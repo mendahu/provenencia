@@ -13,8 +13,9 @@ struct GraphCanvasCamera: Equatable, Sendable {
     /// Default zoom-out floor for overview of a large document.
     /// Hosts may clamp differently; these are GraphCanvas defaults only.
     static let minMagnification: CGFloat = 0.25
-    /// Cap zoom-in near identity — magnification is for overview, not to
-    /// enlarge hosted views (layer zoom would look soft past ~1.25 anyway).
+    /// Cap zoom-in near identity — magnification is for overview. The cap
+    /// protects the SwiftUI base layer, which scales as a bitmap and would look
+    /// soft past ~1.25; items re-render at the settled zoom and stay sharp.
     static let maxMagnification: CGFloat = 1.25
 
     static let `default` = GraphCanvasCamera(magnification: 1, contentOffset: .zero)

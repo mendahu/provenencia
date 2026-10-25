@@ -31,6 +31,10 @@ func CreateArtifact(in []byte) ([]byte, error) {
 			return nil, err
 		}
 	}
+	graphIDs, err := parseIDs(req.GetGraphIds())
+	if err != nil {
+		return nil, err
+	}
 	var out *engine.CreateArtifactResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		a, wrote, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
@@ -40,6 +44,7 @@ func CreateArtifact(in []byte) ([]byte, error) {
 					FileID:      fileID,
 					Label:       req.GetLabel(),
 					Description: req.GetDescription(),
+					GraphIDs:    graphIDs,
 				})
 			})
 		if err != nil {
@@ -224,10 +229,10 @@ func listArtifactsProto(c *database.Catalog, sourceID []byte) ([]*engine.Artifac
 
 func artifactProto(c *database.Catalog, a artifacts.Artifact) (*engine.Artifact, error) {
 	out := &engine.Artifact{
-		Id:          uuidString(a.ID),
+		Id:          database.UUIDString(a.ID),
 		Ref:         a.Ref,
-		SourceId:    uuidString(a.SourceID),
-		FileId:      uuidString(a.FileID),
+		SourceId:    database.UUIDString(a.SourceID),
+		FileId:      database.UUIDString(a.FileID),
 		Label:       a.Label,
 		Description: a.Description,
 	}

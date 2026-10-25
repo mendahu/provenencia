@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -27,17 +28,15 @@ var (
 )
 
 const (
-	sqlInsert = `INSERT INTO subjects (id, ref, source_id, subject_type_id, label, description)
-		VALUES (?, ?, ?, ?, ?, ?)`
+	sqlInsert = `INSERT INTO subjects (id, ref, source_id, graph_id, subject_type_id, label, description)
+		VALUES (?, ?, ?, ?, ?, ?, ?)`
 	sqlUpdate = `UPDATE subjects SET label = ?, description = ? WHERE id = ?`
 	sqlDelete = `DELETE FROM subjects WHERE id = ?`
-	sqlGet    = `SELECT id, ref, source_id, subject_type_id, COALESCE(label, ''), COALESCE(description, '')
+	sqlGet    = `SELECT id, ref, source_id, graph_id, subject_type_id, COALESCE(label, ''), COALESCE(description, '')
 		FROM subjects WHERE id = ?`
-	sqlGetByRef = `SELECT id, ref, source_id, subject_type_id, COALESCE(label, ''), COALESCE(description, '')
+	sqlGetByRef = `SELECT id, ref, source_id, graph_id, subject_type_id, COALESCE(label, ''), COALESCE(description, '')
 		FROM subjects WHERE ref = ?`
-	sqlSourceExists = `SELECT 1 FROM sources WHERE id = ?`
-	sqlTypePrefix   = `SELECT candidate_ref_prefix FROM subject_types WHERE id = ?`
-	maxRefRetries   = 8
+	sqlTypePrefix = `SELECT candidate_ref_prefix FROM subject_types WHERE id = ?`
 )
 
 // Subject is one subjects row.
@@ -45,6 +44,7 @@ type Subject struct {
 	ID            []byte
 	Ref           string
 	SourceID      []byte
+	GraphID       []byte
 	SubjectTypeID []byte
 	Label         string
 	Description   string
@@ -52,7 +52,9 @@ type Subject struct {
 
 // CreateInput is the mutable fields for a new Subject.
 type CreateInput struct {
-	SourceID      []byte
+	// GraphID is the Evidence graph the Subject joins. Required; the
+	// Subject's Source is the graph's Source.
+	GraphID       []byte
 	SubjectTypeID []byte
 	Label         string
 	Description   string
@@ -74,9 +76,6 @@ func Create(tx *database.Tx, userID []byte, in CreateInput, placement *Placement
 	}
 	in.Label = strings.TrimSpace(in.Label)
 	in.Description = strings.TrimSpace(in.Description)
-	if len(in.SourceID) != 16 || len(in.SubjectTypeID) != 16 {
-		return Subject{}, nil, ErrInvalid
-	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Subject{}, nil, err
 	}
@@ -100,10 +99,17 @@ func Create(tx *database.Tx, userID []byte, in CreateInput, placement *Placement
 func InsertTx(tx *sql.Tx, in CreateInput) (Subject, rowchange.Change, error) {
 	in.Label = strings.TrimSpace(in.Label)
 	in.Description = strings.TrimSpace(in.Description)
-	if len(in.SourceID) != 16 || len(in.SubjectTypeID) != 16 {
+	if len(in.SubjectTypeID) != 16 {
 		return Subject{}, rowchange.Change{}, ErrInvalid
 	}
-	if err := requireSource(tx, in.SourceID); err != nil {
+	if len(in.GraphID) != 16 {
+		return Subject{}, rowchange.Change{}, ErrInvalid
+	}
+	sourceID, err := evidencegraphs.SourceOf(tx, in.GraphID)
+	if errors.Is(err, evidencegraphs.ErrInvalid) {
+		return Subject{}, rowchange.Change{}, ErrInvalid
+	}
+	if err != nil {
 		return Subject{}, rowchange.Change{}, err
 	}
 	prefix, err := requireTypePrefix(tx, in.SubjectTypeID)
@@ -117,22 +123,15 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Subject, rowchange.Change, error) {
 	}
 	idBytes := id[:]
 
-	var subjectRef string
-	for attempt := 0; attempt < maxRefRetries; attempt++ {
-		subjectRef, err = ref.Mint(prefix)
-		if err != nil {
-			return Subject{}, rowchange.Change{}, err
-		}
-		_, err = tx.Exec(sqlInsert, idBytes, subjectRef, in.SourceID, in.SubjectTypeID, nullStr(in.Label), nullStr(in.Description))
-		if err == nil {
-			break
-		}
-		if !database.IsUniqueConflict(err) {
-			return Subject{}, rowchange.Change{}, mapConstraint(err)
-		}
+	subjectRef, err := database.InsertWithRef(database.Minter(prefix), func(storedRef string) error {
+		_, err := tx.Exec(sqlInsert, idBytes, storedRef, sourceID, in.GraphID, in.SubjectTypeID, database.NullString(in.Label), database.NullString(in.Description))
+		return err
+	})
+	if errors.Is(err, database.ErrRefsExhausted) {
+		return Subject{}, rowchange.Change{}, ErrInvalid
 	}
 	if err != nil {
-		return Subject{}, rowchange.Change{}, ErrInvalid
+		return Subject{}, rowchange.Change{}, mapConstraint(err)
 	}
 
 	change := rowchange.Change{
@@ -142,16 +141,18 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Subject, rowchange.Change, error) {
 		Fields: rowchange.FullRow(map[string]any{
 			"id":              id.String(),
 			"ref":             subjectRef,
-			"source_id":       uuidJSON(in.SourceID),
-			"subject_type_id": uuidJSON(in.SubjectTypeID),
-			"label":           nullJSON(in.Label),
-			"description":     nullJSON(in.Description),
+			"source_id":       database.UUIDJSON(sourceID),
+			"graph_id":        database.UUIDJSON(in.GraphID),
+			"subject_type_id": database.UUIDJSON(in.SubjectTypeID),
+			"label":           database.NullString(in.Label),
+			"description":     database.NullString(in.Description),
 		}),
 	}
 	return Subject{
 		ID:            append([]byte(nil), idBytes...),
 		Ref:           subjectRef,
-		SourceID:      append([]byte(nil), in.SourceID...),
+		SourceID:      append([]byte(nil), sourceID...),
+		GraphID:       append([]byte(nil), in.GraphID...),
 		SubjectTypeID: append([]byte(nil), in.SubjectTypeID...),
 		Label:         in.Label,
 		Description:   in.Description,
@@ -180,16 +181,16 @@ func Update(tx *database.Tx, userID, id []byte, label, description string) ([]ro
 
 	fields := map[string]rowchange.FieldDiff{}
 	if prev.Label != label {
-		fields["label"] = rowchange.FieldDiff{Old: nullJSON(prev.Label), New: nullJSON(label)}
+		fields["label"] = rowchange.FieldDiff{Old: database.NullString(prev.Label), New: database.NullString(label)}
 	}
 	if prev.Description != description {
-		fields["description"] = rowchange.FieldDiff{Old: nullJSON(prev.Description), New: nullJSON(description)}
+		fields["description"] = rowchange.FieldDiff{Old: database.NullString(prev.Description), New: database.NullString(description)}
 	}
 	if len(fields) == 0 {
 		return nil, nil
 	}
 
-	if _, err := tx.Exec(sqlUpdate, nullStr(label), nullStr(description), id); err != nil {
+	if _, err := tx.Exec(sqlUpdate, database.NullString(label), database.NullString(description), id); err != nil {
 		return nil, mapConstraint(err)
 	}
 	return []rowchange.Change{{
@@ -263,10 +264,11 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 		return nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
-		"id":              {Old: uuidString(id), New: nil},
+		"id":              {Old: database.UUIDString(id), New: nil},
 		"ref":             {Old: prev.Ref, New: nil},
-		"source_id":       {Old: uuidString(prev.SourceID), New: nil},
-		"subject_type_id": {Old: uuidString(prev.SubjectTypeID), New: nil},
+		"source_id":       {Old: database.UUIDString(prev.SourceID), New: nil},
+		"graph_id":        {Old: database.UUIDString(prev.GraphID), New: nil},
+		"subject_type_id": {Old: database.UUIDString(prev.SubjectTypeID), New: nil},
 	}
 	if prev.Label != "" {
 		fields["label"] = rowchange.FieldDiff{Old: prev.Label, New: nil}
@@ -325,19 +327,10 @@ func getTx(tx *sql.Tx, id []byte) (Subject, error) {
 
 func scanSubject(row rowScanner) (Subject, error) {
 	var s Subject
-	if err := row.Scan(&s.ID, &s.Ref, &s.SourceID, &s.SubjectTypeID, &s.Label, &s.Description); err != nil {
+	if err := row.Scan(&s.ID, &s.Ref, &s.SourceID, &s.GraphID, &s.SubjectTypeID, &s.Label, &s.Description); err != nil {
 		return Subject{}, err
 	}
 	return s, nil
-}
-
-func requireSource(tx *sql.Tx, sourceID []byte) error {
-	var one int
-	err := tx.QueryRow(sqlSourceExists, sourceID).Scan(&one)
-	if errors.Is(err, sql.ErrNoRows) {
-		return ErrInvalid
-	}
-	return err
 }
 
 func requireTypePrefix(tx *sql.Tx, typeID []byte) (string, error) {
@@ -354,20 +347,6 @@ func requireTypePrefix(tx *sql.Tx, typeID []byte) (string, error) {
 		return "", ErrInvalid
 	}
 	return prefix, nil
-}
-
-func nullStr(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
-func nullJSON(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
 }
 
 // linkedHandles are accepted handles of Subjects this one points at.
@@ -390,25 +369,6 @@ func linkedHandles(tx *sql.Tx, subjectID []byte) ([][]byte, error) {
 		out = append(out, id)
 	}
 	return out, rows.Err()
-}
-
-func uuidString(id []byte) string {
-	u, err := uuid.FromBytes(id)
-	if err != nil {
-		return ""
-	}
-	return u.String()
-}
-
-func uuidJSON(id []byte) any {
-	if len(id) != 16 {
-		return nil
-	}
-	s := uuidString(id)
-	if s == "" {
-		return nil
-	}
-	return s
 }
 
 func mapConstraint(err error) error {

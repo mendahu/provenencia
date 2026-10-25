@@ -128,6 +128,7 @@ final class CitationComposerModel {
     var vocabulary: CitationComposerVocabulary { context.vocabulary }
 
     var sourceID: String { entry.sourceID }
+    var graphID: String { entry.graphID }
     var subjectID: String { entry.subjectID }
 
     private(set) var phase: Phase = .loading
@@ -135,11 +136,14 @@ final class CitationComposerModel {
     private(set) var subjectTypeKey: String = ""
     private(set) var subjectTypeID: String = ""
     var sourceTitle: String { workspace?.source.title ?? "" }
-    var artifacts: [CatalogArtifact] { workspace?.artifacts ?? [] }
+    /// The Artifacts linked to this Evidence graph, in the Source page's order.
+    var artifacts: [CatalogArtifact] {
+        session.linkedArtifacts(graphID: graphID, artifacts: workspace?.artifacts ?? []) ?? []
+    }
     var listedCitations: [CatalogListedCitation] {
         guard let artifactID = selectedArtifactID else { return [] }
         let handle: QueryHandle<[CatalogListedCitation]>? = session.queryHandle(
-            citationsKey(artifactID: artifactID)
+            context.citationsKey(artifactID: artifactID)
         )
         return handle?.value ?? []
     }
@@ -207,7 +211,6 @@ final class CitationComposerModel {
 
     let artifactViewer = ArtifactViewerModel()
     var armedRegionTool: ArtifactRegionTool?
-    @ObservationIgnored
     var depictionPreviewMemo: DepictionPreviewMemo?
     var viewerPage: Int { artifactViewer.page }
     var viewerPageCount: Int { artifactViewer.pageCount }
@@ -232,11 +235,12 @@ final class CitationComposerModel {
             store: store,
             session: session,
             userID: userID,
-            sourceID: entry.sourceID
+            sourceID: entry.sourceID,
+            graphID: entry.graphID
         )
-        if case .edit(_, _, _, let artifactID, _) = entry {
+        if case .edit(_, _, _, _, let artifactID, _) = entry {
             context.artifactID = artifactID
-        } else if case .addProperty(_, _, let artifactID) = entry {
+        } else if case .addProperty(_, _, _, let artifactID) = entry {
             context.artifactID = artifactID
         }
         fields.attach(context)
@@ -371,7 +375,7 @@ final class CitationComposerModel {
         }
     }
 
-    var graphHandle: QueryHandle<SourceGraphRows>? {
+    var graphHandle: QueryHandle<EvidenceGraphRows>? {
         session.queryHandle(graphKey)
     }
 
@@ -387,16 +391,13 @@ final class CitationComposerModel {
         vocabulary.termComboOptionsByPropertyID[propertyID] ?? []
     }
 
-    var graphKey: CatalogQueryKey { .sourceGraph(project: session.projectKey, sourceId: sourceID) }
+    var graphKey: CatalogQueryKey { .evidenceGraph(project: session.projectKey, graphId: graphID) }
     var workspaceKey: CatalogQueryKey { .sourceWorkspace(project: session.projectKey, sourceId: sourceID) }
-    var citationCountsKey: CatalogQueryKey { .citationCounts(project: session.projectKey, sourceId: sourceID) }
+    var citationCountsKey: CatalogQueryKey { .citationCounts(project: session.projectKey, graphId: graphID) }
+    var evidenceGraphsKey: CatalogQueryKey { session.evidenceGraphsKey }
     var fieldsKey: CatalogQueryKey { .propertiesWorkspace(project: session.projectKey) }
     var connectRulesKey: CatalogQueryKey { .connectRules(project: session.projectKey) }
     var sourceTypesKey: CatalogQueryKey { .sourceTypesList(project: session.projectKey) }
-
-    private func citationsKey(artifactID: String) -> CatalogQueryKey {
-        .citationsByArtifact(project: session.projectKey, artifactId: artifactID)
-    }
 
     private func termsKey(propertyID: String) -> CatalogQueryKey {
         .propertyTerms(project: session.projectKey, propertyId: propertyID)
@@ -409,7 +410,7 @@ final class CitationComposerModel {
 
     private var fieldsSnapshot: PropertiesSnapshot { context.fieldsSnapshot }
 
-    var graphSnapshot: SourceGraphSnapshot { context.graphSnapshot }
+    var graphSnapshot: EvidenceGraphSnapshot { context.graphSnapshot }
 
     func prepare() async {
         phase = .loading
@@ -453,6 +454,7 @@ final class CitationComposerModel {
             } else {
                 resetComposerIdentity(keepLocator: false)
             }
+            let artifacts = self.artifacts
             if let selected = selectedArtifactID, !artifacts.contains(where: { $0.id == selected }) {
                 resetComposerIdentity(keepLocator: false)
             }
@@ -579,7 +581,7 @@ final class CitationComposerModel {
                     userID: userID,
                     subjectID: target.id
                 )
-                session.apply(effects, .deletedSubject(sourceId: sourceID))
+                session.apply(effects, .deletedSubject)
                 await refreshCitationLines()
                 return
             }
@@ -781,11 +783,11 @@ final class CitationComposerModel {
     }
 
     func graphLocation() -> WorkspaceLocation {
-        WorkspaceLocation(section: .sources, sourceId: sourceID, sourceSurface: .graph)
+        .evidenceGraph(sourceId: sourceID, graphId: graphID)
     }
 
     func sourcePageLocation() -> WorkspaceLocation {
-        WorkspaceLocation(section: .sources, sourceId: sourceID, sourceSurface: .page)
+        .sourcePage(sourceId: sourceID)
     }
 
     func beginNewSubject(typeKey: String, field: CitationSubjectField) {
@@ -808,14 +810,14 @@ final class CitationComposerModel {
             let (created, effects) = try await store.createSubject(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
-                sourceID: sourceID,
+                graphID: graphID,
                 subjectTypeID: draft.typeID,
                 label: draft.label,
                 description: draft.description,
                 placement: slot.cell
             )
             landingColumn = slot.landingColumn
-            session.apply(effects, .mutatedSourceGraph(sourceId: sourceID))
+            session.apply(effects)
             await context.waitForGraph()
             assignCreatedSubject(created.id, field: draft.field)
             newSubjectDraft = nil
@@ -1064,7 +1066,7 @@ final class CitationComposerModel {
         await context.waitForGraph()
         if Task.isCancelled { return nil }
         if let cached = await cachedCitation(id: citationID),
-           let graphHandle: QueryHandle<SourceGraphRows> = session.queryHandle(graphKey),
+           let graphHandle: QueryHandle<EvidenceGraphRows> = session.queryHandle(graphKey),
            let graphRows = graphHandle.value
         {
             return FetchedCitation(
@@ -1076,6 +1078,7 @@ final class CitationComposerModel {
         // then drops a citation whose artifact is gone.
         let (fetched, _, listed) = try await store.getCitation(
             projectDir: session.projectKey.projectDir,
+            graphID: graphID,
             citationID: citationID
         )
         if Task.isCancelled { return nil }
@@ -1107,11 +1110,12 @@ final class CitationComposerModel {
         if let selectedArtifactID, !selectedArtifactID.isEmpty {
             artifactIDs.append(selectedArtifactID)
         }
+        let artifacts = self.artifacts
         for artifact in artifacts where !artifactIDs.contains(artifact.id) {
             artifactIDs.append(artifact.id)
         }
         for artifactID in artifactIDs {
-            let key = citationsKey(artifactID: artifactID)
+            let key = context.citationsKey(artifactID: artifactID)
             let _: QueryHandle<[CatalogListedCitation]> = session.query(key)
             let rows = await session.readyValue(key) as [CatalogListedCitation]?
             if let match = rows?.first(where: { $0.citation.id == id }) {
@@ -1125,11 +1129,11 @@ final class CitationComposerModel {
         guard !didApplyEntry else { return }
         didApplyEntry = true
         switch entry {
-        case .addProperty(_, let subjectID, _):
+        case .addProperty(_, _, let subjectID, _):
             beginPropertyDraft(subjectID: subjectID)
-        case .connect(_, let fromID, let toID, _):
+        case .connect(_, _, let fromID, let toID, _):
             beginBridgeDraft(endA: fromID, endB: toID, termID: "", origin: .graph)
-        case .edit(_, let subjectID, _, _, let observationID):
+        case .edit(_, _, let subjectID, _, _, let observationID):
             guard let observationID, !observationID.isEmpty else { break }
             beginEdit(observationID: observationID, subjectID: subjectID)
         }
@@ -1188,19 +1192,21 @@ final class CitationComposerModel {
     }
 
     private func warmCatalogHandles() async throws {
-        let _: QueryHandle<SourceGraphRows> = session.query(graphKey)
+        let _: QueryHandle<EvidenceGraphRows> = session.query(graphKey)
         let _: QueryHandle<PropertiesSnapshot> = session.query(fieldsKey)
         let _: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
         let _: QueryHandle<[CatalogSourceType]> = session.query(sourceTypesKey)
         let _: QueryHandle<[String: Int]> = session.query(citationCountsKey)
+        let _: QueryHandle<[CatalogEvidenceGraph]> = session.query(evidenceGraphsKey)
         let _: QueryHandle<[CatalogConnectRule]> = session.query(connectRulesKey)
-        let rows: SourceGraphRows? = await session.readyValue(graphKey)
+        let rows: EvidenceGraphRows? = await session.readyValue(graphKey)
         let fieldsReady: PropertiesSnapshot? = await session.readyValue(fieldsKey)
         let workspaceReady: CatalogSourceWorkspace? = await session.readyValue(workspaceKey)
         _ = await session.readyValue(sourceTypesKey) as [CatalogSourceType]?
         _ = await session.readyValue(citationCountsKey) as [String: Int]?
         _ = await session.readyValue(connectRulesKey) as [CatalogConnectRule]?
-        guard rows != nil, fieldsReady != nil, workspaceReady != nil else {
+        let graphsReady: [CatalogEvidenceGraph]? = await session.readyValue(evidenceGraphsKey)
+        guard rows != nil, fieldsReady != nil, workspaceReady != nil, graphsReady != nil else {
             throw CatalogWarmError.handleMissing
         }
     }

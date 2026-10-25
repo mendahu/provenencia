@@ -10,6 +10,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/files"
@@ -125,7 +126,7 @@ func TestReleaseSchedulesPurge(t *testing.T) {
 			if err := sqlTx.Commit(); err != nil {
 				t.Fatal(err)
 			}
-			art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, FileID: fileID, Label: "Page"})
+			art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, FileID: fileID, Label: "Page"})
 			if err != nil {
 				t.Fatal(err)
 			}

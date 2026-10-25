@@ -82,6 +82,11 @@ Prefer extending a composite with slots over a new root `PV*` for a slight varia
 | One-off body | Pass a snowflake into the DS body/detail slot |
 | Custom chrome that copies header/footer by hand | **Don’t** — compose `PVPanel` / FormDialog / Confirm; only the unique body stays snowflake |
 
+**Every sheet presents through `.pvSheet(item:)` / `.pvSheet(isPresented:)`** (`Components/Panel/PVSheet.swift`),
+never a raw `.sheet`. It gives the sheet Escape, a click outside, and the
+discard question for a dirty form, all from one rule (`PVSheetDismiss`). Do not
+add `.pvOutsideClick` or `.keyboardShortcut(.cancelAction)` to a sheet yourself.
+
 macOS sheets: **no scrim/dim**, no redrawing window corner radius/shadow on panel content.
 Dismissal for async work stays on the caller binding (`isRunning` can show). See
 `PVConfirm.swift` / DesignSystem README “Confirmations are system chrome.”

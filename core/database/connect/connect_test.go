@@ -1,12 +1,16 @@
 package connect
 
 import (
+	"bytes"
 	"errors"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -15,6 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -77,7 +82,7 @@ func TestCreateCitedBridge(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		art, err := runArtifactCreate(c, userID, artifacts.CreateInput{
+		art, err := artifactstest.Create(c, userID, artifacts.CreateInput{
 			SourceID: src.ID, Label: "Scan",
 		})
 		if err != nil {
@@ -101,15 +106,8 @@ func TestCreateCitedBridge(t *testing.T) {
 		}
 		create := func(typeID []byte, label string, x, y int64) subjects.Subject {
 			t.Helper()
-			s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-				return subjects.Create(tx, userID, subjects.CreateInput{
-					SourceID: src.ID, SubjectTypeID: typeID, Label: label,
-				}, &subjects.Placement{GridX: x, GridY: y})
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			return s
+			graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+			return subjectstest.At(t, c, userID, graph, typeID, label, subjects.Placement{GridX: x, GridY: y})
 		}
 		personProp := lookupProp("person")
 		eventProp := lookupProp("event")
@@ -158,7 +156,6 @@ func TestCreateCitedBridge(t *testing.T) {
 		s := mustSeed(t)
 		res, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
 			return CreateCitedBridge(tx, userID, CreateInput{
-				SourceID:      s.source.ID,
 				FromSubjectID: s.person.ID,
 				ToSubjectID:   s.event.ID,
 				BridgeTypeKey: "participation",
@@ -185,6 +182,9 @@ func TestCreateCitedBridge(t *testing.T) {
 		}
 		if got.Ref == "" {
 			t.Fatal("missing bridge ref")
+		}
+		if !bytes.Equal(got.GraphID, evidencegraphstest.SoleGraph(t, s.c, s.source.ID).ID) {
+			t.Fatalf("bridge graph %x is not the Source's Default graph", got.GraphID)
 		}
 		pos, err := subjectpositions.Get(s.c, res.Subject.ID)
 		if err != nil {
@@ -217,7 +217,6 @@ func TestCreateCitedBridge(t *testing.T) {
 		s := mustSeed(t)
 		_, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
 			return CreateCitedBridge(tx, userID, CreateInput{
-				SourceID:      s.source.ID,
 				FromSubjectID: s.person.ID,
 				ToSubjectID:   s.personB.ID,
 				BridgeTypeKey: "relationship",
@@ -241,7 +240,6 @@ func TestCreateCitedBridge(t *testing.T) {
 		s := mustSeed(t)
 		_, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
 			return CreateCitedBridge(tx, userID, CreateInput{
-				SourceID:      s.source.ID,
 				FromSubjectID: s.event.ID,
 				ToSubjectID:   s.place.ID,
 				BridgeTypeKey: "location",
@@ -265,7 +263,6 @@ func TestCreateCitedBridge(t *testing.T) {
 		before := countBridges(t, s.c, "location")
 		_, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
 			return CreateCitedBridge(tx, userID, CreateInput{
-				SourceID:      s.source.ID,
 				FromSubjectID: s.person.ID,
 				ToSubjectID:   s.place.ID,
 				BridgeTypeKey: "location",
@@ -292,7 +289,6 @@ func TestCreateCitedBridge(t *testing.T) {
 		before := countBridges(t, s.c, "participation")
 		_, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
 			return CreateCitedBridge(tx, userID, CreateInput{
-				SourceID:      s.source.ID,
 				FromSubjectID: s.person.ID,
 				ToSubjectID:   s.event.ID,
 				BridgeTypeKey: "participation",
@@ -319,7 +315,6 @@ func TestCreateCitedBridge(t *testing.T) {
 		s := mustSeed(t)
 		_, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
 			return CreateCitedBridge(tx, userID, CreateInput{
-				SourceID:      s.source.ID,
 				FromSubjectID: s.event.ID,
 				ToSubjectID:   s.place.ID,
 				BridgeTypeKey: "location",
@@ -352,7 +347,6 @@ func TestCreateCitedBridge(t *testing.T) {
 		}
 		res, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
 			return CreateCitedBridge(tx, userID, CreateInput{
-				SourceID:      s.source.ID,
 				FromSubjectID: s.event.ID,
 				ToSubjectID:   s.place.ID,
 				BridgeTypeKey: "location",
@@ -387,7 +381,6 @@ func TestCreateCitedBridge(t *testing.T) {
 		}
 		_, err = writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
 			return CreateCitedBridge(tx, userID, CreateInput{
-				SourceID:      s.source.ID,
 				FromSubjectID: s.event.ID,
 				ToSubjectID:   s.place.ID,
 				BridgeTypeKey: "location",
@@ -406,6 +399,92 @@ func TestCreateCitedBridge(t *testing.T) {
 		}
 	})
 
+	// twoGraphs adds Artifact P2 and a Jones graph linked to P2 only (unlinked
+	// from Default), with a Jones person and event.
+	type twoGraph struct {
+		seed
+		p2          artifacts.Artifact
+		jones       evidencegraphs.Graph
+		jonesPerson subjects.Subject
+		jonesEvent  subjects.Subject
+	}
+	mustTwoGraphs := func(t *testing.T) twoGraph {
+		t.Helper()
+		s := mustSeed(t)
+		_, jones, p2 := artifactstest.Split(t, s.c, userID, s.source.ID, "Jones")
+		create := func(key, label string, x, y int64) subjects.Subject {
+			t.Helper()
+			typ, err := subjecttypes.Lookup(s.c, key, vocabkey.OriginProvenencia)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return subjectstest.At(t, s.c, userID, jones.ID, typ.ID, label, subjects.Placement{GridX: x, GridY: y})
+		}
+		return twoGraph{
+			seed: s, p2: p2, jones: jones,
+			jonesPerson: create("person", "Ben", 8, 0),
+			jonesEvent:  create("event", "Jones wedding", 10, 4),
+		}
+	}
+	bridge := func(s seed, from, to subjects.Subject, in CreateInput) (Result, error) {
+		in.FromSubjectID, in.ToSubjectID, in.BridgeTypeKey = from.ID, to.ID, "participation"
+		in.Observations = []observations.Input{
+			{PropertyID: s.personProp.ID, ValueSubjectID: s.person.ID},
+			{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
+			{PropertyID: s.roleProp.ID, ValueTermID: s.roleTerm.ID},
+		}
+		return writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
+			return CreateCitedBridge(tx, userID, in)
+		})
+	}
+
+	t.Run("bridge joins its endpoints' graph", func(t *testing.T) {
+		g := mustTwoGraphs(t)
+		s := g.seed
+		s.person, s.event = g.jonesPerson, g.jonesEvent
+		res, err := bridge(s, g.jonesPerson, g.jonesEvent, CreateInput{
+			Citation: citations.CreateInput{ArtifactID: g.p2.ID, LocatorJSON: validLocator},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(res.Subject.GraphID, g.jones.ID) || !bytes.Equal(res.Subject.SourceID, g.source.ID) {
+			t.Fatalf("bridge graph %x source %x", res.Subject.GraphID, res.Subject.SourceID)
+		}
+	})
+
+	t.Run("endpoints in two graphs refused", func(t *testing.T) {
+		g := mustTwoGraphs(t)
+		before := countBridges(t, g.c, "participation")
+		s := g.seed
+		s.event = g.jonesEvent
+		_, err := bridge(s, g.person, g.jonesEvent, CreateInput{
+			Citation: citations.CreateInput{ArtifactID: g.artifact.ID, LocatorJSON: validLocator},
+		})
+		if !errors.Is(err, observations.ErrOtherGraph) {
+			t.Fatalf("got %v want ErrOtherGraph", err)
+		}
+		if n := countBridges(t, g.c, "participation"); n != before {
+			t.Fatalf("bridges %d want %d", n, before)
+		}
+	})
+
+	t.Run("attached citation on an unlinked artifact refused", func(t *testing.T) {
+		g := mustTwoGraphs(t)
+		cited, err := writes.Call(g.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				ArtifactID: g.p2.ID, LocatorJSON: validLocator,
+			}, nil)
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = bridge(g.seed, g.person, g.event, CreateInput{CitationID: cited.Citation.ID})
+		if !errors.Is(err, observations.ErrOtherGraph) {
+			t.Fatalf("got %v want ErrOtherGraph", err)
+		}
+	})
+
 	t.Run("missing position invalid", func(t *testing.T) {
 		s := mustSeed(t)
 		if _, err := writes.Call(s.c, writes.Op{}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
@@ -416,7 +495,6 @@ func TestCreateCitedBridge(t *testing.T) {
 		}
 		_, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
 			return CreateCitedBridge(tx, userID, CreateInput{
-				SourceID:      s.source.ID,
 				FromSubjectID: s.event.ID,
 				ToSubjectID:   s.place.ID,
 				BridgeTypeKey: "location",
@@ -458,12 +536,4 @@ func TestFloorDiv(t *testing.T) {
 	if floorDiv(-3+1+1, 2) != -1 {
 		t.Fatal("negative odd midpoint")
 	}
-}
-
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
-		})
-	return a, err
 }

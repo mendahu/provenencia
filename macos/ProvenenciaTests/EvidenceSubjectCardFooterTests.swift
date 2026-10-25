@@ -15,7 +15,7 @@ struct EvidenceSubjectCardFooterTests {
         kind: "person"
     )
 
-    private func placed(cited: Bool, promoted: Bool, kind: EvidencePrimaryKind = .person) -> SourceGraphPlacedSubject {
+    private func placed(cited: Bool, promoted: Bool, kind: EvidencePrimaryKind = .person) -> EvidenceGraphPlacedSubject {
         let observations: [CatalogObservation] = cited ? [
             CatalogObservation(
                 id: "o1", ref: "OBS-1", citationID: "c-1", subjectID: "s1", propertyID: "p1",
@@ -24,7 +24,7 @@ struct EvidenceSubjectCardFooterTests {
                 propertyKey: "name", propertyLabel: "Name", propertyValueType: "text"
             ),
         ] : []
-        return SourceGraphPlacedSubject(
+        return EvidenceGraphPlacedSubject(
             subject: CatalogSubject(
                 id: "s1", ref: "CPR-2AB91", sourceID: "src", subjectTypeID: "type-\(kind.rawValue)",
                 label: "James Robins", description: ""
@@ -93,7 +93,7 @@ struct EvidenceSubjectCardFooterTests {
         }
 
         // A filed bridge card has no Unpromote square either.
-        let bridge = SourceGraphPlacedBridge(
+        let bridge = EvidenceGraphPlacedBridge(
             subject: CatalogSubject(id: "b1", ref: "REL-3RN7K", sourceID: "x", subjectTypeID: "t", label: "", description: ""),
             kind: .relationship,
             typeLabel: "Relationship",
@@ -113,7 +113,7 @@ struct EvidenceSubjectCardFooterTests {
                 kind: "relationship"
             )
         )
-        let snapshot = SourceGraphSnapshot(sourceId: "x", bridges: [bridge])
+        let snapshot = EvidenceGraphSnapshot(graphId: "x", bridges: [bridge])
         let bridgeIDs = EvidenceBridgeCard.actionTargets(for: bridge, in: snapshot, canCite: true).map(\.id)
         #expect(!bridgeIDs.contains(EvidenceSubjectCard.unpromoteActionID))
     }

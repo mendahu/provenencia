@@ -5,6 +5,7 @@ import Observation
 /// `WorkspaceLocation` the graph card pushed.
 struct PromoteEntry: Equatable, Sendable {
     let sourceID: String
+    let graphID: String
     let subjectID: String
     let kind: EvidencePrimaryKind
     let subjectRef: String
@@ -17,10 +18,12 @@ struct PromoteEntry: Equatable, Sendable {
         guard location.section == .sources,
               location.sourceSurface == .promote,
               let sourceID = location.sourceId,
+              let graphID = location.graphId,
               let subjectID = location.subjectId,
               let kind = location.subjectTypeKey.flatMap(EvidencePrimaryKind.init(rawValue:))
         else { return nil }
         self.sourceID = sourceID
+        self.graphID = graphID
         self.subjectID = subjectID
         self.kind = kind
         let ref = Self.trimmed(location.ref) ?? ""
@@ -31,11 +34,11 @@ struct PromoteEntry: Equatable, Sendable {
     }
 
     var identityKey: String {
-        mapAll ? "promote|\(sourceID)|all" : "promote|\(sourceID)|\(subjectID)"
+        mapAll ? "promote|\(graphID)|all" : "promote|\(graphID)|\(subjectID)"
     }
 
     var graphLocation: WorkspaceLocation {
-        WorkspaceLocation(section: .sources, sourceId: sourceID, sourceSurface: .graph, title: sourceTitle)
+        .evidenceGraph(sourceId: sourceID, graphId: graphID, title: sourceTitle)
     }
 
     private static func trimmed(_ text: String?) -> String? {
@@ -47,6 +50,7 @@ struct PromoteEntry: Equatable, Sendable {
 extension WorkspaceLocation {
     static func promote(
         sourceId: String,
+        graphId: String,
         subjectId: String,
         kind: EvidencePrimaryKind,
         ref: String?,
@@ -57,6 +61,7 @@ extension WorkspaceLocation {
         WorkspaceLocation(
             section: .sources,
             sourceId: sourceId,
+            graphId: graphId,
             subjectId: subjectId,
             subjectTypeKey: kind.rawValue,
             sourceSurface: .promote,
@@ -72,6 +77,13 @@ extension WorkspaceLocation {
 @MainActor
 @Observable
 final class PromoteModel {
+    /// Where the open sheet's evidence read stands.
+    enum SheetEvidence: Equatable {
+        case idle
+        case loading
+        case failed(String)
+    }
+
     struct PendingLeave: Identifiable, Equatable {
         let navigation: PendingNavigation
         var id: String { String(describing: navigation) }
@@ -81,7 +93,6 @@ final class PromoteModel {
     let session: WorkspaceSession
     let store: any GenealogyStore
     let userID: String
-    let catalogCounts: CatalogCounts?
     weak var navigation: WorkspaceNavigation?
 
     private(set) var flow: PromoteFlow
@@ -90,15 +101,20 @@ final class PromoteModel {
     private(set) var sourceMark: PVMarkKey = .defaultTypeMark
     /// Property labels by "key|origin", from the Properties snapshot.
     private(set) var propertyLabels: [String: String] = [:]
+    /// Property labels by key alone: the product's, else a researcher's.
+    private var propertyLabelsByKey: [String: String] = [:]
     private(set) var loadError: String?
     private(set) var saveError: String?
     private(set) var proposeError: String?
+    /// The open sheet's claim evidence read: the loaded value lives on its row.
+    private(set) var sheetEvidence = SheetEvidence.idle
+    private var evidenceGeneration = 0
     /// A proposal after a decision is in flight; Done waits for it.
     private(set) var isProposing = false
     /// Bumped per proposal; only the latest one's answer is merged.
     private var proposeGeneration = 0
 
-    var graphKey: CatalogQueryKey { .sourceGraph(project: session.projectKey, sourceId: entry.sourceID) }
+    var graphKey: CatalogQueryKey { .evidenceGraph(project: session.projectKey, graphId: entry.graphID) }
     var confidenceKey: CatalogQueryKey { .confidenceGradesList(project: session.projectKey) }
     var propertiesKey: CatalogQueryKey { .propertiesWorkspace(project: session.projectKey) }
     var rulesKey: CatalogQueryKey { .connectRules(project: session.projectKey) }
@@ -114,16 +130,13 @@ final class PromoteModel {
         entry: PromoteEntry,
         session: WorkspaceSession,
         store: any GenealogyStore,
-        userID: String,
-        catalogCounts: CatalogCounts?
+        userID: String
     ) {
         self.entry = entry
         self.session = session
         self.store = store
         self.userID = userID
-        self.catalogCounts = catalogCounts
         var flow = PromoteFlow(entryID: entry.subjectID)
-        flow.nameOrders = session.nameFormat
         flow.mappedRest = entry.mapAll
         self.flow = flow
     }
@@ -132,19 +145,23 @@ final class PromoteModel {
         do {
             let proposal = try await store.proposePromoteGraphAlignment(
                 projectDir: session.projectKey.projectDir,
-                sourceID: entry.sourceID,
+                graphID: entry.graphID,
                 fixed: []
             )
             // Rows are built from the graph's Subjects. Without them every row
             // would drop and the page would read as empty: say so instead.
-            guard let facts = await facts() else {
+            guard let snapshot = await graphSnapshot() else {
                 loadError = L10n.string(L10n.Promote.graphUnavailable)
                 return
             }
             grades = await session.readyValue(confidenceKey) ?? []
             await attachSource()
-            flow.nameOrders = session.nameFormat
-            flow.load(entryID: entry.subjectID, proposal: proposal, subjects: facts.subjects, bridges: facts.bridges)
+            syncNameOrders()
+            let subjects = subjectFacts(snapshot)
+            flow.load(
+                entryID: entry.subjectID, proposal: proposal, subjects: subjects,
+                bridges: Self.bridgeFacts(snapshot, subjects: subjects)
+            )
             loadError = nil
         } catch {
             loadError = L10n.Errors.message(for: error)
@@ -155,13 +172,24 @@ final class PromoteModel {
 
     func setTarget(subjectID: String, token: String) {
         guard flow.setTarget(subjectID: subjectID, token: token) else { return }
+        proposeAfterDecision()
+    }
+
+    /// Holds a record Promote did not offer as the row's decided target.
+    func hold(subjectID: String, id: String, ref: String, header: CatalogConclusionHeader?) {
+        guard flow.hold(subjectID: subjectID, id: id, ref: ref, header: header) else { return }
+        proposeAfterDecision()
+    }
+
+    /// A decision changed the fixed pairs: propose again.
+    private func proposeAfterDecision() {
         flow.staleNote = nil
         let generation = nextProposal()
         Task { await repropose(generation: generation) }
     }
 
-    func togglePin(subjectID: String, comparisonID: String) {
-        flow.togglePin(subjectID: subjectID, comparisonID: comparisonID)
+    func togglePin(subjectID: String, pinIDs: [String]) {
+        flow.togglePin(subjectID: subjectID, pinIDs: pinIDs)
     }
 
     func setArgument(subjectID: String, argument: String) {
@@ -172,16 +200,62 @@ final class PromoteModel {
         flow.setConfidence(subjectID: subjectID, gradeID: gradeID)
     }
 
-    func toggleBridge(_ id: String) { flow.toggleBridge(id) }
+    func openSheet(_ subjectID: String) { setSheetSubject(subjectID) }
+    func closeSheet() { setSheetSubject(nil) }
 
-    func openSheet(_ subjectID: String) { flow.sheetSubjectID = subjectID }
-    func closeSheet() { flow.sheetSubjectID = nil }
+    /// Reads the open sheet's evidence again, after a failed read.
+    func reloadEvidence() { setSheetSubject(flow.sheetSubjectID) }
 
-    func setGroup(_ group: PromoteFlow.Grouping) { flow.group = group }
+    /// Opens, switches or closes the sheet. A row filed on a handle reads its
+    /// claim evidence each time its sheet opens; any other row has none.
+    func setSheetSubject(_ id: String?) {
+        evidenceGeneration += 1
+        sheetEvidence = .idle
+        syncNameOrders()
+        flow.sheetSubjectID = id
+        guard let id, let row = flow.row(id), !row.anchor, case .handle(let handleID, _, _) = row.target else { return }
+        loadEvidence(subjectID: id, handleID: handleID)
+    }
 
-    func setBridgesOpen(_ open: Bool) { flow.bridgesOpen = open }
+    private func loadEvidence(subjectID: String, handleID: String) {
+        let generation = evidenceGeneration
+        let neighbors = flow.evidenceNeighbors(for: subjectID)
+        sheetEvidence = .loading
+        Task {
+            do {
+                let evidence = try await store.getPromoteClaimEvidence(
+                    projectDir: session.projectKey.projectDir,
+                    graphID: entry.graphID,
+                    subjectID: subjectID,
+                    handleID: handleID,
+                    neighbors: neighbors
+                )
+                guard generation == evidenceGeneration else { return }
+                flow.setEvidence(subjectID: subjectID, handleID: handleID, board: board(of: evidence))
+                sheetEvidence = .idle
+            } catch {
+                guard generation == evidenceGeneration else { return }
+                sheetEvidence = .failed(L10n.Errors.message(for: error))
+            }
+        }
+    }
 
-    func setSheetSubject(_ id: String?) { flow.sheetSubjectID = id }
+    /// The evidence worded for the sheet, once: the page's names for the connected rows and the
+    /// researcher's name order.
+    private func board(of evidence: CatalogClaimEvidence) -> EvidenceBoard {
+        EvidenceBoard.build(
+            evidence: evidence,
+            neighbor: { [flow] id in flow.row(id) },
+            labels: { [self] key in propertyLabel(key: key) },
+            worded: { [session] value in ReconciledValueDisplay.string(for: value, orders: session.nameFormat) }
+        )
+    }
+
+    /// The one place the page takes the researcher's name order from the session: when it loads,
+    /// proposes again and opens a sheet, whose evidence is worded in the same order.
+    private func syncNameOrders() {
+        flow.nameOrders = session.nameFormat
+    }
 
     func done() {
         guard canFinish else { return }
@@ -200,24 +274,21 @@ final class PromoteModel {
 
     func keepPromoting() { flow.cancelLeave() }
 
-    func reasonText(for row: PromoteFlow.Row) -> String {
-        reasonText(row.reason, on: row)
+    /// The page row a connected Subject is, or nil when it is not on the page.
+    func neighbor(_ subjectID: String) -> PromoteFlow.Row? {
+        flow.row(subjectID)
     }
 
     func reasonText(_ reason: PromoteFlow.Reason, on row: PromoteFlow.Row) -> String {
         switch reason {
         case .via(let neighborID):
-            guard let neighbor = flow.rows.first(where: { $0.subjectID == neighborID }) else {
+            guard let neighbor = neighbor(neighborID) else {
                 return L10n.string(L10n.Promote.reasonVia)
             }
-            let ref: String
-            if case .handle(_, let handleRef, _) = neighbor.target { ref = handleRef } else { ref = neighbor.ref }
-            let phrase = flow.bridges.first { bridge in
-                Set([bridge.endA, bridge.endB]) == Set([row.subjectID, neighborID])
-            }?.phrase ?? ""
-            return phrase.isEmpty
-                ? L10n.Promote.viaNeighbor(neighbor: neighbor.name, ref: ref)
-                : L10n.Promote.via(neighbor: neighbor.name, ref: ref, role: phrase)
+            let role = flow.bridge(between: row.subjectID, and: neighborID)?.term ?? ""
+            return role.isEmpty
+                ? L10n.Promote.viaNeighbor(neighbor: neighbor.name, ref: neighbor.shownRef)
+                : L10n.Promote.via(neighbor: neighbor.name, ref: neighbor.shownRef, role: role)
         case .filed: return L10n.string(L10n.Promote.alreadyFiled)
         case .decided: return L10n.string(L10n.Promote.reasonDecided)
         case .agrees(let key, let origin): return L10n.Promote.agreesOn(property: propertyLabel(key: key, origin: origin))
@@ -225,12 +296,39 @@ final class PromoteModel {
         case .taken: return L10n.string(L10n.Promote.reasonTaken)
         case .noMatch: return L10n.string(L10n.Promote.reasonNoMatch)
         case .empty: return L10n.string(L10n.Promote.reasonEmpty)
+        case .neighborPlaced(let id), .neighborMoved(let id), .neighborReleased(let id):
+            guard let neighbor = neighbor(id) else { return L10n.string(L10n.Promote.reasonMoveUnknown) }
+            switch reason {
+            case .neighborPlaced:
+                return neighbor.target.handleRef.map { L10n.Promote.neighborPlaced(neighbor: neighbor.name, ref: $0) }
+                    ?? L10n.string(L10n.Promote.reasonMoveUnknown)
+            case .neighborMoved:
+                return neighbor.target.handleRef.map { L10n.Promote.neighborMoved(neighbor: neighbor.name, ref: $0) }
+                    ?? L10n.string(L10n.Promote.reasonMoveUnknown)
+            case .neighborReleased:
+                return L10n.Promote.neighborReleased(neighbor: neighbor.name)
+            default:
+                // Only the three move reasons reach this arm.
+                return L10n.string(L10n.Promote.reasonMoveUnknown)
+            }
         }
+    }
+
+    /// The band as the row's button speaks it: "Strong", or "Strong, contested".
+    func assessmentText(_ readout: PromoteFlow.SelectionReadout) -> String {
+        let band = L10n.string(L10n.Promote.assessment(readout.assessment))
+        return readout.contested ? L10n.Promote.assessmentContested(band) : band
     }
 
     /// The catalog label for a Property, or its key when the snapshot lacks it.
     func propertyLabel(key: String, origin: String) -> String {
         propertyLabels[key + "|" + origin] ?? key
+    }
+
+    /// The label for a Property known by its key alone: the product's Property, else a researcher's
+    /// own with that key, else the key.
+    func propertyLabel(key: String) -> String {
+        propertyLabelsByKey[key] ?? key
     }
 
     private func nextProposal() -> Int {
@@ -245,29 +343,19 @@ final class PromoteModel {
                 isProposing = false
             }
         }
-        let fixed = flow.rows.compactMap { row -> CatalogPromoteGraphAlignmentFixed? in
-            guard row.decided else { return nil }
-            switch row.target {
-            case .handle(let id, _, _):
-                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, handleID: id)
-            case .newKind:
-                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, target: "new")
-            case .skip:
-                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, target: "skip")
-            case .unset:
-                return nil
-            }
-        }
+        let fixed = flow.fixed(for: flow.rows.filter(\.decided))
         do {
             let proposal = try await store.proposePromoteGraphAlignment(
                 projectDir: session.projectKey.projectDir,
-                sourceID: entry.sourceID,
+                graphID: entry.graphID,
                 fixed: fixed
             )
-            let facts = await facts()
+            let snapshot = await graphSnapshot()
             guard generation == proposeGeneration else { return }
-            if let facts {
-                flow.merge(proposal, subjects: facts.subjects)
+            if let snapshot {
+                syncNameOrders()
+                // Bridges are the page's, built once at load: a proposal moves rows, not connections.
+                flow.merge(proposal, subjects: subjectFacts(snapshot))
                 proposeError = nil
             } else {
                 // Merging without the graph would drop every row and its
@@ -287,13 +375,11 @@ final class PromoteModel {
             _ = try await store.applyPromoteGraphAlignment(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
-                sourceID: entry.sourceID,
+                graphID: entry.graphID,
                 seenRevision: seen,
-                rows: batch,
-                skipBridgeIDs: flow.skipBridgeIDs()
+                rows: batch
             )
-            session.apply(.promotedSubject(sourceId: entry.sourceID))
-            await catalogCounts?.refreshAll()
+            session.apply(.promotedSubject(graphId: entry.graphID))
             session.noticeToast = VocabularyToast(
                 title: L10n.Promote.filedTitle(filed: flow.fileCount, connections: flow.connectionCount),
                 body: flow.skipCount > 0 ? L10n.Promote.filedBody(skipped: flow.skipCount) : "",
@@ -313,10 +399,10 @@ final class PromoteModel {
         }
     }
 
-    /// The graph's Subjects and bridges as rows read them. Nil when the
-    /// graph read isn't ready (never loaded, or failed with nothing cached).
-    private func facts() async -> (subjects: [PromoteFlow.SubjectFact], bridges: [PromoteFlow.BridgeFact])? {
-        let rows: SourceGraphRows? = await session.readyValue(graphKey)
+    /// The Source graph as a snapshot, with the property labels refreshed from the same read. Nil
+    /// when the graph read isn't ready (never loaded, or failed with nothing cached).
+    private func graphSnapshot() async -> EvidenceGraphSnapshot? {
+        let rows: EvidenceGraphRows? = await session.readyValue(graphKey)
         let properties: PropertiesSnapshot? = await session.readyValue(propertiesKey)
         let rules: [CatalogConnectRule]? = await session.readyValue(rulesKey)
         if let properties {
@@ -324,14 +410,22 @@ final class PromoteModel {
                 properties.properties.map { ($0.key + "|" + $0.origin, $0.label) },
                 uniquingKeysWith: { first, _ in first }
             )
+            propertyLabelsByKey = [:]
+            for property in properties.properties where propertyLabelsByKey[property.key] == nil || CatalogOrigin.isProduct(property.origin) {
+                propertyLabelsByKey[property.key] = property.label
+            }
         }
         guard let rows else { return nil }
-        let snapshot = SourceGraphSnapshot.build(
+        return EvidenceGraphSnapshot.build(
             rows: rows,
             types: properties?.types ?? [],
             rules: rules ?? []
         )
-        let subjects = snapshot.subjects.map { placed -> PromoteFlow.SubjectFact in
+    }
+
+    /// The snapshot's Subjects as rows read them.
+    private func subjectFacts(_ snapshot: EvidenceGraphSnapshot) -> [PromoteFlow.SubjectFact] {
+        snapshot.subjects.map { placed -> PromoteFlow.SubjectFact in
             let anchor: PromoteFlow.Anchor?
             if let membership = placed.membership {
                 let title = membership.name?.form ?? membership.entity.ref
@@ -347,12 +441,20 @@ final class PromoteModel {
                 anchor: anchor
             )
         }
-        let nameByID = Dictionary(uniqueKeysWithValues: subjects.map { ($0.id, $0.name) })
-        let bridges = snapshot.bridges.map { bridge in
+    }
+
+    /// The snapshot's connections as the page reads them, with each end named from `subjects`.
+    static func bridgeFacts(
+        _ snapshot: EvidenceGraphSnapshot,
+        subjects: [PromoteFlow.SubjectFact]
+    ) -> [PromoteFlow.BridgeFact] {
+        let nameByID = Dictionary(subjects.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+        let placedByID = EvidenceBridgeEdgeSummary.subjects(of: snapshot)
+        return snapshot.bridges.map { bridge in
             PromoteFlow.BridgeFact(
                 id: bridge.subject.id,
-                sentence: EvidenceBridgeEdgeSummary.sentence(for: bridge, in: snapshot),
-                phrase: EvidenceBridgeEdgeSummary.phrase(for: bridge),
+                sentence: EvidenceBridgeEdgeSummary.sentence(for: bridge, in: snapshot, subjects: placedByID, bridges: [:]),
+                term: EvidenceBridgeEdgeSummary.reasonRole(for: bridge),
                 endAName: bridge.endpointAID.flatMap { nameByID[$0] } ?? "",
                 endBName: bridge.endpointBID.flatMap { nameByID[$0] } ?? "",
                 mark: bridge.kind.markKey,
@@ -361,7 +463,6 @@ final class PromoteModel {
                 alreadyFiled: bridge.membership != nil
             )
         }
-        return (subjects, bridges)
     }
 
     private func attachSource() async {

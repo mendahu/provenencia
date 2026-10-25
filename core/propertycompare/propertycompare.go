@@ -66,6 +66,14 @@ type Result struct {
 	Excluded []Excluded    // values dropped as non-evidence, side A's then side B's
 }
 
+// Similarity is the speaking pair's similarity, 0 when no pair spoke.
+func (r Result) Similarity() float64 {
+	if r.Speaking == nil {
+		return 0
+	}
+	return r.Speaking.Result.Similarity
+}
+
 // SpeakingPair is the one pair of values that decided the outcome.
 type SpeakingPair struct {
 	A, B   Value // side A's and side B's value; one may be negative
@@ -159,11 +167,18 @@ func Compare(a, b []Value, meta propertymeta.Meta, rules valuecompare.Rules) Res
 	return out
 }
 
+// Typed is v with its value type set from meta, the one typing rule: Compare
+// types every value as the property's value type.
+func Typed(v Value, meta propertymeta.Meta) Value {
+	v.Type = meta.ValueType
+	return v
+}
+
 // split sets each value's type, drops neutral values into out.Excluded and
 // returns the rest in input order with the count of positive ones.
 func split(values []Value, side valuecompare.Side, meta propertymeta.Meta, rules valuecompare.Rules, out *Result) (kept []keyed, positives int) {
 	for _, v := range values {
-		v.Type = meta.ValueType
+		v = Typed(v, meta)
 		if v.Neutral {
 			out.Excluded = append(out.Excluded, Excluded{Side: side, Value: v, Reason: ExcludeNeutral})
 			continue

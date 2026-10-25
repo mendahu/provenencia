@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import Provenencia
 
-@Suite
+@MainActor @Suite
 struct WorkspaceDestinationHostTests {
     private let projectDir = "/tmp/workspace-destination-host.provenencia"
 
@@ -21,17 +21,17 @@ struct WorkspaceDestinationHostTests {
         )
     }
 
-    @Test func presentationSourceGraph() {
+    @Test func presentationEvidenceGraph() {
         #expect(
             presentation(
-                for: WorkspaceLocation(section: .sources, sourceId: "src-1", sourceSurface: .graph)
+                for: WorkspaceLocation(section: .sources, sourceId: "src-1", graphId: "g-1", sourceSurface: .graph)
             ) == .sourceGraph
         )
     }
 
     @Test func presentationPromote() {
         let location = WorkspaceLocation.promote(
-            sourceId: "src-1", subjectId: "sub-1", kind: .event, ref: "CEV-1", title: nil, sourceTitle: nil
+            sourceId: "src-1", graphId: "g-1", subjectId: "sub-1", kind: .event, ref: "CEV-1", title: nil, sourceTitle: nil
         )
         #expect(presentation(for: location) == .sourcePromote)
         #expect(WorkspaceDestinationHost.destinationKind(for: .sourcePromote) == .sources)
@@ -43,6 +43,7 @@ struct WorkspaceDestinationHostTests {
                 for: WorkspaceLocation(
                     section: .sources,
                     sourceId: "src-1",
+                    graphId: "g-1",
                     subjectId: "sub-1",
                     sourceSurface: .citationComposer
                 )
@@ -56,6 +57,7 @@ struct WorkspaceDestinationHostTests {
                 for: WorkspaceLocation(
                     section: .sources,
                     sourceId: "src-1",
+                    graphId: "g-1",
                     citationId: "cit-1",
                     artifactId: "art-0",
                     sourceSurface: .citationComposer
@@ -70,6 +72,7 @@ struct WorkspaceDestinationHostTests {
                 for: WorkspaceLocation(
                     section: .sources,
                     sourceId: "src-1",
+                    graphId: "g-1",
                     connectFromSubjectId: "p1",
                     connectToSubjectId: "e1",
                     connectBridgeTypeKey: "participation",
@@ -131,10 +134,11 @@ struct WorkspaceDestinationHostTests {
         let locations: [WorkspaceLocation] = [
             .sectionRoot(.sources),
             WorkspaceLocation(section: .sources, sourceId: "s1"),
-            WorkspaceLocation(section: .sources, sourceId: "s1", sourceSurface: .graph),
+            WorkspaceLocation(section: .sources, sourceId: "s1", graphId: "g-1", sourceSurface: .graph),
             WorkspaceLocation(
                 section: .sources,
                 sourceId: "s1",
+                graphId: "g-1",
                 subjectId: "sub-1",
                 sourceSurface: .citationComposer
             ),

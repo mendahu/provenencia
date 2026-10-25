@@ -22,10 +22,13 @@ final class WorkspaceSession {
     private(set) var visibleKeys: Set<CatalogQueryKey> = []
     /// Transient notice after leaving a place (composer save, etc.).
     var noticeToast: VocabularyToast?
-    /// Evidence-graph pan and zoom, keyed by Source id. Not catalog data; quit drops it.
+    /// Recounts the sidebar after a write in `CatalogQueryRegistry.navCountTriggers`. Set by `WorkspaceView`.
+    @ObservationIgnored
+    var onNavCountsMoved: (@MainActor () async -> Void)?
+    /// Evidence-graph pan and zoom, keyed by graph id. Not catalog data; quit drops it.
     @ObservationIgnored
     private var graphCameras: [String: GraphCanvasCamera] = [:]
-    /// Bridge to select the next time that Source's graph appears. Consumed once.
+    /// Bridge to select the next time that graph appears. Consumed once.
     private var pendingGraphSelections: [String: String] = [:]
 
     init(
@@ -46,22 +49,22 @@ final class WorkspaceSession {
         }
     }
 
-    func graphCamera(for sourceID: String) -> GraphCanvasCamera? {
-        graphCameras[sourceID]
+    func graphCamera(for graphID: String) -> GraphCanvasCamera? {
+        graphCameras[graphID]
     }
 
-    func setGraphCamera(_ camera: GraphCanvasCamera, for sourceID: String) {
-        guard graphCameras[sourceID] != camera else { return }
-        graphCameras[sourceID] = camera
+    func setGraphCamera(_ camera: GraphCanvasCamera, for graphID: String) {
+        guard graphCameras[graphID] != camera else { return }
+        graphCameras[graphID] = camera
     }
 
-    func setPendingGraphSelection(subjectID: String, sourceID: String) {
-        pendingGraphSelections[sourceID] = subjectID
+    func setPendingGraphSelection(subjectID: String, graphID: String) {
+        pendingGraphSelections[graphID] = subjectID
     }
 
-    func consumePendingGraphSelection(sourceID: String) -> String? {
-        let id = pendingGraphSelections[sourceID]
-        pendingGraphSelections[sourceID] = nil
+    func consumePendingGraphSelection(graphID: String) -> String? {
+        let id = pendingGraphSelections[graphID]
+        pendingGraphSelections[graphID] = nil
         return id
     }
 
@@ -163,26 +166,33 @@ final class WorkspaceSession {
     /// every cached row whose last activity the effects moved
     /// (`patchLastUpdated`), then the mutation's enriched Source row and cached
     /// page shell. Then it invalidates the deduped union of what the effects
-    /// reported (that Source's graph and citation reads, the Conclusions whose
+    /// reported (each Evidence graph it names, its Sources' citation reads, the Conclusions whose
     /// handles changed) and what the mutation names (the Source page's own
     /// workspace, the metadata field list), so a key both name is invalidated
     /// once, not cancelled and restarted twice. Keys the registry evicts or
     /// marks stale when hidden are not loaded unless on screen. Last, it
-    /// refreshes graph progress for the Sources the effects and the mutation
-    /// moved. Features only call `apply`; they do not query afterward or tell
-    /// sibling views to refresh.
+    /// refreshes graph progress for the Evidence graphs the effects and the mutation
+    /// moved, and runs `onNavCountsMoved` for a mutation in
+    /// `CatalogQueryRegistry.navCountTriggers`. Features only call `apply`;
+    /// they do not query afterward or tell sibling views to refresh.
     func apply(_ effects: CatalogWriteEffects = .empty, _ mutation: CatalogMutation? = nil) {
         patchLastUpdated(effects)
         if let source = mutation?.patchedSource {
             patchUpdatedSource(source)
         }
         apply(invalidations: registry.invalidations(for: effects, by: mutation, project: projectKey))
-        var progressSources = effects.sources
-        if let mutation, let sourceID = graphProgressSource(of: mutation), !progressSources.contains(sourceID) {
-            progressSources.append(sourceID)
+        var progressGraphs = effects.evidenceGraphs
+        if let graphId = mutation?.evidenceGraphId, !progressGraphs.contains(graphId) {
+            progressGraphs.append(graphId)
         }
-        for sourceID in progressSources {
-            refreshSourceGraphProgress(sourceId: sourceID)
+        for graphId in progressGraphs {
+            refreshEvidenceGraphProgress(graphId: graphId)
+        }
+        if let kind = mutation?.invalidationKind,
+           CatalogQueryRegistry.navCountTriggers.contains(kind),
+           let recount = onNavCountsMoved
+        {
+            Task { await recount() }
         }
     }
 
@@ -241,39 +251,29 @@ final class WorkspaceSession {
         return keys
     }
 
-    /// The Source whose graph progress a mutation moved, if it moved one.
-    private func graphProgressSource(of mutation: CatalogMutation) -> String? {
-        switch mutation {
-        case .mutatedSourceGraph(let id), .deletedSubject(let id), .promotedSubject(let id):
-            return id
-        default:
-            return nil
-        }
-    }
-
     /// Surgical Get-one + map merge. Skips when the list never warmed the map.
-    private func refreshSourceGraphProgress(sourceId: String) {
-        let key = CatalogQueryKey.sourceGraphProgress(project: projectKey)
-        let existing: QueryHandle<[String: SourceGraphProgress]>? = queryHandle(key)
+    private func refreshEvidenceGraphProgress(graphId: String) {
+        let key = CatalogQueryKey.evidenceGraphProgress(project: projectKey)
+        let existing: QueryHandle<[String: EvidenceGraphProgress]>? = queryHandle(key)
         guard existing != nil else { return }
-        Task { await self.patchSourceGraphProgress(sourceId: sourceId) }
+        Task { await self.patchEvidenceGraphProgress(graphId: graphId) }
     }
 
-    private func patchSourceGraphProgress(sourceId: String) async {
-        let key = CatalogQueryKey.sourceGraphProgress(project: projectKey)
-        let existing: QueryHandle<[String: SourceGraphProgress]>? = queryHandle(key)
+    private func patchEvidenceGraphProgress(graphId: String) async {
+        let key = CatalogQueryKey.evidenceGraphProgress(project: projectKey)
+        let existing: QueryHandle<[String: EvidenceGraphProgress]>? = queryHandle(key)
         guard existing != nil else { return }
         do {
-            let one = try await store.getSourceGraphProgress(
+            let one = try await store.getEvidenceGraphProgress(
                 projectDir: projectKey.projectDir,
-                sourceID: sourceId
+                graphID: graphId
             )
-            let handle: QueryHandle<[String: SourceGraphProgress]>? = queryHandle(key)
+            let handle: QueryHandle<[String: EvidenceGraphProgress]>? = queryHandle(key)
             var map = handle?.value ?? [:]
             if one.isZero {
-                map.removeValue(forKey: sourceId)
+                map.removeValue(forKey: graphId)
             } else {
-                map[sourceId] = one
+                map[graphId] = one
             }
             setQueryValue(key, value: map)
         } catch {
@@ -380,8 +380,8 @@ final class WorkspaceSession {
             let _: QueryHandle<CatalogSourceWorkspace> = query(key)
         case .typeSuggestions:
             let _: QueryHandle<[CatalogTypeSuggestion]> = query(key)
-        case .sourceGraph:
-            let _: QueryHandle<SourceGraphRows> = query(key)
+        case .evidenceGraph:
+            let _: QueryHandle<EvidenceGraphRows> = query(key)
         case .citationCounts:
             let _: QueryHandle<[String: Int]> = query(key)
         case .propertiesWorkspace:
@@ -392,8 +392,10 @@ final class WorkspaceSession {
             let _: QueryHandle<[CatalogPropertyTerm]> = query(key)
         case .citationsByArtifact:
             let _: QueryHandle<[CatalogListedCitation]> = query(key)
-        case .sourceGraphProgress:
-            let _: QueryHandle<[String: SourceGraphProgress]> = query(key)
+        case .evidenceGraphProgress:
+            let _: QueryHandle<[String: EvidenceGraphProgress]> = query(key)
+        case .evidenceGraphsList:
+            let _: QueryHandle<[CatalogEvidenceGraph]> = query(key)
         case .personsList:
             let _: QueryHandle<[CatalogPersonHeader]> = query(key)
         case .eventsList:

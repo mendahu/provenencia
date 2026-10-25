@@ -39,7 +39,7 @@ const (
 	KeyPlaceRelationshipType = "place_relationship_type"
 	// Locked place_relationship_type keys. Walk / cycle behaviour is keyed
 	// here in Go (part_of = containment; succeeded_by = succession).
-	KeyPartOf      = "part_of"
+	KeyPartOf      = string(vocabkey.TermPartOf)
 	KeySucceededBy = "succeeded_by"
 
 	sqlUpsert = `INSERT INTO property_terms (id, property_id, key, origin, label, description, directed, inverse_key, neutral)
@@ -111,17 +111,11 @@ func Upsert(c *database.Catalog, t Term) ([]byte, error) {
 	} else if len(id) != 16 {
 		return nil, ErrInvalid
 	}
-	var desc any
-	if t.Description == "" {
-		desc = nil
-	} else {
-		desc = t.Description
-	}
 	var inverse any
 	if k := strings.TrimSpace(t.InverseKey); k != "" {
 		inverse = k
 	}
-	if _, err := db.Exec(sqlUpsert, id, t.PropertyID, t.Key, t.Origin, t.Label, desc, directedBit(t.Directed), inverse, directedBit(t.Neutral)); err != nil {
+	if _, err := db.Exec(sqlUpsert, id, t.PropertyID, t.Key, t.Origin, t.Label, database.NullString(t.Description), directedBit(t.Directed), inverse, directedBit(t.Neutral)); err != nil {
 		return nil, err
 	}
 	return append([]byte(nil), id...), nil
@@ -162,18 +156,12 @@ func Create(tx *database.Tx, userID, propertyID []byte, label, description strin
 	if label == "" {
 		return Term{}, nil, ErrInvalid
 	}
-	var desc any
-	if description == "" {
-		desc = nil
-	} else {
-		desc = description
-	}
-	if _, err := tx.Exec(sqlUpsert, id, propertyID, key, vocabkey.OriginUser, label, desc, 0, nil, 0); err != nil {
+	if _, err := tx.Exec(sqlUpsert, id, propertyID, key, vocabkey.OriginUser, label, database.NullString(description), 0, nil, 0); err != nil {
 		return Term{}, nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
 		"id":          {Old: nil, New: uid.String()},
-		"property_id": {Old: nil, New: uuidString(propertyID)},
+		"property_id": {Old: nil, New: database.UUIDString(propertyID)},
 		"key":         {Old: nil, New: key},
 		"origin":      {Old: nil, New: vocabkey.OriginUser},
 		"label":       {Old: nil, New: label},
@@ -226,21 +214,15 @@ func Update(tx *database.Tx, userID, id []byte, label, description string) (Term
 
 	fields := map[string]rowchange.FieldDiff{}
 	if existing.Label != label {
-		fields["label"] = rowchange.FieldDiff{Old: nullJSON(existing.Label), New: nullJSON(label)}
+		fields["label"] = rowchange.FieldDiff{Old: database.NullString(existing.Label), New: database.NullString(label)}
 	}
 	if existing.Description != description {
-		fields["description"] = rowchange.FieldDiff{Old: nullJSON(existing.Description), New: nullJSON(description)}
+		fields["description"] = rowchange.FieldDiff{Old: database.NullString(existing.Description), New: database.NullString(description)}
 	}
 	if len(fields) == 0 {
 		return existing, nil, nil
 	}
-	var desc any
-	if description == "" {
-		desc = nil
-	} else {
-		desc = description
-	}
-	if _, err := tx.Exec(sqlUpdate, label, desc, id); err != nil {
+	if _, err := tx.Exec(sqlUpdate, label, database.NullString(description), id); err != nil {
 		return Term{}, nil, err
 	}
 	term, err := scanTerm(tx.QueryRow(sqlGetByID, id))
@@ -317,8 +299,8 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 		return nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
-		"id":          {Old: uuidString(id), New: nil},
-		"property_id": {Old: uuidString(existing.PropertyID), New: nil},
+		"id":          {Old: database.UUIDString(id), New: nil},
+		"property_id": {Old: database.UUIDString(existing.PropertyID), New: nil},
 		"key":         {Old: existing.Key, New: nil},
 		"origin":      {Old: existing.Origin, New: nil},
 		"label":       {Old: existing.Label, New: nil},
@@ -421,20 +403,4 @@ func propertyTermsLocked(tx *sql.Tx, propertyID []byte) (bool, error) {
 		return false, err
 	}
 	return key == KeyPlaceRelationshipType, nil
-}
-
-func uuidString(id []byte) string {
-	if len(id) != 16 {
-		return ""
-	}
-	var u uuid.UUID
-	copy(u[:], id)
-	return u.String()
-}
-
-func nullJSON(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
 }

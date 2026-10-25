@@ -47,7 +47,7 @@ struct CitationComposerVocabulary: Equatable {
 
     static func make(
         fields: PropertiesSnapshot,
-        snapshot: SourceGraphSnapshot,
+        snapshot: EvidenceGraphSnapshot,
         rules: [CatalogConnectRule],
         termsByPropertyID: [String: [CatalogPropertyTerm]]
     ) -> CitationComposerVocabulary {

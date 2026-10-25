@@ -33,6 +33,7 @@ struct ReconciledValueDisplayTests {
         CatalogReconcilerOutcome(
             observationID: id, observationRef: "OBS-\(id)", reason: ReconcilerReason(wire: reason), valueRank: rank,
             deniedByObservationID: deniedBy, recorded: recorded, subjectID: "sub-\(id)", subjectRef: "CPR-\(id)",
+            graphID: "g-\(id)",
             citationID: "cit-\(id)", artifactID: "art-\(id)", sourceID: source, sourceTitle: title, credibilityKey: "",
             transcriptionUncertain: uncertain, claimConfidenceKey: "",
             credibilityOffset: credibilityOffset, claimConfidenceOffset: claimConfidenceOffset,
@@ -69,6 +70,11 @@ struct ReconciledValueDisplayTests {
             outcome("news", "weak", rank: 3, source: "s-news", title: "Death notice, The Globe, 1880",
                     recorded: .name(jamesRobins), credibilityOffset: -1),
         ])
+    }
+
+    @Test func aDepictionReadsAsLikeness() {
+        let likeness = CatalogConclusionValue.depiction(CatalogDepictionValue(regionJSON: "", imageRelPath: "objects/x.png"))
+        #expect(ReconciledValueDisplay.string(for: likeness) == "Likeness")
     }
 
     @Test func badgesNameEveryShownState() {
@@ -124,8 +130,8 @@ struct ReconciledValueDisplayTests {
         #expect(ReconciledValueDisplay.string(for: .none) == "")
         #expect(ReconciledValueDisplay.string(for: .text("  farmer ")) == "farmer")
         #expect(ReconciledValueDisplay.string(for: .integer(1890), locale: en) == "1890")
-        #expect(ReconciledValueDisplay.string(for: .term(id: "t", key: "male", label: "Male")) == "Male")
-        #expect(ReconciledValueDisplay.string(for: .term(id: "t", key: "male", label: "")) == "male")
+        #expect(ReconciledValueDisplay.string(for: .term(id: "t", key: "male", label: "Male", origin: CatalogOrigin.provenencia)) == "Male")
+        #expect(ReconciledValueDisplay.string(for: .term(id: "t", key: "male", label: "", origin: CatalogOrigin.provenencia)) == "male")
         #expect(ReconciledValueDisplay.string(for: .name(Self.jamesRobins)) == "James Robins")
         let date = CatalogDateValueInput(kind: "point", startYear: 1817, startMonth: 5, startDay: 14)
         #expect(ReconciledValueDisplay.string(for: .date(date), locale: en) == DateRowDisplay.line(date: date, locale: en))

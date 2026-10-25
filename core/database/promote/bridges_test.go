@@ -10,22 +10,26 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -42,6 +46,7 @@ type bridgeWorld struct {
 	c                        *database.Catalog
 	source                   sources.Source
 	artifact                 artifacts.Artifact
+	graph                    []byte // the Source's one Evidence graph
 	personProp, eventProp    properties.Property
 	placeProp, relatedProp   properties.Property
 	roleProp, relTypeProp    properties.Property
@@ -76,11 +81,11 @@ func newBridgeWorld(t *testing.T) *bridgeWorld {
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	w := &bridgeWorld{t: t, c: c, source: src, artifact: art}
+	w := &bridgeWorld{t: t, c: c, source: src, artifact: art, graph: evidencegraphstest.SoleGraph(t, c, src.ID).ID}
 	w.personProp = w.prop("person")
 	w.eventProp = w.prop("event")
 	w.placeProp = w.prop("place")
@@ -121,15 +126,7 @@ func (w *bridgeWorld) node(kind, label string, x, y int64) subjects.Subject {
 	if err != nil {
 		w.t.Fatal(err)
 	}
-	s, err := writes.Call(w.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: w.source.ID, SubjectTypeID: st.ID, Label: label,
-		}, &subjects.Placement{GridX: x, GridY: y})
-	})
-	if err != nil {
-		w.t.Fatal(err)
-	}
-	return s
+	return subjectstest.At(w.t, w.c, userID, w.graph, st.ID, label, subjects.Placement{GridX: x, GridY: y})
 }
 
 func (w *bridgeWorld) participation(person, event subjects.Subject, role propertyterms.Term) connect.Result {
@@ -174,7 +171,7 @@ func (w *bridgeWorld) bridge(kind string, from, to subjects.Subject, obs []obser
 	w.t.Helper()
 	res, err := writes.Call(w.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-			SourceID: w.source.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
+			FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
 			Citation:     citations.CreateInput{ArtifactID: w.artifact.ID, LocatorJSON: bridgeLocator},
 			Observations: obs,
 		})
@@ -187,22 +184,12 @@ func (w *bridgeWorld) bridge(kind string, from, to subjects.Subject, obs []obser
 
 func (w *bridgeWorld) promote(s subjects.Subject) promote.Result {
 	w.t.Helper()
-	res, err := writes.Call(w.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
-	})
-	if err != nil {
-		w.t.Fatal(err)
-	}
-	return res
+	return promotetest.Save(w.t, w.c, userID, promote.Input{SubjectID: s.ID})
 }
 
 func (w *bridgeWorld) join(s subjects.Subject, entityID []byte) {
 	w.t.Helper()
-	if _, err := writes.Call(w.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
-	}); err != nil {
-		w.t.Fatal(err)
-	}
+	promotetest.Save(w.t, w.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
 }
 
 func (w *bridgeWorld) handles(typeKey string) [][]byte {

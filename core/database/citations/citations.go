@@ -5,14 +5,16 @@ package citations
 import (
 	"database/sql"
 	"errors"
+	"strings"
+
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/ref"
@@ -45,21 +47,32 @@ const (
 
 	sqlDelete = `DELETE FROM citations WHERE id = ?`
 
-	sqlListByArtifact = `SELECT id, ref, artifact_id, locator_json,
-		COALESCE(transcription, ''), COALESCE(label, ''),
-		transcription_uncertain, COALESCE(transcription_note, ''),
-		(SELECT COUNT(*) FROM observations WHERE citation_id = citations.id)
-		FROM citations WHERE artifact_id = ?
-		ORDER BY ref COLLATE NOCASE`
+	// A graph's Citations on an Artifact: those it uses, plus those with no
+	// Observation yet (a new Citation belongs to no graph until its first
+	// Observation). The "used" half is the rule the Unlink check shares, spelled
+	// once in evidencegraphs.SQLObservationsInGraph. Binds one graph id; the
+	// Citation table is aliased c.
+	sqlUsedByGraph = `EXISTS (SELECT 1 FROM ` + evidencegraphs.SQLObservationsInGraph + `)`
+	sqlInGraph     = `(` + sqlUsedByGraph + ` OR NOT EXISTS (SELECT 1 FROM observations o WHERE o.citation_id = c.id))`
 
-	// People a Citation names: the Observation's subject, or the subject an
-	// edge points at. Earliest Observation id wins. The caller caps the list.
+	// Binds: graph (count), artifact, graph (filter).
+	sqlListByArtifact = `SELECT c.id, c.ref, c.artifact_id, c.locator_json,
+		COALESCE(c.transcription, ''), COALESCE(c.label, ''),
+		c.transcription_uncertain, COALESCE(c.transcription_note, ''),
+		(SELECT COUNT(*) FROM ` + evidencegraphs.SQLObservationsInGraph + `)
+		FROM citations c WHERE c.artifact_id = ? AND ` + sqlInGraph + `
+		ORDER BY c.ref COLLATE NOCASE`
+
+	// People a Citation names within one graph: the Observation's subject, or
+	// the subject an edge points at. Earliest Observation id wins. The caller
+	// caps the list. The graph filters Observations (not Citations), so it is a
+	// join here, not SQLObservationsInGraph. Binds per branch: graph, artifact.
 	sqlPersonNamesByArtifact = `
 WITH named AS (
 	SELECT o.citation_id AS cid, s.id AS sid, s.label AS label, o.id AS oid
 	FROM observations o
 	INNER JOIN citations c ON c.id = o.citation_id
-	INNER JOIN subjects s ON s.id = o.subject_id
+	INNER JOIN subjects s ON s.id = o.subject_id AND s.graph_id = ?
 	INNER JOIN subject_types t ON t.id = s.subject_type_id
 	WHERE c.artifact_id = ? AND t.key = 'person'
 		AND TRIM(COALESCE(s.label, '')) <> ''
@@ -67,6 +80,7 @@ WITH named AS (
 	SELECT o.citation_id, s.id, s.label, o.id
 	FROM observations o
 	INNER JOIN citations c ON c.id = o.citation_id
+	INNER JOIN subjects so ON so.id = o.subject_id AND so.graph_id = ?
 	INNER JOIN subjects s ON s.id = o.value_subject_id
 	INNER JOIN subject_types t ON t.id = s.subject_type_id
 	WHERE c.artifact_id = ? AND t.key = 'person'
@@ -76,19 +90,14 @@ SELECT cid, sid, label FROM named
 GROUP BY cid, sid
 ORDER BY cid, MIN(oid)`
 
-	sqlCountBySource = `SELECT c.artifact_id, COUNT(*)
+	// Binds: graph (link), graph (filter).
+	sqlCountByEvidenceGraph = `SELECT c.artifact_id, COUNT(*)
 		FROM citations c
-		INNER JOIN artifacts a ON a.id = c.artifact_id
-		WHERE a.source_id = ?
+		INNER JOIN evidence_graph_artifacts l ON l.artifact_id = c.artifact_id AND l.graph_id = ?
+		WHERE ` + sqlInGraph + `
 		GROUP BY c.artifact_id`
 
 	sqlArtifactExists = `SELECT 1 FROM artifacts WHERE id = ?`
-
-	sqlCitationSource = `SELECT a.source_id FROM citations c
-		INNER JOIN artifacts a ON a.id = c.artifact_id
-		WHERE c.id = ?`
-
-	maxRefRetries = 8
 )
 
 // Citation is one citations row.
@@ -198,32 +207,25 @@ func InsertWithObservationsTx(
 		uncertain = 1
 	}
 
-	var citRef string
-	for attempt := 0; attempt < maxRefRetries; attempt++ {
-		citRef, err = ref.Mint(ref.PrefixCitation)
-		if err != nil {
-			return CreateResult{}, nil, err
-		}
-		_, err = tx.Exec(
+	citRef, err := database.InsertWithRef(database.Minter(ref.PrefixCitation), func(storedRef string) error {
+		_, err := tx.Exec(
 			sqlInsert,
 			idBytes,
-			citRef,
+			storedRef,
 			in.ArtifactID,
 			in.LocatorJSON,
-			nullIfEmpty(in.Transcription),
-			nullIfEmpty(in.Label),
+			database.NullString(in.Transcription),
+			database.NullString(in.Label),
 			uncertain,
-			nullIfEmpty(in.TranscriptionNote),
+			database.NullString(in.TranscriptionNote),
 		)
-		if err == nil {
-			break
-		}
-		if !database.IsUniqueConflict(err) {
-			return CreateResult{}, nil, mapConstraint(err)
-		}
+		return err
+	})
+	if errors.Is(err, database.ErrRefsExhausted) {
+		return CreateResult{}, nil, ErrInvalid
 	}
 	if err != nil {
-		return CreateResult{}, nil, ErrInvalid
+		return CreateResult{}, nil, mapConstraint(err)
 	}
 
 	changes := []rowchange.Change{{
@@ -233,12 +235,12 @@ func InsertWithObservationsTx(
 		Fields: rowchange.FullRow(map[string]any{
 			"id":                      id.String(),
 			"ref":                     citRef,
-			"artifact_id":             uuidJSON(in.ArtifactID),
+			"artifact_id":             database.UUIDJSON(in.ArtifactID),
 			"locator_json":            in.LocatorJSON,
-			"transcription":           nullIfEmpty(in.Transcription),
-			"label":                   nullIfEmpty(in.Label),
+			"transcription":           database.NullString(in.Transcription),
+			"label":                   database.NullString(in.Label),
 			"transcription_uncertain": in.TranscriptionUncertain,
-			"transcription_note":      nullIfEmpty(in.TranscriptionNote),
+			"transcription_note":      database.NullString(in.TranscriptionNote),
 		}),
 	}}
 
@@ -333,10 +335,10 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 		fields["locator_json"] = rowchange.FieldDiff{Old: prev.LocatorJSON, New: in.LocatorJSON}
 	}
 	if prev.Transcription != in.Transcription {
-		fields["transcription"] = rowchange.FieldDiff{Old: emptyAsNil(prev.Transcription), New: emptyAsNil(in.Transcription)}
+		fields["transcription"] = rowchange.FieldDiff{Old: database.NullString(prev.Transcription), New: database.NullString(in.Transcription)}
 	}
 	if prev.Label != in.Label {
-		fields["label"] = rowchange.FieldDiff{Old: emptyAsNil(prev.Label), New: emptyAsNil(in.Label)}
+		fields["label"] = rowchange.FieldDiff{Old: database.NullString(prev.Label), New: database.NullString(in.Label)}
 	}
 	if prev.TranscriptionUncertain != in.TranscriptionUncertain {
 		fields["transcription_uncertain"] = rowchange.FieldDiff{
@@ -346,8 +348,8 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 	}
 	if prev.TranscriptionNote != in.TranscriptionNote {
 		fields["transcription_note"] = rowchange.FieldDiff{
-			Old: emptyAsNil(prev.TranscriptionNote),
-			New: emptyAsNil(in.TranscriptionNote),
+			Old: database.NullString(prev.TranscriptionNote),
+			New: database.NullString(in.TranscriptionNote),
 		}
 	}
 	if len(fields) == 0 {
@@ -362,10 +364,10 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 		sqlUpdate,
 		prev.ArtifactID,
 		in.LocatorJSON,
-		nullIfEmpty(in.Transcription),
-		nullIfEmpty(in.Label),
+		database.NullString(in.Transcription),
+		database.NullString(in.Label),
 		uncertain,
-		nullIfEmpty(in.TranscriptionNote),
+		database.NullString(in.TranscriptionNote),
 		citationID,
 	); err != nil {
 		return Citation{}, nil, err
@@ -385,13 +387,6 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 			Action:     rowchange.ActionUpdate,
 			Fields:     fields,
 		}}, nil
-}
-
-func emptyAsNil(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
 }
 
 // Delete erases a Citation when no Observation remains. Notes CASCADE.
@@ -428,9 +423,9 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 		return nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
-		"id":          {Old: uuidString(id), New: nil},
+		"id":          {Old: database.UUIDString(id), New: nil},
 		"ref":         {Old: prev.Ref, New: nil},
-		"artifact_id": {Old: uuidString(prev.ArtifactID), New: nil},
+		"artifact_id": {Old: database.UUIDString(prev.ArtifactID), New: nil},
 	}
 	if prev.LocatorJSON != "" {
 		fields["locator_json"] = rowchange.FieldDiff{Old: prev.LocatorJSON, New: nil}
@@ -491,44 +486,17 @@ func GetTx(tx *sql.Tx, id []byte) (Citation, error) {
 	return scanOne(tx.QueryRow(sqlGet, id))
 }
 
-// SourceID returns the Artifact source_id for a Citation.
-func SourceID(c *database.Catalog, citationID []byte) ([]byte, error) {
+// ListByArtifact returns an Artifact's Citations that belong to one Evidence
+// graph (sqlInGraph), each with the count of its Observations in that graph.
+func ListByArtifact(c *database.Catalog, graphID, artifactID []byte) ([]ListedCitation, error) {
 	db, err := c.DB()
 	if err != nil {
 		return nil, err
 	}
-	if len(citationID) != 16 {
+	if len(graphID) != 16 || len(artifactID) != 16 {
 		return nil, ErrInvalid
 	}
-	var sourceID []byte
-	if err := db.QueryRow(sqlCitationSource, citationID).Scan(&sourceID); err != nil {
-		return nil, err
-	}
-	return append([]byte(nil), sourceID...), nil
-}
-
-// SourceIDTx returns the Artifact source_id for a Citation.
-func SourceIDTx(tx *sql.Tx, citationID []byte) ([]byte, error) {
-	if len(citationID) != 16 {
-		return nil, ErrInvalid
-	}
-	var sourceID []byte
-	if err := tx.QueryRow(sqlCitationSource, citationID).Scan(&sourceID); err != nil {
-		return nil, err
-	}
-	return sourceID, nil
-}
-
-// ListByArtifact returns Citations for an Artifact, each with its Observation count.
-func ListByArtifact(c *database.Catalog, artifactID []byte) ([]ListedCitation, error) {
-	db, err := c.DB()
-	if err != nil {
-		return nil, err
-	}
-	if len(artifactID) != 16 {
-		return nil, ErrInvalid
-	}
-	rows, err := db.Query(sqlListByArtifact, artifactID)
+	rows, err := db.Query(sqlListByArtifact, graphID, artifactID, graphID)
 	if err != nil {
 		return nil, err
 	}
@@ -544,14 +512,14 @@ func ListByArtifact(c *database.Catalog, artifactID []byte) ([]ListedCitation, e
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	if err := attachPersonNames(db, artifactID, out); err != nil {
+	if err := attachPersonNames(db, graphID, artifactID, out); err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func attachPersonNames(db *sql.DB, artifactID []byte, list []ListedCitation) error {
-	rows, err := db.Query(sqlPersonNamesByArtifact, artifactID, artifactID)
+func attachPersonNames(db *sql.DB, graphID, artifactID []byte, list []ListedCitation) error {
+	rows, err := db.Query(sqlPersonNamesByArtifact, graphID, artifactID, graphID, artifactID)
 	if err != nil {
 		return err
 	}
@@ -579,16 +547,17 @@ func attachPersonNames(db *sql.DB, artifactID []byte, list []ListedCitation) err
 	return nil
 }
 
-// CountBySource returns citation counts keyed by artifact UUID string.
-func CountBySource(c *database.Catalog, sourceID []byte) (map[string]int32, error) {
+// CountByEvidenceGraph returns the graph's Citation counts keyed by artifact
+// UUID string, for the Artifacts linked to the graph.
+func CountByEvidenceGraph(c *database.Catalog, graphID []byte) (map[string]int32, error) {
 	db, err := c.DB()
 	if err != nil {
 		return nil, err
 	}
-	if len(sourceID) != 16 {
+	if len(graphID) != 16 {
 		return nil, ErrInvalid
 	}
-	rows, err := db.Query(sqlCountBySource, sourceID)
+	rows, err := db.Query(sqlCountByEvidenceGraph, graphID, graphID)
 	if err != nil {
 		return nil, err
 	}
@@ -652,32 +621,6 @@ func scanListedRow(row rowScanner) (ListedCitation, error) {
 	}
 	listed.TranscriptionUncertain = uncertain != 0
 	return listed, nil
-}
-
-func nullIfEmpty(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
-func uuidString(id []byte) string {
-	u, err := uuid.FromBytes(id)
-	if err != nil {
-		return ""
-	}
-	return u.String()
-}
-
-func uuidJSON(id []byte) any {
-	if len(id) != 16 {
-		return nil
-	}
-	s := uuidString(id)
-	if s == "" {
-		return nil
-	}
-	return s
 }
 
 func mapConstraint(err error) error {

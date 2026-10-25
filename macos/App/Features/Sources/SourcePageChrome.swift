@@ -30,9 +30,20 @@ struct SourcePageMetadataValueChrome: ViewModifier {
     }
 }
 
+/// Gap above a Source page section, beyond the page stack's own spacing.
+struct SourcePageSectionTopPadding: ViewModifier {
+    func body(content: Content) -> some View {
+        content.padding(.top, PVSpacing.space11 - PVSpacing.space9)
+    }
+}
+
 extension View {
     func sourcePageMetadataValueChrome() -> some View {
         modifier(SourcePageMetadataValueChrome())
+    }
+
+    func sourcePageSectionTopPadding() -> some View {
+        modifier(SourcePageSectionTopPadding())
     }
 }
 

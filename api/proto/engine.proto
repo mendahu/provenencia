@@ -83,17 +83,17 @@ enum Method {
   METHOD_DELETE_PROPERTY_TERM = 66;
   METHOD_CREATE_CITATION_WITH_OBSERVATIONS = 67;
   METHOD_ADD_OBSERVATIONS_TO_CITATION = 68;
-  METHOD_LIST_OBSERVATIONS_BY_SOURCE = 69;
+  METHOD_LIST_OBSERVATIONS_BY_EVIDENCE_GRAPH = 69;
   METHOD_GET_CITATION = 70;
   METHOD_CREATE_CITED_BRIDGE = 72;
-  METHOD_CITATION_COUNTS_BY_SOURCE = 73;
+  METHOD_CITATION_COUNTS_BY_EVIDENCE_GRAPH = 73;
   METHOD_LIST_CITATIONS_BY_ARTIFACT = 74;
   METHOD_UPDATE_CITATION = 75;
   METHOD_UPDATE_OBSERVATION = 76;
   METHOD_DELETE_OBSERVATION = 77;
   METHOD_GET_PROPERTIES_WORKSPACE = 78;
-  METHOD_LIST_SOURCE_GRAPH_PROGRESS = 79;
-  METHOD_GET_SOURCE_GRAPH_PROGRESS = 80;
+  METHOD_LIST_EVIDENCE_GRAPH_PROGRESS = 79;
+  METHOD_GET_EVIDENCE_GRAPH_PROGRESS = 80;
   METHOD_GET_DELETE_IMPACT = 81;
   METHOD_DELETE_SOURCE = 82;
   METHOD_DELETE_ARTIFACT = 83;
@@ -105,12 +105,22 @@ enum Method {
   METHOD_GET_CONCLUSION_DETAIL = 90;
   METHOD_LIST_EVENT_HEADERS = 91;
   METHOD_LIST_PLACE_HEADERS = 93;
-  METHOD_LIST_SOURCE_EVENT_TITLES = 96;
+  METHOD_LIST_EVIDENCE_GRAPH_EVENT_TITLES = 96;
   METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT = 97;
   METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT = 98;
   METHOD_GET_NAME_FORMAT = 99;
   METHOD_UNPROMOTE_SUBJECT = 100;
   METHOD_SET_PREFERRED_LIKENESS = 101;
+  METHOD_COPY_SOURCE = 102;
+  METHOD_LIST_EVIDENCE_GRAPHS = 103;
+  METHOD_CREATE_EVIDENCE_GRAPH = 104;
+  METHOD_UPDATE_EVIDENCE_GRAPH = 105;
+  METHOD_DELETE_EVIDENCE_GRAPH = 106;
+  METHOD_LINK_EVIDENCE_GRAPH_ARTIFACT = 107;
+  METHOD_UNLINK_EVIDENCE_GRAPH_ARTIFACT = 108;
+  METHOD_GET_EVIDENCE_GRAPH_UNLINK_IMPACT = 109;
+  METHOD_GET_PROMOTE_CLAIM_EVIDENCE = 110;
+  METHOD_REORDER_SUBJECT_TYPE_PROPERTIES = 111;
 }
 
 message PingRequest {
@@ -416,6 +426,119 @@ message CreateSourceRequest {
 
 message CreateSourceResponse {
   Source source = 1;
+  WriteEffects effects = 2;
+}
+
+// CopySource creates a new Source from an existing one in one audited write.
+// Notes, Subjects, Citations, Observations, graphs and the cover are never
+// copied.
+message CopySourceRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string source_id = 3; // the Source to copy
+  string title = 4; // required (non-empty after trim)
+  string source_type_id = 5;
+  bool copy_description = 6;
+  bool copy_metadata = 7; // values and their layout
+  bool copy_credibility = 8;
+  repeated string artifact_ids = 9; // the original's Artifacts to copy
+}
+
+message CopySourceResponse {
+  Source source = 1;
+  WriteEffects effects = 2;
+}
+
+message EvidenceGraph {
+  string id = 1;
+  string ref = 2;
+  string source_id = 3;
+  string name = 4;
+  string description = 5;
+  repeated string artifact_ids = 6; // by Artifact ref from List; in request order from Create
+}
+
+message ListEvidenceGraphsRequest {
+  string project_dir = 1;
+}
+
+message ListEvidenceGraphsResponse {
+  repeated EvidenceGraph graphs = 1;
+}
+
+message CreateEvidenceGraphRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string source_id = 3;
+  string name = 4;
+  string description = 5;
+  repeated string artifact_ids = 6; // at least one
+}
+
+message CreateEvidenceGraphResponse {
+  EvidenceGraph graph = 1;
+  WriteEffects effects = 2;
+}
+
+message UpdateEvidenceGraphRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string graph_id = 3;
+  string name = 4;
+  string description = 5;
+  repeated string artifact_ids = 6; // empty = links unchanged; otherwise the full set
+}
+
+message UpdateEvidenceGraphResponse {
+  WriteEffects effects = 1;
+}
+
+message DeleteEvidenceGraphRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string graph_id = 3;
+}
+
+message DeleteEvidenceGraphResponse {
+  WriteEffects effects = 1;
+}
+
+message LinkEvidenceGraphArtifactRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string graph_id = 3;
+  string artifact_id = 4;
+}
+
+message LinkEvidenceGraphArtifactResponse {
+  WriteEffects effects = 1;
+}
+
+message UnlinkEvidenceGraphArtifactRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string graph_id = 3;
+  string artifact_id = 4;
+}
+
+message UnlinkEvidenceGraphArtifactResponse {
+  WriteEffects effects = 1;
+}
+
+// Which of the Artifacts a graph edit removes are used by the graph's Citations.
+message GetEvidenceGraphUnlinkImpactRequest {
+  string project_dir = 1;
+  string graph_id = 2;
+  repeated string artifact_ids = 3;
+}
+
+message EvidenceGraphUnlinkBlock {
+  string artifact_id = 1;
+  DeleteImpactGroup citations = 2;
+}
+
+message GetEvidenceGraphUnlinkImpactResponse {
+  repeated EvidenceGraphUnlinkBlock blocked = 1;
 }
 
 message UpdateSourceRequest {
@@ -550,6 +673,7 @@ message CreateArtifactRequest {
   string file_id = 4; // empty = fileless
   string description = 5;
   string label = 6; // required
+  repeated string graph_ids = 7; // empty = every graph of the Source
 }
 
 message CreateArtifactResponse {
@@ -593,13 +717,11 @@ message DeleteCitationResponse {
 }
 
 // WriteEffects is the catalog the write touched. Swift invalidates those
-// handles and Sources instead of a broad citation refetch.
+// handles and Evidence graphs instead of a broad citation refetch.
 message WriteEffects {
   repeated string handles = 1;
-  // Sources whose graph changed: what the Source graph and graph progress load.
-  repeated string sources = 2;
-  reserved 3;
-  bool vocabulary = 4;
+  reserved 2, 3, 4, 12;
+  reserved "sources";
   bool structure = 5;
   repeated string header_handles = 6;
   // Handles whose last-updated revision this write moved. Swift patches those
@@ -616,9 +738,12 @@ message WriteEffects {
   // Sources whose citation reads (citation counts, citations by artifact) this
   // write moved.
   repeated string citation_sources = 11;
-  // An Observation was created, deleted, or moved to another Property, so the
-  // Properties workspace's usedBy counts changed.
-  bool property_usage = 12;
+  // Catalog-wide lists this write changed: effects.List values ("vocabulary",
+  // "property_usage", "evidence_graphs"). Swift drops the reads that show each.
+  repeated string lists = 13;
+  // Evidence graphs whose loaded rows this write changed: what the graph's rows
+  // and graph progress read.
+  repeated string evidence_graphs = 14;
 }
 
 message IngestArtifactFileRequest {
@@ -849,6 +974,7 @@ message WorkspaceLocation {
   string subject_type_key = 16; // Properties type-strip category; empty = All properties
   string property_id = 17;      // Properties inspector row
   string entity_id = 18;        // Conclusion handle (persons / events / places)
+  string graph_id = 19;         // the Evidence graph of a graph, citationComposer or promote surface
 }
 
 // SearchCatalog finds navigable catalog roots for the omnibar (S3-07+).
@@ -929,13 +1055,15 @@ message ListSubjectTypesResponse {
 message CreateSubjectRequest {
   string project_dir = 1;
   string user_id = 2;
-  string source_id = 3;
+  reserved 3;
+  reserved "source_id";
   string subject_type_id = 4;
   string label = 5;
   string description = 6;
   bool has_placement = 7;
   int64 grid_x = 8;
   int64 grid_y = 9;
+  string graph_id = 10;
 }
 
 message CreateSubjectResponse {
@@ -1021,8 +1149,8 @@ message PromoteSubjectResponse {
 }
 
 // UnpromoteSubject deletes a primary Subject's accepted claim and, in the same
-// revision, the accepted claims of the bridges on its Source that have it as an
-// end. No handle is deleted. A Subject with no accepted claim writes nothing.
+// revision, the accepted claims of the bridges on its Evidence graph that have
+// it as an end. No handle is deleted. A Subject with no accepted claim writes nothing.
 message UnpromoteSubjectRequest {
   string project_dir = 1;
   string user_id = 2;
@@ -1087,13 +1215,16 @@ message EventTitle {
   string type_label = 6;
   repeated EventTitleSubject subjects = 7;
   string place = 8;
+  string type_origin = 9; // with type_key: the term's origin
 }
 
-// ListSourceEventTitles titles every Event Subject on one Source's Evidence
-// graph from what that Source cites, by the same rule as Event headers.
-message ListSourceEventTitlesRequest {
+// ListEvidenceGraphEventTitles titles every Event Subject on one Evidence
+// graph from what its Source cites, by the same rule as Event headers.
+message ListEvidenceGraphEventTitlesRequest {
   string project_dir = 1;
-  string source_id = 2;
+  reserved 2;
+  reserved "source_id";
+  string graph_id = 3;
 }
 
 message SourceEventTitle {
@@ -1101,7 +1232,7 @@ message SourceEventTitle {
   EventTitle title = 2;
 }
 
-message ListSourceEventTitlesResponse {
+message ListEvidenceGraphEventTitlesResponse {
   repeated SourceEventTitle titles = 1;
 }
 
@@ -1109,7 +1240,9 @@ message ListSourceEventTitlesResponse {
 // Source's Evidence graph. Unpromoted Subjects are absent.
 message ListSubjectMembershipsRequest {
   string project_dir = 1;
-  string source_id = 2;
+  reserved 2;
+  reserved "source_id";
+  string graph_id = 3;
 }
 
 message ListSubjectMembershipsResponse {
@@ -1286,6 +1419,8 @@ message ConclusionValue {
     ConclusionTerm term = 3;
     DateValueInput date = 4;
     NameValueInput name = 5;
+    // A likeness: the stored crop's path, with no region.
+    DepictionValue depiction = 6;
   }
 }
 
@@ -1293,6 +1428,7 @@ message ConclusionTerm {
   string id = 1;
   string key = 2;
   string label = 3;
+  string origin = 4; // whose term the key is: it names a product term only with the product's origin
 }
 
 // ReconciledValueDetail is one auto-reconciled value of a Property: displayed
@@ -1331,6 +1467,7 @@ message ReconcilerOutcomeDetail {
   // on that unit (for a name, the part it lost on). 0 otherwise.
   int32 vote_support = 18;
   int32 vote_total = 19;
+  string graph_id = 20;  // the Evidence graph of the Observation's Subject
 }
 
 // ConclusionField is one Property of a handle: its state (single, merged,
@@ -1384,13 +1521,15 @@ message ConclusionDetail {
   repeated LikenessDetail likenesses = 7;
 }
 
-// ProposePromoteGraphAlignment loads one Source's Evidence layer and proposes
+// ProposePromoteGraphAlignment loads one Evidence graph's layer and proposes
 // a handle, New, or Skip for every primary Subject (S9-42). fixed are decided
 // or already-chosen anchors; already-promoted Subjects are free anchors too.
 message ProposePromoteGraphAlignmentRequest {
   string project_dir = 1;
-  string source_id = 2;
+  reserved 2;
+  reserved "source_id";
   repeated PromoteGraphAlignmentFixed fixed = 3;
+  string graph_id = 4;
 }
 
 // A decided row Align holds as given. target is handle (handle_id set), new,
@@ -1401,29 +1540,90 @@ message PromoteGraphAlignmentFixed {
   string target = 3;
 }
 
-message PromoteGraphAlignmentComparison {
+// GetPromoteClaimEvidence is one Promote row's claim evidence against its
+// target, from the targets the page holds for its rows (S11-25).
+message GetPromoteClaimEvidenceRequest {
+  string project_dir = 1;
+  reserved 2;
+  reserved "source_id";
+  string subject_id = 3;
+  string handle_id = 4;
+  repeated PromoteGraphAlignmentFixed neighbors = 5;
+  string graph_id = 6;
+}
+
+message PromoteClaimEvidencePin {
+  string id = 1;
+  reserved 2, 3;
+  reserved "member_subject_id", "member_observation_id";
+  string source_id = 4;
+  ConclusionValue value = 5;
+}
+
+message PromoteClaimEvidenceLine {
   string property_key = 1;
-  string property_origin = 2;
-  string outcome = 3; // agree, partial, conflict, unknown
-  string value_type = 4;
-  bool pinned = 5;
-  double weight = 6;
-  reserved 7; // group_label: English built in Go; the page words groups now
-  // Empty for the Subject's own records; the layer neighbor for a one-hop record.
-  string group_subject_id = 14;
-  string incoming_observation_id = 8;
-  string incoming_display = 9;
-  string incoming_source = 10;
-  string member_observation_id = 11;
-  string member_display = 12;
-  string member_source = 13;
-  // Structured dates, when the comparison is a date. The client formats
-  // these for the user's locale. The display strings stay the portable
-  // fallback.
-  DateValueInput incoming_date = 15;
-  DateValueInput member_date = 16;
-  // The incoming value is a negative Observation: shown as "not <value>".
-  bool incoming_negative = 17;
+  string outcome = 2;        // propertycompare.Outcome
+  string property_cause = 3; // propertycompare.Cause
+  string relation = 4;       // valuecompare.Relation
+  string cause = 5;          // valuecompare.Cause
+  reserved 6, 7, 8;
+  reserved "pinnable", "points", "checked";
+  string incoming_observation_id = 9;
+  ConclusionValue incoming = 10;
+  bool incoming_negative = 11;
+  repeated PromoteClaimEvidencePin members = 12;
+}
+
+message PromoteClaimEvidenceSection {
+  string property_key = 1;
+  repeated PromoteClaimEvidenceLine lines = 2;
+}
+
+message PromoteClaimEvidenceBundle {
+  string id = 1;
+  reserved 2, 3;
+  reserved "member_subject_id", "source_id";
+}
+
+message PromoteClaimEvidenceRelationship {
+  string neighbor_subject_id = 1;
+  string key = 2; // BridgeKey.String(): identity only
+  string bridge_type = 3;
+  reserved 4, 5, 6, 8, 9, 10, 11;
+  reserved "term", "end", "cause", "points", "pinnable", "checked";
+  string outcome = 7;
+  repeated PromoteClaimEvidenceBundle bundles = 12;
+  repeated PromoteClaimEvidenceSection sections = 13;
+  // The link read from the neighbor's side (segmentcompare.ReadFrom): the
+  // endpoint property the neighbor is at ("" for a symmetric link), the term it
+  // carries, and whether that term names the neighbor. The term is absent for a
+  // bridge type with no term.
+  string neighbor_end = 14;
+  ConclusionTerm neighbor_term = 15;
+  bool neighbor_term_names_neighbor = 16;
+  // A participation's event type (17 replaces the string at 6); absent for any
+  // other bridge type.
+  ConclusionTerm event_type = 17;
+}
+
+// A pin the evidence offers; checked ones are the defaults.
+message PromoteClaimEvidenceOffer {
+  string id = 1;
+  bool checked = 2;
+}
+
+message PromoteClaimEvidenceSource {
+  string id = 1;
+  string title = 2;
+}
+
+message GetPromoteClaimEvidenceResponse {
+  repeated PromoteClaimEvidenceSection sections = 1;
+  repeated PromoteClaimEvidenceRelationship relationships = 2;
+  repeated PromoteClaimEvidenceOffer offers = 3;
+  repeated PromoteClaimEvidenceSource sources = 4;
+  reserved 5;
+  reserved "lifespan";
 }
 
 message PromoteGraphAlignmentAlternative {
@@ -1455,7 +1655,7 @@ message PromoteGraphAlignmentRow {
   double score = 6;
   string assessment = 7; // strong, medium, weak, none
   reserved 8; // reasons: English strings; see reason
-  repeated PromoteGraphAlignmentComparison comparisons = 9;
+  reserved 9; // comparisons: GetPromoteClaimEvidence
   repeated PromoteGraphAlignmentAlternative alternatives = 10;
   bool conflict_with_fixed = 11;
   bool possible_duplicate = 12;
@@ -1476,6 +1676,14 @@ message PromoteGraphAlignmentRow {
   string reason = 20;
   string reason_property_key = 21;
   string reason_property_origin = 22;
+  // A comparison behind the pair this row reports conflicts, whatever its
+  // band. The page marks it.
+  bool contested = 23;
+  // A graphalign.Reason move code, set when settling released an earlier
+  // pair of this row. Empty when no move.
+  string move_reason = 24;
+  // With move_reason: the layer neighbor that caused the move.
+  string move_neighbor_subject_id = 25;
 }
 
 message ProposePromoteGraphAlignmentResponse {
@@ -1490,15 +1698,11 @@ message ProposePromoteGraphAlignmentResponse {
 message ApplyPromoteGraphAlignmentRequest {
   string project_dir = 1;
   string user_id = 2;
-  string source_id = 3;
   int64 seen_revision = 4;
   repeated ApplyPromoteGraphAlignmentRow rows = 5;
-  repeated string skip_bridge_ids = 6;
-}
-
-message ApplyPromoteGraphAlignmentPair {
-  string incoming_observation_id = 1;
-  string member_observation_id = 2;
+  reserved 3, 6;
+  reserved "source_id", "skip_bridge_ids";
+  string graph_id = 7;
 }
 
 message ApplyPromoteGraphAlignmentRow {
@@ -1507,7 +1711,11 @@ message ApplyPromoteGraphAlignmentRow {
   string entity_id = 3;
   string confidence_grade_id = 4;
   string argument = 5;
-  repeated ApplyPromoteGraphAlignmentPair pairs = 6;
+  reserved 6; // pairs: pin_ids
+  // The pins the researcher left checked in the row's sheet.
+  repeated string pin_ids = 7;
+  // The sheet was never opened: Go pins what the evidence checks. Not with pin_ids.
+  bool default_pins = 8;
 }
 
 message ApplyPromoteGraphAlignmentWritten {
@@ -1523,7 +1731,9 @@ message ApplyPromoteGraphAlignmentResponse {
 
 message ListSubjectsRequest {
   string project_dir = 1;
-  string source_id = 2;
+  reserved 2;
+  reserved "source_id";
+  string graph_id = 3;
 }
 
 message ListSubjectsResponse {
@@ -1550,7 +1760,9 @@ message ClearSubjectPositionResponse {}
 
 message ListSubjectPositionsRequest {
   string project_dir = 1;
-  string source_id = 2;
+  reserved 2;
+  reserved "source_id";
+  string graph_id = 3;
 }
 
 message ListSubjectPositionsResponse {
@@ -1691,6 +1903,20 @@ message RemoveSubjectTypePropertyRequest {
 
 message RemoveSubjectTypePropertyResponse {}
 
+// ReorderSubjectTypePropertiesRequest sets a type's binding order. property_ids
+// is every bound property of the type, each once, in the new order.
+message ReorderSubjectTypePropertiesRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string subject_type_id = 3;
+  repeated string property_ids = 4;
+}
+
+message ReorderSubjectTypePropertiesResponse {
+  repeated SubjectTypeProperty properties = 1;
+  WriteEffects effects = 2;
+}
+
 message ListPlaceableSubjectTypesRequest {}
 
 message ListPlaceableSubjectTypesResponse {
@@ -1816,6 +2042,11 @@ message Observation {
   string value_depiction_id = 18;
   // Response data; never read from a request.
   DepictionValue depiction = 19;
+  // Response data; never read from a request.
+  string value_term_key = 20;
+  // Response data; never read from a request. With value_term_key: the
+  // term's origin, so a key reads as the product's only when it is.
+  string value_term_origin = 21;
 }
 
 // ObservationDraft is one Observation insert payload (create or append).
@@ -1867,18 +2098,22 @@ message AddObservationsToCitationResponse {
   WriteEffects effects = 2;
 }
 
-message ListObservationsBySourceRequest {
+message ListObservationsByEvidenceGraphRequest {
   string project_dir = 1;
-  string source_id = 2;
+  reserved 2;
+  reserved "source_id";
+  string graph_id = 3;
 }
 
-message ListObservationsBySourceResponse {
+message ListObservationsByEvidenceGraphResponse {
   repeated Observation observations = 1;
 }
 
-message CitationCountsBySourceRequest {
+message CitationCountsByEvidenceGraphRequest {
   string project_dir = 1;
-  string source_id = 2;
+  reserved 2;
+  reserved "source_id";
+  string graph_id = 3;
 }
 
 message ArtifactCitationCount {
@@ -1886,7 +2121,7 @@ message ArtifactCitationCount {
   int32 count = 2;
 }
 
-message CitationCountsBySourceResponse {
+message CitationCountsByEvidenceGraphResponse {
   repeated ArtifactCitationCount counts = 1;
 }
 
@@ -1900,6 +2135,7 @@ message ListedCitation {
 message ListCitationsByArtifactRequest {
   string project_dir = 1;
   string artifact_id = 2;
+  string graph_id = 3;
 }
 
 message ListCitationsByArtifactResponse {
@@ -1909,6 +2145,7 @@ message ListCitationsByArtifactResponse {
 message GetCitationRequest {
   string project_dir = 1;
   string citation_id = 2;
+  string graph_id = 3;
 }
 
 message GetCitationResponse {
@@ -1920,12 +2157,11 @@ message GetCitationResponse {
 message CreateCitedBridgeRequest {
   string project_dir = 1;
   string user_id = 2;
-  string source_id = 3;
   string from_subject_id = 4;
   string to_subject_id = 5;
   string bridge_type_key = 6;
-  reserved 7, 9, 10;
-  reserved "label", "grid_x", "grid_y";
+  reserved 3, 7, 9, 10;
+  reserved "source_id", "label", "grid_x", "grid_y";
   string description = 8;
   string artifact_id = 11;
   string locator_json = 12;
@@ -1994,7 +2230,8 @@ message GetPropertiesWorkspaceResponse {
   repeated SubjectTypePropertiesGroup groups = 3;
 }
 
-message SourceGraphProgress {
+message EvidenceGraphProgress {
+  // The graph's Source.
   string source_id = 1;
   int32 subject_count = 2;
   int32 observation_count = 3;
@@ -2002,23 +2239,26 @@ message SourceGraphProgress {
   reserved "uncited_count";
   int32 primary_count = 5;
   int32 filed_count = 6;
+  string graph_id = 7;
 }
 
-message ListSourceGraphProgressRequest {
+message ListEvidenceGraphProgressRequest {
   string project_dir = 1;
 }
 
-message ListSourceGraphProgressResponse {
-  repeated SourceGraphProgress rows = 1;
+message ListEvidenceGraphProgressResponse {
+  repeated EvidenceGraphProgress rows = 1;
 }
 
-message GetSourceGraphProgressRequest {
+message GetEvidenceGraphProgressRequest {
   string project_dir = 1;
-  string source_id = 2;
+  reserved 2;
+  reserved "source_id";
+  string graph_id = 3;
 }
 
-message GetSourceGraphProgressResponse {
-  SourceGraphProgress progress = 1;
+message GetEvidenceGraphProgressResponse {
+  EvidenceGraphProgress progress = 1;
 }
 
 enum DeleteImpactGate {
@@ -2029,6 +2269,7 @@ enum DeleteImpactGate {
   DELETE_IMPACT_GATE_EDGE_LOCKED = 4;
   DELETE_IMPACT_GATE_INFRA = 5;
   DELETE_IMPACT_GATE_ORIGIN_LOCKED = 6;
+  DELETE_IMPACT_GATE_LAST_GRAPH = 7;
 }
 
 message GetDeleteImpactRequest {

@@ -23,9 +23,9 @@ Packages: layer 1 is **value compare** (`core/valuecompare`), and layer 2 is **p
 | 1 | **Value comparison** | How do these two values relate? | This doc |
 | 2 | **Property comparison** | Do these two Subjects agree on one property? | This doc |
 | 3 | **Subject comparison** | How alike are these two Subjects on their own values? | Decided in shape (§ Layer 3) |
-| 4 | **Entity comparison** | Does this Subject belong with this entity? | Decided in shape (§ Entities): subject comparison against the entity's reconciled conclusion |
+| 4 | **Entity comparison** | Does this Subject belong with this entity? | Built in S11-11 (§ Entities): subject comparison against the entity's reconciled conclusion |
 | 5 | **Segment comparison** | Does this neighbor, through this bridge, line up? | Decided in shape (§ Segments) |
-| 6 | **Graph alignment** | Which handle is each Subject on the layer? | Decided in shape (§ Layer 6 procedure) |
+| 6 | **Graph alignment** | Which handle is each Subject on the layer? | Built in S11-16 (§ Layer 6 procedure) |
 
 Layers 1–3 are **discrete**: one thing against one thing. An entity is a group of Subjects, so comparing against one is one-to-many. Layer 4 turns that back into one-to-one by comparing against the group's conclusion.
 
@@ -53,7 +53,7 @@ type Result struct {
 }
 ```
 
-- **One entry point per value type** behind one interface. Name, date, text, term and integer each have a comparer. A value type with no comparer (subject, depiction) says so explicitly, and is never silently compared as 0.
+- **One entry point per value type** behind one interface. Name, date, text, term and integer each have a comparer. A value type with no comparer (subject) says so explicitly, and is never silently compared as 0.
 - **`Result` is the normalized part.** Every value type returns the same `Relation` set and a `Similarity` with a shared meaning (§ Normalizing). A caller can use `Result` without knowing the value type.
 - **`Detail` is the reasoning.** It is structured, with a shared shape across types and type-specific parts inside it (§ Detail).
 
@@ -171,7 +171,7 @@ type PartMatch struct {
 }
 ```
 
-- **`Cause` is a shared vocabulary of codes:** `exact`, `case`, `fold`, `alias`, `abbreviation`, `initial`, `spelling`, `precision`, `missing_part`, `overlap`, `gap`, `beyond_tolerance`, `generation_conflict`, `role` (words paired across part types), `below_minimum` (a pair close enough to be `Near` but under its type's minimum, so `Different`), `empty`, `phrase_only`, `no_match` (nothing in common), `too_long` (text with more words than the alignment may compare), `order` (text whose shared words are out of order), `unsupported` (no comparer, or two value types). UI copy, reason codes and labeler features are all keyed on these.
+- **`Cause` is a shared vocabulary of codes:** `exact`, `case`, `fold`, `alias`, `abbreviation`, `initial`, `spelling`, `precision`, `missing_part`, `overlap`, `gap`, `beyond_tolerance`, `generation_conflict`, `role` (words paired across part types), `below_minimum` (a pair close enough to be `Near` but under its type's minimum, so `Different`), `empty`, `phrase_only`, `no_match` (nothing in common), `too_long` (text with more words than the alignment may compare), `order` (text whose shared words are out of order), `unjudged` (two values the layer cannot relate, such as two different likeness images: the researcher judges them), `unsupported` (no comparer, or two value types). UI copy, reason codes and labeler features are all keyed on these.
 - **`Parts` explains the match.** Which words or ends paired is what the UI shows and what the labeler records as features.
 - **No strings to parse.** The display text is for showing; logic reads the codes.
 - **Echoes the callers' value refs.** Each value can carry an opaque ref (an Observation id) that the layers never read and `Detail` hands back, so the claim evidence view knows exactly which Observations spoke without the layers knowing about the catalog. Segment comparison does the same for a whole segment: bridge ends, role or term, and the neighbor's agreeing values.
@@ -281,7 +281,7 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 - **Registry-driven.** One registry defines every Subject type, its properties, and how each one counts in a Subject comparison. Layer 3 has the most levers of any comparison layer, and all of them live there.
 - **Comparisons that span properties are special cases, declared in the registry.** Two known ones:
   - an event's `date` against another's `start_date` + `end_date`, read as one period;
-  - a person's **sex at birth and gender, compared as one pair**: both sides' sex and gender values are pooled into one direct comparison, so a Subject recording only gender still meets an entity recording only sex at birth.
+  - a person's **sex at birth and gender, compared as one pair**: both sides' sex and gender values are pooled into one direct comparison, so a Subject recording only gender still meets an entity recording only sex at birth. The pool's `Terms` reads a gender term as the sex at birth term it names (`man` → `male`, `woman` → `female`); a gender with no entry (`non_binary`) is left out, never a conflict (S11-30).
 - **Useful whatever the size.** A Subject with three or four properties against an entity with four or five does happen, and the comparison should get full value from it. In practice most Subjects carry one or two properties, so its *effective* job will be mostly agreement plus ruling out the obvious (names nothing alike, different event types). That is an outcome of the weights, not a separate job. Relationships are not compared here; graph alignment does that, and it does most of the positive work.
 - **Agreement and amount of evidence are different.** Two people whose names match exactly, and two whose names *and* genders match, both agree perfectly, but the second has more points of connection and is the better match. One 0–1 number can't say both.
 
@@ -320,7 +320,8 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 **A segment** is two primary Subjects joined by a bridge: primary – bridge – primary. Segment comparison compares a segment on the layer with one in the research graph:
 - **The neighbor** by entity comparison (layer 4).
-- **The bridge** by Subject comparison on the bridge's own properties (role, relationship term, dates), plus direction: a parent maps to a parent, and a term and its inverse correspond with the ends swapped. This replaces exact signature equality (`corresponds`).
+- **The bridge** as a typed key: its role or relationship term in canonical direction, the end it is read from, and the event type on a participation. A term and its inverse correspond with the ends swapped. Its own properties (dates) are not compared: no golden needs them.
+- **Placement:** `Together` (the layer neighbor is placed on this research neighbor), `Apart` (placed elsewhere) or `Unplaced` (not placed yet: entity compare on the neighbor decides, with causes `unplaced_differs` and `unplaced_unsure`).
 - **Output:** outcome (match, partial, conflict, unknown), similarity, evidence, detail. No walking, no decisions.
 
 **A segment behaves like a property whose value is a neighbor,** with the same cardinality rule as property comparison:
@@ -342,12 +343,14 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 **Decided (2026-10-17).** A pair is compared only when something cheap put it forward: a shared shortlist key, or a link to an accepted pair. Nothing is compared just because it exists. A Source with 100 Subjects stays at a few thousand pure comparisons, not hundreds of thousands. Terms are in § Vocabulary.
 
-1. **Shortlist.** For each Subject, look up research handles that share a shortlist key. Keys are declared per kind in the registry and built with value compare's `Key`, so shortlisting and comparison agree on "the same". Examples: person, name words (not initials); event, type + year bucket within tolerance; place, toponym. The index is one key → handles map per kind on the in-memory catalog graph (`graphcache`), built once and dropped with a handle commit, like the stats. Guarantee: shortlisting never misses a pair value compare would call `Same` or `Equivalent` (aliases share a key).
+1. **Shortlist.** For each Subject, look up research handles that share a shortlist key. Keys are declared per kind in the registry and built with value compare's `Key`, so shortlisting and comparison agree on "the same". Examples: person, name words (not initials); event, type + year bucket within tolerance; place, toponym words. The index is one key → handles map per kind on the in-memory catalog graph (`graphcache`), built once and dropped with a handle commit, like the stats. Promote reads through the same cache: a Source's layer, member values and each Subject's ranked candidates (the candidates memo) are memoized on its loaded graph, and handle profiles live as long as the index; a commit, a vocabulary change or new alias tables drops them. Guarantee: shortlisting never misses a pair value compare would call `Same` or `Equivalent` (aliases share a key). **Built in S11-15** (`core/shortlist`): word keys for person names and toponyms, type and year bucket for events; seeding reads it, the walk from S11-16.
 2. **Score and keep the top K.** Entity comparison (layer 4) on shortlisted handles; keep the best K per Subject (registry, about 5). Nominated handles skip shortlisting.
 3. **One queue.** Every candidate enters one best-first queue at the start, scored on its properties. Anchors (decided rows, already-promoted Subjects) add segment evidence to their neighbors' entries. There is no separate fallback pass and no second walk: an isolated Subject is a candidate that never gets link support. **The answer does not depend on where the walk starts.**
 4. **Accept, then compare segments around the pair only.** Pop the best pair; accept it if it clears the accept bar and keeps one-to-one. On accept, run segment comparison (layer 5) for each layer neighbor of the Subject against each corresponding research neighbor of the handle: degree × degree, a handful. Re-score and re-queue what changed; skip stale queue entries by version.
 5. **Settle dirty pairs.** A pair is dirty when a neighbor was placed, moved or released after it was scored. When the queue empties, re-score only dirty pairs. A pair that falls under the bar, or that a rival beats by the settle margin, is released and re-queued, which makes its neighbors dirty. Changes ripple only as far as they reach. A round cap is the safety net. This replaces today's refinement loop (`refineOneHop`), which re-scores everything each round. Each move has a reason ("Alice moved because Gracie was placed"), which feeds the page's "updated because…" mark.
-6. **Remember results across re-runs: last, and only if a test shows it's needed.** Layers 1–4 are pure in (Subject values, handle values), and a decision changes placements, not values, so their results could be memoized while the Promote page is open. This is the final step of the plan, gated by a performance test on a large Source. No pre-optimizing: if the test passes without it, it isn't built. If built, an invariant checks that cached and uncached runs give identical proposals.
+6. **Remember results across re-runs: last, and only if a test shows it's needed.** Layers 1–4 are pure in (Subject values, handle values), and a decision changes placements, not values, so their results could be memoized while the Promote page is open. This is the final step of the plan, gated by a performance test on a large Source. No pre-optimizing: if the test passes without it, it isn't built. If built, an invariant checks that cached and uncached runs give identical proposals. Built in S11-21: each Subject's candidates are remembered across proposals; `memo matches a fresh run` and `TestCandidatesMemoFollowsCommits` are the invariant.
+
+**Built in S11-16.** `graphalign.Align(layer, canon, fixed, cfg)` is the procedure: the loader fills `Canon.Candidates` through `graphalign.Candidates` (similarity at least `MinSimilarity`, the best `TopK`, every tie at the cutoff up to `TieCap`); `place` nominates the handles a placed pair's links point at (at most `TopK` plus ties, capped at `TieCap`, ranked as `Candidates` ranks, at any similarity (S11-21)) and marks placed neighbors dirty; `settle` re-scores only dirty pairs and releases a pair under the bar or led by a free rival by the settle margin, at most `SettleRounds` times. A link whose neighbor is not placed yet is segment compare's `Unplaced`. Rows carry `Flags.Contested` and `Row.Move` with the move reasons `neighbor_placed`, `neighbor_moved` and `neighbor_released`; S11-17 sends both on `PromoteGraphAlignmentRow` (`contested`, `move_reason`, `move_neighbor_subject_id`); S11-18 shows them.
 
 **Registry knobs this adds:** shortlist keys per kind, K, the accept bar, the settle margin and round cap.
 
@@ -370,19 +373,19 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 ### Lifespan: a derived property for people
 
-**Decided (2026-10-16): lifespan applies to people only.** Person matching is the chief job, and events and places differ enough that a lifespan wouldn't help them. Dates on a person's neighbors constrain each other. An entity that died before the Subject was born is not that Subject, even when neither side has the other's event.
+**Decided (2026-10-16): lifespan applies to people only.** Person matching is the chief job, and events and places differ enough that a lifespan wouldn't help them. The dates of the events a person takes part in constrain each other. An entity that died before the Subject was born is not that Subject, even when neither side has the other's event.
 
-- **The subject profile builder derives a lifespan** for a person Subject or person entity from its **direct** neighbors' dates, by registry rules keyed on bridge type. For example:
-  - subject of a birth at D: born at D;
-  - subject of a death at D: died by D;
-  - subject of a marriage at D: alive, roughly 14 or older;
-  - parent of someone born at D: born about 12–60 years earlier (narrower for mothers);
-  - residence at D: alive at D.
-
-  Maximum lifespan, minimum and maximum parent ages are registry numbers.
-- **Subject comparison compares the lifespans** as a registry-declared special case for people, using value compare's date relations. `Different` (impossible together: died before born, or a 140-year span) is a conflict. `Overlaps` or `Contains` is consistent.
+- **Decided (2026-10-18): a timeline, not per-bridge rules.** The profile builder lays every dated event a person takes part in on one line, any event type and any role. Its **span** runs from the first dated event to the last. Its **window** starts at the person's own birth or, with none, `MaxYears` before the first dated event, and ends at the person's own death or burial or, with none, `MaxYears` after the last. A side whose own events fall outside its own window has no lifespan. Age rules (marriage, parents) are dropped: the lifespan guides matching and is not an authority.
+- **Subject comparison checks each side's span against the other side's window** as a registry-declared special case for people, using value compare's date relations. `Different` either way is a conflict (died 1840 against born 1850; born 1850 against died 1990; resided 1950 against died 1900). Anything else, `Near` included, is consistent.
 - **Weighted as a conflict detector:** large conflict penalty, near-zero agree weight, because the dates it reads are already counted through their own segments.
-- **Bounded by construction:** rules read direct neighbors only, so nothing recurses across the tree. Both sides' windows can be built before alignment, once each. Two-hop rules (a grandchild's birth) would be explicit registry entries, later if ever.
+- **Bounded by construction:** the builder reads only the person's own events, so nothing recurses across the tree. Both sides' lifespans can be built before alignment, once each.
+
+**Built in S11-12.** `subjectprofile.Build` and `ForSubject` take the person's life events (event type, role, dates) and the registry's `subject.Lifespans` for the kind, and add two derived values, `lifespan` (the window) and `lifespan_span`. `subjectcompare.Compare` scores the `lifespan` lead from both directions: a conflict loses `subject.Weights.person.lifespan.Conflict`, consistent lifespans earn its `Agree`.
+
+**Matching signal only.** The lifespan is built for matching and ranking suggestions: `subjectprofile.Build` and `ForSubject` add the window and the span to the side's values and return nothing else, and the claim evidence neither shows nor reports it.
+
+**Built in S11-14.** `segmentcompare.Key(link, terms)` reads a bridge as a `vocabkey.BridgeKey`, and `Corresponds` is the one correspondence rule. `segmentcompare.Compare(a, b, placed, own, metas, rules, subject, value)` compares one layer segment with one research segment; `placed` is `Together` (the layer neighbor is placed on this research neighbor) or `Apart` (placed elsewhere). A one-cardinality link placed apart conflicts; every other link is unknown. Causes: `not_corresponding`, `gated`, `placed_apart`.
+
 
 ## Entities: compare against the conclusion
 
@@ -399,13 +402,17 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 | Reconciled value | In the profile |
 |---|---|
-| The concluded value (several when tied leaders show together, or when the property is multi-valued) | positive |
-| A value the researcher denied | negative |
+| A displayed value (several when tied leaders show together, or when the property is multi-valued) | positive |
+| A value a stronger negative Observation denied (reason `denied`) | negative |
 | Outvoted, weak, provisional | left out |
 
 **The profile is strict (decided 2026-10-16).** Only the conclusion goes in. An outvoted value is, by the group's own judgment, not true. A real alternate, such as a maiden name, belongs in the conclusion: the auto-reconciler flags it, or the researcher records a Reconciliation Claim. Maiden names are not built yet, but that is the intended path. If a true value is missing from the conclusion, that is a reconciliation fix, not a matching rule. A single name mismatch is also weighed alongside sex, dates, relationships and the rest of the graph above this layer, so it doesn't decide a match alone.
 
 **The profile builder is its own package:** `core/subjectprofile`, with `subjectprofile.Build`. It turns reconciler output into a Subject-shaped profile and compares nothing.
+
+**Built in S11-11.** `subjectprofile.Build(entity, metas, rules, opts)` reads each Property's auto-reconciled values: values the reconciler displays become positives, values with reason `denied` negatives, and the rest are left out. A Property with nothing left is absent. The output is `subjectcompare.Values`, so entity compare is `Build` then `subjectcompare.Compare`, and entity against entity is `Compare` on two profiles. `Options.Excluding` runs `autoreconcile.Reconcile` again on each Property those members recorded, without their candidates. `subjectprofile.ForSubject` builds a plain Subject's side from its own Observations through the same conversion. A negative Observation that denies no positive value leaves no reconciled value, so it is not in the profile. Reconciliation Claims, when they ship, are laid over the profile as a replacing list.
+
+**Migrated in S11-13.** Promote scores every candidate with entity compare. `promotealign` builds each Source Subject's side with `ForSubject` from the Source's own Observations and life events, and each handle's with `Build` from the cache and its participations, once per proposal; `graphalign` runs `subjectcompare.Compare` for every pair it scores, the duplicate-New check included. A handle is a candidate when its own properties reach the weak band (`graphalign.Candidates`, user 2026-10-18). The lifespan counts but is not shown until S11-20. `core/match` and `core/database/matching` are deleted.
 
 ## Frequency
 
@@ -421,6 +428,8 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 So every property weight is a plain registry number. The labeler can fit them later. Remove `Stats.ValueFreq`, the `m` / `u` priors (`MPrior`, `UPrior`), the frequency scales and their lift to the accept bar. The toponym agreement bonus existed to work around the frequency weight; re-set it as a plain weight if still needed.
 
+**Built in S11-24.** Promote's walk scores every property on a plain weight: 2 per value type, and name, sex, gender and toponym on their `subject.Weights`. `Stats.ValueFreq`, the priors and the lift are gone.
+
 ## Match registry
 
 **Decided (2026-10-17): one registry package, `core/matchregistry`, for every matching tunable.** Today the numbers are spread over `core/match/registry.go`, `core/graphalign/registry.go`, `promotealign/canon.go` (`seedCandidateLimit`), `match/words.go` (`foldOnly`) and `autoreconcile/spelling.go` (`SpellingFloor`, `SpellingShortMin`; moved to `core/valuecompare` and `core/matchregistry` in S11-02). Two weight sets exist for the same property (`Rank`'s name 10, Promote's 2.5), and some keys are pipe-joined strings.
@@ -433,11 +442,11 @@ So every property weight is a plain registry number. The labeler can fit them la
 | `subject.go` | Per Subject type and property: agree weight, conflict penalty; pairs compared together (sex with gender, `date` with `start_date` / `end_date`); lifespan rules and constants |
 | `segment.go` | Bridge cardinality (birth and death are one), neighbor credit, link support |
 | `alignment.go` | Shortlist keys per kind, K, tie cap, accept bar, band cutoffs, settle margin and round cap |
-| `evidence.go` | Claim evidence policy: which relations start checked or are pinnable, each kind's defining properties (event: `event_type`) |
+| `evidence.go` | Claim evidence policy: which relations start checked, each kind's defining properties (event: `event_type`) |
 
 **Rules:**
 - **Each layer takes its own section as an argument** (rule 5). Tests override it without editing the defaults.
-- **Typed keys,** not pipe-joined strings: `BridgeKey{Kind, Role, NeighborType, End}`, `PropertyKey`, `SubjectType`. A misspelled key fails to compile.
+- **Typed keys,** not pipe-joined strings: `BridgeKey{Type, Term, End, EventType}`, `PropertyKey`, `SubjectType`. A misspelled key fails to compile.
 - **Catalog data is passed in at runtime,** never copied: alias tables, stored name patterns. Their install seeds stay where they are.
 - **Data model facts stay in the catalog and vocabulary** (property cardinality, neutral / directed / inverse terms, bridge kinds). The registry refers to them by key. Bridge cardinality (a person has one birth) is different: it's a matching rule declared in the registry's segment section.
 - **The reconciler keeps its own numbers** (`MinMajoritySupport`); it imports the spelling floor from value compare.
@@ -459,13 +468,13 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 | Layer | Consumers today, once moved | Future consumers (`docs/ideas/`) |
 |---|---|---|
 | 1 value compare | Promote, `Rank`, the reconciler's grouping and pins, place-chain date windows (`conclusionheaders`) | Term dedupe ("godfather" vs "god-father", `term-management.md`), gazetteer lookup, Daitch–Mokotoff tier, international names |
-| 2 property compare | Promote sheet exhibits (replacing `pairExhibits`), reconciler checks | Whether provisional values count (`possible-values.md`) |
+| 2 property compare | Promote's claim evidence (`core/claimevidence`), reconciler checks | Whether provisional values count (`possible-values.md`) |
 | 3 subject compare | Duplicate New rows (`alikeNew`), merge hints (entity vs entity = two profiles) | Gazetteer place matching, duplicate Subjects while entering a Source |
-| 4 entity compare | Promote candidates, Subject suggestions (`matching.ForSubject`) | Weak-claim review (`identity-claim-review.md`), share-package import (`share-packages.md`) |
+| 4 entity compare | Promote candidates (S11-13) | Weak-claim review (`identity-claim-review.md`), share-package import (`share-packages.md`) |
 
 **Small changes that widen reach:**
 - **A normalized key per value type** beside `Compare`: `valuecompare.Key(v, level)`, where `level` is `Same` or `Equivalent`. Two values have the same key exactly when `Compare` says that relation. One function then serves reconciler grouping, search index dedupe, term dedupe and sort-independent equality, instead of the six text rules there are today.
-- **Leave-one-out profiles:** `subjectprofile.Build(entity, Excluding(member))`. "Does this member still fit the rest?" is the weak-claim review, and costs one option.
+- **Leave-one-out profiles:** `subjectprofile.Build(entity, metas, rules, Options{Excluding: members})`. "Does this member still fit the rest?" is the weak-claim review, and costs one option.
 - **Profiles on both sides:** because a profile is Subject-shaped, entity-vs-entity (merge hints) is layer 3 on two profiles, with no new code.
 - **The date window primitives** (`Window` with `Overlaps`, `Contains`, `Intersect`) moved into value compare in S11-04, with `AboutEnds` and `EndsWindow`; `DateBounds` and `WindowOfDate` became `valuecompare.DateWindow`, and `PeriodWindow` and `LinkMembership` moved to `conclusionheaders` on it, in S11-06, so place chains and reconciliation use the same day-precision rules as matching.
 
@@ -475,9 +484,10 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 |---|---|
 | `autoreconcile` `textKey`, `termKey`, `dateKey`, `subsumes` / `partFits`, `IsInitial`, `SpellingSimilarity`, `EditDistance`, `NormalizeForm`, `DateEnds` and windows (`DateEnds` and windows moved in S11-04) | Value compare (the reconciler imports it) — done in S11-06 |
 | `autoreconcile.Compatible` | Value compare's relation, under the reconciler's own grouping policy (rule 7) — done in S11-06 |
-| `promotealign.pairExhibits` (its own pairing; ignores negatives and cardinality) | Property compare's speaking pair |
-| `match/pairs.go` leaders and weighting (`weigh`, `pairValues`) | The strict profile; negatives and cardinality move to property compare |
-| `graphalign` `alikeNew`, `pairNode` (property part) | Subject compare |
+| `autoreconcile` `moduleFor`'s private depiction key (`idKey` on the image File) | `valuecompare.Key` on the depiction comparer: the same image File is the same value — done in S11-32 |
+| `promotealign.pairExhibits` (its own pairing; ignores negatives and cardinality) | Property compare's speaking pair — done in S11-25 |
+| `match/pairs.go` leaders and weighting (`weigh`, `pairValues`) | The strict profile; negatives and cardinality move to property compare — done in S11-13 |
+| `graphalign` `alikeNew`, `pairNode` (property part) | Subject compare — done in S11-13 |
 | `conclusionheaders` `laterStart` / `earlierEnd` (year only, while reconciliation uses days) | Value compare's date windows |
 | ~~`autoreconciler.hasValue`~~ — done in S10-52: `autoreconcile.Carries` | One function |
 | `Stats.ValueFreq`, `countNameWords` | Removed (frequency descoped) |
@@ -489,7 +499,7 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 
 **Found in passing (fixed in this spike):**
 - `match.indexAliases` doesn't normalize alias tokens. That's latent: only the lowercase product seed writes tables today. It matters once user or plugin tables exist; `Key` fixes it.
-- Text equality disagreed across six places (reconciler, match, search scoring, FTS, header sort, frequency stats). After S11-07 the reconciler, search scoring and the term duplicate check share `Key` (`valuecompare.TextKey`), and `core/match` goes in S11-13. FTS and the header sort (`SortKey`, ordering only) keep their own rules on purpose.
+- Text equality disagreed across six places (reconciler, match, search scoring, FTS, header sort, frequency stats). After S11-07 the reconciler, search scoring and the term duplicate check share `Key` (`valuecompare.TextKey`), and `core/match` went in S11-13. FTS and the header sort (`SortKey`, ordering only) keep their own rules on purpose.
 
 ## What moves where in today's code
 
@@ -518,7 +528,7 @@ Flow: shortlist or nominate → score → keep the top K as candidates → accep
 ## Decided on 2026-10-17
 
 - **Neighbor credit travels one hop.** Start with one walk and one hop; chains come from the walk. Revisit only if goldens show chains under-rewarded.
-- **Misspellings and shortlisting: start simple.** Accept the gap ("Robnis" vs "Robins" shares no exact key); links catch most of it. A coarse key (surname consonant skeleton) is the fallback if the sparse-data tier shows a problem.
+- **Misspellings and shortlisting: start simple.** Accept the gap ("Robnis" vs "Robins" shares no exact key); links catch most of it. A coarse key (surname consonant skeleton) is the fallback if the sparse-data tier shows a problem. S11-15 shipped the gap for toponyms too ("Provenance" vs "Provenanced"); review in the Spike 11 matching dogfood.
 - **Reconciler grouping rules** are the reconciler's own decision, designed in its PR. Today's disagreements to resolve there: `Montréal` / `Montreal` and `Jim` / `James` agree in matching but don't group or pin; `J. Robins` / `James Robins` groups but only scores partial. Decided in S11-06: `Same` groups, `Contains` folds, `Equivalent` never; text never folds; ABT is a range.
 
 ## Open questions

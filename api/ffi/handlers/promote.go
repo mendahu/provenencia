@@ -104,7 +104,7 @@ func ListClaimConfidenceGrades(in []byte) ([]byte, error) {
 		}
 		for _, g := range rows {
 			out.Grades = append(out.Grades, &engine.ClaimConfidenceGrade{
-				Id:        uuidString(g.ID),
+				Id:        database.UUIDString(g.ID),
 				Key:       g.Key,
 				Origin:    g.Origin,
 				Label:     g.Label,
@@ -124,13 +124,13 @@ func ListSubjectMemberships(in []byte) ([]byte, error) {
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, unmarshalErr("list_subject_memberships", err)
 	}
-	sourceID, err := parseID(req.GetSourceId())
+	graphID, err := parseID(req.GetGraphId())
 	if err != nil {
 		return nil, err
 	}
 	var out *engine.ListSubjectMembershipsResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		sg, err := c.Graph().Source(sourceID)
+		eg, err := c.Graph().EvidenceGraph(graphID)
 		if err != nil {
 			return err
 		}
@@ -138,15 +138,15 @@ func ListSubjectMemberships(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		rows, err := membershipsFromSource(c.Graph(), sg, namePropertyID(props))
+		rows, err := membershipsFromGraph(c.Graph(), eg, namePropertyID(props))
 		if err != nil {
 			return err
 		}
 		out = &engine.ListSubjectMembershipsResponse{}
 		for _, m := range rows {
 			sm := &engine.SubjectMembership{
-				SubjectId: uuidString(m.SubjectID),
-				ClaimId:   uuidString(m.ClaimID),
+				SubjectId: database.UUIDString(m.SubjectID),
+				ClaimId:   database.UUIDString(m.ClaimID),
 				Entity:    canonicalEntityProto(m.Entity),
 				Kind:      m.Kind,
 			}
@@ -165,20 +165,20 @@ func ListSubjectMemberships(in []byte) ([]byte, error) {
 
 func canonicalEntityProto(e canonicalentities.Entity) *engine.CanonicalEntity {
 	return &engine.CanonicalEntity{
-		Id:            uuidString(e.ID),
+		Id:            database.UUIDString(e.ID),
 		Ref:           e.Ref,
-		SubjectTypeId: uuidString(e.SubjectTypeID),
+		SubjectTypeId: database.UUIDString(e.SubjectTypeID),
 		Label:         e.Label,
 	}
 }
 
 func identityClaimProto(c identityclaims.Claim) *engine.IdentityClaim {
 	return &engine.IdentityClaim{
-		Id:                uuidString(c.ID),
-		SubjectId:         uuidString(c.SubjectID),
-		EntityId:          uuidString(c.EntityID),
+		Id:                database.UUIDString(c.ID),
+		SubjectId:         database.UUIDString(c.SubjectID),
+		EntityId:          database.UUIDString(c.EntityID),
 		Status:            c.Status,
-		ConfidenceGradeId: uuidString(c.ConfidenceGradeID),
+		ConfidenceGradeId: database.UUIDString(c.ConfidenceGradeID),
 		Argument:          c.Argument,
 	}
 }

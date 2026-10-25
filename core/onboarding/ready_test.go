@@ -7,10 +7,12 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -269,4 +271,23 @@ func runSourceTypeDelete(c *database.Catalog, userID, id []byte) error {
 			return struct{}{}, changes, err
 		})
 	return err
+}
+
+func TestOpenCatalogMintsGraphRefs(t *testing.T) {
+	parent := t.TempDir()
+	c, err := createCatalog(parent, "graphs.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := c.Dir()
+	sourceID := evidencegraphstest.SeedRefless(t, c)
+
+	reopened, err := OpenCatalog(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reopened.Close()
+	if got := evidencegraphstest.SoleGraph(t, reopened, sourceID).Ref; !ref.Valid(got) {
+		t.Fatalf("graph ref %q", got)
+	}
 }

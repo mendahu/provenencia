@@ -12,6 +12,7 @@ import (
 	"sort"
 
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/depictionvalue"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 )
@@ -78,6 +79,9 @@ const (
 	CauseOrder Cause = "order"
 	// CauseRole: words paired across part types (a surname against a given name).
 	CauseRole Cause = "role"
+	// CauseUnjudged: two values the layer cannot relate: the researcher judges
+	// them.
+	CauseUnjudged Cause = "unjudged"
 	// CauseUnsupported: no comparer for the type, or two value types.
 	CauseUnsupported Cause = "unsupported"
 )
@@ -158,7 +162,9 @@ type Value struct {
 	Name        *namevalue.Value
 	NamePattern string
 	Date        *datevalue.Value
-	Ref         []byte
+	// Depiction is a likeness; only its ImageFileID is read.
+	Depiction *depictionvalue.Value
+	Ref       []byte
 }
 
 // comparer compares and keys the values of one value type.
@@ -174,6 +180,8 @@ var comparers = map[string]comparer{
 	propertymeta.ValueTypeInteger: integer{},
 	propertymeta.ValueTypeDate:    date{},
 	propertymeta.ValueTypeName:    name{},
+
+	propertymeta.ValueTypeDepiction: depiction{},
 }
 
 // Compare relates a to b under rules. Values of different types, and types

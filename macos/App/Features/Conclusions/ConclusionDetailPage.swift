@@ -241,7 +241,6 @@ private struct ConclusionDetailLikenessSection: View {
     @FocusState private var focusedID: String?
 
     private static let column: CGFloat = 120
-    private static let crop: CGFloat = 96
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -267,14 +266,12 @@ private struct ConclusionDetailLikenessSection: View {
 
     private func tileView(_ tile: ConclusionDetailLikeness) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space3) {
-            CachedThumbnail(
+            LikenessTileView(
                 projectDir: projectDir,
                 relPath: tile.imageRelPath,
-                size: Self.crop,
-                fallbackMark: .subjectPerson
-            )
-            .accessibilityHidden(true)
-            .overlay {
+                caption: tile.sourceTitle,
+                captionWidth: Self.column
+            ) {
                 Button {
                     navigation.go(to: tile.location)
                 } label: {
@@ -289,14 +286,6 @@ private struct ConclusionDetailLikenessSection: View {
                 .accessibilityLabel(L10n.Conclusions.likenessTileLabel(tile.sourceTitle))
                 .accessibilityIdentifier("persons.detail.likeness.\(tile.id)")
             }
-            Text(verbatim: tile.sourceTitle)
-                .font(PVFont.body(size: PVTypeScale.caption))
-                .foregroundStyle(PVColor.textMuted)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(maxWidth: Self.column, alignment: .leading)
-                .help(Text(verbatim: tile.sourceTitle))
-                .accessibilityHidden(true)
             if let portrait {
                 if tile.isPortrait {
                     PVBadge(L10n.Conclusions.portraitBadge, tone: .accent, icon: .photo)
@@ -362,9 +351,6 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
     let summary: (Content) -> Summary
     let portrait: ConclusionPortraitModel?
 
-    @State private var portraitMenu = PVContextMenuState()
-    @State private var portraitKeyboard = PVContextMenuKeyboard.inactive
-
     /// PDP-11: the menu exists only while the lead is not the earliest.
     private var showsPortraitMenu: Bool { portrait != nil && content.thumbnail.offersEarliest }
 
@@ -394,26 +380,6 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
             }
             .padding(.top, PVSpacing.space6)
         }
-        // Menu on the row (not the 120pt thumb) so the click origin shares
-        // the panel's coordinate space, as on the Source header.
-        .pvContextMenu(
-            $portraitMenu,
-            keyboard: $portraitKeyboard,
-            keyboardTitles: [L10n.string(L10n.Conclusions.useEarliestLikeness)]
-        ) {
-            PVContextMenuPanel(
-                title: L10n.Conclusions.portraitMenuTitle,
-                accessibilityIdentifier: "persons.detail.portrait.menu"
-            ) {
-                PVContextMenuItem(
-                    L10n.Conclusions.useEarliestLikeness,
-                    index: 0,
-                    accessibilityIdentifier: "persons.detail.portrait.useEarliest"
-                ) {
-                    Task { await portrait?.useEarliest() }
-                }
-            }
-        }
     }
 
     @ViewBuilder
@@ -429,12 +395,20 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
         )
         if showsPortraitMenu {
             thumb
-                .pvContextMenuTrigger($portraitMenu)
+                .pvRightClickMenu(
+                    title: L10n.Conclusions.portraitMenuTitle,
+                    accessibilityIdentifier: "persons.detail.portrait.menu",
+                    items: [
+                        PVActionMenuItem(
+                            title: L10n.Conclusions.useEarliestLikeness,
+                            accessibilityIdentifier: "persons.detail.portrait.useEarliest"
+                        ) {
+                            Task { await portrait?.useEarliest() }
+                        },
+                    ]
+                )
                 .help(L10n.string(L10n.Conclusions.portraitMenuHint))
                 .accessibilityHint(L10n.string(L10n.Conclusions.portraitMenuHint))
-                .accessibilityAction(named: Text(L10n.Conclusions.useEarliestLikeness)) {
-                    Task { await portrait?.useEarliest() }
-                }
                 .accessibilityIdentifier("persons.detail.portrait")
         } else {
             thumb
@@ -460,6 +434,51 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
                 .font(PVFont.mono(size: PVTypeScale.h1, weight: PVFontWeight.medium))
                 .foregroundStyle(PVColor.textDisplay)
                 .accessibilityAddTraits(.isHeader)
+        }
+    }
+}
+
+/// One likeness: its crop over a one-line muted caption. The gallery passes the button that opens
+/// the Citation as `overlay` (drawn over the crop only).
+private struct LikenessTileView<Overlay: View>: View {
+    let projectDir: String
+    let relPath: String
+    let caption: String
+    let captionWidth: CGFloat
+    private let overlay: Overlay
+
+    init(
+        projectDir: String,
+        relPath: String,
+        caption: String,
+        captionWidth: CGFloat,
+        @ViewBuilder overlay: () -> Overlay
+    ) {
+        self.projectDir = projectDir
+        self.relPath = relPath
+        self.caption = caption
+        self.captionWidth = captionWidth
+        self.overlay = overlay()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space3) {
+            CachedThumbnail(
+                projectDir: projectDir,
+                relPath: relPath,
+                size: CachedThumbnail.likenessCrop,
+                fallbackMark: .subjectPerson
+            )
+            .accessibilityHidden(true)
+            .overlay { overlay }
+            Text(verbatim: caption)
+                .font(PVFont.body(size: PVTypeScale.caption))
+                .foregroundStyle(PVColor.textMuted)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: captionWidth, alignment: .leading)
+                .help(Text(verbatim: caption))
+                .accessibilityHidden(true)
         }
     }
 }

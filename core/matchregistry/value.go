@@ -14,21 +14,21 @@ func defaultValue() valuecompare.Rules {
 			FuzzyFloor: 0.8,
 			// the reconciler's old short-word minimum: Ann ~ Anne, Jon ~ John.
 			ShortVariantMinLength: 3,
-			// match DefaultWordRules.InitialCredit: an initial against a word
+			// carried from match DefaultWordRules.InitialCredit: an initial against a word
 			// it begins.
 			InitialCredit: 0.5,
-			// match.AliasCredit: a nickname or abbreviation table hit.
+			// carried from match.AliasCredit: a nickname or abbreviation table hit.
 			AliasCredit: 0.98,
-			// match.MaxExactPairing: longer word lists pair greedily.
+			// carried from match.MaxExactPairing: longer word lists pair greedily.
 			MaxExactPairing: 12,
-			// match foldOnly: a match that exists only after folding.
+			// carried from match foldOnly: a match that exists only after folding.
 			FoldCredit: 0.95,
 			// An estimate: a word this long is a run-on, not a spelling variant.
 			MaxSpellingLength: 32,
-			// match.SpacedParticles. A typed surname prefix (van, de) is a
+			// carried from match.SpacedParticles. A typed surname prefix (van, de) is a
 			// part role, not a particle.
 			Particles: []string{"o", "mc", "mac", "st", "d", "fitz"},
-			// match.LetterFolds: letters that survive accent stripping.
+			// carried from match.LetterFolds: letters that survive accent stripping.
 			Folds: map[rune]string{
 				'ß': "ss",
 				'æ': "ae",
@@ -41,9 +41,9 @@ func defaultValue() valuecompare.Rules {
 			},
 		},
 		Names: valuecompare.NameRules{
-			// graphalign's name PropertyScale.Floor.
+			// carried from graphalign's name scale floor.
 			NearMinimum: 0.75,
-			// match.DefaultNames affinities.
+			// carried from match.DefaultNames affinities.
 			UntypedAffinity: 0.8,
 			NickAffinity:    0.9,
 			CrossRole:       0.5,
@@ -53,7 +53,7 @@ func defaultValue() valuecompare.Rules {
 			// An estimate: a Jr. on one side only says about as much as a
 			// middle name (OtherGiven 0.5).
 			Generation: 0.5,
-			// match.WesternNamePattern: given names then surname, with
+			// carried from match.WesternNamePattern: given names then surname, with
 			// GEDCOM-style part types. Every product part type
 			// (namevalue.PartTypes) must have a role.
 			Western: valuecompare.NamePattern{
@@ -68,7 +68,7 @@ func defaultValue() valuecompare.Rules {
 					"":                              valuecompare.RoleUntyped,
 				},
 				// What a matched word of each role earns and an unmatched one
-				// costs: match.WesternNamePattern.Weights.
+				// costs; carried from match.WesternNamePattern.Weights.
 				Weights: valuecompare.NameWeights{
 					Family:     1.5,
 					FirstGiven: 1,
@@ -78,31 +78,31 @@ func defaultValue() valuecompare.Rules {
 				},
 			},
 		},
-		// match.DefaultText.Partial; MaxWords is an estimate, well above a toponym or
+		// carried from match.DefaultText.Partial; MaxWords is an estimate, well above a toponym or
 		// a short remark.
 		Text: valuecompare.TextRules{Partial: 0.7, MaxWords: 64},
-		// match.DefaultIntegers.Tolerance: any difference disagrees.
+		// carried from match.DefaultIntegers.Tolerance: any difference disagrees.
 		Integers: valuecompare.IntegerRules{Tolerance: 0},
 		Dates: valuecompare.DateRules{
-			// DefaultDates.Tolerance: civil years apart that still resemble.
+			// carried from DefaultDates.Tolerance: civil years apart that still resemble.
 			Tolerance: 2,
-			// graphalign ValueTypeScale["date"].Floor: no floor.
+			// carried from graphalign's date scale: no floor.
 			NearMinimum: 0,
-			// DefaultDates.MissingDay: same month, a day missing on one side.
+			// carried from DefaultDates.MissingDay: same month, a day missing on one side.
 			MissingDay: 0.9,
-			// DefaultDates.MissingMonth: a month missing on one side.
+			// carried from DefaultDates.MissingMonth: a month missing on one side.
 			MissingMonth: 0.8,
-			// DefaultDates.OtherDay: same month, different known days.
+			// carried from DefaultDates.OtherDay: same month, different known days.
 			OtherDay: 0.7,
-			// DefaultDates.OtherMonth: different known months.
+			// carried from DefaultDates.OtherMonth: different known months.
 			OtherMonth: 0.6,
-			// DefaultDates.YearsApartFrom: start of the fall-off across years.
+			// carried from DefaultDates.YearsApartFrom: start of the fall-off across years.
 			YearsApartFrom: 0.8,
-			// DefaultDates.SpanOneYear: a span of a year or less.
+			// carried from DefaultDates.SpanOneYear: a span of a year or less.
 			SpanOneYear: 0.8,
-			// DefaultDates.SpanPerExtraYear: less for each extra year of span.
+			// carried from DefaultDates.SpanPerExtraYear: less for each extra year of span.
 			SpanPerExtraYear: 0.05,
-			// DefaultDates.SpanFloor: lowest span similarity; open bounds.
+			// carried from DefaultDates.SpanFloor: lowest span similarity; open bounds.
 			SpanFloor: 0.2,
 			// An estimate: the design's ABT rule, one unit of the most precise
 			// part on each side.

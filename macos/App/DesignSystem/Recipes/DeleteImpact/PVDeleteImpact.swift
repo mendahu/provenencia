@@ -107,6 +107,8 @@ enum PVDeleteImpactCopy {
             return (L10n.DeleteImpact.gateOriginLockedTitle, L10n.string(L10n.DeleteImpact.gateOriginLockedBody))
         case .infra:
             return (L10n.DeleteImpact.gateInfraTitle, L10n.string(L10n.DeleteImpact.gateInfraBody))
+        case .lastGraph:
+            return (L10n.DeleteImpact.gateLastGraphTitle, L10n.string(L10n.DeleteImpact.gateLastGraphBody))
         }
     }
 
@@ -139,13 +141,6 @@ enum PVDeleteImpactControls {
 
     static func showsDestructiveAction(_ report: CatalogDeleteImpact) -> Bool {
         report.allowed
-    }
-
-    static func isExtraGate(_ gate: CatalogDeleteImpactGate) -> Bool {
-        switch gate {
-        case .ok, .inbound: false
-        case .notFound, .edgeLocked, .infra, .originLocked: true
-        }
     }
 
     @MainActor
@@ -361,7 +356,7 @@ extension View {
                 }
                 .accessibilityLabel(Text(verbatim: PVDeleteImpactCopy.summary(request.target, request.report)))
             }
-            .sheet(item: noticeItem) { request in
+            .pvSheet(item: noticeItem) { request in
                 PVDeleteImpactNotice(
                     target: request.target,
                     report: request.report,
@@ -432,11 +427,10 @@ enum PVDeleteImpactPreviewData {
     )
 
     static func loc(_ observationId: String) -> WorkspaceLocation {
-        WorkspaceLocation(
-            section: .sources,
+        .citationComposer(
             sourceId: "preview-source",
-            observationId: observationId,
-            sourceSurface: .citationComposer
+            graphId: "preview-graph",
+            observationId: observationId
         )
     }
 

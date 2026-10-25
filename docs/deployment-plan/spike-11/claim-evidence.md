@@ -1,6 +1,6 @@
 # Claim Evidence
 
-**Status:** requirements, being scoped (2026-10-17). Part of [Spike 11](README.md), after the matching algorithm is re-implemented ([`comparison-layers.md`](comparison-layers.md)). Today's model: [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §3 (assessment sheet) and §9 (pins).
+**Status:** requirements; the query is built in S11-19 (`core/claimevidence`, `promotealign.Evidence`), the RPC and Go-owned pins are built in S11-25 (2026-10-21), the likeness lines in S11-32 (its lifespan line was withdrawn in S11-20 ship round 11), and the sheet in S11-20 (2026-10-22), audited in S11-33 (2026-10-23). Part of [Spike 11](README.md), after the matching algorithm is re-implemented ([`comparison-layers.md`](comparison-layers.md)). Today's model: [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §3 (assessment sheet) and §9 (pins).
 
 ## Why
 
@@ -28,35 +28,31 @@ This is a different question from **"Why was this suggested?"**, which is matchi
 
 - **One line per member per property.** Five members with names give five name lines.
 - **Grouped by property, not by Subject** (decided 2026-10-17): a Name section, a Sex section, and so on. One-hop groups are their own sections (§ Evidence through relationships).
-- **Members with an identical value collapse into one line** (decided 2026-10-17): "The names match · 12 records", expandable to each member and its Source. Checking the line pins all of them; expanding lets the researcher uncheck one.
+- **Members with an identical value collapse into one line** (decided 2026-10-17): the line shows "Show 12 records" in its Source column, which expands to each member and its Source. Checking the line pins all of them; expanding lets the researcher uncheck one.
 - **No "select all".** Lines that match start checked; the researcher changes from there.
 - **Pairs compared together show as one section** (decided 2026-10-17): sex at birth with gender, and an event's `date` with `start_date` / `end_date`.
 - **What starts checked** (decided 2026-10-17):
 
-  | Relation | Shown | Pinnable | Starts checked |
-  |---|---|---|---|
-  | `Same`, `Equivalent` | yes | yes | yes |
-  | `Contains`, `Overlaps`, `Near` | yes | yes | **no** |
-  | `Different`, or a negative that contradicts | yes, as a disagreement | no | — |
-  | `Unknown` | no | — | — |
+  | Relation | Shown | Starts checked |
+  |---|---|---|
+  | `Same`, `Equivalent` | yes | yes |
+  | `Contains`, `Overlaps`, `Near` | yes | **no** |
+  | `Different`, or a negative that contradicts | yes, as a disagreement | **no** |
+  | `Unknown`, cause `unjudged` (two different likeness images) | yes, to judge by eye | **no** |
+  | `Unknown`, any other cause | no | — |
 
+  Every line, member and relationship can be pinned (S11-20 round 16, from the board's notes: a conflict starts unchecked and can still be pinned). Only the default check depends on the relation.
+
+- **Likenesses are judged by eye** (S11-32). Two likeness values are `Same` (`exact`) when they are the same image File and `Unknown` (`unjudged`) otherwise; the app never calls two different images the same face. `evidence.ByEye` lists the causes of an unknown line that is kept, never checked. The line carries the stored crop's path, not its region. Likeness has no weight in matching, so these lines never move a band.
+- **Sections follow the catalog's binding order** for the kind (`subject_type_properties.sort_order`, cached with the vocabulary): the person's `name`, `likeness`, `sex_at_birth`, `gender`, `interests` as seeded, then any property with no binding, by key. Reordering a type's bindings (`ReorderSubjectTypeProperties`) shows on the next open.
+- **The lifespan is a matching signal only.** It ranks suggestions (`subjectprofile`, `subjectcompare`) and is not a sheet line: the evidence carries no lifespan, on the wire or in the app (removed in S11-20 ship round 11, at the user's request; S11-32 had carried it).
 - **Each line names the member's Source,** so the researcher sees which record agrees.
 
 ### Wording
 
-The copy is overhauled so the screen says what it is for. Lines are sentences built from value compare's relation and `Detail.Cause`, never from a number. Draft wording, to be settled in the design brief:
+The copy is overhauled so the screen says what it is for. Lines are sentences built from value compare's relation and `Detail.Cause`, never from a number. Settled in [S11-D2](design/archive/S11-D2-evidence-sheet.md) (the copy table, ES-8) and built in S11-20 as `L10n.Promote.lineSentence`, which is the one place the sentences are written; this document keeps no English copy of them. A relationship is named by the connection that matched, read from the neighbor's side as the engine reports it: its Card header is "…they share <phrase> (<refs>)", where the phrase is the neighbor's part in the link ("a spouse", "a birth event", "a place within it") and the refs are the connected row's and its record's. It is not named by its neighbor ("Through <name>"). Every sentence is one whole translatable phrase, with no translated word spliced into another (S11-33).
 
-| Relation and cause | Line reads |
-|---|---|
-| `Same` | "The names match" / "The dates match" |
-| `Equivalent`, `fold` | "Same name, different spelling" |
-| `Equivalent`, `alias` | "Same name (nickname)" |
-| `Contains`, `precision` | "Same date, recorded less precisely" |
-| `Contains`, `missing_part` | "The name matches; a given name is missing" |
-| `Near` | "Similar name" / "Dates are close" |
-| `Different` | "The names differ" |
-
-**Requirement on value compare:** its cause codes must be rich enough to word every line in this table without reading the similarity number.
+**Requirement on value compare:** its cause codes must be rich enough to word every line without reading the similarity number.
 
 ### Writing pins
 
@@ -73,27 +69,29 @@ New chrome and copy: a Claude Design brief ([`add-design-brief`](../../../.agent
 - **Every bridge counts, on both sides, with no key relationships.** On the layer, every bridge the loader reads (participation, location, relationship, `part_of`, `succeeded_by`) gives a neighbor group. On the entity side, any bridge of any type between the handle's members and the neighbor's handle's members qualifies.
 - **The bridge type is never checked.** A spouse on the Source can pair with a member who is that person's *sibling* in another Source. Matching checks that (`corresponds`); the evidence view doesn't.
 - **The lines compare only the neighbor's own values** (her husband's name), never the relationship itself.
-- **The heading is "Through <name>"** (`promote.sheet.through`): no relationship, and no reason it matters.
+- **The heading was "Through <name>"** (`promote.sheet.through`, gone in S11-20): no relationship, and no reason it matters.
 
 **Decided (2026-10-17): the relationship is abstracted; the neighbor's properties are shown.**
 
 The researcher wants to say "these are the same person because they have a matching birth event", then check the evidence that the births really match. The plumbing that connects them is handled for them.
 
 - **Use segments.** A relationship section exists only when the Source segment (this Subject – bridge – neighbor) corresponds to a member segment (member – bridge – neighbor's member). Correspondence comes from segment comparison (layer 5): same bridge kind, role or term, and direction, with inverse terms (parent ↔ child). A spouse only meets a spouse. Every corresponding relationship counts, ordered core first (birth, death, parents and children, spouses), then the rest.
-- **The relationship is its own checkable line,** and it says what matched and why it counts: "They have a matching birth event", "They have a matching spouse: Robert Gates". Checking it pins the bundle below. It starts checked when the segment matches, and is pinnable but unchecked when the segment is partial. It works even when there is nothing under it to check: an event's place link, or two births with no dates (decided 2026-10-17).
+- **The relationship is its own checkable line,** and it says what matched and why it counts: "They have a matching birth event", "They have a matching spouse: Robert Gates". Checking it pins the bundle below. It starts checked when the segment matches, and is unchecked when the segment is partial. It works even when there is nothing under it to check: an event's place link, or two births with no dates (decided 2026-10-17).
 - **Abstracted (bundled, not shown):** everything that only connects the two, on both sides:
   - the bridge's two end Observations (who, and which event or person);
   - everything on the bridge itself: its role, its relationship type, any other bridge values;
   - the neighbor's **defining properties**, declared per kind in the registry. For an event that is `event_type`: "birth" is what the heading already says.
-- **Shown as checkable lines under it,** each with its own checkbox: the neighbor's other properties, exactly like the Subject's own property lines. Under "They have a matching birth event": the birth date lines. Under "They have a matching spouse": Robert's name, sex, and so on. Same rules as property lines: grouped by property, identical member values collapse into one line, matches start checked, partial matches pinnable and unchecked, disagreements shown and not pinnable.
+- **Shown as checkable lines under it,** each with its own checkbox: the neighbor's other properties, exactly like the Subject's own property lines. Under "They have a matching birth event": the birth date lines. Under "They have a matching spouse": Robert's name, sex, and so on. Same rules as property lines: grouped by property, identical member values collapse into one line, matches start checked, partial matches and disagreements start unchecked, and every line can be pinned.
 - **Registry rule, not code:** "a segment's bundle is all of its bridge's Observations plus the neighbor kind's defining properties". Event's defining property is `event_type`; adding one for another kind is one entry.
 
 ## Retires
 
+Done in S11-25:
+
 - `pairExhibits`, `comparerDiscount` and `exhibitCompatible` (`core/database/promotealign/exhibits.go`).
-- `attachExhibits` running inside every proposal read. `withRowLines` / `refLine` are replaced by the "why suggested" summary.
+- `attachExhibits` running inside every proposal read. `withRowLines` / `refLine` are replaced by the "why suggested" summary (S11-20).
 
 ## Open questions
 
-- **Where a bundle's pins land.** On the person's claim (with backfill onto each member's claim), as today. The neighbor event gets its own claim and pins from its own row; duplicates across claims are accepted on purpose (§9).
+- **Where a bundle's pins land.** On the person's claim (with backfill onto each member's claim), as today. The neighbor event gets its own claim and pins from its own row; duplicates across claims are accepted on purpose (§9). Answered for the schema by S11-19: `identity_claim_evidence` is keyed `(identity_claim_id, observation_id)` and stores no incoming-to-member pairing, so one incoming Observation pins against many members' Observations and no migration is needed.
 

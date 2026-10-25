@@ -23,33 +23,43 @@ type Graph struct {
 	kindOn  map[string]bool
 	kindSet map[string]map[string]bool
 
-	stats   any
-	statsOK bool
+	// matchIndex is what Promote derives from the whole catalog.
+	matchIndex   any
+	matchIndexOK bool
 
 	vocab   Vocabulary
 	vocabOK bool
 
 	// displays are finished header rows keyed by handle id. details are the
 	// conclusion-detail value memos for the same ids; a drop clears both.
-	// sources are loaded Evidence graphs keyed by source id.
+	// evidenceGraphs are loaded Evidence graphs keyed by graph id, each with
+	// the memos features derive from it, so a memo cannot outlive its graph.
+	// At most evidenceCap stay loaded; evidenceTick stamps their use order.
 	// labels is the vocabulary map the rows resolve at read time. alt, when
 	// set, is the querier a one-shot graph reads instead of db (a write transaction).
-	displays map[string]any
-	details  map[string]any
-	sources  map[string]SourceGraph
-	labels   any
-	labelsOK bool
-	alt      Querier
+	displays       map[string]any
+	details        map[string]any
+	evidenceGraphs map[string]*loadedEvidenceGraph
+	evidenceTick   uint64
+	evidenceCap    int
+	labels         any
+	labelsOK       bool
+	alt            Querier
 
 	// activity is last activity per scope type, then per scope id, loaded by
 	// the first Activity read of that type and patched by OnCommit.
 	activity map[string]map[string]effects.Activity
 
-	// aliases are abbreviation and nickname tables for this open catalog.
-	// They are not graph nodes: Drop leaves them. Closing the catalog drops
-	// them with this graph. namealiases owns the concrete slice.
-	aliases   any
-	aliasesOK bool
+	// aliasIndex is the built abbreviation and nickname index for this open
+	// catalog. It is not a graph node: Drop leaves it. Closing the catalog
+	// drops it with this graph. namealiases owns the concrete value.
+	aliasIndex   any
+	aliasIndexOK bool
+
+	// nameFormat is the catalog's default name format, warmed the same way.
+	// nameformats owns the concrete value.
+	nameFormat   any
+	nameFormatOK bool
 
 	entityTable string
 	claimTable  string
@@ -92,16 +102,19 @@ type Value struct {
 	Against     int
 }
 
-// Member is one accepted or provisional identity claim.
+// Member is one accepted or provisional identity claim. SourceID is the Source
+// and GraphID the Evidence graph the claimed Subject is on. A Subject never
+// changes Source or graph, and a commit that names the handle reloads the node.
 type Member struct {
 	SubjectID []byte
+	SourceID  []byte
+	GraphID   []byte
 	Accepted  bool
 }
 
 // Link is one association seen from this node. AssociationRef is the sort
 // key, then the neighbor's ref. FromEnd is true when this node is the
-// association's first endpoint. Directed and InverseKey are copied off the
-// term row at load; the edge signature is built later, at the feature edge.
+// association's first endpoint.
 type Link struct {
 	Neighbor                 []byte
 	NeighborRef              string
@@ -112,8 +125,6 @@ type Link struct {
 	DisambiguationPropertyID []byte
 	TermID                   []byte
 	TermKey                  string
-	InverseKey               string
-	Directed                 bool
 	NeighborTypeID           []byte
 	BridgeTypeKey            string
 	NeighborTypeKey          string
@@ -127,7 +138,7 @@ type Querier interface {
 
 // New returns an empty graph bound to db. Open and Create attach it and Listen.
 func New(db *sql.DB) *Graph {
-	g := &Graph{db: db}
+	g := &Graph{db: db, evidenceCap: maxEvidenceGraphs}
 	g.entityTable = mustTable(catalogmodel.KindCanonicalEntity)
 	g.claimTable = mustTable(catalogmodel.KindIdentityClaim)
 	g.valueTable = mustTableName("auto_reconciler_values")
@@ -153,26 +164,36 @@ func mustTableName(name string) string {
 	panic("graphcache: catalog model missing " + name)
 }
 
+// dropDerived empties what features derive from the graph and its vocabulary
+// and alias index: the Evidence graph memos and the match index.
+func (g *Graph) dropDerived() {
+	for _, e := range g.evidenceGraphs {
+		e.memos = nil
+	}
+	g.matchIndexOK = false
+	g.matchIndex = nil
+}
+
 func (g *Graph) clear() {
 	g.nodes = map[string]*Node{}
 	g.holders = map[string][][]byte{}
 	g.kinds = map[string][][]byte{}
 	g.kindOn = map[string]bool{}
 	g.kindSet = map[string]map[string]bool{}
-	g.statsOK = false
-	g.stats = nil
+	g.dropDerived()
 	g.vocabOK = false
 	g.vocab = Vocabulary{}
 	g.displays = map[string]any{}
 	g.details = map[string]any{}
-	g.sources = map[string]SourceGraph{}
+	g.evidenceGraphs = map[string]*loadedEvidenceGraph{}
 	g.labelsOK = false
 	g.labels = nil
 	g.activity = map[string]map[string]effects.Activity{}
-	// Alias tables stay. They follow the catalog connection, not a rebuild.
+	// The alias index and the name format stay. They follow the catalog connection,
+	// not a rebuild.
 }
 
-// Drop empties nodes, holders, kind indexes, and stats. The next read fills
+// Drop empties nodes, holders, kind indexes, and the match index. The next read fills
 // them. EnsureCatalog calls this after a rebuild, which does not go through Run.
 func (g *Graph) Drop() {
 	if g == nil {
@@ -235,50 +256,79 @@ func (g *Graph) Kind(typeID []byte) ([]*Node, error) {
 	return out, nil
 }
 
-// Stats returns the cached scan. A commit that names handles, and a structure
-// drop, clear it. A vocabulary-only write does not.
-func (g *Graph) Stats() (any, bool) {
-	if g == nil || !g.statsOK {
+// MatchIndex returns the match index: what Promote derives from the whole
+// catalog, stored in this slot by a feature. A commit that names handles, a
+// vocabulary commit, a structure drop and SetAliasIndex clear it: its keys
+// read term keys and metas as well as handles.
+func (g *Graph) MatchIndex() (any, bool) {
+	if g == nil || !g.matchIndexOK {
 		return nil, false
 	}
-	return g.stats, true
+	return g.matchIndex, true
 }
 
-// AliasTables returns the abbreviation and nickname tables warmed for this
-// open catalog. The bool is false until namealiases.Warm stores them,
-// including when the stored slice is empty.
-func (g *Graph) AliasTables() (any, bool) {
-	if g == nil || !g.aliasesOK {
+// AliasIndex returns the abbreviation and nickname index namealiases.Warm
+// built for this open catalog. The bool is false until Warm stores it,
+// including when the catalog has no alias rows.
+func (g *Graph) AliasIndex() (any, bool) {
+	if g == nil || !g.aliasIndexOK {
 		return nil, false
 	}
-	return g.aliases, true
+	return g.aliasIndex, true
 }
 
-// SetAliasTables stores abbreviation and nickname tables until the catalog
-// closes. A nil slice is a warm catalog with no rows. Drop does not clear this.
-func (g *Graph) SetAliasTables(tables any) {
+// SetAliasIndex stores the built alias index until the catalog closes. An
+// index built from no tables is a warm catalog with no rows. Drop does not
+// clear this. The match index and Evidence graph memos read the alias sets,
+// so a new index drops them. A stored index is shared, so readers treat it as
+// read-only.
+func (g *Graph) SetAliasIndex(index any) {
 	if g == nil {
 		return
 	}
-	g.aliases = tables
-	g.aliasesOK = true
+	g.dropDerived()
+	g.aliasIndex = index
+	g.aliasIndexOK = true
 }
 
-// SetStats stores a scan until the next handle commit or drop.
-func (g *Graph) SetStats(stats any) {
+// NameFormat returns the catalog's default name format warmed for this open
+// catalog. The bool is false until nameformats.Warm stores it.
+func (g *Graph) NameFormat() (any, bool) {
+	if g == nil || !g.nameFormatOK {
+		return nil, false
+	}
+	return g.nameFormat, true
+}
+
+// SetNameFormat stores the catalog's default name format until the catalog
+// closes. Drop does not clear it. The match index and Evidence graph memos read
+// the name format's part roles, so a new one drops them.
+func (g *Graph) SetNameFormat(v any) {
 	if g == nil {
 		return
 	}
-	g.stats = stats
-	g.statsOK = true
+	g.dropDerived()
+	g.nameFormat = v
+	g.nameFormatOK = true
 }
 
-// ResetStatsForTest drops the cached scan.
-func (g *Graph) ResetStatsForTest() {
+// SetMatchIndex stores the match index until the next handle commit,
+// vocabulary commit, alias index load or drop.
+func (g *Graph) SetMatchIndex(index any) {
 	if g == nil {
 		return
 	}
-	g.statsOK = false
+	g.matchIndex = index
+	g.matchIndexOK = true
+}
+
+// ResetMatchIndexForTest drops the match index.
+func (g *Graph) ResetMatchIndexForTest() {
+	if g == nil {
+		return
+	}
+	g.matchIndexOK = false
+	g.matchIndex = nil
 }
 
 // SetQueryCounterForTest counts queries this graph issues. Tests only.
@@ -287,6 +337,33 @@ func (g *Graph) SetQueryCounterForTest(fn func()) {
 		return
 	}
 	g.count = fn
+}
+
+// LoadedEvidenceGraphForTest reports whether an Evidence graph is loaded.
+func (g *Graph) LoadedEvidenceGraphForTest(graphID []byte) bool {
+	_, ok := g.evidenceGraphs[string(graphID)]
+	return ok
+}
+
+// SetEvidenceGraphCapForTest sets how many Evidence graphs stay loaded; n <= 0
+// restores the default. Tests only.
+func (g *Graph) SetEvidenceGraphCapForTest(n int) {
+	if g == nil {
+		return
+	}
+	if n <= 0 {
+		n = maxEvidenceGraphs
+	}
+	g.evidenceCap = n
+	g.evictEvidenceGraphs()
+}
+
+// LoadedEvidenceGraphCountForTest returns how many Evidence graphs are loaded.
+func (g *Graph) LoadedEvidenceGraphCountForTest() int {
+	if g == nil {
+		return 0
+	}
+	return len(g.evidenceGraphs)
 }
 
 // LoadedForTest reports whether id is in the node map.
@@ -306,6 +383,19 @@ func (g *Graph) CorruptRefForTest(id []byte) {
 	}
 	cp := *n
 	cp.Ref = n.Ref + "-corrupt"
+	g.nodes[string(id)] = &cp
+}
+
+// CorruptMemberSourceForTest replaces the Source of a loaded node's first
+// member so Verify can fail a test.
+func (g *Graph) CorruptMemberSourceForTest(id []byte) {
+	n := g.nodes[string(id)]
+	if n == nil || len(n.Members) == 0 {
+		return
+	}
+	cp := *n
+	cp.Members = append([]Member(nil), n.Members...)
+	cp.Members[0].SourceID = make([]byte, 16)
 	g.nodes[string(id)] = &cp
 }
 

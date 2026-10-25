@@ -8,14 +8,25 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// side is the values one Subject offers for a lead property: the lead's own,
-// then each pooled property's in list order, or, when the lead has a period
-// and the Subject has no positive lead value, the lead's own and the period
-// built from its start and end. It copies; it never appends to values.
-func side(kind vocabkey.SubjectType, lead vocabkey.PropertyKey, values Values, rules Rules) []propertycompare.Value {
+// Side is the values Compare reads for lead on one Subject: the lead's own,
+// its pooled properties' (terms mapped into the lead's vocabulary by the
+// pool's Terms), or, when the lead has a period and no positive value, the
+// period built from its start and end. It copies.
+func Side(kind vocabkey.SubjectType, lead vocabkey.PropertyKey, values Values, rules Rules) []propertycompare.Value {
 	out := slices.Clone(values[lead])
-	for _, with := range rules.Pools[kind][lead].With {
-		out = append(out, values[with]...)
+	pool := rules.Pools[kind][lead]
+	for _, with := range pool.With {
+		terms, mapped := pool.Terms[with]
+		for _, v := range values[with] {
+			if mapped && v.Term != "" {
+				t, ok := terms[v.Term]
+				if !ok {
+					continue
+				}
+				v.Term = t
+			}
+			out = append(out, v)
+		}
 	}
 	if p, ok := rules.Periods[kind][lead]; ok && !slices.ContainsFunc(out, propertycompare.Value.Positive) {
 		if v, ok := period(values[p.Start], values[p.End]); ok {
@@ -30,32 +41,25 @@ func side(kind vocabkey.SubjectType, lead vocabkey.PropertyKey, values Values, r
 // of the values never matters. A missing start or end is open. ok is false
 // when neither is recorded or the span would end before it begins.
 func period(starts, ends []propertycompare.Value) (propertycompare.Value, bool) {
-	var first, last valuecompare.DateEnd
-	var hasFirst, hasLast bool
+	var firsts, lasts []valuecompare.DateEnd
 	for _, v := range starts {
 		if !v.Positive() || v.Date == nil {
 			continue
 		}
-		e, _, ok := valuecompare.DateEnds(*v.Date)
-		if !ok || e.Open {
-			continue
-		}
-		if !hasFirst || e.Lo < first.Lo || (e.Lo == first.Lo && e.Hi < first.Hi) {
-			first, hasFirst = e, true
+		if e, _, ok := valuecompare.DateEnds(*v.Date); ok {
+			firsts = append(firsts, e)
 		}
 	}
 	for _, v := range ends {
 		if !v.Positive() || v.Date == nil {
 			continue
 		}
-		_, e, ok := valuecompare.DateEnds(*v.Date)
-		if !ok || e.Open {
-			continue
-		}
-		if !hasLast || e.Hi > last.Hi || (e.Hi == last.Hi && e.Lo > last.Lo) {
-			last, hasLast = e, true
+		if _, e, ok := valuecompare.DateEnds(*v.Date); ok {
+			lasts = append(lasts, e)
 		}
 	}
+	first, hasFirst := valuecompare.Earliest(firsts)
+	last, hasLast := valuecompare.Latest(lasts)
 	if !hasFirst && !hasLast {
 		return propertycompare.Value{}, false
 	}

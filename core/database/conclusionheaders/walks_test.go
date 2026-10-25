@@ -10,26 +10,16 @@ import (
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/writes"
 )
-
-func (f *fixture) bare(kind string) subjects.Subject {
-	f.t.Helper()
-	typeID := f.typeID(kind)
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: f.source.ID, SubjectTypeID: typeID,
-		}, nil)
-	})
-	must(f.t, err)
-	return s
-}
 
 func (f *fixture) cite(s subjects.Subject, in ...observations.Input) {
 	f.t.Helper()
@@ -54,10 +44,7 @@ func (f *fixture) at(s subjects.Subject, x, y int64) {
 
 func (f *fixture) promoteSubject(s subjects.Subject) []byte {
 	f.t.Helper()
-	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
-	})
-	must(f.t, err)
+	res := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
 	return res.Entity.ID
 }
 
@@ -82,7 +69,7 @@ func (f *fixture) bridge(kind string, from, to subjects.Subject, obs []observati
 	f.t.Helper()
 	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-			SourceID: f.source.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
+			FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
 			Citation:     citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator},
 			Observations: obs,
 		})
@@ -97,40 +84,40 @@ func (f *fixture) named(s subjects.Subject, form string) {
 
 func TestCanonicalWalks(t *testing.T) {
 	f := newFixture(t)
-	james := f.bare("person")
+	james := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
 	f.named(james, "James Robins")
 	f.at(james, 0, 0)
-	mary := f.bare("person")
+	mary := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
 	f.named(mary, "Mary Smith")
 	f.at(mary, 0, 2)
-	ann := f.bare("person")
+	ann := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
 	f.named(ann, "Ann Lee")
 	f.at(ann, 0, 4)
-	unnamed := f.bare("person")
+	unnamed := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
 	f.at(unnamed, 0, 6)
-	witness := f.bare("person")
+	witness := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
 	f.named(witness, "Witness Webb")
 	f.at(witness, 0, 8)
 
-	birth := f.bare("event")
+	birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.cite(birth,
 		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
 		observations.Input{PropertyID: f.prop("date").ID, Date: pointYear(1817)},
 	)
 	f.at(birth, 4, 0)
-	death := f.bare("event")
+	death := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.cite(death,
 		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "death").ID},
 		observations.Input{PropertyID: f.prop("start_date").ID, Date: pointYear(1880)},
 	)
 	f.at(death, 4, 2)
-	marriage := f.bare("event")
+	marriage := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.cite(marriage, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "marriage").ID})
 	f.at(marriage, 4, 4)
-	census := f.bare("event")
+	census := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.cite(census, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "census").ID})
 	f.at(census, 4, 6)
-	baptism := f.bare("event")
+	baptism := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.cite(baptism, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "baptism").ID})
 	f.at(baptism, 4, 8)
 	eventTypeID := f.prop("event_type").ID
@@ -139,17 +126,17 @@ func TestCanonicalWalks(t *testing.T) {
 			return propertyterms.Create(tx, userID, eventTypeID, "Fire", "")
 		})
 	must(t, err)
-	fire := f.bare("event")
+	fire := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.cite(fire, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: fireTerm.ID})
 	f.at(fire, 4, 10)
 
-	york := f.bare("place")
+	york := subjectstest.On(f.t, f.c, userID, f.graph, "place", "")
 	f.cite(york,
 		observations.Input{PropertyID: f.prop("toponym").ID, ValueText: "York", HasText: true},
 		observations.Input{PropertyID: f.prop("toponym").ID, ValueText: "Tkaronto", HasText: true},
 	)
 	f.at(york, 8, 0)
-	toronto := f.bare("place")
+	toronto := subjectstest.On(f.t, f.c, userID, f.graph, "place", "")
 	f.cite(toronto, observations.Input{PropertyID: f.prop("toponym").ID, ValueText: "Toronto", HasText: true})
 	f.at(toronto, 8, 2)
 
@@ -309,23 +296,23 @@ func TestCanonicalWalks(t *testing.T) {
 	must(t, err)
 	deps, err := conclusionheaders.HeaderDependents(db, [][]byte{yorkID})
 	must(t, err)
-	if !hasID(deps, birthID) || !hasID(deps, fireID) || !hasID(deps, jamesID) || hasID(deps, deathID) {
+	if !database.ContainsBlobID(deps, birthID) || !database.ContainsBlobID(deps, fireID) || !database.ContainsBlobID(deps, jamesID) || database.ContainsBlobID(deps, deathID) {
 		t.Fatalf("place dependents missing birth/fire/james or included the death")
 	}
 	// The witness is not a subject of the birth, so the place walk does not reach them.
 	fromJames, err := conclusionheaders.HeaderDependents(db, [][]byte{jamesID})
 	must(t, err)
-	if !hasID(fromJames, birthID) || !hasID(fromJames, deathID) || !hasID(fromJames, marriageID) || !hasID(fromJames, censusID) {
+	if !database.ContainsBlobID(fromJames, birthID) || !database.ContainsBlobID(fromJames, deathID) || !database.ContainsBlobID(fromJames, marriageID) || !database.ContainsBlobID(fromJames, censusID) {
 		t.Fatal("person dependents missed an event")
 	}
-	if hasID(fromJames, yorkID) || hasID(fromJames, baptismID) {
+	if database.ContainsBlobID(fromJames, yorkID) || database.ContainsBlobID(fromJames, baptismID) {
 		t.Fatal("person walk reached a place or someone else's event")
 	}
 	// James's header embeds his birth's date: a change to the birth must
 	// reach him. The witness is not a subject, so they are not reached.
 	fromBirth, err := conclusionheaders.HeaderDependents(db, [][]byte{birthID})
 	must(t, err)
-	if !hasID(fromBirth, jamesID) || hasID(fromBirth, birthID) || hasID(fromBirth, yorkID) {
+	if !database.ContainsBlobID(fromBirth, jamesID) || database.ContainsBlobID(fromBirth, birthID) || database.ContainsBlobID(fromBirth, yorkID) {
 		t.Fatalf("event dependents %d: missing James, or included the event or its place", len(fromBirth))
 	}
 }
@@ -386,15 +373,6 @@ func sameSet(got, want []string) bool {
 	return true
 }
 
-func hasID(ids [][]byte, id []byte) bool {
-	for _, got := range ids {
-		if bytes.Equal(got, id) {
-			return true
-		}
-	}
-	return false
-}
-
 // Two surviving births are a disagreement: the header counts them and leads
 // with the earliest dated one, whatever the refs say.
 func TestCompetingLifeEvents(t *testing.T) {
@@ -412,12 +390,12 @@ func TestCompetingLifeEvents(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
-			james := f.bare("person")
+			james := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
 			f.named(james, "James Robins")
 			f.at(james, 0, 0)
 			var births []subjects.Subject
 			for i, year := range tt.years {
-				birth := f.bare("event")
+				birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 				in := []observations.Input{{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID}}
 				if year != 0 {
 					in = append(in, observations.Input{PropertyID: f.prop("date").ID, Date: pointYear(year)})

@@ -9,12 +9,15 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -22,7 +25,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
@@ -38,6 +41,7 @@ type batchFixture struct {
 	c        *database.Catalog
 	source   sources.Source
 	artifact artifacts.Artifact
+	graph    []byte // the Source's one Evidence graph
 	y        int64
 }
 
@@ -68,11 +72,11 @@ func newBatchFixture(t *testing.T) *batchFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &batchFixture{t: t, c: c, source: src, artifact: art}
+	return &batchFixture{t: t, c: c, source: src, artifact: art, graph: evidencegraphstest.SoleGraph(t, c, src.ID).ID}
 }
 
 func (f *batchFixture) prop(key string) properties.Property {
@@ -95,16 +99,7 @@ func (f *batchFixture) term(propKey, termKey string) propertyterms.Term {
 
 func (f *batchFixture) bare(kind string) subjects.Subject {
 	f.t.Helper()
-	st, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
-	if err != nil {
-		f.t.Fatal(err)
-	}
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: st.ID}, nil)
-	})
-	if err != nil {
-		f.t.Fatal(err)
-	}
+	s := subjectstest.On(f.t, f.c, userID, f.graph, kind, "")
 	if _, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
 		return subjectpositions.Set(tx, s.ID, 0, f.y)
 	}); err != nil {
@@ -138,7 +133,7 @@ func (f *batchFixture) participation(person, event subjects.Subject) subjects.Su
 	role := f.term("role", "subject").ID
 	res, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-			SourceID: f.source.ID, FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
+			FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
 			Citation: citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: batchLocator},
 			Observations: []observations.Input{
 				{PropertyID: personProp, ValueSubjectID: person.ID},
@@ -210,15 +205,6 @@ func yearDate(y int) *datevalue.Value {
 	return &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}
 }
 
-func containsID(ids [][]byte, id []byte) bool {
-	for _, x := range ids {
-		if bytes.Equal(x, id) {
-			return true
-		}
-	}
-	return false
-}
-
 func TestSaveBatchFilesBothEndsOnce(t *testing.T) {
 	f := newBatchFixture(t)
 	person := f.bare("person")
@@ -226,7 +212,7 @@ func TestSaveBatchFilesBothEndsOnce(t *testing.T) {
 	f.participation(person, event)
 
 	res := f.save(promote.Batch{
-		SourceID: f.source.ID, SeenRevision: f.revision(),
+		GraphID: f.graph, SeenRevision: f.revision(),
 		Rows: []promote.BatchRow{
 			{SubjectID: person.ID, Target: promote.TargetNew},
 			{SubjectID: event.ID, Target: promote.TargetNew},
@@ -256,25 +242,15 @@ func TestSaveBatchFilesBridgeWhoseEndsWereAlreadyPromoted(t *testing.T) {
 	f := newBatchFixture(t)
 	person := f.bare("person")
 	event := f.bare("event")
-	per, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: person.ID})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	evt, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: event.ID})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	bridge := f.participation(person, event)
+	per := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: person.ID})
+	evt := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: event.ID})
+	f.participation(person, event)
 	if f.bridgeClaims("participation") != 0 {
 		t.Fatal("bridge filed before the batch")
 	}
 
 	f.save(promote.Batch{
-		SourceID: f.source.ID, SeenRevision: f.revision(),
+		GraphID: f.graph, SeenRevision: f.revision(),
 		Rows: []promote.BatchRow{
 			{SubjectID: person.ID, Target: promote.TargetHandle, EntityID: per.Entity.ID},
 			{SubjectID: event.ID, Target: promote.TargetHandle, EntityID: evt.Entity.ID},
@@ -283,34 +259,25 @@ func TestSaveBatchFilesBridgeWhoseEndsWereAlreadyPromoted(t *testing.T) {
 	if f.bridgeClaims("participation") != 1 {
 		t.Fatalf("participation claims %d, want 1", f.bridgeClaims("participation"))
 	}
-
-	// A second Done with the bridge switched off does not file another copy.
-	// (Already filed, so this also checks idempotence.) The skip path is the
-	// unfiled case below.
-	_ = bridge
 }
 
-func TestSaveBatchSkipsSwitchedOffBridge(t *testing.T) {
+func TestSaveBatchLeavesBridgeWithASkippedEndUnfiled(t *testing.T) {
 	f := newBatchFixture(t)
 	person := f.bare("person")
 	event := f.bare("event")
-	if _, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: person.ID})
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: event.ID})
-	}); err != nil {
-		t.Fatal(err)
-	}
-	bridge := f.participation(person, event)
+	f.participation(person, event)
 	f.save(promote.Batch{
-		SourceID: f.source.ID, SeenRevision: f.revision(),
-		SkipBridgeIDs: [][]byte{bridge.ID},
+		GraphID: f.graph, SeenRevision: f.revision(),
+		Rows: []promote.BatchRow{
+			{SubjectID: person.ID, Target: promote.TargetNew},
+			{SubjectID: event.ID, Target: promote.TargetSkip},
+		},
 	})
 	if n := f.bridgeClaims("participation"); n != 0 {
-		t.Fatalf("skipped bridge filed %d claims", n)
+		t.Fatalf("bridge with a skipped end filed %d claims", n)
+	}
+	if !f.hasClaim(person.ID) {
+		t.Fatal("person was not filed")
 	}
 }
 
@@ -321,7 +288,7 @@ func TestSaveBatchStaleWritesNothing(t *testing.T) {
 	_ = f.bare("place") // a later write advances the revision
 	_, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
 		return promote.SaveBatch(tx, userID, promote.Batch{
-			SourceID: f.source.ID, SeenRevision: seen,
+			GraphID: f.graph, SeenRevision: seen,
 			Rows: []promote.BatchRow{{SubjectID: person.ID, Target: promote.TargetNew}},
 		})
 	})
@@ -333,103 +300,45 @@ func TestSaveBatchStaleWritesNothing(t *testing.T) {
 	}
 }
 
-func TestSaveBatchOneHopPin(t *testing.T) {
-	tests := []struct {
-		name string
-		// eventTarget is how the layer's own event is filed in the same Done.
-		eventTarget string
-		// pinDeath pairs with the handle person's death date, not their birth.
-		pinDeath bool
-		wantErr  bool
-	}{
-		{name: "a neighbor filed on the matching handle pins and backfills", eventTarget: promote.TargetHandle},
-		{name: "a neighbor filed New pins nothing", eventTarget: promote.TargetNew, wantErr: true},
-		{name: "a skipped neighbor pins nothing", eventTarget: promote.TargetSkip, wantErr: true},
-		{name: "a record from another of the handle's events is refused", eventTarget: promote.TargetHandle, pinDeath: true, wantErr: true},
+// A pin set names the Observations of a neighbor's records and the filed member
+// they belong to: the new claim and that member's claim both carry them.
+func TestSaveBatchPinsANeighborRecord(t *testing.T) {
+	f := newBatchFixture(t)
+	person := f.bare("person")
+	birth := f.bare("event")
+	birthDate := f.cite(birth, observations.Input{PropertyID: f.prop("date").ID, Date: yearDate(1849)})
+	f.participation(person, birth)
+	per := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: person.ID})
+	birthH := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: birth.ID})
+
+	// A second layer: the birth date sits on the event, one hop from the person.
+	personB := f.bare("person")
+	eventB := f.bare("event")
+	incoming := f.cite(eventB, observations.Input{PropertyID: f.prop("date").ID, Date: yearDate(1849)})
+	f.participation(personB, eventB)
+
+	res := f.save(promote.Batch{
+		GraphID: f.graph, SeenRevision: f.revision(),
+		Rows: []promote.BatchRow{{
+			SubjectID: personB.ID, Target: promote.TargetHandle, EntityID: per.Entity.ID,
+			PinSets: []promote.PinSet{{Member: birth.ID, Observations: [][]byte{incoming[0].ID, birthDate[0].ID}}},
+		}, {SubjectID: eventB.ID, Target: promote.TargetHandle, EntityID: birthH.Entity.ID}},
+	})
+	if len(res.Written) != 2 || res.Written[0].Pins != 2 {
+		t.Fatalf("written %+v", res.Written)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			f := newBatchFixture(t)
-			person := f.bare("person")
-			birth := f.bare("event")
-			birthDate := f.cite(birth, observations.Input{PropertyID: f.prop("date").ID, Date: yearDate(1849)})
-			death := f.bare("event")
-			deathDate := f.cite(death, observations.Input{PropertyID: f.prop("date").ID, Date: yearDate(1849)})
-			f.participation(person, birth)
-			f.participation(person, death)
-			per, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-				return promote.Save(tx, userID, promote.Input{SubjectID: person.ID})
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			birthH, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-				return promote.Save(tx, userID, promote.Input{SubjectID: birth.ID})
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if _, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-				return promote.Save(tx, userID, promote.Input{SubjectID: death.ID})
-			}); err != nil {
-				t.Fatal(err)
-			}
-
-			// A second layer: the birth date sits on the event, one hop from the person.
-
-			personB := f.bare("person")
-			eventB := f.bare("event")
-			incoming := f.cite(eventB, observations.Input{PropertyID: f.prop("date").ID, Date: yearDate(1849)})
-			f.participation(personB, eventB)
-
-			member := birthDate[0].ID
-			if tt.pinDeath {
-				member = deathDate[0].ID
-			}
-			eventRow := promote.BatchRow{SubjectID: eventB.ID, Target: tt.eventTarget}
-			if tt.eventTarget == promote.TargetHandle {
-				eventRow.EntityID = birthH.Entity.ID
-			}
-			p6a1 := promote.Batch{
-				SourceID: f.source.ID, SeenRevision: f.revision(),
-				Rows: []promote.BatchRow{{
-					SubjectID: personB.ID, Target: promote.TargetHandle, EntityID: per.Entity.ID,
-					Pairs: []promote.Pair{{IncomingObservationID: incoming[0].ID, MemberObservationID: member}},
-				}, eventRow},
-			}
-			res, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
-				return promote.SaveBatch(tx, userID, p6a1)
-			})
-
-			if tt.wantErr {
-				if !errors.Is(err, promote.ErrInvalid) {
-					t.Fatalf("err %v, want promote.ErrInvalid", err)
-				}
-				if f.hasClaim(personB.ID) {
-					t.Fatal("a refused pin still filed the claim")
-				}
-				return
-			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(res.Written) != 2 || res.Written[0].Pins < 2 {
-				t.Fatalf("written %+v", res.Written)
-			}
-			db, err := f.c.DB()
-			if err != nil {
-				t.Fatal(err)
-			}
-			for _, claimID := range [][]byte{res.Written[0].Claim.ID, birthH.Claim.ID} {
-				pins, err := identityclaims.PinnedObservations(db, claimID)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !containsID(pins, incoming[0].ID) || !containsID(pins, member) {
-					t.Fatalf("claim %x pins %d, want both dates", claimID, len(pins))
-				}
-			}
-		})
+	db, err := f.c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, claimID := range [][]byte{res.Written[0].Claim.ID, birthH.Claim.ID} {
+		pins, err := identityclaims.PinnedObservations(db, claimID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !database.ContainsBlobID(pins, incoming[0].ID) || !database.ContainsBlobID(pins, birthDate[0].ID) {
+			t.Fatalf("claim %x pins %d, want both dates", claimID, len(pins))
+		}
 	}
 }
 
@@ -478,10 +387,71 @@ func cacheLines(t *testing.T, q interface {
 	return out
 }
 
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
+// A Done files the Subjects of its own graph and the bridges between them; a
+// waiting bridge on another graph of the Source stays unfiled until that
+// graph's own Done.
+func TestSaveBatchFilesOnlyItsGraph(t *testing.T) {
+	f := newBatchFixture(t)
+	person := f.bare("person")
+	event := f.bare("event")
+	promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: person.ID})
+	promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: event.ID})
+	f.participation(person, event)
+	if n := f.bridgeClaims("participation"); n != 0 {
+		t.Fatalf("participation claims %d before any Done, want 0", n)
+	}
+	def, jones, _ := artifactstest.Split(t, f.c, userID, f.source.ID, "Jones")
+	if !bytes.Equal(def.ID, f.graph) {
+		t.Fatalf("Default graph %x, want %x", def.ID, f.graph)
+	}
+	j := subjectstest.On(t, f.c, userID, jones.ID, "person", "")
+
+	f.save(promote.Batch{
+		GraphID: jones.ID, SeenRevision: f.revision(),
+		Rows: []promote.BatchRow{{SubjectID: j.ID, Target: promote.TargetNew}},
+	})
+	if !f.hasClaim(j.ID) {
+		t.Fatal("the Jones person was not filed")
+	}
+	if n := f.bridgeClaims("participation"); n != 0 {
+		t.Fatalf("participation claims %d after the Jones Done, want 0", n)
+	}
+
+	f.save(promote.Batch{GraphID: f.graph, SeenRevision: f.revision()})
+	if n := f.bridgeClaims("participation"); n != 1 {
+		t.Fatalf("participation claims %d after the Default Done, want 1", n)
+	}
+
+	refused := func(t *testing.T, f *batchFixture, in promote.Batch) {
+		t.Helper()
+		before := f.revision()
+		_, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+			return promote.SaveBatch(tx, userID, in)
 		})
-	return a, err
+		if !errors.Is(err, promote.ErrInvalid) {
+			t.Fatalf("err %v, want promote.ErrInvalid", err)
+		}
+		if got := f.revision(); got != before {
+			t.Fatalf("revision %d, want %d: nothing is written", got, before)
+		}
+	}
+
+	t.Run("a row on another graph is invalid", func(t *testing.T) {
+		f := newBatchFixture(t)
+		smith := f.bare("person")
+		_, jones, _ := artifactstest.Split(t, f.c, userID, f.source.ID, "Jones")
+		refused(t, f, promote.Batch{
+			GraphID: jones.ID, SeenRevision: f.revision(),
+			Rows: []promote.BatchRow{{SubjectID: smith.ID, Target: promote.TargetNew}},
+		})
+		if f.hasClaim(smith.ID) {
+			t.Fatal("the Default person was filed")
+		}
+	})
+
+	t.Run("a graph that does not exist is invalid", func(t *testing.T) {
+		f := newBatchFixture(t)
+		refused(t, f, promote.Batch{GraphID: make([]byte, 16), SeenRevision: f.revision()})
+		refused(t, f, promote.Batch{GraphID: []byte{1, 2, 3}, SeenRevision: f.revision()})
+	})
 }

@@ -50,7 +50,7 @@ struct SourcePageArtifactsView: View {
                 .accessibilityIdentifier("sources.page.artifacts.list")
             }
         }
-        .padding(.top, PVSpacing.space11 - PVSpacing.space9)
+        .sourcePageSectionTopPadding()
     }
 
     /// Label / description / optional file form for the Add Artifact dialog.
@@ -60,7 +60,7 @@ struct SourcePageArtifactsView: View {
                 label: L10n.Sources.artifactLabel,
                 hint: L10n.Sources.artifactLabelHint,
                 error: model.artifacts.draftLabelError,
-                required: true
+                marker: .required
             ) {
                 PVInput(
                     text: $model.artifacts.draft.label,
@@ -159,7 +159,7 @@ struct SourcePageArtifactsView: View {
                 relPath: art.thumbnailRelPath,
                 mediaType: art.file?.mediaType ?? "",
                 originalFilename: art.file?.originalFilename ?? "",
-                typeIconKey: artifactTypeIconKey(for: art),
+                typeIconKey: art.thumbnailTypeIconKey(sourceTypeIconKey: sourceTypeIconKey),
                 layout: .well
             )
         }
@@ -183,10 +183,10 @@ struct SourcePageArtifactsView: View {
             .buttonStyle(.plain)
             .focused($focusedPreviewID, equals: art.id)
             .pvFocusRing(focusedPreviewID == art.id, cornerRadius: 0)
-            .help(Text(hasFile(art) ? L10n.Sources.artifactOpenFileTip : L10n.Sources.artifactAddFileTip))
+            .help(Text(art.hasFile ? L10n.Sources.artifactOpenFileTip : L10n.Sources.artifactAddFileTip))
             .accessibilityLabel(previewLabel(art))
             .accessibilityIdentifier(
-                hasFile(art)
+                art.hasFile
                     ? "sources.page.artifact.\(art.id).open"
                     : "sources.page.artifact.\(art.id).addFile"
             )
@@ -240,7 +240,7 @@ struct SourcePageArtifactsView: View {
 
     private func restingText(_ art: CatalogArtifact) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space3) {
-            Text(verbatim: art.label.isEmpty ? art.ref : art.label)
+            Text(verbatim: art.displayTitle)
                 .font(PVFont.body(size: PVTypeScale.body, weight: PVFontWeight.semibold))
                 .foregroundStyle(PVColor.textPrimary)
                 .lineLimit(2)
@@ -271,7 +271,7 @@ struct SourcePageArtifactsView: View {
             PVField(
                 label: L10n.Sources.artifactLabel,
                 error: model.artifacts.cardLabelError(id: art.id),
-                required: true
+                marker: .required
             ) {
                 PVInput(
                     text: labelBinding(art),
@@ -342,7 +342,7 @@ struct SourcePageArtifactsView: View {
     }
 
     private func activatePreview(_ art: CatalogArtifact) {
-        if hasFile(art) {
+        if art.hasFile {
             model.artifacts.open(art)
         } else {
             model.artifacts.openAttach(to: art.id)
@@ -350,20 +350,15 @@ struct SourcePageArtifactsView: View {
     }
 
     private func previewLabel(_ art: CatalogArtifact) -> String {
-        if hasFile(art) {
+        if art.hasFile {
             let name = art.file?.originalFilename ?? ""
             return L10n.Sources.openArtifactFile(name: name.isEmpty ? art.ref : name)
         }
         return L10n.Sources.addFileToArtifact(ref: art.ref)
     }
 
-    private func hasFile(_ art: CatalogArtifact) -> Bool {
-        art.file != nil && !art.fileID.isEmpty
-    }
-
-    private func artifactTypeIconKey(for art: CatalogArtifact) -> String? {
-        guard art.file == nil || art.fileID.isEmpty else { return nil }
-        return model.identity.types
+    private var sourceTypeIconKey: String? {
+        model.identity.types
             .first { $0.id == model.source?.sourceTypeID }?
             .iconKey
     }

@@ -31,7 +31,7 @@ func personEntityID(t *testing.T, dir, ref string) string {
 		if err := db.QueryRow(`SELECT id FROM canonical_entities WHERE ref = ?`, ref).Scan(&raw); err != nil {
 			return err
 		}
-		id = uuidString(raw)
+		id = database.UUIDString(raw)
 		return nil
 	}); err != nil {
 		t.Fatal(err)
@@ -129,9 +129,13 @@ func TestConclusionValueProtoCoversEveryKind(t *testing.T) {
 			_, ok := v.GetKind().(*engine.ConclusionValue_Integer)
 			return ok
 		}},
-		{"term", conclusiondetails.Value{TermID: term, TermKey: "male", TermLabel: "Male"}, func(v *engine.ConclusionValue) bool {
+		{"term", conclusiondetails.Value{TermID: term, TermKey: "male", TermLabel: "Male", TermOrigin: "user"}, func(v *engine.ConclusionValue) bool {
 			tm := v.GetTerm()
-			return tm.GetId() == uuidString(term) && tm.GetKey() == "male" && tm.GetLabel() == "Male"
+			return tm.GetId() == database.UUIDString(term) && tm.GetKey() == "male" && tm.GetLabel() == "Male" && tm.GetOrigin() == "user"
+		}},
+		{"term without an id", conclusiondetails.Value{TermKey: "male", TermLabel: "Male"}, func(v *engine.ConclusionValue) bool {
+			tm := v.GetTerm()
+			return tm != nil && tm.GetId() == "" && tm.GetKey() == "male" && tm.GetLabel() == "Male"
 		}},
 		{"date", conclusiondetails.Value{Date: &datevalue.Value{Kind: "point", Calendar: "gregorian", StartYear: &year}}, func(v *engine.ConclusionValue) bool {
 			return v.GetDate().GetStartYear() == 1890
@@ -143,7 +147,7 @@ func TestConclusionValueProtoCoversEveryKind(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			v := conclusionValueProto(tc.in)
+			v := conclusionValueProto(tc.in, nil)
 			// Round-trip through the wire, as Swift receives it.
 			b, err := proto.Marshal(v)
 			if err != nil {
@@ -160,6 +164,23 @@ func TestConclusionValueProtoCoversEveryKind(t *testing.T) {
 	}
 }
 
+// A likeness has no field on conclusiondetails.Value: its depiction input is the
+// whole result, before any other case.
+func TestConclusionValueProtoDepiction(t *testing.T) {
+	v := conclusionValueProto(conclusiondetails.Value{Text: "ignored", HasText: true}, &engine.DepictionValue{ImageRelPath: "objects/x.png"})
+	b, err := proto.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got engine.ConclusionValue
+	if err := proto.Unmarshal(b, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.GetDepiction().GetImageRelPath() != "objects/x.png" || got.GetDepiction().GetRegionJson() != "" || got.GetText() != "" {
+		t.Fatalf("%+v", &got)
+	}
+}
+
 func TestConclusionDetailProtoCarriesVoteArtifactAndMembers(t *testing.T) {
 	artifact := []byte{0: 9, 15: 9}
 	d := conclusiondetails.Detail{
@@ -170,7 +191,7 @@ func TestConclusionDetailProtoCarriesVoteArtifactAndMembers(t *testing.T) {
 	}
 	got := conclusionDetailProto(d)
 	o := got.Fields[0].Outcomes[0]
-	if got.GetMemberCount() != 4 || o.GetArtifactId() != uuidString(artifact) || o.GetVoteSupport() != 2 || o.GetVoteTotal() != 3 {
+	if got.GetMemberCount() != 4 || o.GetArtifactId() != database.UUIDString(artifact) || o.GetVoteSupport() != 2 || o.GetVoteTotal() != 3 {
 		t.Fatalf("%+v", got)
 	}
 }

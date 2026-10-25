@@ -57,8 +57,8 @@ enum EvidenceCitedPropertyMarks {
     }
 
     static func graphHasConflict(
-        subjects: [SourceGraphPlacedSubject],
-        bridges: [SourceGraphPlacedBridge]
+        subjects: [EvidenceGraphPlacedSubject],
+        bridges: [EvidenceGraphPlacedBridge]
     ) -> Bool {
         if subjects.contains(where: { cardHasConflict(in: $0.observations) }) {
             return true

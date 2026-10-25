@@ -3,13 +3,13 @@ package identityclaims
 import (
 	"bytes"
 	"database/sql"
-	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 )
 
 // FileBridgesTx files every unfiled bridge whose ends touch subjectID, in
@@ -20,69 +20,37 @@ import (
 // Role stays off the key (it is reconciled on the association). A relationship
 // type, and any later non-role disambiguation such as place_relationship_type,
 // is part of the key; a directed term keeps order and a symmetric one does not.
-// skip names bridge Subjects the caller switched off; nil files every bridge.
 //
 // Returned association ids are the handles whose cache the caller recomputes.
 // Changes belong on the caller's revision. Does not commit.
-func FileBridgesTx(tx *sql.Tx, subjectID []byte, skip map[string]struct{}) (assocIDs [][]byte, changes []rowchange.Change, err error) {
+func FileBridgesTx(tx *sql.Tx, subjectID []byte) (assocIDs [][]byte, changes []rowchange.Change, err error) {
 	if len(subjectID) != 16 {
 		return nil, nil, nil
 	}
-	bridges, err := bridgesTouching(tx, subjectID)
+	bridges, err := bridgeHeads(tx, fileCond, subjectID, subjectID)
 	if err != nil {
 		return nil, nil, err
 	}
-	return fileHeads(tx, bridges, skip)
+	return fileHeads(tx, bridges)
 }
 
-// FileSourceBridgesTx files every unfiled bridge homed to sourceID whose ends
-// are both handles, including a bridge whose ends were claimed before this
-// call. skip names bridge Subjects to leave unfiled. Does not commit.
-func FileSourceBridgesTx(tx *sql.Tx, sourceID []byte, skip map[string]struct{}) (assocIDs [][]byte, changes []rowchange.Change, err error) {
-	if len(sourceID) != 16 {
+// FileEvidenceGraphBridgesTx files every unfiled bridge on the Evidence graph
+// whose ends are both handles, including a bridge whose ends were claimed
+// before this call. Does not commit.
+func FileEvidenceGraphBridgesTx(tx *sql.Tx, graphID []byte) (assocIDs [][]byte, changes []rowchange.Change, err error) {
+	if len(graphID) != 16 {
 		return nil, nil, nil
 	}
-	keys := connectrules.BridgeTypeKeys()
-	if len(keys) == 0 {
-		return nil, nil, nil
-	}
-	args := make([]any, 0, len(keys)+1)
-	args = append(args, sourceID)
-	for _, k := range keys {
-		args = append(args, k)
-	}
-	rows, err := tx.Query(`SELECT s.id, st.key, s.subject_type_id
-		FROM subjects s
-		JOIN subject_types st ON st.id = s.subject_type_id AND st.origin = 'provenencia'
-		WHERE s.source_id = ? AND st.key IN (`+database.SQLInPlaceholders(len(keys))+`)`, args...)
+	heads, err := bridgeHeads(tx, graphCond, graphID)
 	if err != nil {
 		return nil, nil, err
 	}
-	var heads []bridgeHead
-	for rows.Next() {
-		var b bridgeHead
-		if err := rows.Scan(&b.id, &b.typeKey, &b.typeID); err != nil {
-			_ = rows.Close()
-			return nil, nil, err
-		}
-		b.id = append([]byte(nil), b.id...)
-		b.typeID = append([]byte(nil), b.typeID...)
-		heads = append(heads, b)
-	}
-	if err := rows.Err(); err != nil {
-		_ = rows.Close()
-		return nil, nil, err
-	}
-	_ = rows.Close()
-	return fileHeads(tx, heads, skip)
+	return fileHeads(tx, heads)
 }
 
-func fileHeads(tx *sql.Tx, bridges []bridgeHead, skip map[string]struct{}) (assocIDs [][]byte, changes []rowchange.Change, err error) {
+func fileHeads(tx *sql.Tx, bridges []bridgeHead) (assocIDs [][]byte, changes []rowchange.Change, err error) {
 	seen := map[string]bool{}
 	for _, b := range bridges {
-		if _, off := skip[string(b.id)]; off {
-			continue
-		}
 		id, ch, filed, err := fileBridge(tx, b)
 		if err != nil {
 			return nil, nil, err
@@ -103,57 +71,42 @@ type bridgeHead struct {
 	id      []byte
 	typeKey string
 	typeID  []byte
+	// claimID is the head's accepted claim, nil when it has none.
+	claimID []byte
 }
 
 // touchesEnd is true for a bridge Subject s (alias) that has subject ? as an
 // end: one of its Observations names that Subject as its value. It takes one
-// argument and applies no polarity filter, as filing reads none.
-const touchesEnd = `EXISTS (
-		      SELECT 1 FROM observations o
-		      WHERE o.subject_id = s.id AND o.value_subject_id = ?
-		    )`
+// argument and applies no polarity filter, as filing reads none. The IN
+// subquery lets SQLite seek the Observations by value and then s by id.
+const touchesEnd = `s.id IN (SELECT o.subject_id FROM observations o WHERE o.value_subject_id = ?)`
+
+// fileCond is subject ? itself or a bridge touching it (two arguments, the
+// same id twice). The UNION ALL keeps the seek on s.id.
+const fileCond = `s.id IN (SELECT ? UNION ALL SELECT o.subject_id FROM observations o WHERE o.value_subject_id = ?)`
+
+// graphCond is a bridge on Evidence graph ? (one argument).
+const graphCond = `s.graph_id = ?`
 
 // UnfileBridges is the inverse of FileBridgesTx: it deletes, audited, the
-// accepted claim of every bridge on sourceID that has subjectID as an end,
-// pins first, in bridge Subject id order. The bridges' handles (their
-// associations) are left alone. Does not commit.
-func UnfileBridges(tx *database.Tx, sourceID, subjectID []byte) ([]rowchange.Change, error) {
-	keys := connectrules.BridgeTypeKeys()
-	if len(keys) == 0 || len(sourceID) != 16 || len(subjectID) != 16 {
+// accepted claim of every bridge that has subjectID as an end, pins first, in
+// bridge Subject id order. A bridge is on its ends' Evidence graph, so this is
+// per graph. The bridges' handles (their associations) are left alone. Does
+// not commit.
+func UnfileBridges(tx *database.Tx, subjectID []byte) ([]rowchange.Change, error) {
+	if len(subjectID) != 16 {
 		return nil, nil
 	}
-	args := make([]any, 0, len(keys)+2)
-	args = append(args, sourceID)
-	for _, k := range keys {
-		args = append(args, k)
-	}
-	args = append(args, subjectID)
-	rows, err := tx.Query(`SELECT ic.id FROM subjects s
-		JOIN subject_types st ON st.id = s.subject_type_id AND st.origin = 'provenencia'
-		JOIN identity_claims ic ON ic.subject_id = s.id AND ic.status = 'accepted'
-		WHERE s.source_id = ? AND st.key IN (`+database.SQLInPlaceholders(len(keys))+`)
-		  AND `+touchesEnd+`
-		ORDER BY s.id`, args...)
+	heads, err := bridgeHeads(tx.Tx, touchesEnd, subjectID)
 	if err != nil {
 		return nil, err
 	}
-	var claimIDs [][]byte
-	for rows.Next() {
-		var id []byte
-		if err := rows.Scan(&id); err != nil {
-			_ = rows.Close()
-			return nil, err
-		}
-		claimIDs = append(claimIDs, append([]byte(nil), id...))
-	}
-	if err := rows.Err(); err != nil {
-		_ = rows.Close()
-		return nil, err
-	}
-	_ = rows.Close()
 	var changes []rowchange.Change
-	for _, id := range claimIDs {
-		released, err := deleteimpact.ReleaseClaim(tx, id)
+	for _, head := range heads {
+		if head.claimID == nil {
+			continue
+		}
+		released, err := deleteimpact.ReleaseClaim(tx, head.claimID)
 		if err != nil {
 			return nil, err
 		}
@@ -162,25 +115,19 @@ func UnfileBridges(tx *database.Tx, sourceID, subjectID []byte) ([]rowchange.Cha
 	return changes, nil
 }
 
-func bridgesTouching(tx *sql.Tx, subjectID []byte) ([]bridgeHead, error) {
+// bridgeHeads lists the bridge Subjects (product-seeded bridge types) that
+// satisfy cond, in Subject id order. cond is a SQL condition over the alias s.
+func bridgeHeads(tx *sql.Tx, cond string, condArgs ...any) ([]bridgeHead, error) {
 	keys := connectrules.BridgeTypeKeys()
 	if len(keys) == 0 {
 		return nil, nil
 	}
-	args := make([]any, 0, len(keys)+2)
+	args := make([]any, 0, len(keys)+len(condArgs))
 	for _, k := range keys {
 		args = append(args, k)
 	}
-	args = append(args, subjectID, subjectID)
-	q := `SELECT s.id, st.key, s.subject_type_id
-		FROM subjects s
-		JOIN subject_types st ON st.id = s.subject_type_id AND st.origin = 'provenencia'
-		WHERE st.key IN (` + database.SQLInPlaceholders(len(keys)) + `)
-		  AND (
-		    s.id = ?
-		    OR ` + touchesEnd + `
-		  )`
-	rows, err := tx.Query(q, args...)
+	args = append(args, condArgs...)
+	rows, err := tx.Query(bridgeHeadsSQL(cond, len(keys)), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -188,11 +135,12 @@ func bridgesTouching(tx *sql.Tx, subjectID []byte) ([]bridgeHead, error) {
 	var out []bridgeHead
 	for rows.Next() {
 		var b bridgeHead
-		if err := rows.Scan(&b.id, &b.typeKey, &b.typeID); err != nil {
+		if err := rows.Scan(&b.id, &b.typeKey, &b.typeID, &b.claimID); err != nil {
 			return nil, err
 		}
 		b.id = append([]byte(nil), b.id...)
 		b.typeID = append([]byte(nil), b.typeID...)
+		b.claimID = append([]byte(nil), b.claimID...)
 		out = append(out, b)
 	}
 	return out, rows.Err()
@@ -427,7 +375,7 @@ func resolveEndpoint(tx *sql.Tx, obs map[string][]obsValue, propertyKey string) 
 		if err != nil {
 			return nil, false, err
 		}
-		if !containsID(resolved, id) {
+		if !database.ContainsBlobID(resolved, id) {
 			resolved = append(resolved, append([]byte(nil), id...))
 		}
 	}
@@ -444,15 +392,6 @@ func firstTerm(obs map[string][]obsValue, propertyKey string) []byte {
 		}
 	}
 	return nil
-}
-
-func containsID(ids [][]byte, id []byte) bool {
-	for _, existing := range ids {
-		if bytes.Equal(existing, id) {
-			return true
-		}
-	}
-	return false
 }
 
 func findAssociation(tx *sql.Tx, typeKey string, ends []endpoint, termKey string, termID []byte, symmetric bool) ([]byte, error) {
@@ -501,4 +440,18 @@ func queryAssociation(tx *sql.Tx, typeKey string, ends []endpoint, termKey strin
 		return nil, err
 	}
 	return append([]byte(nil), id...), nil
+}
+
+// bridgeHeadsSQL is the bridgeHeads query for nKeys bridge type keys. CROSS
+// JOIN keeps SQLite starting at s through cond's selective seek; left to
+// order the join, it starts at the type index and reads every bridge Subject
+// in the catalog (see graphcache/load.go linkLoadSQL).
+func bridgeHeadsSQL(cond string, nKeys int) string {
+	return `SELECT s.id, st.key, s.subject_type_id, ic.id
+		FROM subjects s
+		CROSS JOIN subject_types st ON st.id = s.subject_type_id AND st.origin = 'provenencia'
+		LEFT JOIN identity_claims ic ON ic.subject_id = s.id AND ic.status = 'accepted'
+		WHERE st.key IN (` + database.SQLInPlaceholders(nKeys) + `)
+		  AND (` + cond + `)
+		ORDER BY s.id`
 }

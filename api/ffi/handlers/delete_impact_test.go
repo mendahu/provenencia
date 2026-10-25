@@ -202,3 +202,14 @@ func TestLocationFromImpactProperties(t *testing.T) {
 		})
 	}
 }
+
+func TestGetDeleteImpactLastGraph(t *testing.T) {
+	f := newGraphFixture(t)
+	var resp engine.GetDeleteImpactResponse
+	mustRPC(t, GetDeleteImpact, &engine.GetDeleteImpactRequest{
+		ProjectDir: f.dir, Kind: "evidence_graph", Id: f.defaultGraphID,
+	}, &resp)
+	if resp.GetAllowed() || resp.GetGate() != engine.DeleteImpactGate_DELETE_IMPACT_GATE_LAST_GRAPH {
+		t.Fatalf("%+v", &resp)
+	}
+}

@@ -14,26 +14,26 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func ListObservationsBySource(in []byte) ([]byte, error) {
-	var req engine.ListObservationsBySourceRequest
+func ListObservationsByEvidenceGraph(in []byte) ([]byte, error) {
+	var req engine.ListObservationsByEvidenceGraphRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("list_observations_by_source", err)
+		return nil, unmarshalErr("list_observations_by_evidence_graph", err)
 	}
-	sourceID, err := parseID(req.GetSourceId())
+	graphID, err := parseID(req.GetGraphId())
 	if err != nil {
 		return nil, err
 	}
-	var out *engine.ListObservationsBySourceResponse
+	var out *engine.ListObservationsByEvidenceGraphResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		sg, err := c.Graph().Source(sourceID)
+		eg, err := c.Graph().EvidenceGraph(graphID)
 		if err != nil {
 			return err
 		}
-		rows, err := listedProtosFromSource(c, sg, nil)
+		rows, err := listedProtosFromGraph(c, eg, nil)
 		if err != nil {
 			return err
 		}
-		out = &engine.ListObservationsBySourceResponse{Observations: rows}
+		out = &engine.ListObservationsByEvidenceGraphResponse{Observations: rows}
 		return nil
 	})
 	if err != nil {
@@ -340,19 +340,19 @@ func optionalID(s string) ([]byte, error) {
 
 func observationProto(o observations.Observation) *engine.Observation {
 	return &engine.Observation{
-		Id:               uuidString(o.ID),
+		Id:               database.UUIDString(o.ID),
 		Ref:              o.Ref,
-		CitationId:       uuidString(o.CitationID),
-		SubjectId:        uuidString(o.SubjectID),
-		PropertyId:       uuidString(o.PropertyID),
+		CitationId:       database.UUIDString(o.CitationID),
+		SubjectId:        database.UUIDString(o.SubjectID),
+		PropertyId:       database.UUIDString(o.PropertyID),
 		Polarity:         o.Polarity,
 		ValueText:        o.ValueText,
 		ValueInteger:     optionalInt64(o.HasInteger, o.ValueInteger),
-		ValueDateId:      uuidString(o.ValueDateID),
-		ValueNameId:      uuidString(o.ValueNameID),
-		ValueSubjectId:   uuidString(o.ValueSubjectID),
-		ValueTermId:      uuidString(o.ValueTermID),
-		ValueDepictionId: uuidString(o.ValueDepictionID),
+		ValueDateId:      database.UUIDString(o.ValueDateID),
+		ValueNameId:      database.UUIDString(o.ValueNameID),
+		ValueSubjectId:   database.UUIDString(o.ValueSubjectID),
+		ValueTermId:      database.UUIDString(o.ValueTermID),
+		ValueDepictionId: database.UUIDString(o.ValueDepictionID),
 	}
 }
 
@@ -363,6 +363,8 @@ func listedObservationProto(l observations.Listed, paths map[string]string) *eng
 	o.PropertyKey = l.PropertyKey
 	o.PropertyLabel = l.PropertyLabel
 	o.PropertyValueType = l.PropertyValueType
+	o.ValueTermKey = l.ValueTermKey
+	o.ValueTermOrigin = l.ValueTermOrigin
 	if l.Date != nil {
 		o.Date = valuecodec.DateToProto(*l.Date)
 	}
@@ -416,11 +418,11 @@ func listedWritten(c *database.Catalog, citationID []byte, written []observation
 	}
 	byID := make(map[string]observations.Listed, len(listed))
 	for _, l := range listed {
-		byID[uuidString(l.ID)] = l
+		byID[database.UUIDString(l.ID)] = l
 	}
 	rows := make([]observations.Listed, 0, len(written))
 	for _, o := range written {
-		if l, ok := byID[uuidString(o.ID)]; ok {
+		if l, ok := byID[database.UUIDString(o.ID)]; ok {
 			rows = append(rows, l)
 		}
 	}

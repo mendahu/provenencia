@@ -1,5 +1,12 @@
 package valuecompare
 
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"slices"
+	"sort"
+)
+
 // AliasKind is abbreviation or nickname. Both score the alias credit.
 type AliasKind string
 
@@ -30,6 +37,13 @@ type aliasSet struct {
 	tokens map[string]bool
 	roles  map[NameRole]bool
 	kind   AliasKind
+	// key is sha256(table key, 0x00, smallest token), hex-encoded. It is a fixed
+	// size however long the table key or a token is, and not the set's tokens: a
+	// key holding every token would be copied for each word of a set with
+	// thousands. Tokens of one set share it, so two words that Hit share it. A
+	// set sharing a smallest token with another set of its table only makes a
+	// wider shortlist.
+	key string
 }
 
 // AliasToken is the one rule for what an alias token is: the comparison token
@@ -64,10 +78,21 @@ func NewAliasIndex(tables []AliasTable, w WordRules) AliasIndex {
 			for token := range tokens {
 				idx.byToken[token] = append(idx.byToken[token], len(idx.sets))
 			}
-			idx.sets = append(idx.sets, aliasSet{tokens: tokens, roles: roles, kind: table.Kind})
+			sorted := make([]string, 0, len(tokens))
+			for token := range tokens {
+				sorted = append(sorted, token)
+			}
+			sort.Strings(sorted)
+			idx.sets = append(idx.sets, aliasSet{tokens: tokens, roles: roles, kind: table.Kind, key: aliasSetKey(table.Key, sorted[0])})
 		}
 	}
 	return idx
+}
+
+// aliasSetKey is the fixed-size key of a set: see aliasSet.key.
+func aliasSetKey(tableKey, smallest string) string {
+	sum := sha256.Sum256([]byte(tableKey + "\x00" + smallest))
+	return hex.EncodeToString(sum[:])
 }
 
 // Hit reports whether one set holds both tokens and allows both roles, and
@@ -80,4 +105,18 @@ func (a AliasIndex) Hit(x, y string, rx, ry NameRole) (AliasKind, bool) {
 		}
 	}
 	return "", false
+}
+
+// SetKeys is the key of every set that holds token (an AliasToken): a
+// fixed-size digest of its table key and smallest token. Roles are ignored, so a shortlist may
+// include more than Hit allows. Sorted, no duplicates; nil for the zero index.
+// Sets do not chain, so no word key can join two words of a set, but a set can
+// be a key: two words that Hit share it.
+func (a AliasIndex) SetKeys(token string) []string {
+	var out []string
+	for _, i := range a.byToken[token] {
+		out = append(out, a.sets[i].key)
+	}
+	sort.Strings(out)
+	return slices.Compact(out)
 }

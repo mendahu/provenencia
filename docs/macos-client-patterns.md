@@ -24,7 +24,7 @@ Audience: someone comfortable with JavaScript and Go, new to Apple platforms.
 | `Features/SourceTypes/` | Source-type vocabulary. | `SourceTypesView` |
 | `Features/Properties/` | Properties and their Subject-type bindings (the Properties page). | `PropertiesView` |
 | `Features/EvidenceGraph/` | Evidence graph for one source: cards, connect, composer handoff. | `EvidenceGraphView` |
-| `Features/GraphCanvas/` | Product-agnostic pan/zoom canvas used by the evidence graph. | `GraphCanvasScrollView` |
+| `Features/GraphCanvas/` | Product-agnostic pan/zoom canvas used by the evidence graph; the item contract is in its [README](../macos/App/Features/GraphCanvas/README.md#items-appkit-owns-where-items-are). | `GraphCanvasScrollView` |
 | `Features/CitationComposer/` | Citation place: artifact, locator, observations. | `CitationComposerView` |
 | `Features/OCR/` | Reusable on-device text recognition (Vision). Not a screen. | `OCREngine`, `OCRImage` |
 | `Features/ArtifactViewer/` | Image and PDF viewer plus region geometry. | `ArtifactViewer` |
@@ -78,17 +78,17 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 | `CatalogQueryRegistry` | Declarative loaders + mutation → cache key map |
 | `PlaceRegistry` | `WorkspaceLocation` → place id, presentation, required query keys |
 | `WorkspaceDestinationHost` | Routes by presentation (list vs detail are separate views) |
-| `QueryHandle` | Observable load state per key (`.ready`, `.loading`, stale `isFetching`) |
+| `QueryHandle` | Observable load state per key (`.ready`, `.loading`, stale `isFetching`; `isSettled` = ready and not refetching, read by `.onSettled`) |
 
 **Cache contract (required):**
 
 1. The registry is the only loader. Features do not rebuild a `CatalogQueryKey` payload from `GenealogyStore`.
 2. `session.apply(mutation)` patches if the mutation says so, then invalidates and **revalidates every already-warmed key**. Features never `session.query` after `apply`.
-   A write that returns `WriteEffects` is applied with `apply(effects)`; one that also has a mutation naming keys the effects cannot (a Source page's own workspace, the metadata field list) is applied with `apply(effects, mutation)`, which patches the moved rows, unions the invalidations, and never invalidates a key twice. Every write under a Source returns its effects, so the Sources list and the Conclusion lists are patched or invalidated from `sourceScopes` (activity: patches the Sources row) and `handles`, never from a blanket mutation trigger; `sources` means the Source's evidence changed and drops its graph and citation reads, so a note does not. The exceptions are the Source row's own writes (`createSource`, `updateSource`, `setSourceCover`, `deleteSource`) and promote, which keep their mutation kinds.
+   A write that returns `WriteEffects` is applied with `apply(effects)`; one that also has a mutation naming keys the effects cannot (a Source page's own workspace, the metadata field list) is applied with `apply(effects, mutation)`, which patches the moved rows, unions the invalidations, and never invalidates a key twice. Every write under a Source returns its effects, so the Sources list and the Conclusion lists are patched or invalidated from `sourceScopes` (activity: patches the Sources row) and `handles`, never from a blanket mutation trigger; `evidenceGraphs` names the Evidence graphs whose rows changed and reloads each (and `citationSources` the Sources whose citation reads moved), so a note does not. The exceptions are the Source row's own writes and promote, which keep their mutation kinds: `createSource` reports its effects and keeps `.createdSource` (a new row the effects cannot describe); `updateSource`, `setSourceCover`, `deleteSource` and promote report none.
    A registry `whenHidden` policy says what an invalidated key that isn't on screen does ("on screen" is the keys of the place from the last `apply(location:)`, `visibleKeys`): `.revalidate` (the default) reloads it now; `.markStale` keeps the old value and reloads on the next `query`; `.evict` drops the handle and cancels its load, so the next visit loads it afresh. The People, Events, Places, and Sources lists are `.markStale`; Conclusion detail keys are `.evict` (S9-15). One save made away from a list reloads no list until the researcher looks at one.
 3. `readyValue` waits out in-flight work, then returns `nil` if the key is still stale.
 4. `setQueryValue` and `patchCached` are overlays (optimistic drag, a list-row patch). A patch is never a substitute for invalidation **unless the write reported everything the patch needs**: a write that reports its activity (`WriteEffects.revision`, `revision_at`) moves a list's last-updated cell through a `CatalogLastUpdatedPatch` declared on that list's registry row, with no read. Invalidation stays for changes the client cannot know (a value, title, or membership changed). Patches go through `WorkspaceSession.patchCached`, so an in-flight load is cancelled and restarted and an older answer cannot overwrite the patch.
-5. Views observe handles. Models keep form/interaction state only. Evidence graph cards are a **pure join** of `sourceGraph` (`SourceGraphRows`) and `propertiesWorkspace` types — that join is not a third cache key.
+5. Views observe handles. Models keep form/interaction state only. Evidence graph cards are a **pure join** of `evidenceGraph` (`EvidenceGraphRows`) and `propertiesWorkspace` types — that join is not a third cache key.
 6. If a place reads a key, that key is in `PlaceRegistry.queryKeys`.
 7. `getCitation` is the exception: a one-shot into the composer fields draft. Do not cache the open citation.
 
@@ -109,7 +109,7 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 - Read display data via `session.queryHandle(_)`; observe with `@Bindable var handle: QueryHandle<…>` in a child view.
 - Never call `session.query()` from computed properties that `body` reads every frame.
 
-**Mutations:** patch list/detail synchronously when the save response is enough (`updatedSource`); `apply` invalidates+reloads on create/delete/ambiguous busts. Name mutations for the **read model** they change (`.mutatedSourceGraph`), not the UI verb. Stale-while-revalidate is for **navigation reads**, not the only path after a write.
+**Mutations:** patch list/detail synchronously when the save response is enough (`updatedSource`); `apply` invalidates+reloads on create/delete/ambiguous busts. Name mutations for the **read model** they change (`.deletedSource`), not the UI verb. A write that returns `WriteEffects` needs no mutation for what its effects name: the Evidence graph follows `evidenceGraphs`. Stale-while-revalidate is for **navigation reads**, not the only path after a write.
 
 **One cache owns each list.** A payload that duplicates another key's data has to
 be invalidated whenever that data changes anywhere, which is a bust with no

@@ -27,7 +27,9 @@ import (
 type vocab struct {
 	propID    map[string][]byte
 	termLabel map[string]string
-	typeID    map[string][]byte
+	// termOrigin is each term's origin: a key names a product term only with the product's.
+	termOrigin map[string]string
+	typeID     map[string][]byte
 }
 
 func vocabulary(g *graphcache.Graph) (vocab, error) {
@@ -46,18 +48,17 @@ func vocabulary(g *graphcache.Graph) (vocab, error) {
 
 func loadVocab(g *graphcache.Graph) (vocab, error) {
 	v := vocab{
-		propID:    map[string][]byte{},
-		termLabel: map[string]string{},
-		typeID:    map[string][]byte{},
+		propID:     map[string][]byte{},
+		termLabel:  map[string]string{},
+		termOrigin: map[string]string{},
+		typeID:     map[string][]byte{},
 	}
 	if err := scanVocab(g, `SELECT id, key FROM properties WHERE origin = ?`, []any{vocabkey.OriginProvenencia}, func(id []byte, key, _ string) {
 		v.propID[key] = append([]byte(nil), id...)
 	}); err != nil {
 		return vocab{}, err
 	}
-	if err := scanVocab(g, `SELECT id, label FROM property_terms`, nil, func(id []byte, label, _ string) {
-		v.termLabel[string(id)] = label
-	}); err != nil {
+	if err := scanTerms(g, v); err != nil {
 		return vocab{}, err
 	}
 	if err := scanVocab(g, `SELECT id, key FROM subject_types WHERE origin = ?`, []any{vocabkey.OriginProvenencia}, func(id []byte, key, _ string) {
@@ -66,6 +67,25 @@ func loadVocab(g *graphcache.Graph) (vocab, error) {
 		return vocab{}, err
 	}
 	return v, nil
+}
+
+// scanTerms reads each term's label and origin in one pass.
+func scanTerms(g *graphcache.Graph, v vocab) error {
+	rows, err := g.Query(`SELECT id, label, origin FROM property_terms`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id []byte
+		var label, origin string
+		if err := rows.Scan(&id, &label, &origin); err != nil {
+			return err
+		}
+		v.termLabel[string(id)] = label
+		v.termOrigin[string(id)] = origin
+	}
+	return rows.Err()
 }
 
 func scanVocab(g *graphcache.Graph, query string, args []any, take func(id []byte, a, b string)) error {
@@ -239,7 +259,7 @@ func persons(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PersonHeader
 	if err != nil {
 		return nil, err
 	}
-	loaded, err := nameformats.Load(g)
+	loaded, err := nameformats.LoadFor(g, g)
 	if err != nil {
 		return nil, err
 	}
@@ -679,6 +699,7 @@ func finishEvent(v vocab, h EventHeader) EventHeader {
 	if h.EventType != nil {
 		et := *h.EventType
 		et.Label = v.termLabel[string(et.ID)]
+		et.Origin = v.termOrigin[string(et.ID)]
 		h.EventType = &et
 	}
 	h.Title = eventTitle(h)

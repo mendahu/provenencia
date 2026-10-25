@@ -249,11 +249,11 @@ The same review applies when a pinned Observation is deleted or its value change
 
 **Weak claims (review alert, future UI).** A claim is surfaced for review when it is accepted, has **zero pins**, and its handle has **more than one** accepted member — it explains membership with no confirmed comparison. A handle's only member (a grounding claim, §5.1) is not flagged. No column stores this; it is a query over `identity_claims` and `identity_claim_evidence`. The audit history of `identity_claim_evidence` (removals are recorded under the claim's id) says *why* a claim is weak: never pinned, or evidence removed when an Observation or member was deleted. The alert offers the same three actions as above — re-pin against a remaining member, accept as-is, or reject — and never acts on its own. Planned with claim management, which is unscheduled; see [`ideas/identity-claim-review.md`](ideas/identity-claim-review.md).
 
-Unpromote on the Evidence graph deletes a primary Subject's accepted claim and, in the same revision, the accepted claims of the bridges on that Source that have it as an end. It does not reject, and it deletes no handle.
+Unpromote on the Evidence graph deletes a primary Subject's accepted claim and, in the same revision, the accepted claims of the bridges on that Evidence graph that have it as an end. It does not reject, and it deletes no handle.
 
 ## 5.3 Promote
 
-The researcher files an Evidence graph's Subjects onto handles from one page. This is the Promote that shipped. The design (graph alignment, scoring, the page) is [`promote-graph-alignment.md`](promote-graph-alignment.md); this section holds the model rules. The schema doesn't require the page: accepting a claim with an empty exhibit stays valid, and that claim may show as undocumented. The product proposes; it never blocks an accept.
+The researcher files an Evidence graph's Subjects onto handles from one page. This is the Promote that shipped. The design (graph alignment, the page) is [`promote-graph-alignment.md`](promote-graph-alignment.md), and its scoring is [`matching-model.md`](matching-model.md); this section holds the model rules. The schema doesn't require the page: accepting a claim with an empty exhibit stays valid, and that claim may show as undocumented. The product proposes; it never blocks an accept.
 
 1. Promote from any unpromoted primary Subject (person, event, place) opens the page with that Subject matched to its best handle. *Map the rest of this graph* adds a row for every other primary Subject on the Evidence graph.
 2. Each row's target is **proposed by aligning** the graph with the canonical graph. A Subject's own Properties *and its neighbors'* (its birth event's date, its places, its family) are compared with each candidate's reconciled values (the pins pair them with its members' Observations), and each comparison agrees, conflicts or is unknown. Subjects that are already members are anchors. A handle with no members is grounding: there's nothing to compare.
@@ -264,7 +264,7 @@ The researcher files an Evidence graph's Subjects onto handles from one page. Th
    - the pins from §5.1, with backfill onto the members' claims;
    - the bridges (§5.4).
 
-   A new claim's `argument` may be drafted from its agreeing comparisons and edited. Older claims' arguments are not rewritten.
+   A new claim's `argument` is what the researcher writes; Promote drafts none. Older claims' arguments are not rewritten.
 
 A skipped row or an unpinned comparison is not stored. Opening Promote again proposes it afresh.
 
@@ -274,13 +274,13 @@ The review in §5.2 is the other half of this: when a member leaves or a pinned 
 
 Promoting one Subject does not promote its neighbors. The page proposes them, and nothing is created for a row the researcher skips. A primary handle (Person, Event, Place) is created only by an accepted row.
 
-**Bridge Subjects** (participation, location, relationship, place relationship) have no identity of their own. Once both ends are members of handles, a bridge is **filed automatically**, joining the association the two handles already share, or a new one. That happens on Done, or later, when a claim makes its second end a member.
+**Bridge Subjects** (participation, location, relationship, place relationship) have no identity of their own. Once both ends are members of handles, a bridge is **filed automatically**, joining the association the two handles already share, or a new one. That happens on Done for the bridge's Evidence graph, or later, when a claim makes its second end a member.
 
 - **Participation and location** are keyed by their ends. The role is a reconciled value on the association, not part of its identity.
 - **Relationship and place relationship** are keyed by their ends and type: spouse *and* cousin are two relationships; `part_of` *and* `succeeded_by` are two place relationships.
 - **Direction** is kept for directed types ("parent of", "part of"); symmetric types (spouse) ignore order.
 - **A bridge whose ends are one handle is refused.** A refused filing (that one, or a place-hierarchy cycle) leaves the bridge unfiled, with its reason, and never fails the claim that triggered it.
-- **On the Promote page, each bridge can be switched off** before Done, for a relationship the researcher doesn't accept from this Source.
+- **The Promote page has no per-bridge switch.** A connection the researcher disputes is fixed on the Evidence graph (delete it, or change its type or role).
 - **A bridge with an unpromoted end** stays on the Evidence graph until that end is promoted.
 
 The role or relationship type stays an Observation on the bridge Subject; reconciliation shows it on the association.

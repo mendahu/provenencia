@@ -4,11 +4,11 @@ import Observation
 enum ConnectionTermCopy {
     static func label(disambiguationKey: String) -> String {
         switch disambiguationKey {
-        case "relationship_type":
+        case SeededPropertyKey.relationshipType:
             return L10n.string(L10n.CitationComposer.connectionRelationship)
-        case "role":
+        case SeededPropertyKey.role:
             return L10n.string(L10n.CitationComposer.connectionRole)
-        case "place_relationship_type":
+        case SeededPropertyKey.placeRelationshipType:
             return L10n.string(L10n.CitationComposer.connectionPlaceRelationship)
         default:
             return L10n.string(L10n.CitationComposer.connectionNoRole)
@@ -184,7 +184,7 @@ final class CitationConnections {
     static func groupSaved(
         observations: [CatalogObservation],
         vocabulary: CitationComposerVocabulary,
-        snapshot: SourceGraphSnapshot
+        snapshot: EvidenceGraphSnapshot
     ) -> (connections: [ConnectionRow], leftover: [CatalogObservation]) {
         var leftover = observations
         var used = Set<String>()
@@ -306,7 +306,6 @@ final class CitationConnections {
             let created = try await context.store.createCitedBridge(
                 projectDir: context.projectDir,
                 userID: context.userID,
-                sourceID: context.sourceID,
                 fromSubjectID: pending.fromSubjectID,
                 toSubjectID: pending.toSubjectID,
                 bridgeTypeKey: pending.bridgeTypeKey,

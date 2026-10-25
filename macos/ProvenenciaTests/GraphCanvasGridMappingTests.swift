@@ -4,19 +4,19 @@ import Testing
 
 @Suite
 struct GraphCanvasGridMappingTests {
-    @Test func contentPointCentersCellAtHalfSpacing() {
-        let point = GraphCanvasGridMapping.contentPoint(gridX: 0, gridY: 0, spacing: 40)
+    @Test func gridPointCentersCellAtHalfSpacing() {
+        let point = GraphCanvasGridMapping.gridPoint(gridX: 0, gridY: 0, spacing: 40)
         #expect(point.x == 20)
         #expect(point.y == 20)
 
-        let next = GraphCanvasGridMapping.contentPoint(gridX: 2, gridY: 3, spacing: 40)
+        let next = GraphCanvasGridMapping.gridPoint(gridX: 2, gridY: 3, spacing: 40)
         #expect(next.x == 100)
         #expect(next.y == 140)
     }
 
-    @Test func gridCellFloorsContentPoint() {
+    @Test func gridCellFloorsGridPoint() {
         let cell = GraphCanvasGridMapping.gridCell(
-            contentPoint: CGPoint(x: 99, y: 141),
+            gridPoint: CGPoint(x: 99, y: 141),
             spacing: 40
         )
         #expect(cell.gridX == 2)
@@ -24,8 +24,8 @@ struct GraphCanvasGridMappingTests {
     }
 
     @Test func roundTripNearestCell() {
-        let origin = GraphCanvasGridMapping.contentPoint(gridX: 5, gridY: 7)
-        let cell = GraphCanvasGridMapping.gridCell(contentPoint: origin)
+        let origin = GraphCanvasGridMapping.gridPoint(gridX: 5, gridY: 7)
+        let cell = GraphCanvasGridMapping.gridCell(gridPoint: origin)
         #expect(cell.gridX == 5)
         #expect(cell.gridY == 7)
     }

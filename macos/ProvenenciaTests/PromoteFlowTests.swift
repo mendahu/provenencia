@@ -11,8 +11,7 @@ struct PromoteFlowTests {
         id: String,
         target: String = "handle",
         handleID: String = "e1",
-        assessment: String = "strong",
-        pinned: Bool = true
+        assessment: String = "strong"
     ) -> CatalogPromoteGraphAlignmentRow {
         CatalogPromoteGraphAlignmentRow(
             subjectID: id,
@@ -22,22 +21,7 @@ struct PromoteFlowTests {
             handleRef: "PER-1",
             score: 5,
             assessment: assessment,
-            reason: "agrees", reasonPropertyKey: "name", reasonPropertyOrigin: "provenencia",
-            comparisons: [
-                CatalogPromoteGraphAlignmentComparison(
-                    propertyKey: "name",
-                    propertyOrigin: "provenencia",
-                    outcome: "agree",
-                    valueType: "name",
-                    pinned: pinned,
-                    incomingObservationID: "obs-in",
-                    incomingDisplay: "James",
-                    incomingSource: "Census",
-                    memberObservationID: "obs-mem",
-                    memberDisplay: "James",
-                    memberSource: "Register"
-                ),
-            ],
+            reason: .agrees, reasonPropertyKey: "name", reasonPropertyOrigin: "provenencia",
             alternatives: [
                 CatalogPromoteGraphAlignmentAlternative(handleID: "e2", handleRef: "PER-2", score: 1),
             ],
@@ -113,6 +97,25 @@ struct PromoteFlowTests {
         #expect(placeRow?.menu.first?.subtitle == PlaceChainDisplay.line(parents: ["Ontario", "Canada"]))
     }
 
+    @Test func aPersonRecordReadsNaturallyInTheSheetAndSortedInTheMenu() {
+        var person = row(id: "p", assessment: "medium")
+        person.person = CatalogPersonHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: ""),
+            name: CatalogNameValue(form: "John Smith", parts: [
+                CatalogNameValuePart(value: "John", type: "given"),
+                CatalogNameValuePart(value: "Smith", type: "surname"),
+            ]),
+            nameValueCount: 1
+        )
+        var flow = PromoteFlow(entryID: "e")
+        flow.nameOrders = .givenSurname
+        flow.load(entryID: "e", proposal: proposal(rows: [person]), subjects: [fact("p")], bridges: [])
+        let personRow = flow.rows.first
+        #expect(personRow?.menu.first?.title == "Smith, John")
+        #expect(personRow?.menu.first?.readingTitle == "John Smith")
+        #expect(personRow?.readingTitle == "John Smith")
+    }
+
     @Test func aMediumMatchStartsOnItsHandle() {
         var flow = PromoteFlow(entryID: "a")
         flow.load(
@@ -149,12 +152,11 @@ struct PromoteFlowTests {
         let winner = row(id: "a", handleID: "e1", assessment: "weak")
         for band in ["weak", "medium", "strong"] {
             var loser = row(id: "b", target: "skip", handleID: "", assessment: band)
-            loser.reason = "taken"
-            loser.comparisons = []
+            loser.reason = .taken
             loser.possibleDuplicate = true
             loser.duplicateOfSubjectID = "a"
             loser.alternatives = [
-                CatalogPromoteGraphAlignmentAlternative(handleID: "e1", handleRef: "PER-1", score: 2.5, assessment: band, reason: "agrees"),
+                CatalogPromoteGraphAlignmentAlternative(handleID: "e1", handleRef: "PER-1", score: 2.5, assessment: band, reason: .agrees),
             ]
             var flow = PromoteFlow(entryID: "a")
             flow.mappedRest = true
@@ -170,12 +172,11 @@ struct PromoteFlowTests {
     /// opens on it; only a no-match stays empty.
     @Test func aWeakCandidateBelowTheBarStartsSelected() {
         var below = row(id: "a", target: "skip", handleID: "", assessment: "weak")
-        below.reason = "weak"
-        below.comparisons = []
+        below.reason = .weak
         below.alternatives = [
             CatalogPromoteGraphAlignmentAlternative(
                 handleID: "e9", handleRef: "PER-9", score: 1,
-                assessment: "weak", reason: "weak"
+                assessment: "weak", reason: .weak
             ),
         ]
         var flow = PromoteFlow(entryID: "a")
@@ -196,7 +197,7 @@ struct PromoteFlowTests {
         chosen.alternatives = [
             CatalogPromoteGraphAlignmentAlternative(
                 handleID: "e2", handleRef: "PER-2", score: 2.5,
-                assessment: "weak", reason: "agrees",
+                assessment: "weak", reason: .agrees,
                 reasonPropertyKey: "name", reasonPropertyOrigin: "provenencia"
             ),
         ]
@@ -222,7 +223,7 @@ struct PromoteFlowTests {
         flow.setTarget(subjectID: "a", token: "handle:e2")
         var rescored = row(id: "a", handleID: "e2", assessment: "medium")
         rescored.handleRef = "PER-2"
-        rescored.reason = "decided"
+        rescored.reason = .decided
         flow.merge(proposal(rows: [rescored], revision: 4), subjects: [fact("a")])
         #expect(flow.rows.first?.selectionReadout == PromoteFlow.SelectionReadout(
             assessment: .medium, reason: .agrees(key: "name", origin: "provenencia")
@@ -276,21 +277,344 @@ struct PromoteFlowTests {
         #expect(bea?.decided == false)
     }
 
-    @Test func doneSendsPinsAndASwitchedOffBridge() {
+    @Test func theBridgeBetweenTwoSubjectsIsTheFirstOnThePageEitherWayRound() {
+        var flow = PromoteFlow(entryID: "john")
+        flow.bridges = [
+            PromoteFlow.BridgeFact(id: "other", sentence: "", endA: "mary", endB: "birth"),
+            PromoteFlow.BridgeFact(id: "first", sentence: "", endA: "birth", endB: "john"),
+            PromoteFlow.BridgeFact(id: "second", sentence: "", endA: "john", endB: "birth"),
+        ]
+        #expect(flow.bridge(between: "john", and: "birth")?.id == "first")
+        #expect(flow.bridge(between: "birth", and: "john")?.id == "first")
+        #expect(flow.bridge(between: "john", and: "death") == nil)
+    }
+
+    @Test func aContestedRowAndItsMoveReachTheFlow() {
+        var a = row(id: "a")
+        a.contested = true
+        a.moveReason = .neighborMoved
+        a.moveNeighborSubjectID = "b"
         var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [a, row(id: "b", handleID: "e2")]), subjects: [fact("a"), fact("b")], bridges: [])
+        let rowA = flow.rows.first { $0.subjectID == "a" }
+        let rowB = flow.rows.first { $0.subjectID == "b" }
+        #expect(rowA?.contested == true)
+        #expect(rowA?.move == .neighborMoved(neighborID: "b"))
+        #expect(rowB?.contested == false)
+        #expect(rowB?.move == nil)
+
+        func move(_ code: PromoteReasonCode?, neighbor: String) -> PromoteFlow.Reason? {
+            var r = row(id: "a")
+            r.moveReason = code
+            r.moveNeighborSubjectID = neighbor
+            return PromoteFlow.Reason(move: r)
+        }
+        #expect(move(nil, neighbor: "b") == nil)
+        #expect(move(.neighborReleased, neighbor: "") == .empty)
+        #expect(move(.unrecognized("later_move"), neighbor: "b") == .empty)
+    }
+
+    @Test func aContestedRowShowsContestedInItsReadout() {
+        var a = row(id: "a")
+        a.contested = true
+        var b = row(id: "b", handleID: "e3")
+        b.handleRef = "PER-3"
+        var c = row(id: "c", target: "skip", handleID: "", assessment: "weak")
+        c.contested = true
+        c.alternatives[0].assessment = "weak"
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [a, b, c]), subjects: [fact("a"), fact("b"), fact("c")], bridges: [])
+        let rowA = flow.rows.first { $0.subjectID == "a" }
+        let rowB = flow.rows.first { $0.subjectID == "b" }
+        let rowC = flow.rows.first { $0.subjectID == "c" }
+        #expect(rowA?.selectionReadout?.contested == true)
+        #expect(rowB?.selectionReadout?.contested == false)
+        #expect(rowC?.target.handleID == "e2")
+        #expect(rowC?.selectionReadout == PromoteFlow.SelectionReadout(assessment: .weak, reason: .empty, contested: true))
+    }
+
+    @Test func aContestedRowWithoutAHandleShowsNoReadout() {
+        var n = row(id: "n", target: "new", handleID: "")
+        n.contested = true
+        var t = row(id: "t", target: "skip", handleID: "", assessment: "medium")
+        t.reason = .taken
+        t.contested = true
+        var z = row(id: "z", target: "skip", handleID: "", assessment: "none")
+        z.contested = true
+        var x = row(id: "x")
+        x.contested = true
+        var flow = PromoteFlow(entryID: "n")
+        flow.load(
+            entryID: "n", proposal: proposal(rows: [n, t, z, x]),
+            subjects: [fact("n"), fact("t"), fact("z"), fact("x", anchor: true)], bridges: []
+        )
+        for id in ["n", "t", "z", "x"] {
+            #expect(flow.rows.first { $0.subjectID == id }?.selectionReadout == nil, "row \(id)")
+        }
+    }
+
+    @Test func retargetingClearsContestedAndMoveUntilTheNextProposal() {
+        var a = row(id: "a")
+        a.contested = true
+        a.moveReason = .neighborMoved
+        a.moveNeighborSubjectID = "b"
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [a, row(id: "b", handleID: "e3")]), subjects: [fact("a"), fact("b")], bridges: [])
+        flow.mapRest()
+        flow.setTarget(subjectID: "a", token: "handle:e2")
+        let cleared = flow.rows.first { $0.subjectID == "a" }
+        #expect(cleared?.contested == false)
+        #expect(cleared?.move == nil)
+        var next = row(id: "a", handleID: "e2")
+        next.contested = true
+        flow.merge(proposal(rows: [next], revision: 4), subjects: [fact("a")])
+        let again = flow.rows.first { $0.subjectID == "a" }
+        #expect(again?.target.handleID == "e2")
+        #expect(again?.contested == true)
+    }
+
+    @Test func theCaptionReasonIsTheMoveWhenThereIsOne() {
+        var a = row(id: "a")
+        a.moveReason = .neighborMoved
+        a.moveNeighborSubjectID = "b"
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [a, row(id: "b", handleID: "e3")]), subjects: [fact("a"), fact("b")], bridges: [])
+        let rowA = flow.rows.first { $0.subjectID == "a" }
+        let rowB = flow.rows.first { $0.subjectID == "b" }
+        #expect(rowA?.captionReason == .neighborMoved(neighborID: "b"))
+        #expect(rowB?.captionReason == rowB?.reason)
+        #expect(rowA?.shownRef == "PER-1")
+        flow.setTarget(subjectID: "a", token: "skip")
+        #expect(flow.rows.first { $0.subjectID == "a" }?.shownRef == "CPR-a")
+    }
+
+    @Test func aDecidedRowTakesTheLatestContestedFlag() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [row(id: "a")]), subjects: [fact("a")], bridges: [])
+        flow.mapRest()
+        flow.setTarget(subjectID: "a", token: "handle:e1")
+        var contested = row(id: "a")
+        contested.contested = true
+        flow.merge(proposal(rows: [contested], revision: 4), subjects: [fact("a")])
+        let a = flow.rows.first { $0.subjectID == "a" }
+        #expect(a?.target.handleID == "e1")
+        #expect(a?.decided == true)
+        #expect(a?.contested == true)
+    }
+
+    @Test func anAnchorRowIsNeverContested() {
+        var a = row(id: "a")
+        a.contested = true
+        a.moveReason = .neighborPlaced
+        a.moveNeighborSubjectID = "b"
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [a]), subjects: [fact("a", anchor: true)], bridges: [])
+        let anchor = flow.rows.first { $0.subjectID == "a" }
+        #expect(anchor?.anchor == true)
+        #expect(anchor?.contested == false)
+        #expect(anchor?.move == nil)
+    }
+
+    @Test func reasonCodesParseThroughTheWireVocabulary() {
+        let wire: [(String, PromoteReasonCode)] = [
+            ("via", .via), ("decided", .decided), ("agrees", .agrees), ("weak", .weak), ("taken", .taken),
+            ("no_match", .noMatch), ("empty", .empty), ("neighbor_placed", .neighborPlaced),
+            ("neighbor_moved", .neighborMoved), ("neighbor_released", .neighborReleased),
+        ]
+        for (code, expected) in wire {
+            #expect(PromoteReasonCode(wire: code) == expected)
+        }
+        #expect(PromoteReasonCode(wire: "later_code") == .unrecognized("later_code"))
+
+        func reason(_ code: PromoteReasonCode, neighbor: String = "") -> PromoteFlow.Reason {
+            PromoteFlow.Reason(code: code, propertyKey: "name", propertyOrigin: "provenencia", neighborID: neighbor)
+        }
+        #expect(reason(.via, neighbor: "n") == .via(neighborID: "n"))
+        #expect(reason(.via) == .empty)
+        #expect(reason(.decided) == .decided)
+        #expect(reason(.agrees) == .agrees(key: "name", origin: "provenencia"))
+        #expect(reason(.weak) == .weak)
+        #expect(reason(.taken) == .taken)
+        #expect(reason(.noMatch) == .noMatch)
+        #expect(reason(.empty) == .empty)
+        #expect(reason(.neighborPlaced, neighbor: "n") == .neighborPlaced(neighborID: "n"))
+        #expect(reason(.neighborPlaced) == .empty)
+        #expect(reason(.unrecognized("later_code")) == .empty)
+    }
+
+    @Test func doneSendsDefaultPinsAndConnectionsFollowEnds() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.mappedRest = true
         flow.load(
             entryID: "a",
-            proposal: proposal(rows: [row(id: "a")]),
-            subjects: [fact("a")],
-            bridges: [PromoteFlow.BridgeFact(id: "br", sentence: "link", endA: "a", endB: "a")]
+            proposal: proposal(rows: [row(id: "a", handleID: "e1"), row(id: "b", handleID: "e2")]),
+            subjects: [fact("a"), fact("b")],
+            bridges: [PromoteFlow.BridgeFact(id: "br", sentence: "link", endA: "a", endB: "b")]
         )
-        flow.toggleBridge("br")
+        #expect(flow.connections.first?.state == .files)
+        flow.setTarget(subjectID: "b", token: "skip")
+        #expect(flow.connections.first?.state == .waits(endID: "b", why: .skipped))
         let batch = flow.batchRows()
-        #expect(batch.count == 1)
-        #expect(batch[0].pairs.count == 1)
-        #expect(batch[0].pairs[0].incomingObservationID == "obs-in")
-        #expect(flow.skipBridgeIDs() == ["br"])
-        #expect(flow.connectionLines().first?.state == .off)
+        #expect(batch.count == 2)
+        #expect(batch[0].subjectID == "a")
+        #expect(batch[0].defaultPins)
+        #expect(batch[0].pinIDs.isEmpty)
+        #expect(batch[1].subjectID == "b")
+        #expect(batch[1].target == "skip")
+        flow.setTarget(subjectID: "b", token: "new")
+        #expect(flow.connections.first?.state == .files)
+    }
+
+    private func link(
+        _ id: String, _ a: String?, _ b: String?,
+        sentence: String? = nil, alreadyFiled: Bool = false
+    ) -> PromoteFlow.BridgeFact {
+        var bridge = PromoteFlow.BridgeFact(id: id, sentence: sentence ?? id, endA: a, endB: b)
+        bridge.endAName = a ?? ""
+        bridge.endBName = b ?? ""
+        bridge.alreadyFiled = alreadyFiled
+        return bridge
+    }
+
+    private func mapped(
+        ids: [String], handleBy: (String) -> String = { "e-" + $0 }, anchors: Set<String> = [],
+        bridges: [PromoteFlow.BridgeFact]
+    ) -> PromoteFlow {
+        var flow = PromoteFlow(entryID: ids[0])
+        flow.mappedRest = true
+        flow.load(
+            entryID: ids[0],
+            proposal: proposal(rows: ids.map { row(id: $0, handleID: handleBy($0)) }),
+            subjects: ids.map { fact($0, anchor: anchors.contains($0), handleID: handleBy($0)) },
+            bridges: bridges
+        )
+        return flow
+    }
+
+    @Test func connectionsShowUnderEveryEndThatIsARow() {
+        let flow = mapped(ids: ["j", "b", "t", "o", "m", "n", "a", "c"], bridges: [
+            link("pa", "j", "b"),
+            link("lo", "b", "t"),
+            link("pr", "t", "o"),
+            link("di", "m", "n"),
+            link("sy", "a", "c"),
+        ])
+        let byRow = flow.connectionsByRow
+        #expect(Set(byRow["j"]?.map(\.id) ?? []) == ["pa"])
+        #expect(Set(byRow["b"]?.map(\.id) ?? []) == ["pa", "lo"])
+        #expect(Set(byRow["t"]?.map(\.id) ?? []) == ["lo", "pr"])
+        #expect(Set(byRow["o"]?.map(\.id) ?? []) == ["pr"])
+        #expect(Set(byRow["m"]?.map(\.id) ?? []) == ["di"])
+        #expect(Set(byRow["n"]?.map(\.id) ?? []) == ["di"])
+        #expect(Set(byRow["a"]?.map(\.id) ?? []) == ["sy"])
+        #expect(Set(byRow["c"]?.map(\.id) ?? []) == ["sy"])
+        #expect(byRow.values.joined().allSatisfy { $0.otherEnd == nil })
+    }
+
+    @Test func aConnectionWithOneRowEndShowsOnlyThere() {
+        // (a) The event is an anchor: it shows under the person only, with a note that it is filed.
+        let filed = mapped(ids: ["j", "b"], anchors: ["b"], bridges: [link("pa", "j", "b")])
+        let filedRows = filed.connectionsByRow
+        #expect(filedRows.keys.sorted() == ["j"])
+        #expect(filedRows["j"]?.first?.otherEnd == PromoteFlow.OtherEnd(name: "b", filed: true))
+        #expect(filedRows["j"]?.first?.bridge.state == .files)
+
+        // (b) Not mapped: the other end is not on this page.
+        var alone = PromoteFlow(entryID: "j")
+        alone.load(
+            entryID: "j",
+            proposal: proposal(rows: [row(id: "j"), row(id: "b", handleID: "e2")]),
+            subjects: [fact("j"), fact("b")],
+            bridges: [link("pa", "j", "b")]
+        )
+        let shown = alone.connectionsByRow
+        #expect(shown.keys.sorted() == ["j"])
+        #expect(shown["j"]?.first?.bridge.state == .waits(endID: "b", why: .notOnPage))
+        #expect(shown["j"]?.first?.otherEnd == PromoteFlow.OtherEnd(name: "b", filed: false))
+
+        // (c) Both ends anchors: shown nowhere, still counted.
+        let both = mapped(ids: ["a", "b"], anchors: ["a", "b"], bridges: [link("x", "a", "b")])
+        #expect(both.connectionsByRow.isEmpty)
+        #expect(both.connectionCount == 1)
+
+        // (d) Already filed: neither shown nor counted.
+        let old = mapped(ids: ["a", "b"], bridges: [link("old", "a", "b", alreadyFiled: true)])
+        #expect(old.connectionsByRow.isEmpty)
+        #expect(old.connections.isEmpty)
+        #expect(old.connectionCount == 0)
+
+        // (e) Neither end is a row: shown nowhere, nothing files.
+        let neither = mapped(ids: ["xx", "ww"], bridges: [link("x", "zz", "yy")])
+        #expect(neither.connectionsByRow.isEmpty)
+        #expect(neither.connectionCount == 0)
+
+        // (f) Both ends are one row: shown once.
+        let same = mapped(ids: ["a"], bridges: [link("r", "a", "a")])
+        #expect(same.connectionsByRow["a"]?.map(\.id) == ["r"])
+    }
+
+    @Test func waitingNamesTheEndAndWhy() {
+        let bridges = [link("r", "a", "b")]
+        var flow = mapped(ids: ["a", "b"], bridges: bridges)
+        flow.setTarget(subjectID: "b", token: "skip")
+        #expect(flow.connections.first?.state == .waits(endID: "b", why: .skipped))
+        flow.setTarget(subjectID: "a", token: "skip")
+        #expect(flow.connections.first?.state == .waits(endID: "a", why: .skipped))
+
+        var unset = PromoteFlow(entryID: "a")
+        unset.mappedRest = true
+        unset.load(
+            entryID: "a",
+            proposal: proposal(rows: [row(id: "a", handleID: "e1"), row(id: "b", handleID: "", assessment: "none")]),
+            subjects: [fact("a"), fact("b")],
+            bridges: bridges
+        )
+        #expect(unset.connections.first?.state == .waits(endID: "b", why: .unset))
+
+        let missing = mapped(ids: ["a", "b"], bridges: [link("r", "a", nil)])
+        #expect(missing.connections.first?.state == .waits(endID: nil, why: .notOnPage))
+    }
+
+    @Test func bothEndsOnOneRecordNameTheRecord() {
+        let flow = mapped(ids: ["a", "b"], handleBy: { _ in "e1" }, bridges: [link("r", "a", "b")])
+        #expect(flow.connections.first?.state == .selfLink(ref: "PER-1"))
+        #expect(flow.connectionCount == 0)
+    }
+
+    @Test func rowConnectionsAreOrderedByStateThenSentence() {
+        var flow = mapped(
+            ids: ["b", "p1", "p2", "p3", "p4", "p5"],
+            handleBy: { $0 == "p5" ? "e-b" : "e-" + $0 },
+            bridges: [
+                link("x1", "p1", "b", sentence: "d"),
+                link("x2", "p2", "b", sentence: "c"),
+                link("x3", "p3", "b", sentence: "b"),
+                link("x4", "p4", "b", sentence: "a"),
+                link("x5", "p5", "b", sentence: "e"),
+            ]
+        )
+        flow.setTarget(subjectID: "p2", token: "skip")
+        flow.setTarget(subjectID: "p3", token: "skip")
+        #expect(flow.connectionsByRow["b"]?.map(\.bridge.sentence) == ["a", "d", "b", "c", "e"])
+    }
+
+    @Test func theUnsetCountCountsRowsWithNoTarget() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.mappedRest = true
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [
+                row(id: "a", handleID: "e1"),
+                row(id: "b", handleID: "", assessment: "none"),
+                row(id: "c"),
+            ]),
+            subjects: [fact("a"), fact("b"), fact("c", anchor: true)],
+            bridges: []
+        )
+        #expect(flow.unsetCount == 1)
+        #expect(!flow.targetsChosen)
+        flow.setTarget(subjectID: "b", token: "new")
+        #expect(flow.unsetCount == 0)
     }
 
     @Test func promoteAllStartsExpandedAndHidesFiledBridges() {
@@ -307,10 +631,9 @@ struct PromoteFlowTests {
         )
         #expect(flow.visibleRows.map(\.subjectID) == ["a", "b"])
         #expect(flow.targetsChosen)
-        #expect(flow.connectionLines().map(\.id) == ["new"])
-        #expect(flow.connectionLines().first?.state == .files)
+        #expect(flow.connections.map(\.id) == ["new"])
+        #expect(flow.connections.first?.state == .files)
         #expect(flow.connectionCount == 1)
-        #expect(flow.skipBridgeIDs().isEmpty)
     }
 
     @Test func anchorsAreReadOnly() {
@@ -362,41 +685,159 @@ struct PromoteFlowTests {
             #expect(line.target == "skip")
             #expect(line.argument.isEmpty)
             #expect(line.confidenceGradeID == nil)
-            #expect(line.pairs.isEmpty)
+            #expect(line.pinIDs.isEmpty)
+            #expect(line.defaultPins == false)
         }
     }
 
-    @Test func aRetargetRedraftsPinsAndArgumentForTheNewTarget() {
+    /// A board that offers these pins, checked or not, and has nothing else to say.
+    private func evidence(_ offers: [(String, Bool)]) -> EvidenceBoard {
+        EvidenceBoard.build(
+            evidence: CatalogClaimEvidence(offers: offers.map { CatalogClaimEvidenceOffer(id: $0.0, checked: $0.1) }),
+            neighbor: { _ in nil }, labels: { $0 }, worded: { _ in "" }
+        )
+    }
+
+    private func loaded(_ rows: [CatalogPromoteGraphAlignmentRow] = [], ids: [String] = ["a"]) -> PromoteFlow {
+        var flow = PromoteFlow(entryID: ids[0])
+        flow.mappedRest = true
+        flow.load(
+            entryID: ids[0],
+            proposal: proposal(rows: rows.isEmpty ? ids.map { row(id: $0) } : rows),
+            subjects: ids.map { fact($0) },
+            bridges: []
+        )
+        return flow
+    }
+
+    @Test func aNeverOpenedRowSendsDefaultPins() {
+        let flow = loaded()
+        #expect(flow.rows[0].board == nil)
+        let line = flow.batchRows()[0]
+        #expect(line.defaultPins)
+        #expect(line.pinIDs.isEmpty)
+    }
+
+    @Test func openingDraftsTheCheckedPins() {
+        var flow = loaded()
+        flow.setEvidence(subjectID: "a", handleID: "e1", board: evidence([("l:2", true), ("l:1", true), ("l:3", false)]))
+        #expect(flow.rows[0].pins == ["l:1", "l:2"])
+        #expect(flow.rows[0].decided == false)
+        let line = flow.batchRows()[0]
+        #expect(line.defaultPins == false)
+        #expect(line.pinIDs == ["l:1", "l:2"])
+    }
+
+    @Test func reopeningKeepsOnlyOfferedPins() {
+        var flow = loaded()
+        flow.setEvidence(subjectID: "a", handleID: "e1", board: evidence([("l:1", true), ("l:2", true), ("l:3", true)]))
+        flow.togglePin(subjectID: "a", pinIDs: ["l:2"])
+        #expect(flow.rows[0].pins == ["l:1", "l:3"])
+        // The neighbor was set to Skip: l:3 is no longer offered, l:2 still is, unchecked.
+        flow.setEvidence(subjectID: "a", handleID: "e1", board: evidence([("l:1", true), ("l:2", true)]))
+        #expect(flow.rows[0].pins == ["l:1"])
+    }
+
+    @Test func aLineTogglesEveryMember() {
+        var flow = loaded()
+        flow.setEvidence(subjectID: "a", handleID: "e1", board: evidence([("l:a", true), ("l:b", true)]))
+        flow.togglePin(subjectID: "a", pinIDs: ["l:a", "l:b"])
+        #expect(flow.rows[0].pins.isEmpty)
+        #expect(flow.rows[0].decided)
+        flow.togglePin(subjectID: "a", pinIDs: ["l:a", "l:b"])
+        #expect(flow.rows[0].pins == ["l:a", "l:b"])
+        // One member left unchecked makes the line unchecked; a tap checks them all.
+        flow.togglePin(subjectID: "a", pinIDs: ["l:a"])
+        flow.togglePin(subjectID: "a", pinIDs: ["l:a", "l:b"])
+        #expect(flow.rows[0].pins == ["l:a", "l:b"])
+    }
+
+    @Test func evidenceForAnOldTargetIsIgnored() {
+        var flow = loaded()
+        flow.setTarget(subjectID: "a", token: "handle:e2")
+        flow.setEvidence(subjectID: "a", handleID: "e1", board: evidence([("l:1", true)]))
+        #expect(flow.rows[0].board == nil)
+        #expect(flow.rows[0].pins.isEmpty)
+    }
+
+    @Test func evidenceNeighborsAreTheRowsDoneFiles() {
+        let anchor = row(id: "anchor")
         var flow = PromoteFlow(entryID: "a")
-        flow.load(entryID: "a", proposal: proposal(rows: [row(id: "a")]), subjects: [fact("a")], bridges: [])
-        #expect(flow.rows[0].argument == "James")
+        flow.mappedRest = true
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [
+                row(id: "a"), row(id: "h", handleID: "e7"),
+                row(id: "n", target: "new", handleID: "", assessment: "strong"),
+                row(id: "s", target: "skip", handleID: "", assessment: "strong"),
+                row(id: "u", target: "skip", handleID: "", assessment: "none"),
+                anchor,
+            ]),
+            subjects: [fact("a"), fact("h"), fact("n"), fact("s"), fact("u"), fact("anchor", anchor: true)],
+            bridges: []
+        )
+        let unset = flow.rows.first { $0.subjectID == "u" }
+        #expect(unset?.target == .unset)
+        let got = flow.evidenceNeighbors(for: "a")
+        #expect(got.map(\.subjectID).sorted() == ["h", "n", "s"])
+        #expect(got.first { $0.subjectID == "h" }?.handleID == "e7")
+        #expect(got.first { $0.subjectID == "n" }?.target == "new")
+        #expect(got.first { $0.subjectID == "s" }?.target == "skip")
+        flow.mappedRest = false
+        #expect(flow.evidenceNeighbors(for: "a").isEmpty)
+    }
+
+    @Test func aRetargetClearsEvidenceAndPins() {
+        var flow = loaded()
+        flow.setEvidence(subjectID: "a", handleID: "e1", board: evidence([("l:1", true)]))
+        #expect(flow.rows[0].pins == ["l:1"])
 
         flow.setTarget(subjectID: "a", token: "handle:e2")
         #expect(flow.rows[0].pins.isEmpty)
-        #expect(flow.rows[0].comparisons.isEmpty)
-        #expect(flow.batchRows()[0].pairs.isEmpty)
+        #expect(flow.rows[0].board == nil)
+        let line = flow.batchRows()[0]
+        #expect(line.defaultPins)
+        #expect(line.pinIDs.isEmpty)
+    }
 
-        var onE2 = row(id: "a", handleID: "e2")
-        onE2.comparisons[0].incomingObservationID = "obs-in-2"
-        onE2.comparisons[0].memberObservationID = "obs-mem-2"
-        onE2.comparisons[0].incomingDisplay = "Jim"
-        flow.merge(proposal(rows: [onE2], revision: 4), subjects: [fact("a")])
-        #expect(flow.rows[0].pins == [onE2.comparisons[0].id])
-        #expect(flow.rows[0].argument == "Jim")
-        #expect(flow.batchRows()[0].pairs.first?.memberObservationID == "obs-mem-2")
+    @Test func everyRowStartsWithAnEmptyArgument() {
+        let flow = loaded(ids: ["a", "b"])
+        #expect(flow.rows.map(\.argument) == ["", ""])
+        #expect(flow.batchRows().map(\.argument) == ["", ""])
+    }
 
+    @Test func aTypedArgumentSurvivesARetargetAndAReproposal() {
+        var flow = loaded()
         flow.setArgument(subjectID: "a", argument: "my reasons")
         flow.setTarget(subjectID: "a", token: "new")
         #expect(flow.rows[0].argument == "my reasons")
+        flow.merge(proposal(rows: [row(id: "a", handleID: "e2")], revision: 4), subjects: [fact("a")])
+        #expect(flow.rows[0].argument == "my reasons")
+
+        // A row nobody decided keeps it across a reproposal too.
+        var other = loaded(ids: ["a", "b"])
+        other.setArgument(subjectID: "b", argument: "typed")
+        other.merge(proposal(rows: [row(id: "a"), row(id: "b", handleID: "e2")], revision: 4), subjects: [fact("a"), fact("b")])
+        #expect(other.rows[1].argument == "typed")
     }
 
     @Test func aManualPinOnTheSameTargetSurvivesAReproposal() {
-        var flow = PromoteFlow(entryID: "a")
-        flow.load(entryID: "a", proposal: proposal(rows: [row(id: "a")]), subjects: [fact("a")], bridges: [])
-        let line = flow.rows[0].comparisons[0].id
-        flow.togglePin(subjectID: "a", comparisonID: line)
+        var flow = loaded()
+        flow.setEvidence(subjectID: "a", handleID: "e1", board: evidence([("l:1", true)]))
+        flow.togglePin(subjectID: "a", pinIDs: ["l:1"])
         #expect(flow.rows[0].pins.isEmpty)
         flow.merge(proposal(rows: [row(id: "a")], revision: 4), subjects: [fact("a")])
+        #expect(flow.rows[0].pins.isEmpty)
+        #expect(flow.rows[0].board != nil)
+    }
+
+    @Test func anUnsettledRowKeepsItsEvidenceOnlyOnTheSameTarget() {
+        var flow = loaded()
+        flow.setEvidence(subjectID: "a", handleID: "e1", board: evidence([("l:1", true)]))
+        flow.merge(proposal(rows: [row(id: "a")], revision: 4), subjects: [fact("a")])
+        #expect(flow.rows[0].pins == ["l:1"])
+        flow.merge(proposal(rows: [row(id: "a", handleID: "e2")], revision: 5), subjects: [fact("a")])
+        #expect(flow.rows[0].board == nil)
         #expect(flow.rows[0].pins.isEmpty)
     }
 
@@ -428,26 +869,6 @@ struct PromoteFlowTests {
         #expect(note("a") == .sharesHandle(otherName: "e", ref: "PER-2"))
     }
 
-    @Test func aConflictingComparisonIsNotDraftedAsAPin() {
-        var proposed = row(id: "a")
-        proposed.comparisons.append(CatalogPromoteGraphAlignmentComparison(
-            propertyKey: "start_date",
-            propertyOrigin: "provenencia",
-            outcome: "conflict",
-            valueType: "date",
-            pinned: true,
-            incomingObservationID: "obs-date",
-            incomingDisplay: "1990",
-            memberObservationID: "obs-date-there",
-            memberDisplay: "1985"
-        ))
-        var flow = PromoteFlow(entryID: "a")
-        flow.load(entryID: "a", proposal: proposal(rows: [proposed]), subjects: [fact("a")], bridges: [])
-        let conflict = proposed.comparisons[1].id
-        #expect(flow.rows[0].pins.contains(proposed.comparisons[0].id))
-        #expect(!flow.rows[0].pins.contains(conflict))
-    }
-
     @Test func aConflictNamesTheStrongerHandleNotTheDecidedOne() {
         var flow = PromoteFlow(entryID: "a")
         flow.load(entryID: "a", proposal: proposal(rows: [row(id: "a")]), subjects: [fact("a")], bridges: [])
@@ -460,17 +881,155 @@ struct PromoteFlowTests {
         #expect(flow.rows[0].conflictNote == "PER-1")
     }
 
-    @Test func aNegatedConflictLineIsNotDraftedAsAPin() {
-        var proposed = row(id: "a")
-        proposed.comparisons.append(CatalogPromoteGraphAlignmentComparison(
-            propertyKey: "sex_at_birth", propertyOrigin: "provenencia", outcome: "conflict",
-            valueType: "term", pinned: false, incomingDisplay: "male", incomingNegative: true,
-            memberDisplay: "male"
+    // MARK: - A record Promote did not offer
+
+    /// A row Promote found no record for: New, no band, no alternatives, so it opens unset.
+    private func unmatched(_ id: String) -> CatalogPromoteGraphAlignmentRow {
+        var unmatched = row(id: id, target: "new", handleID: "", assessment: "none")
+        unmatched.reason = .noMatch
+        unmatched.alternatives = []
+        return unmatched
+    }
+
+    @Test func aFoundRecordIsHeldAndJoinsTheMenu() {
+        let polly = CatalogPersonHeader(
+            entity: CatalogCanonicalEntity(id: "e7", ref: "PER-7", subjectTypeID: "t", label: ""),
+            name: CatalogNameValue(form: "Polly Jones", parts: [
+                CatalogNameValuePart(value: "Polly", type: "given"),
+                CatalogNameValuePart(value: "Jones", type: "surname"),
+            ]),
+            nameValueCount: 1
+        )
+        let orders = NameFormatOrders.givenSurname
+        func started() -> PromoteFlow {
+            var flow = PromoteFlow(entryID: "a")
+            flow.nameOrders = orders
+            flow.load(entryID: "a", proposal: proposal(rows: [unmatched("a")]), subjects: [fact("a")], bridges: [])
+            flow.mapRest()
+            return flow
+        }
+
+        var flow = started()
+        #expect(flow.rows[0].target == .unset)
+        #expect(flow.rows[0].menu.isEmpty)
+        let accepted = flow.hold(subjectID: "a", id: "e7", ref: "PER-7", header: .person(polly))
+        #expect(accepted)
+        let held = flow.rows[0]
+        #expect(held.target == .handle(id: "e7", ref: "PER-7", title: "Jones, Polly"))
+        #expect(held.menu.last == PromoteFlow.Alternative(
+            id: "e7", ref: "PER-7", title: "Jones, Polly", readingTitle: "Polly Jones",
+            subtitle: PersonLifeDisplay.line(polly).text, assessment: .none, reason: .decided
         ))
+        #expect(held.decided)
+        #expect(flow.manual)
+        #expect(held.readingTitle == "Polly Jones")
+        #expect(held.selectionReadout == PromoteFlow.SelectionReadout(assessment: .none, reason: .decided))
+
+        let fixed = flow.fixed(for: flow.rows.filter(\.decided))
+        #expect(fixed == [CatalogPromoteGraphAlignmentFixed(subjectID: "a", handleID: "e7")])
+        let batch = flow.batchRows().first { $0.subjectID == "a" }
+        #expect(batch?.target == "handle")
+        #expect(batch?.entityID == "e7")
+        #expect(batch?.defaultPins == true)
+
+        var bare = started()
+        let bareAccepted = bare.hold(subjectID: "a", id: "e7", ref: "PER-7", header: nil)
+        #expect(bareAccepted)
+        let item = bare.rows[0].menu.last
+        #expect(item?.title == "PER-7")
+        #expect(item?.readingTitle == "PER-7")
+        #expect(item?.subtitle == "")
+    }
+
+    @Test func aFoundRecordSurvivesAReproposalWithItsBandRefreshed() {
         var flow = PromoteFlow(entryID: "a")
-        flow.load(entryID: "a", proposal: proposal(rows: [proposed]), subjects: [fact("a")], bridges: [])
-        let line = proposed.comparisons[proposed.comparisons.count - 1]
-        #expect(!flow.rows[0].pins.contains(line.id))
-        #expect(L10n.Promote.negatedValue(line.incomingDisplay) == "not male")
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [unmatched("a"), row(id: "b")]),
+            subjects: [fact("a"), fact("b")],
+            bridges: []
+        )
+        flow.mapRest()
+        flow.hold(subjectID: "a", id: "e7", ref: "PER-7", header: nil)
+
+        var heldA = row(id: "a", handleID: "e7", assessment: "weak")
+        heldA.handleRef = "PER-7"
+        heldA.reason = .decided
+        heldA.contested = true
+        flow.merge(proposal(rows: [heldA, row(id: "b")], revision: 4), subjects: [fact("a"), fact("b")])
+        var a = flow.rows.first { $0.subjectID == "a" }
+        #expect(a?.menu.contains { $0.id == "e7" } == true)
+        #expect(a?.menu.first { $0.id == "e7" }?.assessment == .weak)
+        #expect(a?.menu.first { $0.id == "e7" }?.reason == .decided)
+        #expect(a?.contested == true)
+        #expect(a?.target.handleRef == "PER-7")
+        if case .handle(let id, _, _)? = a?.target { #expect(id == "e7") } else { Issue.record("target is not a handle") }
+
+        flow.setTarget(subjectID: "b", token: "handle:e2")
+        flow.merge(
+            proposal(rows: [unmatched("a"), row(id: "b")], revision: 5),
+            subjects: [fact("a"), fact("b")]
+        )
+        a = flow.rows.first { $0.subjectID == "a" }
+        if case .handle(let id, _, _)? = a?.target { #expect(id == "e7") } else { Issue.record("target is not a handle") }
+        #expect(a?.menu.contains { $0.id == "e7" } == true)
+    }
+
+    @Test func aFoundRecordAlreadyInTheMenuIsPickedNotAddedAgain() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [row(id: "a")]), subjects: [fact("a")], bridges: [])
+        let offered = flow.rows[0].menu
+        #expect(offered.map(\.id) == ["e1", "e2"])
+        let accepted = flow.hold(subjectID: "a", id: "e2", ref: "PER-2", header: nil)
+        #expect(accepted)
+        #expect(flow.rows[0].menu == offered)
+        #expect(flow.rows[0].menu[1].reason == offered[1].reason)
+        #expect(flow.rows[0].target == .handle(id: "e2", ref: "PER-2", title: offered[1].title))
+    }
+
+    @Test func holdingAFoundRecordResetsTheOldTargetsEvidence() {
+        var contested = row(id: "a")
+        contested.contested = true
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [contested]), subjects: [fact("a")], bridges: [])
+        flow.setEvidence(subjectID: "a", handleID: "e1", board: evidence([("l:1", true)]))
+        #expect(flow.rows[0].board != nil)
+        #expect(flow.rows[0].pins == ["l:1"])
+        #expect(flow.rows[0].contested)
+
+        flow.hold(subjectID: "a", id: "e7", ref: "PER-7", header: nil)
+        #expect(flow.rows[0].board == nil)
+        #expect(flow.rows[0].pins.isEmpty)
+        #expect(flow.rows[0].contested == false)
+        #expect(flow.rows[0].move == nil)
+    }
+
+    @Test func aFoundRecordSharingAHandleNamesTheOtherRow() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [unmatched("a"), row(id: "b")]),
+            subjects: [fact("a"), fact("b")],
+            bridges: []
+        )
+        flow.mapRest()
+        flow.hold(subjectID: "a", id: "e1", ref: "PER-1", header: nil)
+        #expect(flow.rows.first { $0.subjectID == "a" }?.duplicateNote == .sharesHandle(otherName: "b", ref: "PER-1"))
+    }
+
+    @Test func anAnchorOrMissingRowOrEmptyIDHoldsNothing() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [row(id: "a"), row(id: "b")]),
+            subjects: [fact("a", anchor: true), fact("b")],
+            bridges: []
+        )
+        let before = flow.rows
+        let onAnchor = flow.hold(subjectID: "a", id: "e7", ref: "PER-7", header: nil)
+        let onMissing = flow.hold(subjectID: "zz", id: "e7", ref: "PER-7", header: nil)
+        let withNoID = flow.hold(subjectID: "b", id: "", ref: "PER-7", header: nil)
+        #expect(!onAnchor && !onMissing && !withNoID)
+        #expect(flow.rows == before)
     }
 }

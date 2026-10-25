@@ -32,13 +32,13 @@ func filedSubject(t *testing.T, observed bool) (dir, userID, sourceID, subjectID
 func TestSourceWritesReturnEffects(t *testing.T) {
 	tests := []struct {
 		name        string
-		run         func(t *testing.T) (effects *engine.WriteEffects, sourceID, handleID string)
+		run         func(t *testing.T) (effects *engine.WriteEffects, dir, sourceID, handleID string)
 		wantHandles bool // the filed handle is in effects.handles
-		wantSources bool // the Source's evidence changed (effects.sources); a note moves only its activity
+		wantGraphs  bool // the Source's graph changed (effects.evidence_graphs); a note moves only its activity
 	}{
 		{
 			name: "a note on a Source reports the Source and no handle",
-			run: func(t *testing.T) (*engine.WriteEffects, string, string) {
+			run: func(t *testing.T) (*engine.WriteEffects, string, string, string) {
 				dir, userID, sourceID, _, handleID := filedSubject(t, false)
 				out, err := AddSourceNote(marshalProto(t, &engine.AddSourceNoteRequest{
 					ProjectDir: dir, UserId: userID, SourceId: sourceID, Body: "seen at the archive",
@@ -50,12 +50,12 @@ func TestSourceWritesReturnEffects(t *testing.T) {
 				if err := proto.Unmarshal(out, &resp); err != nil {
 					t.Fatal(err)
 				}
-				return resp.GetEffects(), sourceID, handleID
+				return resp.GetEffects(), dir, sourceID, handleID
 			},
 		},
 		{
 			name: "a credibility change reports the handles filed from the Source",
-			run: func(t *testing.T) (*engine.WriteEffects, string, string) {
+			run: func(t *testing.T) (*engine.WriteEffects, string, string, string) {
 				dir, userID, sourceID, _, handleID := filedSubject(t, true)
 				gout, err := ListSourceCredibilityGrades(marshalProto(t, &engine.ListSourceCredibilityGradesRequest{ProjectDir: dir}))
 				if err != nil {
@@ -75,13 +75,13 @@ func TestSourceWritesReturnEffects(t *testing.T) {
 				if err := proto.Unmarshal(out, &resp); err != nil {
 					t.Fatal(err)
 				}
-				return resp.GetEffects(), sourceID, handleID
+				return resp.GetEffects(), dir, sourceID, handleID
 			},
 			wantHandles: true,
 		},
 		{
 			name: "deleting a filed Subject reports its handle and Source",
-			run: func(t *testing.T) (*engine.WriteEffects, string, string) {
+			run: func(t *testing.T) (*engine.WriteEffects, string, string, string) {
 				dir, userID, sourceID, subjectID, handleID := filedSubject(t, false)
 				out, err := DeleteSubject(marshalProto(t, &engine.DeleteSubjectRequest{
 					ProjectDir: dir, UserId: userID, SubjectId: subjectID,
@@ -93,23 +93,24 @@ func TestSourceWritesReturnEffects(t *testing.T) {
 				if err := proto.Unmarshal(out, &resp); err != nil {
 					t.Fatal(err)
 				}
-				return resp.GetEffects(), sourceID, handleID
+				return resp.GetEffects(), dir, sourceID, handleID
 			},
 			wantHandles: true,
-			wantSources: true,
+			wantGraphs:  true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			eff, sourceID, handleID := tt.run(t)
+			eff, dir, sourceID, handleID := tt.run(t)
 			if eff.GetRevision() <= 0 || eff.GetRevisionAt() == "" {
 				t.Fatalf("activity = %d %q", eff.GetRevision(), eff.GetRevisionAt())
 			}
 			if !contains(eff.GetSourceScopes(), sourceID) {
 				t.Fatalf("source_scopes = %v, want %s", eff.GetSourceScopes(), sourceID)
 			}
-			if got := contains(eff.GetSources(), sourceID); got != tt.wantSources {
-				t.Fatalf("sources = %v, Source %s in sources = %v, want %v", eff.GetSources(), sourceID, got, tt.wantSources)
+			graphID := soleGraphID(t, dir, sourceID)
+			if got := contains(eff.GetEvidenceGraphs(), graphID); got != tt.wantGraphs {
+				t.Fatalf("evidence_graphs = %v, graph %s in it = %v, want %v", eff.GetEvidenceGraphs(), graphID, got, tt.wantGraphs)
 			}
 			if got := contains(eff.GetHandles(), handleID); got != tt.wantHandles {
 				t.Fatalf("handles = %v, handle %s in handles = %v, want %v", eff.GetHandles(), handleID, got, tt.wantHandles)

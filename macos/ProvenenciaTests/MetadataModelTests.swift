@@ -36,24 +36,19 @@ struct MetadataModelTests {
         return (model, session)
     }
 
-    private func waitForQuery<Value>(_ handle: QueryHandle<Value>) async {
-        var waited: UInt64 = 0
-        let step: UInt64 = 10_000_000
-        while waited < 2_000_000_000 {
-            if handle.status == .ready || handle.status == .error { return }
-            await Task.yield()
-            try? await Task.sleep(nanoseconds: step)
-            waited += step
-        }
-    }
-
     private func warm(_ model: MetadataModel, session: WorkspaceSession) async {
         model.warmFieldsQuery()
-        if let fieldsHandle: QueryHandle<[CatalogMetadataField]> = session.queryHandle(
+        await publishSettled(model, session: session)
+    }
+
+    /// Waits out the fields list's reload, then publishes its count as the
+    /// view's `onSettled` does.
+    private func publishSettled(_ model: MetadataModel, session: WorkspaceSession) async {
+        guard let fieldsHandle: QueryHandle<[CatalogMetadataField]> = session.queryHandle(
             MetadataModel.fieldsListKey(for: session)
-        ) {
-            await waitForQuery(fieldsHandle)
-        }
+        ) else { return }
+        await waitForQuery(fieldsHandle)
+        #expect(fieldsHandle.isSettled)
         model.syncCatalogCounts()
     }
 
@@ -164,6 +159,7 @@ struct MetadataModelTests {
         #expect(model.fields.first?.origin == "user")
         #expect(model.toast?.title == L10n.string(L10n.Metadata.toastAddedTitle))
         #expect(model.selectedField?.key == "grandmas-album-code")
+        await publishSettled(model, session: session)
         #expect(counts.metadata?.total == 1)
         #expect(counts.metadata?.user == 1)
         #expect(location?.section == .metadata)
@@ -387,6 +383,7 @@ struct MetadataModelTests {
         #expect(model.pendingDeleteField == nil)
         #expect(!model.isDeleting)
         #expect(model.toast?.title == L10n.string(L10n.Metadata.toastDeletedTitle))
+        await publishSettled(model, session: session)
         #expect(counts.metadata?.total == 1)
         #expect(counts.metadata?.seeded == 1)
         #expect(counts.metadata?.user == 0)

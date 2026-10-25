@@ -67,8 +67,8 @@ enum PVTracking {
 /// Resolves Provenencia's brand fonts by family name + numeric weight
 /// against whatever weight faces are registered (see
 /// `PVFontRegistration.registerBundledFontsIfNeeded()`), falling back to
-/// the closest system serif/monospace face if a bundled font is somehow
-/// unavailable (e.g. running in a context that skipped registration) —
+/// the system font (display and body) or the system monospaced face (mono)
+/// if a bundled font is somehow unavailable (e.g. running in a context that skipped registration) —
 /// never crashes.
 enum PVFont {
     static func display(size: CGFloat = PVTypeScale.h2, weight: CGFloat = PVFontWeight.semibold) -> Font {
@@ -80,7 +80,7 @@ enum PVFont {
     }
 
     static func mono(size: CGFloat = PVTypeScale.caption, weight: CGFloat = PVFontWeight.regular) -> Font {
-        Font(nsResolved(family: PVFontFamily.mono, size: size, weight: weight, italic: false))
+        Font(nsMono(size: size, weight: weight))
     }
 
     /// AppKit face used by display text, so measured card heights match paint.
@@ -93,7 +93,48 @@ enum PVFont {
         nsResolved(family: PVFontFamily.body, size: size, weight: weight, italic: italic)
     }
 
+    /// AppKit face used by mono text (ids, dates, counts).
+    static func nsMono(size: CGFloat, weight: CGFloat = PVFontWeight.regular) -> NSFont {
+        nsResolved(family: PVFontFamily.mono, size: size, weight: weight, italic: false)
+    }
+
+    private struct NSFontKey: Hashable {
+        let family: String
+        let size: CGFloat
+        let weight: CGFloat
+        let italic: Bool
+    }
+
+    /// Resolved AppKit faces, reused so card paint and SwiftUI bodies do not
+    /// rebuild a descriptor and font on every call. Lock-guarded because
+    /// `PVFont` is not actor-isolated, so any thread may call it.
+    private static let fontLock = NSLock()
+    nonisolated(unsafe) private static var nsFonts: [NSFontKey: NSFont] = [:]
+
+    #if DEBUG
+    static func nsIsCachedForTesting(family: String, size: CGFloat, weight: CGFloat, italic: Bool) -> Bool {
+        fontLock.lock()
+        defer { fontLock.unlock() }
+        return nsFonts[NSFontKey(family: family, size: size, weight: weight, italic: italic)] != nil
+    }
+    #endif
+
     private static func nsResolved(
+        family: String,
+        size: CGFloat,
+        weight: CGFloat,
+        italic: Bool
+    ) -> NSFont {
+        let key = NSFontKey(family: family, size: size, weight: weight, italic: italic)
+        fontLock.lock()
+        defer { fontLock.unlock() }
+        if let stored = nsFonts[key] { return stored }
+        let font = nsResolveUncached(family: family, size: size, weight: weight, italic: italic)
+        nsFonts[key] = font
+        return font
+    }
+
+    private static func nsResolveUncached(
         family: String,
         size: CGFloat,
         weight: CGFloat,
@@ -107,6 +148,9 @@ enum PVFont {
         if let nsFont = NSFont(descriptor: descriptor, size: size) {
             return nsFont
         }
+        if family == PVFontFamily.mono {
+            return NSFont.monospacedSystemFont(ofSize: size, weight: systemNSWeight(for: weight))
+        }
         return NSFont.systemFont(ofSize: size, weight: systemNSWeight(for: weight))
     }
 
@@ -114,13 +158,7 @@ enum PVFont {
     /// raw value, so `NSFontDescriptor` resolution asks for the same weight
     /// tier the family actually ships faces for.
     private static func nsWeight(for weight: CGFloat) -> CGFloat {
-        switch weight {
-        case ..<PVFontWeight.regular: return NSFont.Weight.light.rawValue
-        case PVFontWeight.regular..<PVFontWeight.medium: return NSFont.Weight.regular.rawValue
-        case PVFontWeight.medium..<PVFontWeight.semibold: return NSFont.Weight.medium.rawValue
-        case PVFontWeight.semibold..<PVFontWeight.bold: return NSFont.Weight.semibold.rawValue
-        default: return NSFont.Weight.bold.rawValue
-        }
+        systemNSWeight(for: weight).rawValue
     }
 
     private static func systemNSWeight(for weight: CGFloat) -> NSFont.Weight {

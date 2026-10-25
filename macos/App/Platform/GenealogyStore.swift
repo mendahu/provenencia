@@ -88,6 +88,55 @@ struct CatalogArtifact: Sendable, Equatable {
     }
 }
 
+/// One Evidence graph: a named set of a Source's Artifacts.
+struct CatalogEvidenceGraph: Sendable, Equatable, Identifiable {
+    var id: String
+    var ref: String
+    var sourceID: String
+    var name: String
+    var description: String
+    var artifactIDs: [String]
+}
+
+extension CatalogEvidenceGraph {
+    /// `artifacts` filtered to the ones this graph links, in the order given
+    /// (the Source page's Artifact order, not the link order).
+    func linkedArtifacts(_ artifacts: [CatalogArtifact]) -> [CatalogArtifact] {
+        let linked = Set(artifactIDs)
+        return artifacts.filter { linked.contains($0.id) }
+    }
+}
+
+/// An Artifact a graph edit would unlink that the graph's Citations still use,
+/// with those Citations shaped for the DeleteImpact recipe.
+struct CatalogEvidenceGraphUnlinkBlock: Sendable, Equatable {
+    var artifactID: String
+    var citations: CatalogDeleteImpactGroup
+}
+
+extension CatalogArtifact {
+    /// The trimmed label, else the ref: the one name every list and dialog shows.
+    var displayTitle: String {
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? ref : trimmed
+    }
+
+    /// True when the label is non-empty after trimming (`displayTitle` is the label, not the ref).
+    var hasDisplayLabel: Bool {
+        !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// True when the Artifact has a file row and a file id.
+    var hasFile: Bool {
+        file != nil && !fileID.isEmpty
+    }
+
+    /// The Source type icon to show in place of a thumbnail: nil when the Artifact has a file.
+    func thumbnailTypeIconKey(sourceTypeIconKey: String?) -> String? {
+        hasFile ? nil : sourceTypeIconKey
+    }
+}
+
 extension CatalogSource {
     /// The cover Artifact's id when the cover is a pinned Artifact. Nil otherwise.
     var coverArtifactID: String? {
@@ -104,13 +153,14 @@ struct CatalogCredibilityGrade: Sendable, Equatable, Identifiable {
     var sortOrder: Int
 }
 
-enum CatalogDeleteImpactGate: String, Sendable, Equatable {
+enum CatalogDeleteImpactGate: String, Sendable, Equatable, CaseIterable {
     case ok
     case inbound
     case notFound = "not_found"
     case edgeLocked = "edge_locked"
     case infra
     case originLocked = "origin_locked"
+    case lastGraph = "last_graph"
 }
 
 struct CatalogDeleteImpact: Sendable, Equatable {
@@ -174,6 +224,12 @@ struct CatalogSubject: Sendable, Equatable, Identifiable {
     var subjectTypeID: String
     var label: String
     var description: String
+
+    /// The label without surrounding whitespace; nil when it is blank.
+    var trimmedLabel: String? {
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
 }
 
 /// A Conclusion handle (PER-…, EVT-…, PLC-…).
@@ -234,29 +290,6 @@ struct CatalogPromoteGraphAlignmentFixed: Sendable, Equatable {
     var target: String = "handle"
 }
 
-/// One Property comparison on a graph-alignment row. Agreeing lines with
-/// observation ids are the drafted pins.
-struct CatalogPromoteGraphAlignmentComparison: Sendable, Equatable, Identifiable {
-    var propertyKey: String
-    var propertyOrigin: String
-    var outcome: String
-    var valueType: String
-    var pinned: Bool
-    var weight: Double = 0
-    /// Empty for the Subject's own records; the layer neighbor for a one-hop record.
-    var groupSubjectID: String = ""
-    var incomingObservationID: String = ""
-    var incomingDisplay: String = ""
-    /// The incoming value is a negative Observation: shown as "not <value>".
-    var incomingNegative: Bool = false
-    var incomingSource: String = ""
-    var memberObservationID: String = ""
-    var memberDisplay: String = ""
-    var memberSource: String = ""
-
-    var id: String { incomingObservationID + "|" + memberObservationID + "|" + propertyKey }
-}
-
 /// A runner-up handle on a graph-alignment row.
 struct CatalogPromoteGraphAlignmentAlternative: Sendable, Equatable {
     var handleID: String
@@ -267,8 +300,8 @@ struct CatalogPromoteGraphAlignmentAlternative: Sendable, Equatable {
     var place: CatalogPlaceHeader?
     /// strong, medium, weak, none — this record's own band.
     var assessment: String = ""
-    /// via, agrees, or weak. The page words it.
-    var reason: String = ""
+    /// A row reason, worded by the page.
+    var reason: PromoteReasonCode = .empty
     var reasonPropertyKey: String = ""
     var reasonPropertyOrigin: String = ""
     var viaNeighborSubjectID: String = ""
@@ -283,12 +316,11 @@ struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
     var handleRef: String
     var score: Double
     var assessment: String
-    /// via, decided, agrees, weak, taken, no_match, empty — worded by the page.
-    var reason: String = ""
+    /// A row reason, worded by the page.
+    var reason: PromoteReasonCode = .empty
     /// With reason agrees: the Property that agrees most.
     var reasonPropertyKey: String = ""
     var reasonPropertyOrigin: String = ""
-    var comparisons: [CatalogPromoteGraphAlignmentComparison]
     var alternatives: [CatalogPromoteGraphAlignmentAlternative]
     var conflictWithFixed: Bool
     var possibleDuplicate: Bool
@@ -297,6 +329,11 @@ struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
     var viaNeighborSubjectID: String = ""
     var viaBridgeType: String = ""
     var viaRole: String = ""
+    /// A comparison behind the reported pair conflicts, whatever the band.
+    var contested: Bool = false
+    /// A move reason when settling released an earlier pair of this row in this proposal; nil otherwise.
+    var moveReason: PromoteReasonCode? = nil
+    var moveNeighborSubjectID: String = ""
     var person: CatalogPersonHeader?
     var event: CatalogEventHeader?
     var place: CatalogPlaceHeader?
@@ -310,10 +347,92 @@ struct CatalogPromoteGraphAlignmentProposal: Sendable, Equatable {
     var rows: [CatalogPromoteGraphAlignmentRow]
 }
 
-/// One confirmed comparison on a Done row.
-struct CatalogPromoteGraphAlignmentPair: Sendable, Equatable {
+/// One member Observation a line would pin. `id` is Go's pin id.
+struct CatalogClaimEvidencePin: Sendable, Equatable, Identifiable {
+    var id: String
+    var sourceID: String
+    var value: CatalogConclusionValue
+}
+
+/// One incoming Observation against the members that say something about the
+/// same property (`claimevidence.Line`).
+struct CatalogClaimEvidenceLine: Sendable, Equatable, Identifiable {
+    var propertyKey: String
+    var outcome: EvidenceOutcome
+    var propertyCause: EvidencePropertyCause = .none
+    var relation: ValueRelation
+    var cause: ValueCause = .none
     var incomingObservationID: String
-    var memberObservationID: String
+    var incoming: CatalogConclusionValue
+    /// The incoming value is a negative Observation: shown as "not <value>".
+    var incomingNegative: Bool = false
+    var members: [CatalogClaimEvidencePin]
+
+    var id: String { incomingObservationID + "|" + (members.first?.id ?? propertyKey) }
+}
+
+/// The lines for one property.
+struct CatalogClaimEvidenceSection: Sendable, Equatable, Identifiable {
+    var propertyKey: String
+    var lines: [CatalogClaimEvidenceLine]
+
+    var id: String { propertyKey }
+}
+
+/// One member's side of a relationship. `id` is Go's pin id.
+struct CatalogClaimEvidenceBundle: Sendable, Equatable, Identifiable {
+    var id: String
+}
+
+/// A term as the evidence wire names it: its key, the catalog's label, and whose term it is.
+/// `key` names a product term only when `CatalogOrigin.isProduct(origin)`.
+struct CatalogEvidenceTerm: Sendable, Equatable {
+    var key: String
+    var label: String
+    var origin: String
+
+    /// The key, when it is a product term.
+    var productKey: String? { CatalogOrigin.isProduct(origin) ? key : nil }
+}
+
+/// One link of the row's Subject that corresponds to a link between the
+/// entity's members and a neighbor's (`claimevidence.Relationship`).
+struct CatalogClaimEvidenceRelationship: Sendable, Equatable, Identifiable {
+    var neighborSubjectID: String
+    var key: String
+    var bridgeType: String = ""
+    var outcome: EvidenceOutcome
+    var bundles: [CatalogClaimEvidenceBundle]
+    var sections: [CatalogClaimEvidenceSection] = []
+    /// The link read from the neighbor's side: the endpoint property the neighbor is at ("" for a
+    /// symmetric link), the term it carries, and whether that term names the neighbor.
+    var neighborEnd: String = ""
+    var neighborTerm: CatalogEvidenceTerm?
+    var neighborTermNamesNeighbor: Bool = false
+    /// A participation's event type.
+    var eventType: CatalogEvidenceTerm?
+
+    var id: String { neighborSubjectID + "|" + key }
+}
+
+/// A pin the evidence offers; checked ones are the defaults.
+struct CatalogClaimEvidenceOffer: Sendable, Equatable {
+    var id: String
+    var checked: Bool
+}
+
+/// One Promote row's claim evidence against its target (`getPromoteClaimEvidence`).
+struct CatalogClaimEvidence: Sendable, Equatable {
+    var sections: [CatalogClaimEvidenceSection] = []
+    var relationships: [CatalogClaimEvidenceRelationship] = []
+    var offers: [CatalogClaimEvidenceOffer] = []
+    /// Source id → title.
+    var sourceTitles: [String: String] = [:]
+
+    /// The pins that start checked.
+    var checkedPinIDs: Set<String> { Set(offers.filter(\.checked).map(\.id)) }
+    /// Every pin the evidence offers.
+    var offeredPinIDs: Set<String> { Set(offers.map(\.id)) }
 }
 
 /// One Subject on a Done.
@@ -323,7 +442,10 @@ struct CatalogPromoteBatchRow: Sendable, Equatable {
     var entityID: String?
     var confidenceGradeID: String?
     var argument: String
-    var pairs: [CatalogPromoteGraphAlignmentPair]
+    /// The sheet was never opened: Go pins what the evidence checks.
+    var defaultPins: Bool = false
+    /// The pins the researcher left checked (ids from `CatalogClaimEvidence.offers`).
+    var pinIDs: [String] = []
 }
 
 /// One claim a Done filed.
@@ -463,6 +585,8 @@ struct CatalogEventHeader: Sendable, Equatable, Identifiable {
     var eventName: String = ""
     var eventNameCount: Int = 0
     var eventTypeKey: String = ""
+    /// The type term's origin; `eventTypeKey` is the product's only when this is `CatalogOrigin.provenencia`.
+    var eventTypeOrigin: String = ""
     var eventTypeLabel: String = ""
     var eventTypeCount: Int = 0
     var date: CatalogDateValueInput?
@@ -503,6 +627,8 @@ struct CatalogEventTitle: Sendable, Equatable {
     var label: String = ""
     var ref: String = ""
     var typeKey: String = ""
+    /// The type term's origin; `typeKey` is the product's only when this is `CatalogOrigin.provenencia`.
+    var typeOrigin: String = ""
     var typeLabel: String = ""
     /// Subject-role persons in stable order; `nil` reads "unnamed person".
     var subjects: [CatalogNameValue?] = []
@@ -536,9 +662,18 @@ enum CatalogConclusionValue: Sendable, Equatable {
     case none
     case text(String)
     case integer(Int64)
-    case term(id: String, key: String, label: String)
+    /// `origin` is the term's: `key` names a product term only when `CatalogOrigin.isProduct(origin)`.
+    case term(id: String, key: String, label: String, origin: String)
     case date(CatalogDateValueInput)
     case name(CatalogNameValue)
+    /// A likeness: its stored crop; the region is not sent on the evidence wire.
+    case depiction(CatalogDepictionValue)
+
+    /// A likeness, drawn as a crop rather than worded.
+    var isDepiction: Bool {
+        if case .depiction = self { return true }
+        return false
+    }
 }
 
 /// One auto-reconciled value of a Property (S9-14). `.kept` is displayed;
@@ -570,6 +705,8 @@ struct CatalogReconcilerOutcome: Sendable, Equatable, Identifiable {
     var recorded: CatalogConclusionValue
     var subjectID: String
     var subjectRef: String
+    /// The Evidence graph of the Observation's Subject.
+    var graphID: String = ""
     var citationID: String
     var artifactID: String = ""
     var sourceID: String
@@ -631,18 +768,6 @@ struct CatalogConclusionDetail: Sendable, Equatable {
     var header: CatalogConclusionHeader?
     /// The handle's likenesses, earliest recorded first.
     var likenesses: [CatalogLikeness] = []
-
-    var personHeader: CatalogPersonHeader? {
-        if case .person(let header) = header { header } else { nil }
-    }
-
-    var eventHeader: CatalogEventHeader? {
-        if case .event(let header) = header { header } else { nil }
-    }
-
-    var placeHeader: CatalogPlaceHeader? {
-        if case .place(let header) = header { header } else { nil }
-    }
 }
 
 /// One handle's row for its kind, as the lists show it.
@@ -650,6 +775,20 @@ enum CatalogConclusionHeader: Sendable, Equatable {
     case person(CatalogPersonHeader)
     case event(CatalogEventHeader)
     case place(CatalogPlaceHeader)
+}
+
+extension CatalogConclusionHeader {
+    var person: CatalogPersonHeader? {
+        if case .person(let header) = self { header } else { nil }
+    }
+
+    var event: CatalogEventHeader? {
+        if case .event(let header) = self { header } else { nil }
+    }
+
+    var place: CatalogPlaceHeader? {
+        if case .place(let header) = self { header } else { nil }
+    }
 }
 
 /// One Observation row with Property summary (graph / card payloads).
@@ -677,6 +816,8 @@ struct CatalogObservation: Sendable, Equatable, Identifiable {
     var propertyValueType: String
     /// Product/user term key when `valueTermID` is set (empty when unknown).
     var valueTermKey: String = ""
+    /// The term's origin; its key is the product's only when this is `CatalogOrigin.provenencia`.
+    var valueTermOrigin: String = ""
     /// depiction_values.id when the Observation holds a depiction.
     var valueDepictionID: String = ""
     /// The saved depiction when listed; response data, never sent back to Go.
@@ -704,6 +845,10 @@ struct CatalogPropertyTerm: Sendable, Equatable, Identifiable {
     var origin: String
     var label: String
     var description: String
+
+    /// `key` when this is a product term, else nil: a researcher's own term
+    /// may be keyed like one, so only the product's names a seeded term.
+    var productKey: String? { CatalogOrigin.isProduct(origin) ? key : nil }
 }
 
 struct CatalogSubjectTypeProperty: Sendable, Equatable, Identifiable {
@@ -758,7 +903,7 @@ struct CatalogConnectRule: Sendable, Equatable {
         CatalogConnectRule(
             fromTypeKey: "person", toTypeKey: "event",
             bridgeTypeKey: "participation", edgePropertyKeys: ["person", "event"],
-            disambiguation: "role", refuse: false,
+            disambiguation: SeededPropertyKey.role, refuse: false,
             edges: [
                 CatalogConnectEdge(propertyKey: "person", endpointTypeKey: "person"),
                 CatalogConnectEdge(propertyKey: "event", endpointTypeKey: "event"),
@@ -767,7 +912,7 @@ struct CatalogConnectRule: Sendable, Equatable {
         CatalogConnectRule(
             fromTypeKey: "event", toTypeKey: "person",
             bridgeTypeKey: "participation", edgePropertyKeys: ["person", "event"],
-            disambiguation: "role", refuse: false,
+            disambiguation: SeededPropertyKey.role, refuse: false,
             edges: [
                 CatalogConnectEdge(propertyKey: "person", endpointTypeKey: "person"),
                 CatalogConnectEdge(propertyKey: "event", endpointTypeKey: "event"),
@@ -974,13 +1119,29 @@ protocol GenealogyStore: Sendable {
 
     func listSources(projectDir: String) async throws -> [CatalogSource]
     func getSourceWorkspace(projectDir: String, sourceID: String) async throws -> CatalogSourceWorkspace
+    /// Creates a Source in one audited write and returns it with the write's effects.
     func createSource(
         projectDir: String,
         userID: String,
         sourceTypeID: String,
         title: String,
         description: String
-    ) async throws -> CatalogSource
+    ) async throws -> (CatalogSource, CatalogWriteEffects)
+    /// Copies a Source in one audited write: a new Source with `title` and
+    /// `sourceTypeID`, plus, each only when chosen, the original's description,
+    /// metadata with its layout, credibility, and the listed Artifacts. Notes,
+    /// Subjects, Citations, Observations, graphs and the cover are never copied.
+    func copySource(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        title: String,
+        sourceTypeID: String,
+        copyDescription: Bool,
+        copyMetadata: Bool,
+        copyCredibility: Bool,
+        artifactIDs: [String]
+    ) async throws -> (CatalogSource, CatalogWriteEffects)
     func deleteSource(projectDir: String, userID: String, sourceID: String) async throws
     func updateSource(
         projectDir: String,
@@ -1036,7 +1197,8 @@ protocol GenealogyStore: Sendable {
         sourceID: String,
         fileID: String,
         label: String,
-        description: String
+        description: String,
+        graphIDs: [String]
     ) async throws -> (CatalogArtifact, CatalogWriteEffects)
     func deleteArtifact(projectDir: String, userID: String, artifactID: String) async throws -> CatalogWriteEffects
     func updateArtifact(
@@ -1052,6 +1214,43 @@ protocol GenealogyStore: Sendable {
         artifactID: String,
         path: String
     ) async throws -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool, effects: CatalogWriteEffects)
+    func listEvidenceGraphs(projectDir: String) async throws -> [CatalogEvidenceGraph]
+    func createEvidenceGraph(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        name: String,
+        description: String,
+        artifactIDs: [String]
+    ) async throws -> (CatalogEvidenceGraph, CatalogWriteEffects)
+    /// Empty `artifactIDs` leaves the links unchanged; otherwise it is the full set.
+    func updateEvidenceGraph(
+        projectDir: String,
+        userID: String,
+        graphID: String,
+        name: String,
+        description: String,
+        artifactIDs: [String]
+    ) async throws -> CatalogWriteEffects
+    func deleteEvidenceGraph(projectDir: String, userID: String, graphID: String) async throws -> CatalogWriteEffects
+    func linkEvidenceGraphArtifact(
+        projectDir: String,
+        userID: String,
+        graphID: String,
+        artifactID: String
+    ) async throws -> CatalogWriteEffects
+    func unlinkEvidenceGraphArtifact(
+        projectDir: String,
+        userID: String,
+        graphID: String,
+        artifactID: String
+    ) async throws -> CatalogWriteEffects
+    /// Which of `artifactIDs` a graph edit would unlink that the graph's Citations use.
+    func getEvidenceGraphUnlinkImpact(
+        projectDir: String,
+        graphID: String,
+        artifactIDs: [String]
+    ) async throws -> [CatalogEvidenceGraphUnlinkBlock]
     func listSourceCredibilityGrades(projectDir: String) async throws -> [CatalogCredibilityGrade]
     func upsertSourceCredibilityAssessment(
         projectDir: String,
@@ -1140,12 +1339,12 @@ protocol GenealogyStore: Sendable {
     /// has no stored profile, so display keeps stored part order.
     func nameFormat(projectDir: String) async throws -> NameFormatOrders
     /// Catalog search (S3-07+). Empty / whitespace query → empty hits. `kinds`
-    /// restricts hits to those kinds; empty is the omnibar's default set, which
-    /// leaves out `person` / `event` / `place` until S9-35.
+    /// restricts hits to those kinds; empty is the default set (every searchable kind).
+    /// A nil `location` gives no section nudge.
     func searchCatalog(
         projectDir: String,
         query: String,
-        location: WorkspaceLocation,
+        location: WorkspaceLocation?,
         kinds: [String]
     ) async throws -> [CatalogSearchHit]
 
@@ -1153,7 +1352,7 @@ protocol GenealogyStore: Sendable {
     func createSubject(
         projectDir: String,
         userID: String,
-        sourceID: String,
+        graphID: String,
         subjectTypeID: String,
         label: String,
         description: String,
@@ -1189,27 +1388,34 @@ protocol GenealogyStore: Sendable {
         entityID: String,
         observationID: String
     ) async throws -> CatalogWriteEffects
-    /// Propose a handle, New, or Skip for every primary Subject on one Source (graph alignment).
+    /// Propose a handle, New, or Skip for every primary Subject on one Evidence graph (graph alignment).
     func proposePromoteGraphAlignment(
         projectDir: String,
-        sourceID: String,
+        graphID: String,
         fixed: [CatalogPromoteGraphAlignmentFixed]
     ) async throws -> CatalogPromoteGraphAlignmentProposal
-    /// File one Done: claims, pins, and bridges. `seenRevision` is the proposal's revision.
+    /// One row's claim evidence against its target, on one Evidence graph. `neighbors` are the targets the page holds for its other rows.
+    func getPromoteClaimEvidence(
+        projectDir: String,
+        graphID: String,
+        subjectID: String,
+        handleID: String,
+        neighbors: [CatalogPromoteGraphAlignmentFixed]
+    ) async throws -> CatalogClaimEvidence
+    /// File one Done for one Evidence graph: claims, pins, and bridges. `seenRevision` is the proposal's revision.
     func applyPromoteGraphAlignment(
         projectDir: String,
         userID: String,
-        sourceID: String,
+        graphID: String,
         seenRevision: Int64,
-        rows: [CatalogPromoteBatchRow],
-        skipBridgeIDs: [String]
+        rows: [CatalogPromoteBatchRow]
     ) async throws -> CatalogPromoteBatchResult
     /// The claim confidence scale, in order.
     func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade]
-    /// Accepted handle of every promoted Subject on one Source's Evidence graph.
-    func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership]
-    /// The title of every Event Subject on one Source's Evidence graph, keyed by Subject id.
-    func listSourceEventTitles(projectDir: String, sourceID: String) async throws -> [String: CatalogEventTitle]
+    /// Accepted handle of every promoted Subject on one Evidence graph.
+    func listSubjectMemberships(projectDir: String, graphID: String) async throws -> [CatalogSubjectMembership]
+    /// The title of every Event Subject on one Evidence graph, keyed by Subject id.
+    func listEvidenceGraphEventTitles(projectDir: String, graphID: String) async throws -> [String: CatalogEventTitle]
     /// Every unmerged Person as a row header, in Go's list order (by shown title, then ref-only by ref).
     func listPersonHeaders(projectDir: String) async throws -> [CatalogPersonHeader]
     func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader]
@@ -1217,7 +1423,7 @@ protocol GenealogyStore: Sendable {
     /// One handle's fields, auto-reconciled values and outcomes. Throws
     /// `conclusiondetails.not_found` for an unknown or merged handle.
     func getConclusionDetail(projectDir: String, entityID: String) async throws -> CatalogConclusionDetail
-    func listSubjects(projectDir: String, sourceID: String) async throws -> [CatalogSubject]
+    func listSubjects(projectDir: String, graphID: String) async throws -> [CatalogSubject]
     func setSubjectPosition(
         projectDir: String,
         subjectID: String,
@@ -1225,7 +1431,7 @@ protocol GenealogyStore: Sendable {
         gridY: Int64
     ) async throws -> CatalogSubjectPosition
     func clearSubjectPosition(projectDir: String, subjectID: String) async throws
-    func listSubjectPositions(projectDir: String, sourceID: String) async throws -> [CatalogSubjectPosition]
+    func listSubjectPositions(projectDir: String, graphID: String) async throws -> [CatalogSubjectPosition]
 
     func createProperty(
         projectDir: String,
@@ -1270,7 +1476,6 @@ protocol GenealogyStore: Sendable {
     func createCitedBridge(
         projectDir: String,
         userID: String,
-        sourceID: String,
         fromSubjectID: String,
         toSubjectID: String,
         bridgeTypeKey: String,
@@ -1301,6 +1506,7 @@ protocol GenealogyStore: Sendable {
 
     func getCitation(
         projectDir: String,
+        graphID: String,
         citationID: String
     ) async throws -> (CatalogCitation, [String], [CatalogObservation])
 
@@ -1336,22 +1542,28 @@ protocol GenealogyStore: Sendable {
         observations: [CatalogObservationDraft]
     ) async throws -> ([CatalogObservation], CatalogWriteEffects)
 
-    func listObservationsBySource(projectDir: String, sourceID: String) async throws -> [CatalogObservation]
+    func listObservationsByEvidenceGraph(projectDir: String, graphID: String) async throws -> [CatalogObservation]
 
-    func citationCountsBySource(projectDir: String, sourceID: String) async throws -> [String: Int]
+    func citationCountsByEvidenceGraph(projectDir: String, graphID: String) async throws -> [String: Int]
 
-    func listCitationsByArtifact(projectDir: String, artifactID: String) async throws -> [CatalogListedCitation]
+    func listCitationsByArtifact(
+        projectDir: String,
+        graphID: String,
+        artifactID: String
+    ) async throws -> [CatalogListedCitation]
 
-    func listSourceGraphProgress(projectDir: String) async throws -> [SourceGraphProgress]
+    func listEvidenceGraphProgress(projectDir: String) async throws -> [EvidenceGraphProgress]
 
-    func getSourceGraphProgress(projectDir: String, sourceID: String) async throws -> SourceGraphProgress
+    func getEvidenceGraphProgress(projectDir: String, graphID: String) async throws -> EvidenceGraphProgress
 
     func getDeleteImpact(projectDir: String, kind: String, id: String) async throws -> CatalogDeleteImpact
 }
 
-/// Per-Source Evidence-graph counts for the Sources list (S8-08).
-struct SourceGraphProgress: Sendable, Equatable, Identifiable {
-    var id: String { sourceId }
+/// Per-graph Evidence-graph counts for the Sources list (S8-08).
+struct EvidenceGraphProgress: Sendable, Equatable, Identifiable {
+    var id: String { graphId }
+    var graphId: String
+    /// The graph's Source; empty when no graph has this id.
     var sourceId: String
     var subjectCount: Int
     var observationCount: Int
@@ -1360,8 +1572,8 @@ struct SourceGraphProgress: Sendable, Equatable, Identifiable {
     /// Primary subjects with an accepted Identity Claim.
     var filedCount: Int = 0
 
-    static func zeros(sourceId: String) -> SourceGraphProgress {
-        SourceGraphProgress(sourceId: sourceId, subjectCount: 0, observationCount: 0)
+    static func zeros(graphId: String) -> EvidenceGraphProgress {
+        EvidenceGraphProgress(graphId: graphId, sourceId: "", subjectCount: 0, observationCount: 0)
     }
 
     var isZero: Bool {
@@ -1411,12 +1623,5 @@ extension GenealogyStore {
             confidenceGradeID: nil,
             argument: ""
         )
-    }
-}
-
-extension GenealogyStore {
-    /// Omnibar search: the default kind set.
-    func searchCatalog(projectDir: String, query: String, location: WorkspaceLocation) async throws -> [CatalogSearchHit] {
-        try await searchCatalog(projectDir: projectDir, query: query, location: location, kinds: [])
     }
 }

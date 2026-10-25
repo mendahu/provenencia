@@ -6,18 +6,22 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -41,7 +45,7 @@ func TestImpactConclusion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,14 +53,8 @@ func TestImpactConclusion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	york, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: place.ID, Label: "York",
-		}, nil)
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+	york := subjectstest.OfType(t, c, userID, graph, place.ID, "York")
 	toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
@@ -109,24 +107,13 @@ func TestImpactConclusion(t *testing.T) {
 	})
 
 	t.Run("allowed promoted subject still names the handle it leaves", func(t *testing.T) {
-		leeds, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: place.ID, Label: "Leeds",
-			}, nil)
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+		leeds := subjectstest.OfType(t, c, userID, graph, place.ID, "Leeds")
 		got := mustImpact(t, c, catalogmodel.KindSubject, leeds.ID)
 		if !got.Allowed || len(got.Cascades) != 0 {
 			t.Fatalf("unpromoted %+v", got)
 		}
-		res, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID, promote.Input{SubjectID: leeds.ID})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		res := promotetest.Save(t, c, userID, promote.Input{SubjectID: leeds.ID})
 		got = mustImpact(t, c, catalogmodel.KindSubject, leeds.ID)
 		if !got.Allowed || len(got.Groups) != 0 {
 			t.Fatalf("%+v", got)

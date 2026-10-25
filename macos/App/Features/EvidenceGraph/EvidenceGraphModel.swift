@@ -20,6 +20,9 @@ final class EvidenceGraphModel {
         var error: String?
     }
 
+    /// The Evidence graph this canvas shows. Its Source reads (`sourceRow`,
+    /// citation counts, the Source page) stay on `sourceID`.
+    let graphID: String
     let sourceID: String
     let session: WorkspaceSession
     let store: any GenealogyStore
@@ -55,11 +58,11 @@ final class EvidenceGraphModel {
     private(set) var groupDragIDs: [String] = []
     @ObservationIgnored
     private var snapshotMemo: (
-        rows: SourceGraphRows,
+        rows: EvidenceGraphRows,
         types: [CatalogSubjectType],
         rules: [CatalogConnectRule],
         orders: NameFormatOrders,
-        value: SourceGraphSnapshot,
+        value: EvidenceGraphSnapshot,
         text: EvidenceGraphText
     )?
     /// Subject whose filing the Unpromote confirm names (`.pvConfirm(item:)`).
@@ -87,7 +90,7 @@ final class EvidenceGraphModel {
     var createError: String?
     var hoverGridX: Int64?
     var hoverGridY: Int64?
-    /// Content-space point for the connect rubber-band (under cursor).
+    /// Grid-space point for the connect rubber-band (under cursor).
     var connectHoverPoint: CGPoint?
     /// Selected cards. A click or a rotor pick holds one; a rectangle holds several.
     private(set) var selectedSubjectIDs: Set<String> = []
@@ -108,11 +111,6 @@ final class EvidenceGraphModel {
     /// Canvas while a drag has carried a card past the resting document.
     /// Cleared when the drop lands; the snapshot's own fit takes over.
     var liveCanvas: EvidenceGraphCanvas?
-    /// Grid-space point the scroll document's top-left stands on.
-    var canvasOrigin: CGPoint = CGPoint(
-        x: EvidenceGraphPlacement.originReserve,
-        y: EvidenceGraphPlacement.originReserve
-    )
 
     /// Seeded type ids keyed by primary or bridge kind rawValue.
     var typeIDByKind: [String: String] {
@@ -160,7 +158,7 @@ final class EvidenceGraphModel {
     }
 
     private var graphKey: CatalogQueryKey {
-        CatalogQueryKey.sourceGraph(project: session.projectKey, sourceId: sourceID)
+        CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: graphID)
     }
 
     private var fieldsKey: CatalogQueryKey {
@@ -180,7 +178,7 @@ final class EvidenceGraphModel {
     }
 
     private var citationCountsKey: CatalogQueryKey {
-        CatalogQueryKey.citationCounts(project: session.projectKey, sourceId: sourceID)
+        CatalogQueryKey.citationCounts(project: session.projectKey, graphId: graphID)
     }
 
     private var fieldsSnapshot: PropertiesSnapshot? {
@@ -188,10 +186,7 @@ final class EvidenceGraphModel {
         return handle?.value
     }
 
-    private var sourceRow: CatalogSource? {
-        let handle: QueryHandle<[CatalogSource]>? = session.queryHandle(sourcesListKey)
-        return handle?.value?.first { $0.id == sourceID }
-    }
+    private var sourceRow: CatalogSource? { session.source(id: sourceID) }
 
     private var placeableTypes: [CatalogSubjectType] {
         (fieldsSnapshot?.types ?? []).filter {
@@ -201,11 +196,13 @@ final class EvidenceGraphModel {
     }
 
     init(
+        graphID: String,
         sourceID: String,
         session: WorkspaceSession,
         store: any GenealogyStore,
         userID: String
     ) {
+        self.graphID = graphID
         self.sourceID = sourceID
         self.session = session
         self.store = store
@@ -213,9 +210,9 @@ final class EvidenceGraphModel {
     }
 
     /// Snapshot as loaded. Edges come from cited observations.
-    func displaySnapshot(rows: SourceGraphRows?, types: [CatalogSubjectType]) -> SourceGraphSnapshot {
+    func displaySnapshot(rows: EvidenceGraphRows?, types: [CatalogSubjectType]) -> EvidenceGraphSnapshot {
         let rules = connectRules
-        let normalized = rows ?? SourceGraphRows(sourceId: sourceID)
+        let normalized = rows ?? EvidenceGraphRows(graphId: graphID)
         if let snapshotMemo,
            snapshotMemo.rows == normalized,
            snapshotMemo.types == types,
@@ -224,7 +221,7 @@ final class EvidenceGraphModel {
         {
             return snapshotMemo.value
         }
-        let value = SourceGraphSnapshot.build(
+        let value = EvidenceGraphSnapshot.build(
             rows: normalized,
             types: types,
             rules: rules
@@ -235,19 +232,19 @@ final class EvidenceGraphModel {
 
     /// Card copy for the same snapshot as ``displaySnapshot(rows:types:)``,
     /// formatted once when that snapshot is built.
-    func displayText(rows: SourceGraphRows?, types: [CatalogSubjectType]) -> EvidenceGraphText {
+    func displayText(rows: EvidenceGraphRows?, types: [CatalogSubjectType]) -> EvidenceGraphText {
         _ = displaySnapshot(rows: rows, types: types)
         return snapshotMemo?.text ?? EvidenceGraphText(snapshot: displaySnapshot(rows: rows, types: types), orders: session.nameFormat)
     }
 
     func prepare() async {
-        let _: QueryHandle<SourceGraphRows> = session.query(graphKey)
+        let _: QueryHandle<EvidenceGraphRows> = session.query(graphKey)
         let rules: QueryHandle<[CatalogConnectRule]> = session.query(connectRulesKey)
         let _: QueryHandle<PropertiesSnapshot> = session.query(fieldsKey)
         let _: QueryHandle<[CatalogSource]> = session.query(sourcesListKey)
         let _: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
         let _: QueryHandle<[String: Int]> = session.query(citationCountsKey)
-        _ = await session.readyValue(graphKey) as SourceGraphRows?
+        _ = await session.readyValue(graphKey) as EvidenceGraphRows?
         _ = await session.readyValue(fieldsKey) as PropertiesSnapshot?
         _ = await session.readyValue(connectRulesKey) as [CatalogConnectRule]?
         _ = await session.readyValue(sourcesListKey) as [CatalogSource]?
@@ -263,7 +260,7 @@ final class EvidenceGraphModel {
         if !canCite {
             disarmCiteTools()
         }
-        if let id = session.consumePendingGraphSelection(sourceID: sourceID) {
+        if let id = session.consumePendingGraphSelection(graphID: graphID) {
             selectedSubjectIDs = [id]
         }
     }
@@ -590,19 +587,19 @@ final class EvidenceGraphModel {
         )
     }
 
-    func updateHover(contentPoint: CGPoint) {
+    func updateHover(gridPoint: CGPoint) {
         guard armedKind != nil, !isCreating else { return }
-        let cell = gridCell(atDocument: contentPoint)
+        let cell = GraphCanvasGridMapping.gridCell(gridPoint: gridPoint)
         hoverGridX = cell.gridX
         hoverGridY = cell.gridY
     }
 
-    func updateConnectHover(contentPoint: CGPoint) {
+    func updateConnectHover(gridPoint: CGPoint) {
         guard armedConnect, connectOriginID != nil, !isCreating else {
             connectHoverPoint = nil
             return
         }
-        connectHoverPoint = contentPoint
+        connectHoverPoint = gridPoint
     }
 
     func clearHover() {
@@ -611,17 +608,10 @@ final class EvidenceGraphModel {
         connectHoverPoint = nil
     }
 
-    /// Document points are `grid point − canvasOrigin`.
-    private func gridCell(atDocument point: CGPoint) -> (gridX: Int64, gridY: Int64) {
-        GraphCanvasGridMapping.gridCell(
-            contentPoint: CGPoint(x: point.x + canvasOrigin.x, y: point.y + canvasOrigin.y)
-        )
-    }
-
     /// Opens the create dialog at the snapped cell (tool must be armed).
-    func beginCreate(at contentPoint: CGPoint) {
+    func beginCreate(at gridPoint: CGPoint) {
         guard canCite, let kind = armedKind, !isCreating, !isSaving, editingSubjectID == nil else { return }
-        let cell = gridCell(atDocument: contentPoint)
+        let cell = GraphCanvasGridMapping.gridCell(gridPoint: gridPoint)
         pendingGridX = cell.gridX
         pendingGridY = cell.gridY
         draft = CreateDraft(
@@ -756,7 +746,7 @@ final class EvidenceGraphModel {
                 label: storedLabel,
                 description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
             )
-            session.apply(effects, .mutatedSourceGraph(sourceId: sourceID))
+            session.apply(effects)
             editingSubjectID = nil
             editingPrimaryKind = nil
             editingBridgeKind = nil
@@ -801,17 +791,16 @@ final class EvidenceGraphModel {
             title = nil
             ref = nil
         }
-        return WorkspaceLocation(
-            section: .sources,
+        return .citationComposer(
             sourceId: sourceID,
+            graphId: graphID,
             subjectId: subjectID,
             citationId: citationID,
             artifactId: artifactID,
             observationId: observationID,
-            sourceSurface: .citationComposer,
             ref: ref,
             title: title,
-            sourceTitle: resolvedSourceTitle()
+            sourceTitle: sourceRow?.title
         )
     }
 
@@ -887,11 +876,12 @@ final class EvidenceGraphModel {
         else { return nil }
         return .promote(
             sourceId: sourceID,
+            graphId: graphID,
             subjectId: placed.id,
             kind: placed.kind,
             ref: placed.subject.ref,
             title: placed.displayName(orders: session.nameFormat),
-            sourceTitle: resolvedSourceTitle()
+            sourceTitle: sourceRow?.title
         )
     }
 
@@ -907,11 +897,12 @@ final class EvidenceGraphModel {
         guard let placed else { return nil }
         return .promote(
             sourceId: sourceID,
+            graphId: graphID,
             subjectId: placed.id,
             kind: placed.kind,
             ref: placed.subject.ref,
             title: placed.displayName(orders: session.nameFormat),
-            sourceTitle: resolvedSourceTitle(),
+            sourceTitle: sourceRow?.title,
             mapAll: true
         )
     }
@@ -995,7 +986,7 @@ final class EvidenceGraphModel {
                 userID: userID,
                 subjectID: target.id
             )
-            session.apply(effects, .deletedSubject(sourceId: sourceID))
+            session.apply(effects, .deletedSubject)
             selectedSubjectIDs.remove(target.id)
             if activatedSubjectID == target.id {
                 activatedSubjectID = nil
@@ -1003,24 +994,9 @@ final class EvidenceGraphModel {
         }
     }
 
-    private func resolvedSourceTitle() -> String? {
-        let listKey = CatalogQueryKey.sourcesList(project: session.projectKey)
-        guard let handle: QueryHandle<[CatalogSource]> = session.queryHandle(listKey),
-              let sources = handle.value,
-              let match = sources.first(where: { $0.id == sourceID })
-        else { return nil }
-        return match.title
-    }
-
     /// Source page recovery target when the graph has no Artifacts.
     func sourcePageLocation(title: String, ref: String?) -> WorkspaceLocation {
-        WorkspaceLocation(
-            section: .sources,
-            sourceId: sourceID,
-            sourceSurface: .page,
-            ref: ref,
-            title: title
-        )
+        .sourcePage(sourceId: sourceID, ref: ref, title: title)
     }
 
     @discardableResult
@@ -1044,13 +1020,13 @@ final class EvidenceGraphModel {
             let (created, effects) = try await store.createSubject(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
-                sourceID: sourceID,
+                graphID: graphID,
                 subjectTypeID: typeID,
                 label: trimmed,
                 description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines),
                 placement: CatalogGridCell(gridX: pendingGridX, gridY: pendingGridY)
             )
-            session.apply(effects, .mutatedSourceGraph(sourceId: sourceID))
+            session.apply(effects)
             isCreating = false
             disarm()
             return created.id
@@ -1078,16 +1054,14 @@ final class EvidenceGraphModel {
             toTypeKey: toKind.rawValue,
             toLabel: toLabel
         )
-        return WorkspaceLocation(
-            section: .sources,
+        return .citationComposer(
             sourceId: sourceID,
-            subjectId: nil,
+            graphId: graphID,
             connectFromSubjectId: fromID,
             connectToSubjectId: toID,
             connectBridgeTypeKey: rule.bridgeTypeKey,
-            sourceSurface: .citationComposer,
             title: sentence,
-            sourceTitle: resolvedSourceTitle()
+            sourceTitle: sourceRow?.title
         )
     }
 
@@ -1102,7 +1076,7 @@ final class EvidenceGraphModel {
     /// becomes the selection. Returns the cards that move, anchor included.
     @discardableResult
     func beginGroupDrag(anchor: String) -> Set<String> {
-        let handle: QueryHandle<SourceGraphRows>? = session.queryHandle(graphKey)
+        let handle: QueryHandle<EvidenceGraphRows>? = session.queryHandle(graphKey)
         guard handle?.value != nil, let snapshot = currentSnapshot() else {
             selectSubject(id: anchor)
             groupDragIDs = [anchor]
@@ -1127,14 +1101,14 @@ final class EvidenceGraphModel {
         subjectID: String,
         originGridX: Int64,
         originGridY: Int64,
-        documentDelta: CGSize
+        delta: CGSize
     ) -> (gridX: Int64, gridY: Int64)? {
         guard allowsCardMoves else { return nil }
         let snapped = snapAndPatch(
             subjectID: subjectID,
             originGridX: originGridX,
             originGridY: originGridY,
-            documentDelta: documentDelta
+            delta: delta
         )
         persistPositions([
             PositionWrite(
@@ -1153,7 +1127,7 @@ final class EvidenceGraphModel {
     @discardableResult
     func commitGroupDrag(
         anchor: String,
-        documentDelta: CGSize
+        delta: CGSize
     ) -> [(subjectID: String, gridX: Int64, gridY: Int64)] {
         let ids = groupDragIDs.isEmpty ? [anchor] : groupDragIDs
         groupDragIDs = []
@@ -1165,7 +1139,7 @@ final class EvidenceGraphModel {
                 subjectID: id,
                 originGridX: cell.x,
                 originGridY: cell.y,
-                documentDelta: documentDelta
+                delta: delta
             )
             writes.append(
                 PositionWrite(
@@ -1224,14 +1198,14 @@ final class EvidenceGraphModel {
         persistPositions(writes)
     }
 
-    func ghostPlacedSubject() -> SourceGraphPlacedSubject? {
+    func ghostPlacedSubject() -> EvidenceGraphPlacedSubject? {
         guard let kind = armedKind,
               let x = hoverGridX,
               let y = hoverGridY,
               !isCreating
         else { return nil }
         let label = typeLabelByKind[kind.rawValue] ?? kind.rawValue
-        return SourceGraphPlacedSubject(
+        return EvidenceGraphPlacedSubject(
             subject: CatalogSubject(
                 id: "ghost",
                 ref: "",
@@ -1363,14 +1337,14 @@ final class EvidenceGraphModel {
         }
     }
 
-    private func currentSnapshot() -> SourceGraphSnapshot? {
-        guard let handle: QueryHandle<SourceGraphRows> = session.queryHandle(graphKey) else {
+    private func currentSnapshot() -> EvidenceGraphSnapshot? {
+        guard let handle: QueryHandle<EvidenceGraphRows> = session.queryHandle(graphKey) else {
             return nil
         }
         return displaySnapshot(rows: handle.value, types: fieldsSnapshot?.types ?? [])
     }
 
-    private func primary(in snapshot: SourceGraphSnapshot?, id: String) -> SourceGraphPlacedSubject? {
+    private func primary(in snapshot: EvidenceGraphSnapshot?, id: String) -> EvidenceGraphPlacedSubject? {
         snapshot?.subjects.first { $0.id == id }
     }
 
@@ -1381,20 +1355,20 @@ final class EvidenceGraphModel {
         var gridY: Int64
     }
 
-    /// Drops a card at `origin + documentDelta`, snapped to the grid, and patches
+    /// Drops a card at `origin + delta`, snapped to the grid, and patches
     /// the session cache. The store write is the caller's.
     private func snapAndPatch(
         subjectID: String,
         originGridX: Int64,
         originGridY: Int64,
-        documentDelta: CGSize
+        delta: CGSize
     ) -> (gridX: Int64, gridY: Int64, generation: Int) {
-        let origin = GraphCanvasGridMapping.contentPoint(gridX: originGridX, gridY: originGridY)
+        let origin = GraphCanvasGridMapping.gridPoint(gridX: originGridX, gridY: originGridY)
         let dropped = CGPoint(
-            x: origin.x + documentDelta.width,
-            y: origin.y + documentDelta.height
+            x: origin.x + delta.width,
+            y: origin.y + delta.height
         )
-        let cell = GraphCanvasGridMapping.gridCell(contentPoint: dropped)
+        let cell = GraphCanvasGridMapping.gridCell(gridPoint: dropped)
         let generation = bumpPositionGeneration(subjectID: subjectID)
         applyPositionPatch(subjectID: subjectID, gridX: cell.gridX, gridY: cell.gridY)
         return (cell.gridX, cell.gridY, generation)
@@ -1424,7 +1398,7 @@ final class EvidenceGraphModel {
     }
 
     private func applyPositionPatch(subjectID: String, gridX: Int64, gridY: Int64) {
-        if let handle: QueryHandle<SourceGraphRows> = session.queryHandle(graphKey),
+        if let handle: QueryHandle<EvidenceGraphRows> = session.queryHandle(graphKey),
            let rows = handle.value
         {
             session.setQueryValue(

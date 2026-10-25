@@ -140,7 +140,7 @@ struct MetadataDetailPane: View {
     private var form: some View {
         if let draft = Binding($model.draft) {
             VStack(alignment: .leading, spacing: PVSpacing.space7) {
-                PVField(label: L10n.Metadata.formLabel, error: model.formError, required: true) {
+                PVField(label: L10n.Metadata.formLabel, error: model.formError, marker: .required) {
                     PVInput(
                         text: draft.label,
                         prompt: model.isAdding ? L10n.Metadata.formLabelPlaceholder : nil,

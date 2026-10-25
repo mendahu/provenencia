@@ -9,30 +9,29 @@ struct PromoteView: View {
         entry: PromoteEntry,
         session: WorkspaceSession,
         store: any GenealogyStore,
-        userID: String,
-        catalogCounts: CatalogCounts?
+        userID: String
     ) {
         _model = State(initialValue: PromoteModel(
             entry: entry,
             session: session,
             store: store,
-            userID: userID,
-            catalogCounts: catalogCounts
+            userID: userID
         ))
     }
 
     var body: some View {
         let model = model
+        let connections = model.flow.connectionsByRow
         VStack(spacing: 0) {
             header
             ScrollView {
                 VStack(alignment: .leading, spacing: PVSpacing.space7) {
                     notices
-                    if model.flow.mappedRest {
-                        mappedBar
+                    if model.flow.mappedRest && !model.entry.mapAll {
+                        openedFromNote
                     }
                     ForEach(sections, id: \.id) { section in
-                        sectionBlock(section)
+                        sectionBlock(section, connections: connections)
                     }
                     if !model.flow.mappedRest && model.flow.restCount > 0 {
                         mapRest
@@ -42,9 +41,6 @@ struct PromoteView: View {
                 .padding(.vertical, PVSpacing.space6)
                 .frame(maxWidth: 1200, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            if bridgesOpen.wrappedValue {
-                connectionsPanel
             }
             footer
         }
@@ -59,7 +55,7 @@ struct PromoteView: View {
             }
         }
         .task {
-            let _: QueryHandle<SourceGraphRows> = model.session.query(model.graphKey)
+            let _: QueryHandle<EvidenceGraphRows> = model.session.query(model.graphKey)
             let _: QueryHandle<[CatalogClaimConfidenceGrade]> = model.session.query(model.confidenceKey)
             let _: QueryHandle<PropertiesSnapshot> = model.session.query(model.propertiesKey)
             let _: QueryHandle<[CatalogConnectRule]> = model.session.query(model.rulesKey)
@@ -67,7 +63,7 @@ struct PromoteView: View {
             let _: QueryHandle<[CatalogSourceType]> = model.session.query(model.sourceTypesKey)
             await model.load()
         }
-        .sheet(item: sheetBinding) { row in
+        .pvSheet(item: sheetBinding) { row in
             PromoteEvidenceSheet(row: row, grades: model.grades, model: model)
         }
         .pvConfirm(
@@ -75,10 +71,7 @@ struct PromoteView: View {
             copy: { _ in
                 PVConfirmCopy(
                     title: L10n.string(L10n.Promote.leaveTitle),
-                    message: L10n.Promote.leaveDetail(
-                        rows: model.flow.rows.filter(\.decided).count,
-                        connections: model.flow.bridgeOff.count
-                    ),
+                    message: L10n.Promote.leaveDetail(rows: model.flow.rows.filter(\.decided).count),
                     confirm: L10n.Promote.leaveConfirm,
                     cancel: L10n.Promote.leaveCancel
                 )
@@ -165,31 +158,11 @@ struct PromoteView: View {
         return L10n.Promote.singleSummary(more: model.flow.restCount)
     }
 
-    private var mappedBar: some View {
-        HStack(alignment: .center) {
-            if !model.entry.mapAll {
-                Text(verbatim: L10n.Promote.openedFrom(name: model.entry.subjectName))
-                    .font(PVFont.body(size: PVTypeScale.bodySmall))
-                    .italic()
-                    .foregroundStyle(PVColor.textSecondary)
-            }
-            Spacer(minLength: PVSpacing.space4)
-            PVSelect(
-                selection: groupBinding,
-                options: [
-                    PVSelectOption(value: PromoteFlow.Grouping.kind.rawValue, label: L10n.string(L10n.Promote.groupKind)),
-                    PVSelectOption(value: PromoteFlow.Grouping.assessment.rawValue, label: L10n.string(L10n.Promote.groupAssessment)),
-                ],
-                icon: .layers,
-                displayLabel: model.flow.group == .assessment
-                    ? L10n.string(L10n.Promote.groupedByAssessment)
-                    : L10n.string(L10n.Promote.groupedByKind),
-                fillsWidth: false,
-                accessibilityLabel: L10n.Promote.groupLabel,
-                accessibilityIdentifier: "promote.group"
-            )
-            .disabled(model.isSaving)
-        }
+    private var openedFromNote: some View {
+        Text(verbatim: L10n.Promote.openedFrom(name: model.entry.subjectName))
+            .font(PVFont.body(size: PVTypeScale.bodySmall))
+            .italic()
+            .foregroundStyle(PVColor.textSecondary)
     }
 
     private var mapRest: some View {
@@ -204,14 +177,21 @@ struct PromoteView: View {
         }
     }
 
-    private func sectionBlock(_ section: Section) -> some View {
+    private func sectionBlock(
+        _ section: Section,
+        connections: [String: [PromoteFlow.RowConnection]]
+    ) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             PVSectionHeader(title: section.title, meta: section.meta)
             if !section.rows.isEmpty {
                 columnHeaders
                 ForEach(section.rows) { row in
-                    PromoteAlignmentRow(row: row, model: model)
-                        .disabled(model.isSaving)
+                    PromoteAlignmentRow(
+                        row: row,
+                        model: model,
+                        connections: connections[row.subjectID] ?? []
+                    )
+                    .disabled(model.isSaving)
                 }
             }
             if !section.anchors.isEmpty {
@@ -251,101 +231,13 @@ struct PromoteView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var connectionsPanel: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space3) {
-            HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
-                Text(L10n.Promote.connectionsTitle)
-                    .font(PVFont.display(size: PVTypeScale.h4, weight: PVFontWeight.semibold))
-                    .foregroundStyle(PVColor.textDisplay)
-                Text(verbatim: connectionMeta)
-                    .font(PVFont.mono(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textMuted)
-                Text(L10n.Promote.connectionsHint)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall))
-                    .italic()
-                    .foregroundStyle(PVColor.textSecondary)
-            }
-            ScrollView {
-                VStack(spacing: 0) {
-                    ForEach(model.flow.connectionLines()) { bridge in
-                        connectionRow(bridge)
-                    }
-                }
-            }
-            .frame(maxHeight: 420)
-        }
-        .padding(.horizontal, PVSpacing.space10)
-        .padding(.vertical, PVSpacing.space4)
-        .background(PVColor.surfaceCard)
-        .overlay(alignment: .top) { PVDivider() }
-    }
-
-    private func connectionRow(_ bridge: PromoteFlow.Bridge) -> some View {
-        HStack(alignment: .center, spacing: PromoteLayout.columnGap) {
-            PVMark(bridge.mark, size: 16, decorative: true)
-                .foregroundStyle(PVColor.textMuted)
-                .frame(width: 20)
-            if bridge.endAName.isEmpty || bridge.endBName.isEmpty {
-                Text(verbatim: bridge.sentence)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                HStack(spacing: PVSpacing.space2) {
-                    Text(verbatim: bridge.endAName)
-                    Text(verbatim: bridge.phrase)
-                        .italic()
-                        .foregroundStyle(PVColor.textSecondary)
-                    Text(verbatim: bridge.endBName)
-                }
-                .font(PVFont.body(size: PVTypeScale.bodySmall))
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            if bridge.state == .files || bridge.state == .off {
-                PVSwitch(
-                    L10n.Promote.connectionState(bridge.state),
-                    isOn: bridgeOn(bridge.id),
-                    isDisabled: model.isSaving
-                )
-                .accessibilityIdentifier("promote.connection.\(bridge.id)")
-            } else {
-                Text(L10n.Promote.connectionState(bridge.state))
-                    .font(PVFont.body(size: PVTypeScale.caption))
-                    .italic()
-                    .foregroundStyle(PVColor.textMuted)
-                    .multilineTextAlignment(.trailing)
-            }
-        }
-        .padding(.vertical, PVSpacing.space2)
-        .overlay(alignment: .top) { PVDivider() }
-        // One element: the connection's sentence, then its switch or why it won't file.
-        .accessibilityElement(children: .combine)
-    }
-
-    private var connectionMeta: String {
-        let lines = model.flow.connectionLines()
-        return L10n.Promote.connectionsMeta(
-            filed: lines.filter(\.files).count,
-            off: lines.filter { $0.state == .off }.count,
-            unfiled: lines.filter { $0.state == .endSkipped || $0.state == .selfLink }.count
-        )
-    }
-
     private var footer: some View {
         HStack(spacing: PVSpacing.space4) {
-            PVButton(
-                L10n.Promote.connections(count: model.flow.connectionCount),
-                variant: .ghost,
-                size: .sm,
-                iconRight: bridgesOpen.wrappedValue ? .chevronUp : .chevronDown
-            ) {
-                model.setBridgesOpen(!model.flow.bridgesOpen)
-            }
-            .disabled(model.isSaving)
-            .accessibilityIdentifier("promote.connections.toggle")
             Spacer()
             Text(verbatim: L10n.Promote.doneSummary(
                 file: model.flow.fileCount,
                 skip: model.flow.skipCount,
+                unselected: model.flow.unsetCount,
                 connections: model.flow.connectionCount
             ))
             .font(PVFont.mono(size: PVTypeScale.caption))
@@ -376,11 +268,6 @@ struct PromoteView: View {
     private var sections: [Section] {
         let working = model.flow.visibleRows.filter { !$0.anchor }
         let anchors = model.flow.mappedRest ? model.flow.rows.filter(\.anchor) : []
-        if model.flow.group == .assessment {
-            return [PromoteFlow.Assessment.strong, .medium, .weak, .none].map { band in
-                section(band.rawValue, PromoteAssessmentCopy.title(band), working.filter { $0.assessment == band }, [])
-            }.filter { !$0.rows.isEmpty }
-        }
         return [
             kindSection("person", L10n.Promote.kindPerson, .person, working, anchors),
             kindSection("event", L10n.Promote.kindEvent, .event, working, anchors),
@@ -397,43 +284,16 @@ struct PromoteView: View {
     ) -> Section {
         let rows = working.filter { $0.kind == kind }
         let filed = anchors.filter { $0.kind == kind }
-        return section(id, title, rows, filed)
-    }
-
-    private func section(
-        _ id: String,
-        _ title: LocalizedStringResource,
-        _ rows: [PromoteFlow.Row],
-        _ anchors: [PromoteFlow.Row]
-    ) -> Section {
-        let total = rows.count + anchors.count
-        let meta = anchors.isEmpty
+        let total = rows.count + filed.count
+        let meta = filed.isEmpty
             ? L10n.Promote.sectionCount(total)
-            : L10n.Promote.sectionCountFiled(rows: total, filed: anchors.count)
-        return Section(id: id, title: title, meta: meta, rows: rows, anchors: anchors)
-    }
-
-    private var groupBinding: Binding<String> {
-        Binding(
-            get: { model.flow.group.rawValue },
-            set: { model.setGroup(PromoteFlow.Grouping(rawValue: $0) ?? .kind) }
-        )
-    }
-
-    private var bridgesOpen: Binding<Bool> {
-        Binding(get: { model.flow.bridgesOpen }, set: { model.setBridgesOpen($0) })
-    }
-
-    private func bridgeOn(_ id: String) -> Binding<Bool> {
-        Binding(
-            get: { !model.flow.bridgeOff.contains(id) },
-            set: { _ in model.toggleBridge(id) }
-        )
+            : L10n.Promote.sectionCountFiled(rows: total, filed: filed.count)
+        return Section(id: id, title: title, meta: meta, rows: rows, anchors: filed)
     }
 
     private var sheetBinding: Binding<PromoteFlow.Row?> {
         Binding(
-            get: { model.flow.rows.first { $0.subjectID == model.flow.sheetSubjectID } },
+            get: { model.flow.row(model.flow.sheetSubjectID) },
             set: { model.setSheetSubject($0?.subjectID) }
         )
     }
@@ -449,6 +309,8 @@ struct PromoteView: View {
 private struct PromoteAlignmentRow: View {
     let row: PromoteFlow.Row
     let model: PromoteModel
+    /// The connections shown under this row, in display order.
+    let connections: [PromoteFlow.RowConnection]
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space2) {
@@ -489,7 +351,7 @@ private struct PromoteAlignmentRow: View {
                     if let readout = row.selectionReadout {
                         Button { model.openSheet(row.subjectID) } label: {
                             HStack(spacing: PVSpacing.space3) {
-                                PVBadge(PromoteAssessmentCopy.title(readout.assessment), tone: badgeTone(readout.assessment))
+                                PromoteReadoutBadges(readout: readout)
                                 Text(verbatim: model.reasonText(readout.reason, on: row))
                                     .font(PVFont.body(size: PVTypeScale.caption))
                                     .italic()
@@ -504,7 +366,7 @@ private struct PromoteAlignmentRow: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityLabel(Text(verbatim: L10n.Promote.evidenceFor(
                             name: row.name,
-                            assessment: L10n.string(PromoteAssessmentCopy.title(readout.assessment)),
+                            assessment: model.assessmentText(readout),
                             reason: model.reasonText(readout.reason, on: row)
                         )))
                         .accessibilityIdentifier("promote.row.\(row.ref).evidence")
@@ -522,10 +384,7 @@ private struct PromoteAlignmentRow: View {
                 .frame(width: PromoteLayout.badgeColumn, alignment: .trailing)
             }
             if row.updated {
-                Text(verbatim: L10n.Promote.updatedDetail(model.reasonText(for: row)))
-                    .font(PVFont.body(size: PVTypeScale.caption))
-                    .italic()
-                    .foregroundStyle(PVColor.textSecondary)
+                PromoteUpdatedCaption(reason: model.reasonText(row.captionReason, on: row))
                     .padding(.leading, PromoteLayout.noteIndent)
             }
             if let ref = row.conflictNote {
@@ -546,6 +405,9 @@ private struct PromoteAlignmentRow: View {
                 )
                 .padding(.leading, PromoteLayout.noteIndent)
             }
+            if !connections.isEmpty {
+                PromoteConnectionSubrows(rowName: row.name, rowRef: row.ref, connections: connections)
+            }
         }
         .padding(.vertical, PVSpacing.space3)
         .overlay(alignment: .top) { PVDivider() }
@@ -562,15 +424,6 @@ private struct PromoteAlignmentRow: View {
         PromoteKindTile(kind: row.kind, size: PromoteLayout.kindTile, markSize: 16, background: PVColor.surfaceSunken)
     }
 
-    private func badgeTone(_ assessment: PromoteFlow.Assessment) -> PVBadgeTone {
-        switch assessment {
-        case .strong: .success
-        case .medium: .info
-        case .weak: .warning
-        case .none: .neutral
-        }
-    }
-
     private var targetOptions: [PVSelectOption] {
         var options = row.menu.map { alt in
             PVSelectOption(value: "handle:\(alt.id)", label: "\(alt.ref)  \(alt.title)")
@@ -585,6 +438,67 @@ private struct PromoteAlignmentRow: View {
             get: { row.target.token },
             set: { model.setTarget(subjectID: row.subjectID, token: $0) }
         )
+    }
+}
+
+/// The connections that join a row, under its notes: a rule at the note indent and one line each,
+/// with a second line for the other end or a self-link's warning.
+private struct PromoteConnectionSubrows: View {
+    let rowName: String
+    let rowRef: String
+    let connections: [PromoteFlow.RowConnection]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(connections) { connection in
+                subrow(connection)
+            }
+        }
+        .padding(.leading, PVSpacing.space4)
+        .overlay(alignment: .leading) {
+            Rectangle().fill(PVColor.borderSubtle).frame(width: 1)
+        }
+        .padding(.leading, PromoteLayout.noteIndent)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text(verbatim: L10n.Promote.connectionsOf(name: rowName)))
+    }
+
+    private func subrow(_ connection: PromoteFlow.RowConnection) -> some View {
+        let bridge = connection.bridge
+        let endName = bridge.name(of: bridge.state.waitingEndID)
+        let files = bridge.state == .files
+        return VStack(alignment: .leading, spacing: PVSpacing.space1) {
+            HStack(spacing: PVSpacing.space3) {
+                PVMark(bridge.mark, size: 14, decorative: true)
+                    .foregroundStyle(PVColor.textMuted)
+                Text(verbatim: bridge.sentence)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .help(Text(verbatim: bridge.sentence))
+                    .foregroundStyle(files ? PVColor.textPrimary : PVColor.textMuted)
+                Spacer(minLength: PVSpacing.space4)
+                if let text = L10n.Promote.connectionState(bridge.state, endName: endName) {
+                    Text(verbatim: text)
+                        .font(PVFont.body(size: PVTypeScale.caption))
+                        .italic()
+                        .foregroundStyle(files ? PVColor.textSecondary : PVColor.textMuted)
+                }
+            }
+            if let other = connection.otherEnd {
+                Text(verbatim: L10n.Promote.connectionOtherEnd(name: other.name, filed: other.filed))
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
+                    .padding(.leading, 14 + PVSpacing.space3)
+            }
+            if case .selfLink(let ref) = bridge.state {
+                PVCallout(tone: .warning, message: L10n.Promote.connectionSelfLink(ref: ref), compact: true)
+            }
+        }
+        .padding(.vertical, PVSpacing.space1)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: L10n.Promote.connectionSpoken(sentence: bridge.sentence, state: bridge.state, endName: endName)))
+        .accessibilityIdentifier("promote.row.\(rowRef).connection.\(bridge.id)")
     }
 }
 
@@ -660,240 +574,6 @@ private struct PromoteAnchorRow: View {
     }
 }
 
-private struct PromoteEvidenceSheet: View {
-    let row: PromoteFlow.Row
-    let grades: [CatalogClaimConfidenceGrade]
-    let model: PromoteModel
-
-    var body: some View {
-        PVPanel(title: Text(verbatim: sheetTitle), subtitle: sheetSubtitle, width: 880) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: PVSpacing.space5) {
-                    if row.comparisons.contains(where: { $0.outcome == "conflict" }) {
-                        PVCallout(
-                            tone: .warning,
-                            title: L10n.Promote.conflictCalloutTitle,
-                            message: L10n.string(L10n.Promote.conflictCalloutBody),
-                            compact: true
-                        )
-                    }
-                    sheetColumns
-                    ForEach(groups) { group in
-                        PVCard {
-                            VStack(alignment: .leading, spacing: 0) {
-                                HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
-                                    Text(verbatim: group.title)
-                                        .font(PVFont.display(size: PVTypeScale.h4, weight: PVFontWeight.medium))
-                                        .foregroundStyle(PVColor.textDisplay)
-                                    if !group.ref.isEmpty {
-                                        Text(verbatim: group.ref)
-                                            .font(PVFont.mono(size: PVTypeScale.caption))
-                                            .foregroundStyle(PVColor.textMuted)
-                                    }
-                                }
-                                .padding(.horizontal, PVSpacing.space4)
-                                .padding(.vertical, PVSpacing.space3)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(PVColor.surfaceSunken)
-                                ForEach(group.lines) { line in
-                                    comparisonLine(line)
-                                }
-                            }
-                        }
-                    }
-                    VStack(alignment: .leading, spacing: PVSpacing.space4) {
-                        Text(L10n.Promote.claimHeading)
-                            .font(PVFont.display(size: PVTypeScale.h4, weight: PVFontWeight.semibold))
-                            .foregroundStyle(PVColor.textDisplay)
-                        HStack(alignment: .top, spacing: PVSpacing.space5) {
-                            PVField(label: L10n.Promote.status, hint: L10n.Promote.sheetStatusHint) {
-                                PVSelect(
-                                    selection: .constant("accepted"),
-                                    options: [PVSelectOption(value: "accepted", label: L10n.string(L10n.Promote.statusAccepted))]
-                                )
-                            }
-                            PVField(label: L10n.Promote.confidence) {
-                                PVSelect(
-                                    selection: confidenceBinding,
-                                    options: confidenceOptions,
-                                    accessibilityIdentifier: "promote.sheet.confidence"
-                                )
-                            }
-                        }
-                        PVField(label: L10n.Promote.argument, hint: L10n.Promote.argumentHint(pinned: row.pins.count)) {
-                            PVTextArea(text: argumentBinding)
-                                .accessibilityIdentifier("promote.sheet.argument")
-                        }
-                    }
-                }
-                .padding(PVSpacing.space5)
-            }
-        } footer: {
-            PVButton(L10n.Promote.backToRows, variant: .primary) { model.closeSheet() }
-                .accessibilityIdentifier("promote.sheet.close")
-        }
-    }
-
-    private var sheetTitle: String {
-        switch row.target {
-        case .handle(_, let ref, let title):
-            return L10n.Promote.sheetTitleHandle(name: row.name, ref: ref, title: title)
-        case .newKind:
-            return L10n.Promote.sheetTitleNew(name: row.name, target: L10n.string(L10n.Promote.newOption(row.kind)))
-        case .skip, .unset:
-            return row.name
-        }
-    }
-
-    private var sheetSubtitle: Text? {
-        guard let readout = row.selectionReadout else { return nil }
-        return Text(verbatim: L10n.Promote.sheetSubtitle(
-            assessment: L10n.string(PromoteAssessmentCopy.title(readout.assessment)),
-            reason: model.reasonText(readout.reason, on: row)
-        ))
-    }
-
-    private var sheetColumns: some View {
-        HStack(spacing: PromoteLayout.columnGap) {
-            Text(L10n.Promote.sheetPin)
-                .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
-                .frame(width: PromoteLayout.pinColumn, alignment: .leading)
-            Text(L10n.Promote.sheetCompared).frame(width: 150, alignment: .leading)
-            Text(L10n.Promote.sheetHere).frame(maxWidth: .infinity, alignment: .leading)
-            Text(verbatim: targetColumn).frame(maxWidth: .infinity, alignment: .leading)
-            Text(L10n.Promote.sheetResult).frame(width: 92, alignment: .leading)
-            Text(L10n.Promote.sheetWeight)
-                .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
-                .frame(width: PromoteLayout.weightColumn, alignment: .trailing)
-        }
-        .pvMicroCaps()
-        .foregroundStyle(PVColor.textMuted)
-    }
-
-    private var targetColumn: String {
-        switch row.target {
-        case .handle(_, let ref, _): ref
-        case .newKind: L10n.string(L10n.Promote.newOption(row.kind))
-        case .skip: L10n.string(L10n.Promote.skip)
-        case .unset: L10n.string(L10n.Promote.targetPlaceholder)
-        }
-    }
-
-    private func comparisonLine(_ line: CatalogPromoteGraphAlignmentComparison) -> some View {
-        HStack(alignment: .top, spacing: PromoteLayout.columnGap) {
-            PVCheckbox(
-                isChecked: pin(line.id),
-                isDisabled: line.incomingObservationID.isEmpty || line.outcome == "unknown",
-                accessibilitySpokenLabel: L10n.Promote.pinLine(
-                    property: compared(line), here: incomingText(line), there: line.memberDisplay
-                )
-            )
-            .accessibilityIdentifier("promote.sheet.pin.\(line.id)")
-            .frame(width: PromoteLayout.pinColumn, alignment: .leading)
-            Text(verbatim: compared(line))
-                .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
-                .frame(width: 150, alignment: .leading)
-            Text(verbatim: incomingText(line))
-                .font(PVFont.body(size: PVTypeScale.caption))
-                .frame(maxWidth: .infinity, alignment: .leading)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: line.memberDisplay)
-                    .font(PVFont.body(size: PVTypeScale.caption))
-                if !line.memberSource.isEmpty {
-                    Text(verbatim: line.memberSource)
-                        .font(PVFont.body(size: PVTypeScale.caption))
-                        .italic()
-                        .foregroundStyle(PVColor.textMuted)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            PVBadge(L10n.Promote.outcome(line.outcome), tone: outcomeTone(line.outcome), subtle: true)
-                .frame(width: 92, alignment: .leading)
-            Text(verbatim: weightText(line.weight))
-                .font(PVFont.mono(size: PVTypeScale.caption))
-                .foregroundStyle(PVColor.textSecondary)
-                .lineLimit(1)
-                .frame(width: PromoteLayout.weightColumn, alignment: .trailing)
-        }
-        .padding(.horizontal, PVSpacing.space4)
-        .padding(.vertical, PVSpacing.space3)
-        .overlay(alignment: .top) { PVDivider() }
-    }
-
-    private struct ExhibitGroup: Identifiable {
-        var id: String
-        var title: String
-        var ref: String
-        var lines: [CatalogPromoteGraphAlignmentComparison]
-    }
-
-    private var groups: [ExhibitGroup] {
-        var order: [String] = []
-        var lines: [String: [CatalogPromoteGraphAlignmentComparison]] = [:]
-        for line in row.comparisons {
-            let key = line.groupSubjectID
-            if lines[key] == nil { order.append(key) }
-            lines[key, default: []].append(line)
-        }
-        return order.map { key in
-            guard !key.isEmpty else {
-                return ExhibitGroup(id: "own", title: L10n.string(L10n.Promote.ownRecords), ref: row.ref, lines: lines[key] ?? [])
-            }
-            let neighbor = model.flow.rows.first { $0.subjectID == key }
-            let name = neighbor?.name ?? L10n.string(L10n.Promote.sheetNeighbor)
-            return ExhibitGroup(id: key, title: L10n.Promote.through(name), ref: neighbor?.ref ?? "", lines: lines[key] ?? [])
-        }
-    }
-
-    private func incomingText(_ line: CatalogPromoteGraphAlignmentComparison) -> String {
-        line.incomingNegative ? L10n.Promote.negatedValue(line.incomingDisplay) : line.incomingDisplay
-    }
-
-    private func compared(_ line: CatalogPromoteGraphAlignmentComparison) -> String {
-        model.propertyLabel(key: line.propertyKey, origin: line.propertyOrigin)
-    }
-
-    private func outcomeTone(_ outcome: String) -> PVBadgeTone {
-        switch outcome {
-        case "agree": .success
-        case "partial": .info
-        case "conflict": .danger
-        default: .neutral
-        }
-    }
-
-    private func weightText(_ weight: Double) -> String {
-        if weight == 0 { return "0" }
-        let sign = weight > 0 ? "+" : "−"
-        return sign + String(format: "%.2f", abs(weight))
-    }
-
-    private func pin(_ id: String) -> Binding<Bool> {
-        Binding(
-            get: { row.pins.contains(id) },
-            set: { _ in model.togglePin(subjectID: row.subjectID, comparisonID: id) }
-        )
-    }
-
-    private var argumentBinding: Binding<String> {
-        Binding(get: { row.argument }, set: { model.setArgument(subjectID: row.subjectID, argument: $0) })
-    }
-
-    private var confidenceBinding: Binding<String> {
-        Binding(
-            get: { row.confidenceGradeID ?? "" },
-            set: { model.setConfidence(subjectID: row.subjectID, gradeID: $0.isEmpty ? nil : $0) }
-        )
-    }
-
-    private var confidenceOptions: [PVSelectOption] {
-        [PVSelectOption(value: "", label: L10n.string(L10n.Promote.confidenceUnset))]
-            + grades.map { PVSelectOption(value: $0.id, label: $0.label) }
-    }
-}
-
 /// The board's column grid, shared by the header row and every row so the
 /// columns line up.
 private enum PromoteLayout {
@@ -901,22 +581,8 @@ private enum PromoteLayout {
     static let kindTile: CGFloat = 28
     static let targetColumn: CGFloat = 330
     static let badgeColumn: CGFloat = 112
-    /// Micro-caps headers need more than the checkbox and the signed weight.
-    static let pinColumn: CGFloat = 36
-    static let weightColumn: CGFloat = 64
     /// Notes under a row start where its name does.
     static let noteIndent = kindTile + columnGap
-}
-
-private enum PromoteAssessmentCopy {
-    static func title(_ assessment: PromoteFlow.Assessment) -> LocalizedStringResource {
-        switch assessment {
-        case .strong: L10n.Promote.assessmentStrong
-        case .medium: L10n.Promote.assessmentMedium
-        case .weak: L10n.Promote.assessmentWeak
-        case .none: L10n.Promote.assessmentNone
-        }
-    }
 }
 
 private struct PromoteKindTile: View {

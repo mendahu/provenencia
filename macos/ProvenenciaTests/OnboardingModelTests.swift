@@ -371,7 +371,18 @@ private struct ThrowingStore: GenealogyStore {
         sourceTypeID _: String,
         title _: String,
         description _: String
-    ) async throws -> CatalogSource { throw StoreBoom.boom }
+    ) async throws -> (CatalogSource, CatalogWriteEffects) { throw StoreBoom.boom }
+    func copySource(
+        projectDir _: String,
+        userID _: String,
+        sourceID _: String,
+        title _: String,
+        sourceTypeID _: String,
+        copyDescription _: Bool,
+        copyMetadata _: Bool,
+        copyCredibility _: Bool,
+        artifactIDs _: [String]
+    ) async throws -> (CatalogSource, CatalogWriteEffects) { throw StoreBoom.boom }
     func updateSource(
         projectDir _: String,
         userID _: String,
@@ -424,7 +435,8 @@ private struct ThrowingStore: GenealogyStore {
         sourceID _: String,
         fileID _: String,
         label _: String,
-        description _: String
+        description _: String,
+        graphIDs _: [String]
     ) async throws -> (CatalogArtifact, CatalogWriteEffects) { throw StoreBoom.boom }
     func deleteArtifact(projectDir _: String, userID _: String, artifactID _: String) async throws -> CatalogWriteEffects {
         throw StoreBoom.boom
@@ -443,6 +455,43 @@ private struct ThrowingStore: GenealogyStore {
         path _: String
     ) async throws
         -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool, effects: CatalogWriteEffects) { throw StoreBoom.boom }
+    func listEvidenceGraphs(projectDir _: String) async throws -> [CatalogEvidenceGraph] { throw StoreBoom.boom }
+    func createEvidenceGraph(
+        projectDir _: String,
+        userID _: String,
+        sourceID _: String,
+        name _: String,
+        description _: String,
+        artifactIDs _: [String]
+    ) async throws -> (CatalogEvidenceGraph, CatalogWriteEffects) { throw StoreBoom.boom }
+    func updateEvidenceGraph(
+        projectDir _: String,
+        userID _: String,
+        graphID _: String,
+        name _: String,
+        description _: String,
+        artifactIDs _: [String]
+    ) async throws -> CatalogWriteEffects { throw StoreBoom.boom }
+    func deleteEvidenceGraph(projectDir _: String, userID _: String, graphID _: String) async throws -> CatalogWriteEffects {
+        throw StoreBoom.boom
+    }
+    func linkEvidenceGraphArtifact(
+        projectDir _: String,
+        userID _: String,
+        graphID _: String,
+        artifactID _: String
+    ) async throws -> CatalogWriteEffects { throw StoreBoom.boom }
+    func unlinkEvidenceGraphArtifact(
+        projectDir _: String,
+        userID _: String,
+        graphID _: String,
+        artifactID _: String
+    ) async throws -> CatalogWriteEffects { throw StoreBoom.boom }
+    func getEvidenceGraphUnlinkImpact(
+        projectDir _: String,
+        graphID _: String,
+        artifactIDs _: [String]
+    ) async throws -> [CatalogEvidenceGraphUnlinkBlock] { throw StoreBoom.boom }
     func listSourceCredibilityGrades(projectDir _: String) async throws -> [CatalogCredibilityGrade] {
         throw StoreBoom.boom
     }
@@ -518,14 +567,14 @@ private struct ThrowingStore: GenealogyStore {
     func searchCatalog(
         projectDir _: String,
         query _: String,
-        location _: WorkspaceLocation,
+        location _: WorkspaceLocation?,
         kinds _: [String]
     ) async throws -> [CatalogSearchHit] { throw StoreBoom.boom }
     func listSubjectTypes(projectDir _: String) async throws -> [CatalogSubjectType] { throw StoreBoom.boom }
     func createSubject(
         projectDir _: String,
         userID _: String,
-        sourceID _: String,
+        graphID _: String,
         subjectTypeID _: String,
         label _: String,
         description _: String,
@@ -550,28 +599,36 @@ private struct ThrowingStore: GenealogyStore {
     }
     func proposePromoteGraphAlignment(
         projectDir _: String,
-        sourceID _: String,
+        graphID _: String,
         fixed _: [CatalogPromoteGraphAlignmentFixed]
     ) async throws -> CatalogPromoteGraphAlignmentProposal {
+        throw StoreBoom.boom
+    }
+    func getPromoteClaimEvidence(
+        projectDir _: String,
+        graphID _: String,
+        subjectID _: String,
+        handleID _: String,
+        neighbors _: [CatalogPromoteGraphAlignmentFixed]
+    ) async throws -> CatalogClaimEvidence {
         throw StoreBoom.boom
     }
     func applyPromoteGraphAlignment(
         projectDir _: String,
         userID _: String,
-        sourceID _: String,
+        graphID _: String,
         seenRevision _: Int64,
-        rows _: [CatalogPromoteBatchRow],
-        skipBridgeIDs _: [String]
+        rows _: [CatalogPromoteBatchRow]
     ) async throws -> CatalogPromoteBatchResult {
         throw StoreBoom.boom
     }
     func listClaimConfidenceGrades(projectDir _: String) async throws -> [CatalogClaimConfidenceGrade] {
         throw StoreBoom.boom
     }
-    func listSubjectMemberships(projectDir _: String, sourceID _: String) async throws -> [CatalogSubjectMembership] {
+    func listSubjectMemberships(projectDir _: String, graphID _: String) async throws -> [CatalogSubjectMembership] {
         throw StoreBoom.boom
     }
-    func listSourceEventTitles(projectDir _: String, sourceID _: String) async throws -> [String: CatalogEventTitle] {
+    func listEvidenceGraphEventTitles(projectDir _: String, graphID _: String) async throws -> [String: CatalogEventTitle] {
         throw StoreBoom.boom
     }
     func listPersonHeaders(projectDir _: String) async throws -> [CatalogPersonHeader] {
@@ -600,7 +657,7 @@ private struct ThrowingStore: GenealogyStore {
     ) async throws -> CatalogWriteEffects {
         throw StoreBoom.boom
     }
-    func listSubjects(projectDir _: String, sourceID _: String) async throws -> [CatalogSubject] {
+    func listSubjects(projectDir _: String, graphID _: String) async throws -> [CatalogSubject] {
         throw StoreBoom.boom
     }
     func setSubjectPosition(
@@ -612,7 +669,7 @@ private struct ThrowingStore: GenealogyStore {
     func clearSubjectPosition(projectDir _: String, subjectID _: String) async throws {
         throw StoreBoom.boom
     }
-    func listSubjectPositions(projectDir _: String, sourceID _: String) async throws
+    func listSubjectPositions(projectDir _: String, graphID _: String) async throws
         -> [CatalogSubjectPosition] { throw StoreBoom.boom }
     func createProperty(
         projectDir _: String,
@@ -660,7 +717,6 @@ private struct ThrowingStore: GenealogyStore {
     func createCitedBridge(
         projectDir _: String,
         userID _: String,
-        sourceID _: String,
         fromSubjectID _: String,
         toSubjectID _: String,
         bridgeTypeKey _: String,
@@ -689,6 +745,7 @@ private struct ThrowingStore: GenealogyStore {
     ) async throws -> (CatalogCitation, [CatalogObservation], CatalogWriteEffects) { throw StoreBoom.boom }
     func getCitation(
         projectDir _: String,
+        graphID _: String,
         citationID _: String
     ) async throws -> (CatalogCitation, [String], [CatalogObservation]) { throw StoreBoom.boom }
     func updateCitation(
@@ -722,19 +779,23 @@ private struct ThrowingStore: GenealogyStore {
         citationID _: String,
         observations _: [CatalogObservationDraft]
     ) async throws -> ([CatalogObservation], CatalogWriteEffects) { throw StoreBoom.boom }
-    func listObservationsBySource(projectDir _: String, sourceID _: String) async throws -> [CatalogObservation] {
+    func listObservationsByEvidenceGraph(projectDir _: String, graphID _: String) async throws -> [CatalogObservation] {
         throw StoreBoom.boom
     }
-    func citationCountsBySource(projectDir _: String, sourceID _: String) async throws -> [String: Int] {
+    func citationCountsByEvidenceGraph(projectDir _: String, graphID _: String) async throws -> [String: Int] {
         throw StoreBoom.boom
     }
-    func listCitationsByArtifact(projectDir _: String, artifactID _: String) async throws -> [CatalogListedCitation] {
+    func listCitationsByArtifact(
+        projectDir _: String,
+        graphID _: String,
+        artifactID _: String
+    ) async throws -> [CatalogListedCitation] {
         throw StoreBoom.boom
     }
-    func listSourceGraphProgress(projectDir _: String) async throws -> [SourceGraphProgress] {
+    func listEvidenceGraphProgress(projectDir _: String) async throws -> [EvidenceGraphProgress] {
         throw StoreBoom.boom
     }
-    func getSourceGraphProgress(projectDir _: String, sourceID _: String) async throws -> SourceGraphProgress {
+    func getEvidenceGraphProgress(projectDir _: String, graphID _: String) async throws -> EvidenceGraphProgress {
         throw StoreBoom.boom
     }
     func getDeleteImpact(projectDir _: String, kind _: String, id _: String) async throws -> CatalogDeleteImpact {

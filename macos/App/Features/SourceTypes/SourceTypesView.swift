@@ -131,15 +131,15 @@ private struct SourceTypesContent: View {
     let store = FakeStore()
     let projectDir = "/tmp/preview.provenencia"
     store.fieldsByProject[projectDir] = [
-        CatalogMetadataField(id: "f1", key: "author", origin: "provenencia", label: "Author", dataType: "text", description: "Person or body responsible for the content."),
-        CatalogMetadataField(id: "f2", key: "publication-date", origin: "provenencia", label: "Publication date", dataType: "date", description: "Date the source was published."),
-        CatalogMetadataField(id: "f3", key: "publisher", origin: "provenencia", label: "Publisher", dataType: "text", description: "Who issued it."),
+        CatalogMetadataField(id: "f1", key: "author", origin: CatalogOrigin.provenencia, label: "Author", dataType: "text", description: "Person or body responsible for the content."),
+        CatalogMetadataField(id: "f2", key: "publication-date", origin: CatalogOrigin.provenencia, label: "Publication date", dataType: "date", description: "Date the source was published."),
+        CatalogMetadataField(id: "f3", key: "publisher", origin: CatalogOrigin.provenencia, label: "Publisher", dataType: "text", description: "Who issued it."),
         CatalogMetadataField(id: "f4", key: "grandmas-album-code", origin: "user", label: "Grandma's album code", dataType: "text", description: "Pencil code on the back of prints."),
     ]
     store.sourceTypesByProject[projectDir] = [
-        CatalogSourceType(id: "t1", key: "photograph", origin: "provenencia", label: "Photograph", description: "A photographic image of people, places or objects.", usedBy: 41),
-        CatalogSourceType(id: "t2", key: "book", origin: "provenencia", label: "Book", description: "A published monograph.", usedBy: 18),
-        CatalogSourceType(id: "t3", key: "letter", origin: "provenencia", label: "Letter", description: "Private correspondence.", usedBy: 0),
+        CatalogSourceType(id: "t1", key: "photograph", origin: CatalogOrigin.provenencia, label: "Photograph", description: "A photographic image of people, places or objects.", usedBy: 41),
+        CatalogSourceType(id: "t2", key: "book", origin: CatalogOrigin.provenencia, label: "Book", description: "A published monograph.", usedBy: 18),
+        CatalogSourceType(id: "t3", key: "letter", origin: CatalogOrigin.provenencia, label: "Letter", description: "Private correspondence.", usedBy: 0),
         CatalogSourceType(id: "t4", key: "family-scrapbook", origin: "user", label: "Family scrapbook", description: "Nan's albums.", usedBy: 3),
         CatalogSourceType(id: "t5", key: "grave-memorial", origin: "plugin:findagrave", label: "Grave memorial", description: "A memorial page.", usedBy: 5),
     ]

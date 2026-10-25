@@ -63,7 +63,7 @@ struct PersonDetailTests {
     }
 
     @Test func treatmentRidesOnContentAndRowsStay() {
-        let woman = CatalogConclusionValue.term(id: "t", key: "woman", label: "Woman")
+        let woman = CatalogConclusionValue.term(id: "t", key: "woman", label: "Woman", origin: CatalogOrigin.provenencia)
         let gender = D.field(
             "single", key: "gender", label: "Gender", valueType: "term",
             [D.value(1, "kept", woman)], outcomes: [D.outcome("g", "kept", recorded: woman)]
@@ -88,7 +88,7 @@ struct PersonDetailTests {
     }
 
     @Test func headerThumbIsTheLeadLikeness() {
-        let woman = CatalogConclusionValue.term(id: "t", key: "woman", label: "Woman")
+        let woman = CatalogConclusionValue.term(id: "t", key: "woman", label: "Woman", origin: CatalogOrigin.provenencia)
         let gender = D.field(
             "single", key: "gender", label: "Gender", valueType: "term",
             [D.value(1, "kept", woman)], outcomes: [D.outcome("g", "kept", recorded: woman)]
@@ -326,11 +326,12 @@ struct PersonDetailTests {
         let location = ReconciliationRecord.composerLocation(for: outcome)
         #expect(location.section == .sources && location.sourceSurface == .citationComposer)
         let entry = try #require(CitationComposerEntry(location: location))
-        guard case let .edit(sourceID, subjectID, citationID, artifactID, observationID) = entry else {
+        guard case let .edit(sourceID, graphID, subjectID, citationID, artifactID, observationID) = entry else {
             Issue.record("expected an edit entry, got \(entry)")
             return
         }
-        #expect(sourceID == "s-bible" && subjectID == "sub-bible" && citationID == "cit-bible")
+        #expect(sourceID == "s-bible" && graphID == "g-bible" && subjectID == "sub-bible" && citationID == "cit-bible")
+        #expect(location.graphId == "g-bible")
         #expect(artifactID == "art-bible" && observationID == "bible")
     }
 }

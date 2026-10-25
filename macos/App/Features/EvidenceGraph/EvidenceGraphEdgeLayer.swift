@@ -9,14 +9,13 @@ import SwiftUI
 /// same hues (wider soft under-stroke + slightly thicker stroke) — never remaps
 /// to accent.
 struct EvidenceGraphEdgeLayer: View {
-    let snapshot: SourceGraphSnapshot
+    let snapshot: EvidenceGraphSnapshot
     var selectedBridgeID: String?
     var dragOffsets: [String: CGSize] = [:]
     /// Measured card layouts, so edges attach to the painted cards.
     var layouts: [String: EvidenceCardLayout] = [:]
-    /// Grid-space point the document's top-left stands on. Frames are drawn at `grid − origin`.
-    var documentOrigin: CGPoint = .zero
     @Environment(\.graphCanvasViewport) private var viewport
+    @Environment(\.graphCanvasContentOrigin) private var origin
 
     var body: some View {
         let pixel = GraphCanvasCoordinates.screenPixelDocumentWidth(
@@ -66,7 +65,7 @@ struct EvidenceGraphEdgeLayer: View {
 
     private func strokePrimaryToBridge(
         context: GraphicsContext,
-        primary: SourceGraphPlacedSubject,
+        primary: EvidenceGraphPlacedSubject,
         primaryRect: CGRect,
         bridgeRect: CGRect,
         selected: Bool,
@@ -111,47 +110,58 @@ struct EvidenceGraphEdgeLayer: View {
         )
     }
 
-    private func primaryFrame(_ placed: SourceGraphPlacedSubject, offset: CGSize) -> CGRect {
-        EvidenceSubjectCard.edgeFrame(for: placed, dragOffset: offset, layout: layouts[placed.id])
-            .offsetBy(dx: -documentOrigin.x, dy: -documentOrigin.y)
+    private func primaryFrame(_ placed: EvidenceGraphPlacedSubject, offset: CGSize) -> CGRect {
+        GraphCanvasCoordinates.documentRect(
+            EvidenceSubjectCard.edgeFrame(for: placed, dragOffset: offset, layout: layouts[placed.id]),
+            origin: origin
+        )
     }
 
-    private func bridgeFrame(_ placed: SourceGraphPlacedBridge, offset: CGSize) -> CGRect {
-        EvidenceBridgeCard.contentFrame(for: placed, in: snapshot, dragOffset: offset, layout: layouts[placed.id])
-            .offsetBy(dx: -documentOrigin.x, dy: -documentOrigin.y)
+    private func bridgeFrame(_ placed: EvidenceGraphPlacedBridge, offset: CGSize) -> CGRect {
+        GraphCanvasCoordinates.documentRect(
+            EvidenceBridgeCard.contentFrame(for: placed, in: snapshot, dragOffset: offset, layout: layouts[placed.id]),
+            origin: origin
+        )
     }
 }
 
-/// Observes AppKit live drag offsets without invalidating the card `ForEach` parent.
+/// Observes AppKit live drag offsets without invalidating the SwiftUI base layer
+/// (cards are canvas items, not part of it).
 struct EvidenceGraphEdgesHost: View {
     @Bindable var pointer: GraphCanvasPointerController
-    let snapshot: SourceGraphSnapshot
+    let snapshot: EvidenceGraphSnapshot
     var selectedBridgeID: String?
     var layouts: [String: EvidenceCardLayout] = [:]
-    var documentOrigin: CGPoint = .zero
 
     var body: some View {
         EvidenceGraphEdgeLayer(
             snapshot: snapshot,
             selectedBridgeID: selectedBridgeID,
             dragOffsets: pointer.offsets,
-            layouts: layouts,
-            documentOrigin: documentOrigin
+            layouts: layouts
         )
     }
 }
 
 /// Dashed rubber-band from origin card toward the cursor while waiting for B.
 struct EvidenceGraphConnectRubberBand: View {
-    let origin: SourceGraphPlacedSubject
-    let cursor: CGPoint
+    let origin: EvidenceGraphPlacedSubject
+    /// Grid-space cursor point.
+    let gridCursor: CGPoint
     var layout: EvidenceCardLayout?
-    var documentOrigin: CGPoint = .zero
+    @Environment(\.graphCanvasContentOrigin) private var contentOrigin
+    @Environment(\.graphCanvasViewport) private var viewport
 
     var body: some View {
+        let pixel = GraphCanvasCoordinates.screenPixelDocumentWidth(
+            magnification: viewport?.magnification ?? 1
+        )
+        let cursor = GraphCanvasCoordinates.documentPoint(gridCursor, origin: contentOrigin)
         Canvas { context, _ in
-            let fromRect = EvidenceSubjectCard.edgeFrame(for: origin, layout: layout)
-                .offsetBy(dx: -documentOrigin.x, dy: -documentOrigin.y)
+            let fromRect = GraphCanvasCoordinates.documentRect(
+                EvidenceSubjectCard.edgeFrame(for: origin, layout: layout),
+                origin: contentOrigin
+            )
             let edgeStart = GraphCanvasEdgeGeometry.attachmentPoint(fromRect: fromRect, toward: cursor)
             let start = GraphCanvasEdgeGeometry.tuckInside(edgeStart, rect: fromRect)
             let path = GraphCanvasEdgeGeometry.cubicPath(from: start, to: cursor)
@@ -166,7 +176,7 @@ struct EvidenceGraphConnectRubberBand: View {
                     startPoint: start,
                     endPoint: cursor
                 ),
-                style: StrokeStyle(lineWidth: 1.75, lineCap: .round, dash: [5, 4])
+                style: StrokeStyle(lineWidth: 1.75 * pixel, lineCap: .round, dash: [5 * pixel, 4 * pixel])
             )
         }
         .allowsHitTesting(false)

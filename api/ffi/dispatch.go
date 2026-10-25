@@ -77,17 +77,17 @@ const (
 	MethodDeletePropertyTerm                = int32(engine.Method_METHOD_DELETE_PROPERTY_TERM)
 	MethodCreateCitationWithObservations    = int32(engine.Method_METHOD_CREATE_CITATION_WITH_OBSERVATIONS)
 	MethodAddObservationsToCitation         = int32(engine.Method_METHOD_ADD_OBSERVATIONS_TO_CITATION)
-	MethodListObservationsBySource          = int32(engine.Method_METHOD_LIST_OBSERVATIONS_BY_SOURCE)
+	MethodListObservationsByEvidenceGraph   = int32(engine.Method_METHOD_LIST_OBSERVATIONS_BY_EVIDENCE_GRAPH)
 	MethodGetCitation                       = int32(engine.Method_METHOD_GET_CITATION)
 	MethodCreateCitedBridge                 = int32(engine.Method_METHOD_CREATE_CITED_BRIDGE)
-	MethodCitationCountsBySource            = int32(engine.Method_METHOD_CITATION_COUNTS_BY_SOURCE)
+	MethodCitationCountsByEvidenceGraph     = int32(engine.Method_METHOD_CITATION_COUNTS_BY_EVIDENCE_GRAPH)
 	MethodListCitationsByArtifact           = int32(engine.Method_METHOD_LIST_CITATIONS_BY_ARTIFACT)
 	MethodUpdateCitation                    = int32(engine.Method_METHOD_UPDATE_CITATION)
 	MethodUpdateObservation                 = int32(engine.Method_METHOD_UPDATE_OBSERVATION)
 	MethodDeleteObservation                 = int32(engine.Method_METHOD_DELETE_OBSERVATION)
 	MethodGetPropertiesWorkspace            = int32(engine.Method_METHOD_GET_PROPERTIES_WORKSPACE)
-	MethodListSourceGraphProgress           = int32(engine.Method_METHOD_LIST_SOURCE_GRAPH_PROGRESS)
-	MethodGetSourceGraphProgress            = int32(engine.Method_METHOD_GET_SOURCE_GRAPH_PROGRESS)
+	MethodListEvidenceGraphProgress         = int32(engine.Method_METHOD_LIST_EVIDENCE_GRAPH_PROGRESS)
+	MethodGetEvidenceGraphProgress          = int32(engine.Method_METHOD_GET_EVIDENCE_GRAPH_PROGRESS)
 	MethodGetDeleteImpact                   = int32(engine.Method_METHOD_GET_DELETE_IMPACT)
 	MethodDeleteSource                      = int32(engine.Method_METHOD_DELETE_SOURCE)
 	MethodDeleteArtifact                    = int32(engine.Method_METHOD_DELETE_ARTIFACT)
@@ -100,11 +100,21 @@ const (
 	MethodGetNameFormat                     = int32(engine.Method_METHOD_GET_NAME_FORMAT)
 	MethodUnpromoteSubject                  = int32(engine.Method_METHOD_UNPROMOTE_SUBJECT)
 	MethodSetPreferredLikeness              = int32(engine.Method_METHOD_SET_PREFERRED_LIKENESS)
+	MethodCopySource                        = int32(engine.Method_METHOD_COPY_SOURCE)
+	MethodListEvidenceGraphs                = int32(engine.Method_METHOD_LIST_EVIDENCE_GRAPHS)
+	MethodCreateEvidenceGraph               = int32(engine.Method_METHOD_CREATE_EVIDENCE_GRAPH)
+	MethodUpdateEvidenceGraph               = int32(engine.Method_METHOD_UPDATE_EVIDENCE_GRAPH)
+	MethodDeleteEvidenceGraph               = int32(engine.Method_METHOD_DELETE_EVIDENCE_GRAPH)
+	MethodLinkEvidenceGraphArtifact         = int32(engine.Method_METHOD_LINK_EVIDENCE_GRAPH_ARTIFACT)
+	MethodUnlinkEvidenceGraphArtifact       = int32(engine.Method_METHOD_UNLINK_EVIDENCE_GRAPH_ARTIFACT)
+	MethodGetEvidenceGraphUnlinkImpact      = int32(engine.Method_METHOD_GET_EVIDENCE_GRAPH_UNLINK_IMPACT)
+	MethodGetPromoteClaimEvidence           = int32(engine.Method_METHOD_GET_PROMOTE_CLAIM_EVIDENCE)
+	MethodReorderSubjectTypeProperties      = int32(engine.Method_METHOD_REORDER_SUBJECT_TYPE_PROPERTIES)
 	MethodListClaimConfidenceGrades         = int32(engine.Method_METHOD_LIST_CLAIM_CONFIDENCE_GRADES)
 	MethodGetConclusionDetail               = int32(engine.Method_METHOD_GET_CONCLUSION_DETAIL)
 	MethodListEventHeaders                  = int32(engine.Method_METHOD_LIST_EVENT_HEADERS)
 	MethodListPlaceHeaders                  = int32(engine.Method_METHOD_LIST_PLACE_HEADERS)
-	MethodListSourceEventTitles             = int32(engine.Method_METHOD_LIST_SOURCE_EVENT_TITLES)
+	MethodListEvidenceGraphEventTitles      = int32(engine.Method_METHOD_LIST_EVIDENCE_GRAPH_EVENT_TITLES)
 )
 
 // Call routes one coarse FFI operation to api/ffi/handlers.
@@ -244,14 +254,14 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.CreateCitationWithObservations(in)
 	case MethodAddObservationsToCitation:
 		return handlers.AddObservationsToCitation(in)
-	case MethodListObservationsBySource:
-		return handlers.ListObservationsBySource(in)
+	case MethodListObservationsByEvidenceGraph:
+		return handlers.ListObservationsByEvidenceGraph(in)
 	case MethodGetCitation:
 		return handlers.GetCitation(in)
 	case MethodCreateCitedBridge:
 		return handlers.CreateCitedBridge(in)
-	case MethodCitationCountsBySource:
-		return handlers.CitationCountsBySource(in)
+	case MethodCitationCountsByEvidenceGraph:
+		return handlers.CitationCountsByEvidenceGraph(in)
 	case MethodListCitationsByArtifact:
 		return handlers.ListCitationsByArtifact(in)
 	case MethodUpdateCitation:
@@ -262,10 +272,10 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.DeleteObservation(in)
 	case MethodGetPropertiesWorkspace:
 		return handlers.GetPropertiesWorkspace(in)
-	case MethodListSourceGraphProgress:
-		return handlers.ListSourceGraphProgress(in)
-	case MethodGetSourceGraphProgress:
-		return handlers.GetSourceGraphProgress(in)
+	case MethodListEvidenceGraphProgress:
+		return handlers.ListEvidenceGraphProgress(in)
+	case MethodGetEvidenceGraphProgress:
+		return handlers.GetEvidenceGraphProgress(in)
 	case MethodGetDeleteImpact:
 		return handlers.GetDeleteImpact(in)
 	case MethodDeleteSource:
@@ -280,6 +290,26 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.UnpromoteSubject(in)
 	case MethodSetPreferredLikeness:
 		return handlers.SetPreferredLikeness(in)
+	case MethodCopySource:
+		return handlers.CopySource(in)
+	case MethodListEvidenceGraphs:
+		return handlers.ListEvidenceGraphs(in)
+	case MethodCreateEvidenceGraph:
+		return handlers.CreateEvidenceGraph(in)
+	case MethodUpdateEvidenceGraph:
+		return handlers.UpdateEvidenceGraph(in)
+	case MethodDeleteEvidenceGraph:
+		return handlers.DeleteEvidenceGraph(in)
+	case MethodLinkEvidenceGraphArtifact:
+		return handlers.LinkEvidenceGraphArtifact(in)
+	case MethodUnlinkEvidenceGraphArtifact:
+		return handlers.UnlinkEvidenceGraphArtifact(in)
+	case MethodGetEvidenceGraphUnlinkImpact:
+		return handlers.GetEvidenceGraphUnlinkImpact(in)
+	case MethodGetPromoteClaimEvidence:
+		return handlers.GetPromoteClaimEvidence(in)
+	case MethodReorderSubjectTypeProperties:
+		return handlers.ReorderSubjectTypeProperties(in)
 	case MethodListSubjectMemberships:
 		return handlers.ListSubjectMemberships(in)
 	case MethodListPersonHeaders:
@@ -298,8 +328,8 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.ListEventHeaders(in)
 	case MethodListPlaceHeaders:
 		return handlers.ListPlaceHeaders(in)
-	case MethodListSourceEventTitles:
-		return handlers.ListSourceEventTitles(in)
+	case MethodListEvidenceGraphEventTitles:
+		return handlers.ListEvidenceGraphEventTitles(in)
 	default:
 		return nil, apperr.New(apperr.CodeInternalUnknownMethod, apperr.KindInternal, strconv.Itoa(int(method)))
 	}

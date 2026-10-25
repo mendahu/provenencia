@@ -214,3 +214,20 @@ struct PVContextMenuPlacementTests {
         #expect(frame.maxY == anchor.maxY - origin.y)
     }
 }
+
+@Suite
+struct PVActionMenuItemTests {
+    @Test func keyboardTitlesKeepEverySlot() {
+        let items = [
+            PVActionMenuItem(title: "Clear region", isEnabled: false),
+            PVActionMenuItem(title: "Reset"),
+        ]
+        #expect(PVActionMenuItem.keyboardTitles(items) == ["Clear region", "Reset"])
+    }
+
+    @Test func keyboardTitlesNilWhenNothingIsEnabled() {
+        let items = [PVActionMenuItem(title: "Default icon is in use", isEnabled: false)]
+        #expect(PVActionMenuItem.keyboardTitles(items) == nil)
+        #expect(PVActionMenuItem.keyboardTitles([]) == nil)
+    }
+}

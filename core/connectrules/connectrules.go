@@ -50,37 +50,37 @@ type Rule struct {
 // Product bridges and refusals. Omitted pairs refuse by default.
 var productBridges = []Bridge{
 	{
-		Origin: vocabkey.OriginProvenencia, BridgeTypeKey: "participation",
+		Origin: vocabkey.OriginProvenencia, BridgeTypeKey: vocabkey.BridgeParticipation,
 		Endpoints: []Endpoint{
-			{PropertyKey: "person", TypeKey: "person"},
-			{PropertyKey: "event", TypeKey: "event"},
+			{PropertyKey: vocabkey.PropertyPerson, TypeKey: vocabkey.Person},
+			{PropertyKey: vocabkey.PropertyEvent, TypeKey: vocabkey.Event},
 		},
 		Disambiguation: DisambiguationRole,
 		Pairs:          [][2]string{{"person", "event"}, {"event", "person"}},
 	},
 	{
-		Origin: vocabkey.OriginProvenencia, BridgeTypeKey: "relationship",
+		Origin: vocabkey.OriginProvenencia, BridgeTypeKey: vocabkey.BridgeRelationship,
 		Endpoints: []Endpoint{
-			{PropertyKey: "person", TypeKey: "person"},
-			{PropertyKey: "related_to", TypeKey: "person"},
+			{PropertyKey: vocabkey.PropertyPerson, TypeKey: vocabkey.Person},
+			{PropertyKey: vocabkey.PropertyRelatedTo, TypeKey: vocabkey.Person},
 		},
 		Disambiguation: DisambiguationRelationshipType,
 		Pairs:          [][2]string{{"person", "person"}},
 	},
 	{
-		Origin: vocabkey.OriginProvenencia, BridgeTypeKey: "location",
+		Origin: vocabkey.OriginProvenencia, BridgeTypeKey: vocabkey.BridgeLocation,
 		Endpoints: []Endpoint{
-			{PropertyKey: "event", TypeKey: "event"},
-			{PropertyKey: "place", TypeKey: "place"},
+			{PropertyKey: vocabkey.PropertyEvent, TypeKey: vocabkey.Event},
+			{PropertyKey: vocabkey.PropertyPlace, TypeKey: vocabkey.Place},
 		},
 		Disambiguation: DisambiguationNone,
 		Pairs:          [][2]string{{"event", "place"}, {"place", "event"}},
 	},
 	{
-		Origin: vocabkey.OriginProvenencia, BridgeTypeKey: "place_relationship",
+		Origin: vocabkey.OriginProvenencia, BridgeTypeKey: vocabkey.BridgePlaceRelationship,
 		Endpoints: []Endpoint{
-			{PropertyKey: "from", TypeKey: "place"},
-			{PropertyKey: "to", TypeKey: "place"},
+			{PropertyKey: vocabkey.PropertyFrom, TypeKey: vocabkey.Place},
+			{PropertyKey: vocabkey.PropertyTo, TypeKey: vocabkey.Place},
 		},
 		Disambiguation: DisambiguationPlaceRelationshipType,
 		Pairs:          [][2]string{{"place", "place"}},

@@ -8,7 +8,6 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -21,11 +20,11 @@ const (
 		ON CONFLICT(subject_id) DO UPDATE SET
 			grid_x = excluded.grid_x,
 			grid_y = excluded.grid_y`
-	sqlGet          = `SELECT subject_id, grid_x, grid_y FROM subject_positions WHERE subject_id = ?`
-	sqlListBySource = `SELECT p.subject_id, p.grid_x, p.grid_y
+	sqlGet         = `SELECT subject_id, grid_x, grid_y FROM subject_positions WHERE subject_id = ?`
+	sqlListByGraph = `SELECT p.subject_id, p.grid_x, p.grid_y
 		FROM subject_positions p
 		INNER JOIN subjects s ON s.id = p.subject_id
-		WHERE s.source_id = ?
+		WHERE s.graph_id = ?
 		ORDER BY p.grid_y, p.grid_x, p.subject_id`
 	sqlClear         = `DELETE FROM subject_positions WHERE subject_id = ?`
 	sqlSubjectExists = `SELECT 1 FROM subjects WHERE id = ?`
@@ -57,7 +56,7 @@ func Set(tx *database.Tx, subjectID []byte, gridX, gridY int64) (Position, []row
 	}
 	action := rowchange.ActionCreate
 	fields := map[string]rowchange.FieldDiff{
-		"subject_id": {New: uuidString(subjectID)},
+		"subject_id": {New: database.UUIDString(subjectID)},
 		"grid_x":     {New: gridX},
 		"grid_y":     {New: gridY},
 	}
@@ -119,17 +118,18 @@ func GetTx(tx *sql.Tx, subjectID []byte) (Position, error) {
 	return scanPosition(tx.QueryRow(sqlGet, subjectID))
 }
 
-// ListBySource returns placed positions for subjects homed to sourceID.
-// Unplaced subjects are omitted (tray is the set difference client-side).
-func ListBySource(c *database.Catalog, sourceID []byte) ([]Position, error) {
+// ListByEvidenceGraph returns placed positions for subjects on the Evidence
+// graph graphID. Unplaced subjects are omitted (tray is the set difference
+// client-side).
+func ListByEvidenceGraph(c *database.Catalog, graphID []byte) ([]Position, error) {
 	db, err := c.DB()
 	if err != nil {
 		return nil, err
 	}
-	if len(sourceID) != 16 {
+	if len(graphID) != 16 {
 		return nil, ErrInvalid
 	}
-	rows, err := db.Query(sqlListBySource, sourceID)
+	rows, err := db.Query(sqlListByGraph, graphID)
 	if err != nil {
 		return nil, err
 	}
@@ -166,19 +166,11 @@ func Clear(tx *database.Tx, subjectID []byte) ([]rowchange.Change, error) {
 		EntityID:   append([]byte(nil), subjectID...),
 		Action:     rowchange.ActionDelete,
 		Fields: rowchange.DeletedRow(map[string]any{
-			"subject_id": uuidString(subjectID),
+			"subject_id": database.UUIDString(subjectID),
 			"grid_x":     prev.GridX,
 			"grid_y":     prev.GridY,
 		}),
 	}}, nil
-}
-
-func uuidString(id []byte) string {
-	parsed, err := uuid.FromBytes(id)
-	if err != nil {
-		return ""
-	}
-	return parsed.String()
 }
 
 type rowScanner interface {

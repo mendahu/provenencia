@@ -1,12 +1,13 @@
 import AppKit
 import SwiftUI
 
-/// Workspace destination for a Source’s Evidence graph.
+/// Workspace destination for one Evidence graph.
 ///
-/// Product place under Sources (`sourceSurface: .graph`). Composes the
+/// Product place under Sources (`WorkspaceLocation.evidenceGraph(…)`). Composes the
 /// reusable [`GraphCanvas`](../GraphCanvas/) shell with primary + bridge cards,
 /// palette place/create/connect, and drag persist (S6-02–S6-04).
 struct EvidenceGraphView: View {
+    let graphID: String
     let sourceID: String
     let session: WorkspaceSession
     let store: any GenealogyStore
@@ -16,7 +17,7 @@ struct EvidenceGraphView: View {
     @State private var model: EvidenceGraphModel
 
     private var graphKey: CatalogQueryKey {
-        CatalogQueryKey.sourceGraph(project: session.projectKey, sourceId: sourceID)
+        CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: graphID)
     }
 
     private var fieldsKey: CatalogQueryKey {
@@ -24,17 +25,20 @@ struct EvidenceGraphView: View {
     }
 
     init(
+        graphID: String,
         sourceID: String,
         session: WorkspaceSession,
         store: any GenealogyStore,
         userID: String
     ) {
+        self.graphID = graphID
         self.sourceID = sourceID
         self.session = session
         self.store = store
         self.userID = userID
         _model = State(
             initialValue: EvidenceGraphModel(
+                graphID: graphID,
                 sourceID: sourceID,
                 session: session,
                 store: store,
@@ -45,14 +49,14 @@ struct EvidenceGraphView: View {
 
     var body: some View {
         Group {
-            if let graphHandle: QueryHandle<SourceGraphRows> = session.queryHandle(graphKey),
+            if let graphHandle: QueryHandle<EvidenceGraphRows> = session.queryHandle(graphKey),
                let fieldsHandle: QueryHandle<PropertiesSnapshot> = session.queryHandle(fieldsKey)
             {
                 EvidenceGraphContent(
                     graphHandle: graphHandle,
                     fieldsHandle: fieldsHandle,
                     model: model,
-                    sourceID: sourceID,
+                    graphID: graphID,
                     sourceTitle: model.sourceTitle,
                     sourceRef: model.sourceRef,
                     navigation: navigation
@@ -65,7 +69,7 @@ struct EvidenceGraphView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier("workspace.destination.evidenceGraph")
-        .task(id: sourceID) {
+        .task(id: graphID) {
             await model.prepare()
         }
         .onChange(of: model.armedKind) { _, kind in
@@ -92,24 +96,24 @@ struct EvidenceGraphView: View {
 // MARK: - Content
 
 private struct EvidenceGraphContent: View {
-    @Bindable var graphHandle: QueryHandle<SourceGraphRows>
+    @Bindable var graphHandle: QueryHandle<EvidenceGraphRows>
     @Bindable var fieldsHandle: QueryHandle<PropertiesSnapshot>
     @Bindable var model: EvidenceGraphModel
-    let sourceID: String
+    let graphID: String
     let sourceTitle: String
     let sourceRef: String?
     let navigation: WorkspaceNavigation
     @FocusState private var focus: EvidenceGraphFocus?
 
-    private var snapshot: SourceGraphSnapshot {
+    private var snapshot: EvidenceGraphSnapshot {
         model.displaySnapshot(rows: graphHandle.value, types: fieldsHandle.value?.types ?? [])
     }
 
-    private var subjects: [SourceGraphPlacedSubject] {
+    private var subjects: [EvidenceGraphPlacedSubject] {
         snapshot.subjects
     }
 
-    private var bridges: [SourceGraphPlacedBridge] {
+    private var bridges: [EvidenceGraphPlacedBridge] {
         snapshot.bridges
     }
 
@@ -152,9 +156,6 @@ private struct EvidenceGraphContent: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(accessibilityGraphLabel)
         .vocabularyToastOverlay($model.toast, identifier: "evidenceGraph.toast")
-        .onChange(of: canvas.origin, initial: true) { _, origin in
-            model.canvasOrigin = origin
-        }
         .pvFormDialog(
             isPresented: sheetPresented,
             copy: PVFormDialogCopy(
@@ -270,10 +271,10 @@ private struct EvidenceGraphContent: View {
             GraphCanvasScrollView(
                 contentSize: contentSize,
                 contentOrigin: canvas.origin,
-                contentID: sourceID,
-                restoredCamera: model.session.graphCamera(for: sourceID),
+                contentID: graphID,
+                restoredCamera: model.session.graphCamera(for: graphID),
                 onCameraChange: { camera in
-                    model.session.setGraphCamera(camera, for: sourceID)
+                    model.session.setGraphCamera(camera, for: graphID)
                 },
                 accessibilityLabel: L10n.string(L10n.Workspace.evidenceGraphTitle)
             ) {
@@ -424,7 +425,7 @@ private struct EvidenceGraphContent: View {
                     label: L10n.EvidenceGraph.labelField,
                     hint: L10n.EvidenceGraph.workingLabelHint,
                     error: model.labelError,
-                    required: true
+                    marker: .required
                 ) {
                     PVInput(
                         text: Binding(
@@ -698,9 +699,10 @@ private struct EvidenceGraphLabeledHeaderWidthKey: PreferenceKey {
 // MARK: - Document (paint-only; AppKit owns pointer)
 
 /// Reads live drag offsets so the document can grow before the drop, without
-/// the card `ForEach` following every pointer event.
+/// the SwiftUI base layer following every pointer event (cards are canvas
+/// items, not part of it).
 private struct EvidenceGraphDragCanvasSize: View {
-    let snapshot: SourceGraphSnapshot
+    let snapshot: EvidenceGraphSnapshot
     @Bindable var pointer: GraphCanvasPointerController
     @Bindable var model: EvidenceGraphModel
 
@@ -723,14 +725,17 @@ private struct EvidenceGraphDragCanvasSize: View {
     }
 }
 
-/// The selection rectangle, in document space so it scales with zoom. This is
-/// the only reader of ``GraphCanvasPointerController/marqueeRect``: the document
-/// body must not follow a property that changes every pointer event.
+/// The selection rectangle, drawn in the document so it scales with zoom. This
+/// is the only reader of ``GraphCanvasPointerController/marqueeRect`` (grid
+/// space): the document body must not follow a property that changes every
+/// pointer event.
 private struct EvidenceGraphMarquee: View {
     @Bindable var pointer: GraphCanvasPointerController
+    @Environment(\.graphCanvasContentOrigin) private var origin
 
     var body: some View {
-        if let rect = pointer.marqueeRect {
+        if let grid = pointer.marqueeRect {
+            let rect = GraphCanvasCoordinates.documentRect(grid, origin: origin)
             Rectangle()
                 .fill(PVColor.accent.opacity(0.09))
                 .overlay(Rectangle().stroke(PVColor.accent, lineWidth: 1.5))
@@ -743,7 +748,7 @@ private struct EvidenceGraphMarquee: View {
 }
 
 private struct EvidenceGraphDocument: View {
-    @Bindable var graphHandle: QueryHandle<SourceGraphRows>
+    @Bindable var graphHandle: QueryHandle<EvidenceGraphRows>
     @Bindable var fieldsHandle: QueryHandle<PropertiesSnapshot>
     @Bindable var model: EvidenceGraphModel
     let canvas: EvidenceGraphCanvas
@@ -772,7 +777,7 @@ private struct EvidenceGraphDocument: View {
     }
 }
 
-/// The graph's base layer (grid, edges, ghost, rubber band, empty state) and
+/// The graph's base layer (grid, edges, rubber band, empty state), the placement preview and
 /// the controller for its cards.
 ///
 /// Cards are ``GraphCanvasItem``s: AppKit hosts and positions each one, and a
@@ -781,7 +786,7 @@ private struct EvidenceGraphDocument: View {
 /// read would re-run this body on every pointer event. ``EvidenceGraphEdgesHost``
 /// is the one view that follows live offsets.
 private struct EvidenceGraphDocumentBody: View {
-    @Bindable var graphHandle: QueryHandle<SourceGraphRows>
+    @Bindable var graphHandle: QueryHandle<EvidenceGraphRows>
     @Bindable var fieldsHandle: QueryHandle<PropertiesSnapshot>
     @Bindable var model: EvidenceGraphModel
     let canvas: EvidenceGraphCanvas
@@ -791,15 +796,15 @@ private struct EvidenceGraphDocumentBody: View {
     /// Painted card layouts; hit targets and edges follow these, not constants.
     @State private var cardLayouts = EvidenceCardLayoutStore()
 
-    private var snapshot: SourceGraphSnapshot {
+    private var snapshot: EvidenceGraphSnapshot {
         model.displaySnapshot(rows: graphHandle.value, types: fieldsHandle.value?.types ?? [])
     }
 
-    private var subjects: [SourceGraphPlacedSubject] {
+    private var subjects: [EvidenceGraphPlacedSubject] {
         snapshot.subjects
     }
 
-    private var bridges: [SourceGraphPlacedBridge] {
+    private var bridges: [EvidenceGraphPlacedBridge] {
         snapshot.bridges
     }
 
@@ -820,11 +825,6 @@ private struct EvidenceGraphDocumentBody: View {
 
     private var contentSize: CGSize { canvas.size }
 
-    /// Grid-space frames are drawn at `frame − canvas.origin`.
-    private func inDocument(_ rect: CGRect) -> CGRect {
-        rect.offsetBy(dx: -canvas.origin.x, dy: -canvas.origin.y)
-    }
-
     var body: some View {
         ZStack(alignment: .topLeading) {
             GraphCanvasGridView(contentSize: contentSize)
@@ -834,8 +834,7 @@ private struct EvidenceGraphDocumentBody: View {
                 pointer: pointer,
                 snapshot: snapshot,
                 selectedBridgeID: selectedBridgeID,
-                layouts: cardLayouts.layouts,
-                documentOrigin: canvas.origin
+                layouts: cardLayouts.layouts
             )
             .frame(width: contentSize.width, height: contentSize.height)
 
@@ -846,21 +845,10 @@ private struct EvidenceGraphDocumentBody: View {
             {
                 EvidenceGraphConnectRubberBand(
                     origin: origin,
-                    cursor: cursor,
-                    layout: cardLayouts.layout(for: origin.id),
-                    documentOrigin: canvas.origin
+                    gridCursor: cursor,
+                    layout: cardLayouts.layout(for: origin.id)
                 )
                     .frame(width: contentSize.width, height: contentSize.height)
-            }
-
-            if let ghost = model.ghostPlacedSubject() {
-                let center = EvidenceSubjectCard.contentCenter(gridX: ghost.gridX, gridY: ghost.gridY)
-                EvidenceGhostCard(card: .ghost(ghost, presentation: model.presentation(for: ghost.kind.rawValue)))
-                    .id(ghost.kind.rawValue)
-                    .fixedSize()
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
-                    .position(CGPoint(x: center.x - canvas.origin.x, y: center.y - canvas.origin.y))
             }
 
             if subjects.isEmpty, bridges.isEmpty, graphHandle.status == .ready, inputMode == .idle {
@@ -882,13 +870,14 @@ private struct EvidenceGraphDocumentBody: View {
         .onChange(of: pointer.draggingItemID) { _, _ in
             publishHitTargets()
         }
+        // The placement preview is an item: it moves with the hover cell and is
+        // rebuilt only when the armed kind changes.
+        .onChange(of: previewToken, initial: true) { _, _ in
+            pushPreview()
+        }
         // Cards change only when what they draw does — never per drag frame.
         .onChange(of: cards, initial: true) { _, cards in
             pushItems(cards)
-        }
-        .onChange(of: canvas.origin) { _, _ in
-            pushItems(cards)
-            publishHitTargets()
         }
         .onChange(of: EvidenceGraphHitRefresh.token(subjects: subjects, bridges: bridges)) { _, _ in
             cardLayouts.retain(only: Set(subjects.map(\.id) + bridges.map(\.id)))
@@ -928,7 +917,7 @@ private struct EvidenceGraphDocumentBody: View {
         }
         model.setShiftSelectHeld(pointer.shiftHeld)
         pointer.onDragEnded = { id, delta in
-            _ = model.commitGroupDrag(anchor: id, documentDelta: delta)
+            _ = model.commitGroupDrag(anchor: id, delta: delta)
         }
         pointer.onPlace = { point in
             model.beginCreate(at: point)
@@ -941,7 +930,7 @@ private struct EvidenceGraphDocumentBody: View {
                 }
             }
         }
-        pointer.onCardAction = { id, actionID in
+        pointer.onItemAction = { id, actionID in
             if let location = model.performCardAction(subjectID: id, actionID: actionID) {
                 navigation.go(to: location)
             }
@@ -950,13 +939,13 @@ private struct EvidenceGraphDocumentBody: View {
             switch model.inputMode {
             case .placing:
                 if let point {
-                    model.updateHover(contentPoint: point)
+                    model.updateHover(gridPoint: point)
                 } else {
                     model.clearHover()
                 }
             case .connecting:
                 if let point {
-                    model.updateConnectHover(contentPoint: point)
+                    model.updateConnectHover(gridPoint: point)
                 } else {
                     model.clearHover()
                 }
@@ -988,12 +977,10 @@ private struct EvidenceGraphDocumentBody: View {
             targets.append(
                 GraphCanvasHitTarget(
                     id: placed.id,
-                    frame: inDocument(
-                        EvidenceBridgeCard.contentFrame(
-                            for: placed,
-                            in: snapshot,
-                            layout: cardLayouts.layout(for: placed.id)
-                        )
+                    frame: EvidenceBridgeCard.contentFrame(
+                        for: placed,
+                        in: snapshot,
+                        layout: cardLayouts.layout(for: placed.id)
                     ),
                     acceptsConnect: false,
                     actions: EvidenceBridgeCard.actionTargets(
@@ -1001,9 +988,7 @@ private struct EvidenceGraphDocumentBody: View {
                         in: snapshot,
                         canCite: model.canCite,
                         layout: cardLayouts.layout(for: placed.id)
-                    ).map { action in
-                        action.mapFrame(inDocument)
-                    }
+                    )
                 )
             )
         }
@@ -1011,20 +996,16 @@ private struct EvidenceGraphDocumentBody: View {
             targets.append(
                 GraphCanvasHitTarget(
                     id: placed.id,
-                    frame: inDocument(
-                        EvidenceSubjectCard.edgeFrame(
-                            for: placed,
-                            layout: cardLayouts.layout(for: placed.id)
-                        )
+                    frame: EvidenceSubjectCard.edgeFrame(
+                        for: placed,
+                        layout: cardLayouts.layout(for: placed.id)
                     ),
                     acceptsConnect: true,
                     actions: EvidenceSubjectCard.actionTargets(
                         for: placed,
                         canCite: model.canCite,
                         layout: cardLayouts.layout(for: placed.id)
-                    ).map { action in
-                        action.mapFrame(inDocument)
-                    }
+                    )
                 )
             )
         }
@@ -1034,8 +1015,8 @@ private struct EvidenceGraphDocumentBody: View {
     /// What every card draws, bridges first so subjects paint above them.
     private var cards: [EvidenceCanvasCard] {
         let text = text
-        let hovered = pointer.hoveredCardAction
-        let pressed = pointer.pressedCardAction
+        let hovered = pointer.hoveredItemAction
+        let pressed = pointer.pressedItemAction
         func state(_ id: String) -> EvidenceCanvasCard.State {
             EvidenceCanvasCard.State(
                 isSelected: model.selectedSubjectIDs.contains(id),
@@ -1043,8 +1024,8 @@ private struct EvidenceGraphDocumentBody: View {
                 isConnectingFrom: model.connectOriginID == id,
                 isDragging: pointer.draggingItemID == id || pointer.draggingPeerIDs.contains(id),
                 canCite: model.canCite,
-                hoveredActionID: hovered?.cardID == id ? hovered?.actionID : nil,
-                pressedActionID: pressed?.cardID == id ? pressed?.actionID : nil
+                hoveredActionID: hovered?.itemID == id ? hovered?.actionID : nil,
+                pressedActionID: pressed?.itemID == id ? pressed?.actionID : nil
             )
         }
         return bridges.map { placed in
@@ -1065,6 +1046,33 @@ private struct EvidenceGraphDocumentBody: View {
         }
     }
 
+    /// What the preview shows: the armed kind at the hovered cell.
+    private struct PreviewToken: Equatable {
+        var kind: String
+        var gridX: Int64
+        var gridY: Int64
+    }
+
+    private var previewToken: PreviewToken? {
+        model.ghostPlacedSubject().map {
+            PreviewToken(kind: $0.kind.rawValue, gridX: $0.gridX, gridY: $0.gridY)
+        }
+    }
+
+    /// Shows the card a click would create, at the origin it would have.
+    private func pushPreview() {
+        guard let ghost = model.ghostPlacedSubject() else {
+            items.preview = nil
+            return
+        }
+        let card = EvidenceCanvasCard.ghost(ghost, presentation: model.presentation(for: ghost.kind.rawValue))
+        items.preview = GraphCanvasPreview(
+            origin: card.origin,
+            model: ghost.kind.rawValue,
+            makeView: { EvidenceCardView(ghostOf: card) }
+        )
+    }
+
     private func pushItems(_ cards: [EvidenceCanvasCard]) {
         let content = EvidenceCanvasCardContent(model: model, navigation: navigation, layouts: cardLayouts)
         let subjectsRotor = L10n.string(L10n.EvidenceGraph.subjectsRotor)
@@ -1072,10 +1080,7 @@ private struct EvidenceGraphDocumentBody: View {
         items.update(cards.map { card in
             GraphCanvasItem(
                 id: card.id,
-                origin: CGPoint(
-                    x: card.origin.x - canvas.origin.x,
-                    y: card.origin.y - canvas.origin.y
-                ),
+                origin: card.origin,
                 isRaised: card.state.isDragging || card.state.isActivated,
                 rotor: GraphCanvasRotorEntry(
                     rotor: card.isBridge ? linksRotor : subjectsRotor,
@@ -1196,8 +1201,8 @@ private struct EvidenceLegendConflictMark: View {
 /// the row count does. Saving a citation deletes and reinserts its observations.
 enum EvidenceGraphHitRefresh {
     static func token(
-        subjects: [SourceGraphPlacedSubject],
-        bridges: [SourceGraphPlacedBridge]
+        subjects: [EvidenceGraphPlacedSubject],
+        bridges: [EvidenceGraphPlacedBridge]
     ) -> String {
         var parts: [String] = []
         parts.reserveCapacity(subjects.count + bridges.count)
@@ -1219,13 +1224,4 @@ enum EvidenceGraphHitRefresh {
         let ids = observations.map(\.id).joined(separator: ",")
         return "\(id)@\(gridX),\(gridY):\(ids)"
     }
-}
-
-/// The placement ghost: the live card, built in its ghost mode. The look
-/// depends only on the armed kind, so SwiftUI never needs to update it.
-private struct EvidenceGhostCard: NSViewRepresentable {
-    let card: EvidenceCanvasCard
-
-    func makeNSView(context: Context) -> EvidenceCardView { EvidenceCardView(ghostOf: card) }
-    func updateNSView(_ view: EvidenceCardView, context: Context) {}
 }

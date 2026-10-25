@@ -14,7 +14,7 @@ struct EvidenceGraphPlacementTests {
     }
 
     @Test func emptyGraphLandsAtFourThree() {
-        let snapshot = SourceGraphSnapshot(sourceId: "src")
+        let snapshot = EvidenceGraphSnapshot(graphId: "src")
         let slot = EvidenceGraphPlacement.composerSlot(in: snapshot, landingColumn: nil)
         #expect(slot.cell.gridX == 104)
         #expect(slot.cell.gridY == 103)
@@ -59,7 +59,7 @@ struct EvidenceGraphPlacementTests {
     }
 
     @Test func columnPastTheOldFloorGrowsDownward() {
-        var subjects: [SourceGraphPlacedSubject] = [placedSubject(id: "origin", x: downtown(40), y: downtown(50))]
+        var subjects: [EvidenceGraphPlacedSubject] = [placedSubject(id: "origin", x: downtown(40), y: downtown(50))]
         let first = EvidenceGraphPlacement.composerSlot(
             in: snapshot(subjects: subjects, bridges: []),
             landingColumn: nil
@@ -208,14 +208,14 @@ struct EvidenceGraphPlacementTests {
     }
 
     private func snapshot(
-        subjects: [SourceGraphPlacedSubject],
-        bridges: [SourceGraphPlacedBridge]
-    ) -> SourceGraphSnapshot {
-        SourceGraphSnapshot(sourceId: "src", subjects: subjects, bridges: bridges)
+        subjects: [EvidenceGraphPlacedSubject],
+        bridges: [EvidenceGraphPlacedBridge]
+    ) -> EvidenceGraphSnapshot {
+        EvidenceGraphSnapshot(graphId: "src", subjects: subjects, bridges: bridges)
     }
 
-    private func placedSubject(id: String, x: Int64, y: Int64) -> SourceGraphPlacedSubject {
-        SourceGraphPlacedSubject(
+    private func placedSubject(id: String, x: Int64, y: Int64) -> EvidenceGraphPlacedSubject {
+        EvidenceGraphPlacedSubject(
             subject: CatalogSubject(
                 id: id, ref: "CPR-1", sourceID: "src", subjectTypeID: "type-person",
                 label: id, description: ""
@@ -228,8 +228,8 @@ struct EvidenceGraphPlacementTests {
         )
     }
 
-    private func placedBridge(id: String, x: Int64, y: Int64) -> SourceGraphPlacedBridge {
-        SourceGraphPlacedBridge(
+    private func placedBridge(id: String, x: Int64, y: Int64) -> EvidenceGraphPlacedBridge {
+        EvidenceGraphPlacedBridge(
             subject: CatalogSubject(
                 id: id, ref: "PTN-1", sourceID: "src", subjectTypeID: "type-participation",
                 label: id, description: ""
@@ -241,7 +241,7 @@ struct EvidenceGraphPlacementTests {
         )
     }
 
-    private func framesIntersect(_ cell: CatalogGridCell, existing: SourceGraphSnapshot) -> Bool {
+    private func framesIntersect(_ cell: CatalogGridCell, existing: EvidenceGraphSnapshot) -> Bool {
         let incoming = cardFrame(x: cell.gridX, y: cell.gridY)
         let others = existing.subjects.map { cardFrame(x: $0.gridX, y: $0.gridY) }
             + existing.bridges.map { cardFrame(x: $0.gridX, y: $0.gridY) }
@@ -249,7 +249,7 @@ struct EvidenceGraphPlacementTests {
     }
 
     private func cardFrame(x: Int64, y: Int64) -> CGRect {
-        let center = GraphCanvasGridMapping.contentPoint(gridX: x, gridY: y)
+        let center = GraphCanvasGridMapping.gridPoint(gridX: x, gridY: y)
         return CGRect(
             x: center.x - EvidenceSubjectCard.width / 2,
             y: center.y - EvidenceSubjectCard.approximateHalfHeight,

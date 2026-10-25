@@ -8,10 +8,14 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -80,7 +84,7 @@ func newScopeSeed(t *testing.T) scopeSeed {
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := runArtifactCreate(c, scopeUserID, artifacts.CreateInput{SourceID: a.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, scopeUserID, artifacts.CreateInput{SourceID: a.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,9 +97,10 @@ func newScopeSeed(t *testing.T) scopeSeed {
 		t.Fatal(err)
 	}
 	mkSubject := func(typeID []byte, label string, x int64) subjects.Subject {
+		graph := evidencegraphstest.SoleGraph(t, c, a.ID).ID
 		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: scopeUserID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 			return subjects.Create(tx, scopeUserID, subjects.CreateInput{
-				SourceID: a.ID, SubjectTypeID: typeID, Label: label,
+				GraphID: graph, SubjectTypeID: typeID, Label: label,
 			}, &subjects.Placement{GridX: x, GridY: 0})
 		})
 		if err != nil {
@@ -199,12 +204,7 @@ func (s scopeSeed) textObs(subject subjects.Subject, text string) observations.I
 // promote promotes a Subject to a new handle and returns the handle id.
 func (s scopeSeed) promote(t *testing.T, subject subjects.Subject) []byte {
 	t.Helper()
-	res, err := writes.Call(s.c, writes.Op{Action: "promote_subject", UserID: scopeUserID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, scopeUserID, promote.Input{SubjectID: subject.ID})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	res := promotetest.Save(t, s.c, scopeUserID, promote.Input{SubjectID: subject.ID})
 	return res.Entity.ID
 }
 
@@ -296,7 +296,7 @@ func TestSourceScopes(t *testing.T) {
 			run: func(t *testing.T, s scopeSeed) {
 				var art artifacts.Artifact
 				s.bumpsA(t, func() {
-					a, err := runArtifactCreate(s.c, scopeUserID, artifacts.CreateInput{SourceID: s.a.ID, Label: "Back"})
+					a, err := artifactstest.Create(s.c, scopeUserID, artifacts.CreateInput{SourceID: s.a.ID, Label: "Back"})
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -311,13 +311,76 @@ func TestSourceScopes(t *testing.T) {
 			},
 		},
 		{
+			name: "graph link and unlink",
+			run: func(t *testing.T, s scopeSeed) {
+				second, err := artifactstest.Create(s.c, scopeUserID, artifacts.CreateInput{SourceID: s.a.ID, Label: "Second"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				linkWrite := func(action string, fn func(tx *database.Tx, graphID []byte) ([]rowchange.Change, error)) {
+					t.Helper()
+					graphID := evidencegraphstest.SoleGraph(t, s.c, s.a.ID).ID
+					if _, err := writes.Call(s.c, writes.Op{Action: action, UserID: scopeUserID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						changes, err := fn(tx, graphID)
+						return struct{}{}, changes, err
+					}); err != nil {
+						t.Fatal(err)
+					}
+				}
+				s.bumpsA(t, func() {
+					linkWrite("unlink_artifact", func(tx *database.Tx, graphID []byte) ([]rowchange.Change, error) {
+						return evidencegraphs.Unlink(tx, scopeUserID, graphID, second.ID)
+					})
+				})
+				s.bumpsA(t, func() {
+					linkWrite("link_artifact", func(tx *database.Tx, graphID []byte) ([]rowchange.Change, error) {
+						return evidencegraphs.Link(tx, scopeUserID, graphID, second.ID)
+					})
+				})
+			},
+		},
+		{
+			name: "graph create, rename and delete",
+			run: func(t *testing.T, s scopeSeed) {
+				var jones evidencegraphs.Graph
+				s.bumpsA(t, func() {
+					got, err := writes.Call(s.c, writes.Op{Action: "create_evidence_graph", UserID: scopeUserID}, func(tx *database.Tx) (evidencegraphs.Graph, []rowchange.Change, error) {
+						return evidencegraphs.Create(tx, scopeUserID, evidencegraphs.CreateInput{
+							SourceID: s.a.ID, Name: "Jones", ArtifactIDs: [][]byte{s.artifact.ID},
+						})
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+					jones = got
+				})
+				s.bumpsA(t, func() {
+					if _, err := writes.Call(s.c, writes.Op{Action: "update_evidence_graph", UserID: scopeUserID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						changes, err := evidencegraphs.Update(tx, scopeUserID, jones.ID, evidencegraphs.UpdateInput{Name: "Jones household"})
+						return struct{}{}, changes, err
+					}); err != nil {
+						t.Fatal(err)
+					}
+				})
+				s.bumpsA(t, func() {
+					if _, err := writes.Call(s.c, writes.Op{Action: "delete_evidence_graph", UserID: scopeUserID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						changes, err := evidencegraphs.Delete(tx, scopeUserID, jones.ID)
+						return struct{}{}, changes, err
+					}); err != nil {
+						t.Fatal(err)
+					}
+				})
+			},
+		},
+		{
 			name: "subject create, edit, delete",
 			run: func(t *testing.T, s scopeSeed) {
 				var subj subjects.Subject
 				s.bumpsA(t, func() {
+					graph := evidencegraphstest.SoleGraph(t, s.c, s.a.ID).ID
 					got, err := writes.Call(s.c, writes.Op{Action: "create_subject", UserID: scopeUserID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 						return subjects.Create(tx, scopeUserID, subjects.CreateInput{
-							SourceID: s.a.ID, SubjectTypeID: s.personTy, Label: "Cy",
+							GraphID: graph, SubjectTypeID: s.personTy, Label: "Cy",
 						}, &subjects.Placement{GridX: 16, GridY: 0})
 					})
 					if err != nil {
@@ -438,7 +501,7 @@ func TestSourceScopes(t *testing.T) {
 				// artifacts exist would see sources the revision did not.
 				checkNewEffects(t, s.c)
 				for _, src := range []sources.Source{s.a, s.b} {
-					if _, err := runArtifactCreate(s.c, scopeUserID, artifacts.CreateInput{
+					if _, err := artifactstest.Create(s.c, scopeUserID, artifacts.CreateInput{
 						SourceID: src.ID, FileID: fres.File.ID, Label: "Scan",
 					}); err != nil {
 						t.Fatal(err)
@@ -610,14 +673,6 @@ func writeFile(t *testing.T, path, body string) {
 	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
-}
-
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
-		})
-	return a, err
 }
 
 func runArtifactUpdate(c *database.Catalog, userID []byte, a artifacts.Artifact) error {

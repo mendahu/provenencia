@@ -14,7 +14,9 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/namealiases"
+	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -41,30 +43,49 @@ func key(projectDir string) (string, error) {
 	return filepath.Clean(projectDir), nil
 }
 
+// ReconcileOnOpen runs the open-time repairs of a catalog, in order: refs for
+// rows a format step added without one, the project uuid, then the derived
+// caches. onboarding.createCatalog, onboarding's OpenCatalog and Do all call
+// it, so the next repair is one line here. It does not close c.
+func ReconcileOnOpen(c *database.Catalog) error {
+	if err := users.EnsureRefs(c); err != nil {
+		return err
+	}
+	if err := evidencegraphs.EnsureRefs(c); err != nil {
+		return err
+	}
+	if err := project.EnsureUUID(c); err != nil {
+		return err
+	}
+	// The cache first: the search index's handle documents read it.
+	if err := autoreconciler.EnsureCatalog(c); err != nil {
+		return err
+	}
+	return searchindex.EnsureCatalog(c)
+}
+
+// WarmOnOpen loads what Promote and the lists read on every call onto the
+// catalog graph, once, when a project opens: the built alias index, then the
+// default name format. One list, so a catalog opened for a test warms what the
+// app does.
+func WarmOnOpen(c *database.Catalog) error {
+	if err := namealiases.Warm(c); err != nil {
+		return err
+	}
+	return nameformats.Warm(c)
+}
+
 func openResearcher(projectDir string) (*database.Catalog, error) {
 	c, err := database.Open(projectDir)
 	if err != nil {
 		return nil, err
 	}
-	if err := users.EnsureRefs(c); err != nil {
+	if err := ReconcileOnOpen(c); err != nil {
 		_ = c.Close()
 		return nil, err
 	}
-	if err := project.EnsureUUID(c); err != nil {
-		_ = c.Close()
-		return nil, err
-	}
-	// The cache first: the search index's handle documents read it.
-	if err := autoreconciler.EnsureCatalog(c); err != nil {
-		_ = c.Close()
-		return nil, err
-	}
-	if err := searchindex.EnsureCatalog(c); err != nil {
-		_ = c.Close()
-		return nil, err
-	}
-	// Alias tables stay warm for the life of this project. Close drops them.
-	if err := namealiases.Warm(c); err != nil {
+	// What scoring reads stays warm for the life of this project. Close drops it.
+	if err := WarmOnOpen(c); err != nil {
 		_ = c.Close()
 		return nil, err
 	}

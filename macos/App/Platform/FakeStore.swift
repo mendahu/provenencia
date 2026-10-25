@@ -16,11 +16,18 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var sourcesByProject: [String: [CatalogSource]] = [:]
     var notesBySource: [String: [CatalogSourceNote]] = [:]
     var artifactsBySource: [String: [CatalogArtifact]] = [:]
+    /// Every Evidence graph of a project. `createSource` and `copySource` add a
+    /// Default graph, as the engine does; tests seed more directly, with ids that
+    /// differ from their Source's.
+    var evidenceGraphsByProject: [String: [CatalogEvidenceGraph]] = [:]
+    /// What `getEvidenceGraphUnlinkImpact` returns, filtered to the Artifacts asked.
+    var unlinkImpactBlocks: [CatalogEvidenceGraphUnlinkBlock] = []
     var credibilityBySource: [String: CatalogCredibilityAssessment] = [:]
     var credibilityGradesByProject: [String: [CatalogCredibilityGrade]] = [:]
     var sourceTypesByProject: [String: [CatalogSourceType]] = [:]
     var subjectTypesByProject: [String: [CatalogSubjectType]] = [:]
-    var subjectsBySource: [String: [CatalogSubject]] = [:]
+    /// Subjects by Evidence graph id.
+    var subjectsByGraph: [String: [CatalogSubject]] = [:]
     /// Accepted Identity Claim per Subject id (Promote): the claim and its handle.
     var membershipBySubject: [String: CatalogSubjectMembership] = [:]
     /// Distinct handles that pin an Observation, for delete-impact confirms.
@@ -32,15 +39,20 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var promoteProposeDelays: [Duration] = []
     /// The decided rows the last proposal call held.
     var lastPromoteFixed: [CatalogPromoteGraphAlignmentFixed] = []
+    /// Claim evidence per Subject id, as Go would compose it. A Subject with no
+    /// entry gets empty evidence.
+    var promoteEvidence: [String: CatalogClaimEvidence] = [:]
+    /// Thrown by `getPromoteClaimEvidence` when set.
+    var promoteEvidenceError: Error?
     /// The last Done the page filed, for tests.
-    var lastPromoteBatch: (rows: [CatalogPromoteBatchRow], skipBridgeIDs: [String])?
+    var lastPromoteBatch: [CatalogPromoteBatchRow]?
     /// Event and Place headers as Go would compose them, seeded by tests in
     /// list order. FakeStore does not reconcile, walk, or title them; Go owns
     /// those rules (`conclusionheaders`, `eventtitle`) and their tests.
     var seededEventHeaders: [CatalogEventHeader] = []
     var seededPlaceHeaders: [CatalogPlaceHeader] = []
-    /// Event card titles Go would choose, per Source then Subject id.
-    var eventTitlesBySource: [String: [String: CatalogEventTitle]] = [:]
+    /// Event card titles Go would choose, per Evidence graph then Subject id.
+    var eventTitlesByGraph: [String: [String: CatalogEventTitle]] = [:]
     /// A handle's detail as Go would compose it, seeded by tests. Persons
     /// without a seed fall back to the name mirror below.
     var seededConclusionDetails: [String: CatalogConclusionDetail] = [:]
@@ -56,7 +68,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var subjectTypePropertiesByType: [String: [CatalogSubjectTypeProperty]] = [:]
     var subjectTypePresentations: [String: CatalogSubjectTypePresentation] = [:]
     var connectRules: [CatalogConnectRule] = CatalogConnectRule.productMatrix
-    var observationsBySource: [String: [CatalogObservation]] = [:]
+    /// Observations by the Evidence graph of their Subject.
+    var observationsByGraph: [String: [CatalogObservation]] = [:]
     var edgeObservationIDs: Set<String> = []
     var citationsByID: [String: CatalogCitation] = [:]
     var citationNotesByID: [String: [String]] = [:]
@@ -76,19 +89,21 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var listSubjectsCalls = 0
     var listSubjectTypesCalls = 0
     var getSourceWorkspaceCalls = 0
-    var listSourceGraphProgressCalls = 0
-    var getSourceGraphProgressCalls = 0
+    var listEvidenceGraphProgressCalls = 0
+    var getEvidenceGraphProgressCalls = 0
     var deleteSourceCalls = 0
     var deleteArtifactCalls = 0
+    var deleteEvidenceGraphCalls = 0
     /// Optional Impact override keyed by entity id (tests).
     var deleteImpactByID: [String: CatalogDeleteImpact] = [:]
-    /// Optional override for graph-progress rows (tests). Missing keys compute from subjects/observations.
-    var graphProgressBySource: [String: SourceGraphProgress] = [:]
-    var listSourceGraphProgressError: Error?
-    var getSourceGraphProgressError: Error?
+    /// Optional override for graph-progress rows by graph id (tests). Missing keys compute from subjects/observations.
+    var graphProgressByGraph: [String: EvidenceGraphProgress] = [:]
+    var listEvidenceGraphProgressError: Error?
+    var listEvidenceGraphsError: Error?
+    var getEvidenceGraphProgressError: Error?
     /// Monotonic stand-in for audit_transactions.revision (Sources Updated sort).
     private var nextAuditRevision: Int64 = 1
-    /// When set, `searchCatalog` throws (omnibar error UI).
+    /// When set, `searchCatalog` throws (any search caller's error UI).
     var searchCatalogError: Error?
     /// When set, `workspaceNavCounts` throws instead of returning counts.
     var workspaceNavCountsError: Error?
@@ -347,20 +362,64 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         sourceTypeID: String,
         title: String,
         description: String
-    ) async throws -> CatalogSource {
+    ) async throws -> (CatalogSource, CatalogWriteEffects) {
         return withState {
-            let rev = nextAuditRevision
-            nextAuditRevision += 1
             let source = CatalogSource(
                 id: UUID().uuidString.lowercased(),
                 ref: "SRC-FAKE1",
                 sourceTypeID: sourceTypeID,
                 title: title,
-                description: description,
-                updated: CatalogActivity(revision: rev)
+                description: description
             )
-            sourcesByProject[projectDir, default: []].append(source)
-            return source
+            return insertSource(source, projectDir: projectDir)
+        }
+    }
+
+    func copySource(
+        projectDir: String,
+        userID _: String,
+        sourceID: String,
+        title: String,
+        sourceTypeID: String,
+        copyDescription: Bool,
+        copyMetadata: Bool,
+        copyCredibility: Bool,
+        artifactIDs: [String]
+    ) async throws -> (CatalogSource, CatalogWriteEffects) {
+        return try withState {
+            guard let original = sourcesByProject[projectDir]?.first(where: { $0.id == sourceID }) else {
+                throw StoreBoom.boom
+            }
+            let copyID = UUID().uuidString.lowercased()
+            var copy = CatalogSource(
+                id: copyID,
+                ref: "SRC-FAKE1",
+                sourceTypeID: sourceTypeID,
+                title: title,
+                description: copyDescription ? original.description : ""
+            )
+            if copyMetadata {
+                // Entries copy as they are; a `suggested` flag can be stale under
+                // another type in the fake.
+                metadataBySource[copyID] = metadataBySource[sourceID]
+            }
+            if copyCredibility, var assessment = credibilityBySource[sourceID] {
+                assessment.id = UUID().uuidString.lowercased()
+                assessment.sourceID = copyID
+                credibilityBySource[copyID] = assessment
+            }
+            let chosen = (artifactsBySource[sourceID] ?? []).filter { artifactIDs.contains($0.id) }
+            if !chosen.isEmpty {
+                artifactsBySource[copyID] = chosen.map { art in
+                    var copied = art
+                    copied.id = UUID().uuidString.lowercased()
+                    copied.ref = "ART-FAKE1"
+                    copied.sourceID = copyID
+                    return copied
+                }
+                copy.hasArtifact = true
+            }
+            return insertSource(copy, projectDir: projectDir)
         }
     }
 
@@ -441,7 +500,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 createdAt: formatter.string(from: Date())
             )
             notesBySource[sourceID, default: []].append(note)
-            return (note, bumpSource(sourceID, evidence: false))
+            return (note, bumpSource(sourceID, graphs: []))
         }
     }
 
@@ -454,7 +513,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     var copy = notes
                     copy[idx].body = body
                     notesBySource[sourceID] = copy
-                    return (copy[idx], bumpSource(sourceID, evidence: false))
+                    return (copy[idx], bumpSource(sourceID, graphs: []))
                 }
             }
             throw StoreBoom.boom
@@ -468,7 +527,15 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             sourcesByProject[projectDir] = (sourcesByProject[projectDir] ?? []).filter { $0.id != sourceID }
             notesBySource[sourceID] = nil
             artifactsBySource[sourceID] = nil
-            subjectsBySource[sourceID] = nil
+            for graphID in graphIDsOfSource(sourceID) {
+                subjectsByGraph[graphID] = nil
+                observationsByGraph[graphID] = nil
+                eventTitlesByGraph[graphID] = nil
+                graphProgressByGraph[graphID] = nil
+            }
+            for (project, graphs) in evidenceGraphsByProject {
+                evidenceGraphsByProject[project] = graphs.filter { $0.sourceID != sourceID }
+            }
             metadataBySource[sourceID] = nil
             credibilityBySource[sourceID] = nil
         }
@@ -479,7 +546,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             var effects = CatalogWriteEffects.empty
             for (sourceID, notes) in notesBySource where notes.contains(where: { $0.id == noteID }) {
                 notesBySource[sourceID] = notes.filter { $0.id != noteID }
-                effects = bumpSource(sourceID, evidence: false)
+                effects = bumpSource(sourceID, graphs: [])
             }
             return effects
         }
@@ -516,7 +583,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 list.append(entry)
             }
             metadataBySource[sourceID] = list
-            return (entry, bumpSource(sourceID, evidence: false))
+            return (entry, bumpSource(sourceID, graphs: []))
         }
     }
 
@@ -533,7 +600,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 list.remove(at: idx)
             }
             metadataBySource[sourceID] = list
-            return bumpSource(sourceID, evidence: false)
+            return bumpSource(sourceID, graphs: [])
         }
     }
 
@@ -547,7 +614,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             var list = metadataBySource[sourceID] ?? []
             list.removeAll { $0.field.id == fieldID && !$0.hasValue }
             metadataBySource[sourceID] = list
-            return (list, bumpSource(sourceID, evidence: false))
+            return (list, bumpSource(sourceID, graphs: []))
         }
     }
 
@@ -573,17 +640,18 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 next.append(entry)
             }
             metadataBySource[sourceID] = next
-            return (next, bumpSource(sourceID, evidence: false))
+            return (next, bumpSource(sourceID, graphs: []))
         }
     }
 
     func createArtifact(
-        projectDir _: String,
+        projectDir: String,
         userID _: String,
         sourceID: String,
         fileID: String,
         label: String,
-        description: String
+        description: String,
+        graphIDs: [String]
     ) async throws -> (CatalogArtifact, CatalogWriteEffects) {
         return withState {
             let art = CatalogArtifact(
@@ -596,7 +664,16 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 file: nil
             )
             artifactsBySource[sourceID, default: []].append(art)
-            return (art, bumpSource(sourceID, evidence: true))
+            var graphs = evidenceGraphsByProject[projectDir] ?? []
+            for i in graphs.indices where graphs[i].sourceID == sourceID
+                && (graphIDs.isEmpty || graphIDs.contains(graphs[i].id))
+            {
+                graphs[i].artifactIDs.append(art.id)
+            }
+            evidenceGraphsByProject[projectDir] = graphs
+            var effects = bumpSource(sourceID, graphs: graphIDsOfSource(sourceID))
+            effects.lists.insert(.evidenceGraphs)
+            return (art, effects)
         }
     }
 
@@ -614,7 +691,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     copy[idx].label = label
                     copy[idx].description = description
                     artifactsBySource[sourceID] = copy
-                    return (copy[idx], bumpSource(sourceID, evidence: true))
+                    return (copy[idx], bumpSource(sourceID, graphs: graphIDsOfSource(sourceID)))
                 }
             }
             throw StoreBoom.boom
@@ -630,7 +707,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             var effects = CatalogWriteEffects.empty
             for (sourceID, arts) in artifactsBySource where arts.contains(where: { $0.id == artifactID }) {
                 artifactsBySource[sourceID] = arts.filter { $0.id != artifactID }
-                effects = bumpSource(sourceID, evidence: true)
+                effects = bumpSource(sourceID, graphs: graphIDsOfSource(sourceID))
+            }
+            for (project, var graphs) in evidenceGraphsByProject {
+                for i in graphs.indices {
+                    graphs[i].artifactIDs.removeAll { $0 == artifactID }
+                }
+                evidenceGraphsByProject[project] = graphs
             }
             for (project, var sources) in sourcesByProject {
                 for i in sources.indices where sources[i].primaryArtifactID == artifactID {
@@ -643,6 +726,120 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             citationsByID = citationsByID.filter { $0.value.artifactID != artifactID }
             return effects
         }
+    }
+
+    func listEvidenceGraphs(projectDir: String) async throws -> [CatalogEvidenceGraph] {
+        try withState {
+            if let listEvidenceGraphsError { throw listEvidenceGraphsError }
+            markCatalogSessionHeld(projectDir)
+            return (evidenceGraphsByProject[projectDir] ?? []).sorted(by: Self.graphListOrder)
+        }
+    }
+
+    func createEvidenceGraph(
+        projectDir: String,
+        userID _: String,
+        sourceID: String,
+        name: String,
+        description: String,
+        artifactIDs: [String]
+    ) async throws -> (CatalogEvidenceGraph, CatalogWriteEffects) {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, !artifactIDs.isEmpty else { throw StoreBoom.boom }
+            let graph = appendGraph(
+                projectDir: projectDir, sourceID: sourceID, name: trimmed, description: description,
+                artifactIDs: artifactIDs
+            )
+            return (graph, Self.graphEffects(sourceID: sourceID))
+        }
+    }
+
+    func updateEvidenceGraph(
+        projectDir: String,
+        userID _: String,
+        graphID: String,
+        name: String,
+        description: String,
+        artifactIDs: [String]
+    ) async throws -> CatalogWriteEffects {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            guard let idx = evidenceGraphsByProject[projectDir]?.firstIndex(where: { $0.id == graphID }) else {
+                throw StoreBoom.boom
+            }
+            evidenceGraphsByProject[projectDir]?[idx].name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            evidenceGraphsByProject[projectDir]?[idx].description = description
+            if !artifactIDs.isEmpty {
+                evidenceGraphsByProject[projectDir]?[idx].artifactIDs = artifactIDs
+            }
+            return Self.graphEffects(sourceID: evidenceGraphsByProject[projectDir]?[idx].sourceID)
+        }
+    }
+
+    func deleteEvidenceGraph(projectDir: String, userID _: String, graphID: String) async throws -> CatalogWriteEffects {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            deleteEvidenceGraphCalls += 1
+            guard evidenceGraphsByProject[projectDir]?.contains(where: { $0.id == graphID }) == true else {
+                throw StoreBoom.boom
+            }
+            evidenceGraphsByProject[projectDir]?.removeAll { $0.id == graphID }
+            return Self.graphEffects(sourceID: nil)
+        }
+    }
+
+    func linkEvidenceGraphArtifact(
+        projectDir: String,
+        userID _: String,
+        graphID: String,
+        artifactID: String
+    ) async throws -> CatalogWriteEffects {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            guard let idx = evidenceGraphsByProject[projectDir]?.firstIndex(where: { $0.id == graphID }) else {
+                throw StoreBoom.boom
+            }
+            if evidenceGraphsByProject[projectDir]?[idx].artifactIDs.contains(artifactID) == false {
+                evidenceGraphsByProject[projectDir]?[idx].artifactIDs.append(artifactID)
+            }
+            return Self.graphEffects(sourceID: evidenceGraphsByProject[projectDir]?[idx].sourceID)
+        }
+    }
+
+    func unlinkEvidenceGraphArtifact(
+        projectDir: String,
+        userID _: String,
+        graphID: String,
+        artifactID: String
+    ) async throws -> CatalogWriteEffects {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            guard let idx = evidenceGraphsByProject[projectDir]?.firstIndex(where: { $0.id == graphID }) else {
+                throw StoreBoom.boom
+            }
+            evidenceGraphsByProject[projectDir]?[idx].artifactIDs.removeAll { $0 == artifactID }
+            return Self.graphEffects(sourceID: evidenceGraphsByProject[projectDir]?[idx].sourceID)
+        }
+    }
+
+    func getEvidenceGraphUnlinkImpact(
+        projectDir: String,
+        graphID _: String,
+        artifactIDs: [String]
+    ) async throws -> [CatalogEvidenceGraphUnlinkBlock] {
+        withState {
+            markCatalogSessionHeld(projectDir)
+            return artifactIDs.compactMap { id in unlinkImpactBlocks.first { $0.artifactID == id } }
+        }
+    }
+
+    /// Every graph write reports the graph list, as Go does. A create, link,
+    /// unlink or edit also reports its Source for the citation reads (graph
+    /// delete has no Source to report: the link rows go with it).
+    private static func graphEffects(sourceID: String?) -> CatalogWriteEffects {
+        CatalogWriteEffects(citationSources: sourceID.map { [$0] } ?? [], lists: [.evidenceGraphs])
     }
 
     func ingestArtifactFile(
@@ -695,7 +892,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         copy[idx].thumbnailRelPath = "objects/aa/bb/thumb-\(file.id.prefix(8))"
                     }
                     artifactsBySource[sourceID] = copy
-                    return (copy[idx], file, false, bumpSource(sourceID, evidence: true))
+                    return (copy[idx], file, false, bumpSource(sourceID, graphs: graphIDsOfSource(sourceID)))
                 }
             }
             throw StoreBoom.boom
@@ -708,9 +905,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 return grades
             }
             return [
-                CatalogCredibilityGrade(id: "g-low", key: "low_trust", origin: "provenencia", label: "Low trust", sortOrder: 1),
-                CatalogCredibilityGrade(id: "g-std", key: "standard", origin: "provenencia", label: "Standard", sortOrder: 2),
-                CatalogCredibilityGrade(id: "g-high", key: "high_trust", origin: "provenencia", label: "High trust", sortOrder: 3),
+                CatalogCredibilityGrade(id: "g-low", key: "low_trust", origin: CatalogOrigin.provenencia, label: "Low trust", sortOrder: 1),
+                CatalogCredibilityGrade(id: "g-std", key: "standard", origin: CatalogOrigin.provenencia, label: "Standard", sortOrder: 2),
+                CatalogCredibilityGrade(id: "g-high", key: "high_trust", origin: CatalogOrigin.provenencia, label: "High trust", sortOrder: 3),
             ]
         }
     }
@@ -734,7 +931,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 argument: argument
             )
             credibilityBySource[sourceID] = assessment
-            return (assessment, bumpSource(sourceID, evidence: false))
+            return (assessment, bumpSource(sourceID, graphs: []))
         }
     }
 
@@ -766,7 +963,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if key.isEmpty {
                 throw StoreBoom.boom
             }
-            if (sourceTypesByProject[projectDir] ?? []).contains(where: { $0.origin == "user" && $0.key == key }) {
+            if (sourceTypesByProject[projectDir] ?? []).contains(where: { $0.origin == CatalogOrigin.user && $0.key == key }) {
                 throw CoreInvokeError.coded(
                     status: 1,
                     code: "sourcetypes.duplicate_key",
@@ -803,7 +1000,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             guard let idx = list.firstIndex(where: { $0.id == typeID }) else {
                 throw StoreBoom.boom
             }
-            guard list[idx].origin == "user" || list[idx].origin == "provenencia" else {
+            guard list[idx].origin == CatalogOrigin.user || list[idx].origin == CatalogOrigin.provenencia else {
                 throw StoreBoom.boom
             }
             list[idx].label = label
@@ -908,7 +1105,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if key.isEmpty {
                 throw StoreBoom.boom
             }
-            if (fieldsByProject[projectDir] ?? []).contains(where: { $0.origin == "user" && $0.key == key }) {
+            if (fieldsByProject[projectDir] ?? []).contains(where: { $0.origin == CatalogOrigin.user && $0.key == key }) {
                 throw CoreInvokeError.coded(
                     status: 1,
                     code: "metadatafields.duplicate_key",
@@ -942,7 +1139,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             guard let idx = list.firstIndex(where: { $0.id == fieldID }) else {
                 throw StoreBoom.boom
             }
-            guard list[idx].origin == "user" || list[idx].origin == "provenencia" else {
+            guard list[idx].origin == CatalogOrigin.user || list[idx].origin == CatalogOrigin.provenencia else {
                 throw StoreBoom.boom
             }
             guard list[idx].dataType == dataType else {
@@ -1013,12 +1210,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     /// Handle kinds: Persons by auto-reconciled name or ref, Events and Places by ref or
-    /// label (FakeStore has no event / place values). Other kinds: the omnibar
+    /// label (FakeStore has no event / place values). Other kinds: the vocabulary
     /// fake below, filtered to the requested kinds.
     func searchCatalog(
         projectDir: String,
         query: String,
-        location: WorkspaceLocation,
+        location: WorkspaceLocation?,
         kinds: [String]
     ) async throws -> [CatalogSearchHit] {
         let handleKinds = Self.primaryTypeKeys
@@ -1033,8 +1230,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             }
         }
         if wanted.isEmpty || !wanted.isSubset(of: handleKinds) {
-            let omnibar = try await omnibarSearchCatalog(projectDir: projectDir, query: query, location: location)
-            scored += wanted.isEmpty ? omnibar : omnibar.filter { wanted.contains($0.hit.kind) }
+            let vocabulary = try await vocabularySearchHits(projectDir: projectDir, query: query, location: location)
+            scored += wanted.isEmpty ? vocabulary : vocabulary.filter { wanted.contains($0.hit.kind) }
         }
         return Array(Self.orderedByMixedScore(scored).prefix(50).map(\.hit))
     }
@@ -1129,10 +1326,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    private func omnibarSearchCatalog(
+    private func vocabularySearchHits(
         projectDir: String,
         query: String,
-        location: WorkspaceLocation
+        location: WorkspaceLocation?
     ) async throws -> [(hit: CatalogSearchHit, score: Double)] {
         return try withState {
             markCatalogSessionHeld(projectDir)
@@ -1179,7 +1376,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 } else {
                     guard score > 0 else { continue }
                 }
-                let boost = location.section == .sources ? 1.1 : 1.0
+                let boost = location?.section == .sources ? 1.1 : 1.0
                 scored.append((
                     CatalogSearchHit(
                         kind: "source",
@@ -1214,7 +1411,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         tokens: tokens
                     )
                     guard score > 0 else { continue }
-                    let boost = location.section == .sourceTypes ? 1.1 : 1.0
+                    let boost = location?.section == .sourceTypes ? 1.1 : 1.0
                     scored.append((
                         CatalogSearchHit(
                             kind: "source_type",
@@ -1245,7 +1442,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         tokens: tokens
                     )
                     guard score > 0 else { continue }
-                    let boost = location.section == .metadata ? 1.1 : 1.0
+                    let boost = location?.section == .metadata ? 1.1 : 1.0
                     scored.append((
                         CatalogSearchHit(
                             kind: "metadata_field",
@@ -1280,15 +1477,18 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     func createSubject(
         projectDir: String,
         userID _: String,
-        sourceID: String,
+        graphID: String,
         subjectTypeID: String,
         label: String,
         description: String,
         placement: CatalogGridCell?
     ) async throws -> (CatalogSubject, CatalogWriteEffects) {
-        return withState {
+        return try withState {
             recordedCalls.append("createSubject typeID=\(subjectTypeID) placement=\(placement.map { "\($0.gridX),\($0.gridY)" } ?? "nil")")
             markCatalogSessionHeld(projectDir)
+            guard let sourceID = sourceOfGraph(graphID) else {
+                throw CoreInvokeError.coded(status: 1, code: "subjects.invalid", kind: .user, params: [])
+            }
             let subject = CatalogSubject(
                 id: UUID().uuidString.lowercased(),
                 ref: "CPR-FAKE1",
@@ -1297,8 +1497,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 label: label,
                 description: description
             )
-            subjectsBySource[sourceID, default: []].append(subject)
-            let effects = bumpSource(sourceID, evidence: true)
+            subjectsByGraph[graphID, default: []].append(subject)
+            let effects = bumpSource(sourceID, graphs: [graphID])
             if let placement {
                 subjectPositionsBySubject[subject.id] = CatalogSubjectPosition(
                     subjectID: subject.id,
@@ -1320,12 +1520,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return try withState {
             recordedCalls.append("updateSubject id=\(subjectID) label=\(label)")
             markCatalogSessionHeld(projectDir)
-            for (sourceID, var list) in subjectsBySource {
+            for (graphID, var list) in subjectsByGraph {
                 guard let idx = list.firstIndex(where: { $0.id == subjectID }) else { continue }
                 list[idx].label = label
                 list[idx].description = description
-                subjectsBySource[sourceID] = list
-                return (list[idx], bumpSource(sourceID, evidence: true))
+                subjectsByGraph[graphID] = list
+                return (list[idx], bumpSource(sourceOfGraph(graphID), graphs: [graphID]))
             }
             throw StoreBoom.boom
         }
@@ -1346,7 +1546,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return try withState {
             markCatalogSessionHeld(projectDir)
             recordedCalls.append("promoteSubject id=\(subjectID)" + (entityID.map { " entity=\($0)" } ?? ""))
-            guard let subject = subjectsBySource.values.flatMap({ $0 }).first(where: { $0.id == subjectID }),
+            guard let subject = subjectsByGraph.values.flatMap({ $0 }).first(where: { $0.id == subjectID }),
                   let type = subjectTypesByProject[projectDir]?.first(where: { $0.id == subject.subjectTypeID })
             else {
                 throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
@@ -1404,11 +1604,11 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             markCatalogSessionHeld(projectDir)
             recordedCalls.append("unpromoteSubject id=\(subjectID)")
             if let unpromoteSubjectError { throw unpromoteSubjectError }
-            guard let sourceID = subjectsBySource.first(where: { $0.value.contains { $0.id == subjectID } })?.key else {
+            guard let graphID = graphOfSubject(subjectID) else {
                 throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
             }
             guard membershipBySubject[subjectID] != nil else { return .empty }
-            let ends = (observationsBySource[sourceID] ?? [])
+            let ends = (observationsByGraph[graphID] ?? [])
                 .filter { $0.valueSubjectID == subjectID }
                 .map(\.subjectID)
             var removed: [String] = []
@@ -1418,7 +1618,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 membershipBySubject[id] = nil
                 claimBySubject[id] = nil
             }
-            return CatalogWriteEffects(handles: removed, sources: [sourceID], handleScopes: removed)
+            return CatalogWriteEffects(handles: removed, evidenceGraphs: [graphID], handleScopes: removed)
         }
     }
 
@@ -1441,7 +1641,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// already-promoted Subjects are Target handle with their membership.
     func proposePromoteGraphAlignment(
         projectDir: String,
-        sourceID: String,
+        graphID: String,
         fixed: [CatalogPromoteGraphAlignmentFixed]
     ) async throws -> CatalogPromoteGraphAlignmentProposal {
         // Delay and scripted rows are one claim. Concurrent calls must not
@@ -1449,7 +1649,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         let claimed: (delay: Duration?, proposal: CatalogPromoteGraphAlignmentProposal?) = withState {
             markCatalogSessionHeld(projectDir)
             lastPromoteFixed = fixed
-            recordedCalls.append("proposePromoteGraphAlignment")
+            recordedCalls.append("proposePromoteGraphAlignment graph=\(graphID)")
             let delay: Duration? = promoteProposeDelays.isEmpty ? nil : promoteProposeDelays.removeFirst()
             guard !promoteProposals.isEmpty else { return (delay, nil) }
             let next = promoteProposals.count > 1 ? promoteProposals.removeFirst() : promoteProposals[0]
@@ -1458,12 +1658,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
         if let delay = claimed.delay { try? await Task.sleep(for: delay) }
         if let proposal = claimed.proposal { return proposal }
-        return buildPromoteProposal(projectDir: projectDir, sourceID: sourceID, fixed: fixed)
+        return buildPromoteProposal(projectDir: projectDir, graphID: graphID, fixed: fixed)
     }
 
     private func buildPromoteProposal(
         projectDir: String,
-        sourceID: String,
+        graphID: String,
         fixed: [CatalogPromoteGraphAlignmentFixed]
     ) -> CatalogPromoteGraphAlignmentProposal {
         withState {
@@ -1473,7 +1673,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 return CatalogPromoteGraphAlignmentProposal(revision: nextAuditRevision - 1, rows: next.rows)
             }
             let fixedBySubject = Dictionary(uniqueKeysWithValues: fixed.map { ($0.subjectID, $0.handleID) })
-            let subjects = subjectsBySource[sourceID] ?? []
+            let subjects = subjectsByGraph[graphID] ?? []
             let types = Dictionary(uniqueKeysWithValues: (subjectTypesByProject[projectDir] ?? []).map { ($0.id, $0) })
             let rows = subjects.compactMap { subject -> CatalogPromoteGraphAlignmentRow? in
                 guard let type = types[subject.subjectTypeID],
@@ -1488,8 +1688,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         handleRef: membership.entity.ref,
                         score: 0,
                         assessment: "strong",
-                        reason: "decided",
-                        comparisons: [],
+                        reason: .decided,
                         alternatives: [],
                         conflictWithFixed: false,
                         possibleDuplicate: false
@@ -1506,8 +1705,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         handleRef: entity.ref,
                         score: 0,
                         assessment: "strong",
-                        reason: "decided",
-                        comparisons: [],
+                        reason: .decided,
                         alternatives: [],
                         conflictWithFixed: false,
                         possibleDuplicate: false
@@ -1521,8 +1719,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     handleRef: "",
                     score: 0,
                     assessment: "none",
-                    reason: "empty",
-                    comparisons: [],
+                    reason: .empty,
                     alternatives: [],
                     conflictWithFixed: false,
                     possibleDuplicate: false
@@ -1532,19 +1729,33 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    /// Files claims and records pins so a pinned Observation's delete names each handle.
+    func getPromoteClaimEvidence(
+        projectDir: String,
+        graphID: String,
+        subjectID: String,
+        handleID: String,
+        neighbors: [CatalogPromoteGraphAlignmentFixed]
+    ) async throws -> CatalogClaimEvidence {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            recordedCalls.append("getPromoteClaimEvidence graph=\(graphID) subject=\(subjectID) handle=\(handleID) neighbors=\(neighbors.count)")
+            if let promoteEvidenceError { throw promoteEvidenceError }
+            return promoteEvidence[subjectID] ?? CatalogClaimEvidence()
+        }
+    }
+
+    /// Files claims. Which Observations a pin names is Go's (`promotealign.PinOffers`); the fake pins none.
     func applyPromoteGraphAlignment(
         projectDir: String,
         userID _: String,
-        sourceID: String,
+        graphID: String,
         seenRevision: Int64,
-        rows: [CatalogPromoteBatchRow],
-        skipBridgeIDs: [String]
+        rows: [CatalogPromoteBatchRow]
     ) async throws -> CatalogPromoteBatchResult {
         try withState {
             markCatalogSessionHeld(projectDir)
-            recordedCalls.append("applyPromoteGraphAlignment source=\(sourceID) rows=\(rows.count)")
-            lastPromoteBatch = (rows, skipBridgeIDs)
+            recordedCalls.append("applyPromoteGraphAlignment graph=\(graphID) rows=\(rows.count)")
+            lastPromoteBatch = rows
             let current = nextAuditRevision - 1
             guard seenRevision == current else {
                 throw CoreInvokeError.coded(status: 1, code: "promote.stale", kind: .conflict, params: [])
@@ -1554,12 +1765,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 // Go's applyRow: a Skip writes nothing and carries nothing; a New has no pins.
                 switch row.target {
                 case "skip":
-                    guard row.entityID == nil, row.pairs.isEmpty, row.confidenceGradeID == nil, row.argument.isEmpty else {
+                    guard row.entityID == nil, row.pinIDs.isEmpty, row.confidenceGradeID == nil, row.argument.isEmpty else {
                         throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
                     }
                     continue
                 case "new":
-                    guard row.entityID == nil, row.pairs.isEmpty else {
+                    guard row.entityID == nil, row.pinIDs.isEmpty else {
                         throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
                     }
                 case "handle":
@@ -1567,14 +1778,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 default:
                     throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
                 }
-                guard let subject = (subjectsBySource[sourceID] ?? []).first(where: { $0.id == row.subjectID }),
+                guard let subject = (subjectsByGraph[graphID] ?? []).first(where: { $0.id == row.subjectID }),
                       let type = subjectTypesByProject[projectDir]?.first(where: { $0.id == subject.subjectTypeID }),
                       Self.primaryTypeKeys.contains(type.key)
                 else {
                     throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
                 }
                 if let existing = membershipBySubject[subject.id] {
-                    if row.target == "handle", existing.entity.id == row.entityID, row.pairs.isEmpty {
+                    if row.target == "handle", existing.entity.id == row.entityID, row.pinIDs.isEmpty {
                         continue
                     }
                     throw CoreInvokeError.coded(status: 1, code: "identityclaims.already_member", kind: .conflict, params: [])
@@ -1611,18 +1822,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     kind: type.key
                 )
                 claimBySubject[subject.id] = claim
-                for pair in row.pairs {
-                    recordPin(observationID: pair.incomingObservationID, entity: entity)
-                    recordPin(observationID: pair.memberObservationID, entity: entity)
-                    if let member = observationsBySource.values.flatMap({ $0 }).first(where: { $0.id == pair.memberObservationID }),
-                       let memberEntity = membershipBySubject[member.subjectID]?.entity,
-                       memberEntity.id != entity.id
-                    {
-                        recordPin(observationID: pair.incomingObservationID, entity: memberEntity)
-                        recordPin(observationID: pair.memberObservationID, entity: memberEntity)
-                    }
-                }
-                written.append(CatalogPromoteBatchWritten(entity: entity, claim: claim, pins: row.pairs.count * 2))
+                written.append(CatalogPromoteBatchWritten(entity: entity, claim: claim, pins: row.pinIDs.count))
             }
             let revision: Int64
             if written.isEmpty {
@@ -1635,33 +1835,25 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    private func recordPin(observationID: String, entity: CatalogCanonicalEntity) {
-        var list = pinsByObservation[observationID] ?? []
-        if !list.contains(where: { $0.id == entity.id }) {
-            list.append(entity)
-        }
-        pinsByObservation[observationID] = list
-    }
-
     func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade] {
         return withState {
             markCatalogSessionHeld(projectDir)
             return [
-                CatalogClaimConfidenceGrade(id: "cg-low", key: "low_confidence", origin: "provenencia", label: "Low confidence", sortOrder: 1),
-                CatalogClaimConfidenceGrade(id: "cg-mod", key: "moderate", origin: "provenencia", label: "Moderate", sortOrder: 2),
-                CatalogClaimConfidenceGrade(id: "cg-high", key: "high_confidence", origin: "provenencia", label: "High confidence", sortOrder: 3),
+                CatalogClaimConfidenceGrade(id: "cg-low", key: "low_confidence", origin: CatalogOrigin.provenencia, label: "Low confidence", sortOrder: 1),
+                CatalogClaimConfidenceGrade(id: "cg-mod", key: "moderate", origin: CatalogOrigin.provenencia, label: "Moderate", sortOrder: 2),
+                CatalogClaimConfidenceGrade(id: "cg-high", key: "high_confidence", origin: CatalogOrigin.provenencia, label: "High confidence", sortOrder: 3),
             ]
         }
     }
 
-    func listSourceEventTitles(projectDir: String, sourceID: String) async throws -> [String: CatalogEventTitle] {
+    func listEvidenceGraphEventTitles(projectDir: String, graphID: String) async throws -> [String: CatalogEventTitle] {
         withState {
             markCatalogSessionHeld(projectDir)
-            return eventTitlesBySource[sourceID] ?? [:]
+            return eventTitlesByGraph[graphID] ?? [:]
         }
     }
 
-    func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership] {
+    func listSubjectMemberships(projectDir: String, graphID: String) async throws -> [CatalogSubjectMembership] {
         // Reads do not append to `recordedCalls`: graph reads run as parallel
         // `async let`s beside position writes that log their calls.
         return withState {
@@ -1670,7 +1862,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 personHeaders().map { ($0.entity.id, $0) },
                 uniquingKeysWith: { first, _ in first }
             )
-            return (subjectsBySource[sourceID] ?? []).compactMap { subject -> CatalogSubjectMembership? in
+            return (subjectsByGraph[graphID] ?? []).compactMap { subject -> CatalogSubjectMembership? in
                 guard var membership = membershipBySubject[subject.id] else { return nil }
                 membership.name = headers[membership.entity.id]?.name
                 return membership
@@ -1765,7 +1957,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         var keys: [String] = []
         var supportingSources: [Set<String>] = []
         var propertyID = ""
-        for (sourceID, list) in observationsBySource.sorted(by: { $0.key < $1.key }) {
+        for (graphID, list) in observationsByGraph.sorted(by: { $0.key < $1.key }) {
+            let sourceID = sourceOfGraph(graphID) ?? ""
             for o in list where o.propertyKey == "name" && memberIDs.contains(o.subjectID) && !o.nameForm.isEmpty {
                 propertyID = o.propertyID
                 let name = CatalogNameValue(form: o.nameForm, parts: o.nameParts)
@@ -1788,7 +1981,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     deniedByObservationID: "",
                     recorded: .name(name),
                     subjectID: o.subjectID,
-                    subjectRef: subjectsBySource[sourceID]?.first { $0.id == o.subjectID }?.ref ?? "",
+                    subjectRef: subjectsByGraph[graphID]?.first { $0.id == o.subjectID }?.ref ?? "",
+                    graphID: graphID,
                     citationID: o.citationID,
                     sourceID: sourceID,
                     sourceTitle: sources.first { $0.id == sourceID }?.title ?? "",
@@ -1874,7 +2068,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     params: []
                 )
             }
-            for (sourceID, list) in observationsBySource {
+            for (graphID, list) in observationsByGraph {
                 let kept = list.filter { observation in
                     guard observation.subjectID == subjectID else { return true }
                     return !isConnectionFacet(observation, projectDir: projectDir)
@@ -1882,13 +2076,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 for observation in list where !kept.contains(where: { $0.id == observation.id }) {
                     edgeObservationIDs.remove(observation.id)
                 }
-                observationsBySource[sourceID] = kept
+                observationsByGraph[graphID] = kept
             }
-            for (sourceID, var list) in subjectsBySource {
+            for (graphID, var list) in subjectsByGraph {
                 guard let idx = list.firstIndex(where: { $0.id == subjectID }) else { continue }
                 list.remove(at: idx)
-                subjectsBySource[sourceID] = list
-                let effects = bumpSource(sourceID, evidence: true)
+                subjectsByGraph[graphID] = list
+                let effects = bumpSource(sourceOfGraph(graphID), graphs: [graphID])
                 subjectPositionsBySubject[subjectID] = nil
                 membershipBySubject[subjectID] = nil
                 return effects
@@ -1897,14 +2091,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func listSubjects(projectDir: String, sourceID: String) async throws -> [CatalogSubject] {
+    func listSubjects(projectDir: String, graphID: String) async throws -> [CatalogSubject] {
         return try withState {
             listSubjectsCalls += 1
             markCatalogSessionHeld(projectDir)
             if let listSubjectsError {
                 throw listSubjectsError
             }
-            return subjectsBySource[sourceID] ?? []
+            return subjectsByGraph[graphID] ?? []
         }
     }
 
@@ -1961,10 +2155,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func listSubjectPositions(projectDir: String, sourceID: String) async throws -> [CatalogSubjectPosition] {
+    func listSubjectPositions(projectDir: String, graphID: String) async throws -> [CatalogSubjectPosition] {
         return withState {
             markCatalogSessionHeld(projectDir)
-            let subjects = subjectsBySource[sourceID] ?? []
+            let subjects = subjectsByGraph[graphID] ?? []
             return subjects.compactMap { subjectPositionsBySubject[$0.id] }
                 .sorted {
                     if $0.gridY != $1.gridY { return $0.gridY < $1.gridY }
@@ -2095,7 +2289,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 .filter { $0.isLetter || $0.isNumber || $0 == "-" }
             if let property = (propertiesByProject[projectDir] ?? []).first(where: { $0.id == propertyID }),
                property.key == "place_relationship_type",
-               property.origin == "provenencia"
+               property.origin == CatalogOrigin.provenencia
             {
                 throw CoreInvokeError.coded(
                     status: 1, code: "propertyterms.locked", kind: .user, params: []
@@ -2204,7 +2398,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     func createCitedBridge(
         projectDir: String,
         userID: String,
-        sourceID: String,
         fromSubjectID: String,
         toSubjectID: String,
         bridgeTypeKey: String,
@@ -2221,13 +2414,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     ) async throws -> (CatalogSubject, CatalogCitation, [CatalogObservation], CatalogWriteEffects) {
         // Validate and pick the bridge type under the lock; `createSubject` and
         // the citation write below take it themselves.
-        let plan: (rule: CatalogConnectRule, typeID: String, cell: CatalogGridCell) = try withState {
+        let plan: (rule: CatalogConnectRule, typeID: String, cell: CatalogGridCell, graphID: String, sourceID: String) = try withState {
             recordedCalls.append(
                 "createCitedBridge citationID=\(citationID ?? "nil") observations=\(drafts.count)"
             )
             markCatalogSessionHeld(projectDir)
-            let from = subjectsBySource[sourceID]?.first(where: { $0.id == fromSubjectID })
-            let to = subjectsBySource[sourceID]?.first(where: { $0.id == toSubjectID })
+            let all = subjectsByGraph.values.flatMap { $0 }
+            let from = all.first(where: { $0.id == fromSubjectID })
+            let to = all.first(where: { $0.id == toSubjectID })
             guard let from, let to, from.id != to.id else {
                 throw CoreInvokeError.coded(status: 1, code: "connect.invalid", kind: .user, params: [])
             }
@@ -2272,12 +2466,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             }
             let midX = Self.floorDiv(fromPos.gridX + toPos.gridX + 1, 2)
             let midY = Self.floorDiv(fromPos.gridY + toPos.gridY + 1, 2)
-            return (rule, type.id, CatalogGridCell(gridX: midX, gridY: midY))
+            // The bridge lands on its from-end's graph.
+            let graphID = graphOfSubject(from.id) ?? ""
+            return (rule, type.id, CatalogGridCell(gridX: midX, gridY: midY), graphID, from.sourceID)
         }
         let (subject, _) = try await createSubject(
             projectDir: projectDir,
             userID: userID,
-            sourceID: sourceID,
+            graphID: plan.graphID,
             subjectTypeID: plan.typeID,
             label: "",
             description: description,
@@ -2324,7 +2520,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 }
             }
         }
-        return (subject, citation, observations, CatalogWriteEffects(sources: [sourceID], citationSources: [sourceID], propertyUsage: true))
+        return (subject, citation, observations, CatalogWriteEffects(evidenceGraphs: [plan.graphID], citationSources: [plan.sourceID], lists: [.propertyUsage]))
     }
 
     private static func floorDiv(_ a: Int64, _ b: Int64) -> Int64 {
@@ -2338,7 +2534,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     private func isEdgeLocked(observation: CatalogObservation, projectDir: String) -> Bool {
         if edgeObservationIDs.contains(observation.id) { return true }
-        let subject = subjectsBySource.values.flatMap { $0 }.first(where: { $0.id == observation.subjectID })
+        let subject = subjectsByGraph.values.flatMap { $0 }.first(where: { $0.id == observation.subjectID })
         let typeKey = subject.flatMap { subject in
             subjectTypesByProject[projectDir]?.first(where: { $0.id == subject.subjectTypeID })?.key
         } ?? ""
@@ -2393,22 +2589,23 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 drafts: drafts
             )
             let owner = owningSource(ofCitation: citation.id)
-            bumpSource(owner, evidence: true)
-            return (citation, created, CatalogWriteEffects(sources: owner.map { [$0] } ?? [], citationSources: owner.map { [$0] } ?? []))
+            let graphs = owner.map { graphIDsOfSource($0) } ?? []
+            bumpSource(owner, graphs: graphs)
+            return (citation, created, CatalogWriteEffects(evidenceGraphs: graphs, citationSources: owner.map { [$0] } ?? []))
         }
     }
 
     func getCitation(
         projectDir: String,
+        graphID: String,
         citationID: String
     ) async throws -> (CatalogCitation, [String], [CatalogObservation]) {
         return try withState {
             markCatalogSessionHeld(projectDir)
-            recordedCalls.append("getCitation \(citationID)")
+            recordedCalls.append("getCitation \(citationID) graphID=\(graphID)")
             guard let citation = citationsByID[citationID] else { throw StoreBoom.boom }
             let notes = citationNotesByID[citationID] ?? []
-            let observations = observationsBySource.values
-                .flatMap { $0 }
+            let observations = (observationsByGraph[graphID] ?? [])
                 .filter { $0.citationID == citationID }
             return (citation, notes, observations)
         }
@@ -2428,8 +2625,16 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             allowEdgeRows: false
         )
         return (written, {
-            let owner = withState { owningSource(ofCitation: citationID).map { [$0] } ?? [] }
-            return CatalogWriteEffects(sources: owner, citationSources: owner, propertyUsage: true)
+            withState {
+                let owner = owningSource(ofCitation: citationID).map { [$0] } ?? []
+                // The Observations land on their Subjects' graphs.
+                let graphs = written.compactMap { graphOfSubject($0.subjectID) }
+                return CatalogWriteEffects(
+                    evidenceGraphs: Self.unique(graphs),
+                    citationSources: owner,
+                    lists: [.propertyUsage]
+                )
+            }
         }())
     }
 
@@ -2457,7 +2662,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     throw edgeLockedError()
                 }
             }
-            bumpSource(owningSource(ofCitation: citationID), evidence: true)
+            let owner = owningSource(ofCitation: citationID)
+            bumpSource(owner, graphs: owner.map { graphIDsOfSource($0) } ?? [])
             return written
         }
     }
@@ -2483,8 +2689,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             citation.transcriptionNote = transcriptionNote
             citationsByID[citationID] = citation
             let owner = owningSource(ofCitation: citationID)
-            bumpSource(owner, evidence: true)
-            return (citation, CatalogWriteEffects(sources: owner.map { [$0] } ?? [], citationSources: owner.map { [$0] } ?? []))
+            let graphs = owner.map { graphIDsOfSource($0) } ?? []
+            bumpSource(owner, graphs: graphs)
+            return (citation, CatalogWriteEffects(evidenceGraphs: graphs, citationSources: owner.map { [$0] } ?? []))
         }
     }
 
@@ -2502,7 +2709,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             )
             markCatalogSessionHeld(projectDir)
             if let updateObservationError { throw updateObservationError }
-            let existing = observationsBySource.values.flatMap { $0 }.first(where: { $0.id == observation.id })
+            let existing = observationsByGraph.values.flatMap { $0 }.first(where: { $0.id == observation.id })
             guard let existing else { throw StoreBoom.boom }
             if isEdgeLocked(observation: existing, projectDir: projectDir)
                 || isEdgeLocked(observation: observation, projectDir: projectDir)
@@ -2523,14 +2730,15 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 next.valueDepictionID = existing.valueDepictionID
                 next.depiction = existing.depiction
             }
-            for (sourceID, list) in observationsBySource where list.contains(where: { $0.id == next.id }) {
-                observationsBySource[sourceID] = list.map { $0.id == next.id ? next : $0 }
-                bumpSource(sourceID, evidence: true)
+            var owners: [String] = []
+            var graphs: [String] = []
+            for (graphID, list) in observationsByGraph where list.contains(where: { $0.id == next.id }) {
+                observationsByGraph[graphID] = list.map { $0.id == next.id ? next : $0 }
+                bumpSource(sourceOfGraph(graphID), graphs: [graphID])
+                graphs.append(graphID)
+                owners.append(contentsOf: sourceOfGraph(graphID).map { [$0] } ?? [])
             }
-            let owners = observationsBySource.keys.filter { key in
-                observationsBySource[key]?.contains(where: { $0.id == next.id }) ?? false
-            }
-            return (next, CatalogWriteEffects(sources: owners, citationSources: owners))
+            return (next, CatalogWriteEffects(evidenceGraphs: graphs, citationSources: Self.unique(owners)))
         }
     }
 
@@ -2538,19 +2746,21 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return try withState {
             recordedCalls.append("deleteObservation id=\(observationID)")
             markCatalogSessionHeld(projectDir)
-            let existing = observationsBySource.values.flatMap { $0 }.first(where: { $0.id == observationID })
+            let existing = observationsByGraph.values.flatMap { $0 }.first(where: { $0.id == observationID })
             guard let existing else { throw StoreBoom.boom }
             if isEdgeLocked(observation: existing, projectDir: projectDir) {
                 throw edgeLockedError()
             }
             var owners: [String] = []
-            for (sourceID, list) in observationsBySource where list.contains(where: { $0.id == observationID }) {
-                owners.append(sourceID)
-                observationsBySource[sourceID] = list.filter { $0.id != observationID }
-                bumpSource(sourceID, evidence: true)
+            var graphs: [String] = []
+            for (graphID, list) in observationsByGraph where list.contains(where: { $0.id == observationID }) {
+                graphs.append(graphID)
+                owners.append(contentsOf: sourceOfGraph(graphID).map { [$0] } ?? [])
+                observationsByGraph[graphID] = list.filter { $0.id != observationID }
+                bumpSource(sourceOfGraph(graphID), graphs: [graphID])
             }
             pinsByObservation[observationID] = nil
-            return CatalogWriteEffects(sources: owners, citationSources: owners, propertyUsage: true)
+            return CatalogWriteEffects(evidenceGraphs: graphs, citationSources: Self.unique(owners), lists: [.propertyUsage])
         }
     }
 
@@ -2573,8 +2783,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             let owner = owningSource(ofCitation: citationID)
             citationsByID.removeValue(forKey: citationID)
             citationNotesByID.removeValue(forKey: citationID)
-            bumpSource(owner, evidence: true)
-            return CatalogWriteEffects(sources: owner.map { [$0] } ?? [], citationSources: owner.map { [$0] } ?? [])
+            let graphs = owner.map { graphIDsOfSource($0) } ?? []
+            bumpSource(owner, graphs: graphs)
+            return CatalogWriteEffects(evidenceGraphs: graphs, citationSources: owner.map { [$0] } ?? [])
         }
     }
 
@@ -2598,31 +2809,37 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func listObservationsBySource(projectDir: String, sourceID: String) async throws -> [CatalogObservation] {
+    func listObservationsByEvidenceGraph(projectDir: String, graphID: String) async throws -> [CatalogObservation] {
         return withState {
             markCatalogSessionHeld(projectDir)
-            return observationsBySource[sourceID] ?? []
+            return observationsByGraph[graphID] ?? []
         }
     }
 
-    func citationCountsBySource(projectDir: String, sourceID: String) async throws -> [String: Int] {
+    func citationCountsByEvidenceGraph(projectDir: String, graphID: String) async throws -> [String: Int] {
         return withState {
             markCatalogSessionHeld(projectDir)
-            let artifactIDs = Set((artifactsBySource[sourceID] ?? []).map(\.id))
+            guard let graph = evidenceGraphsByProject[projectDir]?.first(where: { $0.id == graphID }) else {
+                return [:]
+            }
+            let artifactIDs = Set(graph.artifactIDs)
             var counts: [String: Int] = [:]
-            for citation in citationsByID.values where artifactIDs.contains(citation.artifactID) {
+            for citation in citationsByID.values
+            where artifactIDs.contains(citation.artifactID) && citationIsInGraph(citation.id, graphID: graphID) {
                 counts[citation.artifactID, default: 0] += 1
             }
             return counts
         }
     }
 
-    func listSourceGraphProgress(projectDir: String) async throws -> [SourceGraphProgress] {
+    func listEvidenceGraphProgress(projectDir: String) async throws -> [EvidenceGraphProgress] {
         return try withState {
             markCatalogSessionHeld(projectDir)
-            listSourceGraphProgressCalls += 1
-            if let listSourceGraphProgressError { throw listSourceGraphProgressError }
-            let ids = Set((sourcesByProject[projectDir] ?? []).map(\.id) + subjectsBySource.keys + graphProgressBySource.keys)
+            listEvidenceGraphProgressCalls += 1
+            if let listEvidenceGraphProgressError { throw listEvidenceGraphProgressError }
+            let ids = Set(
+                (evidenceGraphsByProject[projectDir] ?? []).map(\.id) + subjectsByGraph.keys + graphProgressByGraph.keys
+            )
             return ids.compactMap { id in
                 let row = graphProgress(for: id, projectDir: projectDir)
                 return row.isZero ? nil : row
@@ -2630,12 +2847,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func getSourceGraphProgress(projectDir: String, sourceID: String) async throws -> SourceGraphProgress {
+    func getEvidenceGraphProgress(projectDir: String, graphID: String) async throws -> EvidenceGraphProgress {
         return try withState {
             markCatalogSessionHeld(projectDir)
-            getSourceGraphProgressCalls += 1
-            if let getSourceGraphProgressError { throw getSourceGraphProgressError }
-            return graphProgress(for: sourceID, projectDir: projectDir)
+            getEvidenceGraphProgressCalls += 1
+            if let getEvidenceGraphProgressError { throw getEvidenceGraphProgressError }
+            return graphProgress(for: graphID, projectDir: projectDir)
         }
     }
 
@@ -2647,7 +2864,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             }
             if kind == "source" {
                 let arts = artifactsBySource[id] ?? []
-                let subs = subjectsBySource[id] ?? []
+                let subs = subjectsOfSource(id)
                 var groups: [CatalogDeleteImpactGroup] = []
                 if !arts.isEmpty {
                     groups.append(
@@ -2679,19 +2896,19 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                             via: "subjects.source_id",
                             kind: "subject",
                             total: subs.count,
-                            listed: subs.prefix(20).map {
-                                CatalogDeleteImpactListed(
-                                    id: $0.id,
-                                    ref: $0.ref,
-                                    title: $0.label,
-                                    location: WorkspaceLocation(
-                                        section: .sources,
-                                        sourceId: id,
-                                        subjectId: $0.id,
-                                        sourceSurface: .graph,
-                                        ref: $0.ref,
-                                        title: $0.label
-                                    )
+                            listed: subs.prefix(20).map { subject in
+                                let location = WorkspaceLocation.evidenceGraph(
+                                    sourceId: id,
+                                    graphId: graphOfSubject(subject.id) ?? "",
+                                    subjectId: subject.id,
+                                    ref: subject.ref,
+                                    title: subject.label
+                                )
+                                return CatalogDeleteImpactListed(
+                                    id: subject.id,
+                                    ref: subject.ref,
+                                    title: subject.label,
+                                    location: location
                                 )
                             }
                         )
@@ -2720,12 +2937,11 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                                         id: $0.id,
                                         ref: $0.ref,
                                         title: $0.transcription,
-                                        location: WorkspaceLocation(
-                                            section: .sources,
-                                            sourceId: sourceID,
+                                        location: WorkspaceLocation.citationComposer(
+                                            sourceId: sourceID ?? "",
+                                            graphId: firstGraphID(ofArtifact: $0.artifactID) ?? "",
                                             citationId: $0.id,
                                             artifactId: $0.artifactID,
-                                            sourceSurface: .citationComposer,
                                             ref: $0.ref,
                                             title: $0.ref
                                         )
@@ -2762,7 +2978,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     private func observationsHoldingProperty(propertyID: String) -> [CatalogObservation] {
-        observationsBySource.values.flatMap { $0 }.filter { $0.propertyID == propertyID }
+        observationsByGraph.values.flatMap { $0 }.filter { $0.propertyID == propertyID }
     }
 
     private func propertyDeleteImpact(projectDir: String, id: String) -> CatalogDeleteImpact {
@@ -2851,10 +3067,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                             id: $0.id,
                             ref: $0.ref,
                             title: $0.title.isEmpty ? $0.ref : $0.title,
-                            location: WorkspaceLocation(
-                                section: .sources,
+                            location: WorkspaceLocation.sourcePage(
                                 sourceId: $0.id,
-                                sourceSurface: .page,
                                 ref: $0.ref,
                                 title: $0.title.isEmpty ? $0.ref : $0.title
                             )
@@ -2890,10 +3104,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                             id: $0.id,
                             ref: $0.ref,
                             title: $0.title.isEmpty ? $0.ref : $0.title,
-                            location: WorkspaceLocation(
-                                section: .sources,
+                            location: WorkspaceLocation.sourcePage(
                                 sourceId: $0.id,
-                                sourceSurface: .page,
                                 ref: $0.ref,
                                 title: $0.title.isEmpty ? $0.ref : $0.title
                             )
@@ -2908,7 +3120,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         guard citationsByID[id] != nil else {
             return CatalogDeleteImpact(allowed: false, gate: .notFound, groups: [])
         }
-        let observations = observationsBySource.values.flatMap { $0 }.filter { $0.citationID == id }
+        let observations = observationsByGraph.values.flatMap { $0 }.filter { $0.citationID == id }
         if observations.isEmpty {
             return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
         }
@@ -2920,7 +3132,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     private func observationDeleteImpact(projectDir: String, id: String) -> CatalogDeleteImpact {
-        let existing = observationsBySource.values.flatMap { $0 }.first { $0.id == id }
+        let existing = observationsByGraph.values.flatMap { $0 }.first { $0.id == id }
         guard let existing else {
             return CatalogDeleteImpact(allowed: false, gate: .notFound, groups: [])
         }
@@ -2954,10 +3166,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     private func subjectDeleteImpact(projectDir: String, id: String) -> CatalogDeleteImpact {
-        guard subjectsBySource.values.contains(where: { $0.contains(where: { $0.id == id }) }) else {
+        guard subjectsByGraph.values.contains(where: { $0.contains(where: { $0.id == id }) }) else {
             return CatalogDeleteImpact(allowed: false, gate: .notFound, groups: [])
         }
-        let observations = observationsBySource.values.flatMap { $0 }
+        let observations = observationsByGraph.values.flatMap { $0 }
         let asEndpoint = observations.filter { $0.valueSubjectID == id }
         let asOwner = observations.filter {
             $0.subjectID == id && !isConnectionFacet($0, projectDir: projectDir)
@@ -3002,7 +3214,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             kind: "observation",
             total: observations.count,
             listed: observations.prefix(20).map { observation in
-                let owner = subjectsBySource.values.flatMap { $0 }.first(where: { $0.id == observation.subjectID })
+                let owner = subjectsByGraph.values.flatMap { $0 }.first(where: { $0.id == observation.subjectID })
                 var title = observation.propertyLabel
                 if !observation.valueText.isEmpty {
                     title = title.isEmpty
@@ -3016,13 +3228,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     id: observation.id,
                     ref: observation.ref,
                     title: title,
-                    location: WorkspaceLocation(
-                        section: .sources,
-                        sourceId: owner?.sourceID,
+                    location: WorkspaceLocation.citationComposer(
+                        sourceId: owner?.sourceID ?? "",
+                        graphId: graphOfSubject(observation.subjectID) ?? "",
                         subjectId: observation.subjectID,
                         citationId: observation.citationID,
                         observationId: observation.id,
-                        sourceSurface: .citationComposer,
                         ref: observation.ref,
                         title: owner?.label.isEmpty == false ? owner?.label : observation.ref
                     )
@@ -3038,41 +3249,42 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         let propertyKey = observation.propertyKey.isEmpty
             ? (propertiesByProject[projectDir]?.first(where: { $0.id == observation.propertyID })?.key ?? "")
             : observation.propertyKey
-        return propertyKey == "role" || propertyKey == "relationship_type"
+        return propertyKey == SeededPropertyKey.role || propertyKey == SeededPropertyKey.relationshipType
     }
 
     private func fixtureContains(projectDir: String, id: String) -> Bool {
         if (sourcesByProject[projectDir] ?? []).contains(where: { $0.id == id }) { return true }
         if artifactsBySource.values.contains(where: { $0.contains(where: { $0.id == id }) }) { return true }
         if (subjectTypesByProject[projectDir] ?? []).contains(where: { $0.id == id }) { return true }
-        if subjectsBySource.values.contains(where: { $0.contains(where: { $0.id == id }) }) { return true }
+        if subjectsByGraph.values.contains(where: { $0.contains(where: { $0.id == id }) }) { return true }
         if (sourceTypesByProject[projectDir] ?? []).contains(where: { $0.id == id }) { return true }
         if (fieldsByProject[projectDir] ?? []).contains(where: { $0.id == id }) { return true }
         if (propertiesByProject[projectDir] ?? []).contains(where: { $0.id == id }) { return true }
         if propertyTermsByProperty.values.contains(where: { $0.contains(where: { $0.id == id }) }) { return true }
         if (credibilityGradesByProject[projectDir] ?? []).contains(where: { $0.id == id }) { return true }
         if citationsByID[id] != nil { return true }
-        if observationsBySource.values.contains(where: { $0.contains(where: { $0.id == id }) }) { return true }
+        if observationsByGraph.values.contains(where: { $0.contains(where: { $0.id == id }) }) { return true }
         return false
     }
 
     /// Subject type keys Promote starts from; the fake has no origin to check.
     private static let primaryTypeKeys = Set(EvidencePrimaryKind.allCases.map(\.rawValue))
 
-    private func graphProgress(for sourceID: String, projectDir: String) -> SourceGraphProgress {
-        if let override = graphProgressBySource[sourceID] {
+    private func graphProgress(for graphID: String, projectDir: String) -> EvidenceGraphProgress {
+        if let override = graphProgressByGraph[graphID] {
             return override
         }
         let sourceTypeIDs = Set(
             (subjectTypesByProject[projectDir] ?? []).filter { $0.key == "source" }.map(\.id)
         )
-        let subjects = (subjectsBySource[sourceID] ?? []).filter { !sourceTypeIDs.contains($0.subjectTypeID) }
-        let observations = observationsBySource[sourceID] ?? []
+        let subjects = (subjectsByGraph[graphID] ?? []).filter { !sourceTypeIDs.contains($0.subjectTypeID) }
+        let observations = observationsByGraph[graphID] ?? []
         let primaryTypeIDs = Set(
             (subjectTypesByProject[projectDir] ?? []).filter { Self.primaryTypeKeys.contains($0.key) }.map(\.id)
         )
-        return SourceGraphProgress(
-            sourceId: sourceID,
+        return EvidenceGraphProgress(
+            graphId: graphID,
+            sourceId: sourceOfGraph(graphID) ?? "",
             subjectCount: subjects.count,
             observationCount: observations.count,
             primaryCount: subjects.filter { primaryTypeIDs.contains($0.subjectTypeID) }.count,
@@ -3080,22 +3292,29 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         )
     }
 
-    private func personNames(for citationID: String, projectDir: String) -> [String] {
+    /// The engine's rule for a graph's Citations: one with an Observation in the
+    /// graph, or one with no Observation anywhere yet.
+    private func citationIsInGraph(_ citationID: String, graphID: String) -> Bool {
+        if (observationsByGraph[graphID] ?? []).contains(where: { $0.citationID == citationID }) {
+            return true
+        }
+        return !observationsByGraph.values.contains { $0.contains { $0.citationID == citationID } }
+    }
+
+    private func personNames(for citationID: String, graphID: String, projectDir: String) -> [String] {
         let personTypeIDs = Set(
             (subjectTypesByProject[projectDir] ?? []).filter { $0.key == "person" }.map(\.id)
         )
-        let subjects = subjectsBySource.values.flatMap { $0 }
+        let subjects = subjectsByGraph[graphID] ?? []
         func label(_ id: String) -> String? {
             guard let subject = subjects.first(where: { $0.id == id }),
                   personTypeIDs.contains(subject.subjectTypeID)
             else { return nil }
-            let trimmed = subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? nil : trimmed
+            return subject.trimmedLabel
         }
         var firstID: [String: String] = [:]
         var labels: [String: String] = [:]
-        let observations = observationsBySource.values
-            .flatMap { $0 }
+        let observations = (observationsByGraph[graphID] ?? [])
             .filter { $0.citationID == citationID }
             .sorted { $0.id < $1.id }
         for observation in observations {
@@ -3114,21 +3333,24 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             .compactMap { labels[$0.key] }
     }
 
-    func listCitationsByArtifact(projectDir: String, artifactID: String) async throws -> [CatalogListedCitation] {
+    func listCitationsByArtifact(
+        projectDir: String,
+        graphID: String,
+        artifactID: String
+    ) async throws -> [CatalogListedCitation] {
         return withState {
             markCatalogSessionHeld(projectDir)
             let listed = citationsByID.values
-                .filter { $0.artifactID == artifactID }
+                .filter { $0.artifactID == artifactID && citationIsInGraph($0.id, graphID: graphID) }
                 .sorted { $0.ref.localizedCaseInsensitiveCompare($1.ref) == .orderedAscending }
             return listed.map { citation in
-                let count = observationsBySource.values
-                    .flatMap { $0 }
+                let count = (observationsByGraph[graphID] ?? [])
                     .filter { $0.citationID == citation.id }
                     .count
                 return CatalogListedCitation(
                     citation: citation,
                     observationCount: count,
-                    subjectNames: personNames(for: citation.id, projectDir: projectDir)
+                    subjectNames: personNames(for: citation.id, graphID: graphID, projectDir: projectDir)
                 )
             }
         }
@@ -3140,7 +3362,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         ref: String,
         row: CatalogObservation
     ) throws -> CatalogObservation {
-        guard subjectsBySource.values.flatMap({ $0 }).contains(where: { $0.id == row.subjectID }) else {
+        guard subjectsByGraph.values.flatMap({ $0 }).contains(where: { $0.id == row.subjectID }) else {
             throw StoreBoom.boom
         }
         let property = propertiesByProject.values.flatMap { $0 }.first(where: { $0.id == row.propertyID })
@@ -3157,7 +3379,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             displayText = DateValueDisplay.string(for: date)
         }
         if displayText.isEmpty, !row.valueSubjectID.isEmpty {
-            displayText = subjectsBySource.values
+            displayText = subjectsByGraph.values
                 .flatMap { $0 }
                 .first(where: { $0.id == row.valueSubjectID })?
                 .label ?? ""
@@ -3183,7 +3405,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             propertyValueType: row.propertyValueType.isEmpty ? (property?.valueType ?? "") : row.propertyValueType,
             valueTermKey: row.valueTermKey.isEmpty
                 ? (propertyTermsByProperty[row.propertyID]?.first(where: { $0.id == row.valueTermID })?.key ?? "")
-                : row.valueTermKey
+                : row.valueTermKey,
+            valueTermOrigin: row.valueTermOrigin.isEmpty
+                ? (propertyTermsByProperty[row.propertyID]?.first(where: { $0.id == row.valueTermID })?.origin ?? "")
+                : row.valueTermOrigin
         )
     }
 
@@ -3211,8 +3436,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
         var created: [CatalogObservation] = []
         for draft in drafts {
-            guard let subject = subjectsBySource.values.flatMap({ $0 }).first(where: { $0.id == draft.subjectID })
-            else {
+            guard let graphID = graphOfSubject(draft.subjectID) else {
                 throw StoreBoom.boom
             }
             let property = propertiesByProject[projectDir]?.first(where: { $0.id == draft.propertyID })
@@ -3229,7 +3453,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 displayText = DateValueDisplay.string(for: date)
             }
             if displayText.isEmpty, !draft.valueSubjectID.isEmpty {
-                displayText = subjectsBySource.values
+                displayText = subjectsByGraph.values
                     .flatMap { $0 }
                     .first(where: { $0.id == draft.valueSubjectID })?
                     .label ?? ""
@@ -3255,17 +3479,104 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 propertyValueType: property?.valueType ?? "",
                 valueTermKey: propertyTermsByProperty[draft.propertyID]?
                     .first(where: { $0.id == draft.valueTermID })?
-                    .key ?? ""
+                    .key ?? "",
+                valueTermOrigin: propertyTermsByProperty[draft.propertyID]?
+                    .first(where: { $0.id == draft.valueTermID })?
+                    .origin ?? ""
             )
             if let input = draft.depiction {
                 let stored = nextFakeDepiction(input)
                 obs.valueDepictionID = stored.0
                 obs.depiction = stored.1
             }
-            observationsBySource[subject.sourceID, default: []].append(obs)
+            observationsByGraph[graphID, default: []].append(obs)
             created.append(obs)
         }
         return created
+    }
+
+    /// Appends a new Source with its Default graph, which links the Source's
+    /// Artifacts (a copy's), and bumps it like the engine's `sources` insert,
+    /// reporting the Default graph. Call inside `withState`.
+    private func insertSource(
+        _ source: CatalogSource,
+        projectDir: String
+    ) -> (CatalogSource, CatalogWriteEffects) {
+        sourcesByProject[projectDir, default: []].append(source)
+        let graph = appendGraph(
+            projectDir: projectDir, sourceID: source.id, name: "Default", description: "",
+            artifactIDs: (artifactsBySource[source.id] ?? []).map(\.id)
+        )
+        let effects = bumpSource(source.id, graphs: [graph.id])
+        return (sourcesByProject[projectDir]?.first { $0.id == source.id } ?? source, effects)
+    }
+
+    /// Appends an Evidence graph to the project's list. Call inside `withState`.
+    private func appendGraph(
+        projectDir: String,
+        sourceID: String,
+        name: String,
+        description: String,
+        artifactIDs: [String]
+    ) -> CatalogEvidenceGraph {
+        let graph = CatalogEvidenceGraph(
+            id: UUID().uuidString.lowercased(),
+            ref: "GPH-FAKE1",
+            sourceID: sourceID,
+            name: name,
+            description: description,
+            artifactIDs: artifactIDs
+        )
+        evidenceGraphsByProject[projectDir, default: []].append(graph)
+        return graph
+    }
+
+    /// The Source of an Evidence graph, over every project's graph list. Call inside `withState`.
+    private func sourceOfGraph(_ graphID: String) -> String? {
+        for graphs in evidenceGraphsByProject.values {
+            if let graph = graphs.first(where: { $0.id == graphID }) { return graph.sourceID }
+        }
+        return nil
+    }
+
+    /// The ids of every Evidence graph of a Source. Call inside `withState`.
+    private func graphIDsOfSource(_ sourceID: String) -> [String] {
+        var ids = evidenceGraphsByProject.values.flatMap { $0 }.filter { $0.sourceID == sourceID }.map(\.id)
+        for (graphID, list) in subjectsByGraph where !ids.contains(graphID) && list.first?.sourceID == sourceID {
+            ids.append(graphID)
+        }
+        return ids
+    }
+
+    /// Every Subject of a Source, over its graphs. Call inside `withState`.
+    private func subjectsOfSource(_ sourceID: String) -> [CatalogSubject] {
+        graphIDsOfSource(sourceID).flatMap { subjectsByGraph[$0] ?? [] }
+    }
+
+    /// The Evidence graph a Subject is on. Call inside `withState`.
+    private func graphOfSubject(_ subjectID: String) -> String? {
+        subjectsByGraph.first(where: { $0.value.contains { $0.id == subjectID } })?.key
+    }
+
+    /// The graph list order, as `evidencegraphs.sqlListOrder`: name without
+    /// case, then ref, then id.
+    private static func graphListOrder(_ a: CatalogEvidenceGraph, _ b: CatalogEvidenceGraph) -> Bool {
+        let order = a.name.localizedCaseInsensitiveCompare(b.name)
+        if order != .orderedSame { return order == .orderedAscending }
+        return a.ref == b.ref ? a.id < b.id : a.ref < b.ref
+    }
+
+    /// The first graph, by name, an Artifact is linked to. Call inside `withState`.
+    private func firstGraphID(ofArtifact artifactID: String) -> String? {
+        evidenceGraphsByProject.values.flatMap { $0 }
+            .filter { $0.artifactIDs.contains(artifactID) }
+            .sorted(by: Self.graphListOrder)
+            .first?.id
+    }
+
+    private static func unique(_ ids: [String]) -> [String] {
+        var seen = Set<String>()
+        return ids.filter { seen.insert($0).inserted }
     }
 
     /// Runs `body` under `stateLock`. Never spans an `await`: methods that
@@ -3273,11 +3584,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// Mirrors the engine's audit scopes: any write under a Source moves its
     /// "Updated" revision, not just edits to the Source row.
     /// Returns the effects the engine would report for that write: the Source
-    /// scope and the new revision, plus the Source in `sources` when the write
-    /// changes its evidence (artifacts, Subjects, Citations, Observations), or
-    /// `.empty` when the Source is not in any list.
+    /// scope and the new revision, plus the Evidence graphs whose rows it
+    /// changes (`graphs`: a Subject write names its Subject's graph, an
+    /// Artifact or Citation write every graph of the Source) and the Source in
+    /// `citationSources` when `graphs` is not empty. A Source in no list
+    /// reports its graphs and no activity; no Source reports nothing.
     @discardableResult
-    private func bumpSource(_ sourceID: String?, evidence: Bool) -> CatalogWriteEffects {
+    private func bumpSource(_ sourceID: String?, graphs: [String]) -> CatalogWriteEffects {
         guard let sourceID else { return .empty }
         for (project, var list) in sourcesByProject {
             guard let idx = list.firstIndex(where: { $0.id == sourceID }) else { continue }
@@ -3286,13 +3599,15 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             nextAuditRevision += 1
             sourcesByProject[project] = list
             return CatalogWriteEffects(
-                sources: evidence ? [sourceID] : [],
-                citationSources: evidence ? [sourceID] : [],
+                evidenceGraphs: graphs,
+                citationSources: graphs.isEmpty ? [] : [sourceID],
                 sourceScopes: [sourceID],
                 activity: activity
             )
         }
-        return .empty
+        // A Source no list holds has no activity to move, but the write still
+        // reports the graphs it changed.
+        return CatalogWriteEffects(evidenceGraphs: graphs, citationSources: graphs.isEmpty ? [] : [sourceID])
     }
 
     private func owningSource(ofCitation citationID: String) -> String? {
@@ -3301,9 +3616,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         {
             return owner
         }
-        return observationsBySource.first(where: { entry in
+        return observationsByGraph.first(where: { entry in
             entry.value.contains { $0.citationID == citationID }
-        })?.key
+        }).flatMap { sourceOfGraph($0.key) }
     }
 
     private func withState<T>(_ body: () throws -> T) rethrows -> T {

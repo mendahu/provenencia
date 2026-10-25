@@ -806,10 +806,10 @@ struct CitationBridgeSentence: View {
     }
 
     static func displayLabel(_ term: CatalogPropertyTerm) -> String {
-        switch term.key {
-        case "part_of":
+        switch term.productKey {
+        case SeededPlaceRelationshipTypeTerm.partOf:
             return L10n.string(L10n.CitationComposer.placeTermPartOf)
-        case "succeeded_by":
+        case SeededPlaceRelationshipTypeTerm.succeededBy:
             return L10n.string(L10n.CitationComposer.placeTermSucceededBy)
         default:
             return term.label.localizedLowercase
@@ -914,13 +914,7 @@ struct CitationDepictionValueArea: View {
                 )
             }
             HStack(alignment: .top, spacing: PVSpacing.space5) {
-                PVThumbnail(
-                    PVThumbnail.Content(
-                        image: model.depictionPreview.map { Image(nsImage: $0) },
-                        label: L10n.CitationComposer.depictionPreviewLabel
-                    ),
-                    size: 96
-                )
+                preview
                 VStack(alignment: .leading, spacing: PVSpacing.space4) {
                     Text(model.depictionCaption)
                         .font(PVFont.body(size: 12, italic: true))
@@ -962,6 +956,40 @@ struct CitationDepictionValueArea: View {
             }
         }
         .accessibilityIdentifier("citationComposer.depiction")
+        .task(id: model.depictionPreviewKey) { await model.renderDepictionPreview() }
+    }
+
+    /// The 96pt preview in the state the model derived: loading while the cut
+    /// runs, the cut, or the saved image of an unchanged edit.
+    @ViewBuilder
+    private var preview: some View {
+        switch model.depictionPreviewState {
+        case .none, .failed:
+            PVThumbnail(PVThumbnail.Content(label: L10n.CitationComposer.depictionPreviewLabel), size: 96)
+        case .cutting:
+            PVThumbnail(
+                PVThumbnail.Content(loading: true, label: L10n.CitationComposer.depictionPreviewLabel),
+                size: 96
+            )
+            .accessibilityValue(Text(L10n.DesignSystem.thumbnailLoading))
+        case .cut(let image):
+            PVThumbnail(
+                PVThumbnail.Content(
+                    image: Image(nsImage: image),
+                    label: L10n.CitationComposer.depictionPreviewLabel
+                ),
+                size: 96
+            )
+        case .saved(let relPath):
+            CachedThumbnail(
+                projectDir: model.session.projectKey.projectDir,
+                relPath: relPath,
+                mediaType: "image/png",
+                size: 96
+            )
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(L10n.CitationComposer.depictionPreviewLabel))
+        }
     }
 
     /// Sets the region without drawing and announces the caption it produced.

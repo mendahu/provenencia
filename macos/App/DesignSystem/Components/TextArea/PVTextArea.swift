@@ -97,6 +97,9 @@ struct PVTextArea: View {
     private let isInvalid: Bool
     /// When true, claims focus once the field appears (inline edit / type picker).
     private let activateOnAppear: Bool
+    /// When true, the field takes the height its container offers (never less than `lineLimit`'s
+    /// lower bound) instead of sizing to its text; the text scrolls inside it.
+    private let fillsHeight: Bool
 
     init(
         text: Binding<String>,
@@ -104,7 +107,8 @@ struct PVTextArea: View {
         prompt: LocalizedStringResource? = nil,
         typography: Typography = .body,
         isInvalid: Bool = false,
-        activateOnAppear: Bool = false
+        activateOnAppear: Bool = false,
+        fillsHeight: Bool = false
     ) {
         self._text = text
         self.lineLimit = lineLimit
@@ -112,6 +116,7 @@ struct PVTextArea: View {
         self.typography = typography
         self.isInvalid = isInvalid
         self.activateOnAppear = activateOnAppear
+        self.fillsHeight = fillsHeight
     }
 
     @FocusState private var isFocused: Bool
@@ -120,6 +125,10 @@ struct PVTextArea: View {
 
     /// Field body height: at least `lineLimit`'s lower bound, growing with the
     /// text until the upper bound, then the editor scrolls.
+    private var minEditorHeight: CGFloat {
+        (lineHeight > 0 ? lineHeight : 18) * CGFloat(lineLimit.lowerBound)
+    }
+
     private var editorHeight: CGFloat {
         let line = lineHeight > 0 ? lineHeight : 18
         let minHeight = line * CGFloat(lineLimit.lowerBound)
@@ -133,7 +142,10 @@ struct PVTextArea: View {
             .scrollContentBackground(.hidden)
             .focusEffectDisabled()
             .focused($isFocused)
-            .frame(height: editorHeight)
+            .frame(
+                minHeight: fillsHeight ? minEditorHeight : editorHeight,
+                maxHeight: fillsHeight ? .infinity : editorHeight
+            )
             .background(alignment: .topLeading) {
                 if text.isEmpty, let prompt {
                     Text(prompt)

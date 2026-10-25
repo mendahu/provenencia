@@ -2,19 +2,12 @@ import SwiftUI
 
 /// Sticky identity header: thumbnail, title edit, type chip.
 struct SourcePageIdentityHeader: View {
-    @Environment(WorkspaceNavigation.self) private var navigation
     @Bindable var model: SourcePageModel
     /// Local draft so title keystrokes don't invalidate the whole Source page
     /// observation graph on every character.
     @State private var titleDraft = ""
-    @State private var coverMenu = PVContextMenuState()
-    @State private var coverKeyboard = PVContextMenuKeyboard.inactive
     private enum TypeField: Hashable { case combo }
     @FocusState private var typeFieldFocused: TypeField?
-
-    private var coverMenuItemCount: Int {
-        model.source?.coverMode == "type_icon" ? 0 : 1
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {
@@ -24,18 +17,9 @@ struct SourcePageIdentityHeader: View {
                     titleCluster
                         .frame(maxWidth: .infinity, alignment: .leading)
                     HStack(alignment: .top, spacing: PVSpacing.space4) {
+                        copySourceButton
                         deleteSourceButton
-                        evidenceGraphJump
                     }
-                }
-                // Menu on the row (not the 72pt thumb) so click origin shares
-                // the panel's coordinate space.
-                .pvContextMenu(
-                    $coverMenu,
-                    keyboard: coverMenuItemCount > 0 ? $coverKeyboard : nil,
-                    keyboardTitles: coverMenuItemCount > 0 ? [L10n.string(L10n.Sources.thumbnailRevertToDefault)] : []
-                ) {
-                    coverMenuPanel
                 }
                 .frame(maxWidth: PVSpacing.widthContentMax, alignment: .leading)
             }
@@ -59,31 +43,32 @@ struct SourcePageIdentityHeader: View {
             mediaType: identityCover.mediaType,
             originalFilename: identityCover.originalFilename,
             typeIconKey: identityCover.typeIconKey,
-            size: 72
+            size: 72,
+            imageLabel: L10n.string(L10n.Sources.thumbnailImageLabel)
         )
-        .accessibilityHint(L10n.string(L10n.Sources.thumbnailMenuHint))
+        // No VoiceOver hint: the actions rotor lists the menu's items, and the
+        // type-icon cover has none to promise.
         .accessibilityIdentifier("sources.page.cover")
-        .pvContextMenuTrigger($coverMenu)
+        .pvRightClickMenu(
+            title: L10n.Sources.thumbnailMenuTitle,
+            accessibilityIdentifier: "sources.page.cover.menu",
+            items: coverMenuItems
+        )
         .help(L10n.string(L10n.Sources.thumbnailMenuHint))
     }
 
-    private var coverMenuPanel: some View {
-        PVContextMenuPanel(
-            title: L10n.Sources.thumbnailMenuTitle,
-            accessibilityIdentifier: "sources.page.cover.menu"
-        ) {
-            if model.source?.coverMode == "type_icon" {
-                PVContextMenuItem(L10n.Sources.thumbnailDefaultInUse, isEnabled: false)
-            } else {
-                PVContextMenuItem(
-                    L10n.Sources.thumbnailRevertToDefault,
-                    index: 0,
-                    accessibilityIdentifier: "sources.page.cover.revert"
-                ) {
-                    Task { await model.artifacts.revertCoverToTypeIcon() }
-                }
-            }
+    private var coverMenuItems: [PVActionMenuItem] {
+        if model.source?.coverMode == "type_icon" {
+            return [PVActionMenuItem(title: L10n.Sources.thumbnailDefaultInUse, isEnabled: false)]
         }
+        return [
+            PVActionMenuItem(
+                title: L10n.Sources.thumbnailRevertToDefault,
+                accessibilityIdentifier: "sources.page.cover.revert"
+            ) {
+                Task { await model.artifacts.revertCoverToTypeIcon() }
+            },
+        ]
     }
 
     private var identityCover: (
@@ -173,6 +158,18 @@ struct SourcePageIdentityHeader: View {
         }
     }
 
+    private var copySourceButton: some View {
+        PVIconButton(
+            .duplicate,
+            label: L10n.Sources.copySourceEntry,
+            size: .sm
+        ) {
+            model.openCopy()
+        }
+        .disabled(model.source == nil)
+        .accessibilityIdentifier("sources.page.copySource")
+    }
+
     private var deleteSourceButton: some View {
         PVIconButton(
             .trash,
@@ -184,27 +181,6 @@ struct SourcePageIdentityHeader: View {
         }
         .disabled(model.source == nil)
         .accessibilityIdentifier("sources.page.deleteSource")
-    }
-
-    private var evidenceGraphJump: some View {
-        let location = model.source.flatMap(SourcesListNavigation.graphLocation(for:))
-        return PVButton(
-            L10n.Sources.jumpToEvidenceGraph,
-            variant: .secondary,
-            size: .sm,
-            icon: .gitBranch
-        ) {
-            if let location {
-                navigation.go(to: location)
-            }
-        }
-        .disabled(location == nil)
-        .help(
-            location == nil
-                ? L10n.string(L10n.Sources.needsArtifactTooltip)
-                : L10n.string(L10n.Sources.jumpToEvidenceGraph)
-        )
-        .accessibilityIdentifier("sources.page.jumpToEvidenceGraph")
     }
 
     private var metaRow: some View {
@@ -231,16 +207,11 @@ struct SourcePageIdentityHeader: View {
                             accessibilityIdentifierPrefix: "sources.page.type",
                             focus: PVComboFocus($typeFieldFocused, equals: .combo)
                         ) { option, query in
-                            HStack(spacing: PVSpacing.space3) {
-                                if let type = model.identity.types.first(where: { $0.id == option.value }) {
-                                    PVMark(
-                                        PVMarkKey(catalogKey: type.iconKey),
-                                        size: .row,
-                                        decorative: true
-                                    )
-                                }
-                                PVComboBoxPlainRow(option: option, query: query)
-                            }
+                            SourceTypeComboRow(
+                                type: model.identity.types.first { $0.id == option.value },
+                                option: option,
+                                query: query
+                            )
                         }
                         .frame(width: 210)
                         .disabled(model.identity.isSaving)

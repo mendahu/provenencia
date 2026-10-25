@@ -29,6 +29,9 @@ enum WorkspaceLocationReconcile: Equatable, Sendable {
 struct WorkspaceLocation: Codable, Equatable, Sendable {
     var section: WorkspaceSection
     var sourceId: String?
+    /// The Evidence graph of a graph, citationComposer or promote surface. A
+    /// location of one of those surfaces without it is the Source page.
+    var graphId: String?
     var fieldId: String?
     var typeId: String?
     /// Subject scoped into the citation composer when `sourceSurface == .citationComposer`.
@@ -50,7 +53,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     /// Canonical handle (Person / Event / Place) for a Conclude detail place.
     var entityId: String?
     /// Page vs Evidence graph vs composer when `section == .sources` and `sourceId` is set.
-    /// Legacy history without this key decodes as `.page`.
+    /// Legacy history without this key, or a graph surface without `graphId`, decodes as `.page`.
     var sourceSurface: SourceSurface
     /// Promote opened from the graph's Promote all control, with every subject
     /// already expanded. Card Promote leaves this false. Legacy history decodes as false.
@@ -60,8 +63,8 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     /// Denormalized jump-menu cache; ignored for navigation identity.
     /// For the citation composer this is the **subject scope** (card label), not the Source title.
     var title: String?
-    /// Denormalized Source title for composer breadcrumbs (`Evidence graph for {source}`);
-    /// ignored for navigation identity. Empty/legacy history falls back to the bare graph title.
+    /// Denormalized Source title, the Source crumb's label while the Sources list has no value
+    /// (composer, Promote); ignored for navigation identity.
     var sourceTitle: String?
     /// Id of the row at the top of a list place (Sources, People, Events, Places).
     /// Ignored for navigation identity, like `title` and `ref`. Written when leaving
@@ -69,7 +72,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     var listScrollAnchor: String?
 
     enum CodingKeys: String, CodingKey {
-        case section, sourceId, fieldId, typeId, subjectId, citationId, artifactId, observationId
+        case section, sourceId, graphId, fieldId, typeId, subjectId, citationId, artifactId, observationId
         case connectFromSubjectId, connectToSubjectId, connectBridgeTypeKey
         case subjectTypeKey, propertyId, entityId
         case sourceSurface, promoteAll, ref, title, sourceTitle, listScrollAnchor
@@ -78,6 +81,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     init(
         section: WorkspaceSection,
         sourceId: String? = nil,
+        graphId: String? = nil,
         fieldId: String? = nil,
         typeId: String? = nil,
         subjectId: String? = nil,
@@ -99,6 +103,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     ) {
         self.section = section
         self.sourceId = Self.nilIfEmpty(sourceId)
+        self.graphId = Self.nilIfEmpty(graphId)
         self.fieldId = Self.nilIfEmpty(fieldId)
         self.typeId = Self.nilIfEmpty(typeId)
         self.subjectId = Self.nilIfEmpty(subjectId)
@@ -111,7 +116,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         self.subjectTypeKey = Self.nilIfEmpty(subjectTypeKey)
         self.propertyId = Self.nilIfEmpty(propertyId)
         self.entityId = Self.nilIfEmpty(entityId)
-        self.sourceSurface = sourceSurface
+        self.sourceSurface = Self.normalizedSurface(sourceSurface, graphId: self.graphId)
         self.promoteAll = promoteAll
         self.ref = Self.nilIfEmpty(ref)
         self.title = Self.nilIfEmpty(title)
@@ -123,6 +128,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         section = try container.decode(WorkspaceSection.self, forKey: .section)
         sourceId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .sourceId))
+        graphId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .graphId))
         fieldId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .fieldId))
         typeId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .typeId))
         subjectId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .subjectId))
@@ -135,7 +141,10 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         subjectTypeKey = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .subjectTypeKey))
         propertyId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .propertyId))
         entityId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .entityId))
-        sourceSurface = try container.decodeIfPresent(SourceSurface.self, forKey: .sourceSurface) ?? .page
+        sourceSurface = Self.normalizedSurface(
+            try container.decodeIfPresent(SourceSurface.self, forKey: .sourceSurface) ?? .page,
+            graphId: graphId
+        )
         promoteAll = try container.decodeIfPresent(Bool.self, forKey: .promoteAll) ?? false
         ref = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .ref))
         title = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .title))
@@ -163,6 +172,65 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         WorkspaceLocation(section: .places, entityId: entityId, ref: ref, title: title)
     }
 
+    /// One Source's page.
+    static func sourcePage(sourceId: String, ref: String? = nil, title: String? = nil) -> WorkspaceLocation {
+        WorkspaceLocation(section: .sources, sourceId: sourceId, sourceSurface: .page, ref: ref, title: title)
+    }
+
+    /// An Evidence graph's canvas.
+    static func evidenceGraph(
+        sourceId: String,
+        graphId: String,
+        subjectId: String? = nil,
+        ref: String? = nil,
+        title: String? = nil,
+        sourceTitle: String? = nil
+    ) -> WorkspaceLocation {
+        WorkspaceLocation(
+            section: .sources,
+            sourceId: sourceId,
+            graphId: graphId,
+            subjectId: subjectId,
+            sourceSurface: .graph,
+            ref: ref,
+            title: title,
+            sourceTitle: sourceTitle
+        )
+    }
+
+    /// The citation composer on an Evidence graph.
+    static func citationComposer(
+        sourceId: String,
+        graphId: String,
+        subjectId: String? = nil,
+        citationId: String? = nil,
+        artifactId: String? = nil,
+        observationId: String? = nil,
+        connectFromSubjectId: String? = nil,
+        connectToSubjectId: String? = nil,
+        connectBridgeTypeKey: String? = nil,
+        ref: String? = nil,
+        title: String? = nil,
+        sourceTitle: String? = nil
+    ) -> WorkspaceLocation {
+        WorkspaceLocation(
+            section: .sources,
+            sourceId: sourceId,
+            graphId: graphId,
+            subjectId: subjectId,
+            citationId: citationId,
+            artifactId: artifactId,
+            observationId: observationId,
+            connectFromSubjectId: connectFromSubjectId,
+            connectToSubjectId: connectToSubjectId,
+            connectBridgeTypeKey: connectBridgeTypeKey,
+            sourceSurface: .citationComposer,
+            ref: ref,
+            title: title,
+            sourceTitle: sourceTitle
+        )
+    }
+
     /// The Sources, People, Events, or Places list. Detail places are not lists.
     var isListRoot: Bool {
         switch section {
@@ -188,6 +256,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     static func == (lhs: WorkspaceLocation, rhs: WorkspaceLocation) -> Bool {
         lhs.section == rhs.section
             && lhs.sourceId == rhs.sourceId
+            && lhs.graphId == rhs.graphId
             && lhs.fieldId == rhs.fieldId
             && lhs.typeId == rhs.typeId
             && lhs.subjectId == rhs.subjectId
@@ -211,6 +280,18 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
             && connectFromSubjectId != nil
             && connectToSubjectId != nil
             && connectBridgeTypeKey != nil
+    }
+
+    /// A graph, citationComposer or promote surface needs its graph; without
+    /// one the location is the Source page, as a history entry with no
+    /// `sourceSurface` decodes. Every way a location is built goes through this.
+    private static func normalizedSurface(_ surface: SourceSurface, graphId: String?) -> SourceSurface {
+        switch surface {
+        case .graph, .citationComposer, .promote:
+            return graphId == nil ? .page : surface
+        case .page:
+            return .page
+        }
     }
 
     private static func nilIfEmpty(_ value: String?) -> String? {

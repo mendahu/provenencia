@@ -20,8 +20,9 @@ Product SemVer (`VERSION`) is a separate bump. Do not bump it for a format chang
 3. Put additive DDL in the new file (`CREATE TABLE` / `STRICT`). No Source tables unless the spike/PR explicitly includes them.
    - **Classify the FK before you write `ON DELETE`.** See [`docs/catalog-deletes.md`](../../../docs/catalog-deletes.md). **Resource → resource** is `NO ACTION`. **Facet → parent** (notes, metadata, layout, positions, name parts, vocab joins) is `ON DELETE CASCADE`; also mark it `Audited` (research rows: Go releases and audits them, the CASCADE is a backstop) or silent — see [`add-catalog-delete`](../add-catalog-delete/SKILL.md). **Owned outbound** (parent column → child, e.g. `observations.value_date_id`, `artifacts.file_id`) stays `NO ACTION`; declaring it `BucketOwnedOutbound` in `catalogmodel` is the whole registration (a row child also registers `PK`); `deleteimpact` derives the release so official `Delete` removes the child. **Optional back-pointer** is `SET NULL` (`sources.primary_artifact_id`). In the same PR, register the table and every FK in `core/database/catalogmodel` — [`add-catalog-model`](../add-catalog-model/SKILL.md). Resource probes, facet releases, and title/location projectors stay in `deleteimpact` — [`add-catalog-delete`](../add-catalog-delete/SKILL.md). If researchers can delete the new row, add `Delete` there too — no private `sqlInUse`. Unregistered tables and FKs fail CI.
    - **New audited table?** Its writes need a non-`None` effect — see [`add-audit-scope`](../add-audit-scope/SKILL.md). A `None` entry is not recorded. Unmapped entity types fail CI.
+   - **A step runs in one transaction with its `user_version` write**: it commits whole or rolls back whole. A table rebuild (SQLite cannot `ALTER` a column or `ON DELETE`) puts `-- migrate: foreign_keys off` on its own line near the top. `migrate` then runs the step with foreign keys off, runs `PRAGMA foreign_key_check` before it commits, and refuses the step (rolling it back) if any foreign key is broken, so the rebuild must leave every foreign key valid. Steps without the line run with foreign keys on, so `DELETE`/`UPDATE` cascades work. Never write `PRAGMA foreign_keys` or `PRAGMA foreign_key_check` in a step; inside a transaction the pragmas do nothing. The loader refuses a file that has them, a line starting `-- migrate:` (any case, any spacing) that is not exactly `-- migrate: foreign_keys off`, and a line that is only `BEGIN;`, `COMMIT;` or `ROLLBACK;` (with an optional `DEFERRED`/`IMMEDIATE`/`EXCLUSIVE` and `TRANSACTION`). A trigger's `BEGIN` and `END;` are fine; a lone `END;` is not refused.
    - **Table rebuilds drop indexes.** `DROP TABLE` + `RENAME` (SQLite cannot `ALTER` `ON DELETE`) also drops that table’s indexes. Recreate hot FK indexes in the same step or a follow-up (`000030` dropped `artifacts_source_id_idx` / `artifacts_file_id_idx`; `000031` restored them and added Impact-probe indexes). Honesty tests require a covering index (explicit, UNIQUE, or PK leftmost) on every FK child column.
-4. **Do not write a test for the migration itself.** No upgrade-from-version-N test, no per-migration table-presence test, and no grepping shipped `.sql` contents in `migrate_test.go` (that file only tests `parseMigrations` rules with a fake FS). The existing suite covers a migration:
+4. **Do not write a test for the migration itself.** No upgrade-from-version-N test, no per-migration table-presence test, and no grepping shipped `.sql` contents in `migrate_test.go` (that file only tests `parseMigrations` rules and how `migrate` runs steps, with fake steps). The existing suite covers a migration:
    - the schema hash self-check (Create/Open `verifySchema`)
    - `catalogmodel.TestPragmaHonesty` (tables and FKs against the live schema) and the `deleteimpact` honesty tests (probes, releases, projectors)
    - the domain package tests that read and write the new or changed table
@@ -41,10 +42,15 @@ After migrate, `Create` / `Open` hash `sqlite_schema` and compare it to an **ini
 
 Agents “update the hash” by shipping the migration and proving tests pass — never by inventing a parallel digest file or constant.
 
+## Backfill ids
+
+A backfill that needs ids calls `uuid7()`, a SQL function registered on every catalog connection in `core/database/driver.go`. Prefer it over a nullable column filled at open (the `project.uuid` / `EnsureUUID` pattern). Take the new id by scalar subquery, not a JOIN, so an orphan row fails `NOT NULL` and the step rolls back instead of dropping it.
+
 ## Do not
 
 - Run a command against a researcher’s `*.provenencia` folder except by opening it with this engine
 - Add `golang-migrate` or a `schema_migrations` table
 - Put identity / FFI / ingest in the SQL
 - Commit a hand-maintained schema hash / bypass open-time schema verification
+- **`uuid7()` in the stored schema** (defaults, triggers, views, CHECK) — other tools opening the file have no such function; `TestSchemaCallsNoAppFunction` enforces it.
 - **Seed vocabulary rows** (`subject_types`, `properties`, `property_terms`, bindings, source types, grades, …) in SQL — use create-time `Install` / registries (`subjectvocab`, `sourcevocab`, …). Pre-production: refresh existing projects by re-running Install on the CLI; do not backfill seeds in migrations until the product owner says the app is in production.

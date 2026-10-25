@@ -4,6 +4,7 @@ package observations
 import (
 	"bytes"
 	"database/sql"
+	"errors"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -14,18 +15,23 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/depictionvalues"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/depictionvalue"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 var (
 	ErrInvalid    = apperr.New(apperr.CodeObservationsInvalid, apperr.KindUser)
 	ErrEdgeLocked = apperr.New(apperr.CodeObservationsEdgeLocked, apperr.KindConflict)
 	ErrInUse      = apperr.New(apperr.CodeObservationsInUse, apperr.KindConflict)
+	ErrOtherGraph = apperr.New(apperr.CodeObservationsOtherGraph, apperr.KindUser)
 )
 
 // InsertOptions controls engine-locked edge Observation writes.
@@ -47,7 +53,7 @@ const (
 
 	sqlCitationExists = `SELECT 1 FROM citations WHERE id = ?`
 	sqlSubjectType    = `SELECT subject_type_id FROM subjects WHERE id = ?`
-	sqlSubjectTypeKey = `SELECT t.key FROM subjects s
+	sqlSubjectTypeKey = `SELECT t.key, t.origin FROM subjects s
 		JOIN subject_types t ON t.id = s.subject_type_id
 		WHERE s.id = ?`
 	sqlGetRow = `SELECT id, ref, citation_id, subject_id, property_id, polarity,
@@ -57,7 +63,7 @@ const (
 	sqlListNotesByObservation = `SELECT id, body FROM observation_notes WHERE observation_id = ? ORDER BY rowid`
 	sqlDeleteNote             = `DELETE FROM observation_notes WHERE id = ?`
 	sqlDeleteObservationByID  = `DELETE FROM observations WHERE id = ?`
-	sqlSubjectExists          = `SELECT 1 FROM subjects WHERE id = ?`
+	sqlCitationArtifact       = `SELECT artifact_id FROM citations WHERE id = ?`
 	sqlBindingExists          = `SELECT 1 FROM subject_type_properties WHERE subject_type_id = ? AND property_id = ?`
 	sqlTermOnProperty         = `SELECT 1 FROM property_terms WHERE id = ? AND property_id = ?`
 	sqlPropertyGet            = `SELECT id, key, origin, label, COALESCE(description, ''), value_type
@@ -71,6 +77,8 @@ const (
 		o.value_depiction_id,
 		p.key, p.label, p.value_type,
 		COALESCE(pt.label, ''),
+		COALESCE(pt.key, ''),
+		COALESCE(pt.origin, ''),
 		COALESCE(nv.form, ''),
 		COALESCE(vs.label, ''),
 		dv.kind, dv.qualifier, dv.calendar,
@@ -100,8 +108,6 @@ const (
 
 	sqlCountBySubjectOrValue = `SELECT COUNT(*) FROM observations
 		WHERE subject_id = ? OR value_subject_id = ?`
-
-	maxRefRetries = 8
 )
 
 // Observation is one observations row.
@@ -132,6 +138,10 @@ type Listed struct {
 	PropertyValueType string
 	// ValueTermLabel is the property_terms.label for value_term_id (empty when unset).
 	ValueTermLabel string
+	// ValueTermKey is the property_terms.key for value_term_id (empty when unset).
+	ValueTermKey string
+	// ValueTermOrigin is the property_terms.origin for value_term_id (empty when unset).
+	ValueTermOrigin string
 	// ValueNameForm is name_values.form for value_name_id (empty when unset).
 	ValueNameForm string
 	// Name is the joined name_values row plus parts when value_name_id is set.
@@ -144,8 +154,8 @@ type Listed struct {
 	// An empty RegionJSON means the stored region is not a valid region of the
 	// Citation's page; an empty ImageFileID means the stored image is not a
 	// Go-stored PNG. Every later reader that returns a depiction (the source
-	// graph's hydration) goes through depictionvalues.Readable.
-	Depiction *depictionvalues.Value
+	// graph's hydration) goes through depictionvalue.Readable.
+	Depiction *depictionvalue.Value
 }
 
 // Input is one Observation write. ID empty inserts. ID set updates that row.
@@ -222,16 +232,62 @@ type resolvedValue struct {
 	ValueChanges []rowchange.Change
 }
 
-// requireSubjectSource rejects an observation whose subject is homed to a
-// different Source than the citation's artifact. Value subjects are not checked.
-func requireSubjectSource(tx *sql.Tx, citationID, subjectID []byte) error {
-	var one int
-	err := tx.QueryRow(`SELECT 1
-		FROM subjects s
-		JOIN citations c ON c.id = ?
-		JOIN artifacts a ON a.id = c.artifact_id AND a.source_id = s.source_id
-		WHERE s.id = ?`, citationID, subjectID).Scan(&one)
-	if err == sql.ErrNoRows {
+// requireSameGraph refuses an Observation whose Subject, Subject value, or
+// Citation Artifact is not in, or linked to, the Subject's Evidence graph.
+// A product reification (a source Subject) may be the value of a non-edge
+// row in any graph.
+func requireSameGraph(tx *sql.Tx, citationID, subjectID, valueSubjectID []byte, edge bool) error {
+	graph, err := evidencegraphs.SubjectGraphTx(tx, subjectID)
+	if err != nil {
+		return mapMissing(err)
+	}
+	var artifactID []byte
+	if err := tx.QueryRow(sqlCitationArtifact, citationID).Scan(&artifactID); err != nil {
+		return mapMissing(err)
+	}
+	linked, err := evidencegraphs.IsLinkedTx(tx, graph, artifactID)
+	if err != nil {
+		return mapMissing(err)
+	}
+	if !linked {
+		return ErrOtherGraph
+	}
+	if len(valueSubjectID) == 0 {
+		return nil
+	}
+	valueGraph, err := evidencegraphs.SubjectGraphTx(tx, valueSubjectID)
+	if err != nil {
+		return mapMissing(err)
+	}
+	if bytes.Equal(valueGraph, graph) {
+		return nil
+	}
+	if !edge {
+		key, origin, err := subjectTypeKeyTx(tx, valueSubjectID)
+		if err != nil {
+			return err
+		}
+		if origin == vocabkey.OriginProvenencia {
+			if info, ok := subjectvocab.TypeByKey(key); ok && info.Role == subjectvocab.RoleReification {
+				return nil
+			}
+		}
+	}
+	return ErrOtherGraph
+}
+
+// subjectTypeKeyTx reads a Subject's type key and origin; a missing Subject is
+// ErrInvalid.
+func subjectTypeKeyTx(tx *sql.Tx, subjectID []byte) (key, origin string, err error) {
+	if err := tx.QueryRow(sqlSubjectTypeKey, subjectID).Scan(&key, &origin); err != nil {
+		return "", "", mapMissing(err)
+	}
+	return key, origin, nil
+}
+
+// mapMissing turns a missing row into ErrInvalid.
+func mapMissing(err error) error {
+	if errors.Is(err, sql.ErrNoRows) || errors.Is(err, evidencegraphs.ErrInvalid) {
 		return ErrInvalid
 	}
 	return err
@@ -251,10 +307,6 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 	if len(in.SubjectID) != 16 || len(in.PropertyID) != 16 {
 		return Observation{}, nil, ErrInvalid
 	}
-	if err := requireSubjectSource(tx, citationID, in.SubjectID); err != nil {
-		return Observation{}, nil, err
-	}
-
 	var subjectTypeID []byte
 	if err := tx.QueryRow(sqlSubjectType, in.SubjectID).Scan(&subjectTypeID); err != nil {
 		if err == sql.ErrNoRows {
@@ -274,19 +326,20 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 	if err != nil {
 		return Observation{}, nil, err
 	}
-	var typeKey string
-	if err := tx.QueryRow(sqlSubjectTypeKey, in.SubjectID).Scan(&typeKey); err != nil {
-		if err == sql.ErrNoRows {
-			return Observation{}, nil, ErrInvalid
-		}
+	typeKey, _, err := subjectTypeKeyTx(tx, in.SubjectID)
+	if err != nil {
 		return Observation{}, nil, err
 	}
-	if _, ok := connectrules.Edge(typeKey, prop.Key); ok && !opts.AllowEdgeRows {
+	_, edge := connectrules.Edge(typeKey, prop.Key)
+	if edge && !opts.AllowEdgeRows {
 		return Observation{}, nil, ErrEdgeLocked
 	}
 
 	resolved, err := resolveValue(tx, citationID, prop.ValueType, in, nil)
 	if err != nil {
+		return Observation{}, nil, err
+	}
+	if err := requireSameGraph(tx, citationID, in.SubjectID, resolved.SubjectID, edge); err != nil {
 		return Observation{}, nil, err
 	}
 
@@ -296,37 +349,30 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 	}
 	idBytes := id[:]
 
-	var obsRef string
-	for attempt := 0; attempt < maxRefRetries; attempt++ {
-		obsRef, err = ref.Mint(ref.PrefixObservation)
-		if err != nil {
-			return Observation{}, nil, err
-		}
-		_, err = tx.Exec(
+	obsRef, err := database.InsertWithRef(database.Minter(ref.PrefixObservation), func(storedRef string) error {
+		_, err := tx.Exec(
 			sqlInsert,
 			idBytes,
-			obsRef,
+			storedRef,
 			citationID,
 			in.SubjectID,
 			in.PropertyID,
 			polarity,
-			nullIfEmpty(resolved.Text),
+			database.NullString(resolved.Text),
 			nullInt64(resolved.Integer),
-			nullBlob(resolved.DateID),
-			nullBlob(resolved.NameID),
-			nullBlob(resolved.SubjectID),
-			nullBlob(resolved.TermID),
-			nullBlob(resolved.DepictionID),
+			database.NullBlob(resolved.DateID),
+			database.NullBlob(resolved.NameID),
+			database.NullBlob(resolved.SubjectID),
+			database.NullBlob(resolved.TermID),
+			database.NullBlob(resolved.DepictionID),
 		)
-		if err == nil {
-			break
-		}
-		if !database.IsUniqueConflict(err) {
-			return Observation{}, nil, mapConstraint(err)
-		}
+		return err
+	})
+	if errors.Is(err, database.ErrRefsExhausted) {
+		return Observation{}, nil, ErrInvalid
 	}
 	if err != nil {
-		return Observation{}, nil, ErrInvalid
+		return Observation{}, nil, mapConstraint(err)
 	}
 
 	changes := []rowchange.Change{{
@@ -336,17 +382,17 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 		Fields: rowchange.FullRow(map[string]any{
 			"id":                 id.String(),
 			"ref":                obsRef,
-			"citation_id":        uuidJSON(citationID),
-			"subject_id":         uuidJSON(in.SubjectID),
-			"property_id":        uuidJSON(in.PropertyID),
+			"citation_id":        database.UUIDJSON(citationID),
+			"subject_id":         database.UUIDJSON(in.SubjectID),
+			"property_id":        database.UUIDJSON(in.PropertyID),
 			"polarity":           polarity,
-			"value_text":         emptyAsNil(resolved.Text),
+			"value_text":         database.NullString(resolved.Text),
 			"value_integer":      nullInt64(resolved.Integer),
-			"value_date_id":      uuidJSON(resolved.DateID),
-			"value_name_id":      uuidJSON(resolved.NameID),
-			"value_subject_id":   uuidJSON(resolved.SubjectID),
-			"value_term_id":      uuidJSON(resolved.TermID),
-			"value_depiction_id": uuidJSON(resolved.DepictionID),
+			"value_date_id":      database.UUIDJSON(resolved.DateID),
+			"value_name_id":      database.UUIDJSON(resolved.NameID),
+			"value_subject_id":   database.UUIDJSON(resolved.SubjectID),
+			"value_term_id":      database.UUIDJSON(resolved.TermID),
+			"value_depiction_id": database.UUIDJSON(resolved.DepictionID),
 		}),
 	}}
 	changes = append(changes, resolved.ValueChanges...)
@@ -481,13 +527,6 @@ func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, exi
 		if len(in.ValueSubjectID) != 16 || hasOtherScalars(in, "subject") {
 			return resolvedValue{}, ErrInvalid
 		}
-		var one int
-		if err := tx.QueryRow(sqlSubjectExists, in.ValueSubjectID).Scan(&one); err != nil {
-			if err == sql.ErrNoRows {
-				return resolvedValue{}, ErrInvalid
-			}
-			return resolvedValue{}, err
-		}
 		return resolvedValue{SubjectID: in.ValueSubjectID}, nil
 	case propertymeta.ValueTypeTerm:
 		if len(in.ValueTermID) != 16 || hasOtherScalars(in, "term") {
@@ -612,7 +651,7 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 			depictionRegion                                           sql.NullString
 			depictionImage                                            []byte
 			citationLocator, imageMediaType                           sql.NullString
-			termLabel, nameForm, subjectLabel                         string
+			termLabel, termKey, termOrigin, nameForm, subjectLabel    string
 			kind, qual, cal, phrase, startTZ, endTZ                   sql.NullString
 			startY, startM, startD, startH, startMin, startS, startMs sql.NullInt64
 			endY, endM, endD, endH, endMin, endS, endMs               sql.NullInt64
@@ -622,7 +661,7 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 			&valueText, &valueInt, &dateID, &nameID, &subjectID, &termID,
 			&depictionID,
 			&l.PropertyKey, &l.PropertyLabel, &l.PropertyValueType,
-			&termLabel, &nameForm, &subjectLabel,
+			&termLabel, &termKey, &termOrigin, &nameForm, &subjectLabel,
 			&kind, &qual, &cal,
 			&startY, &startM, &startD,
 			&startH, &startMin, &startS, &startMs, &startTZ,
@@ -648,6 +687,8 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 		l.ValueDepictionID = append([]byte(nil), depictionID...)
 		l.Depiction = depictionvalues.FromJoin(depictionID, depictionRegion, depictionImage, citationLocator, imageMediaType)
 		l.ValueTermLabel = termLabel
+		l.ValueTermKey = termKey
+		l.ValueTermOrigin = termOrigin
 		l.ValueNameForm = nameForm
 		l.ValueSubjectLabel = subjectLabel
 		if kind.Valid && kind.String != "" {
@@ -748,44 +789,11 @@ func getPropertyTx(tx *sql.Tx, id []byte) (properties.Property, error) {
 	return p, err
 }
 
-func nullIfEmpty(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
 func nullInt64(p *int64) any {
 	if p == nil {
 		return nil
 	}
 	return *p
-}
-
-func nullBlob(b []byte) any {
-	if len(b) == 0 {
-		return nil
-	}
-	return b
-}
-
-func uuidString(id []byte) string {
-	u, err := uuid.FromBytes(id)
-	if err != nil {
-		return ""
-	}
-	return u.String()
-}
-
-func uuidJSON(id []byte) any {
-	if len(id) != 16 {
-		return nil
-	}
-	s := uuidString(id)
-	if s == "" {
-		return nil
-	}
-	return s
 }
 
 func mapConstraint(err error) error {
@@ -802,9 +810,9 @@ func dateUpdateChange(prev, next datevalue.Value) *rowchange.Change {
 			fields[key] = rowchange.FieldDiff{Old: old, New: new}
 		}
 	}
-	add("kind", emptyAsNil(prev.Kind), emptyAsNil(next.Kind))
-	add("qualifier", emptyAsNil(prev.Qualifier), emptyAsNil(next.Qualifier))
-	add("calendar", emptyAsNil(prev.Calendar), emptyAsNil(next.Calendar))
+	add("kind", database.NullString(prev.Kind), database.NullString(next.Kind))
+	add("qualifier", database.NullString(prev.Qualifier), database.NullString(next.Qualifier))
+	add("calendar", database.NullString(prev.Calendar), database.NullString(next.Calendar))
 	add("start_year", intPtrAny(prev.StartYear), intPtrAny(next.StartYear))
 	add("start_month", intPtrAny(prev.StartMonth), intPtrAny(next.StartMonth))
 	add("start_day", intPtrAny(prev.StartDay), intPtrAny(next.StartDay))
@@ -812,7 +820,7 @@ func dateUpdateChange(prev, next datevalue.Value) *rowchange.Change {
 	add("start_minute", intPtrAny(prev.StartMinute), intPtrAny(next.StartMinute))
 	add("start_second", intPtrAny(prev.StartSecond), intPtrAny(next.StartSecond))
 	add("start_millisecond", intPtrAny(prev.StartMillisecond), intPtrAny(next.StartMillisecond))
-	add("start_tz", emptyAsNil(prev.StartTZ), emptyAsNil(next.StartTZ))
+	add("start_tz", database.NullString(prev.StartTZ), database.NullString(next.StartTZ))
 	add("end_year", intPtrAny(prev.EndYear), intPtrAny(next.EndYear))
 	add("end_month", intPtrAny(prev.EndMonth), intPtrAny(next.EndMonth))
 	add("end_day", intPtrAny(prev.EndDay), intPtrAny(next.EndDay))
@@ -820,8 +828,8 @@ func dateUpdateChange(prev, next datevalue.Value) *rowchange.Change {
 	add("end_minute", intPtrAny(prev.EndMinute), intPtrAny(next.EndMinute))
 	add("end_second", intPtrAny(prev.EndSecond), intPtrAny(next.EndSecond))
 	add("end_millisecond", intPtrAny(prev.EndMillisecond), intPtrAny(next.EndMillisecond))
-	add("end_tz", emptyAsNil(prev.EndTZ), emptyAsNil(next.EndTZ))
-	add("phrase", emptyAsNil(prev.Phrase), emptyAsNil(next.Phrase))
+	add("end_tz", database.NullString(prev.EndTZ), database.NullString(next.EndTZ))
+	add("phrase", database.NullString(prev.Phrase), database.NullString(next.Phrase))
 	if len(fields) == 0 {
 		return nil
 	}
@@ -874,7 +882,7 @@ func namePartsJSON(parts []namevalue.Part) []map[string]any {
 		out[i] = map[string]any{
 			"idx":   p.Idx,
 			"value": p.Value,
-			"type":  emptyAsNil(p.Type),
+			"type":  database.NullString(p.Type),
 		}
 	}
 	return out
@@ -882,10 +890,10 @@ func namePartsJSON(parts []namevalue.Part) []map[string]any {
 
 func dateValueMap(id []byte, v datevalue.Value) map[string]any {
 	return map[string]any{
-		"id":                uuidJSON(id),
-		"kind":              emptyAsNil(v.Kind),
-		"qualifier":         emptyAsNil(v.Qualifier),
-		"calendar":          emptyAsNil(v.Calendar),
+		"id":                database.UUIDJSON(id),
+		"kind":              database.NullString(v.Kind),
+		"qualifier":         database.NullString(v.Qualifier),
+		"calendar":          database.NullString(v.Calendar),
 		"start_year":        intPtrAny(v.StartYear),
 		"start_month":       intPtrAny(v.StartMonth),
 		"start_day":         intPtrAny(v.StartDay),
@@ -893,7 +901,7 @@ func dateValueMap(id []byte, v datevalue.Value) map[string]any {
 		"start_minute":      intPtrAny(v.StartMinute),
 		"start_second":      intPtrAny(v.StartSecond),
 		"start_millisecond": intPtrAny(v.StartMillisecond),
-		"start_tz":          emptyAsNil(v.StartTZ),
+		"start_tz":          database.NullString(v.StartTZ),
 		"end_year":          intPtrAny(v.EndYear),
 		"end_month":         intPtrAny(v.EndMonth),
 		"end_day":           intPtrAny(v.EndDay),
@@ -901,14 +909,14 @@ func dateValueMap(id []byte, v datevalue.Value) map[string]any {
 		"end_minute":        intPtrAny(v.EndMinute),
 		"end_second":        intPtrAny(v.EndSecond),
 		"end_millisecond":   intPtrAny(v.EndMillisecond),
-		"end_tz":            emptyAsNil(v.EndTZ),
-		"phrase":            emptyAsNil(v.Phrase),
+		"end_tz":            database.NullString(v.EndTZ),
+		"phrase":            database.NullString(v.Phrase),
 	}
 }
 
 func nameValueMap(id []byte, v namevalue.Value) map[string]any {
 	return map[string]any{
-		"id":    uuidJSON(id),
+		"id":    database.UUIDJSON(id),
 		"form":  v.Form,
 		"parts": namePartsJSON(v.Parts),
 	}
@@ -920,10 +928,10 @@ func dateCreateChange(id []byte, v datevalue.Value) rowchange.Change {
 		EntityID:   append([]byte(nil), id...),
 		Action:     rowchange.ActionCreate,
 		Fields: rowchange.FullRow(map[string]any{
-			"id":                uuidJSON(id),
-			"kind":              emptyAsNil(v.Kind),
-			"qualifier":         emptyAsNil(v.Qualifier),
-			"calendar":          emptyAsNil(v.Calendar),
+			"id":                database.UUIDJSON(id),
+			"kind":              database.NullString(v.Kind),
+			"qualifier":         database.NullString(v.Qualifier),
+			"calendar":          database.NullString(v.Calendar),
 			"start_year":        intPtrAny(v.StartYear),
 			"start_month":       intPtrAny(v.StartMonth),
 			"start_day":         intPtrAny(v.StartDay),
@@ -931,7 +939,7 @@ func dateCreateChange(id []byte, v datevalue.Value) rowchange.Change {
 			"start_minute":      intPtrAny(v.StartMinute),
 			"start_second":      intPtrAny(v.StartSecond),
 			"start_millisecond": intPtrAny(v.StartMillisecond),
-			"start_tz":          emptyAsNil(v.StartTZ),
+			"start_tz":          database.NullString(v.StartTZ),
 			"end_year":          intPtrAny(v.EndYear),
 			"end_month":         intPtrAny(v.EndMonth),
 			"end_day":           intPtrAny(v.EndDay),
@@ -939,8 +947,8 @@ func dateCreateChange(id []byte, v datevalue.Value) rowchange.Change {
 			"end_minute":        intPtrAny(v.EndMinute),
 			"end_second":        intPtrAny(v.EndSecond),
 			"end_millisecond":   intPtrAny(v.EndMillisecond),
-			"end_tz":            emptyAsNil(v.EndTZ),
-			"phrase":            emptyAsNil(v.Phrase),
+			"end_tz":            database.NullString(v.EndTZ),
+			"phrase":            database.NullString(v.Phrase),
 		}),
 	}
 }
@@ -951,7 +959,7 @@ func nameCreateChange(id []byte, v namevalue.Value) rowchange.Change {
 		parts[i] = map[string]any{
 			"idx":   p.Idx,
 			"value": p.Value,
-			"type":  emptyAsNil(p.Type),
+			"type":  database.NullString(p.Type),
 		}
 	}
 	return rowchange.Change{
@@ -959,7 +967,7 @@ func nameCreateChange(id []byte, v namevalue.Value) rowchange.Change {
 		EntityID:   append([]byte(nil), id...),
 		Action:     rowchange.ActionCreate,
 		Fields: rowchange.FullRow(map[string]any{
-			"id":    uuidJSON(id),
+			"id":    database.UUIDJSON(id),
 			"form":  v.Form,
 			"parts": parts,
 		}),

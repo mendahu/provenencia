@@ -37,10 +37,18 @@ Official **resource / vocab `Delete`**: follow `.agents/skills/add-catalog-delet
 
 - Take `*database.Catalog`. Get the handle with `c.DB()`; return that error (`database.ErrClosed`).
 - Keep SQL as unexported consts next to the functions. Do not add `core/database/queries/`.
-- Domain validation sentinels stay in this package (`users.ErrInvalid`), except for a value type that matching layers compare: that lives in a pure `core/<singular>` package (`core/datevalue`, `core/namevalue`) that owns its type, `Validate` and `ErrInvalid`, and the table package keeps only the queries. Do **not** add them to `core/database/errors.go` (that file is lock/format/folder/closed only).
+- Domain validation sentinels stay in this package (`users.ErrInvalid`), except for a value type that a matching layer or the reconciler carries: that lives in a pure `core/<singular>` package (`core/datevalue`, `core/namevalue`, `core/depictionvalue`) that owns its type, `Validate` and `ErrInvalid`, and the table package keeps only the queries. Do **not** add them to `core/database/errors.go` (that file is lock/format/folder/closed only).
 - `database` must **not** import table packages (import cycle). Use-cases (`onboarding`, later FFI) import both.
 - `Delete` for a resource or vocab row calls `deleteimpact.Impact` in the same tx, then deletes the parent, then owned-outbound release. Facet/field deletes (notes, metadata clear) stay ordinary writes.
 - Research writes call `audit.Record` in the same tx. A new audited `EntityType` needs a non-`None` effect, and delete changes carry the parent FK — follow `.agents/skills/add-audit-scope/SKILL.md`. "Last activity" reads (`Updated`) come from the display cache, `Graph.Activity`, which loads `audit_transaction_scopes` once and follows commits.
+
+## Reads inside a write
+
+The catalog has one connection, so a read through `c.DB()` inside `writes.Run` waits on the transaction that is already open. A read a write needs takes the `*sql.Tx` through an exported `…Tx` twin (`sources.GetTx`, `artifacts.ListBySourceTx`, `sourcemetadata.ListLayoutTx`). Write the SQL and scan once in an unexported function over `database.Querier`; the Catalog read and its Tx twin both call it.
+
+A read made of more than one query opens one read transaction (`db.Begin`, deferred `Rollback`), as `deleteimpact.Snapshot` and `evidencegraphs.List` do, so its queries see one state. Its unexported body takes `*sql.Tx` and the package's writes call it with theirs; add an exported `…Tx` twin only with its first caller outside the package.
+
+A write across several tables lives in a composing package (`core/database/connect`, `core/database/sourcecopy`). It takes the `*database.Tx`, calls each owner package's write, returns the changes, and never calls `writes.Run`; the handler does.
 
 ## Tests
 
@@ -52,6 +60,6 @@ Run `CGO_ENABLED=1 go test ./core/database/...` (and the use-case package you ca
 
 - Add `<table>.go` / `<table>_test.go` under `core/database/` itself
 - Attach table methods to `Catalog`
-- Add a new value struct under `core/database/<table>` when a matching layer compares it (put it in a pure `core/<singular>` package)
+- Add a new value struct under `core/database/<table>` when a matching layer or the reconciler carries it (put it in a pure `core/<singular>` package)
 - Put identity, FFI, or ingest in the query package
 - Reach into `Catalog`’s unexported `db` field from another package

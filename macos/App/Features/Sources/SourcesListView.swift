@@ -37,7 +37,7 @@ struct SourcesListView: View {
                     sourcesHandle: sourcesHandle,
                     typesHandle: typesHandle,
                     progressHandle: session.queryHandle(
-                        SourcesModel.sourceGraphProgressKey(for: session)
+                        SourcesModel.evidenceGraphProgressKey(for: session)
                     ),
                     model: model
                 )
@@ -57,7 +57,7 @@ private struct SourcesListContent: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Bindable var sourcesHandle: QueryHandle<[CatalogSource]>
     @Bindable var typesHandle: QueryHandle<[CatalogSourceType]>
-    var progressHandle: QueryHandle<[String: SourceGraphProgress]>?
+    var progressHandle: QueryHandle<[String: EvidenceGraphProgress]>?
     @Bindable var model: SourcesModel
 
     var body: some View {
@@ -95,37 +95,27 @@ private struct SourcesListContent: View {
             ),
             isRunning: model.isSaving,
             isDirty: model.addSheetIsDirty,
+            confirmDisabled: !model.canSubmitAdd,
             accessibilityIdentifierPrefix: "sources.add",
             onConfirm: {
                 Task {
                     if let created = await model.create() {
-                        navigation.go(to: WorkspaceLocation(
-                            section: .sources,
-                            sourceId: created.id,
-                            ref: created.ref,
-                            title: created.title
-                        ))
+                        navigation.go(to: SourcesListNavigation.pageLocation(for: created))
                     }
                 }
             }
         ) {
-            addForm(typeOptions: model.typeComboOptions)
+            addForm
         }
+        .sourceCopyDialog($model.copying)
         .task(id: model.isAdding) {
             guard model.isAdding else { return }
             model.refreshTypes()
             model.selectSoleTypeIfNeeded()
         }
-        .onChange(of: sourcesHandle.status) { _, status in
-            if status == .ready { model.syncCatalogCounts() }
-        }
+        .onSettled(sourcesHandle) { model.syncCatalogCounts() }
         .onChange(of: typesHandle.status) { _, _ in
             if model.isAdding { model.selectSoleTypeIfNeeded() }
-        }
-        .onAppear {
-            if sourcesHandle.status == .ready {
-                model.syncCatalogCounts()
-            }
         }
         .onChange(of: model.settings) { _, _ in
             navigation.go(to: navigation.currentLocation.withListScrollAnchor(nil))
@@ -324,11 +314,11 @@ private struct SourcesListContent: View {
                                     onOpenPage: {
                                         navigation.go(to: SourcesListNavigation.pageLocation(for: source))
                                     },
-                                    onOpenGraph: {
-                                        if let location = SourcesListNavigation.graphLocation(for: source) {
-                                            navigation.go(to: location)
-                                        }
-                                    }
+                                    onOpenGraph: model.graphLocation(for: source).map { location in
+                                        { navigation.go(to: location) }
+                                    },
+                                    graphBlockedReason: model.graphBlockedReason(for: source),
+                                    onCopy: { model.openCopy(source) }
                                 )
                                 .id(source.id)
                             }
@@ -386,52 +376,25 @@ private struct SourcesListContent: View {
         .accessibilityIdentifier("sources.empty")
     }
 
-    private func addForm(typeOptions: [PVComboBoxOption]) -> some View {
+    private var addForm: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
             if let createError = model.createError {
                 PVCallout(tone: .danger, message: createError)
                     .accessibilityIdentifier("sources.add.error")
-            } else if let loadError = model.loadError, typeOptions.isEmpty {
+            } else if let loadError = model.loadError, model.types.isEmpty {
                 PVCallout(
                     tone: .danger,
                     message: L10n.Errors.message(for: loadError)
                 )
                 .accessibilityIdentifier("sources.add.loadError")
             }
-            PVField(
-                label: L10n.Sources.formTitle,
-                error: model.titleError,
-                required: true
-            ) {
-                PVInput(
-                    text: $model.draft.title,
-                    isInvalid: model.titleError != nil,
-                    activateOnAppear: true
-                )
-                .accessibilityIdentifier("sources.add.title")
-            }
-            PVField(
-                label: L10n.Sources.formType,
-                error: model.typeError,
-                required: true
-            ) {
-                PVComboBox(
-                    selection: $model.draft.sourceTypeID,
-                    options: typeOptions,
-                    placeholder: L10n.Sources.typePlaceholder,
-                    emptyLabel: typeOptions.isEmpty
-                        ? L10n.Sources.typePoolEmpty
-                        : L10n.Sources.typeNoMatch,
-                    isInvalid: model.typeError != nil,
-                    label: L10n.Sources.formType,
-                    accessibilityIdentifierPrefix: "sources.add.type"
-                ) { option, query in
-                    sourceTypeComboRow(option: option, query: query)
-                }
-                .onChange(of: model.draft.sourceTypeID) { _, newValue in
-                    if !newValue.isEmpty { model.typeError = nil }
-                }
-            }
+            SourceTitleTypeFields(
+                draft: $model.draft,
+                titleError: $model.titleError,
+                typeError: $model.typeError,
+                types: model.types,
+                accessibilityIdentifierPrefix: "sources.add"
+            )
             PVField(
                 label: L10n.Sources.formDescription,
                 hint: L10n.Sources.formDescriptionHint
@@ -441,19 +404,6 @@ private struct SourcesListContent: View {
             }
         }
     }
-
-    private func sourceTypeComboRow(option: PVComboBoxOption, query: String) -> some View {
-        HStack(spacing: PVSpacing.space3) {
-            if let type = model.types.first(where: { $0.id == option.value }) {
-                PVMark(
-                    PVMarkKey(catalogKey: type.iconKey),
-                    size: .row,
-                    decorative: true
-                )
-            }
-            PVComboBoxPlainRow(option: option, query: query)
-        }
-    }
 }
 
 /// Observes the progress map so one Source's Get-one merge repaints that row.
@@ -461,7 +411,7 @@ private struct SourcesSplitRowProgress: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     let source: CatalogSource
     let model: SourcesModel
-    @Bindable var handle: QueryHandle<[String: SourceGraphProgress]>
+    @Bindable var handle: QueryHandle<[String: EvidenceGraphProgress]>
 
     var body: some View {
         SourcesSplitRow(
@@ -469,16 +419,16 @@ private struct SourcesSplitRowProgress: View {
             typeLabel: model.typeLabel(for: source),
             typeIconKey: model.typeIconKey(for: source),
             projectDir: model.pageProjectDir,
-            progress: handle.value?[source.id],
-            countsLoading: handle.value == nil && handle.status != .ready,
+            progress: model.entryGraph(for: source).flatMap { handle.value?[$0.id] },
+            countsLoading: model.graphCountsLoading,
             onOpenPage: {
                 navigation.go(to: SourcesListNavigation.pageLocation(for: source))
             },
-            onOpenGraph: {
-                if let location = SourcesListNavigation.graphLocation(for: source) {
-                    navigation.go(to: location)
-                }
-            }
+            onOpenGraph: model.graphLocation(for: source).map { location in
+                { navigation.go(to: location) }
+            },
+            graphBlockedReason: model.graphBlockedReason(for: source),
+            onCopy: { model.openCopy(source) }
         )
     }
 }

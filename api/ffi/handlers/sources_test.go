@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
@@ -111,6 +113,9 @@ func TestCreateSourceAndWorkspace(t *testing.T) {
 				}
 				if created.Source.GetTitle() != "Passport" || created.Source.GetDescription() != "1948" {
 					t.Fatalf("%+v", created.Source)
+				}
+				if created.Effects.GetRevision() <= 0 || !slices.Contains(created.Effects.GetSourceScopes(), created.Source.GetId()) {
+					t.Fatalf("effects %+v", created.Effects)
 				}
 				cr := req.(*engine.CreateSourceRequest)
 				assertLatestAuditAction(t, cr.ProjectDir, "create_source")
@@ -554,4 +559,116 @@ func metadataSuggestionFixture(t *testing.T) (dir, userID, typeID, sourceID, fie
 	}
 	fieldID = suggestions.Suggestions[0].Field.Id
 	return dir, userID, typeID, sourceID, fieldID
+}
+
+// copySourceFixture seeds Sources A and B, each with one fileless Artifact.
+func copySourceFixture(t *testing.T) (dir, userID, typeID, sourceA, artifactA, artifactB string) {
+	t.Helper()
+	dir, userID, typeID = sourceFixture(t)
+	seed := func(title string) (sourceID, artifactID string) {
+		cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
+			ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: title,
+		}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var created engine.CreateSourceResponse
+		if err := proto.Unmarshal(cout, &created); err != nil {
+			t.Fatal(err)
+		}
+		aout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
+			ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Label: "Scan",
+		}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var art engine.CreateArtifactResponse
+		if err := proto.Unmarshal(aout, &art); err != nil {
+			t.Fatal(err)
+		}
+		return created.Source.Id, art.Artifact.Id
+	}
+	sourceA, artifactA = seed("Obituary A")
+	_, artifactB = seed("Obituary B")
+	return dir, userID, typeID, sourceA, artifactA, artifactB
+}
+
+func TestCopySource(t *testing.T) {
+	runRPC(t, CopySource, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "rejects a malformed source id",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, typeID, _, _, _ := copySourceFixture(t)
+				return &engine.CopySourceRequest{
+					ProjectDir: dir, UserId: userID, SourceId: "nope", Title: "Copy", SourceTypeId: typeID,
+				}
+			},
+			wantErr:   true,
+			wantErrIs: errInvalidID,
+		},
+		{
+			name: "copies a source with its Artifact",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, typeID, sourceA, artifactA, _ := copySourceFixture(t)
+				return &engine.CopySourceRequest{
+					ProjectDir: dir, UserId: userID, SourceId: sourceA, Title: "Copy of Obituary A",
+					SourceTypeId: typeID, CopyDescription: true, CopyMetadata: true, CopyCredibility: true,
+					ArtifactIds: []string{artifactA},
+				}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var resp engine.CopySourceResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				cr := req.(*engine.CopySourceRequest)
+				if resp.Source.GetTitle() != "Copy of Obituary A" || resp.Source.GetSourceTypeId() != cr.SourceTypeId ||
+					!strings.HasPrefix(resp.Source.GetRef(), "SRC-") || resp.Source.GetId() == cr.SourceId {
+					t.Fatalf("source %+v", resp.Source)
+				}
+				if resp.Effects.GetRevision() <= 0 || !slices.Contains(resp.Effects.GetSourceScopes(), resp.Source.GetId()) {
+					t.Fatalf("effects %+v", resp.Effects)
+				}
+				assertLatestAuditAction(t, cr.ProjectDir, "copy_source")
+				wsOut, err := GetSourceWorkspace(marshalProto(t, &engine.GetSourceWorkspaceRequest{
+					ProjectDir: cr.ProjectDir, SourceId: resp.Source.GetId(),
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var ws engine.GetSourceWorkspaceResponse
+				if err := proto.Unmarshal(wsOut, &ws); err != nil {
+					t.Fatal(err)
+				}
+				if len(ws.Artifacts) != 1 || ws.Artifacts[0].GetLabel() != "Scan" {
+					t.Fatalf("artifacts %+v", ws.Artifacts)
+				}
+			},
+		},
+		{
+			name: "rejects a malformed artifact id",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, typeID, sourceA, artifactA, _ := copySourceFixture(t)
+				return &engine.CopySourceRequest{
+					ProjectDir: dir, UserId: userID, SourceId: sourceA, Title: "Copy", SourceTypeId: typeID,
+					ArtifactIds: []string{artifactA, "nope"},
+				}
+			},
+			wantErr:   true,
+			wantErrIs: errInvalidID,
+		},
+		{
+			name: "rejects another source's Artifact",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, typeID, sourceA, _, artifactB := copySourceFixture(t)
+				return &engine.CopySourceRequest{
+					ProjectDir: dir, UserId: userID, SourceId: sourceA, Title: "Copy", SourceTypeId: typeID,
+					ArtifactIds: []string{artifactB},
+				}
+			},
+			wantErr:   true,
+			wantErrIs: sources.ErrInvalid,
+		},
+	})
 }

@@ -20,22 +20,23 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 	}
 	g.applyActivity(c)
 	set := c.Effects
-	if set.Vocabulary {
+	if set.Has(effects.ListVocabulary) {
 		g.DropLabels()
 		g.vocabOK = false
 		g.vocab = Vocabulary{}
+		g.dropDerived()
 	}
 	if set.Structure {
 		g.Drop()
 		return g.verifyIfSet()
 	}
-	g.dropSources(set.Sources)
+	g.dropEvidenceGraphs(set.EvidenceGraphs)
 	ids := uniqueIDs(set.Handles)
 	if len(ids) == 0 {
 		return g.verifyIfSet()
 	}
-	g.statsOK = false
-	g.stats = nil
+	g.matchIndexOK = false
+	g.matchIndex = nil
 	rows, err := g.entityRows(ids)
 	if err != nil {
 		return err

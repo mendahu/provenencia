@@ -6,14 +6,7 @@ import Testing
 @Suite
 @MainActor
 struct GraphCanvasItemLayerTests {
-    private final class SizedView: NSView {
-        override var intrinsicContentSize: NSSize {
-            NSSize(
-                width: 100 + 2 * GraphCanvasItemLayer.paintOutset,
-                height: 40 + 2 * GraphCanvasItemLayer.paintOutset
-            )
-        }
-    }
+    private final class SizedView: GraphCanvasItemView {}
 
     private final class BuildCounter {
         var counts: [String: Int] = [:]
@@ -44,7 +37,18 @@ struct GraphCanvasItemLayerTests {
             model: model,
             makeView: {
                 counter?.counts[id, default: 0] += 1
-                return SizedView()
+                return SizedView(contentSize: CGSize(width: 100, height: 40))
+            }
+        )
+    }
+
+    private func previewItem(at origin: CGPoint, model: String, counter: BuildCounter? = nil) -> GraphCanvasPreview {
+        GraphCanvasPreview(
+            origin: origin,
+            model: model,
+            makeView: {
+                counter?.counts["preview", default: 0] += 1
+                return SizedView(contentSize: CGSize(width: 100, height: 40))
             }
         )
     }
@@ -55,10 +59,28 @@ struct GraphCanvasItemLayerTests {
         layer.update([item("a", at: CGPoint(x: 300, y: 200))])
 
         let view = try #require(layer.view(for: "a"))
-        let outset = GraphCanvasItemLayer.paintOutset
+        let outset = GraphCanvasItemView.paintOutset
         #expect(view.superview === container)
         #expect(view.frame.origin == CGPoint(x: 300 - outset, y: 200 - outset))
         #expect(view.frame.width >= 100 + 2 * outset)
+    }
+
+    @Test func eachItemIsItsOwnLayerAtTheLayersScale() throws {
+        let container = flippedContainer()
+        let layer = GraphCanvasItemLayer(container: container)
+        layer.update([item("a", at: .zero)])
+
+        let first = try #require(layer.view(for: "a"))
+        #expect(first.wantsLayer)
+        #expect(first.layerContentsRedrawPolicy == .onSetNeedsDisplay)
+        #expect(first.layer?.contentsScale == 1)
+
+        layer.contentsScale = 2
+        #expect(first.layer?.contentsScale == 2)
+
+        layer.update([item("a", at: .zero), item("b", at: CGPoint(x: 200, y: 0))])
+        let second = try #require(layer.view(for: "b"))
+        #expect(second.layer?.contentsScale == 2)
     }
 
     @Test func rebuildsContentOnlyWhenTheModelChanges() {
@@ -105,6 +127,227 @@ struct GraphCanvasItemLayerTests {
 
         layer.update([item("a", at: .zero, raised: true), item("b", at: .zero)])
         #expect(container.subviews.last === layer.view(for: "a"))
+    }
+
+    /// The item ids in the container's subview order, bottom to top.
+    private func stackOrder(_ container: NSView, _ layer: GraphCanvasItemLayer, _ ids: [String]) -> [String] {
+        container.subviews.compactMap { subview in ids.first { layer.view(for: $0) === subview } }
+    }
+
+    @Test func itemsKeepHostOrderAcrossARebuildAndARaise() {
+        let container = flippedContainer()
+        let layer = GraphCanvasItemLayer(container: container)
+        let ids = ["a", "b", "c"]
+        let origins = [CGPoint(x: 0, y: 0), CGPoint(x: 10, y: 0), CGPoint(x: 20, y: 0)]
+        func push(model b: String = "v1", raised: String? = nil) {
+            layer.update(zip(ids, origins).map { id, origin in
+                item(id, at: origin, model: id == "b" ? b : "v1", raised: id == raised)
+            })
+        }
+
+        push()
+        #expect(stackOrder(container, layer, ids) == ["a", "b", "c"])
+
+        // A rebuilt view goes back where it was, not on top.
+        let before = layer.view(for: "b")
+        push(model: "v2")
+        #expect(layer.view(for: "b") !== before)
+        #expect(stackOrder(container, layer, ids) == ["a", "b", "c"])
+
+        push(model: "v2", raised: "c")
+        #expect(stackOrder(container, layer, ids) == ["a", "b", "c"])
+        push(model: "v2", raised: "a")
+        #expect(stackOrder(container, layer, ids) == ["b", "c", "a"])
+        #expect(ids.map { layer.stackIndex(of: $0) } == [2, 0, 1])
+
+        // A lowered item comes back down.
+        push(model: "v2")
+        #expect(stackOrder(container, layer, ids) == ["a", "b", "c"])
+        #expect(ids.map { layer.stackIndex(of: $0) } == [0, 1, 2])
+        #expect(layer.stackIndex(of: "missing") == nil)
+    }
+
+    @Test func restackingPaintsNothing() throws {
+        final class Counting: GraphCanvasItemView {
+            var paints = 0
+            override func paint() { paints += 1 }
+        }
+        let container = flippedContainer()
+        let layer = GraphCanvasItemLayer(container: container)
+        func push(raised: String?) {
+            layer.update(["a", "b", "c"].map { id in
+                GraphCanvasItem(id: id, origin: .zero, isRaised: id == raised, model: "v1", makeView: {
+                    Counting(contentSize: CGSize(width: 10, height: 10))
+                })
+            })
+        }
+        push(raised: nil)
+        for id in ["a", "b", "c"] {
+            let view = try #require(layer.view(for: id) as? Counting)
+            view.layer?.contentsScale = 1
+            view.updateLayer()
+        }
+        func paints() -> [Int] {
+            ["a", "b", "c"].map { (layer.view(for: $0) as? Counting)?.paints ?? -1 }
+        }
+        #expect(paints() == [1, 1, 1])
+
+        push(raised: "a")
+        push(raised: nil)
+        for id in ["a", "b", "c"] { layer.view(for: id)?.updateLayer() }
+        #expect(paints() == [1, 1, 1])
+    }
+
+    @Test func hitTestingPicksTheTopmostPaintedItem() {
+        let container = flippedContainer()
+        let layer = GraphCanvasItemLayer(container: container)
+        let frame = CGRect(x: 0, y: 0, width: 50, height: 50)
+        let targets = ["a", "b", "c"].map { GraphCanvasHitTarget(id: $0, frame: frame, acceptsConnect: true) }
+        func hit() -> String? {
+            GraphCanvasPointerHitTesting.topmostTarget(
+                at: CGPoint(x: 10, y: 10), in: targets, stackIndex: { layer.stackIndex(of: $0) }
+            )?.id
+        }
+        func push(raised: String?, bModel: String = "v1") {
+            layer.update(["a", "b", "c"].map { id in
+                item(id, at: .zero, model: id == "b" ? bModel : "v1", raised: id == raised)
+            })
+        }
+        push(raised: nil)
+        #expect(hit() == "c")
+        push(raised: nil, bModel: "v2")
+        #expect(hit() == "c")
+        push(raised: "a")
+        #expect(hit() == "a")
+        push(raised: nil)
+        #expect(hit() == "c")
+    }
+
+    @Test func gridOriginsAreShownRelativeToTheDocumentsContentOrigin() throws {
+        let pointer = GraphCanvasPointerController()
+        let document = GraphCanvasDocumentView(pointer: pointer, frame: CGRect(x: 0, y: 0, width: 600, height: 600))
+        let outset = GraphCanvasItemView.paintOutset
+        document.contentOrigin = CGPoint(x: 100, y: 50)
+        document.items.update([item("a", at: CGPoint(x: 130, y: 70))])
+        let view = try #require(document.items.view(for: "a"))
+        #expect(view.frame.origin == CGPoint(x: 30 - outset, y: 20 - outset))
+
+        #expect(document.gridPoint(forDocumentPoint: CGPoint(x: 35, y: 25)) == CGPoint(x: 135, y: 75))
+        pointer.hitTargets = [
+            GraphCanvasHitTarget(id: "a", frame: CGRect(x: 130, y: 70, width: 40, height: 30), acceptsConnect: true),
+        ]
+        var selected: String?
+        pointer.onSelect = { selected = $0 }
+        let grid = document.gridPoint(forDocumentPoint: CGPoint(x: 35, y: 25))
+        pointer.mouseDown(gridPoint: grid, windowPoint: .zero)
+        pointer.mouseUp(gridPoint: grid, windowPoint: .zero)
+        #expect(selected == "a")
+
+        // Moving the origin re-places the item without a new push.
+        document.contentOrigin = CGPoint(x: 0, y: 0)
+        #expect(view.frame.origin == CGPoint(x: 130 - outset, y: 70 - outset))
+    }
+
+    @Test func aPreviewIsPlacedLikeAnItemAndStaysBelowEveryItem() throws {
+        let container = flippedContainer()
+        let layer = GraphCanvasItemLayer(container: container)
+        let outset = GraphCanvasItemView.paintOutset
+        let counter = BuildCounter()
+        layer.contentOrigin = { CGPoint(x: 100, y: 50) }
+        layer.update([item("a", at: CGPoint(x: 130, y: 70)), item("b", at: CGPoint(x: 200, y: 70))])
+
+        layer.preview = previewItem(at: CGPoint(x: 130, y: 70), model: "person", counter: counter)
+        let preview = try #require(layer.previewView)
+        #expect(preview.superview === container)
+        #expect(preview.frame.origin == CGPoint(x: 30 - outset, y: 20 - outset))
+        #expect(container.subviews.first === preview)
+        #expect(preview.layer?.contentsScale == 1)
+
+        // Below every item and raised item, across pushes; an update that does
+        // not list it leaves it alone.
+        layer.update([item("a", at: CGPoint(x: 130, y: 70), raised: true), item("b", at: CGPoint(x: 200, y: 70))])
+        #expect(container.subviews.first === preview)
+        layer.update([item("b", at: CGPoint(x: 200, y: 70), model: "v2")])
+        #expect(layer.previewView === preview)
+        #expect(container.subviews.first === preview)
+        layer.update([item("c", at: CGPoint(x: 300, y: 70)), item("b", at: CGPoint(x: 200, y: 70), model: "v2")])
+        #expect(container.subviews.first === preview)
+        #expect(container.subviews.count == 3)
+
+        // No rotor entry, no stack index, not an item.
+        #expect(layer.rotorNames.isEmpty)
+        #expect(layer.view(for: "graphCanvas.preview") == nil)
+
+        // A move reuses the view; a new model rebuilds it.
+        layer.preview = previewItem(at: CGPoint(x: 170, y: 110), model: "person", counter: counter)
+        #expect(layer.previewView === preview)
+        #expect(preview.frame.origin == CGPoint(x: 70 - outset, y: 60 - outset))
+        #expect(counter.counts["preview"] == 1)
+        layer.preview = previewItem(at: CGPoint(x: 170, y: 110), model: "event", counter: counter)
+        #expect(layer.previewView !== preview)
+        #expect(preview.superview == nil)
+        #expect(counter.counts["preview"] == 2)
+        #expect(container.subviews.first === layer.previewView)
+
+        // It follows the content origin and the render scale like an item.
+        layer.contentOrigin = { CGPoint(x: 0, y: 0) }
+        layer.placeAll()
+        #expect(layer.previewView?.frame.origin == CGPoint(x: 170 - outset, y: 110 - outset))
+        layer.contentsScale = 2
+        #expect(layer.previewView?.layer?.contentsScale == 2)
+
+        layer.preview = nil
+        #expect(layer.previewView == nil)
+        #expect(container.subviews.allSatisfy { $0 !== preview })
+        #expect(container.subviews.count == 2)
+    }
+
+    /// A container that records every view the layer adds or moves in it.
+    private final class RecordingContainer: NSView {
+        var added: [NSView] = []
+        override var isFlipped: Bool { true }
+        override func addSubview(_ view: NSView, positioned place: NSWindow.OrderingMode, relativeTo otherView: NSView?) {
+            added.append(view)
+            super.addSubview(view, positioned: place, relativeTo: otherView)
+        }
+    }
+
+    @Test func aRebuildAndARaiseMoveOnlyTheViewsThatChanged() throws {
+        let container = RecordingContainer(frame: CGRect(x: 0, y: 0, width: 2_000, height: 2_000))
+        let layer = GraphCanvasItemLayer(container: container)
+        var middleModel = "v1"
+        func push(raised: String? = nil) {
+            layer.update(["a", "b", "c"].enumerated().map { index, id in
+                item(id, at: CGPoint(x: 100 * index, y: 0), model: id == "b" ? middleModel : "v1", raised: id == raised)
+            })
+        }
+        push()
+        let a = try #require(layer.view(for: "a"))
+        let b = try #require(layer.view(for: "b"))
+        let c = try #require(layer.view(for: "c"))
+        #expect(container.subviews == [a, b, c])
+
+        // A selection-style rebuild of the middle item: its new view goes
+        // straight into its place and nothing else moves.
+        container.added = []
+        middleModel = "v2"
+        push()
+        let b2 = try #require(layer.view(for: "b"))
+        #expect(b2 !== b)
+        #expect(container.added == [b2])
+        #expect(container.subviews == [a, b2, c])
+
+        // Raising the first item moves only that item, to the top.
+        container.added = []
+        push(raised: "a")
+        #expect(container.added == [a])
+        #expect(container.subviews == [b2, c, a])
+
+        // Lowering it again moves only it back.
+        container.added = []
+        push()
+        #expect(container.added == [a])
+        #expect(container.subviews == [a, b2, c])
     }
 
     @Test func rotorFilterIgnoresCaseAndAccents() throws {

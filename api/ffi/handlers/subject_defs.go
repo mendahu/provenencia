@@ -138,11 +138,58 @@ func ListSubjectTypeProperties(in []byte) ([]byte, error) {
 		}
 		out = &engine.ListSubjectTypePropertiesResponse{}
 		for _, b := range rows {
-			out.Properties = append(out.Properties, &engine.SubjectTypeProperty{
-				Property:  propertyProto(b.Property),
-				SortOrder: int32(b.SortOrder),
-				Locked:    b.Locked,
+			out.Properties = append(out.Properties, subjectTypePropertyProto(b))
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
+func subjectTypePropertyProto(b subjectvocab.Binding) *engine.SubjectTypeProperty {
+	return &engine.SubjectTypeProperty{
+		Property:  propertyProto(b.Property),
+		SortOrder: int32(b.SortOrder),
+		Locked:    b.Locked,
+	}
+}
+
+func ReorderSubjectTypeProperties(in []byte) ([]byte, error) {
+	var req engine.ReorderSubjectTypePropertiesRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("reorder_subject_type_properties", err)
+	}
+	userID, err := parseUserID(req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	typeID, err := parseID(req.GetSubjectTypeId())
+	if err != nil {
+		return nil, err
+	}
+	propertyIDs, err := parseIDs(req.GetPropertyIds())
+	if err != nil {
+		return nil, err
+	}
+	var out *engine.ReorderSubjectTypePropertiesResponse
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		_, wrote, err := writes.Run(c, writes.Op{Action: subjectvocab.ActionReorder, UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := subjectvocab.ReorderBindings(tx, userID, typeID, propertyIDs)
+				return struct{}{}, changes, err
 			})
+		if err != nil {
+			return err
+		}
+		rows, err := subjectvocab.ListBindings(c, typeID)
+		if err != nil {
+			return err
+		}
+		out = &engine.ReorderSubjectTypePropertiesResponse{Effects: writeEffectsProto(wrote)}
+		for _, b := range rows {
+			out.Properties = append(out.Properties, subjectTypePropertyProto(b))
 		}
 		return nil
 	})
@@ -157,7 +204,8 @@ func AssignSubjectTypeProperty(in []byte) ([]byte, error) {
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, unmarshalErr("assign_subject_type_property", err)
 	}
-	if _, err := parseUserID(req.GetUserId()); err != nil {
+	userID, err := parseUserID(req.GetUserId())
+	if err != nil {
 		return nil, err
 	}
 	typeID, err := parseID(req.GetSubjectTypeId())
@@ -170,7 +218,11 @@ func AssignSubjectTypeProperty(in []byte) ([]byte, error) {
 	}
 	var out *engine.AssignSubjectTypePropertyResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := subjectvocab.AppendBinding(c, typeID, propertyID); err != nil {
+		if _, _, err := writes.Run(c, writes.Op{Action: subjectvocab.ActionAssign, UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := subjectvocab.AppendBinding(tx, userID, typeID, propertyID)
+				return struct{}{}, changes, err
+			}); err != nil {
 			return err
 		}
 		out = &engine.AssignSubjectTypePropertyResponse{}
@@ -187,7 +239,8 @@ func RemoveSubjectTypeProperty(in []byte) ([]byte, error) {
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, unmarshalErr("remove_subject_type_property", err)
 	}
-	if _, err := parseUserID(req.GetUserId()); err != nil {
+	userID, err := parseUserID(req.GetUserId())
+	if err != nil {
 		return nil, err
 	}
 	typeID, err := parseID(req.GetSubjectTypeId())
@@ -200,7 +253,11 @@ func RemoveSubjectTypeProperty(in []byte) ([]byte, error) {
 	}
 	var out *engine.RemoveSubjectTypePropertyResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := subjectvocab.DeleteBinding(c, typeID, propertyID); err != nil {
+		if _, _, err := writes.Run(c, writes.Op{Action: subjectvocab.ActionRemove, UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := subjectvocab.DeleteBinding(tx, userID, typeID, propertyID)
+				return struct{}{}, changes, err
+			}); err != nil {
 			return err
 		}
 		out = &engine.RemoveSubjectTypePropertyResponse{}
@@ -290,13 +347,9 @@ func GetPropertiesWorkspace(in []byte) ([]byte, error) {
 			if err != nil {
 				return err
 			}
-			group := &engine.SubjectTypePropertiesGroup{SubjectTypeId: uuidString(typ.ID)}
+			group := &engine.SubjectTypePropertiesGroup{SubjectTypeId: database.UUIDString(typ.ID)}
 			for _, b := range bindings {
-				group.Properties = append(group.Properties, &engine.SubjectTypeProperty{
-					Property:  propertyProto(b.Property),
-					SortOrder: int32(b.SortOrder),
-					Locked:    b.Locked,
-				})
+				group.Properties = append(group.Properties, subjectTypePropertyProto(b))
 			}
 			if info, ok := subjectvocab.TypeByKey(typ.Key); ok {
 				group.Presentation = subjectTypePresentationProto(info)
@@ -313,7 +366,7 @@ func GetPropertiesWorkspace(in []byte) ([]byte, error) {
 
 func propertyProto(p properties.Property) *engine.Property {
 	return &engine.Property{
-		Id:          uuidString(p.ID),
+		Id:          database.UUIDString(p.ID),
 		Key:         p.Key,
 		Origin:      p.Origin,
 		Label:       p.Label,

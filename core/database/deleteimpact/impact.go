@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
-	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // ParseKind maps a GetDeleteImpact kind string to a registered kind.
@@ -56,20 +55,14 @@ func Impact(tx *sql.Tx, kind catalogmodel.Kind, id []byte) (Report, error) {
 		return Report{}, err
 	}
 
-	if kind == catalogmodel.KindObservation {
-		edge, err := isEdgeObservation(tx, id)
+	for _, e := range extraGatesFor(kind) {
+		held, err := e.Holds(tx, id)
 		if err != nil {
 			return Report{}, err
 		}
-		if edge {
-			return Report{Allowed: false, Gate: GateEdgeLocked}, nil
+		if held {
+			return Report{Allowed: false, Gate: e.Gate}, nil
 		}
-	}
-
-	if gate, err := originGate(tx, kind, id); err != nil {
-		return Report{}, err
-	} else if gate != GateOK {
-		return Report{Allowed: false, Gate: gate}, nil
 	}
 
 	groups, err := collectGroups(tx, inboundFor(kind), id)
@@ -119,25 +112,23 @@ func collectGroups(tx *sql.Tx, edges []inboundEdge, id []byte) ([]Group, error) 
 	return groups, nil
 }
 
-func originGate(tx *sql.Tx, kind catalogmodel.Kind, id []byte) (Gate, error) {
-	rule, ok := originRuleFor(kind)
-	if !ok {
-		return GateOK, nil
+// ListedGroup shapes rows a domain read found into one report group, projected
+// and capped as Impact lists inbound rows. Callers pass rows with ID and Ref
+// set, from the query that found them.
+func ListedGroup(tx *sql.Tx, via string, kind catalogmodel.Kind, rows []Listed) (Group, error) {
+	if tx == nil {
+		return Group{}, ErrInvalid
 	}
-	var origin string
-	err := tx.QueryRow(rule.OriginSQL, id).Scan(&origin)
-	if err == sql.ErrNoRows {
-		return GateOK, nil
+	g := Group{Via: via, Kind: kind, Total: len(rows)}
+	for i, r := range rows {
+		if i == listedCap {
+			break
+		}
+		listed, err := projectListed(tx, kind, probeRow{ID: r.ID, Ref: r.Ref})
+		if err != nil {
+			return Group{}, err
+		}
+		g.Listed = append(g.Listed, listed)
 	}
-	if err != nil {
-		return "", err
-	}
-	origin = strings.TrimSpace(origin)
-	if rule.PluginNever && vocabkey.IsPluginOrigin(origin) {
-		return GateOriginLocked, nil
-	}
-	if rule.SeededLocked && origin == vocabkey.OriginProvenencia {
-		return GateOriginLocked, nil
-	}
-	return GateOK, nil
+	return g, nil
 }

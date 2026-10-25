@@ -17,14 +17,19 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 ## Current ideas
 
 - [`source-to-source-relationships.md`](source-to-source-relationships.md)
-- [`source-structure.md`](source-structure.md) — several Evidence graphs per Source, and nested Sources (publication → issue → item)
+- [`source-structure-later.md`](source-structure-later.md) — what Spike 12 parked: nested Sources, derivation links, named templates, per-graph credibility, layered citations
+- [`graph-canvas-second-host.md`](graph-canvas-second-host.md) — what a family-tree canvas host still needs from GraphCanvas: hit targets from measured layout, a routed edge layer, selection, growable bounds, a host zoom range
+- [`evidence-graph-card-memory.md`](evidence-graph-card-memory.md) — every card keeps its painted image after S11-21; about 585–774 MB for 110 cards on Retina. Options if it becomes a problem
 - [`evidence-graph-structure-shortcuts.md`](evidence-graph-structure-shortcuts.md) — place a common cluster (wedding, birth, residence) in one action, or paste a cluster already on the canvas
 - [`registry-source-import.md`](registry-source-import.md) — paste a record URL from Ancestry, FamilySearch and similar to create a Source; access (logins, OAuth) is unproven
 - [`source-provenance-date.md`](source-provenance-date.md)
 - [`text-quote-locators.md`](text-quote-locators.md)
 - [`audio-video-sources.md`](audio-video-sources.md)
 - [`shared-list-helpers.md`](shared-list-helpers.md) — one list of graph mutations (the other two items are in Spike 11)
+- [`test-subject-fixtures.md`](test-subject-fixtures.md) — test Subject helpers that place a Subject do it in a second write; let `subjectstest` take a placement
+- [`settled-list-count-publish.md`](settled-list-count-publish.md) — Properties badge is off by one after create or delete; one publish-on-settled rule for Sources, Properties and Metadata
 - [`depictions-and-likenesses.md`](depictions-and-likenesses.md) — leftovers after Spike 10 (other keys, signature, transparent crop, Windows PDF draw)
+- [`coverage-aware-similarity.md`](coverage-aware-similarity.md) — a match on one shared property (a surname-only record) scores similarity 1 and shows as an unbanded alternative
 - [`international-names.md`](international-names.md) — leftovers after Spike 10 (other name patterns, transliteration, calendars)
 - [`daitch-mokotoff.md`](daitch-mokotoff.md) — phonetic tier descoped from Spike 10 (S10-26)
 - [`matching-test-suite.md`](matching-test-suite.md) — scenario goldens, invariants, a simulated world, a scoreboard, and a labeler that fits the registry numbers. Its "make the algorithm graspable" part is Spike 11 (S11-01); the rest waits on the re-implementation
@@ -32,17 +37,19 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md)
 - [`large-jpeg-thumbnails.md`](large-jpeg-thumbnails.md) — JPEGs over the 64-megapixel decode budget save and keep the missing-image glyph
 - [`identity-claim-review.md`](identity-claim-review.md)
-- [`promote-find-another-record.md`](promote-find-another-record.md) — a "find another record…" entry in the Promote target menu, for a record `Rank` did not offer
+- [`binding-order-editing.md`](binding-order-editing.md) — a per-type ordered list of properties on the Properties page, calling `ReorderSubjectTypeProperties` (engine side shipped in S11-32)
 - [`place-gazetteer-service.md`](place-gazetteer-service.md)
 - [`possible-values.md`](possible-values.md)
 - [`term-management.md`](term-management.md) — one place to manage terms, including relationship direction and inverses
+- [`kinship-view.md`](kinship-view.md) — family trees and person pages reading every kinship shape as one fact, and patterns beyond spouse, parent and grandparent (matching's part is Spike 11)
 
 ## Archived
 
 Shipped ideas keep **decisions**, not PR order. Closed spikes: [`docs/deployment-plan/archive/`](../deployment-plan/archive/).
 
 - [`archive/interpretation-graph-ui.md`](archive/interpretation-graph-ui.md) — Evidence graph decisions; leftovers re-homed
-- [`archive/evidence-graph-drag-performance.md`](archive/evidence-graph-drag-performance.md) — AppKit cards; a drag moves the view
+- [`archive/evidence-graph-drag-performance.md`](archive/evidence-graph-drag-performance.md) — AppKit cards; a drag moves the view; since S11-21 cards paint once into a reused image
+- [`archive/graph-focus-views.md`](archive/graph-focus-views.md) — focus views inside one large graph; not built, archived once large graphs pan and zoom smoothly (S11-21)
 - [`archive/page-navigation-performance.md`](archive/page-navigation-performance.md) — session cache / place registry
 - [`archive/catalog-access-serialization.md`](archive/catalog-access-serialization.md) — held catalog session
 - [`archive/catalog-graph-cache.md`](archive/catalog-graph-cache.md) — one write path and the in-memory catalog graph

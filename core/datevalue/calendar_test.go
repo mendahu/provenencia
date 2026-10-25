@@ -87,3 +87,24 @@ func TestCalendar(t *testing.T) {
 		t.Errorf("AddDays(1817, 1, 1, -1) = %d-%d-%d", y, m, d)
 	}
 }
+
+func TestAddYears(t *testing.T) {
+	for _, tc := range []struct {
+		name                string
+		y, m, d, n          int
+		wantY, wantM, wantD int
+	}{
+		{"year precision back", 1850, 0, 0, -110, 1740, 0, 0},
+		{"leap day to common year", 1904, 2, 29, 110, 2014, 2, 28},
+		{"leap day to leap year", 1904, 2, 29, 4, 1908, 2, 29},
+		{"full date", 1901, 5, 1, 110, 2011, 5, 1},
+		{"month precision", 1850, 3, 0, 1, 1851, 3, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			y, m, d := datevalue.AddYears(tc.y, tc.m, tc.d, tc.n)
+			if y != tc.wantY || m != tc.wantM || d != tc.wantD {
+				t.Errorf("AddYears(%d, %d, %d, %d) = %d-%d-%d, want %d-%d-%d", tc.y, tc.m, tc.d, tc.n, y, m, d, tc.wantY, tc.wantM, tc.wantD)
+			}
+		})
+	}
+}

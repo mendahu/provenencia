@@ -87,7 +87,7 @@ func conclusionDetailProto(d conclusiondetails.Detail) *engine.ConclusionDetail 
 	out := &engine.ConclusionDetail{Entity: canonicalEntityProto(d.Entity), MemberCount: int32(d.MemberCount)}
 	for _, f := range d.Fields {
 		pf := &engine.ConclusionField{
-			PropertyId:  uuidString(f.PropertyID),
+			PropertyId:  database.UUIDString(f.PropertyID),
 			PropertyKey: f.PropertyKey,
 			Label:       f.Label,
 			ValueType:   f.ValueType,
@@ -99,7 +99,7 @@ func conclusionDetailProto(d conclusiondetails.Detail) *engine.ConclusionDetail 
 				Reason:  v.Reason,
 				Support: int32(v.Support),
 				Against: int32(v.Against),
-				Value:   conclusionValueProto(v.Value),
+				Value:   conclusionValueProto(v.Value, nil),
 			})
 		}
 		for _, o := range f.Outcomes {
@@ -112,18 +112,19 @@ func conclusionDetailProto(d conclusiondetails.Detail) *engine.ConclusionDetail 
 
 func reconcilerOutcomeProto(o conclusiondetails.Outcome) *engine.ReconcilerOutcomeDetail {
 	po := &engine.ReconcilerOutcomeDetail{
-		ObservationId:          uuidString(o.ObservationID),
+		ObservationId:          database.UUIDString(o.ObservationID),
 		ObservationRef:         o.ObservationRef,
 		Reason:                 o.Reason,
 		ValueRank:              int32(o.ValueRank),
-		Recorded:               conclusionValueProto(o.Recorded),
-		SubjectId:              uuidString(o.SubjectID),
+		Recorded:               conclusionValueProto(o.Recorded, nil),
+		SubjectId:              database.UUIDString(o.SubjectID),
 		SubjectRef:             o.SubjectRef,
-		CitationId:             uuidString(o.CitationID),
-		ArtifactId:             uuidString(o.ArtifactID),
+		GraphId:                database.UUIDString(o.GraphID),
+		CitationId:             database.UUIDString(o.CitationID),
+		ArtifactId:             database.UUIDString(o.ArtifactID),
 		VoteSupport:            int32(o.Vote.Support),
 		VoteTotal:              int32(o.Vote.Of),
-		SourceId:               uuidString(o.SourceID),
+		SourceId:               database.UUIDString(o.SourceID),
 		SourceTitle:            o.SourceTitle,
 		CredibilityKey:         o.CredibilityKey,
 		TranscriptionUncertain: o.Provenance.Uncertain,
@@ -132,21 +133,28 @@ func reconcilerOutcomeProto(o conclusiondetails.Outcome) *engine.ReconcilerOutco
 		ClaimConfidenceOffset:  int32(o.Provenance.ClaimConfidence),
 	}
 	if len(o.DeniedBy) > 0 {
-		po.DeniedByObservationId = uuidString(o.DeniedBy)
+		po.DeniedByObservationId = database.UUIDString(o.DeniedBy)
 	}
 	return po
 }
 
-func conclusionValueProto(v conclusiondetails.Value) *engine.ConclusionValue {
+// conclusionValueProto is a typed value as a ConclusionValue. depiction, when
+// not nil, is the result: a likeness has no field on conclusiondetails.Value.
+func conclusionValueProto(v conclusiondetails.Value, depiction *engine.DepictionValue) *engine.ConclusionValue {
+	if depiction != nil {
+		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Depiction{Depiction: depiction}}
+	}
 	switch {
 	case v.Name != nil:
 		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Name{Name: valuecodec.NameToProto(*v.Name)}}
 	case v.Date != nil:
 		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Date{Date: valuecodec.DateToProto(*v.Date)}}
-	case len(v.TermID) > 0:
-		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Term{Term: &engine.ConclusionTerm{
-			Id: uuidString(v.TermID), Key: v.TermKey, Label: v.TermLabel,
-		}}}
+	case len(v.TermID) > 0 || v.TermKey != "":
+		term := &engine.ConclusionTerm{Key: v.TermKey, Label: v.TermLabel, Origin: v.TermOrigin}
+		if len(v.TermID) > 0 {
+			term.Id = database.UUIDString(v.TermID)
+		}
+		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Term{Term: term}}
 	case v.HasInteger:
 		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Integer{Integer: v.Integer}}
 	case v.HasText:

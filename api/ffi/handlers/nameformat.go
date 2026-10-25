@@ -20,7 +20,7 @@ func GetNameFormat(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		loaded, err := nameformats.Load(db)
+		loaded, err := nameformats.LoadFor(c.Graph(), db)
 		if err != nil {
 			return err
 		}

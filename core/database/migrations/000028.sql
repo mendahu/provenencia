@@ -2,7 +2,7 @@
 -- Flatten any structured DateValue into value_text (phrase, else year).
 -- SQLite cannot ALTER CHECK or DROP a column in place; recreate both tables.
 
-PRAGMA foreign_keys=OFF;
+-- migrate: foreign_keys off
 
 UPDATE source_metadata
 SET value_text = (
@@ -63,5 +63,3 @@ WHERE id IN (SELECT id FROM metadata_date_ids)
 	);
 
 DROP TABLE metadata_date_ids;
-
-PRAGMA foreign_keys=ON;

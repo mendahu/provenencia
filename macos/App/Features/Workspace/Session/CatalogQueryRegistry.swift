@@ -37,6 +37,13 @@ struct CatalogQueryRegistry: Sendable {
         .promotedSubject, .deletedSource, .updatedProperty,
     ]
 
+    /// Writes that change a sidebar count (Sources, Persons, Events, Places).
+    /// `WorkspaceSession.apply` recounts after each; features never call
+    /// `CatalogCounts.refreshAll()`.
+    static let navCountTriggers: Set<CatalogMutationKind> = [
+        .createdSource, .deletedSource, .promotedSubject,
+    ]
+
     private struct Spec {
         let kind: CatalogQueryKey.Kind
         let stalePolicy: CatalogQueryStalePolicy
@@ -118,14 +125,18 @@ struct CatalogQueryRegistry: Sendable {
             ]
         ),
         Spec(
-            kind: .sourceGraph,
+            kind: .evidenceGraph,
             stalePolicy: .sessionFresh,
-            invalidateOn: [.mutatedSourceGraph, .deletedSubject, .deletedSource, .promotedSubject]
+            // Writes that report effects reload the graphs they name
+            // (`WriteEffects.evidenceGraphs`); Promote reports none.
+            invalidateOn: [.deletedSource, .promotedSubject]
         ),
         Spec(
             kind: .citationCounts,
             stalePolicy: .sessionFresh,
-            invalidateOn: [.deletedSubject]
+            // Reloads follow the write's `citationSources` effects.
+            invalidateOn: [],
+            whenHidden: .markStale
         ),
         Spec(
             kind: .propertiesWorkspace,
@@ -152,15 +163,26 @@ struct CatalogQueryRegistry: Sendable {
         Spec(
             kind: .citationsByArtifact,
             stalePolicy: .sessionFresh,
-            invalidateOn: [.deletedSubject],
+            // Reloads follow the write's `citationSources` effects.
+            invalidateOn: [],
             whenHidden: .markStale
         ),
         Spec(
-            kind: .sourceGraphProgress,
+            kind: .evidenceGraphProgress,
             stalePolicy: .sessionFresh,
-            // Canvas writes patch one Source via Get + setQueryValue — do not
+            // Canvas writes patch one graph via Get + setQueryValue — do not
             // restale the project-wide map (or sourcesList).
             invalidateOn: []
+        ),
+        Spec(
+            kind: .evidenceGraphsList,
+            stalePolicy: .sessionFresh,
+            // Graph and link writes report the `evidence_graphs` list in
+            // `WriteEffects`; `deleteSource` reports none, so `.deletedSource` drops it.
+            invalidateOn: [.deletedSource],
+            // A visible key still revalidates (`WorkspaceSession.apply(invalidations:)`);
+            // a hidden list just goes stale until it is shown again.
+            whenHidden: .markStale
         ),
         Spec(
             kind: .personsList,
@@ -211,34 +233,34 @@ struct CatalogQueryRegistry: Sendable {
             return try await store.getSourceWorkspace(projectDir: project.projectDir, sourceID: sourceId)
         case .typeSuggestions(let project, let typeId):
             return try await store.listTypeSuggestions(projectDir: project.projectDir, typeID: typeId)
-        case .citationCounts(let project, let sourceId):
-            return try await store.citationCountsBySource(
+        case .citationCounts(let project, let graphId):
+            return try await store.citationCountsByEvidenceGraph(
                 projectDir: project.projectDir,
-                sourceID: sourceId
+                graphID: graphId
             )
-        case .sourceGraph(let project, let sourceId):
+        case .evidenceGraph(let project, let graphId):
             async let subjects = store.listSubjects(
                 projectDir: project.projectDir,
-                sourceID: sourceId
+                graphID: graphId
             )
             async let positions = store.listSubjectPositions(
                 projectDir: project.projectDir,
-                sourceID: sourceId
+                graphID: graphId
             )
-            async let observations = store.listObservationsBySource(
+            async let observations = store.listObservationsByEvidenceGraph(
                 projectDir: project.projectDir,
-                sourceID: sourceId
+                graphID: graphId
             )
             async let memberships = store.listSubjectMemberships(
                 projectDir: project.projectDir,
-                sourceID: sourceId
+                graphID: graphId
             )
-            async let eventTitles = store.listSourceEventTitles(
+            async let eventTitles = store.listEvidenceGraphEventTitles(
                 projectDir: project.projectDir,
-                sourceID: sourceId
+                graphID: graphId
             )
-            return SourceGraphRows(
-                sourceId: sourceId,
+            return EvidenceGraphRows(
+                graphId: graphId,
                 subjects: try await subjects,
                 positions: try await positions,
                 observations: try await observations,
@@ -252,18 +274,21 @@ struct CatalogQueryRegistry: Sendable {
                 projectDir: project.projectDir,
                 propertyID: propertyId
             )
-        case .citationsByArtifact(let project, let artifactId):
+        case .citationsByArtifact(let project, let graphId, let artifactId):
             return try await store.listCitationsByArtifact(
                 projectDir: project.projectDir,
+                graphID: graphId,
                 artifactID: artifactId
             )
-        case .sourceGraphProgress(let project):
-            let rows = try await store.listSourceGraphProgress(projectDir: project.projectDir)
-            var map: [String: SourceGraphProgress] = [:]
+        case .evidenceGraphProgress(let project):
+            let rows = try await store.listEvidenceGraphProgress(projectDir: project.projectDir)
+            var map: [String: EvidenceGraphProgress] = [:]
             for row in rows {
-                map[row.sourceId] = row
+                map[row.graphId] = row
             }
             return map
+        case .evidenceGraphsList(let project):
+            return try await store.listEvidenceGraphs(projectDir: project.projectDir)
         case .propertiesWorkspace(let project):
             return try await store.getPropertiesWorkspace(projectDir: project.projectDir)
         case .personsList(let project):
@@ -278,29 +303,28 @@ struct CatalogQueryRegistry: Sendable {
     }
 
     /// Cache effects of one write's reported handles and Sources. Each read
-    /// follows what feeds it: the Source graph per `sources`, the citation
-    /// reads per `citationSources`, the Properties workspace on `propertyUsage`,
-    /// vocabulary, or structure. Handle scopes invalidate nothing: they move
+    /// follows what feeds it: each Evidence graph per `evidenceGraphs`, the citation
+    /// reads per `citationSources`, the catalog-wide lists per `lists`, and the
+    /// Properties workspace on structure. Handle scopes invalidate nothing: they move
     /// through `lastUpdatedPatch`.
     func invalidations(for effects: CatalogWriteEffects, project: ProjectKey) -> [CatalogQueryInvalidation] {
         var out: [CatalogQueryInvalidation] = []
-        for sourceID in effects.sources {
-            out.append(.key(.sourceGraph(project: project, sourceId: sourceID)))
+        for graphID in effects.evidenceGraphs {
+            out.append(.key(.evidenceGraph(project: project, graphId: graphID)))
         }
-        for sourceID in effects.citationSources {
-            out.append(.key(.citationCounts(project: project, sourceId: sourceID)))
-        }
+        // The effects name Sources and the keys name graphs: drop every cached
+        // citation read once.
         if !effects.citationSources.isEmpty {
+            out.append(.allCached(.citationCounts))
             out.append(.allCached(.citationsByArtifact))
         }
-        if effects.propertyUsage {
-            out.append(.key(.propertiesWorkspace(project: project)))
+        var listed = CatalogList.allCases.filter { effects.lists.contains($0) }
+            .flatMap { Self.invalidations(for: $0, project: project) }
+        if effects.structure {
+            listed.append(.key(.propertiesWorkspace(project: project)))
         }
-        if effects.vocabulary || effects.structure {
-            let workspace = CatalogQueryInvalidation.key(.propertiesWorkspace(project: project))
-            if !out.contains(workspace) {
-                out.append(workspace)
-            }
+        for invalidation in listed where !out.contains(invalidation) {
+            out.append(invalidation)
         }
         if !effects.touchedHandles.isEmpty {
             out.append(.key(.personsList(project: project)))
@@ -311,6 +335,16 @@ struct CatalogQueryRegistry: Sendable {
             out.append(.key(.conclusionDetail(project: project, entityId: entityID)))
         }
         return out
+    }
+
+    /// The cached reads one catalog-wide list feeds.
+    static func invalidations(for list: CatalogList, project: ProjectKey) -> [CatalogQueryInvalidation] {
+        switch list {
+        case .vocabulary, .propertyUsage:
+            return [.key(.propertiesWorkspace(project: project))]
+        case .evidenceGraphs:
+            return [.key(.evidenceGraphsList(project: project))]
+        }
     }
 
     /// The deduped union of what a write's effects reported and what its
@@ -380,21 +414,13 @@ private extension CatalogQueryKey.Kind {
             default:
                 return .allCached(.typeSuggestions)
             }
-        case .sourceGraph:
-            switch mutation {
-            case .mutatedSourceGraph(let sourceId), .deletedSubject(let sourceId),
-                 .deletedSource(let sourceId), .promotedSubject(let sourceId):
-                return .key(.sourceGraph(project: project, sourceId: sourceId))
-            default:
-                return .allCached(.sourceGraph)
+        case .evidenceGraph:
+            if let graphId = mutation.evidenceGraphId {
+                return .key(.evidenceGraph(project: project, graphId: graphId))
             }
+            return .allCached(.evidenceGraph)
         case .citationCounts:
-            switch mutation {
-            case .deletedSubject(let sourceId):
-                return .key(.citationCounts(project: project, sourceId: sourceId))
-            default:
-                return .allCached(.citationCounts)
-            }
+            return .allCached(.citationCounts)
         case .propertiesWorkspace:
             return .key(.propertiesWorkspace(project: project))
         case .connectRules:
@@ -408,8 +434,10 @@ private extension CatalogQueryKey.Kind {
             }
         case .citationsByArtifact:
             return .allCached(.citationsByArtifact)
-        case .sourceGraphProgress:
-            return .key(.sourceGraphProgress(project: project))
+        case .evidenceGraphProgress:
+            return .key(.evidenceGraphProgress(project: project))
+        case .evidenceGraphsList:
+            return .key(.evidenceGraphsList(project: project))
         case .personsList:
             return .key(.personsList(project: project))
         case .eventsList:

@@ -31,10 +31,15 @@ struct SourcesSplitRow: View {
     let typeLabel: String
     let typeIconKey: String?
     let projectDir: String
-    var progress: SourceGraphProgress?
+    var progress: EvidenceGraphProgress?
     var countsLoading: Bool = false
     var onOpenPage: () -> Void
-    var onOpenGraph: () -> Void
+    /// Nil blocks the Open graph zone: the entry graph links no Artifact, or the
+    /// graph list has not loaded.
+    var onOpenGraph: (() -> Void)?
+    /// Why Open graph is blocked (`SourcesListNavigation.graphBlockedReason`); nil shows no hint.
+    var graphBlockedReason: String?
+    var onCopy: () -> Void
 
     private var updatedAt: String { source.updated.at }
 
@@ -97,12 +102,25 @@ struct SourcesSplitRow: View {
             in: .current
         )))
         .accessibilityIdentifier("sources.row.\(source.id).page")
+        .pvRightClickMenu(
+            accessibilityIdentifier: "sources.row.\(source.id).menu",
+            items: [
+                PVActionMenuItem(
+                    title: L10n.Sources.copySourceEntry,
+                    accessibilityIdentifier: "sources.row.\(source.id).copy",
+                    action: onCopy
+                ),
+            ]
+        )
     }
 
     @ViewBuilder
     private var graphZone: some View {
         if source.hasArtifact {
-            Button(action: onOpenGraph) {
+            Button {
+                guard let onOpenGraph else { return }
+                onOpenGraph()
+            } label: {
                 HStack(alignment: .top, spacing: PVSpacing.space3 + PVSpacing.spacePx) {
                     PVIcon(.network, size: 16)
                     VStack(alignment: .leading, spacing: PVSpacing.space1) {
@@ -118,6 +136,9 @@ struct SourcesSplitRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(SourcesSplitZoneButtonStyle(emphasizeOnHover: true))
+            .disabled(onOpenGraph == nil)
+            .help(graphBlockedReason ?? "")
+            .accessibilityHint(Text(graphBlockedReason ?? ""))
             .accessibilityLabel(Text(verbatim: L10n.Sources.graphZoneAccessibility(
                 progress: progress,
                 countsLoading: countsLoading

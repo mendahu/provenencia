@@ -6,14 +6,17 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -26,6 +29,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
+	"github.com/mendahu/provenencia/core/database/subjectvocab/subjectvocabtest"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
@@ -206,7 +210,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,30 +226,10 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	place, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: placeType.ID, Label: "Leeds",
-		}, nil)
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	alice, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Alice",
-		}, &subjects.Placement{GridX: 0, GridY: 0})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	wedding, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: eventType.ID, Label: "Wedding",
-		}, &subjects.Placement{GridX: 4, GridY: 4})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+	place := subjectstest.OfType(t, c, userID, graph, placeType.ID, "Leeds")
+	alice := subjectstest.At(t, c, userID, graph, personType.ID, "Alice", subjects.Placement{GridX: 0, GridY: 0})
+	wedding := subjectstest.At(t, c, userID, graph, eventType.ID, "Wedding", subjects.Placement{GridX: 4, GridY: 4})
 	toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
@@ -357,7 +341,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		}
 		bridge, err := writes.Call(c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 			return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-				SourceID: src.ID, FromSubjectID: alice.ID, ToSubjectID: wedding.ID,
+				FromSubjectID: alice.ID, ToSubjectID: wedding.ID,
 				BridgeTypeKey: "participation",
 				Citation:      citations.CreateInput{ArtifactID: art.ID, LocatorJSON: testLocator},
 				Observations: []observations.Input{
@@ -406,9 +390,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		})
 
 		t.Run("bridge extra observation inbound", func(t *testing.T) {
-			if err := subjectvocab.AppendBinding(c, bridge.Subject.SubjectTypeID, toponym.ID); err != nil {
-				t.Fatal(err)
-			}
+			subjectvocabtest.Assign(t, c, userID, bridge.Subject.SubjectTypeID, toponym.ID)
 			if _, err := writes.Call(c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
 				return observations.AddToCitation(tx, userID, bridge.Citation.ID, []observations.Input{{
 					SubjectID: bridge.Subject.ID, PropertyID: toponym.ID, ValueText: "extra", HasText: true,
@@ -464,9 +446,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if userRole.Key != "role" || userRole.Origin != vocabkey.OriginUser {
 			t.Fatalf("user role %+v", userRole)
 		}
-		if err := subjectvocab.AppendBinding(c, personType.ID, userRole.ID); err != nil {
-			t.Fatal(err)
-		}
+		subjectvocabtest.Assign(t, c, userID, personType.ID, userRole.ID)
 		res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
 				ArtifactID: art.ID, LocatorJSON: testLocator,
@@ -513,21 +493,12 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := subjectvocab.AppendBinding(c, personType.ID, roleProp.ID); err != nil {
-			t.Fatal(err)
-		}
+		subjectvocabtest.Assign(t, c, userID, personType.ID, roleProp.ID)
 		roleTerm, err := propertyterms.Lookup(c, roleProp.ID, "witness", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		bob, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Bob",
-			}, &subjects.Placement{GridX: 8, GridY: 0})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		bob := subjectstest.At(t, c, userID, graph, personType.ID, "Bob", subjects.Placement{GridX: 8, GridY: 0})
 		if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
 				ArtifactID: art.ID, LocatorJSON: testLocator,
@@ -603,13 +574,13 @@ func TestSnapshotOwnedThenRelease(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	art1, err := runArtifactCreate(c, userID, artifacts.CreateInput{
+	art1, err := artifactstest.Create(c, userID, artifacts.CreateInput{
 		SourceID: src.ID, FileID: fileA, Label: "Share 1",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	art2, err := runArtifactCreate(c, userID, artifacts.CreateInput{
+	art2, err := artifactstest.Create(c, userID, artifacts.CreateInput{
 		SourceID: src.ID, FileID: fileA, Label: "Share 2",
 	})
 	if err != nil {
@@ -693,7 +664,7 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 		}
 	})
 
-	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -754,18 +725,8 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
-	if err != nil {
-		t.Fatal(err)
-	}
-	sub, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: empty.ID, SubjectTypeID: personType.ID, Label: "Alice",
-		}, nil)
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	graph := evidencegraphstest.SoleGraph(t, c, empty.ID).ID
+	sub := subjectstest.On(t, c, userID, graph, "person", "Alice")
 
 	t.Run("source blocked by subject", func(t *testing.T) {
 		got := mustImpact(t, c, catalogmodel.KindSource, empty.ID)
@@ -777,6 +738,68 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 		}
 		if got.Groups[0].Listed[0].Ref != sub.Ref {
 			t.Fatalf("listed %+v", got.Groups[0].Listed)
+		}
+	})
+}
+
+func TestImpactEvidenceGraph(t *testing.T) {
+	c, userID := testCatalog(t)
+	if err := subjectvocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	def := evidencegraphstest.SoleGraph(t, c, src.ID)
+	sub := subjectstest.On(t, c, userID, def.ID, "person", "Alice")
+
+	t.Run("a Source's only graph is last_graph", func(t *testing.T) {
+		got := mustImpact(t, c, catalogmodel.KindEvidenceGraph, def.ID)
+		if got.Allowed || got.Gate != deleteimpact.GateLastGraph || len(got.Groups) != 0 {
+			t.Fatalf("%+v", got)
+		}
+	})
+
+	jones := evidencegraphstest.Create(t, c, userID, src.ID, "Jones", art.ID)
+
+	t.Run("a graph with Subjects is blocked by them", func(t *testing.T) {
+		got := mustImpact(t, c, catalogmodel.KindEvidenceGraph, def.ID)
+		if got.Allowed || got.Gate != deleteimpact.GateInbound {
+			t.Fatalf("%+v", got)
+		}
+		if len(got.Groups) != 1 || got.Groups[0].Via != "subjects.graph_id" || got.Groups[0].Total != 1 {
+			t.Fatalf("groups %+v", got.Groups)
+		}
+		listed := got.Groups[0].Listed
+		if len(listed) != 1 || listed[0].Ref != sub.Ref || listed[0].Location.Section == "" {
+			t.Fatalf("listed %+v", listed)
+		}
+	})
+
+	t.Run("an empty second graph is allowed", func(t *testing.T) {
+		got := mustImpact(t, c, catalogmodel.KindEvidenceGraph, jones.ID)
+		if !got.Allowed || got.Gate != deleteimpact.GateOK || len(got.Groups) != 0 {
+			t.Fatalf("%+v", got)
+		}
+	})
+
+	t.Run("unknown graph", func(t *testing.T) {
+		got := mustImpact(t, c, catalogmodel.KindEvidenceGraph, fakeID(t))
+		if got.Allowed || got.Gate != deleteimpact.GateNotFound {
+			t.Fatalf("%+v", got)
 		}
 	})
 }
@@ -806,7 +829,7 @@ func TestImpactAgreesWithSQLite(t *testing.T) {
 		}
 	})
 
-	if _, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"}); err != nil {
+	if _, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -916,4 +939,178 @@ func testCatalog(t *testing.T) (*database.Catalog, []byte) {
 		t.Fatal(err)
 	}
 	return c, userID
+}
+
+func TestListedGroup(t *testing.T) {
+	c, userID := testCatalog(t)
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []deleteimpact.Listed
+	for i := 0; i < 25; i++ {
+		res, err := writes.Call(c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				ArtifactID: art.ID, LocatorJSON: testLocator,
+			}, nil)
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		rows = append(rows, deleteimpact.Listed{ID: res.Citation.ID, Ref: res.Citation.Ref})
+	}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	t.Run("three rows are projected", func(t *testing.T) {
+		g, err := deleteimpact.ListedGroup(tx, "x.via", catalogmodel.KindCitation, rows[:3])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if g.Via != "x.via" || g.Kind != catalogmodel.KindCitation || g.Total != 3 || len(g.Listed) != 3 {
+			t.Fatalf("%+v", g)
+		}
+		for i, l := range g.Listed {
+			if l.Ref != rows[i].Ref || string(l.ID) != string(rows[i].ID) {
+				t.Fatalf("row %d: %+v", i, l)
+			}
+			if l.Title == "" || l.Location.SourceSurface != "citationComposer" || l.Location.CitationID != idString(rows[i].ID) {
+				t.Fatalf("row %d projection: %+v", i, l)
+			}
+		}
+	})
+	t.Run("more than the cap lists the first 20", func(t *testing.T) {
+		g, err := deleteimpact.ListedGroup(tx, "x.via", catalogmodel.KindCitation, rows)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if g.Total != 25 || len(g.Listed) != 20 {
+			t.Fatalf("total %d listed %d", g.Total, len(g.Listed))
+		}
+		for i, l := range g.Listed {
+			if l.Ref != rows[i].Ref {
+				t.Fatalf("row %d out of order: %q want %q", i, l.Ref, rows[i].Ref)
+			}
+		}
+	})
+	t.Run("empty", func(t *testing.T) {
+		g, err := deleteimpact.ListedGroup(tx, "x.via", catalogmodel.KindCitation, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if g.Total != 0 || len(g.Listed) != 0 || g.Via != "x.via" {
+			t.Fatalf("%+v", g)
+		}
+	})
+	t.Run("nil tx", func(t *testing.T) {
+		if _, err := deleteimpact.ListedGroup(nil, "x.via", catalogmodel.KindCitation, rows); !errors.Is(err, deleteimpact.ErrInvalid) {
+			t.Fatalf("got %v", err)
+		}
+	})
+}
+
+// A Subject, an Observation, a Citation and a graph name their Evidence graph
+// in the location the delete report links to.
+func TestLocationsNameTheirGraph(t *testing.T) {
+	c, userID := testCatalog(t)
+	if err := subjectvocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"}); err != nil {
+		t.Fatal(err)
+	}
+	def, jones, page := artifactstest.Split(t, c, userID, src.ID, "Jones")
+	subject := subjectstest.On(t, c, userID, jones.ID, "place", "Leeds")
+	toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cited, err := writes.Call(c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			ArtifactID: page.ID, LocatorJSON: testLocator,
+		}, []observations.Input{{SubjectID: subject.ID, PropertyID: toponym.ID, ValueText: "Leeds", HasText: true}})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	bare, err := writes.Call(c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			ArtifactID: page.ID, LocatorJSON: testLocator,
+		}, nil)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	loc := func(kind catalogmodel.Kind, id []byte, ref string) deleteimpact.Location {
+		t.Helper()
+		g, err := deleteimpact.ListedGroup(tx, "x.via", kind, []deleteimpact.Listed{{ID: id, Ref: ref}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return g.Listed[0].Location
+	}
+	for _, tt := range []struct {
+		name     string
+		kind     catalogmodel.Kind
+		id       []byte
+		ref      string
+		surface  string
+		graphID  []byte
+		sourceID []byte
+	}{
+		{"Subject", catalogmodel.KindSubject, subject.ID, subject.Ref, "graph", jones.ID, src.ID},
+		{"Observation", catalogmodel.KindObservation, cited.Observations[0].ID, cited.Observations[0].Ref, "citationComposer", jones.ID, src.ID},
+		{"Citation with an Observation", catalogmodel.KindCitation, cited.Citation.ID, cited.Citation.Ref, "citationComposer", jones.ID, src.ID},
+		{"Citation with no Observation", catalogmodel.KindCitation, bare.Citation.ID, bare.Citation.Ref, "citationComposer", jones.ID, src.ID},
+		{"graph", catalogmodel.KindEvidenceGraph, jones.ID, jones.Ref, "graph", jones.ID, src.ID},
+		{"Default graph", catalogmodel.KindEvidenceGraph, def.ID, def.Ref, "graph", def.ID, src.ID},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := loc(tt.kind, tt.id, tt.ref)
+			if got.SourceSurface != tt.surface || got.GraphID != idString(tt.graphID) || got.SourceID != idString(tt.sourceID) {
+				t.Fatalf("location %+v, want %s on graph %x of %x", got, tt.surface, tt.graphID, tt.sourceID)
+			}
+		})
+	}
 }

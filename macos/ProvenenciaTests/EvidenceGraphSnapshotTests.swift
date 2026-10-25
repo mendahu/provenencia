@@ -1,0 +1,509 @@
+import Foundation
+import Testing
+@testable import Provenencia
+
+@Suite
+@MainActor
+struct EvidenceGraphSnapshotTests {
+    private let personType = CatalogSubjectType(
+        id: "type-person",
+        key: "person",
+        origin: "provenencia",
+        label: "Person",
+        description: "",
+        refPrefix: "PER",
+        candidateRefPrefix: "CPR"
+    )
+    private let eventType = CatalogSubjectType(
+        id: "type-event",
+        key: "event",
+        origin: "provenencia",
+        label: "Event",
+        description: "",
+        refPrefix: "EVT",
+        candidateRefPrefix: "CEV"
+    )
+    private let locationType = CatalogSubjectType(
+        id: "type-location",
+        key: "location",
+        origin: "provenencia",
+        label: "Location",
+        description: "",
+        refPrefix: "LOC",
+        candidateRefPrefix: "CLO"
+    )
+
+    @Test func buildMarksCitedFromObservations() {
+        let alice = CatalogSubject(
+            id: "s-alice",
+            ref: "CPR-A",
+            sourceID: "src-1",
+            subjectTypeID: personType.id,
+            label: "Alice",
+            description: ""
+        )
+        let observation = CatalogObservation(
+            id: "obs-1",
+            ref: "OBS-1",
+            citationID: "cit-1",
+            subjectID: alice.id,
+            propertyID: "prop-1",
+            polarity: "positive",
+            valueText: "Boston",
+            valueInteger: nil,
+            valueDateID: "",
+            valueNameID: "",
+            valueSubjectID: "",
+            valueTermID: "",
+            propertyKey: "toponym",
+            propertyLabel: "Toponym",
+            propertyValueType: "text"
+        )
+        let snapshot = EvidenceGraphSnapshot.build(
+            graphId: "g-1",
+            subjects: [alice],
+            positions: [CatalogSubjectPosition(subjectID: alice.id, gridX: 0, gridY: 0)],
+            types: [personType],
+            observations: [observation],
+            rules: CatalogConnectRule.productMatrix
+        )
+        #expect(snapshot.subjects.count == 1)
+        #expect(snapshot.subjects[0].isCited)
+        #expect(snapshot.subjects[0].observations.count == 1)
+        #expect(snapshot.subjects[0].observations[0].valueText == "Boston")
+    }
+
+    @Test func buildSortsObservationsByPropertyLabel() {
+        let alice = CatalogSubject(
+            id: "s-alice",
+            ref: "CPR-A",
+            sourceID: "src-1",
+            subjectTypeID: personType.id,
+            label: "Alice",
+            description: ""
+        )
+        let sex = CatalogObservation(
+            id: "obs-sex",
+            ref: "OBS-Z",
+            citationID: "cit-1",
+            subjectID: alice.id,
+            propertyID: "prop-sex",
+            polarity: "positive",
+            valueText: "Female",
+            valueInteger: nil,
+            valueDateID: "",
+            valueNameID: "",
+            valueSubjectID: "",
+            valueTermID: "",
+            propertyKey: "sex_at_birth",
+            propertyLabel: "Sex at Birth",
+            propertyValueType: "term"
+        )
+        let name = CatalogObservation(
+            id: "obs-name",
+            ref: "OBS-A",
+            citationID: "cit-1",
+            subjectID: alice.id,
+            propertyID: "prop-name",
+            polarity: "positive",
+            valueText: "Ada",
+            valueInteger: nil,
+            valueDateID: "",
+            valueNameID: "",
+            valueSubjectID: "",
+            valueTermID: "",
+            propertyKey: "name",
+            propertyLabel: "Name",
+            propertyValueType: "name"
+        )
+        let snapshot = EvidenceGraphSnapshot.build(
+            graphId: "g-1",
+            subjects: [alice],
+            positions: [CatalogSubjectPosition(subjectID: alice.id, gridX: 0, gridY: 0)],
+            types: [personType],
+            observations: [sex, name],
+            rules: CatalogConnectRule.productMatrix
+        )
+        #expect(snapshot.subjects[0].observations.map(\.propertyLabel) == ["Name", "Sex at Birth"])
+    }
+
+    @Test func buildKeepsPlacedPrimariesAndBridgesWithLinks() {
+        let alice = CatalogSubject(
+            id: "s-alice",
+            ref: "CPR-A",
+            sourceID: "src-1",
+            subjectTypeID: personType.id,
+            label: "Alice",
+            description: ""
+        )
+        let birth = CatalogSubject(
+            id: "s-birth",
+            ref: "CEV-B",
+            sourceID: "src-1",
+            subjectTypeID: eventType.id,
+            label: "Birth",
+            description: ""
+        )
+        let bridge = CatalogSubject(
+            id: "s-loc",
+            ref: "CLO-L",
+            sourceID: "src-1",
+            subjectTypeID: locationType.id,
+            label: "At home",
+            description: ""
+        )
+        let unplaced = CatalogSubject(
+            id: "s-bob",
+            ref: "CPR-B",
+            sourceID: "src-1",
+            subjectTypeID: personType.id,
+            label: "Bob",
+            description: ""
+        )
+
+        let snapshot = EvidenceGraphSnapshot.build(
+            graphId: "g-1",
+            subjects: [birth, alice, bridge, unplaced],
+            positions: [
+                CatalogSubjectPosition(subjectID: alice.id, gridX: 1, gridY: 2),
+                CatalogSubjectPosition(subjectID: birth.id, gridX: 3, gridY: 4),
+                CatalogSubjectPosition(subjectID: bridge.id, gridX: 5, gridY: 6),
+            ],
+            types: [personType, eventType, locationType],
+            observations: [
+                CatalogObservation(
+                    id: "obs-event",
+                    ref: "OBS-E",
+                    citationID: "cit-1",
+                    subjectID: bridge.id,
+                    propertyID: "prop-event",
+                    polarity: "positive",
+                    valueText: "Birth",
+                    valueInteger: nil,
+                    valueDateID: "",
+                    valueNameID: "",
+                    valueSubjectID: birth.id,
+                    valueTermID: "",
+                    propertyKey: "event",
+                    propertyLabel: "Event",
+                    propertyValueType: "subject"
+                ),
+                CatalogObservation(
+                    id: "obs-place",
+                    ref: "OBS-P",
+                    citationID: "cit-1",
+                    subjectID: bridge.id,
+                    propertyID: "prop-place",
+                    polarity: "positive",
+                    valueText: "Alice",
+                    valueInteger: nil,
+                    valueDateID: "",
+                    valueNameID: "",
+                    valueSubjectID: alice.id,
+                    valueTermID: "",
+                    propertyKey: "place",
+                    propertyLabel: "Place",
+                    propertyValueType: "subject"
+                ),
+            ],
+            rules: CatalogConnectRule.productMatrix
+        )
+
+        #expect(snapshot.graphId == "g-1")
+        #expect(snapshot.subjects.map(\.id) == [alice.id, birth.id])
+        #expect(snapshot.subjects[0].kind == .person)
+        #expect(snapshot.subjects[0].gridX == 1)
+        #expect(snapshot.subjects[0].isCited == false)
+        #expect(snapshot.subjects[1].kind == .event)
+        #expect(snapshot.bridges.count == 1)
+        #expect(snapshot.bridges[0].id == bridge.id)
+        #expect(snapshot.bridges[0].kind == .location)
+        #expect(snapshot.bridges[0].endpointAID == birth.id)
+        #expect(snapshot.bridges[0].endpointBID == alice.id)
+    }
+
+    @Test func citedEndpointsComeFromRuleEdges() {
+        let custom = CatalogConnectRule(
+            fromTypeKey: "event",
+            toTypeKey: "place",
+            bridgeTypeKey: "location",
+            edgePropertyKeys: ["place", "event"],
+            disambiguation: "none",
+            refuse: false,
+            edges: [
+                CatalogConnectEdge(propertyKey: "place", endpointTypeKey: "place"),
+                CatalogConnectEdge(propertyKey: "event", endpointTypeKey: "event"),
+            ]
+        )
+        let ends = EvidenceGraphSnapshot.citedEndpoints(
+            kind: .location,
+            observations: [
+                CatalogObservation(
+                    id: "obs-event",
+                    ref: "OBS-E",
+                    citationID: "cit-1",
+                    subjectID: "s-loc",
+                    propertyID: "prop-event",
+                    polarity: ObservationPolarity.positive.rawValue,
+                    valueText: "",
+                    valueInteger: nil,
+                    valueDateID: "",
+                    valueNameID: "",
+                    valueSubjectID: "s-birth",
+                    valueTermID: "",
+                    propertyKey: "event",
+                    propertyLabel: "Event",
+                    propertyValueType: PropertyValueType.subject.rawValue
+                ),
+                CatalogObservation(
+                    id: "obs-place",
+                    ref: "OBS-P",
+                    citationID: "cit-1",
+                    subjectID: "s-loc",
+                    propertyID: "prop-place",
+                    polarity: ObservationPolarity.positive.rawValue,
+                    valueText: "",
+                    valueInteger: nil,
+                    valueDateID: "",
+                    valueNameID: "",
+                    valueSubjectID: "s-alice",
+                    valueTermID: "",
+                    propertyKey: "place",
+                    propertyLabel: "Place",
+                    propertyValueType: PropertyValueType.subject.rawValue
+                ),
+            ],
+            rules: [custom]
+        )
+        #expect(ends.a == "s-alice")
+        #expect(ends.b == "s-birth")
+    }
+
+    @Test func legacyConnectKeysDecodeAndAreIgnored() throws {
+        let json = """
+        {
+          "section":"sources",
+          "sourceId":"s1",
+          "graphId":"g1",
+          "connectFromSubjectId":"p1",
+          "connectToSubjectId":"e1",
+          "connectBridgeTypeKey":"participation",
+          "connectDisambiguationTermId":"term-witness",
+          "connectGridX":2,
+          "connectGridY":3,
+          "sourceSurface":"citationComposer"
+        }
+        """
+        let decoded = try JSONDecoder().decode(WorkspaceLocation.self, from: Data(json.utf8))
+        #expect(decoded.connectFromSubjectId == "p1")
+        #expect(decoded.connectToSubjectId == "e1")
+        #expect(decoded.connectBridgeTypeKey == "participation")
+        #expect(decoded.isConnectPrefill)
+        #expect(decoded.sourceSurface == .citationComposer)
+    }
+
+    @Test func connectRulesRefusePersonPlace() {
+        let rules = CatalogConnectRule.productMatrix
+        #expect(CatalogConnectRule.match(from: "person", to: "event", in: rules).bridgeTypeKey == "participation")
+        #expect(CatalogConnectRule.match(from: "event", to: "person", in: rules).bridgeTypeKey == "participation")
+        #expect(CatalogConnectRule.match(from: "person", to: "place", in: rules).refuse)
+        #expect(CatalogConnectRule.match(from: "place", to: "person", in: rules).refuse)
+        #expect(CatalogConnectRule.match(from: "event", to: "place", in: rules).bridgeTypeKey == "location")
+        #expect(CatalogConnectRule.match(from: "person", to: "person", in: rules).bridgeTypeKey == "relationship")
+        #expect(CatalogConnectRule.match(from: "event", to: "event", in: rules).refuse)
+        #expect(CatalogConnectRule.match(from: "place", to: "place", in: rules).bridgeTypeKey == "place_relationship")
+        #expect(!CatalogConnectRule.match(from: "place", to: "place", in: rules).refuse)
+    }
+
+    @Test func updatingPositionChangesOnlyMatchingSubject() {
+        let alice = CatalogSubject(
+            id: "s-alice",
+            ref: "CPR-A",
+            sourceID: "src-1",
+            subjectTypeID: personType.id,
+            label: "Alice",
+            description: ""
+        )
+        let rows = EvidenceGraphRows(
+            graphId: "g-1",
+            subjects: [alice],
+            positions: [CatalogSubjectPosition(subjectID: alice.id, gridX: 1, gridY: 2)]
+        )
+        let next = rows.updatingPosition(subjectID: alice.id, gridX: 9, gridY: 8)
+        #expect(next.positions[0].gridX == 9)
+        #expect(next.positions[0].gridY == 8)
+    }
+
+    @Test func accessibilityLabelIncludesUncited() {
+        let placed = EvidenceGraphPlacedSubject(
+            subject: CatalogSubject(
+                id: "s1",
+                ref: "CPR-1",
+                sourceID: "src",
+                subjectTypeID: personType.id,
+                label: "Wm Robins",
+                description: ""
+            ),
+            kind: .person,
+            typeLabel: "Person",
+            gridX: 0,
+            gridY: 0,
+            isCited: false
+        )
+        let label = EvidenceSubjectCard.accessibilityLabel(for: placed)
+        #expect(label.contains("Person"))
+        #expect(label.contains("Wm Robins"))
+        #expect(label.contains(L10n.string(L10n.EvidenceGraph.uncitedAccessibility)))
+    }
+
+    @Test func accessibilityLabelIncludesCited() {
+        let placed = EvidenceGraphPlacedSubject(
+            subject: CatalogSubject(
+                id: "s1",
+                ref: "CPR-1",
+                sourceID: "src",
+                subjectTypeID: personType.id,
+                label: "Wm Robins",
+                description: ""
+            ),
+            kind: .person,
+            typeLabel: "Person",
+            gridX: 0,
+            gridY: 0,
+            isCited: true
+        )
+        let label = EvidenceSubjectCard.accessibilityLabel(for: placed)
+        #expect(label.contains(L10n.string(L10n.EvidenceGraph.citedAccessibility)))
+    }
+
+    @Test func buildAttachesMembershipToPrimariesAndBridges() {
+        let alice = CatalogSubject(
+            id: "s-alice", ref: "CPR-A", sourceID: "src-1", subjectTypeID: personType.id, label: "Alice", description: ""
+        )
+        let bob = CatalogSubject(
+            id: "s-bob", ref: "CPR-B", sourceID: "src-1", subjectTypeID: personType.id, label: "Bob", description: ""
+        )
+        let bridge = CatalogSubject(
+            id: "s-loc", ref: "CLO-A", sourceID: "src-1", subjectTypeID: locationType.id, label: "There", description: ""
+        )
+        let handle = CatalogCanonicalEntity(id: "e-1", ref: "PER-7KD45", subjectTypeID: personType.id, label: "")
+        let association = CatalogCanonicalEntity(id: "e-2", ref: "LOC-3TX9Q", subjectTypeID: locationType.id, label: "")
+        let snapshot = EvidenceGraphSnapshot.build(
+            graphId: "g-1",
+            subjects: [alice, bob, bridge],
+            positions: [
+                CatalogSubjectPosition(subjectID: alice.id, gridX: 0, gridY: 0),
+                CatalogSubjectPosition(subjectID: bob.id, gridX: 4, gridY: 0),
+                CatalogSubjectPosition(subjectID: bridge.id, gridX: 2, gridY: 2),
+            ],
+            types: [personType, locationType],
+            memberships: [
+                CatalogSubjectMembership(subjectID: alice.id, claimID: "c-1", entity: handle, kind: "person"),
+                CatalogSubjectMembership(subjectID: bridge.id, claimID: "c-2", entity: association, kind: "location"),
+            ]
+        )
+        #expect(snapshot.subjects.first { $0.id == alice.id }?.membership?.entity.ref == "PER-7KD45")
+        #expect(snapshot.subjects.first { $0.id == bob.id }?.membership == nil)
+        #expect(snapshot.bridges.first?.membership?.entity.ref == "LOC-3TX9Q")
+    }
+
+    @Test func positionUpdateKeepsMemberships() {
+        let membership = CatalogSubjectMembership(
+            subjectID: "s-alice",
+            claimID: "c-1",
+            entity: CatalogCanonicalEntity(id: "e-1", ref: "PER-7KD45", subjectTypeID: personType.id, label: ""),
+            kind: "person"
+        )
+        let rows = EvidenceGraphRows(graphId: "src-1", memberships: [membership])
+            .updatingPosition(subjectID: "s-alice", gridX: 3, gridY: 3)
+        #expect(rows.memberships == [membership])
+    }
+
+    // MARK: Display name (Promote)
+
+    private func placed(
+        _ kind: EvidencePrimaryKind,
+        label: String,
+        _ observations: [CatalogObservation] = []
+    ) -> EvidenceGraphPlacedSubject {
+        EvidenceGraphPlacedSubject(
+            subject: CatalogSubject(id: "s1", ref: "CXX-1", sourceID: "src", subjectTypeID: "t", label: label, description: ""),
+            kind: kind, typeLabel: "", gridX: 0, gridY: 0, isCited: !observations.isEmpty,
+            observations: observations
+        )
+    }
+
+    private func observation(
+        _ key: String,
+        text: String = "",
+        nameForm: String = "",
+        polarity: String = "positive",
+        termKey: String = ""
+    ) -> CatalogObservation {
+        CatalogObservation(
+            id: key, ref: "OBS-1", citationID: "c1", subjectID: "s1", propertyID: "p-\(key)",
+            polarity: polarity, valueText: text, valueInteger: nil, valueDateID: "",
+            valueNameID: "", nameForm: nameForm, valueSubjectID: "", valueTermID: "",
+            propertyKey: key, propertyLabel: key, propertyValueType: "text",
+            valueTermKey: termKey
+        )
+    }
+
+    @Test func displayNameUsesEachKindsNamingProperty() {
+        #expect(placed(.person, label: "James", [observation("name", nameForm: "James Robins")]).displayName == "James Robins")
+        var structured = observation("name", text: "Jeremiah Arthurt Gumtree", nameForm: "Jeremiah Arthurt Gumtree")
+        structured.propertyValueType = PropertyValueType.name.rawValue
+        structured.nameParts = [
+            CatalogNameValuePart(value: "Jeremiah", type: "given"),
+            CatalogNameValuePart(value: "Arthur", type: "given"),
+            CatalogNameValuePart(value: "Gumtree", type: "surname"),
+        ]
+        #expect(placed(.person, label: "Jerry", [structured]).displayName == "Jeremiah Arthur Gumtree")
+        #expect(placed(.place, label: "the town", [observation("toponym", text: "York")]).displayName == "York")
+        // A toponym doesn't name a Person, nor a name a Place.
+        #expect(placed(.person, label: "James", [observation("toponym", text: "York")]).displayName == "James")
+        #expect(placed(.place, label: "the town", [observation("name", nameForm: "York")]).displayName == "the town")
+        // An Event is titled by Go (grapheventtitles); until it is, its label.
+        #expect(placed(.event, label: "Baptism", [observation("name", nameForm: "James")]).displayName == "Baptism")
+        var titled = placed(.event, label: "Grandpa's fire", [observation("event_name", text: "The Great Fire")])
+        titled.eventTitle = CatalogEventTitle(rule: .recordedName, recordedName: "The Great Fire", label: "Grandpa's fire")
+        #expect(titled.displayName == "The Great Fire")
+    }
+
+    @Test func eventCardsTakeGosTitleForTheirSubject() {
+        let james = CatalogSubject(
+            id: "s-james", ref: "CPR-J", sourceID: "src-1", subjectTypeID: personType.id,
+            label: "James", description: ""
+        )
+        let baptism = CatalogSubject(
+            id: "s-baptism", ref: "CEV-B", sourceID: "src-1", subjectTypeID: eventType.id,
+            label: "Baptism", description: ""
+        )
+        let baptismTitle = CatalogEventTitle(
+            rule: .subject, label: "Baptism", ref: "CEV-B", typeKey: "baptism", typeOrigin: CatalogOrigin.provenencia, typeLabel: "Baptism",
+            subjects: [CatalogNameValue(form: "James Robins")]
+        )
+        let rows = EvidenceGraphRows(
+            graphId: "g-1",
+            subjects: [james, baptism],
+            positions: [james, baptism].map { CatalogSubjectPosition(subjectID: $0.id, gridX: 0, gridY: 0) },
+            eventTitles: [baptism.id: baptismTitle, james.id: baptismTitle]
+        )
+        let snapshot = EvidenceGraphSnapshot.build(rows: rows, types: [personType, eventType], rules: CatalogConnectRule.productMatrix)
+        let card = snapshot.subjects.first { $0.id == baptism.id }
+        #expect(card?.eventTitle == baptismTitle)
+        #expect(card?.displayName == L10n.EventTitle.ofOne(type: "Baptism", subject: "James Robins"))
+        // A Person is never titled as an Event.
+        let person = snapshot.subjects.first { $0.id == james.id }
+        #expect(person?.eventTitle == nil && person?.displayName == "James")
+        // A position move keeps the titles.
+        #expect(rows.updatingPosition(subjectID: james.id, gridX: 2, gridY: 2).eventTitles == rows.eventTitles)
+    }
+
+    @Test func displayNameSkipsDeniedAndBlankValues() {
+        let denied = observation("toponym", text: "Leeds", polarity: "negative")
+        #expect(placed(.place, label: "the town", [denied, observation("toponym", text: "York")]).displayName == "York")
+        #expect(placed(.place, label: "the town", [observation("toponym", text: "  ")]).displayName == "the town")
+        #expect(placed(.place, label: "  ").displayName == "CXX-1")
+    }
+}

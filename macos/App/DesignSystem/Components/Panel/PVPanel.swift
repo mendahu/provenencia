@@ -13,9 +13,12 @@ enum PVPanelFooterChrome {
 /// slot, optional footer. Draws the warm ``PVColor/surfaceCard`` fill so sheet
 /// content matches the design kit; **does not** redraw corner radius, shadow,
 /// or scrim — the sheet window still owns those.
-struct PVPanel<Body: View, Footer: View>: View {
+struct PVPanel<Body: View, Footer: View, TitleAccessory: View>: View {
     let title: Text
     let subtitle: Text?
+    /// Drawn in the title row, top-aligned, right after the title and filling the rest of the row
+    /// (the Promote sheet's band marks and close button); put a Spacer in it to push a control right.
+    let titleAccessory: TitleAccessory
     let width: CGFloat
     let footerChrome: PVPanelFooterChrome
     @ViewBuilder let panelBody: () -> Body
@@ -30,10 +33,12 @@ struct PVPanel<Body: View, Footer: View>: View {
         width: CGFloat,
         footerChrome: PVPanelFooterChrome = .sunken,
         @ViewBuilder body: @escaping () -> Body,
-        @ViewBuilder footer: @escaping () -> Footer
+        @ViewBuilder footer: @escaping () -> Footer,
+        @ViewBuilder titleAccessory: () -> TitleAccessory
     ) {
         self.title = title
         self.subtitle = subtitle
+        self.titleAccessory = titleAccessory()
         self.width = width
         self.footerChrome = footerChrome
         self.panelBody = body
@@ -56,12 +61,20 @@ struct PVPanel<Body: View, Footer: View>: View {
 
     private var headerAndBody: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space7) {
-            VStack(alignment: .leading, spacing: PVSpacing.space1) {
-                title
-                    .font(PVFont.display(size: PVTypeScale.h3))
-                    .tracking(PVTypeScale.h3 * PVTracking.display)
-                    .foregroundStyle(PVColor.textDisplay)
-                    .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                HStack(alignment: .top, spacing: 0) {
+                    title
+                        .font(PVFont.display(size: PVTypeScale.h3))
+                        .tracking(PVTypeScale.h3 * PVTracking.display)
+                        .foregroundStyle(PVColor.textDisplay)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .layoutPriority(1)
+                    if TitleAccessory.self != EmptyView.self {
+                        titleAccessory
+                            .padding(.leading, PVSpacing.space4)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
                 if let subtitle {
                     subtitle
                         .font(PVFont.body(size: PVTypeScale.bodySmall))
@@ -89,7 +102,29 @@ struct PVPanel<Body: View, Footer: View>: View {
     }
 }
 
-extension PVPanel where Footer == EmptyView {
+extension PVPanel where TitleAccessory == EmptyView {
+    /// Panel with a footer band and no title accessory.
+    init(
+        title: Text,
+        subtitle: Text? = nil,
+        width: CGFloat,
+        footerChrome: PVPanelFooterChrome = .sunken,
+        @ViewBuilder body: @escaping () -> Body,
+        @ViewBuilder footer: @escaping () -> Footer
+    ) {
+        self.init(
+            title: title,
+            subtitle: subtitle,
+            width: width,
+            footerChrome: footerChrome,
+            body: body,
+            footer: footer,
+            titleAccessory: { EmptyView() }
+        )
+    }
+}
+
+extension PVPanel where Footer == EmptyView, TitleAccessory == EmptyView {
     /// Panel with no footer band.
     init(
         title: Text,
@@ -100,6 +135,7 @@ extension PVPanel where Footer == EmptyView {
     ) {
         self.title = title
         self.subtitle = subtitle
+        self.titleAccessory = EmptyView()
         self.width = width
         self.footerChrome = footerChrome
         self.panelBody = body
@@ -124,6 +160,22 @@ extension PVPanel where Footer == EmptyView {
             Text(verbatim: "Cancel")
             Text(verbatim: "Create")
         }
+    }
+    .background(PVColor.surfaceCard)
+}
+
+#Preview("Panel — title accessory") {
+    PVPanel(
+        title: Text(verbatim: "John Smith joins John Smith PER-7QH3D"),
+        width: 640
+    ) {
+        Text(verbatim: "Body")
+            .font(PVFont.body(size: PVTypeScale.bodySmall))
+            .foregroundStyle(PVColor.textSecondary)
+    } footer: {
+        Text(verbatim: "Footer")
+    } titleAccessory: {
+        PVBadge("Strong", tone: .success)
     }
     .background(PVColor.surfaceCard)
 }

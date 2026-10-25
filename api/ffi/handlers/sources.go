@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/database/sourcecopy"
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -129,7 +130,59 @@ func CreateSource(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.CreateSourceResponse{Source: sp}
+		out = &engine.CreateSourceResponse{Source: sp, Effects: writeEffectsProto(res)}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
+func CopySource(in []byte) ([]byte, error) {
+	var req engine.CopySourceRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("copy_source", err)
+	}
+	userID, err := parseUserID(req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	sourceID, err := parseID(req.GetSourceId())
+	if err != nil {
+		return nil, err
+	}
+	typeID, err := parseID(req.GetSourceTypeId())
+	if err != nil {
+		return nil, err
+	}
+	artifactIDs, err := parseIDs(req.GetArtifactIds())
+	if err != nil {
+		return nil, err
+	}
+	var out *engine.CopySourceResponse
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		s, res, err := writes.Run(c, writes.Op{Action: "copy_source", UserID: userID},
+			func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+				return sourcecopy.Copy(tx, userID, sourcecopy.CopyInput{
+					SourceID:     sourceID,
+					Title:        req.GetTitle(),
+					SourceTypeID: typeID,
+					Description:  req.GetCopyDescription(),
+					Metadata:     req.GetCopyMetadata(),
+					Credibility:  req.GetCopyCredibility(),
+					ArtifactIDs:  artifactIDs,
+				})
+			})
+		if err != nil {
+			return err
+		}
+		s.Updated = res.Activity
+		sp, err := enrichSourceProto(c, s)
+		if err != nil {
+			return err
+		}
+		out = &engine.CopySourceResponse{Source: sp, Effects: writeEffectsProto(res)}
 		return nil
 	})
 	if err != nil {
@@ -518,13 +571,9 @@ func ReorderSourceMetadata(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	fieldIDs := make([][]byte, 0, len(req.GetFieldIds()))
-	for _, id := range req.GetFieldIds() {
-		fid, err := parseID(id)
-		if err != nil {
-			return nil, err
-		}
-		fieldIDs = append(fieldIDs, fid)
+	fieldIDs, err := parseIDs(req.GetFieldIds())
+	if err != nil {
+		return nil, err
 	}
 	var out *engine.ReorderSourceMetadataResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
@@ -554,13 +603,13 @@ func ReorderSourceMetadata(in []byte) ([]byte, error) {
 
 func sourceProto(s sources.Source) *engine.Source {
 	return &engine.Source{
-		Id:                uuidString(s.ID),
+		Id:                database.UUIDString(s.ID),
 		Ref:               s.Ref,
-		SourceTypeId:      uuidString(s.SourceTypeID),
+		SourceTypeId:      database.UUIDString(s.SourceTypeID),
 		Title:             s.Title,
 		Description:       s.Description,
 		CoverMode:         s.CoverMode,
-		PrimaryArtifactId: uuidString(s.PrimaryArtifactID),
+		PrimaryArtifactId: database.UUIDString(s.PrimaryArtifactID),
 		UpdatedRevision:   s.Updated.Revision,
 		UpdatedAt:         s.Updated.At,
 	}
@@ -568,8 +617,8 @@ func sourceProto(s sources.Source) *engine.Source {
 
 func noteProto(n sources.Note) *engine.SourceNote {
 	return &engine.SourceNote{
-		Id:                uuidString(n.ID),
-		SourceId:          uuidString(n.SourceID),
+		Id:                database.UUIDString(n.ID),
+		SourceId:          database.UUIDString(n.SourceID),
 		Body:              n.Body,
 		AuthorDisplayName: n.AuthorDisplayName,
 		CreatedAt:         n.CreatedAt,
@@ -579,7 +628,7 @@ func noteProto(n sources.Note) *engine.SourceNote {
 func metadataEntryProto(_ *database.Catalog, e sourcemetadata.WorkspaceEntry) *engine.MetadataWorkspaceEntry {
 	out := &engine.MetadataWorkspaceEntry{
 		Field: &engine.MetadataField{
-			Id:          uuidString(e.Field.ID),
+			Id:          database.UUIDString(e.Field.ID),
 			Key:         e.Field.Key,
 			Origin:      e.Field.Origin,
 			Label:       e.Field.Label,
@@ -598,7 +647,7 @@ func metadataEntryProto(_ *database.Catalog, e sourcemetadata.WorkspaceEntry) *e
 
 func fileRefProto(f files.File, relPath string) *engine.SourceFileRef {
 	return &engine.SourceFileRef{
-		Id:               uuidString(f.ID),
+		Id:               database.UUIDString(f.ID),
 		RelPath:          relPath,
 		OriginalFilename: f.OriginalFilename,
 		MediaType:        f.MediaType,

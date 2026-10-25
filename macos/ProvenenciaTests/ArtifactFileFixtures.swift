@@ -171,6 +171,29 @@ enum ArtifactFileFixtures {
         ]
     }
 
+    /// The image as flat RGBA bytes (premultiplied, row 0 at the top), read
+    /// through a redraw into a known layout so any source layout works. Empty
+    /// when the bitmap cannot be made.
+    static func rgbaBytes(_ image: CGImage) -> [UInt8] {
+        let width = image.width
+        let height = image.height
+        var data = [UInt8](repeating: 0, count: width * height * 4)
+        let drawn = data.withUnsafeMutableBytes { buffer -> Bool in
+            guard let context = CGContext(
+                data: buffer.baseAddress,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: width * 4,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ) else { return false }
+            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+            return true
+        }
+        return drawn ? data : []
+    }
+
     static func write(_ data: Data, projectDir: String, relPath: String) throws {
         let url = URL(fileURLWithPath: projectDir).appendingPathComponent(relPath)
         try FileManager.default.createDirectory(

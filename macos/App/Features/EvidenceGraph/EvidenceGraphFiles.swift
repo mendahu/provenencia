@@ -32,12 +32,11 @@ enum EvidenceGraphFiles {
     static func fileBearing(_ artifacts: [CatalogArtifact], coverArtifactID: String?) -> [Row] {
         artifacts.compactMap { artifact in
             guard let relPath = artifact.openableRelPath, let file = artifact.file else { return nil }
-            let label = artifact.label.trimmingCharacters(in: .whitespacesAndNewlines)
             return Row(
                 id: artifact.id,
                 ref: artifact.ref,
-                title: label.isEmpty ? artifact.ref : label,
-                titleIsRef: label.isEmpty,
+                title: artifact.displayTitle,
+                titleIsRef: !artifact.hasDisplayLabel,
                 filename: file.originalFilename,
                 relPath: relPath,
                 mediaType: file.mediaType,

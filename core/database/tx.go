@@ -19,6 +19,15 @@ type Tx struct {
 	catalog *Catalog
 }
 
+// Querier is the read surface that *sql.DB and *sql.Tx share. A package writes
+// one read function over it and exposes a Catalog entry point and a Tx twin, so
+// the SQL and scan exist once. A read inside writes.Run must use the Tx: the
+// catalog has one connection.
+type Querier interface {
+	Query(query string, args ...any) (*sql.Rows, error)
+	QueryRow(query string, args ...any) *sql.Row
+}
+
 // Catalog is the catalog this write began on. It is nil for a Tx built outside
 // BeginWrite.
 func (t *Tx) Catalog() *Catalog {

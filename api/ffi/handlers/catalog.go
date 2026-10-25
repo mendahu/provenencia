@@ -38,15 +38,18 @@ func parseID(s string) ([]byte, error) {
 	return u[:], nil
 }
 
-func uuidString(id []byte) string {
-	if len(id) != 16 {
-		return ""
+// parseIDs parses a repeated id field; the first malformed id fails it. An
+// empty field returns nil.
+func parseIDs(raws []string) ([][]byte, error) {
+	var out [][]byte
+	for _, raw := range raws {
+		id, err := parseID(raw)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, id)
 	}
-	u, err := uuid.FromBytes(id)
-	if err != nil {
-		return ""
-	}
-	return u.String()
+	return out, nil
 }
 
 func unmarshalErr(op string, err error) error {

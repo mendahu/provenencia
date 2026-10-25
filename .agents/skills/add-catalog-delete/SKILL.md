@@ -25,7 +25,7 @@ Rule: [`.cursor/rules/catalog-deletes.mdc`](../../../.cursor/rules/catalog-delet
 | Yes — must call `deleteimpact` | No — leave as a field/facet write |
 | --- | --- |
 | `sources` / `artifacts` / `citations` / `observations` / `subjects` | Note row delete, `ClearSourceMetadata` |
-| Vocab: `sourcetypes`, `metadatafields`, `properties`, `propertyterms`, later subject types | `sourcevocab` / `subjectvocab` join-row remove |
+| Vocab: `sourcetypes`, `metadatafields`, `properties`, `propertyterms`, later subject types | `sourcevocab` join-row remove; the `subjectvocab` join-row remove is an audited `writes.Run` write (`subject_type_property`), not a Delete |
 | Later Claim / Narrative resources | `searchindex.Delete` (FTS doc only) |
 | Existing `Delete` with no UI this spike | Owned-outbound child rows that `catalogmodel` already declares |
 
@@ -46,15 +46,15 @@ Every facet `CASCADE` FK is registered as `facet` and classified:
 - [ ] Resource inbound edges have count + list probes; owned outbound is declared `BucketOwnedOutbound` in `catalogmodel` (a row child registers `PK`); no `deleteimpact` code
 - [ ] Title + location projectors registered on the blocker kind (domain package)
 - [ ] Proto kind / via keys; recipe L10n heading (unknown via still renders)
-- [ ] Domain `Delete`: load → extra gates → Impact in the same tx → connection facets if any → `SnapshotOwned` if owned outbound → DELETE parent → `ReleaseSnapshot` → audit / FTS
-- [ ] Extra gates: domain `Delete` missing row → `ErrInvalid`; `GetDeleteImpact` missing → `not_found`; `edge_locked` / infra / `origin_locked` via Impact + `Refuse`
+- [ ] Domain `Delete`: load → Impact in the same tx (extra gates are `Impact` gates) → connection facets if any → `SnapshotOwned` if owned outbound → DELETE parent → `ReleaseSnapshot` → audit / FTS
+- [ ] Extra gates: domain `Delete` missing row → `ErrInvalid`; `GetDeleteImpact` missing → `not_found`; `edge_locked` / `last_graph` / infra / `origin_locked` are `Impact` gates mapped by `Refuse`; a new per-kind gate is one `extraGateList` entry in `core/database/deleteimpact/register.go`
 - [ ] Bridge `subjects.Delete` releases connection facets (loop `connectrules.All()` endpoints + `Disambiguation` matching property origin; do not hard-code `role` / `relationship_type`) before the parent; other `observations.Delete` stays `edge_locked`
 - [ ] FFI: GetDeleteImpact returns the report; Delete* refuse is a generic in_use / extra-gate code (no report on Error, no apperr ref params)
 - [ ] Audit + searchindex stay in the domain package
 - [ ] Delete changes carry the parent FK in `DeletedRow`; any new entity type has a non-`None` effect ([`add-audit-scope`](../add-audit-scope/SKILL.md))
 - [ ] FFI: GetDeleteImpact works for this kind (UI or not)
 - [ ] Swift (when the screen ships): `DeleteImpactFlow` + recipe; confirm uses `target.id`;
-        `*.in_use` refetch; `.deletedSubject(sourceId:)` for subject erase
+        `*.in_use` refetch; `.deletedSubject` for subject erase
 - [ ] Tests: empty → erase; inbound → listed + total; GetDeleteImpact missing → not_found;
         domain Delete missing → ErrInvalid; extra gates; pragma includes new FKs;
         Impact.allowed iff SQLite resource DELETE would succeed; audit + FTS on the writer
@@ -66,7 +66,7 @@ Every facet `CASCADE` FK is registered as `facet` and classified:
 func Delete(c *database.Catalog, userID, id []byte) error {
     // load row — missing → ErrInvalid (do not run Impact as empty)
     // begin tx
-    // extra gates (edge_locked, infra, …) before Impact when they are not already Impact gates
+    // extra gates (edge_locked, last_graph, origin_locked, …) are Impact gates: Refuse maps them
     report, err := deleteimpact.Impact(tx, catalogmodel.KindCitation, id)
     if err != nil { return err }
     if err := deleteimpact.Refuse(report, deleteimpact.Codes{
@@ -96,6 +96,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 2. Register the table and its FKs with [`add-catalog-model`](../add-catalog-model/SKILL.md). In the same PR, add probes, projectors, and facet releases in `core/database/deleteimpact`. A table that owns a File or a value row declares its FKs as `BucketOwnedOutbound` (and a `PK` on a row child) in `catalogmodel` and adds no `deleteimpact` code; its `Delete` calls the release, which schedules the purge, and an update that swaps an owned child calls `deleteimpact.ReleaseReplaced` for the old one. A composite FK registers once, under its leading column, with the full tuple in `FromCols`.
 3. If researchers can delete the row, add `Delete` in the domain package using the pattern above.
 4. If this spike has no UI, still register + cut over any existing `Delete`.
+5. A domain invariant's refusal (a link, not a row delete) gets a preflight that returns a `deleteimpact.Group` through `ListedGroup`, from the same query the write refuses on; its via is named for the refusal code.
 
 ## UI
 
@@ -107,7 +108,7 @@ Shared Swift state is **`DeleteImpactFlow`** (next to the recipe). Models call `
 - On `*.in_use`, the flow refetches Impact so the same sheet becomes a notice instead of leaving a confirm that can no longer succeed.
 - Confirm deletes `request.target.id` (catalog id), never a live selection that may have moved (`activeCitationID`, selected row).
 - Listed-row `activate` dismisses first, then navigates on the next run loop (`then:` is injectable in tests).
-- Subject erase applies `.deletedSubject(sourceId:)` so Observation `usedBy` and citation lists reload; source erase also busts `sourceWorkspace` / `sourceGraph`; type erase busts `typeSuggestions`.
+- Subject erase applies `.deletedSubject` so Observation `usedBy` reloads (the citation reads reload through the write's effects); source erase also busts `sourceWorkspace` / `evidenceGraph`; type erase busts `typeSuggestions`.
 
 ## Do not
 

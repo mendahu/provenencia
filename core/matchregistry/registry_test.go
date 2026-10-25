@@ -20,7 +20,9 @@ func TestDefaultIsFresh(t *testing.T) {
 	first.Value.Names.Western.PartRoles["x"] = valuecompare.RoleFamily
 	first.Subject.Weights[vocabkey.Person][vocabkey.PropertyName] = subjectcompare.Weights{}
 	first.Subject.Pools[vocabkey.Person][vocabkey.PropertySexAtBirth].With[0] = "changed"
+	first.Subject.Pools[vocabkey.Person][vocabkey.PropertySexAtBirth].Terms[vocabkey.PropertyGender][vocabkey.GenderMan] = "changed"
 	first.Subject.Periods[vocabkey.Event][vocabkey.PropertyDate] = subjectcompare.Period{}
+	first.Subject.Lifespans[vocabkey.Person][vocabkey.PropertyLifespan].Starts[0] = subjectcompare.EventRole{}
 	if got := Default(); !reflect.DeepEqual(got, want) {
 		t.Errorf("second Default() = %+v, want %+v", got, want)
 	}
@@ -37,5 +39,58 @@ func TestWesternPatternCoversEveryPartType(t *testing.T) {
 	}
 	if _, ok := western.PartRoles[""]; !ok {
 		t.Error("untyped parts have no role in the Western pattern")
+	}
+}
+
+// Every lead shortlisting keys by is a catalog property the subject section
+// weighs, not a derived lead: the index builds no life.
+func TestShortlistSection(t *testing.T) {
+	reg := Default()
+	rules := reg.Alignment.Shortlist
+	if rules.YearBucket <= 0 {
+		t.Errorf("YearBucket = %d, want > 0", rules.YearBucket)
+	}
+	if rules.MaxBuckets <= 0 {
+		t.Errorf("MaxBuckets = %d, want > 0", rules.MaxBuckets)
+	}
+	check := func(kind vocabkey.SubjectType, lead vocabkey.PropertyKey) {
+		t.Helper()
+		if _, ok := reg.Subject.Weights[kind][lead]; !ok {
+			t.Errorf("%s lead %s has no weights in the subject section", kind, lead)
+		}
+		if reg.Subject.Derived(kind, lead) {
+			t.Errorf("%s lead %s is derived (a lifespan): the shortlist builds no life", kind, lead)
+		}
+	}
+	for kind, leads := range rules.Words {
+		for _, lead := range leads {
+			check(kind, lead)
+		}
+	}
+	for kind, d := range rules.Dated {
+		check(kind, d.Type)
+		check(kind, d.Date)
+	}
+}
+
+// The alignment section's numbers stay in an order the walk can use: bands
+// ascend, the tie cap holds the K, and the walk always accepts something and
+// settles at least once.
+func TestAlignmentSection(t *testing.T) {
+	a := Default().Alignment
+	if a.TopK < 1 || a.TieCap < a.TopK {
+		t.Errorf("TopK %d, TieCap %d: want 1 <= TopK <= TieCap", a.TopK, a.TieCap)
+	}
+	if !(a.Bands.Weak <= a.Bands.Medium && a.Bands.Medium <= a.Bands.Strong) {
+		t.Errorf("Bands %+v: want Weak <= Medium <= Strong", a.Bands)
+	}
+	if a.AcceptBar <= 0 {
+		t.Errorf("AcceptBar = %v, want > 0", a.AcceptBar)
+	}
+	if a.SettleRounds < 1 {
+		t.Errorf("SettleRounds = %d, want >= 1", a.SettleRounds)
+	}
+	if a.MinSimilarity < 0 || a.MinSimilarity > 1 {
+		t.Errorf("MinSimilarity = %v, want in [0, 1]", a.MinSimilarity)
 	}
 }

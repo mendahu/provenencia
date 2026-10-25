@@ -31,18 +31,15 @@ enum CatalogMutation: Sendable, Equatable {
     /// `mutatedSourceWorkspace` because it also moves each field's `usedBy`.
     case mutatedSourceMetadata(sourceId: String)
 
-    /// Subjects or positions on this Source's Evidence graph changed
-    /// (create, relabel, or delete).
-    case mutatedSourceGraph(sourceId: String)
-
     /// A Subject (including a bridge) was erased. Releases connection facets
-    /// so Observation `usedBy` and citation lists must reload.
-    case deletedSubject(sourceId: String)
+    /// so Observation `usedBy` must reload; the citation reads follow the
+    /// write's effects.
+    case deletedSubject
 
-    /// A Subject on this Source was promoted (an Identity Claim filed it onto a
-    /// handle), so its graph card's membership changed. The S9-04 card
+    /// A Subject on this Evidence graph was promoted (an Identity Claim filed it
+    /// onto a handle), so its graph card's membership changed. The S9-04 card
     /// dispatches it after `promoteSubject` succeeds.
-    case promotedSubject(sourceId: String)
+    case promotedSubject(graphId: String)
 
     case createdProperty
     case updatedProperty
@@ -53,20 +50,32 @@ enum CatalogMutation: Sendable, Equatable {
     case createdPropertyTerm(propertyId: String)
 }
 
+/// A catalog-wide list a write changed. The raw values are Go's
+/// `effects.List` wire keys (`WriteEffects.lists`); a key this build does not
+/// know is dropped when the effects are decoded.
+enum CatalogList: String, Sendable, CaseIterable {
+    /// A vocabulary label changed.
+    case vocabulary = "vocabulary"
+    /// An Observation was created, deleted, or moved to another Property, so
+    /// the Properties workspace's `usedBy` counts changed.
+    case propertyUsage = "property_usage"
+    /// A graph or link row was written.
+    case evidenceGraphs = "evidence_graphs"
+}
+
 /// Handles and Sources a write reported. The session drops those cached
 /// reads and patches the rows whose last activity it moved.
 struct CatalogWriteEffects: Sendable, Equatable {
     var handles: [String] = []
-    /// Sources whose graph changed (the Source graph and graph progress). A
-    /// note, metadata, or credibility change is only in `sourceScopes`.
-    var sources: [String] = []
+    /// Evidence graphs whose loaded rows changed (the graph's rows and graph
+    /// progress). A note, metadata, or credibility change is only in `sourceScopes`.
+    var evidenceGraphs: [String] = []
     /// Sources whose citation reads moved: citation counts and citations by
-    /// artifact. A Subject edit is in `sources` and not here.
+    /// artifact. A Subject edit is in `evidenceGraphs` and not here.
     var citationSources: [String] = []
-    /// An Observation was created, deleted, or moved to another Property, so
-    /// the Properties workspace's `usedBy` counts changed.
-    var propertyUsage = false
-    var vocabulary = false
+    /// Catalog-wide lists this write changed. Each is a cached read the write
+    /// cannot patch row by row; see `CatalogQueryRegistry.invalidations(for:project:)`.
+    var lists: Set<CatalogList> = []
     var structure = false
     var headerHandles: [String] = []
     /// Handles whose last-updated time this write moved. The session patches
@@ -102,7 +111,6 @@ enum CatalogMutationKind: Hashable, Sendable {
     case removedTypeSuggestion
     case mutatedSourceWorkspace
     case mutatedSourceMetadata
-    case mutatedSourceGraph
     case deletedSubject
     case promotedSubject
     case createdProperty
@@ -144,8 +152,6 @@ extension CatalogMutation {
             return .mutatedSourceWorkspace
         case .mutatedSourceMetadata:
             return .mutatedSourceMetadata
-        case .mutatedSourceGraph:
-            return .mutatedSourceGraph
         case .deletedSubject:
             return .deletedSubject
         case .promotedSubject:
@@ -160,6 +166,18 @@ extension CatalogMutation {
             return .mutatedSubjectTypeProperties
         case .createdPropertyTerm:
             return .createdPropertyTerm
+        }
+    }
+
+    /// The Evidence graph this mutation changes, for a mutation that names one
+    /// and brings no effects with it. The registry reloads it and the session
+    /// patches its progress; nil for every other mutation.
+    var evidenceGraphId: String? {
+        switch self {
+        case .promotedSubject(let graphId):
+            return graphId
+        default:
+            return nil
         }
     }
 

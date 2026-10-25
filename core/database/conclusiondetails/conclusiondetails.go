@@ -30,6 +30,7 @@ import (
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // ErrNotFound is returned for an unknown or merged handle.
@@ -49,6 +50,8 @@ type Value struct {
 	TermID     []byte
 	TermKey    string
 	TermLabel  string
+	// TermOrigin is the term's origin: its key is the product's only when this is vocabkey.OriginProvenencia.
+	TermOrigin string
 	Date       *datevalue.Value
 	Name       *namevalue.Value
 }
@@ -77,6 +80,7 @@ type Outcome struct {
 	Recorded           Value              // what the record said
 	SubjectID          []byte
 	SubjectRef         string
+	GraphID            []byte // the Evidence graph of the Observation's Subject
 	CitationID         []byte
 	ArtifactID         []byte
 	SourceID           []byte
@@ -119,18 +123,15 @@ type Detail struct {
 }
 
 const (
-	// Property ids this handle's outcomes name, with the kind's binding order.
-	// Labels and value types come from the graph vocabulary.
-	sqlPropertyIDs = `SELECT DISTINCT ao.property_id, stp.sort_order
-		FROM auto_reconciler_outcomes ao
-		LEFT JOIN subject_type_properties stp ON stp.property_id = ao.property_id AND stp.subject_type_id = ?
-		WHERE ao.entity_id = ?`
+	// Property ids this handle's outcomes name. Labels, value types and the
+	// kind's binding order come from the graph vocabulary.
+	sqlPropertyIDs = `SELECT DISTINCT ao.property_id FROM auto_reconciler_outcomes ao WHERE ao.entity_id = ?`
 
 	sqlOutcomes = `SELECT ao.property_id, ao.observation_id, o.ref, ao.reason, ao.value_rank, ao.denied_by,
 			COALESCE(ao.vote_support, 0), COALESCE(ao.vote_total, 0),
-			o.value_text, o.value_integer, o.value_term_id, COALESCE(t.key, ''), COALESCE(t.label, ''),
+			o.value_text, o.value_integer, o.value_term_id, COALESCE(t.key, ''), COALESCE(t.label, ''), COALESCE(t.origin, ''),
 			o.value_date_id, o.value_name_id,
-			s.id, s.ref, c.id, a.id, src.id, COALESCE(src.title, ''),
+			s.id, s.ref, s.graph_id, c.id, a.id, src.id, COALESCE(src.title, ''),
 			COALESCE(sg.key, ''), COALESCE(cg.key, ''),
 			COALESCE(sg.sort_order - (SELECT sort_order FROM source_credibility_grades
 				WHERE key = 'standard' AND origin = 'provenencia'), 0),
@@ -263,20 +264,16 @@ func loadProperties(g *graphcache.Graph, q Querier, entityID, subjectTypeID []by
 	for _, p := range v.Properties {
 		props[string(p.ID)] = p
 	}
-	rows, err := q.Query(sqlPropertyIDs, subjectTypeID, entityID)
+	order := v.TypeOrder(subjectTypeID)
+	rows, err := q.Query(sqlPropertyIDs, entityID)
 	if err != nil {
 		return nil, nil, err
 	}
 	defer rows.Close()
-	type row struct {
-		f     *Field
-		order sql.NullInt64
-	}
-	var got []row
+	var got []*Field
 	for rows.Next() {
 		var id []byte
-		var order sql.NullInt64
-		if err := rows.Scan(&id, &order); err != nil {
+		if err := rows.Scan(&id); err != nil {
 			return nil, nil, err
 		}
 		p, ok := props[string(id)]
@@ -287,27 +284,19 @@ func loadProperties(g *graphcache.Graph, q Querier, entityID, subjectTypeID []by
 			PropertyID: append([]byte(nil), p.ID...), PropertyKey: p.Key, Label: p.Label,
 			ValueType: p.ValueType, cardinality: p.Cardinality,
 		}
-		got = append(got, row{f: f, order: order})
+		got = append(got, f)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, nil, err
 	}
 	sort.SliceStable(got, func(i, j int) bool {
-		if got[i].order.Valid != got[j].order.Valid {
-			return got[i].order.Valid
-		}
-		if got[i].order.Valid && got[i].order.Int64 != got[j].order.Int64 {
-			return got[i].order.Int64 < got[j].order.Int64
-		}
-		return got[i].f.PropertyKey < got[j].f.PropertyKey
+		return vocabkey.CompareByOrder(order, vocabkey.PropertyKey(got[i].PropertyKey), vocabkey.PropertyKey(got[j].PropertyKey)) < 0
 	})
-	fields := make([]*Field, len(got))
 	byProp := map[string]*Field{}
-	for i := range got {
-		fields[i] = got[i].f
-		byProp[string(fields[i].PropertyID)] = fields[i]
+	for _, f := range got {
+		byProp[string(f.PropertyID)] = f
 	}
-	return fields, byProp, nil
+	return got, byProp, nil
 }
 
 func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Field) error {
@@ -330,7 +319,7 @@ func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Fi
 			v.Value.Integer, v.Value.HasInteger = rank.Integer, rank.HasInteger
 			v.Value.TermID = append([]byte(nil), rank.TermID...)
 			if name, ok := terms[string(rank.TermID)]; ok {
-				v.Value.TermKey, v.Value.TermLabel = name.Key, name.Label
+				v.Value.TermKey, v.Value.TermLabel, v.Value.TermOrigin = name.Key, name.Label, name.Origin
 			}
 			if len(rank.Date) > 0 {
 				d, err := valuecodec.UnmarshalDate(rank.Date)
@@ -378,8 +367,8 @@ func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field, leads ma
 		)
 		if err := rows.Scan(&propertyID, &o.ObservationID, &o.ObservationRef, &o.Reason, &rank, &o.DeniedBy,
 			&o.Vote.Support, &o.Vote.Of,
-			&text, &integer, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &dateID, &nameID,
-			&o.SubjectID, &o.SubjectRef, &o.CitationID, &o.ArtifactID, &o.SourceID, &o.SourceTitle,
+			&text, &integer, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &o.Recorded.TermOrigin, &dateID, &nameID,
+			&o.SubjectID, &o.SubjectRef, &o.GraphID, &o.CitationID, &o.ArtifactID, &o.SourceID, &o.SourceTitle,
 			&o.CredibilityKey, &o.ClaimConfidenceKey,
 			&o.Provenance.Credibility, &o.Provenance.Uncertain, &o.Provenance.ClaimConfidence); err != nil {
 			_ = rows.Close()

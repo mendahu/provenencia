@@ -67,3 +67,44 @@ func TestValidOrigin(t *testing.T) {
 		}
 	}
 }
+
+func TestBridgeKeyString(t *testing.T) {
+	tests := []struct {
+		key  BridgeKey
+		want string
+	}{
+		{BridgeKey{BridgeParticipation, "subject", PropertyPerson, EventBirth}, "participation·subject·person·birth"},
+		{BridgeKey{Type: BridgeRelationship, Term: "spouse"}, "relationship·spouse"},
+		{BridgeKey{Type: BridgeLocation, End: PropertyEvent}, "location·event"},
+	}
+	for _, tc := range tests {
+		if got := tc.key.String(); got != tc.want {
+			t.Errorf("%+v.String() = %q, want %q", tc.key, got, tc.want)
+		}
+	}
+}
+
+func TestCompareByOrder(t *testing.T) {
+	order := []PropertyKey{"name", "likeness", "gender"}
+	tests := []struct {
+		a, b PropertyKey
+		want int
+	}{
+		{"name", "likeness", -1},
+		{"gender", "likeness", 1},
+		{"name", "name", 0},
+		{"gender", "alpha", -1},
+		{"alpha", "gender", 1},
+		{"alpha", "beta", -1},
+		{"beta", "alpha", 1},
+	}
+	for _, tc := range tests {
+		got := CompareByOrder(order, tc.a, tc.b)
+		if (got < 0) != (tc.want < 0) || (got > 0) != (tc.want > 0) {
+			t.Errorf("CompareByOrder(%q, %q) = %d, want sign %d", tc.a, tc.b, got, tc.want)
+		}
+	}
+	if CompareByOrder(nil, "b", "a") <= 0 {
+		t.Error("with no order, keys rank by key")
+	}
+}

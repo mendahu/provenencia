@@ -52,22 +52,26 @@ func reportToProto(r deleteimpact.Report) *engine.GetDeleteImpactResponse {
 func groupsToProto(groups []deleteimpact.Group) []*engine.DeleteImpactGroup {
 	var out []*engine.DeleteImpactGroup
 	for _, g := range groups {
-		pg := &engine.DeleteImpactGroup{
-			Via:   g.Via,
-			Kind:  string(g.Kind),
-			Total: int32(g.Total),
-		}
-		for _, item := range g.Listed {
-			pg.Listed = append(pg.Listed, &engine.DeleteImpactListed{
-				Id:       uuidString(item.ID),
-				Ref:      item.Ref,
-				Title:    item.Title,
-				Location: locationFromImpact(item.Location),
-			})
-		}
-		out = append(out, pg)
+		out = append(out, groupToProto(g))
 	}
 	return out
+}
+
+func groupToProto(g deleteimpact.Group) *engine.DeleteImpactGroup {
+	pg := &engine.DeleteImpactGroup{
+		Via:   g.Via,
+		Kind:  string(g.Kind),
+		Total: int32(g.Total),
+	}
+	for _, item := range g.Listed {
+		pg.Listed = append(pg.Listed, &engine.DeleteImpactListed{
+			Id:       database.UUIDString(item.ID),
+			Ref:      item.Ref,
+			Title:    item.Title,
+			Location: locationFromImpact(item.Location),
+		})
+	}
+	return pg
 }
 
 func gateToProto(g deleteimpact.Gate) engine.DeleteImpactGate {
@@ -84,6 +88,8 @@ func gateToProto(g deleteimpact.Gate) engine.DeleteImpactGate {
 		return engine.DeleteImpactGate_DELETE_IMPACT_GATE_INFRA
 	case deleteimpact.GateOriginLocked:
 		return engine.DeleteImpactGate_DELETE_IMPACT_GATE_ORIGIN_LOCKED
+	case deleteimpact.GateLastGraph:
+		return engine.DeleteImpactGate_DELETE_IMPACT_GATE_LAST_GRAPH
 	default:
 		return engine.DeleteImpactGate_DELETE_IMPACT_GATE_UNSPECIFIED
 	}
@@ -93,6 +99,7 @@ func locationFromImpact(loc deleteimpact.Location) *engine.WorkspaceLocation {
 	return &engine.WorkspaceLocation{
 		Section:              loc.Section,
 		SourceId:             loc.SourceID,
+		GraphId:              loc.GraphID,
 		FieldId:              loc.FieldID,
 		TypeId:               loc.TypeID,
 		SubjectId:            loc.SubjectID,

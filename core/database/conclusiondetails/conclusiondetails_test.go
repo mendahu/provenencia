@@ -10,14 +10,17 @@ import (
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibility"
@@ -25,6 +28,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -85,7 +89,7 @@ func (f *fixture) source(title string) sources.Source {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: f.typeID, Title: title})
 	})
 	must(f.t, err)
-	art, err := runArtifactCreate(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(f.t, err)
 	f.arts[string(src.ID)] = art
 	return src
@@ -93,11 +97,8 @@ func (f *fixture) source(title string) sources.Source {
 
 func (f *fixture) personOn(src sources.Source) subjects.Subject {
 	f.t.Helper()
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: f.person.ID}, nil)
-	})
-	must(f.t, err)
-	return s
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, src.ID).ID
+	return subjectstest.OfType(f.t, f.c, userID, graph, f.person.ID, "")
 }
 
 // name files a name Observation from "type=value|…" parts (or "form:…").
@@ -128,10 +129,7 @@ func (f *fixture) nameIn(s subjects.Subject, spec string) observations.Input {
 
 func (f *fixture) promote(s subjects.Subject, onto []byte) []byte {
 	f.t.Helper()
-	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID, EntityID: onto})
-	})
-	must(f.t, err)
+	res := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID, EntityID: onto})
 	return res.Entity.ID
 }
 
@@ -376,6 +374,10 @@ func TestForEntityEvidence(t *testing.T) {
 		!o.Provenance.Weak() || o.Provenance.Credibility >= 0 || o.Provenance.Uncertain || o.Provenance.ClaimConfidence != 0 {
 		t.Fatalf("weak outcome %+v", o)
 	}
+	// An outcome names the Evidence graph of its Observation's Subject.
+	if o := outcomeOf(name, weak.ID); !bytes.Equal(o.GraphID, evidencegraphstest.SoleGraph(t, f.c, register.ID).ID) {
+		t.Fatalf("outcome graph %x, want the Register's graph", o.GraphID)
+	}
 	if o := outcomeOf(name, denied.ID); o.Reason != "denied" || !bytes.Equal(o.DeniedBy, negative.ID) {
 		t.Fatalf("denied outcome %+v", o)
 	}
@@ -495,12 +497,4 @@ func termID(t *testing.T, f *fixture, key string) []byte {
 	var id []byte
 	must(t, db.QueryRow(`SELECT id FROM property_terms WHERE property_id = ? AND key = ?`, f.sex.ID, key).Scan(&id))
 	return id
-}
-
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
-		})
-	return a, err
 }

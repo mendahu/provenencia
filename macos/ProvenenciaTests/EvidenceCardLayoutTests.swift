@@ -23,8 +23,8 @@ struct EvidenceCardLayoutTests {
         value: String = "Value",
         promoted: Bool = false,
         handleName: String? = nil
-    ) -> SourceGraphPlacedSubject {
-        SourceGraphPlacedSubject(
+    ) -> EvidenceGraphPlacedSubject {
+        EvidenceGraphPlacedSubject(
             subject: CatalogSubject(id: "s", ref: "CPR-2AB91", sourceID: "x", subjectTypeID: "t", label: label, description: description),
             kind: .person,
             typeLabel: "Person",
@@ -41,14 +41,9 @@ struct EvidenceCardLayoutTests {
         )
     }
 
-    /// Renders `view` in an offscreen window and returns its bitmap.
+    /// Renders `view` at scale 1 and returns its bitmap.
     private func bitmap(of view: EvidenceCardView) throws -> NSBitmapImageRep {
-        let window = NSWindow(contentRect: CGRect(origin: .zero, size: view.intrinsicContentSize), styleMask: [], backing: .buffered, defer: false)
-        view.frame = window.contentView!.bounds
-        window.contentView = view
-        let rep = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
-        view.cacheDisplay(in: view.bounds, to: rep)
-        return rep
+        NSBitmapImageRep(cgImage: try #require(view.renderImage(scale: 1)))
     }
 
     /// Builds the live card and returns the layout it measured plus the height
@@ -69,14 +64,14 @@ struct EvidenceCardLayoutTests {
         return (view.layout, CGFloat(bottom - top + 1) / scale)
     }
 
-    private func measureSubject(_ p: SourceGraphPlacedSubject) throws -> (EvidenceCardLayout, CGFloat) {
+    private func measureSubject(_ p: EvidenceGraphPlacedSubject) throws -> (EvidenceCardLayout, CGFloat) {
         try measure(EvidenceCanvasCard(placed: .subject(p, nil), text: EvidenceCardText(subject: p), state: .resting))
     }
 
     static let cases: [String] = ["uncited", "uncited+description", "cited1", "cited3", "cited3+promoted", "longHandleName+promoted",
                                   "longTitle", "wrappedValues", "longDescription"]
 
-    private func fixture(_ name: String) -> SourceGraphPlacedSubject {
+    private func fixture(_ name: String) -> EvidenceGraphPlacedSubject {
         switch name {
         case "uncited": placed(rows: 0)
         case "uncited+description": placed(rows: 0, description: "Son, age 14, line 13")
@@ -143,7 +138,7 @@ struct EvidenceCardLayoutTests {
     }
 
     @Test func bridgeTargetsFollowThePaint() throws {
-        let bridge = SourceGraphPlacedBridge(
+        let bridge = EvidenceGraphPlacedBridge(
             subject: CatalogSubject(id: "b", ref: "CPA-3RN7K", sourceID: "x", subjectTypeID: "t", label: "", description: ""),
             kind: .participation,
             typeLabel: "Participation",
@@ -152,7 +147,7 @@ struct EvidenceCardLayoutTests {
             isCited: true,
             observations: [observation(0), observation(1)]
         )
-        let snapshot = SourceGraphSnapshot(sourceId: "x", bridges: [bridge])
+        let snapshot = EvidenceGraphSnapshot(graphId: "x", bridges: [bridge])
         let (layout, drawn) = try measure(
             EvidenceCanvasCard(placed: .bridge(bridge), text: EvidenceCardText(bridge: bridge, in: snapshot), state: .resting)
         )

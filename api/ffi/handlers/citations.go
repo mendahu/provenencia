@@ -66,22 +66,22 @@ func CreateCitationWithObservations(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func CitationCountsBySource(in []byte) ([]byte, error) {
-	var req engine.CitationCountsBySourceRequest
+func CitationCountsByEvidenceGraph(in []byte) ([]byte, error) {
+	var req engine.CitationCountsByEvidenceGraphRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("citation_counts_by_source", err)
+		return nil, unmarshalErr("citation_counts_by_evidence_graph", err)
 	}
-	sourceID, err := parseID(req.GetSourceId())
+	graphID, err := parseID(req.GetGraphId())
 	if err != nil {
 		return nil, err
 	}
-	var out *engine.CitationCountsBySourceResponse
+	var out *engine.CitationCountsByEvidenceGraphResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		counts, err := citations.CountBySource(c, sourceID)
+		counts, err := citations.CountByEvidenceGraph(c, graphID)
 		if err != nil {
 			return err
 		}
-		out = &engine.CitationCountsBySourceResponse{}
+		out = &engine.CitationCountsByEvidenceGraphResponse{}
 		for artifactID, n := range counts {
 			out.Counts = append(out.Counts, &engine.ArtifactCitationCount{
 				ArtifactId: artifactID,
@@ -105,6 +105,10 @@ func GetCitation(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	graphID, err := parseID(req.GetGraphId())
+	if err != nil {
+		return nil, err
+	}
 	var out *engine.GetCitationResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		cit, err := citations.Get(c, citationID)
@@ -115,15 +119,11 @@ func GetCitation(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		sourceID, err := citations.SourceID(c, citationID)
+		eg, err := c.Graph().EvidenceGraph(graphID)
 		if err != nil {
 			return err
 		}
-		sg, err := c.Graph().Source(sourceID)
-		if err != nil {
-			return err
-		}
-		rows, err := listedProtosFromSource(c, sg, citationID)
+		rows, err := listedProtosFromGraph(c, eg, citationID)
 		if err != nil {
 			return err
 		}
@@ -185,13 +185,17 @@ func ListCitationsByArtifact(in []byte) ([]byte, error) {
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, unmarshalErr("list_citations_by_artifact", err)
 	}
+	graphID, err := parseID(req.GetGraphId())
+	if err != nil {
+		return nil, err
+	}
 	artifactID, err := parseID(req.GetArtifactId())
 	if err != nil {
 		return nil, err
 	}
 	var out *engine.ListCitationsByArtifactResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		list, err := citations.ListByArtifact(c, artifactID)
+		list, err := citations.ListByArtifact(c, graphID, artifactID)
 		if err != nil {
 			return err
 		}
@@ -245,9 +249,9 @@ func DeleteCitation(in []byte) ([]byte, error) {
 
 func citationProto(c citations.Citation) *engine.Citation {
 	return &engine.Citation{
-		Id:                     uuidString(c.ID),
+		Id:                     database.UUIDString(c.ID),
 		Ref:                    c.Ref,
-		ArtifactId:             uuidString(c.ArtifactID),
+		ArtifactId:             database.UUIDString(c.ArtifactID),
 		LocatorJson:            c.LocatorJSON,
 		Transcription:          c.Transcription,
 		Label:                  c.Label,

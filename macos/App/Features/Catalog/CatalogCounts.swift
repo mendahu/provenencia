@@ -104,7 +104,7 @@ final class CatalogCounts {
     }
 
     /// Writes the Sources total the feature model already knows from its
-    /// in-memory list (after load or create).
+    /// in-memory list (after load).
     func publishSources(_ count: Int) {
         sources = count
     }
@@ -113,8 +113,9 @@ final class CatalogCounts {
     /// destination `load()` — Go `catalogsession` serializes catalog ops.
     /// Failures set `lastRefreshError` and leave badges unchanged (absent until
     /// a later success). Vocabulary mutations use `publish*` instead of
-    /// recounting; Conclusion handle counts have no loaded list to publish
-    /// from, so a Promote recounts through here.
+    /// recounting; a write in `CatalogQueryRegistry.navCountTriggers` recounts
+    /// through here, called by `WorkspaceSession.apply` (wired in
+    /// `WorkspaceView`).
     func refreshAll() async {
         do {
             let nav = try await store.workspaceNavCounts(projectDir: projectDir)

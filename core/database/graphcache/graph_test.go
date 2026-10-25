@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
@@ -227,25 +228,11 @@ func TestLoadLinksUsesTheEdgeIndex(t *testing.T) {
 		t.Fatal(err)
 	}
 	q, args := graphcache.LinkLoadSQL([][]byte{make([]byte, 16)})
-	rows, err := db.Query(`EXPLAIN QUERY PLAN `+q, args...)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	var plans []string
-	for rows.Next() {
-		var id, parent, notUsed int
-		var detail string
-		if err := rows.Scan(&id, &parent, &notUsed, &detail); err != nil {
-			t.Fatal(err)
-		}
-		plans = append(plans, detail)
+	plans := dbtest.QueryPlan(t, db, q, args...)
+	for _, detail := range plans {
 		if strings.HasPrefix(detail, "SCAN ") && !strings.Contains(detail, "CONSTANT") {
 			t.Fatalf("full scan: %s", detail)
 		}
-	}
-	if err := rows.Err(); err != nil {
-		t.Fatal(err)
 	}
 	joined := strings.Join(plans, "\n")
 	if !strings.Contains(joined, "auto_reconciler_values_edge_idx") {
@@ -253,17 +240,32 @@ func TestLoadLinksUsesTheEdgeIndex(t *testing.T) {
 	}
 }
 
-func TestDropLeavesAliasTables(t *testing.T) {
+func TestDropLeavesAliasIndex(t *testing.T) {
 	g := graphcache.New(nil)
-	g.SetAliasTables([]string{"jas"})
+	g.SetAliasIndex([]string{"jas"})
 	g.Drop()
-	raw, ok := g.AliasTables()
+	raw, ok := g.AliasIndex()
 	if !ok {
-		t.Fatal("drop cleared alias tables")
+		t.Fatal("drop cleared alias index")
 	}
 	tables, ok := raw.([]string)
 	if !ok || len(tables) != 1 || tables[0] != "jas" {
 		t.Fatalf("%#v", raw)
+	}
+}
+
+func TestDropLeavesNameFormat(t *testing.T) {
+	g := graphcache.New(nil)
+	if v, ok := (*graphcache.Graph)(nil).NameFormat(); ok || v != nil {
+		t.Errorf("a nil graph holds name format %v, %v", v, ok)
+	}
+	if _, ok := g.NameFormat(); ok {
+		t.Fatal("a new graph holds a name format")
+	}
+	g.SetNameFormat("western")
+	g.Drop()
+	if v, ok := g.NameFormat(); !ok || v != "western" {
+		t.Fatalf("after Drop NameFormat = %v, %v, want western, true", v, ok)
 	}
 }
 
@@ -431,5 +433,53 @@ func TestTermsByID(t *testing.T) {
 	}
 	if b := got["id-b"]; b.Key != "unknown" || b.Label != "Unknown" || !b.Neutral {
 		t.Errorf("id-b = %+v", b)
+	}
+}
+
+func TestMatchIndexDrops(t *testing.T) {
+	c := openCatalog(t)
+	g := c.Graph()
+	id := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+	stored := func() bool {
+		_, ok := g.MatchIndex()
+		return ok
+	}
+	g.SetMatchIndex("index")
+	if v, ok := g.MatchIndex(); !ok || v != "index" {
+		t.Fatalf("MatchIndex = %v, %v after SetMatchIndex", v, ok)
+	}
+	g.SetAliasIndex(nil)
+	if stored() {
+		t.Error("SetAliasIndex left the match index")
+	}
+	g.SetMatchIndex("index")
+	g.SetNameFormat("western")
+	if stored() {
+		t.Error("SetNameFormat left the match index")
+	}
+	g.SetMatchIndex("index")
+	if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 1}, Effects: effects.Set{Handles: [][]byte{id}}}); err != nil {
+		t.Fatal(err)
+	}
+	if stored() {
+		t.Error("a commit that names a handle left the match index")
+	}
+	g.SetMatchIndex("index")
+	g.Drop()
+	if stored() {
+		t.Error("Drop left the match index")
+	}
+	t.Run("vocabulary commit", func(t *testing.T) {
+		g.SetMatchIndex("index")
+		if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 2}, Effects: effects.Set{Lists: []effects.List{effects.ListVocabulary}}}); err != nil {
+			t.Fatal(err)
+		}
+		if stored() {
+			t.Error("a vocabulary-only commit left the match index")
+		}
+	})
+	g.ResetMatchIndexForTest()
+	if stored() {
+		t.Error("ResetMatchIndexForTest left the match index")
 	}
 }

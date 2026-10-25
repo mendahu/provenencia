@@ -62,7 +62,7 @@ func openDB(sqlitePath string) (*sql.DB, error) {
 }
 
 func openDBURI(uri string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", uri)
+	db, err := sql.Open(driverName, uri)
 	if err != nil {
 		return nil, err
 	}

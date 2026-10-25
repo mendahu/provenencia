@@ -6,4 +6,6 @@ The table and foreign-key list is [`catalogmodel`](../catalogmodel). This packag
 
 It does not decide what a surviving write touches. That registry is [`effects`](../effects). The two do not import each other.
 
+A domain invariant's refusal (a link, not a row delete) gets a preflight that returns a `deleteimpact.Group` through `ListedGroup`, from the same query the write refuses on; its via is named for the refusal code.
+
 Policy: [`docs/catalog-deletes.md`](../../../docs/catalog-deletes.md). Adding a delete: [`.agents/skills/add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md). The map of the schema packages is in [`catalogmodel`](../catalogmodel/README.md).

@@ -31,12 +31,12 @@ A connection the researcher disputes gets a way back to the graph (open the brid
 
 1. **Which row hosts a connection?** A bridge has two ends.
    - *Mirror* it under both ends: the most direct, but every connection appears twice.
-   - *One host by rule*: participations and locations under the event (the hub that ties people and places); relationships under the `person` end; place relationships under the part (child) place. Less noise, but a person row wouldn't show the events it's in.
+   - *One host by rule*: participations and locations under the event (the event ties people and places together); relationships under the `person` end; place relationships under the part (child) place. Less noise, but a person row wouldn't show the events it's in.
    - A middle option: one host, plus a compact "+3 connections" on the other end that points to it.
 2. **Ends that aren't rows on this page.** On a single-subject Promote, or for an end that's already filed (an anchor), the connection goes under the visible end and names the other ("Toronto, already filed").
 3. **Already-filed connections:** hidden (as today), or shown dimmed for context.
 4. **Busy rows:** an event with eight participants, or a person in many events. Collapse after two or three ("+5 more").
-5. **Grouping by assessment:** subrows travel with their host row, so that grouping still works.
+5. **Grouping by assessment:** removed in S11-27 (A-6); rows are always grouped by kind.
 6. **The evidence sheet:** its "Through Mary" groups are the same bridges. A subrow could open the sheet at that group, and the sheet could list the row's connections.
 7. **Accessibility:** a subrow reads as part of its host ("Mary, parent of John, files on Done"), so VoiceOver users hear why a connection waits.
 

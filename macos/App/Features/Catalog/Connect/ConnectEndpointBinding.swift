@@ -61,7 +61,7 @@ enum ConnectEndpointBinding {
         toTypeKey: String,
         toLabel: String
     ) -> String {
-        let kind = EvidenceBridgeKind(rawValue: rule.bridgeTypeKey) ?? .participation
+        let kind = ConnectionSentenceRegistry.kind(bridgeTypeKey: rule.bridgeTypeKey)
         let bound = bind(
             rule: rule,
             fromID: fromID,
@@ -71,44 +71,11 @@ enum ConnectEndpointBinding {
             toTypeKey: toTypeKey,
             toLabel: toLabel
         )
-        return sentence(kind: kind, endpointA: bound?[0].label, endpointB: bound?[1].label, term: nil)
-    }
-
-    /// Kind-ordered A/B nouns. A is the first rule edge; B is the second.
-    static func sentence(
-        kind: EvidenceBridgeKind,
-        endpointA: String?,
-        endpointB: String?,
-        term: String?
-    ) -> String {
-        switch kind {
-        case .location:
-            return EvidenceBridgeEdgeSummary.sentence(
-                kind: kind,
-                person: nil,
-                related: nil,
-                event: endpointA,
-                place: endpointB,
-                term: term
-            )
-        case .relationship, .placeRelationship:
-            return EvidenceBridgeEdgeSummary.sentence(
-                kind: kind,
-                person: endpointA,
-                related: endpointB,
-                event: nil,
-                place: nil,
-                term: term
-            )
-        case .participation:
-            return EvidenceBridgeEdgeSummary.sentence(
-                kind: kind,
-                person: endpointA,
-                related: nil,
-                event: endpointB,
-                place: nil,
-                term: term
-            )
-        }
+        return ConnectionSentenceRegistry.sentence(
+            kind: kind,
+            endpointA: bound?[0].label,
+            endpointB: bound?[1].label,
+            term: nil
+        )
     }
 }

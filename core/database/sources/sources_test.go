@@ -11,9 +11,10 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
-	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -715,7 +716,7 @@ func TestSourceDelete(t *testing.T) {
 	var docs int
 	if err := db.QueryRow(
 		`SELECT COUNT(*) FROM catalog_search_docs WHERE kind = 'source' AND entity_id = ?`,
-		uuidString(empty.ID),
+		database.UUIDString(empty.ID),
 	).Scan(&docs); err != nil {
 		t.Fatal(err)
 	}
@@ -745,16 +746,49 @@ func TestSourceDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{
-			SourceID: uncited.ID, SubjectTypeID: personType.ID, Label: "Alice",
-		}, nil)
-	}); err != nil {
-		t.Fatal(err)
+	graphs, err := evidencegraphs.List(c, uncited.ID)
+	if err != nil || len(graphs) != 1 {
+		t.Fatalf("source %x has %d graphs, want 1", uncited.ID, len(graphs))
 	}
+	subjectstest.OfType(t, c, userID, graphs[0].ID, personType.ID, "Alice")
 	if err := runDelete(c, userID, uncited.ID); !errors.Is(err, ErrInUse) {
 		t.Fatalf("subject inbound %v", err)
 	}
+
+	t.Run("releases the Default graph", func(t *testing.T) {
+		graphed, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "Graph only"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []rowchange.Change
+		if _, err := writes.Call(c, writes.Op{Action: "delete_source", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := Delete(tx, userID, graphed.ID)
+			got = changes
+			return struct{}{}, changes, err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		var n int
+		if err := db.QueryRow(`SELECT COUNT(*) FROM evidence_graphs WHERE source_id = ?`, graphed.ID).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		if n != 0 {
+			t.Fatalf("graph rows left=%d", n)
+		}
+		var types []string
+		for _, ch := range got {
+			types = append(types, ch.EntityType+" "+string(ch.Action))
+		}
+		want := []string{"evidence_graph delete", "source delete"}
+		if len(types) != len(want) {
+			t.Fatalf("changes %v", types)
+		}
+		for i := range want {
+			if types[i] != want[i] {
+				t.Fatalf("changes %v want %v", types, want)
+			}
+		}
+	})
 
 	missing := make([]byte, 16)
 	if err := runDelete(c, userID, missing); !errors.Is(err, ErrInvalid) {

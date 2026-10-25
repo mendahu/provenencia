@@ -43,7 +43,7 @@ func CreateSubject(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	sourceID, err := parseID(req.GetSourceId())
+	graphID, err := parseID(req.GetGraphId())
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func CreateSubject(in []byte) ([]byte, error) {
 		s, wrote, err := writes.Run(c, writes.Op{Action: "create_subject", UserID: userID},
 			func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 				return subjects.Create(tx, userID, subjects.CreateInput{
-					SourceID:      sourceID,
+					GraphID:       graphID,
 					SubjectTypeID: typeID,
 					Label:         req.GetLabel(),
 					Description:   req.GetDescription(),
@@ -151,18 +151,18 @@ func ListSubjects(in []byte) ([]byte, error) {
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, unmarshalErr("list_subjects", err)
 	}
-	sourceID, err := parseID(req.GetSourceId())
+	graphID, err := parseID(req.GetGraphId())
 	if err != nil {
 		return nil, err
 	}
 	var out *engine.ListSubjectsResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		sg, err := c.Graph().Source(sourceID)
+		eg, err := c.Graph().EvidenceGraph(graphID)
 		if err != nil {
 			return err
 		}
 		out = &engine.ListSubjectsResponse{}
-		for _, s := range sg.Subjects {
+		for _, s := range eg.Subjects {
 			out.Subjects = append(out.Subjects, subjectProto(subjects.Subject{
 				ID: s.ID, Ref: s.Ref, SourceID: s.SourceID, SubjectTypeID: s.SubjectTypeID,
 				Label: s.Label, Description: s.Description,
@@ -231,17 +231,17 @@ func ListSubjectPositions(in []byte) ([]byte, error) {
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, unmarshalErr("list_subject_positions", err)
 	}
-	sourceID, err := parseID(req.GetSourceId())
+	graphID, err := parseID(req.GetGraphId())
 	if err != nil {
 		return nil, err
 	}
 	var out *engine.ListSubjectPositionsResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		rows, err := subjectpositions.ListBySource(c, sourceID)
+		out = &engine.ListSubjectPositionsResponse{}
+		rows, err := subjectpositions.ListByEvidenceGraph(c, graphID)
 		if err != nil {
 			return err
 		}
-		out = &engine.ListSubjectPositionsResponse{}
 		for _, p := range rows {
 			out.Positions = append(out.Positions, subjectPositionProto(p))
 		}
@@ -255,7 +255,7 @@ func ListSubjectPositions(in []byte) ([]byte, error) {
 
 func subjectTypeProto(t subjecttypes.Type) *engine.SubjectType {
 	return &engine.SubjectType{
-		Id:                 uuidString(t.ID),
+		Id:                 database.UUIDString(t.ID),
 		Key:                t.Key,
 		Origin:             t.Origin,
 		Label:              t.Label,
@@ -267,10 +267,10 @@ func subjectTypeProto(t subjecttypes.Type) *engine.SubjectType {
 
 func subjectProto(s subjects.Subject) *engine.Subject {
 	return &engine.Subject{
-		Id:            uuidString(s.ID),
+		Id:            database.UUIDString(s.ID),
 		Ref:           s.Ref,
-		SourceId:      uuidString(s.SourceID),
-		SubjectTypeId: uuidString(s.SubjectTypeID),
+		SourceId:      database.UUIDString(s.SourceID),
+		SubjectTypeId: database.UUIDString(s.SubjectTypeID),
 		Label:         s.Label,
 		Description:   s.Description,
 	}
@@ -278,7 +278,7 @@ func subjectProto(s subjects.Subject) *engine.Subject {
 
 func subjectPositionProto(p subjectpositions.Position) *engine.SubjectPosition {
 	return &engine.SubjectPosition{
-		SubjectId: uuidString(p.SubjectID),
+		SubjectId: database.UUIDString(p.SubjectID),
 		GridX:     p.GridX,
 		GridY:     p.GridY,
 	}

@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"errors"
+	"slices"
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/apperr"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -211,4 +214,90 @@ func TestGetPropertiesWorkspace(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestReorderSubjectTypeProperties(t *testing.T) {
+	dir, userID, _, personID := subjectFixture(t)
+	list := func() []string {
+		out, err := ListSubjectTypeProperties(marshalProto(t, &engine.ListSubjectTypePropertiesRequest{
+			ProjectDir: dir, SubjectTypeId: personID,
+		}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var resp engine.ListSubjectTypePropertiesResponse
+		if err := proto.Unmarshal(out, &resp); err != nil {
+			t.Fatal(err)
+		}
+		var ids []string
+		for _, p := range resp.Properties {
+			ids = append(ids, p.GetProperty().GetId())
+		}
+		return ids
+	}
+	ids := list()
+	if len(ids) < 3 {
+		t.Fatalf("person binds %d", len(ids))
+	}
+
+	reversed := slices.Clone(ids)
+	slices.Reverse(reversed)
+	out, err := ReorderSubjectTypeProperties(marshalProto(t, &engine.ReorderSubjectTypePropertiesRequest{
+		ProjectDir: dir, UserId: userID, SubjectTypeId: personID, PropertyIds: reversed,
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var resp engine.ReorderSubjectTypePropertiesResponse
+	if err := proto.Unmarshal(out, &resp); err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, p := range resp.Properties {
+		got = append(got, p.GetProperty().GetId())
+	}
+	if !slices.Equal(got, reversed) {
+		t.Fatalf("response order %v, want %v", got, reversed)
+	}
+	if resp.Effects == nil {
+		t.Fatal("no write effects")
+	}
+	assertLatestAuditAction(t, dir, "reorder_subject_type_properties")
+
+	_, err = ReorderSubjectTypeProperties(marshalProto(t, &engine.ReorderSubjectTypePropertiesRequest{
+		ProjectDir: dir, UserId: userID, SubjectTypeId: personID, PropertyIds: reversed[1:],
+	}))
+	var ae *apperr.Error
+	if !errors.As(err, &ae) || ae.Code() != apperr.CodeSubjectVocabInvalid {
+		t.Fatalf("short list: %v", err)
+	}
+	if !slices.Equal(list(), reversed) {
+		t.Fatal("a refused reorder moved the order")
+	}
+}
+
+func TestAssignRemoveSubjectTypePropertyAreAudited(t *testing.T) {
+	dir, userID, _, personID := subjectFixture(t)
+	created, err := CreateProperty(marshalProto(t, &engine.CreatePropertyRequest{
+		ProjectDir: dir, UserId: userID, Label: "Burial Ground", ValueType: "text",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var prop engine.CreatePropertyResponse
+	if err := proto.Unmarshal(created, &prop); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := AssignSubjectTypeProperty(marshalProto(t, &engine.AssignSubjectTypePropertyRequest{
+		ProjectDir: dir, UserId: userID, SubjectTypeId: personID, PropertyId: prop.Property.GetId(),
+	})); err != nil {
+		t.Fatal(err)
+	}
+	assertLatestAuditAction(t, dir, "assign_subject_type_property")
+	if _, err := RemoveSubjectTypeProperty(marshalProto(t, &engine.RemoveSubjectTypePropertyRequest{
+		ProjectDir: dir, UserId: userID, SubjectTypeId: personID, PropertyId: prop.Property.GetId(),
+	})); err != nil {
+		t.Fatal(err)
+	}
+	assertLatestAuditAction(t, dir, "remove_subject_type_property")
 }

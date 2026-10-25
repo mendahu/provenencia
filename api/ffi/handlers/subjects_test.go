@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"errors"
+	"slices"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"google.golang.org/protobuf/proto"
@@ -91,7 +94,7 @@ func TestCreateSubject(t *testing.T) {
 				return &engine.CreateSubjectRequest{
 					ProjectDir:    dir,
 					UserId:        "",
-					SourceId:      sourceID,
+					GraphId:       soleGraphID(t, dir, sourceID),
 					SubjectTypeId: typeID,
 					Label:         "Nameless",
 				}
@@ -106,7 +109,7 @@ func TestCreateSubject(t *testing.T) {
 				return &engine.CreateSubjectRequest{
 					ProjectDir:    dir,
 					UserId:        userID,
-					SourceId:      sourceID,
+					GraphId:       soleGraphID(t, dir, sourceID),
 					SubjectTypeId: typeID,
 					Label:         "Alice",
 					Description:   "daughter",
@@ -128,7 +131,7 @@ func TestCreateSubject(t *testing.T) {
 				assertLatestAuditAction(t, cr.ProjectDir, "create_subject")
 				listOut, err := ListSubjects(marshalProto(t, &engine.ListSubjectsRequest{
 					ProjectDir: cr.ProjectDir,
-					SourceId:   cr.SourceId,
+					GraphId:    cr.GraphId,
 				}))
 				if err != nil {
 					t.Fatal(err)
@@ -149,7 +152,7 @@ func TestCreateSubject(t *testing.T) {
 				return &engine.CreateSubjectRequest{
 					ProjectDir:    dir,
 					UserId:        userID,
-					SourceId:      sourceID,
+					GraphId:       soleGraphID(t, dir, sourceID),
 					SubjectTypeId: typeID,
 					Label:         "Placed",
 					HasPlacement:  true,
@@ -165,7 +168,7 @@ func TestCreateSubject(t *testing.T) {
 				cr := req.(*engine.CreateSubjectRequest)
 				listOut, err := ListSubjectPositions(marshalProto(t, &engine.ListSubjectPositionsRequest{
 					ProjectDir: cr.ProjectDir,
-					SourceId:   cr.SourceId,
+					GraphId:    cr.GraphId,
 				}))
 				if err != nil {
 					t.Fatal(err)
@@ -190,7 +193,7 @@ func TestUpdateSubject(t *testing.T) {
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, sourceID, typeID := subjectFixture(t)
 				createOut, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
-					ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: typeID, Label: "Bob",
+					ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: typeID, Label: "Bob",
 				}))
 				if err != nil {
 					t.Fatal(err)
@@ -231,7 +234,7 @@ func TestDeleteSubject(t *testing.T) {
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, sourceID, typeID := subjectFixture(t)
 				createOut, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
-					ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: typeID, Label: "Carol",
+					ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: typeID, Label: "Carol",
 				}))
 				if err != nil {
 					t.Fatal(err)
@@ -263,7 +266,7 @@ func TestDeleteSubject(t *testing.T) {
 				}
 				listOut, err := ListSubjects(marshalProto(t, &engine.ListSubjectsRequest{
 					ProjectDir: dr.ProjectDir,
-					SourceId:   sources.Sources[0].GetId(),
+					GraphId:    soleGraphID(t, dr.ProjectDir, sources.Sources[0].GetId()),
 				}))
 				if err != nil {
 					t.Fatal(err)
@@ -313,9 +316,31 @@ func TestListSubjects(t *testing.T) {
 			name: "empty then after create",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _, sourceID, _ := subjectFixture(t)
-				return &engine.ListSubjectsRequest{ProjectDir: dir, SourceId: sourceID}
+				return &engine.ListSubjectsRequest{ProjectDir: dir, GraphId: soleGraphID(t, dir, sourceID)}
 			},
 			want: &engine.ListSubjectsResponse{},
+		},
+		{
+			name: "a graph no catalog row names reads empty",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, _, _ := subjectFixture(t)
+				return &engine.ListSubjectsRequest{ProjectDir: dir, GraphId: uuid.Must(uuid.NewV7()).String()}
+			},
+			want: &engine.ListSubjectsResponse{},
+			after: func(t *testing.T, _ []byte, req proto.Message) {
+				r := req.(*engine.ListSubjectsRequest)
+				out, err := ListSubjectPositions(marshalProto(t, &engine.ListSubjectPositionsRequest{ProjectDir: r.GetProjectDir(), GraphId: r.GetGraphId()}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var got engine.ListSubjectPositionsResponse
+				if err := proto.Unmarshal(out, &got); err != nil {
+					t.Fatal(err)
+				}
+				if len(got.Positions) != 0 {
+					t.Fatalf("positions %+v", got.Positions)
+				}
+			},
 		},
 	})
 }
@@ -328,7 +353,7 @@ func TestSubjectPositions(t *testing.T) {
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, sourceID, typeID := subjectFixture(t)
 				createOut, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
-					ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: typeID, Label: "Dave",
+					ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: typeID, Label: "Dave",
 				}))
 				if err != nil {
 					t.Fatal(err)
@@ -387,7 +412,7 @@ func TestSubjectPositions(t *testing.T) {
 
 				listOut, err := ListSubjectPositions(marshalProto(t, &engine.ListSubjectPositionsRequest{
 					ProjectDir: sr.ProjectDir,
-					SourceId:   sourceID,
+					GraphId:    soleGraphID(t, sr.ProjectDir, sourceID),
 				}))
 				if err != nil {
 					t.Fatal(err)
@@ -412,7 +437,7 @@ func TestSubjectPositions(t *testing.T) {
 				}
 				listOut, err = ListSubjectPositions(marshalProto(t, &engine.ListSubjectPositionsRequest{
 					ProjectDir: sr.ProjectDir,
-					SourceId:   sourceID,
+					GraphId:    soleGraphID(t, sr.ProjectDir, sourceID),
 				}))
 				if err != nil {
 					t.Fatal(err)
@@ -438,4 +463,78 @@ func TestListSubjectPositionsBadProto(t *testing.T) {
 	runRPC(t, ListSubjectPositions, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 	})
+}
+
+// onSplitSource is a Source with Ada on its Default graph and Bea, placed at
+// (2, 3), on a second graph named Jones.
+func onSplitSource(t *testing.T) (f graphFixture, jones string, bea *engine.Subject) {
+	t.Helper()
+	f = newGraphFixture(t)
+	jones = f.createGraph(t, "Jones", f.page2).GetGraph().GetId()
+	var subs engine.ListSubjectsResponse
+	mustRPC(t, ListSubjects, &engine.ListSubjectsRequest{ProjectDir: f.dir, GraphId: f.defaultGraphID}, &subs)
+	var created engine.CreateSubjectResponse
+	mustRPC(t, CreateSubject, &engine.CreateSubjectRequest{
+		ProjectDir: f.dir, UserId: f.userID, GraphId: jones, SubjectTypeId: subs.Subjects[0].GetSubjectTypeId(),
+		Label: "Bea", HasPlacement: true, GridX: 2, GridY: 3,
+	}, &created)
+	return f, jones, created.GetSubject()
+}
+
+// A graph reads only its own Subjects and positions; an id no graph has reads empty.
+func TestListSubjectsOfASplitSource(t *testing.T) {
+	f, jones, bea := onSplitSource(t)
+	var subs engine.ListSubjectsResponse
+	mustRPC(t, ListSubjects, &engine.ListSubjectsRequest{ProjectDir: f.dir, GraphId: jones}, &subs)
+	if len(subs.GetSubjects()) != 1 || subs.GetSubjects()[0].GetId() != bea.GetId() {
+		t.Fatalf("Jones subjects %+v", subs.GetSubjects())
+	}
+	var pos engine.ListSubjectPositionsResponse
+	mustRPC(t, ListSubjectPositions, &engine.ListSubjectPositionsRequest{ProjectDir: f.dir, GraphId: jones}, &pos)
+	if len(pos.GetPositions()) != 1 || pos.GetPositions()[0].GetSubjectId() != bea.GetId() {
+		t.Fatalf("Jones positions %+v", pos.GetPositions())
+	}
+	unknown := uuid.Must(uuid.NewV7()).String()
+	var none engine.ListSubjectsResponse
+	mustRPC(t, ListSubjects, &engine.ListSubjectsRequest{ProjectDir: f.dir, GraphId: unknown}, &none)
+	var nonePos engine.ListSubjectPositionsResponse
+	mustRPC(t, ListSubjectPositions, &engine.ListSubjectPositionsRequest{ProjectDir: f.dir, GraphId: unknown}, &nonePos)
+	if len(none.GetSubjects()) != 0 || len(nonePos.GetPositions()) != 0 {
+		t.Fatalf("unknown graph read %+v %+v", none.GetSubjects(), nonePos.GetPositions())
+	}
+}
+
+// A Subject created on a graph takes that graph's Source and reports only that
+// graph; an unknown graph is refused.
+func TestCreateSubjectOnGraph(t *testing.T) {
+	f, jones, _ := onSplitSource(t)
+	var subs engine.ListSubjectsResponse
+	mustRPC(t, ListSubjects, &engine.ListSubjectsRequest{ProjectDir: f.dir, GraphId: f.defaultGraphID}, &subs)
+	typeID := subs.Subjects[0].GetSubjectTypeId()
+	var created engine.CreateSubjectResponse
+	mustRPC(t, CreateSubject, &engine.CreateSubjectRequest{
+		ProjectDir: f.dir, UserId: f.userID, GraphId: jones, SubjectTypeId: typeID, Label: "Cal",
+	}, &created)
+	if created.GetSubject().GetSourceId() != f.sourceID {
+		t.Fatalf("source %s, want %s", created.GetSubject().GetSourceId(), f.sourceID)
+	}
+	if got := created.GetEffects().GetEvidenceGraphs(); !slices.Equal(got, []string{jones}) {
+		t.Fatalf("evidence_graphs %v, want [%s]", got, jones)
+	}
+	var onJones engine.ListSubjectsResponse
+	mustRPC(t, ListSubjects, &engine.ListSubjectsRequest{ProjectDir: f.dir, GraphId: jones}, &onJones)
+	found := false
+	for _, s := range onJones.GetSubjects() {
+		found = found || s.GetId() == created.GetSubject().GetId()
+	}
+	if !found {
+		t.Fatalf("Cal is not on Jones: %+v", onJones.GetSubjects())
+	}
+	var refused engine.CreateSubjectResponse
+	err := rpc(t, CreateSubject, &engine.CreateSubjectRequest{
+		ProjectDir: f.dir, UserId: f.userID, GraphId: uuid.Must(uuid.NewV7()).String(), SubjectTypeId: typeID, Label: "Dee",
+	}, &refused)
+	if !errors.Is(err, subjects.ErrInvalid) {
+		t.Fatalf("unknown graph: got %v, want subjects.invalid", err)
+	}
 }

@@ -26,7 +26,7 @@ Authoritative product note: [`docs/ideas/archive/catalog-access-serialization.md
 | `onboarding.OpenCatalog` | One-shot open (tests / low-level). Prefer `Do` for product paths |
 | `database.Open` / `Create` | Migrate-only / package tests. **Never** from FFI handlers |
 
-`Do` get-or-opens once (same open policy as `OpenCatalog`: migrate + `users.EnsureRefs`), holds the connection, and runs `fn` under a per-session mutex. Opening a **different** `projectDir` closes other held sessions first (one live project).
+`Do` get-or-opens once (same open policy as `OpenCatalog`: migrate + `catalogsession.ReconcileOnOpen`, the one list of open-time repairs: `users.EnsureRefs`, `evidencegraphs.EnsureRefs`, `project.EnsureUUID`, the derived caches), holds the connection, and runs `fn` under a per-session mutex. Opening a **different** `projectDir` closes other held sessions first (one live project).
 
 ## FFI catalog handler pattern
 
@@ -59,7 +59,7 @@ func ListThings(in []byte) ([]byte, error) {
 
 ## Lifecycle
 
-- **Open (get-or-open):** first `Do` / `withProjectCatalog` / Mac catalog store call for that dir (typically `CatalogCounts.refreshAll` after workspace mount). No `OpenCatalogSession` FFI. That open loads abbreviation and nickname tables onto the catalog graph (`namealiases.Warm`) for the life of the project. Closing the session drops the graph. A future editor calls `namealiases.Invalidate` after writing a table so the open project reloads it.
+- **Open (get-or-open):** first `Do` / `withProjectCatalog` / Mac catalog store call for that dir (typically `CatalogCounts.refreshAll` after workspace mount). No `OpenCatalogSession` FFI. The open runs `catalogsession.WarmOnOpen`, the one list of open-time warms: the built alias index (`namealiases.Warm`) and the default name format (`nameformats.Warm`), held on the catalog graph for the life of the project. Readers go through `namealiases.Rules` and `nameformats.LoadFor`; a writer calls the owning package's `Invalidate`. A new open-time warm is added to `WarmOnOpen`, not called inline. Closing the session drops the graph.
 - **Mac leave:** `WorkspaceView.onDisappear` → `GenealogyStore.closeCatalogSession(projectDir:)`. Destination content mounts immediately; overlapping loads are fine (Go queues).
 - **Also close:** Go `SignOut` / `RemoveActiveProject` / `OpenProject` (switch) call `Close`/`CloseAll`.
 - **Create (`Complete` / `createCatalog`):** create-then-close; do not register a closed handle in the session map. Later RPCs open via `Do`.

@@ -3,7 +3,6 @@
 package deleteimpact
 
 import (
-	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 )
@@ -16,6 +15,7 @@ const (
 	GateEdgeLocked   Gate = "edge_locked"
 	GateInfra        Gate = "infra"
 	GateOriginLocked Gate = "origin_locked"
+	GateLastGraph    Gate = "last_graph"
 )
 
 const (
@@ -39,8 +39,10 @@ var ErrInvalid = apperr.New(apperr.CodeDeleteImpactInvalid, apperr.KindUser)
 
 // Location is the Go form of proto WorkspaceLocation after S8-12.
 type Location struct {
-	Section              string
-	SourceID             string
+	Section  string
+	SourceID string
+	// GraphID is the Evidence graph of a graph or citationComposer location.
+	GraphID              string
 	FieldID              string
 	TypeID               string
 	SubjectID            string
@@ -84,15 +86,4 @@ type Listed struct {
 	Ref      string
 	Title    string
 	Location Location
-}
-
-func uuidString(id []byte) string {
-	if len(id) != 16 {
-		return ""
-	}
-	u, err := uuid.FromBytes(id)
-	if err != nil {
-		return ""
-	}
-	return u.String()
 }

@@ -91,19 +91,17 @@ struct PVList<Item: Identifiable, Thumbnail: View, Primary: View, Secondary: Vie
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            LazyVStack(spacing: 0) {
-                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                    row(item, index: index)
-                        .id(item.id)
-                }
-            }
-            .scrollTargetLayout()
-            .onChange(of: focusIndex) { _, index in
-                guard items.indices.contains(index) else { return }
-                proxy.scrollTo(items[index].id)
+        LazyVStack(spacing: 0) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                row(item, index: index)
+                    .id(item.id)
             }
         }
+        .scrollTargetLayout()
+        .pvScrollsRowIntoView(
+            items.indices.contains(focusIndex) ? items[focusIndex].id : nil,
+            animated: false
+        )
         .pvListChrome()
         .focusable()
         .focusEffectDisabled()
@@ -365,16 +363,16 @@ struct PVListSkeleton: View {
                     PVThumbnail(PVThumbnail.Content(loading: true), size: thumbnailSize)
                     GeometryReader { geometry in
                         VStack(alignment: .leading, spacing: PVSpacing.space3) {
-                            bar(width: geometry.size.width * Self.titleWidths[index % Self.titleWidths.count], height: 12)
-                            bar(width: geometry.size.width * 0.62, height: 10)
+                            PVSkeletonBar(width: geometry.size.width * Self.titleWidths[index % Self.titleWidths.count], height: 12)
+                            PVSkeletonBar(width: geometry.size.width * 0.62, height: 10)
                         }
                         .frame(maxHeight: .infinity, alignment: .center)
                     }
                     if let detailWidth {
-                        bar(width: 64, height: 10)
+                        PVSkeletonBar(width: 64, height: 10)
                             .frame(width: detailWidth, alignment: .leading)
                     }
-                    bar(width: 72, height: 10)
+                    PVSkeletonBar(width: 72, height: 10)
                 }
                 .frame(height: thumbnailSize)
                 .padding(.vertical, density.vertical)
@@ -387,12 +385,6 @@ struct PVListSkeleton: View {
         .pvListChrome()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(L10n.DesignSystem.listLoading))
-    }
-
-    private func bar(width: CGFloat, height: CGFloat) -> some View {
-        RoundedRectangle(cornerRadius: 2, style: .continuous)
-            .fill(PVColor.borderSubtle)
-            .frame(width: width, height: height)
     }
 }
 

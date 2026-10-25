@@ -2,7 +2,9 @@
 // roles, and role weights. A name value does not point at a profile. The
 // create-time rows live in registry.go. Install writes that list once when
 // a catalog is created. Load reads the project default, or the built-in
-// Western pattern when that row is missing.
+// Western pattern when that row is missing. A future writer of the catalog's
+// default name format calls Invalidate, which reloads the open project's warm
+// copy and drops the graph's match index: shortlist keys read its part roles.
 package nameformats
 
 import (
@@ -13,6 +15,8 @@ import (
 	"math"
 	"strings"
 
+	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
@@ -152,6 +156,45 @@ func (l Loaded) Rules(base valuecompare.Rules) valuecompare.Rules {
 	}
 	base.Names.Patterns = map[string]valuecompare.NamePattern{l.Key: l.Profile.Pattern}
 	return base
+}
+
+// Warm loads the catalog's default name format onto the catalog graph.
+// catalogsession calls this when a project opens. A later Warm replaces it.
+// Closing the catalog drops it with the graph.
+func Warm(c *database.Catalog) error {
+	db, err := c.DB()
+	if err != nil {
+		return err
+	}
+	loaded, err := Load(db)
+	if err != nil {
+		return err
+	}
+	g := c.Graph()
+	if g == nil {
+		return database.ErrClosed
+	}
+	g.SetNameFormat(loaded)
+	return nil
+}
+
+// Invalidate reloads the catalog's default name format. A future writer calls
+// this after changing it.
+func Invalidate(c *database.Catalog) error {
+	return Warm(c)
+}
+
+// LoadFor is Load through the graph's warm copy: no query when g holds one.
+// g may be nil, and a cold graph is read from q.
+func LoadFor(g *graphcache.Graph, q Querier) (Loaded, error) {
+	if raw, ok := g.NameFormat(); ok {
+		loaded, ok := raw.(Loaded)
+		if !ok {
+			return Loaded{}, fmt.Errorf("nameformats: name format cache has %T", raw)
+		}
+		return loaded, nil
+	}
+	return Load(q)
 }
 
 // Load reads the project default. A missing or empty setting returns the

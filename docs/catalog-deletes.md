@@ -8,13 +8,14 @@ Skills: [`add-catalog-model`](../.agents/skills/add-catalog-model/SKILL.md), [`a
 
 1. **Buckets are named on the FK.** Resource → resource is `NO ACTION`. Facet → parent is `ON DELETE CASCADE`. Owned outbound (parent column → child) stays `NO ACTION`; official `Delete` releases the child, and the release is derived from the `BucketOwnedOutbound` FKs in `catalogmodel` (a row child is deleted by its `PK`; a `files` child is released when no declared FK into `files` points at it, and its own thumbnail links do not count). Every exported release takes the write's `*database.Tx` and schedules `files.PurgeAfterCommit` itself, which unlinks `objects/` after commit for each File row actually dropped. Optional back-pointers are `SET NULL`. **Connection facets** are a predicate split on `observations.subject_id` (below) — not SQLite `CASCADE`.
 2. **`Impact` explains the schema; it does not replace it.** A successful erase must be a transaction the FK graph would accept **after** official release of owned outbound and connection facets. Owned outbound cannot be looked up after the parent row is gone: take `SnapshotOwned` **before** `DELETE`, then `ReleaseSnapshot`, which schedules the purge of what it released. An update that swaps an owned child calls `ReleaseReplaced` for the old one. `ReleaseOwned` is only valid while the parent still exists. Connection facets on a bridge subject are released **before** the parent `DELETE`.
-3. **Erase iff the target exists, extra gates pass, and inbound resources are empty.** Extra gates: `not_found`, `edge_locked`, `infra`, `origin_locked`.
+3. **Erase iff the target exists, extra gates pass, and inbound resources are empty.** Extra gates: `not_found`, `edge_locked`, `last_graph`, `infra`, `origin_locked`. The gates `Impact` checks before inbound (`edge_locked`, `last_graph`, `origin_locked`) come from one per-kind list, `extraGateList` in `core/database/deleteimpact/register.go`; a new per-kind gate is one entry.
 4. **No general cross-resource cascade.** Citation ↛ Observations. The one named exception is connection facets on a bridge subject.
 5. **Every official `Delete` calls `deleteimpact.Impact` in the same tx.** No private `sqlInUse`. Preview is `GetDeleteImpact`; the writer re-runs `Impact`. Writers with no UI still cut over when the registry lands.
 6. **Edge-lock is a gate on Observation writes.** `observations.Delete` / `Update` of an edge row stay `edge_locked`. The only writer that may remove an edge row is official `subjects.Delete` releasing connection facets.
 7. **The map stays honest.** Every catalog table (except `sqlite_%` / FTS shadows) and every live FK is registered in `core/database/catalogmodel`. CI fails if `PRAGMA foreign_key_list` shows an unregistered or mis-tagged FK, or an FK leading column with no covering index. `deleteimpact` still requires a list probe on every resource edge, an owned-outbound row child with a `PK` and no ownership cycle (`TestOwnedPlanShapes`), and a projector `Section` for resource/vocab kinds with an `Exists` check. `Impact.allowed` (inbound) iff a raw resource `DELETE` would succeed with FKs on, **or** the only remaining pointers are registered `connectionFacet` predicates. Every `CASCADE` FK is classified **audited** or **silent**; an audited one has exactly one facet release (below), a silent one has none.
 8. **Composite FKs are keyed by their leading column.** `PRAGMA foreign_key_list` returns one row per column; the register names the FK by its `seq = 0` column and lists the whole tuple in `FromCols` (`identity_claims (subject_id, subject_type_id) → subjects`). Only the leading column needs a covering index.
 9. **Conclusion rows.** `identity_claims` is a facet of both its Subject and its handle; `identity_claim_evidence` (pins) is a facet of both its claim and its Observation. All four FKs are **audited** `CASCADE`s. Nothing in Conclusion blocks a delete: a Subject leaves its handles, a pinned Observation leaves the claims that pinned it (they stay, weaker — model §5.2). Impact names the affected handles as `cascades`. Handles and claim confidence grades have no delete path yet. `ReleaseClaim` is the one claim removal (pins first, audited). Subject delete and Unpromote both call it.
+10. **Evidence graphs.** A graph is part of its Source's record and a link row is part of both its graph and its Artifact, so `evidence_graphs.source_id`, `evidence_graph_artifacts.graph_id` and `.artifact_id` are **audited** `CASCADE`s. Source delete releases its graphs, Artifact delete releases its links, and graph delete releases its links by `graph_id` (`ReleaseFacets`, audited under the graph's id). `subjects.graph_id` (composite with `source_id`) is a **resource** edge: a graph with Subjects is not deletable. `KindEvidenceGraph` is deletable, and a Source's last graph is refused by the `last_graph` extra gate, which `GetDeleteImpact` reports and `evidencegraphs.Delete` maps to `evidencegraphs.last_graph`.
 
 ### Connection facets (bridge subjects only)
 
@@ -46,7 +47,7 @@ Research rows that a delete takes with it are removed **explicitly** and audited
 
 | Audited (released) | Silent (`CASCADE` only) |
 | --- | --- |
-| `source_notes`, `source_metadata`, `source_credibility_assessments`, `source_metadata_layout` (both FKs), `citation_notes`, `observation_notes`, `identity_claims` (both FKs; `entity_id` has no delete path yet), `identity_claim_evidence` (both FKs) | `subject_positions` (unaudited layout), `source_type_metadata_fields` / `subject_type_properties` (vocab joins, never audited), `name_value_parts` (part of its name value) |
+| `source_notes`, `source_metadata`, `source_credibility_assessments`, `source_metadata_layout` (both FKs), `citation_notes`, `observation_notes`, `identity_claims` (both FKs; `entity_id` has no delete path yet), `identity_claim_evidence` (both FKs), `evidence_graphs` (`source_id`), `evidence_graph_artifacts` (both FKs), `subject_type_properties` (both FKs, released under the property id: a Property delete releases its bindings; subject types have no delete command yet, but the audited FK has its release, as `TestFacetReleaseHonesty` requires) | `subject_positions` (unaudited layout), `source_type_metadata_fields` (a vocab join, a UI hint, never audited), `name_value_parts` (part of its name value) |
 
 A silent `CASCADE` is only for rows that are never audited on create either. If a row has an audit entity type, its delete is audited.
 
@@ -62,7 +63,7 @@ Plugin rows are a future plugin manager, not researcher trash.
 
 ### Terms are resources
 
-`property_terms.property_id` is `NO ACTION`. A property with any term row is blocked until those terms are deleted. There is no Terms page — that notice is honest. Type-bindings (`subject_type_properties`) CASCADE and do not block.
+`property_terms.property_id` is `NO ACTION`. A property with any term row is blocked until those terms are deleted. There is no Terms page — that notice is honest. Type-bindings (`subject_type_properties`) do not block: a Property delete releases and audits them (`subject_type_property`, one change per bound type) before the Property itself.
 
 ## Impact report
 
@@ -85,6 +86,7 @@ Impact
 - `via` / `kind` are machine keys. **DeleteImpact recipe** L10n writes headings and overflow. Unknown `via` still lists refs.
 - Title and `WorkspaceLocation` come from **per-kind projectors** registered by the domain package.
 - The **report proto is only on `GetDeleteImpact`** (preflight fetch). `Delete` re-runs `Impact` in-tx as a safety net; refuse is a generic `*.in_use` / extra-gate code — not the report on `Error`, not refs in `apperr` params. The UI must not call `Delete` when preflight is blocked.
+- An Evidence graph unlink is refused with a plain code too; its preflight is `GetEvidenceGraphUnlinkImpact`, which returns one `DeleteImpactGroup` of Citations per blocking Artifact.
 
 ## New table (same PR)
 
@@ -99,7 +101,7 @@ Impact
 
 ## UI
 
-Official trash uses the DeleteImpact recipe: confirm if `allowed`, notice if not. Facet writes stay on `.pvConfirm`. `usedBy` must match the Impact totals that actually block. Swift screens share **`DeleteImpactFlow`**: confirm errors live in the sheet; `*.in_use` refetches Impact so the sheet becomes a notice; confirm deletes `target.id`; listed-row activate dismisses before navigating; subject erase applies `.deletedSubject(sourceId:)`.
+Official trash uses the DeleteImpact recipe: confirm if `allowed`, notice if not. Facet writes stay on `.pvConfirm`. `usedBy` must match the Impact totals that actually block. Swift screens share **`DeleteImpactFlow`**: confirm errors live in the sheet; `*.in_use` refetches Impact so the sheet becomes a notice; confirm deletes `target.id`; listed-row activate dismisses before navigating; subject erase applies `.deletedSubject` so Observation `usedBy` reloads (the citation reads reload through the write's effects).
 
 ## FFI
 

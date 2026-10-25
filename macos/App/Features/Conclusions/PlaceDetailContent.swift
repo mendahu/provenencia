@@ -29,7 +29,7 @@ struct PlaceDetailContent: ConclusionDetailBody {
         )
         ref = detail.entity.ref
         members = L10n.Conclusions.memberCount(detail.memberCount)
-        let header = detail.placeHeader
+        let header = detail.header?.place
         let line = PlaceChainDisplay.line(
             parents: header?.parents ?? [],
             candidates: header?.parentsAreCandidates ?? false

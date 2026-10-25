@@ -1,6 +1,8 @@
 package effects
 
 import (
+	"slices"
+
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 )
@@ -24,19 +26,38 @@ type SearchIDs struct {
 	IDs  [][]byte
 }
 
+// List names a catalog-wide list a write changed: one the app caches whole
+// and a row change cannot be patched into. The values are the wire keys
+// (WriteEffects.lists) and Swift's CatalogList raw values.
+type List string
+
+const (
+	// ListVocabulary: a vocabulary label (source type, metadata field,
+	// subject type, Property, Property term) or a subject type's property
+	// binding changed.
+	ListVocabulary List = "vocabulary"
+	// ListPropertyUsage: an Observation was created, deleted, or moved to
+	// another Property, so the Properties workspace's usedBy counts changed.
+	ListPropertyUsage List = "property_usage"
+	// ListEvidenceGraphs: a graph or link row was written.
+	ListEvidenceGraphs List = "evidence_graphs"
+)
+
+// Lists is every catalog-wide list, in the order Set.Lists reports them.
+var Lists = []List{ListVocabulary, ListPropertyUsage, ListEvidenceGraphs}
+
 // Set is what a batch of changes touches. Empty Handles or Search means that
-// job has nothing to do. Vocabulary and Structure are catalog-wide.
+// job has nothing to do. Lists and Structure are the catalog-wide fields.
 type Set struct {
 	Handles [][]byte
-	// Sources are the Sources whose graph changed (Effect.Source): what the
-	// Source graph and graph progress load.
-	Sources [][]byte
+	// EvidenceGraphs are the Evidence graphs whose loaded rows changed
+	// (Effect.EvidenceGraph): graphcache drops each, and graph progress counts
+	// them.
+	EvidenceGraphs [][]byte
 	// CitationSources are the Sources whose citation reads (citation counts,
-	// citations by artifact) a change moves (Effect.CitationSource).
+	// citations by artifact) a change moves (Effect.CitationSource). The app
+	// keys those reads by graph and drops every graph's.
 	CitationSources [][]byte
-	// PropertyUsage is set when an Observation was created, deleted, or moved
-	// to another Property: the Properties workspace's usedBy counts changed.
-	PropertyUsage bool
 	// SourceScopes are the Sources whose last activity a change moves
 	// (Effect.SourceScope), the audit source scope.
 	SourceScopes [][]byte
@@ -44,8 +65,11 @@ type Set struct {
 	// batch moves (Effect.HandleScope); Handles is the recompute set.
 	HandleScopes [][]byte
 	Search       []SearchIDs
-	Vocabulary   bool
-	Structure    bool
+	// Lists are the catalog-wide lists the batch changed, deduped, in the
+	// order of Lists.
+	Lists []List
+	// Structure is set when the graph cache drops whole; it is not a list.
+	Structure bool
 	// HeaderDeps are handles whose stored rows read Handles. Run fills this
 	// from the walk RecomputeTx already did. HeaderDepsWalked says that walk
 	// happened, including when it found nobody, so a commit drops those rows
@@ -59,16 +83,14 @@ type Set struct {
 // bucket that has no effects.
 type Effect struct {
 	Entity string
-	// Source is the Source whose graph this change changes: the Source graph
-	// and graph progress load the table. A table neither loads leaves it empty.
-	Source Path
-	// CitationSource is the Source whose citation reads (citation counts,
-	// citations by artifact) load the table. A table neither loads leaves it
-	// empty.
+	// EvidenceGraph is the Evidence graph whose loaded rows this change moves
+	// (a Path that ends at evidence_graphs): graphcache drops it, and graph
+	// progress counts it. A table neither loads leaves it empty.
+	EvidenceGraph Path
+	// CitationSource is the Source whose change drops the citation reads
+	// (citation counts, citations by artifact) of every graph (the app keys
+	// them by graph). A table neither loads leaves it empty.
 	CitationSource Path
-	// PropertyUsage marks a table whose creates, deletes, and property_id
-	// edits move the Properties workspace's usedBy counts.
-	PropertyUsage bool
 	// SourceScope is the Source whose last activity (audit source scope) this
 	// change moves.
 	SourceScope Path
@@ -77,9 +99,23 @@ type Effect struct {
 	// change moves; Handles is the recompute set.
 	HandleScope Path
 	Search      []SearchDoc
-	Vocabulary  bool
-	Structure   Path
-	None        bool
+	// Lists are the catalog-wide lists a change to the table moves.
+	Lists []List
+	// ListsOnField, when set, narrows an update: it moves Lists only if it
+	// writes this field. Creates and deletes always move them.
+	ListsOnField string
+	Structure    Path
+	None         bool
+}
+
+// Has reports whether the batch changed the list.
+func (s Set) Has(l List) bool {
+	for _, got := range s.Lists {
+		if got == l {
+			return true
+		}
+	}
+	return false
 }
 
 // Handle queries mirror autoreconciler. They stay here so the registry can
@@ -115,18 +151,34 @@ func valueMembers(col string) Path {
 	return chain(inbound("observations", col), field("subject_id"), membersOf)
 }
 
+// observationGraph is an Observation to the Evidence graph of its Subject.
+var observationGraph = up("subject_id", "graph_id")
+
+// graphsOfSource is a path ending at a Source, to every Evidence graph of it.
+func graphsOfSource(p Path) Path {
+	return chain(p, inbound("evidence_graphs", "source_id"))
+}
+
+// valueGraph is a value row to the Evidence graphs of the Observations that
+// hold it in col.
+func valueGraph(col string) Path {
+	return chain(inbound("observations", col), observationGraph)
+}
+
 // valueSource is a value row to the Source of the Observations that hold it
-// in col. Both Source and SourceScope walk it.
+// in col, through each Observation's Citation. CitationSource and SourceScope
+// walk it; EvidenceGraph walks valueGraph, through the Observation's Subject.
 func valueSource(col string) Path {
 	return chain(inbound("observations", col), up("citation_id", "artifact_id", "source_id"))
 }
 
 // ownedValue is the effect of a value row an Observation owns in col: the
-// change carries the Source and handles of the Observations that hold it.
+// change carries the Evidence graphs, the Source and the handles of the
+// Observations that hold it.
 func ownedValue(entity, col string) Effect {
 	return Effect{
 		Entity:         entity,
-		Source:         valueSource(col),
+		EvidenceGraph:  valueGraph(col),
 		CitationSource: valueSource(col),
 		SourceScope:    valueSource(col),
 		Handles:        valueMembers(col),
@@ -134,16 +186,16 @@ func ownedValue(entity, col string) Effect {
 	}
 }
 
-// usesProperty reports whether the change moves the Properties workspace's
-// usedBy counts.
-func (e Effect) usesProperty(ch rowchange.Change) bool {
-	if !e.PropertyUsage {
+// movesLists reports whether the change moves the entry's Lists: always for
+// a create or delete, and for an update only when it writes ListsOnField.
+func (e Effect) movesLists(ch rowchange.Change) bool {
+	if len(e.Lists) == 0 {
 		return false
 	}
-	if ch.Action != rowchange.ActionUpdate {
+	if ch.Action != rowchange.ActionUpdate || e.ListsOnField == "" {
 		return true
 	}
-	_, ok := ch.Fields["property_id"]
+	_, ok := ch.Fields[e.ListsOnField]
 	return ok
 }
 
@@ -156,9 +208,10 @@ var observers = chain(
 
 var registry = map[string]Effect{
 	"sources": {
-		Entity:      "source",
-		SourceScope: self(),
-		Search:      []SearchDoc{{Kind: DocSource, Path: self()}},
+		Entity:        "source",
+		EvidenceGraph: onField("title", graphsOfSource(self())),
+		SourceScope:   self(),
+		Search:        []SearchDoc{{Kind: DocSource, Path: self()}},
 	},
 	"source_notes": {
 		Entity:      "source_note",
@@ -183,14 +236,14 @@ var registry = map[string]Effect{
 	},
 	"artifacts": {
 		Entity:         "artifact",
-		Source:         field("source_id"),
+		EvidenceGraph:  graphsOfSource(field("source_id")),
 		CitationSource: field("source_id"),
 		SourceScope:    field("source_id"),
 		Search:         []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
 	},
 	"citations": {
 		Entity:         "citation",
-		Source:         up("artifact_id", "source_id"),
+		EvidenceGraph:  graphsOfSource(up("artifact_id", "source_id")),
 		CitationSource: up("artifact_id", "source_id"),
 		SourceScope:    up("artifact_id", "source_id"),
 		Handles:        onField("transcription_uncertain", sqlPath(sqlHandlesForCitation)),
@@ -198,9 +251,10 @@ var registry = map[string]Effect{
 	"citation_notes": {Entity: "citation_note", SourceScope: up("citation_id", "artifact_id", "source_id")},
 	"observations": {
 		Entity:         "observation",
-		Source:         up("citation_id", "artifact_id", "source_id"),
+		EvidenceGraph:  observationGraph,
 		CitationSource: up("citation_id", "artifact_id", "source_id"),
-		PropertyUsage:  true,
+		Lists:          []List{ListPropertyUsage},
+		ListsOnField:   "property_id",
 		SourceScope:    up("citation_id", "artifact_id", "source_id"),
 		Handles:        observationMembers,
 		HandleScope:    observationMembers,
@@ -210,7 +264,19 @@ var registry = map[string]Effect{
 		SourceScope: up("observation_id", "citation_id", "artifact_id", "source_id"),
 		HandleScope: chain(up("observation_id", "subject_id"), membersOf),
 	},
-	"subjects": {Entity: "subject", Source: field("source_id"), SourceScope: field("source_id")},
+	"subjects": {Entity: "subject", EvidenceGraph: field("graph_id"), SourceScope: field("source_id")},
+	"evidence_graphs": {
+		Entity:        "evidence_graph",
+		EvidenceGraph: self(),
+		SourceScope:   field("source_id"),
+		Lists:         []List{ListEvidenceGraphs},
+	},
+	"evidence_graph_artifacts": {
+		Entity:         "evidence_graph_artifact",
+		SourceScope:    up("graph_id", "source_id"),
+		CitationSource: up("graph_id", "source_id"),
+		Lists:          []List{ListEvidenceGraphs},
+	},
 	"files": {
 		Entity:      "file",
 		SourceScope: chain(inbound("artifacts", "file_id"), field("source_id")),
@@ -220,27 +286,27 @@ var registry = map[string]Effect{
 	"name_values":      ownedValue("name_value", "value_name_id"),
 	"depiction_values": ownedValue("depiction_value", "value_depiction_id"),
 	"source_types": {
-		Entity:     "source_type",
-		Vocabulary: true,
+		Entity: "source_type",
+		Lists:  []List{ListVocabulary},
 		Search: []SearchDoc{
 			{Kind: DocSourceType, Path: self()},
 			{Kind: DocSource, Path: inbound("sources", "source_type_id")},
 		},
 	},
 	"source_metadata_fields": {
-		Entity:     "metadata_field",
-		Vocabulary: true,
-		Search:     []SearchDoc{{Kind: DocMetadataField, Path: self()}},
+		Entity: "metadata_field",
+		Lists:  []List{ListVocabulary},
+		Search: []SearchDoc{{Kind: DocMetadataField, Path: self()}},
 	},
-	"subject_types": {Vocabulary: true},
+	"subject_types": {Lists: []List{ListVocabulary}},
 	"properties": {
-		Entity:     "property",
-		Vocabulary: true,
-		Handles:    onField("cardinality", sqlPath(sqlHandlesForProperty)),
+		Entity:  "property",
+		Lists:   []List{ListVocabulary},
+		Handles: onField("cardinality", sqlPath(sqlHandlesForProperty)),
 	},
 	"property_terms": {
-		Entity:     "property_term",
-		Vocabulary: true,
+		Entity: "property_term",
+		Lists:  []List{ListVocabulary},
 		// A neutral term reconciles differently, so the handles that observe
 		// it are recomputed.
 		Handles: onField("neutral", sqlPath(sqlHandlesForTerm)),
@@ -252,8 +318,8 @@ var registry = map[string]Effect{
 	},
 	"canonical_entities": {Entity: "canonical_entity", Handles: self(), HandleScope: self()},
 	"identity_claims": {
-		Entity: "identity_claim",
-		Source: from("subject_id", field("source_id")),
+		Entity:        "identity_claim",
+		EvidenceGraph: from("subject_id", field("graph_id")),
 		Handles: union(
 			field("entity_id"),
 			onStatus("accepted", from("subject_id", observers)),
@@ -261,17 +327,17 @@ var registry = map[string]Effect{
 		HandleScope: field("entity_id"),
 	},
 	"identity_claim_evidence": {
-		Entity:      "identity_claim_evidence",
-		Source:      up("identity_claim_id", "subject_id", "source_id"),
-		Handles:     up("identity_claim_id", "entity_id"),
-		HandleScope: up("identity_claim_id", "entity_id"),
+		Entity:        "identity_claim_evidence",
+		EvidenceGraph: up("identity_claim_id", "subject_id", "graph_id"),
+		Handles:       up("identity_claim_id", "entity_id"),
+		HandleScope:   up("identity_claim_id", "entity_id"),
 	},
 
 	"source_credibility_grades":   {None: true},
 	"claim_confidence_grades":     {None: true},
 	"users":                       {None: true},
 	"subject_positions":           {Entity: "subject_position", None: true},
-	"subject_type_properties":     {None: true},
+	"subject_type_properties":     {Entity: "subject_type_property", Lists: []List{ListVocabulary}},
 	"source_type_metadata_fields": {None: true},
 	"name_value_parts":            {None: true},
 	"name_format_profiles":        {None: true},
@@ -323,7 +389,7 @@ func init() {
 
 // paths lists every path field of the effect.
 func (e Effect) paths() []Path {
-	return []Path{e.Source, e.CitationSource, e.SourceScope, e.Handles, e.HandleScope, e.Structure}
+	return []Path{e.EvidenceGraph, e.CitationSource, e.SourceScope, e.Handles, e.HandleScope, e.Structure}
 }
 
 func (e Effect) validate(table string) error {
@@ -333,10 +399,18 @@ func (e Effect) validate(table string) error {
 				return errf("%s: None entry still has effects", table)
 			}
 		}
-		if len(e.Search) > 0 || e.Vocabulary {
+		if len(e.Search) > 0 || len(e.Lists) > 0 {
 			return errf("%s: None entry still has effects", table)
 		}
 		return nil
+	}
+	for _, l := range e.Lists {
+		if !slices.Contains(Lists, l) {
+			return errf("%s: undeclared list %q", table, l)
+		}
+	}
+	if e.ListsOnField != "" && len(e.Lists) == 0 {
+		return errf("%s: ListsOnField without Lists", table)
 	}
 	for _, p := range e.paths() {
 		if p.zero() {

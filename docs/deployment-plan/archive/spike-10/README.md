@@ -19,7 +19,10 @@
 - **Names match the way records are written.** Accent folding is matching only; display, `NormalizeForm`, and `sort_key` never fold, so José and Jose stay separate groupings. Abbreviation and nickname tables are catalog vocabulary. Spaced particles rejoin. A value counts by its support, and a negative Observation is a contradiction. Date windows compare in days. The Western name-format profile is a catalog row.
 - **A depiction is an owned value row: a region plus an image File.** The app renders the region; Go checks, decodes, and re-encodes its own PNG and never stores the app's bytes. The image is not an Artifact and not a thumbnail. A File is released when no declared pointer remains, and one purge removes its object.
 - **A likeness takes its region from the keyboard too.** Drawing stays a pointer action; **Use the whole photo** (or page) and **Use the citation's region** set the region without drawing, and Draw moves focus to Cancel and announces drawing mode.
-- **A gallery is the reconciled likeness values; a preferred portrait is a display pointer.** With no choice, the earliest likeness leads the Person page and the People list.
+- **A gallery is the reconciled likeness values; a preferred portrait is a display pointer.** With no choice, the earliest likeness leads the Person page and the People list. A likeness record is in the gallery by its own outcome (kept or weak), so a negative, provisional, or denied record of the same picture never leads, opens, or becomes the portrait.
+- **A depiction value is pure.** `core/depictionvalue` holds the type, its shape check, and the read rule (`Readable`); `core/database/depictionvalues` holds only the queries, so the matching layers carry a likeness without reaching `core/database`. Skill: [`add-depiction-value`](../../../../.agents/skills/add-depiction-value/SKILL.md).
+- **Someone else's project folder is untrusted input.** A locator holds at most 256 region points and 64 KiB, in Go and in the Swift mirror; an oversized stored region reads as hidden. The app refuses a symlinked or aliased object, shard folder, or `objects/`, as `core/objectstore` does. `ThumbnailCache` decodes only a PNG or JPEG with a long edge of at most 4096 px, four at a time.
+- **The likeness preview is cut off the main thread**, once per region, drawing only the face box of a PDF page with PDFKit so annotations the viewer shows are in the likeness. An edit with no redraw keeps the saved image.
 - **Unpromote deletes a filing.** It deletes the Subject's claim and the bridge claims on that Source that use it. It does not reject, and the handle stays.
 - **New seeds are for new catalogs.** `engagement`, `interests`, `gender`, and `likeness` come from Install. No migration adds them to an existing catalog.
 
@@ -32,7 +35,7 @@ An adaptive choice field. A default role on a new connection. Omnibar whole-word
 | Item | Home |
 | --- | --- |
 | Promote compares two likenesses as pictures; place chains; concluded values first | Spike 11 |
-| Depiction leftovers | [`depictions-and-likenesses.md`](../../../ideas/depictions-and-likenesses.md) |
+| Depiction leftovers, including the 2026-10-18 likeness audit items no PR took | [`depictions-and-likenesses.md`](../../../ideas/depictions-and-likenesses.md) |
 | International-name leftovers, including the collation locale | [`international-names.md`](../../../ideas/international-names.md) |
 | Daitch–Mokotoff | [`daitch-mokotoff.md`](../../../ideas/daitch-mokotoff.md) |
 | Matcher calibration and a labelled set | [`matching-test-suite.md`](../../../ideas/matching-test-suite.md) |

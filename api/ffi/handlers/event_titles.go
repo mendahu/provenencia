@@ -3,7 +3,7 @@ package handlers
 import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/sourceeventtitles"
+	"github.com/mendahu/provenencia/core/database/grapheventtitles"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"google.golang.org/protobuf/proto"
@@ -27,6 +27,7 @@ func eventTitleProto(p eventtitle.Plan) *engine.EventTitle {
 		Label:        p.Parts.Label,
 		Ref:          p.Parts.Ref,
 		TypeKey:      p.Parts.TypeKey,
+		TypeOrigin:   p.Parts.TypeOrigin,
 		TypeLabel:    p.Parts.TypeLabel,
 		Place:        p.Parts.Place,
 	}
@@ -40,18 +41,18 @@ func eventTitleProto(p eventtitle.Plan) *engine.EventTitle {
 	return out
 }
 
-func ListSourceEventTitles(in []byte) ([]byte, error) {
-	var req engine.ListSourceEventTitlesRequest
+func ListEvidenceGraphEventTitles(in []byte) ([]byte, error) {
+	var req engine.ListEvidenceGraphEventTitlesRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("list_source_event_titles", err)
+		return nil, unmarshalErr("list_evidence_graph_event_titles", err)
 	}
-	sourceID, err := parseID(req.GetSourceId())
+	graphID, err := parseID(req.GetGraphId())
 	if err != nil {
 		return nil, err
 	}
-	out := &engine.ListSourceEventTitlesResponse{}
+	out := &engine.ListEvidenceGraphEventTitlesResponse{}
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		sg, err := c.Graph().Source(sourceID)
+		eg, err := c.Graph().EvidenceGraph(graphID)
 		if err != nil {
 			return err
 		}
@@ -67,13 +68,13 @@ func ListSourceEventTitles(in []byte) ([]byte, error) {
 		for id, info := range props {
 			keys[id] = info.Key
 		}
-		termLookup := map[string]struct{ Key, Label string }{}
+		termLookup := map[string]struct{ Key, Origin, Label string }{}
 		for id, info := range vocab.TermsByID() {
-			termLookup[id] = struct{ Key, Label string }{Key: info.Key, Label: info.Label}
+			termLookup[id] = struct{ Key, Origin, Label string }{Key: info.Key, Origin: info.Origin, Label: info.Label}
 		}
-		for _, t := range sourceeventtitles.FromStored(sg, keys, termLookup) {
+		for _, t := range grapheventtitles.FromStored(eg, keys, termLookup) {
 			out.Titles = append(out.Titles, &engine.SourceEventTitle{
-				SubjectId: uuidString(t.SubjectID),
+				SubjectId: database.UUIDString(t.SubjectID),
 				Title:     eventTitleProto(t.Plan),
 			})
 		}

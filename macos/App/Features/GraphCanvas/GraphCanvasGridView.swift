@@ -36,7 +36,7 @@ private struct GraphCanvasGridPatternRepresentable: NSViewRepresentable {
 
     func updateNSView(_ view: GraphCanvasGridPatternView, context: Context) {
         let spacingChanged = view.gridSpacing != gridSpacing
-        let magnificationChanged = abs(view.magnification - magnification) > 0.000_1
+        let magnificationChanged = abs(view.magnification - magnification) > GraphCanvasCoordinates.magnificationTolerance
         guard spacingChanged || magnificationChanged else { return }
         view.gridSpacing = gridSpacing
         view.magnification = magnification
@@ -95,10 +95,9 @@ final class GraphCanvasGridPatternView: NSView {
             GraphCanvasCoordinates.screenPixelDocumentWidth(magnification: magnification),
             cell
         )
-        var stroke = NSColor.gray.withAlphaComponent(0.7)
-        appearance.performAsCurrentDrawingAppearance {
-            stroke = NSColor(PVColor.borderSubtle).withAlphaComponent(0.7)
-        }
+        // A color baked into a cached pattern does not follow later appearance
+        // changes, so resolve it for this appearance with `PVPainter.color`.
+        let stroke = PVPainter.color(PVColor.borderSubtle, in: appearance).withAlphaComponent(0.7)
         guard let color = stroke.usingColorSpace(.sRGB)?.cgColor else { return nil }
         return GraphCanvasGridPattern.color(spacing: cell, lineWidth: lineWidth, stroke: color)
     }

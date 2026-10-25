@@ -5,15 +5,19 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
-	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
+	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
@@ -24,6 +28,12 @@ import (
 // Observation of the given polarity on a fresh Source, and returns the
 // Source and Subject ids.
 func personOnNewSource(t *testing.T, dir, userID, typeID, sexKey, polarity string) (sourceID, subjectID string) {
+	t.Helper()
+	return namedPersonOnNewSource(t, dir, userID, typeID, "Mary Smith", sexKey, polarity)
+}
+
+// namedPersonOnNewSource is personOnNewSource for a person with the given name.
+func namedPersonOnNewSource(t *testing.T, dir, userID, typeID, personName, sexKey, polarity string) (sourceID, subjectID string) {
 	t.Helper()
 	uid := uuid.MustParse(userID)
 	tid := uuid.MustParse(typeID)
@@ -42,12 +52,8 @@ func personOnNewSource(t *testing.T, dir, userID, typeID, sexKey, polarity strin
 		if err != nil {
 			return err
 		}
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: uid[:]}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, uid[:], subjects.CreateInput{SourceID: src.ID, SubjectTypeID: tid[:]}, nil)
-		})
-		if err != nil {
-			return err
-		}
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+		s := subjectstest.OfType(t, c, uid[:], graph, tid[:], "")
 		name, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
@@ -60,7 +66,7 @@ func personOnNewSource(t *testing.T, dir, userID, typeID, sexKey, polarity strin
 		if err != nil {
 			return err
 		}
-		art, err := runArtifactCreate(c, uid[:], artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+		art, err := artifactstest.Create(c, uid[:], artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 		if err != nil {
 			return err
 		}
@@ -68,11 +74,11 @@ func personOnNewSource(t *testing.T, dir, userID, typeID, sexKey, polarity strin
 			return citations.CreateWithObservations(tx, uid[:], citations.CreateInput{
 				ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
 			}, []observations.Input{
-				{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluetest.Western("Mary Smith")},
+				{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluetest.Western(personName)},
 				{SubjectID: s.ID, PropertyID: sex.ID, ValueTermID: term.ID, Polarity: polarity},
 			})
 		})
-		sourceID, subjectID = uuidString(src.ID), uuidString(s.ID)
+		sourceID, subjectID = database.UUIDString(src.ID), database.UUIDString(s.ID)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -80,104 +86,191 @@ func personOnNewSource(t *testing.T, dir, userID, typeID, sexKey, polarity strin
 	return sourceID, subjectID
 }
 
-// A row-level conflict from a negative Observation reaches the response as a
-// comparison line that names the incoming value as negative and cannot be
-// pinned.
-func TestProposeNegativeConflictLine(t *testing.T) {
-	dir, userID, _, typeID := subjectFixture(t)
-	_, handleSubject := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityPositive)
-	handle := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: handleSubject})
-	sourceID, incoming := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityNegative)
-
-	out, err := ProposePromoteGraphAlignment(marshalProto(t, &engine.ProposePromoteGraphAlignmentRequest{
-		ProjectDir: dir, SourceId: sourceID,
-		Fixed: []*engine.PromoteGraphAlignmentFixed{{SubjectId: incoming, HandleId: handle.Entity.GetId()}},
-	}))
-	if err != nil {
-		t.Fatal(err)
+// The contested flag reaches the response at any band: a negative Observation
+// against a filed positive one conflicts whether the row is skipped, fixed or
+// (with a positive Observation) not contested at all.
+func TestProposeSendsContested(t *testing.T) {
+	cases := []struct {
+		name       string
+		polarity   string
+		fix        bool
+		wantTarget string
+		wantReason string
+		wantFlag   bool
+	}{
+		{"negative, unfixed", observations.PolarityNegative, false, "skip", "weak", true},
+		{"negative, fixed", observations.PolarityNegative, true, "handle", "decided", true},
+		{"positive", observations.PolarityPositive, false, "handle", "agrees", false},
 	}
-	var resp engine.ProposePromoteGraphAlignmentResponse
-	if err := proto.Unmarshal(out, &resp); err != nil {
-		t.Fatal(err)
-	}
-	for _, row := range resp.GetRows() {
-		for _, c := range row.GetComparisons() {
-			if c.GetPropertyKey() == "sex_at_birth" && c.GetOutcome() == "conflict" {
-				if !c.GetIncomingNegative() || c.GetPinned() || c.GetIncomingObservationId() != "" || c.GetIncomingDisplay() != "Male" {
-					t.Fatalf("conflict line %+v", c)
+	var tests []rpcTest
+	for _, tc := range cases {
+		var incoming string
+		tests = append(tests, rpcTest{
+			name: tc.name,
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, typeID := subjectFixture(t)
+				_, handleSubject := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityPositive)
+				handle := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: handleSubject})
+				var sourceID string
+				sourceID, incoming = personOnNewSource(t, dir, userID, typeID, "male", tc.polarity)
+				req := &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, GraphId: soleGraphID(t, dir, sourceID)}
+				if tc.fix {
+					req.Fixed = []*engine.PromoteGraphAlignmentFixed{{SubjectId: incoming, HandleId: handle.Entity.GetId()}}
 				}
-				return
+				return req
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var resp engine.ProposePromoteGraphAlignmentResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				for _, row := range resp.GetRows() {
+					if row.GetSubjectId() != incoming {
+						continue
+					}
+					if row.GetTarget() != tc.wantTarget || row.GetReason() != tc.wantReason || row.GetContested() != tc.wantFlag {
+						t.Fatalf("row target %q reason %q contested %v; want %q %q %v",
+							row.GetTarget(), row.GetReason(), row.GetContested(), tc.wantTarget, tc.wantReason, tc.wantFlag)
+					}
+					return
+				}
+				t.Fatalf("no row for incoming subject %s in %+v", incoming, resp.GetRows())
+			},
+		})
+	}
+	runRPC(t, ProposePromoteGraphAlignment, tests)
+}
+
+// A fixed pair on a record the shortlist does not reach: unfixed the row does
+// not offer it; fixed the row holds it, decided and contested on a conflict.
+func TestProposeHoldsAFoundRecord(t *testing.T) {
+	f := newFoundRecordFixture(t)
+	propose := func(fixed ...*engine.PromoteGraphAlignmentFixed) *engine.PromoteGraphAlignmentRow {
+		t.Helper()
+		var resp engine.ProposePromoteGraphAlignmentResponse
+		mustRPC(t, ProposePromoteGraphAlignment, &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: f.dir, GraphId: f.graphID, Fixed: fixed}, &resp)
+		for _, row := range resp.GetRows() {
+			if row.GetSubjectId() == f.incoming {
+				return row
 			}
 		}
+		t.Fatalf("no row for %s in %+v", f.incoming, resp.GetRows())
+		return nil
 	}
-	t.Fatalf("no sex_at_birth conflict line in %+v", resp.GetRows())
+
+	unfixed := propose()
+	if unfixed.GetHandleId() == f.handle {
+		t.Fatalf("unfixed row %+v targets the found record", unfixed)
+	}
+	for _, alt := range unfixed.GetAlternatives() {
+		if alt.GetHandleId() == f.handle {
+			t.Fatalf("unfixed row lists the found record: %+v", unfixed)
+		}
+	}
+
+	row := propose(&engine.PromoteGraphAlignmentFixed{SubjectId: f.incoming, HandleId: f.handle})
+	if row.GetTarget() != "handle" || row.GetHandleId() != f.handle || row.GetReason() != "decided" ||
+		row.GetAssessment() != "none" || !row.GetContested() {
+		t.Fatalf("fixed row %+v, want handle %s, decided, none, contested", row, f.handle)
+	}
+}
+
+// A row whose earlier pair was released carries the move's reason and the
+// neighbor that caused it; a row without a move carries neither.
+func TestProposalProtoSendsMove(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	dir, _, _, _ := subjectFixture(t)
+	a, b, n := uuid.New(), uuid.New(), uuid.New()
+	prop := graphalign.Proposal{Rows: []graphalign.Row{
+		{SubjectID: a[:], Target: graphalign.TargetSkip, Move: &graphalign.Move{Reason: graphalign.ReasonNeighborPlaced, NeighborSubjectID: n[:]}},
+		{SubjectID: b[:], Target: graphalign.TargetSkip},
+	}}
+	var resp *engine.ProposePromoteGraphAlignmentResponse
+	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
+		var err error
+		resp, err = proposalProto(c, prop)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	rows := resp.GetRows()
+	if len(rows) != 2 {
+		t.Fatalf("rows %d", len(rows))
+	}
+	if rows[0].GetMoveReason() != "neighbor_placed" || rows[0].GetMoveNeighborSubjectId() != n.String() {
+		t.Fatalf("moved row %+v", rows[0])
+	}
+	if rows[1].GetMoveReason() != "" || rows[1].GetMoveNeighborSubjectId() != "" {
+		t.Fatalf("plain row %+v", rows[1])
+	}
 }
 
 func TestProposePromoteGraphAlignment(t *testing.T) {
 	runRPC(t, ProposePromoteGraphAlignment, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
-			name: "bad source id",
+			name: "bad graph id",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _, _, _ := subjectFixture(t)
-				return &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, SourceId: "nope"}
+				return &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, GraphId: "nope"}
 			},
 			wantErr: true,
 		},
 		{
-			name: "empty source returns no rows",
+			name: "unknown graph",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, _, _ := subjectFixture(t)
+				return &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, GraphId: uuid.NewString()}
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty graph returns no rows",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _, sourceID, _ := subjectFixture(t)
-				return &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, SourceId: sourceID}
+				return &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, GraphId: soleGraphID(t, dir, sourceID)}
 			},
 			want: &engine.ProposePromoteGraphAlignmentResponse{},
 		},
+		{
+			// Two look-alike handles, so the row has a reason property and so
+			// does its alternative; each goes out as a product property.
+			name: "reason properties go out as product properties",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, typeID := subjectFixture(t)
+				for range 2 {
+					_, handleSubject := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityPositive)
+					promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: handleSubject})
+				}
+				sourceID, _ := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityPositive)
+				return &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, GraphId: soleGraphID(t, dir, sourceID)}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var resp engine.ProposePromoteGraphAlignmentResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				var named int
+				check := func(what, key, origin string) {
+					switch {
+					case key == "" && origin != "":
+						t.Fatalf("%s: origin %q without a key", what, origin)
+					case key != "" && origin != vocabkey.OriginProvenencia:
+						t.Fatalf("%s: key %q has origin %q, want %q", what, key, origin, vocabkey.OriginProvenencia)
+					case key != "":
+						named++
+					}
+				}
+				for _, row := range resp.GetRows() {
+					check("row", row.GetReasonPropertyKey(), row.GetReasonPropertyOrigin())
+					for _, alt := range row.GetAlternatives() {
+						check("alternative", alt.GetReasonPropertyKey(), alt.GetReasonPropertyOrigin())
+					}
+				}
+				if named < 2 {
+					t.Fatalf("%d reason properties in %+v, want the row's and an alternative's", named, resp.GetRows())
+				}
+			},
+		},
 	})
-}
-
-// A row whose handle has no accepted member claim has no exhibits, yet every
-// comparison line reaches the response with the two values it compared.
-func TestProposeRowWithoutExhibitsSendsValues(t *testing.T) {
-	dir, userID, _, typeID := subjectFixture(t)
-	_, handleSubject := personOnNewSource(t, dir, userID, typeID, "female", observations.PolarityPositive)
-	handle := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: handleSubject})
-	entityID := uuid.MustParse(handle.Entity.GetId())
-	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
-		db, err := c.DB()
-		if err != nil {
-			return err
-		}
-		if _, err := db.Exec(`UPDATE identity_claims SET status = 'provisional' WHERE entity_id = ?`, entityID[:]); err != nil {
-			return err
-		}
-		c.Graph().Drop()
-		return nil
-	}); err != nil {
-		t.Fatal(err)
-	}
-	sourceID, incoming := personOnNewSource(t, dir, userID, typeID, "female", observations.PolarityPositive)
-
-	out, err := ProposePromoteGraphAlignment(marshalProto(t, &engine.ProposePromoteGraphAlignmentRequest{
-		ProjectDir: dir, SourceId: sourceID,
-		Fixed: []*engine.PromoteGraphAlignmentFixed{{SubjectId: incoming, HandleId: handle.Entity.GetId()}},
-	}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var resp engine.ProposePromoteGraphAlignmentResponse
-	if err := proto.Unmarshal(out, &resp); err != nil {
-		t.Fatal(err)
-	}
-	shown := map[string][2]string{}
-	for _, row := range resp.GetRows() {
-		for _, c := range row.GetComparisons() {
-			if c.GetIncomingDisplay() == "" || c.GetMemberDisplay() == "" {
-				t.Fatalf("a line without both values: %+v", c)
-			}
-			shown[c.GetPropertyKey()] = [2]string{c.GetIncomingDisplay(), c.GetMemberDisplay()}
-		}
-	}
-	if shown["name"] != [2]string{"Mary Smith", "Mary Smith"} || shown["sex_at_birth"] != [2]string{"Female", "Female"} {
-		t.Fatalf("lines %v", shown)
-	}
 }

@@ -6,38 +6,29 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/graphalign"
-	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
 )
 
-// ProposePromoteGraphAlignment loads one Source's Evidence layer and returns
+// ProposePromoteGraphAlignment loads one Evidence graph's layer and returns
 // Align's proposal (S9-42).
 func ProposePromoteGraphAlignment(in []byte) ([]byte, error) {
 	var req engine.ProposePromoteGraphAlignmentRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, unmarshalErr("propose_promote_graph_alignment", err)
 	}
-	sourceID, err := parseID(req.GetSourceId())
+	graphID, err := parseID(req.GetGraphId())
 	if err != nil {
 		return nil, err
 	}
-	fixed := make([]graphalign.Fixed, 0, len(req.GetFixed()))
-	for _, f := range req.GetFixed() {
-		sid, err := parseID(f.GetSubjectId())
-		if err != nil {
-			return nil, err
-		}
-		hid, err := optionalID(f.GetHandleId())
-		if err != nil {
-			return nil, err
-		}
-		fixed = append(fixed, graphalign.Fixed{SubjectID: sid, HandleID: hid, Target: graphalign.Target(f.GetTarget())})
+	fixed, err := fixedFromProto(req.GetFixed())
+	if err != nil {
+		return nil, err
 	}
 
 	var out *engine.ProposePromoteGraphAlignmentResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		prop, rev, err := promotealign.Propose(c, sourceID, fixed)
+		prop, rev, err := promotealign.Propose(c, graphID, fixed)
 		if err != nil {
 			return err
 		}
@@ -52,6 +43,24 @@ func ProposePromoteGraphAlignment(in []byte) ([]byte, error) {
 		return nil, err
 	}
 	return proto.Marshal(out)
+}
+
+// fixedFromProto reads the targets a page holds for its rows: the ids parse,
+// and a target is kept as the client sent it for the core to check.
+func fixedFromProto(in []*engine.PromoteGraphAlignmentFixed) ([]graphalign.Fixed, error) {
+	fixed := make([]graphalign.Fixed, 0, len(in))
+	for _, f := range in {
+		sid, err := parseID(f.GetSubjectId())
+		if err != nil {
+			return nil, err
+		}
+		hid, err := optionalID(f.GetHandleId())
+		if err != nil {
+			return nil, err
+		}
+		fixed = append(fixed, graphalign.Fixed{SubjectID: sid, HandleID: hid, Target: graphalign.Target(f.GetTarget())})
+	}
+	return fixed, nil
 }
 
 func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.ProposePromoteGraphAlignmentResponse, error) {
@@ -105,60 +114,40 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 
 	for _, r := range prop.Rows {
 		row := &engine.PromoteGraphAlignmentRow{
-			SubjectId:            uuidString(r.SubjectID),
+			SubjectId:            database.UUIDString(r.SubjectID),
 			Kind:                 r.Kind,
 			Target:               string(r.Target),
-			HandleId:             uuidString(r.HandleID),
+			HandleId:             database.UUIDString(r.HandleID),
 			HandleRef:            r.HandleRef,
 			Score:                r.Score,
 			Assessment:           string(r.Assessment),
 			Reason:               string(r.Reason),
-			ReasonPropertyKey:    r.ReasonProperty.Key,
-			ReasonPropertyOrigin: r.ReasonProperty.Origin,
+			ReasonPropertyKey:    string(r.ReasonProperty),
+			ReasonPropertyOrigin: productOrigin(r.ReasonProperty),
 			ConflictWithFixed:    r.Flags.ConflictWithFixed,
+			Contested:            r.Flags.Contested,
 			PossibleDuplicate:    r.Flags.PossibleDuplicate,
-			DuplicateOfSubjectId: uuidString(r.Flags.DuplicateOf),
+			DuplicateOfSubjectId: database.UUIDString(r.Flags.DuplicateOf),
 		}
 		if r.Via != nil {
-			row.ViaNeighborSubjectId = uuidString(r.Via.NeighborSubjectID)
-			row.ViaBridgeType = r.Via.Signature.BridgeType
-			row.ViaRole = r.Via.Signature.RoleOrType
+			row.ViaNeighborSubjectId = database.UUIDString(r.Via.NeighborSubjectID)
+			row.ViaBridgeType = string(r.Via.Key.Type)
+			row.ViaRole = string(r.Via.Key.Term)
 		}
-		for _, ex := range r.Exhibits {
-			cmp := &engine.PromoteGraphAlignmentComparison{
-				PropertyKey:           ex.Property.Key,
-				PropertyOrigin:        ex.Property.Origin,
-				Outcome:               string(ex.Outcome),
-				ValueType:             ex.ValueType,
-				Pinned:                ex.Pinned,
-				Weight:                ex.Weight,
-				GroupSubjectId:        uuidString(ex.GroupSubjectID),
-				IncomingObservationId: uuidString(ex.IncomingObservationID),
-				IncomingDisplay:       ex.IncomingDisplay,
-				IncomingNegative:      ex.IncomingNegative,
-				IncomingSource:        ex.IncomingSource,
-				MemberObservationId:   uuidString(ex.MemberObservationID),
-				MemberDisplay:         ex.MemberDisplay,
-				MemberSource:          ex.MemberSource,
-			}
-			if ex.IncomingDate != nil {
-				cmp.IncomingDate = valuecodec.DateToProto(*ex.IncomingDate)
-			}
-			if ex.MemberDate != nil {
-				cmp.MemberDate = valuecodec.DateToProto(*ex.MemberDate)
-			}
-			row.Comparisons = append(row.Comparisons, cmp)
+		if r.Move != nil {
+			row.MoveReason = string(r.Move.Reason)
+			row.MoveNeighborSubjectId = database.UUIDString(r.Move.NeighborSubjectID)
 		}
 		for _, a := range r.Alternatives {
 			alt := &engine.PromoteGraphAlignmentAlternative{
-				HandleId:             uuidString(a.HandleID),
+				HandleId:             database.UUIDString(a.HandleID),
 				HandleRef:            a.Ref,
 				Score:                a.Score,
 				Assessment:           string(a.Assessment),
 				Reason:               string(a.Reason),
-				ReasonPropertyKey:    a.ReasonProperty.Key,
-				ReasonPropertyOrigin: a.ReasonProperty.Origin,
-				ViaNeighborSubjectId: uuidString(a.ViaNeighbor),
+				ReasonPropertyKey:    string(a.ReasonProperty),
+				ReasonPropertyOrigin: productOrigin(a.ReasonProperty),
+				ViaNeighborSubjectId: database.UUIDString(a.ViaNeighbor),
 			}
 			switch r.Kind {
 			case vocabkey.Person:
@@ -195,4 +184,13 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 		out.Rows = append(out.Rows, row)
 	}
 	return out, nil
+}
+
+// productOrigin is the origin a reason property's key goes out with: subject
+// compare leads are product properties, and an empty key has no origin.
+func productOrigin(key vocabkey.PropertyKey) string {
+	if key == "" {
+		return ""
+	}
+	return vocabkey.OriginProvenencia
 }

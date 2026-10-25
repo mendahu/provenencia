@@ -1,7 +1,7 @@
 -- S10-32: value_type = depiction. The value is a depiction_values row: a
 -- region of the Citation's page and the image File Go stored from it.
 -- likeness is seeded by subjectvocab.Install at create time, not here.
-PRAGMA foreign_keys=OFF;
+-- migrate: foreign_keys off
 
 CREATE TABLE properties__new (
 	id          BLOB PRIMARY KEY,
@@ -24,8 +24,6 @@ SELECT id, key, origin, label, description, value_type, cardinality FROM propert
 
 DROP TABLE properties;
 ALTER TABLE properties__new RENAME TO properties;
-
-PRAGMA foreign_keys=ON;
 
 CREATE TABLE depiction_values (
 	id            BLOB PRIMARY KEY,

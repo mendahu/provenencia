@@ -1,59 +1,44 @@
 // Package graphalign proposes a handle, New, or Skip for every primary
 // Subject on one Evidence layer (S9-41). Pure: no catalog I/O. S9-42 loads
-// Layer / Canon / Stats and calls Align.
+// Layer / Canon and calls Align.
 package graphalign
 
 import (
-	"github.com/mendahu/provenencia/core/datevalue"
-	"github.com/mendahu/provenencia/core/match"
+	"bytes"
+
+	"github.com/mendahu/provenencia/core/subjectcompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
-
-// EdgeSignature identifies corresponding bridges on the layer and edges on
-// the canonical graph (design §6).
-//
-// Directed marks a term whose order is part of its meaning (parent of, part
-// of). A directed edge corresponds only from the same end: Bridge.A and
-// CanonEdge.From are the bridge's first endpoint. Key leaves it out, since
-// both ends of one bridge share a fan-out entry and a signature identity.
-type EdgeSignature struct {
-	BridgeType       string // participation, relationship, location, place_relationship
-	RoleOrType       string // role or relationship / place-relationship term key
-	NeighborKind     string // person, event, place
-	NeighborTypeTerm string // e.g. birth on an event
-	Directed         bool
-}
-
-// Key is a stable map key for the signature.
-func (s EdgeSignature) Key() string {
-	return s.BridgeType + "|" + s.RoleOrType + "|" + s.NeighborKind + "|" + s.NeighborTypeTerm
-}
-
-// ScaleKey is the signature-scale lookup. A directed signature has one entry
-// per end, the same "|from" / "|to" suffix pairGroup uses. An undirected
-// signature is Key alone.
-func (s EdgeSignature) ScaleKey(fromEnd bool) string {
-	if !s.Directed {
-		return s.Key()
-	}
-	if fromEnd {
-		return s.Key() + "|from"
-	}
-	return s.Key() + "|to"
-}
 
 // Subject is one primary Subject on the Evidence layer.
 type Subject struct {
 	ID         []byte
 	Ref        string
 	Kind       string // person, event, place
-	Values     match.Values
+	Values     subjectcompare.Values
 	Provenance float64 // scales node scores; 1 is default, below 1 weakens
 }
 
 // Bridge links two primary Subjects on the layer (walked undirected).
 type Bridge struct {
-	A, B      []byte
-	Signature EdgeSignature
+	A, B       []byte
+	KeyA, KeyB vocabkey.BridgeKey // the bridge read from A's end and from B's
+	// Associations are the bridge Subjects behind the edge. The layers never
+	// read them; the loader sets them and the claim evidence query reads them
+	// back, as it does a value's Ref.
+	Associations [][]byte
+}
+
+// From reads the bridge from one end: the Subject at the other end and the
+// bridge as seen from id. ok is false when id is neither end.
+func (b Bridge) From(id []byte) (other []byte, key vocabkey.BridgeKey, ok bool) {
+	switch {
+	case bytes.Equal(b.A, id):
+		return b.B, b.KeyA, true
+	case bytes.Equal(b.B, id):
+		return b.A, b.KeyB, true
+	}
+	return nil, vocabkey.BridgeKey{}, false
 }
 
 // Handle is one canonical entity in the prefetched canon neighborhood.
@@ -61,34 +46,29 @@ type Handle struct {
 	ID     []byte
 	Ref    string
 	Kind   string
-	Values match.Values
+	Values subjectcompare.Values
 }
 
 // CanonEdge is one filed association hop between handles.
 type CanonEdge struct {
-	From, To  []byte
-	Signature EdgeSignature
+	From, To       []byte
+	KeyFrom, KeyTo vocabkey.BridgeKey // the edge read from From's end and from To's
 }
 
 // Layer is one Source's primary Subjects and bridges.
 type Layer struct {
 	Subjects []Subject
 	Bridges  []Bridge
-	Metas    []match.PropertyMeta
+	Metas    subjectcompare.Metas
 }
 
 // Canon is the part of the canonical graph reachable from the seed handles.
 type Canon struct {
 	Handles []Handle
 	Edges   []CanonEdge
-}
-
-// Stats supplies catalog frequencies for Fellegi–Sunter weights.
-type Stats struct {
-	// ValueFreq[propertyKey][valueKey] ≈ how often unrelated handles agree.
-	ValueFreq map[string]map[string]float64
-	// FanOut[signature.Key()] is the typical neighbor count for that edge.
-	FanOut map[string]float64
+	// Candidates are each Subject's shortlisted candidates, by Subject id, in
+	// Candidates order; the loader fills them.
+	Candidates map[string][][]byte
 }
 
 // Fixed is a decided or already-promoted row Align holds as given. Target
@@ -120,48 +100,21 @@ const (
 	AssessNone   Assessment = "none"
 )
 
-// Comparison is one Property outcome on the chosen (or top) candidate: an
-// input to the score. Pins come from Exhibit, which pairs Observations.
+// Comparison is one lead property's outcome on the chosen (or top) candidate:
+// an input to the score. Key, Result (Outcome, Cause, Speaking: A the
+// Subject's value, B the handle's) and Points come from subject compare.
 type Comparison struct {
-	Property  match.Property
-	Outcome   match.Outcome
-	ValueType string
-	// Weight is the points this outcome added (negative for a conflict).
-	Weight float64
-	// Probe and Candidate are the two values behind the outcome; a conflict
-	// the exhibits did not show is shown from these.
-	Probe, Candidate match.ValueRef
+	subjectcompare.PropertyResult
+	// Derived: the lead is a property the profile builder derives (a person's
+	// lifespan), with no catalog row.
+	Derived bool
 }
 
 // Via is the layer edge that seeded this row's handle, when the walk
 // reached it from an already-decided neighbor.
 type Via struct {
 	NeighborSubjectID []byte
-	Signature         EdgeSignature
-}
-
-// Exhibit is one pin-able observation pair the loader attaches after Align.
-// GroupSubjectID is empty for the Subject's own records and names the layer
-// neighbor for a one-hop record. Displays are values (term labels for
-// terms), not copy.
-type Exhibit struct {
-	Property              match.Property
-	Outcome               match.Outcome
-	ValueType             string
-	Pinned                bool
-	Weight                float64
-	GroupSubjectID        []byte
-	IncomingObservationID []byte
-	IncomingDisplay       string
-	// IncomingNegative is true when the incoming value is a negative
-	// Observation: the record says the Subject is not this value.
-	IncomingNegative    bool
-	IncomingSource      string
-	IncomingDate        *datevalue.Value
-	MemberObservationID []byte
-	MemberDisplay       string
-	MemberSource        string
-	MemberDate          *datevalue.Value
+	Key               vocabkey.BridgeKey
 }
 
 // Reason is why a row reads as it does. Codes, not copy: the page words them.
@@ -177,6 +130,21 @@ const (
 	ReasonEmpty   Reason = "empty"    // nothing to match on: Skip
 )
 
+// Move reasons: why settling released a row's earlier pair. They extend Reason
+// and appear only in Move.Reason.
+const (
+	ReasonNeighborPlaced   Reason = "neighbor_placed"   // a neighbor was placed
+	ReasonNeighborMoved    Reason = "neighbor_moved"    // a neighbor was placed on another handle than before
+	ReasonNeighborReleased Reason = "neighbor_released" // a neighbor was released
+)
+
+// Move is why settling released this row's earlier pair: a neighbor was
+// placed, moved or released.
+type Move struct {
+	Reason            Reason
+	NeighborSubjectID []byte
+}
+
 // Alternative is a handle the researcher can choose. Assessment and Reason
 // describe this record on its own, so the page can show them for the
 // selected record and show nothing for Skip, New, or an empty menu.
@@ -186,7 +154,7 @@ type Alternative struct {
 	Score          float64
 	Assessment     Assessment
 	Reason         Reason // via, agrees, or weak
-	ReasonProperty match.Property
+	ReasonProperty vocabkey.PropertyKey
 	ViaNeighbor    []byte
 }
 
@@ -200,6 +168,9 @@ type RowFlags struct {
 	// or both rows are New and score alike.
 	PossibleDuplicate bool
 	DuplicateOf       []byte
+	// Contested: a comparison behind the pair this row reports conflicts,
+	// whatever its band.
+	Contested bool
 }
 
 // Row is one Subject's proposal.
@@ -213,12 +184,14 @@ type Row struct {
 	Assessment   Assessment
 	Alternatives []Alternative
 	Comparisons  []Comparison
-	Exhibits     []Exhibit
 	Reason       Reason
 	// ReasonProperty is the agreeing Property behind ReasonAgrees.
-	ReasonProperty match.Property
+	ReasonProperty vocabkey.PropertyKey
 	Via            *Via
 	Flags          RowFlags
+	// Move is set when settling released an earlier pair of this row and the
+	// row's final target is not that handle.
+	Move *Move
 }
 
 // Proposal is Align's full output: one row per primary Subject.

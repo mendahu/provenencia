@@ -13,9 +13,10 @@ import (
 
 // EventType is the displayed (kept rank-1) event_type term.
 type EventType struct {
-	ID    []byte
-	Key   string
-	Label string
+	ID     []byte
+	Key    string
+	Origin string // the term's origin; Key is a product type's only when it is the product's
+	Label  string
 }
 
 // EventHeader is one Event as a row. A rank-1 date wins over a start/end
@@ -60,7 +61,7 @@ func eventTitle(h EventHeader) eventtitle.Plan {
 		Place:        FirstPlaceName(h.Places),
 	}
 	if h.EventType != nil {
-		parts.TypeKey, parts.TypeLabel = h.EventType.Key, h.EventType.Label
+		parts.TypeKey, parts.TypeOrigin, parts.TypeLabel = h.EventType.Key, h.EventType.Origin, h.EventType.Label
 	}
 	for _, s := range h.Subjects {
 		parts.Subjects = append(parts.Subjects, eventtitle.Subject{Name: s.Name})

@@ -124,4 +124,4 @@ Worked paths:
 
 Coder tests lock the codes above: Auerbach is `097400` and `097500`; Uhrbach shares both; Moskowitz and Moskovitz are `645740`; Lewinsky and Levinski are `876450`; Lee is `800000` and Leigh is `850000`. A surname-only Lewinsky/Levinski comparison equals 0.7. The existing Smyth/Smith case stays the edit-distance score. `José`/`Jose` stays 0.95. An empty chart makes Lewinsky/Levinski score 0.
 
-[`docs/matching.md`](../matching.md) then lists the tier after near-spelling. No UI, no migration, no product-version bump.
+[`docs/matching-model.md`](../matching-model.md) then lists the tier's knob in the inventory. No UI, no migration, no product-version bump.

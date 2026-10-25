@@ -44,9 +44,11 @@ struct WorkspaceView: View {
         navigation.onLocationCommit = { location in
             session.apply(location: location)
         }
+        let counts = CatalogCounts(projectDir: projectDir, store: model.store)
+        session.onNavCountsMoved = { await counts.refreshAll() }
         _session = State(initialValue: session)
         _navigation = State(initialValue: navigation)
-        _catalogCounts = State(initialValue: CatalogCounts(projectDir: projectDir, store: model.store))
+        _catalogCounts = State(initialValue: counts)
     }
 
     var body: some View {
@@ -178,11 +180,11 @@ extension WorkspaceView {
             CatalogSource(id: "\($0)", ref: "SRC-FAKE\($0)", sourceTypeID: "", title: "Source \($0)", description: "")
         }
         store.sourceTypesByProject[projectDir] = [
-            CatalogSourceType(id: "1", key: "photograph", origin: "provenencia", label: "Photograph", description: ""),
-            CatalogSourceType(id: "2", key: "book", origin: "provenencia", label: "Book", description: ""),
+            CatalogSourceType(id: "1", key: "photograph", origin: CatalogOrigin.provenencia, label: "Photograph", description: ""),
+            CatalogSourceType(id: "2", key: "book", origin: CatalogOrigin.provenencia, label: "Book", description: ""),
         ]
         store.fieldsByProject[projectDir] = [
-            CatalogMetadataField(id: "1", key: "date_taken", origin: "provenencia", label: "Date taken", dataType: "date", description: ""),
+            CatalogMetadataField(id: "1", key: "date_taken", origin: CatalogOrigin.provenencia, label: "Date taken", dataType: "date", description: ""),
         ]
         let model = OnboardingModel(store: store, folders: .previewEmpty())
         model.session = PreviewFixture.identity

@@ -51,7 +51,19 @@ func GetBySource(c *database.Catalog, sourceID []byte) (Assessment, error) {
 	if len(sourceID) != 16 {
 		return Assessment{}, ErrInvalid
 	}
-	return scanAssessment(db.QueryRow(sqlGetBySource, sourceID))
+	return getBySource(db, sourceID)
+}
+
+// GetBySourceTx is GetBySource on an open transaction.
+func GetBySourceTx(tx *sql.Tx, sourceID []byte) (Assessment, error) {
+	if len(sourceID) != 16 {
+		return Assessment{}, ErrInvalid
+	}
+	return getBySource(tx, sourceID)
+}
+
+func getBySource(q database.Querier, sourceID []byte) (Assessment, error) {
+	return scanAssessment(q.QueryRow(sqlGetBySource, sourceID))
 }
 
 // Upsert inserts or updates the single assessment row for a Source. The caller
@@ -97,13 +109,13 @@ func Upsert(tx *database.Tx, userID []byte, in UpsertInput) (Assessment, []rowch
 			return Assessment{}, nil, err
 		}
 		id = uid[:]
-		if _, err := q.Exec(sqlInsert, id, in.SourceID, in.CredibilityGradeID, nullStr(in.Argument)); err != nil {
+		if _, err := q.Exec(sqlInsert, id, in.SourceID, in.CredibilityGradeID, database.NullString(in.Argument)); err != nil {
 			return Assessment{}, nil, mapConstraint(err)
 		}
 		action = rowchange.ActionCreate
 		fields["id"] = rowchange.FieldDiff{Old: nil, New: uid.String()}
-		fields["source_id"] = rowchange.FieldDiff{Old: nil, New: uuidString(in.SourceID)}
-		fields["credibility_grade_id"] = rowchange.FieldDiff{Old: nil, New: uuidString(in.CredibilityGradeID)}
+		fields["source_id"] = rowchange.FieldDiff{Old: nil, New: database.UUIDString(in.SourceID)}
+		fields["credibility_grade_id"] = rowchange.FieldDiff{Old: nil, New: database.UUIDString(in.CredibilityGradeID)}
 		if in.Argument != "" {
 			fields["argument"] = rowchange.FieldDiff{Old: nil, New: in.Argument}
 		}
@@ -119,35 +131,35 @@ func Upsert(tx *database.Tx, userID []byte, in UpsertInput) (Assessment, []rowch
 				Argument:           prev.Argument,
 			}, nil, nil
 		}
-		if _, err := q.Exec(sqlUpdate, in.CredibilityGradeID, nullStr(in.Argument), id); err != nil {
+		if _, err := q.Exec(sqlUpdate, in.CredibilityGradeID, database.NullString(in.Argument), id); err != nil {
 			return Assessment{}, nil, mapConstraint(err)
 		}
 		action = rowchange.ActionUpdate
 		if gradeChanged {
 			fields["credibility_grade_id"] = rowchange.FieldDiff{
-				Old: uuidString(prev.CredibilityGradeID),
-				New: uuidString(in.CredibilityGradeID),
+				Old: database.UUIDString(prev.CredibilityGradeID),
+				New: database.UUIDString(in.CredibilityGradeID),
 			}
 		}
 		if argChanged {
 			fields["argument"] = rowchange.FieldDiff{
-				Old: nullJSON(prev.Argument),
-				New: nullJSON(in.Argument),
+				Old: database.NullString(prev.Argument),
+				New: database.NullString(in.Argument),
 			}
 		}
 	}
 
 	return Assessment{
-		ID:                 append([]byte(nil), id...),
-		SourceID:           append([]byte(nil), in.SourceID...),
-		CredibilityGradeID: append([]byte(nil), in.CredibilityGradeID...),
-		Argument:           in.Argument,
-	}, []rowchange.Change{{
-		EntityType: "source_credibility_assessment",
-		EntityID:   append([]byte(nil), id...),
-		Action:     action,
-		Fields:     fields,
-	}}, nil
+			ID:                 append([]byte(nil), id...),
+			SourceID:           append([]byte(nil), in.SourceID...),
+			CredibilityGradeID: append([]byte(nil), in.CredibilityGradeID...),
+			Argument:           in.Argument,
+		}, []rowchange.Change{{
+			EntityType: "source_credibility_assessment",
+			EntityID:   append([]byte(nil), id...),
+			Action:     action,
+			Fields:     fields,
+		}}, nil
 }
 
 type rowScanner interface {
@@ -169,28 +181,6 @@ func requireSource(tx *sql.Tx, sourceID []byte) error {
 		return ErrInvalid
 	}
 	return err
-}
-
-func nullStr(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
-func nullJSON(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
-func uuidString(id []byte) string {
-	u, err := uuid.FromBytes(id)
-	if err != nil {
-		return ""
-	}
-	return u.String()
 }
 
 func mapConstraint(err error) error {

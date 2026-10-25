@@ -7,6 +7,7 @@ import Testing
 struct CitationComposerModelTests {
     private let projectDir = "/tmp/citation-composer-model.provenencia"
     private let sourceID = "src-1"
+    private let graphID = "g-1"
     private let subjectID = "sub-person-1"
     private let eventID = "sub-event-1"
     private let placeID = "sub-place-1"
@@ -103,7 +104,12 @@ struct CitationComposerModelTests {
                 id: sourceID, ref: "SRC-1", sourceTypeID: "stype", title: "Census", description: ""
             ),
         ]
-        store.subjectsBySource[sourceID] = [
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: graphID, ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: ["art-0", "art-1"]
+            ),
+        ]
+        store.subjectsByGraph[graphID] = [
             subject(id: subjectID, typeID: personTypeID, ref: "CPR-1", label: "Margt."),
             subject(id: eventID, typeID: eventTypeID, ref: "CEV-1", label: "Birth"),
             subject(id: placeID, typeID: placeTypeID, ref: "CPL-1", label: "Boston"),
@@ -120,24 +126,46 @@ struct CitationComposerModelTests {
         return store
     }
 
+    private func artifact(_ n: Int) -> CatalogArtifact {
+        CatalogArtifact(
+            id: "art-\(n)",
+            ref: "ART-\(n)",
+            sourceID: sourceID,
+            fileID: "file-\(n)",
+            label: "Scan \(n + 1)",
+            description: "",
+            file: CatalogFileRef(
+                id: "file-\(n)",
+                relPath: "objects/file-\(n).pdf",
+                originalFilename: "scan.pdf",
+                mediaType: "application/pdf",
+                byteSize: 10
+            )
+        )
+    }
+
     private func seedArtifact(_ store: FakeStore) {
-        store.artifactsBySource[sourceID] = [
-            CatalogArtifact(
-                id: "art-0",
-                ref: "ART-0",
-                sourceID: sourceID,
-                fileID: "file-0",
-                label: "Scan 1",
-                description: "",
-                file: CatalogFileRef(
-                    id: "file-0",
-                    relPath: "objects/file-0.pdf",
-                    originalFilename: "scan.pdf",
-                    mediaType: "application/pdf",
-                    byteSize: 10
-                )
-            ),
+        store.artifactsBySource[sourceID] = [artifact(0)]
+    }
+
+    /// Replaces the fixture graph's links.
+    private func link(_ store: FakeStore, _ artifactIDs: [String]) {
+        store.evidenceGraphsByProject[projectDir]?[0].artifactIDs = artifactIDs
+    }
+
+    /// A second graph of the Source, Smith, linking art-0, with one person.
+    private func seedSecondGraph(_ store: FakeStore) {
+        store.evidenceGraphsByProject[projectDir]?.append(
+            CatalogEvidenceGraph(
+                id: "g-2", ref: "GPH-2", sourceID: sourceID, name: "Smith", description: "", artifactIDs: ["art-0"]
+            )
+        )
+        store.subjectsByGraph["g-2"] = [
+            subject(id: "sub-person-2", typeID: personTypeID, ref: "CPR-2", label: "Clara"),
         ]
+        store.subjectPositionsBySubject["sub-person-2"] = CatalogSubjectPosition(
+            subjectID: "sub-person-2", gridX: 0, gridY: 0
+        )
     }
 
     private func seedCitation(
@@ -156,11 +184,12 @@ struct CitationComposerModelTests {
             transcriptionUncertain: false,
             transcriptionNote: ""
         )
-        store.observationsBySource[sourceID] = observations
+        store.observationsByGraph[graphID] = observations
     }
 
     private func makeModel(
         store: FakeStore,
+        graphID: String? = nil,
         subjectID: String? = nil,
         citationID: String? = nil,
         observationID: String? = nil,
@@ -168,10 +197,12 @@ struct CitationComposerModelTests {
         connectTo: String? = nil,
         bridge: String? = nil
     ) -> CitationComposerModel {
+        let graphID = graphID ?? self.graphID
         let entry: CitationComposerEntry
         if let connectFrom, let connectTo, let bridge {
             entry = .connect(
                 sourceID: sourceID,
+                graphID: graphID,
                 fromSubjectID: connectFrom,
                 toSubjectID: connectTo,
                 bridgeTypeKey: bridge
@@ -179,6 +210,7 @@ struct CitationComposerModelTests {
         } else if let citationID {
             entry = .edit(
                 sourceID: sourceID,
+                graphID: graphID,
                 subjectID: subjectID ?? self.subjectID,
                 citationID: citationID,
                 artifactID: "art-0",
@@ -187,6 +219,7 @@ struct CitationComposerModelTests {
         } else {
             entry = .addProperty(
                 sourceID: sourceID,
+                graphID: graphID,
                 subjectID: subjectID ?? self.subjectID,
                 artifactID: "art-0"
             )
@@ -370,7 +403,7 @@ struct CitationComposerModelTests {
         let store = makeStore()
         seedArtifact(store)
         let bridge = subject(id: "bridge-1", typeID: participationTypeID, ref: "PTN-1", label: "")
-        store.subjectsBySource[sourceID]?.append(bridge)
+        store.subjectsByGraph[graphID]?.append(bridge)
         store.subjectPositionsBySubject[bridge.id] = CatalogSubjectPosition(
             subjectID: bridge.id, gridX: 4, gridY: 0
         )
@@ -413,7 +446,7 @@ struct CitationComposerModelTests {
         let store = makeStore()
         seedArtifact(store)
         let bridge = subject(id: "bridge-1", typeID: participationTypeID, ref: "PTN-1", label: "")
-        store.subjectsBySource[sourceID]?.append(bridge)
+        store.subjectsByGraph[graphID]?.append(bridge)
         store.subjectPositionsBySubject[bridge.id] = CatalogSubjectPosition(
             subjectID: bridge.id, gridX: 4, gridY: 0
         )
@@ -449,6 +482,103 @@ struct CitationComposerModelTests {
         await ghostArt.fields.saveCitation()
         #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations") })
         #expect(store.recordedCalls.contains { $0.hasPrefix("updateCitation") } == false)
+    }
+
+    // MARK: - Evidence graph scope (S12-10)
+
+    @Test func composerListsOnlyTheGraphsLinkedArtifacts() async {
+        let store = makeStore()
+        store.artifactsBySource[sourceID] = [artifact(0), artifact(1)]
+        link(store, ["art-1"])
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.artifacts.map(\.id) == ["art-1"])
+        #expect(model.selectedArtifactID == "art-1")
+    }
+
+    @Test func composerKeepsPageOrderForLinkedArtifacts() async {
+        let store = makeStore()
+        store.artifactsBySource[sourceID] = [artifact(0), artifact(1)]
+        link(store, ["art-1", "art-0"])
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.artifacts.map(\.id) == ["art-0", "art-1"])
+    }
+
+    @Test func graphWithNoLinksShowsTheNoArtifactGate() async {
+        let store = makeStore()
+        seedArtifact(store)
+        link(store, [])
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.phase == .compose)
+        #expect(model.hasNoArtifacts)
+    }
+
+    @Test func unlinkedEntryArtifactOpensANewCitation() async {
+        let store = makeStore()
+        store.artifactsBySource[sourceID] = [artifact(0), artifact(1)]
+        link(store, ["art-1"])
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.selectedArtifactID == "art-1")
+        #expect(model.activeCitationID == nil)
+    }
+
+    @Test func graphListFailureFailsTheLoad() async {
+        enum Boom: Error { case boom }
+        let store = makeStore()
+        seedArtifact(store)
+        store.listEvidenceGraphsError = Boom.boom
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.phase == .loadFailed)
+    }
+
+    @Test func stepperListsOnlyThisGraphsCitations() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedSecondGraph(store)
+        for (id, ref) in [("cit-a", "CIT-A"), ("cit-b", "CIT-B"), ("cit-c", "CIT-C")] {
+            store.citationsByID[id] = CatalogCitation(
+                id: id, ref: ref, artifactID: "art-0", locatorJSON: "{}", transcription: "",
+                description: "", transcriptionUncertain: false, transcriptionNote: ""
+            )
+        }
+        store.observationsByGraph[graphID] = [occupationObservation(id: "obs-a", ref: "OBS-A", citationID: "cit-a")]
+        var other = occupationObservation(id: "obs-b", ref: "OBS-B", citationID: "cit-b")
+        other.subjectID = "sub-person-2"
+        store.observationsByGraph["g-2"] = [other]
+
+        let jones = makeModel(store: store)
+        await jones.prepare()
+        #expect(jones.listedCitations.map(\.citation.ref).sorted() == ["CIT-A", "CIT-C"])
+        #expect(jones.listedCount(for: "art-0") == 2)
+
+        let smith = makeModel(store: store, graphID: "g-2", subjectID: "sub-person-2")
+        await smith.prepare()
+        #expect(smith.listedCitations.map(\.citation.ref).sorted() == ["CIT-B", "CIT-C"])
+    }
+
+    @Test func firstObservationMovesANewCitationIntoTheGraph() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedSecondGraph(store)
+        let jones = makeModel(store: store)
+        await jones.prepare()
+        jones.beginPropertyDraft(subjectID: subjectID)
+        jones.mutateProperty {
+            $0.values.propertyID = occupationPropertyID
+            $0.values.valueText = "miller"
+        }
+        await jones.saveAuthoring()
+        let created = jones.activeCitationID
+        #expect(created != nil)
+        #expect(jones.listedCitations.contains { $0.id == created })
+
+        let smith = makeModel(store: store, graphID: "g-2", subjectID: "sub-person-2")
+        await smith.prepare()
+        #expect(!smith.listedCitations.contains { $0.id == created })
     }
 
     @Test func incompatibleSubjectClearsPropertyAndDisablesSave() async {
@@ -777,16 +907,7 @@ struct CitationComposerModelTests {
                 ]
             )
         )
-        let orders = NameFormatOrders(
-            natural: [
-                NameFormatPart(partType: "given", trailingSeparator: ""),
-                NameFormatPart(partType: "surname", trailingSeparator: ""),
-            ],
-            sorted: [
-                NameFormatPart(partType: "surname", trailingSeparator: ", "),
-                NameFormatPart(partType: "given", trailingSeparator: ""),
-            ]
-        )
+        let orders = NameFormatOrders.givenSurname
         #expect(
             CitationObservationValue.summary(
                 valueType: PropertyValueType.name.rawValue,
@@ -801,7 +922,7 @@ struct CitationComposerModelTests {
         let store = makeStore()
         seedArtifact(store)
         let bridge = subject(id: "bridge-1", typeID: participationTypeID, ref: "PTN-1", label: "")
-        store.subjectsBySource[sourceID]?.append(bridge)
+        store.subjectsByGraph[graphID]?.append(bridge)
         store.subjectPositionsBySubject[bridge.id] = CatalogSubjectPosition(
             subjectID: bridge.id, gridX: 4, gridY: 0
         )
@@ -870,10 +991,10 @@ struct CitationComposerModelTests {
                 error: nil
             ),
         ])
-        store.subjectsBySource[sourceID]?.append(
+        store.subjectsByGraph[graphID]?.append(
             subject(id: "bridge-1", typeID: participationTypeID, ref: "PTN-1", label: "")
         )
-        store.observationsBySource[sourceID, default: []].append(
+        store.observationsByGraph[graphID, default: []].append(
             roleObservation(id: "role-1", ref: "OBS-ROLE", subjectID: "bridge-1", termID: "term-witness")
         )
         model.connections.applyTerm(connectionID: connectionID, termID: "term-witness")
@@ -909,7 +1030,7 @@ struct CitationComposerModelTests {
         seedArtifact(store)
         let model = makeModel(store: store)
         await model.prepare()
-        model.session.apply(.mutatedSourceGraph(sourceId: sourceID))
+        model.session.apply(CatalogWriteEffects(evidenceGraphs: [graphID]))
         #expect(model.isGraphReloading)
         model.beginAddObservation()
         model.beginNewSubject(typeKey: "person", field: .propertySubject)
@@ -1040,11 +1161,41 @@ struct CitationComposerModelTests {
         #expect(model.citationDescription == "")
     }
 
+    /// T-18: the composer entry needs the location's graph, and an existing
+    /// Citation read straight from the store names that graph.
+    @Test func entryNeedsTheGraph() async {
+        let location = WorkspaceLocation.citationComposer(
+            sourceId: sourceID, graphId: graphID, subjectId: subjectID, artifactId: "art-0"
+        )
+        #expect(CitationComposerEntry(location: location)?.graphID == graphID)
+        #expect(CitationComposerEntry(location: location)?.sourceID == sourceID)
+        // Without a graph the location is the Source page, which is no entry.
+        let bare = WorkspaceLocation(
+            section: .sources, sourceId: sourceID, subjectId: subjectID, sourceSurface: .citationComposer
+        )
+        #expect(bare.sourceSurface == .page)
+        #expect(CitationComposerEntry(location: bare) == nil)
+
+        // A Citation on a file the Source no longer has is not in the cached
+        // lists, so the composer reads it from the store, on its graph.
+        let store = makeStore()
+        seedArtifact(store)
+        store.citationsByID["cit-gone"] = CatalogCitation(
+            id: "cit-gone", ref: "CIT-9", artifactID: "art-gone",
+            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
+            transcription: "", description: "", transcriptionUncertain: false, transcriptionNote: ""
+        )
+        let model = makeModel(store: store, citationID: "cit-gone")
+        await model.prepare()
+        #expect(store.recordedCalls.contains("getCitation cit-gone graphID=\(graphID)"))
+    }
+
     @Test func connectEntryIgnoresLegacyTermAndGrid() throws {
         let json = """
         {
           "section":"sources",
           "sourceId":"\(sourceID)",
+          "graphId":"\(graphID)",
           "connectFromSubjectId":"\(subjectID)",
           "connectToSubjectId":"\(eventID)",
           "connectBridgeTypeKey":"participation",
@@ -1058,6 +1209,7 @@ struct CitationComposerModelTests {
         let entry = CitationComposerEntry(location: location)
         #expect(entry == .connect(
             sourceID: sourceID,
+            graphID: graphID,
             fromSubjectID: subjectID,
             toSubjectID: eventID,
             bridgeTypeKey: "participation"
@@ -1335,6 +1487,101 @@ struct CitationComposerModelTests {
         }
     }
 
+    // MARK: term keys honour the term's origin
+
+    private func termVocabulary(
+        propertyKey: String, terms: [(key: String, label: String, origin: String)], endTypeKey: String
+    ) -> CitationComposerVocabulary {
+        let property = CatalogProperty(
+            id: "p-\(propertyKey)", key: propertyKey, origin: CatalogOrigin.provenencia, label: propertyKey,
+            description: "", valueType: "term"
+        )
+        func end(_ id: String) -> CitationComposerModel.GraphSubjectOption {
+            .init(id: id, label: id, ref: id, typeID: "t", typeKey: endTypeKey)
+        }
+        var vocabulary = CitationComposerVocabulary.empty
+        vocabulary.propertiesByID = [property.id: property]
+        vocabulary.subjectsByID = ["a": end("a"), "b": end("b")]
+        vocabulary.connectRules = CatalogConnectRule.productMatrix
+        vocabulary.termsByPropertyID[property.id] = terms.map {
+            CatalogPropertyTerm(
+                id: "term-\($0.origin)-\($0.key)", propertyID: property.id, key: $0.key,
+                origin: $0.origin, label: $0.label, description: ""
+            )
+        }
+        return vocabulary
+    }
+
+    private func readyBridge(_ vocabulary: CitationComposerVocabulary, termID: String) -> CitationReadyBridge? {
+        guard case .ready(let ready) = CitationComposerAuthoring.resolvePair(
+            endA: "a", endB: "b", termID: termID, vocabulary: vocabulary
+        ) else { return nil }
+        return ready
+    }
+
+    @Test func aProductTermsInverseIsNeverAResearchersTerm() {
+        let vocabulary = termVocabulary(
+            propertyKey: "relationship_type",
+            terms: [
+                (key: "parent", label: "Parent", origin: CatalogOrigin.provenencia),
+                (key: "child", label: "Kid", origin: CatalogOrigin.user),
+            ],
+            endTypeKey: "person"
+        )
+        let ready = readyBridge(vocabulary, termID: "term-provenencia-parent")
+        #expect(ready?.endBTitle == "Parent")
+        let theirs = termVocabulary(
+            propertyKey: "relationship_type",
+            terms: [
+                (key: "parent", label: "Mine", origin: CatalogOrigin.user),
+                (key: "child", label: "Child", origin: CatalogOrigin.provenencia),
+            ],
+            endTypeKey: "person"
+        )
+        #expect(readyBridge(theirs, termID: "term-user-parent")?.endBTitle == "Mine")
+        let product = termVocabulary(
+            propertyKey: "relationship_type",
+            terms: [
+                (key: "parent", label: "Parent", origin: CatalogOrigin.provenencia),
+                (key: "child", label: "Child", origin: CatalogOrigin.provenencia),
+            ],
+            endTypeKey: "person"
+        )
+        #expect(readyBridge(product, termID: "term-provenencia-parent")?.endBTitle == "Child")
+    }
+
+    @Test func aResearchersSpouseTermGetsNoSpouseSentence() {
+        let user = termVocabulary(
+            propertyKey: "relationship_type",
+            terms: [(key: "spouse", label: "Partner", origin: CatalogOrigin.user)],
+            endTypeKey: "person"
+        )
+        #expect(readyBridge(user, termID: "term-user-spouse")?.reading == L10n.CitationComposer.isATermOf("a", "partner", "b"))
+        let product = termVocabulary(
+            propertyKey: "relationship_type",
+            terms: [(key: "spouse", label: "Spouse", origin: CatalogOrigin.provenencia)],
+            endTypeKey: "person"
+        )
+        #expect(readyBridge(product, termID: "term-provenencia-spouse")?.reading == L10n.CitationComposer.areSpouses("a", "b"))
+    }
+
+    @Test func aResearchersPlaceTermKeyedPartOfKeepsItsOwnLabel() {
+        let theirs = CatalogPropertyTerm(
+            id: "t", propertyID: "p", key: "part_of", origin: CatalogOrigin.user, label: "Inside of", description: ""
+        )
+        #expect(CitationBridgeSentence.displayLabel(theirs) == "inside of")
+        var product = theirs
+        product.origin = CatalogOrigin.provenencia
+        #expect(CitationBridgeSentence.displayLabel(product) == L10n.string(L10n.CitationComposer.placeTermPartOf))
+        let vocabulary = termVocabulary(
+            propertyKey: "place_relationship_type",
+            terms: [(key: "part_of", label: "Inside of", origin: CatalogOrigin.user)],
+            endTypeKey: "place"
+        )
+        let ready = readyBridge(vocabulary, termID: "term-user-part_of")
+        #expect(ready?.endATitle == "Inside of" && ready?.reading == nil)
+    }
+
     @Test func citationPreviewFallsBack() {
         #expect(CitationComposerAuthoring.preview(transcription: "line", description: "desc") == .text("line"))
         #expect(CitationComposerAuthoring.preview(transcription: "", description: "desc") == .text("desc"))
@@ -1486,7 +1733,7 @@ struct CitationComposerModelTests {
             Issue.record("the edit dialog should still be a property observation")
             return
         }
-        let created = store.subjectsBySource[sourceID]?.last
+        let created = store.subjectsByGraph[graphID]?.last
         #expect(values.subjectID == created?.id)
         #expect(values.subjectID != subjectID)
     }

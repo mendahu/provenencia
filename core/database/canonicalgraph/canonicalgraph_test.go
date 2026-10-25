@@ -7,11 +7,15 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/dbtest"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -19,7 +23,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/hops"
@@ -70,11 +74,12 @@ func TestNewHop(t *testing.T) {
 }
 
 type fixture struct {
-	t   *testing.T
-	c   *database.Catalog
-	src sources.Source
-	art artifacts.Artifact
-	y   int64
+	t     *testing.T
+	c     *database.Catalog
+	src   sources.Source
+	art   artifacts.Artifact
+	graph []byte // the Source's one Evidence graph
+	y     int64
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -92,20 +97,15 @@ func newFixture(t *testing.T) *fixture {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
 	})
 	must(t, err)
-	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(t, err)
-	return &fixture{t: t, c: c, src: src, art: art}
+	return &fixture{t: t, c: c, src: src, art: art, graph: evidencegraphstest.SoleGraph(t, c, src.ID).ID}
 }
 
 func (f *fixture) subject(kind string) subjects.Subject {
 	f.t.Helper()
-	st, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
-	must(f.t, err)
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.src.ID, SubjectTypeID: st.ID}, nil)
-	})
-	must(f.t, err)
-	_, err = writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+	s := subjectstest.On(f.t, f.c, userID, f.graph, kind, "")
+	_, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
 		return subjectpositions.Set(tx, s.ID, 0, f.y)
 	})
 	must(f.t, err)
@@ -124,7 +124,7 @@ func (f *fixture) bridge(kind string, from, to subjects.Subject, obs ...observat
 	f.t.Helper()
 	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-			SourceID: f.src.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
+			FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
 			Citation:     citations.CreateInput{ArtifactID: f.art.ID, LocatorJSON: locator},
 			Observations: obs,
 		})
@@ -145,10 +145,7 @@ func (f *fixture) participation(person, event subjects.Subject, role string) {
 
 func (f *fixture) promote(s subjects.Subject) []byte {
 	f.t.Helper()
-	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
-	})
-	must(f.t, err)
+	res := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
 	return res.Entity.ID
 }
 
@@ -213,19 +210,11 @@ func TestWalk(t *testing.T) {
 	t.Run("the walk reads indexes, not whole tables", func(t *testing.T) {
 		for _, hop := range []hops.Hop{participates, asSubject, located.Reverse()} {
 			query, args := canonicalgraph.WalkSQL(hop, [][]byte{jamesID, birthID})
-			rows, err := db.Query(`EXPLAIN QUERY PLAN `+query, args...)
-			must(t, err)
-			for rows.Next() {
-				var id, parent, notUsed int
-				var detail string
-				must(t, rows.Scan(&id, &parent, &notUsed, &detail))
+			for _, detail := range dbtest.QueryPlan(t, db, query, args...) {
 				if strings.HasPrefix(detail, "SCAN ") {
-					_ = rows.Close()
 					t.Fatalf("full scan: %s", detail)
 				}
 			}
-			must(t, rows.Err())
-			_ = rows.Close()
 		}
 	})
 }
@@ -246,80 +235,4 @@ func sameIDs(got, want [][]byte) bool {
 		}
 	}
 	return true
-}
-
-func TestWalkSource(t *testing.T) {
-	f := newFixture(t)
-	james, birth, wedding, york := f.subject("person"), f.subject("event"), f.subject("event"), f.subject("place")
-	f.participation(james, birth, "subject")
-	f.participation(james, wedding, "witness")
-	f.bridge("location", birth, york,
-		observations.Input{PropertyID: f.prop("event"), ValueSubjectID: birth.ID},
-		observations.Input{PropertyID: f.prop("place"), ValueSubjectID: york.ID},
-	)
-	participates := hops.MustHop("participation", "person", "event", nil)
-
-	tests := []struct {
-		name string
-		hop  hops.Hop
-		from []subjects.Subject
-		want []subjects.Subject
-	}{
-		{name: "every participation", hop: participates, from: []subjects.Subject{james}, want: []subjects.Subject{birth, wedding}},
-		{name: "subject role only", hop: hops.EventsOfSubject, from: []subjects.Subject{james}, want: []subjects.Subject{birth}},
-		{name: "an event's subjects", hop: hops.SubjectsOfEvent, from: []subjects.Subject{birth, wedding}, want: []subjects.Subject{james}},
-		{name: "a location", hop: hops.PlacesOfEvent, from: []subjects.Subject{birth}, want: []subjects.Subject{york}},
-		{name: "an event with no location", hop: hops.PlacesOfEvent, from: []subjects.Subject{wedding}},
-		{name: "a place's events", hop: hops.EventsAtPlace, from: []subjects.Subject{york}, want: []subjects.Subject{birth}},
-	}
-	db, err := f.c.DB()
-	must(t, err)
-	ids := func(ss []subjects.Subject) [][]byte {
-		var out [][]byte
-		for _, s := range ss {
-			out = append(out, s.ID)
-		}
-		return out
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			edges, err := canonicalgraph.WalkSource(db, f.src.ID, tt.hop, ids(tt.from))
-			must(t, err)
-			if got := canonicalgraph.Targets(edges); !sameIDs(got, ids(tt.want)) {
-				t.Fatalf("got %d targets, want %d", len(got), len(tt.want))
-			}
-		})
-	}
-
-	t.Run("another Source's graph is not walked", func(t *testing.T) {
-		edges, err := canonicalgraph.WalkSource(db, make([]byte, 16), hops.EventsOfSubject, [][]byte{james.ID})
-		must(t, err)
-		if len(edges) != 0 {
-			t.Fatalf("walked %d edges", len(edges))
-		}
-	})
-
-	t.Run("the walk reads indexes, not whole tables", func(t *testing.T) {
-		query, args := canonicalgraph.WalkSourceSQL(hops.EventsOfSubject, f.src.ID, [][]byte{james.ID})
-		rows, err := db.Query(`EXPLAIN QUERY PLAN `+query, args...)
-		must(t, err)
-		defer rows.Close()
-		for rows.Next() {
-			var id, parent, notUsed int
-			var detail string
-			must(t, rows.Scan(&id, &parent, &notUsed, &detail))
-			if strings.HasPrefix(detail, "SCAN ") {
-				t.Fatalf("full scan: %s", detail)
-			}
-		}
-		must(t, rows.Err())
-	})
-}
-
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
-		})
-	return a, err
 }

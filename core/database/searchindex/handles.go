@@ -84,7 +84,7 @@ func reprojectHandleBatch(q Querier, ids [][]byte) error {
 		if vocabkey.IsPrimaryType(typeKey, typeOrigin) {
 			h.kind = typeKey
 		}
-		h.id = uuidString(id)
+		h.id = database.UUIDString(id)
 		heads[string(id)] = h
 	}
 	err = rows.Err()
@@ -107,7 +107,7 @@ func reprojectHandleBatch(q Querier, ids [][]byte) error {
 		if !ok {
 			// Gone: drop any document of any handle kind.
 			for _, kind := range vocabkey.PrimaryKinds() {
-				if err := Delete(q, kind, uuidString(id)); err != nil {
+				if err := Delete(q, kind, database.UUIDString(id)); err != nil {
 					return err
 				}
 			}
@@ -219,13 +219,13 @@ func loadHandleHeaders(q Querier, heads map[string]handleHead) (handleHeaders, e
 		return handleHeaders{}, err
 	}
 	for _, h := range ps {
-		out.persons[uuidString(h.Entity.ID)] = h
+		out.persons[database.UUIDString(h.Entity.ID)] = h
 	}
 	for _, h := range es {
-		out.events[uuidString(h.Entity.ID)] = h
+		out.events[database.UUIDString(h.Entity.ID)] = h
 	}
 	for _, h := range pl {
-		out.places[uuidString(h.Entity.ID)] = h
+		out.places[database.UUIDString(h.Entity.ID)] = h
 	}
 	return out, nil
 }

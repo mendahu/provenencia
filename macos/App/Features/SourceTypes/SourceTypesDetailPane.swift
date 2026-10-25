@@ -176,7 +176,7 @@ struct SourceTypesDetailPane: View {
     private var form: some View {
         if let draft = Binding($model.draft) {
             VStack(alignment: .leading, spacing: PVSpacing.space7) {
-                PVField(label: L10n.SourceTypes.formLabel, error: model.formError, required: true) {
+                PVField(label: L10n.SourceTypes.formLabel, error: model.formError, marker: .required) {
                     PVInput(
                         text: draft.label,
                         prompt: model.isAdding ? L10n.SourceTypes.formLabelPlaceholder : nil,
@@ -187,7 +187,7 @@ struct SourceTypesDetailPane: View {
                 PVField(
                     label: L10n.SourceTypes.formIcon,
                     hint: L10n.SourceTypes.formIconHint,
-                    required: true
+                    marker: .required
                 ) {
                     iconFieldButton(selection: draft.iconKey)
                 }

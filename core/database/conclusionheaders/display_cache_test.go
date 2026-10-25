@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -26,10 +27,10 @@ func TestDisplayCacheFollowsAPlaceThreeStepsUp(t *testing.T) {
 	f.placeRel(city, region, propertyterms.KeyPartOf, nil, nil)
 	f.placeRel(town, city, propertyterms.KeyPartOf, nil, nil)
 
-	person := f.bare("person")
+	person := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
 	f.named(person, "Ada Town")
 	f.at(person, 8, 0)
-	birth := f.bare("event")
+	birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.cite(birth,
 		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
 		observations.Input{PropertyID: f.prop("date").ID, Date: pointYear(1901)},
@@ -49,7 +50,7 @@ func TestDisplayCacheFollowsAPlaceThreeStepsUp(t *testing.T) {
 	must(t, err)
 	deps, err := conclusionheaders.HeaderDependents(db, [][]byte{countryID})
 	must(t, err)
-	if !hasID(deps, townID) || !hasID(deps, birthID) || !hasID(deps, personID) {
+	if !database.ContainsBlobID(deps, townID) || !database.ContainsBlobID(deps, birthID) || !database.ContainsBlobID(deps, personID) {
 		t.Fatalf("country dependents missing the town, the birth, or the person (%d ids)", len(deps))
 	}
 
@@ -91,10 +92,10 @@ func TestDisplayCacheFollowsAPlaceThreeStepsUp(t *testing.T) {
 // row drops the birth, and the search document written in that save drops it too.
 func TestBirthBecomingMarriageDropsThePerson(t *testing.T) {
 	f := newFixture(t)
-	person := f.bare("person")
+	person := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
 	f.named(person, "Ada Birth")
 	f.at(person, 0, 0)
-	birth := f.bare("event")
+	birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.cite(birth,
 		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
 		observations.Input{PropertyID: f.prop("date").ID, Date: pointYear(1901)},
@@ -127,7 +128,7 @@ func TestBirthBecomingMarriageDropsThePerson(t *testing.T) {
 
 	deps, err := conclusionheaders.HeaderDependents(db, [][]byte{birthID})
 	must(t, err)
-	if !hasID(deps, personID) {
+	if !database.ContainsBlobID(deps, personID) {
 		t.Fatal("a marriage that was a birth did not reach its subject")
 	}
 	after := personHeader(t, f, personID)

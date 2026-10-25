@@ -50,8 +50,8 @@ struct SourcePageModelTests {
         return store
     }
 
-    private func makeModel(store: FakeStore) -> SourcePageModel {
-        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+    private func makeModel(store: FakeStore, session: WorkspaceSession? = nil) -> SourcePageModel {
+        let session = session ?? WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         return SourcePageModel(
             sourceID: sourceID,
             session: session,
@@ -69,6 +69,17 @@ struct SourcePageModelTests {
         #expect(model.credibility.savedKey == "standard")
         #expect(model.workspace?.credibility == nil)
         #expect(model.credibility.grades.count == 3)
+    }
+
+    @Test func openCopyUsesThePageSource() async {
+        let model = makeModel(store: makeStore())
+        model.openCopy()
+        #expect(model.copying == nil)
+
+        await model.warmFromSession()
+        model.openCopy()
+        #expect(model.copying?.original.id == sourceID)
+        #expect(model.copying?.choices.draft.title == "Copy of Family album")
     }
 
     @Test func saveTitleUpdatesCommittedTitle() async {
@@ -324,6 +335,37 @@ struct SourcePageModelTests {
         #expect(!model.artifacts.canUseAsThumbnail(model.artifacts.items[0]))
     }
 
+    @Test func creatingAnArtifactWithAFileOpensTheGraphJump() async throws {
+        let store = makeStore()
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: "g-1", ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: []
+            ),
+        ]
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = SourcePageModel(
+            sourceID: sourceID, session: session, userID: userID,
+            sessionDisplayName: "Jake Robins", store: store
+        )
+        await model.warmFromSession()
+        await waitForQuery(session.query(session.evidenceGraphsKey) as QueryHandle<[CatalogEvidenceGraph]>)
+        #expect(entryGraphLocation(model) == nil)
+
+        model.artifacts.openAdd()
+        model.artifacts.draft.label = "Scan"
+        let path = FileManager.default.temporaryDirectory
+            .appendingPathComponent("scan-\(UUID().uuidString).pdf").path
+        try Data("%PDF-1.1".utf8).write(to: URL(fileURLWithPath: path))
+        model.artifacts.draft.filePath = path
+        await model.artifacts.create()
+
+        // The create linked the Artifact to the entry graph; the file ingest
+        // after it moved no graph link, so the list reloads only if the
+        // create's effects were applied too.
+        await waitForQuery(session.query(session.evidenceGraphsKey) as QueryHandle<[CatalogEvidenceGraph]>)
+        #expect(entryGraphLocation(model)?.graphId == "g-1")
+    }
+
     @Test func useAsThumbnailAndRevertToTypeIcon() async throws {
         let store = makeStore()
         let model = makeModel(store: store)
@@ -389,6 +431,54 @@ struct SourcePageModelTests {
         #expect(model.source?.thumbnailMediaType.isEmpty == true)
         #expect(model.source?.coverMode == "type_icon")
         #expect(model.identity.typeLabel == "Photograph")
+    }
+
+    @Test func aRefusedFileKeepsTheCreatedArtifactAndARetryAttachesToIt() async throws {
+        let store = makeStore()
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: "g-1", ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: []
+            ),
+        ]
+        store.ingestArtifactFileError = CoreInvokeError.coded(
+            status: 1, code: "ingest.invalid", kind: .user, params: []
+        )
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = SourcePageModel(
+            sourceID: sourceID, session: session, userID: userID,
+            sessionDisplayName: "Jake Robins", store: store
+        )
+        await model.warmFromSession()
+        await waitForQuery(session.query(session.evidenceGraphsKey) as QueryHandle<[CatalogEvidenceGraph]>)
+        model.artifacts.openAdd()
+        model.artifacts.draft.label = "Scan"
+        model.artifacts.draft.filePath = "/tmp/provenencia-missing-\(UUID().uuidString).bin"
+
+        await model.artifacts.create()
+
+        // Go created the Artifact before the file was refused: the page shows
+        // it and its graph link, and the dialog stays open on the refusal.
+        #expect(model.artifacts.isAdding)
+        #expect(model.artifacts.draft.reject != nil)
+        #expect(model.artifacts.items.map(\.label) == ["Scan"])
+        #expect(model.artifacts.items.first?.fileID.isEmpty == true)
+        await waitForQuery(session.query(session.evidenceGraphsKey) as QueryHandle<[CatalogEvidenceGraph]>)
+        #expect(entryGraphLocation(model)?.graphId == "g-1")
+
+        store.ingestArtifactFileError = nil
+        let path = FileManager.default.temporaryDirectory
+            .appendingPathComponent("scan-\(UUID().uuidString).pdf").path
+        try Data("%PDF-1.1".utf8).write(to: URL(fileURLWithPath: path))
+        model.artifacts.applyPickedFile(url: URL(fileURLWithPath: path), into: .create)
+        model.artifacts.draft.label = "Scan, front"
+
+        await model.artifacts.create()
+
+        #expect(!model.artifacts.isAdding)
+        #expect(store.artifactsBySource[sourceID]?.count == 1)
+        #expect(model.artifacts.items.count == 1)
+        #expect(model.artifacts.items.first?.label == "Scan, front")
+        #expect(model.artifacts.items.first?.fileID.isEmpty == false)
     }
 
     @Test func ingestMissingFileSurfacesIngestInvalid() async {
@@ -703,23 +793,11 @@ struct SourcePageModelTests {
         let fieldsHandle: QueryHandle<[CatalogMetadataField]>? = session.queryHandle(
             .metadataFieldsList(project: session.projectKey)
         )
-        await settle(try #require(fieldsHandle))
+        await waitForQuery(try #require(fieldsHandle))
 
         #expect(model.metadata.fieldComboOptions.map(\.label) == ["Author", "Folio"])
         // The page payload itself was never refetched.
         #expect(workspaceBefore?.value == payloadBefore)
-    }
-
-    /// Waits out a cache load (or its stale-while-revalidate refetch).
-    private func settle<Value>(_ handle: QueryHandle<Value>) async {
-        var waited: UInt64 = 0
-        while waited < 2_000_000_000 {
-            if handle.status == .error { return }
-            if handle.status == .ready, !handle.isFetching { return }
-            await Task.yield()
-            try? await Task.sleep(nanoseconds: 10_000_000)
-            waited += 10_000_000
-        }
     }
 
     @Test func addMetadataRequiresFieldAndValue() async {
@@ -1056,6 +1134,95 @@ struct SourcePageModelTests {
         #expect(store.deleteSourceCalls == 0)
     }
 
+    /// Where Open goes for the page's first graph; nil while it links no Artifact.
+    private func entryGraphLocation(_ model: SourcePageModel) -> WorkspaceLocation? {
+        model.graphs.rows?.first.flatMap { model.graphs.location(for: $0) }
+    }
+
+    @Test func graphRowsAreTheSourcesGraphsByName() async {
+        let store = makeStore()
+        store.evidenceGraphsByProject[projectDir] = [
+            evidenceGraph("g-smith", name: "Smith household"),
+            evidenceGraph("g-default", name: "Default"),
+            evidenceGraph("g-jones", name: "Jones household"),
+            evidenceGraph("g-other", sourceID: "src-2", name: "Other source"),
+        ]
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = makeModel(store: store, session: session)
+        await model.warmFromSession()
+        await waitForQuery(session.evidenceGraphsHandle!)
+        #expect(model.graphs.rows?.map(\.name) == ["Default", "Jones household", "Smith household"])
+        #expect(model.graphs.rows?.first?.name == "Default")
+        #expect(L10n.Sources.graphsCount(3) == "3 evidence graphs")
+    }
+
+    @Test func graphRowsNilUntilListLoadsAndErrorWhenItFails() async {
+        let store = makeStore()
+        store.evidenceGraphsByProject[projectDir] = [evidenceGraph("g-default", name: "Default")]
+        let model = makeModel(store: store)
+        #expect(model.graphs.rows == nil)
+        #expect(model.graphs.loadError == nil)
+
+        struct Boom: Error {}
+        let failing = makeStore()
+        failing.listEvidenceGraphsError = Boom()
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: failing)
+        let failed = makeModel(store: failing, session: session)
+        await failed.warmFromSession()
+        await waitForQuery(session.evidenceGraphsHandle!)
+        #expect(failed.graphs.rows == nil)
+        #expect(failed.graphs.loadError != nil)
+    }
+
+    @Test func deleteEmptyGraphCallsStoreAndToasts() async {
+        let store = makeStore()
+        store.evidenceGraphsByProject[projectDir] = [
+            evidenceGraph("g-default", name: "Default"),
+            evidenceGraph("g-jones", name: "Jones household"),
+        ]
+        store.deleteImpactByID["g-jones"] = CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = makeModel(store: store, session: session)
+        session.apply(location: WorkspaceLocation.sourcePage(sourceId: sourceID))
+        await model.warmFromSession()
+        await waitForQuery(session.evidenceGraphsHandle!)
+        await model.askDeleteGraph(id: "g-jones")
+        #expect(model.pendingImpact?.target.kind == "evidence_graph")
+        #expect(model.pendingImpact?.target.ref == "GPH-G-JONES")
+        let left = await model.confirmResourceDelete()
+        #expect(!left)
+        #expect(store.deleteEvidenceGraphCalls == 1)
+        #expect(store.deleteArtifactCalls == 0)
+        #expect(model.toast?.title == "Evidence graph deleted")
+        #expect(model.toast?.body == "GPH-G-JONES was erased from this source.")
+        // The page is the visible place, so the effects revalidate the list.
+        #expect(await waitUntil { model.graphs.rows?.map(\.id) == ["g-default"] })
+    }
+
+    @Test(arguments: [
+        CatalogDeleteImpact(
+            allowed: false, gate: .inbound,
+            groups: [CatalogDeleteImpactGroup(via: "subjects.graph_id", kind: "subject", total: 3, listed: [])]
+        ),
+        CatalogDeleteImpact(allowed: false, gate: .lastGraph, groups: []),
+    ])
+    func blockedGraphDoesNotCallDelete(report: CatalogDeleteImpact) async {
+        let store = makeStore()
+        store.evidenceGraphsByProject[projectDir] = [evidenceGraph("g-default", name: "Default")]
+        store.deleteImpactByID["g-default"] = report
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = makeModel(store: store, session: session)
+        await model.warmFromSession()
+        await waitForQuery(session.evidenceGraphsHandle!)
+        await model.askDeleteGraph(id: "g-default")
+        #expect(model.pendingImpact?.report.allowed == false)
+        #expect(model.pendingImpact?.report.gate == report.gate)
+        #expect(model.pendingImpact?.report.groups.first?.total == report.groups.first?.total)
+        let left = await model.confirmResourceDelete()
+        #expect(!left)
+        #expect(store.deleteEvidenceGraphCalls == 0)
+    }
+
     @Test func deleteUncitedArtifactStaysOnPageAndClearsCover() async {
         var source = CatalogSource(
             id: sourceID, ref: "SRC-AAAAA", sourceTypeID: "t1",
@@ -1137,6 +1304,11 @@ struct SourcePageModelTests {
             transcriptionUncertain: false,
             transcriptionNote: ""
         )
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: "g-1", ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: ["a1"]
+            ),
+        ]
         let model = makeModel(store: store)
         await model.warmFromSession()
         await model.askDeleteArtifact(id: "a1")
@@ -1146,6 +1318,7 @@ struct SourcePageModelTests {
         #expect(jump?.sourceId == sourceID)
         #expect(jump?.citationId == "c1")
         #expect(jump?.artifactId == "a1")
+        #expect(jump?.graphId == "g-1")
         #expect(jump?.sourceSurface == .citationComposer)
         #expect(model.pendingImpact?.report.groups.first?.listed.first?.title == "John Hartley, worsted weaver")
         #expect(model.pendingImpact?.report.groups.first?.listed.first?.ref == "CIT-AAAAA")
@@ -1195,5 +1368,30 @@ struct SourcePageModelTests {
         await model.notes.confirmDelete()
         #expect(model.notes.items.isEmpty)
         #expect(model.notes.pendingDelete == nil)
+    }
+
+    @Test func confirmDeleteSourceRecountsThroughSession() async {
+        let store = makeStore()
+        store.sourcesByProject[projectDir]?.append(
+            CatalogSource(
+                id: "src-2", ref: "SRC-BBBBB", sourceTypeID: "t1",
+                title: "Letters", description: ""
+            )
+        )
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let counts = CatalogCounts(projectDir: projectDir, store: store)
+        session.onNavCountsMoved = { await counts.refreshAll() }
+        let model = SourcePageModel(
+            sourceID: sourceID,
+            session: session,
+            userID: userID,
+            sessionDisplayName: "Jake Robins",
+            store: store
+        )
+        await model.warmFromSession()
+        await model.askDeleteSource()
+        let left = await model.confirmResourceDelete()
+        #expect(left)
+        #expect(await waitUntil { counts.sources == 1 })
     }
 }

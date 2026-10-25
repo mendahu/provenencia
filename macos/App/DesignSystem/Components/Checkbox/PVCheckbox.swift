@@ -104,7 +104,8 @@ struct PVCheckbox: View {
         .opacity(isDisabled ? 0.5 : 1)
         .modifier(CheckboxAccessibility(
             spoken: label == nil ? accessibilityLabelText : nil,
-            isOn: isChecked
+            isOn: isChecked,
+            isIndeterminate: isIndeterminate
         ))
     }
 }
@@ -158,6 +159,13 @@ struct PVCheckboxMark: View {
 private struct CheckboxAccessibility: ViewModifier {
     var spoken: Text?
     var isOn: Bool
+    /// Some, not all: the box draws a minus and speaks "partly checked".
+    var isIndeterminate = false
+
+    /// "partly checked" for a mixed box; empty otherwise, so the traits speak checked and not.
+    private var value: Text {
+        isIndeterminate ? Text(L10n.DesignSystem.checkboxPartlyChecked) : Text(verbatim: "")
+    }
 
     func body(content: Content) -> some View {
         let marked = content.accessibilityAddTraits(isOn ? [.isButton, .isSelected] : .isButton)
@@ -165,8 +173,11 @@ private struct CheckboxAccessibility: ViewModifier {
             marked
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(spoken)
+                .accessibilityValue(value)
         } else {
-            marked.accessibilityElement(children: .combine)
+            marked
+                .accessibilityElement(children: .combine)
+                .accessibilityValue(value)
         }
     }
 }
@@ -192,6 +203,7 @@ private struct PVCheckboxPreview: View {
                 PVCheckboxMark(isChecked: false)
                 PVCheckboxMark(isChecked: false, isIndeterminate: true)
                 PVCheckboxMark(isChecked: true, isLocked: true)
+                PVCheckbox(isChecked: .constant(false), isIndeterminate: true, accessibilitySpokenLabel: "Partly checked line")
             }
         }
     }

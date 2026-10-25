@@ -6,6 +6,7 @@
 package sourcemetadata
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"sort"
@@ -54,8 +55,13 @@ const (
 	sqlLayoutOrder = `INSERT INTO source_metadata_layout (source_id, field_id, sort_order)
 		VALUES (?, ?, ?)
 		ON CONFLICT(source_id, field_id) DO UPDATE SET sort_order = excluded.sort_order`
-	sqlLayoutGet  = `SELECT sort_order, dismissed FROM source_metadata_layout WHERE source_id = ? AND field_id = ?`
-	sqlLayoutList = `SELECT field_id, sort_order, dismissed FROM source_metadata_layout WHERE source_id = ?`
+	sqlHasAny = `SELECT EXISTS (SELECT 1 FROM source_metadata WHERE source_id = ?)
+		OR EXISTS (SELECT 1 FROM source_metadata_layout WHERE source_id = ?)`
+	sqlLayoutInsert = `INSERT INTO source_metadata_layout (source_id, field_id, sort_order, dismissed)
+		VALUES (?, ?, ?, ?)`
+	sqlLayoutGet  = `SELECT field_id, sort_order, dismissed FROM source_metadata_layout WHERE source_id = ? AND field_id = ?`
+	sqlLayoutList = `SELECT field_id, sort_order, dismissed FROM source_metadata_layout WHERE source_id = ?
+		ORDER BY sort_order, field_id`
 )
 
 // Row is one source_metadata value.
@@ -84,8 +90,9 @@ type WorkspaceEntry struct {
 	SortOrder int
 }
 
-// layout is one source_metadata_layout row for a field.
-type layout struct {
+// LayoutRow is one source_metadata_layout row for a field.
+type LayoutRow struct {
+	FieldID   []byte
 	SortOrder int
 	Dismissed bool
 }
@@ -104,7 +111,7 @@ func Set(tx *database.Tx, userID []byte, in Input) (Row, []rowchange.Change, err
 	if err := requireSource(tx.Tx, in.SourceID); err != nil {
 		return Row{}, nil, err
 	}
-	field, err := getFieldTx(tx.Tx, in.FieldID)
+	field, err := getField(tx.Tx, in.FieldID)
 	if err != nil {
 		return Row{}, nil, err
 	}
@@ -115,66 +122,157 @@ func Set(tx *database.Tx, userID []byte, in Input) (Row, []rowchange.Change, err
 		return Row{}, nil, err
 	}
 
-	normalized, err := normalizeValue(field.DataType, in.ValueText)
-	if err != nil {
-		return Row{}, nil, err
-	}
-	in.ValueText = normalized
-
-	var row Row
-	var action string
-	fields := map[string]rowchange.FieldDiff{}
-
 	if creating {
-		id, err := uuid.NewV7()
+		row, change, err := insertValueTx(tx.Tx, in.SourceID, field, in.ValueText)
 		if err != nil {
 			return Row{}, nil, err
-		}
-		idBytes := id[:]
-		if _, err := tx.Exec(sqlInsert, idBytes, in.SourceID, in.FieldID, nullStr(in.ValueText)); err != nil {
-			return Row{}, nil, mapConstraint(err)
 		}
 		// A field the researcher just filled needs a place in the Source's
 		// order; appending keeps an existing hand-sorted layout intact.
 		if _, err := tx.Exec(sqlLayoutAppend, in.SourceID, in.FieldID, in.SourceID); err != nil {
 			return Row{}, nil, mapConstraint(err)
 		}
-		row = Row{
-			ID:        append([]byte(nil), idBytes...),
-			SourceID:  append([]byte(nil), in.SourceID...),
-			FieldID:   append([]byte(nil), in.FieldID...),
-			ValueText: in.ValueText,
-		}
-		action = rowchange.ActionCreate
-		fields["id"] = rowchange.FieldDiff{Old: nil, New: id.String()}
-		fields["source_id"] = rowchange.FieldDiff{Old: nil, New: uuidString(in.SourceID)}
-		fields["field_id"] = rowchange.FieldDiff{Old: nil, New: uuidString(in.FieldID)}
-		if in.ValueText != "" {
-			fields["value_text"] = rowchange.FieldDiff{Old: nil, New: in.ValueText}
-		}
-	} else {
-		if prev.ValueText == in.ValueText {
-			return prev, nil, nil
-		}
-		if _, err := tx.Exec(sqlUpdate, nullStr(in.ValueText), prev.ID); err != nil {
-			return Row{}, nil, mapConstraint(err)
-		}
-		row = Row{
-			ID:        append([]byte(nil), prev.ID...),
-			SourceID:  append([]byte(nil), in.SourceID...),
-			FieldID:   append([]byte(nil), in.FieldID...),
-			ValueText: in.ValueText,
-		}
-		action = rowchange.ActionUpdate
-		fields["value_text"] = rowchange.FieldDiff{Old: nullJSON(prev.ValueText), New: nullJSON(in.ValueText)}
+		return row, []rowchange.Change{change}, nil
 	}
 
+	normalized, err := normalizeValue(field.DataType, in.ValueText)
+	if err != nil {
+		return Row{}, nil, err
+	}
+	in.ValueText = normalized
+	if prev.ValueText == in.ValueText {
+		return prev, nil, nil
+	}
+	if _, err := tx.Exec(sqlUpdate, database.NullString(in.ValueText), prev.ID); err != nil {
+		return Row{}, nil, mapConstraint(err)
+	}
+	row := Row{
+		ID:        append([]byte(nil), prev.ID...),
+		SourceID:  append([]byte(nil), in.SourceID...),
+		FieldID:   append([]byte(nil), in.FieldID...),
+		ValueText: in.ValueText,
+	}
 	return row, []rowchange.Change{{
 		EntityType: "source_metadata",
 		EntityID:   row.ID,
-		Action:     action,
-		Fields:     fields,
+		Action:     rowchange.ActionUpdate,
+		Fields: map[string]rowchange.FieldDiff{
+			"value_text": {Old: database.NullString(prev.ValueText), New: database.NullString(in.ValueText)},
+		},
 	}}, nil
+}
+
+// insertValueTx trims and normalizes valueText for the field's data type, inserts
+// the source_metadata row, and returns it with its create change. It writes no
+// layout row; Set appends one and CreateAll writes the caller's.
+func insertValueTx(tx *sql.Tx, sourceID []byte, field metadatafields.Field, valueText string) (Row, rowchange.Change, error) {
+	normalized, err := normalizeValue(field.DataType, strings.TrimSpace(valueText))
+	if err != nil {
+		return Row{}, rowchange.Change{}, err
+	}
+	id, err := uuid.NewV7()
+	if err != nil {
+		return Row{}, rowchange.Change{}, err
+	}
+	idBytes := id[:]
+	if _, err := tx.Exec(sqlInsert, idBytes, sourceID, field.ID, database.NullString(normalized)); err != nil {
+		return Row{}, rowchange.Change{}, mapConstraint(err)
+	}
+	row := Row{
+		ID:        append([]byte(nil), idBytes...),
+		SourceID:  append([]byte(nil), sourceID...),
+		FieldID:   append([]byte(nil), field.ID...),
+		ValueText: normalized,
+	}
+	fields := map[string]rowchange.FieldDiff{
+		"id":        {Old: nil, New: id.String()},
+		"source_id": {Old: nil, New: database.UUIDString(sourceID)},
+		"field_id":  {Old: nil, New: database.UUIDString(field.ID)},
+	}
+	if normalized != "" {
+		fields["value_text"] = rowchange.FieldDiff{Old: nil, New: normalized}
+	}
+	return row, rowchange.Change{
+		EntityType: "source_metadata",
+		EntityID:   row.ID,
+		Action:     rowchange.ActionCreate,
+		Fields:     fields,
+	}, nil
+}
+
+// CreateAll writes values and layout rows verbatim onto a Source that has
+// neither, so a copy reads back in the original's order with the original's
+// dismissed flags. Unlike Set it appends no layout row of its own. Changes are
+// the value changes in input order, then the layout changes in input order.
+// The caller records them.
+func CreateAll(tx *database.Tx, userID, sourceID []byte, values []Input, layout []LayoutRow) ([]rowchange.Change, error) {
+	if tx == nil || len(sourceID) != 16 {
+		return nil, ErrInvalid
+	}
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return nil, err
+	}
+	if len(values) == 0 && len(layout) == 0 {
+		return nil, nil
+	}
+	if err := requireSource(tx.Tx, sourceID); err != nil {
+		return nil, err
+	}
+	var has bool
+	if err := tx.QueryRow(sqlHasAny, sourceID, sourceID).Scan(&has); err != nil {
+		return nil, err
+	}
+	if has {
+		return nil, ErrInvalid
+	}
+	for _, in := range values {
+		if !bytes.Equal(in.SourceID, sourceID) {
+			return nil, ErrInvalid
+		}
+	}
+
+	changes := make([]rowchange.Change, 0, len(values)+len(layout))
+	for _, in := range values {
+		if len(in.FieldID) != 16 {
+			return nil, ErrInvalid
+		}
+		field, err := getField(tx.Tx, in.FieldID)
+		if err != nil {
+			return nil, err
+		}
+		_, change, err := insertValueTx(tx.Tx, sourceID, field, in.ValueText)
+		if err != nil {
+			return nil, err
+		}
+		changes = append(changes, change)
+	}
+	for _, l := range layout {
+		if len(l.FieldID) != 16 {
+			return nil, ErrInvalid
+		}
+		if _, err := getField(tx.Tx, l.FieldID); err != nil {
+			return nil, err
+		}
+		dismissed := 0
+		if l.Dismissed {
+			dismissed = 1
+		}
+		if _, err := tx.Exec(sqlLayoutInsert, sourceID, l.FieldID, l.SortOrder, dismissed); err != nil {
+			return nil, mapConstraint(err)
+		}
+		changes = append(changes, rowchange.Change{
+			EntityType: "source_metadata_layout",
+			EntityID:   append([]byte(nil), l.FieldID...),
+			Action:     rowchange.ActionCreate,
+			Fields: map[string]rowchange.FieldDiff{
+				"source_id":  {Old: nil, New: database.UUIDString(sourceID)},
+				"field_id":   {Old: nil, New: database.UUIDString(l.FieldID)},
+				"sort_order": {Old: nil, New: l.SortOrder},
+				"dismissed":  {Old: nil, New: l.Dismissed},
+			},
+		})
+	}
+	return changes, nil
 }
 
 // Clear deletes the metadata row for (source_id, field_id) when one exists.
@@ -199,9 +297,9 @@ func Clear(tx *database.Tx, userID, sourceID, fieldID []byte) ([]rowchange.Chang
 		return nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
-		"id":        {Old: uuidString(prev.ID), New: nil},
-		"source_id": {Old: uuidString(prev.SourceID), New: nil},
-		"field_id":  {Old: uuidString(prev.FieldID), New: nil},
+		"id":        {Old: database.UUIDString(prev.ID), New: nil},
+		"source_id": {Old: database.UUIDString(prev.SourceID), New: nil},
+		"field_id":  {Old: database.UUIDString(prev.FieldID), New: nil},
 	}
 	if prev.ValueText != "" {
 		fields["value_text"] = rowchange.FieldDiff{Old: prev.ValueText, New: nil}
@@ -232,7 +330,7 @@ func DismissSuggestion(tx *database.Tx, userID, sourceID, fieldID []byte) ([]row
 	if err := requireSource(tx.Tx, sourceID); err != nil {
 		return nil, err
 	}
-	if _, err := getFieldTx(tx.Tx, fieldID); err != nil {
+	if _, err := getField(tx.Tx, fieldID); err != nil {
 		return nil, err
 	}
 
@@ -269,8 +367,8 @@ func DismissSuggestion(tx *database.Tx, userID, sourceID, fieldID []byte) ([]row
 		EntityID:   fieldID,
 		Action:     action,
 		Fields: map[string]rowchange.FieldDiff{
-			"source_id": {Old: uuidString(sourceID), New: uuidString(sourceID)},
-			"field_id":  {Old: uuidString(fieldID), New: uuidString(fieldID)},
+			"source_id": {Old: database.UUIDString(sourceID), New: database.UUIDString(sourceID)},
+			"field_id":  {Old: database.UUIDString(fieldID), New: database.UUIDString(fieldID)},
 			"dismissed": {Old: oldDismissed, New: true},
 		},
 	}}, nil
@@ -304,7 +402,7 @@ func Reorder(tx *database.Tx, userID, sourceID []byte, fieldIDs [][]byte) ([]row
 
 	var changes []rowchange.Change
 	for i, fieldID := range fieldIDs {
-		if _, err := getFieldTx(tx.Tx, fieldID); err != nil {
+		if _, err := getField(tx.Tx, fieldID); err != nil {
 			return nil, err
 		}
 		prev, err := getLayoutTx(tx.Tx, sourceID, fieldID)
@@ -331,8 +429,8 @@ func Reorder(tx *database.Tx, userID, sourceID []byte, fieldIDs [][]byte) ([]row
 			EntityID:   fieldID,
 			Action:     action,
 			Fields: map[string]rowchange.FieldDiff{
-				"source_id":  {Old: uuidString(sourceID), New: uuidString(sourceID)},
-				"field_id":   {Old: uuidString(fieldID), New: uuidString(fieldID)},
+				"source_id":  {Old: database.UUIDString(sourceID), New: database.UUIDString(sourceID)},
+				"field_id":   {Old: database.UUIDString(fieldID), New: database.UUIDString(fieldID)},
 				"sort_order": {Old: oldOrder, New: i},
 			},
 		})
@@ -349,7 +447,19 @@ func ListBySource(c *database.Catalog, sourceID []byte) ([]Row, error) {
 	if len(sourceID) != 16 {
 		return nil, ErrInvalid
 	}
-	rows, err := db.Query(sqlListBySource, sourceID)
+	return listBySource(db, sourceID)
+}
+
+// ListBySourceTx is ListBySource on an open transaction.
+func ListBySourceTx(tx *sql.Tx, sourceID []byte) ([]Row, error) {
+	if len(sourceID) != 16 {
+		return nil, ErrInvalid
+	}
+	return listBySource(tx, sourceID)
+}
+
+func listBySource(q database.Querier, sourceID []byte) ([]Row, error) {
+	rows, err := q.Query(sqlListBySource, sourceID)
 	if err != nil {
 		return nil, err
 	}
@@ -381,6 +491,10 @@ func ListWorkspace(c *database.Catalog, sourceID []byte) ([]WorkspaceEntry, erro
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrInvalid
 		}
+		return nil, err
+	}
+	db, err := c.DB()
+	if err != nil {
 		return nil, err
 	}
 	suggestions, err := sourcevocab.ListSuggestions(c, src.SourceTypeID)
@@ -420,7 +534,7 @@ func ListWorkspace(c *database.Catalog, sourceID []byte) ([]WorkspaceEntry, erro
 		if _, ok := seen[key]; ok {
 			continue
 		}
-		field, err := lookupField(c, v.FieldID)
+		field, err := getField(db, v.FieldID)
 		if err != nil {
 			return nil, err
 		}
@@ -448,32 +562,52 @@ func ListWorkspace(c *database.Catalog, sourceID []byte) ([]WorkspaceEntry, erro
 	return out, nil
 }
 
+// ListLayoutTx returns the Source's layout rows on an open transaction, ordered
+// by sort_order then field id.
+func ListLayoutTx(tx *sql.Tx, sourceID []byte) ([]LayoutRow, error) {
+	if len(sourceID) != 16 {
+		return nil, ErrInvalid
+	}
+	return listLayoutRows(tx, sourceID)
+}
+
 // listLayout reads the Source's layout rows keyed by field id, with the highest
 // sort_order in use (-1 when the Source has no layout).
-func listLayout(c *database.Catalog, sourceID []byte) (map[string]layout, int, error) {
+func listLayout(c *database.Catalog, sourceID []byte) (map[string]LayoutRow, int, error) {
 	db, err := c.DB()
 	if err != nil {
 		return nil, 0, err
 	}
-	rows, err := db.Query(sqlLayoutList, sourceID)
+	rows, err := listLayoutRows(db, sourceID)
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
-	out := map[string]layout{}
+	out := make(map[string]LayoutRow, len(rows))
 	maxOrder := -1
-	for rows.Next() {
-		var fieldID []byte
-		var sortOrder, dismissed int
-		if err := rows.Scan(&fieldID, &sortOrder, &dismissed); err != nil {
-			return nil, 0, err
-		}
-		out[string(fieldID)] = layout{SortOrder: sortOrder, Dismissed: dismissed == 1}
-		if sortOrder > maxOrder {
-			maxOrder = sortOrder
+	for _, l := range rows {
+		out[string(l.FieldID)] = l
+		if l.SortOrder > maxOrder {
+			maxOrder = l.SortOrder
 		}
 	}
-	return out, maxOrder, rows.Err()
+	return out, maxOrder, nil
+}
+
+func listLayoutRows(q database.Querier, sourceID []byte) ([]LayoutRow, error) {
+	rows, err := q.Query(sqlLayoutList, sourceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []LayoutRow
+	for rows.Next() {
+		l, err := scanLayoutRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, l)
+	}
+	return out, rows.Err()
 }
 
 func normalizeValue(dataType, valueText string) (string, error) {
@@ -510,34 +644,24 @@ func getPairTx(tx *sql.Tx, sourceID, fieldID []byte) (Row, error) {
 	return scanRow(tx.QueryRow(sqlGetPair, sourceID, fieldID))
 }
 
-func getLayoutTx(tx *sql.Tx, sourceID, fieldID []byte) (layout, error) {
-	var l layout
+func scanLayoutRow(row rowScanner) (LayoutRow, error) {
+	var l LayoutRow
 	var dismissed int
-	if err := tx.QueryRow(sqlLayoutGet, sourceID, fieldID).Scan(&l.SortOrder, &dismissed); err != nil {
-		return layout{}, err
+	if err := row.Scan(&l.FieldID, &l.SortOrder, &dismissed); err != nil {
+		return LayoutRow{}, err
 	}
 	l.Dismissed = dismissed == 1
 	return l, nil
 }
 
-func getFieldTx(tx *sql.Tx, fieldID []byte) (metadatafields.Field, error) {
-	var f metadatafields.Field
-	err := tx.QueryRow(sqlFieldGet, fieldID).Scan(
-		&f.ID, &f.Key, &f.Origin, &f.Label, &f.DataType, &f.Description,
-	)
-	if errors.Is(err, sql.ErrNoRows) {
-		return metadatafields.Field{}, ErrInvalid
-	}
-	return f, err
+func getLayoutTx(tx *sql.Tx, sourceID, fieldID []byte) (LayoutRow, error) {
+	return scanLayoutRow(tx.QueryRow(sqlLayoutGet, sourceID, fieldID))
 }
 
-func lookupField(c *database.Catalog, fieldID []byte) (metadatafields.Field, error) {
-	db, err := c.DB()
-	if err != nil {
-		return metadatafields.Field{}, err
-	}
+// getField reads one metadata field; an unknown id is ErrInvalid.
+func getField(q database.Querier, fieldID []byte) (metadatafields.Field, error) {
 	var f metadatafields.Field
-	err = db.QueryRow(sqlFieldGet, fieldID).Scan(
+	err := q.QueryRow(sqlFieldGet, fieldID).Scan(
 		&f.ID, &f.Key, &f.Origin, &f.Label, &f.DataType, &f.Description,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -553,28 +677,6 @@ func requireSource(tx *sql.Tx, sourceID []byte) error {
 		return ErrInvalid
 	}
 	return err
-}
-
-func nullStr(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
-func nullJSON(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
-func uuidString(id []byte) string {
-	u, err := uuid.FromBytes(id)
-	if err != nil {
-		return ""
-	}
-	return u.String()
 }
 
 func mapConstraint(err error) error {

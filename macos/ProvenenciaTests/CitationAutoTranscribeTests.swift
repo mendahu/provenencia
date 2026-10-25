@@ -9,6 +9,7 @@ import Testing
 @MainActor
 struct CitationAutoTranscribeTests {
     private let sourceID = "src-1"
+    private let graphID = "g-1"
     private let subjectID = "sub-person-1"
     private let personTypeID = "type-person"
     private let eventTypeID = "type-event"
@@ -377,7 +378,12 @@ struct CitationAutoTranscribeTests {
                 id: sourceID, ref: "SRC-1", sourceTypeID: "stype", title: "Census", description: ""
             ),
         ]
-        store.subjectsBySource[sourceID] = [
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: graphID, ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: ["art-0"]
+            ),
+        ]
+        store.subjectsByGraph[graphID] = [
             CatalogSubject(
                 id: subjectID, ref: "CPR-1", sourceID: sourceID, subjectTypeID: personTypeID,
                 label: "Margt.", description: ""
@@ -395,7 +401,7 @@ struct CitationAutoTranscribeTests {
         engine: FakeOCREngine
     ) -> CitationComposerModel {
         CitationComposerModel(
-            entry: .addProperty(sourceID: sourceID, subjectID: subjectID, artifactID: "art-0"),
+            entry: .addProperty(sourceID: sourceID, graphID: graphID, subjectID: subjectID, artifactID: "art-0"),
             session: WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store),
             store: store,
             userID: "user-1",
@@ -416,18 +422,6 @@ struct CitationAutoTranscribeTests {
         ), let cgImage = context.makeImage() else { return nil }
         return NSImage(cgImage: cgImage, size: NSSize(width: width, height: height))
     }
-
-    private func waitUntil(
-        timeout: Duration = .seconds(2),
-        _ predicate: () -> Bool
-    ) async -> Bool {
-        let deadline = ContinuousClock.now + timeout
-        while ContinuousClock.now < deadline {
-            if predicate() { return true }
-            try? await Task.sleep(for: .milliseconds(10))
-        }
-        return predicate()
-    }
 }
 
 private enum TestOCRError: Error {
@@ -443,12 +437,11 @@ private final class FakeOCREngine: OCREngine, @unchecked Sendable {
     private(set) var recognizeCount = 0
 
     func recognizeText(in image: CGImage) async throws -> String {
-        lock.lock()
-        recognizeCount += 1
-        lastSize = CGSize(width: image.width, height: image.height)
-        let shouldHold = self.shouldHold
-        let result = self.result
-        lock.unlock()
+        let (shouldHold, result) = lock.withLock {
+            recognizeCount += 1
+            lastSize = CGSize(width: image.width, height: image.height)
+            return (self.shouldHold, self.result)
+        }
         if shouldHold {
             await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
                 lock.lock()

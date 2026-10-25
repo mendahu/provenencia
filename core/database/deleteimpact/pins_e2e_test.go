@@ -8,11 +8,15 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
@@ -30,7 +34,7 @@ import (
 )
 
 // pinnedHandle is one Place handle filed through Promote: A grounds it, B
-// joins with two confirmed pairs (each Subject's toponym and alternate name),
+// joins with a confirmed pin set (each Subject's toponym and alternate name),
 // so all four Observations are pinned on both claims.
 type pinnedHandle struct {
 	c                   *database.Catalog
@@ -58,21 +62,15 @@ func newPinnedHandle(t *testing.T) pinnedHandle {
 		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Gazetteer"})
 	})
 	must(err)
-	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(err)
 	place, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
 	must(err)
 	toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 	must(err)
-	mk := func(label string) subjects.Subject {
-		t.Helper()
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: place.ID, Label: label}, nil)
-		})
-		must(err)
-		return s
-	}
-	a, b := mk("York"), mk("York (U.C.)")
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+	a := subjectstest.OfType(t, c, userID, graph, place.ID, "York")
+	b := subjectstest.OfType(t, c, userID, graph, place.ID, "York (U.C.)")
 	res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
 			ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "York, otherwise Toronto",
@@ -88,17 +86,19 @@ func newPinnedHandle(t *testing.T) pinnedHandle {
 	h := pinnedHandle{c: c, userID: userID, a: a, b: b,
 		aName: o[0].ID, aAlt: o[1].ID, bName: o[2].ID, bAlt: o[3].ID}
 
-	grounding, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: a.ID, Argument: "The gazetteer entry."})
+	grounding := promotetest.Save(t, c, userID, promote.Input{SubjectID: a.ID, Argument: "The gazetteer entry."})
+	rev := int64(0)
+	db, err := c.DB()
+	must(err)
+	must(db.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev))
+	batch, err := writes.Call(c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+		return promote.SaveBatch(tx, userID, promote.Batch{GraphID: graph, SeenRevision: rev, Rows: []promote.BatchRow{{
+			SubjectID: b.ID, Target: promote.TargetHandle, EntityID: grounding.Entity.ID,
+			PinSets: []promote.PinSet{{Member: a.ID, Observations: [][]byte{h.bName, h.aName, h.bAlt, h.aAlt}}},
+		}}})
 	})
 	must(err)
-	joined, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: b.ID, EntityID: grounding.Entity.ID, Pairs: []promote.Pair{
-			{IncomingObservationID: h.bName, MemberObservationID: h.aName},
-			{IncomingObservationID: h.bAlt, MemberObservationID: h.aAlt},
-		}})
-	})
-	must(err)
+	joined := batch.Written[0]
 	h.entityID, h.entityRef = string(grounding.Entity.ID), grounding.Entity.Ref
 	h.ca, h.cb = grounding.Claim.ID, joined.Claim.ID
 	return h
@@ -270,8 +270,8 @@ func TestPinnedObservationDeleteEndToEnd(t *testing.T) {
 	// The audit reads back per claim: what Promote pinned, then what the delete took.
 	// Promote pins each pair's incoming record, then the member's, on each claim.
 	want := []string{
-		"promote_subject:create:bName", "promote_subject:create:aName",
-		"promote_subject:create:bAlt", "promote_subject:create:aAlt",
+		"promote_batch:create:bName", "promote_batch:create:aName",
+		"promote_batch:create:bAlt", "promote_batch:create:aAlt",
 		"delete_observation:delete:aName",
 	}
 	for name, claimID := range map[string][]byte{"A": h.ca, "B": h.cb} {

@@ -8,10 +8,13 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -19,7 +22,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
@@ -35,6 +38,7 @@ type handleFixture struct {
 	user     []byte
 	source   []byte
 	artifact []byte
+	graph    []byte // the Source's one Evidence graph
 }
 
 func newHandleFixture(t *testing.T) *handleFixture {
@@ -55,11 +59,11 @@ func newHandleFixture(t *testing.T) *handleFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := runArtifactCreate(c, user, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, user, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &handleFixture{t: t, c: c, user: user, source: src.ID, artifact: art.ID}
+	return &handleFixture{t: t, c: c, user: user, source: src.ID, artifact: art.ID, graph: evidencegraphstest.SoleGraph(t, c, src.ID).ID}
 }
 
 func (f *handleFixture) prop(key string) properties.Property {
@@ -74,16 +78,7 @@ func (f *handleFixture) prop(key string) properties.Property {
 // subject creates a Subject of kind with the given Observations.
 func (f *handleFixture) subject(kind string, in func(s subjects.Subject) []observations.Input) subjects.Subject {
 	f.t.Helper()
-	st, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
-	if err != nil {
-		f.t.Fatal(err)
-	}
-	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: f.user}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-		return subjects.Create(tx, f.user, subjects.CreateInput{SourceID: f.source, SubjectTypeID: st.ID}, nil)
-	})
-	if err != nil {
-		f.t.Fatal(err)
-	}
+	s := subjectstest.On(f.t, f.c, f.user, f.graph, kind, "")
 	if in != nil {
 		obs := in(s)
 		if _, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: f.user}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
@@ -107,13 +102,7 @@ func (f *handleFixture) person(forms ...string) subjects.Subject {
 
 func (f *handleFixture) promote(s subjects.Subject, onto []byte) promote.Result {
 	f.t.Helper()
-	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: f.user}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, f.user, promote.Input{SubjectID: s.ID, EntityID: onto})
-	})
-	if err != nil {
-		f.t.Fatal(err)
-	}
-	return res
+	return promotetest.Save(f.t, f.c, f.user, promote.Input{SubjectID: s.ID, EntityID: onto})
 }
 
 func (f *handleFixture) search(text string, kinds ...string) []Hit {
@@ -257,7 +246,7 @@ func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 	roleProp := f.prop("role").ID
 	if _, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: f.user}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, f.user, connect.CreateInput{
-			SourceID: f.source, FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
+			FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
 			Citation: citations.CreateInput{ArtifactID: f.artifact, LocatorJSON: handleLocator},
 			Observations: []observations.Input{
 				{PropertyID: personProp, ValueSubjectID: person.ID},
@@ -271,7 +260,7 @@ func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 	placeProp := f.prop("place").ID
 	if _, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: f.user}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, f.user, connect.CreateInput{
-			SourceID: f.source, FromSubjectID: event.ID, ToSubjectID: place.ID, BridgeTypeKey: "location",
+			FromSubjectID: event.ID, ToSubjectID: place.ID, BridgeTypeKey: "location",
 			Citation: citations.CreateInput{ArtifactID: f.artifact, LocatorJSON: handleLocator},
 			Observations: []observations.Input{
 				{PropertyID: eventProp, ValueSubjectID: event.ID},
@@ -341,7 +330,7 @@ func (f *handleFixture) fileBridges() {
 		f.t.Fatal(err)
 	}
 	if _, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: f.user}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
-		return promote.SaveBatch(tx, f.user, promote.Batch{SourceID: f.source, SeenRevision: rev})
+		return promote.SaveBatch(tx, f.user, promote.Batch{GraphID: f.graph, SeenRevision: rev})
 	}); err != nil {
 		f.t.Fatal(err)
 	}
@@ -535,14 +524,6 @@ func TestMergedHandleLeavesTheIndex(t *testing.T) {
 	if hits := f.search("Robins", KindPerson); refsOf(hits) != fmt.Sprint([]string{"person:" + a.Entity.Ref}) {
 		t.Fatalf("got %s", refsOf(hits))
 	}
-}
-
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
-		})
-	return a, err
 }
 
 // TestHandleKindsArePrimaryKinds keeps the registry's Handle flags in step with

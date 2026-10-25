@@ -3,9 +3,11 @@ package deleteimpact
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 type inboundEdge struct {
@@ -74,6 +76,7 @@ var deletableKinds = map[catalogmodel.Kind]bool{
 	catalogmodel.KindCitation:         true,
 	catalogmodel.KindObservation:      true,
 	catalogmodel.KindSubject:          true,
+	catalogmodel.KindEvidenceGraph:    true,
 	catalogmodel.KindSourceType:       true,
 	catalogmodel.KindMetadataField:    true,
 	catalogmodel.KindCredibilityGrade: true,
@@ -138,6 +141,7 @@ var inboundEdgeList = sync.OnceValue(func() []inboundEdge {
 	return []inboundEdge{
 		fkEdge(catalogmodel.KindSource, "artifacts.source_id", catalogmodel.KindArtifact, "artifacts", "source_id", "ref"),
 		fkEdge(catalogmodel.KindSource, "subjects.source_id", catalogmodel.KindSubject, "subjects", "source_id", "ref"),
+		fkEdge(catalogmodel.KindEvidenceGraph, "subjects.graph_id", catalogmodel.KindSubject, "subjects", "graph_id", "ref"),
 		fkEdge(catalogmodel.KindArtifact, "citations.artifact_id", catalogmodel.KindCitation, "citations", "artifact_id", "ref"),
 		fkEdge(catalogmodel.KindCitation, "observations.citation_id", catalogmodel.KindObservation, "observations", "citation_id", "ref"),
 		subjectResourceInbound(),
@@ -174,13 +178,64 @@ var inboundEdgeList = sync.OnceValue(func() []inboundEdge {
 	}
 })
 
-func originRuleFor(kind catalogmodel.Kind) (originRule, bool) {
+// extraGate is a per-kind gate Impact checks after the existence check and
+// before the inbound groups: the first entry for the kind that holds refuses.
+type extraGate struct {
+	Kind  catalogmodel.Kind
+	Gate  Gate
+	Holds func(tx *sql.Tx, id []byte) (bool, error)
+}
+
+// extraGateList is the one list of gates checked before inbound, in order:
+// edge-locked, last-graph, then every origin rule. A new per-kind gate is one
+// entry here.
+var extraGateList = sync.OnceValue(func() []extraGate {
+	gates := []extraGate{
+		{catalogmodel.KindObservation, GateEdgeLocked, isEdgeObservation},
+		{catalogmodel.KindEvidenceGraph, GateLastGraph, isLastGraph},
+	}
 	for _, r := range originRules {
-		if r.Kind == kind {
-			return r, true
+		gates = append(gates, extraGate{r.Kind, GateOriginLocked, originHolds(r)})
+	}
+	return gates
+})
+
+func extraGatesFor(kind catalogmodel.Kind) []extraGate {
+	var out []extraGate
+	for _, g := range extraGateList() {
+		if g.Kind == kind {
+			out = append(out, g)
 		}
 	}
-	return originRule{}, false
+	return out
+}
+
+// originHolds reports whether the row's origin locks it against delete under
+// the rule.
+func originHolds(r originRule) func(*sql.Tx, []byte) (bool, error) {
+	return func(tx *sql.Tx, id []byte) (bool, error) {
+		var origin string
+		err := tx.QueryRow(r.OriginSQL, id).Scan(&origin)
+		if err == sql.ErrNoRows {
+			return false, nil
+		}
+		if err != nil {
+			return false, err
+		}
+		origin = strings.TrimSpace(origin)
+		if r.PluginNever && vocabkey.IsPluginOrigin(origin) {
+			return true, nil
+		}
+		return r.SeededLocked && origin == vocabkey.OriginProvenencia, nil
+	}
+}
+
+// isLastGraph reports whether the graph is the only one of its Source.
+func isLastGraph(tx *sql.Tx, graphID []byte) (bool, error) {
+	var n int
+	err := tx.QueryRow(`SELECT COUNT(*) FROM evidence_graphs
+		WHERE source_id = (SELECT source_id FROM evidence_graphs WHERE id = ?)`, graphID).Scan(&n)
+	return n == 1, err
 }
 
 func resourceInboundVias() map[string]bool {

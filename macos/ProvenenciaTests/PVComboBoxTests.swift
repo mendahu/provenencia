@@ -114,6 +114,21 @@ struct PVComboBoxTests {
         #expect(PVComboBoxMatch.move(from: -1, delta: 1, in: []) == -1)
     }
 
+    // MARK: Remote results
+
+    @Test func searchingLineShowsOnlyWhileLoadingWithNothingIn() {
+        #expect(PVComboBoxMatch.listLine(optionCount: 0, isLoading: true) == .loading)
+    }
+
+    @Test func optionsAlreadyInStayWhileANewSearchRuns() {
+        #expect(PVComboBoxMatch.listLine(optionCount: 3, isLoading: true) == .rows)
+    }
+
+    @Test func noOptionsAndNoSearchShowsTheEmptyLine() {
+        #expect(PVComboBoxMatch.listLine(optionCount: 0, isLoading: false) == .empty)
+        #expect(PVComboBoxMatch.listLine(optionCount: 2, isLoading: false) == .rows)
+    }
+
     // MARK: Placement
 
     /// A roomy 1440x900 display with the menu bar taken off the top, in

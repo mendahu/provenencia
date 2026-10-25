@@ -120,7 +120,7 @@ struct EvidenceCitedPropertyMarksTests {
     }
 
     @Test func graphHasConflictIgnoresNegationOnly() {
-        let subject = SourceGraphPlacedSubject(
+        let subject = EvidenceGraphPlacedSubject(
             subject: CatalogSubject(
                 id: "s1",
                 ref: "CPR-1",
@@ -138,7 +138,7 @@ struct EvidenceCitedPropertyMarksTests {
         )
         #expect(!EvidenceCitedPropertyMarks.graphHasConflict(subjects: [subject], bridges: []))
 
-        let denied = SourceGraphPlacedSubject(
+        let denied = EvidenceGraphPlacedSubject(
             subject: subject.subject,
             kind: .person,
             typeLabel: "Person",
@@ -149,7 +149,7 @@ struct EvidenceCitedPropertyMarksTests {
         )
         #expect(!EvidenceCitedPropertyMarks.graphHasConflict(subjects: [denied], bridges: []))
 
-        let conflicted = SourceGraphPlacedSubject(
+        let conflicted = EvidenceGraphPlacedSubject(
             subject: subject.subject,
             kind: .person,
             typeLabel: "Person",

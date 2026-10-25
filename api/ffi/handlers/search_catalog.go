@@ -59,6 +59,7 @@ func locationFromProto(loc *engine.WorkspaceLocation) search.WorkspaceLocation {
 		SubjectTypeKey:       loc.GetSubjectTypeKey(),
 		PropertyID:           loc.GetPropertyId(),
 		EntityID:             loc.GetEntityId(),
+		GraphID:              loc.GetGraphId(),
 		SourceSurface:        loc.GetSourceSurface(),
 		Ref:                  loc.GetRef(),
 		Title:                loc.GetTitle(),
@@ -82,6 +83,7 @@ func locationToProto(loc search.WorkspaceLocation) *engine.WorkspaceLocation {
 		SubjectTypeKey:       loc.SubjectTypeKey,
 		PropertyId:           loc.PropertyID,
 		EntityId:             loc.EntityID,
+		GraphId:              loc.GraphID,
 		SourceSurface:        loc.SourceSurface,
 		Ref:                  loc.Ref,
 		Title:                loc.Title,
@@ -120,15 +122,15 @@ func fillHitHeaders(c *database.Catalog, hits []*engine.SearchHit) error {
 	}
 	personByID := map[string]conclusionheaders.PersonHeader{}
 	for _, p := range listedPersons {
-		personByID[uuidString(p.Entity.ID)] = p
+		personByID[database.UUIDString(p.Entity.ID)] = p
 	}
 	eventByID := map[string]conclusionheaders.EventHeader{}
 	for _, e := range listedEvents {
-		eventByID[uuidString(e.Entity.ID)] = e
+		eventByID[database.UUIDString(e.Entity.ID)] = e
 	}
 	placeByID := map[string]conclusionheaders.PlaceHeader{}
 	for _, p := range listedPlaces {
-		placeByID[uuidString(p.Entity.ID)] = p
+		placeByID[database.UUIDString(p.Entity.ID)] = p
 	}
 	for _, h := range hits {
 		switch h.GetKind() {

@@ -8,16 +8,20 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -67,7 +71,7 @@ func TestHandlePaths(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,15 +85,8 @@ func TestHandlePaths(t *testing.T) {
 	}
 	mk := func(typeID []byte, label string, x int64) subjects.Subject {
 		t.Helper()
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: typeID, Label: label,
-			}, &subjects.Placement{GridX: x, GridY: 0})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		return s
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+		return subjectstest.At(t, c, userID, graph, typeID, label, subjects.Placement{GridX: x, GridY: 0})
 	}
 	alice := mk(personType.ID, "Alice", 0)
 	bob := mk(personType.ID, "Bob", 4)
@@ -98,30 +95,10 @@ func TestHandlePaths(t *testing.T) {
 	eve := mk(personType.ID, "Eve", 14)
 	boston := mk(placeType.ID, "Boston", 16)
 
-	aliceRes, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: alice.ID})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	bobRes, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: bob.ID})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	eveRes, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: eve.ID})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	bostonRes, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: boston.ID})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	aliceRes := promotetest.Save(t, c, userID, promote.Input{SubjectID: alice.ID})
+	bobRes := promotetest.Save(t, c, userID, promote.Input{SubjectID: bob.ID})
+	eveRes := promotetest.Save(t, c, userID, promote.Input{SubjectID: eve.ID})
+	bostonRes := promotetest.Save(t, c, userID, promote.Input{SubjectID: boston.ID})
 	if _, err := writes.Call(c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
 		return identityclaims.Create(tx, userID, identityclaims.CreateInput{
 			SubjectID: cara.ID, EntityID: aliceRes.Entity.ID, Status: identityclaims.StatusRejected,
@@ -401,12 +378,4 @@ func idSet(got [][]byte, want ...[]byte) bool {
 		}
 	}
 	return true
-}
-
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
-		})
-	return a, err
 }

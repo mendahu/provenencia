@@ -139,11 +139,11 @@ Each module answers three questions:
 | **subject** | candidate Subjects map to the **same handle**; unpromoted Subjects drop out | none | the handle (an edge of the canonical graph) | unpromoted |
 | **date** | the same span of days (§7.1) | span containment | §7.1 | empty |
 | **name** | §7.2 | containment per part type (§7.2) | §7.2 | no parts |
-| **depiction** | the same image File (the same pixels) | none | the image | an image `depictionvalues.Readable` refuses |
+| **depiction** | the same image File (the same pixels) | none | the image | an image `depictionvalue.Readable` refuses |
 
-A depiction's value is its image File; the loader reads it through `depictionvalues.Readable`, and the cache stores it as `value_image_file_id`. `likeness` is `multiple`, so a person's images form a gallery, built from the records whose own outcome is `kept` or `weak` ([conclusion layer §6](conclusion-layer-data-model.md#6-canonical_entities)). The Person page lists no depiction field.
+A depiction's value is its image File; the loader reads it through `depictionvalue.Readable`, and the cache stores it as `value_image_file_id`. `likeness` is `multiple`, so a person's images form a gallery, built from the records whose own outcome is `kept` or `weak` ([conclusion layer §6](conclusion-layer-data-model.md#6-canonical_entities)). The Person page lists no depiction field.
 
-The same *same value* test (`autoreconcile.Compatible`) decides which Promote comparisons are pinned ([`promote-graph-alignment.md`](promote-graph-alignment.md) §6), so a pin and a Person page never disagree about whether two values match. Scoring uses value compare's similarity, so a partial resemblance can raise a match without being pinned.
+Promote pins a comparison line only when value compare says the values are the same ([`matching-model.md`](matching-model.md)). Scoring uses value compare's similarity, so a partial resemblance can raise a match without being pinned.
 
 ## 7.1 Dates
 

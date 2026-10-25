@@ -103,7 +103,7 @@ func TestCompare(t *testing.T) {
 			a: Vals{name: {robins}}, b: Vals{name: {robins}}, sim: 1, ev: 2.5,
 			check: all(is(name, agree, rel, 2.5), is(sex, unknown, noVals, 0))},
 		{name: "AC-1.2 gender counts as sex at birth", kind: vocabkey.Person,
-			a: Vals{name: {robins}, gender: {pt.Term("female")}}, b: Vals{name: {robins}, gender: {pt.Term("female")}}, sim: 1, ev: 3.1},
+			a: Vals{name: {robins}, gender: {pt.Term("woman")}}, b: Vals{name: {robins}, gender: {pt.Term("woman")}}, sim: 1, ev: 3.1},
 		{name: "AC-1.3 name agrees, sex conflicts", kind: vocabkey.Person,
 			a: Vals{name: {robins}, sex: {pt.Term("male")}}, b: Vals{name: {robins}, sex: {pt.Term("female")}}, sim: 2.5 / 3.5, ev: 1.5},
 		{name: "AC-1.4 name partial", kind: vocabkey.Person,
@@ -129,9 +129,10 @@ func TestCompare(t *testing.T) {
 			check: is(name, unknown, noVals, 0)},
 		{name: "AC-1.12 both sides empty", kind: vocabkey.Person, sim: 0, ev: 0,
 			check: func(t *testing.T, r subjectcompare.Result) {
-				if !slices.Equal(keys(r), []vocabkey.PropertyKey{name, sex}) {
+				if !slices.Equal(keys(r), []vocabkey.PropertyKey{vocabkey.PropertyLifespan, name, sex}) {
 					t.Errorf("properties %v", keys(r))
 				}
+				is(vocabkey.PropertyLifespan, unknown, noVals, 0)(t, r)
 				is(name, unknown, noVals, 0)(t, r)
 				is(sex, unknown, noVals, 0)(t, r)
 			}},
@@ -158,10 +159,19 @@ func TestCompare(t *testing.T) {
 			}},
 
 		{name: "AC-2.1 gender against sex at birth agrees", kind: vocabkey.Person,
-			a: Vals{gender: {pt.Term("female")}}, b: Vals{sex: {pt.Term("female")}}, sim: 1, ev: 0.6,
+			a: Vals{gender: {pt.Term("woman")}}, b: Vals{sex: {pt.Term("female")}}, sim: 1, ev: 0.6,
 			check: is(sex, agree, rel, 0.6)},
+		{name: "AC-2.1 the gender man against the sex male agrees", kind: vocabkey.Person,
+			a: Vals{gender: {pt.Term("man")}}, b: Vals{sex: {pt.Term("male")}}, sim: 1, ev: 0.6,
+			check: is(sex, agree, rel, 0.6)},
+		{name: "AC-2.1 a side recording both sex and gender agrees with sex alone", kind: vocabkey.Person,
+			a: Vals{sex: {pt.Term("male")}, gender: {pt.Term("man")}}, b: Vals{sex: {pt.Term("male")}}, sim: 1, ev: 0.6,
+			check: is(sex, agree, rel, 0.6)},
+		{name: "AC-2.1 a gender the pool does not map is left out", kind: vocabkey.Person,
+			a: Vals{gender: {pt.Term("non_binary")}}, b: Vals{sex: {pt.Term("male")}}, sim: 0, ev: 0,
+			check: is(sex, unknown, noVals, 0)},
 		{name: "AC-2.2 sex at birth against gender conflicts", kind: vocabkey.Person,
-			a: Vals{sex: {pt.Term("male")}}, b: Vals{gender: {pt.Term("female")}}, sim: 0, ev: -1,
+			a: Vals{sex: {pt.Term("male")}}, b: Vals{gender: {pt.Term("woman")}}, sim: 0, ev: -1,
 			check: is(sex, conflict, rel, -1)},
 		{name: "AC-2.3 an unknown sex is excluded", kind: vocabkey.Person,
 			a: Vals{sex: {pt.Neutral(pt.Term("unknown"))}}, b: Vals{sex: {pt.Term("male")}}, sim: 0, ev: 0,
@@ -173,7 +183,7 @@ func TestCompare(t *testing.T) {
 				}
 			}},
 		{name: "AC-2.4 a negative sex contradicts gender", kind: vocabkey.Person,
-			a: Vals{sex: {pt.Neg(pt.Term("male"))}}, b: Vals{gender: {pt.Term("male")}}, sim: 0, ev: -1,
+			a: Vals{sex: {pt.Neg(pt.Term("male"))}}, b: Vals{gender: {pt.Term("man")}}, sim: 0, ev: -1,
 			check: is(sex, conflict, neg, -1)},
 		{name: "AC-2.5 a date against a period", kind: vocabkey.Event,
 			a: Vals{date: {year(1817)}}, b: Vals{start: {year(1815)}, end: {year(1820)}}, sim: 0.55, ev: 1.1,
@@ -263,5 +273,93 @@ func TestCompare(t *testing.T) {
 				r.check(t, got)
 			}
 		})
+	}
+}
+
+func TestPoints(t *testing.T) {
+	w := subjectcompare.Weights{Agree: 2.5, Conflict: 3}
+	speaking := func(sim float64) *propertycompare.SpeakingPair {
+		return &propertycompare.SpeakingPair{Result: valuecompare.Result{Similarity: sim}}
+	}
+	for _, c := range []struct {
+		name string
+		res  propertycompare.Result
+		want float64
+	}{
+		{"agree", propertycompare.Result{Outcome: propertycompare.OutcomeAgree, Speaking: speaking(0.4)}, 2.5},
+		{"partial", propertycompare.Result{Outcome: propertycompare.OutcomePartial, Speaking: speaking(0.75)}, 1.875},
+		{"conflict", propertycompare.Result{Outcome: propertycompare.OutcomeConflict}, -3},
+		{"unknown", propertycompare.Result{Outcome: propertycompare.OutcomeUnknown}, 0},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if got := subjectcompare.Points(c.res, w); !near(got, c.want) {
+				t.Errorf("Points = %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
+func TestDerived(t *testing.T) {
+	rules := matchregistry.Default().Subject
+	for _, c := range []struct {
+		kind vocabkey.SubjectType
+		key  vocabkey.PropertyKey
+		want bool
+	}{
+		{vocabkey.Person, vocabkey.PropertyLifespan, true},
+		{vocabkey.Person, vocabkey.PropertyLifespanSpan, true},
+		{vocabkey.Person, name, false},
+		{vocabkey.Event, vocabkey.PropertyLifespan, false},
+	} {
+		if got := rules.Derived(c.kind, c.key); got != c.want {
+			t.Errorf("Derived(%s, %s) = %v, want %v", c.kind, c.key, got, c.want)
+		}
+	}
+}
+
+func TestLead(t *testing.T) {
+	rules := matchregistry.Default().Subject
+	for _, c := range []struct {
+		kind vocabkey.SubjectType
+		key  vocabkey.PropertyKey
+		want vocabkey.PropertyKey
+		ok   bool
+	}{
+		{vocabkey.Person, name, name, true},
+		{vocabkey.Person, gender, sex, true},
+		{vocabkey.Event, start, date, true},
+		{vocabkey.Event, end, date, true},
+		{vocabkey.Person, vocabkey.PropertyLifespan, vocabkey.PropertyLifespan, true},
+		{vocabkey.Person, vocabkey.PropertyLifespanSpan, "", false},
+		{vocabkey.Person, vocabkey.PropertyKey("occupation"), "", false},
+		{vocabkey.Event, name, "", false},
+		{vocabkey.SubjectType("source"), name, "", false},
+	} {
+		got, ok := rules.Lead(c.kind, c.key)
+		if got != c.want || ok != c.ok {
+			t.Errorf("Lead(%s, %s) = %q, %v; want %q, %v", c.kind, c.key, got, ok, c.want, c.ok)
+		}
+	}
+}
+
+func TestRulesRole(t *testing.T) {
+	rules := matchregistry.Default().Subject
+	for _, c := range []struct {
+		kind vocabkey.SubjectType
+		key  vocabkey.PropertyKey
+		lead vocabkey.PropertyKey
+		role subjectcompare.Role
+		ok   bool
+	}{
+		{vocabkey.Person, name, name, subjectcompare.RoleLead, true},
+		{vocabkey.Person, gender, sex, subjectcompare.RolePooled, true},
+		{vocabkey.Event, start, date, subjectcompare.RolePeriodEnd, true},
+		{vocabkey.Event, end, date, subjectcompare.RolePeriodEnd, true},
+		{vocabkey.Person, vocabkey.PropertyLifespanSpan, "", subjectcompare.RoleLead, false},
+	} {
+		lead, role, ok := rules.Role(c.kind, c.key)
+		if lead != c.lead || role != c.role || ok != c.ok {
+			t.Errorf("Role(%s, %s) = %q, %v, %v; want %q, %v, %v", c.kind, c.key, lead, role, ok, c.lead, c.role, c.ok)
+		}
 	}
 }

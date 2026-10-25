@@ -1,10 +1,13 @@
 package effects
 
 import (
-	"github.com/mendahu/provenencia/core/database/rowchange"
+	"reflect"
+	"slices"
+	"sort"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 )
 
 // TestEveryNonSkipTableHasAnEntry checks the registry against catalogmodel.
@@ -63,7 +66,7 @@ func TestGradeTablesHaveNoHandles(t *testing.T) {
 		if !ok {
 			t.Fatalf("missing %s", name)
 		}
-		if !eff.None || !eff.Handles.zero() || eff.Vocabulary {
+		if !eff.None || !eff.Handles.zero() || len(eff.Lists) > 0 {
 			t.Fatalf("%s should be an empty effect, got %+v", name, eff)
 		}
 	}
@@ -75,12 +78,12 @@ func hasWork(e Effect) bool {
 			return true
 		}
 	}
-	return len(e.Search) > 0 || e.Vocabulary
+	return len(e.Search) > 0 || len(e.Lists) > 0
 }
 
 // TestSourceEvidenceIsNotActivity pins which tables move a Source's evidence
-// (Effect.Source: what the Source graph, graph progress, citation counts, and
-// citations by artifact load) and which move its last activity
+// (Effect.EvidenceGraph: what the Evidence graph cache and graph progress load;
+// Effect.CitationSource: what citation counts and citations by artifact load) and which move its last activity
 // (Effect.SourceScope: the audit source scope). Identity claims change the
 // evidence graph but have never been audited under a Source.
 func TestSourceEvidenceIsNotActivity(t *testing.T) {
@@ -90,11 +93,13 @@ func TestSourceEvidenceIsNotActivity(t *testing.T) {
 		activity bool
 		citation bool // CitationSource: the citation reads load it
 	}{
-		{"sources", false, true, false},
+		{"sources", true, true, false},
 		{"source_notes", false, true, false},
 		{"source_metadata", false, true, false},
 		{"source_metadata_layout", false, true, false},
 		{"source_credibility_assessments", false, true, false},
+		{"evidence_graphs", true, true, false},
+		{"evidence_graph_artifacts", false, true, true},
 		{"files", false, true, false},
 		{"citation_notes", false, true, false},
 		{"observation_notes", false, true, false},
@@ -113,8 +118,8 @@ func TestSourceEvidenceIsNotActivity(t *testing.T) {
 			if !ok {
 				t.Fatalf("no entry for %s", tt.table)
 			}
-			if got := !eff.Source.zero(); got != tt.evidence {
-				t.Errorf("Source set = %v, want %v", got, tt.evidence)
+			if got := !eff.EvidenceGraph.zero(); got != tt.evidence {
+				t.Errorf("EvidenceGraph set = %v, want %v", got, tt.evidence)
 			}
 			if got := !eff.SourceScope.zero(); got != tt.activity {
 				t.Errorf("SourceScope set = %v, want %v", got, tt.activity)
@@ -126,9 +131,9 @@ func TestSourceEvidenceIsNotActivity(t *testing.T) {
 	}
 }
 
-// TestPropertyUsage pins when an Observation change moves the Properties
+// TestPropertyUsageList pins when an Observation change moves the Properties
 // workspace's usedBy counts: a create, a delete, or a property_id edit.
-func TestPropertyUsage(t *testing.T) {
+func TestPropertyUsageList(t *testing.T) {
 	text := map[string]rowchange.FieldDiff{"value_text": {Old: "a", New: "b"}}
 	prop := map[string]rowchange.FieldDiff{"property_id": {Old: []byte{1}, New: []byte{2}}}
 	tests := []struct {
@@ -145,9 +150,64 @@ func TestPropertyUsage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := registry[tt.table].usesProperty(tt.ch); got != tt.want {
-				t.Errorf("usesProperty = %v, want %v", got, tt.want)
+			if got := registry[tt.table].movesLists(tt.ch); got != tt.want {
+				t.Errorf("movesLists = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+// TestEvidenceGraphsList pins which tables move the graph list, and that a
+// None entry cannot.
+func TestEvidenceGraphsList(t *testing.T) {
+	var got []string
+	for table, eff := range registry {
+		if slices.Contains(eff.Lists, ListEvidenceGraphs) {
+			got = append(got, table)
+		}
+	}
+	sort.Strings(got)
+	want := []string{"evidence_graph_artifacts", "evidence_graphs"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("tables with ListEvidenceGraphs = %v, want %v", got, want)
+	}
+	if err := (Effect{None: true, Lists: []List{ListEvidenceGraphs}}).validate("x"); err == nil {
+		t.Fatal("a None entry with Lists validated")
+	}
+	if err := (Effect{Lists: []List{"nope"}}).validate("x"); err == nil {
+		t.Fatal("an undeclared list validated")
+	}
+	if err := (Effect{ListsOnField: "property_id"}).validate("x"); err == nil {
+		t.Fatal("ListsOnField without Lists validated")
+	}
+}
+
+// TestEvidenceGraphPathsEndAtGraphs pins which tables name Evidence graphs and
+// that every such path ends at evidence_graphs.
+func TestEvidenceGraphPathsEndAtGraphs(t *testing.T) {
+	want := []string{
+		"sources", "artifacts", "citations", "observations", "subjects",
+		"evidence_graphs", "identity_claims", "identity_claim_evidence",
+		"date_values", "name_values", "depiction_values",
+	}
+	var got []string
+	for table, eff := range registry {
+		if eff.EvidenceGraph.zero() {
+			continue
+		}
+		got = append(got, table)
+		end, err := eff.EvidenceGraph.check(table)
+		if err != nil {
+			t.Errorf("%s: %v", table, err)
+			continue
+		}
+		if end != "evidence_graphs" {
+			t.Errorf("%s: EvidenceGraph ends at %s, want evidence_graphs", table, end)
+		}
+	}
+	slices.Sort(got)
+	slices.Sort(want)
+	if !slices.Equal(got, want) {
+		t.Errorf("tables with an EvidenceGraph path = %v, want %v", got, want)
 	}
 }

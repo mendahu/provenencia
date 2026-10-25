@@ -24,7 +24,7 @@ type Querier interface {
 // carry. With no stored default name format, Names.Patterns stays empty and the
 // key is western. g may be nil: the alias tables are then read from q.
 func Load(g *graphcache.Graph, q Querier) (rules valuecompare.Rules, namePattern string, err error) {
-	loaded, err := nameformats.Load(q)
+	loaded, err := nameformats.LoadFor(g, q)
 	if err != nil {
 		return valuecompare.Rules{}, "", err
 	}

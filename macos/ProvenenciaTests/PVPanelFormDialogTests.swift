@@ -5,6 +5,7 @@ import Testing
 @testable import Provenencia
 
 @Suite
+@MainActor
 struct PVPanelTests {
     @Test func storesWidthAndSunkenFooterByDefault() {
         let panel = PVPanel(
@@ -99,7 +100,7 @@ struct PVFormDialogClickTests {
 
     @Test func aClickOnTheSheetIsInside() {
         let sheet = window()
-        #expect(PVFormDialogClick.isInsideSheet(eventWindow: sheet, sheet: sheet, modalWindow: nil))
+        #expect(PVOutsideClick.isInsideSheet(eventWindow: sheet, sheet: sheet, modalWindow: nil))
     }
 
     @Test func aParentWindowClickIsOutside() {
@@ -107,44 +108,60 @@ struct PVFormDialogClickTests {
         let sheet = window()
         workspace.addChildWindow(sheet, ordered: .above)
         defer { workspace.removeChildWindow(sheet) }
-        #expect(!PVFormDialogClick.isInsideSheet(eventWindow: workspace, sheet: sheet, modalWindow: nil))
+        #expect(!PVOutsideClick.isInsideSheet(eventWindow: workspace, sheet: sheet, modalWindow: nil))
+    }
+
+    @Test func aSheetOnASheetIsInside() {
+        let workspace = window()
+        let parentSheet = window()
+        let childSheet = window()
+        workspace.makeKeyAndOrderFront(nil)
+        workspace.beginSheet(parentSheet) { _ in }
+        parentSheet.beginSheet(childSheet) { _ in }
+        defer {
+            parentSheet.endSheet(childSheet)
+            workspace.endSheet(parentSheet)
+        }
+        #expect(PVOutsideClick.isInsideSheet(eventWindow: childSheet, sheet: parentSheet, modalWindow: nil))
+        #expect(!PVOutsideClick.isInsideSheet(eventWindow: workspace, sheet: parentSheet, modalWindow: nil))
     }
 
     @Test func anOpenPanelModalCountsAsInside() {
         let sheet = window()
         let workspace = window()
         let panel = NSOpenPanel()
-        #expect(PVFormDialogClick.isInsideSheet(eventWindow: nil, sheet: sheet, modalWindow: panel))
-        #expect(PVFormDialogClick.isInsideSheet(eventWindow: workspace, sheet: sheet, modalWindow: panel))
+        #expect(PVOutsideClick.isInsideSheet(eventWindow: nil, sheet: sheet, modalWindow: panel))
+        #expect(PVOutsideClick.isInsideSheet(eventWindow: workspace, sheet: sheet, modalWindow: panel))
     }
 
     @Test func aSavePanelEventWindowIsInside() {
         let sheet = window()
         let panel = NSSavePanel()
-        #expect(PVFormDialogClick.isInsideSheet(eventWindow: panel, sheet: sheet, modalWindow: nil))
+        #expect(PVOutsideClick.isInsideSheet(eventWindow: panel, sheet: sheet, modalWindow: nil))
     }
 
     @Test func aPopUpMenuWindowIsInside() {
         let sheet = window()
         let menu = window()
         menu.level = .popUpMenu
-        #expect(PVFormDialogClick.isInsideSheet(eventWindow: menu, sheet: sheet, modalWindow: nil))
+        #expect(PVOutsideClick.isInsideSheet(eventWindow: menu, sheet: sheet, modalWindow: nil))
     }
 }
 
 @Suite
-struct PVFormDialogDismissTests {
-    @Test func runningWorkIgnoresAnOutsideClick() {
-        #expect(PVFormDialogDismiss.action(isRunning: true, isDirty: false) == .ignore)
-        #expect(PVFormDialogDismiss.action(isRunning: true, isDirty: true) == .ignore)
-    }
-
-    @Test func aDirtySheetConfirmsBeforeClosing() {
-        #expect(PVFormDialogDismiss.action(isRunning: false, isDirty: true) == .confirmDiscard)
-    }
-
-    @Test func aCleanSheetCloses() {
-        #expect(PVFormDialogDismiss.action(isRunning: false, isDirty: false) == .close)
+struct PVSheetDismissTests {
+    /// T-1: the one table behind Escape and an outside click.
+    @Test func sheetDismissActionTable() {
+        for dirty in [false, true] {
+            for confirming in [false, true] {
+                #expect(PVSheetDismiss.action(isRunning: true, isDirty: dirty, isConfirmingDiscard: confirming) == .ignore)
+            }
+        }
+        for dirty in [false, true] {
+            #expect(PVSheetDismiss.action(isRunning: false, isDirty: dirty, isConfirmingDiscard: true) == .keepEditing)
+        }
+        #expect(PVSheetDismiss.action(isRunning: false, isDirty: true, isConfirmingDiscard: false) == .confirmDiscard)
+        #expect(PVSheetDismiss.action(isRunning: false, isDirty: false, isConfirmingDiscard: false) == .close)
     }
 }
 
@@ -167,6 +184,7 @@ struct PVFormDialogAccessibilityTests {
 }
 
 @Suite
+@MainActor
 struct PVFormDialogContentTests {
     private func sampleCopy() -> PVFormDialogCopy {
         PVFormDialogCopy(

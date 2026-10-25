@@ -2,9 +2,11 @@
 package propertycomparetest
 
 import (
+	"bytes"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/depictionvalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/valuecompare"
@@ -30,6 +32,11 @@ func Name(form string) propertycompare.Value {
 // Date is a date value.
 func Date(d *datevalue.Value) propertycompare.Value {
 	return propertycompare.Value{Value: valuecompare.Value{Date: d}}
+}
+
+// Depiction is a likeness value whose 16-byte image File id is id repeated.
+func Depiction(id byte) propertycompare.Value {
+	return propertycompare.Value{Value: valuecompare.Value{Depiction: &depictionvalue.Value{ImageFileID: bytes.Repeat([]byte{id}, 16)}}}
 }
 
 // Neg marks v negative.

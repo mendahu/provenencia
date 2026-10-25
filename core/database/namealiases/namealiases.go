@@ -2,13 +2,14 @@
 // lists are in registry.go. Install writes them once when a catalog is
 // created. AddProductNicknames copies the current product nickname sets into
 // a catalog that already exists. Scoring reads these rows and no other list.
-// An open project keeps that read on the catalog graph until the project
-// closes; Invalidate reloads it.
+// An open project keeps the alias index built from those rows on the catalog
+// graph until the project closes; Invalidate rebuilds it.
 package namealiases
 
 import (
 	"database/sql"
 	"fmt"
+	"sort"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
@@ -75,7 +76,9 @@ func Install(c *database.Catalog) error {
 	return tx.Commit()
 }
 
-// Load reads every alias table. No rows returns a nil slice.
+// Load reads every alias table. No rows returns a nil slice. A table's Sets
+// are the stored sets in ascending set_idx order; a position is not a set_idx,
+// so a stored index far above the rest costs nothing.
 func Load(q Querier) ([]valuecompare.AliasTable, error) {
 	rows, err := q.Query(`SELECT id, key, origin, label, kind FROM name_alias_tables ORDER BY key, origin`)
 	if err != nil {
@@ -155,23 +158,22 @@ func Load(q Querier) ([]valuecompare.AliasTable, error) {
 		if len(byIdx) == 0 {
 			continue
 		}
-		max := 0
+		idxs := make([]int, 0, len(byIdx))
 		for idx := range byIdx {
-			if idx > max {
-				max = idx
-			}
+			idxs = append(idxs, idx)
 		}
-		tables[i].Sets = make([][]string, max+1)
-		for idx, tokens := range byIdx {
-			tables[i].Sets[idx] = tokens
+		sort.Ints(idxs)
+		tables[i].Sets = make([][]string, 0, len(idxs))
+		for _, idx := range idxs {
+			tables[i].Sets = append(tables[i].Sets, byIdx[idx])
 		}
 	}
 	return tables, nil
 }
 
-// Warm loads every alias table onto the catalog graph. catalogsession calls
-// this when a project opens. A later Warm replaces the tables. Closing the
-// catalog drops them with the graph.
+// Warm loads every alias table and stores the alias index built from them on
+// the catalog graph. catalogsession calls this when a project opens. A later
+// Warm replaces the index. Closing the catalog drops it with the graph.
 func Warm(c *database.Catalog) error {
 	db, err := c.DB()
 	if err != nil {
@@ -185,35 +187,40 @@ func Warm(c *database.Catalog) error {
 	if g == nil {
 		return database.ErrClosed
 	}
-	g.SetAliasTables(append([]valuecompare.AliasTable(nil), tables...))
+	g.SetAliasIndex(buildIndex(tables))
 	return nil
 }
 
-// Invalidate reloads the catalog's alias tables. A future editor calls this
-// after inserting, changing, or deleting a table.
+// Invalidate reloads the catalog's alias tables and rebuilds the index. A
+// future editor calls this after inserting, changing, or deleting a table.
 func Invalidate(c *database.Catalog) error {
 	return Warm(c)
 }
 
-// Rules is base with the catalog's alias tables in Names.Aliases. A warmed
-// graph supplies its tables, including none. A nil or cold graph is read from
-// q. The rows replace whatever index base had.
+// Rules is base with the catalog's alias index in Names.Aliases. A warmed
+// graph supplies its built index, which is shared and read-only, including an
+// index of no tables. A nil or cold graph reads q and builds one. The index
+// replaces whatever base had.
 func Rules(g *graphcache.Graph, q Querier, base valuecompare.Rules) (valuecompare.Rules, error) {
-	if raw, ok := g.AliasTables(); ok {
-		tables, ok := raw.([]valuecompare.AliasTable)
+	if raw, ok := g.AliasIndex(); ok {
+		index, ok := raw.(valuecompare.AliasIndex)
 		if !ok {
 			return valuecompare.Rules{}, fmt.Errorf("namealiases: alias cache has %T", raw)
 		}
-		return withAliases(base, tables), nil
+		base.Names.Aliases = index
+		return base, nil
 	}
 	tables, err := Load(q)
 	if err != nil {
 		return valuecompare.Rules{}, err
 	}
-	return withAliases(base, tables), nil
+	base.Names.Aliases = buildIndex(tables)
+	return base, nil
 }
 
-func withAliases(base valuecompare.Rules, tables []valuecompare.AliasTable) valuecompare.Rules {
-	base.Names.Aliases = valuecompare.NewAliasIndex(tables, base.Words)
-	return base
+// buildIndex keys the tables with valueWords, the word rules that already key
+// every stored alias token, so storage, the warm index and the cold index use
+// one rule.
+func buildIndex(tables []valuecompare.AliasTable) valuecompare.AliasIndex {
+	return valuecompare.NewAliasIndex(tables, valueWords)
 }

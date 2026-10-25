@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -150,10 +151,11 @@ func TestRunMixedOmitsNone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 	sub, res, err := writes.Run(c, writes.Op{Action: "create_subject", UserID: userID},
 		func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: person.ID, Label: "Ada",
+				GraphID: graph, SubjectTypeID: person.ID, Label: "Ada",
 			}, &subjects.Placement{GridX: 1, GridY: 2})
 		})
 	if err != nil {
@@ -345,7 +347,7 @@ func TestPropertyTermRun(t *testing.T) {
 
 func assertTermEffects(t *testing.T, res writes.Result) {
 	t.Helper()
-	if res.Revision == 0 || !res.Effects.Vocabulary || res.Effects.Structure || len(res.Effects.Handles) != 0 || len(res.Effects.Search) != 0 {
+	if res.Revision == 0 || !res.Effects.Has(effects.ListVocabulary) || res.Effects.Structure || len(res.Effects.Handles) != 0 || len(res.Effects.Search) != 0 {
 		t.Fatalf("rev %d effects %+v", res.Revision, res.Effects)
 	}
 }

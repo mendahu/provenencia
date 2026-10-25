@@ -11,8 +11,10 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
@@ -22,6 +24,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -87,7 +90,7 @@ func TestObservations(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		art, err := runArtifactCreate(c, userID, artifacts.CreateInput{
+		art, err := artifactstest.Create(c, userID, artifacts.CreateInput{
 			SourceID: src.ID,
 			Label:    "Page scan",
 		})
@@ -106,30 +109,10 @@ func TestObservations(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		person, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Bob",
-			}, &subjects.Placement{GridX: 0, GridY: 0})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		place, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: placeType.ID,
-			}, &subjects.Placement{GridX: 4, GridY: 0})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		event, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: eventType.ID, Label: "Birth",
-			}, &subjects.Placement{GridX: 2, GridY: 4})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+		person := subjectstest.At(t, c, userID, graph, personType.ID, "Bob", subjects.Placement{GridX: 0, GridY: 0})
+		place := subjectstest.At(t, c, userID, graph, placeType.ID, "", subjects.Placement{GridX: 4, GridY: 0})
+		event := subjectstest.At(t, c, userID, graph, eventType.ID, "Birth", subjects.Placement{GridX: 2, GridY: 4})
 		toponymProp, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
@@ -277,7 +260,19 @@ func TestObservations(t *testing.T) {
 						if row.ValueTermLabel == "" || row.ValueText != row.ValueTermLabel {
 							t.Fatalf("term display: label=%q text=%q", row.ValueTermLabel, row.ValueText)
 						}
+						if row.ValueTermKey != "female" {
+							t.Fatalf("term key %q, want female", row.ValueTermKey)
+						}
+						if row.ValueTermOrigin != "provenencia" {
+							t.Fatalf("term origin %q, want provenencia", row.ValueTermOrigin)
+						}
 						sawTerm = true
+					}
+					if row.PropertyKey == "toponym" && row.ValueTermKey != "" {
+						t.Fatalf("non-term observation has term key %q", row.ValueTermKey)
+					}
+					if row.PropertyKey == "toponym" && row.ValueTermOrigin != "" {
+						t.Fatalf("non-term observation has term origin %q", row.ValueTermOrigin)
 					}
 				}
 				if !sawText || !sawTerm {
@@ -679,7 +674,7 @@ func TestObservations(t *testing.T) {
 				}
 				bridge, err := writes.Call(c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 					return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-						SourceID: s.source.ID, FromSubjectID: s.person.ID, ToSubjectID: s.event.ID,
+						FromSubjectID: s.person.ID, ToSubjectID: s.event.ID,
 						Citation: citations.CreateInput{ArtifactID: s.artifact.ID, LocatorJSON: validLocator},
 						Observations: []observations.Input{
 							{PropertyID: personProp.ID, ValueSubjectID: s.person.ID},
@@ -1319,10 +1314,157 @@ func objectExists(t *testing.T, c *database.Catalog, f files.File) bool {
 	return err == nil
 }
 
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
+func TestObservationsStayInOneGraph(t *testing.T) {
+	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+	validLocator := `{"version":1,"selectors":[{"type":"page","artifact_page":3}]}`
+
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	ur, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.Upsert(c, userID, "Tester", ur); err != nil {
+		t.Fatal(err)
+	}
+	if err := subjectvocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	newSource := func(title string) sources.Source {
+		src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: title})
 		})
-	return a, err
+		if err != nil {
+			t.Fatal(err)
+		}
+		return src
+	}
+	census, book := newSource("Census"), newSource("Book")
+	p1, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: census.ID, Label: "P1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: book.ID, Label: "B1"}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Census Default is linked to P1 only; Jones to P2 only.
+	def, jones, p2 := artifactstest.Split(t, c, userID, census.ID, "Jones")
+
+	typeOf := func(key string) []byte {
+		ty, err := subjecttypes.Lookup(c, key, vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return ty.ID
+	}
+	propOf := func(key string) properties.Property {
+		p, err := properties.Lookup(c, key, vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	newSubject := func(src sources.Source, graphID []byte, typeKey, label string) subjects.Subject {
+		typeID := typeOf(typeKey)
+		if graphID == nil {
+			graphID = evidencegraphstest.SoleGraph(t, c, src.ID).ID
+		}
+		s := subjectstest.OfType(t, c, userID, graphID, typeID, label)
+		return s
+	}
+	ann := newSubject(census, def.ID, "person", "Ann")
+	ben := newSubject(census, jones.ID, "person", "Ben")
+	part := newSubject(census, def.ID, "participation", "Part")
+	rec := newSubject(census, def.ID, "source", "Rec")
+	otherSrc := newSubject(census, jones.ID, "source", "JonesRec")
+	cert := newSubject(book, nil, "source", "Cert")
+	cal := newSubject(book, nil, "person", "Cal")
+	nameProp, personProp, mentionsProp := propOf("name"), propOf("person"), propOf("mentions")
+
+	nameOn := func(s subjects.Subject, form string) observations.Input {
+		return observations.Input{SubjectID: s.ID, PropertyID: nameProp.ID, Name: &namevalue.Value{Form: form}}
+	}
+	valueOn := func(s subjects.Subject, p properties.Property, v subjects.Subject) observations.Input {
+		return observations.Input{SubjectID: s.ID, PropertyID: p.ID, ValueSubjectID: v.ID}
+	}
+
+	save := func(art artifacts.Artifact, edge bool, in observations.Input) (citations.CreateResult, error) {
+		res, _, err := writes.Run(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.InsertWithObservationsTx(tx.Tx, citations.CreateInput{ArtifactID: art.ID, LocatorJSON: validLocator}, []observations.Input{in}, observations.InsertOptions{AllowEdgeRows: edge})
+		})
+		return res, err
+	}
+	counts := func() [2]int {
+		return [2]int{
+			rowCount(t, c, `SELECT COUNT(*) FROM citations`),
+			rowCount(t, c, `SELECT COUNT(*) FROM observations`),
+		}
+	}
+
+	tests := []struct {
+		name  string
+		art   artifacts.Artifact
+		edge  bool
+		in    observations.Input
+		other bool
+	}{
+		{"AC-1.1 subject and artifact in one graph", p1, false, nameOn(ann, "Ann"), false},
+		{"AC-1.2 subject in the other graph", p1, false, nameOn(ben, "Ben"), true},
+		{"AC-1.3 artifact linked to the other graph", p2, false, nameOn(ann, "Ann"), true},
+		{"AC-1.4 subject of another source", p1, false, nameOn(cal, "Cal"), true},
+		{"AC-1.5 edge value in the other graph", p1, true, valueOn(part, personProp, ben), true},
+		{"AC-1.6 edge value in the same graph", p1, true, valueOn(part, personProp, ann), false},
+		{"AC-1.7 mentions a reification of another source", p1, false, valueOn(rec, mentionsProp, cert), false},
+		{"AC-1.8 mentions a non-reification of another source", p1, false, valueOn(rec, mentionsProp, cal), true},
+		{"AC-1.11 edge row is never exempt", p1, true, valueOn(part, personProp, otherSrc), true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			before := counts()
+			_, err := save(tt.art, tt.edge, tt.in)
+			if tt.other {
+				if !errors.Is(err, observations.ErrOtherGraph) {
+					t.Fatalf("got %v want ErrOtherGraph", err)
+				}
+				if after := counts(); after != before {
+					t.Fatalf("rows left: before %v after %v", before, after)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+
+	t.Run("AC-1.9 and AC-1.10 update keeps the graph", func(t *testing.T) {
+		res, err := save(p1, false, nameOn(ann, "Ann Two"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		obs := res.Observations[0]
+		before := rowCount(t, c, `SELECT COUNT(*) FROM observations WHERE subject_id = ?`, ben.ID)
+		in := nameOn(ben, "Ben")
+		in.ID = obs.ID
+		if _, err := observationstest.UpdateObservation(c, userID, in); !errors.Is(err, observations.ErrOtherGraph) {
+			t.Fatalf("got %v want ErrOtherGraph", err)
+		}
+		if rowCount(t, c, `SELECT COUNT(*) FROM observations WHERE subject_id = ?`, ben.ID) != before ||
+			rowCount(t, c, `SELECT COUNT(*) FROM observations WHERE id = ? AND subject_id = ?`, obs.ID, ann.ID) != 1 {
+			t.Fatal("stored row changed")
+		}
+		in = nameOn(ann, "Ann Three")
+		in.ID = obs.ID
+		if _, err := observationstest.UpdateObservation(c, userID, in); err != nil {
+			t.Fatal(err)
+		}
+	})
 }

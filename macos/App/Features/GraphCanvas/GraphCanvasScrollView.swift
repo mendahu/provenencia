@@ -13,6 +13,12 @@ import SwiftUI
 /// `rootView` freely; there is no SwiftUI `DragGesture` to cancel.
 ///
 /// **Coordinate seams**
+/// - Grid space: what hosts speak — item origins, hit targets, gesture points,
+///   base-layer drawing input. Two hosts agree on a grid point whatever the
+///   document's size or position.
+/// - Document space: the AppKit document view's own coordinates. The document's
+///   top-left stands on grid point ``contentOrigin``; the document view converts
+///   each mouse event once, and places each item at `origin − contentOrigin`.
 /// - Live pointer: AppKit `convert` on the document view
 /// - Pure layout / unit tests: ``GraphCanvasCoordinates``
 ///
@@ -68,13 +74,14 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
             pointer: coordinator.pointer,
             frame: CGRect(origin: .zero, size: contentSize)
         )
+        document.contentOrigin = contentOrigin
         document.setAccessibilityLabel(accessibilityLabel)
-        document.installHostingRoot(hostedRoot(context: context, items: document.items))
+        document.installHostingRoot(hostedRoot(context: context, items: document.items, origin: contentOrigin))
         scrollView.documentView = document
+        scrollView.items = document.items
         coordinator.documentView = document
         coordinator.installedContentID = contentID
         coordinator.installedContentSize = contentSize
-        coordinator.installedContentOrigin = contentOrigin
 
         let restored = restoredCamera
         DispatchQueue.main.async {
@@ -95,19 +102,21 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
 
         let idChanged = coordinator.installedContentID != contentID
         let sizeChanged = coordinator.installedContentSize != contentSize
-        let previousOrigin = coordinator.installedContentOrigin ?? contentOrigin
+        let previousOrigin = coordinator.documentView?.contentOrigin ?? contentOrigin
         let originDelta = CGSize(
             width: previousOrigin.x - contentOrigin.x,
             height: previousOrigin.y - contentOrigin.y
         )
         coordinator.installedContentID = contentID
         coordinator.installedContentSize = contentSize
-        coordinator.installedContentOrigin = contentOrigin
 
-        // Paint updates every representable pass — safe now that AppKit owns gestures.
+        // The origin is set before the root, so the root and the items are
+        // built against the new one. Paint updates every representable pass —
+        // safe now that AppKit owns gestures.
         if let document = coordinator.documentView {
+            document.contentOrigin = contentOrigin
             document.setAccessibilityLabel(accessibilityLabel)
-            document.installHostingRoot(hostedRoot(context: context, items: document.items))
+            document.installHostingRoot(hostedRoot(context: context, items: document.items, origin: contentOrigin))
         }
 
         if sizeChanged {
@@ -118,29 +127,20 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
         // the same grid point in view.
         if originDelta != .zero, !idChanged {
             Self.shiftVisibleOrigin(in: scrollView, by: originDelta, contentSize: contentSize)
-            coordinator.pointer.shiftActiveDocumentOrigin(by: originDelta)
         }
         if idChanged {
             scrollView.applyOpeningCamera(restoredCamera, contentSize: contentSize)
         }
     }
 
-    private func hostedRoot(context: Context, items: GraphCanvasItemLayer) -> AnyView {
+    private func hostedRoot(context: Context, items: GraphCanvasItemLayer, origin: CGPoint) -> AnyView {
         AnyView(
             content()
+                .environment(\.graphCanvasContentOrigin, origin)
                 .environment(\.graphCanvasViewport, context.coordinator.viewport)
                 .environment(\.graphCanvasPointer, context.coordinator.pointer)
                 .environment(\.graphCanvasItems, items)
                 .allowsHitTesting(false)
-        )
-    }
-
-    /// Reads the live camera from an `NSScrollView` for conversion / future tools.
-    static func camera(from scrollView: NSScrollView) -> GraphCanvasCamera {
-        let origin = scrollView.documentVisibleRect.origin
-        return GraphCanvasCamera(
-            magnification: scrollView.magnification,
-            contentOffset: origin
         )
     }
 
@@ -167,7 +167,6 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
         var documentView: GraphCanvasDocumentView?
         var installedContentID: AnyHashable?
         var installedContentSize: CGSize?
-        var installedContentOrigin: CGPoint?
         var onCameraChange: (GraphCanvasCamera) -> Void = { _ in }
         let viewport: GraphCanvasViewportController
         let pointer: GraphCanvasPointerController
@@ -190,10 +189,21 @@ final class GraphCanvasNSScrollView: NSScrollView {
     var onCameraChange: ((GraphCanvasCamera) -> Void)?
     private var suppressCameraReport = false
     private var isUpdatingMagnificationFloor = false
+    /// The item layer whose render scale follows the settled zoom.
+    weak var items: GraphCanvasItemLayer?
+    /// How long the zoom must hold still before the items re-render at it.
+    static let itemScaleSettleDelay: TimeInterval = 0.15
+    private var itemScaleSettle: DispatchWorkItem?
+    nonisolated(unsafe) private var liveMagnifyEndObserver: Any?
+
+    deinit {
+        if let liveMagnifyEndObserver { NotificationCenter.default.removeObserver(liveMagnifyEndObserver) }
+    }
 
     override var magnification: CGFloat {
         didSet {
-            guard abs(oldValue - magnification) > 0.000_1 else { return }
+            guard abs(oldValue - magnification) > GraphCanvasCoordinates.magnificationTolerance else { return }
+            scheduleItemContentsScale()
             let value = magnification
             let viewport = viewport
             MainActor.assumeIsolated {
@@ -216,33 +226,19 @@ final class GraphCanvasNSScrollView: NSScrollView {
             viewportSize: contentView.frame.size
         )
         minMagnification = floor
-        if let camera {
-            magnification = GraphCanvasCoordinates.clampMagnification(
-                camera.magnification,
-                minimum: floor
-            )
-            let visible = contentView.bounds.size
-            let origin = GraphCanvasCoordinates.clampedContentOrigin(
-                proposed: camera.contentOffset,
-                documentSize: contentSize,
-                visibleSize: visible
-            )
-            contentView.scroll(to: origin)
-            reflectScrolledClipView(contentView)
-        } else {
-            magnification = GraphCanvasCoordinates.clampMagnification(1, minimum: floor)
-            let visible = contentView.bounds.size
-            let origin = GraphCanvasCoordinates.clampedContentOrigin(
-                proposed: CGPoint(
-                    x: (contentSize.width - visible.width) / 2,
-                    y: (contentSize.height - visible.height) / 2
-                ),
-                documentSize: contentSize,
-                visibleSize: visible
-            )
-            contentView.scroll(to: origin)
-            reflectScrolledClipView(contentView)
-        }
+        magnification = GraphCanvasCoordinates.clampMagnification(camera?.magnification ?? 1, minimum: floor)
+        let visible = contentView.bounds.size
+        let proposed = camera?.contentOffset ?? CGPoint(
+            x: (contentSize.width - visible.width) / 2,
+            y: (contentSize.height - visible.height) / 2
+        )
+        let origin = GraphCanvasCoordinates.clampedContentOrigin(
+            proposed: proposed,
+            documentSize: contentSize,
+            visibleSize: visible
+        )
+        contentView.scroll(to: origin)
+        reflectScrolledClipView(contentView)
     }
 
     override func reflectScrolledClipView(_ clipView: NSClipView) {
@@ -266,10 +262,10 @@ final class GraphCanvasNSScrollView: NSScrollView {
             documentSize: document.frame.size,
             viewportSize: contentView.frame.size
         )
-        if abs(minMagnification - floor) > 0.000_1 {
+        if abs(minMagnification - floor) > GraphCanvasCoordinates.magnificationTolerance {
             minMagnification = floor
         }
-        guard magnification + 0.000_1 < floor else { return }
+        guard magnification + GraphCanvasCoordinates.magnificationTolerance < floor else { return }
         let clip = contentView
         let center = clip.convert(CGPoint(x: clip.bounds.midX, y: clip.bounds.midY), to: nil)
         zoom(to: floor, windowLocation: center)
@@ -287,7 +283,54 @@ final class GraphCanvasNSScrollView: NSScrollView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        viewport?.observeWindow(window)
+        if liveMagnifyEndObserver == nil {
+            liveMagnifyEndObserver = NotificationCenter.default.addObserver(
+                forName: NSScrollView.didEndLiveMagnifyNotification,
+                object: self,
+                queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.scheduleItemContentsScale() }
+            }
+        }
+        applyItemContentsScale()
+        scheduleItemContentsScale()
+    }
+
+    override func viewDidChangeBackingProperties() {
+        super.viewDidChangeBackingProperties()
+        applyItemContentsScale()
+        scheduleItemContentsScale()
+    }
+
+    /// Applies the items' render scale once the zoom has held still for
+    /// ``itemScaleSettleDelay``. A pinch, a wheel step and the spring-back all
+    /// change `magnification`, and the end of a pinch is not a reliable event,
+    /// so each change restarts a timer instead of waiting for an end. A live
+    /// pinch does not call the `magnification` setter, so its end comes from
+    /// `NSScrollView.didEndLiveMagnifyNotification`; wheel steps and the
+    /// spring-back come through the setter. Every
+    /// zoom source and a backing change share this one settle path, and it
+    /// runs after AppKit's own backing-scale update.
+    private func scheduleItemContentsScale() {
+        itemScaleSettle?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            MainActor.assumeIsolated {
+                self?.applyItemContentsScale()
+            }
+        }
+        itemScaleSettle = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.itemScaleSettleDelay, execute: work)
+    }
+
+    /// Sets the items' render scale at once. A window or backing-scale change
+    /// calls this and then ``scheduleItemContentsScale()``, so a layer AppKit
+    /// resets after this call is put back when the timer fires.
+    private func applyItemContentsScale() {
+        guard let window else { return }
+        items?.contentsScale = GraphCanvasCoordinates.itemContentsScale(
+            backingScale: window.backingScaleFactor,
+            magnification: magnification
+        )
     }
 
     override func scrollWheel(with event: NSEvent) {
@@ -305,7 +348,7 @@ final class GraphCanvasNSScrollView: NSScrollView {
             magnification * factor,
             minimum: minMagnification
         )
-        guard abs(target - magnification) > 0.000_1 else { return }
+        guard abs(target - magnification) > GraphCanvasCoordinates.magnificationTolerance else { return }
         zoom(to: target, windowLocation: event.locationInWindow)
     }
 
@@ -320,7 +363,7 @@ final class GraphCanvasNSScrollView: NSScrollView {
             newMagnification,
             minimum: minMagnification
         )
-        guard abs(newMag - oldMag) > 0.000_1 else { return }
+        guard abs(newMag - oldMag) > GraphCanvasCoordinates.magnificationTolerance else { return }
 
         let clip = contentView
         let anchor = clip.convert(windowLocation, from: nil)
@@ -358,20 +401,17 @@ final class GraphCanvasNSScrollView: NSScrollView {
 /// Bridges pan deltas into the hosting `NSScrollView`.
 @MainActor
 @Observable
-final class GraphCanvasViewportController: NSObject {
+final class GraphCanvasViewportController {
     weak var scrollView: NSScrollView?
     /// Live `NSScrollView` magnification. Grid fade and screen-space strokes read this.
     var magnification: CGFloat = 1
-    /// True while the window first responder is inside this canvas document.
-    private(set) var documentContainsKeyboardFocus = false
-    private var observedWindow: NSWindow?
 
     /// Pans by a delta measured in **window / view** points (Y down).
     /// Divides by magnification so one screen pixel of drag moves one screen
     /// pixel of content.
     func panByViewDelta(_ delta: CGSize) {
         guard let scrollView, let document = scrollView.documentView else { return }
-        let mag = max(scrollView.magnification, 0.000_1)
+        let mag = max(scrollView.magnification, GraphCanvasCoordinates.minimumMagnification)
         let clip = scrollView.contentView
         var origin = clip.bounds.origin
         origin.x -= delta.width / mag
@@ -386,57 +426,6 @@ final class GraphCanvasViewportController: NSObject {
         clip.scroll(to: origin)
         scrollView.reflectScrolledClipView(clip)
     }
-
-    /// Document-space point under the cursor via AppKit conversion.
-    func contentPointUnderCursor() -> CGPoint? {
-        guard let scrollView,
-              let window = scrollView.window,
-              let document = scrollView.documentView
-        else { return nil }
-        let windowPoint = window.mouseLocationOutsideOfEventStream
-        return document.convert(windowPoint, from: nil)
-    }
-
-    func observeWindow(_ window: NSWindow?) {
-        if let observedWindow {
-            observedWindow.removeObserver(self, forKeyPath: "firstResponder")
-            self.observedWindow = nil
-        }
-        refreshDocumentKeyboardFocus()
-        guard let window else { return }
-        window.addObserver(self, forKeyPath: "firstResponder", options: [.new], context: nil)
-        observedWindow = window
-    }
-
-    nonisolated override func observeValue(
-        forKeyPath keyPath: String?,
-        of object: Any?,
-        change: [NSKeyValueChangeKey: Any]?,
-        context: UnsafeMutableRawPointer?
-    ) {
-        guard keyPath == "firstResponder" else {
-            super.observeValue(forKeyPath: keyPath, of: object, change: change, context: context)
-            return
-        }
-        Task { @MainActor in
-            self.refreshDocumentKeyboardFocus()
-        }
-    }
-
-    private func refreshDocumentKeyboardFocus() {
-        guard let scrollView,
-              let window = scrollView.window,
-              let document = scrollView.documentView
-        else {
-            documentContainsKeyboardFocus = false
-            return
-        }
-        let responder = window.firstResponder as? NSView
-        let inside = responder === document || (responder?.isDescendant(of: document) ?? false)
-        if documentContainsKeyboardFocus != inside {
-            documentContainsKeyboardFocus = inside
-        }
-    }
 }
 
 private struct GraphCanvasViewportKey: EnvironmentKey {
@@ -445,6 +434,10 @@ private struct GraphCanvasViewportKey: EnvironmentKey {
 
 private struct GraphCanvasPointerKey: EnvironmentKey {
     static let defaultValue: GraphCanvasPointerController? = nil
+}
+
+private struct GraphCanvasContentOriginKey: EnvironmentKey {
+    static let defaultValue: CGPoint = .zero
 }
 
 private struct GraphCanvasItemsKey: EnvironmentKey {
@@ -460,6 +453,14 @@ extension EnvironmentValues {
     var graphCanvasPointer: GraphCanvasPointerController? {
         get { self[GraphCanvasPointerKey.self] }
         set { self[GraphCanvasPointerKey.self] = newValue }
+    }
+
+    /// The grid point the canvas document's top-left stands on. The host's base
+    /// view draws grid-space input at `grid − origin`
+    /// (``GraphCanvasCoordinates/documentRect(_:origin:)``).
+    var graphCanvasContentOrigin: CGPoint {
+        get { self[GraphCanvasContentOriginKey.self] }
+        set { self[GraphCanvasContentOriginKey.self] = newValue }
     }
 
     /// The canvas item layer, so the host's base view can push its items.

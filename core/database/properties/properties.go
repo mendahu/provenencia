@@ -115,13 +115,7 @@ func Upsert(c *database.Catalog, p Property) ([]byte, error) {
 	} else if len(id) != 16 {
 		return nil, ErrInvalid
 	}
-	var desc any
-	if p.Description == "" {
-		desc = nil
-	} else {
-		desc = p.Description
-	}
-	if _, err := db.Exec(sqlUpsert, id, p.Key, p.Origin, p.Label, desc, p.ValueType, p.Cardinality); err != nil {
+	if _, err := db.Exec(sqlUpsert, id, p.Key, p.Origin, p.Label, database.NullString(p.Description), p.ValueType, p.Cardinality); err != nil {
 		return nil, err
 	}
 	return append([]byte(nil), id...), nil
@@ -167,13 +161,7 @@ func Create(tx *database.Tx, userID []byte, label, valueType, description, cardi
 	if label == "" || !valueTypeOK(valueType) || !cardinalityOK(cardinality) {
 		return Property{}, nil, ErrInvalid
 	}
-	var desc any
-	if description == "" {
-		desc = nil
-	} else {
-		desc = description
-	}
-	if _, err := tx.Exec(sqlUpsert, id, key, vocabkey.OriginUser, label, desc, valueType, cardinality); err != nil {
+	if _, err := tx.Exec(sqlUpsert, id, key, vocabkey.OriginUser, label, database.NullString(description), valueType, cardinality); err != nil {
 		return Property{}, nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
@@ -245,13 +233,13 @@ func Update(tx *database.Tx, userID, id []byte, label, valueType, description, c
 
 	fields := map[string]rowchange.FieldDiff{}
 	if existing.Label != label {
-		fields["label"] = rowchange.FieldDiff{Old: nullJSON(existing.Label), New: nullJSON(label)}
+		fields["label"] = rowchange.FieldDiff{Old: database.NullString(existing.Label), New: database.NullString(label)}
 	}
 	if existing.Description != description {
-		fields["description"] = rowchange.FieldDiff{Old: nullJSON(existing.Description), New: nullJSON(description)}
+		fields["description"] = rowchange.FieldDiff{Old: database.NullString(existing.Description), New: database.NullString(description)}
 	}
 	if cardinalityChanged {
-		fields["cardinality"] = rowchange.FieldDiff{Old: nullJSON(existing.Cardinality), New: nullJSON(cardinality)}
+		fields["cardinality"] = rowchange.FieldDiff{Old: database.NullString(existing.Cardinality), New: database.NullString(cardinality)}
 	}
 	existing.Label = label
 	existing.Description = description
@@ -262,13 +250,7 @@ func Update(tx *database.Tx, userID, id []byte, label, valueType, description, c
 	if len(fields) == 0 {
 		return existing, nil, nil
 	}
-	var desc any
-	if description == "" {
-		desc = nil
-	} else {
-		desc = description
-	}
-	if _, err := tx.Exec(sqlUpdate, label, desc, cardinality, id); err != nil {
+	if _, err := tx.Exec(sqlUpdate, label, database.NullString(description), cardinality, id); err != nil {
 		return Property{}, nil, err
 	}
 	return existing, []rowchange.Change{{
@@ -393,7 +375,8 @@ func CountByOrigin(c *database.Catalog) (OriginCounts, error) {
 }
 
 // Delete erases a user-origin Property when no observations or terms
-// reference it. Type bindings CASCADE. Seeded and plugin-origin rows are
+// reference it. Its type bindings are released and audited before it goes
+// (the FK cascade stays as a backstop). Seeded and plugin-origin rows are
 // origin_locked even when unused. The caller records delete_property.
 func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if tx == nil {
@@ -422,11 +405,15 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	}); err != nil {
 		return nil, err
 	}
+	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindProperty, id)
+	if err != nil {
+		return nil, err
+	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
-		"id":         {Old: uuidString(id), New: nil},
+		"id":         {Old: database.UUIDString(id), New: nil},
 		"key":        {Old: prev.Key, New: nil},
 		"origin":     {Old: prev.Origin, New: nil},
 		"label":      {Old: prev.Label, New: nil},
@@ -435,12 +422,12 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if prev.Description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: prev.Description, New: nil}
 	}
-	return []rowchange.Change{{
+	return append(released, rowchange.Change{
 		EntityType: "property",
 		EntityID:   append([]byte(nil), id...),
 		Action:     rowchange.ActionDelete,
 		Fields:     fields,
-	}}, nil
+	}), nil
 }
 
 func valueTypeOK(vt string) bool {
@@ -466,22 +453,6 @@ func researcherCreatable(valueType string) bool {
 
 func cardinalityOK(cardinality string) bool {
 	return cardinality == propertymeta.CardinalitySingle || cardinality == propertymeta.CardinalityMultiple
-}
-
-func uuidString(id []byte) string {
-	if len(id) != 16 {
-		return ""
-	}
-	var u uuid.UUID
-	copy(u[:], id)
-	return u.String()
-}
-
-func nullJSON(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
 }
 
 type rowScanner interface {

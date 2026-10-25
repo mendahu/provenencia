@@ -20,7 +20,8 @@ struct PlaceRegistryTests {
         #expect(sources?.queryKeys == [
             .sourcesList(project: project),
             .sourceTypesList(project: project),
-            .sourceGraphProgress(project: project),
+            .evidenceGraphsList(project: project),
+            .evidenceGraphProgress(project: project),
         ])
 
         let fields = resolve(.sectionRoot(.metadata))
@@ -55,12 +56,13 @@ struct PlaceRegistryTests {
             .sourceTypesList(project: project),
             .metadataFieldsList(project: project),
             .credibilityGradesList(project: project),
+            .evidenceGraphsList(project: project),
         ])
     }
 
-    @Test func resolvesSourceGraphDistinctFromPage() {
-        let page = WorkspaceLocation(section: .sources, sourceId: "src-1", sourceSurface: .page)
-        let graph = WorkspaceLocation(section: .sources, sourceId: "src-1", sourceSurface: .graph)
+    @Test func resolvesEvidenceGraphDistinctFromPage() {
+        let page = WorkspaceLocation.sourcePage(sourceId: "src-1")
+        let graph = WorkspaceLocation(section: .sources, sourceId: "src-1", graphId: "g-1", sourceSurface: .graph)
         #expect(page != graph)
 
         let pagePlace = resolve(page)
@@ -70,14 +72,15 @@ struct PlaceRegistryTests {
         let graphPlace = resolve(graph)
         #expect(graphPlace?.placeID == .sourceGraph)
         #expect(graphPlace?.presentation == .sourceGraph)
-        #expect(graphPlace?.deepId == "src-1")
+        #expect(graphPlace?.deepId == "g-1")
         #expect(graphPlace?.queryKeys == [
-            .sourceGraph(project: project, sourceId: "src-1"),
+            .evidenceGraph(project: project, graphId: "g-1"),
             .propertiesWorkspace(project: project),
             .sourcesList(project: project),
             .connectRules(project: project),
             .sourceWorkspace(project: project, sourceId: "src-1"),
-            .citationCounts(project: project, sourceId: "src-1"),
+            .citationCounts(project: project, graphId: "g-1"),
+            .evidenceGraphsList(project: project),
         ])
     }
 
@@ -121,15 +124,16 @@ struct PlaceRegistryTests {
     @Test func queryKeysMatchDesignTable() {
         let cases: [(WorkspaceLocation, PlaceID, [CatalogQueryKey])] = [
             (
-                .promote(sourceId: "s1", subjectId: "sub-1", kind: .person, ref: "CPR-1", title: "James", sourceTitle: nil),
+                .promote(sourceId: "s1", graphId: "g-1", subjectId: "sub-1", kind: .person, ref: "CPR-1", title: "James", sourceTitle: nil),
                 .sourcePromote,
                 [
-                    .sourceGraph(project: project, sourceId: "s1"),
+                    .evidenceGraph(project: project, graphId: "g-1"),
                     .sourcesList(project: project),
                     .sourceTypesList(project: project),
                     .confidenceGradesList(project: project),
                     .propertiesWorkspace(project: project),
                     .connectRules(project: project),
+                    .evidenceGraphsList(project: project),
                 ]
             ),
             (
@@ -138,7 +142,8 @@ struct PlaceRegistryTests {
                 [
                     .sourcesList(project: project),
                     .sourceTypesList(project: project),
-                    .sourceGraphProgress(project: project),
+                    .evidenceGraphsList(project: project),
+                    .evidenceGraphProgress(project: project),
                 ]
             ),
             (
@@ -149,36 +154,40 @@ struct PlaceRegistryTests {
                     .sourceTypesList(project: project),
                     .metadataFieldsList(project: project),
                     .credibilityGradesList(project: project),
+                    .evidenceGraphsList(project: project),
                 ]
             ),
             (
-                WorkspaceLocation(section: .sources, sourceId: "s1", sourceSurface: .graph),
+                WorkspaceLocation(section: .sources, sourceId: "s1", graphId: "g-1", sourceSurface: .graph),
                 .sourceGraph,
                 [
-                    .sourceGraph(project: project, sourceId: "s1"),
+                    .evidenceGraph(project: project, graphId: "g-1"),
                     .propertiesWorkspace(project: project),
                     .sourcesList(project: project),
                     .connectRules(project: project),
                     .sourceWorkspace(project: project, sourceId: "s1"),
-                    .citationCounts(project: project, sourceId: "s1"),
+                    .citationCounts(project: project, graphId: "g-1"),
+                    .evidenceGraphsList(project: project),
                 ]
             ),
             (
                 WorkspaceLocation(
                     section: .sources,
                     sourceId: "s1",
+                    graphId: "g-1",
                     subjectId: "sub-1",
                     sourceSurface: .citationComposer
                 ),
                 .sourceCitationComposer,
                 [
-                    .sourceGraph(project: project, sourceId: "s1"),
+                    .evidenceGraph(project: project, graphId: "g-1"),
                     .propertiesWorkspace(project: project),
                     .sourcesList(project: project),
                     .connectRules(project: project),
                     .sourceWorkspace(project: project, sourceId: "s1"),
                     .sourceTypesList(project: project),
-                    .citationCounts(project: project, sourceId: "s1"),
+                    .citationCounts(project: project, graphId: "g-1"),
+                    .evidenceGraphsList(project: project),
                 ]
             ),
             (
@@ -220,17 +229,18 @@ struct PlaceRegistryTests {
         for id in PlaceID.allCases {
             let location: WorkspaceLocation = switch id {
             case .sourcesList: .sectionRoot(.sources)
-            case .sourceDetail: WorkspaceLocation(section: .sources, sourceId: "s1", sourceSurface: .page)
-            case .sourceGraph: WorkspaceLocation(section: .sources, sourceId: "s1", sourceSurface: .graph)
+            case .sourceDetail: WorkspaceLocation.sourcePage(sourceId: "s1")
+            case .sourceGraph: WorkspaceLocation(section: .sources, sourceId: "s1", graphId: "g-1", sourceSurface: .graph)
             case .sourceCitationComposer:
                 WorkspaceLocation(
                     section: .sources,
                     sourceId: "s1",
+                    graphId: "g-1",
                     subjectId: "sub-1",
                     sourceSurface: .citationComposer
                 )
             case .sourcePromote:
-                .promote(sourceId: "s1", subjectId: "sub-1", kind: .person, ref: "CPR-1", title: nil, sourceTitle: nil)
+                .promote(sourceId: "s1", graphId: "g-1", subjectId: "sub-1", kind: .person, ref: "CPR-1", title: nil, sourceTitle: nil)
             case .metadata: .sectionRoot(.metadata)
             case .sourceTypes: .sectionRoot(.sourceTypes)
             case .sourceTypesDetail: WorkspaceLocation(section: .sourceTypes, typeId: "t1")
@@ -249,7 +259,7 @@ struct PlaceRegistryTests {
     }
 
     @Test func promoteWithoutSubjectFallsBackToTheSourcePage() {
-        let location = WorkspaceLocation(section: .sources, sourceId: "s1", sourceSurface: .promote)
+        let location = WorkspaceLocation(section: .sources, sourceId: "s1", graphId: "g-1", sourceSurface: .promote)
         #expect(resolve(location)?.placeID != .sourcePromote)
     }
 
@@ -281,6 +291,7 @@ struct PlaceRegistryTests {
         let location = WorkspaceLocation(
             section: .sources,
             sourceId: "s1",
+            graphId: "g-1",
             citationId: "cit-1",
             artifactId: "art-0",
             sourceSurface: .citationComposer,
@@ -299,6 +310,7 @@ struct PlaceRegistryTests {
         let location = WorkspaceLocation(
             section: .sources,
             sourceId: "s1",
+            graphId: "g-1",
             connectFromSubjectId: "p1",
             connectToSubjectId: "e1",
             connectBridgeTypeKey: "participation",
@@ -322,6 +334,7 @@ struct PlaceRegistryTests {
         let location = WorkspaceLocation(
             section: .sources,
             sourceId: "s1",
+            graphId: "g-1",
             subjectId: "sub-1",
             citationId: "cit-1",
             artifactId: "art-0",
@@ -338,7 +351,7 @@ struct PlaceRegistryTests {
         #expect(CitationComposerEntry(location: location)?.observationID == "obs-9")
         let place = resolve(location)
         #expect(place?.queryKeys.contains(
-            .citationsByArtifact(project: project, artifactId: "art-0")
+            .citationsByArtifact(project: project, graphId: "g-1", artifactId: "art-0")
         ) == true)
     }
 }

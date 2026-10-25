@@ -6,10 +6,10 @@ import Testing
 @Suite
 @MainActor
 struct GraphCanvasEdgeGeometryTests {
-    private func snapshot(for placed: SourceGraphPlacedBridge) -> SourceGraphSnapshot {
+    private func snapshot(for placed: EvidenceGraphPlacedBridge) -> EvidenceGraphSnapshot {
         var placed = placed
         if placed.endpointAID == nil || placed.endpointBID == nil {
-            let ends = SourceGraphSnapshot.citedEndpoints(
+            let ends = EvidenceGraphSnapshot.citedEndpoints(
                 kind: placed.kind,
                 observations: placed.observations,
                 rules: CatalogConnectRule.productMatrix
@@ -17,7 +17,7 @@ struct GraphCanvasEdgeGeometryTests {
             placed.endpointAID = placed.endpointAID ?? ends.a
             placed.endpointBID = placed.endpointBID ?? ends.b
         }
-        var subjects: [SourceGraphPlacedSubject] = []
+        var subjects: [EvidenceGraphPlacedSubject] = []
         for observation in placed.observations where !observation.valueSubjectID.isEmpty {
             if subjects.contains(where: { $0.id == observation.valueSubjectID }) { continue }
             let kind: EvidencePrimaryKind
@@ -28,7 +28,7 @@ struct GraphCanvasEdgeGeometryTests {
             }
             let label = observation.valueText.isEmpty ? "X" : observation.valueText
             subjects.append(
-                SourceGraphPlacedSubject(
+                EvidenceGraphPlacedSubject(
                     subject: CatalogSubject(
                         id: observation.valueSubjectID,
                         ref: "REF-\(observation.valueSubjectID)",
@@ -45,7 +45,7 @@ struct GraphCanvasEdgeGeometryTests {
                 )
             )
         }
-        return SourceGraphSnapshot(sourceId: "src", subjects: subjects, bridges: [placed])
+        return EvidenceGraphSnapshot(graphId: "src", subjects: subjects, bridges: [placed])
     }
     @Test func attachmentPointHitsHorizontalEdge() {
         let rect = CGRect(x: 0, y: 0, width: 100, height: 40)
@@ -98,7 +98,7 @@ struct GraphCanvasEdgeGeometryTests {
     }
 
     @Test func primaryEdgeFrameSharesLayoutTop() {
-        let placed = SourceGraphPlacedSubject(
+        let placed = EvidenceGraphPlacedSubject(
             subject: CatalogSubject(
                 id: "s1",
                 ref: "CPR-1",
@@ -122,7 +122,7 @@ struct GraphCanvasEdgeGeometryTests {
     }
 
     @Test func uncitedCardExposesDeleteTargetWithoutPropertyEdit() {
-        let placed = SourceGraphPlacedSubject(
+        let placed = EvidenceGraphPlacedSubject(
             subject: CatalogSubject(
                 id: "s1",
                 ref: "CPR-1",
@@ -161,7 +161,7 @@ struct GraphCanvasEdgeGeometryTests {
             propertyLabel: "Occupation",
             propertyValueType: "text"
         )
-        let placed = SourceGraphPlacedSubject(
+        let placed = EvidenceGraphPlacedSubject(
             subject: CatalogSubject(
                 id: "s1",
                 ref: "CPR-1",
@@ -187,7 +187,7 @@ struct GraphCanvasEdgeGeometryTests {
     }
 
     @Test func headerActionHitsCenterOnTrailingIcons() throws {
-        let placed = SourceGraphPlacedSubject(
+        let placed = EvidenceGraphPlacedSubject(
             subject: CatalogSubject(
                 id: "s1",
                 ref: "CPR-1",
@@ -236,7 +236,7 @@ struct GraphCanvasEdgeGeometryTests {
             propertyLabel: "Person",
             propertyValueType: "subject"
         )
-        let placed = SourceGraphPlacedBridge(
+        let placed = EvidenceGraphPlacedBridge(
             subject: CatalogSubject(
                 id: "b1",
                 ref: "CPA-1",
@@ -267,8 +267,8 @@ struct GraphCanvasEdgeGeometryTests {
     }
 
     @Test func wrappedBridgePhraseGrowsTheHitFrame() {
-        func placed(text: String) -> SourceGraphPlacedBridge {
-            SourceGraphPlacedBridge(
+        func placed(text: String) -> EvidenceGraphPlacedBridge {
+            EvidenceGraphPlacedBridge(
                 subject: CatalogSubject(
                     id: "b1",
                     ref: "CPA-1",
@@ -303,8 +303,8 @@ struct GraphCanvasEdgeGeometryTests {
                 ]
             )
         }
-        func withPerson(_ label: String) -> SourceGraphPlacedBridge {
-            SourceGraphPlacedBridge(
+        func withPerson(_ label: String) -> EvidenceGraphPlacedBridge {
+            EvidenceGraphPlacedBridge(
                 subject: CatalogSubject(
                     id: "b1",
                     ref: "CPA-1",
@@ -367,7 +367,7 @@ struct GraphCanvasEdgeGeometryTests {
     /// Regression for #183: a frame floor taller than the painted bridge left
     /// bottom-approach terminals visible below the card.
     @Test func bridgeFrameTracksPaintedHeightWithoutFloor() {
-        func placed(person: String, event: String) -> SourceGraphPlacedBridge {
+        func placed(person: String, event: String) -> EvidenceGraphPlacedBridge {
             func observation(id: String, key: String, value: String) -> CatalogObservation {
                 CatalogObservation(
                     id: id,
@@ -387,7 +387,7 @@ struct GraphCanvasEdgeGeometryTests {
                     propertyValueType: "subject"
                 )
             }
-            return SourceGraphPlacedBridge(
+            return EvidenceGraphPlacedBridge(
                 subject: CatalogSubject(
                     id: "b1",
                     ref: "CPA-1",
@@ -423,7 +423,7 @@ struct GraphCanvasEdgeGeometryTests {
     }
 
     @Test func bottomApproachEndsUnderTheBridgeFill() {
-        let bridge = SourceGraphPlacedBridge(
+        let bridge = EvidenceGraphPlacedBridge(
             subject: CatalogSubject(
                 id: "b1",
                 ref: "CPA-1",
@@ -456,7 +456,7 @@ struct GraphCanvasEdgeGeometryTests {
     }
 
     @Test func bridgeOmitsCitationEditWhenCannotCite() {
-        let placed = SourceGraphPlacedBridge(
+        let placed = EvidenceGraphPlacedBridge(
             subject: CatalogSubject(
                 id: "b1",
                 ref: "CPA-1",
@@ -477,7 +477,7 @@ struct GraphCanvasEdgeGeometryTests {
     }
 
     @Test func citedBridgeCopyUsesTheFullSentence() {
-        let placed = SourceGraphPlacedBridge(
+        let placed = EvidenceGraphPlacedBridge(
             subject: CatalogSubject(
                 id: "b1",
                 ref: "CPA-1",
@@ -563,8 +563,8 @@ struct GraphCanvasEdgeGeometryTests {
     }
 
     @Test func hitRefreshTokenChangesWhenObservationIDIsReplaced() {
-        func card(observationID: String) -> SourceGraphPlacedSubject {
-            SourceGraphPlacedSubject(
+        func card(observationID: String) -> EvidenceGraphPlacedSubject {
+            EvidenceGraphPlacedSubject(
                 subject: CatalogSubject(
                     id: "s1",
                     ref: "CPR-1",
@@ -605,7 +605,7 @@ struct GraphCanvasEdgeGeometryTests {
     }
 
     @Test func citedBridgeExposesAddPropertyWhenCanCite() {
-        let placed = SourceGraphPlacedBridge(
+        let placed = EvidenceGraphPlacedBridge(
             subject: CatalogSubject(
                 id: "b1",
                 ref: "CPA-1",
@@ -684,7 +684,7 @@ struct GraphCanvasEdgeGeometryTests {
         #expect(!actions.contains(where: {
             $0.id == EvidenceSubjectCard.editPropertyActionID(observationID: "obs-person")
         }))
-        let baseline = SourceGraphPlacedBridge(
+        let baseline = EvidenceGraphPlacedBridge(
             subject: placed.subject,
             kind: placed.kind,
             typeLabel: placed.typeLabel,
@@ -700,7 +700,7 @@ struct GraphCanvasEdgeGeometryTests {
     }
 
     @Test func citedBridgeOmitsAddPropertyHitWhenCannotCite() {
-        let placed = SourceGraphPlacedBridge(
+        let placed = EvidenceGraphPlacedBridge(
             subject: CatalogSubject(
                 id: "b1",
                 ref: "CPA-1",
@@ -725,7 +725,7 @@ struct GraphCanvasEdgeGeometryTests {
     }
 
     @Test func uncitedBridgeAddPropertySitsOnTheCardWhenCanCite() {
-        let placed = SourceGraphPlacedBridge(
+        let placed = EvidenceGraphPlacedBridge(
             subject: CatalogSubject(
                 id: "b1",
                 ref: "CPA-1",

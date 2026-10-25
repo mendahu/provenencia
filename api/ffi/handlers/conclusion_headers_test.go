@@ -9,17 +9,21 @@ import (
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -53,7 +57,7 @@ func namedPerson(t *testing.T) (dir, handleRef string) {
 		if err := db.QueryRow(`SELECT source_id FROM subjects WHERE id = ?`, subjectID[:]).Scan(&sourceID); err != nil {
 			return err
 		}
-		art, err := runArtifactCreate(c, userID[:], artifacts.CreateInput{SourceID: sourceID, Label: "Scan"})
+		art, err := artifactstest.Create(c, userID[:], artifacts.CreateInput{SourceID: sourceID, Label: "Scan"})
 		if err != nil {
 			return err
 		}
@@ -224,16 +228,8 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 	}
 	var subjectID []byte
 	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
-		st, err := subjecttypes.Lookup(c, "event", vocabkey.OriginProvenencia)
-		if err != nil {
-			return err
-		}
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID[:]}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID[:], subjects.CreateInput{SourceID: source[:], SubjectTypeID: st.ID}, nil)
-		})
-		if err != nil {
-			return err
-		}
+		graph := evidencegraphstest.SoleGraph(t, c, source[:]).ID
+		s := subjectstest.On(t, c, userID[:], graph, "event", "")
 		subjectID = s.ID
 		name, err := properties.Lookup(c, "event_name", vocabkey.OriginProvenencia)
 		if err != nil {
@@ -251,7 +247,7 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
-		art, err := runArtifactCreate(c, userID[:], artifacts.CreateInput{SourceID: source[:], Label: "Scan"})
+		art, err := artifactstest.Create(c, userID[:], artifacts.CreateInput{SourceID: source[:], Label: "Scan"})
 		if err != nil {
 			return err
 		}
@@ -268,13 +264,8 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
-		p, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID[:]}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID[:], promote.Input{SubjectID: subjectID})
-		})
-		if err != nil {
-			return err
-		}
-		entityID = uuidString(p.Entity.ID)
+		p := promotetest.Save(t, c, userID[:], promote.Input{SubjectID: subjectID})
+		entityID = database.UUIDString(p.Entity.ID)
 		return nil
 	}); err != nil {
 		t.Fatal(err)
@@ -332,21 +323,13 @@ func citedPlace(t *testing.T) (dir, entityID string) {
 		t.Fatal(err)
 	}
 	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
-		st, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
-		if err != nil {
-			return err
-		}
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID[:]}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID[:], subjects.CreateInput{SourceID: source[:], SubjectTypeID: st.ID}, nil)
-		})
-		if err != nil {
-			return err
-		}
+		graph := evidencegraphstest.SoleGraph(t, c, source[:]).ID
+		s := subjectstest.On(t, c, userID[:], graph, "place", "")
 		toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
 		}
-		art, err := runArtifactCreate(c, userID[:], artifacts.CreateInput{SourceID: source[:], Label: "Scan"})
+		art, err := artifactstest.Create(c, userID[:], artifacts.CreateInput{SourceID: source[:], Label: "Scan"})
 		if err != nil {
 			return err
 		}
@@ -361,13 +344,8 @@ func citedPlace(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
-		p, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID[:]}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-			return promote.Save(tx, userID[:], promote.Input{SubjectID: s.ID})
-		})
-		if err != nil {
-			return err
-		}
-		entityID = uuidString(p.Entity.ID)
+		p := promotetest.Save(t, c, userID[:], promote.Input{SubjectID: s.ID})
+		entityID = database.UUIDString(p.Entity.ID)
 		return nil
 	}); err != nil {
 		t.Fatal(err)
@@ -430,12 +408,12 @@ func TestListSubjectMembershipsCarriesAutoReconciledName(t *testing.T) {
 		if err := db.QueryRow(`SELECT source_id FROM subjects LIMIT 1`).Scan(&id); err != nil {
 			return err
 		}
-		sourceID = uuidString(id)
+		sourceID = database.UUIDString(id)
 		return nil
 	}); err != nil {
 		t.Fatal(err)
 	}
-	out, err := ListSubjectMemberships(marshalProto(t, &engine.ListSubjectMembershipsRequest{ProjectDir: dir, SourceId: sourceID}))
+	out, err := ListSubjectMemberships(marshalProto(t, &engine.ListSubjectMembershipsRequest{ProjectDir: dir, GraphId: soleGraphID(t, dir, sourceID)}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -475,7 +453,7 @@ func TestLifeFactsProtoCarriesIdentities(t *testing.T) {
 			if got.GetEvent().GetRef() != tt.wantEvent {
 				t.Fatalf("event %+v", got.GetEvent())
 			}
-			if tt.wantEvent != "" && got.GetEvent().GetId() != uuidString(event.ID) {
+			if tt.wantEvent != "" && got.GetEvent().GetId() != database.UUIDString(event.ID) {
 				t.Fatalf("event id %q", got.GetEvent().GetId())
 			}
 			var placeRef string
@@ -508,7 +486,7 @@ func eventSourceID(t *testing.T, dir string) string {
 			JOIN subject_types st ON st.id = s.subject_type_id AND st.key = 'event' LIMIT 1`).Scan(&id); err != nil {
 			return err
 		}
-		sourceID = uuidString(id)
+		sourceID = database.UUIDString(id)
 		return nil
 	}); err != nil {
 		t.Fatal(err)
@@ -534,13 +512,13 @@ func TestEventTitlesUseOneRule(t *testing.T) {
 			t.Fatalf("%+v", title)
 		}
 	})
-	runRPC(t, ListSourceEventTitles, []rpcTest{
+	runRPC(t, ListEvidenceGraphEventTitles, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
 			name: "bad source id",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _, _, _ := subjectFixture(t)
-				return &engine.ListSourceEventTitlesRequest{ProjectDir: dir, SourceId: "nope"}
+				return &engine.ListEvidenceGraphEventTitlesRequest{ProjectDir: dir, GraphId: "nope"}
 			},
 			wantErr: true,
 		},
@@ -548,10 +526,10 @@ func TestEventTitlesUseOneRule(t *testing.T) {
 			name: "the Source's Event card is titled by the same rule",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _ := citedEvent(t)
-				return &engine.ListSourceEventTitlesRequest{ProjectDir: dir, SourceId: eventSourceID(t, dir)}
+				return &engine.ListEvidenceGraphEventTitlesRequest{ProjectDir: dir, GraphId: soleGraphID(t, dir, eventSourceID(t, dir))}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
-				var resp engine.ListSourceEventTitlesResponse
+				var resp engine.ListEvidenceGraphEventTitlesResponse
 				if err := proto.Unmarshal(out, &resp); err != nil {
 					t.Fatal(err)
 				}
@@ -567,10 +545,11 @@ func TestEventTitlesUseOneRule(t *testing.T) {
 	})
 }
 
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
-		})
-	return a, err
+// A user event type keyed like a product one crosses with its origin, so the
+// app never reads it as the product's.
+func TestEventTitleProtoCarriesTheTypeOrigin(t *testing.T) {
+	got := eventTitleProto(eventtitle.Choose(eventtitle.Parts{TypeKey: "birth", TypeOrigin: "user", TypeLabel: "Arrival"}))
+	if got.GetTypeKey() != "birth" || got.GetTypeOrigin() != "user" {
+		t.Fatalf("type = %q (%q)", got.GetTypeKey(), got.GetTypeOrigin())
+	}
 }

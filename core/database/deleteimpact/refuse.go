@@ -5,6 +5,7 @@ type Codes struct {
 	InUse        error
 	OriginLocked error
 	EdgeLocked   error
+	LastGraph    error
 	NotFound     error
 	Infra        error
 }
@@ -22,6 +23,8 @@ func Refuse(report Report, codes Codes) error {
 		return firstErr(codes.OriginLocked, codes.InUse)
 	case GateEdgeLocked:
 		return firstErr(codes.EdgeLocked, codes.InUse)
+	case GateLastGraph:
+		return firstErr(codes.LastGraph, codes.InUse)
 	case GateNotFound:
 		return firstErr(codes.NotFound, ErrInvalid)
 	case GateInfra:

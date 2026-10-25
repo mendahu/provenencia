@@ -20,7 +20,7 @@ struct EventDetailContent: ConclusionDetailBody {
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders()
     ) {
-        let header = detail.eventHeader
+        let header = detail.header?.event
         title = header.map { EventTitleDisplay.titleSource($0, locale: locale, orders: orders) }
             ?? EventTitleDisplay.untitled(detail.entity)
         ref = detail.entity.ref

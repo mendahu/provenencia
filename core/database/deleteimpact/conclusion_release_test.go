@@ -6,15 +6,19 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -53,7 +57,7 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,14 +71,8 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 	}
 	mkSubject := func(label string) subjects.Subject {
 		t.Helper()
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: place.ID, Label: label,
-			}, nil)
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+		s := subjectstest.OfType(t, c, userID, graph, place.ID, label)
 		return s
 	}
 	a, b := mkSubject("York"), mkSubject("York (U.C.)")
@@ -91,21 +89,25 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 	}
 	obsA, obsB := res.Observations[0].ID, res.Observations[1].ID
 
-	grounding, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: a.ID})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	// A confirmed comparison: B joins with its toponym paired against A's, so
+	grounding := promotetest.Save(t, c, userID, promote.Input{SubjectID: a.ID})
+	// A confirmed pin set: B joins with its toponym pinned against A's, so
 	// Promote pins both Observations on both claims (backfill).
-	joined, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-		return promote.Save(tx, userID, promote.Input{SubjectID: b.ID, EntityID: grounding.Entity.ID,
-			Pairs: []promote.Pair{{IncomingObservationID: obsB, MemberObservationID: obsA}}})
+	rev := int64(0)
+	if db, err := c.DB(); err != nil {
+		t.Fatal(err)
+	} else if err := db.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev); err != nil {
+		t.Fatal(err)
+	}
+	batch, err := writes.Call(c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+		return promote.SaveBatch(tx, userID, promote.Batch{GraphID: b.GraphID, SeenRevision: rev, Rows: []promote.BatchRow{{
+			SubjectID: b.ID, Target: promote.TargetHandle, EntityID: grounding.Entity.ID,
+			PinSets: []promote.PinSet{{Member: a.ID, Observations: [][]byte{obsB, obsA}}},
+		}}})
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	joined := batch.Written[0]
 	ca, cb := grounding.Claim.ID, joined.Claim.ID
 
 	return conclusionFixture{c: c, userID: userID, a: a, b: b, obsA: obsA, obsB: obsB,
@@ -158,12 +160,4 @@ func TestSubjectDeleteReleasesOwnClaimPins(t *testing.T) {
 	if err != nil || len(members) != 1 || string(members[0].ID) != string(ca) {
 		t.Fatalf("%v %+v", err, members)
 	}
-}
-
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
-		})
-	return a, err
 }

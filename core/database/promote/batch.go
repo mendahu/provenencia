@@ -10,6 +10,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
@@ -23,25 +24,23 @@ const (
 )
 
 // BatchRow is one Subject on a Done. Skip writes nothing. New mints a handle.
-// Handle joins EntityID. Pairs are confirmed comparisons (join and new-onto
-// existing only; a mint with pairs is invalid, same as Save).
+// Handle joins EntityID. PinSets are the evidence the researcher confirmed
+// (join only; a New row with pin sets is invalid).
 type BatchRow struct {
 	SubjectID         []byte
 	Target            string
 	EntityID          []byte
 	ConfidenceGradeID []byte
 	Argument          string
-	Pairs             []Pair
+	PinSets           []PinSet
 }
 
-// Batch is one Done for a Source. SeenRevision is the audit revision the
-// proposal was read at. SkipBridgeIDs are Evidence bridges the researcher
-// switched off.
+// Batch is one Done for an Evidence graph. SeenRevision is the audit revision
+// the proposal was read at.
 type Batch struct {
-	SourceID      []byte
-	SeenRevision  int64
-	Rows          []BatchRow
-	SkipBridgeIDs [][]byte
+	GraphID      []byte
+	SeenRevision int64
+	Rows         []BatchRow
 }
 
 // Written is one claim the batch filed.
@@ -58,8 +57,8 @@ type BatchResult struct {
 	Written  []Written
 }
 
-// SaveBatch files one Done in a single transaction: claims, one-hop pins,
-// and bridges (except switched-off ones). The caller records the returned
+// SaveBatch files one Done in a single transaction: claims, pin sets,
+// and bridges whose ends are both handles. The caller records the returned
 // changes as promote_batch. Revision on the result is SeenRevision; the
 // caller replaces it with the revision it recorded when that is non-zero,
 // so an all-skip batch still reports the revision the proposal was read at.
@@ -71,21 +70,10 @@ func SaveBatch(tx *database.Tx, userID []byte, in Batch) (BatchResult, []rowchan
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return BatchResult{}, nil, err
 	}
-	if len(in.SourceID) != 16 {
-		return BatchResult{}, nil, ErrInvalid
-	}
-	skip := map[string]struct{}{}
-	for _, id := range in.SkipBridgeIDs {
-		if len(id) != 16 {
-			return BatchResult{}, nil, ErrInvalid
-		}
-		skip[string(id)] = struct{}{}
-	}
 
 	q := tx.Tx
-	var exists int
-	if err := q.QueryRow(`SELECT 1 FROM sources WHERE id = ?`, in.SourceID).Scan(&exists); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+	if _, err := evidencegraphs.SourceOf(q, in.GraphID); err != nil {
+		if errors.Is(err, evidencegraphs.ErrInvalid) {
 			return BatchResult{}, nil, ErrInvalid
 		}
 		return BatchResult{}, nil, err
@@ -102,16 +90,8 @@ func SaveBatch(tx *database.Tx, userID []byte, in Batch) (BatchResult, []rowchan
 		changes []rowchange.Change
 		written []Written
 	)
-	targets := pinTargets{}
 	for _, row := range in.Rows {
-		if row.Target == TargetHandle {
-			targets[string(row.SubjectID)] = row.EntityID
-		} else {
-			targets[string(row.SubjectID)] = nil
-		}
-	}
-	for _, row := range in.Rows {
-		w, rowChanges, _, err := applyRow(q, in.SourceID, row, targets)
+		w, rowChanges, _, err := applyRow(q, in.GraphID, row)
 		if err != nil {
 			return BatchResult{}, nil, err
 		}
@@ -122,7 +102,7 @@ func SaveBatch(tx *database.Tx, userID []byte, in Batch) (BatchResult, []rowchan
 		written = append(written, *w)
 	}
 
-	_, filed, err := identityclaims.FileSourceBridgesTx(q, in.SourceID, skip)
+	_, filed, err := identityclaims.FileEvidenceGraphBridgesTx(q, in.GraphID)
 	if err != nil {
 		return BatchResult{}, nil, err
 	}
@@ -137,15 +117,15 @@ func latestRevision(tx *sql.Tx) (int64, error) {
 }
 
 // applyRow files one claim. A nil Written is an anchor or a skip.
-func applyRow(tx *sql.Tx, sourceID []byte, row BatchRow, targets pinTargets) (*Written, []rowchange.Change, []byte, error) {
+func applyRow(tx *sql.Tx, graphID []byte, row BatchRow) (*Written, []rowchange.Change, []byte, error) {
 	switch row.Target {
 	case TargetSkip:
-		if len(row.EntityID) != 0 || len(row.Pairs) != 0 || len(row.ConfidenceGradeID) != 0 || row.Argument != "" {
+		if len(row.EntityID) != 0 || len(row.PinSets) != 0 || len(row.ConfidenceGradeID) != 0 || row.Argument != "" {
 			return nil, nil, nil, ErrInvalid
 		}
 		return nil, nil, nil, nil
 	case TargetNew:
-		if len(row.EntityID) != 0 || len(row.Pairs) != 0 {
+		if len(row.EntityID) != 0 || len(row.PinSets) != 0 {
 			return nil, nil, nil, ErrInvalid
 		}
 	case TargetHandle:
@@ -169,7 +149,7 @@ func applyRow(tx *sql.Tx, sourceID []byte, row BatchRow, targets pinTargets) (*W
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if !bytes.Equal(subject.SourceID, sourceID) {
+	if !bytes.Equal(subject.GraphID, graphID) {
 		return nil, nil, nil, ErrInvalid
 	}
 	st, err := subjecttypes.GetByIDTx(tx, subject.SubjectTypeID)
@@ -182,7 +162,7 @@ func applyRow(tx *sql.Tx, sourceID []byte, row BatchRow, targets pinTargets) (*W
 
 	existing, err := identityclaims.AcceptedEntityForSubjectTx(tx, subject.ID)
 	if err == nil {
-		if row.Target == TargetHandle && bytes.Equal(existing.EntityID, row.EntityID) && len(row.Pairs) == 0 {
+		if row.Target == TargetHandle && bytes.Equal(existing.EntityID, row.EntityID) && len(row.PinSets) == 0 {
 			return nil, nil, nil, nil
 		}
 		return nil, nil, nil, identityclaims.ErrAlreadyMember
@@ -220,7 +200,7 @@ func applyRow(tx *sql.Tx, sourceID []byte, row BatchRow, targets pinTargets) (*W
 		return nil, nil, nil, err
 	}
 	changes = append(changes, claimChange)
-	pins, pinChanges, err := pinPairs(tx, claim, row.Pairs, targets)
+	pins, pinChanges, err := pinSets(tx, claim, row.PinSets)
 	if err != nil {
 		return nil, nil, nil, err
 	}

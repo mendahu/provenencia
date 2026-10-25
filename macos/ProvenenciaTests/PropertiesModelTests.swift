@@ -59,25 +59,17 @@ struct PropertiesModelTests {
         store: FakeStore = FakeStore(),
         properties: [CatalogProperty] = [],
         types: [CatalogSubjectType] = [],
-        fieldsByType: [String: [CatalogSubjectTypeProperty]] = [:]
+        fieldsByType: [String: [CatalogSubjectTypeProperty]] = [:],
+        catalogCounts: CatalogCounts? = nil
     ) -> (PropertiesModel, WorkspaceSession, FakeStore) {
         store.propertiesByProject[projectDir] = properties
         store.subjectTypesByProject[projectDir] = types
         store.subjectTypePropertiesByType = fieldsByType
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
-        let model = PropertiesModel(session: session, userID: userID, store: store)
+        let model = PropertiesModel(
+            session: session, userID: userID, store: store, catalogCounts: catalogCounts
+        )
         return (model, session, store)
-    }
-
-    private func waitForQuery<Value>(_ handle: QueryHandle<Value>) async {
-        var waited: UInt64 = 0
-        let step: UInt64 = 10_000_000
-        while waited < 2_000_000_000 {
-            if !handle.isFetching, handle.status == .ready || handle.status == .error { return }
-            await Task.yield()
-            try? await Task.sleep(nanoseconds: step)
-            waited += step
-        }
     }
 
     private func warm(_ model: PropertiesModel, session: WorkspaceSession) async {
@@ -87,6 +79,16 @@ struct PropertiesModelTests {
         ) {
             await waitForQuery(handle)
         }
+    }
+
+    /// Puts Properties on screen, as the workspace does, so a write reloads it.
+    private func showProperties(
+        _ model: PropertiesModel, session: WorkspaceSession
+    ) async -> QueryHandle<PropertiesSnapshot> {
+        session.apply(location: .sectionRoot(.properties))
+        await warm(model, session: session)
+        let handle: QueryHandle<PropertiesSnapshot> = session.query(PropertiesModel.workspaceKey(for: session))
+        return handle
     }
 
     private func presentation(_ key: String, role: String, sort: Int) -> CatalogSubjectTypePresentation {
@@ -203,6 +205,32 @@ struct PropertiesModelTests {
         #expect(store.propertiesByProject[projectDir]?.contains { $0.key == "custom-fact" && $0.cardinality == "single" } == true)
         #expect(store.subjectTypePropertiesByType[person.id]?.contains { $0.property.key == "custom-fact" } == true)
         #expect(!(SubjectPropertyValueType.researcherCreatable.contains("term")))
+    }
+
+    /// Properties on screen: a create reloads the list, and its count is published
+    /// from the reload, not from the cached snapshot the write returns to.
+    @Test func createPublishesTheCountOnceTheReloadSettles() async {
+        let store = FakeStore()
+        let counts = CatalogCounts(projectDir: projectDir, store: store)
+        let (model, session, _) = makeModel(
+            store: store, properties: [nameProperty()], types: [personType()], catalogCounts: counts
+        )
+        let handle = await showProperties(model, session: session)
+        model.syncCatalogCounts()
+        #expect(counts.properties?.total == 1)
+
+        counts.publishProperties(CatalogCountSummary(total: 7, seeded: 7, user: 0, plugin: 0))
+        model.openCreate()
+        model.draft?.label = "Languages spoken"
+        #expect(await model.submitCreate() != nil)
+        #expect(!handle.isSettled)
+        #expect(counts.properties?.total == 7)
+
+        await waitForQuery(handle)
+        #expect(handle.isSettled)
+        model.syncCatalogCounts()
+        #expect(counts.properties?.total == 2)
+        #expect(counts.properties?.user == 1)
     }
 
     @Test func createDefaultsToOneValueAndCanSubmitSeveral() async {
@@ -384,6 +412,30 @@ struct PropertiesModelTests {
         #expect(model.selectedPropertyID == nil)
     }
 
+    /// Properties on screen: a delete publishes its count from the reload.
+    @Test func deletePublishesTheCountOnceTheReloadSettles() async {
+        let store = FakeStore()
+        let counts = CatalogCounts(projectDir: projectDir, store: store)
+        let property = userProperty()
+        let (model, session, _) = makeModel(
+            store: store, properties: [nameProperty(), property], types: [personType()],
+            catalogCounts: counts
+        )
+        let handle = await showProperties(model, session: session)
+        model.selectProperty(property.id)
+        await model.askDelete()
+
+        counts.publishProperties(CatalogCountSummary(total: 7, seeded: 7, user: 0, plugin: 0))
+        #expect(await model.confirmPendingImpact())
+        #expect(!handle.isSettled)
+        #expect(counts.properties?.total == 7)
+
+        await waitForQuery(handle)
+        model.syncCatalogCounts()
+        #expect(counts.properties?.total == 1)
+        #expect(counts.properties?.user == 0)
+    }
+
     @Test func boundOnlyPropertyConfirmDeletes() async {
         let store = FakeStore()
         let property = userProperty()
@@ -410,7 +462,7 @@ struct PropertiesModelTests {
     @Test func propertyUsedOnTwoObservationsShowsInboundNotice() async {
         let store = FakeStore()
         let property = userProperty(usedBy: 2)
-        store.observationsBySource["src-1"] = [
+        store.observationsByGraph["g-1"] = [
             observation(id: "obs-1", ref: "OBS-AAAAA", propertyID: property.id, title: "accidental"),
             observation(id: "obs-2", ref: "OBS-BBBBB", propertyID: property.id, title: "natural"),
         ]

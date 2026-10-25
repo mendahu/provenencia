@@ -3,6 +3,7 @@ package graphcache
 import (
 	"bytes"
 	"fmt"
+	"slices"
 	"sort"
 )
 
@@ -70,9 +71,9 @@ func (g *Graph) Verify() error {
 			}
 		}
 	}
-	if sourceFn != nil {
-		for key, stored := range g.sources {
-			if err := sourceFn(g, []byte(key), stored); err != nil {
+	if evidenceGraphFn != nil {
+		for key, e := range g.evidenceGraphs {
+			if err := evidenceGraphFn(g, []byte(key), e.graph); err != nil {
 				return err
 			}
 		}
@@ -246,7 +247,7 @@ func sameMembers(got, want []Member) error {
 		return fmt.Errorf("count %d, catalog %d", len(got), len(want))
 	}
 	for i := range got {
-		if !sameID(got[i].SubjectID, want[i].SubjectID) || got[i].Accepted != want[i].Accepted {
+		if !sameID(got[i].SubjectID, want[i].SubjectID) || !sameID(got[i].SourceID, want[i].SourceID) || !sameID(got[i].GraphID, want[i].GraphID) || got[i].Accepted != want[i].Accepted {
 			return fmt.Errorf("claim %d differs", i)
 		}
 	}
@@ -260,14 +261,8 @@ func linkEndpoints(self []byte, l Link, rows []TruthRow) bool {
 			ids = append(ids, row.EntityID)
 		}
 	}
-	return hasID(ids, self) && hasID(ids, l.Neighbor)
-}
-
-func hasID(ids [][]byte, id []byte) bool {
-	for _, cur := range ids {
-		if sameID(cur, id) {
-			return true
-		}
+	has := func(id []byte) bool {
+		return slices.ContainsFunc(ids, func(cur []byte) bool { return sameID(cur, id) })
 	}
-	return false
+	return has(self) && has(l.Neighbor)
 }

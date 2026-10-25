@@ -27,8 +27,12 @@
 		AA0000000000000000000301 /* PVThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000300 /* PVThumbnail.swift */; };
 		A90900000000000000000004 /* PVListTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90900000000000000000003 /* PVListTests.swift */; };
 		A90900000000000000000002 /* PVList.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90900000000000000000001 /* PVList.swift */; };
+		AA00000000000000000C120F /* PVSkeletonBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C120E /* PVSkeletonBar.swift */; };
 		AA000000000000000000031F /* PVReorderableList.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000320 /* PVReorderableList.swift */; };
 		AA0000000000000000000305 /* PVFormDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000304 /* PVFormDialog.swift */; };
+		AA00000000000000000099A1 /* PVOutsideClick.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000099A0 /* PVOutsideClick.swift */; };
+		AA000000000000000005E003 /* PVSheetDismiss.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E002 /* PVSheetDismiss.swift */; };
+		AA000000000000000005E001 /* PVSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E000 /* PVSheet.swift */; };
 		AA0000000000000000000501 /* PVPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000500 /* PVPanel.swift */; };
 		AA0000000000000000000307 /* SourcesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000306 /* SourcesModel.swift */; };
 		AA1041000000000000000002 /* SourcesListSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1041000000000000000001 /* SourcesListSettings.swift */; };
@@ -44,10 +48,17 @@
 		AA000000000000000000034B /* SourceArtifactsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000034A /* SourceArtifactsSection.swift */; };
 		AA0000000000000000000361 /* SourcePageChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000360 /* SourcePageChrome.swift */; };
 		AA0000000000000000000363 /* SourcePageIdentityHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000362 /* SourcePageIdentityHeader.swift */; };
+		AA00000000000000000C1207 /* SourceTitleTypeFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C1206 /* SourceTitleTypeFields.swift */; };
+		AA00000000000000000C1209 /* SourceCopyModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C1208 /* SourceCopyModel.swift */; };
+		AA00000000000000000C1211 /* SourceArtifactChecklist.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C1210 /* SourceArtifactChecklist.swift */; };
+		AA00000000000000000C1213 /* SourceCopyDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C1212 /* SourceCopyDialog.swift */; };
+		AA00000000000000000C1205 /* SourceTypeComboRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C1204 /* SourceTypeComboRow.swift */; };
 		AA0000000000000000000365 /* SourcePageDescriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000364 /* SourcePageDescriptionView.swift */; };
 		AA0000000000000000000367 /* SourcePageCredibilityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000366 /* SourcePageCredibilityView.swift */; };
 		AA0000000000000000000369 /* SourcePageMetadataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000368 /* SourcePageMetadataView.swift */; };
 		AA000000000000000000036B /* SourcePageArtifactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000036A /* SourcePageArtifactsView.swift */; };
+		AA1213000000000000000002 /* SourcePageGraphsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1213000000000000000001 /* SourcePageGraphsView.swift */; };
+		AA1212000000000000000002 /* SourceGraphsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1212000000000000000001 /* SourceGraphsSection.swift */; };
 		AA000000000000000000036D /* SourcePageNotesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000036C /* SourcePageNotesView.swift */; };
 		AA0000000000000000000371 /* PVInlineEdit.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000370 /* PVInlineEdit.swift */; };
 		AA0000000000000000000373 /* PVTextArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000372 /* PVTextArea.swift */; };
@@ -111,7 +122,9 @@
 		AA0000000000000000000391 /* ThumbnailCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000390 /* ThumbnailCache.swift */; };
 		AA0000000000000000000393 /* CachedThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000392 /* CachedThumbnail.swift */; };
 		AA00000000000000000003C1 /* PVContextMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003C0 /* PVContextMenu.swift */; };
+		AA00000000000000000FE006 /* PVActionMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000FE005 /* PVActionMenu.swift */; };
 		AA000000000000000000046D /* PVFloatingMenuSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000046C /* PVFloatingMenuSelection.swift */; };
+		AA00000000000000000004F5 /* PVScrollRowIntoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004F4 /* PVScrollRowIntoView.swift */; };
 		AA0000000000000000000467 /* SourcesListNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000466 /* SourcesListNavigation.swift */; };
 		AA0000000000000000000469 /* SourcesSplitRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000468 /* SourcesSplitRow.swift */; };
 		AA0000000000000000000395 /* ThumbnailCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000394 /* ThumbnailCacheTests.swift */; };
@@ -119,6 +132,9 @@
 		AA000000000000000000031D /* SourcePageModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000031E /* SourcePageModelTests.swift */; };
 		AA0000000000000000000333 /* DateValueDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000332 /* DateValueDraftTests.swift */; };
 		AA0000000000000000000313 /* SourcesModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000312 /* SourcesModelTests.swift */; };
+		AA00000000000000000C120D /* SourceCopyModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C120C /* SourceCopyModelTests.swift */; };
+		AA00000000000000000C120B /* QueryHandleWaiting.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C120A /* QueryHandleWaiting.swift */; };
+		AA00000000000000000C1203 /* CatalogArtifactTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000C1202 /* CatalogArtifactTests.swift */; };
 		AA1041000000000000000004 /* SourcesListSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1041000000000000000003 /* SourcesListSettingsTests.swift */; };
 		AA000000000000000000046B /* SourcesListNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000046A /* SourcesListNavigationTests.swift */; };
 		AA000000000000000000046F /* PVFloatingMenuSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000046E /* PVFloatingMenuSelectionTests.swift */; };
@@ -145,7 +161,10 @@
 		AA00000000000000000003A1 /* CatalogSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003A0 /* CatalogSessionStoreTests.swift */; };
 		AA00000000000000000003E1 /* SearchCatalogStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003E0 /* SearchCatalogStoreTests.swift */; };
 		AA0000000000000000000451 /* SubjectStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000450 /* SubjectStoreTests.swift */; };
-		AA0000000000000000000461 /* SourceGraphSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000460 /* SourceGraphSnapshot.swift */; };
+		AA0000000000000000000F51 /* EvidenceGraphStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000F50 /* EvidenceGraphStoreTests.swift */; };
+		AA0000000000000000000461 /* EvidenceGraphSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000460 /* EvidenceGraphSnapshot.swift */; };
+		AA1210000000000000000002 /* WorkspaceSession+EvidenceGraphs.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1210000000000000000001 /* WorkspaceSession+EvidenceGraphs.swift */; };
+		AA1211000000000000000002 /* WorkspaceSession+Sources.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1211000000000000000001 /* WorkspaceSession+Sources.swift */; };
 		AA0000000000000000000471 /* GraphCanvasCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000470 /* GraphCanvasCamera.swift */; };
 		AA0000000000000000000473 /* GraphCanvasCoordinates.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000472 /* GraphCanvasCoordinates.swift */; };
 		AA0000000000000000000475 /* GraphCanvasGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000474 /* GraphCanvasGridView.swift */; };
@@ -159,6 +178,7 @@
 		A7090000000000000000000A /* EvidenceBridgeEdgeSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70900000000000000000009 /* EvidenceBridgeEdgeSummary.swift */; };
 		A7090000000000000000000C /* EvidenceBridgeEdgeSummaryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7090000000000000000000B /* EvidenceBridgeEdgeSummaryTests.swift */; };
 		A71000000000000000000002 /* PropertyTermDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71000000000000000000001 /* PropertyTermDisplay.swift */; };
+		AA0000000000000000009F11 /* StyledFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000009F10 /* StyledFormat.swift */; };
 		A71100000000000000000002 /* InterpretationValueKinds.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71100000000000000000001 /* InterpretationValueKinds.swift */; };
 		A71200000000000000000002 /* CitationFieldsDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71200000000000000000001 /* CitationFieldsDraft.swift */; };
 		A71300000000000000000002 /* CitationObservationRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71300000000000000000001 /* CitationObservationRows.swift */; };
@@ -173,8 +193,15 @@
 		A71800000000000000000002 /* EvidenceGraphPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71800000000000000000001 /* EvidenceGraphPlacementTests.swift */; };
 		AA00000000000000000000F7 /* EvidenceSubjectCardFooterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000F6 /* EvidenceSubjectCardFooterTests.swift */; };
 		AA00000000000000000000F9 /* EvidenceCardLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000F8 /* EvidenceCardLayoutTests.swift */; };
+		AA00000000000000000000FB /* PVSymbolImages.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000FA /* PVSymbolImages.swift */; };
+		AA00000000000000000000FD /* PVSymbolImagesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000FC /* PVSymbolImagesTests.swift */; };
+		AA00000000000000000000FF /* PVFontTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000FE /* PVFontTests.swift */; };
 		AA0000000000000000000673 /* L10nResolutionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000672 /* L10nResolutionTests.swift */; };
 		AA0000000000000000000680 /* GraphCanvasItemLayerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000067F /* GraphCanvasItemLayerTests.swift */; };
+		AA0000000000000000000112 /* PVPainterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000111 /* PVPainterTests.swift */; };
+		AA000000000000000000010E /* PVPainter.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000010D /* PVPainter.swift */; };
+		AA0000000000000000000110 /* PVTextMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000010F /* PVTextMetrics.swift */; };
+		AA000000000000000000010B /* GraphCanvasItemViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000010A /* GraphCanvasItemViewTests.swift */; };
 		AA0000000000000000000682 /* PVTextAreaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000681 /* PVTextAreaTests.swift */; };
 		AA0000000000000000000678 /* L10nPluralTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000677 /* L10nPluralTests.swift */; };
 		A71900000000000000000002 /* CitationComposerContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71900000000000000000001 /* CitationComposerContext.swift */; };
@@ -183,6 +210,8 @@
 		A71D00000000000000000006 /* VisionOCREngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71D00000000000000000005 /* VisionOCREngine.swift */; };
 		A71D00000000000000000008 /* OCRImageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71D00000000000000000007 /* OCRImageTests.swift */; };
 		A71D0000000000000000000A /* CitationAutoTranscribeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71D00000000000000000009 /* CitationAutoTranscribeTests.swift */; };
+		A71C00000000000000000002 /* ConnectionSentenceRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71C00000000000000000001 /* ConnectionSentenceRegistry.swift */; };
+		A71C00000000000000000004 /* ConnectionSentenceRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71C00000000000000000003 /* ConnectionSentenceRegistryTests.swift */; };
 		A71A00000000000000000002 /* ConnectEndpointBinding.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71A00000000000000000001 /* ConnectEndpointBinding.swift */; };
 		A71B00000000000000000002 /* ConnectEndpointBindingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71B00000000000000000001 /* ConnectEndpointBindingTests.swift */; };
 		A71000000000000000000006 /* PropertyTermDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71000000000000000000005 /* PropertyTermDisplayTests.swift */; };
@@ -198,11 +227,12 @@
 		AA00000000000000000004C1 /* GraphCanvasHitTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004C0 /* GraphCanvasHitTarget.swift */; };
 		AA00000000000000000004C3 /* GraphCanvasPointerController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004C2 /* GraphCanvasPointerController.swift */; };
 		AA000000000000000000067E /* GraphCanvasItemLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000067D /* GraphCanvasItemLayer.swift */; };
+		AA0000000000000000000109 /* GraphCanvasItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000108 /* GraphCanvasItemView.swift */; };
 		AA00000000000000000004C5 /* GraphCanvasDocumentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004C4 /* GraphCanvasDocumentView.swift */; };
 		AA00000000000000000004C7 /* GraphCanvasPointerHitTestingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004C6 /* GraphCanvasPointerHitTestingTests.swift */; };
 		AA0000000000000000000483 /* EvidenceSubjectKindStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000482 /* EvidenceSubjectKindStyle.swift */; };
 		AA0000000000000000000487 /* GraphCanvasGridMappingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000486 /* GraphCanvasGridMappingTests.swift */; };
-		AA0000000000000000000489 /* SourceGraphSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000488 /* SourceGraphSnapshotTests.swift */; };
+		AA0000000000000000000489 /* EvidenceGraphSnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000488 /* EvidenceGraphSnapshotTests.swift */; };
 		AA000000000000000000047B /* GraphCanvasCoordinatesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000047A /* GraphCanvasCoordinatesTests.swift */; };
 		AA00000000000000000003F1 /* WorkspaceToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003F0 /* WorkspaceToolbar.swift */; };
 		AA00000000000000000003F3 /* OmnibarFocusCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003F2 /* OmnibarFocusCoordinator.swift */; };
@@ -210,9 +240,12 @@
 		AA0000000000000000000441 /* WindowDragTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000440 /* WindowDragTests.swift */; };
 		AA00000000000000000003F7 /* PVOmnibarHitRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003F6 /* PVOmnibarHitRow.swift */; };
 		AA00000000000000000003F9 /* OmnibarResultsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003F8 /* OmnibarResultsModel.swift */; };
-		AA00000000000000000003FF /* OmnibarHitPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003FE /* OmnibarHitPresentation.swift */; };
+		AA00000000000000000003FF /* CatalogSearchHitPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003FE /* CatalogSearchHitPresentation.swift */; };
+		AA000000000000000000E372 /* CatalogSearchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000E371 /* CatalogSearchModel.swift */; };
+		AA000000000000000000E374 /* CatalogSearchHitRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000E373 /* CatalogSearchHitRow.swift */; };
 		AA00000000000000000003FB /* OmnibarResultsHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003FA /* OmnibarResultsHost.swift */; };
 		AA00000000000000000003FD /* OmnibarResultsModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003FC /* OmnibarResultsModelTests.swift */; };
+		AA000000000000000000E376 /* CatalogSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000E375 /* CatalogSearchTests.swift */; };
 		AA0000000000000000000401 /* ProjectFilesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000400 /* ProjectFilesTests.swift */; };
 		AA0000000000000000000412 /* ProjectKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000411 /* ProjectKey.swift */; };
 		AA0000000000000000000414 /* CatalogQueryKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000413 /* CatalogQueryKey.swift */; };
@@ -240,6 +273,7 @@
 		07D60E0FE9704E4723AE18DD /* PVLogoMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11ADAF744C32587CD34CDD23 /* PVLogoMark.swift */; };
 		080D24179717B185C273478D /* PVField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16D4D3531F81FABFCDDE4F84 /* PVField.swift */; };
 		13208FE0B57739DECCA156C7 /* WorkspaceChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5B33345A1FE839C1516B4FC /* WorkspaceChrome.swift */; };
+		AA0000000000000000000A15 /* QueryHandleSettled.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000A14 /* QueryHandleSettled.swift */; };
 		14A19539FB0D86BB050EC437 /* WorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8F65C4577481FF5F505271F /* WorkspaceView.swift */; };
 		1538A09B7711459456E31FCD /* PVRadius.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B7FCE6BAF87CC79B6907492 /* PVRadius.swift */; };
 		210C39BBEED71061425C528F /* PVElevation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A63753F8D90991976A28F13 /* PVElevation.swift */; };
@@ -352,8 +386,16 @@
 		B91100000000000000000008 /* PromoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91100000000000000000007 /* PromoteView.swift */; };
 		B9110000000000000000000C /* PromoteModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000B /* PromoteModelTests.swift */; };
 		B9110000000000000000000E /* PromoteFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000D /* PromoteFlow.swift */; };
-		B91100000000000000000012 /* ComparisonValueDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91100000000000000000011 /* ComparisonValueDisplay.swift */; };
+		C1120094E727223A3EA7D87A /* PromoteEvidenceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C112000400E7D14ECD8AF111 /* PromoteEvidenceSheet.swift */; };
+		AA000000000000000005E00B /* PromoteEvidenceCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E00A /* PromoteEvidenceCards.swift */; };
+		C11200BD269354BE1FC4BDC0 /* PromoteEvidenceDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C112003C83C97BC64D181BED /* PromoteEvidenceDisplay.swift */; };
+		AA000000000000000005E007 /* PromoteEvidenceBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E006 /* PromoteEvidenceBoard.swift */; };
+		C11200E6D8FE13682466E995 /* PromoteReadout.swift in Sources */ = {isa = PBXBuildFile; fileRef = C112002B53DFC6E2EF560AC7 /* PromoteReadout.swift */; };
 		B91100000000000000000010 /* PromoteFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000F /* PromoteFlowTests.swift */; };
+		C112007CF5D40430AF417EA9 /* PromoteEvidenceDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11200E484C4CD37DD9BA992 /* PromoteEvidenceDisplayTests.swift */; };
+		AA000000000000000005E009 /* TextEmphasisRenderingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E008 /* TextEmphasisRenderingTests.swift */; };
+		AA000000000000000005E005 /* PromoteEvidenceBoardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E004 /* PromoteEvidenceBoardTests.swift */; };
+		AA0000000000000000000FA2 /* StyledFormatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000FA1 /* StyledFormatTests.swift */; };
 		B02746CAC03F94127373BB92 /* DateRowDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B052AEDEE88EFC9ED8413469 /* DateRowDisplay.swift */; };
 		B0F71D26711A163E3B415FCB /* DerivedPlace.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0628D2BFA20C5351EA2685B /* DerivedPlace.swift */; };
 		B071F1D64BED98AE2965E8AD /* PersonLifeDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B066DC6442EFA8875D71F9AE /* PersonLifeDisplay.swift */; };
@@ -369,6 +411,8 @@
 		A53400000000000000001004 /* ArtifactFileFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000004 /* ArtifactFileFixtures.swift */; };
 		A53400000000000000001005 /* CitationComposerDepictionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000005 /* CitationComposerDepictionTests.swift */; };
 		A53400000000000000001007 /* RegionFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000007 /* RegionFixtures.swift */; };
+		A53400000000000000001B01 /* EvidenceGraphFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000B01 /* EvidenceGraphFixtures.swift */; };
+		A53400000000000000001A01 /* NameFormatOrdersFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000A01 /* NameFormatOrdersFixtures.swift */; };
 		A53400000000000000001006 /* ArtifactRegionCropTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000006 /* ArtifactRegionCropTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -414,8 +458,12 @@
 		AA0000000000000000000300 /* PVThumbnail.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVThumbnail.swift; sourceTree = "<group>"; };
 		A90900000000000000000003 /* PVListTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVListTests.swift; sourceTree = "<group>"; };
 		A90900000000000000000001 /* PVList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVList.swift; sourceTree = "<group>"; };
+		AA00000000000000000C120E /* PVSkeletonBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSkeletonBar.swift; sourceTree = "<group>"; };
 		AA0000000000000000000320 /* PVReorderableList.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVReorderableList.swift; sourceTree = "<group>"; };
 		AA0000000000000000000304 /* PVFormDialog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFormDialog.swift; sourceTree = "<group>"; };
+		AA00000000000000000099A0 /* PVOutsideClick.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVOutsideClick.swift; sourceTree = "<group>"; };
+		AA000000000000000005E002 /* PVSheetDismiss.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSheetDismiss.swift; sourceTree = "<group>"; };
+		AA000000000000000005E000 /* PVSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSheet.swift; sourceTree = "<group>"; };
 		AA0000000000000000000500 /* PVPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVPanel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000306 /* SourcesModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesModel.swift; sourceTree = "<group>"; };
 		AA1041000000000000000001 /* SourcesListSettings.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListSettings.swift; sourceTree = "<group>"; };
@@ -431,10 +479,17 @@
 		AA000000000000000000034A /* SourceArtifactsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceArtifactsSection.swift; sourceTree = "<group>"; };
 		AA0000000000000000000360 /* SourcePageChrome.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageChrome.swift; sourceTree = "<group>"; };
 		AA0000000000000000000362 /* SourcePageIdentityHeader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageIdentityHeader.swift; sourceTree = "<group>"; };
+		AA00000000000000000C1206 /* SourceTitleTypeFields.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTitleTypeFields.swift; sourceTree = "<group>"; };
+		AA00000000000000000C1208 /* SourceCopyModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceCopyModel.swift; sourceTree = "<group>"; };
+		AA00000000000000000C1210 /* SourceArtifactChecklist.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceArtifactChecklist.swift; sourceTree = "<group>"; };
+		AA00000000000000000C1212 /* SourceCopyDialog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceCopyDialog.swift; sourceTree = "<group>"; };
+		AA00000000000000000C1204 /* SourceTypeComboRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceTypeComboRow.swift; sourceTree = "<group>"; };
 		AA0000000000000000000364 /* SourcePageDescriptionView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageDescriptionView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000366 /* SourcePageCredibilityView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageCredibilityView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000368 /* SourcePageMetadataView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageMetadataView.swift; sourceTree = "<group>"; };
 		AA000000000000000000036A /* SourcePageArtifactsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageArtifactsView.swift; sourceTree = "<group>"; };
+		AA1213000000000000000001 /* SourcePageGraphsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageGraphsView.swift; sourceTree = "<group>"; };
+		AA1212000000000000000001 /* SourceGraphsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceGraphsSection.swift; sourceTree = "<group>"; };
 		AA000000000000000000036C /* SourcePageNotesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageNotesView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000370 /* PVInlineEdit.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVInlineEdit.swift; sourceTree = "<group>"; };
 		AA0000000000000000000372 /* PVTextArea.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVTextArea.swift; sourceTree = "<group>"; };
@@ -498,7 +553,9 @@
 		AA0000000000000000000390 /* ThumbnailCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThumbnailCache.swift; sourceTree = "<group>"; };
 		AA0000000000000000000392 /* CachedThumbnail.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CachedThumbnail.swift; sourceTree = "<group>"; };
 		AA00000000000000000003C0 /* PVContextMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVContextMenu.swift; sourceTree = "<group>"; };
+		AA00000000000000000FE005 /* PVActionMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVActionMenu.swift; sourceTree = "<group>"; };
 		AA000000000000000000046C /* PVFloatingMenuSelection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFloatingMenuSelection.swift; sourceTree = "<group>"; };
+		AA00000000000000000004F4 /* PVScrollRowIntoView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVScrollRowIntoView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000466 /* SourcesListNavigation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListNavigation.swift; sourceTree = "<group>"; };
 		AA0000000000000000000468 /* SourcesSplitRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesSplitRow.swift; sourceTree = "<group>"; };
 		AA0000000000000000000394 /* ThumbnailCacheTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThumbnailCacheTests.swift; sourceTree = "<group>"; };
@@ -506,6 +563,9 @@
 		AA000000000000000000031E /* SourcePageModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageModelTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000332 /* DateValueDraftTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDraftTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000312 /* SourcesModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesModelTests.swift; sourceTree = "<group>"; };
+		AA00000000000000000C120C /* SourceCopyModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceCopyModelTests.swift; sourceTree = "<group>"; };
+		AA00000000000000000C120A /* QueryHandleWaiting.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QueryHandleWaiting.swift; sourceTree = "<group>"; };
+		AA00000000000000000C1202 /* CatalogArtifactTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogArtifactTests.swift; sourceTree = "<group>"; };
 		AA1041000000000000000003 /* SourcesListSettingsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListSettingsTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000046A /* SourcesListNavigationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListNavigationTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000046E /* PVFloatingMenuSelectionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFloatingMenuSelectionTests.swift; sourceTree = "<group>"; };
@@ -549,7 +609,10 @@
 		AA00000000000000000003A0 /* CatalogSessionStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogSessionStoreTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000003E0 /* SearchCatalogStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SearchCatalogStoreTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000450 /* SubjectStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SubjectStoreTests.swift; sourceTree = "<group>"; };
-		AA0000000000000000000460 /* SourceGraphSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceGraphSnapshot.swift; sourceTree = "<group>"; };
+		AA0000000000000000000F50 /* EvidenceGraphStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphStoreTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000460 /* EvidenceGraphSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphSnapshot.swift; sourceTree = "<group>"; };
+		AA1210000000000000000001 /* WorkspaceSession+EvidenceGraphs.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "WorkspaceSession+EvidenceGraphs.swift"; sourceTree = "<group>"; };
+		AA1211000000000000000001 /* WorkspaceSession+Sources.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "WorkspaceSession+Sources.swift"; sourceTree = "<group>"; };
 		AA0000000000000000000470 /* GraphCanvasCamera.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasCamera.swift; sourceTree = "<group>"; };
 		AA0000000000000000000472 /* GraphCanvasCoordinates.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasCoordinates.swift; sourceTree = "<group>"; };
 		AA0000000000000000000474 /* GraphCanvasGridView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasGridView.swift; sourceTree = "<group>"; };
@@ -564,6 +627,7 @@
 		A70900000000000000000009 /* EvidenceBridgeEdgeSummary.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceBridgeEdgeSummary.swift; sourceTree = "<group>"; };
 		A7090000000000000000000B /* EvidenceBridgeEdgeSummaryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceBridgeEdgeSummaryTests.swift; sourceTree = "<group>"; };
 		A71000000000000000000001 /* PropertyTermDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PropertyTermDisplay.swift; sourceTree = "<group>"; };
+		AA0000000000000000009F10 /* StyledFormat.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StyledFormat.swift; sourceTree = "<group>"; };
 		A71100000000000000000001 /* InterpretationValueKinds.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = InterpretationValueKinds.swift; sourceTree = "<group>"; };
 		A71200000000000000000001 /* CitationFieldsDraft.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationFieldsDraft.swift; sourceTree = "<group>"; };
 		A71300000000000000000001 /* CitationObservationRows.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationObservationRows.swift; sourceTree = "<group>"; };
@@ -579,15 +643,24 @@
 		AA00000000000000000000F6 /* EvidenceSubjectCardFooterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceSubjectCardFooterTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000672 /* L10nResolutionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = L10nResolutionTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000067F /* GraphCanvasItemLayerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasItemLayerTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000111 /* PVPainterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVPainterTests.swift; sourceTree = "<group>"; };
+		AA000000000000000000010D /* PVPainter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVPainter.swift; sourceTree = "<group>"; };
+		AA000000000000000000010F /* PVTextMetrics.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVTextMetrics.swift; sourceTree = "<group>"; };
+		AA000000000000000000010A /* GraphCanvasItemViewTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasItemViewTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000681 /* PVTextAreaTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVTextAreaTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000677 /* L10nPluralTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = L10nPluralTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000000F8 /* EvidenceCardLayoutTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceCardLayoutTests.swift; sourceTree = "<group>"; };
+		AA00000000000000000000FA /* PVSymbolImages.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSymbolImages.swift; sourceTree = "<group>"; };
+		AA00000000000000000000FC /* PVSymbolImagesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSymbolImagesTests.swift; sourceTree = "<group>"; };
+		AA00000000000000000000FE /* PVFontTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFontTests.swift; sourceTree = "<group>"; };
 		A71900000000000000000001 /* CitationComposerContext.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerContext.swift; sourceTree = "<group>"; };
 		A71D00000000000000000001 /* OCREngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OCREngine.swift; sourceTree = "<group>"; };
 		A71D00000000000000000003 /* OCRImage.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OCRImage.swift; sourceTree = "<group>"; };
 		A71D00000000000000000005 /* VisionOCREngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = VisionOCREngine.swift; sourceTree = "<group>"; };
 		A71D00000000000000000007 /* OCRImageTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OCRImageTests.swift; sourceTree = "<group>"; };
 		A71D00000000000000000009 /* CitationAutoTranscribeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationAutoTranscribeTests.swift; sourceTree = "<group>"; };
+		A71C00000000000000000001 /* ConnectionSentenceRegistry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConnectionSentenceRegistry.swift; sourceTree = "<group>"; };
+		A71C00000000000000000003 /* ConnectionSentenceRegistryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConnectionSentenceRegistryTests.swift; sourceTree = "<group>"; };
 		A71A00000000000000000001 /* ConnectEndpointBinding.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConnectEndpointBinding.swift; sourceTree = "<group>"; };
 		A71B00000000000000000001 /* ConnectEndpointBindingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConnectEndpointBindingTests.swift; sourceTree = "<group>"; };
 		A71000000000000000000005 /* PropertyTermDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PropertyTermDisplayTests.swift; sourceTree = "<group>"; };
@@ -603,20 +676,24 @@
 		AA00000000000000000004C0 /* GraphCanvasHitTarget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasHitTarget.swift; sourceTree = "<group>"; };
 		AA00000000000000000004C2 /* GraphCanvasPointerController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasPointerController.swift; sourceTree = "<group>"; };
 		AA000000000000000000067D /* GraphCanvasItemLayer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasItemLayer.swift; sourceTree = "<group>"; };
+		AA0000000000000000000108 /* GraphCanvasItemView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasItemView.swift; sourceTree = "<group>"; };
 		AA00000000000000000004C4 /* GraphCanvasDocumentView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasDocumentView.swift; sourceTree = "<group>"; };
 		AA00000000000000000004C6 /* GraphCanvasPointerHitTestingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasPointerHitTestingTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000482 /* EvidenceSubjectKindStyle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceSubjectKindStyle.swift; sourceTree = "<group>"; };
 		AA0000000000000000000486 /* GraphCanvasGridMappingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasGridMappingTests.swift; sourceTree = "<group>"; };
-		AA0000000000000000000488 /* SourceGraphSnapshotTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceGraphSnapshotTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000488 /* EvidenceGraphSnapshotTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphSnapshotTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000003F0 /* WorkspaceToolbar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceToolbar.swift; sourceTree = "<group>"; };
 		AA00000000000000000003F2 /* OmnibarFocusCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OmnibarFocusCoordinator.swift; sourceTree = "<group>"; };
 		AA00000000000000000003F4 /* WorkspaceToolbarBreadcrumbTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceToolbarBreadcrumbTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000440 /* WindowDragTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WindowDragTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000003F6 /* PVOmnibarHitRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVOmnibarHitRow.swift; sourceTree = "<group>"; };
 		AA00000000000000000003F8 /* OmnibarResultsModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OmnibarResultsModel.swift; sourceTree = "<group>"; };
-		AA00000000000000000003FE /* OmnibarHitPresentation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OmnibarHitPresentation.swift; sourceTree = "<group>"; };
+		AA00000000000000000003FE /* CatalogSearchHitPresentation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogSearchHitPresentation.swift; sourceTree = "<group>"; };
+		AA000000000000000000E371 /* CatalogSearchModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogSearchModel.swift; sourceTree = "<group>"; };
+		AA000000000000000000E373 /* CatalogSearchHitRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogSearchHitRow.swift; sourceTree = "<group>"; };
 		AA00000000000000000003FA /* OmnibarResultsHost.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OmnibarResultsHost.swift; sourceTree = "<group>"; };
 		AA00000000000000000003FC /* OmnibarResultsModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OmnibarResultsModelTests.swift; sourceTree = "<group>"; };
+		AA000000000000000000E375 /* CatalogSearchTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogSearchTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000400 /* ProjectFilesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProjectFilesTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000411 /* ProjectKey.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProjectKey.swift; sourceTree = "<group>"; };
 		AA0000000000000000000413 /* CatalogQueryKey.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogQueryKey.swift; sourceTree = "<group>"; };
@@ -664,6 +741,7 @@
 		A1B2C3D4E5F60718293A4B5C /* WindowDragRegion.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WindowDragRegion.swift; sourceTree = "<group>"; };
 		7F69681C808F487B9BD6E7AA /* WindowSizing.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WindowSizing.swift; sourceTree = "<group>"; };
 		A5B33345A1FE839C1516B4FC /* WorkspaceChrome.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceChrome.swift; sourceTree = "<group>"; };
+		AA0000000000000000000A14 /* QueryHandleSettled.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QueryHandleSettled.swift; sourceTree = "<group>"; };
 		AA0000000000000000000010 /* ProvenenciaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProvenenciaApp.swift; sourceTree = "<group>"; };
 		AA0000000000000000000011 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000012 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -745,8 +823,16 @@
 		B91100000000000000000007 /* PromoteView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteView.swift; sourceTree = "<group>"; };
 		B9110000000000000000000B /* PromoteModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteModelTests.swift; sourceTree = "<group>"; };
 		B9110000000000000000000D /* PromoteFlow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteFlow.swift; sourceTree = "<group>"; };
-		B91100000000000000000011 /* ComparisonValueDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ComparisonValueDisplay.swift; sourceTree = "<group>"; };
+		C112000400E7D14ECD8AF111 /* PromoteEvidenceSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceSheet.swift; sourceTree = "<group>"; };
+		AA000000000000000005E00A /* PromoteEvidenceCards.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceCards.swift; sourceTree = "<group>"; };
+		C112003C83C97BC64D181BED /* PromoteEvidenceDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceDisplay.swift; sourceTree = "<group>"; };
+		AA000000000000000005E006 /* PromoteEvidenceBoard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceBoard.swift; sourceTree = "<group>"; };
+		C112002B53DFC6E2EF560AC7 /* PromoteReadout.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteReadout.swift; sourceTree = "<group>"; };
 		B9110000000000000000000F /* PromoteFlowTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteFlowTests.swift; sourceTree = "<group>"; };
+		C11200E484C4CD37DD9BA992 /* PromoteEvidenceDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceDisplayTests.swift; sourceTree = "<group>"; };
+		AA000000000000000005E008 /* TextEmphasisRenderingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TextEmphasisRenderingTests.swift; sourceTree = "<group>"; };
+		AA000000000000000005E004 /* PromoteEvidenceBoardTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceBoardTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000FA1 /* StyledFormatTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StyledFormatTests.swift; sourceTree = "<group>"; };
 		B052AEDEE88EFC9ED8413469 /* DateRowDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateRowDisplay.swift; sourceTree = "<group>"; };
 		B0628D2BFA20C5351EA2685B /* DerivedPlace.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DerivedPlace.swift; sourceTree = "<group>"; };
 		B066DC6442EFA8875D71F9AE /* PersonLifeDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonLifeDisplay.swift; sourceTree = "<group>"; };
@@ -762,6 +848,8 @@
 		A53400000000000000000004 /* ArtifactFileFixtures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "ArtifactFileFixtures.swift"; sourceTree = "<group>"; };
 		A53400000000000000000005 /* CitationComposerDepictionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "CitationComposerDepictionTests.swift"; sourceTree = "<group>"; };
 		A53400000000000000000007 /* RegionFixtures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "RegionFixtures.swift"; sourceTree = "<group>"; };
+		A53400000000000000000B01 /* EvidenceGraphFixtures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "EvidenceGraphFixtures.swift"; sourceTree = "<group>"; };
+		A53400000000000000000A01 /* NameFormatOrdersFixtures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "NameFormatOrdersFixtures.swift"; sourceTree = "<group>"; };
 		A53400000000000000000006 /* ArtifactRegionCropTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "ArtifactRegionCropTests.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -804,6 +892,7 @@
 				AA0000000000000000000661 /* SubjectTypeChrome.swift */,
 				AA0000000000000000000253 /* CatalogCounts.swift */,
 				AA0000000000000000000660 /* Connect */,
+				AA000000000000000000E370 /* Search */,
 			);
 			name = Catalog;
 			path = Catalog;
@@ -814,9 +903,20 @@
 			children = (
 				A70900000000000000000009 /* EvidenceBridgeEdgeSummary.swift */,
 				A71A00000000000000000001 /* ConnectEndpointBinding.swift */,
+				A71C00000000000000000001 /* ConnectionSentenceRegistry.swift */,
 				A71700000000000000000001 /* EvidenceGraphPlacement.swift */,
 			);
 			path = Connect;
+			sourceTree = "<group>";
+		};
+		AA000000000000000000E370 /* Search */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000003FE /* CatalogSearchHitPresentation.swift */,
+				AA000000000000000000E371 /* CatalogSearchModel.swift */,
+				AA000000000000000000E373 /* CatalogSearchHitRow.swift */,
+			);
+			path = Search;
 			sourceTree = "<group>";
 		};
 		AA0000000000000000000280 /* CatalogVocabulary */ = {
@@ -848,10 +948,17 @@
 				AA00000000000000000003D2 /* IngestFileDropRow.swift */,
 				AA0000000000000000000360 /* SourcePageChrome.swift */,
 				AA0000000000000000000362 /* SourcePageIdentityHeader.swift */,
+				AA00000000000000000C1206 /* SourceTitleTypeFields.swift */,
+				AA00000000000000000C1208 /* SourceCopyModel.swift */,
+				AA00000000000000000C1210 /* SourceArtifactChecklist.swift */,
+				AA00000000000000000C1212 /* SourceCopyDialog.swift */,
+				AA00000000000000000C1204 /* SourceTypeComboRow.swift */,
 				AA0000000000000000000364 /* SourcePageDescriptionView.swift */,
 				AA0000000000000000000366 /* SourcePageCredibilityView.swift */,
 				AA0000000000000000000368 /* SourcePageMetadataView.swift */,
 				AA000000000000000000036A /* SourcePageArtifactsView.swift */,
+				AA1213000000000000000001 /* SourcePageGraphsView.swift */,
+				AA1212000000000000000001 /* SourceGraphsSection.swift */,
 				AA000000000000000000036C /* SourcePageNotesView.swift */,
 				AA0000000000000000000310 /* SourcePageView.swift */,
 			);
@@ -939,7 +1046,9 @@
 				AA0000000000000000000427 /* WorkspacePresentationID.swift */,
 				AA0000000000000000000429 /* ResolvedPlace.swift */,
 				AA000000000000000000042B /* PlaceRegistry.swift */,
-				AA0000000000000000000460 /* SourceGraphSnapshot.swift */,
+				AA0000000000000000000460 /* EvidenceGraphSnapshot.swift */,
+				AA1210000000000000000001 /* WorkspaceSession+EvidenceGraphs.swift */,
+				AA1211000000000000000001 /* WorkspaceSession+Sources.swift */,
 			);
 			name = Session;
 			path = Session;
@@ -954,7 +1063,6 @@
 				E1F203948576A1B2C3D4E5F4 /* WorkspaceNavigation.swift */,
 				AA00000000000000000003F0 /* WorkspaceToolbar.swift */,
 				AA00000000000000000003F8 /* OmnibarResultsModel.swift */,
-				AA00000000000000000003FE /* OmnibarHitPresentation.swift */,
 				AA00000000000000000003FA /* OmnibarResultsHost.swift */,
 				B8C9D0E1F203948576A1B2C1 /* WorkspaceLocation.swift */,
 				C9D0E1F203948576A1B2C3D2 /* NavigationHistoryStore.swift */,
@@ -964,6 +1072,7 @@
 				AA000000000000000000042F /* WorkspaceDestinationHost.swift */,
 				D8F65C4577481FF5F505271F /* WorkspaceView.swift */,
 				A5B33345A1FE839C1516B4FC /* WorkspaceChrome.swift */,
+				AA0000000000000000000A14 /* QueryHandleSettled.swift */,
 			);
 			name = Workspace;
 			path = Workspace;
@@ -1043,6 +1152,7 @@
 				AA00000000000000000000F0 /* ProjectSlug.swift */,
 				AA0000000000000000000021 /* TextMatch.swift */,
 				A71000000000000000000001 /* PropertyTermDisplay.swift */,
+				AA0000000000000000009F10 /* StyledFormat.swift */,
 				A71100000000000000000001 /* InterpretationValueKinds.swift */,
 				AA00000000000000000000E2 /* L10n.swift */,
 				AA0000000000000000000044 /* Generated */,
@@ -1105,6 +1215,7 @@
 				AA00000000000000000004C0 /* GraphCanvasHitTarget.swift */,
 				AA00000000000000000004C2 /* GraphCanvasPointerController.swift */,
 				AA000000000000000000067D /* GraphCanvasItemLayer.swift */,
+				AA0000000000000000000108 /* GraphCanvasItemView.swift */,
 				AA00000000000000000004C4 /* GraphCanvasDocumentView.swift */,
 			);
 			path = GraphCanvas;
@@ -1286,7 +1397,9 @@
 				AA00000000000000000003A0 /* CatalogSessionStoreTests.swift */,
 				AA00000000000000000003E0 /* SearchCatalogStoreTests.swift */,
 				AA0000000000000000000450 /* SubjectStoreTests.swift */,
+				AA0000000000000000000F50 /* EvidenceGraphStoreTests.swift */,
 				AA00000000000000000003FC /* OmnibarResultsModelTests.swift */,
+				AA000000000000000000E375 /* CatalogSearchTests.swift */,
 				AA00000000000000000003F4 /* WorkspaceToolbarBreadcrumbTests.swift */,
 				AA0000000000000000000440 /* WindowDragTests.swift */,
 				B567080CA23230E18488F894 /* TrafficLightsTests.swift */,
@@ -1299,6 +1412,9 @@
 				A70500000000000000000004 /* PropertiesModelTests.swift */,
 				AA0000000000000000000206 /* SourceTypesModelTests.swift */,
 				AA0000000000000000000312 /* SourcesModelTests.swift */,
+				AA00000000000000000C120C /* SourceCopyModelTests.swift */,
+				AA00000000000000000C120A /* QueryHandleWaiting.swift */,
+				AA00000000000000000C1202 /* CatalogArtifactTests.swift */,
 				AA1041000000000000000003 /* SourcesListSettingsTests.swift */,
 				AA000000000000000000046A /* SourcesListNavigationTests.swift */,
 				AA000000000000000000046E /* PVFloatingMenuSelectionTests.swift */,
@@ -1308,7 +1424,7 @@
 				AA0000000000000000000623 /* PVDeleteImpactTests.swift */,
 				AA000000000000000000047A /* GraphCanvasCoordinatesTests.swift */,
 				AA0000000000000000000486 /* GraphCanvasGridMappingTests.swift */,
-				AA0000000000000000000488 /* SourceGraphSnapshotTests.swift */,
+				AA0000000000000000000488 /* EvidenceGraphSnapshotTests.swift */,
 				AA0000000000000000000494 /* EvidenceGraphModelTests.swift */,
 				A70800000000000000000005 /* CitationComposerModelTests.swift */,
 				A71D00000000000000000007 /* OCRImageTests.swift */,
@@ -1317,13 +1433,20 @@
 				A53400000000000000000005 /* CitationComposerDepictionTests.swift */,
 				A53400000000000000000004 /* ArtifactFileFixtures.swift */,
 				A53400000000000000000007 /* RegionFixtures.swift */,
+				A53400000000000000000B01 /* EvidenceGraphFixtures.swift */,
+				A53400000000000000000A01 /* NameFormatOrdersFixtures.swift */,
 				A71800000000000000000001 /* EvidenceGraphPlacementTests.swift */,
 				AA00000000000000000000F6 /* EvidenceSubjectCardFooterTests.swift */,
 				AA00000000000000000000F8 /* EvidenceCardLayoutTests.swift */,
+				AA00000000000000000000FC /* PVSymbolImagesTests.swift */,
+				AA00000000000000000000FE /* PVFontTests.swift */,
 				AA0000000000000000000672 /* L10nResolutionTests.swift */,
 				AA000000000000000000067F /* GraphCanvasItemLayerTests.swift */,
+				AA000000000000000000010A /* GraphCanvasItemViewTests.swift */,
+				AA0000000000000000000111 /* PVPainterTests.swift */,
 				AA0000000000000000000677 /* L10nPluralTests.swift */,
 				A71B00000000000000000001 /* ConnectEndpointBindingTests.swift */,
+				A71C00000000000000000003 /* ConnectionSentenceRegistryTests.swift */,
 				A70B0000000000000000000B /* ArtifactViewerModelTests.swift */,
 				A70B00000000000000000016 /* ArtifactRegionGeometryTests.swift */,
 				A70B0000000000000000001A /* CitationLocatorDraftTests.swift */,
@@ -1361,6 +1484,10 @@
 				AA0000000000000000000681 /* PVTextAreaTests.swift */,
 				B9110000000000000000000B /* PromoteModelTests.swift */,
 				B9110000000000000000000F /* PromoteFlowTests.swift */,
+				C11200E484C4CD37DD9BA992 /* PromoteEvidenceDisplayTests.swift */,
+				AA000000000000000005E008 /* TextEmphasisRenderingTests.swift */,
+				AA000000000000000005E004 /* PromoteEvidenceBoardTests.swift */,
+				AA0000000000000000000FA1 /* StyledFormatTests.swift */,
 				B0D89A265AAED569EA0CA31E /* DateRowDisplayTests.swift */,
 				B042B09EC818DE35F967C981 /* DerivedPlaceTests.swift */,
 			);
@@ -1379,10 +1506,21 @@
 			path = Button;
 			sourceTree = "<group>";
 		};
+		AA000000000000000000010C /* Painter */ = {
+			isa = PBXGroup;
+			children = (
+				AA000000000000000000010D /* PVPainter.swift */,
+				AA000000000000000000010F /* PVTextMetrics.swift */,
+			);
+			name = Painter;
+			path = Painter;
+			sourceTree = "<group>";
+		};
 		D5C000000000000000000001 /* Icon */ = {
 			isa = PBXGroup;
 			children = (
 				36412B0A6A6851ADB45A7AA8 /* PVIcon.swift */,
+				AA00000000000000000000FA /* PVSymbolImages.swift */,
 			);
 			name = Icon;
 			path = Icon;
@@ -1442,6 +1580,15 @@
 			path = Divider;
 			sourceTree = "<group>";
 		};
+		AA00000000000000000C12F1 /* SkeletonBar */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000C120E /* PVSkeletonBar.swift */,
+			);
+			name = SkeletonBar;
+			path = SkeletonBar;
+			sourceTree = "<group>";
+		};
 		A90900000000000000000010 /* List */ = {
 			isa = PBXGroup;
 			children = (
@@ -1482,6 +1629,7 @@
 			isa = PBXGroup;
 			children = (
 				AA00000000000000000003C0 /* PVContextMenu.swift */,
+				AA00000000000000000FE005 /* PVActionMenu.swift */,
 			);
 			name = ContextMenu;
 			path = ContextMenu;
@@ -1494,6 +1642,15 @@
 			);
 			name = FloatingMenuSelection;
 			path = FloatingMenuSelection;
+			sourceTree = "<group>";
+		};
+		D5C000000000000000000023 /* ScrollRowIntoView */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000004F4 /* PVScrollRowIntoView.swift */,
+			);
+			name = ScrollRowIntoView;
+			path = ScrollRowIntoView;
 			sourceTree = "<group>";
 		};
 		D5C000000000000000000011 /* Field */ = {
@@ -1601,6 +1758,9 @@
 		D5C000000000000000000021 /* Panel */ = {
 			isa = PBXGroup;
 			children = (
+				AA00000000000000000099A0 /* PVOutsideClick.swift */,
+				AA000000000000000005E002 /* PVSheetDismiss.swift */,
+				AA000000000000000005E000 /* PVSheet.swift */,
 				AA0000000000000000000500 /* PVPanel.swift */,
 			);
 			name = Panel;
@@ -1694,6 +1854,7 @@
 			children = (
 				D5C000000000000000000006 /* Button */,
 				D5C000000000000000000001 /* Icon */,
+				AA000000000000000000010C /* Painter */,
 				D5C00000000000000000000E /* LogoMark */,
 				D5C00000000000000000000F /* IconButton */,
 				D5C000000000000000000015 /* HoverEffect */,
@@ -1702,11 +1863,13 @@
 				D5C00000000000000000000C /* Divider */,
 				D5C00000000000000000001A /* Thumbnail */,
 				A90900000000000000000010 /* List */,
+				AA00000000000000000C12F1 /* SkeletonBar */,
 				D5C000000000000000000007 /* Card */,
 				A91600000000000000000010 /* Disclosure */,
 				D5C00000000000000000000D /* SectionHeader */,
 				D5C000000000000000000012 /* ContextMenu */,
 				D5C00000000000000000001B /* FloatingMenuSelection */,
+				D5C000000000000000000023 /* ScrollRowIntoView */,
 				D5C000000000000000000011 /* Field */,
 				D5C00000000000000000001D /* Input */,
 				D5C00000000000000000000B /* InlineEdit */,
@@ -1774,7 +1937,11 @@
 				B91100000000000000000005 /* PromoteModel.swift */,
 				B91100000000000000000007 /* PromoteView.swift */,
 				B9110000000000000000000D /* PromoteFlow.swift */,
-				B91100000000000000000011 /* ComparisonValueDisplay.swift */,
+				C112000400E7D14ECD8AF111 /* PromoteEvidenceSheet.swift */,
+				AA000000000000000005E00A /* PromoteEvidenceCards.swift */,
+				C112003C83C97BC64D181BED /* PromoteEvidenceDisplay.swift */,
+				AA000000000000000005E006 /* PromoteEvidenceBoard.swift */,
+				C112002B53DFC6E2EF560AC7 /* PromoteReadout.swift */,
 			);
 			path = Promote;
 			sourceTree = "<group>";
@@ -1927,6 +2094,7 @@
 				AA0000000000000000000022 /* TextMatch.swift in Sources */,
 				AA00000000000000000000E5 /* L10n.swift in Sources */,
 				A71000000000000000000002 /* PropertyTermDisplay.swift in Sources */,
+				AA0000000000000000009F11 /* StyledFormat.swift in Sources */,
 				A71100000000000000000002 /* InterpretationValueKinds.swift in Sources */,
 				A71200000000000000000002 /* CitationFieldsDraft.swift in Sources */,
 				AA0000000000000000000671 /* CitationTranscriptionModel.swift in Sources */,
@@ -1941,6 +2109,7 @@
 				A71D00000000000000000006 /* VisionOCREngine.swift in Sources */,
 				A71700000000000000000002 /* EvidenceGraphPlacement.swift in Sources */,
 				A71A00000000000000000002 /* ConnectEndpointBinding.swift in Sources */,
+				A71C00000000000000000002 /* ConnectionSentenceRegistry.swift in Sources */,
 				AA0000000000000000000005 /* GenealogyStore.swift in Sources */,
 				AA0000000000000000000006 /* FakeStore.swift in Sources */,
 				AA0000000000000000000007 /* GoStore.swift in Sources */,
@@ -1954,6 +2123,8 @@
 				01574F7767F9B0AF5550AFAD /* PVMotion.swift in Sources */,
 				CA918E2A0BCB420DA8CD87E5 /* PVButton.swift in Sources */,
 				6D245285E4AB8AAFDE78E313 /* PVIcon.swift in Sources */,
+				AA000000000000000000010E /* PVPainter.swift in Sources */,
+				AA0000000000000000000110 /* PVTextMetrics.swift in Sources */,
 				080D24179717B185C273478D /* PVField.swift in Sources */,
 				ECC25906B62C6453A5CB9D25 /* PVInput.swift in Sources */,
 				AA0000000000000000000371 /* PVInlineEdit.swift in Sources */,
@@ -1988,10 +2159,14 @@
 				AA0000000000000000000428 /* WorkspacePresentationID.swift in Sources */,
 				AA000000000000000000042A /* ResolvedPlace.swift in Sources */,
 				AA000000000000000000042C /* PlaceRegistry.swift in Sources */,
-				AA0000000000000000000461 /* SourceGraphSnapshot.swift in Sources */,
+				AA0000000000000000000461 /* EvidenceGraphSnapshot.swift in Sources */,
+				AA1210000000000000000002 /* WorkspaceSession+EvidenceGraphs.swift in Sources */,
+				AA1211000000000000000002 /* WorkspaceSession+Sources.swift in Sources */,
 				AA00000000000000000003F1 /* WorkspaceToolbar.swift in Sources */,
 				AA00000000000000000003F9 /* OmnibarResultsModel.swift in Sources */,
-				AA00000000000000000003FF /* OmnibarHitPresentation.swift in Sources */,
+				AA00000000000000000003FF /* CatalogSearchHitPresentation.swift in Sources */,
+				AA000000000000000000E372 /* CatalogSearchModel.swift in Sources */,
+				AA000000000000000000E374 /* CatalogSearchHitRow.swift in Sources */,
 				AA00000000000000000003FB /* OmnibarResultsHost.swift in Sources */,
 				AA00000000000000000003F7 /* PVOmnibarHitRow.swift in Sources */,
 				AA0000000000000000000620 /* PVDeleteImpact.swift in Sources */,
@@ -2033,12 +2208,14 @@
 				AA00000000000000000004C1 /* GraphCanvasHitTarget.swift in Sources */,
 				AA00000000000000000004C3 /* GraphCanvasPointerController.swift in Sources */,
 				AA000000000000000000067E /* GraphCanvasItemLayer.swift in Sources */,
+				AA0000000000000000000109 /* GraphCanvasItemView.swift in Sources */,
 				AA00000000000000000004C5 /* GraphCanvasDocumentView.swift in Sources */,
 				AA000000000000000000047F /* GraphCanvasGridMapping.swift in Sources */,
 				AA0000000000000000000481 /* EvidenceSubjectCard.swift in Sources */,
 				AA0000000000000000000A11 /* EvidenceCardView.swift in Sources */,
 				A80600000000000000000002 /* EvidenceCitedPropertyMarks.swift in Sources */,
 				A90400000000000000000002 /* EvidenceCardLayout.swift in Sources */,
+				AA00000000000000000000FB /* PVSymbolImages.swift in Sources */,
 				AA000000000000000000067A /* EvidenceCardText.swift in Sources */,
 				AA000000000000000000067C /* EvidenceCanvasCard.swift in Sources */,
 				A70900000000000000000006 /* ObservationValueDisplay.swift in Sources */,
@@ -2048,6 +2225,7 @@
 				AA0000000000000000000483 /* EvidenceSubjectKindStyle.swift in Sources */,
 				14A19539FB0D86BB050EC437 /* WorkspaceView.swift in Sources */,
 				13208FE0B57739DECCA156C7 /* WorkspaceChrome.swift in Sources */,
+				AA0000000000000000000A15 /* QueryHandleSettled.swift in Sources */,
 				840A56FF5DC13597C1DFDDF9 /* TrafficLights.swift in Sources */,
 				B2C3D4E5F60718293A4B5C6D /* WindowDragRegion.swift in Sources */,
 				327D9751467546DCB56EC478 /* WindowSizing.swift in Sources */,
@@ -2085,10 +2263,14 @@
 				57420D5CDD1330745ACC33FD /* MetadataDetailPane.swift in Sources */,
 				AA0000000000000000000301 /* PVThumbnail.swift in Sources */,
 				A90900000000000000000002 /* PVList.swift in Sources */,
+				AA00000000000000000C120F /* PVSkeletonBar.swift in Sources */,
 				AA00000000000000000003B1 /* PVMark.swift in Sources */,
 				AA1041000000000000000008 /* PVLastUpdated.swift in Sources */,
 				AA000000000000000000031F /* PVReorderableList.swift in Sources */,
 				AA0000000000000000000305 /* PVFormDialog.swift in Sources */,
+				AA00000000000000000099A1 /* PVOutsideClick.swift in Sources */,
+				AA000000000000000005E003 /* PVSheetDismiss.swift in Sources */,
+				AA000000000000000005E001 /* PVSheet.swift in Sources */,
 				AA0000000000000000000501 /* PVPanel.swift in Sources */,
 				AA0000000000000000000307 /* SourcesModel.swift in Sources */,
 				AA1041000000000000000002 /* SourcesListSettings.swift in Sources */,
@@ -2104,10 +2286,17 @@
 				AA000000000000000000034B /* SourceArtifactsSection.swift in Sources */,
 				AA0000000000000000000361 /* SourcePageChrome.swift in Sources */,
 				AA0000000000000000000363 /* SourcePageIdentityHeader.swift in Sources */,
+				AA00000000000000000C1207 /* SourceTitleTypeFields.swift in Sources */,
+				AA00000000000000000C1209 /* SourceCopyModel.swift in Sources */,
+				AA00000000000000000C1211 /* SourceArtifactChecklist.swift in Sources */,
+				AA00000000000000000C1213 /* SourceCopyDialog.swift in Sources */,
+				AA00000000000000000C1205 /* SourceTypeComboRow.swift in Sources */,
 				AA0000000000000000000365 /* SourcePageDescriptionView.swift in Sources */,
 				AA0000000000000000000367 /* SourcePageCredibilityView.swift in Sources */,
 				AA0000000000000000000369 /* SourcePageMetadataView.swift in Sources */,
 				AA000000000000000000036B /* SourcePageArtifactsView.swift in Sources */,
+				AA1213000000000000000002 /* SourcePageGraphsView.swift in Sources */,
+				AA1212000000000000000002 /* SourceGraphsSection.swift in Sources */,
 				AA000000000000000000036D /* SourcePageNotesView.swift in Sources */,
 				AA0000000000000000000331 /* DateValueDraft.swift in Sources */,
 				A70900000000000000000002 /* DateValueDisplay.swift in Sources */,
@@ -2154,7 +2343,9 @@
 				AA0000000000000000000391 /* ThumbnailCache.swift in Sources */,
 				AA0000000000000000000393 /* CachedThumbnail.swift in Sources */,
 				AA00000000000000000003C1 /* PVContextMenu.swift in Sources */,
+				AA00000000000000000FE006 /* PVActionMenu.swift in Sources */,
 				AA000000000000000000046D /* PVFloatingMenuSelection.swift in Sources */,
+				AA00000000000000000004F5 /* PVScrollRowIntoView.swift in Sources */,
 				AA0000000000000000000467 /* SourcesListNavigation.swift in Sources */,
 				AA0000000000000000000469 /* SourcesSplitRow.swift in Sources */,
 				AA0000000000000000000351 /* TimestampFormat.swift in Sources */,
@@ -2164,7 +2355,11 @@
 				B91100000000000000000006 /* PromoteModel.swift in Sources */,
 				B91100000000000000000008 /* PromoteView.swift in Sources */,
 				B9110000000000000000000E /* PromoteFlow.swift in Sources */,
-				B91100000000000000000012 /* ComparisonValueDisplay.swift in Sources */,
+				C1120094E727223A3EA7D87A /* PromoteEvidenceSheet.swift in Sources */,
+				AA000000000000000005E00B /* PromoteEvidenceCards.swift in Sources */,
+				C11200BD269354BE1FC4BDC0 /* PromoteEvidenceDisplay.swift in Sources */,
+				AA000000000000000005E007 /* PromoteEvidenceBoard.swift in Sources */,
+				C11200E6D8FE13682466E995 /* PromoteReadout.swift in Sources */,
 				B02746CAC03F94127373BB92 /* DateRowDisplay.swift in Sources */,
 				B0F71D26711A163E3B415FCB /* DerivedPlace.swift in Sources */,
 				B071F1D64BED98AE2965E8AD /* PersonLifeDisplay.swift in Sources */,
@@ -2196,7 +2391,9 @@
 				AA00000000000000000003A1 /* CatalogSessionStoreTests.swift in Sources */,
 				AA00000000000000000003E1 /* SearchCatalogStoreTests.swift in Sources */,
 				AA0000000000000000000451 /* SubjectStoreTests.swift in Sources */,
+				AA0000000000000000000F51 /* EvidenceGraphStoreTests.swift in Sources */,
 				AA00000000000000000003FD /* OmnibarResultsModelTests.swift in Sources */,
+				AA000000000000000000E376 /* CatalogSearchTests.swift in Sources */,
 				AA00000000000000000003F5 /* WorkspaceToolbarBreadcrumbTests.swift in Sources */,
 				AA0000000000000000000441 /* WindowDragTests.swift in Sources */,
 				8B20E11A26E9E10EF915519C /* TrafficLightsTests.swift in Sources */,
@@ -2210,6 +2407,9 @@
 				AA0000000000000000000216 /* SourceTypesModelTests.swift in Sources */,
 				AA0000000000000000000242 /* PVComboBoxTests.swift in Sources */,
 				AA0000000000000000000313 /* SourcesModelTests.swift in Sources */,
+				AA00000000000000000C120D /* SourceCopyModelTests.swift in Sources */,
+				AA00000000000000000C120B /* QueryHandleWaiting.swift in Sources */,
+				AA00000000000000000C1203 /* CatalogArtifactTests.swift in Sources */,
 				AA1041000000000000000004 /* SourcesListSettingsTests.swift in Sources */,
 				AA000000000000000000046B /* SourcesListNavigationTests.swift in Sources */,
 				AA000000000000000000046F /* PVFloatingMenuSelectionTests.swift in Sources */,
@@ -2219,7 +2419,7 @@
 				AA0000000000000000000622 /* PVDeleteImpactTests.swift in Sources */,
 				AA000000000000000000047B /* GraphCanvasCoordinatesTests.swift in Sources */,
 				AA0000000000000000000487 /* GraphCanvasGridMappingTests.swift in Sources */,
-				AA0000000000000000000489 /* SourceGraphSnapshotTests.swift in Sources */,
+				AA0000000000000000000489 /* EvidenceGraphSnapshotTests.swift in Sources */,
 				AA0000000000000000000495 /* EvidenceGraphModelTests.swift in Sources */,
 				A70800000000000000000006 /* CitationComposerModelTests.swift in Sources */,
 				A71D00000000000000000008 /* OCRImageTests.swift in Sources */,
@@ -2228,14 +2428,21 @@
 				A53400000000000000001005 /* CitationComposerDepictionTests.swift in Sources */,
 				A53400000000000000001004 /* ArtifactFileFixtures.swift in Sources */,
 				A53400000000000000001007 /* RegionFixtures.swift in Sources */,
+				A53400000000000000001B01 /* EvidenceGraphFixtures.swift in Sources */,
+				A53400000000000000001A01 /* NameFormatOrdersFixtures.swift in Sources */,
 				A71800000000000000000002 /* EvidenceGraphPlacementTests.swift in Sources */,
 				AA00000000000000000000F7 /* EvidenceSubjectCardFooterTests.swift in Sources */,
 				AA00000000000000000000F9 /* EvidenceCardLayoutTests.swift in Sources */,
+				AA00000000000000000000FD /* PVSymbolImagesTests.swift in Sources */,
+				AA00000000000000000000FF /* PVFontTests.swift in Sources */,
 				AA0000000000000000000673 /* L10nResolutionTests.swift in Sources */,
 				AA0000000000000000000680 /* GraphCanvasItemLayerTests.swift in Sources */,
+				AA000000000000000000010B /* GraphCanvasItemViewTests.swift in Sources */,
+				AA0000000000000000000112 /* PVPainterTests.swift in Sources */,
 				AA0000000000000000000682 /* PVTextAreaTests.swift in Sources */,
 				AA0000000000000000000678 /* L10nPluralTests.swift in Sources */,
 				A71B00000000000000000002 /* ConnectEndpointBindingTests.swift in Sources */,
+				A71C00000000000000000004 /* ConnectionSentenceRegistryTests.swift in Sources */,
 				A70B0000000000000000000C /* ArtifactViewerModelTests.swift in Sources */,
 				A70B00000000000000000017 /* ArtifactRegionGeometryTests.swift in Sources */,
 				A70B0000000000000000001B /* CitationLocatorDraftTests.swift in Sources */,
@@ -2271,6 +2478,10 @@
 				A71000000000000000000006 /* PropertyTermDisplayTests.swift in Sources */,
 				B9110000000000000000000C /* PromoteModelTests.swift in Sources */,
 				B91100000000000000000010 /* PromoteFlowTests.swift in Sources */,
+				C112007CF5D40430AF417EA9 /* PromoteEvidenceDisplayTests.swift in Sources */,
+				AA000000000000000005E009 /* TextEmphasisRenderingTests.swift in Sources */,
+				AA000000000000000005E005 /* PromoteEvidenceBoardTests.swift in Sources */,
+				AA0000000000000000000FA2 /* StyledFormatTests.swift in Sources */,
 				B0E27559D6CFFEBA2093C436 /* DateRowDisplayTests.swift in Sources */,
 				B0E8631619214033F0948729 /* DerivedPlaceTests.swift in Sources */,
 			);

@@ -154,7 +154,6 @@ struct PVTable<Row: Identifiable, Content: View>: View {
 
     @FocusState private var isFocused: Bool
     @State private var matcher = PVTableTypeSelectMatcher()
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(
         rows: [Row],
@@ -197,20 +196,15 @@ struct PVTable<Row: Identifiable, Content: View>: View {
 
     /// The scrolling row list: one focus stop, list-like semantics.
     private var rowList: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(rows) { row in
-                        rowView(row).id(row.id)
-                    }
-                    content
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(rows) { row in
+                    rowView(row).id(row.id)
                 }
-            }
-            .onChange(of: selection) { _, new in
-                guard let new else { return }
-                withAnimation(reduceMotion ? nil : PVMotion.fastStandard) { proxy.scrollTo(new) }
+                content
             }
         }
+        .pvScrollsRowIntoView(selection)
         .focusable()
         .focusEffectDisabled()
         .focused($isFocused)

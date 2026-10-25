@@ -8,13 +8,14 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
@@ -27,7 +28,7 @@ func promotableSubject(t *testing.T) *engine.PromoteSubjectRequest {
 	t.Helper()
 	dir, userID, sourceID, typeID := subjectFixture(t)
 	out, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
-		ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: typeID, Label: "James",
+		ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: typeID, Label: "James",
 	}))
 	if err != nil {
 		t.Fatal(err)
@@ -111,7 +112,7 @@ func TestUnpromoteSubject(t *testing.T) {
 		}
 		n := 0
 		for _, src := range list.Sources {
-			out, err := ListSubjectMemberships(marshalProto(t, &engine.ListSubjectMembershipsRequest{ProjectDir: dir, SourceId: src.GetId()}))
+			out, err := ListSubjectMemberships(marshalProto(t, &engine.ListSubjectMembershipsRequest{ProjectDir: dir, GraphId: soleGraphID(t, dir, src.GetId())}))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -157,7 +158,7 @@ func TestUnpromoteSubject(t *testing.T) {
 					t.Fatal(err)
 				}
 				e := resp.GetEffects()
-				if len(e.GetSources()) == 0 || len(e.GetHandles()) == 0 {
+				if len(e.GetEvidenceGraphs()) == 0 || len(e.GetHandles()) == 0 {
 					t.Fatalf("effects %+v", e)
 				}
 				in := req.(*engine.UnpromoteSubjectRequest)
@@ -190,7 +191,7 @@ func TestUnpromoteSubject(t *testing.T) {
 					}
 				}
 				out, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
-					ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: relID, Label: "bridge",
+					ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: relID, Label: "bridge",
 				}))
 				if err != nil {
 					t.Fatal(err)
@@ -247,7 +248,7 @@ func TestListSubjectMemberships(t *testing.T) {
 		dir, userID, sourceID, typeID := subjectFixture(t)
 		create := func(label string) string {
 			out, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
-				ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: typeID, Label: label,
+				ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: typeID, Label: label,
 			}))
 			if err != nil {
 				t.Fatal(err)
@@ -277,7 +278,7 @@ func TestListSubjectMemberships(t *testing.T) {
 	t.Run("promoted listed with handle and kind, unpromoted absent", func(t *testing.T) {
 		f := setup(t)
 		out, err := ListSubjectMemberships(marshalProto(t, &engine.ListSubjectMembershipsRequest{
-			ProjectDir: f.dir, SourceId: f.sourceID,
+			ProjectDir: f.dir, GraphId: soleGraphID(t, f.dir, f.sourceID),
 		}))
 		if err != nil {
 			t.Fatal(err)
@@ -307,7 +308,7 @@ func TestListSubjectMemberships(t *testing.T) {
 			name: "bad source id",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _, _, _ := subjectFixture(t)
-				return &engine.ListSubjectMembershipsRequest{ProjectDir: dir, SourceId: "nope"}
+				return &engine.ListSubjectMembershipsRequest{ProjectDir: dir, GraphId: "nope"}
 			},
 			wantErr: true,
 		},
@@ -326,16 +327,11 @@ func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...stri
 		if err != nil {
 			return err
 		}
-		var sourceID, typeID []byte
-		if err := db.QueryRow(`SELECT source_id, subject_type_id FROM subjects WHERE id = ?`, first[:]).Scan(&sourceID, &typeID); err != nil {
+		var graphID, typeID []byte
+		if err := db.QueryRow(`SELECT graph_id, subject_type_id FROM subjects WHERE id = ?`, first[:]).Scan(&graphID, &typeID); err != nil {
 			return err
 		}
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID[:]}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID[:], subjects.CreateInput{SourceID: sourceID, SubjectTypeID: typeID}, nil)
-		})
-		if err != nil {
-			return err
-		}
+		s := subjectstest.OfType(t, c, userID[:], graphID, typeID, "")
 		id = s.ID
 		if len(forms) == 0 {
 			return nil
@@ -344,7 +340,7 @@ func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...stri
 		if err != nil {
 			return err
 		}
-		art, err := runArtifactCreate(c, userID[:], artifacts.CreateInput{SourceID: sourceID, Label: "Scan"})
+		art, err := artifactstest.Create(c, userID[:], artifacts.CreateInput{SourceID: s.SourceID, Label: "Scan"})
 		if err != nil {
 			return err
 		}
@@ -361,7 +357,7 @@ func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...stri
 	}); err != nil {
 		t.Fatal(err)
 	}
-	return uuidString(id)
+	return database.UUIDString(id)
 }
 
 func promoteOK(t *testing.T, req *engine.PromoteSubjectRequest) *engine.PromoteSubjectResponse {

@@ -96,6 +96,6 @@ test can reach; then give exact manual steps.
 The shape to copy. Names in the example are illustrative.
 
 "AC-2.1 says a filed Source drops out of the In-progress filter. The query in
-`core/database/sourcegraphprogress` counts a primary as filed when *any* claim
+`core/database/graphprogress` counts a primary as filed when *any* claim
 is accepted, not when every primary has one. Failing test:
 `TestEvidenceStatus/one_of_two_primaries_filed` → want In progress, got Filed."

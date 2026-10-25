@@ -4,9 +4,11 @@ import (
 	"database/sql"
 	"strings"
 
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/depictionvalue"
 	"github.com/mendahu/provenencia/core/locator"
 )
 
@@ -17,8 +19,8 @@ type StagedFile interface {
 	InsertTx(tx *sql.Tx) (files.File, []rowchange.Change, error)
 }
 
-// DepictionInput is the value of a depiction Property: the region of the
-// Citation's page that shows the face, and the image of it. A caller sets
+// DepictionInput is the value of a depiction Property: a region of the
+// Citation's page and the image of it. A caller sets
 // RegionJSON and ImagePath; ingest.StageDepictions reads ImagePath and sets
 // Image. The write never reads ImagePath.
 type DepictionInput struct {
@@ -51,6 +53,7 @@ func resolveDepiction(tx *sql.Tx, citationID []byte, d *DepictionInput) (resolve
 	if len(fileID) != 16 {
 		return resolvedValue{}, ErrInvalid
 	}
+	d.RegionJSON = strings.TrimSpace(d.RegionJSON)
 	if err := locator.ValidateDepictionRegion(d.RegionJSON, locatorJSON); err != nil {
 		return resolvedValue{}, err
 	}
@@ -58,17 +61,16 @@ func resolveDepiction(tx *sql.Tx, citationID []byte, d *DepictionInput) (resolve
 	if err != nil {
 		return resolvedValue{}, err
 	}
-	v := depictionvalues.Value{RegionJSON: d.RegionJSON, ImageFileID: file.ID}
+	v := depictionvalue.Value{RegionJSON: d.RegionJSON, ImageFileID: file.ID}
 	id, err := depictionvalues.InsertTx(tx, v)
 	if err != nil {
 		return resolvedValue{}, err
 	}
-	v.RegionJSON = strings.TrimSpace(v.RegionJSON)
 	changes := append(fileChanges, depictionCreateChange(id, v))
 	return resolvedValue{DepictionID: id, ValueChanges: changes}, nil
 }
 
-func depictionCreateChange(id []byte, v depictionvalues.Value) rowchange.Change {
+func depictionCreateChange(id []byte, v depictionvalue.Value) rowchange.Change {
 	return rowchange.Change{
 		EntityType: "depiction_value",
 		EntityID:   append([]byte(nil), id...),
@@ -77,10 +79,10 @@ func depictionCreateChange(id []byte, v depictionvalues.Value) rowchange.Change 
 	}
 }
 
-func depictionValueMap(id []byte, v depictionvalues.Value) map[string]any {
+func depictionValueMap(id []byte, v depictionvalue.Value) map[string]any {
 	return map[string]any{
-		"id":            uuidJSON(id),
+		"id":            database.UUIDJSON(id),
 		"region_json":   v.RegionJSON,
-		"image_file_id": uuidJSON(v.ImageFileID),
+		"image_file_id": database.UUIDJSON(v.ImageFileID),
 	}
 }

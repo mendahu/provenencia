@@ -52,6 +52,15 @@ struct SourcesModelTests {
     ) -> (SourcesModel, WorkspaceSession) {
         store.sourcesByProject[projectDir] = sources
         store.sourceTypesByProject[projectDir] = types
+        if store.evidenceGraphsByProject[projectDir] == nil {
+            // One Default graph per Source, linking an Artifact, with an id that is not the Source's.
+            store.evidenceGraphsByProject[projectDir] = sources.map {
+                CatalogEvidenceGraph(
+                    id: "g-\($0.id)", ref: "GPH-1", sourceID: $0.id, name: "Default", description: "",
+                    artifactIDs: ["a-\($0.id)"]
+                )
+            }
+        }
         let session = makeSession(store: store)
         let model = SourcesModel(
             session: session,
@@ -61,17 +70,6 @@ struct SourcesModelTests {
             settingsStore: settingsStore
         )
         return (model, session)
-    }
-
-    private func waitForQuery<Value>(_ handle: QueryHandle<Value>) async {
-        var waited: UInt64 = 0
-        let step: UInt64 = 10_000_000
-        while waited < 2_000_000_000 {
-            if handle.status == .ready || handle.status == .error { return }
-            await Task.yield()
-            try? await Task.sleep(nanoseconds: step)
-            waited += step
-        }
     }
 
     private func warmLists(_ model: SourcesModel, session: WorkspaceSession) async {
@@ -86,12 +84,17 @@ struct SourcesModelTests {
         ) {
             await waitForQuery(typesHandle)
         }
+        if let graphsHandle: QueryHandle<[CatalogEvidenceGraph]> = session.queryHandle(
+            CatalogQueryKey.evidenceGraphsList(project: session.projectKey)
+        ) {
+            await waitForQuery(graphsHandle)
+        }
         model.syncCatalogCounts()
     }
 
     private func warmProgress(_ model: SourcesModel, session: WorkspaceSession) async {
-        if let handle: QueryHandle<[String: SourceGraphProgress]> = session.queryHandle(
-            SourcesModel.sourceGraphProgressKey(for: session)
+        if let handle: QueryHandle<[String: EvidenceGraphProgress]> = session.queryHandle(
+            SourcesModel.evidenceGraphProgressKey(for: session)
         ) {
             await waitForQuery(handle)
         }
@@ -99,9 +102,9 @@ struct SourcesModelTests {
 
     private func progress(
         _ id: String, primary: Int, filed: Int
-    ) -> SourceGraphProgress {
-        SourceGraphProgress(
-            sourceId: id, subjectCount: primary, observationCount: 0,
+    ) -> EvidenceGraphProgress {
+        EvidenceGraphProgress(
+            graphId: "g-\(id)", sourceId: id, subjectCount: primary, observationCount: 0,
             primaryCount: primary, filedCount: filed
         )
     }
@@ -111,6 +114,14 @@ struct SourcesModelTests {
             .appendingPathComponent("sources-settings-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent("settings.json", isDirectory: false)
+    }
+
+    @Test func openCopySetsCopyingForThatSource() {
+        let s1 = source(id: "s1", title: "Obit", typeID: "t1")
+        let (model, _) = makeModel(sources: [s1], types: [photoType()])
+        #expect(model.copying == nil)
+        model.openCopy(s1)
+        #expect(model.copying?.original.id == "s1")
     }
 
     @Test func sessionQueryPopulatesSourcesTypesAndPublishesCount() async {
@@ -211,28 +222,75 @@ struct SourcesModelTests {
         #expect(model.isAdding)
     }
 
-    @Test func createReturnsSourceAndPublishesCount() async {
-        let store = FakeStore()
-        let counts = CatalogCounts(projectDir: projectDir, store: store)
-        let (model, session) = makeModel(
-            store: store,
-            types: [photoType()],
-            catalogCounts: counts
-        )
+    @Test func draftValidation() {
+        let empty = SourcesModel.Draft(sourceTypeID: "", title: "  ").validation
+        #expect(empty.typeError == L10n.string(L10n.Sources.typeRequired))
+        #expect(empty.titleError == L10n.string(L10n.Sources.titleRequired))
+        #expect(!empty.isValid)
+
+        let draft = SourcesModel.Draft(sourceTypeID: "t1", title: " Album ")
+        #expect(draft.validation.typeError == nil)
+        #expect(draft.validation.titleError == nil)
+        #expect(draft.validation.isValid)
+        #expect(draft.trimmedTitle == "Album")
+    }
+
+    @Test func canSubmitAddFollowsValidation() async {
+        let (model, session) = makeModel(types: [photoType(), bookType()])
         await warmLists(model, session: session)
-        #expect(counts.sources == 0)
+        model.openAdd()
+        #expect(!model.canSubmitAdd)
+        model.draft.sourceTypeID = "t1"
+        model.draft.title = "Album"
+        #expect(model.canSubmitAdd)
+        model.draft.title = " "
+        #expect(!model.canSubmitAdd)
+    }
+
+    @Test func createReturnsSourceAndRefreshesList() async {
+        let (model, session) = makeModel(types: [photoType()])
+        await warmLists(model, session: session)
+        session.apply(location: .sectionRoot(.sources))
 
         model.openAdd()
         model.draft.sourceTypeID = "t1"
         model.draft.title = "  Family album  "
         model.draft.description = "Nan's prints"
         let created = await model.create()
+        if let handle: QueryHandle<[CatalogSource]> = session.queryHandle(
+            SourcesModel.sourcesListKey(for: session)
+        ) {
+            await waitForQuery(handle)
+        }
 
         #expect(!model.isAdding)
-        #expect(model.sources.count == 1)
         #expect(created?.title == "Family album")
-        #expect(counts.sources == 1)
+        #expect(model.sources.count == 1)
         #expect(model.toast != nil)
+    }
+
+    @Test func createRefreshesListThroughSession() async {
+        let store = FakeStore()
+        let (model, session) = makeModel(
+            store: store,
+            sources: [source(id: "s1", title: "Deed", typeID: "t1")],
+            types: [photoType()]
+        )
+        await warmLists(model, session: session)
+        session.apply(location: .sectionRoot(.sources))
+        store.sourcesByProject[projectDir]?.append(source(id: "s2", title: "Will", typeID: "t1"))
+
+        model.openAdd()
+        model.draft.sourceTypeID = "t1"
+        model.draft.title = "Family album"
+        _ = await model.create()
+        if let handle: QueryHandle<[CatalogSource]> = session.queryHandle(
+            SourcesModel.sourcesListKey(for: session)
+        ) {
+            await waitForQuery(handle)
+        }
+
+        #expect(Set(model.sources.map(\.title)) == ["Deed", "Will", "Family album"])
     }
 
     @Test func cancelAddDoesNotCreate() async {
@@ -258,7 +316,7 @@ struct SourcesModelTests {
             await waitForQuery(typesHandle)
         }
         #expect(model.types.map(\.id) == ["t1", "t2"])
-        #expect(model.typeComboOptions.count == 2)
+        #expect(model.types.count == 2)
     }
 
     @Test func typesHandleLoadsWhenSourcesListFails() async {
@@ -318,6 +376,43 @@ struct SourcesModelTests {
         #expect(model.sources.first?.coverMode == "type_icon")
     }
 
+    /// A hidden list publishes its count only once its reload lands, not from the stale cached rows.
+    @Test func hiddenListRepublishesCountAfterReload() async {
+        let store = FakeStore()
+        let counts = CatalogCounts(projectDir: projectDir, store: store)
+        let (model, session) = makeModel(
+            store: store,
+            sources: [source(id: "s1", title: "Album", typeID: "t1", ref: "SRC-0001")],
+            types: [photoType()],
+            catalogCounts: counts
+        )
+        await warmLists(model, session: session)
+        #expect(counts.sources == 1)
+
+        // The list is hidden: a write marks it stale instead of reloading it.
+        store.sourcesByProject[projectDir]?.append(
+            source(id: "s2", title: "Deed", typeID: "t1", ref: "SRC-0002")
+        )
+        session.apply(.createdSource)
+
+        // Coming back reloads it. The cached `.ready` value must not be republished.
+        model.warmListQueries()
+        guard let handle: QueryHandle<[CatalogSource]> = session.queryHandle(
+            SourcesModel.sourcesListKey(for: session)
+        ) else {
+            Issue.record("sources handle missing")
+            return
+        }
+        #expect(handle.isFetching)
+        #expect(!handle.isSettled)
+
+        await waitForQuery(handle)
+        #expect(handle.isSettled)
+        model.syncCatalogCounts()
+        #expect(model.sources.count == 2)
+        #expect(counts.sources == 2)
+    }
+
     /// A write's activity moves the row in the Updated sort without a reload.
     @Test func writeActivityMovesTheRowInTheUpdatedSort() async {
         let (model, session) = makeModel(
@@ -341,8 +436,8 @@ struct SourcesModelTests {
 
     @Test func warmListQueriesLoadsGraphProgress() async {
         let store = FakeStore()
-        store.graphProgressBySource["s1"] = SourceGraphProgress(
-            sourceId: "s1", subjectCount: 4, observationCount: 0
+        store.graphProgressByGraph["g-s1"] = EvidenceGraphProgress(
+            graphId: "g-s1", sourceId: "s1", subjectCount: 4, observationCount: 0
         )
         let (model, session) = makeModel(
             store: store,
@@ -350,12 +445,12 @@ struct SourcesModelTests {
             types: [photoType()]
         )
         await warmLists(model, session: session)
-        if let progressHandle: QueryHandle<[String: SourceGraphProgress]> = session.queryHandle(
-            SourcesModel.sourceGraphProgressKey(for: session)
+        if let progressHandle: QueryHandle<[String: EvidenceGraphProgress]> = session.queryHandle(
+            SourcesModel.evidenceGraphProgressKey(for: session)
         ) {
             await waitForQuery(progressHandle)
         }
-        #expect(model.graphProgress(for: "s1")?.subjectCount == 4)
+        #expect(model.graphProgress(for: "g-s1")?.subjectCount == 4)
         #expect(model.graphCountsLoading == false)
     }
 
@@ -368,14 +463,14 @@ struct SourcesModelTests {
         )
         #expect(
             L10n.Sources.graphZoneAccessibility(
-                progress: .zeros(sourceId: "s1"),
+                progress: .zeros(graphId: "g1"),
                 countsLoading: false
             ) == "Open graph, 0 subjects, not started"
         )
         #expect(
             L10n.Sources.graphZoneAccessibility(
-                progress: SourceGraphProgress(
-                    sourceId: "s1", subjectCount: 12, observationCount: 48
+                progress: EvidenceGraphProgress(
+                    graphId: "g1", sourceId: "s1", subjectCount: 12, observationCount: 48
                 ),
                 countsLoading: false
             ) == "Open graph, 12 subjects, 48 observations"
@@ -459,9 +554,9 @@ struct SourcesModelTests {
             sources.append(source(id: "s\(index)", title: title, typeID: typeID, ref: "SRC-0000\(index)"))
         }
         for id in ["s1", "s2", "s5"] {
-            store.graphProgressBySource[id] = progress(id, primary: 2, filed: 1)
+            store.graphProgressByGraph["g-\(id)"] = progress(id, primary: 2, filed: 1)
         }
-        store.graphProgressBySource["s3"] = progress("s3", primary: 1, filed: 1)
+        store.graphProgressByGraph["g-s3"] = progress("s3", primary: 1, filed: 1)
         let (model, session) = makeModel(
             store: store, sources: sources, types: [photoType(), bookType()]
         )
@@ -508,7 +603,7 @@ struct SourcesModelTests {
 
     @Test func statusFilterWaitsForCounts() async {
         let store = FakeStore()
-        store.graphProgressBySource["s1"] = progress("s1", primary: 1, filed: 0)
+        store.graphProgressByGraph["g-s1"] = progress("s1", primary: 1, filed: 0)
         let (model, session) = makeModel(
             store: store,
             sources: [
@@ -537,7 +632,7 @@ struct SourcesModelTests {
     @Test func statusCountsFailureSurfacesAnErrorAndUnfilteredCount() async {
         enum Boom: Error { case boom }
         let store = FakeStore()
-        store.listSourceGraphProgressError = Boom.boom
+        store.listEvidenceGraphProgressError = Boom.boom
         let (model, session) = makeModel(
             store: store,
             sources: [
@@ -553,5 +648,43 @@ struct SourcesModelTests {
         model.settings.status = .filed
         #expect(model.statusCountsError != nil)
         #expect(model.countLine(visibleCount: model.visibleSources.count) == L10n.Sources.countLine(total: 2))
+    }
+
+    @Test func graphListFailureShowsTheStatusError() async {
+        enum Boom: Error { case boom }
+        let store = FakeStore()
+        store.listEvidenceGraphsError = Boom.boom
+        let (model, session) = makeModel(
+            store: store,
+            sources: [source(id: "s1", title: "A", typeID: "t1")],
+            types: [photoType()]
+        )
+        model.warmListQueries()
+        await warmProgress(model, session: session)
+        if let handle: QueryHandle<[CatalogEvidenceGraph]> = session.queryHandle(
+            CatalogQueryKey.evidenceGraphsList(project: session.projectKey)
+        ) {
+            await waitForQuery(handle)
+        }
+        model.settings.status = .empty
+        #expect(model.statusCountsError != nil)
+        #expect(!model.isAwaitingFilterData)
+    }
+
+    @Test func graphListLoadingKeepsCountsLoading() async {
+        let store = FakeStore()
+        let (model, session) = makeModel(
+            store: store,
+            sources: [source(id: "s1", title: "A", typeID: "t1")],
+            types: [photoType()]
+        )
+        // Only the progress read starts; the graph list is still pending.
+        let _: QueryHandle<[String: EvidenceGraphProgress]> = session.query(
+            SourcesModel.evidenceGraphProgressKey(for: session)
+        )
+        await warmProgress(model, session: session)
+        model.settings.status = .empty
+        #expect(model.graphCountsLoading)
+        #expect(model.isAwaitingFilterData)
     }
 }

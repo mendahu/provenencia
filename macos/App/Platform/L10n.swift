@@ -96,6 +96,16 @@ enum L10n {
             defaultValue: "*",
             comment: "Marks a required PVField as required, shown beside its label"
         )
+        static let optionalMarker = LocalizedStringResource(
+            "designSystem.field.optionalMarker",
+            defaultValue: "(optional)",
+            comment: "Marks an optional PVField, shown muted beside its label"
+        )
+        static let checkboxPartlyChecked = LocalizedStringResource(
+            "designSystem.checkbox.partlyChecked",
+            defaultValue: "partly checked",
+            comment: "Spoken value of a PVCheckbox that is checked for some of what it covers, not all"
+        )
 
         static let formDialogDiscardTitle = LocalizedStringResource(
             "designSystem.formDialog.discardTitle",
@@ -206,6 +216,12 @@ enum L10n {
             "designSystem.list.loading",
             defaultValue: "Loading",
             comment: "Accessibility label for a PVList skeleton shown on first load"
+        )
+
+        static let comboBoxSearching = LocalizedStringResource(
+            "designSystem.comboBox.searching",
+            defaultValue: "Searching…",
+            comment: "PVComboBox list line while the caller's remote search runs and no results are in yet"
         )
 
         static let thumbnailLoading = LocalizedStringResource(
@@ -1082,14 +1098,6 @@ enum L10n {
             comment: "Evidence graph deep place title (toolbar breadcrumb and stub)"
         )
 
-        static func evidenceGraphFor(sourceTitle: String) -> String {
-            return L10n.format(LocalizedStringResource(
-                "workspace.section.evidenceGraph.forSource",
-                defaultValue: "Evidence graph for %@",
-                comment: "Composer breadcrumb segment; argument is the Source title"
-            ), sourceTitle)
-        }
-
         static let evidenceGraphStubBody = LocalizedStringResource(
             "workspace.stub.evidenceGraph.body",
             defaultValue: "Interpret subjects on this source — canvas coming soon.",
@@ -1299,9 +1307,6 @@ enum L10n {
         static func mapRest(count: Int) -> String {
             L10n.format(LocalizedStringResource("promote.page.mapRest", defaultValue: "Map the rest of this graph (%lld)", comment: "Adds every other person, event, and place; argument is how many"), count)
         }
-        static let groupKind = LocalizedStringResource("promote.page.group.kind", defaultValue: "Kind", comment: "Group Promote rows by person, event, or place")
-        static let groupAssessment = LocalizedStringResource("promote.page.group.assessment", defaultValue: "Assessment", comment: "Group Promote rows by how sure the match is")
-        static let groupLabel = LocalizedStringResource("promote.page.group.label", defaultValue: "Group rows", comment: "Accessibility label for the Promote grouping menu")
         static let kindPerson = LocalizedStringResource("promote.page.kind.person", defaultValue: "People", comment: "Promote section of person rows")
         static let kindEvent = LocalizedStringResource("promote.page.kind.event", defaultValue: "Events", comment: "Promote section of event rows")
         static let kindPlace = LocalizedStringResource("promote.page.kind.place", defaultValue: "Places", comment: "Promote section of place rows")
@@ -1332,45 +1337,314 @@ enum L10n {
         static func updatedDetail(_ reason: String) -> String {
             L10n.format(LocalizedStringResource("promote.row.updatedDetail", defaultValue: "Updated · %@", comment: "A suggested row moved on the last proposal; argument is why, e.g. via a neighbor"), reason)
         }
-        static let claimHeading = LocalizedStringResource("promote.sheet.claim", defaultValue: "Claim", comment: "Heading above status, confidence, and argument on the evidence sheet")
         static let backToRows = LocalizedStringResource("promote.sheet.back", defaultValue: "Back to all rows", comment: "Closes the Promote evidence sheet")
-        static let sheetNeighbor = LocalizedStringResource("promote.sheet.neighbor", defaultValue: "a neighbor", comment: "Evidence group name when the neighbor row is not on the page; shown after 'Through'")
-        static let ownRecords = LocalizedStringResource("promote.sheet.own", defaultValue: "This subject", comment: "Evidence group for the subject's own records")
         static let status = LocalizedStringResource("promote.sheet.status", defaultValue: "Status", comment: "Claim status field")
         static let confidence = LocalizedStringResource("promote.sheet.confidence", defaultValue: "Confidence", comment: "Claim confidence field")
         static let confidenceUnset = LocalizedStringResource("promote.sheet.confidence.unset", defaultValue: "Not stated", comment: "No confidence grade chosen")
-        static let argument = LocalizedStringResource("promote.sheet.argument", defaultValue: "Argument", comment: "Claim argument field")
-        static func pinLine(property: String, here: String, there: String) -> String {
-            L10n.format(LocalizedStringResource("promote.sheet.pinLine", defaultValue: "Pin %1$@: %2$@ and %3$@", comment: "VoiceOver label for one pin box; 1 = property, 2 = this source's value, 3 = the matched record's value"), property, here, there)
-        }
+        static let argument = LocalizedStringResource("promote.sheet.argument", defaultValue: "Additional comments or arguments about this claim", comment: "Claim argument field label; the field is marked optional")
         static func negatedValue(_ value: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.negatedValue", defaultValue: "not %@", comment: "An incoming value a record denies, on the evidence sheet; %@ = the value it says the subject is not"), value)
         }
         static func evidenceFor(name: String, assessment: String, reason: String) -> String {
             L10n.format(LocalizedStringResource("promote.row.evidenceFor", defaultValue: "Evidence for %1$@: %2$@, %3$@", comment: "VoiceOver label for the button that opens a row's evidence; 1 = subject name, 2 = assessment, 3 = reason"), name, assessment, reason)
         }
-        static func outcome(_ outcome: String) -> LocalizedStringResource {
+        static let contested = LocalizedStringResource("promote.row.contested", defaultValue: "Contested", comment: "Badge beside a Promote row's band when a comparison behind its pair conflicts")
+        static func assessmentContested(_ assessment: String) -> String {
+            L10n.format(LocalizedStringResource("promote.row.assessmentContested", defaultValue: "%@, contested", comment: "Spoken band of a contested Promote row, inside the evidence button label; argument is the band name (\"Strong\")"), assessment)
+        }
+        static func assessment(_ assessment: PromoteFlow.Assessment) -> LocalizedStringResource {
+            switch assessment {
+            case .strong: assessmentStrong
+            case .medium: assessmentMedium
+            case .weak: assessmentWeak
+            case .none: assessmentNone
+            }
+        }
+        static func neighborPlaced(neighbor: String, ref: String) -> String {
+            L10n.format(LocalizedStringResource("promote.reason.neighborPlaced", defaultValue: "after %1$@ → %2$@ was matched", comment: "Why a row moved on the last proposal: a neighbor was matched; 1 = neighbor name, 2 = its ref. Follows \"Updated · \""), neighbor, ref)
+        }
+        static func neighborMoved(neighbor: String, ref: String) -> String {
+            L10n.format(LocalizedStringResource("promote.reason.neighborMoved", defaultValue: "after %1$@ moved to %2$@", comment: "Why a row moved: a neighbor was matched to another record; 1 = neighbor name, 2 = its new ref. Follows \"Updated · \""), neighbor, ref)
+        }
+        static func neighborReleased(neighbor: String) -> String {
+            L10n.format(LocalizedStringResource("promote.reason.neighborReleased", defaultValue: "after %@ was unmatched", comment: "Why a row moved: a neighbor lost its match; argument is the neighbor name. Follows \"Updated · \""), neighbor)
+        }
+        static let reasonMoveUnknown = LocalizedStringResource("promote.reason.moveUnknown", defaultValue: "after a connected row changed", comment: "Why a row moved, when the neighbor is not on the page. Follows \"Updated · \"")
+        /// The Badge on a line: how the comparison came out. Two likenesses the layer cannot relate say "Judge by eye".
+        static func outcome(_ outcome: EvidenceOutcome, cause: ValueCause = .none) -> LocalizedStringResource {
             switch outcome {
-            case "agree": LocalizedStringResource("promote.sheet.agrees", defaultValue: "Agrees", comment: "A comparison that agrees")
-            case "partial": LocalizedStringResource("promote.sheet.similar", defaultValue: "Similar", comment: "A comparison whose text is a spelling variant or shares words")
-            case "conflict": LocalizedStringResource("promote.sheet.conflicts", defaultValue: "Conflicts", comment: "A comparison that disagrees")
-            default: LocalizedStringResource("promote.sheet.unknown", defaultValue: "Unknown", comment: "A comparison with nothing to compare")
+            case .agree: LocalizedStringResource("promote.sheet.agrees", defaultValue: "Agrees", comment: "A comparison that agrees")
+            case .partial: LocalizedStringResource("promote.sheet.similar", defaultValue: "Similar", comment: "A comparison whose text is a spelling variant or shares words")
+            case .conflict: LocalizedStringResource("promote.sheet.conflicts", defaultValue: "Conflicts", comment: "A comparison that disagrees")
+            case .unknown: cause == .unjudged ? judgeByEye : notCompared
+            case .unrecognized: notCompared
             }
         }
-        static func connections(count: Int) -> String {
-            L10n.format(LocalizedStringResource("promote.connections.count", defaultValue: "%lld connections will be filed", comment: "Bridge summary; argument is how many will be filed"), count)
+        static let notCompared = LocalizedStringResource("promote.sheet.unknown", defaultValue: "Not compared", comment: "A comparison with nothing to compare, on the evidence sheet")
+        /// The sentence of an evidence line, from how its values relate (S11-D2 ES-8). The value's type picks the name, date or generic wording.
+        static func lineSentence(
+            relation: ValueRelation,
+            cause: ValueCause,
+            propertyCause: EvidencePropertyCause,
+            value: CatalogConclusionValue
+        ) -> LocalizedStringResource {
+            if cause == .unjudged { return lineCompareLikenesses }
+            let family: ValueFamily
+            switch value {
+            case .name: family = .name
+            case .date: family = .date
+            case .depiction: family = .likeness
+            default: family = .other
+            }
+            if propertyCause == .negative || relation == .different {
+                switch family {
+                case .date: return lineDifferentDates
+                case .name: return lineDifferentNames
+                case .likeness, .other: return lineDisagrees
+                }
+            }
+            switch relation {
+            case .same:
+                switch family {
+                case .name: return lineSameName
+                case .date: return lineSameDate
+                case .likeness: return lineSameLikeness
+                case .other: return lineSame
+                }
+            case .equivalent:
+                switch cause {
+                case .fold: return lineEquivalentFold
+                case .alias: return lineEquivalentAlias
+                case .abbreviation: return lineEquivalentAbbreviation
+                default: return lineEquivalentOther
+                }
+            case .contains:
+                switch cause {
+                case .precision: return lineContainsPrecision
+                case .missingPart: return lineContainsMissingPart
+                case .initial: return lineContainsInitial
+                default: return lineContainsOther
+                }
+            case .overlaps:
+                return family == .date ? lineOverlapsDates : lineOverlapsOther
+            case .near:
+                switch cause {
+                case .spelling: return lineNearSpelling
+                case .gap: return lineNearGap
+                default: return lineSimilar
+                }
+            case .none:
+                return notCompared
+            case .unknown, .unrecognized, .different:
+                // `.different` was answered above, with the disagreement wording.
+                return lineSimilar
+            }
         }
-        static let connectionFiled = LocalizedStringResource("promote.connections.filed", defaultValue: "Filed", comment: "Switch label for a connection that will be filed")
-        static func connectionState(_ state: PromoteFlow.ConnectionState) -> LocalizedStringResource {
+        /// Which wording a value's type picks for a line sentence.
+        private enum ValueFamily { case name, date, likeness, other }
+        static let whySuggested = LocalizedStringResource("promote.sheet.whySuggested", defaultValue: "Why this was suggested", comment: "Group name for the lines under the evidence sheet title: the Updated caption and the contested line")
+        static func whySuggestedSpoken(assessment: String, reason: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.whySuggestedSpoken", defaultValue: "Why this was suggested: %1$@, %2$@", comment: "VoiceOver label of the band and Contested marks in the evidence sheet title; 1 = band, 2 = reason"), assessment, reason)
+        }
+        static let somethingDisagrees = LocalizedStringResource("promote.sheet.somethingDisagrees", defaultValue: "Something below disagrees with this record.", comment: "Line under the evidence sheet title when the row is contested")
+        static let titleHandle = LocalizedStringResource("promote.sheet.titleHandle", defaultValue: "%1$@ joins %2$@ %3$@", comment: "Evidence sheet title for a row filed on an existing record; 1 = the row's name, 2 = the record's title, 3 = the record's ref. The word joins is muted italic, the ref a ref.")
+        private static let subtitlePerson = LocalizedStringResource("promote.sheet.subtitle.person", defaultValue: "This is an identity claim to join %1$@ from %2$@ into the concluded person %3$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file.", comment: "Evidence sheet subtitle for a person row; 1 = the row's name, 2 = the Source title, 3 = the record's title. Names are bold, the Source title italic.")
+        private static let subtitleUntitledPerson = LocalizedStringResource("promote.sheet.subtitleUntitled.person", defaultValue: "This is an identity claim to join %1$@ from this source into the concluded person %2$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file.", comment: "Evidence sheet subtitle for a person row when the Source has no title; 1 = the row's name, 2 = the record's title")
+        private static let evidenceHeadingPerson = LocalizedStringResource("promote.sheet.evidenceHeading.person", defaultValue: "%1$@ from %2$@ belongs in the concluded person %3$@ because…", comment: "Heading of the evidence on the Promote sheet for a person row; 1 = the row's name, 2 = the Source title, 3 = the record's title")
+        private static let evidenceHeadingUntitledPerson = LocalizedStringResource("promote.sheet.evidenceHeadingUntitled.person", defaultValue: "%1$@ from this source belongs in the concluded person %2$@ because…", comment: "Heading of the evidence on the Promote sheet for a person row when the Source has no title; 1 = the row's name, 2 = the record's title")
+        private static let subtitleEvent = LocalizedStringResource("promote.sheet.subtitle.event", defaultValue: "This is an identity claim to join %1$@ from %2$@ into the concluded event %3$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file.", comment: "Evidence sheet subtitle for an event row; 1 = the row's name, 2 = the Source title, 3 = the record's title. Names are bold, the Source title italic.")
+        private static let subtitleUntitledEvent = LocalizedStringResource("promote.sheet.subtitleUntitled.event", defaultValue: "This is an identity claim to join %1$@ from this source into the concluded event %2$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file.", comment: "Evidence sheet subtitle for an event row when the Source has no title; 1 = the row's name, 2 = the record's title")
+        private static let evidenceHeadingEvent = LocalizedStringResource("promote.sheet.evidenceHeading.event", defaultValue: "%1$@ from %2$@ belongs in the concluded event %3$@ because…", comment: "Heading of the evidence on the Promote sheet for an event row; 1 = the row's name, 2 = the Source title, 3 = the record's title")
+        private static let evidenceHeadingUntitledEvent = LocalizedStringResource("promote.sheet.evidenceHeadingUntitled.event", defaultValue: "%1$@ from this source belongs in the concluded event %2$@ because…", comment: "Heading of the evidence on the Promote sheet for an event row when the Source has no title; 1 = the row's name, 2 = the record's title")
+        private static let subtitlePlace = LocalizedStringResource("promote.sheet.subtitle.place", defaultValue: "This is an identity claim to join %1$@ from %2$@ into the concluded place %3$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file.", comment: "Evidence sheet subtitle for a place row; 1 = the row's name, 2 = the Source title, 3 = the record's title. Names are bold, the Source title italic.")
+        private static let subtitleUntitledPlace = LocalizedStringResource("promote.sheet.subtitleUntitled.place", defaultValue: "This is an identity claim to join %1$@ from this source into the concluded place %2$@. Check the box on each observation below that supports the claim. Observations that clearly match are already checked — review them before you file.", comment: "Evidence sheet subtitle for a place row when the Source has no title; 1 = the row's name, 2 = the record's title")
+        private static let evidenceHeadingPlace = LocalizedStringResource("promote.sheet.evidenceHeading.place", defaultValue: "%1$@ from %2$@ belongs in the concluded place %3$@ because…", comment: "Heading of the evidence on the Promote sheet for a place row; 1 = the row's name, 2 = the Source title, 3 = the record's title")
+        private static let evidenceHeadingUntitledPlace = LocalizedStringResource("promote.sheet.evidenceHeadingUntitled.place", defaultValue: "%1$@ from this source belongs in the concluded place %2$@ because…", comment: "Heading of the evidence on the Promote sheet for a place row when the Source has no title; 1 = the row's name, 2 = the record's title")
+        /// The subtitle under the title for a row of this kind, with the Source titled. One whole sentence per kind, so a translation inflects the kind word itself.
+        static func subtitle(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            switch kind {
+            case .person: subtitlePerson
+            case .event: subtitleEvent
+            case .place: subtitlePlace
+            }
+        }
+        /// The subtitle for a row of this kind when its Source has no title. One whole sentence per kind, so a translation inflects the kind word itself.
+        static func subtitleUntitled(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            switch kind {
+            case .person: subtitleUntitledPerson
+            case .event: subtitleUntitledEvent
+            case .place: subtitleUntitledPlace
+            }
+        }
+        /// The evidence heading for a row of this kind, with the Source titled. One whole sentence per kind, so a translation inflects the kind word itself.
+        static func evidenceHeading(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            switch kind {
+            case .person: evidenceHeadingPerson
+            case .event: evidenceHeadingEvent
+            case .place: evidenceHeadingPlace
+            }
+        }
+        /// The evidence heading for a row of this kind when its Source has no title. One whole sentence per kind, so a translation inflects the kind word itself.
+        static func evidenceHeadingUntitled(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            switch kind {
+            case .person: evidenceHeadingUntitledPerson
+            case .event: evidenceHeadingUntitledEvent
+            case .place: evidenceHeadingUntitledPlace
+            }
+        }
+        static func similarityIn(property: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.similarityIn", defaultValue: "they have a similarity in %@", comment: "Header of a property Card on the evidence sheet, after the leading ellipsis; the argument is the property's name in lowercase"), property)
+        }
+        static func shareHeader(phrase: String, first: String, second: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.shareHeader", defaultValue: "they share %1$@ (%2$@ and %3$@)", comment: "Header of a relationship Card, after the leading ellipsis; 1 = what they share, such as a spouse, 2 = the connected row's ref on this Source, 3 = the connected record's ref"), phrase, first, second)
+        }
+        static func shareHeaderOne(phrase: String, ref: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.shareHeaderOne", defaultValue: "they share %1$@ (%2$@)", comment: "Header of a relationship Card when the connected row has only one ref to show, after the leading ellipsis; 1 = what they share, 2 = that ref"), phrase, ref)
+        }
+        static func shareHeaderBare(phrase: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.shareHeaderBare", defaultValue: "they share %@", comment: "Header of a relationship Card when the connected row is not on the page, after the leading ellipsis; the argument is what they share"), phrase)
+        }
+        /// A Card header as it is drawn: led by an ellipsis, as if finishing "this row and the record's other sources…". VoiceOver reads the header without it.
+        static func cardHeaderLead(_ header: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.cardHeaderLead", defaultValue: "…%@", comment: "A Card header on the evidence sheet as it is drawn: an ellipsis, then the header; the argument is the header"), header)
+        }
+        static let closeSheet = LocalizedStringResource("promote.sheet.close", defaultValue: "Close", comment: "Closes the Promote evidence sheet from its title row")
+        static func hideRecords(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.hideRecords", defaultValue: "Hide %lld records", comment: "Button that collapses an expanded evidence line; the argument is how many records it hides"), count)
+        }
+        static func checkedCount(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.checkedCount", defaultValue: "%lld checked", comment: "Meta of the evidence heading: how many pieces of evidence are checked"), count)
+        }
+        static func recordCount(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.recordCount", defaultValue: "· %lld records", comment: "After a relationship that bundles records: how many stand behind it"), count)
+        }
+        static func showRecords(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.showRecords", defaultValue: "Show %lld records", comment: "Button that expands a collapsed evidence line to its records"), count)
+        }
+        static func thisSource(_ value: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.thisSource", defaultValue: "This source: %@", comment: "Muted detail under an evidence sentence: the value on the Source being promoted"), value)
+        }
+        static let nothingUnder = LocalizedStringResource("promote.sheet.nothingUnder", defaultValue: "Nothing else to compare.", comment: "Caption under a relationship that has no lines of its own")
+        static let pickRecordTitle = LocalizedStringResource("promote.sheet.pickRecord.title", defaultValue: "Pick a record to see its evidence", comment: "Empty state title on the evidence sheet of a row with no record")
+        static let pickRecordBody = LocalizedStringResource("promote.sheet.pickRecord.body", defaultValue: "Choose a record in this row's menu. New and Skip file no evidence.", comment: "Empty state body on the evidence sheet of a row with no record")
+        static let nothingToCompareTitle = LocalizedStringResource("promote.sheet.nothingToCompare.title", defaultValue: "Nothing to compare yet", comment: "Empty state title when the record has nothing to compare with this row")
+        static let nothingToCompareBody = LocalizedStringResource("promote.sheet.nothingToCompare.body", defaultValue: "The record's other sources say nothing about these properties.", comment: "Empty state body when the record has nothing to compare with this row")
+        static let judgeByEye = LocalizedStringResource("promote.sheet.judgeByEye", defaultValue: "Judge by eye", comment: "Badge on two likenesses the researcher compares")
+        static let lineSameName = LocalizedStringResource("promote.sheet.line.sameName", defaultValue: "Same name", comment: "Evidence sentence: a name that matches exactly")
+        static let lineSameDate = LocalizedStringResource("promote.sheet.line.sameDate", defaultValue: "Same date", comment: "Evidence sentence: a date that matches exactly")
+        static let lineSameLikeness = LocalizedStringResource("promote.sheet.line.sameLikeness", defaultValue: "Same likeness", comment: "Evidence sentence: a likeness that is the same image")
+        static let lineSame = LocalizedStringResource("promote.sheet.line.same", defaultValue: "The same", comment: "Evidence sentence: a value that matches exactly")
+        static let lineEquivalentFold = LocalizedStringResource("promote.sheet.line.equivalentFold", defaultValue: "Same, written with different accents", comment: "Evidence sentence: values that match once accents are folded")
+        static let lineEquivalentAlias = LocalizedStringResource("promote.sheet.line.equivalentAlias", defaultValue: "Same name (nickname)", comment: "Evidence sentence: a name that is a nickname of the other")
+        static let lineEquivalentAbbreviation = LocalizedStringResource("promote.sheet.line.equivalentAbbreviation", defaultValue: "Same name (abbreviated)", comment: "Evidence sentence: a name that abbreviates the other")
+        static let lineEquivalentOther = LocalizedStringResource("promote.sheet.line.equivalentOther", defaultValue: "The same, written differently", comment: "Evidence sentence: values that are equivalent for another reason")
+        static let lineContainsPrecision = LocalizedStringResource("promote.sheet.line.containsPrecision", defaultValue: "Same date, recorded less precisely", comment: "Evidence sentence: a date that contains the other, less precise")
+        static let lineContainsMissingPart = LocalizedStringResource("promote.sheet.line.containsMissingPart", defaultValue: "Matches; part of the name is missing", comment: "Evidence sentence: a name missing a word the other has")
+        static let lineContainsInitial = LocalizedStringResource("promote.sheet.line.containsInitial", defaultValue: "Matches by initial", comment: "Evidence sentence: a name that matches by an initial")
+        static let lineContainsOther = LocalizedStringResource("promote.sheet.line.containsOther", defaultValue: "Matches, with less detail", comment: "Evidence sentence: a value that contains the other with less detail")
+        static let lineOverlapsDates = LocalizedStringResource("promote.sheet.line.overlapsDates", defaultValue: "The dates overlap", comment: "Evidence sentence: dates that overlap")
+        static let lineOverlapsOther = LocalizedStringResource("promote.sheet.line.overlapsOther", defaultValue: "Partly the same", comment: "Evidence sentence: values that partly overlap")
+        static let lineNearSpelling = LocalizedStringResource("promote.sheet.line.nearSpelling", defaultValue: "Similar spelling", comment: "Evidence sentence: names spelled alike")
+        static let lineNearGap = LocalizedStringResource("promote.sheet.line.nearGap", defaultValue: "Close dates", comment: "Evidence sentence: dates a year or two apart")
+        static let lineSimilar = LocalizedStringResource("promote.sheet.line.similar", defaultValue: "Similar", comment: "Evidence sentence: values that are alike for another reason")
+        static let lineDifferentDates = LocalizedStringResource("promote.sheet.line.differentDates", defaultValue: "Different dates", comment: "Evidence sentence: dates that disagree")
+        static let lineDifferentNames = LocalizedStringResource("promote.sheet.line.differentNames", defaultValue: "Different names", comment: "Evidence sentence: names that disagree")
+        static let lineDisagrees = LocalizedStringResource("promote.sheet.line.disagrees", defaultValue: "Disagrees", comment: "Evidence sentence: values that disagree, or a negative that denies the other")
+        static let lineCompareLikenesses = LocalizedStringResource("promote.sheet.line.compareLikenesses", defaultValue: "Compare these likenesses", comment: "Evidence sentence: two different likeness images the researcher judges by eye")
+        static func spokenLine(property: String, sentence: String, here: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.spokenLine", defaultValue: "%1$@. %2$@. This source: %3$@.", comment: "VoiceOver label of an evidence line; 1 = property, 2 = sentence, 3 = this source's value"), property, sentence, here)
+        }
+        static func spokenLineCount(property: String, sentence: String, count: Int, here: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.spokenLineCount", defaultValue: "%1$@. %2$@, %#@n@. This source: %4$@.", comment: "VoiceOver label of a collapsed evidence line; 1 = property, 2 = sentence, 3 = record count, 4 = this source's value"), property, sentence, count, here)
+        }
+        static func spokenMember(source: String, value: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.spokenMember", defaultValue: "%1$@: %2$@.", comment: "VoiceOver label of one record under an expanded line; 1 = its Source, 2 = its value"), source, value)
+        }
+        static func spokenLineMember(line: String, member: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.spokenLineMember", defaultValue: "%1$@ %2$@", comment: "VoiceOver label of an evidence line with its one record; 1 = the line, 2 = the record"), line, member)
+        }
+        static let untitledRecord = LocalizedStringResource("promote.sheet.untitledRecord", defaultValue: "a record", comment: "A record whose Source has no title, on any line or member")
+        static func spokenRelationship(sentence: String, outcome: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.spokenRelationship", defaultValue: "%1$@. %2$@.", comment: "VoiceOver label of a relationship line; 1 = the sentence, 2 = the outcome word"), sentence, outcome)
+        }
+        static func spokenRelationshipCount(sentence: String, outcome: String, count: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.spokenRelationshipCount", defaultValue: "%1$@. %2$@, %#@n@.", comment: "VoiceOver label of a relationship line that bundles several records; 1 = sentence, 2 = the outcome word, 3 = record count"), sentence, outcome, count)
+        }
+        static func spokenLikeness(source: String, sentence: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.spokenLikeness", defaultValue: "Likeness from this source and %1$@. %2$@.", comment: "VoiceOver label of a likeness line; 1 = the record's Source, 2 = sentence"), source, sentence)
+        }
+        static func spokenLikenessCount(source: String, sentence: String, count: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.spokenLikenessCount", defaultValue: "Likeness from this source and %1$@. %2$@, %#@n@.", comment: "VoiceOver label of a likeness line that bundles several records; 1 = the record's Source, 2 = sentence, 3 = record count"), source, sentence, count)
+        }
+        static let evidenceRetry = LocalizedStringResource("promote.sheet.retry", defaultValue: "Try again", comment: "Button under the evidence-unavailable callout that reads the evidence again")
+        /// The state text of a connection subrow: "Files on Done", or "Waits for <end>". nil for a
+        /// self-link, whose copy is the warning under the sentence. `endName` is the waiting end's
+        /// name; empty reads "its other end".
+        static func connectionState(_ state: PromoteFlow.ConnectionState, endName: String) -> String? {
             switch state {
-            case .files: connectionFiled
-            case .off: LocalizedStringResource("promote.connections.off", defaultValue: "Not filed this time", comment: "A connection the researcher switched off")
-            case .selfLink: LocalizedStringResource("promote.connections.self", defaultValue: "Not filed · both ends are the same record", comment: "A connection whose ends resolve to one handle")
-            case .endSkipped: LocalizedStringResource("promote.connections.skipped", defaultValue: "Not filed · an end is skipped", comment: "A connection that stays unfiled because an end is not being filed")
+            case .files:
+                return L10n.string(LocalizedStringResource("promote.connection.files", defaultValue: "Files on Done", comment: "Subrow state of a Promote connection that files on Done"))
+            case .waits:
+                if endName.isEmpty {
+                    return L10n.string(LocalizedStringResource("promote.connection.waitsEnd", defaultValue: "Waits for its other end", comment: "Subrow state of a Promote connection that waits when the end has no name"))
+                }
+                return L10n.format(LocalizedStringResource("promote.connection.waits", defaultValue: "Waits for %@", comment: "Subrow state of a Promote connection that waits; argument is the name of the end it waits for"), endName)
+            case .selfLink:
+                return nil
             }
         }
-        static func doneSummary(file: Int, skip: Int, connections: Int) -> String {
-            L10n.format(LocalizedStringResource("promote.done.summary", defaultValue: "File %1$lld · Skip %2$lld · %3$lld connections", comment: "Footer: how many rows will be filed, skipped, and how many connections"), file, skip, connections)
+        /// What VoiceOver reads for a subrow: the sentence, then why it files or waits. `endName` is
+        /// the waiting end's name; the self-link names its own record.
+        static func connectionSpoken(sentence: String, state: PromoteFlow.ConnectionState, endName: String) -> String {
+            let part: String
+            switch state {
+            case .files:
+                part = L10n.string(LocalizedStringResource("promote.connection.spoken.files", defaultValue: "Files on Done.", comment: "VoiceOver: a Promote connection that files on Done"))
+            case .waits(_, let why):
+                if endName.isEmpty {
+                    part = L10n.string(LocalizedStringResource("promote.connection.spoken.waitsEnd", defaultValue: "Waits for its other end.", comment: "VoiceOver: a Promote connection that waits when the end has no name"))
+                } else {
+                    switch why {
+                    case .skipped:
+                        part = L10n.format(LocalizedStringResource("promote.connection.spoken.skipped", defaultValue: "Waits for %@, who is skipped.", comment: "VoiceOver: a Promote connection that waits for an end that is skipped; argument is its name"), endName)
+                    case .unset:
+                        part = L10n.format(LocalizedStringResource("promote.connection.spoken.unset", defaultValue: "Waits for %@, who has no target yet.", comment: "VoiceOver: a Promote connection that waits for an end with no target yet; argument is its name"), endName)
+                    case .notOnPage:
+                        part = L10n.format(LocalizedStringResource("promote.connection.spoken.notOnPage", defaultValue: "Waits for %@, who is not on this page.", comment: "VoiceOver: a Promote connection that waits for an end that is not on the page; argument is its name"), endName)
+                    }
+                }
+            case .selfLink(let ref):
+                part = L10n.format(LocalizedStringResource("promote.connection.spoken.selfLink", defaultValue: "Not filed, both ends are %@.", comment: "VoiceOver: a Promote connection whose ends land on one record; argument is that record's ref"), ref)
+            }
+            return sentence + ". " + part
+        }
+        /// The warning under a self-link subrow; `ref` is the record both ends land on.
+        static func connectionSelfLink(ref: String) -> String {
+            L10n.format(LocalizedStringResource("promote.connection.selfLink", defaultValue: "Not filed · both ends are %@", comment: "Warning under a Promote connection whose ends land on one record; argument is that record's ref"), ref)
+        }
+        /// The note under a subrow whose other end is not a row to work on; `name` is that end.
+        static func connectionOtherEnd(name: String, filed: Bool) -> String {
+            if filed {
+                return L10n.format(LocalizedStringResource("promote.connection.otherEnd.filed", defaultValue: "%@ is already filed", comment: "Note under a Promote connection whose other end is already filed; argument is its name"), name)
+            }
+            return L10n.format(LocalizedStringResource("promote.connection.otherEnd.notOnPage", defaultValue: "%@ is not on this page", comment: "Note under a Promote connection whose other end is not on the page; argument is its name"), name)
+        }
+        /// VoiceOver name of a row's list of subrows; `name` is the row's name.
+        static func connectionsOf(name: String) -> String {
+            L10n.format(LocalizedStringResource("promote.connection.of", defaultValue: "Connections of %@", comment: "VoiceOver name of the list of connections under a Promote row; argument is the row's name"), name)
+        }
+        /// The footer: what Done files, skips and leaves unselected, and how many connections file.
+        /// A zero skip or unselected part is left out. `connections` always shows.
+        static func doneSummary(file: Int, skip: Int, unselected: Int, connections: Int) -> String {
+            var parts = [L10n.format(LocalizedStringResource("promote.done.file", defaultValue: "File %lld", comment: "Footer part: how many rows Done files"), file)]
+            if skip > 0 {
+                parts.append(L10n.format(LocalizedStringResource("promote.done.skip", defaultValue: "Skip %lld", comment: "Footer part: how many rows are skipped"), skip))
+            }
+            if unselected > 0 {
+                parts.append(L10n.format(LocalizedStringResource("promote.done.unselected", defaultValue: "%lld unselected", comment: "Footer part: how many rows have no target yet"), unselected))
+            }
+            parts.append(L10n.format(LocalizedStringResource("promote.done.connections", defaultValue: "%lld connections", comment: "Footer part: how many connections Done files"), connections))
+            return parts.joined(separator: " · ")
         }
         static let filing = LocalizedStringResource("promote.done.filing", defaultValue: "Filing", comment: "Done button while the batch is writing")
         static let done = LocalizedStringResource("promote.done.action", defaultValue: "Done", comment: "Files the Promote page")
@@ -1386,8 +1660,8 @@ enum L10n {
             L10n.format(LocalizedStringResource("promote.toast.filedBody", defaultValue: "%lld subjects are still on the graph, not filed yet", comment: "Toast body after Done; skipped subjects are not a rejection"), skipped)
         }
         static let leaveTitle = LocalizedStringResource("promote.leave.pageTitle", defaultValue: "Discard your changes to this mapping?", comment: "Leave guard title when the Promote page has manual changes")
-        static func leaveDetail(rows: Int, connections: Int) -> String {
-            L10n.format(LocalizedStringResource("promote.leave.pageMessage", defaultValue: "You chose targets on %1$lld rows and switched off %2$lld connections. Nothing has been filed; opening Promote again proposes the graph afresh.", comment: "Leave guard body; 1 = rows changed, 2 = connections switched off"), rows, connections)
+        static func leaveDetail(rows: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.leave.pageMessage", defaultValue: "You chose targets on %lld rows. Nothing has been filed; opening Promote again proposes the graph afresh.", comment: "Leave guard body; argument is how many rows changed"), rows)
         }
         static func openedFrom(name: String) -> String {
             L10n.format(LocalizedStringResource("promote.page.openedFrom", defaultValue: "Opened from %@ · weak and unmatched rows start as Skip", comment: "Shown once the rest of the graph is mapped; argument is the subject the page opened on"), name)
@@ -1405,8 +1679,6 @@ enum L10n {
         static let columnSource = LocalizedStringResource("promote.page.column.source", defaultValue: "On this Source", comment: "Promote row column: the subject on this Source")
         static let columnTarget = LocalizedStringResource("promote.page.column.target", defaultValue: "Files on", comment: "Promote row column: the handle the subject will file on")
         static let columnAssessment = LocalizedStringResource("promote.page.column.assessment", defaultValue: "Assessment", comment: "Promote row column: how sure the match is")
-        static let groupedByKind = LocalizedStringResource("promote.page.grouped.kind", defaultValue: "Grouped by kind", comment: "Closed label of the grouping menu when rows are grouped by kind")
-        static let groupedByAssessment = LocalizedStringResource("promote.page.grouped.assessment", defaultValue: "Grouped by assessment", comment: "Closed label of the grouping menu when rows are grouped by assessment")
         static func sectionCount(_ count: Int) -> String {
             L10n.format(LocalizedStringResource("promote.section.count", defaultValue: "%lld", comment: "How many rows are in a Promote section"), count)
         }
@@ -1429,34 +1701,10 @@ enum L10n {
             L10n.format(LocalizedStringResource("promote.warning.conflictTitle", defaultValue: "A stronger match is %@", comment: "Warning title when a decided row disagrees with a new proposal; argument is the other handle ref"), ref)
         }
         static let conflictBody = LocalizedStringResource("promote.warning.conflictBody", defaultValue: "This choice is kept.", comment: "Warning body when a decided row disagrees with a new proposal")
-        static let connectionsTitle = LocalizedStringResource("promote.connections.title", defaultValue: "Connections", comment: "Title of the connections list")
-        static func connectionsMeta(filed: Int, off: Int, unfiled: Int) -> String {
-            L10n.format(LocalizedStringResource("promote.connections.meta", defaultValue: "%1$lld filed · %2$lld switched off · %3$lld not filed", comment: "Connections list summary; 1 = filed, 2 = switched off, 3 = not filed"), filed, off, unfiled)
-        }
-        static let connectionsHint = LocalizedStringResource("promote.connections.hint", defaultValue: "Switch off a relationship you don’t accept from this Source; it stays on the graph", comment: "Hint in the connections list")
-        static let sheetHere = LocalizedStringResource("promote.sheet.column.here", defaultValue: "This source", comment: "Evidence sheet column: the value on this Source")
-        static let sheetPin = LocalizedStringResource("promote.sheet.column.pin", defaultValue: "Pin", comment: "Evidence sheet column: whether the comparison is pinned")
-        static let sheetCompared = LocalizedStringResource("promote.sheet.column.compared", defaultValue: "Compared", comment: "Evidence sheet column: what is being compared")
-        static let sheetResult = LocalizedStringResource("promote.sheet.column.result", defaultValue: "Result", comment: "Evidence sheet column: agrees, conflicts, or unknown")
-        static let sheetWeight = LocalizedStringResource("promote.sheet.column.weight", defaultValue: "Weight", comment: "Evidence sheet column: how much the comparison counted")
-        static let sheetStatusHint = LocalizedStringResource("promote.sheet.status.hint", defaultValue: "Provisional and rejected arrive in a later spike", comment: "Hint under claim status; only Accepted can be filed")
-        static func argumentHint(pinned: Int) -> String {
-            L10n.format(LocalizedStringResource("promote.sheet.argument.hint", defaultValue: "Drafted from the %lld pinned comparisons · edit before filing", comment: "Hint under the claim argument; argument is how many comparisons are pinned"), pinned)
-        }
-        static func sheetTitleHandle(name: String, ref: String, title: String) -> String {
-            L10n.format(LocalizedStringResource("promote.sheet.titleHandle", defaultValue: "%1$@ → %2$@ %3$@", comment: "Evidence sheet title for a row filed on an existing record; 1 = the row's name, 2 = the record's ref, 3 = the record's title"), name, ref, title)
-        }
         static func sheetTitleNew(name: String, target: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.titleNew", defaultValue: "%1$@ → %2$@", comment: "Evidence sheet title for a row filed as a new record; 1 = the row's name, 2 = the New option, e.g. New person"), name, target)
         }
-        static func sheetSubtitle(assessment: String, reason: String) -> String {
-            L10n.format(LocalizedStringResource("promote.sheet.subtitle", defaultValue: "%1$@ · %2$@. Agreeing comparisons are pinned as this claim’s evidence.", comment: "Evidence sheet subtitle; 1 = assessment, 2 = why this row matched"), assessment, reason)
-        }
-        static func through(_ neighbor: String) -> String {
-            L10n.format(LocalizedStringResource("promote.sheet.through", defaultValue: "Through %@", comment: "Evidence group reached through a neighbor; argument is the neighbor's name"), neighbor)
-        }
-        static let conflictCalloutTitle = LocalizedStringResource("promote.sheet.conflict.title", defaultValue: "A comparison disagrees", comment: "Evidence sheet callout when one comparison conflicts")
-        static let conflictCalloutBody = LocalizedStringResource("promote.sheet.conflict.body", defaultValue: "The conflicting comparison is not pinned. The claim can still be filed.", comment: "Evidence sheet callout body for a conflict")
+        static let evidenceUnavailable = LocalizedStringResource("promote.sheet.evidenceUnavailable", defaultValue: "The evidence could not be loaded", comment: "Evidence sheet callout title when the evidence read fails")
         static func newOption(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
             let resource: LocalizedStringResource = switch kind {
             case .person: LocalizedStringResource("promote.new.person", defaultValue: "New Person", comment: "Promote target choice: mint a new handle")
@@ -2088,6 +2336,44 @@ enum L10n {
             ), type)
         }
 
+        // MARK: What a row shares with a connected record ("they share a spouse")
+
+        private static func share(_ similar: Bool, _ agrees: LocalizedStringResource, _ similarly: LocalizedStringResource) -> LocalizedStringResource {
+            similar ? similarly : agrees
+        }
+
+        static func shareNamed(phrase: String, name: String) -> String {
+            L10n.format(LocalizedStringResource("evidenceGraph.share.named", defaultValue: "%1$@, %2$@", comment: "What a row shares with a connected person; 1 = the share phrase, such as a witness, 2 = the person's name"), phrase, name)
+        }
+
+        static func shareConnectionNamed(term: String, similar: Bool) -> String {
+            let resource = share(similar,
+                LocalizedStringResource("evidenceGraph.share.connectionNamed", defaultValue: "a connection (%@)", comment: "What a row shares with a connected record when the connection's term is the researcher's own; the argument is that term"),
+                LocalizedStringResource("evidenceGraph.share.connectionNamed.similar", defaultValue: "a similar connection (%@)", comment: "What a row shares with a connected record when the outcome is similar and the connection's term is the researcher's own; the argument is that term"))
+            return L10n.format(resource, term)
+        }
+
+        static func shareEventUntyped(similar: Bool) -> String {
+            let resource = share(similar,
+                LocalizedStringResource("evidenceGraph.share.eventUntyped", defaultValue: "an event", comment: "What a row shares with a connected record, after \"they share\", when the outcome agrees (eventUntyped)"),
+                LocalizedStringResource("evidenceGraph.share.eventUntyped.similar", defaultValue: "a similar event", comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar (eventUntyped)"))
+            return L10n.string(resource)
+        }
+
+        static func shareLocation(place: String, similar: Bool) -> String {
+            let resource = share(similar,
+                LocalizedStringResource("evidenceGraph.share.location", defaultValue: "a place, %@", comment: "What a row shares with a connected record, after \"they share\", when the outcome agrees (location); the place's name"),
+                LocalizedStringResource("evidenceGraph.share.location.similar", defaultValue: "a similar place, %@", comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar (location); the place's name"))
+            return L10n.format(resource, place)
+        }
+
+        static func shareConnection(similar: Bool) -> String {
+            let resource = share(similar,
+                LocalizedStringResource("evidenceGraph.share.connection", defaultValue: "a connection", comment: "What a row shares with a connected record, after \"they share\", when the outcome agrees (connection)"),
+                LocalizedStringResource("evidenceGraph.share.connection.similar", defaultValue: "a similar connection", comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar (connection)"))
+            return L10n.string(resource)
+        }
+
         static let bridgeSummaryRelationshipBare = LocalizedStringResource(
             "evidenceGraph.bridge.summary.relationshipBare",
             defaultValue: "Is related to",
@@ -2158,6 +2444,60 @@ enum L10n {
             comment: "Participation edge summary when role and endpoint labels are missing"
         )
 
+        /// "%1$@ was born" for a subject's birth; the argument is the person.
+        static func bridgeSentenceBirthSubject(person: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.birthSubject",
+                defaultValue: "%1$@ was born",
+                comment: "Connection sentence for a person who is the subject of a birth; the argument is the person"
+            ), person)
+        }
+
+        /// "%1$@ died" for a subject's death; the argument is the person.
+        static func bridgeSentenceDeathSubject(person: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.deathSubject",
+                defaultValue: "%1$@ died",
+                comment: "Connection sentence for a person who is the subject of a death; the argument is the person"
+            ), person)
+        }
+
+        /// "%1$@ was baptized" for a subject's baptism; the argument is the person.
+        static func bridgeSentenceBaptismSubject(person: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.baptismSubject",
+                defaultValue: "%1$@ was baptized",
+                comment: "Connection sentence for a person who is the subject of a baptism; the argument is the person"
+            ), person)
+        }
+
+        /// "%1$@ married (%2$@)" for a subject's marriage; arguments are person then event title.
+        static func bridgeSentenceMarriageSubject(person: String, event: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.marriageSubject",
+                defaultValue: "%1$@ married (%2$@)",
+                comment: "Connection sentence for a person who is the subject of a marriage; arguments are person then event title"
+            ), person, event)
+        }
+
+        /// "%1$@'s funeral (%2$@)" for a subject's funeral; arguments are person then event title.
+        static func bridgeSentenceFuneralSubject(person: String, event: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.funeralSubject",
+                defaultValue: "%1$@'s funeral (%2$@)",
+                comment: "Connection sentence for a person who is the subject of a funeral; arguments are person then event title"
+            ), person, event)
+        }
+
+        /// "%1$@ was buried" for a subject's burial; the argument is the person.
+        static func bridgeSentenceBurialSubject(person: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.burialSubject",
+                defaultValue: "%1$@ was buried",
+                comment: "Connection sentence for a person who is the subject of a burial; the argument is the person"
+            ), person)
+        }
+
         static let linksRotor = LocalizedStringResource(
             "evidenceGraph.rotor.links",
             defaultValue: "Links",
@@ -2209,205 +2549,699 @@ enum L10n {
         }
     }
 
-    /// Product Property-term display names (`propertyTerm.<propertyKey>.<termKey>`).
+    /// Seeded Property-term wording (`propertyTerm.<propertyKey>.<termKey>`): one entry for every
+    /// seeded term, beside its siblings. A term that a sentence can share has its share phrase
+    /// whole, with its own article ("an informant"), and the same phrase for a similar outcome ("a
+    /// similar informant"), so no sentence splices a translated word into another. Adding a seeded
+    /// term is one entry here; `TestSwiftVocabularyMatchesGo` fails when one has none.
     enum PropertyTerm {
-        static func resource(propertyKey: String, termKey: String) -> LocalizedStringResource? {
+        /// One seeded term's words.
+        struct Wording {
+            /// The term's name ("Spouse").
+            let label: LocalizedStringResource
+            /// What a row shares with a connected record when the term names the connection ("a spouse");
+            /// nil for a term no share phrase names.
+            var share: LocalizedStringResource?
+            /// ``share`` for a similar outcome ("a similar spouse").
+            var shareSimilar: LocalizedStringResource?
+            /// What a row shares with a connected record when the term names the row, not the neighbor
+            /// (a place relationship read from the other end: "a parent place"); nil for a term whose
+            /// share reads the same from both ends.
+            var shareOtherEnd: LocalizedStringResource?
+            /// ``shareOtherEnd`` for a similar outcome.
+            var shareOtherEndSimilar: LocalizedStringResource?
+        }
+
+        static func wording(propertyKey: String, termKey: String) -> Wording? {
             switch (propertyKey, termKey) {
-            case ("event_type", "birth"): return eventTypeBirth
-            case ("event_type", "death"): return eventTypeDeath
-            case ("event_type", "marriage"): return eventTypeMarriage
-            case ("event_type", "engagement"): return eventTypeEngagement
-            case ("event_type", "baptism"): return eventTypeBaptism
-            case ("event_type", "burial"): return eventTypeBurial
-            case ("event_type", "funeral"): return eventTypeFuneral
-            case ("event_type", "census"): return eventTypeCensus
-            case ("event_type", "residence"): return eventTypeResidence
-            case ("event_type", "migration"): return eventTypeMigration
-            case ("event_type", "travel"): return eventTypeTravel
-            case ("role", "subject"): return roleSubject
-            case ("role", "father"): return roleFather
-            case ("role", "mother"): return roleMother
-            case ("role", "spouse"): return roleSpouse
-            case ("role", "child"): return roleChild
-            case ("role", "witness"): return roleWitness
-            case ("role", "informant"): return roleInformant
-            case ("role", "pallbearer"): return rolePallbearer
-            case ("relationship_type", "spouse"): return relationshipSpouse
-            case ("relationship_type", "sibling"): return relationshipSibling
-            case ("relationship_type", "cousin"): return relationshipCousin
-            case ("relationship_type", "parent"): return relationshipParent
-            case ("relationship_type", "child"): return relationshipChild
-            case ("relationship_type", "grandparent"): return relationshipGrandparent
-            case ("relationship_type", "grandchild"): return relationshipGrandchild
-            case ("relationship_type", "pibling"): return relationshipPibling
-            case ("relationship_type", "nibling"): return relationshipNibling
-            case ("relationship_type", "guardian"): return relationshipGuardian
-            case ("relationship_type", "ward"): return relationshipWard
-            case ("place_relationship_type", "part_of"): return placeRelationshipPartOf
-            case ("place_relationship_type", "succeeded_by"): return placeRelationshipSucceededBy
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.birth): return eventTypeBirth
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.death): return eventTypeDeath
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.marriage): return eventTypeMarriage
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.engagement): return eventTypeEngagement
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.baptism): return eventTypeBaptism
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.burial): return eventTypeBurial
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.funeral): return eventTypeFuneral
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.census): return eventTypeCensus
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.residence): return eventTypeResidence
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.migration): return eventTypeMigration
+            case (SeededPropertyKey.eventType, SeededEventTypeTerm.travel): return eventTypeTravel
+            case (SeededPropertyKey.role, SeededRoleTerm.subject): return roleSubject
+            case (SeededPropertyKey.role, SeededRoleTerm.father): return roleFather
+            case (SeededPropertyKey.role, SeededRoleTerm.mother): return roleMother
+            case (SeededPropertyKey.role, SeededRoleTerm.spouse): return roleSpouse
+            case (SeededPropertyKey.role, SeededRoleTerm.child): return roleChild
+            case (SeededPropertyKey.role, SeededRoleTerm.witness): return roleWitness
+            case (SeededPropertyKey.role, SeededRoleTerm.informant): return roleInformant
+            case (SeededPropertyKey.role, SeededRoleTerm.pallbearer): return rolePallbearer
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.spouse): return relationshipSpouse
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.sibling): return relationshipSibling
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.cousin): return relationshipCousin
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.parent): return relationshipParent
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.child): return relationshipChild
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.grandparent): return relationshipGrandparent
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.grandchild): return relationshipGrandchild
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.pibling): return relationshipPibling
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.nibling): return relationshipNibling
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.guardian): return relationshipGuardian
+            case (SeededPropertyKey.relationshipType, SeededRelationshipTypeTerm.ward): return relationshipWard
+            case (SeededPropertyKey.placeRelationshipType, SeededPlaceRelationshipTypeTerm.partOf): return placeRelationshipPartOf
+            case (SeededPropertyKey.placeRelationshipType, SeededPlaceRelationshipTypeTerm.succeededBy): return placeRelationshipSucceededBy
+            case (SeededPropertyKey.gender, SeededGenderTerm.man): return genderMan
+            case (SeededPropertyKey.gender, SeededGenderTerm.woman): return genderWoman
+            case (SeededPropertyKey.gender, SeededGenderTerm.nonBinary): return genderNonBinary
+            case (SeededPropertyKey.sexAtBirth, SeededSexAtBirthTerm.female): return sexAtBirthFemale
+            case (SeededPropertyKey.sexAtBirth, SeededSexAtBirthTerm.male): return sexAtBirthMale
+            case (SeededPropertyKey.sexAtBirth, SeededSexAtBirthTerm.intersex): return sexAtBirthIntersex
+            case (SeededPropertyKey.sexAtBirth, SeededSexAtBirthTerm.indeterminate): return sexAtBirthIndeterminate
+            case (SeededPropertyKey.sexAtBirth, SeededSexAtBirthTerm.unknown): return sexAtBirthUnknown
             default: return nil
             }
         }
 
-        static let eventTypeBirth = LocalizedStringResource(
-            "propertyTerm.event_type.birth",
-            defaultValue: "Birth",
-            comment: "Product event_type term: birth"
+        /// The term's name alone.
+        static func resource(propertyKey: String, termKey: String) -> LocalizedStringResource? {
+            wording(propertyKey: propertyKey, termKey: termKey)?.label
+        }
+
+        static let eventTypeBirth = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.event_type.birth",
+                defaultValue: "Birth",
+                comment: "Product event_type term: birth"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.event.birth",
+                defaultValue: "a birth event",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is birth, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.event.birth.similar",
+                defaultValue: "a similar birth event",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: the type of a connected event is birth, with its own article"
+            )
         )
-        static let eventTypeDeath = LocalizedStringResource(
-            "propertyTerm.event_type.death",
-            defaultValue: "Death",
-            comment: "Product event_type term: death"
+        static let eventTypeDeath = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.event_type.death",
+                defaultValue: "Death",
+                comment: "Product event_type term: death"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.event.death",
+                defaultValue: "a death event",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is death, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.event.death.similar",
+                defaultValue: "a similar death event",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: the type of a connected event is death, with its own article"
+            )
         )
-        static let eventTypeMarriage = LocalizedStringResource(
-            "propertyTerm.event_type.marriage",
-            defaultValue: "Marriage",
-            comment: "Product event_type term: marriage"
+        static let eventTypeMarriage = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.event_type.marriage",
+                defaultValue: "Marriage",
+                comment: "Product event_type term: marriage"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.event.marriage",
+                defaultValue: "a marriage event",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is marriage, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.event.marriage.similar",
+                defaultValue: "a similar marriage event",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: the type of a connected event is marriage, with its own article"
+            )
         )
-        static let eventTypeEngagement = LocalizedStringResource(
-            "propertyTerm.event_type.engagement",
-            defaultValue: "Engagement",
-            comment: "Product event_type term: engagement"
+        static let eventTypeEngagement = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.event_type.engagement",
+                defaultValue: "Engagement",
+                comment: "Product event_type term: engagement"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.event.engagement",
+                defaultValue: "an engagement event",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is engagement, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.event.engagement.similar",
+                defaultValue: "a similar engagement event",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: the type of a connected event is engagement, with its own article"
+            )
         )
-        static let eventTypeBaptism = LocalizedStringResource(
-            "propertyTerm.event_type.baptism",
-            defaultValue: "Baptism",
-            comment: "Product event_type term: baptism"
+        static let eventTypeBaptism = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.event_type.baptism",
+                defaultValue: "Baptism",
+                comment: "Product event_type term: baptism"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.event.baptism",
+                defaultValue: "a baptism event",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is baptism, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.event.baptism.similar",
+                defaultValue: "a similar baptism event",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: the type of a connected event is baptism, with its own article"
+            )
         )
-        static let eventTypeBurial = LocalizedStringResource(
-            "propertyTerm.event_type.burial",
-            defaultValue: "Burial",
-            comment: "Product event_type term: burial"
+        static let eventTypeBurial = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.event_type.burial",
+                defaultValue: "Burial",
+                comment: "Product event_type term: burial"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.event.burial",
+                defaultValue: "a burial event",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is burial, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.event.burial.similar",
+                defaultValue: "a similar burial event",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: the type of a connected event is burial, with its own article"
+            )
         )
-        static let eventTypeFuneral = LocalizedStringResource(
-            "propertyTerm.event_type.funeral",
-            defaultValue: "Funeral",
-            comment: "Product event_type term: funeral"
+        static let eventTypeFuneral = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.event_type.funeral",
+                defaultValue: "Funeral",
+                comment: "Product event_type term: funeral"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.event.funeral",
+                defaultValue: "a funeral event",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is funeral, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.event.funeral.similar",
+                defaultValue: "a similar funeral event",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: the type of a connected event is funeral, with its own article"
+            )
         )
-        static let eventTypeCensus = LocalizedStringResource(
-            "propertyTerm.event_type.census",
-            defaultValue: "Census Enumeration",
-            comment: "Product event_type term: census"
+        static let eventTypeCensus = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.event_type.census",
+                defaultValue: "Census Enumeration",
+                comment: "Product event_type term: census"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.event.census",
+                defaultValue: "a census event",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is census, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.event.census.similar",
+                defaultValue: "a similar census event",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: the type of a connected event is census, with its own article"
+            )
         )
-        static let eventTypeResidence = LocalizedStringResource(
-            "propertyTerm.event_type.residence",
-            defaultValue: "Residence",
-            comment: "Product event_type term: residence"
+        static let eventTypeResidence = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.event_type.residence",
+                defaultValue: "Residence",
+                comment: "Product event_type term: residence"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.event.residence",
+                defaultValue: "a residence event",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is residence, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.event.residence.similar",
+                defaultValue: "a similar residence event",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: the type of a connected event is residence, with its own article"
+            )
         )
-        static let eventTypeMigration = LocalizedStringResource(
-            "propertyTerm.event_type.migration",
-            defaultValue: "Migration",
-            comment: "Product event_type term: migration"
+        static let eventTypeMigration = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.event_type.migration",
+                defaultValue: "Migration",
+                comment: "Product event_type term: migration"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.event.migration",
+                defaultValue: "a migration event",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is migration, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.event.migration.similar",
+                defaultValue: "a similar migration event",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: the type of a connected event is migration, with its own article"
+            )
         )
-        static let eventTypeTravel = LocalizedStringResource(
-            "propertyTerm.event_type.travel",
-            defaultValue: "Travel",
-            comment: "Product event_type term: travel"
+        static let eventTypeTravel = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.event_type.travel",
+                defaultValue: "Travel",
+                comment: "Product event_type term: travel"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.event.travel",
+                defaultValue: "a travel event",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: the type of a connected event is travel, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.event.travel.similar",
+                defaultValue: "a similar travel event",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: the type of a connected event is travel, with its own article"
+            )
         )
-        static let roleSubject = LocalizedStringResource(
-            "propertyTerm.role.subject",
-            defaultValue: "Subject",
-            comment: "Product role term: subject"
+        static let roleSubject = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.role.subject",
+                defaultValue: "Subject",
+                comment: "Product role term: subject"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.role.subject",
+                defaultValue: "a subject",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is subject, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.role.subject.similar",
+                defaultValue: "a similar subject",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's role in the event is subject, with its own article"
+            )
         )
-        static let roleFather = LocalizedStringResource(
-            "propertyTerm.role.father",
-            defaultValue: "Father",
-            comment: "Product role term: father"
+        static let roleFather = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.role.father",
+                defaultValue: "Father",
+                comment: "Product role term: father"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.role.father",
+                defaultValue: "a father",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is father, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.role.father.similar",
+                defaultValue: "a similar father",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's role in the event is father, with its own article"
+            )
         )
-        static let roleMother = LocalizedStringResource(
-            "propertyTerm.role.mother",
-            defaultValue: "Mother",
-            comment: "Product role term: mother"
+        static let roleMother = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.role.mother",
+                defaultValue: "Mother",
+                comment: "Product role term: mother"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.role.mother",
+                defaultValue: "a mother",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is mother, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.role.mother.similar",
+                defaultValue: "a similar mother",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's role in the event is mother, with its own article"
+            )
         )
-        static let roleSpouse = LocalizedStringResource(
-            "propertyTerm.role.spouse",
-            defaultValue: "Spouse",
-            comment: "Product role term: spouse"
+        static let roleSpouse = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.role.spouse",
+                defaultValue: "Spouse",
+                comment: "Product role term: spouse"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.role.spouse",
+                defaultValue: "a spouse",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is spouse, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.role.spouse.similar",
+                defaultValue: "a similar spouse",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's role in the event is spouse, with its own article"
+            )
         )
-        static let roleChild = LocalizedStringResource(
-            "propertyTerm.role.child",
-            defaultValue: "Child",
-            comment: "Product role term: child"
+        static let roleChild = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.role.child",
+                defaultValue: "Child",
+                comment: "Product role term: child"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.role.child",
+                defaultValue: "a child",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is child, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.role.child.similar",
+                defaultValue: "a similar child",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's role in the event is child, with its own article"
+            )
         )
-        static let roleWitness = LocalizedStringResource(
-            "propertyTerm.role.witness",
-            defaultValue: "Witness",
-            comment: "Product role term: witness"
+        static let roleWitness = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.role.witness",
+                defaultValue: "Witness",
+                comment: "Product role term: witness"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.role.witness",
+                defaultValue: "a witness",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is witness, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.role.witness.similar",
+                defaultValue: "a similar witness",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's role in the event is witness, with its own article"
+            )
         )
-        static let roleInformant = LocalizedStringResource(
-            "propertyTerm.role.informant",
-            defaultValue: "Informant",
-            comment: "Product role term: informant"
+        static let roleInformant = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.role.informant",
+                defaultValue: "Informant",
+                comment: "Product role term: informant"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.role.informant",
+                defaultValue: "an informant",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is informant, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.role.informant.similar",
+                defaultValue: "a similar informant",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's role in the event is informant, with its own article"
+            )
         )
-        static let rolePallbearer = LocalizedStringResource(
-            "propertyTerm.role.pallbearer",
-            defaultValue: "Pallbearer",
-            comment: "Product role term: pallbearer"
+        static let rolePallbearer = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.role.pallbearer",
+                defaultValue: "Pallbearer",
+                comment: "Product role term: pallbearer"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.role.pallbearer",
+                defaultValue: "a pallbearer",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is pallbearer, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.role.pallbearer.similar",
+                defaultValue: "a similar pallbearer",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's role in the event is pallbearer, with its own article"
+            )
         )
-        static let relationshipSpouse = LocalizedStringResource(
-            "propertyTerm.relationship_type.spouse",
-            defaultValue: "Spouse",
-            comment: "Product relationship_type term: spouse"
+        static let relationshipSpouse = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.relationship_type.spouse",
+                defaultValue: "Spouse",
+                comment: "Product relationship_type term: spouse"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.relationship.spouse",
+                defaultValue: "a spouse",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is spouse, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.relationship.spouse.similar",
+                defaultValue: "a similar spouse",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is spouse, with its own article"
+            )
         )
-        static let relationshipSibling = LocalizedStringResource(
-            "propertyTerm.relationship_type.sibling",
-            defaultValue: "Sibling",
-            comment: "Product relationship_type term: sibling"
+        static let relationshipSibling = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.relationship_type.sibling",
+                defaultValue: "Sibling",
+                comment: "Product relationship_type term: sibling"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.relationship.sibling",
+                defaultValue: "a sibling",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is sibling, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.relationship.sibling.similar",
+                defaultValue: "a similar sibling",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is sibling, with its own article"
+            )
         )
-        static let relationshipCousin = LocalizedStringResource(
-            "propertyTerm.relationship_type.cousin",
-            defaultValue: "Cousin",
-            comment: "Product relationship_type term: cousin"
+        static let relationshipCousin = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.relationship_type.cousin",
+                defaultValue: "Cousin",
+                comment: "Product relationship_type term: cousin"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.relationship.cousin",
+                defaultValue: "a cousin",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is cousin, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.relationship.cousin.similar",
+                defaultValue: "a similar cousin",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is cousin, with its own article"
+            )
         )
-        static let relationshipParent = LocalizedStringResource(
-            "propertyTerm.relationship_type.parent",
-            defaultValue: "Parent",
-            comment: "Product relationship_type term: parent"
+        static let relationshipParent = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.relationship_type.parent",
+                defaultValue: "Parent",
+                comment: "Product relationship_type term: parent"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.relationship.parent",
+                defaultValue: "a parent",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is parent, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.relationship.parent.similar",
+                defaultValue: "a similar parent",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is parent, with its own article"
+            )
         )
-        static let relationshipChild = LocalizedStringResource(
-            "propertyTerm.relationship_type.child",
-            defaultValue: "Child",
-            comment: "Product relationship_type term: child"
+        static let relationshipChild = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.relationship_type.child",
+                defaultValue: "Child",
+                comment: "Product relationship_type term: child"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.relationship.child",
+                defaultValue: "a child",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is child, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.relationship.child.similar",
+                defaultValue: "a similar child",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is child, with its own article"
+            )
         )
-        static let relationshipGrandparent = LocalizedStringResource(
-            "propertyTerm.relationship_type.grandparent",
-            defaultValue: "Grandparent",
-            comment: "Product relationship_type term: grandparent"
+        static let relationshipGrandparent = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.relationship_type.grandparent",
+                defaultValue: "Grandparent",
+                comment: "Product relationship_type term: grandparent"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.relationship.grandparent",
+                defaultValue: "a grandparent",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is grandparent, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.relationship.grandparent.similar",
+                defaultValue: "a similar grandparent",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is grandparent, with its own article"
+            )
         )
-        static let relationshipGrandchild = LocalizedStringResource(
-            "propertyTerm.relationship_type.grandchild",
-            defaultValue: "Grandchild",
-            comment: "Product relationship_type term: grandchild"
+        static let relationshipGrandchild = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.relationship_type.grandchild",
+                defaultValue: "Grandchild",
+                comment: "Product relationship_type term: grandchild"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.relationship.grandchild",
+                defaultValue: "a grandchild",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is grandchild, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.relationship.grandchild.similar",
+                defaultValue: "a similar grandchild",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is grandchild, with its own article"
+            )
         )
-        static let relationshipPibling = LocalizedStringResource(
-            "propertyTerm.relationship_type.pibling",
-            defaultValue: "Aunt / uncle",
-            comment: "Product relationship_type term: pibling"
+        static let relationshipPibling = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.relationship_type.pibling",
+                defaultValue: "Aunt / uncle",
+                comment: "Product relationship_type term: pibling"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.relationship.pibling",
+                defaultValue: "an aunt or uncle",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is pibling, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.relationship.pibling.similar",
+                defaultValue: "a similar aunt or uncle",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is pibling, with its own article"
+            )
         )
-        static let relationshipNibling = LocalizedStringResource(
-            "propertyTerm.relationship_type.nibling",
-            defaultValue: "Niece / nephew",
-            comment: "Product relationship_type term: nibling"
+        static let relationshipNibling = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.relationship_type.nibling",
+                defaultValue: "Niece / nephew",
+                comment: "Product relationship_type term: nibling"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.relationship.nibling",
+                defaultValue: "a niece or nephew",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is nibling, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.relationship.nibling.similar",
+                defaultValue: "a similar niece or nephew",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is nibling, with its own article"
+            )
         )
-        static let relationshipGuardian = LocalizedStringResource(
-            "propertyTerm.relationship_type.guardian",
-            defaultValue: "Guardian",
-            comment: "Product relationship_type term: guardian"
+        static let relationshipGuardian = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.relationship_type.guardian",
+                defaultValue: "Guardian",
+                comment: "Product relationship_type term: guardian"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.relationship.guardian",
+                defaultValue: "a guardian",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is guardian, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.relationship.guardian.similar",
+                defaultValue: "a similar guardian",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is guardian, with its own article"
+            )
         )
-        static let relationshipWard = LocalizedStringResource(
-            "propertyTerm.relationship_type.ward",
-            defaultValue: "Ward",
-            comment: "Product relationship_type term: ward"
+        static let relationshipWard = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.relationship_type.ward",
+                defaultValue: "Ward",
+                comment: "Product relationship_type term: ward"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.relationship.ward",
+                defaultValue: "a ward",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's relationship is ward, with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.relationship.ward.similar",
+                defaultValue: "a similar ward",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is ward, with its own article"
+            )
         )
-        static let placeRelationshipPartOf = LocalizedStringResource(
-            "propertyTerm.place_relationship_type.part_of",
-            defaultValue: "Part of",
-            comment: "Product place_relationship_type term: part_of"
+        static let placeRelationshipPartOf = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.place_relationship_type.part_of",
+                defaultValue: "Part of",
+                comment: "Product place_relationship_type term: part_of"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.placeRelationship.part_of",
+                defaultValue: "a place within it",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: the connected place is within the row's place (part of, naming the neighbor), with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.placeRelationship.part_of.similar",
+                defaultValue: "a similar place within it",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: the connected place is within the row's place (part of, naming the neighbor), with its own article"
+            ),
+            shareOtherEnd: LocalizedStringResource(
+                "evidenceGraph.share.placeRelationship.part_of.otherEnd",
+                defaultValue: "a parent place",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: the connected place is the parent of the row's place (part of, naming the row), with its own article"
+            ),
+            shareOtherEndSimilar: LocalizedStringResource(
+                "evidenceGraph.share.placeRelationship.part_of.otherEnd.similar",
+                defaultValue: "a similar parent place",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: the connected place is the parent of the row's place (part of, naming the row), with its own article"
+            )
         )
-        static let placeRelationshipSucceededBy = LocalizedStringResource(
-            "propertyTerm.place_relationship_type.succeeded_by",
-            defaultValue: "Succeeded by",
-            comment: "Product place_relationship_type term: succeeded_by"
+        static let placeRelationshipSucceededBy = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.place_relationship_type.succeeded_by",
+                defaultValue: "Succeeded by",
+                comment: "Product place_relationship_type term: succeeded_by"
+            ),
+            share: LocalizedStringResource(
+                "evidenceGraph.share.placeRelationship.succeeded_by",
+                defaultValue: "a predecessor place",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: the connected place came before the row's place (succeeded by, naming the neighbor), with its own article"
+            ),
+            shareSimilar: LocalizedStringResource(
+                "evidenceGraph.share.placeRelationship.succeeded_by.similar",
+                defaultValue: "a similar predecessor place",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: the connected place came before the row's place (succeeded by, naming the neighbor), with its own article"
+            ),
+            shareOtherEnd: LocalizedStringResource(
+                "evidenceGraph.share.placeRelationship.succeeded_by.otherEnd",
+                defaultValue: "a successor place",
+                comment: "What a row shares with a connected record, after \"they share\", when it agrees: the connected place came after the row's place (succeeded by, naming the row), with its own article"
+            ),
+            shareOtherEndSimilar: LocalizedStringResource(
+                "evidenceGraph.share.placeRelationship.succeeded_by.otherEnd.similar",
+                defaultValue: "a similar successor place",
+                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: the connected place came after the row's place (succeeded by, naming the row), with its own article"
+            )
+        )
+        static let genderMan = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.gender.man",
+                defaultValue: "Man",
+                comment: "Product gender term: man"
+            )
+        )
+        static let genderWoman = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.gender.woman",
+                defaultValue: "Woman",
+                comment: "Product gender term: woman"
+            )
+        )
+        static let genderNonBinary = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.gender.non_binary",
+                defaultValue: "Non-binary",
+                comment: "Product gender term: non_binary"
+            )
+        )
+        static let sexAtBirthFemale = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.sex_at_birth.female",
+                defaultValue: "Female",
+                comment: "Product sex_at_birth term: female"
+            )
+        )
+        static let sexAtBirthMale = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.sex_at_birth.male",
+                defaultValue: "Male",
+                comment: "Product sex_at_birth term: male"
+            )
+        )
+        static let sexAtBirthIntersex = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.sex_at_birth.intersex",
+                defaultValue: "Intersex",
+                comment: "Product sex_at_birth term: intersex"
+            )
+        )
+        static let sexAtBirthIndeterminate = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.sex_at_birth.indeterminate",
+                defaultValue: "Indeterminate",
+                comment: "Product sex_at_birth term: indeterminate"
+            )
+        )
+        static let sexAtBirthUnknown = Wording(
+            label: LocalizedStringResource(
+                "propertyTerm.sex_at_birth.unknown",
+                defaultValue: "Unknown",
+                comment: "Product sex_at_birth term: unknown"
+            )
         )
     }
 
@@ -4123,8 +4957,8 @@ enum L10n {
 
         static let noArtifactsCallout = LocalizedStringResource(
             "citationComposer.noArtifactsCallout",
-            defaultValue: "Every citation needs an artifact to point at. Attach one from the Source page, then return here.",
-            comment: "Left-pane callout when the Source has no Artifacts"
+            defaultValue: "Every citation needs an artifact linked to this evidence graph. Add one from the Source page, then return here.",
+            comment: "Left-pane callout when the Evidence graph links no Artifacts"
         )
 
         static let goToSourcePage = LocalizedStringResource(
@@ -4225,8 +5059,8 @@ enum L10n {
 
         static let noArtifactsTitle = LocalizedStringResource(
             "citationComposer.noArtifactsTitle",
-            defaultValue: "This source has no artifacts",
-            comment: "Callout title when the Source has no Artifacts to cite"
+            defaultValue: "This evidence graph has no artifacts",
+            comment: "Callout title when the Evidence graph links no Artifacts"
         )
 
         static let identityChangedNew = LocalizedStringResource(
@@ -5014,7 +5848,7 @@ enum L10n {
         }
 
         static func graphZoneAccessibility(
-            progress: SourceGraphProgress?,
+            progress: EvidenceGraphProgress?,
             countsLoading: Bool
         ) -> String {
             let open = L10n.string(openGraph)
@@ -5042,6 +5876,12 @@ enum L10n {
             "sources.list.needsArtifactTooltip",
             defaultValue: "Add an artifact on the source page to build its evidence graph",
             comment: "Tooltip on the blocked Sources list graph zone"
+        )
+
+        static let graphNeedsArtifactTooltip = LocalizedStringResource(
+            "sources.graph.needsArtifact",
+            defaultValue: "Add an artifact to open this evidence graph",
+            comment: "Tooltip and VoiceOver hint on a disabled Open for an Evidence graph that links no Artifact"
         )
 
         static let openSourcePage = LocalizedStringResource(
@@ -5144,6 +5984,154 @@ enum L10n {
             ), title)
         }
 
+        static func copySourceTitlePrefill(_ title: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.copy.titlePrefill",
+                defaultValue: "Copy of %@",
+                comment: "Prefilled title of a copied Source; argument is the original title"
+            ), title)
+        }
+
+        static let copySourceArtifactsHeading = LocalizedStringResource(
+            "sources.copy.artifactsHeading",
+            defaultValue: "Artifacts",
+            comment: "Heading of the Copy Source Artifact checklist"
+        )
+
+        static let copySourceAllArtifacts = LocalizedStringResource(
+            "sources.copy.allArtifacts",
+            defaultValue: "All Artifacts",
+            comment: "Copy Source checkbox that checks or unchecks every Artifact"
+        )
+
+        static let copySourceNoArtifacts = LocalizedStringResource(
+            "sources.copy.noArtifacts",
+            defaultValue: "This Source has no Artifacts.",
+            comment: "Copy Source note when the original has no Artifacts"
+        )
+
+        static func copySourceArtifactCount(_ selected: Int, _ total: Int) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.copy.artifactCount",
+                defaultValue: "%1$lld of %2$lld",
+                comment: "Copy Source Artifact count; arguments are the checked count and the total"
+            ), selected, total)
+        }
+
+        static let copySourceEntry = LocalizedStringResource(
+            "sources.copy.entry",
+            defaultValue: "Copy…",
+            comment: "Source page action that opens the Copy Source form"
+        )
+
+        static let copySourceDialogTitle = LocalizedStringResource(
+            "sources.copy.dialogTitle",
+            defaultValue: "Copy Source",
+            comment: "Title of the Copy Source dialog"
+        )
+
+        static func copySourceDialogSubtitle(_ title: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.copy.dialogSubtitle",
+                defaultValue: "Start a new Source from %@. Notes and the Evidence graph are not copied.",
+                comment: "Subtitle of the Copy Source dialog; argument is the original Source title"
+            ), title)
+        }
+
+        static let copySourceConfirm = LocalizedStringResource(
+            "sources.copy.confirm",
+            defaultValue: "Copy",
+            comment: "Confirm button on the Copy Source dialog"
+        )
+
+        static let copySourcePartsHeading = LocalizedStringResource(
+            "sources.copy.partsHeading",
+            defaultValue: "Copy from the original",
+            comment: "Heading above the Copy Source part checkboxes"
+        )
+
+        static let copySourceDescription = LocalizedStringResource(
+            "sources.copy.description",
+            defaultValue: "Description",
+            comment: "Copy Source checkbox: copy the original's description"
+        )
+
+        static let copySourceMetadata = LocalizedStringResource(
+            "sources.copy.metadata",
+            defaultValue: "Metadata",
+            comment: "Copy Source checkbox: copy the original's metadata"
+        )
+
+        static let copySourceMetadataHint = LocalizedStringResource(
+            "sources.copy.metadataHint",
+            defaultValue: "Values and field layout",
+            comment: "Hint under the Copy Source Metadata checkbox"
+        )
+
+        static let copySourceCredibility = LocalizedStringResource(
+            "sources.copy.credibility",
+            defaultValue: "Credibility",
+            comment: "Copy Source checkbox: copy the original's credibility"
+        )
+
+        static let copySourceCredibilityHint = LocalizedStringResource(
+            "sources.copy.credibilityHint",
+            defaultValue: "Grade and argument",
+            comment: "Hint under the Copy Source Credibility checkbox"
+        )
+
+        static let copySourcePartAbsent = LocalizedStringResource(
+            "sources.copy.partAbsent",
+            defaultValue: "None on this Source",
+            comment: "Hint under a Copy Source checkbox when the original has none of that part"
+        )
+
+        static let copySourceDescriptionHint = LocalizedStringResource(
+            "sources.copy.descriptionHint",
+            defaultValue: "The original's description, as written",
+            comment: "Hint under the Copy Source Description checkbox"
+        )
+
+        static let copySourceLoading = LocalizedStringResource(
+            "sources.copy.loading",
+            defaultValue: "Reading the original's parts and Artifacts",
+            comment: "Copy Source loading state while the original's parts are read"
+        )
+
+        static let copySourceLoadErrorTitle = LocalizedStringResource(
+            "sources.copy.loadErrorTitle",
+            defaultValue: "The original's parts could not be read.",
+            comment: "Copy Source callout title when the original's workspace fails to load"
+        )
+
+        static func copySourceLoadErrorMessage(_ error: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.copy.loadErrorMessage",
+                defaultValue: "Title and type are kept. Try reading them again. %@",
+                comment: "Copy Source load error message; argument is the error text"
+            ), error)
+        }
+
+        static let copySourceReadAgain = LocalizedStringResource(
+            "sources.copy.readAgain",
+            defaultValue: "Read again",
+            comment: "Button that reloads the original's parts in the Copy Source form"
+        )
+
+        static let copySourceSaveErrorTitle = LocalizedStringResource(
+            "sources.copy.saveErrorTitle",
+            defaultValue: "The copy could not be saved.",
+            comment: "Copy Source callout title when the copy fails"
+        )
+
+        static func copySourceSaveErrorMessage(_ error: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.copy.saveErrorMessage",
+                defaultValue: "Nothing was written. Your choices are kept. %@",
+                comment: "Copy Source save error message; argument is the error text"
+            ), error)
+        }
+
         // MARK: Source page (S2-18)
 
         static let pageTitleRequired = LocalizedStringResource(
@@ -5216,12 +6204,6 @@ enum L10n {
             "sources.page.saveAction",
             defaultValue: "Save",
             comment: "Primary save for title or type edit"
-        )
-
-        static let jumpToEvidenceGraph = LocalizedStringResource(
-            "sources.page.jumpToEvidenceGraph",
-            defaultValue: "Jump to graph",
-            comment: "Identity-header secondary button that opens this Source's Evidence graph"
         )
 
         static let editTitle = LocalizedStringResource(
@@ -5309,6 +6291,20 @@ enum L10n {
                 "sources.page.toastArtifactDeletedBody",
                 defaultValue: "%@ was erased from this source.",
                 comment: "Toast body after Artifact erase; argument is ART-…"
+            ), ref)
+        }
+
+        static let toastGraphDeletedTitle = LocalizedStringResource(
+            "sources.page.toastGraphDeletedTitle",
+            defaultValue: "Evidence graph deleted",
+            comment: "Toast title after an Evidence graph is erased"
+        )
+
+        static func toastGraphDeletedBody(ref: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.toastGraphDeletedBody",
+                defaultValue: "%@ was erased from this source.",
+                comment: "Toast body after Evidence graph erase; argument is GPH-…"
             ), ref)
         }
 
@@ -5693,6 +6689,42 @@ enum L10n {
                 defaultValue: "%lld artifacts",
                 comment: "Artifacts section count; argument is artifact count"
             ), count)
+        }
+
+        static func graphsCount(_ count: Int) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.graphsCount",
+                defaultValue: "%lld evidence graphs",
+                comment: "Evidence graphs section count; argument is graph count"
+            ), count)
+        }
+
+        static let graphsHeading = LocalizedStringResource(
+            "sources.page.graphsHeading",
+            defaultValue: "Evidence graphs",
+            comment: "Heading for the Evidence graphs section on the Source page"
+        )
+
+        static let openEvidenceGraph = LocalizedStringResource(
+            "sources.page.graph.open",
+            defaultValue: "Open",
+            comment: "Button on an Evidence graph row that opens its canvas"
+        )
+
+        static func openEvidenceGraphLabel(name: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.graph.openLabel",
+                defaultValue: "Open %@",
+                comment: "VoiceOver label for opening an Evidence graph; argument is the graph name"
+            ), name)
+        }
+
+        static func deleteEvidenceGraphLabel(name: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.graph.deleteLabel",
+                defaultValue: "Delete %@",
+                comment: "VoiceOver label for deleting an Evidence graph; argument is the graph name"
+            ), name)
         }
 
         static let metadataHeading = LocalizedStringResource(
@@ -6143,10 +7175,16 @@ enum L10n {
             comment: "Context menu title on the Source identity cover"
         )
 
+        static let thumbnailImageLabel = LocalizedStringResource(
+            "sources.page.thumbnailImageLabel",
+            defaultValue: "Source cover",
+            comment: "Accessibility label of the Source identity cover thumbnail while it shows an Artifact image"
+        )
+
         static let thumbnailMenuHint = LocalizedStringResource(
             "sources.page.thumbnailMenuHint",
             defaultValue: "Right-click for thumbnail options",
-            comment: "Accessibility hint on the Source identity cover thumbnail"
+            comment: "Hover tooltip on the Source identity cover thumbnail"
         )
 
         static let thumbnailRevertToDefault = LocalizedStringResource(
@@ -7410,6 +8448,8 @@ enum L10n {
                 pair = (nounSource, nounSources)
             case "artifact":
                 pair = (nounArtifact, nounArtifacts)
+            case "evidence_graph":
+                pair = (nounEvidenceGraph, nounEvidenceGraphs)
             case "citation":
                 pair = (nounCitation, nounCitations)
             case "observation":
@@ -7464,6 +8504,16 @@ enum L10n {
         static let nounArtifacts = LocalizedStringResource(
             "deleteImpact.kind.artifact.other",
             defaultValue: "artifacts",
+            comment: "Plural Impact kind noun"
+        )
+        static let nounEvidenceGraph = LocalizedStringResource(
+            "deleteImpact.kind.evidence_graph.one",
+            defaultValue: "evidence graph",
+            comment: "Singular Impact kind noun"
+        )
+        static let nounEvidenceGraphs = LocalizedStringResource(
+            "deleteImpact.kind.evidence_graph.other",
+            defaultValue: "evidence graphs",
             comment: "Plural Impact kind noun"
         )
         static let nounCitation = LocalizedStringResource(
@@ -7770,6 +8820,16 @@ enum L10n {
                 defaultValue: "%lld subjects belong to this source",
                 comment: "Inbound heading for subjects.source_id; argument is how many"
             ),
+            "subjects.graph_id": LocalizedStringResource(
+                "deleteImpact.via.subjectsGraphId",
+                defaultValue: "This graph has %lld subjects",
+                comment: "Inbound heading for subjects.graph_id; argument is how many"
+            ),
+            "evidencegraphs.artifact_in_use": LocalizedStringResource(
+                "deleteImpact.via.evidenceGraphsArtifactInUse",
+                defaultValue: "%lld citations in this graph use this artifact",
+                comment: "Heading over the Citations that keep an Artifact linked to a graph; argument is how many"
+            ),
             "citations.artifact_id": LocalizedStringResource(
                 "deleteImpact.via.citationsArtifactId",
                 defaultValue: "%lld citations are drawn from this artifact",
@@ -7850,6 +8910,17 @@ enum L10n {
             "deleteImpact.gate.originLocked.body",
             defaultValue: "Provenencia-seeded properties and terms can’t be deleted. Plugin vocabulary is removed from the plugin manager, not here.",
             comment: "Extra-gate body for origin_locked"
+        )
+
+        static let gateLastGraphTitle = LocalizedStringResource(
+            "deleteImpact.gate.lastGraph.title",
+            defaultValue: "This is the source’s only evidence graph",
+            comment: "Extra-gate title for last_graph"
+        )
+        static let gateLastGraphBody = LocalizedStringResource(
+            "deleteImpact.gate.lastGraph.body",
+            defaultValue: "A source keeps at least one evidence graph. Add another graph before you delete this one.",
+            comment: "Extra-gate body for last_graph"
         )
 
         static let gateInfraTitle = LocalizedStringResource(
@@ -7987,6 +9058,12 @@ enum L10n {
             "conclusions.state.empty",
             defaultValue: "Nothing recorded",
             comment: "Empty Conclusion field with no specific wording for its Property"
+        )
+
+        static let likenessValue = LocalizedStringResource(
+            "conclusions.value.likeness",
+            defaultValue: "Likeness",
+            comment: "A likeness value worded as text where no crop is drawn"
         )
 
         static let badgeMerged = LocalizedStringResource(
@@ -9462,10 +10539,40 @@ enum L10n {
             defaultValue: "This citation still has observations.",
             comment: "FFI error citations.in_use"
         )
+        static let evidenceGraphsInvalid = LocalizedStringResource(
+            "error.evidencegraphs.invalid",
+            defaultValue: "That evidence graph isn’t valid.",
+            comment: "FFI error evidencegraphs.invalid"
+        )
+        static let evidenceGraphsArtifactInUse = LocalizedStringResource(
+            "error.evidencegraphs.artifact_in_use",
+            defaultValue: "Citations in this evidence graph still use an artifact you removed, so it stays linked.",
+            comment: "FFI error evidencegraphs.artifact_in_use"
+        )
+        static let evidenceGraphsLastArtifact = LocalizedStringResource(
+            "error.evidencegraphs.last_artifact",
+            defaultValue: "An evidence graph needs at least one artifact.",
+            comment: "FFI error evidencegraphs.last_artifact"
+        )
+        static let evidenceGraphsInUse = LocalizedStringResource(
+            "error.evidencegraphs.in_use",
+            defaultValue: "This evidence graph still has subjects.",
+            comment: "FFI error evidencegraphs.in_use"
+        )
+        static let evidenceGraphsLastGraph = LocalizedStringResource(
+            "error.evidencegraphs.last_graph",
+            defaultValue: "A source keeps at least one evidence graph.",
+            comment: "FFI error evidencegraphs.last_graph"
+        )
         static let observationsInvalid = LocalizedStringResource(
             "error.observations.invalid",
             defaultValue: "That observation isn’t valid.",
             comment: "FFI error observations.invalid"
+        )
+        static let observationsOtherGraph = LocalizedStringResource(
+            "error.observations.other_graph",
+            defaultValue: "That subject or artifact is in another evidence graph.",
+            comment: "FFI error observations.other_graph"
         )
 
         static let observationsEdgeLocked = LocalizedStringResource(
@@ -9694,8 +10801,20 @@ enum L10n {
                 return L10n.string(citationsInvalid)
             case "citations.in_use":
                 return L10n.string(citationsInUse)
+            case "evidencegraphs.invalid":
+                return L10n.string(evidenceGraphsInvalid)
+            case "evidencegraphs.artifact_in_use":
+                return L10n.string(evidenceGraphsArtifactInUse)
+            case "evidencegraphs.last_artifact":
+                return L10n.string(evidenceGraphsLastArtifact)
+            case "evidencegraphs.in_use":
+                return L10n.string(evidenceGraphsInUse)
+            case "evidencegraphs.last_graph":
+                return L10n.string(evidenceGraphsLastGraph)
             case "observations.invalid":
                 return L10n.string(observationsInvalid)
+            case "observations.other_graph":
+                return L10n.string(observationsOtherGraph)
             case "observations.edge_locked":
                 return L10n.string(observationsEdgeLocked)
             case "observations.in_use":

@@ -7,8 +7,10 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -18,6 +20,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
+	"github.com/mendahu/provenencia/core/database/subjectvocab/subjectvocabtest"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -60,7 +63,7 @@ func TestSubjectDelete(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		art, err := runArtifactCreate(c, userID, artifacts.CreateInput{
+		art, err := artifactstest.Create(c, userID, artifacts.CreateInput{
 			SourceID: src.ID, Label: "Scan",
 		})
 		if err != nil {
@@ -74,9 +77,10 @@ func TestSubjectDelete(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 		alice, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Alice",
+				GraphID: graph, SubjectTypeID: personType.ID, Label: "Alice",
 			}, &subjects.Placement{GridX: 0, GridY: 0})
 		})
 		if err != nil {
@@ -84,7 +88,7 @@ func TestSubjectDelete(t *testing.T) {
 		}
 		wedding, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
 			return subjects.Create(tx, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: eventType.ID, Label: "Wedding",
+				GraphID: graph, SubjectTypeID: eventType.ID, Label: "Wedding",
 			}, &subjects.Placement{GridX: 4, GridY: 4})
 		})
 		if err != nil {
@@ -113,7 +117,7 @@ func TestSubjectDelete(t *testing.T) {
 		}
 		bridge, err := writes.Call(c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 			return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-				SourceID: src.ID, FromSubjectID: alice.ID, ToSubjectID: wedding.ID,
+				FromSubjectID: alice.ID, ToSubjectID: wedding.ID,
 				BridgeTypeKey: "participation",
 				Citation:      citations.CreateInput{ArtifactID: art.ID, LocatorJSON: testLocator},
 				Observations: []observations.Input{
@@ -193,9 +197,7 @@ func TestSubjectDelete(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := subjectvocab.AppendBinding(c, bridge.Subject.SubjectTypeID, toponym.ID); err != nil {
-			t.Fatal(err)
-		}
+		subjectvocabtest.Assign(t, c, userID, bridge.Subject.SubjectTypeID, toponym.ID)
 		if _, err := writes.Call(c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
 			return observations.AddToCitation(tx, userID, bridge.Citation.ID, []observations.Input{{
 				SubjectID: bridge.Subject.ID, PropertyID: toponym.ID, ValueText: "extra", HasText: true,
@@ -254,12 +256,4 @@ func TestSubjectDelete(t *testing.T) {
 			t.Fatalf("got %v", err)
 		}
 	})
-}
-
-func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
-	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-			return artifacts.Create(tx, userID, in)
-		})
-	return a, err
 }

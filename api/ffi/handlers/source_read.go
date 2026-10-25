@@ -6,11 +6,11 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	_ "github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
-	_ "github.com/mendahu/provenencia/core/database/sourcefill"
+	"github.com/mendahu/provenencia/core/depictionvalue"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -38,9 +38,9 @@ func loadPropertyInfo(c *database.Catalog) (map[string]propertyInfo, error) {
 	return out, nil
 }
 
-// listedProtosFromSource projects stored observations. A citation id keeps
-// that citation's rows, in the Source's ref order. Nil keeps every row.
-func listedProtosFromSource(c *database.Catalog, sg graphcache.SourceGraph, citationID []byte) ([]*engine.Observation, error) {
+// listedProtosFromGraph projects stored observations. A citation id keeps
+// that citation's rows, in the graph's ref order. Nil keeps every row.
+func listedProtosFromGraph(c *database.Catalog, eg graphcache.EvidenceGraph, citationID []byte) ([]*engine.Observation, error) {
 	props, err := loadPropertyInfo(c)
 	if err != nil {
 		return nil, err
@@ -54,11 +54,11 @@ func listedProtosFromSource(c *database.Catalog, sg graphcache.SourceGraph, cita
 		terms = v.TermsByID()
 	}
 	subjectLabels := map[string]string{}
-	for _, s := range sg.Subjects {
+	for _, s := range eg.Subjects {
 		subjectLabels[string(s.ID)] = s.Label
 	}
 	var rows []observations.Listed
-	for _, o := range sg.Observations {
+	for _, o := range eg.Observations {
 		if citationID != nil && !bytes.Equal(o.CitationID, citationID) {
 			continue
 		}
@@ -71,7 +71,7 @@ func listedProtosFromSource(c *database.Catalog, sg graphcache.SourceGraph, cita
 	return listedProtos(c, rows)
 }
 
-func listedFromSource(o graphcache.SourceObservation, props map[string]propertyInfo, terms map[string]graphcache.VocabTerm, subjectLabels map[string]string) (observations.Listed, error) {
+func listedFromSource(o graphcache.EvidenceObservation, props map[string]propertyInfo, terms map[string]graphcache.VocabTerm, subjectLabels map[string]string) (observations.Listed, error) {
 	info := props[string(o.PropertyID)]
 	l := observations.Listed{
 		Observation: observations.Observation{
@@ -87,13 +87,15 @@ func listedFromSource(o graphcache.SourceObservation, props map[string]propertyI
 	}
 	if term, ok := terms[string(o.TermID)]; ok {
 		l.ValueTermLabel = term.Label
+		l.ValueTermKey = term.Key
+		l.ValueTermOrigin = term.Origin
 	}
 	if label, ok := subjectLabels[string(o.ValueSubjectID)]; ok {
 		l.ValueSubjectLabel = label
 	}
 	// Matches depictionvalues.FromJoin's non-nil result: depiction_values.image_file_id is NOT NULL.
 	if len(o.DepictionID) > 0 {
-		l.Depiction = &depictionvalues.Value{ID: o.DepictionID, RegionJSON: o.DepictionRegion, ImageFileID: o.DepictionImageFileID}
+		l.Depiction = &depictionvalue.Value{ID: o.DepictionID, RegionJSON: o.DepictionRegion, ImageFileID: o.DepictionImageFileID}
 	}
 	if len(o.Date) > 0 {
 		d, err := valuecodec.UnmarshalDate(o.Date)
@@ -114,16 +116,16 @@ func listedFromSource(o graphcache.SourceObservation, props map[string]propertyI
 	return l, nil
 }
 
-func membershipsFromSource(g *graphcache.Graph, sg graphcache.SourceGraph, nameProperty []byte) ([]identityclaims.Membership, error) {
-	ids := make([][]byte, 0, len(sg.Members))
-	for _, m := range sg.Members {
+func membershipsFromGraph(g *graphcache.Graph, eg graphcache.EvidenceGraph, nameProperty []byte) ([]identityclaims.Membership, error) {
+	ids := make([][]byte, 0, len(eg.Members))
+	for _, m := range eg.Members {
 		ids = append(ids, m.EntityID)
 	}
 	if err := g.Nodes(ids); err != nil {
 		return nil, err
 	}
 	var out []identityclaims.Membership
-	for _, m := range sg.Members {
+	for _, m := range eg.Members {
 		n, err := g.Node(m.EntityID)
 		if err != nil {
 			return nil, err

@@ -21,6 +21,12 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Source page section counts differ
+
+- **Date:** 2026-10-25
+- **Where:** Source page
+- **Annoyance:** Source page section counts: Notes shows a bare number, Artifacts and Evidence graphs a localized count (S12-11 review M-8).
+
 ### Guarding a Citation page change after depictions are saved on it
 
 - **Date:** 2026-10-17
@@ -40,13 +46,6 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 - **Date:** 2026-10-17
 - **Where:** Evidence graph
 - **Annoyance:** Shift-click adds or removes one card, but keyboard and VoiceOver users have no way to do the same (deferred from S10-57).
-
-### Dense Evidence graphs (census-scale)
-
-- **Date:** 2026-09-24
-- **Where:** Evidence graph
-- **Annoyance:** A real census page can put dozens of Subjects and hundreds of Observations on one canvas. Nothing is wrong with the model — it just gets hard to see the household you care about.
-- **Wanted:** Layers or filters when a Source actually hurts. Descoped from [Spike 10](../deployment-plan/archive/spike-10/) on 2026-10-08. Canvas growth and box-select shipped in that spike; hiding part of a Source did not.
 
 ### Automatic structure from the Artifact (beyond transcription)
 

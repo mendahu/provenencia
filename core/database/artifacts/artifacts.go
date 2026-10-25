@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/ref"
@@ -47,7 +48,6 @@ const (
 	sqlExistsByFile   = `SELECT 1 FROM artifacts WHERE file_id = ? LIMIT 1`
 	sqlSourceExists   = `SELECT 1 FROM sources WHERE id = ?`
 	sqlFileExists     = `SELECT 1 FROM files WHERE id = ?`
-	maxRefRetries     = 8
 )
 
 // Artifact is one artifacts row. FileID is nil when fileless.
@@ -66,6 +66,9 @@ type CreateInput struct {
 	FileID      []byte // nil/empty = fileless
 	Label       string
 	Description string
+	// GraphIDs are the graphs of the Source the Artifact is linked to on
+	// create. Empty = every graph of the Source.
+	GraphIDs [][]byte
 }
 
 // Create inserts an Artifact and mints ART-…. The caller records the returned
@@ -101,49 +104,47 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Artifact, []rowchan
 	}
 	idBytes := id[:]
 
-	var artRef string
-	for attempt := 0; attempt < maxRefRetries; attempt++ {
-		artRef, err = ref.Mint(ref.PrefixArtifact)
-		if err != nil {
-			return Artifact{}, nil, err
-		}
-		_, err = tx.Exec(sqlInsert, idBytes, artRef, in.SourceID, nullBlob(in.FileID), in.Label, nullStr(in.Description))
-		if err == nil {
-			break
-		}
-		if !database.IsUniqueConflict(err) {
-			return Artifact{}, nil, mapConstraint(err)
-		}
+	artRef, err := database.InsertWithRef(database.Minter(ref.PrefixArtifact), func(storedRef string) error {
+		_, err := tx.Exec(sqlInsert, idBytes, storedRef, in.SourceID, database.NullBlob(in.FileID), in.Label, database.NullString(in.Description))
+		return err
+	})
+	if errors.Is(err, database.ErrRefsExhausted) {
+		return Artifact{}, nil, ErrInvalid
 	}
 	if err != nil {
-		return Artifact{}, nil, ErrInvalid
+		return Artifact{}, nil, mapConstraint(err)
 	}
 
 	fields := map[string]rowchange.FieldDiff{
 		"id":        {Old: nil, New: id.String()},
 		"ref":       {Old: nil, New: artRef},
-		"source_id": {Old: nil, New: uuidString(in.SourceID)},
+		"source_id": {Old: nil, New: database.UUIDString(in.SourceID)},
 		"label":     {Old: nil, New: in.Label},
 	}
 	if len(in.FileID) == 16 {
-		fields["file_id"] = rowchange.FieldDiff{Old: nil, New: uuidString(in.FileID)}
+		fields["file_id"] = rowchange.FieldDiff{Old: nil, New: database.UUIDString(in.FileID)}
 	}
 	if in.Description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: nil, New: in.Description}
 	}
+	linked, err := evidencegraphs.LinkArtifact(tx, userID, in.SourceID, idBytes, in.GraphIDs)
+	if err != nil {
+		return Artifact{}, nil, err
+	}
+	changes := append([]rowchange.Change{{
+		EntityType: "artifact",
+		EntityID:   append([]byte(nil), idBytes...),
+		Action:     rowchange.ActionCreate,
+		Fields:     fields,
+	}}, linked...)
 	return Artifact{
-			ID:          append([]byte(nil), idBytes...),
-			Ref:         artRef,
-			SourceID:    append([]byte(nil), in.SourceID...),
-			FileID:      copyBlob(in.FileID),
-			Label:       in.Label,
-			Description: in.Description,
-		}, []rowchange.Change{{
-			EntityType: "artifact",
-			EntityID:   append([]byte(nil), idBytes...),
-			Action:     rowchange.ActionCreate,
-			Fields:     fields,
-		}}, nil
+		ID:          append([]byte(nil), idBytes...),
+		Ref:         artRef,
+		SourceID:    append([]byte(nil), in.SourceID...),
+		FileID:      copyBlob(in.FileID),
+		Label:       in.Label,
+		Description: in.Description,
+	}, changes, nil
 }
 
 // Update patches label, description, and/or first-attach file_id. The caller
@@ -188,21 +189,21 @@ func Update(tx *database.Tx, userID []byte, a Artifact) ([]rowchange.Change, err
 	fields := map[string]rowchange.FieldDiff{}
 	if !bytes.Equal(prev.FileID, a.FileID) {
 		fields["file_id"] = rowchange.FieldDiff{
-			Old: uuidJSON(prev.FileID),
-			New: uuidJSON(a.FileID),
+			Old: database.UUIDJSON(prev.FileID),
+			New: database.UUIDJSON(a.FileID),
 		}
 	}
 	if prev.Label != a.Label {
 		fields["label"] = rowchange.FieldDiff{Old: prev.Label, New: a.Label}
 	}
 	if prev.Description != a.Description {
-		fields["description"] = rowchange.FieldDiff{Old: nullJSON(prev.Description), New: nullJSON(a.Description)}
+		fields["description"] = rowchange.FieldDiff{Old: database.NullString(prev.Description), New: database.NullString(a.Description)}
 	}
 	if len(fields) == 0 {
 		return nil, nil
 	}
 
-	if _, err := tx.Exec(sqlUpdate, nullBlob(a.FileID), a.Label, nullStr(a.Description), a.ID); err != nil {
+	if _, err := tx.Exec(sqlUpdate, database.NullBlob(a.FileID), a.Label, database.NullString(a.Description), a.ID); err != nil {
 		return nil, mapConstraint(err)
 	}
 	return []rowchange.Change{{
@@ -242,6 +243,10 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 		return nil, err
 	}
 
+	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindArtifact, id)
+	if err != nil {
+		return nil, err
+	}
 	snap, err := deleteimpact.SnapshotOwned(tx.Tx, catalogmodel.KindArtifact, id)
 	if err != nil {
 		return nil, err
@@ -255,23 +260,23 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	}
 
 	fields := map[string]rowchange.FieldDiff{
-		"id":        {Old: uuidString(id), New: nil},
+		"id":        {Old: database.UUIDString(id), New: nil},
 		"ref":       {Old: existing.Ref, New: nil},
-		"source_id": {Old: uuidString(existing.SourceID), New: nil},
+		"source_id": {Old: database.UUIDString(existing.SourceID), New: nil},
 		"label":     {Old: existing.Label, New: nil},
 	}
 	if len(existing.FileID) == 16 {
-		fields["file_id"] = rowchange.FieldDiff{Old: uuidString(existing.FileID), New: nil}
+		fields["file_id"] = rowchange.FieldDiff{Old: database.UUIDString(existing.FileID), New: nil}
 	}
 	if existing.Description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: existing.Description, New: nil}
 	}
-	return []rowchange.Change{{
+	return append(released, rowchange.Change{
 		EntityType: "artifact",
 		EntityID:   append([]byte(nil), id...),
 		Action:     rowchange.ActionDelete,
 		Fields:     fields,
-	}}, nil
+	}), nil
 }
 
 // Get returns an Artifact by id, or sql.ErrNoRows.
@@ -333,7 +338,19 @@ func ListBySource(c *database.Catalog, sourceID []byte) ([]Artifact, error) {
 	if len(sourceID) != 16 {
 		return nil, ErrInvalid
 	}
-	rows, err := db.Query(sqlListBySource, sourceID)
+	return listBySource(db, sourceID)
+}
+
+// ListBySourceTx is ListBySource on an open transaction.
+func ListBySourceTx(tx *sql.Tx, sourceID []byte) ([]Artifact, error) {
+	if len(sourceID) != 16 {
+		return nil, ErrInvalid
+	}
+	return listBySource(tx, sourceID)
+}
+
+func listBySource(q database.Querier, sourceID []byte) ([]Artifact, error) {
+	rows, err := q.Query(sqlListBySource, sourceID)
 	if err != nil {
 		return nil, err
 	}
@@ -423,42 +440,6 @@ func requireFile(tx *sql.Tx, fileID []byte) error {
 		return ErrInvalid
 	}
 	return err
-}
-
-func nullStr(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
-func nullBlob(b []byte) any {
-	if len(b) == 0 {
-		return nil
-	}
-	return b
-}
-
-func nullJSON(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
-func uuidString(id []byte) string {
-	u, err := uuid.FromBytes(id)
-	if err != nil {
-		return ""
-	}
-	return u.String()
-}
-
-func uuidJSON(id []byte) any {
-	if len(id) == 0 {
-		return nil
-	}
-	return uuidString(id)
 }
 
 func copyBlob(b []byte) []byte {

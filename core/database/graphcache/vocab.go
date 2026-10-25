@@ -1,12 +1,76 @@
 package graphcache
 
-// Vocabulary is the catalog's properties, terms, and subject types.
+import (
+	"sort"
+
+	"github.com/mendahu/provenencia/core/vocabkey"
+)
+
+// Vocabulary is the catalog's properties, terms, subject types, and the
+// properties each type binds, in binding order.
 // A vocabulary write drops it. Structure drops the whole graph, which
 // drops this with it.
 type Vocabulary struct {
 	Properties []VocabProperty
 	Terms      []VocabTerm
 	Types      []VocabType
+	Bindings   []VocabBinding
+}
+
+// VocabBinding is one subject_type_properties row: a property bound to a
+// subject type at SortOrder.
+type VocabBinding struct {
+	TypeID, PropertyID []byte
+	SortOrder          int
+}
+
+// BindingOrder returns, per provenencia subject type key, its bound property
+// keys in binding order. Types of other origins are left out: a key is only
+// unique within an origin.
+func (v Vocabulary) BindingOrder() map[vocabkey.SubjectType][]vocabkey.PropertyKey {
+	out := map[vocabkey.SubjectType][]vocabkey.PropertyKey{}
+	for _, t := range v.Types {
+		if t.Origin != vocabkey.OriginProvenencia {
+			continue
+		}
+		if order := v.TypeOrder(t.ID); len(order) > 0 {
+			out[vocabkey.SubjectType(t.Key)] = order
+		}
+	}
+	return out
+}
+
+// TypeOrder returns the property keys bound to one subject type, by SortOrder,
+// then key.
+func (v Vocabulary) TypeOrder(typeID []byte) []vocabkey.PropertyKey {
+	propKey := make(map[string]vocabkey.PropertyKey, len(v.Properties))
+	for _, p := range v.Properties {
+		propKey[string(p.ID)] = vocabkey.PropertyKey(p.Key)
+	}
+	type bound struct {
+		key   vocabkey.PropertyKey
+		order int
+	}
+	var bs []bound
+	for _, b := range v.Bindings {
+		if string(b.TypeID) != string(typeID) {
+			continue
+		}
+		if pk, ok := propKey[string(b.PropertyID)]; ok {
+			bs = append(bs, bound{pk, b.SortOrder})
+		}
+	}
+	sort.SliceStable(bs, func(i, j int) bool {
+		if bs[i].order != bs[j].order {
+			return bs[i].order < bs[j].order
+		}
+		return bs[i].key < bs[j].key
+	})
+	keys := make([]vocabkey.PropertyKey, len(bs))
+	for i, b := range bs {
+		keys[i] = b.key
+	}
+	return keys
 }
 
 // VocabProperty is one properties row.
@@ -24,6 +88,7 @@ type VocabTerm struct {
 	ID          []byte
 	PropertyKey string
 	Key         string
+	Origin      string
 	Label       string
 	Directed    bool
 	InverseKey  string
@@ -103,7 +168,7 @@ func (g *Graph) loadVocabulary() (Vocabulary, error) {
 	}
 	_ = types.Close()
 
-	terms, err := g.query(`SELECT t.id, p.key, t.key, t.label, t.directed, COALESCE(t.inverse_key, ''), t.neutral
+	terms, err := g.query(`SELECT t.id, p.key, t.key, t.origin, t.label, t.directed, COALESCE(t.inverse_key, ''), t.neutral
 		FROM property_terms t
 		JOIN properties p ON p.id = t.property_id`)
 	if err != nil {
@@ -112,7 +177,7 @@ func (g *Graph) loadVocabulary() (Vocabulary, error) {
 	for terms.Next() {
 		var t VocabTerm
 		var directed, neutral int
-		if err := terms.Scan(&t.ID, &t.PropertyKey, &t.Key, &t.Label, &directed, &t.InverseKey, &neutral); err != nil {
+		if err := terms.Scan(&t.ID, &t.PropertyKey, &t.Key, &t.Origin, &t.Label, &directed, &t.InverseKey, &neutral); err != nil {
 			_ = terms.Close()
 			return Vocabulary{}, err
 		}
@@ -126,5 +191,24 @@ func (g *Graph) loadVocabulary() (Vocabulary, error) {
 		return Vocabulary{}, err
 	}
 	_ = terms.Close()
+
+	bindings, err := g.query(`SELECT subject_type_id, property_id, sort_order FROM subject_type_properties ORDER BY subject_type_id, sort_order, property_id`)
+	if err != nil {
+		return Vocabulary{}, err
+	}
+	for bindings.Next() {
+		var b VocabBinding
+		if err := bindings.Scan(&b.TypeID, &b.PropertyID, &b.SortOrder); err != nil {
+			_ = bindings.Close()
+			return Vocabulary{}, err
+		}
+		b.TypeID, b.PropertyID = cloneID(b.TypeID), cloneID(b.PropertyID)
+		v.Bindings = append(v.Bindings, b)
+	}
+	if err := bindings.Err(); err != nil {
+		_ = bindings.Close()
+		return Vocabulary{}, err
+	}
+	_ = bindings.Close()
 	return v, nil
 }

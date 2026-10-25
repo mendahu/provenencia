@@ -358,3 +358,87 @@ func given(text string) valuecompare.Value {
 		Value: text, Type: namevalue.PartTypeGiven,
 	}}}}
 }
+
+func TestLoadHugeSetIndex(t *testing.T) {
+	c := newCatalog(t)
+	db := mustDB(t, c)
+	insertTable(t, db, "huge", "user", "nickname", [][]string{{"jim", "james"}})
+	var id []byte
+	if err := db.QueryRow(`SELECT id FROM name_alias_tables WHERE key = 'huge'`).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	for _, token := range []string{"bill", "william"} {
+		if _, err := db.Exec(`INSERT INTO name_alias_members (table_id, set_idx, token) VALUES (?, ?, ?)`,
+			id, 2_000_000_000, token); err != nil {
+			t.Fatal(err)
+		}
+	}
+	tables, err := Load(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := tableByKey(t, tables, "huge").Sets
+	want := [][]string{{"james", "jim"}, {"bill", "william"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("sets %v, want %v", got, want)
+	}
+}
+
+// TestWarmRulesReusesIndex: a warm graph hands back the index Warm built; a
+// call builds nothing.
+func TestWarmRulesReusesIndex(t *testing.T) {
+	c := newCatalog(t)
+	if err := Install(c); err != nil {
+		t.Fatal(err)
+	}
+	if err := Warm(c); err != nil {
+		t.Fatal(err)
+	}
+	db := mustDB(t, c)
+	base := matchregistry.Default().Value
+	tables, err := Load(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("warm graph", func(t *testing.T) {
+		g := c.Graph()
+		var failed error
+		got := testing.AllocsPerRun(10, func() {
+			if _, err := Rules(g, db, base); err != nil {
+				failed = err
+			}
+		})
+		if failed != nil {
+			t.Fatal(failed)
+		}
+		if got >= 10 {
+			t.Errorf("a warm Rules allocates %v times, want under 10", got)
+		}
+		build := testing.AllocsPerRun(10, func() {
+			_ = valuecompare.NewAliasIndex(tables, base.Words)
+		})
+		if build <= 1000 {
+			t.Errorf("NewAliasIndex allocates %v times; the test cannot see a rebuild", build)
+		}
+		rules, err := Rules(g, db, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertScore(t, rules, "Jas.", "James", base.Words.AliasCredit)
+	})
+
+	t.Run("nil graph", func(t *testing.T) {
+		warm, err := Rules(c.Graph(), db, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cold, err := Rules(nil, db, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(cold.Names.Aliases, warm.Names.Aliases) {
+			t.Error("a nil graph builds a different index from the warm one")
+		}
+	})
+}

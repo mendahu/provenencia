@@ -1,6 +1,7 @@
 import AppKit
 import CoreGraphics
 import Foundation
+import ImageIO
 import Testing
 @testable import Provenencia
 
@@ -8,6 +9,7 @@ import Testing
 @MainActor
 struct CitationComposerDepictionTests {
     private let sourceID = "src-1"
+    private let graphID = "g-1"
     private let adaID = "sub-ada"
     private let benID = "sub-ben"
     private let claraID = "sub-clara"
@@ -48,7 +50,12 @@ struct CitationComposerDepictionTests {
         store.sourcesByProject[projectDir] = [
             CatalogSource(id: sourceID, ref: "SRC-1", sourceTypeID: "stype", title: "Wedding", description: ""),
         ]
-        store.subjectsBySource[sourceID] = [
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: graphID, ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: ["art-0"]
+            ),
+        ]
+        store.subjectsByGraph[graphID] = [
             person(adaID, ref: "CPR-1", label: "Ada Lovelace"),
             person(benID, ref: "CPR-2", label: "Ben Ford"),
             person(claraID, ref: "CPR-3", label: "Clara Ford"),
@@ -102,13 +109,14 @@ struct CitationComposerDepictionTests {
         if let citationID {
             entry = .edit(
                 sourceID: sourceID,
+                graphID: graphID,
                 subjectID: subjectID ?? adaID,
                 citationID: citationID,
                 artifactID: "art-0",
                 observationID: observationID
             )
         } else {
-            entry = .addProperty(sourceID: sourceID, subjectID: subjectID ?? adaID, artifactID: "art-0")
+            entry = .addProperty(sourceID: sourceID, graphID: graphID, subjectID: subjectID ?? adaID, artifactID: "art-0")
         }
         return CitationComposerModel(
             entry: entry,
@@ -144,7 +152,7 @@ struct CitationComposerDepictionTests {
             transcriptionUncertain: false,
             transcriptionNote: ""
         )
-        store.observationsBySource[sourceID] = observations
+        store.observationsByGraph[graphID] = observations
     }
 
     private func likenessObservation(
@@ -307,7 +315,7 @@ struct CitationComposerDepictionTests {
         let citationRegion = rect(0.5, 0.5, 0.9, 0.9)
         #expect(model.setRegion(citationRegion))
         openLikenessDraft(model)
-        #expect(model.depictionPreview == nil)
+        #expect(model.depictionPreviewState == .none)
         model.startDepictionDrawing()
         #expect(model.presented == .drawingDepiction(over: .authoring))
         #expect(model.armedRegionTool == .rectangle)
@@ -317,7 +325,12 @@ struct CitationComposerDepictionTests {
         #expect(model.locator.region == citationRegion)
         #expect(model.presented == .authoring)
         #expect(model.viewerRegion == face)
-        #expect(model.depictionPreview?.size == CGSize(width: 4, height: 4))
+        await model.renderDepictionPreview()
+        guard case .cut(let image) = model.depictionPreviewState else {
+            Issue.record("the preview should be cut")
+            return
+        }
+        #expect(image.size == CGSize(width: 4, height: 4))
 
         model.startDepictionDrawing()
         model.cancelDepictionDrawing()
@@ -563,7 +576,7 @@ struct CitationComposerDepictionTests {
 
         let call = try #require(store.recordedCalls.last { $0.hasPrefix("addObservationsToCitation") })
         #expect(call.hasSuffix(" depiction=1 depictionFile=present"))
-        let saved = try #require(store.observationsBySource[sourceID]?.last?.depiction)
+        let saved = try #require(store.observationsByGraph[graphID]?.last?.depiction)
         let sent = CitationLocatorDraft.decode(saved.regionJSON)
         #expect(sent.page == nil)
         #expect(sent.region != nil)
@@ -699,6 +712,135 @@ struct CitationComposerDepictionTests {
         #expect(model.editCanConfirm)
     }
 
+    // MARK: - Preview off the main thread
+
+    @Test func previewIsCutAfterTheRegionCommits() async throws {
+        let (projectDir, store) = try seeded()
+        let model = makeModel(store: store, projectDir: projectDir)
+        await model.prepare()
+        openLikenessDraft(model)
+        model.startDepictionDrawing()
+        #expect(model.commitViewerRegion(rect(0.25, 0.25, 0.75, 0.75)))
+        #expect(model.depictionPreviewState == .cutting)
+        await model.renderDepictionPreview()
+        guard case .cut(let image) = model.depictionPreviewState else {
+            Issue.record("the preview should be cut")
+            return
+        }
+        #expect(image.size == CGSize(width: 4, height: 4))
+    }
+
+    /// Width, height and RGBA bytes of the PNG the save wrote, compared with the preview's cut.
+    private func savedPixelsMatchThePreview(_ model: CitationComposerModel) async throws {
+        let preview = try #require(model.depictionPreviewMemo?.cut?.cgImage)
+        let values = try #require(draftValues(model))
+        // Decode inside the closure: the file is removed when it returns.
+        let sent: (width: Int, height: Int, bytes: [UInt8]) = try await model.withDepictionInput(for: values) { input in
+            let url = URL(fileURLWithPath: input.imagePath)
+            let source = try #require(CGImageSourceCreateWithURL(url as CFURL, nil))
+            let image = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
+            return (image.width, image.height, ArtifactFileFixtures.rgbaBytes(image))
+        }
+        #expect(sent.width == preview.width)
+        #expect(sent.height == preview.height)
+        #expect(!sent.bytes.isEmpty)
+        let samePixels = sent.bytes == ArtifactFileFixtures.rgbaBytes(preview)
+        #expect(samePixels)
+    }
+
+    @Test func savedPixelsAreThePreviewPixels() async throws {
+        let (projectDir, store) = try seeded()
+        let photo = makeModel(store: store, projectDir: projectDir)
+        await photo.prepare()
+        openLikenessDraft(photo)
+        photo.startDepictionDrawing()
+        #expect(photo.commitViewerRegion(rect(0.25, 0.25, 0.75, 0.75)))
+        await photo.renderDepictionPreview()
+        try await savedPixelsMatchThePreview(photo)
+
+        let (pdfDir, pdfStore) = try seeded(.pdf)
+        try ArtifactFileFixtures.writeMarkedPDF(projectDir: pdfDir, relPath: "objects/news.pdf", rotation: 0)
+        let pdf = makeModel(store: pdfStore, projectDir: pdfDir)
+        await pdf.prepare()
+        openLikenessDraft(pdf)
+        pdf.startDepictionDrawing()
+        #expect(pdf.commitViewerRegion(rect(0, 0, 0.5, 0.5)))
+        await pdf.renderDepictionPreview()
+        try await savedPixelsMatchThePreview(pdf)
+    }
+
+    @Test func editWithoutRedrawShowsTheSavedImage() async throws {
+        let (model, _) = try await editingSavedLikeness()
+        #expect(model.depictionPreviewKey == nil)
+        #expect(model.depictionPreviewState == .saved(relPath: savedRelPath))
+        model.startDepictionDrawing()
+        #expect(model.commitViewerRegion(rect(0.5, 0.5, 0.9, 0.9)))
+        #expect(model.depictionPreviewState == .cutting)
+        await model.renderDepictionPreview()
+        guard case .cut = model.depictionPreviewState else {
+            Issue.record("the redrawn preview should be cut")
+            return
+        }
+
+        let (projectDir, store) = try seeded()
+        seedCitation(store, observations: [likenessObservation(region: "")])
+        let hidden = makeModel(store: store, projectDir: projectDir, citationID: "cit-1", observationID: "obs-1")
+        await hidden.prepare()
+        #expect(hidden.depictionPreviewState == .none)
+    }
+
+    @Test func staleCutIsNotStored() async throws {
+        let (projectDir, store) = try seeded()
+        let model = makeModel(store: store, projectDir: projectDir)
+        await model.prepare()
+        openLikenessDraft(model)
+        model.startDepictionDrawing()
+        #expect(model.commitViewerRegion(rect(0.25, 0.25, 0.75, 0.75)))
+        let first = try #require(draftValues(model)).depictionDraft
+        model.startDepictionDrawing()
+        #expect(model.commitViewerRegion(rect(0, 0, 1, 1)))
+        _ = await model.depictionImage(for: first)
+        #expect(model.depictionPreviewState == .cutting)
+        #expect(model.depictionPreviewMemo == nil)
+        await model.renderDepictionPreview()
+        guard case .cut(let image) = model.depictionPreviewState else {
+            Issue.record("the current region should be cut")
+            return
+        }
+        #expect(image.size == CGSize(width: 8, height: 8))
+    }
+
+    @Test func missingFileCutFails() async throws {
+        let (projectDir, store) = try seeded()
+        try FileManager.default.removeItem(atPath: projectDir + "/objects/photo.png")
+        let model = makeModel(store: store, projectDir: projectDir)
+        await model.prepare()
+        openLikenessDraft(model)
+        model.startDepictionDrawing()
+        #expect(model.commitViewerRegion(rect(0.25, 0.25, 0.75, 0.75)))
+        await model.renderDepictionPreview()
+        #expect(model.depictionPreviewState == .failed)
+        await model.saveAuthoring()
+        guard case .property(let draft) = model.authoring else {
+            Issue.record("the dialog should stay open")
+            return
+        }
+        #expect(draft.error == L10n.string(L10n.CitationComposer.depictionRenderFailed))
+        #expect(draft.values.depictionDraft.hasRegion)
+    }
+
+    @Test func editWithNoSavedImageDoesNotCut() async throws {
+        let (projectDir, store) = try seeded()
+        let region = regionJSON(rect(0.1, 0.1, 0.4, 0.4))
+        var observation = likenessObservation(region: region)
+        observation.depiction = CatalogDepictionValue(regionJSON: region, imageRelPath: "")
+        seedCitation(store, observations: [observation])
+        let model = makeModel(store: store, projectDir: projectDir, citationID: "cit-1", observationID: "obs-1")
+        await model.prepare()
+        #expect(model.depictionPreviewKey == nil)
+        #expect(model.depictionPreviewState == .none)
+    }
+
     // MARK: - Lines, copy (T-19, T-22, T-23)
 
     @Test func savedLineCarriesItsImage() async throws {
@@ -781,7 +923,7 @@ struct CitationComposerDepictionTests {
 
         let call = try #require(store.recordedCalls.last { $0.hasPrefix("addObservationsToCitation") })
         #expect(call.hasSuffix(" depiction=1 depictionFile=present"))
-        let saved = try #require(store.observationsBySource[sourceID]?.last?.depiction)
+        let saved = try #require(store.observationsByGraph[graphID]?.last?.depiction)
         let selectors = try JSONSerialization.jsonObject(with: Data(saved.regionJSON.utf8)) as? [String: Any]
         let types = (selectors?["selectors"] as? [[String: Any]])?.compactMap { $0["type"] as? String }
         #expect(types?.filter { $0 == "region" }.count == 1)

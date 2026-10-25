@@ -2,6 +2,8 @@ package identityclaims
 
 import (
 	"database/sql"
+
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 )
 
@@ -34,8 +36,8 @@ func PinTx(tx *sql.Tx, claimID, observationID []byte) (change rowchange.Change, 
 		EntityID:   append([]byte(nil), claimID...),
 		Action:     rowchange.ActionCreate,
 		Fields: rowchange.FullRow(map[string]any{
-			"identity_claim_id": uuidJSON(claimID),
-			"observation_id":    uuidJSON(observationID),
+			"identity_claim_id": database.UUIDJSON(claimID),
+			"observation_id":    database.UUIDJSON(observationID),
 		}),
 	}, true, nil
 }

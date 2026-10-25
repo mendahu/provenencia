@@ -1,6 +1,7 @@
 package subjects
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -8,8 +9,10 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	_ "github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	_ "github.com/mendahu/provenencia/core/database/sourcefill"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
@@ -53,6 +56,16 @@ func TestSubjects(t *testing.T) {
 		}
 		return src
 	}
+	mustArtifact := func(t *testing.T, c *database.Catalog, sourceID []byte) artifacts.Artifact {
+		t.Helper()
+		a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID}, func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, artifacts.CreateInput{SourceID: sourceID, Label: "Scan"})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return a
+	}
 	mustSubjectTypes := func(t *testing.T, c *database.Catalog) {
 		t.Helper()
 		if err := subjectvocab.Install(c); err != nil {
@@ -91,6 +104,72 @@ func TestSubjects(t *testing.T) {
 		run  func(t *testing.T, c *database.Catalog)
 	}{
 		{
+			name: "graph id given",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				mustSubjectTypes(t, c)
+				src := mustSource(t, c)
+				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				art := mustArtifact(t, c, src.ID)
+				jones := evidencegraphstest.Create(t, c, userID, src.ID, "Jones", art.ID)
+				var created []rowchange.Change
+				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
+					s, changes, err := Create(tx, userID, CreateInput{
+						GraphID: jones.ID, SubjectTypeID: person.ID, Label: "Ben",
+					}, nil)
+					created = changes
+					return s, changes, err
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !bytes.Equal(s.GraphID, jones.ID) {
+					t.Fatalf("created graph %x want %x", s.GraphID, jones.ID)
+				}
+				got, err := Get(c, s.ID)
+				if err != nil || !bytes.Equal(got.GraphID, jones.ID) {
+					t.Fatalf("read graph %x want %x (%v)", got.GraphID, jones.ID, err)
+				}
+				if len(created) == 0 || created[0].Fields["graph_id"].New != database.UUIDJSON(jones.ID) {
+					t.Fatalf("create change graph_id: %+v", created)
+				}
+				var deleted []rowchange.Change
+				if _, err := writes.Call(c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := Delete(tx, userID, s.ID)
+					deleted = changes
+					return struct{}{}, changes, err
+				}); err != nil {
+					t.Fatal(err)
+				}
+				last := deleted[len(deleted)-1]
+				if last.EntityType != "subject" || last.Fields["graph_id"].Old != database.UUIDJSON(jones.ID) {
+					t.Fatalf("delete change graph_id: %+v", last)
+				}
+			},
+		},
+		{
+			name: "graph id wrong length",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				mustSubjectTypes(t, c)
+				person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, err = writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
+					return Create(tx, userID, CreateInput{
+						GraphID: []byte{1, 2, 3}, SubjectTypeID: person.ID, Label: "X",
+					}, nil)
+				})
+				if !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v want ErrInvalid", err)
+				}
+			},
+		},
+		{
 			name: "create rejects empty user id",
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
@@ -100,9 +179,10 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 				_, err = writes.Call(c, writes.Op{Action: "create_subject", UserID: nil}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
 					return Create(tx, nil, CreateInput{
-						SourceID:      src.ID,
+						GraphID:       graph,
 						SubjectTypeID: person.ID,
 						Label:         "Alice",
 					}, nil)
@@ -122,9 +202,10 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
 					return Create(tx, userID, CreateInput{
-						SourceID:      src.ID,
+						GraphID:       graph,
 						SubjectTypeID: person.ID,
 						Label:         "Alice",
 					}, nil)
@@ -187,9 +268,10 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
 					return Create(tx, userID, CreateInput{
-						SourceID:      src.ID,
+						GraphID:       graph,
 						SubjectTypeID: person.ID,
 						Label:         "Placed",
 					}, &Placement{GridX: -2, GridY: 5})
@@ -216,9 +298,10 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
 					return Create(tx, userID, CreateInput{
-						SourceID:      src.ID,
+						GraphID:       graph,
 						SubjectTypeID: event.ID,
 					}, nil)
 				})
@@ -240,9 +323,10 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
 					return Create(tx, userID, CreateInput{
-						SourceID: src.ID, SubjectTypeID: person.ID, Label: "Alice",
+						GraphID: graph, SubjectTypeID: person.ID, Label: "Alice",
 					}, nil)
 				})
 				if err != nil {
@@ -282,9 +366,10 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
 					return Create(tx, userID, CreateInput{
-						SourceID: src.ID, SubjectTypeID: person.ID, Label: "Bob",
+						GraphID: graph, SubjectTypeID: person.ID, Label: "Bob",
 					}, nil)
 				})
 				if err != nil {
@@ -346,19 +431,22 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				graph := evidencegraphstest.SoleGraph(t, c, srcA.ID).ID
+				a, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
+					return Create(tx, userID, CreateInput{GraphID: graph, SubjectTypeID: person.ID, Label: "A"}, nil)
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				graphB := evidencegraphstest.SoleGraph(t, c, srcB.ID).ID
 				if _, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
-					return Create(tx, userID, CreateInput{SourceID: srcA.ID, SubjectTypeID: person.ID, Label: "A"}, nil)
+					return Create(tx, userID, CreateInput{GraphID: graphB, SubjectTypeID: person.ID, Label: "B"}, nil)
 				}); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
-					return Create(tx, userID, CreateInput{SourceID: srcB.ID, SubjectTypeID: person.ID, Label: "B"}, nil)
-				}); err != nil {
-					t.Fatal(err)
-				}
-				sg, err := c.Graph().Source(srcA.ID)
-				if err != nil || len(sg.Subjects) != 1 || sg.Subjects[0].Label != "A" {
-					t.Fatalf("%v %+v", err, sg.Subjects)
+				eg, err := c.Graph().EvidenceGraph(a.GraphID)
+				if err != nil || len(eg.Subjects) != 1 || eg.Subjects[0].Label != "A" {
+					t.Fatalf("%v %+v", err, eg.Subjects)
 				}
 			},
 		},
@@ -386,5 +474,75 @@ func TestSubjects(t *testing.T) {
 			defer c.Close()
 			tt.run(t, c)
 		})
+	}
+}
+
+func TestInsertReadsTheGraphsSource(t *testing.T) {
+	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	r, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.Upsert(c, userID, "Jake", r); err != nil {
+		t.Fatal(err)
+	}
+	if err := subjectvocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	newSource := func(title string) sources.Source {
+		t.Helper()
+		src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: title})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return src
+	}
+	src := newSource("Deed")
+	art, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID}, func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+		return artifacts.Create(tx, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	jones := evidencegraphstest.Create(t, c, userID, src.ID, "Jones", art.ID)
+	person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unknown := make([]byte, 16)
+	unknown[0] = 9
+	create := func(in CreateInput) (Subject, error) {
+		in.SubjectTypeID, in.Label = person.ID, "X"
+		return writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
+			return Create(tx, userID, in, nil)
+		})
+	}
+
+	s, err := create(CreateInput{GraphID: jones.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(s.SourceID, src.ID) || !bytes.Equal(s.GraphID, jones.ID) {
+		t.Fatalf("subject on %x of %x, want %x of %x", s.GraphID, s.SourceID, jones.ID, src.ID)
+	}
+	for name, in := range map[string]CreateInput{
+		"no graph id":           {},
+		"unknown graph":         {GraphID: unknown},
+		"graph id wrong length": {GraphID: []byte{1, 2, 3}},
+	} {
+		if _, err := create(in); !errors.Is(err, ErrInvalid) {
+			t.Fatalf("%s: got %v want ErrInvalid", name, err)
+		}
 	}
 }

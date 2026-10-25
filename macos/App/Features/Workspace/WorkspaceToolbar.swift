@@ -31,6 +31,7 @@ enum HistoryJumpMenuSide: Hashable {
 struct WorkspaceToolbar: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Environment(OmnibarFocusCoordinator.self) private var omnibarFocus
+    @Environment(WorkspaceSession.self) private var session
     var jumpMenu: HistoryJumpMenuModel
     @Bindable var omnibarResults: OmnibarResultsModel
     let projectDir: String
@@ -70,7 +71,7 @@ struct WorkspaceToolbar: View {
         .onChange(of: navigation.currentLocation) { _, _ in
             jumpMenu.dismiss()
         }
-        .onChange(of: omnibarResults.query) { _, _ in
+        .onChange(of: omnibarResults.search.query) { _, _ in
             omnibarResults.scheduleSearch(
                 projectDir: projectDir,
                 location: navigation.currentLocation,
@@ -152,6 +153,10 @@ struct WorkspaceToolbar: View {
     private var breadcrumbs: some View {
         PVBreadcrumbs(items: Self.breadcrumbItems(
             for: navigation.currentLocation,
+            names: BreadcrumbNames(
+                sourceTitle: { session.source(id: $0)?.title },
+                graphName: { session.evidenceGraph(id: $0)?.name }
+            ),
             goTo: { location in
                 WindowDrag.unlessDragging {
                     navigation.go(to: location)
@@ -164,7 +169,7 @@ struct WorkspaceToolbar: View {
 
     private var omnibarField: some View {
         PVInput(
-            text: $omnibarResults.query,
+            text: Bindable(omnibarResults.search).query,
             size: .sm,
             prompt: L10n.Workspace.omnibarPlaceholder,
             icon: .search,
@@ -183,12 +188,27 @@ struct WorkspaceToolbar: View {
         .accessibilityIdentifier("workspace.toolbar.omnibar")
     }
 
+    /// Names the crumbs read from the session's lists, so a rename shows at
+    /// once. `.none` knows no name; crumbs then fall back to what the location
+    /// carries.
+    struct BreadcrumbNames {
+        var sourceTitle: (String) -> String?
+        var graphName: (String) -> String?
+
+        static var none: BreadcrumbNames {
+            BreadcrumbNames(sourceTitle: { _ in nil }, graphName: { _ in nil })
+        }
+    }
+
     /// Builds toolbar crumbs.
-    /// Composer (S7-D4): `Sources › Evidence graph › Citation for {scope}` with a
-    /// tappable Evidence graph segment back to the Source’s graph place.
-    /// Promote (S9-11): `Sources › Evidence graph › Promote {ref}`, the same way.
+    /// Graph (S12-11): `Sources › {Source title} › {graph name}`; the Source
+    /// crumb goes to the Source page.
+    /// Composer (S7-D4): `Sources › {Source title} › {graph name} › Citation for {scope}`
+    /// with a tappable graph segment back to the graph's canvas.
+    /// Promote (S9-11): `Sources › {Source title} › {graph name} › Promote {ref}`, the same way.
     static func breadcrumbItems(
         for location: WorkspaceLocation,
+        names: BreadcrumbNames = .none,
         goTo: @escaping (WorkspaceLocation) -> Void
     ) -> [PVBreadcrumbItem] {
         let sectionLabel = L10n.string(location.section.label)
@@ -208,40 +228,45 @@ struct WorkspaceToolbar: View {
             ),
         ]
 
-        if location.sourceSurface == .citationComposer || location.sourceSurface == .promote,
-           let sourceID = location.sourceId
+        if location.sourceSurface == .graph || location.sourceSurface == .citationComposer
+            || location.sourceSurface == .promote,
+           let sourceID = location.sourceId, let graphID = location.graphId
         {
-            let scope = location.title.flatMap { $0.nilIfEmpty }
-                ?? location.ref.flatMap { $0.nilIfEmpty }
-                ?? "…"
-            let graphLabel: String
-            if let sourceTitle = location.sourceTitle.flatMap({ $0.nilIfEmpty }) {
-                graphLabel = L10n.Workspace.evidenceGraphFor(sourceTitle: sourceTitle)
-            } else {
-                graphLabel = L10n.string(L10n.Workspace.evidenceGraphTitle)
+            let onCanvas = location.sourceSurface == .graph
+            let carriedTitle = onCanvas ? location.title : location.sourceTitle
+            let sourceLabel = names.sourceTitle(sourceID).flatMap { $0.nilIfEmpty }
+                ?? carriedTitle.flatMap { $0.nilIfEmpty }
+            if let sourceLabel {
+                items.append(
+                    PVBreadcrumbItem(
+                        id: "source-\(sourceID)",
+                        label: sourceLabel,
+                        action: { goTo(.sourcePage(sourceId: sourceID, title: sourceLabel)) }
+                    )
+                )
             }
+            let graphLabel = names.graphName(graphID).flatMap { $0.nilIfEmpty }
+                ?? L10n.string(L10n.Workspace.evidenceGraphTitle)
             items.append(
                 PVBreadcrumbItem(
-                    id: "graph-\(sourceID)",
+                    id: "graph-\(graphID)",
                     label: graphLabel,
-                    action: {
-                        goTo(WorkspaceLocation(
-                            section: .sources,
-                            sourceId: sourceID,
-                            sourceSurface: .graph,
-                            ref: nil,
-                            title: location.sourceTitle
-                        ))
+                    action: onCanvas ? nil : {
+                        goTo(.evidenceGraph(sourceId: sourceID, graphId: graphID, title: sourceLabel))
                     }
                 )
             )
+            if onCanvas { return items }
+            let scope = location.title.flatMap { $0.nilIfEmpty }
+                ?? location.ref.flatMap { $0.nilIfEmpty }
+                ?? "…"
             if location.sourceSurface == .promote {
                 let label = location.promoteAll
                     ? L10n.string(L10n.EvidenceGraph.promoteAll)
                     : L10n.Promote.breadcrumb(ref: location.ref.flatMap { $0.nilIfEmpty } ?? scope)
                 items.append(
                     PVBreadcrumbItem(
-                        id: "promote-\(sourceID)",
+                        id: "promote-\(graphID)",
                         label: label,
                         action: nil
                     )
@@ -249,7 +274,7 @@ struct WorkspaceToolbar: View {
             } else {
                 items.append(
                     PVBreadcrumbItem(
-                        id: "composer-\(sourceID)",
+                        id: "composer-\(graphID)",
                         label: L10n.CitationComposer.breadcrumbCitationFor(scope: scope),
                         action: nil
                     )
@@ -596,6 +621,7 @@ private extension Optional where Wrapped == String {
         store: FakeStore()
     )
         .environment(WorkspaceNavigation())
+        .environment(WorkspaceSession(projectKey: ProjectKey(projectDir: "/tmp/preview.provenencia"), store: FakeStore()))
         .environment(OmnibarFocusCoordinator())
         .frame(width: 900)
         .background(PVColor.surfacePage)

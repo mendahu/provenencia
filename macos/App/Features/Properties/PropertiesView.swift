@@ -91,10 +91,10 @@ private struct PropertiesContent: View {
         .onChange(of: navigation.currentLocation) { _, location in
             reconcileSelection(for: location)
         }
-        .onChange(of: handle.status) { _, status in
-            if status == .ready { model.syncCatalogCounts() }
+        .onChange(of: handle.status) { _, _ in
             reconcileSelection(for: navigation.currentLocation)
         }
+        .onSettled(handle) { model.syncCatalogCounts() }
         .onChange(of: handle.value) { _, _ in
             reconcileSelection(for: navigation.currentLocation)
         }
@@ -114,7 +114,6 @@ private struct PropertiesContent: View {
         }
         .onAppear {
             reconcileSelection(for: navigation.currentLocation)
-            if handle.status == .ready { model.syncCatalogCounts() }
         }
         .background {
             PropertiesCreateHost(model: model)
@@ -784,7 +783,7 @@ private struct PropertiesCreateHost: View {
             PVField(
                 label: L10n.Properties.createLabel,
                 hint: L10n.Properties.createLabelHint,
-                required: true
+                marker: .required
             ) {
                 PVInput(
                     text: Binding(
@@ -827,7 +826,7 @@ private struct PropertiesCreateHost: View {
             PVField(
                 label: L10n.Properties.createValueType,
                 hint: L10n.Properties.createValueTypeHint,
-                required: true
+                marker: .required
             ) {
                 PVChipGroup(style: .segmented) {
                     ForEach(SubjectPropertyValueType.researcherCreatable, id: \.self) { vt in

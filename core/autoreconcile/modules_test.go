@@ -5,11 +5,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/depictionvalues"
-	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/depictionvalue"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
-	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 func term(n byte, termID, key string) Candidate {
@@ -17,9 +15,9 @@ func term(n byte, termID, key string) Candidate {
 }
 
 // depiction is a likeness holding image; an empty image is one whose File
-// depictionvalues.Readable refused.
+// depictionvalue.Readable refused.
 func depiction(n byte, image string) Candidate {
-	return Candidate{ObservationID: id(n), Value: Value{Depiction: &depictionvalues.Value{ImageFileID: []byte(image)}}}
+	return Candidate{ObservationID: id(n), Value: Value{Depiction: &depictionvalue.Value{ImageFileID: []byte(image)}}}
 }
 
 // neutralTerm is a term the catalog flags as no evidence ("unknown").
@@ -151,74 +149,4 @@ func TestReconcileDepictionMultiple(t *testing.T) {
 			t.Fatalf("values %v, outcomes %+v", got.Values, got.Outcomes)
 		}
 	})
-}
-
-// Compatible is the pipeline's "same value or fold", one pair at a time.
-func TestCompatible(t *testing.T) {
-	cases := []struct {
-		name      string
-		valueType string
-		a, b      Candidate
-		want      bool
-	}{
-		{"text: trimmed and case-insensitive", propertymeta.ValueTypeText, text(1, " York"), text(2, "york"), true},
-		{"text: different", propertymeta.ValueTypeText, text(1, "York"), text(2, "Toronto"), false},
-		{"text: punctuation and spacing are ignored", propertymeta.ValueTypeText, text(1, "Sainte-Anne"), text(2, "Sainte Anne"), true},
-		{"text: word breaks are ignored", propertymeta.ValueTypeText, text(1, "Yorktown"), text(2, "York Town"), true},
-		{"text: an accent fold is a different value", propertymeta.ValueTypeText, text(1, "Montréal"), text(2, "Montreal"), false},
-		{"text: never folds", propertymeta.ValueTypeText, text(1, "York"), text(2, "York, Upper Canada"), false},
-		{"text: blank is no evidence", propertymeta.ValueTypeText, text(1, ""), text(2, ""), false},
-		{"integer: equal", propertymeta.ValueTypeInteger, integer(1, 34), integer(2, 34), true},
-		{"integer: different", propertymeta.ValueTypeInteger, integer(1, 34), integer(2, 35), false},
-		{"term: the same term", propertymeta.ValueTypeTerm, term(1, "m", "male"), term(2, "m", "male"), true},
-		{"term: different terms", propertymeta.ValueTypeTerm, term(1, "m", "male"), term(2, "f", "female"), false},
-		{"term: a neutral term is no evidence", propertymeta.ValueTypeTerm, neutralTerm(1, "u", "unknown"), neutralTerm(2, "u", "unknown"), false},
-		{"name: the same parts", propertymeta.ValueTypeName,
-			nm(1, "given=James|surname=Robins"), nm(2, "given=James|surname=Robins"), true},
-		{"name: an initial folds into the full given name", propertymeta.ValueTypeName,
-			nm(1, "given=J.|surname=Robins"), nm(2, "given=James|surname=Robins"), true},
-		{"name: fold either way round", propertymeta.ValueTypeName,
-			nm(1, "given=James|surname=Robins"), nm(2, "given=J.|surname=Robins"), true},
-		{"name: a part only one carries does not count against", propertymeta.ValueTypeName,
-			nm(1, "given=James"), nm(2, "given=James|surname=Robins"), true},
-		{"name: a spelling variant differs", propertymeta.ValueTypeName,
-			nm(1, "given=James|surname=Robins"), nm(2, "given=James|surname=Robbins"), false},
-		{"name: no shared part", propertymeta.ValueTypeName,
-			nm(1, "given=James"), nm(2, "surname=Robins"), false},
-		{"name: no parts is no evidence", propertymeta.ValueTypeName, name(1, "James Robins"), name(2, "James Robins"), false},
-		{"depiction: the same image", propertymeta.ValueTypeDepiction, depiction(1, "a"), depiction(2, "a"), true},
-		{"depiction: different images", propertymeta.ValueTypeDepiction, depiction(1, "a"), depiction(2, "b"), false},
-		{"depiction: an unreadable image is no evidence", propertymeta.ValueTypeDepiction, depiction(1, ""), depiction(2, ""), false},
-		{"mismatched value", propertymeta.ValueTypeInteger, text(1, "34"), integer(2, 34), false},
-		{"unknown value type", "colour", text(1, "red"), text(2, "red"), false},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := Compatible(testRules, tc.valueType, tc.a.Value, tc.b.Value); got != tc.want {
-				t.Fatalf("Compatible = %v, want %v", got, tc.want)
-			}
-		})
-	}
-}
-
-// An alias never makes two names compatible: value compare finds the longer
-// name contains the shorter, but only as an alias, which does not fold.
-func TestCompatibleIgnoresAliases(t *testing.T) {
-	rules := matchregistry.Default().Value
-	rules.Names.Aliases = valuecompare.NewAliasIndex([]valuecompare.AliasTable{{
-		Key: "t", Kind: valuecompare.AliasNickname,
-		Roles: []valuecompare.NameRole{valuecompare.RoleGiven, valuecompare.RoleNick, valuecompare.RoleUntyped},
-		Sets:  [][]string{{"jim", "james"}},
-	}}, rules.Words)
-	a := nm(1, "given=Jim|surname=Robins").Value
-	b := nm(2, "given=James|given=Kenneth|surname=Robins").Value
-	if Compatible(rules, propertymeta.ValueTypeName, a, b) {
-		t.Fatal("Jim Robins is compatible with James Kenneth Robins through an alias")
-	}
-	res, _ := valuecompare.Compare(
-		valuecompare.Value{Type: propertymeta.ValueTypeName, Name: a.Name},
-		valuecompare.Value{Type: propertymeta.ValueTypeName, Name: b.Name}, rules)
-	if res.Relation != valuecompare.Contains {
-		t.Fatalf("whole names relate as %q, want contains", res.Relation)
-	}
 }

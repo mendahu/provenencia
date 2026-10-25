@@ -30,11 +30,19 @@ var layerPackages = []struct {
 	{"core/propertycompare/propertycomparetest", false},
 	{"core/subjectcompare", true},
 	{"core/subjectcompare/subjectcomparetest", false},
+	{"core/subjectprofile", true},
+	{"core/segmentcompare", true},
+	{"core/segmentcompare/segmentcomparetest", false},
+	{"core/shortlist", true},
+	{"core/graphalign", true},
+	{"core/claimevidence", true},
 	{"core/matchregistry", false},
 	{"core/datevalue", false},
 	{"core/datevalue/datevaluetest", false},
 	{"core/namevalue", false},
 	{"core/namevalue/namevaluetest", false},
+	{"core/depictionvalue", false},
+	{"core/depictionvalue/depictionvaluetest", false},
 	{"core/propertymeta", false},
 	{"core/vocabkey", false},
 }
@@ -42,7 +50,7 @@ var layerPackages = []struct {
 func TestLayerPackages(t *testing.T) {
 	root := filepath.Join("..", "..")
 	for _, p := range layerPackages {
-		t.Run(p.dir+"/pure", func(t *testing.T) { checkPure(t, root, p.dir) })
+		t.Run(p.dir+"/pure", func(t *testing.T) { checkPure(t, root, p.dir, p.numbers) })
 		if p.numbers {
 			t.Run(p.dir+"/numbers", func(t *testing.T) { checkNumbers(t, root, p.dir) })
 		}
@@ -51,8 +59,11 @@ func TestLayerPackages(t *testing.T) {
 
 // checkPure fails when the package has a file that builds only with a tag, or
 // imports, directly or through another package of the module, anything under
-// core/database.
-func checkPure(t *testing.T, root, dir string) {
+// core/database. Following only non-test imports, it also fails when a numbers
+// layer reaches core/matchregistry, and when a package other than
+// core/subjectprofile reaches core/autoreconcile. It is one walker with three
+// rules (D-11).
+func checkPure(t *testing.T, root, dir string, numbers bool) {
 	ctx := build.Default
 	ctx.BuildTags = nil
 	pkg, err := ctx.ImportDir(filepath.Join(root, dir), 0)
@@ -65,30 +76,52 @@ func checkPure(t *testing.T, root, dir string) {
 	if len(pkg.IgnoredGoFiles) > 0 {
 		t.Errorf("%s has files that build only with a tag or a platform: %s", dir, strings.Join(pkg.IgnoredGoFiles, ", "))
 	}
-	visited := map[string]bool{}
-	var walk func(pkg *build.Package, chain []string)
-	walk = func(pkg *build.Package, chain []string) {
-		imports := slices.Concat(pkg.Imports, pkg.TestImports, pkg.XTestImports)
-		for _, imp := range imports {
-			if !strings.HasPrefix(imp, modulePath) || visited[imp] {
-				continue
+	// One walker, three rules (D-11). The catalog rule holds on every hop; the
+	// registry and autoreconcile rules hold only along production imports.
+	// visited is keyed by import path and prodOnly, so a package first reached
+	// through a test import is walked again through a production one.
+	type visit struct {
+		imp      string
+		prodOnly bool
+	}
+	visited := map[visit]bool{}
+	var walk func(pkg *build.Package, chain []string, prodOnly bool)
+	walk = func(pkg *build.Package, chain []string, prodOnly bool) {
+		step := func(imp string, prodOnly bool) {
+			key := visit{imp, prodOnly}
+			if !strings.HasPrefix(imp, modulePath) || visited[key] {
+				return
 			}
-			visited[imp] = true
+			visited[key] = true
 			next := append(slices.Clone(chain), imp)
 			rest := strings.TrimPrefix(imp, modulePath)
 			if rest == "core/database" || strings.HasPrefix(rest, "core/database/") {
 				t.Errorf("%s reaches the catalog: %s", dir, strings.Join(next, " -> "))
-				continue
+				return
+			}
+			if prodOnly && numbers && rest == "core/matchregistry" {
+				t.Errorf("%s is a numbers layer and reaches the registry: %s", dir, strings.Join(next, " -> "))
+				return
+			}
+			if prodOnly && rest == "core/autoreconcile" && dir != "core/subjectprofile" {
+				t.Errorf("%s reaches core/autoreconcile: %s", dir, strings.Join(next, " -> "))
+				return
 			}
 			dep, err := ctx.ImportDir(filepath.Join(root, rest), 0)
 			if err != nil {
 				t.Errorf("%s: reading %s: %v", dir, imp, err)
-				continue
+				return
 			}
-			walk(dep, next)
+			walk(dep, next, prodOnly)
+		}
+		for _, imp := range pkg.Imports {
+			step(imp, prodOnly)
+		}
+		for _, imp := range slices.Concat(pkg.TestImports, pkg.XTestImports) {
+			step(imp, false)
 		}
 	}
-	walk(pkg, []string{modulePath + dir})
+	walk(pkg, []string{modulePath + dir}, true)
 }
 
 // checkNumbers fails on every numeric literal in a non-test file other than 0

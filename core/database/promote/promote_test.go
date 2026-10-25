@@ -8,13 +8,15 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
@@ -33,12 +35,7 @@ func TestSave(t *testing.T) {
 			name: "person mints a PER handle with one accepted member",
 			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
 				james := mk("person")
-				res, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, promote.Input{SubjectID: james.ID})
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
+				res := promotetest.Save(t, c, userID, promote.Input{SubjectID: james.ID})
 				if !ref.Valid(res.Entity.Ref) || !strings.HasPrefix(res.Entity.Ref, "PER-") {
 					t.Fatalf("ref %q", res.Entity.Ref)
 				}
@@ -58,13 +55,7 @@ func TestSave(t *testing.T) {
 		{
 			name: "one promote_subject revision with two changes",
 			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
-				p6a1 := promote.Input{SubjectID: mk("person").ID}
-				res, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, p6a1)
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
+				res := promotetest.Save(t, c, userID, promote.Input{SubjectID: mk("person").ID})
 				db, err := c.DB()
 				if err != nil {
 					t.Fatal(err)
@@ -105,13 +96,8 @@ func TestSave(t *testing.T) {
 			name: "second promote of a member refused without minting",
 			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
 				james := mk("person")
-				first, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, promote.Input{SubjectID: james.ID})
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
-				_, err = writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+				first := promotetest.Save(t, c, userID, promote.Input{SubjectID: james.ID})
+				_, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
 					return promote.Save(tx, userID, promote.Input{SubjectID: james.ID})
 				})
 				if !errors.Is(err, identityclaims.ErrAlreadyMember) {
@@ -127,13 +113,7 @@ func TestSave(t *testing.T) {
 			name: "event and place mint their own prefixes",
 			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
 				for key, prefix := range map[string]string{"event": "EVT-", "place": "PLC-"} {
-					p6a2 := promote.Input{SubjectID: mk(key).ID}
-					res, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-						return promote.Save(tx, userID, p6a2)
-					})
-					if err != nil {
-						t.Fatal(err)
-					}
+					res := promotetest.Save(t, c, userID, promote.Input{SubjectID: mk(key).ID})
 					if !strings.HasPrefix(res.Entity.Ref, prefix) {
 						t.Fatalf("%s ref %q", key, res.Entity.Ref)
 					}
@@ -143,20 +123,9 @@ func TestSave(t *testing.T) {
 		{
 			name: "join files a claim onto the existing handle without minting",
 			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
-				p6a5 := promote.Input{SubjectID: mk("person").ID}
-				first, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, p6a5)
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
+				first := promotetest.Save(t, c, userID, promote.Input{SubjectID: mk("person").ID})
 				second := mk("person")
-				res, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, promote.Input{SubjectID: second.ID, EntityID: first.Entity.ID})
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
+				res := promotetest.Save(t, c, userID, promote.Input{SubjectID: second.ID, EntityID: first.Entity.ID})
 				if string(res.Entity.ID) != string(first.Entity.ID) || res.Entity.Ref != first.Entity.Ref {
 					t.Fatalf("joined %+v, want %+v", res.Entity, first.Entity)
 				}
@@ -179,15 +148,9 @@ func TestSave(t *testing.T) {
 		{
 			name: "join onto another type's handle refused without writing",
 			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
-				p6a6 := promote.Input{SubjectID: mk("event").ID}
-				event, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, p6a6)
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
+				event := promotetest.Save(t, c, userID, promote.Input{SubjectID: mk("event").ID})
 				james := mk("person")
-				_, err = writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+				_, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
 					return promote.Save(tx, userID, promote.Input{SubjectID: james.ID, EntityID: event.Entity.ID})
 				})
 				if !errors.Is(err, identityclaims.ErrTypeMismatch) {
@@ -202,9 +165,9 @@ func TestSave(t *testing.T) {
 			name: "join onto an unknown or merged handle invalid",
 			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
 				james := mk("person")
-				p6a7 := promote.Input{SubjectID: james.ID, EntityID: make([]byte, 16)}
+				in := promote.Input{SubjectID: james.ID, EntityID: make([]byte, 16)}
 				if _, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, p6a7)
+					return promote.Save(tx, userID, in)
 				}); !errors.Is(err, promote.ErrInvalid) {
 					t.Fatalf("unknown: %v", err)
 				}
@@ -213,20 +176,8 @@ func TestSave(t *testing.T) {
 				}); !errors.Is(err, promote.ErrInvalid) {
 					t.Fatalf("short id: %v", err)
 				}
-				p6a8 := promote.Input{SubjectID: mk("person").ID}
-				a, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, p6a8)
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
-				p6a9 := promote.Input{SubjectID: mk("person").ID}
-				b, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, p6a9)
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
+				a := promotetest.Save(t, c, userID, promote.Input{SubjectID: mk("person").ID})
+				b := promotetest.Save(t, c, userID, promote.Input{SubjectID: mk("person").ID})
 				db, err := c.DB()
 				if err != nil {
 					t.Fatal(err)
@@ -251,26 +202,12 @@ func TestSave(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				p6a10 := promote.Input{
+				minted := promotetest.Save(t, c, userID, promote.Input{
 					SubjectID: mk("person").ID, ConfidenceGradeID: high.ID, Argument: "  Grounding entry.  ",
-				}
-				minted, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, p6a10)
 				})
-
-				if err != nil {
-					t.Fatal(err)
-				}
-				p6a11 := promote.Input{
+				joined := promotetest.Save(t, c, userID, promote.Input{
 					SubjectID: mk("person").ID, EntityID: minted.Entity.ID, ConfidenceGradeID: high.ID, Argument: "Same name and age.",
-				}
-				joined, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, p6a11)
 				})
-
-				if err != nil {
-					t.Fatal(err)
-				}
 				for _, tc := range []struct {
 					claim identityclaims.Claim
 					arg   string
@@ -283,11 +220,11 @@ func TestSave(t *testing.T) {
 						t.Fatalf("%+v", got)
 					}
 				}
-				p6a12 := promote.Input{
+				in := promote.Input{
 					SubjectID: mk("person").ID, ConfidenceGradeID: make([]byte, 16),
 				}
 				if _, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, p6a12)
+					return promote.Save(tx, userID, in)
 				}); !errors.Is(err, identityclaims.ErrInvalid) {
 					t.Fatalf("unknown grade: %v", err)
 				}
@@ -296,9 +233,9 @@ func TestSave(t *testing.T) {
 		{
 			name: "bridge kinds unsupported in v1",
 			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
-				p6a13 := promote.Input{SubjectID: mk("participation").ID}
+				in := promote.Input{SubjectID: mk("participation").ID}
 				_, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, p6a13)
+					return promote.Save(tx, userID, in)
 				})
 				if !errors.Is(err, promote.ErrUnsupportedType) {
 					t.Fatalf("got %v", err)
@@ -308,15 +245,15 @@ func TestSave(t *testing.T) {
 		{
 			name: "unknown subject or missing user invalid",
 			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
-				p6a14 := promote.Input{SubjectID: make([]byte, 16)}
+				in := promote.Input{SubjectID: make([]byte, 16)}
 				if _, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, p6a14)
+					return promote.Save(tx, userID, in)
 				}); !errors.Is(err, promote.ErrInvalid) {
 					t.Fatalf("unknown subject: %v", err)
 				}
-				p6a15 := promote.Input{SubjectID: mk("person").ID}
+				in = promote.Input{SubjectID: mk("person").ID}
 				if _, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: nil}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, nil, p6a15)
+					return promote.Save(tx, nil, in)
 				}); !errors.Is(err, promote.ErrInvalid) {
 					t.Fatalf("missing user: %v", err)
 				}
@@ -390,16 +327,8 @@ func newCatalog(t *testing.T) (*database.Catalog, func(key string) subjects.Subj
 	}
 	return c, func(key string) subjects.Subject {
 		t.Helper()
-		st, err := subjecttypes.Lookup(c, key, vocabkey.OriginProvenencia)
-		if err != nil {
-			t.Fatal(err)
-		}
-		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
-			return subjects.Create(tx, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: st.ID}, nil)
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+		s := subjectstest.On(t, c, userID, graph, key, "")
 		return s
 	}
 }

@@ -99,6 +99,26 @@ func marshalProto(t *testing.T, m proto.Message) []byte {
 	return b
 }
 
+// rpc calls fn with req and decodes the reply into resp.
+func rpc(t *testing.T, fn func([]byte) ([]byte, error), req, resp proto.Message) error {
+	t.Helper()
+	out, err := fn(marshalProto(t, req))
+	if err != nil {
+		return err
+	}
+	if err := proto.Unmarshal(out, resp); err != nil {
+		t.Fatal(err)
+	}
+	return nil
+}
+
+func mustRPC(t *testing.T, fn func([]byte) ([]byte, error), req, resp proto.Message) {
+	t.Helper()
+	if err := rpc(t, fn, req, resp); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func assertWantEqual(t *testing.T, out []byte, want proto.Message) {
 	t.Helper()
 	got := want.ProtoReflect().New().Interface().(proto.Message)

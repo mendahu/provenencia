@@ -7,11 +7,20 @@ import SwiftUI
 /// steal pointer events. Empty-canvas drag pans via ``GraphCanvasPointerController``.
 ///
 /// Two layers of content: the host's base SwiftUI view (grid, edges, overlays)
-/// at the bottom, and ``items`` — one view per card — above it. A card
+/// at the bottom, and ``items`` — one view per item — above it. An item
 /// drag moves its item view directly; no SwiftUI runs per pointer event.
 final class GraphCanvasDocumentView: NSView {
     let pointer: GraphCanvasPointerController
     private(set) lazy var items = GraphCanvasItemLayer(container: self)
+    /// The grid point this view's top-left stands on. Hosts speak grid space;
+    /// this view converts at the edge: mouse events to grid points, and item
+    /// origins to document frames. The scroll view sets it.
+    var contentOrigin: CGPoint = .zero {
+        didSet {
+            guard contentOrigin != oldValue else { return }
+            items.placeAll()
+        }
+    }
     private var hostingView: NSHostingView<AnyView>?
     private var trackingArea: NSTrackingArea?
     // `deinit` removes these, so they cannot be main-actor isolated.
@@ -26,6 +35,8 @@ final class GraphCanvasDocumentView: NSView {
         self.pointer = pointer
         super.init(frame: frame)
         wantsLayer = true
+        pointer.stackIndex = { [weak self] in self?.items.stackIndex(of: $0) }
+        items.contentOrigin = { [weak self] in self?.contentOrigin ?? .zero }
     }
 
     @available(*, unavailable)
@@ -44,6 +55,15 @@ final class GraphCanvasDocumentView: NSView {
         hosting.autoresizingMask = [.width, .height]
         addSubview(hosting, positioned: .below, relativeTo: nil)
         hostingView = hosting
+    }
+
+    /// The grid point under a point in this view's own coordinates.
+    func gridPoint(forDocumentPoint point: CGPoint) -> CGPoint {
+        GraphCanvasCoordinates.gridPoint(point, origin: contentOrigin)
+    }
+
+    private func gridPoint(for event: NSEvent) -> CGPoint {
+        gridPoint(forDocumentPoint: convert(event.locationInWindow, from: nil))
     }
 
     func resizeDocument(to size: CGSize) {
@@ -67,7 +87,7 @@ final class GraphCanvasDocumentView: NSView {
     }
 
     /// Shift as the canvas should see it: not while a text field is being edited.
-    static func reportedShift(_ flags: NSEvent.ModifierFlags, textHasFocus: Bool) -> Bool {
+    nonisolated static func reportedShift(_ flags: NSEvent.ModifierFlags, textHasFocus: Bool) -> Bool {
         !textHasFocus && flags.contains(.shift)
     }
 
@@ -130,34 +150,31 @@ final class GraphCanvasDocumentView: NSView {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     override func mouseDown(with event: NSEvent) {
-        let doc = convert(event.locationInWindow, from: nil)
+        let grid = gridPoint(for: event)
         let shiftDown = event.modifierFlags.contains(.shift)
         // A Shift press is canvas intent even when a text field kept focus.
         pointer.setShiftHeld(shiftDown)
         pointer.mouseDown(
-            documentPoint: doc,
+            gridPoint: grid,
             windowPoint: event.locationInWindow,
             shiftDown: shiftDown
         )
     }
 
     override func mouseDragged(with event: NSEvent) {
-        let doc = convert(event.locationInWindow, from: nil)
-        pointer.mouseDragged(documentPoint: doc, windowPoint: event.locationInWindow)
+        pointer.mouseDragged(gridPoint: gridPoint(for: event), windowPoint: event.locationInWindow)
         items.applyDragOffsets(pointer.offsets)
     }
 
     override func mouseUp(with event: NSEvent) {
-        let doc = convert(event.locationInWindow, from: nil)
-        pointer.mouseUp(documentPoint: doc, windowPoint: event.locationInWindow)
+        pointer.mouseUp(gridPoint: gridPoint(for: event), windowPoint: event.locationInWindow)
         // The dropped item returns to its pushed origin; the host's drop
         // handler pushes the new origin in the same update.
         items.applyDragOffsets(pointer.offsets)
     }
 
     override func mouseMoved(with event: NSEvent) {
-        let doc = convert(event.locationInWindow, from: nil)
-        pointer.mouseMoved(documentPoint: doc)
+        pointer.mouseMoved(gridPoint: gridPoint(for: event))
         syncToolTip()
     }
 
