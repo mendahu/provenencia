@@ -1,6 +1,6 @@
 # S11-36 — Find another record in the target menu
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 11 · Slice 8 — Find another record
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S11-D3](../design/S11-D3-promote-target-menu.md), board agreed 2026-10-25
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/swift-tests.mdc`
 **Context:** [Find another record § Shape](../promote-find-another-record.md#shape), [§ Where the Swift side changes](../promote-find-another-record.md#where-the-swift-side-changes), [§ Decided](../promote-find-another-record.md#decided-user-2026-10-24); working rules "A found record is a decided row, nothing new", "No new search RPC, and one search model", "An inline picker, every record of the kind, no warning", "The menu entry is a sentinel option", "The picked record joins the row's menu"; the map's S11-36 scope entry (picker on `PVComboBox`, the hit row's VoiceOver label, `selected`); [`macos/App/DesignSystem/README.md`](../../../../macos/App/DesignSystem/README.md) § "The combo box subset"
 **Planned:** 2026-10-25 against `main` @ `056b6ed` (code unchanged at `bfb852a9`)
-**Review:** [`S11-36-find-another-record.review.md`](S11-36-find-another-record.review.md) — round 1 answered; round 2 running
+**Review:** [`S11-36-find-another-record.review.md`](S11-36-find-another-record.review.md) — Fits with changes / Ready with changes, 2 rounds
 
 ### Implementer — read this first
 
@@ -143,7 +143,7 @@ A researcher on the Promote page who knows a Subject is a record Promote did not
 
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
-| D-1 | `PromoteFlow.Target` gains `static let findToken = "find"` *(new)* and `static func handleToken(_ id: String) -> String` *(new)*. `Row.menuItem(forToken:) -> Alternative?` *(new)* is the one decoder of a record token. Every option value in `PromoteView` is spelled from `Target` (`Target.newKind.token`, `Target.skip.token`, `handleToken`, `findToken`); `PromoteTargetMenuRow` decodes with `menuItem(forToken:)` and compares the rest with `Target` tokens | One spelling and one decoder for the four tokens (review M-5); the menu and the parser cannot drift | A token enum — because `PVSelect` values are strings |
+| D-1 | `PromoteFlow.Target` gains `static let findToken = "find"` *(new)* and `static func handleToken(_ id: String) -> String` *(new)*. `Row.menuItem(forToken:) -> Alternative?` *(new)* is the one decoder of a record token. Every option value in `PromoteView` is spelled from `Target` (`Target.newKind.token`, `Target.skip.token`, `handleToken`, `findToken`); `PromoteTargetMenuRow` and `target(for:on:)` both decode with `menuItem(forToken:)` and compare the rest with `Target.skip.token`, `Target.newKind.token` and `Target.findToken`; `target(for:on:)` keeps no prefix parse of its own | One spelling and one decoder for the four tokens (review M-5); the menu and the parser cannot drift | A token enum — because `PVSelect` values are strings |
 | D-2 | `target(for:on:)` returns `Target?`: `nil` for a token it cannot resolve (unknown, `findToken`, a handle not in the menu). `setTarget` returns false and changes nothing on `nil` | Any unresolved token decides nothing, so the flow never needs to know the sentinel (review M-4) | A `findToken` special case in `setTarget` — because every other unresolved token would still decide the row |
 | D-3 | `PromoteModel.setTarget(subjectID:token:)` sends `Target.findToken` to `openRecordSearch(subjectID:)` *(new)* and returns before calling the flow. `PromoteView`'s binding keeps calling `model.setTarget` | The working rule's "the row's binding catches the token before `setTarget`", in a place a model test drives | Catching it in the view's binding — because no test can drive a view binding |
 | D-4 | `PromoteModel` holds one open search: `struct RecordSearch { let subjectID: String; let search: CatalogSearchModel }` *(new, nested)* and `private(set) var recordSearch: RecordSearch?` *(new)*. `openRecordSearch(subjectID:)` does nothing for an anchor or a missing row; otherwise it cancels any open search and sets one with `CatalogSearchModel(kinds: [row.kind.rawValue])` | One search at a time (FR-6), kind from the row; one optional cannot leave a subject id without its search. One noun across the model and view (review M-10) | Per-row `@State` — because opening on another row must close the first and tests cannot reach view state |
@@ -227,7 +227,7 @@ Removed: none (the band-only function becomes `private`; its keys stay).
 **STEP-1 — One spelling and one decoder for target tokens**
 Files: `macos/App/Features/Promote/PromoteFlow.swift`, `macos/App/Features/Promote/PromoteView.swift`, `macos/ProvenenciaTests/PromoteFlowTests.swift`. Skill: `add-swift-test`.
 Do: D-1, D-2. Add T-1, T-2. Existing tests keep their token literals.
-Check: `rg '"(handle:|new|skip|find)' macos/App/Features/Promote/PromoteView.swift` prints nothing; `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/PromoteFlowTests` passes.
+Check: `rg '"(handle:|new|skip|find)' macos/App/Features/Promote/PromoteView.swift` prints nothing; `rg 'hasPrefix\("handle:' macos/App` prints nothing; `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/PromoteFlowTests` passes.
 
 **STEP-2 — The model's one record search**
 Files: `macos/App/Features/Promote/PromoteModel.swift`, `macos/App/Features/Catalog/Search/CatalogSearchModel.swift`, `macos/ProvenenciaTests/PromoteModelTests.swift`, `macos/ProvenenciaTests/CatalogSearchTests.swift`.
@@ -237,12 +237,12 @@ Check: `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia
 **STEP-3 — "Little evidence" for a chosen record at band None**
 Files: `macos/App/Features/Promote/PromoteFlow.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, `macos/App/Features/Promote/PromoteReadout.swift`, `macos/App/Features/Promote/PromoteModel.swift`, `macos/ProvenenciaTests/PromoteModelTests.swift`, `macos/ProvenenciaTests/PromoteFlowTests.swift`. Skill: `add-localized-string`.
 Do: D-9; `assessmentChosenNone`; move `PromoteModelTests` lines 566 – 567 onto the readout form; in `PromoteFlowTests`, every `SelectionReadout` equality on a decided row gains `chosen: true` (lines 214 and 926, and line 228 if that row is decided) and no other test line changes; set the readout preview's `.none, .decided` case to `chosen: true`. Add T-7.
-Check: `python3 scripts/check-localizable-xcstrings.py` passes; `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/PromoteModelTests` passes.
+Check: `python3 scripts/check-localizable-xcstrings.py` passes; `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/PromoteModelTests -only-testing:ProvenenciaTests/PromoteFlowTests` passes.
 
 **STEP-4 — Combo box: a custom empty line, reported resets, the host environment**
 Files: `macos/App/DesignSystem/Components/ComboBox/PVComboBox.swift`, `macos/ProvenenciaTests/PVComboBoxTests.swift`, `macos/App/DesignSystem/README.md` (§ "The combo box subset"). Skill: `add-ui-component`.
 Do: D-15, D-16, D-17. Put D-16's rule in a pure helper `PVComboBoxMatch.reportsRestore(isRemote:old:new:) -> Bool` *(new)* so T-9 tests it; the README's subset section gains one sentence each for the custom empty line, the reported resets and the environment.
-Check: `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/PVComboBoxTests` passes; the Source type editor, the Add Source type field and the Citation composer combo boxes open, filter and commit as before (manual check 7).
+Check: `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/PVComboBoxTests` passes; every other `PVComboBox` opens, filters and commits as before (manual check 7).
 
 **STEP-5 — The hit row: no `selected`, its own VoiceOver label**
 Files: `macos/App/DesignSystem/Recipes/OmnibarHitRow/PVOmnibarHitRow.swift`, `macos/App/Features/Catalog/Search/CatalogSearchHitRow.swift`, `macos/App/Features/Catalog/Search/CatalogSearchHitPresentation.swift`, `macos/App/Features/Workspace/OmnibarResultsHost.swift`, `macos/ProvenenciaTests/CatalogSearchTests.swift`. Skill: `add-ui-component`.
@@ -305,7 +305,7 @@ Use a project with a Source that has a person Subject "Ada" Promote offers nothi
 4. Search "Polly" on Ada and pick Polly Jones: the menu shows her, Decided; in under a second the band, Contested when it conflicts, and "Your choice" (AC-2.1). Open the menu: she sits before New Person, checked (AC-2.2). If the band is None it reads "Little evidence", and the evidence sheet's title too (AC-4.1). Search Polly again and pick her: no second item (AC-2.3). On another row Promote proposed at None, the band reads "No match" until you choose that record from the menu, then "Little evidence" (AC-4.3, AC-4.4).
 5. Open a search on a row and press Done: the search closes and the page files; Ada files on Polly Jones's record (AC-2.4, AC-3.5). The slice Check is true.
 6. VoiceOver: the entry, the field ("Find another record for Ada"), a hit, ×, and the evidence button (AC-4.5, AC-5.1). In the toolbar omnibar, search "Polly" and VoiceOver a hit: title, kind, subtitle, ref as before (AC-5.2).
-7. Regression: the Source page's type editor, the Add Source type field, and a Citation composer combo box each open, filter, commit and dismiss as before.
+7. Regression: every other `PVComboBox` opens, filters, commits and dismisses as before, and its rows look the same: the Source page's type editor and metadata field, the Add Source type field, the Properties inspector, the Source types detail pane, and each combo box in the Citation composer's authoring box.
 
 ## 11. Risks and stop conditions
 

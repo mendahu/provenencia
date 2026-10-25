@@ -1,6 +1,6 @@
 # Review — S11-36 Find another record in the target menu
 
-**Verdict:** round 1: Fits with changes — Not ready. Round 2: pending
+**Verdict:** Fits with changes — Ready with changes (round 1: Fits with changes — Not ready)
 **Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
@@ -95,3 +95,11 @@ Executability (sonnet): **Ready with changes.** Every round-1 X and M answer hol
 
 ### X-15 · nit · "lines 566 – 585"
 Logged; fixed to 566 – 567.
+
+Maintainability (opus): **Fits with changes.** Every round-1 M answer holds; no new blockers.
+
+- **D-1 wording (from M-5):** Fixed — D-1 now says `target(for:on:)` decodes through `menuItem(forToken:)` with no prefix parse of its own; STEP-1's check adds `rg 'hasPrefix\("handle:' macos/App`.
+- **Manual check 7 covers three of ten combo boxes (from M-3):** Fixed — it names every other `PVComboBox` call site.
+- **STEP-3 runs only `PromoteModelTests` (same as X-9):** Fixed — its check runs `PromoteFlowTests` too.
+
+No blocker open, To user answered: the plan is **Planned**.
