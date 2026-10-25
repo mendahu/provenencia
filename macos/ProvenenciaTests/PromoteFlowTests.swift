@@ -108,16 +108,7 @@ struct PromoteFlowTests {
             nameValueCount: 1
         )
         var flow = PromoteFlow(entryID: "e")
-        flow.nameOrders = NameFormatOrders(
-            natural: [
-                NameFormatPart(partType: "given", trailingSeparator: ""),
-                NameFormatPart(partType: "surname", trailingSeparator: ""),
-            ],
-            sorted: [
-                NameFormatPart(partType: "surname", trailingSeparator: ", "),
-                NameFormatPart(partType: "given", trailingSeparator: ""),
-            ]
-        )
+        flow.nameOrders = .givenSurname
         flow.load(entryID: "e", proposal: proposal(rows: [person]), subjects: [fact("p")], bridges: [])
         let personRow = flow.rows.first
         #expect(personRow?.menu.first?.title == "Smith, John")
@@ -909,16 +900,7 @@ struct PromoteFlowTests {
             ]),
             nameValueCount: 1
         )
-        let orders = NameFormatOrders(
-            natural: [
-                NameFormatPart(partType: "given", trailingSeparator: ""),
-                NameFormatPart(partType: "surname", trailingSeparator: ""),
-            ],
-            sorted: [
-                NameFormatPart(partType: "surname", trailingSeparator: ", "),
-                NameFormatPart(partType: "given", trailingSeparator: ""),
-            ]
-        )
+        let orders = NameFormatOrders.givenSurname
         func started() -> PromoteFlow {
             var flow = PromoteFlow(entryID: "a")
             flow.nameOrders = orders
