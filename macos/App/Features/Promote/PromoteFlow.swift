@@ -16,11 +16,18 @@ struct PromoteFlow: Equatable, Sendable {
         var token: String {
             switch self {
             case .unset: ""
-            case .handle(let id, _, _): "handle:\(id)"
+            case .handle(let id, _, _): Self.handleToken(id)
             case .newKind: "new"
             case .skip: "skip"
             }
         }
+
+        /// The menu option value that stands for the record with this id.
+        static func handleToken(_ id: String) -> String { "handle:\(id)" }
+
+        /// The menu option value for "Find another record…": a sentinel that opens a search and is
+        /// never a target.
+        static let findToken = "find"
 
         var handleID: String? {
             if case .handle(let id, _, _) = self { return id }
@@ -135,6 +142,8 @@ struct PromoteFlow: Equatable, Sendable {
         var reason: Reason
         /// The proposal says this pair conflicts somewhere; the page marks it beside the band.
         var contested = false
+        /// The researcher decided this row; the page words a band below Weak as their choice.
+        var chosen = false
     }
 
     struct Alternative: Equatable, Sendable, Identifiable {
@@ -192,7 +201,12 @@ struct PromoteFlow: Equatable, Sendable {
         var selectionReadout: SelectionReadout? {
             guard case .handle(let id, _, _) = target,
                   let alt = menu.first(where: { $0.id == id }) else { return nil }
-            return SelectionReadout(assessment: alt.assessment, reason: alt.reason, contested: contested)
+            return SelectionReadout(assessment: alt.assessment, reason: alt.reason, contested: contested, chosen: decided)
+        }
+
+        /// The menu item a record token names, the one decoder of `Target.handleToken`.
+        func menuItem(forToken token: String) -> Alternative? {
+            menu.first { Target.handleToken($0.id) == token }
         }
 
         /// What the Updated caption words: the move when settling moved this row, else its reason.
@@ -431,7 +445,8 @@ struct PromoteFlow: Equatable, Sendable {
     @discardableResult
     mutating func setTarget(subjectID: String, token: String) -> Bool {
         guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }), !rows[index].anchor else { return false }
-        return select(target(for: token, on: rows[index]), at: index)
+        guard let next = target(for: token, on: rows[index]) else { return false }
+        return select(next, at: index)
     }
 
     /// Holds a record Promote did not offer: it joins the row's menu as the
@@ -635,16 +650,15 @@ struct PromoteFlow: Equatable, Sendable {
         }
     }
 
-    private func target(for token: String, on row: Row) -> Target {
-        if token == "skip" { return .skip }
-        if token == "new" { return .newKind }
-        if token.hasPrefix("handle:") {
-            let id = String(token.dropFirst("handle:".count))
-            if let alt = row.menu.first(where: { $0.id == id }) {
-                return .handle(id: alt.id, ref: alt.ref, title: alt.title)
-            }
+    /// The target a menu token names on this row; nil for a token that names none (the search
+    /// entry, an unknown token, a record not in the menu).
+    private func target(for token: String, on row: Row) -> Target? {
+        if token == Target.skip.token { return .skip }
+        if token == Target.newKind.token { return .newKind }
+        if let alt = row.menuItem(forToken: token) {
+            return .handle(id: alt.id, ref: alt.ref, title: alt.title)
         }
-        return row.target
+        return nil
     }
 
     private static func makeRow(
