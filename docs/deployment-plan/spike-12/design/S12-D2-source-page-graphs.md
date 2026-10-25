@@ -70,9 +70,9 @@ A census page scan can hold several households. The researcher splits the Source
 | Graphs list alphabetically by name | The row order is by name, A to Z. The order is not draggable. |
 | Open opens the graph's canvas | It is the same canvas **Jump to graph** opens today. |
 | Open needs a linked Artifact | A graph opens only when at least one of the Source's Artifacts is linked to it, as **Jump to graph** today. A Source with no Artifacts has a Default graph with none linked, so its Open is disabled with the reason "Add an artifact to open this evidence graph". |
-| Delete is refused in two cases | A graph that still holds Subjects can't be deleted; the notice lists them ("This graph has 3 subjects"), each linking to its graph. A Source's only graph can't be deleted; the notice reads "This is the source's only evidence graph" / "A source keeps at least one evidence graph. Add another graph before you delete this one." |
+| Delete is refused in two cases | A graph that still holds Subjects can't be deleted; the notice lists them ("This graph has 3 subjects"), each linking to its graph. A Source's only graph can't be deleted; the notice reads "This is the source’s only evidence graph" / "A source keeps at least one evidence graph. Add another graph before you delete this one." |
 | Delete is always enabled | Like Source and Artifact delete, the button is never greyed out. The DeleteImpact recipe asks first and explains a refusal. |
-| An allowed delete asks first | An empty graph that is not the last one: the recipe's confirm, "Delete this evidence graph?", then the row leaves the section and a success toast reads "Evidence graph deleted" / "GPH-4K2PQ was deleted from this source." |
+| An allowed delete asks first | An empty graph that is not the last one: the recipe's confirm, "Delete evidence graph GPH-4K2PQ?", then the row leaves the section and a success toast reads "Evidence graph deleted" / "GPH-4K2PQ was erased from this source." (the same verb as the Artifact toast on this page). |
 | The graph list loads separately from the page | The page's own sections can be ready before the graph list is. Until it is loaded, the section shows a short loading state. If the read fails, the section shows a danger callout; the rest of the page still works. |
 | No progress on this page | Per-graph progress (Subjects filed, Citations) is on the Sources list (S12-D5), not here. |
 | A graph name is the canvas's breadcrumb | Breadcrumbs read **Sources › {Source title} › {graph name}**. They are drawn in the PR plan, not on this board. |
@@ -100,16 +100,16 @@ A census page scan can hold several households. The researcher splits the Source
 
 | ID | Requirement |
 | --- | --- |
-| GS-1 | The **Evidence graphs** section sits between the Description / Credibility / Metadata columns and the Artifacts section, at the same width and spacing as Artifacts. Its section header reads "Evidence graphs" with the count as meta ("1", "3"). The header's trailing side stays empty (S12-D3 puts Add graph there). |
-| GS-2 | One row per graph in name order. A row is a card: the name (body, semibold, up to 2 lines then truncated), the ref in mono, muted, after the name or under it, and the description under them (body small, muted, up to 3 lines then truncated). A graph with no description has no description line. |
+| GS-1 | The **Evidence graphs** section sits between the Description / Credibility / Metadata columns and the Artifacts section, at the same width and spacing as Artifacts. Its section header reads "Evidence graphs" with the count as meta in words, as Artifacts does ("1 evidence graph", "3 evidence graphs"). The header's trailing side stays empty (S12-D3 puts Add graph there). |
+| GS-2 | One row per graph in name order. A row is a card: the name (body, semibold, up to 2 lines then truncated), the ref in mono, muted, on its own line under the name, and the description under the ref (body small, muted, up to 3 lines then truncated). A graph with no description has no description line. |
 | GS-3 | Each row ends with **Open** (secondary button, small, graph icon) and **Delete** (icon button, trash, danger tone, small), in that order, matching the header's Copy… and Delete sizes. |
 | GS-4 | Open opens the graph's canvas. It is disabled when the graph links no Artifact, with the tooltip and VoiceOver hint "Add an artifact to open this evidence graph". |
 | GS-5 | Delete opens the DeleteImpact recipe for that graph: the confirm when allowed; the blocked notice listing the graph's Subjects when it has any; the "only evidence graph" notice for the Source's last graph. Delete is never disabled. |
-| GS-6 | After a confirmed delete the row leaves the section and a success toast shows "Evidence graph deleted" / "{ref} was deleted from this source." |
+| GS-6 | After a confirmed delete the row leaves the section and a success toast shows "Evidence graph deleted" / "{ref} was erased from this source." |
 | GS-7 | The header loses **Jump to graph**. Copy… and Delete stay where they are, right-aligned. |
-| GS-8 | Loading: until the graph list loads, the section header shows with no count and one skeleton row in place of the rows. Error: a danger callout in place of the rows; the rest of the page is unchanged. |
+| GS-8 | Loading: until the graph list loads, the section header shows with no count and one skeleton row in place of the rows. Error: the section header stays, and a danger callout in place of the rows carries the app's standard message for the failure (the board writes "Couldn’t read the evidence graphs." as a stand-in); the rest of the page is unchanged. |
 | GS-9 | VoiceOver: each row reads its name and ref. Open reads "Open {name}"; Delete reads "Delete {name}". |
-| GS-10 | Many graphs (12) stack in the section with no inner scroll; the page scrolls as it does today. |
+| GS-10 | Many graphs (12) stack in the section with no inner scroll; the page scrolls as it does today. In a narrow window the name and description wrap within their line limits and Open and Delete keep their size. |
 
 ---
 
@@ -120,12 +120,12 @@ Draw at the Source page's content width.
 1. **Obituary, one graph** — the common case. Header without Jump to graph (Copy… and Delete only); Evidence graphs section with one row, "Default", `GPH-4K2PQ`, no description; Artifacts below (GS-1 – GS-3, GS-7).
 2. **Census, three graphs** — "Default", "Jones household", "Smith household", with descriptions "Pages 1–2, every household", "Household 14, page 3", "Household 15, page 3" (GS-2).
 3. **No Artifacts** — a new Source with no Artifacts; the Default row's Open is disabled with its tooltip shown (GS-4).
-4. **Delete allowed** — the recipe's confirm over the page for "Jones household" (GS-5).
+4. **Delete allowed** — the recipe's confirm over the page for "Jones household", titled "Delete evidence graph GPH-JONES?" (GS-5).
 5. **Delete blocked by Subjects** — the recipe's notice listing three Subjects of "Smith household" (GS-5).
 6. **Last graph** — the recipe's "only evidence graph" notice on frame 1 (GS-5).
 7. **After delete** — frame 2 with two rows and the success toast (GS-6).
 8. **Loading** and **error** states of the section (GS-8).
-9. **Long text** — a 60-character name and a four-sentence description, truncated (GS-2).
+9. **Long text** — a 60-character name and a four-sentence description, truncated, at the page's minimum width (GS-2, GS-10).
 
 ---
 
@@ -135,12 +135,12 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
-| Section title | Component | Ship | `DesignSystem/Components/SectionHeader/PVSectionHeader.swift` | "Evidence graphs" with the count as `meta`, as Artifacts and Notes do. |
+| Section title | Component | Ship | `DesignSystem/Components/SectionHeader/PVSectionHeader.swift` | "Evidence graphs" with the count in words as `meta`, as Artifacts does ("3 evidence graphs"); Notes' bare number is not the model. |
 | Graph row | Snowflake | **New** | `Features/Sources/SourcePageGraphsView.swift` (new) | A Card with the name, ref, description, Open and Delete. No second call site: the Sources list accordion (S12-D5) draws list rows with progress, not this card, and S12-D3 adds Edit to this same row. Not a kit primitive. |
 | Row surface | Component | Ship | `DesignSystem/Components/Card/PVCard.swift` | One card per graph. Not a local rounded rectangle. |
 | Open | Component | Ship | `PVButton` (`.secondary`, `.sm`, `gitBranch` icon) | The same button and icon **Jump to graph** used. |
 | Delete | Component | Ship | `PVIconButton` (`trash`, `.danger`, `.sm`) | The same as the header's Source Delete. |
-| Delete confirm and refusals | Recipe | Ship | `DesignSystem/Recipes/DeleteImpact/PVDeleteImpact.swift`, `DeleteImpactFlow.swift` | The page's existing `pvDeleteImpact`. Kind `evidence_graph`. Inbound Subjects and the `last_graph` gate already have copy. Not a second Confirm. |
+| Delete confirm and refusals | Recipe | Ship | `DesignSystem/Recipes/DeleteImpact/PVDeleteImpact.swift`, `DeleteImpactFlow.swift` | The page's existing `pvDeleteImpact`. Kind `evidence_graph`. Inbound Subjects and the `last_graph` gate already have copy; the noun "evidence graph" in the confirm title is new copy (today it would read "item"). Not a second Confirm. |
 | Loading row | Component | Ship | `DesignSystem/Components/SkeletonBar/PVSkeletonBar.swift` | One skeleton row while the graph list loads. Not a spinner. |
 | Load error | Component | Ship | `PVCallout` (danger) | In place of the rows. |
 | After-delete notice | Component | Ship | The page's `vocabularyToastOverlay` toast | As Artifact delete. |
