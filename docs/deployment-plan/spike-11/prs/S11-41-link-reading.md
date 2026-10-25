@@ -45,7 +45,7 @@ Reading a bridge as a `segmentcompare.Link` moves out of `promotealign` into `co
 | AC-1.1 | `LinkOf(participation bridge, "subject", "birth", firstEnd true)` | `Link{Type: participation, Term: subject, End: person, Other: event, EventType: birth, SameType: false}` |
 | AC-1.2 | Same bridge, `firstEnd false` | `End: event, Other: person`; everything else as AC-1.1 |
 | AC-1.3 | `LinkOf(relationship bridge, "parent", "birth", firstEnd true)` | `EventType` is empty (only a participation keeps one); `End: person, Other: related_to, SameType: true` |
-| AC-1.4 | `EventEndpoint` on the participation, relationship and location bridges | `(false, true)`, `(false, false)`, `(true, true)` |
+| AC-1.4 | `EventEndpoint` on the participation, relationship, place relationship and location bridges | `(false, true)`, `(false, false)`, `(false, false)`, `(true, true)` |
 | AC-1.6 | `LinkOf(location bridge, "", "birth", firstEnd true)` | `End: event, Other: place, SameType: false`, `EventType` empty: the location bridge has an event end, but only a participation keeps the event type |
 | AC-1.5 | `segmentcompare` imports `core/connectrules` | `TestLayerPackages` still passes: no build tag, no path to `core/database` |
 
@@ -54,7 +54,7 @@ Reading a bridge as a `segmentcompare.Link` moves out of `promotealign` into `co
 | AC | Given / when | Then |
 | --- | --- | --- |
 | AC-2.1 | `CGO_ENABLED=1 go test -tags fts5 ./core/...` | Passes with no test changed outside `core/segmentcompare` |
-| AC-2.2 | `rg -n 'func linkOf\|func eventEndpoint\|linkOf\(\|eventEndpoint\(' core/database` | No match |
+| AC-2.2 | `rg -n 'linkOf|eventEndpoint' core/database` | No match |
 
 ## 3. Scope
 
@@ -159,13 +159,13 @@ None — no copy.
 
 **STEP-1 — Add `LinkOf` and `EventEndpoint` to `segmentcompare`, with tests**
 Files: `core/segmentcompare/key.go`, `core/segmentcompare/segmentcompare_test.go`. Skill: `add-match-rule` (layer 5).
-Do: add both functions per D-1 – D-4 and the doc comment in §6, with `EventEndpoint`'s comment from `terms.go` ("the one rule for where a link reads its event type"). Add T-1 and T-2.
+Do: add both functions per D-1 – D-4 and the doc comment in §6, with `EventEndpoint`'s comment from `terms.go` ("the one rule for where a link reads its event type"). Add T-1 and T-2: the test file imports `core/connectrules`; a `bridge(t, key)` helper inside each test calls `connectrules.LookupBridge` and `t.Fatalf`s when it returns false. Terms in the rows: `vocabkey.BridgeTerm(vocabkey.RoleSubject)` (as `partKey` in the same file does), `vocabkey.BridgeTerm("parent")` (no constant exists until S11-38), `vocabkey.TermPartOf`; event type `vocabkey.EventBirth`.
 Check: `go test ./core/segmentcompare/... ./core/matchregistry/...` passes with no build tags.
 
 **STEP-2 — Move the loaders onto them and delete the private copies**
 Files: `core/database/promotealign/terms.go`, `core/database/promotealign/layer.go`, `core/database/promotealign/canon.go`.
 Do: replace each `eventEndpoint(` with `segmentcompare.EventEndpoint(` and each `linkOf(` with `segmentcompare.LinkOf(` converting `term` / `l.TermKey` and `eventType` per D-2. Change both "linkOf alone decides whether the key keeps it" comments to "`segmentcompare.LinkOf` alone decides whether the key keeps it". Delete `linkOf` and `eventEndpoint` from `terms.go`; drop any import that becomes unused.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/...` passes; AC-2.2's `rg` prints nothing.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/...` passes; `rg -n 'linkOf|eventEndpoint' core/database` prints nothing (AC-2.2).
 
 **STEP-3 — Name the reading in the matching skill**
 Files: `.agents/skills/add-match-rule/SKILL.md`.
@@ -174,7 +174,7 @@ Check: `rg -n 'LinkOf' .agents/skills/add-match-rule/SKILL.md` prints the line.
 
 **STEP-4 — Docs**
 Files: `docs/deployment-plan/spike-11/completed.md`, `docs/deployment-plan/spike-11/deployment-plan.md` (map row), this plan (status).
-Do: per the Definition of done.
+Do: map row S11-41 in `deployment-plan.md`: Status `Landed #N` (the Plan cell already links this file). `completed.md`: a new section at the top (newest first), `## S11-41 — One link reading for bridges`, then `**Landed YYYY-MM-DD** in [#N](https://github.com/mendahu/provenencia/pull/N).` and two or three sentences on what moved, ending "Nothing changes for researchers." This plan: Status `Landed in [#N](https://github.com/mendahu/provenencia/pull/N) (YYYY-MM-DD)`, and a `**Landed:**` header line after **Planned** listing every difference from the plan ("None." when there is none).
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-11/prs/S11-41-link-reading.md` reports no errors; `scripts/check-pr.sh` prints `check-pr: PASS`.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits. For this PR: one code commit ("Read every bridge as a link through one function in segment compare.") and one docs commit.
