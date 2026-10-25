@@ -105,3 +105,15 @@ Maintainability (opus) confirmed that M-1, M-2, M-4 – M-7 landed correctly. On
 ## Verdict
 
 No blocker is open after two rounds; the cap is reached. **Fits with changes — Ready with changes**, all applied. The plan stays `Blocked — on board S12-D3`. At board agreement the planner fills §6 Frames and Strings from the board, archives the brief and sets the plan to Planned.
+
+## Board agreement (2026-10-25)
+
+The writer rendered all thirteen S12-D3 frames from the exported board and checked them against the plan. Changes folded into the plan (§6 Frames and Strings, D-1, D-8, D-13, D-14, Out):
+- The Add subtitle is the board's "An evidence graph is a discrete group of subjects and their relationships. …".
+- A caption under the Artifacts heading ("Select all the artifacts that are relevant to this evidence graph.") becomes an optional `description` on `PVArtifactChecklist`. The Copy form passes none.
+- Description carries `PVField`'s `.optional` marker.
+- The Kept linked callout has a lock icon and no title, so `graphFormKeptLinkedTitle` is dropped.
+- The read-error and save-error bodies follow the Copy form's pattern ("… are kept. … %@").
+- The board's mono error "detail" box and its web lock stand-in are web-kit gaps, listed in Out.
+
+No structural change, so the review is not rerun.
