@@ -138,11 +138,7 @@ final class CitationComposerModel {
     var sourceTitle: String { workspace?.source.title ?? "" }
     /// The Artifacts linked to this Evidence graph, in the Source page's order.
     var artifacts: [CatalogArtifact] {
-        SourcesListNavigation.linkedArtifacts(
-            graphID: graphID,
-            artifacts: workspace?.artifacts ?? [],
-            in: session
-        ) ?? []
+        session.linkedArtifacts(graphID: graphID, artifacts: workspace?.artifacts ?? []) ?? []
     }
     var listedCitations: [CatalogListedCitation] {
         guard let artifactID = selectedArtifactID else { return [] }
@@ -398,7 +394,7 @@ final class CitationComposerModel {
     var graphKey: CatalogQueryKey { .evidenceGraph(project: session.projectKey, graphId: graphID) }
     var workspaceKey: CatalogQueryKey { .sourceWorkspace(project: session.projectKey, sourceId: sourceID) }
     var citationCountsKey: CatalogQueryKey { .citationCounts(project: session.projectKey, graphId: graphID) }
-    var evidenceGraphsKey: CatalogQueryKey { .evidenceGraphsList(project: session.projectKey) }
+    var evidenceGraphsKey: CatalogQueryKey { session.evidenceGraphsKey }
     var fieldsKey: CatalogQueryKey { .propertiesWorkspace(project: session.projectKey) }
     var connectRulesKey: CatalogQueryKey { .connectRules(project: session.projectKey) }
     var sourceTypesKey: CatalogQueryKey { .sourceTypesList(project: session.projectKey) }
@@ -458,6 +454,7 @@ final class CitationComposerModel {
             } else {
                 resetComposerIdentity(keepLocator: false)
             }
+            let artifacts = self.artifacts
             if let selected = selectedArtifactID, !artifacts.contains(where: { $0.id == selected }) {
                 resetComposerIdentity(keepLocator: false)
             }
@@ -1113,6 +1110,7 @@ final class CitationComposerModel {
         if let selectedArtifactID, !selectedArtifactID.isEmpty {
             artifactIDs.append(selectedArtifactID)
         }
+        let artifacts = self.artifacts
         for artifact in artifacts where !artifactIDs.contains(artifact.id) {
             artifactIDs.append(artifact.id)
         }

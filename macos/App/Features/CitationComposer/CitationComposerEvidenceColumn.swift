@@ -79,11 +79,13 @@ struct CitationComposerEvidenceColumn: View {
     }
 
     private var artifactStepper: some View {
-        stepper(
+        // Read once: each read of `model.artifacts` scans the project's graph list.
+        let artifacts = model.artifacts
+        return stepper(
             eyebrow: L10n.CitationComposer.artifactEyebrow,
-            position: artifactPosition
+            position: artifactPosition(in: artifacts)
         ) {
-            artifactSelect
+            artifactSelect(artifacts)
         }
     }
 
@@ -146,19 +148,19 @@ struct CitationComposerEvidenceColumn: View {
         }
     }
 
-    private var artifactSelect: some View {
+    private func artifactSelect(_ artifacts: [CatalogArtifact]) -> some View {
         PVSelect(
             selection: artifactSelection,
-            options: artifactOptions,
+            options: artifactOptions(artifacts),
             size: .md,
             menuWidth: 360,
             maxVisibleRows: 6,
             rowHeight: 64,
-            isDisabled: model.isTranscribing || model.isDrawingDepiction || model.artifacts.isEmpty,
+            isDisabled: model.isTranscribing || model.isDrawingDepiction || artifacts.isEmpty,
             accessibilityLabel: L10n.CitationComposer.artifactEyebrow,
             accessibilityIdentifier: "citationComposer.artifactSelect"
         ) { option in
-            if let artifact = model.artifacts.first(where: { $0.id == option.id }) {
+            if let artifact = artifacts.first(where: { $0.id == option.id }) {
                 artifactMenuRow(artifact)
             } else {
                 Text(verbatim: option.label)
@@ -197,8 +199,8 @@ struct CitationComposerEvidenceColumn: View {
             }
     }
 
-    private var artifactOptions: [PVSelectOption] {
-        model.artifacts.map { artifact in
+    private func artifactOptions(_ artifacts: [CatalogArtifact]) -> [PVSelectOption] {
+        artifacts.map { artifact in
             PVSelectOption(value: artifact.id, label: artifactTitle(artifact))
         }
     }
@@ -215,12 +217,11 @@ struct CitationComposerEvidenceColumn: View {
         )
     }
 
-    private var artifactPosition: String {
+    private func artifactPosition(in artifacts: [CatalogArtifact]) -> String {
         guard let id = model.selectedArtifactID,
-              let index = model.artifacts.firstIndex(where: { $0.id == id }),
-              !model.artifacts.isEmpty
+              let index = artifacts.firstIndex(where: { $0.id == id })
         else { return "" }
-        return L10n.DesignSystem.selectOptionPosition(current: index + 1, count: model.artifacts.count)
+        return L10n.DesignSystem.selectOptionPosition(current: index + 1, count: artifacts.count)
     }
 
     private func citationMenuRow(_ listed: CatalogListedCitation) -> some View {
