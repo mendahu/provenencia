@@ -1,6 +1,7 @@
 # S12-10 — Composer offers linked Artifacts
 
 **Status:** Landed in [#540](https://github.com/mendahu/provenencia/pull/540) (2026-10-24)
+**Landed:** Three differences, all from review round 1. D-1 and D-3: the Citation-used-by-graph SQL is built from one exported `evidencegraphs.SQLObservationsInGraph` in `citations` and `evidencegraphs` (same-pass cleanup), and the Unlink check keeps D-3's reading (Observation-less Citations do not block). D-7: the session read of a graph's linked Artifacts lives in `WorkspaceSession+EvidenceGraphs.swift` beside the one graph-list key and handle, not in `SourcesListNavigation.swift`; its rule and signature shape are unchanged. D-10: the FakeStore graph create also reports `citationSources`, as the engine does through `Link`; graph delete reports none in both.
 **Spike / slice:** Spike 12 · Slice 3 — Graph id end to end
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the composer's Artifact picker, Citation stepper and empty callout keep their look; only what they list and two strings change)
