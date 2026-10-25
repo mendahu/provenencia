@@ -205,10 +205,10 @@ func canonKeys(self []byte, selfKind string, n *graphcache.Node, l graphcache.Li
 	} else {
 		from, to = l.Neighbor, self
 	}
-	// The event type comes from whichever end is an event; linkOf alone
+	// The event type comes from whichever end is an event; `segmentcompare.Keys` alone
 	// decides whether the key keeps it.
 	var eventType string
-	if first, has := eventEndpoint(b); has {
+	if first, has := segmentcompare.EventEndpoint(b); has {
 		// The first endpoint is the edge's from end; self is that end when
 		// the link was filed from it.
 		if first == l.FromEnd {
@@ -217,8 +217,7 @@ func canonKeys(self []byte, selfKind string, n *graphcache.Node, l graphcache.Li
 			eventType = keptTerm(neighbor, props, neighborTypeProperty[vocabkey.Event])
 		}
 	}
-	keyFrom = segmentcompare.Key(linkOf(b, l.TermKey, eventType, true), terms)
-	keyTo = segmentcompare.Key(linkOf(b, l.TermKey, eventType, false), terms)
+	keyFrom, keyTo = segmentcompare.Keys(b, vocabkey.BridgeTerm(l.TermKey), vocabkey.EventType(eventType), terms)
 	return from, to, keyFrom, keyTo, true
 }
 
