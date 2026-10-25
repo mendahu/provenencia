@@ -328,7 +328,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-13 — Artifact graph checkboxes
 
-**Ships.** One checkbox per graph in the Add Artifact dialog (all on, sent as `graph_ids`) and in an Artifact card's edit (through link and unlink), shown only when the Source has two or more graphs. Swift only. The canvas's cite gate and Files list read the graph's linked Artifacts (`CatalogEvidenceGraph.linkedArtifacts`; moved from S12-10 at its planning, user 2026-10-24).
+**Ships.** One checkbox per graph in the Add Artifact dialog (all on, sent as `graph_ids`) and in an Artifact card's edit (through link and unlink), shown only when the Source has two or more graphs. Swift only. The canvas's cite gate and Files list read the graph's linked Artifacts (`CatalogEvidenceGraph.linkedArtifacts`; moved from S12-10 at its planning, user 2026-10-24), through the session accessor `WorkspaceSession.linkedArtifacts(graphID:artifacts:)` (S12-10). If the canvas reads it per row, give the session one id-indexed view of the graph list built when its value lands, and point `SourcePageModel.evidenceGraphLocation`'s `graphsBySource` regroup at it too (S12-10 review PRF-1). With the checkboxes in, the composer's `noArtifactsCallout` ("Add one from the Source page") should also offer linking an existing Artifact (S12-10 review UX-1).
 **Not this PR.** Graph creation (S12-12).
 **Check.** On a one-graph Source nothing changes; on a three-graph Source a new page can be linked to one graph only.
 **Context.** Working rule "Single-graph Sources hide link checkboxes"; brief S12-D4.
