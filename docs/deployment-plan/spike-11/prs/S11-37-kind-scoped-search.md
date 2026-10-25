@@ -1,6 +1,6 @@
 # S11-37 — One kind-scoped catalog search
 
-**Status:** Planned
+**Status:** Landed in #551 (2026-10-25)
 **Spike / slice:** Spike 11 · Slice 8 — Find another record
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the omnibar draws the same panel and rows from the moved code; Promote's picker is S11-36's, gated on S11-D3)
@@ -13,6 +13,7 @@
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/swift-tests.mdc`
 **Context:** [Find another record § Where the Swift side changes](../promote-find-another-record.md#where-the-swift-side-changes), [§ Decided](../promote-find-another-record.md#decided-user-2026-10-24); working rule "No new search RPC, and one search model"; [`docs/design-system-layers.md`](../../../design-system-layers.md)
 **Planned:** 2026-10-25 against `main` @ `7f8117d`
+**Landed:** `waitForSearch` waits up to ten seconds rather than `waitUntil`'s two-second default, because the first full-suite gate run timed out with the main actor busy. Steps 2 – 4 landed as two commits (code, tests) rather than one per step, since the pbxproj registers every new file at once. The manual check (§10) was not run by the implementer.
 **Review:** [`S11-37-kind-scoped-search.review.md`](S11-37-kind-scoped-search.review.md) — Fits with changes / Ready with changes, 2 rounds (findings fixed)
 
 ### Implementer — read this first
