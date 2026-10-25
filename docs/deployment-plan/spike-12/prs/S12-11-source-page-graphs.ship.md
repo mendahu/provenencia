@@ -88,5 +88,10 @@ No new findings. Nits: none. No Fix plan 2.
 ## Finish
 Merged `origin/main` (`c7c78526`, S11-37 plan docs only) as `d6adeee1`; gate PASS.
 
+## After ready — user report
+The user reported a Swift 6 warning: `WorkspaceToolbar.swift:198` `BreadcrumbNames.none` is not concurrency-safe. `check-pr.sh`'s incremental `xcode-test` does not surface warnings, so the gate missed it.
+
+**F-9 — `BreadcrumbNames.none` as a computed static** · head `cdf20523` · Gate PASS (orchestrator run). The implementer also marked `WorkspaceToolbarBreadcrumbTests` `@MainActor` to clear the "sending 'self.names'" warnings from the suite's new `names` property (and older main-actor call warnings in the same suite). A clean `build-for-testing` leaves 6 warnings in changed files, all in `WorkspaceSessionTests.swift` (55, 62, 69, 169, 847, 877), from `c07f6c02c` and `d4e666b8c` on `main`; left as is.
+
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none (UX-3 written into S12-12 scope) · to user: — · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: none (UX-3 written into S12-12 scope) · to user: — · CON miss: none
