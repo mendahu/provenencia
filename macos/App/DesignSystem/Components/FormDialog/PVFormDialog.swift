@@ -205,7 +205,7 @@ extension View {
         isDirty: Bool = false,
         confirmDisabled: Bool = false,
         accessibilityIdentifierPrefix: String? = nil,
-        onConfirm: @escaping (Model) async -> Bool,
+        onConfirm: @escaping @MainActor (Model) async -> Bool,
         @ViewBuilder form: @escaping (Model) -> Form
     ) -> some View {
         pvFormDialog(
@@ -223,7 +223,7 @@ extension View {
             accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
             onConfirm: {
                 guard let current = item.wrappedValue else { return }
-                Task {
+                Task { @MainActor in
                     if await onConfirm(current) { item.wrappedValue = nil }
                 }
             }
