@@ -1,7 +1,7 @@
 # Review — S12-13 Artifact graph checkboxes
 
-**Verdict:** Fits with changes — Ready with changes (round 1; round 2 pending)
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet). Both read the plan; the maintainability reviewer also read the S12-D4 brief.
+**Verdict:** Fits with changes — Ready with changes (all blockers fixed)
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet). Both read the plan; the maintainability reviewer also read the S12-D4 brief.
 
 ## To user
 
@@ -10,7 +10,7 @@
 ## Writer's own calls
 
 - D-12: the graph list's scroll cap is the kit checklist's 264pt, not the board's 280pt, so the two checklists on the Source page are one size (M-7).
-- D-8: each successful link or unlink patches the card's snapshot in place, and after a refusal the locks are read again over it, keeping the researcher's checkboxes (X-4, X-12).
+- D-8: after the write loop the save awaits the graph list's reload once, and a failed reload shows Read again (X-12's requested fallback). After a refusal the locks are read again from the reloaded list, keeping the researcher's checkboxes (X-4, X-12, M-10).
 - D-9: the canvas waits for the graph list in `prepare()` so a graph with no links disarms the tools on open (X-5).
 - §10: the manual check uses a project built from scratch, and the composer's LK-12 copy is checked by test, because the composer cannot be opened on a graph with no links.
 
@@ -66,7 +66,7 @@
 **Answer:** Fixed — D-8: the early return covers fields and links; `clearPageError()` stays; `savingID` covers every write; `replace(_:effects:)` for `updateArtifact` only.
 
 ### X-4 · major · After a partial failure, `graphs`, `prefill` and `locked` are not said to refresh
-**Answer:** Fixed — D-8 patches the snapshot after each successful write and re-reads the locks after any error; D-6 says `loadLinkLocks()` reads that snapshot; T-10 asserts the patched prefill. (Round 2 X-12 replaced the first answer, a rebuild from the live session.)
+**Answer:** Fixed — D-8 patches the snapshot after each successful write and re-reads the locks after any error; D-6 says `loadLinkLocks()` reads that snapshot; T-10 asserts the patched prefill. (Superseded in round 2 by X-12 and M-10: the card reads links from the session after one await.)
 
 ### X-5 · major · `fileRows` guard and `canCite` timing in `prepare()`
 **Codebase:** `EvidenceGraphModel.prepare()`; `EvidenceGraphView` `.onChange(of: model.canCite)` only republishes hit targets.
@@ -97,4 +97,20 @@ Logged.
 **Plan:** D-8 read `context.session.evidenceGraph(id:)` for "currently linked" and rebuilt `prefillExcluded` from it after an error.
 **Codebase:** `WorkspaceSession.apply(_:)` invalidates the graph list and starts `revalidate`, then returns; `evidenceGraph(id:)` reads the old value until the reload lands (`WorkspaceSession.swift` ~178–235).
 **Better shape:** Await `readyValue` after each write, or track successful writes locally.
-**Answer:** Fixed — D-8 tracks them locally: each successful write patches `linkEdit.prefillExcluded` and the snapshot graph's `artifactIDs`; the diff and the locks read the snapshot; nothing waits on the reload. T-10 and the Risks row updated.
+**Answer:** Fixed — first by patching a local snapshot, then replaced under M-10: D-5 keeps only ids on the card, D-8 awaits `readyValue(evidenceGraphsKey)` once after the loop, and a nil result sets `loadState` failed. T-10 asserts against the reloaded list.
+
+### Round-1 answers checked
+Executability: X-1, X-2, X-3, X-5 – X-11 accepted; X-4 reopened as X-12. Maintainability: M-1 – M-9 accepted, with two gaps.
+- M-2 gap: the `macos/App/DesignSystem/README.md` ArtifactChecklist row names `PVArtifactChecklistState`. **Answer:** Fixed — STEP-3 files.
+- M-3 gap: `SourceGraphFormModel` `init` and `loadKeptLinks()` also write `graph.artifactIDs.isEmpty`. **Answer:** Fixed — D-9 and a §4 row.
+- M-4 note: the preflight now has two hooks (`…Calls` and `…GraphIDs`). Logged; the count can be read from the array in a later cleanup.
+- M-6 note: `CoreInvokeError.code` has one reader now. Logged; accepted.
+
+### M-10 · blocker · The card's link edit keeps its own copy of the graph list, and the refused-save rebuild reads that list before it has reloaded
+**Plan:** D-5 `linkEdit.graphs` copy; D-6 locks from it; D-8 reads the live session and rebuilds at once.
+**Codebase:** `WorkspaceSession.apply(_:_:)` only starts the reload; `evidenceGraph(id:)` serves the old value until it lands; Known trap "a feature model copying `handle.value` into its own array".
+**Better shape:** Ids and choices on the card; rows from the session; one `readyValue` await after the loop, before `loadLinkLocks()`.
+**Answer:** Fixed — D-5, D-6, D-7, D-8, T-10, Risks row, Codebase fit row.
+
+### Note (below blocker) · card edit state in two shapes
+`editingArtifactID`, `labels`, `descriptions` and `fieldErrors` are per-id dictionaries beside the one-card `linkEdit` and `cardSaveError`. **Answer:** Logged — §3 Out row; a follow-up for the next card change.
