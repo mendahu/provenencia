@@ -168,7 +168,7 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Table | `Components/Table/PVTable.swift` (added for S2-22, extracted from the Metadata (then Source fields) list; see "The table tradeoff" below) |
 | Confirm | `Components/Confirm/PVConfirm.swift` (added for S2-22's delete confirmation; the macOS answer to `ConfirmDialog.jsx`, which the web spec says not to port — see "Confirmations are system chrome" below) |
 | Panel | `Components/Panel/PVPanel.swift` (sheet content shell: title / subtitle / body / optional footer; optional title accessory, drawn after the title, filling the row; put a Spacer in it to push a control right; no window chrome); `Components/Panel/PVSheet.swift` (`.pvSheet`, the one sheet presenter: Escape, outside click and the discard question) |
-| FormDialog | `Components/FormDialog/PVFormDialog.swift` (short create/edit form sheet on `PVPanel`; optional `width`, default 480 — see note below) |
+| FormDialog | `Components/FormDialog/PVFormDialog.swift` (short create/edit form sheet on `PVPanel`; optional `width`, default 480; `pvFormDialog(item:)` for model-backed forms — see note below) |
 | ComboBox | `Components/ComboBox/PVComboBox.swift` (added for S2-16's assign-field control, where the pool is the whole Metadata vocabulary; single-select subset only — see "The combo box subset" below). The box is content-agnostic: rows (`row`) and the empty line (`empty`, given the typed query) are caller-built views; the kit ships only the generic `PVComboBoxPlainRow` (label + subtext) and a plain-text empty line, and never grows domain row kinds (the web kit's `person` row lives in features as their own `row`). S9-11 added **remote results**: `onQueryChange` hands each typed query to the caller, which passes back the search results as `options`, keeping the committed option among them, and `isLoading` shows the searching line while that search runs |
 | Radio | `Components/Radio/PVRadio.swift` (`PVRadio` label + description, and the bare `PVRadioMark` for rows that are themselves the control; added for S9-11's Promote target choice) |
 | Checkbox | `Components/Checkbox/PVCheckbox.swift` (`PVCheckbox` label + description, and the bare `PVCheckboxMark`; `isLocked` is the lock mark in that same box for a link or binding the researcher cannot clear, spoken "Locked"; `isIndeterminate` is spoken "partly checked") |
@@ -203,6 +203,9 @@ gives it none. Here `PVFormDialog` presents through `.pvSheet` on ``PVPanel`` �
 family as `PVConfirm`'s rich sheet — and leaves window chrome to the system. Prefer
 `PVConfirm` for destructive confirmations; use `PVFormDialog` for short
 create/edit forms.
+A form backed by a model its host sets presents through `pvFormDialog(item:)`, which
+owns the presented binding (cleared by Escape, Cancel or an outside click, never
+while the save runs) and clears it when `onConfirm` answers true.
 
 **Every sheet presents through `.pvSheet`**
 (`Components/Panel/PVSheet.swift`, `item:` and `isPresented:` forms), and

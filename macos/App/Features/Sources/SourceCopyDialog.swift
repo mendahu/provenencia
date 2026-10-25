@@ -13,18 +13,9 @@ private struct SourceCopyDialogModifier: ViewModifier {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Binding var model: SourceCopyModel?
 
-    private var isPresented: Binding<Bool> {
-        Binding(
-            get: { model != nil },
-            set: { presented in
-                if !presented, model?.isSaving != true { model = nil }
-            }
-        )
-    }
-
     func body(content: Content) -> some View {
         content.pvFormDialog(
-            isPresented: isPresented,
+            item: $model,
             copy: PVFormDialogCopy(
                 title: L10n.Sources.copySourceDialogTitle,
                 verbatimSubtitle: model.map { L10n.Sources.copySourceDialogSubtitle($0.original.title) },
@@ -36,20 +27,13 @@ private struct SourceCopyDialogModifier: ViewModifier {
             isDirty: model?.isDirty ?? false,
             confirmDisabled: !(model?.canCopy ?? false),
             accessibilityIdentifierPrefix: "sources.copy",
-            onConfirm: {
-                guard let current = model else { return }
-                Task {
-                    if let copy = await current.copy() {
-                        model = nil
-                        navigation.go(to: SourcesListNavigation.pageLocation(for: copy))
-                    }
-                }
-            }
-        ) {
-            if let model {
-                SourceCopyForm(model: model)
-            }
-        }
+            onConfirm: { current in
+                guard let copy = await current.copy() else { return false }
+                navigation.go(to: SourcesListNavigation.pageLocation(for: copy))
+                return true
+            },
+            form: { SourceCopyForm(model: $0) }
+        )
     }
 }
 

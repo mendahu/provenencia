@@ -13,15 +13,6 @@ private struct SourceGraphFormDialogModifier: ViewModifier {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Binding var model: SourceGraphFormModel?
 
-    private var isPresented: Binding<Bool> {
-        Binding(
-            get: { model != nil },
-            set: { presented in
-                if !presented, model?.isSaving != true { model = nil }
-            }
-        )
-    }
-
     private var copy: PVFormDialogCopy {
         if let graph = model?.graph {
             return PVFormDialogCopy(
@@ -41,28 +32,22 @@ private struct SourceGraphFormDialogModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content.pvFormDialog(
-            isPresented: isPresented,
+            item: $model,
             copy: copy,
             width: 520,
             isRunning: model?.isSaving ?? false,
             isDirty: model?.isDirty ?? false,
             confirmDisabled: !(model?.canSave ?? false),
             accessibilityIdentifierPrefix: "sources.graphForm",
-            onConfirm: {
-                guard let current = model else { return }
-                Task {
-                    if await current.save() { model = nil }
-                }
-            }
-        ) {
-            if let model {
+            onConfirm: { await $0.save() },
+            form: { current in
                 SourceGraphForm(
-                    model: model,
+                    model: current,
                     onNavigate: { navigation.go(to: $0) },
-                    dismiss: { self.model = nil }
+                    dismiss: { model = nil }
                 )
             }
-        }
+        )
     }
 }
 
