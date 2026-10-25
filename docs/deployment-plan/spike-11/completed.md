@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-41 — One link reading for bridges
+
+**Landed 2026-10-25** in [#561](https://github.com/mendahu/provenencia/pull/561). Reading a bridge as a `segmentcompare.Link` moved out of `promotealign` into `core/segmentcompare/key.go`: `LinkOf`, `EventEndpoint` and a new `Keys` that returns a bridge's keys from each of its ends. The layer loader and `loadCanon`'s `canonKeys` (and through it the evidence query) call them, and the private `linkOf` and `eventEndpoint` are gone, so `core/kinship` can key an implied link the way a recorded one is keyed. Nothing changes for researchers.
+
 ## S11-36 — Find another record in the target menu
 
 **Landed 2026-10-25** in [#558](https://github.com/mendahu/provenencia/pull/558). Every working Promote row's target menu now ends with "Find another record…". Choosing it turns the row's target cell into a search over every record of the row's kind, on `CatalogSearchModel` and `CatalogSearchHitRow`; picking a hit holds it through `PromoteFlow.hold`, so the row shows the record's own band, Contested and evidence, and Done files it. Opening, cancelling or moving the search decides nothing: the entry is a sentinel option (`Target.findToken`, `isMenuOnly` so stepping the closed menu never lands on it) that `PromoteModel` catches, and the row's target menu takes focus back when the search closes, and `PromoteFlow.setTarget` now refuses any token that names no target. A record the researcher chose that the evidence rates below Weak reads "Little evidence" instead of "No match", on the row, the sheet title and VoiceOver. `PVComboBox` gained a general init with a caller-built empty line, reports its own resets to a remote caller, and carries the host environment into its popup; `PVOmnibarHitRow` lost its unused `selected`, and the hit row carries its own VoiceOver label.
