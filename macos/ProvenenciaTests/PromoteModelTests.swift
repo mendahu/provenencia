@@ -415,12 +415,7 @@ struct PromoteModelTests {
     }
 
     @Test func aFoundRecordIsProposedHeldAndFiled() async {
-        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
-        store.membershipBySubject["x"] = CatalogSubjectMembership(
-            subjectID: "x", claimID: "claim-x",
-            entity: CatalogCanonicalEntity(id: "e-far", ref: "PER-FAR", subjectTypeID: "type-person", label: "Polly Jones"),
-            kind: "person"
-        )
+        let store = storeWithFoundRecords([subject("a", ref: "CPR-A", label: "Ada")])
         let model = model(store: store, subjectID: "a")
         await model.load()
         model.mapRest()
