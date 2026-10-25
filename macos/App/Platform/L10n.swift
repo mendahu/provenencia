@@ -6302,6 +6302,20 @@ enum L10n {
             ), ref)
         }
 
+        static let toastGraphDeletedTitle = LocalizedStringResource(
+            "sources.page.toastGraphDeletedTitle",
+            defaultValue: "Evidence graph deleted",
+            comment: "Toast title after an Evidence graph is erased"
+        )
+
+        static func toastGraphDeletedBody(ref: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.toastGraphDeletedBody",
+                defaultValue: "%@ was erased from this source.",
+                comment: "Toast body after Evidence graph erase; argument is GPH-…"
+            ), ref)
+        }
+
         static let deleteNoteConfirmTitle = LocalizedStringResource(
             "sources.page.deleteNoteConfirmTitle",
             defaultValue: "Delete this note?",
@@ -6683,6 +6697,42 @@ enum L10n {
                 defaultValue: "%lld artifacts",
                 comment: "Artifacts section count; argument is artifact count"
             ), count)
+        }
+
+        static func graphsCount(_ count: Int) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.graphsCount",
+                defaultValue: "%lld evidence graphs",
+                comment: "Evidence graphs section count; argument is graph count"
+            ), count)
+        }
+
+        static let graphsHeading = LocalizedStringResource(
+            "sources.page.graphsHeading",
+            defaultValue: "Evidence graphs",
+            comment: "Heading for the Evidence graphs section on the Source page"
+        )
+
+        static let openEvidenceGraph = LocalizedStringResource(
+            "sources.page.graph.open",
+            defaultValue: "Open",
+            comment: "Button on an Evidence graph row that opens its canvas"
+        )
+
+        static func openEvidenceGraphLabel(name: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.graph.openLabel",
+                defaultValue: "Open %@",
+                comment: "VoiceOver label for opening an Evidence graph; argument is the graph name"
+            ), name)
+        }
+
+        static func deleteEvidenceGraphLabel(name: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.graph.deleteLabel",
+                defaultValue: "Delete %@",
+                comment: "VoiceOver label for deleting an Evidence graph; argument is the graph name"
+            ), name)
         }
 
         static let metadataHeading = LocalizedStringResource(
@@ -8406,6 +8456,8 @@ enum L10n {
                 pair = (nounSource, nounSources)
             case "artifact":
                 pair = (nounArtifact, nounArtifacts)
+            case "evidence_graph":
+                pair = (nounEvidenceGraph, nounEvidenceGraphs)
             case "citation":
                 pair = (nounCitation, nounCitations)
             case "observation":
@@ -8460,6 +8512,16 @@ enum L10n {
         static let nounArtifacts = LocalizedStringResource(
             "deleteImpact.kind.artifact.other",
             defaultValue: "artifacts",
+            comment: "Plural Impact kind noun"
+        )
+        static let nounEvidenceGraph = LocalizedStringResource(
+            "deleteImpact.kind.evidence_graph.one",
+            defaultValue: "evidence graph",
+            comment: "Singular Impact kind noun"
+        )
+        static let nounEvidenceGraphs = LocalizedStringResource(
+            "deleteImpact.kind.evidence_graph.other",
+            defaultValue: "evidence graphs",
             comment: "Plural Impact kind noun"
         )
         static let nounCitation = LocalizedStringResource(

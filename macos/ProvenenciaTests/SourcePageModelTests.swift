@@ -50,8 +50,8 @@ struct SourcePageModelTests {
         return store
     }
 
-    private func makeModel(store: FakeStore) -> SourcePageModel {
-        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+    private func makeModel(store: FakeStore, session: WorkspaceSession? = nil) -> SourcePageModel {
+        let session = session ?? WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         return SourcePageModel(
             sourceID: sourceID,
             session: session,
@@ -1144,6 +1144,97 @@ struct SourcePageModelTests {
         let left = await model.confirmResourceDelete()
         #expect(!left)
         #expect(store.deleteSourceCalls == 0)
+    }
+
+    private func graph(_ id: String, name: String, sourceID: String? = nil) -> CatalogEvidenceGraph {
+        CatalogEvidenceGraph(
+            id: id, ref: "GPH-\(id.uppercased())", sourceID: sourceID ?? self.sourceID,
+            name: name, description: "", artifactIDs: []
+        )
+    }
+
+    @Test func graphRowsAreTheSourcesGraphsByName() async {
+        let store = makeStore()
+        store.evidenceGraphsByProject[projectDir] = [
+            graph("g-smith", name: "Smith household"),
+            graph("g-default", name: "Default"),
+            graph("g-jones", name: "Jones household"),
+            graph("g-other", name: "Other source", sourceID: "src-2"),
+        ]
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = makeModel(store: store, session: session)
+        await model.warmFromSession()
+        await settle(session.evidenceGraphsHandle!)
+        #expect(model.graphs.rows?.map(\.name) == ["Default", "Jones household", "Smith household"])
+        #expect(model.graphs.rows?.first?.name == "Default")
+        #expect(L10n.Sources.graphsCount(3) == "3 evidence graphs")
+    }
+
+    @Test func graphRowsNilUntilListLoadsAndErrorWhenItFails() async {
+        let store = makeStore()
+        store.evidenceGraphsByProject[projectDir] = [graph("g-default", name: "Default")]
+        let model = makeModel(store: store)
+        #expect(model.graphs.rows == nil)
+        #expect(model.graphs.loadError == nil)
+
+        struct Boom: Error {}
+        let failing = makeStore()
+        failing.listEvidenceGraphsError = Boom()
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: failing)
+        let failed = makeModel(store: failing, session: session)
+        await failed.warmFromSession()
+        await settle(session.evidenceGraphsHandle!)
+        #expect(failed.graphs.rows == nil)
+        #expect(failed.graphs.loadError != nil)
+    }
+
+    @Test func deleteEmptyGraphCallsStoreAndToasts() async {
+        let store = makeStore()
+        store.evidenceGraphsByProject[projectDir] = [
+            graph("g-default", name: "Default"),
+            graph("g-jones", name: "Jones household"),
+        ]
+        store.deleteImpactByID["g-jones"] = CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = makeModel(store: store, session: session)
+        session.apply(location: WorkspaceLocation(section: .sources, sourceId: sourceID, sourceSurface: .page))
+        await model.warmFromSession()
+        await settle(session.evidenceGraphsHandle!)
+        await model.askDeleteGraph(id: "g-jones")
+        #expect(model.pendingImpact?.target.kind == "evidence_graph")
+        #expect(model.pendingImpact?.target.ref == "GPH-G-JONES")
+        let left = await model.confirmResourceDelete()
+        #expect(!left)
+        #expect(store.deleteEvidenceGraphCalls == 1)
+        #expect(store.deleteArtifactCalls == 0)
+        #expect(model.toast?.title == "Evidence graph deleted")
+        #expect(model.toast?.body == "GPH-G-JONES was erased from this source.")
+        // The page is the visible place, so the effects revalidate the list.
+        #expect(await waitUntil { model.graphs.rows?.map(\.id) == ["g-default"] })
+    }
+
+    @Test(arguments: [
+        CatalogDeleteImpact(
+            allowed: false, gate: .inbound,
+            groups: [CatalogDeleteImpactGroup(via: "subjects.graph_id", kind: "subject", total: 3, listed: [])]
+        ),
+        CatalogDeleteImpact(allowed: false, gate: .lastGraph, groups: []),
+    ])
+    func blockedGraphDoesNotCallDelete(report: CatalogDeleteImpact) async {
+        let store = makeStore()
+        store.evidenceGraphsByProject[projectDir] = [graph("g-default", name: "Default")]
+        store.deleteImpactByID["g-default"] = report
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = makeModel(store: store, session: session)
+        await model.warmFromSession()
+        await settle(session.evidenceGraphsHandle!)
+        await model.askDeleteGraph(id: "g-default")
+        #expect(model.pendingImpact?.report.allowed == false)
+        #expect(model.pendingImpact?.report.gate == report.gate)
+        #expect(model.pendingImpact?.report.groups.first?.total == report.groups.first?.total)
+        let left = await model.confirmResourceDelete()
+        #expect(!left)
+        #expect(store.deleteEvidenceGraphCalls == 0)
     }
 
     @Test func deleteUncitedArtifactStaysOnPageAndClearsCover() async {
