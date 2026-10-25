@@ -37,41 +37,6 @@ func loadTerms(g *graphcache.Graph) (segmentcompare.Terms, error) {
 	return out, nil
 }
 
-// linkOf is a bridge as recorded, read from its first endpoint's end or its
-// second. It is the one builder of a link for both the layer and the canon,
-// so the two sides cannot drift: a bridge has two endpoints, and only a
-// participation carries an event type.
-func linkOf(b connectrules.Bridge, term, eventType string, firstEnd bool) segmentcompare.Link {
-	first, second := b.Endpoints[0], b.Endpoints[1]
-	l := segmentcompare.Link{
-		Type:     vocabkey.SubjectType(b.BridgeTypeKey),
-		Term:     vocabkey.BridgeTerm(term),
-		End:      vocabkey.PropertyKey(first.PropertyKey),
-		Other:    vocabkey.PropertyKey(second.PropertyKey),
-		SameType: first.TypeKey == second.TypeKey,
-	}
-	if !firstEnd {
-		l.End, l.Other = l.Other, l.End
-	}
-	if b.BridgeTypeKey == vocabkey.BridgeParticipation {
-		l.EventType = vocabkey.EventType(eventType)
-	}
-	return l
-}
-
-// eventEndpoint says which end of a bridge is an event: first when it is the
-// bridge's first endpoint, and ok false when neither is. It is the one rule
-// for where a link reads its event type, for the layer and the canon alike.
-func eventEndpoint(b connectrules.Bridge) (first, ok bool) {
-	switch {
-	case b.Endpoints[0].TypeKey == vocabkey.Event:
-		return true, true
-	case b.Endpoints[1].TypeKey == vocabkey.Event:
-		return false, true
-	}
-	return false, false
-}
-
 // seenEdge identifies one edge, whichever end listed it, by its ends and the
 // key it reads from each.
 type seenEdge struct {
