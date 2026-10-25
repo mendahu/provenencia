@@ -42,7 +42,7 @@ The omnibar's search state (query, debounce, generation guard, loading, error an
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-1.1 | Every case in `OmnibarResultsModelTests` at the planning base, retargeted per D-6 | Each passes with the same inputs and the same expectations |
+| AC-1.1 | Every case in `OmnibarResultsModelTests` at the planning base, retargeted per D-9 | Each passes with the same inputs and the same expectations |
 | AC-1.2 | Omnibar: type `Ilminster` on the Sources list of a project with a Source titled `Ilminster parish` | The panel shows that Source as the first hit, with its type label and thumbnail; ↓ / ↑ move the selection; Return opens the Source and clears the field; Esc closes the panel and keeps the query |
 
 **US-2.** As a contributor (S11-36), I drive one search model with a set of kinds and no location, so that a person row's picker searches only person records without a copy of the omnibar's model.
