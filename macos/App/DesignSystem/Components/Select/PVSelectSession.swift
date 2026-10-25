@@ -113,15 +113,21 @@ struct PVSelectSession: Equatable {
 
     mutating func moveCommitted(delta: Int) {
         guard canOpen else { return }
-        let next = PVFloatingMenuSelection.moveIndex(
+        var next = PVFloatingMenuSelection.moveIndex(
             from: selectedIndex, delta: delta, count: options.count
         )
+        let step = delta < 0 ? -1 : 1
+        while options.indices.contains(next), options[next].isMenuOnly {
+            next += step
+        }
         commit(index: next, close: false)
     }
 
     mutating func jumpCommitted(toFirst: Bool) {
         guard canOpen else { return }
-        commit(index: toFirst ? 0 : options.count - 1, close: false)
+        let steppable = options.indices.filter { !options[$0].isMenuOnly }
+        guard let target = toFirst ? steppable.first : steppable.last else { return }
+        commit(index: target, close: false)
     }
 
     // MARK: Open
@@ -197,7 +203,9 @@ struct PVSelectSession: Equatable {
         let buffer = typeSelect.append(character, now: now)
         let current = isOpen ? highlightIndex : selectedIndex
         let from = buffer.count == 1 ? current + 1 : max(0, current)
-        let hit = PVTypeSelectMatcher.index(in: optionTitles, prefix: buffer, fromIndex: from)
+        // Closed type-select commits, so it never lands on a menu-only option.
+        let titles = commit ? options.map { $0.isMenuOnly ? "" : $0.label } : optionTitles
+        let hit = PVTypeSelectMatcher.index(in: titles, prefix: buffer, fromIndex: from)
         guard hit >= 0 else { return false }
         if commit {
             selection = options[hit].id

@@ -356,6 +356,10 @@ row, or scroll and then click.
 | Escape | No-op | Dismiss; restore the snapshot taken at open |
 | Click away | — | Dismiss without commit (same as Escape) |
 
+**Menu-only options.** A `PVSelectOption` with `isMenuOnly` is chosen only
+from the open menu; the closed keys (↑ / ↓, Home / End, type-select) and
+VoiceOver adjust skip it.
+
 **Selected vs highlight.** The committed row keeps a leading checkmark and
 the `.isSelected` trait, with **no** fill. Keyboard highlight uses
 `surfaceSelected` fill. A committed+highlighted row shows both; two rows

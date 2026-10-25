@@ -311,6 +311,8 @@ private struct PromoteAlignmentRow: View {
     let model: PromoteModel
     /// The connections shown under this row, in display order.
     let connections: [PromoteFlow.RowConnection]
+    /// Lets the target menu take focus back when the record search closes.
+    @FocusState private var targetFocus: Bool?
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space2) {
@@ -402,6 +404,13 @@ private struct PromoteAlignmentRow: View {
         }
         .padding(.vertical, PVSpacing.space3)
         .overlay(alignment: .top) { PVDivider() }
+        .onChange(of: model.recordSearch?.subjectID) { old, new in
+            // Pick, Cancel and Escape all end here: the search unmounts, so hand focus
+            // back to the menu that replaces it once it is on screen.
+            if old == row.subjectID, new != row.subjectID {
+                DispatchQueue.main.async { targetFocus = true }
+            }
+        }
     }
 
     private func duplicateTitle(_ note: PromoteFlow.DuplicateNote) -> String {
@@ -423,7 +432,8 @@ private struct PromoteAlignmentRow: View {
             isDisabled: model.isSaving,
             isInvalid: row.target == .unset,
             accessibilitySpokenLabel: L10n.Promote.filesOn(name: row.name),
-            accessibilityIdentifier: "promote.row.\(row.ref).target"
+            accessibilityIdentifier: "promote.row.\(row.ref).target",
+            focus: PVSelectFocus($targetFocus, equals: true)
         ) { option in
             PromoteTargetMenuRow(option: option, row: row)
         }
@@ -442,7 +452,8 @@ private struct PromoteAlignmentRow: View {
         options.append(PVSelectOption(
             value: PromoteFlow.Target.findToken,
             label: L10n.string(L10n.Promote.findOption),
-            accessibilityIdentifier: "promote.row.\(row.ref).target.find"
+            accessibilityIdentifier: "promote.row.\(row.ref).target.find",
+            isMenuOnly: true
         ))
         return options
     }
