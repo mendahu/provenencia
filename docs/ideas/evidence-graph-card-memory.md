@@ -27,4 +27,5 @@ Peaks while zooming reached about 1.3 GB. On Retina that is about 5 MB per card 
 
 - Which number is a problem: the steady footprint on a big Source, or the zoom peak?
 - Does the second-copy theory hold? Reading `footprint` before and after replacing `layer.contents` with an `IOSurface` on one card would settle it.
-- Should this share a budget with [S11-31](../deployment-plan/spike-11/deployment-plan.md) (bound the Go-side Source cache), or stay separate, since that is engine memory and this is app memory?
+
+It does not share a budget with [S11-31](../deployment-plan/spike-11/prs/S11-31-evidence-graph-cap.md), which caps the Go engine's loaded Evidence graphs: that is engine rows, this is app card images, and each is bounded where it lives (S11-31 plan, 2026-10-25).
