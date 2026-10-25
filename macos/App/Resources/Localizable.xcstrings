@@ -37,6 +37,78 @@
         }
       }
     },
+    "designSystem.checkbox.locked": {
+      "comment": "Spoken value of a PVCheckbox for a link or binding the researcher cannot clear",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Locked"
+          }
+        }
+      }
+    },
+    "artifactChecklist.heading": {
+      "comment": "Heading of an Artifact checklist",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artifacts"
+          }
+        }
+      }
+    },
+    "artifactChecklist.all": {
+      "comment": "Checklist checkbox that checks or unchecks every Artifact",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All Artifacts"
+          }
+        }
+      }
+    },
+    "artifactChecklist.empty": {
+      "comment": "Artifact checklist note when the Source has no Artifacts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Source has no Artifacts."
+          }
+        }
+      }
+    },
+    "artifactChecklist.count": {
+      "comment": "Artifact checklist count; arguments are the checked count and the total",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "artifactChecklist.lockedValue": {
+      "comment": "Spoken value of a locked Artifact checklist row; argument is the Artifact ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Locked, %@"
+          }
+        }
+      }
+    },
     "designSystem.comboBox.searching": {
       "comment": "PVComboBox list line while the caller's remote search runs and no results are in yet",
       "extractionState": "manual",
@@ -1393,7 +1465,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "A source keeps at least one evidence graph. Add another graph before you delete this one."
+            "value": "A source keeps at least one evidence graph. Use Add evidence graph to make another, then delete this one. A new evidence graph needs an artifact."
           }
         }
       }
@@ -5510,42 +5582,6 @@
         }
       }
     },
-    "sources.copy.allArtifacts": {
-      "comment": "Copy Source checkbox that checks or unchecks every Artifact",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "All Artifacts"
-          }
-        }
-      }
-    },
-    "sources.copy.artifactCount": {
-      "comment": "Copy Source Artifact count; arguments are the checked count and the total",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld of %2$lld"
-          }
-        }
-      }
-    },
-    "sources.copy.artifactsHeading": {
-      "comment": "Heading of the Copy Source Artifact checklist",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Artifacts"
-          }
-        }
-      }
-    },
     "sources.copy.confirm": {
       "comment": "Confirm button on the Copy Source dialog",
       "extractionState": "manual",
@@ -5702,18 +5738,6 @@
         }
       }
     },
-    "sources.copy.noArtifacts": {
-      "comment": "Copy Source note when the original has no Artifacts",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This Source has no Artifacts."
-          }
-        }
-      }
-    },
     "sources.copy.partAbsent": {
       "comment": "Hint under a Copy Source checkbox when the original has none of that part",
       "extractionState": "manual",
@@ -5738,8 +5762,8 @@
         }
       }
     },
-    "sources.copy.readAgain": {
-      "comment": "Button that reloads the original's parts in the Copy Source form",
+    "sources.form.readAgain": {
+      "comment": "Button that reads a Source-page form's loaded parts again after they failed to load",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -9506,18 +9530,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bound"
-          }
-        }
-      }
-    },
-    "properties.inspector.bindingLocked": {
-      "comment": "Accessibility / badge for a locked subject-type binding",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Locked"
           }
         }
       }
@@ -22019,6 +22031,414 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete %@"
+          }
+        }
+      }
+    },
+    "sources.page.addEvidenceGraph": {
+      "comment": "Button in the Evidence graphs header that opens the Add evidence graph form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add evidence graph"
+          }
+        }
+      }
+    },
+    "sources.graph.addNeedsArtifact": {
+      "comment": "Tooltip and VoiceOver hint of Add evidence graph when the Source has no Artifact",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add an artifact before you add an evidence graph"
+          }
+        }
+      }
+    },
+    "sources.page.graph.editLabel": {
+      "comment": "VoiceOver label for editing an Evidence graph; argument is the graph name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit %@"
+          }
+        }
+      }
+    },
+    "sources.graphForm.addTitle": {
+      "comment": "Title of the Add evidence graph form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add evidence graph"
+          }
+        }
+      }
+    },
+    "sources.graphForm.addSubtitle": {
+      "comment": "Subtitle of the Add evidence graph form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An evidence graph is a discrete group of subjects and their relationships. Use different graphs to isolate groups of data from a large source."
+          }
+        }
+      }
+    },
+    "sources.graphForm.artifactsHint": {
+      "comment": "Caption under the Artifacts heading in the evidence graph form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select all the artifacts that are relevant to this evidence graph."
+          }
+        }
+      }
+    },
+    "sources.graphForm.addConfirm": {
+      "comment": "Confirm button of the Add evidence graph form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
+          }
+        }
+      }
+    },
+    "sources.graphForm.editTitle": {
+      "comment": "Title of the Edit evidence graph form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit evidence graph"
+          }
+        }
+      }
+    },
+    "sources.graphForm.saveConfirm": {
+      "comment": "Confirm button of the Edit evidence graph form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        }
+      }
+    },
+    "sources.graphForm.name": {
+      "comment": "Label of the evidence graph name field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
+          }
+        }
+      }
+    },
+    "sources.graphForm.namePlaceholder": {
+      "comment": "Placeholder of the evidence graph name field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jones household"
+          }
+        }
+      }
+    },
+    "sources.graphForm.nameRequired": {
+      "comment": "Error under the evidence graph name field when it is blank",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Give the evidence graph a name."
+          }
+        }
+      }
+    },
+    "sources.graphForm.description": {
+      "comment": "Label of the evidence graph description field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Description"
+          }
+        }
+      }
+    },
+    "sources.graphForm.descriptionHint": {
+      "comment": "Hint under the evidence graph description field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Which part of the source this graph covers"
+          }
+        }
+      }
+    },
+    "sources.graphForm.noneChecked": {
+      "comment": "Line under the Artifact checklist when no Artifact is checked",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check at least one artifact."
+          }
+        }
+      }
+    },
+    "sources.graphForm.keptLinkedMessage": {
+      "comment": "Callout above the Citations that keep an Artifact linked to the graph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These artifacts stay linked while citations in this graph use them."
+          }
+        }
+      }
+    },
+    "sources.graphForm.loading": {
+      "comment": "Evidence graph form loading line while the kept links are read",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading the artifacts…"
+          }
+        }
+      }
+    },
+    "sources.graphForm.loadErrorTitle": {
+      "comment": "Evidence graph form callout title when the kept links fail to load",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t read the artifacts"
+          }
+        }
+      }
+    },
+    "sources.graphForm.loadErrorMessage": {
+      "comment": "Evidence graph form load error message; argument is the error text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name and description are kept. Read the artifacts again to change the links. %@"
+          }
+        }
+      }
+    },
+    "sources.graphForm.saveErrorTitle": {
+      "comment": "Evidence graph form callout title when the save fails",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t save the evidence graph"
+          }
+        }
+      }
+    },
+    "sources.graphForm.saveErrorMessage": {
+      "comment": "Evidence graph form save error message; argument is the error text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing was saved. Your changes are kept. %@"
+          }
+        }
+      }
+    },
+    "sources.page.toastGraphAddedTitle": {
+      "comment": "Toast title after an Evidence graph is added",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence graph added"
+          }
+        }
+      }
+    },
+    "sources.page.toastGraphAddedBody": {
+      "comment": "Toast body after an Evidence graph is added; argument is GPH-…",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is ready to open."
+          }
+        }
+      }
+    },
+    "promote.target.find": {
+      "comment": "Promote target menu entry that opens a search over every record of the row's kind",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find another record…"
+          }
+        }
+      }
+    },
+    "promote.search.placeholder.person": {
+      "comment": "Placeholder of the Promote record search field for this kind",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search people"
+          }
+        }
+      }
+    },
+    "promote.search.noMatches.person": {
+      "comment": "Line of the Promote record search list when nothing of this kind matches; argument is the typed query",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No people match “%@”"
+          }
+        }
+      }
+    },
+    "promote.search.placeholder.event": {
+      "comment": "Placeholder of the Promote record search field for this kind",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search events"
+          }
+        }
+      }
+    },
+    "promote.search.noMatches.event": {
+      "comment": "Line of the Promote record search list when nothing of this kind matches; argument is the typed query",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No events match “%@”"
+          }
+        }
+      }
+    },
+    "promote.search.placeholder.place": {
+      "comment": "Placeholder of the Promote record search field for this kind",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search places"
+          }
+        }
+      }
+    },
+    "promote.search.noMatches.place": {
+      "comment": "Line of the Promote record search list when nothing of this kind matches; argument is the typed query",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No places match “%@”"
+          }
+        }
+      }
+    },
+    "promote.search.label": {
+      "comment": "VoiceOver label of the Promote record search field; argument is the subject's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find another record for %@"
+          }
+        }
+      }
+    },
+    "promote.search.cancel": {
+      "comment": "Button that closes the Promote record search and brings the target menu back",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel search"
+          }
+        }
+      }
+    },
+    "promote.search.hint": {
+      "comment": "Line of the Promote record search list before the query is long enough to search",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type at least two letters of a name or a ref"
+          }
+        }
+      }
+    },
+    "promote.assessment.chosenNone": {
+      "comment": "Promote band for a record the researcher chose when nothing lines up",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Little evidence"
           }
         }
       }

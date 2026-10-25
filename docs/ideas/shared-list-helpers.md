@@ -40,3 +40,5 @@ Sheets share one dismissal now (`.pvSheet`: Escape, a click outside, the discard
 - **Scrolling** to the highlighted row is already shared (`.pvScrollsRowIntoView`).
 
 The fields are not the same, so the omnibar cannot simply become a combo box. The combo box picks a value and keeps it: `@Binding selection`, the field shows the picked label, and only typed text filters. Its Escape has two steps, and a click outside also takes focus off the field. The omnibar has no picked value: Return opens the record and clears the field, Escape keeps the query, and it has an error state of its own. The shared piece is the layer underneath: a kit popup list that owns the window and its placement, the keys, the highlight, the scrolling, closing, and the loading, empty and error lines. `PVComboBox` would add the picked-value field on top, and the omnibar the command field. It folds in the popup dismissal above.
+
+`CatalogSearchModel.selectedIndex`, `moveSelection` and `selectedHit` are the omnibar's highlight; they move onto `OmnibarResultsModel` with that list, since the combo box keeps its own.

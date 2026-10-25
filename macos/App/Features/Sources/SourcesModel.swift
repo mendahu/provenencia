@@ -270,7 +270,7 @@ final class SourcesModel {
     }
 
     func typeIconKey(for source: CatalogSource) -> String? {
-        types.first { $0.id == source.sourceTypeID }?.iconKey
+        types.iconKey(forTypeID: source.sourceTypeID)
     }
 
     /// A Source's title and ref keyed once. Two keys, so a match cannot cross fields.

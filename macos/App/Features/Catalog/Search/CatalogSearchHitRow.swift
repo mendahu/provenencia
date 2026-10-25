@@ -4,7 +4,6 @@ import SwiftUI
 struct CatalogSearchHitRow: View {
     let hit: CatalogSearchHit
     let projectDir: String
-    var selected: Bool
     @Environment(WorkspaceSession.self) private var session
 
     var body: some View {
@@ -18,9 +17,9 @@ struct CatalogSearchHitRow: View {
             matchContext: CatalogSearchHitPresentation.matchContextText(
                 field: hit.matchReason,
                 snippet: hit.matchSnippet
-            ),
-            selected: selected
+            )
         )
+        .accessibilityLabel(CatalogSearchHitPresentation.accessibilityLabel(for: hit, orders: session.nameFormat))
     }
 
     @ViewBuilder

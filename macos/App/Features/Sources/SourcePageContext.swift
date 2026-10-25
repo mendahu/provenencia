@@ -57,6 +57,11 @@ final class SourcePageContext {
         return handle?.value ?? []
     }
 
+    /// The Source's type icon, for Artifact thumbnails and covers that have no file.
+    var sourceTypeIconKey: String? {
+        types.iconKey(forTypeID: source?.sourceTypeID)
+    }
+
     var grades: [CatalogCredibilityGrade] {
         let handle: QueryHandle<[CatalogCredibilityGrade]>? = session.queryHandle(
             .credibilityGradesList(project: session.projectKey)

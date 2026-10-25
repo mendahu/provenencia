@@ -100,7 +100,7 @@ These are the calls for this spike. PR plans treat them as binding.
 - **Effects are graph-keyed, in one step.** S12-07 keeps `effects.Set.Sources` keyed by Source; `graphcache` drops every graph of a changed Source. S12-08 re-keys `Set` / `Effect`, `WriteEffects.sources` and the Swift mutations (`.mutatedSourceGraph`, `.deletedSubject`, `.promotedSubject`) to graph ids together, so the wire never carries graph ids that Swift reads as Source ids. `.promotedSubject` moves in S12-08 too, because Promote reads the canvas's key (user, 2026-10-22). Binds S12-07, S12-08, S12-09.
 - **The graph list has its own effect.** S12-03 gives `evidence_graphs` and `evidence_graph_artifacts` an `Effect` that sets the catalog-wide list key `evidence_graphs` (`effects.ListEvidenceGraphs` in `Set.Lists`, beside `vocabulary` and `property_usage`); the wire (`WriteEffects.lists`) and Swift (`CatalogList`) already carry every list key, so S12-05 adds one `CatalogQueryRegistry.invalidations(for: CatalogList)` line for the graph list. Every write that creates, edits, links or deletes a graph (Copy Source, Add Artifact, Source delete included) refreshes the list with no per-feature code. Binds S12-03, S12-05.
 - **Single-graph Sources hide link checkboxes.** Linking is automatic while a Source has one graph; the checkboxes appear in the Artifacts section once there are two or more. Binds S12-13.
-- **Source page:** a Graphs section with one row per graph (name, ref, description, Open), create, edit and delete. The header's Evidence graph jump is removed. No per-graph progress on this page. Binds S12-11, S12-12.
+- **Source page:** a Graphs section with one row per graph (name, ref, description, Open), create, edit and delete. The header's Evidence graph jump is removed. Each row shows the graph's Subject and Observation counts, the same line as the Sources list (user, 2026-10-25; S12-11's "no progress on this page" is superseded). Binds S12-11, S12-12, S12-14.
 - **Sources list:** every row is an accordion listing its graphs, each with its own progress counts and an Open link. Open is available for a graph with at least one linked Artifact, as today's single button is. Binds S12-14.
 - **Omnibar:** graphs are a searchable kind (name, description, ref); a hit opens the graph. Binds S12-15 (through [`add-searchable-kind`](../../../.agents/skills/add-searchable-kind/SKILL.md)).
 
@@ -122,9 +122,9 @@ These are the calls for this spike. PR plans treat them as binding.
 | S12-09 | Promote per graph | 3 | Proposal, Apply, bridge filing, unpromote and the Promote RPCs per graph; `SoleGraph` / `SoleGraphTx` deleted | — | S12-08, S12-18, S11-17, S11-25, S11-26, S11-27 | [Plan](prs/S12-09-promote-per-graph.md) | Landed #535 |
 | S12-10 | Composer offers linked Artifacts | 3 | The Citation composer lists only the graph's linked Artifacts, and on each only the graph's Citations (citation list and counts re-keyed by graph) | — | S12-05, S12-08 | [Plan](prs/S12-10-composer-linked-artifacts.md) | Landed #540 |
 | S12-11 | Source page Graphs section | 4 | List graphs with Open and Delete; remove the header jump; breadcrumbs name the graph | S12-D2 | S12-05, S12-08, S12-D2 | [Plan](prs/S12-11-source-page-graphs.md) | Landed #549 |
-| S12-12 | Graph form | 4 | Create and edit a graph: name, description, the shared Artifact checklist | S12-D3 | S12-02, S12-11, S12-D3 | [Plan](prs/S12-12-graph-form.md) | Planned |
+| S12-12 | Graph form | 4 | Create and edit a graph: name, description, the shared Artifact checklist | S12-D3 | S12-02, S12-11, S12-D3 | [Plan](prs/S12-12-graph-form.md) | Landed #557 |
 | S12-13 | Artifact graph checkboxes | 4 | Graph checkboxes in the Add Artifact dialog and Artifact card edit, shown with two or more graphs; Swift only | S12-D4 | S12-12, S12-D4 | — | Scoped |
-| S12-14 | Sources list graph accordion | 4 | Each row expands to its graphs with per-graph progress and Open | S12-D5 | S12-08, S12-D5 | — | Scoped |
+| S12-14 | Graph counts in the Sources list and on the Source page | 4 | Each Sources list row expands to its graphs with per-graph progress and Open; the Source page's graph rows show the same count line | S12-D5 | S12-08, S12-D5 | — | Scoped |
 | S12-15 | Graphs in the omnibar | 4 | Graphs as a searchable kind; a hit opens the graph | — | S12-08 | — | Scoped |
 | S12-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
@@ -137,7 +137,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | [S12-D2](design/archive/S12-D2-source-page-graphs.md) | Source page — Graphs section | **S12-11** | One row per graph (name, ref, description, Open, delete); replaces the header jump. Board agreed 2026-10-25 |
 | [S12-D3](design/archive/S12-D3-graph-form.md) | Graph form | **S12-12** | Create and edit: name, description, the Artifact checklist from S12-D1 all on; in-use Artifacts locked with their Citations listed; the last-graph notice names Add evidence graph. Board agreed 2026-10-25 |
 | S12-D4 | Source page — Artifacts section graph links | **S12-13** | Checkboxes in the add dialog and card edit; refusal wording for unlink |
-| S12-D5 | Sources list — graph accordion | **S12-14** | Expander per row, per-graph progress and Open |
+| S12-D5 | Sources list — graph accordion | **S12-14** | Expander per row, per-graph progress and Open; the count line on the Source page's graph rows |
 
 ## Slices
 
@@ -175,7 +175,7 @@ SLICE 4 — Graphs in the UI
   ✎ S12-D2 ──▶ S12-11  Source page Graphs section
   ✎ S12-D3 ──▶ S12-12  Graph form
   ✎ S12-D4 ──▶ S12-13  Artifact graph checkboxes
-  ✎ S12-D5 ──▶ S12-14  Sources list graph accordion
+  ✎ S12-D5 ──▶ S12-14  Graph counts in the Sources list and on the Source page
   S12-15  Graphs in the omnibar
   Check: the dogfood bar's census case end to end.
 
@@ -328,17 +328,17 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-13 — Artifact graph checkboxes
 
-**Ships.** One checkbox per graph in the Add Artifact dialog (all on, sent as `graph_ids`) and in an Artifact card's edit (through link and unlink), shown only when the Source has two or more graphs. Swift only. The canvas's cite gate and Files list read the graph's linked Artifacts (`CatalogEvidenceGraph.linkedArtifacts`; moved from S12-10 at its planning, user 2026-10-24), through the session accessor `WorkspaceSession.linkedArtifacts(graphID:artifacts:)` (S12-10). If the canvas reads it per row, give the session one id-indexed view of the graph list built when its value lands, and back `WorkspaceSession.evidenceGraph(id:)` and `evidenceGraphs(sourceID:)` with it, and move `SourcesModel.graphsBySourceCache` onto it (S12-10 review PRF-1). With the checkboxes in, the composer's `noArtifactsCallout` ("Add one from the Source page") should also offer linking an existing Artifact (S12-10 review UX-1). If its dialogs are the third form presented from an optional model (after `sourceCopyDialog` and S12-12's `sourceGraphFormDialog`), add a kit `pvFormDialog(item:)` and move all three onto it (S12-12 plan review M-5).
+**Ships.** One checkbox per graph in the Add Artifact dialog (all on, sent as `graph_ids`) and in an Artifact card's edit (through link and unlink), shown only when the Source has two or more graphs. Swift only. The canvas's cite gate and Files list read the graph's linked Artifacts (`CatalogEvidenceGraph.linkedArtifacts`; moved from S12-10 at its planning, user 2026-10-24), through the session accessor `WorkspaceSession.linkedArtifacts(graphID:artifacts:)` (S12-10). If the canvas reads it per row, give the session one id-indexed view of the graph list built when its value lands, and back `WorkspaceSession.evidenceGraph(id:)` and `evidenceGraphs(sourceID:)` with it, and move `SourcesModel.graphsBySourceCache` onto it (S12-10 review PRF-1). With the checkboxes in, the composer's `noArtifactsCallout` ("Add one from the Source page") should also offer linking an existing Artifact (S12-10 review UX-1). Its dialogs present through the kit's `pvFormDialog(item:)` (added in S12-12 with `sourceCopyDialog` and `sourceGraphFormDialog`).
 **Not this PR.** Graph creation (S12-12).
 **Check.** On a one-graph Source nothing changes; on a three-graph Source a new page can be linked to one graph only.
 **Context.** Working rule "Single-graph Sources hide link checkboxes"; brief S12-D4.
 
-#### S12-14 — Sources list graph accordion
+#### S12-14 — Graph counts in the Sources list and on the Source page
 
-**Ships.** Every Sources list row expands to list its graphs alphabetically, each with its own progress counts and Open link.
-**Not this PR.** Source-level progress totals (not wanted).
-**Check.** The bar's Finding graphs outcome, Sources list half.
-**Context.** Working rules "Sources list", "One graph list"; brief S12-D5.
+**Ships.** Every Sources list row expands to list its graphs alphabetically, each with its own progress counts and Open link. Each graph row in the Source page's Evidence graphs section shows its Subject and Observation counts (user, 2026-10-25). Both read the existing project-wide `CatalogQueryKey.evidenceGraphProgress` map, which `WorkspaceSession.apply` already refreshes per graph. Swift only: no new query, RPC or string. The Source page place (`PlaceRegistry` `.sourceDetail`) adds `.evidenceGraphProgress(project:)` to its query keys, and `SourceGraphsSection` gains a per-graph progress read like `SourcesModel.graphProgress(for:)`. `SourcesSplitRow`'s private `graphCountLine` (the loading rule, "0 subjects · not started", and "N subjects · M observations" through `L10n.Sources.graphCountLine`) becomes one shared Sources view, which the list row, the accordion's graph rows and the Source page's graph rows all draw.
+**Not this PR.** Source-level progress totals (not wanted). Filed / primary counts or a Promote button on the Source page rows.
+**Check.** The bar's Finding graphs outcome, Sources list half. On a census Source with three graphs, each Source page row shows that graph's counts; adding an Observation in one graph updates only its row, with no page reload. A model test asserts a graph's progress reaches its Source page row.
+**Context.** Working rules "Sources list", "Source page", "One graph list"; brief S12-D5 (it also draws the count line on the Source page row).
 
 #### S12-15 — Graphs in the omnibar
 

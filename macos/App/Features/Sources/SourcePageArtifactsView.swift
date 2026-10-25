@@ -358,9 +358,7 @@ struct SourcePageArtifactsView: View {
     }
 
     private var sourceTypeIconKey: String? {
-        model.identity.types
-            .first { $0.id == model.source?.sourceTypeID }?
-            .iconKey
+        model.identity.types.iconKey(forTypeID: model.source?.sourceTypeID)
     }
 }
 

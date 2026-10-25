@@ -13,18 +13,9 @@ private struct SourceCopyDialogModifier: ViewModifier {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Binding var model: SourceCopyModel?
 
-    private var isPresented: Binding<Bool> {
-        Binding(
-            get: { model != nil },
-            set: { presented in
-                if !presented, model?.isSaving != true { model = nil }
-            }
-        )
-    }
-
     func body(content: Content) -> some View {
         content.pvFormDialog(
-            isPresented: isPresented,
+            item: $model,
             copy: PVFormDialogCopy(
                 title: L10n.Sources.copySourceDialogTitle,
                 verbatimSubtitle: model.map { L10n.Sources.copySourceDialogSubtitle($0.original.title) },
@@ -36,20 +27,13 @@ private struct SourceCopyDialogModifier: ViewModifier {
             isDirty: model?.isDirty ?? false,
             confirmDisabled: !(model?.canCopy ?? false),
             accessibilityIdentifierPrefix: "sources.copy",
-            onConfirm: {
-                guard let current = model else { return }
-                Task {
-                    if let copy = await current.copy() {
-                        model = nil
-                        navigation.go(to: SourcesListNavigation.pageLocation(for: copy))
-                    }
-                }
-            }
-        ) {
-            if let model {
-                SourceCopyForm(model: model)
-            }
-        }
+            onConfirm: { current in
+                guard let copy = await current.copy() else { return false }
+                navigation.go(to: SourcesListNavigation.pageLocation(for: copy))
+                return true
+            },
+            form: { SourceCopyForm(model: $0) }
+        )
     }
 }
 
@@ -87,33 +71,25 @@ private struct SourceCopyForm: View {
                 Text(L10n.Sources.copySourcePartsHeading)
                     .pvMicroCaps()
                     .foregroundStyle(PVColor.textFaint)
-                switch model.loadState {
-                case .ready:
+                SourceFormLoadArea(
+                    state: model.loadState,
+                    loadingText: L10n.Sources.copySourceLoading,
+                    errorTitle: L10n.Sources.copySourceLoadErrorTitle,
+                    errorMessage: L10n.Sources.copySourceLoadErrorMessage,
+                    onReadAgain: { model.reloadWorkspace() },
+                    accessibilityIdentifierPrefix: "sources.copy"
+                ) {
                     partCheckboxes
-                case .loading:
-                    loading
-                case .failed(let message):
-                    PVCallout(
-                        tone: .danger,
-                        title: L10n.Sources.copySourceLoadErrorTitle,
-                        message: L10n.Sources.copySourceLoadErrorMessage(message),
-                        compact: true
-                    ) {
-                        PVButton(L10n.Sources.copySourceReadAgain, variant: .secondary, size: .sm) {
-                            model.reloadWorkspace()
-                        }
-                        .accessibilityIdentifier("sources.copy.readAgain")
-                    }
-                    .accessibilityIdentifier("sources.copy.loadError")
                 }
             }
             if model.loadState == .ready, let workspace = model.workspace {
-                SourceArtifactChecklist(
+                PVArtifactChecklist(
                     artifacts: workspace.artifacts,
                     excluded: $model.choices.excludedArtifactIDs,
                     projectDir: model.projectDir,
                     sourceTypeIconKey: model.sourceTypeIconKey,
-                    isDisabled: model.isSaving
+                    isDisabled: model.isSaving,
+                    accessibilityIdentifierPrefix: "sources.copy.artifacts"
                 )
             }
         }
@@ -160,24 +136,5 @@ private struct SourceCopyForm: View {
             get: { available && model.choices[keyPath: keyPath] },
             set: { model.choices[keyPath: keyPath] = $0 }
         )
-    }
-
-    private var loading: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space5) {
-            GeometryReader { geometry in
-                VStack(alignment: .leading, spacing: PVSpacing.space5) {
-                    ForEach([0.42, 0.36, 0.48], id: \.self) { fraction in
-                        PVSkeletonBar(width: geometry.size.width * fraction, height: 12)
-                    }
-                }
-            }
-            .frame(height: 12 * 3 + PVSpacing.space5 * 2)
-            Text(L10n.Sources.copySourceLoading)
-                .font(PVFont.body(size: PVTypeScale.caption, italic: true))
-                .foregroundStyle(PVColor.textMuted)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(L10n.Sources.copySourceLoading))
-        .accessibilityIdentifier("sources.copy.loading")
     }
 }

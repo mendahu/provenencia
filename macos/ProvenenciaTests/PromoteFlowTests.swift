@@ -212,7 +212,7 @@ struct PromoteFlowTests {
 
         flow.setTarget(subjectID: "a", token: "handle:e2")
         #expect(flow.rows.first?.selectionReadout == PromoteFlow.SelectionReadout(
-            assessment: .weak, reason: .agrees(key: "name", origin: "provenencia")
+            assessment: .weak, reason: .agrees(key: "name", origin: "provenencia"), chosen: true
         ))
 
         flow.setTarget(subjectID: "a", token: "skip")
@@ -226,7 +226,7 @@ struct PromoteFlowTests {
         rescored.reason = .decided
         flow.merge(proposal(rows: [rescored], revision: 4), subjects: [fact("a")])
         #expect(flow.rows.first?.selectionReadout == PromoteFlow.SelectionReadout(
-            assessment: .medium, reason: .agrees(key: "name", origin: "provenencia")
+            assessment: .medium, reason: .agrees(key: "name", origin: "provenencia"), chosen: true
         ))
     }
 
@@ -652,6 +652,46 @@ struct PromoteFlowTests {
         #expect(flow.restCount == 1)
     }
 
+    @Test func anUnresolvedTokenDecidesNothing() {
+        var flow = PromoteFlow(entryID: "a")
+        let unset = row(id: "a", target: "new", handleID: "", assessment: "none")
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [unset, row(id: "b")]),
+            subjects: [fact("a"), fact("b")],
+            bridges: []
+        )
+        flow.setTarget(subjectID: "b", token: PromoteFlow.Target.handleToken("e1"))
+        let before = flow
+        for subject in ["a", "b"] {
+            for token in [PromoteFlow.Target.findToken, "bogus", PromoteFlow.Target.handleToken("not-in-menu")] {
+                #expect(flow.setTarget(subjectID: subject, token: token) == false)
+            }
+        }
+        #expect(flow == before)
+        #expect(flow.rows.map(\.target) == before.rows.map(\.target))
+        #expect(flow.rows.map(\.decided) == [false, true])
+    }
+
+    @Test func menuTokensAreSpelledAndDecodedOnce() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [row(id: "a")]),
+            subjects: [fact("a")],
+            bridges: []
+        )
+        let handle = PromoteFlow.Target.handle(id: "e1", ref: "PER-1", title: "A")
+        #expect(handle.token == PromoteFlow.Target.handleToken("e1"))
+        let first = flow.rows[0]
+        #expect(first.menuItem(forToken: PromoteFlow.Target.handleToken("e1"))?.id == "e1")
+        #expect(first.menuItem(forToken: PromoteFlow.Target.newKind.token) == nil)
+        #expect(first.menuItem(forToken: PromoteFlow.Target.findToken) == nil)
+        flow.setTarget(subjectID: "a", token: PromoteFlow.Target.handleToken("e2"))
+        flow.setTarget(subjectID: "a", token: PromoteFlow.Target.handleToken("e1"))
+        #expect(flow.rows[0].target.handleID == "e1")
+    }
+
     @Test func leaveAsksOnlyAfterAManualChange() {
         var flow = PromoteFlow(entryID: "a")
         #expect(flow.requestLeave(.back) == false)
@@ -923,7 +963,7 @@ struct PromoteFlowTests {
         #expect(held.decided)
         #expect(flow.manual)
         #expect(held.readingTitle == "Polly Jones")
-        #expect(held.selectionReadout == PromoteFlow.SelectionReadout(assessment: .none, reason: .decided))
+        #expect(held.selectionReadout == PromoteFlow.SelectionReadout(assessment: .none, reason: .decided, chosen: true))
 
         let fixed = flow.fixed(for: flow.rows.filter(\.decided))
         #expect(fixed == [CatalogPromoteGraphAlignmentFixed(subjectID: "a", handleID: "e7")])

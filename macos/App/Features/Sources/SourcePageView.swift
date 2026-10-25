@@ -190,6 +190,7 @@ private struct SourcePageContent: View {
             SourcePageMetadataView(model: model).addForm
         }
         .sourceCopyDialog($model.copying)
+        .sourceGraphFormDialog($model.graphs.form)
         .pvConfirm(
             item: Binding(
                 get: { model.metadata.pendingDelete },

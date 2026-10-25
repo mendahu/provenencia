@@ -31,9 +31,14 @@ final class CatalogSearchModel {
         query.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// The query is too short to search.
+    var isBelowMinimumQuery: Bool {
+        trimmedQuery.count < Self.minQueryLength
+    }
+
     /// Results show once the query is long enough and a search has run (or is in flight).
     var showsResults: Bool {
-        trimmedQuery.count >= Self.minQueryLength && (hasSearched || isLoading)
+        !isBelowMinimumQuery && (hasSearched || isLoading)
     }
 
     var showsLoadingState: Bool {
@@ -71,7 +76,7 @@ final class CatalogSearchModel {
     ) {
         debounceTask?.cancel()
         let q = trimmedQuery
-        guard q.count >= Self.minQueryLength else {
+        guard !isBelowMinimumQuery else {
             dismiss()
             return
         }

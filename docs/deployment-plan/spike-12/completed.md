@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-12 — Graph form
+
+**Landed 2026-10-25** in [#557](https://github.com/mendahu/provenencia/pull/557). A researcher can click Add evidence graph in the Source page's Evidence graphs header, or Edit on a graph's row, and get one form: name, description and the Source's Artifacts as a checklist, all checked for a new graph and the linked ones for an edit. Saving makes or changes the graph in one write; Add toasts "Evidence graph added" and the list stays in name order. An edit reads once which Artifacts the graph's Citations use, shows them checked and locked with the Citations listed, and offers Read again if that read fails. Add is disabled with a reason on a Source with no Artifacts. The last-graph delete notice now names Add evidence graph. The Artifact checklist is promoted to the `PVArtifactChecklist` recipe (shared with Copy Source), `PVCheckbox` gains a lock mark, and the delete notice's Citation list and the forms' load area are shared.
+
 ## S12-11 — Source page Graphs section
 
 **Landed 2026-10-25** in [#549](https://github.com/mendahu/provenencia/pull/549). The Source page shows an Evidence graphs section between the overview columns and Artifacts: one card per graph with its name, `GPH-` ref and description, an Open button (disabled with the reason when the graph links no Artifact) and a Delete button that goes through the delete-impact check, with a success toast. The header's Jump to graph is gone. The canvas, Citation composer and Promote breadcrumbs read Sources › Source title › graph name from the session's lists, so a rename shows at once. `WorkspaceLocation.sourcePage` replaces three hand-built copies, and `WorkspaceSession.evidenceGraph(id:)`, `evidenceGraphs(sourceID:)` and `source(id:)` are the one read of each list. Swift only; no engine, FFI or catalog change.

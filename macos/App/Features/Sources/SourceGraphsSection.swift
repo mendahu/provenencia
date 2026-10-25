@@ -9,6 +9,9 @@ import Observation
 final class SourceGraphsSection {
     private let context: SourcePageContext
 
+    /// The Add / Edit form while it is open.
+    var form: SourceGraphFormModel?
+
     init(context: SourcePageContext) {
         self.context = context
     }
@@ -36,5 +39,34 @@ final class SourceGraphsSection {
     /// Why Open is blocked; nil when it opens.
     func blockedReason(for graph: CatalogEvidenceGraph) -> String? {
         SourcesListNavigation.graphBlockedReason(for: graph)
+    }
+
+    // MARK: Add and edit
+
+    /// A new graph needs an Artifact to link.
+    var canAdd: Bool { !(context.workspace?.artifacts.isEmpty ?? true) }
+
+    /// Why Add is disabled; nil when it is enabled, and while the page loads.
+    var addBlockedReason: String? {
+        guard let workspace = context.workspace, workspace.artifacts.isEmpty else { return nil }
+        return L10n.string(L10n.Sources.addEvidenceGraphNeedsArtifact)
+    }
+
+    func openAdd() {
+        guard canAdd else { return }
+        form = SourceGraphFormModel(context: context, mode: .create)
+    }
+
+    /// The graph with `id` when it belongs to this page's Source.
+    func ownGraph(id: String) -> CatalogEvidenceGraph? {
+        guard let graph = context.session.evidenceGraph(id: id), graph.sourceID == context.sourceID else { return nil }
+        return graph
+    }
+
+    func openEdit(id: String) {
+        guard context.workspace != nil, let graph = ownGraph(id: id) else { return }
+        let model = SourceGraphFormModel(context: context, mode: .edit(graph))
+        form = model
+        Task { await model.loadKeptLinks() }
     }
 }

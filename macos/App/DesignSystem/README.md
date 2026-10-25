@@ -168,10 +168,10 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Table | `Components/Table/PVTable.swift` (added for S2-22, extracted from the Metadata (then Source fields) list; see "The table tradeoff" below) |
 | Confirm | `Components/Confirm/PVConfirm.swift` (added for S2-22's delete confirmation; the macOS answer to `ConfirmDialog.jsx`, which the web spec says not to port — see "Confirmations are system chrome" below) |
 | Panel | `Components/Panel/PVPanel.swift` (sheet content shell: title / subtitle / body / optional footer; optional title accessory, drawn after the title, filling the row; put a Spacer in it to push a control right; no window chrome); `Components/Panel/PVSheet.swift` (`.pvSheet`, the one sheet presenter: Escape, outside click and the discard question) |
-| FormDialog | `Components/FormDialog/PVFormDialog.swift` (short create/edit form sheet on `PVPanel`; optional `width`, default 480 — see note below) |
+| FormDialog | `Components/FormDialog/PVFormDialog.swift` (short create/edit form sheet on `PVPanel`; optional `width`, default 480; `pvFormDialog(item:)` for model-backed forms — see note below) |
 | ComboBox | `Components/ComboBox/PVComboBox.swift` (added for S2-16's assign-field control, where the pool is the whole Metadata vocabulary; single-select subset only — see "The combo box subset" below). The box is content-agnostic: rows (`row`) and the empty line (`empty`, given the typed query) are caller-built views; the kit ships only the generic `PVComboBoxPlainRow` (label + subtext) and a plain-text empty line, and never grows domain row kinds (the web kit's `person` row lives in features as their own `row`). S9-11 added **remote results**: `onQueryChange` hands each typed query to the caller, which passes back the search results as `options`, keeping the committed option among them, and `isLoading` shows the searching line while that search runs |
 | Radio | `Components/Radio/PVRadio.swift` (`PVRadio` label + description, and the bare `PVRadioMark` for rows that are themselves the control; added for S9-11's Promote target choice) |
-| Checkbox | `Components/Checkbox/PVCheckbox.swift` (`PVCheckbox` label + description, and the bare `PVCheckboxMark`; `isLocked` is the Properties seeded-binding lock in that same box; `isIndeterminate` is spoken "partly checked") |
+| Checkbox | `Components/Checkbox/PVCheckbox.swift` (`PVCheckbox` label + description, and the bare `PVCheckboxMark`; `isLocked` is the lock mark in that same box for a link or binding the researcher cannot clear, spoken "Locked"; `isIndeterminate` is spoken "partly checked") |
 | Switch | `Components/Switch/PVSwitch.swift` (32×18 track; immediate on/off — a saved form still uses Checkbox) |
 | List | `Components/List/PVList.swift` (added for S9-09, ported from the kit's `PVList`: navigation rows — thumbnail slot (a view; S10-35), title, secondary line, optional fixed-width detail column (icon and one line of text, with help) before the trailing mono ref, chevron — as buttons, not selection; one focus stop with ↑/↓ · Home/End · Page Up/Down · Return/Space; `PVListSkeleton` for first load. The counterpart to Table) |
 | ScrollRowIntoView | `Components/ScrollRowIntoView/PVScrollRowIntoView.swift` (`.pvScrollsRowIntoView`: keeps the highlighted or selected row in view as the keyboard moves it, and can send a new list back to its first row; `PVTable`, `PVList`, `PVSelect`, `PVComboBox` and the omnibar results scroll through it — do not add another `ScrollViewReader` for this) |
@@ -180,7 +180,8 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Card | `Components/Card/PVCard.swift` (surface container: tone / border / radius / optional elevation + padding; mirrors web `Card.jsx`; no header/footer slots yet — compose those outside) |
 | Marks | `Recipes/Marks/PVMark.swift` (`file_*` + `type_*` + `subject_*`; see colocated `MARKS.md`; not SF Symbols); `PVGlyph` / `PVGlyphView` for a symbol-or-mark slot |
 | OmnibarHitRow | `Recipes/OmnibarHitRow/PVOmnibarHitRow.swift` |
-| DeleteImpact | `Recipes/DeleteImpact/PVDeleteImpact.swift` (S8-13: confirm when `GetDeleteImpact` is allowed, notice when blocked; composes `.pvConfirm`) |
+| DeleteImpact | `Recipes/DeleteImpact/PVDeleteImpact.swift` (S8-13: confirm when `GetDeleteImpact` is allowed, notice when blocked; composes `.pvConfirm`; `PVDeleteImpactGroupList` is its list of rows, for in-form refusal lists) |
+| ArtifactChecklist | `Recipes/ArtifactChecklist/PVArtifactChecklist.swift` (S12-12: a Source's Artifacts as a checklist with an All row, thumbnails, count and an optional caption; `locked` rows show the lock mark with a hint and survive the All row; `PVArtifactChecklistState` is its pure arithmetic; used by the Copy Source and Evidence graph forms) |
 | Breadcrumbs | `Components/Breadcrumbs/PVBreadcrumbs.swift` (added for S2-18 Source page trail; Sources → `SRC-…`) |
 | ReorderableList | `Components/ReorderableList/PVReorderableList.swift` (+ `PVReorderHandle`; added for S2-25 Metadata drag order) |
 
@@ -202,6 +203,9 @@ gives it none. Here `PVFormDialog` presents through `.pvSheet` on ``PVPanel`` �
 family as `PVConfirm`'s rich sheet — and leaves window chrome to the system. Prefer
 `PVConfirm` for destructive confirmations; use `PVFormDialog` for short
 create/edit forms.
+A form backed by a model its host sets presents through `pvFormDialog(item:)`, which
+owns the presented binding (cleared by Escape, Cancel or an outside click, never
+while the save runs) and clears it when `onConfirm` answers true.
 
 **Every sheet presents through `.pvSheet`**
 (`Components/Panel/PVSheet.swift`, `item:` and `isPresented:` forms), and
@@ -228,7 +232,12 @@ added, rather than porting speculatively. Async loading is ported for remote
 results (`isLoading`): with nothing in yet the list shows a "Searching…" line
 in place of the empty line, and options already in stay until new ones
 replace them, as the omnibar keeps its hits. A failed search is the caller's
-empty line.
+empty line, and the general init takes `empty` as a view given the typed query,
+so a hint or a failure's message can be that line. When the box resets the
+field itself (a click away, the second Escape) it reports the restored text
+through `onQueryChange` too, so the caller's query and results follow the
+field. The popup window carries the field's environment, so a row sees the
+same session and `isEnabled` the field does.
 
 What is ported is the interaction contract, and it is worth restating because
 every clause of it is a decision rather than an accident:
@@ -346,6 +355,10 @@ row, or scroll and then click.
 | Home / End | Commit first/last. Stay closed. | First / last highlight |
 | Escape | No-op | Dismiss; restore the snapshot taken at open |
 | Click away | — | Dismiss without commit (same as Escape) |
+
+**Menu-only options.** A `PVSelectOption` with `isMenuOnly` is chosen only
+from the open menu; the closed keys (↑ / ↓, Home / End, type-select) and
+VoiceOver adjust skip it.
 
 **Selected vs highlight.** The committed row keeps a leading checkmark and
 the `.isSelected` trait, with **no** fill. Keyboard highlight uses

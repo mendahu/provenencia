@@ -129,6 +129,12 @@ struct PVComboBoxTests {
         #expect(PVComboBoxMatch.listLine(optionCount: 2, isLoading: false) == .rows)
     }
 
+    @Test func aRestoreIsReportedOnlyToRemoteCallers() {
+        #expect(PVComboBoxMatch.reportsRestore(isRemote: true, old: "Pol", new: ""))
+        #expect(PVComboBoxMatch.reportsRestore(isRemote: true, old: "", new: "") == false)
+        #expect(PVComboBoxMatch.reportsRestore(isRemote: false, old: "Pol", new: "") == false)
+    }
+
     // MARK: Placement
 
     /// A roomy 1440x900 display with the menu bar taken off the top, in

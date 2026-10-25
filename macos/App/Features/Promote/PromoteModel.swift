@@ -171,8 +171,47 @@ final class PromoteModel {
     func mapRest() { flow.mapRest() }
 
     func setTarget(subjectID: String, token: String) {
+        if token == PromoteFlow.Target.findToken {
+            openRecordSearch(subjectID: subjectID)
+            return
+        }
         guard flow.setTarget(subjectID: subjectID, token: token) else { return }
         proposeAfterDecision()
+    }
+
+    /// A search of one row's kind, open in that row's target cell.
+    struct RecordSearch {
+        let subjectID: String
+        let search: CatalogSearchModel
+    }
+
+    /// The one open record search; nil when no row is searching. Opening or closing it decides nothing.
+    private(set) var recordSearch: RecordSearch?
+
+    /// Turns the row's target cell into a search over every record of its kind. Any open search closes.
+    func openRecordSearch(subjectID: String) {
+        guard let row = flow.row(subjectID), !row.anchor else { return }
+        closeRecordSearch()
+        recordSearch = RecordSearch(subjectID: subjectID, search: CatalogSearchModel(kinds: [row.kind.rawValue]))
+    }
+
+    func recordSearchQueryChanged(_ text: String) {
+        guard let search = recordSearch?.search else { return }
+        search.query = text
+        search.scheduleSearch(projectDir: session.projectKey.projectDir, location: nil, store: store)
+    }
+
+    /// Holds the picked hit as the open search's row's decided target, then closes the search.
+    func pickSearchHit(id: String) {
+        guard let open = recordSearch,
+              let hit = open.search.hits.first(where: { $0.id == id }) else { return }
+        closeRecordSearch()
+        hold(subjectID: open.subjectID, id: hit.id, ref: hit.ref, header: hit.header)
+    }
+
+    func closeRecordSearch() {
+        recordSearch?.search.cancel()
+        recordSearch = nil
     }
 
     /// Holds a record Promote did not offer as the row's decided target.
@@ -258,6 +297,7 @@ final class PromoteModel {
     }
 
     func done() {
+        closeRecordSearch()
         guard canFinish else { return }
         flow.saving = true
         flow.staleNote = nil
@@ -266,6 +306,7 @@ final class PromoteModel {
     }
 
     func leave() {
+        closeRecordSearch()
         let pending = flow.pendingLeave
         flow.cancelLeave()
         navigation?.resumeHeldNavigation()
@@ -316,7 +357,7 @@ final class PromoteModel {
 
     /// The band as the row's button speaks it: "Strong", or "Strong, contested".
     func assessmentText(_ readout: PromoteFlow.SelectionReadout) -> String {
-        let band = L10n.string(L10n.Promote.assessment(readout.assessment))
+        let band = L10n.string(L10n.Promote.assessment(readout))
         return readout.contested ? L10n.Promote.assessmentContested(band) : band
     }
 
@@ -470,8 +511,8 @@ final class PromoteModel {
         let types: [CatalogSourceType]? = await session.readyValue(sourceTypesKey)
         guard let source = sources?.first(where: { $0.id == entry.sourceID }) else { return }
         sourceRef = source.ref
-        if let type = types?.first(where: { $0.id == source.sourceTypeID }) {
-            sourceMark = PVMarkKey(catalogKey: type.iconKey)
+        if let iconKey = types?.iconKey(forTypeID: source.sourceTypeID) {
+            sourceMark = PVMarkKey(catalogKey: iconKey)
         }
     }
 }

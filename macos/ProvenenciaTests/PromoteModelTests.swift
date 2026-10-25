@@ -415,12 +415,7 @@ struct PromoteModelTests {
     }
 
     @Test func aFoundRecordIsProposedHeldAndFiled() async {
-        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
-        store.membershipBySubject["x"] = CatalogSubjectMembership(
-            subjectID: "x", claimID: "claim-x",
-            entity: CatalogCanonicalEntity(id: "e-far", ref: "PER-FAR", subjectTypeID: "type-person", label: "Polly Jones"),
-            kind: "person"
-        )
+        let store = storeWithFoundRecords([subject("a", ref: "CPR-A", label: "Ada")])
         let model = model(store: store, subjectID: "a")
         await model.load()
         model.mapRest()
@@ -439,6 +434,128 @@ struct PromoteModelTests {
         let batch = store.lastPromoteBatch?.first { $0.subjectID == "a" }
         #expect(batch?.target == "handle")
         #expect(batch?.entityID == "e-far")
+    }
+
+    private func storeWithFoundRecords(_ subjects: [CatalogSubject]) -> FakeStore {
+        let store = store(subjects: subjects)
+        store.membershipBySubject["x"] = CatalogSubjectMembership(
+            subjectID: "x", claimID: "claim-x",
+            entity: CatalogCanonicalEntity(id: "e-far", ref: "PER-FAR", subjectTypeID: "type-person", label: "Polly Jones"),
+            kind: "person"
+        )
+        store.membershipBySubject["y"] = CatalogSubjectMembership(
+            subjectID: "y", claimID: "claim-y",
+            entity: CatalogCanonicalEntity(id: "p-1", ref: "PLC-1", subjectTypeID: "type-place", label: "Polly Street"),
+            kind: "place"
+        )
+        return store
+    }
+
+    @Test func aRecordSearchOpensOnTheRowsKindAndDecidesNothing() async {
+        let store = storeWithFoundRecords([subject("a", ref: "CPR-A", label: "Ada")])
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        model.mapRest()
+        let fixedBefore = store.lastPromoteFixed
+
+        model.setTarget(subjectID: "a", token: PromoteFlow.Target.findToken)
+        #expect(model.recordSearch?.subjectID == "a")
+        #expect(model.recordSearch?.search.kinds == ["person"])
+        #expect(model.flow.row("a")?.decided == false)
+        #expect(model.flow.row("a")?.target == .unset)
+        #expect(model.isProposing == false)
+        #expect(store.lastPromoteFixed == fixedBefore)
+    }
+
+    @Test func cancellingOrMovingARecordSearchChangesNoRow() async {
+        let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
+        let store = storeWithFoundRecords(subjects)
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        model.mapRest()
+        let rowsBefore = model.flow.rows
+        let fixedBefore = store.lastPromoteFixed
+
+        model.openRecordSearch(subjectID: "a")
+        model.openRecordSearch(subjectID: "b")
+        #expect(model.recordSearch?.subjectID == "b")
+        model.closeRecordSearch()
+        #expect(model.recordSearch == nil)
+        #expect(model.flow.rows == rowsBefore)
+        #expect(store.lastPromoteFixed == fixedBefore)
+
+        model.openRecordSearch(subjectID: "a")
+        model.done()
+        #expect(model.recordSearch == nil)
+    }
+
+    @Test func aFoundRecordIsSearchedPickedAndHeld() async {
+        let store = storeWithFoundRecords([subject("a", ref: "CPR-A", label: "Ada")])
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        model.mapRest()
+
+        model.openRecordSearch(subjectID: "a")
+        model.recordSearchQueryChanged("Polly")
+        let search = model.recordSearch!.search
+        await waitForSearch(search)
+        #expect(search.hits.map(\.id) == ["e-far"])
+
+        model.pickSearchHit(id: "e-far")
+        #expect(model.recordSearch == nil)
+        _ = await waitUntil { !model.isProposing }
+        #expect(store.lastPromoteFixed == [CatalogPromoteGraphAlignmentFixed(subjectID: "a", handleID: "e-far")])
+        #expect(model.flow.row("a")?.decided == true)
+        #expect(model.flow.row("a")?.target.handleID == "e-far")
+
+        model.done()
+        let filed = await waitUntil { store.lastPromoteBatch != nil }
+        #expect(filed)
+        #expect(store.lastPromoteBatch?.first { $0.subjectID == "a" }?.entityID == "e-far")
+    }
+
+    @Test func aRecordSearchShowsFailuresAndIgnoresUnknownHits() async {
+        struct Boom: Error {}
+        let store = storeWithFoundRecords([subject("a", ref: "CPR-A", label: "Ada")])
+        store.searchCatalogError = Boom()
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        model.mapRest()
+        let before = model.flow.row("a")
+
+        model.openRecordSearch(subjectID: "a")
+        model.recordSearchQueryChanged("Polly")
+        let search = model.recordSearch!.search
+        await waitForSearch(search)
+        #expect(search.showsErrorState)
+
+        model.pickSearchHit(id: "nope")
+        #expect(model.recordSearch?.subjectID == "a")
+        #expect(model.flow.row("a") == before)
+    }
+
+    @Test func aChosenRecordBelowWeakReadsLittleEvidence() async {
+        func words(_ readout: PromoteFlow.SelectionReadout) -> String { L10n.string(L10n.Promote.assessment(readout)) }
+        let chosenNone = PromoteFlow.SelectionReadout(assessment: .none, reason: .decided, chosen: true)
+        #expect(words(chosenNone) == L10n.string(L10n.Promote.assessmentChosenNone))
+        #expect(words(.init(assessment: .none, reason: .empty)) == L10n.string(L10n.Promote.assessmentNone))
+        #expect(words(.init(assessment: .weak, reason: .empty, chosen: true)) == L10n.string(L10n.Promote.assessmentWeak))
+
+        let model = model(store: storeWithFoundRecords([subject("a", ref: "CPR-A", label: "Ada")]), subjectID: "a")
+        var contested = chosenNone
+        contested.contested = true
+        #expect(model.assessmentText(contested) == L10n.Promote.assessmentContested("Little evidence"))
+
+        // A row decided on an offered alternative Promote rates None reads as chosen; a suggested one does not.
+        var none = row("a", handleID: "e1", assessment: "weak")
+        none.alternatives = [
+            CatalogPromoteGraphAlignmentAlternative(handleID: "e2", handleRef: "PER-2", score: 1, assessment: "none"),
+        ]
+        let page = await loadedAdaAndBea(none, row("b", handleID: "e3"))
+        #expect(page.flow.row("a")?.selectionReadout?.chosen == false)
+        page.setTarget(subjectID: "a", token: PromoteFlow.Target.handleToken("e2"))
+        #expect(page.flow.row("a")?.selectionReadout?.assessment == PromoteFlow.Assessment.none)
+        #expect(page.flow.row("a")?.selectionReadout?.chosen == true)
     }
 
     /// Ada and Bea on one page, each placed by the given proposal rows.
@@ -563,8 +680,8 @@ struct PromoteModelTests {
         let model = await loadedAdaAndBea(contested, row("b", handleID: "e2"))
         let ada = model.flow.row("a")!
         let bea = model.flow.row("b")!
-        #expect(model.assessmentText(ada.selectionReadout!) == L10n.Promote.assessmentContested(L10n.string(L10n.Promote.assessment(.strong))))
-        #expect(model.assessmentText(bea.selectionReadout!) == L10n.string(L10n.Promote.assessment(.strong)))
+        #expect(model.assessmentText(ada.selectionReadout!) == L10n.Promote.assessmentContested(L10n.string(L10n.Promote.assessment(ada.selectionReadout!))))
+        #expect(model.assessmentText(bea.selectionReadout!) == L10n.string(L10n.Promote.assessment(bea.selectionReadout!)))
     }
 
     @Test func theSheetMarksSpeakTheContestedBand() async {

@@ -184,7 +184,7 @@ final class SourcePageModel {
     }
 
     func askDeleteGraph(id: String) async {
-        guard let graph = context.session.evidenceGraph(id: id), graph.sourceID == context.sourceID else { return }
+        guard let graph = graphs.ownGraph(id: id) else { return }
         await presentImpact(kind: "evidence_graph", id: graph.id, ref: graph.ref, title: graph.name)
     }
 
