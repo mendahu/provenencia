@@ -101,7 +101,7 @@ Impact
 
 ## UI
 
-Official trash uses the DeleteImpact recipe: confirm if `allowed`, notice if not. Facet writes stay on `.pvConfirm`. `usedBy` must match the Impact totals that actually block. Swift screens share **`DeleteImpactFlow`**: confirm errors live in the sheet; `*.in_use` refetches Impact so the sheet becomes a notice; confirm deletes `target.id`; listed-row activate dismisses before navigating; subject erase applies `.deletedSubject(sourceId:)`.
+Official trash uses the DeleteImpact recipe: confirm if `allowed`, notice if not. Facet writes stay on `.pvConfirm`. `usedBy` must match the Impact totals that actually block. Swift screens share **`DeleteImpactFlow`**: confirm errors live in the sheet; `*.in_use` refetches Impact so the sheet becomes a notice; confirm deletes `target.id`; listed-row activate dismisses before navigating; subject erase applies `.deletedSubject` so Observation `usedBy` reloads (the citation reads reload through the write's effects).
 
 ## FFI
 
