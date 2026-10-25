@@ -97,7 +97,7 @@ const (
 	Method_METHOD_LIST_OBSERVATIONS_BY_EVIDENCE_GRAPH  Method = 69
 	Method_METHOD_GET_CITATION                         Method = 70
 	Method_METHOD_CREATE_CITED_BRIDGE                  Method = 72
-	Method_METHOD_CITATION_COUNTS_BY_SOURCE            Method = 73
+	Method_METHOD_CITATION_COUNTS_BY_EVIDENCE_GRAPH    Method = 73
 	Method_METHOD_LIST_CITATIONS_BY_ARTIFACT           Method = 74
 	Method_METHOD_UPDATE_CITATION                      Method = 75
 	Method_METHOD_UPDATE_OBSERVATION                   Method = 76
@@ -208,7 +208,7 @@ var (
 		69:  "METHOD_LIST_OBSERVATIONS_BY_EVIDENCE_GRAPH",
 		70:  "METHOD_GET_CITATION",
 		72:  "METHOD_CREATE_CITED_BRIDGE",
-		73:  "METHOD_CITATION_COUNTS_BY_SOURCE",
+		73:  "METHOD_CITATION_COUNTS_BY_EVIDENCE_GRAPH",
 		74:  "METHOD_LIST_CITATIONS_BY_ARTIFACT",
 		75:  "METHOD_UPDATE_CITATION",
 		76:  "METHOD_UPDATE_OBSERVATION",
@@ -316,7 +316,7 @@ var (
 		"METHOD_LIST_OBSERVATIONS_BY_EVIDENCE_GRAPH":  69,
 		"METHOD_GET_CITATION":                         70,
 		"METHOD_CREATE_CITED_BRIDGE":                  72,
-		"METHOD_CITATION_COUNTS_BY_SOURCE":            73,
+		"METHOD_CITATION_COUNTS_BY_EVIDENCE_GRAPH":    73,
 		"METHOD_LIST_CITATIONS_BY_ARTIFACT":           74,
 		"METHOD_UPDATE_CITATION":                      75,
 		"METHOD_UPDATE_OBSERVATION":                   76,
@@ -17399,28 +17399,28 @@ func (x *ListObservationsByEvidenceGraphResponse) GetObservations() []*Observati
 	return nil
 }
 
-type CitationCountsBySourceRequest struct {
+type CitationCountsByEvidenceGraphRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
-	SourceId      string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
+	GraphId       string                 `protobuf:"bytes,3,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CitationCountsBySourceRequest) Reset() {
-	*x = CitationCountsBySourceRequest{}
+func (x *CitationCountsByEvidenceGraphRequest) Reset() {
+	*x = CitationCountsByEvidenceGraphRequest{}
 	mi := &file_engine_proto_msgTypes[253]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CitationCountsBySourceRequest) String() string {
+func (x *CitationCountsByEvidenceGraphRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CitationCountsBySourceRequest) ProtoMessage() {}
+func (*CitationCountsByEvidenceGraphRequest) ProtoMessage() {}
 
-func (x *CitationCountsBySourceRequest) ProtoReflect() protoreflect.Message {
+func (x *CitationCountsByEvidenceGraphRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[253]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -17432,21 +17432,21 @@ func (x *CitationCountsBySourceRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CitationCountsBySourceRequest.ProtoReflect.Descriptor instead.
-func (*CitationCountsBySourceRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use CitationCountsByEvidenceGraphRequest.ProtoReflect.Descriptor instead.
+func (*CitationCountsByEvidenceGraphRequest) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{253}
 }
 
-func (x *CitationCountsBySourceRequest) GetProjectDir() string {
+func (x *CitationCountsByEvidenceGraphRequest) GetProjectDir() string {
 	if x != nil {
 		return x.ProjectDir
 	}
 	return ""
 }
 
-func (x *CitationCountsBySourceRequest) GetSourceId() string {
+func (x *CitationCountsByEvidenceGraphRequest) GetGraphId() string {
 	if x != nil {
-		return x.SourceId
+		return x.GraphId
 	}
 	return ""
 }
@@ -17503,27 +17503,27 @@ func (x *ArtifactCitationCount) GetCount() int32 {
 	return 0
 }
 
-type CitationCountsBySourceResponse struct {
+type CitationCountsByEvidenceGraphResponse struct {
 	state         protoimpl.MessageState   `protogen:"open.v1"`
 	Counts        []*ArtifactCitationCount `protobuf:"bytes,1,rep,name=counts,proto3" json:"counts,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CitationCountsBySourceResponse) Reset() {
-	*x = CitationCountsBySourceResponse{}
+func (x *CitationCountsByEvidenceGraphResponse) Reset() {
+	*x = CitationCountsByEvidenceGraphResponse{}
 	mi := &file_engine_proto_msgTypes[255]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CitationCountsBySourceResponse) String() string {
+func (x *CitationCountsByEvidenceGraphResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CitationCountsBySourceResponse) ProtoMessage() {}
+func (*CitationCountsByEvidenceGraphResponse) ProtoMessage() {}
 
-func (x *CitationCountsBySourceResponse) ProtoReflect() protoreflect.Message {
+func (x *CitationCountsByEvidenceGraphResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[255]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -17535,12 +17535,12 @@ func (x *CitationCountsBySourceResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CitationCountsBySourceResponse.ProtoReflect.Descriptor instead.
-func (*CitationCountsBySourceResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use CitationCountsByEvidenceGraphResponse.ProtoReflect.Descriptor instead.
+func (*CitationCountsByEvidenceGraphResponse) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{255}
 }
 
-func (x *CitationCountsBySourceResponse) GetCounts() []*ArtifactCitationCount {
+func (x *CitationCountsByEvidenceGraphResponse) GetCounts() []*ArtifactCitationCount {
 	if x != nil {
 		return x.Counts
 	}
@@ -17612,6 +17612,7 @@ type ListCitationsByArtifactRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
 	ArtifactId    string                 `protobuf:"bytes,2,opt,name=artifact_id,json=artifactId,proto3" json:"artifact_id,omitempty"`
+	GraphId       string                 `protobuf:"bytes,3,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -17656,6 +17657,13 @@ func (x *ListCitationsByArtifactRequest) GetProjectDir() string {
 func (x *ListCitationsByArtifactRequest) GetArtifactId() string {
 	if x != nil {
 		return x.ArtifactId
+	}
+	return ""
+}
+
+func (x *ListCitationsByArtifactRequest) GetGraphId() string {
+	if x != nil {
+		return x.GraphId
 	}
 	return ""
 }
@@ -20749,26 +20757,27 @@ const file_engine_proto_rawDesc = "" +
 	"projectDir\x12\x19\n" +
 	"\bgraph_id\x18\x03 \x01(\tR\agraphIdJ\x04\b\x02\x10\x03R\tsource_id\"q\n" +
 	"'ListObservationsByEvidenceGraphResponse\x12F\n" +
-	"\fobservations\x18\x01 \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\"]\n" +
-	"\x1dCitationCountsBySourceRequest\x12\x1f\n" +
+	"\fobservations\x18\x01 \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\"s\n" +
+	"$CitationCountsByEvidenceGraphRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\x12\x1b\n" +
-	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"N\n" +
+	"projectDir\x12\x19\n" +
+	"\bgraph_id\x18\x03 \x01(\tR\agraphIdJ\x04\b\x02\x10\x03R\tsource_id\"N\n" +
 	"\x15ArtifactCitationCount\x12\x1f\n" +
 	"\vartifact_id\x18\x01 \x01(\tR\n" +
 	"artifactId\x12\x14\n" +
-	"\x05count\x18\x02 \x01(\x05R\x05count\"f\n" +
-	"\x1eCitationCountsBySourceResponse\x12D\n" +
+	"\x05count\x18\x02 \x01(\x05R\x05count\"m\n" +
+	"%CitationCountsByEvidenceGraphResponse\x12D\n" +
 	"\x06counts\x18\x01 \x03(\v2,.provenencia.engine.v1.ArtifactCitationCountR\x06counts\"\x9f\x01\n" +
 	"\x0eListedCitation\x12;\n" +
 	"\bcitation\x18\x01 \x01(\v2\x1f.provenencia.engine.v1.CitationR\bcitation\x12+\n" +
 	"\x11observation_count\x18\x02 \x01(\x05R\x10observationCount\x12#\n" +
-	"\rsubject_names\x18\x03 \x03(\tR\fsubjectNames\"b\n" +
+	"\rsubject_names\x18\x03 \x03(\tR\fsubjectNames\"}\n" +
 	"\x1eListCitationsByArtifactRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x1f\n" +
 	"\vartifact_id\x18\x02 \x01(\tR\n" +
-	"artifactId\"f\n" +
+	"artifactId\x12\x19\n" +
+	"\bgraph_id\x18\x03 \x01(\tR\agraphId\"f\n" +
 	"\x1fListCitationsByArtifactResponse\x12C\n" +
 	"\tcitations\x18\x01 \x03(\v2%.provenencia.engine.v1.ListedCitationR\tcitations\"q\n" +
 	"\x12GetCitationRequest\x12\x1f\n" +
@@ -20903,7 +20912,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x05Error\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x124\n" +
 	"\x04kind\x18\x02 \x01(\x0e2 .provenencia.engine.v1.ErrorKindR\x04kind\x12\x16\n" +
-	"\x06params\x18\x03 \x03(\tR\x06params*\x9d\x1d\n" +
+	"\x06params\x18\x03 \x03(\tR\x06params*\xa5\x1d\n" +
 	"\x06Method\x12\x16\n" +
 	"\x12METHOD_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vMETHOD_PING\x10\x01\x12\x16\n" +
@@ -20976,8 +20985,8 @@ const file_engine_proto_rawDesc = "" +
 	"#METHOD_ADD_OBSERVATIONS_TO_CITATION\x10D\x12.\n" +
 	"*METHOD_LIST_OBSERVATIONS_BY_EVIDENCE_GRAPH\x10E\x12\x17\n" +
 	"\x13METHOD_GET_CITATION\x10F\x12\x1e\n" +
-	"\x1aMETHOD_CREATE_CITED_BRIDGE\x10H\x12$\n" +
-	" METHOD_CITATION_COUNTS_BY_SOURCE\x10I\x12%\n" +
+	"\x1aMETHOD_CREATE_CITED_BRIDGE\x10H\x12,\n" +
+	"(METHOD_CITATION_COUNTS_BY_EVIDENCE_GRAPH\x10I\x12%\n" +
 	"!METHOD_LIST_CITATIONS_BY_ARTIFACT\x10J\x12\x1a\n" +
 	"\x16METHOD_UPDATE_CITATION\x10K\x12\x1d\n" +
 	"\x19METHOD_UPDATE_OBSERVATION\x10L\x12\x1d\n" +
@@ -21310,9 +21319,9 @@ var file_engine_proto_goTypes = []any{
 	(*AddObservationsToCitationResponse)(nil),         // 254: provenencia.engine.v1.AddObservationsToCitationResponse
 	(*ListObservationsByEvidenceGraphRequest)(nil),    // 255: provenencia.engine.v1.ListObservationsByEvidenceGraphRequest
 	(*ListObservationsByEvidenceGraphResponse)(nil),   // 256: provenencia.engine.v1.ListObservationsByEvidenceGraphResponse
-	(*CitationCountsBySourceRequest)(nil),             // 257: provenencia.engine.v1.CitationCountsBySourceRequest
+	(*CitationCountsByEvidenceGraphRequest)(nil),      // 257: provenencia.engine.v1.CitationCountsByEvidenceGraphRequest
 	(*ArtifactCitationCount)(nil),                     // 258: provenencia.engine.v1.ArtifactCitationCount
-	(*CitationCountsBySourceResponse)(nil),            // 259: provenencia.engine.v1.CitationCountsBySourceResponse
+	(*CitationCountsByEvidenceGraphResponse)(nil),     // 259: provenencia.engine.v1.CitationCountsByEvidenceGraphResponse
 	(*ListedCitation)(nil),                            // 260: provenencia.engine.v1.ListedCitation
 	(*ListCitationsByArtifactRequest)(nil),            // 261: provenencia.engine.v1.ListCitationsByArtifactRequest
 	(*ListCitationsByArtifactResponse)(nil),           // 262: provenencia.engine.v1.ListCitationsByArtifactResponse
@@ -21536,7 +21545,7 @@ var file_engine_proto_depIdxs = []int32{
 	249, // 189: provenencia.engine.v1.AddObservationsToCitationResponse.observations:type_name -> provenencia.engine.v1.Observation
 	91,  // 190: provenencia.engine.v1.AddObservationsToCitationResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
 	249, // 191: provenencia.engine.v1.ListObservationsByEvidenceGraphResponse.observations:type_name -> provenencia.engine.v1.Observation
-	258, // 192: provenencia.engine.v1.CitationCountsBySourceResponse.counts:type_name -> provenencia.engine.v1.ArtifactCitationCount
+	258, // 192: provenencia.engine.v1.CitationCountsByEvidenceGraphResponse.counts:type_name -> provenencia.engine.v1.ArtifactCitationCount
 	248, // 193: provenencia.engine.v1.ListedCitation.citation:type_name -> provenencia.engine.v1.Citation
 	260, // 194: provenencia.engine.v1.ListCitationsByArtifactResponse.citations:type_name -> provenencia.engine.v1.ListedCitation
 	248, // 195: provenencia.engine.v1.GetCitationResponse.citation:type_name -> provenencia.engine.v1.Citation

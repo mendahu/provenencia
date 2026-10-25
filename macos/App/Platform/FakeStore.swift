@@ -751,7 +751,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 projectDir: projectDir, sourceID: sourceID, name: trimmed, description: description,
                 artifactIDs: artifactIDs
             )
-            return (graph, Self.graphEffects)
+            return (graph, Self.graphEffects(sourceID: sourceID))
         }
     }
 
@@ -773,7 +773,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if !artifactIDs.isEmpty {
                 evidenceGraphsByProject[projectDir]?[idx].artifactIDs = artifactIDs
             }
-            return Self.graphEffects
+            return Self.graphEffects(sourceID: evidenceGraphsByProject[projectDir]?[idx].sourceID)
         }
     }
 
@@ -784,7 +784,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 throw StoreBoom.boom
             }
             evidenceGraphsByProject[projectDir]?.removeAll { $0.id == graphID }
-            return Self.graphEffects
+            return Self.graphEffects(sourceID: nil)
         }
     }
 
@@ -802,7 +802,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if evidenceGraphsByProject[projectDir]?[idx].artifactIDs.contains(artifactID) == false {
                 evidenceGraphsByProject[projectDir]?[idx].artifactIDs.append(artifactID)
             }
-            return Self.graphEffects
+            return Self.graphEffects(sourceID: evidenceGraphsByProject[projectDir]?[idx].sourceID)
         }
     }
 
@@ -818,7 +818,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 throw StoreBoom.boom
             }
             evidenceGraphsByProject[projectDir]?[idx].artifactIDs.removeAll { $0 == artifactID }
-            return Self.graphEffects
+            return Self.graphEffects(sourceID: evidenceGraphsByProject[projectDir]?[idx].sourceID)
         }
     }
 
@@ -833,9 +833,11 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    /// Every graph write reports the graph list, as Go does.
-    private static var graphEffects: CatalogWriteEffects {
-        CatalogWriteEffects(lists: [.evidenceGraphs])
+    /// Every graph write reports the graph list, as Go does. A create, link,
+    /// unlink or edit also reports its Source for the citation reads (graph
+    /// delete has no Source to report: the link rows go with it).
+    private static func graphEffects(sourceID: String?) -> CatalogWriteEffects {
+        CatalogWriteEffects(citationSources: sourceID.map { [$0] } ?? [], lists: [.evidenceGraphs])
     }
 
     func ingestArtifactFile(
@@ -2812,12 +2814,16 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func citationCountsBySource(projectDir: String, sourceID: String) async throws -> [String: Int] {
+    func citationCountsByEvidenceGraph(projectDir: String, graphID: String) async throws -> [String: Int] {
         return withState {
             markCatalogSessionHeld(projectDir)
-            let artifactIDs = Set((artifactsBySource[sourceID] ?? []).map(\.id))
+            guard let graph = evidenceGraphsByProject[projectDir]?.first(where: { $0.id == graphID }) else {
+                return [:]
+            }
+            let artifactIDs = Set(graph.artifactIDs)
             var counts: [String: Int] = [:]
-            for citation in citationsByID.values where artifactIDs.contains(citation.artifactID) {
+            for citation in citationsByID.values
+            where artifactIDs.contains(citation.artifactID) && citationIsInGraph(citation.id, graphID: graphID) {
                 counts[citation.artifactID, default: 0] += 1
             }
             return counts
@@ -3288,11 +3294,20 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         )
     }
 
-    private func personNames(for citationID: String, projectDir: String) -> [String] {
+    /// The engine's rule for a graph's Citations: one with an Observation in the
+    /// graph, or one with no Observation anywhere yet.
+    private func citationIsInGraph(_ citationID: String, graphID: String) -> Bool {
+        if (observationsByGraph[graphID] ?? []).contains(where: { $0.citationID == citationID }) {
+            return true
+        }
+        return !observationsByGraph.values.contains { $0.contains { $0.citationID == citationID } }
+    }
+
+    private func personNames(for citationID: String, graphID: String, projectDir: String) -> [String] {
         let personTypeIDs = Set(
             (subjectTypesByProject[projectDir] ?? []).filter { $0.key == "person" }.map(\.id)
         )
-        let subjects = subjectsByGraph.values.flatMap { $0 }
+        let subjects = subjectsByGraph[graphID] ?? []
         func label(_ id: String) -> String? {
             guard let subject = subjects.first(where: { $0.id == id }),
                   personTypeIDs.contains(subject.subjectTypeID)
@@ -3301,8 +3316,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
         var firstID: [String: String] = [:]
         var labels: [String: String] = [:]
-        let observations = observationsByGraph.values
-            .flatMap { $0 }
+        let observations = (observationsByGraph[graphID] ?? [])
             .filter { $0.citationID == citationID }
             .sorted { $0.id < $1.id }
         for observation in observations {
@@ -3321,21 +3335,24 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             .compactMap { labels[$0.key] }
     }
 
-    func listCitationsByArtifact(projectDir: String, artifactID: String) async throws -> [CatalogListedCitation] {
+    func listCitationsByArtifact(
+        projectDir: String,
+        graphID: String,
+        artifactID: String
+    ) async throws -> [CatalogListedCitation] {
         return withState {
             markCatalogSessionHeld(projectDir)
             let listed = citationsByID.values
-                .filter { $0.artifactID == artifactID }
+                .filter { $0.artifactID == artifactID && citationIsInGraph($0.id, graphID: graphID) }
                 .sorted { $0.ref.localizedCaseInsensitiveCompare($1.ref) == .orderedAscending }
             return listed.map { citation in
-                let count = observationsByGraph.values
-                    .flatMap { $0 }
+                let count = (observationsByGraph[graphID] ?? [])
                     .filter { $0.citationID == citation.id }
                     .count
                 return CatalogListedCitation(
                     citation: citation,
                     observationCount: count,
-                    subjectNames: personNames(for: citation.id, projectDir: projectDir)
+                    subjectNames: personNames(for: citation.id, graphID: graphID, projectDir: projectDir)
                 )
             }
         }

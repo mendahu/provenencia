@@ -78,9 +78,14 @@ final class CitationComposerContext {
         session.apply(effects)
         if !effects.citationSources.isEmpty, let artifactID, !artifactID.isEmpty {
             let _: QueryHandle<[CatalogListedCitation]> = session.query(
-                .citationsByArtifact(project: session.projectKey, artifactId: artifactID)
+                citationsKey(artifactID: artifactID)
             )
         }
+    }
+
+    /// The Citations of one Artifact as this graph sees them.
+    func citationsKey(artifactID: String) -> CatalogQueryKey {
+        .citationsByArtifact(project: session.projectKey, graphId: graphID, artifactId: artifactID)
     }
 
     /// `nil` follows the citation open in the composer.
@@ -141,10 +146,7 @@ final class CitationComposerContext {
 
     func reloadListedCitations() async {
         guard let artifactID else { return }
-        let key = CatalogQueryKey.citationsByArtifact(
-            project: session.projectKey,
-            artifactId: artifactID
-        )
+        let key = citationsKey(artifactID: artifactID)
         let _: QueryHandle<[CatalogListedCitation]> = session.query(key)
         _ = await session.readyValue(key) as [CatalogListedCitation]?
     }

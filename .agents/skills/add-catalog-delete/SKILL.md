@@ -54,7 +54,7 @@ Every facet `CASCADE` FK is registered as `facet` and classified:
 - [ ] Delete changes carry the parent FK in `DeletedRow`; any new entity type has a non-`None` effect ([`add-audit-scope`](../add-audit-scope/SKILL.md))
 - [ ] FFI: GetDeleteImpact works for this kind (UI or not)
 - [ ] Swift (when the screen ships): `DeleteImpactFlow` + recipe; confirm uses `target.id`;
-        `*.in_use` refetch; `.deletedSubject(sourceId:)` for subject erase
+        `*.in_use` refetch; `.deletedSubject` for subject erase
 - [ ] Tests: empty → erase; inbound → listed + total; GetDeleteImpact missing → not_found;
         domain Delete missing → ErrInvalid; extra gates; pragma includes new FKs;
         Impact.allowed iff SQLite resource DELETE would succeed; audit + FTS on the writer
@@ -108,7 +108,7 @@ Shared Swift state is **`DeleteImpactFlow`** (next to the recipe). Models call `
 - On `*.in_use`, the flow refetches Impact so the same sheet becomes a notice instead of leaving a confirm that can no longer succeed.
 - Confirm deletes `request.target.id` (catalog id), never a live selection that may have moved (`activeCitationID`, selected row).
 - Listed-row `activate` dismisses first, then navigates on the next run loop (`then:` is injectable in tests).
-- Subject erase applies `.deletedSubject(sourceId:)` so Observation `usedBy` and citation lists reload; source erase also busts `sourceWorkspace` / `evidenceGraph`; type erase busts `typeSuggestions`.
+- Subject erase applies `.deletedSubject` so Observation `usedBy` reloads (the citation reads reload through the write's effects); source erase also busts `sourceWorkspace` / `evidenceGraph`; type erase busts `typeSuggestions`.
 
 ## Do not
 

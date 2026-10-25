@@ -86,7 +86,7 @@ enum Method {
   METHOD_LIST_OBSERVATIONS_BY_EVIDENCE_GRAPH = 69;
   METHOD_GET_CITATION = 70;
   METHOD_CREATE_CITED_BRIDGE = 72;
-  METHOD_CITATION_COUNTS_BY_SOURCE = 73;
+  METHOD_CITATION_COUNTS_BY_EVIDENCE_GRAPH = 73;
   METHOD_LIST_CITATIONS_BY_ARTIFACT = 74;
   METHOD_UPDATE_CITATION = 75;
   METHOD_UPDATE_OBSERVATION = 76;
@@ -2109,9 +2109,11 @@ message ListObservationsByEvidenceGraphResponse {
   repeated Observation observations = 1;
 }
 
-message CitationCountsBySourceRequest {
+message CitationCountsByEvidenceGraphRequest {
   string project_dir = 1;
-  string source_id = 2;
+  reserved 2;
+  reserved "source_id";
+  string graph_id = 3;
 }
 
 message ArtifactCitationCount {
@@ -2119,7 +2121,7 @@ message ArtifactCitationCount {
   int32 count = 2;
 }
 
-message CitationCountsBySourceResponse {
+message CitationCountsByEvidenceGraphResponse {
   repeated ArtifactCitationCount counts = 1;
 }
 
@@ -2133,6 +2135,7 @@ message ListedCitation {
 message ListCitationsByArtifactRequest {
   string project_dir = 1;
   string artifact_id = 2;
+  string graph_id = 3;
 }
 
 message ListCitationsByArtifactResponse {

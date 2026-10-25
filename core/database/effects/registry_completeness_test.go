@@ -99,7 +99,7 @@ func TestSourceEvidenceIsNotActivity(t *testing.T) {
 		{"source_metadata_layout", false, true, false},
 		{"source_credibility_assessments", false, true, false},
 		{"evidence_graphs", true, true, false},
-		{"evidence_graph_artifacts", false, true, false},
+		{"evidence_graph_artifacts", false, true, true},
 		{"files", false, true, false},
 		{"citation_notes", false, true, false},
 		{"observation_notes", false, true, false},

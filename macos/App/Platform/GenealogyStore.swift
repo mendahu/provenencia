@@ -98,6 +98,15 @@ struct CatalogEvidenceGraph: Sendable, Equatable, Identifiable {
     var artifactIDs: [String]
 }
 
+extension CatalogEvidenceGraph {
+    /// `artifacts` filtered to the ones this graph links, in the order given
+    /// (the Source page's Artifact order, not the link order).
+    func linkedArtifacts(_ artifacts: [CatalogArtifact]) -> [CatalogArtifact] {
+        let linked = Set(artifactIDs)
+        return artifacts.filter { linked.contains($0.id) }
+    }
+}
+
 /// An Artifact a graph edit would unlink that the graph's Citations still use,
 /// with those Citations shaped for the DeleteImpact recipe.
 struct CatalogEvidenceGraphUnlinkBlock: Sendable, Equatable {
@@ -1533,9 +1542,13 @@ protocol GenealogyStore: Sendable {
 
     func listObservationsByEvidenceGraph(projectDir: String, graphID: String) async throws -> [CatalogObservation]
 
-    func citationCountsBySource(projectDir: String, sourceID: String) async throws -> [String: Int]
+    func citationCountsByEvidenceGraph(projectDir: String, graphID: String) async throws -> [String: Int]
 
-    func listCitationsByArtifact(projectDir: String, artifactID: String) async throws -> [CatalogListedCitation]
+    func listCitationsByArtifact(
+        projectDir: String,
+        graphID: String,
+        artifactID: String
+    ) async throws -> [CatalogListedCitation]
 
     func listEvidenceGraphProgress(projectDir: String) async throws -> [EvidenceGraphProgress]
 

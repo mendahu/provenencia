@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/ref"
@@ -46,21 +47,32 @@ const (
 
 	sqlDelete = `DELETE FROM citations WHERE id = ?`
 
-	sqlListByArtifact = `SELECT id, ref, artifact_id, locator_json,
-		COALESCE(transcription, ''), COALESCE(label, ''),
-		transcription_uncertain, COALESCE(transcription_note, ''),
-		(SELECT COUNT(*) FROM observations WHERE citation_id = citations.id)
-		FROM citations WHERE artifact_id = ?
-		ORDER BY ref COLLATE NOCASE`
+	// A graph's Citations on an Artifact: those it uses, plus those with no
+	// Observation yet (a new Citation belongs to no graph until its first
+	// Observation). The "used" half is the rule the Unlink check shares, spelled
+	// once in evidencegraphs.SQLObservationsInGraph. Binds one graph id; the
+	// Citation table is aliased c.
+	sqlUsedByGraph = `EXISTS (SELECT 1 FROM ` + evidencegraphs.SQLObservationsInGraph + `)`
+	sqlInGraph     = `(` + sqlUsedByGraph + ` OR NOT EXISTS (SELECT 1 FROM observations o WHERE o.citation_id = c.id))`
 
-	// People a Citation names: the Observation's subject, or the subject an
-	// edge points at. Earliest Observation id wins. The caller caps the list.
+	// Binds: graph (count), artifact, graph (filter).
+	sqlListByArtifact = `SELECT c.id, c.ref, c.artifact_id, c.locator_json,
+		COALESCE(c.transcription, ''), COALESCE(c.label, ''),
+		c.transcription_uncertain, COALESCE(c.transcription_note, ''),
+		(SELECT COUNT(*) FROM ` + evidencegraphs.SQLObservationsInGraph + `)
+		FROM citations c WHERE c.artifact_id = ? AND ` + sqlInGraph + `
+		ORDER BY c.ref COLLATE NOCASE`
+
+	// People a Citation names within one graph: the Observation's subject, or
+	// the subject an edge points at. Earliest Observation id wins. The caller
+	// caps the list. The graph filters Observations (not Citations), so it is a
+	// join here, not SQLObservationsInGraph. Binds per branch: graph, artifact.
 	sqlPersonNamesByArtifact = `
 WITH named AS (
 	SELECT o.citation_id AS cid, s.id AS sid, s.label AS label, o.id AS oid
 	FROM observations o
 	INNER JOIN citations c ON c.id = o.citation_id
-	INNER JOIN subjects s ON s.id = o.subject_id
+	INNER JOIN subjects s ON s.id = o.subject_id AND s.graph_id = ?
 	INNER JOIN subject_types t ON t.id = s.subject_type_id
 	WHERE c.artifact_id = ? AND t.key = 'person'
 		AND TRIM(COALESCE(s.label, '')) <> ''
@@ -68,6 +80,7 @@ WITH named AS (
 	SELECT o.citation_id, s.id, s.label, o.id
 	FROM observations o
 	INNER JOIN citations c ON c.id = o.citation_id
+	INNER JOIN subjects so ON so.id = o.subject_id AND so.graph_id = ?
 	INNER JOIN subjects s ON s.id = o.value_subject_id
 	INNER JOIN subject_types t ON t.id = s.subject_type_id
 	WHERE c.artifact_id = ? AND t.key = 'person'
@@ -77,10 +90,11 @@ SELECT cid, sid, label FROM named
 GROUP BY cid, sid
 ORDER BY cid, MIN(oid)`
 
-	sqlCountBySource = `SELECT c.artifact_id, COUNT(*)
+	// Binds: graph (link), graph (filter).
+	sqlCountByEvidenceGraph = `SELECT c.artifact_id, COUNT(*)
 		FROM citations c
-		INNER JOIN artifacts a ON a.id = c.artifact_id
-		WHERE a.source_id = ?
+		INNER JOIN evidence_graph_artifacts l ON l.artifact_id = c.artifact_id AND l.graph_id = ?
+		WHERE ` + sqlInGraph + `
 		GROUP BY c.artifact_id`
 
 	sqlArtifactExists = `SELECT 1 FROM artifacts WHERE id = ?`
@@ -472,16 +486,17 @@ func GetTx(tx *sql.Tx, id []byte) (Citation, error) {
 	return scanOne(tx.QueryRow(sqlGet, id))
 }
 
-// ListByArtifact returns Citations for an Artifact, each with its Observation count.
-func ListByArtifact(c *database.Catalog, artifactID []byte) ([]ListedCitation, error) {
+// ListByArtifact returns an Artifact's Citations that belong to one Evidence
+// graph (sqlInGraph), each with the count of its Observations in that graph.
+func ListByArtifact(c *database.Catalog, graphID, artifactID []byte) ([]ListedCitation, error) {
 	db, err := c.DB()
 	if err != nil {
 		return nil, err
 	}
-	if len(artifactID) != 16 {
+	if len(graphID) != 16 || len(artifactID) != 16 {
 		return nil, ErrInvalid
 	}
-	rows, err := db.Query(sqlListByArtifact, artifactID)
+	rows, err := db.Query(sqlListByArtifact, graphID, artifactID, graphID)
 	if err != nil {
 		return nil, err
 	}
@@ -497,14 +512,14 @@ func ListByArtifact(c *database.Catalog, artifactID []byte) ([]ListedCitation, e
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	if err := attachPersonNames(db, artifactID, out); err != nil {
+	if err := attachPersonNames(db, graphID, artifactID, out); err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func attachPersonNames(db *sql.DB, artifactID []byte, list []ListedCitation) error {
-	rows, err := db.Query(sqlPersonNamesByArtifact, artifactID, artifactID)
+func attachPersonNames(db *sql.DB, graphID, artifactID []byte, list []ListedCitation) error {
+	rows, err := db.Query(sqlPersonNamesByArtifact, graphID, artifactID, graphID, artifactID)
 	if err != nil {
 		return err
 	}
@@ -532,16 +547,17 @@ func attachPersonNames(db *sql.DB, artifactID []byte, list []ListedCitation) err
 	return nil
 }
 
-// CountBySource returns citation counts keyed by artifact UUID string.
-func CountBySource(c *database.Catalog, sourceID []byte) (map[string]int32, error) {
+// CountByEvidenceGraph returns the graph's Citation counts keyed by artifact
+// UUID string, for the Artifacts linked to the graph.
+func CountByEvidenceGraph(c *database.Catalog, graphID []byte) (map[string]int32, error) {
 	db, err := c.DB()
 	if err != nil {
 		return nil, err
 	}
-	if len(sourceID) != 16 {
+	if len(graphID) != 16 {
 		return nil, ErrInvalid
 	}
-	rows, err := db.Query(sqlCountBySource, sourceID)
+	rows, err := db.Query(sqlCountByEvidenceGraph, graphID, graphID)
 	if err != nil {
 		return nil, err
 	}

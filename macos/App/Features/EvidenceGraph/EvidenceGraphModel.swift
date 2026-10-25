@@ -178,7 +178,7 @@ final class EvidenceGraphModel {
     }
 
     private var citationCountsKey: CatalogQueryKey {
-        CatalogQueryKey.citationCounts(project: session.projectKey, sourceId: sourceID)
+        CatalogQueryKey.citationCounts(project: session.projectKey, graphId: graphID)
     }
 
     private var fieldsSnapshot: PropertiesSnapshot? {
@@ -989,7 +989,7 @@ final class EvidenceGraphModel {
                 userID: userID,
                 subjectID: target.id
             )
-            session.apply(effects, .deletedSubject(sourceId: sourceID))
+            session.apply(effects, .deletedSubject)
             selectedSubjectIDs.remove(target.id)
             if activatedSubjectID == target.id {
                 activatedSubjectID = nil

@@ -120,9 +120,7 @@ final class SourcePageModel {
         let fields: QueryHandle<[CatalogMetadataField]> = session.query(
             .metadataFieldsList(project: session.projectKey)
         )
-        let _: QueryHandle<[CatalogEvidenceGraph]> = session.query(
-            .evidenceGraphsList(project: session.projectKey)
-        )
+        let _: QueryHandle<[CatalogEvidenceGraph]> = session.query(session.evidenceGraphsKey)
         var waited: UInt64 = 0
         let step: UInt64 = 10_000_000
         while waited < 2_000_000_000 {

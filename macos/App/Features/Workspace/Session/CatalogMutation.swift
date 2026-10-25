@@ -32,8 +32,9 @@ enum CatalogMutation: Sendable, Equatable {
     case mutatedSourceMetadata(sourceId: String)
 
     /// A Subject (including a bridge) was erased. Releases connection facets
-    /// so Observation `usedBy` and citation lists must reload.
-    case deletedSubject(sourceId: String)
+    /// so Observation `usedBy` must reload; the citation reads follow the
+    /// write's effects.
+    case deletedSubject
 
     /// A Subject on this Evidence graph was promoted (an Identity Claim filed it
     /// onto a handle), so its graph card's membership changed. The S9-04 card

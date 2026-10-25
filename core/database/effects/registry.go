@@ -55,7 +55,8 @@ type Set struct {
 	// them.
 	EvidenceGraphs [][]byte
 	// CitationSources are the Sources whose citation reads (citation counts,
-	// citations by artifact) a change moves (Effect.CitationSource).
+	// citations by artifact) a change moves (Effect.CitationSource). The app
+	// keys those reads by graph and drops every graph's.
 	CitationSources [][]byte
 	// SourceScopes are the Sources whose last activity a change moves
 	// (Effect.SourceScope), the audit source scope.
@@ -86,9 +87,9 @@ type Effect struct {
 	// (a Path that ends at evidence_graphs): graphcache drops it, and graph
 	// progress counts it. A table neither loads leaves it empty.
 	EvidenceGraph Path
-	// CitationSource is the Source whose citation reads (citation counts,
-	// citations by artifact) load the table. A table neither loads leaves it
-	// empty.
+	// CitationSource is the Source whose change drops the citation reads
+	// (citation counts, citations by artifact) of every graph (the app keys
+	// them by graph). A table neither loads leaves it empty.
 	CitationSource Path
 	// SourceScope is the Source whose last activity (audit source scope) this
 	// change moves.
@@ -271,9 +272,10 @@ var registry = map[string]Effect{
 		Lists:         []List{ListEvidenceGraphs},
 	},
 	"evidence_graph_artifacts": {
-		Entity:      "evidence_graph_artifact",
-		SourceScope: up("graph_id", "source_id"),
-		Lists:       []List{ListEvidenceGraphs},
+		Entity:         "evidence_graph_artifact",
+		SourceScope:    up("graph_id", "source_id"),
+		CitationSource: up("graph_id", "source_id"),
+		Lists:          []List{ListEvidenceGraphs},
 	},
 	"files": {
 		Entity:      "file",

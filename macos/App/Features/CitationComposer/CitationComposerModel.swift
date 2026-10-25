@@ -136,11 +136,14 @@ final class CitationComposerModel {
     private(set) var subjectTypeKey: String = ""
     private(set) var subjectTypeID: String = ""
     var sourceTitle: String { workspace?.source.title ?? "" }
-    var artifacts: [CatalogArtifact] { workspace?.artifacts ?? [] }
+    /// The Artifacts linked to this Evidence graph, in the Source page's order.
+    var artifacts: [CatalogArtifact] {
+        session.linkedArtifacts(graphID: graphID, artifacts: workspace?.artifacts ?? []) ?? []
+    }
     var listedCitations: [CatalogListedCitation] {
         guard let artifactID = selectedArtifactID else { return [] }
         let handle: QueryHandle<[CatalogListedCitation]>? = session.queryHandle(
-            citationsKey(artifactID: artifactID)
+            context.citationsKey(artifactID: artifactID)
         )
         return handle?.value ?? []
     }
@@ -390,14 +393,11 @@ final class CitationComposerModel {
 
     var graphKey: CatalogQueryKey { .evidenceGraph(project: session.projectKey, graphId: graphID) }
     var workspaceKey: CatalogQueryKey { .sourceWorkspace(project: session.projectKey, sourceId: sourceID) }
-    var citationCountsKey: CatalogQueryKey { .citationCounts(project: session.projectKey, sourceId: sourceID) }
+    var citationCountsKey: CatalogQueryKey { .citationCounts(project: session.projectKey, graphId: graphID) }
+    var evidenceGraphsKey: CatalogQueryKey { session.evidenceGraphsKey }
     var fieldsKey: CatalogQueryKey { .propertiesWorkspace(project: session.projectKey) }
     var connectRulesKey: CatalogQueryKey { .connectRules(project: session.projectKey) }
     var sourceTypesKey: CatalogQueryKey { .sourceTypesList(project: session.projectKey) }
-
-    private func citationsKey(artifactID: String) -> CatalogQueryKey {
-        .citationsByArtifact(project: session.projectKey, artifactId: artifactID)
-    }
 
     private func termsKey(propertyID: String) -> CatalogQueryKey {
         .propertyTerms(project: session.projectKey, propertyId: propertyID)
@@ -454,6 +454,7 @@ final class CitationComposerModel {
             } else {
                 resetComposerIdentity(keepLocator: false)
             }
+            let artifacts = self.artifacts
             if let selected = selectedArtifactID, !artifacts.contains(where: { $0.id == selected }) {
                 resetComposerIdentity(keepLocator: false)
             }
@@ -580,7 +581,7 @@ final class CitationComposerModel {
                     userID: userID,
                     subjectID: target.id
                 )
-                session.apply(effects, .deletedSubject(sourceId: sourceID))
+                session.apply(effects, .deletedSubject)
                 await refreshCitationLines()
                 return
             }
@@ -1109,11 +1110,12 @@ final class CitationComposerModel {
         if let selectedArtifactID, !selectedArtifactID.isEmpty {
             artifactIDs.append(selectedArtifactID)
         }
+        let artifacts = self.artifacts
         for artifact in artifacts where !artifactIDs.contains(artifact.id) {
             artifactIDs.append(artifact.id)
         }
         for artifactID in artifactIDs {
-            let key = citationsKey(artifactID: artifactID)
+            let key = context.citationsKey(artifactID: artifactID)
             let _: QueryHandle<[CatalogListedCitation]> = session.query(key)
             let rows = await session.readyValue(key) as [CatalogListedCitation]?
             if let match = rows?.first(where: { $0.citation.id == id }) {
@@ -1195,6 +1197,7 @@ final class CitationComposerModel {
         let _: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
         let _: QueryHandle<[CatalogSourceType]> = session.query(sourceTypesKey)
         let _: QueryHandle<[String: Int]> = session.query(citationCountsKey)
+        let _: QueryHandle<[CatalogEvidenceGraph]> = session.query(evidenceGraphsKey)
         let _: QueryHandle<[CatalogConnectRule]> = session.query(connectRulesKey)
         let rows: EvidenceGraphRows? = await session.readyValue(graphKey)
         let fieldsReady: PropertiesSnapshot? = await session.readyValue(fieldsKey)
@@ -1202,7 +1205,8 @@ final class CitationComposerModel {
         _ = await session.readyValue(sourceTypesKey) as [CatalogSourceType]?
         _ = await session.readyValue(citationCountsKey) as [String: Int]?
         _ = await session.readyValue(connectRulesKey) as [CatalogConnectRule]?
-        guard rows != nil, fieldsReady != nil, workspaceReady != nil else {
+        let graphsReady: [CatalogEvidenceGraph]? = await session.readyValue(evidenceGraphsKey)
+        guard rows != nil, fieldsReady != nil, workspaceReady != nil, graphsReady != nil else {
             throw CatalogWarmError.handleMissing
         }
     }

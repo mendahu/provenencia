@@ -734,7 +734,7 @@ struct WorkspaceSessionTests {
         let sources = CatalogQueryKey.sourcesList(project: project)
         let propertiesKey = CatalogQueryKey.propertiesWorkspace(project: project)
         let graphKey = CatalogQueryKey.evidenceGraph(project: project, graphId: "g-1")
-        let citationsKey = CatalogQueryKey.citationsByArtifact(project: project, artifactId: "a1")
+        let citationsKey = CatalogQueryKey.citationsByArtifact(project: project, graphId: "g-1", artifactId: "a1")
         session.setQueryValue(sources, value: [
             CatalogSource(id: "s1", ref: "SRC-1", sourceTypeID: "t1", title: "Alpha", description: ""),
         ])
@@ -769,7 +769,7 @@ struct WorkspaceSessionTests {
             section: .sources, sourceId: "s1", graphId: "g-1", sourceSurface: .graph, title: "Alpha"
         ))
         let propertiesKey = CatalogQueryKey.propertiesWorkspace(project: project)
-        let countsKey = CatalogQueryKey.citationCounts(project: project, sourceId: "s1")
+        let countsKey = CatalogQueryKey.citationCounts(project: project, graphId: "g-1")
         #expect(session.visibleKeys.contains(propertiesKey))
         #expect(session.visibleKeys.contains(countsKey))
         let properties: QueryHandle<PropertiesSnapshot> = session.query(propertiesKey)
@@ -794,7 +794,7 @@ struct WorkspaceSessionTests {
         seedStore(store)
         let session = makeSession(store: store)
         let project = session.projectKey
-        let key = CatalogQueryKey.citationsByArtifact(project: project, artifactId: "a1")
+        let key = CatalogQueryKey.citationsByArtifact(project: project, graphId: "g-1", artifactId: "a1")
         session.setQueryValue(key, value: [CatalogListedCitation]())
         session.apply(location: WorkspaceLocation(
             section: .sources, sourceId: "s1", graphId: "g-1", citationId: "c1", sourceSurface: .citationComposer, title: "Alpha"

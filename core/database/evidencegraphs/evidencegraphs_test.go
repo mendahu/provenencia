@@ -397,6 +397,55 @@ func TestUnlink(t *testing.T) {
 	}
 }
 
+func TestLinkWritesMoveCitationReads(t *testing.T) {
+	f := newFixture(t)
+	src, _ := f.createSource(t, "Census 1881")
+	graph := evidencegraphstest.SoleGraph(t, f.c, src.ID).ID
+	a1 := f.newArtifact(t, src, "Page 1")
+	a2 := f.newArtifact(t, src, "Page 2")
+	f.link(t, graph, a1)
+	var created []byte
+	for _, step := range []struct {
+		name string
+		fn   func(tx *database.Tx) ([]rowchange.Change, error)
+	}{
+		{"link", func(tx *database.Tx) ([]rowchange.Change, error) {
+			return evidencegraphs.Link(tx, userID, graph, a2)
+		}},
+		{"unlink", func(tx *database.Tx) ([]rowchange.Change, error) {
+			return evidencegraphs.Unlink(tx, userID, graph, a2)
+		}},
+		{"create", func(tx *database.Tx) ([]rowchange.Change, error) {
+			g, changes, err := evidencegraphs.Create(tx, userID, evidencegraphs.CreateInput{
+				SourceID: src.ID, Name: "Smith", ArtifactIDs: [][]byte{a2},
+			})
+			created = g.ID
+			return changes, err
+		}},
+		{"delete", func(tx *database.Tx) ([]rowchange.Change, error) {
+			return evidencegraphs.Delete(tx, userID, created)
+		}},
+	} {
+		name, fn := step.name, step.fn
+		// A graph delete reports no Source: its link rows go with it.
+		wantSource := name != "delete"
+		_, res, err := writes.Run(f.c, writes.Op{Action: name + "_artifact", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := fn(tx)
+			return struct{}{}, changes, err
+		})
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		cs := res.Effects.CitationSources
+		if wantSource && (len(cs) != 1 || !bytes.Equal(cs[0], src.ID)) {
+			t.Fatalf("%s: citation sources %x want the graph's Source", name, cs)
+		}
+		if !wantSource && len(cs) != 0 {
+			t.Fatalf("%s: citation sources %x want none", name, cs)
+		}
+	}
+}
+
 func TestMembership(t *testing.T) {
 	f := newFixture(t)
 	src, _ := f.createSource(t, "Census 1881")
