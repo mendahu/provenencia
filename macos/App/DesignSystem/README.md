@@ -181,7 +181,7 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Marks | `Recipes/Marks/PVMark.swift` (`file_*` + `type_*` + `subject_*`; see colocated `MARKS.md`; not SF Symbols); `PVGlyph` / `PVGlyphView` for a symbol-or-mark slot |
 | OmnibarHitRow | `Recipes/OmnibarHitRow/PVOmnibarHitRow.swift` |
 | DeleteImpact | `Recipes/DeleteImpact/PVDeleteImpact.swift` (S8-13: confirm when `GetDeleteImpact` is allowed, notice when blocked; composes `.pvConfirm`; `PVDeleteImpactGroupList` is its list of rows, for in-form refusal lists) |
-| ArtifactChecklist | `Recipes/ArtifactChecklist/PVArtifactChecklist.swift` (S12-12: a Source's Artifacts as a checklist with an All row, thumbnails, count and an optional caption; `locked` rows show the lock mark with a hint and survive the All row; `PVArtifactChecklistState` is its pure arithmetic; used by the Copy Source and Evidence graph forms) |
+| ArtifactChecklist | `Recipes/ArtifactChecklist/PVArtifactChecklist.swift`, `PVChecklistRows.swift` (S12-12: a Source's Artifacts as a checklist with an All row, thumbnails, count and an optional caption; `locked` rows show the lock mark with a hint and survive the All row; `PVChecklistState` is the pure arithmetic of every id checklist; `PVChecklistFrame` is the bordered, capped, divided row list and `PVChecklistCheckbox` the row checkbox with its toggle and locked spoken value, both also composed by the artifact graph group in `SourceArtifactGraphLinks`; used by the Copy Source and Evidence graph forms) |
 | Breadcrumbs | `Components/Breadcrumbs/PVBreadcrumbs.swift` (added for S2-18 Source page trail; Sources → `SRC-…`) |
 | ReorderableList | `Components/ReorderableList/PVReorderableList.swift` (+ `PVReorderHandle`; added for S2-25 Metadata drag order) |
 

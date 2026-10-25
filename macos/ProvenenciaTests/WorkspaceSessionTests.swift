@@ -22,6 +22,31 @@ struct WorkspaceSessionTests {
         WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
     }
 
+    @Test func evidenceGraphIndexFollowsTheListRevision() {
+        let session = makeSession()
+        let key = session.evidenceGraphsKey
+        #expect(session.evidenceGraphs(sourceID: "s1") == nil)
+        #expect(session.evidenceGraphsBySource.isEmpty)
+
+        session.setQueryValue(key, value: [
+            evidenceGraph("g1", sourceID: "s1", name: "Default"),
+            evidenceGraph("g2", sourceID: "s2", name: "Default"),
+            evidenceGraph("g3", sourceID: "s1", name: "Jones"),
+        ])
+        #expect(session.evidenceGraph(id: "g3")?.name == "Jones")
+        #expect(session.evidenceGraphs(sourceID: "s1")?.map(\.id) == ["g1", "g3"])
+        #expect(session.evidenceGraphs(sourceID: "s2")?.map(\.id) == ["g2"])
+        #expect(session.evidenceGraphs(sourceID: "s9")?.isEmpty == true)
+        #expect(session.evidenceGraphsBySource.keys.sorted() == ["s1", "s2"])
+
+        session.setQueryValue(key, value: [
+            evidenceGraph("g1", sourceID: "s1", name: "Default"),
+        ])
+        #expect(session.evidenceGraph(id: "g3") == nil)
+        #expect(session.evidenceGraphs(sourceID: "s1")?.map(\.id) == ["g1"])
+        #expect(session.evidenceGraphsBySource.keys.sorted() == ["s1"])
+    }
+
     @Test func loadsAndCachesValue() async {
         let session = makeSession()
         let key = CatalogQueryKey.sourcesList(project: session.projectKey)

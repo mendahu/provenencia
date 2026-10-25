@@ -8,15 +8,18 @@ enum SourceFormLoadState: Equatable {
 }
 
 /// The area of a Source-page form that waits on a read (the Copy form's parts,
-/// the graph form's kept links): three skeleton bars with a caption while
-/// loading, a compact danger callout with **Read again** when the read failed,
-/// and `ready` once it has a value. One body for both forms.
+/// the graph form's kept links, an Artifact card's graph links): skeleton bars
+/// with a caption while loading (three, or one half-width bar when `compact`,
+/// for a card), a compact danger callout with **Read again** when the read
+/// failed, and `ready` once it has a value. One body for every form.
 struct SourceFormLoadArea<Ready: View>: View {
     let state: SourceFormLoadState
     let loadingText: LocalizedStringResource
     let errorTitle: LocalizedStringResource
     let errorMessage: (String) -> String
     let onReadAgain: () -> Void
+    /// One half-width skeleton bar instead of three, for a small host.
+    var compact = false
     /// Roots the ids: `.loading`, `.loadError`, `.readAgain`.
     let accessibilityIdentifierPrefix: String
     @ViewBuilder let ready: () -> Ready
@@ -45,12 +48,12 @@ struct SourceFormLoadArea<Ready: View>: View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {
             GeometryReader { geometry in
                 VStack(alignment: .leading, spacing: PVSpacing.space5) {
-                    ForEach([0.42, 0.36, 0.48], id: \.self) { fraction in
+                    ForEach(compact ? [0.48] : [0.42, 0.36, 0.48], id: \.self) { fraction in
                         PVSkeletonBar(width: geometry.size.width * fraction, height: 12)
                     }
                 }
             }
-            .frame(height: 12 * 3 + PVSpacing.space5 * 2)
+            .frame(height: compact ? 12 : 12 * 3 + PVSpacing.space5 * 2)
             Text(loadingText)
                 .font(PVFont.body(size: PVTypeScale.caption, italic: true))
                 .foregroundStyle(PVColor.textMuted)

@@ -123,7 +123,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S12-10 | Composer offers linked Artifacts | 3 | The Citation composer lists only the graph's linked Artifacts, and on each only the graph's Citations (citation list and counts re-keyed by graph) | — | S12-05, S12-08 | [Plan](prs/S12-10-composer-linked-artifacts.md) | Landed #540 |
 | S12-11 | Source page Graphs section | 4 | List graphs with Open and Delete; remove the header jump; breadcrumbs name the graph | S12-D2 | S12-05, S12-08, S12-D2 | [Plan](prs/S12-11-source-page-graphs.md) | Landed #549 |
 | S12-12 | Graph form | 4 | Create and edit a graph: name, description, the shared Artifact checklist | S12-D3 | S12-02, S12-11, S12-D3 | [Plan](prs/S12-12-graph-form.md) | Landed #557 |
-| S12-13 | Artifact graph checkboxes | 4 | Graph checkboxes in the Add Artifact dialog and Artifact card edit, shown with two or more graphs; Swift only | S12-D4 | S12-12, S12-D4 | [Plan](prs/S12-13-artifact-graph-checkboxes.md) | Planned |
+| S12-13 | Artifact graph checkboxes | 4 | Graph checkboxes in the Add Artifact dialog and Artifact card edit, shown with two or more graphs; Swift only | S12-D4 | S12-12, S12-D4 | [Plan](prs/S12-13-artifact-graph-checkboxes.md) | Landed #562 |
 | S12-14 | Graph counts in the Sources list and on the Source page | 4 | Each Sources list row expands to its graphs with per-graph progress and Open; the Source page's graph rows show the same count line | S12-D5 | S12-08, S12-D5 | — | Scoped |
 | S12-15 | Graphs in the omnibar | 4 | Graphs as a searchable kind; a hit opens the graph | — | S12-08 | — | Scoped |
 | S12-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |

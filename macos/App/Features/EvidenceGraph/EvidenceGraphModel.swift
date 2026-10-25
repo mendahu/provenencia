@@ -126,10 +126,14 @@ final class EvidenceGraphModel {
         fieldsSnapshot?.presentationsByKey ?? [:]
     }
 
-    /// False when the Source has zero Artifacts — disables cite controls (S7-09).
+    /// False when this graph links no Artifact — disables cite controls (S7-09).
+    /// True while the graph list has no value (unknown); a graph missing from a
+    /// loaded list cannot be cited.
     var canCite: Bool {
-        guard let match = sourceRow else { return true }
-        return match.hasArtifact
+        guard let graph = session.evidenceGraph(id: graphID) else {
+            return session.evidenceGraphsHandle?.value == nil
+        }
+        return graph.hasArtifact
     }
 
     var connectRules: [CatalogConnectRule] {
@@ -242,12 +246,14 @@ final class EvidenceGraphModel {
         let rules: QueryHandle<[CatalogConnectRule]> = session.query(connectRulesKey)
         let _: QueryHandle<PropertiesSnapshot> = session.query(fieldsKey)
         let _: QueryHandle<[CatalogSource]> = session.query(sourcesListKey)
+        let _: QueryHandle<[CatalogEvidenceGraph]> = session.query(session.evidenceGraphsKey)
         let _: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
         let _: QueryHandle<[String: Int]> = session.query(citationCountsKey)
         _ = await session.readyValue(graphKey) as EvidenceGraphRows?
         _ = await session.readyValue(fieldsKey) as PropertiesSnapshot?
         _ = await session.readyValue(connectRulesKey) as [CatalogConnectRule]?
         _ = await session.readyValue(sourcesListKey) as [CatalogSource]?
+        _ = await session.readyValue(session.evidenceGraphsKey) as [CatalogEvidenceGraph]?
         _ = await session.readyValue(workspaceKey) as CatalogSourceWorkspace?
         _ = await session.readyValue(citationCountsKey) as [String: Int]?
         if rules.status == .error, let message = connectRulesError {
@@ -265,25 +271,18 @@ final class EvidenceGraphModel {
         }
     }
 
-    func refreshCanCite() async {
-        let _: QueryHandle<[CatalogSource]> = session.query(sourcesListKey)
-        _ = await session.readyValue(sourcesListKey) as [CatalogSource]?
-        if !canCite {
-            disarmCiteTools()
-        }
-    }
-
     // MARK: Files (S10-20)
 
-    /// This Source's Artifacts that have a file, in page order. Empty until the
-    /// workspace loads and when it fails to.
+    /// The Artifacts this graph links that have a file, in page order. Empty
+    /// until the workspace loads and when it fails to, and while the graph list
+    /// has no value.
     var fileRows: [EvidenceGraphFiles.Row] {
         guard let handle: QueryHandle<CatalogSourceWorkspace> = session.queryHandle(workspaceKey),
               handle.status == .ready,
               let workspace = handle.value
         else { return [] }
         return EvidenceGraphFiles.fileBearing(
-            workspace.artifacts,
+            session.linkedArtifacts(graphID: graphID, artifacts: workspace.artifacts) ?? [],
             coverArtifactID: sourceRow?.coverArtifactID
         )
     }

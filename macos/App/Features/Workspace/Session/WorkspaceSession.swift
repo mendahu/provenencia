@@ -28,6 +28,11 @@ final class WorkspaceSession {
     /// Evidence-graph pan and zoom, keyed by graph id. Not catalog data; quit drops it.
     @ObservationIgnored
     private var graphCameras: [String: GraphCanvasCamera] = [:]
+    /// The Evidence graph list indexed by id and by Source, rebuilt when the
+    /// list handle's revision moves (`WorkspaceSession+EvidenceGraphs.swift`).
+    /// Not observed: filling it while a view reads must not invalidate that view.
+    @ObservationIgnored
+    var evidenceGraphIndex: EvidenceGraphIndex?
     /// Bridge to select the next time that graph appears. Consumed once.
     private var pendingGraphSelections: [String: String] = [:]
 

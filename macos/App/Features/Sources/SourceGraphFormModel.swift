@@ -50,7 +50,7 @@ final class SourceGraphFormModel {
                 description: graph.description,
                 excludedArtifactIDs: Set(artifactIDs.filter { !linked.contains($0) })
             )
-            loadState = graph.artifactIDs.isEmpty ? .ready : .loading
+            loadState = graph.hasArtifact ? .loading : .ready
         }
         draft = prefill
     }
@@ -91,7 +91,7 @@ final class SourceGraphFormModel {
 
     /// The ids a save sends: the checked Artifacts in page order.
     var checkedArtifactIDs: [String] {
-        PVArtifactChecklistState.checkedIDs(
+        PVChecklistState.checkedIDs(
             ids: artifacts.map(\.id),
             excluded: draft.excludedArtifactIDs,
             locked: Set(locked.keys)
@@ -111,7 +111,7 @@ final class SourceGraphFormModel {
     /// use. One call covers the whole form. A graph with no links has nothing
     /// to read. Read again calls this too.
     func loadKeptLinks() async {
-        guard let graph, !graph.artifactIDs.isEmpty else { return }
+        guard let graph, graph.hasArtifact else { return }
         loadState = .loading
         do {
             blocks = try await context.store.getEvidenceGraphUnlinkImpact(
@@ -175,7 +175,7 @@ final class SourceGraphFormModel {
             saveError = message
             // A Citation took the Artifact since the form opened: read the
             // kept links again so the row locks, and keep the refusal in view.
-            if case .coded(_, "evidencegraphs.artifact_in_use", _, _) = error as? CoreInvokeError,
+            if (error as? CoreInvokeError)?.code == "evidencegraphs.artifact_in_use",
                graph != nil
             {
                 await loadKeptLinks()
