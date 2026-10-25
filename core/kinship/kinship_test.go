@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/segmentcompare/segmentcomparetest"
@@ -17,15 +16,6 @@ import (
 
 var terms = segmentcomparetest.Terms()
 
-func bridge(t testing.TB, key string) connectrules.Bridge {
-	t.Helper()
-	b, ok := connectrules.LookupBridge(key)
-	if !ok {
-		t.Fatalf("no %s bridge", key)
-	}
-	return b
-}
-
 // Subject ids: people P1.. = 0x11.., events E1.. = 0x21.., bridges b1.. = 0x31...
 func p(n byte) []byte { return []byte{0x10 + n} }
 func e(n byte) []byte { return []byte{0x20 + n} }
@@ -33,13 +23,13 @@ func b(n byte) []byte { return []byte{0x30 + n} }
 
 // part is a participation edge with the person at A.
 func part(t testing.TB, person, event byte, role vocabkey.Role, eventType vocabkey.EventType, bridgeID byte) kinship.Edge {
-	ka, kb := segmentcompare.Keys(bridge(t, vocabkey.BridgeParticipation), vocabkey.BridgeTerm(role), eventType, terms)
+	ka, kb := segmentcompare.Keys(segmentcomparetest.Bridge(t, vocabkey.BridgeParticipation), vocabkey.BridgeTerm(role), eventType, terms)
 	return kinship.Edge{A: p(person), B: e(event), KeyA: ka, KeyB: kb, Associations: [][]byte{b(bridgeID)}}
 }
 
 // rel is a relationship edge with the person endpoint at A.
 func rel(t testing.TB, person, relatedTo byte, term vocabkey.BridgeTerm, bridgeID byte) kinship.Edge {
-	ka, kb := segmentcompare.Keys(bridge(t, vocabkey.BridgeRelationship), term, "", terms)
+	ka, kb := segmentcompare.Keys(segmentcomparetest.Bridge(t, vocabkey.BridgeRelationship), term, "", terms)
 	return kinship.Edge{A: p(person), B: p(relatedTo), KeyA: ka, KeyB: kb, Associations: [][]byte{b(bridgeID)}}
 }
 
@@ -194,7 +184,7 @@ func TestDerive(t *testing.T) {
 }
 
 func TestDeriveInvariants(t *testing.T) {
-	relB := bridge(t, vocabkey.BridgeRelationship)
+	relB := segmentcomparetest.Bridge(t, vocabkey.BridgeRelationship)
 	keysOf := func(term vocabkey.BridgeTerm) [2]vocabkey.BridgeKey {
 		a, c := segmentcompare.Keys(relB, term, "", terms)
 		return [2]vocabkey.BridgeKey{a, c}
@@ -271,5 +261,28 @@ func TestDeriveInvariants(t *testing.T) {
 		if again := kinship.Derive(withDirect, terms); !reflect.DeepEqual(again, got) {
 			t.Fatalf("case %d: a direct grandparent link changed the output", i)
 		}
+	}
+}
+
+// BenchmarkDerive reads a parent tree where every child has two parents, so
+// the cost of the parent-of-parent chain shows as the tree doubles.
+func BenchmarkDerive(b *testing.B) {
+	for _, generations := range []int{8, 9, 10} {
+		b.Run(fmt.Sprintf("generations=%d", generations), func(b *testing.B) {
+			rel := segmentcomparetest.Bridge(b, vocabkey.BridgeRelationship)
+			first, second := segmentcompare.Keys(rel, vocabkey.TermParent, "", terms)
+			id := func(n int) []byte { return []byte(fmt.Sprintf("p%d", n)) }
+			var edges []kinship.Edge
+			// Person n has parents 2n and 2n+1: a binary tree rooted at 1.
+			for n := 1; n < 1<<generations; n++ {
+				for _, parent := range []int{2 * n, 2*n + 1} {
+					edges = append(edges, kinship.Edge{A: id(parent), B: id(n), KeyA: first, KeyB: second})
+				}
+			}
+			b.ResetTimer()
+			for b.Loop() {
+				kinship.Derive(edges, terms)
+			}
+		})
 	}
 }
