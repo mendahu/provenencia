@@ -87,7 +87,7 @@ final class GraphCanvasDocumentView: NSView {
     }
 
     /// Shift as the canvas should see it: not while a text field is being edited.
-    static func reportedShift(_ flags: NSEvent.ModifierFlags, textHasFocus: Bool) -> Bool {
+    nonisolated static func reportedShift(_ flags: NSEvent.ModifierFlags, textHasFocus: Bool) -> Bool {
         !textHasFocus && flags.contains(.shift)
     }
 
