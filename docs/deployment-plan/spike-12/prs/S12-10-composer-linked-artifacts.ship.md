@@ -1,7 +1,7 @@
 # Ship log — S12-10 Composer offers linked Artifacts
 
 **Plan:** [`S12-10-composer-linked-artifacts.md`](S12-10-composer-linked-artifacts.md) · **Branch:** `s12-10-composer-linked-artifacts` · **PR:** #540
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 Head `e9f3f8a6`. Gate PASS (orchestrator run against `933cc3c1`). Report: no deviations from Decisions. Notes: FakeStore create-graph returns no `citationSources` (D-10 lists only link, unlink, update); manual check not run; two new tests fixed before first push (Go list compared as a set; Swift fixture subject position).
@@ -67,3 +67,25 @@ Check: Go test passes; Swift tests pass.
 Files: the plan.
 Do: Under Status, a Landed note listing: D-1/D-3 SQL now built from `evidencegraphs.SQLObservationsInGraph` (F-1, same-pass cleanup); D-7's session read moved to `WorkspaceSession+EvidenceGraphs.swift` (F-4); D-10's create (and delete if F-7 found it) also reports `citationSources`.
 Check: scripts/check-pr.sh PASS (plan-docs).
+
+## Round 1 — fix
+Head `7efaa61c`. Gate PASS (orchestrator run). F-1 to F-8 done. Deviations: F-5 helper is `createCitation(c, userID, in, obs) (CreateResult, error)` since several cases assert on the error and need different `CreateInput` fields; F-7's new create/delete cases passed from the start (engine reports the Source on create, nothing on delete), so the fake's create was the only change.
+CON-1 / CON-2 (CON had no Fix-now blocker or major of its own; CON-1's major is MNT-3's): read by the orchestrator. **Resolved**: `git grep "deletedSubject(sourceId"` outside `docs/deployment-plan/` prints nothing; the plan's Landed note lists the D-1/D-3, D-7 and D-10 differences. PRF-2/MNT-5, MNT-6 ride with their reviewers' round 2.
+
+## Round 2 — review
+Reviewers: MNT (MNT-1 blocker; MNT-2, MNT-3, MNT-4 majors), SEC+PRF (PRF-1 major). Not sent: CON (minors only), UX (no findings). Scope `e9f3f8a6...7efaa61c`.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-1 | MNT | blocker | (round 1) | Resolved | `evidencegraphs.SQLObservationsInGraph` is the one spelling; `sqlCitationsUsing`, `sqlUsedByGraph`, `observation_count` built from it |
+| MNT-2 | MNT | major | (round 1) | Resolved | `WorkspaceSession+EvidenceGraphs.swift` is the only `evidenceGraphsList(` outside the registries |
+| MNT-3 | MNT | major | (round 1) | Resolved | both docs say `.deletedSubject` |
+| MNT-4 | MNT | major | (round 1) | Resolved | `createCitation` helper; the action string appears only in it and one audit assertion |
+| PRF-1 | PRF | major | (round 1) | Resolved | one `model.artifacts` read in the evidence column; model methods bind once |
+| PRF-2, MNT-5 | PRF, MNT | minor | (round 1) | Resolved | SEC+PRF round 2: binds graph, artifact per branch; same results |
+| MNT-6 | MNT | minor | (round 1) | Resolved | orchestrator read `1b2ef52e`: fake create passes `sourceID`; Go test covers create and delete |
+
+No new blockers from either reviewer.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: none (S12-13 notes written into its map entry: graph-list id index, `noArtifactsCallout` link wording) · to user: — · CON miss: none
