@@ -74,7 +74,7 @@ struct PVArtifactChecklist: View {
                 VStack(spacing: 0) {
                     allRow
                     ScrollView {
-                        VStack(spacing: 0) {
+                        LazyVStack(spacing: 0) {
                             ForEach(artifacts, id: \.id) { artifact in
                                 PVDivider()
                                 row(artifact)
