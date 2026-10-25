@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-11 — Source page Graphs section
+
+**Landed 2026-10-25** in [#549](https://github.com/mendahu/provenencia/pull/549). The Source page shows an Evidence graphs section between the overview columns and Artifacts: one card per graph with its name, `GPH-` ref and description, an Open button (disabled with the reason when the graph links no Artifact) and a Delete button that goes through the delete-impact check, with a success toast. The header's Jump to graph is gone. The canvas, Citation composer and Promote breadcrumbs read Sources › Source title › graph name from the session's lists, so a rename shows at once. `WorkspaceLocation.sourcePage` replaces three hand-built copies, and `WorkspaceSession.evidenceGraph(id:)`, `evidenceGraphs(sourceID:)` and `source(id:)` are the one read of each list. Swift only; no engine, FFI or catalog change.
+
 ## S12-10 — Composer offers linked Artifacts
 
 **Landed 2026-10-24** in [#540](https://github.com/mendahu/provenencia/pull/540). The Citation composer on one Evidence graph offers only the Artifacts linked to that graph, and on each steps only through the graph's Citations (those with an Observation on one of its Subjects, plus those with none yet), with that graph's counts and names. `ListCitationsByArtifact` takes `graph_id` and `CitationCountsBySource` became `CitationCountsByEvidenceGraph`; the app's citation keys are per graph and link rows now report `CitationSource`, so a link, unlink or graph edit refreshes them. The empty callout reads "This evidence graph has no artifacts". On an existing project nothing visibly changes: every Source has one graph linked to all its Artifacts.
