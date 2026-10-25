@@ -2166,20 +2166,20 @@ enum L10n {
 
         static let noArtifactTitle = LocalizedStringResource(
             "evidenceGraph.noArtifact.title",
-            defaultValue: "No Artifacts on this source",
+            defaultValue: "No artifacts in this evidence graph",
             comment: "Title on the graph-wide No-Artifact warning callout"
         )
 
         static let noArtifactMessage = LocalizedStringResource(
             "evidenceGraph.noArtifact.message",
-            defaultValue: "Citing needs an Artifact. Place tools, Connect, and Add property stay disabled until you attach one.",
+            defaultValue: "Citing needs an artifact linked to this evidence graph. Place tools, Connect, and Add property stay disabled until one is linked.",
             comment: "Body on the graph-wide No-Artifact warning callout"
         )
 
         static let noArtifactAction = LocalizedStringResource(
             "evidenceGraph.noArtifact.action",
-            defaultValue: "Add an Artifact",
-            comment: "Callout action that navigates to the Source page to attach an Artifact"
+            defaultValue: "Go to Source page",
+            comment: "Callout action that navigates to the Source page to link an Artifact"
         )
 
         static let labelField = LocalizedStringResource(
@@ -4989,7 +4989,7 @@ enum L10n {
 
         static let noArtifactsCallout = LocalizedStringResource(
             "citationComposer.noArtifactsCallout",
-            defaultValue: "Every citation needs an artifact linked to this evidence graph. Add one from the Source page, then return here.",
+            defaultValue: "Every citation needs an artifact linked to this evidence graph. Add one on the Source page, or link an existing one from its card, then return here.",
             comment: "Left-pane callout when the Evidence graph links no Artifacts"
         )
 
@@ -6862,6 +6862,64 @@ enum L10n {
                 "sources.graphForm.saveErrorMessage",
                 defaultValue: "Nothing was saved. Your changes are kept. %@",
                 comment: "Evidence graph form save error message; argument is the error text"
+            ), error)
+        }
+
+        static let artifactGraphsLabel = LocalizedStringResource(
+            "sources.page.artifact.graphs.label",
+            defaultValue: "Evidence graphs",
+            comment: "Label of the evidence graph checkbox group in the Add artifact dialog and on an artifact card in edit"
+        )
+
+        static let artifactGraphsHint = LocalizedStringResource(
+            "sources.page.artifact.graphs.hint",
+            defaultValue: "Which evidence graphs can cite this artifact",
+            comment: "Hint under the evidence graph checkbox group label in the Add artifact dialog and on an artifact card in edit"
+        )
+
+        static let artifactGraphsNeedsOne = LocalizedStringResource(
+            "sources.page.artifact.graphs.needsOne",
+            defaultValue: "Check at least one evidence graph.",
+            comment: "Muted line under the evidence graph group in the Add artifact dialog when every box is unchecked"
+        )
+
+        static let artifactGraphOnlyArtifact = LocalizedStringResource(
+            "sources.page.artifact.graphs.onlyArtifact",
+            defaultValue: "The only artifact in this evidence graph",
+            comment: "Hint on a locked evidence graph checkbox on an artifact card when the artifact is the graph's only one"
+        )
+
+        static let artifactGraphsLoading = LocalizedStringResource(
+            "sources.page.artifact.graphs.loading",
+            defaultValue: "Reading the evidence graphs…",
+            comment: "Loading line on an artifact card in edit while its evidence graph links are read"
+        )
+
+        static let artifactGraphsLoadErrorTitle = LocalizedStringResource(
+            "sources.page.artifact.graphs.loadErrorTitle",
+            defaultValue: "Couldn’t read the evidence graphs",
+            comment: "Callout title on an artifact card in edit when its evidence graph links fail to load"
+        )
+
+        static func artifactGraphsLoadErrorMessage(_ error: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.artifact.graphs.loadErrorMessage",
+                defaultValue: "Label and description are kept. Read the evidence graphs again to change the links. %@",
+                comment: "Callout message on an artifact card in edit when its evidence graph links fail to load; argument is the error text"
+            ), error)
+        }
+
+        static let artifactCardSaveErrorTitle = LocalizedStringResource(
+            "sources.page.artifact.saveErrorTitle",
+            defaultValue: "Couldn’t save the artifact",
+            comment: "Callout title on an artifact card in edit when saving it fails"
+        )
+
+        static func artifactCardSaveErrorMessage(_ error: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.artifact.saveErrorMessage",
+                defaultValue: "Some changes may not be saved. Every field and box keeps its value — save again to finish. %@",
+                comment: "Callout message on an artifact card in edit when saving it fails; argument is the error text"
             ), error)
         }
 

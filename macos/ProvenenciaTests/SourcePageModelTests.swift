@@ -1412,4 +1412,236 @@ struct SourcePageModelTests {
         #expect(left)
         #expect(await waitUntil { counts.sources == 1 })
     }
+
+    // MARK: Artifact ↔ graph links (S12-13)
+
+    private func graph(_ id: String, _ name: String, _ artifactIDs: [String]) -> CatalogEvidenceGraph {
+        evidenceGraph(id, sourceID: sourceID, name: name, artifactIDs: artifactIDs)
+    }
+
+    private func page(_ id: String) -> CatalogArtifact {
+        CatalogArtifact(
+            id: id, ref: "ART-\(id)", sourceID: sourceID, fileID: "", label: "Page \(id)", description: ""
+        )
+    }
+
+    /// The census: Brown (`g-b`, P9), Jones (`g-j`, P3 P4), Smith (`g-s`, P3 P6), with the
+    /// page location applied so the graph list is a visible key and graph writes refresh it.
+    private func makeCensus(
+        graphs: [CatalogEvidenceGraph]? = nil
+    ) async -> (model: SourcePageModel, store: FakeStore, session: WorkspaceSession) {
+        let artifacts = ["P3", "P4", "P6", "P9"].map(page)
+        let store = makeStore(artifacts: artifacts)
+        store.evidenceGraphsByProject[projectDir] = graphs ?? [
+            graph("g-b", "Brown household", ["P9"]),
+            graph("g-j", "Jones household", ["P3", "P4"]),
+            graph("g-s", "Smith household", ["P3", "P6"]),
+        ]
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = SourcePageModel(
+            sourceID: sourceID, session: session, userID: userID,
+            sessionDisplayName: "Jake Robins", store: store
+        )
+        session.apply(location: WorkspaceLocation.sourcePage(sourceId: sourceID))
+        await model.warmFromSession()
+        await waitForQuery(session.evidenceGraphsHandle!)
+        return (model, store, session)
+    }
+
+    private func smithBlock(citations: Int = 2) -> CatalogEvidenceGraphUnlinkBlock {
+        CatalogEvidenceGraphUnlinkBlock(
+            artifactID: "P3",
+            citations: CatalogDeleteImpactGroup(
+                via: "evidencegraphs.artifact_in_use", kind: "citation", total: citations, listed: []
+            )
+        )
+    }
+
+    private func linkCalls(_ store: FakeStore) -> [String] {
+        store.recordedCalls.filter { $0.contains("EvidenceGraphArtifact") }
+    }
+
+    @Test func addArtifactOnOneGraphSendsEveryGraph() async {
+        let (model, store, _) = await makeCensus(graphs: [graph("g-1", "Default", [])])
+        #expect(model.artifacts.visibleGraphs == nil)
+        model.artifacts.openAdd()
+        model.artifacts.draft.label = "Page 7"
+        await model.artifacts.create()
+        // `[]` links every graph: the one graph linked it.
+        #expect(store.evidenceGraphsByProject[projectDir]?.first?.artifactIDs.count == 1)
+        #expect(!model.artifacts.isAdding)
+
+        // A graph list with no value (loading) shows no group and sends `[]`.
+        let loading = makeStore()
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: loading)
+        let other = makeModel(store: loading, session: session)
+        #expect(other.artifacts.visibleGraphs == nil)
+        #expect(other.artifacts.draftGraphIDs.isEmpty)
+    }
+
+    @Test func addArtifactLinksOnlyTheCheckedGraphs() async {
+        let (model, store, _) = await makeCensus()
+        #expect(model.artifacts.visibleGraphs?.map(\.id) == ["g-b", "g-j", "g-s"])
+        model.artifacts.openAdd()
+        #expect(model.artifacts.draftGraphIDs == ["g-b", "g-j", "g-s"])
+        model.artifacts.draft.label = "Page 7"
+        model.artifacts.draft.excludedGraphIDs = ["g-b", "g-s"]
+        #expect(model.artifacts.draftGraphIDs == ["g-j"])
+        await model.artifacts.create()
+        let created = store.artifactsBySource[sourceID]?.last
+        #expect(created?.label == "Page 7")
+        let graphs = store.evidenceGraphsByProject[projectDir] ?? []
+        #expect(graphs.first { $0.id == "g-j" }?.artifactIDs.contains(created?.id ?? "") == true)
+        #expect(graphs.first { $0.id == "g-b" }?.artifactIDs.contains(created?.id ?? "") == false)
+        #expect(graphs.first { $0.id == "g-s" }?.artifactIDs.contains(created?.id ?? "") == false)
+        #expect(!model.artifacts.isAdding)
+        #expect(model.toast != nil)
+    }
+
+    @Test func addArtifactNeedsAGraph() async {
+        let (model, store, _) = await makeCensus()
+        model.artifacts.openAdd()
+        model.artifacts.draft.label = "Page 7"
+        model.artifacts.draft.excludedGraphIDs = ["g-b", "g-j", "g-s"]
+        #expect(!model.artifacts.canSubmitDraft)
+        #expect(model.artifacts.draftNeedsGraph)
+        await model.artifacts.create()
+        #expect(store.artifactsBySource[sourceID]?.count == 4)
+        #expect(model.artifacts.isAdding)
+    }
+
+    @Test func addArtifactExcludedGraphIsDirty() async {
+        let (model, _, _) = await makeCensus()
+        model.artifacts.openAdd()
+        #expect(!model.artifacts.addSheetIsDirty)
+        model.artifacts.draft.excludedGraphIDs = ["g-b"]
+        #expect(model.artifacts.addSheetIsDirty)
+    }
+
+    @Test func cardEditOnOneGraphHasNoLinks() async {
+        let (model, store, _) = await makeCensus(graphs: [graph("g-1", "Default", ["P3"])])
+        model.artifacts.beginEdit("P3")
+        await model.artifacts.linkLoadTask?.value
+        #expect(model.artifacts.linkEdit == nil)
+        #expect(store.getEvidenceGraphUnlinkImpactCalls == 0)
+    }
+
+    @Test func cardEditLocksInUseAndOnlyArtifactGraphs() async {
+        let (model, store, _) = await makeCensus()
+        store.unlinkImpactBlocksByGraph["g-s"] = [smithBlock()]
+        model.artifacts.beginEdit("P3")
+        #expect(model.artifacts.linkEdit?.loadState == .loading || model.artifacts.linkEdit?.loadState == .ready)
+        await model.artifacts.linkLoadTask?.value
+        let edit = model.artifacts.linkEdit
+        #expect(edit?.loadState == .ready)
+        #expect(edit?.locked["g-s"] == "2 citations in this graph use this artifact")
+        #expect(edit?.locked["g-j"] == nil)
+        #expect(edit?.excluded == ["g-b"])
+        #expect(store.getEvidenceGraphUnlinkImpactGraphIDs == ["g-j", "g-s"])
+
+        store.getEvidenceGraphUnlinkImpactGraphIDs = []
+        model.artifacts.beginEdit("P9")
+        await model.artifacts.linkLoadTask?.value
+        #expect(model.artifacts.linkEdit?.locked["g-b"] == L10n.string(L10n.Sources.artifactGraphOnlyArtifact))
+        #expect(model.artifacts.linkEdit?.excluded == ["g-j", "g-s"])
+        #expect(store.getEvidenceGraphUnlinkImpactGraphIDs.isEmpty)
+    }
+
+    @Test func cardSaveLinksThenUnlinks() async {
+        let (model, store, session) = await makeCensus()
+        model.artifacts.beginEdit("P3")
+        #expect(!model.artifacts.canSaveFields("P3"))
+        await model.artifacts.linkLoadTask?.value
+        model.artifacts.linkEdit?.excluded = ["g-j"]
+        #expect(model.artifacts.checkedGraphIDs == ["g-b", "g-s"])
+        #expect(model.artifacts.canSaveFields("P3"))
+        await model.artifacts.saveFields(id: "P3")
+        #expect(linkCalls(store) == [
+            "linkEvidenceGraphArtifact graph=g-b artifact=P3",
+            "unlinkEvidenceGraphArtifact graph=g-j artifact=P3",
+        ])
+        #expect(store.updateArtifactCalls == 0)
+        #expect(model.artifacts.editingArtifactID == nil)
+        #expect(model.artifacts.linkEdit == nil)
+        #expect(session.evidenceGraph(id: "g-b")?.artifactIDs.contains("P3") == true)
+        #expect(session.evidenceGraph(id: "g-j")?.artifactIDs.contains("P3") == false)
+    }
+
+    @Test func cardSaveFieldsOnlyHasNoLinkCalls() async {
+        let (model, store, _) = await makeCensus()
+        model.artifacts.beginEdit("P3")
+        await model.artifacts.linkLoadTask?.value
+        model.artifacts.labels["P3"] = "Page 3, front"
+        await model.artifacts.saveFields(id: "P3")
+        #expect(store.updateArtifactCalls == 1)
+        #expect(linkCalls(store).isEmpty)
+        #expect(model.artifacts.items.first { $0.id == "P3" }?.label == "Page 3, front")
+        #expect(model.artifacts.editingArtifactID == nil)
+    }
+
+    @Test func cardSaveRefusedKeepsEditAndRereadsLocks() async {
+        let (model, store, _) = await makeCensus()
+        model.artifacts.beginEdit("P3")
+        await model.artifacts.linkLoadTask?.value
+        model.artifacts.linkEdit?.excluded = ["g-j"]
+        store.unlinkEvidenceGraphArtifactError = CoreInvokeError.coded(
+            status: 1, code: "evidencegraphs.artifact_in_use", kind: .conflict, params: []
+        )
+        store.unlinkImpactBlocksByGraph["g-j"] = [smithBlock(citations: 1)]
+        let impactCalls = store.getEvidenceGraphUnlinkImpactCalls
+        await model.artifacts.saveFields(id: "P3")
+
+        #expect(model.artifacts.editingArtifactID == "P3")
+        #expect(model.artifacts.cardSaveError != nil)
+        #expect(model.pageError == nil)
+        #expect(model.artifacts.linkEdit?.excluded == ["g-j"])
+        #expect(linkCalls(store) == ["linkEvidenceGraphArtifact graph=g-b artifact=P3"])
+        // The save awaited the reloaded list, so the new link is current and Jones locks.
+        #expect(model.artifacts.linkedGraphIDs.contains("g-b"))
+        #expect(store.getEvidenceGraphUnlinkImpactCalls > impactCalls)
+        #expect(model.artifacts.linkEdit?.locked["g-j"] == "1 citation in this graph uses this artifact")
+
+        store.unlinkEvidenceGraphArtifactError = nil
+        store.unlinkImpactBlocksByGraph["g-j"] = []
+        await model.artifacts.loadLinkLocks()
+        await model.artifacts.saveFields(id: "P3")
+        #expect(linkCalls(store) == [
+            "linkEvidenceGraphArtifact graph=g-b artifact=P3",
+            "unlinkEvidenceGraphArtifact graph=g-j artifact=P3",
+        ])
+        #expect(model.artifacts.editingArtifactID == nil)
+        #expect(model.artifacts.cardSaveError == nil)
+    }
+
+    @Test func cardLinkReadFailsAndReadAgain() async {
+        let (model, store, _) = await makeCensus()
+        store.getEvidenceGraphUnlinkImpactError = CoreInvokeError.failed(status: 3)
+        model.artifacts.beginEdit("P3")
+        await model.artifacts.linkLoadTask?.value
+        guard case .failed = model.artifacts.linkEdit?.loadState else {
+            Issue.record("expected a failed read, got \(String(describing: model.artifacts.linkEdit?.loadState))")
+            return
+        }
+        model.artifacts.labels["P3"] = "Changed"
+        #expect(!model.artifacts.canSaveFields("P3"))
+        store.getEvidenceGraphUnlinkImpactError = nil
+        await model.artifacts.loadLinkLocks()
+        #expect(model.artifacts.linkEdit?.loadState == .ready)
+        #expect(model.artifacts.canSaveFields("P3"))
+    }
+
+    @Test func cardCancelDropsLinkChanges() async {
+        let (model, store, _) = await makeCensus()
+        model.artifacts.beginEdit("P3")
+        await model.artifacts.linkLoadTask?.value
+        model.artifacts.linkEdit?.excluded.insert("g-j")
+        #expect(model.artifacts.fieldsDirty("P3"))
+        model.artifacts.cancelFields(id: "P3")
+        #expect(model.artifacts.linkEdit == nil)
+        #expect(linkCalls(store).isEmpty)
+        model.artifacts.beginEdit("P3")
+        await model.artifacts.linkLoadTask?.value
+        #expect(model.artifacts.checkedGraphIDs.contains("g-j"))
+        #expect(!model.artifacts.fieldsDirty("P3"))
+    }
 }

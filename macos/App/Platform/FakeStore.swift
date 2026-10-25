@@ -93,6 +93,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var getEvidenceGraphProgressCalls = 0
     var deleteSourceCalls = 0
     var deleteArtifactCalls = 0
+    var updateArtifactCalls = 0
     var deleteEvidenceGraphCalls = 0
     var createEvidenceGraphCalls = 0
     var updateEvidenceGraphCalls = 0
@@ -695,6 +696,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         description: String
     ) async throws -> (CatalogArtifact, CatalogWriteEffects) {
         return try withState {
+            updateArtifactCalls += 1
             for (sourceID, arts) in artifactsBySource {
                 if let idx = arts.firstIndex(where: { $0.id == artifactID }) {
                     var copy = arts

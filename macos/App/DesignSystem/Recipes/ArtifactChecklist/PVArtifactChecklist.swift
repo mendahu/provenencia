@@ -57,7 +57,7 @@ struct PVArtifactChecklist: View {
     let accessibilityIdentifierPrefix: String
 
     private static let thumbnailSize: CGFloat = 32
-    private static let maxRowsHeight: CGFloat = 264
+    static let maxRowsHeight: CGFloat = 264
 
     private var ids: [String] { artifacts.map(\.id) }
     private var lockedIDs: Set<String> { Set(locked.keys) }

@@ -80,6 +80,24 @@ struct SourcePageArtifactsView: View {
                 PVInput(text: $model.artifacts.draft.description)
                     .accessibilityIdentifier("sources.page.addArtifact.description")
             }
+            if let graphs = model.artifacts.visibleGraphs {
+                PVField(
+                    label: L10n.Sources.artifactGraphsLabel,
+                    hint: L10n.Sources.artifactGraphsHint
+                ) {
+                    SourceArtifactGraphLinks(
+                        graphs: graphs,
+                        excluded: $model.artifacts.draft.excludedGraphIDs,
+                        accessibilityIdentifierPrefix: "sources.page.addArtifact.graphs"
+                    )
+                    if model.artifacts.draftNeedsGraph {
+                        Text(L10n.Sources.artifactGraphsNeedsOne)
+                            .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+                            .foregroundStyle(PVColor.textMuted)
+                            .accessibilityIdentifier("sources.page.addArtifact.graphs.needsGraph")
+                    }
+                }
+            }
             PVField(label: L10n.Sources.optionalFile) {
                 IngestFileDropRow(
                     fileName: model.artifacts.draft.fileName,
@@ -266,8 +284,51 @@ struct SourcePageArtifactsView: View {
         .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .topLeading)
     }
 
+    /// The Evidence graphs the card in edit links the Artifact to; absent on a
+    /// Source with one graph.
+    @ViewBuilder
+    private func graphLinks(_ art: CatalogArtifact) -> some View {
+        if let edit = model.artifacts.linkEdit, edit.artifactID == art.id {
+            let prefix = "sources.page.artifact.\(art.id).graphs"
+            PVField(
+                label: L10n.Sources.artifactGraphsLabel,
+                hint: L10n.Sources.artifactGraphsHint
+            ) {
+                SourceFormLoadArea(
+                    state: edit.loadState,
+                    loadingText: L10n.Sources.artifactGraphsLoading,
+                    errorTitle: L10n.Sources.artifactGraphsLoadErrorTitle,
+                    errorMessage: L10n.Sources.artifactGraphsLoadErrorMessage,
+                    onReadAgain: { Task { await model.artifacts.loadLinkLocks() } },
+                    compact: true,
+                    accessibilityIdentifierPrefix: prefix
+                ) {
+                    SourceArtifactGraphLinks(
+                        graphs: model.artifacts.linkEditGraphs,
+                        excluded: Binding(
+                            get: { model.artifacts.linkEdit?.excluded ?? [] },
+                            set: { model.artifacts.linkEdit?.excluded = $0 }
+                        ),
+                        locked: edit.locked,
+                        accessibilityIdentifierPrefix: prefix
+                    )
+                    .disabled(model.artifacts.savingID == art.id)
+                }
+            }
+        }
+    }
+
     private func editFields(_ art: CatalogArtifact) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {
+            if let saveError = model.artifacts.cardSaveError {
+                PVCallout(
+                    tone: .danger,
+                    title: L10n.Sources.artifactCardSaveErrorTitle,
+                    message: saveError,
+                    compact: true
+                )
+                .accessibilityIdentifier("sources.page.artifact.\(art.id).saveError")
+            }
             PVField(
                 label: L10n.Sources.artifactLabel,
                 error: model.artifacts.cardLabelError(id: art.id),
@@ -292,6 +353,7 @@ struct SourcePageArtifactsView: View {
                 )
                 .accessibilityIdentifier("sources.page.artifact.\(art.id).description")
             }
+            graphLinks(art)
             HStack(spacing: PVSpacing.space3) {
                 PVButton(
                     L10n.Sources.saveArtifact,

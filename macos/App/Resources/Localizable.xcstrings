@@ -11385,7 +11385,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No Artifacts on this source"
+            "value": "No artifacts in this evidence graph"
           }
         }
       }
@@ -11397,19 +11397,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Citing needs an Artifact. Place tools, Connect, and Add property stay disabled until you attach one."
+            "value": "Citing needs an artifact linked to this evidence graph. Place tools, Connect, and Add property stay disabled until one is linked."
           }
         }
       }
     },
     "evidenceGraph.noArtifact.action": {
-      "comment": "Callout action that navigates to the Source page to attach an Artifact",
+      "comment": "Callout action that navigates to the Source page to link an Artifact",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add an Artifact"
+            "value": "Go to Source page"
           }
         }
       }
@@ -12273,7 +12273,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Every citation needs an artifact linked to this evidence graph. Add one from the Source page, then return here."
+            "value": "Every citation needs an artifact linked to this evidence graph. Add one on the Source page, or link an existing one from its card, then return here."
           }
         }
       }
@@ -22439,6 +22439,114 @@
           "stringUnit": {
             "state": "translated",
             "value": "Little evidence"
+          }
+        }
+      }
+    },
+    "sources.page.artifact.graphs.label": {
+      "comment": "Label of the evidence graph checkbox group in the Add artifact dialog and on an artifact card in edit",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence graphs"
+          }
+        }
+      }
+    },
+    "sources.page.artifact.graphs.hint": {
+      "comment": "Hint under the evidence graph checkbox group label in the Add artifact dialog and on an artifact card in edit",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Which evidence graphs can cite this artifact"
+          }
+        }
+      }
+    },
+    "sources.page.artifact.graphs.needsOne": {
+      "comment": "Muted line under the evidence graph group in the Add artifact dialog when every box is unchecked",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check at least one evidence graph."
+          }
+        }
+      }
+    },
+    "sources.page.artifact.graphs.onlyArtifact": {
+      "comment": "Hint on a locked evidence graph checkbox on an artifact card when the artifact is the graph's only one",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The only artifact in this evidence graph"
+          }
+        }
+      }
+    },
+    "sources.page.artifact.graphs.loading": {
+      "comment": "Loading line on an artifact card in edit while its evidence graph links are read",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading the evidence graphs…"
+          }
+        }
+      }
+    },
+    "sources.page.artifact.graphs.loadErrorTitle": {
+      "comment": "Callout title on an artifact card in edit when its evidence graph links fail to load",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t read the evidence graphs"
+          }
+        }
+      }
+    },
+    "sources.page.artifact.graphs.loadErrorMessage": {
+      "comment": "Callout message on an artifact card in edit when its evidence graph links fail to load; argument is the error text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Label and description are kept. Read the evidence graphs again to change the links. %@"
+          }
+        }
+      }
+    },
+    "sources.page.artifact.saveErrorTitle": {
+      "comment": "Callout title on an artifact card in edit when saving it fails",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t save the artifact"
+          }
+        }
+      }
+    },
+    "sources.page.artifact.saveErrorMessage": {
+      "comment": "Callout message on an artifact card in edit when saving it fails; argument is the error text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some changes may not be saved. Every field and box keeps its value — save again to finish. %@"
           }
         }
       }
