@@ -80,7 +80,7 @@ const (
 	MethodListObservationsByEvidenceGraph   = int32(engine.Method_METHOD_LIST_OBSERVATIONS_BY_EVIDENCE_GRAPH)
 	MethodGetCitation                       = int32(engine.Method_METHOD_GET_CITATION)
 	MethodCreateCitedBridge                 = int32(engine.Method_METHOD_CREATE_CITED_BRIDGE)
-	MethodCitationCountsBySource            = int32(engine.Method_METHOD_CITATION_COUNTS_BY_SOURCE)
+	MethodCitationCountsByEvidenceGraph     = int32(engine.Method_METHOD_CITATION_COUNTS_BY_EVIDENCE_GRAPH)
 	MethodListCitationsByArtifact           = int32(engine.Method_METHOD_LIST_CITATIONS_BY_ARTIFACT)
 	MethodUpdateCitation                    = int32(engine.Method_METHOD_UPDATE_CITATION)
 	MethodUpdateObservation                 = int32(engine.Method_METHOD_UPDATE_OBSERVATION)
@@ -260,8 +260,8 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.GetCitation(in)
 	case MethodCreateCitedBridge:
 		return handlers.CreateCitedBridge(in)
-	case MethodCitationCountsBySource:
-		return handlers.CitationCountsBySource(in)
+	case MethodCitationCountsByEvidenceGraph:
+		return handlers.CitationCountsByEvidenceGraph(in)
 	case MethodListCitationsByArtifact:
 		return handlers.ListCitationsByArtifact(in)
 	case MethodUpdateCitation:

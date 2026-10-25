@@ -226,7 +226,7 @@ func checkSavedLikeness(t *testing.T, dir string, row *engine.Observation) {
 
 func TestCreateCitationRefusesSymlinkedCrop(t *testing.T) {
 	t.Cleanup(func() { _ = catalogsession.CloseAll() })
-	dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
+	dir, userID, sourceID, artifactID, personID, likenessID := likenessFixture(t)
 	before := objectRelPaths(t, dir)
 	link := filepath.Join(t.TempDir(), "link.jpg")
 	if err := os.Symlink(writeCrop(t, 300, 200, 128), link); err != nil {
@@ -242,7 +242,7 @@ func TestCreateCitationRefusesSymlinkedCrop(t *testing.T) {
 	if after := objectRelPaths(t, dir); strings.Join(after, ",") != strings.Join(before, ",") {
 		t.Fatalf("objects changed: %v -> %v", before, after)
 	}
-	lout, err := ListCitationsByArtifact(marshalProto(t, &engine.ListCitationsByArtifactRequest{ProjectDir: dir, ArtifactId: artifactID}))
+	lout, err := ListCitationsByArtifact(marshalProto(t, &engine.ListCitationsByArtifactRequest{ProjectDir: dir, ArtifactId: artifactID, GraphId: soleGraphID(t, dir, sourceID)}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -686,9 +686,11 @@ func TestListObservationsByEvidenceGraph(t *testing.T) {
 	})
 }
 
-func TestCitationCountsBySource(t *testing.T) {
-	runRPC(t, CitationCountsBySource, []rpcTest{
+func TestCitationCountsByEvidenceGraph(t *testing.T) {
+	runRPC(t, CitationCountsByEvidenceGraph, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{name: "missing graph_id", req: &engine.CitationCountsByEvidenceGraphRequest{ProjectDir: "x"}, wantErr: true},
+		{name: "bad graph_id", req: &engine.CitationCountsByEvidenceGraphRequest{ProjectDir: "x", GraphId: "nope"}, wantErr: true},
 		{
 			name: "counts citations per artifact",
 			reqFn: func(t *testing.T) proto.Message {
@@ -719,13 +721,13 @@ func TestCitationCountsBySource(t *testing.T) {
 				})); err != nil {
 					t.Fatal(err)
 				}
-				return &engine.CitationCountsBySourceRequest{
+				return &engine.CitationCountsByEvidenceGraphRequest{
 					ProjectDir: dir,
-					SourceId:   sourceID,
+					GraphId:    soleGraphID(t, dir, sourceID),
 				}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
-				var list engine.CitationCountsBySourceResponse
+				var list engine.CitationCountsByEvidenceGraphResponse
 				if err := proto.Unmarshal(out, &list); err != nil {
 					t.Fatal(err)
 				}
@@ -741,9 +743,25 @@ func TestListCitationsByArtifact(t *testing.T) {
 	runRPC(t, ListCitationsByArtifact, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
+			name: "missing graph_id",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, _, artifactID, _, _ := citationFixture(t)
+				return &engine.ListCitationsByArtifactRequest{ProjectDir: dir, ArtifactId: artifactID}
+			},
+			wantErr: true,
+		},
+		{
+			name: "bad graph_id",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, _, artifactID, _, _ := citationFixture(t)
+				return &engine.ListCitationsByArtifactRequest{ProjectDir: dir, ArtifactId: artifactID, GraphId: "nope"}
+			},
+			wantErr: true,
+		},
+		{
 			name: "lists citations with observation counts",
 			reqFn: func(t *testing.T) proto.Message {
-				dir, userID, _, artifactID, placeID, propID := citationFixture(t)
+				dir, userID, sourceID, artifactID, placeID, propID := citationFixture(t)
 				if _, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
 					ProjectDir:    dir,
 					UserId:        userID,
@@ -770,6 +788,7 @@ func TestListCitationsByArtifact(t *testing.T) {
 				return &engine.ListCitationsByArtifactRequest{
 					ProjectDir: dir,
 					ArtifactId: artifactID,
+					GraphId:    soleGraphID(t, dir, sourceID),
 				}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
