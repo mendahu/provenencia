@@ -8,7 +8,7 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 
 | Step | View | Gates | Notes |
 | --- | --- | --- | --- |
-| S12-D2 | Source page — Graphs section | **S12-11** | One row per graph with Open and delete; replaces the header jump |
+| [S12-D2](S12-D2-source-page-graphs.md) | Source page — Graphs section | **S12-11** | One row per graph with Open and delete; replaces the header jump. Brief written 2026-10-25; board not drawn |
 | S12-D3 | Graph form | **S12-12** | Create and edit: name, description, Artifact checkboxes |
 | S12-D4 | Source page — Artifacts section graph links | **S12-13** | Checkboxes in the add dialog and card edit |
 | S12-D5 | Sources list — graph accordion | **S12-14** | Expander per row, per-graph progress and Open |
