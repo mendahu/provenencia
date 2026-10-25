@@ -1,6 +1,7 @@
 # S12-12 — Graph form
 
-**Status:** Planned
+**Status:** Landed in [#557](https://github.com/mendahu/provenencia/pull/557) (2026-10-25)
+**Landed:** Differences from the plan: the new `ArtifactChecklist` group id is `D5C000000000000000000024`, because `...23` is `ScrollRowIntoView` on `main`; the `Case` type in `PVArtifactChecklistTests` is internal, not private, for the parameterized test; the PVDeleteImpact test suite is `PVDeleteImpactCopyTests`, so the STEP-1 and STEP-2 checks ran with that name; `SourceGraphFormModel` gains a `graph` accessor and `keptLinked` (page-order Artifact and block pairs) for the view; `loadKeptLinks()` sets `.loading` first, so Read again shows the loading line; STEP-1 and STEP-2 shipped in one commit.
 **Spike / slice:** Spike 12 · Slice 4 — Graphs in the UI
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S12-D3](../design/archive/S12-D3-graph-form.md), board agreed 2026-10-25
