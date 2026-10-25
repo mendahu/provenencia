@@ -23,6 +23,18 @@ type Edge struct {
 	Associations [][]byte
 }
 
+// reads returns the edge's ends in the order of a key pair, whichever end the
+// pair is read from: x is the end read by first, y the end read by second.
+func (e Edge) reads(first, second vocabkey.BridgeKey) (x, y []byte, ok bool) {
+	switch {
+	case e.KeyA == first && e.KeyB == second:
+		return e.A, e.B, true
+	case e.KeyA == second && e.KeyB == first:
+		return e.B, e.A, true
+	}
+	return nil, nil, false
+}
+
 // Pattern is how an implied link was made.
 type Pattern string
 
@@ -61,11 +73,8 @@ func Derive(edges []Edge, terms segmentcompare.Terms) []Implied {
 	var out []Implied
 	var steps []step
 	for _, e := range edges {
-		switch {
-		case e.KeyA == parentFirst && e.KeyB == parentSecond:
-			steps = appendStep(steps, e.A, e.B, e)
-		case e.KeyA == parentSecond && e.KeyB == parentFirst:
-			steps = appendStep(steps, e.B, e.A, e)
+		if g, m, ok := e.reads(parentFirst, parentSecond); ok {
+			steps = appendStep(steps, g, m, e)
 		}
 	}
 
@@ -75,8 +84,8 @@ func Derive(edges []Edge, terms segmentcompare.Terms) []Implied {
 	}
 	out = append(out, implied...)
 	for _, imp := range implied {
-		if imp.KeyA == parentFirst && imp.KeyB == parentSecond {
-			steps = appendStep(steps, imp.A, imp.B, imp.Edge)
+		if g, m, ok := imp.reads(parentFirst, parentSecond); ok {
+			steps = appendStep(steps, g, m, imp.Edge)
 		}
 	}
 	return append(out, chains(steps, rel, terms)...)
@@ -122,16 +131,11 @@ func eventLinks(p eventPattern, edges []Edge, part, rel connectrules.Bridge, ter
 	byEvent := map[string][]participant{}
 	for _, e := range edges {
 		for _, r := range roles {
-			var x participant
-			switch {
-			case e.KeyA == r.person && e.KeyB == r.event:
-				x = participant{person: e.A, event: e.B}
-			case e.KeyA == r.event && e.KeyB == r.person:
-				x = participant{person: e.B, event: e.A}
-			default:
+			person, event, ok := e.reads(r.person, r.event)
+			if !ok {
 				continue
 			}
-			x.edge, x.atA, x.atB = e, r.atA, r.atB
+			x := participant{person: person, event: event, edge: e, atA: r.atA, atB: r.atB}
 			if _, seen := byEvent[string(x.event)]; !seen {
 				order = append(order, x.event)
 			}
@@ -172,26 +176,35 @@ func eventLinks(p eventPattern, edges []Edge, part, rel connectrules.Bridge, ter
 func chains(steps []step, rel connectrules.Bridge, terms segmentcompare.Terms) []Implied {
 	first, second := segmentcompare.Keys(rel, vocabkey.TermGrandparent, "", terms)
 	type triple struct{ g, m, c string }
+	type pair struct{ g, m string }
+	// Step indices by parent, and by parent and child, in step order.
+	byG := map[string][]int{}
+	byPair := map[pair][]int{}
+	for i, s := range steps {
+		byG[string(s.g)] = append(byG[string(s.g)], i)
+		k := pair{string(s.g), string(s.m)}
+		byPair[k] = append(byPair[k], i)
+	}
 	made := map[triple]bool{}
 	var out []Implied
 	for _, up := range steps {
-		for _, down := range steps {
+		for _, i := range byG[string(up.m)] {
+			down := steps[i]
+			if bytes.Equal(up.g, down.m) {
+				continue
+			}
 			t := triple{string(up.g), string(up.m), string(down.m)}
-			if !bytes.Equal(up.m, down.g) || bytes.Equal(up.g, down.m) || made[t] {
+			if made[t] {
 				continue
 			}
 			made[t] = true
 			var from []Edge
 			var assoc [][]byte
-			for _, s := range steps {
-				if bytes.Equal(s.g, up.g) && bytes.Equal(s.m, up.m) {
-					from = append(from, s.edge)
-				}
+			for _, j := range byPair[pair{t.g, t.m}] {
+				from = append(from, steps[j].edge)
 			}
-			for _, s := range steps {
-				if bytes.Equal(s.g, up.m) && bytes.Equal(s.m, down.m) {
-					from = append(from, s.edge)
-				}
+			for _, j := range byPair[pair{t.m, t.c}] {
+				from = append(from, steps[j].edge)
 			}
 			for _, e := range from {
 				for _, a := range e.Associations {
