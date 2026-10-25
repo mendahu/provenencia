@@ -6,7 +6,7 @@
 **Implements later as:** PR **S11-36** (find another record in the target menu)
 **Depends on:** S11-35 (landed [#543](https://github.com/mendahu/provenencia/pull/543): `PromoteFlow.hold` holds a record Promote did not offer); S11-37 (landed [#551](https://github.com/mendahu/provenencia/pull/551): `CatalogSearchModel` and `CatalogSearchHitRow`, the omnibar's search and hit row in a shared home)
 **Related:** [`../promote-find-another-record.md`](../promote-find-another-record.md) (the feature and the [decided](../promote-find-another-record.md#decided-user-2026-10-24) product calls), [`archive/S11-D1-promote-rows.md`](archive/S11-D1-promote-rows.md) (the rows this board extends), [`../../../promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3
-**Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), the board S11-D1 and S11-D2 were agreed on. Not drawn yet
+**Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), agreed 2026-10-25: frames 20 – 26b (§8)
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
 **Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
 
@@ -114,7 +114,7 @@ A researcher on the Promote page who knows a Subject is a record Promote did not
 | FR-4 | The list's line when it has no hits: under two characters typed (and on an empty field), "Type at least two letters of a name or a ref"; while the first results load, the ComboBox's own searching line ("Searching…"); hits already shown stay while a new search runs; no hits, "No people match “Polly”" (by kind: "No events match …", "No places match …"); a failed search, its error message in the same line. |
 | FR-5 | Picking a hit (click, or Return on the highlighted hit) closes the search, and the target menu comes back with the record as its selection. The row shows the Decided Badge. When Promote answers, the assessment column shows the record's band Badge, the Contested Badge when the pair conflicts, and "Your choice". Opening the menu shows the record as an item after the offered records and before New, drawn like every record item (mark, title, "ref · life line"), checked. A hit that is already in the menu is selected there, not added twice. |
 | FR-6 | **Cancel search**, or Escape with nothing typed, closes the search: the target menu comes back unchanged and the row is not Decided unless it was before. Escape is the ComboBox's: the first press closes the list, the next clears what was typed, the one after closes the search. A click outside closes the list and leaves the field, as every ComboBox does; the search stays in the target cell, with its Cancel button, until a pick or a cancel. Choosing "Find another record…" on another row closes this one. |
-| FR-7 | A record the researcher chose, by search or from the menu, whose band is None reads **"Little evidence"** in the neutral band Badge instead of "No match", on the row and on the evidence sheet's title. Contested shows after it when the pair conflicts. Offered records Promote rates None keep "No match". No Callout. |
+| FR-7 | A record the researcher chose, by search or from the menu, whose band is None reads **"Little evidence"** in the neutral band Badge instead of "No match", on the row and on the evidence sheet's title. Contested shows after it when the pair conflicts. A suggested record Promote rates None, not yet chosen, keeps "No match". No Callout. |
 | FR-8 | VoiceOver: the entry reads "Find another record"; the field and its list read "Find another record for Ada Smith"; each hit reads as the toolbar search's does: title, kind, life line, ref, match line ("Jones, Polly, Person, 1871 – 1950, PER-7QH3D"); the button reads "Cancel search". A FR-7 row's evidence button reads "Evidence for Ada Smith: Little evidence, Your choice". |
 | FR-9 | While Done files, the entry is disabled with the rest of the menu, and an open search field and its Cancel button are disabled. |
 
@@ -144,17 +144,35 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Target menu | Component | Ship | `macos/App/DesignSystem/Components/Select/PVSelect.swift` | The entry is one more option. No action item, divider or section in Select: the kit gains nothing. |
 | Menu entry | Snowflake | **Extend** | `macos/App/Features/Promote/PromoteView.swift` `PromoteTargetMenuRow` | Draws the search icon and the text for the entry, as it already draws New and Skip. |
 | Found record in the menu | Snowflake | Ship | `macos/App/Features/Promote/PromoteView.swift` `PromoteTargetMenuRow` | Drawn like every record item. No "found" mark. |
-| Search field and its list | Component | Ship | `macos/App/DesignSystem/Components/ComboBox/PVComboBox.swift` | Remote results: the page searches and the box shows them, with its own searching line, empty line, list window, keyboard, Escape and click-outside. Not a second popup list, and not the toolbar search's panel. |
-| Hit row | Recipe | Ship | `macos/App/DesignSystem/Recipes/OmnibarHitRow/PVOmnibarHitRow.swift`, filled by `macos/App/Features/Catalog/Search/CatalogSearchHitRow.swift` | Inside the ComboBox list as each option's row. The ComboBox draws the highlight and the checkmark gutter; the hit row draws no selection of its own. The kind Badge stays. |
+| Search field and its list | Component | **Extend** | `macos/App/DesignSystem/Components/ComboBox/PVComboBox.swift` | Remote results: the page searches and the box shows them, with its own searching line, empty line, list window, keyboard, Escape and click-away. Not a second popup list. S11-36 gives it a public init with a caller-drawn empty line, tells a remote caller when the box resets the field, and carries the field's environment into its list (user, 2026-10-25). No visual change. |
+| Hit row | Recipe | **Extend** | `macos/App/DesignSystem/Recipes/OmnibarHitRow/PVOmnibarHitRow.swift`, filled by `macos/App/Features/Catalog/Search/CatalogSearchHitRow.swift` | Inside the ComboBox list as each option's row. The ComboBox draws the highlight and the checkmark gutter. S11-36 removes the row's unused `selected` fill and puts the spoken label on the row; no visual change. The kind Badge stays. |
 | Cancel search | Component | Ship | `macos/App/DesignSystem/Components/IconButton/PVIconButton.swift` (`.dismiss`, `.sm`) | Same as the Source page's type editor cancel. |
 | Band, Contested, Decided marks | Component | Ship | `macos/App/DesignSystem/Components/Badge/PVBadge.swift` | As today. |
-| Row readout | Snowflake | **Extend** | `macos/App/Features/Promote/PromoteReadout.swift` `PromoteReadoutBadges` | Words a chosen record at band None "Little evidence" (FR-7), on the row and the sheet title. Same neutral tone. |
+| Row readout | Snowflake | **Extend** | `macos/App/Features/Promote/PromoteReadout.swift` `PromoteReadoutBadges` | The badge text and the spoken band both come from one L10n band wording (S11-36 D-9): "Little evidence" for a chosen record at band None (FR-7), on the row and the sheet title. Same neutral tone. |
 | Toolbar search panel | Snowflake | Ship | `macos/App/Features/Workspace/OmnibarResultsHost.swift` | Not used on this page and not redrawn. |
 
-**Non-goals.** No new kit primitive. No action item, divider or header in Select. No popup or overlay beside the ComboBox's own list. No Callout, Chip or extra mark for a found or differently named record. No band or score per hit. No change to the hit row recipe.
+**Non-goals.** No new kit component. No action item, divider or header in Select. No popup or overlay beside the ComboBox's own list. No Callout, Chip or extra mark for a found or differently named record. No band or score per hit. No visual change to the hit row recipe.
 
 ---
 
 ## 7. Handoff
 
 When the board is agreed: add a **Board notes** section here listing the frames and anything the board changed, record the board link in the S11-36 plan's **Board** line, move S11-36 from `Blocked — on board S11-D3` to `Planned` with `plan-pr`, and move this brief to the spike's `design/archive/` when S11-36 lands, updating [`README.md`](README.md).
+
+---
+
+## 8. Board notes (agreed 2026-10-25)
+
+Checked against `Promote flow.dc.html`. Where the board differs from this brief, the board wins and the S11-36 plan copies it.
+
+| Frame | Requirement | The board |
+| --- | --- | --- |
+| 20 | FR-1 | As written. The entry is a 14 pt search icon and the text in secondary ink, 8 pt apart. |
+| 21 | FR-2, FR-4 | As written. The Cancel search button is the ghost × IconButton. Specimens draw the field unfocused; the live field holds the focus. |
+| 22, 22b, 22c | FR-3, FR-4 | The fixtures are redrawn on the board's obituary ("Marion"), not "Polly". A typed ref accents the matched refs. The list is capped at 290 pt (the kit's 288). |
+| 23, 23b | FR-4 | No hits reads "No people match “Mairon”". A failed search shows the search's own message; the brief named none. |
+| 24 | FR-5 | As written: Weak, Contested, "Your choice"; the found record after the offered one and before New, checked; no "found" mark. |
+| 25, 25s | FR-7, FR-8 | "Little evidence" for every record the researcher chose at band None. A suggested None (Ken's PER-7KG40) keeps "No match". S11-D2's E03, a menu choice at None, now reads "Little evidence" too. |
+| 26 | FR-6 | A click outside closes the list and leaves the field, dropping the typed text; the search stays until a pick or Cancel. Escape closes the list, then clears the text, then closes the search. |
+| 26b | FR-9 | As written. |
+

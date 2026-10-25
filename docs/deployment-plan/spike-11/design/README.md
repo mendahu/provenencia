@@ -6,7 +6,7 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 
 ## Scheduled
 
-- [S11-D3](S11-D3-promote-target-menu.md) — Promote page, target menu: the "Find another record…" entry, its search, and a found record in the menu. Gates **S11-36**. Written 2026-10-25; board not drawn. [Design](../promote-find-another-record.md).
+- [S11-D3](S11-D3-promote-target-menu.md) — Promote page, target menu: the "Find another record…" entry, its search, and a found record in the menu. Gates **S11-36**. Board agreed 2026-10-25 (Promote flow board, frames 20 – 26b). [Design](../promote-find-another-record.md).
 - [S11-D4](S11-D4-kit-search-parity.md) — the design-system project itself: ComboBox remote results and the omnibar field, panel and hit row brought up to the shipped app. Gates no PR; paste it into the main kit project before S11-D3's board, so that board pulls the updated kit.
 
 ## Archived
