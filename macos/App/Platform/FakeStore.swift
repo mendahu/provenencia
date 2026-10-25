@@ -94,12 +94,18 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var deleteSourceCalls = 0
     var deleteArtifactCalls = 0
     var deleteEvidenceGraphCalls = 0
+    var createEvidenceGraphCalls = 0
+    var updateEvidenceGraphCalls = 0
+    var getEvidenceGraphUnlinkImpactCalls = 0
     /// Optional Impact override keyed by entity id (tests).
     var deleteImpactByID: [String: CatalogDeleteImpact] = [:]
     /// Optional override for graph-progress rows by graph id (tests). Missing keys compute from subjects/observations.
     var graphProgressByGraph: [String: EvidenceGraphProgress] = [:]
     var listEvidenceGraphProgressError: Error?
     var listEvidenceGraphsError: Error?
+    var createEvidenceGraphError: Error?
+    var updateEvidenceGraphError: Error?
+    var getEvidenceGraphUnlinkImpactError: Error?
     var getEvidenceGraphProgressError: Error?
     /// Monotonic stand-in for audit_transactions.revision (Sources Updated sort).
     private var nextAuditRevision: Int64 = 1
@@ -745,6 +751,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         artifactIDs: [String]
     ) async throws -> (CatalogEvidenceGraph, CatalogWriteEffects) {
         try withState {
+            createEvidenceGraphCalls += 1
+            if let createEvidenceGraphError { throw createEvidenceGraphError }
             markCatalogSessionHeld(projectDir)
             let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty, !artifactIDs.isEmpty else { throw StoreBoom.boom }
@@ -765,6 +773,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         artifactIDs: [String]
     ) async throws -> CatalogWriteEffects {
         try withState {
+            updateEvidenceGraphCalls += 1
+            if let updateEvidenceGraphError { throw updateEvidenceGraphError }
             markCatalogSessionHeld(projectDir)
             guard let idx = evidenceGraphsByProject[projectDir]?.firstIndex(where: { $0.id == graphID }) else {
                 throw StoreBoom.boom
@@ -829,7 +839,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         graphID _: String,
         artifactIDs: [String]
     ) async throws -> [CatalogEvidenceGraphUnlinkBlock] {
-        withState {
+        try withState {
+            getEvidenceGraphUnlinkImpactCalls += 1
+            if let getEvidenceGraphUnlinkImpactError { throw getEvidenceGraphUnlinkImpactError }
             markCatalogSessionHeld(projectDir)
             return artifactIDs.compactMap { id in unlinkImpactBlocks.first { $0.artifactID == id } }
         }

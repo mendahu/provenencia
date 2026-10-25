@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA121400000000000000000C /* SourceGraphFormModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA121400000000000000000B /* SourceGraphFormModelTests.swift */; };
+		AA121400000000000000000A /* SourceGraphFormDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1214000000000000000009 /* SourceGraphFormDialog.swift */; };
+		AA1214000000000000000008 /* SourceGraphFormModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1214000000000000000007 /* SourceGraphFormModel.swift */; };
 		AA1214000000000000000006 /* PVArtifactChecklistTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1214000000000000000005 /* PVArtifactChecklistTests.swift */; };
 		AA1214000000000000000004 /* SourceFormLoadArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1214000000000000000003 /* SourceFormLoadArea.swift */; };
 		AA1214000000000000000002 /* PVArtifactChecklist.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1214000000000000000001 /* PVArtifactChecklist.swift */; };
@@ -443,6 +446,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AA121400000000000000000B /* SourceGraphFormModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceGraphFormModelTests.swift; sourceTree = "<group>"; };
+		AA1214000000000000000009 /* SourceGraphFormDialog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceGraphFormDialog.swift; sourceTree = "<group>"; };
+		AA1214000000000000000007 /* SourceGraphFormModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceGraphFormModel.swift; sourceTree = "<group>"; };
 		AA1214000000000000000005 /* PVArtifactChecklistTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVArtifactChecklistTests.swift; sourceTree = "<group>"; };
 		AA1214000000000000000003 /* SourceFormLoadArea.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceFormLoadArea.swift; sourceTree = "<group>"; };
 		AA1214000000000000000001 /* PVArtifactChecklist.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVArtifactChecklist.swift; sourceTree = "<group>"; };
@@ -956,6 +962,8 @@
 				AA00000000000000000C1208 /* SourceCopyModel.swift */,
 				AA00000000000000000C1212 /* SourceCopyDialog.swift */,
 				AA1214000000000000000003 /* SourceFormLoadArea.swift */,
+				AA1214000000000000000007 /* SourceGraphFormModel.swift */,
+				AA1214000000000000000009 /* SourceGraphFormDialog.swift */,
 				AA00000000000000000C1204 /* SourceTypeComboRow.swift */,
 				AA0000000000000000000364 /* SourcePageDescriptionView.swift */,
 				AA0000000000000000000366 /* SourcePageCredibilityView.swift */,
@@ -1418,6 +1426,7 @@
 				AA0000000000000000000312 /* SourcesModelTests.swift */,
 				AA00000000000000000C120C /* SourceCopyModelTests.swift */,
 				AA1214000000000000000005 /* PVArtifactChecklistTests.swift */,
+				AA121400000000000000000B /* SourceGraphFormModelTests.swift */,
 				AA00000000000000000C120A /* QueryHandleWaiting.swift */,
 				AA00000000000000000C1202 /* CatalogArtifactTests.swift */,
 				AA1041000000000000000003 /* SourcesListSettingsTests.swift */,
@@ -2305,6 +2314,8 @@
 				AA00000000000000000C1209 /* SourceCopyModel.swift in Sources */,
 				AA00000000000000000C1213 /* SourceCopyDialog.swift in Sources */,
 				AA1214000000000000000004 /* SourceFormLoadArea.swift in Sources */,
+				AA1214000000000000000008 /* SourceGraphFormModel.swift in Sources */,
+				AA121400000000000000000A /* SourceGraphFormDialog.swift in Sources */,
 				AA1214000000000000000002 /* PVArtifactChecklist.swift in Sources */,
 				AA00000000000000000C1205 /* SourceTypeComboRow.swift in Sources */,
 				AA0000000000000000000365 /* SourcePageDescriptionView.swift in Sources */,
@@ -2425,6 +2436,7 @@
 				AA0000000000000000000313 /* SourcesModelTests.swift in Sources */,
 				AA00000000000000000C120D /* SourceCopyModelTests.swift in Sources */,
 				AA1214000000000000000006 /* PVArtifactChecklistTests.swift in Sources */,
+				AA121400000000000000000C /* SourceGraphFormModelTests.swift in Sources */,
 				AA00000000000000000C120B /* QueryHandleWaiting.swift in Sources */,
 				AA00000000000000000C1203 /* CatalogArtifactTests.swift in Sources */,
 				AA1041000000000000000004 /* SourcesListSettingsTests.swift in Sources */,

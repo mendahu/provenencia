@@ -6706,6 +6706,152 @@ enum L10n {
             ), name)
         }
 
+        static let addEvidenceGraph = LocalizedStringResource(
+            "sources.page.addEvidenceGraph",
+            defaultValue: "Add evidence graph",
+            comment: "Button in the Evidence graphs header that opens the Add evidence graph form"
+        )
+
+        static let addEvidenceGraphNeedsArtifact = LocalizedStringResource(
+            "sources.graph.addNeedsArtifact",
+            defaultValue: "Add an artifact before you add an evidence graph",
+            comment: "Tooltip and VoiceOver hint of Add evidence graph when the Source has no Artifact"
+        )
+
+        static func editEvidenceGraphLabel(name: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.graph.editLabel",
+                defaultValue: "Edit %@",
+                comment: "VoiceOver label for editing an Evidence graph; argument is the graph name"
+            ), name)
+        }
+
+        static let graphFormAddTitle = LocalizedStringResource(
+            "sources.graphForm.addTitle",
+            defaultValue: "Add evidence graph",
+            comment: "Title of the Add evidence graph form"
+        )
+
+        static let graphFormAddSubtitle = LocalizedStringResource(
+            "sources.graphForm.addSubtitle",
+            defaultValue: "An evidence graph is a discrete group of subjects and their relationships. Use different graphs to isolate groups of data from a large source.",
+            comment: "Subtitle of the Add evidence graph form"
+        )
+
+        static let graphFormArtifactsHint = LocalizedStringResource(
+            "sources.graphForm.artifactsHint",
+            defaultValue: "Select all the artifacts that are relevant to this evidence graph.",
+            comment: "Caption under the Artifacts heading in the evidence graph form"
+        )
+
+        static let graphFormAddConfirm = LocalizedStringResource(
+            "sources.graphForm.addConfirm",
+            defaultValue: "Add",
+            comment: "Confirm button of the Add evidence graph form"
+        )
+
+        static let graphFormEditTitle = LocalizedStringResource(
+            "sources.graphForm.editTitle",
+            defaultValue: "Edit evidence graph",
+            comment: "Title of the Edit evidence graph form"
+        )
+
+        static let graphFormSaveConfirm = LocalizedStringResource(
+            "sources.graphForm.saveConfirm",
+            defaultValue: "Save",
+            comment: "Confirm button of the Edit evidence graph form"
+        )
+
+        static let graphFormName = LocalizedStringResource(
+            "sources.graphForm.name",
+            defaultValue: "Name",
+            comment: "Label of the evidence graph name field"
+        )
+
+        static let graphFormNamePlaceholder = LocalizedStringResource(
+            "sources.graphForm.namePlaceholder",
+            defaultValue: "Jones household",
+            comment: "Placeholder of the evidence graph name field"
+        )
+
+        static let graphFormNameRequired = LocalizedStringResource(
+            "sources.graphForm.nameRequired",
+            defaultValue: "Give the evidence graph a name.",
+            comment: "Error under the evidence graph name field when it is blank"
+        )
+
+        static let graphFormDescription = LocalizedStringResource(
+            "sources.graphForm.description",
+            defaultValue: "Description",
+            comment: "Label of the evidence graph description field"
+        )
+
+        static let graphFormDescriptionHint = LocalizedStringResource(
+            "sources.graphForm.descriptionHint",
+            defaultValue: "Which part of the source this graph covers",
+            comment: "Hint under the evidence graph description field"
+        )
+
+        static let graphFormNoneChecked = LocalizedStringResource(
+            "sources.graphForm.noneChecked",
+            defaultValue: "Check at least one artifact.",
+            comment: "Line under the Artifact checklist when no Artifact is checked"
+        )
+
+        static let graphFormKeptLinkedMessage = LocalizedStringResource(
+            "sources.graphForm.keptLinkedMessage",
+            defaultValue: "These artifacts stay linked while citations in this graph use them.",
+            comment: "Callout above the Citations that keep an Artifact linked to the graph"
+        )
+
+        static let graphFormLoading = LocalizedStringResource(
+            "sources.graphForm.loading",
+            defaultValue: "Reading the artifacts…",
+            comment: "Evidence graph form loading line while the kept links are read"
+        )
+
+        static let graphFormLoadErrorTitle = LocalizedStringResource(
+            "sources.graphForm.loadErrorTitle",
+            defaultValue: "Couldn’t read the artifacts",
+            comment: "Evidence graph form callout title when the kept links fail to load"
+        )
+
+        static func graphFormLoadErrorMessage(_ error: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.graphForm.loadErrorMessage",
+                defaultValue: "Name and description are kept. Read the artifacts again to change the links. %@",
+                comment: "Evidence graph form load error message; argument is the error text"
+            ), error)
+        }
+
+        static let graphFormSaveErrorTitle = LocalizedStringResource(
+            "sources.graphForm.saveErrorTitle",
+            defaultValue: "Couldn’t save the evidence graph",
+            comment: "Evidence graph form callout title when the save fails"
+        )
+
+        static func graphFormSaveErrorMessage(_ error: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.graphForm.saveErrorMessage",
+                defaultValue: "Nothing was saved. Your changes are kept. %@",
+                comment: "Evidence graph form save error message; argument is the error text"
+            ), error)
+        }
+
+        static let toastGraphAddedTitle = LocalizedStringResource(
+            "sources.page.toastGraphAddedTitle",
+            defaultValue: "Evidence graph added",
+            comment: "Toast title after an Evidence graph is added"
+        )
+
+        static func toastGraphAddedBody(ref: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.toastGraphAddedBody",
+                defaultValue: "%@ is ready to open.",
+                comment: "Toast body after an Evidence graph is added; argument is GPH-…"
+            ), ref)
+        }
+
         static let metadataHeading = LocalizedStringResource(
             "sources.page.metadataHeading",
             defaultValue: "Metadata",
@@ -8893,7 +9039,7 @@ enum L10n {
         )
         static let gateLastGraphBody = LocalizedStringResource(
             "deleteImpact.gate.lastGraph.body",
-            defaultValue: "A source keeps at least one evidence graph. Add another graph before you delete this one.",
+            defaultValue: "A source keeps at least one evidence graph. Use Add evidence graph to make another, then delete this one. A new evidence graph needs an artifact.",
             comment: "Extra-gate body for last_graph"
         )
 

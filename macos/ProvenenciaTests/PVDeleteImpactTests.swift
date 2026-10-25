@@ -102,7 +102,7 @@ struct PVDeleteImpactCopyTests {
         #expect(!PVDeleteImpactControls.showsDestructiveAction(report))
         let gate = try #require(PVDeleteImpactCopy.extraGate(for: .lastGraph, ref: "GPH-7KD45"))
         #expect(L10n.string(gate.title) == "This is the source’s only evidence graph")
-        #expect(gate.body == "A source keeps at least one evidence graph. Add another graph before you delete this one.")
+        #expect(gate.body == "A source keeps at least one evidence graph. Use Add evidence graph to make another, then delete this one. A new evidence graph needs an artifact.")
     }
 
     @Test func voiceOverNamesEraseVersusBlocked() {

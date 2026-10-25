@@ -1465,7 +1465,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "A source keeps at least one evidence graph. Add another graph before you delete this one."
+            "value": "A source keeps at least one evidence graph. Use Add evidence graph to make another, then delete this one. A new evidence graph needs an artifact."
           }
         }
       }
@@ -22031,6 +22031,282 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete %@"
+          }
+        }
+      }
+    },
+    "sources.page.addEvidenceGraph": {
+      "comment": "Button in the Evidence graphs header that opens the Add evidence graph form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add evidence graph"
+          }
+        }
+      }
+    },
+    "sources.graph.addNeedsArtifact": {
+      "comment": "Tooltip and VoiceOver hint of Add evidence graph when the Source has no Artifact",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add an artifact before you add an evidence graph"
+          }
+        }
+      }
+    },
+    "sources.page.graph.editLabel": {
+      "comment": "VoiceOver label for editing an Evidence graph; argument is the graph name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit %@"
+          }
+        }
+      }
+    },
+    "sources.graphForm.addTitle": {
+      "comment": "Title of the Add evidence graph form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add evidence graph"
+          }
+        }
+      }
+    },
+    "sources.graphForm.addSubtitle": {
+      "comment": "Subtitle of the Add evidence graph form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An evidence graph is a discrete group of subjects and their relationships. Use different graphs to isolate groups of data from a large source."
+          }
+        }
+      }
+    },
+    "sources.graphForm.artifactsHint": {
+      "comment": "Caption under the Artifacts heading in the evidence graph form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select all the artifacts that are relevant to this evidence graph."
+          }
+        }
+      }
+    },
+    "sources.graphForm.addConfirm": {
+      "comment": "Confirm button of the Add evidence graph form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
+          }
+        }
+      }
+    },
+    "sources.graphForm.editTitle": {
+      "comment": "Title of the Edit evidence graph form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit evidence graph"
+          }
+        }
+      }
+    },
+    "sources.graphForm.saveConfirm": {
+      "comment": "Confirm button of the Edit evidence graph form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        }
+      }
+    },
+    "sources.graphForm.name": {
+      "comment": "Label of the evidence graph name field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
+          }
+        }
+      }
+    },
+    "sources.graphForm.namePlaceholder": {
+      "comment": "Placeholder of the evidence graph name field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jones household"
+          }
+        }
+      }
+    },
+    "sources.graphForm.nameRequired": {
+      "comment": "Error under the evidence graph name field when it is blank",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Give the evidence graph a name."
+          }
+        }
+      }
+    },
+    "sources.graphForm.description": {
+      "comment": "Label of the evidence graph description field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Description"
+          }
+        }
+      }
+    },
+    "sources.graphForm.descriptionHint": {
+      "comment": "Hint under the evidence graph description field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Which part of the source this graph covers"
+          }
+        }
+      }
+    },
+    "sources.graphForm.noneChecked": {
+      "comment": "Line under the Artifact checklist when no Artifact is checked",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check at least one artifact."
+          }
+        }
+      }
+    },
+    "sources.graphForm.keptLinkedMessage": {
+      "comment": "Callout above the Citations that keep an Artifact linked to the graph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These artifacts stay linked while citations in this graph use them."
+          }
+        }
+      }
+    },
+    "sources.graphForm.loading": {
+      "comment": "Evidence graph form loading line while the kept links are read",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading the artifacts…"
+          }
+        }
+      }
+    },
+    "sources.graphForm.loadErrorTitle": {
+      "comment": "Evidence graph form callout title when the kept links fail to load",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t read the artifacts"
+          }
+        }
+      }
+    },
+    "sources.graphForm.loadErrorMessage": {
+      "comment": "Evidence graph form load error message; argument is the error text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name and description are kept. Read the artifacts again to change the links. %@"
+          }
+        }
+      }
+    },
+    "sources.graphForm.saveErrorTitle": {
+      "comment": "Evidence graph form callout title when the save fails",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t save the evidence graph"
+          }
+        }
+      }
+    },
+    "sources.graphForm.saveErrorMessage": {
+      "comment": "Evidence graph form save error message; argument is the error text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing was saved. Your changes are kept. %@"
+          }
+        }
+      }
+    },
+    "sources.page.toastGraphAddedTitle": {
+      "comment": "Toast title after an Evidence graph is added",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence graph added"
+          }
+        }
+      }
+    },
+    "sources.page.toastGraphAddedBody": {
+      "comment": "Toast body after an Evidence graph is added; argument is GPH-…",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is ready to open."
           }
         }
       }
