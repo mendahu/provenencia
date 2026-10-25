@@ -14,6 +14,7 @@
 		AA1214000000000000000004 /* SourceFormLoadArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1214000000000000000003 /* SourceFormLoadArea.swift */; };
 		AA121400000000000000000D /* SourceArtifactGraphLinks.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA121400000000000000000E /* SourceArtifactGraphLinks.swift */; };
 		AA1214000000000000000002 /* PVArtifactChecklist.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1214000000000000000001 /* PVArtifactChecklist.swift */; };
+		AA1214000000000000000F02 /* PVChecklistRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1214000000000000000F01 /* PVChecklistRows.swift */; };
 		A91600000000000000000034 /* PVSymbolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91600000000000000000033 /* PVSymbolTests.swift */; };
 		A91600000000000000000032 /* PersonDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91600000000000000000031 /* PersonDetailTests.swift */; };
 		A91D00000000000000000008 /* EventDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91D00000000000000000007 /* EventDetailTests.swift */; };
@@ -453,6 +454,7 @@
 		AA1214000000000000000005 /* PVArtifactChecklistTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVArtifactChecklistTests.swift; sourceTree = "<group>"; };
 		AA1214000000000000000003 /* SourceFormLoadArea.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceFormLoadArea.swift; sourceTree = "<group>"; };
 		AA121400000000000000000E /* SourceArtifactGraphLinks.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceArtifactGraphLinks.swift; sourceTree = "<group>"; };
+		AA1214000000000000000F01 /* PVChecklistRows.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVChecklistRows.swift; sourceTree = "<group>"; };
 		AA1214000000000000000001 /* PVArtifactChecklist.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVArtifactChecklist.swift; sourceTree = "<group>"; };
 		A91600000000000000000033 /* PVSymbolTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSymbolTests.swift; sourceTree = "<group>"; };
 		A91600000000000000000031 /* PersonDetailTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonDetailTests.swift; sourceTree = "<group>"; };
@@ -1860,6 +1862,7 @@
 			isa = PBXGroup;
 			children = (
 				AA1214000000000000000001 /* PVArtifactChecklist.swift */,
+				AA1214000000000000000F01 /* PVChecklistRows.swift */,
 			);
 			name = ArtifactChecklist;
 			path = ArtifactChecklist;
@@ -2321,6 +2324,7 @@
 				AA1214000000000000000008 /* SourceGraphFormModel.swift in Sources */,
 				AA121400000000000000000A /* SourceGraphFormDialog.swift in Sources */,
 				AA1214000000000000000002 /* PVArtifactChecklist.swift in Sources */,
+				AA1214000000000000000F02 /* PVChecklistRows.swift in Sources */,
 				AA00000000000000000C1205 /* SourceTypeComboRow.swift in Sources */,
 				AA0000000000000000000365 /* SourcePageDescriptionView.swift in Sources */,
 				AA0000000000000000000367 /* SourcePageCredibilityView.swift in Sources */,

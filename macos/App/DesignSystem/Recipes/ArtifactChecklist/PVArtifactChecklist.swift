@@ -31,6 +31,11 @@ enum PVChecklistState {
             && checkedCount(ids: ids, excluded: excluded, locked: locked) > 0
     }
 
+    /// Checks or unchecks one id in the unchecked set.
+    static func setChecked(_ on: Bool, id: String, in excluded: inout Set<String>) {
+        if on { excluded.remove(id) } else { excluded.insert(id) }
+    }
+
     /// What the All row sets `excluded` to: off clears every id that is not locked.
     static func toggledAll(on: Bool, ids: [String], locked: Set<String>) -> Set<String> {
         on ? [] : Set(ids).subtracting(locked)
@@ -57,7 +62,6 @@ struct PVArtifactChecklist: View {
     let accessibilityIdentifierPrefix: String
 
     private static let thumbnailSize: CGFloat = 32
-    static let maxRowsHeight: CGFloat = 264
 
     private var ids: [String] { artifacts.map(\.id) }
     private var lockedIDs: Set<String> { Set(locked.keys) }
@@ -71,23 +75,7 @@ struct PVArtifactChecklist: View {
         } else {
             VStack(alignment: .leading, spacing: PVSpacing.space4) {
                 header
-                VStack(spacing: 0) {
-                    allRow
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            ForEach(artifacts, id: \.id) { artifact in
-                                PVDivider()
-                                row(artifact)
-                            }
-                        }
-                    }
-                    .frame(maxHeight: Self.maxRowsHeight)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                        .strokeBorder(PVColor.borderSubtle, lineWidth: 1)
-                }
+                PVChecklistFrame(items: artifacts, id: \.id, header: { allRow }, row: row)
             }
             .accessibilityIdentifier(accessibilityIdentifierPrefix)
         }
@@ -161,37 +149,17 @@ struct PVArtifactChecklist: View {
         .padding(.horizontal, PVSpacing.space5)
     }
 
-    @ViewBuilder
     private func rowCheckbox(_ artifact: CatalogArtifact) -> some View {
-        if let hint = locked[artifact.id] {
-            // Always the labelled form: an unlabelled Artifact shows its ref as
-            // the label, so the hint is never alone.
-            PVCheckbox(
-                verbatim: artifact.displayTitle,
-                description: hint,
-                isChecked: .constant(true),
-                isLocked: true
-            )
-            .accessibilityValue(Text(verbatim: L10n.ArtifactChecklist.lockedValue(ref: artifact.ref)))
-        } else {
-            let isChecked = Binding(
-                get: { !excluded.contains(artifact.id) },
-                set: { on in
-                    if on { excluded.remove(artifact.id) } else { excluded.insert(artifact.id) }
-                }
-            )
-            if artifact.hasDisplayLabel {
-                PVCheckbox(verbatim: artifact.displayTitle, isChecked: isChecked, isDisabled: isDisabled)
-                    .accessibilityValue(Text(verbatim: artifact.ref))
-            } else {
-                PVCheckbox(
-                    isChecked: isChecked,
-                    isDisabled: isDisabled,
-                    accessibilitySpokenLabel: artifact.displayTitle
-                )
-                .accessibilityValue(Text(verbatim: artifact.ref))
-            }
-        }
+        PVChecklistCheckbox(
+            id: artifact.id,
+            title: artifact.displayTitle,
+            ref: artifact.ref,
+            showsTitle: artifact.hasDisplayLabel || locked[artifact.id] != nil,
+            speaksRef: true,
+            lockReason: locked[artifact.id],
+            excluded: $excluded,
+            isDisabled: isDisabled
+        )
     }
 }
 

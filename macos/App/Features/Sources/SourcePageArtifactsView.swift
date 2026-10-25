@@ -88,6 +88,7 @@ struct SourcePageArtifactsView: View {
                     SourceArtifactGraphLinks(
                         graphs: graphs,
                         excluded: $model.artifacts.draft.excludedGraphIDs,
+                        isDisabled: model.artifacts.draftGraphsLocked,
                         accessibilityIdentifierPrefix: "sources.page.addArtifact.graphs"
                     )
                     if model.artifacts.draftNeedsGraph {
@@ -310,9 +311,9 @@ struct SourcePageArtifactsView: View {
                             set: { model.artifacts.linkEdit?.excluded = $0 }
                         ),
                         locked: edit.locked,
+                        isDisabled: model.artifacts.savingID == art.id,
                         accessibilityIdentifierPrefix: prefix
                     )
-                    .disabled(model.artifacts.savingID == art.id)
                 }
             }
         }
