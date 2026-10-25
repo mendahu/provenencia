@@ -175,6 +175,8 @@ var seedProperties = []seedProperty{
 	{Key: "toponym", Label: "Toponym", Description: "Place name as interpreted from a Source", ValueType: propertymeta.ValueTypeText, Cardinality: propertymeta.CardinalityMultiple},
 	{Key: "interests", Label: "Interests", Description: "Free-text interests. More than one value is allowed.", ValueType: propertymeta.ValueTypeText, Cardinality: propertymeta.CardinalityMultiple},
 	{Key: "likeness", Label: "Likeness", Description: "A picture of this person: a region of a cited page and the image of it. More than one is allowed.", ValueType: propertymeta.ValueTypeDepiction, Cardinality: propertymeta.CardinalityMultiple},
+	{Key: "religion", Label: "Religion", Description: "Religion or denomination as recorded. More than one value is allowed. Product term vocabulary; add your own terms.", ValueType: propertymeta.ValueTypeTerm, Cardinality: propertymeta.CardinalityMultiple},
+	{Key: "languages_spoken", Label: "Languages spoken", Description: "Languages the person spoke. More than one value is allowed. Product term vocabulary; add your own terms.", ValueType: propertymeta.ValueTypeTerm, Cardinality: propertymeta.CardinalityMultiple},
 }
 
 // Non-bridge bindings from docs/seeded-vocabulary.md §3.3.
@@ -187,6 +189,8 @@ var seedBindings = []seedBinding{
 	{TypeKey: "person", PropertyKey: "sex_at_birth", SortOrder: 2},
 	{TypeKey: "person", PropertyKey: "gender", SortOrder: 3},
 	{TypeKey: "person", PropertyKey: "interests", SortOrder: 4},
+	{TypeKey: "person", PropertyKey: "religion", SortOrder: 5},
+	{TypeKey: "person", PropertyKey: "languages_spoken", SortOrder: 6},
 
 	{TypeKey: "event", PropertyKey: "event_type", SortOrder: 0, Locked: true},
 	{TypeKey: "event", PropertyKey: "event_name", SortOrder: 1},
@@ -206,7 +210,7 @@ var seedBindings = []seedBinding{
 	{TypeKey: "source", PropertyKey: "remark", SortOrder: 1},
 }
 
-// Property terms from docs/seeded-vocabulary.md §3.4–3.9.
+// Property terms from docs/seeded-vocabulary.md §3.4–3.11.
 var seedTerms = []seedTerm{
 	{PropertyKey: "sex_at_birth", Key: "female", Label: "Female"},
 	{PropertyKey: "sex_at_birth", Key: "male", Label: "Male"},
@@ -255,4 +259,8 @@ var seedTerms = []seedTerm{
 		Description: "From is part of to. Builds display chains.", Directed: true},
 	{PropertyKey: "place_relationship_type", Key: "succeeded_by", Label: "Succeeded by",
 		Description: "From was succeeded by to. Lineage; never a chain.", Directed: true},
+
+	{PropertyKey: "religion", Key: "catholic", Label: "Catholic"},
+
+	{PropertyKey: "languages_spoken", Key: "english", Label: "English"},
 }

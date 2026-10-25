@@ -137,21 +137,28 @@ func TestPipeline(t *testing.T) {
 
 func TestPipelineMultipleCardinality(t *testing.T) {
 	cases := []struct {
-		name  string
-		in    []Candidate
-		want  []wantRow
-		state State
+		name      string
+		valueType string
+		in        []Candidate
+		want      []wantRow
+		state     State
 	}{
-		{"majority does not crowd out a distinct value",
+		{"majority does not crowd out a distinct value", propertymeta.ValueTypeText,
 			[]Candidate{from("a", text(1, "York")), from("b", text(2, "york")), from("c", text(3, "Toronto"))},
 			[]wantRow{{[]byte{1, 2}, ReasonKept, 2, 0}, {[]byte{3}, ReasonKept, 1, 0}}, StateMultiple},
-		{"a weak distinct value still drops",
+		{"a weak distinct value still drops", propertymeta.ValueTypeText,
 			[]Candidate{text(1, "York"), lowTrust(text(2, "Toronto"))},
+			[]wantRow{{[]byte{1}, ReasonKept, 1, 0}, {[]byte{2}, ReasonWeak, 1, 0}}, StateSingle},
+		{"distinct terms both kept", propertymeta.ValueTypeTerm,
+			[]Candidate{from("a", term(1, "t1", "catholic")), from("b", term(2, "t1", "catholic")), from("c", term(3, "t2", "anglican"))},
+			[]wantRow{{[]byte{1, 2}, ReasonKept, 2, 0}, {[]byte{3}, ReasonKept, 1, 0}}, StateMultiple},
+		{"a weak distinct term still drops", propertymeta.ValueTypeTerm,
+			[]Candidate{term(1, "t1", "catholic"), lowTrust(term(2, "t2", "anglican"))},
 			[]wantRow{{[]byte{1}, ReasonKept, 1, 0}, {[]byte{2}, ReasonWeak, 1, 0}}, StateSingle},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Reconcile(testRules, propertymeta.ValueTypeText, tc.in, nil, propertymeta.CardinalityMultiple)
+			got, err := Reconcile(testRules, tc.valueType, tc.in, nil, propertymeta.CardinalityMultiple)
 			if err != nil {
 				t.Fatal(err)
 			}

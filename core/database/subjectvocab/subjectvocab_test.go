@@ -521,6 +521,118 @@ func TestInstallSeedsFuneralAndPallbearer(t *testing.T) {
 	}
 }
 
+func TestInstallMatchesRegistry(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	if err := Install(c); err != nil {
+		t.Fatal(err)
+	}
+
+	propertyIDs := map[string][]byte{}
+	for _, sp := range seedProperties {
+		p, err := properties.Lookup(c, sp.Key, vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatalf("property %s: %v", sp.Key, err)
+		}
+		wantCardinality := sp.Cardinality
+		if wantCardinality == "" {
+			wantCardinality = propertymeta.CardinalitySingle
+		}
+		if p.Label != sp.Label || p.ValueType != sp.ValueType || p.Cardinality != wantCardinality {
+			t.Fatalf("property %s: got %+v, registry %+v", sp.Key, p, sp)
+		}
+		propertyIDs[sp.Key] = p.ID
+	}
+
+	for _, st := range seedTerms {
+		id, ok := propertyIDs[st.PropertyKey]
+		if !ok {
+			t.Fatalf("term %s/%s: property not in registry", st.PropertyKey, st.Key)
+		}
+		term, err := propertyterms.Lookup(c, id, st.Key, vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatalf("term %s/%s: %v", st.PropertyKey, st.Key, err)
+		}
+		if term.Label != st.Label || term.Neutral != st.Neutral || term.Directed != st.Directed || term.InverseKey != st.Inverse {
+			t.Fatalf("term %s/%s: got %+v, registry %+v", st.PropertyKey, st.Key, term, st)
+		}
+	}
+
+	for _, sty := range seedTypes {
+		typ, err := subjecttypes.Lookup(c, sty.Key, vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatalf("type %s: %v", sty.Key, err)
+		}
+		got, err := ListBindings(c, typ.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := BindingsForType(sty.Key)
+		if len(got) != len(want) {
+			t.Fatalf("type %s: %d bindings, registry %d", sty.Key, len(got), len(want))
+		}
+		byKey := map[string]Binding{}
+		for _, b := range got {
+			byKey[b.Property.Key] = b
+		}
+		for _, w := range want {
+			b, ok := byKey[w.PropertyKey]
+			if !ok || b.SortOrder != w.SortOrder || b.Locked != w.Locked {
+				t.Fatalf("type %s binding %s: got %+v, registry %+v", sty.Key, w.PropertyKey, b, w)
+			}
+		}
+	}
+}
+
+func TestSeedReligionAndLanguagesSpoken(t *testing.T) {
+	for key, label := range map[string]string{"religion": "Religion", "languages_spoken": "Languages spoken"} {
+		var found *seedProperty
+		for i := range seedProperties {
+			if seedProperties[i].Key == key {
+				found = &seedProperties[i]
+			}
+		}
+		if found == nil {
+			t.Fatalf("%s not in seedProperties", key)
+		}
+		if found.Label != label || found.ValueType != propertymeta.ValueTypeTerm || found.Cardinality != propertymeta.CardinalityMultiple {
+			t.Fatalf("%s %+v", key, *found)
+		}
+	}
+	wantTerms := map[string][]seedTerm{
+		"religion":         {{PropertyKey: "religion", Key: "catholic", Label: "Catholic"}},
+		"languages_spoken": {{PropertyKey: "languages_spoken", Key: "english", Label: "English"}},
+	}
+	for key, want := range wantTerms {
+		var got []seedTerm
+		for _, st := range seedTerms {
+			if st.PropertyKey == key {
+				got = append(got, st)
+			}
+		}
+		if !slices.Equal(got, want) {
+			t.Fatalf("%s terms %+v, want %+v", key, got, want)
+		}
+	}
+	for key, sortOrder := range map[string]int{"religion": 5, "languages_spoken": 6} {
+		sort := -1
+		for _, b := range BindingsForType("person") {
+			if b.PropertyKey == key {
+				sort = b.SortOrder
+			}
+		}
+		if sort != sortOrder {
+			t.Fatalf("%s person sort order %d, want %d", key, sort, sortOrder)
+		}
+		if LockedBinding("person", key) {
+			t.Fatalf("%s binding is locked", key)
+		}
+	}
+}
+
 func TestAllTypesPaletteSortFollowsBoardOrder(t *testing.T) {
 	want := []string{
 		"person", "event", "place", "relationship",
