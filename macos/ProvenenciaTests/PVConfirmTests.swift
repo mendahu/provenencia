@@ -60,7 +60,7 @@ struct PVConfirmAccessibilityTests {
     }
 }
 
-@Suite
+@MainActor @Suite
 struct PVConfirmContentTests {
     private func sampleCopy() -> PVConfirmCopy {
         PVConfirmCopy(

@@ -70,24 +70,17 @@ struct WorkspaceSessionTests {
         let counter = Counter()
         let gate = Gate()
 
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { @MainActor in
+        let loads = (0..<2).map { _ in
+            Task {
                 _ = session.ensureQuery(key) {
                     counter.increment()
                     await gate.waitForOpen()
                     return ["shared"]
                 }
             }
-            group.addTask { @MainActor in
-                _ = session.ensureQuery(key) {
-                    counter.increment()
-                    await gate.waitForOpen()
-                    return ["shared"]
-                }
-            }
-            await gate.open()
-            await group.waitForAll()
         }
+        gate.open()
+        for load in loads { await load.value }
 
         let handle: QueryHandle<[String]> = session.queryHandle(key)!
         await waitForFetchComplete(handle)
@@ -185,7 +178,7 @@ struct WorkspaceSessionTests {
 
         #expect(handle.value == ["first"])
         #expect(handle.isFetching)
-        await gate.open()
+        gate.open()
         await waitForFetchComplete(handle)
         #expect(handle.value == ["second"])
         #expect(handle.isFetching == false)
@@ -863,7 +856,7 @@ struct WorkspaceSessionTests {
         _ = session.ensureQuery(key) { ["new"] }
         await waitForFetchComplete(handle)
         #expect(handle.value == ["new"])
-        await olderGate.open()
+        olderGate.open()
         await Task.yield()
         #expect(handle.value == ["new"])
         #expect(handle.isFetching == false)
@@ -893,7 +886,7 @@ struct WorkspaceSessionTests {
         }
         session.setQueryValue(key, value: [patched])
         #expect(handle.value?.first?.id == "patched")
-        await gate.open()
+        gate.open()
         await Task.yield()
         #expect(handle.value?.first?.id != "stale")
     }
