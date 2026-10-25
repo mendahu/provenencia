@@ -63,3 +63,15 @@ Round 1 raised three executability blockers (X-1 – X-3), each a missing decisi
 
 ### M-5 · nit · An unbacked "Next adds" line and the name `useEvidenceGraph`
 **Answer:** Fixed. The displays and details line is dropped, so **Next adds** is "None named". `useEvidenceGraph` is renamed `touchEvidenceGraph`.
+
+## Refresh 2026-10-25 — S11-21 landed
+
+S11-21 merged as #536 (`933cc3c`). Between the planning base `74f64d0` and `933cc3c`, no Go file changed: the later commits are the evidence graph canvas (macOS) and docs. Every §4 row was re-read on `main`, and the working set was measured again with the same throwaway test. Source A gives 23 graphs, 21 for a full pass and at most 2 per request, as before. The one-place Source gives 1 for a full evidence pass over all 33 handle rows.
+
+Changes to the plan:
+
+- The header, Planned and §4 now point at `main` @ `933cc3c`. Stop condition 1, which waited on #536, now checks the shape of `TestLargeSourceBudgets` on `main`.
+- §4 Memo-only readers: the candidates memo lives in `loadCandidatesMemo`, not `loadCanon`. S11-21's Landed note records that move; the earlier row named the wrong function.
+- §4 Working set and D-6 cite the one-place measurement.
+- §3 Out: card image memory (`docs/ideas/evidence-graph-card-memory.md`, parked by S11-21) gets its own budget. This commit answers that idea's open question.
+- Map conflict: S11-21's PR reworded S11-31's Check to "a Source whose events are all located at one place with many filed events". This plan keeps "a page whose records hold members from many Sources", because a full evidence pass on the one-place Source loads 1 graph and cannot reach any cap. Flagged to the user.
