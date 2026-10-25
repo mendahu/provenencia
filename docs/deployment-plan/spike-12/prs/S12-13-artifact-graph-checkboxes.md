@@ -1,6 +1,7 @@
 # S12-13 — Artifact graph checkboxes
 
-**Status:** Planned
+**Status:** Landed in [#562](https://github.com/mendahu/provenencia/pull/562) (2026-10-25)
+**Landed:** Differences from the plan: `evidenceGraphIndex` is internal, not private, because its builder lives in `WorkspaceSession+EvidenceGraphs.swift`; `SourceArtifactLinkEdit` is the nested `SourceArtifactsSection.LinkEdit`; `PVArtifactChecklist.maxRowsHeight` is internal so the graph group shares the 264pt cap; `SourceArtifactsSection` gains `linkEditGraphs` (the card's rows from the session) and `FakeStore` gains `updateArtifactCalls` (T-8 and T-9 assert no or one `updateArtifact`); `saveFields` returns without a call while the link read has not finished; when the reload after a refused save has no value, the card's Read again error is the graph list's error; the new file's project ids are `AA121400000000000000000D` / `...0E`; `EvidenceGraphModelTests.makeStore` now links `a`, `b`, `c` to its graph and `selectStaysAvailableWithoutAnArtifact` seeds a graph with no links instead of a Source without Artifacts. The manual check and the twelve-graph dialog stop condition were not run in the app by the implementer.
 **Spike / slice:** Spike 12 · Slice 4 — Graphs in the UI
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S12-D4](../design/archive/S12-D4-artifact-graph-links.md), board agreed 2026-10-25

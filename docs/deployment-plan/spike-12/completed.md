@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-13 — Artifact graph checkboxes
+
+**Landed 2026-10-25** in [#562](https://github.com/mendahu/provenencia/pull/562). On a Source with two or more Evidence graphs, Add artifact lists the graphs as checkboxes, all checked, and links the new Artifact only to the checked ones (Add waits until one is checked). An Artifact card in edit lists the graphs checked for its current links; one Save writes the label, description and link changes, links before unlinks. A graph that must keep the Artifact (its Citations use it, or it is the graph's only Artifact) shows locked with the reason, and a refused save shows on the card and re-reads the locks. The canvas's cite tools and Files menu now follow the graph's own links, and its callout and the composer's name the graph. The session indexes the graph list by id and Source (`evidenceGraphsBySource`), which replaces the Sources list's own cache; `PVArtifactChecklistState` is `PVChecklistState`, and `SourceFormLoadArea` gains a compact size. Swift only.
+
 ## S12-12 — Graph form
 
 **Landed 2026-10-25** in [#557](https://github.com/mendahu/provenencia/pull/557). A researcher can click Add evidence graph in the Source page's Evidence graphs header, or Edit on a graph's row, and get one form: name, description and the Source's Artifacts as a checklist, all checked for a new graph and the linked ones for an edit. Saving makes or changes the graph in one write; Add toasts "Evidence graph added" and the list stays in name order. An edit reads once which Artifacts the graph's Citations use, shows them checked and locked with the Citations listed, and offers Read again if that read fails. Add is disabled with a reason on a Source with no Artifacts. The last-graph delete notice now names Add evidence graph. The Artifact checklist is promoted to the `PVArtifactChecklist` recipe (shared with Copy Source), `PVCheckbox` gains a lock mark, and the delete notice's Citation list and the forms' load area are shared.

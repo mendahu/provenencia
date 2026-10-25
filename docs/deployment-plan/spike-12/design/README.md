@@ -12,7 +12,7 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 
 ## Archived
 
-- [S12-D4](archive/S12-D4-artifact-graph-links.md) — Artifacts section graph links; board agreed 2026-10-25, built by S12-13.
+- [S12-D4](archive/S12-D4-artifact-graph-links.md) — Artifacts section graph links; board agreed 2026-10-25, built by S12-13 ([#562](https://github.com/mendahu/provenencia/pull/562)).
 - [S12-D3](archive/S12-D3-graph-form.md) — Graph form; board agreed 2026-10-25, built by S12-12.
 - [S12-D2](archive/S12-D2-source-page-graphs.md) — Source page Graphs section; board agreed 2026-10-25, built by S12-11.
 - [S12-D1](archive/S12-D1-copy-source-form.md) — Copy Source form (Source page); board agreed 2026-10-18, built by S12-02 (#485).
