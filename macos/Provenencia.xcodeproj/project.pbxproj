@@ -407,6 +407,7 @@
 		A53400000000000000001004 /* ArtifactFileFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000004 /* ArtifactFileFixtures.swift */; };
 		A53400000000000000001005 /* CitationComposerDepictionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000005 /* CitationComposerDepictionTests.swift */; };
 		A53400000000000000001007 /* RegionFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000007 /* RegionFixtures.swift */; };
+		A53400000000000000001B01 /* EvidenceGraphFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000B01 /* EvidenceGraphFixtures.swift */; };
 		A53400000000000000001A01 /* NameFormatOrdersFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000A01 /* NameFormatOrdersFixtures.swift */; };
 		A53400000000000000001006 /* ArtifactRegionCropTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000006 /* ArtifactRegionCropTests.swift */; };
 /* End PBXBuildFile section */
@@ -839,6 +840,7 @@
 		A53400000000000000000004 /* ArtifactFileFixtures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "ArtifactFileFixtures.swift"; sourceTree = "<group>"; };
 		A53400000000000000000005 /* CitationComposerDepictionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "CitationComposerDepictionTests.swift"; sourceTree = "<group>"; };
 		A53400000000000000000007 /* RegionFixtures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "RegionFixtures.swift"; sourceTree = "<group>"; };
+		A53400000000000000000B01 /* EvidenceGraphFixtures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "EvidenceGraphFixtures.swift"; sourceTree = "<group>"; };
 		A53400000000000000000A01 /* NameFormatOrdersFixtures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "NameFormatOrdersFixtures.swift"; sourceTree = "<group>"; };
 		A53400000000000000000006 /* ArtifactRegionCropTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "ArtifactRegionCropTests.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -1412,6 +1414,7 @@
 				A53400000000000000000005 /* CitationComposerDepictionTests.swift */,
 				A53400000000000000000004 /* ArtifactFileFixtures.swift */,
 				A53400000000000000000007 /* RegionFixtures.swift */,
+				A53400000000000000000B01 /* EvidenceGraphFixtures.swift */,
 				A53400000000000000000A01 /* NameFormatOrdersFixtures.swift */,
 				A71800000000000000000001 /* EvidenceGraphPlacementTests.swift */,
 				AA00000000000000000000F6 /* EvidenceSubjectCardFooterTests.swift */,
@@ -2392,6 +2395,7 @@
 				A53400000000000000001005 /* CitationComposerDepictionTests.swift in Sources */,
 				A53400000000000000001004 /* ArtifactFileFixtures.swift in Sources */,
 				A53400000000000000001007 /* RegionFixtures.swift in Sources */,
+				A53400000000000000001B01 /* EvidenceGraphFixtures.swift in Sources */,
 				A53400000000000000001A01 /* NameFormatOrdersFixtures.swift in Sources */,
 				A71800000000000000000002 /* EvidenceGraphPlacementTests.swift in Sources */,
 				AA00000000000000000000F7 /* EvidenceSubjectCardFooterTests.swift in Sources */,

@@ -290,7 +290,7 @@ struct WorkspaceNavigationTests {
         #expect(scrolled == .sectionRoot(.persons))
         #expect(a != WorkspaceLocation(section: .sources, sourceId: "2"))
         #expect(
-            WorkspaceLocation(section: .sources, sourceId: "1", sourceSurface: .page)
+            WorkspaceLocation.sourcePage(sourceId: "1")
                 != WorkspaceLocation(section: .sources, sourceId: "1", graphId: "g-1", sourceSurface: .graph)
         )
     }
@@ -466,7 +466,7 @@ struct WorkspaceNavigationTests {
 
     @Test func goToGraphIsDistinctPlaceFromPage() throws {
         let (navigation, _) = try attachedNavigation()
-        navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-1", sourceSurface: .page))
+        navigation.go(to: WorkspaceLocation.sourcePage(sourceId: "src-1"))
         navigation.go(to: WorkspaceLocation(section: .sources, sourceId: "src-1", graphId: "g-1", sourceSurface: .graph))
         #expect(navigation.currentLocation.sourceSurface == .graph)
         #expect(navigation.selectedSection == .sources)

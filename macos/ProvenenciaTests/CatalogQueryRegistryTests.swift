@@ -11,24 +11,6 @@ struct CatalogQueryRegistryTests {
         WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
     }
 
-    private func waitForFetchComplete<Value>(
-        _ handle: QueryHandle<Value>,
-        timeoutNanoseconds: UInt64 = 2_000_000_000
-    ) async {
-        var waited: UInt64 = 0
-        let step: UInt64 = 10_000_000
-        while waited < timeoutNanoseconds {
-            if handle.isFetching {
-                // stale-while-revalidate still in flight
-            } else if handle.status == .ready || handle.status == .error {
-                return
-            }
-            await Task.yield()
-            try? await Task.sleep(nanoseconds: step)
-            waited += step
-        }
-    }
-
     private func seedStore(_ store: FakeStore) {
         store.sourcesByProject[projectDir] = [
             CatalogSource(id: "s1", ref: "SRC-1", sourceTypeID: "t1", title: "Alpha", description: ""),
@@ -78,11 +60,11 @@ struct CatalogQueryRegistryTests {
             CatalogQueryKey.typeSuggestions(project: project, typeId: "t1")
         )
 
-        await waitForFetchComplete(sourcesHandle)
-        await waitForFetchComplete(typesHandle)
-        await waitForFetchComplete(fieldsHandle)
-        await waitForFetchComplete(workspaceHandle)
-        await waitForFetchComplete(suggestionsHandle)
+        await waitForQuery(sourcesHandle)
+        await waitForQuery(typesHandle)
+        await waitForQuery(fieldsHandle)
+        await waitForQuery(workspaceHandle)
+        await waitForQuery(suggestionsHandle)
 
         #expect(sourcesHandle.value?.first?.title == "Alpha")
         #expect(typesHandle.value?.first?.label == "Book")
@@ -97,7 +79,7 @@ struct CatalogQueryRegistryTests {
         let handle: QueryHandle<[CatalogClaimConfidenceGrade]> = session.query(
             CatalogQueryKey.confidenceGradesList(project: session.projectKey)
         )
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
         #expect(handle.value?.map(\.key) == ["low_confidence", "moderate", "high_confidence"])
     }
 
@@ -146,7 +128,7 @@ struct CatalogQueryRegistryTests {
         let handle: QueryHandle<[String: Int]> = session.query(
             CatalogQueryKey.citationCounts(project: session.projectKey, graphId: "g1")
         )
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
         #expect(handle.value?["art-0"] == 2)
         #expect(handle.value?["art-1"] == nil)
     }
@@ -161,7 +143,7 @@ struct CatalogQueryRegistryTests {
         let handle: QueryHandle<[String: EvidenceGraphProgress]> = session.query(
             CatalogQueryKey.evidenceGraphProgress(project: session.projectKey)
         )
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
         #expect(handle.value?["g-1"]?.subjectCount == 12)
         #expect(handle.value?["g-1"]?.observationCount == 48)
         #expect(handle.value?["s1"] == nil)
@@ -174,7 +156,7 @@ struct CatalogQueryRegistryTests {
         let handle: QueryHandle<[CatalogConnectRule]> = session.query(
             CatalogQueryKey.connectRules(project: session.projectKey)
         )
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
         #expect(handle.value?.isEmpty == false)
     }
 
@@ -193,7 +175,7 @@ struct CatalogQueryRegistryTests {
         let session = makeSession(store: store)
         let key = CatalogQueryKey.propertyTerms(project: session.projectKey, propertyId: "p1")
         let handle: QueryHandle<[CatalogPropertyTerm]> = session.query(key)
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
         #expect(handle.value?.count == 1)
 
         store.propertyTermsByProperty["p1"]?.append(
@@ -207,7 +189,7 @@ struct CatalogQueryRegistryTests {
             )
         )
         session.apply(.createdPropertyTerm(propertyId: "p1"))
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
         #expect(handle.value?.count == 2)
     }
 
@@ -227,7 +209,7 @@ struct CatalogQueryRegistryTests {
         let handle: QueryHandle<[CatalogListedCitation]> = session.query(
             CatalogQueryKey.citationsByArtifact(project: session.projectKey, graphId: "g1", artifactId: "art-0")
         )
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
         #expect(handle.value?.map(\.id) == ["cit-1"])
     }
 
@@ -287,7 +269,7 @@ struct CatalogQueryRegistryTests {
         let handle: QueryHandle<EvidenceGraphRows> = session.query(
             CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: "g-1")
         )
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
 
         #expect(handle.value?.graphId == "g-1")
         #expect(handle.value?.subjects.count == 2)
@@ -327,7 +309,7 @@ struct CatalogQueryRegistryTests {
         let handle: QueryHandle<EvidenceGraphRows> = session.query(
             CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: "g-1")
         )
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
 
         #expect(handle.value?.memberships.map(\.subjectID) == ["sub-1"])
         let snapshot = EvidenceGraphSnapshot.build(
@@ -371,7 +353,7 @@ struct CatalogQueryRegistryTests {
         let handle: QueryHandle<[CatalogPersonHeader]> = session.query(
             CatalogQueryKey.personsList(project: session.projectKey)
         )
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
 
         let headers = try #require(handle.value)
         #expect(headers.map(\.entity.ref) == [james.entity.ref, bare.entity.ref])
@@ -407,7 +389,7 @@ struct CatalogQueryRegistryTests {
         let handle: QueryHandle<[CatalogPersonHeader]> = session.query(
             CatalogQueryKey.personsList(project: session.projectKey)
         )
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
 
         #expect(try #require(handle.value)[0].nameValueCount == 2)
     }
@@ -442,7 +424,7 @@ struct CatalogQueryRegistryTests {
         let handle: QueryHandle<CatalogConclusionDetail> = session.query(
             CatalogQueryKey.conclusionDetail(project: session.projectKey, entityId: james.entity.id)
         )
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
 
         let detail = try #require(handle.value)
         #expect(detail.entity == james.entity)
@@ -521,9 +503,9 @@ struct CatalogQueryRegistryTests {
         let page: QueryHandle<CatalogConclusionDetail> = session.query(
             .conclusionDetail(project: session.projectKey, entityId: early.entity.id)
         )
-        await waitForFetchComplete(events)
-        await waitForFetchComplete(places)
-        await waitForFetchComplete(page)
+        await waitForQuery(events)
+        await waitForQuery(places)
+        await waitForQuery(page)
         // Order is Go's; the fake does not re-sort or re-derive.
         #expect(events.value == [late, early])
         #expect(places.value == [place])
@@ -554,7 +536,7 @@ struct CatalogQueryRegistryTests {
         let key = CatalogQueryKey.sourcesList(project: session.projectKey)
 
         let handle: QueryHandle<[CatalogSource]> = session.query(key)
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
 
         store.sourcesByProject[projectDir] = [
             CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "", title: "Beta", description: ""),
@@ -591,8 +573,8 @@ struct CatalogQueryRegistryTests {
 
         let listHandle: QueryHandle<[CatalogSource]> = session.query(listKey)
         let workspaceHandle: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
-        await waitForFetchComplete(listHandle)
-        await waitForFetchComplete(workspaceHandle)
+        await waitForQuery(listHandle)
+        await waitForQuery(workspaceHandle)
         store.heldCatalogProjectDir = nil
 
         let updated = CatalogSource(
@@ -612,7 +594,7 @@ struct CatalogQueryRegistryTests {
         let key = CatalogQueryKey.sourcesList(project: session.projectKey)
 
         let handle: QueryHandle<[CatalogSource]> = session.query(key)
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
 
         store.sourcesByProject[projectDir] = [
             CatalogSource(id: "s1", ref: "SRC-1", sourceTypeID: "", title: "Alpha", description: ""),
@@ -621,7 +603,7 @@ struct CatalogQueryRegistryTests {
 
         session.apply(.createdSource)
         let _: QueryHandle<[CatalogSource]> = session.query(key)
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
         #expect(handle.value?.count == 2)
         // FakeStore listSources is newest-created-first (id DESC), matching Go.
         #expect(handle.value?.map(\.title) == ["New Row", "Alpha"])
@@ -651,7 +633,7 @@ struct CatalogQueryRegistryTests {
         let key = CatalogQueryKey.sourcesList(project: session.projectKey)
 
         let handle: QueryHandle<[CatalogSource]> = session.query(key)
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
         store.heldCatalogProjectDir = nil
 
         let activity = CatalogActivity(revision: 42, at: "2026-10-15T16:00:00Z")
@@ -715,8 +697,8 @@ struct CatalogQueryRegistryTests {
 
         let fieldsHandle: QueryHandle<[CatalogMetadataField]> = session.query(fieldsKey)
         let typesHandle: QueryHandle<[CatalogSourceType]> = session.query(typesKey)
-        await waitForFetchComplete(fieldsHandle)
-        await waitForFetchComplete(typesHandle)
+        await waitForQuery(fieldsHandle)
+        await waitForQuery(typesHandle)
 
         store.fieldsByProject[projectDir] = [
             CatalogMetadataField(
@@ -734,7 +716,7 @@ struct CatalogQueryRegistryTests {
         ] {
             session.apply(mutation)
             let _: QueryHandle<[CatalogMetadataField]> = session.query(fieldsKey)
-            await waitForFetchComplete(fieldsHandle)
+            await waitForQuery(fieldsHandle)
             #expect(fieldsHandle.value?.first?.label == "Date")
 
             let _: QueryHandle<[CatalogSourceType]> = session.query(typesKey)
@@ -753,8 +735,8 @@ struct CatalogQueryRegistryTests {
 
         let typesHandle: QueryHandle<[CatalogSourceType]> = session.query(typesKey)
         let fieldsHandle: QueryHandle<[CatalogMetadataField]> = session.query(fieldsKey)
-        await waitForFetchComplete(typesHandle)
-        await waitForFetchComplete(fieldsHandle)
+        await waitForQuery(typesHandle)
+        await waitForQuery(fieldsHandle)
 
         store.sourceTypesByProject[projectDir] = [
             CatalogSourceType(id: "t2", key: "photo", origin: "user", label: "Photo", description: ""),
@@ -772,7 +754,7 @@ struct CatalogQueryRegistryTests {
         ] {
             session.apply(mutation)
             let _: QueryHandle<[CatalogSourceType]> = session.query(typesKey)
-            await waitForFetchComplete(typesHandle)
+            await waitForQuery(typesHandle)
             #expect(typesHandle.value?.first?.label == "Photo")
 
             let _: QueryHandle<[CatalogMetadataField]> = session.query(fieldsKey)
@@ -795,9 +777,9 @@ struct CatalogQueryRegistryTests {
         let suggestionsHandle: QueryHandle<[CatalogTypeSuggestion]> = session.query(suggestionsKey)
         let otherHandle: QueryHandle<[CatalogTypeSuggestion]> = session.query(otherSuggestionsKey)
         let typesHandle: QueryHandle<[CatalogSourceType]> = session.query(typesKey)
-        await waitForFetchComplete(suggestionsHandle)
-        await waitForFetchComplete(otherHandle)
-        await waitForFetchComplete(typesHandle)
+        await waitForQuery(suggestionsHandle)
+        await waitForQuery(otherHandle)
+        await waitForQuery(typesHandle)
 
         store.suggestionsByType["t1"] = []
         store.suggestionsByType["t2"] = [
@@ -814,7 +796,7 @@ struct CatalogQueryRegistryTests {
 
         session.apply(.assignedTypeSuggestion(typeId: "t1"))
         let _: QueryHandle<[CatalogTypeSuggestion]> = session.query(suggestionsKey)
-        await waitForFetchComplete(suggestionsHandle)
+        await waitForQuery(suggestionsHandle)
         #expect(suggestionsHandle.value?.isEmpty == true)
 
         let _: QueryHandle<[CatalogTypeSuggestion]> = session.query(otherSuggestionsKey)
@@ -1005,8 +987,8 @@ struct CatalogQueryRegistryTests {
 
         let workspaceHandle: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
         let fieldsHandle: QueryHandle<[CatalogMetadataField]> = session.query(fieldsKey)
-        await waitForFetchComplete(workspaceHandle)
-        await waitForFetchComplete(fieldsHandle)
+        await waitForQuery(workspaceHandle)
+        await waitForQuery(fieldsHandle)
         store.heldCatalogProjectDir = nil
 
         store.fieldsByProject[projectDir]?.append(
@@ -1016,7 +998,7 @@ struct CatalogQueryRegistryTests {
         )
         session.apply(.createdMetadataField)
         session.apply(.createdSourceType)
-        await waitForFetchComplete(fieldsHandle)
+        await waitForQuery(fieldsHandle)
         #expect(fieldsHandle.value?.map(\.label) == ["Author", "Folio"])
         #expect(workspaceHandle.isFetching == false)
 
@@ -1044,8 +1026,8 @@ struct CatalogQueryRegistryTests {
 
         let firstHandle: QueryHandle<CatalogSourceWorkspace> = session.query(firstKey)
         let secondHandle: QueryHandle<CatalogSourceWorkspace> = session.query(secondKey)
-        await waitForFetchComplete(firstHandle)
-        await waitForFetchComplete(secondHandle)
+        await waitForQuery(firstHandle)
+        await waitForQuery(secondHandle)
 
         store.metadataBySource["s1"] = [suggestedAuthorEntry(label: "Author name")]
         store.metadataBySource["s2"] = [suggestedAuthorEntry(label: "Author name")]
@@ -1053,8 +1035,8 @@ struct CatalogQueryRegistryTests {
 
         let _: QueryHandle<CatalogSourceWorkspace> = session.query(firstKey)
         let _: QueryHandle<CatalogSourceWorkspace> = session.query(secondKey)
-        await waitForFetchComplete(firstHandle)
-        await waitForFetchComplete(secondHandle)
+        await waitForQuery(firstHandle)
+        await waitForQuery(secondHandle)
         #expect(firstHandle.value?.metadata.first?.field.label == "Author name")
         #expect(secondHandle.value?.metadata.first?.field.label == "Author name")
     }
@@ -1082,8 +1064,8 @@ struct CatalogQueryRegistryTests {
 
         let firstHandle: QueryHandle<[CatalogTypeSuggestion]> = session.query(firstKey)
         let secondHandle: QueryHandle<[CatalogTypeSuggestion]> = session.query(secondKey)
-        await waitForFetchComplete(firstHandle)
-        await waitForFetchComplete(secondHandle)
+        await waitForQuery(firstHandle)
+        await waitForQuery(secondHandle)
 
         let renamed = CatalogTypeSuggestion(
             field: CatalogMetadataField(
@@ -1098,8 +1080,8 @@ struct CatalogQueryRegistryTests {
 
         let _: QueryHandle<[CatalogTypeSuggestion]> = session.query(firstKey)
         let _: QueryHandle<[CatalogTypeSuggestion]> = session.query(secondKey)
-        await waitForFetchComplete(firstHandle)
-        await waitForFetchComplete(secondHandle)
+        await waitForQuery(firstHandle)
+        await waitForQuery(secondHandle)
         #expect(firstHandle.value?.first?.field.label == "Author name")
         #expect(secondHandle.value?.first?.field.label == "Author name")
     }
@@ -1113,14 +1095,14 @@ struct CatalogQueryRegistryTests {
         let key = CatalogQueryKey.metadataFieldsList(project: session.projectKey)
 
         let handle: QueryHandle<[CatalogMetadataField]> = session.query(key)
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
         #expect(handle.value?.first?.usedBy == 0)
 
         store.fieldsByProject[projectDir]?[0].usedBy = 1
         session.apply(.mutatedSourceMetadata(sourceId: "s1"))
 
         let _: QueryHandle<[CatalogMetadataField]> = session.query(key)
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
         #expect(handle.value?.first?.usedBy == 1)
     }
 
@@ -1132,14 +1114,14 @@ struct CatalogQueryRegistryTests {
         let key = CatalogQueryKey.sourceTypesList(project: session.projectKey)
 
         let handle: QueryHandle<[CatalogSourceType]> = session.query(key)
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
         #expect(handle.value?.first?.usedBy == 0)
 
         store.sourceTypesByProject[projectDir]?[0].usedBy = 1
         session.apply(.createdSource)
 
         let _: QueryHandle<[CatalogSourceType]> = session.query(key)
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
         #expect(handle.value?.first?.usedBy == 1)
     }
 
@@ -1159,8 +1141,8 @@ struct CatalogQueryRegistryTests {
 
         let listHandle: QueryHandle<[CatalogSource]> = session.query(listKey)
         let workspaceHandle: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
-        await waitForFetchComplete(listHandle)
-        await waitForFetchComplete(workspaceHandle)
+        await waitForQuery(listHandle)
+        await waitForQuery(workspaceHandle)
 
         let moved = CatalogSource(
             id: "s1", ref: "SRC-1", sourceTypeID: "t2", title: "Alpha", description: ""
@@ -1181,7 +1163,7 @@ struct CatalogQueryRegistryTests {
         #expect(listHandle.value?.first?.sourceTypeID == "t2")
 
         let _: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
-        await waitForFetchComplete(workspaceHandle)
+        await waitForQuery(workspaceHandle)
         #expect(workspaceHandle.value?.source.sourceTypeID == "t2")
         #expect(workspaceHandle.value?.metadata.count == 1)
     }
@@ -1229,7 +1211,7 @@ struct CatalogQueryRegistryTests {
         let handle: QueryHandle<[CatalogEvidenceGraph]> = session.query(
             .evidenceGraphsList(project: session.projectKey)
         )
-        await waitForFetchComplete(handle)
+        await waitForQuery(handle)
         #expect(handle.value == [graph])
     }
 

@@ -61,7 +61,7 @@ struct PlaceRegistryTests {
     }
 
     @Test func resolvesEvidenceGraphDistinctFromPage() {
-        let page = WorkspaceLocation(section: .sources, sourceId: "src-1", sourceSurface: .page)
+        let page = WorkspaceLocation.sourcePage(sourceId: "src-1")
         let graph = WorkspaceLocation(section: .sources, sourceId: "src-1", graphId: "g-1", sourceSurface: .graph)
         #expect(page != graph)
 
@@ -229,7 +229,7 @@ struct PlaceRegistryTests {
         for id in PlaceID.allCases {
             let location: WorkspaceLocation = switch id {
             case .sourcesList: .sectionRoot(.sources)
-            case .sourceDetail: WorkspaceLocation(section: .sources, sourceId: "s1", sourceSurface: .page)
+            case .sourceDetail: WorkspaceLocation.sourcePage(sourceId: "s1")
             case .sourceGraph: WorkspaceLocation(section: .sources, sourceId: "s1", graphId: "g-1", sourceSurface: .graph)
             case .sourceCitationComposer:
                 WorkspaceLocation(

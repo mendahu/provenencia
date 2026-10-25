@@ -793,23 +793,11 @@ struct SourcePageModelTests {
         let fieldsHandle: QueryHandle<[CatalogMetadataField]>? = session.queryHandle(
             .metadataFieldsList(project: session.projectKey)
         )
-        await settle(try #require(fieldsHandle))
+        await waitForQuery(try #require(fieldsHandle))
 
         #expect(model.metadata.fieldComboOptions.map(\.label) == ["Author", "Folio"])
         // The page payload itself was never refetched.
         #expect(workspaceBefore?.value == payloadBefore)
-    }
-
-    /// Waits out a cache load (or its stale-while-revalidate refetch).
-    private func settle<Value>(_ handle: QueryHandle<Value>) async {
-        var waited: UInt64 = 0
-        while waited < 2_000_000_000 {
-            if handle.status == .error { return }
-            if handle.status == .ready, !handle.isFetching { return }
-            await Task.yield()
-            try? await Task.sleep(nanoseconds: 10_000_000)
-            waited += 10_000_000
-        }
     }
 
     @Test func addMetadataRequiresFieldAndValue() async {
@@ -1151,25 +1139,18 @@ struct SourcePageModelTests {
         model.graphs.rows?.first.flatMap { model.graphs.location(for: $0) }
     }
 
-    private func graph(_ id: String, name: String, sourceID: String? = nil) -> CatalogEvidenceGraph {
-        CatalogEvidenceGraph(
-            id: id, ref: "GPH-\(id.uppercased())", sourceID: sourceID ?? self.sourceID,
-            name: name, description: "", artifactIDs: []
-        )
-    }
-
     @Test func graphRowsAreTheSourcesGraphsByName() async {
         let store = makeStore()
         store.evidenceGraphsByProject[projectDir] = [
-            graph("g-smith", name: "Smith household"),
-            graph("g-default", name: "Default"),
-            graph("g-jones", name: "Jones household"),
-            graph("g-other", name: "Other source", sourceID: "src-2"),
+            evidenceGraph("g-smith", name: "Smith household"),
+            evidenceGraph("g-default", name: "Default"),
+            evidenceGraph("g-jones", name: "Jones household"),
+            evidenceGraph("g-other", sourceID: "src-2", name: "Other source"),
         ]
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let model = makeModel(store: store, session: session)
         await model.warmFromSession()
-        await settle(session.evidenceGraphsHandle!)
+        await waitForQuery(session.evidenceGraphsHandle!)
         #expect(model.graphs.rows?.map(\.name) == ["Default", "Jones household", "Smith household"])
         #expect(model.graphs.rows?.first?.name == "Default")
         #expect(L10n.Sources.graphsCount(3) == "3 evidence graphs")
@@ -1177,7 +1158,7 @@ struct SourcePageModelTests {
 
     @Test func graphRowsNilUntilListLoadsAndErrorWhenItFails() async {
         let store = makeStore()
-        store.evidenceGraphsByProject[projectDir] = [graph("g-default", name: "Default")]
+        store.evidenceGraphsByProject[projectDir] = [evidenceGraph("g-default", name: "Default")]
         let model = makeModel(store: store)
         #expect(model.graphs.rows == nil)
         #expect(model.graphs.loadError == nil)
@@ -1188,7 +1169,7 @@ struct SourcePageModelTests {
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: failing)
         let failed = makeModel(store: failing, session: session)
         await failed.warmFromSession()
-        await settle(session.evidenceGraphsHandle!)
+        await waitForQuery(session.evidenceGraphsHandle!)
         #expect(failed.graphs.rows == nil)
         #expect(failed.graphs.loadError != nil)
     }
@@ -1196,15 +1177,15 @@ struct SourcePageModelTests {
     @Test func deleteEmptyGraphCallsStoreAndToasts() async {
         let store = makeStore()
         store.evidenceGraphsByProject[projectDir] = [
-            graph("g-default", name: "Default"),
-            graph("g-jones", name: "Jones household"),
+            evidenceGraph("g-default", name: "Default"),
+            evidenceGraph("g-jones", name: "Jones household"),
         ]
         store.deleteImpactByID["g-jones"] = CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let model = makeModel(store: store, session: session)
-        session.apply(location: WorkspaceLocation(section: .sources, sourceId: sourceID, sourceSurface: .page))
+        session.apply(location: WorkspaceLocation.sourcePage(sourceId: sourceID))
         await model.warmFromSession()
-        await settle(session.evidenceGraphsHandle!)
+        await waitForQuery(session.evidenceGraphsHandle!)
         await model.askDeleteGraph(id: "g-jones")
         #expect(model.pendingImpact?.target.kind == "evidence_graph")
         #expect(model.pendingImpact?.target.ref == "GPH-G-JONES")
@@ -1227,12 +1208,12 @@ struct SourcePageModelTests {
     ])
     func blockedGraphDoesNotCallDelete(report: CatalogDeleteImpact) async {
         let store = makeStore()
-        store.evidenceGraphsByProject[projectDir] = [graph("g-default", name: "Default")]
+        store.evidenceGraphsByProject[projectDir] = [evidenceGraph("g-default", name: "Default")]
         store.deleteImpactByID["g-default"] = report
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let model = makeModel(store: store, session: session)
         await model.warmFromSession()
-        await settle(session.evidenceGraphsHandle!)
+        await waitForQuery(session.evidenceGraphsHandle!)
         await model.askDeleteGraph(id: "g-default")
         #expect(model.pendingImpact?.report.allowed == false)
         #expect(model.pendingImpact?.report.gate == report.gate)
