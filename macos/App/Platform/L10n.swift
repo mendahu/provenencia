@@ -4959,8 +4959,8 @@ enum L10n {
 
         static let noArtifactsCallout = LocalizedStringResource(
             "citationComposer.noArtifactsCallout",
-            defaultValue: "Every citation needs an artifact to point at. Attach one from the Source page, then return here.",
-            comment: "Left-pane callout when the Source has no Artifacts"
+            defaultValue: "Every citation needs an artifact linked to this evidence graph. Add one from the Source page, then return here.",
+            comment: "Left-pane callout when the Evidence graph links no Artifacts"
         )
 
         static let goToSourcePage = LocalizedStringResource(
@@ -5061,8 +5061,8 @@ enum L10n {
 
         static let noArtifactsTitle = LocalizedStringResource(
             "citationComposer.noArtifactsTitle",
-            defaultValue: "This source has no artifacts",
-            comment: "Callout title when the Source has no Artifacts to cite"
+            defaultValue: "This evidence graph has no artifacts",
+            comment: "Callout title when the Evidence graph links no Artifacts"
         )
 
         static let identityChangedNew = LocalizedStringResource(

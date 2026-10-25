@@ -12255,13 +12255,13 @@
       }
     },
     "citationComposer.noArtifactsCallout": {
-      "comment": "Left-pane callout when the Source has no Artifacts",
+      "comment": "Left-pane callout when the Evidence graph links no Artifacts",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Every citation needs an artifact to point at. Attach one from the Source page, then return here."
+            "value": "Every citation needs an artifact linked to this evidence graph. Add one from the Source page, then return here."
           }
         }
       }
@@ -13851,13 +13851,13 @@
       }
     },
     "citationComposer.noArtifactsTitle": {
-      "comment": "Callout title when the Source has no Artifacts to cite",
+      "comment": "Callout title when the Evidence graph links no Artifacts",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This source has no artifacts"
+            "value": "This evidence graph has no artifacts"
           }
         }
       }
