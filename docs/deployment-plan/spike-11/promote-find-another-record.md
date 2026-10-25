@@ -31,13 +31,13 @@ A researcher who knows the Subject and a differently named record are one person
 
 `checkFixed` checks only that the handle is unmerged and of the Subject's kind, never that it was a candidate (map review, 2026-10-24).
 
-S11-35 pins this with tests rather than assuming it, extending the existing fixed-handle tests (`promote_align_test.go`, `promotealign_test.go` `TestProposeWithOnlyFixedSubjectsBuildsNoIndex`) and checking filing in the handler or `promote` tests: a fixed handle no shortlist key reaches is loaded, banded, marked contested when it conflicts, has evidence, and files.
+S11-35 pinned this with tests and changed no Go code: `TestProposeHoldsAnUnshortlistedHandle` (`promotealign`) shows a fixed off-shortlist handle is loaded, scored and marked contested on a conflict, and over the FFI `TestProposeHoldsAFoundRecord` (propose), `TestGetPromoteClaimEvidenceForAFoundRecord` (evidence) and `TestApplyPromoteGraphAlignment` "files a found record" (filing) show it is explained and filed.
 
 ## Where the Swift side changes
 
-- `PromoteFlow.target(for:on:)` resolves only handles in `row.menu`; any other token leaves the target as it was. A picked record needs a way in: a flow call that takes the record (id, ref, sorted and reading titles, subtitle), adds it to `row.menu` and sets the target, with the same follow-up as `setTarget` (decided, duplicate notes, re-propose).
+- `PromoteFlow.target(for:on:)` resolves only handles in `row.menu`; any other token leaves the target as it was. A picked record needs a way in: a flow call, `hold(subjectID:id:ref:header:)`, that takes the record's id, ref and list header and titles it as the menu titles every record, adds it to `row.menu` and sets the target, with the same follow-up as `setTarget` (decided, duplicate notes, re-propose).
 - A decided row keeps its `menu` across proposals (`makeRow`'s `kept = previous`), so the picked record survives a re-proposal. Its band is refreshed from the proposal. Its reason is not: Go reports `decided` for every fixed row and `makeRow` keeps a menu item's reason when the new one is `decided`, so a menu pick keeps the sentence it was offered with. A found record was never offered, so the call writes reason `decided`. Its band can be None for a `Different` pick; S11-D3 decides how that reads.
-- `FakeStore`'s propose must hold a fixed handle that is not in its candidates, for the Swift tests and previews.
+- `FakeStore`'s unscripted propose already holds a fixed handle of any filed record (it has no candidates); `PromoteModelTests` pins it.
 - The menu entry: `PVSelect` is a selection control with no action item. The entry is a sentinel option the row's binding intercepts before `setTarget`, which would otherwise mark the row decided and re-propose even though the target did not change; `PromoteTargetMenuRow` learns to draw it. If S11-D3 draws something a sentinel cannot do, a kit PR is cut ahead of S11-36.
 - The search: the omnibar's results model (`OmnibarResultsModel`: debounce, generation guard, errors, empty state) and its private hit row (`OmnibarHitRowView`) are Workspace internals, and the model sends no `kinds`. S11-37 moves both to a shared home with a `kinds` input and an optional location, so Promote reuses them instead of growing a copy.
 
