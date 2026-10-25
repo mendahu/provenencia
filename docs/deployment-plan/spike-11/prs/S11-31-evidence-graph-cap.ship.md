@@ -71,4 +71,4 @@ Reviewers: SEC+PRF (PRF-1 was a Fix-now major). CON and MNT are not re-sent: the
 Head `a38e8f86`. PRF-1 **Resolved**: the reviewer ran `TestEvidenceReadsEachGraphOnce` red at `4d9c197d` and green at head. Every graph read in `evidence.go` goes through `evidenceReader.graph`. The request-local map lives for one reader only (one `Evidence` call, or one `ResolvePins` Done, which only reads). No new findings, no nits.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none (nits CON-2, MNT-2–MNT-4 logged) · to user: PRF-1 (answered 2026-10-24: fix with a request-local map, superseding the §3 Out line) · CON miss: none
+Gate PASS · CI green (first Go tests run failed `TestLargeSourceBudgets/cold`: cold proposal 2.54s vs 2.5s budget, a path this PR does not change; rerun of the failed job passed) · open: none · follow-ups: none (nits CON-2, MNT-2–MNT-4 logged) · to user: PRF-1 (answered 2026-10-24: fix with a request-local map, superseding the §3 Out line) · CON miss: none
