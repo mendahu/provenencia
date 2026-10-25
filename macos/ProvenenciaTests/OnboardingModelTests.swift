@@ -567,7 +567,7 @@ private struct ThrowingStore: GenealogyStore {
     func searchCatalog(
         projectDir _: String,
         query _: String,
-        location _: WorkspaceLocation,
+        location _: WorkspaceLocation?,
         kinds _: [String]
     ) async throws -> [CatalogSearchHit] { throw StoreBoom.boom }
     func listSubjectTypes(projectDir _: String) async throws -> [CatalogSubjectType] { throw StoreBoom.boom }

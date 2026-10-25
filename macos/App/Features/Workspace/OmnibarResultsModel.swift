@@ -130,7 +130,8 @@ final class OmnibarResultsModel {
             let results = try await store.searchCatalog(
                 projectDir: projectDir,
                 query: query,
-                location: location
+                location: location,
+                kinds: []
             )
             guard generation == searchGeneration else { return }
             hits = results

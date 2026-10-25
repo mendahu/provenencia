@@ -1210,12 +1210,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     /// Handle kinds: Persons by auto-reconciled name or ref, Events and Places by ref or
-    /// label (FakeStore has no event / place values). Other kinds: the omnibar
+    /// label (FakeStore has no event / place values). Other kinds: the vocabulary
     /// fake below, filtered to the requested kinds.
     func searchCatalog(
         projectDir: String,
         query: String,
-        location: WorkspaceLocation,
+        location: WorkspaceLocation?,
         kinds: [String]
     ) async throws -> [CatalogSearchHit] {
         let handleKinds = Self.primaryTypeKeys
@@ -1230,7 +1230,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             }
         }
         if wanted.isEmpty || !wanted.isSubset(of: handleKinds) {
-            let omnibar = try await omnibarSearchCatalog(projectDir: projectDir, query: query, location: location)
+            let omnibar = try await vocabularySearchHits(projectDir: projectDir, query: query, location: location)
             scored += wanted.isEmpty ? omnibar : omnibar.filter { wanted.contains($0.hit.kind) }
         }
         return Array(Self.orderedByMixedScore(scored).prefix(50).map(\.hit))
@@ -1326,10 +1326,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    private func omnibarSearchCatalog(
+    private func vocabularySearchHits(
         projectDir: String,
         query: String,
-        location: WorkspaceLocation
+        location: WorkspaceLocation?
     ) async throws -> [(hit: CatalogSearchHit, score: Double)] {
         return try withState {
             markCatalogSessionHeld(projectDir)
@@ -1376,7 +1376,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 } else {
                     guard score > 0 else { continue }
                 }
-                let boost = location.section == .sources ? 1.1 : 1.0
+                let boost = location?.section == .sources ? 1.1 : 1.0
                 scored.append((
                     CatalogSearchHit(
                         kind: "source",
@@ -1411,7 +1411,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         tokens: tokens
                     )
                     guard score > 0 else { continue }
-                    let boost = location.section == .sourceTypes ? 1.1 : 1.0
+                    let boost = location?.section == .sourceTypes ? 1.1 : 1.0
                     scored.append((
                         CatalogSearchHit(
                             kind: "source_type",
@@ -1442,7 +1442,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         tokens: tokens
                     )
                     guard score > 0 else { continue }
-                    let boost = location.section == .metadata ? 1.1 : 1.0
+                    let boost = location?.section == .metadata ? 1.1 : 1.0
                     scored.append((
                         CatalogSearchHit(
                             kind: "metadata_field",
