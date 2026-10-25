@@ -69,7 +69,7 @@ final class SourceCopyModel {
 
     /// The original's type icon, for Artifact thumbnails that have no file.
     var sourceTypeIconKey: String? {
-        types.first { $0.id == original.sourceTypeID }?.iconKey
+        types.iconKey(forTypeID: original.sourceTypeID)
     }
 
     /// A value wins: a failed refetch keeps the stale parts and stays `.ready`.

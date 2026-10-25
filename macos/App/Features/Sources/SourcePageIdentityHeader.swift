@@ -77,9 +77,7 @@ struct SourcePageIdentityHeader: View {
         originalFilename: String,
         typeIconKey: String?
     ) {
-        let typeIcon = model.identity.types
-            .first { $0.id == model.identity.sourceTypeID }?
-            .iconKey
+        let typeIcon = model.identity.types.iconKey(forTypeID: model.identity.sourceTypeID)
         // Source cover is type icon or an explicit raster pin — never MIME.
         if let source = model.source,
            source.coverMode == "artifact",
@@ -238,9 +236,7 @@ struct SourcePageIdentityHeader: View {
                 HStack(spacing: PVSpacing.space3) {
                     CatalogSourceTypePill(
                         label: model.identity.typeLabel,
-                        iconKey: model.identity.types
-                            .first { $0.id == model.identity.sourceTypeID }?
-                            .iconKey
+                        iconKey: model.identity.types.iconKey(forTypeID: model.identity.sourceTypeID)
                     )
                         .accessibilityIdentifier("sources.page.type")
 

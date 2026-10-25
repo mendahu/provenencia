@@ -69,7 +69,7 @@ final class SourceGraphFormModel {
 
     /// The Source's type icon, for Artifact thumbnails that have no file.
     var sourceTypeIconKey: String? {
-        context.types.first { $0.id == context.source?.sourceTypeID }?.iconKey
+        context.sourceTypeIconKey
     }
 
     /// Artifact id to the hint under its locked row: the S12-05 heading for
