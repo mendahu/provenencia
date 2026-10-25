@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import Provenencia
 
-@Suite
+@MainActor @Suite
 struct WorkspaceToolbarBreadcrumbTests {
     @Test func conclusionDetailCrumbPrefersTheTitle() {
         var wentTo: WorkspaceLocation?

@@ -230,8 +230,10 @@ struct OmnibarResultsModelTests {
             }
             try? await Task.sleep(nanoseconds: 25_000_000)
         }
-        let hit = try? #require(model.hits.first { $0.id == "f9" })
-        guard let hit else { return }
+        guard let hit = model.hits.first(where: { $0.id == "f9" }) else {
+            Issue.record("no f9 hit")
+            return
+        }
 
         let navigation = WorkspaceNavigation()
         model.activate(hit, navigation: navigation)

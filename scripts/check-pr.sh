@@ -18,6 +18,10 @@
 #   plan-docs     scripts/check-plan-docs.py on the plans and open briefs this branch changes
 #   xcode-test    xcodebuild test (ProvenenciaTests), the CI command. macOS only:
 #                 anywhere else it fails, because a PR is not checked without it.
+#                 The Swift files this branch changes are touched first, so an
+#                 incremental build recompiles them and prints their warnings.
+#   swift-warnings  no Swift compiler warning in xcode-test's build output. main
+#                 builds with none, so any warning here is the branch's.
 #
 # Exit 0 only when every check passes. Logs for a failed check are printed;
 # all logs stay in the directory named on the last line.
@@ -29,7 +33,7 @@ base=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --base) base="$2"; shift 2 ;;
-    -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,28p' "$0"; exit 0 ;;
     *) echo "check-pr: unknown argument $1" >&2; exit 2 ;;
   esac
 done
@@ -47,15 +51,15 @@ run() {
   local name="$1"; shift
   local start=$SECONDS
   if "$@" >"$logs/$name.log" 2>&1; then
-    printf 'PASS  %-12s %4ss\n' "$name" $((SECONDS - start))
+    printf 'PASS  %-14s %4ss\n' "$name" $((SECONDS - start))
   else
-    printf 'FAIL  %-12s %4ss\n' "$name" $((SECONDS - start))
+    printf 'FAIL  %-14s %4ss\n' "$name" $((SECONDS - start))
     tail -n 40 "$logs/$name.log" | sed 's/^/      /'
     failed+=("$name")
   fi
 }
 
-skip() { printf 'SKIP  %-12s       %s\n' "$1" "$2"; }
+skip() { printf 'SKIP  %-14s       %s\n' "$1" "$2"; }
 
 gofmt_changed() {
   local files bad
@@ -78,12 +82,26 @@ plan_docs_changed() {
 }
 
 xcode_test() {
+  local files
+  files="$(changed 'macos/*.swift')"
+  # shellcheck disable=SC2086
+  [[ -n "$files" ]] && touch $files
   NSUnbufferedIO=YES xcodebuild test \
     -project macos/Provenencia.xcodeproj \
     -scheme Provenencia \
     -destination 'platform=macOS' \
     -only-testing:ProvenenciaTests \
     CODE_SIGNING_ALLOWED=NO
+}
+
+swift_warnings() {
+  local warnings
+  warnings="$(grep -E '^/.+\.swift:[0-9]+:[0-9]+: warning:' "$logs/xcode-test.log" \
+    | sed "s|^$ROOT/||" | sort -u)"
+  [[ -z "$warnings" ]] && return 0
+  echo "Swift warnings:"
+  echo "$warnings"
+  return 1
 }
 
 echo "check-pr: against $(git rev-parse --short "$base")"
@@ -95,8 +113,10 @@ run localizable python3 scripts/check-localizable-xcstrings.py
 run plan-docs   plan_docs_changed
 if [[ "$(uname -s)" == "Darwin" ]]; then
   run xcode-test xcode_test
+  run swift-warnings swift_warnings
 else
   skip xcode-test "not macOS"
+  skip swift-warnings "not macOS"
   failed+=("xcode-test (needs macOS)")
 fi
 

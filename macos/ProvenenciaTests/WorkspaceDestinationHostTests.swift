@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import Provenencia
 
-@Suite
+@MainActor @Suite
 struct WorkspaceDestinationHostTests {
     private let projectDir = "/tmp/workspace-destination-host.provenencia"
 

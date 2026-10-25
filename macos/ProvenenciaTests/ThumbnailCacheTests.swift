@@ -81,16 +81,11 @@ struct ThumbnailCacheTests {
             try ArtifactFileFixtures.writePNG(
                 projectDir: project, relPath: "objects/aa/bb/k\(i).png", width: 64, height: 64)
         }
-        let results = await withTaskGroup(of: Bool.self) { group in
-            for i in 0..<8 {
-                group.addTask { @MainActor in
-                    await cache.image(projectDir: project, relPath: "objects/aa/bb/k\(i).png") != nil
-                }
-            }
-            var all: [Bool] = []
-            for await r in group { all.append(r) }
-            return all
+        let decodes = (0..<8).map { i in
+            Task { await cache.image(projectDir: project, relPath: "objects/aa/bb/k\(i).png") != nil }
         }
+        var results: [Bool] = []
+        for decode in decodes { results.append(await decode.value) }
         #expect(results.count == 8 && results.allSatisfy { $0 })
         #expect((1...2).contains(cache.peakConcurrentDecodes))
     }
