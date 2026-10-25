@@ -447,20 +447,10 @@ struct PromoteFlow: Equatable, Sendable {
         if let offered = rows[index].menu.first(where: { $0.id == id }) {
             item = offered
         } else {
-            let kind = rows[index].kind
-            let parts = Self.headerParts(header)
-            item = Alternative(
-                id: id, ref: ref,
-                title: Self.conclusionTitle(
-                    kind: kind, person: parts.person, event: parts.event, place: parts.place,
-                    fallback: ref, orders: nameOrders, style: .sorted
-                ),
-                readingTitle: Self.conclusionTitle(
-                    kind: kind, person: parts.person, event: parts.event, place: parts.place,
-                    fallback: ref, orders: nameOrders, style: .natural
-                ),
-                subtitle: Self.conclusionSubtitle(kind: kind, person: parts.person, event: parts.event, place: parts.place),
-                assessment: .none, reason: .decided
+            item = Self.item(
+                id: id, ref: ref, kind: rows[index].kind,
+                person: header?.person, event: header?.event, place: header?.place,
+                orders: nameOrders, assessment: .none, reason: .decided
             )
             rows[index].menu.append(item)
         }
@@ -745,63 +735,49 @@ struct PromoteFlow: Equatable, Sendable {
     private static func menu(for proposal: CatalogPromoteGraphAlignmentRow, kind: EvidencePrimaryKind, orders: NameFormatOrders) -> [Alternative] {
         var out: [Alternative] = []
         if proposal.target == "handle", !proposal.handleID.isEmpty {
-            out.append(Alternative(
+            out.append(item(
                 id: proposal.handleID, ref: proposal.handleRef,
-                title: headerTitle(proposal, orders: orders, style: .sorted),
-                readingTitle: headerTitle(proposal, orders: orders, style: .natural),
-                subtitle: headerSubtitle(proposal),
-                assessment: Assessment(wire: proposal.assessment), reason: Reason(proposal)
+                kind: EvidencePrimaryKind(rawValue: proposal.kind),
+                person: proposal.person, event: proposal.event, place: proposal.place,
+                orders: orders, assessment: Assessment(wire: proposal.assessment), reason: Reason(proposal)
             ))
         }
         for alt in proposal.alternatives where alt.handleID != proposal.handleID {
-            out.append(Alternative(
-                id: alt.handleID, ref: alt.handleRef,
-                title: headerTitle(alt, kind: kind, orders: orders, style: .sorted),
-                readingTitle: headerTitle(alt, kind: kind, orders: orders, style: .natural),
-                subtitle: headerSubtitle(alt, kind: kind),
-                assessment: Assessment(wire: alt.assessment), reason: Reason(alt)
+            out.append(item(
+                id: alt.handleID, ref: alt.handleRef, kind: kind,
+                person: alt.person, event: alt.event, place: alt.place,
+                orders: orders, assessment: Assessment(wire: alt.assessment), reason: Reason(alt)
             ))
         }
         return out
     }
 
-    private static func headerSubtitle(_ row: CatalogPromoteGraphAlignmentRow) -> String {
-        conclusionSubtitle(
-            kind: EvidencePrimaryKind(rawValue: row.kind),
-            person: row.person, event: row.event, place: row.place
+    /// One menu item, titled sorted and natural and subtitled from the record's
+    /// header, whichever way the record reached the menu.
+    private static func item(
+        id: String,
+        ref: String,
+        kind: EvidencePrimaryKind?,
+        person: CatalogPersonHeader?,
+        event: CatalogEventHeader?,
+        place: CatalogPlaceHeader?,
+        orders: NameFormatOrders,
+        assessment: Assessment,
+        reason: Reason
+    ) -> Alternative {
+        Alternative(
+            id: id, ref: ref,
+            title: conclusionTitle(
+                kind: kind, person: person, event: event, place: place,
+                fallback: ref, orders: orders, style: .sorted
+            ),
+            readingTitle: conclusionTitle(
+                kind: kind, person: person, event: event, place: place,
+                fallback: ref, orders: orders, style: .natural
+            ),
+            subtitle: conclusionSubtitle(kind: kind, person: person, event: event, place: place),
+            assessment: assessment, reason: reason
         )
-    }
-
-    private static func headerSubtitle(_ alt: CatalogPromoteGraphAlignmentAlternative, kind: EvidencePrimaryKind) -> String {
-        conclusionSubtitle(kind: kind, person: alt.person, event: alt.event, place: alt.place)
-    }
-
-    private static func headerTitle(_ row: CatalogPromoteGraphAlignmentRow, orders: NameFormatOrders, style: NameDisplayStyle) -> String {
-        conclusionTitle(
-            kind: EvidencePrimaryKind(rawValue: row.kind),
-            person: row.person, event: row.event, place: row.place,
-            fallback: row.handleRef,
-            orders: orders, style: style
-        )
-    }
-
-    private static func headerTitle(_ alt: CatalogPromoteGraphAlignmentAlternative, kind: EvidencePrimaryKind, orders: NameFormatOrders, style: NameDisplayStyle) -> String {
-        conclusionTitle(
-            kind: kind,
-            person: alt.person, event: alt.event, place: alt.place,
-            fallback: alt.handleRef,
-            orders: orders, style: style
-        )
-    }
-
-    private static func headerParts(_ header: CatalogConclusionHeader?)
-        -> (person: CatalogPersonHeader?, event: CatalogEventHeader?, place: CatalogPlaceHeader?) {
-        switch header {
-        case .person(let person): (person, nil, nil)
-        case .event(let event): (nil, event, nil)
-        case .place(let place): (nil, nil, place)
-        case nil: (nil, nil, nil)
-        }
     }
 
     private static func conclusionTitle(
