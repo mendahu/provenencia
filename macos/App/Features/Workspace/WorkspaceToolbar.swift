@@ -195,7 +195,9 @@ struct WorkspaceToolbar: View {
         var sourceTitle: (String) -> String?
         var graphName: (String) -> String?
 
-        static let none = BreadcrumbNames(sourceTitle: { _ in nil }, graphName: { _ in nil })
+        static var none: BreadcrumbNames {
+            BreadcrumbNames(sourceTitle: { _ in nil }, graphName: { _ in nil })
+        }
     }
 
     /// Builds toolbar crumbs.
