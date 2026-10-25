@@ -8,7 +8,7 @@ struct PromoteReadoutBadges: View {
 
     var body: some View {
         HStack(spacing: PVSpacing.space3) {
-            PVBadge(L10n.Promote.assessment(readout.assessment), tone: tone)
+            PVBadge(L10n.Promote.assessment(readout), tone: tone)
             if readout.contested {
                 PVBadge(L10n.Promote.contested, tone: .danger, icon: .warning)
             }
@@ -42,7 +42,7 @@ struct PromoteUpdatedCaption: View {
 #Preview("Readout badges") {
     VStack(alignment: .leading, spacing: PVSpacing.space4) {
         PromoteReadoutBadges(readout: PromoteFlow.SelectionReadout(assessment: .strong, reason: .empty))
-        PromoteReadoutBadges(readout: PromoteFlow.SelectionReadout(assessment: .none, reason: .decided, contested: true))
+        PromoteReadoutBadges(readout: PromoteFlow.SelectionReadout(assessment: .none, reason: .decided, contested: true, chosen: true))
     }
     .padding(PVSpacing.space8)
     .background(PVColor.surfaceCard)

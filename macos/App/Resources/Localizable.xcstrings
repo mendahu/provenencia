@@ -22310,6 +22310,138 @@
           }
         }
       }
+    },
+    "promote.target.find": {
+      "comment": "Promote target menu entry that opens a search over every record of the row's kind",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find another record…"
+          }
+        }
+      }
+    },
+    "promote.search.placeholder.person": {
+      "comment": "Placeholder of the Promote record search field for this kind",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search people"
+          }
+        }
+      }
+    },
+    "promote.search.noMatches.person": {
+      "comment": "Line of the Promote record search list when nothing of this kind matches; argument is the typed query",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No people match “%@”"
+          }
+        }
+      }
+    },
+    "promote.search.placeholder.event": {
+      "comment": "Placeholder of the Promote record search field for this kind",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search events"
+          }
+        }
+      }
+    },
+    "promote.search.noMatches.event": {
+      "comment": "Line of the Promote record search list when nothing of this kind matches; argument is the typed query",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No events match “%@”"
+          }
+        }
+      }
+    },
+    "promote.search.placeholder.place": {
+      "comment": "Placeholder of the Promote record search field for this kind",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search places"
+          }
+        }
+      }
+    },
+    "promote.search.noMatches.place": {
+      "comment": "Line of the Promote record search list when nothing of this kind matches; argument is the typed query",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No places match “%@”"
+          }
+        }
+      }
+    },
+    "promote.search.label": {
+      "comment": "VoiceOver label of the Promote record search field; argument is the subject's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find another record for %@"
+          }
+        }
+      }
+    },
+    "promote.search.cancel": {
+      "comment": "Button that closes the Promote record search and brings the target menu back",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel search"
+          }
+        }
+      }
+    },
+    "promote.search.hint": {
+      "comment": "Line of the Promote record search list before the query is long enough to search",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type at least two letters of a name or a ref"
+          }
+        }
+      }
+    },
+    "promote.assessment.chosenNone": {
+      "comment": "Promote band for a record the researcher chose when nothing lines up",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Little evidence"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

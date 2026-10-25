@@ -1357,7 +1357,13 @@ enum L10n {
         static func assessmentContested(_ assessment: String) -> String {
             L10n.format(LocalizedStringResource("promote.row.assessmentContested", defaultValue: "%@, contested", comment: "Spoken band of a contested Promote row, inside the evidence button label; argument is the band name (\"Strong\")"), assessment)
         }
-        static func assessment(_ assessment: PromoteFlow.Assessment) -> LocalizedStringResource {
+        static let assessmentChosenNone = LocalizedStringResource("promote.assessment.chosenNone", defaultValue: "Little evidence", comment: "Promote band for a record the researcher chose when nothing lines up")
+        /// The band as a row, the evidence sheet and VoiceOver word it: a record the researcher chose
+        /// at None reads "Little evidence", not "No match".
+        static func assessment(_ readout: PromoteFlow.SelectionReadout) -> LocalizedStringResource {
+            readout.assessment == .none && readout.chosen ? assessmentChosenNone : assessment(readout.assessment)
+        }
+        private static func assessment(_ assessment: PromoteFlow.Assessment) -> LocalizedStringResource {
             switch assessment {
             case .strong: assessmentStrong
             case .medium: assessmentMedium
@@ -1717,6 +1723,27 @@ enum L10n {
             case .place: LocalizedStringResource("promote.new.place", defaultValue: "New Place", comment: "Promote target choice: mint a new handle")
             }
             return resource
+        }
+        static let findOption = LocalizedStringResource("promote.target.find", defaultValue: "Find another record…", comment: "Promote target menu entry that opens a search over every record of the row's kind")
+        static func searchPlaceholder(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            switch kind {
+            case .person: LocalizedStringResource("promote.search.placeholder.person", defaultValue: "Search people", comment: "Placeholder of the Promote record search field for this kind")
+            case .event: LocalizedStringResource("promote.search.placeholder.event", defaultValue: "Search events", comment: "Placeholder of the Promote record search field for this kind")
+            case .place: LocalizedStringResource("promote.search.placeholder.place", defaultValue: "Search places", comment: "Placeholder of the Promote record search field for this kind")
+            }
+        }
+        static func searchLabel(name: String) -> String {
+            L10n.format(LocalizedStringResource("promote.search.label", defaultValue: "Find another record for %@", comment: "VoiceOver label of the Promote record search field; argument is the subject's name"), name)
+        }
+        static let searchCancel = LocalizedStringResource("promote.search.cancel", defaultValue: "Cancel search", comment: "Button that closes the Promote record search and brings the target menu back")
+        static let searchHint = LocalizedStringResource("promote.search.hint", defaultValue: "Type at least two letters of a name or a ref", comment: "Line of the Promote record search list before the query is long enough to search")
+        static func searchNoMatches(_ kind: EvidencePrimaryKind, query: String) -> String {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.search.noMatches.person", defaultValue: "No people match “%@”", comment: "Line of the Promote record search list when nothing of this kind matches; argument is the typed query")
+            case .event: LocalizedStringResource("promote.search.noMatches.event", defaultValue: "No events match “%@”", comment: "Line of the Promote record search list when nothing of this kind matches; argument is the typed query")
+            case .place: LocalizedStringResource("promote.search.noMatches.place", defaultValue: "No places match “%@”", comment: "Line of the Promote record search list when nothing of this kind matches; argument is the typed query")
+            }
+            return L10n.format(resource, query)
         }
         static func leaveTitle(name: String) -> String {
             L10n.format(LocalizedStringResource("promote.leave.title", defaultValue: "Leave Promote without filing %@?", comment: "Promote leave guard title; argument is the subject's name or ref"), name)

@@ -94,7 +94,7 @@ destination UI.
   new Method if they fit `SearchHit`.
 - Swift: `CatalogSearchHit` + `GenealogyStore.searchCatalog`; FakeStore scores
   in memory with the same kind/location rules; call `markCatalogSessionHeld`.
-- Swift callers search through `CatalogSearchModel` (`macos/App/Features/Catalog/Search/`): kinds at init, an optional location per search (nil: no section nudge). The omnibar and Promote's find-another-record picker both use it; draw hits with `CatalogSearchHitRow`.
+- Swift callers search through `CatalogSearchModel` (`macos/App/Features/Catalog/Search/`): kinds at init, an optional location per search (nil: no section nudge). The omnibar and Promote's find-another-record picker both use it; draw hits with `CatalogSearchHitRow`, which carries its own VoiceOver label (the session's name order). A picker is `PVComboBox(onQueryChange:isLoading:empty:)` over `CatalogSearchModel(kinds:)`, as `PromoteRecordSearch` does.
 
 Catalog RPCs use `withProjectCatalog` — see
 [`use-catalog-session`](../use-catalog-session/SKILL.md). New Method →
