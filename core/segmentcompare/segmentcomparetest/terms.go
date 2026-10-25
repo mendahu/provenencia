@@ -2,6 +2,9 @@
 package segmentcomparetest
 
 import (
+	"testing"
+
+	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -38,4 +41,14 @@ func Terms() segmentcompare.Terms {
 			"succeeded_by":      {Directed: true},
 		},
 	}
+}
+
+// Bridge returns the seeded bridge type of key, failing t when there is none.
+func Bridge(t testing.TB, key string) connectrules.Bridge {
+	t.Helper()
+	b, ok := connectrules.LookupBridge(key)
+	if !ok {
+		t.Fatalf("no %s bridge", key)
+	}
+	return b
 }
