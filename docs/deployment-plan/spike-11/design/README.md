@@ -6,7 +6,7 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 
 ## Scheduled
 
-- **S11-D3** — Promote page, target menu: the "Find another record…" entry, its search, and a found record in the menu. Gates **S11-36**. Not written yet; [design](../promote-find-another-record.md).
+- [S11-D3](S11-D3-promote-target-menu.md) — Promote page, target menu: the "Find another record…" entry, its search, and a found record in the menu. Gates **S11-36**. Written 2026-10-25; board not drawn. [Design](../promote-find-another-record.md).
 
 ## Archived
 
