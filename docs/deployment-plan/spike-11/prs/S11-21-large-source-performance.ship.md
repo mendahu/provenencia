@@ -252,3 +252,6 @@ Check: the new tests fail first and pass; T-18 – T-20 pass (T-20's "stays on t
 
 ## Canvas health — fix and round 2
 Head `f411b40b`. Gate PASS (orchestrator). F-15 – F-17 done; their new tests failed first (F-15's coordinate and metric tests at compile level). Implementer also moved a Subject trim in `FakeStore.swift` onto `trimmedLabel`. Round 2 (MNT+UX, fresh): **Clean** — MNT-1 – MNT-4, MNT-6, MNT-7, UX-1, UX-2, PRF-1 Resolved; nits covered. MNT-5 Resolved by the orchestrator (the `PVSymbolImages` doc comment's remaining card wording, comment-only).
+
+## Result (canvas health)
+Gate PASS (`a6a5b48c`) · visual check on the 110-Subject Source, user driving: "Looks great." · open: none · follow-ups: `docs/ideas/graph-canvas-second-host.md` (group D, plus MNT-8's empty-text estimate), `ArtifactMediaViewport` magnification literals (logged) · to user: none · CON miss: none
