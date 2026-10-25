@@ -1,7 +1,7 @@
 # Review — S11-37 One kind-scoped catalog search
 
-**Verdict:** Fits with changes — Ready with changes
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Ready with changes (both rounds' findings fixed)
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet), fresh each round
 
 ## To user
 
@@ -12,6 +12,7 @@ None.
 - The shared home is `macos/App/Features/Catalog/Search/`, with type names `CatalogSearchModel`, `CatalogSearchHitPresentation` and `CatalogSearchHitRow` (D-1, D-7, D-8). The map left the home open.
 - `GenealogyStore.searchCatalog`'s `location` becomes optional at the protocol, and a nil location is sent to Go unset (D-3). Promote could have passed its own location instead, but that would nudge ranking by section.
 - `closePanel()` now cancels the in-flight search instead of only clearing `isLoading` (D-6). The researcher cannot see the difference.
+- The 9 three-argument store test calls gain `kinds: []` rather than keeping a test-only extension (D-4, from M-2).
 - The kinds are fixed when the model is created, not passed with each search (D-2).
 - `L10n.Workspace.omnibar*` keys and `PVOmnibarHitRow` keep their names (Out).
 
@@ -60,3 +61,35 @@ None.
 
 ### M-7 · nit · STEP-2 would have committed two copies of the search state
 **Answer:** Fixed. The steps are reordered: STEP-3 creates `CatalogSearchModel` and moves the omnibar onto it in one commit.
+
+## Round 2
+
+Round 1 had a blocker (X-1), so fresh reviewers checked the answers. Both confirmed every round-1 answer was in the plan.
+
+### M-8 · blocker · `cancel()` would be a third copy of "stop the in-flight search"
+**Plan:** D-6 added `cancel()` next to `dismiss()` and `scheduleSearch`'s short-query branch, both moved verbatim. Each one cancels the debounce, bumps the generation and stops loading.
+**Codebase:** `OmnibarResultsModel.swift` `dismiss()` (lines 52–62) and the short-query guard (lines 80–90) already repeat that sequence, and the guard leaves out `debounceTask = nil`.
+**Answer:** Fixed. D-6 makes `cancel()` the only place that stops a search: `dismiss` is `cancel` plus clearing the results, and the short-query branch is `dismiss(); return`. D-2, STEP-3 and the Codebase fit row are updated to match.
+
+### M-3 (remnant) · minor · `activateFieldHitFromSearch` kept its own inline poll loop
+**Answer:** Fixed. D-9 has it call the shared `waitForSearch` too.
+
+### X-5 · major · There are nine extension callers, not ten, and the `rg` check could not work
+**Answer:** Fixed. D-4 lists the nine lines; line 184 already passes `kinds`. STEP-1 drops the `rg` check and relies on the compiler: with the extension deleted, a missed caller fails the build.
+
+### X-6 · major · STEP-4's case count did not match the suites
+**Answer:** Fixed. STEP-4 now says 8, 7 and 3 cases.
+
+### X-7 · minor · `robinsSearchStore`'s return type
+**Answer:** Fixed. It returns `james: CatalogPromoteResult`, as the test has it today, so the existing `james.entity.*` expectations stay as they are. T-1 uses `james.entity.ref`.
+
+### X-8 · minor · `waitForSearch` needs `@MainActor`
+**Answer:** Fixed in D-9.
+
+### X-9 · minor · pbxproj IDs
+**Answer:** Fixed. §7 now says to check each new ID with `rg -c` before using it.
+
+### X-10 · nit
+Logged.
+
+**Verdict after round 2:** no open blocker, and nothing goes To user. The plan is Planned.
