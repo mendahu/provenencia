@@ -58,27 +58,13 @@ struct SourceGraphFormModelTests {
         return (model, store, session)
     }
 
-    private func block(_ artifactID: String, citations: Int) -> CatalogEvidenceGraphUnlinkBlock {
-        CatalogEvidenceGraphUnlinkBlock(
-            artifactID: artifactID,
-            citations: CatalogDeleteImpactGroup(
-                via: "evidencegraphs.artifact_in_use",
-                kind: "citation",
-                total: citations,
-                listed: (1...citations).map {
-                    PVDeleteImpactPreviewData.listed(ref: "CIT-\(artifactID)\($0)", title: "Smith, John")
-                }
-            )
-        )
-    }
-
     /// `g-smith` linked to a3 and a4, with a3 in use by two Citations; the edit form open and loaded.
     private func openSmithEdit(
         store: FakeStore,
         model: SourcePageModel,
         blocks: [CatalogEvidenceGraphUnlinkBlock]? = nil
     ) async -> SourceGraphFormModel? {
-        store.unlinkImpactBlocksByGraph["g-smith"] = blocks ?? [block("a3", citations: 2)]
+        store.unlinkImpactBlocksByGraph["g-smith"] = blocks ?? [unlinkBlock("a3", citations: 2)]
         model.graphs.openEdit(id: "g-smith")
         guard let form = model.graphs.form else { return nil }
         _ = await waitUntil { form.loadState != .loading }
@@ -209,7 +195,7 @@ struct SourceGraphFormModelTests {
         store.updateEvidenceGraphError = CoreInvokeError.coded(
             status: 1, code: "evidencegraphs.artifact_in_use", kind: .conflict, params: []
         )
-        store.unlinkImpactBlocksByGraph["g-pair"] = [block("a2", citations: 1)]
+        store.unlinkImpactBlocksByGraph["g-pair"] = [unlinkBlock("a2", citations: 1)]
         let before = form.draft
         let saved = await form.save()
         #expect(!saved)
@@ -222,7 +208,7 @@ struct SourceGraphFormModelTests {
     @Test func editPreflightFailureThenReadAgain() async throws {
         let (model, store, _) = await makeModel(graphs: [smith()])
         store.getEvidenceGraphUnlinkImpactError = Boom()
-        store.unlinkImpactBlocksByGraph["g-smith"] = [block("a3", citations: 2)]
+        store.unlinkImpactBlocksByGraph["g-smith"] = [unlinkBlock("a3", citations: 2)]
         model.graphs.openEdit(id: "g-smith")
         let form = try #require(model.graphs.form)
         _ = await waitUntil { form.loadState != .loading }

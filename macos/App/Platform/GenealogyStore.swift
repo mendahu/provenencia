@@ -102,6 +102,12 @@ extension CatalogEvidenceGraph {
     /// The graph links at least one Artifact.
     var hasArtifact: Bool { !artifactIDs.isEmpty }
 
+    /// The graph links this Artifact.
+    func links(_ artifactID: String) -> Bool { artifactIDs.contains(artifactID) }
+
+    /// This Artifact is the only one the graph links.
+    func isOnlyArtifact(_ artifactID: String) -> Bool { artifactIDs == [artifactID] }
+
     /// `artifacts` filtered to the ones this graph links, in the order given
     /// (the Source page's Artifact order, not the link order).
     func linkedArtifacts(_ artifacts: [CatalogArtifact]) -> [CatalogArtifact] {

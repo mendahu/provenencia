@@ -174,7 +174,7 @@ final class SourceArtifactsSection {
             linkEdit = LinkEdit(
                 artifactID: id,
                 graphIDs: graphs.map(\.id),
-                excluded: Set(graphs.filter { !$0.artifactIDs.contains(id) }.map(\.id))
+                excluded: Set(graphs.filter { !$0.links(id) }.map(\.id))
             )
             linkLoadTask = Task { await loadLinkLocks() }
         }
@@ -190,7 +190,7 @@ final class SourceArtifactsSection {
     var linkedGraphIDs: [String] {
         guard let edit = linkEdit else { return [] }
         return edit.graphIDs.filter {
-            context.session.evidenceGraph(id: $0)?.artifactIDs.contains(edit.artifactID) == true
+            context.session.evidenceGraph(id: $0)?.links(edit.artifactID) == true
         }
     }
 
@@ -224,9 +224,9 @@ final class SourceArtifactsSection {
         var reads: [String] = []
         for graphID in edit.graphIDs {
             guard let graph = context.session.evidenceGraph(id: graphID),
-                  graph.artifactIDs.contains(artifactID)
+                  graph.links(artifactID)
             else { continue }
-            if graph.artifactIDs == [artifactID] {
+            if graph.isOnlyArtifact(artifactID) {
                 locked[graphID] = L10n.string(L10n.Sources.artifactGraphOnlyArtifact)
             } else {
                 reads.append(graphID)

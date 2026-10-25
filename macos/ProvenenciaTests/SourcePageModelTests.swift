@@ -1448,15 +1448,6 @@ struct SourcePageModelTests {
         return (model, store, session)
     }
 
-    private func smithBlock(citations: Int = 2) -> CatalogEvidenceGraphUnlinkBlock {
-        CatalogEvidenceGraphUnlinkBlock(
-            artifactID: "P3",
-            citations: CatalogDeleteImpactGroup(
-                via: "evidencegraphs.artifact_in_use", kind: "citation", total: citations, listed: []
-            )
-        )
-    }
-
     private func linkCalls(_ store: FakeStore) -> [String] {
         store.recordedCalls.filter { $0.contains("EvidenceGraphArtifact") }
     }
@@ -1528,7 +1519,7 @@ struct SourcePageModelTests {
 
     @Test func cardEditLocksInUseAndOnlyArtifactGraphs() async {
         let (model, store, _) = await makeCensus()
-        store.unlinkImpactBlocksByGraph["g-s"] = [smithBlock()]
+        store.unlinkImpactBlocksByGraph["g-s"] = [unlinkBlock("P3", citations: 2)]
         model.artifacts.beginEdit("P3")
         #expect(model.artifacts.linkEdit?.loadState == .loading || model.artifacts.linkEdit?.loadState == .ready)
         await model.artifacts.linkLoadTask?.value
@@ -1587,7 +1578,7 @@ struct SourcePageModelTests {
         store.unlinkEvidenceGraphArtifactError = CoreInvokeError.coded(
             status: 1, code: "evidencegraphs.artifact_in_use", kind: .conflict, params: []
         )
-        store.unlinkImpactBlocksByGraph["g-j"] = [smithBlock(citations: 1)]
+        store.unlinkImpactBlocksByGraph["g-j"] = [unlinkBlock("P3", citations: 1)]
         let impactCalls = store.getEvidenceGraphUnlinkImpactCalls
         await model.artifacts.saveFields(id: "P3")
 
