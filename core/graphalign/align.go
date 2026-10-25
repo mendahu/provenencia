@@ -17,13 +17,19 @@ import (
 // re-scores only its neighbors; and when the queue empties, only the pairs
 // whose neighbors moved are settled again.
 func Align(layer Layer, canon Canon, fixed []Fixed, cfg Config) Proposal {
+	return run(layer, canon, fixed, cfg).proposal()
+}
+
+// run is the procedure up to the proposal, so a test can read the state it ends
+// on.
+func run(layer Layer, canon Canon, fixed []Fixed, cfg Config) *state {
 	st := newState(layer, canon, fixed, cfg)
 	st.anchor()
 	st.seed()
 	st.walk()
 	st.settle()
 	st.rescoreAll()
-	return st.proposal()
+	return st
 }
 
 type state struct {
@@ -48,6 +54,11 @@ type state struct {
 	held map[string]Target
 	// subjectID → subjectID that took a handle this one cleared the bar for
 	lostTo map[string]string
+
+	// pairs remembers the subject compare of a layer Subject and a handle for
+	// the length of one Align: values do not change during a run, and the same
+	// pair is compared by its own score and by every neighbor's segments.
+	pairs map[string]map[string]subjectcompare.Result
 
 	// cands are each Subject's candidates by handle, with their latest score
 	cands map[string]map[string]*cand
@@ -107,6 +118,7 @@ func newState(layer Layer, canon Canon, fixed []Fixed, cfg Config) *state {
 		owner:        map[string]string{},
 		held:         map[string]Target{},
 		lostTo:       map[string]string{},
+		pairs:        map[string]map[string]subjectcompare.Result{},
 		cands:        map[string]map[string]*cand{},
 		dirty:        map[string]mark{},
 		releasedFrom: map[string][]byte{},
@@ -233,7 +245,7 @@ func (st *state) candidate(sk string, h *Handle) *cand {
 // stands, and bumps its version.
 func (st *state) score(sk string, h *Handle, c *cand) {
 	s := st.subjects[sk]
-	r := st.evaluate(s.Kind, s.Values, h.Values)
+	r := st.pair(s, h)
 	links := st.segments(s.ID, h, r.Evidence, st.placedOf)
 	var edge float64
 	for _, l := range links {
@@ -310,11 +322,12 @@ func (st *state) corresponding(link adjLink, hid []byte) []adjLink {
 	return out
 }
 
-// place puts s on h and tells its neighbors. Each canon neighbor of h through
-// a corresponding link becomes a candidate of the layer neighbor of its kind,
-// at any score, with s as the one that nominated it. A neighbor that is
-// already placed (and not fixed) is marked dirty; one that is not placed has
-// every candidate re-scored and queued.
+// place puts s on h and tells its neighbors. Of the canon neighbors of h
+// through a corresponding link, the most similar TopK plus ties, at most
+// TieCap, of the layer neighbor's kind become candidates of that neighbor, at
+// any similarity, ranked as Candidates ranks (keepTop), with s as the one that
+// nominated them. A neighbor that is already placed (and not fixed) is marked
+// dirty; one that is not placed has every candidate re-scored and queued.
 func (st *state) place(sk string, hid []byte) {
 	st.placed[sk] = append([]byte(nil), hid...)
 	st.owner[string(hid)] = sk
@@ -334,19 +347,27 @@ func (st *state) place(sk string, hid []byte) {
 			continue
 		}
 		_, nPlaced := st.placed[nk]
+		var fresh []scored
+		seen := map[string]bool{}
 		for _, ce := range st.corresponding(link, hid) {
 			g := st.handles[string(ce.neighbor)]
-			if g == nil || g.Kind != ns.Kind {
+			if g == nil || g.Kind != ns.Kind || seen[string(g.ID)] {
 				continue
 			}
-			c := st.cands[nk][string(g.ID)]
-			if c == nil {
-				c = st.candidate(nk, g)
-				// An unplaced neighbor is re-scored below, with the rest.
-				c.via, c.viaKey = append([]byte(nil), s.ID...), link.key
-			} else if st.fixedSet[nk] && len(c.via) == 0 {
-				c.via, c.viaKey = append([]byte(nil), s.ID...), link.key
+			seen[string(g.ID)] = true
+			if c := st.cands[nk][string(g.ID)]; c != nil {
+				if st.fixedSet[nk] && len(c.via) == 0 {
+					c.via, c.viaKey = append([]byte(nil), s.ID...), link.key
+				}
+				continue
 			}
+			r := st.pair(ns, g)
+			fresh = append(fresh, scored{h: *g, evidence: r.Evidence, similarity: r.Similarity})
+		}
+		for _, h := range keepTop(fresh, st.cfg.Alignment) {
+			// An unplaced neighbor is re-scored below, with the rest.
+			c := st.candidate(nk, st.handles[string(h.ID)])
+			c.via, c.viaKey = append([]byte(nil), s.ID...), link.key
 		}
 		if st.fixedSet[nk] || done[nk] {
 			continue
@@ -499,6 +520,22 @@ func (st *state) viaOf(sk string, c *cand) ([]byte, vocabkey.BridgeKey) {
 	return nil, vocabkey.BridgeKey{}
 }
 
+// pair is subject compare of layer Subject s and handle h, computed once for
+// the run.
+func (st *state) pair(s *Subject, h *Handle) subjectcompare.Result {
+	if r, ok := st.pairs[string(s.ID)][string(h.ID)]; ok {
+		return r
+	}
+	r := st.evaluate(s.Kind, s.Values, h.Values)
+	byHandle := st.pairs[string(s.ID)]
+	if byHandle == nil {
+		byHandle = map[string]subjectcompare.Result{}
+		st.pairs[string(s.ID)] = byHandle
+	}
+	byHandle[string(h.ID)] = r
+	return r
+}
+
 func (st *state) evaluate(kind string, a, b subjectcompare.Values) subjectcompare.Result {
 	return subjectcompare.Compare(vocabkey.SubjectType(kind), a, b, st.metas, st.cfg.Subject, st.cfg.Value)
 }
@@ -572,16 +609,18 @@ func (st *state) segments(subjectID []byte, h *Handle, own float64, placedOf fun
 
 // compareSegments is layer 5 on one layer link and one canon link.
 func (st *state) compareSegments(l adjLink, ns *Subject, ce adjLink, nh *Handle, placed segmentcompare.Placement, own float64) segmentcompare.Result {
-	return st.compare(l.key, ns.Kind, ns.Values, ce.key, nh.Kind, nh.Values, placed, own)
+	return st.compare(l.key, ns.Kind, ns.Values, ce.key, nh.Kind, nh.Values, placed, own,
+		func() subjectcompare.Result { return st.pair(ns, nh) })
 }
 
 // compare is the one call to layer 5: two segments, each a key, the neighbor's
-// kind and its values.
-func (st *state) compare(keyA vocabkey.BridgeKey, kindA string, valuesA subjectcompare.Values, keyB vocabkey.BridgeKey, kindB string, valuesB subjectcompare.Values, placed segmentcompare.Placement, own float64) segmentcompare.Result {
-	return segmentcompare.Compare(
+// kind and its values. neighbor gives the neighbors' subject compare, so a
+// caller with a memo of it can share the work.
+func (st *state) compare(keyA vocabkey.BridgeKey, kindA string, valuesA subjectcompare.Values, keyB vocabkey.BridgeKey, kindB string, valuesB subjectcompare.Values, placed segmentcompare.Placement, own float64, neighbor func() subjectcompare.Result) segmentcompare.Result {
+	return segmentcompare.CompareNeighbor(
 		segmentcompare.Segment{Key: keyA, NeighborKind: vocabkey.SubjectType(kindA), Neighbor: valuesA},
 		segmentcompare.Segment{Key: keyB, NeighborKind: vocabkey.SubjectType(kindB), Neighbor: valuesB},
-		placed, own, st.metas, st.cfg.Segment, st.cfg.Subject, st.cfg.Value)
+		placed, own, neighbor, st.cfg.Segment)
 }
 
 // lostContest reports whether another Subject already holds the handle, and

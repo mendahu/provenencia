@@ -215,7 +215,7 @@ struct EvidenceGraphModelTests {
         )
 
         model.toggleArm(.person)
-        model.beginCreate(at: CGPoint(x: 100, y: 140))
+        model.beginCreate(at: CGPoint(x: 4_100, y: 4_140))
         let gridX = 2 + EvidenceGraphPlacement.originReserveCells
         let gridY = 3 + EvidenceGraphPlacement.originReserveCells
         #expect(model.isCreating)
@@ -709,7 +709,7 @@ struct EvidenceGraphModelTests {
             subjectID: "s1",
             originGridX: 1,
             originGridY: 2,
-            documentDelta: CGSize(width: 160, height: 0)
+            delta: CGSize(width: 160, height: 0)
         )
         let olderWrite = model.lastPositionWrite
         try #require(await waitUntil(timeout: .seconds(5)) { store.heldSetSubjectPositionCount == 1 })
@@ -717,7 +717,7 @@ struct EvidenceGraphModelTests {
             subjectID: "s1",
             originGridX: 5,
             originGridY: 2,
-            documentDelta: CGSize(width: 160, height: 0)
+            delta: CGSize(width: 160, height: 0)
         )
         let newerWrite = model.lastPositionWrite
         try #require(await waitUntil(timeout: .seconds(5)) { store.heldSetSubjectPositionCount == 2 })
@@ -766,7 +766,7 @@ struct EvidenceGraphModelTests {
             subjectID: "s1",
             originGridX: 1,
             originGridY: 2,
-            documentDelta: CGSize(width: 160, height: 0)
+            delta: CGSize(width: 160, height: 0)
         )
         let olderWrite = model.lastPositionWrite
         try #require(await waitUntil(timeout: .seconds(5)) { store.heldSetSubjectPositionCount == 1 })
@@ -774,7 +774,7 @@ struct EvidenceGraphModelTests {
             subjectID: "s1",
             originGridX: 5,
             originGridY: 2,
-            documentDelta: CGSize(width: 160, height: 0)
+            delta: CGSize(width: 160, height: 0)
         )
         let newerWrite = model.lastPositionWrite
         try #require(await waitUntil(timeout: .seconds(5)) { store.heldSetSubjectPositionCount == 2 })
@@ -2174,7 +2174,7 @@ struct EvidenceGraphModelTests {
         let (store, model) = groupModel()
         model.replacePrimarySelection(["p1", "p2"])
         _ = model.beginGroupDrag(anchor: "p1")
-        let moved = model.commitGroupDrag(anchor: "p1", documentDelta: CGSize(width: 40, height: 0))
+        let moved = model.commitGroupDrag(anchor: "p1", delta: CGSize(width: 40, height: 0))
         #expect(moved.map(\.subjectID) == ["p1", "p2"])
         #expect(moved.map(\.gridX) == [3, 5])
         #expect(moved.map(\.gridY) == [3, 3])
@@ -2192,7 +2192,7 @@ struct EvidenceGraphModelTests {
         let (store, model) = groupModel()
         model.replacePrimarySelection(["p1", "b1"])
         _ = model.beginGroupDrag(anchor: "p1")
-        let moved = model.commitGroupDrag(anchor: "p1", documentDelta: CGSize(width: 40, height: 0))
+        let moved = model.commitGroupDrag(anchor: "p1", delta: CGSize(width: 40, height: 0))
         #expect(moved.map(\.subjectID) == ["p1", "b1"])
         #expect(moved.map(\.gridX) == [3, 4])
         await model.lastPositionWrite?.value

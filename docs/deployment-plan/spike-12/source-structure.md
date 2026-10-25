@@ -98,5 +98,5 @@ These were weighed and parked. Their reasoning is in [`ideas/source-structure-la
 - Named Source templates. Copy Source covers the case for now.
 - Per-graph credibility.
 - Layered citation output (Evidence Explained style "…; citing …").
-- Canvas focus views (one connected component at a time, filter by Citation): [`ideas/graph-focus-views.md`](../../ideas/graph-focus-views.md).
+- Canvas focus views (one connected component at a time, filter by Citation): [`ideas/archive/graph-focus-views.md`](../../ideas/archive/graph-focus-views.md) (archived 2026-10-24).
 - `source` Subjects, `mentions` and `remark`: [`ideas/source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md). None exist yet; graph isolation will forbid cross-graph subject values when that idea is picked up, so it has to be re-thought then.

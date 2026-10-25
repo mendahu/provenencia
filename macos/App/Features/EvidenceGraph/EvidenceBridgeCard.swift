@@ -28,7 +28,7 @@ enum EvidenceBridgeCard {
     static let bodyActionHitHeight: CGFloat = 28
 
     static func contentCenter(gridX: Int64, gridY: Int64) -> CGPoint {
-        GraphCanvasGridMapping.contentPoint(gridX: gridX, gridY: gridY)
+        GraphCanvasGridMapping.gridPoint(gridX: gridX, gridY: gridY)
     }
 
     static func topLeadingOffset(gridX: Int64, gridY: Int64) -> CGSize {
@@ -39,7 +39,7 @@ enum EvidenceBridgeCard {
         )
     }
 
-    /// Document-space frame used for edge attachment and AppKit hit targets.
+    /// Grid-space frame used for edge attachment and AppKit hit targets.
     /// Uses the card's measured `layout` when it has reported one; the wrapped-text
     /// estimate below is only the first-frame fallback.
     static func contentFrame(
@@ -98,32 +98,13 @@ enum EvidenceBridgeCard {
         let font = placed.isCited
             ? PVFont.nsDisplay(size: 14.5, weight: PVFontWeight.medium)
             : PVFont.nsBody(size: 11.5, weight: PVFontWeight.regular, italic: true)
-        return wrappedTextHeight(text, width: bodyTextWidth, font: font, maxLines: 3)
+        guard !text.isEmpty else { return 0 }
+        return PVTextMetrics.textHeight(text, width: bodyTextWidth, font: font, maxLines: 3)
     }
 
     /// Body copy width inside the shell, leaving room for the trailing icon column.
     private static var bodyTextWidth: CGFloat {
         width - shellPaddingX * 2 - 8 - 12
-    }
-
-    private static func wrappedTextHeight(
-        _ text: String,
-        width: CGFloat,
-        font: NSFont,
-        maxLines: Int
-    ) -> CGFloat {
-        let style = NSMutableParagraphStyle()
-        style.lineBreakMode = .byWordWrapping
-        let rect = (text as NSString).boundingRect(
-            with: CGSize(width: max(width, 1), height: .greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            attributes: [
-                .font: font,
-                .paragraphStyle: style,
-            ]
-        )
-        let line = max(font.boundingRectForFont.height, 1)
-        return min(ceil(rect.height), ceil(line) * CGFloat(maxLines))
     }
 
     static func actionTargets(
@@ -265,8 +246,7 @@ enum EvidenceBridgeCard {
             }
             return "\(placed.typeLabel), \(ref), \(summary)"
         }
-        let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        let name = trimmed.isEmpty ? placed.typeLabel : trimmed
+        let name = placed.titleOrTypeLabel
         let honesty = L10n.string(L10n.EvidenceGraph.bridgeHonestyAccessibility)
         if ref.isEmpty {
             return "\(placed.typeLabel), \(name), \(honesty)"

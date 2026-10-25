@@ -58,7 +58,7 @@ func propose(c *database.Catalog, graphID []byte, fixed []graphalign.Fixed) (gra
 	if err != nil {
 		return graphalign.Proposal{}, 0, nil, err
 	}
-	canon, err := loadCanon(c.Graph(), prof, layer, anchors, cfg, terms)
+	canon, err := loadCanon(c.Graph(), in.graphID, prof, layer, anchors, cfg, terms)
 	if err != nil {
 		return graphalign.Proposal{}, 0, nil, err
 	}

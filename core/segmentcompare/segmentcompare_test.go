@@ -3,6 +3,7 @@ package segmentcompare_test
 import (
 	"math"
 	"math/rand"
+	"reflect"
 	"slices"
 	"testing"
 
@@ -131,9 +132,26 @@ func TestReadFrom(t *testing.T) {
 	}
 }
 
-func TestCompare(t *testing.T) {
-	metas := subjectcomparetest.Metas()
-	reg := matchregistry.Default()
+// compareMetas and compareReg are the metas and registry the Compare cases run under.
+var (
+	compareMetas = subjectcomparetest.Metas()
+	compareReg   = matchregistry.Default()
+)
+
+// compareCase is one row of the Compare table, run by TestCompare and
+// TestCompareNeighborMatchesCompare.
+type compareCase struct {
+	name     string
+	a, b     segmentcompare.Segment
+	placed   segmentcompare.Placement
+	own      float64
+	outcome  propertycompare.Outcome
+	cause    segmentcompare.Cause
+	evidence float64
+	neighbor float64
+}
+
+var compareCases = func() []compareCase {
 	birthP := partKey(vocabkey.PropertyPerson, vocabkey.EventBirth)
 	birthE := partKey(vocabkey.PropertyEvent, vocabkey.EventBirth)
 	resid := partKey(vocabkey.PropertyPerson, "residence")
@@ -144,16 +162,7 @@ func TestCompare(t *testing.T) {
 	ann := subjectcompare.Values{vocabkey.PropertyName: {pt.Name("Ann Ames")}}
 	bob := subjectcompare.Values{vocabkey.PropertyName: {pt.Name("John Smith")}}
 
-	tests := []struct {
-		name     string
-		a, b     segmentcompare.Segment
-		placed   segmentcompare.Placement
-		own      float64
-		outcome  propertycompare.Outcome
-		cause    segmentcompare.Cause
-		evidence float64
-		neighbor float64
-	}{
+	return []compareCase{
 		{"AC-1.5", seg(spouse, vocabkey.Person, nil), seg(sibling, vocabkey.Person, nil), segmentcompare.Together, 0, propertycompare.OutcomeUnknown, segmentcompare.CauseNotCorresponding, 0, 0},
 		{"AC-2.1", seg(birthP, vocabkey.Event, event("birth", 1817)), seg(birthP, vocabkey.Event, event("birth", 1817)), segmentcompare.Together, 2.5, propertycompare.OutcomeAgree, "", 2.75, 2.5},
 		{"AC-2.2", seg(birthP, vocabkey.Event, event("birth", 1817)), seg(birthP, vocabkey.Event, event("birth", 1817)), segmentcompare.Apart, 2.5, propertycompare.OutcomeConflict, segmentcompare.CausePlacedApart, -3, 0},
@@ -171,12 +180,42 @@ func TestCompare(t *testing.T) {
 		{"unplaced gated", seg(from, vocabkey.Place, york), seg(from, vocabkey.Place, york), segmentcompare.Unplaced, 1, propertycompare.OutcomeUnknown, segmentcompare.CauseGated, 0, 3},
 		{"AC-2.10", seg(to, vocabkey.Place, york), seg(to, vocabkey.Place, york), segmentcompare.Apart, 3, propertycompare.OutcomeUnknown, segmentcompare.CausePlacedApart, 0, 0},
 	}
-	for _, tc := range tests {
+}()
+
+func TestCompare(t *testing.T) {
+	reg, metas := compareReg, compareMetas
+	for _, tc := range compareCases {
 		t.Run(tc.name, func(t *testing.T) {
 			got := segmentcompare.Compare(tc.a, tc.b, tc.placed, tc.own, metas, reg.Segment, reg.Subject, reg.Value)
 			if got.Outcome != tc.outcome || got.Cause != tc.cause || !near(got.Evidence, tc.evidence) || !near(got.Neighbor.Evidence, tc.neighbor) {
 				t.Errorf("got %s/%q evidence %v neighbor %v; want %s/%q evidence %v neighbor %v",
 					got.Outcome, got.Cause, got.Evidence, got.Neighbor.Evidence, tc.outcome, tc.cause, tc.evidence, tc.neighbor)
+			}
+		})
+	}
+}
+
+// CompareNeighbor with the neighbors compared by the caller gives Compare's
+// result, and asks for the comparison only when the link needs it.
+func TestCompareNeighborMatchesCompare(t *testing.T) {
+	reg, metas := compareReg, compareMetas
+	for _, tc := range compareCases {
+		t.Run(tc.name, func(t *testing.T) {
+			want := segmentcompare.Compare(tc.a, tc.b, tc.placed, tc.own, metas, reg.Segment, reg.Subject, reg.Value)
+			calls := 0
+			got := segmentcompare.CompareNeighbor(tc.a, tc.b, tc.placed, tc.own, func() subjectcompare.Result {
+				calls++
+				return subjectcompare.Compare(tc.a.NeighborKind, tc.a.Neighbor, tc.b.Neighbor, metas, reg.Subject, reg.Value)
+			}, reg.Segment)
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("CompareNeighbor = %+v, Compare = %+v", got, want)
+			}
+			wantCalls := 1
+			if tc.cause == segmentcompare.CauseNotCorresponding || tc.cause == segmentcompare.CausePlacedApart {
+				wantCalls = 0
+			}
+			if calls != wantCalls {
+				t.Errorf("the neighbor comparison ran %d times, want %d", calls, wantCalls)
 			}
 		})
 	}

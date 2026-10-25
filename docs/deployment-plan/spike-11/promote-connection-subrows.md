@@ -31,7 +31,7 @@ A connection the researcher disputes gets a way back to the graph (open the brid
 
 1. **Which row hosts a connection?** A bridge has two ends.
    - *Mirror* it under both ends: the most direct, but every connection appears twice.
-   - *One host by rule*: participations and locations under the event (the hub that ties people and places); relationships under the `person` end; place relationships under the part (child) place. Less noise, but a person row wouldn't show the events it's in.
+   - *One host by rule*: participations and locations under the event (the event ties people and places together); relationships under the `person` end; place relationships under the part (child) place. Less noise, but a person row wouldn't show the events it's in.
    - A middle option: one host, plus a compact "+3 connections" on the other end that points to it.
 2. **Ends that aren't rows on this page.** On a single-subject Promote, or for an end that's already filed (an anchor), the connection goes under the visible end and names the other ("Toronto, already filed").
 3. **Already-filed connections:** hidden (as today), or shown dimmed for context.

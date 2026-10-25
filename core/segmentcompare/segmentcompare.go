@@ -95,6 +95,16 @@ type Result struct {
 // with at least UnplacedAlike evidence counts as placed together, one with
 // negative evidence as placed apart, and any other adds nothing.
 func Compare(a, b Segment, placed Placement, own float64, metas subjectcompare.Metas, rules Rules, subject subjectcompare.Rules, value valuecompare.Rules) Result {
+	return CompareNeighbor(a, b, placed, own, func() subjectcompare.Result {
+		return subjectcompare.Compare(a.NeighborKind, a.Neighbor, b.Neighbor, metas, subject, value)
+	}, rules)
+}
+
+// CompareNeighbor is Compare with the neighbors' comparison handed in as a
+// function, called at most once and only when the link needs it: not for keys
+// that do not correspond, nor for a neighbor placed apart. A caller that has
+// compared the neighbors already returns that result.
+func CompareNeighbor(a, b Segment, placed Placement, own float64, neighbor func() subjectcompare.Result, rules Rules) Result {
 	if !Corresponds(a.Key, b.Key) {
 		return Result{Outcome: propertycompare.OutcomeUnknown, Cause: CauseNotCorresponding}
 	}
@@ -107,19 +117,19 @@ func Compare(a, b Segment, placed Placement, own float64, metas subjectcompare.M
 		out.Cause = CausePlacedApart
 		return out
 	}
-	neighbor := subjectcompare.Compare(a.NeighborKind, a.Neighbor, b.Neighbor, metas, subject, value)
+	nr := neighbor()
 	if placed == Unplaced {
 		switch {
-		case neighbor.Evidence >= rules.UnplacedAlike:
-		case neighbor.Evidence < 0:
+		case nr.Evidence >= rules.UnplacedAlike:
+		case nr.Evidence < 0:
 			out := apart(one, g, own, rules)
-			out.Cause, out.Neighbor = CauseUnplacedDiffers, neighbor
+			out.Cause, out.Neighbor = CauseUnplacedDiffers, nr
 			return out
 		default:
-			return Result{Outcome: propertycompare.OutcomeUnknown, Cause: CauseUnplacedUnsure, Neighbor: neighbor}
+			return Result{Outcome: propertycompare.OutcomeUnknown, Cause: CauseUnplacedUnsure, Neighbor: nr}
 		}
 	}
-	out := Result{Neighbor: neighbor}
+	out := Result{Neighbor: nr}
 	if g.MinOwnEvidence > 0 && own < g.MinOwnEvidence {
 		out.Outcome, out.Cause = propertycompare.OutcomeUnknown, CauseGated
 		return out

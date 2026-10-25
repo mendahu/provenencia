@@ -29,7 +29,7 @@ CON: no findings (clean).
 
 | ID | Lens | Severity | Title | Decision | Evidence / reason |
 | --- | --- | --- | --- | --- | --- |
-| PRF-1 | PRF | blocker | Placing on a hub nominates every filed neighbor per layer link (L × D candidates, ~3 scorings each) | To user → Follow-up (S11-21) | Measured (overlay bench): 30 births at a 6k-event city 2.88 s head vs 9.34 s base, so 3× faster than main, not a regression. The fix bounds nominations, which contradicts D-7 "no K"; S11-21 owns the large-Source budget |
+| PRF-1 | PRF | blocker | Placing on a place with many filed events nominates every filed neighbor per layer link (L × D candidates, ~3 scorings each) | To user → Follow-up (S11-21) | Measured (overlay bench): 30 births at a 6k-event city 2.88 s head vs 9.34 s base, so 3× faster than main, not a regression. The fix bounds nominations, which contradicts D-7 "no K"; S11-21 owns the large-Source budget |
 | MNT-1 | MNT | blocker | `checkPure` has two import walkers; the second ignores `ImportDir` errors | Fix now → F-1 | verified: `guard_test.go:77-127`, `walk` and `walkBuild`; D-11 says one walker |
 | MNT-2 | MNT | major | `promote-graph-alignment.md` §4 signature and §7 `seedCandidateLimit` are stale | Fix now → F-2 | verified by grep at lines 74 and 153 |
 | MNT-3 | MNT | major | `add-match-rule` skill names the deleted `WeakScore` | Fix now → F-2 | verified: SKILL.md:34 |
@@ -40,7 +40,7 @@ CON: no findings (clean).
 
 Nits (logged): `MNT-8 · rows.go:169 · rewrap newPairSegments doc` · `MNT-9 · rows.go:250 · bestNonAssigned → bestExcept` · `MNT-10 · rows.go:71 · Bands.Weak guard repeats band` · `MNT-11 · align.go:31 · state.layer unused` · `MNT-12 · align.go:428 · local release bool name`
 
-**User (2026-10-19):** defer PRF-1 to S11-21; the hub-page shape and its remedy are added to S11-21's scope in the map (`70f26d69`).
+**User (2026-10-19):** defer PRF-1 to S11-21; the shape (a Source whose births are all located at one place with many filed events) and its remedy are added to S11-21's scope in the map (`70f26d69`).
 
 ### Fix plan 1
 

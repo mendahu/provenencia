@@ -63,7 +63,7 @@ struct EvidenceCanvasCard: Equatable {
         return false
     }
 
-    /// Document-space top-leading corner of the card at its grid cell.
+    /// Grid-space top-leading corner of the card at its grid cell.
     @MainActor
     var origin: CGPoint {
         let offset = switch placed {
@@ -87,7 +87,7 @@ struct EvidenceCanvasCardContent {
     /// The subject or bridge card's view. Records the measured hit layout
     /// before the canvas sizes the view, so edges and pointer targets exist
     /// for the opening batch.
-    func cardView(for card: EvidenceCanvasCard) -> NSView {
+    func cardView(for card: EvidenceCanvasCard) -> EvidenceCardView {
         let view = EvidenceCardView(card: card, actions: accessibilityActions(for: card))
         layouts.record(view.layout, for: card.id)
         return view

@@ -240,17 +240,32 @@ func TestLoadLinksUsesTheEdgeIndex(t *testing.T) {
 	}
 }
 
-func TestDropLeavesAliasTables(t *testing.T) {
+func TestDropLeavesAliasIndex(t *testing.T) {
 	g := graphcache.New(nil)
-	g.SetAliasTables([]string{"jas"})
+	g.SetAliasIndex([]string{"jas"})
 	g.Drop()
-	raw, ok := g.AliasTables()
+	raw, ok := g.AliasIndex()
 	if !ok {
-		t.Fatal("drop cleared alias tables")
+		t.Fatal("drop cleared alias index")
 	}
 	tables, ok := raw.([]string)
 	if !ok || len(tables) != 1 || tables[0] != "jas" {
 		t.Fatalf("%#v", raw)
+	}
+}
+
+func TestDropLeavesNameFormat(t *testing.T) {
+	g := graphcache.New(nil)
+	if v, ok := (*graphcache.Graph)(nil).NameFormat(); ok || v != nil {
+		t.Errorf("a nil graph holds name format %v, %v", v, ok)
+	}
+	if _, ok := g.NameFormat(); ok {
+		t.Fatal("a new graph holds a name format")
+	}
+	g.SetNameFormat("western")
+	g.Drop()
+	if v, ok := g.NameFormat(); !ok || v != "western" {
+		t.Fatalf("after Drop NameFormat = %v, %v, want western, true", v, ok)
 	}
 }
 
@@ -433,9 +448,14 @@ func TestMatchIndexDrops(t *testing.T) {
 	if v, ok := g.MatchIndex(); !ok || v != "index" {
 		t.Fatalf("MatchIndex = %v, %v after SetMatchIndex", v, ok)
 	}
-	g.SetAliasTables(nil)
+	g.SetAliasIndex(nil)
 	if stored() {
-		t.Error("SetAliasTables left the match index")
+		t.Error("SetAliasIndex left the match index")
+	}
+	g.SetMatchIndex("index")
+	g.SetNameFormat("western")
+	if stored() {
+		t.Error("SetNameFormat left the match index")
 	}
 	g.SetMatchIndex("index")
 	if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 1}, Effects: effects.Set{Handles: [][]byte{id}}}); err != nil {

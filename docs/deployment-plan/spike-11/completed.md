@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-21 — Large-Source performance check
+
+**Landed 2026-10-24** in [#536](https://github.com/mendahu/provenencia/pull/536). A 100-Subject Source now proposes within its budget and a page of births at a big city no longer freezes Promote. A placed pair nominates only its neighbors' most similar handles, a row decision re-proposes from remembered candidates, and a warm evidence sheet reads nothing from the catalog because the name format and the alias index are warmed when the project opens. The budgets run as `TestLargeSourceBudgets` in every `check-pr.sh`. Evidence graph cards also reuse their SF Symbol images (by symbol and point size) and AppKit fonts (by family, size, weight and italic, in `PVFont`) instead of rebuilding them on every paint, which is what stalled panning a Source with 110 Subjects. Each card is also its own layer that paints once into a cached image (`GraphCanvasItemView`, through `updateLayer`) and repaints only when it changes, so a pan no longer repaints cards.
+
 ## S11-27 — Connection subrows on Promote
 
 **Landed 2026-10-23** in [#530](https://github.com/mendahu/provenencia/pull/530). Each connection on the Promote page is now a subrow under every end that is a row on the page, so a connection between two rows shows under both, and one with a single row end shows under that end with a note that the other end is filed or not on the page. Nothing hops, highlights, caps or expands, and rows are always grouped by kind; the grouping menu is gone. Its state comes only from its ends: "Files on Done", "Waits for <name>" (muted, with VoiceOver saying why), or a warning when both ends are one record. The bottom panel and its footer button are gone; the footer reads "File 12 · Skip 3 · 22 connections" and adds "N unselected" when rows have no target.

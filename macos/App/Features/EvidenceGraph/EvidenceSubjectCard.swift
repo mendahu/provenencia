@@ -68,13 +68,13 @@ enum EvidenceSubjectCard {
         return id.isEmpty ? nil : id
     }
 
-    /// Document-space top-leading corner of the painted card.
+    /// Grid-space top-leading corner of the painted card.
     static func origin(for placed: EvidenceGraphPlacedSubject, dragOffset: CGSize = .zero) -> CGPoint {
         let offset = topLeadingOffset(gridX: placed.gridX, gridY: placed.gridY)
         return CGPoint(x: offset.width + dragOffset.width, y: offset.height + dragOffset.height)
     }
 
-    /// Document-space frame used for edge attachment and AppKit hit targets.
+    /// Grid-space frame used for edge attachment and AppKit hit targets.
     /// Uses the card's measured `layout` when it has reported one; the
     /// constant-based ``contentHeight(for:)`` is only the first-frame fallback.
     static func edgeFrame(
@@ -89,7 +89,7 @@ enum EvidenceSubjectCard {
         return CGRect(origin: origin, size: CGSize(width: width, height: contentHeight(for: placed)))
     }
 
-    /// Nested action frames in document space (same coordinate as ``edgeFrame``).
+    /// Nested action frames in grid space (same coordinate as ``edgeFrame``).
     /// With a measured `layout`, every row / Add property / footer target is the
     /// painted band of the piece it belongs to, so hits move with the paint.
     static func actionTargets(
@@ -277,9 +277,9 @@ enum EvidenceSubjectCard {
         return y
     }
 
-    /// Content-space center for a placed (or ghost) card.
+    /// Grid-space center for a placed (or ghost) card.
     static func contentCenter(gridX: Int64, gridY: Int64) -> CGPoint {
-        GraphCanvasGridMapping.contentPoint(gridX: gridX, gridY: gridY)
+        GraphCanvasGridMapping.gridPoint(gridX: gridX, gridY: gridY)
     }
 
     /// Top-leading offset so the card keeps a real layout frame.
@@ -293,8 +293,7 @@ enum EvidenceSubjectCard {
 
     /// VoiceOver / rotor label for a placed subject.
     static func accessibilityLabel(for placed: EvidenceGraphPlacedSubject) -> String {
-        let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        let name = trimmed.isEmpty ? placed.typeLabel : trimmed
+        let name = placed.titleOrTypeLabel
         let citation = placed.isCited
             ? L10n.string(L10n.EvidenceGraph.citedAccessibility)
             : L10n.string(L10n.EvidenceGraph.uncitedAccessibility)
@@ -314,9 +313,8 @@ enum EvidenceSubjectCard {
             let target = membershipName(membership, orders: orders).map { "\($0), \(membership.entity.ref)" } ?? membership.entity.ref
             return L10n.EvidenceGraph.openHandleAccessibility(kind: placed.kind, ref: target)
         }
-        let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
         return L10n.EvidenceGraph.promoteAccessibility(
-            label: label.isEmpty ? placed.subject.ref : label,
+            label: placed.subject.trimmedLabel ?? placed.subject.ref,
             ref: placed.subject.ref
         )
     }
@@ -337,7 +335,7 @@ enum EvidenceSubjectCard {
     }
 }
 
-/// Document-space hit frames for the trailing edit / delete icons on graph cards.
+/// Grid-space hit frames for the trailing edit / delete icons on graph cards.
 ///
 /// Paint places 12pt ``PVIcon``s in an `HStack(spacing: 6)` flush to the card’s
 /// trailing shell padding. Older hard-coded `maxX - N` offsets sat left of those

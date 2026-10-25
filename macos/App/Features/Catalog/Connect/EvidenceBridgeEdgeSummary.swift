@@ -95,8 +95,7 @@ enum EvidenceBridgeEdgeSummary {
         if let identity = identityNoun(on: placed, orders: orders) {
             return identity
         }
-        let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !label.isEmpty { return label }
+        if let label = placed.subject.trimmedLabel { return label }
         let typed = L10n.EvidenceGraph.bridgeNounTypeAndRef(
             type: placed.typeLabel,
             ref: placed.subject.ref
@@ -148,8 +147,7 @@ enum EvidenceBridgeEdgeSummary {
     }
 
     private static func wholeNameFallback(for bridge: EvidenceGraphPlacedBridge) -> String {
-        let stored = bridge.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !stored.isEmpty { return stored }
+        if let stored = bridge.subject.trimmedLabel { return stored }
         return L10n.EvidenceGraph.bridgeNameKindAndRef(
             phrase: phrase(for: bridge),
             ref: bridge.subject.ref

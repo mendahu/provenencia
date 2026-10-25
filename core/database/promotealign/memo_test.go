@@ -1,12 +1,14 @@
 package promotealign_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"reflect"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -24,6 +26,7 @@ import (
 type warmFixture struct {
 	f                         *fixture
 	srcB                      sources.Source
+	artB                      artifacts.Artifact
 	member                    subjects.Subject
 	bPerson, bBirth           subjects.Subject
 	personHandle, birthHandle []byte
@@ -37,7 +40,7 @@ func newWarmFixture(t *testing.T) *warmFixture {
 	bPerson := f.person(srcB, artB, "John Smith")
 	bBirth := f.datedBirth(srcB, artB, 1817)
 	f.participation(srcB, artB, bPerson, bBirth, "subject")
-	return &warmFixture{f: f, srcB: srcB, member: member, bPerson: bPerson, bBirth: bBirth, personHandle: ph, birthHandle: bh}
+	return &warmFixture{f: f, srcB: srcB, artB: artB, member: member, bPerson: bPerson, bBirth: bBirth, personHandle: ph, birthHandle: bh}
 }
 
 func (w *warmFixture) request() promotealign.EvidenceRequest {
@@ -246,5 +249,53 @@ func TestProfilesLiveWithTheMatchIndex(t *testing.T) {
 	w.f.join(w.f.person(w.f.source, w.f.artifact, "John Smith"), w.personHandle)
 	if _, ok := promotealign.ProfilesKeptForTest(w.f.c); ok {
 		t.Fatal("a handle commit left the match index and its profiles")
+	}
+}
+
+// S11-21 D-8 (AC-4.1, AC-4.2, AC-4.3): a Subject's remembered candidates never
+// outlive the index or the Source edit they were ranked against: the next
+// proposal equals one on a dropped graph.
+func TestCandidatesMemoFollowsCommits(t *testing.T) {
+	tests := []struct {
+		name   string
+		change func(w *warmFixture) (newHandle []byte)
+	}{
+		{"no commit", func(*warmFixture) []byte { return nil }},
+		{"a handle commit", func(w *warmFixture) []byte {
+			srcC, artC := w.f.newSource("Parish register")
+			_, _, ph, _ := w.f.filedBirth(srcC, artC, "John Smith", 1817, nil, nil)
+			return ph
+		}},
+		{"a Source edit", func(w *warmFixture) []byte {
+			w.f.cite(w.artB, w.bPerson, observations.Input{
+				PropertyID: w.f.prop("name").ID, Name: namevaluetest.Western("Johnny Smith"),
+			})
+			return nil
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newWarmFixture(t)
+			graph := w.f.graph(w.srcB)
+			w.f.propose(graph, nil)
+			newHandle := tc.change(w)
+			warm := w.f.propose(graph, nil)
+			w.f.c.Graph().Drop()
+			fresh := w.f.propose(graph, nil)
+			if !reflect.DeepEqual(warm, fresh) {
+				t.Fatalf("the proposal after the change differs from a fresh one:\nwarm  %+v\nfresh %+v", warm, fresh)
+			}
+			if newHandle == nil {
+				return
+			}
+			row := rowFor(fresh, w.bPerson.ID)
+			found := row.Target == graphalign.TargetHandle && bytes.Equal(row.HandleID, newHandle)
+			for _, a := range row.Alternatives {
+				found = found || bytes.Equal(a.HandleID, newHandle)
+			}
+			if !found {
+				t.Errorf("the new handle %x is neither the row's target nor an alternative: %+v", newHandle, row)
+			}
+		})
 	}
 }

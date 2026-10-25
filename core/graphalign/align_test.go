@@ -2,6 +2,7 @@ package graphalign_test
 
 import (
 	"bytes"
+	"fmt"
 	"maps"
 	"math"
 	"slices"
@@ -2222,5 +2223,70 @@ func TestContestedRow(t *testing.T) {
 	}
 	if r := rowBySubject(p, id("k")); r.Target != graphalign.TargetSkip || r.Flags.Contested {
 		t.Fatalf("a decided Skip row is not contested: %+v", r)
+	}
+}
+
+// A placed pair nominates, for each layer neighbor, the most similar TopK of
+// the canon neighbors it reaches through a corresponding link, plus ties, at
+// most TieCap, at any similarity (S11-21 D-7).
+func TestPlacedPairNominatesTopK(t *testing.T) {
+	cfg := matchregistry.Default().AlignConfig()
+	placeK, kidK := id("s-place"), id("s-birth")
+	placeH := id("h-city")
+	tp, tv := textProp("toponym", "City")
+	et, etv := termProp("event_type", "birth")
+	_, dtv := termProp("event_type", "death")
+	loc := locLink()
+
+	birthYear := func(i int) subjectcompare.Values {
+		k, v := dateProp(1800 + i)
+		return vals(et, etv, k, v)
+	}
+	bare := func() subjectcompare.Values { return vals(et, etv) }
+	handleID := func(i int) []byte { return id(fmt.Sprintf("h-b%02d", i)) }
+
+	tests := []struct {
+		name string
+		// canon births by index, and the layer birth
+		birth      func(i int) subjectcompare.Values
+		count      int
+		layerBirth subjectcompare.Values
+		candidates [][]byte
+		want       int
+		among      []int
+	}{
+		{"AC-2.3 the TopK most similar of 30", birthYear, 30, birthYear(15), nil, cfg.Alignment.TopK, []int{15}},
+		{"AC-2.4 ties extend to TieCap", func(int) subjectcompare.Values { return bare() }, 30, bare(), nil, cfg.Alignment.TieCap, nil},
+		{"AC-2.5 a neighbor under MinSimilarity is still nominated", func(int) subjectcompare.Values { return vals(et, dtv) }, 1, bare(), nil, 1, []int{0}},
+		{"AC-2.6 a Canon candidate stays and the bound adds TopK others", birthYear, 30, birthYear(15), [][]byte{handleID(0)}, cfg.Alignment.TopK + 1, []int{0, 15}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			layer := graphalign.Layer{
+				Subjects: []graphalign.Subject{
+					{ID: placeK, Ref: "PLC-S", Kind: "place", Values: vals(tp, tv)},
+					{ID: kidK, Ref: "EVT-S", Kind: "event", Values: tc.layerBirth},
+				},
+				Bridges: []graphalign.Bridge{bridge(kidK, placeK, loc)},
+				Metas:   mergeMetas(placeMetas(), eventMetas()),
+			}
+			canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: placeH, Ref: "PLC-1", Kind: "place", Values: vals(tp, tv)}}}
+			for i := 0; i < tc.count; i++ {
+				canon.Handles = append(canon.Handles, graphalign.Handle{ID: handleID(i), Ref: fmt.Sprintf("EVT-%02d", i), Kind: "event", Values: tc.birth(i)})
+				canon.Edges = append(canon.Edges, edge(handleID(i), placeH, loc))
+			}
+			if tc.candidates != nil {
+				canon.Candidates = map[string][][]byte{string(kidK): tc.candidates}
+			}
+			got := graphalign.NominatedForTest(layer, canon, []graphalign.Fixed{{SubjectID: placeK, HandleID: placeH}}, cfg, kidK)
+			if len(got) != tc.want {
+				t.Fatalf("%d nominated candidates, want %d", len(got), tc.want)
+			}
+			for _, i := range tc.among {
+				if !slices.ContainsFunc(got, func(g []byte) bool { return bytes.Equal(g, handleID(i)) }) {
+					t.Errorf("h-b%02d is not among the nominated candidates", i)
+				}
+			}
+		})
 	}
 }

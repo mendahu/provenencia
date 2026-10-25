@@ -146,7 +146,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-33 | Evidence sheet audit follow-up | 5 | Items 1 – 10, A, B, C, F, G, H, I of the evidence sheet area audit: one sheet dismissal, engine-named relationships, one seeded-term wording table, whole-phrase copy, an evidence board for responsiveness, unread wire fields removed, docs | — | S11-20 | [plan](prs/S11-33-evidence-sheet-audit.md) | Landed #525 |
 | S11-26 | Connections file by their ends | 6 | Drop the bridge switch-off: `SkipBridgeIDs`, `skip_bridge_ids`, the `skip` parameters | — | — | [plan](prs/S11-26-connections-by-ends.md) | Landed #527 |
 | S11-27 | Connection subrows on Promote | 6 | Each connection as a subrow of a row it joins, its state from its ends; the panel and toggles go | S11-D1 | S11-26, S11-D1 | [plan](prs/S11-27-connection-subrows.md) | Landed #530 |
-| S11-21 | Large-Source performance check | 7 | 100-Subject budgeted test; bound nominations, memoize candidates, warm the name format | — | S11-16, S11-19 | [plan](prs/S11-21-large-source-performance.md) | Planned |
+| S11-21 | Large-Source performance check | 7 | 100-Subject budgeted test; bound nominations, memoize candidates, warm the name format and the alias index | — | S11-16, S11-19 | [plan](prs/S11-21-large-source-performance.md) | Landed #536 |
 | S11-31 | Bound the Source cache | 7 | Loaded Source graphs and their memos are evicted least recently used beyond a cap | — | S11-19, S11-21 | — | Scoped |
 | S11-28 | Fold a nickname into its given name | 2 | Reconciler folds a nickname or abbreviation into its formal name, keeping the set's head; a reviewed table directs two-way pairs; cache reads the product alias tables | — | S11-06 | [plan](prs/S11-28-alias-fold.md) | Planned |
 | S11-29 | Quote nicknames and add former surnames | 2 | Nicknames in quotes everywhere; `former_surname` part type in parentheses, italic on the Person titles | — | — | [plan](prs/S11-29-name-display.md) | Planned |
@@ -240,7 +240,7 @@ SLICE 7 — Performance
   S11-21  Large-Source performance check
   S11-31  Bound the Source cache
   Check: a 100-Subject Source proposes within the benchmark, and a warm evidence
-         open issues no catalog query; a hub page leaves at most N Sources loaded.
+         open issues no catalog query; a Source whose events are all located at one place with many filed events leaves at most N Sources loaded.
 
 SLICE 8 — Find another record
   S11-35  Hold a record Promote did not offer   (any time)
@@ -546,16 +546,16 @@ Follow-up to S11-27 (user, 2026-10-24): the S11-D1 board draws a hover on the ro
 
 #### S11-21 — Large-Source performance check
 
-**Ships.** A budgeted `Test…` (not a `Benchmark…`, which `scripts/check-pr.sh` never runs) on a 100-Subject Source against a few thousand handles, reusing `promotealign/bench_test.go`'s `newFixture` and `bulkCanon`. It also times the shortlist index's cold rebuild after a handle commit (S11-15 ship log PRF-1: every handle commit, Promote Done included, drops the whole index, and the next proposal rebuilds it from every person, event and place node; `BenchmarkProposeAfterCommit` was ~522 ms against main's ~580 ms at 20k persons); over budget, a commit records dirty handle ids and the index removes and re-adds only those (`Index.Remove` plus `Add`; `OnCommit` already has the ids). The fixture has a realistic surname and given-name distribution and some BEF/AFT-dated events (S11-15 ship log PRF-3: a common name word, or a closed-dated probe meeting every open-dated event of its type through the `wide` key, shortlists a share of the catalog, and each hit gets a full profile on every proposal, warm ones included; `bulkCanon`'s persons had no names, so S11-15 never measured this). Over budget, score shortlisted handles on their key values (`keyValues`) first and build full profiles only for the top few. The fixture also has a hub page: a Source with about 30 events located at a place that has thousands of filed events (S11-16 ship log PRF-1: placing a pair nominates every corresponding canon neighbor per layer link with no K, D-7, so a proposal costs layer links × hub degree candidates, each scored about three times; 30 births at a 6,000-event city took 2.88 s on S11-16's head against 9.34 s on main). Over budget, bound the nominations from one placed pair with `Candidates`' ordering and no similarity gate (top `TopK` plus ties, at most `TieCap`; a handle reached through a link is still offered at any score), and memoize the neighbor `subjectcompare.Compare` per (layer neighbor, canon handle) within one `Align`. It also times `promotealign.Evidence` and `Propose` opened row by row on the 100-Subject Source, cold and warm. S11-19 §14 already memoizes the layer, profiles and member values on the graph cache and walks Sources in memory, so this PR measures that, and does not build it. A warm run issues no graph query. The fixture also counts the raw catalog queries a warm run still makes (S11-19 ship log round 3, CON-1): `valuerules.Load`'s name-format reads on every call (D-23 found no graph drop to key a memo on), and `Propose`'s `MAX(revision)`. Over budget, the name formats get a commit effect and a graph memo. Memoization of layers 1–4 across re-runs only if the benchmark fails; if built, a test that cached and uncached runs propose the same.
-**Not this PR.** Anything the benchmark doesn't need.
-**Check.** The benchmark passes; the PR says whether memoization was needed.
+**Ships.** The D-1 budgets in `TestLargeSourceBudgets` on the large fixture (a 100-Subject Source, a Source of 30 births all located at one place with 6,000 filed events, Zipf names, BEF / AFT dates); bounded nominations (a placed pair offers each layer neighbor its most similar `TopK` plus ties, capped at `TieCap`, at any similarity); a pair memo per `Align`; a candidates memo across proposals; the name format warmed at open by `nameformats`; the alias index built once at open by `namealiases`.
+**Not this PR.** In-place update of the shortlist index after a handle commit (680 ms against a 1.5 s budget); scoring shortlisted handles on key values first (cold 1.3 s against 2.5 s); a cross-run neighbor memo (declined by the user); a commit effect for name-format writes (no writer after onboarding).
+**Check.** `TestLargeSourceBudgets` passes in `scripts/check-pr.sh`; a warm Evidence pass issues no catalog query.
 **Context.** [Layer 6 procedure](comparison-layers.md#layer-6-procedure) step 6.
 
 #### S11-31 — Bound the Source cache
 
 **Ships.** `graphcache` holds at most N loaded Evidence graphs, and evicts the least recently used one together with its `EvidenceGraphMemo` entries (S11-19 D-21). Today `g.evidenceGraphs` has no eviction, and only a commit or a reset clears it, and the claim evidence query loads every member's Source (S11-19 §14). N lives in one named constant, sized from S11-21's fixture. `Verify` checks only Sources that are still loaded. A test shows that an evicted Source reloads with the same graph, and that its memo is rebuilt.
 **Not this PR.** Evicting nodes, or the match index.
-**Check.** Opening the evidence sheet on every row of a hub page leaves at most N Sources loaded, and the sheet shows the same evidence as before.
+**Check.** Opening the evidence sheet on every row of a Source whose events are all located at one place with many filed events leaves at most N Sources loaded, and the sheet shows the same evidence as before.
 **Context.** [`graphcache`](../../../core/database/graphcache/graph.go); S11-19 §14.
 
 ### Slice 2 follow-ups — Names on the Person page

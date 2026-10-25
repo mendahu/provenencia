@@ -134,15 +134,10 @@ not as a conditional view. `Select`, `Checkbox`, and `Switch` all have the
 same shape waiting in their specs.
 
 
-### Host-owned pointer (paint-only surfaces)
+### Host-owned pointer
 
-On the graph canvas AppKit owns every click and hover; SwiftUI `onHover` and
-`ButtonStyleConfiguration.isPressed` never fire, so a kit control painted on a
-card would sit frozen at rest. Drive it from the host instead:
-`.pvHostInteraction(hovered:pressed:)` sets `\.pvHostInteraction`, which
-``PVHoverEffect`` — and every kit control built on it, such as `PVButton` —
-prefers over its own tracking. Pair it with `.allowsHitTesting(false)` so the
-host stays the only hit path. Do not fork a control to fake its states.
+Paint-only surfaces own their pointer: see the item contract in the [GraphCanvas README](../Features/GraphCanvas/README.md) and `GraphCanvasItemView`.
+
 ## What's built vs. not yet
 
 The components the **Onboarding Flow** board actually uses, plus `Toast`
@@ -155,6 +150,7 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Button | `Components/Button/PVButton.swift` (icon-left, loading spinner, and a chrome-less `link` variant added for S2-02; the label is `PVCopy`, so a formatted `String` such as Promote's "Back to Compare" works as well as a catalog resource, and an `AttributedString` from `StyledFormat.attributed` carries its own styling; `flushLeading` pulls the button left by its own horizontal padding so a ghost button's label starts on its column edge) |
 | Disclosure | `Components/Disclosure/PVDisclosureButton.swift` (added for S9-16's Person page: a `PVButton` that owns an `isExpanded` binding, its chevron, and the spoken state; the caller places the disclosed content. `flushLeading` is forwarded to the button; `pvExpandedState(_:)` is the shared VoiceOver piece, also used by `PVSelect` and the Source page's artifact rows. No JSX twin: boards compose `Button.jsx` with `aria-expanded`) |
 | Icon | `Components/Icon/PVIcon.swift` |
+| Painter | `Components/Painter/PVPainter.swift`, `PVTextMetrics.swift` (AppKit drawing for views that paint themselves, such as a canvas item: token colors resolved per appearance through `PVPainter.color(_:in:)`, continuous rounded shapes, text, symbols and marks; `PVTextMetrics` sizes text by the rule it draws with. `PVSymbolImages` in `Components/Icon/` caches the configured SF Symbol images) |
 | Field | `Components/Field/PVField.swift` (`marker: .required / .optional` marks the label) |
 | Input | `Components/Input/PVInput.swift` |
 | TextArea | `Components/TextArea/PVTextArea.swift` (multiline field with `PVInput`'s chrome; grows with its text between `lineLimit`'s bounds, or with `fillsHeight` takes the height its container offers, never less than the lower bound, and scrolls inside it; added for inline edit, and for the Promote sheet's argument box beside a column of fields) |
@@ -528,8 +524,10 @@ exact folder-name semantics.
 `PVFont.display/body/mono(size:weight:)` resolve a weight by family name +
 numeric weight against whatever's registered (via `NSFontDescriptor`, not a
 hardcoded PostScript name — robust to Google Fonts renaming internal
-PostScript names between versions), falling back to the closest system
-serif/monospace face if a bundled font is ever unavailable.
+PostScript names between versions), falling back to the system font (display and
+body) or the system monospaced face (mono) if a bundled font is ever
+unavailable. AppKit faces
+are resolved once per family, size, weight and italic and reused.
 
 To add a new weight or style later: download it from
 `fonts.googleapis.com/css2?family=...` (see this project's own

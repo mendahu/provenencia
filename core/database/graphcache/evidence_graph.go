@@ -138,7 +138,7 @@ func (g *Graph) dropEvidenceGraphs(ids [][]byte) {
 
 // EvidenceGraphMemo returns what a feature stored for a loaded Evidence graph
 // under key. It is held only while the graph is loaded: a commit that names
-// the graph, Drop, a vocabulary commit and SetAliasTables clear it. A
+// the graph, Drop, a vocabulary commit and SetAliasIndex clear it. A
 // memoized value is shared, so every reader treats it as read-only.
 func (g *Graph) EvidenceGraphMemo(graphID []byte, key string) (any, bool) {
 	if g == nil {

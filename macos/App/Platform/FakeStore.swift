@@ -3297,8 +3297,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             guard let subject = subjects.first(where: { $0.id == id }),
                   personTypeIDs.contains(subject.subjectTypeID)
             else { return nil }
-            let trimmed = subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? nil : trimmed
+            return subject.trimmedLabel
         }
         var firstID: [String: String] = [:]
         var labels: [String: String] = [:]

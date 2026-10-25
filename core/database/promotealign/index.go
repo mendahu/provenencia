@@ -6,6 +6,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync/atomic"
 
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/graphalign"
@@ -20,9 +21,14 @@ import (
 // long as the index does, and every handle commit drops both.
 type matchIndex struct {
 	shortlist       *shortlist.Index
+	gen             uint64
 	profiles        map[string]profile
 	profilesPattern string
 }
+
+// indexGen mints the generation of each shortlist index loadShortlist builds,
+// so a memo ranked against one index can tell it is not the one now stored.
+var indexGen atomic.Uint64
 
 // matchIndexOf is the stored match index, or the zero value when none is.
 func matchIndexOf(g *graphcache.Graph) matchIndex {
@@ -38,10 +44,11 @@ func matchIndexOf(g *graphcache.Graph) matchIndex {
 // from every unmerged handle of the kinds the rules key, and stored. Keys need
 // no life, so no life event is loaded or built. It is dropped by a handle
 // commit, as any match index is; the graph's commit path serializes with it.
-func loadShortlist(g *graphcache.Graph, p *profiler, cfg graphalign.Config) (*shortlist.Index, error) {
+// The uint64 is the index's generation, new for every index built here.
+func loadShortlist(g *graphcache.Graph, p *profiler, cfg graphalign.Config) (*shortlist.Index, uint64, error) {
 	m := matchIndexOf(g)
 	if m.shortlist != nil {
-		return m.shortlist, nil
+		return m.shortlist, m.gen, nil
 	}
 	ix := shortlist.NewIndex(cfg.Alignment.Shortlist, cfg.Subject, cfg.Value, p.metas)
 	kinds := map[vocabkey.SubjectType]bool{}
@@ -63,7 +70,7 @@ func loadShortlist(g *graphcache.Graph, p *profiler, cfg graphalign.Config) (*sh
 		}
 		nodes, err := g.Kind(typeID)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		for _, n := range nodes {
 			if n.Merged {
@@ -71,15 +78,16 @@ func loadShortlist(g *graphcache.Graph, p *profiler, cfg graphalign.Config) (*sh
 			}
 			v, err := p.keyValues(n)
 			if err != nil {
-				return nil, err
+				return nil, 0, err
 			}
 			ix.Add(vocabkey.SubjectType(kind), n.ID, v)
 		}
 	}
 	m.shortlist = ix
+	m.gen = indexGen.Add(1)
 	g.SetMatchIndex(m)
 	p.keep()
-	return ix, nil
+	return ix, m.gen, nil
 }
 
 // seedHandles loads and profiles the handles the index offers each Subject, in

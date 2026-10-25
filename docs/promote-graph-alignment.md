@@ -100,10 +100,10 @@ func Align(layer Layer, canon Canon, fixed []Fixed, cfg Config) Proposal
 
 This is collective entity resolution: graph alignment by propagation (cf. PARIS, similarity flooding). The walk is **best-first, not recursive**. A depth-first walk commits to whatever it reaches first; a priority queue lets the strongest matches settle first, so the weaker ones are decided with the most context.
 
-1. **Handles.** A Subject's handles come from its shortlist or from a link to an accepted pair. The loader shortlists by cheap keys and `graphalign.Candidates` keeps the handles at least half alike (similarity 0.5), the best K by similarity and every handle tied with the K-th, up to the tie cap. `Align` runs no shortlist of its own; it reads the loader's lists (`Canon.Candidates`). A handle reached through a corresponding link of an accepted pair is nominated at any score.
+1. **Handles.** A Subject's handles come from its shortlist or from a link to an accepted pair. The loader shortlists by cheap keys and `graphalign.Candidates` keeps the handles at least half alike (similarity 0.5), the best K by similarity and every handle tied with the K-th, up to the tie cap. `Align` runs no shortlist of its own; it reads the loader's lists (`Canon.Candidates`). A handle reached through a corresponding link of an accepted pair is nominated at any score; one placed pair nominates at most the most similar `TopK` plus ties, up to `TieCap`, for each neighbor (S11-21).
 2. **One queue.** Every fixed pair is placed first. Each candidate is scored (entity compare, then the segments around it) and enters one best-first queue. A pair is popped best first, and placed when it clears the accept bar and its handle is free (one-to-one: within one layer a handle takes at most one Subject). A handle another Subject holds records who took it, so a loser can read `taken`.
 3. **Unplaced neighbors.** A link whose neighbor is not placed yet is judged by entity compare on the neighbor's own properties: alike counts as lined up, a differing one counts against the pair from the start, and an unsure one adds nothing. Once the neighbor is placed on that canon neighbor the same number follows, so a score does not depend on which pair the walk placed first.
-4. **Placing a pair** nominates the handles its links point at for the neighbors, re-scores the neighbors that are not placed, and marks the placed ones dirty. A candidate a free neighbor already had keeps its own reason; only a fixed row's existing candidate gains the nominating `via`, so a decided row has the handles its neighbors point at.
+4. **Placing a pair** nominates, for each neighbor, the most similar of the handles its links point at (as step 1 bounds them), re-scores the neighbors that are not placed, and marks the placed ones dirty. A candidate a free neighbor already had keeps its own reason; only a fixed row's existing candidate gains the nominating `via`, so a decided row has the handles its neighbors point at.
 5. **Settling.** When the queue empties, only dirty pairs are re-scored. A pair is released when it falls under the accept bar or a free rival leads it by the settle margin; the released Subjects walk again. At most `SettleRounds` rounds. A released Subject that ends on another handle carries a move reason (`neighbor_placed`, `neighbor_moved`, `neighbor_released`) and the neighbor behind it. A fixed pair is never released. Every score is replaced, never kept higher, so support from a neighbor that moved is dropped and a "via" reason stays only while that neighbor still supports the pair.
 6. **Rows.** A row's band is its evidence against `Alignment.Bands`. A row is **contested** when any comparison behind its reported pair conflicts, whatever its band. A candidate that cleared no bar comes back Skip with the candidate as an alternative (New only when there is no candidate at all); a decided row whose neighbors point at a handle that leads by the settle margin is flagged `ConflictWithFixed`.
 
@@ -163,7 +163,9 @@ Every read is batched (`sqlbatch`, 500 ids per IN list), so the query count foll
 
 - **Decisions live in the page's draft:** the Swift row list (suggested or decided, target, sheet toggles, claim fields). They're sent as `fixed` on every call and never stored.
 - **Loads read the catalog's in-memory graph** (`graphcache`), which keeps handles, Evidence graphs (keyed by graph id) and the match index between calls, so re-runs after decisions skip loading. Each commit drops what it touched (its effects), not a whole revision.
-- **The match index** (the shortlist index) is cached on the graph and dropped by any commit that names a handle, by a vocabulary commit (its keys read term keys and metas), and by new alias tables.
+- **The match index** (the shortlist index) is cached on the graph and dropped by any commit that names a handle, by a vocabulary commit (its keys read term keys and metas), and by a new alias index (`SetAliasIndex`) or name format (`SetNameFormat`).
+- **The candidates memo** holds each Subject's ranked candidate ids on the Source's Evidence graph memo. It is valid for one match index generation: it is dropped with the Evidence graph memo and ignored when the index generation changes.
+- **Open-time warms** (the default name format and the built alias index) are held on the graph until the project closes. `SetAliasIndex` and `SetNameFormat` drop the caches derived from them.
 
 ---
 
@@ -223,7 +225,7 @@ Spike 9 was replanned around this on 2026-10-06. The close note is [`deployment-
 
 # 11. Open questions
 
-- **Thresholds and bands:** all live in the registry's alignment section (`core/matchregistry/alignment.go`, §4.1). The walk has no depth limit; the size knobs are `TopK` and `TieCap`. Initial values from the obituary golden; refine by dogfooding whole Sources, not by guessing in isolation.
+- **Thresholds and bands:** all live in the registry's alignment section (`core/matchregistry/alignment.go`, §4.1). The walk has no depth limit; the size knobs are `TopK` and `TieCap`, which bound both the shortlisted candidates and each placed pair's nominations. Initial values from the obituary golden; refine by dogfooding whole Sources, not by guessing in isolation.
 - ~~**Places at several grains:**~~ **Decided 2026-10-07:** fold Locations that share a `part_of` graph into one chain; unrealted Places stay competing values and reconcile ([`conclusion-reconciliation.md`](conclusion-reconciliation.md) §11.1). No place-nature Property this spike.
 - **Typed name parts:** a name entered as one form ("Gracie Gray Gates (Frickleton)") weakens name comparison. Is that a composer nudge, or a parsing step?
 - **Naming:** what is the "map the rest of this graph" action called?
@@ -235,7 +237,7 @@ Spike 9 was replanned around this on 2026-10-06. The close note is [`deployment-
 
 §5 and §6 describe the built walk (Spike 11, S11-16). What differs:
 
-- **Query count (§7):** every read is batched (`sqlbatch`), and the canon comes from the in-memory graph, so a warm proposal reads only the layer, the fixed rows, the shortlist index if a handle or vocabulary commit dropped it (one read of every person, event and place node), and, per sheet opened, the claim evidence. Cold, the graph loads one batch per wave of the walk.
+- **Query count (§7):** every read is batched (`sqlbatch`), and the canon comes from the in-memory graph, a warm proposal reads `MAX(revision)` only, and a warm Evidence request reads nothing from the catalog (`TestLargeSourceBudgets` `warm queries`). After a handle or vocabulary commit drops the shortlist index, the next proposal reads it again (one read of every person, event and place node). Cold, the graph loads one batch per wave of the walk.
 - **Properties compared (§6):** only the lead properties of the registry's subject section, with their pools and periods, not every Property both sides carry.
 - **Provenance (§6):** not applied. Every Subject's provenance is 1; credibility, transcription certainty, and member claim confidence don't scale comparisons yet.
 - **Bridge kinds in the loaders:** the layer loader lists its hops (participation, location, relationship, part of, succeeded by) in code. The canon follows every link the graph holds for a `connectrules` bridge, as pins and filing do.

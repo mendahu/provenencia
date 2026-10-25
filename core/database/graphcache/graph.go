@@ -49,11 +49,16 @@ type Graph struct {
 	// the first Activity read of that type and patched by OnCommit.
 	activity map[string]map[string]effects.Activity
 
-	// aliases are abbreviation and nickname tables for this open catalog.
-	// They are not graph nodes: Drop leaves them. Closing the catalog drops
-	// them with this graph. namealiases owns the concrete slice.
-	aliases   any
-	aliasesOK bool
+	// aliasIndex is the built abbreviation and nickname index for this open
+	// catalog. It is not a graph node: Drop leaves it. Closing the catalog
+	// drops it with this graph. namealiases owns the concrete value.
+	aliasIndex   any
+	aliasIndexOK bool
+
+	// nameFormat is the catalog's default name format, warmed the same way.
+	// nameformats owns the concrete value.
+	nameFormat   any
+	nameFormatOK bool
 
 	entityTable string
 	claimTable  string
@@ -159,7 +164,7 @@ func mustTableName(name string) string {
 }
 
 // dropDerived empties what features derive from the graph and its vocabulary
-// and aliases: the Evidence graph memos and the match index.
+// and alias index: the Evidence graph memos and the match index.
 func (g *Graph) dropDerived() {
 	g.memos = map[string]map[string]any{}
 	g.matchIndexOK = false
@@ -181,7 +186,8 @@ func (g *Graph) clear() {
 	g.labelsOK = false
 	g.labels = nil
 	g.activity = map[string]map[string]effects.Activity{}
-	// Alias tables stay. They follow the catalog connection, not a rebuild.
+	// The alias index and the name format stay. They follow the catalog connection,
+	// not a rebuild.
 }
 
 // Drop empties nodes, holders, kind indexes, and the match index. The next read fills
@@ -249,7 +255,7 @@ func (g *Graph) Kind(typeID []byte) ([]*Node, error) {
 
 // MatchIndex returns the match index: what Promote derives from the whole
 // catalog, stored in this slot by a feature. A commit that names handles, a
-// vocabulary commit, a structure drop and SetAliasTables clear it: its keys
+// vocabulary commit, a structure drop and SetAliasIndex clear it: its keys
 // read term keys and metas as well as handles.
 func (g *Graph) MatchIndex() (any, bool) {
 	if g == nil || !g.matchIndexOK {
@@ -258,30 +264,53 @@ func (g *Graph) MatchIndex() (any, bool) {
 	return g.matchIndex, true
 }
 
-// AliasTables returns the abbreviation and nickname tables warmed for this
-// open catalog. The bool is false until namealiases.Warm stores them,
-// including when the stored slice is empty.
-func (g *Graph) AliasTables() (any, bool) {
-	if g == nil || !g.aliasesOK {
+// AliasIndex returns the abbreviation and nickname index namealiases.Warm
+// built for this open catalog. The bool is false until Warm stores it,
+// including when the catalog has no alias rows.
+func (g *Graph) AliasIndex() (any, bool) {
+	if g == nil || !g.aliasIndexOK {
 		return nil, false
 	}
-	return g.aliases, true
+	return g.aliasIndex, true
 }
 
-// SetAliasTables stores abbreviation and nickname tables until the catalog
-// closes. A nil slice is a warm catalog with no rows. Drop does not clear this.
-// The match index and Evidence graph memos read the alias sets, so new tables drop them.
-func (g *Graph) SetAliasTables(tables any) {
+// SetAliasIndex stores the built alias index until the catalog closes. An
+// index built from no tables is a warm catalog with no rows. Drop does not
+// clear this. The match index and Evidence graph memos read the alias sets,
+// so a new index drops them. A stored index is shared, so readers treat it as
+// read-only.
+func (g *Graph) SetAliasIndex(index any) {
 	if g == nil {
 		return
 	}
 	g.dropDerived()
-	g.aliases = tables
-	g.aliasesOK = true
+	g.aliasIndex = index
+	g.aliasIndexOK = true
+}
+
+// NameFormat returns the catalog's default name format warmed for this open
+// catalog. The bool is false until nameformats.Warm stores it.
+func (g *Graph) NameFormat() (any, bool) {
+	if g == nil || !g.nameFormatOK {
+		return nil, false
+	}
+	return g.nameFormat, true
+}
+
+// SetNameFormat stores the catalog's default name format until the catalog
+// closes. Drop does not clear it. The match index and Evidence graph memos read
+// the name format's part roles, so a new one drops them.
+func (g *Graph) SetNameFormat(v any) {
+	if g == nil {
+		return
+	}
+	g.dropDerived()
+	g.nameFormat = v
+	g.nameFormatOK = true
 }
 
 // SetMatchIndex stores the match index until the next handle commit,
-// vocabulary commit, alias table load or drop.
+// vocabulary commit, alias index load or drop.
 func (g *Graph) SetMatchIndex(index any) {
 	if g == nil {
 		return
