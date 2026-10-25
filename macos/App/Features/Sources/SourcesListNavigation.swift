@@ -30,26 +30,7 @@ enum SourcesListNavigation {
     /// has no value.
     @MainActor
     static func graphsBySource(in session: WorkspaceSession) -> [String: [CatalogEvidenceGraph]] {
-        let handle: QueryHandle<[CatalogEvidenceGraph]>? = session.queryHandle(
-            CatalogQueryKey.evidenceGraphsList(project: session.projectKey)
-        )
-        return graphsBySource(handle?.value ?? [])
-    }
-
-    /// The Artifacts of `artifacts` that the graph links, in `artifacts` order.
-    /// `nil` while the session's graph list has no value; empty when the list
-    /// has no graph with that id.
-    @MainActor
-    static func linkedArtifacts(
-        graphID: String,
-        artifacts: [CatalogArtifact],
-        in session: WorkspaceSession
-    ) -> [CatalogArtifact]? {
-        let handle: QueryHandle<[CatalogEvidenceGraph]>? = session.queryHandle(
-            CatalogQueryKey.evidenceGraphsList(project: session.projectKey)
-        )
-        guard let graphs = handle?.value else { return nil }
-        return graphs.first { $0.id == graphID }?.linkedArtifacts(artifacts) ?? []
+        graphsBySource(session.evidenceGraphsHandle?.value ?? [])
     }
 
     /// Why Open graph / Jump to evidence graph is blocked, or nil when it is
@@ -66,10 +47,7 @@ enum SourcesListNavigation {
     /// True once the session's graph list has a value.
     @MainActor
     static func graphListLoaded(in session: WorkspaceSession) -> Bool {
-        let handle: QueryHandle<[CatalogEvidenceGraph]>? = session.queryHandle(
-            CatalogQueryKey.evidenceGraphsList(project: session.projectKey)
-        )
-        return handle?.value != nil
+        session.evidenceGraphsHandle?.value != nil
     }
 
     /// Opens the entry graph's canvas when that graph links at least one

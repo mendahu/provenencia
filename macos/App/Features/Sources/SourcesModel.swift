@@ -137,7 +137,7 @@ final class SourcesModel {
         let _: QueryHandle<[String: EvidenceGraphProgress]> = session.query(
             Self.evidenceGraphProgressKey(for: session)
         )
-        let _: QueryHandle<[CatalogEvidenceGraph]> = session.query(CatalogQueryKey.evidenceGraphsList(project: session.projectKey))
+        let _: QueryHandle<[CatalogEvidenceGraph]> = session.query(session.evidenceGraphsKey)
     }
 
     /// The counts of one Evidence graph, by graph id.
@@ -181,7 +181,7 @@ final class SourcesModel {
     }
 
     private var graphsHandle: QueryHandle<[CatalogEvidenceGraph]>? {
-        session.queryHandle(CatalogQueryKey.evidenceGraphsList(project: session.projectKey))
+        session.evidenceGraphsHandle
     }
 
     /// Counts and the entry graph both come from queries; true while either

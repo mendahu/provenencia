@@ -160,6 +160,7 @@
 		AA0000000000000000000451 /* SubjectStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000450 /* SubjectStoreTests.swift */; };
 		AA0000000000000000000F51 /* EvidenceGraphStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000F50 /* EvidenceGraphStoreTests.swift */; };
 		AA0000000000000000000461 /* EvidenceGraphSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000460 /* EvidenceGraphSnapshot.swift */; };
+		AA1210000000000000000002 /* WorkspaceSession+EvidenceGraphs.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1210000000000000000001 /* WorkspaceSession+EvidenceGraphs.swift */; };
 		AA0000000000000000000471 /* GraphCanvasCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000470 /* GraphCanvasCamera.swift */; };
 		AA0000000000000000000473 /* GraphCanvasCoordinates.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000472 /* GraphCanvasCoordinates.swift */; };
 		AA0000000000000000000475 /* GraphCanvasGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000474 /* GraphCanvasGridView.swift */; };
@@ -598,6 +599,7 @@
 		AA0000000000000000000450 /* SubjectStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SubjectStoreTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000F50 /* EvidenceGraphStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphStoreTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000460 /* EvidenceGraphSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphSnapshot.swift; sourceTree = "<group>"; };
+		AA1210000000000000000001 /* WorkspaceSession+EvidenceGraphs.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "WorkspaceSession+EvidenceGraphs.swift"; sourceTree = "<group>"; };
 		AA0000000000000000000470 /* GraphCanvasCamera.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasCamera.swift; sourceTree = "<group>"; };
 		AA0000000000000000000472 /* GraphCanvasCoordinates.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasCoordinates.swift; sourceTree = "<group>"; };
 		AA0000000000000000000474 /* GraphCanvasGridView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasGridView.swift; sourceTree = "<group>"; };
@@ -1014,6 +1016,7 @@
 				AA0000000000000000000429 /* ResolvedPlace.swift */,
 				AA000000000000000000042B /* PlaceRegistry.swift */,
 				AA0000000000000000000460 /* EvidenceGraphSnapshot.swift */,
+				AA1210000000000000000001 /* WorkspaceSession+EvidenceGraphs.swift */,
 			);
 			name = Session;
 			path = Session;
@@ -2113,6 +2116,7 @@
 				AA000000000000000000042A /* ResolvedPlace.swift in Sources */,
 				AA000000000000000000042C /* PlaceRegistry.swift in Sources */,
 				AA0000000000000000000461 /* EvidenceGraphSnapshot.swift in Sources */,
+				AA1210000000000000000002 /* WorkspaceSession+EvidenceGraphs.swift in Sources */,
 				AA00000000000000000003F1 /* WorkspaceToolbar.swift in Sources */,
 				AA00000000000000000003F9 /* OmnibarResultsModel.swift in Sources */,
 				AA00000000000000000003FF /* OmnibarHitPresentation.swift in Sources */,
