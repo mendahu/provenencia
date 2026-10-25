@@ -259,7 +259,7 @@ final class SourceArtifactsSection {
         isSavingDraft = true
         defer { isSavingDraft = false }
         do {
-            var (art, effects) = try await context.store.createArtifact(
+            var (art, created) = try await context.store.createArtifact(
                 projectDir: context.projectDir,
                 userID: context.userID,
                 sourceID: context.sourceID,
@@ -268,6 +268,9 @@ final class SourceArtifactsSection {
                 description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines),
                 graphIDs: []
             )
+            // Each write's effects apply: the create linked the Artifact to the
+            // Source's graphs, which the file ingest does not report again.
+            var effects = [created]
             if let path = draft.filePath {
                 let ingested = try await context.store.ingestArtifactFile(
                     projectDir: context.projectDir,
@@ -276,7 +279,7 @@ final class SourceArtifactsSection {
                     path: path
                 )
                 art = ingested.artifact
-                effects = ingested.effects
+                effects.append(ingested.effects)
             }
             context.workspace?.artifacts.append(art)
             labels[art.id] = art.label
@@ -286,7 +289,9 @@ final class SourceArtifactsSection {
             draft.reject = nil
             // The artifact list is appended above, so only the effects apply:
             // the Source's row moves and its graph reads follow.
-            context.session.apply(effects)
+            for write in effects {
+                context.session.apply(write)
+            }
             await context.refreshCoverFromStore()
             context.toast = VocabularyToast(
                 title: L10n.Sources.toastArtifactCreatedTitle(ref: art.ref),
