@@ -1757,12 +1757,12 @@ struct GoStore: GenealogyStore {
         return resp.observations.map(Self.mapObservation)
     }
 
-    func citationCountsBySource(projectDir: String, sourceID: String) async throws -> [String: Int] {
-        var req = Provenencia_Engine_V1_CitationCountsBySourceRequest()
+    func citationCountsByEvidenceGraph(projectDir: String, graphID: String) async throws -> [String: Int] {
+        var req = Provenencia_Engine_V1_CitationCountsByEvidenceGraphRequest()
         req.projectDir = projectDir
-        req.sourceID = sourceID
-        let resp: Provenencia_Engine_V1_CitationCountsBySourceResponse = try await provenenciaCall(
-            method: CoreMethod.citationCountsBySource,
+        req.graphID = graphID
+        let resp: Provenencia_Engine_V1_CitationCountsByEvidenceGraphResponse = try await provenenciaCall(
+            method: CoreMethod.citationCountsByEvidenceGraph,
             request: req
         )
         var counts: [String: Int] = [:]
@@ -1953,9 +1953,14 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    func listCitationsByArtifact(projectDir: String, artifactID: String) async throws -> [CatalogListedCitation] {
+    func listCitationsByArtifact(
+        projectDir: String,
+        graphID: String,
+        artifactID: String
+    ) async throws -> [CatalogListedCitation] {
         var req = Provenencia_Engine_V1_ListCitationsByArtifactRequest()
         req.projectDir = projectDir
+        req.graphID = graphID
         req.artifactID = artifactID
         let resp: Provenencia_Engine_V1_ListCitationsByArtifactResponse = try await provenenciaCall(
             method: CoreMethod.listCitationsByArtifact,

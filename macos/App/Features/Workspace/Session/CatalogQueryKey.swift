@@ -12,12 +12,12 @@ enum CatalogQueryKey: Hashable, Sendable {
     case sourceWorkspace(project: ProjectKey, sourceId: String)
     /// One Evidence graph's rows: the canvas, the composer and Promote read it.
     case evidenceGraph(project: ProjectKey, graphId: String)
-    case citationCounts(project: ProjectKey, sourceId: String)
+    case citationCounts(project: ProjectKey, graphId: String)
     case typeSuggestions(project: ProjectKey, typeId: String)
     case propertiesWorkspace(project: ProjectKey)
     case connectRules(project: ProjectKey)
     case propertyTerms(project: ProjectKey, propertyId: String)
-    case citationsByArtifact(project: ProjectKey, artifactId: String)
+    case citationsByArtifact(project: ProjectKey, graphId: String, artifactId: String)
     case evidenceGraphProgress(project: ProjectKey)
     /// Every Evidence graph of the project with its linked Artifact ids (S12-05).
     case evidenceGraphsList(project: ProjectKey)
@@ -112,7 +112,7 @@ enum CatalogQueryKey: Hashable, Sendable {
              .propertiesWorkspace(let project),
              .connectRules(let project),
              .propertyTerms(let project, _),
-             .citationsByArtifact(let project, _),
+             .citationsByArtifact(let project, _, _),
              .evidenceGraphProgress(let project),
              .evidenceGraphsList(let project),
              .personsList(let project),

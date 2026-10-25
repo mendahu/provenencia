@@ -36,6 +36,22 @@ enum SourcesListNavigation {
         return graphsBySource(handle?.value ?? [])
     }
 
+    /// The Artifacts of `artifacts` that the graph links, in `artifacts` order.
+    /// `nil` while the session's graph list has no value; empty when the list
+    /// has no graph with that id.
+    @MainActor
+    static func linkedArtifacts(
+        graphID: String,
+        artifacts: [CatalogArtifact],
+        in session: WorkspaceSession
+    ) -> [CatalogArtifact]? {
+        let handle: QueryHandle<[CatalogEvidenceGraph]>? = session.queryHandle(
+            CatalogQueryKey.evidenceGraphsList(project: session.projectKey)
+        )
+        guard let graphs = handle?.value else { return nil }
+        return graphs.first { $0.id == graphID }?.linkedArtifacts(artifacts) ?? []
+    }
+
     /// Why Open graph / Jump to evidence graph is blocked, or nil when it is
     /// open or the reason is not yet known. With no location, a Source without
     /// an Artifact, or one whose graph list has a value but whose entry graph

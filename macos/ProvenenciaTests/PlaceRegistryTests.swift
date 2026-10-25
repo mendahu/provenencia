@@ -79,7 +79,7 @@ struct PlaceRegistryTests {
             .sourcesList(project: project),
             .connectRules(project: project),
             .sourceWorkspace(project: project, sourceId: "src-1"),
-            .citationCounts(project: project, sourceId: "src-1"),
+            .citationCounts(project: project, graphId: "g-1"),
         ])
     }
 
@@ -164,7 +164,7 @@ struct PlaceRegistryTests {
                     .sourcesList(project: project),
                     .connectRules(project: project),
                     .sourceWorkspace(project: project, sourceId: "s1"),
-                    .citationCounts(project: project, sourceId: "s1"),
+                    .citationCounts(project: project, graphId: "g-1"),
                 ]
             ),
             (
@@ -183,7 +183,8 @@ struct PlaceRegistryTests {
                     .connectRules(project: project),
                     .sourceWorkspace(project: project, sourceId: "s1"),
                     .sourceTypesList(project: project),
-                    .citationCounts(project: project, sourceId: "s1"),
+                    .citationCounts(project: project, graphId: "g-1"),
+                    .evidenceGraphsList(project: project),
                 ]
             ),
             (
@@ -347,7 +348,7 @@ struct PlaceRegistryTests {
         #expect(CitationComposerEntry(location: location)?.observationID == "obs-9")
         let place = resolve(location)
         #expect(place?.queryKeys.contains(
-            .citationsByArtifact(project: project, artifactId: "art-0")
+            .citationsByArtifact(project: project, graphId: "g-1", artifactId: "art-0")
         ) == true)
     }
 }

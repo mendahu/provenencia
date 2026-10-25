@@ -134,7 +134,9 @@ struct CatalogQueryRegistry: Sendable {
         Spec(
             kind: .citationCounts,
             stalePolicy: .sessionFresh,
-            invalidateOn: [.deletedSubject]
+            // Reloads follow the write's `citationSources` effects.
+            invalidateOn: [],
+            whenHidden: .markStale
         ),
         Spec(
             kind: .propertiesWorkspace,
@@ -161,7 +163,8 @@ struct CatalogQueryRegistry: Sendable {
         Spec(
             kind: .citationsByArtifact,
             stalePolicy: .sessionFresh,
-            invalidateOn: [.deletedSubject],
+            // Reloads follow the write's `citationSources` effects.
+            invalidateOn: [],
             whenHidden: .markStale
         ),
         Spec(
@@ -230,10 +233,10 @@ struct CatalogQueryRegistry: Sendable {
             return try await store.getSourceWorkspace(projectDir: project.projectDir, sourceID: sourceId)
         case .typeSuggestions(let project, let typeId):
             return try await store.listTypeSuggestions(projectDir: project.projectDir, typeID: typeId)
-        case .citationCounts(let project, let sourceId):
-            return try await store.citationCountsBySource(
+        case .citationCounts(let project, let graphId):
+            return try await store.citationCountsByEvidenceGraph(
                 projectDir: project.projectDir,
-                sourceID: sourceId
+                graphID: graphId
             )
         case .evidenceGraph(let project, let graphId):
             async let subjects = store.listSubjects(
@@ -271,9 +274,10 @@ struct CatalogQueryRegistry: Sendable {
                 projectDir: project.projectDir,
                 propertyID: propertyId
             )
-        case .citationsByArtifact(let project, let artifactId):
+        case .citationsByArtifact(let project, let graphId, let artifactId):
             return try await store.listCitationsByArtifact(
                 projectDir: project.projectDir,
+                graphID: graphId,
                 artifactID: artifactId
             )
         case .evidenceGraphProgress(let project):
@@ -308,10 +312,10 @@ struct CatalogQueryRegistry: Sendable {
         for graphID in effects.evidenceGraphs {
             out.append(.key(.evidenceGraph(project: project, graphId: graphID)))
         }
-        for sourceID in effects.citationSources {
-            out.append(.key(.citationCounts(project: project, sourceId: sourceID)))
-        }
+        // The effects name Sources and the keys name graphs: drop every cached
+        // citation read once.
         if !effects.citationSources.isEmpty {
+            out.append(.allCached(.citationCounts))
             out.append(.allCached(.citationsByArtifact))
         }
         var listed = CatalogList.allCases.filter { effects.lists.contains($0) }
@@ -416,12 +420,7 @@ private extension CatalogQueryKey.Kind {
             }
             return .allCached(.evidenceGraph)
         case .citationCounts:
-            switch mutation {
-            case .deletedSubject(let sourceId):
-                return .key(.citationCounts(project: project, sourceId: sourceId))
-            default:
-                return .allCached(.citationCounts)
-            }
+            return .allCached(.citationCounts)
         case .propertiesWorkspace:
             return .key(.propertiesWorkspace(project: project))
         case .connectRules:

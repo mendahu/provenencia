@@ -57,10 +57,11 @@ struct PlaceRegistry: Sendable {
                     .connectRules(project: project),
                     .sourceWorkspace(project: project, sourceId: sourceId),
                     .sourceTypesList(project: project),
-                    .citationCounts(project: project, sourceId: sourceId),
+                    .citationCounts(project: project, graphId: graphId),
+                    .evidenceGraphsList(project: project),
                 ]
                 if let artifactId = location.artifactId, !artifactId.isEmpty {
-                    keys.append(.citationsByArtifact(project: project, artifactId: artifactId))
+                    keys.append(.citationsByArtifact(project: project, graphId: graphId, artifactId: artifactId))
                 }
                 return keys
             },
@@ -81,7 +82,7 @@ struct PlaceRegistry: Sendable {
                     .sourcesList(project: project),
                     .connectRules(project: project),
                     .sourceWorkspace(project: project, sourceId: sourceId),
-                    .citationCounts(project: project, sourceId: sourceId),
+                    .citationCounts(project: project, graphId: graphId),
                 ]
             },
             deepId: { $0.graphId }

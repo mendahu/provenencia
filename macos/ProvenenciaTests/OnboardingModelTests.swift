@@ -782,10 +782,14 @@ private struct ThrowingStore: GenealogyStore {
     func listObservationsByEvidenceGraph(projectDir _: String, graphID _: String) async throws -> [CatalogObservation] {
         throw StoreBoom.boom
     }
-    func citationCountsBySource(projectDir _: String, sourceID _: String) async throws -> [String: Int] {
+    func citationCountsByEvidenceGraph(projectDir _: String, graphID _: String) async throws -> [String: Int] {
         throw StoreBoom.boom
     }
-    func listCitationsByArtifact(projectDir _: String, artifactID _: String) async throws -> [CatalogListedCitation] {
+    func listCitationsByArtifact(
+        projectDir _: String,
+        graphID _: String,
+        artifactID _: String
+    ) async throws -> [CatalogListedCitation] {
         throw StoreBoom.boom
     }
     func listEvidenceGraphProgress(projectDir _: String) async throws -> [EvidenceGraphProgress] {
