@@ -1,6 +1,6 @@
 # S11-38 — Kinship patterns
 
-**Status:** Planned
+**Status:** Landed in [#564](https://github.com/mendahu/provenencia/pull/564) (2026-10-25)
 **Spike / slice:** Spike 11 · Slice 9 — Kinship shapes
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: a pure engine package with no caller yet)
@@ -13,6 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/match-rules.mdc`
 **Context:** [Kinship shapes § Shape](../kinship-shapes.md#shape), [§ Counting once](../kinship-shapes.md#counting-once), [§ Weight](../kinship-shapes.md#weight); [segments](../comparison-layers.md#segments-layer-5-and-graph-alignment-layer-6); working rules: "Implied links, not a new comparison", "Three patterns, product terms only", "One pure package, `core/kinship`", "One fact, one link per side", "No new knob", "Pure means the package builds and tests with no build tags and no `core/database` import", "One guard, not one per package"
 **Planned:** 2026-10-25 against `main` @ `846fa65`
+**Landed:** None.
 **Review:** [`S11-38-kinship-patterns.review.md`](S11-38-kinship-patterns.review.md) — Fits with changes / Ready with changes, 1 round (findings fixed or logged)
 
 ### Implementer — read this first
