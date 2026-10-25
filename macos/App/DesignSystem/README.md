@@ -174,6 +174,7 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Checkbox | `Components/Checkbox/PVCheckbox.swift` (`PVCheckbox` label + description, and the bare `PVCheckboxMark`; `isLocked` is the Properties seeded-binding lock in that same box; `isIndeterminate` is spoken "partly checked") |
 | Switch | `Components/Switch/PVSwitch.swift` (32×18 track; immediate on/off — a saved form still uses Checkbox) |
 | List | `Components/List/PVList.swift` (added for S9-09, ported from the kit's `PVList`: navigation rows — thumbnail slot (a view; S10-35), title, secondary line, optional fixed-width detail column (icon and one line of text, with help) before the trailing mono ref, chevron — as buttons, not selection; one focus stop with ↑/↓ · Home/End · Page Up/Down · Return/Space; `PVListSkeleton` for first load. The counterpart to Table) |
+| ScrollRowIntoView | `Components/ScrollRowIntoView/PVScrollRowIntoView.swift` (`.pvScrollsRowIntoView`: keeps the highlighted or selected row in view as the keyboard moves it, and can send a new list back to its first row; `PVTable`, `PVList`, `PVSelect`, `PVComboBox` and the omnibar results scroll through it — do not add another `ScrollViewReader` for this) |
 | SkeletonBar | `Components/SkeletonBar/PVSkeletonBar.swift` (added for S12-02: a rounded `borderSubtle` placeholder bar, fixed or fill width; used by `PVListSkeleton` and the Copy Source loading body) |
 | Thumbnail | `Components/Thumbnail/PVThumbnail.swift` (added for S2-17 Sources list rows; image / mark / SF glyph / empty / loading tile); content takes an image or a `PVGlyph` (S10-49); optional `colors:`: tint and line on mark and symbol states; the line also outlines an image (S10-23, S10-35) |
 | Card | `Components/Card/PVCard.swift` (surface container: tone / border / radius / optional elevation + padding; mirrors web `Card.jsx`; no header/footer slots yet — compose those outside) |
@@ -401,7 +402,7 @@ and screen-reader parity had to be built by hand.
 
 The row list is one focus stop, so tab order reads: search field → sort
 headers → table → detail pane. Selection always scrolls into view via
-`ScrollViewReader`. Like a native table, the highlight dims when the table
+`.pvScrollsRowIntoView`. Like a native table, the highlight dims when the table
 does not have focus — `surfaceSelected` + accent bar when focused,
 `surfaceSelectedInactive` + `borderStrong` when not. Focus shows
 `pvFocusRing` on the container; the view structure never changes on focus

@@ -93,7 +93,6 @@ private struct OmnibarResultsPanel: View {
     var results: OmnibarResultsModel
     let projectDir: String
     let onActivate: (CatalogSearchHit) -> Void
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
@@ -104,7 +103,40 @@ private struct OmnibarResultsPanel: View {
             } else if results.search.showsLoadingState {
                 loadingState
             } else {
-                hitList
+                // ScrollView expands to the proposed height unless we ask for
+                // the ideal (content) height — clamp only when the list is tall.
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(results.search.hits.enumerated()), id: \.element.id) { index, hit in
+                            Button {
+                                onActivate(hit)
+                            } label: {
+                                CatalogSearchHitRow(
+                                    hit: hit,
+                                    projectDir: projectDir,
+                                    selected: false
+                                )
+                            }
+                            .buttonStyle(PVMenuRowButtonStyle(
+                                isSelected: index == results.search.selectedIndex,
+                                cornerRadius: PVRadius.xs,
+                                onHoverChange: { hovering in
+                                    if hovering { results.search.selectedIndex = index }
+                                }
+                            ))
+                            .accessibilityLabel(CatalogSearchHitPresentation.accessibilityLabel(for: hit))
+                            .accessibilityIdentifier("workspace.toolbar.omnibar.hit.\(hit.id)")
+                            .id(hit.id)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxHeight: 420)
+                .fixedSize(horizontal: false, vertical: true)
+                .pvScrollsRowIntoView(
+                    results.search.selectedHit()?.id,
+                    startsAtTopWhenRowsChange: results.search.hits.map(\.id)
+                )
             }
         }
         .padding(PVSpacing.space2)
@@ -120,56 +152,6 @@ private struct OmnibarResultsPanel: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(L10n.Workspace.omnibarResultsAccessibilityLabel))
         .accessibilityIdentifier("workspace.toolbar.omnibar.results")
-    }
-
-    /// Keeps the selected hit in view as ↑ / ↓ move it, and starts a new
-    /// result list at the top (the same scrolling `PVComboBox` does).
-    private var hitList: some View {
-        ScrollViewReader { proxy in
-            // ScrollView expands to the proposed height unless we ask for
-            // the ideal (content) height — clamp only when the list is tall.
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(results.search.hits.enumerated()), id: \.element.id) { index, hit in
-                        Button {
-                            onActivate(hit)
-                        } label: {
-                            CatalogSearchHitRow(
-                                hit: hit,
-                                projectDir: projectDir,
-                                selected: false
-                            )
-                        }
-                        .buttonStyle(PVMenuRowButtonStyle(
-                            isSelected: index == results.search.selectedIndex,
-                            cornerRadius: PVRadius.xs,
-                            onHoverChange: { hovering in
-                                if hovering { results.search.selectedIndex = index }
-                            }
-                        ))
-                        .accessibilityLabel(CatalogSearchHitPresentation.accessibilityLabel(for: hit))
-                        .accessibilityIdentifier("workspace.toolbar.omnibar.hit.\(hit.id)")
-                        .id(hit.id)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .frame(maxHeight: 420)
-            .fixedSize(horizontal: false, vertical: true)
-            .onChange(of: results.search.selectedIndex) { _, index in
-                let hits = results.search.hits
-                guard hits.indices.contains(index) else { return }
-                withAnimation(reduceMotion ? nil : PVMotion.fastStandard) {
-                    proxy.scrollTo(hits[index].id)
-                }
-            }
-            .onChange(of: results.search.hits.map(\.id)) { _, ids in
-                // A new query starts at the top. Without this the scroller
-                // keeps the offset the last list left, hiding the first hit.
-                guard let first = ids.first else { return }
-                proxy.scrollTo(first, anchor: .top)
-            }
-        }
     }
 
     private var loadingState: some View {

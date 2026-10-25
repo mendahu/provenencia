@@ -124,6 +124,7 @@
 		AA00000000000000000003C1 /* PVContextMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003C0 /* PVContextMenu.swift */; };
 		AA00000000000000000FE006 /* PVActionMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000FE005 /* PVActionMenu.swift */; };
 		AA000000000000000000046D /* PVFloatingMenuSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000046C /* PVFloatingMenuSelection.swift */; };
+		AA00000000000000000004F5 /* PVScrollRowIntoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004F4 /* PVScrollRowIntoView.swift */; };
 		AA0000000000000000000467 /* SourcesListNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000466 /* SourcesListNavigation.swift */; };
 		AA0000000000000000000469 /* SourcesSplitRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000468 /* SourcesSplitRow.swift */; };
 		AA0000000000000000000395 /* ThumbnailCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000394 /* ThumbnailCacheTests.swift */; };
@@ -554,6 +555,7 @@
 		AA00000000000000000003C0 /* PVContextMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVContextMenu.swift; sourceTree = "<group>"; };
 		AA00000000000000000FE005 /* PVActionMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVActionMenu.swift; sourceTree = "<group>"; };
 		AA000000000000000000046C /* PVFloatingMenuSelection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFloatingMenuSelection.swift; sourceTree = "<group>"; };
+		AA00000000000000000004F4 /* PVScrollRowIntoView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVScrollRowIntoView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000466 /* SourcesListNavigation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListNavigation.swift; sourceTree = "<group>"; };
 		AA0000000000000000000468 /* SourcesSplitRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesSplitRow.swift; sourceTree = "<group>"; };
 		AA0000000000000000000394 /* ThumbnailCacheTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThumbnailCacheTests.swift; sourceTree = "<group>"; };
@@ -1642,6 +1644,15 @@
 			path = FloatingMenuSelection;
 			sourceTree = "<group>";
 		};
+		D5C000000000000000000023 /* ScrollRowIntoView */ = {
+			isa = PBXGroup;
+			children = (
+				AA00000000000000000004F4 /* PVScrollRowIntoView.swift */,
+			);
+			name = ScrollRowIntoView;
+			path = ScrollRowIntoView;
+			sourceTree = "<group>";
+		};
 		D5C000000000000000000011 /* Field */ = {
 			isa = PBXGroup;
 			children = (
@@ -1858,6 +1869,7 @@
 				D5C00000000000000000000D /* SectionHeader */,
 				D5C000000000000000000012 /* ContextMenu */,
 				D5C00000000000000000001B /* FloatingMenuSelection */,
+				D5C000000000000000000023 /* ScrollRowIntoView */,
 				D5C000000000000000000011 /* Field */,
 				D5C00000000000000000001D /* Input */,
 				D5C00000000000000000000B /* InlineEdit */,
@@ -2333,6 +2345,7 @@
 				AA00000000000000000003C1 /* PVContextMenu.swift in Sources */,
 				AA00000000000000000FE006 /* PVActionMenu.swift in Sources */,
 				AA000000000000000000046D /* PVFloatingMenuSelection.swift in Sources */,
+				AA00000000000000000004F5 /* PVScrollRowIntoView.swift in Sources */,
 				AA0000000000000000000467 /* SourcesListNavigation.swift in Sources */,
 				AA0000000000000000000469 /* SourcesSplitRow.swift in Sources */,
 				AA0000000000000000000351 /* TimestampFormat.swift in Sources */,

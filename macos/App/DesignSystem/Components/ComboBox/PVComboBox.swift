@@ -297,7 +297,6 @@ struct PVComboBox<Row: View, Empty: View>: View {
     /// stays down until then, so it does not appear at zero and resize.
     @State private var rowsMeasured = false
     @FocusState private var isFocused: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Gutter that holds the committed row's checkmark. Every row reserves it
     /// so labels stay aligned whether or not one is checked.
@@ -511,24 +510,14 @@ struct PVComboBox<Row: View, Empty: View>: View {
     /// window and lay out inside it means any disagreement between the two
     /// clips a row, which is exactly what happened.
     private var scroller: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                rowsStack
-            }
-            .onChange(of: activeIndex) { _, index in
-                guard visibleOptions.indices.contains(index) else { return }
-                withAnimation(reduceMotion ? nil : PVMotion.fastStandard) {
-                    proxy.scrollTo(visibleOptions[index].id)
-                }
-            }
-            .onChange(of: visibleOptions.map(\.id)) { _, ids in
-                // A narrowed list starts at the top. Without this the scroller
-                // keeps whatever offset the longer list left behind, hiding
-                // the first result of the query that just narrowed it.
-                guard let first = ids.first else { return }
-                proxy.scrollTo(first, anchor: .top)
-            }
+        let options = visibleOptions
+        return ScrollView {
+            rowsStack
         }
+        .pvScrollsRowIntoView(
+            options.indices.contains(activeIndex) ? options[activeIndex].id : nil,
+            startsAtTopWhenRowsChange: options.map(\.id)
+        )
     }
 
     /// A hidden, non-interactive copy of the rows, laid out behind the field
