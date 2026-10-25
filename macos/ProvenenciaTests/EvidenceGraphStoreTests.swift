@@ -187,7 +187,7 @@ struct EvidenceGraphStoreTests {
         let group = { (via: String) in
             CatalogDeleteImpactGroup(via: via, kind: "citation", total: 1, listed: [])
         }
-        store.unlinkImpactBlocks = [
+        store.unlinkImpactBlocksByGraph["g1"] = [
             CatalogEvidenceGraphUnlinkBlock(artifactID: "a1", citations: group("evidencegraphs.artifact_in_use")),
             CatalogEvidenceGraphUnlinkBlock(artifactID: "a2", citations: group("evidencegraphs.artifact_in_use")),
         ]
