@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`
 **Context:** [`seeded-vocabulary.md`](../../../seeded-vocabulary.md) §3.2, §3.3, §3.9; [`conclusion-reconciliation.md`](../../../conclusion-reconciliation.md) (Property cardinality); [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) (Property terms); working rules: "High tolerance for churn"
 **Planned:** 2026-10-25 against `main` @ `bc673dd6`
-**Landed:** `TestVocabularyDropsOnBindingReorder` in `core/database/graphcache/vocab_test.go` also hard-coded `interests` as the first binding after a reverse; it now reads the registry's person order through `seededPersonOrder` (the first risk row). Nothing else differs.
+**Landed:** `TestVocabularyDropsOnBindingReorder` in `core/database/graphcache/vocab_test.go` also hard-coded `interests` as the first binding after a reverse; it now reads the registry's person order through `seededPersonOrder` (the first risk row). `TestSeedProductValues` (one table) replaces `TestSeedReligionAndLanguagesSpoken` and the older `TestInstallSeedsLikeness` and `TestInstallSeedsFuneralAndPallbearer`; `TestInstallSeedsEngagementTravelInterestsAndGender` is cut to `TestInstallLetsAUserTermJoinASeededProperty`. This supersedes D-7's "the three older Install tests stay" (same-pass cleanup, review MNT-1). Nothing else differs.
 **Review:** [`S11-48-religion-languages.review.md`](S11-48-religion-languages.review.md) — Fits with changes / Ready with changes, 1 round (findings fixed or logged)
 
 ### Implementer — read this first
