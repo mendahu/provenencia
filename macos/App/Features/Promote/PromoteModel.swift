@@ -470,8 +470,8 @@ final class PromoteModel {
         let types: [CatalogSourceType]? = await session.readyValue(sourceTypesKey)
         guard let source = sources?.first(where: { $0.id == entry.sourceID }) else { return }
         sourceRef = source.ref
-        if let type = types?.first(where: { $0.id == source.sourceTypeID }) {
-            sourceMark = PVMarkKey(catalogKey: type.iconKey)
+        if let iconKey = types?.iconKey(forTypeID: source.sourceTypeID) {
+            sourceMark = PVMarkKey(catalogKey: iconKey)
         }
     }
 }
