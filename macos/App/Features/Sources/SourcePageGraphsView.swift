@@ -5,13 +5,14 @@ struct SourcePageGraphsView: View {
     @Bindable var model: SourcePageModel
 
     var body: some View {
+        let rows = model.graphs.rows
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
             PVSectionHeader(
                 title: L10n.Sources.graphsHeading,
-                meta: model.graphs.rows.map { L10n.Sources.graphsCount($0.count) }
+                meta: rows.map { L10n.Sources.graphsCount($0.count) }
             )
 
-            if let rows = model.graphs.rows {
+            if let rows {
                 VStack(alignment: .leading, spacing: PVSpacing.space4) {
                     ForEach(rows, id: \.id) { graph in
                         SourcePageGraphRow(model: model, graph: graph)
@@ -24,7 +25,7 @@ struct SourcePageGraphsView: View {
                 loadingRow
             }
         }
-        .padding(.top, PVSpacing.space11 - PVSpacing.space9)
+        .sourcePageSectionTopPadding()
         .accessibilityIdentifier("sources.page.graphs")
     }
 
@@ -45,7 +46,8 @@ struct SourcePageGraphsView: View {
             }
             .padding(PVSpacing.space6)
         }
-        .accessibilityHidden(true)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(L10n.DesignSystem.listLoading))
         .accessibilityIdentifier("sources.page.graphs.loading")
     }
 }
@@ -66,6 +68,7 @@ private struct SourcePageGraphRow: View {
                         .font(PVFont.body(size: PVTypeScale.body, weight: PVFontWeight.semibold))
                         .foregroundStyle(PVColor.textPrimary)
                         .lineLimit(2)
+                        .help(graph.name)
                     Text(verbatim: graph.ref)
                         .font(PVFont.mono(size: PVTypeScale.caption))
                         .foregroundStyle(PVColor.textMuted)
@@ -74,6 +77,7 @@ private struct SourcePageGraphRow: View {
                             .font(PVFont.body(size: PVTypeScale.bodySmall))
                             .foregroundStyle(PVColor.textMuted)
                             .lineLimit(3)
+                            .help(description)
                     }
                 }
                 .accessibilityElement(children: .combine)
