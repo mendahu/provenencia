@@ -84,7 +84,7 @@ A one-cardinality link is a `One` key, and a gate a `Gates` entry, in `core/matc
 ## Add a kinship pattern
 
 1. Add a `vocabkey` constant for each term the pattern names, and its row in `TestVocabKeysMatchSeed`. Product terms only: a catalog's own terms imply nothing.
-2. An event pattern is a row in `eventPatterns` (an event type, the roles at each end, the implied relationship term) in `core/kinship/patterns.go` (new), with a new `Pattern` code. The chain is one rule in `Derive`, parent of parent only; a pattern of another shape (siblings, great-grandparents) changes `Derive` and is planned as its own PR.
+2. An event pattern is a row in `eventPatterns` (an event type, the roles at each end, the implied relationship term) in `core/kinship/patterns.go`, with a new `Pattern` code. The chain is one rule in `Derive`, parent of parent only; a pattern of another shape (siblings, great-grandparents) changes `Derive` and is planned as its own PR.
 3. Add `TestDerive` rows: the pattern holds, a near miss (another role or event type) does not, and the implied link's direction.
 4. Add no knob: the implied link weighs as the direct link it stands for (the segment registry's Other pair).
 
