@@ -91,7 +91,7 @@ func evidence(g *graphcache.Graph, in inputs, q *evidenceReader, req EvidenceReq
 	for _, s := range in.layer.Subjects {
 		valuesOf[string(s.ID)] = s.Values
 	}
-	rowEG, err := g.EvidenceGraph(in.graphID)
+	rowEG, err := q.graph(in.graphID)
 	if err != nil {
 		return claimevidence.Evidence{}, err
 	}
@@ -240,7 +240,8 @@ type evidenceReader struct {
 	g        *graphcache.Graph
 	in       inputs
 	prof     *profiler
-	memberOf map[string]graphcache.Member // by Subject id, from the members read so far
+	memberOf map[string]graphcache.Member        // by Subject id, from the members read so far
+	graphs   map[string]graphcache.EvidenceGraph // by graph id, the graphs this request has read
 }
 
 func newEvidenceReader(g *graphcache.Graph, in inputs) (*evidenceReader, error) {
@@ -248,7 +249,21 @@ func newEvidenceReader(g *graphcache.Graph, in inputs) (*evidenceReader, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &evidenceReader{g: g, in: in, prof: prof, memberOf: map[string]graphcache.Member{}}, nil
+	return &evidenceReader{g: g, in: in, prof: prof, memberOf: map[string]graphcache.Member{}, graphs: map[string]graphcache.EvidenceGraph{}}, nil
+}
+
+// graph is the Evidence graph with id. The request keeps each one it reads, so
+// a graph the cache evicts mid-request is not read again.
+func (r *evidenceReader) graph(id []byte) (graphcache.EvidenceGraph, error) {
+	if eg, ok := r.graphs[string(id)]; ok {
+		return eg, nil
+	}
+	eg, err := r.g.EvidenceGraph(id)
+	if err != nil {
+		return graphcache.EvidenceGraph{}, err
+	}
+	r.graphs[string(id)] = eg
+	return eg, nil
 }
 
 // accepted are the accepted member Subjects of an entity, in claim order. It
@@ -331,7 +346,7 @@ func (r *evidenceReader) memberValues(subjectIDs [][]byte) ([]claimevidence.Memb
 			}
 		}
 		if len(missing) > 0 {
-			eg, err := r.g.EvidenceGraph([]byte(graphID))
+			eg, err := r.graph([]byte(graphID))
 			if err != nil {
 				return nil, err
 			}
@@ -421,7 +436,7 @@ func (r *evidenceReader) bridges(l graphcache.Link) ([]claimevidence.Bridge, err
 			continue
 		}
 		read[string(m.GraphID)] = true
-		eg, err := r.g.EvidenceGraph(m.GraphID)
+		eg, err := r.graph(m.GraphID)
 		if err != nil {
 			return nil, err
 		}
@@ -476,7 +491,7 @@ func (r *evidenceReader) titles(e claimevidence.Evidence) (map[string]string, er
 		if !ok {
 			return
 		}
-		eg, err := r.g.EvidenceGraph(m.GraphID)
+		eg, err := r.graph(m.GraphID)
 		if err != nil {
 			failed = err
 			return

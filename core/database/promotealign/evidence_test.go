@@ -434,6 +434,43 @@ func TestEvidenceNamesEverySource(t *testing.T) {
 	}
 }
 
+// One Evidence request reads each Evidence graph once, whatever the cap on
+// loaded graphs: the row's graph and both member graphs are read by the
+// reader's first pass, and the Source titles read the member graphs again.
+func TestEvidenceReadsEachGraphOnce(t *testing.T) {
+	f := newFixture(t)
+	_, _, personHandle, birthHandle := f.filedBirth(f.source, f.artifact, "John Smith", 1817, nil, nil)
+	census, censusArt := f.newSource("Census 1851")
+	f.join(f.person(census, censusArt, "John Smith"), personHandle)
+	srcB, artB := f.newSource("Obituary")
+	bPerson := f.person(srcB, artB, "John Smith")
+	bBirth := f.datedBirth(srcB, artB, 1817)
+	f.participation(srcB, artB, bPerson, bBirth, "subject")
+	req := promotealign.EvidenceRequest{
+		GraphID: f.graph(srcB), SubjectID: bPerson.ID, HandleID: personHandle,
+		Neighbors: []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: birthHandle}},
+	}
+
+	run := func() (int, claimevidence.Evidence) {
+		f.c.Graph().Drop()
+		n := 0
+		f.c.Graph().SetQueryCounterForTest(func() { n++ })
+		defer f.c.Graph().SetQueryCounterForTest(nil)
+		e := f.evidence(req)
+		return n, e
+	}
+	defaultQueries, want := run()
+	f.c.Graph().SetEvidenceGraphCapForTest(1)
+	defer f.c.Graph().SetEvidenceGraphCapForTest(0)
+	oneQueries, got := run()
+	if oneQueries != defaultQueries {
+		t.Errorf("a cap of one issued %d graph queries, the default cap %d: a graph was read twice", oneQueries, defaultQueries)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("a cap of one changed the response:\n got %+v\nwant %+v", got, want)
+	}
+}
+
 // A filed bridge gives a bundle only when each end is one positive Observation
 // naming one Subject. The catalog's writes refuse the other shapes, so the
 // test rewrites the filed bridge's endpoint rows.
