@@ -103,7 +103,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var getEvidenceGraphProgressError: Error?
     /// Monotonic stand-in for audit_transactions.revision (Sources Updated sort).
     private var nextAuditRevision: Int64 = 1
-    /// When set, `searchCatalog` throws (omnibar error UI).
+    /// When set, `searchCatalog` throws (any search caller's error UI).
     var searchCatalogError: Error?
     /// When set, `workspaceNavCounts` throws instead of returning counts.
     var workspaceNavCountsError: Error?
@@ -1230,8 +1230,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             }
         }
         if wanted.isEmpty || !wanted.isSubset(of: handleKinds) {
-            let omnibar = try await vocabularySearchHits(projectDir: projectDir, query: query, location: location)
-            scored += wanted.isEmpty ? omnibar : omnibar.filter { wanted.contains($0.hit.kind) }
+            let vocabulary = try await vocabularySearchHits(projectDir: projectDir, query: query, location: location)
+            scored += wanted.isEmpty ? vocabulary : vocabulary.filter { wanted.contains($0.hit.kind) }
         }
         return Array(Self.orderedByMixedScore(scored).prefix(50).map(\.hit))
     }
