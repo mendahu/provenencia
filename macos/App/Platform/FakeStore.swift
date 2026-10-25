@@ -751,7 +751,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 projectDir: projectDir, sourceID: sourceID, name: trimmed, description: description,
                 artifactIDs: artifactIDs
             )
-            return (graph, Self.graphEffects(sourceID: nil))
+            return (graph, Self.graphEffects(sourceID: sourceID))
         }
     }
 
@@ -833,9 +833,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    /// Every graph write reports the graph list, as Go does. A link, unlink or
-    /// edit also reports its Source for the citation reads (graph delete has no
-    /// Source to report: the link rows go with it).
+    /// Every graph write reports the graph list, as Go does. A create, link,
+    /// unlink or edit also reports its Source for the citation reads (graph
+    /// delete has no Source to report: the link rows go with it).
     private static func graphEffects(sourceID: String?) -> CatalogWriteEffects {
         CatalogWriteEffects(citationSources: sourceID.map { [$0] } ?? [], lists: [.evidenceGraphs])
     }
