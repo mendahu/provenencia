@@ -66,4 +66,4 @@ Reviewers: UX (had UX-1 and UX-2 major). Scope `a7d3f84f...a5c7cb5c`. Not re-sen
 No new findings. Watch item (reviewer, low confidence, not a finding): handing the search from Ada's row to another row (AC-3.2) queues two focus writes, Ada's `targetFocus` and the new row's `focus = .query`; the new row's should win. Manual check 3 from the keyboard confirms; narrowing the `onChange` to `new == nil` removes the race if not.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: MNT-2 (`docs/ideas/shared-list-helpers.md`, already named there); the Source page type editor has the same focus-on-close gap as UX-1 (can adopt `PVSelectFocus`/`PVComboFocus` restore) · to user: UX-2 (answered: unsteppable option) · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: MNT-2 (`docs/ideas/shared-list-helpers.md`, already named there); the Source page type editor has the same focus-on-close gap as UX-1 (can adopt `PVSelectFocus`/`PVComboFocus` restore) · to user: UX-2 (answered: unsteppable option) · CON miss: none
