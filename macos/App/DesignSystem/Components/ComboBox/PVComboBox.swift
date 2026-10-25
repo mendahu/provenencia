@@ -70,6 +70,13 @@ enum PVComboBoxMatch {
         return isLoading ? .loading : .empty
     }
 
+    /// Whether the box tells its caller about a reset it made itself (a click
+    /// away or Escape putting the committed label back). Only a remote caller
+    /// follows the field's text; a local filter reads the box's own state.
+    static func reportsRestore(isRemote: Bool, old: String, new: String) -> Bool {
+        isRemote && old != new
+    }
+
     /// Index of the first row that can be committed, or -1 when every row is
     /// disabled. This is the Spotlight rule's landing spot.
     static func firstEnabledIndex(in options: [PVComboBoxOption]) -> Int {
@@ -240,7 +247,9 @@ enum PVComboCommitVia: Equatable {
 /// and the empty line *say* comes in through `row` and `empty`. The kit ships
 /// one generic row (`PVComboBoxPlainRow`: label + subtext) and a plain-text
 /// empty line (`emptyLabel` inits); anything domain-shaped — a person row, a
-/// type mark — is a feature view passed as `row`. It never grows row kinds.
+/// type mark — is a feature view passed as `row`, and an empty line that
+/// changes with the caller's state (a hint, a failure's message) is a view
+/// passed as `empty` through the general init. It never grows row kinds.
 ///
 /// **Remote results** (S9-11): set `onQueryChange` and the box stops
 /// filtering — the caller runs the search and passes the results as
@@ -249,7 +258,9 @@ enum PVComboCommitVia: Equatable {
 /// yet the list shows a searching line in place of the empty line, and
 /// options already in stay on screen until the new ones replace them
 /// (`PVComboBoxMatch.listLine`). A failed search is the caller's `empty`
-/// line.
+/// line. When the box resets the field itself (a click away, the second
+/// Escape) it reports the restored text through `onQueryChange` too, so the
+/// caller's query and results follow the field (`PVComboBoxMatch.reportsRestore`).
 ///
 /// **Not ported** (add here on demand, the way `PVSidebarNav` was): the
 /// multi-select token field and the "use what you typed" create row. No call
@@ -661,8 +672,17 @@ struct PVComboBox<Row: View, Empty: View>: View {
     /// back — the field is a picker, not free text.
     private func closeAndRestore() {
         isOpen = false
+        restoreQuery()
+    }
+
+    /// Puts the committed label back in the field and tells a remote caller.
+    private func restoreQuery() {
+        let old = query
         query = selectedLabel
         isDirty = false
+        if PVComboBoxMatch.reportsRestore(isRemote: onQueryChange != nil, old: old, new: query) {
+            onQueryChange?(query)
+        }
     }
 
     /// The popup's dismissal (click away, window resigning key). On top of
@@ -709,8 +729,7 @@ struct PVComboBox<Row: View, Empty: View>: View {
                 return .handled
             }
             if query != selectedLabel {
-                query = selectedLabel
-                isDirty = false
+                restoreQuery()
                 return .handled
             }
             return .ignored
@@ -736,6 +755,43 @@ struct PVComboBox<Row: View, Empty: View>: View {
 
     private func identifier(_ suffix: String) -> String? {
         accessibilityIdentifierPrefix.map { "\($0).\(suffix)" }
+    }
+}
+
+extension PVComboBox {
+    /// Caller-built rows and a caller-built empty line, given the typed query.
+    init(
+        selection: Binding<String>,
+        options: [PVComboBoxOption],
+        size: PVControlSize = .md,
+        placeholder: (any PVCopy)? = nil,
+        isInvalid: Bool = false,
+        maxListHeight: CGFloat = 288,
+        label: any PVCopy,
+        accessibilityIdentifierPrefix: String? = nil,
+        focus: PVComboFocus? = nil,
+        onCommit: ((String, PVComboCommitVia) -> Bool)? = nil,
+        onQueryChange: ((String) -> Void)? = nil,
+        isLoading: Bool = false,
+        @ViewBuilder row: @escaping (PVComboBoxOption, String) -> Row,
+        @ViewBuilder empty: @escaping (String) -> Empty
+    ) {
+        self.init(
+            selection: selection,
+            options: options,
+            size: size,
+            placeholder: placeholder,
+            isInvalid: isInvalid,
+            maxListHeight: maxListHeight,
+            label: label,
+            accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
+            onCommit: onCommit,
+            focus: focus,
+            onQueryChange: onQueryChange,
+            isLoading: isLoading,
+            row: row,
+            empty: empty
+        )
     }
 }
 
@@ -766,8 +822,8 @@ extension PVComboBox where Empty == Text {
             maxListHeight: maxListHeight,
             label: label,
             accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
-            onCommit: onCommit,
             focus: focus,
+            onCommit: onCommit,
             onQueryChange: onQueryChange,
             isLoading: isLoading,
             row: row,
@@ -841,7 +897,9 @@ private struct PVComboBoxPopupWindow<Content: View>: NSViewRepresentable {
         coordinator.contentHeight = contentHeight
         coordinator.optionCount = optionCount
         coordinator.wantsPresented = isPresented
-        coordinator.setContent(content)
+        // Rows in the popup see what the field sees: the host's environment
+        // (a session, `isEnabled`) does not cross into a child window by itself.
+        coordinator.setContent(content.environment(\.self, context.environment))
         // Showing or moving a window mutates AppKit state, which must not
         // happen inside SwiftUI's layout pass — hence the hop. The closure
         // deliberately captures no values: `applyPresentation` reads the

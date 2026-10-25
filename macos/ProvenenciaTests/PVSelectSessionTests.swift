@@ -17,6 +17,57 @@ struct PVSelectSessionTests {
         PVSelectSession(options: partTypes(), selection: selection, isDisabled: disabled)
     }
 
+    // MARK: Menu-only options
+
+    private func withMenuOnly(selection: String = "") -> PVSelectSession {
+        PVSelectSession(options: [
+            PVSelectOption(value: "a", label: "Alpha"),
+            PVSelectOption(value: "b", label: "Bravo"),
+            PVSelectOption(value: "find", label: "Find another", isMenuOnly: true),
+        ], selection: selection)
+    }
+
+    @Test func closedStepsSkipAMenuOnlyOption() {
+        var up = withMenuOnly()
+        up.handleKey(.up)
+        #expect(up.selection == "b")
+
+        var down = withMenuOnly(selection: "b")
+        down.handleKey(.down)
+        #expect(down.selection == "b")
+
+        var end = withMenuOnly(selection: "a")
+        end.handleKey(.end)
+        #expect(end.selection == "b")
+
+        var home = withMenuOnly(selection: "b")
+        home.handleKey(.home)
+        #expect(home.selection == "a")
+
+        var dec = withMenuOnly()
+        dec.decrement()
+        #expect(dec.selection == "b")
+        var inc = withMenuOnly(selection: "b")
+        inc.increment()
+        #expect(inc.selection == "b")
+    }
+
+    @Test func closedTypeSelectNeverCommitsAMenuOnlyOption() {
+        var typed = withMenuOnly(selection: "a")
+        typed.handleKey(.character("f"))
+        #expect(typed.selection == "a")
+    }
+
+    @Test func theOpenMenuCanStillChooseAMenuOnlyOption() {
+        var open = withMenuOnly(selection: "b")
+        open.handleKey(.space)
+        open.handleKey(.down)
+        #expect(open.highlightIndex == 2)
+        open.handleKey(.return)
+        #expect(open.selection == "find")
+        #expect(!open.isOpen)
+    }
+
     // MARK: Closed field
 
     @Test func emptyOrDisabledCannotOpen() {

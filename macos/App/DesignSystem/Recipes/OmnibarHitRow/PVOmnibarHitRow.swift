@@ -13,7 +13,6 @@ struct PVOmnibarHitRow<Lead: View>: View {
     /// When true, mono ref uses accent (exact catalog-ref match).
     var refAccent: Bool = false
     let matchContext: String
-    var selected: Bool = false
 
     init(
         @ViewBuilder lead: () -> Lead,
@@ -22,8 +21,7 @@ struct PVOmnibarHitRow<Lead: View>: View {
         secondary: String,
         ref: String,
         refAccent: Bool = false,
-        matchContext: String,
-        selected: Bool = false
+        matchContext: String
     ) {
         self.lead = lead()
         self.title = title
@@ -32,7 +30,6 @@ struct PVOmnibarHitRow<Lead: View>: View {
         self.ref = ref
         self.refAccent = refAccent
         self.matchContext = matchContext
-        self.selected = selected
     }
 
     var body: some View {
@@ -84,7 +81,6 @@ struct PVOmnibarHitRow<Lead: View>: View {
         .padding(.vertical, 7)
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
-        .background(selected ? PVColor.surfaceHover : Color.clear)
         .clipShape(RoundedRectangle(cornerRadius: PVRadius.xs, style: .continuous))
         .accessibilityElement(children: .combine)
     }
@@ -99,8 +95,7 @@ struct PVOmnibarHitRow<Lead: View>: View {
             secondary: "Parish register",
             ref: "SRC-3K9M2",
             refAccent: true,
-            matchContext: "Exact match — opens on return",
-            selected: true
+            matchContext: "Exact match — opens on return"
         )
         PVOmnibarHitRow(
             lead: { PVThumbnail(PVThumbnail.Content(glyph: .symbol(.library)), size: 40) },
@@ -108,8 +103,7 @@ struct PVOmnibarHitRow<Lead: View>: View {
             kindLabel: L10n.Workspace.omnibarKindType,
             secondary: "parish-register",
             ref: "",
-            matchContext: "",
-            selected: false
+            matchContext: ""
         )
     }
     .padding(PVSpacing.space2)

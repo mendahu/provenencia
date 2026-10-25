@@ -311,6 +311,8 @@ private struct PromoteAlignmentRow: View {
     let model: PromoteModel
     /// The connections shown under this row, in display order.
     let connections: [PromoteFlow.RowConnection]
+    /// Lets the target menu take focus back when the record search closes.
+    @FocusState private var targetFocus: Bool?
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space2) {
@@ -328,22 +330,13 @@ private struct PromoteAlignmentRow: View {
                 PVIcon(.arrowRight, size: 14)
                     .foregroundStyle(PVColor.textMuted)
                     .frame(width: 14)
-                PVSelect(
-                    selection: targetBinding,
-                    options: targetOptions,
-                    size: .sm,
-                    placeholder: row.target == .unset ? L10n.string(L10n.Promote.targetPlaceholder) : nil,
-                    menuWidth: PromoteLayout.targetColumn,
-                    fillsWidth: true,
-                    rowHeight: 46,
-                    isDisabled: model.isSaving,
-                    isInvalid: row.target == .unset,
-                    accessibilitySpokenLabel: L10n.Promote.filesOn(name: row.name),
-                    accessibilityIdentifier: "promote.row.\(row.ref).target"
-                ) { option in
-                    PromoteTargetMenuRow(option: option, row: row)
+                if model.recordSearch?.subjectID == row.subjectID {
+                    PromoteRecordSearch(row: row, model: model)
+                        .frame(width: PromoteLayout.targetColumn)
+                } else {
+                    targetSelect
+                        .frame(width: PromoteLayout.targetColumn)
                 }
-                .frame(width: PromoteLayout.targetColumn)
                 // A real stack, not a Group: Group forwards its frame to each
                 // child, so an empty assessment column collapses and the
                 // target menu slides into the gap.
@@ -411,6 +404,13 @@ private struct PromoteAlignmentRow: View {
         }
         .padding(.vertical, PVSpacing.space3)
         .overlay(alignment: .top) { PVDivider() }
+        .onChange(of: model.recordSearch?.subjectID) { old, new in
+            // Pick, Cancel and Escape all end here: the search unmounts, so hand focus
+            // back to the menu that replaces it once it is on screen.
+            if old == row.subjectID, new != row.subjectID {
+                DispatchQueue.main.async { targetFocus = true }
+            }
+        }
     }
 
     private func duplicateTitle(_ note: PromoteFlow.DuplicateNote) -> String {
@@ -420,16 +420,41 @@ private struct PromoteAlignmentRow: View {
         }
     }
 
+    private var targetSelect: some View {
+        PVSelect(
+            selection: targetBinding,
+            options: targetOptions,
+            size: .sm,
+            placeholder: row.target == .unset ? L10n.string(L10n.Promote.targetPlaceholder) : nil,
+            menuWidth: PromoteLayout.targetColumn,
+            fillsWidth: true,
+            rowHeight: 46,
+            isDisabled: model.isSaving,
+            isInvalid: row.target == .unset,
+            accessibilitySpokenLabel: L10n.Promote.filesOn(name: row.name),
+            accessibilityIdentifier: "promote.row.\(row.ref).target",
+            focus: PVSelectFocus($targetFocus, equals: true)
+        ) { option in
+            PromoteTargetMenuRow(option: option, row: row)
+        }
+    }
+
     private var kindMark: some View {
         PromoteKindTile(kind: row.kind, size: PromoteLayout.kindTile, markSize: 16, background: PVColor.surfaceSunken)
     }
 
     private var targetOptions: [PVSelectOption] {
         var options = row.menu.map { alt in
-            PVSelectOption(value: "handle:\(alt.id)", label: "\(alt.ref)  \(alt.title)")
+            PVSelectOption(value: PromoteFlow.Target.handleToken(alt.id), label: "\(alt.ref)  \(alt.title)")
         }
-        options.append(PVSelectOption(value: "new", label: L10n.string(L10n.Promote.newOption(row.kind))))
-        options.append(PVSelectOption(value: "skip", label: L10n.string(L10n.Promote.skip)))
+        options.append(PVSelectOption(value: PromoteFlow.Target.newKind.token, label: L10n.string(L10n.Promote.newOption(row.kind))))
+        options.append(PVSelectOption(value: PromoteFlow.Target.skip.token, label: L10n.string(L10n.Promote.skip)))
+        options.append(PVSelectOption(
+            value: PromoteFlow.Target.findToken,
+            label: L10n.string(L10n.Promote.findOption),
+            accessibilityIdentifier: "promote.row.\(row.ref).target.find",
+            isMenuOnly: true
+        ))
         return options
     }
 
@@ -507,11 +532,18 @@ private struct PromoteTargetMenuRow: View {
     let row: PromoteFlow.Row
 
     var body: some View {
-        if option.id == "new" || option.id == "skip" {
+        if option.id == PromoteFlow.Target.newKind.token || option.id == PromoteFlow.Target.skip.token {
             Text(verbatim: option.label)
                 .font(PVFont.body(size: PVTypeScale.bodySmall))
                 .foregroundStyle(PVColor.textPrimary)
-        } else if let alt = row.menu.first(where: { "handle:\($0.id)" == option.id }) {
+        } else if option.id == PromoteFlow.Target.findToken {
+            HStack(spacing: PVSpacing.space3) {
+                PVIcon(.search, size: 14)
+                Text(verbatim: option.label)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall))
+            }
+            .foregroundStyle(PVColor.textSecondary)
+        } else if let alt = row.menuItem(forToken: option.id) {
             HStack(spacing: PVSpacing.space3) {
                 PVMark(row.kind.markKey, size: 16, decorative: true)
                     .foregroundStyle(PVColor.textSecondary)
@@ -526,6 +558,64 @@ private struct PromoteTargetMenuRow: View {
                 }
             }
         }
+    }
+}
+
+/// The target cell while its row searches every record of its kind: a search field over
+/// `CatalogSearchModel` and a button that gives the menu back. A pick holds the record through
+/// `PromoteModel.pickSearchHit`; nothing here decides a row.
+private struct PromoteRecordSearch: View {
+    let row: PromoteFlow.Row
+    let model: PromoteModel
+    @FocusState private var focus: Field?
+
+    private enum Field { case query }
+
+    var body: some View {
+        if let search = model.recordSearch?.search {
+            HStack(spacing: PVSpacing.space2) {
+                PVComboBox(
+                    selection: .constant(""),
+                    options: search.hits.map {
+                        PVComboBoxOption(value: $0.id, label: CatalogSearchHitPresentation.title(for: $0, orders: model.session.nameFormat))
+                    },
+                    size: .sm,
+                    placeholder: L10n.Promote.searchPlaceholder(row.kind),
+                    label: L10n.Promote.searchLabel(name: row.name),
+                    accessibilityIdentifierPrefix: "promote.row.\(row.ref).search",
+                    focus: PVComboFocus($focus, equals: .query),
+                    onCommit: { id, _ in
+                        model.pickSearchHit(id: id)
+                        return false
+                    },
+                    onQueryChange: model.recordSearchQueryChanged,
+                    isLoading: search.isLoading,
+                    row: { option, _ in
+                        if let hit = search.hits.first(where: { $0.id == option.value }) {
+                            CatalogSearchHitRow(hit: hit, projectDir: model.session.projectKey.projectDir)
+                        } else {
+                            EmptyView()
+                        }
+                    },
+                    empty: { _ in
+                        Text(verbatim: emptyLine(search))
+                    }
+                )
+                .onAppear { DispatchQueue.main.async { focus = .query } }
+                PVIconButton(.dismiss, label: L10n.Promote.searchCancel, size: .sm) {
+                    model.closeRecordSearch()
+                }
+                .accessibilityIdentifier("promote.row.\(row.ref).search.cancel")
+            }
+            .onExitCommand { model.closeRecordSearch() }
+        }
+    }
+
+    /// What the list says when it has no hits: the failure, the two-letter floor, or no match.
+    private func emptyLine(_ search: CatalogSearchModel) -> String {
+        if search.showsErrorState, let error = search.searchError { return error }
+        if search.isBelowMinimumQuery { return L10n.string(L10n.Promote.searchHint) }
+        return L10n.Promote.searchNoMatches(row.kind, query: search.trimmedQuery)
     }
 }
 

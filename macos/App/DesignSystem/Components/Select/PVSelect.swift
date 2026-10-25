@@ -10,11 +10,50 @@ struct PVSelectOption: Identifiable, Equatable {
     let id: String
     let label: String
     var accessibilityIdentifier: String?
+    /// Chosen only from the open menu. Stepping a closed select (↑ / ↓,
+    /// Home / End, type-select, VoiceOver adjust) skips it, so an option that
+    /// opens something else is never committed by a stray arrow key.
+    var isMenuOnly: Bool
 
-    init(value: String, label: String, accessibilityIdentifier: String? = nil) {
+    init(
+        value: String,
+        label: String,
+        accessibilityIdentifier: String? = nil,
+        isMenuOnly: Bool = false
+    ) {
         self.id = value
         self.label = label
         self.accessibilityIdentifier = accessibilityIdentifier
+        self.isMenuOnly = isMenuOnly
+    }
+}
+
+/// Optional host focus, the same contract as `PVComboFocus`: the trigger
+/// applies `.focused($binding, equals:)` itself, so a write to that
+/// `FocusState` lands on the select. Without it the select keeps its own focus.
+struct PVSelectFocus {
+    fileprivate let isActive: () -> Bool
+    fileprivate let activate: () -> Void
+    fileprivate let apply: (AnyView) -> AnyView
+
+    init<Value: Hashable>(_ binding: FocusState<Value?>.Binding, equals value: Value) {
+        isActive = { binding.wrappedValue == value }
+        activate = { binding.wrappedValue = value }
+        apply = { view in AnyView(view.focused(binding, equals: value)) }
+    }
+}
+
+private struct PVSelectFocusModifier: ViewModifier {
+    let host: PVSelectFocus?
+    var own: FocusState<Bool>.Binding
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let host {
+            host.apply(AnyView(content))
+        } else {
+            content.focused(own)
+        }
     }
 }
 
@@ -60,6 +99,7 @@ struct PVSelect<Row: View>: View {
     private let accessibilitySpokenLabel: String?
     private let accessibilityIdentifier: String?
     private let closedHelp: String?
+    private let focus: PVSelectFocus?
     private let row: (PVSelectOption) -> Row
 
     @State private var session: PVSelectSession
@@ -68,7 +108,13 @@ struct PVSelect<Row: View>: View {
     @State private var triggerScreen = CGRect.zero
     @State private var visibleScreen = CGRect.zero
     @State private var menuScreen = CGRect.zero
-    @FocusState private var isFocused: Bool
+    @FocusState private var ownFocus: Bool
+
+    private var isFocused: Bool { focus?.isActive() ?? ownFocus }
+
+    private func focusTrigger() {
+        if let focus { focus.activate() } else { ownFocus = true }
+    }
 
     init(
         selection: Binding<String>,
@@ -88,6 +134,7 @@ struct PVSelect<Row: View>: View {
         accessibilitySpokenLabel: String? = nil,
         accessibilityIdentifier: String? = nil,
         closedHelp: String? = nil,
+        focus: PVSelectFocus? = nil,
         @ViewBuilder row: @escaping (PVSelectOption) -> Row
     ) {
         self._selection = selection
@@ -107,6 +154,7 @@ struct PVSelect<Row: View>: View {
         self.accessibilitySpokenLabel = accessibilitySpokenLabel
         self.accessibilityIdentifier = accessibilityIdentifier
         self.closedHelp = closedHelp
+        self.focus = focus
         self.row = row
         self._session = State(initialValue: PVSelectSession(
             options: options,
@@ -142,7 +190,7 @@ struct PVSelect<Row: View>: View {
             }
             .opacity(isDisabled ? 0.45 : 1)
             .focusable(!isDisabled)
-            .focused($isFocused)
+            .modifier(PVSelectFocusModifier(host: focus, own: $ownFocus))
             .disabled(isDisabled)
             .onMoveCommand(perform: handleMoveCommand)
             .onKeyPress(action: handleTriggerKey)
@@ -187,7 +235,7 @@ struct PVSelect<Row: View>: View {
             }
             .onChange(of: session.isOpen) { _, open in
                 if open {
-                    isFocused = true
+                    focusTrigger()
                     presentMenu()
                 } else {
                     menuState.dismiss()
@@ -259,7 +307,7 @@ struct PVSelect<Row: View>: View {
     }
 
     private func toggleMenu() {
-        isFocused = true
+        focusTrigger()
         applySession { $0.toggle() }
     }
 
@@ -422,7 +470,8 @@ extension PVSelect where Row == PVSelectPlainRow {
         accessibilityLabel: LocalizedStringResource? = nil,
         accessibilitySpokenLabel: String? = nil,
         accessibilityIdentifier: String? = nil,
-        closedHelp: String? = nil
+        closedHelp: String? = nil,
+        focus: PVSelectFocus? = nil
     ) {
         self.init(
             selection: selection,
@@ -441,7 +490,8 @@ extension PVSelect where Row == PVSelectPlainRow {
             accessibilityLabel: accessibilityLabel,
             accessibilitySpokenLabel: accessibilitySpokenLabel,
             accessibilityIdentifier: accessibilityIdentifier,
-            closedHelp: closedHelp
+            closedHelp: closedHelp,
+            focus: focus
         ) { option in
             PVSelectPlainRow(text: option.label)
         }

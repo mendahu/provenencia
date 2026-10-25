@@ -52,9 +52,9 @@ enum CatalogSearchHitPresentation {
     }
 
     /// VoiceOver label for a result row — title, kind, subtitle, ref, match context.
-    static func accessibilityLabel(for hit: CatalogSearchHit) -> String {
+    static func accessibilityLabel(for hit: CatalogSearchHit, orders: NameFormatOrders = NameFormatOrders()) -> String {
         var parts = [
-            title(for: hit),
+            title(for: hit, orders: orders),
             L10n.string(kindLabel(for: hit.kind)),
         ]
         let subtitle = secondary(for: hit).trimmingCharacters(in: .whitespacesAndNewlines)
