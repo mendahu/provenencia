@@ -29,3 +29,9 @@ func waitUntil(timeout: Duration = .seconds(2), _ condition: () -> Bool) async -
     }
     return condition()
 }
+
+/// Waits until a catalog search has settled: not loading, and either searched or failed.
+@MainActor
+func waitForSearch(_ model: CatalogSearchModel) async {
+    _ = await waitUntil { !model.isLoading && (model.hasSearched || model.searchError != nil) }
+}
