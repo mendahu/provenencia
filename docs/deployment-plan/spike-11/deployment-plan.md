@@ -161,10 +161,11 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-40 | Implied links in claim evidence | 9 | `canonLinks` derives too; a corresponding implied link gives a relationship line with how each side recorded it and the event behind it, a bundle of every bridge behind it, through the RPC to Swift | — | S11-39 | — | Scoped |
 | S11-42 | Implied links on the evidence sheet | 9 | The sheet words S11-40's line ("both are spouses in the marriage on …") in the existing relationship Card; L10n | — | S11-40 | — | Scoped |
 | S11-43 | Lower the candidate gate | 10 | `alignment.MinSimilarity` 0.5 → 0.4 with its inventory row; a test that "Amy" gets "Amy Lee Anne Long" as an alternative | — | — | — | Scoped |
-| S11-44 | Des as a nickname of Desiree and Desirae | 10 | `{desiree, des}` and `{desirae, des}` in `nicknameSets` with a `CacheVersion` bump; a command copies new product nicknames into the open catalog through `AddProductNicknames` | — | S11-28 | — | Scoped |
+| S11-44 | Des as a nickname of Desiree and Desirae | 10 | `{desiree, des}` and `{desirae, des}` in `nicknameSets` with a `CacheVersion` bump; a command copies new product nicknames and new seeded subject vocabulary (S11-48's Properties, bindings and terms) into the open catalog | — | S11-28, S11-48 | — | Scoped |
 | S11-47 | Promote suggests a record or nothing | 10 | Unplaced proposal rows carry no target and no `weak` / `no_match` reason; possible duplicates found among unplaced rows; Swift drafts a handle or unset only | — | — | — | Scoped |
 | S11-46 | Prefix keys in the shortlist | 10 | `WordKeys` splits into index and lookup lists; given-name words are filed and looked up under their prefixes both ways; `PrefixMinLength`; extra keys measured | — | — | — | Scoped |
 | S11-45 | Prefix names | 10 | A given name that starts another is a `Contains` hit at `PrefixCredit` (`CausePrefix`), with the broader side right; the cause worded on the sheet; the reconciler's call | — | S11-46, S11-28 | — | Scoped |
+| S11-48 | Religion and languages spoken on a person | — | Term Properties `religion` and `languages_spoken` on person, cardinality multiple, seeded with Catholic and English | — | — | [plan](prs/S11-48-religion-languages.md) | Planned |
 | S11-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -272,6 +273,11 @@ SLICE 10 — Name candidates
          "Des" in a catalog that existed before S11-44, once the command has run; a three-letter start of a given name
          with no nickname set is offered through the prefix rule, and the sheet says why.
 
+PERSON VOCABULARY (one-off, user 2026-10-25)
+  S11-48  Religion and languages spoken on a person   (any time; before S11-44)
+  Check: a new project's person takes Religion → Catholic and a custom Anglican, and
+         Languages spoken → English; the Person page keeps both religions.
+
 S11-99 — Dogfood close / docs
 ```
 
@@ -302,6 +308,7 @@ S11-D3 ──┴──▶ S11-36
 S11-41 ──▶ S11-38 ──▶ S11-39 ──▶ S11-40 ──▶ S11-42
 S11-28 ──▶ S11-44
 S11-46, S11-28 ──▶ S11-45
+S11-48 ──▶ S11-44
 ```
 
 ---
@@ -645,6 +652,16 @@ Preparatory refactor, from the slice 9 map review (K-4, 2026-10-24).
 **Check.** A Source marriage against a filed spouse relationship shows "…both are spouses in the marriage on <date>"; checking it pins both participations.
 **Context.** [On the evidence sheet](kinship-shapes.md#on-the-evidence-sheet); [`claim-evidence.md`](claim-evidence.md#evidence-through-relationships); [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md).
 
+### Person vocabulary
+
+#### S11-48 — Religion and languages spoken on a person
+
+The user's call on 2026-10-25: record religion and languages as term Properties first; Organization as a Subject type is parked in [`ideas/organizations.md`](../../ideas/organizations.md).
+**Ships.** `religion` and `languages_spoken` in `subjectvocab`'s registry: term, cardinality multiple, bound to person unlocked, one product term each (Catholic, English). Researchers add the rest as `origin=user` terms. [`seeded-vocabulary.md`](../../seeded-vocabulary.md) and the cardinality paragraph of [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) follow.
+**Not this PR.** Existing catalogs (S11-44's command). Matching weights. Swift wording.
+**Check.** A new project's person takes Religion → Catholic and a custom Anglican, and the Person page shows both.
+**Context.** [`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md).
+
 ### Slice 10 — Name candidates
 
 From dogfood on 2026-10-24. Design and diagnosis: [`name-candidates.md`](name-candidates.md).
@@ -658,9 +675,9 @@ From dogfood on 2026-10-24. Design and diagnosis: [`name-candidates.md`](name-ca
 
 #### S11-44 — Des as a nickname of Desiree and Desirae
 
-**Ships.** `{desiree, des}` and `{desirae, des}` in `nicknameSets` (`namealiases/nicknames_seed.go`, already the product's reviewed edit of upstream; two sets because a shared nickname does not join two formal names), the reconciler `CacheVersion` bump and the seed hash re-pinned (S11-28's recipe). A command copies the product nicknames a catalog lacks into the open catalog through `AddProductNicknames` (no caller today), then `Invalidate`s, and reports how many sets and tokens were new (`NicknameAdd`): an FFI handler ([`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md)) and an app menu command with a toast, copy through L10n. The plan says where the command sits; if it needs a new view, it waits on a brief. Nothing runs on open; [`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md) gains a line on the command.
+**Ships.** `{desiree, des}` and `{desirae, des}` in `nicknameSets` (`namealiases/nicknames_seed.go`, already the product's reviewed edit of upstream; two sets because a shared nickname does not join two formal names), the reconciler `CacheVersion` bump and the seed hash re-pinned (S11-28's recipe). A command copies the product nicknames a catalog lacks into the open catalog through `AddProductNicknames` (no caller today), then `Invalidate`s, and reports how many sets and tokens were new (`NicknameAdd`). The same command adds the seeded subject vocabulary a catalog lacks (user 2026-10-25): `subjectvocab` Properties and terms missing by `(key, origin)`, and a binding only for a Property the command itself adds, so a binding the researcher removed is not restored; this is how S11-48's `religion` and `languages_spoken` reach a catalog made before it: an FFI handler ([`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md)) and an app menu command with a toast, copy through L10n. The plan says where the command sits; if it needs a new view, it waits on a brief. Nothing runs on open; [`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md) gains a line on the command.
 **Not this PR.** An editor for alias tables.
-**Check.** In a catalog created before this PR, after the command, "Desiree" and "Desirae" are offered "Des"; running it again adds nothing; a new catalog has both sets.
+**Check.** In a catalog created before this PR, after the command, "Desiree" and "Desirae" are offered "Des" and a person takes Religion and Languages spoken; running it again adds nothing; a new catalog has both sets.
 **Context.** [Case 2](name-candidates.md#case-2--desiree-against-des); S11-28 (the reviewed table beside upstream).
 
 #### S11-47 — Promote suggests a record or nothing
