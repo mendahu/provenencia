@@ -106,7 +106,9 @@ struct PVCheckbox: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(isDisabled)
+        // A locked box cannot be toggled, but it keeps full strength: it is a
+        // binding the researcher reads, not a control that is off.
+        .disabled(isDisabled || isLocked)
         .opacity(isDisabled ? 0.5 : 1)
         .modifier(CheckboxAccessibility(
             spoken: label == nil ? accessibilityLabelText : nil,
