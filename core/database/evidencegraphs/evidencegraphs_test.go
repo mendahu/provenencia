@@ -397,6 +397,39 @@ func TestUnlink(t *testing.T) {
 	}
 }
 
+func TestLinkWritesMoveCitationReads(t *testing.T) {
+	f := newFixture(t)
+	src, _ := f.createSource(t, "Census 1881")
+	graph := evidencegraphstest.SoleGraph(t, f.c, src.ID).ID
+	a1 := f.newArtifact(t, src, "Page 1")
+	a2 := f.newArtifact(t, src, "Page 2")
+	f.link(t, graph, a1)
+	for _, step := range []struct {
+		name string
+		fn   func(tx *database.Tx) ([]rowchange.Change, error)
+	}{
+		{"link", func(tx *database.Tx) ([]rowchange.Change, error) {
+			return evidencegraphs.Link(tx, userID, graph, a2)
+		}},
+		{"unlink", func(tx *database.Tx) ([]rowchange.Change, error) {
+			return evidencegraphs.Unlink(tx, userID, graph, a2)
+		}},
+	} {
+		name, fn := step.name, step.fn
+		_, res, err := writes.Run(f.c, writes.Op{Action: name + "_artifact", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := fn(tx)
+			return struct{}{}, changes, err
+		})
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		cs := res.Effects.CitationSources
+		if len(cs) != 1 || !bytes.Equal(cs[0], src.ID) {
+			t.Fatalf("%s: citation sources %x want the graph's Source", name, cs)
+		}
+	}
+}
+
 func TestMembership(t *testing.T) {
 	f := newFixture(t)
 	src, _ := f.createSource(t, "Census 1881")
