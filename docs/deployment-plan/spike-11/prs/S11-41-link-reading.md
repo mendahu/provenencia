@@ -1,6 +1,6 @@
 # S11-41 — One link reading for bridges
 
-**Status:** Planned
+**Status:** Landed in [#561](https://github.com/mendahu/provenencia/pull/561) (2026-10-25)
 **Spike / slice:** Spike 11 · Slice 9 — Kinship shapes
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: an engine refactor with no behavior change)
@@ -13,6 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`
 **Context:** [Kinship shapes § Shape](../kinship-shapes.md#shape) ("keyed through the same link reading the loaders use"); [segments](../comparison-layers.md#segments-layer-5-and-graph-alignment-layer-6); working rules: "High tolerance for churn", "Pure means the package builds and tests with no build tags and no `core/database` import", "One guard, not one per package", "One pure package, `core/kinship`"
 **Planned:** 2026-10-25 against `main` @ `74bb416`
+**Landed:** None.
 **Review:** [`S11-41-link-reading.review.md`](S11-41-link-reading.review.md) — Fits with changes / Ready with changes, 1 round (findings fixed or logged)
 
 ### Implementer — read this first

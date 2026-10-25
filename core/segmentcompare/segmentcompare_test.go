@@ -7,6 +7,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/propertycompare"
@@ -286,5 +287,98 @@ func TestInvariants(t *testing.T) {
 				t.Fatalf("case %d: a One fact apart reads %v from one end and %v from the other", i, got.Evidence, back.Evidence)
 			}
 		}
+	}
+}
+
+func bridgeOf(t *testing.T, key string) connectrules.Bridge {
+	t.Helper()
+	b, ok := connectrules.LookupBridge(key)
+	if !ok {
+		t.Fatalf("no bridge %q", key)
+	}
+	return b
+}
+
+func TestLinkOf(t *testing.T) {
+	subject := vocabkey.BridgeTerm(vocabkey.RoleSubject)
+	tests := []struct {
+		name      string
+		bridge    string
+		term      vocabkey.BridgeTerm
+		eventType vocabkey.EventType
+		firstEnd  bool
+		want      segmentcompare.Link
+	}{
+		{"AC-1.1 participation first end", vocabkey.BridgeParticipation, subject, vocabkey.EventBirth, true,
+			segmentcompare.Link{Type: vocabkey.BridgeParticipation, Term: subject, End: vocabkey.PropertyPerson, Other: vocabkey.PropertyEvent, EventType: vocabkey.EventBirth}},
+		{"AC-1.2 participation second end", vocabkey.BridgeParticipation, subject, vocabkey.EventBirth, false,
+			segmentcompare.Link{Type: vocabkey.BridgeParticipation, Term: subject, End: vocabkey.PropertyEvent, Other: vocabkey.PropertyPerson, EventType: vocabkey.EventBirth}},
+		{"AC-1.3 relationship first end", vocabkey.BridgeRelationship, "parent", vocabkey.EventBirth, true,
+			segmentcompare.Link{Type: vocabkey.BridgeRelationship, Term: "parent", End: vocabkey.PropertyPerson, Other: vocabkey.PropertyRelatedTo, SameType: true}},
+		{"relationship second end", vocabkey.BridgeRelationship, "parent", vocabkey.EventBirth, false,
+			segmentcompare.Link{Type: vocabkey.BridgeRelationship, Term: "parent", End: vocabkey.PropertyRelatedTo, Other: vocabkey.PropertyPerson, SameType: true}},
+		{"place relationship first end", vocabkey.BridgePlaceRelationship, vocabkey.TermPartOf, "", true,
+			segmentcompare.Link{Type: vocabkey.BridgePlaceRelationship, Term: vocabkey.TermPartOf, End: vocabkey.PropertyFrom, Other: vocabkey.PropertyTo, SameType: true}},
+		{"AC-1.6 location first end", vocabkey.BridgeLocation, "", vocabkey.EventBirth, true,
+			segmentcompare.Link{Type: vocabkey.BridgeLocation, End: vocabkey.PropertyEvent, Other: vocabkey.PropertyPlace}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := segmentcompare.LinkOf(bridgeOf(t, tt.bridge), tt.term, tt.eventType, tt.firstEnd)
+			if got != tt.want {
+				t.Errorf("LinkOf = %+v, want %+v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEventEndpoint(t *testing.T) {
+	tests := []struct {
+		bridge    string
+		first, ok bool
+	}{
+		{vocabkey.BridgeParticipation, false, true},
+		{vocabkey.BridgeRelationship, false, false},
+		{vocabkey.BridgePlaceRelationship, false, false},
+		{vocabkey.BridgeLocation, true, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.bridge, func(t *testing.T) {
+			first, ok := segmentcompare.EventEndpoint(bridgeOf(t, tt.bridge))
+			if first != tt.first || ok != tt.ok {
+				t.Errorf("EventEndpoint = (%v, %v), want (%v, %v)", first, ok, tt.first, tt.ok)
+			}
+		})
+	}
+}
+
+func TestKeys(t *testing.T) {
+	terms := segmentcomparetest.Terms()
+	subject := vocabkey.BridgeTerm(vocabkey.RoleSubject)
+	tests := []struct {
+		name          string
+		bridge        string
+		term          vocabkey.BridgeTerm
+		eventType     vocabkey.EventType
+		first, second vocabkey.BridgeKey
+	}{
+		{"AC-1.7 parent reads as child with the ends swapped", vocabkey.BridgeRelationship, "parent", "",
+			vocabkey.BridgeKey{Type: vocabkey.BridgeRelationship, Term: "child", End: vocabkey.PropertyRelatedTo},
+			vocabkey.BridgeKey{Type: vocabkey.BridgeRelationship, Term: "child", End: vocabkey.PropertyPerson}},
+		{"AC-1.8 participation", vocabkey.BridgeParticipation, subject, vocabkey.EventBirth,
+			partKey(vocabkey.PropertyPerson, vocabkey.EventBirth), partKey(vocabkey.PropertyEvent, vocabkey.EventBirth)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := bridgeOf(t, tt.bridge)
+			first, second := segmentcompare.Keys(b, tt.term, tt.eventType, terms)
+			if first != tt.first || second != tt.second {
+				t.Errorf("Keys = (%v, %v), want (%v, %v)", first, second, tt.first, tt.second)
+			}
+			if first != segmentcompare.Key(segmentcompare.LinkOf(b, tt.term, tt.eventType, true), terms) ||
+				second != segmentcompare.Key(segmentcompare.LinkOf(b, tt.term, tt.eventType, false), terms) {
+				t.Error("Keys differs from Key(LinkOf(...))")
+			}
+		})
 	}
 }

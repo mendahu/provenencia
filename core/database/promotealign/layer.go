@@ -181,9 +181,9 @@ func loadLayerBridges(g *graphcache.Graph, eg graphcache.EvidenceGraph, props ma
 		if connectrules.HasDisambiguation(b.Disambiguation) {
 			termOf = observedTerms(eg, props, vocabTerms, assocs, b.Disambiguation)
 		}
-		// The event type comes from whichever end is an event; linkOf alone
+		// The event type comes from whichever end is an event; `segmentcompare.Keys` alone
 		// decides whether the key keeps it.
-		eventFirst, hasEvent := eventEndpoint(b)
+		eventFirst, hasEvent := segmentcompare.EventEndpoint(b)
 		eventEnd := func(e graphcache.EvidenceEdge) []byte {
 			if eventFirst {
 				return e.From
@@ -212,8 +212,7 @@ func loadLayerBridges(g *graphcache.Graph, eg graphcache.EvidenceGraph, props ma
 			if hasEvent {
 				eventType = eventTypes[string(eventEnd(e))]
 			}
-			keyA := segmentcompare.Key(linkOf(b, term, eventType, true), terms)
-			keyB := segmentcompare.Key(linkOf(b, term, eventType, false), terms)
+			keyA, keyB := segmentcompare.Keys(b, vocabkey.BridgeTerm(term), vocabkey.EventType(eventType), terms)
 			ek := edgeSeenKey(e.From, e.To, keyA, keyB)
 			if at, ok := seen[ek]; ok {
 				if !slices.ContainsFunc(out[at].Associations, func(a []byte) bool { return bytes.Equal(a, e.Association) }) {
