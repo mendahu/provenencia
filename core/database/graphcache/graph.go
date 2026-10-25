@@ -32,18 +32,19 @@ type Graph struct {
 
 	// displays are finished header rows keyed by handle id. details are the
 	// conclusion-detail value memos for the same ids; a drop clears both.
-	// evidenceGraphs are loaded Evidence graphs keyed by graph id.
+	// evidenceGraphs are loaded Evidence graphs keyed by graph id, each with
+	// the memos features derive from it, so a memo cannot outlive its graph.
+	// At most evidenceCap stay loaded; evidenceTick stamps their use order.
 	// labels is the vocabulary map the rows resolve at read time. alt, when
 	// set, is the querier a one-shot graph reads instead of db (a write transaction).
 	displays       map[string]any
 	details        map[string]any
-	evidenceGraphs map[string]EvidenceGraph
-	// memos are what a feature derives from one loaded Evidence graph, by
-	// graph id and then its own key. A graph and its memos go together.
-	memos    map[string]map[string]any
-	labels   any
-	labelsOK bool
-	alt      Querier
+	evidenceGraphs map[string]*loadedEvidenceGraph
+	evidenceTick   uint64
+	evidenceCap    int
+	labels         any
+	labelsOK       bool
+	alt            Querier
 
 	// activity is last activity per scope type, then per scope id, loaded by
 	// the first Activity read of that type and patched by OnCommit.
@@ -137,7 +138,7 @@ type Querier interface {
 
 // New returns an empty graph bound to db. Open and Create attach it and Listen.
 func New(db *sql.DB) *Graph {
-	g := &Graph{db: db}
+	g := &Graph{db: db, evidenceCap: maxEvidenceGraphs}
 	g.entityTable = mustTable(catalogmodel.KindCanonicalEntity)
 	g.claimTable = mustTable(catalogmodel.KindIdentityClaim)
 	g.valueTable = mustTableName("auto_reconciler_values")
@@ -166,7 +167,9 @@ func mustTableName(name string) string {
 // dropDerived empties what features derive from the graph and its vocabulary
 // and alias index: the Evidence graph memos and the match index.
 func (g *Graph) dropDerived() {
-	g.memos = map[string]map[string]any{}
+	for _, e := range g.evidenceGraphs {
+		e.memos = nil
+	}
 	g.matchIndexOK = false
 	g.matchIndex = nil
 }
@@ -182,7 +185,7 @@ func (g *Graph) clear() {
 	g.vocab = Vocabulary{}
 	g.displays = map[string]any{}
 	g.details = map[string]any{}
-	g.evidenceGraphs = map[string]EvidenceGraph{}
+	g.evidenceGraphs = map[string]*loadedEvidenceGraph{}
 	g.labelsOK = false
 	g.labels = nil
 	g.activity = map[string]map[string]effects.Activity{}
@@ -340,6 +343,27 @@ func (g *Graph) SetQueryCounterForTest(fn func()) {
 func (g *Graph) LoadedEvidenceGraphForTest(graphID []byte) bool {
 	_, ok := g.evidenceGraphs[string(graphID)]
 	return ok
+}
+
+// SetEvidenceGraphCapForTest sets how many Evidence graphs stay loaded; n <= 0
+// restores the default. Tests only.
+func (g *Graph) SetEvidenceGraphCapForTest(n int) {
+	if g == nil {
+		return
+	}
+	if n <= 0 {
+		n = maxEvidenceGraphs
+	}
+	g.evidenceCap = n
+	g.evictEvidenceGraphs()
+}
+
+// LoadedEvidenceGraphCountForTest returns how many Evidence graphs are loaded.
+func (g *Graph) LoadedEvidenceGraphCountForTest() int {
+	if g == nil {
+		return 0
+	}
+	return len(g.evidenceGraphs)
 }
 
 // LoadedForTest reports whether id is in the node map.

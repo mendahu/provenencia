@@ -72,8 +72,8 @@ func (g *Graph) Verify() error {
 		}
 	}
 	if evidenceGraphFn != nil {
-		for key, stored := range g.evidenceGraphs {
-			if err := evidenceGraphFn(g, []byte(key), stored); err != nil {
+		for key, e := range g.evidenceGraphs {
+			if err := evidenceGraphFn(g, []byte(key), e.graph); err != nil {
 				return err
 			}
 		}

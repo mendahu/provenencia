@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/claimevidence"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/databasetest"
@@ -252,5 +253,29 @@ func TestLargeSourceBudgets(t *testing.T) {
 		proposeOnePlace()
 		d := fastest(3, func() time.Duration { return since(proposeOnePlace) })
 		over(t, "warm proposal on the one-place Source", d, budgetOnePlaceWarm)
+	})
+
+	// A pass over Source A touches 21 Evidence graphs; a cap of 8 evicts along
+	// the way and every response must still match the default cap's.
+	t.Run("evidence under a small cap", func(t *testing.T) {
+		const small = 8
+		reqs := evidenceRequests()
+		f.c.Graph().Drop()
+		want := make([]claimevidence.Evidence, len(reqs))
+		for i, req := range reqs {
+			want[i] = f.evidence(req)
+		}
+		f.c.Graph().SetEvidenceGraphCapForTest(small)
+		defer f.c.Graph().SetEvidenceGraphCapForTest(0)
+		f.c.Graph().Drop()
+		for i, req := range reqs {
+			got := f.evidence(req)
+			if n := f.c.Graph().LoadedEvidenceGraphCountForTest(); n > small {
+				t.Fatalf("request %d left %d Evidence graphs loaded, want at most %d", i, n, small)
+			}
+			if !reflect.DeepEqual(got, want[i]) {
+				t.Fatalf("request %d under cap %d differs from the default cap's response", i, small)
+			}
+		}
 	})
 }

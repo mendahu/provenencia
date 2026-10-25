@@ -102,13 +102,49 @@ type EvidenceGraph struct {
 	EventPlaces  []EvidenceEdge
 }
 
+// loadedEvidenceGraph is one loaded Evidence graph, the memos features derive
+// from it, and when it was last used.
+type loadedEvidenceGraph struct {
+	graph EvidenceGraph
+	memos map[string]any
+	used  uint64
+}
+
+// maxEvidenceGraphs is how many Evidence graphs stay loaded. A full evidence
+// pass over S11-21's 100-Subject Source reads 21; 64 keeps about three such
+// pages warm.
+const maxEvidenceGraphs = 64
+
+// touchEvidenceGraph marks e as the most recently used graph.
+func (g *Graph) touchEvidenceGraph(e *loadedEvidenceGraph) {
+	g.evidenceTick++
+	e.used = g.evidenceTick
+}
+
+// evictEvidenceGraphs drops the least recently used graphs, with their memos,
+// until no more than the cap stay loaded.
+func (g *Graph) evictEvidenceGraphs() {
+	for len(g.evidenceGraphs) > g.evidenceCap {
+		var oldest string
+		var min uint64
+		first := true
+		for id, e := range g.evidenceGraphs {
+			if first || e.used < min {
+				oldest, min, first = id, e.used, false
+			}
+		}
+		delete(g.evidenceGraphs, oldest)
+	}
+}
+
 // EvidenceGraph returns the loaded Evidence graph, filling it on first read.
 func (g *Graph) EvidenceGraph(graphID []byte) (EvidenceGraph, error) {
 	if g == nil || len(graphID) != 16 {
 		return EvidenceGraph{}, fmt.Errorf("graphcache: evidence graph id is invalid")
 	}
-	if eg, ok := g.evidenceGraphs[string(graphID)]; ok {
-		return eg, nil
+	if e, ok := g.evidenceGraphs[string(graphID)]; ok {
+		g.touchEvidenceGraph(e)
+		return e.graph, nil
 	}
 	if evidenceGraphLoad == nil {
 		return EvidenceGraph{}, fmt.Errorf("graphcache: evidence graph loader is not registered")
@@ -118,7 +154,10 @@ func (g *Graph) EvidenceGraph(graphID []byte) (EvidenceGraph, error) {
 		return EvidenceGraph{}, err
 	}
 	loaded.GraphID = append([]byte(nil), graphID...)
-	g.evidenceGraphs[string(graphID)] = loaded
+	e := &loadedEvidenceGraph{graph: loaded}
+	g.evidenceGraphs[string(graphID)] = e
+	g.touchEvidenceGraph(e)
+	g.evictEvidenceGraphs()
 	return loaded, nil
 }
 
@@ -132,19 +171,27 @@ func (g *Graph) dropEvidenceGraphs(ids [][]byte) {
 			continue
 		}
 		delete(g.evidenceGraphs, string(id))
-		delete(g.memos, string(id))
 	}
 }
 
 // EvidenceGraphMemo returns what a feature stored for a loaded Evidence graph
 // under key. It is held only while the graph is loaded: a commit that names
-// the graph, Drop, a vocabulary commit and SetAliasIndex clear it. A
-// memoized value is shared, so every reader treats it as read-only.
+// the graph, Drop, a vocabulary commit and SetAliasIndex clear it. A hit
+// counts as a use of the graph. The graph and its memos are also dropped when
+// it is the least recently used of more than maxEvidenceGraphs loaded graphs.
+// A memoized value is shared, so every reader treats it as read-only.
 func (g *Graph) EvidenceGraphMemo(graphID []byte, key string) (any, bool) {
 	if g == nil {
 		return nil, false
 	}
-	v, ok := g.memos[string(graphID)][key]
+	e, ok := g.evidenceGraphs[string(graphID)]
+	if !ok {
+		return nil, false
+	}
+	v, ok := e.memos[key]
+	if ok {
+		g.touchEvidenceGraph(e)
+	}
 	return v, ok
 }
 
@@ -154,13 +201,14 @@ func (g *Graph) SetEvidenceGraphMemo(graphID []byte, key string, v any) {
 	if g == nil {
 		return
 	}
-	if _, loaded := g.evidenceGraphs[string(graphID)]; !loaded {
+	e, ok := g.evidenceGraphs[string(graphID)]
+	if !ok {
 		return
 	}
-	if g.memos[string(graphID)] == nil {
-		g.memos[string(graphID)] = map[string]any{}
+	if e.memos == nil {
+		e.memos = map[string]any{}
 	}
-	g.memos[string(graphID)][key] = v
+	e.memos[key] = v
 }
 
 // WalkEvidenceGraph follows h through one Evidence graph from each Subject
