@@ -9,7 +9,7 @@ enum SourcesListNavigation {
 
     /// The graph the Source-level entry points open: the Source's first graph
     /// in the graph list, which is sorted by name. The interim rule until each
-    /// graph has its own Open (S12-11, S12-14).
+    /// graph has its own Open (S12-14).
     static func entryGraph(sourceID: String, in graphs: [String: [CatalogEvidenceGraph]]) -> CatalogEvidenceGraph? {
         graphs[sourceID]?.first
     }

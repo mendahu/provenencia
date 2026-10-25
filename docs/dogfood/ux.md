@@ -21,6 +21,12 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Source page section counts differ
+
+- **Date:** 2026-10-25
+- **Where:** Source page
+- **Annoyance:** Source page section counts: Notes shows a bare number, Artifacts and Evidence graphs a localized count (S12-11 review M-8).
+
 ### Guarding a Citation page change after depictions are saved on it
 
 - **Date:** 2026-10-17
