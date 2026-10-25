@@ -50,6 +50,24 @@ func newEvidenceFixture(t *testing.T, polarity string) evidenceFixture {
 	return f
 }
 
+// newFoundRecordFixture is a handle of one Mary Smith (male) and, on a Source
+// of its own, a Polly Jones (male): a first name and surname the shortlist does
+// not reach from the handle, so only a fixed pair joins them.
+func newFoundRecordFixture(t *testing.T) evidenceFixture {
+	t.Helper()
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	dir, userID, _, typeID := subjectFixture(t)
+	f := evidenceFixture{dir: dir, userID: userID, typeID: typeID}
+	_, subject := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityPositive)
+	res := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: subject})
+	f.handle = res.Entity.GetId()
+	f.members = []string{subject}
+	f.claims = []string{res.Claim.GetId()}
+	f.sourceID, f.incoming = namedPersonOnNewSource(t, dir, userID, typeID, "Polly Jones", "male", observations.PolarityPositive)
+	f.graphID = soleGraphID(t, dir, f.sourceID)
+	return f
+}
+
 func (f evidenceFixture) request() *engine.GetPromoteClaimEvidenceRequest {
 	return &engine.GetPromoteClaimEvidenceRequest{ProjectDir: f.dir, GraphId: f.graphID, SubjectId: f.incoming, HandleId: f.handle}
 }
@@ -86,6 +104,18 @@ func offerOf(resp *engine.GetPromoteClaimEvidenceResponse, id string) *engine.Pr
 		}
 	}
 	return nil
+}
+
+// The evidence sheet opens for a pair the shortlist never offered.
+func TestGetPromoteClaimEvidenceForAFoundRecord(t *testing.T) {
+	f := newFoundRecordFixture(t)
+	resp := f.evidence(t)
+	if sectionOf(resp, "name") == nil || sectionOf(resp, "sex_at_birth") == nil {
+		t.Fatalf("sections = %+v", resp.GetSections())
+	}
+	if len(resp.GetOffers()) == 0 {
+		t.Fatal("no offers")
+	}
 }
 
 // T-7: the RPC sends a row's lines against its target with the pins on offer.
