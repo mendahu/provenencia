@@ -320,4 +320,4 @@ None.
 
 ## Landed
 
-The code matches the plan. One difference: the Swift tests share one small private helper, `unmatched(_:)`, for the New / no-band / no-alternatives row that T-5, T-6 and T-8 start from, where the plan listed no new helper.
+The code matches the plan. One difference: the Swift tests share one small private helper, `unmatched(_:)`, for the New / no-band / no-alternatives row that T-5, T-6 and T-8 start from, where the plan listed no new helper. Review round 1 changed three things the plan did not name: one `item(...)` builder in `PromoteFlow` builds every menu `Alternative` and replaces the four `headerTitle` / `headerSubtitle` wrappers; `CatalogConclusionHeader` gains `person` / `event` / `place` accessors that replace both `headerParts` and `CatalogConclusionDetail.personHeader` / `eventHeader` / `placeHeader`. Together these supersede D-5 (no `headerParts`, no third `headerTitle` overload). The tests share one fixture, `NameFormatOrders.givenSurname` in `NameFormatOrdersFixtures.swift`.
