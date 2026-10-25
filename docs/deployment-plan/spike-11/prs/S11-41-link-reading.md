@@ -1,6 +1,6 @@
 # S11-41 — One link reading for bridges
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 11 · Slice 9 — Kinship shapes
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: an engine refactor with no behavior change)
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`
 **Context:** [Kinship shapes § Shape](../kinship-shapes.md#shape) ("keyed through the same link reading the loaders use"); [segments](../comparison-layers.md#segments-layer-5-and-graph-alignment-layer-6); working rules: "High tolerance for churn", "Pure means the package builds and tests with no build tags and no `core/database` import", "One guard, not one per package", "One pure package, `core/kinship`"
 **Planned:** 2026-10-25 against `main` @ `74bb416`
-**Review:** — (not reviewed yet)
+**Review:** [`S11-41-link-reading.review.md`](S11-41-link-reading.review.md) — Fits with changes / Ready with changes, 1 round (findings fixed or logged)
 
 ### Implementer — read this first
 
@@ -38,7 +38,7 @@ Reading a bridge as a `segmentcompare.Link` moves out of `promotealign` into `co
 
 ## 2. User stories
 
-**US-1.** As a contributor writing `core/kinship`, when I need the key a direct link between two Subjects would have, I build it with `segmentcompare.LinkOf` and `segmentcompare.Key`, so an implied link keys exactly like a recorded one and the two readings cannot drift.
+**US-1.** As a contributor writing `core/kinship`, when I need the key a direct link between two Subjects would have, I get both of its keys from `segmentcompare.Keys` (built on `LinkOf` and `Key`), so an implied link keys exactly like a recorded one from each end and the two readings cannot drift.
 
 | AC | Given / when | Then |
 | --- | --- | --- |
@@ -47,6 +47,8 @@ Reading a bridge as a `segmentcompare.Link` moves out of `promotealign` into `co
 | AC-1.3 | `LinkOf(relationship bridge, "parent", "birth", firstEnd true)` | `EventType` is empty (only a participation keeps one); `End: person, Other: related_to, SameType: true` |
 | AC-1.4 | `EventEndpoint` on the participation, relationship, place relationship and location bridges | `(false, true)`, `(false, false)`, `(false, false)`, `(true, true)` |
 | AC-1.6 | `LinkOf(location bridge, "", "birth", firstEnd true)` | `End: event, Other: place, SameType: false`, `EventType` empty: the location bridge has an event end, but only a participation keeps the event type |
+| AC-1.7 | `Keys(relationship bridge, "parent", "", segmentcomparetest.Terms())` | `first` = `{relationship, child, End: related_to}`, `second` = `{relationship, child, End: person}`: "A parent of B" reads as `child` with the ends swapped, from each end |
+| AC-1.8 | `Keys(participation bridge, "subject", "birth", terms)` | `first` = `{participation, subject, End: person, EventType: birth}`, `second` = `{participation, subject, End: event, EventType: birth}` |
 | AC-1.5 | `segmentcompare` imports `core/connectrules` | `TestLayerPackages` still passes: no build tag, no path to `core/database` |
 
 **US-2.** As the engine, after the move, Promote and the evidence query read every bridge exactly as before.
@@ -61,9 +63,10 @@ Reading a bridge as a `segmentcompare.Link` moves out of `promotealign` into `co
 | In | Covered by |
 | --- | --- |
 | `LinkOf` and `EventEndpoint` *(new, exported)* in `core/segmentcompare/key.go`, with the bodies of `linkOf` and `eventEndpoint` from `core/database/promotealign/terms.go` (D-1, D-2, D-3) | STEP-1, AC-1.1 – AC-1.6 |
-| Table tests for both in `core/segmentcompare/segmentcompare_test.go` | STEP-1, T-1, T-2 |
-| `loadLayerBridges` and `canonKeys` call the moved functions; `linkOf` and `eventEndpoint` deleted from `core/database/promotealign/terms.go` | STEP-2, AC-2.1, AC-2.2 |
-| The two "linkOf alone decides" comments name `segmentcompare.LinkOf` | STEP-2 |
+| `Keys` *(new)* in `core/segmentcompare/key.go`: a bridge's keys from its first and its second endpoint's end (D-8) | STEP-1, AC-1.7, AC-1.8 |
+| Table tests for all three in `core/segmentcompare/segmentcompare_test.go` | STEP-1, T-1, T-2 |
+| `loadLayerBridges` and `canonKeys` call `EventEndpoint` and `Keys`; `linkOf` and `eventEndpoint` deleted from `core/database/promotealign/terms.go` | STEP-2, AC-2.1, AC-2.2 |
+| The two "linkOf alone decides" comments name `segmentcompare.Keys` | STEP-2 |
 | `add-match-rule` layer 5 bullet names the link reading | STEP-3 |
 | Docs owed (map row, `completed.md`, this plan) | STEP-4 |
 
@@ -73,7 +76,9 @@ Reading a bridge as a `segmentcompare.Link` moves out of `promotealign` into `co
 | Any caller deriving implied links (layer loader, `loadCanon`, `canonLinks`) | S11-39, S11-40 |
 | Moving `canonKeys`, `edgeSeenKey`, `observedTerms` or `loadTerms` | not planned — they read `graphcache` and belong in the adapter |
 | A `core/connectrules` row in the guard's `layerPackages` | not planned — D-4 |
-| Changing `ReadFrom` or `Key` | not planned — unchanged by this PR |
+| Changing `ReadFrom` or `Key`. `ReadFrom` takes a bridge's endpoints unpacked while `LinkOf` takes the `Bridge` (review M-3) | not planned here — logged in the review log for S11-40's planner, whose PR reworks `evidence.go`'s relationship reading |
+| `core/database/identityclaims/bridgefile.go` `sameEndpointType`, a second copy of the same-type rule (review M-2) | not planned — logged in the review log |
+| Rewriting hand-built `segmentcompare.Link` literals in tests (`core/graphalign/align_test.go`, `TestKey`, `TestReadFrom`) | not planned — tests build links by hand on purpose |
 
 ## 4. Current state
 
@@ -101,10 +106,11 @@ Verified at the planning base: adding `import "github.com/mendahu/provenencia/co
 | --- | --- | --- | --- |
 | D-1 | Names: `LinkOf` and `EventEndpoint`, in `core/segmentcompare/key.go`, after `Key` and before `Corresponds` | The map's scope entry puts them beside `Key`; the names are today's, exported | `ReadLink` / a method on `connectrules.Bridge` — `connectrules` is a lower package many callers import, and must not import `segmentcompare` |
 | D-2 | Signature `func LinkOf(b connectrules.Bridge, term vocabkey.BridgeTerm, eventType vocabkey.EventType, firstEnd bool) Link`. Callers convert at the call: `vocabkey.BridgeTerm(term)`, `vocabkey.EventType(eventType)` | `segmentcompare`'s API is typed on `vocabkey` (`Link`, `Key`, `ReadFrom`); the string comes from the catalog at the adapter, which is where the conversion belongs | Keep `string` parameters — a typed package taking untyped strings, and `core/kinship` would hold typed terms |
-| D-3 | `func EventEndpoint(b connectrules.Bridge) (first, ok bool)`, body unchanged | Same rule, now public | — |
+| D-3 | `func EventEndpoint(b connectrules.Bridge) (first, ok bool)`, body unchanged, beside `LinkOf` | It says where a caller reads the event type that `LinkOf` decides whether to keep; the two halves of one rule stay in one file, as the map's scope entry has it | A method on `connectrules.Bridge` — workable (it reads only `TypeKey`), but it splits the event-type rule across two packages; review M-2 |
 | D-4 | Bodies move unchanged; `LinkOf` keeps today's precondition that `b` has two endpoints, written in its doc comment. No length check is added | No behavior change; every caller already skips a bridge with `len(b.Endpoints) != 2`, and every product bridge has two | A guard returning a zero `Link` — a new behavior with no caller that needs it |
 | D-5 | `core/segmentcompare` imports `core/connectrules`. No `layerPackages` row is added for `connectrules` | `connectrules` is pure (vocabkey only) and the guard's walker already fails if it ever reaches `core/database` through `segmentcompare`; the guard's rows are layer and pure value packages | A row for `connectrules` — it is neither, and the transitive walk already covers it |
 | D-6 | Tests are new tables in `core/segmentcompare/segmentcompare_test.go`, against the four product bridges from `connectrules.LookupBridge` only | The product bridges are what every caller passes, and between them they take every branch: location's first endpoint is an event, participation's second, relationship and place relationship have none | Hand-built bridges — they would test shapes no caller passes; a new `key_test.go` — the package keeps one test file |
+| D-8 | `func Keys(b connectrules.Bridge, term vocabkey.BridgeTerm, eventType vocabkey.EventType, terms Terms) (first, second vocabkey.BridgeKey)` *(new)*: `Key(LinkOf(b, term, eventType, true), terms)` and the same with `false`. Both loaders call it in place of their `Key(linkOf(…, true))` / `Key(linkOf(…, false))` pair. `LinkOf` stays exported: `Link` and `Key` are exported and a one-end reader can use it | `graphalign.Bridge` (`core/graphalign/types.go`) needs `KeyA` and `KeyB`, so S11-39's implied links need both keys too; one function keeps a third caller from repeating the pair or hand-swapping one end (review M-1) | Keep the pair at each call site — three copies once S11-39 lands |
 | D-7 | No `promotealign` test changes. The existing suite is the regression check | No key changes; a changed expected value means behavior changed (Stop condition) | — |
 
 ## 6. Design
@@ -115,11 +121,12 @@ Verified at the planning base: adding `import "github.com/mendahu/provenencia/co
 | --- | --- | --- | --- |
 | `segmentcompare.LinkOf` *(new)* | func | `promotealign.linkOf` | It is that function, moved and exported; the old one is deleted |
 | `segmentcompare.EventEndpoint` *(new)* | func | `promotealign.eventEndpoint` | Same; moved and deleted |
-| `TestLinkOf`, `TestEventEndpoint` *(new)* | test | `TestKey`, `TestReadFrom` | Same file and shape; no existing test covers the builder |
+| `segmentcompare.Keys` *(new)* | func | the `keyA`/`keyB` pair in `loadLayerBridges` and `keyFrom`/`keyTo` in `canonKeys` | Replaces both copies of the pair |
+| `TestLinkOf`, `TestEventEndpoint`, `TestKeys` *(new)* | test | `TestKey`, `TestReadFrom` | Same file and shape; no existing test covers the builder |
 
 **Builds on.** `segmentcompare.Link` and `Key` (S11-14); the `ReadFrom` precedent (`10dec362`); `connectrules.LookupBridge`.
-**Deletes.** `linkOf` and `eventEndpoint` in `core/database/promotealign/terms.go`.
-**Next adds.** S11-38's `core/kinship` keys an implied link as `segmentcompare.Key(segmentcompare.LinkOf(relationshipBridge, vocabkey.TermSpouse, "", true), terms)` (its constants are S11-38's), the same reading the loaders use. S11-39 and S11-40 need nothing further from this PR.
+**Deletes.** `linkOf` and `eventEndpoint` in `core/database/promotealign/terms.go`; the two-call key pair in `layer.go` and `canon.go`.
+**Next adds.** S11-38's `core/kinship` keys an implied link from both ends as `segmentcompare.Keys(relationshipBridge, term, "", terms)` (its term constants are S11-38's), the same reading the loaders use, ready for `graphalign.Bridge`'s `KeyA` / `KeyB` in S11-39. S11-40 needs nothing further from this PR.
 
 ### Schema
 
@@ -129,16 +136,19 @@ None — no catalog change.
 
 | Package | Change |
 | --- | --- |
-| `core/segmentcompare` | `key.go` imports `core/connectrules`. `func LinkOf(b connectrules.Bridge, term vocabkey.BridgeTerm, eventType vocabkey.EventType, firstEnd bool) Link` *(new)* and `func EventEndpoint(b connectrules.Bridge) (first, ok bool)` *(new)*, bodies from `terms.go` |
-| `core/database/promotealign` | `terms.go` loses `linkOf` and `eventEndpoint`. `layer.go` `loadLayerBridges` and `canon.go` `canonKeys` call `segmentcompare.EventEndpoint(b)` and `segmentcompare.LinkOf(b, vocabkey.BridgeTerm(…), vocabkey.EventType(eventType), …)` |
+| `core/segmentcompare` | `key.go` imports `core/connectrules`. `func LinkOf(b connectrules.Bridge, term vocabkey.BridgeTerm, eventType vocabkey.EventType, firstEnd bool) Link` *(new)* and `func EventEndpoint(b connectrules.Bridge) (first, ok bool)` *(new)*, bodies from `terms.go`; `func Keys(b connectrules.Bridge, term vocabkey.BridgeTerm, eventType vocabkey.EventType, terms Terms) (first, second vocabkey.BridgeKey)` *(new)* per D-8 |
+| `core/database/promotealign` | `terms.go` loses `linkOf` and `eventEndpoint`. `layer.go` `loadLayerBridges` and `canon.go` `canonKeys` call `segmentcompare.EventEndpoint(b)` and `keyA, keyB := segmentcompare.Keys(b, vocabkey.BridgeTerm(term), vocabkey.EventType(eventType), terms)` (`keyFrom, keyTo = …(l.TermKey)…` in `canonKeys`) |
 
 Doc comment for `LinkOf` (adapted from today's):
 
 ```go
 // LinkOf is a bridge as recorded, read from its first endpoint's end or its
-// second. It is the one builder of a link: the loaders and the kinship
-// patterns read every bridge through it, so their keys cannot drift. b has
-// two endpoints, and only a participation carries an event type.
+// second. It is the one builder of a link: every reader of a bridge goes
+// through it, or through Keys, so their keys cannot drift. b has two
+// endpoints, and only a participation carries an event type.
+
+// Keys are a bridge's keys read from its first endpoint's end and from its
+// second.
 ```
 
 Errors: none.
@@ -157,27 +167,27 @@ None — no copy.
 
 ## 7. Steps
 
-**STEP-1 — Add `LinkOf` and `EventEndpoint` to `segmentcompare`, with tests**
+**STEP-1 — Add `LinkOf`, `EventEndpoint` and `Keys` to `segmentcompare`, with tests**
 Files: `core/segmentcompare/key.go`, `core/segmentcompare/segmentcompare_test.go`. Skill: `add-match-rule` (layer 5).
-Do: add both functions per D-1 – D-4 and the doc comment in §6, with `EventEndpoint`'s comment from `terms.go` ("the one rule for where a link reads its event type"). Add T-1 and T-2: the test file imports `core/connectrules`; a `bridge(t, key)` helper inside each test calls `connectrules.LookupBridge` and `t.Fatalf`s when it returns false. Terms in the rows: `vocabkey.BridgeTerm(vocabkey.RoleSubject)` (as `partKey` in the same file does), `vocabkey.BridgeTerm("parent")` (no constant exists until S11-38), `vocabkey.TermPartOf`; event type `vocabkey.EventBirth`.
+Do: add the three functions per D-1 – D-4 and D-8 and the doc comments in §6, with `EventEndpoint`'s comment from `terms.go` ("the one rule for where a link reads its event type"). Add T-1, T-2 and T-5: the test file imports `core/connectrules`; a `bridge(t, key)` helper inside each test calls `connectrules.LookupBridge` and `t.Fatalf`s when it returns false. Terms in the rows: `vocabkey.BridgeTerm(vocabkey.RoleSubject)` (as `partKey` in the same file does), `vocabkey.BridgeTerm("parent")` (no constant exists until S11-38), `vocabkey.TermPartOf`; event type `vocabkey.EventBirth`.
 Check: `go test ./core/segmentcompare/... ./core/matchregistry/...` passes with no build tags.
 
 **STEP-2 — Move the loaders onto them and delete the private copies**
 Files: `core/database/promotealign/terms.go`, `core/database/promotealign/layer.go`, `core/database/promotealign/canon.go`.
-Do: replace each `eventEndpoint(` with `segmentcompare.EventEndpoint(` and each `linkOf(` with `segmentcompare.LinkOf(` converting `term` / `l.TermKey` and `eventType` per D-2. Change both "linkOf alone decides whether the key keeps it" comments to "`segmentcompare.LinkOf` alone decides whether the key keeps it". Delete `linkOf` and `eventEndpoint` from `terms.go`; drop any import that becomes unused.
+Do: replace each `eventEndpoint(` with `segmentcompare.EventEndpoint(`. Replace each two-line `segmentcompare.Key(linkOf(…, true), terms)` / `segmentcompare.Key(linkOf(…, false), terms)` pair with one `segmentcompare.Keys(…)` call per §6, converting `term` / `l.TermKey` and `eventType` per D-2. Change both "linkOf alone decides whether the key keeps it" comments to "`segmentcompare.Keys` alone decides whether the key keeps it". Delete `linkOf` and `eventEndpoint` from `terms.go`; drop any import that becomes unused.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/...` passes; `rg -n 'linkOf|eventEndpoint' core/database` prints nothing (AC-2.2).
 
 **STEP-3 — Name the reading in the matching skill**
 Files: `.agents/skills/add-match-rule/SKILL.md`.
-Do: in the "Layer 5 (`core/segmentcompare`) scores one link." bullet, after "Keys come from `Key` with the catalog's `Terms`;", add: "a bridge reads as a `Link` through `LinkOf` (its event end through `EventEndpoint`), never built by hand;".
-Check: `rg -n 'LinkOf' .agents/skills/add-match-rule/SKILL.md` prints the line.
+Do: in the "Layer 5 (`core/segmentcompare`) scores one link." bullet, after "Keys come from `Key` with the catalog's `Terms`;", add: "outside tests, a bridge reads as its keys through `Keys` (or as a `Link` through `LinkOf`), with its event end from `EventEndpoint`;".
+Check: `rg -n 'EventEndpoint' .agents/skills/add-match-rule/SKILL.md` prints the line.
 
 **STEP-4 — Docs**
 Files: `docs/deployment-plan/spike-11/completed.md`, `docs/deployment-plan/spike-11/deployment-plan.md` (map row), this plan (status).
 Do: map row S11-41 in `deployment-plan.md`: Status `Landed #N` (the Plan cell already links this file). `completed.md`: a new section at the top (newest first), `## S11-41 — One link reading for bridges`, then `**Landed YYYY-MM-DD** in [#N](https://github.com/mendahu/provenencia/pull/N).` and two or three sentences on what moved, ending "Nothing changes for researchers." This plan: Status `Landed in [#N](https://github.com/mendahu/provenencia/pull/N) (YYYY-MM-DD)`, and a `**Landed:**` header line after **Planned** listing every difference from the plan ("None." when there is none).
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-11/prs/S11-41-link-reading.md` reports no errors; `scripts/check-pr.sh` prints `check-pr: PASS`.
 
-Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits. For this PR: one code commit ("Read every bridge as a link through one function in segment compare.") and one docs commit.
+Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits. For this PR: one code commit ("Read every bridge's keys through one function in segment compare.") and one docs commit.
 
 ## 8. Tests
 
@@ -185,6 +195,7 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | --- | --- | --- | --- | --- |
 | T-1 | Go | `core/segmentcompare/segmentcompare_test.go` `TestLinkOf` *(new)* | Table, bridges from `connectrules.LookupBridge`: participation, `subject`, `birth`, first end → AC-1.1's link; second end → AC-1.2's; relationship, `parent`, `birth`, first end → AC-1.3's (no event type, `SameType`); relationship second end → `End: related_to, Other: person`; place relationship, `part_of`, `""`, first end → `End: from, Other: to, SameType: true`; location, `""`, `birth`, first end → AC-1.6's link. Each row compares the whole `Link` | AC-1.1, AC-1.2, AC-1.3, AC-1.6, D-2, D-4 |
 | T-2 | Go | `core/segmentcompare/segmentcompare_test.go` `TestEventEndpoint` *(new)* | participation → `(false, true)`; relationship → `(false, false)`; place relationship → `(false, false)`; location → `(true, true)` | AC-1.4, D-6 |
+| T-5 | Go | `core/segmentcompare/segmentcompare_test.go` `TestKeys` *(new)* | relationship, `parent`, `""`, `segmentcomparetest.Terms()` → AC-1.7's pair; participation, `subject`, `birth` → AC-1.8's pair; every row also equals `Key(LinkOf(…, true))`, `Key(LinkOf(…, false))` | AC-1.7, AC-1.8, D-8 |
 | T-3 | Go | `core/matchregistry/guard_test.go` `TestLayerPackages` (existing) | `core/segmentcompare/pure` and `/numbers` pass with the new import | AC-1.5, D-5 |
 | T-4 | Go | `core/database/promotealign` suite (existing, unchanged) | `TestLayerBridgesCoverEveryConnectRule`, `TestProposeInverseKinshipTermsCorrespond`, `TestProposeRelationshipFromEitherEnd`, `TestProposeChildOfReadsAsParentOf`, `TestProposeBirthOnAnotherPersonSubtracts` and `evidence_test.go` pass unchanged | AC-2.1, D-7 |
 
