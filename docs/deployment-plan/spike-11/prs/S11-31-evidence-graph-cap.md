@@ -1,6 +1,7 @@
 # S11-31 — Bound the loaded Evidence graphs
 
-**Status:** Planned
+**Status:** Landed in [#541](https://github.com/mendahu/provenencia/pull/541) (2026-10-24)
+**Landed:** Review round 1 (PRF-1) found that one Evidence request reads one graph per distinct member Source, with no bound at 2. By the user's decision on 2026-10-24, `evidenceReader` now keeps the graphs it reads for the length of the request, so each is read once however small the cap. This supersedes the §3 Out line on pinning graphs for a request and the "at most 2 graphs" premise in §4 and §11. `TestEvidenceReadsEachGraphOnce` covers it; the `TestLargeSourceBudgets` fixture could not show the reload, because its cold requests never re-read an evicted graph.
 **Spike / slice:** Spike 11 · Slice 7 — Performance
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: an engine cache gains a cap; nothing on screen changes)
