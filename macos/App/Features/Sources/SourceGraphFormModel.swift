@@ -91,7 +91,7 @@ final class SourceGraphFormModel {
 
     /// The ids a save sends: the checked Artifacts in page order.
     var checkedArtifactIDs: [String] {
-        PVArtifactChecklistState.checkedIDs(
+        PVChecklistState.checkedIDs(
             ids: artifacts.map(\.id),
             excluded: draft.excludedArtifactIDs,
             locked: Set(locked.keys)

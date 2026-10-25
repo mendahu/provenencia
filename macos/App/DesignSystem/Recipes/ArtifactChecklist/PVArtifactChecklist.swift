@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// The arithmetic behind ``PVArtifactChecklist``, apart from the view so it
-/// is testable. State is the set of unchecked ids (`excluded`), so an Artifact
+/// The arithmetic behind ``PVArtifactChecklist`` and every other checklist of
+/// ids, apart from the view so it is testable. State is the set of unchecked ids (`excluded`), so an Artifact
 /// that appears later starts checked. A `locked` id is always checked: it is
 /// never counted as unchecked, and the All row never clears it.
-enum PVArtifactChecklistState {
+enum PVChecklistState {
     /// The unchecked ids that are still on the list and not locked; a deleted
     /// Artifact's id may linger in `excluded` and must not change the count.
     static func liveExcluded(ids: [String], excluded: Set<String>, locked: Set<String>) -> Set<String> {
@@ -101,7 +101,7 @@ struct PVArtifactChecklist: View {
                     .foregroundStyle(PVColor.textPrimary)
                 Spacer(minLength: 0)
                 Text(verbatim: L10n.ArtifactChecklist.count(
-                    PVArtifactChecklistState.checkedCount(ids: ids, excluded: excluded, locked: lockedIDs),
+                    PVChecklistState.checkedCount(ids: ids, excluded: excluded, locked: lockedIDs),
                     artifacts.count
                 ))
                 .font(PVFont.mono(size: PVTypeScale.micro))
@@ -119,12 +119,12 @@ struct PVArtifactChecklist: View {
         PVCheckbox(
             L10n.ArtifactChecklist.all,
             isChecked: Binding(
-                get: { PVArtifactChecklistState.isAllChecked(ids: ids, excluded: excluded, locked: lockedIDs) },
+                get: { PVChecklistState.isAllChecked(ids: ids, excluded: excluded, locked: lockedIDs) },
                 set: { on in
-                    excluded = PVArtifactChecklistState.toggledAll(on: on, ids: ids, locked: lockedIDs)
+                    excluded = PVChecklistState.toggledAll(on: on, ids: ids, locked: lockedIDs)
                 }
             ),
-            isIndeterminate: PVArtifactChecklistState.isAllIndeterminate(
+            isIndeterminate: PVChecklistState.isAllIndeterminate(
                 ids: ids, excluded: excluded, locked: lockedIDs
             ),
             isDisabled: isDisabled
