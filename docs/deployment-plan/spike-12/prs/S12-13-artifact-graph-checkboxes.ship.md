@@ -107,4 +107,4 @@ Minors fixed in round 1, confirmed by their lens in round 2: UX-3 and UX-4 (both
 Nits (logged): `UX-6 · SourcePageArtifactsView.swift:85 · disabled retry group keeps its hint with no reason` · `MNT-7 · CatalogMutation.swift:101 · merging lists fields by hand; doc comment for the next field` · `MNT-8 · PVChecklistRows.swift:187 · showsTitle/speaksRef flags only the Artifact checklist uses`
 
 ## Result
-Gate PASS (`13994bdb`, `main` unmoved at `846fa656`) · CI pending · open: none · follow-ups: UX-5 · to user: UX-1/UX-3/UX-4 answered 2026-10-25 (context copy) · CON miss: none
+Gate PASS (`13994bdb`, `main` unmoved at `846fa656`) · CI green (test, localizable) · open: none · follow-ups: UX-5 · to user: UX-1/UX-3/UX-4 answered 2026-10-25 (context copy) · CON miss: none
