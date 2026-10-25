@@ -218,6 +218,12 @@ enum L10n {
             comment: "Accessibility label for a PVList skeleton shown on first load"
         )
 
+        static let comboBoxSearching = LocalizedStringResource(
+            "designSystem.comboBox.searching",
+            defaultValue: "Searching…",
+            comment: "PVComboBox list line while the caller's remote search runs and no results are in yet"
+        )
+
         static let thumbnailLoading = LocalizedStringResource(
             "designSystem.thumbnail.loading",
             defaultValue: "Loading preview",
