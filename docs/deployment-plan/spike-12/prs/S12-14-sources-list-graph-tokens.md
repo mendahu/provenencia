@@ -1,6 +1,7 @@
 # S12-14 — Graph counts in the Sources list and on the Source page
 
-**Status:** Planned
+**Status:** Landed in [#576](https://github.com/mendahu/provenencia/pull/576) (2026-10-26)
+**Landed:** Differences from the plan: `PersonDetailTests.presentationFollowsTheHandle` also moved to `QueryRead` values (it called the old `ConclusionDetailPresentation` init); `evidenceGraphsRead(sourceID:)` reads `.loading` for a loaded list with no graph for the Source, empty or not, as D-17 words it; `SourcesGraphToken` composes a private `SourcesGraphTokenFrame` for the border, fill and dashed stroke, and its style takes an `inert` flag for the list-failed token (focusable, no hover fill, no press); the `PVStroke` README line sits in the component table beside the `FlowLayout` row; the new files' project ids are random `5C...` values; `SourcesGraphCountLine` keeps the split row's three looks and speaks `graphCounts(_, style: .spoken)`; `FakeStore` still hard-codes `filedCount: 0` for graphs without a seeded override. The manual check and the stop conditions that need the running app (token truncation at the minimum width, `pvRightClickMenu` against the link's click and VoiceOver action, the link highlight reaching the label, Observation repainting a row without a `@Bindable` handle, tab order and focus rings) were not run in the app by the implementer.
 **Spike / slice:** Spike 12 · Slice 4 — Graphs in the UI
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S12-D5](../design/archive/S12-D5-sources-list-graph-tokens.md), board agreed 2026-10-26
