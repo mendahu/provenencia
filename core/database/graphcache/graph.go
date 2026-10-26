@@ -6,9 +6,11 @@ package graphcache
 
 import (
 	"database/sql"
+	"maps"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 )
 
 // Graph is one catalog's canonical graph. Nodes are immutable: a commit
@@ -232,6 +234,25 @@ func (g *Graph) Kind(typeID []byte) ([]*Node, error) {
 		return nil, nil
 	}
 	k := string(typeID)
+	if _, err := g.kindIDs(typeID); err != nil {
+		return nil, err
+	}
+	if err := g.loadIDs(g.kinds[k], false); err != nil {
+		return nil, err
+	}
+	out := make([]*Node, 0, len(g.kinds[k]))
+	for _, id := range g.kinds[k] {
+		if n, ok := g.nodes[string(id)]; ok {
+			out = append(out, n)
+		}
+	}
+	return out, nil
+}
+
+// kindIDs is the ids of every unmerged node of a subject type. The first read
+// stores the list; later commits insert and remove on it.
+func (g *Graph) kindIDs(typeID []byte) ([][]byte, error) {
+	k := string(typeID)
 	if !g.kindOn[k] {
 		ids, err := g.unmergedIDs(typeID)
 		if err != nil {
@@ -244,16 +265,62 @@ func (g *Graph) Kind(typeID []byte) ([]*Node, error) {
 			g.kindSet[k][string(id)] = true
 		}
 	}
-	if err := g.loadIDs(g.kinds[k], false); err != nil {
-		return nil, err
+	return g.kinds[k], nil
+}
+
+// LoadKinds loads every unmerged node of each subject type that is not loaded
+// yet, reading their links through one scan of every association in the
+// catalog instead of one query per chunk of ids. That is cheaper when the kinds
+// hold most of the handles the associations reach; Kind of each type then
+// returns its nodes without a query.
+func (g *Graph) LoadKinds(typeIDs [][]byte) error {
+	if g == nil {
+		return nil
 	}
-	out := make([]*Node, 0, len(g.kinds[k]))
-	for _, id := range g.kinds[k] {
-		if n, ok := g.nodes[string(id)]; ok {
-			out = append(out, n)
+	var all [][]byte
+	for _, typeID := range typeIDs {
+		if len(typeID) != 16 {
+			continue
+		}
+		ids, err := g.kindIDs(typeID)
+		if err != nil {
+			return err
+		}
+		all = append(all, ids...)
+	}
+	var fresh [][]byte
+	for _, id := range uniqueIDs(all) {
+		if _, ok := g.nodes[string(id)]; !ok {
+			fresh = append(fresh, id)
 		}
 	}
-	return out, nil
+	if len(fresh) == 0 {
+		return nil
+	}
+	var nodes []*Node
+	known := map[string]entityRow{}
+	err := sqlbatch.Each(fresh, func(chunk [][]byte) error {
+		got, rows, err := g.readNodes(chunk)
+		nodes = append(nodes, got...)
+		maps.Copy(known, rows)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	ids := make([][]byte, len(nodes))
+	for i, n := range nodes {
+		ids[i] = n.ID
+	}
+	links, err := g.scanLinks(ids, known)
+	if err != nil {
+		return err
+	}
+	for _, n := range nodes {
+		n.Links = links[string(n.ID)]
+		g.install(n)
+	}
+	return nil
 }
 
 // MatchIndex returns the match index: what Promote derives from the whole

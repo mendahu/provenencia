@@ -1,7 +1,9 @@
 package graphcache_test
 
 import (
+	"bytes"
 	"database/sql"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -481,5 +483,224 @@ func TestMatchIndexDrops(t *testing.T) {
 	g.ResetMatchIndexForTest()
 	if stored() {
 		t.Error("ResetMatchIndexForTest left the match index")
+	}
+}
+
+// S11-39 F-8: LoadKinds reads the links of every handle of the kinds through
+// one catalog-wide association scan, and each node it installs equals the one
+// a per-id load installs.
+func TestLoadKindsMatchesNodeLoads(t *testing.T) {
+	c := openCatalog(t)
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	one := func(q string, args ...any) []byte {
+		t.Helper()
+		var id []byte
+		if err := db.QueryRow(q, args...).Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	typeID := func(key string) []byte {
+		return one(`SELECT id FROM subject_types WHERE key = ? AND origin = 'provenencia'`, key)
+	}
+	propID := func(key string) []byte {
+		return one(`SELECT id FROM properties WHERE key = ? AND origin = 'provenencia'`, key)
+	}
+	termID := func(prop, term string) []byte {
+		return one(`SELECT t.id FROM property_terms t JOIN properties p ON p.id = t.property_id
+			WHERE p.key = ? AND p.origin = 'provenencia' AND t.key = ?`, prop, term)
+	}
+	var n byte
+	entity := func(typ, ref string) []byte {
+		n++
+		id := []byte{4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, n}
+		if _, err := db.Exec(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES (?, ?, ?)`, id, typeID(typ), ref); err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	value := func(assoc, prop, to []byte, rank int, reason string) {
+		t.Helper()
+		if _, err := db.Exec(`INSERT INTO auto_reconciler_values
+			(entity_id, property_id, rank, value_entity_id, support, against, reason) VALUES (?, ?, ?, ?, 1, 0, ?)`,
+			assoc, prop, rank, to, reason); err != nil {
+			t.Fatal(err)
+		}
+	}
+	term := func(assoc, prop, term []byte) {
+		t.Helper()
+		if _, err := db.Exec(`INSERT INTO auto_reconciler_values
+			(entity_id, property_id, rank, value_term_id, support, against, reason) VALUES (?, ?, 1, ?, 1, 0, 'kept')`,
+			assoc, prop, term); err != nil {
+			t.Fatal(err)
+		}
+	}
+	firstTerm := func(prop string) []byte {
+		return one(`SELECT t.id FROM property_terms t JOIN properties p ON p.id = t.property_id
+			WHERE p.key = ? AND p.origin = 'provenencia' ORDER BY t.key LIMIT 1`, prop)
+	}
+
+	p1, p2, p3, p4 := entity("person", "PER-1"), entity("person", "PER-2"), entity("person", "PER-3"), entity("person", "PER-4")
+	merged := entity("person", "PER-M")
+	e1, e2 := entity("event", "EVT-1"), entity("event", "EVT-2")
+	l1, l2 := entity("place", "PLC-1"), entity("place", "PLC-2")
+	if _, err := db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, p1, merged); err != nil {
+		t.Fatal(err)
+	}
+	person, event, place := propID("person"), propID("event"), propID("place")
+	related, from, to := propID("related_to"), propID("from"), propID("to")
+
+	// A participation with a role term.
+	a := entity("participation", "BRG-1")
+	value(a, person, p1, 1, "kept")
+	value(a, event, e1, 1, "kept")
+	term(a, propID("role"), termID("role", "subject"))
+	// A relationship with a parent term.
+	a = entity("relationship", "BRG-2")
+	value(a, person, p1, 1, "kept")
+	value(a, related, p2, 1, "kept")
+	term(a, propID("relationship_type"), termID("relationship_type", "parent"))
+	relAssoc := a
+	// A location with no disambiguation.
+	a = entity("location", "BRG-3")
+	value(a, event, e1, 1, "kept")
+	value(a, place, l1, 1, "kept")
+	// A place relationship with a term.
+	a = entity("place_relationship", "BRG-4")
+	value(a, from, l1, 1, "kept")
+	value(a, to, l2, 1, "kept")
+	term(a, propID("place_relationship_type"), firstTerm("place_relationship_type"))
+	// A merged association.
+	a = entity("relationship", "BRG-5")
+	value(a, person, p1, 1, "kept")
+	value(a, related, p3, 1, "kept")
+	if _, err := db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, relAssoc, a); err != nil {
+		t.Fatal(err)
+	}
+	// An association whose endpoint value is rank 2, and one not kept.
+	a = entity("relationship", "BRG-6")
+	value(a, person, p2, 1, "kept")
+	value(a, related, p3, 2, "kept")
+	a = entity("participation", "BRG-7")
+	value(a, person, p3, 1, "kept")
+	value(a, event, e2, 1, "weak")
+	// An association to a merged neighbor.
+	a = entity("relationship", "BRG-8")
+	value(a, person, p2, 1, "kept")
+	value(a, related, merged, 1, "kept")
+	term(a, propID("relationship_type"), termID("relationship_type", "parent"))
+	// A self-loop relationship.
+	a = entity("relationship", "BRG-9")
+	value(a, person, p4, 1, "kept")
+	value(a, related, p4, 1, "kept")
+	term(a, propID("relationship_type"), termID("relationship_type", "parent"))
+	// A person in two associations with the same event.
+	a = entity("participation", "BRG-10")
+	value(a, person, p2, 1, "kept")
+	value(a, event, e1, 1, "kept")
+	term(a, propID("role"), termID("role", "witness"))
+
+	kinds := [][]byte{typeID("person"), typeID("event"), typeID("place")}
+	scanned := graphcache.New(db)
+	if err := scanned.LoadKinds(kinds); err != nil {
+		t.Fatal(err)
+	}
+	perID := graphcache.New(db)
+	total := 0
+	for _, k := range kinds {
+		want, err := scanned.Kind(k)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, w := range want {
+			got, err := perID.Node(w.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			total += len(w.Links)
+			if !reflect.DeepEqual(w.Links, got.Links) {
+				t.Errorf("%s links differ:\nLoadKinds %+v\nNode      %+v", w.Ref, w.Links, got.Links)
+			}
+			if w.Ref != got.Ref || !reflect.DeepEqual(w.Values, got.Values) || !reflect.DeepEqual(w.Members, got.Members) {
+				t.Errorf("%s differs beyond its links", w.Ref)
+			}
+		}
+		again, err := perID.Kind(k)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(again) != len(want) {
+			t.Errorf("kind lists differ: %d vs %d", len(want), len(again))
+		}
+		for i := range again {
+			if i < len(want) && !bytes.Equal(again[i].ID, want[i].ID) {
+				t.Errorf("kind order differs at %d", i)
+			}
+		}
+	}
+	if total == 0 {
+		t.Fatal("the fixture produced no links")
+	}
+}
+
+// S11-39 F-8: after LoadKinds, reading the kinds issues no query.
+func TestLoadKindsThenKindIssuesNoQuery(t *testing.T) {
+	c := openCatalog(t)
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var typeID []byte
+	if err := db.QueryRow(`SELECT id FROM subject_types WHERE key = 'person' AND origin = 'provenencia'`).Scan(&typeID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES (?, ?, 'PER-1')`,
+		[]byte{5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, typeID); err != nil {
+		t.Fatal(err)
+	}
+	g := graphcache.New(db)
+	if err := g.LoadKinds([][]byte{typeID}); err != nil {
+		t.Fatal(err)
+	}
+	queries := 0
+	g.SetQueryCounterForTest(func() { queries++ })
+	nodes, err := g.Kind(typeID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(nodes) != 1 || queries != 0 {
+		t.Fatalf("Kind after LoadKinds returned %d nodes with %d queries", len(nodes), queries)
+	}
+}
+
+// S11-39 F-8: the association scan never reads a table end to end: the
+// associations come from the type index, the endpoints from the edge index.
+func TestLinkScanUsesIndexes(t *testing.T) {
+	c := openCatalog(t)
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	assocQ, endsQ, termsQ, assocArgs, endsArgs, termsArgs := graphcache.LinkScanSQL()
+	for name, q := range map[string]struct {
+		sql  string
+		args []any
+	}{
+		"associations": {assocQ, assocArgs},
+		"endpoints":    {endsQ, endsArgs},
+		"terms":        {termsQ, termsArgs},
+	} {
+		plans := dbtest.QueryPlan(t, db, q.sql, q.args...)
+		for _, detail := range plans {
+			if strings.HasPrefix(detail, "SCAN ") && (strings.Contains(detail, "auto_reconciler_values") || strings.Contains(detail, "canonical_entities")) {
+				t.Errorf("%s: full scan: %s", name, detail)
+			}
+		}
+		if name == "endpoints" && !strings.Contains(strings.Join(plans, "\n"), "auto_reconciler_values_edge_idx") {
+			t.Errorf("endpoints: edge index unused:\n%s", strings.Join(plans, "\n"))
+		}
 	}
 }

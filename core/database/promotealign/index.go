@@ -63,6 +63,17 @@ func loadShortlist(g *graphcache.Graph, p *profiler, cfg graphalign.Config) (*sh
 		sorted = append(sorted, string(kind))
 	}
 	sort.Strings(sorted)
+	// The kinds hold most of the catalog's handles, so their links are read in
+	// one scan of every association, not one query per chunk of ids.
+	var typeIDs [][]byte
+	for _, kind := range sorted {
+		if id := p.types[kind]; len(id) == 16 {
+			typeIDs = append(typeIDs, id)
+		}
+	}
+	if err := g.LoadKinds(typeIDs); err != nil {
+		return nil, 0, err
+	}
 	for _, kind := range sorted {
 		typeID := p.types[kind]
 		if len(typeID) != 16 {

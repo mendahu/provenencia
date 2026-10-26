@@ -1,6 +1,7 @@
 package graphcache
 
 import (
+	"bytes"
 	"database/sql"
 	"sort"
 	"strings"
@@ -38,9 +39,32 @@ func (g *Graph) loadIDs(ids [][]byte, replace bool) error {
 }
 
 func (g *Graph) loadChunk(ids [][]byte) error {
-	rows, err := g.entityRows(ids)
+	nodes, _, err := g.readNodes(ids)
+	if err != nil || len(nodes) == 0 {
+		return err
+	}
+	present := make([][]byte, len(nodes))
+	for i, n := range nodes {
+		present[i] = n.ID
+	}
+	links, err := g.loadLinks(present)
 	if err != nil {
 		return err
+	}
+	for _, n := range nodes {
+		n.Links = links[string(n.ID)]
+		g.install(n)
+	}
+	return nil
+}
+
+// readNodes reads the entity rows, values and members of ids and returns the
+// nodes of the ids that exist, with no links, and their entity rows. An id with
+// no row is removed from the graph. Nothing is installed.
+func (g *Graph) readNodes(ids [][]byte) ([]*Node, map[string]entityRow, error) {
+	rows, err := g.entityRows(ids)
+	if err != nil {
+		return nil, nil, err
 	}
 	present := make([][]byte, 0, len(rows))
 	for _, id := range ids {
@@ -51,20 +75,17 @@ func (g *Graph) loadChunk(ids [][]byte) error {
 		}
 	}
 	if len(present) == 0 {
-		return nil
+		return nil, rows, nil
 	}
 	values, err := g.loadValues(present)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	members, err := g.loadMembers(present)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	links, err := g.loadLinks(present)
-	if err != nil {
-		return err
-	}
+	nodes := make([]*Node, 0, len(present))
 	for _, id := range present {
 		row := rows[string(id)]
 		n := &Node{
@@ -75,15 +96,14 @@ func (g *Graph) loadChunk(ids [][]byte) error {
 			Label:         row.label,
 			Merged:        row.merged,
 			Values:        values[string(id)],
-			Links:         links[string(id)],
 			Members:       members[string(id)],
 		}
 		if n.Values == nil {
 			n.Values = map[string][]Value{}
 		}
-		g.install(n)
+		nodes = append(nodes, n)
 	}
-	return nil
+	return nodes, rows, nil
 }
 
 func (g *Graph) entityRows(ids [][]byte) (map[string]entityRow, error) {
@@ -212,8 +232,7 @@ func (g *Graph) loadLinks(ids [][]byte) (map[string][]Link, error) {
 			_ = rows.Close()
 			return nil, err
 		}
-		b, ok := connectrules.LookupBridge(r.bridgeKey)
-		if !ok || !bridgeEndpoints(b, r.selfPropKey, r.otherPropKey) {
+		if !keepRaw(r) {
 			continue
 		}
 		r.self = cloneID(r.self)
@@ -230,6 +249,14 @@ func (g *Graph) loadLinks(ids [][]byte) (map[string][]Link, error) {
 	}
 	_ = rows.Close()
 	return g.finishLinks(raws, assocIDs)
+}
+
+// keepRaw is whether a read link is one the graph keeps: its association is a
+// registered bridge and the two property keys are that bridge's two ends. Both
+// link loaders keep exactly these.
+func keepRaw(r linkRaw) bool {
+	b, ok := connectrules.LookupBridge(r.bridgeKey)
+	return ok && bridgeEndpoints(b, r.selfPropKey, r.otherPropKey)
 }
 
 // LinkLoadSQL is the association-edge query loadLinks runs.
@@ -263,6 +290,222 @@ func linkLoadSQL(valueTable, entityTable string, ids [][]byte) (string, []any) {
 	args = append(args, blobArgs(ids)...)
 	args = append(args, pairArgs(props)...)
 	return q, args
+}
+
+// LinkScanSQL is the three catalog-wide queries scanLinks runs: the
+// associations, their endpoints and their disambiguation terms.
+func LinkScanSQL() (assocQ, endsQ, termsQ string, assocArgs, endsArgs, termsArgs []any) {
+	g := New(nil)
+	return linkScanSQL(g.valueTable, g.entityTable)
+}
+
+// linkScanSQL reads the links of every handle at once, so no query carries a
+// list of ids. Associations are every unmerged entity of a registered bridge
+// type (id, ref, type key). Endpoints are the kept rank-1 entity values of the
+// bridges' endpoint properties, at any origin: the Go side checks the self end
+// against the registered (key, origin) pairs, as bridgeEndpoints filters the
+// other end. Terms are the kept disambiguation terms. CROSS JOIN and INDEXED BY
+// keep SQLite on auto_reconciler_values_edge_idx (property_id, value_entity_id)
+// instead of starting at every row.
+func linkScanSQL(valueTable, entityTable string) (assocQ, endsQ, termsQ string, assocArgs, endsArgs, termsArgs []any) {
+	types, _ := bridgePredicates()
+	endKeys, disKeys := bridgePropertyKeys()
+	assocQ = `SELECT e.id, e.ref, st.key
+		FROM subject_types st
+		CROSS JOIN ` + entityTable + ` e ON e.subject_type_id = st.id AND e.merged_into_id IS NULL
+		WHERE st.id IN (SELECT id FROM subject_types WHERE ` + pairIn("key", "origin", len(types)) + `)`
+	assocArgs = pairArgs(types)
+	endsQ = `SELECT a.entity_id, a.property_id, p.key, p.origin, a.value_entity_id
+		FROM ` + valueTable + ` a INDEXED BY auto_reconciler_values_edge_idx
+		CROSS JOIN properties p ON p.id = a.property_id
+		WHERE a.rank = 1 AND a.reason = 'kept' AND a.value_entity_id IS NOT NULL
+			AND a.property_id IN (SELECT id FROM properties WHERE key IN (` + placeholders(len(endKeys)) + `))`
+	endsArgs = stringArgs(endKeys)
+	termsQ = `SELECT r.entity_id, r.property_id, r.value_term_id, COALESCE(t.key, ''), p.key
+		FROM ` + valueTable + ` r
+		JOIN properties p ON p.id = r.property_id
+		LEFT JOIN property_terms t ON t.id = r.value_term_id
+		WHERE r.rank = 1 AND r.reason = 'kept' AND r.value_term_id IS NOT NULL
+			AND r.property_id IN (SELECT id FROM properties WHERE key IN (` + placeholders(len(disKeys)) + `))`
+	termsArgs = stringArgs(disKeys)
+	return assocQ, endsQ, termsQ, assocArgs, endsArgs, termsArgs
+}
+
+// bridgePropertyKeys are the endpoint property keys of every registered
+// bridge and the disambiguation property keys, each once, at any origin.
+func bridgePropertyKeys() (ends, disambiguation []string) {
+	seenE := map[string]bool{}
+	seenD := map[string]bool{}
+	for _, b := range connectrules.Bridges() {
+		for _, e := range b.Endpoints {
+			if !seenE[e.PropertyKey] {
+				seenE[e.PropertyKey] = true
+				ends = append(ends, e.PropertyKey)
+			}
+		}
+		if connectrules.HasDisambiguation(b.Disambiguation) && !seenD[b.Disambiguation] {
+			seenD[b.Disambiguation] = true
+			disambiguation = append(disambiguation, b.Disambiguation)
+		}
+	}
+	if len(ends) == 0 {
+		ends = []string{""}
+	}
+	if len(disambiguation) == 0 {
+		disambiguation = []string{""}
+	}
+	return ends, disambiguation
+}
+
+func stringArgs(keys []string) []any {
+	args := make([]any, len(keys))
+	for i, k := range keys {
+		args[i] = k
+	}
+	return args
+}
+
+// scanEnd is one endpoint row of an association read by scanLinks.
+type scanEnd struct {
+	propID          []byte
+	propKey, origin string
+	entity          []byte
+}
+
+// scanLinks is the links of ids (loadLinks's, for every id at once): it reads
+// every association in the catalog and keeps the ends that touch ids. known is
+// the entity rows already read; neighbors outside it are read here.
+func (g *Graph) scanLinks(ids [][]byte, known map[string]entityRow) (map[string][]Link, error) {
+	assocQ, endsQ, termsQ, assocArgs, endsArgs, termsArgs := linkScanSQL(g.valueTable, g.entityTable)
+	type assocRow struct{ ref, typeKey string }
+	assocs := map[string]assocRow{}
+	rows, err := g.query(assocQ, assocArgs...)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var id []byte
+		var r assocRow
+		if err := rows.Scan(&id, &r.ref, &r.typeKey); err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
+		assocs[string(id)] = r
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	ends := map[string][]scanEnd{}
+	rows, err = g.query(endsQ, endsArgs...)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var assoc, propID, entity []byte
+		var e scanEnd
+		if err := rows.Scan(&assoc, &propID, &e.propKey, &e.origin, &entity); err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
+		if _, ok := assocs[string(assoc)]; !ok {
+			continue
+		}
+		e.propID, e.entity = cloneID(propID), cloneID(entity)
+		ends[string(assoc)] = append(ends[string(assoc)], e)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	// The mark of an association and property key is its least term key, as
+	// disambiguation's ORDER BY t.key takes the first.
+	marks := map[string]termMark{}
+	rows, err = g.query(termsQ, termsArgs...)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var entityID, propID, termID []byte
+		var key, propKey string
+		if err := rows.Scan(&entityID, &propID, &termID, &key, &propKey); err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
+		if _, ok := assocs[string(entityID)]; !ok {
+			continue
+		}
+		mk := string(entityID) + "|" + propKey
+		if cur, taken := marks[mk]; !taken || key < cur.key {
+			marks[mk] = termMark{propID: cloneID(propID), termID: cloneID(termID), key: key}
+		}
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+
+	_, registered := bridgePredicates()
+	isRegistered := make(map[[2]string]bool, len(registered))
+	for _, p := range registered {
+		isRegistered[p] = true
+	}
+	want := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		want[string(id)] = true
+	}
+	var missing [][]byte
+	for _, list := range ends {
+		touches := false
+		for _, e := range list {
+			touches = touches || want[string(e.entity)]
+		}
+		if !touches {
+			continue
+		}
+		for _, e := range list {
+			if _, ok := known[string(e.entity)]; !ok {
+				missing = append(missing, e.entity)
+			}
+		}
+	}
+	more, err := g.entityRows(missing)
+	if err != nil {
+		return nil, err
+	}
+	entityOf := func(id []byte) (entityRow, bool) {
+		if r, ok := known[string(id)]; ok {
+			return r, true
+		}
+		r, ok := more[string(id)]
+		return r, ok
+	}
+	var raws []linkRaw
+	for assoc, list := range ends {
+		ar := assocs[assoc]
+		for _, self := range list {
+			if !want[string(self.entity)] || !isRegistered[[2]string{self.propKey, self.origin}] {
+				continue
+			}
+			for _, other := range list {
+				if bytes.Equal(other.propID, self.propID) {
+					continue
+				}
+				n, ok := entityOf(other.entity)
+				if !ok || n.merged {
+					continue
+				}
+				r := linkRaw{
+					self: self.entity, assoc: []byte(assoc), neighbor: other.entity,
+					selfProp: self.propID, neighborType: n.typeID,
+					assocRef: ar.ref, bridgeKey: ar.typeKey,
+					selfPropKey: self.propKey, otherPropKey: other.propKey,
+					neighborRef: n.ref, neighborTypeKey: n.typeKey,
+				}
+				if keepRaw(r) {
+					raws = append(raws, r)
+				}
+			}
+		}
+	}
+	return assembleLinks(raws, marks), nil
 }
 
 func bridgePredicates() (types, props [][2]string) {
@@ -327,6 +570,29 @@ func (g *Graph) finishLinks(raws []linkRaw, assocIDs [][]byte) (map[string][]Lin
 	if err != nil {
 		return nil, err
 	}
+	return assembleLinks(raws, marks), nil
+}
+
+// assembleLinks is each node's links from the raw links read for it: one link
+// for each (self, association, neighbor), the first of them in (self,
+// association, self property, neighbor) order, so a relationship of a person to
+// themselves reads the same whatever order the rows came in. Links are ordered
+// by association ref, then neighbor ref. marks is each association's
+// disambiguation by association id and property key.
+func assembleLinks(raws []linkRaw, marks map[string]termMark) map[string][]Link {
+	sort.SliceStable(raws, func(i, j int) bool {
+		a, b := raws[i], raws[j]
+		if c := bytes.Compare(a.self, b.self); c != 0 {
+			return c < 0
+		}
+		if c := bytes.Compare(a.assoc, b.assoc); c != 0 {
+			return c < 0
+		}
+		if c := bytes.Compare(a.selfProp, b.selfProp); c != 0 {
+			return c < 0
+		}
+		return bytes.Compare(a.neighbor, b.neighbor) < 0
+	})
 	out := map[string][]Link{}
 	seen := map[string]bool{}
 	for _, r := range raws {
@@ -364,7 +630,7 @@ func (g *Graph) finishLinks(raws []linkRaw, assocIDs [][]byte) (map[string][]Lin
 		})
 		out[id] = links
 	}
-	return out, nil
+	return out
 }
 
 func (g *Graph) disambiguation(assocIDs [][]byte) (map[string]termMark, error) {
