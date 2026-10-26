@@ -154,8 +154,8 @@ var hopPersonToEvent = hops.MustHop(vocabkey.BridgeParticipation, vocabkey.Prope
 // loadLayerBridges walks every bridge connectrules registers, with any term,
 // and keys each edge from both ends. It also returns the participations whose
 // ends are both primary, which the lifespans read. Links go through one
-// kinship.LinkSet, so links with the same ends and keys merge, and the links the
-// kinship patterns imply follow the recorded ones (with no association of
+// kinship.LinkSet, so links with the same ends and keys merge, and the links
+// the kinship patterns imply follow the recorded ones (with no association of
 // their own beyond those they were made from).
 func loadLayerBridges(g *graphcache.Graph, eg graphcache.EvidenceGraph, props map[string]graphcache.VocabProperty, vocabTerms map[string]graphcache.VocabTerm, primary map[string]primarySubject, byKind map[string][][]byte, terms segmentcompare.Terms) ([]graphalign.Bridge, []participation, error) {
 	var parts []participation

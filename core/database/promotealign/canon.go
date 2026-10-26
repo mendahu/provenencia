@@ -33,12 +33,13 @@ type candidatesMemo struct {
 // loadCanon reads the open catalog's graph: fixed anchors, the candidates of
 // each unfixed Subject (loadCandidatesMemo), then every link those handles
 // have. Link order is association ref, then the neighbor's ref, which is the
-// order the walk used to break ties. Every handle's profile is built once: the
-// shortlisted ones together, the ones the walk reaches after it. Recorded
+// order the walk used to break ties. Every handle's profile is built once:
+// the shortlisted ones together, the ones the walk reaches after it. Recorded
 // links come from the walk and implied ones from canonlinks.Reader.For, which
 // answers from the graph cache's results for each walked person; both go
-// through one kinship.LinkSet, so a link read from either end or recorded both ways
-// merges, and the implied links follow the recorded ones in walk order.
+// through one kinship.LinkSet, so a link read from either end or recorded
+// both ways merges, and the implied links follow the recorded ones in walk
+// order.
 func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer graphalign.Layer, fixed []graphalign.Fixed, cfg graphalign.Config, terms segmentcompare.Terms) (graphalign.Canon, error) {
 	handles := map[string]*graphcache.Node{}
 	kinds := map[string]string{}
