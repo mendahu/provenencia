@@ -43,10 +43,7 @@ func (v Vocabulary) BindingOrder() map[vocabkey.SubjectType][]vocabkey.PropertyK
 // TypeOrder returns the property keys bound to one subject type, by SortOrder,
 // then key.
 func (v Vocabulary) TypeOrder(typeID []byte) []vocabkey.PropertyKey {
-	propKey := make(map[string]vocabkey.PropertyKey, len(v.Properties))
-	for _, p := range v.Properties {
-		propKey[string(p.ID)] = vocabkey.PropertyKey(p.Key)
-	}
+	props := v.PropertiesByID()
 	type bound struct {
 		key   vocabkey.PropertyKey
 		order int
@@ -56,8 +53,8 @@ func (v Vocabulary) TypeOrder(typeID []byte) []vocabkey.PropertyKey {
 		if string(b.TypeID) != string(typeID) {
 			continue
 		}
-		if pk, ok := propKey[string(b.PropertyID)]; ok {
-			bs = append(bs, bound{pk, b.SortOrder})
+		if p, ok := props[string(b.PropertyID)]; ok {
+			bs = append(bs, bound{vocabkey.PropertyKey(p.Key), b.SortOrder})
 		}
 	}
 	sort.SliceStable(bs, func(i, j int) bool {
@@ -100,6 +97,15 @@ func (v Vocabulary) TermsByID() map[string]VocabTerm {
 	out := make(map[string]VocabTerm, len(v.Terms))
 	for _, t := range v.Terms {
 		out[string(t.ID)] = t
+	}
+	return out
+}
+
+// PropertiesByID maps each property's id (as a string) to the property.
+func (v Vocabulary) PropertiesByID() map[string]VocabProperty {
+	out := make(map[string]VocabProperty, len(v.Properties))
+	for _, p := range v.Properties {
+		out[string(p.ID)] = p
 	}
 	return out
 }

@@ -37,19 +37,6 @@ func loadMetas(g *graphcache.Graph) (subjectcompare.Metas, error) {
 	return out, nil
 }
 
-// propertiesByID maps each property id to its catalog row.
-func propertiesByID(g *graphcache.Graph) (map[string]graphcache.VocabProperty, error) {
-	v, err := g.Vocabulary()
-	if err != nil {
-		return nil, err
-	}
-	out := make(map[string]graphcache.VocabProperty, len(v.Properties))
-	for _, p := range v.Properties {
-		out[string(p.ID)] = p
-	}
-	return out, nil
-}
-
 // decode is the one row decoder for both sides: a Source Observation and a
 // cached handle value carry the same value columns.
 func decode(text string, hasText bool, integer int64, hasInteger bool, termID, date, name, image []byte, terms map[string]graphcache.VocabTerm) (autoreconcile.Value, error) {
@@ -164,14 +151,11 @@ type profiler struct {
 }
 
 func newProfiler(g *graphcache.Graph, metas subjectcompare.Metas, rules subjectcompare.Rules, namePattern string) (*profiler, error) {
-	props, err := propertiesByID(g)
-	if err != nil {
-		return nil, err
-	}
 	vocab, err := g.Vocabulary()
 	if err != nil {
 		return nil, err
 	}
+	props := vocab.PropertiesByID()
 	types, err := typeByKey(g)
 	if err != nil {
 		return nil, err

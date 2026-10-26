@@ -84,6 +84,31 @@ type Node struct {
 	Members       []Member
 }
 
+// Kept returns the node's kept rows of one property, in rank order as cached.
+// A nil node or an id that is not 16 bytes has none.
+func (n *Node) Kept(propID []byte) []Value {
+	if n == nil || len(propID) != 16 {
+		return nil
+	}
+	var out []Value
+	for _, row := range n.Values[string(propID)] {
+		if row.Reason == "kept" {
+			out = append(out, row)
+		}
+	}
+	return out
+}
+
+// Rank1 picks the rank-1 row of a property's rows.
+func Rank1(rows []Value) (Value, bool) {
+	for _, row := range rows {
+		if row.Rank == 1 {
+			return row, true
+		}
+	}
+	return Value{}, false
+}
+
 // Value is one auto_reconciler_values row. Date and Name are the stored blobs.
 type Value struct {
 	Rank        int
