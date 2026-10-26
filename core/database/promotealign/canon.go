@@ -33,7 +33,10 @@ type candidatesMemo struct {
 // each unfixed Subject (loadCandidatesMemo), then every link those handles
 // have. Link order is association ref, then the neighbor's ref, which is the
 // order the walk used to break ties. Every handle's profile is built once: the
-// shortlisted ones together, the ones the walk reaches after it.
+// shortlisted ones together, the ones the walk reaches after it. Links go
+// through one linkSet, so links with the same ends and keys merge, and the
+// links the kinship patterns imply follow the recorded ones (with no
+// association of their own beyond those they were made from).
 func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer graphalign.Layer, fixed []graphalign.Fixed, cfg graphalign.Config, terms segmentcompare.Terms) (graphalign.Canon, error) {
 	props := prof.props
 	types := prof.types
