@@ -1,7 +1,7 @@
 # Ship log — S11-39 Matching reads kinship shapes
 
 **Plan:** [`S11-39-matching-reads-kinship.md`](S11-39-matching-reads-kinship.md) · **Branch:** `s11-39-matching-reads-kinship` · **PR:** #567
-**State:** fixing 3 (user-requested)
+**State:** ready
 
 ## Round 0 — implement
 Head `f631a272`. Gate PASS (orchestrator run). Report deviations: STEP-7 baseline taken from a `git archive` export of `7efa02f` rather than a worktree (export deleted); extra `cloneShapes` helper in `promotealign/terms.go`; T-6 goldens use `kinTree`/`kinSide`/`kinShape` helpers; manual check not run in the app (Go goldens cover its steps). The landing commit also picked up this ship log stub.
@@ -83,8 +83,6 @@ Check: the new rows pass; `go test ./core/kinship/ -bench Derive` shows the many
 ## Round 2 — fix
 Head `9c29cbaf`. Gate PASS (orchestrator run; the implementer's first run hit an unrelated Swift debounce flake, rerun passed). F-5 done: `chains` dedupes through a set; `TestDeriveManyAssociations` (20,000 associations, each twice, × 10 grandchildren) 11.8 s before → 0.03 s after. Merged `origin/main` (S12-14 plan docs only) as `d2194f2e`; gate PASS.
 
-## Result
-Gate PASS · CI green · open: none · follow-ups: none · to user: SEC-1 (answered: bound of 10, then as a `matchregistry` value) · CON miss: none
 
 ## Manual check — user finding (2026-10-26)
 The user's tree records a marriage with both people as `subject`; a Source with a `spouse` relationship links one person (by name) but not the other. Cause: `core/kinship/patterns.go:19` reads only role `spouse` at both ends of a `marriage`, so a `subject` couple implies nothing. The `spouse` role came from `kinship-shapes.md` ("both `spouse` in one `marriage`"), and every golden used it. The evidence sheet showing nothing for a tree-side marriage is AC-3.3 (S11-40), not this bug.
@@ -102,3 +100,9 @@ Do:
 3. Every test or fixture that files a participation with role `spouse` moves to `subject` (marriage) or, where it means a spouse named on another event, to a relationship or `witness` as the test's intent needs; keep each test's assertion. Find them by body: `grep -rnE 'RoleSpouse|participation\([^)]*"spouse"|kinMarriage\("spouse"\)|"spouse", "marriage"' core api macos` must print nothing at the end. A `relationship_type` `spouse` / `TermSpouse` use is correct and stays.
 4. Living docs: `docs/deployment-plan/spike-11/kinship-shapes.md` (the pattern rows and §Shape text: "both `subject` of one `marriage`"), the map `deployment-plan.md` working rule "Three patterns, product terms only" (line ~98: "two `subject`s of one `marriage` imply `spouse`", noting the user decision 2026-10-26) and add a working rule: "**The subject is an event's principal** (user, 2026-10-26): a birth's subject is the person born, a death's the person dying, a marriage's subjects the couple, a migration's the person migrating. No `spouse` participation role.", `docs/matching-model.md` glossary row "kinship pattern" ("two subjects of one marriage"). Do not edit landed PR plans or ship logs other than S11-39's; add an F-6 line to the S11-39 plan's Landed note.
 Check: `go test ./core/...` (with `-tags fts5` where needed) passes; the grep prints nothing; `TestDeriveBound`'s spouse rows use `subject`; scripts/check-pr.sh PASS.
+
+## Round 3 — fix (user-authorized)
+Head `c14e0d3c`. Gate PASS (orchestrator run, against `13dab35f`; `main` has not moved since). F-6 done: marriage pattern reads `subject` at both ends; `role` seed `spouse` and `vocabkey.RoleSpouse` removed; the plan's grep prints nothing. Deviations: the Swift `SeededRoleTerm.spouse`, `L10n` `roleSpouse` and three xcstrings keys removed (the Swift vocabulary parity test requires it); `segmentcomparetest` terms updated; `lifespan_test.go` and `invariants_test.go` keep a literal `"spouse"` as an arbitrary non-subject role. No UX review: the Swift change only deletes the seeded term's wording; `L10n.wording` returns nil for an unseeded term, so an existing catalog's `spouse` role shows its stored label like any catalog term. Nits (logged): `ORC-1 · lifespan_test.go, invariants_test.go · a non-subject role could be witness now that spouse is unseeded`.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: none · to user: SEC-1 (answered: bound of 10, as a `matchregistry` value); marriage role (answered: subject is an event's principal; spouse role removed) · CON miss: none
