@@ -94,7 +94,7 @@ struct SourcesModelTests {
 
     private func warmProgress(_ model: SourcesModel, session: WorkspaceSession) async {
         if let handle: QueryHandle<[String: EvidenceGraphProgress]> = session.queryHandle(
-            SourcesModel.evidenceGraphProgressKey(for: session)
+            session.evidenceGraphProgressKey
         ) {
             await waitForQuery(handle)
         }
@@ -446,11 +446,11 @@ struct SourcesModelTests {
         )
         await warmLists(model, session: session)
         if let progressHandle: QueryHandle<[String: EvidenceGraphProgress]> = session.queryHandle(
-            SourcesModel.evidenceGraphProgressKey(for: session)
+            session.evidenceGraphProgressKey
         ) {
             await waitForQuery(progressHandle)
         }
-        #expect(model.graphProgress(for: "g-s1")?.subjectCount == 4)
+        #expect(session.evidenceGraphProgress(graphID: "g-s1")?.subjectCount == 4)
         #expect(model.graphCountsLoading == false)
     }
 
@@ -680,7 +680,7 @@ struct SourcesModelTests {
         )
         // Only the progress read starts; the graph list is still pending.
         let _: QueryHandle<[String: EvidenceGraphProgress]> = session.query(
-            SourcesModel.evidenceGraphProgressKey(for: session)
+            session.evidenceGraphProgressKey
         )
         await warmProgress(model, session: session)
         model.settings.status = .empty

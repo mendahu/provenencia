@@ -1,6 +1,19 @@
 import Foundation
 import Observation
 
+/// What a handle currently offers a reader: a value, a failure with no value,
+/// or neither yet.
+enum QueryRead<Value> {
+    case loading
+    case failed(Error)
+    case loaded(Value)
+
+    var isLoading: Bool {
+        if case .loading = self { return true }
+        return false
+    }
+}
+
 /// Typed view of one cached catalog query. Owned by `WorkspaceSession` per key.
 @MainActor
 @Observable
@@ -16,6 +29,14 @@ final class QueryHandle<Value> {
 
     /// Loaded and not refetching: `value` is the latest the loader returned.
     var isSettled: Bool { status == .ready && !isFetching }
+
+    /// Folds value / error / loading: a value wins (even a stale one), else a
+    /// failure, else still loading.
+    var read: QueryRead<Value> {
+        if let value { return .loaded(value) }
+        if status == .error, let error { return .failed(error) }
+        return .loading
+    }
 
     init() {}
 

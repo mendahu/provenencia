@@ -47,6 +47,85 @@ struct WorkspaceSessionTests {
         #expect(session.evidenceGraphsBySource.keys.sorted() == ["s1"])
     }
 
+    @Test func evidenceGraphsReadFollowsTheHandle() async {
+        struct TestFailure: Error {}
+        let session = makeSession()
+        func isLoading(_ read: QueryRead<[CatalogEvidenceGraph]>) -> Bool { read.isLoading }
+
+        // No handle yet.
+        #expect(isLoading(session.evidenceGraphsRead(sourceID: "s1")))
+
+        // A handle that has not loaded yet.
+        let pending: QueryHandle<[CatalogEvidenceGraph]> = session.query(session.evidenceGraphsKey)
+        #expect(isLoading(session.evidenceGraphsRead(sourceID: "s1")))
+        await waitForQuery(pending)
+
+        // A failure with no value.
+        let failedSession = makeSession()
+        let failing = failedSession.ensureQuery(failedSession.evidenceGraphsKey) { () async throws -> [CatalogEvidenceGraph] in
+            throw TestFailure()
+        }
+        await waitForQuery(failing)
+        guard case .failed(let error) = failedSession.evidenceGraphsRead(sourceID: "s1") else {
+            Issue.record("expected .failed")
+            return
+        }
+        #expect(error is TestFailure)
+
+        // Loaded: the Source's graphs, or loading when the list has none for it.
+        let loadedSession = makeSession()
+        loadedSession.setQueryValue(loadedSession.evidenceGraphsKey, value: [
+            evidenceGraph("g1", sourceID: "s1", name: "Default"),
+            evidenceGraph("g3", sourceID: "s1", name: "Jones"),
+        ])
+        guard case .loaded(let graphs) = loadedSession.evidenceGraphsRead(sourceID: "s1") else {
+            Issue.record("expected .loaded")
+            return
+        }
+        #expect(graphs.map(\.id) == ["g1", "g3"])
+        #expect(isLoading(loadedSession.evidenceGraphsRead(sourceID: "s9")))
+    }
+
+    @Test func queryReadAndProgressReads() async {
+        struct TestFailure: Error {}
+        let handle = QueryHandle<Int>()
+        #expect(handle.read.isLoading)
+        handle.applySuccess(3)
+        guard case .loaded(let value) = handle.read else {
+            Issue.record("expected .loaded")
+            return
+        }
+        #expect(value == 3)
+        handle.applyFailure(TestFailure(), clearValue: true)
+        guard case .failed(let error) = handle.read else {
+            Issue.record("expected .failed")
+            return
+        }
+        #expect(error is TestFailure)
+        handle.applySuccess(4)
+        handle.applyFailure(TestFailure(), clearValue: false)
+        guard case .loaded(let kept) = handle.read else {
+            Issue.record("expected .loaded with the kept value")
+            return
+        }
+        #expect(kept == 4)
+
+        let store = FakeStore()
+        store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
+            graphId: "g-1", sourceId: "s1", subjectCount: 3, observationCount: 5
+        )
+        store.evidenceGraphsByProject[projectDir] = [evidenceGraph("g-1", sourceID: "s1", name: "Default")]
+        let session = makeSession(store: store)
+        #expect(session.evidenceGraphCountsLoading)
+        #expect(session.evidenceGraphProgress(graphID: "g-1") == nil)
+        let progress: QueryHandle<[String: EvidenceGraphProgress]> = session.query(session.evidenceGraphProgressKey)
+        let graphs: QueryHandle<[CatalogEvidenceGraph]> = session.query(session.evidenceGraphsKey)
+        await waitForQuery(progress)
+        await waitForQuery(graphs)
+        #expect(session.evidenceGraphCountsLoading == false)
+        #expect(session.evidenceGraphProgress(graphID: "g-1")?.subjectCount == 3)
+    }
+
     @Test func loadsAndCachesValue() async {
         let session = makeSession()
         let key = CatalogQueryKey.sourcesList(project: session.projectKey)

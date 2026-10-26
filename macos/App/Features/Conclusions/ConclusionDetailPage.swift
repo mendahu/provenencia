@@ -9,17 +9,16 @@ enum ConclusionDetailPresentation<Content: Equatable>: Equatable {
     case content(Content, refreshing: Bool)
 
     init(
-        value: CatalogConclusionDetail?,
+        _ read: QueryRead<CatalogConclusionDetail>,
         isFetching: Bool,
-        status: QueryStatus,
-        error: Error?,
         content: (CatalogConclusionDetail) -> Content
     ) {
-        if let value {
+        switch read {
+        case .loaded(let value):
             self = .content(content(value), refreshing: isFetching)
-        } else if status == .error, let error {
+        case .failed(let error):
             self = .failed(L10n.Errors.message(for: error))
-        } else {
+        case .loading:
             self = .loading
         }
     }
@@ -180,13 +179,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
     let portrait: ConclusionPortraitModel?
 
     private var presentation: ConclusionDetailPresentation<Content> {
-        ConclusionDetailPresentation(
-            value: handle.value,
-            isFetching: handle.isFetching,
-            status: handle.status,
-            error: handle.error,
-            content: make
-        )
+        ConclusionDetailPresentation(handle.read, isFetching: handle.isFetching, content: make)
     }
 
     var body: some View {

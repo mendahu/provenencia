@@ -36,9 +36,7 @@ struct SourcesListView: View {
                 SourcesListContent(
                     sourcesHandle: sourcesHandle,
                     typesHandle: typesHandle,
-                    progressHandle: session.queryHandle(
-                        SourcesModel.evidenceGraphProgressKey(for: session)
-                    ),
+                    progressHandle: session.evidenceGraphProgressHandle,
                     model: model
                 )
             } else {

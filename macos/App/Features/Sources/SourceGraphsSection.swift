@@ -19,15 +19,14 @@ final class SourceGraphsSection {
     /// The Source's graphs in list order (sorted by name); `nil` while the
     /// graph list has no value.
     var rows: [CatalogEvidenceGraph]? {
-        context.session.evidenceGraphs(sourceID: context.sourceID)
+        guard case .loaded(let graphs) = context.session.evidenceGraphsRead(sourceID: context.sourceID) else { return nil }
+        return graphs
     }
 
     /// The graph list's error while it has no value to show.
     var loadError: Error? {
-        guard let handle = context.session.evidenceGraphsHandle,
-              handle.status == .error, handle.value == nil
-        else { return nil }
-        return handle.error
+        guard case .failed(let error) = context.session.evidenceGraphsRead(sourceID: context.sourceID) else { return nil }
+        return error
     }
 
     /// Where Open goes: the graph's canvas while it links an Artifact.

@@ -126,23 +126,12 @@ final class SourcesModel {
         CatalogQueryKey.sourceTypesList(project: session.projectKey)
     }
 
-    static func evidenceGraphProgressKey(for session: WorkspaceSession) -> CatalogQueryKey {
-        CatalogQueryKey.evidenceGraphProgress(project: session.projectKey)
-    }
-
     /// Starts list queries once (`.task` / dialog). Do not call from view `body`.
     func warmListQueries() {
         let _: QueryHandle<[CatalogSource]> = session.query(Self.sourcesListKey(for: session))
         let _: QueryHandle<[CatalogSourceType]> = session.query(Self.sourceTypesListKey(for: session))
-        let _: QueryHandle<[String: EvidenceGraphProgress]> = session.query(
-            Self.evidenceGraphProgressKey(for: session)
-        )
+        let _: QueryHandle<[String: EvidenceGraphProgress]> = session.query(session.evidenceGraphProgressKey)
         let _: QueryHandle<[CatalogEvidenceGraph]> = session.query(session.evidenceGraphsKey)
-    }
-
-    /// The counts of one Evidence graph, by graph id.
-    func graphProgress(for graphID: String) -> EvidenceGraphProgress? {
-        progressHandle?.value?[graphID]
     }
 
     /// The graph the Source's row opens and counts (`SourcesListNavigation.entryGraph`).
@@ -173,25 +162,17 @@ final class SourcesModel {
 
     /// Counts and the entry graph both come from queries; true while either
     /// has neither a value nor a failure.
-    var graphCountsLoading: Bool {
-        guard let progress = progressHandle, let graphs = graphsHandle else { return true }
-        return (progress.value == nil && progress.status != .ready && progress.status != .error)
-            || (graphs.value == nil && graphs.status != .ready && graphs.status != .error)
-    }
+    var graphCountsLoading: Bool { session.evidenceGraphCountsLoading }
 
     private var typesHandle: QueryHandle<[CatalogSourceType]>? {
         session.queryHandle(Self.sourceTypesListKey(for: session))
-    }
-
-    private var progressHandle: QueryHandle<[String: EvidenceGraphProgress]>? {
-        session.queryHandle(Self.evidenceGraphProgressKey(for: session))
     }
 
     /// The progress handle's failure while a status filter needs its counts.
     var statusCountsError: Error? {
         guard settings.status != nil else { return nil }
         if let handle = graphsHandle, handle.status == .error { return handle.error }
-        guard let handle = progressHandle, handle.status == .error else { return nil }
+        guard let handle = session.evidenceGraphProgressHandle, handle.status == .error else { return nil }
         return handle.error
     }
 
@@ -200,7 +181,7 @@ final class SourcesModel {
         if settings.status != nil, graphCountsLoading { return true }
         if !settings.typeFilterID.isEmpty {
             guard let typesHandle else { return true }
-            return typesHandle.value == nil && typesHandle.status != .error
+            return typesHandle.read.isLoading
         }
         return false
     }
@@ -302,7 +283,7 @@ final class SourcesModel {
             rows = rows.filter { $0.sourceTypeID == typeID }
         }
         if let status = settings.status {
-            let progress = progressHandle?.value
+            let progress = session.evidenceGraphProgressHandle?.value
             let graphs = session.evidenceGraphsBySource
             rows = rows.filter { source in
                 EvidenceStatus(

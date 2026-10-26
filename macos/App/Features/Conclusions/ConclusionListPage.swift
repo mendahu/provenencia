@@ -12,12 +12,13 @@ enum ConclusionListPresentation<Row: Equatable>: Equatable {
     /// The read failed with nothing to show.
     case failed(String)
 
-    init(value: [Row]?, isFetching: Bool, status: QueryStatus, error: Error?) {
-        if let value {
+    init(_ read: QueryRead<[Row]>, isFetching: Bool) {
+        switch read {
+        case .loaded(let value):
             self = value.isEmpty && !isFetching ? .empty : .rows(value, refreshing: isFetching)
-        } else if status == .error, let error {
+        case .failed(let error):
             self = .failed(L10n.Errors.message(for: error))
-        } else {
+        case .loading:
             self = .loading
         }
     }
@@ -134,9 +135,7 @@ private struct ConclusionListBody<Kind: ConclusionListKind>: View {
     @Environment(WorkspaceSession.self) private var session
 
     private var presentation: ConclusionListPresentation<Kind.Row> {
-        ConclusionListPresentation(
-            value: handle.value, isFetching: handle.isFetching, status: handle.status, error: handle.error
-        )
+        ConclusionListPresentation(handle.read, isFetching: handle.isFetching)
     }
 
     private var headerMeta: String? {
