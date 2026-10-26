@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-49 — Kinship links in the graph cache
+
+**Landed 2026-10-26** in [#569](https://github.com/mendahu/provenencia/pull/569). The open catalog's graph cache now answers one person's implied spouse, parent and grandparent links from one cached result per pivot (a marriage or birth event, or the parent between in a chain), through `canonlinks.Reader.For`. Results are dropped when a commit touches the pivot or a node one hop out, through new registered per-node memo slots, and graph verify mode checks each against a fresh derivation. A pivot with more than 10 participants at either end implies nothing (a registry value), the grandparent derivation is linear, and a marriage's couple are its two `subject`s: the `spouse` participation role leaves the seed and the Mac app. Nothing calls `For` until S11-39. New projects no longer offer `Spouse` as an event role.
+
 ## S11-38 — Kinship patterns
 
 **Landed 2026-10-25** in [#564](https://github.com/mendahu/provenencia/pull/564). A new pure package, `core/kinship`, reads one side's links through three patterns: two spouses in a marriage imply a spouse link, a father or mother and the subject of a birth imply a parent link, and a parent of a parent implies a grandparent link. `Derive` returns only the implied links, keyed as recorded relationships are, with the bridge Subjects, event and links each was made from; the term keys are new `vocabkey` constants pinned to the seed. Nothing calls it until S11-39. Nothing changes for researchers.

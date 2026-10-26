@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/claimevidence"
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -388,12 +389,11 @@ func (r *evidenceReader) memberValues(subjectIDs [][]byte) ([]claimevidence.Memb
 // association.
 func (r *evidenceReader) canonLinks(from, to *graphcache.Node) ([]claimevidence.CanonLink, error) {
 	var out []claimevidence.CanonLink
-	fromKind := typeKey(r.prof.types, from.SubjectTypeID)
 	for _, l := range from.Links {
 		if !bytes.Equal(l.Neighbor, to.ID) {
 			continue
 		}
-		a, _, keyA, keyB, ok := canonKeys(from.ID, fromKind, from, l, to, r.prof.props, r.in.terms)
+		a, _, keyA, keyB, ok := canonlinks.EdgeOf(from.ID, from, l, to, r.prof.eventTypeProp, r.in.terms)
 		if !ok {
 			continue
 		}

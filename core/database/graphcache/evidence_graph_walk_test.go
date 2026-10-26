@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
@@ -43,7 +44,7 @@ type walkFixture struct {
 
 func newWalkFixture(t *testing.T) *walkFixture {
 	t.Helper()
-	c := openCatalog(t)
+	c := graphcachetest.OpenCatalog(t)
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	if err != nil {
 		t.Fatal(err)

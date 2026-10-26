@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/segmentcompare"
@@ -15,6 +16,9 @@ import (
 )
 
 var terms = segmentcomparetest.Terms()
+
+// rules is the shipped bound, written here because the layer holds no numbers.
+var rules = kinship.Rules{MaxPivotEnd: 10}
 
 // Subject ids: people P1.. = 0x11.., events E1.. = 0x21.., bridges b1.. = 0x31...
 func p(n byte) []byte { return []byte{0x10 + n} }
@@ -54,7 +58,7 @@ func TestDerive(t *testing.T) {
 		birth    = vocabkey.EventBirth
 	)
 	spouse := func(person, event, br byte) kinship.Edge {
-		return part(t, person, event, vocabkey.RoleSpouse, marriage, br)
+		return part(t, person, event, vocabkey.RoleSubject, marriage, br)
 	}
 	parent := func(g, m, br byte) kinship.Edge { return rel(t, g, m, vocabkey.TermParent, br) }
 	birthParents := func(father, subject, event, b1, b2 byte) kinship.Implied {
@@ -132,7 +136,7 @@ func TestDerive(t *testing.T) {
 		{"AC-1.9 parent", []kinship.Edge{parent(1, 2, 1)}, nil},
 		{"AC-1.10", []kinship.Edge{
 			part(t, 1, 1, "groom", marriage, 1), part(t, 2, 1, "groom", marriage, 2),
-			part(t, 1, 2, vocabkey.RoleSpouse, "wedding", 3), part(t, 2, 2, vocabkey.RoleSpouse, "wedding", 4),
+			part(t, 1, 2, vocabkey.RoleSubject, "wedding", 3), part(t, 2, 2, vocabkey.RoleSubject, "wedding", 4),
 		}, nil},
 		{"AC-1.11 child role", []kinship.Edge{
 			part(t, 1, 1, vocabkey.RoleFather, birth, 1), part(t, 2, 1, "child", birth, 2),
@@ -156,6 +160,11 @@ func TestDerive(t *testing.T) {
 			birthParents(1, 2, 1, 2, 3),
 			grand(1, 3, 2, []kinship.Edge{parent(1, 2, 1), birthParents(1, 2, 1, 2, 3).Edge, parent(2, 3, 4)}, 1, 2, 3, 4),
 		}},
+		{"F-5 duplicates across steps once, first-added order", []kinship.Edge{
+			parent(1, 2, 1), parent(1, 2, 2), parent(2, 3, 2), parent(2, 3, 4),
+		}, []kinship.Implied{
+			grand(1, 3, 2, []kinship.Edge{parent(1, 2, 1), parent(1, 2, 2), parent(2, 3, 2), parent(2, 3, 4)}, 1, 2, 4),
+		}},
 		{"AC-1.14 empty", []kinship.Edge{}, nil},
 		{"AC-1.14 nil", nil, nil},
 		{"AC-1.15", []kinship.Edge{spouse(2, 1, 2), spouse(1, 1, 1)}, []kinship.Implied{
@@ -172,7 +181,7 @@ func TestDerive(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			before := slices.Clone(tc.edges)
-			got := kinship.Derive(tc.edges, terms)
+			got := kinship.Derive(tc.edges, terms, rules)
 			if !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("Derive =\n%+v\nwant\n%+v", got, tc.want)
 			}
@@ -180,6 +189,137 @@ func TestDerive(t *testing.T) {
 				t.Errorf("Derive changed its input")
 			}
 		})
+	}
+}
+
+func TestDeriveBound(t *testing.T) {
+	spouses := func(n int) []kinship.Edge {
+		var edges []kinship.Edge
+		for i := 1; i <= n; i++ {
+			edges = append(edges, part(t, byte(i), 1, vocabkey.RoleSubject, vocabkey.EventMarriage, byte(i)))
+		}
+		return edges
+	}
+	birthWith := func(parents int) []kinship.Edge {
+		edges := []kinship.Edge{part(t, 20, 1, vocabkey.RoleSubject, vocabkey.EventBirth, 30)}
+		for i := 1; i <= parents; i++ {
+			role := vocabkey.RoleFather
+			if i%2 == 0 {
+				role = vocabkey.RoleMother
+			}
+			edges = append(edges, part(t, byte(i), 1, role, vocabkey.EventBirth, byte(i)))
+		}
+		return edges
+	}
+	parentsOf := func(n int) []kinship.Edge {
+		var edges []kinship.Edge
+		for i := 1; i <= n; i++ {
+			edges = append(edges, rel(t, byte(i), 20, vocabkey.TermParent, byte(i)))
+		}
+		return append(edges, rel(t, 20, 21, vocabkey.TermParent, 30))
+	}
+	cases := []struct {
+		name  string
+		edges []kinship.Edge
+		want  int
+	}{
+		{"marriage with 10 spouses", spouses(10), 45},
+		{"marriage with 11 spouses", spouses(11), 0},
+		{"birth with 10 parents", birthWith(10), 10},
+		{"birth with 11 parents", birthWith(11), 0},
+		{"middle person with 10 parents", parentsOf(10), 10},
+		{"middle person with 11 parents", parentsOf(11), 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := len(kinship.Derive(tc.edges, terms, rules)); got != tc.want {
+				t.Errorf("Derive made %d links, want %d", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestDeriveManyAssociations gives one parent link thousands of associations
+// and ten children under the middle person: the grandparent links must not
+// rescan their associations for each one.
+func TestDeriveManyAssociations(t *testing.T) {
+	const n = 20000
+	rel := segmentcomparetest.Bridge(t, vocabkey.BridgeRelationship)
+	first, second := segmentcompare.Keys(rel, vocabkey.TermParent, "", terms)
+	id := func(i int) []byte { return []byte(fmt.Sprintf("a%d", i)) }
+	up := kinship.Edge{A: []byte("g"), B: []byte("m"), KeyA: first, KeyB: second}
+	for i := 0; i < n; i++ {
+		up.Associations = append(up.Associations, id(i), id(i))
+	}
+	edges := []kinship.Edge{up}
+	for c := 0; c < 10; c++ {
+		edges = append(edges, kinship.Edge{A: []byte("m"), B: []byte(fmt.Sprintf("c%d", c)), KeyA: first, KeyB: second})
+	}
+	start := time.Now()
+	got := kinship.Derive(edges, terms, rules)
+	if len(got) != 10 {
+		t.Fatalf("Derive made %d links, want 10", len(got))
+	}
+	for _, imp := range got {
+		if len(imp.Associations) != n {
+			t.Fatalf("a link has %d associations, want %d", len(imp.Associations), n)
+		}
+	}
+	if d := time.Since(start); d > time.Second {
+		t.Errorf("Derive took %v for %d associations, want linear time", d, n)
+	}
+}
+
+func TestParentStep(t *testing.T) {
+	rel := segmentcomparetest.Bridge(t, vocabkey.BridgeRelationship)
+	edge := func(a, b string, term vocabkey.BridgeTerm) kinship.Edge {
+		ka, kb := segmentcompare.Keys(rel, term, "", terms)
+		return kinship.Edge{A: []byte(a), B: []byte(b), KeyA: ka, KeyB: kb}
+	}
+	reversed := edge("p", "c", vocabkey.TermParent)
+	reversed.A, reversed.B, reversed.KeyA, reversed.KeyB = reversed.B, reversed.A, reversed.KeyB, reversed.KeyA
+	for _, tc := range []struct {
+		name          string
+		e             kinship.Edge
+		parent, child string
+		ok            bool
+	}{
+		{"direct", edge("p", "c", vocabkey.TermParent), "p", "c", true},
+		{"reversed ends", reversed, "p", "c", true},
+		{"child term read through its keys", edge("c", "p", "child"), "p", "c", true},
+		{"self link", edge("p", "p", vocabkey.TermParent), "", "", false},
+		{"spouse edge", edge("a", "b", vocabkey.TermSpouse), "", "", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			parent, child, ok := kinship.ParentStep(tc.e, terms)
+			if ok != tc.ok || string(parent) != tc.parent || string(child) != tc.child {
+				t.Errorf("ParentStep = %q, %q, %v; want %q, %q, %v", parent, child, ok, tc.parent, tc.child, tc.ok)
+			}
+		})
+	}
+}
+
+// TestDeriveManyDuplicateParentSteps files the same two parent links 8,000
+// times each: the duplicates must collapse into one grandparent link without
+// pairing every duplicate with every other.
+func TestDeriveManyDuplicateParentSteps(t *testing.T) {
+	const n = 8000
+	rel := segmentcomparetest.Bridge(t, vocabkey.BridgeRelationship)
+	first, second := segmentcompare.Keys(rel, vocabkey.TermParent, "", terms)
+	var edges []kinship.Edge
+	for i := 0; i < n; i++ {
+		a := []byte(fmt.Sprintf("a%d", i))
+		edges = append(edges,
+			kinship.Edge{A: []byte("g"), B: []byte("m"), KeyA: first, KeyB: second, Associations: [][]byte{a}},
+			kinship.Edge{A: []byte("m"), B: []byte("c"), KeyA: first, KeyB: second, Associations: [][]byte{a}})
+	}
+	start := time.Now()
+	got := kinship.Derive(edges, terms, kinship.Rules{MaxPivotEnd: 10})
+	if len(got) != 1 {
+		t.Fatalf("Derive made %d links, want 1", len(got))
+	}
+	if d := time.Since(start); d > time.Second {
+		t.Errorf("Derive took %v for %d duplicate steps, want under a second", d, n)
 	}
 }
 
@@ -199,7 +339,7 @@ func TestDeriveInvariants(t *testing.T) {
 		return out
 	}
 	eventTypes := []vocabkey.EventType{vocabkey.EventBirth, vocabkey.EventMarriage, "wedding"}
-	roles := []vocabkey.Role{vocabkey.RoleSubject, vocabkey.RoleFather, vocabkey.RoleMother, vocabkey.RoleSpouse, "witness", "groom"}
+	roles := []vocabkey.Role{vocabkey.RoleSubject, vocabkey.RoleFather, vocabkey.RoleMother, "witness", "groom"}
 	relTerms := []vocabkey.BridgeTerm{vocabkey.TermParent, "child", vocabkey.TermSpouse, vocabkey.TermGrandparent}
 
 	r := rand.New(rand.NewSource(1))
@@ -228,7 +368,7 @@ func TestDeriveInvariants(t *testing.T) {
 			edges = append(edges, x)
 		}
 
-		got := kinship.Derive(edges, terms)
+		got := kinship.Derive(edges, terms, rules)
 		var assocs [][]byte
 		for _, x := range edges {
 			assocs = append(assocs, x.Associations...)
@@ -247,18 +387,18 @@ func TestDeriveInvariants(t *testing.T) {
 
 		reversed := slices.Clone(edges)
 		slices.Reverse(reversed)
-		if a, c := flatten(got), flatten(kinship.Derive(reversed, terms)); !slices.Equal(a, c) {
+		if a, c := flatten(got), flatten(kinship.Derive(reversed, terms, rules)); !slices.Equal(a, c) {
 			t.Fatalf("case %d: reversed input gives %s, want %s", i, strings.Join(c, "; "), strings.Join(a, "; "))
 		}
 
 		catalogOnly := append(slices.Clone(edges),
 			part(t, person(), 1, "groom", evType[1], 100), rel(t, person(), person(), "godparent", 101))
-		if again := kinship.Derive(catalogOnly, terms); !reflect.DeepEqual(again, got) {
+		if again := kinship.Derive(catalogOnly, terms, rules); !reflect.DeepEqual(again, got) {
 			t.Fatalf("case %d: a catalog's own role and term changed the output", i)
 		}
 
 		withDirect := append(slices.Clone(edges), rel(t, 1, 2, vocabkey.TermGrandparent, 102))
-		if again := kinship.Derive(withDirect, terms); !reflect.DeepEqual(again, got) {
+		if again := kinship.Derive(withDirect, terms, rules); !reflect.DeepEqual(again, got) {
 			t.Fatalf("case %d: a direct grandparent link changed the output", i)
 		}
 	}
@@ -281,7 +421,7 @@ func BenchmarkDerive(b *testing.B) {
 			}
 			b.ResetTimer()
 			for b.Loop() {
-				kinship.Derive(edges, terms)
+				kinship.Derive(edges, terms, rules)
 			}
 		})
 	}

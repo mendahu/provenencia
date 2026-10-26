@@ -25,6 +25,7 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 		g.vocabOK = false
 		g.vocab = Vocabulary{}
 		g.dropDerived()
+		g.dropVocabularyMemos()
 	}
 	if set.Structure {
 		g.Drop()
@@ -56,6 +57,13 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 				roots = append(roots, touched...)
 				continue
 			}
+			// The node's neighbors read it, and the memos that name them
+			// are dropped from the roots.
+			if n, cached := g.nodes[string(id)]; cached {
+				for _, l := range n.Links {
+					roots = append(roots, l.Neighbor)
+				}
+			}
 			g.removeNode(id)
 			continue
 		}
@@ -81,7 +89,11 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 	if err := g.loadIDs(reload, true); err != nil {
 		return err
 	}
-	if err := g.dropCommittedDisplays(uniqueIDs(roots), set); err != nil {
+	roots = uniqueIDs(roots)
+	if err := g.dropCommittedDisplays(roots, set); err != nil {
+		return err
+	}
+	if err := g.dropMemos(roots); err != nil {
 		return err
 	}
 	return g.verifyIfSet()

@@ -65,7 +65,7 @@ func TestLifespanFromEvents(t *testing.T) {
 		{name: "AC-2.6 a child's birth is not the person's", events: []subjectprofile.LifeEvent{ev(birth, vocabkey.Role("father"), y(1880))},
 			want: "lifespan={Between 1760 and 2000}; lifespan_span={Between 1880 and 1880}"},
 		{name: "AC-2.7 order does not matter", events: []subjectprofile.LifeEvent{
-			ev(residence, subj, y(1900)), ev(birth, subj, y(1850)), ev(marriage, vocabkey.Role("spouse"), y(1875))},
+			ev(residence, subj, y(1900)), ev(birth, subj, y(1850)), ev(marriage, vocabkey.RoleSubject, y(1875))},
 			want: "lifespan={Between 1840 and 2020}; lifespan_span={Between 1850 and 1900}"},
 		{name: "AC-2.8 the earliest birth starts the life", events: []subjectprofile.LifeEvent{ev(birth, subj, y(1852)), ev(birth, subj, y(1850))},
 			want: "lifespan={Between 1840 and 1972}; lifespan_span={Between 1850 and 1852}"},

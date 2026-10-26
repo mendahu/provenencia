@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
@@ -15,7 +16,7 @@ import (
 )
 
 func TestVocabularyBindings(t *testing.T) {
-	c := openCatalog(t)
+	c := graphcachetest.OpenCatalog(t)
 	v, err := c.Graph().Vocabulary()
 	if err != nil {
 		t.Fatal(err)
@@ -36,7 +37,7 @@ func TestVocabularyBindings(t *testing.T) {
 // A plugin type that shares a key with a provenencia type does not take over
 // that key's binding order.
 func TestVocabularyBindingsPluginTypeSeededKey(t *testing.T) {
-	c := openCatalog(t)
+	c := graphcachetest.OpenCatalog(t)
 	typeID, err := subjecttypes.Upsert(c, subjecttypes.Type{
 		Key: "person", Origin: "plugin:x", Label: "Person (plugin)",
 		RefPrefix: "XPR", CandidateRefPrefix: "XPC",
@@ -68,7 +69,7 @@ func TestVocabularyBindingsPluginTypeSeededKey(t *testing.T) {
 // A binding reorder committed through writes.Run drops the cached vocabulary,
 // so the next read sees the new order with no restart.
 func TestVocabularyDropsOnBindingReorder(t *testing.T) {
-	c := openCatalog(t)
+	c := graphcachetest.OpenCatalog(t)
 	userID := []byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9}
 	person, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	if err != nil {

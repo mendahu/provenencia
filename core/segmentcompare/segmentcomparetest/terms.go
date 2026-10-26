@@ -29,7 +29,7 @@ func Terms() segmentcompare.Terms {
 	}
 	role := map[vocabkey.BridgeTerm]segmentcompare.Term{}
 	for _, k := range []vocabkey.BridgeTerm{
-		"subject", "father", "mother", "spouse", "child", "witness", "informant", "pallbearer",
+		"subject", "father", "mother", "child", "witness", "informant", "pallbearer",
 	} {
 		role[k] = segmentcompare.Term{}
 	}

@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/valuerules"
@@ -105,7 +106,7 @@ func loadInputs(c *database.Catalog, graphID []byte) (inputs, error) {
 	cfg := matchregistry.Default().AlignConfig()
 	cfg.Value = rules
 
-	terms, err := loadTerms(c.Graph())
+	terms, err := canonlinks.LoadTerms(c.Graph())
 	if err != nil {
 		return inputs{}, err
 	}

@@ -301,7 +301,6 @@ enum SeededRoleTerm {
     static let subject = "subject"
     static let father = "father"
     static let mother = "mother"
-    static let spouse = "spouse"
     static let child = "child"
     static let witness = "witness"
     static let informant = "informant"

@@ -4,24 +4,16 @@ package graphcache
 // conclusionheaders registers it. The graph does not import that package.
 type DepsFunc func(q Querier, ids [][]byte) ([][]byte, error)
 
-// DisplayCheck rebuilds one stored row and compares. conclusionheaders registers it.
-type DisplayCheck func(g *Graph, id []byte, stored any) error
-
 var (
 	depsFn    DepsFunc
-	displayFn DisplayCheck
-	detailFn  DisplayCheck
+	displayFn MemoCheck
 )
 
 // SetDisplayDeps registers the reverse of the header reads.
 func SetDisplayDeps(fn DepsFunc) { depsFn = fn }
 
 // SetDisplayCheck registers the stored-row comparison Verify runs.
-func SetDisplayCheck(fn DisplayCheck) { displayFn = fn }
-
-// SetDetailCheck registers the conclusion-detail comparison Verify runs
-// after the header check. conclusiondetails registers it.
-func SetDetailCheck(fn DisplayCheck) { detailFn = fn }
+func SetDisplayCheck(fn MemoCheck) { displayFn = fn }
 
 // Display returns the stored row for id.
 func (g *Graph) Display(id []byte) (any, bool) {
@@ -38,23 +30,6 @@ func (g *Graph) SetDisplay(id []byte, v any) {
 		return
 	}
 	g.displays[string(id)] = v
-}
-
-// Detail returns the stored conclusion-detail memo for id.
-func (g *Graph) Detail(id []byte) (any, bool) {
-	if g == nil || len(id) != 16 {
-		return nil, false
-	}
-	v, ok := g.details[string(id)]
-	return v, ok
-}
-
-// SetDetail stores a conclusion-detail memo.
-func (g *Graph) SetDetail(id []byte, v any) {
-	if g == nil || len(id) != 16 || v == nil {
-		return
-	}
-	g.details[string(id)] = v
 }
 
 // Labels returns the vocabulary map stored for this catalog.
@@ -88,7 +63,6 @@ func (g *Graph) dropDisplay(id []byte) {
 		return
 	}
 	delete(g.displays, string(id))
-	delete(g.details, string(id))
 }
 
 func (g *Graph) dropDisplays(ids [][]byte) {

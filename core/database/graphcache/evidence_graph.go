@@ -233,15 +233,7 @@ func (g *Graph) WalkEvidenceGraph(eg EvidenceGraph, h hops.Hop, from [][]byte) (
 			bridgeType = t.ID
 		}
 	}
-	propID := func(key string) []byte {
-		for _, p := range v.Properties {
-			if p.Key == key && p.Origin == h.Origin() {
-				return p.ID
-			}
-		}
-		return nil
-	}
-	fromProp, toProp := propID(h.From()), propID(h.To())
+	fromProp, toProp := v.PropertyID(h.From(), h.Origin()), v.PropertyID(h.To(), h.Origin())
 	if len(bridgeType) == 0 || len(fromProp) == 0 || len(toProp) == 0 {
 		return nil, nil
 	}
@@ -249,7 +241,7 @@ func (g *Graph) WalkEvidenceGraph(eg EvidenceGraph, h hops.Hop, from [][]byte) (
 	filterTerms := map[string]bool{}
 	filterKey, termKey, filtered := h.Filter()
 	if filtered {
-		if filterProp = propID(filterKey); len(filterProp) == 0 {
+		if filterProp = v.PropertyID(filterKey, h.Origin()); len(filterProp) == 0 {
 			return nil, nil
 		}
 		for _, t := range v.Terms {
