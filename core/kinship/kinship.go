@@ -232,6 +232,7 @@ func chains(steps []step, rel connectrules.Bridge, terms segmentcompare.Terms, m
 			made[t] = true
 			var from []Edge
 			var assoc [][]byte
+			seen := map[string]struct{}{}
 			for _, j := range byPair[pair{t.g, t.m}] {
 				from = append(from, steps[j].edge)
 			}
@@ -240,7 +241,8 @@ func chains(steps []step, rel connectrules.Bridge, terms segmentcompare.Terms, m
 			}
 			for _, e := range from {
 				for _, a := range e.Associations {
-					if !slices.ContainsFunc(assoc, func(b []byte) bool { return bytes.Equal(a, b) }) {
+					if _, dup := seen[string(a)]; !dup {
+						seen[string(a)] = struct{}{}
 						assoc = append(assoc, a)
 					}
 				}

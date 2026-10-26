@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/segmentcompare"
@@ -159,6 +160,11 @@ func TestDerive(t *testing.T) {
 			birthParents(1, 2, 1, 2, 3),
 			grand(1, 3, 2, []kinship.Edge{parent(1, 2, 1), birthParents(1, 2, 1, 2, 3).Edge, parent(2, 3, 4)}, 1, 2, 3, 4),
 		}},
+		{"F-5 duplicates across steps once, first-added order", []kinship.Edge{
+			parent(1, 2, 1), parent(1, 2, 2), parent(2, 3, 2), parent(2, 3, 4),
+		}, []kinship.Implied{
+			grand(1, 3, 2, []kinship.Edge{parent(1, 2, 1), parent(1, 2, 2), parent(2, 3, 2), parent(2, 3, 4)}, 1, 2, 4),
+		}},
 		{"AC-1.14 empty", []kinship.Edge{}, nil},
 		{"AC-1.14 nil", nil, nil},
 		{"AC-1.15", []kinship.Edge{spouse(2, 1, 2), spouse(1, 1, 1)}, []kinship.Implied{
@@ -230,6 +236,37 @@ func TestDeriveBound(t *testing.T) {
 				t.Errorf("Derive made %d links, want %d", got, tc.want)
 			}
 		})
+	}
+}
+
+// TestDeriveManyAssociations gives one parent link thousands of associations
+// and ten children under the middle person: the grandparent links must not
+// rescan their associations for each one.
+func TestDeriveManyAssociations(t *testing.T) {
+	const n = 20000
+	rel := segmentcomparetest.Bridge(t, vocabkey.BridgeRelationship)
+	first, second := segmentcompare.Keys(rel, vocabkey.TermParent, "", terms)
+	id := func(i int) []byte { return []byte(fmt.Sprintf("a%d", i)) }
+	up := kinship.Edge{A: []byte("g"), B: []byte("m"), KeyA: first, KeyB: second}
+	for i := 0; i < n; i++ {
+		up.Associations = append(up.Associations, id(i), id(i))
+	}
+	edges := []kinship.Edge{up}
+	for c := 0; c < 10; c++ {
+		edges = append(edges, kinship.Edge{A: []byte("m"), B: []byte(fmt.Sprintf("c%d", c)), KeyA: first, KeyB: second})
+	}
+	start := time.Now()
+	got := kinship.Derive(edges, terms, rules)
+	if len(got) != 10 {
+		t.Fatalf("Derive made %d links, want 10", len(got))
+	}
+	for _, imp := range got {
+		if len(imp.Associations) != n {
+			t.Fatalf("a link has %d associations, want %d", len(imp.Associations), n)
+		}
+	}
+	if d := time.Since(start); d > time.Second {
+		t.Errorf("Derive took %v for %d associations, want linear time", d, n)
 	}
 }
 
