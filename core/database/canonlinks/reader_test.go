@@ -385,28 +385,21 @@ func TestRelationships(t *testing.T) {
 		cloneLinks := func(in []kinship.Link) []kinship.Link {
 			var out []kinship.Link
 			for _, l := range in {
-				l.A, l.B = bytes.Clone(l.A), bytes.Clone(l.B)
-				var as [][]byte
-				for _, a := range l.Associations {
-					as = append(as, bytes.Clone(a))
-				}
-				l.Associations = as
-				l.Recording = l.Recording.Clone()
-				out = append(out, l)
+				out = append(out, kinship.Link{Edge: l.Edge.Clone(), Recording: l.Recording.Clone()})
 			}
 			return out
 		}
 		cloneImplied := func(in []kinship.Implied) []kinship.Implied {
 			var out []kinship.Implied
 			for _, l := range in {
-				l.A, l.B = bytes.Clone(l.A), bytes.Clone(l.B)
-				var as [][]byte
-				for _, a := range l.Associations {
-					as = append(as, bytes.Clone(a))
+				c := l
+				c.Edge = l.Edge.Clone()
+				c.Event, c.Through = bytes.Clone(l.Event), bytes.Clone(l.Through)
+				c.From = nil
+				for _, f := range l.From {
+					c.From = append(c.From, f.Clone())
 				}
-				l.Associations = as
-				l.Event, l.Through = bytes.Clone(l.Event), bytes.Clone(l.Through)
-				out = append(out, l)
+				out = append(out, c)
 			}
 			return out
 		}

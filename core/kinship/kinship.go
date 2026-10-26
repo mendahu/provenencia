@@ -32,6 +32,20 @@ type Edge struct {
 	Associations [][]byte
 }
 
+// Clone returns a copy of e that shares no bytes with it: its ends and every
+// association are copied.
+func (e Edge) Clone() Edge {
+	out := e
+	out.A, out.B = bytes.Clone(e.A), bytes.Clone(e.B)
+	if e.Associations != nil {
+		out.Associations = make([][]byte, len(e.Associations))
+		for i, a := range e.Associations {
+			out.Associations[i] = bytes.Clone(a)
+		}
+	}
+	return out
+}
+
 // reads returns the edge's ends in the order of a key pair, whichever end the
 // pair is read from: x is the end read by first, y the end read by second.
 func (e Edge) reads(first, second vocabkey.BridgeKey) (x, y []byte, ok bool) {
