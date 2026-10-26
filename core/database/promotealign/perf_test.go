@@ -67,7 +67,7 @@ func newLargeFixture(t *testing.T) *largeFixture {
 
 	db, err := f.c.DB()
 	must(t, err)
-	must(t, bulkCanon(db, cityID, largeShape(r, names)))
+	must(t, bulkCanon(db, cityID, largeShape(r, names, filed[0])))
 	f.c.Graph().Drop()
 
 	// Source A: 40 persons, 40 births and 20 deaths, none located.
