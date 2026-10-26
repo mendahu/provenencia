@@ -63,6 +63,79 @@ type Implied struct {
 	From    []Edge // the links it was made from
 }
 
+// Shape is one way a link is recorded through a pattern. Pivot is
+// Implied.Event for an event pattern and Implied.Through for a chain: the event
+// or middle parent the link passes through.
+type Shape struct {
+	Pattern Pattern
+	Pivot   []byte
+}
+
+// Clone returns a copy of s that shares no pivot bytes with it.
+func (s Shape) Clone() Shape { return Shape{s.Pattern, bytes.Clone(s.Pivot)} }
+
+// Shape is the way the pattern made this link.
+func (i Implied) Shape() Shape {
+	if i.Event != nil {
+		return Shape{i.Pattern, i.Event}
+	}
+	return Shape{i.Pattern, i.Through}
+}
+
+// Recording is how one link is recorded on one side: the shapes that implied
+// it, and whether they are all it has (it is recorded directly otherwise). The
+// zero value is a link recorded only.
+type Recording struct {
+	Shapes      []Shape
+	OnlyImplied bool
+}
+
+// Clone returns a copy of r that shares no pivot bytes with it.
+func (r Recording) Clone() Recording {
+	var out Recording
+	out.OnlyImplied = r.OnlyImplied
+	for _, s := range r.Shapes {
+		out.Shapes = append(out.Shapes, s.Clone())
+	}
+	return out
+}
+
+// Merge folds another recording of the same link into r: it appends each shape
+// of o that r lacks (same Pattern and pivot), copying its pivot, and the link
+// stays only implied when both were.
+func (r *Recording) Merge(o Recording) {
+	for _, s := range o.Shapes {
+		if !slices.ContainsFunc(r.Shapes, func(x Shape) bool {
+			return x.Pattern == s.Pattern && bytes.Equal(x.Pivot, s.Pivot)
+		}) {
+			r.Shapes = append(r.Shapes, s.Clone())
+		}
+	}
+	r.OnlyImplied = r.OnlyImplied && o.OnlyImplied
+}
+
+// CountedOnce reports whether two corresponding links stand for one fact both
+// sides record through the same kinship pattern, already counted because the
+// shape's pivots are paired: paired maps a pivot of a, the layer side, to its
+// partner on b's side. Two links that are both recorded never are.
+func CountedOnce(a, b Recording, paired func(pivot []byte) ([]byte, bool)) bool {
+	if !a.OnlyImplied && !b.OnlyImplied {
+		return false
+	}
+	for _, x := range a.Shapes {
+		partner, ok := paired(x.Pivot)
+		if !ok {
+			continue
+		}
+		for _, y := range b.Shapes {
+			if x.Pattern == y.Pattern && bytes.Equal(partner, y.Pivot) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // Derive returns the relationship links the edges imply through the event
 // patterns and the parent-of-parent chain, event patterns first. An edge is
 // recognized by its keys alone, from either end. It returns only implied

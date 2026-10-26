@@ -363,3 +363,25 @@ func TestResolvePinsLikeness(t *testing.T) {
 		t.Fatalf("default pins of the likeness, by member: %v, want only the image-A member", len(pinned))
 	}
 }
+
+// The offer of a spouse relationship a Source's marriage implies is checked and
+// starts with the relationship's incoming Observations.
+func TestPinOffersOfAnImpliedLayerLink(t *testing.T) {
+	e, _, _ := marriageEvidence(t, true)
+	if len(e.Relationships) != 1 || len(e.Relationships[0].Members) != 1 {
+		t.Fatalf("relationships %+v, want one spouse relationship with one bundle", e.Relationships)
+	}
+	rel := e.Relationships[0]
+	var offer *promotealign.PinOffer
+	for _, o := range promotealign.PinOffers(e) {
+		if o.ID == promotealign.BundlePinID(rel, rel.Members[0]) {
+			offer = &o
+		}
+	}
+	if offer == nil || !offer.Checked {
+		t.Fatalf("no checked offer for the spouse bundle in %+v", promotealign.PinOffers(e))
+	}
+	if len(offer.Set.Observations) < len(rel.Incoming) || !reflect.DeepEqual(offer.Set.Observations[:len(rel.Incoming)], rel.Incoming) {
+		t.Fatalf("offer observations %x, want to start with %x", offer.Set.Observations, rel.Incoming)
+	}
+}

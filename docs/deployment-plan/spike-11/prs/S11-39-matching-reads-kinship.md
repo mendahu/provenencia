@@ -1,6 +1,6 @@
 # S11-39 — Matching reads kinship shapes
 
-**Status:** Planned
+**Status:** Landed in [#572](https://github.com/mendahu/provenencia/pull/572) (2026-10-26)
 **Spike / slice:** Spike 11 · Slice 9 — Kinship shapes
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: Promote's rows and the evidence sheet's relationship Card are unchanged; only the scores and lines behind them move)
@@ -13,6 +13,10 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/match-rules.mdc`, `.cursor/rules/catalog-queries.mdc`
 **Context:** [Kinship shapes § Shape](../kinship-shapes.md#shape), [§ Where implied links live](../kinship-shapes.md#where-implied-links-live), [§ Counting once](../kinship-shapes.md#counting-once), [§ Weight](../kinship-shapes.md#weight); [layer 6 procedure](../comparison-layers.md#layer-6-procedure); S11-14 D-11 (link weights); working rules: "Implied links, not a new comparison", "The subject is an event's principal", "The canon's implied links live in the graph cache", "One fact, one link per side", "Counted once across sides", "No new weight", "Matching warms behind the open spinner"; closed [#567](https://github.com/mendahu/provenencia/pull/567) and its ship log on `s11-39-matching-reads-kinship` (the first build, measurements, the user's decisions)
 **Planned:** 2026-10-26 against `main` @ `ca51a03c` (re-plan; the 2026-10-26 plan against `7efa02f` shipped as #567 and was closed in the slice 9 re-cut)
+**Landed:** `TestProposeKinshipShapes` was ported whole with the canon-loader commit (AC-1.2, 1.4, 1.6 and 2.3 failed before it and pass after), so the goldens commit holds only the evidence and pin tests. `core/kinship` also has `TestRecordingMerge` for `Recording.Merge`. `BenchmarkDerive` runs generations 11 and 12, as in `fcc3b8b2`. Local budget figures: warm proposal 144 ms of 250 ms, cold 566 ms, after a commit 547 ms; `linkSet.add` is 2.4% of the budget test's CPU samples. CI fix round (F-10): the user raised the warm budget from 250 ms to 350 ms on 2026-10-26 ("Raise the warm budget to 350 ms") after CI measured the warm proposal at 297 ms; `budgetWarm` is 350 ms, S11-21 D-1 and AC-1.2 carry a dated note, and [`narrower-canon-walk.md`](../../../ideas/narrower-canon-walk.md) parks walking only the part of the tree a proposal needs.
+Fix round 1: (F-1) `linkSet` makes an association set only for a link that has associations and `reserve`s room from the walk's link count, and `loadCanon` adds an implied link only from the `For` call of its `A` end; (F-2) `Vocabulary.TypeIDsByKey()` replaces `typeByKey`, which supersedes D-8's "`typeByKey` stays"; (F-3) the budget fixture's `idOf` and `termOf` are file-level and `lookupTree` is gone; (F-4) `fixture.marriage` builds a two-subject marriage and takes the participants' role, because `kinMarriage` also files a "witness" one; (F-5) `Recording.Clone` and `Shape.Clone` are the one copy, used by `linkSet.add` and `Merge`.
+
+Fix round 2: (F-7) `linkSet.reserve` is gone; (F-8) `canonlinks.Reader.For` stores each person's answer in a second graph memo slot, `canonlinks.for`, which `NodeMemo.DropOnHandleCommit` empties on any commit that names a handle; (F-9) `loadCanon` collects the implied links and merges each into the walked or an earlier implied edge, building `[]graphalign.CanonEdge` once without a second `linkSet`.
 **Review:** [`S11-39-matching-reads-kinship.review.md`](S11-39-matching-reads-kinship.review.md) — re-plan: Fits with changes / Ready with changes, 2 rounds (every finding answered)
 
 ### Implementer — read this first

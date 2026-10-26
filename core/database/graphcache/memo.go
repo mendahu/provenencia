@@ -17,6 +17,9 @@ type NodeMemo struct {
 	Check            MemoCheck // nil: Verify skips the slot
 	Deps             MemoDeps  // nil: a commit drops only the roots
 	DropOnVocabulary bool
+	// DropOnHandleCommit empties the slot whenever a commit names any handle:
+	// for a result that reads nodes too far from its own to name them in Deps.
+	DropOnHandleCommit bool
 }
 
 // MemoSlot names one registered NodeMemo.
@@ -93,6 +96,15 @@ func (g *Graph) dropMemos(roots [][]byte) error {
 func (g *Graph) dropVocabularyMemos() {
 	for slot := range g.memos {
 		if memoSlots[slot].DropOnVocabulary {
+			delete(g.memos, slot)
+		}
+	}
+}
+
+// dropHandleMemos empties the slots that drop on any handle commit.
+func (g *Graph) dropHandleMemos() {
+	for slot := range g.memos {
+		if memoSlots[slot].DropOnHandleCommit {
 			delete(g.memos, slot)
 		}
 	}

@@ -8,6 +8,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/kinship"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -32,10 +34,12 @@ type candidatesMemo struct {
 // each unfixed Subject (loadCandidatesMemo), then every link those handles
 // have. Link order is association ref, then the neighbor's ref, which is the
 // order the walk used to break ties. Every handle's profile is built once: the
-// shortlisted ones together, the ones the walk reaches after it.
+// shortlisted ones together, the ones the walk reaches after it. Recorded
+// links come from the walk and implied ones from canonlinks.Reader.For, which
+// answers from the graph cache's results for each walked person; both go
+// through one linkSet, so a link read from either end or recorded both ways
+// merges, and the implied links follow the recorded ones in walk order.
 func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer graphalign.Layer, fixed []graphalign.Fixed, cfg graphalign.Config, terms segmentcompare.Terms) (graphalign.Canon, error) {
-	types := prof.types
-
 	handles := map[string]*graphcache.Node{}
 	kinds := map[string]string{}
 	var seeds [][]byte
@@ -52,7 +56,7 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 		if err != nil || n == nil || n.Merged {
 			return err
 		}
-		kind := typeKey(types, n.SubjectTypeID)
+		kind := string(prof.kind(n))
 		if !vocabkey.IsPrimaryKind(kind) {
 			return nil
 		}
@@ -103,8 +107,12 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 		return handles[string(seeds[i])].Ref < handles[string(seeds[j])].Ref
 	})
 
-	var edges []graphalign.CanonEdge
-	edgeSeen := map[seenEdge]bool{}
+	reader, err := canonlinks.NewReader(g, matchregistry.Default().Kinship)
+	if err != nil {
+		return graphalign.Canon{}, err
+	}
+	set := newLinkSet()
+	var walkedPeople [][]byte
 	walked := map[string]bool{}
 	queue := append([][]byte(nil), seeds...)
 	for len(queue) > 0 {
@@ -121,6 +129,9 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 				continue
 			}
 			walked[string(id)] = true
+			if kinds[string(id)] == vocabkey.Person {
+				walkedPeople = append(walkedPeople, id)
+			}
 			n, err := g.Node(id)
 			if err != nil {
 				return graphalign.Canon{}, err
@@ -146,18 +157,12 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 				if neighbor == nil || neighbor.Merged {
 					continue
 				}
-				nKind := typeKey(types, neighbor.SubjectTypeID)
+				nKind := string(prof.kind(neighbor))
 				if !vocabkey.IsPrimaryKind(nKind) {
 					continue
 				}
 				if from, to, keyFrom, keyTo, ok := canonlinks.EdgeOf(id, n, l, neighbor, prof.eventTypeProp, terms); ok {
-					if ek := edgeSeenKey(from, to, keyFrom, keyTo); !edgeSeen[ek] {
-						edgeSeen[ek] = true
-						edges = append(edges, graphalign.CanonEdge{
-							From: append([]byte(nil), from...), To: append([]byte(nil), to...),
-							KeyFrom: keyFrom, KeyTo: keyTo,
-						})
-					}
+					set.add(sideLink{Edge: kinship.Edge{A: from, B: to, KeyA: keyFrom, KeyB: keyTo}})
 				}
 				if _, ok := handles[string(neighbor.ID)]; !ok {
 					handles[string(neighbor.ID)] = neighbor
@@ -166,6 +171,54 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 				}
 			}
 		}
+	}
+
+	// The implied links are collected before any edge is built. Every link is
+	// walked from both ends and each end's call returns it, so only the call
+	// of its A end adds it.
+	var implied []kinship.Implied
+	for _, id := range walkedPeople {
+		links, err := reader.For(id)
+		if err != nil {
+			return graphalign.Canon{}, err
+		}
+		for _, imp := range links {
+			if !bytes.Equal(imp.A, id) {
+				continue
+			}
+			_, aOK := handles[string(imp.A)]
+			_, bOK := handles[string(imp.B)]
+			if aOK && bOK {
+				implied = append(implied, imp)
+			}
+		}
+	}
+	// Walked links first, in walk order. An implied link that shares ends and
+	// keys with a walked or earlier implied one merges into it; the rest follow
+	// in order. The implied links are the cache's, so an edge copies what it keeps.
+	edges := make([]graphalign.CanonEdge, len(set.links), len(set.links)+len(implied))
+	for i, l := range set.links {
+		edges[i] = graphalign.CanonEdge{
+			From: l.A, To: l.B, KeyFrom: l.KeyA, KeyTo: l.KeyB, Recording: l.Recording,
+		}
+	}
+	impliedAt := map[seenEdge]int{}
+	for _, imp := range implied {
+		k := edgeSeenKey(imp.A, imp.B, imp.KeyA, imp.KeyB)
+		i, ok := set.at[k]
+		if !ok {
+			i, ok = impliedAt[k]
+		}
+		rec := kinship.Recording{Shapes: []kinship.Shape{imp.Shape()}, OnlyImplied: true}
+		if ok {
+			edges[i].Recording.Merge(rec)
+			continue
+		}
+		impliedAt[k] = len(edges)
+		edges = append(edges, graphalign.CanonEdge{
+			From: bytes.Clone(imp.A), To: bytes.Clone(imp.B), KeyFrom: imp.KeyA, KeyTo: imp.KeyB,
+			Recording: rec.Clone(),
+		})
 	}
 
 	nodes := make([]*graphcache.Node, 0, len(handles))
@@ -188,30 +241,6 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 		return bytes.Compare(out.Handles[i].ID, out.Handles[j].ID) < 0
 	})
 	return out, nil
-}
-
-func typeByKey(g *graphcache.Graph) (map[string][]byte, error) {
-	v, err := g.Vocabulary()
-	if err != nil {
-		return nil, err
-	}
-	out := map[string][]byte{}
-	for _, t := range v.Types {
-		if t.Origin != vocabkey.OriginProvenencia {
-			continue
-		}
-		out[t.Key] = append([]byte(nil), t.ID...)
-	}
-	return out, nil
-}
-
-func typeKey(types map[string][]byte, id []byte) string {
-	for key, typeID := range types {
-		if string(typeID) == string(id) {
-			return key
-		}
-	}
-	return ""
 }
 
 // loadCandidatesMemo is the ranked candidate ids of each Subject in todo:

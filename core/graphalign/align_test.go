@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertycompare"
@@ -2289,4 +2290,101 @@ func TestPlacedPairNominatesTopK(t *testing.T) {
 			}
 		})
 	}
+}
+
+// implied marks b as a link the kinship pattern p implies through pivot.
+func implied(b graphalign.Bridge, p kinship.Pattern, pivot []byte, onlyImplied bool) graphalign.Bridge {
+	b.Recording = kinship.Recording{Shapes: []kinship.Shape{{Pattern: p, Pivot: pivot}}, OnlyImplied: onlyImplied}
+	return b
+}
+
+// canonOf is the canon's edges of a layer's bridges, associations dropped.
+func canonOf(bs []graphalign.Bridge) []graphalign.CanonEdge {
+	var out []graphalign.CanonEdge
+	for _, b := range bs {
+		out = append(out, graphalign.CanonEdge{
+			From: b.A, To: b.B, KeyFrom: b.KeyA, KeyTo: b.KeyB, Recording: b.Recording,
+		})
+	}
+	return out
+}
+
+// marriageFixture is Ann and Bob Ames on a layer and in a canon, each side
+// recording their marriage in one shape: "rel" (a spouse relationship only),
+// "event" (both as spouse in one marriage), "marriage" (event plus the spouse
+// link the pattern implies, only implied), or "both" (as marriage, with the
+// link recorded too). Only the layer's and the canon's own marriage Subject and
+// handle exist, and only when that side's shape has one.
+func marriageFixture(layerShape, canonShape string, dated bool) (graphalign.Layer, graphalign.Canon) {
+	et, marriage := termProp("event_type", "marriage")
+	eventValues := vals(et, marriage)
+	if dated {
+		eventValues[vocabkey.PropertyDate] = append(eventValues[vocabkey.PropertyDate], propertycomparetest.Date(datevaluetest.YMD(1840, 5, 12)))
+	}
+	side := func(shape string, ann, bob, ev []byte) []graphalign.Bridge {
+		spouse := relLink("spouse")
+		part := partLink("subject", "marriage")
+		switch shape {
+		case "rel":
+			return []graphalign.Bridge{bridge(ann, bob, spouse)}
+		case "event":
+			return []graphalign.Bridge{bridge(ann, ev, part), bridge(bob, ev, part)}
+		}
+		out := []graphalign.Bridge{bridge(ann, ev, part), bridge(bob, ev, part)}
+		return append(out, implied(bridge(ann, bob, spouse), kinship.PatternMarriageSpouses, ev, shape == "marriage"))
+	}
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: id("s-ann"), Ref: "PER-SA", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: id("s-bob"), Ref: "PER-SB", Kind: "person", Values: nameVals("Bob", "Ames")},
+		},
+		Bridges: side(layerShape, id("s-ann"), id("s-bob"), id("s-marriage")),
+		Metas:   mergeMetas(nameMetas(), eventMetas()),
+	}
+	if layerShape != "rel" {
+		layer.Subjects = append(layer.Subjects, graphalign.Subject{ID: id("s-marriage"), Ref: "EVT-S", Kind: "event", Values: eventValues})
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: id("h-ann"), Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: id("h-bob"), Ref: "PER-2", Kind: "person", Values: nameVals("Bob", "Ames")},
+		},
+		Edges: canonOf(side(canonShape, id("h-ann"), id("h-bob"), id("h-marriage"))),
+	}
+	if canonShape != "rel" {
+		canon.Handles = append(canon.Handles, graphalign.Handle{ID: id("h-marriage"), Ref: "EVT-1", Kind: "event", Values: eventValues})
+	}
+	return layer, canon
+}
+
+func TestKinshipShapesCountOnce(t *testing.T) {
+	cfg := matchregistry.Default().AlignConfig()
+	annFixed := graphalign.Fixed{SubjectID: id("s-ann"), HandleID: id("h-ann")}
+	bob := func(layerShape, canonShape string, dated bool, extra ...graphalign.Fixed) float64 {
+		layer, canon := marriageFixture(layerShape, canonShape, dated)
+		fixed := append([]graphalign.Fixed{annFixed}, extra...)
+		return rowBySubject(alignWith(layer, canon, fixed, cfg), id("s-bob")).Score
+	}
+	same := func(t *testing.T, name string, got, want float64) {
+		t.Helper()
+		if math.Abs(got-want) > 1e-9 {
+			t.Errorf("%s: %.4f, want %.4f", name, got, want)
+		}
+	}
+	direct := bob("rel", "rel", false)
+	same(t, "(marriage, rel)", bob("marriage", "rel", false), direct)
+	same(t, "(rel, marriage)", bob("rel", "marriage", false), direct)
+	once := bob("event", "event", false)
+	if once >= direct {
+		t.Errorf("(event, event) %.4f is not below (rel, rel) %.4f", once, direct)
+	}
+	same(t, "(marriage, marriage)", bob("marriage", "marriage", false), once)
+	same(t, "(both, marriage)", bob("both", "marriage", false), once)
+	same(t, "(marriage, both)", bob("marriage", "both", false), once)
+	same(t, "(marriage, marriage), marriage held New",
+		bob("marriage", "marriage", false, graphalign.Fixed{SubjectID: id("s-marriage"), Target: graphalign.TargetNew}), direct)
+	if twice := bob("both", "both", false); twice <= direct {
+		t.Errorf("(both, both) %.4f is not above (rel, rel) %.4f", twice, direct)
+	}
+	same(t, "dated (marriage, marriage)", bob("marriage", "marriage", true), bob("event", "event", true))
 }

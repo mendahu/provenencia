@@ -1,6 +1,7 @@
 package graphcache_test
 
 import (
+	"bytes"
 	"slices"
 	"sort"
 	"testing"
@@ -63,6 +64,43 @@ func TestVocabularyBindingsPluginTypeSeededKey(t *testing.T) {
 	}
 	if order := v.TypeOrder(typeID); !slices.Equal(order, []vocabkey.PropertyKey{"interests"}) {
 		t.Fatalf("TypeOrder(plugin person) = %v", order)
+	}
+}
+
+// TypeKeysByID names each seeded type by its id and leaves out a type of
+// another origin, even one sharing a seeded key.
+func TestTypeKeysByID(t *testing.T) {
+	c := graphcachetest.OpenCatalog(t)
+	pluginID, err := subjecttypes.Upsert(c, subjecttypes.Type{
+		Key: "person", Origin: "plugin:x", Label: "Person (plugin)",
+		RefPrefix: "XPR", CandidateRefPrefix: "XPC",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	v, err := c.Graph().Vocabulary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	keys := v.TypeKeysByID()
+	var personID []byte
+	for _, ty := range v.Types {
+		if ty.Key == vocabkey.Person && ty.Origin == vocabkey.OriginProvenencia {
+			personID = ty.ID
+		}
+	}
+	if personID == nil || keys[string(personID)] != vocabkey.Person {
+		t.Fatalf("TypeKeysByID()[person id] = %q, want %q", keys[string(personID)], vocabkey.Person)
+	}
+	if k, ok := keys[string(pluginID)]; ok {
+		t.Fatalf("TypeKeysByID() holds the plugin type as %q", k)
+	}
+	ids := v.TypeIDsByKey()
+	if !bytes.Equal(ids[vocabkey.Person], personID) {
+		t.Fatalf("TypeIDsByKey()[person] = %x, want %x", ids[vocabkey.Person], personID)
+	}
+	if len(ids) != len(keys) {
+		t.Fatalf("TypeIDsByKey() has %d types, TypeKeysByID() %d", len(ids), len(keys))
 	}
 }
 

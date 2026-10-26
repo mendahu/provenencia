@@ -110,6 +110,31 @@ func (v Vocabulary) PropertiesByID() map[string]VocabProperty {
 	return out
 }
 
+// TypeKeysByID maps each provenencia subject type's id (as a string) to its
+// key. Types of other origins are left out: a key is only unique within an
+// origin.
+func (v Vocabulary) TypeKeysByID() map[string]string {
+	out := make(map[string]string, len(v.Types))
+	for _, t := range v.Types {
+		if t.Origin == vocabkey.OriginProvenencia {
+			out[string(t.ID)] = t.Key
+		}
+	}
+	return out
+}
+
+// TypeIDsByKey maps each provenencia subject type's key to its id, the other
+// direction of TypeKeysByID.
+func (v Vocabulary) TypeIDsByKey() map[string][]byte {
+	out := make(map[string][]byte, len(v.Types))
+	for _, t := range v.Types {
+		if t.Origin == vocabkey.OriginProvenencia {
+			out[t.Key] = t.ID
+		}
+	}
+	return out
+}
+
 // PropertyID returns the id of the property with this key and origin, or nil
 // when the catalog has none.
 func (v Vocabulary) PropertyID(key, origin string) []byte {

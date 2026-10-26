@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-39 — Matching reads kinship shapes
+
+**Landed 2026-10-26** in [#572](https://github.com/mendahu/provenencia/pull/572). Promote now reads each side's links through the kinship patterns: a Source's marriage, birth parents and parent chain match the spouses, parents and grandparents a tree files, and a tree's marriage and chains match a Source's relationships. The Source side derives when its layer loads; the canon side reads `canonlinks.Reader.For` for each walked person, and both merge in one `promotealign` `linkSet` so a fact recorded two ways on one side is one link. Each link carries a `kinship.Recording` (its shapes and whether only implied), and graph alignment skips a pair `kinship.CountedOnce` reports, so a marriage both sides record counts once when its events are paired and still credits when they are not. One lookup, `Vocabulary.TypeKeysByID`, replaces `typeKey`'s scan. The large-source budgets run over a 12-generation parent tree with a marriage per couple.
+
 ## S11-50 — Matching warms while the project opens
 
 **Landed 2026-10-26** in [#570](https://github.com/mendahu/provenencia/pull/570). Opening a project now loads every person, event and place into the graph cache and builds Promote's shortlist index under the open spinner (`catalogsession.WarmOnOpen` ends with the new `promotealign.Warm`), so the first Promote pays only for its own Source. A matching warm that fails never fails the open: the next proposal builds the index and reports the error. `graphcache` tracks `WarmNeeded`, set by every drop that loses the warm state, and `Do` warms the alias index and name format again before it returns (the shortlist index waits for the next proposal) without ever replacing the call's result; a handle commit still drops only the index. The budgets gain a "warm at open" figure, and cold is the first proposal after it.

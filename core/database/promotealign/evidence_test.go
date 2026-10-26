@@ -716,3 +716,65 @@ func TestEvidenceSectionOrder(t *testing.T) {
 		}
 	})
 }
+
+// A Source that records a marriage reads as the spouses a tree files: one
+// spouse relationship, checked, bundling both participations' Observations.
+// The other way round, the filed marriage derives on the canon side later.
+func TestEvidenceReadsASourceMarriageAsSpouses(t *testing.T) {
+	t.Run("AC-3.1", func(t *testing.T) {
+		e, ann, _ := marriageEvidence(t, true)
+		if len(e.Relationships) != 1 {
+			t.Fatalf("relationships = %d, want 1: %+v", len(e.Relationships), e.Relationships)
+		}
+		r := e.Relationships[0]
+		if r.Key.String() != "relationship·spouse" || !bytes.Equal(r.Neighbor, ann.ID) || !r.Checked {
+			t.Fatalf("relationship = %+v, want a checked relationship·spouse to Ann", r)
+		}
+		if len(r.Incoming) != 6 || len(r.Members) != 1 {
+			t.Fatalf("incoming %d, members %d, want 6 and 1", len(r.Incoming), len(r.Members))
+		}
+	})
+	t.Run("AC-3.3", func(t *testing.T) {
+		e, _, _ := marriageEvidence(t, false)
+		if len(e.Relationships) != 0 {
+			t.Fatalf("relationships %+v, want none", e.Relationships)
+		}
+	})
+}
+
+// marriageEvidence is Bob's evidence on his handle with Ann placed on hers:
+// the tree files a spouse relationship and the Source a marriage, or, when
+// sourceMarries is false, the other way round.
+func marriageEvidence(t *testing.T, sourceMarries bool) (claimevidence.Evidence, subjects.Subject, subjects.Subject) {
+	t.Helper()
+	f := newFixture(t)
+	aAnn := f.person(f.source, f.artifact, "Ann Ames")
+	aBob := f.person(f.source, f.artifact, "Bob Ames")
+	if sourceMarries {
+		f.relationship(f.source, f.artifact, aAnn, aBob, "spouse")
+	}
+	var treeMarriage *subjects.Subject
+	if !sourceMarries {
+		m := f.marriage(f.source, f.artifact, aAnn, aBob, "subject")
+		treeMarriage = &m
+	}
+	annH := f.promote(aAnn).Entity.ID
+	bobH := f.promote(aBob).Entity.ID
+	if treeMarriage != nil {
+		f.promote(*treeMarriage)
+	}
+
+	srcB, artB := f.newSource("Marriage register")
+	bAnn := f.person(srcB, artB, "Ann Ames")
+	bBob := f.person(srcB, artB, "Bob Ames")
+	if sourceMarries {
+		f.marriage(srcB, artB, bAnn, bBob, "subject")
+	} else {
+		f.relationship(srcB, artB, bAnn, bBob, "spouse")
+	}
+	e := f.evidence(promotealign.EvidenceRequest{
+		GraphID: f.graph(srcB), SubjectID: bBob.ID, HandleID: bobH,
+		Neighbors: []graphalign.Fixed{{SubjectID: bAnn.ID, HandleID: annH}},
+	})
+	return e, bAnn, bBob
+}
