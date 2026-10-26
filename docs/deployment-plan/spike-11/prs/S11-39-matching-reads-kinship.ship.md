@@ -1,7 +1,7 @@
 # Ship log — S11-39 Matching reads kinship shapes
 
 **Plan:** [`S11-39-matching-reads-kinship.md`](S11-39-matching-reads-kinship.md) · **Branch:** `s11-39-matching-reads-kinship-v2` · **PR:** #572
-**State:** ready — CI decides PRF-1 (user, 2026-10-26)
+**State:** stopped — CI warm budget red (to user)
 
 The first ship loop (#567, closed in the slice 9 re-cut) has its own ship log on `s11-39-matching-reads-kinship`. This log is the re-plan's, from `main` @ `7fdd4776`.
 
@@ -104,4 +104,4 @@ PRF-1 stays open after the two-round cap: the PR goes to the user before being m
 Merged `origin/main` (S11-51 added to the map; conflict in `deployment-plan.md` resolved: this branch's S11-39 row and working-rule wording plus main's S11-51 sentence and rows) as `ce26b56a`; gate PASS.
 
 ## Result
-Gate PASS · CI pending · open: PRF-1 (CI decides) · follow-ups: SEC-1; verify-mode `a_handle_merged` on main · to user: PRF-1 (answered: run CI) · CON miss: none
+Gate PASS · CI **red** (Go tests 40403797939: warm proposal 297 ms against 250 ms; macOS tests green) · open: PRF-1 (CI decides) · follow-ups: SEC-1; verify-mode `a_handle_merged` on main · to user: PRF-1 (answered: run CI) · CON miss: none
