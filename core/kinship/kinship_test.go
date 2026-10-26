@@ -267,7 +267,7 @@ func TestDeriveInvariants(t *testing.T) {
 // BenchmarkDerive reads a parent tree where every child has two parents, so
 // the cost of the parent-of-parent chain shows as the tree doubles.
 func BenchmarkDerive(b *testing.B) {
-	for _, generations := range []int{8, 9, 10} {
+	for _, generations := range []int{8, 9, 10, 11, 12} {
 		b.Run(fmt.Sprintf("generations=%d", generations), func(b *testing.B) {
 			rel := segmentcomparetest.Bridge(b, vocabkey.BridgeRelationship)
 			first, second := segmentcompare.Keys(rel, vocabkey.TermParent, "", terms)
@@ -282,6 +282,62 @@ func BenchmarkDerive(b *testing.B) {
 			b.ResetTimer()
 			for b.Loop() {
 				kinship.Derive(edges, terms)
+			}
+		})
+	}
+}
+
+func TestImpliedShape(t *testing.T) {
+	cases := []struct {
+		name string
+		in   kinship.Implied
+		want kinship.Shape
+	}{
+		{"event", kinship.Implied{Pattern: kinship.PatternMarriageSpouses, Event: []byte("E1")}, kinship.Shape{Pattern: kinship.PatternMarriageSpouses, Pivot: []byte("E1")}},
+		{"chain", kinship.Implied{Pattern: kinship.PatternParentOfParent, Through: []byte("P2")}, kinship.Shape{Pattern: kinship.PatternParentOfParent, Pivot: []byte("P2")}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := c.in.Shape(); !reflect.DeepEqual(got, c.want) {
+				t.Fatalf("Shape() = %+v, want %+v", got, c.want)
+			}
+		})
+	}
+}
+
+func TestCountedOnce(t *testing.T) {
+	marriage := func(pivot string) []kinship.Shape {
+		return []kinship.Shape{{Pattern: kinship.PatternMarriageSpouses, Pivot: []byte(pivot)}}
+	}
+	birth := func(pivot string) []kinship.Shape {
+		return []kinship.Shape{{Pattern: kinship.PatternBirthParents, Pivot: []byte(pivot)}}
+	}
+	pairs := func(p []byte) ([]byte, bool) {
+		if string(p) == "E1" {
+			return []byte("E9"), true
+		}
+		return nil, false
+	}
+	none := func([]byte) ([]byte, bool) { return nil, false }
+	cases := []struct {
+		name         string
+		a, b         []kinship.Shape
+		aOnly, bOnly bool
+		paired       func([]byte) ([]byte, bool)
+		want         bool
+	}{
+		{"a only implied", marriage("E1"), marriage("E9"), true, false, pairs, true},
+		{"b only implied", marriage("E1"), marriage("E9"), false, true, pairs, true},
+		{"neither only implied", marriage("E1"), marriage("E9"), false, false, pairs, false},
+		{"pivots not partners", marriage("E1"), marriage("E8"), true, true, pairs, false},
+		{"nothing paired", marriage("E1"), marriage("E9"), true, true, none, false},
+		{"different patterns", marriage("E1"), birth("E9"), true, true, pairs, false},
+		{"empty shapes", nil, nil, true, true, pairs, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := kinship.CountedOnce(c.a, c.b, c.aOnly, c.bOnly, c.paired); got != c.want {
+				t.Fatalf("CountedOnce = %v, want %v", got, c.want)
 			}
 		})
 	}

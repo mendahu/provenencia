@@ -54,6 +54,44 @@ type Implied struct {
 	From    []Edge // the links it was made from
 }
 
+// Shape is one way a link is recorded through a pattern. Pivot is
+// Implied.Event for an event pattern and Implied.Through for a chain: the event
+// or middle parent the link passes through.
+type Shape struct {
+	Pattern Pattern
+	Pivot   []byte
+}
+
+// Shape is the way the pattern made this link.
+func (i Implied) Shape() Shape {
+	if i.Event != nil {
+		return Shape{i.Pattern, i.Event}
+	}
+	return Shape{i.Pattern, i.Through}
+}
+
+// CountedOnce reports whether two corresponding links stand for one fact both
+// sides record through the same kinship pattern, already counted because the
+// shape's pivots are paired: paired maps a pivot of a to its partner on b's
+// side. Two links that are both recorded never are.
+func CountedOnce(a, b []Shape, aOnlyImplied, bOnlyImplied bool, paired func(pivot []byte) ([]byte, bool)) bool {
+	if !aOnlyImplied && !bOnlyImplied {
+		return false
+	}
+	for _, x := range a {
+		partner, ok := paired(x.Pivot)
+		if !ok {
+			continue
+		}
+		for _, y := range b {
+			if x.Pattern == y.Pattern && bytes.Equal(partner, y.Pivot) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // Derive returns the relationship links the edges imply through the event
 // patterns and the parent-of-parent chain, event patterns first. An edge is
 // recognized by its keys alone, from either end. It returns only implied
