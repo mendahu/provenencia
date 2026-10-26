@@ -8,7 +8,8 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/autoreconciler" // registers graphcache.SetTruth for verify mode
+	"github.com/mendahu/provenencia/core/database/autoreconciler"
+	"github.com/mendahu/provenencia/core/database/databasetest" // registers graphcache.SetTruth for verify mode
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
@@ -93,15 +94,42 @@ func (k *Canon) exec(query string, args ...any) {
 	}
 }
 
+func subjectTypeID(t testing.TB, db *sql.DB, key string) []byte {
+	t.Helper()
+	var typeID []byte
+	if err := db.QueryRow(`SELECT id FROM subject_types WHERE key = ? AND origin = 'provenencia'`, key).Scan(&typeID); err != nil {
+		t.Fatal(err)
+	}
+	return typeID
+}
+
+// AssertKindsLoaded fails when loading any of the provenencia subject types
+// named by keys onto the graph of c issues a SELECT.
+func AssertKindsLoaded(t testing.TB, c *database.Catalog, keys ...string) {
+	t.Helper()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	selects := databasetest.CountSelects(t, c)
+	for _, key := range keys {
+		typeID := subjectTypeID(t, db, key)
+		before := selects.N()
+		if _, err := c.Graph().Kind(typeID); err != nil {
+			t.Fatal(err)
+		}
+		if n := selects.N() - before; n != 0 {
+			t.Errorf("Kind(%s) issued %d SELECTs, want 0", key, n)
+		}
+	}
+}
+
 // Entity adds a canonical entity of a provenencia subject type, with a Subject
 // that is its accepted member, and returns its id. Ids and refs come from a
 // counter.
 func (k *Canon) Entity(kind string) []byte {
 	k.t.Helper()
-	var typeID []byte
-	if err := k.db.QueryRow(`SELECT id FROM subject_types WHERE key = ? AND origin = 'provenencia'`, kind).Scan(&typeID); err != nil {
-		k.t.Fatal(err)
-	}
+	typeID := subjectTypeID(k.t, k.db, kind)
 	id := k.next(3)
 	ref := fmt.Sprintf("TST-%d", k.n)
 	k.exec(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES (?, ?, ?)`, id, typeID, ref)

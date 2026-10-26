@@ -9,8 +9,8 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
-	"github.com/mendahu/provenencia/core/database/databasetest"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promotealign"
@@ -315,24 +315,7 @@ func TestWarmBuildsTheIndex(t *testing.T) {
 	if gen == 0 {
 		t.Fatal("Warm built no index")
 	}
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	selects := databasetest.CountSelects(t, c)
-	for _, key := range []string{"person", "event"} {
-		var typeID []byte
-		if err := db.QueryRow(`SELECT id FROM subject_types WHERE key = ? AND origin = 'provenencia'`, key).Scan(&typeID); err != nil {
-			t.Fatal(err)
-		}
-		before := selects.N()
-		if _, err := g.Kind(typeID); err != nil {
-			t.Fatal(err)
-		}
-		if n := selects.N() - before; n != 0 {
-			t.Errorf("Kind(%s) issued %d SELECTs after Warm, want 0", key, n)
-		}
-	}
+	graphcachetest.AssertKindsLoaded(t, c, "person", "event")
 	w.f.propose(w.f.graph(w.srcB), nil)
 	if got := promotealign.MatchIndexGenForTest(g); got != gen {
 		t.Errorf("a proposal rebuilt the index: generation %d, want %d", got, gen)
