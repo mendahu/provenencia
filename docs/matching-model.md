@@ -26,6 +26,7 @@ matchregistry ──────────────────────
 | 6 | Graph alignment | `core/graphalign` | The layer's Subjects and the research graph's handles | Rows: target, band, contested mark, reasons, alternatives | `alignment`, `segment`, `subject` |
 
 The subject profile builder sits beside layer 4. It turns the reconciler's conclusion into a Subject-shaped profile and compares nothing: displayed values are positive, denied values negative, and outvoted, weak and provisional values are left out. It also builds a plain Subject's side from its own Observations.
+Before layer 6, each side's links are read through the kinship patterns (`core/kinship`): a shared marriage implies spouses, a birth's father or mother and subject imply a parent, and a parent of a parent implies a grandparent. An implied link weighs as the relationship it stands for. A fact both sides record through the same pattern counts once when the walk has paired the event or middle parent it passes through.
 Layer 6 decides what to compare (shortlisting), in what order (one best-first queue), and what to place (the accept bar); a row's band comes from its evidence. See the reasoning in [`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-6-procedure).
 
 ## Worked example
@@ -72,6 +73,9 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 | **entity comparison** | Layer 4: a Subject against an entity's profile |
 | **lifespan** | A person's derived window and span, built from the exact dates (BEF, AFT and half-open ones are skipped) of every event they take part in, widened by a slack of years each way; each side's span is checked against the other's window |
 | **segment** | Two primary Subjects joined by a bridge: primary, bridge, primary |
+| **kinship pattern** | A shape that records a kinship fact without naming it: two spouses in one marriage, a birth's father or mother and subject, a parent of a parent |
+| **implied link** | A relationship link a kinship pattern adds to one side, keyed as a recorded relationship; never stored or filed |
+| **shape** | One way a side records a link: a kinship pattern and the event or middle parent it passes through |
 | **bridge** | The Subject that joins the two primary Subjects of a segment (a birth, a relationship) |
 | **cardinality** | How many a Subject can have through one bridge; only birth and death are declared `one` |
 | **support** | Points a matching neighbor adds to a pair through a segment |
