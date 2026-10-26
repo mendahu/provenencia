@@ -8,11 +8,13 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
-	_ "github.com/mendahu/provenencia/core/database/autoreconciler" // registers graphcache.SetTruth for verify mode
+	"github.com/mendahu/provenencia/core/database/autoreconciler" // registers graphcache.SetTruth for verify mode
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // OpenCatalog creates a catalog in a temporary directory with one user and the
@@ -37,41 +39,75 @@ func OpenCatalog(t testing.TB) *database.Catalog {
 	return c
 }
 
-// Canon writes canonical entities and the rows the graph cache reads, and
-// commits them the way a write would.
+// Canon writes canonical entities and what the graph cache reads of them, and
+// commits them the way a write would. Each value is backed by an Observation
+// on a Subject that is an accepted member of its entity, and the reconciler
+// writes the kept rows from them, so Verify (PROVENENCIA_GRAPH_VERIFY=1) finds
+// the cache equal to the catalog. A Subject has the id of its entity. Rows go
+// in directly, not through a write, so nothing reaches the graph until Commit.
 type Canon struct {
-	t   testing.TB
-	c   *database.Catalog
-	db  *sql.DB
-	n   int
-	rev int64
+	t        testing.TB
+	c        *database.Catalog
+	db       *sql.DB
+	n        int
+	rev      int64
+	citation []byte
+	graph    []byte
+	source   []byte
 }
 
-// NewCanon returns a builder over c.
+// NewCanon returns a builder over c, with one Source, Artifact, Citation and
+// Evidence graph behind every Observation it writes.
 func NewCanon(t testing.TB, c *database.Catalog) *Canon {
 	t.Helper()
 	db, err := c.DB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &Canon{t: t, c: c, db: db}
+	k := &Canon{t: t, c: c, db: db}
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	k.source, k.graph, k.citation = k.next(5), k.next(6), k.next(7)
+	artifact := k.next(8)
+	k.exec(`INSERT INTO sources (id, ref, source_type_id, title) VALUES (?, 'SRC-TST', ?, 'Canon')`, k.source, typeID)
+	k.exec(`INSERT INTO artifacts (id, ref, source_id, label) VALUES (?, 'ART-TST', ?, 'Scan')`, artifact, k.source)
+	k.exec(`INSERT INTO citations (id, ref, artifact_id, locator_json) VALUES (?, 'CIT-TST', ?, '{"version":1,"selectors":[{"type":"page","artifact_page":1}]}')`, k.citation, artifact)
+	k.exec(`INSERT INTO evidence_graphs (id, ref, source_id, name) VALUES (?, 'EVG-TST', ?, 'Canon')`, k.graph, k.source)
+	return k
 }
 
-// Entity adds a canonical entity of a provenencia subject type and returns its
-// id. Ids and refs come from a counter.
+// next is the next id of one table family: {family, 1, 0, ..., counter}.
+func (k *Canon) next(family byte) []byte {
+	k.n++
+	id := make([]byte, 16)
+	id[0], id[1], id[14], id[15] = family, 1, byte(k.n>>8), byte(k.n)
+	return id
+}
+
+func (k *Canon) exec(query string, args ...any) {
+	k.t.Helper()
+	if _, err := k.db.Exec(query, args...); err != nil {
+		k.t.Fatal(err)
+	}
+}
+
+// Entity adds a canonical entity of a provenencia subject type, with a Subject
+// that is its accepted member, and returns its id. Ids and refs come from a
+// counter.
 func (k *Canon) Entity(kind string) []byte {
 	k.t.Helper()
 	var typeID []byte
 	if err := k.db.QueryRow(`SELECT id FROM subject_types WHERE key = ? AND origin = 'provenencia'`, kind).Scan(&typeID); err != nil {
 		k.t.Fatal(err)
 	}
-	k.n++
-	id := make([]byte, 16)
-	id[0], id[1], id[14], id[15] = 3, 1, byte(k.n>>8), byte(k.n)
-	if _, err := k.db.Exec(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES (?, ?, ?)`,
-		id, typeID, fmt.Sprintf("TST-%d", k.n)); err != nil {
-		k.t.Fatal(err)
-	}
+	id := k.next(3)
+	ref := fmt.Sprintf("TST-%d", k.n)
+	k.exec(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES (?, ?, ?)`, id, typeID, ref)
+	k.exec(`INSERT INTO subjects (id, ref, source_id, graph_id, subject_type_id) VALUES (?, ?, ?, ?, ?)`, id, "SUB-"+ref, k.source, k.graph, typeID)
+	k.exec(`INSERT INTO identity_claims (id, subject_id, entity_id, subject_type_id, status) VALUES (?, ?, ?, ?, 'accepted')`,
+		k.next(9), id, id, typeID)
 	return id
 }
 
@@ -84,22 +120,27 @@ func (k *Canon) propID(key string) []byte {
 	return id
 }
 
-const insertValue = `INSERT INTO auto_reconciler_values
-	(entity_id, property_id, rank, %s, support, against, reason)
-	VALUES (?, ?, 1, ?, 1, 0, 'kept')`
+// observe files one Observation on an entity's Subject and rewrites the
+// entity's kept rows from its Observations.
+func (k *Canon) observe(entity []byte, propKey, column string, value []byte) {
+	k.t.Helper()
+	k.exec(`INSERT INTO observations (id, ref, citation_id, subject_id, property_id, `+column+`) VALUES (?, ?, ?, ?, ?, ?)`,
+		k.next(4), fmt.Sprintf("OBS-TST-%d", k.n), k.citation, entity, k.propID(propKey), value)
+	if err := autoreconciler.RecomputeTx(k.db, [][]byte{entity}); err != nil {
+		k.t.Fatal(err)
+	}
+}
 
-// Term sets the rank-1 kept term of one property of an entity to a seeded term.
+// Term sets the kept term of one property of an entity to a term of the
+// catalog: a seeded one, or one the test added.
 func (k *Canon) Term(entity []byte, propKey, termKey string) {
 	k.t.Helper()
-	prop := k.propID(propKey)
 	var termID []byte
-	if err := k.db.QueryRow(`SELECT id FROM property_terms WHERE property_id = ? AND key = ? AND origin = 'provenencia'`,
-		prop, termKey).Scan(&termID); err != nil {
+	if err := k.db.QueryRow(`SELECT id FROM property_terms WHERE property_id = ? AND key = ? ORDER BY origin = 'provenencia' DESC`,
+		k.propID(propKey), termKey).Scan(&termID); err != nil {
 		k.t.Fatal(err)
 	}
-	if _, err := k.db.Exec(fmt.Sprintf(insertValue, "value_term_id"), entity, prop, termID); err != nil {
-		k.t.Fatal(err)
-	}
+	k.observe(entity, propKey, "value_term_id", termID)
 }
 
 // Link adds an association of a bridge subject type. ends maps each endpoint
@@ -109,31 +150,25 @@ func (k *Canon) Link(kind string, ends map[string][]byte, termProp, termKey stri
 	k.t.Helper()
 	id := k.Entity(kind)
 	for prop, end := range ends {
-		if _, err := k.db.Exec(fmt.Sprintf(insertValue, "value_entity_id"), id, k.propID(prop), end); err != nil {
-			k.t.Fatal(err)
-		}
+		k.observe(id, prop, "value_subject_id", end)
 	}
 	k.Term(id, termProp, termKey)
 	return id
 }
 
-// Remove deletes an entity's values and row.
+// Remove deletes an entity, its Subject and what they hold.
 func (k *Canon) Remove(id []byte) {
 	k.t.Helper()
-	if _, err := k.db.Exec(`DELETE FROM auto_reconciler_values WHERE entity_id = ?`, id); err != nil {
-		k.t.Fatal(err)
-	}
-	if _, err := k.db.Exec(`DELETE FROM canonical_entities WHERE id = ?`, id); err != nil {
-		k.t.Fatal(err)
-	}
+	k.exec(`DELETE FROM observations WHERE subject_id = ?`, id)
+	k.exec(`DELETE FROM identity_claims WHERE entity_id = ?`, id)
+	k.exec(`DELETE FROM subjects WHERE id = ?`, id)
+	k.exec(`DELETE FROM canonical_entities WHERE id = ?`, id)
 }
 
 // Retype replaces the kept term of one property of an entity.
 func (k *Canon) Retype(entity []byte, propKey, termKey string) {
 	k.t.Helper()
-	if _, err := k.db.Exec(`DELETE FROM auto_reconciler_values WHERE entity_id = ? AND property_id = ?`, entity, k.propID(propKey)); err != nil {
-		k.t.Fatal(err)
-	}
+	k.exec(`DELETE FROM observations WHERE subject_id = ? AND property_id = ?`, entity, k.propID(propKey))
 	k.Term(entity, propKey, termKey)
 }
 
