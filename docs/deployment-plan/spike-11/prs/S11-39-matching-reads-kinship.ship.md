@@ -1,7 +1,7 @@
 # Ship log — S11-39 Matching reads kinship shapes
 
 **Plan:** [`S11-39-matching-reads-kinship.md`](S11-39-matching-reads-kinship.md) · **Branch:** `s11-39-matching-reads-kinship` · **PR:** #567
-**State:** fixing 1
+**State:** fixing 2
 
 ## Round 0 — implement
 Head `f631a272`. Gate PASS (orchestrator run). Report deviations: STEP-7 baseline taken from a `git archive` export of `7efa02f` rather than a worktree (export deleted); extra `cloneShapes` helper in `promotealign/terms.go`; T-6 goldens use `kinTree`/`kinSide`/`kinShape` helpers; manual check not run in the app (Go goldens cover its steps). The landing commit also picked up this ship log stub.
@@ -61,3 +61,21 @@ Files: `core/matchregistry` (the registry value and its doc), `core/kinship/kins
 Start from the saved patch `/private/tmp/claude-501/-Users-jakerobins-Repos-provenencia/e7ccccd4-c472-4924-8362-33987dd34c10/scratchpad/f1.patch` (logic and `TestDeriveBound`), then:
 Do: add the value to the registry where values of its kind live (as `PrefixMinLength` does), named for what it bounds (for example `Kinship.MaxPivotEnd`), value 10, with a comment: a pivot (an event, or the parent between in a chain) with more participants than this at either end reads as malformed data and implies nothing; it keeps derivation linear in its input. `kinship.Derive` takes the bound as an argument (no numeric literal in `core/kinship`; it must not import `matchregistry`). `promotealign` reads it from `matchregistry.Default()` and passes it through `withImplied`. `TestDeriveBound` passes the bound in and pins 10 vs 11 at each end; `BenchmarkDerive` passes the registry's value or a test-local one. Update `core/kinship`'s package doc ("no numbers" stays true: the bound comes in as an argument).
 Check: `TestDeriveBound` rows pass (fail without the skip); `TestLayerPackages` passes unchanged; scripts/check-pr.sh PASS. Add an F-1 line to the plan's Landed note.
+F-1′ head `16ff9ef2`. Gate PASS (orchestrator run). `kinship.Rules{MaxPivotEnd}` from `matchregistry.Default().Kinship` (10), passed through `withImplied`; knob inventory row added; `TestLayerPackages` unchanged.
+
+## Round 2 — review
+Reviewers: SEC+PRF (round-1 majors SEC-1, PRF-1). Not sent back: CON (clean), MNT (minors only). MNT-2 read by the orchestrator in `layer.go`/`canon.go`: **Resolved**. SEC-2 (F-4): resolved, `linkSet` keeps a per-link association set.
+
+SEC-1: Resolved for events and distinct parents. PRF-1: Resolved (budget case: warm 140 ms / 250 ms, cold 1.31 s / 2.5 s, after a commit 609 ms / 1.5 s).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| SEC-3 | SEC/PRF | blocker | `chains` dedupes grandparent associations with `slices.ContainsFunc` over a growing slice: quadratic in a parent link's associations, which `MaxPivotEnd` does not bound; `Rules`'s comment says Derive is linear | Fix now → F-5 | verified: `kinship.go:280-286`; reviewer's probe, 16,000 associations on one g→m link × 10 grandchildren → 4.1 s |
+
+### Fix plan 2
+
+**F-5 — Dedupe chain associations through a set** (from SEC-3)
+Files: `core/kinship/kinship.go` (`chains`), `core/kinship/kinship_test.go`.
+Failing test first: add a `BenchmarkDerive` case (or a `TestDeriveBound` row with a time-independent check) for one parent link g→m carrying several thousand associations plus m→c1..c10; and a `TestDerive` row asserting the implied grandparent link's associations are deduped and in first-added order (duplicates across the two steps appear once).
+Do: in `chains`, replace the `slices.ContainsFunc(assoc, …)` scan with a `map[string]struct{}` keyed by `string(a)`, keeping first-added order, the same shape F-4 used in `linkSet.add` (`core/database/promotealign/terms.go`). Optionally collect `from` and the deduped associations once per `(g,m)` pair and reuse it across that pair's grandchildren. Keep the `Rules` comment's "linear in its input" true.
+Check: the new rows pass; `go test ./core/kinship/ -bench Derive` shows the many-association case roughly linear (report the timings at two sizes); scripts/check-pr.sh PASS.
