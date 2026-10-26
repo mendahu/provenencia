@@ -166,6 +166,7 @@ Every read is batched (`sqlbatch`, 500 ids per IN list), so the query count foll
 - **The match index** (the shortlist index) is cached on the graph and dropped by any commit that names a handle, by a vocabulary commit (its keys read term keys and metas), and by a new alias index (`SetAliasIndex`) or name format (`SetNameFormat`).
 - **The candidates memo** holds each Subject's ranked candidate ids on the Source's Evidence graph memo. It is valid for one match index generation: it is dropped with the Evidence graph memo and ignored when the index generation changes.
 - **Open-time warms** (the default name format and the built alias index) are held on the graph until the project closes. `SetAliasIndex` and `SetNameFormat` drop the caches derived from them.
+- **Matching warms at open** (`catalogsession.WarmOnOpen`, behind the open spinner): `promotealign.Warm` loads the shortlist kinds (every person, event and place) onto the graph and builds the name index, after the alias index and name format, so the first proposal pays only for its own Source. A call that drops the warm state (a vocabulary or structure commit, `Drop`, a new alias index or name format) warms it again before `catalogsession.Do` returns. A handle commit drops only the match index, and the next proposal rebuilds it ([`name-index-on-commit.md`](ideas/name-index-on-commit.md)).
 
 ---
 
