@@ -112,7 +112,7 @@ struct NameValueEditorForm: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .overlay(
                     RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                        .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                        .strokeBorder(style: PVStroke.dashed)
                         .foregroundStyle(PVColor.borderDefault)
                 )
             } else {
