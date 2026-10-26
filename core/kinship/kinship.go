@@ -196,14 +196,20 @@ func eventLinks(p eventPattern, edges []Edge, part, rel connectrules.Bridge, ter
 // chains makes one grandparent link per grandparent, middle and grandchild.
 func chains(steps []step, rel connectrules.Bridge, terms segmentcompare.Terms, maxPivotEnd int) []Implied {
 	first, second := segmentcompare.Keys(rel, vocabkey.TermGrandparent, "", terms)
-	type triple struct{ g, m, c string }
 	type pair struct{ g, m string }
-	// Step indices by parent, and by parent and child, in step order.
-	byG := map[string][]int{}
+	// Step indices by parent and child, and the distinct pairs in first-seen
+	// order; then the distinct children of each parent in first-seen order, as
+	// the index of a step that has them. Duplicate steps never pair with each
+	// other, so the loop below is linear in the distinct pairs.
 	byPair := map[pair][]int{}
+	var order []pair
+	childrenOf := map[string][]int{}
 	for i, s := range steps {
-		byG[string(s.g)] = append(byG[string(s.g)], i)
 		k := pair{string(s.g), string(s.m)}
+		if _, seen := byPair[k]; !seen {
+			order = append(order, k)
+			childrenOf[k.g] = append(childrenOf[k.g], i)
+		}
 		byPair[k] = append(byPair[k], i)
 	}
 	// Distinct parents of each middle person; one with too many implies nothing.
@@ -214,29 +220,24 @@ func chains(steps []step, rel connectrules.Bridge, terms segmentcompare.Terms, m
 		}
 		parents[string(s.m)][string(s.g)] = struct{}{}
 	}
-	made := map[triple]bool{}
 	var out []Implied
-	for _, up := range steps {
-		if len(parents[string(up.m)]) > maxPivotEnd {
+	for _, up := range order {
+		if len(parents[up.m]) > maxPivotEnd {
 			continue
 		}
-		for _, i := range byG[string(up.m)] {
+		upStep := steps[byPair[up][0]]
+		for _, i := range childrenOf[up.m] {
 			down := steps[i]
-			if bytes.Equal(up.g, down.m) {
+			if bytes.Equal(upStep.g, down.m) {
 				continue
 			}
-			t := triple{string(up.g), string(up.m), string(down.m)}
-			if made[t] {
-				continue
-			}
-			made[t] = true
 			var from []Edge
 			var assoc [][]byte
 			seen := map[string]struct{}{}
-			for _, j := range byPair[pair{t.g, t.m}] {
+			for _, j := range byPair[up] {
 				from = append(from, steps[j].edge)
 			}
-			for _, j := range byPair[pair{t.m, t.c}] {
+			for _, j := range byPair[pair{up.m, string(down.m)}] {
 				from = append(from, steps[j].edge)
 			}
 			for _, e := range from {
@@ -248,9 +249,9 @@ func chains(steps []step, rel connectrules.Bridge, terms segmentcompare.Terms, m
 				}
 			}
 			out = append(out, Implied{
-				Edge:    Edge{A: up.g, B: down.m, KeyA: first, KeyB: second, Associations: assoc},
+				Edge:    Edge{A: upStep.g, B: down.m, KeyA: first, KeyB: second, Associations: assoc},
 				Pattern: PatternParentOfParent,
-				Through: up.m,
+				Through: upStep.m,
 				From:    from,
 			})
 		}
