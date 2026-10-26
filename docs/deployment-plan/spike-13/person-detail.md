@@ -1,64 +1,103 @@
 # Person detail page
 
-**Status:** requirements capture (2026-10-26). Dictated by the product owner; not yet scoped into PRs. Open questions at the end are unanswered and are **not** decisions.
+**Status:** requirements agreed (2026-10-26). Dictated by the product owner, then refined through a round of scope questions. Not yet cut into PRs.
 
 ## Why
 
-The Person page (`macos/App/Features/Conclusions/PersonDetailView.swift`, worded by `PersonDetailContent`, board S9-D5) is a stub: a header with name, born/died vitals and a likeness thumb, one column of reconciled property rows, a member count, and a likeness gallery. Spike 13 makes it the place a researcher goes to understand one canonical person: who they were, who their family was, what happened in their life, what they looked like, and what evidence says so.
+The Person page (`macos/App/Features/Conclusions/PersonDetailView.swift`, worded by `PersonDetailContent`, board S9-D5) is a stub: a header with name, born/died vitals and a likeness thumb, one column of reconciled property rows with a Why accordion (`ReconciliationReasoningView`), a member count, and a likeness gallery. Spike 13 makes it the place a researcher goes to understand one canonical person: who they were, who their family was, what happened in their life, what they looked like, and what evidence says so.
+
+## Spike-wide rules
+
+- **R-1. Person page only.** Event and Place pages keep their current layout this spike. The section pattern may be reused for them later.
+- **R-2. Canonical people only.** Everything on the page is canonical (promoted) entities. A relative, participant, or anything else that exists only as an unpromoted Subject does not appear. Where nothing is promoted, nothing is drawn.
+- **R-3. Reuse the existing gender/sex colors.** Every person treatment on the page (Family, Timeline participants) uses the color logic already shipped (`PersonGenderTreatment`, S10-23), including its treatment for unknown values.
 
 ## Layout
 
-- **R-1. Five sections.** The page is divided into five sections: **Vitals**, **Family**, **Timeline**, **Gallery**, **Sources**.
-- **R-2. Easy switching.** The user can move between the five sections quickly from anywhere on the page.
-- **R-3. The pattern is a design call.** Stacked sections with jump shortcuts, tab navigation, or something else: the spike's design brief explores the options and picks an elegant one. Not decided here.
+- **R-4. A fixed header.** The current header (name, born/died line, portrait, gender badge, ref) stays at the top whichever section is showing. It is display only: clean and easy to read, with no controls.
+- **R-5. Five sections.** Below the header the page is divided into **Vitals**, **Family**, **Timeline**, **Gallery**, **Sources**.
+- **R-6. Easy switching.** The user can move between the five sections quickly from anywhere on the page.
+- **R-7. The pattern is a design call.** Stacked sections with jump shortcuts, tab navigation, or something else: the design brief explores the options and picks an elegant one.
+
+## Provenance sheet (new control)
+
+A new, reusable control that sits next to any concluded value on a page. It replaces and extends today's Why accordion.
+
+- **R-8. One control, one sheet.** Clicking the control beside a value opens a sheet describing that value's entire provenance.
+- **R-9. What the sheet shows.** Every Source that speaks to the value; the auto-reconciler's reasoning (everything the Why accordion shows today moves here, with more detail); and, later, any manual Reconciliation Claims (R-10).
+- **R-10. Reconciliation Claims are out of scope.** They are not built yet. The sheet is designed so they slot in later without a redesign.
+- **R-11. Rich links.** From the sheet the user can click through to the Source, the Citation, and the exact Observation behind each record.
+- **R-12. Conflicting values live here.** Vitals keeps today's "mixed" marker on a row whose records disagree; the detail behind it is in the provenance sheet.
+- **R-13. Reusable.** Built as a shared control, not Person-specific, so Event and Place pages can adopt it later (R-1).
 
 ## 1. Vitals
 
-- **R-4.** Shows the basic facts: name, birth date and place, death date and place.
-- **R-5.** Shows every Person property of this canonical person: anything that appears on the person's cards today belongs here.
+- **R-14.** Shows the basic facts: name, birth date and place, death date and place. These repeat the header, with the provenance control beside each one.
+- **R-15.** Shows every Person property of this canonical person: anything that appears on the person's cards today belongs here, each with the provenance control.
 
 ## 2. Family
 
 The first quasi-family-tree visualization in the app.
 
-- **R-6. Simple, not a canvas.** A plain laid-out diagram, not a `GraphCanvas` host or a pannable/zoomable surface.
-- **R-7. The nuclear family.** Shows this person's **parents, siblings, spouse(s), and children**: the people they grew up with and the people who grew up with them.
-- **R-8. Every relative is a link** to that relative's Person page, so the user can bounce from person to person.
-- **R-9. Each person on the diagram shows:** a likeness, name, birth date and place, death date and place.
-- **R-10. Color-coded by gender or sex.**
-- **R-11. Lines** connect the people appropriately (parent to child, spouse to spouse, siblings through their parents).
+- **R-16. Simple, not a canvas.** A plain laid-out diagram, not a `GraphCanvas` host or a pannable/zoomable surface.
+- **R-17. The nuclear family.** Shows this person's **parents, siblings, spouse(s), and children**: the people they grew up with and the people who grew up with them.
+- **R-18. Implied relationships count.** The diagram shows as much as can be concluded automatically: direct links, links implied through events (shared marriage, a birth's parents, already read through `canonlinks.Reader.For`, S11-49), and **siblings from a shared parent** (new). Extending the graph cache's implied links to make this easy is in scope.
+- **R-19. Several families.** A person with more than one spouse shows each family. A person with conflicting parents shows each set. The layout handles both.
+- **R-20. Every relative is a link** to that relative's Person page, so the user can bounce from person to person.
+- **R-21. Each person on the diagram shows:** a likeness, name, birth date and place, death date and place, colored per R-3. This **person tile** is shared with the Timeline (R-27).
+- **R-22. Lines** connect the people appropriately (parent to child, spouse to spouse, siblings through their parents).
 
 ## 3. Timeline
 
-- **R-12. Every event this person is associated with,** in chronological order, so the section reads as a visualization of the life from birth to death.
-- **R-13. Each event shows** a name, a date, and a location.
-- **R-14. A thumbnail slot for an event depiction.** Event depictions are not built yet; the slot is reserved so the layout does not change when they arrive.
-- **R-15. Each event links** to its Event page.
-- **R-16. Participants.** Each event lists the other people who took part in it, each a link to their Person page, drawn with the **same person treatment as the Family section** (R-9, R-10).
+- **R-23. Events this person took part in directly,** in chronological order, so the section reads as a visualization of the life from birth to death. Family events the person was not a participant in (a child's birth they are not recorded at) are not listed.
+- **R-24. Undated events** go in an "Undated" group at the end.
+- **R-25. Each event shows** a name, a date, a location, and the person's role in it.
+- **R-26. A placeholder thumbnail slot for an event depiction.** Event depictions are not built; the slot is reserved so the layout does not change when they arrive.
+- **R-27. Participants.** Each event lists the other canonical people who took part, each with their role and drawn as the shared person tile (R-21), each a link to their Person page.
+- **R-28. Each event links** to its Event page.
 
 ## 4. Gallery
 
-- **R-17. Every likeness of this person** lives here.
-- **R-18. A built-in viewer.** Click a likeness to expand it, and ideally step through likenesses like a slideshow. The design brief should present options.
+- **R-29. Every likeness of this person** lives here.
+- **R-30. A built-in viewer.** Click a likeness to expand it, and ideally step through likenesses like a slideshow. The design brief presents options.
+- **R-31. Set as portrait** stays available from the gallery (and the viewer).
+- **R-32. Open the Citation** a likeness was cropped from.
 
 ## 5. Sources
 
-- **R-19. One entry per Subject promoted into this person.** In the engine this is the list of member Subjects (identity claims) of the canonical person.
-- **R-20. Presented as Sources.** The user thinks of each member as a source: every Subject lives in an Evidence graph, and every Evidence graph belongs to a Source.
-- **R-21. Grouped by Source.** Since Spike 12 a Source can hold several Evidence graphs; members from graphs of the same Source are grouped under that one Source.
-- **R-22. Each Source group shows** the Source's name, some information about the Source, and the member Subject entries (as Evidence graph subject cards) beneath it.
-- **R-23. Each Source links** to its Source page.
+The user thinks of this section as "where the sources are". The data is the person's **identity claims**: every Subject connected (promoted) into this canonical person.
 
-## 6. Identity claim controls
+- **R-33. One entry per identity claim.**
+- **R-34. Grouped by Source.** Since Spike 12 a Source can hold several Evidence graphs, so one Source can contribute several claims. Claims from the same Source are grouped under it.
+- **R-35. Each Source group shows** the Source's title, type, and date, and the claims' Subjects beneath it as Evidence graph subject cards.
+- **R-36. Groups are ordered by Source title.**
+- **R-37. Each Source links** to its Source page.
 
-Controls on each member (identity claim) in the Sources section.
+### Identity claim controls
 
-- **R-24. Remove.** Un-promote the Subject from this person. Same behavior as the un-promote control in the Evidence graph today.
-- **R-25. Review / edit (new).** Open the claim's pinned evidence and its argument, so the user can see why the Subject was connected to this person. Editing the pins or the argument from here is the new capability.
+On each claim in the Sources section.
+
+- **R-38. Remove.** Un-promote the Subject from this person, the same behavior as the un-promote control in the Evidence graph today.
+- **R-39. Removing the last claim** deletes the canonical person. A warning says so before it happens; if the user proceeds, the app returns to the Persons list.
+- **R-40. Review (view only).** Open the claim's pinned evidence and its argument, so the user can see why the Subject was connected to this person. Editing pins or the argument is not this spike.
+
+## Not this spike
+
+- **Event and Place pages in the new layout:** later; the provenance sheet is built to be reused (R-13).
+- **Reconciliation Claims** (manual reconciliation) in the provenance sheet: later; the sheet leaves room (R-10).
+- **Editing an identity claim's pins or argument:** later; this spike is view only (R-40).
+- **Weak-claim alerts and the claim review queue:** stay parked in [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md).
+- **Event depictions:** later; the Timeline reserves a placeholder (R-26).
+- **Unpromoted Subjects anywhere on the page:** refused (R-2).
+- **Kinship beyond the nuclear family** (grandparents, aunts and uncles, godparents, census households): stays in [`ideas/kinship-view.md`](../../ideas/kinship-view.md).
+
+## Dogfood bar
+
+The product owner has several real people in their project ready and will test them by hand as PRs land. The bar outcomes are written with the PR map.
 
 ## Related material already in the repo
 
-- [`ideas/kinship-view.md`](../../ideas/kinship-view.md): family on person pages must read every kinship shape (direct links and links implied through events) as one fact, through `canonlinks.Reader.For` (S11-49). Also notes that `core/kinship`'s link reading should move to its own pure package before a person page imports it, and lists siblings-from-shared-parents as a pattern not yet built.
-- [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md): weak-claim alerts, re-pin against a remaining member, reject a claim. Overlaps R-24 and R-25.
+- [`ideas/kinship-view.md`](../../ideas/kinship-view.md): family on person pages must read every kinship shape as one fact through `canonlinks.Reader.For` (S11-49). Notes that `core/kinship`'s link reading should move to its own pure package before a person page imports it (S11-38 review M-3), and that siblings from shared parents is not built yet (R-18).
+- [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md): weak-claim alerts and re-pinning; parked.
 - [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md): likeness leftovers after Spike 10.
-- [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5 (identity claims, pins, promote) and §7.3 (Participation and Relationship associations).
+- [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5 (identity claims, pins, promote), §7 (Reconciliation Claims, Participation and Relationship associations).
