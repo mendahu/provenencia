@@ -162,4 +162,13 @@ Head `3620aa7f`. Gate PASS (orchestrator run). F-7 done (`dbd674c9`, `TestCanonW
 
 Local (orchestrator, load average 8–10, unreliable): cold 1.06–1.18 s, warm 33–42 ms, after a commit 536–542 ms.
 
-**CI, Go tests run 40353254720 on `3620aa7f`: failure.** Warm passes. Cold 3.29 s (budget 2.5 s; before: 3.30–3.48 s). After a handle commit 1.75 s (budget 1.5 s; passed before). Cause of the after-commit regression, read in code: `LoadKinds` (`graphcache/graph.go:276-315`) runs the catalog-wide `scanLinks` for any non-empty set of uncached ids, so one handle missing after a commit reads every association in the catalog. F-8 bought no measurable cold gain on CI. **To user.**
+**CI, Go tests run 40353254720 on `3620aa7f`: failure.** Warm passes. Cold 3.29 s (budget 2.5 s; before: 3.30–3.48 s). After a handle commit 1.75 s (budget 1.5 s; passed before). Orchestrator's first reading blamed `LoadKinds` scanning for one uncached handle after a commit; **wrong** — `OnCommit` reloads new handles of loaded kinds (`entityNeedsReload` with `kindOn`, `commit.go:104-107`), so `fresh` is empty after a commit (confirmed by the round-4 reviewer). Cause of the after-commit 1.75 s on CI is unknown (local 488 → ~540 ms). F-8 bought no measurable cold gain on CI. **To user.**
+
+## Round 4 — review
+Reviewer: SEC+PRF (scope `78913390...3620aa7f`).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| PRF-1 (r4) | PRF | major | The canon walk memo is stored per Evidence graph; a handle commit drops only the graphs it names, so other graphs keep stale, never-hitting copies of a catalog-sized walk, up to `maxEvidenceGraphs = 64` (the plan says 8) | Fix now (pending the user's cold decision) | verified: `evidence_graph.go:116` = 64; `commit.go:33-39` drops named graphs' memos and nils `matchIndex` only; the walk's inputs are seeds + match index gen, nothing graph-specific. Fix: keep the walk on the `matchIndex` value (dropped whole by a handle commit) in a small bounded map keyed by seeds; correct the §11 row |
+
+Nits (logged): `PRF-2 · graphcache/graph.go:276 · LoadKinds could use loadIDs below a small threshold` (not a cause after commits, per the reviewer).
