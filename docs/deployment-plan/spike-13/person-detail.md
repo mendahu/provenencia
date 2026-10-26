@@ -12,6 +12,12 @@ The Person page (`macos/App/Features/Conclusions/PersonDetailView.swift`, worded
 - **R-2. Canonical people only.** Everything on the page is canonical (promoted) entities. A relative, participant, or anything else that exists only as an unpromoted Subject does not appear. Where nothing is promoted, nothing is drawn.
 - **R-3. Reuse the existing gender/sex colors.** Every person treatment on the page (Family, Timeline participants) uses the color logic already shipped (`PersonGenderTreatment`, S10-23), including its treatment for unknown values.
 
+## Design first, then re-cut
+
+- **R-D1. The whole page is designed up front.** Before any chrome PR is planned, Claude Design boards cover every part of the page together: header, section switching, all five sections, the provenance sheet, the gallery viewer, and the claim review and remove-last-claim flows. The product owner approves the page as a whole, not view by view.
+- **R-D2. Expect scope to change after the design.** The PR map is cut from these requirements, then re-cut once the boards are approved. Chrome PRs stay `Scoped` until then; requirements here may be amended by what the design finds.
+- **R-D3. Engine work may run ahead of the design** where it does not depend on what the boards decide (for example sibling inference, R-18), so the spike is not idle while design iterates.
+
 ## Layout
 
 - **R-4. A fixed header.** The current header (name, born/died line, portrait, gender badge, ref) stays at the top whichever section is showing. It is display only: clean and easy to read, with no controls.
@@ -29,10 +35,12 @@ A new, reusable control that sits next to any concluded value on a page. It repl
 - **R-11. Rich links.** From the sheet the user can click through to the Source, the Citation, and the exact Observation behind each record.
 - **R-12. Conflicting values live here.** Vitals keeps today's "mixed" marker on a row whose records disagree; the detail behind it is in the provenance sheet.
 - **R-13. Reusable.** Built as a shared control, not Person-specific, so Event and Place pages can adopt it later (R-1).
+- **R-13a. Wherever a single value is shown, in Vitals.** Every value in Vitals gets the control, including values that belong to another entity: the birth date is a property of the birth event, and it still opens its provenance from the Person page.
+- **R-13b. Not in the other sections, for now.** Family, Timeline, Gallery and Sources are dense, and their items usually stand for more than one property, so they do not get the control this spike. Revisit as the design and the page mature.
 
 ## 1. Vitals
 
-- **R-14.** Shows the basic facts: name, birth date and place, death date and place. These repeat the header, with the provenance control beside each one.
+- **R-14.** Shows the basic facts: name, birth date and place, death date and place. These repeat the header, with the provenance control beside each one (R-13a).
 - **R-15.** Shows every Person property of this canonical person: anything that appears on the person's cards today belongs here, each with the provenance control.
 
 ## 2. Family
@@ -90,6 +98,24 @@ On each claim in the Sources section.
 - **Event depictions:** later; the Timeline reserves a placeholder (R-26).
 - **Unpromoted Subjects anywhere on the page:** refused (R-2).
 - **Kinship beyond the nuclear family** (grandparents, aunts and uncles, godparents, census households): stays in [`ideas/kinship-view.md`](../../ideas/kinship-view.md).
+
+## Cross-spike dependencies
+
+Spike 12 is expected to close before Spike 13 starts. Spike 11 may still be open, and Spike 13 runs alongside it.
+
+**Spike 12 (assumed closed):** Source grouping (R-34) relies on multiple Evidence graphs per Source (S12-03 onward) and on per-graph unpromote (S12-09) for R-38. If any S12 PR is still open when Spike 13 starts, the PR that needs it names it as a dependency.
+
+**Spike 11 (may be open).** Landed and relied on: kinship patterns (S11-38, #564), one link reading for bridges (S11-41, #561), kinship links in the graph cache with `canonlinks.Reader.For` (S11-49, #569). Still open and touching the same code:
+
+| Spike 11 PR | Status (2026-10-26) | Where it meets Spike 13 |
+| --- | --- | --- |
+| S11-39 Matching reads kinship shapes | Blocked — re-plan | Sibling inference (R-18) adds a pattern to `core/kinship`. Matching would start counting siblings too, moving S11-39's goldens. Decide whether the sibling pattern is for the page only or also for matching, and sequence the two PRs |
+| S11-40 / S11-42 Implied links in claim evidence and on the evidence sheet | Scoped | Claim review (R-40) shows a claim's evidence and argument; S11-40 changes what the claim evidence query returns for relationships. The review view should reuse that query and sheet, so it follows S11-40 or is designed to absorb it |
+| S11-29 Quote nicknames and add former surnames | Planned | Changes how Person titles render: the header (R-4), Family tiles and Timeline participants |
+| S11-30 Gender meets sex at birth | In review | Feeds the gender/sex color treatment reused on every tile (R-3) |
+| S11-28, S11-44, S11-45 Nickname fold, nickname sets, prefix names | Planned / Scoped | Change the reconciler's outcomes and causes, which the provenance sheet explains (R-9). The sheet should word causes from the reconciler's records, not a fixed list |
+
+**Possible preparatory refactor:** `core/kinship` still reads links through `segmentcompare` and so imports the whole compare stack ([`kinship-view.md`](../../ideas/kinship-view.md), S11-38 review M-3; S11-41 unified the reading but did not move it to its own pure package). Before the Family section's engine path imports `core/kinship`, consider moving link reading out. Note that this touches the same files as S11-39.
 
 ## Dogfood bar
 
