@@ -3,7 +3,9 @@ package promotealign
 import (
 	"bytes"
 	"maps"
+	"slices"
 	"sort"
+	"strings"
 
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database/graphcache"
@@ -17,6 +19,36 @@ import (
 // candidatesMemoKey is the Evidence graph memo key of each Subject's candidates,
 // with the name pattern they were ranked under after it.
 const candidatesMemoKey = "promotealign.candidates\x00"
+
+// canonWalkMemoKey is the Evidence graph memo key of the canon walk.
+const canonWalkMemoKey = "promotealign.canonWalk\x00"
+
+// canonWalk is the edges the canon walk made from the seeds, the handles it
+// reached (in Ref-then-ID order, with their kinds), the seeds it started from
+// (seedsKey) and the generation of the match index it ran against. A stored
+// value is never mutated.
+type canonWalk struct {
+	gen     uint64
+	seeds   string
+	edges   []graphalign.CanonEdge
+	handles []walkedHandle
+}
+
+type walkedHandle struct {
+	id   []byte
+	kind string
+}
+
+// seedsKey is the seeds as one comparable key: sorted, deduplicated and
+// concatenated, so the same set of seeds in any order has the same key.
+func seedsKey(seeds [][]byte) string {
+	ids := make([]string, 0, len(seeds))
+	for _, s := range seeds {
+		ids = append(ids, string(s))
+	}
+	sort.Strings(ids)
+	return strings.Join(slices.Compact(ids), "")
+}
 
 // candidatesMemo is the candidates (handle ids, in order) of each Subject the
 // graph's Evidence graph has had ranked, and the generation of the match index
@@ -37,7 +69,10 @@ type candidatesMemo struct {
 // shortlisted ones together, the ones the walk reaches after it. Links go
 // through one linkSet, so links with the same ends and keys merge, and the
 // links the kinship patterns imply follow the recorded ones (with no
-// association of their own beyond those they were made from).
+// association of their own beyond those they were made from). The walk is
+// remembered by loadCanonWalk until a handle commit, a different set of seeds
+// or a change to the Evidence graph's memos, as candidatesMemo is, because it
+// reads only what those change.
 func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer graphalign.Layer, fixed []graphalign.Fixed, cfg graphalign.Config, terms segmentcompare.Terms) (graphalign.Canon, error) {
 	props := prof.props
 	types := prof.types
@@ -109,6 +144,38 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 		return handles[string(seeds[i])].Ref < handles[string(seeds[j])].Ref
 	})
 
+	edges, err := loadCanonWalk(g, graphID, seeds, handles, kinds, props, types, terms)
+	if err != nil {
+		return graphalign.Canon{}, err
+	}
+
+	nodes := make([]*graphcache.Node, 0, len(handles))
+	for _, n := range handles {
+		nodes = append(nodes, n)
+	}
+	if err := prof.profile(nodes); err != nil {
+		return graphalign.Canon{}, err
+	}
+	out := graphalign.Canon{Edges: edges, Candidates: candidates}
+	for id, n := range handles {
+		out.Handles = append(out.Handles, graphalign.Handle{
+			ID: append([]byte(nil), n.ID...), Ref: n.Ref, Kind: kinds[id], Values: prof.values(n.ID),
+		})
+	}
+	sort.Slice(out.Handles, func(i, j int) bool {
+		if out.Handles[i].Ref != out.Handles[j].Ref {
+			return out.Handles[i].Ref < out.Handles[j].Ref
+		}
+		return bytes.Compare(out.Handles[i].ID, out.Handles[j].ID) < 0
+	})
+	return out, nil
+}
+
+// walkCanon follows every filed link from the seeds, wave by wave, and returns
+// the edges they make: each recorded link as one edge, merged with the others
+// that have its ends and keys, then the edges the kinship patterns imply. It
+// adds each handle it reaches to handles and kinds.
+func walkCanon(g *graphcache.Graph, seeds [][]byte, handles map[string]*graphcache.Node, kinds map[string]string, props map[string]graphcache.VocabProperty, types map[string][]byte, terms segmentcompare.Terms) ([]graphalign.CanonEdge, error) {
 	set := newLinkSet()
 	walked := map[string]bool{}
 	queue := append([][]byte(nil), seeds...)
@@ -128,7 +195,7 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 			walked[string(id)] = true
 			n, err := g.Node(id)
 			if err != nil {
-				return graphalign.Canon{}, err
+				return nil, err
 			}
 			if n == nil {
 				continue
@@ -139,7 +206,7 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 			}
 		}
 		if err := g.Nodes(prefetch); err != nil {
-			return graphalign.Canon{}, err
+			return nil, err
 		}
 		for _, item := range ready {
 			id, n := item.id, item.n
@@ -147,7 +214,7 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 			for _, l := range n.Links {
 				neighbor, err := g.Node(l.Neighbor)
 				if err != nil {
-					return graphalign.Canon{}, err
+					return nil, err
 				}
 				if neighbor == nil || neighbor.Merged {
 					continue
@@ -175,27 +242,7 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 			From: l.A, To: l.B, KeyFrom: l.KeyA, KeyTo: l.KeyB, Shapes: l.Shapes, OnlyImplied: l.OnlyImplied,
 		})
 	}
-
-	nodes := make([]*graphcache.Node, 0, len(handles))
-	for _, n := range handles {
-		nodes = append(nodes, n)
-	}
-	if err := prof.profile(nodes); err != nil {
-		return graphalign.Canon{}, err
-	}
-	out := graphalign.Canon{Edges: edges, Candidates: candidates}
-	for id, n := range handles {
-		out.Handles = append(out.Handles, graphalign.Handle{
-			ID: append([]byte(nil), n.ID...), Ref: n.Ref, Kind: kinds[id], Values: prof.values(n.ID),
-		})
-	}
-	sort.Slice(out.Handles, func(i, j int) bool {
-		if out.Handles[i].Ref != out.Handles[j].Ref {
-			return out.Handles[i].Ref < out.Handles[j].Ref
-		}
-		return bytes.Compare(out.Handles[i].ID, out.Handles[j].ID) < 0
-	})
-	return out, nil
+	return edges, nil
 }
 
 // canonKeys reads one filed link as an edge between its two ends, ordered as
@@ -309,4 +356,55 @@ func loadCandidatesMemo(g *graphcache.Graph, graphID []byte, prof *profiler, lay
 	}
 	g.SetEvidenceGraphMemo(graphID, key, candidatesMemo{gen: gen, bySubject: stored})
 	return stored, nil
+}
+
+// loadCanonWalk is walkCanon's edges, remembered on the Evidence graph's memo
+// beside the candidates and cleared with it (Drop, a vocabulary commit,
+// SetAliasIndex, SetNameFormat, a commit to that graph). The walk reads only
+// handles' links, values and kinds, which change only in a handle commit, and
+// that gives the next match index a new generation; so a walk made for the
+// same seeds under the same generation is the walk again. A catalog with no
+// match index (generation 0) stores nothing. A hit adds the stored handles to
+// handles and kinds and returns the stored edges, shared and read-only; a miss
+// walks and stores a new canonWalk, never changing a stored one.
+func loadCanonWalk(g *graphcache.Graph, graphID []byte, seeds [][]byte, handles map[string]*graphcache.Node, kinds map[string]string, props map[string]graphcache.VocabProperty, types map[string][]byte, terms segmentcompare.Terms) ([]graphalign.CanonEdge, error) {
+	gen := matchIndexOf(g).gen
+	key := seedsKey(seeds)
+	if gen != 0 {
+		if v, ok := g.EvidenceGraphMemo(graphID, canonWalkMemoKey); ok {
+			if m, ok := v.(canonWalk); ok && m.gen == gen && m.seeds == key {
+				for _, h := range m.handles {
+					if _, ok := handles[string(h.id)]; ok {
+						continue
+					}
+					n, err := g.Node(h.id)
+					if err != nil {
+						return nil, err
+					}
+					handles[string(h.id)] = n
+					kinds[string(h.id)] = h.kind
+				}
+				return m.edges, nil
+			}
+		}
+	}
+	edges, err := walkCanon(g, seeds, handles, kinds, props, types, terms)
+	if err != nil {
+		return nil, err
+	}
+	if gen != 0 {
+		m := canonWalk{gen: gen, seeds: key, edges: edges}
+		for id := range handles {
+			m.handles = append(m.handles, walkedHandle{id: []byte(id), kind: kinds[id]})
+		}
+		sort.Slice(m.handles, func(i, j int) bool {
+			ri, rj := handles[string(m.handles[i].id)].Ref, handles[string(m.handles[j].id)].Ref
+			if ri != rj {
+				return ri < rj
+			}
+			return bytes.Compare(m.handles[i].id, m.handles[j].id) < 0
+		})
+		g.SetEvidenceGraphMemo(graphID, canonWalkMemoKey, m)
+	}
+	return edges, nil
 }

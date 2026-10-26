@@ -64,6 +64,8 @@ type MemoSnapshot struct {
 	LayerKind map[string]string // primary Subject id -> kind
 	LayerOK   bool
 	Members   map[string]subjectcompare.Values
+	// CanonEdges is the memoized canon walk's edges of graphID.
+	CanonEdges []graphalign.CanonEdge
 }
 
 // MemoSnapshotForTest reads the memoized layer of graphID and the memoized
@@ -85,6 +87,9 @@ func MemoSnapshotForTest(c *database.Catalog, graphID, memberGraphID []byte) Mem
 		for id, p := range m.primary {
 			out.LayerKind[id] = p.kind
 		}
+	}
+	if v, ok := c.Graph().EvidenceGraphMemo(graphID, canonWalkMemoKey); ok {
+		out.CanonEdges = v.(canonWalk).edges
 	}
 	if v, ok := c.Graph().EvidenceGraphMemo(memberGraphID, membersMemoKey+namePattern); ok {
 		out.Members = v.(map[string]subjectcompare.Values)
@@ -113,4 +118,14 @@ func LinkSetForTest(links []SideLink, terms segmentcompare.Terms) []SideLink {
 	}
 	s.withImplied(terms, matchregistry.Default().Kinship)
 	return s.links
+}
+
+// CanonWalkForTest is the memoized canon walk's edges of graphID, as stored,
+// and false when the graph has none.
+func CanonWalkForTest(c *database.Catalog, graphID []byte) ([]graphalign.CanonEdge, bool) {
+	v, ok := c.Graph().EvidenceGraphMemo(graphID, canonWalkMemoKey)
+	if !ok {
+		return nil, false
+	}
+	return v.(canonWalk).edges, true
 }

@@ -193,7 +193,7 @@ func TestMemoIsNotMutated(t *testing.T) {
 	w.f.propose(w.f.graph(w.srcB), nil)
 	w.f.evidence(promotealign.EvidenceRequest{GraphID: w.f.graph(w.srcB), SubjectID: w.bPerson.ID, HandleID: w.personHandle})
 	first := w.snapshot(t)
-	if !first.LayerOK || len(first.Layer.Subjects) == 0 || len(first.Members) == 0 {
+	if !first.LayerOK || len(first.Layer.Subjects) == 0 || len(first.Members) == 0 || len(first.CanonEdges) == 0 {
 		t.Fatalf("nothing was memoized: %+v", first)
 	}
 	before := memoJSON(t, w)
@@ -295,6 +295,94 @@ func TestCandidatesMemoFollowsCommits(t *testing.T) {
 			}
 			if !found {
 				t.Errorf("the new handle %x is neither the row's target nor an alternative: %+v", newHandle, row)
+			}
+		})
+	}
+}
+
+// S11-39 F-7: the canon walk is remembered on the Evidence graph's memo, and
+// never outlives the index, the seeds or the Source edit it was walked for:
+// the next proposal equals one on a dropped graph.
+func TestCanonWalkMemo(t *testing.T) {
+	// family files Ann, Bea and Cal on the fixture Source with Ann the parent
+	// of Bea, promotes Ann and Bea, and holds an incoming Ann Ames.
+	type family struct {
+		f             *fixture
+		srcB          sources.Source
+		ann, bea, cal subjects.Subject
+		annHandle     []byte
+		incoming      subjects.Subject
+	}
+	newFamily := func(t *testing.T) *family {
+		t.Helper()
+		f := newFixture(t)
+		ann := f.person(f.source, f.artifact, "Ann Ames")
+		bea := f.person(f.source, f.artifact, "Bea Ames")
+		cal := f.person(f.source, f.artifact, "Cal Ames")
+		f.relationship(f.source, f.artifact, ann, bea, "parent")
+		f.relationship(f.source, f.artifact, bea, cal, "parent")
+		annHandle := f.promote(ann).Entity.ID
+		f.promote(bea)
+		srcB, artB := f.newSource("Obituary")
+		return &family{f: f, srcB: srcB, ann: ann, bea: bea, cal: cal, annHandle: annHandle, incoming: f.person(srcB, artB, "Ann Ames")}
+	}
+
+	t.Run("a second proposal reuses the memo", func(t *testing.T) {
+		w := newFamily(t)
+		graph := w.f.graph(w.srcB)
+		w.f.propose(graph, nil)
+		first, ok := promotealign.CanonWalkForTest(w.f.c, graph)
+		if !ok || len(first) == 0 {
+			t.Fatalf("the proposal memoized no canon walk (%v, %d edges)", ok, len(first))
+		}
+		warm := w.f.propose(graph, nil)
+		again, _ := promotealign.CanonWalkForTest(w.f.c, graph)
+		if &again[0] != &first[0] {
+			t.Fatal("the walk was redone, not read from the memo")
+		}
+		w.f.c.Graph().Drop()
+		if fresh := w.f.propose(graph, nil); !reflect.DeepEqual(warm, fresh) {
+			t.Fatalf("warm proposal differs from a fresh one:\nwarm  %+v\nfresh %+v", warm, fresh)
+		}
+	})
+
+	tests := []struct {
+		name   string
+		change func(t *testing.T, w *family, graph []byte)
+	}{
+		{"no commit", func(*testing.T, *family, []byte) {}},
+		{"a handle commit", func(t *testing.T, w *family, _ []byte) {
+			srcC, artC := w.f.newSource("Parish register")
+			w.f.filedBirth(srcC, artC, "Ann Ames", 1817, nil, nil)
+		}},
+		{"a parent relationship filed between two filed persons", func(t *testing.T, w *family, _ []byte) {
+			// Cal's promotion files Bea's parent link to Cal, which implies
+			// Ann as Cal's grandparent.
+			w.f.promote(w.cal)
+		}},
+		{"pinned, then unpinned", func(t *testing.T, w *family, graph []byte) {
+			w.f.propose(graph, []graphalign.Fixed{{SubjectID: w.incoming.ID, HandleID: w.annHandle}})
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newFamily(t)
+			graph := w.f.graph(w.srcB)
+			before := w.f.propose(graph, nil)
+			tc.change(t, w, graph)
+			warm := w.f.propose(graph, nil)
+			edges, _ := promotealign.CanonWalkForTest(w.f.c, graph)
+			w.f.c.Graph().Drop()
+			fresh := w.f.propose(graph, nil)
+			if !reflect.DeepEqual(warm, fresh) {
+				t.Fatalf("the proposal after the change differs from a fresh one:\nwarm  %+v\nfresh %+v", warm, fresh)
+			}
+			fresh2, _ := promotealign.CanonWalkForTest(w.f.c, graph)
+			if !reflect.DeepEqual(edges, fresh2) {
+				t.Fatalf("the memoized walk differs from a fresh walk:\nwarm  %+v\nfresh %+v", edges, fresh2)
+			}
+			if tc.name == "a parent relationship filed between two filed persons" && len(fresh2) <= 1 {
+				t.Errorf("the commit added no edge: %+v (before %+v)", fresh2, before.Rows)
 			}
 		})
 	}
