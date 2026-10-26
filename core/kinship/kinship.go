@@ -1,8 +1,8 @@
 // Package kinship reads one side's links through the kinship patterns: a
 // shared marriage implies spouses, a birth's father or mother and subject
 // imply a parent, and a parent of a parent implies a grandparent. Pure: no
-// catalog, no I/O, no numbers; the catalog's bridge terms come in as an
-// argument. It returns only implied links; callers merge them with direct ones.
+// catalog, no I/O, no numbers; the catalog's bridge terms and the Rules come
+// in as arguments. It returns only implied links; callers merge them with direct ones.
 package kinship
 
 import (
@@ -13,6 +13,15 @@ import (
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
+
+// Rules is what Derive reads from the registry.
+type Rules struct {
+	// MaxPivotEnd bounds what one pivot can imply: a pivot (an event, or the
+	// parent between in a chain) with more participants than this at either
+	// end reads as malformed data and implies nothing. It keeps Derive linear
+	// in its input.
+	MaxPivotEnd int
+}
 
 // Edge is one link between two primary Subjects: its two ends, the link read
 // from each end, and the bridge Subjects behind it.
@@ -59,7 +68,7 @@ type Implied struct {
 // recognized by its keys alone, from either end. It returns only implied
 // links, never an input edge, and does not modify edges; the returned slices
 // share the input's byte slices. It is nil when nothing is implied.
-func Derive(edges []Edge, terms segmentcompare.Terms) []Implied {
+func Derive(edges []Edge, terms segmentcompare.Terms, rules Rules) []Implied {
 	part, ok := connectrules.LookupBridge(vocabkey.BridgeParticipation)
 	if !ok {
 		return nil
@@ -80,7 +89,7 @@ func Derive(edges []Edge, terms segmentcompare.Terms) []Implied {
 
 	var implied []Implied
 	for _, p := range eventPatterns {
-		implied = append(implied, eventLinks(p, edges, part, rel, terms)...)
+		implied = append(implied, eventLinks(p, edges, part, rel, terms, rules.MaxPivotEnd)...)
 	}
 	out = append(out, implied...)
 	for _, imp := range implied {
@@ -88,7 +97,7 @@ func Derive(edges []Edge, terms segmentcompare.Terms) []Implied {
 			steps = appendStep(steps, g, m, imp.Edge)
 		}
 	}
-	return append(out, chains(steps, rel, terms)...)
+	return append(out, chains(steps, rel, terms, rules.MaxPivotEnd)...)
 }
 
 // step is one parent step: g is m's parent, and edge is the link it was read
@@ -116,7 +125,7 @@ type participant struct {
 
 // eventLinks makes the links one event pattern implies, one per event and
 // pair of participation edges.
-func eventLinks(p eventPattern, edges []Edge, part, rel connectrules.Bridge, terms segmentcompare.Terms) []Implied {
+func eventLinks(p eventPattern, edges []Edge, part, rel connectrules.Bridge, terms segmentcompare.Terms, maxPivotEnd int) []Implied {
 	type roleKeys struct {
 		person, event vocabkey.BridgeKey
 		atA, atB      bool
@@ -149,6 +158,18 @@ func eventLinks(p eventPattern, edges []Edge, part, rel connectrules.Bridge, ter
 	var out []Implied
 	for _, event := range order {
 		group := byEvent[string(event)]
+		var atA, atB int
+		for _, x := range group {
+			if x.atA {
+				atA++
+			}
+			if x.atB {
+				atB++
+			}
+		}
+		if atA > maxPivotEnd || atB > maxPivotEnd {
+			continue
+		}
 		for _, x := range group {
 			for _, y := range group {
 				if !x.atA || !y.atB || bytes.Equal(x.person, y.person) {
@@ -173,7 +194,7 @@ func eventLinks(p eventPattern, edges []Edge, part, rel connectrules.Bridge, ter
 }
 
 // chains makes one grandparent link per grandparent, middle and grandchild.
-func chains(steps []step, rel connectrules.Bridge, terms segmentcompare.Terms) []Implied {
+func chains(steps []step, rel connectrules.Bridge, terms segmentcompare.Terms, maxPivotEnd int) []Implied {
 	first, second := segmentcompare.Keys(rel, vocabkey.TermGrandparent, "", terms)
 	type triple struct{ g, m, c string }
 	type pair struct{ g, m string }
@@ -185,9 +206,20 @@ func chains(steps []step, rel connectrules.Bridge, terms segmentcompare.Terms) [
 		k := pair{string(s.g), string(s.m)}
 		byPair[k] = append(byPair[k], i)
 	}
+	// Distinct parents of each middle person; one with too many implies nothing.
+	parents := map[string]map[string]struct{}{}
+	for _, s := range steps {
+		if parents[string(s.m)] == nil {
+			parents[string(s.m)] = map[string]struct{}{}
+		}
+		parents[string(s.m)][string(s.g)] = struct{}{}
+	}
 	made := map[triple]bool{}
 	var out []Implied
 	for _, up := range steps {
+		if len(parents[string(up.m)]) > maxPivotEnd {
+			continue
+		}
 		for _, i := range byG[string(up.m)] {
 			down := steps[i]
 			if bytes.Equal(up.g, down.m) {

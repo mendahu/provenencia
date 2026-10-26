@@ -10,6 +10,7 @@ package matchregistry
 import (
 	"github.com/mendahu/provenencia/core/claimevidence"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/valuecompare"
@@ -26,6 +27,8 @@ type Registry struct {
 	Segment segmentcompare.Rules
 	// Alignment is layer 6: candidates, the accept bar, bands and settling.
 	Alignment graphalign.Rules
+	// Kinship is the bound on what one pivot of a kinship pattern implies.
+	Kinship kinship.Rules
 	// Evidence is the claim evidence view: which lines start checked, and what
 	// a relationship line bundles. It is not evidence points; no comparison
 	// layer reads it.
@@ -35,7 +38,7 @@ type Registry struct {
 // Default is the shipped registry. Each call builds new slices and maps, so a
 // caller that changes its copy changes no one else's.
 func Default() Registry {
-	return Registry{Value: defaultValue(), Subject: defaultSubject(), Segment: defaultSegment(), Alignment: defaultAlignment(), Evidence: defaultEvidence()}
+	return Registry{Value: defaultValue(), Subject: defaultSubject(), Segment: defaultSegment(), Alignment: defaultAlignment(), Kinship: defaultKinship(), Evidence: defaultEvidence()}
 }
 
 // AlignConfig is the registry as graph alignment reads it.
