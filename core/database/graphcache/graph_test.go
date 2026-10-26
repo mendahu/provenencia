@@ -5,19 +5,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/database/subjectvocab"
-	"github.com/mendahu/provenencia/core/database/users"
-	"github.com/mendahu/provenencia/core/ref"
-
-	_ "github.com/mendahu/provenencia/core/database/autoreconciler"
+	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 )
 
 func TestNodeAndKindAndVerify(t *testing.T) {
-	c := openCatalog(t)
+	c := graphcachetest.OpenCatalog(t)
 	db, err := c.DB()
 	if err != nil {
 		t.Fatal(err)
@@ -31,7 +26,7 @@ func TestNodeAndKindAndVerify(t *testing.T) {
 		t.Fatal(err)
 	}
 	g := c.Graph()
-	if g.LoadedForTest(id) {
+	if loaded(g, id) {
 		t.Fatal("a node loaded before anyone read it")
 	}
 	n, err := g.Node(id)
@@ -57,7 +52,7 @@ func TestNodeAndKindAndVerify(t *testing.T) {
 	}
 
 	g.Drop()
-	if g.LoadedForTest(id) {
+	if loaded(g, id) {
 		t.Fatal("Drop left a node")
 	}
 	if _, err := g.Node(id); err != nil {
@@ -66,13 +61,13 @@ func TestNodeAndKindAndVerify(t *testing.T) {
 	if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 1}, Effects: effects.Set{Structure: true}}); err != nil {
 		t.Fatal(err)
 	}
-	if g.LoadedForTest(id) {
+	if loaded(g, id) {
 		t.Fatal("a structure commit left a node")
 	}
 }
 
 func TestCommitInsertsANewHandleIntoALoadedKind(t *testing.T) {
-	c := openCatalog(t)
+	c := graphcachetest.OpenCatalog(t)
 	db, err := c.DB()
 	if err != nil {
 		t.Fatal(err)
@@ -92,7 +87,7 @@ func TestCommitInsertsANewHandleIntoALoadedKind(t *testing.T) {
 	if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 1}, Effects: effects.Set{Handles: [][]byte{id}}}); err != nil {
 		t.Fatal(err)
 	}
-	if !g.LoadedForTest(id) {
+	if !loaded(g, id) {
 		t.Fatal("a new handle of a loaded kind was not inserted")
 	}
 	nodes, err := g.Kind(typeID)
@@ -105,49 +100,13 @@ func TestCommitInsertsANewHandleIntoALoadedKind(t *testing.T) {
 }
 
 func TestCommitOfAnAssociationLoadsEndpoints(t *testing.T) {
-	c := openCatalog(t)
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	typeID := func(key string) []byte {
-		t.Helper()
-		var id []byte
-		if err := db.QueryRow(`SELECT id FROM subject_types WHERE key = ? AND origin = 'provenencia'`, key).Scan(&id); err != nil {
-			t.Fatal(err)
-		}
-		return id
-	}
-	propID := func(key string) []byte {
-		t.Helper()
-		var id []byte
-		if err := db.QueryRow(`SELECT id FROM properties WHERE key = ? AND origin = 'provenencia'`, key).Scan(&id); err != nil {
-			t.Fatal(err)
-		}
-		return id
-	}
-	personT, eventT, partT := typeID("person"), typeID("event"), typeID("participation")
-	person := []byte{3, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
-	event := []byte{3, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
-	assoc := []byte{3, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3}
-	if _, err := db.Exec(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES (?, ?, 'PER-A'), (?, ?, 'EVT-A'), (?, ?, 'BRG-A')`,
-		person, personT, event, eventT, assoc, partT); err != nil {
-		t.Fatal(err)
-	}
-	ins := `INSERT INTO auto_reconciler_values
-		(entity_id, property_id, rank, value_entity_id, support, against, reason)
-		VALUES (?, ?, 1, ?, 1, 0, 'kept')`
-	if _, err := db.Exec(ins, assoc, propID("person"), person); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := db.Exec(ins, assoc, propID("event"), event); err != nil {
-		t.Fatal(err)
-	}
+	c := graphcachetest.OpenCatalog(t)
+	canon := graphcachetest.NewCanon(t, c)
+	person, event := canon.Entity("person"), canon.Entity("event")
+	assoc := canon.Link("participation", map[string][]byte{"person": person, "event": event}, "role", "subject")
 	g := c.Graph()
-	if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 1}, Effects: effects.Set{Handles: [][]byte{assoc}}}); err != nil {
-		t.Fatal(err)
-	}
-	if !g.LoadedForTest(person) || !g.LoadedForTest(event) {
+	canon.Commit(assoc)
+	if !loaded(g, person) || !loaded(g, event) {
 		t.Fatal("an association commit did not load its endpoints")
 	}
 	n, err := g.Node(person)
@@ -160,56 +119,16 @@ func TestCommitOfAnAssociationLoadsEndpoints(t *testing.T) {
 }
 
 func TestCommitReloadsASharedEndpointOnce(t *testing.T) {
-	c := openCatalog(t)
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	typeID := func(key string) []byte {
-		t.Helper()
-		var id []byte
-		if err := db.QueryRow(`SELECT id FROM subject_types WHERE key = ? AND origin = 'provenencia'`, key).Scan(&id); err != nil {
-			t.Fatal(err)
-		}
-		return append([]byte(nil), id...)
-	}
-	propID := func(key string) []byte {
-		t.Helper()
-		var id []byte
-		if err := db.QueryRow(`SELECT id FROM properties WHERE key = ? AND origin = 'provenencia'`, key).Scan(&id); err != nil {
-			t.Fatal(err)
-		}
-		return append([]byte(nil), id...)
-	}
-	personT, eventT, partT := typeID("person"), typeID("event"), typeID("participation")
-	person := []byte{4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
-	eventA := []byte{4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
-	eventB := []byte{4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3}
-	assocA := []byte{4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4}
-	assocB := []byte{4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5}
-	if _, err := db.Exec(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES
-		(?, ?, 'PER-S'), (?, ?, 'EVT-A'), (?, ?, 'EVT-B'), (?, ?, 'BRG-A'), (?, ?, 'BRG-B')`,
-		person, personT, eventA, eventT, eventB, eventT, assocA, partT, assocB, partT); err != nil {
-		t.Fatal(err)
-	}
-	ins := `INSERT INTO auto_reconciler_values
-		(entity_id, property_id, rank, value_entity_id, support, against, reason)
-		VALUES (?, ?, 1, ?, 1, 0, 'kept')`
-	for _, row := range [][2][]byte{{assocA, eventA}, {assocB, eventB}} {
-		if _, err := db.Exec(ins, row[0], propID("event"), row[1]); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := db.Exec(ins, row[0], propID("person"), person); err != nil {
-			t.Fatal(err)
-		}
-	}
+	c := graphcachetest.OpenCatalog(t)
+	canon := graphcachetest.NewCanon(t, c)
+	person, eventA, eventB := canon.Entity("person"), canon.Entity("event"), canon.Entity("event")
+	assocA := canon.Link("participation", map[string][]byte{"person": person, "event": eventA}, "role", "subject")
+	assocB := canon.Link("participation", map[string][]byte{"person": person, "event": eventB}, "role", "subject")
 	g := c.Graph()
 	var n int
 	g.SetQueryCounterForTest(func() { n++ })
-	if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 1}, Effects: effects.Set{Handles: [][]byte{assocA, assocB}}}); err != nil {
-		t.Fatal(err)
-	}
-	if !g.LoadedForTest(person) || !g.LoadedForTest(eventA) || !g.LoadedForTest(eventB) {
+	canon.Commit(assocA, assocB)
+	if !loaded(g, person) || !loaded(g, eventA) || !loaded(g, eventB) {
 		t.Fatal("shared endpoint was not loaded")
 	}
 	// One entity-row read, two endpoint lookups, one chunk (entity, values,
@@ -221,8 +140,13 @@ func TestCommitReloadsASharedEndpointOnce(t *testing.T) {
 	}
 }
 
+func loaded(g *graphcache.Graph, id []byte) bool {
+	_, ok := g.Cached(id)
+	return ok
+}
+
 func TestLoadLinksUsesTheEdgeIndex(t *testing.T) {
-	c := openCatalog(t)
+	c := graphcachetest.OpenCatalog(t)
 	db, err := c.DB()
 	if err != nil {
 		t.Fatal(err)
@@ -267,26 +191,6 @@ func TestDropLeavesNameFormat(t *testing.T) {
 	if v, ok := g.NameFormat(); !ok || v != "western" {
 		t.Fatalf("after Drop NameFormat = %v, %v, want western, true", v, ok)
 	}
-}
-
-func openCatalog(t *testing.T) *database.Catalog {
-	t.Helper()
-	c, err := database.Create(t.TempDir(), "t.provenencia")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = c.Close() })
-	r, err := ref.Mint(ref.PrefixUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := users.Upsert(c, []byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9}, "Tester", r); err != nil {
-		t.Fatal(err)
-	}
-	if err := subjectvocab.Install(c); err != nil {
-		t.Fatal(err)
-	}
-	return c
 }
 
 // seedActivity writes one audit transaction scoped to ids of one scope type.
@@ -406,7 +310,7 @@ func TestActivity(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := openCatalog(t)
+			c := graphcachetest.OpenCatalog(t)
 			db, err := c.DB()
 			if err != nil {
 				t.Fatal(err)
@@ -437,7 +341,7 @@ func TestTermsByID(t *testing.T) {
 }
 
 func TestMatchIndexDrops(t *testing.T) {
-	c := openCatalog(t)
+	c := graphcachetest.OpenCatalog(t)
 	g := c.Graph()
 	id := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
 	stored := func() bool {
@@ -481,5 +385,83 @@ func TestMatchIndexDrops(t *testing.T) {
 	g.ResetMatchIndexForTest()
 	if stored() {
 		t.Error("ResetMatchIndexForTest left the match index")
+	}
+}
+
+var (
+	memoNear = graphcache.RegisterNodeMemo(graphcache.NodeMemo{
+		Name: "graphcache_test.near",
+		Deps: func(g *graphcache.Graph, roots [][]byte) ([][]byte, error) {
+			var out [][]byte
+			for _, id := range roots {
+				if n, ok := g.Cached(id); ok {
+					for _, l := range n.Links {
+						out = append(out, l.Neighbor)
+					}
+				}
+			}
+			return out, nil
+		},
+	})
+	memoVocab = graphcache.RegisterNodeMemo(graphcache.NodeMemo{Name: "graphcache_test.vocab", DropOnVocabulary: true})
+)
+
+func TestNodeMemoDropsOnCommit(t *testing.T) {
+	c := graphcachetest.OpenCatalog(t)
+	canon := graphcachetest.NewCanon(t, c)
+	person, event, other := canon.Entity("person"), canon.Entity("event"), canon.Entity("person")
+	assoc := canon.Link("participation", map[string][]byte{"person": person, "event": event}, "role", "subject")
+	canon.Commit(assoc)
+	g := c.Graph()
+	if _, err := g.Node(other); err != nil {
+		t.Fatal(err)
+	}
+	held := func(slot graphcache.MemoSlot, id []byte) bool {
+		_, ok := g.Memo(slot, id)
+		return ok
+	}
+	fill := func() {
+		for _, id := range [][]byte{event, person, other} {
+			g.SetMemo(memoNear, id, "near")
+			g.SetMemo(memoVocab, id, "vocab")
+		}
+	}
+
+	fill()
+	canon.Commit(event)
+	if held(memoNear, event) || held(memoNear, person) {
+		t.Fatal("a committed node, and the node its Deps names, must be dropped")
+	}
+	if !held(memoNear, other) {
+		t.Fatal("an untouched node's entry was dropped")
+	}
+	if held(memoVocab, event) {
+		t.Fatal("a slot without Deps keeps the committed node")
+	}
+	if !held(memoVocab, person) {
+		t.Fatal("a slot without Deps dropped a neighbor")
+	}
+
+	fill()
+	if _, err := g.Node(canon.Entity("person")); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range [][]byte{event, person, other} {
+		if !held(memoNear, id) || !held(memoVocab, id) {
+			t.Fatal("a first load dropped an entry")
+		}
+	}
+
+	canon.CommitVocabulary()
+	if held(memoVocab, event) || held(memoVocab, other) {
+		t.Fatal("a vocabulary commit kept a DropOnVocabulary slot")
+	}
+	if !held(memoNear, event) {
+		t.Fatal("a vocabulary commit dropped another slot")
+	}
+
+	g.Drop()
+	if held(memoNear, event) || held(memoNear, person) {
+		t.Fatal("Drop kept an entry")
 	}
 }

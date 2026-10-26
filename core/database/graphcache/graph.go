@@ -30,15 +30,15 @@ type Graph struct {
 	vocab   Vocabulary
 	vocabOK bool
 
-	// displays are finished header rows keyed by handle id. details are the
-	// conclusion-detail value memos for the same ids; a drop clears both.
+	// displays are finished header rows keyed by handle id. memos are the
+	// results owners store per node through registered slots (memo.go).
 	// evidenceGraphs are loaded Evidence graphs keyed by graph id, each with
 	// the memos features derive from it, so a memo cannot outlive its graph.
 	// At most evidenceCap stay loaded; evidenceTick stamps their use order.
 	// labels is the vocabulary map the rows resolve at read time. alt, when
 	// set, is the querier a one-shot graph reads instead of db (a write transaction).
 	displays       map[string]any
-	details        map[string]any
+	memos          map[MemoSlot]map[string]any
 	evidenceGraphs map[string]*loadedEvidenceGraph
 	evidenceTick   uint64
 	evidenceCap    int
@@ -209,7 +209,7 @@ func (g *Graph) clear() {
 	g.vocabOK = false
 	g.vocab = Vocabulary{}
 	g.displays = map[string]any{}
-	g.details = map[string]any{}
+	g.memos = nil
 	g.evidenceGraphs = map[string]*loadedEvidenceGraph{}
 	g.labelsOK = false
 	g.labels = nil
@@ -389,15 +389,6 @@ func (g *Graph) LoadedEvidenceGraphCountForTest() int {
 		return 0
 	}
 	return len(g.evidenceGraphs)
-}
-
-// LoadedForTest reports whether id is in the node map.
-func (g *Graph) LoadedForTest(id []byte) bool {
-	if g == nil {
-		return false
-	}
-	_, ok := g.nodes[string(id)]
-	return ok
 }
 
 // CorruptRefForTest replaces a loaded node's ref so Verify can fail a test.
