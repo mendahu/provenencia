@@ -1,5 +1,84 @@
 # Review — S11-39 Matching reads kinship shapes
 
+**Verdict (re-plan):** Fits with changes — Ready with changes. No blocker open; status Planned.
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
+
+## To user
+- None. The re-plan follows the slice 9 re-cut and S11-49/S11-50's landed code; every product call was already made (2026-10-26).
+
+## Writer's own calls
+- Close #567 and re-plan against `main` (user agreed), porting named commits by hand.
+- `loadCanon` calls `Reader.For` per walked person after the walk and adds only links whose two ends are walked handles (D-7).
+- No key interning; `linkSet.add`'s share is measured instead (D-8, M-5).
+- M-7 declined (below).
+
+## Re-plan round 1
+
+### M-1 · blocker · D-8 added a second type-id → kind lookup
+**Answer:** Fixed — D-8: `Vocabulary.TypeKeysByID`; `(*profiler).kind` is the one lookup for `loadCanon` and `checkFixed`; `typeKey` deleted; STEP-5 names the files.
+
+### M-2 · major · A canon link read from both ends stores its shape twice (also X-5)
+**Answer:** Fixed — D-1 `Recording.Merge` keeps shapes distinct; D-5 `addImplied` is the one entry for implied links; T-4 row.
+
+### M-3 · major · `Shapes` + `OnlyImplied` copied as a field pair onto four carriers
+**Answer:** Fixed — D-1 `kinship.Recording`, embedded in `Bridge`, `CanonEdge`, `adjLink`, `sideLink`; D-2 `CountedOnce(a, b Recording, paired)`.
+
+### M-4 · major · Skill and context docs left describing the deleted merge (also X-10)
+**Answer:** Fixed — STEP-8 rewrites add-match-rule lines 32–33, kinship-shapes § Counting once and the map's working rule; `matching-model.md` paragraph is added after line 28 with the "implied link" and "shape" glossary rows.
+
+### M-5 · minor · Key interning unmeasured
+**Answer:** Fixed — dropped; STEP-7 reports `linkSet.add`'s share.
+
+### M-6 · minor · `linkSet` in a file named for terms
+**Answer:** Fixed — `promotealign/links.go`.
+
+### M-7 · minor · `Shape.Pivot` a third name for `Event`/`Through`
+**Answer:** Declined — embedding `Shape` in `Implied` changes S11-49's landed `Implied` fields and their readers (`canonlinks/reader.go`, its tests, `kinship_test.go`) for no behavior here; `Implied.Shape()` is the one view.
+
+### X-1 · blocker · Two tests named in the wrong package
+**Answer:** Fixed — §4 Tests row; STEP-4 runs `./core/graphalign/` too.
+
+### X-2 · blocker · CI cannot report budget figures
+**Answer:** Fixed — AC-4.1, D-12, DoD: local `-v` figures in the PR body; CI pass/fail.
+
+### X-3 · blocker · `typeKey` has callers outside `canon.go`
+**Answer:** Fixed — with M-1.
+
+### X-4 · major · `For` call order undefined (`walked` is a map)
+**Answer:** Fixed — D-7: `walkedPeople` slice in wave order; "walked handles" means keys of `handles`.
+
+### X-6 · major · Tree counts wrong
+**Answer:** Fixed — AC-4.1: 4,095 persons, 4,094 parent links, 2,047 marriages.
+
+### X-7 · major · STEP-4 had no failing test
+**Answer:** Fixed — STEP-4 ports the `kin…` helpers and the AC-1.2, AC-1.4, AC-1.6 subtests first.
+
+### X-8 · major · `LinkSetForTest` signature
+**Answer:** Fixed — D-5 gives it with `rules`; per-link association set kept.
+
+### X-9 · major · Ported `spouse` roles not all listed
+**Answer:** Fixed — Precedent: every marriage role `spouse` → `subject`, `lookupTree` and the tree ids named.
+
+### X-11 · minor · Smaller choices
+**Answer:** Fixed — STEP-2 runs the purity guard; STEP-3/4/5 skip `TestLargeSourceBudgets` until STEP-7; D-3 quotes the closure and builds it once per state; the branch is cut from `main`. Canon-side associations: `CanonEdge` carries none, and the set clones them as for any link (logged, no change).
+
+## Re-plan round 2
+
+Executability (Sonnet): Ready with changes; every round-1 answer holds.
+- X-12 · blocker · `checkFixed` has no profiler, so it cannot use `profiler.kind` — **Fixed:** D-8: the profiler keeps `typeKeys`; `checkFixed` reads `g.Vocabulary().TypeKeysByID()`; `loadCanon`'s `kinds` stays `map[string]string`; no caller signature changes.
+- X-13 · minor · STEP-8 named `deployment-plan.md` twice — **Fixed:** one entry.
+- X-14 · minor · T-4's implied rows — **Fixed:** built from recorded edges so `Derive` produces them.
+
+Maintainability (Opus): Fits with changes; M-1 – M-6 answers hold, M-7 decline sound.
+- M-8 · blocker · D-3's `paired` closure copies `(*state).placedOf` — **Fixed:** D-3 passes `st.placedOf`.
+- M-1 gap (`checkFixed` has no profiler) — **Fixed** with X-12 (reads `TypeKeysByID` directly; no signature change).
+- M-2 note (pivots cloned on a hit, not a miss) — **Fixed:** D-5 clones pivots on a miss too.
+- M-4 note (the map's S11-39 scope entry still named the old merge) — **Fixed** in the same commit.
+
+Round 2 is the cap. No blocker open; no To user item.
+
+## First plan (2026-10-26, shipped as #567, closed in the slice 9 re-cut)
+
 **Verdict:** Fits with changes — Ready with changes. No blocker open.
 **Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
