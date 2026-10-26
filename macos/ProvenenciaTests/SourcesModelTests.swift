@@ -475,6 +475,11 @@ struct SourcesModelTests {
         #expect(L10n.Sources.graphCounts(.notStarted, style: .spoken) == "0 subjects, not started")
     }
 
+    @Test func graphTokenCopyMatchesBoard() {
+        #expect(L10n.Sources.openEvidenceGraphLabel(name: "Jones household") == "Open graph Jones household")
+        #expect(L10n.Sources.graphNeedsArtifact("Unlinked") == "Unlinked needs an artifact")
+    }
+
     @Test func statusMatchesAnyGraphOfTheSource() async {
         let store = FakeStore()
         let sources = [

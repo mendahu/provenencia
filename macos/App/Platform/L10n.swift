@@ -5921,6 +5921,14 @@ enum L10n {
             comment: "Tooltip on the blocked Sources list graph zone"
         )
 
+        static func graphNeedsArtifact(_ name: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.list.graphNeedsArtifact",
+                defaultValue: "%@ needs an artifact",
+                comment: "Blocked Sources list graph token; argument is the graph name"
+            ), name)
+        }
+
         static let graphNeedsArtifactTooltip = LocalizedStringResource(
             "sources.graph.needsArtifact",
             defaultValue: "Add an artifact to open this evidence graph",
@@ -6731,8 +6739,8 @@ enum L10n {
         static func openEvidenceGraphLabel(name: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "sources.page.graph.openLabel",
-                defaultValue: "Open %@",
-                comment: "VoiceOver label for opening an Evidence graph; argument is the graph name"
+                defaultValue: "Open graph %@",
+                comment: "VoiceOver label for opening an Evidence graph from the Source page or a Sources list token; argument is the graph name"
             ), name)
         }
 

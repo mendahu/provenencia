@@ -7158,6 +7158,18 @@
         }
       }
     },
+    "sources.list.graphNeedsArtifact": {
+      "comment": "Blocked Sources list graph token; argument is the graph name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ needs an artifact"
+          }
+        }
+      }
+    },
     "sources.list.noFilterMatchesMessage": {
       "comment": "Empty-state body when the Sources type, status, and search filters match nothing",
       "extractionState": "manual",
@@ -21976,13 +21988,13 @@
       }
     },
     "sources.page.graph.openLabel": {
-      "comment": "VoiceOver label for opening an Evidence graph; argument is the graph name",
+      "comment": "VoiceOver label for opening an Evidence graph from the Source page or a Sources list token; argument is the graph name",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Open %@"
+            "value": "Open graph %@"
           }
         }
       }
