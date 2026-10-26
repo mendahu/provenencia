@@ -6,21 +6,6 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// seenEdge identifies one edge, whichever end listed it, by its ends and the
-// key it reads from each.
-type seenEdge struct {
-	a, b       string
-	keyA, keyB vocabkey.BridgeKey
-}
-
-// edgeSeenKey is the edge a and b share, with the ends in a fixed order.
-func edgeSeenKey(a, b []byte, keyA, keyB vocabkey.BridgeKey) seenEdge {
-	if string(a) > string(b) {
-		a, b, keyA, keyB = b, a, keyB, keyA
-	}
-	return seenEdge{a: string(a), b: string(b), keyA: keyA, keyB: keyB}
-}
-
 // observedTerms maps each Subject to the key of a positive Observation's term
 // on the Property, among those the Evidence graph records for the listed
 // Subjects. The first key in order wins.

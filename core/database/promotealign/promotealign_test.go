@@ -33,10 +33,13 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/segmentcompare"
+	"github.com/mendahu/provenencia/core/segmentcompare/segmentcomparetest"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
@@ -1316,5 +1319,119 @@ func TestProposeHoldsAnUnshortlistedHandle(t *testing.T) {
 				t.Fatalf("contested %v, want %v", row.Flags.Contested, tt.wantContested)
 			}
 		})
+	}
+}
+
+// The link set merges a recorded link and an implied one of the same ends and
+// keys into one, and merges the links of two marriages of one couple.
+func TestLinkSet(t *testing.T) {
+	terms := segmentcomparetest.Terms()
+	rules := matchregistry.Default().Kinship
+	person := func(n byte) []byte { return []byte{0x10 + n} }
+	event := func(n byte) []byte { return []byte{0x20 + n} }
+	bridgeID := func(n byte) []byte { return []byte{0x30 + n} }
+	part := func(p, e, b byte) promotealign.SideLink {
+		ka, kb := segmentcompare.Keys(segmentcomparetest.Bridge(t, vocabkey.BridgeParticipation), "subject", "marriage", terms)
+		return promotealign.SideLink{Edge: kinship.Edge{A: person(p), B: event(e), KeyA: ka, KeyB: kb, Associations: [][]byte{bridgeID(b)}}}
+	}
+	spouse := func(p, q, b byte) promotealign.SideLink {
+		ka, kb := segmentcompare.Keys(segmentcomparetest.Bridge(t, vocabkey.BridgeRelationship), "spouse", "", terms)
+		return promotealign.SideLink{Edge: kinship.Edge{A: person(p), B: person(q), KeyA: ka, KeyB: kb, Associations: [][]byte{bridgeID(b)}}}
+	}
+	flip := func(l promotealign.SideLink) promotealign.SideLink {
+		l.A, l.B, l.KeyA, l.KeyB = l.B, l.A, l.KeyB, l.KeyA
+		return l
+	}
+	t.Run("the same recorded link from each end is one", func(t *testing.T) {
+		got := promotealign.LinkSetForTest([]promotealign.SideLink{spouse(1, 2, 1), flip(spouse(1, 2, 2))}, terms, rules)
+		if len(got) != 1 || len(got[0].Associations) != 2 || got[0].OnlyImplied || len(got[0].Shapes) != 0 {
+			t.Fatalf("links %+v, want one recorded link with 2 associations", got)
+		}
+	})
+	t.Run("a recorded spouse link and a marriage are one link", func(t *testing.T) {
+		got := promotealign.LinkSetForTest([]promotealign.SideLink{spouse(1, 2, 1), part(1, 1, 2), part(2, 1, 3)}, terms, rules)
+		var spouses []promotealign.SideLink
+		for _, l := range got {
+			if l.KeyA.Type == vocabkey.BridgeRelationship {
+				spouses = append(spouses, l)
+			}
+		}
+		if len(spouses) != 1 || len(spouses[0].Associations) != 3 || len(spouses[0].Shapes) != 1 || spouses[0].OnlyImplied {
+			t.Fatalf("spouse links %+v, want one with 3 associations, one shape, recorded", spouses)
+		}
+	})
+	t.Run("two marriages of one couple are one implied link", func(t *testing.T) {
+		got := promotealign.LinkSetForTest([]promotealign.SideLink{part(1, 1, 1), part(2, 1, 2), part(1, 2, 3), part(2, 2, 4)}, terms, rules)
+		var spouses []promotealign.SideLink
+		for _, l := range got {
+			if l.KeyA.Type == vocabkey.BridgeRelationship {
+				spouses = append(spouses, l)
+			}
+		}
+		if len(spouses) != 1 || len(spouses[0].Associations) != 4 || len(spouses[0].Shapes) != 2 || !spouses[0].OnlyImplied {
+			t.Fatalf("spouse links %+v, want one implied link with 4 associations and 2 shapes", spouses)
+		}
+	})
+	t.Run("the same implied link added twice is one shape", func(t *testing.T) {
+		imp := spouse(1, 2, 1)
+		imp.Recording = kinship.Recording{Shapes: []kinship.Shape{{Pattern: kinship.PatternMarriageSpouses, Pivot: event(1)}}, OnlyImplied: true}
+		got := promotealign.LinkSetForTest([]promotealign.SideLink{imp, imp}, terms, rules)
+		if len(got) != 1 || len(got[0].Shapes) != 1 || !got[0].OnlyImplied {
+			t.Fatalf("links %+v, want one implied link with one shape", got)
+		}
+	})
+	t.Run("an implied link does not alias the input", func(t *testing.T) {
+		in := []promotealign.SideLink{part(1, 1, 1), part(2, 1, 2)}
+		got := promotealign.LinkSetForTest(in, terms, rules)
+		var imp promotealign.SideLink
+		for _, l := range got {
+			if l.KeyA.Type == vocabkey.BridgeRelationship {
+				imp = l
+			}
+		}
+		if imp.A == nil {
+			t.Fatalf("no implied link in %+v", got)
+		}
+		want := bytes.Clone(imp.A)
+		in[0].A[0], in[1].A[0] = 0xff, 0xff
+		if !bytes.Equal(imp.A, want) {
+			t.Fatalf("implied A %x changed with the input, want %x", imp.A, want)
+		}
+	})
+}
+
+// A Source that records a spouse relationship and a marriage has one spouse
+// bridge, with every association behind it; a marriage alone has an implied one.
+func TestLayerBridgesMergeKinshipShapes(t *testing.T) {
+	spouses := func(bs []graphalign.Bridge) []graphalign.Bridge {
+		var out []graphalign.Bridge
+		for _, b := range bs {
+			if b.KeyA.Type == vocabkey.BridgeRelationship && b.KeyA.Term == "spouse" {
+				out = append(out, b)
+			}
+		}
+		return out
+	}
+	build := func(withRelationship bool) []graphalign.Bridge {
+		f := newFixture(t)
+		ann := f.person(f.source, f.artifact, "Ann Ames")
+		bob := f.person(f.source, f.artifact, "Bob Ames")
+		marriage := f.eventOn(f.source, f.artifact, "marriage", nil)
+		f.participation(f.source, f.artifact, ann, marriage, "subject")
+		f.participation(f.source, f.artifact, bob, marriage, "subject")
+		if withRelationship {
+			f.relationship(f.source, f.artifact, ann, bob, "spouse")
+		}
+		bridges, err := promotealign.LayerBridges(f.c, f.graph(f.source))
+		must(t, err)
+		return bridges
+	}
+	both := spouses(build(true))
+	if len(both) != 1 || len(both[0].Associations) != 3 || len(both[0].Shapes) != 1 || both[0].OnlyImplied {
+		t.Fatalf("recorded and implied: %+v, want one recorded bridge with 3 associations and one shape", both)
+	}
+	only := spouses(build(false))
+	if len(only) != 1 || len(only[0].Associations) != 2 || !only[0].OnlyImplied {
+		t.Fatalf("marriage only: %+v, want one implied bridge with 2 associations", only)
 	}
 }
