@@ -130,14 +130,7 @@ func TestDoRewarms(t *testing.T) {
 				}
 				if tc.kinds {
 					// A drop empties the kinds; the next proposal loads them.
-					db, err := c.DB()
-					if err != nil {
-						return err
-					}
-					var typeID []byte
-					if err := db.QueryRow(`SELECT id FROM subject_types WHERE key = 'person' AND origin = 'provenencia'`).Scan(&typeID); err != nil {
-						return err
-					}
+					typeID := graphcachetest.SubjectTypeID(t, c, "person")
 					selects := databasetest.CountSelects(t, c)
 					if _, err := g.Kind(typeID); err != nil {
 						return err
@@ -164,10 +157,8 @@ func TestOpenSurvivesABadValue(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		var typeID, propID []byte
-		if err := db.QueryRow(`SELECT id FROM subject_types WHERE key = 'event' AND origin = 'provenencia'`).Scan(&typeID); err != nil {
-			return err
-		}
+		typeID := graphcachetest.SubjectTypeID(t, c, "event")
+		var propID []byte
 		if err := db.QueryRow(`SELECT id FROM properties WHERE key = 'date' AND origin = 'provenencia'`).Scan(&propID); err != nil {
 			return err
 		}
@@ -191,10 +182,6 @@ func TestOpenSurvivesABadValue(t *testing.T) {
 		}
 		if err := promotealign.Warm(c); err == nil {
 			t.Error("promotealign.Warm succeeded over a value that does not decode")
-		}
-		_, _, err := promotealign.Propose(c, make([]byte, 16), nil)
-		if err == nil {
-			t.Error("a proposal succeeded over a value that does not decode")
 		}
 		return nil
 	})

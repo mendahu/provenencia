@@ -94,8 +94,13 @@ func (k *Canon) exec(query string, args ...any) {
 	}
 }
 
-func subjectTypeID(t testing.TB, db *sql.DB, key string) []byte {
+// SubjectTypeID returns the id of the provenencia subject type named key.
+func SubjectTypeID(t testing.TB, c *database.Catalog, key string) []byte {
 	t.Helper()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
 	var typeID []byte
 	if err := db.QueryRow(`SELECT id FROM subject_types WHERE key = ? AND origin = 'provenencia'`, key).Scan(&typeID); err != nil {
 		t.Fatal(err)
@@ -107,13 +112,9 @@ func subjectTypeID(t testing.TB, db *sql.DB, key string) []byte {
 // named by keys onto the graph of c issues a SELECT.
 func AssertKindsLoaded(t testing.TB, c *database.Catalog, keys ...string) {
 	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
 	selects := databasetest.CountSelects(t, c)
 	for _, key := range keys {
-		typeID := subjectTypeID(t, db, key)
+		typeID := SubjectTypeID(t, c, key)
 		before := selects.N()
 		if _, err := c.Graph().Kind(typeID); err != nil {
 			t.Fatal(err)
@@ -129,7 +130,7 @@ func AssertKindsLoaded(t testing.TB, c *database.Catalog, keys ...string) {
 // counter.
 func (k *Canon) Entity(kind string) []byte {
 	k.t.Helper()
-	typeID := subjectTypeID(k.t, k.db, kind)
+	typeID := SubjectTypeID(k.t, k.c, kind)
 	id := k.next(3)
 	ref := fmt.Sprintf("TST-%d", k.n)
 	k.exec(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES (?, ?, ?)`, id, typeID, ref)
