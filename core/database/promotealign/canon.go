@@ -40,8 +40,6 @@ type candidatesMemo struct {
 // through one linkSet, so a link read from either end or recorded both ways
 // merges, and the implied links follow the recorded ones in walk order.
 func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer graphalign.Layer, fixed []graphalign.Fixed, cfg graphalign.Config, terms segmentcompare.Terms) (graphalign.Canon, error) {
-	types := prof.types
-
 	handles := map[string]*graphcache.Node{}
 	kinds := map[string]string{}
 	var seeds [][]byte
@@ -58,7 +56,7 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 		if err != nil || n == nil || n.Merged {
 			return err
 		}
-		kind := typeKey(types, n.SubjectTypeID)
+		kind := string(prof.kind(n))
 		if !vocabkey.IsPrimaryKind(kind) {
 			return nil
 		}
@@ -159,7 +157,7 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 				if neighbor == nil || neighbor.Merged {
 					continue
 				}
-				nKind := typeKey(types, neighbor.SubjectTypeID)
+				nKind := string(prof.kind(neighbor))
 				if !vocabkey.IsPrimaryKind(nKind) {
 					continue
 				}
@@ -230,15 +228,6 @@ func typeByKey(g *graphcache.Graph) (map[string][]byte, error) {
 		out[t.Key] = append([]byte(nil), t.ID...)
 	}
 	return out, nil
-}
-
-func typeKey(types map[string][]byte, id []byte) string {
-	for key, typeID := range types {
-		if string(typeID) == string(id) {
-			return key
-		}
-	}
-	return ""
 }
 
 // loadCandidatesMemo is the ranked candidate ids of each Subject in todo:

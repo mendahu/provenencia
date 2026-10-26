@@ -66,6 +66,36 @@ func TestVocabularyBindingsPluginTypeSeededKey(t *testing.T) {
 	}
 }
 
+// TypeKeysByID names each seeded type by its id and leaves out a type of
+// another origin, even one sharing a seeded key.
+func TestTypeKeysByID(t *testing.T) {
+	c := graphcachetest.OpenCatalog(t)
+	pluginID, err := subjecttypes.Upsert(c, subjecttypes.Type{
+		Key: "person", Origin: "plugin:x", Label: "Person (plugin)",
+		RefPrefix: "XPR", CandidateRefPrefix: "XPC",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	v, err := c.Graph().Vocabulary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	keys := v.TypeKeysByID()
+	var personID []byte
+	for _, ty := range v.Types {
+		if ty.Key == vocabkey.Person && ty.Origin == vocabkey.OriginProvenencia {
+			personID = ty.ID
+		}
+	}
+	if personID == nil || keys[string(personID)] != vocabkey.Person {
+		t.Fatalf("TypeKeysByID()[person id] = %q, want %q", keys[string(personID)], vocabkey.Person)
+	}
+	if k, ok := keys[string(pluginID)]; ok {
+		t.Fatalf("TypeKeysByID() holds the plugin type as %q", k)
+	}
+}
+
 // A binding reorder committed through writes.Run drops the cached vocabulary,
 // so the next read sees the new order with no restart.
 func TestVocabularyDropsOnBindingReorder(t *testing.T) {

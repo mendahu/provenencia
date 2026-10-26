@@ -144,7 +144,8 @@ type profiler struct {
 	eventTypeProp []byte // the event_type property: what types an event on a bridge
 	terms         map[string]graphcache.VocabTerm
 	metas         subjectcompare.Metas
-	types         map[string][]byte
+	types         map[string][]byte // subject type key -> id
+	typeKeys      map[string]string // subject type id -> key
 	rules         subjectcompare.Rules
 	reconcile     valuecompare.Rules
 	namePattern   string
@@ -170,7 +171,7 @@ func newProfiler(g *graphcache.Graph, metas subjectcompare.Metas, rules subjectc
 		done = map[string]profile{}
 	}
 	return &profiler{
-		g: g, props: props, eventTypeProp: vocab.PropertyID(vocabkey.PropertyEventType, vocabkey.OriginProvenencia), terms: vocab.TermsByID(), metas: metas, types: types, rules: rules,
+		g: g, props: props, eventTypeProp: vocab.PropertyID(vocabkey.PropertyEventType, vocabkey.OriginProvenencia), terms: vocab.TermsByID(), metas: metas, types: types, typeKeys: vocab.TypeKeysByID(), rules: rules,
 		reconcile: matchregistry.Default().Value, namePattern: namePattern,
 		done: done,
 	}, nil
@@ -190,7 +191,7 @@ func (p *profiler) keep() {
 }
 
 func (p *profiler) kind(n *graphcache.Node) vocabkey.SubjectType {
-	return vocabkey.SubjectType(typeKey(p.types, n.SubjectTypeID))
+	return vocabkey.SubjectType(p.typeKeys[string(n.SubjectTypeID)])
 }
 
 // profile builds every node not built yet. A node whose kind has a lifespan
