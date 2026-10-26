@@ -6,6 +6,7 @@ package graphalign
 import (
 	"bytes"
 
+	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -27,6 +28,10 @@ type Bridge struct {
 	// read them; the loader sets them and the claim evidence query reads them
 	// back, as it does a value's Ref.
 	Associations [][]byte
+	// Shapes are the kinship patterns that imply the link; none for a link only
+	// recorded. OnlyImplied is true when no recorded bridge stands behind it.
+	Shapes      []kinship.Shape
+	OnlyImplied bool
 }
 
 // From reads the bridge from one end: the Subject at the other end and the
@@ -49,13 +54,18 @@ type Handle struct {
 	Values subjectcompare.Values
 }
 
-// CanonEdge is one filed association hop between handles.
+// CanonEdge is one filed association hop, or a link the kinship patterns
+// imply, between handles.
 type CanonEdge struct {
 	From, To       []byte
 	KeyFrom, KeyTo vocabkey.BridgeKey // the edge read from From's end and from To's
+	// Shapes and OnlyImplied are as on Bridge.
+	Shapes      []kinship.Shape
+	OnlyImplied bool
 }
 
-// Layer is one Source's primary Subjects and bridges.
+// Layer is one Source's primary Subjects and bridges, recorded or implied by
+// the kinship patterns.
 type Layer struct {
 	Subjects []Subject
 	Bridges  []Bridge
