@@ -1,6 +1,6 @@
 # S11-39 — Matching reads kinship shapes
 
-**Status:** Planned
+**Status:** Blocked — on S11-49, S11-50 and a re-plan (slice 9 re-cut, 2026-10-26; see the map's S11-39 scope entry and #567's ship log)
 **Spike / slice:** Spike 11 · Slice 9 — Kinship shapes
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: Promote's rows and the evidence sheet's relationship Card are unchanged; only the scores and lines behind them move)
