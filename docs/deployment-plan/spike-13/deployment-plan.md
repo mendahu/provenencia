@@ -4,6 +4,8 @@ The Person page becomes the place a researcher goes to understand one canonical 
 
 **Design first, then re-cut** ([R-D1, R-D2](person-detail.md#design-first-then-re-cut)). Unlike earlier spikes, every brief is written up front and the boards are approved **together**, as one page. Until then every chrome PR is `Scoped` and its scope entry is provisional; the map is re-cut when the boards are agreed. Engine PRs whose shape the boards cannot change run alongside the design ([R-D3](person-detail.md#design-first-then-re-cut)).
 
+Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
+
 **Spike 11 runs in parallel; Spike 12 is expected to be closed.** PRs that touch code Spike 11 is still changing name the Spike 11 PR in **Depends on**. The overlaps are in [person-detail.md § Cross-spike dependencies](person-detail.md#cross-spike-dependencies). A PR plan written before its Spike 11 dependency lands stops at `Blocked — on S11-NN`.
 
 ## Status
@@ -31,7 +33,7 @@ The Person page becomes the place a researcher goes to understand one canonical 
 | --- | --- | --- |
 | R-1 – R-7 layout, fixed header, section switching | S13-09, S13-10 | S13-D1 |
 | R-8 – R-15 provenance sheet, Vitals | S13-06, S13-11 | S13-D2 |
-| R-16 – R-22 Family; [`ideas/kinship-view.md`](../../ideas/kinship-view.md) "Family trees and person pages", siblings from shared parents | S13-02, S13-03, S13-04, S13-12 | S13-D3 |
+| R-16 – R-22 Family; [`ideas/kinship-view.md`](../../ideas/kinship-view.md) "Family trees and person pages", siblings from shared parents | S13-02, S13-03, S13-19, S13-04, S13-12 | S13-D3 |
 | R-23 – R-28 Timeline | S13-05, S13-13 | S13-D4 |
 | R-29 – R-32 Gallery and viewer | S13-14, S13-15 | S13-D5 |
 | R-33 – R-37 Sources | S13-01, S13-16 | S13-D6 |
@@ -47,41 +49,44 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 ### Process
 
 - **Seven briefs, one approval.** S13-D1 … S13-D7 are written together at the start of the spike, drawn as one board set, and approved together (R-D1). No chrome PR is planned before that approval. On approval the map is re-cut: scope entries for S13-09 onward are rewritten, PRs may split, merge or be descoped, and engine PRs already landed are amended by follow-ups, not reopened (R-D2).
-- **Engine PRs that run ahead are the ones the boards cannot reshape.** S13-01 … S13-08 return data every plausible design needs (R-D3). Each read returns **data, not layout**: grouping into families or Sources happens in Go, placement on the page happens in Swift. If the boards ask for data a landed read lacks, a follow-up PR adds it.
-- **Each PR updates the docs and skills it makes false.** S13-03: [`matching-model.md`](../../matching-model.md) only if a knob is added, and [`ideas/kinship-view.md`](../../ideas/kinship-view.md) (siblings shipped for the page). S13-08: [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5 (Unpromote of the last member). S13-09: [`macos-client-patterns.md`](../../macos-client-patterns.md) if the detail-page pattern changes.
+- **Engine PRs that run ahead are the ones the boards cannot reshape.** S13-01 … S13-08 and S13-19 return data every plausible design needs (R-D3). Each read returns **data, not layout**: grouping into families or Sources happens in Go, placement on the page happens in Swift. If the boards ask for data a landed read lacks, a follow-up PR adds it.
+- **Each PR updates the docs and skills it makes false.** S13-19: [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md) (one link merge). S13-03: `add-match-rule` (page-only derivations), [`matching-model.md`](../../matching-model.md) only if a knob is added, and [`ideas/kinship-view.md`](../../ideas/kinship-view.md) (siblings shipped for the page). S13-08: [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5 (Unpromote of the last member), [`catalog-deletes.md`](../../catalog-deletes.md). S13-01: [`add-workspace-place`](../../../.agents/skills/add-workspace-place/SKILL.md) (per-handle invalidation spec). S13-06: the `LifeFacts` and `ReconciledValueRowModel.derived` comments ("its page owns the Why"). S13-09: [`macos-client-patterns.md`](../../macos-client-patterns.md) (sectioned detail page).
 
 ### Engine
 
-- **Each section reads its own query.** The Person page is several reads, each with its own RPC and `CatalogQueryKey`, so a section loads and refreshes on its own: today's `GetConclusionDetail` (header, Vitals, Gallery) plus one each for claims (S13-01), family (S13-04) and timeline (S13-05). `GetConclusionDetail` does not grow the other sections ([`add-workspace-place`](../../../.agents/skills/add-workspace-place/SKILL.md)). Through [`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md). Binds S13-01, S13-04, S13-05.
-- **One person summary for every tile.** Family tiles and Timeline participants carry the same summary: entity, name, birth and death life facts, likeness path, and the gender and sex terms `PersonGenderTreatment` reads. It is built by `conclusionheaders.PersonsByIDs`, the code that builds the Person header, never a second copy (S13-02). Binds S13-02, S13-04, S13-05.
-- **Canonical only, filtered in Go** (R-2). Reads return canonical entities with at least one accepted member; unpromoted Subjects never cross the wire. Binds S13-01, S13-04, S13-05.
-- **Siblings are page-only** (R-18a). The shared-parent sibling derivation lives beside the existing patterns in `core/kinship` but is **not** in the pattern set `canonlinks.Reader.For` gives matching; `promotealign` and S11-39's goldens see no change, and a test proves it. The Family read asks for siblings explicitly. Binds S13-03, S13-04.
-- **Family reads direct and implied links as one fact.** Parents, spouses and children come from direct Relationship links (`graphcache.Node.Links` with `vocabkey.BridgeRelationship`, direction through `kinship.ParentStep`) merged with `canonlinks.Reader.For`'s implied links, keyed so a relationship recorded both ways appears once. Families are grouped in Go: one family per spouse (with the children who have both as parents), one per distinct parent set, and children with one known parent in their own group. Binds S13-04.
-- **Timeline is direct participation, any role** (R-23). The read walks the person's event links in every role, not `hops.EventsOfSubject`'s `subject` role only, and returns each event's title, date, place, the person's role term and the other canonical participants with theirs. Sorting by date happens in Go; undated events come back flagged, grouped by Swift (R-24). Binds S13-05.
-- **The provenance sheet reads the records the page already has.** `ConclusionDetail` already carries `ReconcilerOutcomeDetail` records per field; S13-06 adds them for the derived life rows (birth and death date and place, read from the lead birth or death event's fields) so every Vitals row has records. No new provenance RPC. Binds S13-06, S13-11.
-- **Claims are read per person, grouped by Source in Go.** S13-01 reads accepted members through `identityclaims.AcceptedMembers`, joins each member's Evidence graph (`evidencegraphs`) and Source (`sources`, `sourcetypes`), and returns groups ordered by Source title (R-36) with the claims inside. The Source **date** is the provisional open question below. Binds S13-01.
-- **Claim review reuses the claim evidence types.** S13-07's stored-claim read returns pins (`identityclaims.PinnedObservations`), argument and confidence in `claimevidence`'s `Line` / `Section` shapes, so the review sheet can reuse the Promote evidence sheet's line rendering. When S11-40 adds implied-link relationship lines, the review picks them up through the same types. Binds S13-07, S13-18.
-- **One Unpromote.** The Person page's Remove calls the same `UnpromoteSubject` as the Evidence graph (R-38). S13-08 changes what that one path does on the last accepted member (open question below); there is no Person-page-only removal. Binds S13-08, S13-17.
+- **Each section reads its own query.** The Person page is several reads, each with its own RPC and `CatalogQueryKey`, so a section loads and refreshes on its own: today's `GetConclusionDetail` (header, Vitals, Gallery) plus one each for claims (S13-01), family (S13-04) and timeline (S13-05). `GetConclusionDetail` does not grow the other sections ([`add-workspace-place`](../../../.agents/skills/add-workspace-place/SKILL.md)). The three new reads are composed in one package, `core/database/persondetail` (beside `conclusiondetails`); handlers stay thin ([`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md)). Binds S13-01, S13-04, S13-05.
+- **One invalidation rule for person-section keys.** Today `CatalogQueryRegistry.invalidations(for:project:)` hand-writes the `touchedHandles` → `.conclusionDetail` fan-out. S13-01 turns that into a registry `Spec` declaration (per-handle keys refreshed for every touched handle) and declares its key with it; S13-04 and S13-05 add one entry each. A relative's or co-participant's change touches their id, not this person's, so the family and timeline keys also refresh on any promote or unpromote effect (`.allCached` for that kind) unless the plan finds a keyed effect. Binds S13-01, S13-04, S13-05.
+- **One person header for every tile.** Family tiles and Timeline participants carry `PersonHeader` (`conclusionheaders.PersonsByIDs`), which already holds name, birth and death `LifeFacts` and likeness, and whose package doc already names "later tree nodes". S13-02 adds the gender and sex terms to it; no new summary type. `PersonsByIDs` returns rows in title order, so S13-04 and S13-05 re-key by id. Binds S13-02, S13-04, S13-05.
+- **Canonical only, filtered in Go** (R-2). Reads return canonical entities with at least one accepted member; unpromoted Subjects never cross the wire. One `graphcache` `Node` accepted-members helper (S13-01) replaces the private copies `promotealign.acceptedClaims` and `conclusiondetails.acceptedMembers`, and every reader uses it. Binds S13-01, S13-04, S13-05.
+- **Siblings are page-only** (R-18a). The shared-parent sibling derivation lives in `core/kinship` but is **not** in the pattern set `canonlinks.Reader.For` gives matching; `promotealign` and S11-39's goldens see no change, and a test proves it. The Family read asks for siblings explicitly. S13-03 updates [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md) (which today says a sibling pattern "changes `Derive`") with where page-only derivations go. Binds S13-03, S13-04.
+- **One person's links, direct and implied, from one function.** `promotealign` merges direct and implied links through its private `edgeSeenKey` in two places (`canon.go` `loadCanon`, `layer.go`), and S11-39 adds more. S13-19 (preparatory) gives `canonlinks` one export that returns a person's links, direct (through `kinship.ParentStep`) and implied, deduped by an exported merge key, moves `promotealign` onto it, and updates `add-match-rule`'s "callers merge … through their own merge" line. The Family read calls it. Binds S13-19, S13-04.
+- **Family groups in Go.** One family per spouse (with the children who have both as parents), one per distinct parent set, and children with one known parent in their own group. Binds S13-04.
+- **Timeline is direct participation, any role** (R-23). S13-05 adds an unfiltered participation hop to `core/hops` (beside `EventsOfSubject`, which is `subject` role only) and returns, per event, `EventHeader` (title, date, folded places), the person's role term, and the other participants as {role, `PersonHeader`}, ordered by `conclusionheaders.sortEvents` (undated last). Swift titles events with `EventTitleDisplay` and groups the undated ones (R-24). Binds S13-05.
+- **A derived row carries its owning entity's records.** `ConclusionDetail` already carries `ReconcilerOutcomeDetail` records per field. S13-06 adds, for each derived row, the records of the field on the entity that owns it (the lead birth or death event's date; its Place), keyed by that entity on `ConclusionDetail`, not on `LifeFacts` (which lists and tiles also carry). Event's derived place row can take the same path later. No new provenance RPC. Binds S13-06, S13-11.
+- **Claims are read per person from the graph cache, grouped by Source in Go.** S13-01 reads the person's accepted members from `graphcache` (`Member` has Subject, Source and graph ids; `EvidenceGraph` has the Source title), adds Source type through `sourcetypes`, and returns groups ordered by Source title (R-36). Each claim carries the existing `CatalogSubject` and Observation wire messages the Evidence graph's Subject card already renders. **No Source date** until the open question is settled. Binds S13-01.
+- **Claim review reuses the claim evidence query.** S13-07 adds a stored-claim mode to `promotealign.Evidence`: the claim's own Subject is left out of the members, lines are checked from the stored pins, and status, grade and argument come from `identityclaims`. `GetIdentityClaim` calls it; there is no second evidence builder. S11-40 also changes `Evidence`; whichever lands second rebases. Binds S13-07, S13-18.
+- **One Unpromote, deletes through the registry.** The Person page's Remove calls the same `UnpromoteSubject` as the Evidence graph (R-38). If the last member's removal deletes the person (open question 1), S13-08 deletes the canonical entity through `core/database/deleteimpact` ([`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md), [`add-audit-scope`](../../../.agents/skills/add-audit-scope/SKILL.md)), and the confirm reads an Impact report through an unpromote preflight, as `GetDeleteImpact` and `GetEvidenceGraphUnlinkImpact` do, not a one-off flag. Binds S13-08, S13-17.
 
 ### Client
 
-- **The Person page leaves the shared detail page.** Event and Place keep `ConclusionDetailPage` unchanged (R-1). S13-09 moves the Person page onto its own page type that reuses the header, rows and likeness section as components, with no visible change, before any new chrome. Binds S13-09, S13-10.
+- **One sectioned Conclusion page, not a Person fork.** `ConclusionDetailPage` stays the one page for Person, Event and Place. S13-09 gives it a sections slot; Event and Place pass a single section and look unchanged (R-1), and the Person page later passes five. When Event and Place adopt sections, they fill the slot. Binds S13-09, S13-10.
 - **One person tile, built once.** The tile is built in S13-12 (Family) and reused by S13-13 (Timeline), placed per [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) as a recipe once it has the second caller. Briefs S13-D3 and S13-D4 draw the same tile. Binds S13-12, S13-13.
-- **Colors reuse `PersonGenderTreatment`** (R-3), fed from the person summary. Binds S13-12, S13-13.
+- **Colors reuse `PersonGenderTreatment`** (R-3), fed from `PersonHeader`'s terms (S13-02). Binds S13-12, S13-13.
 
 ## PR map
 
 | PR | Title | Slice | Scope | Brief | Depends on | Plan | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| S13-01 | Person claims read | 1 | `ListPersonClaims` RPC: a person's accepted claims grouped by Source (title, type, date), ordered by title, each with its Subject, graph and claim id | — | — | — | Scoped |
-| S13-02 | Person summary | 1 | One person summary (name, life facts, likeness, gender and sex terms) from `conclusionheaders.PersonsByIDs`, on the wire for tiles | — | S11-30 | — | Scoped |
+| S13-01 | Person claims read | 1 | `ListPersonClaims` RPC from the graph cache: a person's accepted claims grouped by Source (title, type), ordered by title, each with its Subject card data, graph and claim id; one accepted-members helper; per-handle invalidation spec | — | — | — | Scoped |
+| S13-02 | Gender in the person header | 1 | `PersonHeader` gains the gender and sex terms; `PersonGenderTreatment` reads only the header | — | S11-30 | — | Scoped |
 | S13-03 | Siblings from a shared parent | 1 | A page-only sibling derivation in `core/kinship`, outside matching's pattern set, with a test that matching is unchanged | — | S11-39 | — | Scoped |
-| S13-04 | Person family read | 1 | `GetPersonFamily` RPC: parents, siblings, spouses, children from direct and implied links, grouped into families, as person summaries | — | S13-02, S13-03 | — | Scoped |
-| S13-05 | Person timeline read | 1 | `ListPersonEvents` RPC: every event the person took part in, any role, sorted by date, with role, place and the other participants as person summaries | — | S13-02 | — | Scoped |
-| S13-06 | Life rows carry their records | 1 | `ConclusionDetail`'s birth and death date and place rows carry the lead event's reconciler records | — | — | — | Scoped |
-| S13-07 | Stored claim read | 1 | `GetIdentityClaim` RPC: an accepted claim's pins, argument and confidence in `claimevidence` shapes | — | — | — | Scoped |
-| S13-08 | Unpromoting the last member | 1 | `UnpromoteSubject` on a person's last accepted member (open question) with an impact flag the confirm can word | — | — | — | Scoped |
-| S13-09 | Person page on its own page | 2 | Preparatory: the Person page moves off `ConclusionDetailPage` onto its own page type; no visible change | — | — | — | Scoped |
+| S13-04 | Person family read | 1 | `GetPersonFamily` RPC: parents, siblings, spouses, children from S13-19's links, grouped into families, as `PersonHeader`s | — | S13-01, S13-02, S13-03, S13-19 | — | Scoped |
+| S13-05 | Person timeline read | 1 | An any-role participation hop; `ListPersonEvents` RPC: `EventHeader`s sorted by `sortEvents`, with the person's role and the other participants as {role, `PersonHeader`} | — | S13-01, S13-02 | — | Scoped |
+| S13-06 | Derived rows carry their records | 1 | `ConclusionDetail` carries, for each derived row, the reconciler records of the owning entity's field (birth and death event date and place) | — | — | — | Scoped |
+| S13-07 | Stored claim read | 1 | A stored-claim mode on `promotealign.Evidence`; `GetIdentityClaim` RPC returns its sections with pins checked, status, grade and argument | — | — | — | Scoped |
+| S13-08 | Unpromoting the last member | 1 | `UnpromoteSubject` on the last accepted member deletes the person through `deleteimpact` (open question 1); an unpromote Impact preflight for the confirm | — | — | — | Blocked — on open question 1 |
+| S13-19 | One person's links | 1 | Preparatory: `canonlinks` exports a person's direct and implied links deduped by one exported merge key; `promotealign` moves onto it | — | S11-39 | — | Scoped |
+| S13-09 | Sections slot on the Conclusion page | 2 | Preparatory: `ConclusionDetailPage` gains a sections slot; Person, Event and Place pass one section; no visible change | — | — | — | Scoped |
 | S13-10 | Header and sections | 2 | The fixed header, the section switcher, and Vitals as the first section (today's rows) | S13-D1 | S13-09, design gate | — | Scoped |
 | S13-11 | Provenance sheet | 2 | The provenance control and sheet replace the Why accordion on every Vitals row, with links to Source, Citation and Observation | S13-D2 | S13-06, S13-10, design gate | — | Scoped |
 | S13-12 | Family section | 3 | The family diagram with person tiles, lines and several families | S13-D3 | S13-04, S13-10, design gate | — | Scoped |
@@ -118,18 +123,19 @@ SLICE 0 — Design (runs alongside slice 1)
 
 SLICE 1 — Engine reads (runs alongside the design)
   S13-01  Person claims read
-  S13-02  Person summary
+  S13-02  Gender in the person header
   S13-03  Siblings from a shared parent
+  S13-19  One person's links (preparatory)
   S13-04  Person family read
   S13-05  Person timeline read
-  S13-06  Life rows carry their records
+  S13-06  Derived rows carry their records
   S13-07  Stored claim read
   S13-08  Unpromoting the last member
   Check: go tests; matching goldens unchanged; no visible change in the app
          except S13-08's Evidence graph unpromote behavior
 
 SLICE 2 — Page frame and Vitals
-  S13-09  Person page on its own page
+  S13-09  Sections slot on the Conclusion page
   ✎ S13-D1 ──▶ S13-10  Header and sections
   ✎ S13-D2 ──▶ S13-11  Provenance sheet
   Check: bar 1 and 2
@@ -153,20 +159,22 @@ SLICE 5 — Sources and claims
 S13-99 — Dogfood close / docs
 ```
 
-**In parallel:** slice 1's PRs are independent of each other except S13-04 (after S13-02 and S13-03) and S13-05 (after S13-02); S13-01, S13-06, S13-07 and S13-08 can start at once. S13-09 can land during the design. After the design gate, slices 3, 4 and 5 can run in parallel once S13-10 lands.
+**In parallel:** S13-01, S13-06 and S13-07 can start at once; S13-02 waits on S11-30, and S13-03 and S13-19 on S11-39; S13-04 and S13-05 follow S13-01 (its accepted-members helper and invalidation spec) and S13-02; S13-08 waits on open question 1. S13-09 can land during the design. After the design gate, slices 3, 4 and 5 can run in parallel once S13-10 lands.
 
 ### Dependencies at a glance
 
 ```text
-S11-30 ──▶ S13-02 ──┬──▶ S13-04 ──▶ S13-12 ──▶ S13-13
-S11-39 ──▶ S13-03 ──┘                ▲           ▲
-           S13-02 ──▶ S13-05 ────────┼───────────┘
+S11-30 ──▶ S13-02 ──┬──────────────▶ S13-04 ──▶ S13-12 ──▶ S13-13
+S11-39 ──▶ S13-03 ──┤                  ▲                     ▲
+S11-39 ──▶ S13-19 ──┘                  │                     │
+S13-01 ──┬─────────────────────────────┘                     │
+         ├──▶ S13-05 ◀── S13-02 ─────────────────────────────┘
+         └──▶ S13-16
 S13-09 ──▶ S13-10 ──┬──▶ S13-11 ◀── S13-06
                     ├──▶ S13-12
                     ├──▶ S13-14 ──▶ S13-15
-                    └──▶ S13-16 ──┬──▶ S13-17 ◀── S13-08
+                    └──▶ S13-16 ──┬──▶ S13-17 ◀── S13-08 ◀── open question 1
                                   └──▶ S13-18 ◀── S13-07
-S13-01 ──▶ S13-16
 design gate (S13-D1 … S13-D7) ──▶ S13-10 … S13-18
 ```
 
@@ -180,68 +188,75 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Chrome scopes (s
 
 #### S13-01 — Person claims read
 
-**Ships.** `ListPersonClaims(personId)`: the person's accepted identity claims grouped by Source, groups ordered by Source title, each group with the Source's id, ref, title, type name and date, and each claim with its claim id, Subject (ref and card fields), Evidence graph id and name. Its own query key, refreshed by the effects that promote or unpromote into the person.
-**Not this PR.** The section (S13-16); the date if the open question is not settled (ships without it, added after).
-**Check.** A handler test: a Source with two graphs each contributing a claim returns one group with two claims.
-**Context.** Working rules "Each section reads its own query", "Claims are read per person"; R-33 – R-37; `identityclaims.AcceptedMembers`, `evidencegraphs.List`.
+**Ships.** `ListPersonClaims(personId)` in `core/database/persondetail`, read from `graphcache`: the person's accepted identity claims grouped by Source, groups ordered by Source title, each group with the Source's id, ref, title and type name, and each claim with its claim id, Evidence graph id and name, and the `CatalogSubject` and Observations the Subject card renders. Also: one `graphcache` accepted-members helper with `promotealign.acceptedClaims` and `conclusiondetails.acceptedMembers` moved onto it, and the per-handle invalidation `Spec` with `.conclusionDetail` and this key declared through it.
+**Not this PR.** The section (S13-16); a Source date (open question 2).
+**Check.** A handler test: a Source with two graphs each contributing a claim returns one group with two claims; registry tests: a promote into the person refreshes both keys.
+**Context.** Working rules "Each section reads its own query", "One invalidation rule for person-section keys", "Canonical only", "Claims are read per person from the graph cache"; R-33 – R-37.
 
-#### S13-02 — Person summary
+#### S13-02 — Gender in the person header
 
-**Ships.** A `PersonSummary` on the wire (entity, name, birth and death `LifeFacts`, likeness path, gender and sex terms) built by `conclusionheaders.PersonsByIDs`; `PersonHeader` reuses it or embeds it so there is one shape. Swift's `PersonGenderTreatment` can read from it without full fields.
+**Ships.** `PersonHeader` (Go and proto) gains the gender and sex terms. `PersonGenderTreatment` reads only the header's terms; the Person page header moves onto it and the read from detail fields is deleted.
 **Not this PR.** Any tile chrome (S13-12).
-**Check.** `PersonsByIDs` tests cover the gender and sex terms; Swift treatment tests read a summary.
-**Context.** Working rule "One person summary for every tile"; R-3, R-21; S11-30's gender ↔ sex crosswalk must land first so the terms are final.
+**Check.** `PersonsByIDs` tests cover the terms; Swift treatment tests read a header; the Person page badge and thumb colors are unchanged.
+**Context.** Working rule "One person header for every tile"; R-3, R-21; S11-30's gender ↔ sex crosswalk lands first so the terms are final.
 
 #### S13-03 — Siblings from a shared parent
 
 **Ships.** A sibling derivation in `core/kinship`: two canonical people who share a parent (direct or implied) are siblings, with the parent and links behind it. It is reachable only from an explicit option, not from the pattern set `canonlinks.Reader.For` gives matching.
 **Not this PR.** Half-sibling and step relationships as distinct kinds; sibling evidence in matching (R-18a).
 **Check.** `go test ./core/kinship/...`; a test that `promotealign`'s inputs are unchanged with the derivation present; S11-39's goldens unchanged.
-**Context.** Working rule "Siblings are page-only"; R-18, R-18a; [`ideas/kinship-view.md`](../../ideas/kinship-view.md); S11-39 edits the same package and goes first.
+**Context.** Working rule "Siblings are page-only"; R-18, R-18a; [`ideas/kinship-view.md`](../../ideas/kinship-view.md); S11-39 edits the same package and goes first; updates `add-match-rule`.
+
+#### S13-19 — One person's links
+
+**Ships.** A preparatory refactor: `canonlinks` exports one function returning a person's links, direct Relationship links (direction through `kinship.ParentStep`) and implied ones, deduped by one exported merge key (today `promotealign`'s private `edgeSeenKey`). `promotealign`'s `loadCanon` and layer loader move onto the key; `add-match-rule`'s "own merge" line is rewritten.
+**Not this PR.** Siblings (S13-03); any RPC.
+**Check.** Matching goldens and `canonlinks` verify mode unchanged; a test that a relationship recorded directly and implied by a marriage comes back once.
+**Context.** Working rule "One person's links, direct and implied, from one function"; S11-39 adds implied links to the same merge and goes first.
 
 #### S13-04 — Person family read
 
-**Ships.** `GetPersonFamily(personId)`: parent sets, spouses with their shared children, children with one known parent, and siblings, each as a person summary and each with the relationship kind and whether it was recorded directly or implied. Canonical people only.
+**Ships.** `GetPersonFamily(personId)` in `core/database/persondetail`, from S13-19's links plus S13-03's siblings: parent sets, spouses with their shared children, children with one known parent, and siblings, each as a `PersonHeader` (re-keyed by id) with the relationship kind and whether it was recorded directly or implied. Canonical people only. Its key joins the S13-01 invalidation spec.
 **Not this PR.** The diagram (S13-12); grandparents and beyond.
 **Check.** Handler tests: two marriages give two families; two conflicting parent sets give two parent groups; a relationship recorded directly and implied by a marriage appears once.
-**Context.** Working rules "Family reads direct and implied links as one fact", "Canonical only"; R-17 – R-19.
+**Context.** Working rules "One person's links, direct and implied, from one function", "Family groups in Go", "Canonical only"; R-17 – R-19.
 
 #### S13-05 — Person timeline read
 
-**Ships.** `ListPersonEvents(personId)`: every canonical event the person took part in directly, in any role, sorted by date, each with title, date, place, the person's role, and the other canonical participants with their roles as person summaries; undated events flagged.
+**Ships.** An any-role participation hop in `core/hops`, and `ListPersonEvents(personId)` in `core/database/persondetail`: every canonical event the person took part in directly, as `EventHeader`s ordered by `conclusionheaders.sortEvents`, each with the person's role term and the other canonical participants as {role, `PersonHeader`}. Its key joins the S13-01 invalidation spec.
 **Not this PR.** The section (S13-13); event depictions (R-26).
 **Check.** Handler tests: a witness role appears; a child's birth the person is not linked to does not; undated events come last and flagged.
-**Context.** Working rule "Timeline is direct participation, any role"; R-23 – R-28; `graphcache.Link.TermKey`, `conclusionheaders` event titles.
+**Context.** Working rule "Timeline is direct participation, any role"; R-23 – R-28; `hops.EventsOfSubject`, `EventHeader.subjects` (whether `EventSubject` folds into {role, `PersonHeader`} later is logged in the plan).
 
-#### S13-06 — Life rows carry their records
+#### S13-06 — Derived rows carry their records
 
-**Ships.** `ConclusionDetail` gives the birth and death date and place rows the lead birth or death event's `ReconcilerOutcomeDetail` records, so `ReconciledValueRowModel.derived` rows have records like other fields.
+**Ships.** `ConclusionDetail` carries, keyed by owning entity, the `ReconcilerOutcomeDetail` records of each derived row's field (the lead birth or death event's date and Place), so `ReconciledValueRowModel.derived` rows have records like other fields. Not on `LifeFacts`. The "its page owns the Why" comments are updated.
 **Not this PR.** The sheet (S13-11).
 **Check.** A handler test: a person with two birth records on one birth event returns both on the birth-date row.
-**Context.** Working rule "The provenance sheet reads the records the page already has"; R-13a, R-14.
+**Context.** Working rule "A derived row carries its owning entity's records"; R-13a, R-14.
 
 #### S13-07 — Stored claim read
 
-**Ships.** `GetIdentityClaim(claimId)`: the claim's status, confidence, argument and pinned Observations, in `claimevidence` `Section` / `Line` shapes.
+**Ships.** A stored-claim mode on `promotealign.Evidence` (the claim's own Subject left out of the members, lines checked from the stored pins) and `GetIdentityClaim(claimId)`, which returns those sections with the claim's status, grade and argument.
 **Not this PR.** Editing pins or argument (R-40); the sheet (S13-18).
-**Check.** A handler test round-trips a claim promoted with pins and an argument.
-**Context.** Working rule "Claim review reuses the claim evidence types"; `identityclaims.PinnedObservations`; S11-19, S11-25.
+**Check.** A handler test round-trips a claim promoted with pins and an argument: the pinned lines come back checked.
+**Context.** Working rule "Claim review reuses the claim evidence query"; `identityclaims.PinnedObservations`; S11-19, S11-25; S11-40 edits `Evidence` too.
 
 #### S13-08 — Unpromoting the last member
 
-**Ships.** `UnpromoteSubject` on a canonical entity's last accepted member does what the open question below decides, and its preflight tells the confirm that this is the last member so the copy can warn.
+**Ships.** `UnpromoteSubject` on a canonical entity's last accepted member deletes the entity through `core/database/deleteimpact` (Impact in the same transaction, probes, audit scope), and an unpromote Impact preflight the confirm words, as `GetDeleteImpact` does.
 **Not this PR.** The Person page control (S13-17).
 **Check.** Promote tests for the last member; the Evidence graph's unpromote confirm words the new outcome.
-**Context.** Working rule "One Unpromote"; R-38, R-39; `promote.Unpromote`, `deleteimpact.ReleaseClaim`. **Blocked on a product answer** before `plan-pr`.
+**Context.** Working rule "One Unpromote, deletes through the registry"; R-38, R-39; `promote.Unpromote`, `deleteimpact.ReleaseClaim`; `add-catalog-delete`, `add-audit-scope`. Blocked on open question 1.
 
 ### Slice 2 — Page frame and Vitals
 
-#### S13-09 — Person page on its own page
+#### S13-09 — Sections slot on the Conclusion page
 
-**Ships.** A preparatory refactor: `PersonDetailView` stops configuring `ConclusionDetailPage` and gets its own page type composed of the header, rows and likeness section, now shared components. Event and Place are untouched.
-**Not this PR.** Any visible change.
-**Check.** The Person, Event and Place pages look the same; existing Person page tests pass.
-**Context.** Working rule "The Person page leaves the shared detail page"; R-1; `ConclusionDetailPage.swift`.
+**Ships.** A preparatory refactor: `ConclusionDetailPage` (and `ConclusionDetailBody`) gains a sections slot below the header; Person, Event and Place each pass today's content as one section.
+**Not this PR.** Any visible change; the switcher (S13-10).
+**Check.** The Person, Event and Place pages look the same; existing detail page tests pass.
+**Context.** Working rule "One sectioned Conclusion page, not a Person fork"; R-1; `ConclusionDetailPage.swift`.
 
 #### S13-10 — Header and sections
 
@@ -254,7 +269,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Chrome scopes (s
 **Ships.** The provenance control beside every Vitals value and the sheet from S13-D2: every record, the reconciler's reasoning, and links to the Source, Citation and Observation. It replaces the Why accordion on the Person page.
 **Not this PR.** Reconciliation Claims (R-10); the control outside Vitals (R-13b).
 **Check.** Bar 2.
-**Context.** R-8 – R-13b; working rule "The provenance sheet reads the records the page already has"; `ReconciliationReasoningView`.
+**Context.** R-8 – R-13b; working rule "A derived row carries its owning entity's records"; `ReconciliationReasoningView`; open question 3.
 
 ### Slice 3 — Family and Timeline
 
@@ -310,6 +325,6 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Chrome scopes (s
 Not decided; a PR that depends on one stays `Scoped` and `plan-pr` asks it again.
 
 1. **Last member, everywhere or Person page only?** Today unpromoting the last member keeps the canonical person with no members ("the handle stays"). R-39 says removing the last claim deletes the person. With one Unpromote (working rule), that would change the Evidence graph's behavior too. Gates S13-08.
-2. **Which Source date?** Sources have no date column; dates live in typed metadata fields (`record_date`, `issue_date`, …) as text. Which field, and what when a Source has none? Gates the date in S13-01.
-3. **Provenance sheet on Event and Place pages.** The Why accordion is a shared row. Should S13-11 replace it on Event and Place too (one mechanism), or keep the accordion there until those pages are redesigned (R-1)? Gates S13-11.
+2. **Which Source date?** Sources have no date column; dates live in typed metadata fields (`record_date`, `issue_date`, …) as text, and [`ideas/source-provenance-date.md`](../../ideas/source-provenance-date.md) already settles that a metadata key is not a first-class date. Options: drop the date from the group (R-35), or pull that idea into the spike as its own PR. S13-01 ships without a date either way.
+3. **Provenance sheet on Event and Place pages.** The Why accordion is a shared row. Should S13-11 replace it on Event and Place too, or keep the accordion there until those pages are redesigned (R-1)? Recommendation: replace it everywhere and delete the accordion, so there is one provenance mechanism; keeping both is debt. Gates S13-11.
 4. **Remembering the section.** Should Back / Forward and restore return to the section the user was on (the section is part of the `WorkspaceLocation`), or always open on Vitals? Gates S13-10.
