@@ -1,7 +1,7 @@
 # Ship log — S11-39 Matching reads kinship shapes
 
 **Plan:** [`S11-39-matching-reads-kinship.md`](S11-39-matching-reads-kinship.md) · **Branch:** `s11-39-matching-reads-kinship-v2` · **PR:** #572
-**State:** CI fix round (user decision)
+**State:** ready
 
 The first ship loop (#567, closed in the slice 9 re-cut) has its own ship log on `s11-39-matching-reads-kinship`. This log is the re-plan's, from `main` @ `7fdd4776`.
 
@@ -104,7 +104,7 @@ PRF-1 stays open after the two-round cap: the PR goes to the user before being m
 Merged `origin/main` (S11-51 added to the map; conflict in `deployment-plan.md` resolved: this branch's S11-39 row and working-rule wording plus main's S11-51 sentence and rows) as `ce26b56a`; gate PASS.
 
 ## Result
-Gate PASS · CI **red** (Go tests 40403797939: warm proposal 297 ms against 250 ms; macOS tests green) · open: PRF-1 (CI decides) · follow-ups: SEC-1; verify-mode `a_handle_merged` on main · to user: PRF-1 (answered: run CI) · CON miss: none
+Gate PASS · CI green on `b745d14a` (Go tests 40406913609, macOS tests 40406913619; earlier Go tests 40403797939 red at 297 ms against 250 ms) · open: none (PRF-1 answered: warm budget raised to 350 ms by the user) · follow-ups: SEC-1; `docs/ideas/narrower-canon-walk.md`; verify-mode `a_handle_merged` on main · to user: PRF-1 (answered: run CI, then raise the warm budget to 350 ms) · CON miss: none
 
 **User decision (2026-10-26) on the red warm budget:** "Raise the warm budget to 350 ms (recording it as a user decision in the plan and S11-21's figures), and add an idea for walking only the part of the tree a proposal needs."
 
