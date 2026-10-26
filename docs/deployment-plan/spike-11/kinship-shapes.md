@@ -1,6 +1,6 @@
 # Kinship shapes: one fact, several ways to record it
 
-**Status:** pulled into [Spike 11](deployment-plan.md) on 2026-10-24 (S11-41, S11-38, S11-39, S11-40, S11-42). Idea first written 2026-10-19 while shipping S11-14, as `docs/ideas/relationships-from-shared-events.md`; grandparent added by the user on 2026-10-24. What stays later is in [`ideas/kinship-view.md`](../../ideas/kinship-view.md).
+**Status:** pulled into [Spike 11](deployment-plan.md) on 2026-10-24 (S11-41, S11-38, S11-39, S11-40, S11-42); re-cut 2026-10-26 with S11-49 (implied links in the graph cache) and S11-50 (matching warms while the project opens). Idea first written 2026-10-19 while shipping S11-14, as `docs/ideas/relationships-from-shared-events.md`; grandparent added by the user on 2026-10-24. What stays later is in [`ideas/kinship-view.md`](../../ideas/kinship-view.md).
 
 Matching today: [`comparison-layers.md`](comparison-layers.md#segments-layer-5-and-graph-alignment-layer-6) (segments, layer 6). Seeded terms: [`seeded-vocabulary.md`](../../seeded-vocabulary.md).
 
@@ -10,7 +10,7 @@ A kinship fact can be recorded in more than one shape:
 
 | Fact | Direct | Through an event | Through a chain |
 | --- | --- | --- | --- |
-| A and B are spouses | `relationship · spouse` between A and B | A and B are both `spouse` in one `marriage` | — |
+| A and B are spouses | `relationship · spouse` between A and B | A and B are both `subject` of one `marriage` | — |
 | A is B's parent | `relationship · parent`, A parent of B | A is `father` or `mother`, B is `subject`, in one `birth` | — |
 | A is C's grandparent | `relationship · grandparent`, A grandparent of C | — | A is a parent of B, and B is a parent of C (each in any parent shape) |
 
@@ -22,16 +22,29 @@ Matching does not know these are one fact. `segmentcompare.Corresponds` lines up
 
 | Pattern | Holds when | Implies |
 | --- | --- | --- |
-| Marriage spouses | Two people are each `spouse` in one `marriage` event | `relationship · spouse` between them |
+| Marriage spouses | Two people are each `subject` of one `marriage` event | `relationship · spouse` between them |
 | Birth parents | A is `father` or `mother` and B is `subject` in one `birth` event | `relationship · parent`, A parent of B |
 | Parent of a parent | A is a parent of B and B is a parent of C, each by a direct or implied link | `relationship · grandparent`, A grandparent of C |
 
 - **Directed where the roles say so.** Birth roles name the parent end (`father`, `mother`) and the child end (`subject`), so the implied parent link is directed like a recorded one, and reads through `segmentcompare.Key` with its inverse (`child`).
 - **One way only.** A chain implies a grandparent. A grandparent link does not imply a parent in between; there is no one to name.
 - **Grandparent stops at two generations.** Great-grandparent and deeper are not seeded terms and are not derived.
-- **Seeded terms only.** The patterns name product terms through `core/vocabkey` constants. Every term is already seeded (`subjectvocab/registry.go`); `birth` and `subject` have `vocabkey` constants, and S11-38 adds constants for `marriage`, the roles `father`, `mother` and `spouse`, and the relationship terms `spouse`, `parent` and `grandparent`, checked by `TestVocabKeysMatchSeed`. A catalog's own terms imply nothing.
+- **Seeded terms only.** The patterns name product terms through `core/vocabkey` constants. Every term is already seeded (`subjectvocab/registry.go`); `birth` and `subject` have `vocabkey` constants, and S11-38 adds constants for `marriage`, the roles `father` and `mother`, and the relationship terms `spouse`, `parent` and `grandparent`, checked by `TestVocabKeysMatchSeed`. A catalog's own terms imply nothing.
 
-**Derived, not stored.** Implied links are worked out when a side is loaded: the Source layer by `promotealign`'s layer loader, the canon neighborhood by `loadCanon` (which already loads the whole connected component, so grandparent needs no extra reach), and the evidence query's canon side by `canonLinks`. Nothing is written to the catalog, and nothing on the Evidence graph changes.
+- **The subject is an event's principal** (user, 2026-10-26). A marriage's couple are its two `subject`s, as a birth's child and a death's decedent are its subject. There is no `spouse` participation role; the seed, `vocabkey` and Swift drop it (S11-39). An existing catalog keeps its own `spouse` role term, which implies nothing.
+- **Bounded per pivot** (user, 2026-10-26). A pivot with more than `kinship.MaxPivotEnd` (10) participants at either end, or a person with more than 10 parents, reads as malformed data and implies nothing, so one event cannot turn a linear list of links into a quadratic one.
+
+## Where implied links live
+
+Re-cut 2026-10-26 after S11-39's first ship loop measured the first design on a 12-generation tree (8,190 parent links, 4,095 marriages, about 18,000 handles reached through one shared place).
+
+**One result per pivot, in the graph cache.** Every pattern reads one node's links. A marriage's spouses and a birth's parent come from that event node's participations. A grandparent through B comes from B's filed parent links and the birth parents B's event neighbors imply: one hop out. The graph cache keeps each pivot's result, derived the first time a reader needs it, and drops it when the pivot or any node one hop out is replaced or removed, or the vocabulary changes. `canonlinks.Reader.For` answers one person's implied links from the results of its events and of its parents and children. `loadCanon` (S11-39), the evidence query's `canonLinks` (S11-40), and later trees and person pages read it. There is one copy per open catalog; nothing is written to the catalog, and graph verify mode checks each result against a fresh derivation (S11-49).
+
+**The Source side derives when its layer loads.** A Source's layer is small and already memoized with the layer; the layer loader calls `core/kinship` over it (S11-39).
+
+**Why not per proposal.** Deriving over the walked component on every proposal cost about 20–30 ms on the tree, and memoizing the whole walk per Source missed on every pin (a pin changes the walk's seeds), was thrown away by every commit, and kept one catalog-sized copy per Source. The graph cache keeps one copy, current through commits.
+
+**Warm at open.** Loading every person, event and place and building the name index was most of the first proposal's cost (about 0.65 s of 1.05 s locally, three times that on CI). It moves behind the open spinner (S11-50, user 2026-10-26). Kinship results are not warmed; they are derived on first read, about 20–30 ms across that catalog.
 
 **One pure package.** `core/kinship` holds the pattern table and the derivation: it takes a side's links (each with its two ends, its key and its bridge Subjects) and the catalog's `segmentcompare.Terms`, and returns only the implied ones, each carrying the links and the event it was made from. Their keys come from `segmentcompare.Key` over the same link reading the loaders use (moved to `segmentcompare` by S11-41), never built by hand. It imports no `core/database`, joins the one purity guard, and is the place a family tree or a person page will read later ([`ideas/kinship-view.md`](../../ideas/kinship-view.md)).
 
