@@ -49,6 +49,8 @@ Spike 10 and earlier cut each PR as an In / Out / Testable table inside `deploym
 
 [Spike 12 — Source structure](spike-12/) is open alongside it. Plan: [`spike-12/deployment-plan.md`](spike-12/deployment-plan.md). Briefs are authored just before the PR they gate.
 
+[Spike 13 — Person detail page](spike-13/) is open. Plan: [`spike-13/deployment-plan.md`](spike-13/deployment-plan.md). Each brief is designed, then implemented, before the next.
+
 Ideas: [`ideas/`](../ideas/). Claude Design briefs: [`add-design-brief`](../../.agents/skills/add-design-brief/SKILL.md).
 
 ## Completed

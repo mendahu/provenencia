@@ -1,6 +1,6 @@
 # First-class Source provenance date
 
-**Status:** idea only — not roadmapped. Parked after de-scoping structured DateValue from Source metadata (Spike 8 **S8-D4** / **S8-07**). Authoritative catalog rule: [`source-layer-data-model.md`](../source-layer-data-model.md) §1.2 and §5.
+**Status:** pulled into Spike 13 (2026-10-26) so the Person page's Sources section can show each Source's date (R-35 in [`person-detail.md`](person-detail.md)). PRs S13-20, S13-21 and S13-22; decisions in [`deployment-plan.md`](deployment-plan.md#open-questions). Was parked after de-scoping structured DateValue from Source metadata (Spike 8 **S8-D4** / **S8-07**). Authoritative catalog rule: [`source-layer-data-model.md`](../../source-layer-data-model.md) §1.2 and §5.
 
 ## Problem
 
@@ -19,9 +19,18 @@ Source metadata already has type-specific date *labels* for filing and keyword s
 
 ## What this idea still owns
 
-1. **Whether the feature is worth it.** Dogfood has not proven a research workflow that needs “Sources from 1880” as a catalog sort rather than as interpreted event dates.
+Answered 2026-10-26 (now working rules in the [map](deployment-plan.md#engine)):
+
+- **Meaning and name:** the original publication date, when the Source was created. Shown as the Source's publication date.
+- **Storage:** a structured date, `date_value_id` into the shared `date_values`.
+- **Backfill:** none; the field is optional and filled by hand.
+- **Sources list:** shows it and sorts by it, undated last (S13-22).
+
+The original questions, kept for the record:
+
+1. ~~Whether the feature is worth it.~~ Yes: the product owner wants it, first for the Person page's Sources section (2026-10-26).
 2. **The attribute’s name and grain.** Publication vs issuance vs registration vs enumeration are different legal moments. The first-class field has to pick one meaning (or an explicit “as-of” that the researcher chooses per Source).
-3. **Storage.** A column on `sources` (or a single dedicated FK), not `data_type = 'date'` on `source_metadata_fields`. Schema and DateValue-or-text is decided when a spike pulls this.
+3. **Storage.** A column on `sources` (or a single dedicated FK), not `data_type = 'date'` on `source_metadata_fields`. Schema and DateValue-or-text: open question 6.
 4. **UI.** Where it lives on the Source page so it is obvious it is the sort key, not another metadata row.
 
-Until a spike pulls this, metadata date fields remain ordinary text.
+Metadata date fields remain ordinary text.

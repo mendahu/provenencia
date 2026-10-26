@@ -173,7 +173,7 @@ Tables in any domain layer may reference a structured date:
 date_value_id BLOB REFERENCES date_values(id)
 ```
 
-Source catalog dates do **not** use this column. A book’s publication wording or a certificate’s issue date lives on `source_metadata.value_text` only. A later project-wide “when was this evidence created or published” sort is a first-class Source attribute, not a DateValue hanging off an EAV key ([`ideas/source-provenance-date.md`](ideas/source-provenance-date.md)).
+Source catalog dates do **not** use this column. A book’s publication wording or a certificate’s issue date lives on `source_metadata.value_text` only. A later project-wide “when was this evidence created or published” sort is a first-class Source attribute, not a DateValue hanging off an EAV key ([`source-provenance-date.md`](deployment-plan/spike-13/source-provenance-date.md) (Spike 13)).
 
 Interpretation Observations (and later Claims) attach `date_value_id` when the property is a genealogical date:
 
