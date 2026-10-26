@@ -45,4 +45,4 @@ Reviewers: CON (had a Fix-now major). MNT, SEC+PRF: no Fix-now blocker or major.
 CON-1 **Resolved** (Landed line at plan line 16 lists every difference and the evidence). CON-2 **Resolved**. No new findings.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: MNT-3 (nit: `docs/ideas/kinship-view.md` could name `Reader.Relationships`) · to user: — · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: MNT-3 (nit: `docs/ideas/kinship-view.md` could name `Reader.Relationships`) · to user: — · CON miss: none
