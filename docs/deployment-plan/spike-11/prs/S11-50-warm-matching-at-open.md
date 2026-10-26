@@ -238,3 +238,12 @@ None.
 
 **Title:** S11-50 — Matching warms while the project opens
 **Body:** objective in one sentence; what shipped against US-1 – US-3; AC evidence; CI budget figures; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-11/prs/S11-50-warm-matching-at-open.md`.
+
+## Landed
+
+Differences from the plan:
+
+- D-4 was revised by the user on 2026-10-26 after review: "Change D-4: a matching warm failure never fails the open or a committed call (leave the index unbuilt; the next proposal reports the error); after a mid-session drop, re-warm only the alias index and name format, and leave the shortlist index to the next proposal." `WarmOnOpen` runs `warmGraph` (the alias index, the name format, then `MarkWarm`) and returns its error only, then `promotealign.Warm` with its error ignored. `Do` runs only `warmGraph` after `fn` returns nil and the graph needs a warm, and its error never replaces `fn`'s result. The shortlist index is built at open only. `TestDoRewarms` asserts this, and `TestOpenSurvivesABadValue` covers a value that does not decode.
+- The tests were written with the code, not seen failing first.
+- The Status reads `Landed in [#570](...) (date)`, because `check-plan-docs.py` rejects a bare `Landed #570`.
+- The CI budget figures go in the PR body when CI runs.

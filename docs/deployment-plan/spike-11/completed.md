@@ -4,7 +4,7 @@ One short paragraph per landed PR, newest first. Written by the PR that lands it
 
 ## S11-50 — Matching warms while the project opens
 
-**Landed 2026-10-26** in [#570](https://github.com/mendahu/provenencia/pull/570). Opening a project now loads every person, event and place into the graph cache and builds Promote's name index under the open spinner (`catalogsession.WarmOnOpen` ends with the new `promotealign.Warm`), so the first Promote pays only for its own Source. `graphcache` tracks `WarmNeeded`, set by every drop that loses the warm state, and `Do` warms again before it returns; a handle commit still drops only the index. The budgets gain a "warm at open" figure, and cold is the first proposal after it.
+**Landed 2026-10-26** in [#570](https://github.com/mendahu/provenencia/pull/570). Opening a project now loads every person, event and place into the graph cache and builds Promote's shortlist index under the open spinner (`catalogsession.WarmOnOpen` ends with the new `promotealign.Warm`), so the first Promote pays only for its own Source. A matching warm that fails never fails the open: the next proposal builds the index and reports the error. `graphcache` tracks `WarmNeeded`, set by every drop that loses the warm state, and `Do` warms the alias index and name format again before it returns (the shortlist index waits for the next proposal) without ever replacing the call's result; a handle commit still drops only the index. The budgets gain a "warm at open" figure, and cold is the first proposal after it.
 
 ## S11-49 — Kinship links in the graph cache
 
