@@ -1,7 +1,7 @@
 # Ship log — S11-39 Matching reads kinship shapes
 
 **Plan:** [`S11-39-matching-reads-kinship.md`](S11-39-matching-reads-kinship.md) · **Branch:** `s11-39-matching-reads-kinship` · **PR:** #567
-**State:** fixing 2
+**State:** ready
 
 ## Round 0 — implement
 Head `f631a272`. Gate PASS (orchestrator run). Report deviations: STEP-7 baseline taken from a `git archive` export of `7efa02f` rather than a worktree (export deleted); extra `cloneShapes` helper in `promotealign/terms.go`; T-6 goldens use `kinTree`/`kinSide`/`kinShape` helpers; manual check not run in the app (Go goldens cover its steps). The landing commit also picked up this ship log stub.
@@ -79,3 +79,9 @@ Files: `core/kinship/kinship.go` (`chains`), `core/kinship/kinship_test.go`.
 Failing test first: add a `BenchmarkDerive` case (or a `TestDeriveBound` row with a time-independent check) for one parent link g→m carrying several thousand associations plus m→c1..c10; and a `TestDerive` row asserting the implied grandparent link's associations are deduped and in first-added order (duplicates across the two steps appear once).
 Do: in `chains`, replace the `slices.ContainsFunc(assoc, …)` scan with a `map[string]struct{}` keyed by `string(a)`, keeping first-added order, the same shape F-4 used in `linkSet.add` (`core/database/promotealign/terms.go`). Optionally collect `from` and the deduped associations once per `(g,m)` pair and reuse it across that pair's grandchildren. Keep the `Rules` comment's "linear in its input" true.
 Check: the new rows pass; `go test ./core/kinship/ -bench Derive` shows the many-association case roughly linear (report the timings at two sizes); scripts/check-pr.sh PASS.
+
+## Round 2 — fix
+Head `9c29cbaf`. Gate PASS (orchestrator run; the implementer's first run hit an unrelated Swift debounce flake, rerun passed). F-5 done: `chains` dedupes through a set; `TestDeriveManyAssociations` (20,000 associations, each twice, × 10 grandchildren) 11.8 s before → 0.03 s after. Merged `origin/main` (S12-14 plan docs only) as `d2194f2e`; gate PASS.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: none · to user: SEC-1 (answered: bound of 10, then as a `matchregistry` value) · CON miss: none
