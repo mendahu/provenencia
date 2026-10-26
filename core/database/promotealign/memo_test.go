@@ -9,6 +9,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/databasetest"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -297,5 +298,43 @@ func TestCandidatesMemoFollowsCommits(t *testing.T) {
 				t.Errorf("the new handle %x is neither the row's target nor an alternative: %+v", newHandle, row)
 			}
 		})
+	}
+}
+
+// T-2 (AC-1.2): Warm loads the shortlist kinds and builds the index, so a
+// proposal on another Source builds no new one and loads no kind.
+func TestWarmBuildsTheIndex(t *testing.T) {
+	w := newWarmFixture(t)
+	c := w.f.c
+	g := c.Graph()
+	g.Drop()
+	if err := promotealign.Warm(c); err != nil {
+		t.Fatal(err)
+	}
+	gen := promotealign.MatchIndexGenForTest(g)
+	if gen == 0 {
+		t.Fatal("Warm built no index")
+	}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	selects := databasetest.CountSelects(t, c)
+	for _, key := range []string{"person", "event"} {
+		var typeID []byte
+		if err := db.QueryRow(`SELECT id FROM subject_types WHERE key = ? AND origin = 'provenencia'`, key).Scan(&typeID); err != nil {
+			t.Fatal(err)
+		}
+		before := selects.N()
+		if _, err := g.Kind(typeID); err != nil {
+			t.Fatal(err)
+		}
+		if n := selects.N() - before; n != 0 {
+			t.Errorf("Kind(%s) issued %d SELECTs after Warm, want 0", key, n)
+		}
+	}
+	w.f.propose(w.f.graph(w.srcB), nil)
+	if got := promotealign.MatchIndexGenForTest(g); got != gen {
+		t.Errorf("a proposal rebuilt the index: generation %d, want %d", got, gen)
 	}
 }

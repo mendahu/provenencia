@@ -79,6 +79,19 @@ type inputs struct {
 	primary     map[string]primarySubject
 }
 
+// loadConfig is the alignment config a proposal ranks with and the shortlist
+// index is built with: the registry's, with the catalog's value rules. The
+// string is the name pattern those rules came from.
+func loadConfig(g *graphcache.Graph, q database.Querier) (graphalign.Config, string, error) {
+	rules, namePattern, err := valuerules.Load(g, q)
+	if err != nil {
+		return graphalign.Config{}, "", err
+	}
+	cfg := matchregistry.Default().AlignConfig()
+	cfg.Value = rules
+	return cfg, namePattern, nil
+}
+
 // loadInputs checks the catalog and graph id (promote.ErrInvalid for a nil
 // catalog, an id that is not 16 bytes, or a graph that does not exist) and
 // loads the graph's layer.
@@ -99,12 +112,10 @@ func loadInputs(c *database.Catalog, graphID []byte) (inputs, error) {
 		return inputs{}, promote.ErrInvalid
 	}
 
-	rules, namePattern, err := valuerules.Load(c.Graph(), q)
+	cfg, namePattern, err := loadConfig(c.Graph(), q)
 	if err != nil {
 		return inputs{}, err
 	}
-	cfg := matchregistry.Default().AlignConfig()
-	cfg.Value = rules
 
 	terms, err := canonlinks.LoadTerms(c.Graph())
 	if err != nil {
