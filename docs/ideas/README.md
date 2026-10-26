@@ -43,7 +43,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`place-gazetteer-service.md`](place-gazetteer-service.md)
 - [`possible-values.md`](possible-values.md)
 - [`term-management.md`](term-management.md) — one place to manage terms, including relationship direction and inverses
-- [`kinship-view.md`](kinship-view.md) — family trees and person pages reading every kinship shape as one fact, and patterns beyond spouse, parent and grandparent (matching's part is Spike 11)
+- [`kinship-view.md`](kinship-view.md) — family trees reading every kinship shape as one fact, and patterns beyond spouse, parent and grandparent (matching's part is Spike 11; the Person page's nuclear family and page-only siblings are [Spike 13](../deployment-plan/spike-13/))
 
 ## Archived
 

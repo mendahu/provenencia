@@ -2,16 +2,20 @@
 
 ## Status
 
-**Being scoped.** Requirements agreed 2026-10-26; no PR map yet.
+**Open — design phase.** Requirements agreed and PR map cut 2026-10-26; no PR has landed. PR map: [`deployment-plan.md`](deployment-plan.md). Finished steps: [`completed.md`](completed.md).
 
-The Person page is a stub. This spike turns it into a fixed header over five sections (Vitals, Family, Timeline, Gallery, Sources) with quick switching between them, adds a reusable provenance sheet beside every concluded value, and adds controls to remove or review a person's identity claims.
+The Person page is a stub. This spike turns it into a fixed header over five sections (Vitals, Family, Timeline, Gallery, Sources) with quick switching between them, adds a reusable provenance sheet beside every value in Vitals, and adds controls to remove or review a person's identity claims. The whole page is designed and approved first; the map is re-cut after.
 
 ## Documents
 
 | Doc | Role |
 | --- | --- |
-| [**Person detail**](person-detail.md) | Requirements, spike-wide rules, not this spike |
+| [**Deployment plan**](deployment-plan.md) | Goal, working rules, PR map, order, open questions |
+| [**Person detail**](person-detail.md) | Requirements, spike-wide rules, cross-spike dependencies, not this spike |
+| [**Completed**](completed.md) | Finished steps |
+| [Design briefs](design/) | Claude Design; all seven written up front and approved together |
+| PR plans (`prs/`) | One per PR, written just before the PR |
 
 ## Not this spike
 
-Event and Place pages in the new layout, Reconciliation Claims, editing identity claims, weak-claim alerts, event depictions, and kinship beyond the nuclear family. Homes: [person-detail.md § Not this spike](person-detail.md#not-this-spike).
+Event and Place pages in the new layout, Reconciliation Claims, editing identity claims, weak-claim alerts, event depictions, kinship beyond the nuclear family, and sibling evidence in matching. Homes: [person-detail.md § Not this spike](person-detail.md#not-this-spike).
