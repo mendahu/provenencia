@@ -314,6 +314,24 @@ func TestForFollowsCommits(t *testing.T) {
 		w.k.Commit(father)
 		w.expect(cal, shape{Pattern: kinship.PatternBirthParents, Event: "B2", A: "Bea", B: "Cal", Assoc: []string{"B2/Bea", "B2/Cal"}})
 	})
+	t.Run("an event deleted alone", func(t *testing.T) {
+		w := newWorld(t)
+		ann, bea, cal := w.person("Ann"), w.person("Bea"), w.person("Cal")
+		b1, b2 := w.event("B1", vocabkey.EventBirth), w.event("B2", vocabkey.EventBirth)
+		father := w.join("B1/Ann", ann, b1, "father")
+		child := w.join("B1/Bea", bea, b1, "subject")
+		w.join("B2/Bea", bea, b2, "mother")
+		w.join("B2/Cal", cal, b2, "subject")
+		if len(w.for_(cal)) != 2 {
+			t.Fatal("setup: want a parent and a grandparent")
+		}
+		// The commit names the event alone, not its participations.
+		w.k.Remove(father)
+		w.k.Remove(child)
+		w.k.Remove(b1)
+		w.k.Commit(b1)
+		w.expect(cal, shape{Pattern: kinship.PatternBirthParents, Event: "B2", A: "Bea", B: "Cal", Assoc: []string{"B2/Bea", "B2/Cal"}})
+	})
 	t.Run("AC-2.5", func(t *testing.T) {
 		w := newWorld(t)
 		ann, bob := w.person("Ann"), w.person("Bob")

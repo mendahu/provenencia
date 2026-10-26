@@ -57,6 +57,13 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 				roots = append(roots, touched...)
 				continue
 			}
+			// The node's neighbors read it, and the memos that name them
+			// are dropped from the roots.
+			if n, cached := g.nodes[string(id)]; cached {
+				for _, l := range n.Links {
+					roots = append(roots, l.Neighbor)
+				}
+			}
 			g.removeNode(id)
 			continue
 		}
