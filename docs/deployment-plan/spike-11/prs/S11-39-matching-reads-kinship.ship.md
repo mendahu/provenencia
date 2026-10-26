@@ -1,7 +1,7 @@
 # Ship log — S11-39 Matching reads kinship shapes
 
 **Plan:** [`S11-39-matching-reads-kinship.md`](S11-39-matching-reads-kinship.md) · **Branch:** `s11-39-matching-reads-kinship-v2` · **PR:** #572
-**State:** stopped — CI warm budget red (to user)
+**State:** CI fix round (user decision)
 
 The first ship loop (#567, closed in the slice 9 re-cut) has its own ship log on `s11-39-matching-reads-kinship`. This log is the re-plan's, from `main` @ `7fdd4776`.
 
@@ -105,3 +105,11 @@ Merged `origin/main` (S11-51 added to the map; conflict in `deployment-plan.md` 
 
 ## Result
 Gate PASS · CI **red** (Go tests 40403797939: warm proposal 297 ms against 250 ms; macOS tests green) · open: PRF-1 (CI decides) · follow-ups: SEC-1; verify-mode `a_handle_merged` on main · to user: PRF-1 (answered: run CI) · CON miss: none
+
+**User decision (2026-10-26) on the red warm budget:** "Raise the warm budget to 350 ms (recording it as a user decision in the plan and S11-21's figures), and add an idea for walking only the part of the tree a proposal needs."
+
+### CI fix round
+**F-10 — Warm budget 350 ms**
+Files: `core/database/promotealign/perf_test.go` (`budgetWarm = 350 * time.Millisecond`; the comment above the constants says the warm figure was raised from 250 ms by the user on 2026-10-26 when the fixture gained the 12-generation tree and matching read kinship links), `docs/deployment-plan/spike-11/prs/S11-21-large-source-performance.md` (a dated note under D-1 and beside AC-1.2: warm raised to 350 ms by the user, 2026-10-26, S11-39; the rest of D-1 unchanged), this PR's plan (Landed note: the user's decision, quoted, with CI's 297 ms), `docs/ideas/narrower-canon-walk.md` *(new)* and `docs/ideas/README.md`.
+Idea file content: every proposal walks the whole connected component of the canon from its seeds (on the large fixture about 18,000 handles and 24,000 links, plus about 6,000 implied links), so per-link work grows with the tree, not with the Source; the warm proposal on a 4,000-person connected tree costs about 115 ms locally and 297 ms on CI (S11-39). The shape to explore: walk only as far as alignment can use (the hops a layer link can correspond to from the seeds and their placed neighbors), keep the walk deterministic, and measure against `TestLargeSourceBudgets`; open questions: how far a grandparent or place chain needs to reach, and whether the 250 ms warm figure can return.
+Check: `scripts/check-pr.sh` PASS; `python3 scripts/check-plan-docs.py` 0 errors.
