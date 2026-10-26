@@ -46,3 +46,18 @@ Do: in `linkSet`, keep per link a set of its associations (for example `seen []m
 Check: `TestLinkSet`, `TestLayerBridgesMergeKinshipShapes` pass; scripts/check-pr.sh PASS.
 
 Also record in the plan's Landed note: F-1 adds the bound of 10 per pivot end (user decision on SEC-1, in this ship log); F-3 adds the budget case.
+
+## Round 1 — fix
+Head `823856b0`. Implementer's gate PASS without F-1. F-2 done (`350f777f`), F-4 done (`5a29a0a6`), F-3 done (`823856b0`): the shared large-source fixture now holds a 12-generation tree (8,190 parent links, 4,095 marriages); warm 123 ms vs 73 ms without it (budget 250 ms), cold 1.11 s (2.5 s), after a commit 478 ms (1.5 s). The memo stays out per D-8. Deviation: the tree lookups run before `bulkCanon`'s transaction (one connection; a query inside it deadlocked).
+
+**Stopped on F-1.** `core/matchregistry/guard_test.go` marks `core/kinship` `numbers: true`: "the registry owns every tunable". `const maxPivotEnd = 10` fails `TestLayerPackages/core/kinship/numbers`. Fix plan 1 was wrong to call the bound "not a registry knob". The patch (code + `TestDeriveBound`, 10 vs 11 at each pivot) is saved, unapplied. **To user:** where the bound lives.
+
+**F-1, user's answer (2026-10-26):** "Put the cap in core/matchregistry as a registry value (10), read in promotealign and passed into kinship.Derive."
+
+### Fix plan 1, F-1 revised
+
+**F-1′ — Bound what one pivot can imply, through a registry value** (from SEC-1; user-approved twice)
+Files: `core/matchregistry` (the registry value and its doc), `core/kinship/kinship.go`, `core/kinship/kinship_test.go`, `core/database/promotealign/terms.go` (`withImplied`) and its callers in `layer.go`/`canon.go`, `docs/matching-model.md` knob inventory. Skill: `add-match-rule` (follow its steps for a registry knob, including the knob inventory row).
+Start from the saved patch `/private/tmp/claude-501/-Users-jakerobins-Repos-provenencia/e7ccccd4-c472-4924-8362-33987dd34c10/scratchpad/f1.patch` (logic and `TestDeriveBound`), then:
+Do: add the value to the registry where values of its kind live (as `PrefixMinLength` does), named for what it bounds (for example `Kinship.MaxPivotEnd`), value 10, with a comment: a pivot (an event, or the parent between in a chain) with more participants than this at either end reads as malformed data and implies nothing; it keeps derivation linear in its input. `kinship.Derive` takes the bound as an argument (no numeric literal in `core/kinship`; it must not import `matchregistry`). `promotealign` reads it from `matchregistry.Default()` and passes it through `withImplied`. `TestDeriveBound` passes the bound in and pins 10 vs 11 at each end; `BenchmarkDerive` passes the registry's value or a test-local one. Update `core/kinship`'s package doc ("no numbers" stays true: the bound comes in as an argument).
+Check: `TestDeriveBound` rows pass (fail without the skip); `TestLayerPackages` passes unchanged; scripts/check-pr.sh PASS. Add an F-1 line to the plan's Landed note.
