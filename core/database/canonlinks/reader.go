@@ -173,6 +173,21 @@ func (d *deriver) edge(n *graphcache.Node, l graphcache.Link) (kinship.Edge, boo
 	return kinship.Edge{A: from, B: to, KeyA: keyFrom, KeyB: keyTo, Associations: [][]byte{l.Association}}, true
 }
 
+// relationshipEdges reads each relationship link of n that edge reads, in
+// n.Links order: the links that are kin.
+func (d *deriver) relationshipEdges(n *graphcache.Node) []kinship.Edge {
+	var out []kinship.Edge
+	for _, l := range n.Links {
+		if l.BridgeTypeKey != vocabkey.BridgeRelationship {
+			continue
+		}
+		if e, ok := d.edge(n, l); ok {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
 // eventLinks is what the event patterns imply over one event's links.
 func (d *deriver) eventLinks(id []byte) ([]kinship.Implied, error) {
 	n, err := d.node(id)
@@ -227,14 +242,7 @@ func (d *deriver) chainLinks(id []byte, eventResult func([]byte) ([]kinship.Impl
 	if err != nil || n == nil {
 		return nil, err
 	}
-	var edges []kinship.Edge
-	for _, l := range n.Links {
-		if l.BridgeTypeKey == vocabkey.BridgeRelationship {
-			if e, ok := d.edge(n, l); ok {
-				edges = append(edges, e)
-			}
-		}
-	}
+	edges := d.relationshipEdges(n)
 	atEnd, err := d.eventLinksAt(n, eventResult)
 	if err != nil {
 		return nil, err
@@ -324,6 +332,30 @@ func (r *Reader) For(id []byte) ([]kinship.Implied, error) {
 	return out, nil
 }
 
+// Relationships returns id's relationship links, recorded and implied, one per
+// pair of ends and keys: each relationship link filed on id, then For's links,
+// merged through one kinship.LinkSet. The caller owns the slice and its bytes.
+// Nothing is filtered: a link to a merged person is returned, as For returns
+// implied links to one.
+func (r *Reader) Relationships(id []byte) ([]kinship.Link, error) {
+	n, err := r.loadAround(id)
+	if err != nil || n == nil {
+		return nil, err
+	}
+	set := kinship.NewLinkSet()
+	for _, e := range r.d.relationshipEdges(n) {
+		set.Add(kinship.Link{Edge: e})
+	}
+	implied, err := r.For(id)
+	if err != nil {
+		return nil, err
+	}
+	for _, imp := range implied {
+		set.AddImplied(imp)
+	}
+	return set.Links(), nil
+}
+
 // forLinks is For's derivation. around gives a person's node with their
 // neighbors available to node; event and chain give a pivot's links.
 func (d *deriver) forLinks(id []byte, around func([]byte) (*graphcache.Node, error), event, chain func([]byte) ([]kinship.Implied, error)) ([]kinship.Implied, error) {
@@ -353,14 +385,7 @@ func (d *deriver) forLinks(id []byte, around func([]byte) (*graphcache.Node, err
 			people = append(people, person)
 		}
 	}
-	for _, l := range n.Links {
-		if l.BridgeTypeKey != vocabkey.BridgeRelationship {
-			continue
-		}
-		e, ok := d.edge(n, l)
-		if !ok {
-			continue
-		}
+	for _, e := range d.relationshipEdges(n) {
 		parent, child, ok := kinship.ParentStep(e, d.terms)
 		if !ok {
 			continue

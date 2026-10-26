@@ -73,12 +73,17 @@ func (w *world) join(name string, person, event []byte, role string) []byte {
 	return id
 }
 
-// parent files parent as the parent of child.
-func (w *world) parent(name string, parent, child []byte) []byte {
-	id := w.k.Link("relationship", map[string][]byte{"person": parent, "related_to": child}, "relationship_type", "parent")
+// relationship files a relationship of the term from a to b.
+func (w *world) relationship(name string, a, b []byte, term string) []byte {
+	id := w.k.Link("relationship", map[string][]byte{"person": a, "related_to": b}, "relationship_type", term)
 	w.names[string(id)] = name
 	w.all = append(w.all, id)
 	return id
+}
+
+// parent files parent as the parent of child.
+func (w *world) parent(name string, parent, child []byte) []byte {
+	return w.relationship(name, parent, child, "parent")
 }
 
 // shape is a link as a test reads it: ids by name, associations as a set.
@@ -257,6 +262,165 @@ func TestFor(t *testing.T) {
 		ann := w.person("Zed")
 		if _, err := w.r.For(ann); err != nil {
 			t.Fatal(err)
+		}
+	})
+}
+
+// relShape is a relationship link as a test reads it: ends by name, keys,
+// associations as sorted names, shapes as (pattern, pivot name).
+type relShape struct {
+	A, B        string
+	KeyA, KeyB  vocabkey.BridgeKey
+	Assoc       []string
+	Shapes      []string
+	OnlyImplied bool
+}
+
+func (w *world) relShapes(links []kinship.Link) []relShape {
+	var out []relShape
+	for _, l := range links {
+		s := relShape{A: w.name(l.A), B: w.name(l.B), KeyA: l.KeyA, KeyB: l.KeyB, OnlyImplied: l.OnlyImplied}
+		for _, a := range l.Associations {
+			s.Assoc = append(s.Assoc, w.name(a))
+		}
+		sort.Strings(s.Assoc)
+		for _, sh := range l.Shapes {
+			s.Shapes = append(s.Shapes, fmt.Sprintf("%s/%s", sh.Pattern, w.name(sh.Pivot)))
+		}
+		out = append(out, s)
+	}
+	return out
+}
+
+func (w *world) relationships(id []byte) []kinship.Link {
+	w.t.Helper()
+	links, err := w.r.Relationships(id)
+	if err != nil {
+		w.t.Fatal(err)
+	}
+	return links
+}
+
+// lesserFirst turns each link so the lesser end's name is A, keys with it.
+func lesserFirst(links []relShape) []relShape {
+	out := slices.Clone(links)
+	for i, l := range out {
+		if l.A > l.B {
+			out[i].A, out[i].B, out[i].KeyA, out[i].KeyB = l.B, l.A, l.KeyB, l.KeyA
+		}
+	}
+	return out
+}
+
+func TestRelationships(t *testing.T) {
+	check := func(t *testing.T, got, want []relShape) {
+		t.Helper()
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("got  %+v\nwant %+v", got, want)
+		}
+	}
+	t.Run("AC-1.1", func(t *testing.T) {
+		w := newWorld(t)
+		ann, bob := w.person("Ann"), w.person("Bob")
+		w.relationship("AB", ann, bob, "spouse")
+		w.marriage("M1", ann, bob)
+		ka, kb := w.keys(vocabkey.BridgeRelationship, vocabkey.TermSpouse)
+		want := []relShape{{A: "Ann", B: "Bob", KeyA: ka, KeyB: kb, Assoc: []string{"AB", "M1/Ann", "M1/Bob"},
+			Shapes: []string{string(kinship.PatternMarriageSpouses) + "/M1"}}}
+		check(t, lesserFirst(w.relShapes(w.relationships(ann))), want)
+		check(t, lesserFirst(w.relShapes(w.relationships(bob))), want)
+	})
+	t.Run("AC-1.2", func(t *testing.T) {
+		w := newWorld(t)
+		ann, bea := w.person("Ann"), w.person("Bea")
+		w.parent("AB", ann, bea)
+		b1 := w.event("B1", vocabkey.EventBirth)
+		w.join("B1/Ann", ann, b1, "father")
+		w.join("B1/Bea", bea, b1, "subject")
+		ka, kb := w.keys(vocabkey.BridgeRelationship, vocabkey.TermParent)
+		check(t, w.relShapes(w.relationships(bea)), []relShape{{A: "Ann", B: "Bea", KeyA: ka, KeyB: kb,
+			Assoc: []string{"AB", "B1/Ann", "B1/Bea"}, Shapes: []string{string(kinship.PatternBirthParents) + "/B1"}}})
+	})
+	t.Run("AC-1.3", func(t *testing.T) {
+		w := newWorld(t)
+		ann, bea, cal := w.person("Ann"), w.person("Bea"), w.person("Cal")
+		w.parent("AB", ann, bea)
+		w.parent("BC", bea, cal)
+		pa, pb := w.keys(vocabkey.BridgeRelationship, vocabkey.TermParent)
+		ga, gb := w.keys(vocabkey.BridgeRelationship, vocabkey.TermGrandparent)
+		check(t, w.relShapes(w.relationships(ann)), []relShape{
+			{A: "Ann", B: "Bea", KeyA: pa, KeyB: pb, Assoc: []string{"AB"}},
+			{A: "Ann", B: "Cal", KeyA: ga, KeyB: gb, Assoc: []string{"AB", "BC"},
+				Shapes: []string{string(kinship.PatternParentOfParent) + "/Bea"}, OnlyImplied: true},
+		})
+	})
+	t.Run("AC-1.4", func(t *testing.T) {
+		w := newWorld(t)
+		ann, bob := w.person("Ann"), w.person("Bob")
+		w.marriage("M1", ann, bob)
+		links := w.relationships(ann)
+		if len(links) != 1 || !links[0].OnlyImplied {
+			t.Fatalf("links %+v, want one implied spouse link", w.relShapes(links))
+		}
+		for _, l := range links {
+			if l.KeyA.Type != vocabkey.BridgeRelationship {
+				t.Fatalf("link %+v is not a relationship", l)
+			}
+		}
+	})
+	t.Run("AC-1.5", func(t *testing.T) {
+		w := newWorld(t)
+		if got := w.relationships(w.person("Ann")); len(got) != 0 {
+			t.Fatalf("got %+v, want none", got)
+		}
+		if got := w.relationships(make([]byte, 16)); len(got) != 0 {
+			t.Fatalf("got %+v for an unknown id, want none", got)
+		}
+	})
+	t.Run("AC-1.6", func(t *testing.T) {
+		w := newWorld(t)
+		ann, bob := w.person("Ann"), w.person("Bob")
+		w.relationship("AB", ann, bob, "spouse")
+		w.marriage("M1", ann, bob)
+		cloneLinks := func(in []kinship.Link) []kinship.Link {
+			var out []kinship.Link
+			for _, l := range in {
+				l.A, l.B = bytes.Clone(l.A), bytes.Clone(l.B)
+				var as [][]byte
+				for _, a := range l.Associations {
+					as = append(as, bytes.Clone(a))
+				}
+				l.Associations = as
+				l.Recording = l.Recording.Clone()
+				out = append(out, l)
+			}
+			return out
+		}
+		cloneImplied := func(in []kinship.Implied) []kinship.Implied {
+			var out []kinship.Implied
+			for _, l := range in {
+				l.A, l.B = bytes.Clone(l.A), bytes.Clone(l.B)
+				var as [][]byte
+				for _, a := range l.Associations {
+					as = append(as, bytes.Clone(a))
+				}
+				l.Associations = as
+				l.Event, l.Through = bytes.Clone(l.Event), bytes.Clone(l.Through)
+				out = append(out, l)
+			}
+			return out
+		}
+		wantRel, wantFor := cloneLinks(w.relationships(ann)), cloneImplied(w.for_(ann))
+		got := w.relationships(ann)
+		got[0].A[0] ^= 0xff
+		for _, a := range got[0].Associations {
+			a[0] ^= 0xff
+		}
+		if !reflect.DeepEqual(w.relationships(ann), wantRel) {
+			t.Fatalf("Relationships changed after the caller edited a result")
+		}
+		if !reflect.DeepEqual(w.for_(ann), wantFor) {
+			t.Fatalf("For changed after the caller edited a result")
 		}
 	})
 }
