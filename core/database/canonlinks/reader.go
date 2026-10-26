@@ -149,6 +149,29 @@ func (d *deriver) eventLinks(id []byte) ([]kinship.Implied, error) {
 	return out, nil
 }
 
+// eventLinksAt returns the links of each event n stands in, each event once,
+// that have n as an end. eventResult gives one event's links.
+func (d *deriver) eventLinksAt(n *graphcache.Node, eventResult func([]byte) ([]kinship.Implied, error)) ([]kinship.Implied, error) {
+	var out []kinship.Implied
+	seen := map[string]bool{}
+	for _, l := range n.Links {
+		if l.NeighborTypeKey != vocabkey.Event || seen[string(l.Neighbor)] {
+			continue
+		}
+		seen[string(l.Neighbor)] = true
+		links, err := eventResult(l.Neighbor)
+		if err != nil {
+			return nil, err
+		}
+		for _, imp := range links {
+			if bytes.Equal(imp.A, n.ID) || bytes.Equal(imp.B, n.ID) {
+				out = append(out, imp)
+			}
+		}
+	}
+	return out, nil
+}
+
 // chainLinks is what the parent-of-parent chain implies with one person as the
 // parent between. It reads the person's relationship links and the birth links
 // with the person at an end from the results of the events they stand in.
@@ -158,24 +181,20 @@ func (d *deriver) chainLinks(id []byte, eventResult func([]byte) ([]kinship.Impl
 		return nil, err
 	}
 	var edges []kinship.Edge
-	seen := map[string]bool{}
 	for _, l := range n.Links {
-		switch {
-		case l.BridgeTypeKey == vocabkey.BridgeRelationship:
+		if l.BridgeTypeKey == vocabkey.BridgeRelationship {
 			if e, ok := d.edge(n, l); ok {
 				edges = append(edges, e)
 			}
-		case l.NeighborTypeKey == vocabkey.Event && !seen[string(l.Neighbor)]:
-			seen[string(l.Neighbor)] = true
-			links, err := eventResult(l.Neighbor)
-			if err != nil {
-				return nil, err
-			}
-			for _, imp := range links {
-				if imp.Pattern == kinship.PatternBirthParents && (bytes.Equal(imp.A, id) || bytes.Equal(imp.B, id)) {
-					edges = append(edges, imp.Edge)
-				}
-			}
+		}
+	}
+	atEnd, err := d.eventLinksAt(n, eventResult)
+	if err != nil {
+		return nil, err
+	}
+	for _, imp := range atEnd {
+		if imp.Pattern == kinship.PatternBirthParents {
+			edges = append(edges, imp.Edge)
 		}
 	}
 	return kinship.Derive(edges, d.terms, d.rules), nil
@@ -245,26 +264,14 @@ func (r *Reader) For(id []byte) ([]kinship.Implied, error) {
 		return nil, err
 	}
 	atEnd := func(imp kinship.Implied) bool { return bytes.Equal(imp.A, id) || bytes.Equal(imp.B, id) }
-	var out []kinship.Implied
+	out, err := r.d.eventLinksAt(n, r.event)
+	if err != nil {
+		return nil, err
+	}
 	var births []kinship.Implied
-	events := map[string]bool{}
-	for _, l := range n.Links {
-		if l.NeighborTypeKey != vocabkey.Event || events[string(l.Neighbor)] {
-			continue
-		}
-		events[string(l.Neighbor)] = true
-		links, err := r.event(l.Neighbor)
-		if err != nil {
-			return nil, err
-		}
-		for _, imp := range links {
-			if !atEnd(imp) {
-				continue
-			}
-			out = append(out, imp)
-			if imp.Pattern == kinship.PatternBirthParents {
-				births = append(births, imp)
-			}
+	for _, imp := range out {
+		if imp.Pattern == kinship.PatternBirthParents {
+			births = append(births, imp)
 		}
 	}
 
