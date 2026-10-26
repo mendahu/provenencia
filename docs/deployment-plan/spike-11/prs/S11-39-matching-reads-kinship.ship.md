@@ -1,7 +1,7 @@
 # Ship log — S11-39 Matching reads kinship shapes
 
 **Plan:** [`S11-39-matching-reads-kinship.md`](S11-39-matching-reads-kinship.md) · **Branch:** `s11-39-matching-reads-kinship` · **PR:** #567
-**State:** ready
+**State:** stopped — CI budgets red (to user)
 
 ## Round 0 — implement
 Head `f631a272`. Gate PASS (orchestrator run). Report deviations: STEP-7 baseline taken from a `git archive` export of `7efa02f` rather than a worktree (export deleted); extra `cloneShapes` helper in `promotealign/terms.go`; T-6 goldens use `kinTree`/`kinSide`/`kinShape` helpers; manual check not run in the app (Go goldens cover its steps). The landing commit also picked up this ship log stub.
@@ -105,4 +105,17 @@ Check: `go test ./core/...` (with `-tags fts5` where needed) passes; the grep pr
 Head `c14e0d3c`. Gate PASS (orchestrator run, against `13dab35f`; `main` has not moved since). F-6 done: marriage pattern reads `subject` at both ends; `role` seed `spouse` and `vocabkey.RoleSpouse` removed; the plan's grep prints nothing. Deviations: the Swift `SeededRoleTerm.spouse`, `L10n` `roleSpouse` and three xcstrings keys removed (the Swift vocabulary parity test requires it); `segmentcomparetest` terms updated; `lifespan_test.go` and `invariants_test.go` keep a literal `"spouse"` as an arbitrary non-subject role. No UX review: the Swift change only deletes the seeded term's wording; `L10n.wording` returns nil for an unseeded term, so an existing catalog's `spouse` role shows its stored label like any catalog term. Nits (logged): `ORC-1 · lifespan_test.go, invariants_test.go · a non-subject role could be witness now that spouse is unseeded`.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · to user: SEC-1 (answered: bound of 10, as a `matchregistry` value); marriage role (answered: subject is an event's principal; spouse role removed) · CON miss: none
+Gate PASS · CI **red** (Go tests, `TestLargeSourceBudgets`) · open: CI budgets · follow-ups: none · to user: SEC-1 (answered: bound of 10, as a `matchregistry` value); marriage role (answered: subject is an event's principal; spouse role removed) · CON miss: none
+
+## CI — budgets red (2026-10-26)
+Correction: the earlier "CI green" was wrong. `gh pr checks --watch | tail` showed only the macOS workflow; **Go tests** has failed on every non-draft head since F-3 (`0b0e47bb`, `dddf84ed`, `216e0872`, `c14e0d3c`, `893ad748`): warm 278–283 ms (budget 250 ms) or cold 3.30–3.48 s (budget 2.5 s). Earlier heads were drafts, so CI skipped them. Locally the test passes.
+
+Local measurement on `893ad748` (orchestrator, `withImplied` in `loadCanon` disabled for one run, not committed):
+
+| | Cold | Warm | After a commit |
+| --- | --- | --- | --- |
+| Branch | 1.04 s | 123 ms | — |
+| Canon without implied links | 0.97 s | 94 ms | 438 ms |
+| Before F-3's tree (round 1 report) | 0.73 s | 73 ms | 377 ms |
+
+CI runs about 2.3× (warm) to 3.3× (cold) slower than this Mac. On that ratio the warm failure comes from the canon's derivation (94 → 123 ms locally, about 30%), the trigger D-8's Out line named ("revisit if a budget fails"). The cold failure comes mostly from walking the larger tree itself (0.73 → 0.97 s with no derivation, est. 3.2 s on CI), a cost from before this PR that F-3's fixture measured for the first time. **To user.**
