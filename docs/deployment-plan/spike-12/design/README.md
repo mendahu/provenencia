@@ -6,12 +6,11 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 
 ## Scheduled
 
-| Step | View | Gates | Notes |
-| --- | --- | --- | --- |
-| [S12-D5](S12-D5-sources-list-graph-accordion.md) | Sources list — graph accordion | **S12-14** | Expander per row, per-graph progress and Open; the count line on the Source page's graph rows; the Status filter's Promoted label. Written 2026-10-26; board not agreed |
+None. Every Spike 12 brief has an agreed board.
 
 ## Archived
 
+- [S12-D5](archive/S12-D5-sources-list-graph-tokens.md) — Sources list graph tokens; board agreed 2026-10-26, to be built by S12-14.
 - [S12-D4](archive/S12-D4-artifact-graph-links.md) — Artifacts section graph links; board agreed 2026-10-25, built by S12-13 ([#562](https://github.com/mendahu/provenencia/pull/562)).
 - [S12-D3](archive/S12-D3-graph-form.md) — Graph form; board agreed 2026-10-25, built by S12-12.
 - [S12-D2](archive/S12-D2-source-page-graphs.md) — Source page Graphs section; board agreed 2026-10-25, built by S12-11.

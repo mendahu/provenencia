@@ -1,12 +1,15 @@
 # Review — S12-14 Graph counts in the Sources list and on the Source page
 
+**Reshape after the board (2026-10-26).** Board S12-D5 drew a line of graph tokens instead of the accordion; the user adopted it (compact counts with a hover help) and chose to remove `primary_count` end to end (M-5 answered). The plan was rewritten as `S12-14-sources-list-graph-tokens.md`; Decisions D-1 to D-19 replace the accordion's, keeping the round 1 and 2 fixes that still apply (D-3, D-5 – D-9, D-13, D-14, D-17). Rounds 1 and 2 below reviewed the accordion plan; the token plan's review is under "Token plan".
+
 **Verdict:** Fits with changes — Ready with changes (round 1: Not ready; every finding answered)
 **Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 **Covers:** the plan and brief [S12-D5](../design/S12-D5-sources-list-graph-accordion.md)
 
 ## To user
 
-- **M-5 — `primaryCount` has no reader after the new status rule.** Recommended: drop it end to end in this PR (Go `graphprogress.Progress.PrimaryCount`, `engine.proto` field 5 reserved, the handler, `GoStore`, `FakeStore`, `EvidenceGraphProgress`, tests), as one added step, per "High tolerance for churn". The PR stops being Swift only. Alternative: Swift side only, Go and proto logged. Plan Open question 2.
+- Answered 2026-10-26: remove end to end (plan D-18, STEP-3).
+- (was) **M-5 — `primaryCount` has no reader after the new status rule.** Recommended: drop it end to end in this PR (Go `graphprogress.Progress.PrimaryCount`, `engine.proto` field 5 reserved, the handler, `GoStore`, `FakeStore`, `EvidenceGraphProgress`, tests), as one added step, per "High tolerance for churn". The PR stops being Swift only. Alternative: Swift side only, Go and proto logged. Plan Open question 2.
 
 ## Writer's own calls
 
