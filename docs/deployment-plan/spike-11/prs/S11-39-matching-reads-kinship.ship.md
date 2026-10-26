@@ -84,4 +84,4 @@ Check: the new rows pass; `go test ./core/kinship/ -bench Derive` shows the many
 Head `9c29cbaf`. Gate PASS (orchestrator run; the implementer's first run hit an unrelated Swift debounce flake, rerun passed). F-5 done: `chains` dedupes through a set; `TestDeriveManyAssociations` (20,000 associations, each twice, × 10 grandchildren) 11.8 s before → 0.03 s after. Merged `origin/main` (S12-14 plan docs only) as `d2194f2e`; gate PASS.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · to user: SEC-1 (answered: bound of 10, then as a `matchregistry` value) · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: none · to user: SEC-1 (answered: bound of 10, then as a `matchregistry` value) · CON miss: none
