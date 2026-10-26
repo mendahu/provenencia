@@ -86,4 +86,4 @@ SEC+PRF: SEC-1 **Resolved** (`chains` loops distinct triples; 8,000 duplicates i
 `origin/main` had not moved; gate PASS on `b0f7e00d`.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: move `displays` onto memo slots; `ParentStep` per-edge key cost · to user: — · CON miss: none
+Gate PASS · CI green (Go tests 40376650050, macOS tests 40376649997) · open: none · follow-ups: move `displays` onto memo slots; `ParentStep` per-edge key cost · to user: — · CON miss: none
