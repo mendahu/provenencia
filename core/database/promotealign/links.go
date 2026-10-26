@@ -2,8 +2,6 @@ package promotealign
 
 import (
 	"bytes"
-	"maps"
-	"slices"
 
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/segmentcompare"
@@ -44,15 +42,6 @@ type linkSet struct {
 }
 
 func newLinkSet() *linkSet { return &linkSet{at: map[seenEdge]int{}} }
-
-// reserve makes room for n more links.
-func (s *linkSet) reserve(n int) {
-	s.links = slices.Grow(s.links, n)
-	s.assocs = slices.Grow(s.assocs, n)
-	at := make(map[seenEdge]int, len(s.at)+n)
-	maps.Copy(at, s.at)
-	s.at = at
-}
 
 // add merges l into the link with the same ends and keys, or appends it. The
 // set holds its own copy of every end, association and pivot.
