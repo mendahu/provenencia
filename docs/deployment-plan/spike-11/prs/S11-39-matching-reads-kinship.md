@@ -1,6 +1,6 @@
 # S11-39 — Matching reads kinship shapes
 
-**Status:** Planned
+**Status:** Landed in [#567](https://github.com/mendahu/provenencia/pull/567) (2026-10-26)
 **Spike / slice:** Spike 11 · Slice 9 — Kinship shapes
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: Promote's rows and the evidence sheet's relationship Card are unchanged; only the scores and lines behind them move)
@@ -13,6 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/match-rules.mdc`
 **Context:** [Kinship shapes § Shape](../kinship-shapes.md#shape), [§ Counting once](../kinship-shapes.md#counting-once), [§ Weight](../kinship-shapes.md#weight); [layer 6 procedure](../comparison-layers.md#layer-6-procedure); S11-14 D-11 (link weights); S11-38 D-1 (`kinship.Edge`); S11-41 (landed [#561](https://github.com/mendahu/provenencia/pull/561), `segmentcompare.Keys`); working rules: "Implied links, not a new comparison", "One fact, one link per side", "Counted once across sides", "No new knob", "High tolerance for churn", "Sparse data first"
 **Planned:** 2026-10-26 against `main` @ `7efa02f`
+**Landed:** `terms.go` also has a small `cloneShapes` helper so `linkSet.add` clones each shape's pivot (D-5 says add clones every end and association). `TestProposeKinshipShapes` builds its fixture through `kinTree`, `kinSide` and `kinShape` helpers; its kinship closures take the person between (`m`) as well as `a` and `b`. STEP-7's baseline ran from a `git archive` export of `7efa02f`, not a worktree.
 **Review:** [`S11-39-matching-reads-kinship.review.md`](S11-39-matching-reads-kinship.review.md) — Fits with changes / Ready with changes, 2 rounds (every finding fixed)
 
 ### Implementer — read this first

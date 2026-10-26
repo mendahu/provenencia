@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-39 — Matching reads kinship shapes
+
+**Landed 2026-10-26** in [#567](https://github.com/mendahu/provenencia/pull/567). Promote reads a marriage, a birth's father or mother and a parent chain as spouse, parent and grandparent links on both sides, so each finds what the other records; both loaders merge recorded and implied links through one `linkSet`. A fact both sides record through the same paired shape counts once (`kinship.CountedOnce`, called from graph alignment's `corresponding`), while a sparse marriage whose event is not placed still credits. A Source marriage against a filed spouse relationship shows the spouse line on the evidence sheet.
+
 ## S11-38 — Kinship patterns
 
 **Landed 2026-10-25** in [#564](https://github.com/mendahu/provenencia/pull/564). A new pure package, `core/kinship`, reads one side's links through three patterns: two spouses in a marriage imply a spouse link, a father or mother and the subject of a birth imply a parent link, and a parent of a parent implies a grandparent link. `Derive` returns only the implied links, keyed as recorded relationships are, with the bridge Subjects, event and links each was made from; the term keys are new `vocabkey` constants pinned to the seed. Nothing calls it until S11-39. Nothing changes for researchers.
