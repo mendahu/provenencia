@@ -5,7 +5,7 @@ Map review per [`review-plan`](../../../.agents/skills/review-plan/SKILL.md#map-
 | ID | Finding | Answer |
 | --- | --- | --- |
 | K-1 | S13-02's `PersonSummary` duplicates `PersonHeader`, whose doc already names "later tree nodes"; gender treatment would get two inputs | **Fixed.** S13-02 is "Gender in the person header"; rule "One person header for every tile"; `PersonGenderTreatment` reads only the header. Re-key by id noted in S13-04 / S13-05 |
-| K-2 | S13-04 would be the third copy of the direct + implied merge (`promotealign.edgeSeenKey` in `canon.go`, `layer.go`) | **Fixed, preparatory PR added — to user to confirm.** S13-19 "One person's links" in `canonlinks`, after S11-39; S13-04 depends on it; rule "One person's links, direct and implied, from one function"; updates `add-match-rule` |
+| K-2 | S13-04 would be the third copy of the direct + implied merge (`promotealign.edgeSeenKey` in `canon.go`, `layer.go`) | **Fixed; user agreed 2026-10-26 and moved it to Spike 11 as S11-51** (right after S11-39). Was S13-19 "One person's links" in `canonlinks`, after S11-39; S13-04 depends on it; rule "One person's links, direct and implied, from one function"; updates `add-match-rule` |
 | K-3 | Deleting the person on last unpromote would skip `deleteimpact`; a boolean flag skips the Impact preflight pattern | **Fixed.** S13-08 deletes through `deleteimpact` with an unpromote Impact preflight; `add-catalog-delete`, `add-audit-scope` named. Still blocked on open question 1 |
 | K-4 | `GetIdentityClaim` would be a second claim evidence builder beside `promotealign.Evidence` | **Fixed.** S13-07 adds a stored-claim mode to `Evidence`; rule renamed "reuses the claim evidence query" |
 | K-5 | S13-05 rebuilds `EventHeader` / `sortEvents` and walks links without a named hop | **Fixed.** Any-role hop in `core/hops`; `EventHeader` + role + {role, `PersonHeader`}; `sortEvents`; `EventSubject` fold logged for the plan |
@@ -19,4 +19,4 @@ Map review per [`review-plan`](../../../.agents/skills/review-plan/SKILL.md#map-
 | K-13 | Open question 2 ignores `ideas/source-provenance-date.md` | **Fixed.** S13-01 ships without a date; OQ2 links the idea and names the two options |
 | K-14 | Owner package for the three new reads not named | **Fixed.** `core/database/persondetail` named in the rule and scopes |
 
-No blocker remains open and no fix reshaped the spike's slices, so no round 2. Open to the user: K-2's preparatory PR (S13-19) and K-9 (open question 3).
+No blocker remains open and no fix reshaped the spike's slices, so no round 2. K-2 and K-9 were answered by the user on 2026-10-26: S13-19 became S11-51; the Why accordion stays on Event and Place until they adopt sections.

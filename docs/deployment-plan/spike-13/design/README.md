@@ -2,7 +2,7 @@
 
 **UI in this spike is designed in Claude Design before it is implemented.** Workflow: [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md).
 
-**This spike differs from earlier ones:** all eight briefs are written up front and the boards are approved together, as one page ([R-D1](../person-detail.md#design-first-then-re-cut)). Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-track). A brief still covers one view.
+**This spike differs from earlier ones:** all nine briefs are written up front and the boards are approved together, as one page ([R-D1](../person-detail.md#design-first-then-re-cut)). Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-track). A brief still covers one view.
 
 ## Scheduled
 
@@ -16,6 +16,7 @@
 | S13-D6 | Sources section, Remove and the last-claim warning | S13-16, S13-17 |
 | S13-D7 | Claim review sheet | S13-18 |
 | S13-D8 | Source page: the Source date | S13-21 |
+| S13-D9 | Sources list: the Source date | S13-22 |
 
 ## Archived
 

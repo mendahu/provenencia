@@ -14,7 +14,7 @@ The Person page is a stub. This spike turns it into a fixed header over five sec
 | [**Person detail**](person-detail.md) | Requirements, spike-wide rules, cross-spike dependencies, not this spike |
 | [**Source provenance date**](source-provenance-date.md) | The first-class Source date the Sources section shows (moved from ideas) |
 | [**Completed**](completed.md) | Finished steps |
-| [Design briefs](design/) | Claude Design; all eight written up front and approved together |
+| [Design briefs](design/) | Claude Design; all nine written up front and approved together |
 | PR plans (`prs/`) | One per PR, written just before the PR |
 
 ## Not this spike
