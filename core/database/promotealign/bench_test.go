@@ -468,7 +468,7 @@ type treeIDs struct {
 	person, event, participation, relationship []byte
 	personP, eventP, roleP, relatedP, relTypeP []byte
 	typeP, nameP                               []byte
-	spouse, marriage, parent                   []byte
+	subject, marriage, parent                  []byte
 }
 
 // lookupTree reads treeIDs. It runs before bulkCanon's transaction, because
@@ -498,10 +498,10 @@ func lookupTree(db *sql.DB) (treeIDs, error) {
 		personP: idOf("properties", "person"), eventP: idOf("properties", "event"), roleP: idOf("properties", "role"),
 		relatedP: idOf("properties", "related_to"), relTypeP: idOf("properties", "relationship_type"),
 		typeP: idOf("properties", "event_type"), nameP: idOf("properties", "name"),
-		spouse: termOf("role", "spouse"), marriage: termOf("event_type", "marriage"), parent: termOf("relationship_type", "parent"),
+		subject: termOf("role", "subject"), marriage: termOf("event_type", "marriage"), parent: termOf("relationship_type", "parent"),
 	}
 	for _, id := range [][]byte{ids.person, ids.event, ids.participation, ids.relationship, ids.personP, ids.eventP,
-		ids.roleP, ids.relatedP, ids.relTypeP, ids.typeP, ids.nameP, ids.spouse, ids.marriage, ids.parent} {
+		ids.roleP, ids.relatedP, ids.relTypeP, ids.typeP, ids.nameP, ids.subject, ids.marriage, ids.parent} {
 		if id == nil {
 			return ids, fmt.Errorf("the catalog lacks a vocabulary row the tree needs")
 		}
@@ -552,7 +552,7 @@ func bulkTree(ids treeIDs, ent, val, nameVal *sql.Stmt, shape catalogShape) erro
 			if _, err := val.Exec(part, ids.eventP, nil, ev); err != nil {
 				return err
 			}
-			if _, err := val.Exec(part, ids.roleP, ids.spouse, nil); err != nil {
+			if _, err := val.Exec(part, ids.roleP, ids.subject, nil); err != nil {
 				return err
 			}
 			link++

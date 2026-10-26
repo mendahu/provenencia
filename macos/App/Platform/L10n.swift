@@ -2620,7 +2620,6 @@ enum L10n {
             case (SeededPropertyKey.role, SeededRoleTerm.subject): return roleSubject
             case (SeededPropertyKey.role, SeededRoleTerm.father): return roleFather
             case (SeededPropertyKey.role, SeededRoleTerm.mother): return roleMother
-            case (SeededPropertyKey.role, SeededRoleTerm.spouse): return roleSpouse
             case (SeededPropertyKey.role, SeededRoleTerm.child): return roleChild
             case (SeededPropertyKey.role, SeededRoleTerm.witness): return roleWitness
             case (SeededPropertyKey.role, SeededRoleTerm.informant): return roleInformant
@@ -2891,23 +2890,6 @@ enum L10n {
                 "evidenceGraph.share.role.mother.similar",
                 defaultValue: "a similar mother",
                 comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's role in the event is mother, with its own article"
-            )
-        )
-        static let roleSpouse = Wording(
-            label: LocalizedStringResource(
-                "propertyTerm.role.spouse",
-                defaultValue: "Spouse",
-                comment: "Product role term: spouse"
-            ),
-            share: LocalizedStringResource(
-                "evidenceGraph.share.role.spouse",
-                defaultValue: "a spouse",
-                comment: "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is spouse, with its own article"
-            ),
-            shareSimilar: LocalizedStringResource(
-                "evidenceGraph.share.role.spouse.similar",
-                defaultValue: "a similar spouse",
-                comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's role in the event is spouse, with its own article"
             )
         )
         static let roleChild = Wording(

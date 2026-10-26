@@ -2324,7 +2324,7 @@ func marriageFixture(layerShape, canonShape string, dated bool) (graphalign.Laye
 	}
 	side := func(shape string, ann, bob, ev []byte) []graphalign.Bridge {
 		spouse := relLink("spouse")
-		part := partLink("spouse", "marriage")
+		part := partLink("subject", "marriage")
 		switch shape {
 		case "rel":
 			return []graphalign.Bridge{bridge(ann, bob, spouse)}

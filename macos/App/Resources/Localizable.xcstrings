@@ -13586,18 +13586,6 @@
         }
       }
     },
-    "propertyTerm.role.spouse": {
-      "comment": "Product role term: spouse",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spouse"
-          }
-        }
-      }
-    },
     "propertyTerm.role.child": {
       "comment": "Product role term: child",
       "extractionState": "manual",
@@ -20795,30 +20783,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "a similar mother"
-          }
-        }
-      }
-    },
-    "evidenceGraph.share.role.spouse": {
-      "comment": "What a row shares with a connected record, after \"they share\", when it agrees: a connected person's role in the event is spouse, with its own article",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "a spouse"
-          }
-        }
-      }
-    },
-    "evidenceGraph.share.role.spouse.similar": {
-      "comment": "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's role in the event is spouse, with its own article",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "a similar spouse"
           }
         }
       }

@@ -1330,7 +1330,7 @@ func TestLinkSet(t *testing.T) {
 	event := func(n byte) []byte { return []byte{0x20 + n} }
 	bridgeID := func(n byte) []byte { return []byte{0x30 + n} }
 	part := func(p, e, b byte) promotealign.SideLink {
-		ka, kb := segmentcompare.Keys(segmentcomparetest.Bridge(t, vocabkey.BridgeParticipation), "spouse", "marriage", terms)
+		ka, kb := segmentcompare.Keys(segmentcomparetest.Bridge(t, vocabkey.BridgeParticipation), "subject", "marriage", terms)
 		return promotealign.SideLink{Edge: kinship.Edge{A: person(p), B: event(e), KeyA: ka, KeyB: kb, Associations: [][]byte{bridgeID(b)}}}
 	}
 	spouse := func(p, q, b byte) promotealign.SideLink {
@@ -1408,8 +1408,8 @@ func TestLayerBridgesMergeKinshipShapes(t *testing.T) {
 		ann := f.person(f.source, f.artifact, "Ann Ames")
 		bob := f.person(f.source, f.artifact, "Bob Ames")
 		marriage := f.eventOn(f.source, f.artifact, "marriage", nil)
-		f.participation(f.source, f.artifact, ann, marriage, "spouse")
-		f.participation(f.source, f.artifact, bob, marriage, "spouse")
+		f.participation(f.source, f.artifact, ann, marriage, "subject")
+		f.participation(f.source, f.artifact, bob, marriage, "subject")
 		if withRelationship {
 			f.relationship(f.source, f.artifact, ann, bob, "spouse")
 		}
@@ -1550,7 +1550,7 @@ func sameScore(a, b float64) bool { return math.Abs(a-b) < 1e-9 }
 // it through the same paired shape.
 func TestProposeKinshipShapes(t *testing.T) {
 	spouse, parent, grandparent := kinRelationship("spouse"), kinRelationship("parent"), kinRelationship("grandparent")
-	marriage, witnessed := kinMarriage("spouse"), kinMarriage("witness")
+	marriage, witnessed := kinMarriage("subject"), kinMarriage("witness")
 	atBirth := kinBirth("father")
 	// direct is the row of a Source that records the fact the tree does, in the
 	// shape the tree does.

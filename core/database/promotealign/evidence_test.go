@@ -750,8 +750,8 @@ func marriageEvidence(t *testing.T, sourceMarries bool) (claimevidence.Evidence,
 	f := newFixture(t)
 	marry := func(src sources.Source, art artifacts.Artifact, a, b subjects.Subject) subjects.Subject {
 		m := f.eventOn(src, art, "marriage", nil)
-		f.participation(src, art, a, m, "spouse")
-		f.participation(src, art, b, m, "spouse")
+		f.participation(src, art, a, m, "subject")
+		f.participation(src, art, b, m, "subject")
 		return m
 	}
 	aAnn := f.person(f.source, f.artifact, "Ann Ames")

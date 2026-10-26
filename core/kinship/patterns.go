@@ -16,6 +16,6 @@ type eventPattern struct {
 // eventPatterns are the product's event patterns, in output order. A catalog's
 // own roles and event types imply nothing.
 var eventPatterns = []eventPattern{
-	{PatternMarriageSpouses, vocabkey.EventMarriage, []vocabkey.Role{vocabkey.RoleSpouse}, []vocabkey.Role{vocabkey.RoleSpouse}, vocabkey.TermSpouse},
+	{PatternMarriageSpouses, vocabkey.EventMarriage, []vocabkey.Role{vocabkey.RoleSubject}, []vocabkey.Role{vocabkey.RoleSubject}, vocabkey.TermSpouse},
 	{PatternBirthParents, vocabkey.EventBirth, []vocabkey.Role{vocabkey.RoleFather, vocabkey.RoleMother}, []vocabkey.Role{vocabkey.RoleSubject}, vocabkey.TermParent},
 }

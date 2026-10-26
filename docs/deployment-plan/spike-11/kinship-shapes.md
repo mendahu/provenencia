@@ -10,7 +10,7 @@ A kinship fact can be recorded in more than one shape:
 
 | Fact | Direct | Through an event | Through a chain |
 | --- | --- | --- | --- |
-| A and B are spouses | `relationship · spouse` between A and B | A and B are both `spouse` in one `marriage` | — |
+| A and B are spouses | `relationship · spouse` between A and B | A and B are both `subject` of one `marriage` | — |
 | A is B's parent | `relationship · parent`, A parent of B | A is `father` or `mother`, B is `subject`, in one `birth` | — |
 | A is C's grandparent | `relationship · grandparent`, A grandparent of C | — | A is a parent of B, and B is a parent of C (each in any parent shape) |
 
@@ -22,14 +22,14 @@ Matching does not know these are one fact. `segmentcompare.Corresponds` lines up
 
 | Pattern | Holds when | Implies |
 | --- | --- | --- |
-| Marriage spouses | Two people are each `spouse` in one `marriage` event | `relationship · spouse` between them |
+| Marriage spouses | Two people are each `subject` of one `marriage` event | `relationship · spouse` between them |
 | Birth parents | A is `father` or `mother` and B is `subject` in one `birth` event | `relationship · parent`, A parent of B |
 | Parent of a parent | A is a parent of B and B is a parent of C, each by a direct or implied link | `relationship · grandparent`, A grandparent of C |
 
 - **Directed where the roles say so.** Birth roles name the parent end (`father`, `mother`) and the child end (`subject`), so the implied parent link is directed like a recorded one, and reads through `segmentcompare.Key` with its inverse (`child`).
 - **One way only.** A chain implies a grandparent. A grandparent link does not imply a parent in between; there is no one to name.
 - **Grandparent stops at two generations.** Great-grandparent and deeper are not seeded terms and are not derived.
-- **Seeded terms only.** The patterns name product terms through `core/vocabkey` constants. Every term is already seeded (`subjectvocab/registry.go`); `birth` and `subject` have `vocabkey` constants, and S11-38 adds constants for `marriage`, the roles `father`, `mother` and `spouse`, and the relationship terms `spouse`, `parent` and `grandparent`, checked by `TestVocabKeysMatchSeed`. A catalog's own terms imply nothing.
+- **Seeded terms only.** The patterns name product terms through `core/vocabkey` constants. Every term is already seeded (`subjectvocab/registry.go`); `birth` and `subject` have `vocabkey` constants, and S11-38 adds constants for `marriage`, the roles `father` and `mother`, and the relationship terms `spouse`, `parent` and `grandparent`, checked by `TestVocabKeysMatchSeed`. A catalog's own terms imply nothing.
 
 **Derived, not stored.** Implied links are worked out when a side is loaded: the Source layer by `promotealign`'s layer loader, the canon neighborhood by `loadCanon` (which already loads the whole connected component, so grandparent needs no extra reach), and the evidence query's canon side by `canonLinks`. Nothing is written to the catalog, and nothing on the Evidence graph changes.
 
