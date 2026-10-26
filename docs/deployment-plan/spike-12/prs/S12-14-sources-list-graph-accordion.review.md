@@ -1,7 +1,7 @@
 # Review — S12-14 Graph counts in the Sources list and on the Source page
 
-**Verdict:** round 1: Fits with changes — Not ready; every finding answered (see Round 2)
-**Rounds:** 1 so far. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes (round 1: Not ready; every finding answered)
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 **Covers:** the plan and brief [S12-D5](../design/S12-D5-sources-list-graph-accordion.md)
 
 ## To user
@@ -98,3 +98,19 @@
 **Answer:** Fixed — brief Count line call sites (with M-8), frame 5 (row expanded earlier in the session), frame 7 (all three statuses).
 
 **Checks the dry run could not run:** Swift builds and tests (no Xcode in the sandbox). Not a plan defect.
+
+## Round 2
+
+Reviewers checked every round-1 answer: all hold (maintainability notes M-4 left the "error with no value" check in two features, raised as M-10).
+
+### M-10 · blocker · "One Source's graphs: loading, failed or rows" written a second time
+**Plan:** D-12 `SourcesModel.graphZone(for:)` / `GraphZone` and D-7 `statuses(for:)` each read `evidenceGraphsHandle`, and disagreed on a loaded list with no graph for the Source. **Codebase:** `SourceGraphsSection.rows` / `loadError` already answer the same question for the page; `WorkspaceSession+EvidenceGraphs.swift` is the list's one reader. **Better shape:** one session read, `evidenceGraphsRead(sourceID:)`.
+**Answer:** Fixed — D-17 (new) `EvidenceGraphsRead` / `evidenceGraphsRead(sourceID:)`; D-7, D-8 (`rows`, `loadError` forward), D-12 (`.loaded([])` → `.loading` for the row only) read it; STEP-1, T-9.
+
+Below blocker (reviewer, not raised): brief §1 said "under its ref and description" — Fixed to "under its ref, above its description". §6 Next adds had a canvas reading `SourcesModel.EvidenceStatus` — Fixed: a reader outside Sources moves `EvidenceStatus` first.
+
+### X-14 · blocker · A third navigation test calls a deleted helper
+**Codebase:** `SourcesListNavigationTests.graphLocationBlockedWithoutArtifact` calls `graphLocation(for:graphs:)`; the private `graphsBySource(_:)` is used only by deleted tests; the STEP-4 pattern missed both.
+**Answer:** Fixed — D-9, §4 and T-5 delete the test and the helper (the per-graph blocked case stays in `graphLocationOpensTheGivenGraph`); the STEP-4 `rg` pattern matches `graphsBySource(`.
+
+**Verdict:** Fits with changes — Ready with changes. No blocker open. Open: board S12-D5 (plan Blocked) and M-5 (To user).
