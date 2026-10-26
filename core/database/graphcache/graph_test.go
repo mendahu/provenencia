@@ -17,10 +17,7 @@ func TestNodeAndKindAndVerify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var typeID []byte
-	if err := db.QueryRow(`SELECT id FROM subject_types WHERE key = 'person' AND origin = 'provenencia'`).Scan(&typeID); err != nil {
-		t.Fatal(err)
-	}
+	typeID := graphcachetest.SubjectTypeID(t, c, "person")
 	id := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
 	if _, err := db.Exec(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES (?, ?, 'PER-1')`, id, typeID); err != nil {
 		t.Fatal(err)
@@ -72,10 +69,7 @@ func TestCommitInsertsANewHandleIntoALoadedKind(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var typeID []byte
-	if err := db.QueryRow(`SELECT id FROM subject_types WHERE key = 'person' AND origin = 'provenencia'`).Scan(&typeID); err != nil {
-		t.Fatal(err)
-	}
+	typeID := graphcachetest.SubjectTypeID(t, c, "person")
 	g := c.Graph()
 	if _, err := g.Kind(typeID); err != nil {
 		t.Fatal(err)
