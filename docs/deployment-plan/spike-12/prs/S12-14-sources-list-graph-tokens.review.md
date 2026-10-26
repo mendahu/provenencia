@@ -191,3 +191,25 @@ Below blocker (reviewer, not raised): brief §1 said "under its ref and descript
 **Answer:** `SourcesListNavigation` fixed (M-18); `PVList.swift` is Out (a file this PR does not touch).
 
 **Logged:** Shift-F10 for `pvRightClickMenu` (board frame 1) — a kit PR; the Conclusion presentations onto `QueryHandle.read`.
+
+## Token plan — round 2
+
+**Reviewers:** maintainability (Opus) — Fits with changes; executability (Sonnet) — Ready.
+
+### M-19 · blocker · The token decides "why blocked" a second way
+**Codebase:** `SourcesListNavigation.graphBlockedReason(for:)`, read by `SourceGraphsSection.blockedReason(for:)` on the Source page.
+**Answer:** Fixed — D-11 `Kind.graph` carries `blockedReason` from `graphBlockedReason(for:)` (D-12); the token states table uses it for help and hint.
+
+**Disputed round-1 answers:**
+- M-11 (Conclusion presentations left as Out) — Fixed: D-14 moves `ConclusionListPresentation` and `ConclusionDetailPresentation` onto `QueryHandle.read` in STEP-1, with `PersonsListTests`; the Out line is gone.
+- M-15 (a sixth dash copy) — Fixed: `EvidenceCardView` uses `PVStroke.dashPattern`; §4, D-20, STEP-4 (its `rg` now matches any `[4, 3]`) and the brief say six.
+- M-16 (brief still said `Components/Flow/`) — Fixed in the brief inventory.
+
+**Below blocker (reviewer):** `statusCountsError`'s new reads — Fixed (D-13); `SourcesModel.graphProgress(for:)` without an app caller — Fixed (deleted, D-13; STEP-1 moves its test); the extension header — Fixed (D-13).
+
+**Logged (reviewer):** hand folds left in `SourcePageModel.sync`, `SourceTypesModel` and `EvidenceGraphModel.canCite` (named in the plan's Next adds).
+
+### Executability round 2 — Ready
+One risk raised and taken: a `ButtonStyle` struct's `@Environment(\.isFocused)` is outside the button's focus scope. Fixed — D-10 and D-11 read it in a private body `View`, as `PVButtonBody` does; §10 step 5 checks the ring is drawn.
+
+**Verdict:** Fits with changes — Ready. No blocker open, nothing To user. The plan is Planned.
