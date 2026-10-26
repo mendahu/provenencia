@@ -1,7 +1,7 @@
 # Ship log — S11-38 Kinship patterns
 
 **Plan:** [`S11-38-kinship-patterns.md`](S11-38-kinship-patterns.md) · **Branch:** `s11-38-kinship-patterns` · **PR:** #564
-**State:** fixing 1 (SEC-1 to user)
+**State:** ready
 
 Branch cut from `origin/main` @ `e3b85f97` with the two plan commits from `s11-38-plan` cherry-picked on top (the plan never landed on `main`).
 
@@ -53,3 +53,13 @@ MNT-2 (F-3) **Resolved**: checked the grep myself. MNT-3 (F-4) **Resolved**: che
 
 ## Round 2 — review
 Reviewers: MNT (MNT-1), SEC+PRF (PRF-1). Scope `0581b563...56ce5bec`. CON had no Fix-now blocker or major.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-1 | MNT | major | Either-end key-pair rule copied | Resolved | `Edge.reads` (`kinship.go:28-36`) used at all three call sites; grep prints only the helper's two lines |
+| PRF-1 | PRF | blocker | `chains` pairwise over parent steps | Resolved | `byG`/`byPair` index; benchmark allocations 5,163 / 10,302 / 20,573 at 8 / 9 / 10 generations (exact doubling) |
+
+No new findings. No Fix plan 2.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: SEC-1 (`docs/ideas/kinship-view.md`, "Bounding event fan-out") · to user: SEC-1 (answered: accept as is) · CON miss: none
