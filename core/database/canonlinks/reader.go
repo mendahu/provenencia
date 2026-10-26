@@ -66,7 +66,15 @@ func check(g *graphcache.Graph, id []byte, stored any) error {
 	if !ok {
 		return fmt.Errorf("canonlinks: stored result %x has type %T", id, stored)
 	}
-	d, err := newDeriver(g, res.rules, true)
+	// The check must not load: it reads only nodes already cached.
+	cached := func(id []byte) (*graphcache.Node, error) {
+		n, ok := g.Cached(id)
+		if !ok {
+			return nil, fmt.Errorf("canonlinks: %x is not cached", id)
+		}
+		return n, nil
+	}
+	d, err := newDeriver(g, res.rules, cached)
 	if err != nil {
 		return err
 	}
@@ -88,17 +96,16 @@ func check(g *graphcache.Graph, id []byte, stored any) error {
 	return nil
 }
 
-// deriver derives one pivot's links from graph nodes. strict reads only nodes
-// that are already cached and fails on any other: the check must not load.
+// deriver derives one pivot's links from graph nodes, read through node.
 type deriver struct {
 	g             *graphcache.Graph
-	strict        bool
+	node          func([]byte) (*graphcache.Node, error)
 	rules         kinship.Rules
 	terms         segmentcompare.Terms
 	eventTypeProp []byte
 }
 
-func newDeriver(g *graphcache.Graph, rules kinship.Rules, strict bool) (*deriver, error) {
+func newDeriver(g *graphcache.Graph, rules kinship.Rules, node func([]byte) (*graphcache.Node, error)) (*deriver, error) {
 	terms, err := LoadTerms(g)
 	if err != nil {
 		return nil, err
@@ -107,18 +114,7 @@ func newDeriver(g *graphcache.Graph, rules kinship.Rules, strict bool) (*deriver
 	if err != nil {
 		return nil, err
 	}
-	return &deriver{g: g, strict: strict, rules: rules, terms: terms, eventTypeProp: v.PropertyID(vocabkey.PropertyEventType, vocabkey.OriginProvenencia)}, nil
-}
-
-func (d *deriver) node(id []byte) (*graphcache.Node, error) {
-	if !d.strict {
-		return d.g.Node(id)
-	}
-	n, ok := d.g.Cached(id)
-	if !ok {
-		return nil, fmt.Errorf("canonlinks: %x is not cached", id)
-	}
-	return n, nil
+	return &deriver{g: g, node: node, rules: rules, terms: terms, eventTypeProp: v.PropertyID(vocabkey.PropertyEventType, vocabkey.OriginProvenencia)}, nil
 }
 
 // edge reads one link of n as an edge that stands for that link alone.
@@ -194,7 +190,7 @@ type Reader struct {
 
 // NewReader loads the catalog's bridge terms and event type property once.
 func NewReader(g *graphcache.Graph, rules kinship.Rules) (*Reader, error) {
-	d, err := newDeriver(g, rules, false)
+	d, err := newDeriver(g, rules, g.Node)
 	if err != nil {
 		return nil, err
 	}
