@@ -398,7 +398,59 @@ var (
 		},
 	})
 	memoVocab = graphcache.RegisterNodeMemo(graphcache.NodeMemo{Name: "graphcache_test.vocab", DropOnVocabulary: true})
+	memoAll   = graphcache.RegisterNodeMemo(graphcache.NodeMemo{Name: "graphcache_test.all", DropOnHandleCommit: true})
 )
+
+func TestNodeMemoDropsOnAnyCommit(t *testing.T) {
+	c := graphcachetest.OpenCatalog(t)
+	canon := graphcachetest.NewCanon(t, c)
+	person, event, other := canon.Entity("person"), canon.Entity("event"), canon.Entity("person")
+	canon.Commit(canon.Link("participation", map[string][]byte{"person": person, "event": event}, "role", "subject"))
+	g := c.Graph()
+	ids := [][]byte{event, person, other}
+	held := func() bool {
+		for _, id := range ids {
+			if _, ok := g.Memo(memoAll, id); !ok {
+				return false
+			}
+		}
+		return true
+	}
+	fill := func() {
+		for _, id := range ids {
+			g.SetMemo(memoAll, id, "all")
+		}
+	}
+	fill()
+	if _, err := g.Node(canon.Entity("person")); err != nil {
+		t.Fatal(err)
+	}
+	if !held() {
+		t.Fatal("a first load dropped an entry")
+	}
+	canon.Commit(event)
+	if held() {
+		t.Fatal("a handle commit kept an entry")
+	}
+	for _, id := range ids {
+		if _, ok := g.Memo(memoAll, id); ok {
+			t.Fatal("a handle commit kept an entry")
+		}
+	}
+	fill()
+	canon.CommitVocabulary()
+	for _, id := range ids {
+		if _, ok := g.Memo(memoAll, id); !ok {
+			t.Fatal("a vocabulary commit dropped a slot without DropOnVocabulary")
+		}
+	}
+	g.Drop()
+	for _, id := range ids {
+		if _, ok := g.Memo(memoAll, id); ok {
+			t.Fatal("Drop kept an entry")
+		}
+	}
+}
 
 func TestNodeMemoDropsOnCommit(t *testing.T) {
 	c := graphcachetest.OpenCatalog(t)
