@@ -1,7 +1,7 @@
 # Ship log — S11-39 Matching reads kinship shapes
 
 **Plan:** [`S11-39-matching-reads-kinship.md`](S11-39-matching-reads-kinship.md) · **Branch:** `s11-39-matching-reads-kinship` · **PR:** #567
-**State:** fixing 4 (user-requested)
+**State:** stopped — CI cold still red after Fix plan 4 (to user)
 
 ## Round 0 — implement
 Head `f631a272`. Gate PASS (orchestrator run). Report deviations: STEP-7 baseline taken from a `git archive` export of `7efa02f` rather than a worktree (export deleted); extra `cloneShapes` helper in `promotealign/terms.go`; T-6 goldens use `kinTree`/`kinSide`/`kinShape` helpers; manual check not run in the app (Go goldens cover its steps). The landing commit also picked up this ship log stub.
@@ -156,3 +156,10 @@ Do:
 Check: the new tests pass; `go test -tags fts5 ./core/database/...` passes; `PROVENENCIA_GRAPH_VERIFY=1` run of `./core/database/promotealign` passes; `TestLargeSourceBudgets` cold and after-a-commit pass; scripts/check-pr.sh PASS. Report cold, warm and after-a-commit.
 
 Not this round (user: read CI's cold number first): parallel candidate ranking, a ranking-only compare path, scanning values.
+
+## Round 4 — fix (user-authorized)
+Head `3620aa7f`. Gate PASS (orchestrator run). F-7 done (`dbd674c9`, `TestCanonWalkMemo`), F-8 done (`3620aa7f`, `TestLoadKindsMatchesNodeLoads`, `TestLoadKindsThenKindIssuesNoQuery`, `TestLinkScanUsesIndexes`). Deviations: associations query starts from `subject_types` (same result, plan test passes). `PROVENENCIA_GRAPH_VERIFY=1` fails only `TestMemoFollowsCommit/a_handle_merged` ("links: count 1, catalog 0"); the implementer reports it fails on `origin/main` too (raw-SQL merge then `OnCommit`) — not verified by the orchestrator yet.
+
+Local (orchestrator, load average 8–10, unreliable): cold 1.06–1.18 s, warm 33–42 ms, after a commit 536–542 ms.
+
+**CI, Go tests run 40353254720 on `3620aa7f`: failure.** Warm passes. Cold 3.29 s (budget 2.5 s; before: 3.30–3.48 s). After a handle commit 1.75 s (budget 1.5 s; passed before). Cause of the after-commit regression, read in code: `LoadKinds` (`graphcache/graph.go:276-315`) runs the catalog-wide `scanLinks` for any non-empty set of uncached ids, so one handle missing after a commit reads every association in the catalog. F-8 bought no measurable cold gain on CI. **To user.**
