@@ -15,7 +15,7 @@ Reviewers: CON (Sonnet), MNT, SEC+PRF. Skipped: UX (no `macos/App/**`, strings, 
 | --- | --- | --- | --- | --- | --- |
 | PRF-1 | PRF | blocker | `chains` compares every pair of parent steps and allocates a 3-string key per pair | Fix now → F-1 | verified: `kinship.go:177-179` builds `triple{…}` before the `bytes.Equal(up.m, down.g)` filter, and lines 186/191 rescan all steps per triple; reviewer measured 4× per doubling (S≈8k → 4.2 s, 3.1 GB). `loadCanon` feeds a whole family in S11-39 |
 | MNT-1 | MNT | major | Two copies of "match an edge to a key pair from either end" | Fix now → F-2 | verified: `kinship.go:64-69` and `:126-131` are the same D-3 rule as two switches |
-| SEC-1 | SEC (+PRF) | major | Event patterns emit k(k-1)/2 links per event from a catalog-sized participant count | To user | verified: `kinship.go:146-166` nested loops over one event's group. Output size is quadratic by D-5's definition ("every two different people who are each `spouse`"), so any bound changes D-5 and needs a number the "No new knob" rule and the `numbers` guard refuse in this package |
+| SEC-1 | SEC (+PRF) | major | Event patterns emit k(k-1)/2 links per event from a catalog-sized participant count | To user → Follow-up (user: accept as is) | verified: `kinship.go:146-166` nested loops over one event's group. Output size is quadratic by D-5's definition ("every two different people who are each `spouse`"), so any bound changes D-5 and needs a number the "No new knob" rule and the `numbers` guard refuse in this package |
 | MNT-2 | MNT | minor | Skill marks `core/kinship/patterns.go` "(new)" | Fix now → F-3 | verified: `.agents/skills/add-match-rule/SKILL.md:87`; file this PR changes |
 | MNT-3 | MNT | minor | Second copy of the `LookupBridge`+`Fatalf` test helper | Fix now → F-4 | same-pass cleanup: `kinship_test.go:20-27` copies `segmentcompare_test.go:293-300` (`bridgeOf`) |
 | CON-1 | CON | minor | Landed note omits the `docs/ideas/kinship-view.md` line | Rejected | that line came from the plan's own review commit (`90bd3126`, review M-3), not from implementation; it is no difference from the plan |
@@ -44,3 +44,12 @@ Check: `rg -n '\(new\)' .agents/skills/*/SKILL.md` prints only `plan-pr` lines.
 Files: `core/segmentcompare/segmentcomparetest/terms.go` (or a sibling file in that package), `core/kinship/kinship_test.go`, `core/segmentcompare/segmentcompare_test.go`.
 Do: add `func Bridge(t testing.TB, key string) connectrules.Bridge` beside `Terms` (`t.Helper()`, `connectrules.LookupBridge`, `t.Fatalf` on miss). Delete `bridge` in `kinship_test.go` and `bridgeOf` in `segmentcompare_test.go`; point their callers at `segmentcomparetest.Bridge`.
 Check: `rg -n 'LookupBridge\(' core -g '*_test.go'` prints nothing; `rg -n 'func Bridge' core/segmentcompare/segmentcomparetest` prints one line; scripts/check-pr.sh PASS.
+
+**SEC-1, user answer (2026-10-25):** accept as is. Real data has two spouses per marriage; the quadratic output D-5 defines stays, and SEC-1 is logged as an idea in [`docs/ideas/kinship-view.md`](../../../ideas/kinship-view.md).
+
+## Round 1 — fix
+Head `56ce5bec`. Gate PASS (all eight checks). F-1 done (`chains` indexes by parent and by (parent, child); `BenchmarkDerive` 0.49 / 1.28 / 2.86 ms at 255 / 511 / 1023 people, about linear); F-2 done (`Edge.reads`; `rg 'KeyA == .*KeyB ==' core/kinship` prints only the helper's two lines); F-3 done; F-4 done (`segmentcomparetest.Bridge`; `rg 'LookupBridge\(' core -g '*_test.go'` prints nothing).
+MNT-2 (F-3) **Resolved**: checked the grep myself. MNT-3 (F-4) **Resolved**: checked both greps myself.
+
+## Round 2 — review
+Reviewers: MNT (MNT-1), SEC+PRF (PRF-1). Scope `0581b563...56ce5bec`. CON had no Fix-now blocker or major.
