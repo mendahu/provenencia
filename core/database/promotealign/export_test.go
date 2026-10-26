@@ -111,6 +111,6 @@ func LinkSetForTest(links []SideLink, terms segmentcompare.Terms) []SideLink {
 	for _, l := range links {
 		s.add(l)
 	}
-	s.withImplied(terms)
+	s.withImplied(terms, matchregistry.Default().Kinship)
 	return s.links
 }

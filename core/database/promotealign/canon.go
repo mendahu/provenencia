@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/kinship"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -167,7 +168,7 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 		}
 	}
 
-	set.withImplied(terms)
+	set.withImplied(terms, matchregistry.Default().Kinship)
 	var edges []graphalign.CanonEdge
 	for _, l := range set.links {
 		edges = append(edges, graphalign.CanonEdge{

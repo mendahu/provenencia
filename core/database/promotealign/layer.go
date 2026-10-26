@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/kinship"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/subjectprofile"
@@ -217,7 +218,7 @@ func loadLayerBridges(g *graphcache.Graph, eg graphcache.EvidenceGraph, props ma
 			set.add(sideLink{Edge: kinship.Edge{A: e.From, B: e.To, KeyA: keyA, KeyB: keyB, Associations: [][]byte{e.Association}}})
 		}
 	}
-	set.withImplied(terms)
+	set.withImplied(terms, matchregistry.Default().Kinship)
 	var out []graphalign.Bridge
 	for _, l := range set.links {
 		out = append(out, graphalign.Bridge{

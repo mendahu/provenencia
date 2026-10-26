@@ -116,12 +116,12 @@ func cloneShapes(in []kinship.Shape) []kinship.Shape {
 }
 
 // withImplied adds the links the kinship patterns imply to the set, through add.
-func (s *linkSet) withImplied(terms segmentcompare.Terms) {
+func (s *linkSet) withImplied(terms segmentcompare.Terms, rules kinship.Rules) {
 	edges := make([]kinship.Edge, len(s.links))
 	for i, l := range s.links {
 		edges[i] = l.Edge
 	}
-	for _, imp := range kinship.Derive(edges, terms) {
+	for _, imp := range kinship.Derive(edges, terms, rules) {
 		s.add(sideLink{Edge: imp.Edge, Shapes: []kinship.Shape{imp.Shape()}, OnlyImplied: true})
 	}
 }
