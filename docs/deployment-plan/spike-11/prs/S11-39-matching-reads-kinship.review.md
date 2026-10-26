@@ -77,3 +77,13 @@ The numbers in §2 and §11 come from a throwaway prototype at `7efa02f` (not in
 
 ### X-13 · minor · Smaller gaps
 **Answer:** Fixed — STEP-9 gives the exact paragraph, glossary rows and §12 bullet; §9 names the map row change; `TestLayerBridgesCoverEveryConnectRule` joins "Most likely to break".
+
+## Round 2
+
+Maintainability (Opus): M-1, M-3, M-4, M-5, M-6 accepted; M-2 accepted in part (led to M-7); X-4, X-5, X-8, X-9 accepted. Verdict: Fits with changes.
+
+### M-7 · blocker · `withImplied` is a second same-ends, same-key merge beside the one `loadLayerBridges` keeps, against the working rule
+**Plan:** D-5 `withImplied` indexes and merges on its own; the inline merge in `loadLayerBridges` and `edgeSeen` in `loadCanon` stay; D-6 / D-7 copy out and back.
+**Codebase:** `core/database/promotealign/layer.go` `loadLayerBridges` (`seen`, inline merge); `core/database/promotealign/canon.go` `loadCanon` (`edgeSeen`); working rule "One fact, one link per side" ("through the loaders' existing merge (`edgeSeenKey`), not a second one").
+**Better shape:** one `linkSet` with `add` in `terms.go`, used by both loaders' walks and by `withImplied`; one conversion per loader.
+**Answer:** Fixed — D-5 is `sideLink` / `linkSet` / `add` / `withImplied`; D-6 and D-7 replace `seen` and `edgeSeen` with `set.add` and convert once; §6 Deletes lists both inline merges; T-4 is `TestLinkSet` through `LinkSetForTest`; STEP-8's skill text names `linkSet.add` as the one merge.
