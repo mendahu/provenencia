@@ -5,7 +5,7 @@ import (
 	"maps"
 	"sort"
 
-	"github.com/mendahu/provenencia/core/connectrules"
+	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/segmentcompare"
@@ -34,7 +34,6 @@ type candidatesMemo struct {
 // order the walk used to break ties. Every handle's profile is built once: the
 // shortlisted ones together, the ones the walk reaches after it.
 func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer graphalign.Layer, fixed []graphalign.Fixed, cfg graphalign.Config, terms segmentcompare.Terms) (graphalign.Canon, error) {
-	props := prof.props
 	types := prof.types
 
 	handles := map[string]*graphcache.Node{}
@@ -139,7 +138,6 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 		}
 		for _, item := range ready {
 			id, n := item.id, item.n
-			selfKind := typeKey(types, n.SubjectTypeID)
 			for _, l := range n.Links {
 				neighbor, err := g.Node(l.Neighbor)
 				if err != nil {
@@ -152,7 +150,7 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 				if !vocabkey.IsPrimaryKind(nKind) {
 					continue
 				}
-				if from, to, keyFrom, keyTo, ok := canonKeys(id, selfKind, n, l, neighbor, props, terms); ok {
+				if from, to, keyFrom, keyTo, ok := canonlinks.EdgeOf(id, n, l, neighbor, prof.eventTypeProp, terms); ok {
 					if ek := edgeSeenKey(from, to, keyFrom, keyTo); !edgeSeen[ek] {
 						edgeSeen[ek] = true
 						edges = append(edges, graphalign.CanonEdge{
@@ -190,52 +188,6 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 		return bytes.Compare(out.Handles[i].ID, out.Handles[j].ID) < 0
 	})
 	return out, nil
-}
-
-// canonKeys reads one filed link as an edge between its two ends, ordered as
-// recorded, with the key it has from each. A link whose bridge is not
-// registered is not an edge.
-func canonKeys(self []byte, selfKind string, n *graphcache.Node, l graphcache.Link, neighbor *graphcache.Node, props map[string]graphcache.VocabProperty, terms segmentcompare.Terms) (from, to []byte, keyFrom, keyTo vocabkey.BridgeKey, ok bool) {
-	b, ok := connectrules.LookupBridge(l.BridgeTypeKey)
-	if !ok || len(b.Endpoints) != 2 {
-		return nil, nil, vocabkey.BridgeKey{}, vocabkey.BridgeKey{}, false
-	}
-	if l.FromEnd {
-		from, to = self, l.Neighbor
-	} else {
-		from, to = l.Neighbor, self
-	}
-	// The event type comes from whichever end is an event; `segmentcompare.Keys` alone
-	// decides whether the key keeps it.
-	var eventType string
-	if first, has := segmentcompare.EventEndpoint(b); has {
-		// The first endpoint is the edge's from end; self is that end when
-		// the link was filed from it.
-		if first == l.FromEnd {
-			eventType = keptTerm(n, props, neighborTypeProperty[vocabkey.Event])
-		} else {
-			eventType = keptTerm(neighbor, props, neighborTypeProperty[vocabkey.Event])
-		}
-	}
-	keyFrom, keyTo = segmentcompare.Keys(b, vocabkey.BridgeTerm(l.TermKey), vocabkey.EventType(eventType), terms)
-	return from, to, keyFrom, keyTo, true
-}
-
-func keptTerm(n *graphcache.Node, props map[string]graphcache.VocabProperty, key string) string {
-	if n == nil || key == "" {
-		return ""
-	}
-	for propID, rows := range n.Values {
-		if props[propID].Key != key {
-			continue
-		}
-		for _, row := range rows {
-			if row.Rank == 1 && row.Reason == "kept" {
-				return row.TermKey
-			}
-		}
-	}
-	return ""
 }
 
 func typeByKey(g *graphcache.Graph) (map[string][]byte, error) {

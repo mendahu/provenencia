@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
+	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/depictionvalue"
@@ -139,15 +140,16 @@ type profile struct {
 // as the graph's match index lives. done is the index's profile map. A caller
 // keeps the profiles with keep(); nothing else stores them.
 type profiler struct {
-	g           *graphcache.Graph
-	props       map[string]graphcache.VocabProperty
-	terms       map[string]graphcache.VocabTerm
-	metas       subjectcompare.Metas
-	types       map[string][]byte
-	rules       subjectcompare.Rules
-	reconcile   valuecompare.Rules
-	namePattern string
-	done        map[string]profile
+	g             *graphcache.Graph
+	props         map[string]graphcache.VocabProperty
+	eventTypeProp []byte // the event_type property: what types an event on a bridge
+	terms         map[string]graphcache.VocabTerm
+	metas         subjectcompare.Metas
+	types         map[string][]byte
+	rules         subjectcompare.Rules
+	reconcile     valuecompare.Rules
+	namePattern   string
+	done          map[string]profile
 }
 
 func newProfiler(g *graphcache.Graph, metas subjectcompare.Metas, rules subjectcompare.Rules, namePattern string) (*profiler, error) {
@@ -169,7 +171,7 @@ func newProfiler(g *graphcache.Graph, metas subjectcompare.Metas, rules subjectc
 		done = map[string]profile{}
 	}
 	return &profiler{
-		g: g, props: props, terms: vocab.TermsByID(), metas: metas, types: types, rules: rules,
+		g: g, props: props, eventTypeProp: canonlinks.EventTypeProperty(vocab), terms: vocab.TermsByID(), metas: metas, types: types, rules: rules,
 		reconcile: matchregistry.Default().Value, namePattern: namePattern,
 		done: done,
 	}, nil

@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/matchregistry"
@@ -22,7 +23,7 @@ func LayerBridges(c *database.Catalog, graphID []byte) ([]graphalign.Bridge, err
 	}
 	cfg := matchregistry.Default().AlignConfig()
 	cfg.Value = rules
-	terms, err := loadTerms(c.Graph())
+	terms, err := canonlinks.LoadTerms(c.Graph())
 	if err != nil {
 		return nil, err
 	}
