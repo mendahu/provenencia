@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/shortlist"
@@ -88,6 +89,31 @@ func loadShortlist(g *graphcache.Graph, p *profiler, cfg graphalign.Config) (*sh
 	g.SetMatchIndex(m)
 	p.keep()
 	return ix, m.gen, nil
+}
+
+// Warm loads the shortlist kinds onto the catalog graph and builds the
+// shortlist index, so the first proposal after a project opens ranks without
+// either. A handle commit drops the index again; the next proposal rebuilds it.
+func Warm(c *database.Catalog) error {
+	db, err := c.DB()
+	if err != nil {
+		return err
+	}
+	g := c.Graph()
+	cfg, namePattern, err := loadConfig(g, db)
+	if err != nil {
+		return err
+	}
+	metas, err := loadMetas(g)
+	if err != nil {
+		return err
+	}
+	prof, err := newProfiler(g, metas, cfg.Subject, namePattern)
+	if err != nil {
+		return err
+	}
+	_, _, err = loadShortlist(g, prof, cfg)
+	return err
 }
 
 // seedHandles loads and profiles the handles the index offers each Subject, in

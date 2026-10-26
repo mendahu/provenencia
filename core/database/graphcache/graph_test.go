@@ -17,10 +17,7 @@ func TestNodeAndKindAndVerify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var typeID []byte
-	if err := db.QueryRow(`SELECT id FROM subject_types WHERE key = 'person' AND origin = 'provenencia'`).Scan(&typeID); err != nil {
-		t.Fatal(err)
-	}
+	typeID := graphcachetest.SubjectTypeID(t, c, "person")
 	id := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
 	if _, err := db.Exec(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES (?, ?, 'PER-1')`, id, typeID); err != nil {
 		t.Fatal(err)
@@ -72,10 +69,7 @@ func TestCommitInsertsANewHandleIntoALoadedKind(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var typeID []byte
-	if err := db.QueryRow(`SELECT id FROM subject_types WHERE key = 'person' AND origin = 'provenencia'`).Scan(&typeID); err != nil {
-		t.Fatal(err)
-	}
+	typeID := graphcachetest.SubjectTypeID(t, c, "person")
 	g := c.Graph()
 	if _, err := g.Kind(typeID); err != nil {
 		t.Fatal(err)
@@ -463,5 +457,45 @@ func TestNodeMemoDropsOnCommit(t *testing.T) {
 	g.Drop()
 	if held(memoNear, event) || held(memoNear, person) {
 		t.Fatal("Drop kept an entry")
+	}
+}
+
+// WarmNeeded is set by every drop that loses what the open-time warm built,
+// and not by a handle commit, which drops only the match index.
+func TestWarmNeeded(t *testing.T) {
+	g := graphcachetest.OpenCatalog(t).Graph()
+	if !g.WarmNeeded() {
+		t.Fatal("a new graph does not need a warm")
+	}
+	g.MarkWarm()
+	if g.WarmNeeded() {
+		t.Fatal("MarkWarm left the flag set")
+	}
+	g.SetMatchIndex(struct{}{})
+	id := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+	if err := g.OnCommit(effects.Commit{Effects: effects.Set{Handles: [][]byte{id}}}); err != nil {
+		t.Fatal(err)
+	}
+	if g.WarmNeeded() {
+		t.Error("a handle commit set the flag")
+	}
+	if _, ok := g.MatchIndex(); ok {
+		t.Error("a handle commit left the match index")
+	}
+	g.Drop()
+	if !g.WarmNeeded() {
+		t.Error("Drop did not set the flag")
+	}
+	g.MarkWarm()
+	if err := g.OnCommit(effects.Commit{Effects: effects.Set{Lists: []effects.List{effects.ListVocabulary}}}); err != nil {
+		t.Fatal(err)
+	}
+	if !g.WarmNeeded() {
+		t.Error("a vocabulary commit did not set the flag")
+	}
+	g.MarkWarm()
+	g.SetNameFormat(struct{}{})
+	if !g.WarmNeeded() {
+		t.Error("SetNameFormat did not set the flag")
 	}
 }
