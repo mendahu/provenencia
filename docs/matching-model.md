@@ -88,6 +88,8 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 | **settle** | Re-score dirty pairs until none changes or the round cap is reached |
 | **band** | Strong, medium, weak or no match, for a whole row, from its evidence |
 | **contested** | A visible mark on a row whose comparisons include a conflict, whatever its band |
+| **kinship pattern** | A row of `core/kinship`'s table that says a fact recorded one way implies a relationship link: a marriage's two subjects imply spouses, a birth's father or mother and subject imply a parent, and a parent of a parent implies a grandparent |
+| **pivot** | The one node a kinship pattern reads: an event (a marriage or a birth), or the person between in a chain; the graph cache keeps one result per pivot, derived on first read (`canonlinks.Reader.For`) |
 | **match registry** | The one package holding every matching tunable, one section per layer group |
 | **knob** | One registry field a developer can tune; changing it is one edit in the registry |
 
@@ -198,6 +200,7 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `alignment.Shortlist.Words` | person `name`, place `toponym` | decided ([`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-6-procedure)) | Leads whose words key a Subject |
 | `alignment.Shortlist.Dated.event.Type` | `event_type` | decided ([`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-6-procedure)) | The term keyed with each year bucket |
 | `alignment.Shortlist.Dated.event.Date` | `date` | decided ([`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-6-procedure)) | The date whose reach is bucketed; a period stands for it |
+| `kinship.MaxPivotEnd` | 10 | user, 2026-10-26 (S11-39): more than two, for unusual families, with a bound so one malformed event stays cheap | Most participants at either end of a pivot (an event, or the parent between in a chain) before it reads as malformed and implies nothing |
 | `evidence.Checked` | `Same`, `Equivalent` | decided ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md#lines)) | Relations whose lines start checked |
 | `evidence.ByEye` | `unjudged` | decided ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md#lines)) | Causes of an unknown line the researcher judges: kept, never checked |
 | `evidence.Defining` | event `event_type` | decided ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md#evidence-through-relationships)) | Neighbor properties bundled into a relationship line |

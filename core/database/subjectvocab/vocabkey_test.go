@@ -69,7 +69,6 @@ func TestVocabKeysMatchSeed(t *testing.T) {
 		{"role", string(vocabkey.RoleSubject)},
 		{"role", string(vocabkey.RoleFather)},
 		{"role", string(vocabkey.RoleMother)},
-		{"role", string(vocabkey.RoleSpouse)},
 		{"relationship_type", string(vocabkey.TermSpouse)},
 		{"relationship_type", string(vocabkey.TermParent)},
 		{"relationship_type", string(vocabkey.TermGrandparent)},

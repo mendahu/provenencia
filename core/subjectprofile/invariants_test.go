@@ -150,7 +150,7 @@ func TestInvariants(t *testing.T) {
 		r := rand.New(rand.NewSource(invariantSeed))
 		lifespans := matchregistry.Default().Subject.Lifespans[vocabkey.Person]
 		types := []vocabkey.EventType{vocabkey.EventBirth, vocabkey.EventDeath, vocabkey.EventBurial, "residence", "marriage"}
-		roles := []vocabkey.Role{vocabkey.RoleSubject, "spouse", "father"}
+		roles := []vocabkey.Role{vocabkey.RoleSubject, "witness", "father"}
 		built := 0
 		for i := 0; i < invariantCases; i++ {
 			var events []subjectprofile.LifeEvent

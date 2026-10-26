@@ -70,14 +70,11 @@ func loadLayer(g *graphcache.Graph, graphID []byte, cfg graphalign.Config, nameP
 	if err != nil {
 		return graphalign.Layer{}, nil, err
 	}
-	props, err := propertiesByID(g)
-	if err != nil {
-		return graphalign.Layer{}, nil, err
-	}
 	vocab, err := g.Vocabulary()
 	if err != nil {
 		return graphalign.Layer{}, nil, err
 	}
+	props := vocab.PropertiesByID()
 	primary := map[string]primarySubject{}
 	byKind := map[string][][]byte{}
 	for _, s := range eg.Subjects {

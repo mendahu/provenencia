@@ -1,41 +1,10 @@
 package promotealign
 
 import (
-	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/observations"
-	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
-
-// loadTerms reads the catalog's facts about every term of each registered
-// bridge's disambiguation Property: whether it keeps direction and which term
-// reads it from the other end. It is the one source of both.
-func loadTerms(g *graphcache.Graph) (segmentcompare.Terms, error) {
-	v, err := g.Vocabulary()
-	if err != nil {
-		return nil, err
-	}
-	out := segmentcompare.Terms{}
-	for _, b := range connectrules.Bridges() {
-		if !connectrules.HasDisambiguation(b.Disambiguation) {
-			continue
-		}
-		typ := vocabkey.SubjectType(b.BridgeTypeKey)
-		for _, t := range v.Terms {
-			if t.PropertyKey != b.Disambiguation {
-				continue
-			}
-			if out[typ] == nil {
-				out[typ] = map[vocabkey.BridgeTerm]segmentcompare.Term{}
-			}
-			out[typ][vocabkey.BridgeTerm(t.Key)] = segmentcompare.Term{
-				Directed: t.Directed, Inverse: vocabkey.BridgeTerm(t.InverseKey),
-			}
-		}
-	}
-	return out, nil
-}
 
 // seenEdge identifies one edge, whichever end listed it, by its ends and the
 // key it reads from each.

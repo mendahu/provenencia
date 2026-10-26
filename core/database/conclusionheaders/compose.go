@@ -117,28 +117,6 @@ func entityOf(n *graphcache.Node) canonicalentities.Entity {
 	}
 }
 
-func kept(n *graphcache.Node, propID []byte) []graphcache.Value {
-	if n == nil || len(propID) != 16 {
-		return nil
-	}
-	var out []graphcache.Value
-	for _, row := range n.Values[string(propID)] {
-		if row.Reason == "kept" {
-			out = append(out, row)
-		}
-	}
-	return out
-}
-
-func rank1(rows []graphcache.Value) (graphcache.Value, bool) {
-	for _, row := range rows {
-		if row.Rank == 1 {
-			return row, true
-		}
-	}
-	return graphcache.Value{}, false
-}
-
 func follow(g *graphcache.Graph, id []byte, hop hops.Hop) ([]graphcache.Link, error) {
 	if g == nil {
 		return nil, nil
@@ -147,8 +125,8 @@ func follow(g *graphcache.Graph, id []byte, hop hops.Hop) ([]graphcache.Link, er
 }
 
 func keptName(n *graphcache.Node, propID []byte) (*namevalue.Value, int, error) {
-	rows := kept(n, propID)
-	row, ok := rank1(rows)
+	rows := n.Kept(propID)
+	row, ok := graphcache.Rank1(rows)
 	if !ok || len(row.Name) == 0 {
 		return nil, len(rows), nil
 	}
@@ -160,8 +138,8 @@ func keptName(n *graphcache.Node, propID []byte) (*namevalue.Value, int, error) 
 }
 
 func keptText(n *graphcache.Node, propID []byte) (string, int) {
-	rows := kept(n, propID)
-	row, ok := rank1(rows)
+	rows := n.Kept(propID)
+	row, ok := graphcache.Rank1(rows)
 	if !ok || !row.HasText {
 		return "", len(rows)
 	}
@@ -169,8 +147,8 @@ func keptText(n *graphcache.Node, propID []byte) (string, int) {
 }
 
 func keptTerm(n *graphcache.Node, propID []byte) (id []byte, key string, nkept int) {
-	rows := kept(n, propID)
-	row, ok := rank1(rows)
+	rows := n.Kept(propID)
+	row, ok := graphcache.Rank1(rows)
 	if !ok || row.TermKey == "" {
 		return nil, "", len(rows)
 	}
@@ -178,8 +156,8 @@ func keptTerm(n *graphcache.Node, propID []byte) (id []byte, key string, nkept i
 }
 
 func keptDateAt(n *graphcache.Node, propID []byte) (*datevalue.Value, int, string, bool, error) {
-	rows := kept(n, propID)
-	row, ok := rank1(rows)
+	rows := n.Kept(propID)
+	row, ok := graphcache.Rank1(rows)
 	if !ok {
 		return nil, len(rows), "", false, nil
 	}
@@ -193,7 +171,7 @@ func keptDateAt(n *graphcache.Node, propID []byte) (*datevalue.Value, int, strin
 
 func toponyms(n *graphcache.Node, propID []byte) []string {
 	var names []string
-	for _, row := range kept(n, propID) {
+	for _, row := range n.Kept(propID) {
 		name := strings.TrimSpace(row.Text)
 		if row.HasText && name != "" {
 			names = append(names, name)

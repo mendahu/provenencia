@@ -64,12 +64,8 @@ func (g *Graph) Verify() error {
 			}
 		}
 	}
-	if detailFn != nil {
-		for key, stored := range g.details {
-			if err := detailFn(g, []byte(key), stored); err != nil {
-				return err
-			}
-		}
+	if err := g.verifyMemos(); err != nil {
+		return err
 	}
 	if evidenceGraphFn != nil {
 		for key, e := range g.evidenceGraphs {
