@@ -1,6 +1,7 @@
 package graphcache_test
 
 import (
+	"bytes"
 	"slices"
 	"sort"
 	"testing"
@@ -93,6 +94,13 @@ func TestTypeKeysByID(t *testing.T) {
 	}
 	if k, ok := keys[string(pluginID)]; ok {
 		t.Fatalf("TypeKeysByID() holds the plugin type as %q", k)
+	}
+	ids := v.TypeIDsByKey()
+	if !bytes.Equal(ids[vocabkey.Person], personID) {
+		t.Fatalf("TypeIDsByKey()[person] = %x, want %x", ids[vocabkey.Person], personID)
+	}
+	if len(ids) != len(keys) {
+		t.Fatalf("TypeIDsByKey() has %d types, TypeKeysByID() %d", len(ids), len(keys))
 	}
 }
 

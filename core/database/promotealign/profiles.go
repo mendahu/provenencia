@@ -158,10 +158,6 @@ func newProfiler(g *graphcache.Graph, metas subjectcompare.Metas, rules subjectc
 		return nil, err
 	}
 	props := vocab.PropertiesByID()
-	types, err := typeByKey(g)
-	if err != nil {
-		return nil, err
-	}
 	// Profiles are kept with the match index, for one name pattern at a time:
 	// this profiler shares the index's map when it has one for this pattern,
 	// and starts its own otherwise. keep stores a map into the index.
@@ -171,7 +167,7 @@ func newProfiler(g *graphcache.Graph, metas subjectcompare.Metas, rules subjectc
 		done = map[string]profile{}
 	}
 	return &profiler{
-		g: g, props: props, eventTypeProp: vocab.PropertyID(vocabkey.PropertyEventType, vocabkey.OriginProvenencia), terms: vocab.TermsByID(), metas: metas, types: types, typeKeys: vocab.TypeKeysByID(), rules: rules,
+		g: g, props: props, eventTypeProp: vocab.PropertyID(vocabkey.PropertyEventType, vocabkey.OriginProvenencia), terms: vocab.TermsByID(), metas: metas, types: vocab.TypeIDsByKey(), typeKeys: vocab.TypeKeysByID(), rules: rules,
 		reconcile: matchregistry.Default().Value, namePattern: namePattern,
 		done: done,
 	}, nil

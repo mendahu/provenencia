@@ -2,6 +2,8 @@ package promotealign
 
 import (
 	"bytes"
+	"maps"
+	"slices"
 
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/segmentcompare"
@@ -37,11 +39,20 @@ type linkSet struct {
 	links []sideLink
 	at    map[seenEdge]int // a link's index in links
 	// assocs holds each link's associations, parallel to links, so a merge does
-	// not rescan them.
+	// not rescan them. A link with none (a canon link) has a nil set.
 	assocs []map[string]struct{}
 }
 
 func newLinkSet() *linkSet { return &linkSet{at: map[seenEdge]int{}} }
+
+// reserve makes room for n more links.
+func (s *linkSet) reserve(n int) {
+	s.links = slices.Grow(s.links, n)
+	s.assocs = slices.Grow(s.assocs, n)
+	at := make(map[seenEdge]int, len(s.at)+n)
+	maps.Copy(at, s.at)
+	s.at = at
+}
 
 // add merges l into the link with the same ends and keys, or appends it. The
 // set holds its own copy of every end, association and pivot.
@@ -50,6 +61,9 @@ func (s *linkSet) add(l sideLink) {
 	if i, ok := s.at[k]; ok {
 		have := &s.links[i]
 		for _, a := range l.Associations {
+			if s.assocs[i] == nil {
+				s.assocs[i] = map[string]struct{}{}
+			}
 			if _, dup := s.assocs[i][string(a)]; !dup {
 				s.assocs[i][string(a)] = struct{}{}
 				have.Associations = append(have.Associations, bytes.Clone(a))
@@ -59,18 +73,17 @@ func (s *linkSet) add(l sideLink) {
 		return
 	}
 	l.A, l.B = bytes.Clone(l.A), bytes.Clone(l.B)
-	assocs := make([][]byte, len(l.Associations))
-	have := make(map[string]struct{}, len(l.Associations))
-	for i, a := range l.Associations {
-		assocs[i] = bytes.Clone(a)
-		have[string(a)] = struct{}{}
+	var have map[string]struct{}
+	if len(l.Associations) > 0 {
+		assocs := make([][]byte, len(l.Associations))
+		have = make(map[string]struct{}, len(l.Associations))
+		for i, a := range l.Associations {
+			assocs[i] = bytes.Clone(a)
+			have[string(a)] = struct{}{}
+		}
+		l.Associations = assocs
 	}
-	l.Associations = assocs
-	var shapes []kinship.Shape
-	for _, x := range l.Shapes {
-		shapes = append(shapes, kinship.Shape{Pattern: x.Pattern, Pivot: bytes.Clone(x.Pivot)})
-	}
-	l.Shapes = shapes
+	l.Recording = l.Recording.Clone()
 	s.at[k] = len(s.links)
 	s.links = append(s.links, l)
 	s.assocs = append(s.assocs, have)

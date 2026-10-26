@@ -114,6 +114,7 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 	set := newLinkSet()
 	var walkedPeople [][]byte
 	walked := map[string]bool{}
+	walkedLinks := 0
 	queue := append([][]byte(nil), seeds...)
 	for len(queue) > 0 {
 		wave := queue
@@ -140,6 +141,7 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 				continue
 			}
 			ready = append(ready, reached{id, n})
+			walkedLinks += len(n.Links)
 			for _, l := range n.Links {
 				prefetch = append(prefetch, l.Neighbor)
 			}
@@ -173,12 +175,18 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 		}
 	}
 
+	set.reserve(walkedLinks)
 	for _, id := range walkedPeople {
 		implied, err := reader.For(id)
 		if err != nil {
 			return graphalign.Canon{}, err
 		}
 		for _, imp := range implied {
+			// Every link is walked from both ends and each end's call returns
+			// it, so only the call of its A end adds it.
+			if !bytes.Equal(imp.A, id) {
+				continue
+			}
 			_, aOK := handles[string(imp.A)]
 			_, bOK := handles[string(imp.B)]
 			if aOK && bOK {
@@ -212,21 +220,6 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 		}
 		return bytes.Compare(out.Handles[i].ID, out.Handles[j].ID) < 0
 	})
-	return out, nil
-}
-
-func typeByKey(g *graphcache.Graph) (map[string][]byte, error) {
-	v, err := g.Vocabulary()
-	if err != nil {
-		return nil, err
-	}
-	out := map[string][]byte{}
-	for _, t := range v.Types {
-		if t.Origin != vocabkey.OriginProvenencia {
-			continue
-		}
-		out[t.Key] = append([]byte(nil), t.ID...)
-	}
 	return out, nil
 }
 
