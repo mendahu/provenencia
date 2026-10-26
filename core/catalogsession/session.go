@@ -18,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/project"
+	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/users"
 )
@@ -65,14 +66,24 @@ func ReconcileOnOpen(c *database.Catalog) error {
 }
 
 // WarmOnOpen loads what Promote and the lists read on every call onto the
-// catalog graph, once, when a project opens: the built alias index, then the
-// default name format. One list, so a catalog opened for a test warms what the
-// app does.
+// catalog graph when a project opens: the built alias index, the default name
+// format, then matching's shortlist kinds and name index. Matching goes last
+// because setting the first two drops the match index. It ends by marking the
+// graph warm. Do runs it again after a call that dropped the graph or its
+// vocabulary, so the call that threw the warm state away pays for it. One list,
+// so a catalog opened for a test warms what the app does.
 func WarmOnOpen(c *database.Catalog) error {
 	if err := namealiases.Warm(c); err != nil {
 		return err
 	}
-	return nameformats.Warm(c)
+	if err := nameformats.Warm(c); err != nil {
+		return err
+	}
+	if err := promotealign.Warm(c); err != nil {
+		return err
+	}
+	c.Graph().MarkWarm()
+	return nil
 }
 
 func openResearcher(projectDir string) (*database.Catalog, error) {
@@ -137,7 +148,9 @@ func getOrOpen(projectDir string) (*session, error) {
 
 // Do runs fn on the held catalog for projectDir, opening once if needed.
 // Operations on the same project serialize; overlapping callers wait.
-// Opening a different project closes any other held session first.
+// Opening a different project closes any other held session first. When fn
+// returns nil and left the graph needing a warm, Do runs WarmOnOpen before it
+// returns; when fn fails it does not.
 func Do(projectDir string, fn func(*database.Catalog) error) error {
 	dir, err := key(projectDir)
 	if err != nil {
@@ -157,6 +170,9 @@ func Do(projectDir string, fn func(*database.Catalog) error) error {
 			continue
 		}
 		err = fn(s.cat)
+		if err == nil && s.cat.Graph().WarmNeeded() {
+			err = WarmOnOpen(s.cat)
+		}
 		s.mu.Unlock()
 		return err
 	}
