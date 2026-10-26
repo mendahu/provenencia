@@ -12,11 +12,11 @@ The Person page (`macos/App/Features/Conclusions/PersonDetailView.swift`, worded
 - **R-2. Canonical people only.** Everything on the page is canonical (promoted) entities. A relative, participant, or anything else that exists only as an unpromoted Subject does not appear. Where nothing is promoted, nothing is drawn.
 - **R-3. Reuse the existing gender/sex colors.** Every person treatment on the page (Family, Timeline participants) uses the color logic already shipped (`PersonGenderTreatment`, S10-23), including its treatment for unknown values.
 
-## Design first, then re-cut
+## Design, then build, one view at a time
 
-- **R-D1. The whole page is designed up front.** Before any chrome PR is planned, Claude Design boards cover every part of the page together: header, section switching, all five sections, the provenance sheet, the gallery viewer, and the claim review and remove-last-claim flows. The product owner approves the page as a whole, not view by view.
-- **R-D2. Expect scope to change after the design.** The PR map is cut from these requirements, then re-cut once the boards are approved. Chrome PRs stay `Scoped` until then; requirements here may be amended by what the design finds.
-- **R-D3. Engine work may run ahead of the design** where it does not depend on what the boards decide (for example sibling inference, R-18), so the spike is not idle while design iterates.
+- **R-D1. Design and implement incrementally.** Each view's brief is written and its board agreed, then that view is implemented, before the next brief starts (2026-10-26; this replaced an earlier "design the whole page up front" rule). The first board draws the page frame with all five sections, so later boards fill it.
+- **R-D2. Expect scope to change as boards land.** Chrome PR scopes are provisional until their board is agreed; a later board that needs landed chrome changed adds a follow-up PR.
+- **R-D3. Engine work may run ahead of the design** where it does not depend on what the boards decide (for example sibling inference, R-18).
 
 ## Layout
 

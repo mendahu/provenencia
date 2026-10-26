@@ -2,9 +2,11 @@
 
 **UI in this spike is designed in Claude Design before it is implemented.** Workflow: [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md).
 
-**This spike differs from earlier ones:** all nine briefs are written up front and the boards are approved together, as one page ([R-D1](../person-detail.md#design-first-then-re-cut)). Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-track). A brief still covers one view.
+Briefs are written **one at a time, just before the PR they gate**; each board is agreed and implemented before the next brief ([R-D1](../person-detail.md#design-then-build-one-view-at-a-time)). Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-track). A brief covers one view.
 
 ## Scheduled
+
+In order; S13-D8 and S13-D9 may run alongside once S13-20 lands.
 
 | Brief | View | Gates |
 | --- | --- | --- |
