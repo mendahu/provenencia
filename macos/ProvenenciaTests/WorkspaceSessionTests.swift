@@ -1061,7 +1061,7 @@ struct WorkspaceSessionTests {
         let store = FakeStore()
         seedStore(store)
         store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
-            graphId: "g-1", sourceId: "s1", subjectCount: 2, observationCount: 1, primaryCount: 2, filedCount: 0
+            graphId: "g-1", sourceId: "s1", subjectCount: 2, observationCount: 1, filedCount: 0
         )
         let session = makeSession(store: store)
         let progressHandle: QueryHandle<[String: EvidenceGraphProgress]> = session.query(
@@ -1072,7 +1072,7 @@ struct WorkspaceSessionTests {
         let callsBefore = store.getEvidenceGraphProgressCalls
 
         store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
-            graphId: "g-1", sourceId: "s1", subjectCount: 2, observationCount: 1, primaryCount: 2, filedCount: 2
+            graphId: "g-1", sourceId: "s1", subjectCount: 2, observationCount: 1, filedCount: 2
         )
         session.apply(.promotedSubject(graphId: "g-1"))
         var waited: UInt64 = 0

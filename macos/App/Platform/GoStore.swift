@@ -1835,7 +1835,6 @@ struct GoStore: GenealogyStore {
             sourceId: row.sourceID,
             subjectCount: Int(row.subjectCount),
             observationCount: Int(row.observationCount),
-            primaryCount: Int(row.primaryCount),
             filedCount: Int(row.filedCount)
         )
     }

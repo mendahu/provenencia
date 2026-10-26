@@ -3330,15 +3330,11 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         )
         let subjects = (subjectsByGraph[graphID] ?? []).filter { !sourceTypeIDs.contains($0.subjectTypeID) }
         let observations = observationsByGraph[graphID] ?? []
-        let primaryTypeIDs = Set(
-            (subjectTypesByProject[projectDir] ?? []).filter { Self.primaryTypeKeys.contains($0.key) }.map(\.id)
-        )
         return EvidenceGraphProgress(
             graphId: graphID,
             sourceId: sourceOfGraph(graphID) ?? "",
             subjectCount: subjects.count,
             observationCount: observations.count,
-            primaryCount: subjects.filter { primaryTypeIDs.contains($0.subjectTypeID) }.count,
             filedCount: 0
         )
     }

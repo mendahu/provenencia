@@ -236,8 +236,8 @@ func TestGraphProgress(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		wantDef := Progress{GraphID: def.ID, SourceID: s.empty.ID, SubjectCount: 2, PrimaryCount: 2, FiledCount: 1, ObservationCount: 1}
-		wantJones := Progress{GraphID: jones.ID, SourceID: s.empty.ID, SubjectCount: 1, PrimaryCount: 1, FiledCount: 0, ObservationCount: 0}
+		wantDef := Progress{GraphID: def.ID, SourceID: s.empty.ID, SubjectCount: 2, FiledCount: 1, ObservationCount: 1}
+		wantJones := Progress{GraphID: jones.ID, SourceID: s.empty.ID, SubjectCount: 1, FiledCount: 0, ObservationCount: 0}
 		rows, err := List(s.c)
 		if err != nil {
 			t.Fatal(err)
@@ -258,7 +258,7 @@ func TestGraphProgress(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if wantOne := (Progress{GraphID: jones.ID, SourceID: s.empty.ID, SubjectCount: 1, PrimaryCount: 1}); !reflect.DeepEqual(one, wantOne) {
+		if wantOne := (Progress{GraphID: jones.ID, SourceID: s.empty.ID, SubjectCount: 1}); !reflect.DeepEqual(one, wantOne) {
 			t.Fatalf("Get(Jones) %+v, want %+v", one, wantOne)
 		}
 		unknown := make([]byte, 16)
@@ -291,7 +291,7 @@ func TestGraphProgress(t *testing.T) {
 	})
 }
 
-func TestPrimaryAndFiledCounts(t *testing.T) {
+func TestFiledCounts(t *testing.T) {
 	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
@@ -365,11 +365,11 @@ func TestPrimaryAndFiledCounts(t *testing.T) {
 	newSubject(reifyOnly, "source", "Reify")
 
 	want := map[string]Progress{
-		"Unfiled":     {SubjectCount: 1, PrimaryCount: 1, FiledCount: 0},
-		"Filed":       {SubjectCount: 1, PrimaryCount: 1, FiledCount: 1},
-		"Provisional": {SubjectCount: 1, PrimaryCount: 1, FiledCount: 0},
-		"Bridge":      {SubjectCount: 1, PrimaryCount: 0, FiledCount: 0},
-		"Mixed":       {SubjectCount: 2, PrimaryCount: 2, FiledCount: 1},
+		"Unfiled":     {SubjectCount: 1, FiledCount: 0},
+		"Filed":       {SubjectCount: 1, FiledCount: 1},
+		"Provisional": {SubjectCount: 1, FiledCount: 0},
+		"Bridge":      {SubjectCount: 1, FiledCount: 0},
+		"Mixed":       {SubjectCount: 2, FiledCount: 1},
 	}
 	srcs := map[string]sources.Source{
 		"Unfiled": unfiled, "Filed": filed, "Provisional": provisional,
@@ -393,7 +393,7 @@ func TestPrimaryAndFiledCounts(t *testing.T) {
 		if got == nil {
 			t.Fatalf("%s missing from list", name)
 		}
-		if got.SubjectCount != w.SubjectCount || got.PrimaryCount != w.PrimaryCount || got.FiledCount != w.FiledCount {
+		if got.SubjectCount != w.SubjectCount || got.FiledCount != w.FiledCount {
 			t.Fatalf("%s list %+v want %+v", name, *got, w)
 		}
 		one, err := Get(c, got.GraphID)
@@ -401,7 +401,7 @@ func TestPrimaryAndFiledCounts(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !bytes.Equal(one.GraphID, got.GraphID) || one.SubjectCount != got.SubjectCount ||
-			one.ObservationCount != got.ObservationCount || one.PrimaryCount != got.PrimaryCount ||
+			one.ObservationCount != got.ObservationCount ||
 			one.FiledCount != got.FiledCount {
 			t.Fatalf("%s get %+v != list %+v", name, one, *got)
 		}
@@ -416,7 +416,7 @@ func TestPrimaryAndFiledCounts(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got.SubjectCount != 0 || got.PrimaryCount != 0 || got.FiledCount != 0 {
+		if got.SubjectCount != 0 || got.FiledCount != 0 {
 			t.Fatalf("get %s %+v", src.Title, got)
 		}
 	}

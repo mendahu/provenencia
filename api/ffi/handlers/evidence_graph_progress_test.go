@@ -61,7 +61,7 @@ func TestListEvidenceGraphProgress(t *testing.T) {
 					t.Fatalf("%+v", list.Rows[0])
 				}
 				// The fixture subject is a place: primary, not yet filed.
-				if list.Rows[0].GetPrimaryCount() != 1 || list.Rows[0].GetFiledCount() != 0 {
+				if list.Rows[0].GetFiledCount() != 0 {
 					t.Fatalf("primary/filed %+v", list.Rows[0])
 				}
 			},

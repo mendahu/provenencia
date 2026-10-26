@@ -1583,9 +1583,8 @@ struct EvidenceGraphProgress: Sendable, Equatable, Identifiable {
     var sourceId: String
     var subjectCount: Int
     var observationCount: Int
-    /// Subjects of a Promote primary kind (person, event, place).
-    var primaryCount: Int = 0
-    /// Primary subjects with an accepted Identity Claim.
+    /// Subjects of a Promote primary kind (person, event, place) with an
+    /// accepted Identity Claim.
     var filedCount: Int = 0
 
     static func zeros(graphId: String) -> EvidenceGraphProgress {

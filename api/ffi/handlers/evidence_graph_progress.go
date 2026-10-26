@@ -60,7 +60,6 @@ func protoProgress(row graphprogress.Progress) *engine.EvidenceGraphProgress {
 		SourceId:         database.UUIDString(row.SourceID),
 		SubjectCount:     row.SubjectCount,
 		ObservationCount: row.ObservationCount,
-		PrimaryCount:     row.PrimaryCount,
 		FiledCount:       row.FiledCount,
 	}
 }
