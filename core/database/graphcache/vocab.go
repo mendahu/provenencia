@@ -110,6 +110,17 @@ func (v Vocabulary) PropertiesByID() map[string]VocabProperty {
 	return out
 }
 
+// PropertyID returns the id of the property with this key and origin, or nil
+// when the catalog has none.
+func (v Vocabulary) PropertyID(key, origin string) []byte {
+	for _, p := range v.Properties {
+		if p.Key == key && p.Origin == origin {
+			return p.ID
+		}
+	}
+	return nil
+}
+
 // VocabType is one subject type.
 type VocabType struct {
 	ID     []byte

@@ -358,7 +358,7 @@ func (w *world) edgesOf() []kinship.Edge {
 	if err != nil {
 		w.t.Fatal(err)
 	}
-	prop := EventTypeProperty(v)
+	prop := v.PropertyID(vocabkey.PropertyEventType, vocabkey.OriginProvenencia)
 	seen := map[string]bool{}
 	var edges []kinship.Edge
 	for _, id := range w.all {

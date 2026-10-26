@@ -107,7 +107,7 @@ func newDeriver(g *graphcache.Graph, rules kinship.Rules, strict bool) (*deriver
 	if err != nil {
 		return nil, err
 	}
-	return &deriver{g: g, strict: strict, rules: rules, terms: terms, eventTypeProp: EventTypeProperty(v)}, nil
+	return &deriver{g: g, strict: strict, rules: rules, terms: terms, eventTypeProp: v.PropertyID(vocabkey.PropertyEventType, vocabkey.OriginProvenencia)}, nil
 }
 
 func (d *deriver) node(id []byte) (*graphcache.Node, error) {

@@ -40,17 +40,6 @@ func LoadTerms(g *graphcache.Graph) (segmentcompare.Terms, error) {
 	return out, nil
 }
 
-// EventTypeProperty is the id of the product's event_type property, or nil
-// when the catalog has none. It types an event on a bridge.
-func EventTypeProperty(v graphcache.Vocabulary) []byte {
-	for _, p := range v.Properties {
-		if p.Key == vocabkey.PropertyEventType && p.Origin == vocabkey.OriginProvenencia {
-			return p.ID
-		}
-	}
-	return nil
-}
-
 // EdgeOf reads one filed link of self as an edge between its two ends,
 // ordered as recorded, with the key it has from each. neighbor is read only
 // when it is the event end; nil is allowed otherwise. ok is false for an

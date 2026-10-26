@@ -5,7 +5,6 @@ import (
 	"slices"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
-	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/depictionvalue"
@@ -171,7 +170,7 @@ func newProfiler(g *graphcache.Graph, metas subjectcompare.Metas, rules subjectc
 		done = map[string]profile{}
 	}
 	return &profiler{
-		g: g, props: props, eventTypeProp: canonlinks.EventTypeProperty(vocab), terms: vocab.TermsByID(), metas: metas, types: types, rules: rules,
+		g: g, props: props, eventTypeProp: vocab.PropertyID(vocabkey.PropertyEventType, vocabkey.OriginProvenencia), terms: vocab.TermsByID(), metas: metas, types: types, rules: rules,
 		reconcile: matchregistry.Default().Value, namePattern: namePattern,
 		done: done,
 	}, nil
