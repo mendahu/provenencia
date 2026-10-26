@@ -43,6 +43,7 @@
 		AA000000000000000005E001 /* PVSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E000 /* PVSheet.swift */; };
 		AA0000000000000000000501 /* PVPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000500 /* PVPanel.swift */; };
 		AA0000000000000000000307 /* SourcesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000306 /* SourcesModel.swift */; };
+		5C50DA58E4EFE9C98DE5A9B9 /* SourcesGraphCountLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CE80D0EED6C01DDCC1CAF4A /* SourcesGraphCountLine.swift */; };
 		5C2EE98EB1AE4D19F6E404A3 /* SourcesGraphCounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C745557BF95F91E04A444F9 /* SourcesGraphCounts.swift */; };
 		AA1041000000000000000002 /* SourcesListSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1041000000000000000001 /* SourcesListSettings.swift */; };
 		AA0000000000000000000309 /* SourcesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000308 /* SourcesListView.swift */; };
@@ -484,6 +485,7 @@
 		AA000000000000000005E000 /* PVSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSheet.swift; sourceTree = "<group>"; };
 		AA0000000000000000000500 /* PVPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVPanel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000306 /* SourcesModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesModel.swift; sourceTree = "<group>"; };
+		5CE80D0EED6C01DDCC1CAF4A /* SourcesGraphCountLine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesGraphCountLine.swift; sourceTree = "<group>"; };
 		5C745557BF95F91E04A444F9 /* SourcesGraphCounts.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesGraphCounts.swift; sourceTree = "<group>"; };
 		AA1041000000000000000001 /* SourcesListSettings.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListSettings.swift; sourceTree = "<group>"; };
 		AA0000000000000000000308 /* SourcesListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListView.swift; sourceTree = "<group>"; };
@@ -956,6 +958,7 @@
 				AA0000000000000000000306 /* SourcesModel.swift */,
 				AA1041000000000000000001 /* SourcesListSettings.swift */,
 				5C745557BF95F91E04A444F9 /* SourcesGraphCounts.swift */,
+				5CE80D0EED6C01DDCC1CAF4A /* SourcesGraphCountLine.swift */,
 				AA0000000000000000000308 /* SourcesListView.swift */,
 				AA0000000000000000000466 /* SourcesListNavigation.swift */,
 				AA0000000000000000000468 /* SourcesSplitRow.swift */,
@@ -2325,6 +2328,7 @@
 				AA0000000000000000000307 /* SourcesModel.swift in Sources */,
 				AA1041000000000000000002 /* SourcesListSettings.swift in Sources */,
 				5C2EE98EB1AE4D19F6E404A3 /* SourcesGraphCounts.swift in Sources */,
+				5C50DA58E4EFE9C98DE5A9B9 /* SourcesGraphCountLine.swift in Sources */,
 				AA0000000000000000000309 /* SourcesListView.swift in Sources */,
 				AA0000000000000000000311 /* SourcePageView.swift in Sources */,
 				AA0000000000000000000317 /* PVBreadcrumbs.swift in Sources */,

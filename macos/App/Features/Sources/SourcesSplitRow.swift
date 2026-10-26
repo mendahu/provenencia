@@ -127,7 +127,7 @@ struct SourcesSplitRow: View {
                         Text(L10n.Sources.openGraph)
                             .font(PVFont.body(size: PVTypeScale.bodySmall))
                             .lineLimit(1)
-                        graphCountLine
+                        SourcesGraphCountLine(progress: progress, countsLoading: countsLoading)
                     }
                 }
                 .padding(.horizontal, PVSpacing.space6)
@@ -164,38 +164,6 @@ struct SourcesSplitRow: View {
             .accessibilityLabel(Text(L10n.Sources.needsArtifact))
             .accessibilityHint(Text(L10n.Sources.needsArtifactTooltip))
             .accessibilityIdentifier("sources.row.\(source.id).graphBlocked")
-        }
-    }
-
-    @ViewBuilder
-    private var graphCountLine: some View {
-        if countsLoading && progress == nil {
-            Rectangle()
-                .fill(PVColor.borderSubtle)
-                .frame(height: 1)
-                .padding(.trailing, PVSpacing.space3)
-                .padding(.vertical, 5)
-                .accessibilityHidden(true)
-        } else if (progress?.subjectCount ?? 0) == 0 {
-            HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space2) {
-                Text(verbatim: L10n.Sources.graphSubjectCount(0))
-                    .font(PVFont.mono(size: PVTypeScale.micro))
-                Text(verbatim: "·")
-                    .font(PVFont.mono(size: PVTypeScale.micro))
-                Text(L10n.Sources.graphNotStarted)
-                    .font(PVFont.body(size: PVTypeScale.micro))
-                    .italic()
-            }
-            .foregroundStyle(PVColor.textMuted)
-            .lineLimit(1)
-        } else if let progress {
-            Text(verbatim: L10n.Sources.graphCountLine(
-                subjects: progress.subjectCount,
-                observations: progress.observationCount
-            ))
-            .font(PVFont.mono(size: PVTypeScale.micro))
-            .foregroundStyle(PVColor.textMuted)
-            .lineLimit(1)
         }
     }
 }
