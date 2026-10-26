@@ -270,6 +270,35 @@ func TestDeriveManyAssociations(t *testing.T) {
 	}
 }
 
+func TestParentStep(t *testing.T) {
+	rel := segmentcomparetest.Bridge(t, vocabkey.BridgeRelationship)
+	edge := func(a, b string, term vocabkey.BridgeTerm) kinship.Edge {
+		ka, kb := segmentcompare.Keys(rel, term, "", terms)
+		return kinship.Edge{A: []byte(a), B: []byte(b), KeyA: ka, KeyB: kb}
+	}
+	reversed := edge("p", "c", vocabkey.TermParent)
+	reversed.A, reversed.B, reversed.KeyA, reversed.KeyB = reversed.B, reversed.A, reversed.KeyB, reversed.KeyA
+	for _, tc := range []struct {
+		name          string
+		e             kinship.Edge
+		parent, child string
+		ok            bool
+	}{
+		{"direct", edge("p", "c", vocabkey.TermParent), "p", "c", true},
+		{"reversed ends", reversed, "p", "c", true},
+		{"child term read through its keys", edge("c", "p", "child"), "p", "c", true},
+		{"self link", edge("p", "p", vocabkey.TermParent), "", "", false},
+		{"spouse edge", edge("a", "b", vocabkey.TermSpouse), "", "", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			parent, child, ok := kinship.ParentStep(tc.e, terms)
+			if ok != tc.ok || string(parent) != tc.parent || string(child) != tc.child {
+				t.Errorf("ParentStep = %q, %q, %v; want %q, %q, %v", parent, child, ok, tc.parent, tc.child, tc.ok)
+			}
+		})
+	}
+}
+
 // TestDeriveManyDuplicateParentSteps files the same two parent links 8,000
 // times each: the duplicates must collapse into one grandparent link without
 // pairing every duplicate with every other.

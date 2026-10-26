@@ -77,13 +77,12 @@ func Derive(edges []Edge, terms segmentcompare.Terms, rules Rules) []Implied {
 	if !ok {
 		return nil
 	}
-	parentFirst, parentSecond := segmentcompare.Keys(rel, vocabkey.TermParent, "", terms)
 
 	var out []Implied
 	var steps []step
 	for _, e := range edges {
-		if g, m, ok := e.reads(parentFirst, parentSecond); ok {
-			steps = appendStep(steps, g, m, e)
+		if g, m, ok := ParentStep(e, terms); ok {
+			steps = append(steps, step{g, m, e})
 		}
 	}
 
@@ -93,8 +92,8 @@ func Derive(edges []Edge, terms segmentcompare.Terms, rules Rules) []Implied {
 	}
 	out = append(out, implied...)
 	for _, imp := range implied {
-		if g, m, ok := imp.reads(parentFirst, parentSecond); ok {
-			steps = appendStep(steps, g, m, imp.Edge)
+		if g, m, ok := ParentStep(imp.Edge, terms); ok {
+			steps = append(steps, step{g, m, imp.Edge})
 		}
 	}
 	return append(out, chains(steps, rel, terms, rules.MaxPivotEnd)...)
@@ -107,12 +106,21 @@ type step struct {
 	edge Edge
 }
 
-// appendStep adds a parent step unless it joins a Subject to itself.
-func appendStep(steps []step, g, m []byte, e Edge) []step {
-	if bytes.Equal(g, m) {
-		return steps
+// ParentStep reads an edge as one parent step: parent is child's parent, from
+// whichever end the link is read. It is false for any other link, and for a
+// link that joins a Subject to itself. It is the one rule for what a parent
+// step is, shared by Derive and the readers of its inputs.
+func ParentStep(e Edge, terms segmentcompare.Terms) (parent, child []byte, ok bool) {
+	rel, found := connectrules.LookupBridge(vocabkey.BridgeRelationship)
+	if !found {
+		return nil, nil, false
 	}
-	return append(steps, step{g, m, e})
+	first, second := segmentcompare.Keys(rel, vocabkey.TermParent, "", terms)
+	parent, child, ok = e.reads(first, second)
+	if !ok || bytes.Equal(parent, child) {
+		return nil, nil, false
+	}
+	return parent, child, true
 }
 
 // participant is one person's participation edge in an event, and the ends of

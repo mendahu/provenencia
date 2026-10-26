@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/segmentcompare"
@@ -92,12 +91,11 @@ func check(g *graphcache.Graph, id []byte, stored any) error {
 // deriver derives one pivot's links from graph nodes. strict reads only nodes
 // that are already cached and fails on any other: the check must not load.
 type deriver struct {
-	g                         *graphcache.Graph
-	strict                    bool
-	rules                     kinship.Rules
-	terms                     segmentcompare.Terms
-	eventTypeProp             []byte
-	parentFirst, parentSecond vocabkey.BridgeKey
+	g             *graphcache.Graph
+	strict        bool
+	rules         kinship.Rules
+	terms         segmentcompare.Terms
+	eventTypeProp []byte
 }
 
 func newDeriver(g *graphcache.Graph, rules kinship.Rules, strict bool) (*deriver, error) {
@@ -109,13 +107,7 @@ func newDeriver(g *graphcache.Graph, rules kinship.Rules, strict bool) (*deriver
 	if err != nil {
 		return nil, err
 	}
-	rel, ok := connectrules.LookupBridge(vocabkey.BridgeRelationship)
-	if !ok {
-		return nil, fmt.Errorf("canonlinks: the %s bridge is not registered", vocabkey.BridgeRelationship)
-	}
-	d := &deriver{g: g, strict: strict, rules: rules, terms: terms, eventTypeProp: EventTypeProperty(v)}
-	d.parentFirst, d.parentSecond = segmentcompare.Keys(rel, vocabkey.TermParent, "", terms)
-	return d, nil
+	return &deriver{g: g, strict: strict, rules: rules, terms: terms, eventTypeProp: EventTypeProperty(v)}, nil
 }
 
 func (d *deriver) node(id []byte) (*graphcache.Node, error) {
@@ -295,13 +287,17 @@ func (r *Reader) For(id []byte) ([]kinship.Implied, error) {
 			continue
 		}
 		e, ok := r.d.edge(n, l)
-		if !ok || !r.d.isParentStep(e) {
+		if !ok {
 			continue
 		}
-		if bytes.Equal(e.A, id) {
-			add(e.B)
+		parent, child, ok := kinship.ParentStep(e, r.d.terms)
+		if !ok {
+			continue
+		}
+		if bytes.Equal(parent, id) {
+			add(child)
 		} else {
-			add(e.A)
+			add(parent)
 		}
 	}
 	for _, imp := range births {
@@ -326,10 +322,4 @@ func (r *Reader) For(id []byte) ([]kinship.Implied, error) {
 		}
 	}
 	return out, nil
-}
-
-// isParentStep reports whether an edge is a parent link, read from either end.
-func (d *deriver) isParentStep(e kinship.Edge) bool {
-	return (e.KeyA == d.parentFirst && e.KeyB == d.parentSecond) ||
-		(e.KeyA == d.parentSecond && e.KeyB == d.parentFirst)
 }
