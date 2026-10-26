@@ -59,6 +59,9 @@ func TestAlignInvariants(t *testing.T) {
 		{"obituary", gracieObituary, []graphalign.Fixed{{SubjectID: id("s-gracie"), HandleID: id("h-gracie")}}},
 		{"sparse name and birth", sparseAnnAmes, nil},
 		{"part-of chain", partOfChain, nil},
+		{"marriage on both sides", func() (graphalign.Layer, graphalign.Canon) {
+			return marriageFixture("marriage", "marriage", true)
+		}, []graphalign.Fixed{{SubjectID: id("s-ann"), HandleID: id("h-ann")}}},
 	}
 	for _, fx := range fixtures {
 		t.Run(fx.name, func(t *testing.T) {

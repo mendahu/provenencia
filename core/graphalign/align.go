@@ -5,6 +5,7 @@ import (
 	"container/heap"
 	"sort"
 
+	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -74,10 +75,11 @@ type state struct {
 }
 
 // An adjLink is one end's view of an edge: the neighbor and the bridge's key
-// read from this end.
+// read from this end, with how the kinship patterns imply the link.
 type adjLink struct {
 	neighbor []byte
 	key      vocabkey.BridgeKey
+	kinship.Recording
 }
 
 // A cand is one Subject's candidate handle and its latest score. Every
@@ -135,13 +137,13 @@ func newState(layer Layer, canon Canon, fixed []Fixed, cfg Config) *state {
 	for _, b := range layer.Bridges {
 		for _, end := range [][]byte{b.A, b.B} {
 			other, key, _ := b.From(end)
-			st.layerAdj[string(end)] = append(st.layerAdj[string(end)], adjLink{neighbor: other, key: key})
+			st.layerAdj[string(end)] = append(st.layerAdj[string(end)], adjLink{neighbor: other, key: key, Recording: b.Recording})
 		}
 	}
 	for _, e := range canon.Edges {
 		f, t := string(e.From), string(e.To)
-		st.canonAdj[f] = append(st.canonAdj[f], adjLink{neighbor: e.To, key: e.KeyFrom})
-		st.canonAdj[t] = append(st.canonAdj[t], adjLink{neighbor: e.From, key: e.KeyTo})
+		st.canonAdj[f] = append(st.canonAdj[f], adjLink{neighbor: e.To, key: e.KeyFrom, Recording: e.Recording})
+		st.canonAdj[t] = append(st.canonAdj[t], adjLink{neighbor: e.From, key: e.KeyTo, Recording: e.Recording})
 	}
 	for _, f := range fixed {
 		sk, hk := string(f.SubjectID), string(f.HandleID)
@@ -311,11 +313,15 @@ func (st *state) markDirty(nk string, m mark) {
 	}
 }
 
-// corresponding is the canon links of hid that correspond to link.
+// corresponding is the canon links of hid that correspond to link, leaving out
+// a pair that stands for one fact both sides record through the same kinship
+// pattern, once the walk has paired the event or middle parent it passes
+// through.
 func (st *state) corresponding(link adjLink, hid []byte) []adjLink {
 	var out []adjLink
 	for _, ce := range st.canonAdj[string(hid)] {
-		if segmentcompare.Corresponds(link.key, ce.key) {
+		if segmentcompare.Corresponds(link.key, ce.key) &&
+			!kinship.CountedOnce(link.Recording, ce.Recording, st.placedOf) {
 			out = append(out, ce)
 		}
 	}
