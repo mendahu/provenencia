@@ -1,6 +1,6 @@
 # S11-49 — Kinship links in the graph cache
 
-**Status:** Planned
+**Status:** Landed in [#569](https://github.com/mendahu/provenencia/pull/569) (2026-10-26)
 **Spike / slice:** Spike 11 · Slice 9 — Kinship shapes
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: an engine read with no caller yet; the one Swift change removes a seeded term's wording)
@@ -13,6 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/match-rules.mdc`
 **Context:** [Kinship shapes § Shape](../kinship-shapes.md#shape), [§ Where implied links live](../kinship-shapes.md#where-implied-links-live); working rules: "Three patterns, product terms only", "The subject is an event's principal", "The canon's implied links live in the graph cache", "Bounded per pivot", "High tolerance for churn"; [#567's ship log](https://github.com/mendahu/provenencia/blob/s11-39-matching-reads-kinship/docs/deployment-plan/spike-11/prs/S11-39-matching-reads-kinship.ship.md) (measurements, the user's decisions)
 **Planned:** 2026-10-26 against `main` @ `13dab35f`
+**Landed:** (1) `graphcachetest.Canon` backs each value with an Observation on a Subject that is an accepted member of its entity (the Subject has the entity's id) and lets the reconciler write the kept rows, instead of inserting `auto_reconciler_values` directly (D-12): direct inserts fail graph Verify, so AC-2.6 could not pass. `Term` finds a term by key at any origin, seeded first. (2) An event result keeps only the links with an `Event` (D-4): `Derive` over one event's links can also chain parents inside a malformed event, and a chain is the person's result. (3) STEP-7 and STEP-8 are one commit. Otherwise none.
 **Review:** [`S11-49-kinship-graph-cache.review.md`](S11-49-kinship-graph-cache.review.md) — Fits with changes / Ready with changes, 2 rounds (every finding answered)
 
 ### Implementer — read this first
