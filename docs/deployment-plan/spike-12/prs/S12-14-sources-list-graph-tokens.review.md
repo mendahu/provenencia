@@ -117,3 +117,77 @@ Below blocker (reviewer, not raised): brief §1 said "under its ref and descript
 **Answer:** Fixed — D-9, §4 and T-5 delete the test and the helper (the per-graph blocked case stays in `graphLocationOpensTheGivenGraph`); the STEP-4 `rg` pattern matches `graphsBySource(`.
 
 **Verdict:** Fits with changes — Ready with changes. No blocker open. Open: board S12-D5 (plan Blocked) and M-5 (To user).
+
+
+## Token plan — round 1
+
+**Reviewers:** maintainability (Opus) — Fits with changes; executability (Sonnet) — Ready with changes.
+
+### M-11 · blocker · `EvidenceGraphsRead` is a third copy of the loading / failed / loaded fold
+**Codebase:** `ConclusionListPresentation.init(value:isFetching:status:error:)`, `ConclusionDetailPresentation`; `QueryHandle` has only `isSettled`.
+**Answer:** Fixed — D-14 `QueryRead<Value>` / `QueryHandle.read` replaces `isAwaitingFirstValue` and the graph-only enum; D-17 returns `QueryRead<[CatalogEvidenceGraph]>`; `macos-client-patterns.md` row in STEP-1 and the DoD. Moving the two Conclusion presentations onto it: Out, logged here for a later Conclusions change (keeps this PR off Conclusions code).
+
+### M-12 · blocker · The count rule written three times, and again as Empty
+**Answer:** Fixed — D-3 `SourcesGraphCounts` and `L10n.Sources.graphCounts(_:style:)` (compact / full / spoken); D-5 Empty is `.notStarted`; the token and count line switch only for styling; T-11.
+
+### M-13 · major · `openGraphNamed` duplicates `openEvidenceGraphLabel(name:)`
+**Answer:** Fixed — the token reuses `openEvidenceGraphLabel(name:)`, whose default becomes "Open graph %@" (Source page Open reads the same); T-12.
+
+### M-14 · major · Button styles do not name `PVHoverEffect` / `pvFocusRing`
+**Answer:** Fixed — D-10 `SourcesLinkButtonStyle` and D-11 `SourcesGraphTokenButtonStyle` wrap `PVHoverEffect` and apply `pvFocusRing`, with no hand hover state or reduce-motion check; Codebase fit rows.
+
+### M-15 · major · Fifth hand copy of the dashed stroke
+**Answer:** Fixed — D-20 `PVStroke` token; the four `StrokeStyle` copies and `PVChip`'s pattern move onto it (STEP-4); brief inventory row added.
+
+### M-16 · major · `PVFlowLayout` folder, preview and README row
+**Answer:** Fixed — D-19: `Components/FlowLayout/`, `#Preview`, README row; STEP-4 Files and the pbxproj group.
+
+### M-17 · minor · Two readings of "loaded, no graphs for this Source"
+**Answer:** Fixed — D-17 reads it as `.loading` once; D-7 and D-12 use the session read directly; `tokenLine(for:)` is gone.
+
+### M-18 · minor · `SourcesListNavigation` header goes stale
+**Answer:** Fixed — D-9 rewrites the header; STEP-7's `rg` matches `split-row`.
+
+### X-15 · blocker · STEP-3 `rg` matches the `reserved "primary_count"` line
+**Answer:** Fixed — the pattern matches identifiers and `primary_count = ` only.
+
+### X-16 · major · Proto regeneration needs tools a sandbox lacks
+**Answer:** Fixed — §7 preamble, D-18 and a stop condition: stop and report, never hand-edit generated files.
+
+### X-17 · major · A ButtonStyle cannot recolor a title that sets its own color
+**Answer:** Fixed — D-10: the style publishes a private environment value; `SourcesLinkLabel` reads it for the title color, underline and cover outline. The board's 2 px underline offset is not available in SwiftUI's `underline`; the default underline is used (stated in D-10).
+
+### X-18 · major · The 56 indent does not line up with the title
+**Answer:** Fixed — D-10 link inner spacing `space4`; D-16 `tokenIndent` = 4 + 44 + 8 and the row's leading padding absorbs the link's 4 pt pad.
+
+### X-19 · major · Token identifiers and labels missing for four states
+**Answer:** Fixed — the token takes `sourceID`; the token states table lists visible text, help, label, hint, identifier and focus per state.
+
+### X-20 · major · FakeStore's `primaryTypeIDs` would be dead
+**Answer:** Fixed — D-18 deletes it and keeps `primaryTypeKeys`; STEP-3's `rg` matches `primaryTypeIDs`.
+
+### X-21 · major · `listCaption` asserted in STEP-6 but added in STEP-7
+**Answer:** Fixed — §6 Strings names the step for each key; the caption assertion is T-13 in STEP-7.
+
+### X-22 · minor · `statuses(for:)` while loading or failed
+**Answer:** Fixed — D-7 returns `[]`; T-2.
+
+### X-23 · minor · STEP-4 README and pbxproj group
+**Answer:** Fixed (with M-16).
+
+### X-24 · minor · STEP-8 omits `design/README.md`
+**Answer:** Fixed.
+
+### X-25 · minor · Handler test edit unspecified
+**Answer:** Fixed — D-18 and T-4: drop the primary clause, keep `FiledCount` 0; the `FiledCount` doc comment wording given.
+
+### X-26 · minor · How tests warm, unwrap and apply
+**Answer:** Fixed — §8 preamble: warm, `try #require` the handle, `waitForQuery`, `CatalogWriteEffects(evidenceGraphs:)`.
+
+### X-27 · minor · Small visual choices open
+**Answer:** Fixed — D-11 gives colors, the italic font, hover, focus, and blocked tokens as an empty-action `Button`.
+
+### X-28 · nit · Stale "split row" comments
+**Answer:** `SourcesListNavigation` fixed (M-18); `PVList.swift` is Out (a file this PR does not touch).
+
+**Logged:** Shift-F10 for `pvRightClickMenu` (board frame 1) — a kit PR; the Conclusion presentations onto `QueryHandle.read`.
