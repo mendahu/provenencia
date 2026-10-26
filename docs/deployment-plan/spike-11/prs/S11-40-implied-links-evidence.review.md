@@ -1,7 +1,7 @@
 # Review — S11-40 Implied links in claim evidence
 
 **Verdict:** Fits with changes — Ready with changes
-**Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 - None.
@@ -59,3 +59,28 @@
 
 ### X-8 · minor · Smaller choices left open
 **Answer:** Fixed — `export_test.go` needs no change (§6); D-10 writes `paired`; AC-2.1 does not assert Ann's row; STEP-7 says to import `core/kinship`; D-13 says `init(wire:)` is written as `EvidenceOutcome`'s.
+
+## Round 2
+
+Round-1 answers: maintainability accepted M-1 – M-7; executability accepted all but X-5 (handler fixture, now X-10) and X-6 (moved into STEP-4, now X-11).
+
+### M-9 · blocker · The canon pivot's headers would be the third hand-copied "read headers by kind, re-key by id" block
+`proposalProto` and `search_catalog.go` `fillHitHeaders` each hold one copy; S13-04 and S13-05 would add more.
+**Answer:** Fixed — D-17 adds `conclusionheaders.ByIDs` / `Headers`; `proposalProto` and `fillHitHeaders` move onto it (STEP-7, T-9); D-11 reads pivots through it; STEP-10 updates Spike 13's "One person header for every tile".
+
+Below the bar, taken anyway: the `add-match-rule` layer-5 line now names claim evidence (STEP-10). Not taken: `canonLinks`' `BridgeTypeKey != relationship` filter beside `canonlinks`' private `relationshipEdges` — a one-line complement, and exporting it changes `canonlinks` (Out).
+
+### X-10 · major · T-7 has no way to build the catalog
+**Answer:** Fixed — D-18: T-7 hand-builds `claimevidence.Evidence` over `citedEvent`'s dated event handle and `newEvidenceFixture`'s person handle; AC-3.1 – AC-3.3 are worded on `claimEvidenceProto`; the catalog-built cases are T-4.
+
+### X-11 · major · STEP-4 still hides about six changes
+**Answer:** Fixed — STEP-4 (relationship links with recordings, every test unchanged), STEP-5 (pivots, T-4, T-6), STEP-6 (count-once, T-5).
+
+### X-12 · minor · STEP-3 and D-16 leave small choices open
+**Answer:** Fixed — STEP-3 calls `canonLinks` with a nil `rels` and reads every `from.Links` entry; D-1 says relationship links are skipped from STEP-4; D-16 says `marriageEvidence` stops calling `f.marriage`.
+
+### X-13 · nit · Subtest renames are not in any step
+**Answer:** Fixed — STEP-5 renames and flips them.
+
+## Verdict
+Two rounds done; no open blocker; To user empty. Plan marked Planned.
