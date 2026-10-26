@@ -61,4 +61,4 @@ Reviewers: SEC+PRF (SEC-1, PRF-1). Scope `9a680f5f...b9917db2`.
 SEC+PRF: SEC-1 and PRF-1 **Resolved** to the revised D-4. No new blocker. `origin/main` had not moved; gate PASS on `b9917db2`.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · to user: SEC-1, PRF-1 (answered: D-4 revised) · CON miss: none
+Gate PASS · CI green (Go tests 40387975407 incl. TestLargeSourceBudgets, macOS tests 40387975380) · open: none · follow-ups: none · to user: SEC-1, PRF-1 (answered: D-4 revised) · CON miss: none
