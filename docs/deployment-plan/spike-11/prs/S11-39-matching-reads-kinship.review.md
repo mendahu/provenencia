@@ -1,7 +1,7 @@
 # Review — S11-39 Matching reads kinship shapes
 
-**Verdict:** round 1: Fits with changes — Ready with changes. Round 2: pending.
-**Rounds:** 1 (round 2 pending). **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes. No blocker open.
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 
@@ -87,3 +87,11 @@ Maintainability (Opus): M-1, M-3, M-4, M-5, M-6 accepted; M-2 accepted in part (
 **Codebase:** `core/database/promotealign/layer.go` `loadLayerBridges` (`seen`, inline merge); `core/database/promotealign/canon.go` `loadCanon` (`edgeSeen`); working rule "One fact, one link per side" ("through the loaders' existing merge (`edgeSeenKey`), not a second one").
 **Better shape:** one `linkSet` with `add` in `terms.go`, used by both loaders' walks and by `withImplied`; one conversion per loader.
 **Answer:** Fixed — D-5 is `sideLink` / `linkSet` / `add` / `withImplied`; D-6 and D-7 replace `seen` and `edgeSeen` with `set.add` and convert once; §6 Deletes lists both inline merges; T-4 is `TestLinkSet` through `LinkSetForTest`; STEP-8's skill text names `linkSet.add` as the one merge.
+
+Executability (Sonnet): X-1 to X-13 accepted; every Current state row true at `7efa02f`. Verdict: Ready with changes.
+
+### X-14 · major · AC-2.2 cites the wrong number for the witness control
+**Answer:** Fixed — AC-2.2 says "above AC-1.1's witness control (2.5)", with 2.875 as AC-2.2's own measurement.
+
+### X-15 · minor · T-3 reuses T-2's fixture but no builder is named
+**Answer:** Fixed — STEP-2 names `marriageFixture(layerShape, canonShape string, dated bool)` and gives T-3's row literally.

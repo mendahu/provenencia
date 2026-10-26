@@ -1,6 +1,6 @@
 # S11-39 — Matching reads kinship shapes
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 11 · Slice 9 — Kinship shapes
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: Promote's rows and the evidence sheet's relationship Card are unchanged; only the scores and lines behind them move)
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/match-rules.mdc`
 **Context:** [Kinship shapes § Shape](../kinship-shapes.md#shape), [§ Counting once](../kinship-shapes.md#counting-once), [§ Weight](../kinship-shapes.md#weight); [layer 6 procedure](../comparison-layers.md#layer-6-procedure); S11-14 D-11 (link weights); S11-38 D-1 (`kinship.Edge`); S11-41 (landed [#561](https://github.com/mendahu/provenencia/pull/561), `segmentcompare.Keys`); working rules: "Implied links, not a new comparison", "One fact, one link per side", "Counted once across sides", "No new knob", "High tolerance for churn", "Sparse data first"
 **Planned:** 2026-10-26 against `main` @ `7efa02f`
-**Review:** [`S11-39-matching-reads-kinship.review.md`](S11-39-matching-reads-kinship.review.md) — round 1 Fits with changes / Ready with changes; round 2 pending
+**Review:** [`S11-39-matching-reads-kinship.review.md`](S11-39-matching-reads-kinship.review.md) — Fits with changes / Ready with changes, 2 rounds (every finding fixed)
 
 ### Implementer — read this first
 
@@ -57,7 +57,7 @@ Fixture names: Source people Ann Ames, Bob Ames, Bea Ames, Cal Ames (`f.person`)
 | AC | Given / when | Then |
 | --- | --- | --- |
 | AC-2.1 | Tree: `spouse` relationship. Source: a `spouse` relationship and a `marriage` with both as `spouse` | `LayerBridges` holds one `relationship·spouse` bridge between Ann and Bob: 3 `Associations` (the relationship bridge and both participation bridges), one `Shapes` entry, `OnlyImplied` false. Bob's row's score equals AC-1.1's direct-against-direct row (3.375) |
-| AC-2.2 | Tree and Source each record one `marriage` with Ann and Bob as `spouse` | Bob's row is on Bob's handle, band weak, score below AC-1.1's direct-against-direct row and above AC-1.1's witness control (2.875): the marriage events are paired, so the implied spouse link adds nothing (T-2 pins the exact equality with no implied links) |
+| AC-2.2 | Tree and Source each record one `marriage` with Ann and Bob as `spouse` | Bob's row is on Bob's handle, band weak, score below AC-1.1's direct-against-direct row and above AC-1.1's witness control (2.5); planning measured 2.875: the marriage events are paired, so the implied spouse link adds nothing (T-2 pins the exact equality with no implied links) |
 | AC-2.3 | As AC-2.2 but Bob is sex only and Ann is fixed, so the marriage event row has too little to be placed | Bob's row's first alternative is Bob's handle, reason `via`, score equal to AC-1.3's shape for spouses: the same tree against a Source recording a `spouse` relationship to a sex-only Bob (0.875). The events are not paired, so the implied link credits |
 | AC-2.4 | Tree and Source each record Ann `parent` Bea `parent` Cal; Ann fixed | Cal's row is on Cal's handle, band medium, score equal to AC-1.5's comparison row (3.375): Bea is paired, so the implied grandparent link adds nothing beyond the parent path |
 | AC-2.5 | A Source with both a `spouse` relationship and a `marriage`, against a tree with only the `marriage` (D-4) | Bob's row's score equals AC-2.2's (2.875): the tree records the fact once, through the paired marriage |
@@ -198,7 +198,7 @@ Check: `go test ./core/kinship/... ./core/matchregistry/...` passes.
 
 **STEP-2 — The count-once rule in `graphalign`**
 Files: `core/graphalign/types.go`, `core/graphalign/align.go`, `core/graphalign/align_test.go`, `core/graphalign/invariants_test.go`. Skill: `add-match-rule`.
-Do: D-3, with the comments §6 names. In `align_test.go` add `implied(b graphalign.Bridge, p kinship.Pattern, pivot []byte, onlyImplied bool) graphalign.Bridge` *(new)* (sets `Shapes` to that one shape and `OnlyImplied`) and `canonOf(bs []graphalign.Bridge) []graphalign.CanonEdge` *(new)* (field by field, `Associations` dropped). Add `TestKinshipShapesCountOnce` (T-2) and its fixture, then the `TestAlignInvariants` row (T-3).
+Do: D-3, with the comments §6 names. In `align_test.go` add `implied(b graphalign.Bridge, p kinship.Pattern, pivot []byte, onlyImplied bool) graphalign.Bridge` *(new)* (sets `Shapes` to that one shape and `OnlyImplied`) and `canonOf(bs []graphalign.Bridge) []graphalign.CanonEdge` *(new)* (field by field, `Associations` dropped). Add the fixture builder `marriageFixture(layerShape, canonShape string, dated bool) (graphalign.Layer, graphalign.Canon)` *(new)* (shapes `rel`, `event`, `marriage`, `both`, as T-2 defines them), then `TestKinshipShapesCountOnce` (T-2) over it, then the `TestAlignInvariants` row (T-3): `build: func() (graphalign.Layer, graphalign.Canon) { return marriageFixture("marriage", "marriage", true) }`, `fixed: []graphalign.Fixed{{SubjectID: id("s-ann"), HandleID: id("h-ann")}}`.
 Check: `go test ./core/graphalign/...` passes; every existing `graphalign` test passes unchanged.
 
 **STEP-3 — One link set; the layer loader derives**
