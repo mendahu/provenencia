@@ -8,7 +8,7 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 
 | Step | View | Gates | Notes |
 | --- | --- | --- | --- |
-| S12-D5 | Sources list — graph accordion | **S12-14** | Expander per row, per-graph progress and Open; the count line on the Source page's graph rows |
+| [S12-D5](S12-D5-sources-list-graph-accordion.md) | Sources list — graph accordion | **S12-14** | Expander per row, per-graph progress and Open; the count line on the Source page's graph rows; the Status filter's Promoted label. Written 2026-10-26; board not agreed |
 
 ## Archived
 
