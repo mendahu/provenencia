@@ -1,6 +1,6 @@
 # S11-51 — One person's links for every reader
 
-**Status:** Planned
+**Status:** Landed in [#575](https://github.com/mendahu/provenencia/pull/575) (2026-10-26)
 **Spike / slice:** Spike 11 · Slice 9 — Kinship shapes
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: an engine move and one read with no caller in the app yet)

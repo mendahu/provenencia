@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-51 — One person's links for every reader
+
+**Landed 2026-10-26** in [#575](https://github.com/mendahu/provenencia/pull/575). The merge that makes a fact recorded two ways one link moved from `promotealign` into the pure `core/kinship` as `LinkSet`, and took in `loadCanon`'s separate merge of implied links (`PlaceImplied`, with `Implied.Recording` as the one implied recording). `canonlinks.Reader.Relationships` returns one canonical person's relationship links, recorded and implied, merged once, for the evidence query's canon side and the Person page. Promote's proposals do not change.
+
 ## S11-39 — Matching reads kinship shapes
 
 **Landed 2026-10-26** in [#572](https://github.com/mendahu/provenencia/pull/572). Promote now reads each side's links through the kinship patterns: a Source's marriage, birth parents and parent chain match the spouses, parents and grandparents a tree files, and a tree's marriage and chains match a Source's relationships. The Source side derives when its layer loads; the canon side reads `canonlinks.Reader.For` for each walked person, and both merge in one `promotealign` `linkSet` so a fact recorded two ways on one side is one link. Each link carries a `kinship.Recording` (its shapes and whether only implied), and graph alignment skips a pair `kinship.CountedOnce` reports, so a marriage both sides record counts once when its events are paired and still credits when they are not. One lookup, `Vocabulary.TypeKeysByID`, replaces `typeKey`'s scan. The large-source budgets run over a 12-generation parent tree with a marriage per couple.
