@@ -88,6 +88,8 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 | **settle** | Re-score dirty pairs until none changes or the round cap is reached |
 | **band** | Strong, medium, weak or no match, for a whole row, from its evidence |
 | **contested** | A visible mark on a row whose comparisons include a conflict, whatever its band |
+| **kinship pattern** | A row of `core/kinship`'s table that says a fact recorded one way implies a relationship link: a marriage's two subjects imply spouses, a birth's father or mother and subject imply a parent, and a parent of a parent implies a grandparent |
+| **pivot** | The one node a kinship pattern reads: an event (a marriage or a birth), or the person between in a chain; the graph cache keeps one result per pivot, derived on first read (`canonlinks.Reader.For`) |
 | **match registry** | The one package holding every matching tunable, one section per layer group |
 | **knob** | One registry field a developer can tune; changing it is one edit in the registry |
 
