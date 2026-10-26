@@ -1,7 +1,7 @@
 # Ship log — S11-39 Matching reads kinship shapes
 
 **Plan:** [`S11-39-matching-reads-kinship.md`](S11-39-matching-reads-kinship.md) · **Branch:** `s11-39-matching-reads-kinship` · **PR:** #567
-**State:** stopped — CI cold still red after Fix plan 4 (to user)
+**State:** paused — slice 9 re-cut (user, 2026-10-26); waits on the graph-cache kinship and load-time warm PRs, then a re-plan
 
 ## Round 0 — implement
 Head `f631a272`. Gate PASS (orchestrator run). Report deviations: STEP-7 baseline taken from a `git archive` export of `7efa02f` rather than a worktree (export deleted); extra `cloneShapes` helper in `promotealign/terms.go`; T-6 goldens use `kinTree`/`kinSide`/`kinShape` helpers; manual check not run in the app (Go goldens cover its steps). The landing commit also picked up this ship log stub.
@@ -172,3 +172,11 @@ Reviewer: SEC+PRF (scope `78913390...3620aa7f`).
 | PRF-1 (r4) | PRF | major | The canon walk memo is stored per Evidence graph; a handle commit drops only the graphs it names, so other graphs keep stale, never-hitting copies of a catalog-sized walk, up to `maxEvidenceGraphs = 64` (the plan says 8) | Fix now (pending the user's cold decision) | verified: `evidence_graph.go:116` = 64; `commit.go:33-39` drops named graphs' memos and nils `matchIndex` only; the walk's inputs are seeds + match index gen, nothing graph-specific. Fix: keep the walk on the `matchIndex` value (dropped whole by a handle commit) in a small bounded map keyed by seeds; correct the §11 row |
 
 Nits (logged): `PRF-2 · graphcache/graph.go:276 · LoadKinds could use loadIDs below a small threshold` (not a cause after commits, per the reviewer).
+
+## Slice 9 re-cut (user, 2026-10-26)
+The user reviewed the slice after round 4: "putting the relationship shortcuts into the cache is smart", and for cold: "Move everything behind the spinner so that it's honest. Then we will address that problem later if it grows too long. Recut the rest of the slice." The re-cut (committed on its own branch off `main`):
+- A new build PR puts kinship links in the graph cache: each pattern is derived from its pivot node (a marriage or birth event, or the parent between in a chain) when the node installs, filed by end, kept current by `OnCommit`, checked by graph verify mode.
+- A new PR warms matching while the project loads, behind the open spinner (`catalogsession.WarmOnOpen`): the shortlist kinds, the name index and, through node installs, the kinship links; operations that drop them re-warm in the same call; budgets gain an open budget and "cold" becomes the first proposal after open.
+- S11-39 is reduced: F-7 (walk memo) and F-8 (association scan) are reverted; `loadCanon` reads the cache's implied links; the walk's edge key and type lookup are trimmed. F-1 to F-6 stay. S11-39 is re-planned once the two PRs land.
+- After-commit index upkeep is parked as an idea.
+PRF-1 (r4) is moot with F-7 reverted.
