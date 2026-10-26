@@ -14,12 +14,13 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/kinship"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// shipped is the registry's bound, written here because the layer holds no numbers.
-var shipped = kinship.Rules{MaxPivotEnd: 10}
+// shipped is the registry's bound.
+var shipped = matchregistry.Default().Kinship
 
 // world is one catalog with its canon builder and a reader over it.
 type world struct {
