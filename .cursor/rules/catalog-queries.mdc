@@ -15,3 +15,4 @@ Follow the project skill `.agents/skills/add-catalog-query/SKILL.md`.
 - Researcher callers obtain `*database.Catalog` from `catalogsession.Do` / FFI `withProjectCatalog`, not open-per-call. See `.agents/skills/use-catalog-session/SKILL.md`.
 - An open-catalog read of the canonical graph follows a `hops.Hop` with `graphcache.Graph.Follow`. Do not hand-write the association join in SQL; the bridge shape lives in the connectrules registry.
 - `canonicalgraph.Walk` stays for dependent discovery and for any walk that must see rows the cache has not loaded, including inside a write. One Evidence graph is walked in memory with `graphcache.Graph.WalkEvidenceGraph` on its loaded `EvidenceGraph`.
+- A per-node result derived from the graph cache registers a `graphcache.NodeMemo` (`RegisterNodeMemo`, with its `Deps` and `Check`); never add a map field on `Graph` for one.
