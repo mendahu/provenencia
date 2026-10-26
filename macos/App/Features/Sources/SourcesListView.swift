@@ -36,7 +36,6 @@ struct SourcesListView: View {
                 SourcesListContent(
                     sourcesHandle: sourcesHandle,
                     typesHandle: typesHandle,
-                    progressHandle: session.evidenceGraphProgressHandle,
                     model: model
                 )
             } else {
@@ -55,7 +54,6 @@ private struct SourcesListContent: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Bindable var sourcesHandle: QueryHandle<[CatalogSource]>
     @Bindable var typesHandle: QueryHandle<[CatalogSourceType]>
-    var progressHandle: QueryHandle<[String: EvidenceGraphProgress]>?
     @Bindable var model: SourcesModel
 
     var body: some View {
@@ -299,27 +297,8 @@ private struct SourcesListContent: View {
                 LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                     Section {
                         ForEach(rows) { source in
-                            if let progressHandle {
-                                SourcesSplitRowProgress(source: source, model: model, handle: progressHandle)
-                                    .id(source.id)
-                            } else {
-                                SourcesSplitRow(
-                                    source: source,
-                                    typeLabel: model.typeLabel(for: source),
-                                    typeIconKey: model.typeIconKey(for: source),
-                                    projectDir: model.pageProjectDir,
-                                    countsLoading: true,
-                                    onOpenPage: {
-                                        navigation.go(to: SourcesListNavigation.pageLocation(for: source))
-                                    },
-                                    onOpenGraph: model.graphLocation(for: source).map { location in
-                                        { navigation.go(to: location) }
-                                    },
-                                    graphBlockedReason: model.graphBlockedReason(for: source),
-                                    onCopy: { model.openCopy(source) }
-                                )
+                            SourcesListRow(source: source, model: model)
                                 .id(source.id)
-                            }
                         }
                     } header: {
                         captionBand
@@ -339,27 +318,19 @@ private struct SourcesListContent: View {
     }
 
     private var captionBand: some View {
-        SourcesSplitLayout.columns {
-            Text(L10n.Sources.columnSource)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, PVSpacing.gutterPage)
-                .padding(.trailing, PVSpacing.space6)
-        } graph: {
-            Text(L10n.Sources.columnEvidenceGraph)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                // Padding inside the fixed graph-zone track (not outside — that skewed the hairline).
-                .padding(.horizontal, PVSpacing.space6)
-        }
-        .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
-        .tracking(PVTypeScale.micro * PVTracking.caps)
-        .textCase(.uppercase)
-        .foregroundStyle(PVColor.textMuted)
-        .padding(.vertical, PVSpacing.space3)
-        .background(PVColor.surfaceCard)
-        .overlay(alignment: .bottom) {
-            PVDivider()
-        }
-        .accessibilityIdentifier("sources.captionBand")
+        Text(L10n.Sources.listCaption)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, PVSpacing.gutterPage)
+            .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
+            .tracking(PVTypeScale.micro * PVTracking.caps)
+            .textCase(.uppercase)
+            .foregroundStyle(PVColor.textMuted)
+            .padding(.vertical, PVSpacing.space3)
+            .background(PVColor.surfaceCard)
+            .overlay(alignment: .bottom) {
+                PVDivider()
+            }
+            .accessibilityIdentifier("sources.captionBand")
     }
 
     private var emptyState: some View {
@@ -401,32 +372,5 @@ private struct SourcesListContent: View {
                     .accessibilityIdentifier("sources.add.description")
             }
         }
-    }
-}
-
-/// Observes the progress map so one Source's Get-one merge repaints that row.
-private struct SourcesSplitRowProgress: View {
-    @Environment(WorkspaceNavigation.self) private var navigation
-    let source: CatalogSource
-    let model: SourcesModel
-    @Bindable var handle: QueryHandle<[String: EvidenceGraphProgress]>
-
-    var body: some View {
-        SourcesSplitRow(
-            source: source,
-            typeLabel: model.typeLabel(for: source),
-            typeIconKey: model.typeIconKey(for: source),
-            projectDir: model.pageProjectDir,
-            progress: model.entryGraph(for: source).flatMap { handle.value?[$0.id] },
-            countsLoading: model.graphCountsLoading,
-            onOpenPage: {
-                navigation.go(to: SourcesListNavigation.pageLocation(for: source))
-            },
-            onOpenGraph: model.graphLocation(for: source).map { location in
-                { navigation.go(to: location) }
-            },
-            graphBlockedReason: model.graphBlockedReason(for: source),
-            onCopy: { model.openCopy(source) }
-        )
     }
 }

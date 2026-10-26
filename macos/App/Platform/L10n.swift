@@ -5811,22 +5811,10 @@ enum L10n {
             comment: "Accessibility label for the Sources list"
         )
 
-        static let columnSource = LocalizedStringResource(
-            "sources.list.columnSource",
-            defaultValue: "Source",
-            comment: "Caption band above the Sources list left zone"
-        )
-
-        static let columnEvidenceGraph = LocalizedStringResource(
-            "sources.list.columnEvidenceGraph",
-            defaultValue: "Evidence graph",
-            comment: "Caption band above the Sources list graph zone"
-        )
-
-        static let openGraph = LocalizedStringResource(
-            "sources.list.openGraph",
-            defaultValue: "Open graph",
-            comment: "Sources list right-zone action when the Source has an Artifact"
+        static let listCaption = LocalizedStringResource(
+            "sources.list.caption",
+            defaultValue: "Source · evidence graphs",
+            comment: "Caption band above the Sources list"
         )
 
         static let graphNotStarted = LocalizedStringResource(
@@ -5888,25 +5876,6 @@ enum L10n {
                 case .spoken: return "\(graphSubjectCount(subjects)), \(graphObservationCount(observations))"
                 }
             }
-        }
-
-        static func graphZoneAccessibility(
-            progress: EvidenceGraphProgress?,
-            countsLoading: Bool
-        ) -> String {
-            let open = L10n.string(openGraph)
-            if countsLoading && progress == nil {
-                return "\(open), \(L10n.string(graphCountsLoading))"
-            }
-            let subjects = progress?.subjectCount ?? 0
-            if subjects == 0 {
-                return "\(open), \(graphSubjectCount(0)), \(L10n.string(graphNotStarted))"
-            }
-            return [
-                open,
-                graphSubjectCount(subjects),
-                graphObservationCount(progress?.observationCount ?? 0),
-            ].joined(separator: ", ")
         }
 
         static let needsArtifact = LocalizedStringResource(

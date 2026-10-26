@@ -6968,26 +6968,14 @@
         }
       }
     },
-    "sources.list.columnEvidenceGraph": {
-      "comment": "Caption band above the Sources list graph zone",
+    "sources.list.caption": {
+      "comment": "Caption band above the Sources list",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Evidence graph"
-          }
-        }
-      }
-    },
-    "sources.list.columnSource": {
-      "comment": "Caption band above the Sources list left zone",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Source"
+            "value": "Source · evidence graphs"
           }
         }
       }
@@ -7214,18 +7202,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "sources.list.openGraph": {
-      "comment": "Sources list right-zone action when the Source has an Artifact",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open graph"
           }
         }
       }

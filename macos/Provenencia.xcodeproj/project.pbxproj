@@ -43,6 +43,7 @@
 		AA000000000000000005E001 /* PVSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E000 /* PVSheet.swift */; };
 		AA0000000000000000000501 /* PVPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000500 /* PVPanel.swift */; };
 		AA0000000000000000000307 /* SourcesModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000306 /* SourcesModel.swift */; };
+		5CAFFCA2F237A3775C96457C /* SourcesListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C5F45F508613ACB81849199 /* SourcesListRow.swift */; };
 		5C1B99631A3E4757B5C21786 /* SourcesGraphToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C2AB895DB1104874AA8881F /* SourcesGraphToken.swift */; };
 		5C50DA58E4EFE9C98DE5A9B9 /* SourcesGraphCountLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CE80D0EED6C01DDCC1CAF4A /* SourcesGraphCountLine.swift */; };
 		5C2EE98EB1AE4D19F6E404A3 /* SourcesGraphCounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C745557BF95F91E04A444F9 /* SourcesGraphCounts.swift */; };
@@ -137,7 +138,6 @@
 		AA000000000000000000046D /* PVFloatingMenuSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000046C /* PVFloatingMenuSelection.swift */; };
 		AA00000000000000000004F5 /* PVScrollRowIntoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004F4 /* PVScrollRowIntoView.swift */; };
 		AA0000000000000000000467 /* SourcesListNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000466 /* SourcesListNavigation.swift */; };
-		AA0000000000000000000469 /* SourcesSplitRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000468 /* SourcesSplitRow.swift */; };
 		AA0000000000000000000395 /* ThumbnailCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000394 /* ThumbnailCacheTests.swift */; };
 		AA0000000000000000000351 /* TimestampFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000350 /* TimestampFormat.swift */; };
 		AA000000000000000000031D /* SourcePageModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000031E /* SourcePageModelTests.swift */; };
@@ -486,6 +486,7 @@
 		AA000000000000000005E000 /* PVSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSheet.swift; sourceTree = "<group>"; };
 		AA0000000000000000000500 /* PVPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVPanel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000306 /* SourcesModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesModel.swift; sourceTree = "<group>"; };
+		5C5F45F508613ACB81849199 /* SourcesListRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListRow.swift; sourceTree = "<group>"; };
 		5C2AB895DB1104874AA8881F /* SourcesGraphToken.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesGraphToken.swift; sourceTree = "<group>"; };
 		5CE80D0EED6C01DDCC1CAF4A /* SourcesGraphCountLine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesGraphCountLine.swift; sourceTree = "<group>"; };
 		5C745557BF95F91E04A444F9 /* SourcesGraphCounts.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesGraphCounts.swift; sourceTree = "<group>"; };
@@ -580,7 +581,6 @@
 		AA000000000000000000046C /* PVFloatingMenuSelection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFloatingMenuSelection.swift; sourceTree = "<group>"; };
 		AA00000000000000000004F4 /* PVScrollRowIntoView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVScrollRowIntoView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000466 /* SourcesListNavigation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesListNavigation.swift; sourceTree = "<group>"; };
-		AA0000000000000000000468 /* SourcesSplitRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcesSplitRow.swift; sourceTree = "<group>"; };
 		AA0000000000000000000394 /* ThumbnailCacheTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThumbnailCacheTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000350 /* TimestampFormat.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimestampFormat.swift; sourceTree = "<group>"; };
 		AA000000000000000000031E /* SourcePageModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourcePageModelTests.swift; sourceTree = "<group>"; };
@@ -962,9 +962,9 @@
 				5C745557BF95F91E04A444F9 /* SourcesGraphCounts.swift */,
 				5CE80D0EED6C01DDCC1CAF4A /* SourcesGraphCountLine.swift */,
 				5C2AB895DB1104874AA8881F /* SourcesGraphToken.swift */,
+				5C5F45F508613ACB81849199 /* SourcesListRow.swift */,
 				AA0000000000000000000308 /* SourcesListView.swift */,
 				AA0000000000000000000466 /* SourcesListNavigation.swift */,
-				AA0000000000000000000468 /* SourcesSplitRow.swift */,
 				AA000000000000000000031A /* SourcePageModel.swift */,
 				AA0000000000000000000340 /* SourcePageContext.swift */,
 				AA0000000000000000000342 /* SourceIdentitySection.swift */,
@@ -2333,6 +2333,7 @@
 				5C2EE98EB1AE4D19F6E404A3 /* SourcesGraphCounts.swift in Sources */,
 				5C50DA58E4EFE9C98DE5A9B9 /* SourcesGraphCountLine.swift in Sources */,
 				5C1B99631A3E4757B5C21786 /* SourcesGraphToken.swift in Sources */,
+				5CAFFCA2F237A3775C96457C /* SourcesListRow.swift in Sources */,
 				AA0000000000000000000309 /* SourcesListView.swift in Sources */,
 				AA0000000000000000000311 /* SourcePageView.swift in Sources */,
 				AA0000000000000000000317 /* PVBreadcrumbs.swift in Sources */,
@@ -2411,7 +2412,6 @@
 				AA000000000000000000046D /* PVFloatingMenuSelection.swift in Sources */,
 				AA00000000000000000004F5 /* PVScrollRowIntoView.swift in Sources */,
 				AA0000000000000000000467 /* SourcesListNavigation.swift in Sources */,
-				AA0000000000000000000469 /* SourcesSplitRow.swift in Sources */,
 				AA0000000000000000000351 /* TimestampFormat.swift in Sources */,
 				B91100000000000000000003 /* PVRadio.swift in Sources */,
 				B91300000000000000000003 /* PVCheckbox.swift in Sources */,

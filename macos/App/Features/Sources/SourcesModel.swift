@@ -137,28 +137,6 @@ final class SourcesModel {
         let _: QueryHandle<[CatalogEvidenceGraph]> = session.query(session.evidenceGraphsKey)
     }
 
-    /// The graph the Source's row opens and counts (`SourcesListNavigation.entryGraph`).
-    /// Nil while the graph list has no value.
-    func entryGraph(for source: CatalogSource) -> CatalogEvidenceGraph? {
-        SourcesListNavigation.entryGraph(sourceID: source.id, in: session.evidenceGraphsBySource)
-    }
-
-    /// Where the row's Open graph goes; nil blocks it (no entry graph, or it
-    /// links no Artifact).
-    func graphLocation(for source: CatalogSource) -> WorkspaceLocation? {
-        SourcesListNavigation.graphLocation(for: source, graphs: session.evidenceGraphsBySource)
-    }
-
-    /// Why the row's Open graph is blocked; nil when open or unknown (the
-    /// graph list has no value).
-    func graphBlockedReason(for source: CatalogSource) -> String? {
-        SourcesListNavigation.graphBlockedReason(
-            hasArtifact: source.hasArtifact,
-            graphListLoaded: graphsHandle?.value != nil,
-            location: graphLocation(for: source)
-        )
-    }
-
     private var graphsHandle: QueryHandle<[CatalogEvidenceGraph]>? {
         session.evidenceGraphsHandle
     }

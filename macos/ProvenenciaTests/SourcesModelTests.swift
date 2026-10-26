@@ -475,6 +475,50 @@ struct SourcesModelTests {
         #expect(L10n.Sources.graphCounts(.notStarted, style: .spoken) == "0 subjects, not started")
     }
 
+    @Test func listCaptionMatchesBoard() {
+        #expect(L10n.string(L10n.Sources.listCaption) == "Source · evidence graphs")
+    }
+
+    @Test func listReadsEachGraphsProgress() async {
+        let store = FakeStore()
+        let sources = [source(id: "s1", title: "Census", typeID: "t1")]
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: "g-smith", ref: "GPH-3", sourceID: "s1", name: "Smith household", description: "", artifactIDs: ["a"]
+            ),
+            CatalogEvidenceGraph(
+                id: "g-default", ref: "GPH-1", sourceID: "s1", name: "Default", description: "", artifactIDs: ["a"]
+            ),
+            CatalogEvidenceGraph(
+                id: "g-jones", ref: "GPH-2", sourceID: "s1", name: "Jones household", description: "", artifactIDs: ["a"]
+            ),
+        ]
+        store.graphProgressByGraph["g-jones"] = EvidenceGraphProgress(
+            graphId: "g-jones", sourceId: "s1", subjectCount: 12, observationCount: 40
+        )
+        let (model, session) = makeModel(store: store, sources: sources, types: [photoType()])
+        await warmLists(model, session: session)
+        await warmProgress(model, session: session)
+
+        guard case .loaded(let graphs) = session.evidenceGraphsRead(sourceID: "s1") else {
+            Issue.record("expected the Source's graphs")
+            return
+        }
+        #expect(graphs.map(\.name) == ["Default", "Jones household", "Smith household"])
+        #expect(session.evidenceGraphProgress(graphID: "g-jones")?.subjectCount == 12)
+        #expect(session.evidenceGraphProgress(graphID: "g-jones")?.observationCount == 40)
+        #expect(session.evidenceGraphProgress(graphID: "g-default") == nil)
+        #expect(session.evidenceGraphProgress(graphID: "g-smith") == nil)
+
+        store.graphProgressByGraph["g-jones"] = EvidenceGraphProgress(
+            graphId: "g-jones", sourceId: "s1", subjectCount: 12, observationCount: 41
+        )
+        session.apply(CatalogWriteEffects(evidenceGraphs: ["g-jones"]))
+        #expect(await waitUntil { session.evidenceGraphProgress(graphID: "g-jones")?.observationCount == 41 })
+        #expect(session.evidenceGraphProgress(graphID: "g-default") == nil)
+        #expect(session.evidenceGraphProgress(graphID: "g-smith") == nil)
+    }
+
     @Test func graphTokenCopyMatchesBoard() {
         #expect(L10n.Sources.openEvidenceGraphLabel(name: "Jones household") == "Open graph Jones household")
         #expect(L10n.Sources.graphNeedsArtifact("Unlinked") == "Unlinked needs an artifact")
