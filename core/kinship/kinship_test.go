@@ -58,7 +58,7 @@ func TestDerive(t *testing.T) {
 		birth    = vocabkey.EventBirth
 	)
 	spouse := func(person, event, br byte) kinship.Edge {
-		return part(t, person, event, vocabkey.RoleSpouse, marriage, br)
+		return part(t, person, event, vocabkey.RoleSubject, marriage, br)
 	}
 	parent := func(g, m, br byte) kinship.Edge { return rel(t, g, m, vocabkey.TermParent, br) }
 	birthParents := func(father, subject, event, b1, b2 byte) kinship.Implied {
@@ -136,7 +136,7 @@ func TestDerive(t *testing.T) {
 		{"AC-1.9 parent", []kinship.Edge{parent(1, 2, 1)}, nil},
 		{"AC-1.10", []kinship.Edge{
 			part(t, 1, 1, "groom", marriage, 1), part(t, 2, 1, "groom", marriage, 2),
-			part(t, 1, 2, vocabkey.RoleSpouse, "wedding", 3), part(t, 2, 2, vocabkey.RoleSpouse, "wedding", 4),
+			part(t, 1, 2, vocabkey.RoleSubject, "wedding", 3), part(t, 2, 2, vocabkey.RoleSubject, "wedding", 4),
 		}, nil},
 		{"AC-1.11 child role", []kinship.Edge{
 			part(t, 1, 1, vocabkey.RoleFather, birth, 1), part(t, 2, 1, "child", birth, 2),
@@ -196,7 +196,7 @@ func TestDeriveBound(t *testing.T) {
 	spouses := func(n int) []kinship.Edge {
 		var edges []kinship.Edge
 		for i := 1; i <= n; i++ {
-			edges = append(edges, part(t, byte(i), 1, vocabkey.RoleSpouse, vocabkey.EventMarriage, byte(i)))
+			edges = append(edges, part(t, byte(i), 1, vocabkey.RoleSubject, vocabkey.EventMarriage, byte(i)))
 		}
 		return edges
 	}
@@ -286,7 +286,7 @@ func TestDeriveInvariants(t *testing.T) {
 		return out
 	}
 	eventTypes := []vocabkey.EventType{vocabkey.EventBirth, vocabkey.EventMarriage, "wedding"}
-	roles := []vocabkey.Role{vocabkey.RoleSubject, vocabkey.RoleFather, vocabkey.RoleMother, vocabkey.RoleSpouse, "witness", "groom"}
+	roles := []vocabkey.Role{vocabkey.RoleSubject, vocabkey.RoleFather, vocabkey.RoleMother, "witness", "groom"}
 	relTerms := []vocabkey.BridgeTerm{vocabkey.TermParent, "child", vocabkey.TermSpouse, vocabkey.TermGrandparent}
 
 	r := rand.New(rand.NewSource(1))

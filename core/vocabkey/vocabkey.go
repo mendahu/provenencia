@@ -94,7 +94,6 @@ const (
 	RoleSubject   Role      = "subject"
 	RoleFather    Role      = "father"
 	RoleMother    Role      = "mother"
-	RoleSpouse    Role      = "spouse"
 
 	SexMale     = "male"   // sex_at_birth
 	SexFemale   = "female" // sex_at_birth
