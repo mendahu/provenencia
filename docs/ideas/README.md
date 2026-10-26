@@ -23,7 +23,6 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`evidence-graph-card-memory.md`](evidence-graph-card-memory.md) — every card keeps its painted image after S11-21; about 585–774 MB for 110 cards on Retina. Options if it becomes a problem
 - [`evidence-graph-structure-shortcuts.md`](evidence-graph-structure-shortcuts.md) — place a common cluster (wedding, birth, residence) in one action, or paste a cluster already on the canvas
 - [`registry-source-import.md`](registry-source-import.md) — paste a record URL from Ancestry, FamilySearch and similar to create a Source; access (logins, OAuth) is unproven
-- [`source-provenance-date.md`](source-provenance-date.md)
 - [`text-quote-locators.md`](text-quote-locators.md)
 - [`audio-video-sources.md`](audio-video-sources.md)
 - [`shared-list-helpers.md`](shared-list-helpers.md) — one list of graph mutations (the other two items are in Spike 11)
@@ -43,7 +42,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`place-gazetteer-service.md`](place-gazetteer-service.md)
 - [`possible-values.md`](possible-values.md)
 - [`term-management.md`](term-management.md) — one place to manage terms, including relationship direction and inverses
-- [`kinship-view.md`](kinship-view.md) — family trees and person pages reading every kinship shape as one fact, and patterns beyond spouse, parent and grandparent (matching's part is Spike 11)
+- [`kinship-view.md`](kinship-view.md) — family trees reading every kinship shape as one fact, and patterns beyond spouse, parent and grandparent (matching's part is Spike 11; the Person page's nuclear family and page-only siblings are [Spike 13](../deployment-plan/spike-13/))
 
 ## Archived
 

@@ -2,6 +2,8 @@
 
 **Status:** idea only — not roadmapped. Left over when [kinship shapes](../deployment-plan/spike-11/kinship-shapes.md) was pulled into Spike 11 (2026-10-24), which teaches matching that a shared marriage, a birth's parents and a parent chain imply spouse, parent and grandparent links.
 
+**Spike 13** ([person detail](../deployment-plan/spike-13/person-detail.md#2-family)) takes the Person page's nuclear family (parents, siblings, spouses, children) and a page-only sibling derivation from a shared parent. Sibling evidence for matching stays here.
+
 ## What stays here
 
 - **Family trees and person pages.** "Who are this person's spouses, parents, children and grandparents" from the canonical layer has to read every shape as one fact, or it misses relationships recorded through events. The graph cache holds the canon's implied links per pivot, read through `canonlinks.Reader.For` (S11-49), so a tree or person page reads them as matching does.
