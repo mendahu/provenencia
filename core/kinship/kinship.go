@@ -2,7 +2,7 @@
 // shared marriage implies spouses, a birth's father or mother and subject
 // imply a parent, and a parent of a parent implies a grandparent. Pure: no
 // catalog, no I/O, no numbers; the catalog's bridge terms and the Rules come
-// in as arguments. It returns only implied links; callers merge them with direct ones.
+// in as arguments. It returns only implied links; `LinkSet` merges them with direct ones.
 package kinship
 
 import (
@@ -30,6 +30,20 @@ type Edge struct {
 	KeyA, KeyB vocabkey.BridgeKey // the link read from A's end and from B's
 	// Associations are the bridge Subjects behind the link.
 	Associations [][]byte
+}
+
+// Clone returns a copy of e that shares no bytes with it: its ends and every
+// association are copied.
+func (e Edge) Clone() Edge {
+	out := e
+	out.A, out.B = bytes.Clone(e.A), bytes.Clone(e.B)
+	if e.Associations != nil {
+		out.Associations = make([][]byte, len(e.Associations))
+		for i, a := range e.Associations {
+			out.Associations[i] = bytes.Clone(a)
+		}
+	}
+	return out
 }
 
 // reads returns the edge's ends in the order of a key pair, whichever end the
@@ -80,6 +94,12 @@ func (i Implied) Shape() Shape {
 		return Shape{i.Pattern, i.Event}
 	}
 	return Shape{i.Pattern, i.Through}
+}
+
+// Recording is how this implied link records itself on a side: its one shape,
+// and implied only.
+func (i Implied) Recording() Recording {
+	return Recording{Shapes: []Shape{i.Shape()}, OnlyImplied: true}
 }
 
 // Recording is how one link is recorded on one side: the shapes that implied

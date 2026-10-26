@@ -8,8 +8,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
-	"github.com/mendahu/provenencia/core/kinship"
-	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 )
 
@@ -105,18 +103,4 @@ func ProfilesKeptForTest(c *database.Catalog) (int, bool) {
 // the graph has none.
 func MatchIndexGenForTest(g *graphcache.Graph) uint64 {
 	return matchIndexOf(g).gen
-}
-
-// SideLink is a link on one side of a proposal.
-type SideLink = sideLink
-
-// LinkSetForTest merges links through a new link set, adds the links the
-// kinship patterns imply, and returns the set's links.
-func LinkSetForTest(links []SideLink, terms segmentcompare.Terms, rules kinship.Rules) []SideLink {
-	s := newLinkSet()
-	for _, l := range links {
-		s.add(l)
-	}
-	s.withImplied(terms, rules)
-	return s.links
 }

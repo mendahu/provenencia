@@ -154,12 +154,12 @@ var hopPersonToEvent = hops.MustHop(vocabkey.BridgeParticipation, vocabkey.Prope
 // loadLayerBridges walks every bridge connectrules registers, with any term,
 // and keys each edge from both ends. It also returns the participations whose
 // ends are both primary, which the lifespans read. Links go through one
-// linkSet, so links with the same ends and keys merge, and the links the
-// kinship patterns imply follow the recorded ones (with no association of
+// kinship.LinkSet, so links with the same ends and keys merge, and the links
+// the kinship patterns imply follow the recorded ones (with no association of
 // their own beyond those they were made from).
 func loadLayerBridges(g *graphcache.Graph, eg graphcache.EvidenceGraph, props map[string]graphcache.VocabProperty, vocabTerms map[string]graphcache.VocabTerm, primary map[string]primarySubject, byKind map[string][][]byte, terms segmentcompare.Terms) ([]graphalign.Bridge, []participation, error) {
 	var parts []participation
-	set := newLinkSet()
+	set := kinship.NewLinkSet()
 	for _, b := range connectrules.Bridges() {
 		if len(b.Endpoints) != 2 || len(byKind[b.Endpoints[0].TypeKey]) == 0 {
 			continue
@@ -212,12 +212,12 @@ func loadLayerBridges(g *graphcache.Graph, eg graphcache.EvidenceGraph, props ma
 				eventType = eventTypes[string(eventEnd(e))]
 			}
 			keyA, keyB := segmentcompare.Keys(b, vocabkey.BridgeTerm(term), vocabkey.EventType(eventType), terms)
-			set.add(sideLink{Edge: kinship.Edge{A: e.From, B: e.To, KeyA: keyA, KeyB: keyB, Associations: [][]byte{e.Association}}})
+			set.Add(kinship.Link{Edge: kinship.Edge{A: e.From, B: e.To, KeyA: keyA, KeyB: keyB, Associations: [][]byte{e.Association}}})
 		}
 	}
-	set.withImplied(terms, matchregistry.Default().Kinship)
+	set.WithImplied(terms, matchregistry.Default().Kinship)
 	var out []graphalign.Bridge
-	for _, l := range set.links {
+	for _, l := range set.Links() {
 		out = append(out, graphalign.Bridge{
 			A: l.A, B: l.B, KeyA: l.KeyA, KeyB: l.KeyB, Associations: l.Associations, Recording: l.Recording,
 		})

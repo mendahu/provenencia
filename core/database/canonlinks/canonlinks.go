@@ -1,7 +1,9 @@
 // Package canonlinks reads the canon's links: each filed link as an edge
 // between its two ends with the key it has from each (EdgeOf), the catalog's
 // bridge terms (LoadTerms), and the links the kinship patterns imply for one
-// person (Reader.For). Matching, claim evidence and later readers share it.
+// person (Reader.For), and one person's relationship links, recorded and
+// implied, merged through kinship.LinkSet (Reader.Relationships). Matching,
+// claim evidence and later readers share it.
 package canonlinks
 
 import (

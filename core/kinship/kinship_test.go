@@ -518,3 +518,26 @@ func TestCountedOnce(t *testing.T) {
 		})
 	}
 }
+
+// Edge.Clone copies the ends and every association, so the copy shares no bytes
+// with the edge.
+func TestEdgeClone(t *testing.T) {
+	e := kinship.Edge{
+		A: []byte{1}, B: []byte{2},
+		KeyA: vocabkey.BridgeKey{Term: "a"}, KeyB: vocabkey.BridgeKey{Term: "b"},
+		Associations: [][]byte{{3}, {4}},
+	}
+	got := e.Clone()
+	if !reflect.DeepEqual(got, e) {
+		t.Fatalf("got %+v, want %+v", got, e)
+	}
+	e.A[0], e.B[0], e.Associations[0][0], e.Associations[1][0] = 9, 9, 9, 9
+	want := kinship.Edge{
+		A: []byte{1}, B: []byte{2},
+		KeyA: vocabkey.BridgeKey{Term: "a"}, KeyB: vocabkey.BridgeKey{Term: "b"},
+		Associations: [][]byte{{3}, {4}},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("clone changed with the original: got %+v, want %+v", got, want)
+	}
+}

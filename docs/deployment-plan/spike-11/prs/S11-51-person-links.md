@@ -1,6 +1,6 @@
 # S11-51 — One person's links for every reader
 
-**Status:** Planned
+**Status:** Landed in [#575](https://github.com/mendahu/provenencia/pull/575) (2026-10-26)
 **Spike / slice:** Spike 11 · Slice 9 — Kinship shapes
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: an engine move and one read with no caller in the app yet)
@@ -13,6 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/match-rules.mdc`, `.cursor/rules/catalog-queries.mdc`
 **Context:** [Kinship shapes § Shape](../kinship-shapes.md#shape), [§ Where implied links live](../kinship-shapes.md#where-implied-links-live); S11-39 plan D-5 – D-7 and its Landed note (F-9); working rules: "One fact, one link per side", "The canon's implied links live in the graph cache", "One pure package, `core/kinship`"; Spike 13 working rule ["One person's links, direct and implied, from one function"](../../spike-13/deployment-plan.md#engine)
 **Planned:** 2026-10-26 against `main` @ `b3b6a78e`
+**Landed:** Three differences from the plan. T-1 was written in the same commit as `Relationships`, not watched red first. `TestLinkSet` gained the subtest "an added implied link records as Implied.Recording" (planned in T-2). Review round 1 added `Edge.Clone` beside `Shape.Clone`, so `TestRelationships` copies an edge once instead of twice. Evidence: `PROVENENCIA_GRAPH_VERIFY=1` over `canonlinks` passed; `TestLargeSourceBudgets -count=3` passed with budgets unchanged.
 **Review:** [`S11-51-person-links.review.md`](S11-51-person-links.review.md) — Fits with changes / Ready with changes, 2 rounds (every finding answered)
 
 ### Implementer — read this first
