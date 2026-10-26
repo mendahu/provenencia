@@ -2,7 +2,6 @@ package promotealign
 
 import (
 	"bytes"
-	"slices"
 
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database/graphcache"
@@ -71,6 +70,9 @@ type sideLink struct {
 type linkSet struct {
 	links []sideLink
 	at    map[seenEdge]int // a link's index in links
+	// seen holds each link's associations, parallel to links, so a merge does
+	// not rescan them.
+	seen []map[string]struct{}
 }
 
 func newLinkSet() *linkSet { return &linkSet{at: map[seenEdge]int{}} }
@@ -82,7 +84,8 @@ func (s *linkSet) add(l sideLink) {
 	if i, ok := s.at[k]; ok {
 		have := &s.links[i]
 		for _, a := range l.Associations {
-			if !slices.ContainsFunc(have.Associations, func(b []byte) bool { return bytes.Equal(a, b) }) {
+			if _, dup := s.seen[i][string(a)]; !dup {
+				s.seen[i][string(a)] = struct{}{}
 				have.Associations = append(have.Associations, bytes.Clone(a))
 			}
 		}
@@ -92,9 +95,12 @@ func (s *linkSet) add(l sideLink) {
 	}
 	l.A, l.B = bytes.Clone(l.A), bytes.Clone(l.B)
 	assocs := make([][]byte, len(l.Associations))
+	have := make(map[string]struct{}, len(l.Associations))
 	for i, a := range l.Associations {
 		assocs[i] = bytes.Clone(a)
+		have[string(a)] = struct{}{}
 	}
+	s.seen = append(s.seen, have)
 	l.Associations = assocs
 	l.Shapes = cloneShapes(l.Shapes)
 	s.at[k] = len(s.links)
