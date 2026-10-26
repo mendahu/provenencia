@@ -62,4 +62,4 @@ Reviewers: MNT (MNT-1), SEC+PRF (PRF-1). Scope `0581b563...56ce5bec`. CON had no
 No new findings. No Fix plan 2.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: SEC-1 (`docs/ideas/kinship-view.md`, "Bounding event fan-out") · to user: SEC-1 (answered: accept as is) · CON miss: none
+Gate PASS · CI green (Go tests, macOS tests) · open: none · follow-ups: SEC-1 (`docs/ideas/kinship-view.md`, "Bounding event fan-out") · to user: SEC-1 (answered: accept as is) · CON miss: none
