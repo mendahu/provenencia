@@ -2,7 +2,7 @@
 // shared marriage implies spouses, a birth's father or mother and subject
 // imply a parent, and a parent of a parent implies a grandparent. Pure: no
 // catalog, no I/O, no numbers; the catalog's bridge terms and the Rules come
-// in as arguments. It returns only implied links; callers merge them with direct ones.
+// in as arguments. It returns only implied links; `LinkSet` merges them with direct ones.
 package kinship
 
 import (
@@ -80,6 +80,12 @@ func (i Implied) Shape() Shape {
 		return Shape{i.Pattern, i.Event}
 	}
 	return Shape{i.Pattern, i.Through}
+}
+
+// Recording is how this implied link records itself on a side: its one shape,
+// and implied only.
+func (i Implied) Recording() Recording {
+	return Recording{Shapes: []Shape{i.Shape()}, OnlyImplied: true}
 }
 
 // Recording is how one link is recorded on one side: the shapes that implied

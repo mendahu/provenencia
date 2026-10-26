@@ -37,7 +37,7 @@ type candidatesMemo struct {
 // shortlisted ones together, the ones the walk reaches after it. Recorded
 // links come from the walk and implied ones from canonlinks.Reader.For, which
 // answers from the graph cache's results for each walked person; both go
-// through one linkSet, so a link read from either end or recorded both ways
+// through one kinship.LinkSet, so a link read from either end or recorded both ways
 // merges, and the implied links follow the recorded ones in walk order.
 func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer graphalign.Layer, fixed []graphalign.Fixed, cfg graphalign.Config, terms segmentcompare.Terms) (graphalign.Canon, error) {
 	handles := map[string]*graphcache.Node{}
@@ -111,7 +111,7 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 	if err != nil {
 		return graphalign.Canon{}, err
 	}
-	set := newLinkSet()
+	set := kinship.NewLinkSet()
 	var walkedPeople [][]byte
 	walked := map[string]bool{}
 	queue := append([][]byte(nil), seeds...)
@@ -162,7 +162,7 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 					continue
 				}
 				if from, to, keyFrom, keyTo, ok := canonlinks.EdgeOf(id, n, l, neighbor, prof.eventTypeProp, terms); ok {
-					set.add(sideLink{Edge: kinship.Edge{A: from, B: to, KeyA: keyFrom, KeyB: keyTo}})
+					set.Add(kinship.Link{Edge: kinship.Edge{A: from, B: to, KeyA: keyFrom, KeyB: keyTo}})
 				}
 				if _, ok := handles[string(neighbor.ID)]; !ok {
 					handles[string(neighbor.ID)] = neighbor
@@ -196,25 +196,20 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 	// Walked links first, in walk order. An implied link that shares ends and
 	// keys with a walked or earlier implied one merges into it; the rest follow
 	// in order. The implied links are the cache's, so an edge copies what it keeps.
-	edges := make([]graphalign.CanonEdge, len(set.links), len(set.links)+len(implied))
-	for i, l := range set.links {
+	links := set.Links()
+	edges := make([]graphalign.CanonEdge, len(links), len(links)+len(implied))
+	for i, l := range links {
 		edges[i] = graphalign.CanonEdge{
 			From: l.A, To: l.B, KeyFrom: l.KeyA, KeyTo: l.KeyB, Recording: l.Recording,
 		}
 	}
-	impliedAt := map[seenEdge]int{}
-	for _, imp := range implied {
-		k := edgeSeenKey(imp.A, imp.B, imp.KeyA, imp.KeyB)
-		i, ok := set.at[k]
-		if !ok {
-			i, ok = impliedAt[k]
-		}
-		rec := kinship.Recording{Shapes: []kinship.Shape{imp.Shape()}, OnlyImplied: true}
-		if ok {
-			edges[i].Recording.Merge(rec)
+	for i, at := range set.PlaceImplied(implied) {
+		imp := implied[i]
+		rec := imp.Recording()
+		if at < len(edges) {
+			edges[at].Recording.Merge(rec)
 			continue
 		}
-		impliedAt[k] = len(edges)
 		edges = append(edges, graphalign.CanonEdge{
 			From: bytes.Clone(imp.A), To: bytes.Clone(imp.B), KeyFrom: imp.KeyA, KeyTo: imp.KeyB,
 			Recording: rec.Clone(),
