@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`
 **Context:** [where graphs show](../source-structure.md#where-graphs-show); working rules: "Sources list", "Source page", "One graph list", "Name and description are editable; graphs list alphabetically by name", "A graph is a place", "High tolerance for churn"; the S12-11 plan D-2 (session reads of the graph list), the S12-13 [Landed note](S12-13-artifact-graph-checkboxes.md) (`evidenceGraphsBySource`, `EvidenceGraphIndex`)
 **Planned:** 2026-10-26 against `main` @ `e3b85f9`
-**Review:** — (not reviewed yet)
+**Review:** [`S12-14-sources-list-graph-accordion.review.md`](S12-14-sources-list-graph-accordion.review.md) — round 1 Fits with changes / Not ready, all answered; round 2 pending
 
 ### Implementer — read this first
 
@@ -77,14 +77,15 @@ A researcher sees every Evidence graph of every Source from the Sources list: ea
 
 | In | Covered by |
 | --- | --- |
-| Graph zone expander on every row with an Artifact (GA-1, GA-6) | STEP-4, AC-1.1, AC-1.2, AC-1.8 |
-| Graph sub-rows with per-graph Open and count line (GA-2 – GA-4, GA-9, GA-10) | STEP-5, AC-1.2 – AC-1.6 |
+| One session read of graph progress, and one "awaiting first value" check on `QueryHandle` (D-13, D-14) | STEP-1, T-10 |
+| Status rule per graph, any-graph Source match, Promoted label and stored value (GA-8, D-5 – D-7) | STEP-2, AC-2.1 – AC-2.7 |
+| One shared count line view with one spoken form (D-3) | STEP-3, AC-1.3, AC-3.1 |
+| Session-held expanded state (GA-7, D-4) | STEP-4, AC-1.9 |
+| Graph zone expander on every row with an Artifact (GA-1, GA-6, D-12) | STEP-4, AC-1.1, AC-1.2, AC-1.8 |
 | "Needs an artifact" row unchanged (GA-5) | STEP-4, AC-1.7 |
-| Session-held expanded state (GA-7, D-4) | STEP-3, AC-1.9 |
-| Status rule per graph, any-graph Source match, Promoted label (GA-8, D-5 – D-7) | STEP-1, AC-2.1 – AC-2.7 |
-| One shared count line view (D-3) | STEP-2, AC-1.3, AC-3.1 |
+| The interim entry-graph helpers deleted; one row call site (D-9, D-15) | STEP-4 |
+| Graph sub-rows with per-graph Open and count line (GA-2 – GA-4, GA-9, GA-10) | STEP-5, AC-1.2 – AC-1.6 |
 | Source page cards show the count line; the place warms the progress key (GA-11, D-8) | STEP-6, AC-3.1 – AC-3.3 |
-| The interim entry-graph helpers deleted (D-9) | STEP-3 |
 
 | Out | Home |
 | --- | --- |
@@ -94,51 +95,59 @@ A researcher sees every Evidence graph of every Source from the Sources list: ea
 | A Source-level total of Subjects or Observations | not planned (map scope) |
 | Persisting expanded rows across relaunch or in history | not planned (user, 2026-10-26) |
 | A kit accordion or tree component | not planned (brief non-goals) |
-| Any change to `graphprogress` or the progress RPCs | not planned (D-5: the rule is a Swift reading of today's counts) |
+| Moving the status rule into `graphprogress` | when a second reader needs it (review M-5); logged in the review log |
+| `SourcesModel.warmListQueries` warming the keys the place already warms | not planned here (review log, "Log it") |
 
 ## 4. Current state
 
 | Area | Where | Today |
 | --- | --- | --- |
-| Row | `macos/App/Features/Sources/SourcesSplitRow.swift` `SourcesSplitRow` | Page zone + one graph zone. Takes one `progress`, `countsLoading`, `onOpenGraph`, `graphBlockedReason`. `graphZone` draws "Open graph" + `graphCountLine` for the Source, or the sunken "Needs an artifact" zone when `!source.hasArtifact`. |
+| Row | `macos/App/Features/Sources/SourcesSplitRow.swift` `SourcesSplitRow` | Page zone + one graph zone. Takes one `progress`, `countsLoading`, `onOpenGraph`, `graphBlockedReason`. `graphZone` draws "Open graph" + `graphCountLine` for the Source, or the sunken "Needs an artifact" zone when `!source.hasArtifact`. The page zone's `CachedThumbnail` uses its default `size` (44). |
 | Count line | same file, private `graphCountLine` | Three states: hairline while `countsLoading && progress == nil`; "0 subjects · not started" when `subjectCount == 0`; else `L10n.Sources.graphCountLine`. Private, one caller. |
-| Zone style | same file, private `SourcesSplitZoneButtonStyle` | Hover fill and muted → primary label lift. |
-| List wiring | `macos/App/Features/Sources/SourcesListView.swift` `listBody`, `SourcesSplitRowProgress` | `ForEach(rows)` draws one `SourcesSplitRow` per Source, `.id(source.id)`; `SourcesSplitRowProgress` observes the progress handle and passes the entry graph's progress. |
-| Status menu | same file, `statusMenu` | `SourcesModel.EvidenceStatus.allCases` labels. |
+| Spoken count | `macos/App/Platform/L10n.swift` `L10n.Sources.graphZoneAccessibility(progress:countsLoading:)` | Repeats the same three branches with "Open graph" in front. |
+| Zone style | `SourcesSplitRow.swift` private `SourcesSplitZoneButtonStyle` | Hover fill and muted → primary label lift. |
+| List wiring | `macos/App/Features/Sources/SourcesListView.swift` `SourcesListView`, `SourcesListContent` (`progressHandle` parameter), `listBody`, `SourcesSplitRowProgress` | `listBody` has two `SourcesSplitRow(...)` constructions: `SourcesSplitRowProgress` when the progress handle exists, an inline one with `countsLoading: true` when not. Each row is one `ForEach(rows)` element with `.id(source.id)`. |
+| Status menu | same file, `statusMenu` | Options from `SourcesModel.EvidenceStatus.allCases`; identifiers `sources.status.<rawValue>`. |
 | Model | `macos/App/Features/Sources/SourcesModel.swift` `EvidenceStatus` | Cases `empty`, `inProgress = "in_progress"`, `filed`; `init(_ progress:)`: empty when `primaryCount == 0`, in progress when `filedCount < primaryCount`, else filed. `.filed` labels `L10n.Sources.statusFullyPromoted`. |
-| Model | same file, `entryGraph(for:)`, `graphLocation(for:)`, `graphBlockedReason(for:)` | The interim "first graph" rule, used by the list wiring. |
-| Model | same file, `visibleSources` | The status filter reads the entry graph's progress only. |
-| Model | same file, `graphProgress(for:)`, `graphCountsLoading`, `warmListQueries`, `statusCountsError`, `isAwaitingFilterData` | Progress map read by graph id; loading of the progress and graph-list handles. Stay. |
-| Settings | `macos/App/Features/Sources/SourcesListSettings.swift` | `status: SourcesModel.EvidenceStatus?`, decoded by raw value (`"filed"` stored today). |
+| Model | same file, `evidenceGraphProgressKey(for:)`, private `progressHandle`, `graphProgress(for:)`, `graphCountsLoading`, `isAwaitingFilterData`, `statusCountsError`, `warmListQueries` | Progress key and handle looked up here. `graphCountsLoading` and `isAwaitingFilterData` hand-write "no value and not settled" checks. |
+| Model | same file, `entryGraph(for:)`, `graphLocation(for:)`, `graphBlockedReason(for:)`, `visibleSources` | The interim "first graph" rule; the status filter reads the entry graph only. |
+| Settings | `macos/App/Features/Sources/SourcesListSettings.swift` `SourcesListSettings.init(from:)` | Decodes each field on its own; `status` by raw value (`"filed"` stored today). |
 | Navigation | `macos/App/Features/Sources/SourcesListNavigation.swift` | `entryGraph(sourceID:in:)`, `graphBlockedReason(hasArtifact:graphListLoaded:location:)`, `graphLocation(for:graphs:)` (interim, list-only); `graphLocation(for:graph:)` and `graphBlockedReason(for:)` (per graph; used by `SourceGraphsSection`). |
-| Session | `macos/App/Features/Workspace/Session/WorkspaceSession.swift` | `graphCameras` holds per-graph UI state "not catalog data; quit drops it" (`@ObservationIgnored`). `apply(_:_:)` calls `refreshEvidenceGraphProgress(graphId:)` for each graph a write names; it patches the progress map only when the key is already cached. |
-| Session | `macos/App/Features/Workspace/Session/WorkspaceSession+EvidenceGraphs.swift` `evidenceGraphsBySource`, `evidenceGraphs(sourceID:)`, `evidenceGraphsHandle` | The graph list by Source, in name order. |
+| Session | `macos/App/Features/Workspace/Session/WorkspaceSession.swift` | `graphCameras` is private UI state, "quit drops it", reached through `graphCamera(for:)` / `setGraphCamera(_:for:)`. `refreshEvidenceGraphProgress` and `patchEvidenceGraphProgress` build `CatalogQueryKey.evidenceGraphProgress(project:)` inline; the patch runs only when the map is already cached. |
+| Session | `macos/App/Features/Workspace/Session/WorkspaceSession+EvidenceGraphs.swift` | "The one place" the graph list's key and handle are looked up: `evidenceGraphsKey`, `evidenceGraphsHandle`, `evidenceGraphs(sourceID:)`, `evidenceGraphsBySource`. |
+| Query handle | `macos/App/Features/Workspace/Session/QueryHandle.swift` `QueryHandle` | `status`, `value`, `error`, `isSettled`; no "awaiting first value". |
 | Place | `macos/App/Features/Workspace/Session/PlaceRegistry.swift` `.sourcesList`, `.sourceDetail` | The list place warms `.evidenceGraphProgress(project:)`; the Source page place does not. |
 | Source page | `macos/App/Features/Sources/SourceGraphsSection.swift` `SourceGraphsSection` | `rows`, `loadError`, `location(for:)`, `blockedReason(for:)`; no progress read. |
-| Source page | `macos/App/Features/Sources/SourcePageGraphsView.swift` `SourcePageGraphRow` | Card: name, ref, description; Open, Edit, Delete. |
-| Strings | `macos/App/Platform/L10n.swift` `L10n.Sources` | `graphsCount(_:)` ("%lld evidence graph(s)", plural, key `sources.page.graphsCount`), `openGraph`, `graphCountLine`, `graphSubjectCount`, `graphNotStarted`, `graphZoneAccessibility`, `needsArtifact`, `needsArtifactTooltip`, `graphNeedsArtifactTooltip`, `statusFullyPromoted` (`sources.list.status.fullyPromoted`, "Fully promoted"). |
-| Tests | `macos/ProvenenciaTests/SourcesModelTests.swift` | `evidenceStatusFromCounts`, `filtersCombineAndClear`, `statusFilterWaitsForCounts`, `graphProgressCopyMatchesBoard`, `warmListQueriesLoadsGraphProgress`; helper `progress(_:primary:filed:)` sets `subjectCount = primary`. |
+| Source page | `macos/App/Features/Sources/SourcePageGraphsView.swift` `SourcePageGraphRow` | Card: name, ref, description (combined accessibility element); Open, Edit, Delete. |
+| Source page | `macos/App/Features/Sources/SourcePageModel.swift` `warmFromSession()` | Tests and previews warm a hand list of keys; navigation warms through `PlaceRegistry`. |
+| Strings | `macos/App/Platform/L10n.swift` `L10n.Sources` | `graphsCount(_:)` (plural, key `sources.page.graphsCount`), `openGraph`, `graphCountLine`, `graphSubjectCount`, `graphNotStarted`, `graphCountsLoading`, `needsArtifact`, `needsArtifactTooltip`, `graphNeedsArtifactTooltip`, `statusFullyPromoted` (`sources.list.status.fullyPromoted`, "Fully promoted"). |
+| Tests | `macos/ProvenenciaTests/SourcesModelTests.swift` | `evidenceStatusFromCounts`, `filtersCombineAndClear` (seeds `primary: 2, filed: 1`, expects In progress), `settingsRestoreOnNewModel` (`.filed`), `statusCountsFailureSurfacesAnErrorAndUnfilteredCount` (`.filed`), `statusFilterWaitsForCounts`, `graphProgressCopyMatchesBoard`, `warmListQueriesLoadsGraphProgress`; helper `progress(_:primary:filed:)` sets `subjectCount = primary`. |
 | Tests | `macos/ProvenenciaTests/SourcesListNavigationTests.swift` | `graphLocationOpensTheFirstGraph`, `graphBlockedReasonNeedsTheGraphList` (interim helpers); `graphLocationOpensTheGivenGraph` (stays). |
-| Tests | `macos/ProvenenciaTests/SourcePageModelTests.swift` | Graph section tests; `FakeStore.graphProgressByGraph` seeds progress. |
+| Tests | `macos/ProvenenciaTests/PlaceRegistryTests.swift` | `resolvesSourceDetail` and the place table assert the exact `.sourceDetail` key list. |
+| Tests | `macos/ProvenenciaTests/SourcePageModelTests.swift` | Graph section tests; helper `entryGraphLocation(_:)` (reads `model.graphs.location(for:)`, stays); `session.apply(location:)` warms place keys in some tests. `FakeStore.graphProgressByGraph` seeds progress. |
 
-**Precedent.** S12-11 ([#549](https://github.com/mendahu/provenencia/pull/549)) put the Source page's graph rows on session reads (`SourceGraphsSection.rows` over `evidenceGraphs(sourceID:)`) instead of a page copy: read progress the same way. `graphCameras` is the precedent for UI state held by the session until quit. S12-13 ([#562](https://github.com/mendahu/provenencia/pull/562)) built `evidenceGraphsBySource`, which the sub-rows read.
+**Precedent.** S12-11 ([#549](https://github.com/mendahu/provenencia/pull/549)) put the Source page's graph rows on session reads (`SourceGraphsSection.rows` over `evidenceGraphs(sourceID:)`) instead of a page copy: progress gets the same session home. `graphCameras` is the precedent for UI state held by the session until quit, behind methods. S12-13 ([#562](https://github.com/mendahu/provenencia/pull/562)) built `evidenceGraphsBySource`, which the sub-rows read.
 
 ## 5. Decisions
 
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
 | D-1 | Every row with an Artifact has the expander; its label is `L10n.Sources.graphsCount(n)`. A Source with no Artifact keeps today's "Needs an artifact" zone with no expander. | User, 2026-10-26: every row expands. A Source with no Artifact has only an unopenable, empty Default graph; the existing zone already says what to do. | One-graph rows keep a direct Open — user chose every row. An expander on the no-Artifact row — one disabled sub-row says less than today's zone. |
-| D-2 | Sub-rows are drawn by the list, under the row, inside the same `ForEach` element (a `VStack(spacing: 0)` holding the row and, when expanded, its sub-rows), with `.id(source.id)` on that `VStack`. | `ListScrollAnchorModifier` anchors on Source ids; a sub-row is not a list row of its own. | Sub-rows as separate `ForEach` items — breaks the scroll anchor's id list. |
-| D-3 | `SourcesGraphCountLine` *(new)*, `macos/App/Features/Sources/SourcesGraphCountLine.swift`: `struct SourcesGraphCountLine: View { var progress: EvidenceGraphProgress?; var countsLoading: Bool }`, body moved verbatim from `SourcesSplitRow.graphCountLine`. The sub-row and `SourcePageGraphRow` draw it. | One count rule, two views (map scope). | Copying the three states into the page card. |
-| D-4 | Expanded state is `WorkspaceSession.expandedSourceRows: Set<String>` *(new)*, observed (no `@ObservationIgnored`), beside `graphCameras`. `SourcesModel.isExpanded(_ sourceID:) -> Bool` and `toggleExpanded(_ sourceID:)` *(new)* read and write it. Deleted Source ids may stay in the set. | User, 2026-10-26: until relaunch. The list's `SourcesModel` is rebuilt with the view; the session lives for the project. It must be observed so a toggle repaints. | `SourcesListSettings` (persists, user declined); `WorkspaceLocation` (history, user declined); `@State` on the view (lost on leave). |
-| D-5 | Graph status is read from today's counts: `.empty` when `subjectCount == 0`; `.promoted` when `filedCount > 0`; else `.inProgress`. A graph missing from the progress map is empty. | User, 2026-10-26: In progress = at least one Subject and none promoted; one filed Subject makes it done. `filedCount` is "primary Subjects with an accepted Identity Claim", the only promoted signal the map carries. `subjectCount` is what the count line shows, so a graph reading "0 subjects" is Empty. | Keeping `primaryCount == 0` as Empty — a graph with only value Subjects would read Empty while its line says "2 subjects". A new "has ever been promoted" engine field — `filedCount > 0` is that fact today; Unpromote of every Subject returns the graph to In progress, which matches "none promoted". |
-| D-6 | The case `.filed` is renamed `.promoted` with raw value `"filed"` kept; `inProgress` keeps `"in_progress"`. | Stored settings decode by raw value (AC-2.7). The Swift name follows the new label. | A new raw value — drops every saved status filter. |
-| D-7 | A Source matches a status when any graph in `session.evidenceGraphsBySource[source.id]` has it. A Source with no graph in the list matches Empty. `SourcesModel.statuses(for source: CatalogSource) -> Set<EvidenceStatus>` *(new)* computes it; `visibleSources` filters with `statuses(for:).contains(status)`. | User, 2026-10-26: a Source is in progress when at least one graph is; the same reading for every status. | All graphs must match — user chose any. Hiding non-matching sub-rows — user did not ask; brief GA-8 shows all. |
-| D-8 | The `.sourceDetail` place adds `.evidenceGraphProgress(project: project)` to its query keys. `SourceGraphsSection.progress(for graph: CatalogEvidenceGraph) -> EvidenceGraphProgress?` and `countsLoading: Bool` *(new)* read the session handle the way `SourcesModel.graphProgress(for:)` and `graphCountsLoading` do. | Without the key, `refreshEvidenceGraphProgress` skips (it patches only a cached map) and a page opened first never loads counts (AC-3.2). Working rule "One graph list": per-graph progress is its own key, not folded into `GetSourceWorkspace`. | A per-Source progress RPC — the map already covers it, no engine change. |
-| D-9 | Delete the interim helpers: `SourcesListNavigation.entryGraph(sourceID:in:)`, `graphLocation(for:graphs:)`, `graphBlockedReason(hasArtifact:graphListLoaded:location:)`; `SourcesModel.entryGraph(for:)`, `graphLocation(for:)`, `graphBlockedReason(for:)`; the tests `graphLocationOpensTheFirstGraph`, `graphBlockedReasonNeedsTheGraphList`. `SourcesListNavigation.graphLocation(for:graph:)` and `graphBlockedReason(for:)` stay; the sub-row uses them. | Working rule "High tolerance for churn"; the map's "Until S12-14 adds per-graph Open". | Keeping them for the collapsed row — the collapsed row opens nothing now. |
-| D-10 | The expander is a `Button` over the full 248 pt zone with `SourcesSplitZoneButtonStyle(emphasizeOnHover: true)` (made internal, still in `SourcesSplitRow.swift`, so `SourcesGraphSubRow.swift` reuses it), trailing `PVIcon(PVExpandedState.chevron(isExpanded:))`, and `.pvExpandedState(isExpanded)`. | Brief inventory: not `PVDisclosureButton` (a `PVButton` trigger, not a full-zone hit area). The chevron and spoken state come from the kit so they match every other disclosure. | `PVDisclosureButton` — wrong hit area and look. A local chevron rule. |
-| D-11 | `SourcesGraphSubRow` *(new)*, `macos/App/Features/Sources/SourcesGraphSubRow.swift`, takes `graph: CatalogEvidenceGraph`, `progress: EvidenceGraphProgress?`, `countsLoading: Bool`, `onOpen: (() -> Void)?`, `blockedReason: String?`. Left column: name and ref, `accessibilityElement(children: .combine)`; right column: today's Open zone body moved out of `SourcesSplitRow.graphZone` into this view, with `graphZoneAccessibility(progress:countsLoading:)`. Identifiers `sources.row.<sourceId>.graph.<graphRef>` (zone) and `sources.row.<sourceId>.graphs` (expander). | One view per graph; the Open zone has one home after the row stops drawing it. | A shared "zone" view used by both — the row no longer draws an Open zone. |
-| D-12 | While the graph list has no value and no error, the expander shows `PVSkeletonBar(width: 96, height: 10)` in place of the label and is disabled. On a graph-list error it shows `PVIcon(.warning)` in `PVColor.danger` with `.help(L10n.Errors.message(for:))` and is disabled. | Brief GA-6. `statusCountsError` already surfaces the error list-wide only when a status filter is set. | A callout per row — 248 pt is too narrow. |
+| D-2 | Sub-rows are drawn under their row inside the same `ForEach` element: `SourcesListRow` *(new, replaces `SourcesSplitRowProgress`)* is a `VStack(spacing: 0)` of the row and, when expanded, its sub-rows; `listBody` puts `.id(source.id)` on it. | `ListScrollAnchorModifier` anchors on Source ids; a sub-row is not a list row of its own. | Sub-rows as separate `ForEach` items — breaks the scroll anchor's id list. |
+| D-3 | `SourcesGraphCountLine` *(new)*, `macos/App/Features/Sources/SourcesGraphCountLine.swift`: `struct SourcesGraphCountLine: View { var progress: EvidenceGraphProgress?; var countsLoading: Bool }`, body moved from `SourcesSplitRow.graphCountLine`, plus `.accessibilityElement(children: .ignore)` and `.accessibilityLabel(Text(verbatim: L10n.Sources.graphCountLineSpoken(progress:countsLoading:)))`. `L10n.Sources.graphCountLineSpoken` *(new func, no new key)* holds the three branches now in `graphZoneAccessibility` minus "Open graph"; `graphZoneAccessibility` becomes `"\(openGraph), \(graphCountLineSpoken(...))"`. | One count rule for sight and VoiceOver (review M-2); the page card speaks "counts loading" too. | Copying the three states into the page card; a second spoken copy. |
+| D-4 | Expanded state is private `expandedSourceRows: Set<String>` *(new)* on `WorkspaceSession`, observed (no `@ObservationIgnored`), beside `graphCameras`, reached through `isSourceRowExpanded(_ sourceID:) -> Bool` and `toggleSourceRowExpanded(_ sourceID:)` *(new)*. Only `SourcesListRow` reads it. The toggle does not animate. Deleted Source ids may stay in the set. | User, 2026-10-26: until relaunch. The list's `SourcesModel` is rebuilt with the view; the session lives for the project. Method-shaped like `graphCamera(for:)` (review M-7). | `SourcesListSettings` (persists, user declined); `WorkspaceLocation` (history, user declined); `@State` on the view (lost on leave); a public `Set` property. |
+| D-5 | Graph status is read from today's counts: `.empty` when `subjectCount == 0`; `.promoted` when `filedCount > 0`; else `.inProgress`. A graph missing from the progress map is empty. | User, 2026-10-26: In progress = at least one Subject and none promoted; one filed Subject makes it done. `filedCount` is "primary Subjects with an accepted Identity Claim", the only promoted signal the map carries. `subjectCount` is what the count line shows, so a graph reading "0 subjects" is Empty. | `primaryCount == 0` as Empty — a graph with only value Subjects would read Empty beside "2 subjects". A new "ever promoted" engine field — `filedCount > 0` is that fact today; unpromoting every Subject returns the graph to In progress, which matches "none promoted". |
+| D-6 | The case `.filed` becomes `.promoted` with raw value `"promoted"`. `SourcesListSettings.init(from:)` decodes the status as a `String` and maps a stored `"filed"` to `.promoted` before `EvidenceStatus(rawValue:)`; any other unknown value falls back to nil as today. | One word in code, storage and UI identifiers (`sources.status.promoted`); the legacy alias lives where stale settings are already handled (review M-6). AC-2.7. | Keeping raw `"filed"` — two names for one status. Dropping saved filters — needless. |
+| D-7 | A Source matches a status when any graph in `session.evidenceGraphs(sourceID:)` has it. A Source with no graph in a loaded list matches Empty. `SourcesModel.statuses(for source: CatalogSource) -> Set<EvidenceStatus>` *(new)* computes it; `visibleSources` filters with `statuses(for:).contains(status)`. | User, 2026-10-26: a Source is in progress when at least one graph is; the same reading for every status. | All graphs must match — user chose any. Hiding non-matching sub-rows — brief GA-8 shows all. |
+| D-8 | The `.sourceDetail` place adds `.evidenceGraphProgress(project: project)` as the last of its query keys. `SourceGraphsSection.progress(for graph:)` and `countsLoading` *(new)* forward to the session reads of D-13. `SourcePageModel.warmFromSession()` is not changed; page tests warm with `session.apply(location: .sourcePage(...))`. | Without the key, `refreshEvidenceGraphProgress` skips and a page opened first never loads counts (AC-3.2). Working rule "One graph list": progress is its own key, not folded into `GetSourceWorkspace`. | A per-Source progress RPC; a third hand key list in `warmFromSession`. |
+| D-9 | Delete the interim helpers: `SourcesListNavigation.entryGraph(sourceID:in:)`, `graphLocation(for:graphs:)`, `graphBlockedReason(hasArtifact:graphListLoaded:location:)`; `SourcesModel.entryGraph(for:)`, `graphLocation(for:)`, `graphBlockedReason(for:)`; the tests `graphLocationOpensTheFirstGraph`, `graphBlockedReasonNeedsTheGraphList`. `SourcesListNavigation.graphLocation(for:graph:)` and `graphBlockedReason(for:)` stay; the sub-row uses them. | Working rule "High tolerance for churn"; the map's "Until S12-14 adds per-graph Open". | Keeping them for the collapsed row — it opens nothing now. |
+| D-10 | The expander is a `Button` over the full 248 pt zone with `SourcesSplitZoneButtonStyle(emphasizeOnHover: true)` (made internal, still in `SourcesSplitRow.swift`, so `SourcesGraphSubRow.swift` reuses it): `PVIcon(.network, size: 16)`, the label, `Spacer`, `PVIcon(PVExpandedState.chevron(isExpanded:))`, `.pvExpandedState(isExpanded)`. Padding as today's zone (`space6` horizontal, `space5 + spacePx` vertical). Identifier `sources.row.<sourceId>.graphs`. | Brief inventory: not `PVDisclosureButton` (a `PVButton` trigger, not a full-zone hit area). Chevron and spoken state from the kit. | `PVDisclosureButton`; a local chevron rule. |
+| D-11 | `SourcesGraphSubRow` *(new)*, `macos/App/Features/Sources/SourcesGraphSubRow.swift`, takes `graph: CatalogEvidenceGraph`, `progress: EvidenceGraphProgress?`, `countsLoading: Bool`, `onOpen: (() -> Void)?`, `blockedReason: String?`. Columns through `SourcesSplitLayout.columns`. Left: `HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3)` of the name (`PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium)`, one line) and the ref (`PVFont.mono(size: PVTypeScale.micro)`, `textMuted`, fixed size), `accessibilityElement(children: .combine)`, leading padding `SourcesSplitLayout.subRowLeadingInset`, trailing `space6`, vertical `space5 + spacePx`. Right: today's Open zone body moved out of `SourcesSplitRow.graphZone` with `SourcesGraphCountLine` and `graphZoneAccessibility`. Background `PVColor.surfaceSunken`; bottom `PVDivider()`. Identifier `sources.row.<graph.sourceID>.graph.<graph.ref>`. | One view per graph; the Open zone has one home once the row stops drawing it. `graph.sourceID` carries the Source id. | A shared zone view used by both — the row no longer draws an Open zone. |
+| D-12 | `SourcesModel.graphZone(for source: CatalogSource) -> GraphZone` *(new)*, `enum GraphZone { case loading, failed(Error), graphs([CatalogEvidenceGraph]) }` nested in `SourcesModel`: `failed` when the graph-list handle is `.error` with no value; `loading` while it is awaiting its first value (D-14) or the loaded list has no graph for the Source (a just-created Source before the list refresh); else `graphs`. The row draws `loading` as `PVSkeletonBar(width: 96, height: 10)` in place of the label, disabled, accessibility label `L10n.DesignSystem.listLoading`; `failed` as `PVIcon(.warning)` in `PVColor.danger` with `.help(L10n.Errors.message(for:))`, disabled, the same text as accessibility label. | Brief GA-6; one model member feeds the row (review X-8). | Reading handles in the view; a callout per row — 248 pt is too narrow. |
+| D-13 | `WorkspaceSession+EvidenceGraphs.swift` gains the progress reads beside the graph list's: `evidenceGraphProgressKey`, `evidenceGraphProgressHandle`, `evidenceGraphProgress(graphID:) -> EvidenceGraphProgress?`, `evidenceGraphCountsLoading: Bool` (progress handle or graph-list handle awaiting first value) *(new)*. `refreshEvidenceGraphProgress` / `patchEvidenceGraphProgress` use the key; `SourcesModel.graphProgress(for:)` and `graphCountsLoading` forward to it, and `SourcesModel.evidenceGraphProgressKey(for:)` and the private `progressHandle` are deleted (tests move to `session.evidenceGraphProgressKey`). | One read path for the progress map, the shape the graph list already has (review M-1). | `SourceGraphsSection` copying `SourcesModel`'s reads. |
+| D-14 | `QueryHandle.isAwaitingFirstValue: Bool` *(new)* = `value == nil && status != .ready && status != .error`. `graphCountsLoading`, the types branch of `isAwaitingFilterData` (today `value == nil && status != .error`, which is the same answer for every reachable state, since `.ready` always carries a value), D-12 and D-13 use it. | One meaning of "loading" (review M-4). | A fourth hand-written check. |
+| D-15 | `SourcesListContent` loses its `progressHandle` parameter and `listBody` its inline no-handle row; every row is a `SourcesListRow(source:model:)`, which reads progress through the session (observation tracks the `@Observable` handle). | One row call site; the next row parameter is added once (review M-3, X-9). | Two branches each growing the sub-row loop. |
+| D-16 | `SourcesSplitLayout` gains `static let thumbnailSize: CGFloat = 44` and `static var subRowLeadingInset: CGFloat { PVSpacing.gutterPage + thumbnailSize + PVSpacing.space5 }` *(new)*; the row's `CachedThumbnail` passes `size: SourcesSplitLayout.thumbnailSize`. | The sub-row name aligns with the Source title from one constant (review X-10). | A copied literal 44. |
 
 ## 6. Design
 
@@ -147,17 +156,22 @@ A researcher sees every Evidence graph of every Source from the Sources list: ea
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
 | `SourcesGraphCountLine` *(new)* | view | `SourcesSplitRow.graphCountLine` (private) | It is that code, lifted for a second caller (D-3). |
+| `L10n.Sources.graphCountLineSpoken` *(new func)* | L10n func | `graphZoneAccessibility` | Its three branches, extracted so both read one (D-3). |
 | `SourcesGraphSubRow` *(new)* | view | `SourcePageGraphRow`; `SourcesSplitRow.graphZone` | The page card is a `PVCard` with actions; the list needs the split columns. The zone body moves here (D-11). |
-| `WorkspaceSession.expandedSourceRows` *(new)* | session state | `graphCameras` | Same lifetime; must be observed (D-4). |
-| `SourcesModel.isExpanded(_:)`, `toggleExpanded(_:)`, `statuses(for:)` *(new)* | func | `graphProgress(for:)`, `visibleSources` | Model API the view calls; `statuses(for:)` replaces the inline entry-graph read. |
-| `SourceGraphsSection.progress(for:)`, `countsLoading` *(new)* | func | `SourcesModel.graphProgress(for:)`, `graphCountsLoading` | The page model reads the same key; a page cannot hold a `SourcesModel`. |
+| `SourcesListRow` *(new, replaces `SourcesSplitRowProgress`)* | view | `SourcesSplitRowProgress` | Renamed: it now draws the row and its sub-rows (D-2, D-15). |
+| `WorkspaceSession` `expandedSourceRows`, `isSourceRowExpanded`, `toggleSourceRowExpanded` *(new)* | session state | `graphCameras`, `graphCamera(for:)` | Same lifetime and shape (D-4). |
+| `WorkspaceSession` `evidenceGraphProgressKey`, `evidenceGraphProgressHandle`, `evidenceGraphProgress(graphID:)`, `evidenceGraphCountsLoading` *(new)* | session reads | `evidenceGraphsKey`, `evidenceGraphsHandle`, `evidenceGraphs(sourceID:)` | Moved from `SourcesModel` beside the graph list's reads (D-13). |
+| `QueryHandle.isAwaitingFirstValue` *(new)* | property | `isSettled` | Different question: no value yet (D-14). |
+| `SourcesModel.statuses(for:)`, `graphZone(for:)`, `GraphZone` *(new)* | func / enum | `graphProgress(for:)`, `visibleSources` | Model API the view calls (D-7, D-12). |
+| `SourceGraphsSection.progress(for:)`, `countsLoading` *(new)* | forwarders | `SourceGraphsSection.rows` | Forward to D-13. |
+| `SourcesSplitLayout.thumbnailSize`, `subRowLeadingInset` *(new)* | constants | `SourcesSplitLayout.graphZoneWidth` | Same enum (D-16). |
 | `L10n.Sources.statusPromoted` *(new, replaces `statusFullyPromoted`)* | L10n key | `statusFullyPromoted` | Renamed with its key (D-6). |
 
-Searched: `DisclosureGroup`, `isExpanded`, `PVDisclosureButton` (kit disclosure, rejected D-10); `graphCountLine`, `evidenceGraphProgress`, `graphsBySource`, `entryGraph` (all callers listed in §4).
+Searched: `DisclosureGroup`, `isExpanded`, `PVDisclosureButton` (kit disclosure, rejected D-10); `graphCountLine`, `graphZoneAccessibility`, `evidenceGraphProgress`, `progressHandle`, `graphsBySource`, `entryGraph`, `isSettled`, `status != .error` (all callers listed in §4).
 
 **Builds on.** `evidenceGraphsBySource` (S12-13), `SourcesListNavigation.graphLocation(for:graph:)` / `graphBlockedReason(for:)` (S12-11), `PVExpandedState` / `pvExpandedState`, the `PlaceRegistry` query keys ([`add-workspace-place`](../../../../.agents/skills/add-workspace-place/SKILL.md)), `WorkspaceSession.apply`'s per-graph progress patch.
-**Deletes.** The interim helpers and their two tests (D-9); `SourcesSplitRow`'s `progress`, `countsLoading`, `onOpenGraph`, `graphBlockedReason` parameters and its private `graphCountLine`; `L10n.Sources.statusFullyPromoted` and its catalog entry.
-**Next adds.** S12-15's graph hit opens the same location a sub-row opens (`graphLocation(for:graph:)`). A later per-graph status mark on a sub-row reads `EvidenceStatus(progress)` with no new rule.
+**Deletes.** The interim helpers and their two tests (D-9); `SourcesModel.evidenceGraphProgressKey(for:)` and `progressHandle` (D-13); `SourcesSplitRowProgress` and the inline row (D-15); `SourcesSplitRow`'s `progress`, `countsLoading`, `onOpenGraph`, `graphBlockedReason` parameters and its private `graphCountLine`; `L10n.Sources.statusFullyPromoted` and its catalog entry.
+**Next adds.** S12-15's graph hit opens the location a sub-row opens (`graphLocation(for:graph:)`). A later status mark on a sub-row or the canvas reads `session.evidenceGraphProgress(graphID:)` and `EvidenceStatus(_:)` with no new read.
 
 ### Schema
 
@@ -165,63 +179,63 @@ None — no catalog change.
 
 ### Go core
 
-None — the counts are today's `graphprogress.List` / `Get`.
+None — the counts are today's `graphprogress.List` / `Get` (pending Open question 2).
 
 ### FFI
 
-None —
+None — (pending Open question 2).
 
 ### macOS
 
 | Building block | Component | Home | Notes |
 | --- | --- | --- | --- |
-| Split row | snowflake, extended | `SourcesSplitRow.swift` `SourcesSplitRow` | New parameters: `graphCount: Int?` (nil while the graph list has no value), `graphListError: Error?`, `isExpanded: Bool`, `onToggleGraphs: () -> Void`. `graphZone` draws the expander (D-1, D-10, D-12) or the unchanged "Needs an artifact" branch. |
-| Expander | snowflake (new) | `SourcesSplitRow.swift` | Network icon, `Text(verbatim: L10n.Sources.graphsCount(n))`, `Spacer`, chevron; label = the count text; `.pvExpandedState`. Identifier `sources.row.<id>.graphs`. |
-| Graph sub-row | snowflake (new) | `SourcesGraphSubRow.swift` (new) | `SourcesSplitLayout.columns`; left padding `PVSpacing.gutterPage` + 44 (the `CachedThumbnail` default `size`) + `PVSpacing.space5` so the name aligns with the Source title; background `PVColor.surfaceSunken`; bottom `PVDivider()`. |
+| Split row | snowflake, extended | `SourcesSplitRow.swift` `SourcesSplitRow` | New parameters: `graphZone: SourcesModel.GraphZone`, `isExpanded: Bool`, `onToggleGraphs: () -> Void`. `graphZone` draws the expander (D-1, D-10, D-12) or the unchanged "Needs an artifact" branch. |
+| Expander | snowflake (new) | `SourcesSplitRow.swift` | D-10, D-12. |
+| Graph sub-row | snowflake (new) | `SourcesGraphSubRow.swift` (new) | D-11, D-16. |
 | Count line | snowflake (lifted) | `SourcesGraphCountLine.swift` (new) | D-3. |
-| List wiring | — | `SourcesListView.swift` | `SourcesSplitRowProgress` passes the row's new parameters and, when `model.isExpanded(source.id)`, draws `ForEach(session.evidenceGraphs(sourceID:) ?? [])` sub-rows with `handle.value?[graph.id]`; the no-handle branch passes `countsLoading: true` to its sub-rows (D-2). |
-| Status menu | `PVSelect` | `SourcesListView.swift` `statusMenu` | Labels from `EvidenceStatus.label`, no layout change. |
+| List row | snowflake | `SourcesListView.swift` `SourcesListRow` | D-2, D-15: the row with `graphZone: model.graphZone(for:)`, `isExpanded: session.isSourceRowExpanded(source.id)`, then, when expanded and `.graphs(let graphs)`, `ForEach(graphs)` sub-rows with `model.graphProgress(for:)`, `model.graphCountsLoading`, `SourcesListNavigation.graphLocation(for:graph:)` and `graphBlockedReason(for:)`. |
+| Status menu | `PVSelect` | `SourcesListView.swift` `statusMenu` | Labels from `EvidenceStatus.label`; no layout change. |
 | Source page card | snowflake, extended | `SourcePageGraphsView.swift` `SourcePageGraphRow` | `SourcesGraphCountLine(progress: model.graphs.progress(for: graph), countsLoading: model.graphs.countsLoading)` on its own line after the ref, before the description, inside the combined accessibility element. |
 
-States: loading and graph-list failure on the expander (D-12); per-sub-row loading hairline from `SourcesGraphCountLine`; 12 graphs list in full (no inner scroll). Accessibility: expander label is the count text with the expanded state; sub-row left reads "{name}, {ref}"; sub-row Open reads `graphZoneAccessibility` with the blocked hint.
+States: loading, failure and not-yet-listed on the expander (D-12); per-sub-row loading hairline from `SourcesGraphCountLine` (reachable when a row was expanded before a reload); 12 graphs list in full (no inner scroll). Accessibility: expander label is the count text with the expanded state; sub-row left reads "{name}, {ref}"; sub-row Open reads `graphZoneAccessibility` with the blocked hint; the count line speaks `graphCountLineSpoken` everywhere.
 
 **Frames.** Filled from the agreed S12-D5 board, frame by frame, before status Planned.
 
 ### Strings
 
-L10n keys: `L10n.Sources.statusPromoted` *(new)* = `sources.list.status.promoted` "Promoted" (comment: "Status filter option: graphs with at least one promoted subject"). Removed: `L10n.Sources.statusFullyPromoted` / `sources.list.status.fullyPromoted`. `sources.list.status.inProgress`'s comment says "at least one subject and none promoted". Reused: `L10n.Sources.graphsCount` (comment widened to "Evidence graph count on the Source page section and the Sources list expander"). Final copy from the board replaces this line before Planned.
+L10n keys: `L10n.Sources.statusPromoted` *(new)* = `sources.list.status.promoted` "Promoted" (comment: "Status filter option: graphs with at least one promoted subject"). Removed: `L10n.Sources.statusFullyPromoted` / `sources.list.status.fullyPromoted`. `sources.list.status.inProgress`'s comment says "at least one subject and none promoted". New func, no key: `L10n.Sources.graphCountLineSpoken`. Reused: `L10n.Sources.graphsCount` (comment widened to "Evidence graph count on the Source page section and the Sources list expander"). Final copy from the board replaces this line before Planned.
 
 ## 7. Steps
 
-**STEP-1 — Read status per graph.**
-Files: `SourcesModel.swift`, `SourcesListSettings.swift` (no change expected; verify decoding), `L10n.swift`, `Localizable.xcstrings`, `SourcesModelTests.swift`. Skill: `add-localized-string`, `add-swift-test`.
-Do: D-5, D-6, D-7. Rename the label key. Update `progress(_:primary:filed:)` in the tests to take `subjects:` separately where a test needs `subjectCount != primaryCount`.
-Check: T-1, T-2, T-3 pass; `xcodebuild test` for `SourcesModelTests`.
+**STEP-1 — One read of graph progress.**
+Files: `QueryHandle.swift`, `WorkspaceSession+EvidenceGraphs.swift`, `WorkspaceSession.swift`, `SourcesModel.swift`, `SourcesListView.swift` (key call sites only), `SourcesModelTests.swift`, any test calling `SourcesModel.evidenceGraphProgressKey`. Skill: `add-workspace-place`.
+Do: D-13, D-14. No behavior change.
+Check: T-10 passes; existing `SourcesModelTests` pass; `rg -n 'SourcesModel\.evidenceGraphProgressKey|evidenceGraphProgress\(project: projectKey\)' macos/App` lists only `WorkspaceSession+EvidenceGraphs.swift`.
 
-**STEP-2 — Lift the count line.**
-Files: `SourcesGraphCountLine.swift` *(new)*, `SourcesSplitRow.swift`. Skill: `add-ui-component`.
+**STEP-2 — Read status per graph.**
+Files: `SourcesModel.swift`, `SourcesListSettings.swift`, `L10n.swift`, `Localizable.xcstrings`, `SourcesModelTests.swift`, `SourcesListSettingsTests.swift`. Skill: `add-localized-string`, `add-swift-test`.
+Do: D-5, D-6, D-7. The test helper becomes `progress(_ id:, subjects:, filed:)` (primary = subjects). Existing tests: `filtersCombineAndClear` seeds `filed: 0` where it expects In progress (s1, s2, s5) and keeps `filed: 1` where it expects Promoted; `settingsRestoreOnNewModel` and `statusCountsFailureSurfacesAnErrorAndUnfilteredCount` use `.promoted`.
+Check: T-1, T-2, T-3 pass with every other `SourcesModelTests` test.
+
+**STEP-3 — One count line, seen and spoken.**
+Files: `SourcesGraphCountLine.swift` *(new)*, `SourcesSplitRow.swift`, `L10n.swift`. Skill: `add-ui-component`, `add-localized-string`.
 Do: D-3. The row still draws today's Open zone through the new view.
-Check: the app builds; `graphProgressCopyMatchesBoard` passes.
+Check: the app builds; `graphProgressCopyMatchesBoard` passes unchanged; T-11 passes.
 
-**STEP-3 — Hold expanded rows; drop the interim entry graph.**
-Files: `WorkspaceSession.swift`, `SourcesModel.swift`, `SourcesListNavigation.swift`, `SourcesListNavigationTests.swift`, `SourcesModelTests.swift`.
-Do: D-4, D-9 (the list still compiles against the row's old parameters until STEP-4: keep the row's call sites passing `nil` / `true` for one step, or do STEP-3 and STEP-4 in one commit).
-Check: T-4, T-5 pass; `rg -n 'entryGraph|graphLocation\(for: source\)|graphListLoaded' macos` returns nothing.
-
-**STEP-4 — The expander.**
-Files: `SourcesSplitRow.swift`, `SourcesListView.swift`. Skill: `add-ui-component`.
-Do: D-1, D-10, D-12; the row's new parameters (§6 macOS).
-Check: the app builds; in the app, rows read "N evidence graphs" and toggle the chevron.
+**STEP-4 — The expander, held per Source; the interim entry graph goes.**
+Files: `WorkspaceSession.swift`, `SourcesModel.swift`, `SourcesSplitRow.swift`, `SourcesListView.swift`, `SourcesListNavigation.swift`, `SourcesListNavigationTests.swift`, `SourcesModelTests.swift`. Skill: `add-ui-component`.
+Do: D-1, D-4, D-9, D-10, D-12, D-15, D-16. Rows toggle; no sub-rows yet.
+Check: T-4, T-5, T-9 pass; `rg -n 'SourcesListNavigation\.entryGraph|model\.entryGraph|graphListLoaded|graphLocation\(for: source\)\b|SourcesSplitRowProgress' macos/App macos/ProvenenciaTests` returns nothing (`SourcePageModelTests.entryGraphLocation` is not matched and stays).
 
 **STEP-5 — Graph sub-rows.**
 Files: `SourcesGraphSubRow.swift` *(new)*, `SourcesListView.swift`.
 Do: D-2, D-11.
-Check: T-6 passes; manual check steps 1–4.
+Check: T-6 passes; manual check steps 1–3.
 
 **STEP-6 — Counts on the Source page.**
-Files: `PlaceRegistry.swift`, `SourceGraphsSection.swift`, `SourcePageGraphsView.swift`, `SourcePageModelTests.swift`. Skill: `add-workspace-place`.
-Do: D-8; the card line (§6 macOS).
-Check: T-7, T-8 pass.
+Files: `PlaceRegistry.swift`, `PlaceRegistryTests.swift`, `SourceGraphsSection.swift`, `SourcePageGraphsView.swift`, `SourcePageModelTests.swift`. Skill: `add-workspace-place`.
+Do: D-8; the card line (§6 macOS). `PlaceRegistryTests` `resolvesSourceDetail` and the place table's `.sourceDetail` row gain `.evidenceGraphProgress(project: project)` at the end.
+Check: T-7, T-8 and `PlaceRegistryTests` pass.
 
 **STEP-7 — Docs.**
 Files: `../completed.md`, `../deployment-plan.md` (map row; working rule "A graph is a place" drops its interim first-graph sentence), this plan (status, Landed note), `../design/S12-D5-sources-list-graph-accordion.md` → `../design/archive/`, `../design/README.md`.
@@ -236,14 +250,17 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | --- | --- | --- | --- | --- |
 | T-1 | Swift | `SourcesModelTests.swift` `evidenceStatusFromCounts` (rewritten) | nil → empty; subjects 0 → empty; subjects 5, primary 3, filed 0 → inProgress; subjects 5, primary 3, filed 1 → promoted; subjects 2, primary 0 → inProgress | AC-2.1, AC-2.2, AC-2.3, AC-2.4, D-5 |
 | T-2 | Swift | `SourcesModelTests.swift` `statusMatchesAnyGraphOfTheSource` *(new)* | One Source, three graphs (empty, in progress, promoted) → `visibleSources` contains it under each of the three statuses; a second Source with one empty graph shows only under Empty | AC-2.5, D-7 |
-| T-3 | Swift | `SourcesListSettingsTests.swift` `storedFiledStatusRestoresPromoted` *(new)* | Settings JSON `{"status":"filed"}` → `status == .promoted`; `EvidenceStatus.promoted.label` resolves to "Promoted" | AC-2.6, AC-2.7, D-6 |
-| T-4 | Swift | `SourcesModelTests.swift` `expandedRowsOutliveTheModel` *(new)* | Toggle `s1` on one `SourcesModel`; a new `SourcesModel` on the same session → `isExpanded("s1")`; toggle again → false | AC-1.9, D-4 |
+| T-3 | Swift | `SourcesListSettingsTests.swift` `storedFiledStatusRestoresPromoted` *(new)* | JSON `{"status":"filed"}` → `.promoted`; `{"status":"promoted"}` → `.promoted`; `{"status":"bogus"}` → nil with the other fields kept; `EvidenceStatus.promoted.label` resolves to "Promoted" | AC-2.6, AC-2.7, D-6 |
+| T-4 | Swift | `SourcesModelTests.swift` `expandedRowsOutliveTheModel` *(new)* | `session.toggleSourceRowExpanded("s1")`; a new `SourcesModel` on the same session → `session.isSourceRowExpanded("s1")`; toggle again → false | AC-1.9, D-4 |
 | T-5 | Swift | `SourcesListNavigationTests.swift` | `graphLocationOpensTheFirstGraph` and `graphBlockedReasonNeedsTheGraphList` deleted; `graphLocationOpensTheGivenGraph` passes unchanged | D-9 |
-| T-6 | Swift | `SourcesModelTests.swift` `subRowsReadEachGraphsProgress` *(new)* | Three graphs on `s1` with progress on `g-jones` only → `session.evidenceGraphs(sourceID: "s1")` in name order and `model.graphProgress(for:)` per graph returns Jones's counts, nil for the others; applying effects naming `g-jones` with new counts changes only `g-jones` | AC-1.2, AC-1.3, AC-1.10 |
-| T-7 | Swift | `SourcePageModelTests.swift` `graphRowsReadTheirProgress` *(new)* | Page for a Source with two graphs, progress seeded for one → `model.graphs.progress(for:)` returns it for that graph and nil for the other after the place's keys warm; `countsLoading` false | AC-3.1, AC-3.2, D-8 |
-| T-8 | Swift | `SourcePageModelTests.swift` `aGraphWriteMovesOnlyItsRow` *(new)* | T-7, then `session.apply` with effects naming one graph and the store's count changed → that graph's progress updates; the other stays nil | AC-3.3 |
+| T-6 | Swift | `SourcesModelTests.swift` `subRowsReadEachGraphsProgress` *(new)* | Three graphs on `s1`, progress on `g-jones` only → `model.graphZone(for: s1)` is `.graphs` in name order; `model.graphProgress(for:)` returns Jones's counts, nil for the others; `session.apply` with effects naming `g-jones` and new store counts changes only `g-jones` | AC-1.2, AC-1.3, AC-1.10 |
+| T-7 | Swift | `SourcePageModelTests.swift` `graphRowsReadTheirProgress` *(new)* | Page for a Source with two graphs, progress seeded for one; `session.apply(location: .sourcePage(...))` then `waitForQuery` on `session.evidenceGraphProgressHandle` → `model.graphs.progress(for:)` returns it for that graph, nil for the other; `countsLoading` false | AC-3.1, AC-3.2, D-8 |
+| T-8 | Swift | `SourcePageModelTests.swift` `aGraphWriteMovesOnlyItsRow` *(new)* | T-7, then the store's count changes and `session.apply` with effects naming that graph → its progress updates; the other stays nil | AC-3.3 |
+| T-9 | Swift | `SourcesModelTests.swift` `graphZoneFollowsTheGraphList` *(new)* | Graph list not loaded → `.loading`; list failed → `.failed`; loaded without the Source → `.loading`; loaded with it → `.graphs` | AC-1.1, AC-1.8, D-12 |
+| T-10 | Swift | `WorkspaceSessionTests.swift` `progressReadsComeFromTheSession` *(new)* | Before warm: `evidenceGraphCountsLoading` true and `evidenceGraphProgress(graphID:)` nil; after both handles load: false and the seeded value; a handle `.ready` with a value or `.error` → `isAwaitingFirstValue` false | D-13, D-14 |
+| T-11 | Swift | `SourcesModelTests.swift` `graphProgressCopyMatchesBoard` (extended) | `graphCountLineSpoken(progress: nil, countsLoading: true)` == "counts loading"; zeros → "0 subjects, not started"; 12 / 48 → "12 subjects, 48 observations"; `graphZoneAccessibility` results unchanged | D-3 |
 
-Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `SourcesModelTests` (status helper, filter tests), `SourcesListNavigationTests`, `SourcePageModelTests`.
+Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `SourcesModelTests`, `SourcesListNavigationTests`, `SourcesListSettingsTests`, `PlaceRegistryTests`, `SourcePageModelTests`, `WorkspaceSessionTests`.
 
 ## 9. Definition of done
 
@@ -252,30 +269,30 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `S
 - [ ] Every T-# in §8 exists and passes
 - [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests with no Swift warning, catalog and plan-doc checks)
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
-- [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left (statusFullyPromoted gone)
+- [ ] New user-facing copy is in L10n + Localizable.xcstrings; rg -n 'fullyPromoted|Fully promoted' macos returns nothing
 - [ ] UI matches the brief inventory; no new kit primitive
 - [ ] Version bump: none
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: map row status; working rule "A graph is a place" drops the interim first-graph sentence; completed.md: one short paragraph of what shipped
 - [ ] Brief S12-D5 moved to design/archive/ and design/README.md updated
-- [ ] Domain doc: none — the status rule lives in SourcesModel.EvidenceStatus only (rg "Fully promoted" docs returns nothing)
+- [ ] Domain doc: none — the status rule is the map's working rule "Status is per graph" and SourcesModel.EvidenceStatus
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
 
 ## 10. Manual check
 
-1. Open a project with a census Source and three graphs: Default (no Subjects), Jones household (Subjects, not promoted), Smith household (promoted once). The Sources list shows "3 evidence graphs" on the census and "1 evidence graph" on the others; a Source with no Artifact reads "Needs an artifact" and does not expand (AC-1.1, AC-1.6, AC-1.7). Relaunch and watch the list load: the graph zones show a skeleton label first (AC-1.8).
-2. Expand the census: Default, Jones household, Smith household in that order, each with its count line. Open Jones household: its canvas opens on that graph (AC-1.4). Add a fourth graph "Unlinked" with no Artifact (Source page, then unlink): its sub-row's Open is disabled with the hint (AC-1.5).
+1. Open a project with a census Source and three graphs: Default (no Subjects), Jones household (Subjects, not promoted), Smith household (promoted once, one Subject filed of several). The Sources list shows "3 evidence graphs" on the census and "1 evidence graph" on the others; a Source with no Artifact reads "Needs an artifact" and does not expand (AC-1.1, AC-1.6, AC-1.7). Relaunch and watch the list load: the graph zones show a skeleton label first (AC-1.8).
+2. Expand the census: Default, Jones household, Smith household in that order, each with its count line. Open Jones household: its canvas opens on that graph (AC-1.4). On the census Source page, add a new page Artifact, add a graph "Unlinked" linked only to it, then delete that Artifact: back in the list, Unlinked's sub-row Open is disabled with the hint and its count line shows (AC-1.5).
 3. Add an Observation; Back. The census is still expanded; only Jones's line moved.
-4. Status filter: In progress shows the census (Jones, AC-2.2); Promoted shows the census (Smith, one Subject filed of several, AC-2.3); Empty shows the census. The last option reads Promoted.
+4. Status filter: In progress shows the census (Jones, AC-2.2); Promoted shows the census (Smith, AC-2.3); Empty shows the census. The last option reads Promoted.
 5. Open the census Source page: each graph card shows its count line under the ref.
-6. Quit and relaunch: every row is collapsed.
+6. Quit and relaunch with the census Source page as the restored place: the cards' count lines load (AC-3.2). Go to the Sources list: every row is collapsed.
 
 ## 11. Risks and stop conditions
 
 | Risk | Mitigation |
 | --- | --- |
-| Expanding many rows in a long list costs layout | Sub-rows are only built for expanded rows inside the `LazyVStack` element. |
+| Expanding many rows in a long list costs layout | Sub-rows are built only for expanded rows inside the `LazyVStack` element; only `SourcesListRow` reads the expanded set. |
 | The project-wide progress read on every Source page open | It is one cached map shared with the list; patches are per graph. |
 | A graph with only value Subjects can never become Promoted | Accepted (D-5): Promote files only primary kinds; it reads In progress, which is true. |
 
@@ -284,11 +301,12 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `S
 - `WorkspaceSession.refreshEvidenceGraphProgress` no longer patches by graph id, or `apply` no longer calls it for every graph in `effects.evidenceGraphs`.
 - `ListScrollAnchorModifier` needs each sub-row id to restore scroll (D-2 cannot hold).
 - The agreed board draws something the inventory does not hold (a status badge, a Source-level total, a kit accordion).
-- `SourcesListSettings` decodes status by something other than raw value (D-6).
+- Observation does not repaint `SourcesListRow` when the progress map changes without a `@Bindable` handle (D-15): report with the test or manual step that shows it.
 
 ## 12. Open questions
 
-1. **Board S12-D5.** Not yet agreed. On agreement: record the Board line, fill §6 Frames and Strings from it, then run `review-plan`.
+1. **Board S12-D5.** Not yet agreed. On agreement: record the Board line, fill §6 Frames and Strings from it, then run `review-plan` round 2.
+2. **`primaryCount` has no reader after D-5** (review M-5). Recommended: drop it end to end in this PR (`graphprogress.Progress.PrimaryCount`, `engine.proto` field 5 reserved, the handler, `GoStore`, `FakeStore`, `EvidenceGraphProgress`, tests), as one added step, per "High tolerance for churn". Alternative: Swift side only, Go and proto logged.
 
 ## 13. PR
 

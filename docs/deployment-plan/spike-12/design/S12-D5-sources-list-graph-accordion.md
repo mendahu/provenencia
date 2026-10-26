@@ -125,9 +125,9 @@ Draw the Sources list at its default window width; the Source page at its conten
 2. **Census expanded** — the census row expanded under it: "Default" `GPH-4K2PQ` "Open graph / 0 subjects · not started"; "Jones household" `GPH-JONES` "Open graph / 12 subjects · 40 observations"; "Smith household" `GPH-SMITH` "Open graph / 7 subjects · 19 observations". The obituary row below collapsed (GA-2, GA-3).
 3. **One-graph row expanded** — the obituary with its one "Default" sub-row (GA-2).
 4. **Blocked graph** — a fourth census graph "Unlinked" with no Artifact, its Open zone disabled, tooltip shown (GA-4).
-5. **Loading** — graph zones with skeleton labels; an expanded row's sub-row count lines as hairlines (GA-6).
+5. **Loading** — graph zones with skeleton labels; and a row expanded earlier in the session whose counts are reloading, its sub-row count lines as hairlines (GA-6).
 6. **Graph list failed** — zones with the danger mark and tooltip (GA-6).
-7. **Status menu open** — options All statuses, Empty, In progress, Promoted; then two frames of the list filtered, with Jones in progress and Smith promoted: under "In progress" the census shows, and under "Promoted" the census shows again (GA-8).
+7. **Status menu open** — options All statuses, Empty, In progress, Promoted; then the list filtered three times, with the census's Default empty, Jones in progress and Smith promoted: the census shows under "Empty", under "In progress" and under "Promoted" (GA-8).
 8. **Twelve graphs and a long name** — an expanded row with 12 sub-rows, one with a 60-character name, at the list's minimum width (GA-10).
 9. **Source page** — the census's Evidence graphs section with three cards, each with its count line under the ref; one card with a description, one without; the "Default" card reading "0 subjects · not started" (GA-11).
 
@@ -140,10 +140,10 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
 | Split row and columns | Snowflake | Extend | `Features/Sources/SourcesSplitRow.swift` `SourcesSplitRow`, `SourcesSplitLayout.columns` | The row's graph zone becomes the expander. Sub-rows reuse `SourcesSplitLayout.columns` so the hairline stays straight. Not a second row type with its own track. |
-| Expander | Snowflake | **New** | `Features/Sources/SourcesSplitRow.swift` | A full-zone button with the existing `SourcesSplitZoneButtonStyle` hover, the network icon, the count, and the chevron from `PVExpandedState.chevron(isExpanded:)`; spoken state through `pvExpandedState`. Not `PVDisclosureButton`: that is a `PVButton` trigger, and this zone is a whole 248 pt hit area matching today's Open graph zone. |
+| Expander | Snowflake | **New** | `Features/Sources/SourcesSplitRow.swift` | One call site (the list row); not a kit primitive. A full-zone button with the existing `SourcesSplitZoneButtonStyle` hover, the network icon, the count, and the chevron from `PVExpandedState.chevron(isExpanded:)`; spoken state through `pvExpandedState`. Not `PVDisclosureButton`: that is a `PVButton` trigger, and this zone is a whole 248 pt hit area matching today's Open graph zone. |
 | Graph sub-row | Snowflake | **New** | `Features/Sources/SourcesGraphSubRow.swift` (new) | Name, ref, and the Open zone of one graph. One call site (the list). Not a kit primitive, not the Source page card. |
-| Open graph zone | Snowflake | Extend | `SourcesSplitRow.swift` `graphZone` | Today's zone, now drawn per graph on each sub-row instead of once per row. |
-| Count line | Snowflake | **New** (lifted) | `Features/Sources/SourcesGraphCountLine.swift` (new) | Today's private `SourcesSplitRow.graphCountLine` lifted to one Sources view with its three states. Three call sites: the list sub-row, its VoiceOver text, the Source page card. Feature-shared, not kit. |
+| Open graph zone | Snowflake | Extend (moved) | `Features/Sources/SourcesGraphSubRow.swift` (new) | Moved from `SourcesSplitRow.swift` `graphZone`. Today's zone, now drawn per graph on each sub-row instead of once per row. |
+| Count line | Snowflake | **New** (lifted) | `Features/Sources/SourcesGraphCountLine.swift` (new) | Today's private `SourcesSplitRow.graphCountLine` lifted to one Sources view with its three states, which speaks one VoiceOver sentence from the same rule. Two call sites: the list sub-row and the Source page card. Feature-shared, not kit. |
 | Loading label | Component | Ship | `DesignSystem/Components/SkeletonBar/PVSkeletonBar.swift` | In place of the expander label. Not a spinner. |
 | Failure mark | Component | Ship | `PVIcon` with the danger color | With the error tooltip. Not a Callout: the zone is 248 pt wide. |
 | Blocked zone | Snowflake | Ship | `SourcesSplitRow.swift` (the `else` branch of `graphZone`) | Unchanged "Needs an artifact". |
