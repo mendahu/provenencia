@@ -1,9 +1,13 @@
 package promotealign
 
 import (
+	"bytes"
+	"slices"
+
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -50,6 +54,70 @@ func edgeSeenKey(a, b []byte, keyA, keyB vocabkey.BridgeKey) seenEdge {
 		a, b, keyA, keyB = b, a, keyB, keyA
 	}
 	return seenEdge{a: string(a), b: string(b), keyA: keyA, keyB: keyB}
+}
+
+// sideLink is one link on one side of a proposal: a recorded one, or one the
+// kinship patterns imply. Shapes are the patterns that imply it; OnlyImplied is
+// true when no recorded bridge stands behind it.
+type sideLink struct {
+	kinship.Edge
+	Shapes      []kinship.Shape
+	OnlyImplied bool
+}
+
+// linkSet is one side's links, one per pair of ends and keys, in the order they
+// were first added. It is the one merge for both loaders, recorded links and
+// implied ones.
+type linkSet struct {
+	links []sideLink
+	at    map[seenEdge]int // a link's index in links
+}
+
+func newLinkSet() *linkSet { return &linkSet{at: map[seenEdge]int{}} }
+
+// add merges l into the link with the same ends and keys, or appends it. The
+// set holds its own copy of every end, association and pivot.
+func (s *linkSet) add(l sideLink) {
+	k := edgeSeenKey(l.A, l.B, l.KeyA, l.KeyB)
+	if i, ok := s.at[k]; ok {
+		have := &s.links[i]
+		for _, a := range l.Associations {
+			if !slices.ContainsFunc(have.Associations, func(b []byte) bool { return bytes.Equal(a, b) }) {
+				have.Associations = append(have.Associations, bytes.Clone(a))
+			}
+		}
+		have.Shapes = append(have.Shapes, cloneShapes(l.Shapes)...)
+		have.OnlyImplied = have.OnlyImplied && l.OnlyImplied
+		return
+	}
+	l.A, l.B = bytes.Clone(l.A), bytes.Clone(l.B)
+	assocs := make([][]byte, len(l.Associations))
+	for i, a := range l.Associations {
+		assocs[i] = bytes.Clone(a)
+	}
+	l.Associations = assocs
+	l.Shapes = cloneShapes(l.Shapes)
+	s.at[k] = len(s.links)
+	s.links = append(s.links, l)
+}
+
+func cloneShapes(in []kinship.Shape) []kinship.Shape {
+	var out []kinship.Shape
+	for _, x := range in {
+		out = append(out, kinship.Shape{Pattern: x.Pattern, Pivot: bytes.Clone(x.Pivot)})
+	}
+	return out
+}
+
+// withImplied adds the links the kinship patterns imply to the set, through add.
+func (s *linkSet) withImplied(terms segmentcompare.Terms) {
+	edges := make([]kinship.Edge, len(s.links))
+	for i, l := range s.links {
+		edges[i] = l.Edge
+	}
+	for _, imp := range kinship.Derive(edges, terms) {
+		s.add(sideLink{Edge: imp.Edge, Shapes: []kinship.Shape{imp.Shape()}, OnlyImplied: true})
+	}
 }
 
 // observedTerms maps each Subject to the key of a positive Observation's term

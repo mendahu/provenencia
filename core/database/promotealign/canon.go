@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -104,8 +105,7 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 		return handles[string(seeds[i])].Ref < handles[string(seeds[j])].Ref
 	})
 
-	var edges []graphalign.CanonEdge
-	edgeSeen := map[seenEdge]bool{}
+	set := newLinkSet()
 	walked := map[string]bool{}
 	queue := append([][]byte(nil), seeds...)
 	for len(queue) > 0 {
@@ -153,13 +153,7 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 					continue
 				}
 				if from, to, keyFrom, keyTo, ok := canonKeys(id, selfKind, n, l, neighbor, props, terms); ok {
-					if ek := edgeSeenKey(from, to, keyFrom, keyTo); !edgeSeen[ek] {
-						edgeSeen[ek] = true
-						edges = append(edges, graphalign.CanonEdge{
-							From: append([]byte(nil), from...), To: append([]byte(nil), to...),
-							KeyFrom: keyFrom, KeyTo: keyTo,
-						})
-					}
+					set.add(sideLink{Edge: kinship.Edge{A: from, B: to, KeyA: keyFrom, KeyB: keyTo}})
 				}
 				if _, ok := handles[string(neighbor.ID)]; !ok {
 					handles[string(neighbor.ID)] = neighbor
@@ -168,6 +162,14 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 				}
 			}
 		}
+	}
+
+	set.withImplied(terms)
+	var edges []graphalign.CanonEdge
+	for _, l := range set.links {
+		edges = append(edges, graphalign.CanonEdge{
+			From: l.A, To: l.B, KeyFrom: l.KeyA, KeyTo: l.KeyB, Shapes: l.Shapes, OnlyImplied: l.OnlyImplied,
+		})
 	}
 
 	nodes := make([]*graphcache.Node, 0, len(handles))

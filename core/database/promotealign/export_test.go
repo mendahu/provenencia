@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 )
 
@@ -98,4 +99,18 @@ func ProfilesKeptForTest(c *database.Catalog) (int, bool) {
 		return 0, false
 	}
 	return len(matchIndexOf(c.Graph()).profiles), true
+}
+
+// SideLink is a link on one side of a proposal.
+type SideLink = sideLink
+
+// LinkSetForTest merges links through a new link set, adds the links the
+// kinship patterns imply, and returns the set's links.
+func LinkSetForTest(links []SideLink, terms segmentcompare.Terms) []SideLink {
+	s := newLinkSet()
+	for _, l := range links {
+		s.add(l)
+	}
+	s.withImplied(terms)
+	return s.links
 }
