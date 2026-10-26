@@ -475,6 +475,15 @@ func TestRecordingMerge(t *testing.T) {
 	})
 }
 
+func TestRecordingClone(t *testing.T) {
+	o := kinship.Recording{Shapes: []kinship.Shape{{Pattern: kinship.PatternBirthParents, Pivot: []byte("E5")}}, OnlyImplied: true}
+	c := o.Clone()
+	o.Shapes[0].Pivot[0] = 'X'
+	if string(c.Shapes[0].Pivot) != "E5" || !c.OnlyImplied {
+		t.Fatalf("Clone shares pivot bytes or drops OnlyImplied: %+v", c)
+	}
+}
+
 func TestCountedOnce(t *testing.T) {
 	rec := func(pattern kinship.Pattern, pivot string, only bool) kinship.Recording {
 		return kinship.Recording{Shapes: []kinship.Shape{{Pattern: pattern, Pivot: []byte(pivot)}}, OnlyImplied: only}

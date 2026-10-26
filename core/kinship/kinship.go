@@ -71,6 +71,9 @@ type Shape struct {
 	Pivot   []byte
 }
 
+// Clone returns a copy of s that shares no pivot bytes with it.
+func (s Shape) Clone() Shape { return Shape{s.Pattern, bytes.Clone(s.Pivot)} }
+
 // Shape is the way the pattern made this link.
 func (i Implied) Shape() Shape {
 	if i.Event != nil {
@@ -87,6 +90,16 @@ type Recording struct {
 	OnlyImplied bool
 }
 
+// Clone returns a copy of r that shares no pivot bytes with it.
+func (r Recording) Clone() Recording {
+	var out Recording
+	out.OnlyImplied = r.OnlyImplied
+	for _, s := range r.Shapes {
+		out.Shapes = append(out.Shapes, s.Clone())
+	}
+	return out
+}
+
 // Merge folds another recording of the same link into r: it appends each shape
 // of o that r lacks (same Pattern and pivot), copying its pivot, and the link
 // stays only implied when both were.
@@ -95,7 +108,7 @@ func (r *Recording) Merge(o Recording) {
 		if !slices.ContainsFunc(r.Shapes, func(x Shape) bool {
 			return x.Pattern == s.Pattern && bytes.Equal(x.Pivot, s.Pivot)
 		}) {
-			r.Shapes = append(r.Shapes, Shape{s.Pattern, bytes.Clone(s.Pivot)})
+			r.Shapes = append(r.Shapes, s.Clone())
 		}
 	}
 	r.OnlyImplied = r.OnlyImplied && o.OnlyImplied
