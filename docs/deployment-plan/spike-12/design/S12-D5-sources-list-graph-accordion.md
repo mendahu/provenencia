@@ -58,7 +58,7 @@ A census Source can now hold several Evidence graphs (Jones household, Smith hou
 
 - **Sources list.** Every row's graph zone becomes an expander that reads the Source's graph count ("1 evidence graph", "3 evidence graphs"). Expanding it shows one sub-row per graph under the Source row, in name order. Each sub-row carries the graph's name and ref on the left and, in the graph zone column, today's **Open graph** zone for that graph: the label and its count line ("12 subjects · 40 observations", or "0 subjects · not started").
 - **Status filter.** The statuses are now read per graph, with a new meaning for In progress (§2), and the last option reads **Promoted** instead of "Fully promoted".
-- **Source page.** Each Evidence graphs card shows the same count line under its ref and description.
+- **Source page.** Each Evidence graphs card shows the same count line under its ref, above its description.
 
 **What stays.** The page zone and its click (opens the Source page). The graph zone's width, hairline and hover. A Source with no Artifact keeps today's sunken "Needs an artifact" zone with no expander. Search matches Source title and ref only (graphs are found through the omnibar, S12-15).
 
