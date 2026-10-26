@@ -20,11 +20,13 @@ import (
 )
 
 // The budgets of S11-21 D-1. They assume go test runs packages in parallel on
-// four cores, as scripts/check-pr.sh and CI do.
+// four cores, as scripts/check-pr.sh and CI do. The warm figure was raised from
+// 250 ms by the user on 2026-10-26 when the fixture gained the 12-generation
+// tree and matching read kinship links (S11-39).
 const (
 	budgetWarmOnOpen   = 2500 * time.Millisecond
 	budgetCold         = 2500 * time.Millisecond
-	budgetWarm         = 250 * time.Millisecond
+	budgetWarm         = 350 * time.Millisecond
 	budgetAfterCommit  = 1500 * time.Millisecond
 	budgetEvidence     = 100 * time.Millisecond
 	budgetOnePlaceCold = 5 * time.Second
