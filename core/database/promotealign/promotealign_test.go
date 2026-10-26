@@ -961,6 +961,15 @@ func (f *fixture) datedOn(src sources.Source, art artifacts.Artifact, eventType 
 	return f.eventOn(src, art, eventType, &date)
 }
 
+// marriage is a marriage event cited in src with a and b as its participants,
+// each in role.
+func (f *fixture) marriage(src sources.Source, art artifacts.Artifact, a, b subjects.Subject, role string) subjects.Subject {
+	m := f.eventOn(src, art, "marriage", nil)
+	f.participation(src, art, a, m, role)
+	f.participation(src, art, b, m, role)
+	return m
+}
+
 // eventOn is an event cited as an event type, on a date when d is not nil.
 func (f *fixture) eventOn(src sources.Source, art artifacts.Artifact, eventType string, d *datevalue.Value) subjects.Subject {
 	f.t.Helper()
@@ -1416,9 +1425,7 @@ func TestLayerBridgesMergeKinshipShapes(t *testing.T) {
 		f := newFixture(t)
 		ann := f.person(f.source, f.artifact, "Ann Ames")
 		bob := f.person(f.source, f.artifact, "Bob Ames")
-		marriage := f.eventOn(f.source, f.artifact, "marriage", nil)
-		f.participation(f.source, f.artifact, ann, marriage, "subject")
-		f.participation(f.source, f.artifact, bob, marriage, "subject")
+		f.marriage(f.source, f.artifact, ann, bob, "subject")
 		if withRelationship {
 			f.relationship(f.source, f.artifact, ann, bob, "spouse")
 		}
@@ -1465,10 +1472,7 @@ func kinRelationship(term string) kinShape {
 
 func kinMarriage(role string) kinShape {
 	return func(f *fixture, src sources.Source, art artifacts.Artifact, a, _, b subjects.Subject) []subjects.Subject {
-		marriage := f.eventOn(src, art, "marriage", nil)
-		f.participation(src, art, a, marriage, role)
-		f.participation(src, art, b, marriage, role)
-		return []subjects.Subject{marriage}
+		return []subjects.Subject{f.marriage(src, art, a, b, role)}
 	}
 }
 

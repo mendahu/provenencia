@@ -748,12 +748,6 @@ func TestEvidenceReadsASourceMarriageAsSpouses(t *testing.T) {
 func marriageEvidence(t *testing.T, sourceMarries bool) (claimevidence.Evidence, subjects.Subject, subjects.Subject) {
 	t.Helper()
 	f := newFixture(t)
-	marry := func(src sources.Source, art artifacts.Artifact, a, b subjects.Subject) subjects.Subject {
-		m := f.eventOn(src, art, "marriage", nil)
-		f.participation(src, art, a, m, "subject")
-		f.participation(src, art, b, m, "subject")
-		return m
-	}
 	aAnn := f.person(f.source, f.artifact, "Ann Ames")
 	aBob := f.person(f.source, f.artifact, "Bob Ames")
 	if sourceMarries {
@@ -761,7 +755,7 @@ func marriageEvidence(t *testing.T, sourceMarries bool) (claimevidence.Evidence,
 	}
 	var treeMarriage *subjects.Subject
 	if !sourceMarries {
-		m := marry(f.source, f.artifact, aAnn, aBob)
+		m := f.marriage(f.source, f.artifact, aAnn, aBob, "subject")
 		treeMarriage = &m
 	}
 	annH := f.promote(aAnn).Entity.ID
@@ -774,7 +768,7 @@ func marriageEvidence(t *testing.T, sourceMarries bool) (claimevidence.Evidence,
 	bAnn := f.person(srcB, artB, "Ann Ames")
 	bBob := f.person(srcB, artB, "Bob Ames")
 	if sourceMarries {
-		marry(srcB, artB, bAnn, bBob)
+		f.marriage(srcB, artB, bAnn, bBob, "subject")
 	} else {
 		f.relationship(srcB, artB, bAnn, bBob, "spouse")
 	}

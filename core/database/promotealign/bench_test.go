@@ -218,84 +218,110 @@ func benchID(n int) []byte {
 	return id[:]
 }
 
+// idOf is the id of the provenencia row with this key in a vocabulary table.
+func idOf(db *sql.DB, table, key string) ([]byte, error) {
+	var id []byte
+	err := db.QueryRow(`SELECT id FROM `+table+` WHERE key = ? AND origin = 'provenencia'`, key).Scan(&id)
+	return append([]byte(nil), id...), err
+}
+
+// termOf is the id of a provenencia property's term with this key.
+func termOf(db *sql.DB, property, key string) ([]byte, error) {
+	var id []byte
+	err := db.QueryRow(`SELECT t.id FROM property_terms t JOIN properties p ON p.id = t.property_id
+		WHERE p.key = ? AND p.origin = 'provenencia' AND t.key = ?`, property, key).Scan(&id)
+	return append([]byte(nil), id...), err
+}
+
 func bulkCanon(db *sql.DB, city []byte, shape catalogShape) error {
-	idOf := func(table, key string) ([]byte, error) {
-		var id []byte
-		err := db.QueryRow(`SELECT id FROM `+table+` WHERE key = ? AND origin = 'provenencia'`, key).Scan(&id)
-		return append([]byte(nil), id...), err
-	}
-	personT, err := idOf("subject_types", "person")
+	personT, err := idOf(db, "subject_types", "person")
 	if err != nil {
 		return err
 	}
-	eventT, err := idOf("subject_types", "event")
+	eventT, err := idOf(db, "subject_types", "event")
 	if err != nil {
 		return err
 	}
-	placeT, err := idOf("subject_types", "place")
+	placeT, err := idOf(db, "subject_types", "place")
 	if err != nil {
 		return err
 	}
-	partT, err := idOf("subject_types", "participation")
+	partT, err := idOf(db, "subject_types", "participation")
 	if err != nil {
 		return err
 	}
-	locT, err := idOf("subject_types", "location")
+	locT, err := idOf(db, "subject_types", "location")
 	if err != nil {
 		return err
 	}
-	personP, err := idOf("properties", "person")
+	personP, err := idOf(db, "properties", "person")
 	if err != nil {
 		return err
 	}
-	eventP, err := idOf("properties", "event")
+	eventP, err := idOf(db, "properties", "event")
 	if err != nil {
 		return err
 	}
-	placeP, err := idOf("properties", "place")
+	placeP, err := idOf(db, "properties", "place")
 	if err != nil {
 		return err
 	}
-	roleP, err := idOf("properties", "role")
+	roleP, err := idOf(db, "properties", "role")
 	if err != nil {
 		return err
 	}
-	typeP, err := idOf("properties", "event_type")
+	typeP, err := idOf(db, "properties", "event_type")
 	if err != nil {
 		return err
 	}
-	nameP, err := idOf("properties", "name")
+	nameP, err := idOf(db, "properties", "name")
 	if err != nil {
 		return err
 	}
-	toponymP, err := idOf("properties", "toponym")
+	toponymP, err := idOf(db, "properties", "toponym")
 	if err != nil {
 		return err
 	}
-	dateP, err := idOf("properties", "date")
+	dateP, err := idOf(db, "properties", "date")
 	if err != nil {
 		return err
 	}
-	var roleTerm, birthTerm, deathTerm []byte
-	if err := db.QueryRow(`SELECT t.id FROM property_terms t JOIN properties p ON p.id = t.property_id
-		WHERE p.key = 'role' AND p.origin = 'provenencia' AND t.key = 'subject'`).Scan(&roleTerm); err != nil {
+	roleTerm, err := termOf(db, "role", "subject")
+	if err != nil {
 		return err
 	}
-	if err := db.QueryRow(`SELECT t.id FROM property_terms t JOIN properties p ON p.id = t.property_id
-		WHERE p.key = 'event_type' AND p.origin = 'provenencia' AND t.key = 'birth'`).Scan(&birthTerm); err != nil {
+	birthTerm, err := termOf(db, "event_type", "birth")
+	if err != nil {
 		return err
 	}
-	if err := db.QueryRow(`SELECT t.id FROM property_terms t JOIN properties p ON p.id = t.property_id
-		WHERE p.key = 'event_type' AND p.origin = 'provenencia' AND t.key = 'death'`).Scan(&deathTerm); err != nil {
+	deathTerm, err := termOf(db, "event_type", "death")
+	if err != nil {
 		return err
 	}
-	deathTerm = append([]byte(nil), deathTerm...)
-	roleTerm = append([]byte(nil), roleTerm...)
-	birthTerm = append([]byte(nil), birthTerm...)
 
 	var tree treeIDs
 	if shape.TreeGenerations > 0 {
-		if tree, err = lookupTree(db); err != nil {
+		tree = treeIDs{
+			person: personT, event: eventT, participation: partT,
+			personP: personP, eventP: eventP, roleP: roleP, typeP: typeP, nameP: nameP,
+			subject: roleTerm,
+		}
+		for _, l := range []struct {
+			into       *[]byte
+			table, key string
+		}{
+			{&tree.relationship, "subject_types", "relationship"},
+			{&tree.relatedP, "properties", "related_to"},
+			{&tree.relTypeP, "properties", "relationship_type"},
+		} {
+			if *l.into, err = idOf(db, l.table, l.key); err != nil {
+				return err
+			}
+		}
+		if tree.marriage, err = termOf(db, "event_type", "marriage"); err != nil {
+			return err
+		}
+		if tree.parent, err = termOf(db, "relationship_type", "parent"); err != nil {
 			return err
 		}
 	}
@@ -463,50 +489,13 @@ func bulkCanon(db *sql.DB, city []byte, shape catalogShape) error {
 	return tx.Commit()
 }
 
-// treeIDs are the vocabulary ids bulkTree writes with.
+// treeIDs are the vocabulary ids bulkTree writes with. bulkCanon reads them
+// before its transaction, because the catalog has one connection.
 type treeIDs struct {
 	person, event, participation, relationship []byte
 	personP, eventP, roleP, relatedP, relTypeP []byte
 	typeP, nameP                               []byte
 	subject, marriage, parent                  []byte
-}
-
-// lookupTree reads treeIDs. It runs before bulkCanon's transaction, because
-// the catalog has one connection.
-func lookupTree(db *sql.DB) (treeIDs, error) {
-	var ids treeIDs
-	idOf := func(table, key string) []byte {
-		var id []byte
-		err := db.QueryRow(`SELECT id FROM `+table+` WHERE key = ? AND origin = 'provenencia'`, key).Scan(&id)
-		if err != nil {
-			return nil
-		}
-		return append([]byte(nil), id...)
-	}
-	termOf := func(property, key string) []byte {
-		var id []byte
-		err := db.QueryRow(`SELECT t.id FROM property_terms t JOIN properties p ON p.id = t.property_id
-			WHERE p.key = ? AND p.origin = 'provenencia' AND t.key = ?`, property, key).Scan(&id)
-		if err != nil {
-			return nil
-		}
-		return append([]byte(nil), id...)
-	}
-	ids = treeIDs{
-		person: idOf("subject_types", "person"), event: idOf("subject_types", "event"),
-		participation: idOf("subject_types", "participation"), relationship: idOf("subject_types", "relationship"),
-		personP: idOf("properties", "person"), eventP: idOf("properties", "event"), roleP: idOf("properties", "role"),
-		relatedP: idOf("properties", "related_to"), relTypeP: idOf("properties", "relationship_type"),
-		typeP: idOf("properties", "event_type"), nameP: idOf("properties", "name"),
-		subject: termOf("role", "subject"), marriage: termOf("event_type", "marriage"), parent: termOf("relationship_type", "parent"),
-	}
-	for _, id := range [][]byte{ids.person, ids.event, ids.participation, ids.relationship, ids.personP, ids.eventP,
-		ids.roleP, ids.relatedP, ids.relTypeP, ids.typeP, ids.nameP, ids.subject, ids.marriage, ids.parent} {
-		if id == nil {
-			return ids, fmt.Errorf("the catalog lacks a vocabulary row the tree needs")
-		}
-	}
-	return ids, nil
 }
 
 // bulkTree writes shape's parent tree (see catalogShape.TreeGenerations) in a
