@@ -5764,13 +5764,13 @@ enum L10n {
         static let statusInProgress = LocalizedStringResource(
             "sources.list.status.inProgress",
             defaultValue: "In progress",
-            comment: "Sources evidence-status filter option: at least one person, event, or place on the graph is not promoted yet"
+            comment: "Sources evidence-status filter option: at least one subject and none promoted"
         )
 
-        static let statusFullyPromoted = LocalizedStringResource(
-            "sources.list.status.fullyPromoted",
-            defaultValue: "Fully promoted",
-            comment: "Sources evidence-status filter option: every person, event, and place on the graph is promoted"
+        static let statusPromoted = LocalizedStringResource(
+            "sources.list.status.promoted",
+            defaultValue: "Promoted",
+            comment: "Sources evidence-status filter option: graphs with at least one promoted subject"
         )
 
         static let sortAZ = LocalizedStringResource(
@@ -5859,6 +5859,35 @@ enum L10n {
 
         static func graphCountLine(subjects: Int, observations: Int) -> String {
             "\(graphSubjectCount(subjects)) · \(graphObservationCount(observations))"
+        }
+
+        /// How a graph's counts read. `compact` is the token's digits ("12 · 40"),
+        /// `full` the Source page's line, `spoken` what VoiceOver says.
+        enum GraphCountsStyle {
+            case compact
+            case full
+            case spoken
+        }
+
+        /// The one formatter for a graph's counts (`SourcesGraphCounts`), so the
+        /// visible text, the help and VoiceOver agree.
+        static func graphCounts(_ counts: SourcesGraphCounts, style: GraphCountsStyle) -> String {
+            switch counts {
+            case .loading:
+                return L10n.string(graphCountsLoading)
+            case .notStarted:
+                switch style {
+                case .compact: return L10n.string(graphNotStarted)
+                case .full: return "\(graphSubjectCount(0)) · \(L10n.string(graphNotStarted))"
+                case .spoken: return "\(graphSubjectCount(0)), \(L10n.string(graphNotStarted))"
+                }
+            case .counts(let subjects, let observations):
+                switch style {
+                case .compact: return "\(subjects) · \(observations)"
+                case .full: return graphCountLine(subjects: subjects, observations: observations)
+                case .spoken: return "\(graphSubjectCount(subjects)), \(graphObservationCount(observations))"
+                }
+            }
         }
 
         static func graphZoneAccessibility(

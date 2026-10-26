@@ -20632,7 +20632,7 @@
       }
     },
     "sources.list.status.inProgress": {
-      "comment": "Sources evidence-status filter option: at least one person, event, or place on the graph is not promoted yet",
+      "comment": "Sources evidence-status filter option: at least one subject and none promoted",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -20643,14 +20643,14 @@
         }
       }
     },
-    "sources.list.status.fullyPromoted": {
-      "comment": "Sources evidence-status filter option: every person, event, and place on the graph is promoted",
+    "sources.list.status.promoted": {
+      "comment": "Sources evidence-status filter option: graphs with at least one promoted subject",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fully promoted"
+            "value": "Promoted"
           }
         }
       }

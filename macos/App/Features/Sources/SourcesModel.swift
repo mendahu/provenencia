@@ -25,11 +25,12 @@ final class SourcesModel {
         }
     }
 
-    /// Where a Source's Evidence graph stands, from its primary and filed counts.
+    /// Where an Evidence graph stands: no Subjects, Subjects and none promoted,
+    /// or promoted (at least one Subject filed by a Promote).
     enum EvidenceStatus: String, CaseIterable, Identifiable, Codable {
         case empty
         case inProgress = "in_progress"
-        case filed
+        case promoted
 
         var id: String { rawValue }
 
@@ -37,17 +38,19 @@ final class SourcesModel {
             switch self {
             case .empty: L10n.Sources.statusEmpty
             case .inProgress: L10n.Sources.statusInProgress
-            case .filed: L10n.Sources.statusFullyPromoted
+            case .promoted: L10n.Sources.statusPromoted
             }
         }
 
         /// A graph missing from the progress map has zero counts (Go omits it).
         init(_ progress: EvidenceGraphProgress?) {
-            guard let progress, progress.primaryCount > 0 else {
+            if SourcesGraphCounts(progress: progress, countsLoading: false) == .notStarted {
                 self = .empty
-                return
+            } else if let progress, progress.filedCount > 0 {
+                self = .promoted
+            } else {
+                self = .inProgress
             }
-            self = progress.filedCount < progress.primaryCount ? .inProgress : .filed
         }
     }
 
@@ -276,6 +279,14 @@ final class SourcesModel {
         return next
     }
 
+    /// The statuses of the Source's graphs; empty while the Source's graph list
+    /// is loading or failed.
+    func statuses(for source: CatalogSource) -> Set<EvidenceStatus> {
+        guard case .loaded(let graphs) = session.evidenceGraphsRead(sourceID: source.id) else { return [] }
+        let progress = session.evidenceGraphProgressHandle?.value
+        return Set(graphs.map { EvidenceStatus(progress?[$0.id]) })
+    }
+
     var visibleSources: [CatalogSource] {
         var rows = sources
         let typeID = effectiveTypeFilterID
@@ -283,13 +294,7 @@ final class SourcesModel {
             rows = rows.filter { $0.sourceTypeID == typeID }
         }
         if let status = settings.status {
-            let progress = session.evidenceGraphProgressHandle?.value
-            let graphs = session.evidenceGraphsBySource
-            rows = rows.filter { source in
-                EvidenceStatus(
-                    SourcesListNavigation.entryGraph(sourceID: source.id, in: graphs).flatMap { progress?[$0.id] }
-                ) == status
-            }
+            rows = rows.filter { statuses(for: $0).contains(status) }
         }
         let query = TextMatch.Query(trimmedQuery)
         if !query.isEmpty {

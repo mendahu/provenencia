@@ -101,11 +101,11 @@ struct SourcesModelTests {
     }
 
     private func progress(
-        _ id: String, primary: Int, filed: Int
+        _ id: String, subjects: Int, filed: Int
     ) -> EvidenceGraphProgress {
         EvidenceGraphProgress(
-            graphId: "g-\(id)", sourceId: id, subjectCount: primary, observationCount: 0,
-            primaryCount: primary, filedCount: filed
+            graphId: "g-\(id)", sourceId: id, subjectCount: subjects, observationCount: 0,
+            filedCount: filed
         )
     }
 
@@ -457,31 +457,71 @@ struct SourcesModelTests {
     @Test func graphProgressCopyMatchesBoard() {
         #expect(L10n.Sources.graphCountLine(subjects: 12, observations: 48) == "12 subjects · 48 observations")
         #expect(L10n.Sources.graphSubjectCount(0) == "0 subjects")
-        #expect(
-            L10n.Sources.graphZoneAccessibility(progress: nil, countsLoading: true)
-                == "Open graph, counts loading"
+
+        let jones = EvidenceGraphProgress(graphId: "g1", sourceId: "s1", subjectCount: 12, observationCount: 40)
+        #expect(SourcesGraphCounts(progress: nil, countsLoading: true) == .loading)
+        #expect(SourcesGraphCounts(progress: nil, countsLoading: false) == .notStarted)
+        #expect(SourcesGraphCounts(progress: .zeros(graphId: "g1"), countsLoading: false) == .notStarted)
+        #expect(SourcesGraphCounts(progress: jones, countsLoading: true) == .counts(subjects: 12, observations: 40))
+        let counts = SourcesGraphCounts(progress: jones, countsLoading: false)
+        #expect(counts == .counts(subjects: 12, observations: 40))
+
+        #expect(L10n.Sources.graphCounts(counts, style: .compact) == "12 · 40")
+        #expect(L10n.Sources.graphCounts(.notStarted, style: .compact) == "not started")
+        #expect(L10n.Sources.graphCounts(.loading, style: .compact) == "counts loading")
+        #expect(L10n.Sources.graphCounts(counts, style: .full) == "12 subjects · 40 observations")
+        #expect(L10n.Sources.graphCounts(.notStarted, style: .full) == "0 subjects · not started")
+        #expect(L10n.Sources.graphCounts(counts, style: .spoken) == "12 subjects, 40 observations")
+        #expect(L10n.Sources.graphCounts(.notStarted, style: .spoken) == "0 subjects, not started")
+    }
+
+    @Test func statusMatchesAnyGraphOfTheSource() async {
+        let store = FakeStore()
+        let sources = [
+            source(id: "s1", title: "Census", typeID: "t1"),
+            source(id: "s2", title: "Photo", typeID: "t1"),
+        ]
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: "g-default", ref: "GPH-1", sourceID: "s1", name: "Default", description: "", artifactIDs: ["a"]
+            ),
+            CatalogEvidenceGraph(
+                id: "g-jones", ref: "GPH-2", sourceID: "s1", name: "Jones household", description: "", artifactIDs: ["a"]
+            ),
+            CatalogEvidenceGraph(
+                id: "g-smith", ref: "GPH-3", sourceID: "s1", name: "Smith household", description: "", artifactIDs: ["a"]
+            ),
+            CatalogEvidenceGraph(
+                id: "g-photo", ref: "GPH-4", sourceID: "s2", name: "Default", description: "", artifactIDs: ["a"]
+            ),
+        ]
+        store.graphProgressByGraph["g-jones"] = EvidenceGraphProgress(
+            graphId: "g-jones", sourceId: "s1", subjectCount: 12, observationCount: 40
         )
-        #expect(
-            L10n.Sources.graphZoneAccessibility(
-                progress: .zeros(graphId: "g1"),
-                countsLoading: false
-            ) == "Open graph, 0 subjects, not started"
+        store.graphProgressByGraph["g-smith"] = EvidenceGraphProgress(
+            graphId: "g-smith", sourceId: "s1", subjectCount: 7, observationCount: 19, filedCount: 1
         )
-        #expect(
-            L10n.Sources.graphZoneAccessibility(
-                progress: EvidenceGraphProgress(
-                    graphId: "g1", sourceId: "s1", subjectCount: 12, observationCount: 48
-                ),
-                countsLoading: false
-            ) == "Open graph, 12 subjects, 48 observations"
-        )
+        let (model, session) = makeModel(store: store, sources: sources, types: [photoType()])
+        #expect(model.statuses(for: sources[0]).isEmpty)
+        await warmLists(model, session: session)
+        await warmProgress(model, session: session)
+
+        #expect(model.statuses(for: sources[0]) == [.empty, .inProgress, .promoted])
+        #expect(model.statuses(for: sources[1]) == [.empty])
+        model.settings.status = .empty
+        #expect(Set(model.visibleSources.map(\.id)) == ["s1", "s2"])
+        model.settings.status = .inProgress
+        #expect(model.visibleSources.map(\.id) == ["s1"])
+        model.settings.status = .promoted
+        #expect(model.visibleSources.map(\.id) == ["s1"])
     }
 
     @Test func evidenceStatusFromCounts() {
         #expect(SourcesModel.EvidenceStatus(nil) == .empty)
-        #expect(SourcesModel.EvidenceStatus(progress("s", primary: 0, filed: 0)) == .empty)
-        #expect(SourcesModel.EvidenceStatus(progress("s", primary: 2, filed: 1)) == .inProgress)
-        #expect(SourcesModel.EvidenceStatus(progress("s", primary: 2, filed: 2)) == .filed)
+        #expect(SourcesModel.EvidenceStatus(progress("s", subjects: 0, filed: 0)) == .empty)
+        #expect(SourcesModel.EvidenceStatus(progress("s", subjects: 5, filed: 0)) == .inProgress)
+        #expect(SourcesModel.EvidenceStatus(progress("s", subjects: 5, filed: 1)) == .promoted)
+        #expect(SourcesModel.EvidenceStatus(progress("s", subjects: 2, filed: 0)) == .inProgress)
     }
 
     @Test func settingsRestoreOnNewModel() async throws {
@@ -491,14 +531,14 @@ struct SourcesModelTests {
         let (a, _) = makeModel(types: [photoType()], settingsStore: storeA)
         a.settings.sort = .az
         a.settings.typeFilterID = "t1"
-        a.settings.status = .filed
+        a.settings.status = .promoted
         a.settings.query = "smith"
 
         let storeB = try #require(SourcesListSettingsStore(projectUuid: uuid, userID: userID, fileURL: url))
         let (b, _) = makeModel(types: [photoType()], settingsStore: storeB)
         #expect(b.settings == a.settings)
         #expect(b.settings.sort == .az)
-        #expect(b.settings.status == .filed)
+        #expect(b.settings.status == .promoted)
     }
 
     @Test func searchMatchesTitleAndRefIgnoringCaseAndAccents() async {
@@ -554,9 +594,9 @@ struct SourcesModelTests {
             sources.append(source(id: "s\(index)", title: title, typeID: typeID, ref: "SRC-0000\(index)"))
         }
         for id in ["s1", "s2", "s5"] {
-            store.graphProgressByGraph["g-\(id)"] = progress(id, primary: 2, filed: 1)
+            store.graphProgressByGraph["g-\(id)"] = progress(id, subjects: 2, filed: 0)
         }
-        store.graphProgressByGraph["g-s3"] = progress("s3", primary: 1, filed: 1)
+        store.graphProgressByGraph["g-s3"] = progress("s3", subjects: 1, filed: 1)
         let (model, session) = makeModel(
             store: store, sources: sources, types: [photoType(), bookType()]
         )
@@ -603,7 +643,7 @@ struct SourcesModelTests {
 
     @Test func statusFilterWaitsForCounts() async {
         let store = FakeStore()
-        store.graphProgressByGraph["g-s1"] = progress("s1", primary: 1, filed: 0)
+        store.graphProgressByGraph["g-s1"] = progress("s1", subjects: 1, filed: 0)
         let (model, session) = makeModel(
             store: store,
             sources: [
@@ -645,7 +685,7 @@ struct SourcesModelTests {
         await warmProgress(model, session: session)
         #expect(model.statusCountsError == nil)
 
-        model.settings.status = .filed
+        model.settings.status = .promoted
         #expect(model.statusCountsError != nil)
         #expect(model.countLine(visibleCount: model.visibleSources.count) == L10n.Sources.countLine(total: 2))
     }

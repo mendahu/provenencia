@@ -85,4 +85,17 @@ struct SourcesListSettingsTests {
         )
         #expect(InstallPaths.projectKey(projectUuid: uuid) == "000000000000700080000000000000aa")
     }
+
+    @Test func storedFiledStatusRestoresPromoted() throws {
+        func decode(_ json: String) throws -> SourcesListSettings {
+            try JSONDecoder().decode(SourcesListSettings.self, from: Data(json.utf8))
+        }
+        #expect(try decode(#"{"status":"filed"}"#).status == .promoted)
+        #expect(try decode(#"{"status":"promoted"}"#).status == .promoted)
+        let bogus = try decode(#"{"status":"bogus","sort":"az","query":"smith"}"#)
+        #expect(bogus.status == nil)
+        #expect(bogus.sort == .az)
+        #expect(bogus.query == "smith")
+        #expect(L10n.string(SourcesModel.EvidenceStatus.promoted.label) == "Promoted")
+    }
 }
