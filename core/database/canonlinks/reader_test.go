@@ -3,6 +3,7 @@ package canonlinks
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"reflect"
 	"slices"
 	"sort"
@@ -316,6 +317,10 @@ func TestForFollowsCommits(t *testing.T) {
 		w.expect(cal, shape{Pattern: kinship.PatternBirthParents, Event: "B2", A: "Bea", B: "Cal", Assoc: []string{"B2/Bea", "B2/Cal"}})
 	})
 	t.Run("an event deleted alone", func(t *testing.T) {
+		// It commits a handle set that leaves the cache out of step with the catalog on purpose, to exercise the neighbor drop for a writer that omits an event's associations; verify mode would flag that inconsistency, not the drop.
+		if os.Getenv("PROVENENCIA_GRAPH_VERIFY") == "1" {
+			t.Skip("commits a deliberately inconsistent handle set")
+		}
 		w := newWorld(t)
 		ann, bea, cal := w.person("Ann"), w.person("Bea"), w.person("Cal")
 		b1, b2 := w.event("B1", vocabkey.EventBirth), w.event("B2", vocabkey.EventBirth)
