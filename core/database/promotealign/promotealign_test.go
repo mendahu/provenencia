@@ -1426,3 +1426,228 @@ func TestLayerBridgesMergeKinshipShapes(t *testing.T) {
 		t.Fatalf("marriage only: %+v, want one implied bridge with 2 associations", only)
 	}
 }
+
+// kinShape records one way of saying a kinship fact between a and b on src
+// (m is the person between them, for a parent chain), and returns the Subjects
+// it adds besides the people: events the tree promotes.
+type kinShape func(f *fixture, src sources.Source, art artifacts.Artifact, a, m, b subjects.Subject) []subjects.Subject
+
+// kinSide is one side of a proposal: the shape it records, whether it names the
+// person between, and, for a Source, whether the target gives only a sex and
+// whether Ann is fixed on her handle.
+type kinSide struct {
+	shape   kinShape
+	mid     bool
+	sexOnly bool
+	fixAnn  bool
+}
+
+type kinRow struct {
+	row         graphalign.Row
+	ann, target subjects.Subject
+}
+
+func kinRelationship(term string) kinShape {
+	return func(f *fixture, src sources.Source, art artifacts.Artifact, a, _, b subjects.Subject) []subjects.Subject {
+		f.relationship(src, art, a, b, term)
+		return nil
+	}
+}
+
+func kinMarriage(role string) kinShape {
+	return func(f *fixture, src sources.Source, art artifacts.Artifact, a, _, b subjects.Subject) []subjects.Subject {
+		marriage := f.eventOn(src, art, "marriage", nil)
+		f.participation(src, art, a, marriage, role)
+		f.participation(src, art, b, marriage, role)
+		return []subjects.Subject{marriage}
+	}
+}
+
+func kinBirth(parentRole string) kinShape {
+	return func(f *fixture, src sources.Source, art artifacts.Artifact, a, _, b subjects.Subject) []subjects.Subject {
+		birth := f.eventOn(src, art, "birth", nil)
+		f.participation(src, art, a, birth, parentRole)
+		f.participation(src, art, b, birth, "subject")
+		return []subjects.Subject{birth}
+	}
+}
+
+func kinChain(f *fixture, src sources.Source, art artifacts.Artifact, a, m, b subjects.Subject) []subjects.Subject {
+	f.relationship(src, art, a, m, "parent")
+	f.relationship(src, art, m, b, "parent")
+	return nil
+}
+
+func kinBoth(shapes ...kinShape) kinShape {
+	return func(f *fixture, src sources.Source, art artifacts.Artifact, a, m, b subjects.Subject) []subjects.Subject {
+		var extra []subjects.Subject
+		for _, s := range shapes {
+			extra = append(extra, s(f, src, art, a, m, b)...)
+		}
+		return extra
+	}
+}
+
+// kinTree files a tree on f.source that records tree between Ann Ames and the
+// target, promotes everything on it, then proposes each Source side as its own
+// Source and returns the target's row of each.
+func kinTree(t *testing.T, target string, tree kinSide, sides ...kinSide) (targetHandle []byte, out []kinRow) {
+	t.Helper()
+	f := newFixture(t)
+	people := func(src sources.Source, art artifacts.Artifact, s kinSide) (a, m, b subjects.Subject) {
+		a = f.person(src, art, "Ann Ames")
+		if s.mid {
+			m = f.person(src, art, "Bea Ames")
+		}
+		if s.sexOnly {
+			b = f.sexOnly(src, art, "male")
+		} else {
+			b = f.person(src, art, target)
+		}
+		return a, m, b
+	}
+	a, m, b := people(f.source, f.artifact, tree)
+	extra := tree.shape(f, f.source, f.artifact, a, m, b)
+	annHandle := f.promote(a).Entity.ID
+	if tree.mid {
+		f.promote(m)
+	}
+	targetHandle = f.promote(b).Entity.ID
+	for _, s := range extra {
+		f.promote(s)
+	}
+	for i, side := range sides {
+		src, art := f.newSource(fmt.Sprintf("Source %d", i))
+		sa, sm, sb := people(src, art, side)
+		side.shape(f, src, art, sa, sm, sb)
+		var fixed []graphalign.Fixed
+		if side.fixAnn {
+			fixed = []graphalign.Fixed{{SubjectID: sa.ID, HandleID: annHandle}}
+		}
+		out = append(out, kinRow{row: rowFor(f.propose(f.graph(src), fixed), sb.ID), ann: sa, target: sb})
+	}
+	return targetHandle, out
+}
+
+// onHandle is whether the row is proposed on the handle, at the band.
+func onHandle(row graphalign.Row, handle []byte, band graphalign.Assessment) bool {
+	return row.Target == graphalign.TargetHandle && bytes.Equal(row.HandleID, handle) && row.Assessment == band
+}
+
+// firstAlternative is the row's first alternative when it is the handle, via.
+func firstAlternative(row graphalign.Row, handle []byte) (graphalign.Alternative, bool) {
+	if len(row.Alternatives) == 0 {
+		return graphalign.Alternative{}, false
+	}
+	alt := row.Alternatives[0]
+	return alt, bytes.Equal(alt.HandleID, handle) && alt.Reason == graphalign.ReasonVia
+}
+
+func sameScore(a, b float64) bool { return math.Abs(a-b) < 1e-9 }
+
+// A kinship fact recorded in another shape than the tree's helps the match as
+// much as when both record it the same way, and counts once when both record
+// it through the same paired shape.
+func TestProposeKinshipShapes(t *testing.T) {
+	spouse, parent, grandparent := kinRelationship("spouse"), kinRelationship("parent"), kinRelationship("grandparent")
+	marriage, witnessed := kinMarriage("spouse"), kinMarriage("witness")
+	atBirth := kinBirth("father")
+	// direct is the row of a Source that records the fact the tree does, in the
+	// shape the tree does.
+	direct := func(t *testing.T, target string, shape kinShape, mid, sexOnly, fixAnn bool) kinRow {
+		_, rows := kinTree(t, target, kinSide{shape: shape, mid: mid}, kinSide{shape: shape, mid: mid, sexOnly: sexOnly, fixAnn: fixAnn})
+		return rows[0]
+	}
+
+	t.Run("AC-1.1", func(t *testing.T) {
+		bob, rows := kinTree(t, "Bob Ames", kinSide{shape: spouse}, kinSide{shape: spouse}, kinSide{shape: marriage}, kinSide{shape: witnessed})
+		rel, married, witness := rows[0].row, rows[1].row, rows[2].row
+		if !onHandle(married, bob, graphalign.AssessMedium) || !sameScore(married.Score, rel.Score) {
+			t.Fatalf("marriage row %+v, want Bob's handle at medium, score %.4f", married, rel.Score)
+		}
+		if married.Score <= witness.Score || witness.Assessment != graphalign.AssessWeak {
+			t.Fatalf("marriage %.4f, witnessed %+v: want the marriage above a weak witnessed one", married.Score, witness)
+		}
+	})
+	t.Run("AC-1.2", func(t *testing.T) {
+		want := direct(t, "Bob Ames", spouse, false, false, false)
+		bob, rows := kinTree(t, "Bob Ames", kinSide{shape: marriage}, kinSide{shape: spouse})
+		if !onHandle(rows[0].row, bob, graphalign.AssessMedium) || !sameScore(rows[0].row.Score, want.row.Score) {
+			t.Fatalf("row %+v, want Bob's handle at medium, score %.4f", rows[0].row, want.row.Score)
+		}
+	})
+	t.Run("AC-1.3", func(t *testing.T) {
+		bob, rows := kinTree(t, "Bob Ames", kinSide{shape: parent},
+			kinSide{shape: parent, sexOnly: true, fixAnn: true}, kinSide{shape: atBirth, sexOnly: true, fixAnn: true})
+		want, got := rows[0].row, rows[1].row
+		alt, ok := firstAlternative(got, bob)
+		if !ok || len(want.Alternatives) == 0 || !sameScore(alt.Score, want.Alternatives[0].Score) {
+			t.Fatalf("row %+v, want Bob's handle first, via, score %+v", got, want.Alternatives)
+		}
+	})
+	t.Run("AC-1.4", func(t *testing.T) {
+		want := direct(t, "Bob Ames", parent, false, true, true)
+		bob, rows := kinTree(t, "Bob Ames", kinSide{shape: atBirth}, kinSide{shape: parent, sexOnly: true, fixAnn: true})
+		alt, ok := firstAlternative(rows[0].row, bob)
+		if !ok || len(want.row.Alternatives) == 0 || !sameScore(alt.Score, want.row.Alternatives[0].Score) {
+			t.Fatalf("row %+v, want Bob's handle first, via, score %+v", rows[0].row, want.row.Alternatives)
+		}
+	})
+	t.Run("AC-1.5", func(t *testing.T) {
+		cal, rows := kinTree(t, "Cal Ames", kinSide{shape: grandparent},
+			kinSide{shape: grandparent, fixAnn: true}, kinSide{shape: kinChain, mid: true, fixAnn: true})
+		want, got := rows[0].row, rows[1].row
+		if !onHandle(got, cal, graphalign.AssessMedium) || got.Reason != graphalign.ReasonVia || !sameScore(got.Score, want.Score) {
+			t.Fatalf("row %+v, want Cal's handle at medium via, score %.4f", got, want.Score)
+		}
+		wantKey := vocabkey.BridgeKey{Type: vocabkey.BridgeRelationship, Term: "grandchild", End: vocabkey.PropertyRelatedTo}
+		if got.Via == nil || !bytes.Equal(got.Via.NeighborSubjectID, rows[1].ann.ID) || got.Via.Key != wantKey {
+			t.Fatalf("via %+v, want Ann's Source Subject through %s", got.Via, wantKey)
+		}
+	})
+	t.Run("AC-1.6", func(t *testing.T) {
+		want := direct(t, "Cal Ames", grandparent, false, false, true)
+		cal, rows := kinTree(t, "Cal Ames", kinSide{shape: kinChain, mid: true}, kinSide{shape: grandparent, fixAnn: true})
+		got := rows[0].row
+		if !onHandle(got, cal, graphalign.AssessMedium) || got.Reason != graphalign.ReasonVia || !sameScore(got.Score, want.row.Score) {
+			t.Fatalf("row %+v, want Cal's handle at medium via, score %.4f", got, want.row.Score)
+		}
+	})
+	t.Run("AC-2.1", func(t *testing.T) {
+		bob, rows := kinTree(t, "Bob Ames", kinSide{shape: spouse}, kinSide{shape: spouse}, kinSide{shape: kinBoth(spouse, marriage)})
+		if !onHandle(rows[1].row, bob, graphalign.AssessMedium) || !sameScore(rows[1].row.Score, rows[0].row.Score) {
+			t.Fatalf("row %+v, want Bob's handle at medium, score %.4f", rows[1].row, rows[0].row.Score)
+		}
+	})
+	t.Run("AC-2.2", func(t *testing.T) {
+		_, witness := kinTree(t, "Bob Ames", kinSide{shape: spouse}, kinSide{shape: witnessed})
+		want := direct(t, "Bob Ames", spouse, false, false, false)
+		bob, rows := kinTree(t, "Bob Ames", kinSide{shape: marriage}, kinSide{shape: marriage})
+		got := rows[0].row
+		if !onHandle(got, bob, graphalign.AssessWeak) || got.Score >= want.row.Score || got.Score <= witness[0].row.Score {
+			t.Fatalf("row %+v, want Bob's handle at weak, between %.4f and %.4f", got, witness[0].row.Score, want.row.Score)
+		}
+	})
+	t.Run("AC-2.3", func(t *testing.T) {
+		_, wantRows := kinTree(t, "Bob Ames", kinSide{shape: marriage}, kinSide{shape: spouse, sexOnly: true, fixAnn: true})
+		bob, rows := kinTree(t, "Bob Ames", kinSide{shape: marriage}, kinSide{shape: marriage, sexOnly: true, fixAnn: true})
+		alt, ok := firstAlternative(rows[0].row, bob)
+		if !ok || len(wantRows[0].row.Alternatives) == 0 || !sameScore(alt.Score, wantRows[0].row.Alternatives[0].Score) {
+			t.Fatalf("row %+v, want Bob's handle first, via, score %+v", rows[0].row, wantRows[0].row.Alternatives)
+		}
+	})
+	t.Run("AC-2.4", func(t *testing.T) {
+		_, wantRows := kinTree(t, "Cal Ames", kinSide{shape: grandparent}, kinSide{shape: grandparent, fixAnn: true})
+		cal, rows := kinTree(t, "Cal Ames", kinSide{shape: kinChain, mid: true}, kinSide{shape: kinChain, mid: true, fixAnn: true})
+		got := rows[0].row
+		if !onHandle(got, cal, graphalign.AssessMedium) || !sameScore(got.Score, wantRows[0].row.Score) {
+			t.Fatalf("row %+v, want Cal's handle at medium, score %.4f", got, wantRows[0].row.Score)
+		}
+	})
+	t.Run("AC-2.5", func(t *testing.T) {
+		_, rows := kinTree(t, "Bob Ames", kinSide{shape: marriage}, kinSide{shape: marriage}, kinSide{shape: kinBoth(spouse, marriage)})
+		if !sameScore(rows[1].row.Score, rows[0].row.Score) {
+			t.Fatalf("both shapes %.4f, marriage alone %.4f, want equal", rows[1].row.Score, rows[0].row.Score)
+		}
+	})
+}
