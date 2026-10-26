@@ -97,7 +97,7 @@ final class SourceCopyModel {
     /// The original's Artifacts in workspace order, minus the unchecked ones. A
     /// deleted Artifact drops out and a new one starts checked.
     var artifactIDsToCopy: [String] {
-        PVArtifactChecklistState.checkedIDs(
+        PVChecklistState.checkedIDs(
             ids: (workspace?.artifacts ?? []).map(\.id),
             excluded: choices.excludedArtifactIDs,
             locked: []

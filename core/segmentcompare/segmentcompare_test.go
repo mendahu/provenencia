@@ -7,7 +7,6 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/propertycompare"
@@ -290,15 +289,6 @@ func TestInvariants(t *testing.T) {
 	}
 }
 
-func bridgeOf(t *testing.T, key string) connectrules.Bridge {
-	t.Helper()
-	b, ok := connectrules.LookupBridge(key)
-	if !ok {
-		t.Fatalf("no bridge %q", key)
-	}
-	return b
-}
-
 func TestLinkOf(t *testing.T) {
 	subject := vocabkey.BridgeTerm(vocabkey.RoleSubject)
 	tests := []struct {
@@ -324,7 +314,7 @@ func TestLinkOf(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := segmentcompare.LinkOf(bridgeOf(t, tt.bridge), tt.term, tt.eventType, tt.firstEnd)
+			got := segmentcompare.LinkOf(segmentcomparetest.Bridge(t, tt.bridge), tt.term, tt.eventType, tt.firstEnd)
 			if got != tt.want {
 				t.Errorf("LinkOf = %+v, want %+v", got, tt.want)
 			}
@@ -344,7 +334,7 @@ func TestEventEndpoint(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.bridge, func(t *testing.T) {
-			first, ok := segmentcompare.EventEndpoint(bridgeOf(t, tt.bridge))
+			first, ok := segmentcompare.EventEndpoint(segmentcomparetest.Bridge(t, tt.bridge))
 			if first != tt.first || ok != tt.ok {
 				t.Errorf("EventEndpoint = (%v, %v), want (%v, %v)", first, ok, tt.first, tt.ok)
 			}
@@ -370,7 +360,7 @@ func TestKeys(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b := bridgeOf(t, tt.bridge)
+			b := segmentcomparetest.Bridge(t, tt.bridge)
 			first, second := segmentcompare.Keys(b, tt.term, tt.eventType, terms)
 			if first != tt.first || second != tt.second {
 				t.Errorf("Keys = (%v, %v), want (%v, %v)", first, second, tt.first, tt.second)

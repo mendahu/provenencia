@@ -1846,4 +1846,9 @@ struct CitationAuthoringNavigationTests {
             draftAfterCommit: CitationAuthoringDraftAfterCommit()
         ) == nil)
     }
+
+    @Test func noArtifactsCalloutNamesTheGraphLinks() {
+        #expect(L10n.string(L10n.CitationComposer.noArtifactsCallout)
+            == "Every citation needs an artifact linked to this evidence graph. Add one on the Source page, or link an existing one from its card, then return here.")
+    }
 }

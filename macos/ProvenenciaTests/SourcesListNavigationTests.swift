@@ -2,6 +2,11 @@ import Foundation
 import Testing
 @testable import Provenencia
 
+/// The graph list grouped by Source the way the session's index does.
+private func graphsBySource(_ graphs: [CatalogEvidenceGraph]) -> [String: [CatalogEvidenceGraph]] {
+    EvidenceGraphIndex(revision: 0, rows: graphs).bySource
+}
+
 @Suite
 struct SourcesListNavigationTests {
     private func source(id: String = "s1", hasArtifact: Bool = true) -> CatalogSource {
@@ -31,13 +36,13 @@ struct SourcesListNavigationTests {
             evidenceGraph("g-2", sourceID: "s1", name: "Jones", artifactIDs: ["a2"]),
             evidenceGraph("g-9", sourceID: "s2", name: "Other Source's", artifactIDs: ["a1"]),
         ]
-        let location = SourcesListNavigation.graphLocation(for: source(), graphs: SourcesListNavigation.graphsBySource(graphs))
+        let location = SourcesListNavigation.graphLocation(for: source(), graphs: graphsBySource(graphs))
         #expect(location?.sourceSurface == .graph)
         #expect(location?.sourceId == "s1")
         #expect(location?.graphId == "g-1")
         #expect(location?.ref == "SRC-AAAAA")
         #expect(location?.title == "Passport")
-        #expect(SourcesListNavigation.entryGraph(sourceID: "s2", in: SourcesListNavigation.graphsBySource(graphs))?.id == "g-9")
+        #expect(SourcesListNavigation.entryGraph(sourceID: "s2", in: graphsBySource(graphs))?.id == "g-9")
     }
 
     @Test func graphBlockedReasonNeedsTheGraphList() {
@@ -47,18 +52,6 @@ struct SourcesListNavigationTests {
         #expect(SourcesListNavigation.graphBlockedReason(hasArtifact: true, graphListLoaded: false, location: nil) == nil)
         #expect(SourcesListNavigation.graphBlockedReason(hasArtifact: true, graphListLoaded: true, location: nil) == reason)
         #expect(SourcesListNavigation.graphBlockedReason(hasArtifact: true, graphListLoaded: true, location: location) == nil)
-    }
-
-    @Test func graphsBySourceKeepsListOrder() {
-        let map = SourcesListNavigation.graphsBySource([
-            evidenceGraph("g-1", sourceID: "A", name: "Default"),
-            evidenceGraph("g-2", sourceID: "B", name: "Default"),
-            evidenceGraph("g-3", sourceID: "A", name: "Jones"),
-        ])
-        #expect(map["A"]?.map(\.id) == ["g-1", "g-3"])
-        #expect(map["B"]?.map(\.id) == ["g-2"])
-        #expect(SourcesListNavigation.entryGraph(sourceID: "A", in: map)?.id == "g-1")
-        #expect(SourcesListNavigation.entryGraph(sourceID: "C", in: map) == nil)
     }
 
     @Test func graphLocationOpensTheGivenGraph() {
@@ -81,10 +74,10 @@ struct SourcesListNavigationTests {
             evidenceGraph("g-1", sourceID: "s1", name: "Default"),
             evidenceGraph("g-2", sourceID: "s1", name: "Jones", artifactIDs: ["a1"]),
         ]
-        #expect(SourcesListNavigation.graphLocation(for: source(), graphs: SourcesListNavigation.graphsBySource(noLinks)) == nil)
+        #expect(SourcesListNavigation.graphLocation(for: source(), graphs: graphsBySource(noLinks)) == nil)
         // The Source has no graph in the list (not loaded, or none).
         #expect(SourcesListNavigation.graphLocation(for: source(), graphs: [:]) == nil)
-        let other = SourcesListNavigation.graphsBySource([
+        let other = graphsBySource([
             evidenceGraph("g-1", sourceID: "s1", name: "Default", artifactIDs: ["a1"]),
         ])
         #expect(SourcesListNavigation.graphLocation(for: source(id: "s3"), graphs: other) == nil)

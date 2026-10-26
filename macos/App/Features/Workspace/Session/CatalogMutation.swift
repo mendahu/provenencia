@@ -90,6 +90,27 @@ struct CatalogWriteEffects: Sendable, Equatable {
 
     static let empty = CatalogWriteEffects()
 
+    /// These effects and `other`'s as one: ids once each in first-seen order,
+    /// the later write's activity. One `apply` of the result does what two
+    /// would, with one reload per cached read instead of two.
+    func merging(_ other: CatalogWriteEffects) -> CatalogWriteEffects {
+        func union(_ a: [String], _ b: [String]) -> [String] {
+            var seen = Set<String>()
+            return (a + b).filter { seen.insert($0).inserted }
+        }
+        return CatalogWriteEffects(
+            handles: union(handles, other.handles),
+            evidenceGraphs: union(evidenceGraphs, other.evidenceGraphs),
+            citationSources: union(citationSources, other.citationSources),
+            lists: lists.union(other.lists),
+            structure: structure || other.structure,
+            headerHandles: union(headerHandles, other.headerHandles),
+            handleScopes: union(handleScopes, other.handleScopes),
+            sourceScopes: union(sourceScopes, other.sourceScopes),
+            activity: other.activity.revision >= activity.revision ? other.activity : activity
+        )
+    }
+
     var touchedHandles: [String] {
         var seen = Set<String>()
         return (handles + headerHandles).filter { seen.insert($0).inserted && !$0.isEmpty }

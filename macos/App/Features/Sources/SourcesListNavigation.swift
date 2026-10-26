@@ -14,12 +14,6 @@ enum SourcesListNavigation {
         graphs[sourceID]?.first
     }
 
-    /// The graph list grouped by Source in one pass, each Source's graphs in
-    /// list order (sorted by name).
-    static func graphsBySource(_ graphs: [CatalogEvidenceGraph]) -> [String: [CatalogEvidenceGraph]] {
-        Dictionary(grouping: graphs, by: \.sourceID)
-    }
-
     /// Why Open graph is blocked, or nil when it is
     /// open or the reason is not yet known. With no location, a Source without
     /// an Artifact, or one whose graph list has a value but whose entry graph
@@ -33,7 +27,7 @@ enum SourcesListNavigation {
 
     /// Why one graph's Open is blocked: it links no Artifact. Nil when it opens.
     static func graphBlockedReason(for graph: CatalogEvidenceGraph) -> String? {
-        graph.artifactIDs.isEmpty ? L10n.string(L10n.Sources.graphNeedsArtifactTooltip) : nil
+        graph.hasArtifact ? nil : L10n.string(L10n.Sources.graphNeedsArtifactTooltip)
     }
 
     /// Opens the entry graph's canvas when that graph links at least one
@@ -46,7 +40,7 @@ enum SourcesListNavigation {
     /// Opens one graph's canvas when it links at least one Artifact; `nil`
     /// keeps its Open blocked (`graphBlockedReason(for:)` says why).
     static func graphLocation(for source: CatalogSource, graph: CatalogEvidenceGraph) -> WorkspaceLocation? {
-        guard !graph.artifactIDs.isEmpty else { return nil }
+        guard graph.hasArtifact else { return nil }
         return .evidenceGraph(
             sourceId: source.id,
             graphId: graph.id,

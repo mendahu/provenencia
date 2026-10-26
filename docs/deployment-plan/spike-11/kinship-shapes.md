@@ -38,7 +38,7 @@ Matching does not know these are one fact. `segmentcompare.Corresponds` lines up
 ## Counting once
 
 - **One fact, one link per side.** When a side records the same fact in two shapes (a spouse relationship and a shared marriage between the same two people), the side carries one spouse link between them, whose bridge Subjects are both shapes'. It is credited once. The loaders already merge same-ends, same-key edges (`layer.go`'s merge on `edgeSeenKey`, `loadCanon`'s dedupe); implied links go through that merge, so there is no second one.
-- **The event path still counts on its own.** When both sides record the marriage, the people still meet through the marriage event (a participation link to a different neighbor). The implied spouse link adds its own small credit (the segment registry's Other pair, 0.25 support and 0.25 credit) on top. That is the same as recording the marriage and the relationship on both sides today. Proposed: accept it; the credit is small and the facts agree.
+- **Counted once across sides** (user, 2026-10-26). When both sides record the marriage and the walk pairs the two marriage events, the people already meet through the event path, so the implied spouse link adds nothing. When the events are not paired (a sparse marriage whose event row is not placed), the implied link credits. The same holds for a birth's parents and for a chain through a paired middle parent. Each link carries its shapes (pattern and pivot), and graph alignment's `corresponding` skips the pair (S11-39). A link both sides also record directly keeps today's credit. Planning measured the effect: an undated marriage on both sides stays at today's 2.875 (weak) for a named couple, while a marriage against a spouse relationship scores 3.375 (medium), the event path passing on the marriage's own evidence.
 
 ## Weight
 
@@ -64,6 +64,6 @@ In [`ideas/kinship-view.md`](../../ideas/kinship-view.md):
 
 ## Open questions
 
-1. **Counting once across paths.** Proposed above: one link per side per fact; the event path and the implied link each credit when both sides record the event. The alternative is to drop an implied link that both sides also share through the event, which needs the walk to know the shapes.
+1. **Counting once across paths.** Answered (user, 2026-10-26): drop the implied link's credit when both sides share the shape and its pivot is paired; see [Counting once](#counting-once).
 2. **The sheet line.** Is a line that says how a fact was recorded wanted in this spike (S11-40), or is matching enough for now?
 3. **Birth roles beyond `father` / `mother`.** A birth participant recorded with role `child` (rather than `subject`), or a baptism's parents. Proposed: birth with `subject` only; the rest waits.

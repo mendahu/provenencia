@@ -20,8 +20,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// Default graph, as the engine does; tests seed more directly, with ids that
     /// differ from their Source's.
     var evidenceGraphsByProject: [String: [CatalogEvidenceGraph]] = [:]
-    /// What `getEvidenceGraphUnlinkImpact` returns, filtered to the Artifacts asked.
-    var unlinkImpactBlocks: [CatalogEvidenceGraphUnlinkBlock] = []
+    /// What `getEvidenceGraphUnlinkImpact` returns for each graph, filtered to the Artifacts asked.
+    var unlinkImpactBlocksByGraph: [String: [CatalogEvidenceGraphUnlinkBlock]] = [:]
     var credibilityBySource: [String: CatalogCredibilityAssessment] = [:]
     var credibilityGradesByProject: [String: [CatalogCredibilityGrade]] = [:]
     var sourceTypesByProject: [String: [CatalogSourceType]] = [:]
@@ -93,10 +93,15 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var getEvidenceGraphProgressCalls = 0
     var deleteSourceCalls = 0
     var deleteArtifactCalls = 0
+    var updateArtifactCalls = 0
+    /// When set, `updateArtifact` throws.
+    var updateArtifactError: Error?
     var deleteEvidenceGraphCalls = 0
     var createEvidenceGraphCalls = 0
     var updateEvidenceGraphCalls = 0
     var getEvidenceGraphUnlinkImpactCalls = 0
+    /// The graph id of each `getEvidenceGraphUnlinkImpact` call, in order.
+    var getEvidenceGraphUnlinkImpactGraphIDs: [String] = []
     /// Optional Impact override keyed by entity id (tests).
     var deleteImpactByID: [String: CatalogDeleteImpact] = [:]
     /// Optional override for graph-progress rows by graph id (tests). Missing keys compute from subjects/observations.
@@ -106,6 +111,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var createEvidenceGraphError: Error?
     var updateEvidenceGraphError: Error?
     var getEvidenceGraphUnlinkImpactError: Error?
+    var linkEvidenceGraphArtifactError: Error?
+    /// When true, each `linkEvidenceGraphArtifact` suspends until
+    /// `releaseLinkEvidenceGraphArtifact()`, so a test can act mid-save.
+    var holdsLinkEvidenceGraphArtifact = false
+    private var heldLinkEvidenceGraphArtifacts: [CheckedContinuation<Void, Never>] = []
+    var listEvidenceGraphsCalls = 0
+    var unlinkEvidenceGraphArtifactError: Error?
     var getEvidenceGraphProgressError: Error?
     /// Monotonic stand-in for audit_transactions.revision (Sources Updated sort).
     private var nextAuditRevision: Int64 = 1
@@ -691,6 +703,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         description: String
     ) async throws -> (CatalogArtifact, CatalogWriteEffects) {
         return try withState {
+            updateArtifactCalls += 1
+            if let updateArtifactError { throw updateArtifactError }
             for (sourceID, arts) in artifactsBySource {
                 if let idx = arts.firstIndex(where: { $0.id == artifactID }) {
                     var copy = arts
@@ -736,6 +750,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func listEvidenceGraphs(projectDir: String) async throws -> [CatalogEvidenceGraph] {
         try withState {
+            listEvidenceGraphsCalls += 1
             if let listEvidenceGraphsError { throw listEvidenceGraphsError }
             markCatalogSessionHeld(projectDir)
             return (evidenceGraphsByProject[projectDir] ?? []).sorted(by: Self.graphListOrder)
@@ -806,16 +821,36 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         graphID: String,
         artifactID: String
     ) async throws -> CatalogWriteEffects {
-        try withState {
+        if withState({ holdsLinkEvidenceGraphArtifact }) {
+            await withCheckedContinuation { continuation in
+                withState { heldLinkEvidenceGraphArtifacts.append(continuation) }
+            }
+        }
+        return try withState {
+            if let linkEvidenceGraphArtifactError { throw linkEvidenceGraphArtifactError }
             markCatalogSessionHeld(projectDir)
             guard let idx = evidenceGraphsByProject[projectDir]?.firstIndex(where: { $0.id == graphID }) else {
                 throw StoreBoom.boom
             }
+            recordedCalls.append("linkEvidenceGraphArtifact graph=\(graphID) artifact=\(artifactID)")
             if evidenceGraphsByProject[projectDir]?[idx].artifactIDs.contains(artifactID) == false {
                 evidenceGraphsByProject[projectDir]?[idx].artifactIDs.append(artifactID)
             }
             return Self.graphEffects(sourceID: evidenceGraphsByProject[projectDir]?[idx].sourceID)
         }
+    }
+
+    /// Number of `linkEvidenceGraphArtifact` calls suspended by `holdsLinkEvidenceGraphArtifact`.
+    var heldLinkEvidenceGraphArtifactCount: Int {
+        withState { heldLinkEvidenceGraphArtifacts.count }
+    }
+
+    /// Resumes the oldest held `linkEvidenceGraphArtifact` call.
+    func releaseLinkEvidenceGraphArtifact() {
+        let continuation = withState {
+            heldLinkEvidenceGraphArtifacts.isEmpty ? nil : heldLinkEvidenceGraphArtifacts.removeFirst()
+        }
+        continuation?.resume()
     }
 
     func unlinkEvidenceGraphArtifact(
@@ -825,10 +860,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         artifactID: String
     ) async throws -> CatalogWriteEffects {
         try withState {
+            if let unlinkEvidenceGraphArtifactError { throw unlinkEvidenceGraphArtifactError }
             markCatalogSessionHeld(projectDir)
             guard let idx = evidenceGraphsByProject[projectDir]?.firstIndex(where: { $0.id == graphID }) else {
                 throw StoreBoom.boom
             }
+            recordedCalls.append("unlinkEvidenceGraphArtifact graph=\(graphID) artifact=\(artifactID)")
             evidenceGraphsByProject[projectDir]?[idx].artifactIDs.removeAll { $0 == artifactID }
             return Self.graphEffects(sourceID: evidenceGraphsByProject[projectDir]?[idx].sourceID)
         }
@@ -836,14 +873,16 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func getEvidenceGraphUnlinkImpact(
         projectDir: String,
-        graphID _: String,
+        graphID: String,
         artifactIDs: [String]
     ) async throws -> [CatalogEvidenceGraphUnlinkBlock] {
         try withState {
             getEvidenceGraphUnlinkImpactCalls += 1
+            getEvidenceGraphUnlinkImpactGraphIDs.append(graphID)
             if let getEvidenceGraphUnlinkImpactError { throw getEvidenceGraphUnlinkImpactError }
             markCatalogSessionHeld(projectDir)
-            return artifactIDs.compactMap { id in unlinkImpactBlocks.first { $0.artifactID == id } }
+            let blocks = unlinkImpactBlocksByGraph[graphID] ?? []
+            return artifactIDs.compactMap { id in blocks.first { $0.artifactID == id } }
         }
     }
 

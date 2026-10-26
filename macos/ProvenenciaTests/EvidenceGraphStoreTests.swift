@@ -184,13 +184,7 @@ struct EvidenceGraphStoreTests {
 
     @Test func unlinkImpactFiltersToAskedArtifacts() async throws {
         let store = seededStore()
-        let group = { (via: String) in
-            CatalogDeleteImpactGroup(via: via, kind: "citation", total: 1, listed: [])
-        }
-        store.unlinkImpactBlocks = [
-            CatalogEvidenceGraphUnlinkBlock(artifactID: "a1", citations: group("evidencegraphs.artifact_in_use")),
-            CatalogEvidenceGraphUnlinkBlock(artifactID: "a2", citations: group("evidencegraphs.artifact_in_use")),
-        ]
+        store.unlinkImpactBlocksByGraph["g1"] = [unlinkBlock("a1", citations: 1), unlinkBlock("a2", citations: 1)]
         let blocks = try await store.getEvidenceGraphUnlinkImpact(
             projectDir: projectDir, graphID: "g1", artifactIDs: ["a2"]
         )

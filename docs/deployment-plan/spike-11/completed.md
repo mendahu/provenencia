@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-38 — Kinship patterns
+
+**Landed 2026-10-25** in [#564](https://github.com/mendahu/provenencia/pull/564). A new pure package, `core/kinship`, reads one side's links through three patterns: two spouses in a marriage imply a spouse link, a father or mother and the subject of a birth imply a parent link, and a parent of a parent implies a grandparent link. `Derive` returns only the implied links, keyed as recorded relationships are, with the bridge Subjects, event and links each was made from; the term keys are new `vocabkey` constants pinned to the seed. Nothing calls it until S11-39. Nothing changes for researchers.
+
 ## S11-48 — Religion and languages spoken on a person
 
 **Landed 2026-10-25** in [#563](https://github.com/mendahu/provenencia/pull/563). New projects' persons take Religion and Languages spoken as term Properties (cardinality multiple), seeded with Catholic and English; the researcher adds the rest with Add custom. Catalogs made earlier get them from S11-44's command.

@@ -98,7 +98,7 @@ struct EvidenceGraphModelTests {
         ]
         store.evidenceGraphsByProject[projectDir] = [
             CatalogEvidenceGraph(
-                id: graphID, ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: ["art-0"]
+                id: graphID, ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: ["art-0", "a", "b", "c"]
             ),
         ]
         store.propertyTermsByProperty["prop-rel-type"] = [
@@ -791,24 +791,74 @@ struct EvidenceGraphModelTests {
 
     @Test func noArtifactDisablesArmingAndComposerLocation() async {
         let store = makeStore()
-        store.sourcesByProject[projectDir] = [
-            CatalogSource(
-                id: sourceID,
-                ref: "SRC-1",
-                sourceTypeID: "type-book",
-                title: "Bare",
-                description: "",
-                hasArtifact: false
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: graphID, ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: []
             ),
         ]
         let model = makeModel(store: store)
-        let listKey = CatalogQueryKey.sourcesList(project: model.session.projectKey)
-        model.session.setQueryValue(listKey, value: store.sourcesByProject[projectDir] ?? [])
         await model.prepare()
         #expect(model.canCite == false)
         model.toggleArm(.person)
         #expect(model.armedKind == nil)
         #expect(model.composerLocation(for: "p1") == nil)
+    }
+
+    @Test func canCiteNeedsALinkedArtifact() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        // No graph list value yet: unknown, so the tools stay usable.
+        #expect(model.canCite)
+        model.toggleArm(.person)
+        #expect(model.armedKind != nil)
+
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: graphID, ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: []
+            ),
+        ]
+        await model.prepare()
+        #expect(!model.canCite)
+        #expect(model.armedKind == nil)
+
+        // A loaded list without this graph cannot be cited either.
+        model.session.setQueryValue(model.session.evidenceGraphsKey, value: [CatalogEvidenceGraph]())
+        #expect(!model.canCite)
+        model.session.setQueryValue(model.session.evidenceGraphsKey, value: [
+            CatalogEvidenceGraph(
+                id: graphID, ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: ["a"]
+            ),
+        ])
+        #expect(model.canCite)
+
+        #expect(L10n.string(L10n.EvidenceGraph.noArtifactTitle) == "No artifacts in this evidence graph")
+        #expect(L10n.string(L10n.EvidenceGraph.noArtifactMessage)
+            == "Citing needs an artifact linked to this evidence graph. Place tools, Connect, and Add property stay disabled until one is linked.")
+        #expect(L10n.string(L10n.EvidenceGraph.noArtifactAction) == "Go to Source page")
+    }
+
+    @Test func fileRowsAreTheGraphsLinkedArtifacts() async {
+        let store = makeStore()
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: graphID, ref: "GPH-1", sourceID: sourceID, name: "Jones", description: "", artifactIDs: ["P3"]
+            ),
+        ]
+        let model = makeModel(store: store)
+        await model.prepare()
+        let source = CatalogSource(
+            id: sourceID, ref: "SRC-1", sourceTypeID: "type-book", title: "Census", description: "",
+            hasArtifact: true
+        )
+        model.session.setQueryValue(
+            CatalogQueryKey.sourceWorkspace(project: model.session.projectKey, sourceId: sourceID),
+            value: CatalogSourceWorkspace(
+                source: source, notes: [], metadata: [],
+                artifacts: [artifact("P1", label: "Page 1"), artifact("P2", label: "Page 2"), artifact("P3", label: "Page 3")],
+                credibility: nil
+            )
+        )
+        #expect(model.fileRows.map(\.id) == ["P3"])
     }
 
     @Test func deleteUncitedSubjectSucceeds() async throws {
@@ -2203,21 +2253,12 @@ struct EvidenceGraphModelTests {
 
     @Test func selectStaysAvailableWithoutAnArtifact() async {
         let store = makeStore()
-        store.sourcesByProject[projectDir] = [
-            CatalogSource(
-                id: sourceID,
-                ref: "SRC-1",
-                sourceTypeID: "type-book",
-                title: "Bare",
-                description: "",
-                hasArtifact: false
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: graphID, ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: []
             ),
         ]
         let model = makeModel(store: store)
-        model.session.setQueryValue(
-            CatalogQueryKey.sourcesList(project: model.session.projectKey),
-            value: store.sourcesByProject[projectDir] ?? []
-        )
         await model.prepare()
         #expect(model.canCite == false)
         model.replacePrimarySelection([])
