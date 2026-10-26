@@ -50,6 +50,7 @@ The first quasi-family-tree visualization in the app.
 - **R-16. Simple, not a canvas.** A plain laid-out diagram, not a `GraphCanvas` host or a pannable/zoomable surface.
 - **R-17. The nuclear family.** Shows this person's **parents, siblings, spouse(s), and children**: the people they grew up with and the people who grew up with them.
 - **R-18. Implied relationships count.** The diagram shows as much as can be concluded automatically: direct links, links implied through events (shared marriage, a birth's parents, already read through `canonlinks.Reader.For`, S11-49), and **siblings from a shared parent** (new). Extending the graph cache's implied links to make this easy is in scope.
+- **R-18a. Siblings are for the page, not for matching.** Matching keeps its current patterns (spouse, parent, grandparent); Promote and the evidence sheet do not count a shared parent as sibling evidence. Revisit if matching needs it later ([`kinship-view.md`](../../ideas/kinship-view.md)).
 - **R-19. Several families.** A person with more than one spouse shows each family. A person with conflicting parents shows each set. The layout handles both.
 - **R-20. Every relative is a link** to that relative's Person page, so the user can bounce from person to person.
 - **R-21. Each person on the diagram shows:** a likeness, name, birth date and place, death date and place, colored per R-3. This **person tile** is shared with the Timeline (R-27).
@@ -109,7 +110,7 @@ Spike 12 is expected to close before Spike 13 starts. Spike 11 may still be open
 
 | Spike 11 PR | Status (2026-10-26) | Where it meets Spike 13 |
 | --- | --- | --- |
-| S11-39 Matching reads kinship shapes | Blocked — re-plan | Sibling inference (R-18) adds a pattern to `core/kinship`. Matching would start counting siblings too, moving S11-39's goldens. Decide whether the sibling pattern is for the page only or also for matching, and sequence the two PRs |
+| S11-39 Matching reads kinship shapes | Blocked — re-plan | Siblings are page-only (R-18a), so the sibling inference must not reach matching's pattern set and S11-39's goldens do not move. Both still edit `core/kinship` and the graph cache's kinship results, so the sibling PR names S11-39 as a dependency or rebases on it |
 | S11-40 / S11-42 Implied links in claim evidence and on the evidence sheet | Scoped | Claim review (R-40) shows a claim's evidence and argument; S11-40 changes what the claim evidence query returns for relationships. The review view should reuse that query and sheet, so it follows S11-40 or is designed to absorb it |
 | S11-29 Quote nicknames and add former surnames | Planned | Changes how Person titles render: the header (R-4), Family tiles and Timeline participants |
 | S11-30 Gender meets sex at birth | In review | Feeds the gender/sex color treatment reused on every tile (R-3) |
