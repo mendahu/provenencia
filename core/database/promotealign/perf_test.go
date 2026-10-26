@@ -22,6 +22,7 @@ import (
 // The budgets of S11-21 D-1. They assume go test runs packages in parallel on
 // four cores, as scripts/check-pr.sh and CI do.
 const (
+	budgetWarmOnOpen   = 2500 * time.Millisecond
 	budgetCold         = 2500 * time.Millisecond
 	budgetWarm         = 250 * time.Millisecond
 	budgetAfterCommit  = 1500 * time.Millisecond
@@ -153,9 +154,21 @@ func TestLargeSourceBudgets(t *testing.T) {
 		}
 	})
 
+	// What the open spinner covers: the alias index, name format, shortlist
+	// kinds and name index.
+	t.Run("warm at open", func(t *testing.T) {
+		d := fastest(2, func() time.Duration {
+			f.c.Graph().Drop()
+			return since(func() { must(t, catalogsession.WarmOnOpen(f.c)) })
+		})
+		over(t, "warm at open", d, budgetWarmOnOpen)
+	})
+
+	// The first proposal after an open.
 	t.Run("cold", func(t *testing.T) {
 		d := fastest(2, func() time.Duration {
 			f.c.Graph().Drop()
+			must(t, catalogsession.WarmOnOpen(f.c))
 			return since(func() { propose() })
 		})
 		over(t, "cold proposal", d, budgetCold)
@@ -244,6 +257,7 @@ func TestLargeSourceBudgets(t *testing.T) {
 	t.Run("births at one place cold", func(t *testing.T) {
 		d := fastest(2, func() time.Duration {
 			f.c.Graph().Drop()
+			must(t, catalogsession.WarmOnOpen(f.c))
 			return since(proposeOnePlace)
 		})
 		over(t, "cold proposal on the one-place Source", d, budgetOnePlaceCold)
