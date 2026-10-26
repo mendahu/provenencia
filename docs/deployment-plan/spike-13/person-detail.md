@@ -23,6 +23,7 @@ The Person page (`macos/App/Features/Conclusions/PersonDetailView.swift`, worded
 - **R-4. A fixed header.** The current header (name, born/died line, portrait, gender badge, ref) stays at the top whichever section is showing. It is display only: clean and easy to read, with no controls.
 - **R-5. Five sections.** Below the header the page is divided into **Vitals**, **Family**, **Timeline**, **Gallery**, **Sources**.
 - **R-6. Easy switching.** The user can move between the five sections quickly from anywhere on the page.
+- **R-6a. Sections are places.** Switching sections pushes navigation history; Back / Forward and restore return to the section (2026-10-26).
 - **R-7. The pattern is a design call.** Stacked sections with jump shortcuts, tab navigation, or something else: the design brief explores the options and picks an elegant one.
 
 ## Provenance sheet (new control)
@@ -78,7 +79,7 @@ The user thinks of this section as "where the sources are". The data is the pers
 
 - **R-33. One entry per identity claim.**
 - **R-34. Grouped by Source.** Since Spike 12 a Source can hold several Evidence graphs, so one Source can contribute several claims. Claims from the same Source are grouped under it.
-- **R-35. Each Source group shows** the Source's title, type, and date, and the claims' Subjects beneath it as Evidence graph subject cards.
+- **R-35. Each Source group shows** the Source's title, type, and date (a new first-class Source date, [`source-provenance-date.md`](source-provenance-date.md)), and the claims' Subjects beneath it as Evidence graph subject cards.
 - **R-36. Groups are ordered by Source title.**
 - **R-37. Each Source links** to its Source page.
 
@@ -87,12 +88,12 @@ The user thinks of this section as "where the sources are". The data is the pers
 On each claim in the Sources section.
 
 - **R-38. Remove.** Un-promote the Subject from this person, the same behavior as the un-promote control in the Evidence graph today.
-- **R-39. Removing the last claim** deletes the canonical person. A warning says so before it happens; if the user proceeds, the app returns to the Persons list.
+- **R-39. Removing the last claim** deletes the canonical person, wherever the unpromote happens (the Evidence graph too). A warning says so before it happens; if the user proceeds, the app returns to the Persons list.
 - **R-40. Review (view only).** Open the claim's pinned evidence and its argument, so the user can see why the Subject was connected to this person. Editing pins or the argument is not this spike.
 
 ## Not this spike
 
-- **Event and Place pages in the new layout:** later; the provenance sheet is built to be reused (R-13).
+- **Event and Place pages in the new layout:** later; the provenance sheet is built to be reused (R-13). They keep the Why accordion until then; it is deleted when they adopt the sheet.
 - **Reconciliation Claims** (manual reconciliation) in the provenance sheet: later; the sheet leaves room (R-10).
 - **Editing an identity claim's pins or argument:** later; this spike is view only (R-40).
 - **Weak-claim alerts and the claim review queue:** stay parked in [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md).
