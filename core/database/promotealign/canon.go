@@ -8,6 +8,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/kinship"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -32,7 +34,11 @@ type candidatesMemo struct {
 // each unfixed Subject (loadCandidatesMemo), then every link those handles
 // have. Link order is association ref, then the neighbor's ref, which is the
 // order the walk used to break ties. Every handle's profile is built once: the
-// shortlisted ones together, the ones the walk reaches after it.
+// shortlisted ones together, the ones the walk reaches after it. Recorded
+// links come from the walk and implied ones from canonlinks.Reader.For, which
+// answers from the graph cache's results for each walked person; both go
+// through one linkSet, so a link read from either end or recorded both ways
+// merges, and the implied links follow the recorded ones in walk order.
 func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer graphalign.Layer, fixed []graphalign.Fixed, cfg graphalign.Config, terms segmentcompare.Terms) (graphalign.Canon, error) {
 	types := prof.types
 
@@ -103,8 +109,12 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 		return handles[string(seeds[i])].Ref < handles[string(seeds[j])].Ref
 	})
 
-	var edges []graphalign.CanonEdge
-	edgeSeen := map[seenEdge]bool{}
+	reader, err := canonlinks.NewReader(g, matchregistry.Default().Kinship)
+	if err != nil {
+		return graphalign.Canon{}, err
+	}
+	set := newLinkSet()
+	var walkedPeople [][]byte
 	walked := map[string]bool{}
 	queue := append([][]byte(nil), seeds...)
 	for len(queue) > 0 {
@@ -121,6 +131,9 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 				continue
 			}
 			walked[string(id)] = true
+			if kinds[string(id)] == vocabkey.Person {
+				walkedPeople = append(walkedPeople, id)
+			}
 			n, err := g.Node(id)
 			if err != nil {
 				return graphalign.Canon{}, err
@@ -151,13 +164,7 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 					continue
 				}
 				if from, to, keyFrom, keyTo, ok := canonlinks.EdgeOf(id, n, l, neighbor, prof.eventTypeProp, terms); ok {
-					if ek := edgeSeenKey(from, to, keyFrom, keyTo); !edgeSeen[ek] {
-						edgeSeen[ek] = true
-						edges = append(edges, graphalign.CanonEdge{
-							From: append([]byte(nil), from...), To: append([]byte(nil), to...),
-							KeyFrom: keyFrom, KeyTo: keyTo,
-						})
-					}
+					set.add(sideLink{Edge: kinship.Edge{A: from, B: to, KeyA: keyFrom, KeyB: keyTo}})
 				}
 				if _, ok := handles[string(neighbor.ID)]; !ok {
 					handles[string(neighbor.ID)] = neighbor
@@ -166,6 +173,26 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 				}
 			}
 		}
+	}
+
+	for _, id := range walkedPeople {
+		implied, err := reader.For(id)
+		if err != nil {
+			return graphalign.Canon{}, err
+		}
+		for _, imp := range implied {
+			_, aOK := handles[string(imp.A)]
+			_, bOK := handles[string(imp.B)]
+			if aOK && bOK {
+				set.addImplied(imp)
+			}
+		}
+	}
+	edges := make([]graphalign.CanonEdge, 0, len(set.links))
+	for _, l := range set.links {
+		edges = append(edges, graphalign.CanonEdge{
+			From: l.A, To: l.B, KeyFrom: l.KeyA, KeyTo: l.KeyB, Recording: l.Recording,
+		})
 	}
 
 	nodes := make([]*graphcache.Node, 0, len(handles))
