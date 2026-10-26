@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-50 — Matching warms while the project opens
+
+**Landed 2026-10-26** in [#570](https://github.com/mendahu/provenencia/pull/570). Opening a project now loads every person, event and place into the graph cache and builds Promote's name index under the open spinner (`catalogsession.WarmOnOpen` ends with the new `promotealign.Warm`), so the first Promote pays only for its own Source. `graphcache` tracks `WarmNeeded`, set by every drop that loses the warm state, and `Do` warms again before it returns; a handle commit still drops only the index. The budgets gain a "warm at open" figure, and cold is the first proposal after it.
+
 ## S11-49 — Kinship links in the graph cache
 
 **Landed 2026-10-26** in [#569](https://github.com/mendahu/provenencia/pull/569). The open catalog's graph cache now answers one person's implied spouse, parent and grandparent links from one cached result per pivot (a marriage or birth event, or the parent between in a chain), through `canonlinks.Reader.For`. Results are dropped when a commit touches the pivot or a node one hop out, through new registered per-node memo slots, and graph verify mode checks each against a fresh derivation. A pivot with more than 10 participants at either end implies nothing (a registry value), the grandparent derivation is linear, and a marriage's couple are its two `subject`s: the `spouse` participation role leaves the seed and the Mac app. Nothing calls `For` until S11-39. New projects no longer offer `Spouse` as an event role.

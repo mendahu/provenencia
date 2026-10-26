@@ -1,6 +1,6 @@
 # S11-50 — Matching warms while the project opens
 
-**Status:** Planned
+**Status:** Landed in [#570](https://github.com/mendahu/provenencia/pull/570) (2026-10-26)
 **Spike / slice:** Spike 11 · Slice 9 — Kinship shapes
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the open spinner already covers `OpenProject`; the work moves under it)
