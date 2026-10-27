@@ -213,3 +213,54 @@ Below blocker (reviewer, not raised): brief §1 said "under its ref and descript
 One risk raised and taken: a `ButtonStyle` struct's `@Environment(\.isFocused)` is outside the button's focus scope. Fixed — D-10 and D-11 read it in a private body `View`, as `PVButtonBody` does; §10 step 5 checks the ring is drawn.
 
 **Verdict:** Fits with changes — Ready. No blocker open, nothing To user. The plan is Planned.
+
+## Revision 2 (board redraw, 2026-10-27)
+
+The researcher tested revision 1 (graph tokens) on PR #576 and redrew the list: a four-column row (Source · Type · Status · Evidence graph), a status badge and a 52 pt button per graph. The plan was revised in place; everything below the row stays as built at `37571892`.
+
+**Verdict:** Fits — Ready (round 1: Fits with changes / Ready with changes). **Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet).
+
+### To user
+
+None.
+
+### Writer's own calls
+
+- The row menu stays on the Source link only; the board's right-click on the Type and Status cells and Shift-F10 are Out (D-27).
+- Counts that fail to load show the alert glyph and "Counts could not load" on the button, and a faint "—" for status; the board does not draw this state (D-21, D-23).
+- The graph button's help keeps revision 1's name-first wording ("Unlinked — Add an artifact…"), which the researcher approved in revision 1's review; the board shows the reason alone.
+- The board's 2 pt underline offset, toolbar alignment and status-filter callout wording are Out (§3).
+- The failed-counts glyph on the Source page card changes from `.danger` to `.circleAlert`, so the card and the button use one glyph (D-23).
+
+### Round 1
+
+**M-1 · blocker · Two views draw the same graph count state.** Fixed — D-23: `SourcesGraphCountLine` gains `style: .card | .button` and a `countsText` helper (mono digits, italic "not started"); the button puts it in its detail slot; the card's hand split goes; one failure glyph.
+**M-2 · blocker · A second renderer for `PVListDetail`.** Fixed — D-25: `PVListDetailCell` gains `width: CGFloat?` and `iconSize`; the row's second line uses it; both doc comments are fixed (the X-28 Out line is removed). DoD kit line updated.
+**M-3 · major · Status derived in the row apart from the count state.** Fixed — D-3b: `.counts` carries `filed`; `SourcesGraphCounts.status`; `EvidenceStatus.init(_:)` reads it; `Kind.graph` has no separate status. T-11 covers the nil cases.
+**M-4 · major · Two stacks held level by a constant.** Fixed — D-16: one `VStack` of lines, each a status slot and its button; the hairline is drawn once. The Risk row and Stop condition for drift are removed.
+**M-5 · major · Captions restate `pvMicroCaps()`.** Fixed — D-15.
+**M-6 · minor · Four style cases on two choices.** Fixed — D-3a: `notStarted: NotStartedReading` parameter instead of `button` / `buttonSpoken`.
+**M-7 · minor · Status look split between model and row.** Fixed — D-22: `badgeSubtle` and `EvidenceStatus.badge`.
+**M-8 · minor · Caption and row restate paddings.** Fixed — D-24: `SourcesListColumns` owns the insets (static).
+**M-9 · nit · Join keys beside `L10n.LastUpdated.a11yJoin`.** Logged: that key's translator comment is about last-updated phrases; a graph-button key keeps its own context.
+**Outside lens (UX) · status spoken twice.** Declined: the board's VoiceOver spec gives both ("Open graph {name}, {N} subjects, {M} observations, {status}" and the badge "Status: {label}"); the badge is not focusable, so it is read only when VoiceOver walks static text.
+
+**X-1 · blocker · `\.compact\b` grep can never pass.** Fixed — STEP-7 check greps `case compact|style: \.compact`.
+**X-2 · blocker · STEP-7 understates the row edit; intermediate layout undefined.** Fixed — the count fold and renderer are STEP-7; the button and the row are one STEP-8; `Kind.graph` keeps its signature (D-3b).
+**X-3 · major · STEP-9 token grep matches filenames.** Fixed — the grep is `graph tokens?\b|token line|a token`.
+**X-4 · major · No "Revision 2" section.** Fixed — this section.
+**X-5 · major · First frame wide.** Fixed — D-24 states it is accepted.
+**X-6 · major · Badge label formatting.** Fixed — D-22 names `L10n.format(resource, L10n.string(status.label))`; T-14 compares with `L10n.string`.
+**X-7 · minor · Failed state value or hint.** Fixed — states table says hint, not value.
+**X-8 · minor · "token" comments.** Fixed — STEP-8 names the three comments and adds a grep.
+
+### Round 2
+
+Maintainability: every round-1 answer holds; no new blockers; verdict Fits. Two below-blocker notes folded in: the `PVStroke` README row and doc comment and the Spike 13 S13-D9 row still say "tokens" — Fixed, D-26 and STEP-9 name them. It also confirmed S13-22 (Source date on the Sources list) gets a slot in `SourcesListColumns`.
+
+Executability: X-1 – X-8 answers hold. New:
+**X-9 · blocker · STEP-7 deletes `compact` while the token still reads it.** Fixed — `compact` and its grep move to STEP-8.
+**X-10 · blocker · `filed:` changes T-1 – T-10 constructions, a stop condition.** Fixed — D-3b, §8 and the Stop line allow exactly the added `filed: 0`.
+**X-11 · minor · Button width vs padding order.** Fixed — D-16: frame, then padding.
+**X-12 · minor · Non-button states' drawing path.** Fixed — D-11 names `SourcesGraphButtonFrame(look:)` and `.accessibilityElement(children: .ignore)`.
+**X-13 · minor · How T-11 reads fonts.** Fixed — T-11 compares `run.font` with the exact `PVFont` expressions.

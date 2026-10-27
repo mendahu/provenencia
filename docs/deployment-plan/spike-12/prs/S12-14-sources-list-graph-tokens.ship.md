@@ -1,7 +1,7 @@
 # Ship log — S12-14 Graph counts in the Sources list and on the Source page
 
 **Plan:** [`S12-14-sources-list-graph-tokens.md`](S12-14-sources-list-graph-tokens.md) · **Branch:** `s12-14-sources-list-graph-tokens` · **PR:** #576
-**State:** ready
+**State:** implementing (revision 2)
 
 ## Round 0 — implement
 Head `9646520c`. Gate PASS (orchestrator run, against `f22b19a7`). PR #576 (draft). Report deviations (recorded in the plan's Landed note):
@@ -104,3 +104,9 @@ No Fix plan 2.
 
 ## Result
 Gate PASS (`7f711dbb`, `origin/main` unmoved at `f22b19a7`) · CI green · open: none · follow-ups: none · to user: UX-1, UX-2, UX-3, MNT-2 (answered 2026-10-26, fixed) · logged: SEC-out (min-width overflow, manual check), nits CON-2, UX-6, MNT-6, MNT-7 · CON miss: none
+
+## Revision 2 — board redraw (2026-10-27)
+
+After the user's manual check of revision 1 (a flicker on the Source link hover, fixed in `37571892`), the user redrew the list on the board: four columns, a status badge and a 52 pt button per graph. The plan was revised with plan-pr and passed review-plan in two rounds (Fits — Ready). The ship loop restarts at round 0 on the same branch; revision 1's rounds above stay as history.
+
+### Round 0 — implement
