@@ -1,19 +1,19 @@
 # S12-20 — Docs and skills match the code
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 12 · Slice 5 — Audit fixes: High
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** — (no new chrome: docs only, no Swift or Go file changes)
+**Brief:** — (no new chrome: docs and one check script, no Swift or Go file changes)
 **Board:** —
 **Depends on:** —
 **Blocks:** —
 **Branch:** `s12-20-docs-match-code`
-**Version bump:** none — docs only ([`docs/versioning.md`](../../../versioning.md): "Do not bump the product version for docs-only or comment-only changes")
+**Version bump:** none — docs and a contributor check script, nothing in the product ([`docs/versioning.md`](../../../versioning.md): "Do not bump the product version for docs-only or comment-only changes"; `22708a81` added this script with no bump)
 **Skills to load:** [`archive-docs`](../../../../.agents/skills/archive-docs/SKILL.md) ("Shipped idea"), [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md) (the checklist this PR extends)
 **Rules that bind:** `.cursor/rules/catalog-refs.mdc` (this PR edits it)
 **Context:** [app-health audit](../app-health-audit.md) A-6, A-23, A-33; working rules "Each PR updates the docs and skills it makes false" (slices 5–7 line: "S12-20 points `add-catalog-model` step 6 at `core/database/effects/README.md` instead of listing `Effect` fields") and "Fix the High and Medium items, grouped by shared files or behavior"; map review K-13, K-20, K-21
 **Planned:** 2026-10-27 against `main` @ `67988a5`
-**Review:** [`S12-20-docs-match-code.review.md`](S12-20-docs-match-code.review.md) — Fits with changes / Ready with changes → all fixed, 2 rounds; M-7 to user
+**Review:** [`S12-20-docs-match-code.review.md`](S12-20-docs-match-code.review.md) — Fits with changes / Ready with changes → all fixed, 2 rounds; M-7 answered by the user (this PR)
 
 ### Implementer — read this first
 
@@ -36,7 +36,9 @@ The skills, Cursor rules, domain docs and kit README that agents and the product
 
 Where a guidance file keeps its own copy of a list the code owns (the `Effect` fields, the reserved ref prefixes, the delete gates, the matching layers), the copy becomes a pointer to the owner, so the next addition does not make it stale again (plan review M-1 – M-3).
 
-**What stays.** No Go, Swift, proto or script file changes. The docs that later slice 5–7 PRs rewrite (`swift-tests.mdc`'s FakeStore paragraph, the effects README's per-table rules, the pbxproj checklist line) keep their current text.
+The kit README rule is enforced, not only written down: `scripts/check-guidance-names.py`, which `check-pr.sh` already runs, fails on a kit folder with no README row (user, 2026-10-27, review M-7).
+
+**What stays.** No Go, Swift or proto file changes; the one script change is D-9. The docs that later slice 5–7 PRs rewrite (`swift-tests.mdc`'s FakeStore paragraph, the effects README's per-table rules, the pbxproj checklist line) keep their current text.
 
 ## 2. User stories
 
@@ -62,11 +64,13 @@ Where a guidance file keeps its own copy of a list the code owns (the `Effect` f
 | AC-2.8 | `docs/source-layer-data-model.md` §4.2 | Says the copy gets its own Default graph linking the copied Artifacts. `rg -n 'own Default graph' docs/source-layer-data-model.md` → one hit, inside §4.2 |
 | AC-2.9 | `docs/promote-graph-alignment.md` §7 | `rg -n "Source's Evidence graph memo" docs/promote-graph-alignment.md` → no hit |
 
-**US-3.** As a contributor reaching for a kit component, every folder under `macos/App/DesignSystem/Components/` and `macos/App/DesignSystem/Recipes/` has a README row, and `add-ui-component` tells me to add one.
+**US-3.** As a contributor reaching for a kit component, every folder under `macos/App/DesignSystem/Components/` and `macos/App/DesignSystem/Recipes/` has a README row, `add-ui-component` tells me to add one, and `scripts/check-pr.sh` fails when I forget.
 
 | AC | Given / when | Then |
 | --- | --- | --- |
 | AC-3.1 | The README row loop in STEP-4's check | Prints nothing (every folder has a row) |
+| AC-3.3 | A kit folder has no README row: at STEP-4's midpoint, with D-9 in and the six rows not yet added | `python3 scripts/check-guidance-names.py` exits 1 and prints six lines, one per folder, from `macos/App/DesignSystem/README.md: no row for Components/Chip/` to the same line ending `no row for Recipes/LastUpdated/` |
+| AC-3.4 | Every kit folder has a row (after the six rows) | `python3 scripts/check-guidance-names.py` exits 0 and prints `check-guidance-names: OK` |
 | AC-3.2 | `add-ui-component` checklist | Has a line requiring a README row for a new Components/Recipes folder. `rg -n 'README row' .agents/skills/add-ui-component/SKILL.md` → one hit |
 
 **US-4.** As the product owner reading the ideas folder, a shipped idea is in `docs/ideas/archive/` and a done item is gone from an open idea.
@@ -86,6 +90,7 @@ Where a guidance file keeps its own copy of a list the code owns (the `Effect` f
 | A-23: `conclusion-reconciliation.md` §6, `matching.md`, `matching-model.md` intro (D-3, D-4) | STEP-2, AC-2.1 – AC-2.3 |
 | A-23: `docs/catalog-deletes.md`, `docs/macos-client-patterns.md`, `core/database/effects/README.md`, `api/proto/README.md`, `docs/source-layer-data-model.md` §4.2, `docs/promote-graph-alignment.md`, `.cursor/rules/catalog-deletes.mdc` (D-5) | STEP-3, AC-2.4 – AC-2.9 |
 | A-33: six DesignSystem README rows and an `add-ui-component` checklist line (D-6) | STEP-4, AC-3.1, AC-3.2 |
+| A-33: `scripts/check-guidance-names.py` fails on a Components or Recipes folder with no README row (D-9) | STEP-4, AC-3.3, AC-3.4 |
 | Archive `docs/ideas/settled-list-count-publish.md`; drop "Query-wait test helper" from `docs/ideas/shared-list-helpers.md`; ideas README and map links follow (D-7) | STEP-5, AC-4.1, AC-4.2 |
 
 | Out | Home |
@@ -94,7 +99,6 @@ Where a guidance file keeps its own copy of a list the code owns (the `Effect` f
 | Rewriting `swift-tests.mdc`'s FakeStore "does not re-implement" paragraph | S12-35 |
 | The `add-searchable-kind` reshape (kinds own their columns and locations) | S12-36 |
 | `add-ui-component` checklist line "New .swift registered in the Xcode project (pbxproj)" | S12-31 |
-| A check that fails on a kit folder with no README row | not planned (map scope entry "Not this PR"); asked of the user in the review log (M-7) |
 | `docs/matching-model.md` "Replaced" table rows that name S11-16 (around line 226) | not planned: they record what was replaced, and stay true |
 | `core/database/effects/README.md` "Artifact and Citation rows name every graph of their Source" (true today; changes with the code) | S12-25 |
 | `add-catalog-model` steps other than 6 | not planned (no audit finding) |
@@ -128,6 +132,8 @@ Verified at `67988a5`.
 | Shipped idea | `docs/ideas/settled-list-count-publish.md` | Status "idea only". Shipped in `c6dcd51d`, `aedf7aa2`, `228bd821` (`onSettled` in `PropertiesView.swift`, `SourcesModel.swift`). Linked from `docs/ideas/README.md` line 32 and `docs/deployment-plan/spike-12/deployment-plan.md` lines 54, 143, 477, 545 |
 | Done idea item | `docs/ideas/shared-list-helpers.md` "## Query-wait test helper" | Done: `func waitForQuery` exists only in `macos/ProvenenciaTests/QueryHandleWaiting.swift`. `docs/ideas/README.md` line 30 describes the file as "one list of graph mutations (the other two items are in Spike 11)", which matches no section in it |
 | Checks | `scripts/check-guidance-names.py`, `scripts/check-plan-docs.py` | Both pass at the base |
+| Guidance check | `scripts/check-guidance-names.py` `main`, `guide_files`, `code_words` | Checks only that code names cited in `.agents/skills/**/*.md` and `.cursor/rules/*.mdc` exist. Nothing checks the kit README. `scripts/check-pr.sh` runs it as the `guidance-names` step (header comment lines 18–19, `run guidance-names` line 118) |
+| Kit layers | `macos/App/DesignSystem/` | Holds the Components, Recipes and Tokens folders and `README.md`. There is no Snowflakes folder: snowflakes live under `Features/` and get no README row |
 
 **Precedent.** `15d725fc` ("Document the shared subject-mark rule and archive the glyph idea with its leftovers"): a docs-only change that moved the glyph idea into `docs/ideas/archive/` with a **Done in S10-49** status line and a Leftovers paragraph, dropped its `docs/ideas/README.md` Current line, and added a kit README row. Copy its archive shape ([`docs/ideas/archive/glyph-consolidation.md`](../../../ideas/archive/glyph-consolidation.md)). `ab9dd201` ("Name the effects registry path in the searchable-kind skill's projection step") is the same kind of one-line skill correction in the file STEP-1 edits.
 
@@ -144,6 +150,7 @@ Verified at `67988a5`.
 | D-6 | The six rows in **D-6 rows** below go into the `macos/App/DesignSystem/README.md` "What's built vs. not yet" table, each right after the row named in its heading. A row states the component's role and contract and names no callers (an `rg` finds them; review M-5). `add-ui-component` gains the checklist line in **D-6 rows**, after the checklist line that starts "Path is Components". | Each row's text comes from the type's own doc comment at the base | A separate table for these six — the README has one built table |
 | D-7 | `docs/ideas/settled-list-count-publish.md` moves (`git mv`) to `docs/ideas/archive/` and its whole body becomes the text in **D-7 text** below (the `glyph-consolidation.md` shape with `archive-docs`' Leftovers table). In `docs/ideas/README.md` the Current line for it is deleted and the Archived line in **D-7 text** goes right after the `name-matching-enhancements.md` line. The map's four links (lines 54, 143, 477, 545) change both link text and target from `docs/ideas/settled-list-count-publish.md` to `docs/ideas/archive/settled-list-count-publish.md` *(new)*, written relative to the map as the links are today. In `docs/ideas/shared-list-helpers.md` the "## Query-wait test helper" section (heading and paragraph) is deleted, and its `docs/ideas/README.md` line 30 is replaced whole by the line in **D-7 text**. | `archive-docs` "Shipped idea" steps 1–4; map scope entry | Deleting the idea outright — `archive-docs` keeps the decisions |
 | D-8 | The reserved ref prefixes are named by their owner, not listed. `.cursor/rules/catalog-refs.mdc` line 13 becomes "- Reserved prefixes are `core/ref` `reservedPrefixes` (table in `docs/catalog-refs.md`); `ref.ValidatePrefix` refuses them for Subject type prefixes." In `docs/interpretation-layer-data-model.md` line 542 and `docs/seeded-vocabulary.md` line 312, the words "the reserved catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`", become "a reserved catalog prefix (`core/ref` `reservedPrefixes`; the table is in `catalog-refs.md`, linked per D-0)". In `docs/data-model-source-interpretation-conclusion.md` line 219, "Catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`, `GPH` stay reserved" becomes "The reserved catalog prefixes (`core/ref` `reservedPrefixes`, in the table above) stay reserved". | The list already went stale once, with `GPH`; the next ref-bearing table is one Go constant and one row in `docs/catalog-refs.md` (review M-2) | Adding `GPH` to each copy — three lists to keep by hand |
+| D-9 | `scripts/check-guidance-names.py` gains the kit README check (sketch in **D-9 sketch** below). A function `kit_rows_missing()` *(new)* lists each directory under `macos/App/DesignSystem/Components/` and `macos/App/DesignSystem/Recipes/` (directories only, sorted by name). It reports one problem per folder whose path text (a backtick, then layer, slash, folder name, slash) is not in `macos/App/DesignSystem/README.md`, the same test as STEP-4's loop. `main` adds these problems to the stale-name ones, and one summary line names both remedies. The module docstring gains one paragraph saying so. The `check-pr.sh` header comment for `guidance-names` adds "and every kit Components or Recipes folder has a DesignSystem README row". No new script, no new `check-pr.sh` step and no allow-list entry. `Tokens/` is not checked: the README's token table maps CSS files to Swift files, not folders. | The user chose this PR (2026-10-27, M-7). The script already checks guidance against the code and `check-pr.sh` already runs it, so the check costs one function | A new `scripts/check-kit-readme.py` and `check-pr.sh` step — a second script for the same kind of check; a check in `add-ui-component` only — a checklist line is what let six rows go missing |
 
 **Rules this plan bends.** None.
 
@@ -163,8 +170,24 @@ After TextArea:
 After OmnibarHitRow:
 | LastUpdated | `Recipes/LastUpdated/PVLastUpdated.swift` (the last-updated cell of a list row: history icon, relative time with the full stamp as help, a faint dash when none, and the row label's spoken suffix; `PVListDetailCell` draws it) |
 add-ui-component checklist line:
-- [ ] README row: a new `Components/<Name>/` or `Recipes/<Name>/` folder has a row in the DesignSystem README's built table
+- [ ] README row: a new `Components/<Name>/` or `Recipes/<Name>/` folder has a row in the DesignSystem README's built table (`scripts/check-guidance-names.py` fails without it)
 ```
+
+**D-9 sketch.** Names and messages are binding; the body is the implementer's.
+
+```python
+KIT = os.path.join(ROOT, "macos", "App", "DesignSystem")
+KIT_LAYERS = ("Components", "Recipes")
+
+
+def kit_rows_missing():
+    """One problem per kit folder the DesignSystem README has no row for."""
+    # read KIT/README.md; for each layer, each sorted subdirectory name:
+    #   if f"`{layer}/{name}/" not in readme:
+    #       "macos/App/DesignSystem/README.md: no row for {layer}/{name}/"
+```
+
+Summary line on failure, replacing today's: `check-guidance-names: N problem(s). Rename a stale name to the current code or add it to scripts/check-guidance-names.allow with the reason; give a kit folder a row in macos/App/DesignSystem/README.md.`
 
 **D-7 text.** The archived file, whole:
 
@@ -202,14 +225,15 @@ A list publishes its sidebar count only from a settled handle: `QueryHandle.isSe
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
 | Six README rows *(new)* | doc rows | The existing rows of the same table | Extends that table; no new table |
+| `kit_rows_missing` *(new)* in `scripts/check-guidance-names.py` | func | `check-guidance-names.py` `main` (guidance against code); `scripts/check-plan-docs.py` path checks | Extends the script `check-pr.sh` already runs; a new script would be a second guidance checker |
 | `add-ui-component` "README row" checklist line *(new)* | doc line | Same checklist | Extends it |
 | `add-searchable-kind` `fieldValuesForKind` checklist line *(new)* | doc line | Same checklist | Extends it |
 | `docs/ideas/archive/settled-list-count-publish.md` *(new)*, moved from `docs/ideas/` | doc | `docs/ideas/archive/glyph-consolidation.md` | Same shape, per `archive-docs` |
 | Owner pointers in `catalog-refs.mdc`, `catalog-deletes.mdc`, two docs and `matching.md` *(new)* | doc lines | `add-catalog-delete` already points at `extraGateList`; the `matching.md` header already points at `matching-model.md` | Same move as D-1 |
 
-**Builds on.** `core/database/effects/README.md` as the one owner of `Effect` fields; the kit README's built table; `archive-docs` "Shipped idea".
+**Builds on.** `scripts/check-guidance-names.py` and its `check-pr.sh` step; `core/database/effects/README.md` as the one owner of `Effect` fields; the kit README's built table; `archive-docs` "Shipped idea".
 **Deletes.** The `Effect` field list in `add-catalog-model` step 6; the inline reserved-prefix lists in `catalog-refs.mdc` and three docs; the gate list in `catalog-deletes.mdc` line 12; `matching.md`'s layer table; "There are no Source tables."; `matching.md`'s not-built list for S11-14 – S11-16; `matching-model.md`'s "until then"; the "Query-wait test helper" idea section; `docs/ideas/settled-list-count-publish.md` (moved).
-**Next adds.** S12-25 and S12-26 change `Effect` fields and edit only `core/database/effects/registry.go` and its README; a new reserved ref prefix (such as `NAR`, proposed in `docs/catalog-refs.md`) is one `core/ref` constant plus a row in each prefix table (`docs/catalog-refs.md`, `add-catalog-ref`, `docs/data-model-source-interpretation-conclusion.md`), with no inline list to find; a new delete gate is one `extraGateList` entry; S12-36 reshapes `add-searchable-kind` from a skill that names `fieldValuesForKind`; S12-31 edits the `add-ui-component` checklist beside the new README-row line.
+**Next adds.** S12-25 and S12-26 change `Effect` fields and edit only `core/database/effects/registry.go` and its README; a new reserved ref prefix (such as `NAR`, proposed in `docs/catalog-refs.md`) is one `core/ref` constant plus a row in each prefix table (`docs/catalog-refs.md`, `add-catalog-ref`, `docs/data-model-source-interpretation-conclusion.md`), with no inline list to find; a new delete gate is one `extraGateList` entry; S12-36 reshapes `add-searchable-kind` from a skill that names `fieldValuesForKind`; S12-31 edits the `add-ui-component` checklist beside the new README-row line; a new kit folder in any later PR fails `check-pr.sh` until it has a row.
 
 ### Reach
 
@@ -256,10 +280,10 @@ Files: `docs/catalog-deletes.md`, `docs/macos-client-patterns.md`, `core/databas
 Do: D-5 (a)–(g).
 Check: AC-2.4 – AC-2.9 commands; `python3 scripts/check-guidance-names.py` → OK.
 
-**STEP-4 — Kit README rows (A-33)**
-Files: `macos/App/DesignSystem/README.md`, `.agents/skills/add-ui-component/SKILL.md`. Skill: `add-ui-component`.
-Do: D-6, copying the **D-6 rows** text.
-Check: from `macos/App/DesignSystem`, `for d in Components/* Recipes/*; do grep -q "\`$d/" README.md || echo "MISSING ROW: $d"; done` prints nothing; `rg -n 'README row' .agents/skills/add-ui-component/SKILL.md` → one hit.
+**STEP-4 — Kit README rows and their check (A-33)**
+Files: `scripts/check-guidance-names.py`, `scripts/check-pr.sh` (header comment only), `macos/App/DesignSystem/README.md`, `.agents/skills/add-ui-component/SKILL.md`. Skill: `add-ui-component`.
+Do: first D-9, then run `python3 scripts/check-guidance-names.py`: it must exit 1 with exactly the six AC-3.3 lines (record the output). Then D-6, copying the **D-6 rows** text.
+Check: AC-3.3 recorded; `python3 scripts/check-guidance-names.py` → `check-guidance-names: OK` (AC-3.4); from `macos/App/DesignSystem`, `for d in Components/* Recipes/*; do grep -q "\`$d/" README.md || echo "MISSING ROW: $d"; done` prints nothing; `rg -n 'README row' .agents/skills/add-ui-component/SKILL.md` → one hit.
 
 **STEP-5 — Ideas (archive and trim)**
 Files: `docs/ideas/settled-list-count-publish.md` → `docs/ideas/archive/settled-list-count-publish.md` *(new)* (`git mv`), `docs/ideas/shared-list-helpers.md`, `docs/ideas/README.md`, `docs/deployment-plan/spike-12/deployment-plan.md` (four links). Skill: `archive-docs` "Shipped idea".
@@ -280,6 +304,7 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-1 | Script | `scripts/check-guidance-names.py` | Every code name a skill or rule cites exists → `check-guidance-names: OK` | AC-1.1, AC-1.2, AC-3.2 (it scans skills and rules only; AC-1.3 is T-4) |
 | T-2 | Script | `scripts/check-plan-docs.py` on this plan | → 0 errors | D-7 (map links), STEP-6 |
 | T-3 | Shell | STEP-4's README row loop | → no output | AC-3.1 |
+| T-5 | Script | `python3 scripts/check-guidance-names.py` at STEP-4's midpoint, then at its end | Six missing rows → exit 1, six `no row for` lines; all rows → exit 0, `OK` | AC-3.3, AC-3.4, D-9 |
 | T-4 | Shell | The `rg` / `test` command in each AC row | Each → the result its AC states | AC-1.1, AC-1.2, AC-1.3, AC-2.1, AC-2.2, AC-2.3, AC-2.4, AC-2.5, AC-2.6, AC-2.7, AC-2.8, AC-2.9, AC-3.2, AC-4.1, AC-4.2 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. A docs-only branch changes no Go or Swift file, so `guidance-names` and `plan-docs` are the checks it can break.
@@ -316,6 +341,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. A docs-only branch chang
 | --- | --- |
 | A line moved between the base and the implementer's checkout | Each Step's check is an `rg` on text, not a line number |
 | `check-guidance-names.py` flags a name the new text cites | Every name in D-1 – D-7 was checked to exist at the base |
+| The README check matches a folder name inside unrelated text | It matches only the backticked layer-and-folder path form, which the README uses for rows |
 
 **Stop and report if:**
 
@@ -323,7 +349,8 @@ Must stay green: everything `scripts/check-pr.sh` runs. A docs-only branch chang
 - `core/database/effects/README.md` no longer describes the `Effect` fields D-1 sends readers to.
 - `check-guidance-names.py` fails on a name D-1 – D-7 cites.
 - `scripts/check-pr.sh` cannot run `xcode-test` on your machine (not macOS): report its full output with `check-guidance-names.py` and `check-plan-docs.py` passing as the evidence; do not edit the script.
-- Any step would need a change to a `.go`, `.swift`, `.proto` or script file.
+- Any step would need a change to a `.go`, `.swift` or `.proto` file, or a script change beyond D-9.
+- At STEP-4's midpoint the script reports a folder other than the six in §4, or fewer than six.
 
 ## 12. Open questions
 

@@ -5,7 +5,7 @@
 
 ## To user
 
-- **M-7: enforce README rows with a check?** The STEP-4 loop is the whole check: every `Components/*` and `Recipes/*` folder under `macos/App/DesignSystem/` needs a README row. The map's S12-20 "Not this PR" excludes a `check-pr.sh` check, so this plan keeps it Out and adds only a checklist line. **Recommendation:** add the loop to `scripts/check-guidance-names.py` in this PR. It is about five lines; the hand-kept rule is what let six rows go missing; and the PR stops being strictly docs-only by one script edit. If you'd rather keep S12-20 docs-only, the check goes into the map as a line in S12-31, which also changes how kit folders are registered.
+- **M-7: enforce README rows with a check?** **Answered (user, 2026-10-27):** yes, in this PR. D-9 adds `kit_rows_missing` to `scripts/check-guidance-names.py`; STEP-4 runs it before and after the six rows (AC-3.3, AC-3.4, T-5). The map's S12-20 scope entry and row now include the check.
 
 ## Writer's own calls
 
@@ -37,7 +37,7 @@
 **Answer:** Fixed. D-5 (e) states the behavior instead.
 
 ### M-7 · minor · README-row rule is only a checklist line
-**Answer:** To user (above).
+**Answer:** To user → answered: yes, this PR (D-9).
 
 ### M-8 · minor · `Effect.Source` sweep hits intended examples
 `implement-pr` and `conformance.md` use `Effect.Source` as an example.
