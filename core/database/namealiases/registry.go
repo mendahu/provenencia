@@ -12,11 +12,13 @@ func aliasPartRoles() []valuecompare.NameRole {
 }
 
 // productAliasTables is the create-time seed. Install writes this list.
-// Scoring does not read it. Tokens are normalized comparison forms.
+// Matching reads the catalog rows; the reconciler cache reads the product seed
+// through valuerules.Product. Tokens are normalized comparison forms. Each set
+// is a head followed by the names that stand for it (FormalFirst).
 var productAliasTables = []valuecompare.AliasTable{
 	{
 		Key: "abbreviations", Origin: vocabkey.OriginProvenencia, Label: "Abbreviations",
-		Kind: valuecompare.AliasAbbreviation, Roles: aliasPartRoles(),
+		Kind: valuecompare.AliasAbbreviation, Roles: aliasPartRoles(), FormalFirst: true,
 		Sets: [][]string{
 			{"james", "jas"},
 			{"william", "wm"},
@@ -35,12 +37,14 @@ var productAliasTables = []valuecompare.AliasTable{
 		// carltonnorthern/nicknames. A nickname shared by two canonical
 		// names does not join those sets. License and credit:
 		// third_party/nicknames/.
-		Sets: nicknameSets,
+		Sets:        nicknameSets,
+		FormalFirst: true,
+		Directions:  nicknameDirections,
 	},
 }
 
 // aliasTables is the product seed plus anything Register appended.
-// Install writes it. Scoring does not read it.
+// Install writes it. Matching reads the catalog rows, not this variable.
 var (
 	aliasMu     sync.Mutex
 	aliasTables []valuecompare.AliasTable
@@ -54,7 +58,15 @@ func resetAliasTables() {
 	aliasTables = append([]valuecompare.AliasTable(nil), productAliasTables...)
 }
 
-// AliasTables returns the seed Install writes. Scoring does not read this.
+// ProductTables returns a copy of the product seed alone, without anything
+// Register appended. The reconciler cache reads it (valuerules.Product), so a
+// plugin table cannot change the cache.
+func ProductTables() []valuecompare.AliasTable {
+	return append([]valuecompare.AliasTable(nil), productAliasTables...)
+}
+
+// AliasTables returns the seed Install writes. Matching reads the catalog
+// rows; the reconciler cache reads ProductTables.
 func AliasTables() []valuecompare.AliasTable {
 	aliasMu.Lock()
 	defer aliasMu.Unlock()

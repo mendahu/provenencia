@@ -18,18 +18,31 @@ const (
 // AliasTable is one contributed list. Origin records who contributed it
 // (provenencia, user, or plugin:<id>) and does not turn the table off.
 // A set is one equivalence group. Roles are the part roles that may use it.
+//
+// FormalFirst says each set's first token is its head, the name the others
+// stand for. Directions say which name a fold keeps for a pair whose sets each
+// hold the other (bill and william). Both are for the reconciler's fold
+// (AliasIndex.Expands); matching ignores them, and a catalog load sets neither.
 type AliasTable struct {
 	Key, Origin, Label string
 	Kind               AliasKind
 	Roles              []NameRole
 	Sets               [][]string
+	FormalFirst        bool
+	Directions         []AliasDirection
 }
+
+// AliasDirection is the name a fold keeps for a pair listed both ways: Formal
+// is kept, Nickname folds into it.
+type AliasDirection struct{ Formal, Nickname string }
 
 // AliasIndex is a catalog's alias tables, indexed once per load. The zero
 // index hits nothing.
 type AliasIndex struct {
 	sets    []aliasSet
 	byToken map[string][]int // token -> indexes into sets that hold it
+	// prefer holds {Formal, Nickname} (AliasTokens) for each table Direction.
+	prefer map[AliasDirection]bool
 }
 
 // aliasSet is one equivalence set, the roles that may use it, and its kind.
@@ -37,6 +50,9 @@ type aliasSet struct {
 	tokens map[string]bool
 	roles  map[NameRole]bool
 	kind   AliasKind
+	// head is the AliasToken of the set's first token, only in a FormalFirst
+	// table.
+	head string
 	// key is sha256(table key, 0x00, smallest token), hex-encoded. It is a fixed
 	// size however long the table key or a token is, and not the set's tokens: a
 	// key holding every token would be copied for each word of a set with
@@ -62,7 +78,27 @@ func NewAliasIndex(tables []AliasTable, w WordRules) AliasIndex {
 		for _, role := range table.Roles {
 			roles[role] = true
 		}
+		for _, d := range table.Directions {
+			formal, ok1 := AliasToken(d.Formal, w)
+			nick, ok2 := AliasToken(d.Nickname, w)
+			if !ok1 || !ok2 {
+				continue
+			}
+			if idx.prefer == nil {
+				idx.prefer = map[AliasDirection]bool{}
+			}
+			idx.prefer[AliasDirection{formal, nick}] = true
+		}
 		for _, raw := range table.Sets {
+			head := ""
+			if table.FormalFirst {
+				for _, token := range raw {
+					if k, ok := AliasToken(token, w); ok {
+						head = k
+						break
+					}
+				}
+			}
 			tokens := make(map[string]bool, len(raw))
 			for _, token := range raw {
 				if k, ok := AliasToken(token, w); ok {
@@ -83,7 +119,7 @@ func NewAliasIndex(tables []AliasTable, w WordRules) AliasIndex {
 				sorted = append(sorted, token)
 			}
 			sort.Strings(sorted)
-			idx.sets = append(idx.sets, aliasSet{tokens: tokens, roles: roles, kind: table.Kind, key: aliasSetKey(table.Key, sorted[0])})
+			idx.sets = append(idx.sets, aliasSet{tokens: tokens, roles: roles, kind: table.Kind, head: head, key: aliasSetKey(table.Key, sorted[0])})
 		}
 	}
 	return idx
@@ -105,6 +141,23 @@ func (a AliasIndex) Hit(x, y string, rx, ry NameRole) (AliasKind, bool) {
 		}
 	}
 	return "", false
+}
+
+// Expands reports whether a fold keeps into over from: a set that allows role,
+// headed by into, holds from. When a set headed by from also holds into, a
+// Direction in any table must name into as the one kept. from and into are
+// comparison tokens. Without FormalFirst nothing expands.
+func (a AliasIndex) Expands(from, into string, role NameRole) bool {
+	forward, reverse := false, false
+	for _, i := range a.byToken[from] {
+		set := a.sets[i]
+		if !set.roles[role] || !set.tokens[into] {
+			continue
+		}
+		forward = forward || set.head == into
+		reverse = reverse || set.head == from
+	}
+	return forward && (!reverse || a.prefer[AliasDirection{into, from}])
 }
 
 // SetKeys is the key of every set that holds token (an AliasToken): a

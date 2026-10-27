@@ -68,7 +68,7 @@ func namedPerson(t *testing.T) (dir, handleRef string) {
 				{SubjectID: subjectID[:], PropertyID: name.ID, Name: &namevalue.Value{Form: "James Robins", Parts: []namevalue.Part{
 					{Idx: 0, Value: "James", Type: namevalue.PartTypeGiven}, {Idx: 1, Value: "Robins", Type: namevalue.PartTypeSurname},
 				}}},
-				{SubjectID: subjectID[:], PropertyID: name.ID, Name: namevaluetest.Western("Jim Robins")},
+				{SubjectID: subjectID[:], PropertyID: name.ID, Name: namevaluetest.Western("Kenneth Robins")},
 			})
 		})
 		return err
@@ -113,7 +113,7 @@ func TestListPersonHeaders(t *testing.T) {
 					t.Fatalf("%+v", resp.Headers)
 				}
 				h := resp.Headers[0]
-				// James Robins + Jim Robins reconcile into one name (S9-13b).
+				// James Robins + Kenneth Robins reconcile into one name (S9-13b).
 				if !strings.HasPrefix(h.Entity.GetRef(), "PER-") || h.GetNameValueCount() != 1 {
 					t.Fatalf("%+v", h)
 				}
@@ -124,7 +124,7 @@ func TestListPersonHeaders(t *testing.T) {
 					t.Fatalf("likeness path %q on a person without one", h.GetLikenessImageRelPath())
 				}
 				n := h.GetName()
-				if n.GetForm() != "James Jim Robins" || len(n.GetParts()) != 3 || n.GetParts()[2].GetType() != namevalue.PartTypeSurname {
+				if n.GetForm() != "James Kenneth Robins" || len(n.GetParts()) != 3 || n.GetParts()[2].GetType() != namevalue.PartTypeSurname {
 					t.Fatalf("name %+v", n)
 				}
 			},
@@ -422,7 +422,7 @@ func TestListSubjectMembershipsCarriesAutoReconciledName(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(resp.Memberships) != 1 || resp.Memberships[0].Entity.GetRef() != ref ||
-		resp.Memberships[0].GetName().GetForm() != "James Jim Robins" {
+		resp.Memberships[0].GetName().GetForm() != "James Kenneth Robins" {
 		t.Fatalf("%+v", resp.Memberships)
 	}
 }

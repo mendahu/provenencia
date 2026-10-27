@@ -210,7 +210,7 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 
 ## Not knobs
 
-These are identifiers or catalog data, not tunables, and have no row: the vocabulary origins and primary kinds (`core/vocabkey`), `AliasAbbreviation`, `AliasNickname`, `valuecompare.WesternPattern` (a key), `value.Names.Aliases` and `value.Names.Patterns` (catalog rows, passed in at run time), and `graphalign` `Config.Value` (the value section with catalog data, filled by `valuerules.Load`).
+These are identifiers or catalog data, not tunables, and have no row: the vocabulary origins and primary kinds (`core/vocabkey`), `AliasAbbreviation`, `AliasNickname`, `valuecompare.WesternPattern` (a key), `value.Names.Aliases` (catalog rows for matching, the product seed for the reconciler through `valuerules.Product`) and `value.Names.Patterns` (catalog rows, passed in at run time), and `graphalign` `Config.Value` (the value section with catalog data, filled by `valuerules.Load`).
 
 ## Removed knobs
 

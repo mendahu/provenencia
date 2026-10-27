@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-28 — Fold a nickname into the given name it stands for
+
+**Landed 2026-10-27** in [#589](https://github.com/mendahu/provenencia/pull/589). A Person recorded as *Chris Robins* and *Christopher Robins* now shows one given name, *Christopher*, on the Persons list and the Person page. The reconciler folds a nickname or abbreviation into the head of the product alias set that holds it (*Chris* into *Christopher*, *Wm* into *William*, *Ebbie* into *Abel*); `nicknameDirections` says which name to keep for the 108 pairs the list gives both ways, and 35 spelling variants stay two names. Accent folds, surnames and names of different part types never alias-fold. The cache reads the product alias seed through `valuerules.Product` (`autoreconciler.ValueRules`, also used by promote's profiles) and `CacheVersion` is 18; a guard test fails when the seed changes without a bump.
+
 ## S11-43 — Lower the candidate gate
 
 **Landed 2026-10-27** in [#588](https://github.com/mendahu/provenencia/pull/588). A Source person recorded only as "Amy" now finds "Amy Lee Anne Long" in the Promote row's target menu: the candidate gate, `alignment.MinSimilarity`, dropped from 0.5 to 0.4 (decided by the user), so one given name reaches a record with up to three more given names and a surname. A look-alike that only shares a later given name ("Beth Amy Long", 0.375) stays out, and the row still opens unset because no band changes. `namevaluetest.Given` builds a name of given parts only for the layer tests. No wire or Swift change.

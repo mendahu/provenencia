@@ -126,7 +126,7 @@ func TestListPersons(t *testing.T) {
 	}
 
 	f.person("Mary Smith")
-	_, jamesObs, _ := f.person("James Robins", "Jim Robins", "james robins")
+	_, jamesObs, _ := f.person("James Robins", "Kenneth Robins", "james robins")
 	p6a1 := canonicalentities.CreateInput{SubjectTypeID: f.typeID("person"), Label: "Mother of James"}
 	labelled, err := writes.Call(f.c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
 		return canonicalentities.Create(tx, userID, p6a1)
@@ -149,9 +149,9 @@ func TestListPersons(t *testing.T) {
 	}
 	// No profile is installed, so parts stay in stored order (given, then
 	// surname): James before Mary, then the label, then the ref-only row.
-	// James, Jim and james reconcile into one name (S9-13b): Jim is a
+	// James, Kenneth and james reconcile into one name (S9-13b): Kenneth is a
 	// different given name, so it joins rather than being outvoted.
-	if got[0].Name == nil || got[0].Name.Form != "James Jim Robins" || got[0].NameValueCount != 1 {
+	if got[0].Name == nil || got[0].Name.Form != "James Kenneth Robins" || got[0].NameValueCount != 1 {
 		t.Fatalf("first %+v", got[0])
 	}
 	if got[1].Name == nil || got[1].Name.Form != "Mary Smith" || got[1].NameValueCount != 1 {
@@ -165,7 +165,7 @@ func TestListPersons(t *testing.T) {
 	}
 
 	t.Run("a name edit reaches the header", func(t *testing.T) {
-		// Jim → James merges the two values.
+		// Kenneth → James merges the two values.
 		_, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 			return observations.Update(tx, userID, observations.Input{
 				ID: jamesObs[1].ID, SubjectID: jamesObs[1].SubjectID, PropertyID: f.name.ID,
