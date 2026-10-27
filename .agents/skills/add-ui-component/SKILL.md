@@ -63,6 +63,7 @@ Prefer extending a composite with slots over a new root `PV*` for a slight varia
 - [ ] Classified: component | recipe | snowflake
 - [ ] Public Components/Recipes type uses `PV*` prefix (not bare `Button` / SwiftUI-colliding names)
 - [ ] Path is Components|Recipes|Snowflakes/<Name>/… (or Features/) — no category nesting, no loose layer-root .swift
+- [ ] README row: a new `Components/<Name>/` or `Recipes/<Name>/` folder has a row in the DesignSystem README's built table (`scripts/check-guidance-names.py` fails without it)
 - [ ] Grep’d DesignSystem + Features for an existing near-match
 - [ ] Composed down instead of cloning sideways
 - [ ] No catalog types in Components/
