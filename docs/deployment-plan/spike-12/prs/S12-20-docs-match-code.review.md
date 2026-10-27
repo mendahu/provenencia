@@ -1,7 +1,7 @@
 # Review — S12-20 Docs and skills match the code
 
 **Verdict:** Fits with changes — Ready with changes
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 
@@ -62,3 +62,24 @@
 **Answer:** Fixed. The stop condition names the two script checks as the evidence to report.
 
 Also added from the dry run: an Out line saying the S11-16 rows in `matching-model.md`'s "Replaced" table stay.
+
+## Round 2
+
+### M-9 · blocker · D-8 misses `docs/data-model-source-interpretation-conclusion.md:219`
+It has a hand-kept inline list (correct today, ending at `GPH`). AC-1.3's sweep could not see it.
+**Answer:** Fixed. D-8 rewrites line 219 to point at `reservedPrefixes` and the doc's own table. AC-1.3 sweeps for any inline list (`OBS.[,.]`); the only expected hit is `interpretation-layer-data-model.md:74`, which names the layer's own refs. The three prefix tables are correct and stay. Next adds now says a new prefix is one constant plus a row in each table, with no inline list to find. M-2 holds with this.
+
+### M-10 · blocker · Manual check 2 contradicts D-4
+**Answer:** Fixed. §10 step 2 now says there is no layer table, one link to the stack, and only merge hints under "Not built yet". This is the same finding as X-1 below.
+
+### X-1 · major · Manual check 2 contradicts D-4
+**Answer:** Fixed (as M-10).
+
+### X-2 · minor · STEP-1 effects check passes before the edit
+**Answer:** Fixed. STEP-1 now checks `rg -n 'type Effect'` → one hit in step 6. T-1 no longer claims AC-1.3; T-4 covers it.
+
+### X-3 · minor · wording choices
+**Answer:** Fixed. D-0 (new) fixes the link text and relative paths and the one-line rule for code names. D-5 (f) reads "on that graph's memo". D-7 changes both the link text and the target of the four map links. STEP-6 copies the S12-15 `completed.md` shape.
+
+### X-4 · nit · branch and status
+**Answer:** Logged. The header's branch is the implementation branch; this planning branch is separate. Status stays Draft until M-7 is answered.
