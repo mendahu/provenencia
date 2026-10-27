@@ -137,7 +137,7 @@ struct PVConfirmContentTests {
     }
 }
 
-@Suite
+@Suite @MainActor
 struct PVConfirmKeyChipTests {
     @Test func storesLabelAndValue() {
         let chip = PVConfirmKeyChip(label: "Key released", value: "photographer")
