@@ -96,7 +96,9 @@ xcode_test() {
 
 swift_warnings() {
   local warnings
-  warnings="$(grep -E '^/.+\.swift:[0-9]+:[0-9]+: warning:' "$logs/xcode-test.log" \
+  # A warning with no source location (a key path or Sendable check the
+  # compiler raises module-wide) prints as "<unknown>:0: warning:".
+  warnings="$(grep -E '^(/.+\.swift:[0-9]+:[0-9]+|<unknown>:0): warning:' "$logs/xcode-test.log" \
     | sed "s|^$ROOT/||" | sort -u)"
   [[ -z "$warnings" ]] && return 0
   echo "Swift warnings:"
