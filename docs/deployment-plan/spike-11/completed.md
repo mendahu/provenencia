@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-40 — Implied links in claim evidence
+
+**Landed 2026-10-27** in [#579](https://github.com/mendahu/provenencia/pull/579). The evidence sheet's canon side now reads a person's links through `canonlinks.Reader.Relationships`, so a tree marriage, birth or parent chain meets a Source's direct relationship (and the other way round) as one relationship line, checked, whose bundle holds every bridge behind the implied link in one Source plus the event's defining Observations. Each line says how each side recorded the fact (`Relationship.Layer` / `.Canon`, with the tree pivot's header on the wire and Swift's `KinshipPattern`), and a marriage both sides record is counted once when the request pairs the events. One `bridgesOf` reader replaces the filed-link reader, and `conclusionheaders.ByIDs` finds a header by id for Promote, search and the pivots. The sheet's words do not change until S11-42.
+
 ## S11-51 — One person's links for every reader
 
 **Landed 2026-10-26** in [#575](https://github.com/mendahu/provenencia/pull/575). The merge that makes a fact recorded two ways one link moved from `promotealign` into the pure `core/kinship` as `LinkSet`, and took in `loadCanon`'s separate merge of implied links (`PlaceImplied`, with `Implied.Recording` as the one implied recording). `canonlinks.Reader.Relationships` returns one canonical person's relationship links, recorded and implied, merged once, for the evidence query's canon side and the Person page. Promote's proposals do not change.

@@ -1,6 +1,6 @@
 # S11-40 — Implied links in claim evidence
 
-**Status:** Planned
+**Status:** Landed in [#579](https://github.com/mendahu/provenencia/pull/579) (2026-10-27)
 **Spike / slice:** Spike 11 · Slice 9 — Kinship shapes
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the sheet's relationship Card keeps today's sentence; S11-42 words the new fields in the same Card)
@@ -14,6 +14,7 @@
 **Environment:** STEP-1 – STEP-7 need Go with cgo and the `fts5` tag. STEP-8 (`./scripts/generate-proto.sh`), STEP-9 (`xcodebuild test`), `scripts/check-pr.sh` and the manual check need a Mac with the repo's toolchain. A Linux session does STEP-1 – STEP-7 and hands the rest to a Mac session.
 **Context:** [Kinship shapes § On the evidence sheet](../kinship-shapes.md#on-the-evidence-sheet), [§ Counting once](../kinship-shapes.md#counting-once), [§ Where implied links live](../kinship-shapes.md#where-implied-links-live); [`claim-evidence.md` § Evidence through relationships](../claim-evidence.md#evidence-through-relationships); S11-51 plan D-4, D-5 and its **Next adds**; S11-39's Landed note; working rules: "The canon's implied links live in the graph cache", "One fact, one link per side", "Counted once across sides", "One wire vocabulary", "The pin policy has one owner, in Go"; Spike 13 working rule "One person header for every tile"
 **Planned:** 2026-10-26 against `main` @ `f22b19a`
+**Landed:** Differences from the plan: STEP-4 and STEP-5 landed in one commit, because reading `Relationships` makes the old subtest "AC-3.3" (no line for a tree marriage) fail before STEP-5 flips it. `kinship.Shape` holds a `[]byte`, so tests compare shapes by `Pattern` or `reflect.DeepEqual`. Swift reads the canon pivot header through the generated oneof (`case .person(let h)?`), not `hasPerson`. The manual check was not run.
 **Review:** [`S11-40-implied-links-evidence.review.md`](S11-40-implied-links-evidence.review.md) — Fits with changes / Ready with changes, 2 rounds (every finding answered)
 
 ### Implementer — read this first
