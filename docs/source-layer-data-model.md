@@ -168,6 +168,8 @@ Copy Source makes a new Source from an existing one so a researcher starts from 
 
 **Cover.** The copy's cover is reset to the Source type icon (`primary_artifact_id` is empty), even when the original's cover was one of the Artifacts the copy carries.
 
+**Graphs.** Like every new Source, the copy gets its own Default graph, and each copied Artifact is linked to it, as every new Artifact is linked to every graph of its Source by default. Nothing of the original's graphs carries over.
+
 The copy is one audited write, action `copy_source`, built by `core/database/sourcecopy` from the owner packages' own writes. It is the engine under the Copy form; it is not a way to link two Sources. How to relate Sources that belong together is a separate decision, in [the two tools](deployment-plan/spike-12/source-structure.md#the-two-tools).
 
 ---

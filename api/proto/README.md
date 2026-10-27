@@ -33,6 +33,6 @@ Do not add per-field C getters. New user-visible failures need a [`core/apperr`]
 
 ## Rebuild the Mac library
 
-SQLite (`mattn/go-sqlite3`) is compiled into this dylib. Identity and session RPCs take directory paths in protobuf (caller supplies Application Support / Documents; Go does not hardcode them). There are no Source tables.
+SQLite (`mattn/go-sqlite3`) is compiled into this dylib. Identity and session RPCs take directory paths in protobuf (caller supplies Application Support / Documents; Go does not hardcode them).
 
 Building the Mac app (⌘R or `xcodebuild`) runs [`scripts/build-macos-core.sh`](../../scripts/build-macos-core.sh). You can run that script from a terminal too. It writes a universal (`arm64` + `x86_64`) `macos/Core/libprovenencia.dylib` with install name `@rpath/libprovenencia.dylib` and `MACOSX_DEPLOYMENT_TARGET=14.0`. **Do not commit the dylib.**
