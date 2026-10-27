@@ -169,7 +169,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-39 | Matching reads kinship shapes | 9 | The layer loader derives the Source side's implied links and `loadCanon` reads the canon's from the graph cache, both through one `linkSet` merge; graph alignment counts a paired shape once; goldens for marriage ↔ spouse, birth parents ↔ parent, chain ↔ grandparent; the large-source fixture gains a 12-generation tree | — | S11-49, S11-50 | [plan](prs/S11-39-matching-reads-kinship.md) | Landed #572 |
 | S11-51 | One person's links for every reader | 9 | S11-39's `linkSet` merge moves from `promotealign` to `core/kinship` and takes in `loadCanon`'s implied-link merge; `canonlinks.Reader.Relationships` returns a person's recorded and implied links for S11-40 and Spike 13's Person page | — | S11-39 | [plan](prs/S11-51-person-links.md) | Landed #575 |
 | S11-40 | Implied links in claim evidence | 9 | `canonLinks` reads the canon's implied links from the graph cache; a corresponding implied link gives a relationship line with how each side recorded it and the event behind it, a bundle of every bridge behind it, through the RPC to Swift | — | S11-39, S11-51 | [plan](prs/S11-40-implied-links-evidence.md) | Landed #579 |
-| S11-42 | Implied links on the evidence sheet | 9 | The sheet words S11-40's line ("both are spouses in the marriage on …") in the existing relationship Card; L10n | — | S11-40 | — | Scoped |
+| S11-42 | Implied links on the evidence sheet | 9 | The relationship Card says how each side recorded the fact ("This source: married in the marriage on 12 May 1842 · The record: recorded as spouses") in a muted line under its header; L10n | — | S11-40 | [plan](prs/S11-42-implied-links-sheet.md) | Planned |
 | S11-52 | A related person's lines compare with every member | 5 | Under a relationship Card, a person neighbor's property lines compare with all of the entity's accepted members, not only the linking Source's; event neighbors unchanged; a registry entry names the kinds | — | S11-40 | — | Scoped |
 | S11-43 | Lower the candidate gate | 10 | `alignment.MinSimilarity` 0.5 → 0.4 with its inventory row; a test that "Amy" gets "Amy Lee Anne Long" as an alternative | — | — | — | Scoped |
 | S11-44 | Des as a nickname of Desiree and Desirae | 10 | `{desiree, des}` and `{desirae, des}` in `nicknameSets` with a `CacheVersion` bump; a command copies new product nicknames and new seeded subject vocabulary (S11-48's Properties, bindings and terms) into the open catalog | — | S11-28, S11-48 | — | Scoped |
@@ -278,8 +278,8 @@ SLICE 9 — Kinship shapes
   S11-42  Implied links on the evidence sheet
   Check: a Source marriage proposes its couple strong on two people the tree has as
          spouses; a birth naming the father matches the tree's parent link; a parent
-         chain matches a grandparent link; the sheet says "both are spouses in the
-         marriage…" and checking it pins both participations. A project with a
+         chain matches a grandparent link; the sheet says "married in the marriage
+         on …" and checking it pins both participations. A project with a
          12-generation tree opens, then proposes within the large-source budgets.
 
 SLICE 10 — Name candidates
@@ -704,9 +704,9 @@ Added 2026-10-26 from Spike 13's map review (was S13-19, [review K-2](../spike-1
 
 #### S11-42 — Implied links on the evidence sheet
 
-**Ships.** The sheet words S11-40's line by how each side recorded it ("They are spouses: both are spouses in the marriage on 12 May 1842"; "…the record has them as spouses"; a chain names the parent in between), in the existing relationship Card, through L10n. No new chrome.
+**Ships.** The relationship Card keeps its header ("…they share a spouse (refs)") and, when either side records the fact through a kinship pattern, says how each side recorded it in a muted line under the header: "This source: married in the marriage on 12 May 1842 · The record: recorded as spouses" (an event by its date, a chain by the parent in between; user, 2026-10-27). Through L10n. No new chrome.
 **Not this PR.** Engine or wire (S11-40).
-**Check.** A Source marriage against a filed spouse relationship shows "…both are spouses in the marriage on <date>"; checking it pins both participations.
+**Check.** A Source marriage against a filed spouse relationship shows "This source: married in the marriage on <date> · The record: recorded as spouses" under the Card header; checking it pins both participations.
 **Context.** [On the evidence sheet](kinship-shapes.md#on-the-evidence-sheet); [`claim-evidence.md`](claim-evidence.md#evidence-through-relationships); [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md).
 
 ### Person vocabulary
