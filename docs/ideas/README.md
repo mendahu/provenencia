@@ -18,6 +18,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 
 - [`source-to-source-relationships.md`](source-to-source-relationships.md)
 - [`source-structure-later.md`](source-structure-later.md) — what Spike 12 parked: nested Sources, derivation links, named templates, per-graph credibility, layered citations
+- [`artifact-outside-graph-marker.md`](artifact-outside-graph-marker.md) — mark an Artifact card that is in no Evidence graph; parked from Spike 12 slice 5 until it proves a problem
 - [`graph-canvas-second-host.md`](graph-canvas-second-host.md) — what a family-tree canvas host still needs from GraphCanvas: hit targets from measured layout, a routed edge layer, selection, growable bounds, a host zoom range
 - [`name-index-on-commit.md`](name-index-on-commit.md) — a handle commit throws away Promote's name index and every Source's ranked candidates; update them in place instead
 - [`narrower-canon-walk.md`](narrower-canon-walk.md) — every proposal walks the whole connected component of the canon; walk only as far as alignment can use
