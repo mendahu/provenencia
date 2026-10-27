@@ -1,11 +1,11 @@
 # Review — S12-21 The canvas keeps its graph and shows its failures
 
-**Verdict:** (round 2 pending)
-**Rounds:** 1 so far. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 
-None.
+- **M-11: may the deleted-graph canvas bend the navigation rule?** `.cursor/rules/workspace-navigation.mdc` and `add-workspace-location` say a missing deep id prunes the entry and falls back with `fallbackToSectionRoot()`. The map row, audit A-11 and bar outcome 9 instead have the canvas stay put and say the graph no longer exists, with **Go to Source page**. **Recommendation:** keep the callout, and record it as a named exception in both guidance files (STEP-7, §5 **Rules this plan bends**). Alternative: follow the rule, so a gone graph falls back to the Sources list and the gone callout is dropped, which changes bar outcome 9.
 
 ## Writer's own calls
 
@@ -97,3 +97,16 @@ Fresh reviewers checked the round-1 answers and the new plan text.
 **Answer:** Fixed. §11 has a risk row saying the order is deliberate and must not be "fixed".
 
 Nits fixed: T-7 moved after T-6; T-2 names the composer and Promote location builders to reuse.
+
+### M-11 · blocker · The gone-graph state bends the missing-deep-id navigation rule
+`workspace-navigation.mdc:15` and `add-workspace-location` (lines 45, 99) say: fall back with `fallbackToSectionRoot()`.
+**Answer:** To user (above). Until the user answers, §5 **Rules this plan bends** names the rule, and STEP-7 adds the exception line to both files.
+
+### M-8 (answer re-checked) · major · The decline reason does not hold
+A `QueryHandle` accessor needs no `L10n`.
+**Answer:** Fixed. D-6 adds `QueryHandle.failure`. `SourcesModel.statusCountsError` and `EvidenceGraphModel.connectRulesError` move onto it, and STEP-5 checks this with `rg`.
+
+### Below-blocker notes
+- `evidenceGraphIsGone(id:)` was left in **Next adds** and **Scale**. **Fixed.**
+- The gone callout repeated `noArtifactCallout`. **Fixed:** they now share one private builder, `sourcePageCallout(title:message:action:identifier:)` (D-7).
+- The enum should go in its own file. **Partly fixed:** `EvidenceGraphCanvasNotice` now goes in the existing `EvidenceCanvasInputMode.swift`, beside its sibling. A new file waits for S12-31 (Out row).
