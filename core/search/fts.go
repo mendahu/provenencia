@@ -32,6 +32,22 @@ type docRow struct {
 	refMatch                                                  refMatchTier
 }
 
+// docColumns is the catalog_search_docs column list every hit query selects,
+// in the order scanDoc reads it.
+const docColumns = `d.kind, d.entity_id, d.display_ref, d.display_title, d.display_subtitle,
+			d.display_icon_key, d.display_thumbnail_rel_path,
+			d.title, d.ref, d.secondary, d.body`
+
+// scanDoc reads docColumns into d, then any extra selected columns.
+func scanDoc(rows *sql.Rows, d *docRow, extra ...any) error {
+	dest := []any{
+		&d.kind, &d.entityID, &d.displayRef, &d.displayTitle, &d.displaySubtitle,
+		&d.displayIconKey, &d.displayThumbnailRelPath,
+		&d.title, &d.ref, &d.secondary, &d.body,
+	}
+	return rows.Scan(append(dest, extra...)...)
+}
+
 func candidateKey(kind, entityID string) string {
 	return kind + "\x00" + entityID
 }
@@ -295,14 +311,12 @@ func mergeFTS(ctx context.Context, db *sql.DB, byKey map[string]docRow, match st
 	}
 	w := FTSBM25Weights
 	rows, err := db.QueryContext(ctx, fmt.Sprintf(`
-		SELECT d.kind, d.entity_id, d.display_ref, d.display_title, d.display_subtitle,
-			d.display_icon_key, d.display_thumbnail_rel_path,
-			d.title, d.ref, d.secondary, d.body,
+		SELECT %s,
 			bm25(catalog_search_fts, %f, %f, %f, %f) AS rank
 		FROM catalog_search_fts
 		JOIN catalog_search_docs d ON d.rowid = catalog_search_fts.rowid
 		WHERE catalog_search_fts MATCH ?%s
-	`, w.Title, w.Ref, w.Secondary, w.Body, kindSQL(kinds)), append([]any{match}, kindArgs(kinds)...)...)
+	`, docColumns, w.Title, w.Ref, w.Secondary, w.Body, kindSQL(kinds)), append([]any{match}, kindArgs(kinds)...)...)
 	if err != nil {
 		return err
 	}
@@ -313,11 +327,7 @@ func mergeFTS(ctx context.Context, db *sql.DB, byKey map[string]docRow, match st
 			return err
 		}
 		var d docRow
-		if err := rows.Scan(
-			&d.kind, &d.entityID, &d.displayRef, &d.displayTitle, &d.displaySubtitle,
-			&d.displayIconKey, &d.displayThumbnailRelPath,
-			&d.title, &d.ref, &d.secondary, &d.body, &d.ftsRank,
-		); err != nil {
+		if err := scanDoc(rows, &d, &d.ftsRank); err != nil {
 			return err
 		}
 		d.hasFTS = true
@@ -366,9 +376,7 @@ func mergeTrigramCandidates(ctx context.Context, db *sql.DB, byKey map[string]do
 		return 0, err
 	}
 	rows, err := db.QueryContext(ctx, `
-		SELECT d.kind, d.entity_id, d.display_ref, d.display_title, d.display_subtitle,
-			d.display_icon_key, d.display_thumbnail_rel_path,
-			d.title, d.ref, d.secondary, d.body
+		SELECT `+docColumns+`
 		FROM catalog_search_fts_trigram
 		JOIN catalog_search_docs d ON d.rowid = catalog_search_fts_trigram.rowid
 		WHERE catalog_search_fts_trigram MATCH ?`+kindSQL(kinds)+`
@@ -384,11 +392,7 @@ func mergeTrigramCandidates(ctx context.Context, db *sql.DB, byKey map[string]do
 			return added, err
 		}
 		var d docRow
-		if err := rows.Scan(
-			&d.kind, &d.entityID, &d.displayRef, &d.displayTitle, &d.displaySubtitle,
-			&d.displayIconKey, &d.displayThumbnailRelPath,
-			&d.title, &d.ref, &d.secondary, &d.body,
-		); err != nil {
+		if err := scanDoc(rows, &d); err != nil {
 			return added, err
 		}
 		key := candidateKey(d.kind, d.entityID)
