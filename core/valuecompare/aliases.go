@@ -144,8 +144,8 @@ func (a AliasIndex) Hit(x, y string, rx, ry NameRole) (AliasKind, bool) {
 }
 
 // Expands reports whether a fold keeps into over from: a set that allows role,
-// headed by into, holds from. When a set headed by from also holds into, the
-// table's Directions must name into as the one kept. from and into are
+// headed by into, holds from. When a set headed by from also holds into, a
+// Direction in any table must name into as the one kept. from and into are
 // comparison tokens. Without FormalFirst nothing expands.
 func (a AliasIndex) Expands(from, into string, role NameRole) bool {
 	forward, reverse := false, false
