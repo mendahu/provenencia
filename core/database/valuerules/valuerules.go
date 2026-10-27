@@ -40,6 +40,6 @@ func Load(g *graphcache.Graph, q Querier) (rules valuecompare.Rules, namePattern
 // cache then changes only when autoreconciler.CacheVersion does.
 func Product() valuecompare.Rules {
 	rules := matchregistry.Default().Value
-	rules.Names.Aliases = valuecompare.NewAliasIndex(namealiases.ProductTables(), rules.Words)
+	rules.Names.Aliases = namealiases.ProductIndex()
 	return rules
 }

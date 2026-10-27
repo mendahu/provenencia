@@ -219,6 +219,9 @@ func Rules(g *graphcache.Graph, q Querier, base valuecompare.Rules) (valuecompar
 	return base, nil
 }
 
+// ProductIndex is the alias index of the product seed, for the reconciler cache.
+func ProductIndex() valuecompare.AliasIndex { return buildIndex(ProductTables()) }
+
 // buildIndex keys the tables with valueWords, the word rules that already key
 // every stored alias token, so storage, the warm index and the cold index use
 // one rule.
