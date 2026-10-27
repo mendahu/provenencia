@@ -18,7 +18,8 @@ import (
 //     name with no parts is no evidence.
 //   - Format-agnostic. A part type is only an identifier: a name splits into
 //     one unit per part type, and units are compared only with units of the
-//     same type. No type behaves differently from another.
+//     same type. No type behaves differently from another. A type's role in
+//     the name format decides only whether an alias table applies (Fold).
 //   - A unit is the type's words, read as value compare reads them: each part
 //     normalized (case, punctuation and whitespace ignored; accents are not
 //     folded), split into words, and a particle rejoined with the word after
@@ -28,8 +29,14 @@ import (
 //     parts are what's displayed.
 //   - Fold: a unit folds into a fuller one when value compare finds the fuller
 //     one contains it and every word they pair is the same word or an initial
-//     of it. [J] → [James], [James] → [James, Kenneth]. An accent fold or an
-//     alias never folds.
+//     of it. [J] → [James], [James] → [James, Kenneth]. A nickname or
+//     abbreviation folds into the formal name it stands for, as the product
+//     alias seed lists it (Chris → Christopher, Wm → William, Ebbie → Abel;
+//     decided 2026-10-19, S11-28). A name alone never folds, and a pair the
+//     list gives both ways folds only as nicknameDirections says. An alias
+//     applies only to the part roles its table allows; the product tables
+//     cover given names and nicknames, so a surname never alias-folds. An
+//     accent fold never folds ([Jose] stays beside [José, Kenneth]).
 //   - Majority only outvotes spelling variants of the winner (Robbins beside
 //     Robins). A different name (Jake beside James, a married surname) is
 //     never outvoted: sources often record a nickname as a given name.
@@ -55,7 +62,8 @@ type nameUnit struct {
 
 // compareValue is the unit as a name for value compare: its raw parts with no
 // type, renumbered from 0, and no name pattern, so every word is untyped and
-// no part type weighs more than another (S11-06 D-4).
+// no part type weighs more than another (S11-06 D-4). fold re-reads the part
+// type's role for the alias check.
 func (u nameUnit) compareValue() valuecompare.Value {
 	parts := make([]namevalue.Part, len(u.raw))
 	for i, p := range u.raw {
