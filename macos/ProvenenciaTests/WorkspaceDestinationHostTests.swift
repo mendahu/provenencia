@@ -70,7 +70,7 @@ struct WorkspaceDestinationHostTests {
         let (window, host) = mountHost(navigation: navigation, session: session, store: store)
 
         let graphA = CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: "g-a")
-        let loadedA = await waitUntil {
+        let loadedA = await waitUntil(timeout: .seconds(15)) {
             (session.queryHandle(graphA) as QueryHandle<EvidenceGraphRows>?)?.isSettled == true
         }
         #expect(loadedA)
@@ -78,7 +78,7 @@ struct WorkspaceDestinationHostTests {
         navigation.go(to: .evidenceGraph(sourceId: "src-2", graphId: "g-b", title: "Smith"))
         let graphB = CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: "g-b")
         let workspaceB = CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: "src-2")
-        let loadedB = await waitUntil {
+        let loadedB = await waitUntil(timeout: .seconds(15)) {
             (session.queryHandle(graphB) as QueryHandle<EvidenceGraphRows>?)?.isSettled == true
                 && (session.queryHandle(workspaceB) as QueryHandle<CatalogSourceWorkspace>?)?.isSettled == true
         }
@@ -98,7 +98,7 @@ struct WorkspaceDestinationHostTests {
         navigation.go(to: .evidenceGraph(sourceId: "src-1", graphId: "g-x", title: "Gone"))
         let (window, host) = mountHost(navigation: navigation, session: session, store: store)
 
-        let fellBack = await waitUntil { navigation.currentLocation == .sectionRoot(.sources) }
+        let fellBack = await waitUntil(timeout: .seconds(15)) { navigation.currentLocation == .sectionRoot(.sources) }
         #expect(fellBack)
         let remembered = navigation.backJumpItems(limit: 100) + navigation.forwardJumpItems(limit: 100)
         #expect(!remembered.contains { $0.location.graphId == "g-x" })

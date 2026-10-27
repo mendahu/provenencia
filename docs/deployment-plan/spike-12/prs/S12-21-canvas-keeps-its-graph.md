@@ -1,6 +1,7 @@
 # S12-21 — The canvas keeps its graph and shows its failures
 
-**Status:** Planned
+**Status:** Landed in [#596](https://github.com/mendahu/provenencia/pull/596) (2026-10-27)
+**Landed:** Differences from the plan: T-4's case (d), a list that failed with no value, is its own test (`graphPresenceIsUnknownWhenTheListFailed`) because it needs a different store; `EvidenceGraphModel.prepare()` no longer binds the connect-rules handle and tests `connectRulesError` directly, which the STEP-5 grep required and which behaves the same; T-8 attaches history with project uuid `"project-1"`; the hosting tests wait up to 15 s, not 2 s, because the first full-suite run timed out on the `g-a` wait at 2 s while the main actor was busy (it passed alone and on the next run). Commits are grouped by behavior: canvas identity, composer load errors, the skill, and the read-error callout with the deleted-graph fallback. The manual check (section 10) was not run in the app by the implementer.
 **Spike / slice:** Spike 12 · Slice 5 — Audit fixes: High
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the two new states are `PVCallout`s in the canvas's existing callout slot, the shape of its No-artifact callout; audit A-11 "Reuses the canvas's existing callout; no new chrome")
