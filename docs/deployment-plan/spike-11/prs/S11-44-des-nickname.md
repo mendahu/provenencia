@@ -1,6 +1,7 @@
 # S11-44 — Des as a nickname of Desiree and Desirae
 
-**Status:** Planned
+**Status:** Landed in #594 (2026-10-27)
+**Landed:** No differences from the plan.
 **Spike / slice:** Spike 11 · Slice 10 — Name candidates
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: a seed edit; Promote's target menu already shows any alias hit)
