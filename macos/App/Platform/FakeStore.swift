@@ -1390,16 +1390,40 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    /// The ref fast path's boost: 8 for an exact ref, 3 for a prefix, else 1 and unmatched.
-    private static func refBoost(
-        for ref: String,
-        key: (key: String, exact: Bool)?
-    ) -> (boost: Double, matched: Bool) {
-        guard let key else { return (1, false) }
-        let upper = ref.uppercased()
-        if key.exact && upper == key.key { return (8, true) }
-        if !key.exact && upper.hasPrefix(key.key) { return (3, true) }
-        return (1, false)
+    /// Scores one ref-bearing record (Source or Evidence graph): field weights, the ref
+    /// fast path (8 for an exact ref, 3 for a prefix) and the Sources-context boost.
+    /// Returns nil when the record does not match.
+    private static func scoreRefRecord(
+        values: [String: String],
+        ref: String,
+        tokens: [String],
+        raw: String,
+        refKey: (key: String, exact: Bool)?,
+        inSources: Bool
+    ) -> (score: Double, reason: String)? {
+        var (score, reason) = scoreSearchFields(
+            fields: [("title", 10), ("ref", 12), ("description", 3)],
+            values: values,
+            tokens: tokens.isEmpty ? [raw.lowercased()] : tokens
+        )
+        var refBoost = 1.0
+        if let refKey {
+            let upper = ref.uppercased()
+            if refKey.exact && upper == refKey.key {
+                refBoost = 8
+            } else if !refKey.exact && upper.hasPrefix(refKey.key) {
+                refBoost = 3
+            }
+            if refBoost > 1 {
+                score = max(score, 12)
+                reason = "ref"
+            } else if score <= 0 {
+                return nil
+            }
+        } else {
+            guard score > 0 else { return nil }
+        }
+        return (score * (inSources ? 1.1 : 1.0) * refBoost, reason)
     }
 
     private func vocabularySearchHits(
@@ -1430,23 +1454,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     "ref": source.ref,
                     "description": description,
                 ]
-                var (score, reason) = Self.scoreSearchFields(
-                    fields: [("title", 10), ("ref", 12), ("description", 3)],
+                guard let (score, reason) = Self.scoreRefRecord(
                     values: values,
-                    tokens: tokens.isEmpty ? [raw.lowercased()] : tokens
-                )
-                let (refBoost, refMatched) = Self.refBoost(for: source.ref, key: refKey)
-                if refKey != nil {
-                    if refMatched {
-                        score = max(score, 12)
-                        reason = "ref"
-                    } else if score <= 0 {
-                        continue
-                    }
-                } else {
-                    guard score > 0 else { continue }
-                }
-                let boost = location?.section == .sources ? 1.1 : 1.0
+                    ref: source.ref,
+                    tokens: tokens,
+                    raw: raw,
+                    refKey: refKey,
+                    inSources: location?.section == .sources
+                ) else { continue }
                 scored.append((
                     CatalogSearchHit(
                         kind: CatalogSearchKind.source.rawValue,
@@ -1464,7 +1479,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         thumbnailRelPath: source.thumbnailRelPath,
                         iconKey: typeIconByID[source.sourceTypeID] ?? ""
                     ),
-                    score * boost * refBoost
+                    score
                 ))
             }
 
@@ -1474,23 +1489,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             )
             for graph in evidenceGraphsByProject[projectDir] ?? [] {
                 guard let source = sourceByID[graph.sourceID] else { continue }
-                var (score, reason) = Self.scoreSearchFields(
-                    fields: [("title", 10), ("ref", 12), ("description", 3)],
+                guard let (score, reason) = Self.scoreRefRecord(
                     values: ["title": graph.name, "ref": graph.ref, "description": graph.description],
-                    tokens: tokens.isEmpty ? [raw.lowercased()] : tokens
-                )
-                let (refBoost, refMatched) = Self.refBoost(for: graph.ref, key: refKey)
-                if refKey != nil {
-                    if refMatched {
-                        score = max(score, 12)
-                        reason = "ref"
-                    } else if score <= 0 {
-                        continue
-                    }
-                } else {
-                    guard score > 0 else { continue }
-                }
-                let boost = location?.section == .sources ? 1.1 : 1.0
+                    ref: graph.ref,
+                    tokens: tokens,
+                    raw: raw,
+                    refKey: refKey,
+                    inSources: location?.section == .sources
+                ) else { continue }
                 scored.append((
                     CatalogSearchHit(
                         kind: CatalogSearchKind.evidenceGraph.rawValue,
@@ -1501,7 +1507,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         matchReason: reason,
                         location: SourcesListNavigation.canvasLocation(for: source, graph: graph)
                     ),
-                    score * boost * refBoost
+                    score
                 ))
             }
 
