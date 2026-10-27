@@ -1082,34 +1082,50 @@ func TestLocationsNameTheirGraph(t *testing.T) {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	loc := func(kind catalogmodel.Kind, id []byte, ref string) deleteimpact.Location {
+	listed := func(kind catalogmodel.Kind, id []byte, ref string) deleteimpact.Listed {
 		t.Helper()
 		g, err := deleteimpact.ListedGroup(tx, "x.via", kind, []deleteimpact.Listed{{ID: id, Ref: ref}})
 		if err != nil {
 			t.Fatal(err)
 		}
-		return g.Listed[0].Location
+		return g.Listed[0]
 	}
+	// A graph location names the Source in Ref and Title, as the app's do; a
+	// composer location names its scope Subject and carries the Source's title.
+	// The listed row keeps its own ref and title either way.
 	for _, tt := range []struct {
-		name     string
-		kind     catalogmodel.Kind
-		id       []byte
-		ref      string
-		surface  string
-		graphID  []byte
-		sourceID []byte
+		name        string
+		kind        catalogmodel.Kind
+		id          []byte
+		ref         string
+		surface     string
+		graphID     []byte
+		subjectID   []byte
+		listedTitle string
+		locRef      string
+		locTitle    string
 	}{
-		{"Subject", catalogmodel.KindSubject, subject.ID, subject.Ref, "graph", jones.ID, src.ID},
-		{"Observation", catalogmodel.KindObservation, cited.Observations[0].ID, cited.Observations[0].Ref, "citationComposer", jones.ID, src.ID},
-		{"Citation with an Observation", catalogmodel.KindCitation, cited.Citation.ID, cited.Citation.Ref, "citationComposer", jones.ID, src.ID},
-		{"Citation with no Observation", catalogmodel.KindCitation, bare.Citation.ID, bare.Citation.Ref, "citationComposer", jones.ID, src.ID},
-		{"graph", catalogmodel.KindEvidenceGraph, jones.ID, jones.Ref, "graph", jones.ID, src.ID},
-		{"Default graph", catalogmodel.KindEvidenceGraph, def.ID, def.Ref, "graph", def.ID, src.ID},
+		{"Subject", catalogmodel.KindSubject, subject.ID, subject.Ref, "graph", jones.ID, subject.ID, "Leeds", src.Ref, "Register"},
+		{"Observation", catalogmodel.KindObservation, cited.Observations[0].ID, cited.Observations[0].Ref, "citationComposer", jones.ID, subject.ID, "Toponym: Leeds", subject.Ref, "Leeds"},
+		{"Citation with an Observation", catalogmodel.KindCitation, cited.Citation.ID, cited.Citation.Ref, "citationComposer", jones.ID, subject.ID, "Leeds", subject.Ref, "Leeds"},
+		{"Citation with no Observation", catalogmodel.KindCitation, bare.Citation.ID, bare.Citation.Ref, "citationComposer", jones.ID, nil, bare.Citation.Ref, bare.Citation.Ref, bare.Citation.Ref},
+		{"graph", catalogmodel.KindEvidenceGraph, jones.ID, jones.Ref, "graph", jones.ID, nil, jones.Name, src.Ref, "Register"},
+		{"Default graph", catalogmodel.KindEvidenceGraph, def.ID, def.Ref, "graph", def.ID, nil, def.Name, src.Ref, "Register"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got := loc(tt.kind, tt.id, tt.ref)
-			if got.SourceSurface != tt.surface || got.GraphID != idString(tt.graphID) || got.SourceID != idString(tt.sourceID) {
-				t.Fatalf("location %+v, want %s on graph %x of %x", got, tt.surface, tt.graphID, tt.sourceID)
+			l := listed(tt.kind, tt.id, tt.ref)
+			got := l.Location
+			if got.SourceSurface != tt.surface || got.GraphID != idString(tt.graphID) || got.SourceID != idString(src.ID) {
+				t.Fatalf("location %+v, want %s on graph %x of %x", got, tt.surface, tt.graphID, src.ID)
+			}
+			if got.SubjectID != idString(tt.subjectID) {
+				t.Fatalf("location SubjectID %q, want %x", got.SubjectID, tt.subjectID)
+			}
+			if got.Ref != tt.locRef || got.Title != tt.locTitle || got.SourceTitle != "Register" {
+				t.Fatalf("location ref %q title %q source title %q, want %q %q %q", got.Ref, got.Title, got.SourceTitle, tt.locRef, tt.locTitle, "Register")
+			}
+			if l.Ref != tt.ref || l.Title != tt.listedTitle {
+				t.Fatalf("listed %q %q, want %q %q", l.Ref, l.Title, tt.ref, tt.listedTitle)
 			}
 		})
 	}
