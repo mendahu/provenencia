@@ -78,3 +78,22 @@ The reviewer ran on Linux, where there is no `xcodebuild`.
 
 ### M-10 · nit · T-2 repeats the expectations STEP-1 updates
 **Answer:** Fixed. STEP-1 deletes the scattered `deepId` assertions, and T-2 is the one table test.
+
+## Round 2
+
+Fresh reviewers checked the round-1 answers and the new plan text.
+
+### X-9 · major · STEP-2 check pattern can never pass
+`sourceID: sourceID)$` also matches `SourcePageContext.swift:104`, a line this PR keeps.
+**Answer:** Fixed. The alternative is now `sync\(from: [a-zA-Z]+, sourceID:`.
+
+### X-10 · minor · Empty overlay lives in `EvidenceGraphDocumentBody`
+**Answer:** Fixed in §4 and D-7.
+
+### X-11 · minor · Choices left open in the new callouts
+**Answer:** Fixed. D-7 now copies `noArtifactCallout`'s call shape and says which view carries each id. D-5 spells out `session.evidenceGraphPresence(id: graphID)`.
+
+### X-12 · minor · Read-error flash before the gone notice
+**Answer:** Fixed. §11 has a risk row saying the order is deliberate and must not be "fixed".
+
+Nits fixed: T-7 moved after T-6; T-2 names the composer and Promote location builders to reuse.
