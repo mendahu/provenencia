@@ -78,23 +78,12 @@ enum CatalogSearchHitPresentation {
     /// Title the list would show. Falls back to the indexed title when the hit
     /// has no structured header.
     static func title(for hit: CatalogSearchHit, orders: NameFormatOrders = NameFormatOrders()) -> String {
-        switch hit.header {
-        case .person(let header): return PersonHeaderDisplay.title(header, style: .sorted, orders: orders)
-        case .event(let header): return EventTitleDisplay.title(header, orders: orders)
-        case .place(let header): return PlaceTitleDisplay.title(header)
-        case nil: return hit.title
-        }
+        hit.header.map { ConclusionHeaderDisplay.title($0, style: .sorted, orders: orders) } ?? hit.title
     }
 
     /// Secondary line the list would show.
     static func secondary(for hit: CatalogSearchHit) -> String {
-        switch hit.header {
-        case .person(let header): return PersonLifeDisplay.line(header).text
-        case .event(let header): return EventSecondaryDisplay.line(header)
-        case .place(let header):
-            return PlaceChainDisplay.line(parents: header.parents, candidates: header.parentsAreCandidates)
-        case nil: return hit.subtitle
-        }
+        hit.header.map(ConclusionHeaderDisplay.secondary) ?? hit.subtitle
     }
 
     /// The lead thumbnail, or nil for a `source` hit, which `CatalogSearchHitRow`

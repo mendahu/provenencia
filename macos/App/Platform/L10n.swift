@@ -1521,6 +1521,32 @@ enum L10n {
         static func shareHeaderBare(phrase: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.shareHeaderBare", defaultValue: "they share %@", comment: "Header of a relationship Card when the connected row is not on the page, after the leading ellipsis; the argument is what they share"), phrase)
         }
+        static func recorded(source: String, record: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.recorded", defaultValue: "This source: %1$@ · The record: %2$@", comment: "Muted line under a relationship Card's header: how each side records the link; 1 = this Source's way, 2 = the matched record's way"), source, record)
+        }
+        static func spokenRecorded(header: String, source: String, record: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.spokenRecorded", defaultValue: "%1$@. This source: %2$@. The record: %3$@", comment: "VoiceOver reading of a relationship Card's header and how each side records the link; 1 = the header, 2 = this Source's way, 3 = the record's way"), header, source, record)
+        }
+        static func recordedOn(_ value: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.recorded.on", defaultValue: "dated %@", comment: "An event named by its date inside a recorded phrase; the argument is the date, without any phrase about how it was recorded"), value)
+        }
+        static func recordedMarriage(_ value: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.recorded.marriage", defaultValue: "married in the marriage %@", comment: "How a side records a couple: through a marriage; the argument is \"dated <date>\" or the marriage's ref"), value)
+        }
+        static let recordedMarriageNone = LocalizedStringResource("promote.sheet.recorded.marriage.none", defaultValue: "married in a marriage", comment: "How a side records a couple through a marriage that cannot be named")
+        static func recordedBirth(_ value: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.recorded.birth", defaultValue: "parent and child in the birth %@", comment: "How a side records a parent through a birth; the argument is \"dated <date>\" or the birth's ref"), value)
+        }
+        static let recordedBirthNone = LocalizedStringResource("promote.sheet.recorded.birth.none", defaultValue: "parent and child in a birth", comment: "How a side records a parent through a birth that cannot be named")
+        static func recordedChain(_ value: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.recorded.chain", defaultValue: "grandparent and grandchild through %@", comment: "How a side records a grandparent through a parent between; the argument is that parent's name or ref"), value)
+        }
+        static let recordedChainNone = LocalizedStringResource("promote.sheet.recorded.chain.none", defaultValue: "grandparent and grandchild through a parent", comment: "The same, when the parent between cannot be named")
+        static func recordedOther(_ value: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.recorded.other", defaultValue: "through %@", comment: "How a side records a link through a pattern this build has no words for; the argument is the record between"), value)
+        }
+        static let recordedOtherNone = LocalizedStringResource("promote.sheet.recorded.other.none", defaultValue: "through another record", comment: "The same, when the record between cannot be named")
+        static let recordedDirectOther = LocalizedStringResource("promote.sheet.recorded.direct.other", defaultValue: "recorded directly", comment: "A side that records the link directly, of a kind with no words of its own")
         /// A Card header as it is drawn: led by an ellipsis, as if finishing "this row and the record's other sources…". VoiceOver reads the header without it.
         static func cardHeaderLead(_ header: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.cardHeaderLead", defaultValue: "…%@", comment: "A Card header on the evidence sheet as it is drawn: an ellipsis, then the header; the argument is the header"), header)
@@ -2608,7 +2634,15 @@ enum L10n {
             var shareOtherEnd: LocalizedStringResource?
             /// ``shareOtherEnd`` for a similar outcome.
             var shareOtherEndSimilar: LocalizedStringResource?
+            /// How a side of the evidence sheet's caption says it records a link of this term directly
+            /// ("recorded as spouses"); nil for a term with no words of its own, which the sheet words
+            /// "recorded directly" (``L10n/Promote/recordedDirectOther``).
+            var recordedDirect: LocalizedStringResource?
         }
+
+        private static let recordedDirectSpouses = LocalizedStringResource("promote.sheet.recorded.direct.spouses", defaultValue: "recorded as spouses", comment: "A side that records the couple directly")
+        private static let recordedDirectParentChild = LocalizedStringResource("promote.sheet.recorded.direct.parentChild", defaultValue: "recorded as parent and child", comment: "A side that records the parent directly")
+        private static let recordedDirectGrandparent = LocalizedStringResource("promote.sheet.recorded.direct.grandparent", defaultValue: "recorded as grandparent and grandchild", comment: "A side that records the grandparent directly")
 
         static func wording(propertyKey: String, termKey: String) -> Wording? {
             switch (propertyKey, termKey) {
@@ -2981,7 +3015,8 @@ enum L10n {
                 "evidenceGraph.share.relationship.spouse.similar",
                 defaultValue: "a similar spouse",
                 comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is spouse, with its own article"
-            )
+            ),
+            recordedDirect: recordedDirectSpouses
         )
         static let relationshipSibling = Wording(
             label: LocalizedStringResource(
@@ -3032,7 +3067,8 @@ enum L10n {
                 "evidenceGraph.share.relationship.parent.similar",
                 defaultValue: "a similar parent",
                 comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is parent, with its own article"
-            )
+            ),
+            recordedDirect: recordedDirectParentChild
         )
         static let relationshipChild = Wording(
             label: LocalizedStringResource(
@@ -3049,7 +3085,8 @@ enum L10n {
                 "evidenceGraph.share.relationship.child.similar",
                 defaultValue: "a similar child",
                 comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is child, with its own article"
-            )
+            ),
+            recordedDirect: recordedDirectParentChild
         )
         static let relationshipGrandparent = Wording(
             label: LocalizedStringResource(
@@ -3066,7 +3103,8 @@ enum L10n {
                 "evidenceGraph.share.relationship.grandparent.similar",
                 defaultValue: "a similar grandparent",
                 comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is grandparent, with its own article"
-            )
+            ),
+            recordedDirect: recordedDirectGrandparent
         )
         static let relationshipGrandchild = Wording(
             label: LocalizedStringResource(
@@ -3083,7 +3121,8 @@ enum L10n {
                 "evidenceGraph.share.relationship.grandchild.similar",
                 defaultValue: "a similar grandchild",
                 comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is grandchild, with its own article"
-            )
+            ),
+            recordedDirect: recordedDirectGrandparent
         )
         static let relationshipPibling = Wording(
             label: LocalizedStringResource(

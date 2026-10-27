@@ -1,6 +1,6 @@
 # S11-42 — Implied links on the evidence sheet
 
-**Status:** Planned
+**Status:** Landed in [#585](https://github.com/mendahu/provenencia/pull/585) (2026-10-27)
 **Spike / slice:** Spike 11 · Slice 9 — Kinship shapes
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: one muted caption line inside the existing relationship Card header, in the style its record count already uses; user, 2026-10-27)
@@ -14,6 +14,7 @@
 **Environment:** every step needs a Mac with the repo's toolchain (`xcodebuild test`, `scripts/check-pr.sh`) and the app for §10. No Go, proto or FFI change. A session without a Mac does not start: it reports "needs a Mac" to the orchestrator, which hands the PR to a Mac session.
 **Context:** [Kinship shapes § On the evidence sheet](../kinship-shapes.md#on-the-evidence-sheet); [`claim-evidence.md` § Wording](../claim-evidence.md#wording) and [§ Evidence through relationships](../claim-evidence.md#evidence-through-relationships); S11-40 plan D-9, D-11, D-13 and its Landed note; working rules "One wire vocabulary", "Counted once across sides"
 **Planned:** 2026-10-27 against `main` @ `c545a482`
+**Landed:** Differences from the plan: `EvidenceBoard.Pivot` declares its memberwise `init(name:date:ref:)` beside `init?(header:orders:)`, because a custom initializer in the type removes the synthesized one; `wording(_:)` returns nil for `.direct`, so `recorded` words a direct side through `direct(term:)`. The direct words are `recordedDirect` on `L10n.PropertyTerm.Wording` (user, review round 1; D-4's private switch is gone), `direct(term:)` is a lookup with `recordedDirectOther` as the fallback, and the pivot's date is phrase-free (`DateRowDisplay.line(includesPhrase: false)`, used by `dateLine` and the record's `Pivot`) with the copy "dated %@" (user, review round 1; was "on %@").
 **Review:** [`S11-42-implied-links-sheet.review.md`](S11-42-implied-links-sheet.review.md) — Fits with changes / Ready with changes, 1 round (every finding answered)
 
 ### Implementer — read this first
@@ -31,7 +32,7 @@
 
 ## 1. Objective
 
-The evidence sheet's relationship Card says how each side recorded a fact when either side recorded it through a kinship pattern. Under "…they share a spouse (refs)" a muted line reads "This source: married in the marriage on 12 May 1842 · The record: recorded as spouses". S11-40 sends Swift how each side recorded the fact (`CatalogClaimEvidenceRelationship.layer` / `.canon`) and the tree pivot's header, but the sheet still words the Card as if both sides recorded the link directly. This PR adds the caption line, its VoiceOver reading, and its L10n.
+The evidence sheet's relationship Card says how each side recorded a fact when either side recorded it through a kinship pattern. Under "…they share a spouse (refs)" a muted line reads "This source: married in the marriage dated 12 May 1842 · The record: recorded as spouses". S11-40 sends Swift how each side recorded the fact (`CatalogClaimEvidenceRelationship.layer` / `.canon`) and the tree pivot's header, but the sheet still words the Card as if both sides recorded the link directly. This PR adds the caption line, its VoiceOver reading, and its L10n.
 
 **Why now.** S11-40 landed the engine and the wire; its ship log left UX-1 ("an implied tree link's Card does not say how the tree recorded it") to this PR. This is the last PR of slice 9, and the slice Check needs the sheet to say it.
 
@@ -45,9 +46,9 @@ Fixtures: "spouse line" is a `CatalogClaimEvidenceRelationship` with `key` "rela
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-1.1 | Spouse line, `layer` `{marriageSpouses, pivotID "M"}`, `canon` direct; row M on the page | Card `recorded` = "This source: married in the marriage on 12 May 1842 · The record: recorded as spouses" |
-| AC-1.2 | Spouse line, `layer` direct, `canon` `{marriageSpouses, pivot .event(Mʹ)}` | "This source: recorded as spouses · The record: married in the marriage on <Mʹ's date line>" |
-| AC-1.3 | Both sides `marriageSpouses` (layer M, canon Mʹ) | "This source: married in the marriage on 12 May 1842 · The record: married in the marriage on <Mʹ's date line>" |
+| AC-1.1 | Spouse line, `layer` `{marriageSpouses, pivotID "M"}`, `canon` direct; row M on the page | Card `recorded` = "This source: married in the marriage dated 12 May 1842 · The record: recorded as spouses" |
+| AC-1.2 | Spouse line, `layer` direct, `canon` `{marriageSpouses, pivot .event(Mʹ)}` | "This source: recorded as spouses · The record: married in the marriage dated <Mʹ's date line>" |
+| AC-1.3 | Both sides `marriageSpouses` (layer M, canon Mʹ) | "This source: married in the marriage dated 12 May 1842 · The record: married in the marriage dated <Mʹ's date line>" |
 | AC-1.4 | Both sides direct (today's case) | `recorded` is nil; the Card draws no caption; `spoken` equals `main`'s |
 | AC-1.5 | `layer` `{marriageSpouses, pivotID "M"}`, M has `date` "" | Source side reads "married in the marriage EVT-M" |
 | AC-1.6 | `layer` `{marriageSpouses, pivotID "X"}`, no page row X | Source side reads "married in a marriage" |
@@ -55,8 +56,8 @@ Fixtures: "spouse line" is a `CatalogClaimEvidenceRelationship` with `key` "rela
 | AC-1.8 | Grandparent line, `canon` `{parentOfParent, .person(Bea)}`, `layer` direct | "This source: recorded as grandparent and grandchild · The record: grandparent and grandchild through Bea Ames" |
 | AC-1.9 | `canon` `{parentOfParent, pivot nil}` | Record side reads "grandparent and grandchild through a parent" |
 | AC-1.10 | Sibling line (`neighborTerm` the product `sibling` term), `layer` `{unrecognized("sibling_parents"), pivotID "M"}`, `canon` direct | "This source: through Marriage of Ann Ames and Bob Ames · The record: recorded directly" |
-| AC-1.11 | AC-1.1, the Card's own neighbor not on the page (header "they share a spouse") | Card `spoken` = `spokenRelationship` of "they share a spouse. This source: married in the marriage on 12 May 1842. The record: recorded as spouses" and the outcome; the caption is hidden from VoiceOver |
-| AC-1.12 | The app on S11-40's manual-check data (tree marriage; record spouse relationship) | Bob's sheet shows the Card "…they share a spouse (…)" with the caption "This source: recorded as spouses · The record: married in the marriage on 12 May 1842"; checking it and pressing Done pins both tree participations |
+| AC-1.11 | AC-1.1, the Card's own neighbor not on the page (header "they share a spouse") | Card `spoken` = `spokenRelationship` of "they share a spouse. This source: married in the marriage dated 12 May 1842. The record: recorded as spouses" and the outcome; the caption is hidden from VoiceOver |
+| AC-1.12 | The app on S11-40's manual-check data (tree marriage; record spouse relationship) | Bob's sheet shows the Card "…they share a spouse (…)" with the caption "This source: recorded as spouses · The record: married in the marriage dated 12 May 1842"; checking it and pressing Done pins both tree participations |
 
 **US-2.** As the page, a Source event row knows its date as the row lists it, so that the sheet can name a Source marriage or birth by its date.
 
@@ -152,7 +153,7 @@ Searched: `rg "KinshipPattern|\.layer\b|\.canon\b" macos/App/Features`, `rg "Dat
 
 **Builds on.** S11-40's `CatalogClaimEvidenceShape` and `KinshipPattern`; the board/display split from `8aab38bf`; the record-count caption style; `DateRowDisplay` and the per-kind header displays; the Card's `neighborTerm` reading.
 **Deletes.** `PromoteFlow.conclusionTitle` and `conclusionSubtitle`; the two `switch hit.header` blocks in `CatalogSearchHitPresentation`. The add-match-rule step 6 sentence "(S11-42) follows" is replaced (STEP-6).
-**Next adds.** A new kinship pattern adds its `KinshipPattern` case (S11-40), one arm in `PromoteEvidenceDisplay.wording` and two keys (named, none); a pattern implying a link the sheet already words directly needs no direct key. The exhaustive `switch` in `wording` fails the build until the arm is there. A new relationship term an implied link can carry adds one arm in `direct(term:)`. A second reader of these phrases (a tree citation, [`kinship-view.md`](../../../ideas/kinship-view.md) "Citing an implied fact on a tree") moves `recorded`, `Pivot` and the wording out of Promote into a neutral home in that PR.
+**Next adds.** A new kinship pattern adds its `KinshipPattern` case (S11-40), one arm in `PromoteEvidenceDisplay.wording` and two keys (named, none); a pattern implying a link the sheet already words directly needs no direct key. The exhaustive `switch` in `wording` fails the build until the arm is there. A new relationship term an implied link can carry adds a `recordedDirect` phrase to its `Wording` entry in `L10n.PropertyTerm`; with none it reads "recorded directly". A second reader of these phrases (a tree citation, [`kinship-view.md`](../../../ideas/kinship-view.md) "Citing an implied fact on a tree") moves `recorded`, `Pivot` and the wording out of Promote into a neutral home in that PR.
 
 ### Schema
 
@@ -187,10 +188,10 @@ L10n under `L10n.Promote` *(new)*. Each catalog entry is written as the `add-loc
 | --- | --- | --- |
 | `recorded(source:record:)` · `promote.sheet.recorded` | "This source: %1$@ · The record: %2$@" | Muted line under a relationship Card's header: how each side records the link; 1 = this Source's way, 2 = the matched record's way |
 | `spokenRecorded(header:source:record:)` · `promote.sheet.spokenRecorded` | "%1$@. This source: %2$@. The record: %3$@" | VoiceOver reading of a relationship Card's header and how each side records the link; 1 = the header, 2 = this Source's way, 3 = the record's way |
-| `recordedOn(_:)` · `promote.sheet.recorded.on` | "on %@" | An event named by its date inside a recorded phrase; the argument is the date |
-| `recordedMarriage(_:)` · `promote.sheet.recorded.marriage` | "married in the marriage %@" | How a side records a couple: through a marriage; the argument is "on <date>" or the marriage's ref |
+| `recordedOn(_:)` · `promote.sheet.recorded.on` | "dated %@" | An event named by its date inside a recorded phrase; the argument is the date |
+| `recordedMarriage(_:)` · `promote.sheet.recorded.marriage` | "married in the marriage %@" | How a side records a couple: through a marriage; the argument is "dated <date>" or the marriage's ref |
 | `recordedMarriageNone` · `promote.sheet.recorded.marriage.none` | "married in a marriage" | How a side records a couple through a marriage that cannot be named |
-| `recordedBirth(_:)` · `promote.sheet.recorded.birth` | "parent and child in the birth %@" | How a side records a parent through a birth; the argument is "on <date>" or the birth's ref |
+| `recordedBirth(_:)` · `promote.sheet.recorded.birth` | "parent and child in the birth %@" | How a side records a parent through a birth; the argument is "dated <date>" or the birth's ref |
 | `recordedBirthNone` · `promote.sheet.recorded.birth.none` | "parent and child in a birth" | How a side records a parent through a birth that cannot be named |
 | `recordedChain(_:)` · `promote.sheet.recorded.chain` | "grandparent and grandchild through %@" | How a side records a grandparent through a parent between; the argument is that parent's name or ref |
 | `recordedChainNone` · `promote.sheet.recorded.chain.none` | "grandparent and grandchild through a parent" | The same, when the parent between cannot be named |
@@ -201,7 +202,7 @@ L10n under `L10n.Promote` *(new)*. Each catalog entry is written as the `add-loc
 | `recordedDirectGrandparent` · `promote.sheet.recorded.direct.grandparent` | "recorded as grandparent and grandchild" | A side that records the grandparent directly |
 | `recordedDirectOther` · `promote.sheet.recorded.direct.other` | "recorded directly" | A side that records the link directly, of a kind with no words of its own |
 
-The dated marriage reads "married in the marriage on 12 May 1842"; by ref, "married in the marriage EVT-M". Removed: none.
+The dated marriage reads "married in the marriage dated 12 May 1842"; by ref, "married in the marriage EVT-M". Removed: none.
 
 ## 7. Steps
 
@@ -231,7 +232,7 @@ Do: D-9.
 Check: `scripts/check-pr.sh` prints `check-pr: PASS` (no Swift warning); §10 steps 3 and 5 show the caption on one Card and none on the other. AC-1.4's "no caption drawn" is checked by hand only (a view); T-2 pins `recorded == nil`.
 
 **STEP-6 — Docs**
-Files: `docs/deployment-plan/spike-11/claim-evidence.md` (§ Evidence through relationships, "Implied links (S11-40)": a bullet "The Card says how each side recorded it (S11-42)": a muted line under the header, both sides named, an implied side by its pattern and pivot, a direct side by the link's term, words in `PromoteEvidenceDisplay.recorded`; no English copy), `docs/deployment-plan/spike-11/kinship-shapes.md` (§ On the evidence sheet: the first bullet's example becomes "This source: married in the marriage on 12 May 1842 · The record: recorded as spouses", under the unchanged "they share a spouse" header), `.agents/skills/add-match-rule/SKILL.md` ("Add a kinship pattern" step 6: replace "The claim evidence sheet's wording for it (S11-42) follows." with "Then add its arm to `PromoteEvidenceDisplay.wording` and its two `promote.sheet.recorded.*` keys; the `switch` does not compile without it."), `docs/deployment-plan/spike-11/completed.md`, `docs/deployment-plan/spike-11/deployment-plan.md` (map row), this plan (status, Landed note). The plan's "Landed in #N" and the map status are written after the draft PR is open, so its number is known.
+Files: `docs/deployment-plan/spike-11/claim-evidence.md` (§ Evidence through relationships, "Implied links (S11-40)": a bullet "The Card says how each side recorded it (S11-42)": a muted line under the header, both sides named, an implied side by its pattern and pivot, a direct side by the link's term, words in `PromoteEvidenceDisplay.recorded`; no English copy), `docs/deployment-plan/spike-11/kinship-shapes.md` (§ On the evidence sheet: the first bullet's example becomes "This source: married in the marriage dated 12 May 1842 · The record: recorded as spouses", under the unchanged "they share a spouse" header), `.agents/skills/add-match-rule/SKILL.md` ("Add a kinship pattern" step 6: replace "The claim evidence sheet's wording for it (S11-42) follows." with "Then add its arm to `PromoteEvidenceDisplay.wording` and its two `promote.sheet.recorded.*` keys; the `switch` does not compile without it."), `docs/deployment-plan/spike-11/completed.md`, `docs/deployment-plan/spike-11/deployment-plan.md` (map row), this plan (status, Landed note). The plan's "Landed in #N" and the map status are written after the draft PR is open, so its number is known.
 Do: per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-11/prs/S11-42-implied-links-sheet.md` reports no errors; links resolve.
 
@@ -241,8 +242,8 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Swift | `macos/ProvenenciaTests/PromoteEvidenceDisplayTests.swift` `recordedNamesHowEachSideRecordsIt` *(new)* | M = `Pivot(name: "Marriage of Ann Ames and Bob Ames", date: "12 May 1842", ref: "EVT-M")`, spouse term "spouse". (a) `(marriageSpouses, M, direct, nil, "spouse")` → `("married in the marriage on 12 May 1842", "recorded as spouses")`. (b) mirrored → swapped. (c) both marriage → both dated. (d) both direct → nil. (e) M with date "" → "married in the marriage EVT-M". (f) layer pivot nil → "married in a marriage". (g) `(direct, nil, birthParents, Pivot(name: "Birth of Cal Ames", date: "1 Mar 1850", ref: "EVT-B"), "parent")` → `("recorded as parent and child", "parent and child in the birth on 1 Mar 1850")`; term "child" → the same direct phrase. (h) `(direct, nil, parentOfParent, Pivot(name: "Bea Ames", date: "", ref: "PER-B"), "grandparent")` → `("recorded as grandparent and grandchild", "grandparent and grandchild through Bea Ames")`; canon pivot nil → "grandparent and grandchild through a parent". (i) `(unrecognized("x"), M, direct, nil, "sibling")` → `("through Marriage of Ann Ames and Bob Ames", "recorded directly")`. `Pivot(header: .event(Mʹ), orders: NameFormatOrders())` → date `EventSecondaryDisplay.content(Mʹ).date`, ref "EVT-T"; `Pivot(header: .person(Bea), orders:)` → name "Bea Ames", date ""; `Pivot(header: nil, orders:)` → nil | AC-1.1, AC-1.2, AC-1.3, AC-1.5, AC-1.6, AC-1.7, AC-1.8, AC-1.9, AC-1.10, D-3, D-4, D-5, D-6 |
-| T-2 | Swift | `macos/ProvenenciaTests/PromoteEvidenceBoardTests.swift` `aRelationshipCardSaysHowEachSideRecordedIt` *(new)* | `page([SubjectFact(id: "M", kind: .event, name: "Marriage of Ann Ames and Bob Ames", ref: "EVT-M", anchor: nil, date: "12 May 1842")])`; spouse line on neighbor "n1" (no page row) with `layer` `{marriageSpouses, "M"}` → `recorded` = `L10n.Promote.recorded(source: "married in the marriage on 12 May 1842", record: "recorded as spouses")`; `spoken` = `spokenRelationship(header: spokenRecorded(header: "they share a spouse", source: …, record: …), outcome: .agree, count: 1)`. Spouse line with `canon.pivot = .event(Mʹ)` → AC-1.2's caption. Direct–direct → `recorded` nil and `spoken` as on `main` | AC-1.1, AC-1.2, AC-1.4, AC-1.11, D-7, D-8, D-13 |
+| T-1 | Swift | `macos/ProvenenciaTests/PromoteEvidenceDisplayTests.swift` `recordedNamesHowEachSideRecordsIt` *(new)* | M = `Pivot(name: "Marriage of Ann Ames and Bob Ames", date: "12 May 1842", ref: "EVT-M")`, spouse term "spouse". (a) `(marriageSpouses, M, direct, nil, "spouse")` → `("married in the marriage dated 12 May 1842", "recorded as spouses")`. (b) mirrored → swapped. (c) both marriage → both dated. (d) both direct → nil. (e) M with date "" → "married in the marriage EVT-M". (f) layer pivot nil → "married in a marriage". (g) `(direct, nil, birthParents, Pivot(name: "Birth of Cal Ames", date: "1 Mar 1850", ref: "EVT-B"), "parent")` → `("recorded as parent and child", "parent and child in the birth on 1 Mar 1850")`; term "child" → the same direct phrase. (h) `(direct, nil, parentOfParent, Pivot(name: "Bea Ames", date: "", ref: "PER-B"), "grandparent")` → `("recorded as grandparent and grandchild", "grandparent and grandchild through Bea Ames")`; canon pivot nil → "grandparent and grandchild through a parent". (i) `(unrecognized("x"), M, direct, nil, "sibling")` → `("through Marriage of Ann Ames and Bob Ames", "recorded directly")`. `Pivot(header: .event(Mʹ), orders: NameFormatOrders())` → date `EventSecondaryDisplay.content(Mʹ).date`, ref "EVT-T"; `Pivot(header: .person(Bea), orders:)` → name "Bea Ames", date ""; `Pivot(header: nil, orders:)` → nil | AC-1.1, AC-1.2, AC-1.3, AC-1.5, AC-1.6, AC-1.7, AC-1.8, AC-1.9, AC-1.10, D-3, D-4, D-5, D-6 |
+| T-2 | Swift | `macos/ProvenenciaTests/PromoteEvidenceBoardTests.swift` `aRelationshipCardSaysHowEachSideRecordedIt` *(new)* | `page([SubjectFact(id: "M", kind: .event, name: "Marriage of Ann Ames and Bob Ames", ref: "EVT-M", anchor: nil, date: "12 May 1842")])`; spouse line on neighbor "n1" (no page row) with `layer` `{marriageSpouses, "M"}` → `recorded` = `L10n.Promote.recorded(source: "married in the marriage dated 12 May 1842", record: "recorded as spouses")`; `spoken` = `spokenRelationship(header: spokenRecorded(header: "they share a spouse", source: …, record: …), outcome: .agree, count: 1)`. Spouse line with `canon.pivot = .event(Mʹ)` → AC-1.2's caption. Direct–direct → `recorded` nil and `spoken` as on `main` | AC-1.1, AC-1.2, AC-1.4, AC-1.11, D-7, D-8, D-13 |
 | T-3 | Swift | `macos/ProvenenciaTests/EvidenceGraphSnapshotTests.swift` `anEventsDateLineReadsItsDateObservations` *(new)* | Event with a positive `date` 1842-05-12 → `DateRowDisplay.line(date:)` of it; event with `start_date` 1840 and `end_date` 1845 → `DateRowDisplay.line(date: nil, start:, end:)`; event with only a negative `date` → ""; person with a `date` Observation → "" | AC-2.1, AC-2.2, AC-2.3, D-10 |
 | T-4 | Swift | `macos/ProvenenciaTests/PromoteFlowTests.swift` `aRowCarriesItsEventsDate` *(new)* | `flow.load` with an `.event` `SubjectFact` of `date` "12 May 1842", once with an `anchor` and once without → `flow.row(id)?.date` "12 May 1842" both times | AC-2.4, D-11 |
 | T-5 | Swift | `macos/ProvenenciaTests/CatalogSearchTests.swift` `aHeaderIsTitledByItsKind` *(new)* | `ConclusionHeaderDisplay.title(.person(h), style: .sorted)` == `PersonHeaderDisplay.title(h, style: .sorted)`; `.event(e)` == `EventTitleDisplay.title(e)`; `.place(p)` == `PlaceTitleDisplay.title(p)`; `secondary` likewise per kind; `ref` == each header's `entity.ref` | D-12 |
@@ -272,10 +273,10 @@ This check also runs S11-40's manual check, which S11-40 did not run. If step 3 
 
 1. Open a project. On Source "Tree", add Ann Ames and Bob Ames and a marriage dated 12 May 1842 with both as `subject`; promote all three. On Source "Register", add Ann Ames and Bob Ames in a `spouse` relationship.
 2. Open Promote for "Register". Bob's row targets the tree Bob, Ann's the tree Ann.
-3. Open Bob's evidence sheet: the Card "…they share a spouse (…)" shows under its header "This source: recorded as spouses · The record: married in the marriage on 12 May 1842" (AC-1.12). With VoiceOver on, the Card's box reads the header, both sides and the outcome.
+3. Open Bob's evidence sheet: the Card "…they share a spouse (…)" shows under its header "This source: recorded as spouses · The record: married in the marriage dated 12 May 1842" (AC-1.12). With VoiceOver on, the Card's box reads the header, both sides and the outcome.
 4. Press Done without unchecking. `identity_claim_evidence` for Bob's new claim holds both tree marriage participations' Observations.
 5. On Source "Census", add Ann Ames and Bob Ames in a `spouse` relationship and promote it against a tree that records them only as `spouse`: the Card shows no caption (AC-1.4).
-6. On Source "Wedding", add Ann Ames and Bob Ames as `subject`s of a marriage dated 12 May 1842, against a tree that records them only as `spouse`: Bob's sheet reads "This source: married in the marriage on 12 May 1842 · The record: recorded as spouses".
+6. On Source "Wedding", add Ann Ames and Bob Ames as `subject`s of a marriage dated 12 May 1842, against a tree that records them only as `spouse`: Bob's sheet reads "This source: married in the marriage dated 12 May 1842 · The record: recorded as spouses".
 
 ## 11. Risks and stop conditions
 

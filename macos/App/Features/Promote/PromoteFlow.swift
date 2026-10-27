@@ -188,6 +188,8 @@ struct PromoteFlow: Equatable, Sendable {
         var contested = false
         /// Why settling released an earlier pair of this row in this proposal. Not `updated`, which compares with the previous proposal.
         var move: Reason? = nil
+        /// An Event's date as the Events list lists it, without the source's words for it; empty for anything else.
+        var date: String = ""
         var id: String { subjectID }
 
         /// The record behind the target as a sentence reads it (a person in natural order); the
@@ -255,6 +257,8 @@ struct PromoteFlow: Equatable, Sendable {
         var ref: String
         /// Set when the subject is already filed.
         var anchor: Anchor?
+        /// An Event's date as the Events list lists it, without the source's words for it; empty for anything else.
+        var date: String = ""
     }
 
     struct BridgeFact: Equatable, Sendable {
@@ -673,7 +677,8 @@ struct PromoteFlow: Equatable, Sendable {
                 anchor: true, assessment: .strong, reason: .filed,
                 target: .handle(id: anchor.id, ref: anchor.ref, title: anchor.title),
                 menu: [], board: nil, pins: [], confidenceGradeID: nil, argument: "",
-                decided: false, updated: false, conflictNote: nil, proposedDuplicateOf: nil, duplicateNote: nil
+                decided: false, updated: false, conflictNote: nil, proposedDuplicateOf: nil, duplicateNote: nil,
+                date: fact.date
             )
         }
         let menu = menu(for: proposal, kind: fact.kind, orders: orders)
@@ -711,7 +716,7 @@ struct PromoteFlow: Equatable, Sendable {
             pins: keeps ? previous?.pins ?? [] : [], confidenceGradeID: nil, argument: previous?.argument ?? "",
             decided: false, updated: updated, conflictNote: nil,
             proposedDuplicateOf: duplicateOf(proposal), duplicateNote: nil,
-            contested: proposal.contested, move: Reason(move: proposal)
+            contested: proposal.contested, move: Reason(move: proposal), date: fact.date
         )
     }
 
@@ -779,61 +784,19 @@ struct PromoteFlow: Equatable, Sendable {
         assessment: Assessment,
         reason: Reason
     ) -> Alternative {
-        Alternative(
+        let header: CatalogConclusionHeader?
+        switch kind {
+        case .person: header = person.map { .person($0) }
+        case .event: header = event.map { .event($0) }
+        case .place: header = place.map { .place($0) }
+        case nil: header = nil
+        }
+        return Alternative(
             id: id, ref: ref,
-            title: conclusionTitle(
-                kind: kind, person: person, event: event, place: place,
-                fallback: ref, orders: orders, style: .sorted
-            ),
-            readingTitle: conclusionTitle(
-                kind: kind, person: person, event: event, place: place,
-                fallback: ref, orders: orders, style: .natural
-            ),
-            subtitle: conclusionSubtitle(kind: kind, person: person, event: event, place: place),
+            title: header.map { ConclusionHeaderDisplay.title($0, style: .sorted, orders: orders) } ?? ref,
+            readingTitle: header.map { ConclusionHeaderDisplay.title($0, style: .natural, orders: orders) } ?? ref,
+            subtitle: header.map(ConclusionHeaderDisplay.secondary) ?? "",
             assessment: assessment, reason: reason
         )
-    }
-
-    private static func conclusionTitle(
-        kind: EvidencePrimaryKind?,
-        person: CatalogPersonHeader?,
-        event: CatalogEventHeader?,
-        place: CatalogPlaceHeader?,
-        fallback: String,
-        orders: NameFormatOrders,
-        style: NameDisplayStyle
-    ) -> String {
-        switch kind {
-        case .person:
-            if let person { return PersonHeaderDisplay.title(person, style: style, orders: orders) }
-        case .event:
-            if let event { return EventTitleDisplay.title(event, orders: orders) }
-        case .place:
-            if let place { return PlaceTitleDisplay.title(place) }
-        case nil:
-            break
-        }
-        return fallback
-    }
-
-    private static func conclusionSubtitle(
-        kind: EvidencePrimaryKind?,
-        person: CatalogPersonHeader?,
-        event: CatalogEventHeader?,
-        place: CatalogPlaceHeader?
-    ) -> String {
-        switch kind {
-        case .person:
-            if let person { return PersonLifeDisplay.line(person).text }
-        case .event:
-            if let event { return EventSecondaryDisplay.line(event) }
-        case .place:
-            if let place {
-                return PlaceChainDisplay.line(parents: place.parents, candidates: place.parentsAreCandidates)
-            }
-        case nil:
-            break
-        }
-        return ""
     }
 }

@@ -5,18 +5,20 @@ import Foundation
 /// start–end span. Editors keep `DateValueDisplay`.
 enum DateRowDisplay {
     /// A point date wins; otherwise the start–end span. Empty when none of
-    /// them is set.
+    /// them is set. `includesPhrase: false` leaves off the words the source gave for the date
+    /// ("in the spring"), for a place where the date sits inside a sentence.
     static func line(
         date: CatalogDateValueInput?,
         start: CatalogDateValueInput? = nil,
         end: CatalogDateValueInput? = nil,
+        includesPhrase: Bool = true,
         locale: Locale = .autoupdatingCurrent
     ) -> String {
         if let date {
-            return rowDate(date, locale: locale)
+            return rowDate(date, includesPhrase: includesPhrase, locale: locale)
         }
-        let startText = start.map { rowDate($0, locale: locale) } ?? ""
-        let endText = end.map { rowDate($0, locale: locale) } ?? ""
+        let startText = start.map { rowDate($0, includesPhrase: includesPhrase, locale: locale) } ?? ""
+        let endText = end.map { rowDate($0, includesPhrase: includesPhrase, locale: locale) } ?? ""
         switch (startText.isEmpty, endText.isEmpty) {
         case (true, true):
             return ""
@@ -31,7 +33,7 @@ enum DateRowDisplay {
 
     /// One date as the list shows it: day–month–year, qualifier abbreviations,
     /// and `bet … and …` for a range.
-    private static func rowDate(_ input: CatalogDateValueInput, locale: Locale) -> String {
+    private static func rowDate(_ input: CatalogDateValueInput, includesPhrase: Bool, locale: Locale) -> String {
         let draft = DateValueDraft(from: input)
         if draft.isRange {
             guard
@@ -46,7 +48,7 @@ enum DateRowDisplay {
             }
             return appendPhrase(
                 L10n.Dates.rowBetween(start: start, end: end, locale: locale),
-                phrase: draft.phrase,
+                phrase: includesPhrase ? draft.phrase : "",
                 locale: locale
             )
         }
@@ -55,7 +57,7 @@ enum DateRowDisplay {
         ) else {
             return DateValueDisplay.string(for: input, locale: locale)
         }
-        return appendPhrase(applyQualifier(draft.qualifier, to: point, locale: locale), phrase: draft.phrase, locale: locale)
+        return appendPhrase(applyQualifier(draft.qualifier, to: point, locale: locale), phrase: includesPhrase ? draft.phrase : "", locale: locale)
     }
 
     private static func applyQualifier(_ raw: String, to point: String, locale: Locale) -> String {

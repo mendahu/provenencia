@@ -17,6 +17,13 @@ struct DateRowDisplayTests {
         #expect(DateRowDisplay.line(date: nil, locale: en) == "")
     }
 
+    @Test func dateLineCanLeaveOffThePhrase() {
+        var spring = CatalogDateValueInput(kind: "point", startYear: 1842)
+        spring.phrase = "in the spring"
+        #expect(DateRowDisplay.line(date: spring, locale: en).contains("in the spring"))
+        #expect(DateRowDisplay.line(date: spring, includesPhrase: false, locale: en) == "1842")
+    }
+
     @Test func dateLineKeepsQualifiersAndRanges() {
         let about = CatalogDateValueInput(kind: "point", qualifier: "ABT", startYear: 1810)
         let before = CatalogDateValueInput(kind: "point", qualifier: "BEF", startYear: 1790, startMonth: 3)

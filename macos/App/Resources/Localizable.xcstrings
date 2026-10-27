@@ -21807,6 +21807,186 @@
         }
       }
     },
+    "promote.sheet.recorded": {
+      "comment": "Muted line under a relationship Card's header: how each side records the link; 1 = this Source's way, 2 = the matched record's way",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This source: %1$@ · The record: %2$@"
+          }
+        }
+      }
+    },
+    "promote.sheet.spokenRecorded": {
+      "comment": "VoiceOver reading of a relationship Card's header and how each side records the link; 1 = the header, 2 = this Source's way, 3 = the record's way",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@. This source: %2$@. The record: %3$@"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.on": {
+      "comment": "An event named by its date inside a recorded phrase; the argument is the date, without any phrase about how it was recorded",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dated %@"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.marriage": {
+      "comment": "How a side records a couple: through a marriage; the argument is \"on <date>\" or the marriage's ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "married in the marriage %@"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.marriage.none": {
+      "comment": "How a side records a couple through a marriage that cannot be named",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "married in a marriage"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.birth": {
+      "comment": "How a side records a parent through a birth; the argument is \"on <date>\" or the birth's ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "parent and child in the birth %@"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.birth.none": {
+      "comment": "How a side records a parent through a birth that cannot be named",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "parent and child in a birth"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.chain": {
+      "comment": "How a side records a grandparent through a parent between; the argument is that parent's name or ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "grandparent and grandchild through %@"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.chain.none": {
+      "comment": "The same, when the parent between cannot be named",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "grandparent and grandchild through a parent"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.other": {
+      "comment": "How a side records a link through a pattern this build has no words for; the argument is the record between",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "through %@"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.other.none": {
+      "comment": "The same, when the record between cannot be named",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "through another record"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.direct.spouses": {
+      "comment": "A side that records the couple directly",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "recorded as spouses"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.direct.parentChild": {
+      "comment": "A side that records the parent directly",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "recorded as parent and child"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.direct.grandparent": {
+      "comment": "A side that records the grandparent directly",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "recorded as grandparent and grandchild"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.direct.other": {
+      "comment": "A side that records the link directly, of a kind with no words of its own",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "recorded directly"
+          }
+        }
+      }
+    },
     "promote.sheet.cardHeaderLead": {
       "comment": "A Card header on the evidence sheet as it is drawn: an ellipsis, then the header; the argument is the header",
       "extractionState": "manual",

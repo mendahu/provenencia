@@ -325,6 +325,60 @@ struct PromoteEvidenceDisplayTests {
         CatalogEvidenceTerm(key: key, label: key.capitalized, origin: CatalogOrigin.provenencia)
     }
 
+    @Test func recordedNamesHowEachSideRecordsIt() {
+        typealias Pivot = EvidenceBoard.Pivot
+        let marriage = Pivot(name: "Marriage of Ann Ames and Bob Ames", date: "12 May 1842", ref: "EVT-M")
+        func recorded(
+            _ layer: KinshipPattern, _ layerPivot: Pivot?, _ canon: KinshipPattern, _ canonPivot: Pivot?, _ term: String
+        ) -> [String]? {
+            PromoteEvidenceDisplay.recorded(
+                layer: layer, layerPivot: layerPivot, canon: canon, canonPivot: canonPivot, term: term
+            ).map { [$0.source, $0.record] }
+        }
+        // (a) – (d): the marriage, either side or both, and neither.
+        #expect(recorded(.marriageSpouses, marriage, .direct, nil, "spouse")
+            == ["married in the marriage dated 12 May 1842", "recorded as spouses"])
+        #expect(recorded(.direct, nil, .marriageSpouses, marriage, "spouse")
+            == ["recorded as spouses", "married in the marriage dated 12 May 1842"])
+        #expect(recorded(.marriageSpouses, marriage, .marriageSpouses, marriage, "spouse")
+            == ["married in the marriage dated 12 May 1842", "married in the marriage dated 12 May 1842"])
+        #expect(recorded(.direct, nil, .direct, nil, "spouse") == nil)
+        // (e) – (f): an undated marriage by its ref, an unknown one by neither.
+        let undated = Pivot(name: marriage.name, date: "", ref: "EVT-M")
+        #expect(recorded(.marriageSpouses, undated, .direct, nil, "spouse")?.first == "married in the marriage EVT-M")
+        #expect(recorded(.marriageSpouses, nil, .direct, nil, "spouse")?.first == "married in a marriage")
+        // (g): a parent through a birth; either end of the link reads the same direct phrase.
+        let birth = Pivot(name: "Birth of Cal Ames", date: "1 Mar 1850", ref: "EVT-B")
+        for term in ["parent", "child"] {
+            #expect(recorded(.direct, nil, .birthParents, birth, term)
+                == ["recorded as parent and child", "parent and child in the birth dated 1 Mar 1850"])
+        }
+        // (h): a grandparent through the parent between.
+        let bea = Pivot(name: "Bea Ames", date: "", ref: "PER-B")
+        #expect(recorded(.direct, nil, .parentOfParent, bea, "grandparent")
+            == ["recorded as grandparent and grandchild", "grandparent and grandchild through Bea Ames"])
+        #expect(recorded(.direct, nil, .parentOfParent, nil, "grandparent")?.last
+            == "grandparent and grandchild through a parent")
+        // (i): a pattern this build has no words for, against a link with no words of its own.
+        #expect(recorded(.unrecognized("x"), marriage, .direct, nil, "sibling")
+            == ["through Marriage of Ann Ames and Bob Ames", "recorded directly"])
+
+        let when = Pivot(header: .event(CatalogEventHeader(
+            entity: CatalogCanonicalEntity(id: "e", ref: "EVT-T", subjectTypeID: "t", label: ""),
+            date: date(1840, 6, 3),
+            title: CatalogEventTitle(rule: .label, label: "Marriage", ref: "EVT-T")
+        )), orders: NameFormatOrders())
+        #expect(when?.ref == "EVT-T")
+        #expect(when?.date == DateRowDisplay.line(date: date(1840, 6, 3)))
+        let person = Pivot(header: .person(CatalogPersonHeader(
+            entity: CatalogCanonicalEntity(id: "p", ref: "PER-B", subjectTypeID: "t", label: ""),
+            name: CatalogNameValue(form: "Bea Ames"), nameValueCount: 1
+        )), orders: NameFormatOrders())
+        #expect(person?.name == "Bea Ames")
+        #expect(person?.date == "")
+        #expect(Pivot(header: nil, orders: NameFormatOrders()) == nil)
+    }
+
     @Test func relationshipShareFromTheEngine() {
         func phrase(_ r: CatalogClaimEvidenceRelationship, _ name: String = "Mary") -> String {
             PromoteEvidenceDisplay.sharePhrase(relationship: r, neighborName: name)

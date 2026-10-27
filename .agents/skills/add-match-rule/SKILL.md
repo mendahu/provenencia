@@ -88,7 +88,7 @@ A one-cardinality link is a `One` key, and a gate a `Gates` entry, in `core/matc
 3. Add `TestDerive` rows: the pattern holds, a near miss (another role or event type) does not, and the implied link's direction.
 4. Add no knob: the implied link weighs as the direct link it stands for (the segment registry's Other pair).
 5. Say how `canonlinks` reads it: which pivot the pattern is (an event result, or a chain result for the person between), what `Reader.For` reads to find it, and how far `Deps` reaches. A pattern over an event is one more row and needs nothing there; a two-hop pattern changes `canonlinks`' pivots, `For` and its `Deps` only. Add a `TestFor` subtest and an oracle row in `TestForMatchesDerive`.
-6. Add the pattern's `KinshipPattern` case in `macos/App/Platform/ConclusionVocabulary.swift`: `TestSwiftVocabularyMatchesGo` reads `kinship.Patterns()` and fails until it is there. The claim evidence sheet's wording for it (S11-42) follows.
+6. Add the pattern's `KinshipPattern` case in `macos/App/Platform/ConclusionVocabulary.swift`: `TestSwiftVocabularyMatchesGo` reads `kinship.Patterns()` and fails until it is there. Then add its arm to `PromoteEvidenceDisplay.wording` and its two `promote.sheet.recorded.*` keys; the `switch` does not compile without it.
 
 ## Add a layer package
 

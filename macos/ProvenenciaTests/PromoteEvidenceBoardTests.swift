@@ -238,4 +238,83 @@ struct PromoteEvidenceBoardTests {
         #expect(card.groups.isEmpty)
         #expect(card.id == "n1|relationship·spouse")
     }
+
+    /// A page with one proposal row per fact, loaded as the model loads it.
+    private func page(_ facts: [PromoteFlow.SubjectFact]) -> PromoteFlow {
+        var flow = PromoteFlow(entryID: facts.first?.id ?? "")
+        flow.load(
+            entryID: facts.first?.id ?? "",
+            proposal: CatalogPromoteGraphAlignmentProposal(revision: 1, rows: facts.map { fact in
+                CatalogPromoteGraphAlignmentRow(
+                    subjectID: fact.id, kind: fact.kind.rawValue, target: "new", handleID: "", handleRef: "",
+                    score: 0, assessment: "none", reasonPropertyKey: "", reasonPropertyOrigin: "",
+                    alternatives: [], conflictWithFixed: false, possibleDuplicate: false
+                )
+            }),
+            subjects: facts,
+            bridges: []
+        )
+        return flow
+    }
+
+    @Test func aRelationshipCardSaysHowEachSideRecordedIt() {
+        let flow = page([
+            PromoteFlow.SubjectFact(
+                id: "M", kind: .event, name: "Marriage of Ann Ames and Bob Ames", ref: "EVT-M", anchor: nil,
+                date: "12 May 1842"
+            ),
+        ])
+        func card(layer: CatalogClaimEvidenceShape = .init(), canon: CatalogClaimEvidenceShape = .init()) -> EvidenceBoard.RelationshipCard {
+            var spouse = CatalogClaimEvidenceRelationship(
+                neighborSubjectID: "n1", key: "relationship·spouse", bridgeType: "relationship", outcome: .agree,
+                bundles: [CatalogClaimEvidenceBundle(id: "b1")]
+            )
+            spouse.neighborTerm = CatalogEvidenceTerm(key: "spouse", label: "Spouse", origin: CatalogOrigin.provenencia)
+            spouse.neighborTermNamesNeighbor = true
+            spouse.layer = layer
+            spouse.canon = canon
+            return build(CatalogClaimEvidence(relationships: [spouse]), neighbor: { flow.row($0) }).relationships[0]
+        }
+        let outcome = L10n.string(L10n.Promote.outcome(.agree))
+
+        let source = card(layer: .init(pattern: .marriageSpouses, pivotID: "M"))
+        let sourceSays = L10n.Promote.recorded(source: "married in the marriage dated 12 May 1842", record: "recorded as spouses")
+        #expect(source.header == "they share a spouse")
+        #expect(source.recorded == sourceSays)
+        #expect(source.spoken == PromoteEvidenceDisplay.spokenRelationship(
+            header: L10n.Promote.spokenRecorded(
+                header: "they share a spouse",
+                source: "married in the marriage dated 12 May 1842", record: "recorded as spouses"
+            ),
+            outcome: .agree, count: 1
+        ))
+        #expect(source.spoken.contains(outcome))
+
+        let when = CatalogEventHeader(
+            entity: CatalogCanonicalEntity(id: "t", ref: "EVT-T", subjectTypeID: "t", label: ""),
+            date: CatalogDateValueInput(kind: "point", startYear: 1840, startMonth: 6, startDay: 3),
+            title: CatalogEventTitle(rule: .label, label: "Marriage", ref: "EVT-T")
+        )
+        let record = card(canon: .init(pattern: .marriageSpouses, pivotID: "t", pivot: .event(when)))
+        let day = EventSecondaryDisplay.content(when).date
+        #expect(record.recorded == L10n.Promote.recorded(
+            source: "recorded as spouses", record: "married in the marriage dated \(day)"
+        ))
+
+        // A date the source gave words for sits in the caption without them, so no "·" splits a side.
+        var spring = CatalogDateValueInput(kind: "point", startYear: 1842)
+        spring.phrase = "in the spring"
+        var springy = when
+        springy.date = spring
+        let phrased = card(canon: .init(pattern: .marriageSpouses, pivotID: "t", pivot: .event(springy)))
+        #expect(phrased.recorded == L10n.Promote.recorded(
+            source: "recorded as spouses", record: "married in the marriage dated 1842"
+        ))
+
+        let direct = card()
+        #expect(direct.recorded == nil)
+        #expect(direct.spoken == PromoteEvidenceDisplay.spokenRelationship(
+            header: "they share a spouse", outcome: .agree, count: 1
+        ))
+    }
 }
