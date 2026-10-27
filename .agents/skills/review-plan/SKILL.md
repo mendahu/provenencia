@@ -58,7 +58,9 @@ on the role's model. Give it the prompt below and nothing else.
 - [ ] 3. Writer applies the fixes; lint again
 - [ ] 4. Round 2 (only if round 1 had a blocker or a Fixed reshape):
          fresh reviewers get the document + review log; they check the answers
-         and may raise only new blockers
+         and may raise only new blockers. A fix made in round 1 is new plan
+         text that round 1's reviewers never saw: round 2 checks it against
+         the code like any other line
 - [ ] 5. Stop: no open blocker, or round 2 is done. Anything still open → To user
 - [ ] 6. Verdict in the review log and the plan's **Review:** line; report to the user
 ```
@@ -77,6 +79,42 @@ keeps the loop from running until it agrees with itself.
 The writer does not give in to a finding it can refute, and does not refute one
 it cannot. A product question is never settled between agents.
 
+**Floors.** These keep a real finding from being answered away. That is the
+most common reason an app-health audit later finds what a plan review already
+saw: S12-13's review rated a Swift copy of an engine rule minor and logged it,
+and the Spike 12 audit made it a top item.
+
+- Rate with the lens's severity table, not the reviewer's word. A second
+  mechanism, a domain rule in the wrong layer, a registry that is due, and a
+  Decision that bends a working rule, a skill or a `.cursor/rules` line are
+  **blockers**.
+- A blocker of those kinds is answered **Fixed** or **To user**: never Logged,
+  never Declined on the plan's own say-so, never moved to an Out row.
+
+**A Decision that bends a rule is the user's.** When a Decision contradicts a
+working rule, a skill or a `.cursor/rules` file, the writer does not settle it,
+even when a reviewer's question led to it (S12-08 answered an executability
+question by having FakeStore mirror the engine, against `swift-tests.mdc`). It
+goes **To user**; if the user accepts, the plan's **Rules this plan bends**
+names it and a Step updates the rule.
+
+## Plan checks
+
+The classes later audits found most often, each tied to a section of the
+[`plan-pr` template](../plan-pr/template.md). The maintainability reviewer
+works them on every PR plan, beside the rubric. A missing or empty section that
+should not be empty is a finding at the severity the class carries.
+
+| Check | Template | Ask |
+| --- | --- | --- |
+| Rules bent | §5 **Rules this plan bends** | Does a Decision, Out line or Step contradict a working rule, a skill or a `.cursor/rules` file? Each is listed there with the user's answer, or it is a blocker |
+| Reach | §6 **Reach** | Does the PR add a way into existing code (a navigation path, an entry point) or make a state reachable (none, many, a deleted referent)? Is each destination checked: it resets on the new id, handles the missing referent, shows the state? |
+| Scale | §6 **Scale** | For each write the PR adds or re-keys: what does it invalidate and reload at the map's **Scale**? A fan-out to every child of a parent, or one call per child, is a finding |
+| Engine first | §3, §5 | Is a PR scoped to one layer carrying a multi-write user action, a refusal or a rule the other layer owns? The owning layer's change comes first |
+| Replace, not beside | §6 **Deletes** | Does each new mechanism retire the one it replaces (the old key, field, list, preflight, patch path)? Is every callee whose last caller the PR removes in **Deletes**? |
+| Sweep | §6 **Strings**, §9 | Does the DoD `rg` each renamed or deleted name, qualified, across skills, rules, docs and copy? When the PR changes what an action covers, does **Strings** list the copy that names the old scope? |
+| Imports and locks | §7 | Does a Step move a type or call into another package (check the import graph), or take a lock, slot or session a caller may already hold? |
+
 ## Reviewer prompts
 
 Fill in the angle brackets. Do not add the planning conversation.
@@ -89,7 +127,8 @@ maintainability, before anyone builds on it. Read-only: do not edit any file.
 
 Document: <path>
 Rubric: .agents/skills/review-pr/lenses/maintainability.md — read it first and
-follow "How to work".
+follow "How to work". On a PR plan, also work the "Plan checks" table in
+.agents/skills/review-plan/SKILL.md, and the "Floors" there for severity.
 <Round 2 only: Review log: <path>. Check each answer to the round-1 findings.
 Raise only new blockers.>
 
@@ -181,6 +220,16 @@ review gate, with these questions in addition to the rubric:
   same thing? A registry PR comes first.
 - **Pattern changes.** Does the spike change a pattern a skill teaches? A PR
   in the map updates the skill.
+- **Scale.** Does the map name the sizes its work must stay fast at (its
+  **Scale** line), and does each scope entry that adds a write or a list say
+  its fan-out at that size?
+- **Engine before client-only.** Is a PR scoped to one layer carrying a
+  multi-write user action or a rule the other layer owns? Cut the owning
+  layer's change first.
+- **Another spike's code.** Does a PR change code that a PR in another open
+  spike's map also changes? Name the dependency in both maps.
+- **Docs and skills per PR.** Does each PR that renames, re-keys or retires a
+  pattern name the docs and skills it makes false?
 
 Findings are `K-#`, answered the same way, logged as `deployment-plan.review.md`.
 

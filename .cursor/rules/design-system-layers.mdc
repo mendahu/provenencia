@@ -21,7 +21,7 @@ Three layers (Brad Frost). **Stop at the highest layer you need.** Layer roots o
 | **Recipes** | `DesignSystem/Recipes/<Name>/` | Provenencia-specific, **≥2 call sites**. Thin map onto components. |
 | **Snowflakes** | `Features/<Feature>/` or `DesignSystem/Snowflakes/<Name>/` | One screen. Promote on second real consumer. |
 
-Folder name = PascalCase **without** `PV` (`Button`, `EvidenceIcon`). Public types under `Components/` and `Recipes/` **must** use the `PV` prefix (`PVButton`, `PVEvidenceIcon`) so they do not collide with SwiftUI/AppKit and stay greppable as kit API. Details: [`docs/design-system-layers.md`](../../docs/design-system-layers.md) § PV type prefix.
+Folder name = PascalCase **without** `PV` (`Button`, `SectionHeader`). Public types under `Components/` and `Recipes/` **must** use the `PV` prefix (`PVButton`, `PVSectionHeader`) so they do not collide with SwiftUI/AppKit and stay greppable as kit API. Details: [`docs/design-system-layers.md`](../../docs/design-system-layers.md) § PV type prefix.
 
 ```swift
 // ❌ BAD — UI-category nesting, loose file at layer root, domain in Components/, or bare SwiftUI-colliding type name
@@ -31,7 +31,7 @@ struct Button: View { … }  // fights SwiftUI.Button
 
 // ✅ GOOD — layer root + per-component folder + PV type
 // DesignSystem/Components/Input/PVInput.swift
-// DesignSystem/Recipes/EvidenceIcon/PVEvidenceIcon.swift
+// DesignSystem/Recipes/DeleteImpact/PVDeleteImpact.swift
 ```
 
 - Do **not** add new files under legacy `Components/Core|Forms|Feedback|Navigation|Data|Research/`, or as loose `.swift` files directly under `Components|Recipes|Snowflakes/`.

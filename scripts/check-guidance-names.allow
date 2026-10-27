@@ -1,0 +1,37 @@
+# Names a skill or Cursor rule mentions on purpose although no code defines them.
+# One name per line; say why after a #. scripts/check-guidance-names.py reads it.
+
+# Anti-patterns a guide tells agents not to write or bring back
+sqlInUse                # private in-use probe; use deleteimpact
+openProjectCatalog      # pre-session catalog open; do not reintroduce
+OpenCatalogSession      # an FFI method that does not exist on purpose
+isCatalogReady          # retired gate; do not reintroduce
+reconcileNavigation     # pre-S4 navigation pattern
+openedSourceID          # feature-model gate replaced by PlaceRegistry
+DateChange              # S10-32 per-type result fields, a maintainability trap
+NameChange              # same trap
+DepictionChanges        # same trap
+nullStr                 # copies of one helper, cited by ship-pr
+nullJSON                # same
+emptyAsNil              # same
+
+# Illustrative names in "Good finding shape" examples and templates
+SourcesListModel        # review-pr lens examples, marked illustrative
+sourceEvidenceStatus    # same
+CropDepiction           # same
+SourcesListSearchField  # same
+FuncName                # plan-pr template placeholder
+TypeName                # same
+TestName                # same
+TestXSuccess            # go-tests rule example
+TestXEmpty              # same
+TestXError              # same
+nodeId                  # add-workspace-location example of an id field
+vMAJOR                  # version pattern vMAJOR.MINOR.PATCH
+
+# Apple frameworks and tools
+NavigationStack         # SwiftUI
+NavigationPath          # SwiftUI
+StringProtocol          # Swift standard library
+accessibilityRepresentation  # SwiftUI modifier
+sync_with_base_branch   # a CI tool name ship-pr cites

@@ -131,6 +131,31 @@ are not findings. A layout cycle is not a bounded input: it does not finish.
 | **minor** | A measurable cost on a quiet path that does not grow with the catalog or its history |
 | **nit** | — (performance needs a size, not taste) |
 
+## Known traps
+
+Classes that reached `main` past this lens and were found later, by an
+app-health audit or a landing. Each line names the class, the shape it took,
+and what to check. Add a line when an audit traces an item back to this
+lens ([`review-pr`](../SKILL.md) "Close the loop").
+
+- **Rate at the spike's scale.** Use the map's **Scale** line (60 household
+  graphs on one Source, 300 Citations on one page), not a one-graph project.
+  Fan-outs and per-child RPC loops look free at one.
+- **A write that names every sibling.** An effect that names every graph of a
+  Source when the write moved one reloads every graph per save, on the case
+  the spike was built for. Name what the write's rows load.
+- **A project-wide list reloaded for one parent.** The write knows which
+  Source moved; re-read that one.
+- **A key with no hidden policy.** A `CatalogQueryKey` without `whenHidden`
+  reloads off screen after every write that names it.
+- **A history table without its lookup index.** Two correlated subqueries on
+  `audit_changes` by `entity_id` scanned all history per note on every Source
+  page load.
+- **File work under the session.** Copying, hashing or decoding inside
+  `catalogsession.Do` stalls every pane until it ends.
+- **Work in `body` over the whole list.** A filter and sort of every row runs
+  on each keystroke of any field the same view reads.
+
 ## Good finding shape
 
 The shape to copy. Names in the example are illustrative.

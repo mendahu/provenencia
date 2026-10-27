@@ -35,7 +35,13 @@ You do not decide product or architecture; the plan did.
 5. **Commit per behavior.** The subject is one full imperative sentence ending
    in a period that says what changed for the researcher, like the rest of
    `git log`. No WIP commits. Never amend or force-push once pushed.
-6. **Run the gate:** `scripts/check-pr.sh`. Fix until it prints `check-pr: PASS`.
+6. **Sweep, then run the gate.** For each symbol you renamed or deleted, `rg`
+   its old name, qualified (`Effect.Source`, not `Source`), across `.agents/`,
+   `.cursor/rules/`, `docs/*.md` and `L10n.swift`, and fix each hit the Steps
+   did not; report any the plan did not name. For each call you deleted, `rg`
+   the callee: delete it if nothing calls it and the plan's Deletes names it,
+   report it if the plan does not. Then run the gate: `scripts/check-pr.sh`
+   (it includes `check-guidance-names.py`). Fix until it prints `check-pr: PASS`.
    Never skip, disable, or weaken a test or a check to get there.
 7. **Push and open a draft PR:**
    `git push -u origin <branch>` then

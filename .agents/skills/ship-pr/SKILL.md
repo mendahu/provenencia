@@ -170,7 +170,7 @@ Every finding gets exactly one decision, written in the ship log.
 | --- | --- |
 | **Fix now** | Verified blocker or major whose Fit is this PR. A defect in code this PR adds or changes, whatever later PR would first reach it. A **same-pass cleanup** (below), whatever its severity and whatever Fit the reviewer wrote. A minor or a stale comment in a file this PR adds or changes |
 | **Later PR** | The finding belongs to a PR already on the map (copy for a code that S#-NN surfaces, a check S#-NN's DoD needs). Write it into that PR's plan now (its Scope, Strings or DoD), or into its map scope entry when it has no plan yet, and name where in the ship log. No user approval needed |
-| **Follow-up** | Fit is an idea, for code this PR does not add, change, or make worse; a Reshape. Goes to the PR body's follow-up list, and to `docs/ideas/` or the map if the user agrees |
+| **Follow-up** | Fit is an idea, for code this PR does not add, change, or make worse; a Reshape. Goes to the PR body's follow-up list and the ship log's, and to `docs/ideas/` or the map if the user agrees. Spike close (S#-99) triages every ship log's list, so none is lost with the logs |
 | **Rejected** | Refuted, out of the plan's scope with no harm, or contradicted by a Decision or working rule. One line of evidence |
 | **To user** | Contradicts a plan Decision, an AC, or a working rule but looks right; a product call; two lenses that disagree and the code cannot settle it. Pauses the loop |
 | **Logged** | Nits. Copy each reviewer's one-line **Nits** list into the ship log under the round's table, as is: no row each, no evidence |
