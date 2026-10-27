@@ -1,7 +1,7 @@
 # Review — S12-15 Graphs in the omnibar
 
-**Verdict:** Fits with changes — Ready with changes
-**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes; after the refresh, Fits — Ready
+**Rounds:** 2, then one refresh pass. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 
@@ -105,3 +105,35 @@ Main landed S12-19 (#582, `CatalogSearchKind`), the `deleteimpact` graph-locatio
 - §4 gains rows for `CatalogSearchKind` and `deleteimpact.graphLocation`; the presentation, row and FakeStore rows match the S12-19 code.
 
 Fresh reviewers re-ran both lenses on the refreshed plan (below).
+
+### Refresh — maintainability
+
+§4 rows re-checked against the branch; D-1, D-6, D-9, D-11 fit S12-19 and #581. No blocker.
+
+#### M-9 · major · Two Go builders of the graph-canvas location, and a third copy of the `"graph"` surface string, with nothing pinning them together
+**Plan:** D-6 writes the graph location by hand beside `deleteimpact.graphLocation`.
+**Better shape:** pin the two builders with a test in this PR; log one shared Go location type.
+**Answer:** Fixed — T-9 *(new)* compares the graph hit's location with `deleteimpact.ListedGroup`'s for the same graph, field by field. The shared type is an Out row homed to a suggested follow-up task.
+
+Outside the lens: the map rows for S12-14 (#576) and S12-19 (#582) said "In review" after both landed. Fixed in the map in this refresh; the plan's S12-14 Out row is gone.
+
+### Refresh — executability
+
+29 of 31 §4 rows true; the other two were true but only bit through X-1 and X-2.
+
+#### X-1 · blocker · STEP-4's check fails by construction
+**Answer:** Fixed — the Swift case, its three switch arms and the kind's string move into STEP-3 (now "Register the kind in Go and in Swift"), whose check runs `./api/ffi/...` too; old STEP-5 is folded in, so the plan has six steps.
+
+#### X-2 · major · Commit boundaries leave a red tree between STEP-3 and STEP-5
+**Answer:** Fixed by X-1: the Go kind and the Swift case land in one commit, and every step's check passes.
+
+#### X-3 · minor · FakeStore graph loop and ref-only queries
+**Answer:** Fixed — D-11 names the Source loop's token fallback.
+
+#### X-4 · minor · FakeStore location drops `sourceTitle`
+**Answer:** Fixed — `canvasLocation(for:graph:)` passes `sourceTitle: source.title`, matching Go; `==` ignores it.
+
+#### X-5 · minor · Small placements
+**Answer:** Fixed — xcstrings key after `workspace.omnibar.kind.event`; `completed.md` entry at the top; STEP-5 names the three Sources suites; only the list line of the `kinds` proto comment changes.
+
+**Verdict after refresh:** Fits — Ready. No blocker open; the plan stays Planned.
