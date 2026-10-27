@@ -1217,6 +1217,12 @@ enum L10n {
             comment: "Kind chip on an omnibar hit for a Place"
         )
 
+        static let omnibarKindEvidenceGraph = LocalizedStringResource(
+            "workspace.omnibar.kind.evidenceGraph",
+            defaultValue: "Evidence graph",
+            comment: "Kind chip on an omnibar hit for an Evidence graph"
+        )
+
         static func omnibarNoMatchesTitle(query: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "workspace.omnibar.noMatchesTitle",
@@ -1515,6 +1521,32 @@ enum L10n {
         static func shareHeaderBare(phrase: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.shareHeaderBare", defaultValue: "they share %@", comment: "Header of a relationship Card when the connected row is not on the page, after the leading ellipsis; the argument is what they share"), phrase)
         }
+        static func recorded(source: String, record: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.recorded", defaultValue: "This source: %1$@ · The record: %2$@", comment: "Muted line under a relationship Card's header: how each side records the link; 1 = this Source's way, 2 = the matched record's way"), source, record)
+        }
+        static func spokenRecorded(header: String, source: String, record: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.spokenRecorded", defaultValue: "%1$@. This source: %2$@. The record: %3$@", comment: "VoiceOver reading of a relationship Card's header and how each side records the link; 1 = the header, 2 = this Source's way, 3 = the record's way"), header, source, record)
+        }
+        static func recordedOn(_ value: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.recorded.on", defaultValue: "dated %@", comment: "An event named by its date inside a recorded phrase; the argument is the date, without any phrase about how it was recorded"), value)
+        }
+        static func recordedMarriage(_ value: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.recorded.marriage", defaultValue: "married in the marriage %@", comment: "How a side records a couple: through a marriage; the argument is \"dated <date>\" or the marriage's ref"), value)
+        }
+        static let recordedMarriageNone = LocalizedStringResource("promote.sheet.recorded.marriage.none", defaultValue: "married in a marriage", comment: "How a side records a couple through a marriage that cannot be named")
+        static func recordedBirth(_ value: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.recorded.birth", defaultValue: "parent and child in the birth %@", comment: "How a side records a parent through a birth; the argument is \"dated <date>\" or the birth's ref"), value)
+        }
+        static let recordedBirthNone = LocalizedStringResource("promote.sheet.recorded.birth.none", defaultValue: "parent and child in a birth", comment: "How a side records a parent through a birth that cannot be named")
+        static func recordedChain(_ value: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.recorded.chain", defaultValue: "grandparent and grandchild through %@", comment: "How a side records a grandparent through a parent between; the argument is that parent's name or ref"), value)
+        }
+        static let recordedChainNone = LocalizedStringResource("promote.sheet.recorded.chain.none", defaultValue: "grandparent and grandchild through a parent", comment: "The same, when the parent between cannot be named")
+        static func recordedOther(_ value: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.recorded.other", defaultValue: "through %@", comment: "How a side records a link through a pattern this build has no words for; the argument is the record between"), value)
+        }
+        static let recordedOtherNone = LocalizedStringResource("promote.sheet.recorded.other.none", defaultValue: "through another record", comment: "The same, when the record between cannot be named")
+        static let recordedDirectOther = LocalizedStringResource("promote.sheet.recorded.direct.other", defaultValue: "recorded directly", comment: "A side that records the link directly, of a kind with no words of its own")
         /// A Card header as it is drawn: led by an ellipsis, as if finishing "this row and the record's other sources…". VoiceOver reads the header without it.
         static func cardHeaderLead(_ header: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.cardHeaderLead", defaultValue: "…%@", comment: "A Card header on the evidence sheet as it is drawn: an ellipsis, then the header; the argument is the header"), header)
@@ -2602,7 +2634,15 @@ enum L10n {
             var shareOtherEnd: LocalizedStringResource?
             /// ``shareOtherEnd`` for a similar outcome.
             var shareOtherEndSimilar: LocalizedStringResource?
+            /// How a side of the evidence sheet's caption says it records a link of this term directly
+            /// ("recorded as spouses"); nil for a term with no words of its own, which the sheet words
+            /// "recorded directly" (``L10n/Promote/recordedDirectOther``).
+            var recordedDirect: LocalizedStringResource?
         }
+
+        private static let recordedDirectSpouses = LocalizedStringResource("promote.sheet.recorded.direct.spouses", defaultValue: "recorded as spouses", comment: "A side that records the couple directly")
+        private static let recordedDirectParentChild = LocalizedStringResource("promote.sheet.recorded.direct.parentChild", defaultValue: "recorded as parent and child", comment: "A side that records the parent directly")
+        private static let recordedDirectGrandparent = LocalizedStringResource("promote.sheet.recorded.direct.grandparent", defaultValue: "recorded as grandparent and grandchild", comment: "A side that records the grandparent directly")
 
         static func wording(propertyKey: String, termKey: String) -> Wording? {
             switch (propertyKey, termKey) {
@@ -2975,7 +3015,8 @@ enum L10n {
                 "evidenceGraph.share.relationship.spouse.similar",
                 defaultValue: "a similar spouse",
                 comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is spouse, with its own article"
-            )
+            ),
+            recordedDirect: recordedDirectSpouses
         )
         static let relationshipSibling = Wording(
             label: LocalizedStringResource(
@@ -3026,7 +3067,8 @@ enum L10n {
                 "evidenceGraph.share.relationship.parent.similar",
                 defaultValue: "a similar parent",
                 comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is parent, with its own article"
-            )
+            ),
+            recordedDirect: recordedDirectParentChild
         )
         static let relationshipChild = Wording(
             label: LocalizedStringResource(
@@ -3043,7 +3085,8 @@ enum L10n {
                 "evidenceGraph.share.relationship.child.similar",
                 defaultValue: "a similar child",
                 comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is child, with its own article"
-            )
+            ),
+            recordedDirect: recordedDirectParentChild
         )
         static let relationshipGrandparent = Wording(
             label: LocalizedStringResource(
@@ -3060,7 +3103,8 @@ enum L10n {
                 "evidenceGraph.share.relationship.grandparent.similar",
                 defaultValue: "a similar grandparent",
                 comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is grandparent, with its own article"
-            )
+            ),
+            recordedDirect: recordedDirectGrandparent
         )
         static let relationshipGrandchild = Wording(
             label: LocalizedStringResource(
@@ -3077,7 +3121,8 @@ enum L10n {
                 "evidenceGraph.share.relationship.grandchild.similar",
                 defaultValue: "a similar grandchild",
                 comment: "What a row shares with a connected record, after \"they share\", when the outcome is similar: a connected person's relationship is grandchild, with its own article"
-            )
+            ),
+            recordedDirect: recordedDirectGrandparent
         )
         static let relationshipPibling = Wording(
             label: LocalizedStringResource(
@@ -5757,20 +5802,20 @@ enum L10n {
 
         static let statusEmpty = LocalizedStringResource(
             "sources.list.status.empty",
-            defaultValue: "Empty",
-            comment: "Sources evidence-status filter option: the Source's graph has no person, event, or place subjects"
+            defaultValue: "Not started",
+            comment: "Status filter option and badge: a graph with no subjects"
         )
 
         static let statusInProgress = LocalizedStringResource(
             "sources.list.status.inProgress",
             defaultValue: "In progress",
-            comment: "Sources evidence-status filter option: at least one person, event, or place on the graph is not promoted yet"
+            comment: "Sources evidence-status filter option: at least one subject and none promoted"
         )
 
-        static let statusFullyPromoted = LocalizedStringResource(
-            "sources.list.status.fullyPromoted",
-            defaultValue: "Fully promoted",
-            comment: "Sources evidence-status filter option: every person, event, and place on the graph is promoted"
+        static let statusPromoted = LocalizedStringResource(
+            "sources.list.status.promoted",
+            defaultValue: "Promoted",
+            comment: "Sources evidence-status filter option: graphs with at least one promoted subject"
         )
 
         static let sortAZ = LocalizedStringResource(
@@ -5814,25 +5859,25 @@ enum L10n {
         static let columnSource = LocalizedStringResource(
             "sources.list.columnSource",
             defaultValue: "Source",
-            comment: "Caption band above the Sources list left zone"
+            comment: "Sources list column caption"
+        )
+
+        static let columnType = LocalizedStringResource(
+            "sources.list.columnType",
+            defaultValue: "Type",
+            comment: "Sources list column caption"
         )
 
         static let columnEvidenceGraph = LocalizedStringResource(
             "sources.list.columnEvidenceGraph",
             defaultValue: "Evidence graph",
-            comment: "Caption band above the Sources list graph zone"
-        )
-
-        static let openGraph = LocalizedStringResource(
-            "sources.list.openGraph",
-            defaultValue: "Open graph",
-            comment: "Sources list right-zone action when the Source has an Artifact"
+            comment: "Sources list column caption"
         )
 
         static let graphNotStarted = LocalizedStringResource(
             "sources.list.graphNotStarted",
             defaultValue: "not started",
-            comment: "Italic graph-zone state when a Source has zero canvas subjects"
+            comment: "Italic words in a graph count line when a Source has zero canvas subjects"
         )
 
         static let graphCountsLoading = LocalizedStringResource(
@@ -5841,11 +5886,17 @@ enum L10n {
             comment: "VoiceOver while Sources list graph-progress counts have not arrived"
         )
 
+        static let graphCountsUnavailable = LocalizedStringResource(
+            "sources.graph.countsUnavailable",
+            defaultValue: "Counts could not load",
+            comment: "Evidence graph button help and Source page count line when graph counts failed to load"
+        )
+
         static func graphSubjectCount(_ count: Int) -> String {
             L10n.format(LocalizedStringResource(
                 "sources.list.subjectCount",
                 defaultValue: "%lld subjects",
-                comment: "Sources list graph-zone subject count; argument is canvas subject count"
+                comment: "Sources list graph subject count; argument is canvas subject count"
             ), count)
         }
 
@@ -5853,7 +5904,7 @@ enum L10n {
             L10n.format(LocalizedStringResource(
                 "sources.list.observationCount",
                 defaultValue: "%lld observations",
-                comment: "Sources list graph-zone observation count; argument is Observation count"
+                comment: "Sources list graph observation count; argument is Observation count"
             ), count)
         }
 
@@ -5861,35 +5912,59 @@ enum L10n {
             "\(graphSubjectCount(subjects)) · \(graphObservationCount(observations))"
         }
 
-        static func graphZoneAccessibility(
-            progress: EvidenceGraphProgress?,
-            countsLoading: Bool
+        /// How a graph's counts read. `full` is the visible line, `spoken` what
+        /// VoiceOver says.
+        enum GraphCountsStyle {
+            case full
+            case spoken
+        }
+
+        /// How a graph that has not started reads: in words ("0 subjects · not
+        /// started", the Source page's card) or as zero counts (the Sources list's
+        /// graph button, whose badge says "not started").
+        enum NotStartedReading {
+            case words
+            case zeroCounts
+        }
+
+        /// The one formatter for a graph's counts (`SourcesGraphCounts`), so the
+        /// visible text, the help and VoiceOver agree.
+        static func graphCounts(
+            _ counts: SourcesGraphCounts,
+            style: GraphCountsStyle,
+            notStarted: NotStartedReading = .words
         ) -> String {
-            let open = L10n.string(openGraph)
-            if countsLoading && progress == nil {
-                return "\(open), \(L10n.string(graphCountsLoading))"
+            switch counts {
+            case .loading:
+                return L10n.string(graphCountsLoading)
+            case .unavailable(let message):
+                let lead = L10n.string(graphCountsUnavailable)
+                return style == .spoken ? "\(lead). \(message)" : lead
+            case .notStarted where notStarted == .zeroCounts:
+                return graphCounts(.counts(subjects: 0, observations: 0, filed: 0), style: style)
+            case .notStarted:
+                switch style {
+                case .full: return "\(graphSubjectCount(0)) · \(L10n.string(graphNotStarted))"
+                case .spoken: return "\(graphSubjectCount(0)), \(L10n.string(graphNotStarted))"
+                }
+            case .counts(let subjects, let observations, _):
+                switch style {
+                case .full: return graphCountLine(subjects: subjects, observations: observations)
+                case .spoken: return "\(graphSubjectCount(subjects)), \(graphObservationCount(observations))"
+                }
             }
-            let subjects = progress?.subjectCount ?? 0
-            if subjects == 0 {
-                return "\(open), \(graphSubjectCount(0)), \(L10n.string(graphNotStarted))"
-            }
-            return [
-                open,
-                graphSubjectCount(subjects),
-                graphObservationCount(progress?.observationCount ?? 0),
-            ].joined(separator: ", ")
         }
 
         static let needsArtifact = LocalizedStringResource(
             "sources.list.needsArtifact",
             defaultValue: "Needs an artifact",
-            comment: "Blocked graph zone label when the Source has no Artifact"
+            comment: "Second line of the Sources list block for a Source with no Artifact"
         )
 
         static let needsArtifactTooltip = LocalizedStringResource(
             "sources.list.needsArtifactTooltip",
             defaultValue: "Add an artifact on the source page to build its evidence graph",
-            comment: "Tooltip on the blocked Sources list graph zone"
+            comment: "Tooltip on the Sources list block for a Source with no Artifact"
         )
 
         static let graphNeedsArtifactTooltip = LocalizedStringResource(
@@ -5898,10 +5973,73 @@ enum L10n {
             comment: "Tooltip and VoiceOver hint on a disabled Open for an Evidence graph that links no Artifact"
         )
 
+        static let graphNeedsArtifactToOpen = LocalizedStringResource(
+            "sources.list.graphNeedsArtifactToOpen",
+            defaultValue: "Needs an artifact to open",
+            comment: "Second line of a Sources list graph button whose graph links no Artifact"
+        )
+
+        static let noGraphYet = LocalizedStringResource(
+            "sources.list.noGraphYet",
+            defaultValue: "No evidence graph yet",
+            comment: "Sources list graph column for a Source with no Artifact"
+        )
+
+        static let graphsLoading = LocalizedStringResource(
+            "sources.list.graphsLoading",
+            defaultValue: "Evidence graphs loading",
+            comment: "VoiceOver label while a Source's graph list loads"
+        )
+
+        static let graphsFailedTitle = LocalizedStringResource(
+            "sources.list.graphsFailedTitle",
+            defaultValue: "Evidence graphs",
+            comment: "Sources list graph column when the graph list failed to load"
+        )
+
+        static let graphsFailedDetail = LocalizedStringResource(
+            "sources.list.graphsFailedDetail",
+            defaultValue: "Couldn’t be read",
+            comment: "Sources list graph column when the graph list failed to load"
+        )
+
+        static func graphButtonHelp(name: String, detail: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.list.graphButtonHelp",
+                defaultValue: "%1$@ — %2$@",
+                comment: "Sources list graph button tooltip; 1 is the graph name, 2 its counts or why it cannot open"
+            ), name, detail)
+        }
+
+        static func graphBlockLabel(title: String, detail: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.list.graphBlockLabel",
+                defaultValue: "%1$@, %2$@",
+                comment: "VoiceOver label of a Sources list graph block (no Artifact, or the graph list failed): its title and its second line"
+            ), title, detail)
+        }
+
+        /// VoiceOver label of a graph button: open label, counts, then the status
+        /// (left out while the counts load or failed).
+        static func graphButtonLabel(open: String, counts: String, status: String?) -> String {
+            guard let status else {
+                return L10n.format(LocalizedStringResource(
+                    "sources.list.graphButtonLabelNoStatus",
+                    defaultValue: "%1$@, %2$@",
+                    comment: "VoiceOver label of a Sources list graph button without a status: open label, counts"
+                ), open, counts)
+            }
+            return L10n.format(LocalizedStringResource(
+                "sources.list.graphButtonLabel",
+                defaultValue: "%1$@, %2$@, %3$@",
+                comment: "VoiceOver label of a Sources list graph button: open label, counts, status"
+            ), open, counts, status)
+        }
+
         static let openSourcePage = LocalizedStringResource(
             "sources.list.openSourcePage",
             defaultValue: "Open source",
-            comment: "Accessibility label for the Sources list left (filing) zone"
+            comment: "Accessibility label for the Source link in a Sources list row (cover, title and type)"
         )
 
         static let addDialogTitle = LocalizedStringResource(
@@ -6702,8 +6840,8 @@ enum L10n {
         static func openEvidenceGraphLabel(name: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "sources.page.graph.openLabel",
-                defaultValue: "Open %@",
-                comment: "VoiceOver label for opening an Evidence graph; argument is the graph name"
+                defaultValue: "Open graph %@",
+                comment: "VoiceOver label for opening an Evidence graph from the Source page or a Sources list graph button; argument is the graph name"
             ), name)
         }
 

@@ -36,8 +36,8 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 	if len(ids) == 0 {
 		return g.verifyIfSet()
 	}
-	g.matchIndexOK = false
-	g.matchIndex = nil
+	g.dropMatchIndex()
+	g.dropHandleMemos()
 	rows, err := g.entityRows(ids)
 	if err != nil {
 		return err

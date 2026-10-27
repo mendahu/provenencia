@@ -84,7 +84,7 @@ struct PVEmptyState<Action: View>: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
-                .strokeBorder(PVColor.borderDefault, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                .strokeBorder(PVColor.borderDefault, style: PVStroke.dashed)
         )
         .clipShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
     }

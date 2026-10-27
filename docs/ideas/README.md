@@ -18,32 +18,32 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 
 - [`source-to-source-relationships.md`](source-to-source-relationships.md)
 - [`source-structure-later.md`](source-structure-later.md) — what Spike 12 parked: nested Sources, derivation links, named templates, per-graph credibility, layered citations
+- [`artifact-outside-graph-marker.md`](artifact-outside-graph-marker.md) — name, in a graph delete's confirm, the Artifacts it leaves in no Evidence graph; the card marker went to Spike 12 (S12-38)
 - [`graph-canvas-second-host.md`](graph-canvas-second-host.md) — what a family-tree canvas host still needs from GraphCanvas: hit targets from measured layout, a routed edge layer, selection, growable bounds, a host zoom range
 - [`name-index-on-commit.md`](name-index-on-commit.md) — a handle commit throws away Promote's name index and every Source's ranked candidates; update them in place instead
+- [`narrower-canon-walk.md`](narrower-canon-walk.md) — every proposal walks the whole connected component of the canon; walk only as far as alignment can use
 - [`evidence-graph-card-memory.md`](evidence-graph-card-memory.md) — every card keeps its painted image after S11-21; about 585–774 MB for 110 cards on Retina. Options if it becomes a problem
 - [`evidence-graph-structure-shortcuts.md`](evidence-graph-structure-shortcuts.md) — place a common cluster (wedding, birth, residence) in one action, or paste a cluster already on the canvas
 - [`registry-source-import.md`](registry-source-import.md) — paste a record URL from Ancestry, FamilySearch and similar to create a Source; access (logins, OAuth) is unproven
-- [`source-provenance-date.md`](source-provenance-date.md)
 - [`text-quote-locators.md`](text-quote-locators.md)
 - [`audio-video-sources.md`](audio-video-sources.md)
 - [`shared-list-helpers.md`](shared-list-helpers.md) — one list of graph mutations (the other two items are in Spike 11)
 - [`test-subject-fixtures.md`](test-subject-fixtures.md) — test Subject helpers that place a Subject do it in a second write; let `subjectstest` take a placement
 - [`settled-list-count-publish.md`](settled-list-count-publish.md) — Properties badge is off by one after create or delete; one publish-on-settled rule for Sources, Properties and Metadata
-- [`depictions-and-likenesses.md`](depictions-and-likenesses.md) — leftovers after Spike 10 (other keys, signature, transparent crop, Windows PDF draw)
+- [`depictions-and-likenesses.md`](depictions-and-likenesses.md) — leftovers after Spike 10 and Spike 14 batch 1 (signature, Windows PDF draw, audit items)
 - [`coverage-aware-similarity.md`](coverage-aware-similarity.md) — a match on one shared property (a surname-only record) scores similarity 1 and shows as an unbanded alternative
 - [`international-names.md`](international-names.md) — leftovers after Spike 10 (other name patterns, transliteration, calendars)
 - [`daitch-mokotoff.md`](daitch-mokotoff.md) — phonetic tier descoped from Spike 10 (S10-26)
 - [`matching-test-suite.md`](matching-test-suite.md) — scenario goldens, invariants, a simulated world, a scoreboard, and a labeler that fits the registry numbers. Its "make the algorithm graspable" part is Spike 11 (S11-01); the rest waits on the re-implementation
 - [`share-packages.md`](share-packages.md)
 - [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md)
-- [`large-jpeg-thumbnails.md`](large-jpeg-thumbnails.md) — JPEGs over the 64-megapixel decode budget save and keep the missing-image glyph
 - [`identity-claim-review.md`](identity-claim-review.md)
 - [`organizations.md`](organizations.md) — Organization as a Subject type (congregations, employers, schools, regiments, lodges) with part-of and succession like places; descoped from S11-48
 - [`binding-order-editing.md`](binding-order-editing.md) — a per-type ordered list of properties on the Properties page, calling `ReorderSubjectTypeProperties` (engine side shipped in S11-32)
 - [`place-gazetteer-service.md`](place-gazetteer-service.md)
 - [`possible-values.md`](possible-values.md)
 - [`term-management.md`](term-management.md) — one place to manage terms, including relationship direction and inverses
-- [`kinship-view.md`](kinship-view.md) — family trees and person pages reading every kinship shape as one fact, and patterns beyond spouse, parent and grandparent (matching's part is Spike 11)
+- [`kinship-view.md`](kinship-view.md) — family trees reading every kinship shape as one fact, and patterns beyond spouse, parent and grandparent (matching's part is Spike 11; the Person page's nuclear family and page-only siblings are [Spike 13](../deployment-plan/spike-13/))
 
 ## Archived
 

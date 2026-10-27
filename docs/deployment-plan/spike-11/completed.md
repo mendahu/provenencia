@@ -2,6 +2,30 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-43 — Lower the candidate gate
+
+**Landed 2026-10-27** in [#588](https://github.com/mendahu/provenencia/pull/588). A Source person recorded only as "Amy" now finds "Amy Lee Anne Long" in the Promote row's target menu: the candidate gate, `alignment.MinSimilarity`, dropped from 0.5 to 0.4 (decided by the user), so one given name reaches a record with up to three more given names and a surname. A look-alike that only shares a later given name ("Beth Amy Long", 0.375) stays out, and the row still opens unset because no band changes. `namevaluetest.Given` builds a name of given parts only for the layer tests. No wire or Swift change.
+
+## S11-42 — Implied links on the evidence sheet
+
+**Landed 2026-10-27** in [#585](https://github.com/mendahu/provenencia/pull/585). The evidence sheet's relationship Card now says how each side recorded the link. When the Source or the record records it through a marriage, a birth or a parent in between, a muted line under the Card's header reads, for example, "This source: recorded as spouses · The record: married in the marriage dated 12 May 1842", with the marriage named by its date (without any words the source gave for it), a parent by name, and a direct side in the link's own term, which lives on the term's `L10n.PropertyTerm.Wording` as `recordedDirect`; a Card whose sides are both direct looks as before, and VoiceOver reads the line with the Card's box. The words are `PromoteEvidenceDisplay.recorded`, one `wording` entry per kinship pattern, so a new pattern adds one arm and two keys. A Source event's date now rides on its Promote page row, and `ConclusionHeaderDisplay` is the one title, secondary line and ref of any conclusion header, shared by search hits, Promote's menus and the sheet. No engine or wire change.
+
+## S11-40 — Implied links in claim evidence
+
+**Landed 2026-10-27** in [#579](https://github.com/mendahu/provenencia/pull/579). The evidence sheet's canon side now reads a person's links through `canonlinks.Reader.Relationships`, so a tree marriage, birth or parent chain meets a Source's direct relationship (and the other way round) as one relationship line, checked, whose bundle holds every bridge behind the implied link in one Source plus the event's defining Observations. Each line says how each side recorded the fact (`Relationship.Layer` / `.Canon`, with the tree pivot's header on the wire and Swift's `KinshipPattern`), and a marriage both sides record is counted once when the request pairs the events. One `bridgesOf` reader replaces the filed-link reader, and `conclusionheaders.ByIDs` finds a header by id for Promote, search and the pivots. The sheet's words do not change until S11-42.
+
+## S11-51 — One person's links for every reader
+
+**Landed 2026-10-26** in [#575](https://github.com/mendahu/provenencia/pull/575). The merge that makes a fact recorded two ways one link moved from `promotealign` into the pure `core/kinship` as `LinkSet`, and took in `loadCanon`'s separate merge of implied links (`PlaceImplied`, with `Implied.Recording` as the one implied recording). `canonlinks.Reader.Relationships` returns one canonical person's relationship links, recorded and implied, merged once, for the evidence query's canon side and the Person page. Promote's proposals do not change.
+
+## S11-39 — Matching reads kinship shapes
+
+**Landed 2026-10-26** in [#572](https://github.com/mendahu/provenencia/pull/572). Promote now reads each side's links through the kinship patterns: a Source's marriage, birth parents and parent chain match the spouses, parents and grandparents a tree files, and a tree's marriage and chains match a Source's relationships. The Source side derives when its layer loads; the canon side reads `canonlinks.Reader.For` for each walked person, and both merge in one `promotealign` `linkSet` so a fact recorded two ways on one side is one link. Each link carries a `kinship.Recording` (its shapes and whether only implied), and graph alignment skips a pair `kinship.CountedOnce` reports, so a marriage both sides record counts once when its events are paired and still credits when they are not. One lookup, `Vocabulary.TypeKeysByID`, replaces `typeKey`'s scan. The large-source budgets run over a 12-generation parent tree with a marriage per couple.
+
+## S11-50 — Matching warms while the project opens
+
+**Landed 2026-10-26** in [#570](https://github.com/mendahu/provenencia/pull/570). Opening a project now loads every person, event and place into the graph cache and builds Promote's shortlist index under the open spinner (`catalogsession.WarmOnOpen` ends with the new `promotealign.Warm`), so the first Promote pays only for its own Source. A matching warm that fails never fails the open: the next proposal builds the index and reports the error. `graphcache` tracks `WarmNeeded`, set by every drop that loses the warm state, and `Do` warms the alias index and name format again before it returns (the shortlist index waits for the next proposal) without ever replacing the call's result; a handle commit still drops only the index. The budgets gain a "warm at open" figure, and cold is the first proposal after it.
+
 ## S11-49 — Kinship links in the graph cache
 
 **Landed 2026-10-26** in [#569](https://github.com/mendahu/provenencia/pull/569). The open catalog's graph cache now answers one person's implied spouse, parent and grandparent links from one cached result per pivot (a marriage or birth event, or the parent between in a chain), through `canonlinks.Reader.For`. Results are dropped when a commit touches the pivot or a node one hop out, through new registered per-node memo slots, and graph verify mode checks each against a fresh derivation. A pivot with more than 10 participants at either end implies nothing (a registry value), the grandparent derivation is linear, and a marriage's couple are its two `subject`s: the `spouse` participation role leaves the seed and the Mac app. Nothing calls `For` until S11-39. New projects no longer offer `Spouse` as an event role.

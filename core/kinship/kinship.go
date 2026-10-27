@@ -2,7 +2,7 @@
 // shared marriage implies spouses, a birth's father or mother and subject
 // imply a parent, and a parent of a parent implies a grandparent. Pure: no
 // catalog, no I/O, no numbers; the catalog's bridge terms and the Rules come
-// in as arguments. It returns only implied links; callers merge them with direct ones.
+// in as arguments. It returns only implied links; `LinkSet` merges them with direct ones.
 package kinship
 
 import (
@@ -30,6 +30,32 @@ type Edge struct {
 	KeyA, KeyB vocabkey.BridgeKey // the link read from A's end and from B's
 	// Associations are the bridge Subjects behind the link.
 	Associations [][]byte
+}
+
+// From reads the edge from one end: the Subject at the other end and the link
+// as seen from id. ok is false when id is neither end.
+func (e Edge) From(id []byte) (other []byte, key vocabkey.BridgeKey, ok bool) {
+	switch {
+	case bytes.Equal(e.A, id):
+		return e.B, e.KeyA, true
+	case bytes.Equal(e.B, id):
+		return e.A, e.KeyB, true
+	}
+	return nil, vocabkey.BridgeKey{}, false
+}
+
+// Clone returns a copy of e that shares no bytes with it: its ends and every
+// association are copied.
+func (e Edge) Clone() Edge {
+	out := e
+	out.A, out.B = bytes.Clone(e.A), bytes.Clone(e.B)
+	if e.Associations != nil {
+		out.Associations = make([][]byte, len(e.Associations))
+		for i, a := range e.Associations {
+			out.Associations[i] = bytes.Clone(a)
+		}
+	}
+	return out
 }
 
 // reads returns the edge's ends in the order of a key pair, whichever end the
@@ -61,6 +87,96 @@ type Implied struct {
 	Event   []byte // the marriage or birth; nil for a chain
 	Through []byte // the parent between, for a chain; nil otherwise
 	From    []Edge // the links it was made from
+}
+
+// Shape is one way a link is recorded through a pattern. Pivot is
+// Implied.Event for an event pattern and Implied.Through for a chain: the event
+// or middle parent the link passes through.
+type Shape struct {
+	Pattern Pattern
+	Pivot   []byte
+}
+
+// Clone returns a copy of s that shares no pivot bytes with it.
+func (s Shape) Clone() Shape { return Shape{s.Pattern, bytes.Clone(s.Pivot)} }
+
+// Shape is the way the pattern made this link.
+func (i Implied) Shape() Shape {
+	if i.Event != nil {
+		return Shape{i.Pattern, i.Event}
+	}
+	return Shape{i.Pattern, i.Through}
+}
+
+// Recording is how this implied link records itself on a side: its one shape,
+// and implied only.
+func (i Implied) Recording() Recording {
+	return Recording{Shapes: []Shape{i.Shape()}, OnlyImplied: true}
+}
+
+// Recording is how one link is recorded on one side: the shapes that implied
+// it, and whether they are all it has (it is recorded directly otherwise). The
+// zero value is a link recorded only.
+type Recording struct {
+	Shapes      []Shape
+	OnlyImplied bool
+}
+
+// Clone returns a copy of r that shares no pivot bytes with it.
+func (r Recording) Clone() Recording {
+	var out Recording
+	out.OnlyImplied = r.OnlyImplied
+	for _, s := range r.Shapes {
+		out.Shapes = append(out.Shapes, s.Clone())
+	}
+	return out
+}
+
+// Shown is the one shape a side's recording shows: the zero Shape (direct)
+// unless the link is only implied, else the first shape it was implied
+// through. A link recorded directly reads as direct however many patterns
+// also imply it.
+func (r Recording) Shown() Shape {
+	if !r.OnlyImplied || len(r.Shapes) == 0 {
+		return Shape{}
+	}
+	return r.Shapes[0]
+}
+
+// Merge folds another recording of the same link into r: it appends each shape
+// of o that r lacks (same Pattern and pivot), copying its pivot, and the link
+// stays only implied when both were.
+func (r *Recording) Merge(o Recording) {
+	for _, s := range o.Shapes {
+		if !slices.ContainsFunc(r.Shapes, func(x Shape) bool {
+			return x.Pattern == s.Pattern && bytes.Equal(x.Pivot, s.Pivot)
+		}) {
+			r.Shapes = append(r.Shapes, s.Clone())
+		}
+	}
+	r.OnlyImplied = r.OnlyImplied && o.OnlyImplied
+}
+
+// CountedOnce reports whether two corresponding links stand for one fact both
+// sides record through the same kinship pattern, already counted because the
+// shape's pivots are paired: paired maps a pivot of a, the layer side, to its
+// partner on b's side. Two links that are both recorded never are.
+func CountedOnce(a, b Recording, paired func(pivot []byte) ([]byte, bool)) bool {
+	if !a.OnlyImplied && !b.OnlyImplied {
+		return false
+	}
+	for _, x := range a.Shapes {
+		partner, ok := paired(x.Pivot)
+		if !ok {
+			continue
+		}
+		for _, y := range b.Shapes {
+			if x.Pattern == y.Pattern && bytes.Equal(partner, y.Pivot) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // Derive returns the relationship links the edges imply through the event

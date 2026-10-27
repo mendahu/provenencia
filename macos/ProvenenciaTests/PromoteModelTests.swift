@@ -717,6 +717,34 @@ struct PromoteModelTests {
         #expect(model.neighbor("zz") == nil)
     }
 
+    @Test func aPlacedEventsRowCarriesItsDate() async {
+        let wedding = CatalogSubject(
+            id: "m", ref: "CPR-M", sourceID: sourceID, subjectTypeID: "type-event", label: "Wedding", description: ""
+        )
+        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada"), wedding])
+        store.subjectTypesByProject[projectDir]?.append(CatalogSubjectType(
+            id: "type-event", key: "event", origin: "provenencia", label: "Event",
+            description: "", refPrefix: "EVT", candidateRefPrefix: "CEV"
+        ))
+        let married = CatalogDateValueInput(kind: "point", startYear: 1842, startMonth: 5, startDay: 12)
+        store.observationsByGraph[graphID] = [
+            CatalogObservation(
+                id: "o-date", ref: "OBS-D", citationID: "c", subjectID: "m", propertyID: "p-date",
+                polarity: "positive", valueText: "", valueInteger: nil, valueDateID: "", date: married,
+                valueNameID: "", valueSubjectID: "", valueTermID: "",
+                propertyKey: "date", propertyLabel: "Date", propertyValueType: "date"
+            ),
+        ]
+        var eventRow = row("m", handleID: "e2")
+        eventRow.kind = "event"
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), eventRow])]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        #expect(model.flow.row("m")?.date == DateRowDisplay.line(date: married, includesPhrase: false))
+        #expect(model.flow.row("m")?.date.isEmpty == false)
+        #expect(model.flow.row("a")?.date == "")
+    }
+
     @Test func leaveGuardAsksOnlyAfterAManualChange() async {
         let subjects = [subject("a", ref: "CPR-A", label: "Ada")]
         let store = store(subjects: subjects)

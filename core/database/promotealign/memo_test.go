@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promotealign"
@@ -297,5 +298,26 @@ func TestCandidatesMemoFollowsCommits(t *testing.T) {
 				t.Errorf("the new handle %x is neither the row's target nor an alternative: %+v", newHandle, row)
 			}
 		})
+	}
+}
+
+// T-2 (AC-1.2): Warm loads the shortlist kinds and builds the index, so a
+// proposal on another Source builds no new one and loads no kind.
+func TestWarmBuildsTheIndex(t *testing.T) {
+	w := newWarmFixture(t)
+	c := w.f.c
+	g := c.Graph()
+	g.Drop()
+	if err := promotealign.Warm(c); err != nil {
+		t.Fatal(err)
+	}
+	gen := promotealign.MatchIndexGenForTest(g)
+	if gen == 0 {
+		t.Fatal("Warm built no index")
+	}
+	graphcachetest.AssertKindsLoaded(t, c, "person", "event")
+	w.f.propose(w.f.graph(w.srcB), nil)
+	if got := promotealign.MatchIndexGenForTest(g); got != gen {
+		t.Errorf("a proposal rebuilt the index: generation %d, want %d", got, gen)
 	}
 }

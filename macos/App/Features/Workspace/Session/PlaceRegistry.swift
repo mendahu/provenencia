@@ -107,6 +107,7 @@ struct PlaceRegistry: Sendable {
                     .metadataFieldsList(project: project),
                     .credibilityGradesList(project: project),
                     .evidenceGraphsList(project: project),
+                    .evidenceGraphProgress(project: project),
                 ]
             },
             deepId: { $0.sourceId }

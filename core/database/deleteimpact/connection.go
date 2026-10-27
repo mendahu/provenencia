@@ -2,6 +2,7 @@ package deleteimpact
 
 import (
 	"database/sql"
+
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 
 	"github.com/mendahu/provenencia/core/connectrules"

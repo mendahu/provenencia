@@ -26,6 +26,7 @@ matchregistry ──────────────────────
 | 6 | Graph alignment | `core/graphalign` | The layer's Subjects and the research graph's handles | Rows: target, band, contested mark, reasons, alternatives | `alignment`, `segment`, `subject` |
 
 The subject profile builder sits beside layer 4. It turns the reconciler's conclusion into a Subject-shaped profile and compares nothing: displayed values are positive, denied values negative, and outvoted, weak and provisional values are left out. It also builds a plain Subject's side from its own Observations.
+Before layer 6, each side's links are read through the kinship patterns (`core/kinship`): a shared marriage implies spouses, a birth's father or mother and subject imply a parent, and a parent of a parent implies a grandparent. The Source side is derived when its layer loads; the canon side is read through `canonlinks.Reader.For`, which answers from the graph cache's results. Both go through one `kinship.LinkSet` (implied links enter through `AddImplied`, or `PlaceImplied` in `loadCanon`, each recorded by `Implied.Recording`), so a fact recorded two ways on one side is one link. An implied link weighs as the relationship it stands for. A fact both sides record through the same pattern counts once when the walk has paired the event or middle parent it passes through.
 Layer 6 decides what to compare (shortlisting), in what order (one best-first queue), and what to place (the accept bar); a row's band comes from its evidence. See the reasoning in [`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-6-procedure).
 
 ## Worked example
@@ -89,6 +90,8 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 | **band** | Strong, medium, weak or no match, for a whole row, from its evidence |
 | **contested** | A visible mark on a row whose comparisons include a conflict, whatever its band |
 | **kinship pattern** | A row of `core/kinship`'s table that says a fact recorded one way implies a relationship link: a marriage's two subjects imply spouses, a birth's father or mother and subject imply a parent, and a parent of a parent implies a grandparent |
+| **implied link** | A relationship link a kinship pattern adds to one side, keyed as a recorded relationship; never stored or filed |
+| **shape** | One way a side records a link: a kinship pattern and the event or middle parent (its pivot) it passes through |
 | **pivot** | The one node a kinship pattern reads: an event (a marriage or a birth), or the person between in a chain; the graph cache keeps one result per pivot, derived on first read (`canonlinks.Reader.For`) |
 | **match registry** | The one package holding every matching tunable, one section per layer group |
 | **knob** | One registry field a developer can tune; changing it is one edit in the registry |
@@ -189,7 +192,7 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `alignment.Bands.Strong` | 4 | `graphalign` `StrongScore` | Strong band from this evidence |
 | `alignment.Bands.Medium` | 3 | `graphalign` `MediumScore` | Medium band |
 | `alignment.Bands.Weak` | 2 | `graphalign` `WeakScore` | Weak band; below is no match |
-| `alignment.MinSimilarity` | 0.5 | estimate: at least half alike; a name with a sex conflict is 0.71, a birth against a death 0.09 | Least similarity for a shortlisted handle to be a candidate |
+| `alignment.MinSimilarity` | 0.4 | decided: user, 2026-10-24 (S11-43): one given name reaches a record with three more names ("Amy" / "Amy Lee Anne Long" 0.44); a name with a sex conflict is 0.71, a birth against a death 0.09 | Least similarity for a shortlisted handle to be a candidate |
 | `alignment.TopK` | 5 | `promotealign` `seedCandidateLimit` | Candidates kept per Subject after shortlisting, and per layer neighbor of a placed pair |
 | `alignment.TieCap` | 20 | estimate: room for a common name's ties without unbounded work | Most candidates kept when ties pass K, and per layer neighbor of a placed pair |
 | `alignment.Alternatives` | 3 | `graphalign` `AlternativeLimit` | Alternatives shown per row |

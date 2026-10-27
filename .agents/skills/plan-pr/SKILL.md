@@ -36,7 +36,7 @@ Template: [`template.md`](template.md). Copy it; keep every heading.
 | --- | --- |
 | Write the plan for a PR already in the map | **Yes** |
 | Refresh a plan whose dependencies landed differently, or whose `main` moved | **Yes** |
-| Plan a one-off PR outside a spike (bugfix, chore) | **Yes**. Put it under the open spike's `prs/` with the next free ID, and add a map row |
+| Plan a one-off PR outside a spike (bugfix, chore) | **Yes**. Put it under the open even-numbered (odds-and-ends) spike's `prs/` with the next free ID, and add a map row in a batch ([odd and even spikes](../../../docs/deployment-plan/README.md#odd-and-even-spikes)) |
 | Split a spike or slice into PRs, or change the PR list | No — [`plan-spike`](../plan-spike/SKILL.md) |
 | Write the Claude Design brief the PR waits on | [`add-design-brief`](../add-design-brief/SKILL.md), called from step 3 below |
 | Implement the PR | No. The plan's Implementer block is the implementer's instructions |
@@ -228,6 +228,10 @@ Do not mark a plan `Planned` until each line is true. Fix the plan, not the gate
 - [ ] Open questions is empty, or status is Draft / Blocked
 - [ ] Plan agrees with the map row and the working rules; any change was made in the map too
 - [ ] Codebase fit lists every new thing the PR adds, with the closest existing code; Deletes and Next adds are filled
+- [ ] Deletes names every callee whose last caller the PR removes and every mechanism the PR replaces
+- [ ] Every Decision checked against the working rules, the Skills to load and Rules that bind; each contradiction is in Rules this plan bends with the user's answer
+- [ ] Reach and Scale are filled, or None with one clause why
+- [ ] The DoD carries the sweep line; a PR that changes what an action covers lists its old-scope copy under Strings
 - [ ] python3 scripts/check-plan-docs.py <plan> reports no errors
 ```
 

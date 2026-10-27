@@ -19,3 +19,28 @@ var eventPatterns = []eventPattern{
 	{PatternMarriageSpouses, vocabkey.EventMarriage, []vocabkey.Role{vocabkey.RoleSubject}, []vocabkey.Role{vocabkey.RoleSubject}, vocabkey.TermSpouse},
 	{PatternBirthParents, vocabkey.EventBirth, []vocabkey.Role{vocabkey.RoleFather, vocabkey.RoleMother}, []vocabkey.Role{vocabkey.RoleSubject}, vocabkey.TermParent},
 }
+
+// PivotKind is the Subject type a pattern's pivot is: the event for an event
+// pattern, the parent between for a chain, and "" for a code that is no
+// pattern.
+func (p Pattern) PivotKind() vocabkey.SubjectType {
+	for _, ep := range eventPatterns {
+		if ep.code == p {
+			return vocabkey.Event
+		}
+	}
+	if p == PatternParentOfParent {
+		return vocabkey.Person
+	}
+	return ""
+}
+
+// Patterns are the product's pattern codes: each event pattern in order, then
+// the parent-of-parent chain.
+func Patterns() []Pattern {
+	out := make([]Pattern, 0, len(eventPatterns)+1)
+	for _, ep := range eventPatterns {
+		out = append(out, ep.code)
+	}
+	return append(out, PatternParentOfParent)
+}

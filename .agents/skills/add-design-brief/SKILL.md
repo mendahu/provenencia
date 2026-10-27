@@ -118,6 +118,12 @@ Field, not a new Transcribe control”; “conflict mark → Badge”.
 **New kit primitive** only if the inventory marks it New **and** a second call
 site is already known. Otherwise snowflake + compose.
 
+**A brief cannot waive a safety rule.** The board decides layout and wording.
+It does not decide that a dirty form closes without asking, that a destructive
+action skips its confirm, or that a failure says nothing. A frame that needs
+one of those is an open question for the user, written into the brief. (S12-D3
+let a link close a dirty graph form; the Spike 12 audit found the lost edits.)
+
 ## Brief shape
 
 Match an open spike brief (rethink vs enhancement):

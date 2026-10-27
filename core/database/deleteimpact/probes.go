@@ -3,6 +3,7 @@ package deleteimpact
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 )
 

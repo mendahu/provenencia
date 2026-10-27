@@ -4,8 +4,7 @@
 package graphalign
 
 import (
-	"bytes"
-
+	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -21,24 +20,13 @@ type Subject struct {
 
 // Bridge links two primary Subjects on the layer (walked undirected).
 type Bridge struct {
-	A, B       []byte
-	KeyA, KeyB vocabkey.BridgeKey // the bridge read from A's end and from B's
-	// Associations are the bridge Subjects behind the edge. The layers never
-	// read them; the loader sets them and the claim evidence query reads them
-	// back, as it does a value's Ref.
-	Associations [][]byte
-}
-
-// From reads the bridge from one end: the Subject at the other end and the
-// bridge as seen from id. ok is false when id is neither end.
-func (b Bridge) From(id []byte) (other []byte, key vocabkey.BridgeKey, ok bool) {
-	switch {
-	case bytes.Equal(b.A, id):
-		return b.B, b.KeyA, true
-	case bytes.Equal(b.B, id):
-		return b.A, b.KeyB, true
-	}
-	return nil, vocabkey.BridgeKey{}, false
+	// Edge's Associations are the bridge Subjects behind the edge. The layers
+	// never read them; the loader sets them and the claim evidence query reads
+	// them back, as it does a value's Ref.
+	kinship.Edge
+	// Recording is how the kinship patterns imply the link; the zero value is a
+	// link only recorded.
+	kinship.Recording
 }
 
 // Handle is one canonical entity in the prefetched canon neighborhood.
@@ -49,13 +37,17 @@ type Handle struct {
 	Values subjectcompare.Values
 }
 
-// CanonEdge is one filed association hop between handles.
+// CanonEdge is one filed association hop, or a link the kinship patterns
+// imply, between handles.
 type CanonEdge struct {
 	From, To       []byte
 	KeyFrom, KeyTo vocabkey.BridgeKey // the edge read from From's end and from To's
+	// Recording is as on Bridge.
+	kinship.Recording
 }
 
-// Layer is one Source's primary Subjects and bridges.
+// Layer is one Source's primary Subjects and bridges, recorded or implied by
+// the kinship patterns.
 type Layer struct {
 	Subjects []Subject
 	Bridges  []Bridge

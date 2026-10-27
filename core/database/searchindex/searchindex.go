@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/objectpath"
 )
@@ -20,6 +21,7 @@ const (
 	KindSource        = "source"
 	KindSourceType    = "source_type"
 	KindMetadataField = "metadata_field"
+	KindEvidenceGraph = string(catalogmodel.KindEvidenceGraph)
 )
 
 // ProjectionVersion is the Go-side projector shape. Bump when rollup columns
@@ -30,7 +32,8 @@ const (
 //	   the handles whose headers read the one that changed (S9-34).
 //	8: a Person or Place document lists each alternate name once, by text key
 //	   (S11-07).
-const ProjectionVersion = 8
+//	9: Evidence graphs, with their Source in the parent columns (S12-15).
+const ProjectionVersion = 9
 
 // Tagged body line prefixes for Source rollups (parsed by core/search for
 // match field codes + snippets).
@@ -56,6 +59,8 @@ type Document struct {
 	DisplaySubtitle         string
 	DisplayIconKey          string // type icon; empty for fields
 	DisplayThumbnailRelPath string // Source cover objects/… when already derived
+	DisplayParentID         string // UUID string of the record the hit opens inside; empty when none
+	DisplayParentRef        string
 	Title                   string
 	Ref                     string
 	Secondary               string
@@ -111,8 +116,9 @@ func Upsert(q Querier, doc Document) error {
 		`INSERT INTO catalog_search_docs (
 			kind, entity_id, display_ref, display_title, display_subtitle,
 			display_icon_key, display_thumbnail_rel_path,
+			display_parent_id, display_parent_ref,
 			title, ref, secondary, body
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		doc.Kind,
 		doc.EntityID,
 		doc.DisplayRef,
@@ -120,6 +126,8 @@ func Upsert(q Querier, doc Document) error {
 		doc.DisplaySubtitle,
 		doc.DisplayIconKey,
 		doc.DisplayThumbnailRelPath,
+		doc.DisplayParentID,
+		doc.DisplayParentRef,
 		doc.Title,
 		doc.Ref,
 		doc.Secondary,
@@ -216,6 +224,8 @@ func Reproject(q Querier, docs []effects.SearchIDs) error {
 				}
 			case effects.DocMetadataField:
 				err = ReprojectMetadataField(q, id)
+			case effects.DocEvidenceGraph:
+				err = ReprojectEvidenceGraph(q, id)
 			default:
 				return fmt.Errorf("searchindex: unknown search document %q", doc.Kind)
 			}
@@ -402,6 +412,40 @@ func ReprojectMetadataField(q Querier, fieldID []byte) error {
 	})
 }
 
+// ReprojectEvidenceGraph indexes one Evidence graph: its name, ref and
+// description are the match text, and its Source rides in the display columns.
+func ReprojectEvidenceGraph(q Querier, graphID []byte) error {
+	if len(graphID) != 16 {
+		return nil
+	}
+	var ref, name, description, sourceRef, sourceTitle string
+	var sourceID []byte
+	err := q.QueryRow(`
+		SELECT COALESCE(g.ref, ''), g.name, COALESCE(g.description, ''), s.id, s.ref, s.title
+		FROM evidence_graphs g
+		JOIN sources s ON s.id = g.source_id
+		WHERE g.id = ?`, graphID,
+	).Scan(&ref, &name, &description, &sourceID, &sourceRef, &sourceTitle)
+	if err == sql.ErrNoRows {
+		return Delete(q, KindEvidenceGraph, database.UUIDString(graphID))
+	}
+	if err != nil {
+		return err
+	}
+	return Upsert(q, Document{
+		Kind:             KindEvidenceGraph,
+		EntityID:         database.UUIDString(graphID),
+		DisplayRef:       ref,
+		DisplayTitle:     name,
+		DisplaySubtitle:  sourceTitle,
+		DisplayParentID:  database.UUIDString(sourceID),
+		DisplayParentRef: sourceRef,
+		Title:            name,
+		Ref:              ref,
+		Secondary:        description,
+	})
+}
+
 // RebuildAll clears and reprojects every navigable root, then stamps the version.
 func RebuildAll(q Querier) error {
 	if err := ClearAll(q); err != nil {
@@ -431,6 +475,15 @@ func RebuildAll(q Querier) error {
 	}
 	for _, id := range sourceIDs {
 		if err := ReprojectSource(q, id); err != nil {
+			return err
+		}
+	}
+	graphIDs, err := listIDs(q, `SELECT id FROM evidence_graphs`)
+	if err != nil {
+		return err
+	}
+	for _, id := range graphIDs {
+		if err := ReprojectEvidenceGraph(q, id); err != nil {
 			return err
 		}
 	}

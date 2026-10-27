@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/search"
+	"github.com/mendahu/provenencia/core/workspacelocation"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -40,11 +41,11 @@ func SearchCatalog(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func locationFromProto(loc *engine.WorkspaceLocation) search.WorkspaceLocation {
+func locationFromProto(loc *engine.WorkspaceLocation) workspacelocation.Location {
 	if loc == nil {
-		return search.WorkspaceLocation{}
+		return workspacelocation.Location{}
 	}
-	return search.WorkspaceLocation{
+	return workspacelocation.Location{
 		Section:              loc.GetSection(),
 		SourceID:             loc.GetSourceId(),
 		FieldID:              loc.GetFieldId(),
@@ -67,7 +68,7 @@ func locationFromProto(loc *engine.WorkspaceLocation) search.WorkspaceLocation {
 	}
 }
 
-func locationToProto(loc search.WorkspaceLocation) *engine.WorkspaceLocation {
+func locationToProto(loc workspacelocation.Location) *engine.WorkspaceLocation {
 	return &engine.WorkspaceLocation{
 		Section:              loc.Section,
 		SourceId:             loc.SourceID,
@@ -108,42 +109,26 @@ func fillHitHeaders(c *database.Catalog, hits []*engine.SearchHit) error {
 			places = append(places, id)
 		}
 	}
-	listedPersons, err := conclusionheaders.PersonsByIDs(c, persons)
+	headers, err := conclusionheaders.ByIDs(c, persons, events, places)
 	if err != nil {
 		return err
-	}
-	listedEvents, err := conclusionheaders.EventsByIDs(c, events)
-	if err != nil {
-		return err
-	}
-	listedPlaces, err := conclusionheaders.PlacesByIDs(c, places)
-	if err != nil {
-		return err
-	}
-	personByID := map[string]conclusionheaders.PersonHeader{}
-	for _, p := range listedPersons {
-		personByID[database.UUIDString(p.Entity.ID)] = p
-	}
-	eventByID := map[string]conclusionheaders.EventHeader{}
-	for _, e := range listedEvents {
-		eventByID[database.UUIDString(e.Entity.ID)] = e
-	}
-	placeByID := map[string]conclusionheaders.PlaceHeader{}
-	for _, p := range listedPlaces {
-		placeByID[database.UUIDString(p.Entity.ID)] = p
 	}
 	for _, h := range hits {
+		id, err := parseID(h.GetId())
+		if err != nil {
+			continue
+		}
 		switch h.GetKind() {
 		case search.KindPerson:
-			if p, ok := personByID[h.GetId()]; ok {
+			if p, ok := headers.Person(id); ok {
 				h.Header = &engine.SearchHit_Person{Person: personHeaderProto(p)}
 			}
 		case search.KindEvent:
-			if e, ok := eventByID[h.GetId()]; ok {
+			if e, ok := headers.Event(id); ok {
 				h.Header = &engine.SearchHit_Event{Event: eventHeaderProto(e)}
 			}
 		case search.KindPlace:
-			if p, ok := placeByID[h.GetId()]; ok {
+			if p, ok := headers.Place(id); ok {
 				h.Header = &engine.SearchHit_Place{Place: placeHeaderProto(p)}
 			}
 		}

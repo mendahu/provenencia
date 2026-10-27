@@ -411,14 +411,22 @@ struct EvidenceRelationshipCard: View {
                 ids: relationship.pinIDs, checked: pins.intersection(relationship.pinIDs), spoken: relationship.spoken,
                 identifier: "promote.sheet.relationship.\(relationship.neighborSubjectID).\(relationship.key)", env: env
             )
-            HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
-                Text(verbatim: L10n.Promote.cardHeaderLead(relationship.header))
-                    .font(PVFont.display(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
-                    .foregroundStyle(PVColor.textDisplay)
-                if relationship.recordCount > 1 {
-                    Text(verbatim: L10n.Promote.recordCount(relationship.recordCount))
+            VStack(alignment: .leading, spacing: PVSpacing.space1) {
+                HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
+                    Text(verbatim: L10n.Promote.cardHeaderLead(relationship.header))
+                        .font(PVFont.display(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
+                        .foregroundStyle(PVColor.textDisplay)
+                    if relationship.recordCount > 1 {
+                        Text(verbatim: L10n.Promote.recordCount(relationship.recordCount))
+                            .font(PVFont.body(size: PVTypeScale.caption))
+                            .foregroundStyle(PVColor.textMuted)
+                    }
+                }
+                if let recorded = relationship.recorded {
+                    Text(verbatim: recorded)
                         .font(PVFont.body(size: PVTypeScale.caption))
                         .foregroundStyle(PVColor.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

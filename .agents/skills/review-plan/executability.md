@@ -33,6 +33,10 @@ Do not write code. Do not edit files. Walk the plan.
   not mention? If it matters, it needs an Out line or a Decision.
 - **Contradiction.** Does the step disagree with a Decision, a working rule,
   a skill's "Do not", or the brief?
+- **Imports.** Does the step move a type, call or interface into another
+  package? Check the import graph (`go list -deps`); a cycle stops you mid-PR.
+- **Locks.** Does the step take a lock, a decode slot or the catalog session
+  that a caller may already hold? Say who holds it.
 
 ## Briefs
 

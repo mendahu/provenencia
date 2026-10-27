@@ -57,6 +57,7 @@ struct PlaceRegistryTests {
             .metadataFieldsList(project: project),
             .credibilityGradesList(project: project),
             .evidenceGraphsList(project: project),
+            .evidenceGraphProgress(project: project),
         ])
     }
 
@@ -155,6 +156,7 @@ struct PlaceRegistryTests {
                     .metadataFieldsList(project: project),
                     .credibilityGradesList(project: project),
                     .evidenceGraphsList(project: project),
+                    .evidenceGraphProgress(project: project),
                 ]
             ),
             (

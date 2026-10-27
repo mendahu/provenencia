@@ -27,6 +27,7 @@ import (
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
+	"github.com/mendahu/provenencia/core/workspacelocation"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -141,7 +142,7 @@ func TestHandleSearch(t *testing.T) {
 			t.Fatalf("got %+v", hits)
 		}
 		loc := hits[0].Location
-		if loc.Section != SectionPersons || loc.EntityID != uuidString(james.Entity.ID) || loc.Ref != james.Entity.Ref {
+		if loc.Section != workspacelocation.Persons || loc.EntityID != uuidString(james.Entity.ID) || loc.Ref != james.Entity.Ref {
 			t.Fatalf("location %+v", loc)
 		}
 		if hits[0].MemberCount != 1 {
@@ -389,7 +390,7 @@ func TestHandleSearchEventsAndPlaces(t *testing.T) {
 	if hits := f.search("Birth", KindEvent); len(hits) != 1 || hits[0].Ref != event.Entity.Ref || hits[0].Title != "Unspecified birth" {
 		t.Fatalf("event by type: %+v", hits)
 	}
-	if hits := f.search("1817", KindEvent); len(hits) != 1 || hits[0].Location.Section != SectionEvents {
+	if hits := f.search("1817", KindEvent); len(hits) != 1 || hits[0].Location.Section != workspacelocation.Events {
 		t.Fatalf("event by year: %+v", hits)
 	}
 	if hits := f.search("York", KindPlace); refsOf(hits) != fmt.Sprint([]string{"place:" + place.Entity.Ref}) {
@@ -437,12 +438,13 @@ func TestKindPriorityIsATenthOfTheScore(t *testing.T) {
 		{Kind: KindPlace, Title: "P", Score: 10},
 		{Kind: KindEvent, Title: "E", Score: 10},
 		{Kind: KindPerson, Title: "N", Score: 10},
+		{Kind: KindEvidenceGraph, Title: "G", Score: 10},
 	}
 	for i := range equal {
 		equal[i].Score = applyScoreMix(equal[i].Score, equal[i].Kind)
 	}
 	sortHits(equal)
-	if got := kindsOf(equal); fmt.Sprint(got) != fmt.Sprint([]string{KindPerson, KindEvent, KindPlace, KindSource, KindSourceType}) {
+	if got := kindsOf(equal); fmt.Sprint(got) != fmt.Sprint([]string{KindPerson, KindEvent, KindPlace, KindSource, KindEvidenceGraph, KindSourceType}) {
 		t.Fatalf("equal text, got %v", got)
 	}
 

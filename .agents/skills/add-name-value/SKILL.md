@@ -19,7 +19,7 @@ New **tables/columns** need a catalog migration first (`.agents/skills/add-catal
 core/namevalue/              # pure: no core/database import
   namevalue.go               # Value, Part, PartType*, ErrInvalid, Validate
   registry.go                # PartTypeInfo, PartTypes, KnownPartType
-  namevaluetest/             # Western fixture helper
+  namevaluetest/             # Western and Given fixture helpers
   validate_test.go
   registry_test.go
 core/database/namevalues/    # queries

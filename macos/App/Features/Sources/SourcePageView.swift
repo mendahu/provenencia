@@ -243,9 +243,9 @@ private struct SourcePageContent: View {
                 navigation.go(to: location)
             }
         )
-        .onChange(of: workspaceHandle.status) { _, status in
+        .onChange(of: workspaceHandle.status) {
             model.sync(from: workspaceHandle, sourceID: sourceID)
-            if status == .error, workspaceHandle.value == nil {
+            if case .failed = workspaceHandle.read {
                 navigation.fallbackToSectionRoot()
             }
         }

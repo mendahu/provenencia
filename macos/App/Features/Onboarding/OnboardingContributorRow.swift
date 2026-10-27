@@ -54,7 +54,7 @@ struct OnboardingContributorRow: View {
                     PVDivider()
                 case .dashed:
                     OnboardingHorizontalLine()
-                        .stroke(PVColor.borderDefault, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                        .stroke(PVColor.borderDefault, style: PVStroke.dashed)
                         .frame(height: 1)
                 }
             }

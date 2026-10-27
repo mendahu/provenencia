@@ -63,7 +63,7 @@ code to it. Special-casing where an entry belongs is a patch.
 | Omnibar hit kinds | `core/search` registry ([`add-searchable-kind`](../../add-searchable-kind/SKILL.md)) |
 | Workspace places, list/detail caches | `PlaceRegistry`, `CatalogQueryKey`, `CatalogQueryRegistry` ([`add-workspace-place`](../../add-workspace-place/SKILL.md)) |
 | Navigation history | `WorkspaceLocation`, `WorkspaceNavigation` ([`add-workspace-location`](../../add-workspace-location/SKILL.md)) |
-| Go wire vocabulary in Swift | `Platform/ConclusionVocabulary.swift` (`.cursor/rules/macos-client.mdc`) |
+| Go wire vocabulary in Swift | A typed enum with a row in `api/ffi/swift_vocabulary_test.go`, mostly `Platform/ConclusionVocabulary.swift` (`.cursor/rules/macos-client.mdc`) |
 | Copy | `L10n` + `Localizable.xcstrings` ([`add-localized-string`](../../add-localized-string/SKILL.md)) |
 | UI chrome | `DesignSystem` layers ([`add-ui-component`](../../add-ui-component/SKILL.md)) |
 | Error codes | `core/apperr` + `L10n.Errors` |
@@ -305,6 +305,13 @@ the rule; do not restate it.
 - Invalidating a list to move one field the write already reported — Q9.
 - A private decoder beside the package's exported validator for the same format (S10-32 `locator.parse` beside `Validate`) — Q14.
 - One result field per value type, each with its own append, when the map names more types (S10-32 `DateChange` / `NameChange` / `DepictionChanges`) — Q8.
+- A PR scoped to one layer that leaves a multi-write user action or a domain rule in the client: S12-13 saved a card's graph links as several transactions with a Swift copy of the engine's last-link rule — Q3, [`plan-spike`](../../plan-spike/SKILL.md) "Engine before a client-only PR".
+- FakeStore re-implementing an engine rule (order, membership, effects, refusals) — `.cursor/rules/swift-tests.mdc`.
+- A Source-keyed field kept beside its graph-keyed replacement (S12-10's citation effects, S12-14's progress Source id) against the spike's "replace, not beside" rule — Q14.
+- One more entry in hand-kept parallel lists (eight for a cache key, four switches for a search kind): the registry is due before the next entry — Q2.
+- An audited write that returns no effects, with a hand-written mutation in Swift beside the effects path — Q14.
+- A preflight and its write that each derive the same rule, or a second "stage, then write" beside `ingest.StagedImage` — Q14.
+- A step that moves an interface into a package that already imports the caller's package (`core/database` imports `effects`) — Q3; check the import graph.
 
 ## Good finding shape
 

@@ -1,8 +1,6 @@
 package promotealign
 
 import (
-	"bytes"
-	"slices"
 	"sort"
 
 	"github.com/mendahu/provenencia/core/connectrules"
@@ -10,6 +8,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/hops"
+	"github.com/mendahu/provenencia/core/kinship"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/subjectprofile"
@@ -153,11 +153,13 @@ var hopPersonToEvent = hops.MustHop(vocabkey.BridgeParticipation, vocabkey.Prope
 
 // loadLayerBridges walks every bridge connectrules registers, with any term,
 // and keys each edge from both ends. It also returns the participations whose
-// ends are both primary, which the lifespans read.
+// ends are both primary, which the lifespans read. Links go through one
+// kinship.LinkSet, so links with the same ends and keys merge, and the links
+// the kinship patterns imply follow the recorded ones (with no association of
+// their own beyond those they were made from).
 func loadLayerBridges(g *graphcache.Graph, eg graphcache.EvidenceGraph, props map[string]graphcache.VocabProperty, vocabTerms map[string]graphcache.VocabTerm, primary map[string]primarySubject, byKind map[string][][]byte, terms segmentcompare.Terms) ([]graphalign.Bridge, []participation, error) {
-	var out []graphalign.Bridge
 	var parts []participation
-	seen := map[seenEdge]int{} // the edge's index in out
+	set := kinship.NewLinkSet()
 	for _, b := range connectrules.Bridges() {
 		if len(b.Endpoints) != 2 || len(byKind[b.Endpoints[0].TypeKey]) == 0 {
 			continue
@@ -210,19 +212,13 @@ func loadLayerBridges(g *graphcache.Graph, eg graphcache.EvidenceGraph, props ma
 				eventType = eventTypes[string(eventEnd(e))]
 			}
 			keyA, keyB := segmentcompare.Keys(b, vocabkey.BridgeTerm(term), vocabkey.EventType(eventType), terms)
-			ek := edgeSeenKey(e.From, e.To, keyA, keyB)
-			if at, ok := seen[ek]; ok {
-				if !slices.ContainsFunc(out[at].Associations, func(a []byte) bool { return bytes.Equal(a, e.Association) }) {
-					out[at].Associations = append(out[at].Associations, bytes.Clone(e.Association))
-				}
-				continue
-			}
-			seen[ek] = len(out)
-			out = append(out, graphalign.Bridge{
-				A: append([]byte(nil), e.From...), B: append([]byte(nil), e.To...), KeyA: keyA, KeyB: keyB,
-				Associations: [][]byte{bytes.Clone(e.Association)},
-			})
+			set.Add(kinship.Link{Edge: kinship.Edge{A: e.From, B: e.To, KeyA: keyA, KeyB: keyB, Associations: [][]byte{e.Association}}})
 		}
+	}
+	set.WithImplied(terms, matchregistry.Default().Kinship)
+	var out []graphalign.Bridge
+	for _, l := range set.Links() {
+		out = append(out, graphalign.Bridge{Edge: l.Edge, Recording: l.Recording})
 	}
 	return out, parts, nil
 }

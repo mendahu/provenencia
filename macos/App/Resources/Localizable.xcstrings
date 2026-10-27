@@ -6968,30 +6968,6 @@
         }
       }
     },
-    "sources.list.columnEvidenceGraph": {
-      "comment": "Caption band above the Sources list graph zone",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Evidence graph"
-          }
-        }
-      }
-    },
-    "sources.list.columnSource": {
-      "comment": "Caption band above the Sources list left zone",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Source"
-          }
-        }
-      }
-    },
     "sources.list.countLine": {
       "comment": "Sources list count when unfiltered; argument is total",
       "extractionState": "manual",
@@ -7122,8 +7098,20 @@
         }
       }
     },
+    "sources.graph.countsUnavailable": {
+      "comment": "Evidence graph button help and Source page count line when graph counts failed to load",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Counts could not load"
+          }
+        }
+      }
+    },
     "sources.list.graphNotStarted": {
-      "comment": "Italic graph-zone state when a Source has zero canvas subjects",
+      "comment": "Italic words in a graph count line when a Source has zero canvas subjects",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -7135,7 +7123,7 @@
       }
     },
     "sources.list.needsArtifact": {
-      "comment": "Blocked graph zone label when the Source has no Artifact",
+      "comment": "Second line of the Sources list block for a Source with no Artifact",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -7147,7 +7135,7 @@
       }
     },
     "sources.list.needsArtifactTooltip": {
-      "comment": "Tooltip on the blocked Sources list graph zone",
+      "comment": "Tooltip on the Sources list block for a Source with no Artifact",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -7183,7 +7171,7 @@
       }
     },
     "sources.list.observationCount": {
-      "comment": "Sources list graph-zone observation count; argument is Observation count",
+      "comment": "Sources list graph observation count; argument is Observation count",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -7206,20 +7194,8 @@
         }
       }
     },
-    "sources.list.openGraph": {
-      "comment": "Sources list right-zone action when the Source has an Artifact",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open graph"
-          }
-        }
-      }
-    },
     "sources.list.openSourcePage": {
-      "comment": "Accessibility label for the Sources list left (filing) zone",
+      "comment": "Accessibility label for the Source link in a Sources list row (cover, title and type)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -7303,7 +7279,7 @@
       }
     },
     "sources.list.subjectCount": {
-      "comment": "Sources list graph-zone subject count; argument is canvas subject count",
+      "comment": "Sources list graph subject count; argument is canvas subject count",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -10322,6 +10298,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Event"
+          }
+        }
+      }
+    },
+    "workspace.omnibar.kind.evidenceGraph": {
+      "comment": "Kind chip on an omnibar hit for an Evidence graph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence graph"
           }
         }
       }
@@ -20620,19 +20608,19 @@
       }
     },
     "sources.list.status.empty": {
-      "comment": "Sources evidence-status filter option: the Source's graph has no person, event, or place subjects",
+      "comment": "Status filter option and badge: a graph with no subjects",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Empty"
+            "value": "Not started"
           }
         }
       }
     },
     "sources.list.status.inProgress": {
-      "comment": "Sources evidence-status filter option: at least one person, event, or place on the graph is not promoted yet",
+      "comment": "Sources evidence-status filter option: at least one subject and none promoted",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -20643,14 +20631,14 @@
         }
       }
     },
-    "sources.list.status.fullyPromoted": {
-      "comment": "Sources evidence-status filter option: every person, event, and place on the graph is promoted",
+    "sources.list.status.promoted": {
+      "comment": "Sources evidence-status filter option: graphs with at least one promoted subject",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fully promoted"
+            "value": "Promoted"
           }
         }
       }
@@ -21819,6 +21807,186 @@
         }
       }
     },
+    "promote.sheet.recorded": {
+      "comment": "Muted line under a relationship Card's header: how each side records the link; 1 = this Source's way, 2 = the matched record's way",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This source: %1$@ · The record: %2$@"
+          }
+        }
+      }
+    },
+    "promote.sheet.spokenRecorded": {
+      "comment": "VoiceOver reading of a relationship Card's header and how each side records the link; 1 = the header, 2 = this Source's way, 3 = the record's way",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@. This source: %2$@. The record: %3$@"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.on": {
+      "comment": "An event named by its date inside a recorded phrase; the argument is the date, without any phrase about how it was recorded",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dated %@"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.marriage": {
+      "comment": "How a side records a couple: through a marriage; the argument is \"on <date>\" or the marriage's ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "married in the marriage %@"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.marriage.none": {
+      "comment": "How a side records a couple through a marriage that cannot be named",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "married in a marriage"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.birth": {
+      "comment": "How a side records a parent through a birth; the argument is \"on <date>\" or the birth's ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "parent and child in the birth %@"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.birth.none": {
+      "comment": "How a side records a parent through a birth that cannot be named",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "parent and child in a birth"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.chain": {
+      "comment": "How a side records a grandparent through a parent between; the argument is that parent's name or ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "grandparent and grandchild through %@"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.chain.none": {
+      "comment": "The same, when the parent between cannot be named",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "grandparent and grandchild through a parent"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.other": {
+      "comment": "How a side records a link through a pattern this build has no words for; the argument is the record between",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "through %@"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.other.none": {
+      "comment": "The same, when the record between cannot be named",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "through another record"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.direct.spouses": {
+      "comment": "A side that records the couple directly",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "recorded as spouses"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.direct.parentChild": {
+      "comment": "A side that records the parent directly",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "recorded as parent and child"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.direct.grandparent": {
+      "comment": "A side that records the grandparent directly",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "recorded as grandparent and grandchild"
+          }
+        }
+      }
+    },
+    "promote.sheet.recorded.direct.other": {
+      "comment": "A side that records the link directly, of a kind with no words of its own",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "recorded directly"
+          }
+        }
+      }
+    },
     "promote.sheet.cardHeaderLead": {
       "comment": "A Card header on the evidence sheet as it is drawn: an ellipsis, then the header; the argument is the header",
       "extractionState": "manual",
@@ -21976,13 +22144,13 @@
       }
     },
     "sources.page.graph.openLabel": {
-      "comment": "VoiceOver label for opening an Evidence graph; argument is the graph name",
+      "comment": "VoiceOver label for opening an Evidence graph from the Source page or a Sources list graph button; argument is the graph name",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Open %@"
+            "value": "Open graph %@"
           }
         }
       }
@@ -22535,6 +22703,150 @@
           "stringUnit": {
             "state": "translated",
             "value": "Some changes may not be saved. Every field and box keeps its value — save again to finish. %@"
+          }
+        }
+      }
+    },
+    "sources.list.columnSource": {
+      "comment": "Sources list column caption",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
+          }
+        }
+      }
+    },
+    "sources.list.columnType": {
+      "comment": "Sources list column caption",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type"
+          }
+        }
+      }
+    },
+    "sources.list.columnEvidenceGraph": {
+      "comment": "Sources list column caption",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence graph"
+          }
+        }
+      }
+    },
+    "sources.list.graphNeedsArtifactToOpen": {
+      "comment": "Second line of a Sources list graph button whose graph links no Artifact",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needs an artifact to open"
+          }
+        }
+      }
+    },
+    "sources.list.noGraphYet": {
+      "comment": "Sources list graph column for a Source with no Artifact",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No evidence graph yet"
+          }
+        }
+      }
+    },
+    "sources.list.graphsLoading": {
+      "comment": "VoiceOver label while a Source's graph list loads",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence graphs loading"
+          }
+        }
+      }
+    },
+    "sources.list.graphsFailedTitle": {
+      "comment": "Sources list graph column when the graph list failed to load",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence graphs"
+          }
+        }
+      }
+    },
+    "sources.list.graphsFailedDetail": {
+      "comment": "Sources list graph column when the graph list failed to load",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t be read"
+          }
+        }
+      }
+    },
+    "sources.list.graphBlockLabel": {
+      "comment": "VoiceOver label of a Sources list graph block (no Artifact, or the graph list failed): its title and its second line",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "sources.list.graphButtonHelp": {
+      "comment": "Sources list graph button tooltip; 1 is the graph name, 2 its counts or why it cannot open",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ — %2$@"
+          }
+        }
+      }
+    },
+    "sources.list.graphButtonLabel": {
+      "comment": "VoiceOver label of a Sources list graph button: open label, counts, status",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@, %3$@"
+          }
+        }
+      }
+    },
+    "sources.list.graphButtonLabelNoStatus": {
+      "comment": "VoiceOver label of a Sources list graph button without a status: open label, counts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@"
           }
         }
       }

@@ -129,7 +129,7 @@ struct PVChip: View {
         RoundedRectangle(cornerRadius: chipRadius, style: .continuous)
             .strokeBorder(
                 borderColor(colors: colors),
-                style: StrokeStyle(lineWidth: expands ? 0 : 1, dash: isDashed ? [4, 3] : [])
+                style: StrokeStyle(lineWidth: expands ? 0 : 1, dash: isDashed ? PVStroke.dashPattern : [])
             )
     }
 

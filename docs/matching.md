@@ -13,7 +13,7 @@ Matching decides whether two things are the same Person, Event or Place. It is a
 
 ## Where it runs
 
-**Promote.** [`core/database/promotealign`](../core/database/promotealign) builds each side once per proposal: a Source Subject's with `subjectprofile.ForSubject` from its own Observations and the dated events it takes part in, a handle's with `subjectprofile.Build` from its reconciled values and its participations. [`core/graphalign`](../core/graphalign) scores every pair with `subjectcompare.Compare` and adds link support ([promote-graph-alignment.md](promote-graph-alignment.md)). A handle is a candidate when it is shortlisted and at least half alike (`graphalign.Candidates`), or reached through a link to an accepted pair.
+**Promote.** [`core/database/promotealign`](../core/database/promotealign) builds each side once per proposal: a Source Subject's with `subjectprofile.ForSubject` from its own Observations and the dated events it takes part in, a handle's with `subjectprofile.Build` from its reconciled values and its participations. [`core/graphalign`](../core/graphalign) scores every pair with `subjectcompare.Compare` and adds link support ([promote-graph-alignment.md](promote-graph-alignment.md)). A handle is a candidate when it is shortlisted with similarity at least `alignment.MinSimilarity` (`graphalign.Candidates`), or reached through a link to an accepted pair.
 
 **The reconciler** groups values with value compare under its own policy ([conclusion-reconciliation.md](conclusion-reconciliation.md)).
 

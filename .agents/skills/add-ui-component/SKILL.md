@@ -41,9 +41,9 @@ directly. Do not invent a recipe or snowflake shell for completeness.
 | Recipe | `DesignSystem/Recipes/<Name>/` | Domain → component props | Reimplement badge/chip/panel chrome; category nesting |
 | Snowflake | `Features/<Feature>/` or `DesignSystem/Snowflakes/<Name>/` | One-screen glue | Become the de-facto dialog/menu pattern while one-off |
 
-Folder name: PascalCase **without** `PV` (`Button`, `EvidenceIcon`). Public
+Folder name: PascalCase **without** `PV` (`Button`, `SectionHeader`). Public
 types under `Components/` and `Recipes/` **must** use the `PV` prefix
-(`PVButton`, `PVEvidenceIcon`) so they do not collide with SwiftUI/AppKit and
+(`PVButton`, `PVSectionHeader`) so they do not collide with SwiftUI/AppKit and
 read as kit API — see [`docs/design-system-layers.md`](../../../docs/design-system-layers.md)
 § PV type prefix. Colocate the main Swift file, private helpers, and
 component-specific docs in that folder.
@@ -70,6 +70,7 @@ Prefer extending a composite with slots over a new root `PV*` for a slight varia
 - [ ] #Preview with static sample data for new DesignSystem types
 - [ ] New .swift registered in the Xcode project (pbxproj)
 - [ ] Second call site? Snowflake → Recipes/<Name>/ (or Components/<Name>/ if agnostic)
+- [ ] Each behavior the README promises for it (Return, Escape, dismissal, focus, VoiceOver announcement) is in its code and held by a test. `PVConfirm` promised that Return could not confirm a delete while its Delete button kept the default-action shortcut
 ```
 
 ## Dialogs / sheets (current kit)

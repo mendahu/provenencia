@@ -4,7 +4,7 @@ Local-first genealogy software. Native macOS client over a shared Go core. Domai
 
 Agent skills live in [`.agents/skills/`](.agents/skills/), one folder per skill with a `SKILL.md`. Cursor reads that folder directly. `.claude/skills` is a symlink to it for Claude Code. Add new skills under `.agents/skills/` only. Claude Code subagents for the PR loop ([`ship-pr`](.agents/skills/ship-pr/SKILL.md)) are in [`.claude/agents/`](.claude/agents/). Cursor rules stay in [`.cursor/rules/`](.cursor/rules/).
 
-Before a PR leaves draft, `scripts/check-pr.sh` must print `check-pr: PASS`. It runs gofmt on changed Go files, go vet, go test, the Xcode unit tests with no Swift compiler warning (macOS only), and the catalog and plan-doc checks.
+Before a PR leaves draft, `scripts/check-pr.sh` must print `check-pr: PASS`. It runs gofmt on changed Go files, go vet, go test, the Xcode unit tests with no Swift compiler warning (macOS only), the catalog and plan-doc checks, and a check that every code name a skill or Cursor rule cites still exists.
 
 **Requires macOS 14 (Sonoma) or later** and **Go 1.27** or later (the Xcode project builds `libprovenencia.dylib` on compile).
 

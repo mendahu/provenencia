@@ -12,6 +12,7 @@ const (
 	DocSource        = "source"
 	DocSourceType    = "source_type"
 	DocMetadataField = "metadata_field"
+	DocEvidenceGraph = string(catalogmodel.KindEvidenceGraph)
 )
 
 // SearchDoc is one reprojection: Kind says which document, Path says whose ids.
@@ -211,7 +212,10 @@ var registry = map[string]Effect{
 		Entity:        "source",
 		EvidenceGraph: onField("title", graphsOfSource(self())),
 		SourceScope:   self(),
-		Search:        []SearchDoc{{Kind: DocSource, Path: self()}},
+		Search: []SearchDoc{
+			{Kind: DocSource, Path: self()},
+			{Kind: DocEvidenceGraph, Path: onField("title", graphsOfSource(self()))},
+		},
 	},
 	"source_notes": {
 		Entity:      "source_note",
@@ -270,6 +274,7 @@ var registry = map[string]Effect{
 		EvidenceGraph: self(),
 		SourceScope:   field("source_id"),
 		Lists:         []List{ListEvidenceGraphs},
+		Search:        []SearchDoc{{Kind: DocEvidenceGraph, Path: self()}},
 	},
 	"evidence_graph_artifacts": {
 		Entity:         "evidence_graph_artifact",

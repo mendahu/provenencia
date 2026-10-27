@@ -256,25 +256,21 @@ final class WorkspaceSession {
         return keys
     }
 
-    /// Surgical Get-one + map merge. Skips when the list never warmed the map.
+    /// Surgical Get-one + map merge. Skips when no place warmed the map.
     private func refreshEvidenceGraphProgress(graphId: String) {
-        let key = CatalogQueryKey.evidenceGraphProgress(project: projectKey)
-        let existing: QueryHandle<[String: EvidenceGraphProgress]>? = queryHandle(key)
-        guard existing != nil else { return }
+        guard evidenceGraphProgressHandle != nil else { return }
         Task { await self.patchEvidenceGraphProgress(graphId: graphId) }
     }
 
     private func patchEvidenceGraphProgress(graphId: String) async {
-        let key = CatalogQueryKey.evidenceGraphProgress(project: projectKey)
-        let existing: QueryHandle<[String: EvidenceGraphProgress]>? = queryHandle(key)
-        guard existing != nil else { return }
+        let key = evidenceGraphProgressKey
+        guard evidenceGraphProgressHandle != nil else { return }
         do {
             let one = try await store.getEvidenceGraphProgress(
                 projectDir: projectKey.projectDir,
                 graphID: graphId
             )
-            let handle: QueryHandle<[String: EvidenceGraphProgress]>? = queryHandle(key)
-            var map = handle?.value ?? [:]
+            var map = evidenceGraphProgressHandle?.value ?? [:]
             if one.isZero {
                 map.removeValue(forKey: graphId)
             } else {
@@ -282,7 +278,7 @@ final class WorkspaceSession {
             }
             setQueryValue(key, value: map)
         } catch {
-            // Keep last counts; the next mutation or Sources place visit retries.
+            // Keep last counts; the next mutation or the next place visit that warms it retries.
         }
     }
 

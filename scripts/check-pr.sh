@@ -15,6 +15,8 @@
 #   go-vet        go vet -tags fts5 ./api/... ./core/...
 #   go-test       go test -tags fts5 ./api/... ./core/...
 #   localizable   scripts/check-localizable-xcstrings.py
+#   guidance-names  scripts/check-guidance-names.py: every code name a skill or
+#                 Cursor rule cites still exists
 #   plan-docs     scripts/check-plan-docs.py on the plans and open briefs this branch changes
 #   xcode-test    xcodebuild test (ProvenenciaTests), the CI command. macOS only:
 #                 anywhere else it fails, because a PR is not checked without it.
@@ -33,7 +35,7 @@ base=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --base) base="$2"; shift 2 ;;
-    -h|--help) sed -n '2,28p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
     *) echo "check-pr: unknown argument $1" >&2; exit 2 ;;
   esac
 done
@@ -96,7 +98,10 @@ xcode_test() {
 
 swift_warnings() {
   local warnings
-  warnings="$(grep -E '^/.+\.swift:[0-9]+:[0-9]+: warning:' "$logs/xcode-test.log" \
+  # A warning with no source location (a key path or Sendable check the
+  # compiler raises module-wide) prints as "<unknown>:0: warning:"; one inside
+  # a macro expansion (#expect, @Test) names an "@__swiftmacro_….swift" file.
+  warnings="$(grep -E '^([^ ]+\.swift:[0-9]+:[0-9]+|<unknown>:0): warning:' "$logs/xcode-test.log" \
     | sed "s|^$ROOT/||" | sort -u)"
   [[ -z "$warnings" ]] && return 0
   echo "Swift warnings:"
@@ -110,6 +115,7 @@ run gofmt       gofmt_changed
 run go-vet      env CGO_ENABLED=1 go vet -tags fts5 ./api/... ./core/...
 run go-test     env CGO_ENABLED=1 go test -tags fts5 ./api/... ./core/...
 run localizable python3 scripts/check-localizable-xcstrings.py
+run guidance-names python3 scripts/check-guidance-names.py
 run plan-docs   plan_docs_changed
 if [[ "$(uname -s)" == "Darwin" ]]; then
   run xcode-test xcode_test

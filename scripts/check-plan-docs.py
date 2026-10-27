@@ -6,7 +6,9 @@ review judgment; this script checks what does not need judgment, so a
 reviewer never spends a round on a missing heading or a wrong path.
 
 PR plans (docs/deployment-plan/<spike>/prs/S#-NN-<slug>.md), per plan-pr:
-  - every header field and section heading in the template is present
+  - every header field and section heading in the template is present; a
+    Draft plan also has Reach, Scale and **Rules this plan bends.** (added
+    after the 2026-10-27 app-health audit, so older plans stay valid)
   - Status uses the shared status words
   - the Implementer block matches the template word for word
   - no planner comments (<!-- -->) are left
@@ -70,6 +72,8 @@ PLAN_SECTIONS = [
     "## 12. Open questions",
     "## 13. PR",
 ]
+# Required of Draft plans only (see check_plan).
+DRAFT_SECTIONS = ["### Reach", "### Scale"]
 STATUS_RE = re.compile(
     r"^(Draft|Planned|Blocked — .+|In progress|Landed in .+|Descoped.*)$"
 )
@@ -213,6 +217,14 @@ def check_plan(report: Report, text: str) -> None:
     for heading in PLAN_SECTIONS:
         if not any(line.strip() == heading for line in lines):
             report.error(0, f"missing heading: {heading}")
+    # Sections added after the 2026-10-27 app-health audit. Plans written
+    # before it stay valid; every new plan starts as a Draft and keeps them.
+    if status == "Draft":
+        for heading in DRAFT_SECTIONS:
+            if not any(line.strip() == heading for line in lines):
+                report.error(0, f"missing heading: {heading}")
+        if not any(line.startswith("**Rules this plan bends.**") for line in lines):
+            report.error(0, "missing line: **Rules this plan bends.** (template §5)")
 
     template = PLAN_TEMPLATE.read_text(encoding="utf-8")
     want = block_between(template, "### Implementer — read this first", r"^---\s*$")

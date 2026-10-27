@@ -29,6 +29,11 @@ func Name(form string) propertycompare.Value {
 	return propertycompare.Value{Value: valuecompare.Value{Name: namevaluetest.Western(form)}}
 }
 
+// Given is a name value whose every word is a given part.
+func Given(form string) propertycompare.Value {
+	return propertycompare.Value{Value: valuecompare.Value{Name: namevaluetest.Given(form)}}
+}
+
 // Date is a date value.
 func Date(d *datevalue.Value) propertycompare.Value {
 	return propertycompare.Value{Value: valuecompare.Value{Date: d}}

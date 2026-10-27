@@ -983,12 +983,12 @@ message SearchCatalogRequest {
   string query = 2;
   WorkspaceLocation location = 3; // current place; at least section for context boosts
   // Restrict hits to these kinds. Empty = the omnibar's default set
-  // (sources, types, metadata fields, persons, events, and places).
+  // (sources, types, metadata fields, persons, events, places, and Evidence graphs).
   repeated string kinds = 4;
 }
 
 message SearchHit {
-  string kind = 1;         // source | source_type | metadata_field | person | event | place
+  string kind = 1;         // source | source_type | metadata_field | person | event | place | evidence_graph
   string id = 2;
   string ref = 3;
   string title = 4;
@@ -1585,6 +1585,19 @@ message PromoteClaimEvidenceBundle {
   reserved "member_subject_id", "source_id";
 }
 
+// How one side records a relationship's fact (S11-40): the kinship pattern ("" when
+// recorded directly) and the event or parent between it passes through (a layer
+// Subject on the row's side, a handle on the entity's). Only the entity's side
+// carries the pivot's header.
+message PromoteClaimEvidenceShape {
+  string pattern = 1;
+  string pivot_id = 2;
+  oneof pivot_header {
+    PersonHeader person = 3;
+    EventHeader event = 4;
+  }
+}
+
 message PromoteClaimEvidenceRelationship {
   string neighbor_subject_id = 1;
   string key = 2; // BridgeKey.String(): identity only
@@ -1604,6 +1617,10 @@ message PromoteClaimEvidenceRelationship {
   // A participation's event type (17 replaces the string at 6); absent for any
   // other bridge type.
   ConclusionTerm event_type = 17;
+  // How the row's Source (layer) and the entity (canon) record the fact the
+  // line stands for; always set.
+  PromoteClaimEvidenceShape layer = 18;
+  PromoteClaimEvidenceShape canon = 19;
 }
 
 // A pin the evidence offers; checked ones are the defaults.
@@ -2237,7 +2254,8 @@ message EvidenceGraphProgress {
   int32 observation_count = 3;
   reserved 4;
   reserved "uncited_count";
-  int32 primary_count = 5;
+  reserved 5;
+  reserved "primary_count";
   int32 filed_count = 6;
   string graph_id = 7;
 }

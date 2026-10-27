@@ -1174,6 +1174,45 @@ struct SourcePageModelTests {
         #expect(failed.graphs.loadError != nil)
     }
 
+    private func progressSession(_ store: FakeStore) async -> (SourcePageModel, WorkspaceSession) {
+        store.evidenceGraphsByProject[projectDir] = [
+            evidenceGraph("g-default", name: "Default", artifactIDs: ["a-1"]),
+            evidenceGraph("g-jones", name: "Jones household", artifactIDs: ["a-1"]),
+        ]
+        store.graphProgressByGraph["g-jones"] = EvidenceGraphProgress(
+            graphId: "g-jones", sourceId: sourceID, subjectCount: 12, observationCount: 40
+        )
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = makeModel(store: store, session: session)
+        session.apply(location: WorkspaceLocation.sourcePage(sourceId: sourceID))
+        await model.warmFromSession()
+        await waitForQuery(session.evidenceGraphsHandle!)
+        await waitForQuery(session.evidenceGraphProgressHandle!)
+        return (model, session)
+    }
+
+    @Test func graphRowsReadTheirProgress() async {
+        let (model, _) = await progressSession(makeStore())
+        let graphs = model.graphs.rows ?? []
+        #expect(graphs.map(\.id) == ["g-default", "g-jones"])
+        #expect(model.graphs.progress(for: graphs[1])?.subjectCount == 12)
+        #expect(model.graphs.progress(for: graphs[1])?.observationCount == 40)
+        #expect(model.graphs.progress(for: graphs[0]) == nil)
+        #expect(!model.graphs.countsLoading)
+    }
+
+    @Test func aGraphWriteMovesOnlyItsRow() async {
+        let store = makeStore()
+        let (model, session) = await progressSession(store)
+        let graphs = model.graphs.rows ?? []
+        store.graphProgressByGraph["g-jones"] = EvidenceGraphProgress(
+            graphId: "g-jones", sourceId: sourceID, subjectCount: 12, observationCount: 41
+        )
+        session.apply(CatalogWriteEffects(evidenceGraphs: ["g-jones"]))
+        #expect(await waitUntil { model.graphs.progress(for: graphs[1])?.observationCount == 41 })
+        #expect(model.graphs.progress(for: graphs[0]) == nil)
+    }
+
     @Test func addGraphNeedsAnArtifact() async {
         let bare = makeModel(store: makeStore())
         await bare.warmFromSession()

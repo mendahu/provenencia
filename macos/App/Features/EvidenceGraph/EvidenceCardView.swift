@@ -231,7 +231,7 @@ private extension EvidenceCardView {
             cardRect,
             color: selected ? PVColor.accent : (placed.isCited ? style.line : PVColor.borderDefault),
             width: selected ? 1.5 : 1,
-            dash: (placed.isCited || selected) ? [] : [4, 3],
+            dash: (placed.isCited || selected) ? [] : PVStroke.dashPattern,
             painter: painter
         )
         painter?.endClip()

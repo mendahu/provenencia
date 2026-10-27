@@ -5,9 +5,9 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonlinks"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
-	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 )
 
@@ -17,12 +17,10 @@ func LayerBridges(c *database.Catalog, graphID []byte) ([]graphalign.Bridge, err
 	if err != nil {
 		return nil, err
 	}
-	rules, namePattern, err := valuerules.Load(c.Graph(), db)
+	cfg, namePattern, err := loadConfig(c.Graph(), db)
 	if err != nil {
 		return nil, err
 	}
-	cfg := matchregistry.Default().AlignConfig()
-	cfg.Value = rules
 	terms, err := canonlinks.LoadTerms(c.Graph())
 	if err != nil {
 		return nil, err
@@ -99,4 +97,10 @@ func ProfilesKeptForTest(c *database.Catalog) (int, bool) {
 		return 0, false
 	}
 	return len(matchIndexOf(c.Graph()).profiles), true
+}
+
+// MatchIndexGenForTest is the generation of the stored shortlist index, 0 when
+// the graph has none.
+func MatchIndexGenForTest(g *graphcache.Graph) uint64 {
+	return matchIndexOf(g).gen
 }

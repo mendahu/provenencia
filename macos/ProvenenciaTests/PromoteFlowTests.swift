@@ -37,6 +37,25 @@ struct PromoteFlowTests {
         )
     }
 
+    @Test func aRowCarriesItsEventsDate() {
+        for anchored in [true, false] {
+            var flow = PromoteFlow(entryID: "m")
+            flow.load(
+                entryID: "m",
+                proposal: proposal(rows: [row(id: "m", assessment: "medium")]),
+                subjects: [
+                    PromoteFlow.SubjectFact(
+                        id: "m", kind: .event, name: "Marriage", ref: "EVT-M",
+                        anchor: anchored ? PromoteFlow.Anchor(id: "e-anchor", ref: "EVT-A", title: "Filed") : nil,
+                        date: "12 May 1842"
+                    ),
+                ],
+                bridges: []
+            )
+            #expect(flow.row("m")?.date == "12 May 1842")
+        }
+    }
+
     @Test func matchMenusUseConclusionTitles() {
         let birth = CatalogEventTitle(rule: .typeAtPlace, ref: "EVT-D1JBR", typeLabel: "Birth", place: "Gumpertz")
         var event = row(id: "e", assessment: "medium")

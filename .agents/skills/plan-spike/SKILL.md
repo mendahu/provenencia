@@ -33,6 +33,7 @@ Map template: [`map-template.md`](map-template.md).
 | Change | This skill |
 | --- | --- |
 | Open a new spike | **Yes** |
+| Add a batch to an odds-and-ends (even-numbered) spike | **Yes** — as a slice |
 | Add a slice to the open spike, or re-cut one | **Yes** |
 | Pull an idea from `docs/ideas/` or notes from `docs/dogfood/ux.md` into a spike | **Yes** |
 | Descope, merge, or split PRs in the map | **Yes** |
@@ -40,6 +41,15 @@ Map template: [`map-template.md`](map-template.md).
 | Write a Claude Design brief | No — [`add-design-brief`](../add-design-brief/SKILL.md), usually from `plan-pr` |
 | Close a spike | No — [`archive-docs`](../archive-docs/SKILL.md) |
 | Park an idea that is not scheduled | No — a file in `docs/ideas/` |
+
+## Odd and even spikes
+
+Odd-numbered spikes (from 13) are large new features; even-numbered spikes are
+odds and ends ([odd and even spikes](../../../docs/deployment-plan/README.md#odd-and-even-spikes)).
+For an even spike, run the same phases per **batch**: the batch is a slice with
+its own goal, bar outcomes (added under the spike's bar with the batch's name),
+working rules prefixed with the batch (`(Batch 2) …`), and a feature doc when it
+needs one. The spike's goal and its close (S#-99) stay as the template has them.
 
 ## How the session runs
 
@@ -75,6 +85,11 @@ Agree with the user, in a few sentences each:
   features: "José suggests Jose and the Person page still shows both spellings."
 - **Pulled in.** Which ideas files, dogfood notes, and leftovers this covers.
 - **Not this spike.** What someone will ask about, and where it lives instead.
+- **Scale.** The sizes the spike's work must stay fast at: the largest real
+  case behind it (60 household graphs on one census Source, 300 Citations on
+  one page). Plans write their fan-out against it, and the performance lens
+  rates at it. Spike 12 had none, and its writes reloaded every graph of a
+  Source.
 
 ## 2. Context
 
@@ -102,6 +117,10 @@ stack choices, what was refused. `plan-pr` treats them as binding.
 - Name the PR a rule binds when it binds one.
 - Record a refusal as a rule ("**No canvas cover.** S10-48 is descoped …") so
   it is not reopened.
+- A rule that re-keys or splits a concept covers the concept's code names,
+  its docs and skills, and its copy, not only the code. Spike 12 renamed
+  `Effect` fields and left a skill and Promote's copy describing the old
+  scope.
 - Questions the user has not answered stay out of the rules. List them in the
   report. A PR that depends on one is `Scoped`, and `plan-pr` will ask it again.
 
@@ -128,6 +147,13 @@ Split rules:
   migrations, or would have a migration and a large briefed UI change together.
 - **Seeded vocabulary, migrations, and FFI** each have their own skill; a PR
   that needs several is a sign it is two PRs.
+- **Engine before a client-only PR.** A PR scoped to Swift (or to Go) that
+  needs more than one write for one user action, a refusal, or a rule the
+  other layer owns gets the owning layer's change first. S12-13 saved an
+  Artifact card's links as several transactions with a Swift copy of an
+  engine rule.
+- **Another open spike.** A PR that changes code a PR in another open spike's
+  map also changes names it in **Depends on**, in both maps.
 - **Descoping is a decision.** Keep the ID, mark it `Descoped (date)`, and say
   where the idea went.
 
@@ -174,6 +200,9 @@ spike.
 - [ ] Working rules hold every decision a scope entry relies on; no open question is written as a rule
 - [ ] Dependency graph and slice order agree
 - [ ] Every pulled-in dogfood note or idea is in "Where the notes went"
+- [ ] The map has a **Scale** line, and each scope entry that adds a write or a list says its fan-out at that scale
+- [ ] Each PR that renames, re-keys or retires a pattern names the docs and skills it updates
+- [ ] No PR scoped to one layer carries a multi-write action or a rule the other layer owns
 ```
 
 Then run the **map review** in [`review-plan`](../review-plan/SKILL.md): a

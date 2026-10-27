@@ -41,24 +41,20 @@ func lookUpRefDocs(ctx context.Context, db *sql.DB, key string, exact bool, limi
 		rows *sql.Rows
 		err  error
 	)
-	clause, kindArgs := kindClause("kind", kinds)
+	clause, kindArgs := kindClause("d.kind", kinds)
 	if exact {
 		rows, err = db.QueryContext(ctx, `
-			SELECT kind, entity_id, display_ref, display_title, display_subtitle,
-				display_icon_key, display_thumbnail_rel_path,
-				title, ref, secondary, body
-			FROM catalog_search_docs
-			WHERE upper(ref) = ?`+clause+`
+			SELECT `+docColumns+`
+			FROM catalog_search_docs d
+			WHERE upper(d.ref) = ?`+clause+`
 			LIMIT ?
 		`, append(append([]any{key}, kindArgs...), limit)...)
 	} else {
 		like := escapeLike(key) + "%"
 		rows, err = db.QueryContext(ctx, `
-			SELECT kind, entity_id, display_ref, display_title, display_subtitle,
-				display_icon_key, display_thumbnail_rel_path,
-				title, ref, secondary, body
-			FROM catalog_search_docs
-			WHERE upper(ref) LIKE ? ESCAPE '\'`+clause+`
+			SELECT `+docColumns+`
+			FROM catalog_search_docs d
+			WHERE upper(d.ref) LIKE ? ESCAPE '\'`+clause+`
 			LIMIT ?
 		`, append(append([]any{like}, kindArgs...), limit)...)
 	}
@@ -73,11 +69,7 @@ func lookUpRefDocs(ctx context.Context, db *sql.DB, key string, exact bool, limi
 			return nil, err
 		}
 		var d docRow
-		if err := rows.Scan(
-			&d.kind, &d.entityID, &d.displayRef, &d.displayTitle, &d.displaySubtitle,
-			&d.displayIconKey, &d.displayThumbnailRelPath,
-			&d.title, &d.ref, &d.secondary, &d.body,
-		); err != nil {
+		if err := scanDoc(rows, &d); err != nil {
 			return nil, err
 		}
 		if exact {

@@ -5,6 +5,7 @@ package deleteimpact
 import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/workspacelocation"
 )
 
 // Gate is the Impact extra-gate / inbound outcome.
@@ -18,49 +19,13 @@ const (
 	GateLastGraph    Gate = "last_graph"
 )
 
-const (
-	listedCap = 20
-
-	sectionSources     = "sources"
-	sectionSourceTypes = "source-types"
-	sectionMetadata    = "metadata"
-	sectionProperties  = "properties"
-
-	surfacePage             = "page"
-	surfaceGraph            = "graph"
-	surfaceCitationComposer = "citationComposer"
-)
+const listedCap = 20
 
 // Gate is one Impact outcome.
 type Gate string
 
 // ErrInvalid is returned for an unknown kind or malformed id.
 var ErrInvalid = apperr.New(apperr.CodeDeleteImpactInvalid, apperr.KindUser)
-
-// Location is the Go form of proto WorkspaceLocation after S8-12.
-type Location struct {
-	Section  string
-	SourceID string
-	// GraphID is the Evidence graph of a graph or citationComposer location.
-	GraphID              string
-	FieldID              string
-	TypeID               string
-	SubjectID            string
-	CitationID           string
-	ArtifactID           string
-	ObservationID        string
-	ConnectFromSubjectID string
-	ConnectToSubjectID   string
-	ConnectBridgeTypeKey string
-	// SubjectTypeKey is the Properties type-strip category (empty = All properties).
-	SubjectTypeKey string
-	// PropertyID is the Properties inspector row.
-	PropertyID    string
-	SourceSurface string
-	Ref           string
-	Title         string
-	SourceTitle   string
-}
 
 // Report is the speakable delete report (Impact is the function that builds it).
 type Report struct {
@@ -85,5 +50,5 @@ type Listed struct {
 	ID       []byte
 	Ref      string
 	Title    string
-	Location Location
+	Location workspacelocation.Location
 }

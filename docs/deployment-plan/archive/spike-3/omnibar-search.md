@@ -66,6 +66,7 @@ Grouped by layer; not all exist in the shipped catalog yet:
 | Source types | Source (vocab) | `label`, `key`, `description` | no |
 | Source fields | Source (vocab) | `label`, `key`, `description` | no |
 | Sources | Source | `title`, `ref`, type label, `description`, notes, metadata text | `SRC-…` |
+| Evidence graphs | Source | name, description, ref | `GPH-…` |
 | Artifacts | Source | `ref`, `description`, primary File filename | `ART-…` |
 | Files | Source | `original_filename`, `media_type` | no |
 | Citations | Interpretation | `ref`, transcription / quote / page label, description | `CIT-…` |
@@ -76,7 +77,7 @@ Grouped by layer; not all exist in the shipped catalog yet:
 
 Contributors (`USR-…` / display name) are optional later if “who added this” becomes a jump target.
 
-**Spike 3 first kinds:** Sources, source types, source fields (UI exists). Files / Artifacts as soon as project-wide listing or projection allows. Later layers register when their destinations ship — same pipeline. Person, Event, and Place shipped that way: one document per handle, match text taken from the list header, and the hit's location opens the detail page. Subjects are not hits.
+**Spike 3 first kinds:** Sources, source types, source fields (UI exists). Files / Artifacts as soon as project-wide listing or projection allows. Later layers register when their destinations ship — same pipeline. Person, Event, and Place shipped that way: one document per handle, match text taken from the list header, and the hit's location opens the detail page. Subjects are not hits. Evidence graphs shipped in S12-15: one document per graph, and the hit opens the graph's canvas from its Source's id and ref, projected on the document's parent columns.
 
 ## Search architecture (end state)
 
@@ -112,7 +113,7 @@ FTS5 does **not** invent entities. It indexes **documents you project**. Provene
 
 | Role | Examples | In search index? | Omnibar hit? |
 | --- | --- | --- | --- |
-| **Navigable root** | Source, Source field, Source type, Person, Event, Place | Yes — one document per root | **Yes** — `kind` + `location` open that root |
+| **Navigable root** | Source, Evidence graph, Source field, Source type, Person, Event, Place | Yes — one document per root | **Yes** — `kind` + `location` open that root |
 | **Contributory / associated** | `source_notes`, `source_metadata` values, Artifact label/filename, File `original_filename` under a Source | Text **rolled into the parent Source document** (weighted lower than title/ref) | **No** separate hit for “the note” or “the metadata cell” — matching that text returns the **Source** |
 | **Optional first-class hit** | Artifact (when we want jump-to-artifact-on-Source-page) | Either roll into Source **or** own document whose `location` is still Source-scoped | Only if UX wants Artifact as its own row; still not a free-floating note entity |
 

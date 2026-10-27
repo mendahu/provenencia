@@ -20,14 +20,20 @@ import (
 )
 
 // The budgets of S11-21 D-1. They assume go test runs packages in parallel on
-// four cores, as scripts/check-pr.sh and CI do.
+// four cores, as scripts/check-pr.sh and CI do. The warm figure was raised from
+// 250 ms by the user on 2026-10-26 when the fixture gained the 12-generation
+// tree and matching read kinship links (S11-39).
 const (
+	budgetWarmOnOpen   = 2500 * time.Millisecond
 	budgetCold         = 2500 * time.Millisecond
-	budgetWarm         = 250 * time.Millisecond
+	budgetWarm         = 350 * time.Millisecond
 	budgetAfterCommit  = 1500 * time.Millisecond
 	budgetEvidence     = 100 * time.Millisecond
 	budgetOnePlaceCold = 5 * time.Second
 	budgetOnePlaceWarm = 3 * time.Second
+	// budgetPlaceEvidence is a place row's evidence on a cold graph: without
+	// kinship links to derive it reads two nodes, not the place's 6,000 events.
+	budgetPlaceEvidence = 10 * time.Millisecond
 )
 
 // largeFixture is a realistic large catalog (largeShape) and the Sources the
@@ -66,7 +72,7 @@ func newLargeFixture(t *testing.T) *largeFixture {
 
 	db, err := f.c.DB()
 	must(t, err)
-	must(t, bulkCanon(db, cityID, largeShape(r, names)))
+	must(t, bulkCanon(db, cityID, largeShape(r, names, filed[0])))
 	f.c.Graph().Drop()
 
 	// Source A: 40 persons, 40 births and 20 deaths, none located.
@@ -153,9 +159,21 @@ func TestLargeSourceBudgets(t *testing.T) {
 		}
 	})
 
+	// What the open spinner covers: the alias index, name format, shortlist
+	// kinds and name index.
+	t.Run("warm at open", func(t *testing.T) {
+		d := fastest(2, func() time.Duration {
+			f.c.Graph().Drop()
+			return since(func() { must(t, catalogsession.WarmOnOpen(f.c)) })
+		})
+		over(t, "warm at open", d, budgetWarmOnOpen)
+	})
+
+	// The first proposal after an open.
 	t.Run("cold", func(t *testing.T) {
 		d := fastest(2, func() time.Duration {
 			f.c.Graph().Drop()
+			must(t, catalogsession.WarmOnOpen(f.c))
 			return since(func() { propose() })
 		})
 		over(t, "cold proposal", d, budgetCold)
@@ -244,6 +262,7 @@ func TestLargeSourceBudgets(t *testing.T) {
 	t.Run("births at one place cold", func(t *testing.T) {
 		d := fastest(2, func() time.Duration {
 			f.c.Graph().Drop()
+			must(t, catalogsession.WarmOnOpen(f.c))
 			return since(proposeOnePlace)
 		})
 		over(t, "cold proposal on the one-place Source", d, budgetOnePlaceCold)
@@ -253,6 +272,28 @@ func TestLargeSourceBudgets(t *testing.T) {
 		proposeOnePlace()
 		d := fastest(3, func() time.Duration { return since(proposeOnePlace) })
 		over(t, "warm proposal on the one-place Source", d, budgetOnePlaceWarm)
+	})
+
+	// A place has no kinship links, so evidence on its row must not walk its
+	// 6,000 events for them.
+	t.Run("evidence on a place row", func(t *testing.T) {
+		var city *graphalign.Row
+		p := f.propose(onePlaceGraph, nil)
+		for i, r := range p.Rows {
+			if r.Target == graphalign.TargetHandle && r.Kind == "place" {
+				city = &p.Rows[i]
+			}
+		}
+		if city == nil {
+			t.Fatal("the one-place Source has no place row with a handle")
+		}
+		req := promotealign.EvidenceRequest{GraphID: onePlaceGraph, SubjectID: city.SubjectID, HandleID: city.HandleID}
+		d := fastest(3, func() time.Duration {
+			f.c.Graph().Drop()
+			must(t, catalogsession.WarmOnOpen(f.c))
+			return since(func() { f.evidence(req) })
+		})
+		over(t, "evidence on the place row, cold", d, budgetPlaceEvidence)
 	})
 
 	// A pass over Source A touches 21 Evidence graphs; a cap of 8 evicts along

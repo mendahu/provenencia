@@ -26,6 +26,9 @@ type Graph struct {
 	// matchIndex is what Promote derives from the whole catalog.
 	matchIndex   any
 	matchIndexOK bool
+	// warmNeeded is set by every drop that loses what the open-time warm
+	// built, and cleared by MarkWarm.
+	warmNeeded bool
 
 	vocab   Vocabulary
 	vocabOK bool
@@ -190,13 +193,35 @@ func mustTableName(name string) string {
 }
 
 // dropDerived empties what features derive from the graph and its vocabulary
-// and alias index: the Evidence graph memos and the match index.
+// and alias index: the Evidence graph memos and the match index. It also marks
+// the open-time warm as needed again.
 func (g *Graph) dropDerived() {
 	for _, e := range g.evidenceGraphs {
 		e.memos = nil
 	}
+	g.dropMatchIndex()
+	g.warmNeeded = true
+}
+
+// dropMatchIndex empties the match index and nothing else.
+func (g *Graph) dropMatchIndex() {
 	g.matchIndexOK = false
 	g.matchIndex = nil
+}
+
+// WarmNeeded reports whether a drop has lost what the open-time warm built
+// since the last MarkWarm. A new graph needs it. A handle commit drops the
+// match index without setting it.
+func (g *Graph) WarmNeeded() bool {
+	return g != nil && g.warmNeeded
+}
+
+// MarkWarm records that the open-time warm has run.
+func (g *Graph) MarkWarm() {
+	if g == nil {
+		return
+	}
+	g.warmNeeded = false
 }
 
 func (g *Graph) clear() {
@@ -352,8 +377,7 @@ func (g *Graph) ResetMatchIndexForTest() {
 	if g == nil {
 		return
 	}
-	g.matchIndexOK = false
-	g.matchIndex = nil
+	g.dropMatchIndex()
 }
 
 // SetQueryCounterForTest counts queries this graph issues. Tests only.

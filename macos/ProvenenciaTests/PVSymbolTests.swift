@@ -5,7 +5,7 @@ import Testing
 struct PVSymbolTests {
     /// Every S9-16 mark is a real SF Symbol on the deployment target.
     @Test(arguments: [
-        PVSymbol.merge, .split, .stamp, .gitMerge, .scale, .signalLow, .ban, .circleMinus, .minus, .circleDashed,
+        PVSymbol.merge, .split, .stamp, .gitMerge, .scale, .signalLow, .ban, .circleMinus, .minus, .circleDashed, .circleDot, .circleCheck, .circleAlert,
         .promote, .unpromote,
     ])
     func symbolResolves(_ symbol: PVSymbol) {

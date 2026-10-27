@@ -78,7 +78,7 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 | `CatalogQueryRegistry` | Declarative loaders + mutation → cache key map |
 | `PlaceRegistry` | `WorkspaceLocation` → place id, presentation, required query keys |
 | `WorkspaceDestinationHost` | Routes by presentation (list vs detail are separate views) |
-| `QueryHandle` | Observable load state per key (`.ready`, `.loading`, stale `isFetching`; `isSettled` = ready and not refetching, read by `.onSettled`) |
+| `QueryHandle` | Observable load state per key (`.ready`, `.loading`, stale `isFetching`; `isSettled` = ready and not refetching, read by `.onSettled`; `read` folds value / error / loading) |
 
 **Cache contract (required):**
 

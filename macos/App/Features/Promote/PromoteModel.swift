@@ -286,7 +286,8 @@ final class PromoteModel {
             evidence: evidence,
             neighbor: { [flow] id in flow.row(id) },
             labels: { [self] key in propertyLabel(key: key) },
-            worded: { [session] value in ReconciledValueDisplay.string(for: value, orders: session.nameFormat) }
+            worded: { [session] value in ReconciledValueDisplay.string(for: value, orders: session.nameFormat) },
+            orders: session.nameFormat
         )
     }
 
@@ -479,7 +480,8 @@ final class PromoteModel {
                 kind: placed.kind,
                 name: placed.displayName(orders: flow.nameOrders),
                 ref: placed.subject.ref,
-                anchor: anchor
+                anchor: anchor,
+                date: placed.dateLine
             )
         }
     }

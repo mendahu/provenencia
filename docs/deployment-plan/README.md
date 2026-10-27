@@ -6,6 +6,10 @@ Authoritative domain and stack decisions remain in the sibling docs under [`docs
 
 Closed spikes under [`archive/`](archive/) keep **themes and decisions**. PR order, checklists, Claude Design briefs, and PR plans are git history — not duplicated here.
 
+## Odd and even spikes
+
+From Spike 13, **odd-numbered spikes are large new features** and **even-numbered spikes are odds and ends**: small features, UX refinements and fixes. An odds-and-ends spike adds work in batches. Each batch is a slice in the spike's map with its own Check, bar outcomes and working rules (a rule names its batch), cut with [`plan-spike`](../../.agents/skills/plan-spike/SKILL.md) when it is pulled in. A one-off PR goes to the open even spike, as a new batch or into an open one. Work that needs its own dogfood bar or several briefs waits for the next odd spike.
+
 ## How a spike is planned
 
 Two levels of plan, plus briefs and a review for each. The map is cut once and kept current. The plans are written one at a time, just before each PR, because earlier PRs move the code under later ones.
@@ -47,7 +51,11 @@ Spike 10 and earlier cut each PR as an In / Out / Testable table inside `deploym
 
 [Spike 11 — Promote matching refinement](spike-11/) is open. Plan: [`spike-11/deployment-plan.md`](spike-11/deployment-plan.md).
 
-[Spike 12 — Source structure](spike-12/) is open alongside it. Plan: [`spike-12/deployment-plan.md`](spike-12/deployment-plan.md). Briefs are authored just before the PR they gate.
+[Spike 12 — Source structure](spike-12/) is open alongside it. Plan: [`spike-12/deployment-plan.md`](spike-12/deployment-plan.md). Briefs are authored just before the PR they gate. Slices 1–4 have landed; slices 5–7 fix what the [app-health audit](spike-12/app-health-audit.md) of 2026-10-27 found.
+
+[Spike 13 — Person detail page](spike-13/) is open. Plan: [`spike-13/deployment-plan.md`](spike-13/deployment-plan.md). Each brief is designed, then implemented, before the next.
+
+[Spike 14 — Odds and ends](spike-14/) is open. Plan: [`spike-14/deployment-plan.md`](spike-14/deployment-plan.md). Batch 1 is Event and Place pictures.
 
 Ideas: [`ideas/`](../ideas/). Claude Design briefs: [`add-design-brief`](../../.agents/skills/add-design-brief/SKILL.md).
 

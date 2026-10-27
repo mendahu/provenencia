@@ -1269,38 +1269,46 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         location: WorkspaceLocation?,
         kinds: [String]
     ) async throws -> [CatalogSearchHit] {
-        let handleKinds = Self.primaryTypeKeys
-        let wanted = Set(kinds)
+        // No kinds is every kind; an unknown requested kind matches nothing, as in Go.
+        let wanted = kinds.isEmpty
+            ? Set(CatalogSearchKind.allCases)
+            : Set(kinds.compactMap(CatalogSearchKind.init(rawValue:)))
         var scored: [(hit: CatalogSearchHit, score: Double)] = []
-        if wanted.isEmpty || !wanted.isDisjoint(with: handleKinds) {
-            let handleWanted = wanted.isEmpty ? handleKinds : wanted.intersection(handleKinds)
+        let handleWanted = wanted.intersection(Self.handleSearchKinds)
+        if !handleWanted.isEmpty {
             scored += try withState {
                 if let searchCatalogError { throw searchCatalogError }
                 markCatalogSessionHeld(projectDir)
                 return handleSearchHits(query: query, kinds: handleWanted)
             }
         }
-        if wanted.isEmpty || !wanted.isSubset(of: handleKinds) {
+        if !wanted.isSubset(of: Self.handleSearchKinds) {
             let vocabulary = try await vocabularySearchHits(projectDir: projectDir, query: query, location: location)
-            scored += wanted.isEmpty ? vocabulary : vocabulary.filter { wanted.contains($0.hit.kind) }
+            scored += vocabulary.filter { item in item.hit.searchKind.map { wanted.contains($0) } ?? false }
         }
         return Array(Self.orderedByMixedScore(scored).prefix(50).map(\.hit))
     }
 
+    /// Handle kinds mirrored from `KindSpec.Handle`: the primary kinds.
+    private static let handleSearchKinds = Set(EvidencePrimaryKind.allCases.map { CatalogSearchKind($0) })
+
     /// Kind share mirrored from `KindSpec.Priority` and `ScoreMix` (90% text, 10% kind).
-    private static let searchPriority: [String: Double] = [
-        "person": 4,
-        "event": 3,
-        "place": 2,
-        "source": 1,
-    ]
+    private static func searchPriority(_ kind: CatalogSearchKind?) -> Double {
+        switch kind {
+        case .person: 4
+        case .event: 3
+        case .place: 2
+        case .source: 1
+        case .sourceType, .metadataField, .evidenceGraph, nil: 0
+        }
+    }
 
     private static func orderedByMixedScore(
         _ scored: [(hit: CatalogSearchHit, score: Double)]
     ) -> [(hit: CatalogSearchHit, score: Double)] {
         let maxPriority = 4.0
         return scored.enumerated().map { item in
-            let fraction = (searchPriority[item.element.hit.kind] ?? 0) / maxPriority
+            let fraction = searchPriority(item.element.hit.searchKind) / maxPriority
             let mixed = item.element.score * (0.9 + 0.1 * fraction)
             return (offset: item.offset, hit: item.element.hit, score: mixed)
         }.sorted { a, b in
@@ -1312,24 +1320,31 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     /// Call inside `withState`.
-    private func handleSearchHits(query: String, kinds: Set<String>) -> [(hit: CatalogSearchHit, score: Double)] {
+    private func handleSearchHits(query: String, kinds: Set<CatalogSearchKind>) -> [(hit: CatalogSearchHit, score: Double)] {
         let q = TextMatch.Query(query, locale: TextMatch.posix)
         guard !q.isEmpty else { return [] }
         let names = Dictionary(personHeaders().map { ($0.entity.id, $0.name?.form ?? "") }, uniquingKeysWith: { a, _ in a })
         var seen = Set<String>()
         var out: [(hit: CatalogSearchHit, score: Double)] = []
-        for membership in membershipBySubject.values.sorted(by: { $0.entity.ref < $1.entity.ref })
-        where kinds.contains(membership.kind) && seen.insert(membership.entity.id).inserted {
+        for membership in membershipBySubject.values.sorted(by: { $0.entity.ref < $1.entity.ref }) {
+            guard let primary = EvidencePrimaryKind(rawValue: membership.kind),
+                  kinds.contains(CatalogSearchKind(primary)),
+                  seen.insert(membership.entity.id).inserted
+            else { continue }
             let entity = membership.entity
-            let header = handleSearchHeader(kind: membership.kind, id: entity.id)
+            let header = handleSearchHeader(kind: primary, id: entity.id)
             let name = names[entity.id] ?? ""
             let title = !name.isEmpty ? name : (!entity.label.isEmpty ? entity.label : entity.ref)
             guard q.matches(title, entity.ref, entity.label, handleSearchMatchText(header)) else { continue }
-            let section: WorkspaceSection = membership.kind == "person" ? .persons : (membership.kind == "event" ? .events : .places)
+            let section: WorkspaceSection = switch primary {
+            case .person: .persons
+            case .event: .events
+            case .place: .places
+            }
             let refMatch = q.matches(entity.ref)
             out.append((
                 CatalogSearchHit(
-                    kind: membership.kind, id: entity.id, ref: entity.ref, title: title, subtitle: "",
+                    kind: CatalogSearchKind(primary).rawValue, id: entity.id, ref: entity.ref, title: title, subtitle: "",
                     matchReason: refMatch ? "ref" : "title",
                     location: WorkspaceLocation(section: section, entityId: entity.id, ref: entity.ref, title: title),
                     memberCount: membershipBySubject.values.filter { $0.entity.id == entity.id }.count,
@@ -1342,22 +1357,20 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     /// The list header for a handle hit, when the fake has one.
-    private func handleSearchHeader(kind: String, id: String) -> CatalogConclusionHeader? {
+    private func handleSearchHeader(kind: EvidencePrimaryKind, id: String) -> CatalogConclusionHeader? {
         switch kind {
-        case "person":
+        case .person:
             if let header = personHeaders().first(where: { $0.entity.id == id }) {
                 return .person(header)
             }
-        case "event":
+        case .event:
             if let header = seededEventHeaders.first(where: { $0.entity.id == id }) {
                 return .event(header)
             }
-        case "place":
+        case .place:
             if let header = seededPlaceHeaders.first(where: { $0.entity.id == id }) {
                 return .place(header)
             }
-        default:
-            break
         }
         return nil
     }
@@ -1375,6 +1388,42 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         case nil:
             return ""
         }
+    }
+
+    /// Scores one ref-bearing record (Source or Evidence graph): field weights, the ref
+    /// fast path (8 for an exact ref, 3 for a prefix) and the Sources-context boost.
+    /// Returns nil when the record does not match.
+    private static func scoreRefRecord(
+        values: [String: String],
+        ref: String,
+        tokens: [String],
+        raw: String,
+        refKey: (key: String, exact: Bool)?,
+        inSources: Bool
+    ) -> (score: Double, reason: String)? {
+        var (score, reason) = scoreSearchFields(
+            fields: [("title", 10), ("ref", 12), ("description", 3)],
+            values: values,
+            tokens: tokens.isEmpty ? [raw.lowercased()] : tokens
+        )
+        var refBoost = 1.0
+        if let refKey {
+            let upper = ref.uppercased()
+            if refKey.exact && upper == refKey.key {
+                refBoost = 8
+            } else if !refKey.exact && upper.hasPrefix(refKey.key) {
+                refBoost = 3
+            }
+            if refBoost > 1 {
+                score = max(score, 12)
+                reason = "ref"
+            } else if score <= 0 {
+                return nil
+            }
+        } else {
+            guard score > 0 else { return nil }
+        }
+        return (score * (inSources ? 1.1 : 1.0) * refBoost, reason)
     }
 
     private func vocabularySearchHits(
@@ -1405,32 +1454,17 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     "ref": source.ref,
                     "description": description,
                 ]
-                var (score, reason) = Self.scoreSearchFields(
-                    fields: [("title", 10), ("ref", 12), ("description", 3)],
+                guard let (score, reason) = Self.scoreRefRecord(
                     values: values,
-                    tokens: tokens.isEmpty ? [raw.lowercased()] : tokens
-                )
-                var refBoost = 1.0
-                if let refKey {
-                    let srcRef = source.ref.uppercased()
-                    if refKey.exact && srcRef == refKey.key {
-                        score = max(score, 12)
-                        reason = "ref"
-                        refBoost = 8
-                    } else if !refKey.exact && srcRef.hasPrefix(refKey.key) {
-                        score = max(score, 12)
-                        reason = "ref"
-                        refBoost = 3
-                    } else if score <= 0 {
-                        continue
-                    }
-                } else {
-                    guard score > 0 else { continue }
-                }
-                let boost = location?.section == .sources ? 1.1 : 1.0
+                    ref: source.ref,
+                    tokens: tokens,
+                    raw: raw,
+                    refKey: refKey,
+                    inSources: location?.section == .sources
+                ) else { continue }
                 scored.append((
                     CatalogSearchHit(
-                        kind: "source",
+                        kind: CatalogSearchKind.source.rawValue,
                         id: source.id,
                         ref: source.ref,
                         title: source.title,
@@ -1445,11 +1479,39 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         thumbnailRelPath: source.thumbnailRelPath,
                         iconKey: typeIconByID[source.sourceTypeID] ?? ""
                     ),
-                    score * boost * refBoost
+                    score
                 ))
             }
 
-            // Ref-shaped queries only promote Sources (vocab has no SRC-… refs).
+            let sourceByID = Dictionary(
+                (sourcesByProject[projectDir] ?? []).map { ($0.id, $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            for graph in evidenceGraphsByProject[projectDir] ?? [] {
+                guard let source = sourceByID[graph.sourceID] else { continue }
+                guard let (score, reason) = Self.scoreRefRecord(
+                    values: ["title": graph.name, "ref": graph.ref, "description": graph.description],
+                    ref: graph.ref,
+                    tokens: tokens,
+                    raw: raw,
+                    refKey: refKey,
+                    inSources: location?.section == .sources
+                ) else { continue }
+                scored.append((
+                    CatalogSearchHit(
+                        kind: CatalogSearchKind.evidenceGraph.rawValue,
+                        id: graph.id,
+                        ref: graph.ref,
+                        title: graph.name,
+                        subtitle: source.title,
+                        matchReason: reason,
+                        location: SourcesListNavigation.canvasLocation(for: source, graph: graph)
+                    ),
+                    score
+                ))
+            }
+
+            // Ref-shaped queries only promote Sources and Evidence graphs (vocab has no such refs).
             if refKey == nil {
                 for type in types {
                     let (score, reason) = Self.scoreSearchFields(
@@ -1465,7 +1527,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     let boost = location?.section == .sourceTypes ? 1.1 : 1.0
                     scored.append((
                         CatalogSearchHit(
-                            kind: "source_type",
+                            kind: CatalogSearchKind.sourceType.rawValue,
                             id: type.id,
                             ref: "",
                             title: type.label,
@@ -1496,7 +1558,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     let boost = location?.section == .metadata ? 1.1 : 1.0
                     scored.append((
                         CatalogSearchHit(
-                            kind: "metadata_field",
+                            kind: CatalogSearchKind.metadataField.rawValue,
                             id: field.id,
                             ref: "",
                             title: field.label,
@@ -3330,15 +3392,11 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         )
         let subjects = (subjectsByGraph[graphID] ?? []).filter { !sourceTypeIDs.contains($0.subjectTypeID) }
         let observations = observationsByGraph[graphID] ?? []
-        let primaryTypeIDs = Set(
-            (subjectTypesByProject[projectDir] ?? []).filter { Self.primaryTypeKeys.contains($0.key) }.map(\.id)
-        )
         return EvidenceGraphProgress(
             graphId: graphID,
             sourceId: sourceOfGraph(graphID) ?? "",
             subjectCount: subjects.count,
             observationCount: observations.count,
-            primaryCount: subjects.filter { primaryTypeIDs.contains($0.subjectTypeID) }.count,
             filedCount: 0
         )
     }

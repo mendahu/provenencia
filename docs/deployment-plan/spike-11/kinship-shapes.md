@@ -50,7 +50,7 @@ Re-cut 2026-10-26 after S11-39's first ship loop measured the first design on a 
 
 ## Counting once
 
-- **One fact, one link per side.** When a side records the same fact in two shapes (a spouse relationship and a shared marriage between the same two people), the side carries one spouse link between them, whose bridge Subjects are both shapes'. It is credited once. The loaders already merge same-ends, same-key edges (`layer.go`'s merge on `edgeSeenKey`, `loadCanon`'s dedupe); implied links go through that merge, so there is no second one.
+- **One fact, one link per side.** When a side records the same fact in two shapes (a spouse relationship and a shared marriage between the same two people), the side carries one spouse link between them, whose bridge Subjects are both shapes'. It is credited once. Both loaders merge links through the one `kinship.LinkSet` (same ends, same keys); implied links enter it through `AddImplied`, or are placed by `PlaceImplied` in `loadCanon`, each recorded by `Implied.Recording`, so there is no second merge.
 - **Counted once across sides** (user, 2026-10-26). When both sides record the marriage and the walk pairs the two marriage events, the people already meet through the event path, so the implied spouse link adds nothing. When the events are not paired (a sparse marriage whose event row is not placed), the implied link credits. The same holds for a birth's parents and for a chain through a paired middle parent. Each link carries its shapes (pattern and pivot), and graph alignment's `corresponding` skips the pair (S11-39). A link both sides also record directly keeps today's credit. Planning measured the effect: an undated marriage on both sides stays at today's 2.875 (weak) for a named couple, while a marriage against a spouse relationship scores 3.375 (medium), the event path passing on the marriage's own evidence.
 
 ## Weight
@@ -61,10 +61,10 @@ An implied link is weighed as the direct link it stands for: spouse, parent and 
 
 A relationship line today comes from a corresponding segment ([`claim-evidence.md`](claim-evidence.md#evidence-through-relationships)). An implied link that corresponds gives a relationship line too, and it says how it was recorded:
 
-- "They are spouses: both are spouses in the marriage on 12 May 1842" (an implied link on the Source side), or "…the record has them as spouses" (direct).
+- Under the Card's unchanged header ("they share a spouse"), a muted line says how each side recorded it: "This source: married in the marriage dated 12 May 1842 · The record: recorded as spouses". A Card whose sides are both direct has no line.
 - Checking the line pins its bundle: every bridge behind the implied link (both participations, or both parent links of a chain), and the event's defining properties, as a relationship bundle does today.
 
-The line is drawn by the sheet's existing relationship Card. No new chrome, but it is a wire change: `claimevidence.Relationship` gains how each side recorded the fact and the event behind it, which crosses the FFI to Swift (S11-40), and the sheet words it (S11-42). Today a bundle is one bridge between a member and the neighbor's member (`claimevidence/build.go` `bundles`, `BundlePinID`); an implied link has several bridges and passes through an event, so S11-40 decides the bundle's shape and its pin id.
+A bundle is one Source's recording of the fact: the bridges that reach one pivot, the member's bridge first and the bundle's pin id keyed by it. The line is drawn by the sheet's existing relationship Card. No new chrome, but it is a wire change: `claimevidence.Relationship` gains how each side recorded the fact and the event behind it, which crosses the FFI to Swift (S11-40); the sheet words it (S11-42).
 
 ## What stays later
 
@@ -78,5 +78,5 @@ In [`ideas/kinship-view.md`](../../ideas/kinship-view.md):
 ## Open questions
 
 1. **Counting once across paths.** Answered (user, 2026-10-26): drop the implied link's credit when both sides share the shape and its pivot is paired; see [Counting once](#counting-once).
-2. **The sheet line.** Is a line that says how a fact was recorded wanted in this spike (S11-40), or is matching enough for now?
+2. **The sheet line.** Answered: yes. S11-40 carries how each side recorded the fact, and S11-42 words it.
 3. **Birth roles beyond `father` / `mother`.** A birth participant recorded with role `child` (rather than `subject`), or a baptism's parents. Proposed: birth with `subject` only; the rest waits.
