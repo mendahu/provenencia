@@ -5,16 +5,16 @@
 
 ## To user
 
-- **M-11: may the deleted-graph canvas bend the navigation rule?** `.cursor/rules/workspace-navigation.mdc` and `add-workspace-location` say a missing deep id prunes the entry and falls back with `fallbackToSectionRoot()`. The map row, audit A-11 and bar outcome 9 instead have the canvas stay put and say the graph no longer exists, with **Go to Source page**. **Recommendation:** keep the callout, and record it as a named exception in both guidance files (STEP-7, §5 **Rules this plan bends**). Alternative: follow the rule, so a gone graph falls back to the Sources list and the gone callout is dropped, which changes bar outcome 9.
+- **M-11: may the deleted-graph canvas bend the navigation rule?** **Answered (user, 2026-10-27):** no exception; fall back to the Sources list. D-12 calls `fallbackToSectionRoot()` when `graphIsGone`. The gone callout and its three strings are dropped. T-8 tests the fallback. Bar outcome 9 and the S12-21 scope entry are amended in the map. **Rules this plan bends** is none.
 
 ## Writer's own calls
 
 - The Source page's `prepare(for:)` is removed, not kept as the working rule's exception (D-4). The host's `.id(sourceId)` builds one model per Source, so its guard could never fire.
 - Master–detail places (Source types, Metadata) declare `viewIdentity: nil` instead of today's `typeId` / `fieldId` (D-2). A row click must not remount the list.
-- The deleted-graph state outranks a read error, and a read error outranks every existing canvas notice (D-7).
+- A read error outranks every existing canvas notice (D-7).
 - `evidenceGraphPresence` reads `.unknown`, not gone, while the graph list refetches, and `canCite` follows it. During that window the No-artifact callout no longer flashes either, which changes `canCite` behavior (D-5).
 - The composer's Artifact switch still shows the new Artifact after a failed Citation load, unlike its sibling, which returns early (D-8).
-- Copy for the two new callouts (D-10): "This evidence graph no longer exists" and "This evidence graph could not be read", with **Go to Source page** and **Read again**.
+- Copy for the read-error callout (D-10): "This evidence graph could not be read", with **Read again**.
 - T-1 observes which cache keys the canvas model loads, not on-screen text (D-9).
 
 ## Round 1
@@ -100,7 +100,7 @@ Nits fixed: T-7 moved after T-6; T-2 names the composer and Promote location bui
 
 ### M-11 · blocker · The gone-graph state bends the missing-deep-id navigation rule
 `workspace-navigation.mdc:15` and `add-workspace-location` (lines 45, 99) say: fall back with `fallbackToSectionRoot()`.
-**Answer:** To user (above). Until the user answers, §5 **Rules this plan bends** names the rule, and STEP-7 adds the exception line to both files.
+**Answer:** To user, answered: follow the rule (D-12). No guidance file changes.
 
 ### M-8 (answer re-checked) · major · The decline reason does not hold
 A `QueryHandle` accessor needs no `L10n`.
@@ -108,5 +108,5 @@ A `QueryHandle` accessor needs no `L10n`.
 
 ### Below-blocker notes
 - `evidenceGraphIsGone(id:)` was left in **Next adds** and **Scale**. **Fixed.**
-- The gone callout repeated `noArtifactCallout`. **Fixed:** they now share one private builder, `sourcePageCallout(title:message:action:identifier:)` (D-7).
+- The gone callout repeated `noArtifactCallout`. **Moot:** the gone callout was dropped after the M-11 answer.
 - The enum should go in its own file. **Partly fixed:** `EvidenceGraphCanvasNotice` now goes in the existing `EvidenceCanvasInputMode.swift`, beside its sibling. A new file waits for S12-31 (Out row).
