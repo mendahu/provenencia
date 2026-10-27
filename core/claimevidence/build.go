@@ -125,7 +125,7 @@ func bundles(n Neighbor, canons []CanonLink, members []Member, defining []vocabk
 			}
 			named[ni] = true
 			found = append(found, placed{Bundle{
-				Member: b.Member, Neighbor: b.Neighbor, Source: b.Source, Bridge: b.Subject,
+				Member: b.Member, Neighbor: b.Neighbor, Source: b.Source, Bridges: [][]byte{b.Subject},
 				Observations: appendNew(slices.Clone(b.Observations), refsOf(n.Members[ni].Values, defining)...),
 			}, mi, ni})
 		}

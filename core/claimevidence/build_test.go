@@ -81,8 +81,8 @@ func TestBuild(t *testing.T) {
 		if len(r.Members) != 1 {
 			t.Fatalf("bundles = %+v", r.Members)
 		}
-		if e.Kind != vocabkey.Person || r.Kind != vocabkey.Event || !bytes.Equal(r.Members[0].Bridge, []byte{0x70}) {
-			t.Errorf("kind = %q, relationship kind = %q, bridge = %x", e.Kind, r.Kind, r.Members[0].Bridge)
+		if e.Kind != vocabkey.Person || r.Kind != vocabkey.Event || !equalIDs(r.Members[0].Bridges, [][]byte{{0x70}}) {
+			t.Errorf("kind = %q, relationship kind = %q, bridges = %x", e.Kind, r.Kind, r.Members[0].Bridges)
 		}
 		if want := [][]byte{{0x71}, {0x72}, {0x50}}; !equalIDs(r.Members[0].Observations, want) {
 			t.Errorf("bundle Observations = %x, want %x", r.Members[0].Observations, want)

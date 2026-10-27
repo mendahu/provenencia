@@ -67,7 +67,7 @@ type Section struct {
 // bridge between a member and a member of the neighbor's entity.
 type Bundle struct {
 	Member, Neighbor, Source []byte
-	Bridge                   []byte // the member's filed bridge Subject
+	Bridges                  [][]byte // every bridge Subject behind the link, the member's first
 	Observations             [][]byte
 }
 

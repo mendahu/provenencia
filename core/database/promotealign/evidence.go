@@ -513,7 +513,7 @@ func (r *evidenceReader) titles(e claimevidence.Evidence) (map[string]string, er
 	sections(e.Sections)
 	for _, rel := range e.Relationships {
 		for _, b := range rel.Members {
-			add(b.Source, b.Bridge)
+			add(b.Source, b.Bridges[0])
 		}
 		sections(rel.Sections)
 	}
