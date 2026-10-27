@@ -102,4 +102,4 @@ No new blockers. No Fix plan 2.
 Merged `origin/main` (`e1f54022`, S12-20 plan docs only) into the branch; orchestrator gate on `59c71fd9`: PASS.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: FU-1 (alias-aware search; CON-2) · to user: three plan amendments during round 0 (T-11 `core/search` Jim; T-11 Tom → Thommas; D-1a `AliasDirection`), all answered 2026-10-27 · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: FU-1 (alias-aware search; CON-2) · to user: three plan amendments during round 0 (T-11 `core/search` Jim; T-11 Tom → Thommas; D-1a `AliasDirection`), all answered 2026-10-27 · CON miss: none
