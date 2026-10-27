@@ -611,7 +611,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-37 — Canvas tool and sheet state as enums
 
-**Ships.** `EvidenceGraphModel` holds one `tool: EvidenceCanvasInputMode` (shift stays a modifier) and one optional sheet enum (create or edit, with its kind) in place of its eight flags; the old reads derive from them.
+**Ships.** `EvidenceGraphModel` holds one `tool: EvidenceCanvasInputMode` (shift stays a modifier) and one optional sheet enum (create or edit, with its kind) in place of its eight flags; the old reads derive from them. `EvidenceGraphCanvasNotice` and `EvidenceGraphModel.canvasNotice` move out of `EvidenceCanvasInputMode.swift` into their own file (deferred by S12-21's Out line).
 **Not this PR.** A behavior change.
 **Check.** The canvas model tests pass unchanged, plus one per flag combination that can no longer be built.
 **Context.** Audit A-32; maintainability Q9; precedent `CitationComposerModel.Phase`. After S12-21 (same files).
