@@ -83,4 +83,4 @@ Reviewers: MNT (MNT-1 – MNT-3 majors), SEC+PRF (PRF-1 blocker). Not sent back:
 No new findings. No Fix plan 2.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none (UX-1 is S11-42's scope) · to user: MNT-1 (answered: use `CatalogConclusionHeader`, supersedes D-13) · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: none (UX-1 is S11-42's scope) · to user: MNT-1 (answered: use `CatalogConclusionHeader`, supersedes D-13) · CON miss: none
