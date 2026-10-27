@@ -80,7 +80,7 @@ The exact `ON DELETE` classes and `catalogmodel` buckets are set by the schema P
 ### Where graphs show
 
 - **Source page:** a new Graphs section lists the Source's graphs, each with its name, ref, description and its own Open button. Create, edit (name, description, linked Artifacts) and delete live there. The header's jump to the Evidence graph goes; this section replaces it.
-- **Source page, Artifacts section:** the add dialog and each Artifact card's edit show one checkbox per graph on every Source that has a graph (amended 2026-10-27; it was two or more).
+- **Source page, Artifacts section:** the add dialog and each Artifact card's edit show one checkbox per graph on every Source that has a graph (amended 2026-10-27; it was two or more). A card for an Artifact in no graph says so and offers linking it (added 2026-10-27).
 - **Sources list:** each Source's row lists its graphs one per line, each with a status badge (Not started, In progress, Promoted) and a button showing its name and progress counts; the button opens its graph. A graph opens when it has at least one linked Artifact, as the single graph button does today.
 - **Navigation:** a graph is a place. Its location carries the graph id, so Back / Forward and restore return to that exact graph, its Citation composer, and its Promote page. Breadcrumbs read Source › graph name.
 - **Omnibar:** graphs are a searchable kind, by name, description and `GPH-` ref; a hit opens the graph.

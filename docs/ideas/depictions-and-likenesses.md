@@ -11,7 +11,6 @@
 - **One media type for the stored image.** `ingest.StageImage` writes `image/png` as a literal in three places and `depictionvalue.ReadableImage` checks the same literal; one constant in `core/depictionvalue` would tie them, and the transparent-polygon crop would change one place.
 - **Windows.** That client draws the PDF region with its own stack before it sends the image. Spike 10 draws it with PDFKit on the Mac.
 
-- **One stage-then-write entry point.** The observation, citation, and connect FFI handlers each call `ingest.StageDepictions` and then write; one entry point would hold that order.
 
 ## From the 2026-10-18 likeness audit
 
@@ -22,7 +21,7 @@ The Spike 10 follow-ups (S10-60 – S10-66) fixed the High items and Medium item
 - **Cap feedback.** The freeform tool stops at the 256-point cap with a beep only; VoiceOver hears nothing.
 - **A refused image (UX-11).** No distinct glyph or copy for an image the thumbnail check refuses.
 - **Thumbnail work (PRF-2, Medium items 6 and 13).** Cancel a decode that is already running, decode at the drawn size, bound the cache by bytes, and keep the evidence card's loaded likeness.
-- **Go crop work (PRF-3, PRF-4).** Decode the crop before taking the catalog session; store crops below 2,048 px.
+- **Go crop work (PRF-4).** Store crops below 2,048 px. (Decoding the crop before the catalog session, PRF-3, and one stage-then-write entry point went to Spike 12 S12-27, 2026-10-27.)
 - **Raster byte limit (SEC-3).** `core/raster` limits decodes by pixel size, not by bytes.
 - **The PDF cut reopens its file.** The off-main cut opens the PDF by URL without running `ProjectFiles.objectURL` again; carry the project folder and object path in the snapshot instead.
 - **`CitationLocatorDraft.encodeJSON()` key order.** It serializes without `.sortedKeys`, so two encodings of one locator can differ as strings.

@@ -75,3 +75,82 @@ Every round-1 answer holds. K-11 note: `SourcesListView.addForm` is private, so 
 **Answer:** Fixed — S12-04 ships one `evidencegraphs.List` (full rows with linked Artifact ids, by name, optional Source filter); S12-05's RPC wraps it; no `ListBySource`.
 
 Round 2 is the last round; no blocker is open.
+
+---
+
+# Review — Spike 12 slices 5–7 (audit fixes, S12-20 – S12-38)
+
+**Verdict:** Fits with changes
+**Rounds:** 1 so far; round 2 runs once **To user** is answered, because round 1 had blockers and K-2 reshapes S12-25 and S12-26. **Reviewers:** maintainability (map review), fresh agent.
+
+## To user
+- **K-1:** move S12-34 (one descriptor per cache key) to the head of slice 6, before S12-25 and S12-26, so the progress patch, the graph-list merge and the Sources-list insert become descriptor entries instead of hand-written session functions. Recommendation: yes. The scope entries already work in either order; S12-34's descriptor carries the `patch` and `refresh(ids)` slots either way.
+- **K-9:** decide FakeStore's direction before S12-22 and S12-25 change its effects: (a) a seeded fake that returns scripted order, effects and refusals, with engine rules tested in Go, as `.cursor/rules/swift-tests.mdc` says today; or (b) a fake held to the engine by a test. Recommendation: (a). It shrinks FakeStore instead of keeping a second engine, needs no new cross-language mechanism, and makes each Swift test state the engine behavior it assumes. If (a), S12-35 moves to the head of slice 6.
+
+## Writer's own calls
+- K-4 pulls two items of `ideas/depictions-and-likenesses.md` into S12-27 (decode the crop before the session; one stage-then-write entry point), because the staged-object type it asks for covers them. The idea file is trimmed.
+- K-15: dependencies that are only merge order are now written as a preferred order in the "run in parallel" paragraph. Real dependencies kept: S12-22 → S12-38, S12-25 → S12-26 (K-2's keyed effect), S12-23 → S12-28 (K-8), S12-32 → S12-33 (the pin test's allow-list), S12-21 → S12-37 (K-19).
+- K-20: the four-column Sources list text is fixed in this edit (working rule, S12-14 scope, the S12-D5 design row and `completed.md`), so S12-20 no longer carries it.
+- S12-24 keeps the index migration and the pointer releases together (K-20 nit); each fits within ten steps.
+
+## Round 1
+
+### K-1 · blocker · Land S12-34's per-key descriptor before the slice 6 cache work, and give it a patch slot
+**Answer:** To user (a preparatory reorder). S12-34's scope now carries the `patch` and `refresh(ids)` slots and names progress, the graph list by Source and the Sources insert as entries; S12-26 says how it fits if S12-34 lands first.
+
+### K-2 · blocker · One keyed "reads" effect instead of a new WriteEffects field per partial read
+**Answer:** Fixed. Working rule "A write names only the graphs whose loaded rows it moves, and the partial reads it moves by key"; S12-25 introduces `Effect.Reads` → `Set.Reads` → `WriteEffects.reads` in the shape of `Set.Search` (citation reads, graph progress); S12-26 adds the graph list by Source.
+
+### K-3 · blocker · S12-22: extend the existing unlink preflight and link-set writer
+**Answer:** Fixed. Working rule "One unlink check, one link writer": one helper behind `Unlink` and `UnlinkImpact`, `UnlinkImpact` over (graph, Artifact) pairs with graph and reason, `applyLinks` lifted from `evidencegraphs.Update`. S12-38 shows the new lock in the graph form.
+
+### K-4 · blocker · S12-27: one mechanism for staging stored objects
+**Answer:** Fixed. Working rule "File work and decoding happen before the catalog session"; S12-27 is renamed "File work before the catalog session" and covers `ingest.File`, `StageImage` / `StageDepictions` and `derivatives.Ensure`, with `use-catalog-session` updated.
+
+### K-5 · major · S12-32 deletes `.promotedSubject`, but it drives the sidebar recount
+**Answer:** Fixed. S12-32 adds a `counts` effects list on `sources` and `canonical_entities` creates and deletes; `navCountTriggers` goes, and `.promotedSubject` goes only when `conclusionTriggers` no longer needs it.
+
+### K-6 · major · One wire and Go shape for "which graphs"
+**Answer:** Fixed. `GraphLinks { repeated string graph_ids }` on both Artifact requests (absent: default; present and empty: none), one Go type; working rule "An Artifact is the parent" rewritten.
+
+### K-7 · major · S12-22's graph-delete refusal should be an inbound probe, not a new extra gate
+**Answer:** Fixed. Working rule "An Artifact with Citations keeps at least one graph" now uses an inbound probe listing the Citations and rewords `evidencegraphs.in_use`; S12-22 adds the `viaFormats` heading.
+
+### K-8 · major · S12-23 and S12-28 each add a Swift allowlist check
+**Answer:** Fixed. Working rule "…checked first, and Go decides the type": Go's `files` filter decides, Swift checks only extension, execute bit and executable types, and the viewer extends `ThumbnailDecodePolicy`. Dependency S12-23 → S12-28 added.
+
+### K-9 · major · S12-35 reverses the FakeStore rule; settle the direction first
+**Answer:** To user (above). S12-35's scope now starts from that decision.
+
+### K-10 · major · Bar 13 has no structural pin
+**Answer:** Fixed. S12-32 adds the `api/ffi` pin test with an allow-list; S12-33 empties it. Working rule "Every audited write returns its effects, and a test holds them to it".
+
+### K-11 · major · S12-30: put the announcements in the kit
+**Answer:** Fixed. `PVToast` announces itself and `PVCallout` takes an opt-in error announcement; working rule "Kit components announce themselves". S12-30 no longer edits the files S12-38 rewrites.
+
+### K-12 · major · What S12-38 makes dead is not listed
+**Answer:** Fixed. S12-38 deletes `isOnlyArtifact`, `graphListReloaded()`, `L10n.Sources.artifactGraphOnlyArtifact` and the link and unlink RPCs on both sides (proto methods reserved), since the card is their last caller.
+
+### K-13 · major · Skills and docs that S12-25, S12-26 and S12-27 make false are not named
+**Answer:** Fixed. The spike-wide rule "Each PR updates the docs and skills it makes false" gains a slices 5–7 line; S12-20 points `add-catalog-model` at `effects/README.md`; the S12-25, S12-26 and S12-27 scope entries name their docs and skills.
+
+### K-14 · major · S12-21: declare destination identity in `PlaceRegistry`
+**Answer:** Fixed. Working rule "A destination declares its identity"; S12-21 applies `.id(…)` once from the resolved place.
+
+### K-15 · minor · Merge-order preferences are written as dependencies; one real dependency is missing
+**Answer:** Fixed (see Writer's own calls).
+
+### K-16 · minor · S12-29: history rows should use the breadcrumbs' name lookup
+**Answer:** Fixed. S12-29: one location-label function for breadcrumbs, history rows and the VoiceOver label.
+
+### K-17 · minor · S12-24: make the optional-pointer releases `facetRelease` entries
+**Answer:** Fixed. S12-24 adds two `facetRelease` entries and extends `TestFacetReleaseHonesty`.
+
+### K-18 · minor · S12-36 leaves two of A-31's four per-kind lists
+**Answer:** Fixed. S12-36 adds a projector table for `Reproject` and `RebuildAll` and a completeness test.
+
+### K-19 · minor · S12-21's missing-graph state should not become another flag
+**Answer:** Fixed. S12-21 derives it from the graph list; S12-37 depends on S12-21.
+
+### K-20 · nit · Grouping, and the map's four-column text
+**Answer:** Fixed (see Writer's own calls).

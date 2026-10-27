@@ -1,17 +1,16 @@
-# Mark an Artifact that is in no Evidence graph
+# Name the Artifacts a graph delete leaves in no graph
 
-**Parked 2026-10-27** by the user while scoping Spike 12 slice 5 ([map](../deployment-plan/spike-12/deployment-plan.md), working rule "No 'in no graph' marker this spike").
+**Status:** idea, not scheduled. Left over when the card marker for an Artifact in no Evidence graph was pulled into Spike 12 (S12-38, brief S12-D7; user, 2026-10-27).
 
 ## Problem
 
-From S12-22 and S12-38 an Artifact may stand in no Evidence graph: a page added with every graph box unchecked, unchecked from every graph on its card, or left behind when the graph that held it is deleted. No Citation composer offers it until it is linked again. On the Source page its card looks like every other card, so a researcher may only notice when the composer does not offer the page.
+From S12-22 an Artifact may stand in no Evidence graph, and deleting a graph can leave some there. An Artifact with Citations is protected (the delete is refused and names them); one with none simply drops out of every composer. S12-38 marks such an Artifact on its card, but the delete confirm does not say beforehand which Artifacts it will leave in no graph.
 
 ## Rough shape
 
-- The Artifact card says "Not in an evidence graph" (a quiet line or chip) and offers linking it, opening card edit with the graph boxes.
-- A graph delete that leaves Artifacts in no graph could name them in its confirm.
-- Chrome, so it needs a one-view brief (Source page Artifacts section) before a PR.
+- The graph delete confirm lists those Artifacts as a notice, through the DeleteImpact recipe's listed groups, without refusing.
+- `deleteimpact` would need a listed group that informs without blocking; today a listed group either blocks (an inbound probe) or is released.
 
 ## Decide when pulled in
 
-Whether it is a problem in use. The user wants to see how often an Artifact ends up in no graph before adding the cue.
+Whether researchers miss the warning once the card marker exists.

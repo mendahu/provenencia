@@ -196,7 +196,7 @@ The findings behind slices 5–7 of the [map](deployment-plan.md). An area audit
 **Where and problem.**
 - `docs/conclusion-reconciliation.md` §6 says search and matching read outvoted values; matching reads the profile (displayed positive, denied negative: `subjectprofile.go`, `promotealign/index.go`), as `matching-model.md` says. S11-11 D-4 updated one doc, not the other.
 - `docs/matching.md` lists Segment compare (S11-14), the shortlist (S11-15) and the layer 6 walk (S11-16) as not built; they landed in #493, #497, #501. The layer table lacks `core/segmentcompare`, `core/shortlist`, `core/kinship`.
-- This map's working rule "Sources list" and `completed.md` S12-14 describe four columns with a Status column; the code has three, the badge inside the graph button (`SourcesListRow.swift`).
+- This map's working rule "Sources list" and `completed.md` S12-14 described four columns with a Status column; the code has three, the badge inside the graph button (`SourcesListRow.swift`). Corrected with the map, 2026-10-27 (map review K-20).
 - `docs/catalog-deletes.md` gate enum omits `last_graph`; `docs/macos-client-patterns.md` still says "Evidence graph for one source"; `core/database/effects/README.md` does not say a Source title edit names its graphs and reprojects their search documents; `api/proto/README.md` "There are no Source tables"; `docs/source-layer-data-model.md` §4.2 does not say a copy gets its own Default graph linking the copied Artifacts; `docs/promote-graph-alignment.md` "the Source's Evidence graph memo".
 **Fix.** Correct each. Docs only.
 
