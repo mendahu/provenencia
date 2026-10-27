@@ -20607,18 +20607,6 @@
         }
       }
     },
-    "sources.list.statusBadge": {
-      "comment": "VoiceOver label of a graph's status badge in the Sources list; argument is the status label",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Status: %@"
-          }
-        }
-      }
-    },
     "sources.list.status.inProgress": {
       "comment": "Sources evidence-status filter option: at least one subject and none promoted",
       "extractionState": "manual",
@@ -22631,6 +22619,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn’t be read"
+          }
+        }
+      }
+    },
+    "sources.list.graphBlockLabel": {
+      "comment": "VoiceOver label of a Sources list graph block (no Artifact, or the graph list failed): its title and its second line",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@"
           }
         }
       }

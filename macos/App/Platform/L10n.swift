@@ -5761,14 +5761,6 @@ enum L10n {
             comment: "Status filter option and badge: a graph with no subjects"
         )
 
-        static func statusBadgeLabel(_ status: SourcesModel.EvidenceStatus) -> String {
-            L10n.format(LocalizedStringResource(
-                "sources.list.statusBadge",
-                defaultValue: "Status: %@",
-                comment: "VoiceOver label of a graph's status badge in the Sources list; argument is the status label"
-            ), L10n.string(status.label))
-        }
-
         static let statusInProgress = LocalizedStringResource(
             "sources.list.status.inProgress",
             defaultValue: "In progress",
@@ -5910,10 +5902,7 @@ enum L10n {
                 let lead = L10n.string(graphCountsUnavailable)
                 return style == .spoken ? "\(lead). \(message)" : lead
             case .notStarted where notStarted == .zeroCounts:
-                switch style {
-                case .full: return graphCountLine(subjects: 0, observations: 0)
-                case .spoken: return "\(graphSubjectCount(0)), \(graphObservationCount(0))"
-                }
+                return graphCounts(.counts(subjects: 0, observations: 0, filed: 0), style: style)
             case .notStarted:
                 switch style {
                 case .full: return "\(graphSubjectCount(0)) · \(L10n.string(graphNotStarted))"
@@ -5981,6 +5970,14 @@ enum L10n {
                 defaultValue: "%1$@ — %2$@",
                 comment: "Sources list graph button tooltip; 1 is the graph name, 2 its counts or why it cannot open"
             ), name, detail)
+        }
+
+        static func graphBlockLabel(title: String, detail: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.list.graphBlockLabel",
+                defaultValue: "%1$@, %2$@",
+                comment: "VoiceOver label of a Sources list graph block (no Artifact, or the graph list failed): its title and its second line"
+            ), title, detail)
         }
 
         /// VoiceOver label of a graph button: open label, counts, then the status

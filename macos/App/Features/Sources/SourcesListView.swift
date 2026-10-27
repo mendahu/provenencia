@@ -328,19 +328,16 @@ private struct SourcesListContent: View {
     private var captionBand: some View {
         HStack(spacing: 0) {
             caption(L10n.Sources.columnSource)
-                .padding(.trailing, SourcesListColumns.sourceTrailing)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            if let typeWidth = columns.type {
+                .sourcesSourceCell()
+            if columns.type != nil {
                 caption(L10n.Sources.columnType)
-                    .padding(.trailing, SourcesListColumns.cellTrailing)
-                    .frame(width: typeWidth, alignment: .leading)
+                    .sourcesTypeCell(columns)
             }
             caption(L10n.Sources.columnStatus)
-                .padding(.trailing, SourcesListColumns.cellTrailing)
-                .frame(width: columns.status, alignment: .leading)
+                .sourcesStatusCell(columns)
             caption(L10n.Sources.columnEvidenceGraph)
-                .frame(width: columns.graphs, alignment: .leading)
-                .padding(.leading, SourcesListColumns.graphLeading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .sourcesGraphCell(columns)
         }
         .padding(.leading, PVSpacing.gutterPage)
         .padding(.trailing, PVSpacing.gutterPage)

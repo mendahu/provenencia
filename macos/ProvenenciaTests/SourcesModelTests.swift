@@ -579,6 +579,10 @@ struct SourcesModelTests {
                 detail: L10n.string(L10n.Sources.graphNeedsArtifactTooltip)
             ) == "Unlinked — Add an artifact to open this evidence graph"
         )
+        #expect(
+            L10n.Sources.graphBlockLabel(title: "No evidence graph yet", detail: "Needs an artifact")
+                == "No evidence graph yet, Needs an artifact"
+        )
         #expect(L10n.string(L10n.Sources.graphNeedsArtifactToOpen) == "Needs an artifact to open")
         #expect(L10n.string(L10n.Sources.noGraphYet) == "No evidence graph yet")
         #expect(L10n.string(L10n.Sources.graphsFailedTitle) == "Evidence graphs")
@@ -647,7 +651,6 @@ struct SourcesModelTests {
         #expect(Status.promoted.badgeTone == .success)
         #expect(Status.promoted.badgeIcon == .circleCheck)
         #expect(Status.allCases.filter(\.badgeSubtle) == [.empty])
-        #expect(L10n.Sources.statusBadgeLabel(.inProgress) == "Status: In progress")
     }
 
     @Test func settingsRestoreOnNewModel() async throws {

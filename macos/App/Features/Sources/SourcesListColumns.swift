@@ -21,3 +21,26 @@ struct SourcesListColumns: Equatable {
     var status: CGFloat { isCompact ? 120 : 132 }
     var graphs: CGFloat { isCompact ? 240 : 300 }
 }
+
+/// One frame chain per column, so the caption band and the rows cannot drift.
+extension View {
+    func sourcesSourceCell() -> some View {
+        padding(.trailing, SourcesListColumns.sourceTrailing)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    func sourcesTypeCell(_ columns: SourcesListColumns) -> some View {
+        padding(.trailing, SourcesListColumns.cellTrailing)
+            .frame(width: columns.type, alignment: .leading)
+    }
+
+    func sourcesStatusCell(_ columns: SourcesListColumns) -> some View {
+        padding(.trailing, SourcesListColumns.cellTrailing)
+            .frame(width: columns.status, alignment: .leading)
+    }
+
+    func sourcesGraphCell(_ columns: SourcesListColumns) -> some View {
+        frame(width: columns.graphs)
+            .padding(.leading, SourcesListColumns.graphLeading)
+    }
+}

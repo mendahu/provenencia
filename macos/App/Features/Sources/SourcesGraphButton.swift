@@ -41,8 +41,8 @@ struct SourcesGraphButton: View {
             }
             .help(L10n.string(L10n.Sources.needsArtifactTooltip))
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(verbatim: L10n.Sources.graphButtonHelp(
-                name: L10n.string(L10n.Sources.noGraphYet),
+            .accessibilityLabel(Text(verbatim: L10n.Sources.graphBlockLabel(
+                title: L10n.string(L10n.Sources.noGraphYet),
                 detail: L10n.string(L10n.Sources.needsArtifact)
             )))
             .accessibilityHint(Text(L10n.Sources.needsArtifactTooltip))
@@ -72,8 +72,8 @@ struct SourcesGraphButton: View {
             }
             .help(message)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(verbatim: L10n.Sources.graphButtonHelp(
-                name: L10n.string(L10n.Sources.graphsFailedTitle),
+            .accessibilityLabel(Text(verbatim: L10n.Sources.graphBlockLabel(
+                title: L10n.string(L10n.Sources.graphsFailedTitle),
                 detail: L10n.string(L10n.Sources.graphsFailedDetail)
             )))
             .accessibilityHint(Text(verbatim: message))
@@ -163,6 +163,7 @@ struct SourcesGraphButton: View {
             .italic()
             .foregroundStyle(PVColor.textMuted)
             .lineLimit(1)
+            .truncationMode(.tail)
     }
 }
 

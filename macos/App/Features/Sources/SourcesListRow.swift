@@ -19,16 +19,16 @@ struct SourcesListRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
             sourceLink
-                .padding(.trailing, SourcesListColumns.sourceTrailing)
-                .frame(maxWidth: .infinity, minHeight: Self.firstSlot, alignment: .leading)
-            if let typeWidth = columns.type {
+                .sourcesSourceCell()
+                .frame(minHeight: Self.firstSlot)
+            if columns.type != nil {
                 Text(verbatim: model.typeLabel(for: source))
                     .font(PVFont.body(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textSecondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                    .padding(.trailing, SourcesListColumns.cellTrailing)
-                    .frame(width: typeWidth, alignment: .leading)
+                    .help(model.typeLabel(for: source))
+                    .sourcesTypeCell(columns)
                     .frame(minHeight: Self.firstSlot)
             }
             graphStack
@@ -51,11 +51,9 @@ struct SourcesListRow: View {
             ForEach(entries, id: \.id) { entry in
                 HStack(spacing: 0) {
                     statusSlot(entry.kind)
-                        .padding(.trailing, SourcesListColumns.cellTrailing)
-                        .frame(width: columns.status, alignment: .leading)
+                        .sourcesStatusCell(columns)
                     SourcesGraphButton(sourceID: source.id, kind: entry.kind)
-                        .frame(width: columns.graphs)
-                        .padding(.leading, SourcesListColumns.graphLeading)
+                        .sourcesGraphCell(columns)
                 }
             }
         }
@@ -100,7 +98,9 @@ struct SourcesListRow: View {
         .buttonStyle(SourcesLinkButtonStyle())
         .accessibilityLabel(Text(L10n.Sources.openSourcePage))
         .accessibilityValue(Text(verbatim: PVLastUpdated.label(
-            "\(source.title), \(source.ref)",
+            columns.isCompact
+                ? "\(source.title), \(model.typeLabel(for: source)), \(source.ref)"
+                : "\(source.title), \(source.ref)",
             updatedAt: source.updated.at,
             in: .current
         )))
@@ -217,6 +217,7 @@ private struct SourcesLinkLabel: View {
                     // layouts and shows two underlines mid-fade.
                     .underline(true, color: highlighted ? PVColor.textLinkHover : .clear)
                     .lineLimit(1)
+                    .help(title)
                 secondLine
             }
         }
@@ -231,6 +232,7 @@ private struct SourcesLinkLabel: View {
                     .foregroundStyle(PVColor.textMuted)
                     .lineLimit(1)
                     .truncationMode(.tail)
+                    .help(typeLabel)
                 separator
             }
             Text(verbatim: ref)
@@ -278,5 +280,35 @@ private struct SourcesLinkButtonBody: View {
                 .padding(PVSpacing.space2)
                 .pvFocusRing(isFocused, cornerRadius: PVRadius.sm)
         }
+    }
+}
+
+// MARK: Status badge
+
+extension SourcesModel.EvidenceStatus {
+    var badgeTone: PVBadgeTone {
+        switch self {
+        case .empty: .neutral
+        case .inProgress: .warning
+        case .promoted: .success
+        }
+    }
+
+    var badgeIcon: PVSymbol {
+        switch self {
+        case .empty: .circleDashed
+        case .inProgress: .circleDot
+        case .promoted: .circleCheck
+        }
+    }
+
+    /// Only a graph with nothing on it draws an outline instead of a fill.
+    var badgeSubtle: Bool { self == .empty }
+
+    /// The status as a Sources list badge. Hidden from VoiceOver: the graph
+    /// button's label carries the status.
+    @MainActor var badge: some View {
+        PVBadge(label, tone: badgeTone, icon: badgeIcon, subtle: badgeSubtle)
+            .accessibilityHidden(true)
     }
 }

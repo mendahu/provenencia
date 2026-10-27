@@ -1,11 +1,10 @@
 import SwiftUI
 
-/// The last-updated cell of a list row, shared by the Conclusion lists
-/// (S10-22) and the Sources list (S10-41; it draws the cell on the row's second
-/// line): the history icon and the relative
-/// time with the full stamp as help, a faint dash when no time is recorded,
-/// and the spoken suffix of the row label. `PVListDetailCell` draws it.
-/// `now` is read as each row builds (no timer).
+/// The last-updated cell of a list row, shared by the Conclusion lists (S10-22)
+/// and the Sources list (S10-41; it draws the cell on the row's second line):
+/// the history icon and the relative time with the full stamp as help, a faint
+/// dash when no time is recorded, and the spoken suffix of the row label.
+/// `PVListDetailCell` draws it. `now` is read as each row builds (no timer).
 enum PVLastUpdated {
     /// Width of the column, icon included. Layout, not formatting.
     static let columnWidth: CGFloat = 136

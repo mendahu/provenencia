@@ -10,19 +10,20 @@ struct SourcesGraphCountLine: View {
     enum Style {
         case card
         case button
+
+        /// How a graph that has not started reads in this style.
+        var notStartedReading: L10n.Sources.NotStartedReading {
+            self == .button ? .zeroCounts : .words
+        }
     }
 
     let counts: SourcesGraphCounts
     let style: Style
 
-    private var notStarted: L10n.Sources.NotStartedReading {
-        style == .button ? .zeroCounts : .words
-    }
-
     var body: some View {
         content
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(verbatim: L10n.Sources.graphCounts(counts, style: .spoken, notStarted: notStarted)))
+            .accessibilityLabel(Text(verbatim: L10n.Sources.graphCounts(counts, style: .spoken, notStarted: style.notStartedReading)))
     }
 
     @ViewBuilder
@@ -61,7 +62,7 @@ struct SourcesGraphCountLine: View {
     /// ASCII digits, italic on "not started". The words come from the one
     /// localized line, so a translation keeps its order.
     static func countsText(_ counts: SourcesGraphCounts, style: Style) -> AttributedString {
-        let line = L10n.Sources.graphCounts(counts, style: .full, notStarted: style == .button ? .zeroCounts : .words)
+        let line = L10n.Sources.graphCounts(counts, style: .full, notStarted: style.notStartedReading)
         let body = PVFont.body(size: PVTypeScale.micro)
         let mono = PVFont.mono(size: PVTypeScale.micro)
         var out = AttributedString()
