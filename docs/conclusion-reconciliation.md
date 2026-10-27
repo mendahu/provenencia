@@ -115,7 +115,7 @@ The reconciler returns the **answer and its reasoning**, so the UI can be rich a
 | `no_evidence` | nothing usable to compare |
 | `against` | a negative that counted against a value without eliminating it |
 
-**Eliminated means not displayed, never dropped.** Every distinct value is cached, with a reason on each value (`kept` when displayed, else `outvoted`, `weak`, `denied` or `provisional`). The state and list counts read the displayed values; search and matching read them all, so an outvoted spelling still finds its Person.
+**Eliminated means not displayed, never dropped.** Every distinct value is cached, with a reason on each value (`kept` when displayed, else `outvoted`, `weak`, `denied` or `provisional`). The state and list counts read the displayed values; search reads them all, so an outvoted spelling still finds its Person. Matching reads the profile instead: displayed values count for a match, denied values against it, and outvoted, weak and provisional values are left out ([`matching-model.md`](matching-model.md)).
 
 The cache stores the reasoning with the values: state, support, the against count, and every candidate's outcome and reason. List and detail pages render from it without re-running the reconciler.
 
