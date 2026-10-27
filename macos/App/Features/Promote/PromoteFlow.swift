@@ -188,7 +188,7 @@ struct PromoteFlow: Equatable, Sendable {
         var contested = false
         /// Why settling released an earlier pair of this row in this proposal. Not `updated`, which compares with the previous proposal.
         var move: Reason? = nil
-        /// An Event's date as the Events list lists it; empty for anything else.
+        /// An Event's date as the Events list lists it, without the source's words for it; empty for anything else.
         var date: String = ""
         var id: String { subjectID }
 
@@ -257,7 +257,7 @@ struct PromoteFlow: Equatable, Sendable {
         var ref: String
         /// Set when the subject is already filed.
         var anchor: Anchor?
-        /// An Event's date as the Events list lists it; empty for anything else.
+        /// An Event's date as the Events list lists it, without the source's words for it; empty for anything else.
         var date: String = ""
     }
 

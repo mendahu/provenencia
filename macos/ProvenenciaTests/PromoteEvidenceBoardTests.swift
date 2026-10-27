@@ -278,13 +278,13 @@ struct PromoteEvidenceBoardTests {
         let outcome = L10n.string(L10n.Promote.outcome(.agree))
 
         let source = card(layer: .init(pattern: .marriageSpouses, pivotID: "M"))
-        let sourceSays = L10n.Promote.recorded(source: "married in the marriage on 12 May 1842", record: "recorded as spouses")
+        let sourceSays = L10n.Promote.recorded(source: "married in the marriage dated 12 May 1842", record: "recorded as spouses")
         #expect(source.header == "they share a spouse")
         #expect(source.recorded == sourceSays)
         #expect(source.spoken == PromoteEvidenceDisplay.spokenRelationship(
             header: L10n.Promote.spokenRecorded(
                 header: "they share a spouse",
-                source: "married in the marriage on 12 May 1842", record: "recorded as spouses"
+                source: "married in the marriage dated 12 May 1842", record: "recorded as spouses"
             ),
             outcome: .agree, count: 1
         ))
@@ -298,7 +298,17 @@ struct PromoteEvidenceBoardTests {
         let record = card(canon: .init(pattern: .marriageSpouses, pivotID: "t", pivot: .event(when)))
         let day = EventSecondaryDisplay.content(when).date
         #expect(record.recorded == L10n.Promote.recorded(
-            source: "recorded as spouses", record: "married in the marriage on \(day)"
+            source: "recorded as spouses", record: "married in the marriage dated \(day)"
+        ))
+
+        // A date the source gave words for sits in the caption without them, so no "·" splits a side.
+        var spring = CatalogDateValueInput(kind: "point", startYear: 1842)
+        spring.phrase = "in the spring"
+        var springy = when
+        springy.date = spring
+        let phrased = card(canon: .init(pattern: .marriageSpouses, pivotID: "t", pivot: .event(springy)))
+        #expect(phrased.recorded == L10n.Promote.recorded(
+            source: "recorded as spouses", record: "married in the marriage dated 1842"
         ))
 
         let direct = card()

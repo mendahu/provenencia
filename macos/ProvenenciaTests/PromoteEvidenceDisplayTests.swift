@@ -337,11 +337,11 @@ struct PromoteEvidenceDisplayTests {
         }
         // (a) – (d): the marriage, either side or both, and neither.
         #expect(recorded(.marriageSpouses, marriage, .direct, nil, "spouse")
-            == ["married in the marriage on 12 May 1842", "recorded as spouses"])
+            == ["married in the marriage dated 12 May 1842", "recorded as spouses"])
         #expect(recorded(.direct, nil, .marriageSpouses, marriage, "spouse")
-            == ["recorded as spouses", "married in the marriage on 12 May 1842"])
+            == ["recorded as spouses", "married in the marriage dated 12 May 1842"])
         #expect(recorded(.marriageSpouses, marriage, .marriageSpouses, marriage, "spouse")
-            == ["married in the marriage on 12 May 1842", "married in the marriage on 12 May 1842"])
+            == ["married in the marriage dated 12 May 1842", "married in the marriage dated 12 May 1842"])
         #expect(recorded(.direct, nil, .direct, nil, "spouse") == nil)
         // (e) – (f): an undated marriage by its ref, an unknown one by neither.
         let undated = Pivot(name: marriage.name, date: "", ref: "EVT-M")
@@ -351,7 +351,7 @@ struct PromoteEvidenceDisplayTests {
         let birth = Pivot(name: "Birth of Cal Ames", date: "1 Mar 1850", ref: "EVT-B")
         for term in ["parent", "child"] {
             #expect(recorded(.direct, nil, .birthParents, birth, term)
-                == ["recorded as parent and child", "parent and child in the birth on 1 Mar 1850"])
+                == ["recorded as parent and child", "parent and child in the birth dated 1 Mar 1850"])
         }
         // (h): a grandparent through the parent between.
         let bea = Pivot(name: "Bea Ames", date: "", ref: "PER-B")

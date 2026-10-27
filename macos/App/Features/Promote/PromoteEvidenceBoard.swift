@@ -75,7 +75,8 @@ struct EvidenceBoard: Equatable {
     /// A Source's is a page row; the record's is a header from the catalog.
     struct Pivot: Equatable {
         var name: String
-        /// An event's date as the Events list lists it; empty for anything else, or when undated.
+        /// An event's date as the Events list lists it, without the source's words for it; empty for
+        /// anything else, or when undated.
         var date: String
         var ref: String
 
@@ -90,7 +91,9 @@ struct EvidenceBoard: Equatable {
             guard let header else { return nil }
             self.init(
                 name: ConclusionHeaderDisplay.title(header, orders: orders),
-                date: header.event.map { EventSecondaryDisplay.content($0).date } ?? "",
+                date: header.event.map {
+                    DateRowDisplay.line(date: $0.date, start: $0.startDate, end: $0.endDate, includesPhrase: false)
+                } ?? "",
                 ref: ConclusionHeaderDisplay.ref(header)
             )
         }

@@ -53,8 +53,9 @@ struct EvidenceGraphPlacedSubject: Identifiable, Sendable, Equatable {
         return subject.trimmedLabel ?? subject.ref
     }
 
-    /// An Event's date as the Events list lists it: the first asserted `date`, `start_date` and
-    /// `end_date` Observations. Empty for people and places, and for an event with none.
+    /// An Event's date as the Events list lists it, without the words the source gave for it: the
+    /// first asserted `date`, `start_date` and `end_date` Observations. Empty for people and places,
+    /// and for an event with none.
     var dateLine: String {
         guard kind == .event else { return "" }
         func first(_ key: String) -> CatalogDateValueInput? {
@@ -63,7 +64,8 @@ struct EvidenceGraphPlacedSubject: Identifiable, Sendable, Equatable {
         return DateRowDisplay.line(
             date: first(SeededPropertyKey.date),
             start: first(SeededPropertyKey.startDate),
-            end: first(SeededPropertyKey.endDate)
+            end: first(SeededPropertyKey.endDate),
+            includesPhrase: false
         )
     }
 

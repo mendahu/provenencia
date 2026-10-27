@@ -14,7 +14,7 @@
 **Environment:** every step needs a Mac with the repo's toolchain (`xcodebuild test`, `scripts/check-pr.sh`) and the app for §10. No Go, proto or FFI change. A session without a Mac does not start: it reports "needs a Mac" to the orchestrator, which hands the PR to a Mac session.
 **Context:** [Kinship shapes § On the evidence sheet](../kinship-shapes.md#on-the-evidence-sheet); [`claim-evidence.md` § Wording](../claim-evidence.md#wording) and [§ Evidence through relationships](../claim-evidence.md#evidence-through-relationships); S11-40 plan D-9, D-11, D-13 and its Landed note; working rules "One wire vocabulary", "Counted once across sides"
 **Planned:** 2026-10-27 against `main` @ `c545a482`
-**Landed:** Differences from the plan: `wording`'s exhaustive `switch` also has a `.direct` arm (it returns the unrecognized wording and is never asked for; `recorded` words a direct side through `direct(term:)`), because Swift requires every case; `EvidenceBoard.Pivot` declares its memberwise `init(name:date:ref:)` beside `init?(header:orders:)`, because a custom initializer in the type removes the synthesized one.
+**Landed:** Differences from the plan: `EvidenceBoard.Pivot` declares its memberwise `init(name:date:ref:)` beside `init?(header:orders:)`, because a custom initializer in the type removes the synthesized one; `wording(_:)` returns nil for `.direct`, so `recorded` words a direct side through `direct(term:)`. The direct words are `recordedDirect` on `L10n.PropertyTerm.Wording` (user, review round 1; D-4's private switch is gone), `direct(term:)` is a lookup with `recordedDirectOther` as the fallback, and the pivot's date is phrase-free (`DateRowDisplay.line(includesPhrase: false)`, used by `dateLine` and the record's `Pivot`) with the copy "dated %@" (user, review round 1; was "on %@").
 **Review:** [`S11-42-implied-links-sheet.review.md`](S11-42-implied-links-sheet.review.md) — Fits with changes / Ready with changes, 1 round (every finding answered)
 
 ### Implementer — read this first
@@ -153,7 +153,7 @@ Searched: `rg "KinshipPattern|\.layer\b|\.canon\b" macos/App/Features`, `rg "Dat
 
 **Builds on.** S11-40's `CatalogClaimEvidenceShape` and `KinshipPattern`; the board/display split from `8aab38bf`; the record-count caption style; `DateRowDisplay` and the per-kind header displays; the Card's `neighborTerm` reading.
 **Deletes.** `PromoteFlow.conclusionTitle` and `conclusionSubtitle`; the two `switch hit.header` blocks in `CatalogSearchHitPresentation`. The add-match-rule step 6 sentence "(S11-42) follows" is replaced (STEP-6).
-**Next adds.** A new kinship pattern adds its `KinshipPattern` case (S11-40), one arm in `PromoteEvidenceDisplay.wording` and two keys (named, none); a pattern implying a link the sheet already words directly needs no direct key. The exhaustive `switch` in `wording` fails the build until the arm is there. A new relationship term an implied link can carry adds one arm in `direct(term:)`. A second reader of these phrases (a tree citation, [`kinship-view.md`](../../../ideas/kinship-view.md) "Citing an implied fact on a tree") moves `recorded`, `Pivot` and the wording out of Promote into a neutral home in that PR.
+**Next adds.** A new kinship pattern adds its `KinshipPattern` case (S11-40), one arm in `PromoteEvidenceDisplay.wording` and two keys (named, none); a pattern implying a link the sheet already words directly needs no direct key. The exhaustive `switch` in `wording` fails the build until the arm is there. A new relationship term an implied link can carry adds a `recordedDirect` phrase to its `Wording` entry in `L10n.PropertyTerm`; with none it reads "recorded directly". A second reader of these phrases (a tree citation, [`kinship-view.md`](../../../ideas/kinship-view.md) "Citing an implied fact on a tree") moves `recorded`, `Pivot` and the wording out of Promote into a neutral home in that PR.
 
 ### Schema
 
@@ -188,10 +188,10 @@ L10n under `L10n.Promote` *(new)*. Each catalog entry is written as the `add-loc
 | --- | --- | --- |
 | `recorded(source:record:)` · `promote.sheet.recorded` | "This source: %1$@ · The record: %2$@" | Muted line under a relationship Card's header: how each side records the link; 1 = this Source's way, 2 = the matched record's way |
 | `spokenRecorded(header:source:record:)` · `promote.sheet.spokenRecorded` | "%1$@. This source: %2$@. The record: %3$@" | VoiceOver reading of a relationship Card's header and how each side records the link; 1 = the header, 2 = this Source's way, 3 = the record's way |
-| `recordedOn(_:)` · `promote.sheet.recorded.on` | "on %@" | An event named by its date inside a recorded phrase; the argument is the date |
-| `recordedMarriage(_:)` · `promote.sheet.recorded.marriage` | "married in the marriage %@" | How a side records a couple: through a marriage; the argument is "on <date>" or the marriage's ref |
+| `recordedOn(_:)` · `promote.sheet.recorded.on` | "dated %@" | An event named by its date inside a recorded phrase; the argument is the date |
+| `recordedMarriage(_:)` · `promote.sheet.recorded.marriage` | "married in the marriage %@" | How a side records a couple: through a marriage; the argument is "dated <date>" or the marriage's ref |
 | `recordedMarriageNone` · `promote.sheet.recorded.marriage.none` | "married in a marriage" | How a side records a couple through a marriage that cannot be named |
-| `recordedBirth(_:)` · `promote.sheet.recorded.birth` | "parent and child in the birth %@" | How a side records a parent through a birth; the argument is "on <date>" or the birth's ref |
+| `recordedBirth(_:)` · `promote.sheet.recorded.birth` | "parent and child in the birth %@" | How a side records a parent through a birth; the argument is "dated <date>" or the birth's ref |
 | `recordedBirthNone` · `promote.sheet.recorded.birth.none` | "parent and child in a birth" | How a side records a parent through a birth that cannot be named |
 | `recordedChain(_:)` · `promote.sheet.recorded.chain` | "grandparent and grandchild through %@" | How a side records a grandparent through a parent between; the argument is that parent's name or ref |
 | `recordedChainNone` · `promote.sheet.recorded.chain.none` | "grandparent and grandchild through a parent" | The same, when the parent between cannot be named |

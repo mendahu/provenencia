@@ -21832,13 +21832,13 @@
       }
     },
     "promote.sheet.recorded.on": {
-      "comment": "An event named by its date inside a recorded phrase; the argument is the date",
+      "comment": "An event named by its date inside a recorded phrase; the argument is the date, without any phrase about how it was recorded",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "on %@"
+            "value": "dated %@"
           }
         }
       }

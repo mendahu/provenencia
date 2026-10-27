@@ -460,6 +460,9 @@ struct EvidenceGraphSnapshotTests {
         let from = point(1840), to = point(1845)
         #expect(placed(.event, label: "m", [observation("start_date", date: from), observation("end_date", date: to)]).dateLine
             == DateRowDisplay.line(date: nil, start: from, end: to))
+        var spring = point(1842)
+        spring.phrase = "in the spring"
+        #expect(placed(.event, label: "m", [observation("date", date: spring)]).dateLine == "1842")
         #expect(placed(.event, label: "m", [observation("date", polarity: "negative", date: married)]).dateLine == "")
         #expect(placed(.person, label: "p", [observation("date", date: married)]).dateLine == "")
     }
