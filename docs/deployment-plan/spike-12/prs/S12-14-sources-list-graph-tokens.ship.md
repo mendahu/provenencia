@@ -103,4 +103,4 @@ UX: UX-1 Resolved (`.unavailable(message:)` drawn in the token and count line; a
 No Fix plan 2.
 
 ## Result
-Gate PASS (`7f711dbb`, `origin/main` unmoved at `f22b19a7`) · CI pending · open: none · follow-ups: none · to user: UX-1, UX-2, UX-3, MNT-2 (answered 2026-10-26, fixed) · logged: SEC-out (min-width overflow, manual check), nits CON-2, UX-6, MNT-6, MNT-7 · CON miss: none
+Gate PASS (`7f711dbb`, `origin/main` unmoved at `f22b19a7`) · CI green · open: none · follow-ups: none · to user: UX-1, UX-2, UX-3, MNT-2 (answered 2026-10-26, fixed) · logged: SEC-out (min-width overflow, manual check), nits CON-2, UX-6, MNT-6, MNT-7 · CON miss: none
