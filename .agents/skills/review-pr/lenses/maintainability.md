@@ -63,7 +63,7 @@ code to it. Special-casing where an entry belongs is a patch.
 | Omnibar hit kinds | `core/search` registry ([`add-searchable-kind`](../../add-searchable-kind/SKILL.md)) |
 | Workspace places, list/detail caches | `PlaceRegistry`, `CatalogQueryKey`, `CatalogQueryRegistry` ([`add-workspace-place`](../../add-workspace-place/SKILL.md)) |
 | Navigation history | `WorkspaceLocation`, `WorkspaceNavigation` ([`add-workspace-location`](../../add-workspace-location/SKILL.md)) |
-| Go wire vocabulary in Swift | `Platform/ConclusionVocabulary.swift` (`.cursor/rules/macos-client.mdc`) |
+| Go wire vocabulary in Swift | A typed enum with a row in `api/ffi/swift_vocabulary_test.go`, mostly `Platform/ConclusionVocabulary.swift` (`.cursor/rules/macos-client.mdc`) |
 | Copy | `L10n` + `Localizable.xcstrings` ([`add-localized-string`](../../add-localized-string/SKILL.md)) |
 | UI chrome | `DesignSystem` layers ([`add-ui-component`](../../add-ui-component/SKILL.md)) |
 | Error codes | `core/apperr` + `L10n.Errors` |

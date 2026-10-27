@@ -26,6 +26,7 @@ import (
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/raster"
+	"github.com/mendahu/provenencia/core/search"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -41,6 +42,7 @@ const (
 	swiftMarks      = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
 	swiftGraphKinds = "../../macos/App/Features/Workspace/Session/EvidenceGraphSnapshot.swift"
 	swiftCatalogMut = "../../macos/App/Features/Workspace/Session/CatalogMutation.swift"
+	swiftSearchKind = "../../macos/App/Platform/CatalogSearchKind.swift"
 
 	swiftRegionGeometry = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
 	swiftProjectFiles   = "../../macos/App/Platform/ProjectFiles.swift"
@@ -279,6 +281,15 @@ func listStrings() []string {
 	return out
 }
 
+// searchKinds is the sorted Kind of every searchable kind in the registry.
+func searchKinds() []string {
+	var out []string
+	for _, spec := range search.Registry {
+		out = append(out, spec.Kind)
+	}
+	return sorted(out...)
+}
+
 // sortedRelations is every valuecompare relation, sorted.
 func sortedRelations() []string {
 	var out []string
@@ -359,6 +370,10 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		{
 			name: "catalog-wide lists", path: swiftCatalogMut, enum: "CatalogList", re: listCase,
 			want: sorted(listStrings()...),
+		},
+		{
+			name: "search kinds", path: swiftSearchKind, enum: "CatalogSearchKind", re: listCase,
+			want: searchKinds(),
 		},
 		{
 			name: "subject marks", path: swiftMarks, enum: "PVMarkKey", re: subjectMark,

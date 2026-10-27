@@ -194,7 +194,7 @@ struct CatalogDeleteImpactListed: Sendable, Equatable, Identifiable {
     var location: WorkspaceLocation
 }
 
-/// One omnibar / SearchCatalog hit (stable kinds: source, source_type, metadata_field).
+/// One omnibar / SearchCatalog hit. `kind` is the wire string; `searchKind` types it.
 struct CatalogSearchHit: Sendable, Equatable, Identifiable {
     var kind: String
     var id: String

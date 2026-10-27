@@ -28,7 +28,8 @@ Authoritative behavior: [`docs/deployment-plan/archive/spike-3/omnibar-search.md
 - [ ] FTS projector in core/database/searchindex (Upsert/Delete/Rebuild; unicode61 **and** trigram indexes)
 - [ ] Write-path reproject on domain mutators (same tx when practical)
 - [ ] Tagged Source body rollup when contributing child text (`note:` / `metadata:` / `filename:`)
-- [ ] FakeStore mirrors kinds + location rules + ref exact/prefix boost; markCatalogSessionHeld
+- [ ] Swift `CatalogSearchKind` case (`TestSwiftVocabularyMatchesGo` fails without it); the compiler then asks for its `kindLabel` and `leadThumbnail`, and for FakeStore's `searchPriority`
+- [ ] FakeStore mirrors kinds + location rules + ref exact/prefix boost; markCatalogSessionHeld; fake hits for the kind (the compiler does not ask for these)
 - [ ] Package + FFI + Swift FakeStore tests
 ```
 
@@ -94,6 +95,10 @@ destination UI.
   new Method if they fit `SearchHit`.
 - Swift: `CatalogSearchHit` + `GenealogyStore.searchCatalog`; FakeStore scores
   in memory with the same kind/location rules; call `markCatalogSessionHeld`.
+- Swift spells kinds once, in `macos/App/Platform/CatalogSearchKind.swift`
+  (`hit.searchKind`; nil for a kind this build doesn't know). Switches on it
+  are exhaustive, so a new case names each view spot. Never compare
+  `hit.kind` to a string literal.
 - Swift callers search through `CatalogSearchModel` (`macos/App/Features/Catalog/Search/`): kinds at init, an optional location per search (nil: no section nudge). The omnibar and Promote's find-another-record picker both use it; draw hits with `CatalogSearchHitRow`, which carries its own VoiceOver label (the session's name order). A picker is `PVComboBox(onQueryChange:isLoading:empty:)` over `CatalogSearchModel(kinds:)`, as `PromoteRecordSearch` does.
 
 Catalog RPCs use `withProjectCatalog` — see
