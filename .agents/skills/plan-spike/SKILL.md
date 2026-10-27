@@ -33,6 +33,7 @@ Map template: [`map-template.md`](map-template.md).
 | Change | This skill |
 | --- | --- |
 | Open a new spike | **Yes** |
+| Add a batch to an odds-and-ends (even-numbered) spike | **Yes** — as a slice |
 | Add a slice to the open spike, or re-cut one | **Yes** |
 | Pull an idea from `docs/ideas/` or notes from `docs/dogfood/ux.md` into a spike | **Yes** |
 | Descope, merge, or split PRs in the map | **Yes** |
@@ -40,6 +41,15 @@ Map template: [`map-template.md`](map-template.md).
 | Write a Claude Design brief | No — [`add-design-brief`](../add-design-brief/SKILL.md), usually from `plan-pr` |
 | Close a spike | No — [`archive-docs`](../archive-docs/SKILL.md) |
 | Park an idea that is not scheduled | No — a file in `docs/ideas/` |
+
+## Odd and even spikes
+
+Odd-numbered spikes (from 13) are large new features; even-numbered spikes are
+odds and ends ([odd and even spikes](../../../docs/deployment-plan/README.md#odd-and-even-spikes)).
+For an even spike, run the same phases per **batch**: the batch is a slice with
+its own goal, bar outcomes (added under the spike's bar with the batch's name),
+working rules prefixed with the batch (`(Batch 2) …`), and a feature doc when it
+needs one. The spike's goal and its close (S#-99) stay as the template has them.
 
 ## How the session runs
 

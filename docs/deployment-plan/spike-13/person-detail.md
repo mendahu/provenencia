@@ -97,7 +97,7 @@ On each claim in the Sources section.
 - **Reconciliation Claims** (manual reconciliation) in the provenance sheet: later; the sheet leaves room (R-10).
 - **Editing an identity claim's pins or argument:** later; this spike is view only (R-40).
 - **Weak-claim alerts and the claim review queue:** stay parked in [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md).
-- **Event depictions:** later; the Timeline reserves a placeholder (R-26).
+- **Event depictions:** Spike 14 batch 1 adds `event_picture` and the Event page's gallery ([Spike 14](../spike-14/deployment-plan.md)); the Timeline keeps its placeholder (R-26) until this spike chooses to fill it.
 - **Unpromoted Subjects anywhere on the page:** refused (R-2).
 - **Kinship beyond the nuclear family** (grandparents, aunts and uncles, godparents, census households): stays in [`ideas/kinship-view.md`](../../ideas/kinship-view.md).
 
