@@ -5,10 +5,10 @@ import (
 	"slices"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
+	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/depictionvalue"
-	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/subjectprofile"
@@ -168,7 +168,7 @@ func newProfiler(g *graphcache.Graph, metas subjectcompare.Metas, rules subjectc
 	}
 	return &profiler{
 		g: g, props: props, eventTypeProp: vocab.PropertyID(vocabkey.PropertyEventType, vocabkey.OriginProvenencia), terms: vocab.TermsByID(), metas: metas, types: vocab.TypeIDsByKey(), typeKeys: vocab.TypeKeysByID(), rules: rules,
-		reconcile: matchregistry.Default().Value, namePattern: namePattern,
+		reconcile: autoreconciler.ValueRules, namePattern: namePattern,
 		done: done,
 	}, nil
 }

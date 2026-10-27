@@ -1,7 +1,8 @@
 // Package namealiases stores abbreviation and nickname tables. The product
 // lists are in registry.go. Install writes them once when a catalog is
 // created. AddProductNicknames copies the current product nickname sets into
-// a catalog that already exists. Scoring reads these rows and no other list.
+// a catalog that already exists. Matching reads these rows and no other list;
+// the reconciler cache reads the product seed through valuerules.Product.
 // An open project keeps the alias index built from those rows on the catalog
 // graph until the project closes; Invalidate rebuilds it.
 package namealiases

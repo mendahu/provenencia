@@ -46,7 +46,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
-	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
@@ -75,12 +75,14 @@ import (
 //	    ignores punctuation and spacing, ABT is a range, name parts compare as
 //	    words with particles (S11-06).
 //	17: text ignores word breaks: god-father is godfather (S11-07).
-const CacheVersion = 17
+//	18: a nickname or abbreviation of a given name folds into its formal name; the reconciler reads the product alias seed and its nickname heads (S11-28).
+const CacheVersion = 18
 
-// valueRules are the value compare rules reconciling reads: the shipped
-// registry, never a catalog's alias tables or name formats, so the cache
-// changes only when CacheVersion does.
-var valueRules = matchregistry.Default().Value
+// ValueRules are the value compare rules reconciling reads: the shipped
+// registry and the product alias seed, never a catalog's own alias rows or name
+// formats, so the cache changes only when CacheVersion does. Every reconciler
+// caller passes this one value.
+var ValueRules = valuerules.Product()
 
 // Querier is *sql.Tx or *sql.DB.
 type Querier interface {
@@ -323,7 +325,7 @@ func recomputeBatch(q Querier, ids [][]byte) error {
 		return err
 	}
 	for _, g := range groups {
-		res, err := autoreconcile.Reconcile(valueRules, g.valueType, g.candidates, nil, g.cardinality)
+		res, err := autoreconcile.Reconcile(ValueRules, g.valueType, g.candidates, nil, g.cardinality)
 		if err != nil {
 			return err
 		}

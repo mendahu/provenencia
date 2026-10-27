@@ -2,14 +2,18 @@ package autoreconciler_test
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/rand"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/apperr"
+	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
@@ -20,6 +24,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/likenesses"
+	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -384,7 +389,7 @@ func TestReconciledValues(t *testing.T) {
 	person := f.subject("person")
 	f.cite(nameIn(person, f.props["name"], "given=James|surname=Robins"), termIn(person, f.props["sex_at_birth"], f.terms["male"]), intIn(person, f.props["age"], 34))
 	f.cite(nameIn(person, f.props["name"], "given=james|surname=robins."), intIn(person, f.props["age"], 34))
-	jim := f.cite(nameIn(person, f.props["name"], "given=Jim|surname=Robins"))[0]
+	kenneth := f.cite(nameIn(person, f.props["name"], "given=Kenneth|surname=Robins"))[0]
 
 	if got := f.rows(); len(got) != 0 {
 		t.Fatalf("unpromoted subject cached %d rows", len(got))
@@ -393,7 +398,7 @@ func TestReconciledValues(t *testing.T) {
 	all := f.rows()
 
 	names := rowsFor(all, per, f.props["name"].ID)
-	// James, james and Jim reconcile into one name: Jim is a different given
+	// James, james and Kenneth reconcile into one name: Kenneth is a different given
 	// name, not a misspelling, so it isn't outvoted (S9-13b). All three are
 	// cited from the Register, so they are one Source's support (S9-14).
 	if len(names) != 1 || names[0].Support != 1 {
@@ -401,7 +406,7 @@ func TestReconciledValues(t *testing.T) {
 	}
 	top, err := valuecodec.UnmarshalName(names[0].Name)
 	must(t, err)
-	if top.Form != "James Jim Robins" || *names[0].SortKey != "james jim robins" {
+	if top.Form != "James Kenneth Robins" || *names[0].SortKey != "james kenneth robins" {
 		t.Fatalf("rank 1 %q sort %q", top.Form, *names[0].SortKey)
 	}
 	sex := rowsFor(all, per, f.props["sex_at_birth"].ID)
@@ -416,7 +421,7 @@ func TestReconciledValues(t *testing.T) {
 	t.Run("observation update", func(t *testing.T) {
 		_, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 			return observations.Update(tx, userID, observations.Input{
-				ID: jim.ID, SubjectID: person.ID, PropertyID: f.props["name"].ID, Name: nameValue("given=James|surname=Robins"),
+				ID: kenneth.ID, SubjectID: person.ID, PropertyID: f.props["name"].ID, Name: nameValue("given=James|surname=Robins"),
 			})
 		})
 		must(t, err)
@@ -427,7 +432,7 @@ func TestReconciledValues(t *testing.T) {
 	})
 	t.Run("observation add", func(t *testing.T) {
 		obs, err := writes.Call(f.c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
-			return observations.AddToCitation(tx, userID, jim.CitationID, []observations.Input{intIn(person, f.props["age"], 35)})
+			return observations.AddToCitation(tx, userID, kenneth.CitationID, []observations.Input{intIn(person, f.props["age"], 35)})
 		})
 		must(t, err)
 		age := rowsFor(f.rows(), per, f.props["age"].ID)
@@ -621,6 +626,27 @@ func TestReconciledNames(t *testing.T) {
 		}
 		if n.Form != "James Robins Jr." || *names[0].SortKey != "james robins jr" {
 			t.Fatalf("form %q sort %q", n.Form, *names[0].SortKey)
+		}
+	})
+
+	t.Run("a nickname folds into the given name it stands for", func(t *testing.T) {
+		a, b := f.subject("person"), f.subjectOn(f.other, "person")
+		f.cite(nameIn(a, f.props["name"], "given=Chris|surname=Robins"))
+		f.cite(nameIn(b, f.props["name"], "given=Christopher|surname=Robins"))
+		h := f.promote(a)
+		f.join(b, h)
+		names := rowsFor(f.rows(), h, f.props["name"].ID)
+		if len(names) != 1 || names[0].Support != 2 {
+			t.Fatalf("names %+v", names)
+		}
+		n, err := valuecodec.UnmarshalName(names[0].Name)
+		must(t, err)
+		var parts []string
+		for _, p := range n.Parts {
+			parts = append(parts, p.Type+"="+p.Value)
+		}
+		if got := strings.Join(parts, "|"); got != "given=Christopher|surname=Robins" {
+			t.Fatalf("parts %s", got)
 		}
 	})
 
@@ -1216,7 +1242,7 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 	}{
 		{"edit moves the rank-1 value, then its last member is deleted", func(f *fixture) {
 			p := f.subject("person")
-			obs := f.cite(nameIn(p, f.props["name"], "given=James|surname=Robins"), nameIn(p, f.props["name"], "given=Jim|surname=Robins"))
+			obs := f.cite(nameIn(p, f.props["name"], "given=James|surname=Robins"), nameIn(p, f.props["name"], "given=Kenneth|surname=Robins"))
 			f.promote(p)
 			_, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 				return observations.Update(tx, userID, observations.Input{
@@ -1288,12 +1314,12 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			if len(names) != 1 || names[0].Support != 2 {
 				f.t.Fatalf("join should merge the names into one value of 2: %+v", names)
 			}
-			f.cite(nameIn(b, f.props["name"], "given=Jim|surname=Robins"))
+			f.cite(nameIn(b, f.props["name"], "given=Kenneth|surname=Robins"))
 			names = rowsFor(f.rows(), h, f.props["name"].ID)
 			if len(names) != 1 {
 				f.t.Fatalf("a member's new given name should join the one name: %+v", names)
 			}
-			if n, err := valuecodec.UnmarshalName(names[0].Name); err != nil || n.Form != "James Jim Robins" {
+			if n, err := valuecodec.UnmarshalName(names[0].Name); err != nil || n.Form != "James Kenneth Robins" {
 				f.t.Fatalf("name %+v %v", n, err)
 			}
 		}},
@@ -1447,7 +1473,7 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 			kinds := []string{"person", "person", "event", "place"}
 			credibilities := []string{"low_trust", "standard", "high_trust"}
 			grades := []string{"", "low_confidence", "moderate", "high_confidence"}
-			names := []string{"given=James|surname=Robins", "given=james|surname=robins", "given=Jim|surname=Robins",
+			names := []string{"given=James|surname=Robins", "given=james|surname=robins", "given=Kenneth|surname=Robins",
 				"given=J.|surname=Robins", "given=James|given=K.|surname=Robins", "surname=Robbins",
 				"given=Mary|surname=Smith", "form:James Robins"}
 			toponyms := []string{"York", "york", "Upper Canada", "Toronto"}
@@ -1602,4 +1628,91 @@ func subjectByID(subs []subjects.Subject, id []byte) subjects.Subject {
 		}
 	}
 	panic("observation on an unknown subject")
+}
+
+// TestValueRulesFoldNicknamesOnly: the reconciler's rules fold a nickname into
+// the name it stands for and leave every other pair of given names alone.
+func TestValueRulesFoldNicknamesOnly(t *testing.T) {
+	for _, tc := range []struct{ a, b, want string }{
+		{"Bill", "William", "William"},
+		{"Jamie", "James", "James"},
+		{"Tony", "Anthony", "Anthony"},
+		{"Kit", "Christopher", "Christopher"},
+		{"Steve", "Stephen", "Stephen"},
+		{"Ralph", "Raphael", "Raphael"},
+		{"Allan", "Allen", ""},
+		{"John", "Jon", ""},
+		{"Chris", "Kit", ""},
+		{"John", "Peter", ""},
+	} {
+		t.Run(tc.a+"+"+tc.b, func(t *testing.T) {
+			in := []autoreconcile.Candidate{
+				{ObservationID: []byte{0, 0, 0, 1}, Value: autoreconcile.Value{Name: nameValue("given=" + tc.a + "|surname=Robins")}},
+				{ObservationID: []byte{0, 0, 0, 2}, Value: autoreconcile.Value{Name: nameValue("given=" + tc.b + "|surname=Robins")}},
+			}
+			res, err := autoreconcile.Reconcile(autoreconciler.ValueRules, propertymeta.ValueTypeName, in, nil, propertymeta.CardinalitySingle)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(res.Values) != 1 {
+				t.Fatalf("%d values", len(res.Values))
+			}
+			var given []string
+			for _, p := range res.Values[0].Value.Name.Parts {
+				if p.Type == "given" {
+					given = append(given, p.Value)
+				}
+			}
+			want := []string{tc.want}
+			if tc.want == "" {
+				want = []string{tc.a, tc.b}
+				if !slices.Equal(given, want) && !slices.Equal(given, []string{tc.b, tc.a}) {
+					t.Fatalf("given %v, want both of %v", given, want)
+				}
+				return
+			}
+			if !slices.Equal(given, want) {
+				t.Fatalf("given %v, want %v", given, want)
+			}
+		})
+	}
+}
+
+// productAliasPin is the hash of the product alias seed the cache was built
+// from, with the CacheVersion it belongs to.
+var productAliasPin = struct {
+	CacheVersion int
+	Hash         string
+}{CacheVersion: 18, Hash: "dd2d088826d1caf666c0013ff8599ea787d4b0b9903d4819b8f5b397c5e74be0"}
+
+// TestProductAliasTablesPinCacheVersion: the reconciler cache reads the product
+// alias seed, so a seed edit must come with a CacheVersion bump.
+func TestProductAliasTablesPinCacheVersion(t *testing.T) {
+	var lines []string
+	for _, table := range namealiases.ProductTables() {
+		roles := make([]string, len(table.Roles))
+		for i, r := range table.Roles {
+			roles[i] = string(r)
+		}
+		slices.Sort(roles)
+		lines = append(lines, fmt.Sprintf("table %s %s %s formalFirst=%v", table.Key, table.Kind, strings.Join(roles, ","), table.FormalFirst))
+		dirs := make([]string, len(table.Directions))
+		for i, d := range table.Directions {
+			dirs[i] = d.Formal + "<-" + d.Nickname
+		}
+		slices.Sort(dirs)
+		lines = append(lines, dirs...)
+		for _, set := range table.Sets {
+			rest := slices.Clone(set[1:])
+			slices.Sort(rest)
+			lines = append(lines, "set "+set[0]+" "+strings.Join(rest, " "))
+		}
+	}
+	sum := sha256.Sum256([]byte(strings.Join(lines, "\n")))
+	if got := hex.EncodeToString(sum[:]); got != productAliasPin.Hash {
+		t.Fatalf("the product alias seed changed: bump autoreconciler.CacheVersion and re-pin this hash (now %s)", got)
+	}
+	if autoreconciler.CacheVersion != productAliasPin.CacheVersion {
+		t.Fatalf("CacheVersion %d, pinned %d: write the new version beside the new hash", autoreconciler.CacheVersion, productAliasPin.CacheVersion)
+	}
 }

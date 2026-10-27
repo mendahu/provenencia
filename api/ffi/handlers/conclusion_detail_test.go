@@ -70,9 +70,9 @@ func TestGetConclusionDetail(t *testing.T) {
 				if d.Entity.GetRef() == "" || name == nil || d.GetMemberCount() != 1 {
 					t.Fatalf("%+v", &d)
 				}
-				// James Robins + Jim Robins: one name, from one Source, so single.
+				// James Robins + Kenneth Robins: one name, from one Source, so single.
 				if name.GetState() != "single" || len(name.Values) != 1 || name.Values[0].GetReason() != "kept" ||
-					name.Values[0].GetValue().GetName().GetForm() != "James Jim Robins" {
+					name.Values[0].GetValue().GetName().GetForm() != "James Kenneth Robins" {
 					t.Fatalf("name %+v", name)
 				}
 				if len(name.Outcomes) != 2 {
@@ -140,7 +140,7 @@ func TestConclusionValueProtoCoversEveryKind(t *testing.T) {
 		{"date", conclusiondetails.Value{Date: &datevalue.Value{Kind: "point", Calendar: "gregorian", StartYear: &year}}, func(v *engine.ConclusionValue) bool {
 			return v.GetDate().GetStartYear() == 1890
 		}},
-		{"name", conclusiondetails.Value{Name: namevaluetest.Western("Jim Robins")}, func(v *engine.ConclusionValue) bool {
+		{"name", conclusiondetails.Value{Name: namevaluetest.Western("Kenneth Robins")}, func(v *engine.ConclusionValue) bool {
 			n := v.GetName()
 			return len(n.GetParts()) == 2 && n.GetParts()[1].GetType() == namevalue.PartTypeSurname
 		}},
