@@ -14,7 +14,6 @@ import (
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
-	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/propertycompare/propertycomparetest"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -585,23 +584,12 @@ func propResult(t *testing.T, r subjectcompare.Result, key vocabkey.PropertyKey)
 }
 
 func nameVals(given, surname string) subjectcompare.Values {
-	p := vocabkey.PropertyKey(vocabkey.PropertyName)
-	return subjectcompare.Values{p: {nameOf(&namevalue.Value{
-		Form: given + " " + surname,
-		Parts: []namevalue.Part{
-			{Idx: 0, Type: namevalue.PartTypeGiven, Value: given},
-			{Idx: 1, Type: namevalue.PartTypeSurname, Value: surname},
-		},
-	})}}
+	return vals(nameProp(given + " " + surname))
 }
 
 // surnameVals is a name with a surname part and nothing else.
 func surnameVals(surname string) subjectcompare.Values {
-	p := vocabkey.PropertyKey(vocabkey.PropertyName)
-	return subjectcompare.Values{p: {nameOf(&namevalue.Value{
-		Form:  surname,
-		Parts: []namevalue.Part{{Idx: 0, Type: namevalue.PartTypeSurname, Value: surname}},
-	})}}
+	return vals(nameProp(surname))
 }
 
 func nameMetas() subjectcompare.Metas {
@@ -612,7 +600,7 @@ func nameMetas() subjectcompare.Metas {
 // names, unplaced and with no band (S11-43).
 func TestOneGivenNameIsOfferedAFullerRecord(t *testing.T) {
 	layer := graphalign.Layer{
-		Subjects: []graphalign.Subject{{ID: id("s-amy"), Ref: "PER-S", Kind: "person", Values: vals(vocabkey.PropertyKey(vocabkey.PropertyName), nameOf(namevaluetest.Given("Amy")))}},
+		Subjects: []graphalign.Subject{{ID: id("s-amy"), Ref: "PER-S", Kind: "person", Values: vals(givenProp("Amy"))}},
 		Metas:    subjectcomparetest.Metas(),
 	}
 	canon := graphalign.Canon{Handles: []graphalign.Handle{
@@ -1870,6 +1858,11 @@ func TestBirthIsNeverProposedOnADeath(t *testing.T) {
 // nameProp is a Western name property pair for a form.
 func nameProp(form string) (vocabkey.PropertyKey, propertycompare.Value) {
 	return vocabkey.PropertyName, propertycomparetest.Name(form)
+}
+
+// givenProp is a name property pair whose every word is a given part.
+func givenProp(form string) (vocabkey.PropertyKey, propertycompare.Value) {
+	return vocabkey.PropertyName, propertycomparetest.Given(form)
 }
 
 func TestLifespanRulesOutAPerson(t *testing.T) {

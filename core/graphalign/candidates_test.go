@@ -8,7 +8,6 @@ import (
 
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/matchregistry"
-	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/subjectcompare/subjectcomparetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -103,7 +102,7 @@ func TestCandidates(t *testing.T) {
 		}
 	})
 	t.Run("AC-1.1 one given name reaches a record with three more names", func(t *testing.T) {
-		amy := vals(vocabkey.PropertyKey(vocabkey.PropertyName), nameOf(namevaluetest.Given("Amy")))
+		amy := vals(givenProp("Amy"))
 		handles := []graphalign.Handle{
 			person("PER-1", "Amy Lee Anne Long"),
 			person("PER-2", "Beth Amy Long"),
