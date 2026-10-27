@@ -1,7 +1,7 @@
 # Review — S12-15 Graphs in the omnibar
 
-**Verdict:** pending round 2 — round 1: Fits with changes — Ready with changes
-**Rounds:** 1 (round 2 running). **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 
@@ -77,3 +77,19 @@ Round-1 answers M-1 to M-7 accepted.
 **Plan:** STEP-1 edits "the three `SELECT`s"; `lookUpRefDocs` has two (exact and `LIKE`), so four lists and three scans.
 **Better shape:** one `docColumns` list and one `scanDoc(rows, d, extra...)` in `core/search`, moved onto first, then the columns added once.
 **Answer:** Fixed — D-13 and STEP-1 add `docColumns` / `scanDoc` *(new)* before the columns, in their own commit; §4 "Doc rows" says four `SELECT` texts; Codebase fit and Deletes list them; T-1's prefix-ref case now checks `Location.SourceID` through the `LIKE` branch.
+
+## Round 2 — executability
+
+Round-1 answers X-1 to X-8 and the M-4 reshape checked against the code; no false Current state row.
+
+### X-9 · major · STEP-7 priority-line edit says "end" but neither line ends that way
+**Answer:** Fixed — STEP-7 gives the exact new text for the Checklist line and the §1 `Priority` cell.
+
+### X-10 · minor · T-2 does not name the Update inputs for the rename cases
+**Answer:** Fixed — §8 fixture paragraph: `evidencegraphs.UpdateInput` with both fields and nil `ArtifactIDs`; `sources.Get` then `sources.Update` with only `Title` changed.
+
+### X-11 · minor · Plan header contradicts the review log
+**Answer:** Fixed — the **Review:** line links this log.
+
+### X-12 · nit · Where D-6 puts `SurfaceGraph`
+**Answer:** Fixed — D-6: its own const block after the `Section*` block, with its comment.

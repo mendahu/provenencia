@@ -95,7 +95,7 @@ These are the calls for this spike. PR plans treat them as binding.
 
 ### Client
 
-- **One graph list.** S12-04's `evidencegraphs.List` (one read: full rows with linked Artifact ids, sorted by name, optional Source filter) is the only graph read; S12-05 wraps it in one project-wide RPC with its own `CatalogQueryKey`. The Source page, Sources list rows, the composer filter, breadcrumbs and the omnibar location all read it. `GetSourceWorkspace` does not gain graphs ([`add-workspace-place`](../../../.agents/skills/add-workspace-place/SKILL.md): do not fold a shared list into a page payload). Per-graph progress is its own key, keyed by graph id. Binds S12-05, S12-07, S12-08, S12-10, S12-11, S12-14.
+- **One graph list.** S12-04's `evidencegraphs.List` (one read: full rows with linked Artifact ids, sorted by name, optional Source filter) is the only graph read; S12-05 wraps it in one project-wide RPC with its own `CatalogQueryKey`. The Source page, Sources list rows, the composer filter, and breadcrumbs all read it; an omnibar graph hit carries its Source on its search document (S12-15, user 2026-10-27). `GetSourceWorkspace` does not gain graphs ([`add-workspace-place`](../../../.agents/skills/add-workspace-place/SKILL.md): do not fold a shared list into a page payload). Per-graph progress is its own key, keyed by graph id. Binds S12-05, S12-07, S12-08, S12-10, S12-11, S12-14.
 - **A graph is a place.** `WorkspaceLocation` carries the graph id for the graph, composer and Promote surfaces (S12-08; Promote moved from S12-09 because its rows read the canvas's key, user 2026-10-22), so history and restore land on that graph. Breadcrumbs read Source › graph name. Through [`add-workspace-location`](../../../.agents/skills/add-workspace-location/SKILL.md).
 - **Effects are graph-keyed, in one step.** S12-07 keeps `effects.Set.Sources` keyed by Source; `graphcache` drops every graph of a changed Source. S12-08 re-keys `Set` / `Effect`, `WriteEffects.sources` and the Swift mutations (`.mutatedSourceGraph`, `.deletedSubject`, `.promotedSubject`) to graph ids together, so the wire never carries graph ids that Swift reads as Source ids. `.promotedSubject` moves in S12-08 too, because Promote reads the canvas's key (user, 2026-10-22). Binds S12-07, S12-08, S12-09.
 - **The graph list has its own effect.** S12-03 gives `evidence_graphs` and `evidence_graph_artifacts` an `Effect` that sets the catalog-wide list key `evidence_graphs` (`effects.ListEvidenceGraphs` in `Set.Lists`, beside `vocabulary` and `property_usage`); the wire (`WriteEffects.lists`) and Swift (`CatalogList`) already carry every list key, so S12-05 adds one `CatalogQueryRegistry.invalidations(for: CatalogList)` line for the graph list. Every write that creates, edits, links or deletes a graph (Copy Source, Add Artifact, Source delete included) refreshes the list with no per-feature code. Binds S12-03, S12-05.
@@ -126,7 +126,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S12-12 | Graph form | 4 | Create and edit a graph: name, description, the shared Artifact checklist | S12-D3 | S12-02, S12-11, S12-D3 | [Plan](prs/S12-12-graph-form.md) | Landed #557 |
 | S12-13 | Artifact graph checkboxes | 4 | Graph checkboxes in the Add Artifact dialog and Artifact card edit, shown with two or more graphs; Swift only | S12-D4 | S12-12, S12-D4 | [Plan](prs/S12-13-artifact-graph-checkboxes.md) | Landed #562 |
 | S12-14 | Graph counts in the Sources list and on the Source page | 4 | Each Sources list row shows a status badge and a button per graph with its progress, the button opening it; the Source page's graph cards show the count line; the Status filter reads each graph, with In progress redefined; `primary_count` removed | S12-D5 | S12-08, S12-D5 | [Plan](prs/S12-14-sources-list-graph-tokens.md) | In review #576  |
-| S12-15 | Graphs in the omnibar | 4 | Graphs as a searchable kind; a hit opens the graph | — | S12-08 | [Plan](prs/S12-15-graph-search.md) | Scoped |
+| S12-15 | Graphs in the omnibar | 4 | Graphs as a searchable kind; a hit opens the graph; the hit's Source projected on two new search-index display columns (migration) | — | S12-08 | [Plan](prs/S12-15-graph-search.md) | Planned |
 | S12-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -343,6 +343,6 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-15 — Graphs in the omnibar
 
-**Ships.** Graphs are a searchable kind (name, description, `GPH-` ref); a hit opens the graph.
+**Ships.** Graphs are a searchable kind (name, description, `GPH-` ref); a hit opens the graph. Each graph's search document carries its Source's id and ref in two new display columns (migration `000056`), and a Source rename reprojects its graphs (planning, user 2026-10-27).
 **Check.** Searching a graph's ref or a word in its description finds it and opens it.
 **Context.** Working rule "Omnibar"; `add-searchable-kind`.
