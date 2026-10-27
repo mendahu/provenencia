@@ -93,3 +93,15 @@ Round-1 answers X-1 to X-8 and the M-4 reshape checked against the code; no fals
 
 ### X-12 · nit · Where D-6 puts `SurfaceGraph`
 **Answer:** Fixed — D-6: its own const block after the `Section*` block, with its comment.
+
+## Refresh — main @ c545a482
+
+Main landed S12-19 (#582, `CatalogSearchKind`), the `deleteimpact` graph-location fix (#581, the round-1 M-1 follow-up) and S11-40 (#579). The plan was refreshed (`plan-pr` "Refresh an existing plan"):
+
+- **Depends on** adds S12-19; the planning base is `c545a482`.
+- D-1, D-9, D-11, STEP-5, T-6: the new kind is `CatalogSearchKind.evidenceGraph`, and the three exhaustive switches (`kindLabel`, `leadThumbnail`, FakeStore `searchPriority`) take its case. STEP-3's check notes that the S12-19 pin fails until STEP-5.
+- D-6, T-1: the graph location follows `deleteimpact.graphLocation` (#581): Source ref, Source title, and `SourceTitle` too.
+- The two Out rows for M-1 and M-6 are gone: both follow-ups landed.
+- §4 gains rows for `CatalogSearchKind` and `deleteimpact.graphLocation`; the presentation, row and FakeStore rows match the S12-19 code.
+
+Fresh reviewers re-ran both lenses on the refreshed plan (below).
