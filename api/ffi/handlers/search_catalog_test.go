@@ -66,6 +66,39 @@ func TestSearchCatalog(t *testing.T) {
 				}
 			},
 		},
+		func() rpcTest {
+			var f graphFixture
+			var graphID, graphRef string
+			return rpcTest{
+				name: "finds an evidence graph by ref",
+				reqFn: func(t *testing.T) proto.Message {
+					f = newGraphFixture(t)
+					g := f.createGraph(t, "Jones household", f.page2).GetGraph()
+					graphID, graphRef = g.GetId(), g.GetRef()
+					return &engine.SearchCatalogRequest{
+						ProjectDir: f.dir,
+						Query:      graphRef,
+						Location:   &engine.WorkspaceLocation{Section: search.SectionSources},
+					}
+				},
+				after: func(t *testing.T, out []byte, _ proto.Message) {
+					t.Helper()
+					var resp engine.SearchCatalogResponse
+					if err := proto.Unmarshal(out, &resp); err != nil {
+						t.Fatal(err)
+					}
+					if len(resp.Hits) == 0 {
+						t.Fatal("expected hits")
+					}
+					top := resp.Hits[0]
+					loc := top.GetLocation()
+					if top.GetKind() != search.KindEvidenceGraph || top.GetRef() != graphRef ||
+						loc.GetGraphId() != graphID || loc.GetSourceId() != f.sourceID || loc.GetSourceSurface() != search.SurfaceGraph {
+						t.Fatalf("hit %+v", top)
+					}
+				},
+			}
+		}(),
 		{
 			name: "finds seeded type by label",
 			reqFn: func(t *testing.T) proto.Message {

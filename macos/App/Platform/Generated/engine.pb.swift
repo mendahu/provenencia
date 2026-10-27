@@ -3413,7 +3413,7 @@ public nonisolated struct Provenencia_Engine_V1_SearchCatalogRequest: Sendable {
   public mutating func clearLocation() {self._location = nil}
 
   /// Restrict hits to these kinds. Empty = the omnibar's default set
-  /// (sources, types, metadata fields, persons, events, and places).
+  /// (sources, types, metadata fields, persons, events, places, and Evidence graphs).
   public var kinds: [String] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -3428,7 +3428,7 @@ public nonisolated struct Provenencia_Engine_V1_SearchHit: @unchecked Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// source | source_type | metadata_field | person | event | place
+  /// source | source_type | metadata_field | person | event | place | evidence_graph
   public var kind: String {
     get {_storage._kind}
     set {_uniqueStorage()._kind = newValue}

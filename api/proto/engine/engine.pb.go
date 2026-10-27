@@ -8269,7 +8269,7 @@ type SearchCatalogRequest struct {
 	Query      string                 `protobuf:"bytes,2,opt,name=query,proto3" json:"query,omitempty"`
 	Location   *WorkspaceLocation     `protobuf:"bytes,3,opt,name=location,proto3" json:"location,omitempty"` // current place; at least section for context boosts
 	// Restrict hits to these kinds. Empty = the omnibar's default set
-	// (sources, types, metadata fields, persons, events, and places).
+	// (sources, types, metadata fields, persons, events, places, and Evidence graphs).
 	Kinds         []string `protobuf:"bytes,4,rep,name=kinds,proto3" json:"kinds,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -8335,7 +8335,7 @@ func (x *SearchCatalogRequest) GetKinds() []string {
 
 type SearchHit struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
-	Kind     string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"` // source | source_type | metadata_field | person | event | place
+	Kind     string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"` // source | source_type | metadata_field | person | event | place | evidence_graph
 	Id       string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
 	Ref      string                 `protobuf:"bytes,3,opt,name=ref,proto3" json:"ref,omitempty"`
 	Title    string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
