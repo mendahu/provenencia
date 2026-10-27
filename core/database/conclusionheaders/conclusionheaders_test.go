@@ -914,3 +914,26 @@ func TestListHeadersCarryUpdated(t *testing.T) {
 		t.Fatalf("PersonsByIDs %+v", byIDs)
 	}
 }
+
+func TestByIDs(t *testing.T) {
+	f := newFixture(t)
+	_, _, person := f.person("Ada Lovelace")
+	event := f.event()
+	h, err := conclusionheaders.ByIDs(f.c, [][]byte{person, event}, [][]byte{event, person}, nil)
+	must(t, err)
+	if p, ok := h.Person(person); !ok || p.Name.Form != "Ada Lovelace" {
+		t.Errorf("Person(person) = %+v, %v", p, ok)
+	}
+	if e, ok := h.Event(event); !ok || !bytes.Equal(e.Entity.ID, event) {
+		t.Errorf("Event(event) = %+v, %v", e, ok)
+	}
+	if _, ok := h.Person(event); ok {
+		t.Error("Person(event) found")
+	}
+	if _, ok := h.Place(person); ok {
+		t.Error("Place(person) found")
+	}
+	if _, ok := h.Person(make([]byte, 16)); ok {
+		t.Error("an id of no entity was found")
+	}
+}

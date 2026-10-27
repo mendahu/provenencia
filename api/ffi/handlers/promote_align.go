@@ -87,29 +87,9 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 			addHeaderID(r.Kind, a.HandleID)
 		}
 	}
-	persons, err := conclusionheaders.PersonsByIDs(c, personIDs)
+	headers, err := conclusionheaders.ByIDs(c, personIDs, eventIDs, placeIDs)
 	if err != nil {
 		return nil, err
-	}
-	events, err := conclusionheaders.EventsByIDs(c, eventIDs)
-	if err != nil {
-		return nil, err
-	}
-	places, err := conclusionheaders.PlacesByIDs(c, placeIDs)
-	if err != nil {
-		return nil, err
-	}
-	personByID := map[string]conclusionheaders.PersonHeader{}
-	for _, h := range persons {
-		personByID[string(h.Entity.ID)] = h
-	}
-	eventByID := map[string]conclusionheaders.EventHeader{}
-	for _, h := range events {
-		eventByID[string(h.Entity.ID)] = h
-	}
-	placeByID := map[string]conclusionheaders.PlaceHeader{}
-	for _, h := range places {
-		placeByID[string(h.Entity.ID)] = h
 	}
 
 	for _, r := range prop.Rows {
@@ -151,15 +131,15 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 			}
 			switch r.Kind {
 			case vocabkey.Person:
-				if h, ok := personByID[string(a.HandleID)]; ok {
+				if h, ok := headers.Person(a.HandleID); ok {
 					alt.Header = &engine.PromoteGraphAlignmentAlternative_Person{Person: personHeaderProto(h)}
 				}
 			case vocabkey.Event:
-				if h, ok := eventByID[string(a.HandleID)]; ok {
+				if h, ok := headers.Event(a.HandleID); ok {
 					alt.Header = &engine.PromoteGraphAlignmentAlternative_Event{Event: eventHeaderProto(h)}
 				}
 			case vocabkey.Place:
-				if h, ok := placeByID[string(a.HandleID)]; ok {
+				if h, ok := headers.Place(a.HandleID); ok {
 					alt.Header = &engine.PromoteGraphAlignmentAlternative_Place{Place: placeHeaderProto(h)}
 				}
 			}
@@ -168,15 +148,15 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 		if r.Target == graphalign.TargetHandle && len(r.HandleID) == 16 {
 			switch r.Kind {
 			case vocabkey.Person:
-				if h, ok := personByID[string(r.HandleID)]; ok {
+				if h, ok := headers.Person(r.HandleID); ok {
 					row.Header = &engine.PromoteGraphAlignmentRow_Person{Person: personHeaderProto(h)}
 				}
 			case vocabkey.Event:
-				if h, ok := eventByID[string(r.HandleID)]; ok {
+				if h, ok := headers.Event(r.HandleID); ok {
 					row.Header = &engine.PromoteGraphAlignmentRow_Event{Event: eventHeaderProto(h)}
 				}
 			case vocabkey.Place:
-				if h, ok := placeByID[string(r.HandleID)]; ok {
+				if h, ok := headers.Place(r.HandleID); ok {
 					row.Header = &engine.PromoteGraphAlignmentRow_Place{Place: placeHeaderProto(h)}
 				}
 			}
