@@ -405,13 +405,12 @@ struct CatalogEvidenceTerm: Sendable, Equatable {
 }
 
 /// How one side records a relationship's fact (`claimevidence.Relationship.Layer` / `.Canon`):
-/// the kinship pattern, and the event or parent between it passes through. A layer pivot is a
+/// the kinship pattern, and the event or the parent in between. A layer pivot is a
 /// Subject on the page; only the entity's pivot carries a header.
 struct CatalogClaimEvidenceShape: Sendable, Equatable {
     var pattern: KinshipPattern = .direct
     var pivotID: String = ""
-    var pivotPerson: CatalogPersonHeader?
-    var pivotEvent: CatalogEventHeader?
+    var pivot: CatalogConclusionHeader?
 }
 
 /// One link of the row's Subject that corresponds to a link between the

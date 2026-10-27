@@ -1086,8 +1086,8 @@ struct GoStore: GenealogyStore {
     private static func mapEvidenceShape(_ s: Provenencia_Engine_V1_PromoteClaimEvidenceShape) -> CatalogClaimEvidenceShape {
         var shape = CatalogClaimEvidenceShape(pattern: KinshipPattern(wire: s.pattern), pivotID: s.pivotID)
         switch s.pivotHeader {
-        case .person(let h)?: shape.pivotPerson = mapPersonHeader(h)
-        case .event(let h)?: shape.pivotEvent = mapEventHeader(h)
+        case .person(let h)?: shape.pivot = .person(mapPersonHeader(h))
+        case .event(let h)?: shape.pivot = .event(mapEventHeader(h))
         case nil: break
         }
         return shape
