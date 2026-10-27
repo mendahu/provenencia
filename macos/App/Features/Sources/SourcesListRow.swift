@@ -87,6 +87,19 @@ struct SourcesListRow: View {
         let kind: SourcesGraphToken.Kind
     }
 
+    /// What a graph token does. `graphLocation` is nil only when
+    /// `graphBlockedReason` is non-nil (both read `graph.hasArtifact`), so the
+    /// last case cannot happen today; it keeps the token inert if they diverge.
+    private func open(_ graph: CatalogEvidenceGraph) -> SourcesGraphToken.Open {
+        if let reason = SourcesListNavigation.graphBlockedReason(for: graph) {
+            return .blocked(reason: reason)
+        }
+        if let location = SourcesListNavigation.graphLocation(for: source, graph: graph) {
+            return .opens { navigation.go(to: location) }
+        }
+        return .blocked(reason: L10n.string(L10n.Sources.graphNeedsArtifactTooltip))
+    }
+
     /// The row's tokens: one per graph, or the one state that stands for them.
     private var tokens: [TokenEntry] {
         guard source.hasArtifact else {
@@ -106,12 +119,10 @@ struct SourcesListRow: View {
                         graph,
                         counts: SourcesGraphCounts(
                             progress: session.evidenceGraphProgress(graphID: graph.id),
-                            countsLoading: countsLoading
+                            countsLoading: countsLoading,
+                            countsError: session.evidenceGraphCountsError
                         ),
-                        onOpen: SourcesListNavigation.graphLocation(for: source, graph: graph).map { location in
-                            { navigation.go(to: location) }
-                        },
-                        blockedReason: SourcesListNavigation.graphBlockedReason(for: graph)
+                        open: open(graph)
                     )
                 )
             }

@@ -43,6 +43,12 @@ extension WorkspaceSession {
         return progress.read.isLoading || graphs.read.isLoading
     }
 
+    /// The progress map's failure while it has no value to show; `nil` otherwise.
+    var evidenceGraphCountsError: Error? {
+        if case .failed(let error) = evidenceGraphProgressHandle?.read { return error }
+        return nil
+    }
+
     /// The Artifacts of `artifacts` that the graph links, in `artifacts` order.
     /// `nil` while the graph list has no value; empty when the list has no graph
     /// with that id.

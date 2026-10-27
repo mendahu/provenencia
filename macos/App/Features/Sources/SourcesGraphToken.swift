@@ -5,15 +5,20 @@ import SwiftUI
 /// view owns every token state; the states are `Kind`.
 struct SourcesGraphToken: View {
     enum Kind {
-        /// A graph of the Source. Blocked (dashed, inert, "needs an artifact")
-        /// when `blockedReason` is non-nil, which is also its help and hint.
-        case graph(CatalogEvidenceGraph, counts: SourcesGraphCounts, onOpen: (() -> Void)?, blockedReason: String?)
+        /// A graph of the Source: opens its canvas, or is blocked (dashed, inert,
+        /// "needs an artifact") with the reason as its help and hint.
+        case graph(CatalogEvidenceGraph, counts: SourcesGraphCounts, open: Open)
         /// The Source has no Artifact, so it has nothing to build a graph from.
         case needsArtifact
         /// The graph list has not loaded.
         case listLoading
         /// The graph list failed to load.
         case listFailed(Error)
+    }
+
+    enum Open {
+        case opens(() -> Void)
+        case blocked(reason: String)
     }
 
     let sourceID: String
@@ -23,12 +28,12 @@ struct SourcesGraphToken: View {
 
     var body: some View {
         switch kind {
-        case .graph(let graph, let counts, let onOpen, let blockedReason):
-            graphToken(graph, counts: counts, onOpen: onOpen, blockedReason: blockedReason)
+        case .graph(let graph, let counts, let open):
+            graphToken(graph, counts: counts, open: open)
         case .needsArtifact:
             needsArtifactToken
         case .listLoading:
-            SourcesGraphTokenFrame(blocked: false) {
+            SourcesGraphTokenFrame(look: .live) {
                 PVSkeletonBar(width: 96, height: 6)
             }
             .accessibilityElement(children: .ignore)
@@ -43,10 +48,10 @@ struct SourcesGraphToken: View {
     private func graphToken(
         _ graph: CatalogEvidenceGraph,
         counts: SourcesGraphCounts,
-        onOpen: (() -> Void)?,
-        blockedReason: String?
+        open: Open
     ) -> some View {
-        if let blockedReason {
+        switch open {
+        case .blocked(let blockedReason):
             let label = L10n.Sources.graphNeedsArtifact(graph.name)
             Button {} label: {
                 HStack(spacing: PVSpacing.space3) {
@@ -58,14 +63,14 @@ struct SourcesGraphToken: View {
                 }
                 .foregroundStyle(PVColor.textFaint)
             }
-            .buttonStyle(SourcesGraphTokenButtonStyle(blocked: true))
-            .help(blockedReason)
+            .buttonStyle(SourcesGraphTokenButtonStyle(look: .blocked))
+            .help(L10n.Sources.graphTokenHelp(name: graph.name, detail: blockedReason))
             .accessibilityLabel(Text(verbatim: label))
             .accessibilityHint(Text(verbatim: blockedReason))
             .accessibilityIdentifier("sources.row.\(sourceID).graph.\(graph.ref)")
-        } else {
+        case .opens(let onOpen):
             Button {
-                onOpen?()
+                onOpen()
             } label: {
                 HStack(spacing: PVSpacing.space3) {
                     PVIcon(.network, size: 13)
@@ -79,8 +84,8 @@ struct SourcesGraphToken: View {
                     countView(counts)
                 }
             }
-            .buttonStyle(SourcesGraphTokenButtonStyle(blocked: false))
-            .help(L10n.Sources.graphCounts(counts, style: .full))
+            .buttonStyle(SourcesGraphTokenButtonStyle(look: .live))
+            .help(L10n.Sources.graphTokenHelp(name: graph.name, detail: L10n.Sources.graphCounts(counts, style: .full)))
             .accessibilityLabel(Text(verbatim:
                 "\(L10n.Sources.openEvidenceGraphLabel(name: graph.name)), \(L10n.Sources.graphCounts(counts, style: .spoken))"
             ))
@@ -104,6 +109,9 @@ struct SourcesGraphToken: View {
                 .lineLimit(1)
         case .loading:
             PVSkeletonBar(width: 32, height: 6)
+        case .unavailable:
+            PVIcon(.danger, size: 11)
+                .foregroundStyle(PVColor.danger)
         }
     }
 
@@ -118,7 +126,7 @@ struct SourcesGraphToken: View {
             }
             .foregroundStyle(PVColor.textFaint)
         }
-        .buttonStyle(SourcesGraphTokenButtonStyle(blocked: true))
+        .buttonStyle(SourcesGraphTokenButtonStyle(look: .blocked))
         .help(L10n.string(L10n.Sources.needsArtifactTooltip))
         .accessibilityLabel(Text(L10n.Sources.needsArtifact))
         .accessibilityHint(Text(L10n.Sources.needsArtifactTooltip))
@@ -131,17 +139,25 @@ struct SourcesGraphToken: View {
             PVIcon(.danger, size: 13)
                 .foregroundStyle(PVColor.danger)
         }
-        .buttonStyle(SourcesGraphTokenButtonStyle(blocked: false, inert: true))
-        .help(message)
-        .accessibilityLabel(Text(verbatim: message))
+        .buttonStyle(SourcesGraphTokenButtonStyle(look: .inert))
+        .help(L10n.Sources.graphTokenHelp(name: L10n.string(L10n.Sources.graphsUnavailable), detail: message))
+        .accessibilityLabel(Text(L10n.Sources.graphsUnavailable))
+        .accessibilityHint(Text(verbatim: message))
         .accessibilityIdentifier("sources.row.\(sourceID).graphsError")
     }
+}
+
+/// How a token looks: `live` opens a graph (or is a placeholder), `blocked` is
+/// dashed and takes focus but no hover fill, `inert` (the list failed) fills
+/// nothing at all.
+private enum SourcesGraphTokenLook {
+    case live, blocked, inert
 }
 
 /// The token's frame: height 26, 1 pt border, `PVRadius.sm`. A blocked token's
 /// border is dashed.
 private struct SourcesGraphTokenFrame<Content: View>: View {
-    var blocked: Bool
+    var look: SourcesGraphTokenLook
     var hovered = false
     @ViewBuilder var content: Content
 
@@ -152,7 +168,7 @@ private struct SourcesGraphTokenFrame<Content: View>: View {
             .frame(height: 26)
             .background(shape.fill(hovered ? PVColor.surfaceHover : PVColor.surfaceCard))
             .overlay {
-                if blocked {
+                if look == .blocked {
                     shape.strokeBorder(PVColor.borderDefault, style: PVStroke.dashed)
                 } else {
                     shape.strokeBorder(hovered ? PVColor.borderStrong : PVColor.borderDefault, lineWidth: 1)
@@ -161,30 +177,27 @@ private struct SourcesGraphTokenFrame<Content: View>: View {
     }
 }
 
-/// Kit hover and press on the token frame, with the kit focus ring. A blocked
-/// token keeps its focus stop but takes no hover fill; an inert one (the list
-/// failed) fills nothing at all.
+/// Kit hover and press on the token frame, with the kit focus ring. Only a
+/// `live` token takes the hover fill.
 private struct SourcesGraphTokenButtonStyle: ButtonStyle {
-    var blocked: Bool
-    var inert = false
+    let look: SourcesGraphTokenLook
 
     func makeBody(configuration: Configuration) -> some View {
-        SourcesGraphTokenButtonBody(configuration: configuration, blocked: blocked, inert: inert)
+        SourcesGraphTokenButtonBody(configuration: configuration, look: look)
     }
 }
 
 private struct SourcesGraphTokenButtonBody: View {
     let configuration: ButtonStyleConfiguration
-    let blocked: Bool
-    let inert: Bool
+    let look: SourcesGraphTokenLook
 
     /// Read here, in the button's focus scope (see `PVButtonBody`).
     @Environment(\.isFocused) private var isFocused
 
     var body: some View {
-        let live = !blocked && !inert
+        let live = look == .live
         PVHoverEffect(isPressed: live && configuration.isPressed, hoverAnimation: PVMotion.fastStandard) { showHover in
-            SourcesGraphTokenFrame(blocked: blocked, hovered: live && (showHover || configuration.isPressed)) {
+            SourcesGraphTokenFrame(look: look, hovered: live && (showHover || configuration.isPressed)) {
                 configuration.label
             }
             .pvFocusRing(isFocused, cornerRadius: PVRadius.sm)

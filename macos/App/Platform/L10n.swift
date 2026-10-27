@@ -5820,7 +5820,7 @@ enum L10n {
         static let graphNotStarted = LocalizedStringResource(
             "sources.list.graphNotStarted",
             defaultValue: "not started",
-            comment: "Italic graph-zone state when a Source has zero canvas subjects"
+            comment: "Italic graph token state when a Source has zero canvas subjects"
         )
 
         static let graphCountsLoading = LocalizedStringResource(
@@ -5829,11 +5829,17 @@ enum L10n {
             comment: "VoiceOver while Sources list graph-progress counts have not arrived"
         )
 
+        static let graphCountsUnavailable = LocalizedStringResource(
+            "sources.graph.countsUnavailable",
+            defaultValue: "Counts could not load",
+            comment: "Evidence graph token help and Source page count line when graph counts failed to load"
+        )
+
         static func graphSubjectCount(_ count: Int) -> String {
             L10n.format(LocalizedStringResource(
                 "sources.list.subjectCount",
                 defaultValue: "%lld subjects",
-                comment: "Sources list graph-zone subject count; argument is canvas subject count"
+                comment: "Sources list graph token subject count; argument is canvas subject count"
             ), count)
         }
 
@@ -5841,7 +5847,7 @@ enum L10n {
             L10n.format(LocalizedStringResource(
                 "sources.list.observationCount",
                 defaultValue: "%lld observations",
-                comment: "Sources list graph-zone observation count; argument is Observation count"
+                comment: "Sources list graph token observation count; argument is Observation count"
             ), count)
         }
 
@@ -5863,6 +5869,9 @@ enum L10n {
             switch counts {
             case .loading:
                 return L10n.string(graphCountsLoading)
+            case .unavailable(let message):
+                let lead = L10n.string(graphCountsUnavailable)
+                return style == .spoken ? "\(lead). \(message)" : lead
             case .notStarted:
                 switch style {
                 case .compact: return L10n.string(graphNotStarted)
@@ -5881,13 +5890,13 @@ enum L10n {
         static let needsArtifact = LocalizedStringResource(
             "sources.list.needsArtifact",
             defaultValue: "Needs an artifact",
-            comment: "Blocked graph zone label when the Source has no Artifact"
+            comment: "Blocked graph token label when the Source has no Artifact"
         )
 
         static let needsArtifactTooltip = LocalizedStringResource(
             "sources.list.needsArtifactTooltip",
             defaultValue: "Add an artifact on the source page to build its evidence graph",
-            comment: "Tooltip on the blocked Sources list graph zone"
+            comment: "Tooltip on the blocked Sources list graph token"
         )
 
         static func graphNeedsArtifact(_ name: String) -> String {
@@ -5904,10 +5913,24 @@ enum L10n {
             comment: "Tooltip and VoiceOver hint on a disabled Open for an Evidence graph that links no Artifact"
         )
 
+        static let graphsUnavailable = LocalizedStringResource(
+            "sources.list.graphsUnavailable",
+            defaultValue: "Evidence graphs could not load",
+            comment: "Sources list token VoiceOver label and tooltip lead when the Source's Evidence graph list failed to load"
+        )
+
+        static func graphTokenHelp(name: String, detail: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.list.graphTokenHelp",
+                defaultValue: "%1$@ — %2$@",
+                comment: "Evidence graph token tooltip; 1 is the graph name, 2 its counts or why it cannot open"
+            ), name, detail)
+        }
+
         static let openSourcePage = LocalizedStringResource(
             "sources.list.openSourcePage",
             defaultValue: "Open source",
-            comment: "Accessibility label for the Sources list left (filing) zone"
+            comment: "Accessibility label for the Source link in a Sources list row (cover, title and type)"
         )
 
         static let addDialogTitle = LocalizedStringResource(

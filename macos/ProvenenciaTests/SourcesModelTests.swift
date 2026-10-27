@@ -459,11 +459,14 @@ struct SourcesModelTests {
         #expect(L10n.Sources.graphSubjectCount(0) == "0 subjects")
 
         let jones = EvidenceGraphProgress(graphId: "g1", sourceId: "s1", subjectCount: 12, observationCount: 40)
-        #expect(SourcesGraphCounts(progress: nil, countsLoading: true) == .loading)
-        #expect(SourcesGraphCounts(progress: nil, countsLoading: false) == .notStarted)
-        #expect(SourcesGraphCounts(progress: .zeros(graphId: "g1"), countsLoading: false) == .notStarted)
-        #expect(SourcesGraphCounts(progress: jones, countsLoading: true) == .counts(subjects: 12, observations: 40))
-        let counts = SourcesGraphCounts(progress: jones, countsLoading: false)
+        #expect(SourcesGraphCounts(progress: nil, countsLoading: true, countsError: nil) == .loading)
+        #expect(SourcesGraphCounts(progress: nil, countsLoading: false, countsError: nil) == .notStarted)
+        #expect(SourcesGraphCounts(progress: .zeros(graphId: "g1"), countsLoading: false, countsError: nil) == .notStarted)
+        #expect(
+            SourcesGraphCounts(progress: jones, countsLoading: true, countsError: nil)
+                == .counts(subjects: 12, observations: 40)
+        )
+        let counts = SourcesGraphCounts(progress: jones, countsLoading: false, countsError: nil)
         #expect(counts == .counts(subjects: 12, observations: 40))
 
         #expect(L10n.Sources.graphCounts(counts, style: .compact) == "12 · 40")
@@ -473,6 +476,10 @@ struct SourcesModelTests {
         #expect(L10n.Sources.graphCounts(.notStarted, style: .full) == "0 subjects · not started")
         #expect(L10n.Sources.graphCounts(counts, style: .spoken) == "12 subjects, 40 observations")
         #expect(L10n.Sources.graphCounts(.notStarted, style: .spoken) == "0 subjects, not started")
+        let unavailable = SourcesGraphCounts.unavailable(message: "Disk is full")
+        #expect(L10n.Sources.graphCounts(unavailable, style: .compact) == "Counts could not load")
+        #expect(L10n.Sources.graphCounts(unavailable, style: .full) == "Counts could not load")
+        #expect(L10n.Sources.graphCounts(unavailable, style: .spoken) == "Counts could not load. Disk is full")
     }
 
     @Test func listCaptionMatchesBoard() {
@@ -522,6 +529,19 @@ struct SourcesModelTests {
     @Test func graphTokenCopyMatchesBoard() {
         #expect(L10n.Sources.openEvidenceGraphLabel(name: "Jones household") == "Open graph Jones household")
         #expect(L10n.Sources.graphNeedsArtifact("Unlinked") == "Unlinked needs an artifact")
+        #expect(
+            L10n.Sources.graphTokenHelp(
+                name: "Jones household",
+                detail: L10n.Sources.graphCounts(.counts(subjects: 12, observations: 40), style: .full)
+            ) == "Jones household — 12 subjects · 40 observations"
+        )
+        #expect(
+            L10n.Sources.graphTokenHelp(
+                name: "Unlinked",
+                detail: L10n.string(L10n.Sources.graphNeedsArtifactTooltip)
+            ) == "Unlinked — Add an artifact to open this evidence graph"
+        )
+        #expect(L10n.string(L10n.Sources.graphsUnavailable) == "Evidence graphs could not load")
     }
 
     @Test func statusMatchesAnyGraphOfTheSource() async {

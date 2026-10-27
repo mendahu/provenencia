@@ -38,6 +38,9 @@ final class SourceGraphsSection {
     /// True while the counts can still arrive.
     var countsLoading: Bool { context.session.evidenceGraphCountsLoading }
 
+    /// The progress map's failure while it has no value to show.
+    var countsError: Error? { context.session.evidenceGraphCountsError }
+
     /// Where Open goes: the graph's canvas while it links an Artifact.
     func location(for graph: CatalogEvidenceGraph) -> WorkspaceLocation? {
         guard let source = context.source else { return nil }

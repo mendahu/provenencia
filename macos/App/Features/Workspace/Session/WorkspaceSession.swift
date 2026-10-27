@@ -256,7 +256,7 @@ final class WorkspaceSession {
         return keys
     }
 
-    /// Surgical Get-one + map merge. Skips when the list never warmed the map.
+    /// Surgical Get-one + map merge. Skips when no place warmed the map.
     private func refreshEvidenceGraphProgress(graphId: String) {
         guard evidenceGraphProgressHandle != nil else { return }
         Task { await self.patchEvidenceGraphProgress(graphId: graphId) }
@@ -278,7 +278,7 @@ final class WorkspaceSession {
             }
             setQueryValue(key, value: map)
         } catch {
-            // Keep last counts; the next mutation or Sources place visit retries.
+            // Keep last counts; the next mutation or the next place visit that warms it retries.
         }
     }
 

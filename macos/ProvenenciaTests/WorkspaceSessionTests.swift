@@ -126,6 +126,30 @@ struct WorkspaceSessionTests {
         #expect(session.evidenceGraphProgress(graphID: "g-1")?.subjectCount == 3)
     }
 
+    @Test func progressFailureReadsUnavailable() {
+        struct TestFailure: Error {}
+        let session = makeSession()
+        let progress: QueryHandle<[String: EvidenceGraphProgress]> = session.query(session.evidenceGraphProgressKey)
+        progress.applyFailure(TestFailure(), clearValue: true)
+        let error = session.evidenceGraphCountsError
+        #expect(error is TestFailure)
+        #expect(
+            SourcesGraphCounts(progress: nil, countsLoading: false, countsError: error)
+                == .unavailable(message: L10n.Errors.message(for: TestFailure()))
+        )
+
+        let kept = EvidenceGraphProgress(graphId: "g-1", sourceId: "s1", subjectCount: 3, observationCount: 5)
+        progress.applySuccess(["g-1": kept])
+        progress.applyFailure(TestFailure(), clearValue: false)
+        #expect(
+            SourcesGraphCounts(
+                progress: session.evidenceGraphProgress(graphID: "g-1"),
+                countsLoading: false,
+                countsError: session.evidenceGraphCountsError
+            ) == .counts(subjects: 3, observations: 5)
+        )
+    }
+
     @Test func loadsAndCachesValue() async {
         let session = makeSession()
         let key = CatalogQueryKey.sourcesList(project: session.projectKey)

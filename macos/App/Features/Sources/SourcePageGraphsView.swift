@@ -83,7 +83,8 @@ private struct SourcePageGraphRow: View {
                         .foregroundStyle(PVColor.textMuted)
                     SourcesGraphCountLine(
                         progress: model.graphs.progress(for: graph),
-                        countsLoading: model.graphs.countsLoading
+                        countsLoading: model.graphs.countsLoading,
+                        countsError: model.graphs.countsError
                     )
                     if !description.isEmpty {
                         Text(verbatim: description)

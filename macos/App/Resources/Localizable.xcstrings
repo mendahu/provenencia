@@ -7110,8 +7110,20 @@
         }
       }
     },
+    "sources.graph.countsUnavailable": {
+      "comment": "Evidence graph token help and Source page count line when graph counts failed to load",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Counts could not load"
+          }
+        }
+      }
+    },
     "sources.list.graphNotStarted": {
-      "comment": "Italic graph-zone state when a Source has zero canvas subjects",
+      "comment": "Italic graph token state when a Source has zero canvas subjects",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -7122,8 +7134,32 @@
         }
       }
     },
+    "sources.list.graphsUnavailable": {
+      "comment": "Sources list token VoiceOver label and tooltip lead when the Source's Evidence graph list failed to load",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence graphs could not load"
+          }
+        }
+      }
+    },
+    "sources.list.graphTokenHelp": {
+      "comment": "Evidence graph token tooltip; 1 is the graph name, 2 its counts or why it cannot open",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ — %2$@"
+          }
+        }
+      }
+    },
     "sources.list.needsArtifact": {
-      "comment": "Blocked graph zone label when the Source has no Artifact",
+      "comment": "Blocked graph token label when the Source has no Artifact",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -7135,7 +7171,7 @@
       }
     },
     "sources.list.needsArtifactTooltip": {
-      "comment": "Tooltip on the blocked Sources list graph zone",
+      "comment": "Tooltip on the blocked Sources list graph token",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -7183,7 +7219,7 @@
       }
     },
     "sources.list.observationCount": {
-      "comment": "Sources list graph-zone observation count; argument is Observation count",
+      "comment": "Sources list graph token observation count; argument is Observation count",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -7207,7 +7243,7 @@
       }
     },
     "sources.list.openSourcePage": {
-      "comment": "Accessibility label for the Sources list left (filing) zone",
+      "comment": "Accessibility label for the Source link in a Sources list row (cover, title and type)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -7291,7 +7327,7 @@
       }
     },
     "sources.list.subjectCount": {
-      "comment": "Sources list graph-zone subject count; argument is canvas subject count",
+      "comment": "Sources list graph token subject count; argument is canvas subject count",
       "extractionState": "manual",
       "localizations": {
         "en": {

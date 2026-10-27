@@ -44,7 +44,7 @@ final class SourcesModel {
 
         /// A graph missing from the progress map has zero counts (Go omits it).
         init(_ progress: EvidenceGraphProgress?) {
-            if SourcesGraphCounts(progress: progress, countsLoading: false) == .notStarted {
+            if SourcesGraphCounts(progress: progress, countsLoading: false, countsError: nil) == .notStarted {
                 self = .empty
             } else if let progress, progress.filedCount > 0 {
                 self = .promoted
@@ -141,8 +141,7 @@ final class SourcesModel {
         session.evidenceGraphsHandle
     }
 
-    /// Counts and the entry graph both come from queries; true while either
-    /// has neither a value nor a failure.
+    /// True while the graph list or progress map can still arrive.
     var graphCountsLoading: Bool { session.evidenceGraphCountsLoading }
 
     private var typesHandle: QueryHandle<[CatalogSourceType]>? {
