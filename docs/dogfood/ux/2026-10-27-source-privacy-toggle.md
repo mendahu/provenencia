@@ -2,10 +2,19 @@
 
 - **Date:** 2026-10-27
 - **Type:** Feature request (foundation for sharing)
-- **Where:** Source detail page / Sources list / Source data model
+- **Where:** Source detail page / Source data model
 - **Annoyance (verbatim):** "We may already have this but just in case we don't, we need a privacy toggle at the source level to mark certain sources as not public (which we'll be able to use for different features later on down the line, such as sharing)."
 - **Consequence:** There is no way to mark a Source as private today. Any future share / export / sync feature would have nothing to filter on, so researchers could not keep sensitive sources (living-person records, private correspondence, restricted archive copies) out of a package without deleting them.
-- **Wanted:** A per-Source "not public" toggle (default public) stored in the catalog and surfaced on the Source page, intended as a foundation that later features — share packages, exports, sync, web access — can honor. No behaviour beyond storing and showing the flag is asked for now.
+- **Wanted:** A per-Source on/off "not public" switch (default public) persisted in the catalog and toggled on the Source page. It is a foundation for later features — share packages, exports, sync, web access — and does nothing else yet.
+
+## Decisions (Jake, 2026-10-27)
+
+Verbatim: "For now let's make it a simple on/off switch and it doesn't do anything yet. I just want the data to be in there and the ability to toggle it for now."
+
+- **Shape:** boolean on/off. Not tri-state.
+- **Behaviour:** none yet. Nothing is hidden, filtered, or warned about in-app; omnibar, Sources list, and composers are unchanged.
+- **Cascade:** none for now. The flag lives on the Source row only; Artifacts, Citations, and grounded entities are not touched. Whether a future share feature cascades is that feature's decision.
+- **Scope:** persist the field end to end, and a toggle on the Source page. Everything else below is marked out of scope.
 
 ## Does it already exist?
 
@@ -22,15 +31,27 @@
 
 The closest precedent is `cover_mode` / `primary_artifact_id` — a small per-Source attribute added by one migration and carried end to end — so each layer below names the file where that attribute lives.
 
-- **Schema.** New migration: `ALTER TABLE sources ADD COLUMN is_public INTEGER NOT NULL DEFAULT 1 CHECK (is_public IN (0, 1))` (or a `visibility TEXT` enum if more than two states are foreseen). Register in `core/database/catalogmodel`; follow `.agents/skills/add-catalog-migration/SKILL.md`. Existing rows default to public so nothing changes on upgrade.
-- **Go.** `core/database/sources/sources.go` — `Source` struct, `Create`, `Update`, list / get SQL. `core/database/sourcecopy` — decide whether Copy Source carries the flag (probably yes, with a checkbox like metadata / credibility). `core/database/effects/registry.go` already treats `sources` row changes as a Source-scoped effect, so audit / last-activity pick it up for free.
+### In scope
+
+- **Schema.** New migration: `ALTER TABLE sources ADD COLUMN is_public INTEGER NOT NULL DEFAULT 1 CHECK (is_public IN (0, 1))`. Register in `core/database/catalogmodel`; follow `.agents/skills/add-catalog-migration/SKILL.md`. Existing rows default to public so nothing changes on upgrade.
+- **Go.** `core/database/sources/sources.go` — `Source` struct, `Create`, `Update`, list / get SQL. `core/database/effects/registry.go` already treats `sources` row changes as a Source-scoped effect, so audit / last-activity pick it up for free.
 - **FFI.** `api/proto/engine.proto` `Source` message plus `UpdateSourceRequest` (or a dedicated `SetSourcePrivacy` RPC, mirroring `METHOD_SET_SOURCE_COVER`); `api/ffi/handlers/sources.go`.
 - **Swift model.** `macos/App/Platform/GenealogyStore.swift` `CatalogSource` (beside `coverMode`), `GoStore.swift` mapping, `FakeStore.swift`.
-- **Swift UI.** Source page: a toggle in the identity header or its own small section (`macos/App/Features/Sources/SourcePageIdentityHeader.swift` / `SourceIdentitySection.swift`; `PVSwitch` exists in `DesignSystem/Components/Switch`). Sources list: a "Private" glyph on `SourcesListRow.swift` and optionally a filter in `SourcesListSettings.swift` / `SourcesModel`. Copy dialog: `SourceCopyDialog.swift`. All copy through `L10n` (`add-localized-string`).
-- **Docs.** `docs/source-layer-data-model.md` (sources table + a "visibility" note), `docs/ideas/share-packages.md` (close its privacy question by pointing here), `docs/seeded-vocabulary.md` only if a vocabulary rather than a boolean is chosen.
+- **Swift UI.** Source page only: an on/off switch in the identity header or its own small section (`macos/App/Features/Sources/SourcePageIdentityHeader.swift` / `SourceIdentitySection.swift`; `PVSwitch` exists in `DesignSystem/Components/Switch`). Copy through `L10n` (`add-localized-string`).
+- **Docs.** `docs/source-layer-data-model.md` (sources table + a one-line "not public" note), `docs/ideas/share-packages.md` (point its privacy question here).
 
-## Open questions for the design
+### Out of scope for now (per the decisions above)
 
-- Boolean (`is_public`) vs. tri-state (`public` / `private` / `restricted`)? The verbatim ask is binary.
-- Should a private Source hide anything in-app today (omnibar hits, Sources list by default), or is it purely stored for later consumers? The ask implies the latter.
-- Does privacy cascade (a private Source's Artifacts, Citations, and the canonical entities they ground) when a future share feature filters on it, or is it the share feature's job to decide?
+- Sources list "Private" glyph on `SourcesListRow.swift`, and any filter in `SourcesListSettings.swift` / `SourcesModel`.
+- Omnibar / search hiding, composer or graph behaviour.
+- Carrying the flag through Copy Source (`core/database/sourcecopy`, `SourceCopyDialog.swift`). A copy starts public unless decided otherwise later.
+- Any cascade to Artifacts, Citations, or canonical entities.
+- A `visibility` enum or `docs/seeded-vocabulary.md` entry (boolean chosen).
+
+## Design questions
+
+All resolved by the 2026-10-27 decisions above:
+
+- ~~Boolean vs. tri-state~~ — boolean on/off.
+- ~~Hide anything in-app today~~ — no; stored only.
+- ~~Cascade to Artifacts / Citations / entities~~ — no; the Source row only, future consumers decide.
