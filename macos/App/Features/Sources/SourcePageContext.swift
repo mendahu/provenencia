@@ -11,7 +11,7 @@ import Observation
 @MainActor
 @Observable
 final class SourcePageContext {
-    var sourceID: String
+    let sourceID: String
     let projectDir: String
     let userID: String
     let store: any GenealogyStore

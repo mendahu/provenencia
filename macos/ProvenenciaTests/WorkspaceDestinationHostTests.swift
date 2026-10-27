@@ -1,4 +1,6 @@
+import AppKit
 import Foundation
+import SwiftUI
 import Testing
 @testable import Provenencia
 
@@ -7,7 +9,81 @@ struct WorkspaceDestinationHostTests {
     private let projectDir = "/tmp/workspace-destination-host.provenencia"
 
     private func presentation(for location: WorkspaceLocation) -> WorkspacePresentationID {
-        WorkspaceDestinationHost.presentation(for: location, projectDir: projectDir)
+        WorkspaceDestinationHost.place(for: location, projectDir: projectDir)?.presentation ?? .sourcesList
+    }
+
+    /// Two census Sources, each with one graph linked to an Artifact; the canvas reads this store.
+    private func makeCanvasStore() -> FakeStore {
+        let store = FakeStore()
+        store.subjectTypesByProject[projectDir] = [
+            CatalogSubjectType(
+                id: "type-person", key: "person", origin: "provenencia", label: "Person",
+                description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
+            ),
+        ]
+        store.propertiesByProject[projectDir] = [
+            CatalogProperty(
+                id: "prop-role", key: "role", origin: "provenencia", label: "Role",
+                description: "", valueType: "term"
+            ),
+        ]
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(id: "src-1", ref: "SRC-1", sourceTypeID: "", title: "Jones census", description: ""),
+            CatalogSource(id: "src-2", ref: "SRC-2", sourceTypeID: "", title: "Smith census", description: ""),
+        ]
+        store.evidenceGraphsByProject[projectDir] = [
+            evidenceGraph("g-a", sourceID: "src-1", artifactIDs: ["art-1"]),
+            evidenceGraph("g-b", sourceID: "src-2", artifactIDs: ["art-2"]),
+        ]
+        return store
+    }
+
+    /// Mounts the host in a borderless window so the canvas's `.task` runs.
+    private func mountHost(
+        navigation: WorkspaceNavigation,
+        session: WorkspaceSession,
+        store: FakeStore
+    ) -> (NSWindow, NSHostingView<some View>) {
+        let frame = NSRect(x: 0, y: 0, width: 1200, height: 800)
+        let host = NSHostingView(
+            rootView: WorkspaceDestinationHost(
+                userID: "user-1",
+                sessionDisplayName: "",
+                store: store,
+                catalogCounts: CatalogCounts(projectDir: projectDir, store: store)
+            )
+            .environment(navigation)
+            .environment(session)
+        )
+        host.frame = frame
+        let window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
+        window.contentView = host
+        window.orderFrontRegardless()
+        return (window, host)
+    }
+
+    @Test func canvasToCanvasBuildsTheSecondGraphsModel() async {
+        let store = makeCanvasStore()
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let navigation = WorkspaceNavigation()
+        navigation.go(to: .evidenceGraph(sourceId: "src-1", graphId: "g-a", title: "Jones"))
+        let (window, host) = mountHost(navigation: navigation, session: session, store: store)
+
+        let graphA = CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: "g-a")
+        let loadedA = await waitUntil {
+            (session.queryHandle(graphA) as QueryHandle<EvidenceGraphRows>?)?.isSettled == true
+        }
+        #expect(loadedA)
+
+        navigation.go(to: .evidenceGraph(sourceId: "src-2", graphId: "g-b", title: "Smith"))
+        let graphB = CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: "g-b")
+        let workspaceB = CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: "src-2")
+        let loadedB = await waitUntil {
+            (session.queryHandle(graphB) as QueryHandle<EvidenceGraphRows>?)?.isSettled == true
+                && (session.queryHandle(workspaceB) as QueryHandle<CatalogSourceWorkspace>?)?.isSettled == true
+        }
+        #expect(loadedB)
+        withExtendedLifetime((window, host)) {}
     }
 
     @Test func presentationSourcesRoot() {

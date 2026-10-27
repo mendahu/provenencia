@@ -69,7 +69,7 @@ struct EvidenceGraphView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier("workspace.destination.evidenceGraph")
-        .task(id: graphID) {
+        .task {
             await model.prepare()
         }
         .onChange(of: model.armedKind) { _, kind in

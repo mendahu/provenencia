@@ -11,7 +11,16 @@ struct WorkspaceDestinationHost: View {
     let catalogCounts: CatalogCounts
 
     var body: some View {
-        switch Self.presentation(for: navigation.currentLocation, projectDir: session.projectKey.projectDir) {
+        let place = Self.place(for: navigation.currentLocation, projectDir: session.projectKey.projectDir)
+        Group {
+            destination(for: place?.presentation ?? .sourcesList)
+        }
+        .id(place?.viewIdentity)
+    }
+
+    @ViewBuilder
+    private func destination(for presentation: WorkspacePresentationID) -> some View {
+        switch presentation {
         case .sourcesList:
             SourcesListView(
                 session: session,
@@ -50,7 +59,6 @@ struct WorkspaceDestinationHost: View {
                     store: store,
                     userID: userID
                 )
-                .id(entry.identityKey)
             }
         case .sourcePromote:
             if let entry = PromoteEntry(location: navigation.currentLocation) {
@@ -60,7 +68,6 @@ struct WorkspaceDestinationHost: View {
                     store: store,
                     userID: userID
                 )
-                .id(entry.identityKey)
             }
         case .metadata:
             MetadataView(
@@ -89,7 +96,6 @@ struct WorkspaceDestinationHost: View {
                 .accessibilityIdentifier("workspace.destination.persons")
         case .personDetail:
             PersonDetailView(session: session, entityId: navigation.currentLocation.entityId ?? "", userID: userID)
-                .id(navigation.currentLocation.entityId)
                 .accessibilityIdentifier("workspace.destination.personDetail")
         case .eventsList:
             EventsListView(session: session)
@@ -106,13 +112,13 @@ struct WorkspaceDestinationHost: View {
         }
     }
 
-    static func presentation(
+    /// The place `location` resolves to; `body` mounts its presentation and resets on its `viewIdentity`.
+    static func place(
         for location: WorkspaceLocation,
         projectDir: String,
         registry: PlaceRegistry = .standard
-    ) -> WorkspacePresentationID {
-        let project = ProjectKey(projectDir: projectDir)
-        return registry.resolve(location, project: project)?.presentation ?? .sourcesList
+    ) -> ResolvedPlace? {
+        registry.resolve(location, project: ProjectKey(projectDir: projectDir))
     }
 
     /// Mirrors the host `switch` for unit tests (which view family mounts).

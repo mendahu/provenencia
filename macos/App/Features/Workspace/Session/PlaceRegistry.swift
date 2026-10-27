@@ -10,7 +10,8 @@ struct PlaceRegistry: Sendable {
         let priority: Int
         let matches: @Sendable (WorkspaceLocation) -> Bool
         let queryKeys: @Sendable (ProjectKey, WorkspaceLocation) -> [CatalogQueryKey]
-        let deepId: @Sendable (WorkspaceLocation) -> String?
+        /// The id this place's view resets on: a different value remounts the destination. `nil` keeps one view across locations (list roots, master–detail places that follow `currentLocation`).
+        let viewIdentity: @Sendable (WorkspaceLocation) -> String?
     }
 
     /// Higher priority wins when multiple specs could match.
@@ -37,7 +38,7 @@ struct PlaceRegistry: Sendable {
                     .evidenceGraphsList(project: project),
                 ]
             },
-            deepId: { $0.subjectId }
+            viewIdentity: { PromoteEntry(location: $0)?.identityKey }
         ),
         Spec(
             id: .sourceCitationComposer,
@@ -66,7 +67,7 @@ struct PlaceRegistry: Sendable {
                 }
                 return keys
             },
-            deepId: { $0.subjectId ?? $0.citationId }
+            viewIdentity: { CitationComposerEntry(location: $0)?.identityKey }
         ),
         Spec(
             id: .sourceGraph,
@@ -87,7 +88,7 @@ struct PlaceRegistry: Sendable {
                     .evidenceGraphsList(project: project),
                 ]
             },
-            deepId: { $0.graphId }
+            viewIdentity: { $0.graphId }
         ),
         Spec(
             id: .sourceDetail,
@@ -110,7 +111,7 @@ struct PlaceRegistry: Sendable {
                     .evidenceGraphProgress(project: project),
                 ]
             },
-            deepId: { $0.sourceId }
+            viewIdentity: { $0.sourceId }
         ),
         Spec(
             id: .sourceTypesDetail,
@@ -125,7 +126,7 @@ struct PlaceRegistry: Sendable {
                     .typeSuggestions(project: project, typeId: typeId),
                 ]
             },
-            deepId: { $0.typeId }
+            viewIdentity: { _ in nil }
         ),
         Spec(
             id: .metadata,
@@ -135,7 +136,7 @@ struct PlaceRegistry: Sendable {
             queryKeys: { project, _ in
                 [.metadataFieldsList(project: project)]
             },
-            deepId: { $0.fieldId }
+            viewIdentity: { _ in nil }
         ),
         Spec(
             id: .properties,
@@ -145,7 +146,7 @@ struct PlaceRegistry: Sendable {
             queryKeys: { project, _ in
                 [.propertiesWorkspace(project: project)]
             },
-            deepId: { _ in nil }
+            viewIdentity: { _ in nil }
         ),
         Spec(
             id: .sourcesList,
@@ -160,7 +161,7 @@ struct PlaceRegistry: Sendable {
                     .evidenceGraphProgress(project: project),
                 ]
             },
-            deepId: { _ in nil }
+            viewIdentity: { _ in nil }
         ),
         Spec(
             id: .sourceTypes,
@@ -173,7 +174,7 @@ struct PlaceRegistry: Sendable {
                     .metadataFieldsList(project: project),
                 ]
             },
-            deepId: { _ in nil }
+            viewIdentity: { _ in nil }
         ),
         Spec(
             id: .personsList,
@@ -181,7 +182,7 @@ struct PlaceRegistry: Sendable {
             priority: 10,
             matches: { $0.section == .persons && $0.entityId == nil },
             queryKeys: { project, _ in [.personsList(project: project)] },
-            deepId: { _ in nil }
+            viewIdentity: { _ in nil }
         ),
         Spec(
             id: .personDetail,
@@ -191,7 +192,7 @@ struct PlaceRegistry: Sendable {
             queryKeys: { project, location in
                 location.entityId.map { [.conclusionDetail(project: project, entityId: $0)] } ?? []
             },
-            deepId: { $0.entityId }
+            viewIdentity: { $0.entityId }
         ),
         Spec(
             id: .eventsList,
@@ -199,7 +200,7 @@ struct PlaceRegistry: Sendable {
             priority: 10,
             matches: { $0.section == .events && $0.entityId == nil },
             queryKeys: { project, _ in [.eventsList(project: project)] },
-            deepId: { _ in nil }
+            viewIdentity: { _ in nil }
         ),
         Spec(
             id: .eventDetail,
@@ -209,7 +210,7 @@ struct PlaceRegistry: Sendable {
             queryKeys: { project, location in
                 location.entityId.map { [.conclusionDetail(project: project, entityId: $0)] } ?? []
             },
-            deepId: { $0.entityId }
+            viewIdentity: { $0.entityId }
         ),
         Spec(
             id: .placesList,
@@ -217,7 +218,7 @@ struct PlaceRegistry: Sendable {
             priority: 10,
             matches: { $0.section == .places && $0.entityId == nil },
             queryKeys: { project, _ in [.placesList(project: project)] },
-            deepId: { _ in nil }
+            viewIdentity: { _ in nil }
         ),
         Spec(
             id: .placeDetail,
@@ -227,7 +228,7 @@ struct PlaceRegistry: Sendable {
             queryKeys: { project, location in
                 location.entityId.map { [.conclusionDetail(project: project, entityId: $0)] } ?? []
             },
-            deepId: { $0.entityId }
+            viewIdentity: { $0.entityId }
         ),
     ]
 
@@ -243,7 +244,7 @@ struct PlaceRegistry: Sendable {
             placeID: spec.id,
             presentation: spec.presentation,
             queryKeys: spec.queryKeys(project, location),
-            deepId: spec.deepId(location)
+            viewIdentity: spec.viewIdentity(location)
         )
     }
 

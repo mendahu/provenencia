@@ -43,10 +43,9 @@ struct SourcePageView: View {
                 SourcePageLoadingShell(model: model)
             }
         }
-        .task(id: sourceID) {
-            model.prepare(for: sourceID)
+        .task {
             let handle: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
-            model.sync(from: handle, sourceID: sourceID)
+            model.sync(from: handle)
         }
     }
 }
@@ -244,17 +243,17 @@ private struct SourcePageContent: View {
             }
         )
         .onChange(of: workspaceHandle.status) {
-            model.sync(from: workspaceHandle, sourceID: sourceID)
+            model.sync(from: workspaceHandle)
             if case .failed = workspaceHandle.read {
                 navigation.fallbackToSectionRoot()
             }
         }
         .onChange(of: workspaceHandle.value) { _, newValue in
             guard newValue != nil else { return }
-            model.sync(from: workspaceHandle, sourceID: sourceID)
+            model.sync(from: workspaceHandle)
         }
         .onAppear {
-            model.sync(from: workspaceHandle, sourceID: sourceID)
+            model.sync(from: workspaceHandle)
         }
         .accessibilityIdentifier("sources.page")
     }
