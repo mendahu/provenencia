@@ -22539,18 +22539,6 @@
         }
       }
     },
-    "sources.list.columnStatus": {
-      "comment": "Sources list column caption",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Status"
-          }
-        }
-      }
-    },
     "sources.list.columnEvidenceGraph": {
       "comment": "Sources list column caption",
       "extractionState": "manual",

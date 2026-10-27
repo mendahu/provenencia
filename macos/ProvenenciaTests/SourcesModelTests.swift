@@ -499,18 +499,15 @@ struct SourcesModelTests {
     @Test func listColumnsMatchBoard() {
         let wide = SourcesListColumns(listWidth: 1136)
         #expect(!wide.isCompact)
-        #expect(wide.type == 150)
-        #expect(wide.status == 132)
-        #expect(wide.graphs == 300)
+        #expect(wide.type == 170)
+        #expect(wide.graphs == 420)
         #expect(!SourcesListColumns(listWidth: 880).isCompact)
         let narrow = SourcesListColumns(listWidth: 879.5)
         #expect(narrow.isCompact)
         #expect(narrow.type == nil)
-        #expect(narrow.status == 120)
-        #expect(narrow.graphs == 240)
+        #expect(narrow.graphs == 380)
         #expect(L10n.string(L10n.Sources.columnSource) == "Source")
         #expect(L10n.string(L10n.Sources.columnType) == "Type")
-        #expect(L10n.string(L10n.Sources.columnStatus) == "Status")
         #expect(L10n.string(L10n.Sources.columnEvidenceGraph) == "Evidence graph")
     }
 

@@ -24,7 +24,11 @@ struct SourcesGraphButton: View {
     let sourceID: String
     let kind: Kind
 
+    /// The button's minimum height; a wrapped name makes it taller.
     static let height: CGFloat = 52
+    /// The live button's status column, so the badges share a left edge down a
+    /// stack.
+    static let statusSlotWidth: CGFloat = 112
 
     var body: some View {
         switch kind {
@@ -110,7 +114,8 @@ struct SourcesGraphButton: View {
                     glyph: { PVIcon(.network, size: 15) },
                     name: { nameText(graph.name, color: PVColor.textPrimary) },
                     detail: { SourcesGraphCountLine(counts: counts, style: .button) },
-                    chevron: true
+                    chevron: true,
+                    status: counts
                 )
             }
             .buttonStyle(SourcesGraphButtonStyle(look: .live))
@@ -128,12 +133,13 @@ struct SourcesGraphButton: View {
     }
 
     /// Glyph, then the name and detail lines, then (for a graph that opens) the
-    /// chevron.
+    /// status slot and the chevron.
     private func content<Glyph: View, Name: View, Detail: View>(
         glyph: () -> Glyph,
         name: () -> Name,
         detail: () -> Detail,
         chevron: Bool,
+        status: SourcesGraphCounts? = nil,
         lineSpacing: CGFloat = PVSpacing.spacePx
     ) -> some View {
         HStack(spacing: PVSpacing.space4 + PVSpacing.space1) {
@@ -143,18 +149,34 @@ struct SourcesGraphButton: View {
                 detail()
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            if let status {
+                statusSlot(status)
+            }
             if chevron {
                 PVIcon(.chevronForward, size: 14)
             }
         }
     }
 
+    /// The graph's status badge, a rule while its counts load, or nothing.
+    @ViewBuilder
+    private func statusSlot(_ counts: SourcesGraphCounts) -> some View {
+        Group {
+            if let status = counts.status {
+                status.badge
+            } else if counts == .loading {
+                PVSkeletonBar(width: 72, height: 6)
+                    .accessibilityHidden(true)
+            }
+        }
+        .frame(width: Self.statusSlotWidth, alignment: .trailing)
+    }
+
     private func nameText(_ name: String, color: Color) -> some View {
         Text(verbatim: name)
             .font(PVFont.body(size: PVTypeScale.bodySmall))
             .foregroundStyle(color)
-            .lineLimit(1)
-            .truncationMode(.tail)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private func italicDetail(_ text: LocalizedStringResource) -> some View {
@@ -173,7 +195,7 @@ private enum SourcesGraphButtonLook {
     case live, blocked, inert
 }
 
-/// The button's frame: height 52, 1 pt border, `PVRadius.sm`. A blocked button's
+/// The button's frame: minimum height 52, 1 pt border, `PVRadius.sm`. A blocked button's
 /// border is dashed.
 private struct SourcesGraphButtonFrame<Content: View>: View {
     var look: SourcesGraphButtonLook
@@ -186,7 +208,7 @@ private struct SourcesGraphButtonFrame<Content: View>: View {
             .padding(.vertical, PVSpacing.space3)
             .padding(.horizontal, PVSpacing.space4 + PVSpacing.space1)
             .frame(maxWidth: .infinity)
-            .frame(height: SourcesGraphButton.height)
+            .frame(minHeight: SourcesGraphButton.height)
             .background(shape.fill(hovered ? PVColor.surfaceHover : PVColor.surfaceCard))
             .overlay {
                 switch look {

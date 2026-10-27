@@ -333,8 +333,6 @@ private struct SourcesListContent: View {
                 caption(L10n.Sources.columnType)
                     .sourcesTypeCell(columns)
             }
-            caption(L10n.Sources.columnStatus)
-                .sourcesStatusCell(columns)
             caption(L10n.Sources.columnEvidenceGraph)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .sourcesGraphCell(columns)

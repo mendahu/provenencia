@@ -5823,12 +5823,6 @@ enum L10n {
             comment: "Sources list column caption"
         )
 
-        static let columnStatus = LocalizedStringResource(
-            "sources.list.columnStatus",
-            defaultValue: "Status",
-            comment: "Sources list column caption"
-        )
-
         static let columnEvidenceGraph = LocalizedStringResource(
             "sources.list.columnEvidenceGraph",
             defaultValue: "Evidence graph",

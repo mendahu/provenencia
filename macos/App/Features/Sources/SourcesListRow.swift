@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// One Source in the Sources list: four columns (S12-D5). The Source link (cover,
-/// title, and a second line of ref and last update), its type, and one line per
-/// Evidence graph holding that graph's status badge and its button. A Source with
-/// no Artifact shows one blocked block instead.
+/// One Source in the Sources list: three columns (S12-D5). The Source link (cover,
+/// title, and a second line of ref and last update), its type, and a stack of
+/// Evidence graph buttons, each carrying its own status badge. A Source with no
+/// Artifact shows one blocked block instead.
 struct SourcesListRow: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Environment(WorkspaceSession.self) private var session
@@ -32,47 +32,17 @@ struct SourcesListRow: View {
         .accessibilityIdentifier("sources.row.\(source.id)")
     }
 
-    /// One slot per entry, so each badge sits level with its graph button.
-    private var statusStack: some View {
-        VStack(spacing: SourcesListColumns.slotSpacing) {
-            ForEach(entries, id: \.id) { entry in
-                statusSlot(entry.kind)
-                    .frame(height: SourcesGraphButton.height)
-                    .sourcesStatusCell(columns)
-            }
-        }
-        .padding(.vertical, SourcesListColumns.stackVertical)
-    }
-
     /// One graph button per entry; the hairline is the stack's leading edge.
     private var graphStack: some View {
         VStack(spacing: SourcesListColumns.slotSpacing) {
             ForEach(entries, id: \.id) { entry in
                 SourcesGraphButton(sourceID: source.id, kind: entry.kind)
-                    .frame(height: SourcesGraphButton.height)
                     .sourcesGraphCell(columns)
             }
         }
         .padding(.vertical, SourcesListColumns.stackVertical)
         .overlay(alignment: .leading) {
             PVDivider(axis: .vertical)
-        }
-    }
-
-    /// The graph's status badge, a rule while its counts load, or a faint dash
-    /// where there is no status to show.
-    @ViewBuilder
-    private func statusSlot(_ kind: SourcesGraphButton.Kind) -> some View {
-        if case .graph(_, let counts, _) = kind, let status = counts.status {
-            status.badge
-        } else if case .graph(_, .loading, _) = kind {
-            PVSkeletonBar(width: 72, height: 6)
-                .accessibilityHidden(true)
-        } else {
-            Text(verbatim: "—")
-                .font(PVFont.mono(size: PVTypeScale.caption))
-                .foregroundStyle(PVColor.textFaint)
-                .accessibilityHidden(true)
         }
     }
 
@@ -103,7 +73,6 @@ struct SourcesListRow: View {
                         .sourcesTypeCell(columns)
                         .frame(minHeight: Self.firstSlot)
                 }
-                statusStack
             }
             .frame(maxHeight: .infinity, alignment: .top)
         }
@@ -202,8 +171,7 @@ private struct SourcesLinkLabel: View {
                 Text(verbatim: title)
                     .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
                     .foregroundStyle(PVColor.textPrimary)
-                    .lineLimit(1)
-                    .help(title)
+                    .fixedSize(horizontal: false, vertical: true)
                 secondLine
             }
             .frame(minHeight: SourcesListRow.coverSize)
