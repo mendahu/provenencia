@@ -109,7 +109,14 @@ func evidence(g *graphcache.Graph, in inputs, q *evidenceReader, req EvidenceReq
 		if !ok {
 			continue
 		}
-		link := claimevidence.LayerLink{Key: key}
+		link := claimevidence.LayerLink{Key: key, Recording: b.Recording}
+		for _, sh := range b.Recording.Shapes {
+			if info, ok := in.primary[string(sh.Pivot)]; ok {
+				link.Pivots = append(link.Pivots, claimevidence.Pivot{
+					Subject: sh.Pivot, Kind: vocabkey.SubjectType(info.kind), Values: valuesOf[string(sh.Pivot)],
+				})
+			}
+		}
 		for _, a := range b.Associations {
 			link.Observations = append(link.Observations, observationsOf[string(a)]...)
 		}
@@ -147,6 +154,10 @@ func evidence(g *graphcache.Graph, in inputs, q *evidenceReader, req EvidenceReq
 	if err != nil {
 		return claimevidence.Evidence{}, err
 	}
+	rels, err := q.kin.Relationships(row.HandleID)
+	if err != nil {
+		return claimevidence.Evidence{}, err
+	}
 	rowSet := map[string]bool{}
 	for _, m := range members {
 		rowSet[string(m.Subject)] = true
@@ -166,7 +177,7 @@ func evidence(g *graphcache.Graph, in inputs, q *evidenceReader, req EvidenceReq
 		for _, id := range all {
 			nbrSet[string(id)] = true
 		}
-		canon, err := q.canonLinks(handleNode, hn, nil, rowSet, nbrSet)
+		canon, err := q.canonLinks(handleNode, hn, rels, rowSet, nbrSet)
 		if err != nil {
 			return claimevidence.Evidence{}, err
 		}
@@ -192,7 +203,8 @@ func evidence(g *graphcache.Graph, in inputs, q *evidenceReader, req EvidenceReq
 	out := claimevidence.Build(vocabkey.SubjectType(in.primary[string(row.SubjectID)].kind), valuesOf[string(row.SubjectID)],
 		q.prof.values(row.HandleID), members, neighbors, in.layer.Metas, matchregistry.Default().Evidence,
 		in.cfg.Segment, in.cfg.Subject, in.cfg.Value, claimevidence.Inputs{
-			Order: kindOrder,
+			Order:  kindOrder,
+			Placed: placed,
 		})
 	for i := range out.Relationships {
 		readFromNeighbor(&out.Relationships[i], in.terms)
@@ -250,6 +262,7 @@ type evidenceReader struct {
 	g        *graphcache.Graph
 	in       inputs
 	prof     *profiler
+	kin      *canonlinks.Reader                  // the entities' recorded and implied relationship links
 	memberOf map[string]graphcache.Member        // by Subject id, from the members read so far
 	graphs   map[string]graphcache.EvidenceGraph // by graph id, the graphs this request has read
 	indexes  map[string]*bridgeIndex             // by graph id, the graphs bridgesOf has read
@@ -260,7 +273,11 @@ func newEvidenceReader(g *graphcache.Graph, in inputs) (*evidenceReader, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &evidenceReader{g: g, in: in, prof: prof, memberOf: map[string]graphcache.Member{}, graphs: map[string]graphcache.EvidenceGraph{}, indexes: map[string]*bridgeIndex{}}, nil
+	kin, err := canonlinks.NewReader(g, matchregistry.Default().Kinship)
+	if err != nil {
+		return nil, err
+	}
+	return &evidenceReader{g: g, in: in, prof: prof, kin: kin, memberOf: map[string]graphcache.Member{}, graphs: map[string]graphcache.EvidenceGraph{}, indexes: map[string]*bridgeIndex{}}, nil
 }
 
 // graph is the Evidence graph with id. The request keeps each one it reads, so
@@ -400,7 +417,7 @@ func (r *evidenceReader) memberValues(subjectIDs [][]byte) ([]claimevidence.Memb
 func (r *evidenceReader) canonLinks(from, to *graphcache.Node, rels []kinship.Link, row, nbr map[string]bool) ([]claimevidence.CanonLink, error) {
 	var out []claimevidence.CanonLink
 	for _, l := range from.Links {
-		if !bytes.Equal(l.Neighbor, to.ID) {
+		if !bytes.Equal(l.Neighbor, to.ID) || l.BridgeTypeKey == vocabkey.BridgeRelationship {
 			continue
 		}
 		a, _, keyA, keyB, ok := canonlinks.EdgeOf(from.ID, from, l, to, r.prof.eventTypeProp, r.in.terms)
@@ -416,6 +433,63 @@ func (r *evidenceReader) canonLinks(from, to *graphcache.Node, rels []kinship.Li
 			return nil, err
 		}
 		out = append(out, claimevidence.CanonLink{Key: key, Bridges: bridges})
+	}
+	for _, l := range rels {
+		var key vocabkey.BridgeKey
+		switch {
+		case bytes.Equal(l.A, from.ID) && bytes.Equal(l.B, to.ID):
+			key = l.KeyA
+		case bytes.Equal(l.B, from.ID) && bytes.Equal(l.A, to.ID):
+			key = l.KeyB
+		default:
+			continue
+		}
+		pivot := map[string]bool{}
+		for _, sh := range l.Recording.Shapes {
+			ids, err := r.accepted(sh.Pivot)
+			if err != nil {
+				return nil, err
+			}
+			for _, id := range ids {
+				pivot[string(id)] = true
+			}
+		}
+		bridges, err := r.bridgesOf(l.Associations, row, nbr, pivot)
+		if err != nil {
+			return nil, err
+		}
+		pivots, err := r.pivotsOf(bridges)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, claimevidence.CanonLink{Key: key, Bridges: bridges, Recording: l.Recording, Pivots: pivots})
+	}
+	return out, nil
+}
+
+// pivotsOf are the pivot members the bridges reach, each once, with their kind
+// and values.
+func (r *evidenceReader) pivotsOf(bridges []claimevidence.Bridge) ([]claimevidence.Pivot, error) {
+	var ids [][]byte
+	for _, b := range bridges {
+		if b.Pivot != nil && !slices.ContainsFunc(ids, func(x []byte) bool { return bytes.Equal(x, b.Pivot) }) {
+			ids = append(ids, b.Pivot)
+		}
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	ms, err := r.memberValues(ids)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]claimevidence.Pivot, 0, len(ms))
+	for _, m := range ms {
+		ix, err := r.bridgeIndex(r.memberOf[string(m.Subject)].GraphID)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, claimevidence.Pivot{Subject: m.Subject, Kind: vocabkey.SubjectType(ix.types[string(m.Subject)]), Values: m.Values})
 	}
 	return out, nil
 }

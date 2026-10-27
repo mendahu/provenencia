@@ -367,7 +367,7 @@ func TestResolvePinsLikeness(t *testing.T) {
 // The offer of a spouse relationship a Source's marriage implies is checked and
 // starts with the relationship's incoming Observations.
 func TestPinOffersOfAnImpliedLayerLink(t *testing.T) {
-	e, _, _ := marriageEvidence(t, true)
+	e := marriageEvidence(t, true).e
 	if len(e.Relationships) != 1 || len(e.Relationships[0].Members) != 1 {
 		t.Fatalf("relationships %+v, want one spouse relationship with one bundle", e.Relationships)
 	}

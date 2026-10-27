@@ -19,6 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertycompare"
@@ -717,64 +718,130 @@ func TestEvidenceSectionOrder(t *testing.T) {
 	})
 }
 
-// A Source that records a marriage reads as the spouses a tree files: one
-// spouse relationship, checked, bundling both participations' Observations.
-// The other way round, the filed marriage derives on the canon side later.
+// A Source that records a marriage reads as the spouses a tree files, and the
+// other way round: one spouse relationship, checked, bundling every bridge
+// behind it.
 func TestEvidenceReadsASourceMarriageAsSpouses(t *testing.T) {
-	t.Run("AC-3.1", func(t *testing.T) {
-		e, ann, _ := marriageEvidence(t, true)
+	t.Run("AC-1.2", func(t *testing.T) {
+		sc := marriageEvidence(t, true)
+		e := sc.e
 		if len(e.Relationships) != 1 {
 			t.Fatalf("relationships = %d, want 1: %+v", len(e.Relationships), e.Relationships)
 		}
 		r := e.Relationships[0]
-		if r.Key.String() != "relationship·spouse" || !bytes.Equal(r.Neighbor, ann.ID) || !r.Checked {
+		if r.Key.String() != "relationship·spouse" || !bytes.Equal(r.Neighbor, sc.ann.ID) || !r.Checked {
 			t.Fatalf("relationship = %+v, want a checked relationship·spouse to Ann", r)
 		}
-		if len(r.Incoming) != 6 || len(r.Members) != 1 {
-			t.Fatalf("incoming %d, members %d, want 6 and 1", len(r.Incoming), len(r.Members))
+		if r.Layer.Pattern != kinship.PatternMarriageSpouses || !bytes.Equal(r.Layer.Pivot, sc.recordMarriage.ID) || r.Canon.Pattern != "" {
+			t.Errorf("Layer = %+v, Canon = %+v, want the record's marriage and direct", r.Layer, r.Canon)
+		}
+		if len(r.Incoming) != 7 || len(r.Members) != 1 {
+			t.Fatalf("incoming %d, members %d, want 7 and 1", len(r.Incoming), len(r.Members))
+		}
+		if b := r.Members[0]; len(b.Bridges) != 1 || !bytes.Equal(b.Bridges[0], sc.treeRelationship.ID) {
+			t.Errorf("bundle = %+v, want the tree relationship as its one bridge", b)
 		}
 	})
-	t.Run("AC-3.3", func(t *testing.T) {
-		e, _, _ := marriageEvidence(t, false)
-		if len(e.Relationships) != 0 {
-			t.Fatalf("relationships %+v, want none", e.Relationships)
+	t.Run("AC-1.1", func(t *testing.T) {
+		sc := marriageEvidence(t, false)
+		e := sc.e
+		if len(e.Relationships) != 1 {
+			t.Fatalf("relationships = %d, want 1: %+v", len(e.Relationships), e.Relationships)
+		}
+		r := e.Relationships[0]
+		if r.Key.String() != "relationship·spouse" || !bytes.Equal(r.Neighbor, sc.ann.ID) || !r.Checked {
+			t.Fatalf("relationship = %+v, want a checked relationship·spouse to Ann", r)
+		}
+		if r.Layer.Pattern != "" || r.Canon.Pattern != kinship.PatternMarriageSpouses || !bytes.Equal(r.Canon.Pivot, sc.treeMarriage.handle) {
+			t.Errorf("Layer = %+v, Canon = %+v, want direct and the tree's marriage", r.Layer, r.Canon)
+		}
+		if len(r.Members) != 1 {
+			t.Fatalf("members = %d, want 1", len(r.Members))
+		}
+		b := r.Members[0]
+		if !bytes.Equal(b.Member, sc.treeBob.ID) || !bytes.Equal(b.Neighbor, sc.treeAnn.ID) ||
+			len(b.Bridges) != 2 || !bytes.Equal(b.Bridges[0], sc.treeBobPart.ID) || !bytes.Equal(b.Bridges[1], sc.treeAnnPart.ID) {
+			t.Fatalf("bundle = %+v, want Bob, Ann and their participations", b)
+		}
+		want := slices.Concat(sc.f.obsOn(sc.treeBobPart, ""), sc.f.obsOn(sc.treeAnnPart, ""), sc.f.obsOn(sc.treeMarriage.Subject, "event_type"))
+		if !reflect.DeepEqual(b.Observations, want) {
+			t.Errorf("Observations = %x, want %x", b.Observations, want)
 		}
 	})
 }
 
+// marriageScene is Bob's evidence on his handle with Ann placed on hers, and
+// the catalog behind it.
+type marriageScene struct {
+	f                            *fixture
+	e                            claimevidence.Evidence
+	ann, bob                     subjects.Subject // the record's
+	treeAnn, treeBob             subjects.Subject
+	treeMarriage, recordMarriage marriageAt
+	treeBobPart, treeAnnPart     subjects.Subject // the tree marriage's participations; zero when it has none
+	treeRelationship             subjects.Subject // the tree's spouse relationship; zero when it has none
+	annH, bobH                   []byte
+	recordSource                 sources.Source
+	recordArt                    artifacts.Artifact
+}
+
+// marriageAt is a marriage event Subject and, when promoted, its handle.
+type marriageAt struct {
+	subjects.Subject
+	handle []byte
+}
+
+// obsOn is every Observation on a Subject, in the order its Evidence graph
+// lists them; only is the property key that narrows them ("" for all).
+func (f *fixture) obsOn(s subjects.Subject, only string) [][]byte {
+	f.t.Helper()
+	eg, err := f.c.Graph().EvidenceGraph(s.GraphID)
+	must(f.t, err)
+	var out [][]byte
+	for _, o := range eg.Observations {
+		if bytes.Equal(o.SubjectID, s.ID) && (only == "" || bytes.Equal(o.PropertyID, f.prop(only).ID)) {
+			out = append(out, o.ID)
+		}
+	}
+	return out
+}
+
 // marriageEvidence is Bob's evidence on his handle with Ann placed on hers:
 // the tree files a spouse relationship and the Source a marriage, or, when
-// sourceMarries is false, the other way round.
-func marriageEvidence(t *testing.T, sourceMarries bool) (claimevidence.Evidence, subjects.Subject, subjects.Subject) {
+// sourceMarries is false, the other way round. Both marriages are dated.
+func marriageEvidence(t *testing.T, sourceMarries bool) marriageScene {
 	t.Helper()
 	f := newFixture(t)
-	aAnn := f.person(f.source, f.artifact, "Ann Ames")
-	aBob := f.person(f.source, f.artifact, "Bob Ames")
+	sc := marriageScene{f: f}
+	sc.treeAnn = f.person(f.source, f.artifact, "Ann Ames")
+	sc.treeBob = f.person(f.source, f.artifact, "Bob Ames")
 	if sourceMarries {
-		f.relationship(f.source, f.artifact, aAnn, aBob, "spouse")
+		sc.treeRelationship = f.relationship(f.source, f.artifact, sc.treeAnn, sc.treeBob, "spouse")
+	} else {
+		sc.treeMarriage.Subject = f.datedOn(f.source, f.artifact, "marriage", 1842, 5, 12)
+		sc.treeAnnPart = f.participation(f.source, f.artifact, sc.treeAnn, sc.treeMarriage.Subject, "subject")
+		sc.treeBobPart = f.participation(f.source, f.artifact, sc.treeBob, sc.treeMarriage.Subject, "subject")
 	}
-	var treeMarriage *subjects.Subject
+	sc.annH = f.promote(sc.treeAnn).Entity.ID
+	sc.bobH = f.promote(sc.treeBob).Entity.ID
 	if !sourceMarries {
-		m := f.marriage(f.source, f.artifact, aAnn, aBob, "subject")
-		treeMarriage = &m
-	}
-	annH := f.promote(aAnn).Entity.ID
-	bobH := f.promote(aBob).Entity.ID
-	if treeMarriage != nil {
-		f.promote(*treeMarriage)
+		sc.treeMarriage.handle = f.promote(sc.treeMarriage.Subject).Entity.ID
 	}
 
-	srcB, artB := f.newSource("Marriage register")
-	bAnn := f.person(srcB, artB, "Ann Ames")
-	bBob := f.person(srcB, artB, "Bob Ames")
+	sc.recordSource, sc.recordArt = f.newSource("Marriage register")
+	srcB, artB := sc.recordSource, sc.recordArt
+	sc.ann = f.person(srcB, artB, "Ann Ames")
+	sc.bob = f.person(srcB, artB, "Bob Ames")
 	if sourceMarries {
-		f.marriage(srcB, artB, bAnn, bBob, "subject")
+		sc.recordMarriage.Subject = f.datedOn(srcB, artB, "marriage", 1842, 5, 12)
+		f.participation(srcB, artB, sc.ann, sc.recordMarriage.Subject, "subject")
+		f.participation(srcB, artB, sc.bob, sc.recordMarriage.Subject, "subject")
 	} else {
-		f.relationship(srcB, artB, bAnn, bBob, "spouse")
+		f.relationship(srcB, artB, sc.ann, sc.bob, "spouse")
 	}
-	e := f.evidence(promotealign.EvidenceRequest{
-		GraphID: f.graph(srcB), SubjectID: bBob.ID, HandleID: bobH,
-		Neighbors: []graphalign.Fixed{{SubjectID: bAnn.ID, HandleID: annH}},
+	sc.e = f.evidence(promotealign.EvidenceRequest{
+		GraphID: f.graph(srcB), SubjectID: sc.bob.ID, HandleID: sc.bobH,
+		Neighbors: []graphalign.Fixed{{SubjectID: sc.ann.ID, HandleID: sc.annH}},
 	})
-	return e, bAnn, bBob
+	return sc
 }
