@@ -15,7 +15,7 @@
 **Planned:** 2026-10-27 against `main` @ `bac7368`
 **Review:** [`S11-43-candidate-gate.review.md`](S11-43-candidate-gate.review.md) — Fits with changes / Ready with changes, 1 round (every finding answered)
 
-**Landed:** one difference from the plan: `vocabkey.PropertyName` is an untyped string constant, so `vals(vocabkey.PropertyName, ...)` panics; T-1 and T-2 write `vocabkey.PropertyKey(vocabkey.PropertyName)`. T-1's under-the-gate assertion is `t.Errorf` so the candidates assertion also reports.
+**Landed:** three differences from the plan. T-1's under-the-gate assertion is `t.Errorf` so the candidates assertion also reports. T-1 and T-2 build the given-only name with a new `propertycomparetest.Given` through a `givenProp` helper beside `nameProp`, not a `vocabkey.PropertyKey` cast. The four private given-only builders (`given` in `namealiases` and `valuerules`, `aliasGiven` in `catalogsession`, `givenName` merged into `namealiases`' `given`) moved onto `namevaluetest.Given` in review round 1 (the Out line below is superseded), and `nameVals` / `surnameVals` in `align_test.go` build through `nameProp`.
 
 ### Implementer — read this first
 

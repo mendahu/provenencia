@@ -24,7 +24,8 @@ func Western(form string) *namevalue.Value {
 	return v
 }
 
-// Given reads every word of a form as a given part, in order: "Amy" is given Amy. Fixtures only, like Western.
+// Given reads every word of a form as a given part, in order: "Amy" is
+// given Amy. Fixtures only, like Western.
 func Given(form string) *namevalue.Value {
 	v := &namevalue.Value{Form: form}
 	for i, w := range strings.Fields(form) {
