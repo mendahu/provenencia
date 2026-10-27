@@ -1,6 +1,6 @@
 # S11-28 — Fold a nickname into the given name it stands for
 
-**Status:** Planned
+**Status:** Landed in [#589](https://github.com/mendahu/provenencia/pull/589) (2026-10-27)
 **Spike / slice:** Spike 11 · Slice 2 — Value compare, everywhere (follow-up to S11-06)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the reconciler's fold rule changes in Go; pages render the cache as they do today)
