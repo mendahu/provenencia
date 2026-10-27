@@ -2,9 +2,11 @@ package claimevidence_test
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/claimevidence"
+	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/subjectcompare/subjectcomparetest"
@@ -58,10 +60,14 @@ func newScene(year int, layerKey, canonKey vocabkey.BridgeKey) scene {
 }
 
 func (s scene) build() claimevidence.Evidence {
+	return s.buildWith(claimevidence.Inputs{Order: seedOrder()})
+}
+
+func (s scene) buildWith(in claimevidence.Inputs) claimevidence.Evidence {
 	reg := matchregistry.Default()
 	row := vals{vocabkey.PropertyName: {ref(name("John Smith"), 0x01)}}
 	return claimevidence.Build(s.kind, row, row, s.members, s.neighbors, subjectcomparetest.Metas(),
-		reg.Evidence, reg.Segment, reg.Subject, reg.Value, claimevidence.Inputs{Order: seedOrder()})
+		reg.Evidence, reg.Segment, reg.Subject, reg.Value, in)
 }
 
 func TestBuild(t *testing.T) {
@@ -168,4 +174,119 @@ func equalIDs(a, b [][]byte) bool {
 		}
 	}
 	return true
+}
+
+// impliedScene is a person row (member 1) with a person neighbor (member 2)
+// whose spouse link the entity records through a marriage: bob's participation
+// 0x70, ann's 0x72, both reaching the marriage member 0xE0 whose event_type
+// Observation is 0x90.
+func impliedScene() scene {
+	bob := member(1, vals{vocabkey.PropertyName: {ref(name("Bob Ames"), 0x10)}})
+	ann := member(2, vals{vocabkey.PropertyName: {ref(name("Ann Ames"), 0x20)}})
+	marriage := []byte{0xE0}
+	shape := kinship.Shape{Pattern: kinship.PatternMarriageSpouses, Pivot: []byte{0xE1}}
+	n := claimevidence.Neighbor{
+		Subject: []byte{0x30}, Kind: vocabkey.Person,
+		Values:  vals{vocabkey.PropertyName: {ref(name("Ann Ames"), 0x40)}},
+		Handle:  vals{vocabkey.PropertyName: {ref(name("Ann Ames"), 0x50)}},
+		Members: []claimevidence.Member{ann},
+		Layer:   []claimevidence.LayerLink{{Key: spouseKey, Observations: [][]byte{{0x60}}}},
+		Canon: []claimevidence.CanonLink{{
+			Key:       spouseKey,
+			Recording: kinship.Recording{Shapes: []kinship.Shape{shape}, OnlyImplied: true},
+			Pivots:    []claimevidence.Pivot{{Subject: marriage, Kind: vocabkey.Event, Values: vals{vocabkey.PropertyEventType: {ref(term("marriage"), 0x90)}}}},
+			Bridges: []claimevidence.Bridge{
+				{Subject: []byte{0x70}, Source: []byte{0xB1}, Member: bob.Subject, Pivot: marriage, Observations: [][]byte{{0x71}}},
+				{Subject: []byte{0x72}, Source: []byte{0xB1}, Neighbor: ann.Subject, Pivot: marriage, Observations: [][]byte{{0x73}}},
+			},
+		}},
+	}
+	return scene{kind: vocabkey.Person, members: []claimevidence.Member{bob}, neighbors: []claimevidence.Neighbor{n}}
+}
+
+func TestBuildImpliedLinks(t *testing.T) {
+	pivot := kinship.Shape{Pattern: kinship.PatternMarriageSpouses, Pivot: []byte{0xE1}}
+
+	t.Run("a link only implied on a side shows its shape, a direct one does not", func(t *testing.T) {
+		s := impliedScene()
+		s.neighbors[0].Layer[0].Recording = kinship.Recording{Shapes: []kinship.Shape{{Pattern: kinship.PatternMarriageSpouses, Pivot: []byte{0xF1}}}, OnlyImplied: true}
+		r := s.build().Relationships[0]
+		if r.Layer.Pattern != kinship.PatternMarriageSpouses || !bytes.Equal(r.Layer.Pivot, []byte{0xF1}) || !reflect.DeepEqual(r.Canon, pivot) {
+			t.Errorf("Layer = %+v, Canon = %+v", r.Layer, r.Canon)
+		}
+		s = impliedScene()
+		s.neighbors[0].Canon[0].Recording = kinship.Recording{}
+		if r := s.build().Relationships[0]; !reflect.DeepEqual(r.Canon, kinship.Shape{}) {
+			t.Errorf("Canon = %+v, want direct", r.Canon)
+		}
+	})
+
+	t.Run("the bridges that reach one pivot are one bundle, the member's first", func(t *testing.T) {
+		r := impliedScene().build().Relationships[0]
+		if len(r.Members) != 1 {
+			t.Fatalf("bundles = %+v", r.Members)
+		}
+		b := r.Members[0]
+		if !bytes.Equal(b.Member, []byte{1}) || !bytes.Equal(b.Neighbor, []byte{2}) || !equalIDs(b.Bridges, [][]byte{{0x70}, {0x72}}) {
+			t.Errorf("bundle = %+v", b)
+		}
+		if want := [][]byte{{0x71}, {0x73}, {0x90}}; !equalIDs(b.Observations, want) {
+			t.Errorf("Observations = %x, want %x", b.Observations, want)
+		}
+		if got := len(r.Sections); got == 0 {
+			t.Errorf("the neighbor member named by the bundle should be compared: %+v", r.Sections)
+		}
+	})
+
+	t.Run("a bundle needs a bridge of a row member", func(t *testing.T) {
+		s := impliedScene()
+		s.neighbors[0].Canon[0].Bridges = s.neighbors[0].Canon[0].Bridges[1:]
+		if r := s.build().Relationships[0]; len(r.Members) != 0 || len(r.Sections) != 0 {
+			t.Errorf("bundles = %+v, sections = %+v", r.Members, r.Sections)
+		}
+	})
+
+	t.Run("a member's bridge alone is a bundle with no neighbor, after a recorded one", func(t *testing.T) {
+		s := impliedScene()
+		c := &s.neighbors[0].Canon[0]
+		c.Bridges = c.Bridges[:1]
+		s.neighbors[0].Canon = append(s.neighbors[0].Canon, claimevidence.CanonLink{Key: spouseKey, Bridges: []claimevidence.Bridge{
+			{Subject: []byte{0x80}, Source: []byte{0xB2}, Member: []byte{1}, Neighbor: []byte{2}, Observations: [][]byte{{0x81}}},
+		}})
+		r := s.build().Relationships[0]
+		if len(r.Members) != 2 || !equalIDs(r.Members[0].Bridges, [][]byte{{0x80}}) || !equalIDs(r.Members[1].Bridges, [][]byte{{0x70}}) || r.Members[1].Neighbor != nil {
+			t.Fatalf("bundles = %+v", r.Members)
+		}
+	})
+
+	t.Run("both sides implied through paired pivots are counted once", func(t *testing.T) {
+		s := impliedScene()
+		s.neighbors[0].Layer[0].Recording = kinship.Recording{Shapes: []kinship.Shape{{Pattern: kinship.PatternMarriageSpouses, Pivot: []byte{0xF1}}}, OnlyImplied: true}
+		in := claimevidence.Inputs{Order: seedOrder(), Placed: map[string][]byte{string([]byte{0xF1}): {0xE1}}}
+		if e := s.buildWith(in); len(e.Relationships) != 0 {
+			t.Errorf("relationships = %+v", e.Relationships)
+		}
+		in.Placed = nil
+		if e := s.buildWith(in); len(e.Relationships) != 1 {
+			t.Errorf("unpaired relationships = %+v", e.Relationships)
+		}
+	})
+
+	t.Run("both sides recorded are never counted once", func(t *testing.T) {
+		s := newScene(1817, birthKey, birthKey)
+		in := claimevidence.Inputs{Order: seedOrder(), Placed: map[string][]byte{"x": {1}}}
+		if e := s.buildWith(in); len(e.Relationships) != 1 {
+			t.Errorf("relationships = %+v", e.Relationships)
+		}
+	})
+
+	t.Run("a layer pivot's defining Observation ends the incoming list", func(t *testing.T) {
+		s := impliedScene()
+		l := &s.neighbors[0].Layer[0]
+		l.Pivots = []claimevidence.Pivot{{Subject: []byte{0xF1}, Kind: vocabkey.Event, Values: vals{vocabkey.PropertyEventType: {ref(term("marriage"), 0x91)}}}}
+		r := s.build().Relationships[0]
+		if want := [][]byte{{0x60}, {0x91}}; !equalIDs(r.Incoming, want) {
+			t.Errorf("Incoming = %x, want %x", r.Incoming, want)
+		}
+	})
 }
