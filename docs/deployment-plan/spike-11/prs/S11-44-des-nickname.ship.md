@@ -30,4 +30,4 @@ Check: scripts/check-pr.sh PASS.
 Head `04627ccd`. Gate PASS (orchestrator run against `e7411828`). F-1 done: MNT-1 **Resolved** (orchestrator read the commit: header, NOTICE and §4.5 now name the product-added sets). No round 2: no Fix-now blocker or major.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · to user: — · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: none · to user: — · CON miss: none
