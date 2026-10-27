@@ -105,19 +105,33 @@ func (m nameModule) split(v Value) (map[string]unit, bool) {
 	return units, true
 }
 
-// fold: value compare finds into contains from, and every word they pair is
-// the same word or an initial of it.
-func (m nameModule) fold(_ string, from, into unit) bool {
+// fold: value compare finds into contains from, or the two equivalent, and
+// every word they pair is the same word, an initial of it, or a nickname or
+// abbreviation the alias list pairs toward the into word. The type only says
+// which part role an alias table must allow (compareValue strips it).
+func (m nameModule) fold(typ string, from, into unit) bool {
 	res, det := valuecompare.Compare(from.data.(nameUnit).cmp, into.data.(nameUnit).cmp, m.rules)
-	if res.Relation != valuecompare.Contains || det.Broader != valuecompare.SideA {
+	switch {
+	case res.Relation == valuecompare.Contains && det.Broader == valuecompare.SideA:
+	case res.Relation == valuecompare.Equivalent:
+	default:
 		return false
 	}
+	role := m.rules.Names.Western.Role(typ)
+	changed := false
 	for _, p := range det.Parts {
-		if p.Relation != valuecompare.Same && p.Cause != valuecompare.CauseInitial {
+		switch {
+		case p.Relation == valuecompare.Same:
+		case p.Cause == valuecompare.CauseInitial:
+			changed = true
+		case (p.Cause == valuecompare.CauseAlias || p.Cause == valuecompare.CauseAbbreviation) &&
+			m.rules.Names.Aliases.Expands(p.A.Text, p.B.Text, role):
+			changed = true
+		default:
 			return false
 		}
 	}
-	return true
+	return changed || res.Relation == valuecompare.Contains
 }
 
 // outvotes: only a spelling variant of the winner — value compare pairs the

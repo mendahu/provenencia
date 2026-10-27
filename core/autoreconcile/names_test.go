@@ -683,3 +683,104 @@ func TestReconcileNamesWords(t *testing.T) {
 		})
 	}
 }
+
+// aliasRules are the shipped rules plus two FormalFirst alias tables, the shape
+// of the product seed: each set is a head and the names that stand for it.
+var aliasRules = func() valuecompare.Rules {
+	rules := testRules
+	roles := []valuecompare.NameRole{valuecompare.RoleGiven, valuecompare.RoleNick, valuecompare.RoleUntyped}
+	rules.Names.Aliases = valuecompare.NewAliasIndex([]valuecompare.AliasTable{
+		{
+			Key: "nicknames", Kind: valuecompare.AliasNickname, Roles: roles, FormalFirst: true,
+			Sets: [][]string{
+				{"christopher", "chris", "kit"}, {"christina", "chris"}, {"william", "bill"},
+				{"james", "jim"}, {"abel", "ebbie"}, {"allan", "allen"}, {"allen", "allan"},
+			},
+		},
+		{
+			Key: "abbreviations", Kind: valuecompare.AliasAbbreviation, Roles: roles, FormalFirst: true,
+			Sets: [][]string{{"william", "wm"}},
+		},
+	}, rules.Words)
+	return rules
+}()
+
+func TestReconcileNamesAliases(t *testing.T) {
+	folds := []struct {
+		name string
+		in   []Candidate
+		want []cl
+	}{
+		{"AC-1.1 a nickname folds into the given name it stands for",
+			[]Candidate{nm(1, "given=Chris|surname=Robins"), nm(2, "given=Christopher|surname=Robins")},
+			[]cl{{[]byte{1, 2}, "given=Christopher|surname=Robins"}}},
+		{"AC-1.2 an abbreviation folds into the name it abbreviates",
+			[]Candidate{nm(1, "given=Wm|surname=Robins"), nm(2, "given=William|surname=Robins")},
+			[]cl{{[]byte{1, 2}, "given=William|surname=Robins"}}},
+		{"AC-1.3 an alias and an initial fold together",
+			[]Candidate{nm(1, "given=Chris|given=R|surname=Robins"), nm(2, "given=Christopher|given=Robert|surname=Robins")},
+			[]cl{{[]byte{1, 2}, "given=Christopher|given=Robert|surname=Robins"}}},
+		{"AC-1.4 an ambiguous alias folds into the best supported",
+			[]Candidate{nm(1, "given=Christopher|surname=Robins"), nm(2, "given=Christina|surname=Robins"), nm(3, "given=Christina|surname=Robins"), nm(4, "given=Chris|surname=Robins")},
+			[]cl{{[]byte{1, 2, 3, 4}, "given=Christina|given=Christopher|surname=Robins"}}},
+		{"AC-1.4 reversed",
+			[]Candidate{nm(4, "given=Chris|surname=Robins"), nm(3, "given=Christina|surname=Robins"), nm(2, "given=Christina|surname=Robins"), nm(1, "given=Christopher|surname=Robins")},
+			[]cl{{[]byte{1, 2, 3, 4}, "given=Christina|given=Christopher|surname=Robins"}}},
+		{"AC-1.9 a nickname longer than its formal name folds",
+			[]Candidate{nm(1, "given=Ebbie|surname=Robins"), nm(2, "given=Abel|surname=Robins")},
+			[]cl{{[]byte{1, 2}, "given=Abel|surname=Robins"}}},
+	}
+	for _, tc := range folds {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Reconcile(aliasRules, propertymeta.ValueTypeName, tc.in, nil, propertymeta.CardinalitySingle)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var have []cl
+			for i, c := range got.Values {
+				have = append(have, cl{shape(got)[i], spec(c.Value.Name)})
+			}
+			if !reflect.DeepEqual(have, tc.want) {
+				t.Fatalf("got  %v\nwant %v", have, tc.want)
+			}
+			if got.State() != StateMerged {
+				t.Fatalf("state %q, want merged", got.State())
+			}
+			if r := reasonsOf(got); r != "kept" {
+				t.Fatalf("reasons %q, want kept", r)
+			}
+		})
+	}
+
+	unchanged := []struct {
+		name string
+		in   []Candidate
+	}{
+		{"AC-1.5 an accent fold never folds",
+			[]Candidate{nm(1, "given=Jose|surname=Robins"), nm(2, "given=José|given=Kenneth|surname=Robins")}},
+		{"AC-1.6 a fold never crosses part types",
+			[]Candidate{nm(1, "nick=Chris|surname=Robins"), nm(2, "given=Christopher|surname=Robins")}},
+		{"AC-1.7 a surname never alias-folds",
+			[]Candidate{nm(1, "given=Ann|surname=Bill"), nm(2, "given=Ann|surname=William")}},
+		{"AC-1.8 two nicknames of one name stay apart",
+			[]Candidate{nm(1, "given=Chris|surname=Robins"), nm(2, "given=Kit|surname=Robins")}},
+		{"AC-1.10 a pair listed both ways and not directed stays apart",
+			[]Candidate{nm(1, "given=Allan|surname=Robins"), nm(2, "given=Allen|surname=Robins")}},
+	}
+	for _, tc := range unchanged {
+		t.Run(tc.name, func(t *testing.T) {
+			with, err := Reconcile(aliasRules, propertymeta.ValueTypeName, tc.in, nil, propertymeta.CardinalitySingle)
+			if err != nil {
+				t.Fatal(err)
+			}
+			without, err := Reconcile(testRules, propertymeta.ValueTypeName, tc.in, nil, propertymeta.CardinalitySingle)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(specs(with), specs(without)) || with.State() != without.State() || reasonsOf(with) != reasonsOf(without) {
+				t.Fatalf("aliases changed the result:\nwith    %v %v %q\nwithout %v %v %q",
+					specs(with), with.State(), reasonsOf(with), specs(without), without.State(), reasonsOf(without))
+			}
+		})
+	}
+}

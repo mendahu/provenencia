@@ -165,3 +165,46 @@ func TestAliasIndexKeysTokens(t *testing.T) {
 		})
 	}
 }
+
+func TestAliasIndexExpands(t *testing.T) {
+	roles := []valuecompare.NameRole{valuecompare.RoleGiven, valuecompare.RoleNick, valuecompare.RoleUntyped}
+	table := valuecompare.AliasTable{
+		Key: "t", Kind: valuecompare.AliasNickname, Roles: roles, FormalFirst: true,
+		Sets: [][]string{
+			{"christopher", "chris", "kit"}, {"chris", "kris"}, {"abel", "ebbie"}, {"raphael", "ralph"},
+			{"william", "bill"}, {"bill", "william"}, {"allan", "allen"}, {"allen", "allan"},
+		},
+		Directions: []valuecompare.AliasDirection{{Formal: "william", Nickname: "bill"}},
+	}
+	w := matchregistry.Default().Value.Words
+	idx := valuecompare.NewAliasIndex([]valuecompare.AliasTable{table}, w)
+	plain := table
+	plain.FormalFirst = false
+	flat := valuecompare.NewAliasIndex([]valuecompare.AliasTable{plain}, w)
+
+	for _, c := range []struct {
+		from, into string
+		role       valuecompare.NameRole
+		want       bool
+	}{
+		{"chris", "christopher", valuecompare.RoleGiven, true},
+		{"christopher", "chris", valuecompare.RoleGiven, false},
+		{"kit", "christopher", valuecompare.RoleGiven, true},
+		{"chris", "kit", valuecompare.RoleGiven, false},
+		{"kris", "chris", valuecompare.RoleGiven, true},
+		{"ebbie", "abel", valuecompare.RoleGiven, true},
+		{"ralph", "raphael", valuecompare.RoleGiven, true},
+		{"bill", "william", valuecompare.RoleGiven, true},
+		{"william", "bill", valuecompare.RoleGiven, false},
+		{"allan", "allen", valuecompare.RoleGiven, false},
+		{"allen", "allan", valuecompare.RoleGiven, false},
+		{"chris", "christopher", valuecompare.RoleFamily, false},
+	} {
+		if got := idx.Expands(c.from, c.into, c.role); got != c.want {
+			t.Errorf("Expands(%s, %s, %s) = %v, want %v", c.from, c.into, c.role, got, c.want)
+		}
+		if flat.Expands(c.from, c.into, c.role) {
+			t.Errorf("without FormalFirst, Expands(%s, %s, %s) = true", c.from, c.into, c.role)
+		}
+	}
+}
