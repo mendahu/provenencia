@@ -36,7 +36,7 @@ Template: [`template.md`](template.md). Copy it; keep every heading.
 | --- | --- |
 | Write the plan for a PR already in the map | **Yes** |
 | Refresh a plan whose dependencies landed differently, or whose `main` moved | **Yes** |
-| Plan a one-off PR outside a spike (bugfix, chore) | **Yes**. Put it under the open spike's `prs/` with the next free ID, and add a map row |
+| Plan a one-off PR outside a spike (bugfix, chore) | **Yes**. Put it under the open even-numbered (odds-and-ends) spike's `prs/` with the next free ID, and add a map row in a batch ([odd and even spikes](../../../docs/deployment-plan/README.md#odd-and-even-spikes)) |
 | Split a spike or slice into PRs, or change the PR list | No — [`plan-spike`](../plan-spike/SKILL.md) |
 | Write the Claude Design brief the PR waits on | [`add-design-brief`](../add-design-brief/SKILL.md), called from step 3 below |
 | Implement the PR | No. The plan's Implementer block is the implementer's instructions |
