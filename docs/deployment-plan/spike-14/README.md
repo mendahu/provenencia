@@ -17,4 +17,4 @@ The first odds-and-ends spike (working rule "Even spikes are odds and ends"). It
 
 ## Not this spike
 
-Large new features: those go to the next odd-numbered spike. For batch 1: signature and the Spike 10 audit leftovers stay in [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md). The event picture in the Person Timeline is Spike 13's (R-26).
+Large new features: those go to the next odd-numbered spike. For batch 1: signature and the Spike 10 audit leftovers not taken into S14-01 and S14-03 stay in [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md). The event picture in the Person Timeline is Spike 13's (R-26).

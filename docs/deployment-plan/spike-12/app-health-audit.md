@@ -147,7 +147,7 @@ The findings behind slices 5–7 of the [map](deployment-plan.md). An area audit
 
 **Where.** `macos/App/Platform/FakeStore.swift`: `graphEffects` (create, update, delete, link, unlink report only `citationSources` and `lists`); `insertSource` (no `lists: [.evidenceGraphs]`, an extra `citationSources`); `graphListOrder` (`localizedCaseInsensitiveCompare` against Go's `name COLLATE NOCASE, ref, id`); `deleteEvidenceGraph` and `getDeleteImpact("evidence_graph")` never refuse; `copySource` accepts a blank title and unknown or repeated Artifact ids that Go refuses.
 **Problem.** Swift tests pass on behavior the app does not have; nothing pins the fake to Go.
-**Fix.** Route graph writes through `bumpSource` as the engine does; refuse the last graph and a graph with Subjects; match Go's order; refuse `copySource` input with `sources.invalid`. Longer term, a Go test writes the expected effects per action as a golden file a Swift test reads, beside `swift_vocabulary_test.go`. Rewrite `.cursor/rules/swift-tests.mdc` to say which engine rules the fake mirrors and how parity is held.
+**Fix.** Decided 2026-10-27 (map review K-9, option a): the fake goes back to seeded and scripted values and re-implements no engine rule, as `.cursor/rules/swift-tests.mdc` says; engine rules stay tested in Go. The parity option (route graph writes through `bumpSource`, refuse as Go refuses, match Go's order, a Go-written golden file read by Swift) was not taken.
 
 ### A-16 — Source-keyed fields on graph-keyed paths
 

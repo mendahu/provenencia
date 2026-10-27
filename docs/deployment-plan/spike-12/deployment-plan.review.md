@@ -81,11 +81,15 @@ Round 2 is the last round; no blocker is open.
 # Review — Spike 12 slices 5–7 (audit fixes, S12-20 – S12-38)
 
 **Verdict:** Fits with changes
-**Rounds:** 1 so far; round 2 runs once **To user** is answered, because round 1 had blockers and K-2 reshapes S12-25 and S12-26. **Reviewers:** maintainability (map review), fresh agent.
+**Rounds:** 2 (round 2 because round 1 had blockers and K-2 reshapes S12-25 and S12-26). **Reviewers:** maintainability (map review), fresh agent.
 
 ## To user
-- **K-1:** move S12-34 (one descriptor per cache key) to the head of slice 6, before S12-25 and S12-26, so the progress patch, the graph-list merge and the Sources-list insert become descriptor entries instead of hand-written session functions. Recommendation: yes. The scope entries already work in either order; S12-34's descriptor carries the `patch` and `refresh(ids)` slots either way.
-- **K-9:** decide FakeStore's direction before S12-22 and S12-25 change its effects: (a) a seeded fake that returns scripted order, effects and refusals, with engine rules tested in Go, as `.cursor/rules/swift-tests.mdc` says today; or (b) a fake held to the engine by a test. Recommendation: (a). It shrinks FakeStore instead of keeping a second engine, needs no new cross-language mechanism, and makes each Swift test state the engine behavior it assumes. If (a), S12-35 moves to the head of slice 6.
+- **K-1** answered (user, 2026-10-27): S12-34 moves to the head of slice 6. Working rule "The cache-key descriptor comes first in slice 6".
+- **K-9** answered (user, 2026-10-27): option (a), a seeded fake. Working rule "FakeStore is a seeded fake, not a second engine"; S12-35 is "FakeStore is a seeded fake" and moves to the head of slice 6.
+
+## Also decided with the user (2026-10-27)
+- **S12-39** added: oversized JPEGs get a thumbnail from a pure-Go reduced decoder of our own (DC coefficients only), not macOS ImageIO, so a Windows build reuses it. Design: [`oversized-jpeg-thumbnails.md`](oversized-jpeg-thumbnails.md), moved from `ideas/large-jpeg-thumbnails.md`.
+- Four Spike 10 likeness-audit leftovers go to Spike 14 instead of Spike 12: the gallery image source (S14-01) and the composer's drawing feedback, captions and cap announcement (S14-03).
 
 ## Writer's own calls
 - K-4 pulls two items of `ideas/depictions-and-likenesses.md` into S12-27 (decode the crop before the session; one stage-then-write entry point), because the staged-object type it asks for covers them. The idea file is trimmed.
@@ -96,7 +100,7 @@ Round 2 is the last round; no blocker is open.
 ## Round 1
 
 ### K-1 · blocker · Land S12-34's per-key descriptor before the slice 6 cache work, and give it a patch slot
-**Answer:** To user (a preparatory reorder). S12-34's scope now carries the `patch` and `refresh(ids)` slots and names progress, the graph list by Source and the Sources insert as entries; S12-26 says how it fits if S12-34 lands first.
+**Answer:** Fixed (user, 2026-10-27). S12-34 is first in slice 6 and carries the `patch` and `refresh(ids)` slots; today's hand-written updates move into them, and S12-25 and S12-26 add their reads as entries.
 
 ### K-2 · blocker · One keyed "reads" effect instead of a new WriteEffects field per partial read
 **Answer:** Fixed. Working rule "A write names only the graphs whose loaded rows it moves, and the partial reads it moves by key"; S12-25 introduces `Effect.Reads` → `Set.Reads` → `WriteEffects.reads` in the shape of `Set.Search` (citation reads, graph progress); S12-26 adds the graph list by Source.
@@ -120,7 +124,7 @@ Round 2 is the last round; no blocker is open.
 **Answer:** Fixed. Working rule "…checked first, and Go decides the type": Go's `files` filter decides, Swift checks only extension, execute bit and executable types, and the viewer extends `ThumbnailDecodePolicy`. Dependency S12-23 → S12-28 added.
 
 ### K-9 · major · S12-35 reverses the FakeStore rule; settle the direction first
-**Answer:** To user (above). S12-35's scope now starts from that decision.
+**Answer:** Fixed (user, 2026-10-27, option a). S12-35 removes the fake's engine rules and scripts values instead; the working rule binds every PR that adds a store method.
 
 ### K-10 · major · Bar 13 has no structural pin
 **Answer:** Fixed. S12-32 adds the `api/ffi` pin test with an allow-list; S12-33 empties it. Working rule "Every audited write returns its effects, and a test holds them to it".

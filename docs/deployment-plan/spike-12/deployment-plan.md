@@ -2,7 +2,7 @@
 
 A Source can be copied to start a sibling one in a single step, and a big Source can hold several isolated Evidence graphs that are each promoted on their own. The design is in [`source-structure.md`](source-structure.md). It pulls in [`ideas/source-structure.md`](source-structure.md) (moved here) and settles it as two tools; the options weighed and parked are in [`ideas/source-structure-later.md`](../../ideas/source-structure-later.md) and [`ideas/archive/graph-focus-views.md`](../../ideas/archive/graph-focus-views.md) (archived 2026-10-24). One behavior, one PR.
 
-**Slices 5–7 fix what the [app-health audit](app-health-audit.md) of 2026-10-27 found** in the app as slices 1–4 left it: its High and Medium items, grouped into PRs by the files or the behavior they share (user, 2026-10-27). Each scope entry names its audit items (`A-n`); the audit doc holds their evidence and fixes. Slice 5 also makes an Artifact able to stand in no graph, so a new page can start its own graph.
+**Slices 5–7 fix what the [app-health audit](app-health-audit.md) of 2026-10-27 found** in the app as slices 1–4 left it: its High and Medium items, grouped into PRs by the files or the behavior they share (user, 2026-10-27). Each scope entry names its audit items (`A-n`); the audit doc holds their evidence and fixes. Slice 5 also makes an Artifact able to stand in no graph, so a new page can start its own graph, and slice 6 gives oversized JPEGs a thumbnail through a small Go decoder of our own.
 
 **A brief covers one view.** A PR that changes chrome waits on a brief for each view it touches. Briefs and PR plans are written just before the PR ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md), [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md)). A bugfix or a behavior change with no new chrome is not gated.
 
@@ -32,8 +32,9 @@ Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
 10. **A page can start its own graph.** On a Source with only its Default graph, Add artifact with the Default box unchecked adds the page in no graph; Add evidence graph then starts with only that page checked. Until it is linked, its card says it is in no evidence graph.
 11. **A shared project is safe to open.** A stored file whose type is not allowed, or that is executable, is refused with its name; a metadata link opens only on the web; a crafted position, image or engine fault does not crash the app.
 12. **Graph work stays fast on a split census.** A Citation save on a 60-graph census reloads only the graphs its Observations are on; opening a Source page does not scan the audit history; attaching a large scan does not stall the other panes.
-13. **One place for each job.** Every audited write returns its effects; FakeStore, cache keys, search kinds and the canvas's tool state each have one declared place, pinned by tests; a new Swift file needs no hand-written project entry; the docs, skills and kit README describe the code as it is.
+13. **One place for each job.** Every audited write returns its effects; cache keys, search kinds and the canvas's tool state each have one declared place, pinned by tests; FakeStore re-implements no engine rule; a new Swift file needs no hand-written project entry; the docs, skills and kit README describe the code as it is.
 14. **Keyboard and VoiceOver are safe on graph work.** Return in a delete confirm cancels; a dirty graph form asks before a link inside it closes it; VoiceOver hears a graph save or its failure and can jump to the Evidence graphs section by heading; counts read "1 subject", not "1 subjects".
+15. **Every JPEG gets a thumbnail.** An 11,000 × 18,000 scan, over the 64-megapixel decode budget, shows a thumbnail instead of the missing-image glyph and can be used as a cover, through Go code that a Windows build reuses.
 
 ## Where the notes went
 
@@ -51,7 +52,8 @@ Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
 | [`ideas/settled-list-count-publish.md`](../../ideas/settled-list-count-publish.md) — shipped in c6dcd51d, aedf7aa2, 228bd821 and archived; its open question, a stale key read as settled (user, 2026-10-27) | S12-20, S12-26 | — |
 | [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md) — "Fake store keys", "Go reads every Swift mirror", the `effects` package's own querier, and the done "Query-wait test helper" (user, 2026-10-27) | S12-35, S12-25, S12-20 | — |
 | [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) — "Decode the crop before taking the catalog session" and "One stage-then-write entry point" (map review K-4) | S12-27 | — |
-| [Map review](deployment-plan.review.md) of slices 5–7 (2026-10-27) | S12-20 – S12-38 | — |
+| `ideas/large-jpeg-thumbnails.md`, moved here as [`oversized-jpeg-thumbnails.md`](oversized-jpeg-thumbnails.md): a portable, purpose-built decoder instead of macOS ImageIO (user, 2026-10-27) | S12-39 | — |
+| [Map review](deployment-plan.review.md) of slices 5–7 (2026-10-27) | S12-20 – S12-39 | — |
 
 **Back in the ideas folder** — [`ideas/source-structure-later.md`](../../ideas/source-structure-later.md): nested Sources, derivation links, named templates, per-graph credibility, layered citation output. [`ideas/archive/graph-focus-views.md`](../../ideas/archive/graph-focus-views.md) (archived 2026-10-24): focus views for one large graph, including the "layers or filters" half of the dense-graphs dogfood note. [`ideas/artifact-outside-graph-marker.md`](../../ideas/artifact-outside-graph-marker.md): naming, in a graph delete's confirm, the Artifacts it leaves in no graph. The audit's Low items are listed, not scheduled, in [`app-health-audit.md`](app-health-audit.md#not-scheduled).
 
@@ -124,7 +126,7 @@ These are the calls for this spike. PR plans treat them as binding.
 
 ### Audit fixes (slices 5–7)
 
-Decisions on the [app-health audit](app-health-audit.md) and its [map review](deployment-plan.review.md) (user, 2026-10-27). They bind S12-20 – S12-38.
+Decisions on the [app-health audit](app-health-audit.md) and its [map review](deployment-plan.review.md) (user, 2026-10-27). They bind S12-20 – S12-39.
 
 - **Fix the High and Medium items, grouped by shared files or behavior.** Each PR names its audit items (`A-n`); `plan-pr` reads them in the audit doc and re-checks each against the code, because its line numbers are from 731e423. The Low items are [not scheduled](app-health-audit.md#not-scheduled); a plan pulls one in only with the user's OK. Idea items pulled in are listed in "Where the notes went".
 - **An Artifact is the parent; it may stand in no graph.** A graph still needs at least one Artifact; an Artifact needs no graph. Add artifact lists the Source's graphs as checkboxes on every Source that has a graph, one graph included, all checked by default, and none checked is allowed; card edit does the same. The wire says which graphs with one message, `GraphLinks { repeated string graph_ids }`, on `CreateArtifactRequest` and `UpdateArtifactRequest`: absent means the default (every graph on create, links unchanged on update), present and empty means none. Go carries it as one type (for example `Links{Given bool; IDs [][]byte}`) and never tells nil from empty (map review K-6). No composer offers an Artifact in no graph. Supersedes "Single-graph Sources hide link checkboxes" and the bar's old "a new Artifact starts linked to every graph"; the graph rules' "empty means every graph" becomes the wire default. Binds S12-22, S12-38.
@@ -143,6 +145,9 @@ Decisions on the [app-health audit](app-health-audit.md) and its [map review](de
 - **A dirty form asks before a link inside it navigates away.** A Kept-linked Citation in the graph form asks "Discard changes?" first. Overrides S12-D3 GF-8. Binds S12-30.
 - **No graph name in the canvas header.** Refused: the breadcrumb names the graph, and S12-29 adds it to the canvas's VoiceOver label and the Back / Forward history rows through the breadcrumbs' own name lookup (map review K-16). Binds S12-29.
 - **Every audited write returns its effects, and a test holds them to it.** A test in `api/ffi` holds every request with a `user_id` to a response with a `WriteEffects` field: S12-32 adds it with an allow-list of S12-33's writes, and S12-33 empties the list (map review K-10). Sidebar counts become an effects list, `counts`, set by `sources` and `canonical_entities` creates and deletes, so the recount follows `WriteEffects.lists` and `navCountTriggers` goes (map review K-5). Binds S12-32, S12-33.
+- **FakeStore is a seeded fake, not a second engine.** It returns seeded rows in seeded order and the effects and errors a test scripts (its `…Error` hooks and seeded effects); it re-implements no engine rule: no ordering, graph membership, effects resolution or refusal logic. Engine rules are tested in Go. A store method a PR adds to FakeStore follows this from now on; S12-35 removes the rules the fake carries today. This keeps `.cursor/rules/swift-tests.mdc` as written (map review K-9, user 2026-10-27, option a). Binds S12-22, S12-25, S12-35 and every PR that adds a store method.
+- **The cache-key descriptor comes first in slice 6.** S12-34 lands before S12-25 and S12-26, so the progress patch, the graph list by Source and the Sources-list insert are entries in its `refresh` and `patch` slots, not hand-written session functions (map review K-1, user 2026-10-27). Binds S12-25, S12-26, S12-34.
+- **Oversized JPEGs get a thumbnail from a reduced decode of our own.** A JPEG over `maxDecodePixels` is decoded at 1/8 scale from its DC coefficients only, then scaled and encoded as today; JPEGs within the budget keep the standard library, and other formats over it stay refused. It is pure Go, with no C library and no platform API, so a Windows build reuses it (user, 2026-10-27). It reads untrusted bytes, so it is bounded and fuzzed ([design](oversized-jpeg-thumbnails.md)). Binds S12-39.
 - **The spike closes when every slice has landed.** S12-99 waits on slices 5–7, the refactors included.
 
 ## PR map
@@ -174,7 +179,7 @@ Decisions on the [app-health audit](app-health-audit.md) and its [map review](de
 | S12-38 | Add an Artifact without a graph; the card saves links in one write | 5 | A-3, A-8 Swift half and the user's fixes: graph boxes on every Source with a graph, none allowed; a card in no graph says so; one card write and preflight; a new graph starts with the Artifacts in no graph checked; the link and unlink RPCs go | S12-D7 | S12-22, S12-D7 | — | Scoped |
 | S12-23 | The app opens only safe files and links | 5 | A-1, A-5: stored types filtered on read; executable objects refused in Go and Swift; metadata links open through Go's `open_href` | — | — | — | Scoped |
 | S12-24 | Audit history: indexed note authors, audited pointer resets | 5 | A-4, A-22: an index on `audit_changes(entity_id)` (migration); cover and portrait pointer resets released and audited through `deleteimpact` | — | — | — | Scoped |
-| S12-25 | Writes name only the graphs they move | 6 | A-7, A-16: Citation and Artifact effects narrowed; one keyed `reads` effect replaces `citation_sources` and carries progress only on writes that change counts; `EvidenceGraphProgress.source_id` dropped | — | — | — | Scoped |
+| S12-25 | Writes name only the graphs they move | 6 | A-7, A-16: Citation and Artifact effects narrowed; one keyed `reads` effect replaces `citation_sources` and carries progress only on writes that change counts, through S12-34's `refresh` slot; `EvidenceGraphProgress.source_id` dropped | — | S12-34 | — | Scoped |
 | S12-26 | Reload only what moved, only when it is on screen | 6 | A-9, A-10, A-25: the graph list re-read per Source through a `reads` entry; Add Source inserts its row; hidden graph and Source page keys go stale and are not settled until reloaded; the Sources list sorts once per change | — | S12-25 | — | Scoped |
 | S12-27 | File work before the catalog session | 6 | A-24 and map review K-4: one staged-object type stages ingest, depiction images and thumbnails outside `catalogsession.Do`; handlers stage before the session; Go only | — | — | — | Scoped |
 | S12-28 | A crafted project can't crash the app | 6 | A-26, A-27, A-28: bounded graph positions; a bounded Artifact viewer decode through `ThumbnailDecodePolicy`; panic recovery at the FFI boundary | — | S12-23 | — | Scoped |
@@ -183,8 +188,9 @@ Decisions on the [app-health audit](app-health-audit.md) and its [map review](de
 | S12-31 | Xcode synchronized folders | 7 | A-34: `project.pbxproj` on synchronized folders; the pbxproj steps leave the skills and rule | — | — | — | Scoped |
 | S12-32 | Promote and Source writes return their effects | 7 | A-29, A-35 (Promote): Promote and Source handlers return `WriteEffects`; sidebar counts become a `counts` effects list; a test pins effects on every audited write (allow-list for S12-33); the dead `promoteSubject` path goes | — | — | — | Scoped |
 | S12-33 | Vocabulary writes return their effects; dead RPCs go | 7 | A-29, A-35 (the rest): Source type, metadata field, Property, binding and term handlers return `WriteEffects` and the pin test's allow-list empties; six unclaimed RPCs and two test-only store methods deleted | — | S12-32 | — | Scoped |
-| S12-34 | One descriptor per cache key | 7 | A-30: each `CatalogQueryKey.Kind` has one typed descriptor (value, loader, spec, invalidation, a `patch` and a `refresh(ids)` slot), with a test that every kind has one | — | — | — | Scoped |
-| S12-35 | FakeStore matches the engine | 7 | A-15 and the user's pulls from `shared-list-helpers`: the fake's direction settled (map review K-9), its graph effects, order and refusals made to match it; FakeStore keys through `FieldSlug`; `FieldSlug` and `ProjectSlug` fixtures pinned by Go | — | — | — | Scoped |
+| S12-34 | One descriptor per cache key | 6 | A-30: each `CatalogQueryKey.Kind` has one typed descriptor (value, loader, spec, invalidation, a `patch` and a `refresh(ids)` slot), with a test that every kind has one; first in slice 6 | — | — | — | Scoped |
+| S12-35 | FakeStore is a seeded fake | 6 | A-15 and the user's pulls from `shared-list-helpers`: the fake's engine rules (order, graph membership, effects resolution, refusals) give way to seeded and scripted values; FakeStore keys through `FieldSlug`; `FieldSlug` and `ProjectSlug` fixtures pinned by Go | — | — | — | Scoped |
+| S12-39 | Thumbnails for oversized JPEGs | 6 | A pure-Go reduced decoder in `core/raster` reads only DC coefficients, so a JPEG over the 64-megapixel budget gets a 1/8-scale image to thumbnail; bounded and fuzzed; Go only | — | — | — | Scoped |
 | S12-36 | Search kinds own their columns and locations | 7 | A-31: `KindSpec` names each field's column and carries its location builder; `Reproject` and `RebuildAll` read a projector table; a completeness test; Go only | — | — | — | Scoped |
 | S12-37 | Canvas tool and sheet state as enums | 7 | A-32: one tool enum and one sheet enum replace the canvas's flags | — | S12-21 | — | Scoped |
 | S12-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
@@ -257,13 +263,16 @@ SLICE 5 — Audit fixes: High
          refused; a Source page opens without scanning history.
 
 SLICE 6 — Audit fixes: Medium
+  S12-34  One descriptor per cache key
+  S12-35  FakeStore is a seeded fake
   S12-25  Writes name only the graphs they move
   S12-26  Reload only what moved, only when it is on screen
   S12-27  File work before the catalog session
   S12-28  A crafted project can't crash the app
   S12-29  Name the Evidence graph; counts take plurals
   S12-30  Dialogs and VoiceOver behave safely
-  Check: bar outcomes 9, 11, 12 and 14; a Citation save on a 60-graph census
+  S12-39  Thumbnails for oversized JPEGs
+  Check: bar outcomes 9, 11, 12, 14 and 15; a Citation save on a 60-graph census
          refreshes only its graphs; Return in a delete confirm cancels; the
          Promote toast reads "Filed 1 subject".
 
@@ -271,17 +280,15 @@ SLICE 7 — Structural debt
   S12-31  Xcode synchronized folders
   S12-32  Promote and Source writes return their effects
   S12-33  Vocabulary writes return their effects; dead RPCs go
-  S12-34  One descriptor per cache key
-  S12-35  FakeStore matches the engine
   S12-36  Search kinds own their columns and locations
   S12-37  Canvas tool and sheet state as enums
-  Check: bar outcome 13; handler tests show every audited write's effects;
-         the FakeStore golden test and the cache-key test pass.
+  Check: bar outcome 13; handler tests show every audited write's effects,
+         and the pin test passes with an empty allow-list.
 
 S12-99 — Dogfood close / docs
 ```
 
-Which PRs can run in parallel: slice 1 is independent of slices 2 and 3 and can ship first. After S12-03, S12-04, S12-06 and S12-07 can run in parallel. After S12-08, S12-09, S12-10, S12-11, S12-14 and S12-15 are independent of each other. S12-19 depends on nothing and goes before S12-15. In slices 5–7, every PR with no arrow below can run in parallel. Where two PRs edit the same code, the preferred merge order is: S12-22 before S12-25, so its new writes follow the narrowed effects; S12-26, S12-32 and S12-33 before S12-34, unless S12-34 moves first (map review K-1, the user's call); S12-22, S12-25 and S12-33 before S12-35. S12-31 needs a Mac and lands best first, before the other slice 5–7 PRs add Swift files (map review K-15).
+Which PRs can run in parallel: slice 1 is independent of slices 2 and 3 and can ship first. After S12-03, S12-04, S12-06 and S12-07 can run in parallel. After S12-08, S12-09, S12-10, S12-11, S12-14 and S12-15 are independent of each other. S12-19 depends on nothing and goes before S12-15. In slices 5–7, every PR with no arrow below can run in parallel. Where two PRs edit the same code, the preferred merge order is: S12-22 before S12-25, so its new writes follow the narrowed effects; S12-34 and S12-35 first in slice 6 (map review K-1 and K-9); S12-34 before S12-32 and S12-33, which shrink its invalidation sets; S12-27 before S12-39, so the reduced decode runs outside the session. S12-31 needs a Mac and lands best first, before the other slice 5–7 PRs add Swift files (map review K-15).
 
 ### Dependencies at a glance
 
@@ -303,7 +310,7 @@ S12-05, S12-08 ──▶ S12-11 ──▶ S12-12 ──▶ S12-13
 S12-D2 ──▶ S12-11   S12-D3 ──▶ S12-12   S12-D4 ──▶ S12-13   S12-D5 ──▶ S12-14
 
 S12-22 ──▶ S12-38   S12-D7 ──▶ S12-38
-S12-25 ──▶ S12-26
+S12-34 ──▶ S12-25 ──▶ S12-26
 S12-23 ──▶ S12-28
 S12-32 ──▶ S12-33
 S12-21 ──▶ S12-37
@@ -478,7 +485,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-22 — Artifacts can stand outside every graph
 
-**Ships.** `GraphLinks` on `CreateArtifactRequest` and `UpdateArtifactRequest` (absent: the default; present and empty: none), carried in Go as one type. The Artifact update applies its links through `applyLinks`, the loop lifted from `evidencegraphs.Update`, in one write. One unlink check that `Unlink` refuses from and `UnlinkImpact` reports; `UnlinkImpact` takes (graph, Artifact) pairs and `EvidenceGraphUnlinkBlock` gains `graph_id` and `reason`. `Unlink` refuses the last graph of an Artifact with Citations with a new user-kind code; graph `Delete` gains an inbound probe for the Citations it would strand, with a `viaFormats` heading, and `evidencegraphs.in_use` is reworded to cover both reasons. Store and FakeStore methods, `L10n.Errors` copy, and `source-layer-data-model.md`, `interpretation-layer-data-model.md`, `catalog-deletes.md`.
+**Ships.** `GraphLinks` on `CreateArtifactRequest` and `UpdateArtifactRequest` (absent: the default; present and empty: none), carried in Go as one type. The Artifact update applies its links through `applyLinks`, the loop lifted from `evidencegraphs.Update`, in one write. One unlink check that `Unlink` refuses from and `UnlinkImpact` reports; `UnlinkImpact` takes (graph, Artifact) pairs and `EvidenceGraphUnlinkBlock` gains `graph_id` and `reason`. `Unlink` refuses the last graph of an Artifact with Citations with a new user-kind code; graph `Delete` gains an inbound probe for the Citations it would strand, with a `viaFormats` heading, and `evidencegraphs.in_use` is reworded to cover both reasons. Store methods with FakeStore stubs that return scripted links and refusals, `L10n.Errors` copy, and `source-layer-data-model.md`, `interpretation-layer-data-model.md`, `catalog-deletes.md`.
 **Not this PR.** Any view, and deleting the link and unlink RPCs once the card stops calling them (S12-38); sorting accented graph names (audit L-1).
 **Check.** Go tests: an Artifact created in no graph; a card-shaped update that links and unlinks in one revision; the A-3 probes refused with the new code and with the probe's Citations; `UnlinkImpact` reports every reason for a graph's pairs and for an Artifact's pairs, and `Unlink` refuses exactly what it reports. Handler tests for both request changes.
 **Context.** Audit A-3, A-8; working rules "An Artifact is the parent", "An Artifact with Citations keeps at least one graph", "One unlink check, one link writer", "An Artifact card's Save is one write", "Refusals are of two kinds"; map review K-3, K-6, K-7; `add-ffi-handler`, `add-catalog-delete`, `add-localized-string`.
@@ -506,9 +513,23 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 ### Slice 6 — Audit fixes: Medium
 
+#### S12-34 — One descriptor per cache key
+
+**Ships.** Each `CatalogQueryKey.Kind` has one descriptor holding its value type, loader, spec and invalidation rule, plus two update slots: `patch` (today's `lastUpdated`) and `refresh(ids)` (reload some rows and merge them into the cached value). Today's hand-written updates move into them with no change in behavior: `lastUpdated` and `patchUpdatedSource` become `patch` entries and `patchEvidenceGraphProgress` a `refresh` entry; S12-25 and S12-26 then add their reads as entries. `load(key:store:) -> Any`, `warmQuery`'s restated types and the separate `specs` table go. `Kind` is `CaseIterable`, and a test holds every kind to one descriptor. `add-workspace-place` teaches the new shape.
+**Not this PR.** A behavior change to any key.
+**Check.** The new test fails when a kind has no descriptor; `CatalogQueryRegistryTests` and `WorkspaceSessionTests` pass unchanged.
+**Context.** Audit A-30; working rule "The cache-key descriptor comes first in slice 6"; map review K-1; maintainability Q2. Before S12-25 and S12-26, which add its entries, and S12-32 and S12-33, which shrink its invalidation sets.
+
+#### S12-35 — FakeStore is a seeded fake
+
+**Ships.** FakeStore loses the engine rules it re-implements: `graphListOrder`, `citationIsInGraph`, the effects resolution in `graphEffects` and `bumpSource`, and the refusal logic in its graph and Copy Source methods. In their place it returns seeded rows in seeded order and the effects and errors a test scripts through its `…Error` hooks. The Swift tests that leaned on those rules script them instead, and the rules stay tested in Go. FakeStore builds keys through `FieldSlug.kebab`, and `swift_vocabulary_test.go` pins the `FieldSlug` and `ProjectSlug` fixtures, decoding their escaped rows ([idea](../../ideas/shared-list-helpers.md)). `.cursor/rules/swift-tests.mdc` gains a line on scripting effects and refusals.
+**Not this PR.** Pinning `apperr` codes to `L10n.Errors` (audit L-2).
+**Check.** `rg` finds no ordering, membership, effects-resolution or refusal rule in `FakeStore.swift`; the Swift tests pass with scripted values; the fixture pins fail when a Swift fixture drifts from Go.
+**Context.** Audit A-15; working rule "FakeStore is a seeded fake, not a second engine"; map review K-9; `add-swift-test`. First in slice 6 with S12-34; S12-22 adds its store methods by the same rule.
+
 #### S12-25 — Writes name only the graphs they move
 
-**Ships.** The keyed reads effect: `Effect.Reads` → `Set.Reads` → `WriteEffects.reads` (`citation_sources` replaced, its number reserved) → one Swift line per read name. Its first entries: a Citation's citation reads per graph (the graphs of its Observations, or every graph that links its Artifact while it has none), and graph progress on Subjects, Observations and Identity Claims. In the `effects` registry a Citation's `EvidenceGraph` is the graphs of its Observations, an Artifact names none, and a Source title keeps its graphs. Swift invalidates `.citationCounts` and `.citationsByArtifact` per graph; the composer's Artifact key becomes a visible key, so `applyWrite` stops querying after `apply`. `EvidenceGraphProgress.source_id` goes (reserved) and `graphprogress` gets an `evidencegraphs` code. The `effects` package's own `querier` moves onto `database.Querier` ([idea](../../ideas/shared-list-helpers.md)). FakeStore's graph effects follow. Updates `effects/README.md`, `add-catalog-model`, `add-audit-scope`, `add-workspace-place` and `macos-client-patterns.md` rule 2.
+**Ships.** The keyed reads effect: `Effect.Reads` → `Set.Reads` → `WriteEffects.reads` (`citation_sources` replaced, its number reserved) → one Swift line per read name. Its first entries: a Citation's citation reads per graph (the graphs of its Observations, or every graph that links its Artifact while it has none), and graph progress on Subjects, Observations and Identity Claims. In the `effects` registry a Citation's `EvidenceGraph` is the graphs of its Observations, an Artifact names none, and a Source title keeps its graphs. Swift invalidates `.citationCounts` and `.citationsByArtifact` per graph; the composer's Artifact key becomes a visible key, so `applyWrite` stops querying after `apply`. `EvidenceGraphProgress.source_id` goes (reserved) and `graphprogress` gets an `evidencegraphs` code. The `effects` package's own `querier` moves onto `database.Querier` ([idea](../../ideas/shared-list-helpers.md)). Progress and the citation reads refresh through S12-34's `refresh` slot, and FakeStore returns scripted reads. Updates `effects/README.md`, `add-catalog-model`, `add-audit-scope`, `add-workspace-place` and `macos-client-patterns.md` rule 2.
 **Not this PR.** The graph list by Source and hidden-key reloads (S12-26); the first-visit progress scan (audit L-12).
 **Check.** Bar outcome 12, first half: an effects test on a many-graph Source pins "a Citation names only its Observations' graphs" and "an Artifact names none"; a Swift test shows one Citation save refetching only its graph's progress.
 **Context.** Audit A-7, A-16; working rule "A write names only the graphs whose loaded rows it moves, and the partial reads it moves by key"; map review K-2, K-13; `effects.Set.Search` (the shape to copy); `add-ffi-handler`, `add-workspace-place`.
@@ -516,14 +537,14 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 #### S12-26 — Reload only what moved, only when it is on screen
 
 **Ships.** A `reads` entry for the graph list by Source (graph and link rows, Source create, copy and delete); `ListEvidenceGraphsRequest` takes an optional Source, and the session re-reads only the named Sources' graphs and merges them into the cached list through the cache layer. Add and Copy Source insert the row `CreateSource` returns into the Sources list through the same layer, not a feature write-through. `.evidenceGraph` and `.sourceWorkspace` go stale while hidden, and `QueryHandle.isStale` (set by `markStale`, cleared by `beginLoading`) keeps `isSettled` false until a stale key reloads. `SourcesModel.visibleSources` is memoized against the revisions it reads. Updates `macos-client-patterns.md` rule 4 (list membership patched from a write's own row).
-**Not this PR.** The cache-key descriptor (S12-34); if S12-34 lands first (map review K-1), the merge and the insert are its `refresh` and `patch` entries.
+**Not this PR.** The descriptor itself (S12-34): the graph-list merge and the Sources-list insert are its `refresh` and `patch` entries.
 **Check.** A link write re-reads one Source's graphs; an off-screen graph reloads only when revisited; a list that reappears after its key went stale publishes its count only after the reload; typing in Add Source does not re-sort the list (model tests).
 **Context.** Audit A-9, A-10, A-25; [`ideas/settled-list-count-publish.md`](../../ideas/settled-list-count-publish.md) (its open question); working rules "One graph list", "A hidden graph or Source page goes stale; it does not reload"; S12-16 (why the hand-written insert went); `add-workspace-place`, `add-ffi-handler`. After S12-25, whose keyed effect it adds a read to.
 
 #### S12-27 — File work before the catalog session
 
 **Ships.** One staged-object type in `ingest`: it stages bytes from the project folder outside `catalogsession.Do` (stream to an `objectstore` temp file, hash and sniff, and for an image decode and encode), inserts its `files` row inside the write (`LookupByChecksum`, `Install`), and discards what the write did not use. `ingest.File`, `StageImage` (through `StageDepictions` in the citation, observation and connect handlers, one stage-then-write entry point) and the thumbnail derivative (`derivatives.Ensure`) all use it, and handlers stage before `withProjectCatalog`. Go only. Updates `use-catalog-session` and `source-layer-data-model.md`.
-**Not this PR.** Oversized-JPEG thumbnails ([idea](../../ideas/large-jpeg-thumbnails.md)); storing crops below 2,048 px ([idea](../../ideas/depictions-and-likenesses.md)).
+**Not this PR.** Oversized-JPEG thumbnails (S12-39); storing crops below 2,048 px ([idea](../../ideas/depictions-and-likenesses.md)).
 **Check.** Bar outcome 12, last clause. A Go test holds a slow reader in the stage step while another session call completes; a depiction save decodes before the session; the ingest, dedupe, purge and depiction tests pass unchanged.
 **Context.** Audit A-24; working rule "File work and decoding happen before the catalog session"; map review K-4; `core/ingest/stage.go` (`StagedImage`, the split to generalize); `derivatives.Ensure`; [`source-layer-data-model.md`](../../source-layer-data-model.md) (a purge and an import never interleave); `use-catalog-session`.
 
@@ -548,6 +569,13 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Check.** Bar outcome 14. Return in a graph delete confirm cancels; a renamed graph survives a click on a Kept-linked Citation until Discard; VoiceOver hears "Evidence graph added", including from a toast drawn outside the shared overlay.
 **Context.** Audit A-13, A-17, A-18, A-21; working rules "A danger confirm's default action is Cancel", "A dirty form asks before a link inside it navigates away", "Kit components announce themselves"; map review K-11; board S12-D3 (GF-8 overridden); `add-ui-component`.
 
+#### S12-39 — Thumbnails for oversized JPEGs
+
+**Ships.** A reduced JPEG decoder in `core/raster` that reads only DC coefficients and returns the image at 1/8 scale: baseline and progressive Huffman, 8-bit, one to three components with any sampling factors, restart intervals; arithmetic coding, 12-bit, lossless and four-component JPEGs return `ErrTooLarge`. `EncodeJPEG` uses it when the format is JPEG and the declared size is over `maxDecodePixels`, then scales and encodes as today, so `derivatives` stores the usual thumbnail row and the next Source open shows it. Every count read from the file is checked before use, and the 1/8 image counts against the budget. Go native fuzzing over the decoder. Go only.
+**Not this PR.** EXIF orientation; a larger cover derivative; other formats over the budget; the Mac viewer (S12-28).
+**Check.** Bar outcome 15. A JPEG just over 64 MP, built in the test from a lazy image with no full buffer, thumbnails to a 256 px long edge; small baseline and progressive JPEGs decode within tolerance of the standard library's decode scaled by 8; the fuzz seeds pass; PNG and GIF header bombs still return `ErrTooLarge`.
+**Context.** Working rule "Oversized JPEGs get a thumbnail from a reduced decode of our own"; [design](oversized-jpeg-thumbnails.md); `core/raster` (`EncodeJPEG`, `decode`, `maxDecodePixels`, `Slot`), `core/derivatives/ensure.go`, `api/ffi/handlers/thumbnails.go`; ITU-T T.81. Preferred after S12-27. If the plan runs past about ten steps, progressive support splits into its own PR.
+
 ### Slice 7 — Structural debt
 
 #### S12-31 — Xcode synchronized folders
@@ -570,20 +598,6 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Not this PR.** `UpdatePropertyTerm`, `DeletePropertyTerm`, `ReorderSubjectTypeProperties` (named by idea files); the audit's test-net items (L-16).
 **Check.** Handler tests assert effects; the pin test's allow-list is empty; no RPC is left without a Swift caller except the three kept; `macos-client-patterns.md` rule 2 lists only exceptions effects cannot express.
 **Context.** Audit A-29, A-35; working rule "Every audited write returns its effects, and a test holds them to it"; `add-ffi-handler`. After S12-32, whose pin test it empties. The plan confirms `RemoveInstallIdentity` is not planned before deleting it.
-
-#### S12-34 — One descriptor per cache key
-
-**Ships.** Each `CatalogQueryKey.Kind` has one descriptor holding its value type, loader, spec and invalidation rule, plus two update slots: `patch` (today's `lastUpdated`) and `refresh(ids)` (reload some rows and merge them into the cached value). Graph progress, the graph list by Source and the Sources list insert become its entries, in place of the session's hand-written patch functions (`patchEvidenceGraphProgress`, `patchUpdatedSource`). `load(key:store:) -> Any`, `warmQuery`'s restated types and the separate `specs` table go. `Kind` is `CaseIterable`, and a test holds every kind to one descriptor. `add-workspace-place` teaches the new shape.
-**Not this PR.** A behavior change to any key.
-**Check.** The new test fails when a kind has no descriptor; `CatalogQueryRegistryTests` and `WorkspaceSessionTests` pass unchanged.
-**Context.** Audit A-30; map review K-1 (whether it moves to the head of slice 6 is the user's call); maintainability Q2.
-
-#### S12-35 — FakeStore matches the engine
-
-**Ships.** The direction for FakeStore, decided before planning (map review K-9): either a seeded fake that returns scripted order, effects and refusals, with every engine rule tested in Go, or a fake held to the engine by a test. FakeStore's graph effects, list order, graph-delete refusals and `copySource` input follow that direction, and `.cursor/rules/swift-tests.mdc` says which. FakeStore builds keys through `FieldSlug.kebab`, and `swift_vocabulary_test.go` pins the `FieldSlug` and `ProjectSlug` fixtures, decoding their escaped rows ([idea](../../ideas/shared-list-helpers.md)).
-**Not this PR.** Pinning `apperr` codes to `L10n.Errors` (audit L-2).
-**Check.** The graph form and Copy Source model tests exercise the refusals the chosen direction gives them; the fixture pins fail when a Swift fixture drifts from Go.
-**Context.** Audit A-15; map review K-9; `add-swift-test`. Preferred after S12-22, S12-25 and S12-33, which change the effects the fake carries, unless the direction moves it first.
 
 #### S12-36 — Search kinds own their columns and locations
 

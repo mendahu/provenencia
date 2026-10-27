@@ -1,6 +1,6 @@
 # Deployment plan — Spike 14
 
-Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"). It takes small features, UX refinements and fixes in batches; each batch is a slice with its own Check. The first batch pulls the "other keys" item and the transparent-polygon item from [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md), and adds thumbnail parity and rectangle-only depiction drawing. Batch 1 is cut by layer (engine, app, drawing) because almost all of it reuses Person behavior that already exists (working rule "Batch 1 is cut by layer").
+Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"). It takes small features, UX refinements and fixes in batches; each batch is a slice with its own Check. The first batch pulls the "other keys" item and the transparent-polygon item from [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md), and adds thumbnail parity and rectangle-only depiction drawing. It also takes four Spike 10 likeness-audit leftovers that edit the same code: the gallery's image source (S14-01) and the composer's drawing feedback, captions and cap announcement (S14-03) (user, 2026-10-27, while planning Spike 12's audit fixes). Batch 1 is cut by layer (engine, app, drawing) because almost all of it reuses Person behavior that already exists (working rule "Batch 1 is cut by layer").
 
 **A brief covers one view.** A PR that changes chrome waits on a brief for each view it touches. Briefs and PR plans are written just before the PR ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md), [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md)). A bugfix or a behavior change with no new chrome is not gated.
 
@@ -23,6 +23,8 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 5. **An event or place has a thumbnail.** The Event and Place page headers lead with the earliest picture; choosing another tile as the thumbnail (or going back to the earliest) works as a Person's portrait does, and the Events and Places lists lead with the same picture.
 6. **Promote says picture.** Comparing two Places with pictures, the evidence sheet reads "Same picture" or "Compare these pictures", not "likeness".
 7. **Likenesses are unchanged.** A Person's likeness, gallery and portrait work as before.
+8. **A tile shows its own picture.** Every gallery tile, and the header or list thumbnail it leads, shows the image stored with its own record; an edited reconciler cache row cannot show another picture.
+9. **Drawing guides and reports.** While a region or a depiction is drawn, Set page, the locator chip × buttons and Find are disabled and the draw hint hides; Draw is blocked on a file the viewer cannot cut, and a failed cut shows with Save disabled; a PDF Citation's page can be set from the needs-page callout; the captions name the region buttons, not only Draw; an edit that saves no image does not say "Image to save"; VoiceOver hears the freehand tool's point cap.
 
 ## Where the notes went
 
@@ -34,8 +36,10 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 | Rename the gallery layer away from "likeness" (map review K-5) | S14-01, S14-02 | — |
 | Rectangle-only depiction drawing (user, 2026-10-27) | S14-03 | — |
 | [`depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) "Transparent polygon" | Refused (working rule "A depiction is drawn as a rectangle") | — |
+| [`depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) "Gallery image from the record" (likeness audit SEC-4) | S14-01 | — |
+| [`depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) composer feedback (UX-5, UX-6, UX-7), copy (UX-12, UX-13) and cap feedback, moved from Spike 12's audit planning (user, 2026-10-27) | S14-03 | — |
 
-**Back in the ideas folder** — [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md): signature and the Spike 10 audit leftovers.
+**Back in the ideas folder** — [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md): signature and the Spike 10 audit leftovers not taken here.
 
 ## Working rules
 
@@ -56,9 +60,9 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 
 | PR | Title | Slice | Scope | Brief | Depends on | Plan | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| S14-01 | Pictures engine | 1 | Rename the gallery layer (Go, proto, Swift wire mapping); seed `event_picture` and `place_picture`; the gallery reads the gallery keys; Event and Place headers carry the lead picture | — | — | — | Scoped |
+| S14-01 | Pictures engine | 1 | Rename the gallery layer (Go, proto, Swift wire mapping); seed `event_picture` and `place_picture`; the gallery reads the gallery keys and each picture's own image; Event and Place headers carry the lead picture | — | — | — | Scoped |
 | S14-02 | Pictures in the app | 1 | The gallery slot and the Swift view-layer rename; Event and Place pages show Pictures, a header thumbnail and choosing a thumbnail; Events and Places lists lead with it; Promote words depictions as pictures | — | S14-01 | — | Scoped |
-| S14-03 | Rectangle-only depiction drawing | 1 | Depiction drawing offers only the rectangle tool; the Citation's region as a depiction uses its bounding rectangle | — | — | — | Scoped |
+| S14-03 | Rectangle-only depiction drawing | 1 | Depiction drawing offers only the rectangle tool; the Citation's region as a depiction uses its bounding rectangle; the composer's drawing feedback, captions and cap announcement | — | — | — | Scoped |
 | S14-04 | Promote wording for pictures | — | Folded into S14-02 (working rule "Batch 1 is cut by layer") | — | — | — | Descoped (2026-10-27) → S14-02 |
 | S14-05 | Event and Place headers lead with a picture | — | Folded into S14-01 | — | — | — | Descoped (2026-10-27) → S14-01 |
 | S14-06 | Choose an Event or Place thumbnail | — | Folded into S14-02 | — | — | — | Descoped (2026-10-27) → S14-02 |
@@ -78,7 +82,7 @@ SLICE 1 — Event and Place pictures (batch 1)
   S14-01  Pictures engine
   S14-02  Pictures in the app
   S14-03  Rectangle-only depiction drawing
-  Check: bar outcomes 1–7 on a new project.
+  Check: bar outcomes 1–9 on a new project.
 
 S14-99 — Dogfood close / docs
 ```
@@ -102,9 +106,9 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S14-01 — Pictures engine
 
-**Ships.** The gallery-layer rename in Go and proto, with the Swift wire mapping (`GoStore`, `CatalogLikeness`) renamed to compile. `event_picture` and `place_picture` in `subjectvocab/registry.go` with `vocabkey` constants; the gallery reads the gallery keys, so `conclusiondetails.ForEntity` returns tiles for an Event or Place. `EventHeader` and `PlaceHeader` carry the lead image from the lead rule (Go, proto, `GoStore`), as `PersonHeader` does, and a chosen thumbnail refreshes the cached header. `observationstest.SaveDepiction(…, key, …)`, with `SaveLikeness` a wrapper. Updates the docs in [design § Domain docs](event-place-pictures.md#domain-docs-the-prs-update).
+**Ships.** The gallery-layer rename in Go and proto, with the Swift wire mapping (`GoStore`, `CatalogLikeness`) renamed to compile. `event_picture` and `place_picture` in `subjectvocab/registry.go` with `vocabkey` constants; the gallery reads the gallery keys, so `conclusiondetails.ForEntity` returns tiles for an Event or Place. `EventHeader` and `PlaceHeader` carry the lead image from the lead rule (Go, proto, `GoStore`), as `PersonHeader` does, and a chosen thumbnail refreshes the cached header. The gallery reads each picture's image File from its own `depiction_values` row, not the copy in `auto_reconciler_values.value_image_file_id` (likeness audit SEC-4). `observationstest.SaveDepiction(…, key, …)`, with `SaveLikeness` a wrapper. Updates the docs in [design § Domain docs](event-place-pictures.md#domain-docs-the-prs-update).
 **Not this PR.** Anything the app shows (S14-02); drawing (S14-03); renaming the preferred-pointer column.
-**Check.** `TestSeedProductValues` cases for both keys and the gallery-key test; a gallery test where a Place's picture is in its gallery and a Person's likeness is unchanged; an Event's and a Place's header carry the earliest picture, then the chosen one after `SetPreferredLikeness`; a handler test for the detail's header path; the app builds and its tests pass with the renamed mapping.
+**Check.** `TestSeedProductValues` cases for both keys and the gallery-key test; a gallery test where a Place's picture is in its gallery and a Person's likeness is unchanged; an Event's and a Place's header carry the earliest picture, then the chosen one after `SetPreferredLikeness`; a handler test for the detail's header path; a gallery test where an edited `auto_reconciler_values.value_image_file_id` does not change a tile's image; the app builds and its tests pass with the renamed mapping.
 **Context.** Working rules "Event and Place each get their own picture Property", "The gallery layer is named gallery", "The gallery reads one list of gallery keys", "New seeds reach new catalogs only", "An Event or Place chooses its thumbnail"; [design § What changes](event-place-pictures.md#what-changes); `compose.go` `onePerson`, `conclusion_detail.go` `attachHeader`; [`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md), [`add-depiction-value`](../../../.agents/skills/add-depiction-value/SKILL.md), [`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md).
 
 #### S14-02 — Pictures in the app
@@ -116,7 +120,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S14-03 — Rectangle-only depiction drawing
 
-**Ships.** The viewer's region strip takes the tools to offer as `[ArtifactRegionTool]` composer state beside `viewerArmedRegionTool` (the viewer stays unaware of depictions); a depiction draw offers `.rectangle` alone, a Citation region all of `ArtifactRegionTool`. `ArtifactRegionDraft.boundingRectangle`, beside `.whole` and built from `ArtifactRegionGeometry.boundingRect(of:)` and `rectanglePoints`, is what "Use the citation's region" sets on the depiction.
+**Ships.** The viewer's region strip takes the tools to offer as `[ArtifactRegionTool]` composer state beside `viewerArmedRegionTool` (the viewer stays unaware of depictions); a depiction draw offers `.rectangle` alone, a Citation region all of `ArtifactRegionTool`. `ArtifactRegionDraft.boundingRectangle`, beside `.whole` and built from `ArtifactRegionGeometry.boundingRect(of:)` and `rectanglePoints`, is what "Use the citation's region" sets on the depiction. While a region or a depiction is drawn, Set page, the locator chip × buttons and Find are disabled and the draw hint hides; Draw and the region buttons are blocked on a file the viewer cannot cut, and a failed cut shows with Save disabled; the needs-page callout sets a PDF Citation's page (UX-5, UX-6, UX-7). The empty, needs-page and region-hidden captions name the region buttons, not only Draw, and an edit that saves no image drops "Image to save" (UX-12, UX-13). The freehand tool's point cap (`ArtifactRegionOverlay`) is announced to VoiceOver, not only beeped.
 **Not this PR.** Removing shapes from Citation regions; Go-side rectangle enforcement; rewriting saved polygon depictions.
-**Check.** Draw on a likeness shows one radio; a Citation region shows seven; Swift tests for the strip's tool list and the bounding-rectangle conversion; an old polygon depiction still opens and saves.
-**Context.** Working rule "A depiction is drawn as a rectangle"; `ArtifactViewer.swift` `regionTools`, `CitationComposerModel+Depiction.swift` `startDepictionDrawing`, `depictionCitationRegion`, `useDepictionRegion`.
+**Check.** Draw on a likeness shows one radio; a Citation region shows seven; Swift tests for the strip's tool list and the bounding-rectangle conversion; an old polygon depiction still opens and saves; bar outcome 9, with Swift tests for the disabled controls, the blocked Draw and the failed-cut state.
+**Context.** Working rule "A depiction is drawn as a rectangle"; `ArtifactViewer.swift` `regionTools`, `CitationComposerModel+Depiction.swift` `startDepictionDrawing`, `depictionCitationRegion`, `useDepictionRegion`; the audit items in [`depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) (2026-10-18 likeness audit). If the plan runs past about ten steps, the composer feedback splits out as its own PR.
