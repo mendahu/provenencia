@@ -4,8 +4,6 @@
 package graphalign
 
 import (
-	"bytes"
-
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -22,27 +20,13 @@ type Subject struct {
 
 // Bridge links two primary Subjects on the layer (walked undirected).
 type Bridge struct {
-	A, B       []byte
-	KeyA, KeyB vocabkey.BridgeKey // the bridge read from A's end and from B's
-	// Associations are the bridge Subjects behind the edge. The layers never
-	// read them; the loader sets them and the claim evidence query reads them
-	// back, as it does a value's Ref.
-	Associations [][]byte
+	// Edge's Associations are the bridge Subjects behind the edge. The layers
+	// never read them; the loader sets them and the claim evidence query reads
+	// them back, as it does a value's Ref.
+	kinship.Edge
 	// Recording is how the kinship patterns imply the link; the zero value is a
 	// link only recorded.
 	kinship.Recording
-}
-
-// From reads the bridge from one end: the Subject at the other end and the
-// bridge as seen from id. ok is false when id is neither end.
-func (b Bridge) From(id []byte) (other []byte, key vocabkey.BridgeKey, ok bool) {
-	switch {
-	case bytes.Equal(b.A, id):
-		return b.B, b.KeyA, true
-	case bytes.Equal(b.B, id):
-		return b.A, b.KeyB, true
-	}
-	return nil, vocabkey.BridgeKey{}, false
 }
 
 // Handle is one canonical entity in the prefetched canon neighborhood.

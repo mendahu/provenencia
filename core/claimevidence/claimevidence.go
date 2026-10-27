@@ -9,6 +9,7 @@
 package claimevidence
 
 import (
+	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/subjectcompare"
@@ -67,7 +68,7 @@ type Section struct {
 // bridge between a member and a member of the neighbor's entity.
 type Bundle struct {
 	Member, Neighbor, Source []byte
-	Bridge                   []byte // the member's filed bridge Subject
+	Bridges                  [][]byte // every bridge Subject behind the link, the member's first
 	Observations             [][]byte
 }
 
@@ -85,6 +86,11 @@ type Relationship struct {
 	Members  []Bundle
 	Sections []Section // the neighbor's other properties
 
+	// Layer and Canon say how the row's Source and the entity record the fact
+	// the line stands for. The zero Shape is direct. A layer pivot is a layer
+	// Subject; a canon pivot is a handle.
+	Layer, Canon kinship.Shape
+
 	// NeighborEnd, NeighborTerm and NeighborTermNamesNeighbor read Key from the
 	// neighbor's side (segmentcompare.ReadFrom): the endpoint the neighbor is
 	// at, the term it carries, and whether that term names the neighbor.
@@ -101,6 +107,17 @@ type Relationship struct {
 // order for each kind.
 type Inputs struct {
 	Order map[vocabkey.SubjectType][]vocabkey.PropertyKey // each kind's bound properties, in binding order
+	// Placed maps each layer Subject the request places on an entity to that
+	// entity's handle: how kinship.CountedOnce pairs the two sides' pivots.
+	Placed map[string][]byte
+}
+
+// Pivot is the event or parent a kinship pattern passes through: the Subject,
+// its kind, and its values, whose defining properties a link through it bundles.
+type Pivot struct {
+	Subject []byte
+	Kind    vocabkey.SubjectType
+	Values  subjectcompare.Values
 }
 
 // Evidence is everything the sheet shows for one row.
@@ -115,19 +132,26 @@ type Evidence struct {
 type LayerLink struct {
 	Key          vocabkey.BridgeKey // from the row Subject's end
 	Observations [][]byte           // on the layer bridge Subjects
+	Recording    kinship.Recording  // how the row's Source records the link
+	Pivots       []Pivot            // the layer Subjects its shapes pass through
 }
 
-// Bridge is one filed bridge Subject between a member and a member of the
-// neighbor's entity.
+// Bridge is one bridge Subject behind a link between the entity and the
+// neighbor's entity: a filed one joins a member and a member of the neighbor's
+// entity; one behind an implied link joins a member or a neighbor member to the
+// Pivot, the accepted member of the event or parent the link passes through.
+// A recorded bridge has no Pivot.
 type Bridge struct {
-	Subject, Source, Member, Neighbor []byte
-	Observations                      [][]byte
+	Subject, Source, Member, Neighbor, Pivot []byte
+	Observations                             [][]byte
 }
 
 // CanonLink is a link between the entity and the neighbor's entity.
 type CanonLink struct {
-	Key     vocabkey.BridgeKey // from the handle's end
-	Bridges []Bridge           // the association's accepted bridge Subjects
+	Key       vocabkey.BridgeKey // from the handle's end
+	Bridges   []Bridge           // the accepted bridge Subjects behind the link
+	Recording kinship.Recording  // how the entity records the link
+	Pivots    []Pivot            // the pivot members its bridges reach, each once
 }
 
 // Neighbor is one layer neighbor the request places on an entity.

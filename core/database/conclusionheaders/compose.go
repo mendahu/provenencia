@@ -203,6 +203,54 @@ func handleActivity(c *database.Catalog, id []byte) (effects.Activity, error) {
 	return c.Graph().Activity(effects.ScopeCanonicalEntity, id)
 }
 
+// Headers is the headers ByIDs read, found by the entity's raw id.
+type Headers struct {
+	persons map[string]PersonHeader
+	events  map[string]EventHeader
+	places  map[string]PlaceHeader
+}
+
+// Person is the header of the Person with id, or false when it was not read.
+func (h Headers) Person(id []byte) (PersonHeader, bool) { v, ok := h.persons[string(id)]; return v, ok }
+
+// Event is the header of the Event with id, or false when it was not read.
+func (h Headers) Event(id []byte) (EventHeader, bool) { v, ok := h.events[string(id)]; return v, ok }
+
+// Place is the header of the Place with id, or false when it was not read.
+func (h Headers) Place(id []byte) (PlaceHeader, bool) { v, ok := h.places[string(id)]; return v, ok }
+
+// ByIDs reads the headers of the given unmerged Persons, Events and Places,
+// each kind in one call. A kind with no ids is not read. An id that is unknown,
+// merged, or of another kind is absent from its kind's headers.
+func ByIDs(c *database.Catalog, persons, events, places [][]byte) (Headers, error) {
+	var out Headers
+	ps, err := PersonsByIDs(c, persons)
+	if err != nil {
+		return Headers{}, err
+	}
+	out.persons = make(map[string]PersonHeader, len(ps))
+	for _, h := range ps {
+		out.persons[string(h.Entity.ID)] = h
+	}
+	es, err := EventsByIDs(c, events)
+	if err != nil {
+		return Headers{}, err
+	}
+	out.events = make(map[string]EventHeader, len(es))
+	for _, h := range es {
+		out.events[string(h.Entity.ID)] = h
+	}
+	pl, err := PlacesByIDs(c, places)
+	if err != nil {
+		return Headers{}, err
+	}
+	out.places = make(map[string]PlaceHeader, len(pl))
+	for _, h := range pl {
+		out.places[string(h.Entity.ID)] = h
+	}
+	return out, nil
+}
+
 // PersonsByIDs returns the headers of the given unmerged Persons in list
 // order. Unknown, merged, and non-Person ids are absent.
 func PersonsByIDs(c *database.Catalog, ids [][]byte) ([]PersonHeader, error) {

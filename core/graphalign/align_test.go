@@ -92,7 +92,7 @@ func mergeMetas(ms ...subjectcompare.Metas) subjectcompare.Metas {
 type link struct{ a, b vocabkey.BridgeKey }
 
 func bridge(a, b []byte, l link) graphalign.Bridge {
-	return graphalign.Bridge{A: a, B: b, KeyA: l.a, KeyB: l.b}
+	return graphalign.Bridge{Edge: kinship.Edge{A: a, B: b, KeyA: l.a, KeyB: l.b}}
 }
 
 func edge(from, to []byte, l link) graphalign.CanonEdge {

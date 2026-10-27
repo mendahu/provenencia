@@ -541,3 +541,56 @@ func TestEdgeClone(t *testing.T) {
 		t.Fatalf("clone changed with the original: got %+v, want %+v", got, want)
 	}
 }
+
+func TestRecordingShown(t *testing.T) {
+	s1 := kinship.Shape{Pattern: kinship.PatternMarriageSpouses, Pivot: []byte("E1")}
+	s2 := kinship.Shape{Pattern: kinship.PatternBirthParents, Pivot: []byte("E2")}
+	cases := []struct {
+		name string
+		r    kinship.Recording
+		want kinship.Shape
+	}{
+		{"zero is direct", kinship.Recording{}, kinship.Shape{}},
+		{"also recorded directly reads as direct", kinship.Recording{Shapes: []kinship.Shape{s1, s2}}, kinship.Shape{}},
+		{"only implied shows the first shape", kinship.Recording{Shapes: []kinship.Shape{s1, s2}, OnlyImplied: true}, s1},
+		{"implied with no shape is direct", kinship.Recording{OnlyImplied: true}, kinship.Shape{}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := c.r.Shown(); !reflect.DeepEqual(got, c.want) {
+				t.Fatalf("Shown() = %+v, want %+v", got, c.want)
+			}
+		})
+	}
+}
+
+func TestPatterns(t *testing.T) {
+	want := []kinship.Pattern{kinship.PatternMarriageSpouses, kinship.PatternBirthParents, kinship.PatternParentOfParent}
+	if got := kinship.Patterns(); !slices.Equal(got, want) {
+		t.Fatalf("Patterns() = %v, want %v", got, want)
+	}
+	kinds := []vocabkey.SubjectType{vocabkey.Event, vocabkey.Event, vocabkey.Person}
+	for i, p := range want {
+		if got := p.PivotKind(); got != kinds[i] {
+			t.Errorf("%s.PivotKind() = %q, want %q", p, got, kinds[i])
+		}
+	}
+	if got := kinship.Pattern("nope").PivotKind(); got != "" {
+		t.Errorf("unknown PivotKind() = %q", got)
+	}
+}
+
+func TestEdgeFrom(t *testing.T) {
+	a, b, c := []byte{1}, []byte{2}, []byte{3}
+	ka, kb := vocabkey.BridgeKey{Term: "ka"}, vocabkey.BridgeKey{Term: "kb"}
+	e := kinship.Edge{A: a, B: b, KeyA: ka, KeyB: kb}
+	if o, k, ok := e.From(a); !ok || string(o) != string(b) || k != ka {
+		t.Errorf("From(A) = %v, %v, %v", o, k, ok)
+	}
+	if o, k, ok := e.From(b); !ok || string(o) != string(a) || k != kb {
+		t.Errorf("From(B) = %v, %v, %v", o, k, ok)
+	}
+	if _, _, ok := e.From(c); ok {
+		t.Errorf("From(neither) ok")
+	}
+}

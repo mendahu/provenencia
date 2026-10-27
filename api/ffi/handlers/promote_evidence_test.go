@@ -15,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promotealign"
+	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -324,10 +325,10 @@ func TestClaimEvidenceNeighborReading(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		resp = claimEvidenceProto(claimevidence.Evidence{
+		resp, err = claimEvidenceProto(c, claimevidence.Evidence{
 			Kind: vocabkey.Person, Relationships: []claimevidence.Relationship{spouse, cousin, birth},
 		}, values)
-		return nil
+		return err
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -368,4 +369,75 @@ func TestClaimEvidenceNeighborReading(t *testing.T) {
 	reserved("PromoteClaimEvidencePin", "member_subject_id", "member_observation_id")
 	reserved("PromoteClaimEvidenceBundle", "member_subject_id", "source_id")
 	reserved("GetPromoteClaimEvidenceRequest", "source_id")
+}
+
+// T-7: each relationship says how each side recorded the fact, and the
+// entity's pivot carries its header.
+func TestClaimEvidenceShapes(t *testing.T) {
+	neighbor := uuid.Must(uuid.NewV7())
+	spouseKey := vocabkey.BridgeKey{Type: vocabkey.BridgeRelationship, Term: "spouse"}
+	toProto := func(t *testing.T, dir string, rel claimevidence.Relationship) *engine.PromoteClaimEvidenceRelationship {
+		t.Helper()
+		rel.Neighbor, rel.Kind, rel.Key = neighbor[:], vocabkey.Person, spouseKey
+		var resp *engine.GetPromoteClaimEvidenceResponse
+		err := withProjectCatalog(dir, func(c *database.Catalog) error {
+			values, err := promotealign.NewEvidenceValues(c.Graph())
+			if err != nil {
+				return err
+			}
+			resp, err = claimEvidenceProto(c, claimevidence.Evidence{
+				Kind: vocabkey.Person, Relationships: []claimevidence.Relationship{rel, {Neighbor: neighbor[:], Kind: vocabkey.Person, Key: spouseKey}},
+			}, values)
+			return err
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(resp.GetRelationships()) != 2 {
+			t.Fatalf("relationships = %d", len(resp.GetRelationships()))
+		}
+		if plain := resp.GetRelationships()[1]; plain.GetLayer() == nil || plain.GetCanon() == nil {
+			t.Errorf("a direct relationship lacks layer or canon: %+v", plain)
+		}
+		return resp.GetRelationships()[0]
+	}
+
+	t.Run("AC-3.1 a canon event pivot", func(t *testing.T) {
+		dir, handle := citedEvent(t)
+		t.Cleanup(func() { _ = catalogsession.CloseAll() })
+		id, err := parseID(handle)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r := toProto(t, dir, claimevidence.Relationship{Canon: kinship.Shape{Pattern: kinship.PatternMarriageSpouses, Pivot: id}})
+		if r.GetLayer().GetPattern() != "" || r.GetLayer().GetPivotId() != "" || r.GetLayer().GetPivotHeader() != nil {
+			t.Errorf("layer = %+v, want direct", r.GetLayer())
+		}
+		c := r.GetCanon()
+		if c.GetPattern() != "marriage_spouses" || c.GetPivotId() != handle || c.GetEvent().GetEntity().GetId() != handle || c.GetEvent().GetDate() == nil || c.GetPerson() != nil {
+			t.Errorf("canon = %+v", c)
+		}
+	})
+	t.Run("AC-3.2 a canon person pivot", func(t *testing.T) {
+		f := newEvidenceFixture(t, observations.PolarityPositive)
+		id, err := parseID(f.handle)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r := toProto(t, f.dir, claimevidence.Relationship{Canon: kinship.Shape{Pattern: kinship.PatternParentOfParent, Pivot: id}})
+		c := r.GetCanon()
+		if c.GetPattern() != "parent_of_parent" || c.GetPerson().GetEntity().GetId() != f.handle || c.GetEvent() != nil {
+			t.Errorf("canon = %+v", c)
+		}
+	})
+	t.Run("AC-3.3 a layer pivot", func(t *testing.T) {
+		dir, _, _, _ := subjectFixture(t)
+		t.Cleanup(func() { _ = catalogsession.CloseAll() })
+		pivot := uuid.Must(uuid.NewV7())
+		r := toProto(t, dir, claimevidence.Relationship{Layer: kinship.Shape{Pattern: kinship.PatternMarriageSpouses, Pivot: pivot[:]}})
+		l := r.GetLayer()
+		if l.GetPattern() != "marriage_spouses" || l.GetPivotId() != pivot.String() || l.GetPivotHeader() != nil || r.GetCanon().GetPattern() != "" {
+			t.Errorf("layer = %+v, canon = %+v", l, r.GetCanon())
+		}
+	})
 }

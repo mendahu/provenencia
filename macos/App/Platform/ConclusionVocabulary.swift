@@ -134,6 +134,28 @@ enum EvidencePropertyCause: Sendable, Equatable {
     }
 }
 
+/// How a Source or an entity records a relationship's fact (`kinship.Pattern`): directly, or
+/// through an event or a parent between.
+enum KinshipPattern: Sendable, Equatable {
+    /// Recorded directly: the code is empty.
+    case direct
+    case marriageSpouses
+    case birthParents
+    case parentOfParent
+    /// A code this build doesn't know.
+    case unrecognized(String)
+
+    init(wire: String) {
+        switch wire {
+        case "": self = .direct
+        case "marriage_spouses": self = .marriageSpouses
+        case "birth_parents": self = .birthParents
+        case "parent_of_parent": self = .parentOfParent
+        default: self = .unrecognized(wire)
+        }
+    }
+}
+
 /// How two values relate (`valuecompare.Relation`).
 enum ValueRelation: Sendable, Equatable {
     /// No relation: the code is empty (no pair spoke).

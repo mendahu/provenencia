@@ -82,7 +82,14 @@ The researcher wants to say "these are the same person because they have a match
   - everything on the bridge itself: its role, its relationship type, any other bridge values;
   - the neighbor's **defining properties**, declared per kind in the registry. For an event that is `event_type`: "birth" is what the heading already says.
 - **Shown as checkable lines under it,** each with its own checkbox: the neighbor's other properties, exactly like the Subject's own property lines. Under "They have a matching birth event": the birth date lines. Under "They have a matching spouse": Robert's name, sex, and so on. Same rules as property lines: grouped by property, identical member values collapse into one line, matches start checked, partial matches and disagreements start unchecked, and every line can be pinned.
+  - **Which members (decided 2026-10-27, ships in S11-52).** An event neighbor's lines compare with the members of the Source that records the link: this birth with that birth only (S11-19 D-13). A person neighbor's lines compare with all of that entity's accepted members, as the row's own lines do: a spouse is one person across many Sources, so a Source's "Jake Robins" meets every Source that calls him Jake, not only the marriage certificate that calls him James Kenneth Robins. Which kinds widen is a registry entry.
 - **Registry rule, not code:** "a segment's bundle is all of its bridge's Observations plus the neighbor kind's defining properties". Event's defining property is `event_type`; adding one for another kind is one entry.
+
+**Implied links (S11-40).** The entity side reads a person's links through `canonlinks.Reader.Relationships`, so a tree marriage or birth gives a relationship line to a Source that records the fact directly, and the other way round; each line says how each side recorded the fact (`Relationship.Layer`, `.Canon`: the zero `kinship.Shape` is direct, and `Recording.Shown` is the one reading of it).
+
+- **One bundle per Source's recording.** A bridge behind an implied link reaches the pivot (the event, or the parent between) and the row's member or the neighbor's member. The bridges that reach one pivot make one bundle: the row member's bridge first, then the others, and the pivot's defining Observations. A recorded link's bundle is one bridge, as before. The bundle's pin id is keyed by its first bridge.
+- **A pivot with no bridge of a row member makes no bundle.** A Source that records only the far part of the link (a parent of the neighbor, not of the row's member) pins nothing: a pin needs a member to land on.
+- **Counted once.** When both sides record a fact through the same pattern and the request pairs their pivots, the line is dropped, as matching drops the credit (`kinship.CountedOnce`); a participation line to the paired event stays.
 
 ## Retires
 

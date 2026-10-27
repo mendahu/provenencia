@@ -19,6 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/objectpath"
@@ -258,6 +259,16 @@ func subjectMarkSymbols() []string {
 	return out
 }
 
+// patternCodes is every kinship pattern code; Swift's KinshipPattern decodes
+// the claim evidence shapes with them.
+func patternCodes() []string {
+	var out []string
+	for _, p := range kinship.Patterns() {
+		out = append(out, string(p))
+	}
+	return out
+}
+
 // listStrings is every effects.List wire key; Swift's CatalogList decodes
 // WriteEffects.lists with them.
 func listStrings() []string {
@@ -313,6 +324,10 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			name: "evidence property causes", path: swiftVocabulary, enum: "EvidencePropertyCause", re: wireCase,
 			want: sorted("", string(propertycompare.CauseRelation), string(propertycompare.CauseNegative),
 				string(propertycompare.CauseNoValues), string(propertycompare.CauseCardinality)),
+		},
+		{
+			name: "kinship patterns", path: swiftVocabulary, enum: "KinshipPattern", re: wireCase,
+			want: sorted(append(patternCodes(), "")...),
 		},
 		{
 			name: "value relations", path: swiftVocabulary, enum: "ValueRelation", re: wireCase,
@@ -375,7 +390,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 	}
 	t.Run("states and reasons tolerate a value this build doesn't know", func(t *testing.T) {
 		for _, enum := range []string{"ReconciledState", "ReconcilerReason", "PromoteReasonCode",
-			"EvidenceOutcome", "EvidencePropertyCause", "ValueRelation", "ValueCause"} {
+			"EvidenceOutcome", "EvidencePropertyCause", "KinshipPattern", "ValueRelation", "ValueCause"} {
 			if !unrecogniz.MatchString(swiftEnumBody(t, swiftVocabulary, enum)) {
 				t.Fatalf("%s has no unrecognized case", enum)
 			}
