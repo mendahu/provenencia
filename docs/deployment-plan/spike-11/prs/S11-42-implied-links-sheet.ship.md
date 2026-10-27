@@ -63,4 +63,4 @@ No new findings. Round-1 minors checked by the orchestrator: MNT-2 **Resolved** 
 `origin/main` unchanged since the branch was cut (`731e4239`); no merge. Orchestrator docs edit with this log: "the marriage on 12 May 1842" / "on <date>" → "dated" in `deployment-plan.md`, `kinship-shapes.md` and the plan (ACs, §10), to match UX-1's copy.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: MNT-3 · to user: MNT-1, UX-1 (answered 2026-10-27) · CON miss: none
+Gate PASS · CI green (test 10m46s, localizable) · open: none · follow-ups: MNT-3 · to user: MNT-1, UX-1 (answered 2026-10-27) · CON miss: none
