@@ -854,6 +854,30 @@ struct EvidenceGraphModelTests {
         #expect(model.graphReadError == nil)
     }
 
+    @Test func readAgainShowsItIsReading() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.prepare()
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
+        #expect(!model.isRereadingGraph)
+
+        // A failed refetch keeps the stale rows beside the error.
+        store.listSubjectsError = TestFailure()
+        model.readGraphAgain()
+        let failed = await waitUntil { handle?.status == .error && handle?.isFetching == false }
+        #expect(failed)
+        #expect(model.graphReadError != nil)
+        #expect(!model.isRereadingGraph)
+
+        model.readGraphAgain()
+        #expect(model.isRereadingGraph)
+        let failedAgain = await waitUntil { handle?.isFetching == false }
+        #expect(failedAgain)
+        #expect(!model.isRereadingGraph)
+        #expect(model.graphReadError != nil)
+    }
+
     @Test func graphPresenceFollowsTheList() async {
         let store = makeStore()
         let model = makeModel(store: store)

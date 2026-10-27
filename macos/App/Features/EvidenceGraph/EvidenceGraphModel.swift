@@ -157,10 +157,14 @@ final class EvidenceGraphModel {
         errorMessage(session.queryHandle(graphKey) as QueryHandle<EvidenceGraphRows>?)
     }
 
+    /// True while a read of the graph rows is running beside their stale value.
+    var isRereadingGraph: Bool {
+        (session.queryHandle(graphKey) as QueryHandle<EvidenceGraphRows>?)?.isFetching ?? false
+    }
+
     /// Reads the graph rows again after a failed read.
     func readGraphAgain() {
-        session.invalidate(graphKey)
-        let _: QueryHandle<EvidenceGraphRows> = session.query(graphKey)
+        let _: QueryHandle<EvidenceGraphRows> = session.reread(graphKey)
     }
 
     private func errorMessage<Value>(_ handle: QueryHandle<Value>?) -> String? {

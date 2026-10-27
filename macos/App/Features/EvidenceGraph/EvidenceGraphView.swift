@@ -343,10 +343,18 @@ private struct EvidenceGraphContent: View {
             title: L10n.EvidenceGraph.readErrorTitle,
             message: message
         ) {
-            PVButton(L10n.EvidenceGraph.readAgain, variant: .secondary, size: .sm) {
-                model.readGraphAgain()
+            HStack(spacing: PVSpacing.space4) {
+                PVButton(L10n.EvidenceGraph.readAgain, variant: .secondary, size: .sm) {
+                    model.readGraphAgain()
+                }
+                .disabled(model.isRereadingGraph)
+                .accessibilityIdentifier("evidenceGraph.readError.readAgain")
+                if model.isRereadingGraph {
+                    ProgressView()
+                        .controlSize(.small)
+                        .accessibilityIdentifier("evidenceGraph.readError.reading")
+                }
             }
-            .accessibilityIdentifier("evidenceGraph.readError.readAgain")
         }
         .accessibilityIdentifier("evidenceGraph.readError.callout")
     }
