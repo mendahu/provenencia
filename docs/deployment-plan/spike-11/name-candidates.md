@@ -7,7 +7,7 @@ Matching today: [`comparison-layers.md`](comparison-layers.md) (layer 1 names, l
 ## How the target menu is filled
 
 1. **Shortlist** (`core/shortlist`): records of the row's kind that share a key with the Subject, such as a name word (`name|w:amy`) or an alias set (`name|a:…`).
-2. **Candidate gate** (`graphalign.Candidates`): a shortlisted record is a candidate only if subject compare's similarity is at least `alignment.MinSimilarity` (0.5). The top `TopK` (5) are kept, plus ties up to `TieCap`.
+2. **Candidate gate** (`graphalign.Candidates`): a shortlisted record is a candidate only if subject compare's similarity is at least `alignment.MinSimilarity` (0.4 since S11-43; 0.5 before). The top `TopK` (5) are kept, plus ties up to `TieCap`.
 3. **Menu:** the proposed record, then up to `alignment.Alternatives` (3) other candidates. With no candidate, a Subject with values opens New (`no_match`) and an empty menu.
 
 ## Case 1 — "Amy" against "Amy Lee Anne Long"

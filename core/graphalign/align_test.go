@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/propertycompare/propertycomparetest"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -605,6 +606,25 @@ func surnameVals(surname string) subjectcompare.Values {
 
 func nameMetas() subjectcompare.Metas {
 	return metasOf(map[vocabkey.PropertyKey]string{vocabkey.PropertyName: propertymeta.ValueTypeName})
+}
+
+// A Subject named by one given name is offered a record with three more
+// names, unplaced and with no band (S11-43).
+func TestOneGivenNameIsOfferedAFullerRecord(t *testing.T) {
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{{ID: id("s-amy"), Ref: "PER-S", Kind: "person", Values: vals(vocabkey.PropertyKey(vocabkey.PropertyName), nameOf(namevaluetest.Given("Amy")))}},
+		Metas:    subjectcomparetest.Metas(),
+	}
+	canon := graphalign.Canon{Handles: []graphalign.Handle{
+		{ID: id("h-amy"), Ref: "PER-1", Kind: "person", Values: vals(nameProp("Amy Lee Anne Long"))},
+	}}
+	row := rowBySubject(alignWith(layer, canon, nil, matchregistry.Default().AlignConfig()), id("s-amy"))
+	if row.Target == graphalign.TargetHandle || row.Assessment != graphalign.AssessNone {
+		t.Fatalf("row %+v, want unplaced with no band", row)
+	}
+	if len(row.Alternatives) != 1 || !bytes.Equal(row.Alternatives[0].HandleID, id("h-amy")) || row.Alternatives[0].Assessment != graphalign.AssessNone {
+		t.Fatalf("alternatives %+v, want PER-1 with no band", row.Alternatives)
+	}
 }
 
 func TestIsolatedSubjectScoresOnTheWalkScale(t *testing.T) {

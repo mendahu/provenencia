@@ -192,7 +192,7 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `alignment.Bands.Strong` | 4 | `graphalign` `StrongScore` | Strong band from this evidence |
 | `alignment.Bands.Medium` | 3 | `graphalign` `MediumScore` | Medium band |
 | `alignment.Bands.Weak` | 2 | `graphalign` `WeakScore` | Weak band; below is no match |
-| `alignment.MinSimilarity` | 0.5 | estimate: at least half alike; a name with a sex conflict is 0.71, a birth against a death 0.09 | Least similarity for a shortlisted handle to be a candidate |
+| `alignment.MinSimilarity` | 0.4 | decided: user, 2026-10-24 (S11-43): one given name reaches a record with three more names ("Amy" / "Amy Lee Anne Long" 0.44); a name with a sex conflict is 0.71, a birth against a death 0.09 | Least similarity for a shortlisted handle to be a candidate |
 | `alignment.TopK` | 5 | `promotealign` `seedCandidateLimit` | Candidates kept per Subject after shortlisting, and per layer neighbor of a placed pair |
 | `alignment.TieCap` | 20 | estimate: room for a common name's ties without unbounded work | Most candidates kept when ties pass K, and per layer neighbor of a placed pair |
 | `alignment.Alternatives` | 3 | `graphalign` `AlternativeLimit` | Alternatives shown per row |
