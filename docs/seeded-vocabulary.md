@@ -309,7 +309,7 @@ source          SRN           CSR                     A Source reified so other 
 
 Both prefixes are required for every Subject type, including researcher-defined types. `ref_prefix` mints canonical entity refs in the Conclusion layer (`PER-7KD45`); `candidate_ref_prefix` mints Interpretation subject refs (`CPR-7KD45`). Same format, different prefix — see [`catalog-refs.md`](catalog-refs.md) §2.
 
-Do not reuse the reserved catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`. Both columns share **one** three-letter namespace, so a new prefix must not collide with any existing value in *either* column. The leading `C` on candidate prefixes is convention only and is not validated.
+Do not reuse a reserved catalog prefix (`core/ref` `reservedPrefixes`; the table is in [`catalog-refs.md`](catalog-refs.md)). Both columns share **one** three-letter namespace, so a new prefix must not collide with any existing value in *either* column. The leading `C` on candidate prefixes is convention only and is not validated.
 
 `SRN` is used for source-subjects so they do not collide in speech with Source catalog refs (`SRC-…`); `CSR` is its candidate counterpart.
 
