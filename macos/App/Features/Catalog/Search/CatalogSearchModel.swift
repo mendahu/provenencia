@@ -98,6 +98,16 @@ final class CatalogSearchModel {
         }
     }
 
+    /// Returns once the latest scheduled search has finished or been cancelled,
+    /// following any search scheduled while it waited. Tests await this instead
+    /// of polling against a deadline, which a busy main actor can outlast.
+    func settle() async {
+        while let task = debounceTask {
+            await task.value
+            if debounceTask == task { return }
+        }
+    }
+
     func moveSelection(delta: Int) {
         selectedIndex = PVFloatingMenuSelection.moveIndex(
             from: selectedIndex, delta: delta, count: hits.count
