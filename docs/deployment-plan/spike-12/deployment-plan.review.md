@@ -158,3 +158,27 @@ Round 2 is the last round; no blocker is open.
 
 ### K-20 · nit · Grouping, and the map's four-column text
 **Answer:** Fixed (see Writer's own calls).
+
+## Round 2
+
+A fresh reviewer checked the round-1 answers and looked for new blockers in the fixes, S12-39 and the Spike 14 additions. **Verdict:** Fits with changes; every finding below is fixed in map text, and none needed a product call.
+
+Round-1 answers: 19 of 20 resolved. K-8 held only for S12-23 (the viewer half is K-23). Notes on resolved answers, each fixed: `CreateArtifactRequest.graph_ids` (7) is reserved (K-6); S12-33's kept term RPCs still return effects, so the allow-list can empty (K-10); S12-38 goes before S12-30, which still opts two callouts it rewrites into announcing (K-11); S12-32 updates `add-workspace-place` (`navCountTriggers`), S12-24 updates `catalog-deletes.md` and `add-catalog-delete` (K-13); the declared identity replaces `ResolvedPlace.deepId` (K-14); S12-27 splits the in-session thumbnail into read, decode and write (K-4).
+
+### K-21 · blocker · S12-25 cannot move `effects` onto `database.Querier`: import cycle
+`core/database/listen.go` imports `effects`, and `Querier` lives in `database`.
+**Answer:** Fixed. The item leaves S12-25 and goes back to `ideas/shared-list-helpers.md`, blocked with `graphcache` until a leaf package exists.
+
+### K-22 · blocker · S12-26's by-Source graph-list read sits beside the catalog-wide `evidence_graphs` list key
+**Answer:** Fixed. S12-26's `reads` entry replaces the list key: `effects.ListEvidenceGraphs`, the wire key, `CatalogList.evidenceGraphs`, its invalidation case and its pin row go; the working rule "The graph list has its own effect" is marked superseded; S12-26 updates `source-layer-data-model.md`.
+
+### K-23 · blocker · S12-28's "no second type list" conflicts with `ThumbnailDecodePolicy`'s PNG-and-JPEG list
+**Answer:** Fixed. The viewer checks that the sniffed type matches the media type Go returned, plus a pixel budget, through one shared check; `ThumbnailDecodePolicy` keeps PNG and JPEG for thumbnails only. Working rule and S12-28 updated.
+
+### K-24 · blocker · S12-39's design said the decoder holds a decode slot `raster` takes; callers take it
+**Answer:** Fixed. The decoder runs under its caller's `raster.Slot()` and takes none; the S12-39 Check adds a header-only JPEG bomb.
+
+### K-25 · blocker · S14-03 and S12-28 both change whether the viewer can cut a file
+**Answer:** Fixed. One predicate, `ArtifactRegionCrop.snapshot`, changed in place by S12-28; S14-03 depends on S12-28 in both maps.
+
+**Stop:** round 2 is the last round. No blocker is open and **To user** is answered.
