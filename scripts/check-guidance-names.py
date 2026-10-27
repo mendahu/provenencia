@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Fail when a skill or Cursor rule names code that no longer exists.
+"""Fail when a skill or Cursor rule names code that no longer exists, or a kit
+folder has no DesignSystem README row.
 
 Skills and rules teach the next agent the patterns; a name they cite that the
 code renamed or deleted trains it wrong (app-health audit 2026-10-27, A-6:
@@ -14,12 +15,12 @@ A name a guide mentions on purpose (an anti-pattern to avoid, an illustrative
 example, a SwiftUI or tool name) goes in scripts/check-guidance-names.allow
 with the reason.
 
+It cannot see a renamed short or generic name (`Effect.Source`): for those,
+`rg` the old qualified name, as implement-pr's sweep says.
+
 It also fails on a folder under macos/App/DesignSystem/Components/ or Recipes/
 that macos/App/DesignSystem/README.md has no row for (app-health audit A-33):
 a row names its folder as `Components/Name/` or `Recipes/Name/` in backticks.
-
-It cannot see a renamed short or generic name (`Effect.Source`): for those,
-`rg` the old qualified name, as implement-pr's sweep says.
 
     python3 scripts/check-guidance-names.py
 """
