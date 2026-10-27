@@ -154,9 +154,12 @@ func evidence(g *graphcache.Graph, in inputs, q *evidenceReader, req EvidenceReq
 	if err != nil {
 		return claimevidence.Evidence{}, err
 	}
-	rels, err := q.kin.Relationships(row.HandleID)
-	if err != nil {
-		return claimevidence.Evidence{}, err
+	// Kinship links have only person ends, so an event or place row reads none.
+	var rels []kinship.Link
+	if in.primary[string(row.SubjectID)].kind == string(vocabkey.Person) {
+		if rels, err = q.kin.Relationships(row.HandleID); err != nil {
+			return claimevidence.Evidence{}, err
+		}
 	}
 	rowSet := map[string]bool{}
 	for _, m := range members {
