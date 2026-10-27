@@ -11402,6 +11402,30 @@
         }
       }
     },
+    "evidenceGraph.readError.title": {
+      "comment": "Title on the canvas callout when the Evidence graph's rows failed to load; the body is the error text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This evidence graph could not be read"
+          }
+        }
+      }
+    },
+    "evidenceGraph.readError.readAgain": {
+      "comment": "Button that reads a canvas's Evidence graph again after it failed to load",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read again"
+          }
+        }
+      }
+    },
     "artifactViewer.previousPage": {
       "comment": "Artifact viewer: go to previous PDF page",
       "extractionState": "manual",

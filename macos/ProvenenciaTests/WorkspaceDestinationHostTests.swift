@@ -86,6 +86,25 @@ struct WorkspaceDestinationHostTests {
         withExtendedLifetime((window, host)) {}
     }
 
+    @Test func goneGraphFallsBackToTheSourcesList() async throws {
+        let store = makeCanvasStore()
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("host-history-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let navigation = WorkspaceNavigation()
+        navigation.attachProject(uuid: "project-1", fileURL: directory.appendingPathComponent("history.json"))
+        navigation.go(to: .sectionRoot(.sources))
+        navigation.go(to: .evidenceGraph(sourceId: "src-1", graphId: "g-x", title: "Gone"))
+        let (window, host) = mountHost(navigation: navigation, session: session, store: store)
+
+        let fellBack = await waitUntil { navigation.currentLocation == .sectionRoot(.sources) }
+        #expect(fellBack)
+        let remembered = navigation.backJumpItems(limit: 100) + navigation.forwardJumpItems(limit: 100)
+        #expect(!remembered.contains { $0.location.graphId == "g-x" })
+        withExtendedLifetime((window, host)) {}
+    }
+
     @Test func presentationSourcesRoot() {
         #expect(presentation(for: .sectionRoot(.sources)) == .sourcesList)
     }

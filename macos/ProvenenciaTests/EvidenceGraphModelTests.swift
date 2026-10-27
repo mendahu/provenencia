@@ -837,6 +837,111 @@ struct EvidenceGraphModelTests {
         #expect(L10n.string(L10n.EvidenceGraph.noArtifactAction) == "Go to Source page")
     }
 
+    @Test func graphReadFailureShowsAndReadsAgain() async {
+        let store = makeStore()
+        store.listSubjectsError = TestFailure()
+        let model = makeModel(store: store)
+        await model.prepare()
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
+        #expect(handle?.status == .error)
+        #expect(model.graphReadError != nil)
+
+        store.listSubjectsError = nil
+        model.readGraphAgain()
+        let settled = await waitUntil { handle?.isSettled == true }
+        #expect(settled)
+        #expect(model.graphReadError == nil)
+    }
+
+    @Test func graphPresenceFollowsTheList() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        let session = model.session
+        func isGone() -> Bool {
+            if case .gone = session.evidenceGraphPresence(id: graphID) { return true }
+            return false
+        }
+        func isUnknown() -> Bool {
+            if case .unknown = session.evidenceGraphPresence(id: graphID) { return true }
+            return false
+        }
+
+        // (a) No graph list handle yet.
+        #expect(isUnknown())
+        #expect(!model.graphIsGone)
+        #expect(model.canCite)
+
+        // (b) A settled list with the graph.
+        await model.prepare()
+        guard case .present(let graph) = session.evidenceGraphPresence(id: graphID) else {
+            Issue.record("expected the graph to be present")
+            return
+        }
+        #expect(model.canCite == graph.hasArtifact)
+
+        // (c) A settled list without it.
+        session.setQueryValue(session.evidenceGraphsKey, value: [CatalogEvidenceGraph]())
+        #expect(isGone())
+        #expect(model.graphIsGone)
+        #expect(!model.canCite)
+
+        // (e) Refetching: the list keeps its stale value, so the graph is not yet gone.
+        session.invalidate(session.evidenceGraphsKey)
+        let _: QueryHandle<[CatalogEvidenceGraph]> = session.query(session.evidenceGraphsKey)
+        #expect(session.evidenceGraphsHandle?.isFetching == true)
+        #expect(isUnknown())
+        #expect(!model.graphIsGone)
+        #expect(model.canCite)
+    }
+
+    @Test func graphPresenceIsUnknownWhenTheListFailed() async {
+        let store = makeStore()
+        store.listEvidenceGraphsError = TestFailure()
+        let model = makeModel(store: store)
+        await model.prepare()
+        if case .unknown = model.session.evidenceGraphPresence(id: graphID) {} else {
+            Issue.record("expected unknown after a failed list read")
+        }
+        #expect(!model.graphIsGone)
+        #expect(model.canCite)
+    }
+
+    @Test func canvasNoticeOrder() async {
+        // (a) A failed graph read outranks the rest.
+        let failing = makeStore()
+        failing.listSubjectsError = TestFailure()
+        let failed = makeModel(store: failing)
+        await failed.prepare()
+        if case .readError = failed.canvasNotice {} else {
+            Issue.record("expected the read error, got \(String(describing: failed.canvasNotice))")
+        }
+
+        // (b) A graph with no Artifact.
+        let bare = makeStore()
+        bare.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: graphID, ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: []
+            ),
+        ]
+        let noArtifact = makeModel(store: bare)
+        await noArtifact.prepare()
+        #expect(noArtifact.canvasNotice == .noArtifact)
+
+        // (c) A graph with an Artifact, idle.
+        let ok = makeModel(store: makeStore())
+        await ok.prepare()
+        #expect(ok.canvasNotice == nil)
+
+        // (d) Armed.
+        ok.armedKind = .person
+        #expect(ok.canvasNotice == .placing(.person))
+
+        // (e) The No-artifact callout outranks the placing banner.
+        noArtifact.armedKind = .person
+        #expect(noArtifact.canvasNotice == .noArtifact)
+    }
+
     @Test func fileRowsAreTheGraphsLinkedArtifacts() async {
         let store = makeStore()
         store.evidenceGraphsByProject[projectDir] = [
@@ -2331,3 +2436,5 @@ struct EvidenceGraphModelTests {
         #expect(model.armedSelect == false)
     }
 }
+
+private struct TestFailure: Error {}

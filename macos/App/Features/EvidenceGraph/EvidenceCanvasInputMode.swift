@@ -19,6 +19,36 @@ extension EvidenceGraphModel {
     }
 }
 
+/// What the canvas's top-right callout slot shows; the first match in `EvidenceGraphModel.canvasNotice` wins.
+enum EvidenceGraphCanvasNotice: Equatable {
+    case readError(String)
+    case deleteError(String)
+    case fileNotFound(String)
+    case noArtifact
+    case placing(EvidencePrimaryKind)
+    case connecting
+}
+
+extension EvidenceGraphModel {
+    /// The callout slot's content, in priority order: the failed graph read outranks
+    /// the rest because nothing on the canvas is current without the rows.
+    var canvasNotice: EvidenceGraphCanvasNotice? {
+        if let graphReadError { return .readError(graphReadError) }
+        if pendingImpact == nil, let deleteError { return .deleteError(deleteError) }
+        if pendingImpact == nil, deleteError == nil, let fileOpenError,
+           resolvedFileArtifactID == selectedFileArtifactID
+        {
+            return .fileNotFound(fileOpenError)
+        }
+        if !canCite { return .noArtifact }
+        switch inputMode {
+        case .placing(let kind): return .placing(kind)
+        case .connecting: return .connecting
+        case .idle, .selecting: return nil
+        }
+    }
+}
+
 extension EvidencePrimaryKind {
     var markKey: PVMarkKey {
         switch self {

@@ -72,6 +72,9 @@ struct EvidenceGraphView: View {
         .task {
             await model.prepare()
         }
+        .onChange(of: model.graphIsGone, initial: true) { _, gone in
+            if gone { navigation.fallbackToSectionRoot() }
+        }
         .onChange(of: model.armedKind) { _, kind in
             if kind != nil {
                 NSCursor.crosshair.push()
@@ -290,27 +293,30 @@ private struct EvidenceGraphContent: View {
             HStack(alignment: .top, spacing: PVSpacing.space5) {
                 EvidenceGraphPalette(model: model, focus: $focus)
                 Spacer(minLength: 0)
-                if model.pendingImpact == nil, let deleteError = model.deleteError {
-                    PVCallout(tone: .danger, message: deleteError)
+                if let notice = model.canvasNotice {
+                    switch notice {
+                    case .readError(let message):
+                        readErrorCallout(message)
+                            .frame(width: 360, alignment: .trailing)
+                    case .deleteError(let deleteError):
+                        PVCallout(tone: .danger, message: deleteError)
+                            .frame(width: 360, alignment: .trailing)
+                    case .fileNotFound(let fileOpenError):
+                        PVCallout(
+                            tone: .danger,
+                            title: L10n.EvidenceGraph.fileNotFoundTitle,
+                            message: fileOpenError
+                        )
                         .frame(width: 360, alignment: .trailing)
-                } else if model.pendingImpact == nil, model.deleteError == nil,
-                          let fileOpenError = model.fileOpenError,
-                          model.resolvedFileArtifactID == model.selectedFileArtifactID
-                {
-                    PVCallout(
-                        tone: .danger,
-                        title: L10n.EvidenceGraph.fileNotFoundTitle,
-                        message: fileOpenError
-                    )
-                    .frame(width: 360, alignment: .trailing)
-                    .accessibilityIdentifier("evidenceGraph.fileOpen.callout")
-                } else if !model.canCite {
-                    noArtifactCallout
-                        .frame(width: 360, alignment: .trailing)
-                } else if case .placing(let kind) = model.inputMode {
-                    armedBanner(Text(model.armedHint(for: kind)))
-                } else if case .connecting = model.inputMode {
-                    armedBanner(Text(model.connectArmedHint))
+                        .accessibilityIdentifier("evidenceGraph.fileOpen.callout")
+                    case .noArtifact:
+                        noArtifactCallout
+                            .frame(width: 360, alignment: .trailing)
+                    case .placing(let kind):
+                        armedBanner(Text(model.armedHint(for: kind)))
+                    case .connecting:
+                        armedBanner(Text(model.connectArmedHint))
+                    }
                 }
             }
             .padding(.horizontal, PVSpacing.space5)
@@ -329,6 +335,20 @@ private struct EvidenceGraphContent: View {
                 .padding(.bottom, PVSpacing.space8)
             }
         }
+    }
+
+    private func readErrorCallout(_ message: String) -> some View {
+        PVCallout(
+            tone: .danger,
+            title: L10n.EvidenceGraph.readErrorTitle,
+            message: message
+        ) {
+            PVButton(L10n.EvidenceGraph.readAgain, variant: .secondary, size: .sm) {
+                model.readGraphAgain()
+            }
+            .accessibilityIdentifier("evidenceGraph.readError.readAgain")
+        }
+        .accessibilityIdentifier("evidenceGraph.readError.callout")
     }
 
     private var noArtifactCallout: some View {
@@ -851,7 +871,7 @@ private struct EvidenceGraphDocumentBody: View {
                     .frame(width: contentSize.width, height: contentSize.height)
             }
 
-            if subjects.isEmpty, bridges.isEmpty, graphHandle.status == .ready, inputMode == .idle {
+            if subjects.isEmpty, bridges.isEmpty, graphHandle.status == .ready, !model.graphIsGone, inputMode == .idle {
                 emptyOverlay
             }
 

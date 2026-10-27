@@ -14,6 +14,15 @@ struct EvidenceGraphIndex {
     }
 }
 
+/// Whether the graph list has a graph: `unknown` while the list cannot say (no
+/// value yet, refetching after a write, or failed), `gone` only once a settled
+/// list lacks it.
+enum EvidenceGraphPresence {
+    case unknown
+    case present(CatalogEvidenceGraph)
+    case gone
+}
+
 /// The session's cached Evidence graph list and graph progress: the one place
 /// their keys and handles are looked up, and the graph's linked Artifacts read
 /// from them.
@@ -70,6 +79,13 @@ extension WorkspaceSession {
     /// One graph by id; `nil` while the graph list has no value or has no such graph.
     func evidenceGraph(id: String) -> CatalogEvidenceGraph? {
         currentEvidenceGraphIndex?.byID[id]
+    }
+
+    /// Whether the graph list has graph `id`; see `EvidenceGraphPresence`.
+    func evidenceGraphPresence(id: String) -> EvidenceGraphPresence {
+        if let graph = evidenceGraph(id: id) { return .present(graph) }
+        if let handle = evidenceGraphsHandle, handle.isSettled, handle.value != nil { return .gone }
+        return .unknown
     }
 
     /// One Source's graphs in list order (sorted by name); `nil` while the graph
