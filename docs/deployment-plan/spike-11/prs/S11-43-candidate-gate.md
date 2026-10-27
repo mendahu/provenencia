@@ -1,6 +1,6 @@
 # S11-43 — Lower the candidate gate
 
-**Status:** Planned
+**Status:** Landed in #588 (2026-10-27)
 **Spike / slice:** Spike 11 · Slice 10 — Name candidates
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the target menu already lists a row's alternatives; this PR only lets one more record into that list)
@@ -14,6 +14,8 @@
 **Context:** [name candidates § Case 1](../name-candidates.md#case-1--amy-against-amy-lee-anne-long), [§ What stays later](../name-candidates.md#what-stays-later), [`matching-model.md` § Knob inventory](../../../matching-model.md#knob-inventory), [bands](../comparison-layers.md#bands); working rules: "The candidate gate drops to 0.4", "Gate only; the curve is held", "Registry numbers: carry over, then estimate", "Bands come from evidence"
 **Planned:** 2026-10-27 against `main` @ `bac7368`
 **Review:** [`S11-43-candidate-gate.review.md`](S11-43-candidate-gate.review.md) — Fits with changes / Ready with changes, 1 round (every finding answered)
+
+**Landed:** one difference from the plan: `vocabkey.PropertyName` is an untyped string constant, so `vals(vocabkey.PropertyName, ...)` panics; T-1 and T-2 write `vocabkey.PropertyKey(vocabkey.PropertyName)`. T-1's under-the-gate assertion is `t.Errorf` so the candidates assertion also reports.
 
 ### Implementer — read this first
 
