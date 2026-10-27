@@ -10,6 +10,7 @@ enum CatalogSearchKind: String, CaseIterable, Sendable {
     case person = "person"
     case event = "event"
     case place = "place"
+    case evidenceGraph = "evidence_graph"
 
     /// Go's handle kinds are the primary kinds (`KindPerson = vocabkey.Person`).
     init(_ kind: EvidencePrimaryKind) {

@@ -1299,7 +1299,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         case .event: 3
         case .place: 2
         case .source: 1
-        case .sourceType, .metadataField, nil: 0
+        case .sourceType, .metadataField, .evidenceGraph, nil: 0
         }
     }
 
@@ -1390,6 +1390,18 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
+    /// The ref fast path's boost: 8 for an exact ref, 3 for a prefix, else 1 and unmatched.
+    private static func refBoost(
+        for ref: String,
+        key: (key: String, exact: Bool)?
+    ) -> (boost: Double, matched: Bool) {
+        guard let key else { return (1, false) }
+        let upper = ref.uppercased()
+        if key.exact && upper == key.key { return (8, true) }
+        if !key.exact && upper.hasPrefix(key.key) { return (3, true) }
+        return (1, false)
+    }
+
     private func vocabularySearchHits(
         projectDir: String,
         query: String,
@@ -1423,17 +1435,11 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     values: values,
                     tokens: tokens.isEmpty ? [raw.lowercased()] : tokens
                 )
-                var refBoost = 1.0
-                if let refKey {
-                    let srcRef = source.ref.uppercased()
-                    if refKey.exact && srcRef == refKey.key {
+                let (refBoost, refMatched) = Self.refBoost(for: source.ref, key: refKey)
+                if refKey != nil {
+                    if refMatched {
                         score = max(score, 12)
                         reason = "ref"
-                        refBoost = 8
-                    } else if !refKey.exact && srcRef.hasPrefix(refKey.key) {
-                        score = max(score, 12)
-                        reason = "ref"
-                        refBoost = 3
                     } else if score <= 0 {
                         continue
                     }
@@ -1462,7 +1468,44 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 ))
             }
 
-            // Ref-shaped queries only promote Sources (vocab has no SRC-… refs).
+            let sourceByID = Dictionary(
+                (sourcesByProject[projectDir] ?? []).map { ($0.id, $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            for graph in evidenceGraphsByProject[projectDir] ?? [] {
+                guard let source = sourceByID[graph.sourceID] else { continue }
+                var (score, reason) = Self.scoreSearchFields(
+                    fields: [("title", 10), ("ref", 12), ("description", 3)],
+                    values: ["title": graph.name, "ref": graph.ref, "description": graph.description],
+                    tokens: tokens.isEmpty ? [raw.lowercased()] : tokens
+                )
+                let (refBoost, refMatched) = Self.refBoost(for: graph.ref, key: refKey)
+                if refKey != nil {
+                    if refMatched {
+                        score = max(score, 12)
+                        reason = "ref"
+                    } else if score <= 0 {
+                        continue
+                    }
+                } else {
+                    guard score > 0 else { continue }
+                }
+                let boost = location?.section == .sources ? 1.1 : 1.0
+                scored.append((
+                    CatalogSearchHit(
+                        kind: CatalogSearchKind.evidenceGraph.rawValue,
+                        id: graph.id,
+                        ref: graph.ref,
+                        title: graph.name,
+                        subtitle: source.title,
+                        matchReason: reason,
+                        location: SourcesListNavigation.canvasLocation(for: source, graph: graph)
+                    ),
+                    score * boost * refBoost
+                ))
+            }
+
+            // Ref-shaped queries only promote Sources and Evidence graphs (vocab has no such refs).
             if refKey == nil {
                 for type in types {
                     let (score, reason) = Self.scoreSearchFields(

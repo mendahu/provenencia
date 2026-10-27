@@ -11,6 +11,7 @@ enum CatalogSearchHitPresentation {
         case .person: L10n.Workspace.omnibarKindPerson
         case .event: L10n.Workspace.omnibarKindEvent
         case .place: L10n.Workspace.omnibarKindPlace
+        case .evidenceGraph: L10n.Workspace.omnibarKindEvidenceGraph
         }
     }
 
@@ -116,6 +117,8 @@ enum CatalogSearchHitPresentation {
             )
         case .metadataField:
             return PVThumbnail.Content(glyph: WorkspaceSection.metadata.glyph)
+        case .evidenceGraph:
+            return PVThumbnail.Content(glyph: .symbol(.gitBranch))
         case nil:
             return PVThumbnail.Content(glyph: .symbol(.search))
         }

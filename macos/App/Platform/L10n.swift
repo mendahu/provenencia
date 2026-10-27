@@ -1217,6 +1217,12 @@ enum L10n {
             comment: "Kind chip on an omnibar hit for a Place"
         )
 
+        static let omnibarKindEvidenceGraph = LocalizedStringResource(
+            "workspace.omnibar.kind.evidenceGraph",
+            defaultValue: "Evidence graph",
+            comment: "Kind chip on an omnibar hit for an Evidence graph"
+        )
+
         static func omnibarNoMatchesTitle(query: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "workspace.omnibar.noMatchesTitle",

@@ -190,7 +190,7 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 			Subtitle:         d.displaySubtitle,
 			MatchReason:      reason,
 			MatchSnippet:     snippet,
-			Location:         locationFor(d.kind, d.entityID, d.displayRef, d.displayTitle),
+			Location:         locationFor(d),
 			ThumbnailRelPath: d.displayThumbnailRelPath,
 			IconKey:          d.displayIconKey,
 			Score:            score,
@@ -440,6 +440,12 @@ func fieldValuesForKind(kind, title, refCol, secondary, body string) map[string]
 			"metadata":    metadata,
 			"filename":    filename,
 		}
+	case KindEvidenceGraph:
+		return map[string]string{
+			"title":       title,
+			"ref":         refCol,
+			"description": secondary,
+		}
 	case KindSourceType, KindMetadataField:
 		return map[string]string{
 			"label":       title,
@@ -475,8 +481,17 @@ func splitTaggedBody(body string) (notes, metadata, filename string) {
 	return strings.Join(noteParts, "\n"), strings.Join(metaParts, "\n"), strings.Join(fileParts, "\n")
 }
 
-func locationFor(kind, id, refCol, title string) WorkspaceLocation {
+func locationFor(d docRow) WorkspaceLocation {
+	kind, id, refCol, title := d.kind, d.entityID, d.displayRef, d.displayTitle
 	switch kind {
+	case KindEvidenceGraph:
+		// The Go rule deleteimpact.graphLocation sets: the Source's ref and
+		// title, with the Source title again as SourceTitle.
+		return WorkspaceLocation{
+			Section: SectionSources, SourceID: d.displayParentID, GraphID: id,
+			SourceSurface: SurfaceGraph, Ref: d.displayParentRef,
+			Title: d.displaySubtitle, SourceTitle: d.displaySubtitle,
+		}
 	case KindSource:
 		return WorkspaceLocation{Section: SectionSources, SourceID: id, Ref: refCol, Title: title}
 	case KindSourceType:

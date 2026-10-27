@@ -6,6 +6,7 @@ import (
 	"context"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -19,6 +20,8 @@ const (
 	KindPerson = vocabkey.Person
 	KindEvent  = vocabkey.Event
 	KindPlace  = vocabkey.Place
+	// KindEvidenceGraph is declared by catalogmodel (S12-15).
+	KindEvidenceGraph = string(catalogmodel.KindEvidenceGraph)
 )
 
 // Section values match macOS WorkspaceSection raw values.
@@ -31,6 +34,9 @@ const (
 	SectionEvents      = "events"
 	SectionPlaces      = "places"
 )
+
+// SourceSurface values match macOS SourceSurface raw values.
+const SurfaceGraph = "graph"
 
 // DefaultHitLimit caps SearchCatalog responses.
 const DefaultHitLimit = 50

@@ -126,6 +126,17 @@ var Registry = []KindSpec{
 			{Name: "description", Weight: 3},
 		},
 	},
+	{
+		Kind:                KindEvidenceGraph,
+		DefaultInEverything: true,
+		ContextSections:     []string{SectionSources},
+		ContextBoost:        1.1,
+		Fields: []FieldWeight{
+			{Name: "title", Weight: 10},
+			{Name: "ref", Weight: 12},
+			{Name: "description", Weight: 3},
+		},
+	},
 }
 
 // Handle kinds join the omnibar default (S9-35). Priority, high to low:

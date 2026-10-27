@@ -10302,6 +10302,18 @@
         }
       }
     },
+    "workspace.omnibar.kind.evidenceGraph": {
+      "comment": "Kind chip on an omnibar hit for an Evidence graph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence graph"
+          }
+        }
+      }
+    },
     "workspace.omnibar.kind.metadataField": {
       "comment": "Kind chip on an omnibar hit for a metadata field",
       "extractionState": "manual",

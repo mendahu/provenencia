@@ -437,12 +437,13 @@ func TestKindPriorityIsATenthOfTheScore(t *testing.T) {
 		{Kind: KindPlace, Title: "P", Score: 10},
 		{Kind: KindEvent, Title: "E", Score: 10},
 		{Kind: KindPerson, Title: "N", Score: 10},
+		{Kind: KindEvidenceGraph, Title: "G", Score: 10},
 	}
 	for i := range equal {
 		equal[i].Score = applyScoreMix(equal[i].Score, equal[i].Kind)
 	}
 	sortHits(equal)
-	if got := kindsOf(equal); fmt.Sprint(got) != fmt.Sprint([]string{KindPerson, KindEvent, KindPlace, KindSource, KindSourceType}) {
+	if got := kindsOf(equal); fmt.Sprint(got) != fmt.Sprint([]string{KindPerson, KindEvent, KindPlace, KindSource, KindEvidenceGraph, KindSourceType}) {
 		t.Fatalf("equal text, got %v", got)
 	}
 

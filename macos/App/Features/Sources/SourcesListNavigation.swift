@@ -17,11 +17,19 @@ enum SourcesListNavigation {
     /// keeps its Open blocked (`graphBlockedReason(for:)` says why).
     static func graphLocation(for source: CatalogSource, graph: CatalogEvidenceGraph) -> WorkspaceLocation? {
         guard graph.hasArtifact else { return nil }
-        return .evidenceGraph(
+        return canvasLocation(for: source, graph: graph)
+    }
+
+    /// One graph's canvas, whether or not it links an Artifact: what the Sources
+    /// list's graph button and an omnibar graph hit both open. The location
+    /// carries the Source's ref and title, as Go's `deleteimpact.graphLocation` does.
+    static func canvasLocation(for source: CatalogSource, graph: CatalogEvidenceGraph) -> WorkspaceLocation {
+        .evidenceGraph(
             sourceId: source.id,
             graphId: graph.id,
             ref: source.ref,
-            title: source.title
+            title: source.title,
+            sourceTitle: source.title
         )
     }
 }
