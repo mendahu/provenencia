@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-42 — Implied links on the evidence sheet
+
+**Landed 2026-10-27** in [#585](https://github.com/mendahu/provenencia/pull/585). The evidence sheet's relationship Card now says how each side recorded the link. When the Source or the record records it through a marriage, a birth or a parent in between, a muted line under the Card's header reads, for example, "This source: recorded as spouses · The record: married in the marriage on 12 May 1842", with the marriage named by its date, a parent by name, and a direct side in the link's own term; a Card whose sides are both direct looks as before, and VoiceOver reads the line with the Card's box. The words are `PromoteEvidenceDisplay.recorded`, one `wording` entry per kinship pattern, so a new pattern adds one arm and two keys. A Source event's date now rides on its Promote page row, and `ConclusionHeaderDisplay` is the one title, secondary line and ref of any conclusion header, shared by search hits, Promote's menus and the sheet. No engine or wire change.
+
 ## S11-40 — Implied links in claim evidence
 
 **Landed 2026-10-27** in [#579](https://github.com/mendahu/provenencia/pull/579). The evidence sheet's canon side now reads a person's links through `canonlinks.Reader.Relationships`, so a tree marriage, birth or parent chain meets a Source's direct relationship (and the other way round) as one relationship line, checked, whose bundle holds every bridge behind the implied link in one Source plus the event's defining Observations. Each line says how each side recorded the fact (`Relationship.Layer` / `.Canon`, with the tree pivot's header on the wire and Swift's `KinshipPattern`), and a marriage both sides record is counted once when the request pairs the events. One `bridgesOf` reader replaces the filed-link reader, and `conclusionheaders.ByIDs` finds a header by id for Promote, search and the pivots. The sheet's words do not change until S11-42.

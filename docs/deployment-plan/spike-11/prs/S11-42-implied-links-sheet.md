@@ -1,6 +1,6 @@
 # S11-42 — Implied links on the evidence sheet
 
-**Status:** Planned
+**Status:** Landed in [#585](https://github.com/mendahu/provenencia/pull/585) (2026-10-27)
 **Spike / slice:** Spike 11 · Slice 9 — Kinship shapes
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: one muted caption line inside the existing relationship Card header, in the style its record count already uses; user, 2026-10-27)
@@ -14,6 +14,7 @@
 **Environment:** every step needs a Mac with the repo's toolchain (`xcodebuild test`, `scripts/check-pr.sh`) and the app for §10. No Go, proto or FFI change. A session without a Mac does not start: it reports "needs a Mac" to the orchestrator, which hands the PR to a Mac session.
 **Context:** [Kinship shapes § On the evidence sheet](../kinship-shapes.md#on-the-evidence-sheet); [`claim-evidence.md` § Wording](../claim-evidence.md#wording) and [§ Evidence through relationships](../claim-evidence.md#evidence-through-relationships); S11-40 plan D-9, D-11, D-13 and its Landed note; working rules "One wire vocabulary", "Counted once across sides"
 **Planned:** 2026-10-27 against `main` @ `c545a482`
+**Landed:** Differences from the plan: `wording`'s exhaustive `switch` also has a `.direct` arm (it returns the unrecognized wording and is never asked for; `recorded` words a direct side through `direct(term:)`), because Swift requires every case; `EvidenceBoard.Pivot` declares its memberwise `init(name:date:ref:)` beside `init?(header:orders:)`, because a custom initializer in the type removes the synthesized one.
 **Review:** [`S11-42-implied-links-sheet.review.md`](S11-42-implied-links-sheet.review.md) — Fits with changes / Ready with changes, 1 round (every finding answered)
 
 ### Implementer — read this first
