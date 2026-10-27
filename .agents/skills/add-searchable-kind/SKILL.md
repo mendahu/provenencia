@@ -26,6 +26,7 @@ Authoritative behavior: [`docs/deployment-plan/archive/spike-3/omnibar-search.md
 - [ ] DefaultInEverything / ContextSections for ranking boosts
 - [ ] Priority share of the kind tenth (persons 4, events 3, places 2, sources 1, other 0: types, fields, Evidence graphs)
 - [ ] FTS projector in core/database/searchindex (Upsert/Delete/Rebuild; unicode61 **and** trigram indexes)
+- [ ] A `fieldValuesForKind` case (`core/search/fts.go`) mapping the document's columns onto every registry field the kind declares.
 - [ ] Write-path reproject on domain mutators (same tx when practical)
 - [ ] Tagged Source body rollup when contributing child text (`note:` / `metadata:` / `filename:`)
 - [ ] Swift `CatalogSearchKind` case (`TestSwiftVocabularyMatchesGo` fails without it); the compiler then asks for its `kindLabel` and `leadThumbnail`, and for FakeStore's `searchPriority`
@@ -90,7 +91,10 @@ destination UI.
    fan-out, as `source_types` and `sources` do), a case in
    `searchindex.Reproject`, and a loop in `RebuildAll`. A new display column
    goes through `searchindex.Document`/`Upsert` and `core/search`
-   `docColumns`/`scanDoc`.
+   `docColumns`/`scanDoc`. A kind whose document fills `secondary` or `body`
+   with a declared field also needs a case in `core/search/fts.go`
+   `fieldValuesForKind`; without one the kind falls back to `title`, `ref` and
+   `body`, and a declared field such as `description` scores zero with no error.
 3. `FTSSearcher` (`DefaultEngine`) reads unicode61 FTS + docs; when the
    candidate map is still under the hit limit, expands via trigram OR shortlist
    + Jaro–Winkler gate (never full-catalog fuzzy). Empty / whitespace query →

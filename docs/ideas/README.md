@@ -27,9 +27,8 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`registry-source-import.md`](registry-source-import.md) — paste a record URL from Ancestry, FamilySearch and similar to create a Source; access (logins, OAuth) is unproven
 - [`text-quote-locators.md`](text-quote-locators.md)
 - [`audio-video-sources.md`](audio-video-sources.md)
-- [`shared-list-helpers.md`](shared-list-helpers.md) — one list of graph mutations (the other two items are in Spike 11)
+- [`shared-list-helpers.md`](shared-list-helpers.md) — small shared helpers: Properties' empty search state, one catalog querier, a trimmed empty-string binder, one popup dismissal and one popup list
 - [`test-subject-fixtures.md`](test-subject-fixtures.md) — test Subject helpers that place a Subject do it in a second write; let `subjectstest` take a placement
-- [`settled-list-count-publish.md`](settled-list-count-publish.md) — Properties badge is off by one after create or delete; one publish-on-settled rule for Sources, Properties and Metadata
 - [`depictions-and-likenesses.md`](depictions-and-likenesses.md) — leftovers after Spike 10 and Spike 14 batch 1 (signature, Windows PDF draw, audit items)
 - [`coverage-aware-similarity.md`](coverage-aware-similarity.md) — a match on one shared property (a surname-only record) scores similarity 1 and shows as an unbanded alternative
 - [`international-names.md`](international-names.md) — leftovers after Spike 10 (other name patterns, transliteration, calendars)
@@ -58,4 +57,5 @@ Shipped ideas keep **decisions**, not PR order. Closed spikes: [`docs/deployment
 - [`archive/design-system-hardening.md`](archive/design-system-hardening.md) — graduated to [`docs/design-system-layers.md`](../design-system-layers.md)
 - [`archive/promote-matching.md`](archive/promote-matching.md) — what proves a join; answered by graph alignment
 - [`archive/name-matching-enhancements.md`](archive/name-matching-enhancements.md) — Spike 10 matcher leftovers, each closed or re-homed
+- [`archive/settled-list-count-publish.md`](archive/settled-list-count-publish.md) — a list publishes its count only from a settled handle (`onSettled`)
 - Also archived: nav-count RPC, ingest MIME, thumbnails, image cache (same folder)

@@ -1,6 +1,7 @@
 # S12-20 — Docs and skills match the code
 
-**Status:** Planned
+**Status:** Landed in [#591](https://github.com/mendahu/provenencia/pull/591) (2026-10-27)
+**Landed:** Differences from the plan: the base moved from `67988a5` to `5312337a` (S11-28), which touched none of the lines this plan edits. Review round 1 added: an owner pointer on the `catalog-deletes.md` gate enum, a widened `check-guidance-names.py` docstring, and the dropped "as the layers land" clause in `matching-model.md`. The manual check (section 10) was not run in the app by the implementer.
 **Spike / slice:** Spike 12 · Slice 5 — Audit fixes: High
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: docs and one check script, no Swift or Go file changes)

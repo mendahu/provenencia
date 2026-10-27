@@ -539,7 +539,7 @@ A Subject type carries **two** ref prefixes, because this vocabulary is shared w
 
 There is one ref format; the layers are told apart by prefix, not by shape. Candidate prefixes conventionally begin with `C`, but nothing enforces that — a prefix's layer is a registry lookup, not a property of the string.
 
-Prefixes are three uppercase ASCII letters and must not use the reserved catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`. Both columns draw from **one namespace**: a prefix must be globally unique among Subject types (across origins) and across *both* columns, so no `ref_prefix` may equal another type's `candidate_ref_prefix`. The two `UNIQUE` constraints above are necessary but not sufficient; enforce the cross-column check in the write path.
+Prefixes are three uppercase ASCII letters and must not use a reserved catalog prefix (`core/ref` `reservedPrefixes`; the table is in [`catalog-refs.md`](catalog-refs.md)). Both columns draw from **one namespace**: a prefix must be globally unique among Subject types (across origins) and across *both* columns, so no `ref_prefix` may equal another type's `candidate_ref_prefix`. The two `UNIQUE` constraints above are necessary but not sufficient; enforce the cross-column check in the write path.
 
 The Subject type `source` (reification of a Source row) must not use `SRC`; the distinct prefixes `SRN` and `CSR` keep Source catalog refs (`SRC-…`) distinguishable from source-subjects in speech.
 
