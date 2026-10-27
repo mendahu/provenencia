@@ -97,6 +97,35 @@ generated protobuf, previews. Visual taste the board already decided.
 | **minor** | Wording, a missing identifier on a quiet control, an awkward but working flow |
 | **nit** | Taste |
 
+## Known traps
+
+Classes that reached `main` past this lens and were found later, by an
+app-health audit or a landing. Each line names the class, the shape it took,
+and what to check. Add a line when an audit traces an item back to this
+lens ([`review-pr`](../SKILL.md) "Close the loop").
+
+- **A kit promise no code keeps.** `PVConfirm` put focus on Cancel and kept
+  `.keyboardShortcut(.defaultAction)` on Delete, so Return deleted while the
+  README promised it could not. When a flow leans on a kit promise (Return,
+  Escape, dismissal, focus, an announcement), find the code or test that
+  keeps it.
+- **A dismissal that skips the sheet chrome.** A link or button inside a sheet
+  that sets the presenting binding to nil skips the dirty-sheet question.
+  Dismiss through the chrome.
+- **A brief that waives a safety rule.** A board cannot decide that a dirty
+  form closes without asking, that a destructive action skips its confirm, or
+  that a failure is silent (S12-D3 GF-8). Raise it against the brief.
+- **Silent results.** Toasts and inline error callouts reach VoiceOver only
+  if the kit announces them. A write's success or failure must be heard.
+- **`try?` on a load path.** A swallowed load error that leaves a valid-looking
+  empty state (a blank new Citation) invites a duplicate. Check each `try?` the
+  diff adds or moves.
+- **A count without a plural.** A `%lld` noun with no plural variation reads
+  "1 subjects".
+- **The old scope's word.** Copy that still says "this Source" after the
+  action moved to one Evidence graph, and VoiceOver labels that name the
+  container but not which one (the canvas, the history menu).
+
 ## Good finding shape
 
 The shape to copy. Names in the example are illustrative.
