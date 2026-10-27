@@ -93,13 +93,9 @@ func evidence(g *graphcache.Graph, in inputs, q *evidenceReader, req EvidenceReq
 	for _, s := range in.layer.Subjects {
 		valuesOf[string(s.ID)] = s.Values
 	}
-	rowEG, err := q.graph(in.graphID)
+	rowIx, err := q.graphIndex(in.graphID)
 	if err != nil {
 		return claimevidence.Evidence{}, err
-	}
-	observationsOf := map[string][][]byte{}
-	for _, o := range rowEG.Observations {
-		observationsOf[string(o.SubjectID)] = append(observationsOf[string(o.SubjectID)], o.ID)
 	}
 
 	// Layer links of the row Subject, by layer neighbor.
@@ -118,7 +114,9 @@ func evidence(g *graphcache.Graph, in inputs, q *evidenceReader, req EvidenceReq
 			}
 		}
 		for _, a := range b.Associations {
-			link.Observations = append(link.Observations, observationsOf[string(a)]...)
+			for _, o := range rowIx.obs[string(a)] {
+				link.Observations = append(link.Observations, o.ID)
+			}
 		}
 		layerLinks[string(other)] = append(layerLinks[string(other)], link)
 	}
@@ -268,7 +266,7 @@ type evidenceReader struct {
 	kin      *canonlinks.Reader                  // the entities' recorded and implied relationship links
 	memberOf map[string]graphcache.Member        // by Subject id, from the members read so far
 	graphs   map[string]graphcache.EvidenceGraph // by graph id, the graphs this request has read
-	indexes  map[string]*bridgeIndex             // by graph id, the graphs bridgesOf has read
+	indexes  map[string]*graphIndex              // by graph id, the graphs the request has read
 }
 
 func newEvidenceReader(g *graphcache.Graph, in inputs) (*evidenceReader, error) {
@@ -280,7 +278,7 @@ func newEvidenceReader(g *graphcache.Graph, in inputs) (*evidenceReader, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &evidenceReader{g: g, in: in, prof: prof, kin: kin, memberOf: map[string]graphcache.Member{}, graphs: map[string]graphcache.EvidenceGraph{}, indexes: map[string]*bridgeIndex{}}, nil
+	return &evidenceReader{g: g, in: in, prof: prof, kin: kin, memberOf: map[string]graphcache.Member{}, graphs: map[string]graphcache.EvidenceGraph{}, indexes: map[string]*graphIndex{}}, nil
 }
 
 // graph is the Evidence graph with id. The request keeps each one it reads, so
@@ -483,7 +481,7 @@ func (r *evidenceReader) pivotsOf(bridges []claimevidence.Bridge) ([]claimeviden
 	}
 	out := make([]claimevidence.Pivot, 0, len(ms))
 	for _, m := range ms {
-		ix, err := r.bridgeIndex(r.memberOf[string(m.Subject)].GraphID)
+		ix, err := r.graphIndex(r.memberOf[string(m.Subject)].GraphID)
 		if err != nil {
 			return nil, err
 		}
@@ -511,7 +509,7 @@ func (r *evidenceReader) bridgesOf(assocs [][]byte, row, nbr, pivot map[string]b
 			if !ok {
 				continue
 			}
-			ix, err := r.bridgeIndex(m.GraphID)
+			ix, err := r.graphIndex(m.GraphID)
 			if err != nil {
 				return nil, err
 			}
@@ -569,15 +567,15 @@ func (r *evidenceReader) bridgesOf(assocs [][]byte, row, nbr, pivot map[string]b
 	return out, nil
 }
 
-// bridgeIndex is what bridgesOf reads of one Evidence graph: each Subject's
-// type key, and its Observations by Subject.
-type bridgeIndex struct {
+// graphIndex is a graph's Subjects by type and Observations by Subject, indexed
+// once per request.
+type graphIndex struct {
 	types map[string]string
 	obs   map[string][]graphcache.EvidenceObservation
 }
 
-// bridgeIndex indexes the Evidence graph with id once per request.
-func (r *evidenceReader) bridgeIndex(graphID []byte) (*bridgeIndex, error) {
+// graphIndex indexes the Evidence graph with id once per request.
+func (r *evidenceReader) graphIndex(graphID []byte) (*graphIndex, error) {
 	if ix, ok := r.indexes[string(graphID)]; ok {
 		return ix, nil
 	}
@@ -585,7 +583,7 @@ func (r *evidenceReader) bridgeIndex(graphID []byte) (*bridgeIndex, error) {
 	if err != nil {
 		return nil, err
 	}
-	ix := &bridgeIndex{
+	ix := &graphIndex{
 		types: make(map[string]string, len(eg.Subjects)),
 		obs:   make(map[string][]graphcache.EvidenceObservation),
 	}
