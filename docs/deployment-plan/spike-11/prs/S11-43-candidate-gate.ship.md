@@ -60,4 +60,4 @@ Reviewers: MNT (MNT-1 was a Fix-now major). Scope `1a3cb215...17928c3f`.
 No new findings. No Fix plan 2.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · to user: — · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: none · to user: — · CON miss: none
