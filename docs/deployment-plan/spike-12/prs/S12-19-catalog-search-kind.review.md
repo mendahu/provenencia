@@ -1,4 +1,4 @@
-# Review — S14-08 One typed spelling of the omnibar's hit kinds
+# Review — S12-19 One typed spelling of the omnibar's hit kinds
 
 **Verdict:** Fits with changes / Not ready, then fixed. **Rounds:** 1. **Reviewers:** maintainability (fresh agent), executability (fresh agent).
 

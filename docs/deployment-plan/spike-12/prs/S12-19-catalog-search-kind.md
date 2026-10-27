@@ -1,19 +1,19 @@
-# S14-08 — One typed spelling of the omnibar's hit kinds
+# S12-19 — One typed spelling of the omnibar's hit kinds
 
 **Status:** In progress
-**Spike / slice:** Spike 14 · Slice 2 — Odds and ends (batch 2)
+**Spike / slice:** Spike 12 · Slice 4 — Graphs in the UI
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: no view changes what it draws)
 **Board:** —
 **Depends on:** —
-**Blocks:** —
+**Blocks:** S12-15 (it adds the `evidence_graph` case this PR's pin then demands)
 **Branch:** `claude/elegant-archimedes-y44jl5` (the session's assigned branch; the plan and the code ship together)
 **Version bump:** none — an internal refactor with no change a researcher sees ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-searchable-kind`](../../../../.agents/skills/add-searchable-kind/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/macos-client.mdc` (Go wire vocabulary is spelled once in Swift and pinned by `api/ffi/swift_vocabulary_test.go`), `.cursor/rules/go-tests.mdc`
-**Context:** [omnibar search (Spike 3 archive)](../../archive/spike-3/omnibar-search.md), `core/search/registry.go` `Registry`
+**Context:** working rule "Omnibar" (graphs are a searchable kind, S12-15); [omnibar search (Spike 3 archive)](../../archive/spike-3/omnibar-search.md), `core/search/registry.go` `Registry`
 **Planned:** 2026-10-27 against `main` @ `b11d1cb`
-**Review:** [`S14-08-catalog-search-kind.review.md`](S14-08-catalog-search-kind.review.md) — Fits with changes / Not ready → all fixed, 1 round
+**Review:** [`S12-19-catalog-search-kind.review.md`](S12-19-catalog-search-kind.review.md) — Fits with changes / Not ready → all fixed, 1 round
 
 ### Implementer — read this first
 
@@ -236,5 +236,5 @@ None.
 
 ## 13. PR
 
-**Title:** S14-08 — One typed spelling of the omnibar's hit kinds
-**Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; `Plan: docs/deployment-plan/spike-14/prs/S14-08-catalog-search-kind.md`.
+**Title:** S12-19 — One typed spelling of the omnibar's hit kinds
+**Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; `Plan: docs/deployment-plan/spike-12/prs/S12-19-catalog-search-kind.md`.
