@@ -149,7 +149,9 @@ final class SourcesModel {
         session.queryHandle(Self.sourceTypesListKey(for: session))
     }
 
-    /// The progress handle's failure while a status filter needs its counts.
+    /// The progress handle's failure while a status filter needs its counts. It
+    /// reports a failure even beside a stale value, because a status filter
+    /// must not apply stale counts silently.
     var statusCountsError: Error? {
         guard settings.status != nil else { return nil }
         if let handle = graphsHandle, handle.status == .error { return handle.error }
