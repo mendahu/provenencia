@@ -91,6 +91,41 @@ test can reach; then give exact manual steps.
 | **minor** | A weak test; scope noise with no behavior change |
 | **nit** | Test naming, commit wording |
 
+## Known traps
+
+Classes that reached `main` past this lens and were found later, by an
+app-health audit or a landing. Each line names the class, the shape it took,
+and what to check. Add a line when an audit traces an item back to this
+lens ([`review-pr`](../SKILL.md) "Close the loop").
+
+- **A new way into old code.** A PR that adds a path into an existing
+  destination (an omnibar hit, a history entry, a new button) or makes a state
+  reachable (no links, a deleted referent, many where there was one) is
+  checked at the destination: does the view reset on the new id, handle the
+  missing referent, show the state? Once S12-15 let the omnibar open canvas
+  after canvas, the canvas's `@State` model kept the first graph and wrote to
+  it. S12-13 let a card uncheck every graph, and a Citation with no
+  Observation became unreachable.
+- **An old name left behind.** For each symbol the diff renames or deletes,
+  `rg` the old name, qualified (`Effect.Source`), across `.agents/`,
+  `.cursor/rules/` and `docs/*.md`. `scripts/check-guidance-names.py` catches
+  the distinct names, not the short ones. A hit in a skill or rule is a
+  blocker: it trains the next agent wrong.
+- **A re-scoped action, unchanged copy.** When a PR changes what an action
+  covers (Promote per Source → per graph), `rg` `L10n.swift` in the touched
+  features for the old scope's word. "Strings: none" in a plan is a claim to
+  check.
+- **The last caller removed.** For each call the diff deletes, `rg` the
+  callee. One with no caller left goes in this PR: a kit component kept after
+  a revision removed its second caller, a session accessor, two RPCs whose
+  only caller a rewrite replaced.
+- **A fix beside the thing it fixes.** A narrower mechanism (a by-Source
+  read) retires the wider one it replaces (the catalog-wide list key), or both
+  run and the fix does nothing.
+- **A lock taken twice.** A new function that acquires a lock, a decode slot
+  or the session that its callers may already hold deadlocks at the smallest
+  pool. Name who holds it.
+
 ## Good finding shape
 
 The shape to copy. Names in the example are illustrative.

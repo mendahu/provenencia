@@ -18,6 +18,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 
 - [`source-to-source-relationships.md`](source-to-source-relationships.md)
 - [`source-structure-later.md`](source-structure-later.md) — what Spike 12 parked: nested Sources, derivation links, named templates, per-graph credibility, layered citations
+- [`artifact-outside-graph-marker.md`](artifact-outside-graph-marker.md) — name, in a graph delete's confirm, the Artifacts it leaves in no Evidence graph; the card marker went to Spike 12 (S12-38)
 - [`graph-canvas-second-host.md`](graph-canvas-second-host.md) — what a family-tree canvas host still needs from GraphCanvas: hit targets from measured layout, a routed edge layer, selection, growable bounds, a host zoom range
 - [`name-index-on-commit.md`](name-index-on-commit.md) — a handle commit throws away Promote's name index and every Source's ranked candidates; update them in place instead
 - [`narrower-canon-walk.md`](narrower-canon-walk.md) — every proposal walks the whole connected component of the canon; walk only as far as alignment can use
@@ -36,7 +37,6 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`matching-test-suite.md`](matching-test-suite.md) — scenario goldens, invariants, a simulated world, a scoreboard, and a labeler that fits the registry numbers. Its "make the algorithm graspable" part is Spike 11 (S11-01); the rest waits on the re-implementation
 - [`share-packages.md`](share-packages.md)
 - [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md)
-- [`large-jpeg-thumbnails.md`](large-jpeg-thumbnails.md) — JPEGs over the 64-megapixel decode budget save and keep the missing-image glyph
 - [`identity-claim-review.md`](identity-claim-review.md)
 - [`organizations.md`](organizations.md) — Organization as a Subject type (congregations, employers, schools, regiments, lodges) with part-of and succession like places; descoped from S11-48
 - [`binding-order-editing.md`](binding-order-editing.md) — a per-type ordered list of properties on the Properties page, calling `ReorderSubjectTypeProperties` (engine side shipped in S11-32)

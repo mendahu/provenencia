@@ -66,6 +66,8 @@ One paragraph: what this spike pulls in (dogfood notes, [ideas](../../ideas/…)
 1. **Outcome name.** What a person sees or can do. Concrete examples.
 2. …
 
+**Scale.** The largest real case this spike's work must stay fast at: counts, not adjectives ("a census Source with 60 household graphs and 300 Citations on one page"). Plans write their fan-out against it.
+
 ## Where the notes went
 
 | Dogfood note or idea | PR | Brief |
@@ -91,7 +93,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S#-02 | … | 1 | … | S#-D1 | S#-01, S#-D1 | [plan](prs/S#-02-slug.md) | Planned |
 | S#-03 | … | 2 | … | — | — | [plan](prs/S#-03-slug.md) | Landed [#N](https://github.com/mendahu/provenencia/pull/N) |
 | S#-04 | … | 2 | … | — | — | — | Descoped (date) → [idea](../../ideas/….md) |
-| S#-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
+| S#-99 | Dogfood close / docs | — | Bar pass, the ship logs' follow-ups triaged, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 <!-- Status words: Scoped, Blocked — on …, Planned, In progress, Landed #N, Descoped (date). See docs/deployment-plan/README.md. -->
 

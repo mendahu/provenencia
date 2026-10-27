@@ -95,6 +95,30 @@ project folder the app created. Test fixtures.
 "No reachable path today" is not a severity. If a later PR in the map will
 reach it, rate it as reached.
 
+## Known traps
+
+Classes that reached `main` past this lens and were found later, by an
+app-health audit or a landing. Each line names the class, the shape it took,
+and what to check. Add a line when an audit traces an item back to this
+lens ([`review-pr`](../SKILL.md) "Close the loop").
+
+- **Launch Services decides from a stored value.** An object's extension came
+  from the stored `media_type`; a type off the allowlist gave no extension and
+  `NSWorkspace.open` ran whatever was there. Validate the stored type on read,
+  refuse an object with an execute bit, and open only allowed types.
+- **A URL opened by Swift's own sniffing.** Open only an href Go built with
+  `urlshape.OpenHref`; the same for link clicks inside a `PDFView`.
+- **Swift arithmetic on catalog numbers.** `+` and `Int64(_:)` trap on
+  overflow. A crafted position crashed the canvas, and restore reopened it on
+  launch. Bound on write, clamp on read, check in Swift.
+- **A full decode in Swift.** `NSImage(contentsOf:)` on an original has no
+  pixel or type bound; Go's `raster` has both. Check before decoding.
+- **A panic across cgo.** The core runs in the app's process; without a
+  `recover` at `ffi.Call`, one panic ends the app.
+- **A value checked on its way in, trusted on its way out.** Every finding
+  above is this rule ("Reads that pass untrusted values through") at one sink.
+  Name the sink when you review a read.
+
 ## Good finding shape
 
 The shape to copy. Names in the example are illustrative.

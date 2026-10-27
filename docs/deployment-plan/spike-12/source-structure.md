@@ -65,12 +65,12 @@ The exact `ON DELETE` classes and `catalogmodel` buckets are set by the schema P
 - **A graph has a `GPH-` ref, a name and an optional description.** Name and description are editable. Graphs are listed alphabetically by name.
 - **A graph with Subjects can't be deleted.** An empty graph that is not the last one can.
 - **Graphs are fully isolated.** A Subject belongs to exactly one graph and never moves. An Observation's Subject, the Subject it points at (relationships, participations), and its Citation's Artifact must all be in, or linked to, that one graph. Go refuses anything else at write time.
-- **Artifacts and graphs are many-to-many.**
-  - A graph created by the researcher needs at least one linked Artifact. Its form starts with every Artifact checked.
+- **Artifacts and graphs are many-to-many. The Artifact is the parent** (amended 2026-10-27, [audit](app-health-audit.md) slice 5): an Artifact may stand in no graph; a graph needs at least one Artifact.
+  - A graph created by the researcher needs at least one linked Artifact. Its form starts with the Artifacts that are in no graph checked when there are any, otherwise with every Artifact checked (amended 2026-10-27).
   - The Default graph may have none until the Source's first Artifact, which links to it automatically. "Add graph" is unavailable until the Source has an Artifact.
-  - A new Artifact starts linked to every graph.
-  - While a Source has one graph, linking is automatic and the checkboxes are hidden.
-  - Unlinking is refused when that graph's Citations use the Artifact (the refusal names the reason; the Citations are listed alongside it), and when it is the graph's last link.
+  - A new Artifact starts linked to the graphs checked when it is added: all of them by default, or none (amended 2026-10-27; it was every graph).
+  - The graph checkboxes show on every Source that has a graph, one graph included, so a page can be added in no graph (amended 2026-10-27; they were hidden while a Source had one graph).
+  - Unlinking is refused when that graph's Citations use the Artifact (the refusal names the reason; the Citations are listed alongside it), when it is the graph's last link, and when it is the last graph of an Artifact that has Citations; a graph delete that would leave such an Artifact in no graph is refused too (added 2026-10-27).
   - Deleting an Artifact keeps today's rule (refused while Citations use it); it may leave a graph with no Artifacts.
 - **The Citation composer offers only the graph's linked Artifacts.**
 - **Promote is per graph.** A Promote layer is one graph's Subjects.
@@ -80,7 +80,7 @@ The exact `ON DELETE` classes and `catalogmodel` buckets are set by the schema P
 ### Where graphs show
 
 - **Source page:** a new Graphs section lists the Source's graphs, each with its name, ref, description and its own Open button. Create, edit (name, description, linked Artifacts) and delete live there. The header's jump to the Evidence graph goes; this section replaces it.
-- **Source page, Artifacts section:** the add dialog and each Artifact card's edit show one checkbox per graph, when the Source has two or more.
+- **Source page, Artifacts section:** the add dialog and each Artifact card's edit show one checkbox per graph on every Source that has a graph (amended 2026-10-27; it was two or more). A card for an Artifact in no graph says so and offers linking it (added 2026-10-27).
 - **Sources list:** each Source's row lists its graphs one per line, each with a status badge (Not started, In progress, Promoted) and a button showing its name and progress counts; the button opens its graph. A graph opens when it has at least one linked Artifact, as the single graph button does today.
 - **Navigation:** a graph is a place. Its location carries the graph id, so Back / Forward and restore return to that exact graph, its Citation composer, and its Promote page. Breadcrumbs read Source › graph name.
 - **Omnibar:** graphs are a searchable kind, by name, description and `GPH-` ref; a hit opens the graph.

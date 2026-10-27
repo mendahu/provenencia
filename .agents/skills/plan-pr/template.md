@@ -90,6 +90,8 @@ planner; delete it from the finished plan.
 | D-1 | … | … | … — because … |
 | D-2 | … | … | … |
 
+**Rules this plan bends.** None. | A working rule, skill or `.cursor/rules` line a Decision contradicts → why → the user's answer (date) → the Step that updates the rule. <!-- review-plan: a bent rule with no user answer is a blocker. -->
+
 ## 6. Design
 
 <!-- Only the layers this PR touches; write "None —" for the rest. Short sketches for signatures, DDL, proto. Mark new names (new). -->
@@ -103,8 +105,24 @@ planner; delete it from the finished plan.
 | `…` *(new)* | type / func / file / table / FFI / component / key / helper | `path` `Symbol` | … |
 
 **Builds on.** The patterns and registries this PR extends instead of adding its own: skill, registry, precedent.
-**Deletes.** Code, strings, tests, stubs, and docs this PR makes dead, and removes. | None — nothing becomes dead.
+**Deletes.** Code, strings, tests, stubs, and docs this PR makes dead, and removes: every callee whose last caller this PR deletes, and every mechanism the new one replaces (an old key, field, list or patch path). | None — nothing becomes dead.
 **Next adds.** Later PRs in the map or ideas this shape makes easier, and how (a registry entry, a new case). | None named.
+
+### Reach
+
+<!-- Every new way into existing code: a navigation path or entry point into a destination, or a state that can now occur (none, many, a deleted referent). Say what the existing code does there. A new path into an old view is where its latent bugs become common. -->
+
+None — no new path into existing code, no new state reachable. |
+
+| New path or state | Destination | Checked: resets on the new id · handles a missing referent · shows the state |
+| --- | --- | --- |
+| … | `path` `Symbol` | … |
+
+### Scale
+
+<!-- At the map's Scale line: for each write this PR adds or re-keys, the keys and caches it invalidates and what they reload; for each list or loop, the work per row. -->
+
+None — no write, list or loop changes. | At the map's Scale (…): …
 
 ### Schema
 
@@ -139,6 +157,8 @@ None — | `api/proto/engine.proto`: `Method` *(new)*, request `…`, response `
 States: empty …, error …, large …. Accessibility: labels / rotor / keyboard ….
 
 ### Strings
+
+<!-- A PR that changes what an action covers (its scope or concept) lists the existing copy that names the old scope, even when it adds no key. -->
 
 None — | L10n keys *(new)*: `L10n.….…` = "…". Removed: ….
 
@@ -183,6 +203,8 @@ Must stay green: everything `scripts/check-pr.sh` runs. Name any suite this PR i
 - [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests with no Swift warning, catalog and plan-doc checks)
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
 - [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left
+- [ ] Sweep: each renamed or deleted name `rg`'d by its old, qualified name across `.agents/`, `.cursor/rules/`, `docs/*.md` and `L10n.swift` with no hit left; `scripts/check-guidance-names.py` passes (check-pr runs it)
+- [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated
 - [ ] UI matches the brief inventory; no new kit primitive unless the brief marks it New
 - [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together) — or none
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan

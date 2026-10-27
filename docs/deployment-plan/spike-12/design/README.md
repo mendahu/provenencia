@@ -6,7 +6,7 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 
 ## Scheduled
 
-None. Every Spike 12 brief has an agreed board.
+- **S12-D7** — Source page, Artifacts section: an Artifact in no graph (the card's "Not in an evidence graph" line and its link action, and the graph boxes on a one-graph Source). Gates **S12-38**; written just before it.
 
 ## Archived
 

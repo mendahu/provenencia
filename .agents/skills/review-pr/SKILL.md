@@ -136,3 +136,14 @@ area feels heavy.
    primary flow, or guidance that trains agents wrong; Low for polish.
 4. Do not fix anything. The user picks items; they go to the map with
    [`plan-spike`](../plan-spike/SKILL.md) or to `docs/ideas/`.
+5. **Close the loop.** An audit item that a plan or PR review should have
+   caught is a gap in the reviews, not only in the code. For each item, say
+   where it came from: introduced or made reachable by a recent PR (name it),
+   deepened by one, or older than the spikes reviewed. For the first two, name
+   the gate that should have caught it and why it did not: not asked, asked
+   and rated too low, answered Logged or by an Out line, or a Decision that
+   bent a rule. Then add one line per class to the lens's **Known traps**, a
+   question or check to [`review-plan`](../review-plan/SKILL.md), a section
+   to the `plan-pr` template, or a check to `scripts/check-pr.sh`, so the next
+   spike's reviews catch the class before an audit does. Report the classes
+   and the guidance changed beside the action list.
