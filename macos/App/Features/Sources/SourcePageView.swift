@@ -36,7 +36,6 @@ struct SourcePageView: View {
             if let workspaceHandle: QueryHandle<CatalogSourceWorkspace> = session.queryHandle(workspaceKey) {
                 SourcePageContent(
                     workspaceHandle: workspaceHandle,
-                    sourceID: sourceID,
                     model: model
                 )
             } else {
@@ -75,7 +74,6 @@ private struct SourcePageLoadingShell: View {
 private struct SourcePageContent: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Bindable var workspaceHandle: QueryHandle<CatalogSourceWorkspace>
-    let sourceID: String
     @Bindable var model: SourcePageModel
     /// Metadata column height so the left column can stretch and pin Credibility.
     @State private var metadataColumnHeight: CGFloat = 0
