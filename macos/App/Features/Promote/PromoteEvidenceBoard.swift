@@ -71,6 +71,31 @@ struct EvidenceBoard: Equatable {
         var lines: [Line]
     }
 
+    /// The record in between that a side records a link through: a marriage, a birth or a parent.
+    /// A Source's is a page row; the record's is a header from the catalog.
+    struct Pivot: Equatable {
+        var name: String
+        /// An event's date as the Events list lists it; empty for anything else, or when undated.
+        var date: String
+        var ref: String
+
+        init(name: String, date: String, ref: String) {
+            self.name = name
+            self.date = date
+            self.ref = ref
+        }
+
+        /// The record's pivot, titled as every header is; nil when it has none.
+        init?(header: CatalogConclusionHeader?, orders: NameFormatOrders) {
+            guard let header else { return nil }
+            self.init(
+                name: ConclusionHeaderDisplay.title(header, orders: orders),
+                date: header.event.map { EventSecondaryDisplay.content($0).date } ?? "",
+                ref: ConclusionHeaderDisplay.ref(header)
+            )
+        }
+    }
+
     /// A connection the row and the record share: its header, its box and its neighbor's own lines.
     struct RelationshipCard: Equatable, Identifiable {
         var id: String
