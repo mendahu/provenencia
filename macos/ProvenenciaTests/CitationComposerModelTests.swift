@@ -1684,6 +1684,7 @@ struct CitationComposerModelTests {
         let rowCount = model.observationRows.rows.count
         #expect(rowCount == 1)
 
+        let kept = store.citationsByID["cit-1"]
         store.citationsByID["cit-1"] = nil
         model.session.invalidate(
             .citationsByArtifact(project: model.session.projectKey, graphId: graphID, artifactId: "art-0")
@@ -1691,6 +1692,13 @@ struct CitationComposerModelTests {
         await model.refreshCitationLines()
         #expect(model.fields.error != nil)
         #expect(model.observationRows.rows.count == rowCount)
+
+        store.citationsByID["cit-1"] = kept
+        model.session.invalidate(
+            .citationsByArtifact(project: model.session.projectKey, graphId: graphID, artifactId: "art-0")
+        )
+        await model.refreshCitationLines()
+        #expect(model.fields.error == nil)
     }
 
     @Test func customTermReturnsToTheNewObservationDialog() async {

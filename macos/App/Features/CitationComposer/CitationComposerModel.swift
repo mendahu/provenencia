@@ -1049,12 +1049,23 @@ final class CitationComposerModel {
     /// task was cancelled) and returns `nil`, so the caller keeps what it had.
     private func showingLoadFailure<T>(_ work: () async throws -> T) async -> T? {
         do {
-            return try await work()
+            let result = try await work()
+            // Only the message this method set; a save or validation error stays.
+            if let shown = loadFailureMessage, fields.error == shown { fields.error = nil }
+            loadFailureMessage = nil
+            return result
         } catch {
-            if !Task.isCancelled { fields.error = L10n.Errors.message(for: error) }
+            if !Task.isCancelled {
+                let message = L10n.Errors.message(for: error)
+                fields.error = message
+                loadFailureMessage = message
+            }
             return nil
         }
     }
+
+    /// The error `showingLoadFailure` last put in the form, so a later load can clear it.
+    private var loadFailureMessage: String?
 
     private struct FetchedCitation {
         var citation: CatalogCitation
