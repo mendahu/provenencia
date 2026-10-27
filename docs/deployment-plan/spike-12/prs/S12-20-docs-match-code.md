@@ -1,6 +1,6 @@
 # S12-20 — Docs and skills match the code
 
-**Status:** Planned
+**Status:** Landed in [#591](https://github.com/mendahu/provenencia/pull/591) (2026-10-27)
 **Spike / slice:** Spike 12 · Slice 5 — Audit fixes: High
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: docs and one check script, no Swift or Go file changes)
