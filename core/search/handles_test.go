@@ -126,7 +126,7 @@ func refsOf(hits []Hit) string {
 
 func TestHandleSearch(t *testing.T) {
 	f := newHandleFixture(t)
-	james := f.promote(f.person("James Robins", "Jim Robins"), nil)
+	james := f.promote(f.person("James Robins", "Kenneth Robins"), nil)
 	f.promote(f.person("Mary Smith"), nil)
 
 	t.Run("the omnibar default includes handles", func(t *testing.T) {
@@ -138,7 +138,7 @@ func TestHandleSearch(t *testing.T) {
 
 	t.Run("by rank-1 name, with location and member count", func(t *testing.T) {
 		hits := f.search("James Robins", KindPerson)
-		if len(hits) != 1 || hits[0].Ref != james.Entity.Ref || hits[0].Title != "James Jim Robins" {
+		if len(hits) != 1 || hits[0].Ref != james.Entity.Ref || hits[0].Title != "James Kenneth Robins" {
 			t.Fatalf("got %+v", hits)
 		}
 		loc := hits[0].Location
@@ -151,7 +151,7 @@ func TestHandleSearch(t *testing.T) {
 	})
 
 	t.Run("by another name cluster", func(t *testing.T) {
-		if hits := f.search("Jim", KindPerson); refsOf(hits) != fmt.Sprint([]string{"person:" + james.Entity.Ref}) {
+		if hits := f.search("Kenneth", KindPerson); refsOf(hits) != fmt.Sprint([]string{"person:" + james.Entity.Ref}) {
 			t.Fatalf("got %s", refsOf(hits))
 		}
 	})
@@ -216,7 +216,7 @@ func TestHandleSearchFollowsEdits(t *testing.T) {
 
 func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 	f := newHandleFixture(t)
-	person := f.person("James Robins", "Jim Robins")
+	person := f.person("James Robins", "Kenneth Robins")
 	birth, err := propertyterms.Lookup(f.c, f.prop("event_type").ID, "birth", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
@@ -276,13 +276,13 @@ func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 	f.promote(place, nil)
 	f.fileBridges()
 
-	if hits := f.search("Jim Robins", KindPerson); len(hits) != 1 || hits[0].Ref != promoted.Entity.Ref {
+	if hits := f.search("Kenneth Robins", KindPerson); len(hits) != 1 || hits[0].Ref != promoted.Entity.Ref {
 		t.Fatalf("alternate name: %s", refsOf(hits))
 	}
 	if hits := f.search(promoted.Entity.Ref, KindPerson); len(hits) != 1 || hits[0].MatchReason != "ref" {
 		t.Fatalf("ref: %+v", hits)
 	}
-	if hits := f.search("James", KindEvent); len(hits) != 1 || hits[0].Title != "Birth of James Jim Robins" {
+	if hits := f.search("James", KindEvent); len(hits) != 1 || hits[0].Title != "Birth of James Kenneth Robins" {
 		t.Fatalf("event title: %+v", hits)
 	}
 	if hits := f.search("York", KindPlace); len(hits) != 1 {
@@ -312,7 +312,7 @@ func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if hits := f.search("John", KindEvent); len(hits) != 1 || hits[0].Title != "Birth of John Jim Robins" {
+	if hits := f.search("John", KindEvent); len(hits) != 1 || hits[0].Title != "Birth of John Kenneth Robins" {
 		t.Fatalf("after edit: %+v", hits)
 	}
 	if hits := f.search("James", KindEvent); len(hits) != 0 {
