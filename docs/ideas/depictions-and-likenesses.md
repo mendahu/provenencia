@@ -1,12 +1,10 @@
 # Depictions and likenesses — later
 
-**Status:** idea, not scheduled. Spike 10 shipped the `depiction` value type, the `likeness` property, the composer row, the Person gallery, and a preferred portrait ([decisions](../deployment-plan/archive/spike-10/)). Promote comparing two likenesses is Spike 11 (S11-20). Event and Place pictures (`event_picture`, `place_picture`) and rectangle-only depiction drawing are [Spike 14](../deployment-plan/spike-14/) batch 1.
+**Status:** idea, not scheduled. Spike 10 shipped the `depiction` value type, the `likeness` property, the composer row, the Person gallery, and a preferred portrait ([decisions](../deployment-plan/archive/spike-10/)). Promote comparing two likenesses is Spike 11 (S11-20). Event and Place pictures (`event_picture`, `place_picture`) a chosen Event or Place thumbnail, and rectangle-only depiction drawing are [Spike 14](../deployment-plan/spike-14/) batch 1.
 
 ## Still open
 
 - **Signature.** Another key of type `depiction`, or something of its own. Spike 14 gave each kind its own picture key (`likeness`, `event_picture`, `place_picture`); a signature would follow that or not.
-- **A preferred picture for an Event or Place.** Spike 14 keeps the gallery as the only display: the header keeps its mark, and `preferred_likeness_observation_id` stays the Person's. A header thumb and a chosen picture would reuse the Person's lead rule (`likenesses.Lead`).
-- **Pictures on the Events and Places lists.** As the People list leads with a likeness.
 - **Every saved face on the photo.** The composer's viewer shows one region at a time; showing every saved depiction on the photo needs a read-only region layer.
 - **Gallery image from the record.** The gallery reads the image File id from the reconciler cache; joining it to the record's own `depiction_values.image_file_id` keeps an edited cache row from showing another PNG (audit SEC-4, 2026-10-18).
 - **A hidden value's reason and support.** A hidden reconciler row takes its first entry's reason and counts every entry's Source, so a value carried by an accepted weak photo reads `provisional` when a provisional member's copy of the same picture ranks above it. The gallery reads each record's own outcome instead (S10-60); other readers of `auto_reconciler_values.reason` still see the row's.

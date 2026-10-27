@@ -43,3 +43,7 @@
 
 ### K-11 · nit · Promote and thumbnail names
 **Answer:** Logged; folds into K-5.
+
+## After round 1
+
+The user asked for thumbnail parity with a Person's portrait (2026-10-27). The working rule "No preferred picture for an Event or Place" is replaced by "An Event or Place chooses its thumbnail as a Person chooses its portrait", on the one existing mechanism (K-8's generic Go pointer), and S14-05 – S14-07 are added. K-8's "app limits it" answer no longer applies: all three kinds have the portrait.

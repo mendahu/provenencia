@@ -40,6 +40,10 @@ Why not a Property named `depiction`: it would share its name with the value typ
 - **Rectangle-only drawing.** When the composer arms the viewer for a depiction, the region strip shows the rectangle tool alone. A Citation's own region keeps all seven tools.
 - **The Citation's region as a depiction.** "Use the citation's region" on a Citation whose region is not a rectangle sets the depiction to that region's bounding rectangle, built from `ArtifactRegionGeometry.boundingRect(of:)`, the rule the crop already uses, so the image is the same as before.
 
+### Thumbnail parity
+
+An Event or Place chooses its thumbnail as a Person chooses its portrait: the earliest picture leads unless one is chosen, on the page header, the gallery and the list row. One mechanism serves all three kinds: `canonical_entities.preferred_likeness_observation_id`, `canonicalentities.SetPreferredLikeness` (it checks gallery membership, not kind), `likenesses.Lead`, and `ConclusionPortraitModel`. What is new is the lead on `EventHeader` and `PlaceHeader` (Go, wire, `GoStore`) and the pages and lists reading it. A Person's copy says "portrait"; an Event's or Place's says "thumbnail".
+
 ### Data
 
 No migration. New seeds reach new catalogs only (Spike 10 rule "New seeds are for new catalogs"). Existing depictions saved with a polygon keep their region; they load, display and save as they are, and become rectangles only when redrawn. Go keeps accepting any valid region (`locator.ValidateDepictionRegion`); the rectangle rule is the app's drawing tool, not a stored constraint.
@@ -54,8 +58,6 @@ No migration. New seeds reach new catalogs only (Spike 10 rule "New seeds are fo
 
 ## Stays later
 
-- **A preferred picture and a header thumb for an Event or Place.** The header keeps its mark (`eventNoImage`); the gallery is the only display. In Go the pointer is generic (`SetPreferredLikeness` checks gallery membership, not kind) so a later PR can reuse `likenesses.Lead`; the app is what keeps it to the Person.
-- **Pictures on the Events and Places lists.**
 - **The event picture in the Person Timeline.** Spike 13 reserves the slot (R-26); filling it is Spike 13's call once S14-01 lands.
 - **Pictures as matching evidence for an Event or Place.** `subjectcompare` gives pictures no weight; the evidence sheet only lists them (S14-04).
 - **Signature.** Still open in the [depictions idea](../../ideas/depictions-and-likenesses.md).

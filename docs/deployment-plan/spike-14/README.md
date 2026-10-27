@@ -4,7 +4,7 @@
 
 **Open.** Batch 1 (Event and Place pictures) cut 2026-10-27; no PR has landed. PR map: [`deployment-plan.md`](deployment-plan.md). Finished steps: [`completed.md`](completed.md).
 
-The first odds-and-ends spike (working rule "Even spikes are odds and ends"). It takes small features, UX refinements and fixes in batches, each a slice with its own Check. Batch 1 gives Events and Places a Picture Property and a gallery, and makes depiction drawing rectangle-only.
+The first odds-and-ends spike (working rule "Even spikes are odds and ends"). It takes small features, UX refinements and fixes in batches, each a slice with its own Check. Batch 1 gives Events and Places a Picture Property, a gallery and a chosen thumbnail (parity with a Person's portrait), and makes depiction drawing rectangle-only.
 
 ## Documents
 
@@ -17,4 +17,4 @@ The first odds-and-ends spike (working rule "Even spikes are odds and ends"). It
 
 ## Not this spike
 
-Large new features: those go to the next odd-numbered spike. For batch 1: a preferred picture or header thumb for an Event or Place, pictures on the Events and Places lists, signature, and the Spike 10 audit leftovers stay in [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md). The event picture in the Person Timeline is Spike 13's (R-26).
+Large new features: those go to the next odd-numbered spike. For batch 1: signature and the Spike 10 audit leftovers stay in [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md). The event picture in the Person Timeline is Spike 13's (R-26).
