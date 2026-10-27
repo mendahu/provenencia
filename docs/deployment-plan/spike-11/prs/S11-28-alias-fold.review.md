@@ -109,3 +109,5 @@ The user asked whether *Wilma* is a nickname of *William*. It is not: the upstre
 2026-10-21 — S11-25 deleted `autoreconcile.Compatible` with its last caller (`promotealign/exhibits.go`); D-7, T-3 and their rows removed. Other numbering unchanged.
 
 2026-10-27 — Ship round 0 stopped on §11: `core/search/handles_test.go` also records *James Robins* / *Jim Robins*, and T-11 missed it. The user added it to T-11 (same *Jim* → *Kenneth* swap; expected titles and searches follow). No other change.
+
+2026-10-27 — Ship round 0 stopped again. (1) D-1a's `prefer map[[2]string]bool` fails `TestLayerPackages/core/valuecompare/numbers`: the guard reads the array length `2` as a number. The user amended D-1a (and the §6 sketch) to key `prefer` by `AliasDirection`; behavior unchanged. (2) `core/search` `TestHandleSearchFindsOutvotedNames` uses *Tom* as the outvoted name, and *Tom* now folds into *Thomas*. The user added it to T-11: *Tom* → *Thommas*. Consequence noted: a folded nickname is no longer searchable (searching "Tom" no longer finds a Person shown as *Thomas*); alias-aware search is a follow-up.
