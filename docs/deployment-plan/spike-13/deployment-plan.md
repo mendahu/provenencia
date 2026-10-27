@@ -301,7 +301,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Chrome scopes ar
 
 #### S13-14 — Gallery section
 
-**Ships.** The gallery as a section from S13-D5, keeping set as portrait and opening the Citation.
+**Ships.** The gallery as a section from S13-D5, keeping set as portrait and opening the Citation. Built from the kind-neutral gallery slot on `ConclusionDetailBody` that [S14-02](../spike-14/deployment-plan.md#s14-02--pictures-in-the-app) adds, so the old and new galleries can coexist and retiring the old one does not drop the Event and Place galleries. Not a dependency: if S13-14 lands first, S14-02 moves it onto the slot.
 **Check.** Bar 5 without the viewer.
 **Context.** R-29, R-31, R-32; `ConclusionPortraitModel`, `SetPreferredLikeness`.
 

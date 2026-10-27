@@ -47,3 +47,10 @@
 ## After round 1
 
 The user asked for thumbnail parity with a Person's portrait (2026-10-27). The working rule "No preferred picture for an Event or Place" is replaced by "An Event or Place chooses its thumbnail as a Person chooses its portrait", on the one existing mechanism (K-8's generic Go pointer), and S14-05 – S14-07 are added. K-8's "app limits it" answer no longer applies: all three kinds have the portrait.
+
+## Re-cut (2026-10-27)
+
+- **K-2:** the user kept two keys (data model first, the UI adapts); the run cost is recorded in the working rule.
+- **K-3:** the user keeps the old and new galleries side by side, so no dependency. S13-14's scope now says it builds from S14-02's slot.
+- **K-5:** taken, inside S14-01 (Go, proto, wire mapping) and S14-02 (Swift view layer), not as a separate PR. Working rule "The gallery layer is named gallery, not likeness".
+- **Consolidation:** S14-04 – S14-07 folded into S14-01 and S14-02 (working rule "Batch 1 is cut by layer"), IDs kept as Descoped.

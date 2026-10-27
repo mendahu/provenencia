@@ -20,7 +20,7 @@ Separately, a depiction is drawn with the Artifact viewer's full region strip (r
 
 Keys are unique per origin (`UNIQUE (key, origin)`), so the two pictures need their own keys; labels are not unique, so both read "Picture". Each kind owning its key follows `event_name` beside `name` (`core/database/subjectvocab/registry.go`); these are the first two seeded Properties to share a label. Each has its own description ("A picture of this event: …", "A picture of this place: …").
 
-Why not one shared key: a Property's label and description live on the Property, not on the binding (`seedBinding` holds kind, key, sort order, lock). One key across kinds would force one label on all of them, and "Likeness" is the right word only for a face.
+Why not one shared key: a Property's label and description live on the Property, not on the binding (`seedBinding` holds kind, key, sort order, lock). One key across all three kinds would force one label, and "Likeness" is the right word only for a face. One `picture` key for Event and Place alone is possible (`start_date` binds to several kinds), but the data model comes first and the UI adapts: each kind keeps a description true to it. The cost is in the composer's run: after saving an Event's Picture, picking a Place on the next line clears the Property (`applyObservationSubject` keeps it only when the new Subject offers it), and the researcher picks Picture again. Two Places, or two Events, in one run keep it.
 
 Why not a Property named `depiction`: it would share its name with the value type. `name` and `date` already do this, and it does no harm in code (keys are `vocabkey` constants, value types `propertymeta` constants), but "picture" is the plainer word and keeps "depiction" meaning the value type alone.
 
@@ -30,9 +30,11 @@ Why not a Property named `depiction`: it would share its name with the value typ
 - **Composer.** The composer offers any Property bound to the Subject's kind and treats a depiction by value type (`CitationComposerVocabulary.isDepiction`). Its depiction copy is built from the Property label and the Subject label (`depictionThumbLabel`: "%1$@ of %2$@"), so it already reads "Picture of St Mary's Church".
 - **Detail wire.** `conclusiondetails.ForEntity` calls `likenesses.ForEntities` for every kind, and `attachLikenesses` sends the tiles for every kind (`api/ffi/handlers/conclusion_detail.go`). Only the Person header gets a lead path.
 - **Detail chrome.** `ConclusionDetailBody.likenesses` defaults to `[]`; `ConclusionDetailPage` draws `ConclusionDetailLikenessSection` for any body that returns tiles. The section's wording, accessibility ids and fallback mark still say Person (S14-02 makes them the body's).
-- **Promote.** `promotealign.Evidence` lists every bound Property per kind, so the evidence sheet will show Event and Place pictures. Its wording calls every depiction a likeness (`L10n.Promote.lineSentence`, `ValueFamily.likeness`); S14-04 words it by value type.
+- **Promote.** `promotealign.Evidence` lists every bound Property per kind, so the evidence sheet will show Event and Place pictures. Its wording calls every depiction a likeness (`L10n.Promote.lineSentence`, `ValueFamily.likeness`); S14-02 words it by value type.
 
 ### What changes
+
+- **Names.** The gallery layer is named for the gallery, not for the Person key: "gallery" for the layer and "picture" for one item, in Go, proto and Swift. "Likeness" stays for the Person key, the Person page's copy and the portrait. Proto field numbers are kept; the preferred-pointer column keeps its name (renaming it would be a migration for a name only).
 
 - **Seed.** Two Properties and two bindings in `subjectvocab/registry.go`; `vocabkey` constants for the keys.
 - **Gallery keys.** `likenesses.sqlGallery` filters `p.key = 'likeness'`. It reads one list of gallery keys instead, held in `core/vocabkey` beside `PropertyLikeness`, so the next depiction Property that belongs in a gallery is one entry.
@@ -59,5 +61,5 @@ No migration. New seeds reach new catalogs only (Spike 10 rule "New seeds are fo
 ## Stays later
 
 - **The event picture in the Person Timeline.** Spike 13 reserves the slot (R-26); filling it is Spike 13's call once S14-01 lands.
-- **Pictures as matching evidence for an Event or Place.** `subjectcompare` gives pictures no weight; the evidence sheet only lists them (S14-04).
+- **Pictures as matching evidence for an Event or Place.** `subjectcompare` gives pictures no weight; the evidence sheet only lists them (S14-02).
 - **Signature.** Still open in the [depictions idea](../../ideas/depictions-and-likenesses.md).
