@@ -86,22 +86,51 @@ struct WorkspaceDestinationHostTests {
         withExtendedLifetime((window, host)) {}
     }
 
-    @Test func goneGraphFallsBackToTheSourcesList() async throws {
-        let store = makeCanvasStore()
-        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+    /// A Sources-list root under a canvas on `graphId`, with history written to a
+    /// temporary directory the caller removes.
+    private func navigationOnCanvas(graphId: String) throws -> (WorkspaceNavigation, URL) {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("host-history-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let navigation = WorkspaceNavigation()
         navigation.attachProject(uuid: "project-1", fileURL: directory.appendingPathComponent("history.json"))
         navigation.go(to: .sectionRoot(.sources))
-        navigation.go(to: .evidenceGraph(sourceId: "src-1", graphId: "g-x", title: "Gone"))
+        navigation.go(to: .evidenceGraph(sourceId: "src-1", graphId: graphId, title: "Graph"))
+        return (navigation, directory)
+    }
+
+    @Test func goneGraphFallsBackToTheSourcesList() async throws {
+        let store = makeCanvasStore()
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let (navigation, directory) = try navigationOnCanvas(graphId: "g-x")
+        defer { try? FileManager.default.removeItem(at: directory) }
         let (window, host) = mountHost(navigation: navigation, session: session, store: store)
 
         let fellBack = await waitUntil(timeout: .seconds(15)) { navigation.currentLocation == .sectionRoot(.sources) }
         #expect(fellBack)
         let remembered = navigation.backJumpItems(limit: 100) + navigation.forwardJumpItems(limit: 100)
         #expect(!remembered.contains { $0.location.graphId == "g-x" })
+        withExtendedLifetime((window, host)) {}
+    }
+
+    @Test func openGraphThatGoesFallsBackToTheSourcesList() async throws {
+        let store = makeCanvasStore()
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let (navigation, directory) = try navigationOnCanvas(graphId: "g-a")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let (window, host) = mountHost(navigation: navigation, session: session, store: store)
+
+        let graphA = CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: "g-a")
+        let loaded = await waitUntil(timeout: .seconds(15)) {
+            (session.queryHandle(graphA) as QueryHandle<EvidenceGraphRows>?)?.isSettled == true
+                && session.evidenceGraphsHandle?.isSettled == true
+        }
+        #expect(loaded)
+        #expect(navigation.currentLocation.graphId == "g-a")
+
+        session.setQueryValue(session.evidenceGraphsKey, value: [CatalogEvidenceGraph]())
+        let fellBack = await waitUntil(timeout: .seconds(15)) { navigation.currentLocation == .sectionRoot(.sources) }
+        #expect(fellBack)
         withExtendedLifetime((window, host)) {}
     }
 
