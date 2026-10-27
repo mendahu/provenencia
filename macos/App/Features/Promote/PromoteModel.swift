@@ -286,7 +286,8 @@ final class PromoteModel {
             evidence: evidence,
             neighbor: { [flow] id in flow.row(id) },
             labels: { [self] key in propertyLabel(key: key) },
-            worded: { [session] value in ReconciledValueDisplay.string(for: value, orders: session.nameFormat) }
+            worded: { [session] value in ReconciledValueDisplay.string(for: value, orders: session.nameFormat) },
+            orders: session.nameFormat
         )
     }
 

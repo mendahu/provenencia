@@ -103,6 +103,9 @@ struct EvidenceBoard: Equatable {
         var key: String
         /// "they share a spouse (CEV-3B5RT and PER-7QH3D)", without the ellipsis it is drawn after.
         var header: String
+        /// "This source: … · The record: …", when either side records the link through a marriage,
+        /// a birth or a parent; nil when both record it directly.
+        var recorded: String?
         var pinIDs: [String]
         var outcome: EvidenceOutcome
         var spoken: String
@@ -118,13 +121,15 @@ struct EvidenceBoard: Equatable {
         PromoteEvidenceDisplay.checkedCount(offered: offeredPinIDs, pins: pins)
     }
 
-    /// Words the evidence once. `neighbor` is the page row a connected Subject is; `labels` and
-    /// `worded` are the model's property labels and its values in the researcher's name order.
+    /// Words the evidence once. `neighbor` is the page row a Subject is (a connected row, or a
+    /// relationship's Source pivot); `labels` and `worded` are the model's property labels and its
+    /// values in the researcher's name order, which `orders` is for the record's pivot.
     static func build(
         evidence: CatalogClaimEvidence,
         neighbor: (String) -> PromoteFlow.Row?,
         labels: (String) -> String,
-        worded: (CatalogConclusionValue) -> String
+        worded: (CatalogConclusionValue) -> String,
+        orders: NameFormatOrders = NameFormatOrders()
     ) -> EvidenceBoard {
         func sourceTitle(_ pin: CatalogClaimEvidencePin) -> String? {
             guard let title = evidence.sourceTitles[pin.sourceID], !title.isEmpty else { return nil }
@@ -224,15 +229,28 @@ struct EvidenceBoard: Equatable {
             let groups = relationship.sections.filter { !$0.lines.isEmpty }.enumerated().map { index, section in
                 group("\(relationship.id).\(section.propertyKey).\(index)", section)
             }
+            let layerPivot = (relationship.layer.pivotID.isEmpty ? nil : neighbor(relationship.layer.pivotID)).map {
+                Pivot(name: $0.name, date: $0.date, ref: $0.ref)
+            }
+            let recorded = PromoteEvidenceDisplay.recorded(
+                layer: relationship.layer.pattern, layerPivot: layerPivot,
+                canon: relationship.canon.pattern,
+                canonPivot: Pivot(header: relationship.canon.pivot, orders: orders),
+                term: relationship.neighborTerm?.productKey
+            )
+            let spokenHeader = recorded.map {
+                L10n.Promote.spokenRecorded(header: header, source: $0.source, record: $0.record)
+            } ?? header
             return RelationshipCard(
                 id: relationship.id,
                 neighborSubjectID: relationship.neighborSubjectID,
                 key: relationship.key,
                 header: header,
+                recorded: recorded.map { L10n.Promote.recorded(source: $0.source, record: $0.record) },
                 pinIDs: relationship.bundles.map(\.id),
                 outcome: relationship.outcome,
                 spoken: PromoteEvidenceDisplay.spokenRelationship(
-                    header: header, outcome: relationship.outcome, count: relationship.bundles.count
+                    header: spokenHeader, outcome: relationship.outcome, count: relationship.bundles.count
                 ),
                 groups: groups
             )
