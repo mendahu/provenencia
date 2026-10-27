@@ -60,4 +60,4 @@ Nits (logged): `MNT-9 · core/workspacelocation/workspacelocation.go:52 · Graph
 Merged `origin/main` @ `06446e5d` (S11-42 plan docs only). Gate PASS against `06446e5d`.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: MNT-9 (export one `TitleOrRef`), Swift `SourceSurface` pin in `swift_vocabulary_test.go` (the other half of the plan's Out row) · to user: AC-1.5/1.7 wording (CON-N1) · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: MNT-9 (export one `TitleOrRef`), Swift `SourceSurface` pin in `swift_vocabulary_test.go` (the other half of the plan's Out row) · to user: AC-1.5/1.7 wording (CON-N1) · CON miss: none
