@@ -1,7 +1,7 @@
 # Ship log — S12-14 Graph counts in the Sources list and on the Source page
 
 **Plan:** [`S12-14-sources-list-graph-tokens.md`](S12-14-sources-list-graph-tokens.md) · **Branch:** `s12-14-sources-list-graph-tokens` · **PR:** #576
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 Head `9646520c`. Gate PASS (orchestrator run, against `f22b19a7`). PR #576 (draft). Report deviations (recorded in the plan's Landed note):
@@ -91,3 +91,16 @@ Check: the test passes; scripts/check-pr.sh PASS.
 Files: `SourcesGraphToken.swift`, `SourcesListRow.swift`, tests that build `Kind.graph`.
 Do: `Kind.graph(CatalogEvidenceGraph, counts: SourcesGraphCounts, open: Open)` with `enum Open { case opens(() -> Void), blocked(reason: String) }`. `SourcesListRow.tokens`: `graphBlockedReason(for:)` non-nil → `.blocked(reason:)`; else `graphLocation(for:graph:)` → `.opens { navigation.go(to:) }`; if both are nil (cannot happen today: `graphLocation` is nil only when blocked), use `.blocked(reason: L10n.string(L10n.Sources.graphNeedsArtifactTooltip))` — check that `graphLocation` returns nil only when `graphBlockedReason` is non-nil, and say so in a comment. `SourcesGraphTokenButtonStyle(look: Look)` with private `enum Look { case live, blocked, inert }`; drop the two Bools and the `live` fold. No visible change.
 Check: `rg -n "blocked: (true|false)|inert:" macos/App/Features/Sources` prints nothing; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `7f711dbb`. Gate PASS (orchestrator run). F-1 to F-8 done. Deviations: F-5/F-6/F-7 tests written first but not run red separately (F-5's could not compile before the fix); `SourcePageModel.swift:110` (`warmFromSession` wait loop, not a fold) also matches F-1's grep and stays; F-2/F-3/F-5–F-8 share one commit (same files); `PVIcon.swift:81` "graph zone" comment reworded. Minors F-2, F-3, F-4 read by the orchestrator: Resolved.
+
+## Round 2 — review
+Reviewers: MNT, UX (each had a Fix-now major). Scope `9646520c...7f711dbb`. Not re-run: CON, SEC+PRF (clean in round 1).
+
+MNT: MNT-1 Resolved (copy sheet, Source page model and view read through `QueryHandle.read`; `evidenceGraphCountsError` uses the same fold). No new blockers.
+UX: UX-1 Resolved (`.unavailable(message:)` drawn in the token and count line; a stale value still wins; every `SourcesGraphCounts(` call site passes `countsError`). UX-2, UX-3, F-8 read as resolved. No new blockers.
+No Fix plan 2.
+
+## Result
+Gate PASS (`7f711dbb`, `origin/main` unmoved at `f22b19a7`) · CI pending · open: none · follow-ups: none · to user: UX-1, UX-2, UX-3, MNT-2 (answered 2026-10-26, fixed) · logged: SEC-out (min-width overflow, manual check), nits CON-2, UX-6, MNT-6, MNT-7 · CON miss: none
