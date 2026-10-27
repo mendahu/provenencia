@@ -243,24 +243,31 @@ func TestReconcileNames(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.group+"/"+tc.name, func(t *testing.T) {
-			got, err := Reconcile(testRules, propertymeta.ValueTypeName, tc.in, nil, propertymeta.CardinalitySingle)
-			if err != nil {
-				t.Fatal(err)
-			}
-			var have []cl
-			for i, c := range got.Values {
-				have = append(have, cl{shape(got)[i], spec(c.Value.Name)})
-			}
-			if !reflect.DeepEqual(have, tc.want) {
-				t.Fatalf("got  %v\nwant %v", have, tc.want)
-			}
-			if got.State() != tc.state {
-				t.Fatalf("state %q, want %q", got.State(), tc.state)
-			}
-			if r := reasonsOf(got); r != tc.reasons {
-				t.Fatalf("reasons %q, want %q", r, tc.reasons)
-			}
+			checkNames(t, testRules, tc.in, tc.want, tc.state, tc.reasons)
 		})
+	}
+}
+
+// checkNames reconciles in under rules and compares the name values, the
+// state and the reasons with the expected ones.
+func checkNames(t *testing.T, rules valuecompare.Rules, in []Candidate, want []cl, state State, reasons string) {
+	t.Helper()
+	got, err := Reconcile(rules, propertymeta.ValueTypeName, in, nil, propertymeta.CardinalitySingle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var have []cl
+	for i, c := range got.Values {
+		have = append(have, cl{shape(got)[i], spec(c.Value.Name)})
+	}
+	if !reflect.DeepEqual(have, want) {
+		t.Fatalf("got  %v\nwant %v", have, want)
+	}
+	if got.State() != state {
+		t.Fatalf("state %q, want %q", got.State(), state)
+	}
+	if r := reasonsOf(got); r != reasons {
+		t.Fatalf("reasons %q, want %q", r, reasons)
 	}
 }
 
@@ -596,23 +603,7 @@ func TestReconcileNamesCombine(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Reconcile(testRules, propertymeta.ValueTypeName, tc.in, nil, propertymeta.CardinalitySingle)
-			if err != nil {
-				t.Fatal(err)
-			}
-			var have []cl
-			for i, c := range got.Values {
-				have = append(have, cl{shape(got)[i], spec(c.Value.Name)})
-			}
-			if !reflect.DeepEqual(have, tc.want) {
-				t.Fatalf("got  %v\nwant %v", have, tc.want)
-			}
-			if got.State() != tc.state {
-				t.Fatalf("state %q, want %q", got.State(), tc.state)
-			}
-			if r := reasonsOf(got); r != tc.reasons {
-				t.Fatalf("reasons %q, want %q", r, tc.reasons)
-			}
+			checkNames(t, testRules, tc.in, tc.want, tc.state, tc.reasons)
 		})
 	}
 }
@@ -663,23 +654,7 @@ func TestReconcileNamesWords(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Reconcile(testRules, propertymeta.ValueTypeName, tc.in, nil, propertymeta.CardinalitySingle)
-			if err != nil {
-				t.Fatal(err)
-			}
-			var have []cl
-			for i, c := range got.Values {
-				have = append(have, cl{shape(got)[i], spec(c.Value.Name)})
-			}
-			if !reflect.DeepEqual(have, tc.want) {
-				t.Fatalf("got  %v\nwant %v", have, tc.want)
-			}
-			if got.State() != tc.state {
-				t.Fatalf("state %q, want %q", got.State(), tc.state)
-			}
-			if r := reasonsOf(got); r != tc.reasons {
-				t.Fatalf("reasons %q, want %q", r, tc.reasons)
-			}
+			checkNames(t, testRules, tc.in, tc.want, tc.state, tc.reasons)
 		})
 	}
 }
@@ -732,23 +707,7 @@ func TestReconcileNamesAliases(t *testing.T) {
 	}
 	for _, tc := range folds {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Reconcile(aliasRules, propertymeta.ValueTypeName, tc.in, nil, propertymeta.CardinalitySingle)
-			if err != nil {
-				t.Fatal(err)
-			}
-			var have []cl
-			for i, c := range got.Values {
-				have = append(have, cl{shape(got)[i], spec(c.Value.Name)})
-			}
-			if !reflect.DeepEqual(have, tc.want) {
-				t.Fatalf("got  %v\nwant %v", have, tc.want)
-			}
-			if got.State() != StateMerged {
-				t.Fatalf("state %q, want merged", got.State())
-			}
-			if r := reasonsOf(got); r != "kept" {
-				t.Fatalf("reasons %q, want kept", r)
-			}
+			checkNames(t, aliasRules, tc.in, tc.want, StateMerged, "kept")
 		})
 	}
 
