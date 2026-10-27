@@ -1,6 +1,6 @@
 # Matching model
 
-The matching model Spike 11 built; all six layers run, and [`matching.md`](matching.md) says where. The reasoning behind each choice is in [`deployment-plan/spike-11/comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md); this page is the "what", kept true as the layers land.
+The matching model Spike 11 built; all six layers run, and [`matching.md`](matching.md) says where. The reasoning behind each choice is in [`deployment-plan/spike-11/comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md); this page is the "what".
 
 ## The stack
 
