@@ -332,17 +332,31 @@ enum PVListKeyboard {
 
 /// Row chrome: card at rest, hover tint, pressed tint with the shared press
 /// scale (via `PVHoverEffect`), and an inset focus ring on the focused row.
-private struct PVListRowStyle: ButtonStyle {
-    let focused: Bool
+/// `PVList` passes its own `focused`; the Sources list's Source link passes nil
+/// and takes the button's own keyboard focus.
+struct PVListRowStyle: ButtonStyle {
+    let focused: Bool?
 
     func makeBody(configuration: Configuration) -> some View {
+        PVListRowBody(configuration: configuration, focused: focused)
+    }
+}
+
+private struct PVListRowBody: View {
+    let configuration: ButtonStyleConfiguration
+    let focused: Bool?
+
+    /// Read here, in the button's focus scope (see `PVButtonBody`).
+    @Environment(\.isFocused) private var isFocused
+
+    var body: some View {
         PVHoverEffect(isPressed: configuration.isPressed) { hovering in
             configuration.label
                 .background(
                     configuration.isPressed ? PVColor.surfaceActive
                         : hovering ? PVColor.surfaceHover : PVColor.surfaceCard
                 )
-                .pvFocusRing(focused, cornerRadius: PVRadius.sm)
+                .pvFocusRing(focused ?? isFocused, cornerRadius: PVRadius.sm)
         }
     }
 }

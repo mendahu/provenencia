@@ -11,6 +11,12 @@ struct SourcesListColumns: Equatable {
     static let sourceTrailing = PVSpacing.space6
     static let cellTrailing = PVSpacing.space5
     static let graphLeading = PVSpacing.space6
+    /// The Source cell's top and bottom padding around the cover (14 pt).
+    static let sourceVertical = PVSpacing.space5 + PVSpacing.space1
+    /// The status and graph stacks share these, so each badge stays level with
+    /// its graph button (with `SourcesGraphButton.height`).
+    static let slotSpacing = PVSpacing.space3
+    static let stackVertical = PVSpacing.space4
 
     init(listWidth: CGFloat) {
         isCompact = listWidth < Self.compactBelow

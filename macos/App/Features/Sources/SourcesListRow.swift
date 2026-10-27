@@ -19,21 +19,9 @@ struct SourcesListRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
             sourceLink
-                .sourcesSourceCell()
-                .frame(minHeight: Self.firstSlot)
-            if columns.type != nil {
-                Text(verbatim: model.typeLabel(for: source))
-                    .font(PVFont.body(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textSecondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .help(model.typeLabel(for: source))
-                    .sourcesTypeCell(columns)
-                    .frame(minHeight: Self.firstSlot)
-            }
             graphStack
         }
-        .padding(.leading, PVSpacing.gutterPage - PVSpacing.space2)
+        .fixedSize(horizontal: false, vertical: true)
         .padding(.trailing, PVSpacing.gutterPage)
         .frame(maxWidth: .infinity, alignment: .leading)
         .overlay(alignment: .bottom) {
@@ -44,23 +32,30 @@ struct SourcesListRow: View {
         .accessibilityIdentifier("sources.row.\(source.id)")
     }
 
-    /// One line per entry, status slot then button, so each badge sits level with
-    /// its button. The hairline between the columns is drawn once.
-    private var graphStack: some View {
-        VStack(spacing: PVSpacing.space3) {
+    /// One slot per entry, so each badge sits level with its graph button.
+    private var statusStack: some View {
+        VStack(spacing: SourcesListColumns.slotSpacing) {
             ForEach(entries, id: \.id) { entry in
-                HStack(spacing: 0) {
-                    statusSlot(entry.kind)
-                        .sourcesStatusCell(columns)
-                    SourcesGraphButton(sourceID: source.id, kind: entry.kind)
-                        .sourcesGraphCell(columns)
-                }
+                statusSlot(entry.kind)
+                    .frame(height: SourcesGraphButton.height)
+                    .sourcesStatusCell(columns)
             }
         }
-        .padding(.vertical, PVSpacing.space4)
+        .padding(.vertical, SourcesListColumns.stackVertical)
+    }
+
+    /// One graph button per entry; the hairline is the stack's leading edge.
+    private var graphStack: some View {
+        VStack(spacing: SourcesListColumns.slotSpacing) {
+            ForEach(entries, id: \.id) { entry in
+                SourcesGraphButton(sourceID: source.id, kind: entry.kind)
+                    .frame(height: SourcesGraphButton.height)
+                    .sourcesGraphCell(columns)
+            }
+        }
+        .padding(.vertical, SourcesListColumns.stackVertical)
         .overlay(alignment: .leading) {
             PVDivider(axis: .vertical)
-                .padding(.leading, columns.status)
         }
     }
 
@@ -85,22 +80,37 @@ struct SourcesListRow: View {
         Button {
             navigation.go(to: SourcesListNavigation.pageLocation(for: source))
         } label: {
-            SourcesLinkLabel(
-                projectDir: model.pageProjectDir,
-                thumbnailRelPath: source.thumbnailRelPath,
-                typeIconKey: model.typeIconKey(for: source),
-                title: source.title,
-                typeLabel: columns.isCompact ? model.typeLabel(for: source) : "",
-                ref: source.ref,
-                updatedAt: source.updated.at
-            )
+            HStack(alignment: .top, spacing: 0) {
+                SourcesLinkLabel(
+                    projectDir: model.pageProjectDir,
+                    thumbnailRelPath: source.thumbnailRelPath,
+                    typeIconKey: model.typeIconKey(for: source),
+                    title: source.title,
+                    typeLabel: columns.isCompact ? model.typeLabel(for: source) : "",
+                    ref: source.ref,
+                    updatedAt: source.updated.at
+                )
+                .padding(.vertical, SourcesListColumns.sourceVertical)
+                .padding(.leading, PVSpacing.gutterPage)
+                .sourcesSourceCell()
+                if columns.type != nil {
+                    Text(verbatim: model.typeLabel(for: source))
+                        .font(PVFont.body(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.textSecondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .help(model.typeLabel(for: source))
+                        .sourcesTypeCell(columns)
+                        .frame(minHeight: Self.firstSlot)
+                }
+                statusStack
+            }
+            .frame(maxHeight: .infinity, alignment: .top)
         }
-        .buttonStyle(SourcesLinkButtonStyle())
+        .buttonStyle(PVListRowStyle(focused: nil))
         .accessibilityLabel(Text(L10n.Sources.openSourcePage))
         .accessibilityValue(Text(verbatim: PVLastUpdated.label(
-            columns.isCompact
-                ? "\(source.title), \(model.typeLabel(for: source)), \(source.ref)"
-                : "\(source.title), \(source.ref)",
+            "\(source.title), \(model.typeLabel(for: source)), \(source.ref)",
             updatedAt: source.updated.at,
             in: .current
         )))
@@ -167,21 +177,9 @@ struct SourcesListRow: View {
 
 // MARK: Source link
 
-private struct SourcesLinkHighlightedKey: EnvironmentKey {
-    static let defaultValue = false
-}
-
-private extension EnvironmentValues {
-    /// True while the pointer is on the Source link or it is pressed.
-    var sourcesLinkHighlighted: Bool {
-        get { self[SourcesLinkHighlightedKey.self] }
-        set { self[SourcesLinkHighlightedKey.self] = newValue }
-    }
-}
-
 /// The Source link's content: cover, title, and a second line of the type (only
-/// when the Type column is gone), ref and last update. Highlighted, the title
-/// takes the link color and an underline and the cover an outline.
+/// when the Type column is gone), ref and last update. The button's row style
+/// draws the hover, press and focus.
 private struct SourcesLinkLabel: View {
     let projectDir: String
     let thumbnailRelPath: String
@@ -192,8 +190,6 @@ private struct SourcesLinkLabel: View {
     let ref: String
     let updatedAt: String
 
-    @Environment(\.sourcesLinkHighlighted) private var highlighted
-
     var body: some View {
         HStack(spacing: PVSpacing.space4) {
             CachedThumbnail(
@@ -202,24 +198,15 @@ private struct SourcesLinkLabel: View {
                 typeIconKey: typeIconKey,
                 size: SourcesListRow.coverSize
             )
-            .overlay {
-                if highlighted {
-                    RoundedRectangle(cornerRadius: PVRadius.sm)
-                        .strokeBorder(PVColor.borderStrong, lineWidth: 1)
-                }
-            }
             VStack(alignment: .leading, spacing: PVSpacing.space1) {
                 Text(verbatim: title)
                     .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
-                    .foregroundStyle(highlighted ? PVColor.textLinkHover : PVColor.textPrimary)
-                    // Always underlined, only the color changes: toggling the
-                    // underline under the hover animation crossfades two text
-                    // layouts and shows two underlines mid-fade.
-                    .underline(true, color: highlighted ? PVColor.textLinkHover : .clear)
+                    .foregroundStyle(PVColor.textPrimary)
                     .lineLimit(1)
                     .help(title)
                 secondLine
             }
+            .frame(minHeight: SourcesListRow.coverSize)
         }
     }
 
@@ -255,31 +242,6 @@ private struct SourcesLinkLabel: View {
             .font(PVFont.body(size: PVTypeScale.caption))
             .foregroundStyle(PVColor.textFaint)
             .accessibilityHidden(true)
-    }
-}
-
-/// Kit hover, press and focus for the Source link, and the highlight state its
-/// label reads. A style cannot recolor a label that sets its own color, so the
-/// label takes the state from the environment.
-private struct SourcesLinkButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        SourcesLinkButtonBody(configuration: configuration)
-    }
-}
-
-private struct SourcesLinkButtonBody: View {
-    let configuration: ButtonStyleConfiguration
-
-    /// Read here, in the button's focus scope (see `PVButtonBody`).
-    @Environment(\.isFocused) private var isFocused
-
-    var body: some View {
-        PVHoverEffect(isPressed: configuration.isPressed, hoverAnimation: PVMotion.fastStandard) { showHover in
-            configuration.label
-                .environment(\.sourcesLinkHighlighted, showHover || configuration.isPressed)
-                .padding(PVSpacing.space2)
-                .pvFocusRing(isFocused, cornerRadius: PVRadius.sm)
-        }
     }
 }
 
