@@ -404,6 +404,16 @@ struct CatalogEvidenceTerm: Sendable, Equatable {
     var productKey: String? { CatalogOrigin.isProduct(origin) ? key : nil }
 }
 
+/// How one side records a relationship's fact (`claimevidence.Relationship.Layer` / `.Canon`):
+/// the kinship pattern, and the event or parent between it passes through. A layer pivot is a
+/// Subject on the page; only the entity's pivot carries a header.
+struct CatalogClaimEvidenceShape: Sendable, Equatable {
+    var pattern: KinshipPattern = .direct
+    var pivotID: String = ""
+    var pivotPerson: CatalogPersonHeader?
+    var pivotEvent: CatalogEventHeader?
+}
+
 /// One link of the row's Subject that corresponds to a link between the
 /// entity's members and a neighbor's (`claimevidence.Relationship`).
 struct CatalogClaimEvidenceRelationship: Sendable, Equatable, Identifiable {
@@ -420,6 +430,9 @@ struct CatalogClaimEvidenceRelationship: Sendable, Equatable, Identifiable {
     var neighborTermNamesNeighbor: Bool = false
     /// A participation's event type.
     var eventType: CatalogEvidenceTerm?
+    /// How the row's Source and the entity record the fact the line stands for.
+    var layer = CatalogClaimEvidenceShape()
+    var canon = CatalogClaimEvidenceShape()
 
     var id: String { neighborSubjectID + "|" + key }
 }
