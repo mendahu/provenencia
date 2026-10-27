@@ -1,6 +1,7 @@
 # S12-15 — Graphs in the omnibar
 
-**Status:** Planned
+**Status:** Landed in [#583](https://github.com/mendahu/provenencia/pull/583) (2026-10-27)
+**Landed:** Differences from the plan: AC-1.5 and AC-1.7 say "no graph hit" for `jones hou` / `smith hou`, but multi-token search retrieves on any token, so the other household still hits on `hou`; `TestEvidenceGraphSearchFollowsWrites` asserts the renamed graph shows no stale name and the deleted graph has no hit, by graph id, and the other Go tests look a graph up by id instead of counting graph hits. The manual check (section 10) was not run in the app by the implementer.
 **Spike / slice:** Spike 12 · Slice 4 — Graphs in the UI
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: a graph hit is one more kind in the existing `PVOmnibarHitRow`, with a kind chip label and the `gitBranch` glyph the Source page's Open button already uses)
