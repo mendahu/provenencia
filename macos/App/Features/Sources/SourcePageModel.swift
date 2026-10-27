@@ -92,8 +92,7 @@ final class SourcePageModel {
     func warmFromSession() async {
         let session = context.session
         let key = CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: context.sourceID)
-        session.invalidate(key)
-        let handle: QueryHandle<CatalogSourceWorkspace> = session.query(key)
+        let handle: QueryHandle<CatalogSourceWorkspace> = session.reread(key)
         let types: QueryHandle<[CatalogSourceType]> = session.query(
             .sourceTypesList(project: session.projectKey)
         )

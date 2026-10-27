@@ -113,8 +113,7 @@ final class SourceCopyModel {
 
     /// Reads the original's parts again, in every state.
     func reloadWorkspace() {
-        session.invalidate(workspaceKey)
-        let _: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
+        let _: QueryHandle<CatalogSourceWorkspace> = session.reread(workspaceKey)
     }
 
     /// On success returns the copy for the host to open. On failure the form
