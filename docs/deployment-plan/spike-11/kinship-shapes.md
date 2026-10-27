@@ -64,7 +64,7 @@ A relationship line today comes from a corresponding segment ([`claim-evidence.m
 - "They are spouses: both are spouses in the marriage on 12 May 1842" (an implied link on the Source side), or "…the record has them as spouses" (direct).
 - Checking the line pins its bundle: every bridge behind the implied link (both participations, or both parent links of a chain), and the event's defining properties, as a relationship bundle does today.
 
-A bundle is one Source's recording of the fact: the bridges that reach one pivot, the member's bridge first and the bundle's pin id keyed by it. The line is drawn by the sheet's existing relationship Card. No new chrome, but it is a wire change: `claimevidence.Relationship` gains how each side recorded the fact and the event behind it, which crosses the FFI to Swift (S11-40), and the sheet words it (S11-42). Today a bundle is one bridge between a member and the neighbor's member (`claimevidence/build.go` `bundles`, `BundlePinID`); an implied link has several bridges and passes through an event, so S11-40 decides the bundle's shape and its pin id.
+A bundle is one Source's recording of the fact: the bridges that reach one pivot, the member's bridge first and the bundle's pin id keyed by it. The line is drawn by the sheet's existing relationship Card. No new chrome, but it is a wire change: `claimevidence.Relationship` gains how each side recorded the fact and the event behind it, which crosses the FFI to Swift (S11-40), and the sheet words it (S11-42).
 
 ## What stays later
 
