@@ -64,7 +64,7 @@ A relationship line today comes from a corresponding segment ([`claim-evidence.m
 - "They are spouses: both are spouses in the marriage on 12 May 1842" (an implied link on the Source side), or "…the record has them as spouses" (direct).
 - Checking the line pins its bundle: every bridge behind the implied link (both participations, or both parent links of a chain), and the event's defining properties, as a relationship bundle does today.
 
-The line is drawn by the sheet's existing relationship Card. No new chrome, but it is a wire change: `claimevidence.Relationship` gains how each side recorded the fact and the event behind it, which crosses the FFI to Swift (S11-40), and the sheet words it (S11-42). Today a bundle is one bridge between a member and the neighbor's member (`claimevidence/build.go` `bundles`, `BundlePinID`); an implied link has several bridges and passes through an event, so S11-40 decides the bundle's shape and its pin id.
+A bundle is one Source's recording of the fact: the bridges that reach one pivot, the member's bridge first and the bundle's pin id keyed by it. The line is drawn by the sheet's existing relationship Card. No new chrome, but it is a wire change: `claimevidence.Relationship` gains how each side recorded the fact and the event behind it, which crosses the FFI to Swift (S11-40), and the sheet words it (S11-42). Today a bundle is one bridge between a member and the neighbor's member (`claimevidence/build.go` `bundles`, `BundlePinID`); an implied link has several bridges and passes through an event, so S11-40 decides the bundle's shape and its pin id.
 
 ## What stays later
 
@@ -78,5 +78,5 @@ In [`ideas/kinship-view.md`](../../ideas/kinship-view.md):
 ## Open questions
 
 1. **Counting once across paths.** Answered (user, 2026-10-26): drop the implied link's credit when both sides share the shape and its pivot is paired; see [Counting once](#counting-once).
-2. **The sheet line.** Is a line that says how a fact was recorded wanted in this spike (S11-40), or is matching enough for now?
+2. **The sheet line.** Answered: yes. S11-40 carries how each side recorded the fact, and S11-42 words it.
 3. **Birth roles beyond `father` / `mother`.** A birth participant recorded with role `child` (rather than `subject`), or a baptism's parents. Proposed: birth with `subject` only; the rest waits.
