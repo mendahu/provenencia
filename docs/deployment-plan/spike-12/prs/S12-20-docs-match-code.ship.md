@@ -55,4 +55,4 @@ Head `1f5c26d6`. Gate PASS (orchestrator run). F-1 – F-4 done, one commit each
 - MNT-3 **Resolved**: "as the layers land" is gone.
 
 ## Result
-Gate PASS · CI <pending> · open: none · follow-ups: none · to user: — · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: none · to user: — · CON miss: none
