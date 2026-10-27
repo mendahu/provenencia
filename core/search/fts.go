@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/searchindex"
+	"github.com/mendahu/provenencia/core/workspacelocation"
 )
 
 // FTSSearcher retrieves hits from catalog_search_fts + catalog_search_docs.
@@ -23,6 +24,7 @@ func NewFTSSearcher() *FTSSearcher {
 type docRow struct {
 	kind, entityID, displayRef, displayTitle, displaySubtitle string
 	displayIconKey, displayThumbnailRelPath                   string
+	displayParentID, displayParentRef                         string
 	title, ref, secondary, body                               string
 	ftsRank                                                   float64
 	hasFTS                                                    bool
@@ -30,6 +32,24 @@ type docRow struct {
 	fuzzySim                                                  float64
 	fuzzyReason                                               string
 	refMatch                                                  refMatchTier
+}
+
+// docColumns is the catalog_search_docs column list every hit query selects,
+// in the order scanDoc reads it.
+const docColumns = `d.kind, d.entity_id, d.display_ref, d.display_title, d.display_subtitle,
+			d.display_icon_key, d.display_thumbnail_rel_path,
+			d.display_parent_id, d.display_parent_ref,
+			d.title, d.ref, d.secondary, d.body`
+
+// scanDoc reads docColumns into d, then any extra selected columns.
+func scanDoc(rows *sql.Rows, d *docRow, extra ...any) error {
+	dest := []any{
+		&d.kind, &d.entityID, &d.displayRef, &d.displayTitle, &d.displaySubtitle,
+		&d.displayIconKey, &d.displayThumbnailRelPath,
+		&d.displayParentID, &d.displayParentRef,
+		&d.title, &d.ref, &d.secondary, &d.body,
+	}
+	return rows.Scan(append(dest, extra...)...)
 }
 
 func candidateKey(kind, entityID string) string {
@@ -171,7 +191,7 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 			Subtitle:         d.displaySubtitle,
 			MatchReason:      reason,
 			MatchSnippet:     snippet,
-			Location:         locationFor(d.kind, d.entityID, d.displayRef, d.displayTitle),
+			Location:         locationFor(d),
 			ThumbnailRelPath: d.displayThumbnailRelPath,
 			IconKey:          d.displayIconKey,
 			Score:            score,
@@ -295,14 +315,12 @@ func mergeFTS(ctx context.Context, db *sql.DB, byKey map[string]docRow, match st
 	}
 	w := FTSBM25Weights
 	rows, err := db.QueryContext(ctx, fmt.Sprintf(`
-		SELECT d.kind, d.entity_id, d.display_ref, d.display_title, d.display_subtitle,
-			d.display_icon_key, d.display_thumbnail_rel_path,
-			d.title, d.ref, d.secondary, d.body,
+		SELECT %s,
 			bm25(catalog_search_fts, %f, %f, %f, %f) AS rank
 		FROM catalog_search_fts
 		JOIN catalog_search_docs d ON d.rowid = catalog_search_fts.rowid
 		WHERE catalog_search_fts MATCH ?%s
-	`, w.Title, w.Ref, w.Secondary, w.Body, kindSQL(kinds)), append([]any{match}, kindArgs(kinds)...)...)
+	`, docColumns, w.Title, w.Ref, w.Secondary, w.Body, kindSQL(kinds)), append([]any{match}, kindArgs(kinds)...)...)
 	if err != nil {
 		return err
 	}
@@ -313,11 +331,7 @@ func mergeFTS(ctx context.Context, db *sql.DB, byKey map[string]docRow, match st
 			return err
 		}
 		var d docRow
-		if err := rows.Scan(
-			&d.kind, &d.entityID, &d.displayRef, &d.displayTitle, &d.displaySubtitle,
-			&d.displayIconKey, &d.displayThumbnailRelPath,
-			&d.title, &d.ref, &d.secondary, &d.body, &d.ftsRank,
-		); err != nil {
+		if err := scanDoc(rows, &d, &d.ftsRank); err != nil {
 			return err
 		}
 		d.hasFTS = true
@@ -366,9 +380,7 @@ func mergeTrigramCandidates(ctx context.Context, db *sql.DB, byKey map[string]do
 		return 0, err
 	}
 	rows, err := db.QueryContext(ctx, `
-		SELECT d.kind, d.entity_id, d.display_ref, d.display_title, d.display_subtitle,
-			d.display_icon_key, d.display_thumbnail_rel_path,
-			d.title, d.ref, d.secondary, d.body
+		SELECT `+docColumns+`
 		FROM catalog_search_fts_trigram
 		JOIN catalog_search_docs d ON d.rowid = catalog_search_fts_trigram.rowid
 		WHERE catalog_search_fts_trigram MATCH ?`+kindSQL(kinds)+`
@@ -384,11 +396,7 @@ func mergeTrigramCandidates(ctx context.Context, db *sql.DB, byKey map[string]do
 			return added, err
 		}
 		var d docRow
-		if err := rows.Scan(
-			&d.kind, &d.entityID, &d.displayRef, &d.displayTitle, &d.displaySubtitle,
-			&d.displayIconKey, &d.displayThumbnailRelPath,
-			&d.title, &d.ref, &d.secondary, &d.body,
-		); err != nil {
+		if err := scanDoc(rows, &d); err != nil {
 			return added, err
 		}
 		key := candidateKey(d.kind, d.entityID)
@@ -433,6 +441,12 @@ func fieldValuesForKind(kind, title, refCol, secondary, body string) map[string]
 			"metadata":    metadata,
 			"filename":    filename,
 		}
+	case KindEvidenceGraph:
+		return map[string]string{
+			"title":       title,
+			"ref":         refCol,
+			"description": secondary,
+		}
 	case KindSourceType, KindMetadataField:
 		return map[string]string{
 			"label":       title,
@@ -468,22 +482,24 @@ func splitTaggedBody(body string) (notes, metadata, filename string) {
 	return strings.Join(noteParts, "\n"), strings.Join(metaParts, "\n"), strings.Join(fileParts, "\n")
 }
 
-func locationFor(kind, id, refCol, title string) WorkspaceLocation {
-	switch kind {
+func locationFor(d docRow) workspacelocation.Location {
+	switch d.kind {
+	case KindEvidenceGraph:
+		return workspacelocation.Graph(d.displayParentID, d.entityID, d.displayParentRef, d.displaySubtitle)
 	case KindSource:
-		return WorkspaceLocation{Section: SectionSources, SourceID: id, Ref: refCol, Title: title}
+		return workspacelocation.Location{Section: workspacelocation.Sources, SourceID: d.entityID, Ref: d.displayRef, Title: d.displayTitle}
 	case KindSourceType:
-		return WorkspaceLocation{Section: SectionSourceTypes, TypeID: id, Title: title}
+		return workspacelocation.Location{Section: workspacelocation.SourceTypes, TypeID: d.entityID, Title: d.displayTitle}
 	case KindMetadataField:
-		return WorkspaceLocation{Section: SectionMetadata, FieldID: id, Title: title}
+		return workspacelocation.Location{Section: workspacelocation.Metadata, FieldID: d.entityID, Title: d.displayTitle}
 	case KindPerson:
-		return WorkspaceLocation{Section: SectionPersons, EntityID: id, Ref: refCol, Title: title}
+		return workspacelocation.Location{Section: workspacelocation.Persons, EntityID: d.entityID, Ref: d.displayRef, Title: d.displayTitle}
 	case KindEvent:
-		return WorkspaceLocation{Section: SectionEvents, EntityID: id, Ref: refCol, Title: title}
+		return workspacelocation.Location{Section: workspacelocation.Events, EntityID: d.entityID, Ref: d.displayRef, Title: d.displayTitle}
 	case KindPlace:
-		return WorkspaceLocation{Section: SectionPlaces, EntityID: id, Ref: refCol, Title: title}
+		return workspacelocation.Location{Section: workspacelocation.Places, EntityID: d.entityID, Ref: d.displayRef, Title: d.displayTitle}
 	default:
-		return WorkspaceLocation{}
+		return workspacelocation.Location{}
 	}
 }
 

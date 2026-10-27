@@ -983,12 +983,12 @@ message SearchCatalogRequest {
   string query = 2;
   WorkspaceLocation location = 3; // current place; at least section for context boosts
   // Restrict hits to these kinds. Empty = the omnibar's default set
-  // (sources, types, metadata fields, persons, events, and places).
+  // (sources, types, metadata fields, persons, events, places, and Evidence graphs).
   repeated string kinds = 4;
 }
 
 message SearchHit {
-  string kind = 1;         // source | source_type | metadata_field | person | event | place
+  string kind = 1;         // source | source_type | metadata_field | person | event | place | evidence_graph
   string id = 2;
   string ref = 3;
   string title = 4;

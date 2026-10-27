@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
+	"github.com/mendahu/provenencia/core/workspacelocation"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -94,7 +95,7 @@ func TestSearchRanksTitleOverDescriptionAndMapsLocation(t *testing.T) {
 
 	hits, err := DefaultEngine().Search(context.Background(), c, Query{
 		Text:     "Ilminster",
-		Location: WorkspaceLocation{Section: SectionSources},
+		Location: workspacelocation.Location{Section: workspacelocation.Sources},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -108,7 +109,7 @@ func TestSearchRanksTitleOverDescriptionAndMapsLocation(t *testing.T) {
 	if hits[0].MatchReason != "title" {
 		t.Fatalf("match_reason %q", hits[0].MatchReason)
 	}
-	if hits[0].Location.Section != SectionSources || hits[0].Location.SourceID != hits[0].ID {
+	if hits[0].Location.Section != workspacelocation.Sources || hits[0].Location.SourceID != hits[0].ID {
 		t.Fatalf("location %+v", hits[0].Location)
 	}
 	if hits[0].IconKey == "" {
@@ -175,7 +176,7 @@ func TestSearchFindsTypesAndFields(t *testing.T) {
 
 	typeHits, err := DefaultEngine().Search(context.Background(), c, Query{
 		Text:     "birth certificate",
-		Location: WorkspaceLocation{Section: SectionSourceTypes},
+		Location: workspacelocation.Location{Section: workspacelocation.SourceTypes},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -184,7 +185,7 @@ func TestSearchFindsTypesAndFields(t *testing.T) {
 	for _, h := range typeHits {
 		if h.Kind == KindSourceType && h.ID == uuidString(ty.ID) {
 			foundType = true
-			if h.Location.TypeID != h.ID || h.Location.Section != SectionSourceTypes {
+			if h.Location.TypeID != h.ID || h.Location.Section != workspacelocation.SourceTypes {
 				t.Fatalf("type location %+v", h.Location)
 			}
 			if h.IconKey == "" {
@@ -234,7 +235,7 @@ func TestContextBoostPrefersMatchingSection(t *testing.T) {
 
 	onTypes, err := DefaultEngine().Search(context.Background(), c, Query{
 		Text:     "SharedToken",
-		Location: WorkspaceLocation{Section: SectionSourceTypes},
+		Location: workspacelocation.Location{Section: workspacelocation.SourceTypes},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -248,7 +249,7 @@ func TestContextBoostPrefersMatchingSection(t *testing.T) {
 
 	onFields, err := DefaultEngine().Search(context.Background(), c, Query{
 		Text:     "SharedToken",
-		Location: WorkspaceLocation{Section: SectionMetadata},
+		Location: workspacelocation.Location{Section: workspacelocation.Metadata},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -403,7 +404,7 @@ func TestSharedTokenFindsSourceAndVocab(t *testing.T) {
 	}
 	hits, err := DefaultEngine().Search(context.Background(), c, Query{
 		Text:     "SharedToken",
-		Location: WorkspaceLocation{Section: SectionSources},
+		Location: workspacelocation.Location{Section: workspacelocation.Sources},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -450,7 +451,7 @@ func TestMultiTokenPartialCoverageStillRetrieves(t *testing.T) {
 
 	hits, err := DefaultEngine().Search(context.Background(), c, Query{
 		Text:     "John Smith's birth certificate",
-		Location: WorkspaceLocation{Section: SectionSources},
+		Location: workspacelocation.Location{Section: workspacelocation.Sources},
 	})
 	if err != nil {
 		t.Fatal(err)

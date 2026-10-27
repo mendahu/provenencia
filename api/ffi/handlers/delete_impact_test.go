@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/workspacelocation"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -166,12 +167,12 @@ func TestGetDeleteImpact(t *testing.T) {
 func TestLocationFromImpactProperties(t *testing.T) {
 	tests := []struct {
 		name string
-		in   deleteimpact.Location
+		in   workspacelocation.Location
 		want *engine.WorkspaceLocation
 	}{
 		{
 			name: "property term deep-links to parent property",
-			in: deleteimpact.Location{
+			in: workspacelocation.Location{
 				Section: "properties", PropertyID: "prop-1", Ref: "lodger", Title: "Lodger",
 			},
 			want: &engine.WorkspaceLocation{
@@ -180,7 +181,7 @@ func TestLocationFromImpactProperties(t *testing.T) {
 		},
 		{
 			name: "subject type deep-links to strip category",
-			in: deleteimpact.Location{
+			in: workspacelocation.Location{
 				Section: "properties", SubjectTypeKey: "person", Ref: "person", Title: "Person",
 			},
 			want: &engine.WorkspaceLocation{
@@ -189,13 +190,13 @@ func TestLocationFromImpactProperties(t *testing.T) {
 		},
 		{
 			name: "section root stays empty",
-			in:   deleteimpact.Location{Section: "properties"},
+			in:   workspacelocation.Location{Section: "properties"},
 			want: &engine.WorkspaceLocation{Section: "properties"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := locationFromImpact(tt.in)
+			got := locationToProto(tt.in)
 			if !proto.Equal(got, tt.want) {
 				t.Fatalf("got %+v want %+v", got, tt.want)
 			}

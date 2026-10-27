@@ -231,6 +231,24 @@ struct CatalogSearchHitPresentationTests {
         )))
     }
 
+    @Test func evidenceGraphHitPresentation() {
+        let hit = CatalogSearchHit(
+            kind: "evidence_graph", id: "g", ref: "GPH-J0NES", title: "Jones household",
+            subtitle: "1881 Census, Ward 3", matchReason: "description", location: .sectionRoot(.sources)
+        )
+        #expect(hit.searchKind == .evidenceGraph)
+        #expect(
+            L10n.string(CatalogSearchHitPresentation.kindLabel(for: .evidenceGraph))
+                == L10n.string(L10n.Workspace.omnibarKindEvidenceGraph)
+        )
+        #expect(CatalogSearchHitPresentation.leadThumbnail(for: hit)?.glyph == .symbol(.gitBranch))
+        let expected = ListFormatter.localizedString(byJoining: [
+            "Jones household", L10n.string(L10n.Workspace.omnibarKindEvidenceGraph),
+            "1881 Census, Ward 3", "GPH-J0NES", L10n.string(L10n.Workspace.omnibarMatchDescription),
+        ])
+        #expect(CatalogSearchHitPresentation.accessibilityLabel(for: hit) == expected)
+    }
+
     @Test func unknownKindKeepsTheFallbacks() {
         let hit = leadHit(kind: "widget")
         #expect(hit.searchKind == nil)

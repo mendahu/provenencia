@@ -1299,7 +1299,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         case .event: 3
         case .place: 2
         case .source: 1
-        case .sourceType, .metadataField, nil: 0
+        case .sourceType, .metadataField, .evidenceGraph, nil: 0
         }
     }
 
@@ -1390,6 +1390,42 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
+    /// Scores one ref-bearing record (Source or Evidence graph): field weights, the ref
+    /// fast path (8 for an exact ref, 3 for a prefix) and the Sources-context boost.
+    /// Returns nil when the record does not match.
+    private static func scoreRefRecord(
+        values: [String: String],
+        ref: String,
+        tokens: [String],
+        raw: String,
+        refKey: (key: String, exact: Bool)?,
+        inSources: Bool
+    ) -> (score: Double, reason: String)? {
+        var (score, reason) = scoreSearchFields(
+            fields: [("title", 10), ("ref", 12), ("description", 3)],
+            values: values,
+            tokens: tokens.isEmpty ? [raw.lowercased()] : tokens
+        )
+        var refBoost = 1.0
+        if let refKey {
+            let upper = ref.uppercased()
+            if refKey.exact && upper == refKey.key {
+                refBoost = 8
+            } else if !refKey.exact && upper.hasPrefix(refKey.key) {
+                refBoost = 3
+            }
+            if refBoost > 1 {
+                score = max(score, 12)
+                reason = "ref"
+            } else if score <= 0 {
+                return nil
+            }
+        } else {
+            guard score > 0 else { return nil }
+        }
+        return (score * (inSources ? 1.1 : 1.0) * refBoost, reason)
+    }
+
     private func vocabularySearchHits(
         projectDir: String,
         query: String,
@@ -1418,29 +1454,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     "ref": source.ref,
                     "description": description,
                 ]
-                var (score, reason) = Self.scoreSearchFields(
-                    fields: [("title", 10), ("ref", 12), ("description", 3)],
+                guard let (score, reason) = Self.scoreRefRecord(
                     values: values,
-                    tokens: tokens.isEmpty ? [raw.lowercased()] : tokens
-                )
-                var refBoost = 1.0
-                if let refKey {
-                    let srcRef = source.ref.uppercased()
-                    if refKey.exact && srcRef == refKey.key {
-                        score = max(score, 12)
-                        reason = "ref"
-                        refBoost = 8
-                    } else if !refKey.exact && srcRef.hasPrefix(refKey.key) {
-                        score = max(score, 12)
-                        reason = "ref"
-                        refBoost = 3
-                    } else if score <= 0 {
-                        continue
-                    }
-                } else {
-                    guard score > 0 else { continue }
-                }
-                let boost = location?.section == .sources ? 1.1 : 1.0
+                    ref: source.ref,
+                    tokens: tokens,
+                    raw: raw,
+                    refKey: refKey,
+                    inSources: location?.section == .sources
+                ) else { continue }
                 scored.append((
                     CatalogSearchHit(
                         kind: CatalogSearchKind.source.rawValue,
@@ -1458,11 +1479,39 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         thumbnailRelPath: source.thumbnailRelPath,
                         iconKey: typeIconByID[source.sourceTypeID] ?? ""
                     ),
-                    score * boost * refBoost
+                    score
                 ))
             }
 
-            // Ref-shaped queries only promote Sources (vocab has no SRC-… refs).
+            let sourceByID = Dictionary(
+                (sourcesByProject[projectDir] ?? []).map { ($0.id, $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            for graph in evidenceGraphsByProject[projectDir] ?? [] {
+                guard let source = sourceByID[graph.sourceID] else { continue }
+                guard let (score, reason) = Self.scoreRefRecord(
+                    values: ["title": graph.name, "ref": graph.ref, "description": graph.description],
+                    ref: graph.ref,
+                    tokens: tokens,
+                    raw: raw,
+                    refKey: refKey,
+                    inSources: location?.section == .sources
+                ) else { continue }
+                scored.append((
+                    CatalogSearchHit(
+                        kind: CatalogSearchKind.evidenceGraph.rawValue,
+                        id: graph.id,
+                        ref: graph.ref,
+                        title: graph.name,
+                        subtitle: source.title,
+                        matchReason: reason,
+                        location: SourcesListNavigation.canvasLocation(for: source, graph: graph)
+                    ),
+                    score
+                ))
+            }
+
+            // Ref-shaped queries only promote Sources and Evidence graphs (vocab has no such refs).
             if refKey == nil {
                 for type in types {
                     let (score, reason) = Self.scoreSearchFields(

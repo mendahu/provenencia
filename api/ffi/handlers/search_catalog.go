@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/search"
+	"github.com/mendahu/provenencia/core/workspacelocation"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -40,11 +41,11 @@ func SearchCatalog(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func locationFromProto(loc *engine.WorkspaceLocation) search.WorkspaceLocation {
+func locationFromProto(loc *engine.WorkspaceLocation) workspacelocation.Location {
 	if loc == nil {
-		return search.WorkspaceLocation{}
+		return workspacelocation.Location{}
 	}
-	return search.WorkspaceLocation{
+	return workspacelocation.Location{
 		Section:              loc.GetSection(),
 		SourceID:             loc.GetSourceId(),
 		FieldID:              loc.GetFieldId(),
@@ -67,7 +68,7 @@ func locationFromProto(loc *engine.WorkspaceLocation) search.WorkspaceLocation {
 	}
 }
 
-func locationToProto(loc search.WorkspaceLocation) *engine.WorkspaceLocation {
+func locationToProto(loc workspacelocation.Location) *engine.WorkspaceLocation {
 	return &engine.WorkspaceLocation{
 		Section:              loc.Section,
 		SourceId:             loc.SourceID,

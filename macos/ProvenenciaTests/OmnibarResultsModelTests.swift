@@ -122,6 +122,39 @@ struct OmnibarResultsModelTests {
         #expect(model.search.query.isEmpty)
     }
 
+    @Test func activateEvidenceGraphHitOpensTheGraph() async {
+        let store = FakeStore()
+        let projectDir = "/tmp/omnibar-graph.provenencia"
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(
+                id: "src-w3", ref: "SRC-W3CEN", sourceTypeID: "", title: "1881 Census, Ward 3", description: ""
+            ),
+        ]
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: "g-jones", ref: "GPH-J0NES", sourceID: "src-w3", name: "Jones household",
+                description: "", artifactIDs: []
+            ),
+        ]
+        let model = OmnibarResultsModel()
+        model.search.query = "jones"
+        model.scheduleSearch(projectDir: projectDir, location: .sectionRoot(.sources), store: store)
+        await waitForSearch(model.search)
+        guard let hit = model.search.hits.first(where: { $0.kind == "evidence_graph" }) else {
+            Issue.record("no graph hit")
+            return
+        }
+
+        let navigation = WorkspaceNavigation()
+        model.activate(hit, navigation: navigation)
+
+        #expect(navigation.currentLocation.graphId == "g-jones")
+        #expect(navigation.currentLocation.sourceId == "src-w3")
+        #expect(navigation.currentLocation.sourceSurface == .graph)
+        #expect(navigation.selectedSection == .sources)
+        #expect(model.search.query.isEmpty)
+    }
+
     @Test func closePanelSetsUserDismissedWithoutClearingQuery() {
         let model = OmnibarResultsModel()
         model.search.query = "Ilminster"

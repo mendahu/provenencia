@@ -74,6 +74,61 @@ struct SearchCatalogStoreTests {
         #expect(store.heldCatalogProjectDir == projectDir)
     }
 
+    /// The §2 fixture: a census Source with a Default, a Jones and a Smith graph.
+    private func seedCensusGraphs(_ store: FakeStore) -> (source: CatalogSource, jones: CatalogEvidenceGraph) {
+        let source = CatalogSource(
+            id: "src-w3", ref: "SRC-W3CEN", sourceTypeID: "", title: "1881 Census, Ward 3", description: ""
+        )
+        let jones = CatalogEvidenceGraph(
+            id: "g-jones", ref: "GPH-J0NES", sourceID: "src-w3", name: "Jones household",
+            description: "Thomas Jones and family, page 2", artifactIDs: ["a2"]
+        )
+        store.sourcesByProject[projectDir] = [source]
+        store.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: "g-default", ref: "GPH-DEF01", sourceID: "src-w3", name: "Default",
+                description: "", artifactIDs: ["a1"]
+            ),
+            jones,
+            CatalogEvidenceGraph(
+                id: "g-smith", ref: "GPH-SM1TH", sourceID: "src-w3", name: "Smith household",
+                description: "", artifactIDs: ["a1"]
+            ),
+        ]
+        return (source, jones)
+    }
+
+    @Test func findsEvidenceGraphByNameRefAndDescription() async throws {
+        let store = FakeStore()
+        let (source, jones) = seedCensusGraphs(store)
+        func graphHits(_ query: String) async throws -> [CatalogSearchHit] {
+            try await store.searchCatalog(
+                projectDir: projectDir, query: query, location: .sectionRoot(.sources), kinds: []
+            ).filter { $0.kind == "evidence_graph" }
+        }
+
+        let byName = try await graphHits("jones hou")
+        let hit = try #require(byName.first { $0.id == jones.id })
+        #expect(hit.subtitle == "1881 Census, Ward 3")
+        #expect(hit.matchReason == "title")
+        #expect(hit.location == SourcesListNavigation.canvasLocation(for: source, graph: jones))
+
+        let byDescription = try await graphHits("thomas")
+        #expect(byDescription.count == 1)
+        #expect(byDescription.first?.id == jones.id)
+        #expect(byDescription.first?.matchReason == "description")
+
+        let all = try await store.searchCatalog(
+            projectDir: projectDir, query: "GPH-J0NES", location: .sectionRoot(.sources), kinds: []
+        )
+        #expect(all.first?.id == jones.id)
+        #expect(all.first?.matchReason == "ref")
+
+        store.sourcesByProject[projectDir] = []
+        #expect(try await graphHits("jones hou").isEmpty)
+        #expect(store.heldCatalogProjectDir == projectDir)
+    }
+
     @Test func findsTypeAndFieldByLabel() async throws {
         let store = FakeStore()
         store.sourceTypesByProject[projectDir] = [
