@@ -593,6 +593,21 @@ struct SourcesModelTests {
         #expect(SourcesModel.EvidenceStatus(progress("s", subjects: 2, filed: 0)) == .inProgress)
     }
 
+    @Test func statusBadgeMatchesBoard() {
+        typealias Status = SourcesModel.EvidenceStatus
+        #expect(L10n.string(Status.empty.label) == "Not started")
+        #expect(Status.empty.badgeTone == .neutral)
+        #expect(Status.empty.badgeIcon == .circleDashed)
+        #expect(L10n.string(Status.inProgress.label) == "In progress")
+        #expect(Status.inProgress.badgeTone == .warning)
+        #expect(Status.inProgress.badgeIcon == .circleDot)
+        #expect(L10n.string(Status.promoted.label) == "Promoted")
+        #expect(Status.promoted.badgeTone == .success)
+        #expect(Status.promoted.badgeIcon == .circleCheck)
+        #expect(Status.allCases.filter(\.badgeSubtle) == [.empty])
+        #expect(L10n.Sources.statusBadgeLabel(.inProgress) == "Status: In progress")
+    }
+
     @Test func settingsRestoreOnNewModel() async throws {
         let url = try tempSettingsFile()
         let uuid = "00000000-0000-7000-8000-0000000000aa"

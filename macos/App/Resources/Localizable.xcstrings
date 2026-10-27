@@ -20644,13 +20644,25 @@
       }
     },
     "sources.list.status.empty": {
-      "comment": "Sources evidence-status filter option: the Source's graph has no person, event, or place subjects",
+      "comment": "Status filter option and badge: a graph with no subjects",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Empty"
+            "value": "Not started"
+          }
+        }
+      }
+    },
+    "sources.list.statusBadge": {
+      "comment": "VoiceOver label of a graph's status badge in the Sources list; argument is the status label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status: %@"
           }
         }
       }

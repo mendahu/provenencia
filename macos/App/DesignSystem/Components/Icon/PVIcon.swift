@@ -105,6 +105,12 @@ enum PVSymbol: String {
     /// ``PVIcon``; `square.and.arrow.up` is the share glyph, a different mark.
     case imageUp = "pv.image.up"
     case circleDashed = "circle.dashed"
+    /// Lucide `circle-dot`.
+    case circleDot = "smallcircle.filled.circle"
+    /// Lucide `circle-check`.
+    case circleCheck = "checkmark.circle"
+    /// Lucide `circle-alert`.
+    case circleAlert = "exclamationmark.circle"
     case regionRectangle = "rectangle"
     /// Custom six-sided L glyphs — not SF Symbols (see ``PVIcon``).
     case regionLTopRight = "pv.region.l.topRight"

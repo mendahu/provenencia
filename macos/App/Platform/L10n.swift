@@ -5757,9 +5757,17 @@ enum L10n {
 
         static let statusEmpty = LocalizedStringResource(
             "sources.list.status.empty",
-            defaultValue: "Empty",
-            comment: "Sources evidence-status filter option: the Source's graph has no person, event, or place subjects"
+            defaultValue: "Not started",
+            comment: "Status filter option and badge: a graph with no subjects"
         )
+
+        static func statusBadgeLabel(_ status: SourcesModel.EvidenceStatus) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.list.statusBadge",
+                defaultValue: "Status: %@",
+                comment: "VoiceOver label of a graph's status badge in the Sources list; argument is the status label"
+            ), L10n.string(status.label))
+        }
 
         static let statusInProgress = LocalizedStringResource(
             "sources.list.status.inProgress",

@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SwiftUI
 
 /// State for the **Sources** workspace destination (S2-04 board / S2-17 PR):
 /// browse/filter/sort Sources as an evidence list and create via a thin dialog.
@@ -40,6 +41,31 @@ final class SourcesModel {
             case .inProgress: L10n.Sources.statusInProgress
             case .promoted: L10n.Sources.statusPromoted
             }
+        }
+
+        var badgeTone: PVBadgeTone {
+            switch self {
+            case .empty: .neutral
+            case .inProgress: .warning
+            case .promoted: .success
+            }
+        }
+
+        var badgeIcon: PVSymbol {
+            switch self {
+            case .empty: .circleDashed
+            case .inProgress: .circleDot
+            case .promoted: .circleCheck
+            }
+        }
+
+        /// Only a graph with nothing on it draws an outline instead of a fill.
+        var badgeSubtle: Bool { self == .empty }
+
+        /// The status as a Sources list badge; VoiceOver reads "Status: <label>".
+        var badge: some View {
+            PVBadge(label, tone: badgeTone, icon: badgeIcon, subtle: badgeSubtle)
+                .accessibilityLabel(Text(verbatim: L10n.Sources.statusBadgeLabel(self)))
         }
 
         /// A graph missing from the progress map has zero counts (Go omits it).
