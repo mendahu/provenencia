@@ -6968,18 +6968,6 @@
         }
       }
     },
-    "sources.list.caption": {
-      "comment": "Caption band above the Sources list",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Source · evidence graphs"
-          }
-        }
-      }
-    },
     "sources.list.countLine": {
       "comment": "Sources list count when unfiltered; argument is total",
       "extractionState": "manual",
@@ -7111,7 +7099,7 @@
       }
     },
     "sources.graph.countsUnavailable": {
-      "comment": "Evidence graph token help and Source page count line when graph counts failed to load",
+      "comment": "Evidence graph button help and Source page count line when graph counts failed to load",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -7123,7 +7111,7 @@
       }
     },
     "sources.list.graphNotStarted": {
-      "comment": "Italic graph token state when a Source has zero canvas subjects",
+      "comment": "Italic words in a graph count line when a Source has zero canvas subjects",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -7134,32 +7122,8 @@
         }
       }
     },
-    "sources.list.graphsUnavailable": {
-      "comment": "Sources list token VoiceOver label and tooltip lead when the Source's Evidence graph list failed to load",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Evidence graphs could not load"
-          }
-        }
-      }
-    },
-    "sources.list.graphTokenHelp": {
-      "comment": "Evidence graph token tooltip; 1 is the graph name, 2 its counts or why it cannot open",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ — %2$@"
-          }
-        }
-      }
-    },
     "sources.list.needsArtifact": {
-      "comment": "Blocked graph token label when the Source has no Artifact",
+      "comment": "Second line of the Sources list block for a Source with no Artifact",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -7171,25 +7135,13 @@
       }
     },
     "sources.list.needsArtifactTooltip": {
-      "comment": "Tooltip on the blocked Sources list graph token",
+      "comment": "Tooltip on the Sources list block for a Source with no Artifact",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Add an artifact on the source page to build its evidence graph"
-          }
-        }
-      }
-    },
-    "sources.list.graphNeedsArtifact": {
-      "comment": "Blocked Sources list graph token; argument is the graph name",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ needs an artifact"
           }
         }
       }
@@ -7219,7 +7171,7 @@
       }
     },
     "sources.list.observationCount": {
-      "comment": "Sources list graph token observation count; argument is Observation count",
+      "comment": "Sources list graph observation count; argument is Observation count",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -7327,7 +7279,7 @@
       }
     },
     "sources.list.subjectCount": {
-      "comment": "Sources list graph token subject count; argument is canvas subject count",
+      "comment": "Sources list graph subject count; argument is canvas subject count",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -22012,7 +21964,7 @@
       }
     },
     "sources.page.graph.openLabel": {
-      "comment": "VoiceOver label for opening an Evidence graph from the Source page or a Sources list token; argument is the graph name",
+      "comment": "VoiceOver label for opening an Evidence graph from the Source page or a Sources list graph button; argument is the graph name",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -22571,6 +22523,150 @@
           "stringUnit": {
             "state": "translated",
             "value": "Some changes may not be saved. Every field and box keeps its value — save again to finish. %@"
+          }
+        }
+      }
+    },
+    "sources.list.columnSource": {
+      "comment": "Sources list column caption",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
+          }
+        }
+      }
+    },
+    "sources.list.columnType": {
+      "comment": "Sources list column caption",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type"
+          }
+        }
+      }
+    },
+    "sources.list.columnStatus": {
+      "comment": "Sources list column caption",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status"
+          }
+        }
+      }
+    },
+    "sources.list.columnEvidenceGraph": {
+      "comment": "Sources list column caption",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence graph"
+          }
+        }
+      }
+    },
+    "sources.list.graphNeedsArtifactToOpen": {
+      "comment": "Second line of a Sources list graph button whose graph links no Artifact",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needs an artifact to open"
+          }
+        }
+      }
+    },
+    "sources.list.noGraphYet": {
+      "comment": "Sources list graph column for a Source with no Artifact",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No evidence graph yet"
+          }
+        }
+      }
+    },
+    "sources.list.graphsLoading": {
+      "comment": "VoiceOver label while a Source's graph list loads",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence graphs loading"
+          }
+        }
+      }
+    },
+    "sources.list.graphsFailedTitle": {
+      "comment": "Sources list graph column when the graph list failed to load",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence graphs"
+          }
+        }
+      }
+    },
+    "sources.list.graphsFailedDetail": {
+      "comment": "Sources list graph column when the graph list failed to load",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t be read"
+          }
+        }
+      }
+    },
+    "sources.list.graphButtonHelp": {
+      "comment": "Sources list graph button tooltip; 1 is the graph name, 2 its counts or why it cannot open",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ — %2$@"
+          }
+        }
+      }
+    },
+    "sources.list.graphButtonLabel": {
+      "comment": "VoiceOver label of a Sources list graph button: open label, counts, status",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@, %3$@"
+          }
+        }
+      }
+    },
+    "sources.list.graphButtonLabelNoStatus": {
+      "comment": "VoiceOver label of a Sources list graph button without a status: open label, counts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@"
           }
         }
       }

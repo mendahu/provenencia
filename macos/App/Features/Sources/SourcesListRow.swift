@@ -1,44 +1,38 @@
 import SwiftUI
 
-/// One Source in the Sources list: two lines. The first is the Source link
-/// (cover, title, type), when it was last updated, and its ref; the second is
-/// one token per Evidence graph of the Source, each opening that graph. A
-/// Source with no Artifact shows one blocked token instead (S12-D5).
+/// One Source in the Sources list: four columns (S12-D5). The Source link (cover,
+/// title, and a second line of ref and last update), its type, and one line per
+/// Evidence graph holding that graph's status badge and its button. A Source with
+/// no Artifact shows one blocked block instead.
 struct SourcesListRow: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Environment(WorkspaceSession.self) private var session
     let source: CatalogSource
     let model: SourcesModel
+    let columns: SourcesListColumns
 
-    static let coverSize: CGFloat = 44
-    /// The title's x inside the row: the link's padding, the cover and the gap
-    /// after it, so the token line starts under the title.
-    static let tokenIndent: CGFloat = PVSpacing.space2 + coverSize + PVSpacing.space4
+    static let coverSize: CGFloat = 40
+    /// The Source cell's height: the first graph line, so the Source and Type
+    /// centre on it (8 + a 52 pt button + 8).
+    static let firstSlot: CGFloat = PVSpacing.space4 + SourcesGraphButton.height + PVSpacing.space4
 
     var body: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space4) {
-            HStack(spacing: PVSpacing.space5) {
-                sourceLink
-                Spacer(minLength: 0)
-                PVListDetailCell(
-                    detail: PVLastUpdated.detail(source.updated.at, in: .current),
-                    width: PVLastUpdated.columnWidth
-                )
-                Text(source.ref)
-                    .font(PVFont.mono(size: PVTypeScale.micro))
-                    .foregroundStyle(PVColor.textMuted)
+        HStack(alignment: .top, spacing: 0) {
+            sourceLink
+                .padding(.trailing, SourcesListColumns.sourceTrailing)
+                .frame(maxWidth: .infinity, minHeight: Self.firstSlot, alignment: .leading)
+            if let typeWidth = columns.type {
+                Text(verbatim: model.typeLabel(for: source))
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textSecondary)
                     .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
+                    .truncationMode(.tail)
+                    .padding(.trailing, SourcesListColumns.cellTrailing)
+                    .frame(width: typeWidth, alignment: .leading)
+                    .frame(minHeight: Self.firstSlot)
             }
-            PVFlowLayout(spacing: PVSpacing.space3, lineSpacing: PVSpacing.space3) {
-                ForEach(tokens, id: \.id) { token in
-                    SourcesGraphToken(sourceID: source.id, kind: token.kind)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.leading, Self.tokenIndent)
+            graphStack
         }
-        .padding(.vertical, PVSpacing.space5)
         .padding(.leading, PVSpacing.gutterPage - PVSpacing.space2)
         .padding(.trailing, PVSpacing.gutterPage)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -50,6 +44,45 @@ struct SourcesListRow: View {
         .accessibilityIdentifier("sources.row.\(source.id)")
     }
 
+    /// One line per entry, status slot then button, so each badge sits level with
+    /// its button. The hairline between the columns is drawn once.
+    private var graphStack: some View {
+        VStack(spacing: PVSpacing.space3) {
+            ForEach(entries, id: \.id) { entry in
+                HStack(spacing: 0) {
+                    statusSlot(entry.kind)
+                        .padding(.trailing, SourcesListColumns.cellTrailing)
+                        .frame(width: columns.status, alignment: .leading)
+                    SourcesGraphButton(sourceID: source.id, kind: entry.kind)
+                        .frame(width: columns.graphs)
+                        .padding(.leading, SourcesListColumns.graphLeading)
+                }
+            }
+        }
+        .padding(.vertical, PVSpacing.space4)
+        .overlay(alignment: .leading) {
+            PVDivider(axis: .vertical)
+                .padding(.leading, columns.status)
+        }
+    }
+
+    /// The graph's status badge, a rule while its counts load, or a faint dash
+    /// where there is no status to show.
+    @ViewBuilder
+    private func statusSlot(_ kind: SourcesGraphButton.Kind) -> some View {
+        if case .graph(_, let counts, _) = kind, let status = counts.status {
+            status.badge
+        } else if case .graph(_, .loading, _) = kind {
+            PVSkeletonBar(width: 72, height: 6)
+                .accessibilityHidden(true)
+        } else {
+            Text(verbatim: "—")
+                .font(PVFont.mono(size: PVTypeScale.caption))
+                .foregroundStyle(PVColor.textFaint)
+                .accessibilityHidden(true)
+        }
+    }
+
     private var sourceLink: some View {
         Button {
             navigation.go(to: SourcesListNavigation.pageLocation(for: source))
@@ -59,7 +92,9 @@ struct SourcesListRow: View {
                 thumbnailRelPath: source.thumbnailRelPath,
                 typeIconKey: model.typeIconKey(for: source),
                 title: source.title,
-                typeLabel: model.typeLabel(for: source)
+                typeLabel: columns.isCompact ? model.typeLabel(for: source) : "",
+                ref: source.ref,
+                updatedAt: source.updated.at
             )
         }
         .buttonStyle(SourcesLinkButtonStyle())
@@ -82,15 +117,15 @@ struct SourcesListRow: View {
         )
     }
 
-    private struct TokenEntry {
+    private struct GraphEntry {
         let id: String
-        let kind: SourcesGraphToken.Kind
+        let kind: SourcesGraphButton.Kind
     }
 
-    /// What a graph token does. `graphLocation` is nil only when
+    /// What a graph button does. `graphLocation` is nil only when
     /// `graphBlockedReason` is non-nil (both read `graph.hasArtifact`), so the
-    /// last case cannot happen today; it keeps the token inert if they diverge.
-    private func open(_ graph: CatalogEvidenceGraph) -> SourcesGraphToken.Open {
+    /// last case cannot happen today; it keeps the button inert if they diverge.
+    private func open(_ graph: CatalogEvidenceGraph) -> SourcesGraphButton.Open {
         if let reason = SourcesListNavigation.graphBlockedReason(for: graph) {
             return .blocked(reason: reason)
         }
@@ -100,20 +135,20 @@ struct SourcesListRow: View {
         return .blocked(reason: L10n.string(L10n.Sources.graphNeedsArtifactTooltip))
     }
 
-    /// The row's tokens: one per graph, or the one state that stands for them.
-    private var tokens: [TokenEntry] {
+    /// The row's entries: one per graph, or the one state that stands for them.
+    private var entries: [GraphEntry] {
         guard source.hasArtifact else {
-            return [TokenEntry(id: "needsArtifact", kind: .needsArtifact)]
+            return [GraphEntry(id: "needsArtifact", kind: .needsArtifact)]
         }
         switch session.evidenceGraphsRead(sourceID: source.id) {
         case .loading:
-            return [TokenEntry(id: "listLoading", kind: .listLoading)]
+            return [GraphEntry(id: "listLoading", kind: .listLoading)]
         case .failed(let error):
-            return [TokenEntry(id: "listFailed", kind: .listFailed(error))]
+            return [GraphEntry(id: "listFailed", kind: .listFailed(error))]
         case .loaded(let graphs):
             let countsLoading = session.evidenceGraphCountsLoading
             return graphs.map { graph in
-                TokenEntry(
+                GraphEntry(
                     id: graph.id,
                     kind: .graph(
                         graph,
@@ -144,14 +179,18 @@ private extension EnvironmentValues {
     }
 }
 
-/// The Source link's content: cover, title and type. Highlighted, the title
+/// The Source link's content: cover, title, and a second line of the type (only
+/// when the Type column is gone), ref and last update. Highlighted, the title
 /// takes the link color and an underline and the cover an outline.
 private struct SourcesLinkLabel: View {
     let projectDir: String
     let thumbnailRelPath: String
     let typeIconKey: String?
     let title: String
+    /// Empty when the list has a Type column.
     let typeLabel: String
+    let ref: String
+    let updatedAt: String
 
     @Environment(\.sourcesLinkHighlighted) private var highlighted
 
@@ -178,14 +217,42 @@ private struct SourcesLinkLabel: View {
                     // layouts and shows two underlines mid-fade.
                     .underline(true, color: highlighted ? PVColor.textLinkHover : .clear)
                     .lineLimit(1)
-                if !typeLabel.isEmpty {
-                    Text(verbatim: typeLabel)
-                        .font(PVFont.body(size: PVTypeScale.caption))
-                        .foregroundStyle(PVColor.textMuted)
-                        .lineLimit(1)
-                }
+                secondLine
             }
         }
+    }
+
+    /// Type (compact lists only, truncates first), ref, then the last update.
+    private var secondLine: some View {
+        HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
+            if !typeLabel.isEmpty {
+                Text(verbatim: typeLabel)
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                separator
+            }
+            Text(verbatim: ref)
+                .font(PVFont.mono(size: PVTypeScale.micro))
+                .foregroundStyle(PVColor.textMuted)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+            separator
+            PVListDetailCell(
+                detail: PVLastUpdated.detail(updatedAt, in: .current),
+                width: nil,
+                iconSize: 12
+            )
+        }
+        .lineLimit(1)
+    }
+
+    private var separator: some View {
+        Text(verbatim: "·")
+            .font(PVFont.body(size: PVTypeScale.caption))
+            .foregroundStyle(PVColor.textFaint)
+            .accessibilityHidden(true)
     }
 }
 

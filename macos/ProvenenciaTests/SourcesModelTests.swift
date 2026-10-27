@@ -469,15 +469,11 @@ struct SourcesModelTests {
         let counts = SourcesGraphCounts(progress: jones, countsLoading: false, countsError: nil)
         #expect(counts == .counts(subjects: 12, observations: 40, filed: 0))
 
-        #expect(L10n.Sources.graphCounts(counts, style: .compact) == "12 · 40")
-        #expect(L10n.Sources.graphCounts(.notStarted, style: .compact) == "not started")
-        #expect(L10n.Sources.graphCounts(.loading, style: .compact) == "counts loading")
         #expect(L10n.Sources.graphCounts(counts, style: .full) == "12 subjects · 40 observations")
         #expect(L10n.Sources.graphCounts(.notStarted, style: .full) == "0 subjects · not started")
         #expect(L10n.Sources.graphCounts(counts, style: .spoken) == "12 subjects, 40 observations")
         #expect(L10n.Sources.graphCounts(.notStarted, style: .spoken) == "0 subjects, not started")
         let unavailable = SourcesGraphCounts.unavailable(message: "Disk is full")
-        #expect(L10n.Sources.graphCounts(unavailable, style: .compact) == "Counts could not load")
         #expect(L10n.Sources.graphCounts(unavailable, style: .full) == "Counts could not load")
         #expect(L10n.Sources.graphCounts(unavailable, style: .spoken) == "Counts could not load. Disk is full")
 
@@ -500,8 +496,22 @@ struct SourcesModelTests {
         #expect(words?.font == PVFont.body(size: PVTypeScale.micro).italic())
     }
 
-    @Test func listCaptionMatchesBoard() {
-        #expect(L10n.string(L10n.Sources.listCaption) == "Source · evidence graphs")
+    @Test func listColumnsMatchBoard() {
+        let wide = SourcesListColumns(listWidth: 1136)
+        #expect(!wide.isCompact)
+        #expect(wide.type == 150)
+        #expect(wide.status == 132)
+        #expect(wide.graphs == 300)
+        #expect(!SourcesListColumns(listWidth: 880).isCompact)
+        let narrow = SourcesListColumns(listWidth: 879.5)
+        #expect(narrow.isCompact)
+        #expect(narrow.type == nil)
+        #expect(narrow.status == 120)
+        #expect(narrow.graphs == 240)
+        #expect(L10n.string(L10n.Sources.columnSource) == "Source")
+        #expect(L10n.string(L10n.Sources.columnType) == "Type")
+        #expect(L10n.string(L10n.Sources.columnStatus) == "Status")
+        #expect(L10n.string(L10n.Sources.columnEvidenceGraph) == "Evidence graph")
     }
 
     @Test func listReadsEachGraphsProgress() async {
@@ -544,22 +554,36 @@ struct SourcesModelTests {
         #expect(session.evidenceGraphProgress(graphID: "g-smith") == nil)
     }
 
-    @Test func graphTokenCopyMatchesBoard() {
+    @Test func graphButtonCopyMatchesBoard() {
         #expect(L10n.Sources.openEvidenceGraphLabel(name: "Jones household") == "Open graph Jones household")
-        #expect(L10n.Sources.graphNeedsArtifact("Unlinked") == "Unlinked needs an artifact")
         #expect(
-            L10n.Sources.graphTokenHelp(
+            L10n.Sources.graphButtonLabel(
+                open: "Open graph Jones household",
+                counts: "12 subjects, 40 observations",
+                status: L10n.string(SourcesModel.EvidenceStatus.inProgress.label)
+            ) == "Open graph Jones household, 12 subjects, 40 observations, In progress"
+        )
+        #expect(
+            L10n.Sources.graphButtonLabel(open: "Open graph Default", counts: "counts loading", status: nil)
+                == "Open graph Default, counts loading"
+        )
+        #expect(
+            L10n.Sources.graphButtonHelp(
                 name: "Jones household",
                 detail: L10n.Sources.graphCounts(.counts(subjects: 12, observations: 40, filed: 0), style: .full)
             ) == "Jones household — 12 subjects · 40 observations"
         )
         #expect(
-            L10n.Sources.graphTokenHelp(
+            L10n.Sources.graphButtonHelp(
                 name: "Unlinked",
                 detail: L10n.string(L10n.Sources.graphNeedsArtifactTooltip)
             ) == "Unlinked — Add an artifact to open this evidence graph"
         )
-        #expect(L10n.string(L10n.Sources.graphsUnavailable) == "Evidence graphs could not load")
+        #expect(L10n.string(L10n.Sources.graphNeedsArtifactToOpen) == "Needs an artifact to open")
+        #expect(L10n.string(L10n.Sources.noGraphYet) == "No evidence graph yet")
+        #expect(L10n.string(L10n.Sources.graphsFailedTitle) == "Evidence graphs")
+        #expect(L10n.string(L10n.Sources.graphsFailedDetail) == "Couldn’t be read")
+        #expect(L10n.string(L10n.Sources.graphsLoading) == "Evidence graphs loading")
     }
 
     @Test func statusMatchesAnyGraphOfTheSource() async {

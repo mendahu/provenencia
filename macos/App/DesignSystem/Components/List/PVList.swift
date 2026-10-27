@@ -242,11 +242,13 @@ struct PVListDetail {
 }
 
 /// One cell of a `PVList` detail column, framed to its column width. A `nil`
-/// detail leaves the cell empty at the same width. Rows that are not a
-/// `PVList` row (the Sources split row) draw the same cell.
+/// detail leaves the cell empty at the same width. A `nil` width hugs the
+/// content. Rows that are not a `PVList` row (the Sources list row's second
+/// line) draw the same cell.
 struct PVListDetailCell: View {
     let detail: PVListDetail?
-    let width: CGFloat
+    let width: CGFloat?
+    var iconSize: CGFloat = 14
 
     var body: some View {
         content
@@ -260,7 +262,7 @@ struct PVListDetailCell: View {
             let color = detail.faint ? PVColor.textFaint : PVColor.textMuted
             let cell = HStack(spacing: 6) {
                 if let icon = detail.icon {
-                    PVIcon(icon, size: 14)
+                    PVIcon(icon, size: iconSize)
                 }
                 Text(verbatim: detail.text)
                     .font(PVFont.body(size: PVTypeScale.caption))

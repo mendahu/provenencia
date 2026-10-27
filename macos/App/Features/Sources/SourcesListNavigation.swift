@@ -1,7 +1,7 @@
 import Foundation
 
-/// Pure navigation helpers for the Sources list rows and tokens and the Source
-/// page graph cards.
+/// Pure navigation helpers for the Sources list rows and their graph buttons and
+/// the Source page graph cards.
 enum SourcesListNavigation {
     /// Opens the Source filing page.
     static func pageLocation(for source: CatalogSource) -> WorkspaceLocation {
