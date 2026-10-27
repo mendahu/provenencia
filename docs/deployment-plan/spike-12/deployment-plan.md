@@ -35,6 +35,7 @@ Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
 | Same — Problem 1, several Evidence graphs per Source | S12-03 – S12-15 | S12-D2 – S12-D5 |
 | Same — graph ↔ Artifact association | S12-03, S12-04, S12-05, S12-10, S12-12, S12-13 | S12-D3, S12-D4 |
 | [S12-01 plan review](prs/S12-01-copy-source-engine.review.md) M-9 — Add Source and Copy Source refresh the Sources list two ways | S12-16 | — |
+| Search hit kinds repeated as Swift literals, not pinned to `core/search`, before graphs add a kind (user, 2026-10-27) | S12-19 | — |
 | [`dogfood/ux.md`](../../dogfood/ux.md) — "Dense Evidence graphs (census-scale)" (2026-09-24, descoped from Spike 10): split a census so the household you care about is on its own graph | S12-03 – S12-15 | S12-D2 – S12-D5 |
 
 **Back in the ideas folder** — [`ideas/source-structure-later.md`](../../ideas/source-structure-later.md): nested Sources, derivation links, named templates, per-graph credibility, layered citation output. [`ideas/archive/graph-focus-views.md`](../../ideas/archive/graph-focus-views.md) (archived 2026-10-24): focus views for one large graph, including the "layers or filters" half of the dense-graphs dogfood note.
@@ -126,7 +127,8 @@ These are the calls for this spike. PR plans treat them as binding.
 | S12-12 | Graph form | 4 | Create and edit a graph: name, description, the shared Artifact checklist | S12-D3 | S12-02, S12-11, S12-D3 | [Plan](prs/S12-12-graph-form.md) | Landed #557 |
 | S12-13 | Artifact graph checkboxes | 4 | Graph checkboxes in the Add Artifact dialog and Artifact card edit, shown with two or more graphs; Swift only | S12-D4 | S12-12, S12-D4 | [Plan](prs/S12-13-artifact-graph-checkboxes.md) | Landed #562 |
 | S12-14 | Graph counts in the Sources list and on the Source page | 4 | Each Sources list row shows a status badge and a button per graph with its progress, the button opening it; the Source page's graph cards show the count line; the Status filter reads each graph, with In progress redefined; `primary_count` removed | S12-D5 | S12-08, S12-D5 | [Plan](prs/S12-14-sources-list-graph-tokens.md) | In review #576  |
-| S12-15 | Graphs in the omnibar | 4 | Graphs as a searchable kind; a hit opens the graph; the hit's Source projected on two new search-index display columns (migration) | — | S12-08 | [Plan](prs/S12-15-graph-search.md) | Planned |
+| S12-19 | Typed omnibar hit kinds | 4 | `CatalogSearchKind` spells the search kinds once in Swift, pinned to `core/search` `Registry`, so a graph kind can't be missed in the app | — | — | [Plan](prs/S12-19-catalog-search-kind.md) | In review #582 |
+| S12-15 | Graphs in the omnibar | 4 | Graphs as a searchable kind; a hit opens the graph; the hit's Source projected on two new search-index display columns (migration) | — | S12-08, S12-19 | [Plan](prs/S12-15-graph-search.md) | Planned |
 | S12-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -177,13 +179,14 @@ SLICE 4 — Graphs in the UI
   ✎ S12-D3 ──▶ S12-12  Graph form
   ✎ S12-D4 ──▶ S12-13  Artifact graph checkboxes
   ✎ S12-D5 ──▶ S12-14  Graph counts in the Sources list and on the Source page
+  S12-19  Typed omnibar hit kinds
   S12-15  Graphs in the omnibar
   Check: the dogfood bar's census case end to end.
 
 S12-99 — Dogfood close / docs
 ```
 
-Which PRs can run in parallel: slice 1 is independent of slices 2 and 3 and can ship first. After S12-03, S12-04, S12-06 and S12-07 can run in parallel. After S12-08, S12-09, S12-10, S12-11, S12-14 and S12-15 are independent of each other.
+Which PRs can run in parallel: slice 1 is independent of slices 2 and 3 and can ship first. After S12-03, S12-04, S12-06 and S12-07 can run in parallel. After S12-08, S12-09, S12-10, S12-11, S12-14 and S12-15 are independent of each other. S12-19 depends on nothing and goes before S12-15.
 
 ### Dependencies at a glance
 
@@ -199,6 +202,7 @@ S12-03 ──▶ S12-07
 S12-05, S12-07 ──▶ S12-08
 S12-08 ──▶ S12-18 ──▶ S12-09
 S12-08 ──▶ S12-09, S12-14, S12-15
+S12-19 ──▶ S12-15
 S12-05, S12-08 ──▶ S12-10
 S12-05, S12-08 ──▶ S12-11 ──▶ S12-12 ──▶ S12-13
 S12-D2 ──▶ S12-11   S12-D3 ──▶ S12-12   S12-D4 ──▶ S12-13   S12-D5 ──▶ S12-14
@@ -341,8 +345,15 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Check.** The bar's Finding graphs outcome, Sources list half. On a census Source with three graphs, the row shows three badges and three buttons and each Source page card shows that graph's counts; adding an Observation in one graph updates only its button and card, with no reload.
 **Context.** Working rules "Sources list", "Status is per graph", "Source page", "One graph list"; brief S12-D5.
 
+#### S12-19 — Typed omnibar hit kinds
+
+**Ships.** `CatalogSearchKind` in `macos/App/Platform/` with one case per `core/search` `Registry` kind; `CatalogSearchHitPresentation`, `CatalogSearchHitRow` and FakeStore's search switch on it; a `TestSwiftVocabularyMatchesGo` row pins it to the registry. `CatalogSearchHit.kind` stays a string, so an unknown kind still decodes.
+**Not this PR.** The `evidence_graph` case (S12-15 adds it, and the pin then asks for it); typing the request's `kinds`.
+**Check.** The Go pin passes and fails when a case is removed; the omnibar's labels and leads are unchanged; FakeStore search tests are unchanged.
+**Context.** Working rule "Omnibar"; `.cursor/rules/macos-client.mdc` (wire vocabulary spelled once); [`add-searchable-kind`](../../../.agents/skills/add-searchable-kind/SKILL.md); `api/ffi/swift_vocabulary_test.go` `catalog-wide lists` row.
+
 #### S12-15 — Graphs in the omnibar
 
 **Ships.** Graphs are a searchable kind (name, description, `GPH-` ref); a hit opens the graph. Each graph's search document carries its Source's id and ref in two new display columns (migration `000056`), and a Source rename reprojects its graphs (planning, user 2026-10-27).
 **Check.** Searching a graph's ref or a word in its description finds it and opens it.
-**Context.** Working rule "Omnibar"; `add-searchable-kind`.
+**Context.** Working rule "Omnibar"; `add-searchable-kind`; S12-19's `CatalogSearchKind` (add `evidenceGraph`, its label, lead and FakeStore priority).

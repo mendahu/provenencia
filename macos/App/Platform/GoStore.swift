@@ -1061,7 +1061,9 @@ struct GoStore: GenealogyStore {
                     neighborEnd: r.neighborEnd,
                     neighborTerm: r.hasNeighborTerm ? Self.mapEvidenceTerm(r.neighborTerm) : nil,
                     neighborTermNamesNeighbor: r.neighborTermNamesNeighbor,
-                    eventType: r.hasEventType ? Self.mapEvidenceTerm(r.eventType) : nil
+                    eventType: r.hasEventType ? Self.mapEvidenceTerm(r.eventType) : nil,
+                    layer: Self.mapEvidenceShape(r.layer),
+                    canon: Self.mapEvidenceShape(r.canon)
                 )
             },
             offers: resp.offers.map { CatalogClaimEvidenceOffer(id: $0.id, checked: $0.checked) },
@@ -1079,6 +1081,16 @@ struct GoStore: GenealogyStore {
 
     private static func mapEvidenceTerm(_ t: Provenencia_Engine_V1_ConclusionTerm) -> CatalogEvidenceTerm {
         CatalogEvidenceTerm(key: t.key, label: t.label, origin: t.origin)
+    }
+
+    private static func mapEvidenceShape(_ s: Provenencia_Engine_V1_PromoteClaimEvidenceShape) -> CatalogClaimEvidenceShape {
+        var shape = CatalogClaimEvidenceShape(pattern: KinshipPattern(wire: s.pattern), pivotID: s.pivotID)
+        switch s.pivotHeader {
+        case .person(let h)?: shape.pivot = .person(mapPersonHeader(h))
+        case .event(let h)?: shape.pivot = .event(mapEventHeader(h))
+        case nil: break
+        }
+        return shape
     }
 
     private static func mapEvidenceSection(_ s: Provenencia_Engine_V1_PromoteClaimEvidenceSection) -> CatalogClaimEvidenceSection {

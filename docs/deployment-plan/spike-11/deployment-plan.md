@@ -43,6 +43,7 @@ Promote's matching is rebuilt as a stack of pure, registry-driven layers that th
 | S11-27 follow-up — the evidence button's hover on the S11-D1 board was not built (user, 2026-10-24) | S11-34 | — (S11-D1, agreed) |
 | Dogfood, 2026-10-24: "Amy" not offered "Amy Lee Anne Long"; "Desiree" not offered "Des" ([name candidates](name-candidates.md)) | S11-43, S11-44, S11-46, S11-45, S11-47 | — |
 | [Kinship shapes](kinship-shapes.md) (was `ideas/relationships-from-shared-events.md`, from S11-14; grandparent added by the user; pulled in 2026-10-24) | S11-41, S11-38, S11-39, S11-40, S11-42 | — |
+| Dogfood, 2026-10-27 (S11-40 review): a spouse's name lines under a relationship Card compare only with the member from the Source that records the link, so "Jake Robins" conflicts with the marriage certificate's "James Kenneth Robins" while the entity's three "Jake" Sources go unseen | S11-52 | — |
 | [Find another record](promote-find-another-record.md) (was `ideas/promote-find-another-record.md`, from S11-05 D-16; pulled in 2026-10-24) | S11-35, S11-37, S11-36 | S11-D3 |
 
 **Stays in the ideas folder** — the kinship view for trees and person pages, and patterns beyond spouse, parent and grandparent: [`ideas/kinship-view.md`](../../ideas/kinship-view.md). And the rest of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md): scenario files and goldens runner, random-graph invariants, the simulated world, the scoreboard, the labeler, fitting, and dogfood export. Whether they join this spike is decided after the re-implementation.
@@ -118,6 +119,7 @@ These are the calls for this spike. PR plans treat them as binding.
 - **A separate, lazy query per row** ([claim evidence](claim-evidence.md#separate-from-matching)): inputs are the page's targets, not matching internals.
 - **Lines** ([lines](claim-evidence.md#lines)): one per member per property, grouped by property, identical values collapsed; `Same` / `Equivalent` start checked; every line can be pinned, only the default check depends on the relation. No "select all".
 - **Relationships** ([relationships](claim-evidence.md#evidence-through-relationships)): a corresponding segment is its own checkable line that pins the bundled plumbing (bridge ends, everything on the bridge, the neighbor's defining properties, e.g. `event_type`); the neighbor's other properties are checkable lines under it.
+- **A related person's lines compare with every member** (user, 2026-10-27; S11-52). Under a relationship Card whose neighbor is a person, the neighbor's other properties are compared with all of that entity's accepted members, as the row's own property lines are: a spouse is one person recorded across many Sources, and the evidence that the Source's "Jake Robins" is that person lives in every Source that names him. An event neighbor keeps S11-19 D-13's scope, the members of the Source that records the link ("this birth with that birth only"). Which kinds widen is a registry entry in the evidence section, not a kind check in `bundles`. Supersedes S11-19 D-13 for person neighbors.
 
 ## PR map
 
@@ -166,8 +168,9 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-50 | Matching warms while the project opens | 9 | `WarmOnOpen` loads the shortlist's kinds and builds the name index behind the open spinner; drops re-warm in the same call; budgets gain an open budget and cold becomes the first proposal after open | — | — | [plan](prs/S11-50-warm-matching-at-open.md) | Landed #570 |
 | S11-39 | Matching reads kinship shapes | 9 | The layer loader derives the Source side's implied links and `loadCanon` reads the canon's from the graph cache, both through one `linkSet` merge; graph alignment counts a paired shape once; goldens for marriage ↔ spouse, birth parents ↔ parent, chain ↔ grandparent; the large-source fixture gains a 12-generation tree | — | S11-49, S11-50 | [plan](prs/S11-39-matching-reads-kinship.md) | Landed #572 |
 | S11-51 | One person's links for every reader | 9 | S11-39's `linkSet` merge moves from `promotealign` to `core/kinship` and takes in `loadCanon`'s implied-link merge; `canonlinks.Reader.Relationships` returns a person's recorded and implied links for S11-40 and Spike 13's Person page | — | S11-39 | [plan](prs/S11-51-person-links.md) | Landed #575 |
-| S11-40 | Implied links in claim evidence | 9 | `canonLinks` reads the canon's implied links from the graph cache; a corresponding implied link gives a relationship line with how each side recorded it and the event behind it, a bundle of every bridge behind it, through the RPC to Swift | — | S11-39, S11-51 | [plan](prs/S11-40-implied-links-evidence.md) | Planned |
+| S11-40 | Implied links in claim evidence | 9 | `canonLinks` reads the canon's implied links from the graph cache; a corresponding implied link gives a relationship line with how each side recorded it and the event behind it, a bundle of every bridge behind it, through the RPC to Swift | — | S11-39, S11-51 | [plan](prs/S11-40-implied-links-evidence.md) | Landed #579 |
 | S11-42 | Implied links on the evidence sheet | 9 | The sheet words S11-40's line ("both are spouses in the marriage on …") in the existing relationship Card; L10n | — | S11-40 | — | Scoped |
+| S11-52 | A related person's lines compare with every member | 5 | Under a relationship Card, a person neighbor's property lines compare with all of the entity's accepted members, not only the linking Source's; event neighbors unchanged; a registry entry names the kinds | — | S11-40 | — | Scoped |
 | S11-43 | Lower the candidate gate | 10 | `alignment.MinSimilarity` 0.5 → 0.4 with its inventory row; a test that "Amy" gets "Amy Lee Anne Long" as an alternative | — | — | — | Scoped |
 | S11-44 | Des as a nickname of Desiree and Desirae | 10 | `{desiree, des}` and `{desirae, des}` in `nicknameSets` with a `CacheVersion` bump; a command copies new product nicknames and new seeded subject vocabulary (S11-48's Properties, bindings and terms) into the open catalog | — | S11-28, S11-48 | — | Scoped |
 | S11-47 | Promote suggests a record or nothing | 10 | Unplaced proposal rows carry no target and no `weak` / `no_match` reason; possible duplicates found among unplaced rows; Swift drafts a handle or unset only | — | — | — | Scoped |
@@ -237,6 +240,10 @@ SLICE 5 — Claim evidence
   ✎ S11-D2 ──▶ S11-20  Claim evidence sheet
   Check: five named members show as matches with identical values collapsed;
          "They have a matching birth event" pins its bundle; pins land on every member; two people with a likeness show both crops.
+  S11-52  A related person's lines compare with every member   (follow-up, after S11-40)
+  Check (S11-52): a spouse recorded as "Jake Robins" or "Jake" in three Sources and
+         "James Kenneth Robins" in three shows the Jake lines as matches under
+         "they share a spouse", beside the James Kenneth Robins line.
 
 SLICE 6 — Connection subrows
   S11-26  Connections file by their ends   (any time)
@@ -319,6 +326,7 @@ S11-37 ──┤
 S11-D3 ──┴──▶ S11-36
 S11-41 ──▶ S11-38 ──▶ S11-49 ──┐
 S11-50 ─────────────────────┴──▶ S11-39 ──▶ S11-51 ──▶ S11-40 ──▶ S11-42
+                                                        S11-40 ──▶ S11-52
                                             S11-51 ──▶ S13-04   (Spike 13)
 S11-28 ──▶ S11-44
 S11-46, S11-28 ──▶ S11-45
@@ -531,6 +539,16 @@ Split from S11-20 when it was planned (user, 2026-10-22): the engine half of the
 **Not this PR.** Engine and wire (S11-25, S11-32). Opening the sheet from a connection subrow (not planned, decided here for S11-D1's note).
 **Check.** The sheet reads as sentences; no "Through <name>"; checking a relationship line pins it; two people with a likeness show both images.
 **Context.** [S11-D2](design/archive/S11-D2-evidence-sheet.md); [wording](claim-evidence.md#wording); [plan](prs/S11-20-claim-evidence-sheet.md).
+
+### Slice 5 follow-up — A related person's lines
+
+#### S11-52 — A related person's lines compare with every member
+
+Found in dogfood on 2026-10-27, reviewing S11-40 (user): under "they share a spouse", the spouse's name section showed one line, the marriage certificate's "James Kenneth Robins", as a conflict with the Source's "Jake Robins", while three of the entity's six Sources say "Jake Robins" or "Jake". The Card itself agrees, because the relationship compares with the entity's merged values; the lines under it do not.
+**Ships.** Working rule "A related person's lines compare with every member". `bundles` in `core/claimevidence/build.go` passes `Sections` all of a person neighbor's accepted members (`Neighbor.Members`), not only the ones a bundle names; an event neighbor keeps today's scope. The evidence section of `core/matchregistry` gains the entry that says which neighbor kinds compare with every member (person yes, event no), read by `bundles`. The evidence query loads values for those members: S11-19 PRF-1's `bridgedOnly` trim stays for event neighbors and is skipped for the kinds the entry widens. Pins and default checks follow the existing line rules (matches checked, the rest unchecked); bundles and their pin ids do not change. `claim-evidence.md` § Evidence through relationships says it. No new chrome: the Card already draws several records per section.
+**Not this PR.** Place neighbors (an event's place link) keep today's scope unless the plan finds a reason and the user agrees. Whether "Jake" and "James" compare as the same given name ([name candidates](name-candidates.md), S11-28's nickname sets).
+**Check.** The Jake Robins case above shows the "Jake Robins" and "Jake" members as matching lines, checked, and the three "James Kenneth Robins" members as one collapsed line, unchecked, as the row's own Name section would; a birth neighbor's date lines still show only the linking Source's birth; `TestLargeSourceBudgets` stays within budget.
+**Context.** [`claim-evidence.md`](claim-evidence.md#evidence-through-relationships); S11-19 plan D-13 and its ship log PRF-1; `core/claimevidence/build.go` `bundles`, `core/database/promotealign/evidence.go`; [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md).
 
 ### Slice 3 follow-up — Sex and gender
 

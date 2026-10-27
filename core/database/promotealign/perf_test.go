@@ -31,6 +31,9 @@ const (
 	budgetEvidence     = 100 * time.Millisecond
 	budgetOnePlaceCold = 5 * time.Second
 	budgetOnePlaceWarm = 3 * time.Second
+	// budgetPlaceEvidence is a place row's evidence on a cold graph: without
+	// kinship links to derive it reads two nodes, not the place's 6,000 events.
+	budgetPlaceEvidence = 10 * time.Millisecond
 )
 
 // largeFixture is a realistic large catalog (largeShape) and the Sources the
@@ -269,6 +272,28 @@ func TestLargeSourceBudgets(t *testing.T) {
 		proposeOnePlace()
 		d := fastest(3, func() time.Duration { return since(proposeOnePlace) })
 		over(t, "warm proposal on the one-place Source", d, budgetOnePlaceWarm)
+	})
+
+	// A place has no kinship links, so evidence on its row must not walk its
+	// 6,000 events for them.
+	t.Run("evidence on a place row", func(t *testing.T) {
+		var city *graphalign.Row
+		p := f.propose(onePlaceGraph, nil)
+		for i, r := range p.Rows {
+			if r.Target == graphalign.TargetHandle && r.Kind == "place" {
+				city = &p.Rows[i]
+			}
+		}
+		if city == nil {
+			t.Fatal("the one-place Source has no place row with a handle")
+		}
+		req := promotealign.EvidenceRequest{GraphID: onePlaceGraph, SubjectID: city.SubjectID, HandleID: city.HandleID}
+		d := fastest(3, func() time.Duration {
+			f.c.Graph().Drop()
+			must(t, catalogsession.WarmOnOpen(f.c))
+			return since(func() { f.evidence(req) })
+		})
+		over(t, "evidence on the place row, cold", d, budgetPlaceEvidence)
 	})
 
 	// A pass over Source A touches 21 Evidence graphs; a cap of 8 evicts along

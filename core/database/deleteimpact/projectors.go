@@ -79,6 +79,7 @@ func projectObservation(tx *sql.Tx, id []byte, ref string) (string, Location, er
 	var (
 		propLabel, value, subLabel, srcTitle, srcID, citID, subID, graphID string
 		propLabelN, valueN, subLabelN, srcTitleN                           sql.NullString
+		subRef                                                             string
 		srcIDB, citIDB, subIDB, graphIDB                                   []byte
 	)
 	err := tx.QueryRow(`
@@ -88,7 +89,7 @@ func projectObservation(tx *sql.Tx, id []byte, ref string) (string, Location, er
 				NULLIF(TRIM(dv.phrase), ''),
 				CASE WHEN dv.start_year IS NOT NULL THEN CAST(dv.start_year AS TEXT) END,
 				''),
-			sub.label, src.title, src.id, o.citation_id, o.subject_id, sub.graph_id
+			sub.label, sub.ref, src.title, src.id, o.citation_id, o.subject_id, sub.graph_id
 		FROM observations o
 		JOIN properties p ON p.id = o.property_id
 		JOIN citations c ON c.id = o.citation_id
@@ -100,7 +101,7 @@ func projectObservation(tx *sql.Tx, id []byte, ref string) (string, Location, er
 		LEFT JOIN subjects vs ON vs.id = o.value_subject_id
 		LEFT JOIN date_values dv ON dv.id = o.value_date_id
 		WHERE o.id = ?`, id,
-	).Scan(&propLabelN, &valueN, &subLabelN, &srcTitleN, &srcIDB, &citIDB, &subIDB, &graphIDB)
+	).Scan(&propLabelN, &valueN, &subLabelN, &subRef, &srcTitleN, &srcIDB, &citIDB, &subIDB, &graphIDB)
 	if err == sql.ErrNoRows {
 		return ref, Location{
 			Section: sectionSources, SourceSurface: surfaceCitationComposer,
@@ -133,33 +134,33 @@ func projectObservation(tx *sql.Tx, id []byte, ref string) (string, Location, er
 		CitationID:    citID,
 		ObservationID: database.UUIDString(id),
 		SourceSurface: surfaceCitationComposer,
-		Ref:           ref,
-		Title:         subLabel,
+		Ref:           subRef,
+		Title:         titleOrRef(subLabel, subRef),
 		SourceTitle:   srcTitle,
 	}, nil
 }
 
+// projectSubject lists the Subject by its label and opens its graph's canvas
+// with the Subject selected. The location is a graph location, so it names
+// the Source (graphLocation).
 func projectSubject(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
-	var label string
+	var label, srcRef, srcTitle sql.NullString
 	var srcID, graphID []byte
-	err := tx.QueryRow(`SELECT COALESCE(label, ''), source_id, graph_id FROM subjects WHERE id = ?`, id).
-		Scan(&label, &srcID, &graphID)
+	err := tx.QueryRow(`
+		SELECT sub.label, sub.source_id, sub.graph_id, src.ref, src.title
+		FROM subjects sub
+		JOIN sources src ON src.id = sub.source_id
+		WHERE sub.id = ?`, id,
+	).Scan(&label, &srcID, &graphID, &srcRef, &srcTitle)
 	if err == sql.ErrNoRows {
 		return ref, Location{Section: sectionSources, SourceSurface: surfaceGraph, SubjectID: database.UUIDString(id), Ref: ref}, nil
 	}
 	if err != nil {
 		return "", Location{}, err
 	}
-	title := titleOrRef(label, ref)
-	return title, Location{
-		Section:       sectionSources,
-		SourceID:      database.UUIDString(srcID),
-		GraphID:       database.UUIDString(graphID),
-		SubjectID:     database.UUIDString(id),
-		SourceSurface: surfaceGraph,
-		Ref:           ref,
-		Title:         title,
-	}, nil
+	loc := graphLocation(srcID, graphID, srcRef.String, srcTitle.String)
+	loc.SubjectID = database.UUIDString(id)
+	return titleOrRef(label.String, ref), loc, nil
 }
 
 func projectCitation(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
@@ -178,17 +179,17 @@ func projectCitation(tx *sql.Tx, id []byte, ref string) (string, Location, error
 	if err != nil {
 		return "", Location{}, err
 	}
-	locTitle := ref
+	locRef, locTitle := ref, ref
 	var subID, graphID []byte
-	var subLabel sql.NullString
+	var subLabel, subRef sql.NullString
 	obsErr := tx.QueryRow(`
-		SELECT o.subject_id, sub.label, sub.graph_id
+		SELECT o.subject_id, sub.label, sub.ref, sub.graph_id
 		FROM observations o
 		JOIN subjects sub ON sub.id = o.subject_id
 		WHERE o.citation_id = ?
 		ORDER BY o.ref COLLATE NOCASE
 		LIMIT 1`, id,
-	).Scan(&subID, &subLabel, &graphID)
+	).Scan(&subID, &subLabel, &subRef, &graphID)
 	if obsErr != nil && obsErr != sql.ErrNoRows {
 		return "", Location{}, obsErr
 	}
@@ -200,15 +201,12 @@ func projectCitation(tx *sql.Tx, id []byte, ref string) (string, Location, error
 			return "", Location{}, err
 		}
 	}
-	if label := strings.TrimSpace(subLabel.String); label != "" {
-		locTitle = label
+	if subRef.Valid {
+		locRef, locTitle = subRef.String, titleOrRef(subLabel.String, subRef.String)
 	}
 	title := listedSnippet(transcription.String, listedSnippetMaxRunes)
 	if title == "" {
-		title = locTitle
-	}
-	if title == "" {
-		title = ref
+		title = titleOrRef(subLabel.String, ref)
 	}
 	return title, Location{
 		Section:       sectionSources,
@@ -218,7 +216,7 @@ func projectCitation(tx *sql.Tx, id []byte, ref string) (string, Location, error
 		CitationID:    database.UUIDString(id),
 		ArtifactID:    database.UUIDString(artID),
 		SourceSurface: surfaceCitationComposer,
-		Ref:           ref,
+		Ref:           locRef,
 		Title:         locTitle,
 		SourceTitle:   srcTitle.String,
 	}, nil
@@ -276,26 +274,42 @@ func projectSource(tx *sql.Tx, id []byte, ref string) (string, Location, error) 
 	}, nil
 }
 
-// projectEvidenceGraph opens the graph itself: its canvas.
+// projectEvidenceGraph lists the graph by its name and opens its canvas. The
+// location names the Source (graphLocation).
 func projectEvidenceGraph(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
 	var name string
+	var srcRef, srcTitle sql.NullString
 	var sourceID []byte
-	err := tx.QueryRow(`SELECT name, source_id FROM evidence_graphs WHERE id = ?`, id).Scan(&name, &sourceID)
+	err := tx.QueryRow(`
+		SELECT g.name, g.source_id, src.ref, src.title
+		FROM evidence_graphs g
+		JOIN sources src ON src.id = g.source_id
+		WHERE g.id = ?`, id,
+	).Scan(&name, &sourceID, &srcRef, &srcTitle)
 	if err == sql.ErrNoRows {
 		return ref, Location{Section: sectionSources, SourceSurface: surfacePage, Ref: ref}, nil
 	}
 	if err != nil {
 		return "", Location{}, err
 	}
-	title := titleOrRef(name, ref)
-	return title, Location{
+	return titleOrRef(name, ref), graphLocation(sourceID, id, srcRef.String, srcTitle.String), nil
+}
+
+// graphLocation is a graph's canvas. A graph location's Ref and Title name
+// the Source, as the app's do (the canvas breadcrumb falls back to Title for
+// the Source crumb); the graph's own name comes from its id. A
+// citationComposer location instead names its scope Subject in Ref and Title
+// and carries the Source's title in SourceTitle.
+func graphLocation(sourceID, graphID []byte, sourceRef, sourceTitle string) Location {
+	return Location{
 		Section:       sectionSources,
 		SourceID:      database.UUIDString(sourceID),
-		GraphID:       database.UUIDString(id),
+		GraphID:       database.UUIDString(graphID),
 		SourceSurface: surfaceGraph,
-		Ref:           ref,
-		Title:         title,
-	}, nil
+		Ref:           sourceRef,
+		Title:         titleOrRef(sourceTitle, sourceRef),
+		SourceTitle:   sourceTitle,
+	}
 }
 
 // projectPropertyTerm deep-links a term to its parent property's Properties inspector row.

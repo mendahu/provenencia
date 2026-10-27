@@ -19,12 +19,14 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/objectpath"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/raster"
+	"github.com/mendahu/provenencia/core/search"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -40,6 +42,7 @@ const (
 	swiftMarks      = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
 	swiftGraphKinds = "../../macos/App/Features/Workspace/Session/EvidenceGraphSnapshot.swift"
 	swiftCatalogMut = "../../macos/App/Features/Workspace/Session/CatalogMutation.swift"
+	swiftSearchKind = "../../macos/App/Platform/CatalogSearchKind.swift"
 
 	swiftRegionGeometry = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
 	swiftProjectFiles   = "../../macos/App/Platform/ProjectFiles.swift"
@@ -258,6 +261,16 @@ func subjectMarkSymbols() []string {
 	return out
 }
 
+// patternCodes is every kinship pattern code; Swift's KinshipPattern decodes
+// the claim evidence shapes with them.
+func patternCodes() []string {
+	var out []string
+	for _, p := range kinship.Patterns() {
+		out = append(out, string(p))
+	}
+	return out
+}
+
 // listStrings is every effects.List wire key; Swift's CatalogList decodes
 // WriteEffects.lists with them.
 func listStrings() []string {
@@ -266,6 +279,15 @@ func listStrings() []string {
 		out = append(out, string(l))
 	}
 	return out
+}
+
+// searchKinds is the sorted Kind of every searchable kind in the registry.
+func searchKinds() []string {
+	var out []string
+	for _, spec := range search.Registry {
+		out = append(out, spec.Kind)
+	}
+	return sorted(out...)
 }
 
 // sortedRelations is every valuecompare relation, sorted.
@@ -315,6 +337,10 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 				string(propertycompare.CauseNoValues), string(propertycompare.CauseCardinality)),
 		},
 		{
+			name: "kinship patterns", path: swiftVocabulary, enum: "KinshipPattern", re: wireCase,
+			want: sorted(append(patternCodes(), "")...),
+		},
+		{
 			name: "value relations", path: swiftVocabulary, enum: "ValueRelation", re: wireCase,
 			want: sorted(append(sortedRelations(), "")...),
 		},
@@ -346,6 +372,10 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			want: sorted(listStrings()...),
 		},
 		{
+			name: "search kinds", path: swiftSearchKind, enum: "CatalogSearchKind", re: listCase,
+			want: searchKinds(),
+		},
+		{
 			name: "subject marks", path: swiftMarks, enum: "PVMarkKey", re: subjectMark,
 			want: subjectMarkSymbols(),
 		},
@@ -375,7 +405,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 	}
 	t.Run("states and reasons tolerate a value this build doesn't know", func(t *testing.T) {
 		for _, enum := range []string{"ReconciledState", "ReconcilerReason", "PromoteReasonCode",
-			"EvidenceOutcome", "EvidencePropertyCause", "ValueRelation", "ValueCause"} {
+			"EvidenceOutcome", "EvidencePropertyCause", "KinshipPattern", "ValueRelation", "ValueCause"} {
 			if !unrecogniz.MatchString(swiftEnumBody(t, swiftVocabulary, enum)) {
 				t.Fatalf("%s has no unrecognized case", enum)
 			}

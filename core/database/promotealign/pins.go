@@ -19,7 +19,7 @@ func LinePinID(l claimevidence.Line, p claimevidence.Pin) string {
 // BundlePinID is the id of one member's side of a relationship: the neighbor,
 // the link's key and the member's bridge Subject.
 func BundlePinID(rel claimevidence.Relationship, b claimevidence.Bundle) string {
-	return "b:" + database.UUIDString(rel.Neighbor) + ":" + rel.Key.String() + ":" + database.UUIDString(b.Bridge)
+	return "b:" + database.UUIDString(rel.Neighbor) + ":" + rel.Key.String() + ":" + database.UUIDString(b.Bridges[0])
 }
 
 // PinOffer is one pin the evidence offers: the sheet shows it, Checked says

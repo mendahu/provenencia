@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"reflect"
+	"slices"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -367,7 +369,7 @@ func TestResolvePinsLikeness(t *testing.T) {
 // The offer of a spouse relationship a Source's marriage implies is checked and
 // starts with the relationship's incoming Observations.
 func TestPinOffersOfAnImpliedLayerLink(t *testing.T) {
-	e, _, _ := marriageEvidence(t, true)
+	e := marriageEvidence(t, true).e
 	if len(e.Relationships) != 1 || len(e.Relationships[0].Members) != 1 {
 		t.Fatalf("relationships %+v, want one spouse relationship with one bundle", e.Relationships)
 	}
@@ -384,4 +386,55 @@ func TestPinOffersOfAnImpliedLayerLink(t *testing.T) {
 	if len(offer.Set.Observations) < len(rel.Incoming) || !reflect.DeepEqual(offer.Set.Observations[:len(rel.Incoming)], rel.Incoming) {
 		t.Fatalf("offer observations %x, want to start with %x", offer.Set.Observations, rel.Incoming)
 	}
+}
+
+// Done on a row whose sheet was never opened pins an implied line's bundle like
+// any checked relationship.
+func TestResolvePinsImpliedCanonLink(t *testing.T) {
+	sc := marriageEvidence(t, false)
+	f := sc.f
+	r := sc.e.Relationships[0]
+	want := append(slices.Clone(r.Incoming), r.Members[0].Observations...)
+	graphID := f.graph(sc.recordSource)
+
+	t.Run("AC-2.1 default pins", func(t *testing.T) {
+		got := f.resolve(graphID, handleRow(sc.bob, sc.bobH, true), handleRow(sc.ann, sc.annH, true))
+		var set *promote.PinSet
+		for i, s := range got[0].PinSets {
+			if bytes.Equal(s.Member, sc.treeBob.ID) && len(s.Observations) == len(want) {
+				set = &got[0].PinSets[i]
+			}
+		}
+		if set == nil || !reflect.DeepEqual(set.Observations, want) {
+			t.Fatalf("Bob's pin sets = %+v, want a set of tree Bob with %x", got[0].PinSets, want)
+		}
+	})
+
+	id := promotealign.BundlePinID(r, r.Members[0])
+	t.Run("AC-2.2 the offer", func(t *testing.T) {
+		wantID := "b:" + database.UUIDString(sc.ann.ID) + ":relationship·spouse:" + database.UUIDString(sc.treeBobPart.ID)
+		if id != wantID {
+			t.Fatalf("BundlePinID = %q, want %q", id, wantID)
+		}
+		var offers int
+		for _, o := range promotealign.PinOffers(sc.e) {
+			if o.ID == id {
+				offers++
+				if !o.Checked || !reflect.DeepEqual(o.Set.Observations, want) || !bytes.Equal(o.Set.Member, sc.treeBob.ID) {
+					t.Errorf("offer = %+v", o)
+				}
+			}
+		}
+		if offers != 1 {
+			t.Fatalf("offers with id %s = %d, want 1", id, offers)
+		}
+		got := f.resolve(graphID, handleRow(sc.bob, sc.bobH, false, id), handleRow(sc.ann, sc.annH, true))
+		var found bool
+		for _, s := range got[0].PinSets {
+			found = found || (bytes.Equal(s.Member, sc.treeBob.ID) && reflect.DeepEqual(s.Observations, want))
+		}
+		if !found {
+			t.Fatalf("pin sets %+v lack the bundle's", got[0].PinSets)
+		}
+	})
 }

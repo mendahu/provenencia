@@ -417,6 +417,7 @@
 		B0E27559D6CFFEBA2093C436 /* DateRowDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0D89A265AAED569EA0CA31E /* DateRowDisplayTests.swift */; };
 		B0E8631619214033F0948729 /* DerivedPlaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B042B09EC818DE35F967C981 /* DerivedPlaceTests.swift */; };
 		B0CABB2D1B7B37092BF31774 /* ConclusionVocabulary.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C30618199D5D309E96D3DF /* ConclusionVocabulary.swift */; };
+		B0C5EA4C1A2B3C4D5E6F7081 /* CatalogSearchKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C5EA4C1A2B3C4D5E6F7082 /* CatalogSearchKind.swift */; };
 		B068D7E4621B621E234A1886 /* ConclusionDatePlaceLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B071B391C06B014BFC0BA7F1 /* ConclusionDatePlaceLine.swift */; };
 		A53400000000000000001001 /* DepictionValueDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000001 /* DepictionValueDraft.swift */; };
 		A53400000000000000001002 /* CitationComposerModel+Depiction.swift in Sources */ = {isa = PBXBuildFile; fileRef = A53400000000000000000002 /* CitationComposerModel+Depiction.swift */; };
@@ -867,6 +868,7 @@
 		B0D89A265AAED569EA0CA31E /* DateRowDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateRowDisplayTests.swift; sourceTree = "<group>"; };
 		B042B09EC818DE35F967C981 /* DerivedPlaceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DerivedPlaceTests.swift; sourceTree = "<group>"; };
 		B0C30618199D5D309E96D3DF /* ConclusionVocabulary.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConclusionVocabulary.swift; sourceTree = "<group>"; };
+		B0C5EA4C1A2B3C4D5E6F7082 /* CatalogSearchKind.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogSearchKind.swift; sourceTree = "<group>"; };
 		B071B391C06B014BFC0BA7F1 /* ConclusionDatePlaceLine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConclusionDatePlaceLine.swift; sourceTree = "<group>"; };
 		A53400000000000000000001 /* DepictionValueDraft.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "DepictionValueDraft.swift"; sourceTree = "<group>"; };
 		A53400000000000000000002 /* CitationComposerModel+Depiction.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "CitationComposerModel+Depiction.swift"; sourceTree = "<group>"; };
@@ -1199,6 +1201,7 @@
 				F10C63066463B02E05808F78 /* PreviewFixtures.swift */,
 				E07E52EC527189A4A377F9AD /* FieldSlug.swift */,
 				B0C30618199D5D309E96D3DF /* ConclusionVocabulary.swift */,
+				B0C5EA4C1A2B3C4D5E6F7082 /* CatalogSearchKind.swift */,
 			);
 			path = Platform;
 			sourceTree = "<group>";
@@ -2434,6 +2437,7 @@
 				B0AAC26F5EC2839B696B4874 /* ReconciledValueRowModel.swift in Sources */,
 				B053526B050C75CF562118C1 /* ReconciliationRecord.swift in Sources */,
 				B0CABB2D1B7B37092BF31774 /* ConclusionVocabulary.swift in Sources */,
+				B0C5EA4C1A2B3C4D5E6F7081 /* CatalogSearchKind.swift in Sources */,
 				B068D7E4621B621E234A1886 /* ConclusionDatePlaceLine.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
