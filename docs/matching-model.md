@@ -1,6 +1,6 @@
 # Matching model
 
-The matching model Spike 11 builds. Layers land in S11-02 – S11-16; until then [`matching.md`](matching.md) describes the running code. The reasoning behind each choice is in [`deployment-plan/spike-11/comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md); this page is the "what", kept true as the layers land.
+The matching model Spike 11 built; all six layers run, and [`matching.md`](matching.md) says where. The reasoning behind each choice is in [`deployment-plan/spike-11/comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md); this page is the "what".
 
 ## The stack
 
@@ -210,7 +210,7 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 
 ## Not knobs
 
-These are identifiers or catalog data, not tunables, and have no row: the vocabulary origins and primary kinds (`core/vocabkey`), `AliasAbbreviation`, `AliasNickname`, `valuecompare.WesternPattern` (a key), `value.Names.Aliases` and `value.Names.Patterns` (catalog rows, passed in at run time), and `graphalign` `Config.Value` (the value section with catalog data, filled by `valuerules.Load`).
+These are identifiers or catalog data, not tunables, and have no row: the vocabulary origins and primary kinds (`core/vocabkey`), `AliasAbbreviation`, `AliasNickname`, `valuecompare.WesternPattern` (a key), `value.Names.Aliases` (catalog rows for matching, the product seed for the reconciler through `valuerules.Product`) and `value.Names.Patterns` (catalog rows, passed in at run time), and `graphalign` `Config.Value` (the value section with catalog data, filled by `valuerules.Load`).
 
 ## Removed knobs
 

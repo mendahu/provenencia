@@ -24,7 +24,8 @@
 package namealiases
 
 // nicknameSets is the product nickname table. Install writes it.
-// Scoring reads the catalog copy, not this variable.
+// Matching reads the catalog rows; the reconciler cache reads this seed through
+// valuerules.Product, so an edit bumps autoreconciler.CacheVersion.
 var nicknameSets = [][]string{
 	{"aaron", "ron", "ronnie"},
 	{"abbigail", "abbe", "abbey", "abbi", "abbie", "abby", "gail", "nabby"},

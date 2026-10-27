@@ -70,7 +70,7 @@ Plugin rows are a future plugin manager, not researcher trash.
 ```text
 Impact
   allowed          bool
-  gate             enum     // ok | inbound | not_found | edge_locked | infra | origin_locked
+  gate             enum     // ok | inbound | not_found | edge_locked | last_graph | infra | origin_locked (the `Gate` constants in core/database/deleteimpact/kinds.go)
   groups[]                  // inbound only; empty when gate ≠ inbound
     via, kind, total, listed[] { id, ref, title, location }
   cascades[]                // non-blocking; same shape; rows that go with the target

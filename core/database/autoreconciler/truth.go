@@ -43,7 +43,7 @@ func truthRows(q graphcache.Querier, ids [][]byte) (map[string][]graphcache.Trut
 			return err
 		}
 		for _, g := range groups {
-			res, err := autoreconcile.Reconcile(valueRules, g.valueType, g.candidates, nil, g.cardinality)
+			res, err := autoreconcile.Reconcile(ValueRules, g.valueType, g.candidates, nil, g.cardinality)
 			if err != nil {
 				return err
 			}

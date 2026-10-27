@@ -23,7 +23,7 @@ Audience: someone comfortable with JavaScript and Go, new to Apple platforms.
 | `Features/Metadata/` | Source metadata-field vocabulary (the Metadata page). | `MetadataView` |
 | `Features/SourceTypes/` | Source-type vocabulary. | `SourceTypesView` |
 | `Features/Properties/` | Properties and their Subject-type bindings (the Properties page). | `PropertiesView` |
-| `Features/EvidenceGraph/` | Evidence graph for one source: cards, connect, composer handoff. | `EvidenceGraphView` |
+| `Features/EvidenceGraph/` | One Evidence graph, opened by graph id: cards, connect, composer handoff. | `EvidenceGraphView` |
 | `Features/GraphCanvas/` | Product-agnostic pan/zoom canvas used by the evidence graph; the item contract is in its [README](../macos/App/Features/GraphCanvas/README.md#items-appkit-owns-where-items-are). | `GraphCanvasScrollView` |
 | `Features/CitationComposer/` | Citation place: artifact, locator, observations. | `CitationComposerView` |
 | `Features/OCR/` | Reusable on-device text recognition (Vision). Not a screen. | `OCREngine`, `OCRImage` |

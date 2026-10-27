@@ -60,8 +60,9 @@ func negative(c subjectprofile.Candidate) subjectprofile.Candidate {
 	return c
 }
 
-// reconcile runs the reconciler over cs the way the cache does for the
-// property: the property's value type and cardinality, no concluded value.
+// reconcile runs the reconciler over cs with the shipped registry and no alias
+// tables (a layer package cannot reach the product seed in core/database), the
+// property's value type and cardinality, and no concluded value.
 func reconcile(t testing.TB, key vocabkey.PropertyKey, cs []subjectprofile.Candidate) []autoreconcile.ReconciledValue {
 	t.Helper()
 	meta := subjectcomparetest.Metas()[key]

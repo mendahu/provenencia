@@ -4,12 +4,7 @@
 
 Matching decides whether two things are the same Person, Event or Place. It is a stack of pure layers over one registry, [`core/matchregistry`](../core/matchregistry); the [`add-match-rule`](../.agents/skills/add-match-rule/SKILL.md) skill is how to change one.
 
-| Layer | Package | Says |
-| --- | --- | --- |
-| 1 Value compare | [`core/valuecompare`](../core/valuecompare) | How two values of one type relate |
-| 2 Property compare | [`core/propertycompare`](../core/propertycompare) | Whether two sides agree on one property |
-| 3 Subject compare | [`core/subjectcompare`](../core/subjectcompare) | How alike two Subjects of one type are: similarity and evidence |
-| 4 Entity compare | [`core/subjectprofile`](../core/subjectprofile) then layer 3 | Whether a Subject belongs with an entity's conclusion |
+The six layers, their packages and what each says are in the stack ([`matching-model.md#the-stack`](matching-model.md#the-stack)).
 
 ## Where it runs
 
@@ -21,4 +16,4 @@ Matching decides whether two things are the same Person, Event or Place. It is a
 
 ## Not built yet
 
-Segment compare (S11-14), the shortlist index (S11-15) and the layer 6 walk (S11-16). Merge hints are entity against entity, `subjectcompare.Compare` on two `Build` profiles; no surface uses them.
+Merge hints are entity against entity, `subjectcompare.Compare` on two `Build` profiles; no surface uses them.

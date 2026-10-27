@@ -309,7 +309,7 @@ source          SRN           CSR                     A Source reified so other 
 
 Both prefixes are required for every Subject type, including researcher-defined types. `ref_prefix` mints canonical entity refs in the Conclusion layer (`PER-7KD45`); `candidate_ref_prefix` mints Interpretation subject refs (`CPR-7KD45`). Same format, different prefix — see [`catalog-refs.md`](catalog-refs.md) §2.
 
-Do not reuse the reserved catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`. Both columns share **one** three-letter namespace, so a new prefix must not collide with any existing value in *either* column. The leading `C` on candidate prefixes is convention only and is not validated.
+Do not reuse a reserved catalog prefix (`core/ref` `reservedPrefixes`; the table is in [`catalog-refs.md`](catalog-refs.md)). Both columns share **one** three-letter namespace, so a new prefix must not collide with any existing value in *either* column. The leading `C` on candidate prefixes is convention only and is not validated.
 
 `SRN` is used for source-subjects so they do not collide in speech with Source catalog refs (`SRC-…`); `CSR` is its candidate counterpart.
 
@@ -605,7 +605,7 @@ abbreviations
 
 The nickname table is `nicknameSets` in [`core/database/namealiases/nicknames_seed.go`](../core/database/namealiases/nicknames_seed.go). Each set is one canonical name and the nicknames listed for it. A nickname that belongs to two canonical names does not join those sets, so Chris connects Christine and also Christopher, and Tina does not connect Christopher. The list is names.csv from [carltonnorthern/nicknames](https://github.com/carltonnorthern/nicknames), Apache License 2.0. The license and the upstream credit are in [`core/database/namealiases/third_party/nicknames/`](../core/database/namealiases/third_party/nicknames/).
 
-`Register` appends a table for a future plugin. Install writes whatever is registered at catalog create. Open does not heal. Scoring reads these rows and no in-code list. Opening a project loads them once onto the catalog graph and keeps them until the project closes. A future editor calls `namealiases.Invalidate` after a change. An empty catalog makes no abbreviation or nickname hits. `namealiases.AddProductNicknames` copies the product nickname list into a catalog created before that list grew. A set already stored in full is left as it is. Call `namealiases.Invalidate` if that catalog stays open.
+`Register` appends a table for a future plugin. Install writes whatever is registered at catalog create. Open does not heal. Matching reads these rows; the reconciler cache reads the product seed, so a seed edit bumps `CacheVersion`. Each product set is a head and the names that stand for it (`FormalFirst`); `nicknameDirections` says which name a fold keeps where the list pairs two names both ways (S11-28). Opening a project loads them once onto the catalog graph and keeps them until the project closes. A future editor calls `namealiases.Invalidate` after a change. An empty catalog makes no abbreviation or nickname hits. `namealiases.AddProductNicknames` copies the product nickname list into a catalog created before that list grew. A set already stored in full is left as it is. Call `namealiases.Invalidate` if that catalog stays open.
 
 ---
 

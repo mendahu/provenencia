@@ -66,7 +66,7 @@ type Options struct {
 // as positives and the values a stronger negative denied as negatives;
 // outvoted, weak and provisional values are left out, and a Property with
 // nothing left is absent. reconcile is the rules the reconciler runs under:
-// pass matchregistry.Default().Value, as the cache does, not a catalog's
+// pass autoreconciler.ValueRules, as the cache does, not a catalog's
 // valuerules. metas give each Property's value type and cardinality for
 // Options.Excluding. lifespans is the registry's Subject.Lifespans for the
 // side's kind; for each, a window and a span are added when the life events

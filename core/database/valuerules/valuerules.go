@@ -34,3 +34,12 @@ func Load(g *graphcache.Graph, q Querier) (rules valuecompare.Rules, namePattern
 	}
 	return rules, loaded.Key, nil
 }
+
+// Product returns the rules the reconciler cache reads: the shipped registry
+// and the product alias seed, never a catalog's own rows or name formats. The
+// cache then changes only when autoreconciler.CacheVersion does.
+func Product() valuecompare.Rules {
+	rules := matchregistry.Default().Value
+	rules.Names.Aliases = namealiases.ProductIndex()
+	return rules
+}

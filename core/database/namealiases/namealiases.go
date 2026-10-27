@@ -1,7 +1,8 @@
 // Package namealiases stores abbreviation and nickname tables. The product
 // lists are in registry.go. Install writes them once when a catalog is
 // created. AddProductNicknames copies the current product nickname sets into
-// a catalog that already exists. Scoring reads these rows and no other list.
+// a catalog that already exists. Matching reads these rows and no other list;
+// the reconciler cache reads the product seed through valuerules.Product.
 // An open project keeps the alias index built from those rows on the catalog
 // graph until the project closes; Invalidate rebuilds it.
 package namealiases
@@ -217,6 +218,9 @@ func Rules(g *graphcache.Graph, q Querier, base valuecompare.Rules) (valuecompar
 	base.Names.Aliases = buildIndex(tables)
 	return base, nil
 }
+
+// ProductIndex is the alias index of the product seed, for the reconciler cache.
+func ProductIndex() valuecompare.AliasIndex { return buildIndex(ProductTables()) }
 
 // buildIndex keys the tables with valueWords, the word rules that already key
 // every stored alias token, so storage, the warm index and the cold index use

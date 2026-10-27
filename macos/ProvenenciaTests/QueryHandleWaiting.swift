@@ -30,9 +30,10 @@ func waitUntil(timeout: Duration = .seconds(2), _ condition: () -> Bool) async -
     return condition()
 }
 
-/// Waits until a catalog search has settled: not loading, and either searched or failed.
-/// Ten seconds, not two: the debounce runs on the main actor, which a full-suite run keeps busy.
+/// Waits until a catalog search has settled by awaiting the search itself. No
+/// deadline: a full-suite run keeps the main actor busy for longer than any
+/// fixed timeout the debounce could be given (CI runs have taken 17 seconds).
 @MainActor
 func waitForSearch(_ model: CatalogSearchModel) async {
-    _ = await waitUntil(timeout: .seconds(10)) { !model.isLoading && (model.hasSearched || model.searchError != nil) }
+    await model.settle()
 }
