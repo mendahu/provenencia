@@ -8,8 +8,10 @@ of that project's License.txt.
 
 This file was changed from names.csv. Each canonical name and its direct
 nicknames are one equivalence set. Sets that only share a nickname were
-not merged. Tokens are comparison forms: lowercase, with punctuation
-removed (k.c. is kc).
+not merged. Pairs that join two different given names were removed after
+a review. Sets that are not in names.csv were added after review: desirae/des
+and desiree/des (S11-44, 2026-10). Tokens are comparison forms: lowercase,
+with punctuation removed (k.c. is kc).
 
 Credit, from that project's README:
 
