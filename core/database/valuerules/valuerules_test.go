@@ -9,14 +9,13 @@ import (
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/matchregistry"
-	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 func given(text string) valuecompare.Value {
-	return valuecompare.Value{Type: propertymeta.ValueTypeName, NamePattern: valuecompare.WesternPattern,
-		Name: &namevalue.Value{Parts: []namevalue.Part{{Value: text, Type: namevalue.PartTypeGiven}}}}
+	return valuecompare.Value{Type: propertymeta.ValueTypeName, NamePattern: valuecompare.WesternPattern, Name: namevaluetest.Given(text)}
 }
 
 func newCatalog(t *testing.T) *database.Catalog {

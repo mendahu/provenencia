@@ -8,7 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/matchregistry"
-	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/onboarding"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecompare"
@@ -71,7 +71,5 @@ func TestDoKeepsAliasTablesForTheOpenProject(t *testing.T) {
 }
 
 func aliasGiven(text string) valuecompare.Value {
-	return valuecompare.Value{Type: propertymeta.ValueTypeName, Name: &namevalue.Value{Parts: []namevalue.Part{{
-		Value: text, Type: namevalue.PartTypeGiven,
-	}}}}
+	return valuecompare.Value{Type: propertymeta.ValueTypeName, Name: namevaluetest.Given(text)}
 }
