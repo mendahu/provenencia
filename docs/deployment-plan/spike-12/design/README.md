@@ -10,7 +10,7 @@ None. Every Spike 12 brief has an agreed board.
 
 ## Archived
 
-- [S12-D5](archive/S12-D5-sources-list-graph-tokens.md) — Sources list graph tokens; board agreed 2026-10-26, built by S12-14 ([#576](https://github.com/mendahu/provenencia/pull/576)).
+- [S12-D5](archive/S12-D5-sources-list-graph-tokens.md) — Sources list graph buttons; board agreed 2026-10-26, redrawn 2026-10-27, built by S12-14 ([#576](https://github.com/mendahu/provenencia/pull/576)).
 - [S12-D4](archive/S12-D4-artifact-graph-links.md) — Artifacts section graph links; board agreed 2026-10-25, built by S12-13 ([#562](https://github.com/mendahu/provenencia/pull/562)).
 - [S12-D3](archive/S12-D3-graph-form.md) — Graph form; board agreed 2026-10-25, built by S12-12.
 - [S12-D2](archive/S12-D2-source-page-graphs.md) — Source page Graphs section; board agreed 2026-10-25, built by S12-11.

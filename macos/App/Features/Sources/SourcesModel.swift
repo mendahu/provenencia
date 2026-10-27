@@ -63,7 +63,7 @@ final class SourcesModel {
         var badgeSubtle: Bool { self == .empty }
 
         /// The status as a Sources list badge; VoiceOver reads "Status: <label>".
-        var badge: some View {
+        @MainActor var badge: some View {
             PVBadge(label, tone: badgeTone, icon: badgeIcon, subtle: badgeSubtle)
                 .accessibilityLabel(Text(verbatim: L10n.Sources.statusBadgeLabel(self)))
         }
