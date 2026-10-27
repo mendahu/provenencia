@@ -33,6 +33,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 | Promote wording for a non-Person depiction (map review K-4) | S14-02 | — |
 | Rename the gallery layer away from "likeness" (map review K-5) | S14-01, S14-02 | — |
 | Rectangle-only depiction drawing (user, 2026-10-27) | S14-03 | — |
+| Search hit kinds are repeated as Swift literals, not pinned to `core/search` (user, 2026-10-27) | S14-08 | — |
 | [`depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) "Transparent polygon" | Refused (working rule "A depiction is drawn as a rectangle") | — |
 
 **Back in the ideas folder** — [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md): signature and the Spike 10 audit leftovers.
@@ -63,6 +64,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-05 | Event and Place headers lead with a picture | — | Folded into S14-01 | — | — | — | Descoped (2026-10-27) → S14-01 |
 | S14-06 | Choose an Event or Place thumbnail | — | Folded into S14-02 | — | — | — | Descoped (2026-10-27) → S14-02 |
 | S14-07 | Events and Places lists lead with a picture | — | Folded into S14-02 | — | — | — | Descoped (2026-10-27) → S14-02 |
+| S14-08 | Typed omnibar hit kinds | 2 | `CatalogSearchKind` spells the search kinds once in Swift, pinned to `core/search` `Registry` | — | — | [S14-08](prs/S14-08-catalog-search-kind.md) | In progress |
 | S14-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -80,16 +82,21 @@ SLICE 1 — Event and Place pictures (batch 1)
   S14-03  Rectangle-only depiction drawing
   Check: bar outcomes 1–7 on a new project.
 
+SLICE 2 — Odds and ends (batch 2)
+  S14-08  Typed omnibar hit kinds
+  Check: the omnibar shows every hit as before; renaming a kind in core/search fails TestSwiftVocabularyMatchesGo.
+
 S14-99 — Dogfood close / docs
 ```
 
-S14-01 and S14-03 can run in parallel; S14-02 follows S14-01.
+S14-01 and S14-03 can run in parallel; S14-02 follows S14-01. S14-08 is independent of slice 1.
 
 ### Dependencies at a glance
 
 ```text
 S14-01 ──▶ S14-02
 S14-03
+S14-08
 ```
 
 ---
@@ -120,3 +127,12 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Not this PR.** Removing shapes from Citation regions; Go-side rectangle enforcement; rewriting saved polygon depictions.
 **Check.** Draw on a likeness shows one radio; a Citation region shows seven; Swift tests for the strip's tool list and the bounding-rectangle conversion; an old polygon depiction still opens and saves.
 **Context.** Working rule "A depiction is drawn as a rectangle"; `ArtifactViewer.swift` `regionTools`, `CitationComposerModel+Depiction.swift` `startDepictionDrawing`, `depictionCitationRegion`, `useDepictionRegion`.
+
+### Slice 2 — Odds and ends (batch 2)
+
+#### S14-08 — Typed omnibar hit kinds
+
+**Ships.** `CatalogSearchKind` in `macos/App/Platform/` with one case per `core/search` `Registry` kind; `CatalogSearchHitPresentation`, `CatalogSearchHitRow` and FakeStore's search switch on it; a `TestSwiftVocabularyMatchesGo` row pins it to the registry. `CatalogSearchHit.kind` stays a string, so an unknown kind still decodes.
+**Not this PR.** The `evidence_graph` kind (S12-15 adds the case); typing the request's `kinds`.
+**Check.** The Go pin passes and fails when a case is removed; the omnibar's labels and leads are unchanged; FakeStore search tests are unchanged.
+**Context.** `.cursor/rules/macos-client.mdc` (wire vocabulary spelled once); [`add-searchable-kind`](../../../.agents/skills/add-searchable-kind/SKILL.md); `api/ffi/swift_vocabulary_test.go` `catalog-wide lists` row.
