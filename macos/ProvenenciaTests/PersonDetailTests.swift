@@ -23,20 +23,20 @@ struct PersonDetailTests {
 
     @Test func presentationFollowsTheHandle() {
         #expect(ConclusionDetailPresentation<PersonDetailContent>(
-            value: nil, isFetching: true, status: .loading, error: nil, content: { PersonDetailContent(detail: $0) }
+            .loading, isFetching: true, content: { PersonDetailContent(detail: $0) }
         ) == .loading)
         let failed = ConclusionDetailPresentation<PersonDetailContent>(
-            value: nil, isFetching: false, status: .error,
-            error: CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: []),
+            .failed(CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])),
+            isFetching: false,
             content: { PersonDetailContent(detail: $0) }
         )
         #expect(failed == .failed("This record no longer exists. It may have been merged into another."))
         let content = PersonDetailContent(detail: detail())
         #expect(ConclusionDetailPresentation<PersonDetailContent>(
-            value: detail(), isFetching: false, status: .ready, error: nil, content: { PersonDetailContent(detail: $0) }
+            .loaded(detail()), isFetching: false, content: { PersonDetailContent(detail: $0) }
         ) == .content(content, refreshing: false))
         #expect(ConclusionDetailPresentation<PersonDetailContent>(
-            value: detail(), isFetching: true, status: .ready, error: nil, content: { PersonDetailContent(detail: $0) }
+            .loaded(detail()), isFetching: true, content: { PersonDetailContent(detail: $0) }
         ) == .content(content, refreshing: true))
     }
 

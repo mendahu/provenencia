@@ -74,12 +74,11 @@ final class SourceCopyModel {
 
     /// A value wins: a failed refetch keeps the stale parts and stays `.ready`.
     var loadState: SourceFormLoadState {
-        if workspaceHandle.value != nil { return .ready }
-        if workspaceHandle.status == .error {
-            let message = workspaceHandle.error.map { L10n.Errors.message(for: $0) }
-            return .failed(message ?? L10n.string(L10n.Errors.unknown))
+        switch workspaceHandle.read {
+        case .loaded: .ready
+        case .failed(let error): .failed(L10n.Errors.message(for: error))
+        case .loading: .loading
         }
-        return .loading
     }
 
     var descriptionAvailable: Bool {

@@ -223,7 +223,7 @@ struct PromoteFlow: Equatable, Sendable {
         var id: String { fact.id }
         var files: Bool { state == .files }
 
-        subscript<T>(dynamicMember key: KeyPath<BridgeFact, T>) -> T { fact[keyPath: key] }
+        subscript<T>(dynamicMember key: KeyPath<BridgeFact, T> & Sendable) -> T { fact[keyPath: key] }
 
         func name(of endID: String?) -> String { fact.name(of: endID) }
     }

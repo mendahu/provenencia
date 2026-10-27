@@ -63,7 +63,7 @@ struct PVCard<Content: View>: View {
         case .dashed:
             shape.strokeBorder(
                 PVColor.borderDefault,
-                style: StrokeStyle(lineWidth: 1, dash: [4, 3])
+                style: PVStroke.dashed
             )
         }
     }

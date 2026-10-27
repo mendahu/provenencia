@@ -2237,7 +2237,8 @@ message EvidenceGraphProgress {
   int32 observation_count = 3;
   reserved 4;
   reserved "uncited_count";
-  int32 primary_count = 5;
+  reserved 5;
+  reserved "primary_count";
   int32 filed_count = 6;
   string graph_id = 7;
 }

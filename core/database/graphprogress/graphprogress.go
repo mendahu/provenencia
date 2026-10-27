@@ -1,5 +1,5 @@
-// Package graphprogress aggregates subject, observation, primary, and filed
-// counts per Evidence graph for the Sources list.
+// Package graphprogress aggregates subject, observation, and filed counts per
+// Evidence graph for the Sources list.
 package graphprogress
 
 import (
@@ -51,10 +51,9 @@ type Progress struct {
 	SourceID         []byte
 	SubjectCount     int32
 	ObservationCount int32
-	// PrimaryCount is the subjects of a Promote primary kind (person, event,
-	// place); FiledCount is those with an accepted Identity Claim.
-	PrimaryCount int32
-	FiledCount   int32
+	// FiledCount is the subjects of a Promote primary kind (person, event,
+	// place) with an accepted Identity Claim.
+	FiledCount int32
 }
 
 // add folds one grouped subjects row into p.
@@ -63,7 +62,6 @@ func (p *Progress) add(key, origin string, n, filed int32) {
 		p.SubjectCount += n
 	}
 	if vocabkey.IsPrimaryType(key, origin) {
-		p.PrimaryCount += n
 		p.FiledCount += filed
 	}
 }

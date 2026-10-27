@@ -19,16 +19,27 @@ final class SourceGraphsSection {
     /// The Source's graphs in list order (sorted by name); `nil` while the
     /// graph list has no value.
     var rows: [CatalogEvidenceGraph]? {
-        context.session.evidenceGraphs(sourceID: context.sourceID)
+        guard case .loaded(let graphs) = context.session.evidenceGraphsRead(sourceID: context.sourceID) else { return nil }
+        return graphs
     }
 
     /// The graph list's error while it has no value to show.
     var loadError: Error? {
-        guard let handle = context.session.evidenceGraphsHandle,
-              handle.status == .error, handle.value == nil
-        else { return nil }
-        return handle.error
+        guard case .failed(let error) = context.session.evidenceGraphsRead(sourceID: context.sourceID) else { return nil }
+        return error
     }
+
+    /// The counts of one graph; `nil` while the progress map has no value or
+    /// omits the graph (zero counts).
+    func progress(for graph: CatalogEvidenceGraph) -> EvidenceGraphProgress? {
+        context.session.evidenceGraphProgress(graphID: graph.id)
+    }
+
+    /// True while the counts can still arrive.
+    var countsLoading: Bool { context.session.evidenceGraphCountsLoading }
+
+    /// The progress map's failure while it has no value to show.
+    var countsError: Error? { context.session.evidenceGraphCountsError }
 
     /// Where Open goes: the graph's canvas while it links an Artifact.
     func location(for graph: CatalogEvidenceGraph) -> WorkspaceLocation? {

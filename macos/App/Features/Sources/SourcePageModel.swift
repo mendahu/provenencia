@@ -136,8 +136,8 @@ final class SourcePageModel {
     func sync(from handle: QueryHandle<CatalogSourceWorkspace>, sourceID: String) {
         guard context.sourceID == sourceID else { return }
         isLoading = handle.status == .loading && handle.value == nil
-        if handle.status == .error, handle.value == nil {
-            loadError = handle.error
+        if case .failed(let error) = handle.read {
+            loadError = error
         } else {
             loadError = nil
         }

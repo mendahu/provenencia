@@ -78,7 +78,7 @@ enum PVSymbol: String {
     case sortDescending = "arrow.down"
     case sortUnsorted = "chevron.up.chevron.down"
     case filter = "line.3.horizontal.decrease"
-    /// Lucide `network` — Evidence graph zone glyph (S5-D2 / S5-08).
+    /// Lucide `network` — Evidence graph glyph (S5-D2 / S5-08).
     case network = "point.3.connected.trianglepath.dotted"
     /// Lucide `layers` — group rows on the Promote page.
     case layers = "square.3.layers.3d.down.right"
@@ -105,6 +105,12 @@ enum PVSymbol: String {
     /// ``PVIcon``; `square.and.arrow.up` is the share glyph, a different mark.
     case imageUp = "pv.image.up"
     case circleDashed = "circle.dashed"
+    /// Lucide `circle-dot`.
+    case circleDot = "smallcircle.filled.circle"
+    /// Lucide `circle-check`.
+    case circleCheck = "checkmark.circle"
+    /// Lucide `circle-alert`.
+    case circleAlert = "exclamationmark.circle"
     case regionRectangle = "rectangle"
     /// Custom six-sided L glyphs — not SF Symbols (see ``PVIcon``).
     case regionLTopRight = "pv.region.l.topRight"

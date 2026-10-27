@@ -47,12 +47,12 @@ struct PersonsListTests {
 
     @Test func presentationFollowsTheHandleState() {
         let rows = [header("PER-1", name: "A"), header("PER-2", name: "B")]
-        let none: [CatalogPersonHeader]? = nil
-        let empty: [CatalogPersonHeader] = []
-        #expect(ConclusionListPresentation(value: none, isFetching: false, status: .loading, error: nil) == .loading)
-        #expect(ConclusionListPresentation(value: empty, isFetching: false, status: .ready, error: nil) == .empty)
-        #expect(ConclusionListPresentation(value: rows, isFetching: false, status: .ready, error: nil) == .rows(rows, refreshing: false))
-        #expect(ConclusionListPresentation(value: rows, isFetching: true, status: .ready, error: nil) == .rows(rows, refreshing: true))
+        let none: QueryRead<[CatalogPersonHeader]> = .loading
+        let empty: QueryRead<[CatalogPersonHeader]> = .loaded([])
+        #expect(ConclusionListPresentation(none, isFetching: false) == .loading)
+        #expect(ConclusionListPresentation(empty, isFetching: false) == .empty)
+        #expect(ConclusionListPresentation(.loaded(rows), isFetching: false) == .rows(rows, refreshing: false))
+        #expect(ConclusionListPresentation(.loaded(rows), isFetching: true) == .rows(rows, refreshing: true))
     }
 
     @Test func headerMetaCountsAndShowsRefreshing() {

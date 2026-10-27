@@ -68,7 +68,7 @@ struct EvidenceCardLayoutTests {
         try measure(EvidenceCanvasCard(placed: .subject(p, nil), text: EvidenceCardText(subject: p), state: .resting))
     }
 
-    static let cases: [String] = ["uncited", "uncited+description", "cited1", "cited3", "cited3+promoted", "longHandleName+promoted",
+    nonisolated static let cases: [String] = ["uncited", "uncited+description", "cited1", "cited3", "cited3+promoted", "longHandleName+promoted",
                                   "longTitle", "wrappedValues", "longDescription"]
 
     private func fixture(_ name: String) -> EvidenceGraphPlacedSubject {

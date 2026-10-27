@@ -14,13 +14,39 @@ struct EvidenceGraphIndex {
     }
 }
 
-/// The session's cached Evidence graph list: the one place its key and handle
-/// are looked up, and the graph's linked Artifacts read from it.
+/// The session's cached Evidence graph list and graph progress: the one place
+/// their keys and handles are looked up, and the graph's linked Artifacts read
+/// from them.
 extension WorkspaceSession {
     var evidenceGraphsKey: CatalogQueryKey { .evidenceGraphsList(project: projectKey) }
 
     var evidenceGraphsHandle: QueryHandle<[CatalogEvidenceGraph]>? {
         queryHandle(evidenceGraphsKey)
+    }
+
+    var evidenceGraphProgressKey: CatalogQueryKey { .evidenceGraphProgress(project: projectKey) }
+
+    var evidenceGraphProgressHandle: QueryHandle<[String: EvidenceGraphProgress]>? {
+        queryHandle(evidenceGraphProgressKey)
+    }
+
+    /// The counts of one Evidence graph, by graph id; `nil` while the progress
+    /// map has no value or omits the graph (Go omits a graph with zero counts).
+    func evidenceGraphProgress(graphID: String) -> EvidenceGraphProgress? {
+        evidenceGraphProgressHandle?.value?[graphID]
+    }
+
+    /// True while the progress map or the graph list is missing or still
+    /// loading, so a graph's counts can still arrive.
+    var evidenceGraphCountsLoading: Bool {
+        guard let progress = evidenceGraphProgressHandle, let graphs = evidenceGraphsHandle else { return true }
+        return progress.read.isLoading || graphs.read.isLoading
+    }
+
+    /// The progress map's failure while it has no value to show; `nil` otherwise.
+    var evidenceGraphCountsError: Error? {
+        if case .failed(let error) = evidenceGraphProgressHandle?.read { return error }
+        return nil
     }
 
     /// The Artifacts of `artifacts` that the graph links, in `artifacts` order.
@@ -57,5 +83,19 @@ extension WorkspaceSession {
     /// empty while the list has no value.
     var evidenceGraphsBySource: [String: [CatalogEvidenceGraph]] {
         currentEvidenceGraphIndex?.bySource ?? [:]
+    }
+
+    /// One Source's graphs as a read. A loaded list with no graph for the
+    /// Source reads `.loading`: every Source has a Default graph from creation,
+    /// so that is a list not yet refreshed.
+    func evidenceGraphsRead(sourceID: String) -> QueryRead<[CatalogEvidenceGraph]> {
+        guard let handle = evidenceGraphsHandle else { return .loading }
+        switch handle.read {
+        case .loading: return .loading
+        case .failed(let error): return .failed(error)
+        case .loaded:
+            guard let graphs = evidenceGraphs(sourceID: sourceID), !graphs.isEmpty else { return .loading }
+            return .loaded(graphs)
+        }
     }
 }

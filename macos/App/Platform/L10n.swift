@@ -5757,20 +5757,20 @@ enum L10n {
 
         static let statusEmpty = LocalizedStringResource(
             "sources.list.status.empty",
-            defaultValue: "Empty",
-            comment: "Sources evidence-status filter option: the Source's graph has no person, event, or place subjects"
+            defaultValue: "Not started",
+            comment: "Status filter option and badge: a graph with no subjects"
         )
 
         static let statusInProgress = LocalizedStringResource(
             "sources.list.status.inProgress",
             defaultValue: "In progress",
-            comment: "Sources evidence-status filter option: at least one person, event, or place on the graph is not promoted yet"
+            comment: "Sources evidence-status filter option: at least one subject and none promoted"
         )
 
-        static let statusFullyPromoted = LocalizedStringResource(
-            "sources.list.status.fullyPromoted",
-            defaultValue: "Fully promoted",
-            comment: "Sources evidence-status filter option: every person, event, and place on the graph is promoted"
+        static let statusPromoted = LocalizedStringResource(
+            "sources.list.status.promoted",
+            defaultValue: "Promoted",
+            comment: "Sources evidence-status filter option: graphs with at least one promoted subject"
         )
 
         static let sortAZ = LocalizedStringResource(
@@ -5814,25 +5814,25 @@ enum L10n {
         static let columnSource = LocalizedStringResource(
             "sources.list.columnSource",
             defaultValue: "Source",
-            comment: "Caption band above the Sources list left zone"
+            comment: "Sources list column caption"
+        )
+
+        static let columnType = LocalizedStringResource(
+            "sources.list.columnType",
+            defaultValue: "Type",
+            comment: "Sources list column caption"
         )
 
         static let columnEvidenceGraph = LocalizedStringResource(
             "sources.list.columnEvidenceGraph",
             defaultValue: "Evidence graph",
-            comment: "Caption band above the Sources list graph zone"
-        )
-
-        static let openGraph = LocalizedStringResource(
-            "sources.list.openGraph",
-            defaultValue: "Open graph",
-            comment: "Sources list right-zone action when the Source has an Artifact"
+            comment: "Sources list column caption"
         )
 
         static let graphNotStarted = LocalizedStringResource(
             "sources.list.graphNotStarted",
             defaultValue: "not started",
-            comment: "Italic graph-zone state when a Source has zero canvas subjects"
+            comment: "Italic words in a graph count line when a Source has zero canvas subjects"
         )
 
         static let graphCountsLoading = LocalizedStringResource(
@@ -5841,11 +5841,17 @@ enum L10n {
             comment: "VoiceOver while Sources list graph-progress counts have not arrived"
         )
 
+        static let graphCountsUnavailable = LocalizedStringResource(
+            "sources.graph.countsUnavailable",
+            defaultValue: "Counts could not load",
+            comment: "Evidence graph button help and Source page count line when graph counts failed to load"
+        )
+
         static func graphSubjectCount(_ count: Int) -> String {
             L10n.format(LocalizedStringResource(
                 "sources.list.subjectCount",
                 defaultValue: "%lld subjects",
-                comment: "Sources list graph-zone subject count; argument is canvas subject count"
+                comment: "Sources list graph subject count; argument is canvas subject count"
             ), count)
         }
 
@@ -5853,7 +5859,7 @@ enum L10n {
             L10n.format(LocalizedStringResource(
                 "sources.list.observationCount",
                 defaultValue: "%lld observations",
-                comment: "Sources list graph-zone observation count; argument is Observation count"
+                comment: "Sources list graph observation count; argument is Observation count"
             ), count)
         }
 
@@ -5861,35 +5867,59 @@ enum L10n {
             "\(graphSubjectCount(subjects)) · \(graphObservationCount(observations))"
         }
 
-        static func graphZoneAccessibility(
-            progress: EvidenceGraphProgress?,
-            countsLoading: Bool
+        /// How a graph's counts read. `full` is the visible line, `spoken` what
+        /// VoiceOver says.
+        enum GraphCountsStyle {
+            case full
+            case spoken
+        }
+
+        /// How a graph that has not started reads: in words ("0 subjects · not
+        /// started", the Source page's card) or as zero counts (the Sources list's
+        /// graph button, whose badge says "not started").
+        enum NotStartedReading {
+            case words
+            case zeroCounts
+        }
+
+        /// The one formatter for a graph's counts (`SourcesGraphCounts`), so the
+        /// visible text, the help and VoiceOver agree.
+        static func graphCounts(
+            _ counts: SourcesGraphCounts,
+            style: GraphCountsStyle,
+            notStarted: NotStartedReading = .words
         ) -> String {
-            let open = L10n.string(openGraph)
-            if countsLoading && progress == nil {
-                return "\(open), \(L10n.string(graphCountsLoading))"
+            switch counts {
+            case .loading:
+                return L10n.string(graphCountsLoading)
+            case .unavailable(let message):
+                let lead = L10n.string(graphCountsUnavailable)
+                return style == .spoken ? "\(lead). \(message)" : lead
+            case .notStarted where notStarted == .zeroCounts:
+                return graphCounts(.counts(subjects: 0, observations: 0, filed: 0), style: style)
+            case .notStarted:
+                switch style {
+                case .full: return "\(graphSubjectCount(0)) · \(L10n.string(graphNotStarted))"
+                case .spoken: return "\(graphSubjectCount(0)), \(L10n.string(graphNotStarted))"
+                }
+            case .counts(let subjects, let observations, _):
+                switch style {
+                case .full: return graphCountLine(subjects: subjects, observations: observations)
+                case .spoken: return "\(graphSubjectCount(subjects)), \(graphObservationCount(observations))"
+                }
             }
-            let subjects = progress?.subjectCount ?? 0
-            if subjects == 0 {
-                return "\(open), \(graphSubjectCount(0)), \(L10n.string(graphNotStarted))"
-            }
-            return [
-                open,
-                graphSubjectCount(subjects),
-                graphObservationCount(progress?.observationCount ?? 0),
-            ].joined(separator: ", ")
         }
 
         static let needsArtifact = LocalizedStringResource(
             "sources.list.needsArtifact",
             defaultValue: "Needs an artifact",
-            comment: "Blocked graph zone label when the Source has no Artifact"
+            comment: "Second line of the Sources list block for a Source with no Artifact"
         )
 
         static let needsArtifactTooltip = LocalizedStringResource(
             "sources.list.needsArtifactTooltip",
             defaultValue: "Add an artifact on the source page to build its evidence graph",
-            comment: "Tooltip on the blocked Sources list graph zone"
+            comment: "Tooltip on the Sources list block for a Source with no Artifact"
         )
 
         static let graphNeedsArtifactTooltip = LocalizedStringResource(
@@ -5898,10 +5928,73 @@ enum L10n {
             comment: "Tooltip and VoiceOver hint on a disabled Open for an Evidence graph that links no Artifact"
         )
 
+        static let graphNeedsArtifactToOpen = LocalizedStringResource(
+            "sources.list.graphNeedsArtifactToOpen",
+            defaultValue: "Needs an artifact to open",
+            comment: "Second line of a Sources list graph button whose graph links no Artifact"
+        )
+
+        static let noGraphYet = LocalizedStringResource(
+            "sources.list.noGraphYet",
+            defaultValue: "No evidence graph yet",
+            comment: "Sources list graph column for a Source with no Artifact"
+        )
+
+        static let graphsLoading = LocalizedStringResource(
+            "sources.list.graphsLoading",
+            defaultValue: "Evidence graphs loading",
+            comment: "VoiceOver label while a Source's graph list loads"
+        )
+
+        static let graphsFailedTitle = LocalizedStringResource(
+            "sources.list.graphsFailedTitle",
+            defaultValue: "Evidence graphs",
+            comment: "Sources list graph column when the graph list failed to load"
+        )
+
+        static let graphsFailedDetail = LocalizedStringResource(
+            "sources.list.graphsFailedDetail",
+            defaultValue: "Couldn’t be read",
+            comment: "Sources list graph column when the graph list failed to load"
+        )
+
+        static func graphButtonHelp(name: String, detail: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.list.graphButtonHelp",
+                defaultValue: "%1$@ — %2$@",
+                comment: "Sources list graph button tooltip; 1 is the graph name, 2 its counts or why it cannot open"
+            ), name, detail)
+        }
+
+        static func graphBlockLabel(title: String, detail: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.list.graphBlockLabel",
+                defaultValue: "%1$@, %2$@",
+                comment: "VoiceOver label of a Sources list graph block (no Artifact, or the graph list failed): its title and its second line"
+            ), title, detail)
+        }
+
+        /// VoiceOver label of a graph button: open label, counts, then the status
+        /// (left out while the counts load or failed).
+        static func graphButtonLabel(open: String, counts: String, status: String?) -> String {
+            guard let status else {
+                return L10n.format(LocalizedStringResource(
+                    "sources.list.graphButtonLabelNoStatus",
+                    defaultValue: "%1$@, %2$@",
+                    comment: "VoiceOver label of a Sources list graph button without a status: open label, counts"
+                ), open, counts)
+            }
+            return L10n.format(LocalizedStringResource(
+                "sources.list.graphButtonLabel",
+                defaultValue: "%1$@, %2$@, %3$@",
+                comment: "VoiceOver label of a Sources list graph button: open label, counts, status"
+            ), open, counts, status)
+        }
+
         static let openSourcePage = LocalizedStringResource(
             "sources.list.openSourcePage",
             defaultValue: "Open source",
-            comment: "Accessibility label for the Sources list left (filing) zone"
+            comment: "Accessibility label for the Source link in a Sources list row (cover, title and type)"
         )
 
         static let addDialogTitle = LocalizedStringResource(
@@ -6702,8 +6795,8 @@ enum L10n {
         static func openEvidenceGraphLabel(name: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "sources.page.graph.openLabel",
-                defaultValue: "Open %@",
-                comment: "VoiceOver label for opening an Evidence graph; argument is the graph name"
+                defaultValue: "Open graph %@",
+                comment: "VoiceOver label for opening an Evidence graph from the Source page or a Sources list graph button; argument is the graph name"
             ), name)
         }
 

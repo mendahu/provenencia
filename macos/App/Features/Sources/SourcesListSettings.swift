@@ -17,7 +17,9 @@ struct SourcesListSettings: Codable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         sort = (try? container.decodeIfPresent(SourcesModel.Sort.self, forKey: .sort)) ?? .added
         typeFilterID = (try? container.decodeIfPresent(String.self, forKey: .typeFilterID)) ?? ""
-        status = (try? container.decodeIfPresent(SourcesModel.EvidenceStatus.self, forKey: .status)) ?? nil
+        // "filed" is what Promoted was stored as before S12-14.
+        let stored = (try? container.decodeIfPresent(String.self, forKey: .status)) ?? nil
+        status = (stored == "filed" ? "promoted" : stored).flatMap(SourcesModel.EvidenceStatus.init(rawValue:))
         query = (try? container.decodeIfPresent(String.self, forKey: .query)) ?? ""
     }
 }

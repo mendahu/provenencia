@@ -81,6 +81,14 @@ private struct SourcePageGraphRow: View {
                     Text(verbatim: graph.ref)
                         .font(PVFont.mono(size: PVTypeScale.caption))
                         .foregroundStyle(PVColor.textMuted)
+                    SourcesGraphCountLine(
+                        counts: SourcesGraphCounts(
+                            progress: model.graphs.progress(for: graph),
+                            countsLoading: model.graphs.countsLoading,
+                            countsError: model.graphs.countsError
+                        ),
+                        style: .card
+                    )
                     if !description.isEmpty {
                         Text(verbatim: description)
                             .font(PVFont.body(size: PVTypeScale.bodySmall))
