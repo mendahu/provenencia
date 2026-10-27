@@ -23,6 +23,7 @@ func NewFTSSearcher() *FTSSearcher {
 type docRow struct {
 	kind, entityID, displayRef, displayTitle, displaySubtitle string
 	displayIconKey, displayThumbnailRelPath                   string
+	displayParentID, displayParentRef                         string
 	title, ref, secondary, body                               string
 	ftsRank                                                   float64
 	hasFTS                                                    bool
@@ -36,6 +37,7 @@ type docRow struct {
 // in the order scanDoc reads it.
 const docColumns = `d.kind, d.entity_id, d.display_ref, d.display_title, d.display_subtitle,
 			d.display_icon_key, d.display_thumbnail_rel_path,
+			d.display_parent_id, d.display_parent_ref,
 			d.title, d.ref, d.secondary, d.body`
 
 // scanDoc reads docColumns into d, then any extra selected columns.
@@ -43,6 +45,7 @@ func scanDoc(rows *sql.Rows, d *docRow, extra ...any) error {
 	dest := []any{
 		&d.kind, &d.entityID, &d.displayRef, &d.displayTitle, &d.displaySubtitle,
 		&d.displayIconKey, &d.displayThumbnailRelPath,
+		&d.displayParentID, &d.displayParentRef,
 		&d.title, &d.ref, &d.secondary, &d.body,
 	}
 	return rows.Scan(append(dest, extra...)...)
