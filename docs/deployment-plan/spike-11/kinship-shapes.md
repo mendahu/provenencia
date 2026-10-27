@@ -61,10 +61,10 @@ An implied link is weighed as the direct link it stands for: spouse, parent and 
 
 A relationship line today comes from a corresponding segment ([`claim-evidence.md`](claim-evidence.md#evidence-through-relationships)). An implied link that corresponds gives a relationship line too, and it says how it was recorded:
 
-- "They are spouses: both are spouses in the marriage on 12 May 1842" (an implied link on the Source side), or "…the record has them as spouses" (direct).
+- Under the Card's unchanged header ("they share a spouse"), a muted line says how each side recorded it: "This source: married in the marriage on 12 May 1842 · The record: recorded as spouses". A Card whose sides are both direct has no line.
 - Checking the line pins its bundle: every bridge behind the implied link (both participations, or both parent links of a chain), and the event's defining properties, as a relationship bundle does today.
 
-A bundle is one Source's recording of the fact: the bridges that reach one pivot, the member's bridge first and the bundle's pin id keyed by it. The line is drawn by the sheet's existing relationship Card. No new chrome, but it is a wire change: `claimevidence.Relationship` gains how each side recorded the fact and the event behind it, which crosses the FFI to Swift (S11-40), and the sheet words it (S11-42).
+A bundle is one Source's recording of the fact: the bridges that reach one pivot, the member's bridge first and the bundle's pin id keyed by it. The line is drawn by the sheet's existing relationship Card. No new chrome, but it is a wire change: `claimevidence.Relationship` gains how each side recorded the fact and the event behind it, which crosses the FFI to Swift (S11-40); the sheet words it (S11-42).
 
 ## What stays later
 

@@ -90,6 +90,7 @@ The researcher wants to say "these are the same person because they have a match
 - **One bundle per Source's recording.** A bridge behind an implied link reaches the pivot (the event, or the parent between) and the row's member or the neighbor's member. The bridges that reach one pivot make one bundle: the row member's bridge first, then the others, and the pivot's defining Observations. A recorded link's bundle is one bridge, as before. The bundle's pin id is keyed by its first bridge.
 - **A pivot with no bridge of a row member makes no bundle.** A Source that records only the far part of the link (a parent of the neighbor, not of the row's member) pins nothing: a pin needs a member to land on.
 - **Counted once.** When both sides record a fact through the same pattern and the request pairs their pivots, the line is dropped, as matching drops the credit (`kinship.CountedOnce`); a participation line to the paired event stays.
+- **The Card says how each side recorded it (S11-42).** A muted line under the Card's header names both sides, "This source" and "The record": an implied side by its pattern and pivot (the marriage by its date, a parent by name), a direct side by the link's term. A Card whose sides are both direct has no line. The words are in `PromoteEvidenceDisplay.recorded`; a new pattern adds one arm to its `wording` switch and two keys.
 
 ## Retires
 
