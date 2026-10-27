@@ -218,9 +218,7 @@ func loadLayerBridges(g *graphcache.Graph, eg graphcache.EvidenceGraph, props ma
 	set.WithImplied(terms, matchregistry.Default().Kinship)
 	var out []graphalign.Bridge
 	for _, l := range set.Links() {
-		out = append(out, graphalign.Bridge{
-			A: l.A, B: l.B, KeyA: l.KeyA, KeyB: l.KeyB, Associations: l.Associations, Recording: l.Recording,
-		})
+		out = append(out, graphalign.Bridge{Edge: l.Edge, Recording: l.Recording})
 	}
 	return out, parts, nil
 }

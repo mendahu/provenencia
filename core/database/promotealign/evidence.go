@@ -438,13 +438,8 @@ func (r *evidenceReader) canonLinks(from, to *graphcache.Node, rels []kinship.Li
 		out = append(out, claimevidence.CanonLink{Key: key, Bridges: bridges})
 	}
 	for _, l := range rels {
-		var key vocabkey.BridgeKey
-		switch {
-		case bytes.Equal(l.A, from.ID) && bytes.Equal(l.B, to.ID):
-			key = l.KeyA
-		case bytes.Equal(l.B, from.ID) && bytes.Equal(l.A, to.ID):
-			key = l.KeyB
-		default:
+		other, key, ok := l.From(from.ID)
+		if !ok || !bytes.Equal(other, to.ID) {
 			continue
 		}
 		pivot := map[string]bool{}

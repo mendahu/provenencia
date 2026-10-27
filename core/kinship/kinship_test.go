@@ -579,3 +579,18 @@ func TestPatterns(t *testing.T) {
 		t.Errorf("unknown PivotKind() = %q", got)
 	}
 }
+
+func TestEdgeFrom(t *testing.T) {
+	a, b, c := []byte{1}, []byte{2}, []byte{3}
+	ka, kb := vocabkey.BridgeKey{Term: "ka"}, vocabkey.BridgeKey{Term: "kb"}
+	e := kinship.Edge{A: a, B: b, KeyA: ka, KeyB: kb}
+	if o, k, ok := e.From(a); !ok || string(o) != string(b) || k != ka {
+		t.Errorf("From(A) = %v, %v, %v", o, k, ok)
+	}
+	if o, k, ok := e.From(b); !ok || string(o) != string(a) || k != kb {
+		t.Errorf("From(B) = %v, %v, %v", o, k, ok)
+	}
+	if _, _, ok := e.From(c); ok {
+		t.Errorf("From(neither) ok")
+	}
+}

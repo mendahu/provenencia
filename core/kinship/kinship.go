@@ -32,6 +32,18 @@ type Edge struct {
 	Associations [][]byte
 }
 
+// From reads the edge from one end: the Subject at the other end and the link
+// as seen from id. ok is false when id is neither end.
+func (e Edge) From(id []byte) (other []byte, key vocabkey.BridgeKey, ok bool) {
+	switch {
+	case bytes.Equal(e.A, id):
+		return e.B, e.KeyA, true
+	case bytes.Equal(e.B, id):
+		return e.A, e.KeyB, true
+	}
+	return nil, vocabkey.BridgeKey{}, false
+}
+
 // Clone returns a copy of e that shares no bytes with it: its ends and every
 // association are copied.
 func (e Edge) Clone() Edge {

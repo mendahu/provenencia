@@ -397,11 +397,8 @@ func (d *deriver) forLinks(id []byte, around func([]byte) (*graphcache.Node, err
 		}
 	}
 	for _, imp := range births {
-		if bytes.Equal(imp.A, id) {
-			add(imp.B)
-		} else {
-			add(imp.A)
-		}
+		other, _, _ := imp.Edge.From(id)
+		add(other)
 	}
 	for _, m := range people {
 		if _, err := around(m); err != nil {
