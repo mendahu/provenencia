@@ -70,13 +70,7 @@ final class SourcesModel {
 
         /// A graph missing from the progress map has zero counts (Go omits it).
         init(_ progress: EvidenceGraphProgress?) {
-            if SourcesGraphCounts(progress: progress, countsLoading: false, countsError: nil) == .notStarted {
-                self = .empty
-            } else if let progress, progress.filedCount > 0 {
-                self = .promoted
-            } else {
-                self = .inProgress
-            }
+            self = SourcesGraphCounts(progress: progress, countsLoading: false, countsError: nil).status ?? .empty
         }
     }
 

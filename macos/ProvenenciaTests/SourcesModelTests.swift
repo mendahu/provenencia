@@ -464,10 +464,10 @@ struct SourcesModelTests {
         #expect(SourcesGraphCounts(progress: .zeros(graphId: "g1"), countsLoading: false, countsError: nil) == .notStarted)
         #expect(
             SourcesGraphCounts(progress: jones, countsLoading: true, countsError: nil)
-                == .counts(subjects: 12, observations: 40)
+                == .counts(subjects: 12, observations: 40, filed: 0)
         )
         let counts = SourcesGraphCounts(progress: jones, countsLoading: false, countsError: nil)
-        #expect(counts == .counts(subjects: 12, observations: 40))
+        #expect(counts == .counts(subjects: 12, observations: 40, filed: 0))
 
         #expect(L10n.Sources.graphCounts(counts, style: .compact) == "12 · 40")
         #expect(L10n.Sources.graphCounts(.notStarted, style: .compact) == "not started")
@@ -480,6 +480,24 @@ struct SourcesModelTests {
         #expect(L10n.Sources.graphCounts(unavailable, style: .compact) == "Counts could not load")
         #expect(L10n.Sources.graphCounts(unavailable, style: .full) == "Counts could not load")
         #expect(L10n.Sources.graphCounts(unavailable, style: .spoken) == "Counts could not load. Disk is full")
+
+        #expect(L10n.Sources.graphCounts(.notStarted, style: .full, notStarted: .zeroCounts) == "0 subjects · 0 observations")
+        #expect(L10n.Sources.graphCounts(.notStarted, style: .spoken, notStarted: .zeroCounts) == "0 subjects, 0 observations")
+        #expect(L10n.Sources.graphCounts(counts, style: .full, notStarted: .zeroCounts) == "12 subjects · 40 observations")
+        #expect(L10n.Sources.graphCounts(.loading, style: .full, notStarted: .zeroCounts) == "counts loading")
+        #expect(L10n.Sources.graphCounts(unavailable, style: .full, notStarted: .zeroCounts) == "Counts could not load")
+
+        #expect(SourcesGraphCounts.notStarted.status == .empty)
+        #expect(SourcesGraphCounts.counts(subjects: 5, observations: 2, filed: 0).status == .inProgress)
+        #expect(SourcesGraphCounts.counts(subjects: 5, observations: 2, filed: 1).status == .promoted)
+        #expect(SourcesGraphCounts.loading.status == nil)
+        #expect(unavailable.status == nil)
+
+        let notStartedText = SourcesGraphCountLine.countsText(.notStarted, style: .card)
+        let zero = notStartedText.runs.first { String(notStartedText[$0.range].characters) == "0" }
+        #expect(zero?.font == PVFont.mono(size: PVTypeScale.micro))
+        let words = notStartedText.runs.first { String(notStartedText[$0.range].characters) == "not started" }
+        #expect(words?.font == PVFont.body(size: PVTypeScale.micro).italic())
     }
 
     @Test func listCaptionMatchesBoard() {
@@ -532,7 +550,7 @@ struct SourcesModelTests {
         #expect(
             L10n.Sources.graphTokenHelp(
                 name: "Jones household",
-                detail: L10n.Sources.graphCounts(.counts(subjects: 12, observations: 40), style: .full)
+                detail: L10n.Sources.graphCounts(.counts(subjects: 12, observations: 40, filed: 0), style: .full)
             ) == "Jones household — 12 subjects · 40 observations"
         )
         #expect(

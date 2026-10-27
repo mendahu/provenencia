@@ -5871,22 +5871,40 @@ enum L10n {
             case spoken
         }
 
+        /// How a graph that has not started reads: in words ("0 subjects · not
+        /// started", the Source page's card) or as zero counts (the Sources list's
+        /// graph button, whose badge says "not started").
+        enum NotStartedReading {
+            case words
+            case zeroCounts
+        }
+
         /// The one formatter for a graph's counts (`SourcesGraphCounts`), so the
         /// visible text, the help and VoiceOver agree.
-        static func graphCounts(_ counts: SourcesGraphCounts, style: GraphCountsStyle) -> String {
+        static func graphCounts(
+            _ counts: SourcesGraphCounts,
+            style: GraphCountsStyle,
+            notStarted: NotStartedReading = .words
+        ) -> String {
             switch counts {
             case .loading:
                 return L10n.string(graphCountsLoading)
             case .unavailable(let message):
                 let lead = L10n.string(graphCountsUnavailable)
                 return style == .spoken ? "\(lead). \(message)" : lead
+            case .notStarted where notStarted == .zeroCounts:
+                switch style {
+                case .compact: return L10n.string(graphNotStarted)
+                case .full: return graphCountLine(subjects: 0, observations: 0)
+                case .spoken: return "\(graphSubjectCount(0)), \(graphObservationCount(0))"
+                }
             case .notStarted:
                 switch style {
                 case .compact: return L10n.string(graphNotStarted)
                 case .full: return "\(graphSubjectCount(0)) · \(L10n.string(graphNotStarted))"
                 case .spoken: return "\(graphSubjectCount(0)), \(L10n.string(graphNotStarted))"
                 }
-            case .counts(let subjects, let observations):
+            case .counts(let subjects, let observations, _):
                 switch style {
                 case .compact: return "\(subjects) · \(observations)"
                 case .full: return graphCountLine(subjects: subjects, observations: observations)

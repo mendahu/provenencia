@@ -146,7 +146,7 @@ struct WorkspaceSessionTests {
                 progress: session.evidenceGraphProgress(graphID: "g-1"),
                 countsLoading: false,
                 countsError: session.evidenceGraphCountsError
-            ) == .counts(subjects: 3, observations: 5)
+            ) == .counts(subjects: 3, observations: 5, filed: 0)
         )
     }
 
