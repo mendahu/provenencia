@@ -180,4 +180,4 @@ MNT: MNT-1 and MNT-2 Resolved; no new blockers. Nit (logged): `MNT-8 · SourcesL
 No Fix plan 2.
 
 ### Result (revision 2)
-`origin/main` moved to `2243b362` (docs only); merged as `98c8e159`, gate PASS. CI pending · open: none · follow-ups: none · to user: UX-1 (answered 2026-10-27, fixed), CON-1 manual check · logged: CON-2, MNT-6, MNT-8 · CON miss: none
+`origin/main` moved to `2243b362` (docs only); merged as `98c8e159`, gate PASS. CI green · open: none · follow-ups: none · to user: UX-1 (answered 2026-10-27, fixed), CON-1 manual check · logged: CON-2, MNT-6, MNT-8 · CON miss: none
