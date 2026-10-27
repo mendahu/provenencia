@@ -216,19 +216,27 @@ struct CatalogSearchHitPresentationTests {
             CatalogSearchHitPresentation.matchContextText(field: "place", snippet: "Montreal")
                 == L10n.Workspace.omnibarMatchPlace(snippet: "Montreal")
         )
-        #expect(L10n.string(CatalogSearchHitPresentation.kindLabel(for: "person")) == L10n.string(L10n.Workspace.omnibarKindPerson))
-        #expect(CatalogSearchHitPresentation.leadThumbnail(for: leadHit(kind: "event")).glyph == .mark(.subjectEvent))
-        #expect(CatalogSearchHitPresentation.leadThumbnail(for: leadHit(kind: "event")).label == nil)
+        #expect(L10n.string(CatalogSearchHitPresentation.kindLabel(for: .person)) == L10n.string(L10n.Workspace.omnibarKindPerson))
+        #expect(CatalogSearchHitPresentation.leadThumbnail(for: leadHit(kind: "event"))?.glyph == .mark(.subjectEvent))
+        #expect(CatalogSearchHitPresentation.leadThumbnail(for: leadHit(kind: "event"))?.label == nil)
         let typeLead = CatalogSearchHitPresentation.leadThumbnail(for: leadHit(kind: "source_type", iconKey: "type_book"))
-        #expect(typeLead.glyph == .mark(.typeBook))
-        #expect(typeLead.label != nil)
-        #expect(CatalogSearchHitPresentation.leadThumbnail(for: leadHit(kind: "source_type")).glyph == .symbol(.tag))
-        #expect(CatalogSearchHitPresentation.leadThumbnail(for: leadHit(kind: "metadata_field")).glyph == .symbol(.list))
-        #expect(CatalogSearchHitPresentation.leadThumbnail(for: leadHit(kind: "widget")).glyph == .symbol(.search))
+        #expect(typeLead?.glyph == .mark(.typeBook))
+        #expect(typeLead?.label != nil)
+        #expect(CatalogSearchHitPresentation.leadThumbnail(for: leadHit(kind: "source_type"))?.glyph == .symbol(.tag))
+        #expect(CatalogSearchHitPresentation.leadThumbnail(for: leadHit(kind: "metadata_field"))?.glyph == .symbol(.list))
+        #expect(CatalogSearchHitPresentation.leadThumbnail(for: leadHit(kind: "source")) == nil)
         #expect(CatalogSearchHitPresentation.refAccent(for: CatalogSearchHit(
             kind: "person", id: "p", ref: "PER-7KD45", title: "James Robins", subtitle: "",
             matchReason: "ref", location: .sectionRoot(.persons)
         )))
+    }
+
+    @Test func unknownKindKeepsTheFallbacks() {
+        let hit = leadHit(kind: "widget")
+        #expect(hit.searchKind == nil)
+        #expect(L10n.string(CatalogSearchHitPresentation.kindLabel(for: hit.searchKind)) == L10n.string(L10n.Workspace.omnibarKindSource))
+        #expect(CatalogSearchHitPresentation.leadThumbnail(for: hit)?.glyph == .symbol(.search))
+        #expect(leadHit(kind: "source_type").searchKind == .sourceType)
     }
 
     private func leadHit(kind: String, iconKey: String = "") -> CatalogSearchHit {

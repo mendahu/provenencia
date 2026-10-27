@@ -10,7 +10,7 @@ struct CatalogSearchHitRow: View {
         PVOmnibarHitRow(
             lead: { leadView },
             title: CatalogSearchHitPresentation.title(for: hit, orders: session.nameFormat),
-            kindLabel: CatalogSearchHitPresentation.kindLabel(for: hit.kind),
+            kindLabel: CatalogSearchHitPresentation.kindLabel(for: hit.searchKind),
             secondary: CatalogSearchHitPresentation.secondary(for: hit),
             ref: hit.ref,
             refAccent: CatalogSearchHitPresentation.refAccent(for: hit),
@@ -24,8 +24,9 @@ struct CatalogSearchHitRow: View {
 
     @ViewBuilder
     private var leadView: some View {
-        switch hit.kind {
-        case "source":
+        if let lead = CatalogSearchHitPresentation.leadThumbnail(for: hit) {
+            PVThumbnail(lead, size: 40)
+        } else {
             CachedThumbnail(
                 projectDir: projectDir,
                 relPath: hit.thumbnailRelPath,
@@ -33,8 +34,6 @@ struct CatalogSearchHitRow: View {
                 size: 40,
                 cornerRadius: PVRadius.sm
             )
-        default:
-            PVThumbnail(CatalogSearchHitPresentation.leadThumbnail(for: hit), size: 40)
         }
     }
 }

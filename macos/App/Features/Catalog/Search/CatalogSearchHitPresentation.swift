@@ -2,15 +2,15 @@ import Foundation
 
 /// Maps a SearchCatalog hit into result row copy (kind-agnostic slots).
 enum CatalogSearchHitPresentation {
-    static func kindLabel(for kind: String) -> LocalizedStringResource {
+    /// A kind this build doesn't know (nil) reads as a Source.
+    static func kindLabel(for kind: CatalogSearchKind?) -> LocalizedStringResource {
         switch kind {
-        case "source": L10n.Workspace.omnibarKindSource
-        case "source_type": L10n.Workspace.omnibarKindType
-        case "metadata_field": L10n.Workspace.omnibarKindMetadataField
-        case "person": L10n.Workspace.omnibarKindPerson
-        case "event": L10n.Workspace.omnibarKindEvent
-        case "place": L10n.Workspace.omnibarKindPlace
-        default: L10n.Workspace.omnibarKindSource
+        case .source, nil: L10n.Workspace.omnibarKindSource
+        case .sourceType: L10n.Workspace.omnibarKindType
+        case .metadataField: L10n.Workspace.omnibarKindMetadataField
+        case .person: L10n.Workspace.omnibarKindPerson
+        case .event: L10n.Workspace.omnibarKindEvent
+        case .place: L10n.Workspace.omnibarKindPlace
         }
     }
 
@@ -55,7 +55,7 @@ enum CatalogSearchHitPresentation {
     static func accessibilityLabel(for hit: CatalogSearchHit, orders: NameFormatOrders = NameFormatOrders()) -> String {
         var parts = [
             title(for: hit, orders: orders),
-            L10n.string(kindLabel(for: hit.kind)),
+            L10n.string(kindLabel(for: hit.searchKind)),
         ]
         let subtitle = secondary(for: hit).trimmingCharacters(in: .whitespacesAndNewlines)
         if !subtitle.isEmpty {
@@ -96,22 +96,27 @@ enum CatalogSearchHitPresentation {
         }
     }
 
-    /// The lead thumbnail for every kind but `source`, which `CatalogSearchHitRow` draws
-    /// from the Source's own image.
-    static func leadThumbnail(for hit: CatalogSearchHit) -> PVThumbnail.Content {
-        if EvidencePrimaryKind(rawValue: hit.kind) != nil {
-            return ConclusionListRow.thumbnail(mark: PVMarkKey(subjectTypeKey: hit.kind) ?? .fallback)
-        }
-        switch hit.kind {
-        case "source_type":
+    /// The lead thumbnail, or nil for a `source` hit, which `CatalogSearchHitRow`
+    /// draws from the Source's own image.
+    static func leadThumbnail(for hit: CatalogSearchHit) -> PVThumbnail.Content? {
+        switch hit.searchKind {
+        case .source:
+            return nil
+        case .person:
+            return ConclusionListRow.thumbnail(mark: EvidencePrimaryKind.person.markKey)
+        case .event:
+            return ConclusionListRow.thumbnail(mark: EvidencePrimaryKind.event.markKey)
+        case .place:
+            return ConclusionListRow.thumbnail(mark: EvidencePrimaryKind.place.markKey)
+        case .sourceType:
             if hit.iconKey.isEmpty { return PVThumbnail.Content(glyph: WorkspaceSection.sourceTypes.glyph) }
             return PVThumbnail.Content(
                 glyph: .mark(PVMarkKey(catalogKey: hit.iconKey)),
-                label: kindLabel(for: hit.kind)
+                label: kindLabel(for: .sourceType)
             )
-        case "metadata_field":
+        case .metadataField:
             return PVThumbnail.Content(glyph: WorkspaceSection.metadata.glyph)
-        default:
+        case nil:
             return PVThumbnail.Content(glyph: .symbol(.search))
         }
     }
