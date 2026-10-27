@@ -8,7 +8,9 @@ import (
 	"github.com/mendahu/provenencia/core/claimevidence"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
+	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/promotealign"
+	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
@@ -55,8 +57,8 @@ func GetPromoteClaimEvidence(in []byte) ([]byte, error) {
 		if err := values.ResolvePaths(c, e); err != nil {
 			return err
 		}
-		out = claimEvidenceProto(e, values)
-		return nil
+		out, err = claimEvidenceProto(c, e, values)
+		return err
 	})
 	if err != nil {
 		return nil, err
@@ -64,7 +66,7 @@ func GetPromoteClaimEvidence(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func claimEvidenceProto(e claimevidence.Evidence, values promotealign.EvidenceValues) *engine.GetPromoteClaimEvidenceResponse {
+func claimEvidenceProto(c *database.Catalog, e claimevidence.Evidence, values promotealign.EvidenceValues) (*engine.GetPromoteClaimEvidenceResponse, error) {
 	out := &engine.GetPromoteClaimEvidenceResponse{Sections: evidenceSectionsProto(e.Kind, e.Sections, values)}
 	for _, rel := range e.Relationships {
 		r := &engine.PromoteClaimEvidenceRelationship{
@@ -75,6 +77,8 @@ func claimEvidenceProto(e claimevidence.Evidence, values promotealign.EvidenceVa
 			Sections:                  evidenceSectionsProto(rel.Kind, rel.Sections, values),
 			NeighborEnd:               string(rel.NeighborEnd),
 			NeighborTermNamesNeighbor: rel.NeighborTermNamesNeighbor,
+			Layer:                     evidenceShapeProto(rel.Layer),
+			Canon:                     evidenceShapeProto(rel.Canon),
 		}
 		if rel.NeighborTerm != "" {
 			r.NeighborTerm = evidenceTermProto(values, string(rel.NeighborTermProperty), string(rel.NeighborTerm))
@@ -96,7 +100,55 @@ func claimEvidenceProto(e claimevidence.Evidence, values promotealign.EvidenceVa
 	slices.SortFunc(out.Sources, func(a, b *engine.PromoteClaimEvidenceSource) int {
 		return strings.Compare(a.GetId(), b.GetId())
 	})
+	if err := canonPivotHeaders(c, out.Relationships, e.Relationships); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// evidenceShapeProto is one side's shape of a relationship line, without the
+// pivot's header.
+func evidenceShapeProto(s kinship.Shape) *engine.PromoteClaimEvidenceShape {
+	out := &engine.PromoteClaimEvidenceShape{Pattern: string(s.Pattern)}
+	if len(s.Pivot) == 16 {
+		out.PivotId = database.UUIDString(s.Pivot)
+	}
 	return out
+}
+
+// canonPivotHeaders sets the header of each entity-side pivot on the mapped
+// relationships (parallel to rels): the pivot is a handle, an event or a
+// person by its pattern, and every header is read in one call.
+func canonPivotHeaders(c *database.Catalog, mapped []*engine.PromoteClaimEvidenceRelationship, rels []claimevidence.Relationship) error {
+	var persons, events [][]byte
+	for _, rel := range rels {
+		switch rel.Canon.Pattern.PivotKind() {
+		case vocabkey.Person:
+			persons = append(persons, rel.Canon.Pivot)
+		case vocabkey.Event:
+			events = append(events, rel.Canon.Pivot)
+		}
+	}
+	if len(persons)+len(events) == 0 {
+		return nil
+	}
+	headers, err := conclusionheaders.ByIDs(c, persons, events, nil)
+	if err != nil {
+		return err
+	}
+	for i, rel := range rels {
+		switch rel.Canon.Pattern.PivotKind() {
+		case vocabkey.Person:
+			if h, ok := headers.Person(rel.Canon.Pivot); ok {
+				mapped[i].Canon.PivotHeader = &engine.PromoteClaimEvidenceShape_Person{Person: personHeaderProto(h)}
+			}
+		case vocabkey.Event:
+			if h, ok := headers.Event(rel.Canon.Pivot); ok {
+				mapped[i].Canon.PivotHeader = &engine.PromoteClaimEvidenceShape_Event{Event: eventHeaderProto(h)}
+			}
+		}
+	}
+	return nil
 }
 
 // evidenceSectionsProto maps sections whose values belong to a Subject of
