@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/subjectcompare"
@@ -146,6 +147,10 @@ func evidence(g *graphcache.Graph, in inputs, q *evidenceReader, req EvidenceReq
 	if err != nil {
 		return claimevidence.Evidence{}, err
 	}
+	rowSet := map[string]bool{}
+	for _, m := range members {
+		rowSet[string(m.Subject)] = true
+	}
 	var neighbors []claimevidence.Neighbor
 	for _, n := range wanted {
 		hid := placed[string(n)]
@@ -153,11 +158,15 @@ func evidence(g *graphcache.Graph, in inputs, q *evidenceReader, req EvidenceReq
 		if hn == nil {
 			continue
 		}
-		canon, err := q.canonLinks(handleNode, hn)
+		all, err := q.accepted(hid)
 		if err != nil {
 			return claimevidence.Evidence{}, err
 		}
-		all, err := q.accepted(hid)
+		nbrSet := make(map[string]bool, len(all))
+		for _, id := range all {
+			nbrSet[string(id)] = true
+		}
+		canon, err := q.canonLinks(handleNode, hn, nil, rowSet, nbrSet)
 		if err != nil {
 			return claimevidence.Evidence{}, err
 		}
@@ -243,6 +252,7 @@ type evidenceReader struct {
 	prof     *profiler
 	memberOf map[string]graphcache.Member        // by Subject id, from the members read so far
 	graphs   map[string]graphcache.EvidenceGraph // by graph id, the graphs this request has read
+	indexes  map[string]*bridgeIndex             // by graph id, the graphs bridgesOf has read
 }
 
 func newEvidenceReader(g *graphcache.Graph, in inputs) (*evidenceReader, error) {
@@ -250,7 +260,7 @@ func newEvidenceReader(g *graphcache.Graph, in inputs) (*evidenceReader, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &evidenceReader{g: g, in: in, prof: prof, memberOf: map[string]graphcache.Member{}, graphs: map[string]graphcache.EvidenceGraph{}}, nil
+	return &evidenceReader{g: g, in: in, prof: prof, memberOf: map[string]graphcache.Member{}, graphs: map[string]graphcache.EvidenceGraph{}, indexes: map[string]*bridgeIndex{}}, nil
 }
 
 // graph is the Evidence graph with id. The request keeps each one it reads, so
@@ -384,10 +394,10 @@ func (r *evidenceReader) memberValues(subjectIDs [][]byte) ([]claimevidence.Memb
 	return out, nil
 }
 
-// canonLinks are the filed links from one entity to another, each keyed from
-// the first entity's end, with the accepted bridge Subjects filed on its
-// association.
-func (r *evidenceReader) canonLinks(from, to *graphcache.Node) ([]claimevidence.CanonLink, error) {
+// canonLinks are the links from one entity to another, each keyed from the
+// first entity's end, with the accepted bridge Subjects behind it. row and nbr
+// are the Subject ids of the two entities' accepted members.
+func (r *evidenceReader) canonLinks(from, to *graphcache.Node, rels []kinship.Link, row, nbr map[string]bool) ([]claimevidence.CanonLink, error) {
 	var out []claimevidence.CanonLink
 	for _, l := range from.Links {
 		if !bytes.Equal(l.Neighbor, to.ID) {
@@ -401,7 +411,7 @@ func (r *evidenceReader) canonLinks(from, to *graphcache.Node) ([]claimevidence.
 		if bytes.Equal(a, from.ID) {
 			key = keyA
 		}
-		bridges, err := r.bridges(l)
+		bridges, err := r.bridgesOf([][]byte{l.Association}, row, nbr, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -410,72 +420,111 @@ func (r *evidenceReader) canonLinks(from, to *graphcache.Node) ([]claimevidence.
 	return out, nil
 }
 
-// bridges are the accepted bridge Subjects on a link's association, each with
-// the two Subjects it joins (read from its endpoint Observations, in the
-// order of the link's end) and every Observation on it. An end is read from a
-// positive Observation only; an end that names two different Subjects is
-// unresolved, and a bridge that does not record both ends is left out.
-func (r *evidenceReader) bridges(l graphcache.Link) ([]claimevidence.Bridge, error) {
-	spec, ok := connectrules.LookupBridge(l.BridgeTypeKey)
-	if !ok || len(spec.Endpoints) != 2 {
-		return nil, nil
-	}
-	subjectIDs, err := r.accepted(l.Association)
-	if err != nil {
-		return nil, err
-	}
-	memberEnd, neighborEnd := spec.Endpoints[0].PropertyKey, spec.Endpoints[1].PropertyKey
-	if !l.FromEnd {
-		memberEnd, neighborEnd = neighborEnd, memberEnd
-	}
-	obsOf := map[string][]graphcache.EvidenceObservation{} // by bridge Subject
-	read := map[string]bool{}                              // graphs walked
-	for _, id := range subjectIDs {
-		m, ok := r.memberOf[string(id)]
-		if !ok || read[string(m.GraphID)] {
-			continue
-		}
-		read[string(m.GraphID)] = true
-		eg, err := r.graph(m.GraphID)
+// bridgesOf are the accepted bridge Subjects on the associations, each with the
+// Subjects it joins and every Observation on it. A bridge's two ends are read
+// through its own bridge type's endpoint properties from positive Observations
+// only; an end that names two different Subjects is unresolved and the bridge
+// is left out. An end that is a Subject in row is the bridge's Member, else in
+// nbr its Neighbor, else in pivot its Pivot; a bridge that does not reach two of
+// the three is left out.
+func (r *evidenceReader) bridgesOf(assocs [][]byte, row, nbr, pivot map[string]bool) ([]claimevidence.Bridge, error) {
+	var out []claimevidence.Bridge
+	for _, assoc := range assocs {
+		subjectIDs, err := r.accepted(assoc)
 		if err != nil {
 			return nil, err
 		}
-		for _, o := range eg.Observations {
-			obsOf[string(o.SubjectID)] = append(obsOf[string(o.SubjectID)], o)
-		}
-	}
-	var out []claimevidence.Bridge
-	for _, id := range subjectIDs {
-		m, ok := r.memberOf[string(id)]
-		if !ok {
-			continue
-		}
-		b := claimevidence.Bridge{Subject: bytes.Clone(id), Source: bytes.Clone(m.SourceID)}
-		ambiguous := false
-		end := func(into *[]byte, v []byte) {
-			if len(*into) > 0 && !bytes.Equal(*into, v) {
-				ambiguous = true
-			}
-			*into = bytes.Clone(v)
-		}
-		for _, o := range obsOf[string(id)] {
-			b.Observations = append(b.Observations, bytes.Clone(o.ID))
-			if len(o.ValueSubjectID) == 0 || o.Polarity != observations.PolarityPositive {
+		for _, id := range subjectIDs {
+			m, ok := r.memberOf[string(id)]
+			if !ok {
 				continue
 			}
-			switch r.prof.props[string(o.PropertyID)].Key {
-			case memberEnd:
-				end(&b.Member, o.ValueSubjectID)
-			case neighborEnd:
-				end(&b.Neighbor, o.ValueSubjectID)
+			ix, err := r.bridgeIndex(m.GraphID)
+			if err != nil {
+				return nil, err
 			}
+			spec, ok := connectrules.LookupBridge(ix.types[string(id)])
+			if !ok || len(spec.Endpoints) != 2 {
+				continue
+			}
+			b := claimevidence.Bridge{Subject: bytes.Clone(id), Source: bytes.Clone(m.SourceID)}
+			var ends [2][]byte
+			ambiguous := false
+			for _, o := range ix.obs[string(id)] {
+				b.Observations = append(b.Observations, bytes.Clone(o.ID))
+				if len(o.ValueSubjectID) == 0 || o.Polarity != observations.PolarityPositive {
+					continue
+				}
+				key := r.prof.props[string(o.PropertyID)].Key
+				for i, e := range spec.Endpoints {
+					if key != e.PropertyKey {
+						continue
+					}
+					if len(ends[i]) > 0 && !bytes.Equal(ends[i], o.ValueSubjectID) {
+						ambiguous = true
+					}
+					ends[i] = o.ValueSubjectID
+				}
+			}
+			if ambiguous || len(ends[0]) == 0 || len(ends[1]) == 0 {
+				continue
+			}
+			reached := 0
+			for _, end := range ends {
+				var into *[]byte
+				switch {
+				case row[string(end)]:
+					into = &b.Member
+				case nbr[string(end)]:
+					into = &b.Neighbor
+				case pivot[string(end)]:
+					into = &b.Pivot
+				default:
+					continue
+				}
+				if *into != nil {
+					ambiguous = true
+				}
+				*into = bytes.Clone(end)
+				reached++
+			}
+			if ambiguous || reached < 2 {
+				continue
+			}
+			out = append(out, b)
 		}
-		if ambiguous || len(b.Member) == 0 || len(b.Neighbor) == 0 {
-			continue
-		}
-		out = append(out, b)
 	}
 	return out, nil
+}
+
+// bridgeIndex is what bridgesOf reads of one Evidence graph: each Subject's
+// type key, and its Observations by Subject.
+type bridgeIndex struct {
+	types map[string]string
+	obs   map[string][]graphcache.EvidenceObservation
+}
+
+// bridgeIndex indexes the Evidence graph with id once per request.
+func (r *evidenceReader) bridgeIndex(graphID []byte) (*bridgeIndex, error) {
+	if ix, ok := r.indexes[string(graphID)]; ok {
+		return ix, nil
+	}
+	eg, err := r.graph(graphID)
+	if err != nil {
+		return nil, err
+	}
+	ix := &bridgeIndex{
+		types: make(map[string]string, len(eg.Subjects)),
+		obs:   make(map[string][]graphcache.EvidenceObservation),
+	}
+	for _, s := range eg.Subjects {
+		ix.types[string(s.ID)] = s.TypeKey
+	}
+	for _, o := range eg.Observations {
+		ix.obs[string(o.SubjectID)] = append(ix.obs[string(o.SubjectID)], o)
+	}
+	r.indexes[string(graphID)] = ix
+	return ix, nil
 }
 
 // titles maps the id of every Source a pin or bundle in the evidence names to

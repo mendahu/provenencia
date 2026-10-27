@@ -159,13 +159,13 @@ func (f *fixture) place(src sources.Source, art artifacts.Artifact, name string)
 	return s
 }
 
-func (f *fixture) participation(src sources.Source, art artifacts.Artifact, person, event subjects.Subject, role string) {
+func (f *fixture) participation(src sources.Source, art artifacts.Artifact, person, event subjects.Subject, role string) subjects.Subject {
 	f.t.Helper()
 	personProp := f.prop("person").ID
 	eventProp := f.prop("event").ID
 	roleProp := f.prop("role").ID
 	roleTerm := f.term("role", role).ID
-	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+	res, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
 			FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
 			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
@@ -177,6 +177,7 @@ func (f *fixture) participation(src sources.Source, art artifacts.Artifact, pers
 		})
 	})
 	must(f.t, err)
+	return res.Subject
 }
 
 func (f *fixture) locate(src sources.Source, art artifacts.Artifact, event, place subjects.Subject) {
@@ -217,13 +218,13 @@ func (f *fixture) placeRel(src sources.Source, art artifacts.Artifact, from, to 
 }
 
 // relationship cites "person is typ of related" on src.
-func (f *fixture) relationship(src sources.Source, art artifacts.Artifact, person, related subjects.Subject, typ string) {
+func (f *fixture) relationship(src sources.Source, art artifacts.Artifact, person, related subjects.Subject, typ string) subjects.Subject {
 	f.t.Helper()
 	personProp := f.prop("person").ID
 	relatedProp := f.prop("related_to").ID
 	typeProp := f.prop("relationship_type").ID
 	typTerm := f.term("relationship_type", typ).ID
-	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+	res, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
 			FromSubjectID: person.ID, ToSubjectID: related.ID, BridgeTypeKey: "relationship",
 			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
@@ -235,6 +236,7 @@ func (f *fixture) relationship(src sources.Source, art artifacts.Artifact, perso
 		})
 	})
 	must(f.t, err)
+	return res.Subject
 }
 
 // sexOnly is a person whose record gives no name, only a sex at birth.
