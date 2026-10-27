@@ -68,3 +68,12 @@
 
 ### X-8 · nit · Doc and DoD wording
 **Answer:** Fixed — manual check order; STEP-7 states the map row text.
+
+## Round 2 — maintainability
+
+Round-1 answers M-1 to M-7 accepted.
+
+### M-8 · blocker · D-13 adds two columns to four hand-written column lists and three positional scans of the same `docRow`
+**Plan:** STEP-1 edits "the three `SELECT`s"; `lookUpRefDocs` has two (exact and `LIKE`), so four lists and three scans.
+**Better shape:** one `docColumns` list and one `scanDoc(rows, d, extra...)` in `core/search`, moved onto first, then the columns added once.
+**Answer:** Fixed — D-13 and STEP-1 add `docColumns` / `scanDoc` *(new)* before the columns, in their own commit; §4 "Doc rows" says four `SELECT` texts; Codebase fit and Deletes list them; T-1's prefix-ref case now checks `Location.SourceID` through the `LIKE` branch.
