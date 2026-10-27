@@ -491,9 +491,9 @@ struct SourcesModelTests {
 
         let notStartedText = SourcesGraphCountLine.countsText(.notStarted, style: .card)
         let zero = notStartedText.runs.first { String(notStartedText[$0.range].characters) == "0" }
-        #expect(zero?.font == PVFont.mono(size: PVTypeScale.micro))
+        #expect(zero?[AttributeScopes.SwiftUIAttributes.FontAttribute.self] == PVFont.mono(size: PVTypeScale.micro))
         let words = notStartedText.runs.first { String(notStartedText[$0.range].characters) == "not started" }
-        #expect(words?.font == PVFont.body(size: PVTypeScale.micro).italic())
+        #expect(words?[AttributeScopes.SwiftUIAttributes.FontAttribute.self] == PVFont.body(size: PVTypeScale.micro).italic())
     }
 
     @Test func listColumnsMatchBoard() {

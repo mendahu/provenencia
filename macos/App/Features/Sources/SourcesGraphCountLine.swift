@@ -71,7 +71,7 @@ struct SourcesGraphCountLine: View {
         func flush() {
             guard !run.isEmpty else { return }
             var piece = AttributedString(run)
-            piece.font = runIsDigits ? mono : body
+            piece[AttributeScopes.SwiftUIAttributes.FontAttribute.self] = runIsDigits ? mono : body
             out.append(piece)
             run = ""
         }
@@ -84,7 +84,7 @@ struct SourcesGraphCountLine: View {
         flush()
         let notStartedWords = L10n.string(L10n.Sources.graphNotStarted)
         if let range = out.range(of: notStartedWords) {
-            out[range].font = body.italic()
+            out[range][AttributeScopes.SwiftUIAttributes.FontAttribute.self] = body.italic()
         }
         return out
     }

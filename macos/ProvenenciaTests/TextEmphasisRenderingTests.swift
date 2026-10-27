@@ -22,7 +22,7 @@ struct TextEmphasisRenderingTests {
     private func emphasized(_ intent: InlinePresentationIntent?) -> AttributedString {
         var text = AttributedString("John Smith")
         if let intent {
-            text.inlinePresentationIntent = intent
+            text[AttributeScopes.FoundationAttributes.InlinePresentationIntentAttribute.self] = intent
         }
         return text
     }
@@ -56,7 +56,7 @@ struct TextEmphasisRenderingTests {
 
     @Test func anEmphasizedRunInASectionHeaderTitleDrawsHeavier() throws {
         var name = AttributedString("John Smith")
-        name.inlinePresentationIntent = .stronglyEmphasized
+        name[AttributeScopes.FoundationAttributes.InlinePresentationIntentAttribute.self] = .stronglyEmphasized
         let strong = name + AttributedString(" in Leeds")
         let plain = try #require(headerBitmap(AttributedString("John Smith in Leeds")))
         let emphasized = try #require(headerBitmap(strong))
