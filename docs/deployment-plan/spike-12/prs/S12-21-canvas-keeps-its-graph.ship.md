@@ -1,7 +1,7 @@
 # Ship log — S12-21 The canvas keeps its graph and shows its failures
 
 **Plan:** [`S12-21-canvas-keeps-its-graph.md`](S12-21-canvas-keeps-its-graph.md) · **Branch:** `s12-21-canvas-keeps-its-graph` · **PR:** #596
-**State:** fixing 2
+**State:** ready
 
 ## Round 0 — implement
 Head `1fee85d4`. Gate PASS (orchestrator run, xcode-test 60s). Report deviations: T-4 case (d) is its own test (needs a different store); hosting tests T-1 and T-8 wait up to 15 s instead of the plan's 2 s after one load timeout in a full-suite run (passes alone well within 2 s, so `.task` does run; not treated as the Stop condition, left for review); commits grouped by behavior, not per STEP; T-8 attaches history with project uuid `"project-1"`. Manual check (§10) not run.
@@ -82,7 +82,7 @@ Nits (logged): `MNT-7 · docs/macos-client-patterns.md · mention WorkspaceSessi
 Merged `origin/main` @ `331bb3c3` (docs only: S11-47 plan). Gate PASS after the merge. Plan Landed note updated with the review-round changes (commit `3dae2dbe`).
 
 ## Result
-Gate PASS · CI green · open: none · follow-ups: UX-2b (composer load errors shown in the Transcription field slot, without the Citation's ref), MNT-7 (patterns doc names `reread`) · to user: UX-3 answered (reorder; F-7) · CON miss: none
+Gate PASS · CI green (re-run after F-7 below) · open: none · follow-ups: UX-2b (composer load errors shown in the Transcription field slot, without the Citation's ref), MNT-7 (patterns doc names `reread`) · to user: UX-3 answered (reorder; F-7) · CON miss: none
 
 ## User answer — UX-3
 The user chose to reorder (quoted above). The orchestrator updated D-7 and T-7 in the plan and added a line to its Landed note. This fix round changes the order of two existing notices and nothing else, so it goes to no reviewer; the orchestrator reads the fix.
@@ -93,3 +93,6 @@ Files: `macos/App/Features/EvidenceGraph/EvidenceCanvasInputMode.swift` (`canvas
 Failing test first: `canvasNoticeOrder` case (f) per the plan's T-7: as (a) (failed graph read), with a failed Subject delete (`deleteError` set, `pendingImpact == nil`) → `.deleteError(_)`; as (a), with `fileOpenError` for the selected file → `.fileNotFound(_)`. Build the states the way the suite's existing delete-error and file-not-found tests do; do not add FakeStore behavior.
 Do: in `canvasNotice`, move the `graphReadError` → `.readError` check below the `.deleteError` and `.fileNotFound` checks and above `!canCite` → `.noArtifact`. Update the comment on case (a) ("outranks the rest") and any doc comment on `canvasNotice` or `EvidenceGraphCanvasNotice` that states the order.
 Check: `canvasNoticeOrder` passes, and the rest of `EvidenceGraphModelTests` passes; scripts/check-pr.sh PASS.
+
+## Round 2 — fix
+Head `fc690639`. Gate PASS (orchestrator run). F-7 done: `canvasNoticeOrder` case (f) failed first (`.readError` for both states), passes after the move. The orchestrator read the diff: in `canvasNotice`, the `graphReadError` check moved below `.deleteError` and `.fileNotFound` and above `.noArtifact`, and the doc comment states the new order. UX-3 **Resolved**.
