@@ -109,7 +109,7 @@ These are the calls for this spike. PR plans treat them as binding.
 ### Name candidates
 
 - **The candidate gate drops to 0.4** (user, 2026-10-24; [case 1](name-candidates.md#case-1--amy-against-amy-lee-anne-long)). `alignment.MinSimilarity` 0.5 → 0.4, so a one-name Subject reaches a record with three more names. The gate only picks candidates; no band moves, and the row still opens unset (S11-47).
-- **Des is a nickname of Desiree and of Desirae** (user, 2026-10-24): two sets, `{desiree, des}` and `{desirae, des}`, in `nicknameSets`, the product's already-reviewed edit of the upstream list, with a `CacheVersion` bump. An existing catalog gains new product nicknames by a command the researcher runs, over `AddProductNicknames`; nothing backfills on open (S11-44).
+- **Des is a nickname of Desiree and of Desirae** (user, 2026-10-24): two sets, `{desiree, des}` and `{desirae, des}`, in `nicknameSets`, the product's already-reviewed edit of the upstream list, with a `CacheVersion` bump. An existing catalog gains them from a one-off command the user runs by hand with the app closed; nothing is shipped for it and nothing backfills on open (user, 2026-10-27; S11-44).
 - **Promote suggests a record or nothing** (user, 2026-10-24; [detail](name-candidates.md#promote-suggests-a-record-or-nothing)). A proposal row carries a handle or no target, with its alternatives; Go no longer sends New or Skip, nor the row reasons `weak` and `no_match`, and Swift never drafts them. New and Skip are only the researcher's choice, still sent back as fixed pairs.
 - **Gate only; the curve is held** (user, 2026-10-24) until dogfood after S11-43 shows a fuller record still missing.
 - **A prefix is an initial generalised** (user, 2026-10-24; [prefix rule](name-candidates.md#prefix-rule-in-detail)). A word of a given, nickname or untyped part (the alias tables' roles) of at least `PrefixMinLength` letters that is the exact start of another, after folding, is `Contains` at `PrefixCredit` with `CausePrefix`, checked after alias, fold and spelling. No surname prefixes; text compare never gets it. Both knobs live in the registry's value section. `PrefixMinLength` is 2 (user, 2026-10-24). A prefix folds in the reconciler like an initial (user, 2026-10-24). The shortlist finds prefixes both ways through separate index and lookup keys (S11-46).
@@ -172,7 +172,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-42 | Implied links on the evidence sheet | 9 | The relationship Card says how each side recorded the fact ("This source: married in the marriage dated 12 May 1842 · The record: recorded as spouses") in a muted line under its header; L10n | — | S11-40 | [plan](prs/S11-42-implied-links-sheet.md) | Landed #585 |
 | S11-52 | A related person's lines compare with every member | 5 | Under a relationship Card, a person neighbor's property lines compare with all of the entity's accepted members, not only the linking Source's; event neighbors unchanged; a registry entry names the kinds | — | S11-40 | — | Scoped |
 | S11-43 | Lower the candidate gate | 10 | `alignment.MinSimilarity` 0.5 → 0.4 with its inventory row; a test that "Amy" gets "Amy Lee Anne Long" as an alternative | — | — | [plan](prs/S11-43-candidate-gate.md) | Landed #588 |
-| S11-44 | Des as a nickname of Desiree and Desirae | 10 | `{desiree, des}` and `{desirae, des}` in `nicknameSets` with a `CacheVersion` bump; a command copies new product nicknames and new seeded subject vocabulary (S11-48's Properties, bindings and terms) into the open catalog | — | S11-28, S11-48 | — | Scoped |
+| S11-44 | Des as a nickname of Desiree and Desirae | 10 | `{desiree, des}` and `{desirae, des}` in `nicknameSets` with a `CacheVersion` bump. Existing catalogs get them, and S11-48's Properties, from a one-off command the user runs by hand, not shipped (user 2026-10-27) | — | S11-28 | [plan](prs/S11-44-des-nickname.md) | Planned |
 | S11-47 | Promote suggests a record or nothing | 10 | Unplaced proposal rows carry no target and no `weak` / `no_match` reason; possible duplicates found among unplaced rows; Swift drafts a handle or unset only | — | — | — | Scoped |
 | S11-46 | Prefix keys in the shortlist | 10 | `WordKeys` splits into index and lookup lists; given-name words are filed and looked up under their prefixes both ways; `PrefixMinLength`; extra keys measured | — | — | — | Scoped |
 | S11-45 | Prefix names | 10 | A given name that starts another is a `Contains` hit at `PrefixCredit` (`CausePrefix`), with the broader side right; the cause worded on the sheet; the reconciler's call | — | S11-46, S11-28 | — | Scoped |
@@ -289,11 +289,11 @@ SLICE 10 — Name candidates
   S11-46  Prefix keys in the shortlist          (any time)
   S11-45  Prefix names
   Check: "Amy" is offered "Amy Lee Anne Long"; "Desiree" and "Desirae" are offered
-         "Des" in a catalog that existed before S11-44, once the command has run; a three-letter start of a given name
+         "Des" in a new catalog (and in the dogfood catalog after the one-off command); a three-letter start of a given name
          with no nickname set is offered through the prefix rule, and the sheet says why.
 
 PERSON VOCABULARY (one-off, user 2026-10-25)
-  S11-48  Religion and languages spoken on a person   (any time; before S11-44)
+  S11-48  Religion and languages spoken on a person   (any time)
   Check: a new project's person takes Religion → Catholic and a custom Anglican, and
          Languages spoken → English; the Person page keeps both religions.
 
@@ -330,7 +330,6 @@ S11-50 ─────────────────────┴──�
                                             S11-51 ──▶ S13-04   (Spike 13)
 S11-28 ──▶ S11-44
 S11-46, S11-28 ──▶ S11-45
-S11-48 ──▶ S11-44
 ```
 
 ---
@@ -715,7 +714,7 @@ Added 2026-10-26 from Spike 13's map review (was S13-19, [review K-2](../spike-1
 
 The user's call on 2026-10-25: record religion and languages as term Properties first; Organization as a Subject type is parked in [`ideas/organizations.md`](../../ideas/organizations.md).
 **Ships.** `religion` and `languages_spoken` in `subjectvocab`'s registry: term, cardinality multiple, bound to person unlocked, one product term each (Catholic, English). Researchers add the rest as `origin=user` terms. [`seeded-vocabulary.md`](../../seeded-vocabulary.md) and the cardinality paragraph of [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) follow.
-**Not this PR.** Existing catalogs (S11-44's command). Matching weights. Swift wording.
+**Not this PR.** Existing catalogs (a one-off command the user runs by hand, S11-44). Matching weights. Swift wording.
 **Check.** A new project's person takes Religion → Catholic and a custom Anglican, and the Person page shows both.
 **Context.** [`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md).
 
@@ -732,9 +731,9 @@ From dogfood on 2026-10-24. Design and diagnosis: [`name-candidates.md`](name-ca
 
 #### S11-44 — Des as a nickname of Desiree and Desirae
 
-**Ships.** `{desiree, des}` and `{desirae, des}` in `nicknameSets` (`namealiases/nicknames_seed.go`, already the product's reviewed edit of upstream; two sets because a shared nickname does not join two formal names), the reconciler `CacheVersion` bump and the seed hash re-pinned (S11-28's recipe). A command copies the product nicknames a catalog lacks into the open catalog through `AddProductNicknames` (no caller today), then `Invalidate`s, and reports how many sets and tokens were new (`NicknameAdd`). The same command adds the seeded subject vocabulary a catalog lacks (user 2026-10-25): `subjectvocab` Properties and terms missing by `(key, origin)`, and a binding only for a Property the command itself adds, so a binding the researcher removed is not restored; this is how S11-48's `religion` and `languages_spoken` reach a catalog made before it: an FFI handler ([`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md)) and an app menu command with a toast, copy through L10n. The plan says where the command sits; if it needs a new view, it waits on a brief. Nothing runs on open; [`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md) gains a line on the command.
-**Not this PR.** An editor for alias tables.
-**Check.** In a catalog created before this PR, after the command, "Desiree" and "Desirae" are offered "Des" and a person takes Religion and Languages spoken; running it again adds nothing; a new catalog has both sets.
+**Ships.** `{desiree, des}` and `{desirae, des}` in `nicknameSets` (`namealiases/nicknames_seed.go`, already the product's reviewed edit of upstream; two sets because a shared nickname does not join two formal names), the reconciler `CacheVersion` bump and the seed hash re-pinned (S11-28's recipe).
+**Not this PR.** Reaching an existing catalog: the user runs a one-off command by hand, with the app closed, that adds the new nickname sets and S11-48's Properties, terms and person bindings (user 2026-10-27: "We don't need to build anything for this."). An editor for alias tables.
+**Check.** In a new catalog, "Desiree" and "Desirae" are offered "Des" and the reverse.
 **Context.** [Case 2](name-candidates.md#case-2--desiree-against-des); S11-28 (the reviewed table beside upstream).
 
 #### S11-47 — Promote suggests a record or nothing

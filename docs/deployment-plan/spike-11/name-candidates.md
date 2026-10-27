@@ -61,7 +61,7 @@ With `{desiree, des}` as a nickname set, the pair shortlists and compares at sim
 
 1. **Gate only.** Lower the gate to 0.4 (S11-43); leave the curve alone for now.
 2. **A prefix folds like an initial** in the reconciler: `CausePrefix` joins the fold allow-list, so "Des Long" shows as "Desiree Long" within one entity (S11-45).
-3. **New product nicknames reach an existing catalog by a command.** No backfill on open, so `add-seeded-vocabulary`'s rule stands and no marker is stored (S11-44).
+3. **New product nicknames reach an existing catalog by a command.** No backfill on open, so `add-seeded-vocabulary`'s rule stands and no marker is stored (S11-44). The command is a one-off the user runs by hand, not shipped (user, 2026-10-27).
 4. **Prefixes from two letters** (`PrefixMinLength` 2).
 
 ## Promote suggests a record or nothing
