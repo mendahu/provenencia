@@ -73,7 +73,7 @@ Every hit must carry a navigable `WorkspaceLocation` so S3-10 can
 | `metadata_field` | `metadata` | `field_id` |
 | `evidence_graph` | `sources` | `graph_id`, with `source_surface` `graph` and `source_id` from `display_parent_id` |
 
-A kind that opens inside a parent record projects the parent's id and ref into `display_parent_id` / `display_parent_ref` (and its title into `display_subtitle`); `locationFor` reads them.
+A kind that opens inside a parent record projects the parent's id and ref into `display_parent_id` / `display_parent_ref` (and its title into `display_subtitle`); `locationFor` reads them. `locationFor` returns a `core/workspacelocation.Location`, the one Go location type search and delete impact share; a graph hit is built by `workspacelocation.Graph`.
 
 Child text (notes, metadata values, artifact filenames) should **roll into** a
 navigable root hit — do not invent note/metadata hit kinds without a
@@ -86,7 +86,11 @@ destination UI.
    `catalog_search_fts_trigram` in sync on Upsert/Delete/ClearAll. Bump
    `ProjectionVersion` when the document shape or index set changes so
    `searchindex.EnsureCatalog` rebuilds on Open.
-2. Call reproject from domain mutators in the same transaction when practical.
+2. Add a `Search` doc on the table's `effects` registry entry (with the parent
+   fan-out, as `source_types` and `sources` do), a case in
+   `searchindex.Reproject`, and a loop in `RebuildAll`. A new display column
+   goes through `searchindex.Document`/`Upsert` and `core/search`
+   `docColumns`/`scanDoc`.
 3. `FTSSearcher` (`DefaultEngine`) reads unicode61 FTS + docs; when the
    candidate map is still under the hit limit, expands via trigram OR shortlist
    + Jaro–Winkler gate (never full-catalog fuzzy). Empty / whitespace query →

@@ -6,6 +6,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/workspacelocation"
 )
 
 const listedSnippetMaxRunes = 80
@@ -27,7 +28,7 @@ func projectListed(tx *sql.Tx, kind catalogmodel.Kind, row probeRow) (Listed, er
 	return out, nil
 }
 
-func projectKind(tx *sql.Tx, kind catalogmodel.Kind, row probeRow) (string, Location, error) {
+func projectKind(tx *sql.Tx, kind catalogmodel.Kind, row probeRow) (string, workspacelocation.Location, error) {
 	switch kind {
 	case catalogmodel.KindObservation:
 		return projectObservation(tx, row.ID, row.Ref)
@@ -42,27 +43,27 @@ func projectKind(tx *sql.Tx, kind catalogmodel.Kind, row probeRow) (string, Loca
 	case catalogmodel.KindEvidenceGraph:
 		return projectEvidenceGraph(tx, row.ID, row.Ref)
 	case catalogmodel.KindSourceType:
-		return projectVocab(tx, `SELECT label FROM source_types WHERE id = ?`, row.ID, row.Ref, Location{
-			Section: sectionSourceTypes, TypeID: database.UUIDString(row.ID),
+		return projectVocab(tx, `SELECT label FROM source_types WHERE id = ?`, row.ID, row.Ref, workspacelocation.Location{
+			Section: workspacelocation.SourceTypes, TypeID: database.UUIDString(row.ID),
 		})
 	case catalogmodel.KindMetadataField:
-		return projectVocab(tx, `SELECT label FROM source_metadata_fields WHERE id = ?`, row.ID, row.Ref, Location{
-			Section: sectionMetadata, FieldID: database.UUIDString(row.ID),
+		return projectVocab(tx, `SELECT label FROM source_metadata_fields WHERE id = ?`, row.ID, row.Ref, workspacelocation.Location{
+			Section: workspacelocation.Metadata, FieldID: database.UUIDString(row.ID),
 		})
 	case catalogmodel.KindProperty:
-		return projectVocab(tx, `SELECT label FROM properties WHERE id = ?`, row.ID, row.Ref, Location{
-			Section: sectionProperties, PropertyID: database.UUIDString(row.ID),
+		return projectVocab(tx, `SELECT label FROM properties WHERE id = ?`, row.ID, row.Ref, workspacelocation.Location{
+			Section: workspacelocation.Properties, PropertyID: database.UUIDString(row.ID),
 		})
 	case catalogmodel.KindPropertyTerm:
 		return projectPropertyTerm(tx, row.ID, row.Ref)
 	case catalogmodel.KindSubjectType:
 		return projectSubjectType(tx, row.ID, row.Ref)
 	case catalogmodel.KindCredibilityGrade:
-		return projectVocab(tx, `SELECT label FROM source_credibility_grades WHERE id = ?`, row.ID, row.Ref, Location{
-			Section: sectionSources,
+		return projectVocab(tx, `SELECT label FROM source_credibility_grades WHERE id = ?`, row.ID, row.Ref, workspacelocation.Location{
+			Section: workspacelocation.Sources,
 		})
 	default:
-		return row.Ref, Location{Ref: row.Ref, Title: row.Ref}, nil
+		return row.Ref, workspacelocation.Location{Ref: row.Ref, Title: row.Ref}, nil
 	}
 }
 
@@ -75,7 +76,7 @@ const sqlFirstArtifactGraph = `SELECT ega.graph_id FROM evidence_graph_artifacts
 	ORDER BY g.name COLLATE NOCASE, g.ref, g.id
 	LIMIT 1`
 
-func projectObservation(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
+func projectObservation(tx *sql.Tx, id []byte, ref string) (string, workspacelocation.Location, error) {
 	var (
 		propLabel, value, subLabel, srcTitle, srcID, citID, subID, graphID string
 		propLabelN, valueN, subLabelN, srcTitleN                           sql.NullString
@@ -103,13 +104,13 @@ func projectObservation(tx *sql.Tx, id []byte, ref string) (string, Location, er
 		WHERE o.id = ?`, id,
 	).Scan(&propLabelN, &valueN, &subLabelN, &subRef, &srcTitleN, &srcIDB, &citIDB, &subIDB, &graphIDB)
 	if err == sql.ErrNoRows {
-		return ref, Location{
-			Section: sectionSources, SourceSurface: surfaceCitationComposer,
+		return ref, workspacelocation.Location{
+			Section: workspacelocation.Sources, SourceSurface: workspacelocation.SurfaceCitationComposer,
 			ObservationID: database.UUIDString(id), Ref: ref, Title: ref,
 		}, nil
 	}
 	if err != nil {
-		return "", Location{}, err
+		return "", workspacelocation.Location{}, err
 	}
 	propLabel = propLabelN.String
 	value = strings.TrimSpace(valueN.String)
@@ -126,14 +127,14 @@ func projectObservation(tx *sql.Tx, id []byte, ref string) (string, Location, er
 	if title == "" {
 		title = ref
 	}
-	return title, Location{
-		Section:       sectionSources,
+	return title, workspacelocation.Location{
+		Section:       workspacelocation.Sources,
 		SourceID:      srcID,
 		GraphID:       graphID,
 		SubjectID:     subID,
 		CitationID:    citID,
 		ObservationID: database.UUIDString(id),
-		SourceSurface: surfaceCitationComposer,
+		SourceSurface: workspacelocation.SurfaceCitationComposer,
 		Ref:           subRef,
 		Title:         titleOrRef(subLabel, subRef),
 		SourceTitle:   srcTitle,
@@ -142,8 +143,8 @@ func projectObservation(tx *sql.Tx, id []byte, ref string) (string, Location, er
 
 // projectSubject lists the Subject by its label and opens its graph's canvas
 // with the Subject selected. The location is a graph location, so it names
-// the Source (graphLocation).
-func projectSubject(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
+// the Source (workspacelocation.Graph).
+func projectSubject(tx *sql.Tx, id []byte, ref string) (string, workspacelocation.Location, error) {
 	var label, srcRef, srcTitle sql.NullString
 	var srcID, graphID []byte
 	err := tx.QueryRow(`
@@ -153,17 +154,17 @@ func projectSubject(tx *sql.Tx, id []byte, ref string) (string, Location, error)
 		WHERE sub.id = ?`, id,
 	).Scan(&label, &srcID, &graphID, &srcRef, &srcTitle)
 	if err == sql.ErrNoRows {
-		return ref, Location{Section: sectionSources, SourceSurface: surfaceGraph, SubjectID: database.UUIDString(id), Ref: ref}, nil
+		return ref, workspacelocation.Location{Section: workspacelocation.Sources, SourceSurface: workspacelocation.SurfaceGraph, SubjectID: database.UUIDString(id), Ref: ref}, nil
 	}
 	if err != nil {
-		return "", Location{}, err
+		return "", workspacelocation.Location{}, err
 	}
-	loc := graphLocation(srcID, graphID, srcRef.String, srcTitle.String)
+	loc := workspacelocation.Graph(database.UUIDString(srcID), database.UUIDString(graphID), srcRef.String, srcTitle.String)
 	loc.SubjectID = database.UUIDString(id)
 	return titleOrRef(label.String, ref), loc, nil
 }
 
-func projectCitation(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
+func projectCitation(tx *sql.Tx, id []byte, ref string) (string, workspacelocation.Location, error) {
 	var srcID, artID []byte
 	var srcTitle, transcription sql.NullString
 	err := tx.QueryRow(`
@@ -174,10 +175,10 @@ func projectCitation(tx *sql.Tx, id []byte, ref string) (string, Location, error
 		WHERE c.id = ?`, id,
 	).Scan(&srcID, &artID, &srcTitle, &transcription)
 	if err == sql.ErrNoRows {
-		return "", Location{Section: sectionSources, SourceSurface: surfaceCitationComposer, CitationID: database.UUIDString(id), Ref: ref, Title: ref}, nil
+		return "", workspacelocation.Location{Section: workspacelocation.Sources, SourceSurface: workspacelocation.SurfaceCitationComposer, CitationID: database.UUIDString(id), Ref: ref, Title: ref}, nil
 	}
 	if err != nil {
-		return "", Location{}, err
+		return "", workspacelocation.Location{}, err
 	}
 	locRef, locTitle := ref, ref
 	var subID, graphID []byte
@@ -191,14 +192,14 @@ func projectCitation(tx *sql.Tx, id []byte, ref string) (string, Location, error
 		LIMIT 1`, id,
 	).Scan(&subID, &subLabel, &subRef, &graphID)
 	if obsErr != nil && obsErr != sql.ErrNoRows {
-		return "", Location{}, obsErr
+		return "", workspacelocation.Location{}, obsErr
 	}
 	if obsErr == sql.ErrNoRows {
 		// No Observation: the first graph the Artifact is linked to, so the
 		// link still opens the composer.
 		err := tx.QueryRow(sqlFirstArtifactGraph, artID).Scan(&graphID)
 		if err != nil && err != sql.ErrNoRows {
-			return "", Location{}, err
+			return "", workspacelocation.Location{}, err
 		}
 	}
 	if subRef.Valid {
@@ -208,14 +209,14 @@ func projectCitation(tx *sql.Tx, id []byte, ref string) (string, Location, error
 	if title == "" {
 		title = titleOrRef(subLabel.String, ref)
 	}
-	return title, Location{
-		Section:       sectionSources,
+	return title, workspacelocation.Location{
+		Section:       workspacelocation.Sources,
 		SourceID:      database.UUIDString(srcID),
 		GraphID:       database.UUIDString(graphID),
 		SubjectID:     database.UUIDString(subID),
 		CitationID:    database.UUIDString(id),
 		ArtifactID:    database.UUIDString(artID),
-		SourceSurface: surfaceCitationComposer,
+		SourceSurface: workspacelocation.SurfaceCitationComposer,
 		Ref:           locRef,
 		Title:         locTitle,
 		SourceTitle:   srcTitle.String,
@@ -234,49 +235,49 @@ func listedSnippet(s string, maxRunes int) string {
 	return string(runes[:maxRunes]) + "…"
 }
 
-func projectArtifact(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
+func projectArtifact(tx *sql.Tx, id []byte, ref string) (string, workspacelocation.Location, error) {
 	var label sql.NullString
 	var srcID []byte
 	err := tx.QueryRow(`SELECT label, source_id FROM artifacts WHERE id = ?`, id).Scan(&label, &srcID)
 	if err == sql.ErrNoRows {
-		return ref, Location{Section: sectionSources, SourceSurface: surfacePage, ArtifactID: database.UUIDString(id), Ref: ref}, nil
+		return ref, workspacelocation.Location{Section: workspacelocation.Sources, SourceSurface: workspacelocation.SurfacePage, ArtifactID: database.UUIDString(id), Ref: ref}, nil
 	}
 	if err != nil {
-		return "", Location{}, err
+		return "", workspacelocation.Location{}, err
 	}
 	title := titleOrRef(label.String, ref)
-	return title, Location{
-		Section:       sectionSources,
+	return title, workspacelocation.Location{
+		Section:       workspacelocation.Sources,
 		SourceID:      database.UUIDString(srcID),
 		ArtifactID:    database.UUIDString(id),
-		SourceSurface: surfacePage,
+		SourceSurface: workspacelocation.SurfacePage,
 		Ref:           ref,
 		Title:         title,
 	}, nil
 }
 
-func projectSource(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
+func projectSource(tx *sql.Tx, id []byte, ref string) (string, workspacelocation.Location, error) {
 	var title sql.NullString
 	err := tx.QueryRow(`SELECT title FROM sources WHERE id = ?`, id).Scan(&title)
 	if err == sql.ErrNoRows {
-		return ref, Location{Section: sectionSources, SourceSurface: surfacePage, SourceID: database.UUIDString(id), Ref: ref}, nil
+		return ref, workspacelocation.Location{Section: workspacelocation.Sources, SourceSurface: workspacelocation.SurfacePage, SourceID: database.UUIDString(id), Ref: ref}, nil
 	}
 	if err != nil {
-		return "", Location{}, err
+		return "", workspacelocation.Location{}, err
 	}
 	label := titleOrRef(title.String, ref)
-	return label, Location{
-		Section:       sectionSources,
+	return label, workspacelocation.Location{
+		Section:       workspacelocation.Sources,
 		SourceID:      database.UUIDString(id),
-		SourceSurface: surfacePage,
+		SourceSurface: workspacelocation.SurfacePage,
 		Ref:           ref,
 		Title:         label,
 	}, nil
 }
 
 // projectEvidenceGraph lists the graph by its name and opens its canvas. The
-// location names the Source (graphLocation).
-func projectEvidenceGraph(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
+// location names the Source (workspacelocation.Graph).
+func projectEvidenceGraph(tx *sql.Tx, id []byte, ref string) (string, workspacelocation.Location, error) {
 	var name string
 	var srcRef, srcTitle sql.NullString
 	var sourceID []byte
@@ -287,41 +288,24 @@ func projectEvidenceGraph(tx *sql.Tx, id []byte, ref string) (string, Location, 
 		WHERE g.id = ?`, id,
 	).Scan(&name, &sourceID, &srcRef, &srcTitle)
 	if err == sql.ErrNoRows {
-		return ref, Location{Section: sectionSources, SourceSurface: surfacePage, Ref: ref}, nil
+		return ref, workspacelocation.Location{Section: workspacelocation.Sources, SourceSurface: workspacelocation.SurfacePage, Ref: ref}, nil
 	}
 	if err != nil {
-		return "", Location{}, err
+		return "", workspacelocation.Location{}, err
 	}
-	return titleOrRef(name, ref), graphLocation(sourceID, id, srcRef.String, srcTitle.String), nil
-}
-
-// graphLocation is a graph's canvas. A graph location's Ref and Title name
-// the Source, as the app's do (the canvas breadcrumb falls back to Title for
-// the Source crumb); the graph's own name comes from its id. A
-// citationComposer location instead names its scope Subject in Ref and Title
-// and carries the Source's title in SourceTitle.
-func graphLocation(sourceID, graphID []byte, sourceRef, sourceTitle string) Location {
-	return Location{
-		Section:       sectionSources,
-		SourceID:      database.UUIDString(sourceID),
-		GraphID:       database.UUIDString(graphID),
-		SourceSurface: surfaceGraph,
-		Ref:           sourceRef,
-		Title:         titleOrRef(sourceTitle, sourceRef),
-		SourceTitle:   sourceTitle,
-	}
+	return titleOrRef(name, ref), workspacelocation.Graph(database.UUIDString(sourceID), database.UUIDString(id), srcRef.String, srcTitle.String), nil
 }
 
 // projectPropertyTerm deep-links a term to its parent property's Properties inspector row.
-func projectPropertyTerm(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
+func projectPropertyTerm(tx *sql.Tx, id []byte, ref string) (string, workspacelocation.Location, error) {
 	var label sql.NullString
 	var propID []byte
 	err := tx.QueryRow(`SELECT label, property_id FROM property_terms WHERE id = ?`, id).Scan(&label, &propID)
 	if err != nil && err != sql.ErrNoRows {
-		return "", Location{}, err
+		return "", workspacelocation.Location{}, err
 	}
-	return titleOrRef(label.String, ref), Location{
-		Section:    sectionProperties,
+	return titleOrRef(label.String, ref), workspacelocation.Location{
+		Section:    workspacelocation.Properties,
 		PropertyID: database.UUIDString(propID),
 		Ref:        ref,
 		Title:      titleOrRef(label.String, ref),
@@ -329,14 +313,14 @@ func projectPropertyTerm(tx *sql.Tx, id []byte, ref string) (string, Location, e
 }
 
 // projectSubjectType deep-links a type to its Properties type-strip category.
-func projectSubjectType(tx *sql.Tx, id []byte, ref string) (string, Location, error) {
+func projectSubjectType(tx *sql.Tx, id []byte, ref string) (string, workspacelocation.Location, error) {
 	var label, key sql.NullString
 	err := tx.QueryRow(`SELECT label, key FROM subject_types WHERE id = ?`, id).Scan(&label, &key)
 	if err != nil && err != sql.ErrNoRows {
-		return "", Location{}, err
+		return "", workspacelocation.Location{}, err
 	}
-	return titleOrRef(label.String, ref), Location{
-		Section:        sectionProperties,
+	return titleOrRef(label.String, ref), workspacelocation.Location{
+		Section:        workspacelocation.Properties,
 		SubjectTypeKey: key.String,
 		Ref:            ref,
 		Title:          titleOrRef(label.String, ref),
@@ -350,11 +334,11 @@ func titleOrRef(label, ref string) string {
 	return ref
 }
 
-func projectVocab(tx *sql.Tx, q string, id []byte, ref string, loc Location) (string, Location, error) {
+func projectVocab(tx *sql.Tx, q string, id []byte, ref string, loc workspacelocation.Location) (string, workspacelocation.Location, error) {
 	var label sql.NullString
 	err := tx.QueryRow(q, id).Scan(&label)
 	if err != nil && err != sql.ErrNoRows {
-		return "", Location{}, err
+		return "", workspacelocation.Location{}, err
 	}
 	title := titleOrRef(label.String, ref)
 	loc.Ref = ref

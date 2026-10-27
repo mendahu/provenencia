@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/searchindex"
+	"github.com/mendahu/provenencia/core/workspacelocation"
 )
 
 // FTSSearcher retrieves hits from catalog_search_fts + catalog_search_docs.
@@ -481,31 +482,24 @@ func splitTaggedBody(body string) (notes, metadata, filename string) {
 	return strings.Join(noteParts, "\n"), strings.Join(metaParts, "\n"), strings.Join(fileParts, "\n")
 }
 
-func locationFor(d docRow) WorkspaceLocation {
-	kind, id, refCol, title := d.kind, d.entityID, d.displayRef, d.displayTitle
-	switch kind {
+func locationFor(d docRow) workspacelocation.Location {
+	switch d.kind {
 	case KindEvidenceGraph:
-		// The Go rule deleteimpact.graphLocation sets: the Source's ref and
-		// title, with the Source title again as SourceTitle.
-		return WorkspaceLocation{
-			Section: SectionSources, SourceID: d.displayParentID, GraphID: id,
-			SourceSurface: SurfaceGraph, Ref: d.displayParentRef,
-			Title: d.displaySubtitle, SourceTitle: d.displaySubtitle,
-		}
+		return workspacelocation.Graph(d.displayParentID, d.entityID, d.displayParentRef, d.displaySubtitle)
 	case KindSource:
-		return WorkspaceLocation{Section: SectionSources, SourceID: id, Ref: refCol, Title: title}
+		return workspacelocation.Location{Section: workspacelocation.Sources, SourceID: d.entityID, Ref: d.displayRef, Title: d.displayTitle}
 	case KindSourceType:
-		return WorkspaceLocation{Section: SectionSourceTypes, TypeID: id, Title: title}
+		return workspacelocation.Location{Section: workspacelocation.SourceTypes, TypeID: d.entityID, Title: d.displayTitle}
 	case KindMetadataField:
-		return WorkspaceLocation{Section: SectionMetadata, FieldID: id, Title: title}
+		return workspacelocation.Location{Section: workspacelocation.Metadata, FieldID: d.entityID, Title: d.displayTitle}
 	case KindPerson:
-		return WorkspaceLocation{Section: SectionPersons, EntityID: id, Ref: refCol, Title: title}
+		return workspacelocation.Location{Section: workspacelocation.Persons, EntityID: d.entityID, Ref: d.displayRef, Title: d.displayTitle}
 	case KindEvent:
-		return WorkspaceLocation{Section: SectionEvents, EntityID: id, Ref: refCol, Title: title}
+		return workspacelocation.Location{Section: workspacelocation.Events, EntityID: d.entityID, Ref: d.displayRef, Title: d.displayTitle}
 	case KindPlace:
-		return WorkspaceLocation{Section: SectionPlaces, EntityID: id, Ref: refCol, Title: title}
+		return workspacelocation.Location{Section: workspacelocation.Places, EntityID: d.entityID, Ref: d.displayRef, Title: d.displayTitle}
 	default:
-		return WorkspaceLocation{}
+		return workspacelocation.Location{}
 	}
 }
 

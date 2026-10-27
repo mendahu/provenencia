@@ -5,6 +5,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/valuecompare"
+	"github.com/mendahu/provenencia/core/workspacelocation"
 )
 
 // FieldWeight relative importance for FTS / registry scoring.
@@ -92,7 +93,7 @@ var Registry = []KindSpec{
 	{
 		Kind:                KindSource,
 		DefaultInEverything: true,
-		ContextSections:     []string{SectionSources},
+		ContextSections:     []string{workspacelocation.Sources},
 		Priority:            1,
 		ContextBoost:        1.1,
 		Fields: []FieldWeight{
@@ -107,7 +108,7 @@ var Registry = []KindSpec{
 	{
 		Kind:                KindSourceType,
 		DefaultInEverything: true,
-		ContextSections:     []string{SectionSourceTypes},
+		ContextSections:     []string{workspacelocation.SourceTypes},
 		ContextBoost:        1.1,
 		Fields: []FieldWeight{
 			{Name: "label", Weight: 10},
@@ -118,7 +119,7 @@ var Registry = []KindSpec{
 	{
 		Kind:                KindMetadataField,
 		DefaultInEverything: true,
-		ContextSections:     []string{SectionMetadata},
+		ContextSections:     []string{workspacelocation.Metadata},
 		ContextBoost:        1.1,
 		Fields: []FieldWeight{
 			{Name: "label", Weight: 10},
@@ -129,7 +130,7 @@ var Registry = []KindSpec{
 	{
 		Kind:                KindEvidenceGraph,
 		DefaultInEverything: true,
-		ContextSections:     []string{SectionSources},
+		ContextSections:     []string{workspacelocation.Sources},
 		ContextBoost:        1.1,
 		Fields: []FieldWeight{
 			{Name: "title", Weight: 10},

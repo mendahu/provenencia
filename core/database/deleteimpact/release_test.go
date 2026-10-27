@@ -3,9 +3,10 @@ package deleteimpact
 import (
 	"database/sql"
 	"errors"
-	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"strings"
 	"testing"
+
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
