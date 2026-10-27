@@ -173,7 +173,10 @@ private struct SourcesLinkLabel: View {
                 Text(verbatim: title)
                     .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
                     .foregroundStyle(highlighted ? PVColor.textLinkHover : PVColor.textPrimary)
-                    .underline(highlighted)
+                    // Always underlined, only the color changes: toggling the
+                    // underline under the hover animation crossfades two text
+                    // layouts and shows two underlines mid-fade.
+                    .underline(true, color: highlighted ? PVColor.textLinkHover : .clear)
                     .lineLimit(1)
                 if !typeLabel.isEmpty {
                     Text(verbatim: typeLabel)
