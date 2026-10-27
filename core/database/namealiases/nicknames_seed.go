@@ -359,6 +359,8 @@ var nicknameSets = [][]string{
 	{"derek", "derrek", "rick", "ricky"},
 	{"derick", "rick", "ricky"},
 	{"derrick", "eric", "rick", "ricky"},
+	{"desirae", "des"},
+	{"desiree", "des"},
 	{"deuteronomy", "duty"},
 	{"diana", "di", "dicey", "didi"},
 	{"diane", "di", "dian", "dianne", "dicey", "didi"},

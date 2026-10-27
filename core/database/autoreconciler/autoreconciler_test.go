@@ -1640,6 +1640,9 @@ func TestValueRulesFoldNicknamesOnly(t *testing.T) {
 		{"Kit", "Christopher", "Christopher"},
 		{"Steve", "Stephen", "Stephen"},
 		{"Ralph", "Raphael", "Raphael"},
+		{"Des", "Desiree", "Desiree"},
+		{"Des", "Desirae", "Desirae"},
+		{"Desiree", "Desirae", ""},
 		{"Allan", "Allen", ""},
 		{"John", "Jon", ""},
 		{"Chris", "Kit", ""},
@@ -1683,7 +1686,7 @@ func TestValueRulesFoldNicknamesOnly(t *testing.T) {
 var productAliasPin = struct {
 	CacheVersion int
 	Hash         string
-}{CacheVersion: 18, Hash: "dd2d088826d1caf666c0013ff8599ea787d4b0b9903d4819b8f5b397c5e74be0"}
+}{CacheVersion: 19, Hash: "0dee1d25e240c9acebe8007415ea16eb365565cf345d8102e4ebcf22a6771065"}
 
 // TestProductAliasTablesPinCacheVersion: the reconciler cache reads the product
 // alias seed, so a seed edit must come with a CacheVersion bump.
