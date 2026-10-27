@@ -946,8 +946,9 @@ func TestEvidenceImpliedCanonLinks(t *testing.T) {
 			len(b.Bridges) != 2 || !bytes.Equal(b.Bridges[0], calPart.ID) || !bytes.Equal(b.Bridges[1], annPart.ID) {
 			t.Fatalf("bundle = %+v", b)
 		}
-		if last := b.Observations[len(b.Observations)-1]; !slices.ContainsFunc(f.obsOn(birthSubject, "event_type"), func(o []byte) bool { return bytes.Equal(o, last) }) {
-			t.Errorf("Observations %x do not end with the birth's event_type", b.Observations)
+		want := f.obsOn(birthSubject, "event_type")
+		if len(want) != 1 || len(b.Observations) == 0 || !bytes.Equal(b.Observations[len(b.Observations)-1], want[0]) {
+			t.Errorf("Observations %x do not end with the birth's one event_type %x", b.Observations, want)
 		}
 	})
 
@@ -998,10 +999,13 @@ func TestEvidenceImpliedCanonLinks(t *testing.T) {
 		}
 	})
 	t.Run("AC-1.6 chain across Sources", func(t *testing.T) {
-		e, ann, cal, beaCal, _, _, _ := chain(t, true)
-		r := e.Relationships[0]
-		if len(e.Relationships) != 1 || len(r.Members) != 1 {
+		e, ann, cal, beaCal, _, bea, _ := chain(t, true)
+		if len(e.Relationships) != 1 || len(e.Relationships[0].Members) != 1 {
 			t.Fatalf("relationships = %+v", e.Relationships)
+		}
+		r := e.Relationships[0]
+		if r.Canon.Pattern != kinship.PatternParentOfParent || !bytes.Equal(r.Canon.Pivot, bea.ID) {
+			t.Errorf("Canon = %+v, want parent_of_parent through Bea", r.Canon)
 		}
 		b := r.Members[0]
 		if !bytes.Equal(b.Member, cal.ID) || b.Neighbor != nil || len(b.Bridges) != 1 || !bytes.Equal(b.Bridges[0], beaCal.ID) {
