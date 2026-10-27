@@ -932,7 +932,7 @@ struct EvidenceGraphModelTests {
     }
 
     @Test func canvasNoticeOrder() async {
-        // (a) A failed graph read outranks the rest.
+        // (a) A failed graph read outranks the placing and No-artifact notices.
         let failing = makeStore()
         failing.listSubjectsError = TestFailure()
         let failed = makeModel(store: failing)
@@ -964,6 +964,19 @@ struct EvidenceGraphModelTests {
         // (e) The No-artifact callout outranks the placing banner.
         noArtifact.armedKind = .person
         #expect(noArtifact.canvasNotice == .noArtifact)
+
+        // (f) A failed delete and a missing file, which the researcher just asked for, show ahead of the read error.
+        await failed.deleteImpact.ask(kind: "subject", id: "s-1", ref: "CPR-1", title: "Alice") {
+            throw TestFailure()
+        }
+        if case .deleteError = failed.canvasNotice {} else {
+            Issue.record("expected the delete error, got \(String(describing: failed.canvasNotice))")
+        }
+        failed.deleteImpact.cancel()
+        failed.fileOpenError = "File not found"
+        if case .fileNotFound = failed.canvasNotice {} else {
+            Issue.record("expected the file-not-found notice, got \(String(describing: failed.canvasNotice))")
+        }
     }
 
     @Test func fileRowsAreTheGraphsLinkedArtifacts() async {
