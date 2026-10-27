@@ -36,6 +36,8 @@ Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
 14. **Keyboard and VoiceOver are safe on graph work.** Return in a delete confirm cancels; a dirty graph form asks before a link inside it closes it; VoiceOver hears a graph save or its failure and can jump to the Evidence graphs section by heading; counts read "1 subject", not "1 subjects".
 15. **Every JPEG gets a thumbnail.** An 11,000 × 18,000 scan, over the 64-megapixel decode budget, shows a thumbnail instead of the missing-image glyph and can be used as a cover, through Go code that a Windows build reuses.
 
+**Scale.** A census Source with 60 household graphs and 300 Citations on one page; a project of 3,000 Sources, 37,000 Subjects and 92,000 Observations, with 200,000 audit rows. Added 2026-10-27 for slices 5–7 from the audit's measurements; their plans write fan-out against it (`plan-spike` "Scale").
+
 ## Where the notes went
 
 | Idea or note | PR | Brief |
@@ -472,7 +474,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-20 — Docs and skills match the code
 
-**Ships.** The A-6 corrections, with `add-catalog-model` step 6 pointing at `core/database/effects/README.md` instead of listing `Effect` fields (map review K-13); `.cursor/rules/swift-tests.mdc` names `eventTitlesByGraph`; `add-searchable-kind` lists `fieldValuesForKind`; `.cursor/rules/catalog-refs.mdc` reserves `GPH`; `design-system-layers.mdc` takes a real example. The A-23 doc fixes. The A-33 README rows and an `add-ui-component` checklist line for them. [`ideas/settled-list-count-publish.md`](../../ideas/settled-list-count-publish.md) is archived (it shipped in c6dcd51d, aedf7aa2 and 228bd821; its open question is S12-26's), and the done "Query-wait test helper" item leaves [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md). Docs only.
+**Ships.** The A-6 corrections, with `add-catalog-model` step 6 pointing at `core/database/effects/README.md` instead of listing `Effect` fields (map review K-13); `add-searchable-kind` lists `fieldValuesForKind`; `.cursor/rules/catalog-refs.mdc` reserves `GPH`. (The `swift-tests.mdc` event-titles name and the `design-system-layers.mdc` example were fixed with `scripts/check-guidance-names.py` on branch `skills/catch-earlier`; if that has not landed first, this PR fixes them.) The A-23 doc fixes. The A-33 README rows and an `add-ui-component` checklist line for them. [`ideas/settled-list-count-publish.md`](../../ideas/settled-list-count-publish.md) is archived (it shipped in c6dcd51d, aedf7aa2 and 228bd821; its open question is S12-26's), and the done "Query-wait test helper" item leaves [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md). Docs only.
 **Not this PR.** Rewriting `swift-tests.mdc`'s FakeStore paragraph (S12-35); the `add-searchable-kind` reshape (S12-36); the pbxproj steps (S12-31); a `check-pr.sh` check for README rows.
 **Check.** `check-plan-docs.py` passes; each corrected line matches the code it names (the plan's DoD lists one `rg` per line).
 **Context.** Audit A-6, A-23, A-33; spike-wide rule "Each PR updates the docs and skills it makes false"; [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md).
