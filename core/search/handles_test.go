@@ -182,8 +182,8 @@ func TestHandleSearch(t *testing.T) {
 // cached value, so search still finds the handle by it (S9-13).
 func TestHandleSearchFindsOutvotedNames(t *testing.T) {
 	f := newHandleFixture(t)
-	thomas := f.promote(f.person("Thomas Lee", "thomas lee", "Tom Lee"), nil)
-	if hits := f.search("Tom", KindPerson); refsOf(hits) != fmt.Sprint([]string{"person:" + thomas.Entity.Ref}) {
+	thomas := f.promote(f.person("Thomas Lee", "thomas lee", "Thommas Lee"), nil)
+	if hits := f.search("Thommas", KindPerson); refsOf(hits) != fmt.Sprint([]string{"person:" + thomas.Entity.Ref}) {
 		t.Fatalf("got %s", refsOf(hits))
 	}
 }

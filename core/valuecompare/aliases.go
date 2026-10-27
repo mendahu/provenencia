@@ -42,7 +42,7 @@ type AliasIndex struct {
 	sets    []aliasSet
 	byToken map[string][]int // token -> indexes into sets that hold it
 	// prefer holds {Formal, Nickname} (AliasTokens) for each table Direction.
-	prefer map[[2]string]bool
+	prefer map[AliasDirection]bool
 }
 
 // aliasSet is one equivalence set, the roles that may use it, and its kind.
@@ -85,9 +85,9 @@ func NewAliasIndex(tables []AliasTable, w WordRules) AliasIndex {
 				continue
 			}
 			if idx.prefer == nil {
-				idx.prefer = map[[2]string]bool{}
+				idx.prefer = map[AliasDirection]bool{}
 			}
-			idx.prefer[[2]string{formal, nick}] = true
+			idx.prefer[AliasDirection{formal, nick}] = true
 		}
 		for _, raw := range table.Sets {
 			head := ""
@@ -157,7 +157,7 @@ func (a AliasIndex) Expands(from, into string, role NameRole) bool {
 		forward = forward || set.head == into
 		reverse = reverse || set.head == from
 	}
-	return forward && (!reverse || a.prefer[[2]string{into, from}])
+	return forward && (!reverse || a.prefer[AliasDirection{into, from}])
 }
 
 // SetKeys is the key of every set that holds token (an AliasToken): a
