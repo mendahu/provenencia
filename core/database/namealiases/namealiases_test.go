@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/matchregistry"
-	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -353,10 +353,9 @@ func setsWithAll(table valuecompare.AliasTable, tokens ...string) int {
 	return n
 }
 
+// given is a name value of one given part.
 func given(text string) valuecompare.Value {
-	return valuecompare.Value{Type: propertymeta.ValueTypeName, Name: &namevalue.Value{Parts: []namevalue.Part{{
-		Value: text, Type: namevalue.PartTypeGiven,
-	}}}}
+	return valuecompare.Value{Type: propertymeta.ValueTypeName, Name: namevaluetest.Given(text)}
 }
 
 func TestLoadHugeSetIndex(t *testing.T) {

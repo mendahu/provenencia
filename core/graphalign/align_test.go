@@ -584,27 +584,35 @@ func propResult(t *testing.T, r subjectcompare.Result, key vocabkey.PropertyKey)
 }
 
 func nameVals(given, surname string) subjectcompare.Values {
-	p := vocabkey.PropertyKey(vocabkey.PropertyName)
-	return subjectcompare.Values{p: {nameOf(&namevalue.Value{
-		Form: given + " " + surname,
-		Parts: []namevalue.Part{
-			{Idx: 0, Type: namevalue.PartTypeGiven, Value: given},
-			{Idx: 1, Type: namevalue.PartTypeSurname, Value: surname},
-		},
-	})}}
+	return vals(nameProp(given + " " + surname))
 }
 
 // surnameVals is a name with a surname part and nothing else.
 func surnameVals(surname string) subjectcompare.Values {
-	p := vocabkey.PropertyKey(vocabkey.PropertyName)
-	return subjectcompare.Values{p: {nameOf(&namevalue.Value{
-		Form:  surname,
-		Parts: []namevalue.Part{{Idx: 0, Type: namevalue.PartTypeSurname, Value: surname}},
-	})}}
+	return vals(nameProp(surname))
 }
 
 func nameMetas() subjectcompare.Metas {
 	return metasOf(map[vocabkey.PropertyKey]string{vocabkey.PropertyName: propertymeta.ValueTypeName})
+}
+
+// A Subject named by one given name is offered a record with three more
+// names, unplaced and with no band (S11-43).
+func TestOneGivenNameIsOfferedAFullerRecord(t *testing.T) {
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{{ID: id("s-amy"), Ref: "PER-S", Kind: "person", Values: vals(givenProp("Amy"))}},
+		Metas:    subjectcomparetest.Metas(),
+	}
+	canon := graphalign.Canon{Handles: []graphalign.Handle{
+		{ID: id("h-amy"), Ref: "PER-1", Kind: "person", Values: vals(nameProp("Amy Lee Anne Long"))},
+	}}
+	row := rowBySubject(alignWith(layer, canon, nil, matchregistry.Default().AlignConfig()), id("s-amy"))
+	if row.Target == graphalign.TargetHandle || row.Assessment != graphalign.AssessNone {
+		t.Fatalf("row %+v, want unplaced with no band", row)
+	}
+	if len(row.Alternatives) != 1 || !bytes.Equal(row.Alternatives[0].HandleID, id("h-amy")) || row.Alternatives[0].Assessment != graphalign.AssessNone {
+		t.Fatalf("alternatives %+v, want PER-1 with no band", row.Alternatives)
+	}
 }
 
 func TestIsolatedSubjectScoresOnTheWalkScale(t *testing.T) {
@@ -1850,6 +1858,11 @@ func TestBirthIsNeverProposedOnADeath(t *testing.T) {
 // nameProp is a Western name property pair for a form.
 func nameProp(form string) (vocabkey.PropertyKey, propertycompare.Value) {
 	return vocabkey.PropertyName, propertycomparetest.Name(form)
+}
+
+// givenProp is a name property pair whose every word is a given part.
+func givenProp(form string) (vocabkey.PropertyKey, propertycompare.Value) {
+	return vocabkey.PropertyName, propertycomparetest.Given(form)
 }
 
 func TestLifespanRulesOutAPerson(t *testing.T) {

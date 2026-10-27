@@ -2,6 +2,7 @@ package graphalign_test
 
 import (
 	"fmt"
+	"math"
 	"slices"
 	"testing"
 
@@ -97,6 +98,24 @@ func TestCandidates(t *testing.T) {
 		}
 		got := refs(graphalign.Candidates("event", eventVals("birth", 1850), []graphalign.Handle{event("EVT-1", "death", 1850), event("EVT-2", "birth", 1850)}, metas, cfg))
 		if want := []string{"EVT-2"}; !slices.Equal(got, want) {
+			t.Fatalf("candidates %v, want %v", got, want)
+		}
+	})
+	t.Run("AC-1.1 one given name reaches a record with three more names", func(t *testing.T) {
+		amy := vals(givenProp("Amy"))
+		handles := []graphalign.Handle{
+			person("PER-1", "Amy Lee Anne Long"),
+			person("PER-2", "Beth Amy Long"),
+		}
+		sim := subjectcompare.Compare(vocabkey.Person, amy, handles[0].Values, metas, cfg.Subject, cfg.Value).Similarity
+		if math.Abs(sim-2/4.5) > 1e-9 {
+			t.Fatalf("similarity %v, want %v", sim, 2/4.5)
+		}
+		if sim < cfg.Alignment.MinSimilarity {
+			t.Errorf("similarity %v is under the gate %v", sim, cfg.Alignment.MinSimilarity)
+		}
+		got := refs(graphalign.Candidates("person", amy, handles, metas, cfg))
+		if want := []string{"PER-1"}; !slices.Equal(got, want) {
 			t.Fatalf("candidates %v, want %v", got, want)
 		}
 	})

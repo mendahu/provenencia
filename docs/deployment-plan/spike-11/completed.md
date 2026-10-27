@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-43 — Lower the candidate gate
+
+**Landed 2026-10-27** in [#588](https://github.com/mendahu/provenencia/pull/588). A Source person recorded only as "Amy" now finds "Amy Lee Anne Long" in the Promote row's target menu: the candidate gate, `alignment.MinSimilarity`, dropped from 0.5 to 0.4 (decided by the user), so one given name reaches a record with up to three more given names and a surname. A look-alike that only shares a later given name ("Beth Amy Long", 0.375) stays out, and the row still opens unset because no band changes. `namevaluetest.Given` builds a name of given parts only for the layer tests. No wire or Swift change.
+
 ## S11-42 — Implied links on the evidence sheet
 
 **Landed 2026-10-27** in [#585](https://github.com/mendahu/provenencia/pull/585). The evidence sheet's relationship Card now says how each side recorded the link. When the Source or the record records it through a marriage, a birth or a parent in between, a muted line under the Card's header reads, for example, "This source: recorded as spouses · The record: married in the marriage dated 12 May 1842", with the marriage named by its date (without any words the source gave for it), a parent by name, and a direct side in the link's own term, which lives on the term's `L10n.PropertyTerm.Wording` as `recordedDirect`; a Card whose sides are both direct looks as before, and VoiceOver reads the line with the Card's box. The words are `PromoteEvidenceDisplay.recorded`, one `wording` entry per kinship pattern, so a new pattern adds one arm and two keys. A Source event's date now rides on its Promote page row, and `ConclusionHeaderDisplay` is the one title, secondary line and ref of any conclusion header, shared by search hits, Promote's menus and the sheet. No engine or wire change.

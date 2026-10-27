@@ -21,7 +21,8 @@ func defaultAlignment() graphalign.Rules {
 			YearBucket: 2,   // estimate: the date tolerance, so a Near date shares a bucket
 			MaxBuckets: 100, // estimate: two centuries at YearBucket 2; a wider reach keys as open
 		},
-		MinSimilarity: 0.5,                                             // estimate: at least half alike; a name with a sex conflict is 0.71, a birth against a death 0.09
+		// decided: user, 2026-10-24 (S11-43): one given name reaches a record with three more names ("Amy" / "Amy Lee Anne Long" 0.44); a name with a sex conflict is 0.71, a birth against a death 0.09
+		MinSimilarity: 0.4,
 		TopK:          5,                                               // carried from promotealign seedCandidateLimit
 		TieCap:        20,                                              // estimate: room for a common name's ties without unbounded work
 		AcceptBar:     2,                                               // carried from graphalign AcceptScore

@@ -1,6 +1,6 @@
 # S11-43 — Lower the candidate gate
 
-**Status:** Planned
+**Status:** Landed in #588 (2026-10-27)
 **Spike / slice:** Spike 11 · Slice 10 — Name candidates
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the target menu already lists a row's alternatives; this PR only lets one more record into that list)
@@ -14,6 +14,8 @@
 **Context:** [name candidates § Case 1](../name-candidates.md#case-1--amy-against-amy-lee-anne-long), [§ What stays later](../name-candidates.md#what-stays-later), [`matching-model.md` § Knob inventory](../../../matching-model.md#knob-inventory), [bands](../comparison-layers.md#bands); working rules: "The candidate gate drops to 0.4", "Gate only; the curve is held", "Registry numbers: carry over, then estimate", "Bands come from evidence"
 **Planned:** 2026-10-27 against `main` @ `bac7368`
 **Review:** [`S11-43-candidate-gate.review.md`](S11-43-candidate-gate.review.md) — Fits with changes / Ready with changes, 1 round (every finding answered)
+
+**Landed:** three differences from the plan. T-1's under-the-gate assertion is `t.Errorf` so the candidates assertion also reports. T-1 and T-2 build the given-only name with a new `propertycomparetest.Given` through a `givenProp` helper beside `nameProp`, not a `vocabkey.PropertyKey` cast. The four private given-only builders (`given` in `namealiases` and `valuerules`, `aliasGiven` in `catalogsession`, `givenName` merged into `namealiases`' `given`) moved onto `namevaluetest.Given` in review round 1 (the Out line below is superseded), and `nameVals` / `surnameVals` in `align_test.go` build through `nameProp`.
 
 ### Implementer — read this first
 
