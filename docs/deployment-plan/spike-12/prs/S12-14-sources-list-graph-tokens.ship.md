@@ -229,4 +229,4 @@ Check: `rg -n 'columnStatus|sourcesStatusCell|statusStack|statusSlot\b' macos` p
 H-2 done: `d6dd1930`; implementer's clean-build gate PASS, its xcode-test log has no Swift warning (orchestrator read the log). The orchestrator did not re-run the gate: Xcode had the build database open for the user's own testing. The private helper `statusSlot(_:)` in `SourcesGraphButton.swift` matches H-2's grep by name; accepted. Names wrap in blocked buttons and blocks too (shared `nameText`); accepted.
 
 ### Result (revision 2, after H-2)
-CI pending · open: none · follow-ups: none · logged: the gate builds incrementally, so a module-wide warning can hide until a clean build (user to decide whether check-pr cleans first) · CON miss: none
+CI green · open: none · follow-ups: none · logged: the gate builds incrementally, so a module-wide warning can hide until a clean build (user to decide whether check-pr cleans first) · CON miss: none
