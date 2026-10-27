@@ -82,4 +82,4 @@ Nits (logged): `MNT-7 · docs/macos-client-patterns.md · mention WorkspaceSessi
 Merged `origin/main` @ `331bb3c3` (docs only: S11-47 plan). Gate PASS after the merge. Plan Landed note updated with the review-round changes (commit `3dae2dbe`).
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: UX-2b (composer load errors shown in the Transcription field slot, without the Citation's ref), MNT-7 (patterns doc names `reread`) · to user: UX-3 (callout order vs D-7) · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: UX-2b (composer load errors shown in the Transcription field slot, without the Citation's ref), MNT-7 (patterns doc names `reread`) · to user: UX-3 (callout order vs D-7) · CON miss: none
