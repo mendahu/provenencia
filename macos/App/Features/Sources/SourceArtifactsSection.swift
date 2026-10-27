@@ -410,7 +410,7 @@ final class SourceArtifactsSection {
             // the locks again from the new links, so a partial save, an
             // in-use Artifact and a last link all show.
             let reloaded = await graphListReloaded()
-            let reloadError = context.session.evidenceGraphsHandle?.error
+            let reloadError = context.session.evidenceGraphsHandle?.failure
             if reloaded == nil || reloadError != nil {
                 linkEdit?.loadState = .failed(L10n.Errors.message(for: reloadError ?? error))
             } else {

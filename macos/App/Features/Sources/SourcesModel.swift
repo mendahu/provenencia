@@ -203,7 +203,7 @@ final class SourcesModel {
         guard sources.isEmpty else { return nil }
         let sourcesHandle: QueryHandle<[CatalogSource]>? = session.queryHandle(Self.sourcesListKey(for: session))
         let typesHandle: QueryHandle<[CatalogSourceType]>? = session.queryHandle(Self.sourceTypesListKey(for: session))
-        return sourcesHandle?.error ?? typesHandle?.error
+        return sourcesHandle?.failure ?? typesHandle?.failure
     }
 
     // MARK: Derived
