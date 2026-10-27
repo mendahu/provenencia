@@ -784,61 +784,19 @@ struct PromoteFlow: Equatable, Sendable {
         assessment: Assessment,
         reason: Reason
     ) -> Alternative {
-        Alternative(
+        let header: CatalogConclusionHeader?
+        switch kind {
+        case .person: header = person.map { .person($0) }
+        case .event: header = event.map { .event($0) }
+        case .place: header = place.map { .place($0) }
+        case nil: header = nil
+        }
+        return Alternative(
             id: id, ref: ref,
-            title: conclusionTitle(
-                kind: kind, person: person, event: event, place: place,
-                fallback: ref, orders: orders, style: .sorted
-            ),
-            readingTitle: conclusionTitle(
-                kind: kind, person: person, event: event, place: place,
-                fallback: ref, orders: orders, style: .natural
-            ),
-            subtitle: conclusionSubtitle(kind: kind, person: person, event: event, place: place),
+            title: header.map { ConclusionHeaderDisplay.title($0, style: .sorted, orders: orders) } ?? ref,
+            readingTitle: header.map { ConclusionHeaderDisplay.title($0, style: .natural, orders: orders) } ?? ref,
+            subtitle: header.map(ConclusionHeaderDisplay.secondary) ?? "",
             assessment: assessment, reason: reason
         )
-    }
-
-    private static func conclusionTitle(
-        kind: EvidencePrimaryKind?,
-        person: CatalogPersonHeader?,
-        event: CatalogEventHeader?,
-        place: CatalogPlaceHeader?,
-        fallback: String,
-        orders: NameFormatOrders,
-        style: NameDisplayStyle
-    ) -> String {
-        switch kind {
-        case .person:
-            if let person { return PersonHeaderDisplay.title(person, style: style, orders: orders) }
-        case .event:
-            if let event { return EventTitleDisplay.title(event, orders: orders) }
-        case .place:
-            if let place { return PlaceTitleDisplay.title(place) }
-        case nil:
-            break
-        }
-        return fallback
-    }
-
-    private static func conclusionSubtitle(
-        kind: EvidencePrimaryKind?,
-        person: CatalogPersonHeader?,
-        event: CatalogEventHeader?,
-        place: CatalogPlaceHeader?
-    ) -> String {
-        switch kind {
-        case .person:
-            if let person { return PersonLifeDisplay.line(person).text }
-        case .event:
-            if let event { return EventSecondaryDisplay.line(event) }
-        case .place:
-            if let place {
-                return PlaceChainDisplay.line(parents: place.parents, candidates: place.parentsAreCandidates)
-            }
-        case nil:
-            break
-        }
-        return ""
     }
 }

@@ -91,6 +91,7 @@
 		A90700000000000000000008 /* EventTitleDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90700000000000000000007 /* EventTitleDisplay.swift */; };
 		A9070000000000000000000A /* EventTitleDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90700000000000000000009 /* EventTitleDisplayTests.swift */; };
 		A9070000000000000000000C /* PlaceTitleDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9070000000000000000000B /* PlaceTitleDisplay.swift */; };
+		A9C4200000000000000000A1 /* ConclusionHeaderDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9C4200000000000000000A2 /* ConclusionHeaderDisplay.swift */; };
 		A9070000000000000000000E /* PlaceTitleDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9070000000000000000000D /* PlaceTitleDisplayTests.swift */; };
 		A90700000000000000000002 /* PersonHeaderDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90700000000000000000001 /* PersonHeaderDisplay.swift */; };
 		A90A00000000000000000002 /* PersonGenderTreatment.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90A00000000000000000001 /* PersonGenderTreatment.swift */; };
@@ -536,6 +537,7 @@
 		A90700000000000000000007 /* EventTitleDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EventTitleDisplay.swift; sourceTree = "<group>"; };
 		A90700000000000000000009 /* EventTitleDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EventTitleDisplayTests.swift; sourceTree = "<group>"; };
 		A9070000000000000000000B /* PlaceTitleDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaceTitleDisplay.swift; sourceTree = "<group>"; };
+		A9C4200000000000000000A2 /* ConclusionHeaderDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConclusionHeaderDisplay.swift; sourceTree = "<group>"; };
 		A9070000000000000000000D /* PlaceTitleDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaceTitleDisplayTests.swift; sourceTree = "<group>"; };
 		A90700000000000000000001 /* PersonHeaderDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonHeaderDisplay.swift; sourceTree = "<group>"; };
 		A90A00000000000000000001 /* PersonGenderTreatment.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonGenderTreatment.swift; sourceTree = "<group>"; };
@@ -1297,6 +1299,7 @@
 			children = (
 				A90700000000000000000007 /* EventTitleDisplay.swift */,
 				A9070000000000000000000B /* PlaceTitleDisplay.swift */,
+				A9C4200000000000000000A2 /* ConclusionHeaderDisplay.swift */,
 				A90900000000000000000013 /* PersonsListView.swift */,
 				A91C00000000000000000001 /* ConclusionListPage.swift */,
 				A91C00000000000000000003 /* EventsListView.swift */,
@@ -2386,6 +2389,7 @@
 				A90A00000000000000000006 /* ConclusionPortraitModel.swift in Sources */,
 				A90700000000000000000008 /* EventTitleDisplay.swift in Sources */,
 				A9070000000000000000000C /* PlaceTitleDisplay.swift in Sources */,
+				A9C4200000000000000000A1 /* ConclusionHeaderDisplay.swift in Sources */,
 				A70B00000000000000000002 /* ArtifactViewerKind.swift in Sources */,
 				A70B00000000000000000004 /* ArtifactViewerContent.swift in Sources */,
 				A70B00000000000000000006 /* ArtifactViewerModel.swift in Sources */,
