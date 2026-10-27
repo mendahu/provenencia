@@ -68,7 +68,7 @@ func groupToProto(g deleteimpact.Group) *engine.DeleteImpactGroup {
 			Id:       database.UUIDString(item.ID),
 			Ref:      item.Ref,
 			Title:    item.Title,
-			Location: locationFromImpact(item.Location),
+			Location: locationToProto(item.Location),
 		})
 	}
 	return pg
@@ -92,28 +92,5 @@ func gateToProto(g deleteimpact.Gate) engine.DeleteImpactGate {
 		return engine.DeleteImpactGate_DELETE_IMPACT_GATE_LAST_GRAPH
 	default:
 		return engine.DeleteImpactGate_DELETE_IMPACT_GATE_UNSPECIFIED
-	}
-}
-
-func locationFromImpact(loc deleteimpact.Location) *engine.WorkspaceLocation {
-	return &engine.WorkspaceLocation{
-		Section:              loc.Section,
-		SourceId:             loc.SourceID,
-		GraphId:              loc.GraphID,
-		FieldId:              loc.FieldID,
-		TypeId:               loc.TypeID,
-		SubjectId:            loc.SubjectID,
-		CitationId:           loc.CitationID,
-		ArtifactId:           loc.ArtifactID,
-		ObservationId:        loc.ObservationID,
-		ConnectFromSubjectId: loc.ConnectFromSubjectID,
-		ConnectToSubjectId:   loc.ConnectToSubjectID,
-		ConnectBridgeTypeKey: loc.ConnectBridgeTypeKey,
-		SubjectTypeKey:       loc.SubjectTypeKey,
-		PropertyId:           loc.PropertyID,
-		SourceSurface:        loc.SourceSurface,
-		Ref:                  loc.Ref,
-		Title:                loc.Title,
-		SourceTitle:          loc.SourceTitle,
 	}
 }

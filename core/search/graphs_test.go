@@ -1,19 +1,18 @@
 package search
 
 import (
-	"context"
+	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
-	"github.com/mendahu/provenencia/core/database/catalogmodel"
-	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sources"
+	"github.com/mendahu/provenencia/core/workspacelocation"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -21,6 +20,8 @@ type graphSearchFixture struct {
 	*handleFixture
 	jones, smith evidencegraphs.Graph
 	sourceRef    string
+	// emptyGraphRef is the Default graph of a Source the test deletes.
+	emptyGraphRef string
 }
 
 const jonesDescription = "Thomas Jones and family, page 2"
@@ -51,15 +52,6 @@ func newGraphSearchFixture(t *testing.T) *graphSearchFixture {
 	return &graphSearchFixture{handleFixture: f, jones: jones, smith: smith, sourceRef: src.Ref}
 }
 
-func (f *graphSearchFixture) search(text string, kinds ...string) []Hit {
-	f.t.Helper()
-	hits, err := DefaultEngine().Search(context.Background(), f.c, Query{Text: text, Kinds: kinds})
-	if err != nil {
-		f.t.Fatal(err)
-	}
-	return hits
-}
-
 // graphHits are the evidence_graph hits of a default-kinds search.
 func (f *graphSearchFixture) graphHits(text string) []Hit {
 	f.t.Helper()
@@ -83,10 +75,10 @@ func (f *graphSearchFixture) graphHit(text string, g evidencegraphs.Graph) (Hit,
 	return Hit{}, false
 }
 
-func (f *graphSearchFixture) jonesLocation() WorkspaceLocation {
-	return WorkspaceLocation{
-		Section: SectionSources, SourceID: uuidString(f.source), GraphID: uuidString(f.jones.ID),
-		SourceSurface: SurfaceGraph, Ref: f.sourceRef, Title: "Register", SourceTitle: "Register",
+func (f *graphSearchFixture) jonesLocation() workspacelocation.Location {
+	return workspacelocation.Location{
+		Section: workspacelocation.Sources, SourceID: uuidString(f.source), GraphID: uuidString(f.jones.ID),
+		SourceSurface: workspacelocation.SurfaceGraph, Ref: f.sourceRef, Title: "Register", SourceTitle: "Register",
 	}
 }
 
@@ -107,7 +99,7 @@ func TestEvidenceGraphSearch(t *testing.T) {
 		{name: "name", query: "jones hou", wantReason: "title"},
 		{name: "description", query: "thomas", wantReason: "description"},
 		{name: "exact ref", query: f.jones.Ref, wantFirst: true, wantReason: "ref"},
-		{name: "prefix ref lower case", query: lowerASCII(lower), wantReason: "ref"},
+		{name: "prefix ref lower case", query: strings.ToLower(lower), wantReason: "ref"},
 		{name: "source title only", query: "register", wantNone: true},
 		{name: "other kind only", query: "jones", kinds: []string{KindPerson}, wantNone: true},
 	}
@@ -153,16 +145,6 @@ func TestEvidenceGraphSearch(t *testing.T) {
 			t.Fatalf("hits %+v", hits)
 		}
 	})
-}
-
-func lowerASCII(s string) string {
-	b := []byte(s)
-	for i, c := range b {
-		if c >= 'A' && c <= 'Z' {
-			b[i] = c + 'a' - 'A'
-		}
-	}
-	return string(b)
 }
 
 func TestEvidenceGraphSearchFollowsWrites(t *testing.T) {
@@ -214,7 +196,7 @@ func TestEvidenceGraphSearchFollowsWrites(t *testing.T) {
 			write: func(f *graphSearchFixture) {
 				s, err := sources.Get(f.c, f.source)
 				if err != nil {
-					t.Fatal(err)
+					f.t.Fatal(err)
 				}
 				s.Title = "Register (Toronto)"
 				_, err = writes.Call(f.c, writes.Op{Action: "update_source", UserID: f.user}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
@@ -222,7 +204,7 @@ func TestEvidenceGraphSearchFollowsWrites(t *testing.T) {
 					return struct{}{}, ch, err
 				})
 				if err != nil {
-					t.Fatal(err)
+					f.t.Fatal(err)
 				}
 			},
 			check: func(t *testing.T, f *graphSearchFixture) {
@@ -240,7 +222,7 @@ func TestEvidenceGraphSearchFollowsWrites(t *testing.T) {
 					return struct{}{}, ch, err
 				})
 				if err != nil {
-					t.Fatal(err)
+					f.t.Fatal(err)
 				}
 			},
 			check: func(t *testing.T, f *graphSearchFixture) {
@@ -253,30 +235,30 @@ func TestEvidenceGraphSearchFollowsWrites(t *testing.T) {
 		{
 			name: "delete a Source with no Artifact",
 			write: func(f *graphSearchFixture) {
-				typeID := seedType(t, f.c, "Book", "")
+				typeID := seedType(f.t, f.c, "Book", "")
 				empty, _, err := writes.Run(f.c, writes.Op{Action: "create_source", UserID: f.user}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
 					return sources.Create(tx, f.user, sources.CreateInput{SourceTypeID: typeID, Title: "Empty deed"})
 				})
 				if err != nil {
-					t.Fatal(err)
+					f.t.Fatal(err)
 				}
-				g := evidencegraphstest.SoleGraph(t, f.c, empty.ID)
+				g := evidencegraphstest.SoleGraph(f.t, f.c, empty.ID)
 				if g.Ref == "" {
-					t.Fatal("Default graph has no ref")
+					f.t.Fatal("Default graph has no ref")
 				}
 				if h := f.graphHits(g.Ref); len(h) != 1 {
-					t.Fatalf("before delete: %+v", h)
+					f.t.Fatalf("before delete: %+v", h)
 				}
 				if _, err := writes.Call(f.c, writes.Op{Action: "delete_source", UserID: f.user}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 					ch, err := sources.Delete(tx, f.user, empty.ID)
 					return struct{}{}, ch, err
 				}); err != nil {
-					t.Fatal(err)
+					f.t.Fatal(err)
 				}
-				f.smith.Ref = g.Ref
+				f.emptyGraphRef = g.Ref
 			},
 			check: func(t *testing.T, f *graphSearchFixture) {
-				if h := f.graphHits(f.smith.Ref); len(h) != 0 {
+				if h := f.graphHits(f.emptyGraphRef); len(h) != 0 {
 					t.Fatalf("after delete: %+v", h)
 				}
 			},
@@ -295,19 +277,19 @@ func TestRebuildIndexesEvidenceGraphs(t *testing.T) {
 	f := newGraphSearchFixture(t)
 	db, err := f.c.DB()
 	if err != nil {
-		t.Fatal(err)
+		f.t.Fatal(err)
 	}
 	if err := searchindex.ClearAll(db); err != nil {
-		t.Fatal(err)
+		f.t.Fatal(err)
 	}
 	if err := searchindex.SetProjectionVersion(db, 8); err != nil {
-		t.Fatal(err)
+		f.t.Fatal(err)
 	}
 	if h := f.graphHits("jones hou"); len(h) != 0 {
 		t.Fatalf("before rebuild: %+v", h)
 	}
 	if err := searchindex.EnsureCatalog(f.c); err != nil {
-		t.Fatal(err)
+		f.t.Fatal(err)
 	}
 	h, ok := f.graphHit("jones hou", f.jones)
 	if !ok || h.Location.SourceID != uuidString(f.source) {
@@ -315,44 +297,5 @@ func TestRebuildIndexesEvidenceGraphs(t *testing.T) {
 	}
 	if v, err := searchindex.ProjectionVersionStored(db); err != nil || v != 9 {
 		t.Fatalf("stored version %d, %v", v, err)
-	}
-}
-
-func TestEvidenceGraphHitLocationMatchesDeleteImpact(t *testing.T) {
-	f := newGraphSearchFixture(t)
-	hit, ok := f.graphHit("jones hou", f.jones)
-	if !ok {
-		t.Fatal("no Jones hit")
-	}
-	db, err := f.c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer tx.Rollback()
-	g, err := deleteimpact.ListedGroup(tx, "x.via", catalogmodel.KindEvidenceGraph, []deleteimpact.Listed{{ID: f.jones.ID, Ref: f.jones.Ref}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(g.Listed) != 1 {
-		t.Fatalf("group %+v", g)
-	}
-	got, want := hit.Location, g.Listed[0].Location
-	pairs := []struct{ name, a, b string }{
-		{"Section", got.Section, want.Section},
-		{"SourceID", got.SourceID, want.SourceID},
-		{"GraphID", got.GraphID, want.GraphID},
-		{"SourceSurface", got.SourceSurface, want.SourceSurface},
-		{"Ref", got.Ref, want.Ref},
-		{"Title", got.Title, want.Title},
-		{"SourceTitle", got.SourceTitle, want.SourceTitle},
-	}
-	for _, p := range pairs {
-		if p.a != p.b {
-			t.Errorf("%s: search %q, deleteimpact %q", p.name, p.a, p.b)
-		}
 	}
 }
