@@ -195,7 +195,7 @@ enum PromoteEvidenceDisplay {
     ) -> (source: String, record: String)? {
         guard layer != .direct || canon != .direct else { return nil }
         func side(_ pattern: KinshipPattern, _ pivot: EvidenceBoard.Pivot?) -> String {
-            pattern == .direct ? direct(term: term) : implied(wording(pattern), pivot)
+            wording(pattern).map { implied($0, pivot) } ?? direct(term: term)
         }
         return (side(layer, layerPivot), side(canon, canonPivot))
     }
@@ -213,9 +213,10 @@ enum PromoteEvidenceDisplay {
         var none: LocalizedStringResource
     }
 
-    /// The one place a kinship pattern gets its words. Exhaustive, so a new pattern does not compile
+    /// The one place a kinship pattern gets its words; nil for a direct side, which is worded by its term
+    /// (``direct(term:)``). Exhaustive, so a new pattern does not compile
     /// without them.
-    private static func wording(_ pattern: KinshipPattern) -> PatternWording {
+    private static func wording(_ pattern: KinshipPattern) -> PatternWording? {
         switch pattern {
         case .marriageSpouses:
             PatternWording(pivot: .event, named: L10n.Promote.recordedMarriage, none: L10n.Promote.recordedMarriageNone)
@@ -226,8 +227,7 @@ enum PromoteEvidenceDisplay {
         case .unrecognized:
             PatternWording(pivot: .person, named: L10n.Promote.recordedOther, none: L10n.Promote.recordedOtherNone)
         case .direct:
-            // Never asked for: a direct side is worded by its term (``direct(term:)``).
-            PatternWording(pivot: .person, named: L10n.Promote.recordedOther, none: L10n.Promote.recordedOtherNone)
+            nil
         }
     }
 
@@ -245,13 +245,9 @@ enum PromoteEvidenceDisplay {
 
     /// A direct side, in the term of the link both sides record.
     private static func direct(term: String?) -> String {
-        switch term {
-        case SeededRelationshipTypeTerm.spouse: L10n.string(L10n.Promote.recordedDirectSpouses)
-        case SeededRelationshipTypeTerm.parent, SeededRelationshipTypeTerm.child:
-            L10n.string(L10n.Promote.recordedDirectParentChild)
-        case SeededRelationshipTypeTerm.grandparent, SeededRelationshipTypeTerm.grandchild:
-            L10n.string(L10n.Promote.recordedDirectGrandparent)
-        default: L10n.string(L10n.Promote.recordedDirectOther)
+        let words = term.flatMap {
+            L10n.PropertyTerm.wording(propertyKey: SeededPropertyKey.relationshipType, termKey: $0)?.recordedDirect
         }
+        return L10n.string(words ?? L10n.Promote.recordedDirectOther)
     }
 }
