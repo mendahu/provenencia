@@ -1,7 +1,7 @@
 # Ship log — S12-14 Graph counts in the Sources list and on the Source page
 
 **Plan:** [`S12-14-sources-list-graph-tokens.md`](S12-14-sources-list-graph-tokens.md) · **Branch:** `s12-14-sources-list-graph-tokens` · **PR:** #576
-**State:** implementing (revision 2)
+**State:** ready (revision 2)
 
 ## Round 0 — implement
 Head `9646520c`. Gate PASS (orchestrator run, against `f22b19a7`). PR #576 (draft). Report deviations (recorded in the plan's Landed note):
@@ -110,3 +110,74 @@ Gate PASS (`7f711dbb`, `origin/main` unmoved at `f22b19a7`) · CI green · open:
 After the user's manual check of revision 1 (a flicker on the Source link hover, fixed in `37571892`), the user redrew the list on the board: four columns, a status badge and a 52 pt button per graph. The plan was revised with plan-pr and passed review-plan in two rounds (Fits — Ready). The ship loop restarts at round 0 on the same branch; revision 1's rounds above stay as history.
 
 ### Round 0 — implement
+Head `62d34c8e`. Gate PASS (orchestrator run). Commits `d809031a` (STEP-6), `91588926` (STEP-7), `27bdada5` (STEP-8), `62d34c8e` (STEP-9). Report deviations: the plan's §4 Token row renamed to `SourcesGraphButton.swift` (the old path failed `check-plan-docs`); the map row status reads `In review #576`; the docs describe revision 1 as "a row of small graph pills" to pass the STEP-9 grep; `EvidenceStatus.badge` is `@MainActor`; an earlier gate run had 8 Omnibar / CatalogSearch test failures outside this PR that did not recur (flaky); intermediate commits not gated one by one; app not launched (manual check open).
+
+### Round 1 — review
+Reviewers: CON (Sonnet), MNT, UX, SEC+PRF. UX by `macos/App/**` and `Localizable.xcstrings`; SEC+PRF by `macos/App/Features/**` models (per-row reads, `onGeometryChange`). Scope: revision 2, `c7ebefaf...62d34c8e`, on the PR base `f22b19a7`.
+
+CON: clean (1 minor, 2 nits). SEC+PRF: clean. MNT: 2 majors, 2 minors, 3 nits. UX: 4 minors, 1 nit (no blocker or major).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-1 | MNT | major | Badge look and a SwiftUI view on the model enum; `SourcesModel` imports SwiftUI | Fix now → F-1 | verified: `SourcesModel.swift:3` `import SwiftUI`, `:46-69`; no other `Features/*/*Model*.swift` imports SwiftUI; precedent `ReconciledValueRow.badge`. An extension of `EvidenceStatus` in a view file keeps D-22's one owner |
+| UX-1 | UX | minor | VoiceOver reads each status twice (badge and button) | To user → Fix now → F-1 (user 2026-10-27: hide the badge from VoiceOver) | D-22 and the states table asked for both; the user chose the button's label as the one reading |
+| MNT-2 | MNT | major | No-Artifact and failed blocks use the tooltip key as their VoiceOver label | Fix now → F-2 | verified: `SourcesGraphButton.swift:44`, `:75` call `graphButtonHelp`; the states table says comma join. Dedupes UX-4 |
+| UX-4 | UX | minor | Same as MNT-2 | Fix now → F-2 | dup of MNT-2 |
+| MNT-3 | MNT | minor | Caption and row each restate the column frame chains | Fix now → F-3 | verified: `SourcesListView.swift:339-343` vs `SourcesListRow.swift:54-58`; new code in this PR |
+| MNT-4 | MNT | minor | Style → `NotStartedReading` mapping written twice | Fix now → F-4 | verified: `SourcesGraphCountLine.swift:18-19`, `:64` |
+| UX-2 | UX | minor | Compact layout: VoiceOver never says the type | Fix now → F-5 | verified: the link's value omits `typeLabel` |
+| UX-3 | UX | minor | Truncated type and title have no help | Fix now → F-6 | the row this PR adds; S10-42 |
+| CON-1 | CON | minor | Manual check not run | To user (manual check) | the user's §10 check before merge |
+| DOC | orchestrator | minor | Docs call revision 1 "a row of small graph pills", a coined term | Fix now → F-7 | `deployment-plan.md:104`, `:141`, `:339`; memory rule "no coined terms" |
+
+Nits (logged): `CON-2 · plan §4 Token row lists the old type names (history)` · `CON-3 / MNT-7 · PVLastUpdated.swift:3-6 · rewrap doc comment` (→ F-7) · `MNT-5 · L10n.swift:5912-5916 · zeroCounts rebuilds the counts join; reuse .counts` (→ F-4) · `MNT-6 · SourcesListRow.swift:95,191 · empty typeLabel means none; String?` · `UX-5 · SourcesGraphButton.swift:160-166 · italicDetail lacks truncationMode(.tail)` (→ F-2)
+
+User answer (2026-10-27, in chat): UX-1 — hide the badge from VoiceOver; the button's label carries the status. Supersedes D-22's badge accessibility label and the `statusBadgeLabel` string; record in the plan's Landed note at merge.
+
+### Fix plan 1 (revision 2)
+
+**F-1 — Badge look in the view layer; badge hidden from VoiceOver** (from MNT-1, UX-1)
+Files: `SourcesModel.swift`, `SourcesListRow.swift`, `L10n.swift`, `Localizable.xcstrings`, `SourcesModelTests.swift`.
+Do: move `badgeTone`, `badgeIcon`, `badgeSubtle` and `badge` into `extension SourcesModel.EvidenceStatus` at the bottom of `SourcesListRow.swift` (beside `statusSlot`), and drop `import SwiftUI` (and `@MainActor` on `badge` if it no longer needs it) from `SourcesModel.swift`. `badge` becomes `PVBadge(label, tone:, icon:, subtle:)` with `.accessibilityHidden(true)`; delete `L10n.Sources.statusBadgeLabel` and the `sources.list.statusBadge` catalog entry. T-14 drops its `statusBadgeLabel` assertion and keeps the rest.
+Check: `rg -n 'import SwiftUI' macos/App/Features/Sources/SourcesModel.swift` and `rg -n 'statusBadge' macos` print nothing; T-14 passes.
+
+**F-2 — A block label key for the No-Artifact and failed blocks** (from MNT-2, UX-4, UX-5)
+Files: `SourcesGraphButton.swift`, `L10n.swift`, `Localizable.xcstrings`, `SourcesModelTests.swift`.
+Do: add `L10n.Sources.graphBlockLabel(title:detail:)`, key `sources.list.graphBlockLabel`, "%1$@, %2$@", comment "VoiceOver label of a Sources list graph block (no Artifact, or the graph list failed): its title and its second line". Use it for both blocks' `.accessibilityLabel`; `graphButtonHelp` stays for `.help` only. Add `.truncationMode(.tail)` to `italicDetail`. T-12 asserts `graphBlockLabel(title: "No evidence graph yet", detail: "Needs an artifact")` == "No evidence graph yet, Needs an artifact".
+Check: `rg -n 'accessibilityLabel.*graphButtonHelp' macos/App` prints nothing; T-12 passes.
+
+**F-3 — One frame chain per column for caption and row** (from MNT-3)
+Files: `SourcesListColumns.swift`, `SourcesListView.swift`, `SourcesListRow.swift`.
+Do: add `View` extensions in `SourcesListColumns.swift`: `sourcesSourceCell()`, `sourcesTypeCell(_ columns:)`, `sourcesStatusCell(_ columns:)`, `sourcesGraphCell(_ columns:)`, each applying that column's existing padding and frame in today's order (Source: `.padding(.trailing, sourceTrailing).frame(maxWidth: .infinity, alignment: .leading)`; Type: `.padding(.trailing, cellTrailing).frame(width: type, alignment: .leading)`; Status: `.padding(.trailing, cellTrailing).frame(width: status, alignment: .leading)`; Graph: `.frame(width: graphs).padding(.leading, graphLeading)`). The caption and the row call them; extra modifiers that differ (the row's `minHeight: firstSlot`, the caption's vertical padding) stay at the call sites. No visual change.
+Check: `rg -n 'cellTrailing|graphLeading|sourceTrailing' macos/App/Features/Sources/SourcesListView.swift macos/App/Features/Sources/SourcesListRow.swift` prints nothing; scripts/check-pr.sh PASS.
+
+**F-4 — One style → reading mapping; reuse the counts join** (from MNT-4, MNT-5)
+Files: `SourcesGraphCountLine.swift`, `L10n.swift`.
+Do: `SourcesGraphCountLine.Style.notStartedReading` (computed: `.button` → `.zeroCounts`, `.card` → `.words`), read by the label and `countsText`; delete the private `notStarted` property and the inline ternary. In `graphCounts`, `.notStarted` with `.zeroCounts` returns `graphCounts(.counts(subjects: 0, observations: 0, filed: 0), style: style)`.
+Check: T-11 passes unchanged.
+
+**F-5 — The type in VoiceOver when compact** (from UX-2)
+Files: `SourcesListRow.swift`.
+Do: when `columns.isCompact`, the link's accessibility value base is `"\(source.title), \(typeLabel), \(source.ref)"`; wide stays `"\(source.title), \(source.ref)"` (the Type cell is read as its own text).
+Check: scripts/check-pr.sh PASS.
+
+**F-6 — Help on a truncated title and type** (from UX-3)
+Files: `SourcesListRow.swift`.
+Do: `.help(title)` on the link's title `Text`; `.help(typeLabel)` on the Type cell and on the compact second line's type `Text`.
+Check: scripts/check-pr.sh PASS.
+
+**F-7 — Plain words for revision 1 in the docs; doc comment rewrap** (from DOC, CON-3, MNT-7)
+Files: `docs/deployment-plan/spike-12/deployment-plan.md` (lines 104, 141, 339), `macos/App/DesignSystem/Recipes/LastUpdated/PVLastUpdated.swift`.
+Do: replace "the row of small graph pills" / "a row of small graph pills" with "the tokens under each Source's title" (the plan's own word for revision 1; the STEP-9 grep `graph tokens?\b|token line|a token` does not match it). Rewrap `PVLastUpdated`'s doc comment to the paragraph width.
+Check: `rg -n -i 'pill' docs/deployment-plan/spike-12` prints nothing; the STEP-9 grep still prints nothing.
+
+### Round 1 — fix (revision 2)
+Head `01b15c5e`. Gate PASS (orchestrator run). F-1 – F-7 done in `15ea8fe8` (F-1 – F-6, shared files) and `01b15c5e` (F-7). Deviations: `badge` keeps `@MainActor` in the view extension (swift-warnings); F-7's `pill` grep still matches history in the plan, the archived brief and the logs, outside F-7's files (`deployment-plan.md` is clean); the plan's `statusBadgeLabel` mentions stay until the Landed note at merge. UX minors read by the orchestrator: UX-2 (compact value "title, type, ref"), UX-3 (`.help` on title and type), UX-4 / F-2 (`graphBlockLabel`) — Resolved. UX-1 / F-1 badge `accessibilityHidden` — Resolved.
+
+### Round 2 — review (revision 2)
+Reviewers: MNT (had Fix-now majors). Scope `62d34c8e...01b15c5e`. Not re-run: CON, SEC+PRF (clean), UX (minors only, read above).
+MNT: MNT-1 and MNT-2 Resolved; no new blockers. Nit (logged): `MNT-8 · SourcesListRow.swift:25,30,102 · typeLabel computed three times`.
+No Fix plan 2.
+
+### Result (revision 2)
+`origin/main` moved to `2243b362` (docs only); merged as `98c8e159`, gate PASS. CI pending · open: none · follow-ups: none · to user: UX-1 (answered 2026-10-27, fixed), CON-1 manual check · logged: CON-2, MNT-6, MNT-8 · CON miss: none
