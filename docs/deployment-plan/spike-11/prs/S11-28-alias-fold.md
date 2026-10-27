@@ -1,6 +1,8 @@
 # S11-28 — Fold a nickname into the given name it stands for
 
 **Status:** Landed in [#589](https://github.com/mendahu/provenencia/pull/589) (2026-10-27)
+
+**Landed note:** the code differs from the plan in five ways. (1) `promotealign/profiles.go` did not already import `autoreconciler` (§4 said it did); the import was added and the unused `matchregistry` import dropped. (2) T-11 grew to `core/search/handles_test.go` (Jim to Kenneth; outvoted Tom to Thommas), user 2026-10-27. (3) D-1a keys `prefer` by `AliasDirection`, not `[2]string` (layer-numbers guard), user 2026-10-27. (4) `valuerules.Product` gets its index from `namealiases.ProductIndex()`, superseding §4's `valuerules` row; same keying, one rule. (5) A folded nickname is no longer a reconciled value, so searching "Tom" no longer finds a Person shown as *Thomas*; alias-aware search is a follow-up.
 **Spike / slice:** Spike 11 · Slice 2 — Value compare, everywhere (follow-up to S11-06)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the reconciler's fold rule changes in Go; pages render the cache as they do today)
@@ -205,7 +207,7 @@ None — pages render the cache.
 
 ### Strings
 
-None —.
+None.
 
 ## 7. Steps
 
