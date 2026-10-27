@@ -188,6 +188,8 @@ struct PromoteFlow: Equatable, Sendable {
         var contested = false
         /// Why settling released an earlier pair of this row in this proposal. Not `updated`, which compares with the previous proposal.
         var move: Reason? = nil
+        /// An Event's date as the Events list lists it; empty for anything else.
+        var date: String = ""
         var id: String { subjectID }
 
         /// The record behind the target as a sentence reads it (a person in natural order); the
@@ -255,6 +257,8 @@ struct PromoteFlow: Equatable, Sendable {
         var ref: String
         /// Set when the subject is already filed.
         var anchor: Anchor?
+        /// An Event's date as the Events list lists it; empty for anything else.
+        var date: String = ""
     }
 
     struct BridgeFact: Equatable, Sendable {
@@ -673,7 +677,8 @@ struct PromoteFlow: Equatable, Sendable {
                 anchor: true, assessment: .strong, reason: .filed,
                 target: .handle(id: anchor.id, ref: anchor.ref, title: anchor.title),
                 menu: [], board: nil, pins: [], confidenceGradeID: nil, argument: "",
-                decided: false, updated: false, conflictNote: nil, proposedDuplicateOf: nil, duplicateNote: nil
+                decided: false, updated: false, conflictNote: nil, proposedDuplicateOf: nil, duplicateNote: nil,
+                date: fact.date
             )
         }
         let menu = menu(for: proposal, kind: fact.kind, orders: orders)
@@ -711,7 +716,7 @@ struct PromoteFlow: Equatable, Sendable {
             pins: keeps ? previous?.pins ?? [] : [], confidenceGradeID: nil, argument: previous?.argument ?? "",
             decided: false, updated: updated, conflictNote: nil,
             proposedDuplicateOf: duplicateOf(proposal), duplicateNote: nil,
-            contested: proposal.contested, move: Reason(move: proposal)
+            contested: proposal.contested, move: Reason(move: proposal), date: fact.date
         )
     }
 

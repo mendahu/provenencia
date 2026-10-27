@@ -479,7 +479,8 @@ final class PromoteModel {
                 kind: placed.kind,
                 name: placed.displayName(orders: flow.nameOrders),
                 ref: placed.subject.ref,
-                anchor: anchor
+                anchor: anchor,
+                date: placed.dateLine
             )
         }
     }

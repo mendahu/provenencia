@@ -438,15 +438,30 @@ struct EvidenceGraphSnapshotTests {
         text: String = "",
         nameForm: String = "",
         polarity: String = "positive",
-        termKey: String = ""
+        termKey: String = "",
+        date: CatalogDateValueInput? = nil
     ) -> CatalogObservation {
         CatalogObservation(
             id: key, ref: "OBS-1", citationID: "c1", subjectID: "s1", propertyID: "p-\(key)",
-            polarity: polarity, valueText: text, valueInteger: nil, valueDateID: "",
+            polarity: polarity, valueText: text, valueInteger: nil, valueDateID: "", date: date,
             valueNameID: "", nameForm: nameForm, valueSubjectID: "", valueTermID: "",
             propertyKey: key, propertyLabel: key, propertyValueType: "text",
             valueTermKey: termKey
         )
+    }
+
+    @Test func anEventsDateLineReadsItsDateObservations() {
+        func point(_ year: Int32, _ month: Int32? = nil, _ day: Int32? = nil) -> CatalogDateValueInput {
+            CatalogDateValueInput(kind: "point", startYear: year, startMonth: month, startDay: day)
+        }
+        let married = point(1842, 5, 12)
+        #expect(placed(.event, label: "m", [observation("date", date: married)]).dateLine
+            == DateRowDisplay.line(date: married))
+        let from = point(1840), to = point(1845)
+        #expect(placed(.event, label: "m", [observation("start_date", date: from), observation("end_date", date: to)]).dateLine
+            == DateRowDisplay.line(date: nil, start: from, end: to))
+        #expect(placed(.event, label: "m", [observation("date", polarity: "negative", date: married)]).dateLine == "")
+        #expect(placed(.person, label: "p", [observation("date", date: married)]).dateLine == "")
     }
 
     @Test func displayNameUsesEachKindsNamingProperty() {
