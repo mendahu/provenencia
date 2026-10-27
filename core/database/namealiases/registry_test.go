@@ -137,7 +137,7 @@ func TestNicknameDirectionsCoverTwoWayPairs(t *testing.T) {
 	if len(nicknameDirections) != 108 || len(keptTwoWay) != 35 || len(twoWay) != 143 {
 		t.Errorf("directions %d, kept %d, two-way %d; want 108, 35, 143", len(nicknameDirections), len(keptTwoWay), len(twoWay))
 	}
-	if len(nicknameSets) != 1227 {
-		t.Errorf("nicknameSets has %d sets, want 1227", len(nicknameSets))
+	if len(nicknameSets) != 1229 {
+		t.Errorf("nicknameSets has %d sets, want 1229", len(nicknameSets))
 	}
 }

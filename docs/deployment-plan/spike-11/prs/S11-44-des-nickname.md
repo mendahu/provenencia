@@ -1,6 +1,7 @@
 # S11-44 — Des as a nickname of Desiree and Desirae
 
-**Status:** Planned
+**Status:** Landed in #594 (2026-10-27)
+**Landed:** One difference from the plan: review finding MNT-1 added a sentence to the seed header, the names.csv NOTICE and `docs/seeded-vocabulary.md` §4.5 saying the Des sets are product-added, not from names.csv (the DoD had "no domain doc changed").
 **Spike / slice:** Spike 11 · Slice 10 — Name candidates
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: a seed edit; Promote's target menu already shows any alias hit)

@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-44 — Des as a nickname of Desiree and Desirae
+
+**Landed 2026-10-27** in [#594](https://github.com/mendahu/provenencia/pull/594). New projects treat Des as a nickname of Desiree and of Desirae, so Promote offers one for the other and the reconciler shows the formal name. `{desirae, des}` and `{desiree, des}` join `nicknameSets` (1229 sets), Desiree and Desirae stay separate names, and `CacheVersion` is 19. Existing catalogs get the sets from a one-off command the user runs by hand.
+
 ## S11-28 — Fold a nickname into the given name it stands for
 
 **Landed 2026-10-27** in [#589](https://github.com/mendahu/provenencia/pull/589). A Person recorded as *Chris Robins* and *Christopher Robins* now shows one given name, *Christopher*, on the Persons list and the Person page. The reconciler folds a nickname or abbreviation into the head of the product alias set that holds it (*Chris* into *Christopher*, *Wm* into *William*, *Ebbie* into *Abel*); `nicknameDirections` says which name to keep for the 108 pairs the list gives both ways, and 35 spelling variants stay two names. Accent folds, surnames and names of different part types never alias-fold. The cache reads the product alias seed through `valuerules.Product` (`autoreconciler.ValueRules`, also used by promote's profiles) and `CacheVersion` is 18; a guard test fails when the seed changes without a bump.
