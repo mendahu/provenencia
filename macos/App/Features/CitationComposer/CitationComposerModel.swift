@@ -535,7 +535,7 @@ final class CitationComposerModel {
     /// Citation text, label, and the file viewer stay as they are.
     func refreshCitationLines() async {
         guard let id = activeCitationID else { return }
-        if let loaded = try? await fetchOpenCitation(id) {
+        if let loaded = await showingLoadFailure({ try await fetchOpenCitation(id) }) ?? nil {
             if Task.isCancelled { return }
             applyGroupedLines(loaded.observations)
         }
@@ -984,7 +984,7 @@ final class CitationComposerModel {
         await reloadListedCitations()
         let ordered = CitationComposerAuthoring.stepperOrder(listedCitations)
         if let first = ordered.first {
-            try? await loadCitation(first.citation.id)
+            _ = await showingLoadFailure { try await loadCitation(first.citation.id) }
         }
         if Task.isCancelled { return }
         await presentAfterIdentityChange()
@@ -1008,13 +1008,7 @@ final class CitationComposerModel {
         if id == nil || id?.isEmpty == true {
             openBlankCitation()
         } else if let id {
-            do {
-                try await loadCitation(id)
-            } catch {
-                if Task.isCancelled { return }
-                fields.error = L10n.Errors.message(for: error)
-                return
-            }
+            guard await showingLoadFailure({ try await loadCitation(id) }) != nil else { return }
         }
         if Task.isCancelled { return }
         if activeCitationID != before {
@@ -1046,13 +1040,19 @@ final class CitationComposerModel {
             return
         }
         guard let id else { return }
+        guard await showingLoadFailure({ try await loadCitation(id) }) != nil else { return }
+        if Task.isCancelled { return }
+        await presentAfterIdentityChange()
+    }
+
+    /// Runs a Citation load. A failure shows its error in the form (unless this
+    /// task was cancelled) and returns `nil`, so the caller keeps what it had.
+    private func showingLoadFailure<T>(_ work: () async throws -> T) async -> T? {
         do {
-            try await loadCitation(id)
-            if Task.isCancelled { return }
-            await presentAfterIdentityChange()
+            return try await work()
         } catch {
-            if Task.isCancelled { return }
-            fields.error = L10n.Errors.message(for: error)
+            if !Task.isCancelled { fields.error = L10n.Errors.message(for: error) }
+            return nil
         }
     }
 
