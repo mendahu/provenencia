@@ -1,4 +1,4 @@
-package likenesses_test
+package gallery_test
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
-	"github.com/mendahu/provenencia/core/database/likenesses"
+	"github.com/mendahu/provenencia/core/database/gallery"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -84,8 +84,15 @@ func (f *fixture) source(title string) sources.Source {
 
 func (f *fixture) personOn(src sources.Source) subjects.Subject {
 	f.t.Helper()
+	return f.subjectOn(src, "person")
+}
+
+func (f *fixture) subjectOn(src sources.Source, kind string) subjects.Subject {
+	f.t.Helper()
+	ty, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
+	must(f.t, err)
 	graph := evidencegraphstest.SoleGraph(f.t, f.c, src.ID).ID
-	return subjectstest.OfType(f.t, f.c, userID, graph, f.person.ID, "")
+	return subjectstest.OfType(f.t, f.c, userID, graph, ty.ID, "")
 }
 
 func (f *fixture) promote(s subjects.Subject, onto []byte) []byte {
@@ -134,7 +141,7 @@ func (f *fixture) negativeTwin() (h []byte, n, a, b observations.Observation) {
 func TestForEntities(t *testing.T) {
 	t.Run("no ids", func(t *testing.T) {
 		f := newFixture(t)
-		got, err := likenesses.ForEntities(f.c.Graph(), nil)
+		got, err := gallery.ForEntities(f.c.Graph(), nil)
 		must(t, err)
 		if got != nil {
 			t.Fatalf("got %+v", got)
@@ -144,7 +151,7 @@ func TestForEntities(t *testing.T) {
 		f := newFixture(t)
 		a := f.personOn(f.source("Register"))
 		h := f.promote(a, nil)
-		got, err := likenesses.ForEntities(f.c.Graph(), [][]byte{h})
+		got, err := gallery.ForEntities(f.c.Graph(), [][]byte{h})
 		must(t, err)
 		if _, ok := got[string(h)]; ok || len(got) != 0 {
 			t.Fatalf("got %+v", got)
@@ -158,7 +165,7 @@ func TestForEntities(t *testing.T) {
 		ob := observationstest.SaveLikeness(t, f.c, userID, cen.ID, b.ID, 200)
 		h := f.promote(a, nil)
 		f.promote(b, h)
-		got, err := likenesses.ForEntities(f.c.Graph(), [][]byte{h})
+		got, err := gallery.ForEntities(f.c.Graph(), [][]byte{h})
 		must(t, err)
 		g := got[string(h)]
 		if len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], oa.ID) || !bytes.Equal(g[1].ObservationIDs[0], ob.ID) {
@@ -168,7 +175,7 @@ func TestForEntities(t *testing.T) {
 			ID: oa.ID, SubjectID: a.ID, PropertyID: f.likeness.ID,
 			Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 40, 30, 150)}})
 		must(t, err)
-		got, err = likenesses.ForEntities(f.c.Graph(), [][]byte{h})
+		got, err = gallery.ForEntities(f.c.Graph(), [][]byte{h})
 		must(t, err)
 		g = got[string(h)]
 		if len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], oa.ID) || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, f.c, oa.ID)) ||
@@ -184,7 +191,7 @@ func TestForEntities(t *testing.T) {
 			len(g[1].ObservationIDs) != 1 || !bytes.Equal(g[1].ObservationIDs[0], a.ID) || !g[0].Leads {
 			t.Fatalf("gallery %+v", g)
 		}
-		if _, ok := likenesses.ByObservation(g, n.ID); ok {
+		if _, ok := gallery.ByObservation(g, n.ID); ok {
 			t.Fatalf("negative is in the gallery %+v", g)
 		}
 	})
@@ -200,7 +207,7 @@ func TestForEntities(t *testing.T) {
 		if len(g) != 1 || len(g[0].ObservationIDs) != 1 || !bytes.Equal(g[0].ObservationIDs[0], a.ID) {
 			t.Fatalf("gallery %+v", g)
 		}
-		if _, ok := likenesses.ByObservation(g, p.ID); ok {
+		if _, ok := gallery.ByObservation(g, p.ID); ok {
 			t.Fatalf("provisional record is in the gallery %+v", g)
 		}
 	})
@@ -219,8 +226,47 @@ func TestForEntities(t *testing.T) {
 		if len(g) != 2 || len(g[1].ObservationIDs) != 1 || !bytes.Equal(g[1].ObservationIDs[0], w.ID) {
 			t.Fatalf("gallery %+v", g)
 		}
-		if _, ok := likenesses.ByObservation(g, p.ID); ok {
+		if _, ok := gallery.ByObservation(g, p.ID); ok {
 			t.Fatalf("provisional record is in the gallery %+v", g)
+		}
+	})
+	t.Run("place picture on a Place handle", func(t *testing.T) {
+		f := newFixture(t)
+		src := f.source("Map")
+		s := f.subjectOn(src, "place")
+		o := observationstest.SaveDepiction(t, f.c, userID, src.ID, s.ID, vocabkey.PropertyPlacePicture, 100)
+		h := f.promote(s, nil)
+		g := f.gallery(h)
+		if len(g) != 1 || len(g[0].ObservationIDs) != 1 || !bytes.Equal(g[0].ObservationIDs[0], o.ID) {
+			t.Fatalf("gallery %+v", g)
+		}
+	})
+	t.Run("event picture on an Event handle", func(t *testing.T) {
+		f := newFixture(t)
+		src := f.source("Photo")
+		s := f.subjectOn(src, "event")
+		o := observationstest.SaveDepiction(t, f.c, userID, src.ID, s.ID, vocabkey.PropertyEventPicture, 100)
+		h := f.promote(s, nil)
+		g := f.gallery(h)
+		if len(g) != 1 || len(g[0].ObservationIDs) != 1 || !bytes.Equal(g[0].ObservationIDs[0], o.ID) {
+			t.Fatalf("gallery %+v", g)
+		}
+	})
+	t.Run("tile image is the depiction row, not the reconciler cache", func(t *testing.T) {
+		f := newFixture(t)
+		src := f.source("Register")
+		s := f.personOn(src)
+		o := observationstest.SaveLikeness(t, f.c, userID, src.ID, s.ID, 100)
+		h := f.promote(s, nil)
+		want := observationstest.ImageOf(t, f.c, o.ID)
+		other := observationstest.FileArtifact(t, f.c, userID, src.ID).FileID
+		db, err := f.c.DB()
+		must(t, err)
+		_, err = db.Exec(`UPDATE auto_reconciler_values SET value_image_file_id = ? WHERE entity_id = ?`, other, h)
+		must(t, err)
+		g := f.gallery(h)
+		if len(g) != 1 || !bytes.Equal(g[0].ImageFileID, want) || bytes.Equal(g[0].ImageFileID, other) {
+			t.Fatalf("gallery image %x, want depiction %x (not cache %x)", g[0].ImageFileID, want, other)
 		}
 	})
 }
@@ -247,9 +293,9 @@ func (f *fixture) setPreferred(h, observationID []byte) {
 	must(f.t, err)
 }
 
-func (f *fixture) gallery(h []byte) []likenesses.Likeness {
+func (f *fixture) gallery(h []byte) []gallery.Picture {
 	f.t.Helper()
-	got, err := likenesses.ForEntities(f.c.Graph(), [][]byte{h})
+	got, err := gallery.ForEntities(f.c.Graph(), [][]byte{h})
 	must(f.t, err)
 	return got[string(h)]
 }
@@ -263,7 +309,7 @@ func (f *fixture) pointer(h []byte) []byte {
 	return p
 }
 
-func preferredFlags(g []likenesses.Likeness) []bool {
+func preferredFlags(g []gallery.Picture) []bool {
 	out := make([]bool, len(g))
 	for i := range g {
 		out[i] = g[i].Preferred
@@ -271,7 +317,7 @@ func preferredFlags(g []likenesses.Likeness) []bool {
 	return out
 }
 
-func leadsFlags(g []likenesses.Likeness) []bool {
+func leadsFlags(g []gallery.Picture) []bool {
 	out := make([]bool, len(g))
 	for i := range g {
 		out[i] = g[i].Leads
@@ -290,7 +336,7 @@ func TestForEntitiesPreferred(t *testing.T) {
 		if !slices.Equal(leadsFlags(g), []bool{true, false}) {
 			t.Fatalf("leads %v", leadsFlags(g))
 		}
-		l, ok := likenesses.Lead(g)
+		l, ok := gallery.Lead(g)
 		if !ok || !bytes.Equal(l.ObservationIDs[0], a.ID) {
 			t.Fatalf("lead %+v", l)
 		}
@@ -306,7 +352,7 @@ func TestForEntitiesPreferred(t *testing.T) {
 		if !slices.Equal(leadsFlags(g), []bool{false, true}) {
 			t.Fatalf("leads %v", leadsFlags(g))
 		}
-		l, ok := likenesses.Lead(g)
+		l, ok := gallery.Lead(g)
 		if !ok || !bytes.Equal(l.ObservationIDs[0], b.ID) {
 			t.Fatalf("lead %+v", l)
 		}
@@ -321,7 +367,7 @@ func TestForEntitiesPreferred(t *testing.T) {
 		})
 		must(t, err)
 		g := f.gallery(h)
-		l, ok := likenesses.Lead(g)
+		l, ok := gallery.Lead(g)
 		if len(g) != 1 || !ok || !bytes.Equal(l.ObservationIDs[0], a.ID) || l.Preferred {
 			t.Fatalf("gallery %+v lead %+v", g, l)
 		}
@@ -342,7 +388,7 @@ func TestForEntitiesPreferred(t *testing.T) {
 		f.credibility(album, "high_trust")
 		f.promote(c, h)
 		g := f.gallery(h)
-		l, ok := likenesses.Lead(g)
+		l, ok := gallery.Lead(g)
 		if len(g) != 1 || !ok || !bytes.Equal(l.ObservationIDs[0], a.ID) || !slices.Equal(preferredFlags(g), []bool{false}) {
 			t.Fatalf("gallery %+v lead %+v", g, l)
 		}
@@ -361,7 +407,7 @@ func TestForEntitiesPreferred(t *testing.T) {
 		_, err = db.Exec(`UPDATE canonical_entities SET preferred_likeness_observation_id = ? WHERE id = ?`, n.ID, h)
 		must(t, err)
 		g := f.gallery(h)
-		l, ok := likenesses.Lead(g)
+		l, ok := gallery.Lead(g)
 		if !ok || !bytes.Equal(l.ObservationIDs[0], b.ID) {
 			t.Fatalf("gallery %+v lead %+v", g, l)
 		}
@@ -389,7 +435,7 @@ func TestForEntitiesPreferred(t *testing.T) {
 			if !slices.Equal(leadsFlags(g), []bool{true}) {
 				t.Fatalf("leads %v", leadsFlags(g))
 			}
-			l, ok := likenesses.Lead(g)
+			l, ok := gallery.Lead(g)
 			if !ok || !bytes.Equal(l.ObservationIDs[0], a.ID) {
 				t.Fatalf("lead %+v", l)
 			}
@@ -443,7 +489,7 @@ func TestForEntitiesPreferred(t *testing.T) {
 		if len(leadsFlags(nil)) != 0 {
 			t.Fatal("flags")
 		}
-		if _, ok := likenesses.Lead(nil); ok {
+		if _, ok := gallery.Lead(nil); ok {
 			t.Fatal("ok")
 		}
 	})

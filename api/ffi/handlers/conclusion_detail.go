@@ -209,7 +209,7 @@ func attachLikenesses(c *database.Catalog, d conclusiondetails.Detail, lead []by
 	if len(lead) > 0 {
 		imageIDs = append(imageIDs, lead)
 	}
-	for _, l := range d.Likenesses {
+	for _, l := range d.Pictures {
 		imageIDs = append(imageIDs, l.ImageFileID)
 	}
 	paths, err := files.RelPaths(c, imageIDs)
@@ -219,7 +219,7 @@ func attachLikenesses(c *database.Catalog, d conclusiondetails.Detail, lead []by
 	if person := out.GetPerson(); person != nil {
 		person.LikenessImageRelPath = paths[string(lead)]
 	}
-	for _, l := range d.Likenesses {
+	for _, l := range d.Pictures {
 		out.Likenesses = append(out.Likenesses, &engine.LikenessDetail{
 			ImageRelPath: paths[string(l.ImageFileID)],
 			Record:       reconcilerOutcomeProto(l.Record),

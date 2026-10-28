@@ -11,7 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/database/likenesses"
+	"github.com/mendahu/provenencia/core/database/gallery"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/hops"
@@ -482,14 +482,14 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 	for _, n := range nodes {
 		byID[string(n.ID)] = n
 	}
-	gallery, err := likenesses.ForEntities(g, need)
+	tiles, err := gallery.ForEntities(g, need)
 	if err != nil {
 		return nil, err
 	}
 	fresh := map[string]PersonHeader{}
 	for _, id := range need {
 		var lead []byte
-		if l, ok := likenesses.Lead(gallery[string(id)]); ok {
+		if l, ok := gallery.Lead(tiles[string(id)]); ok {
 			lead = l.ImageFileID
 		}
 		h, err := onePerson(v, byID[string(id)], g, pg, lead)

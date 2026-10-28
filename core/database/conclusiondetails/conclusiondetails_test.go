@@ -243,22 +243,22 @@ func TestForEntityLikenesses(t *testing.T) {
 	if len(d.Fields) != 1 || d.Fields[0].PropertyKey != "name" {
 		t.Fatalf("fields %+v", d.Fields)
 	}
-	if len(d.Likenesses) != 2 {
-		t.Fatalf("likenesses %+v", d.Likenesses)
+	if len(d.Pictures) != 2 {
+		t.Fatalf("pictures %+v", d.Pictures)
 	}
-	first := d.Likenesses[0]
+	first := d.Pictures[0]
 	if first.Record.SourceTitle != "Register" || !bytes.Equal(first.Record.ObservationID, oa.ID) ||
 		!bytes.Equal(first.Record.CitationID, oa.CitationID) || len(first.ImageFileID) != 16 {
 		t.Fatalf("first %+v", first)
 	}
-	if !bytes.Equal(d.Likenesses[1].Record.ObservationID, ob.ID) || d.Likenesses[1].Record.SourceTitle != "Census" {
-		t.Fatalf("second %+v", d.Likenesses[1])
+	if !bytes.Equal(d.Pictures[1].Record.ObservationID, ob.ID) || d.Pictures[1].Record.SourceTitle != "Census" {
+		t.Fatalf("second %+v", d.Pictures[1])
 	}
-	if d.Likenesses[0].Preferred || d.Likenesses[1].Preferred {
-		t.Fatalf("preferred before a choice: %+v", d.Likenesses)
+	if d.Pictures[0].Preferred || d.Pictures[1].Preferred {
+		t.Fatalf("preferred before a choice: %+v", d.Pictures)
 	}
-	if !d.Likenesses[0].Leads || d.Likenesses[1].Leads {
-		t.Fatalf("leads before a choice: %+v", d.Likenesses)
+	if !d.Pictures[0].Leads || d.Pictures[1].Leads {
+		t.Fatalf("leads before a choice: %+v", d.Pictures)
 	}
 	_, err := writes.Call(f.c, writes.Op{Action: "set_preferred_likeness", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 		ch, err := canonicalentities.SetPreferredLikeness(tx, userID, h, ob.ID)
@@ -266,18 +266,18 @@ func TestForEntityLikenesses(t *testing.T) {
 	})
 	must(t, err)
 	d = f.detail(h)
-	if len(d.Likenesses) != 2 || d.Likenesses[0].Preferred || !d.Likenesses[1].Preferred {
-		t.Fatalf("after choosing B: %+v", d.Likenesses)
+	if len(d.Pictures) != 2 || d.Pictures[0].Preferred || !d.Pictures[1].Preferred {
+		t.Fatalf("after choosing B: %+v", d.Pictures)
 	}
-	if d.Likenesses[0].Leads || !d.Likenesses[1].Leads {
-		t.Fatalf("leads after choosing B: %+v", d.Likenesses)
+	if d.Pictures[0].Leads || !d.Pictures[1].Leads {
+		t.Fatalf("leads after choosing B: %+v", d.Pictures)
 	}
 
 	only := newFixture(t)
 	n := only.personOn(only.source("Register"))
 	only.cite(n, only.nameIn(n, "given=Ann"))
-	if got := only.detail(only.promote(n, nil)); len(got.Likenesses) != 0 {
-		t.Fatalf("likenesses %+v", got.Likenesses)
+	if got := only.detail(only.promote(n, nil)); len(got.Pictures) != 0 {
+		t.Fatalf("pictures %+v", got.Pictures)
 	}
 }
 
@@ -293,13 +293,13 @@ func TestForEntityLikenessesSkipNegatives(t *testing.T) {
 	f.promote(sb, h)
 	f.promote(sn, h)
 	d := f.detail(h)
-	if len(d.Likenesses) != 2 {
-		t.Fatalf("likenesses %+v", d.Likenesses)
+	if len(d.Pictures) != 2 {
+		t.Fatalf("pictures %+v", d.Pictures)
 	}
-	if first := d.Likenesses[0]; !bytes.Equal(first.Record.ObservationID, b.ID) || first.Record.Reason != "kept" {
+	if first := d.Pictures[0]; !bytes.Equal(first.Record.ObservationID, b.ID) || first.Record.Reason != "kept" {
 		t.Fatalf("first %+v", first)
 	}
-	for _, l := range d.Likenesses {
+	for _, l := range d.Pictures {
 		if bytes.Equal(l.Record.ObservationID, n.ID) {
 			t.Fatalf("negative opens from a tile: %+v", l)
 		}
@@ -320,8 +320,8 @@ func TestForEntityLikenessNeedsAPNG(t *testing.T) {
 		JOIN depiction_values dv ON dv.id = o.value_depiction_id WHERE o.id = ?`, oa.ID).Scan(&image))
 	_, err = db.Exec(`UPDATE files SET media_type = 'image/jpeg' WHERE id = ?`, image)
 	must(t, err)
-	if d := f.detail(h); len(d.Likenesses) != 0 {
-		t.Fatalf("likenesses %+v", d.Likenesses)
+	if d := f.detail(h); len(d.Pictures) != 0 {
+		t.Fatalf("pictures %+v", d.Pictures)
 	}
 	f.c.Graph().Drop()
 	rows, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{h})
