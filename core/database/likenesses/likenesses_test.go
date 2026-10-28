@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/likenesses"
@@ -372,25 +373,71 @@ func TestForEntitiesPreferred(t *testing.T) {
 		}
 	})
 	t.Run("deleting the Observation clears the pointer", func(t *testing.T) {
-		f := newFixture(t)
-		h, a, b, _ := f.twoLikenesses()
-		f.setPreferred(h, b.ID)
-		_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-			ch, err := observations.Delete(tx, userID, b.ID)
-			return struct{}{}, ch, err
+		t.Run("clears preferred pointer row", func(t *testing.T) {
+			f := newFixture(t)
+			h, a, b, _ := f.twoLikenesses()
+			f.setPreferred(h, b.ID)
+			_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				ch, err := observations.Delete(tx, userID, b.ID)
+				return struct{}{}, ch, err
+			})
+			must(t, err)
+			if p := f.pointer(h); p != nil {
+				t.Fatalf("pointer %x", p)
+			}
+			g := f.gallery(h)
+			if !slices.Equal(leadsFlags(g), []bool{true}) {
+				t.Fatalf("leads %v", leadsFlags(g))
+			}
+			l, ok := likenesses.Lead(g)
+			if !ok || !bytes.Equal(l.ObservationIDs[0], a.ID) {
+				t.Fatalf("lead %+v", l)
+			}
 		})
-		must(t, err)
-		if p := f.pointer(h); p != nil {
-			t.Fatalf("pointer %x", p)
-		}
-		g := f.gallery(h)
-		if !slices.Equal(leadsFlags(g), []bool{true}) {
-			t.Fatalf("leads %v", leadsFlags(g))
-		}
-		l, ok := likenesses.Lead(g)
-		if !ok || !bytes.Equal(l.ObservationIDs[0], a.ID) {
-			t.Fatalf("lead %+v", l)
-		}
+		t.Run("records pointer clear in revision", func(t *testing.T) {
+			f := newFixture(t)
+			h, _, b, _ := f.twoLikenesses()
+			diary := f.source("Diary")
+			sd := f.personOn(diary)
+			h2 := f.promote(sd, nil)
+			ob2 := observationstest.SaveLikeness(f.t, f.c, userID, diary.ID, sd.ID, 150)
+			f.setPreferred(h2, ob2.ID)
+			var wantFields map[string]rowchange.FieldDiff
+			_, err := writes.Call(f.c, writes.Op{Action: "set_preferred_likeness", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				ch, err := canonicalentities.SetPreferredLikeness(tx, userID, h2, nil)
+				if len(ch) == 1 {
+					wantFields = ch[0].Fields
+				}
+				return struct{}{}, ch, err
+			})
+			must(t, err)
+			f.setPreferred(h2, ob2.ID)
+			f.setPreferred(h, b.ID)
+			var got []rowchange.Change
+			_, err = writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				ch, err := observations.Delete(tx, userID, b.ID)
+				got = ch
+				return struct{}{}, ch, err
+			})
+			must(t, err)
+			dbtest.RequireUpdateBeforeDelete(t, got, "observation", "canonical_entity", h, wantFields)
+		})
+		t.Run("non-preferred delete emits no canonical_entity change", func(t *testing.T) {
+			f := newFixture(t)
+			_, _, b, _ := f.twoLikenesses()
+			var got []rowchange.Change
+			_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				ch, err := observations.Delete(tx, userID, b.ID)
+				got = ch
+				return struct{}{}, ch, err
+			})
+			must(t, err)
+			for _, ch := range got {
+				if ch.EntityType == "canonical_entity" {
+					t.Fatalf("unexpected canonical_entity change %+v", ch)
+				}
+			}
+		})
 	})
 	t.Run("empty gallery has no lead", func(t *testing.T) {
 		if len(leadsFlags(nil)) != 0 {

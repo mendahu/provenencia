@@ -125,9 +125,15 @@ func TestFacetReleaseHonesty(t *testing.T) {
 
 	for key, fk := range fks {
 		_, has := releases[key]
+		if fk.Bucket == catalogmodel.BucketOptional && normalizeOnDelete(fk.OnDelete) != "SET NULL" {
+			t.Errorf("%s is BucketOptional but OnDelete is %q, want SET NULL", key, fk.OnDelete)
+		}
 		if normalizeOnDelete(fk.OnDelete) != "CASCADE" {
 			if fk.Audited {
 				t.Errorf("%s is Audited but not CASCADE", key)
+			}
+			if fk.Bucket == catalogmodel.BucketOptional && normalizeOnDelete(fk.OnDelete) == "SET NULL" && deletable[fk.To] && !has {
+				t.Errorf("optional SET NULL %s has no facet release (parent %s is deletable)", key, fk.To)
 			}
 			continue
 		}
@@ -147,13 +153,14 @@ func TestFacetReleaseHonesty(t *testing.T) {
 		if tableKind[fk.To] != f.Parent {
 			t.Errorf("facet release %s parent %s, FK points at %s", via, f.Parent, fk.To)
 		}
-		if normalizeOnDelete(fk.OnDelete) == "CASCADE" {
+		onDelete := normalizeOnDelete(fk.OnDelete)
+		if onDelete == "CASCADE" {
 			if !fk.Audited {
 				t.Errorf("facet release %s covers a CASCADE not marked Audited", via)
 			}
-			if f.Remaining == "" {
-				t.Errorf("facet release %s needs a Remaining check (it has a CASCADE backstop)", via)
-			}
+		}
+		if (onDelete == "CASCADE" || (fk.Bucket == catalogmodel.BucketOptional && onDelete == "SET NULL")) && f.Remaining == "" {
+			t.Errorf("facet release %s needs a Remaining check", via)
 		}
 		if f.Release == nil {
 			t.Errorf("facet release %s has no Release", via)
