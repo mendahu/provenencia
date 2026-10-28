@@ -66,9 +66,9 @@ type CreateInput struct {
 	FileID      []byte // nil/empty = fileless
 	Label       string
 	Description string
-	// GraphIDs are the graphs of the Source the Artifact is linked to on
-	// create. Empty = every graph of the Source.
-	GraphIDs [][]byte
+	// Graphs says which graphs of the Source the Artifact is linked to on
+	// create. The zero value is every graph; Given with no IDs is none.
+	Graphs evidencegraphs.GraphLinks
 }
 
 // Create inserts an Artifact and mints ART-…. The caller records the returned
@@ -127,7 +127,7 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Artifact, []rowchan
 	if in.Description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: nil, New: in.Description}
 	}
-	linked, err := evidencegraphs.LinkArtifact(tx, userID, in.SourceID, idBytes, in.GraphIDs)
+	linked, err := evidencegraphs.LinkArtifact(tx, userID, in.SourceID, idBytes, in.Graphs)
 	if err != nil {
 		return Artifact{}, nil, err
 	}
@@ -147,11 +147,13 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Artifact, []rowchan
 	}, changes, nil
 }
 
-// Update patches label, description, and/or first-attach file_id. The caller
-// records the returned changes. An unchanged row returns no changes. Clearing
+// Update patches label, description, and/or first-attach file_id, and, when
+// graphs is Given, sets the Artifact's graph links in the same write. The
+// caller records the returned changes. An unchanged row with no links given
+// returns no changes. Clearing
 // a set file_id back to null is rejected. Replacing a set file_id with a
 // different File is rejected (first-attach only).
-func Update(tx *database.Tx, userID []byte, a Artifact) ([]rowchange.Change, error) {
+func Update(tx *database.Tx, userID []byte, a Artifact, graphs evidencegraphs.GraphLinks) ([]rowchange.Change, error) {
 	if tx == nil {
 		return nil, ErrInvalid
 	}
@@ -199,19 +201,26 @@ func Update(tx *database.Tx, userID []byte, a Artifact) ([]rowchange.Change, err
 	if prev.Description != a.Description {
 		fields["description"] = rowchange.FieldDiff{Old: database.NullString(prev.Description), New: database.NullString(a.Description)}
 	}
-	if len(fields) == 0 {
-		return nil, nil
+	var changes []rowchange.Change
+	if len(fields) > 0 {
+		if _, err := tx.Exec(sqlUpdate, database.NullBlob(a.FileID), a.Label, database.NullString(a.Description), a.ID); err != nil {
+			return nil, mapConstraint(err)
+		}
+		changes = append(changes, rowchange.Change{
+			EntityType: "artifact",
+			EntityID:   append([]byte(nil), a.ID...),
+			Action:     rowchange.ActionUpdate,
+			Fields:     fields,
+		})
 	}
-
-	if _, err := tx.Exec(sqlUpdate, database.NullBlob(a.FileID), a.Label, database.NullString(a.Description), a.ID); err != nil {
-		return nil, mapConstraint(err)
+	if graphs.Given {
+		linked, err := evidencegraphs.SetArtifactGraphs(tx, userID, a.ID, graphs.IDs)
+		if err != nil {
+			return nil, err
+		}
+		changes = append(changes, linked...)
 	}
-	return []rowchange.Change{{
-		EntityType: "artifact",
-		EntityID:   append([]byte(nil), a.ID...),
-		Action:     rowchange.ActionUpdate,
-		Fields:     fields,
-	}}, nil
+	return changes, nil
 }
 
 // Delete erases an Artifact when no Citation points at it. File releases

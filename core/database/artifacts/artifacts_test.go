@@ -161,13 +161,16 @@ func TestArtifacts(t *testing.T) {
 		run  func(t *testing.T, c *database.Catalog)
 	}{
 		{
-			name: "create links to the Default graph when GraphIDs is empty or names it",
+			name: "create links to the Default graph when Graphs is the zero value or names it",
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				src := mustSource(t, c)
 				graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
-				for name, ids := range map[string][][]byte{"empty": nil, "named": {graph}} {
-					a, changes, err := createChanges(t, c, CreateInput{SourceID: src.ID, Label: "Scan " + name, GraphIDs: ids})
+				for name, links := range map[string]evidencegraphs.GraphLinks{
+					"zero":  {},
+					"named": {Given: true, IDs: [][]byte{graph}},
+				} {
+					a, changes, err := createChanges(t, c, CreateInput{SourceID: src.ID, Label: "Scan " + name, Graphs: links})
 					if err != nil {
 						t.Fatalf("%s: %v", name, err)
 					}
@@ -206,7 +209,7 @@ func TestArtifacts(t *testing.T) {
 				}
 				before := artifactCount(t, c)
 				for name, ids := range bad {
-					_, _, err := createChanges(t, c, CreateInput{SourceID: src.ID, Label: "Scan", GraphIDs: ids})
+					_, _, err := createChanges(t, c, CreateInput{SourceID: src.ID, Label: "Scan", Graphs: evidencegraphs.GraphLinks{Given: true, IDs: ids}})
 					if !errors.Is(err, evidencegraphs.ErrInvalid) {
 						t.Fatalf("%s: got %v", name, err)
 					}
@@ -1023,6 +1026,144 @@ func TestArtifactDeleteKeepsSharedThumbnail(t *testing.T) {
 	}
 }
 
+func TestArtifactUpdateGraphs(t *testing.T) {
+	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	userRef, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.Upsert(c, userID, "Jake", userRef); err != nil {
+		t.Fatal(err)
+	}
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Family Bible"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	def := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+	// Q stays in both graphs throughout, so no unlink here is a graph's last.
+	q, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "Q"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	jones := evidencegraphstest.Create(t, c, userID, src.ID, "Jones", q.ID).ID
+	revisions := func() int {
+		db, err := c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		var n int
+		if err := db.QueryRow(`SELECT COUNT(*) FROM audit_transactions`).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	newPage := func(label string, graphs ...[]byte) Artifact {
+		a, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: label, Graphs: evidencegraphs.GraphLinks{Given: true, IDs: graphs}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return a
+	}
+	update := func(a Artifact, links evidencegraphs.GraphLinks) ([]string, int, error) {
+		before := revisions()
+		var kinds []string
+		_, _, err := writes.Run(c, writes.Op{Action: "update_artifact", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := Update(tx, userID, a, links)
+			kinds = changeKinds(changes)
+			return struct{}{}, changes, err
+		})
+		return kinds, revisions() - before, err
+	}
+	label := func(id []byte) string {
+		got, err := Get(c, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return got.Label
+	}
+	sameLinks := func(t *testing.T, id []byte, want ...[]byte) {
+		t.Helper()
+		got := linkedGraphs(t, c, id)
+		if len(got) != len(want) {
+			t.Fatalf("linked %x, want %x", got, want)
+		}
+		for _, w := range want {
+			if !database.ContainsBlobID(got, w) {
+				t.Fatalf("linked %x, want %x", got, want)
+			}
+		}
+	}
+
+	t.Run("label and links are one revision", func(t *testing.T) {
+		p := newPage("P", def)
+		p.Label = "P renamed"
+		kinds, revs, err := update(p, evidencegraphs.GraphLinks{Given: true, IDs: [][]byte{jones}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := []string{"artifact update", "evidence_graph_artifact create", "evidence_graph_artifact delete"}
+		if strings.Join(kinds, ",") != strings.Join(want, ",") || revs != 1 {
+			t.Fatalf("changes %v, %d revisions", kinds, revs)
+		}
+		sameLinks(t, p.ID, jones)
+	})
+	t.Run("given and empty drops links of an Artifact without Citations", func(t *testing.T) {
+		p := newPage("P2", def, jones)
+		kinds, revs, err := update(p, evidencegraphs.GraphLinks{Given: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := []string{"evidence_graph_artifact delete", "evidence_graph_artifact delete"}
+		if strings.Join(kinds, ",") != strings.Join(want, ",") || revs != 1 {
+			t.Fatalf("changes %v, %d revisions", kinds, revs)
+		}
+		sameLinks(t, p.ID)
+	})
+	t.Run("zero links leave the links alone", func(t *testing.T) {
+		p := newPage("P3", def, jones)
+		p.Label = "P3 renamed"
+		kinds, _, err := update(p, evidencegraphs.GraphLinks{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Join(kinds, ",") != "artifact update" {
+			t.Fatalf("changes %v", kinds)
+		}
+		sameLinks(t, p.ID, def, jones)
+	})
+	t.Run("a refused unlink rolls back the label", func(t *testing.T) {
+		p := newPage("P4", def)
+		if _, err := writes.Call(c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				ArtifactID: p.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
+			}, nil)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		p.Label = "P4 renamed"
+		before := revisions()
+		_, _, err := update(p, evidencegraphs.GraphLinks{Given: true})
+		if !errors.Is(err, evidencegraphs.ErrCitationsNeedGraph) {
+			t.Fatalf("got %v", err)
+		}
+		if label(p.ID) != "P4" || revisions() != before {
+			t.Fatalf("label %q, revisions %d -> %d", label(p.ID), before, revisions())
+		}
+		sameLinks(t, p.ID, def)
+	})
+}
+
 func runCreate(c *database.Catalog, userID []byte, in CreateInput) (Artifact, error) {
 	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
 		func(tx *database.Tx) (Artifact, []rowchange.Change, error) {
@@ -1034,7 +1175,7 @@ func runCreate(c *database.Catalog, userID []byte, in CreateInput) (Artifact, er
 func runUpdate(c *database.Catalog, userID []byte, a Artifact) error {
 	_, _, err := writes.Run(c, writes.Op{Action: "update_artifact", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-			changes, err := Update(tx, userID, a)
+			changes, err := Update(tx, userID, a, evidencegraphs.GraphLinks{})
 			return struct{}{}, changes, err
 		})
 	return err

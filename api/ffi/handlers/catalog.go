@@ -5,9 +5,11 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 )
 
 var (
@@ -50,6 +52,20 @@ func parseIDs(raws []string) ([][]byte, error) {
 		out = append(out, id)
 	}
 	return out, nil
+}
+
+// parseGraphLinks reads an Artifact's graph links with their presence: an
+// absent message is the zero value (the default); a present one is Given, and
+// an empty one means none.
+func parseGraphLinks(m *engine.GraphLinks) (evidencegraphs.GraphLinks, error) {
+	if m == nil {
+		return evidencegraphs.GraphLinks{}, nil
+	}
+	ids, err := parseIDs(m.GetGraphIds())
+	if err != nil {
+		return evidencegraphs.GraphLinks{}, err
+	}
+	return evidencegraphs.GraphLinks{Given: true, IDs: ids}, nil
 }
 
 func unmarshalErr(op string, err error) error {

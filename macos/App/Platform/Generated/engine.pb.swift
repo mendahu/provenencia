@@ -1933,7 +1933,21 @@ public nonisolated struct Provenencia_Engine_V1_UnlinkEvidenceGraphArtifactRespo
   fileprivate var _effects: Provenencia_Engine_V1_WriteEffects? = nil
 }
 
-/// Which of the Artifacts a graph edit removes are used by the graph's Citations.
+public nonisolated struct Provenencia_Engine_V1_EvidenceGraphArtifactPair: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var graphID: String = String()
+
+  public var artifactID: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// Which of the (graph, Artifact) pairs an edit would unlink are refused, and why.
 public nonisolated struct Provenencia_Engine_V1_GetEvidenceGraphUnlinkImpactRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1941,9 +1955,7 @@ public nonisolated struct Provenencia_Engine_V1_GetEvidenceGraphUnlinkImpactRequ
 
   public var projectDir: String = String()
 
-  public var graphID: String = String()
-
-  public var artifactIds: [String] = []
+  public var pairs: [Provenencia_Engine_V1_EvidenceGraphArtifactPair] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1957,6 +1969,7 @@ public nonisolated struct Provenencia_Engine_V1_EvidenceGraphUnlinkBlock: Sendab
 
   public var artifactID: String = String()
 
+  /// empty for last_artifact
   public var citations: Provenencia_Engine_V1_DeleteImpactGroup {
     get {_citations ?? Provenencia_Engine_V1_DeleteImpactGroup()}
     set {_citations = newValue}
@@ -1965,6 +1978,11 @@ public nonisolated struct Provenencia_Engine_V1_EvidenceGraphUnlinkBlock: Sendab
   public var hasCitations: Bool {self._citations != nil}
   /// Clears the value of `citations`. Subsequent reads from it will return its default value.
   public mutating func clearCitations() {self._citations = nil}
+
+  public var graphID: String = String()
+
+  /// the refusal's apperr code
+  public var reasonCode: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -2428,7 +2446,31 @@ public nonisolated struct Provenencia_Engine_V1_CreateArtifactRequest: Sendable 
   /// required
   public var label: String = String()
 
-  /// empty = every graph of the Source
+  /// absent = every graph of the Source
+  public var graphLinks: Provenencia_Engine_V1_GraphLinks {
+    get {_graphLinks ?? Provenencia_Engine_V1_GraphLinks()}
+    set {_graphLinks = newValue}
+  }
+  /// Returns true if `graphLinks` has been explicitly set.
+  public var hasGraphLinks: Bool {self._graphLinks != nil}
+  /// Clears the value of `graphLinks`. Subsequent reads from it will return its default value.
+  public mutating func clearGraphLinks() {self._graphLinks = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _graphLinks: Provenencia_Engine_V1_GraphLinks? = nil
+}
+
+/// Which graphs of its Source an Artifact is in. A message field has presence,
+/// so an absent GraphLinks (the default) and a present, empty one (none) differ.
+public nonisolated struct Provenencia_Engine_V1_GraphLinks: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// present and empty = none
   public var graphIds: [String] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -2466,7 +2508,8 @@ public nonisolated struct Provenencia_Engine_V1_CreateArtifactResponse: @uncheck
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
-/// UpdateArtifactRequest patches label and/or description only.
+/// UpdateArtifactRequest patches label and/or description, and, when graph_links
+/// is present, sets the Artifact's graph links in the same write.
 /// File attach stays IngestArtifactFile (first-attach only).
 public nonisolated struct Provenencia_Engine_V1_UpdateArtifactRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -2483,9 +2526,21 @@ public nonisolated struct Provenencia_Engine_V1_UpdateArtifactRequest: Sendable 
 
   public var description_p: String = String()
 
+  /// absent = links unchanged
+  public var graphLinks: Provenencia_Engine_V1_GraphLinks {
+    get {_graphLinks ?? Provenencia_Engine_V1_GraphLinks()}
+    set {_graphLinks = newValue}
+  }
+  /// Returns true if `graphLinks` has been explicitly set.
+  public var hasGraphLinks: Bool {self._graphLinks != nil}
+  /// Clears the value of `graphLinks`. Subsequent reads from it will return its default value.
+  public mutating func clearGraphLinks() {self._graphLinks = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _graphLinks: Provenencia_Engine_V1_GraphLinks? = nil
 }
 
 public nonisolated struct Provenencia_Engine_V1_UpdateArtifactResponse: @unchecked Sendable {
@@ -10286,9 +10341,44 @@ nonisolated extension Provenencia_Engine_V1_UnlinkEvidenceGraphArtifactResponse:
   }
 }
 
+nonisolated extension Provenencia_Engine_V1_EvidenceGraphArtifactPair: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".EvidenceGraphArtifactPair"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}graph_id\0\u{3}artifact_id\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.graphID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.artifactID) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.graphID.isEmpty {
+      try visitor.visitSingularStringField(value: self.graphID, fieldNumber: 1)
+    }
+    if !self.artifactID.isEmpty {
+      try visitor.visitSingularStringField(value: self.artifactID, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_EvidenceGraphArtifactPair, rhs: Provenencia_Engine_V1_EvidenceGraphArtifactPair) -> Bool {
+    if lhs.graphID != rhs.graphID {return false}
+    if lhs.artifactID != rhs.artifactID {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 nonisolated extension Provenencia_Engine_V1_GetEvidenceGraphUnlinkImpactRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetEvidenceGraphUnlinkImpactRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}graph_id\0\u{3}artifact_ids\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{2}\u{3}pairs\0\u{b}graph_id\0\u{b}artifact_ids\0\u{c}\u{2}\u{1}\u{c}\u{3}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -10297,8 +10387,7 @@ nonisolated extension Provenencia_Engine_V1_GetEvidenceGraphUnlinkImpactRequest:
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.projectDir) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.graphID) }()
-      case 3: try { try decoder.decodeRepeatedStringField(value: &self.artifactIds) }()
+      case 4: try { try decoder.decodeRepeatedMessageField(value: &self.pairs) }()
       default: break
       }
     }
@@ -10308,19 +10397,15 @@ nonisolated extension Provenencia_Engine_V1_GetEvidenceGraphUnlinkImpactRequest:
     if !self.projectDir.isEmpty {
       try visitor.visitSingularStringField(value: self.projectDir, fieldNumber: 1)
     }
-    if !self.graphID.isEmpty {
-      try visitor.visitSingularStringField(value: self.graphID, fieldNumber: 2)
-    }
-    if !self.artifactIds.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.artifactIds, fieldNumber: 3)
+    if !self.pairs.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.pairs, fieldNumber: 4)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_GetEvidenceGraphUnlinkImpactRequest, rhs: Provenencia_Engine_V1_GetEvidenceGraphUnlinkImpactRequest) -> Bool {
     if lhs.projectDir != rhs.projectDir {return false}
-    if lhs.graphID != rhs.graphID {return false}
-    if lhs.artifactIds != rhs.artifactIds {return false}
+    if lhs.pairs != rhs.pairs {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -10328,7 +10413,7 @@ nonisolated extension Provenencia_Engine_V1_GetEvidenceGraphUnlinkImpactRequest:
 
 nonisolated extension Provenencia_Engine_V1_EvidenceGraphUnlinkBlock: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".EvidenceGraphUnlinkBlock"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}artifact_id\0\u{1}citations\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}artifact_id\0\u{1}citations\0\u{3}graph_id\0\u{3}reason_code\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -10338,6 +10423,8 @@ nonisolated extension Provenencia_Engine_V1_EvidenceGraphUnlinkBlock: SwiftProto
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.artifactID) }()
       case 2: try { try decoder.decodeSingularMessageField(value: &self._citations) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.graphID) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.reasonCode) }()
       default: break
       }
     }
@@ -10354,12 +10441,20 @@ nonisolated extension Provenencia_Engine_V1_EvidenceGraphUnlinkBlock: SwiftProto
     try { if let v = self._citations {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
     } }()
+    if !self.graphID.isEmpty {
+      try visitor.visitSingularStringField(value: self.graphID, fieldNumber: 3)
+    }
+    if !self.reasonCode.isEmpty {
+      try visitor.visitSingularStringField(value: self.reasonCode, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_EvidenceGraphUnlinkBlock, rhs: Provenencia_Engine_V1_EvidenceGraphUnlinkBlock) -> Bool {
     if lhs.artifactID != rhs.artifactID {return false}
     if lhs._citations != rhs._citations {return false}
+    if lhs.graphID != rhs.graphID {return false}
+    if lhs.reasonCode != rhs.reasonCode {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -11245,7 +11340,7 @@ nonisolated extension Provenencia_Engine_V1_ReorderSourceMetadataResponse: Swift
 
 nonisolated extension Provenencia_Engine_V1_CreateArtifactRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CreateArtifactRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}source_id\0\u{3}file_id\0\u{1}description\0\u{1}label\0\u{3}graph_ids\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}source_id\0\u{3}file_id\0\u{1}description\0\u{1}label\0\u{4}\u{2}graph_links\0\u{b}graph_ids\0\u{c}\u{7}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -11259,13 +11354,17 @@ nonisolated extension Provenencia_Engine_V1_CreateArtifactRequest: SwiftProtobuf
       case 4: try { try decoder.decodeSingularStringField(value: &self.fileID) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.label) }()
-      case 7: try { try decoder.decodeRepeatedStringField(value: &self.graphIds) }()
+      case 8: try { try decoder.decodeSingularMessageField(value: &self._graphLinks) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.projectDir.isEmpty {
       try visitor.visitSingularStringField(value: self.projectDir, fieldNumber: 1)
     }
@@ -11284,9 +11383,9 @@ nonisolated extension Provenencia_Engine_V1_CreateArtifactRequest: SwiftProtobuf
     if !self.label.isEmpty {
       try visitor.visitSingularStringField(value: self.label, fieldNumber: 6)
     }
-    if !self.graphIds.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.graphIds, fieldNumber: 7)
-    }
+    try { if let v = self._graphLinks {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -11297,6 +11396,36 @@ nonisolated extension Provenencia_Engine_V1_CreateArtifactRequest: SwiftProtobuf
     if lhs.fileID != rhs.fileID {return false}
     if lhs.description_p != rhs.description_p {return false}
     if lhs.label != rhs.label {return false}
+    if lhs._graphLinks != rhs._graphLinks {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_GraphLinks: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GraphLinks"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}graph_ids\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedStringField(value: &self.graphIds) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.graphIds.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.graphIds, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_GraphLinks, rhs: Provenencia_Engine_V1_GraphLinks) -> Bool {
     if lhs.graphIds != rhs.graphIds {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -11382,7 +11511,7 @@ nonisolated extension Provenencia_Engine_V1_CreateArtifactResponse: SwiftProtobu
 
 nonisolated extension Provenencia_Engine_V1_UpdateArtifactRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UpdateArtifactRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}artifact_id\0\u{1}label\0\u{1}description\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}artifact_id\0\u{1}label\0\u{1}description\0\u{3}graph_links\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -11395,12 +11524,17 @@ nonisolated extension Provenencia_Engine_V1_UpdateArtifactRequest: SwiftProtobuf
       case 3: try { try decoder.decodeSingularStringField(value: &self.artifactID) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.label) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
+      case 6: try { try decoder.decodeSingularMessageField(value: &self._graphLinks) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.projectDir.isEmpty {
       try visitor.visitSingularStringField(value: self.projectDir, fieldNumber: 1)
     }
@@ -11416,6 +11550,9 @@ nonisolated extension Provenencia_Engine_V1_UpdateArtifactRequest: SwiftProtobuf
     if !self.description_p.isEmpty {
       try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 5)
     }
+    try { if let v = self._graphLinks {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -11425,6 +11562,7 @@ nonisolated extension Provenencia_Engine_V1_UpdateArtifactRequest: SwiftProtobuf
     if lhs.artifactID != rhs.artifactID {return false}
     if lhs.label != rhs.label {return false}
     if lhs.description_p != rhs.description_p {return false}
+    if lhs._graphLinks != rhs._graphLinks {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
