@@ -36,6 +36,8 @@ struct CatalogQueryDescriptor: Sendable {
     /// In-place updates run, in order, before invalidation. Empty for kinds
     /// that only reload.
     var patches: [CatalogQueryPatch] = []
+    /// Partial reload of a warmed value. Nil when this kind has none.
+    var refresh: CatalogQueryRefresh? = nil
     /// Starts the typed load for this kind. Closed over `Value` by `make`.
     let warm: @MainActor @Sendable (WorkspaceSession, CatalogQueryKey) -> Void
 }
@@ -51,6 +53,7 @@ extension CatalogQueryDescriptor {
         whenHidden: CatalogHiddenPolicy = .revalidate,
         invalidation: @escaping @Sendable (ProjectKey, CatalogMutation) -> CatalogQueryInvalidation,
         patches: [CatalogQueryPatch] = [],
+        refresh: CatalogQueryRefresh? = nil,
         load: @escaping @Sendable (CatalogQueryKey, any GenealogyStore) async throws -> Value
     ) -> CatalogQueryDescriptor {
         CatalogQueryDescriptor(
@@ -60,6 +63,7 @@ extension CatalogQueryDescriptor {
             whenHidden: whenHidden,
             invalidation: invalidation,
             patches: patches,
+            refresh: refresh,
             warm: { session, key in
                 let store = session.store
                 let _: QueryHandle<Value> = session.ensureQuery(key) {
@@ -478,6 +482,28 @@ extension CatalogQueryKey.Kind {
                 stalePolicy: .sessionFresh,
                 invalidateOn: [],
                 invalidation: { project, _ in .key(.evidenceGraphProgress(project: project)) },
+                refresh: CatalogQueryRefresh(follows: .evidenceGraphs) { session, key, ids in
+                    for graphId in ids {
+                        guard let _: QueryHandle<[String: EvidenceGraphProgress]> = session.queryHandle(key) else {
+                            return
+                        }
+                        do {
+                            let one = try await session.store.getEvidenceGraphProgress(
+                                projectDir: key.project.projectDir,
+                                graphID: graphId
+                            )
+                            var map: [String: EvidenceGraphProgress] = session.queryHandle(key)?.value ?? [:]
+                            if one.isZero {
+                                map.removeValue(forKey: graphId)
+                            } else {
+                                map[graphId] = one
+                            }
+                            session.setQueryValue(key, value: map)
+                        } catch {
+                            // Keep last counts; the next mutation or the next place visit that warms it retries.
+                        }
+                    }
+                },
                 load: { key, store in
                     guard case .evidenceGraphProgress(let project) = key else {
                         mismatchedCatalogKey(key, .evidenceGraphProgress)

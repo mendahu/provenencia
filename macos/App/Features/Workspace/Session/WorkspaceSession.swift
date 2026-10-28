@@ -186,12 +186,12 @@ final class WorkspaceSession {
     func apply(_ effects: CatalogWriteEffects = .empty, _ mutation: CatalogMutation? = nil) {
         applyPatches(effects, mutation)
         apply(invalidations: registry.invalidations(for: effects, by: mutation, project: projectKey))
-        var progressGraphs = effects.evidenceGraphs
-        if let graphId = mutation?.evidenceGraphId, !progressGraphs.contains(graphId) {
-            progressGraphs.append(graphId)
-        }
-        for graphId in progressGraphs {
-            refreshEvidenceGraphProgress(graphId: graphId)
+        for key in Array(handles.keys) where key.project == projectKey {
+            guard let refresh = key.kind.descriptor.refresh else { continue }
+            let ids = refresh.follows.ids(in: effects, mutation: mutation)
+            if !ids.isEmpty {
+                Task { await refresh.run(self, key, ids) }
+            }
         }
         if let kind = mutation?.invalidationKind,
            CatalogQueryRegistry.navCountTriggers.contains(kind),
@@ -259,32 +259,6 @@ final class WorkspaceSession {
             }
         }
         return keys
-    }
-
-    /// Surgical Get-one + map merge. Skips when no place warmed the map.
-    private func refreshEvidenceGraphProgress(graphId: String) {
-        guard evidenceGraphProgressHandle != nil else { return }
-        Task { await self.patchEvidenceGraphProgress(graphId: graphId) }
-    }
-
-    private func patchEvidenceGraphProgress(graphId: String) async {
-        let key = evidenceGraphProgressKey
-        guard evidenceGraphProgressHandle != nil else { return }
-        do {
-            let one = try await store.getEvidenceGraphProgress(
-                projectDir: projectKey.projectDir,
-                graphID: graphId
-            )
-            var map = evidenceGraphProgressHandle?.value ?? [:]
-            if one.isZero {
-                map.removeValue(forKey: graphId)
-            } else {
-                map[graphId] = one
-            }
-            setQueryValue(key, value: map)
-        } catch {
-            // Keep last counts; the next mutation or the next place visit that warms it retries.
-        }
     }
 
     /// Get-or-load with in-flight dedupe. Reuses cached `.ready` data until invalidated.

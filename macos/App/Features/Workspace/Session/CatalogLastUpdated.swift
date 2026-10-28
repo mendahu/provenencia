@@ -101,3 +101,10 @@ struct CatalogQueryPatch: Sendable {
         }
     }
 }
+
+/// A per-key reload of some rows, merged into the cached value. The session
+/// schedules `run` only for a warmed key, with the ids `follows` names.
+struct CatalogQueryRefresh: Sendable {
+    var follows: CatalogQueryFollows
+    var run: @MainActor @Sendable (WorkspaceSession, CatalogQueryKey, [String]) async -> Void
+}
