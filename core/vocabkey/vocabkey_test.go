@@ -5,6 +5,13 @@ import (
 	"testing"
 )
 
+func TestGalleryKeys(t *testing.T) {
+	want := []string{PropertyLikeness, PropertyEventPicture, PropertyPlacePicture}
+	if got := GalleryKeys(); !slices.Equal(got, want) {
+		t.Fatalf("GalleryKeys() = %v, want %v", got, want)
+	}
+}
+
 func TestIsPrimaryType(t *testing.T) {
 	tests := []struct {
 		key, origin string

@@ -70,8 +70,8 @@ func TestSubjectVocab(t *testing.T) {
 					t.Fatal(err)
 				}
 				eb, err := ListBindings(c, evt.ID)
-				if err != nil || len(eb) != 5 {
-					t.Fatalf("event bindings %v len=%d want 5", err, len(eb))
+				if err != nil || len(eb) != 6 {
+					t.Fatalf("event bindings %v len=%d want 6", err, len(eb))
 				}
 				en, err := properties.Lookup(c, "event_name", vocabkey.OriginProvenencia)
 				if err != nil || en.ValueType != propertymeta.ValueTypeText || en.Origin != vocabkey.OriginProvenencia {
@@ -474,19 +474,21 @@ func TestSeedProductValues(t *testing.T) {
 		label       string
 		valueType   string
 		cardinality string
-		onPerson    bool
+		bindType    string
 		order       int
 		locked      bool
 		terms       []term
 		exactTerms  bool
 	}{
-		{"religion", "Religion", propertymeta.ValueTypeTerm, propertymeta.CardinalityMultiple, true, 5, false, []term{{"catholic", "Catholic"}}, true},
-		{"languages_spoken", "Languages spoken", propertymeta.ValueTypeTerm, propertymeta.CardinalityMultiple, true, 6, false, []term{{"english", "English"}}, true},
-		{"likeness", "Likeness", propertymeta.ValueTypeDepiction, propertymeta.CardinalityMultiple, true, 1, true, nil, false},
-		{"gender", "", propertymeta.ValueTypeTerm, propertymeta.CardinalitySingle, true, 3, false, []term{{"man", ""}, {"woman", ""}, {"non_binary", ""}}, false},
-		{"interests", "", propertymeta.ValueTypeText, propertymeta.CardinalityMultiple, true, 4, false, nil, false},
-		{"event_type", "", "", "", false, 0, false, []term{{"engagement", "Engagement"}, {"travel", "Travel"}, {"funeral", "Funeral"}}, false},
-		{"role", "", "", "", false, 0, false, []term{{"pallbearer", "Pallbearer"}}, false},
+		{"religion", "Religion", propertymeta.ValueTypeTerm, propertymeta.CardinalityMultiple, "person", 5, false, []term{{"catholic", "Catholic"}}, true},
+		{"languages_spoken", "Languages spoken", propertymeta.ValueTypeTerm, propertymeta.CardinalityMultiple, "person", 6, false, []term{{"english", "English"}}, true},
+		{"likeness", "Likeness", propertymeta.ValueTypeDepiction, propertymeta.CardinalityMultiple, "person", 1, true, nil, false},
+		{"event_picture", "Picture", propertymeta.ValueTypeDepiction, propertymeta.CardinalityMultiple, "event", 5, true, nil, false},
+		{"place_picture", "Picture", propertymeta.ValueTypeDepiction, propertymeta.CardinalityMultiple, "place", 3, true, nil, false},
+		{"gender", "", propertymeta.ValueTypeTerm, propertymeta.CardinalitySingle, "person", 3, false, []term{{"man", ""}, {"woman", ""}, {"non_binary", ""}}, false},
+		{"interests", "", propertymeta.ValueTypeText, propertymeta.CardinalityMultiple, "person", 4, false, nil, false},
+		{"event_type", "", "", "", "", 0, false, []term{{"engagement", "Engagement"}, {"travel", "Travel"}, {"funeral", "Funeral"}}, false},
+		{"role", "", "", "", "", 0, false, []term{{"pallbearer", "Pallbearer"}}, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.property, func(t *testing.T) {
@@ -539,19 +541,19 @@ func TestSeedProductValues(t *testing.T) {
 					}
 				}
 			}
-			if !tc.onPerson {
+			if tc.bindType == "" {
 				return
 			}
 			order := -1
-			for _, b := range BindingsForType("person") {
+			for _, b := range BindingsForType(tc.bindType) {
 				if b.PropertyKey == tc.property {
 					order = b.SortOrder
 				}
 			}
 			if order != tc.order {
-				t.Fatalf("%s person sort order %d, want %d", tc.property, order, tc.order)
+				t.Fatalf("%s %s sort order %d, want %d", tc.property, tc.bindType, order, tc.order)
 			}
-			if LockedBinding("person", tc.property) != tc.locked {
+			if LockedBinding(tc.bindType, tc.property) != tc.locked {
 				t.Fatalf("%s binding locked = %v, want %v", tc.property, !tc.locked, tc.locked)
 			}
 		})
