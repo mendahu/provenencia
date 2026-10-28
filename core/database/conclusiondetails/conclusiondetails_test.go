@@ -97,8 +97,15 @@ func (f *fixture) source(title string) sources.Source {
 
 func (f *fixture) personOn(src sources.Source) subjects.Subject {
 	f.t.Helper()
+	return f.subjectOn(src, "person")
+}
+
+func (f *fixture) subjectOn(src sources.Source, kind string) subjects.Subject {
+	f.t.Helper()
+	ty, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
+	must(f.t, err)
 	graph := evidencegraphstest.SoleGraph(f.t, f.c, src.ID).ID
-	return subjectstest.OfType(f.t, f.c, userID, graph, f.person.ID, "")
+	return subjectstest.OfType(f.t, f.c, userID, graph, ty.ID, "")
 }
 
 // name files a name Observation from "type=value|…" parts (or "form:…").
@@ -281,6 +288,18 @@ func TestForEntityLikenesses(t *testing.T) {
 	}
 }
 
+func TestForEntityPlacePictures(t *testing.T) {
+	f := newFixture(t)
+	src := f.source("Map")
+	s := f.subjectOn(src, "place")
+	o := observationstest.SaveDepiction(t, f.c, userID, src.ID, s.ID, vocabkey.PropertyPlacePicture, 100)
+	h := f.promote(s, nil)
+	d := f.detail(h)
+	if len(d.Pictures) != 1 || !bytes.Equal(d.Pictures[0].Record.ObservationID, o.ID) {
+		t.Fatalf("pictures %+v", d.Pictures)
+	}
+}
+
 // A negative of the same picture is not a gallery record, so no tile opens it.
 func TestForEntityLikenessesSkipNegatives(t *testing.T) {
 	f := newFixture(t)
@@ -326,8 +345,8 @@ func TestForEntityLikenessNeedsAPNG(t *testing.T) {
 	f.c.Graph().Drop()
 	rows, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{h})
 	must(t, err)
-	if len(rows) != 1 || rows[0].LikenessImageFileID != nil {
-		t.Fatalf("header leads with %x", rows[0].LikenessImageFileID)
+	if len(rows) != 1 || rows[0].PictureImageFileID != nil {
+		t.Fatalf("header leads with %x", rows[0].PictureImageFileID)
 	}
 }
 

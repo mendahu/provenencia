@@ -22,8 +22,8 @@ func ListPersonHeaders(in []byte) ([]byte, error) {
 		}
 		var imageIDs [][]byte
 		for _, h := range headers {
-			if len(h.LikenessImageFileID) > 0 {
-				imageIDs = append(imageIDs, h.LikenessImageFileID)
+			if len(h.PictureImageFileID) > 0 {
+				imageIDs = append(imageIDs, h.PictureImageFileID)
 			}
 		}
 		paths, err := files.RelPaths(c, imageIDs)
@@ -32,7 +32,7 @@ func ListPersonHeaders(in []byte) ([]byte, error) {
 		}
 		for _, h := range headers {
 			ph := personHeaderProto(h)
-			ph.LikenessImageRelPath = paths[string(h.LikenessImageFileID)]
+			ph.LikenessImageRelPath = paths[string(h.PictureImageFileID)]
 			out.Headers = append(out.Headers, ph)
 		}
 		return nil

@@ -181,7 +181,7 @@ func attachHeader(c *database.Catalog, d conclusiondetails.Detail, out *engine.C
 			return nil, err
 		}
 		out.Header = &engine.ConclusionDetail_Person{Person: personHeaderProto(h[0])}
-		return h[0].LikenessImageFileID, nil
+		return h[0].PictureImageFileID, nil
 	case vocabkey.Event:
 		h, err := conclusionheaders.EventsByIDs(c, ids)
 		if err != nil || len(h) != 1 {

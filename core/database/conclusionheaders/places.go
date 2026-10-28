@@ -44,6 +44,9 @@ type PlaceHeader struct {
 	Contains             []PlaceRelationship
 	Predecessors         []PlaceRelationship
 	Successors           []PlaceRelationship
+	// PictureImageFileID is the image of the picture the Place leads with;
+	// nil when none. Preferred when set and in the gallery, else earliest.
+	PictureImageFileID []byte
 	// Updated is the handle's latest canonical_entity revision and its time.
 	// Filled by List only; zero means none.
 	Updated effects.Activity

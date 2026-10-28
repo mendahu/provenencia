@@ -315,43 +315,142 @@ func TestListPersonsQueryCountIsConstant(t *testing.T) {
 	}
 }
 
-func TestPersonHeaderLeadsWithEarliestLikeness(t *testing.T) {
-	f := newFixture(t)
-	s, _, h := f.person("Ann Lee")
-	_, _, other := f.person("Bob Lee")
-	save := func(shade uint8) observations.Observation {
-		return observationstest.SaveLikeness(t, f.c, userID, f.source.ID, s.ID, shade)
+// eventSubject creates and promotes an Event Subject; returns subject and handle.
+func (f *fixture) eventSubject() (subjects.Subject, []byte) {
+	f.t.Helper()
+	s := subjectstest.OfType(f.t, f.c, userID, f.graph, f.typeID("event"), "")
+	p := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
+	return s, p.Entity.ID
+}
+
+// placePictureSubject creates and promotes a Place Subject; returns subject and
+// handle. Named distinctly from placeSubject in placechains_test.go.
+func (f *fixture) placePictureSubject() (subjects.Subject, []byte) {
+	f.t.Helper()
+	s := subjectstest.OfType(f.t, f.c, userID, f.graph, f.typeID("place"), "")
+	p := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
+	return s, p.Entity.ID
+}
+
+func personLeads(rows []conclusionheaders.PersonHeader) map[string][]byte {
+	out := map[string][]byte{}
+	for _, r := range rows {
+		out[string(r.Entity.ID)] = r.PictureImageFileID
 	}
-	imageOf := func(o observations.Observation) []byte { return observationstest.ImageOf(t, f.c, o.ID) }
-	lead := func(rows []conclusionheaders.PersonHeader, id []byte) []byte {
-		for _, r := range rows {
-			if bytes.Equal(r.Entity.ID, id) {
-				return r.LikenessImageFileID
+	return out
+}
+
+func eventLeads(rows []conclusionheaders.EventHeader) map[string][]byte {
+	out := map[string][]byte{}
+	for _, r := range rows {
+		out[string(r.Entity.ID)] = r.PictureImageFileID
+	}
+	return out
+}
+
+func placeLeads(rows []conclusionheaders.PlaceHeader) map[string][]byte {
+	out := map[string][]byte{}
+	for _, r := range rows {
+		out[string(r.Entity.ID)] = r.PictureImageFileID
+	}
+	return out
+}
+
+func TestHeaderLeadsWithEarliestPicture(t *testing.T) {
+	cases := []struct {
+		name  string
+		key   string
+		setup func(f *fixture) (subjects.Subject, []byte)
+		list  func(f *fixture) (map[string][]byte, error)
+		byIDs func(f *fixture, ids [][]byte) (map[string][]byte, error)
+	}{
+		{
+			name: "person",
+			key:  vocabkey.PropertyLikeness,
+			setup: func(f *fixture) (subjects.Subject, []byte) {
+				s, _, h := f.person("Ann Lee")
+				return s, h
+			},
+			list: func(f *fixture) (map[string][]byte, error) {
+				return personLeads(f.list()), nil
+			},
+			byIDs: func(f *fixture, ids [][]byte) (map[string][]byte, error) {
+				rows, err := conclusionheaders.PersonsByIDs(f.c, ids)
+				return personLeads(rows), err
+			},
+		},
+		{
+			name: "event",
+			key:  vocabkey.PropertyEventPicture,
+			setup: func(f *fixture) (subjects.Subject, []byte) {
+				return f.eventSubject()
+			},
+			list: func(f *fixture) (map[string][]byte, error) {
+				return eventLeads(f.events()), nil
+			},
+			byIDs: func(f *fixture, ids [][]byte) (map[string][]byte, error) {
+				rows, err := conclusionheaders.EventsByIDs(f.c, ids)
+				return eventLeads(rows), err
+			},
+		},
+		{
+			name: "place",
+			key:  vocabkey.PropertyPlacePicture,
+			setup: func(f *fixture) (subjects.Subject, []byte) {
+				return f.placePictureSubject()
+			},
+			list: func(f *fixture) (map[string][]byte, error) {
+				return placeLeads(f.places()), nil
+			},
+			byIDs: func(f *fixture, ids [][]byte) (map[string][]byte, error) {
+				rows, err := conclusionheaders.PlacesByIDs(f.c, ids)
+				return placeLeads(rows), err
+			},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newFixture(t)
+			s, h := tc.setup(f)
+			var other []byte
+			if tc.name == "person" {
+				_, _, other = f.person("Bob Lee")
 			}
-		}
-		t.Fatalf("no row for %x", id)
-		return nil
+			imageOf := func(o observations.Observation) []byte { return observationstest.ImageOf(t, f.c, o.ID) }
+			leads, err := tc.list(f)
+			must(t, err)
+			if got := leads[string(h)]; got != nil {
+				t.Fatalf("lead before any picture: %x", got)
+			}
+			a := observationstest.SaveDepiction(t, f.c, userID, f.source.ID, s.ID, tc.key, 100)
+			leads, err = tc.list(f)
+			must(t, err)
+			if got := leads[string(h)]; !bytes.Equal(got, imageOf(a)) {
+				t.Fatalf("lead after A: %x, want %x", got, imageOf(a))
+			}
+			observationstest.SaveDepiction(t, f.c, userID, f.source.ID, s.ID, tc.key, 200)
+			leads, err = tc.list(f)
+			must(t, err)
+			if got := leads[string(h)]; !bytes.Equal(got, imageOf(a)) {
+				t.Fatalf("lead after B: %x, want %x", got, imageOf(a))
+			}
+			ids := [][]byte{h}
+			if other != nil {
+				ids = append(ids, other)
+			}
+			byIDs, err := tc.byIDs(f, ids)
+			must(t, err)
+			if got := byIDs[string(h)]; !bytes.Equal(got, imageOf(a)) {
+				t.Fatalf("ByIDs lead %x", got)
+			}
+			if other != nil {
+				if got := byIDs[string(other)]; got != nil {
+					t.Fatalf("handle without a picture leads with %x", got)
+				}
+			}
+			must(t, f.c.Graph().Verify())
+		})
 	}
-	if got := lead(f.list(), h); got != nil {
-		t.Fatalf("lead before any likeness: %x", got)
-	}
-	a := save(100)
-	if got := lead(f.list(), h); !bytes.Equal(got, imageOf(a)) {
-		t.Fatalf("lead after A: %x, want %x", got, imageOf(a))
-	}
-	save(200)
-	if got := lead(f.list(), h); !bytes.Equal(got, imageOf(a)) {
-		t.Fatalf("lead after B: %x, want %x", got, imageOf(a))
-	}
-	byIDs, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{h, other})
-	must(t, err)
-	if got := lead(byIDs, h); !bytes.Equal(got, imageOf(a)) {
-		t.Fatalf("PersonsByIDs lead %x", got)
-	}
-	if got := lead(byIDs, other); got != nil {
-		t.Fatalf("person without a likeness leads with %x", got)
-	}
-	must(t, f.c.Graph().Verify())
 }
 
 func TestPersonHeaderSkipsNegativeLikeness(t *testing.T) {
@@ -363,7 +462,7 @@ func TestPersonHeaderSkipsNegativeLikeness(t *testing.T) {
 	var got []byte
 	for _, r := range f.list() {
 		if bytes.Equal(r.Entity.ID, h) {
-			got = r.LikenessImageFileID
+			got = r.PictureImageFileID
 		}
 	}
 	if want := observationstest.ImageOf(t, f.c, b.ID); !bytes.Equal(got, want) {
@@ -372,47 +471,93 @@ func TestPersonHeaderSkipsNegativeLikeness(t *testing.T) {
 	must(t, f.c.Graph().Verify())
 }
 
-func TestPersonHeaderLeadsWithPortrait(t *testing.T) {
-	f := newFixture(t)
-	s, _, h := f.person("Ann Lee")
-	a := observationstest.SaveLikeness(t, f.c, userID, f.source.ID, s.ID, 100)
-	b := observationstest.SaveLikeness(t, f.c, userID, f.source.ID, s.ID, 200)
-	imageOf := func(o observations.Observation) []byte { return observationstest.ImageOf(t, f.c, o.ID) }
-	choose := func(obs []byte) {
-		t.Helper()
-		_, err := writes.Call(f.c, writes.Op{Action: "set_preferred_likeness", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-			ch, err := canonicalentities.SetPreferredLikeness(tx, userID, h, obs)
-			return struct{}{}, ch, err
-		})
-		must(t, err)
+func TestHeaderLeadsWithChosenPicture(t *testing.T) {
+	cases := []struct {
+		name  string
+		key   string
+		setup func(f *fixture) (subjects.Subject, []byte)
+		list  func(f *fixture) (map[string][]byte, error)
+		byIDs func(f *fixture, ids [][]byte) (map[string][]byte, error)
+	}{
+		{
+			name: "person",
+			key:  vocabkey.PropertyLikeness,
+			setup: func(f *fixture) (subjects.Subject, []byte) {
+				s, _, h := f.person("Ann Lee")
+				return s, h
+			},
+			list: func(f *fixture) (map[string][]byte, error) {
+				return personLeads(f.list()), nil
+			},
+			byIDs: func(f *fixture, ids [][]byte) (map[string][]byte, error) {
+				rows, err := conclusionheaders.PersonsByIDs(f.c, ids)
+				return personLeads(rows), err
+			},
+		},
+		{
+			name: "event",
+			key:  vocabkey.PropertyEventPicture,
+			setup: func(f *fixture) (subjects.Subject, []byte) {
+				return f.eventSubject()
+			},
+			list: func(f *fixture) (map[string][]byte, error) {
+				return eventLeads(f.events()), nil
+			},
+			byIDs: func(f *fixture, ids [][]byte) (map[string][]byte, error) {
+				rows, err := conclusionheaders.EventsByIDs(f.c, ids)
+				return eventLeads(rows), err
+			},
+		},
+		{
+			name: "place",
+			key:  vocabkey.PropertyPlacePicture,
+			setup: func(f *fixture) (subjects.Subject, []byte) {
+				return f.placePictureSubject()
+			},
+			list: func(f *fixture) (map[string][]byte, error) {
+				return placeLeads(f.places()), nil
+			},
+			byIDs: func(f *fixture, ids [][]byte) (map[string][]byte, error) {
+				rows, err := conclusionheaders.PlacesByIDs(f.c, ids)
+				return placeLeads(rows), err
+			},
+		},
 	}
-	check := func(want observations.Observation, label string) {
-		t.Helper()
-		for _, rows := range [][]conclusionheaders.PersonHeader{f.list(), func() []conclusionheaders.PersonHeader {
-			r, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{h})
-			must(t, err)
-			return r
-		}()} {
-			found := false
-			for _, r := range rows {
-				if bytes.Equal(r.Entity.ID, h) {
-					found = true
-					if !bytes.Equal(r.LikenessImageFileID, imageOf(want)) {
-						t.Fatalf("%s: lead %x, want %x", label, r.LikenessImageFileID, imageOf(want))
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newFixture(t)
+			s, h := tc.setup(f)
+			a := observationstest.SaveDepiction(t, f.c, userID, f.source.ID, s.ID, tc.key, 100)
+			b := observationstest.SaveDepiction(t, f.c, userID, f.source.ID, s.ID, tc.key, 200)
+			imageOf := func(o observations.Observation) []byte { return observationstest.ImageOf(t, f.c, o.ID) }
+			choose := func(obs []byte) {
+				t.Helper()
+				_, err := writes.Call(f.c, writes.Op{Action: "set_preferred_likeness", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					ch, err := canonicalentities.SetPreferredLikeness(tx, userID, h, obs)
+					return struct{}{}, ch, err
+				})
+				must(t, err)
+			}
+			check := func(want observations.Observation, label string) {
+				t.Helper()
+				listLeads, err := tc.list(f)
+				must(t, err)
+				byIDLeads, err := tc.byIDs(f, [][]byte{h})
+				must(t, err)
+				for _, leads := range []map[string][]byte{listLeads, byIDLeads} {
+					if got := leads[string(h)]; !bytes.Equal(got, imageOf(want)) {
+						t.Fatalf("%s: lead %x, want %x", label, got, imageOf(want))
 					}
 				}
+				must(t, f.c.Graph().Verify())
 			}
-			if !found {
-				t.Fatalf("%s: no row", label)
-			}
-		}
-		must(t, f.c.Graph().Verify())
+			check(a, "no choice")
+			choose(b.ID)
+			check(b, "B chosen")
+			choose(nil)
+			check(a, "cleared")
+		})
 	}
-	check(a, "no choice")
-	choose(b.ID)
-	check(b, "B chosen")
-	choose(nil)
-	check(a, "cleared")
 }
 
 func TestPersonsByIDs(t *testing.T) {
