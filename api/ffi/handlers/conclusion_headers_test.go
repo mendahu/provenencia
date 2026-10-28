@@ -120,8 +120,8 @@ func TestListPersonHeaders(t *testing.T) {
 				if h.GetUpdatedRevision() <= 0 || h.GetUpdatedAt() == "" {
 					t.Fatalf("updated %d %q", h.GetUpdatedRevision(), h.GetUpdatedAt())
 				}
-				if h.GetLikenessImageRelPath() != "" {
-					t.Fatalf("likeness path %q on a person without one", h.GetLikenessImageRelPath())
+				if h.GetPictureImageRelPath() != "" {
+					t.Fatalf("picture path %q on a person without one", h.GetPictureImageRelPath())
 				}
 				n := h.GetName()
 				if n.GetForm() != "James Kenneth Robins" || len(n.GetParts()) != 3 || n.GetParts()[2].GetType() != namevalue.PartTypeSurname {
@@ -145,8 +145,8 @@ func TestListPersonHeaders(t *testing.T) {
 				if len(resp.Headers) != 1 {
 					t.Fatalf("%+v", resp.Headers)
 				}
-				if p := resp.Headers[0].GetLikenessImageRelPath(); !objectPathPattern.MatchString(p) || !strings.HasSuffix(p, ".png") {
-					t.Fatalf("likeness path %q", p)
+				if p := resp.Headers[0].GetPictureImageRelPath(); !objectPathPattern.MatchString(p) || !strings.HasSuffix(p, ".png") {
+					t.Fatalf("picture path %q", p)
 				}
 			},
 		},

@@ -100,11 +100,35 @@ const (
 
 var objectPathPattern = regexp.MustCompile(`^objects/[0-9a-f]{2}/[0-9a-f]{2}/[0-9a-f]{64}\.png$`)
 
-// likenessFixture is a project whose Artifact has an 8 x 8 PNG File and whose
-// Source has a Person subject, plus the likeness Property.
+// likenessFixture is depictionFixture for a Person and the likeness Property.
 func likenessFixture(t *testing.T) (dir, userID, sourceID, artifactID, personID, likenessID string) {
 	t.Helper()
-	dir, userID, sourceID, personTypeID := subjectFixture(t)
+	return depictionFixture(t, "person", "likeness")
+}
+
+// depictionFixture is a project whose Artifact has an 8 x 8 PNG File and whose
+// Source has a Subject of kind with the given depiction Property key.
+func depictionFixture(t *testing.T, kind, key string) (dir, userID, sourceID, artifactID, subjectID, propertyID string) {
+	t.Helper()
+	dir, userID, sourceID, _ = subjectFixture(t)
+	typesOut, err := ListSubjectTypes(marshalProto(t, &engine.ListSubjectTypesRequest{ProjectDir: dir}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var types engine.ListSubjectTypesResponse
+	if err := proto.Unmarshal(typesOut, &types); err != nil {
+		t.Fatal(err)
+	}
+	typeID := ""
+	for _, typ := range types.Types {
+		if typ.GetKey() == kind {
+			typeID = typ.GetId()
+			break
+		}
+	}
+	if typeID == "" {
+		t.Fatalf("no subject type %q", kind)
+	}
 	aout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
 		ProjectDir: dir, UserId: userID, SourceId: sourceID, Label: "Photo",
 	}))
@@ -124,7 +148,7 @@ func likenessFixture(t *testing.T) (dir, userID, sourceID, artifactID, personID,
 		t.Fatal(err)
 	}
 	sout, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
-		ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: personTypeID, Label: "Ada",
+		ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: typeID, Label: "Ada",
 	}))
 	if err != nil {
 		t.Fatal(err)
@@ -133,7 +157,7 @@ func likenessFixture(t *testing.T) (dir, userID, sourceID, artifactID, personID,
 	if err := proto.Unmarshal(sout, &subj); err != nil {
 		t.Fatal(err)
 	}
-	return dir, userID, sourceID, artifactID, subj.Subject.GetId(), propertyIDByKey(t, dir, "likeness")
+	return dir, userID, sourceID, artifactID, subj.Subject.GetId(), propertyIDByKey(t, dir, key)
 }
 
 // objectRelPaths lists every regular file under dir/objects, relative to dir, sorted.

@@ -263,19 +263,48 @@ func TestGetConclusionDetailListsLikenesses(t *testing.T) {
 	if err := proto.Unmarshal(out, &d); err != nil {
 		t.Fatal(err)
 	}
-	if len(d.GetLikenesses()) != 2 {
-		t.Fatalf("likenesses %+v", d.GetLikenesses())
+	if len(d.GetPictures()) != 2 {
+		t.Fatalf("pictures %+v", d.GetPictures())
 	}
-	for _, l := range d.GetLikenesses() {
+	for _, l := range d.GetPictures() {
 		if !strings.HasPrefix(l.GetImageRelPath(), "objects/") || l.GetRecord().GetCitationId() == "" || l.GetRecord().GetSourceTitle() == "" {
-			t.Fatalf("likeness %+v", l)
+			t.Fatalf("picture %+v", l)
 		}
 	}
-	if d.GetLikenesses()[0].GetRecord().GetObservationId() >= d.GetLikenesses()[1].GetRecord().GetObservationId() {
-		t.Fatalf("not earliest first: %+v", d.GetLikenesses())
+	if d.GetPictures()[0].GetRecord().GetObservationId() >= d.GetPictures()[1].GetRecord().GetObservationId() {
+		t.Fatalf("not earliest first: %+v", d.GetPictures())
 	}
-	if got := d.GetPerson().GetLikenessImageRelPath(); got == "" || got != d.GetLikenesses()[0].GetImageRelPath() {
-		t.Fatalf("person lead %q, first tile %q", got, d.GetLikenesses()[0].GetImageRelPath())
+	if got := d.GetPerson().GetPictureImageRelPath(); got == "" || got != d.GetPictures()[0].GetImageRelPath() {
+		t.Fatalf("person lead %q, first tile %q", got, d.GetPictures()[0].GetImageRelPath())
+	}
+}
+
+func TestGetConclusionDetailEventPictureLead(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	dir, userID, _, artifactID, eventID, pictureID := depictionFixture(t, "event", "event_picture")
+	saveLikeness(t, dir, userID, artifactID, eventID, pictureID, writeCrop(t, 300, 200, 100))
+	saveLikeness(t, dir, userID, artifactID, eventID, pictureID, writeCrop(t, 300, 200, 200))
+	promoted := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: eventID})
+	out, err := GetConclusionDetail(marshalProto(t, &engine.GetConclusionDetailRequest{ProjectDir: dir, EntityId: promoted.Entity.GetId()}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var d engine.ConclusionDetail
+	if err := proto.Unmarshal(out, &d); err != nil {
+		t.Fatal(err)
+	}
+	var leadPath string
+	for _, p := range d.GetPictures() {
+		if p.GetLeads() {
+			leadPath = p.GetImageRelPath()
+			break
+		}
+	}
+	if leadPath == "" {
+		t.Fatalf("no leading picture among %+v", d.GetPictures())
+	}
+	if got := d.GetEvent().GetPictureImageRelPath(); got != leadPath {
+		t.Fatalf("event lead %q, leading tile %q", got, leadPath)
 	}
 }
 
@@ -327,14 +356,14 @@ func TestSetPreferredLikeness(t *testing.T) {
 		t.Fatalf("effects %+v", resp.GetEffects())
 	}
 	d := detail()
-	if len(d.GetLikenesses()) != 2 || d.GetLikenesses()[0].GetPreferred() || !d.GetLikenesses()[1].GetPreferred() {
-		t.Fatalf("likenesses %+v", d.GetLikenesses())
+	if len(d.GetPictures()) != 2 || d.GetPictures()[0].GetPreferred() || !d.GetPictures()[1].GetPreferred() {
+		t.Fatalf("pictures %+v", d.GetPictures())
 	}
-	if d.GetLikenesses()[0].GetLeads() || !d.GetLikenesses()[1].GetLeads() {
-		t.Fatalf("leads after choosing B %+v", d.GetLikenesses())
+	if d.GetPictures()[0].GetLeads() || !d.GetPictures()[1].GetLeads() {
+		t.Fatalf("leads after choosing B %+v", d.GetPictures())
 	}
-	if d.GetPerson().GetLikenessImageRelPath() != d.GetLikenesses()[1].GetImageRelPath() {
-		t.Fatalf("lead %q, second tile %q", d.GetPerson().GetLikenessImageRelPath(), d.GetLikenesses()[1].GetImageRelPath())
+	if d.GetPerson().GetPictureImageRelPath() != d.GetPictures()[1].GetImageRelPath() {
+		t.Fatalf("lead %q, second tile %q", d.GetPerson().GetPictureImageRelPath(), d.GetPictures()[1].GetImageRelPath())
 	}
 
 	resp, err = set(b)
@@ -349,12 +378,12 @@ func TestSetPreferredLikeness(t *testing.T) {
 		t.Fatal(err)
 	}
 	d = detail()
-	if d.GetLikenesses()[0].GetPreferred() || d.GetLikenesses()[1].GetPreferred() ||
-		d.GetPerson().GetLikenessImageRelPath() != d.GetLikenesses()[0].GetImageRelPath() {
+	if d.GetPictures()[0].GetPreferred() || d.GetPictures()[1].GetPreferred() ||
+		d.GetPerson().GetPictureImageRelPath() != d.GetPictures()[0].GetImageRelPath() {
 		t.Fatalf("after clear %+v", d)
 	}
-	if !d.GetLikenesses()[0].GetLeads() || d.GetLikenesses()[1].GetLeads() {
-		t.Fatalf("leads after clear %+v", d.GetLikenesses())
+	if !d.GetPictures()[0].GetLeads() || d.GetPictures()[1].GetLeads() {
+		t.Fatalf("leads after clear %+v", d.GetPictures())
 	}
 
 	fresh, err := uuid.NewV7()
@@ -374,7 +403,7 @@ func TestSetPreferredLikeness(t *testing.T) {
 		t.Fatal(err)
 	}
 	d = detail()
-	if len(d.GetLikenesses()) != 1 || d.GetPerson().GetLikenessImageRelPath() != d.GetLikenesses()[0].GetImageRelPath() || d.GetLikenesses()[0].GetPreferred() {
+	if len(d.GetPictures()) != 1 || d.GetPerson().GetPictureImageRelPath() != d.GetPictures()[0].GetImageRelPath() || d.GetPictures()[0].GetPreferred() {
 		t.Fatalf("after delete %+v", d)
 	}
 }

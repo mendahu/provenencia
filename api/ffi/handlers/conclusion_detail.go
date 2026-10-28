@@ -35,7 +35,7 @@ func GetConclusionDetail(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		return attachLikenesses(c, d, lead, out)
+		return attachPictures(c, d, lead, out)
 	})
 	if err != nil {
 		return nil, err
@@ -43,8 +43,8 @@ func GetConclusionDetail(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-// SetPreferredLikeness chooses a Person's portrait among its gallery
-// likenesses, or clears the choice (S10-39).
+// SetPreferredLikeness chooses a handle's gallery portrait or thumbnail
+// pointer among its gallery pictures, or clears the choice (S10-39).
 func SetPreferredLikeness(in []byte) ([]byte, error) {
 	var req engine.SetPreferredLikenessRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
@@ -164,7 +164,7 @@ func conclusionValueProto(v conclusiondetails.Value, depiction *engine.Depiction
 }
 
 // attachHeader reads the handle's header for its kind beside the detail. It
-// returns the Person header's likeness lead (nil for other kinds).
+// returns the header's picture lead File id (nil when none).
 func attachHeader(c *database.Catalog, d conclusiondetails.Detail, out *engine.ConclusionDetail) ([]byte, error) {
 	st, err := subjecttypes.GetByID(c, d.Entity.SubjectTypeID)
 	if err != nil {
@@ -188,6 +188,7 @@ func attachHeader(c *database.Catalog, d conclusiondetails.Detail, out *engine.C
 			return nil, err
 		}
 		out.Header = &engine.ConclusionDetail_Event{Event: eventHeaderProto(h[0])}
+		return h[0].PictureImageFileID, nil
 	case vocabkey.Place:
 		h, err := conclusionheaders.PlacesByIDs(c, ids)
 		if err != nil || len(h) != 1 {
@@ -197,14 +198,15 @@ func attachHeader(c *database.Catalog, d conclusiondetails.Detail, out *engine.C
 			return nil, err
 		}
 		out.Header = &engine.ConclusionDetail_Place{Place: placeHeaderProto(h[0])}
+		return h[0].PictureImageFileID, nil
 	}
 	return nil, nil
 }
 
-// attachLikenesses lists the detail's likenesses with their image paths, and
-// sets the Person header's lead path, in one RelPaths call. A likeness whose
-// path cannot be derived is still listed, with an empty path.
-func attachLikenesses(c *database.Catalog, d conclusiondetails.Detail, lead []byte, out *engine.ConclusionDetail) error {
+// attachPictures lists the detail's pictures with their image paths, and sets
+// the header's lead path, in one RelPaths call. A picture whose path cannot
+// be derived is still listed, with an empty path.
+func attachPictures(c *database.Catalog, d conclusiondetails.Detail, lead []byte, out *engine.ConclusionDetail) error {
 	var imageIDs [][]byte
 	if len(lead) > 0 {
 		imageIDs = append(imageIDs, lead)
@@ -216,11 +218,18 @@ func attachLikenesses(c *database.Catalog, d conclusiondetails.Detail, lead []by
 	if err != nil {
 		return err
 	}
+	path := paths[string(lead)]
 	if person := out.GetPerson(); person != nil {
-		person.LikenessImageRelPath = paths[string(lead)]
+		person.PictureImageRelPath = path
+	}
+	if event := out.GetEvent(); event != nil {
+		event.PictureImageRelPath = path
+	}
+	if place := out.GetPlace(); place != nil {
+		place.PictureImageRelPath = path
 	}
 	for _, l := range d.Pictures {
-		out.Likenesses = append(out.Likenesses, &engine.LikenessDetail{
+		out.Pictures = append(out.Pictures, &engine.PictureDetail{
 			ImageRelPath: paths[string(l.ImageFileID)],
 			Record:       reconcilerOutcomeProto(l.Record),
 			Preferred:    l.Preferred,
