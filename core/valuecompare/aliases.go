@@ -36,6 +36,12 @@ type AliasTable struct {
 // is kept, Nickname folds into it.
 type AliasDirection struct{ Formal, Nickname string }
 
+// AliasRoles are the part roles the product alias tables and the prefix keys
+// read: given, nickname and untyped words, never a surname.
+func AliasRoles() []NameRole {
+	return []NameRole{RoleGiven, RoleNick, RoleUntyped}
+}
+
 // AliasIndex is a catalog's alias tables, indexed once per load. The zero
 // index hits nothing.
 type AliasIndex struct {
