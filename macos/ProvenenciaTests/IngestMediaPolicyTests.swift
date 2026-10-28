@@ -33,6 +33,14 @@ struct IngestMediaPolicyTests {
         #expect(IngestMediaPolicy.validate(url: url) == .reject(.genericType))
     }
 
+    @Test func rejectsALinkFileAsAGenericType() throws {
+        // A stored link or Terminal file is not a program, so ingest keeps the generic message.
+        for name in ["x.webloc", "x.terminal"] {
+            let url = try writeTemp(name: name, data: Data("hello".utf8))
+            #expect(IngestMediaPolicy.validate(url: url) == .reject(.genericType), "\(name)")
+        }
+    }
+
     @Test func calloutOfficeHasTitleAndHelp() {
         let callout = L10n.Errors.ingestCallout(reason: .office)
         #expect(L10n.string(callout.title).contains("Spreadsheets"))
@@ -62,11 +70,20 @@ struct IngestMediaPolicyTests {
         #expect(IngestMediaPolicy.isExecutableType(.unixExecutable))
         #expect(IngestMediaPolicy.isExecutableType(.applicationBundle))
         #expect(!IngestMediaPolicy.isExecutableType(.pdf))
-        // Stored links and Terminal files open another item or run a command.
+        // A stored link or Terminal file is not a program: only Open refuses it.
         for ext in ["webloc", "fileloc", "inetloc", "url", "terminal", "term"] {
             let type = try #require(UTType(filenameExtension: ext))
-            #expect(IngestMediaPolicy.isExecutableType(type), "\(ext)")
+            #expect(!IngestMediaPolicy.isExecutableType(type), "\(ext)")
         }
+    }
+
+    @Test func opensAnotherItemCoversLinksAndTerminalFiles() throws {
+        for ext in ["webloc", "fileloc", "inetloc", "url", "terminal", "term"] {
+            let type = try #require(UTType(filenameExtension: ext))
+            #expect(IngestMediaPolicy.opensAnotherItem(type), "\(ext)")
+        }
+        #expect(!IngestMediaPolicy.opensAnotherItem(.pdf))
+        #expect(!IngestMediaPolicy.opensAnotherItem(.shellScript))
     }
 
     private func writeTemp(name: String, data: Data) throws -> URL {

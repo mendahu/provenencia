@@ -14,7 +14,7 @@ enum ProjectFiles {
         /// symlink, Finder alias or other non-regular file at it.
         case missing
         /// The object is there but its name has no extension, or its type could
-        /// run a program.
+        /// run a program or open another item.
         case unsafe
     }
 
@@ -94,14 +94,17 @@ enum ProjectFiles {
 
     /// The URL to hand to Launch Services for a stored object: `checkedObject`'s,
     /// then `.unsafe` when the name has no extension or its type could run a
-    /// program (`IngestMediaPolicy.isExecutableType`). Go decides which types are
-    /// stored; this refuses only what no stored type should look like.
+    /// program (`IngestMediaPolicy.isExecutableType`) or open another item
+    /// (`IngestMediaPolicy.opensAnotherItem`). Go decides which types are stored;
+    /// this refuses only what no stored type should look like.
     static func openableObjectURL(projectDir: String, relPath: String) -> Result<URL, ObjectRefusal> {
         let checked = checkedObject(projectDir: projectDir, relPath: relPath)
         guard case .success(let url) = checked else { return checked }
         let ext = url.pathExtension
         if ext.isEmpty { return .failure(.unsafe) }
-        if let type = UTType(filenameExtension: ext), IngestMediaPolicy.isExecutableType(type) {
+        if let type = UTType(filenameExtension: ext),
+           IngestMediaPolicy.isExecutableType(type) || IngestMediaPolicy.opensAnotherItem(type)
+        {
             return .failure(.unsafe)
         }
         return checked
