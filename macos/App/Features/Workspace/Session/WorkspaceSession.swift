@@ -1,8 +1,8 @@
 import Foundation
 import Observation
 
-/// Project-scoped catalog query cache. S4-02 adds registry-backed loaders;
-/// S4-04 wires this into workspace navigation.
+/// Project-scoped catalog query cache. Each kind's loader, policies, patches,
+/// and refresh live on `CatalogQueryKey.Kind.descriptor`.
 @MainActor
 @Observable
 final class WorkspaceSession {

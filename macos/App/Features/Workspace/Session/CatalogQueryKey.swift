@@ -1,7 +1,7 @@
 import Foundation
 
-/// Cache identity for one catalog read. New workspace places add cases here;
-/// loaders register in `CatalogQueryRegistry` (S4-02+).
+/// Cache identity for one catalog read. New workspace places add a case here
+/// and an arm on `CatalogQueryKey.Kind.descriptor`.
 enum CatalogQueryKey: Hashable, Sendable {
     case sourcesList(project: ProjectKey)
     case sourceTypesList(project: ProjectKey)
