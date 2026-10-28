@@ -14,6 +14,10 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 
 **By spike close**, each of these is true on a real project. A batch adds its outcomes here when it is cut.
 
+**Batch 2 — Matching calibration:**
+
+10. **Thin name plus kinship is Weak.** Promoting a Source person recorded only as a short given name who shares a lined-up grandparent (or other non-birth/death link) with a matching neighbor reaches at least the Weak band — not "Little evidence" for that shape.
+
 **Batch 1 — Event and Place pictures** (new catalogs; working rule "New seeds reach new catalogs only"):
 
 1. **A place has pictures.** On a Citation of a photo of St Mary's Church, the composer offers Picture for the Place Subject; the saved line reads "Picture of St Mary's Church".
@@ -30,6 +34,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 
 | Dogfood note or idea | PR | Brief |
 | --- | --- | --- |
+| Promote Jake + grandparent read "Little evidence" under Weak (user, 2026-10-28); raise `segment.OtherSupport` | S14-08 | — |
 | [`depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) "Other keys of the same value type" (place and event) | S14-01, S14-02 | — |
 | Thumbnail parity for Event and Place (user, 2026-10-27) | S14-01, S14-02 | — |
 | Promote wording for a non-Person depiction (map review K-4) | S14-02 | — |
@@ -55,6 +60,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 - **(Batch 1) The gallery is one slot on the detail body.** `ConclusionDetailBody` carries one gallery value (title, tile wording, chosen-badge and set wording, fallback mark, tiles) built by one tile mapping, in place of `likenesses` and the Person-only strings, ids and mark in `ConclusionDetailLikenessSection`. Precedent: `ConclusionDetailThumbnail`. Spike 13's Gallery section (S13-14) is built from the same slot, so the old and new galleries can live side by side and retiring the old one does not drop Event and Place galleries. Binds S14-02.
 - **(Batch 1) A depiction is worded as a picture outside the Person's own copy.** The Promote evidence sheet words a depiction line by value type ("Same picture", "Compare these pictures") for every kind, and takes its fallback mark from the line's kind. Binds S14-02.
 - **(Batch 1) A depiction is drawn as a rectangle.** The composer arms the viewer with the rectangle tool alone for a depiction; a Citation's own region keeps all seven tools. "Use the citation's region" takes a non-rectangle region's bounding rectangle. Go keeps accepting any valid depiction region, so a depiction saved as a polygon loads, displays and saves as it is until redrawn. The transparent-polygon crop is refused. Binds S14-03.
+- **(Batch 2) Other-link support is 0.75.** `segment.OtherSupport` is 0.75 (`OtherCredit` stays 0.25): a partial given name plus one lined-up non-birth/death link clears Weak on the 2026-10-28 Jake + grandparent dogfood shape, without a kinship-only tier or a name-curve change. Decided user 2026-10-28 (option A). Binds S14-08.
 
 ## PR map
 
@@ -67,6 +73,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-05 | Event and Place headers lead with a picture | — | Folded into S14-01 | — | — | — | Descoped (2026-10-27) → S14-01 |
 | S14-06 | Choose an Event or Place thumbnail | — | Folded into S14-02 | — | — | — | Descoped (2026-10-27) → S14-02 |
 | S14-07 | Events and Places lists lead with a picture | — | Folded into S14-02 | — | — | — | Descoped (2026-10-27) → S14-02 |
+| S14-08 | Other-link support calibration | 2 | Raise `segment.OtherSupport` 0.25 → 0.75 so a thin name plus kinship clears Weak | — | — | [S14-08-other-support-calibration.md](prs/S14-08-other-support-calibration.md) | Planned |
 | S14-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -84,16 +91,21 @@ SLICE 1 — Event and Place pictures (batch 1)
   S14-03  Rectangle-only depiction drawing
   Check: bar outcomes 1–9 on a new project.
 
+SLICE 2 — Matching calibration (batch 2)
+  S14-08  Other-link support calibration
+  Check: bar outcome 10 on the Jake + grandparent dogfood Source (or the calibration test's shape).
+
 S14-99 — Dogfood close / docs
 ```
 
-S14-01 and S14-03 can run in parallel; S14-02 follows S14-01. S14-03 waits on Spike 12's S12-28, which changes in place the one predicate that says whether the viewer can cut a file; S14-03 gates Draw on it (Spike 12 map review K-25).
+S14-01 and S14-03 can run in parallel; S14-02 follows S14-01. S14-03 waits on Spike 12's S12-28, which changes in place the one predicate that says whether the viewer can cut a file; S14-03 gates Draw on it (Spike 12 map review K-25). S14-08 is independent of batch 1.
 
 ### Dependencies at a glance
 
 ```text
 S14-01 ──▶ S14-02
 S12-28 ──▶ S14-03
+S14-08  (independent)
 ```
 
 ---
@@ -124,3 +136,12 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Not this PR.** Removing shapes from Citation regions; Go-side rectangle enforcement; rewriting saved polygon depictions.
 **Check.** Draw on a likeness shows one radio; a Citation region shows seven; Swift tests for the strip's tool list and the bounding-rectangle conversion; an old polygon depiction still opens and saves; bar outcome 9, with Swift tests for the disabled controls, the blocked Draw and the failed-cut state.
 **Context.** Working rule "A depiction is drawn as a rectangle"; `ArtifactViewer.swift` `regionTools`, `CitationComposerModel+Depiction.swift` `startDepictionDrawing`, `depictionCitationRegion`, `useDepictionRegion`; the audit items in [`depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) (2026-10-18 likeness audit). If the plan runs past about ten steps, the composer feedback splits out as its own PR.
+
+### Slice 2 — Matching calibration
+
+#### S14-08 — Other-link support calibration
+
+**Ships.** `segment.OtherSupport` 0.25 → 0.75 in `core/matchregistry/segment.go`; inventory and `promote-graph-alignment.md` quote the new number; `segmentcompare` AC-2.5 / AC-2.8 expects; a graphalign calibration test for Jake given-only + Carol grandparent clearing Weak. Patch VERSION.
+**Not this PR.** Name-curve relaxation; Weak-bar change; `OtherCredit`; kinship-only tier; multi-Source corroboration.
+**Check.** `TestPartialNameWithGrandparentClearsWeak`; `TestCompare` AC-2.5 / AC-2.8; dogfood Promote row for Jake reads Weak (or stronger), not Little evidence.
+**Context.** Working rule "Other-link support is 0.75"; [`matching-model.md`](../../matching-model.md) `segment.OtherSupport`; [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md).
