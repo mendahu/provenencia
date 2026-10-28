@@ -155,7 +155,7 @@ Verified at `b1bf4c5`.
 | D-10 | One hold type: `final class FakeHold: @unchecked Sendable` *(new, in `FakeStore.swift`)* with its own `NSLock`: `var isOn: Bool`, `var count: Int` (waiting calls), `func wait() async` (returns at once when `isOn` is false, else suspends on a continuation), `func release()` (resumes the oldest). FakeStore: `let updateArtifactHold = FakeHold()` and `let setSubjectPositionHold = FakeHold()`; the link hold and `holdsSetSubjectPosition`, `heldSetSubjectPositions`, `heldSetSubjectPositionCount`, `releaseSetSubjectPosition` go, and `EvidenceGraphModelTests` uses `setSubjectPositionHold.isOn`, `.count`, `.release()`. `updateArtifact` order: record `updateArtifactCalls` and `updateArtifactGraphIDs` inside `withState`; `await updateArtifactHold.wait()` outside it; then throw `updateArtifactError` or write. `setSubjectPosition` keeps its order (record, read its error, wait, throw) | The lens (Q5): a third hand-rolled hold is extracted when one is added (review M-5); the refusal arrives after the pause, as `cardSaveErrorStaysOnTheCardThatSaved` needs (review X-8) | A third copy for `updateArtifact` |
 | D-11 | Copy changes per §6 Strings. `artifactGraphOnlyArtifact` (STEP-3), `artifactGraphsNeedsOne` (STEP-2) and `artifactCardSaveErrorMessage` (STEP-4) are deleted from `L10n.swift` and the catalog | What the one write makes dead (K-12) | — |
 
-**Rules this plan bends.** None. The user's answer to review M-1 (2026-10-28) keeps the lock the engine's: a cited Artifact moves in two Saves; STEP-8 records it under the map's working rule "An Artifact with Citations keeps at least one graph".
+**Rules this plan bends.** None. The user's answer to review M-1 (2026-10-28) keeps the lock the engine's: a cited Artifact moves in two Saves; The map's working rule "An Artifact with Citations keeps at least one graph" records it (2026-10-28).
 
 ## 6. Design
 
@@ -271,7 +271,7 @@ Do: D-9; `./scripts/generate-proto.sh`. In `writesReportTheGraphList`, drop `lin
 Check: AC-5.1's `rg` has no hit; `./scripts/generate-proto.sh` leaves no diff on a second run; `CGO_ENABLED=1 go test -tags fts5 ./...` passes; `xcodebuild test` passes.
 
 **STEP-8 — Docs and guidance**
-Files: `.agents/skills/add-workspace-place/SKILL.md` (line 172: "Artifact ↔ graph link writes (`updateArtifact` with `graphIDs`, `updateEvidenceGraph`): `session.apply(effects)`" in place of the two deleted names), `docs/deployment-plan/spike-12/deployment-plan.md` (map row status; under working rule "An Artifact with Citations keeps at least one graph" one sentence: "On the card and in the graph form the lock is the engine's preflight and does not lift; moving such an Artifact to another graph takes two saves (user, 2026-10-28)."), `docs/deployment-plan/spike-12/completed.md`, `docs/deployment-plan/spike-12/design/README.md` (S12-D7 to Archived), the brief to `design/archive/` with every relative link rewritten for the archive folder, one level deeper (match the links of the archived S12-D4 brief), this plan's **Brief:** link pointed at the archived file, this plan (status, Landed note).
+Files: `.agents/skills/add-workspace-place/SKILL.md` (line 172: "Artifact ↔ graph link writes (`updateArtifact` with `graphIDs`, `updateEvidenceGraph`): `session.apply(effects)`" in place of the two deleted names), `docs/deployment-plan/spike-12/deployment-plan.md` (map row status), `docs/deployment-plan/spike-12/completed.md`, `docs/deployment-plan/spike-12/design/README.md` (S12-D7 to Archived), the brief to `design/archive/` with every relative link rewritten for the archive folder, one level deeper (match the links of the archived S12-D4 brief), this plan's **Brief:** link pointed at the archived file, this plan (status, Landed note).
 Do: per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py` reports no broken link; `python3 scripts/check-guidance-names.py` passes.
 
@@ -312,11 +312,11 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `S
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
 - [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left
 - [ ] Sweep: each deleted name `rg`'d across `.agents/`, `.cursor/rules/`, `docs/*.md` and `L10n.swift` with no hit left — `LinkEvidenceGraphArtifact`, `UnlinkEvidenceGraphArtifact`, `linkEvidenceGraphArtifact`, `unlinkEvidenceGraphArtifact`, `graphListReloaded`, `artifactGraphOnlyArtifact`, `artifactGraphsNeedsOne`, `artifactCardSaveErrorMessage`, `draftNeedsGraph`, `listEvidenceGraphsCalls`, `holdsSetSubjectPosition`; `scripts/check-guidance-names.py` passes (check-pr runs it)
-- [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated (none; the M-1 answer is recorded in STEP-8)
+- [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated (none; the M-1 answer is in the map's working rules)
 - [ ] UI matches the brief inventory; no new kit primitive (the brief marks none New)
 - [ ] Version bump as the header says — none
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
-- [ ] deployment-plan.md: map row status and the working-rule sentence; completed.md: one short paragraph of what shipped
+- [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
 - [ ] Brief moved to design/archive/ with its links rewritten, and design/README.md updated
 - [ ] Domain doc updated: none — `source-layer-data-model.md` already describes `GraphLinks` and none allowed (S12-22)
 - [ ] PR description: what shipped, AC evidence, deviations, manual check

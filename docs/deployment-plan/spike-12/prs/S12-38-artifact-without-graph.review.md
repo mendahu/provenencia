@@ -5,7 +5,7 @@
 
 ## To user
 
-- **M-1** (answered 2026-10-28): should the card lift the `citations_need_graph` lock in Swift when another box is checked, so a cited Artifact moves graphs in one Save? The user's answer: "Let's do it in two steps. No logic in Swift." The plan has no lift. Every preflight block locks its box on the card and in the graph form (D-3, D-7). A cited Artifact moves in two Saves (AC-3.7). STEP-8 records the answer under the map's working rule.
+- **M-1** (answered 2026-10-28): should the card lift the `citations_need_graph` lock in Swift when another box is checked, so a cited Artifact moves graphs in one Save? The user's answer: "Let's do it in two steps. No logic in Swift." The plan has no lift. Every preflight block locks its box on the card and in the graph form (D-3, D-7). A cited Artifact moves in two Saves (AC-3.7). The map's working rule "An Artifact with Citations keeps at least one graph" now records it.
 - **X-1 / Open question 1:** the board S12-D7 is not agreed. The plan stays `Blocked — on board S12-D7` until it is, and round 2 runs on the final Strings.
 
 ## Writer's own calls
