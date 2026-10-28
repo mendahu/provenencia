@@ -44,4 +44,4 @@ Reviewers: CON, MNT. Skipped: SEC+PRF (Clean round 1). Scope: `b49b20d0...d04be4
 Nits (logged): `CON-3 · dbtest/audit.go · RequireUpdateBeforeDelete doc says deep-equals Fields but compares keys + New only`
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · to user: — · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: none · to user: — · CON miss: none
