@@ -476,18 +476,6 @@ private struct ThrowingStore: GenealogyStore {
     func deleteEvidenceGraph(projectDir _: String, userID _: String, graphID _: String) async throws -> CatalogWriteEffects {
         throw StoreBoom.boom
     }
-    func linkEvidenceGraphArtifact(
-        projectDir _: String,
-        userID _: String,
-        graphID _: String,
-        artifactID _: String
-    ) async throws -> CatalogWriteEffects { throw StoreBoom.boom }
-    func unlinkEvidenceGraphArtifact(
-        projectDir _: String,
-        userID _: String,
-        graphID _: String,
-        artifactID _: String
-    ) async throws -> CatalogWriteEffects { throw StoreBoom.boom }
     func getEvidenceGraphUnlinkImpact(
         projectDir _: String,
         pairs _: [CatalogEvidenceGraphArtifactPair]

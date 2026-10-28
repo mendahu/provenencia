@@ -159,8 +159,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var createEvidenceGraphError: Error?
     var updateEvidenceGraphError: Error?
     var getEvidenceGraphUnlinkImpactError: Error?
-    var linkEvidenceGraphArtifactError: Error?
-    var unlinkEvidenceGraphArtifactError: Error?
     var getEvidenceGraphProgressError: Error?
     /// Monotonic stand-in for audit_transactions.revision (Sources Updated sort).
     private var nextAuditRevision: Int64 = 1
@@ -859,44 +857,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             }
             evidenceGraphsByProject[projectDir]?.removeAll { $0.id == graphID }
             return Self.graphEffects(sourceID: nil)
-        }
-    }
-
-    func linkEvidenceGraphArtifact(
-        projectDir: String,
-        userID _: String,
-        graphID: String,
-        artifactID: String
-    ) async throws -> CatalogWriteEffects {
-        try withState {
-            if let linkEvidenceGraphArtifactError { throw linkEvidenceGraphArtifactError }
-            markCatalogSessionHeld(projectDir)
-            guard let idx = evidenceGraphsByProject[projectDir]?.firstIndex(where: { $0.id == graphID }) else {
-                throw StoreBoom.boom
-            }
-            recordedCalls.append("linkEvidenceGraphArtifact graph=\(graphID) artifact=\(artifactID)")
-            if evidenceGraphsByProject[projectDir]?[idx].artifactIDs.contains(artifactID) == false {
-                evidenceGraphsByProject[projectDir]?[idx].artifactIDs.append(artifactID)
-            }
-            return Self.graphEffects(sourceID: evidenceGraphsByProject[projectDir]?[idx].sourceID)
-        }
-    }
-
-    func unlinkEvidenceGraphArtifact(
-        projectDir: String,
-        userID _: String,
-        graphID: String,
-        artifactID: String
-    ) async throws -> CatalogWriteEffects {
-        try withState {
-            if let unlinkEvidenceGraphArtifactError { throw unlinkEvidenceGraphArtifactError }
-            markCatalogSessionHeld(projectDir)
-            guard let idx = evidenceGraphsByProject[projectDir]?.firstIndex(where: { $0.id == graphID }) else {
-                throw StoreBoom.boom
-            }
-            recordedCalls.append("unlinkEvidenceGraphArtifact graph=\(graphID) artifact=\(artifactID)")
-            evidenceGraphsByProject[projectDir]?[idx].artifactIDs.removeAll { $0 == artifactID }
-            return Self.graphEffects(sourceID: evidenceGraphsByProject[projectDir]?[idx].sourceID)
         }
     }
 

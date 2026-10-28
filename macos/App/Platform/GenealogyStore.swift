@@ -1271,18 +1271,6 @@ protocol GenealogyStore: Sendable {
         artifactIDs: [String]
     ) async throws -> CatalogWriteEffects
     func deleteEvidenceGraph(projectDir: String, userID: String, graphID: String) async throws -> CatalogWriteEffects
-    func linkEvidenceGraphArtifact(
-        projectDir: String,
-        userID: String,
-        graphID: String,
-        artifactID: String
-    ) async throws -> CatalogWriteEffects
-    func unlinkEvidenceGraphArtifact(
-        projectDir: String,
-        userID: String,
-        graphID: String,
-        artifactID: String
-    ) async throws -> CatalogWriteEffects
     /// Which of `pairs` an edit would unlink that the engine refuses, in pair order.
     func getEvidenceGraphUnlinkImpact(
         projectDir: String,

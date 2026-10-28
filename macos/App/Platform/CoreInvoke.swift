@@ -63,8 +63,6 @@ enum CoreMethod {
     static let createEvidenceGraph = Int32(Provenencia_Engine_V1_Method.createEvidenceGraph.rawValue)
     static let updateEvidenceGraph = Int32(Provenencia_Engine_V1_Method.updateEvidenceGraph.rawValue)
     static let deleteEvidenceGraph = Int32(Provenencia_Engine_V1_Method.deleteEvidenceGraph.rawValue)
-    static let linkEvidenceGraphArtifact = Int32(Provenencia_Engine_V1_Method.linkEvidenceGraphArtifact.rawValue)
-    static let unlinkEvidenceGraphArtifact = Int32(Provenencia_Engine_V1_Method.unlinkEvidenceGraphArtifact.rawValue)
     static let getEvidenceGraphUnlinkImpact = Int32(Provenencia_Engine_V1_Method.getEvidenceGraphUnlinkImpact.rawValue)
     static let updateSource = Int32(Provenencia_Engine_V1_Method.updateSource.rawValue)
     static let addSourceNote = Int32(Provenencia_Engine_V1_Method.addSourceNote.rawValue)

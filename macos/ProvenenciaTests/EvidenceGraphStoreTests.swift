@@ -56,14 +56,8 @@ struct EvidenceGraphStoreTests {
             projectDir: projectDir, userID: userID, graphID: made.id,
             name: "Jones family", description: "", artifactIDs: ["a2"]
         )
-        let linked = try await store.linkEvidenceGraphArtifact(
-            projectDir: projectDir, userID: userID, graphID: made.id, artifactID: "a1"
-        )
-        let unlinked = try await store.unlinkEvidenceGraphArtifact(
-            projectDir: projectDir, userID: userID, graphID: made.id, artifactID: "a1"
-        )
         let deleted = try await store.deleteEvidenceGraph(projectDir: projectDir, userID: userID, graphID: made.id)
-        for effects in [created, updated, linked, unlinked, deleted] {
+        for effects in [created, updated, deleted] {
             #expect(effects.lists == expected)
         }
         #expect(try await store.listEvidenceGraphs(projectDir: projectDir).isEmpty)

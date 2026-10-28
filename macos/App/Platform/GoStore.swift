@@ -514,42 +514,6 @@ struct GoStore: GenealogyStore {
         return Self.mapWriteEffects(resp.effects)
     }
 
-    func linkEvidenceGraphArtifact(
-        projectDir: String,
-        userID: String,
-        graphID: String,
-        artifactID: String
-    ) async throws -> CatalogWriteEffects {
-        var req = Provenencia_Engine_V1_LinkEvidenceGraphArtifactRequest()
-        req.projectDir = projectDir
-        req.userID = userID
-        req.graphID = graphID
-        req.artifactID = artifactID
-        let resp: Provenencia_Engine_V1_LinkEvidenceGraphArtifactResponse = try await provenenciaCall(
-            method: CoreMethod.linkEvidenceGraphArtifact,
-            request: req
-        )
-        return Self.mapWriteEffects(resp.effects)
-    }
-
-    func unlinkEvidenceGraphArtifact(
-        projectDir: String,
-        userID: String,
-        graphID: String,
-        artifactID: String
-    ) async throws -> CatalogWriteEffects {
-        var req = Provenencia_Engine_V1_UnlinkEvidenceGraphArtifactRequest()
-        req.projectDir = projectDir
-        req.userID = userID
-        req.graphID = graphID
-        req.artifactID = artifactID
-        let resp: Provenencia_Engine_V1_UnlinkEvidenceGraphArtifactResponse = try await provenenciaCall(
-            method: CoreMethod.unlinkEvidenceGraphArtifact,
-            request: req
-        )
-        return Self.mapWriteEffects(resp.effects)
-    }
-
     func getEvidenceGraphUnlinkImpact(
         projectDir: String,
         pairs: [CatalogEvidenceGraphArtifactPair]
