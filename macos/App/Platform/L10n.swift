@@ -10954,7 +10954,7 @@ enum L10n {
         )
         static let evidenceGraphsCitationsNeedGraph = LocalizedStringResource(
             "error.evidencegraphs.citations_need_graph",
-            defaultValue: "Citations on this artifact need it to stay in an evidence graph.",
+            defaultValue: "An artifact with citations must stay in at least one evidence graph.",
             comment: "FFI error evidencegraphs.citations_need_graph"
         )
         static let evidenceGraphsInUse = LocalizedStringResource(

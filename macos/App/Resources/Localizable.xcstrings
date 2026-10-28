@@ -2677,7 +2677,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Citations on this artifact need it to stay in an evidence graph."
+            "value": "An artifact with citations must stay in at least one evidence graph."
           }
         }
       }
