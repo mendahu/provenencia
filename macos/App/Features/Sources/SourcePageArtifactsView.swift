@@ -325,7 +325,32 @@ struct SourcePageArtifactsView: View {
     /// when none is checked.
     @ViewBuilder
     private func graphLinks(_ art: CatalogArtifact) -> some View {
-        if let edit = model.artifacts.linkEdit, edit.artifactID == art.id {
+        graphLinksGroup(art)
+            .onChange(of: model.artifacts.visibleGraphs?.map(\.id)) { _, _ in
+                model.artifacts.graphsChanged()
+            }
+    }
+
+    @ViewBuilder
+    private func graphLinksGroup(_ art: CatalogArtifact) -> some View {
+        if model.artifacts.awaitingGraphs(id: art.id) {
+            PVField(
+                label: L10n.Sources.artifactGraphsLabel,
+                hint: L10n.Sources.artifactGraphsHint
+            ) {
+                SourceFormLoadArea(
+                    state: .loading,
+                    loadingText: L10n.Sources.artifactGraphsLoading,
+                    errorTitle: L10n.Sources.artifactGraphsLoadErrorTitle,
+                    errorMessage: L10n.Sources.artifactGraphsLoadErrorMessage,
+                    onReadAgain: {},
+                    compact: true,
+                    accessibilityIdentifierPrefix: "sources.page.artifact.\(art.id).graphs"
+                ) {
+                    EmptyView()
+                }
+            }
+        } else if let edit = model.artifacts.linkEdit, edit.artifactID == art.id {
             let prefix = "sources.page.artifact.\(art.id).graphs"
             PVField(
                 label: L10n.Sources.artifactGraphsLabel,

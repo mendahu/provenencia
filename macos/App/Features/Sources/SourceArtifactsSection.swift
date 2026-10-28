@@ -183,14 +183,34 @@ final class SourceArtifactsSection {
         fieldErrors[id] = nil
         cardSaveError = nil
         dropLinkEdit()
-        if let graphs = visibleGraphs {
-            linkEdit = LinkEdit(
-                artifactID: id,
-                graphIDs: graphs.map(\.id),
-                excluded: Set(graphs.filter { !$0.links(id) }.map(\.id))
-            )
-            linkLoadTask = Task { await loadLinkLocks() }
-        }
+        startLinkEdit(id: id)
+    }
+
+    /// Builds the card's graph choices and starts its lock read, when the
+    /// session has the Source's graphs.
+    private func startLinkEdit(id: String) {
+        guard let graphs = visibleGraphs else { return }
+        linkEdit = LinkEdit(
+            artifactID: id,
+            graphIDs: graphs.map(\.id),
+            excluded: Set(graphs.filter { !$0.links(id) }.map(\.id))
+        )
+        linkLoadTask = Task { await loadLinkLocks() }
+    }
+
+    /// True while the card `id` is in edit and the graph list has not arrived,
+    /// so its graph group shows the loading state.
+    func awaitingGraphs(id: String) -> Bool {
+        guard editingArtifactID == id, linkEdit == nil else { return false }
+        if case .loading = context.session.evidenceGraphsRead(sourceID: context.sourceID) { return true }
+        return false
+    }
+
+    /// The graph list changed: a card opened in edit before it arrived gets
+    /// its group now, as `beginEdit` would have built it.
+    func graphsChanged() {
+        guard let id = editingArtifactID, linkEdit == nil else { return }
+        startLinkEdit(id: id)
     }
 
     private func dropLinkEdit() {

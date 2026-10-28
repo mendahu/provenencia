@@ -1618,6 +1618,27 @@ struct SourcePageModelTests {
         #expect(store.getEvidenceGraphUnlinkImpactCalls == calls)
     }
 
+    /// A card opened in edit before the graph list arrives shows the group's loading
+    /// state, then gets its group (and lock read) when the list loads.
+    @Test func cardEditBeforeTheListLoadsGetsTheGroup() async {
+        let (model, store, session) = await makeCensus(graphs: [])
+        model.artifacts.beginEdit("P3")
+        #expect(model.artifacts.linkEdit == nil)
+        #expect(model.artifacts.awaitingGraphs(id: "P3"))
+
+        session.setQueryValue(session.evidenceGraphsKey, value: [
+            graph("g-b", "Brown household", ["P9"]),
+            graph("g-j", "Jones household", ["P3", "P4"]),
+        ])
+        model.artifacts.graphsChanged()
+        #expect(!model.artifacts.awaitingGraphs(id: "P3"))
+        #expect(model.artifacts.linkEdit?.artifactID == "P3")
+        #expect(model.artifacts.linkEdit?.excluded == ["g-b"])
+        await model.artifacts.linkLoadTask?.value
+        #expect(model.artifacts.linkEdit?.loadState == .ready)
+        #expect(store.getEvidenceGraphUnlinkImpactCalls == 1)
+    }
+
     /// A cited Artifact moves graphs in two Saves: the lock holds while another box is
     /// checked, and lifts once the engine's preflight no longer blocks.
     @Test func cardCitationsLockHoldsUntilTheLinkIsSaved() async {
