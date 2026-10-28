@@ -228,6 +228,7 @@ enum ValueCause: Sendable, Equatable {
     case alias
     case abbreviation
     case initial
+    case prefix
     case spelling
     case precision
     case missingPart
@@ -257,6 +258,7 @@ enum ValueCause: Sendable, Equatable {
         case "alias": self = .alias
         case "abbreviation": self = .abbreviation
         case "initial": self = .initial
+        case "prefix": self = .prefix
         case "spelling": self = .spelling
         case "precision": self = .precision
         case "missing_part": self = .missingPart

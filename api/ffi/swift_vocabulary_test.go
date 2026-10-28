@@ -357,7 +357,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		{
 			name: "value causes", path: swiftVocabulary, enum: "ValueCause", re: wireCase,
 			want: sorted("", string(valuecompare.CauseExact), string(valuecompare.CauseCase), string(valuecompare.CauseFold),
-				string(valuecompare.CauseAlias), string(valuecompare.CauseAbbreviation), string(valuecompare.CauseInitial),
+				string(valuecompare.CauseAlias), string(valuecompare.CauseAbbreviation), string(valuecompare.CauseInitial), string(valuecompare.CausePrefix),
 				string(valuecompare.CauseSpelling), string(valuecompare.CausePrecision), string(valuecompare.CauseMissingPart),
 				string(valuecompare.CauseOverlap), string(valuecompare.CauseGap), string(valuecompare.CauseBeyondTolerance),
 				string(valuecompare.CauseGenerationConflict), string(valuecompare.CauseEmpty), string(valuecompare.CausePhraseOnly),
