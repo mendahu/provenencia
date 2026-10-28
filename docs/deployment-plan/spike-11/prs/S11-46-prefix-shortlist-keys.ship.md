@@ -1,7 +1,7 @@
 # Ship log — S11-46 Prefix keys in the shortlist
 
 **Plan:** [`S11-46-prefix-shortlist-keys.md`](S11-46-prefix-shortlist-keys.md) · **Branch:** `s11-46-prefix-shortlist-keys` · **PR:** #602
-**State:** stopped — PRF-1 waits on the user
+**State:** ready
 
 ## Round 0 — implement
 Head `3d2db4fe`. Gate PASS (orchestrator run). Report deviations: `main` had moved to `b1bf4c54` (Current state rows rechecked, still true); D-8's comparison-layers sentence reads "index keys and lookup keys", so STEP-5's grep misses that file (wording kept); T-1's no-prefix-key check runs on the text rows and two initial rows. STEP-4 timings: warm proposal 86–90 ms on vs 87–90 off (budget 350 ms); cold proposal ~485 vs ~410 ms (budget 2.5 s).
@@ -13,7 +13,7 @@ Reviewers: CON (Sonnet), MNT, SEC+PRF (matching layers `core/valuecompare`, `cor
 | --- | --- | --- | --- | --- | --- |
 | SEC-1 | SEC | major | Prefix keys have no per-value word bound | Fix now → F-1 | verified: `prefixKeys` (`core/valuecompare/shortlist.go:86`) loops every word; `name` Compare returns `CauseTooLong` past `Names.MaxWords` (`name.go:150`), so prefix keys of such a name can never score. Not D-6's "cap" (that is a posting or hit cap that drops "Jo" lookups); this is D-4's hostile-value bound, reusing an existing knob, losing no recall |
 | CON-1 (+ MNT outside-lens) | CON | major | Plan has no Landed note | Fix now → F-2 | verified: plan diff is the Status line only |
-| PRF-1 | PRF | major | Short given name ("Jo") shortlists every name it starts; the fixture cannot see it | To user (after F-5 measures it) | verified the gap: `bench_test.go` given names are all `Giv…`, so no probe asks `p:` for a short common stem. A bound contradicts D-6 and the Out line, a user decision; F-5 takes a throwaway measurement (D-6's own method) so the user decides from numbers |
+| PRF-1 | PRF | major | Short given name ("Jo") shortlists every name it starts; the fixture cannot see it | To user (after F-5 measures it) → user 2026-10-28: keep no cap (D-6 stands) | verified the gap: `bench_test.go` given names are all `Giv…`, so no probe asks `p:` for a short common stem. A bound contradicts D-6 and the Out line, a user decision; F-5 takes a throwaway measurement (D-6's own method) so the user decides from numbers |
 | MNT-1 (+ SEC outside-lens) | MNT | minor | `sortedUnique` copied; `keyList` inlines the same two lines | Fix now → F-3 (valuecompare half); cross-package half Rejected | in `valuecompare`, one spelling. Across packages: a two-line standard-library idiom with no home short of an exported grab-bag helper; `core/shortlist` keeps its own |
 | MNT-2 (+ CON-3) | MNT | minor | Prefix-key check written three ways; rows picked by name string | Fix now → F-4 | file this PR adds to |
 | MNT-3 | MNT | minor | `name.wordKeys` doc comment stale | Fix now → F-3 | comment unchanged while body changed |
@@ -73,4 +73,4 @@ Reviewers: CON (Sonnet; CON-1 major), SEC+PRF (SEC-1 major). Not sent: MNT (mino
 No new findings. Nits (logged): `CON-4 · plan:6 · no blank line before **Spike / slice:**` (orchestrator added the blank line in the ship-log commit).
 
 ## Result
-Gate PASS · CI pending · open: PRF-1 (To user) · follow-ups: PRF-2 · to user: PRF-1 · CON miss: none
+Gate PASS · CI pending · open: none · follow-ups: PRF-2 (noted in `docs/ideas/name-index-on-commit.md`) · to user: PRF-1 → keep no cap · CON miss: none
