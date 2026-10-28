@@ -73,6 +73,13 @@ func TestSubjectVocab(t *testing.T) {
 				if err != nil || len(eb) != 6 {
 					t.Fatalf("event bindings %v len=%d want 6", err, len(eb))
 				}
+				gotEvent := map[string]bool{}
+				for _, b := range eb {
+					gotEvent[b.Property.Key] = true
+				}
+				if !gotEvent["event_picture"] {
+					t.Fatal("event missing binding event_picture")
+				}
 				en, err := properties.Lookup(c, "event_name", vocabkey.OriginProvenencia)
 				if err != nil || en.ValueType != propertymeta.ValueTypeText || en.Origin != vocabkey.OriginProvenencia {
 					t.Fatalf("event_name %+v %v", en, err)
@@ -128,7 +135,7 @@ func TestSubjectVocab(t *testing.T) {
 				for _, b := range placeBindings {
 					gotPlace[b.Property.Key] = true
 				}
-				for _, key := range []string{"toponym", "start_date", "end_date"} {
+				for _, key := range []string{"toponym", "start_date", "end_date", "place_picture"} {
 					if !gotPlace[key] {
 						t.Fatalf("place missing binding %q", key)
 					}
