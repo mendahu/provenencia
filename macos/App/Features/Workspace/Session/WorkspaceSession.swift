@@ -1,8 +1,8 @@
 import Foundation
 import Observation
 
-/// Project-scoped catalog query cache. S4-02 adds registry-backed loaders;
-/// S4-04 wires this into workspace navigation.
+/// Project-scoped catalog query cache. Each kind's loader, policies, patches,
+/// and refresh live on `CatalogQueryKey.Kind.descriptor`.
 @MainActor
 @Observable
 final class WorkspaceSession {
@@ -93,16 +93,11 @@ final class WorkspaceSession {
     /// Registry-backed get-or-load.
     @discardableResult
     func query<Value>(_ key: CatalogQueryKey) -> QueryHandle<Value> {
-        ensureQuery(key) { [store, registry] in
-            let result = try await registry.load(key: key, store: store)
-            guard let typed = result as? Value else {
-                #if DEBUG
-                assertionFailure("CatalogQueryKey \(key) value type mismatch for \(Value.self)")
-                #endif
-                throw CatalogQueryRegistryError.typeMismatch
-            }
-            return typed
+        key.kind.descriptor.warm(self, key)
+        guard let handle: QueryHandle<Value> = queryHandle(key) else {
+            preconditionFailure("CatalogQueryKey \(key) warmed a different value type than \(Value.self)")
         }
+        return handle
     }
 
     /// Invalidates the key, then queries it: the read-it-again path. Keeps any
@@ -171,14 +166,14 @@ final class WorkspaceSession {
         }
         #endif
         for key in place.queryKeys {
-            warmQuery(key)
+            key.kind.descriptor.warm(self, key)
         }
     }
 
     /// The one application of a write. Patches in place first, with no load:
-    /// every cached row whose last activity the effects moved
-    /// (`patchLastUpdated`), then the mutation's enriched Source row and cached
-    /// page shell. Then it invalidates the deduped union of what the effects
+    /// each warmed key runs its descriptor `patches` in order (last-updated
+    /// cells from the effects, then an enriched Source row and page shell).
+    /// Then it invalidates the deduped union of what the effects
     /// reported (each Evidence graph it names, its Sources' citation reads, the Conclusions whose
     /// handles changed) and what the mutation names (the Source page's own
     /// workspace, the metadata field list), so a key both name is invalidated
@@ -189,17 +184,14 @@ final class WorkspaceSession {
     /// `CatalogQueryRegistry.navCountTriggers`. Features only call `apply`;
     /// they do not query afterward or tell sibling views to refresh.
     func apply(_ effects: CatalogWriteEffects = .empty, _ mutation: CatalogMutation? = nil) {
-        patchLastUpdated(effects)
-        if let source = mutation?.patchedSource {
-            patchUpdatedSource(source)
-        }
+        applyPatches(effects, mutation)
         apply(invalidations: registry.invalidations(for: effects, by: mutation, project: projectKey))
-        var progressGraphs = effects.evidenceGraphs
-        if let graphId = mutation?.evidenceGraphId, !progressGraphs.contains(graphId) {
-            progressGraphs.append(graphId)
-        }
-        for graphId in progressGraphs {
-            refreshEvidenceGraphProgress(graphId: graphId)
+        for key in Array(handles.keys) where key.project == projectKey {
+            guard let refresh = key.kind.descriptor.refresh else { continue }
+            let ids = refresh.follows.ids(in: effects, mutation: mutation)
+            if !ids.isEmpty {
+                Task { await refresh.run(self, key, ids) }
+            }
         }
         if let kind = mutation?.invalidationKind,
            CatalogQueryRegistry.navCountTriggers.contains(kind),
@@ -214,16 +206,21 @@ final class WorkspaceSession {
         apply(.empty, mutation)
     }
 
-    /// Moves the last-updated cell of every cached row the write reports, using
-    /// the write's own activity. Each list declares its patch in the registry.
-    /// No loader runs.
-    private func patchLastUpdated(_ effects: CatalogWriteEffects) {
-        guard effects.activity.revision > 0 else { return }
+    /// Runs each warmed key's descriptor patches. A patch with `follows` gets
+    /// the ids that slot names, and only when the write reported activity.
+    /// A patch with no `follows` reads the mutation.
+    private func applyPatches(_ effects: CatalogWriteEffects, _ mutation: CatalogMutation?) {
         for key in Array(handles.keys) where key.project == projectKey {
-            guard let patch = registry.lastUpdatedPatch(key) else { continue }
-            let ids = Set(patch.scope.ids(in: effects))
-            if !ids.isEmpty {
-                patch.apply(self, key, ids, effects.activity)
+            for patch in key.kind.descriptor.patches {
+                if let follows = patch.follows {
+                    guard effects.activity.revision > 0 else { continue }
+                    let ids = Set(follows.ids(in: effects, mutation: mutation))
+                    if !ids.isEmpty {
+                        patch.apply(self, key, ids, effects.activity, mutation)
+                    }
+                } else {
+                    patch.apply(self, key, [], effects.activity, mutation)
+                }
             }
         }
     }
@@ -262,32 +259,6 @@ final class WorkspaceSession {
             }
         }
         return keys
-    }
-
-    /// Surgical Get-one + map merge. Skips when no place warmed the map.
-    private func refreshEvidenceGraphProgress(graphId: String) {
-        guard evidenceGraphProgressHandle != nil else { return }
-        Task { await self.patchEvidenceGraphProgress(graphId: graphId) }
-    }
-
-    private func patchEvidenceGraphProgress(graphId: String) async {
-        let key = evidenceGraphProgressKey
-        guard evidenceGraphProgressHandle != nil else { return }
-        do {
-            let one = try await store.getEvidenceGraphProgress(
-                projectDir: projectKey.projectDir,
-                graphID: graphId
-            )
-            var map = evidenceGraphProgressHandle?.value ?? [:]
-            if one.isZero {
-                map.removeValue(forKey: graphId)
-            } else {
-                map[graphId] = one
-            }
-            setQueryValue(key, value: map)
-        } catch {
-            // Keep last counts; the next mutation or the next place visit that warms it retries.
-        }
     }
 
     /// Get-or-load with in-flight dedupe. Reuses cached `.ready` data until invalidated.
@@ -364,73 +335,13 @@ final class WorkspaceSession {
     /// Unwarmed keys load on the next `apply(location:)` / `query`.
     private func revalidate(_ key: CatalogQueryKey) {
         guard handles[key] != nil else { return }
-        warmQuery(key)
+        key.kind.descriptor.warm(self, key)
     }
 
     func invalidateAll(matching predicate: (CatalogQueryKey) -> Bool) {
         for key in handles.keys where predicate(key) {
             invalidate(key)
         }
-    }
-
-    private func warmQuery(_ key: CatalogQueryKey) {
-        switch key {
-        case .sourcesList:
-            let _: QueryHandle<[CatalogSource]> = query(key)
-        case .sourceTypesList:
-            let _: QueryHandle<[CatalogSourceType]> = query(key)
-        case .metadataFieldsList:
-            let _: QueryHandle<[CatalogMetadataField]> = query(key)
-        case .credibilityGradesList:
-            let _: QueryHandle<[CatalogCredibilityGrade]> = query(key)
-        case .confidenceGradesList:
-            let _: QueryHandle<[CatalogClaimConfidenceGrade]> = query(key)
-        case .sourceWorkspace:
-            let _: QueryHandle<CatalogSourceWorkspace> = query(key)
-        case .typeSuggestions:
-            let _: QueryHandle<[CatalogTypeSuggestion]> = query(key)
-        case .evidenceGraph:
-            let _: QueryHandle<EvidenceGraphRows> = query(key)
-        case .citationCounts:
-            let _: QueryHandle<[String: Int]> = query(key)
-        case .propertiesWorkspace:
-            let _: QueryHandle<PropertiesSnapshot> = query(key)
-        case .connectRules:
-            let _: QueryHandle<[CatalogConnectRule]> = query(key)
-        case .propertyTerms:
-            let _: QueryHandle<[CatalogPropertyTerm]> = query(key)
-        case .citationsByArtifact:
-            let _: QueryHandle<[CatalogListedCitation]> = query(key)
-        case .evidenceGraphProgress:
-            let _: QueryHandle<[String: EvidenceGraphProgress]> = query(key)
-        case .evidenceGraphsList:
-            let _: QueryHandle<[CatalogEvidenceGraph]> = query(key)
-        case .personsList:
-            let _: QueryHandle<[CatalogPersonHeader]> = query(key)
-        case .eventsList:
-            let _: QueryHandle<[CatalogEventHeader]> = query(key)
-        case .placesList:
-            let _: QueryHandle<[CatalogPlaceHeader]> = query(key)
-        case .conclusionDetail:
-            let _: QueryHandle<CatalogConclusionDetail> = query(key)
-        }
-    }
-
-    private func patchUpdatedSource(_ source: CatalogSource) {
-        let listKey = CatalogQueryKey.sourcesList(project: projectKey)
-        // Leaves any stale flag on the list: other rows may still owe a reload.
-        patchCached(listKey, as: [CatalogSource].self) { sources in
-            guard let index = sources.firstIndex(where: { $0.id == source.id }) else { return false }
-            sources[index] = source
-            return true
-        }
-
-        let workspaceKey = CatalogQueryKey.sourceWorkspace(project: projectKey, sourceId: source.id)
-        let patched = patchCached(workspaceKey, as: CatalogSourceWorkspace.self) {
-            $0.source = source
-            return true
-        }
-        if patched { invalidatedKeys.remove(workspaceKey) }  // that page is now current
     }
 
     private func typedHandle<Value>(for key: CatalogQueryKey, as type: Value.Type) -> QueryHandle<Value> {

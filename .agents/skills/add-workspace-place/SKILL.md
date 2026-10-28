@@ -24,7 +24,7 @@ Spike decisions: [`docs/deployment-plan/archive/spike-4/README.md`](../../../doc
 | Change | This skill | Also use |
 | --- | --- | --- |
 | New sidebar destination / list / detail page | **Yes** | [`add-workspace-location`](../add-workspace-location/SKILL.md) |
-| New catalog read cached across navigation | **Yes** | registry loader in `CatalogQueryRegistry` |
+| New catalog read cached across navigation | **Yes** | descriptor arm in `CatalogQueryRegistry` (loader, `patches` / `refresh`, invalidateOn, whenHidden) |
 | Omnibar-searchable entity | Partial (location + queries) | [`add-searchable-kind`](../add-searchable-kind/SKILL.md) |
 | History-only deep id on existing place | No | `add-workspace-location` |
 | Go table SQL / FFI handler | No | `add-catalog-query`, `add-ffi-handler` |
@@ -35,7 +35,7 @@ Spike decisions: [`docs/deployment-plan/archive/spike-4/README.md`](../../../doc
 - [ ] WorkspaceLocation: optional deep id (+ == ignores ref/title fluff)
 - [ ] WorkspaceSection + sidebar + L10n (if new destination)
 - [ ] PlaceID case + PlaceRegistry Spec (matches, queryKeys, presentation, priority)
-- [ ] CatalogQueryKey case + CatalogQueryRegistry loader + invalidateOn tags
+- [ ] CatalogQueryKey case + descriptor arm (loader, invalidateOn, whenHidden)
 - [ ] WorkspacePresentationID + WorkspaceDestinationHost switch arm
 - [ ] View: warm queries in .task; read queryHandle in body; @Bindable QueryHandle child
 - [ ] Model: warm*Queries() / syncCatalogCounts; mutations via session.apply / setQueryValue
@@ -60,7 +60,8 @@ handles; they do not own fetch-on-appear lifecycle.
 
 | Mechanism | Use when |
 | --- | --- |
-| **Patch** (`patchCached`, `setQueryValue`, `.updatedSource`) | Overlay after a write that returned enough data. A write that reports its activity patches a list's last-updated cell through a `CatalogLastUpdatedPatch` declared on the list's registry row (`Spec.lastUpdated`); no refetch. For a change the write does not describe (a value, title, or membership), pair the patch with `apply` so the registry still refetches. |
+| **Patch** (`patchCached`, `setQueryValue`, descriptor `patches`) | Overlay after a write that returned enough data. A write that reports its activity patches a list's last-updated cell through a `CatalogQueryPatch.lastUpdated` on that list's descriptor (`patches`, with its own `follows`); no refetch. An enriched Source uses `.updatedSourceRow` and `.updatedSourceShell` on the same slots. `patchCached` and `setQueryValue` stay the primitives those slots call. For a change the write does not describe (a value, title, or membership), pair the patch with `apply` so the descriptor still refetches. |
+| **Refresh** (descriptor `refresh`) | Reload some rows and merge them into a warmed value. The slot's `follows` names the ids (`CatalogQueryFollows`). Evidence-graph progress is the one today: Get-one and map merge, skipped when the map was never warmed. |
 | **Invalidate + revalidate** (`session.apply`) | Default after a catalog write. `apply` marks keys stale and reloads any that are already warmed. Features do **not** `session.query` after `apply`. A write returns `WriteEffects` and the app calls `apply(effects)`; when a mutation still names keys the effects cannot (the Source page's own workspace, the metadata field list), call `apply(effects, mutation)`, which applies both once and never invalidates a key twice. |
 | **Mark stale** (`whenHidden: .markStale`) | A write moves a value the current screen does not show, and refetching on every write is too costly. `apply` flags the warmed key without a refetch; the next `query` / place visit reloads it, showing the cached frame meanwhile. `whenHidden` (`.revalidate`, `.markStale`, `.evict`) sets what an invalidated key does when its place is not on screen. |
 | **Stale-while-revalidate** | Navigation reads — Back, sidebar return; show cached frame, `isFetching` while reloading. Not the only refresh path after a write. |
@@ -93,13 +94,12 @@ In [`PlaceRegistry.swift`](../../../macos/App/Features/Workspace/Session/PlaceRe
 Extend [`PlaceRegistryTests`](../../../macos/ProvenenciaTests/PlaceRegistryTests.swift):
 `registryCoversAllPlaceIDs`, query key table row for the new place.
 
-### 3. `CatalogQueryKey` + registry loader
+### 3. `CatalogQueryKey` + descriptor arm
 
 In `Session/`:
 
-- Add `CatalogQueryKey` case (project-scoped payload as needed).
-- Register in [`CatalogQueryRegistry`](../../../macos/App/Features/Workspace/Session/CatalogQueryRegistry.swift): loader calling `GenealogyStore`, `invalidateOn` mutation tags, and `whenHidden` for what an invalidated key does while its place is off screen.
-- Wire `WorkspaceSession.warmQuery` switch arm if the key kind is new.
+- Add `CatalogQueryKey` case (project-scoped payload as needed) and a `Kind` case.
+- Add one arm on `CatalogQueryKey.Kind.descriptor` in [`CatalogQueryRegistry.swift`](../../../macos/App/Features/Workspace/Session/CatalogQueryRegistry.swift): the loader (`guard case` on the key, calling `GenealogyStore`), `invalidateOn`, `whenHidden`, and `invalidation`. The switch is exhaustive, so a new kind does not compile until that arm exists.
 
 **One cache owns each list — do not fold a shared list into a page payload.**
 A deep page composes its own key plus the shared list keys it reads (see the
@@ -111,7 +111,7 @@ warm from the sidebar.
 just the part the write names.** A `CatalogTypeSuggestion` carries a whole field
 row; `workspace.metadata` is a Go-computed join over the type's suggestions; counts
 like `usedBy` / `suggestedFieldCount` move when a different table is written. If the
-mutation names no single owner for an id-bearing key, `Kind.invalidation` returns
+mutation names no single owner for an id-bearing key, the descriptor's `invalidation` returns
 `.allCached(kind)` and every cached key of that kind is busted.
 
 Add [`CatalogQueryRegistryTests`](../../../macos/ProvenenciaTests/CatalogQueryRegistryTests.swift) coverage for load + invalidation (`registry.invalidations`) and the hidden policy (`registry.hiddenPolicy`).
@@ -171,7 +171,7 @@ sync apply from history after list is ready; `fallbackToSectionRoot()` if deep i
 - Other page edits (notes, artifacts, credibility): `context.applyWrite(effects)` → bust the `sourceWorkspace` key, and the effects move the lists.
 - Graph and composer writes (`createSubject`, `updateSubject`, `deleteSubject`) and Artifact ↔ graph link writes (`updateArtifact` with `graphIDs`, `updateEvidenceGraph`): `session.apply(effects)`, plus `.deletedSubject` for a delete (it reloads Observation `usedBy`; the citation reads follow the effects).
 - Any write under a Source moves its `updated` activity (engine audit scopes). Every write under a Source returns `WriteEffects` with its activity, and `apply(effects)` patches the Sources row in place; the mutations that ride along (`mutatedSourceWorkspace`, `mutatedSourceMetadata`, `deletedSubject`) never invalidate `sourcesList` or the Conclusion lists — the Sources row follows the effects' `sourceScopes`, each graph's rows follow `evidenceGraphs`, and the citation reads (keyed by graph) are dropped project-wide when `citationSources` is non-empty, and the Conclusion lists follow `handles`. A new Source child write returns `WriteEffects` (`writeEffectsProto(wrote)` in its handler); the writes that still report none (`updateSource`, `setSourceCover`, `deleteSource`, promote, Property writes) keep their mutation kinds. `createSource` returns `WriteEffects` and is applied with `apply(effects, .createdSource)`, as Copy Source is.
-- A new list with a last-updated cell: conform its row to `CatalogLastUpdatedRow` and add `lastUpdated: .rows(Row.self, scope: …)` to its registry row.
+- A new list with a last-updated cell: conform its row to `CatalogLastUpdatedRow` and add `.lastUpdated(Row.self, follows: …)` to its descriptor `patches`.
 - Vocabulary CRUD: registry `invalidateOn` + list patch where cheap. A patch is an
   optimization on top of invalidation unless the write reported everything the patch needs (last-updated activity).
 

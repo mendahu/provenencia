@@ -456,14 +456,37 @@ struct CatalogQueryRegistryTests {
         #expect(registry.hiddenPolicy(.sourceWorkspace(project: project, sourceId: "s1")) == .revalidate)
     }
 
-    @Test func lastUpdatedPatchesAreDeclaredOnTheFourLists() {
-        let registry = CatalogQueryRegistry.standard
-        let project = ProjectKey(projectDir: projectDir)
-        for key in [CatalogQueryKey.personsList(project: project), .eventsList(project: project), .placesList(project: project)] {
-            #expect(registry.lastUpdatedPatch(key)?.scope == .handle, "\(key)")
+    @Test func everyKindHasOneDescriptor() {
+        let kinds = CatalogQueryKey.Kind.allCases
+        #expect(kinds.count == 19)
+        let described = kinds.map { kind -> CatalogQueryKey.Kind in
+            let descriptor = kind.descriptor
+            #expect(descriptor.kind == kind)
+            return descriptor.kind
         }
-        #expect(registry.lastUpdatedPatch(.sourcesList(project: project))?.scope == .source)
-        #expect(registry.lastUpdatedPatch(.sourceTypesList(project: project)) == nil)
+        #expect(Set(described) == Set(kinds))
+
+        // Omitting one kind from the observed set fails the same equality and names it.
+        let planted = Set(described.filter { $0 != .sourcesList })
+        let missing = Set(kinds).subtracting(planted)
+        #expect(missing == [.sourcesList])
+        #expect(planted != Set(kinds))
+    }
+
+    @Test func lastUpdatedPatchesAreDeclaredOnTheFourLists() {
+        let project = ProjectKey(projectDir: projectDir)
+        func follows(_ key: CatalogQueryKey) -> CatalogQueryFollows? {
+            key.kind.descriptor.patches.compactMap(\.follows).first
+        }
+        for key in [CatalogQueryKey.personsList(project: project), .eventsList(project: project), .placesList(project: project)] {
+            #expect(follows(key) == .handle, "\(key)")
+        }
+        let sourcesList = CatalogQueryKey.sourcesList(project: project)
+        let sourcePatches = sourcesList.kind.descriptor.patches
+        #expect(sourcePatches.count == 2)
+        #expect(sourcePatches[0].follows == .source)
+        #expect(sourcePatches[1].follows == nil)
+        #expect(follows(.sourceTypesList(project: project)) == nil)
     }
 
     @Test func conclusionDetailOfAnUnknownHandleIsCodedNotFound() async throws {
@@ -561,6 +584,33 @@ struct CatalogQueryRegistryTests {
         #expect(handle.status == .ready)
         #expect(handle.value == seeded)
         #expect(store.heldCatalogProjectDir == nil)
+    }
+
+    @Test func applyUpdatedSourceLeavesOtherCachedWorkspacesUntouched() async {
+        let store = FakeStore()
+        seedStore(store)
+        store.sourcesByProject[projectDir]?.append(
+            CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "t1", title: "Beta", description: "")
+        )
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        let firstKey = CatalogQueryKey.sourceWorkspace(project: project, sourceId: "s1")
+        let secondKey = CatalogQueryKey.sourceWorkspace(project: project, sourceId: "s2")
+
+        let firstHandle: QueryHandle<CatalogSourceWorkspace> = session.query(firstKey)
+        let secondHandle: QueryHandle<CatalogSourceWorkspace> = session.query(secondKey)
+        await waitForQuery(firstHandle)
+        await waitForQuery(secondHandle)
+        #expect(firstHandle.value?.source.title == "Alpha")
+        #expect(secondHandle.value?.source.title == "Beta")
+
+        let updated = CatalogSource(
+            id: "s1", ref: "SRC-1", sourceTypeID: "t1", title: "Renamed", description: "New desc"
+        )
+        session.apply(.updatedSource(updated))
+
+        #expect(firstHandle.value?.source.title == "Renamed")
+        #expect(secondHandle.value?.source.title == "Beta")
     }
 
     @Test func applyUpdatedSourcePatchesListAndWorkspace() async {

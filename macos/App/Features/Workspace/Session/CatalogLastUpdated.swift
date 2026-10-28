@@ -9,7 +9,7 @@ struct CatalogActivity: Sendable, Equatable {
 }
 
 /// A cached list row that carries its handle's or Source's last activity.
-/// `Sendable` so `CatalogLastUpdatedPatch.rows` can capture `Row.Type` in its
+/// `Sendable` so `CatalogQueryPatch.lastUpdated` can capture `Row.Type` in its
 /// `@Sendable` closure.
 protocol CatalogLastUpdatedRow: Sendable {
     var id: String { get }
@@ -21,33 +21,49 @@ extension CatalogEventHeader: CatalogLastUpdatedRow {}
 extension CatalogPlaceHeader: CatalogLastUpdatedRow {}
 extension CatalogSource: CatalogLastUpdatedRow {}
 
-/// Which ids of a write's effects a list's rows are keyed by.
-enum CatalogLastUpdatedScope: Sendable {
+/// Which ids of a write a patch or refresh follows. Each slot carries its own.
+enum CatalogQueryFollows: Sendable, Equatable {
     /// `CatalogWriteEffects.handleScopes`: Person, Event, and Place handles.
     case handle
     /// `CatalogWriteEffects.sourceScopes`.
     case source
+    /// `CatalogWriteEffects.evidenceGraphs`, plus the mutation's graph when it
+    /// names one the effects did not.
+    case evidenceGraphs
 
-    /// The ids of a write's effects that name rows of this scope.
-    func ids(in effects: CatalogWriteEffects) -> [String] {
+    /// The ids of a write that this slot follows.
+    func ids(in effects: CatalogWriteEffects, mutation: CatalogMutation?) -> [String] {
         switch self {
-        case .handle: effects.handleScopes
-        case .source: effects.sourceScopes
+        case .handle:
+            return effects.handleScopes
+        case .source:
+            return effects.sourceScopes
+        case .evidenceGraphs:
+            var ids = effects.evidenceGraphs
+            if let graphId = mutation?.evidenceGraphId, !ids.contains(graphId) {
+                ids.append(graphId)
+            }
+            return ids
         }
     }
 }
 
-/// How one cached list moves a row's last activity when a write reports it.
-/// Declared on the list's registry row, so a new list adds one line and the
-/// session needs no per-kind switch.
-struct CatalogLastUpdatedPatch: Sendable {
-    let scope: CatalogLastUpdatedScope
-    let apply: @MainActor @Sendable (WorkspaceSession, CatalogQueryKey, Set<String>, CatalogActivity) -> Void
+/// One in-place update of a warmed cache key. `follows == nil` means the patch
+/// reads the mutation (an enriched Source); otherwise the session passes the
+/// ids that `follows` names. Array order on a descriptor is composition order.
+struct CatalogQueryPatch: Sendable {
+    var follows: CatalogQueryFollows?
+    let apply: @MainActor @Sendable (
+        WorkspaceSession, CatalogQueryKey, Set<String>, CatalogActivity, CatalogMutation?
+    ) -> Void
 
     /// Moves each row whose id is in the set and whose revision is older than
     /// the write's. A row only moves forward; nothing is fetched.
-    static func rows<Row: CatalogLastUpdatedRow>(_: Row.Type, scope: CatalogLastUpdatedScope) -> Self {
-        Self(scope: scope) { session, key, ids, activity in
+    static func lastUpdated<Row: CatalogLastUpdatedRow>(
+        _: Row.Type,
+        follows: CatalogQueryFollows
+    ) -> Self {
+        Self(follows: follows) { session, key, ids, activity, _ in
             session.patchCached(key, as: [Row].self) { rows in
                 var moved = false
                 for index in rows.indices
@@ -59,4 +75,37 @@ struct CatalogLastUpdatedPatch: Sendable {
             }
         }
     }
+
+    /// Replaces the matching Sources-list row with the mutation's Source.
+    /// Leaves any stale flag: other rows may still owe a reload.
+    static func updatedSourceRow() -> Self {
+        Self(follows: nil) { session, key, _, _, mutation in
+            guard let source = mutation?.patchedSource else { return }
+            session.patchCached(key, as: [CatalogSource].self) { sources in
+                guard let index = sources.firstIndex(where: { $0.id == source.id }) else { return false }
+                sources[index] = source
+                return true
+            }
+        }
+    }
+
+    /// Writes the mutation's Source onto the cached page shell and marks that
+    /// page current. `setQueryValue` clears the stale flag; this patch does
+    /// not touch the invalidation set itself.
+    static func updatedSourceShell() -> Self {
+        Self(follows: nil) { session, key, _, _, mutation in
+            guard let source = mutation?.patchedSource else { return }
+            guard case .sourceWorkspace(_, let sourceId) = key, sourceId == source.id else { return }
+            guard var workspace: CatalogSourceWorkspace = session.queryHandle(key)?.value else { return }
+            workspace.source = source
+            session.setQueryValue(key, value: workspace)
+        }
+    }
+}
+
+/// A per-key reload of some rows, merged into the cached value. The session
+/// schedules `run` only for a warmed key, with the ids `follows` names.
+struct CatalogQueryRefresh: Sendable {
+    var follows: CatalogQueryFollows
+    var run: @MainActor @Sendable (WorkspaceSession, CatalogQueryKey, [String]) async -> Void
 }

@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-34 — One descriptor per cache key
+
+**Landed 2026-10-28** in [#614](https://github.com/mendahu/provenencia/pull/614). Each catalog cache kind now has one descriptor: its value, loader, stale and hidden policy, invalidation, in-place patches, and optional refresh. Adding a kind fails to compile until that arm exists, and a test fails if the arms and the kind list disagree. List last-updated cells, an enriched Source row and page, and Evidence graph progress still move the same way; they are entries on the descriptor, so later reads add an entry instead of a new session function. Nothing a researcher sees changes.
+
 ## S12-24 — Audit history: indexed note authors, audited pointer resets
 
 **Landed 2026-10-28** in [#610](https://github.com/mendahu/provenencia/pull/610). Source note attribution seeks `audit_changes` by `entity_id` (catalog format 57) instead of scanning history, and official Artifact and Observation deletes clear cover and preferred-portrait pointers through new `optionalPointer` facet releases that emit the same update fields as `SetCover` and `SetPreferredLikeness`. `TestFacetReleaseHonesty` now requires a release for every deletable-parent `BucketOptional` `SET NULL` FK; delete policy docs and skills name optional pointers beside audited CASCADE facets.
