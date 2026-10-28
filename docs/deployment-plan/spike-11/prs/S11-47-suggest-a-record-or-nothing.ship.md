@@ -1,7 +1,7 @@
 # Ship log — S11-47 Promote suggests a record or nothing
 
 **Plan:** [`S11-47-suggest-a-record-or-nothing.md`](S11-47-suggest-a-record-or-nothing.md) · **Branch:** `s11-47-suggest-a-record-or-nothing` · **PR:** #598
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 Head `b7cae938`. Gate PASS (orchestrator run against `c409b9d4`). Report: no deviations. Base moved from Planned `a70932e` to `c409b9d4`; no Current-state file changed. AC-1.8 and AC-2.5 are the manual check (plan §10), not run.
@@ -47,3 +47,20 @@ Check: `rg -n "both are New|both rows are New" api core macos/App` prints nothin
 Files: `docs/deployment-plan/spike-11/prs/S11-47-suggest-a-record-or-nothing.md`.
 Do: add a Landed note under the Status line. Say the proto output was regenerated with `./scripts/generate-proto.sh`. List F-1 (caption for a weak-drafted unplaced row), and F-2, which supersedes the Out line "Typing the send side" for `CatalogPromoteGraphAlignmentFixed` (same-pass cleanup; the batch row stays Out as a follow-up). Also list F-3's comment edits beyond D-6, D-9 and D-15.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-11/prs/S11-47-suggest-a-record-or-nothing.md` reports 0 errors; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `a57caf98`. Gate PASS (orchestrator run). F-1, F-2, F-3, F-4 done. Deviations: `PromoteFlowTests.swift:911-912` also read `Fixed.target` as a string and moved to `.new` / `.skip`; one sentence added to `completed.md` for F-1.
+CON minors read by the orchestrator: CON-1 **Resolved** (Landed note under Status), CON-2 **Resolved** (proto field 19 reworded, regenerated), CON-3 nit **Resolved** (rewrapped).
+
+## Round 2 — review
+Reviewers: UX (UX-1 major), MNT (MNT-1 major). Not sent: CON (minors only), SEC+PRF (no findings). Scope `b7cae938...a57caf98`.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| UX-1 | UX | major | (round 1) weak-drafted caption | **Resolved** | `captionReason` reads `selectionReadout?.reason` for an unplaced row; `anUnplacedRowDraftedOntoAWeakRecordCaptionsItsReason` |
+| MNT-1 | MNT | major | (round 1) Fixed send side typed | **Resolved** | `Fixed.target: PromoteTargetCode`, `wire` round trip in `reasonCodesParseThroughTheWireVocabulary`; batch row stays a follow-up |
+
+No new findings. MNT-2, MNT-3, MNT-4 **Resolved** (orchestrator read of `9847e04d`; MNT reviewer saw the same).
+
+## Result
+Gate PASS · CI <pending> · open: none · follow-ups: MNT-1 (batch row: type `CatalogPromoteBatchRow.target` / `promote.Target` in Swift, reusing `PromoteTargetCode.wire` or its own enum), MNT-6 (nit) · to user: — · CON miss: none
