@@ -5,7 +5,15 @@
 - **Where:** Auto-reconciler / Person name / Conclusion detail
 - **Annoyance (verbatim):** "Right now the auto reconciler will fold a given name that is a short form of a true name into its true name. I want to preserve that behavior but instead of folding it in and making it go away, I want it to be output as a nickname rather than a first name."
 - **Consequence:** When sources record *Bill Smith* and *William Smith*, the reconciled Person reads *William Smith* and the fact that he went by *Bill* disappears from the headline name. The evidence still exists on the Observations, but the conclusion loses a real, frequently useful fact (what the person was actually called) and the researcher has to re-enter it by hand as a `nick` part.
-- **Wanted:** Keep the fold (one Person, formal given name wins) but carry the folded short form forward as a **`nick` part** of the assembled name — *given: [William], nick: [Bill]* — instead of dropping it. Initials (`J` → `James`) and abbreviations (`Wm` → `William`) should probably still vanish; only true nicknames should surface. Which of those classes count is an open question below.
+- **Wanted:** Keep the fold (one Person, formal given name wins) but carry the folded short form forward as a **`nick` part** of the assembled name — *given: [William], nick: [Bill]* — instead of dropping it. Initials (`J` → `James`) and abbreviations (`Wm` → `William`) still vanish; only nickname-class folds surface (decided 2026-10-28, below).
+
+## Decisions (Jake, 2026-10-28)
+
+Verbatim: "Yeah obviously abbreviations would fold but nicknames would be re-tagged."
+
+- **Nickname-class folds re-emerge.** A fold that value compare pairs through the nickname alias tables (`AliasKind == nickname`, `CauseAlias`; e.g. *Bill* → *William*, *Bob* → *Robert*) keeps folding for the purpose of choosing the formal given name, but the folded word is re-emitted as a `nick` part of the assembled name instead of disappearing.
+- **Abbreviation and initial folds keep folding away** exactly as today: *Wm.* → *William* (`CauseAbbreviation`) and *W.* / *J.* → *William* / *James* (`CauseInitial`) leave no trace in the output name.
+- **Discriminator.** `det.Parts[i].Cause` from `valuecompare.Compare` inside `nameModule.fold` already separates the three classes per paired word, so no new data is needed to tell them apart.
 
 ## How it works today (observed, not implemented)
 
@@ -17,7 +25,7 @@
 
 ## Open questions
 
-- **Which folds re-emerge?** Only `AliasKind == nickname` pairs (*Bill* → *William*)? Or abbreviations too (*Wm* → *William* is not a nickname)? Initials (`J` → `James`) almost certainly should still just disappear. The `Cause` on each paired word makes this a per-class decision.
+- ~~**Which folds re-emerge?**~~ Resolved 2026-10-28 (see Decisions): nickname-class only (`CauseAlias` via a `nickname` table) re-emerges as `nick`; abbreviations (`CauseAbbreviation`) and initials (`CauseInitial`) keep folding away. `det.Parts[i].Cause` is the discriminator.
 - **Provenance of the emitted part.** Today every part of the assembled name comes from a recorded `namevalue.Part` of some member (`assemble` keeps `raw`). An emitted nick would be the folded member's `given` part re-typed as `nick` — a part the source never recorded as a nickname. Does that need marking (a reason like `ReasonFolded` but on the surviving side, or a distinct `ReasonRetyped`), and how does the reconciliation reasoning view explain it?
 - **Cardinality / duplicates.** A Person with *Bill*, *Billy*, and *William* across sources: both nicks, or only the most-supported? `assemble` already dedupes identical words per type, so distinct nicks would all survive unless capped.
 - **Interaction with a researcher-typed `nick`.** If one source already recorded `nick: Bill` and another `given: Bill`, the fold path and the existing nick path must agree on one `nick: [Bill]`, not two.
