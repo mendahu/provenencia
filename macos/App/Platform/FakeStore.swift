@@ -1796,7 +1796,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     return CatalogPromoteGraphAlignmentRow(
                         subjectID: subject.id,
                         kind: type.key,
-                        target: "handle",
+                        target: .handle,
                         handleID: membership.entity.id,
                         handleRef: membership.entity.ref,
                         score: 0,
@@ -1813,7 +1813,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     return CatalogPromoteGraphAlignmentRow(
                         subjectID: subject.id,
                         kind: type.key,
-                        target: "handle",
+                        target: .handle,
                         handleID: entity.id,
                         handleRef: entity.ref,
                         score: 0,
@@ -1827,12 +1827,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 return CatalogPromoteGraphAlignmentRow(
                     subjectID: subject.id,
                     kind: type.key,
-                    target: "skip",
+                    target: .unplaced,
                     handleID: "",
                     handleRef: "",
                     score: 0,
                     assessment: "none",
-                    reason: .empty,
+                    reason: .unplaced,
                     alternatives: [],
                     conflictWithFixed: false,
                     possibleDuplicate: false

@@ -590,8 +590,8 @@ func TestSpellingOnlyToponymIsNotShortlisted(t *testing.T) {
 	srcB, artB := f.newSource("Gazetteer")
 	again := f.place(srcB, artB, "Provenance")
 	row := rowFor(f.propose(f.graph(srcB), nil), again.ID)
-	if row.Target != graphalign.TargetNew || row.Reason != graphalign.ReasonNoMatch {
-		t.Fatalf("provenance row %+v, want a new handle with no_match", row)
+	if row.Target != "" || row.Reason != graphalign.ReasonUnplaced {
+		t.Fatalf("provenance row %+v, want no target and unplaced", row)
 	}
 }
 
@@ -707,8 +707,8 @@ func TestProposeRelationshipFromEitherEnd(t *testing.T) {
 				}
 				return
 			}
-			if r.Target != graphalign.TargetSkip || r.Reason != graphalign.ReasonWeak {
-				t.Fatalf("target=%s reason=%s, want skip and weak (under the accept bar)", r.Target, r.Reason)
+			if r.Target != "" || r.Reason != graphalign.ReasonUnplaced {
+				t.Fatalf("target=%s reason=%s, want no target (under the accept bar)", r.Target, r.Reason)
 			}
 			if len(r.Alternatives) == 0 || !bytes.Equal(r.Alternatives[0].HandleID, want) || r.Alternatives[0].Reason != graphalign.ReasonVia {
 				t.Fatalf("alternatives %+v, want the other end's handle first, via the anchor", r.Alternatives)
@@ -1006,7 +1006,7 @@ func TestProposeLifespanFromLifeEvents(t *testing.T) {
 	t.Run("AC-3.1", func(t *testing.T) {
 		f, _, src, person := lifeFixture(t, 1830)
 		row := rowFor(f.propose(f.graph(src), nil), person.ID)
-		if row.Target != graphalign.TargetNew || row.Reason != graphalign.ReasonNoMatch {
+		if row.Target != "" || row.Reason != graphalign.ReasonUnplaced {
 			t.Fatalf("a man who died in 1830 for a man born in 1850: %+v", row)
 		}
 	})
@@ -1158,8 +1158,8 @@ func TestProposeSeesAHandlePromotedAfterTheIndexWasBuilt(t *testing.T) {
 	b := f.person(srcB, artB, "Ann Ames")
 
 	first := rowFor(f.propose(f.graph(srcB), nil), b.ID)
-	if first.Target != graphalign.TargetNew {
-		t.Fatalf("with nothing promoted the row is %+v, want a new handle", first)
+	if first.Target != "" {
+		t.Fatalf("with nothing promoted the row is %+v, want no target", first)
 	}
 	known := f.promote(a)
 	second := rowFor(f.propose(f.graph(srcB), nil), b.ID)
@@ -1267,8 +1267,8 @@ func TestProposeDoesNotCompareAnUnshortlistedHandle(t *testing.T) {
 	src, art := f.newSource("Register")
 	robnis := f.person(src, art, "Robnis")
 	row := rowFor(f.propose(f.graph(src), nil), robnis.ID)
-	if row.Target != graphalign.TargetNew || row.Reason != graphalign.ReasonNoMatch || len(row.Alternatives) != 0 {
-		t.Fatalf("Robnis row %+v, want New with no_match and no alternatives", row)
+	if row.Target != "" || row.Reason != graphalign.ReasonUnplaced || len(row.Alternatives) != 0 {
+		t.Fatalf("Robnis row %+v, want unplaced with no alternatives", row)
 	}
 }
 

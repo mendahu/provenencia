@@ -982,7 +982,7 @@ struct GoStore: GenealogyStore {
             return CatalogPromoteGraphAlignmentRow(
                 subjectID: r.subjectID,
                 kind: r.kind,
-                target: r.target,
+                target: PromoteTargetCode(wire: r.target),
                 handleID: r.handleID,
                 handleRef: r.handleRef,
                 score: r.score,

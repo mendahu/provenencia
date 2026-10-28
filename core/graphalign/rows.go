@@ -61,20 +61,18 @@ func (st *state) proposal() Proposal {
 			row.Assessment = AssessNone
 			if best := st.bestNonAssigned(sk, nil); best != nil {
 				// A candidate existed but was not accepted (below the bar or
-				// lost one-to-one): Skip, never force a merge.
-				row.Target = TargetSkip
+				// lost one-to-one): suggest nothing, never force a merge. New
+				// and Skip are the researcher's.
+				row.Reason = ReasonUnplaced
 				row.Score = best.score
 				row.Alternatives = st.alts(sk, nil)
-				row.Reason = ReasonWeak
 				reported = best
 				if best.score >= st.cfg.Alignment.Bands.Weak {
 					row.Assessment = st.band(best.score)
 				}
 			} else if st.subjectHasValues(s) {
-				row.Target = TargetNew
-				row.Reason = ReasonNoMatch
+				row.Reason = ReasonUnplaced
 			} else {
-				row.Target = TargetSkip
 				row.Reason = ReasonEmpty
 			}
 			if owner, ok := st.lostTo[sk]; ok {
@@ -122,19 +120,26 @@ func (st *state) flagSharedHandles(rows []Row) {
 	}
 }
 
-// flagAlikeNewRows marks two New rows of one kind that would clear the accept
-// bar against each other: filing both mints two handles for what may be one
-// entity. A signature both rows have neighbors for suppresses the warning
+// wouldBeNew reports whether filing the row New is the open question: a decided
+// New, or a row Promote suggests no record for. A taken row already carries its
+// duplicate, an empty row has nothing to compare, and a Skip files nothing.
+func wouldBeNew(r Row) bool {
+	return r.Target == TargetNew || (r.Target == "" && r.Reason == ReasonUnplaced)
+}
+
+// flagAlikeNewRows marks two rows of one kind that would both be new records
+// (wouldBeNew) and would clear the accept bar against each other: filing both
+// New mints two handles for what may be one entity. A signature both rows have neighbors for suppresses the warning
 // when none of those neighbors are the same subject or a match. It only
 // warns, so the bar is acceptance, not strong.
 func (st *state) flagAlikeNewRows(rows []Row) {
 	for i := range rows {
-		if rows[i].Target != TargetNew || rows[i].Flags.PossibleDuplicate {
+		if !wouldBeNew(rows[i]) || rows[i].Flags.PossibleDuplicate {
 			continue
 		}
 		a := st.subjects[string(rows[i].SubjectID)]
 		for j := range rows {
-			if j == i || rows[j].Target != TargetNew || rows[j].Kind != rows[i].Kind {
+			if j == i || !wouldBeNew(rows[j]) || rows[j].Kind != rows[i].Kind {
 				continue
 			}
 			b := st.subjects[string(rows[j].SubjectID)]
@@ -148,9 +153,9 @@ func (st *state) flagAlikeNewRows(rows []Row) {
 	}
 }
 
-// alikeNew reports whether two New subjects score as one entity. Properties
-// are scored as usual. Each link key both have neighbors for adds one link
-// when a neighbor matches, and rejects the pair when none do.
+// alikeNew reports whether two subjects that would both be new records score as
+// one entity. Properties are scored as usual. Each link key both have neighbors
+// for adds one link when a neighbor matches, and rejects the pair when none do.
 func (st *state) alikeNew(a, b *Subject) bool {
 	r := st.evaluate(a.Kind, a.Values, b.Values)
 	segs, disagree := st.newPairSegments(a, b, r.Evidence)

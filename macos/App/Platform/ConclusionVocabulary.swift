@@ -61,12 +61,13 @@ enum ReconcilerReason: Sendable, Equatable {
 /// Why a Promote row reads as it does, and why settling moved it
 /// (`graphalign.Reason`). The page words the typed cases.
 enum PromoteReasonCode: Sendable, Equatable {
+    /// Promote suggests no record for this row.
+    case unplaced
     case via
     case decided
     case agrees
     case weak
     case taken
-    case noMatch
     case empty
     case neighborPlaced
     case neighborMoved
@@ -76,16 +77,37 @@ enum PromoteReasonCode: Sendable, Equatable {
 
     init(wire: String) {
         switch wire {
+        case "": self = .unplaced
         case "via": self = .via
         case "decided": self = .decided
         case "agrees": self = .agrees
         case "weak": self = .weak
         case "taken": self = .taken
-        case "no_match": self = .noMatch
         case "empty": self = .empty
         case "neighbor_placed": self = .neighborPlaced
         case "neighbor_moved": self = .neighborMoved
         case "neighbor_released": self = .neighborReleased
+        default: self = .unrecognized(wire)
+        }
+    }
+}
+
+/// What a Promote proposal row targets (`graphalign.Target`): a record, a held decision, or nothing.
+enum PromoteTargetCode: Sendable, Equatable {
+    /// Promote suggests no record.
+    case unplaced
+    case handle
+    case new
+    case skip
+    /// A code this build doesn't know.
+    case unrecognized(String)
+
+    init(wire: String) {
+        switch wire {
+        case "": self = .unplaced
+        case "handle": self = .handle
+        case "new": self = .new
+        case "skip": self = .skip
         default: self = .unrecognized(wire)
         }
     }

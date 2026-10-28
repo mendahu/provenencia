@@ -1341,9 +1341,9 @@ enum L10n {
         }
         static let reasonVia = LocalizedStringResource("promote.reason.viaUnknown", defaultValue: "Reached from a matched neighbor", comment: "Why a row was matched, when the neighbor row is not on the page")
         static let reasonDecided = LocalizedStringResource("promote.reason.decided", defaultValue: "Your choice", comment: "Reason on a row whose target the researcher chose")
-        static let reasonWeak = LocalizedStringResource("promote.reason.weak", defaultValue: "Too little agrees to suggest a match", comment: "Reason on a row whose best candidate is below the bar")
+        static let reasonWeak = LocalizedStringResource("promote.reason.weak", defaultValue: "Too little agrees to suggest a match", comment: "Reason on a record in a row's menu whose score is below the weak bar")
         static let reasonTaken = LocalizedStringResource("promote.reason.taken", defaultValue: "Another row took the best match", comment: "Reason on a row whose best handle went to another row on the page")
-        static let reasonNoMatch = LocalizedStringResource("promote.reason.noMatch", defaultValue: "No matching record", comment: "Reason on a row with no candidate handle")
+        static let reasonUnplaced = LocalizedStringResource("promote.reason.unplaced", defaultValue: "No record suggested", comment: "Reason on a Promote row that Promote suggests no record for")
         static let reasonEmpty = LocalizedStringResource("promote.reason.empty", defaultValue: "Nothing to match on", comment: "Reason on a row whose subject has no values to compare")
         static func updatedDetail(_ reason: String) -> String {
             L10n.format(LocalizedStringResource("promote.row.updatedDetail", defaultValue: "Updated · %@", comment: "A suggested row moved on the last proposal; argument is why, e.g. via a neighbor"), reason)

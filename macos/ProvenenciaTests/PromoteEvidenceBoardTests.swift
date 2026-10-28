@@ -48,7 +48,7 @@ struct PromoteEvidenceBoardTests {
             entryID: "a",
             proposal: CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [
                 CatalogPromoteGraphAlignmentRow(
-                    subjectID: "a", kind: "person", target: "handle", handleID: "e1", handleRef: "PER-1",
+                    subjectID: "a", kind: "person", target: .handle, handleID: "e1", handleRef: "PER-1",
                     score: 5, assessment: "strong", reason: .agrees, reasonPropertyKey: "name", reasonPropertyOrigin: "provenencia",
                     alternatives: [], conflictWithFixed: false, possibleDuplicate: false
                 ),
@@ -246,7 +246,7 @@ struct PromoteEvidenceBoardTests {
             entryID: facts.first?.id ?? "",
             proposal: CatalogPromoteGraphAlignmentProposal(revision: 1, rows: facts.map { fact in
                 CatalogPromoteGraphAlignmentRow(
-                    subjectID: fact.id, kind: fact.kind.rawValue, target: "new", handleID: "", handleRef: "",
+                    subjectID: fact.id, kind: fact.kind.rawValue, target: .unplaced, handleID: "", handleRef: "",
                     score: 0, assessment: "none", reasonPropertyKey: "", reasonPropertyOrigin: "",
                     alternatives: [], conflictWithFixed: false, possibleDuplicate: false
                 )

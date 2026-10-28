@@ -540,10 +540,10 @@ func TestGracieObituaryGolden(t *testing.T) {
 	for _, sid := range [][]byte{res1, medHat} {
 		r := rowBySubject(p1, sid)
 		if r.Target == graphalign.TargetHandle {
-			t.Fatalf("place %s should be New or Skip, got %+v", sid, r)
+			t.Fatalf("place %s should have no target, got %+v", sid, r)
 		}
-		if r.Target != graphalign.TargetNew && r.Target != graphalign.TargetSkip {
-			t.Fatalf("place %s: %+v", sid, r)
+		if r.Target != "" {
+			t.Fatalf("place %s: %+v, want no target", sid, r)
 		}
 	}
 
@@ -627,7 +627,7 @@ func TestIsolatedSubjectScoresOnTheWalkScale(t *testing.T) {
 		{
 			name:  "a different first name is no candidate",
 			probe: nameVals("Mary", "Robins"), handle: nameVals("James", "Robins"),
-			wantTarget: graphalign.TargetNew, wantAssess: graphalign.AssessNone, wantReason: graphalign.ReasonNoMatch,
+			wantTarget: "", wantAssess: graphalign.AssessNone, wantReason: graphalign.ReasonUnplaced,
 		},
 		{
 			name:  "the same name alone is a weak match, never strong",
@@ -1050,7 +1050,7 @@ func TestCandidateLoserDoesNotNominate(t *testing.T) {
 	// and adds nothing: EVT-1 is offered only on its own properties.
 	row := rowBySubject(p, mid)
 	term := matchregistry.Default().AlignConfig().Subject.Weights[vocabkey.Event][vocabkey.PropertyEventType].Agree
-	if row.Target != graphalign.TargetSkip || row.Reason != graphalign.ReasonWeak || row.Via != nil {
+	if row.Target != "" || row.Reason != graphalign.ReasonUnplaced || row.Via != nil {
 		t.Fatalf("loser nominated a neighbor: %+v", row)
 	}
 	if len(row.Alternatives) != 1 || !bytes.Equal(row.Alternatives[0].HandleID, hMid) ||
@@ -1220,16 +1220,34 @@ func TestPossibleDuplicates(t *testing.T) {
 	tests := []struct {
 		name    string
 		handles []graphalign.Handle
+		fixed   []graphalign.Fixed
+		taken   string            // the subject that must read ReasonTaken, empty for none
 		want    map[string]string // subject → duplicate of
 	}{
 		{
 			name:    "the row that lost a handle names the row that took it",
 			handles: []graphalign.Handle{{ID: id("h-1"), Ref: "PER-1", Kind: "person", Values: nameVals("John", "Smith")}},
+			taken:   "s-b",
 			want:    map[string]string{"s-b": "s-a"},
 		},
 		{
-			name: "two New rows that match each other name each other",
+			name: "two unplaced rows that match each other name each other",
 			want: map[string]string{"s-a": "s-b", "s-b": "s-a"},
+		},
+		{
+			name:    "two unplaced rows that share a below-bar candidate name each other",
+			handles: []graphalign.Handle{{ID: id("h-1"), Ref: "PER-1", Kind: "person", Values: surnameVals("Smith")}},
+			want:    map[string]string{"s-a": "s-b", "s-b": "s-a"},
+		},
+		{
+			name:  "a row decided New and its look-alike name each other",
+			fixed: []graphalign.Fixed{{SubjectID: id("s-a"), Target: graphalign.TargetNew}},
+			want:  map[string]string{"s-a": "s-b", "s-b": "s-a"},
+		},
+		{
+			name:  "a row decided Skip is not checked",
+			fixed: []graphalign.Fixed{{SubjectID: id("s-a"), Target: graphalign.TargetSkip}},
+			want:  map[string]string{},
 		},
 	}
 	for _, tt := range tests {
@@ -1241,13 +1259,13 @@ func TestPossibleDuplicates(t *testing.T) {
 				},
 				Metas: nameMetas(),
 			}
-			p := alignWith(layer, graphalign.Canon{Handles: tt.handles}, nil, matchregistry.Default().AlignConfig())
+			p := alignWith(layer, graphalign.Canon{Handles: tt.handles}, tt.fixed, matchregistry.Default().AlignConfig())
 			for _, r := range p.Rows {
 				want, flagged := tt.want[string(r.SubjectID)]
 				if r.Flags.PossibleDuplicate != flagged || string(r.Flags.DuplicateOf) != want {
 					t.Fatalf("%s: flags %+v, want duplicate of %q", r.SubjectID, r.Flags, want)
 				}
-				if r.Target == graphalign.TargetSkip && flagged && r.Reason != graphalign.ReasonTaken {
+				if string(r.SubjectID) == tt.taken && r.Reason != graphalign.ReasonTaken {
 					t.Fatalf("%s: reason %q, want taken", r.SubjectID, r.Reason)
 				}
 			}
@@ -1329,24 +1347,25 @@ func TestRowReasons(t *testing.T) {
 	nameKey := vocabkey.PropertyKey(vocabkey.PropertyName)
 	sig := relLink("spouse")
 	tests := []struct {
-		name     string
-		layer    []graphalign.Subject
-		handles  []graphalign.Handle
-		bridges  []graphalign.Bridge
-		edges    []graphalign.CanonEdge
-		fixed    []graphalign.Fixed
-		subject  string
-		want     graphalign.Reason
-		wantProp vocabkey.PropertyKey
+		name       string
+		layer      []graphalign.Subject
+		handles    []graphalign.Handle
+		bridges    []graphalign.Bridge
+		edges      []graphalign.CanonEdge
+		fixed      []graphalign.Fixed
+		subject    string
+		wantTarget graphalign.Target
+		want       graphalign.Reason
+		wantProp   vocabkey.PropertyKey
 	}{
 		{
 			name:    "a property-only match names the agreeing property",
 			layer:   []graphalign.Subject{{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")}},
 			handles: []graphalign.Handle{{ID: id("h-a"), Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")}},
-			subject: "s-a", want: graphalign.ReasonAgrees, wantProp: nameKey,
+			subject: "s-a", wantTarget: graphalign.TargetHandle, want: graphalign.ReasonAgrees, wantProp: nameKey,
 		},
 		{
-			name: "a neighbor-reached candidate below the bar is weak",
+			name: "a neighbor-reached candidate below the bar suggests nothing",
 			layer: []graphalign.Subject{
 				{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")},
 				{ID: id("s-e"), Ref: "E", Kind: "event", Values: vals(termProp("event_type", "residence"))},
@@ -1358,23 +1377,23 @@ func TestRowReasons(t *testing.T) {
 			bridges: []graphalign.Bridge{bridge(id("s-a"), id("s-e"), partLink("subject", "residence"))},
 			edges:   []graphalign.CanonEdge{edge(id("h-a"), id("h-e"), partLink("subject", "residence"))},
 			fixed:   []graphalign.Fixed{{SubjectID: id("s-a"), HandleID: id("h-a")}},
-			subject: "s-e", want: graphalign.ReasonWeak,
+			subject: "s-e", wantTarget: "", want: graphalign.ReasonUnplaced,
 		},
 		{
-			name:    "a surname-only look-alike is offered as weak",
+			name:    "a surname-only look-alike is only an alternative",
 			layer:   []graphalign.Subject{{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")}},
 			handles: []graphalign.Handle{{ID: id("h-a"), Ref: "PER-1", Kind: "person", Values: surnameVals("Ames")}},
-			subject: "s-a", want: graphalign.ReasonWeak,
+			subject: "s-a", wantTarget: "", want: graphalign.ReasonUnplaced,
 		},
 		{
-			name:    "no candidate is no match",
+			name:    "no candidate suggests nothing",
 			layer:   []graphalign.Subject{{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")}},
-			subject: "s-a", want: graphalign.ReasonNoMatch,
+			subject: "s-a", wantTarget: "", want: graphalign.ReasonUnplaced,
 		},
 		{
 			name:    "no values is empty",
 			layer:   []graphalign.Subject{{ID: id("s-a"), Ref: "A", Kind: "person"}},
-			subject: "s-a", want: graphalign.ReasonEmpty,
+			subject: "s-a", wantTarget: "", want: graphalign.ReasonEmpty,
 		},
 		{
 			name: "a neighbor-reached row is via",
@@ -1389,13 +1408,22 @@ func TestRowReasons(t *testing.T) {
 			bridges: []graphalign.Bridge{bridge(id("s-a"), id("s-b"), sig)},
 			edges:   []graphalign.CanonEdge{edge(id("h-a"), id("h-b"), sig)},
 			fixed:   []graphalign.Fixed{{SubjectID: id("s-a"), HandleID: id("h-a")}},
-			subject: "s-b", want: graphalign.ReasonVia,
+			subject: "s-b", wantTarget: graphalign.TargetHandle, want: graphalign.ReasonVia,
 		},
 		{
 			name:    "a held row is decided",
 			layer:   []graphalign.Subject{{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")}},
 			fixed:   []graphalign.Fixed{{SubjectID: id("s-a"), Target: graphalign.TargetSkip}},
-			subject: "s-a", want: graphalign.ReasonDecided,
+			subject: "s-a", wantTarget: graphalign.TargetSkip, want: graphalign.ReasonDecided,
+		},
+		{
+			name: "a row whose handle another row took is taken",
+			layer: []graphalign.Subject{
+				{ID: id("s-a"), Ref: "PER-A", Kind: "person", Values: nameVals("John", "Smith")},
+				{ID: id("s-b"), Ref: "PER-B", Kind: "person", Values: nameVals("John", "Smith")},
+			},
+			handles: []graphalign.Handle{{ID: id("h-1"), Ref: "PER-1", Kind: "person", Values: nameVals("John", "Smith")}},
+			subject: "s-b", wantTarget: "", want: graphalign.ReasonTaken,
 		},
 	}
 	for _, tt := range tests {
@@ -1403,8 +1431,8 @@ func TestRowReasons(t *testing.T) {
 			layer := graphalign.Layer{Subjects: tt.layer, Bridges: tt.bridges, Metas: mergeMetas(nameMetas(), eventMetas())}
 			canon := graphalign.Canon{Handles: tt.handles, Edges: tt.edges}
 			row := rowBySubject(alignWith(layer, canon, tt.fixed, matchregistry.Default().AlignConfig()), id(tt.subject))
-			if row.Reason != tt.want || row.ReasonProperty != tt.wantProp {
-				t.Fatalf("reason %q / %+v, want %q / %+v", row.Reason, row.ReasonProperty, tt.want, tt.wantProp)
+			if row.Target != tt.wantTarget || row.Reason != tt.want || row.ReasonProperty != tt.wantProp {
+				t.Fatalf("target %q reason %q / %+v, want %q %q / %+v", row.Target, row.Reason, row.ReasonProperty, tt.wantTarget, tt.want, tt.wantProp)
 			}
 		})
 	}
@@ -1690,8 +1718,8 @@ func TestNewDuplicateCheckComparesDirectedNeighborsByEnd(t *testing.T) {
 	p := alignWith(layer, graphalign.Canon{}, nil, matchregistry.Default().AlignConfig())
 	for _, sid := range [][]byte{a, b} {
 		r := rowBySubject(p, sid)
-		if r.Target != graphalign.TargetNew || !r.Flags.PossibleDuplicate {
-			t.Fatalf("%s: target=%s duplicate=%v, want New and a possible duplicate", sid, r.Target, r.Flags.PossibleDuplicate)
+		if r.Target != "" || !r.Flags.PossibleDuplicate {
+			t.Fatalf("%s: target=%s duplicate=%v, want unplaced and a possible duplicate", sid, r.Target, r.Flags.PossibleDuplicate)
 		}
 	}
 
@@ -1808,7 +1836,7 @@ func TestBirthIsNeverProposedOnADeath(t *testing.T) {
 		}
 		canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "EVT-1", Kind: "event", Values: eventVals("death", 1850)}}}
 		row := rowBySubject(alignWith(layer, canon, nil, matchregistry.Default().AlignConfig()), s)
-		if row.Target != graphalign.TargetNew || row.Reason != graphalign.ReasonNoMatch || len(row.Alternatives) != 0 {
+		if row.Target != "" || row.Reason != graphalign.ReasonUnplaced || len(row.Alternatives) != 0 {
 			t.Fatalf("birth against a death: %+v", row)
 		}
 	})
@@ -1832,7 +1860,7 @@ func TestBirthIsNeverProposedOnADeath(t *testing.T) {
 		}
 		fixed := []graphalign.Fixed{{SubjectID: p, HandleID: hp}}
 		row := rowBySubject(alignWith(layer, canon, fixed, matchregistry.Default().AlignConfig()), e)
-		if row.Target != graphalign.TargetSkip || row.Assessment != graphalign.AssessNone || row.Reason != graphalign.ReasonWeak {
+		if row.Target != "" || row.Assessment != graphalign.AssessNone || row.Reason != graphalign.ReasonUnplaced {
 			t.Fatalf("birth under a death's signature: %+v", row)
 		}
 		if len(row.Alternatives) != 1 || !bytes.Equal(row.Alternatives[0].HandleID, hd) || row.Alternatives[0].Assessment != graphalign.AssessNone {
@@ -1848,7 +1876,7 @@ func TestBirthIsNeverProposedOnADeath(t *testing.T) {
 		}
 		canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "EVT-1", Kind: "event", Values: vals(et, bv)}}}
 		row := rowBySubject(alignWith(layer, canon, nil, matchregistry.Default().AlignConfig()), s)
-		if row.Target != graphalign.TargetSkip || row.Reason != graphalign.ReasonWeak || row.Assessment != graphalign.AssessNone ||
+		if row.Target != "" || row.Reason != graphalign.ReasonUnplaced || row.Assessment != graphalign.AssessNone ||
 			len(row.Alternatives) == 0 || !bytes.Equal(row.Alternatives[0].HandleID, h) || row.Alternatives[0].Assessment != graphalign.AssessNone {
 			t.Fatalf("undated birth against an undated birth: %+v", row)
 		}
@@ -1879,7 +1907,7 @@ func TestLifespanRulesOutAPerson(t *testing.T) {
 	}
 	t.Run("AC-1.4", func(t *testing.T) {
 		row := align(probe(1830))
-		if row.Target != graphalign.TargetNew || row.Reason != graphalign.ReasonNoMatch {
+		if row.Target != "" || row.Reason != graphalign.ReasonUnplaced {
 			t.Fatalf("died before the handle was born: %+v", row)
 		}
 	})
@@ -2085,8 +2113,8 @@ func TestOnlyCandidatesOrNominatedHandlesAreCompared(t *testing.T) {
 			Candidates: map[string][][]byte{},
 		}
 		row := rowBySubject(graphalign.Align(layer, canon, nil, cfg), id("s"))
-		if row.Target != graphalign.TargetNew || row.Reason != graphalign.ReasonNoMatch || len(row.Alternatives) != 0 {
-			t.Fatalf("want New no_match with no alternatives, got %+v", row)
+		if row.Target != "" || row.Reason != graphalign.ReasonUnplaced || len(row.Alternatives) != 0 {
+			t.Fatalf("want unplaced with no alternatives, got %+v", row)
 		}
 	})
 	t.Run("a handle reached through a placed link is nominated", func(t *testing.T) {
@@ -2117,16 +2145,16 @@ func TestOnlyCandidatesOrNominatedHandlesAreCompared(t *testing.T) {
 			t.Fatalf("want PER-1 via the birth row, got %+v", row)
 		}
 	})
-	t.Run("a same-name look-alike whose sex conflicts is Skip weak", func(t *testing.T) {
+	t.Run("a same-name look-alike whose sex conflicts has no target", func(t *testing.T) {
 		layer := graphalign.Layer{
 			Subjects: []graphalign.Subject{{ID: id("s"), Ref: "PER-S", Kind: "person", Values: withSex(nameVals("Ann", "Ames"), "male")}},
 			Metas:    sexMetas(),
 		}
 		canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: id("h"), Ref: "PER-1", Kind: "person", Values: withSex(nameVals("Ann", "Ames"), "female")}}}
 		row := rowBySubject(alignWith(layer, canon, nil, cfg), id("s"))
-		if row.Target != graphalign.TargetSkip || row.Reason != graphalign.ReasonWeak || row.Assessment != graphalign.AssessNone ||
+		if row.Target != "" || row.Reason != graphalign.ReasonUnplaced || row.Assessment != graphalign.AssessNone ||
 			len(row.Alternatives) == 0 || !bytes.Equal(row.Alternatives[0].HandleID, id("h")) {
-			t.Fatalf("want Skip weak with PER-1 as the alternative, got %+v", row)
+			t.Fatalf("want no target with PER-1 as the alternative, got %+v", row)
 		}
 	})
 }
@@ -2232,8 +2260,8 @@ func TestContestedRow(t *testing.T) {
 	event := cfg.Subject.Weights[vocabkey.Event][vocabkey.PropertyEventType].Agree + cfg.Subject.Weights[vocabkey.Event][vocabkey.PropertyDate].Agree
 	want(pr, "h", name-sexw.Conflict+cfg.Segment.OneSupport+cfg.Segment.OneCredit*event, true)
 	want(er, "he", event+cfg.Segment.OneSupport+cfg.Segment.OneCredit*(name-sexw.Conflict), false)
-	if r := rowBySubject(p, id("n")); r.Target != graphalign.TargetNew || r.Flags.Contested {
-		t.Fatalf("a New row is not contested: %+v", r)
+	if r := rowBySubject(p, id("n")); r.Target != "" || r.Flags.Contested {
+		t.Fatalf("an unplaced row is not contested: %+v", r)
 	}
 	if r := rowBySubject(p, id("k")); r.Target != graphalign.TargetSkip || r.Flags.Contested {
 		t.Fatalf("a decided Skip row is not contested: %+v", r)
