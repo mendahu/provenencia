@@ -180,6 +180,20 @@ func TestWordKeysReachPrefixes(t *testing.T) {
 			t.Errorf("index %q lookup %q, want equal and no prefix key", index, lookup)
 		}
 	})
+	t.Run("too many words", func(t *testing.T) {
+		rules := matchregistry.Default().Value
+		words := make([]string, rules.Names.MaxWords+1)
+		for i := range words {
+			words[i] = "Desiree" + strings.Repeat("a", i)
+		}
+		index, lookup := valuecompare.WordKeys(slGiven(strings.Join(words, " ")), rules)
+		if hasPrefix(index) || hasPrefix(lookup) {
+			t.Errorf("index %q lookup %q hold a prefix key", index, lookup)
+		}
+		if !slices.Contains(index, "w:desiree") || !slices.Contains(lookup, "w:desiree") {
+			t.Errorf("index %q lookup %q lack the word key", index, lookup)
+		}
+	})
 	t.Run("run-on word", func(t *testing.T) {
 		rules := matchregistry.Default().Value
 		index, lookup := valuecompare.WordKeys(slGiven(strings.Repeat("x", rules.Words.MaxSpellingLength+1)), rules)

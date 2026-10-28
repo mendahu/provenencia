@@ -134,6 +134,13 @@ type leftover struct {
 	family, first bool
 }
 
+// tooManyWords is whether a name has more words, generation words included,
+// than the pairing bounds: Compare answers CauseTooLong and wordKeys files no
+// prefix keys for it.
+func tooManyWords(words []nameWord, generation []string, r Rules) bool {
+	return len(words)+len(generation) > r.Names.MaxWords
+}
+
 func (n name) compare(a, b Value, r Rules) (Result, Detail) {
 	wa, ga := nameWords(a, r)
 	wb, gb := nameWords(b, r)
@@ -147,7 +154,7 @@ func (n name) compare(a, b Value, r Rules) (Result, Detail) {
 		return Result{Relation: Same, Similarity: 1}, Detail{Cause: CauseExact, Parts: sameParts(wa, wb, ga, gb, r.Words)}
 	}
 	// The pairing is exponential in the words: bound it.
-	if len(wa)+len(ga) > r.Names.MaxWords || len(wb)+len(gb) > r.Names.MaxWords {
+	if tooManyWords(wa, ga, r) || tooManyWords(wb, gb, r) {
 		return Result{Relation: Unknown}, Detail{Cause: CauseTooLong}
 	}
 	// (3) Generation words that share none.

@@ -59,7 +59,7 @@ func keyList(v Value, r Rules, words []string, extra []string) []string {
 // wordKeys: the name's words as nameWords reads them, so ignored parts and
 // generation words are never keys, plus the alias sets that hold a word.
 func (name) wordKeys(v Value, r Rules) (index, lookup []string) {
-	words, _ := nameWords(v, r)
+	words, generation := nameWords(v, r)
 	if len(words) == 0 {
 		return nil, nil
 	}
@@ -74,6 +74,9 @@ func (name) wordKeys(v Value, r Rules) (index, lookup []string) {
 		}
 	}
 	keys := keyList(v, r, texts, sets)
+	if tooManyWords(words, generation, r) {
+		return keys, slices.Clone(keys)
+	}
 	pi, pl := prefixKeys(words, r)
 	return sortedUnique(append(slices.Clone(keys), pi...)), sortedUnique(append(keys, pl...))
 }
