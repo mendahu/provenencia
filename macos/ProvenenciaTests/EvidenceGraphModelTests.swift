@@ -2158,7 +2158,7 @@ struct EvidenceGraphModelTests {
 
     /// A model whose Source has the given file-bearing Artifacts. The project folder does
     /// not exist, so every object is missing from disk.
-    private func fileModel(artifactIDs: [String]) async -> EvidenceGraphModel {
+    private func fileModel(artifactIDs: [String], relPath: String? = nil) async -> EvidenceGraphModel {
         let store = makeStore()
         let model = makeModel(store: store)
         await model.prepare()
@@ -2182,7 +2182,7 @@ struct EvidenceGraphModelTests {
                 source: source,
                 notes: [],
                 metadata: [],
-                artifacts: artifactIDs.map { artifact($0, label: "Page \($0)") },
+                artifacts: artifactIDs.map { artifact($0, label: "Page \($0)", relPath: relPath) },
                 credibility: nil
             )
         )
@@ -2203,6 +2203,19 @@ struct EvidenceGraphModelTests {
         model.selectFile("a")
         #expect(model.fileOpenError == nil)
         #expect(model.selectedFileArtifactID == "a")
+    }
+
+    @Test func openSelectedFileRefusesAScriptByItsTypeAndNamesTheFile() async throws {
+        defer { try? FileManager.default.removeItem(atPath: projectDir) }
+        let rel = "objects/aa/bb/aabb.sh"
+        try ArtifactFileFixtures.write(Data("x".utf8), projectDir: projectDir, relPath: rel, mode: 0o644)
+        let model = await fileModel(artifactIDs: ["a"], relPath: rel)
+        let row = try #require(model.fileRows.first)
+        model.openSelectedFile()
+        #expect(model.fileOpenError == L10n.ObjectOpen.refused(filename: row.displayFilename))
+        if case .fileOpenFailed = model.canvasNotice {} else {
+            Issue.record("canvasNotice \(String(describing: model.canvasNotice)), want .fileOpenFailed")
+        }
     }
 
     @Test func armingAToolClearsTheMissingFileError() async {

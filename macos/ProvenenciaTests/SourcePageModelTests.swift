@@ -193,6 +193,23 @@ struct SourcePageModelTests {
         #expect(model.pageError == L10n.ObjectOpen.refused(filename: "ART-X"))
     }
 
+    @Test func openRefusesAStoredScriptByItsTypeAndNamesTheFile() async throws {
+        defer { try? FileManager.default.removeItem(atPath: projectDir) }
+        let rel = "objects/aa/bb/aabb.sh"
+        try ArtifactFileFixtures.write(Data("x".utf8), projectDir: projectDir, relPath: rel, mode: 0o644)
+        let art = CatalogArtifact(
+            id: "art-3", ref: "ART-3", sourceID: sourceID, fileID: "file-3", label: "Script",
+            description: "",
+            file: CatalogFileRef(
+                id: "file-3", relPath: rel, originalFilename: "run.sh", mediaType: "text/plain", byteSize: 1
+            )
+        )
+        let model = makeModel(store: makeStore(artifacts: [art]))
+        await model.warmFromSession()
+        model.artifacts.open(art)
+        #expect(model.pageError == L10n.ObjectOpen.refused(filename: art.fileDisplayName))
+    }
+
     @Test func addNoteFailureSurfacesPageError() async {
         let store = makeStore()
         store.addSourceNoteError = CoreInvokeError.coded(
