@@ -567,9 +567,9 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-30 — Dialogs and VoiceOver behave safely
 
-**Ships.** In `PVConfirm` the danger tone makes Cancel the default action and drops Return from the destructive button. The graph form's Kept-linked Citation rows ask "Discard changes?" when the form is dirty and are disabled while it saves. `PVToast` posts its own announcement, and `PVCallout` takes an opt-in announcement for an error, which the graph form's and the Artifact card's save errors use. `PVSectionHeader` titles are headings. Updates `macos/App/DesignSystem/README.md`.
+**Ships.** In `PVConfirm` the danger tone makes Cancel the default action and drops Return from the destructive button. The graph form's Kept-linked Citation rows ask "Discard changes?" when the form is dirty and are disabled while it saves. `PVToast` posts its own announcement, and `PVCallout` takes an opt-in announcement for an error, which the graph form's and the Artifact card's save errors use, and so do the Source page error (`sources.page.error`) and the canvas file-open callout (`evidenceGraph.fileOpen.callout`), which show S12-23's Open refusal (S12-23 review UX-3). `PVSectionHeader` titles are headings. Updates `macos/App/DesignSystem/README.md`.
 **Not this PR.** Holding toasts longer while VoiceOver runs.
-**Check.** Bar outcome 14. Return in a graph delete confirm cancels; a renamed graph survives a click on a Kept-linked Citation until Discard; VoiceOver hears "Evidence graph added", including from a toast drawn outside the shared overlay.
+**Check.** Bar outcome 14. Return in a graph delete confirm cancels; a renamed graph survives a click on a Kept-linked Citation until Discard; VoiceOver hears "Evidence graph added", including from a toast drawn outside the shared overlay, and hears the refusal when Open refuses a file on the Source page or the canvas.
 **Context.** Audit A-13, A-17, A-18, A-21; working rules "A danger confirm's default action is Cancel", "A dirty form asks before a link inside it navigates away", "Kit components announce themselves"; map review K-11; board S12-D3 (GF-8 overridden); `add-ui-component`.
 
 #### S12-39 — Thumbnails for oversized JPEGs
