@@ -1,6 +1,6 @@
 # S11-47 — Promote suggests a record or nothing
 
-**Status:** Planned
+**Status:** Landed in #598 (2026-10-27)
 **Spike / slice:** Spike 11 · Slice 10 — Name candidates
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the row, its menu, its Updated badge and caption already exist; this PR changes which target a row opens on and one caption sentence)
