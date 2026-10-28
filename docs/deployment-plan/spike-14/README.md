@@ -2,7 +2,7 @@
 
 ## Status
 
-**Open.** Batch 1 (Event and Place pictures) cut 2026-10-27; no PR has landed. PR map: [`deployment-plan.md`](deployment-plan.md). Finished steps: [`completed.md`](completed.md).
+**Open.** Batch 1 (Event and Place pictures) cut 2026-10-27; S14-01 and S14-08 have landed. PR map: [`deployment-plan.md`](deployment-plan.md). Finished steps: [`completed.md`](completed.md).
 
 The first odds-and-ends spike (working rule "Even spikes are odds and ends"). It takes small features, UX refinements and fixes in batches, each a slice with its own Check. Batch 1 gives Events and Places a Picture Property, a gallery and a chosen thumbnail (parity with a Person's portrait), and makes depiction drawing rectangle-only. Batch 2 raises `segment.OtherSupport` so a thin name plus kinship clears Weak on Promote (S14-08).
 

@@ -249,7 +249,7 @@ func TestGetConclusionDetailCarriesItsHeader(t *testing.T) {
 	}
 }
 
-func TestGetConclusionDetailListsLikenesses(t *testing.T) {
+func TestGetConclusionDetailListsPictures(t *testing.T) {
 	t.Cleanup(func() { _ = catalogsession.CloseAll() })
 	dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
 	saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 100))

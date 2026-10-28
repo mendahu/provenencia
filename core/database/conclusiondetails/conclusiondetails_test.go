@@ -237,7 +237,7 @@ func TestForEntityFieldsFollowTheRecords(t *testing.T) {
 }
 
 // The Person page lists likenesses apart from its fields, earliest first.
-func TestForEntityLikenesses(t *testing.T) {
+func TestForEntityPictures(t *testing.T) {
 	f := newFixture(t)
 	register, census := f.source("Register"), f.source("Census")
 	a, b := f.personOn(register), f.personOn(census)
@@ -301,7 +301,7 @@ func TestForEntityPlacePictures(t *testing.T) {
 }
 
 // A negative of the same picture is not a gallery record, so no tile opens it.
-func TestForEntityLikenessesSkipNegatives(t *testing.T) {
+func TestForEntityPicturesSkipNegatives(t *testing.T) {
 	f := newFixture(t)
 	album, census, register := f.source("Album"), f.source("Census"), f.source("Register")
 	sn, sb, sa := f.personOn(album), f.personOn(census), f.personOn(register)
