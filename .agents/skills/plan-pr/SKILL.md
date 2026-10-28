@@ -121,6 +121,14 @@ This is most of the work. A plan built from the docs alone is a guess.
   now: the registry that owns it, the layer that owns it, what it makes dead,
   which later PR in the map touches it next. The answers fill **Codebase fit**.
   The reviewer will ask the same questions; answer them first.
+- Find the **edges** of every rule, comparison or algorithm the PR adds or
+  changes. Read the code the new case flows through (its loops, maps, lookups,
+  recursion and caches) and write down what that code assumes; a new kind of
+  input reaching old code is where an unstated assumption breaks. Run a rule
+  that a table, seed or configuration drives over the whole shipped table and
+  look at what it produces, not only at the examples. Note what each input
+  contributes to a result, so you can say what is lost when it is decided,
+  excluded or deleted. The answers fill **Edges**.
 - Load the **skills and rules** for the layers touched and note the rules that
   bind this PR. The implementer loads them too; name them in the header.
 
@@ -150,7 +158,8 @@ List every point where an implementer would otherwise choose. Typical ones:
 which package owns the logic, Go vs Swift, new table vs column vs derived
 read, migration vs `Install`, new FFI method vs extending one, sync vs async,
 session cache vs catalog, which kit component, error code, copy, test layer,
-what happens on empty / failure / huge input.
+what happens on empty / failure / huge input, on an input the app did not
+write, and on an input that is decided, excluded or deleted meanwhile.
 
 - **Technical calls: make them.** Write each as a Decision with the reason and
   the alternative you rejected. Follow the domain docs, the working rules, and
@@ -230,7 +239,8 @@ Do not mark a plan `Planned` until each line is true. Fix the plan, not the gate
 - [ ] Codebase fit lists every new thing the PR adds, with the closest existing code; Deletes and Next adds are filled
 - [ ] Deletes names every callee whose last caller the PR removes and every mechanism the PR replaces
 - [ ] Every Decision checked against the working rules, the Skills to load and Rules that bind; each contradiction is in Rules this plan bends with the user's answer
-- [ ] Reach and Scale are filled, or None with one clause why
+- [ ] Reach, Scale and Edges are filled, or None with one clause why
+- [ ] A budget the PR sets or leans on is measured at the map's Scale, not only on a smaller fixture
 - [ ] The DoD carries the sweep line; a PR that changes what an action covers lists its old-scope copy under Strings
 - [ ] python3 scripts/check-plan-docs.py <plan> reports no errors
 ```

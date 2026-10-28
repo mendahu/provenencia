@@ -4,6 +4,8 @@ A Source can be copied to start a sibling one in a single step, and a big Source
 
 **Slices 5–7 fix what the [app-health audit](app-health-audit.md) of 2026-10-27 found** in the app as slices 1–4 left it: its High and Medium items, grouped into PRs by the files or the behavior they share (user, 2026-10-27). Each scope entry names its audit items (`A-n`); the audit doc holds their evidence and fixes. Slice 5 also makes an Artifact able to stand in no graph, so a new page can start its own graph, and slice 6 gives oversized JPEGs a thumbnail through a small Go decoder of our own.
 
+**Slices 5b and 6b fix what the [second app-health audit](app-health-audit-2.md) of 2026-10-28 found**, with Spike 11's matching rebuild and Promote flow read closest: its High items in slice 5b, after slice 5, and its Medium items in slice 6b, after slice 6 (user, 2026-10-28). Their items are `B-n`.
+
 **A brief covers one view.** A PR that changes chrome waits on a brief for each view it touches. Briefs and PR plans are written just before the PR ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md), [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md)). A bugfix or a behavior change with no new chrome is not gated.
 
 **Spike 11 runs in parallel.** It is rebuilding Promote's matching and its loaders. The PRs here that touch the same code name the Spike 11 PRs they wait on in **Depends on**. A PR plan written before those land must say so and stop at `Blocked — on S11-NN`.
@@ -35,6 +37,12 @@ Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
 13. **One place for each job.** Every audited write returns its effects; cache keys, search kinds and the canvas's tool state each have one declared place, pinned by tests; FakeStore re-implements no engine rule; a new Swift file needs no hand-written project entry; the docs, skills and kit README describe the code as it is.
 14. **Keyboard and VoiceOver are safe on graph work.** Return in a delete confirm cancels; a dirty graph form asks before a link inside it closes it; VoiceOver hears a graph save or its failure and can jump to the Evidence graphs section by heading; counts read "1 subject", not "1 subjects".
 15. **Every JPEG gets a thumbnail.** An 11,000 × 18,000 scan, over the 64-megapixel decode budget, shows a thumbnail instead of the missing-image glyph and can be used as a cover, through Go code that a Windows build reuses.
+16. **Names fold to the formal name and never crash.** A person recorded as B., Bill and William, or as Ann, Anna and Hannah, files, reopens and shows one name without a crash; Charlotte with Chick shows Charlotte, and John with Ivan shows John. (Added 2026-10-28 for slice 5b.)
+17. **A decision never hides a conflict.** Setting a Source person to New or Skip, or another row taking a record, never files that person's birth or death onto someone else's; the row stays Contested.
+18. **A crafted project can't stall or crash matching.** A name holding the key's separators, an alias table with 100,000 sets for one name, or a family with thousands of duplicate parent links opens and proposes in bounded time without a crash.
+19. **Promote costs what its Source costs.** At the **Scale** below, the first proposal after open, the proposal after a Done or after an edit elsewhere, a decision on a Source of 100 new people, and the evidence of a record with 100 member Sources each stay within budget; quick decisions run one proposal at a time. (Added 2026-10-28 for slice 6b, as are 20 and 21.)
+20. **The Promote page recovers, speaks, and files what it shows.** A Subject deleted in another window names its row and the page proposes again without losing other decisions; errors come into view when they appear and VoiceOver hears them; every New row's claim can be graded and argued; pins match the sheet; the footer's connection count is what Done files.
+21. **One spelling is one spelling.** José typed or pasted, É. and Émile, Hélène and Lena, Jr. and Junior compare as one; search finds Søby from "Soby".
 
 **Scale.** A census Source with 60 household graphs and 300 Citations on one page; a project of 3,000 Sources, 37,000 Subjects and 92,000 Observations, with 200,000 audit rows. Added 2026-10-27 for slices 5–7 from the audit's measurements; their plans write fan-out against it (`plan-spike` "Scale").
 
@@ -57,8 +65,10 @@ Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
 | [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) — "One media type for the stored image", "Raster byte limit (SEC-3)" and "The PDF cut reopens its file" (user, 2026-10-27) | S12-27, S12-39, S12-28 | — |
 | `ideas/large-jpeg-thumbnails.md`, moved here as [`oversized-jpeg-thumbnails.md`](oversized-jpeg-thumbnails.md): a portable, purpose-built decoder instead of macOS ImageIO (user, 2026-10-27) | S12-39 | — |
 | [Map review](deployment-plan.review.md) of slices 5–7 (2026-10-27) | S12-20 – S12-39 | — |
+| [App-health audit 2](app-health-audit-2.md) (2026-10-28): the High and Medium items, B-1 – B-24 | S12-40 – S12-48; B-7's guidance fixed with the audit, its FakeStore code in S12-35 | S12-D8 |
+| [`ideas/name-index-on-commit.md`](../../ideas/name-index-on-commit.md) and [`ideas/narrower-canon-walk.md`](../../ideas/narrower-canon-walk.md) — the fixes for audit 2 B-8 (user, 2026-10-28) | S12-43 | — |
 
-**Back in the ideas folder** — [`ideas/source-structure-later.md`](../../ideas/source-structure-later.md): nested Sources, derivation links, named templates, per-graph credibility, layered citation output. [`ideas/archive/graph-focus-views.md`](../../ideas/archive/graph-focus-views.md) (archived 2026-10-24): focus views for one large graph, including the "layers or filters" half of the dense-graphs dogfood note. [`ideas/artifact-outside-graph-marker.md`](../../ideas/artifact-outside-graph-marker.md): naming, in a graph delete's confirm, the Artifacts it leaves in no graph. The audit's Low items are listed, not scheduled, in [`app-health-audit.md`](app-health-audit.md#not-scheduled).
+**Back in the ideas folder** — [`ideas/source-structure-later.md`](../../ideas/source-structure-later.md): nested Sources, derivation links, named templates, per-graph credibility, layered citation output. [`ideas/archive/graph-focus-views.md`](../../ideas/archive/graph-focus-views.md) (archived 2026-10-24): focus views for one large graph, including the "layers or filters" half of the dense-graphs dogfood note. [`ideas/artifact-outside-graph-marker.md`](../../ideas/artifact-outside-graph-marker.md): naming, in a graph delete's confirm, the Artifacts it leaves in no graph. The audits' Low items are listed, not scheduled, in [`app-health-audit.md`](app-health-audit.md#not-scheduled) and [`app-health-audit-2.md`](app-health-audit-2.md#not-scheduled).
 
 ## Working rules
 
@@ -151,7 +161,17 @@ Decisions on the [app-health audit](app-health-audit.md) and its [map review](de
 - **FakeStore is a seeded fake, not a second engine.** It returns seeded rows and scripted effects and errors (`nextWriteEffects`, its `…Error` hooks, and impact maps). S12-35 removed graph list order, Citation membership, WriteEffects composition, and graph / Copy Source refusals from the fake. A store method a PR adds follows that scripting shape and adds none of those rules; leftover synthesizers, vocabulary `CoreInvokeError`s, and local sorts outside that set are not the pattern new methods copy. Engine rules stay tested in Go (map review K-9, user 2026-10-27, option a). Binds S12-22, S12-25, S12-35 and every PR that adds a store method.
 - **The cache-key descriptor comes first in slice 6.** S12-34 lands before S12-25 and S12-26, so the progress patch, the graph list by Source and the Sources-list insert are entries in its `refresh` and `patch` slots, not hand-written session functions (map review K-1, user 2026-10-27). Binds S12-25, S12-26, S12-34.
 - **Oversized JPEGs get a thumbnail from a reduced decode of our own.** A JPEG over `maxDecodePixels` is decoded at 1/8 scale from its DC coefficients only, then scaled and encoded as today; JPEGs within the budget keep the standard library, and other formats over it stay refused. It is pure Go, with no C library and no platform API, so a Windows build reuses it (user, 2026-10-27). It reads untrusted bytes, so it is bounded and fuzzed ([design](oversized-jpeg-thumbnails.md)). Binds S12-39.
-- **The spike closes when every slice has landed.** S12-99 waits on slices 5–7, the refactors included.
+- **The spike closes when every slice has landed.** S12-99 waits on slices 5–7, 5b and 6b, the refactors included.
+
+### Audit 2 fixes (slices 5b and 6b)
+
+Decisions on the [second app-health audit](app-health-audit-2.md) (user, 2026-10-28, unless a rule says otherwise). They bind S12-40 – S12-48.
+
+- **Fix the second audit's High and Medium items, grouped by shared domain or files.** High items go in slice 5b, after slice 5; Medium items in slice 6b, after slice 6. Two items share a PR when they share a domain function or the files they change, so the implementation and review rounds are fewer. Each PR names its items (`B-n`); `plan-pr` reads them in the audit doc and re-checks each against the code, because its line numbers are from 3cc609c. The Low items are [not scheduled](app-health-audit-2.md#not-scheduled); a plan pulls one in only with the user's OK.
+- **Proposals are liberal; the researcher decides.** Promote surfaces a candidate on forgiving evidence: a prefix pair of two full names (Joseph / Josephine), a namesake inside the lifespan slack, an exact tie placed on the lowest ref. What files is the researcher's choice. No PR in slices 5b and 6b narrows what the comparers accept. Spike 11's dogfood bar 4 still holds: a row whose comparisons include a conflict shows Contested, whatever its band, which S12-41 restores for decided and held neighbors. Also a Spike 11 working rule.
+- **A name that heads its own nickname set never folds into another set's head** unless `nicknameDirections` names the pair (audit 2 B-3, option a). Correct folds not yet reviewed, such as Jack → John (`jack` heads `{jack, jackie}`), stop until a Direction is added; until then the Person page shows both names. Binds S12-40.
+- **Matching bounds come from the registry** (planner, 2026-10-28). The bounds S12-42 adds (alias sets per token and per table, implied links per middle person) are `matchregistry` values with knob inventory rows, passed to their layer as `kinship.MaxPivotEnd` is, and a catalog table over a bound is refused on load as `nameformats.LoadID` refuses a bad weight. Binds S12-42.
+- **Budgets at the map's Scale** (planner, 2026-10-28). S12-43's budget subtests grow the S11-21 fixture to the **Scale** line along the axis that grows (catalog size, members per record, would-be-new rows), beside the existing budgets; a budget met only on the smaller fixture is not evidence. Binds S12-43.
 
 ## PR map
 
@@ -182,6 +202,9 @@ Decisions on the [app-health audit](app-health-audit.md) and its [map review](de
 | S12-38 | Add an Artifact without a graph; the card saves links in one write | 5 | A-3, A-8 Swift half and the user's fixes: graph boxes on every Source with a graph, none allowed; a card in no graph says so; one card write and preflight; a new graph starts with the Artifacts in no graph checked; the link and unlink RPCs go | S12-D7 | S12-22, S12-D7 | [Plan](prs/S12-38-artifact-without-graph.md) | Landed #605 |
 | S12-23 | The app opens only safe files and links | 5 | A-1, A-5: stored types filtered on read; Open refuses a type that could run a program and opens the rest by type; metadata links open through Go's `open_href` | — | — | [Plan](prs/S12-23-safe-files-and-links.md) | Landed #608 |
 | S12-24 | Audit history: indexed note authors, audited pointer resets | 5 | A-4, A-22: an index on `audit_changes(entity_id)` (migration); cover and portrait pointer resets released and audited through `deleteimpact` | — | — | [Plan](prs/S12-24-audit-index-and-pointer-resets.md) | Landed #610 |
+| S12-40 | Name folds keep the formal name and never crash | 5b | B-1, B-3: the reconciler resolves each value through the fold graph, so folds that do not chain and fold cycles cannot panic; a name that heads its own nickname set folds only where `nicknameDirections` names the pair; invariant tests run with the product alias tables; `CacheVersion` bump; Go only | — | — | — | Scoped |
+| S12-41 | Graph alignment keeps the conflicts it knows | 5b | B-2: a held-New neighbor, or one whose canon record another row holds, compares Apart, and a held-Skip neighbor Unplaced, so a one-cardinality conflict survives a decision; an owner change re-queues the pairs it reaches; seeded random invariants; Go only | — | — | — | Scoped |
+| S12-42 | Matching survives a crafted project | 5b | B-4, B-5, B-6: unambiguous name keys and fuzz targets for compare and keys; alias tables validated on load against registry bounds; grandparent chains share their edges and are bounded per middle person; Go only | — | — | — | Scoped |
 | S12-25 | Writes name only the graphs they move | 6 | A-7, A-16: Citation and Artifact effects narrowed; one keyed `reads` effect replaces `citation_sources` and carries progress only on writes that change counts, through S12-34's `refresh` slot; `EvidenceGraphProgress.source_id` dropped | — | S12-34 | [Plan](prs/S12-25-writes-name-graphs-they-move.md) | Planned |
 | S12-26 | Reload only what moved, only when it is on screen | 6 | A-9, A-10, A-25: the graph list re-read per Source through a `reads` entry; Add Source inserts its row; hidden graph and Source page keys go stale and are not settled until reloaded; the Sources list sorts once per change | — | S12-25 | — | Scoped |
 | S12-27 | File work before the catalog session | 6 | A-24 and map review K-4: one staged-object type stages ingest, depiction images and thumbnails outside `catalogsession.Do`; handlers stage before the session; one constant for the stored-image type; Go only | — | — | — | Scoped |
@@ -194,6 +217,12 @@ Decisions on the [app-health audit](app-health-audit.md) and its [map review](de
 | S12-34 | One descriptor per cache key | 6 | A-30: each `CatalogQueryKey.Kind` has one typed descriptor (value, loader, spec, invalidation, a `patch` and a `refresh(ids)` slot), with a test that every kind has one; first in slice 6 | — | — | [Plan](prs/S12-34-one-descriptor-per-cache-key.md) | Landed #614 |
 | S12-35 | FakeStore is a seeded fake | 6 | A-15 and the user's pulls from `shared-list-helpers`: the fake's engine rules (order, graph membership, effects resolution, refusals) give way to seeded and scripted values; FakeStore keys through `FieldSlug`; `FieldSlug` and `ProjectSlug` fixtures pinned by Go | — | — | [Plan](prs/S12-35-fakestore-seeded-fake.md) | Landed #617 |
 | S12-39 | Thumbnails for oversized JPEGs | 6 | A pure-Go reduced decoder in `core/raster` reads only DC coefficients, so a JPEG over the 64-megapixel budget gets a 1/8-scale image to thumbnail; bounded and fuzzed; a byte limit inside `core/raster`; Go only | — | — | — | Scoped |
+| S12-43 | A proposal costs what its Source costs | 6b | B-8, B-9, B-11: the shortlist index kept current on commit and only the Subjects it reaches re-ranked; profiles and member values in per-handle node memos; member graphs read without evicting the page's graph; a bounded canon walk; would-be-new rows shortlisted among themselves; budgets at the map's Scale; Go only | — | S11-52 | — | Scoped |
+| S12-44 | The Promote page recovers and speaks | 6b | B-12, B-13, B-16, B-17: one proposal in flight; decided pairs whose Subject is gone dropped before proposing, the failing row named, `promote.invalid` at Done proposes again; errors scrolled into view and announced, a failed load retried; the "start as Skip" line goes | — | S12-30 | — | Scoped |
+| S12-45 | The evidence sheet files what it shows | 6b | B-14, B-15, B-18: an opened, untouched row keeps Go's default pins; a New row opens its sheet from the assessment column; the sheet's fields have spoken names; Swift only | S12-D8 | S11-34, S12-D8 | — | Scoped |
+| S12-46 | Names compare the same however they are written | 6b | B-19, B-20, B-22: initials and aliases tried on folded tokens; NFC at `Same`, compatibility forms and format characters folded at `Equivalent`, mirrored in Swift `TextMatch`; one generation-token table; `CacheVersion` and `ProjectionVersion` bumps | — | — | — | Scoped |
+| S12-47 | Search finds every spelling; a join reprojects only what changed | 6b | B-21, B-10: the search index carries the folded form FTS retrieves on (migration); a join reprojects a root's dependents only when its visible header changed; Go only | — | — | — | Scoped |
+| S12-48 | Promote's wire says what Go decided | 6b | B-23, B-24: the proposal says whether each connection will file and why not, and Swift's filing rule goes; Promote bands and name part types typed in `Platform/` with guard rows | — | S11-29 | — | Scoped |
 | S12-36 | Search kinds own their columns and locations | 7 | A-31: `KindSpec` names each field's column and carries its location builder; `Reproject` and `RebuildAll` read a projector table; a completeness test; Go only | — | — | — | Scoped |
 | S12-37 | Canvas tool and sheet state as enums | 7 | A-32: one tool enum and one sheet enum replace the canvas's flags | — | S12-21 | — | Scoped |
 | S12-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
@@ -210,7 +239,9 @@ Decisions on the [app-health audit](app-health-audit.md) and its [map review](de
 | [S12-D5](design/archive/S12-D5-sources-list-graph-tokens.md) | Sources list — graph buttons | **S12-14** | A three-column row (Source, Type, Evidence graph) with a button per graph carrying its status badge; the count line on the Source page's graph cards; the Status filter's Promoted label. Board agreed 2026-10-26, redrawn 2026-10-27 (first briefed as an accordion, then the tokens under each Source's title) |
 | [S12-D7](design/archive/S12-D7-artifact-in-no-graph.md) | Source page — Artifacts section: an Artifact in no graph | **S12-38** | The card's "Not in an evidence graph" line and its link action, and the graph boxes on a one-graph Source. Written 2026-10-28; board agreed 2026-10-28 |
 
-Slices 5–7 need one brief, S12-D7. The graph name in the canvas header is refused, and the canvas's error and missing-graph states reuse its existing callout (user, 2026-10-27).
+| S12-D8 | Promote page — rows: a New row's sheet opener | **S12-45** | The assessment column of a row set to New opens the evidence sheet, where its claim's confidence and argument are set; starts from the S11-D1 rows board and S11-34's hover. Written just before S12-45 |
+
+Slices 5–7 need one brief, S12-D7. The graph name in the canvas header is refused, and the canvas's error and missing-graph states reuse its existing callout (user, 2026-10-27). Slice 6b needs one, S12-D8.
 
 ## Slices
 
@@ -265,6 +296,15 @@ SLICE 5 — Audit fixes: High
          Citation cannot leave its last graph; a hostile file type or link is
          refused; a Source page opens without scanning history.
 
+SLICE 5b — Audit 2 fixes: High
+  S12-40  Name folds keep the formal name and never crash
+  S12-41  Graph alignment keeps the conflicts it knows
+  S12-42  Matching survives a crafted project
+  Check: bar outcomes 16–18; a project holding B., Bill and William opens and
+         shows William; a Source person set to New keeps their birth off
+         another person's birth, Contested; a 100,000-set alias table and a
+         forged name key neither hang nor crash open or Promote.
+
 SLICE 6 — Audit fixes: Medium
   S12-34  One descriptor per cache key
   S12-35  FakeStore is a seeded fake
@@ -279,6 +319,17 @@ SLICE 6 — Audit fixes: Medium
          refreshes only its graphs; Return in a delete confirm cancels; the
          Promote toast reads "Filed 1 subject".
 
+SLICE 6b — Audit 2 fixes: Medium
+  S12-43  A proposal costs what its Source costs
+  S12-44  The Promote page recovers and speaks
+  ✎ S12-D8 ──▶ S12-45  The evidence sheet files what it shows
+  S12-46  Names compare the same however they are written
+  S12-47  Search finds every spelling; a join reprojects only what changed
+  S12-48  Promote's wire says what Go decided
+  Check: bar outcomes 19–21; at 37,000 Subjects a proposal after Done stays in
+         budget; a Subject deleted in another window names its row and the page
+         recovers; a New row's claim is graded; "Soby" finds Søby.
+
 SLICE 7 — Structural debt
   S12-31  Xcode synchronized folders
   S12-32  Promote and Source writes return their effects
@@ -291,7 +342,7 @@ SLICE 7 — Structural debt
 S12-99 — Dogfood close / docs
 ```
 
-Which PRs can run in parallel: slice 1 is independent of slices 2 and 3 and can ship first. After S12-03, S12-04, S12-06 and S12-07 can run in parallel. After S12-08, S12-09, S12-10, S12-11, S12-14 and S12-15 are independent of each other. S12-19 depends on nothing and goes before S12-15. In slices 5–7, every PR with no arrow below can run in parallel. Where two PRs edit the same code, the preferred merge order is: S12-22 before S12-25, so its new writes follow the narrowed effects; S12-34 and S12-35 first in slice 6 (map review K-1 and K-9); S12-34 before S12-32 and S12-33, which shrink its invalidation sets; S12-27 before S12-39, so the reduced decode runs outside the session. S12-38 before S12-30, which then opts the card's and the graph form's rewritten error callouts into announcing (map review K-11). S12-31 needs a Mac and lands best first, before the other slice 5–7 PRs add Swift files (map review K-15).
+Which PRs can run in parallel: slice 1 is independent of slices 2 and 3 and can ship first. After S12-03, S12-04, S12-06 and S12-07 can run in parallel. After S12-08, S12-09, S12-10, S12-11, S12-14 and S12-15 are independent of each other. S12-19 depends on nothing and goes before S12-15. In slices 5–7, every PR with no arrow below can run in parallel. Where two PRs edit the same code, the preferred merge order is: S12-22 before S12-25, so its new writes follow the narrowed effects; S12-34 and S12-35 first in slice 6 (map review K-1 and K-9); S12-34 before S12-32 and S12-33, which shrink its invalidation sets; S12-27 before S12-39, so the reduced decode runs outside the session. S12-38 before S12-30, which then opts the card's and the graph form's rewritten error callouts into announcing (map review K-11). S12-31 needs a Mac and lands best first, before the other slice 5–7 PRs add Swift files (map review K-15). In slices 5b and 6b, S12-40 goes first: B-1 can crash an existing project on open. Where they edit the same code, the preferred merge order is S12-40 before S12-42 and S12-46 (the alias index, the fold, `CacheVersion`), S12-42 before S12-46 (the name key), S12-46 before S12-47 (the folded form the index carries), S12-47 before S12-36 (the search projection), and S12-44 before S12-32 (Promote's Done handler).
 
 ### Dependencies at a glance
 
@@ -317,11 +368,16 @@ S12-34 ──▶ S12-25 ──▶ S12-26
 S12-23 ──▶ S12-28
 S12-32 ──▶ S12-33
 S12-21 ──▶ S12-37
-slices 1–7 ──▶ S12-99
+S12-30 ──▶ S12-44
+S12-D8 ──▶ S12-45
+slices 1–7, 5b, 6b ──▶ S12-99
 
 Spike 11:
 S11-14, S11-15 ──▶ S12-07
 S11-17, S11-25, S11-26, S11-27 ──▶ S12-09
+S11-52 ──▶ S12-43
+S11-34 ──▶ S12-45
+S11-29 ──▶ S12-48
 ```
 
 ---
@@ -514,6 +570,29 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Check.** Bar outcome 12, second half; the A-22 probes find the `source` and `canonical_entity` changes in the delete's revision.
 **Context.** Audit A-4, A-22; map review K-17; [`audit-revision-history.md`](../../audit-revision-history.md), [`catalog-deletes.md`](../../catalog-deletes.md); `add-catalog-migration`, `add-catalog-delete`, `add-catalog-model`.
 
+### Slice 5b — Audit 2 fixes: High
+
+#### S12-40 — Name folds keep the formal name and never crash
+
+**Ships.** `foldValues` resolves each value through the fold graph to a maximal value it can reach (best supported, then best ranked); a value with no reachable target, or on a cycle, is its own root (B-1). `AliasIndex.Expands` treats a name that heads any set as formal: it folds only where a Direction names the pair (B-3). `TestReconcileNamesInvariants` runs with the product alias tables over a pool of nicknames, initials, prefixes and accented forms in one- to three-word units, asserting no panic and no root with a target; table rows for the B-1 chains and the B-3 examples, with Jack / John as the known cost. `CacheVersion` bump and its pin. `conclusion-reconciliation.md`, `seeded-vocabulary.md` and `add-seeded-vocabulary` say what a head is. Go only.
+**Not this PR.** The FFI panic recover (S12-28); accented alias lookups (S12-46); adding unreviewed folds to `nicknameDirections` beyond the cases above (the user, as dogfood finds them).
+**Check.** Bar outcome 16. A project that holds B., Bill and William opens after the bump and shows William; Charlotte, Charlotte, Chick shows Charlotte; Jack and John show both names.
+**Context.** Audit 2 B-1, B-3; working rules "A name that heads its own nickname set never folds into another set's head", "Proposals are liberal; the researcher decides"; Spike 11's S11-28 plan (D-1a, Appendix A) and S11-45's fold; `add-match-rule`, `add-seeded-vocabulary`. First in slice 5b.
+
+#### S12-41 — Graph alignment keeps the conflicts it knows
+
+**Ships.** In `graphalign` `segments`, a held-New neighbor, and an unplaced neighbor whose corresponding canon neighbor another Subject holds, compare `Apart` on the first corresponding canon link, so a one-cardinality link subtracts its conflict; a held-Skip neighbor compares `Unplaced` on its values (B-2). When `place` or `release` changes a record's owner, the candidates whose links reach it are re-scored and re-queued. Tests: the B-2 fixtures in `TestHeldNewAndSkipDecisions` and `TestAlignInvariants`, a fixed-seed random invariant (c) over small graphs with implied links, and a `promotealign` test through Done that the other person's birth keeps one subject. [`promote-graph-alignment.md`](../../promote-graph-alignment.md) says a decided or held neighbor still counts. Go only.
+**Not this PR.** Swift's weak-row draft (B-26); narrowing what the comparers accept (refused: "Proposals are liberal").
+**Check.** Bar outcome 17: with Ann Ames set to New, her 1817 birth stays off Mary Jones's 1817 birth and reads Contested; the random invariant passes over its seeds. Scale: the re-queue touches only the pairs whose links reach the changed record.
+**Context.** Audit 2 B-2; Spike 11 dogfood bar 4 and its layer 6 procedure ([`comparison-layers.md`](../spike-11/comparison-layers.md#layer-6-procedure)); S11-16 plan D-6, D-7; `add-match-rule`.
+
+#### S12-42 — Matching survives a crafted project
+
+**Ships.** Name keys are unambiguous (roles and tokens escaped or length-prefixed); equal keys compare the role and word lists themselves; `positionalParts` refuses lists of unequal length (B-4). Native fuzz targets for `Compare`, `Key` and `WordKeys`. Alias tables are validated on load against registry bounds on sets per token and on sets and tokens per table, and a table over a bound is refused (B-5). `kinship` grandparent chains carry each distinct pair's edges once, and the implied links per middle person are bounded by a `kinship.Rules` value (B-6). Knob inventory rows for the new bounds; budget tests with a hostile alias table at the map's Scale and with D duplicate parent links × C children; the cache-version bumps a key change needs. Go only.
+**Not this PR.** The word bound's order and the `w:` and `a:` key bounds (B-31); length caps on catalog text (audit L-10); the FFI panic recover (S12-28).
+**Check.** Bar outcome 18. The B-4 probe neither panics nor scores Same; the 100,000-set table is refused on open in bounded time; 8,000 duplicate parent edges derive in linear time and memory.
+**Context.** Audit 2 B-4, B-5, B-6; working rule "Matching bounds come from the registry"; `nameformats.LoadID` (load-time validation to copy); `kinship.MaxPivotEnd` (the bound's precedent); `add-match-rule`. After S12-40, which edits the alias index and bumps `CacheVersion` first.
+
 ### Slice 6 — Audit fixes: Medium
 
 #### S12-34 — One descriptor per cache key
@@ -578,6 +657,50 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Not this PR.** EXIF orientation; a larger cover derivative; other formats over the budget; the Mac viewer (S12-28).
 **Check.** Bar outcome 15. A JPEG just over 64 MP, built in the test from a lazy image with no full buffer, thumbnails to a 256 px long edge; a header-only JPEG declaring a huge frame is refused without allocating it; small baseline and progressive JPEGs decode within tolerance of the standard library's decode scaled by 8; the fuzz seeds pass; PNG and GIF header bombs still return `ErrTooLarge`; an input over the byte limit is refused before any decode.
 **Context.** Working rule "Oversized JPEGs get a thumbnail from a reduced decode of our own"; [design](oversized-jpeg-thumbnails.md); `core/raster` (`EncodeJPEG`, `decode`, `maxDecodePixels`; the decoder runs under its caller's `Slot` and takes none itself, map review K-24), `core/derivatives/ensure.go`, `api/ffi/handlers/thumbnails.go`; ITU-T T.81. Preferred after S12-27. If the plan runs past about ten steps, progressive support splits into its own PR.
+
+### Slice 6b — Audit 2 fixes: Medium
+
+#### S12-43 — A proposal costs what its Source costs
+
+**Ships.** A handle commit keeps the shortlist index current (the dirty ids removed and added again, the generation stable) and re-ranks only the Subjects whose lookup keys meet a changed handle's old or new keys ([idea](../../ideas/name-index-on-commit.md)). Profiles and an evidence request's member values are per-handle `graphcache` node memos that a commit drops only for the handles it names; member graphs are read for the request without entering the LRU, so the proposing Source's graph stays loaded (B-8, B-9). The canon walk stops where alignment can use it ([idea](../../ideas/narrower-canon-walk.md)). Would-be-new rows are shortlisted among themselves before the possible-duplicate compare, and pairs are memoized (B-11). Budget subtests at the map's Scale: the first proposal after open, after a Done, after an edit to a filed Subject on another Source, a decision on an all-new 100-Subject Source, and the evidence of a place with 100 member Sources. Both ideas move to `ideas/archive/`. Go only.
+**Not this PR.** Coalescing proposals in Swift (S12-44); the reprojection on a join (S12-47).
+**Check.** Bar outcome 19, Go half: each budget subtest holds at 37,000 Subjects; `PROVENENCIA_GRAPH_VERIFY=1` passes with the new memos.
+**Context.** Audit 2 B-8, B-9, B-11; working rule "Budgets at the map's Scale"; Spike 11's S11-15 review M-8, S11-21 D-1, S11-31 D-4 and its risk row, S11-46 PRF-2, S11-47 §6 Scale, S11-50; `core/database/graphcache/memo.go` (node memos; the S11-49 kinship memo is the precedent); `use-catalog-session`, `add-match-rule`. After S11-52, which widens the member reads this memoizes. If the plan runs past about ten steps, the walk bound splits into its own PR.
+
+#### S12-44 — The Promote page recovers and speaks
+
+**Ships.** At most one proposal in flight: decisions made while one runs are kept, and the latest fixed set is sent when it returns; `loadEvidence` does the same when the researcher switches sheets (B-12). Before proposing, decided pairs whose Subject is gone from the graph are dropped; Go's refusal names the Subject (`apperr` params) and the page words it on that row; Apply checks the revision before `ResolvePins`, and a `promote.invalid` at Done proposes again once, as stale does, with the stale note cleared when that proposal fails (B-13). Stale, save and proposal errors scroll into view when they appear and are announced through the kit's callout announcement; a failed load offers Try again; the page's existing callout, so no new chrome (B-17). The "start as Skip" line goes or is reworded (B-16). FakeStore scripts the new errors.
+**Not this PR.** The proposal's own cost (S12-43); Promote Done's effects (S12-32).
+**Check.** Bar outcome 20, first two clauses: B-13's manual steps end with the page naming Mary's row and proposing again without losing the other decisions; five quick picks run one proposal at a time; VoiceOver hears a save failure; the page header no longer mentions Skip.
+**Context.** Audit 2 B-12, B-13, B-16, B-17; working rules "Kit components announce themselves", "FakeStore is a seeded fake, not a second engine"; the S11-35 ship log (SEC-out-1); `CatalogSearchModel.scheduleSearch` (the shape to copy); `add-localized-string`, `add-ffi-handler`, `add-swift-test`. After S12-30, whose callout announcement it uses.
+
+#### S12-45 — The evidence sheet files what it shows
+
+**Ships.** A row whose sheet was opened but never toggled keeps Go's default pins at Done, and a re-read adds the default-checked ids it newly offers (B-14). A row set to New opens its sheet from the assessment column, so its claim's confidence and argument can be set (B-15, brief S12-D8). The sheet's Status and Confidence selects and its argument field have spoken names, and `PVField` ties its label to its content in the kit, so every form using it gains one (B-18). Swift only.
+**Not this PR.** The evidence button's hover (S11-34); line outcomes in spoken labels (B-34); unset rows with candidates (B-33).
+**Check.** Bar outcome 20, pins and claims: B-14's steps end with "…they share a spouse" checked and pinned; a New Person row's sheet opens and its grade and argument are filed; VoiceOver names the three fields.
+**Context.** Audit 2 B-14, B-15, B-18; Spike 11 working rule "The pin policy has one owner, in Go" and S11-25 D-12; S11-20 AC-1.4 and board S11-D2 (ES-19, E13c); brief S12-D8 on the S11-D1 rows board; `add-design-brief`, `add-ui-component`, `add-localized-string`, `add-swift-test`. After S11-34, which changes the same assessment-column button.
+
+#### S12-46 — Names compare the same however they are written
+
+**Ships.** The initial rung compares folded tokens, and alias lookups try the folded token too (`Hit`, `SetKeys`, the reconciler fold's `Expands`), keeping "an accent fold alone never folds" (B-19). The `Same` key composes to NFC (`TextKey`, `nameKey`, `AliasToken`); `Equivalent` also folds compatibility forms and drops format characters; Swift `TextMatch` mirrors both, pinned by fixtures in `TestSwiftTextMatchMirrorsTextKey` (B-20). One generation-token table (jr / junior, sr / senior, ii / 2nd, iii / 3rd, …) read by `nameKey` and the generation check, with its inventory row (B-22). `CacheVersion` and `ProjectionVersion` bumps; the Key-contract pools gain accented initials and decomposed and compatibility forms.
+**Not this PR.** Search retrieval of folded spellings (S12-47); transliteration and phonetic codes (Spike 11, "Not this spike").
+**Check.** Bar outcome 21, names: É. / Émile, Hélène / Lena, José composed and decomposed, Jr. / Junior each compare as one, and the reconciler shows one value for each pair.
+**Context.** Audit 2 B-19, B-20, B-22; Spike 11 dogfood bar 6 and working rule "A normalized `Key` per value type"; S11-07 D-9, S11-08; `add-match-rule`, `add-name-value`. After S12-40 and S12-42, which change the fold, the alias index and the name key first.
+
+#### S12-47 — Search finds every spelling; a join reprojects only what changed
+
+**Ships.** The search document carries each value's `Equivalent`-folded form where FTS retrieves on it, so "Soby" finds Søby with or without an alternate, and `distinctAlternates` drops no spelling FTS cannot fold (B-21; a migration and a `ProjectionVersion` bump). `RecomputeReported` reprojects a root's dependents only when the root's header-visible row changed, and composes unchanged dependents from the warm graph (B-10). Go only.
+**Not this PR.** The search registry's columns and projector table (S12-36); ranking changes.
+**Check.** Bar outcome 21, search: B-21's probe finds Ærøskøbing, Søby, Łask and Œuilly from their ASCII spellings; joining a place Subject to a 6,000-event city reprojects only what changed, held by a budget subtest.
+**Context.** Audit 2 B-10, B-21; Spike 11 dogfood bar 6; S11-07 D-6; `core/database/searchindex`, `conclusionheaders.RowsForSearch`; `add-catalog-migration`, `add-searchable-kind`. Preferred after S12-46, whose folded form it indexes, and before S12-36, which reshapes the same projection.
+
+#### S12-48 — Promote's wire says what Go decided
+
+**Ships.** The proposal reports, per connection, whether it will file at Done and why not (a self-link, a `part_of` that would close a cycle), computed from the page's fixed pairs through the filer's own predicates in `core/database/identityclaims/bridgefile.go`; Swift's subrows and footer count read it, a refused connection drawn and worded as the self-link subrow is today (no new chrome), and Swift's own filing rule goes (B-23). Promote's bands and the name part types are typed enums in `Platform/`, decoded once in `GoStore`, each with a `swift_vocabulary_test.go` row; `add-name-value` step 6 names the match-registry role, the format seed roles and the Swift case (B-24). `promote-graph-alignment.md` §9.1 says where the refusal is reported.
+**Not this PR.** Swift's weak-row draft (B-26); unread wire fields (B-37).
+**Check.** Bar outcome 20, footer: a page whose `part_of` connection would close a cycle shows it as not filing, and Done files what the footer counted; the guard rows fail on a renamed band or a new part type.
+**Context.** Audit 2 B-23, B-24; `.cursor/rules/macos-client.mdc` (wire enums in `Platform/` with guard rows); S11-17 (reasons typed), S11-47 D-13; `add-ffi-handler`, `add-name-value`. After S11-29, which adds the part type the guard row covers.
 
 ### Slice 7 — Structural debt
 

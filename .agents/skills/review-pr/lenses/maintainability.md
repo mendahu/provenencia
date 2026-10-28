@@ -312,6 +312,9 @@ the rule; do not restate it.
 - An audited write that returns no effects, with a hand-written mutation in Swift beside the effects path — Q14.
 - A preflight and its write that each derive the same rule, or a second "stage, then write" beside `ingest.StagedImage` — Q14.
 - A step that moves an interface into a package that already imports the caller's package (`core/database` imports `effects`) — Q3; check the import graph.
+- A client decision keyed to engine values: client code that branches on how two engine-owned numbers relate (a threshold against a band), or re-derives whether the engine will accept an action, decides with values it cannot see. Have the engine send the decision or its result — Q3.
+- A string vocabulary that crosses the client boundary (a band, a part type, a state) parsed with a fallback and no parity test: a renamed value silently reads as the fallback. Every such set gets the guard the others have — Q4.
+- A skill or rule line that contradicts a binding rule elsewhere: fixing one line of a skill without searching it for the opposite instruction leaves the next agent following the old one. When a rule changes, `rg` the guides for its opposite — Q10.
 
 ## Good finding shape
 

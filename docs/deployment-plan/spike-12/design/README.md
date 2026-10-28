@@ -6,7 +6,7 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 
 ## Scheduled
 
-None open.
+- S12-D8 — Promote page rows: the sheet opener on a row set to New; gates S12-45. Not written yet; starts from the S11-D1 rows board.
 
 ## Archived
 

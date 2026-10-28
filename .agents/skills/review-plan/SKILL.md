@@ -90,6 +90,12 @@ and the Spike 12 audit made it a top item.
   **blockers**.
 - A blocker of those kinds is answered **Fixed** or **To user**: never Logged,
   never Declined on the plan's own say-so, never moved to an Out row.
+- A finding is never Declined on a premise nobody has checked: how users will
+  behave ("they will change the row"), how rare a case is, or "inside budget"
+  on data smaller than the map's **Scale**. Check it (a test, a count, a
+  measurement at Scale), or answer **To user**.
+- A cost deferred by an earlier plan or ship log is measured at the map's
+  **Scale** before this plan defers it again.
 
 **A Decision that bends a rule is the user's.** When a Decision contradicts a
 working rule, a skill or a `.cursor/rules` file, the writer does not settle it,
@@ -109,7 +115,12 @@ should not be empty is a finding at the severity the class carries.
 | --- | --- | --- |
 | Rules bent | §5 **Rules this plan bends** | Does a Decision, Out line or Step contradict a working rule, a skill or a `.cursor/rules` file? Each is listed there with the user's answer, or it is a blocker |
 | Reach | §6 **Reach** | Does the PR add a way into existing code (a navigation path, an entry point) or make a state reachable (none, many, a deleted referent)? Is each destination checked: it resets on the new id, handles the missing referent, shows the state? |
-| Scale | §6 **Scale** | For each write the PR adds or re-keys: what does it invalidate and reload at the map's **Scale**? A fan-out to every child of a parent, or one call per child, is a finding |
+| Scale | §6 **Scale** | For each write the PR adds or re-keys: what does it invalidate and reload at the map's **Scale**? A fan-out to every child of a parent, or one call per child, is a finding. A budget or a "cheap enough" claim measured below that Scale is unproven: ask for the size, and for the input that grows (rows, members per record, entries past a cache's cap) to be grown in the test. A sentence about how common a case is ("most rows have none") needs a count from real or fixture data |
+| Assumptions | §6 **Edges** | Read the code the new case flows through, not only the plan. What does it assume (transitive, acyclic, symmetric, order-free, one key per value, equal lengths)? Does the new kind of input keep each assumption, and is there a test for it with the new case? An assumption the plan does not list is a finding; one the new case breaks is a blocker |
+| Neighbors | §6 **Edges** | Which inputs sit just either side of the new behavior, and does the plan say what each produces? A widened rule reviewed only from its happy examples is a finding: list the nearest cases it now also reaches, so the user can accept or refuse them |
+| Removed inputs | §6 **Edges** | When an input is decided, excluded, deleted, merged or held by something else, does the result keep what that input contributed (a conflict, a constraint, a count)? "Skipped" is not "neutral". Does every cached or queued result that depends on that state get recomputed when it changes? |
+| Real data | §6 **Edges** | A rule driven by a table, seed or configuration: was it run over the whole shipped table, and are its counts and odd outputs in the plan? Do its tests run with that table, not only a minimal fixture? |
+| Untrusted size | §6 **Edges** | For each list, map or graph from data the app did not write: is every dimension that multiplies cost bounded (items, per key, per item, duplicates, depth), and is the bound checked before the work? A key built by joining values: can a value contain the separator? |
 | Engine first | §3, §5 | Is a PR scoped to one layer carrying a multi-write user action, a refusal or a rule the other layer owns? The owning layer's change comes first |
 | Replace, not beside | §6 **Deletes** | Does each new mechanism retire the one it replaces (the old key, field, list, preflight, patch path)? Is every callee whose last caller the PR removes in **Deletes**? |
 | Sweep | §6 **Strings**, §9 | Does the DoD `rg` each renamed or deleted name, qualified, across skills, rules, docs and copy? When the PR changes what an action covers, does **Strings** list the copy that names the old scope? |

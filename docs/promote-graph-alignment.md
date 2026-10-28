@@ -30,7 +30,7 @@ A vertical link's strongest evidence is the horizontal structure around it linin
 2. **Decisions are fixed.** A choice the researcher made is never overridden by a re-run. Everything not yet decided follows the decisions.
 3. **One claim per Subject.** A batch is many independent claims, and any one can be rejected later on its own.
 4. **No hard-coded lists of Properties or relationships.** What counts as evidence, and how much, comes from metadata (value types, cardinality, bridge types and roles) and from the catalog's own data. A Property or bridge kind added later takes part with no code change.
-5. **Precision over recall.** A false merge is the costliest mistake. The core never proposes a merge below the accept bar: such a row comes back with no target, its candidates as alternatives. The page starts it **unset**, so Done waits for the researcher's Skip or New, and drafts a weak one on its best match for review.
+5. **Precision over recall.** A false merge is the costliest mistake. The core never proposes a merge below the accept bar: such a row comes back with no target, its candidates as alternatives. The page starts it **unset**, so Done waits for the researcher's Skip or New, and drafts a weak one on its best match for review. **Proposals are liberal; the researcher decides** (user, 2026-10-28): precision is about what files, not what is suggested. A candidate the comparers accept on forgiving evidence (a prefix pair of two full names, a namesake inside the lifespan slack) is surfaced, and every conflict the engine found shows as *contested*.
 6. **Explainable, deterministic, local.**
    - Every suggestion carries its reasons.
    - The same inputs give the same proposal.
