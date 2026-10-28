@@ -4,7 +4,7 @@ One short paragraph per landed PR, newest first. Written by the PR that lands it
 
 ## S11-47 — Promote suggests a record or nothing
 
-**Landed 2026-10-27** in [#598](https://github.com/mendahu/provenencia/pull/598). Promote now proposes a record for a row or nothing: a row it cannot place opens unset, and New and Skip are only ever the researcher's choice. Align leaves such a row's target empty (reasons `empty` and `taken` stay; `weak` and `no_match` are gone from rows, and `weak` stays on a menu record), the possible-duplicate check covers every row that would be a new record, and Swift reads the row target as a typed `PromoteTargetCode`. A suggested row that loses its record on a re-proposal reads "Updated · No record suggested".
+**Landed 2026-10-27** in [#598](https://github.com/mendahu/provenencia/pull/598). Promote now proposes a record for a row or nothing: a row it cannot place opens unset, and New and Skip are only ever the researcher's choice. Align leaves such a row's target empty (reasons `empty` and `taken` stay; `weak` and `no_match` are gone from rows, and `weak` stays on a menu record), the possible-duplicate check covers every row that would be a new record, and Swift reads the row target as a typed `PromoteTargetCode`. A suggested row that loses its record on a re-proposal reads "Updated · No record suggested". A row drafted onto a weak record still captions that record's reason.
 
 ## S11-44 — Des as a nickname of Desiree and Desirae
 
