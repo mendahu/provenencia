@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-45 — Prefix names
+
+**Landed 2026-10-28** in [#607](https://github.com/mendahu/provenencia/pull/607). A given name that is the exact start of another now matches it the way an initial does: "Des" against "Desiree" is `Contains` at `PrefixCredit` (0.7) with the new cause `prefix` and the longer name as the broader side, so Promote offers one for the other with no nickname set, the evidence sheet says "Matches by a shortened name", and the reconciler shows "Des Long" and "Desiree Long" as one name, "Desiree Long". Only given, nickname and untyped words take part (`valuecompare.PrefixRuleRole`); surnames never match by prefix, and an alias, accent fold or spelling variant is checked first and still wins. Review round 1 added two doc-only fixes: the name candidates doc names the prefix roles and the built word order, and the format-agnostic comment in `core/autoreconcile/names.go` is rewrapped.
+
 ## S11-46 — Prefix keys in the shortlist
 
 **Landed 2026-10-27** in [#602](https://github.com/mendahu/provenencia/pull/602). The shortlist now hands graph alignment every record whose given name starts another, in both directions: a Source person "Des" reaches the record "Desiree" and the reverse. `valuecompare.WordKeys` returns the keys a value is filed under and the keys it is looked up by, and given, nickname and untyped words add `g:` and `p:` prefix keys from `PrefixMinLength` (2) letters; surnames, text and a name with more words than `Names.MaxWords` never do. Until S11-45 the comparer still calls Des and Desiree `Different`, so the candidate gate drops the new pair and no row changes for that case. On S11-21's large fixture the change added 46% index keys and 13% shortlist hits inside every budget, so there is no cap.
