@@ -54,7 +54,7 @@ No migration. New seeds reach new catalogs only (Spike 10 rule "New seeds are fo
 
 - [`seeded-vocabulary.md`](../../seeded-vocabulary.md): the Property table and the binding block gain `event_picture` and `place_picture` (S14-01).
 - [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §depiction: "`likeness` on `person` is the seeded depiction Property" names all three (S14-01).
-- [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md): the gallery paragraph says a Person's, Event's, or Place's gallery; the preferred pointer stays Person-only (S14-01).
+- [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md): the gallery paragraph says a Person's, Event's, or Place's gallery; the preferred pointer is the handle's (S14-01; working rule "An Event or Place chooses its thumbnail").
 - [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md): "a person's images form a gallery" covers Event and Place pictures (S14-01).
 - [`add-depiction-value`](../../../.agents/skills/add-depiction-value/SKILL.md): its description, the gallery keys, the `SaveDepiction` test helper, and the Do-not line about the Person page (S14-01); depictions are drawn as rectangles (S14-03).
 

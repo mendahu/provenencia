@@ -60,7 +60,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 
 | PR | Title | Slice | Scope | Brief | Depends on | Plan | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| S14-01 | Pictures engine | 1 | Rename the gallery layer (Go, proto, Swift wire mapping); seed `event_picture` and `place_picture`; the gallery reads the gallery keys and each picture's own image; Event and Place headers carry the lead picture | — | — | — | Scoped |
+| S14-01 | Pictures engine | 1 | Rename the gallery layer (Go, proto, Swift wire mapping); seed `event_picture` and `place_picture`; the gallery reads the gallery keys and each picture's own image; Event and Place headers carry the lead picture | — | — | [S14-01-pictures-engine.md](prs/S14-01-pictures-engine.md) | Planned |
 | S14-02 | Pictures in the app | 1 | The gallery slot and the Swift view-layer rename; Event and Place pages show Pictures, a header thumbnail and choosing a thumbnail; Events and Places lists lead with it; Promote words depictions as pictures | — | S14-01 | — | Scoped |
 | S14-03 | Rectangle-only depiction drawing | 1 | Depiction drawing offers only the rectangle tool; the Citation's region as a depiction uses its bounding rectangle; the composer's drawing feedback, captions and cap announcement | — | S12-28 | — | Scoped |
 | S14-04 | Promote wording for pictures | — | Folded into S14-02 (working rule "Batch 1 is cut by layer") | — | — | — | Descoped (2026-10-27) → S14-02 |
