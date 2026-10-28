@@ -1582,8 +1582,8 @@ func TestProposeKinshipShapes(t *testing.T) {
 		want := direct(t, "Bob Ames", spouse, false, false, false)
 		bob, rows := kinTree(t, "Bob Ames", kinSide{shape: marriage}, kinSide{shape: marriage})
 		got := rows[0].row
-		if !onHandle(got, bob, graphalign.AssessWeak) || got.Score >= want.row.Score || got.Score <= witness[0].row.Score {
-			t.Fatalf("row %+v, want Bob's handle at weak, between %.4f and %.4f", got, witness[0].row.Score, want.row.Score)
+		if !onHandle(got, bob, graphalign.AssessMedium) || got.Score >= want.row.Score || got.Score <= witness[0].row.Score {
+			t.Fatalf("row %+v, want Bob's handle at medium, between %.4f and %.4f", got, witness[0].row.Score, want.row.Score)
 		}
 	})
 	t.Run("AC-2.3", func(t *testing.T) {

@@ -181,7 +181,7 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `subject.Pools.person.sex_at_birth.Terms.gender` | `man` → `male`, `woman` → `female` | decided (user, 2026-10-21) | Reads a gender term as the sex at birth term it names before comparing; a gender with no entry (`non_binary`) is left out, never a conflict |
 | `segment.OneSupport` | 1.5 | `graphalign` `EdgeSupportLow` | Points for a matching one-cardinality link (birth, death) |
 | `segment.OneCredit` | 0.5 | `graphalign` `NeighborCreditLow` | Share of the neighbor's own evidence passed on, one-cardinality |
-| `segment.OtherSupport` | 0.25 | `graphalign` `EdgeSupportHigh` | Points for any other matching link |
+| `segment.OtherSupport` | 0.75 | decided: user, 2026-10-28 (S14-08): dogfood Jake + grandparent under Weak at 0.25 | Points for any other matching link |
 | `segment.OtherCredit` | 0.25 | `graphalign` `NeighborCreditHigh` | Share of the neighbor's evidence passed on, other links |
 | `segment.One` | `participation·subject·birth`, `participation·subject·death` | decided 2026-10-17, both ends 2026-10-19 | Links where a differing neighbor conflicts, from either end |
 | `segment.OneConflict` | 3 | estimate: a differing birth or death is as strong as a differing name or date (`subject.Weights.person.name.Conflict`) | Points lost when a one-cardinality link's neighbor is placed elsewhere |
