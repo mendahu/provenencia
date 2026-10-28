@@ -95,6 +95,7 @@ struct CatalogQueryPatch: Sendable {
     static func updatedSourceShell() -> Self {
         Self(follows: nil) { session, key, _, _, mutation in
             guard let source = mutation?.patchedSource else { return }
+            guard case .sourceWorkspace(_, let sourceId) = key, sourceId == source.id else { return }
             guard var workspace: CatalogSourceWorkspace = session.queryHandle(key)?.value else { return }
             workspace.source = source
             session.setQueryValue(key, value: workspace)

@@ -582,6 +582,33 @@ struct CatalogQueryRegistryTests {
         #expect(store.heldCatalogProjectDir == nil)
     }
 
+    @Test func applyUpdatedSourceLeavesOtherCachedWorkspacesUntouched() async {
+        let store = FakeStore()
+        seedStore(store)
+        store.sourcesByProject[projectDir]?.append(
+            CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "t1", title: "Beta", description: "")
+        )
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        let firstKey = CatalogQueryKey.sourceWorkspace(project: project, sourceId: "s1")
+        let secondKey = CatalogQueryKey.sourceWorkspace(project: project, sourceId: "s2")
+
+        let firstHandle: QueryHandle<CatalogSourceWorkspace> = session.query(firstKey)
+        let secondHandle: QueryHandle<CatalogSourceWorkspace> = session.query(secondKey)
+        await waitForQuery(firstHandle)
+        await waitForQuery(secondHandle)
+        #expect(firstHandle.value?.source.title == "Alpha")
+        #expect(secondHandle.value?.source.title == "Beta")
+
+        let updated = CatalogSource(
+            id: "s1", ref: "SRC-1", sourceTypeID: "t1", title: "Renamed", description: "New desc"
+        )
+        session.apply(.updatedSource(updated))
+
+        #expect(firstHandle.value?.source.title == "Renamed")
+        #expect(secondHandle.value?.source.title == "Beta")
+    }
+
     @Test func applyUpdatedSourcePatchesListAndWorkspace() async {
         let store = FakeStore()
         seedStore(store)
