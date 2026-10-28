@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import UniformTypeIdentifiers
 @testable import Provenencia
 
 struct IngestMediaPolicyTests {
@@ -56,11 +57,16 @@ struct IngestMediaPolicyTests {
         #expect(callout!.message.contains("link to another location"))
     }
 
-    @Test func isExecutableTypeCoversScriptsAndApps() {
+    @Test func isExecutableTypeCoversScriptsAndApps() throws {
         #expect(IngestMediaPolicy.isExecutableType(.shellScript))
         #expect(IngestMediaPolicy.isExecutableType(.unixExecutable))
         #expect(IngestMediaPolicy.isExecutableType(.applicationBundle))
         #expect(!IngestMediaPolicy.isExecutableType(.pdf))
+        // Stored links and Terminal files open another item or run a command.
+        for ext in ["webloc", "fileloc", "inetloc", "url", "terminal", "term"] {
+            let type = try #require(UTType(filenameExtension: ext))
+            #expect(IngestMediaPolicy.isExecutableType(type), "\(ext)")
+        }
     }
 
     private func writeTemp(name: String, data: Data) throws -> URL {

@@ -2,7 +2,8 @@ import Foundation
 import UniformTypeIdentifiers
 
 /// Fail-fast ingest allowlist / reject taxonomy. Keep in sync with
-/// `core/ingest/mediatypes` — Go remains authoritative on sniff.
+/// `core/ingest/mediatypes` — Go remains authoritative on sniff. Its
+/// `isExecutableType` is also what `ProjectFiles` asks when it opens a stored object.
 enum IngestMediaPolicy {
     /// Largest file ingest accepts (matches `ingest.MaxBytes`).
     static let maxBytes: Int64 = 512 << 20
@@ -141,12 +142,22 @@ enum IngestMediaPolicy {
         }
     }
 
-    /// True when `type` could run a program: an executable, a Unix executable, an
-    /// application bundle, or a script. Ingest rejects a picked file of such a type,
-    /// and `ProjectFiles` refuses to open a stored object of one.
+    /// Types that open another item when the system opens them, though they are not
+    /// programs: a stored link (`.webloc`, `.fileloc`, `.inetloc`, `.url`) and Terminal's
+    /// settings and session files (`.terminal`, `.term`). An identifier the system does
+    /// not know is left out.
+    private static let opensAnotherItemTypes: [UTType] = [
+        "public.stored-url", "com.apple.terminal.settings", "com.apple.terminal.session",
+    ].compactMap { UTType($0) }
+
+    /// True when `type` could run a program or open another item: an executable, a Unix
+    /// executable, an application bundle, a script, a stored link or a Terminal file.
+    /// Ingest rejects a picked file of such a type, and `ProjectFiles` refuses to open
+    /// a stored object of one.
     static func isExecutableType(_ type: UTType) -> Bool {
         type.conforms(to: .executable) || type.conforms(to: .unixExecutable)
             || type.conforms(to: .application) || type.conforms(to: .script)
+            || opensAnotherItemTypes.contains { type.conforms(to: $0) }
     }
 
     static func byteSize(of url: URL) -> Int64 {

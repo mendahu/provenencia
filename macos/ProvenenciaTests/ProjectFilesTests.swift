@@ -198,6 +198,8 @@ struct ProjectFilesTests {
         ("objects/aa/bb/aabb.sh", mode_t(0o644)),
         ("objects/aa/bb/aabb.command", mode_t(0o644)),
         ("objects/aa/bb/aabb.app", mode_t(0o644)),
+        ("objects/aa/bb/aabb.webloc", mode_t(0o644)),
+        ("objects/aa/bb/aabb.terminal", mode_t(0o644)),
     ])
     func openableObjectURLRefusesUnsafeObjects(relPath: String, mode: mode_t) throws {
         let project = ArtifactFileFixtures.uniqueProjectDir()
