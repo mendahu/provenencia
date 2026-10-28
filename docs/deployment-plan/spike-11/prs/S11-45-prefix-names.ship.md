@@ -38,7 +38,7 @@ Head `0dd38630`. Gate PASS (orchestrator run). F-1 done (`31744119`): **Resolved
 Not run: round 1 had no Fix-now blocker or major.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · to user: — (push approved by user 2026-10-28) · CON miss: none
+Gate PASS · CI green (test, localizable) · open: none · follow-ups: none · to user: — (push approved by user 2026-10-28) · CON miss: none
 
 ## Finish
 User approved the push. Draft #607 opened by the orchestrator (implementer's body file was missing; body written from the plan and this log). Landed docs commit `bad2d26b`. Gate PASS at `bad2d26b`. `origin/main` unchanged since the branch was cut.
