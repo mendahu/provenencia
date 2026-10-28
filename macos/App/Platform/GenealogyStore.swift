@@ -617,9 +617,9 @@ struct CatalogPersonHeader: Sendable, Equatable, Identifiable {
     var death: CatalogLifeFacts = CatalogLifeFacts()
     /// The last revision that touched this Person and when; revision 0 when unknown.
     var updated = CatalogActivity()
-    /// The `objects/…` path of the likeness the Person leads with; "" when none.
+    /// The `objects/…` path of the picture the Person leads with; "" when none.
     /// Filled by the Person list and the detail reads only.
-    var likenessImageRelPath: String = ""
+    var pictureImageRelPath: String = ""
 
     var id: String { entity.id }
 }
@@ -649,6 +649,8 @@ struct CatalogEventHeader: Sendable, Equatable, Identifiable {
     var title: CatalogEventTitle
     /// The last revision that touched this Event and when; revision 0 when unknown.
     var updated = CatalogActivity()
+    /// The `objects/…` path of the picture the Event leads with; "" when none.
+    var pictureImageRelPath: String = ""
 
     var id: String { entity.id }
 }
@@ -700,6 +702,8 @@ struct CatalogPlaceHeader: Sendable, Equatable, Identifiable {
     var successors: [CatalogPlaceRelationship] = []
     /// The last revision that touched this Place and when; revision 0 when unknown.
     var updated = CatalogActivity()
+    /// The `objects/…` path of the picture the Place leads with; "" when none.
+    var pictureImageRelPath: String = ""
 
     var id: String { entity.id }
 }
@@ -789,14 +793,15 @@ struct CatalogConclusionField: Sendable, Equatable, Identifiable {
     var displayedValues: [CatalogReconciledValue] { values.filter(\.isDisplayed) }
 }
 
-/// One likeness a Person page's gallery shows: its image and the record (its
+/// One picture a handle's gallery shows: its image and the record (its
 /// earliest Observation) the tile opens.
-struct CatalogLikeness: Sendable, Equatable, Identifiable {
+struct CatalogPicture: Sendable, Equatable, Identifiable {
     var imageRelPath: String
     var record: CatalogReconcilerOutcome
-    /// True for the likeness chosen as the Person's portrait (S10-39); at most one.
+    /// True for the picture chosen as the handle's portrait or thumbnail
+    /// (S10-39); at most one.
     var preferred: Bool = false
-    /// True for the likeness the Person's header leads with: the preferred one,
+    /// True for the picture the header leads with: the preferred one,
     /// else the earliest; exactly one in a gallery.
     var leads: Bool = false
 
@@ -813,8 +818,8 @@ struct CatalogConclusionDetail: Sendable, Equatable {
     /// The handle's header for its kind, read in the same call, so a page
     /// has one load, one error, and one consistent read.
     var header: CatalogConclusionHeader?
-    /// The handle's likenesses, earliest recorded first.
-    var likenesses: [CatalogLikeness] = []
+    /// The handle's pictures, earliest recorded first.
+    var pictures: [CatalogPicture] = []
 }
 
 /// One handle's row for its kind, as the lists show it.

@@ -83,8 +83,8 @@ struct PersonDetailTests {
         #expect(place.thumbnail == .init(mark: .subjectPlace, label: L10n.Conclusions.placeNoImage) && place.badge == nil)
     }
 
-    private func likeness(_ id: String, path: String, title: String) -> CatalogLikeness {
-        CatalogLikeness(imageRelPath: path, record: D.outcome(id, "kept", title: title))
+    private func likeness(_ id: String, path: String, title: String) -> CatalogPicture {
+        CatalogPicture(imageRelPath: path, record: D.outcome(id, "kept", title: title))
     }
 
     @Test func headerThumbIsTheLeadLikeness() {
@@ -97,16 +97,16 @@ struct PersonDetailTests {
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "t", label: ""),
             name: nil, nameValueCount: 0
         )
-        header.likenessImageRelPath = "objects/ab/cd.png"
+        header.pictureImageRelPath = "objects/ab/cd.png"
         var source = detail(extra: [gender], header: header)
-        source.likenesses = [likeness("a", path: "objects/ab/cd.png", title: "Register")]
+        source.pictures = [likeness("a", path: "objects/ab/cd.png", title: "Register")]
         let thumb = PersonDetailContent(detail: source).thumbnail
         #expect(thumb.imageRelPath == "objects/ab/cd.png")
         #expect(thumb.imageLabel == "Likeness from Register")
         #expect(thumb.colors != nil)
         #expect(thumb.mark == .subjectPerson)
         #expect(thumb.label == L10n.Conclusions.personLikenessThumb)
-        header.likenessImageRelPath = ""
+        header.pictureImageRelPath = ""
         let bare = PersonDetailContent(detail: detail(extra: [gender], header: header)).thumbnail
         #expect(bare.label == L10n.Conclusions.personNoLikeness)
     }
@@ -115,7 +115,7 @@ struct PersonDetailTests {
         var source = detail()
         var second = likeness("b", path: "objects/ef/01.png", title: "")
         second.record.observationRef = "OBS-2"
-        source.likenesses = [likeness("a", path: "objects/ab/cd.png", title: "Register"), second]
+        source.pictures = [likeness("a", path: "objects/ab/cd.png", title: "Register"), second]
         let content = PersonDetailContent(detail: source)
         #expect(content.likenesses.map(\.id) == ["a", "b"])
         #expect(content.likenesses.map(\.sourceTitle) == ["Register", "OBS-2"])
@@ -131,7 +131,7 @@ struct PersonDetailTests {
                 entity: CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "t", label: ""),
                 name: nil, nameValueCount: 0
             )
-            header.likenessImageRelPath = lead == "a" ? "objects/ab/cd.png" : "objects/ef/01.png"
+            header.pictureImageRelPath = lead == "a" ? "objects/ab/cd.png" : "objects/ef/01.png"
             var a = likeness("a", path: "objects/ab/cd.png", title: "Register")
             var b = likeness("b", path: "objects/ef/01.png", title: "Census")
             a.preferred = preferred == "a"
@@ -139,7 +139,7 @@ struct PersonDetailTests {
             a.leads = lead == "a"
             b.leads = lead == "b"
             var source = detail(header: header)
-            source.likenesses = [a, b]
+            source.pictures = [a, b]
             return PersonDetailContent(detail: source)
         }
         let neither = content(preferred: nil, lead: "a")

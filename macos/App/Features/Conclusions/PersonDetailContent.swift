@@ -67,8 +67,8 @@ struct PersonDetailContent: ConclusionDetailBody {
         ]
         rows = Self.rows(detail.fields, header: header, locale: locale, orders: orders)
         treatment = PersonGenderTreatment.read(detail.fields)
-        likenessImageRelPath = header?.likenessImageRelPath ?? ""
-        likenesses = detail.likenesses.map {
+        likenessImageRelPath = header?.pictureImageRelPath ?? ""
+        likenesses = detail.pictures.map {
             ConclusionDetailLikeness(
                 id: $0.record.observationID,
                 imageRelPath: $0.imageRelPath,
