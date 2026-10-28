@@ -16,7 +16,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
-	"github.com/mendahu/provenencia/core/objectpath"
 	"github.com/mendahu/provenencia/core/objectstore"
 	"github.com/mendahu/provenencia/core/raster"
 	"github.com/mendahu/provenencia/core/writes"
@@ -109,13 +108,13 @@ func Ensure(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, error)
 		return Result{}, ErrUnprocessable
 	}
 
-	rel, err := files.StorageRelPath(src.ChecksumSHA256, src.MediaType)
-	if errors.Is(err, objectpath.ErrDisallowedType) {
-		// A stored type off the allowlist has no object path to read.
-		return Result{}, ErrUnprocessable
-	}
+	rel, err := files.ReadRelPath(src)
 	if err != nil {
 		return Result{}, err
+	}
+	if rel == "" {
+		// A stored type off the allowlist has no object path to read.
+		return Result{}, ErrUnprocessable
 	}
 	derivedJPEG, err := generate(c.Dir(), rel, src.ChecksumSHA256, spec.Raster)
 	if err != nil {

@@ -275,3 +275,43 @@ func TestSearchCatalogHandleKinds(t *testing.T) {
 		t.Fatalf("location %+v", loc)
 	}
 }
+
+// A Source whose cover thumbnail row is damaged to a type off the allowlist is
+// still re-indexed by its next write, and its search hit carries no thumbnail.
+func TestSearchHitHidesDamagedCoverThumbnail(t *testing.T) {
+	dir, userID, sourceID, artifactID := sourceWithPNG(t)
+	var covered engine.SetSourceCoverResponse
+	mustRPC(t, SetSourceCover, &engine.SetSourceCoverRequest{
+		ProjectDir: dir, UserId: userID, SourceId: sourceID,
+		CoverMode: "artifact", PrimaryArtifactId: artifactID,
+	}, &covered)
+
+	find := func(query string) *engine.SearchHit {
+		t.Helper()
+		var resp engine.SearchCatalogResponse
+		mustRPC(t, SearchCatalog, &engine.SearchCatalogRequest{
+			ProjectDir: dir,
+			Query:      query,
+			Location:   &engine.WorkspaceLocation{Section: workspacelocation.Sources},
+		}, &resp)
+		if len(resp.Hits) == 0 {
+			t.Fatalf("no hit for %q", query)
+		}
+		return resp.Hits[0]
+	}
+	if find("Scan").GetThumbnailRelPath() == "" {
+		t.Fatal("want a thumbnail on the hit before the damage")
+	}
+
+	damageCatalog(t, dir, `UPDATE files SET media_type = 'application/x-sh'
+		WHERE id IN (SELECT derived_file_id FROM file_derivatives)`)
+	mustRPC(t, UpdateSource, &engine.UpdateSourceRequest{
+		ProjectDir: dir, UserId: userID, SourceId: sourceID,
+		SourceTypeId: covered.GetSource().GetSourceTypeId(), Title: "Scanned ledger",
+	}, &engine.UpdateSourceResponse{})
+
+	hit := find("Scanned ledger")
+	if hit.GetId() != sourceID || hit.GetThumbnailRelPath() != "" {
+		t.Fatalf("want the Source's hit with an empty thumbnail_rel_path, got %+v", hit)
+	}
+}

@@ -8,7 +8,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/namevalue"
-	"github.com/mendahu/provenencia/core/objectpath"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -69,40 +68,6 @@ func TestMigrationCreatesSearchTables(t *testing.T) {
 	}
 	if n != 1 {
 		t.Fatalf("trigram match count %d", n)
-	}
-}
-
-func TestObjectsRelPathAgreesWithObjectpath(t *testing.T) {
-	const sum = "8fce3b0000000000000000000000000000000000000000000000000000000000"
-	for _, mt := range []string{
-		"image/jpeg",
-		"image/png",
-		"image/webp",
-		"image/gif",
-		"application/pdf",
-		"text/plain",
-	} {
-		got, err := objectsRelPath(sum, mt)
-		if err != nil {
-			t.Fatalf("%s: %v", mt, err)
-		}
-		want, err := objectpath.Rel(sum, mt)
-		if err != nil {
-			t.Fatalf("%s objectpath: %v", mt, err)
-		}
-		if got != want {
-			t.Fatalf("%s: searchindex %q != objectpath %q", mt, got, want)
-		}
-	}
-	// A type off the allowlist has no object path: no cover thumbnail, no error.
-	for _, mt := range []string{"image/jpg", "application/octet-stream", ""} {
-		got, err := objectsRelPath(sum, mt)
-		if err != nil || got != "" {
-			t.Fatalf("%q: got (%q, %v) want (\"\", nil)", mt, got, err)
-		}
-	}
-	if _, err := objectsRelPath("abcd", "image/png"); err == nil {
-		t.Fatal("short checksum: want error")
 	}
 }
 
