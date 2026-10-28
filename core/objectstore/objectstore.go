@@ -17,8 +17,15 @@ import (
 )
 
 // ErrNotRegular means an object path is a symlink, FIFO, folder, or device
-// instead of a regular file.
+// instead of a regular file, or a regular file with an execute bit (see
+// ErrExecutable).
 var ErrNotRegular = errors.New("objectstore: object is not a regular file")
+
+// ErrExecutable means an object is a regular file with an execute bit set. The
+// store never writes one (objects are 0o600), so one on disk was put there by
+// something else. It wraps ErrNotRegular, so every caller that refuses a
+// non-regular object refuses it too, and a re-import replaces it.
+var ErrExecutable = fmt.Errorf("%w: execute bit set", ErrNotRegular)
 
 // ErrUnsafeObjects means the project's objects folder is a symlink or not a folder.
 var ErrUnsafeObjects = errors.New("objectstore: objects folder is a symlink or not a folder")
@@ -59,10 +66,11 @@ func openObjectsRoot(projectDir string, create bool) (*os.Root, error) {
 }
 
 // openRegular opens inner under root for reading. Anything but a regular file,
-// or a shard folder that is not a real folder, is ErrNotRegular. The checks
-// come before the open so a FIFO cannot block it. The app mirrors these rules in
-// ProjectFiles.objectURL (macos/App/Platform/ProjectFiles.swift), which changes
-// with them.
+// or a shard folder that is not a real folder, is ErrNotRegular; a regular file
+// with an execute bit is ErrExecutable (which wraps it). The checks come before
+// the open so a FIFO cannot block it. The app mirrors these rules, the execute
+// bit included, in ProjectFiles.objectURL (macos/App/Platform/ProjectFiles.swift),
+// which changes with them.
 func openRegular(root *os.Root, inner string) (*os.File, error) {
 	// Each shard folder must be a real folder: a symlink there is refused like
 	// a symlinked object. The folders are checked top-down, so a missing one
@@ -100,14 +108,19 @@ func openRegular(root *os.Root, inner string) (*os.File, error) {
 		_ = f.Close()
 		return nil, ErrNotRegular
 	}
+	if st.Mode().Perm()&0o111 != 0 {
+		_ = f.Close()
+		return nil, ErrExecutable
+	}
 	return f, nil
 }
 
 // OpenObject opens one object file for reading without following a symlink
 // out of projectDir/objects. rel is the slash-separated path from the project
 // folder and must start with objects/. A missing object is fs.ErrNotExist, a
-// symlinked objects folder is ErrUnsafeObjects, and an object that is not a
-// regular file is ErrNotRegular. The caller closes the file.
+// symlinked objects folder is ErrUnsafeObjects, an object that is not a
+// regular file is ErrNotRegular, and one with an execute bit is ErrExecutable.
+// The caller closes the file.
 func OpenObject(projectDir, rel string) (*os.File, error) {
 	inner, err := innerPath(rel)
 	if err != nil {
