@@ -59,6 +59,7 @@ const (
 	CauseAlias              Cause = "alias"
 	CauseAbbreviation       Cause = "abbreviation"
 	CauseInitial            Cause = "initial"
+	CausePrefix             Cause = "prefix" // a given, nickname or untyped word that is the start of the other's (Des / Desiree)
 	CauseSpelling           Cause = "spelling"
 	CausePrecision          Cause = "precision"
 	CauseMissingPart        Cause = "missing_part"
