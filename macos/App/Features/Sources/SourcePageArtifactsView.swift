@@ -91,11 +91,8 @@ struct SourcePageArtifactsView: View {
                         isDisabled: model.artifacts.draftGraphsLocked,
                         accessibilityIdentifierPrefix: "sources.page.addArtifact.graphs"
                     )
-                    if model.artifacts.draftNeedsGraph {
-                        Text(L10n.Sources.artifactGraphsNeedsOne)
-                            .font(PVFont.body(size: PVTypeScale.caption, italic: true))
-                            .foregroundStyle(PVColor.textMuted)
-                            .accessibilityIdentifier("sources.page.addArtifact.graphs.needsGraph")
+                    if model.artifacts.draftInNoGraph {
+                        noGraphLine(identifier: "sources.page.addArtifact.graphs.none")
                     }
                 }
             }
@@ -115,6 +112,14 @@ struct SourcePageArtifactsView: View {
                 }
             }
         }
+    }
+
+    /// The muted line under a graph group with no box checked.
+    private func noGraphLine(identifier: String) -> some View {
+        Text(L10n.Sources.artifactGraphsNone)
+            .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+            .foregroundStyle(PVColor.textMuted)
+            .accessibilityIdentifier(identifier)
     }
 
     /// Form for the first-attach Add File dialog.
@@ -285,8 +290,9 @@ struct SourcePageArtifactsView: View {
         .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .topLeading)
     }
 
-    /// The Evidence graphs the card in edit links the Artifact to; absent on a
-    /// Source with one graph.
+    /// The Evidence graphs the card in edit links the Artifact to; absent when
+    /// the session has no graphs for the Source. The line under the boxes shows
+    /// when none is checked.
     @ViewBuilder
     private func graphLinks(_ art: CatalogArtifact) -> some View {
         if let edit = model.artifacts.linkEdit, edit.artifactID == art.id {
@@ -310,10 +316,13 @@ struct SourcePageArtifactsView: View {
                             get: { model.artifacts.linkEdit?.excluded ?? [] },
                             set: { model.artifacts.linkEdit?.excluded = $0 }
                         ),
-                        locked: edit.locked,
+                        locked: model.artifacts.lockedGraphs,
                         isDisabled: model.artifacts.savingID == art.id,
                         accessibilityIdentifierPrefix: prefix
                     )
+                }
+                if model.artifacts.cardInNoGraph(id: art.id) {
+                    noGraphLine(identifier: "\(prefix).none")
                 }
             }
         }

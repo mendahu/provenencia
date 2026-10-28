@@ -86,6 +86,21 @@ struct WorkspaceSessionTests {
         #expect(isLoading(loadedSession.evidenceGraphsRead(sourceID: "s9")))
     }
 
+    @Test func artifactIDsInNoGraphReadsTheIndex() {
+        let session = makeSession()
+        #expect(session.artifactIDsInNoGraph(sourceID: "s1", artifactIDs: ["a1"]) == nil)
+
+        session.setQueryValue(session.evidenceGraphsKey, value: [
+            evidenceGraph("g1", sourceID: "s1", name: "Default", artifactIDs: ["a1"]),
+            evidenceGraph("g3", sourceID: "s1", name: "Jones", artifactIDs: ["a1", "a2"]),
+            evidenceGraph("g2", sourceID: "s2", name: "Default", artifactIDs: ["a3"]),
+        ])
+        #expect(session.artifactIDsInNoGraph(sourceID: "s1", artifactIDs: ["a1", "a2", "a3"]) == ["a3"])
+        #expect(session.artifactIDsInNoGraph(sourceID: "s1", artifactIDs: []) == [])
+        // A list with no graph for the Source is a list not yet refreshed.
+        #expect(session.artifactIDsInNoGraph(sourceID: "s9", artifactIDs: ["a1"]) == nil)
+    }
+
     @Test func queryReadAndProgressReads() async {
         struct TestFailure: Error {}
         let handle = QueryHandle<Int>()

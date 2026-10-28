@@ -1,16 +1,19 @@
 import Foundation
 
 /// The graph list indexed for reads: by graph id and grouped by Source, each
-/// Source's graphs in list order (sorted by name). Valid for one handle revision.
+/// Source's graphs in list order (sorted by name), plus the Artifact ids each
+/// Source's graphs link. Valid for one handle revision.
 struct EvidenceGraphIndex {
     let revision: Int
     let byID: [String: CatalogEvidenceGraph]
     let bySource: [String: [CatalogEvidenceGraph]]
+    let linkedArtifactIDsBySource: [String: Set<String>]
 
     init(revision: Int, rows: [CatalogEvidenceGraph]) {
         self.revision = revision
         byID = Dictionary(rows.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         bySource = Dictionary(grouping: rows, by: \.sourceID)
+        linkedArtifactIDsBySource = bySource.mapValues { Set($0.flatMap(\.artifactIDs)) }
     }
 }
 
@@ -113,5 +116,16 @@ extension WorkspaceSession {
             guard let graphs = evidenceGraphs(sourceID: sourceID), !graphs.isEmpty else { return .loading }
             return .loaded(graphs)
         }
+    }
+
+    /// The ids of `artifactIDs` that none of the Source's graphs links. `nil`
+    /// unless the Source's graphs are loaded (`evidenceGraphsRead`), so a list
+    /// not yet refreshed marks nothing.
+    func artifactIDsInNoGraph(sourceID: String, artifactIDs: [String]) -> Set<String>? {
+        guard case .loaded = evidenceGraphsRead(sourceID: sourceID),
+              let index = currentEvidenceGraphIndex
+        else { return nil }
+        let linked = index.linkedArtifactIDsBySource[sourceID] ?? []
+        return Set(artifactIDs.filter { !linked.contains($0) })
     }
 }
