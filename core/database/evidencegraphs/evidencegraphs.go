@@ -554,7 +554,7 @@ func citationRowsExist(tx *sql.Tx, q string, args ...any) (bool, error) {
 
 // UnlinkVia names the preflight group of Citations that keep an Artifact
 // linked. A domain-preflight via is named for its refusal code, not an FK edge.
-const UnlinkVia = "evidencegraphs.artifact_in_use"
+const UnlinkVia = apperr.CodeEvidenceGraphsArtifactInUse
 
 // UnlinkBlock is one pair whose unlink is refused, with the refusal and, for a
 // Citation reason, those Citations shaped for the DeleteImpact recipe.
@@ -601,11 +601,8 @@ func UnlinkImpact(c *database.Catalog, pairs []Pair) ([]UnlinkBlock, error) {
 		if block == nil {
 			continue
 		}
-		switch block.Reason {
-		case ErrArtifactInUse:
-			block.Citations, err = deleteimpact.ListedGroup(tx, UnlinkVia, catalogmodel.KindCitation, rows)
-		case ErrCitationsNeedGraph:
-			block.Citations, err = deleteimpact.ListedGroup(tx, deleteimpact.ViaCitationsNeedGraph, catalogmodel.KindCitation, rows)
+		if len(rows) > 0 {
+			block.Citations, err = deleteimpact.ListedGroup(tx, apperr.From(block.Reason).Code(), catalogmodel.KindCitation, rows)
 		}
 		if err != nil {
 			return nil, err

@@ -6,13 +6,14 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // ViaCitationsNeedGraph heads the Citations an unlink or a graph delete would
 // leave in no Evidence graph. A domain via is named for its refusal code.
-const ViaCitationsNeedGraph = "evidencegraphs.citations_need_graph"
+const ViaCitationsNeedGraph = apperr.CodeEvidenceGraphsCitationsNeedGraph
 
 // SQLCitationsOnlyInGraph is the one spelling of "the Citations an Evidence
 // graph alone holds": Citations whose Artifact is linked to this graph and to
