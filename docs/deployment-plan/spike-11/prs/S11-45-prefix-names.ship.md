@@ -1,7 +1,7 @@
 # Ship log — S11-45 Prefix names
 
-**Plan:** [`S11-45-prefix-names.md`](S11-45-prefix-names.md) · **Branch:** `s11-45-prefix-names` · **PR:** — (not opened: push denied, see Round 0)
-**State:** ready — awaiting user approval to push and open the PR
+**Plan:** [`S11-45-prefix-names.md`](S11-45-prefix-names.md) · **Branch:** `s11-45-prefix-names` · **PR:** #607
+**State:** ready
 
 ## Round 0 — implement
 Head `40545614`. Base `7adb3bcb`. Report: implementer's gate PASS. Stopped before push: `git push` and `gh pr create --draft` were denied by the session's permission classifier, so STEP-7's push/draft PR and STEP-8's "Landed #N" docs commit are not done. Deviations: `CausePrefix` comment is trailing (gofmt alignment), wording per D-2; base moved since `784c7ae` but only `L10n.swift` changed among Current state files (unrelated), no row false. Manual check not run.
@@ -38,4 +38,7 @@ Head `0dd38630`. Gate PASS (orchestrator run). F-1 done (`31744119`): **Resolved
 Not run: round 1 had no Fix-now blocker or major.
 
 ## Result
-Gate PASS · CI — (not pushed) · open: none · follow-ups: none · to user: push / draft PR (permission denied to implementer) · CON miss: none
+Gate PASS · CI pending · open: none · follow-ups: none · to user: — (push approved by user 2026-10-28) · CON miss: none
+
+## Finish
+User approved the push. Draft #607 opened by the orchestrator (implementer's body file was missing; body written from the plan and this log). Landed docs commit `bad2d26b`. Gate PASS at `bad2d26b`. `origin/main` unchanged since the branch was cut.
