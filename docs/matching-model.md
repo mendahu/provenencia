@@ -78,7 +78,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 | **support** | Points a matching neighbor adds to a pair through a segment |
 | **credit** | The share of a neighbor's own evidence passed on to the pair |
 | **shortlisting** | The cheap index lookup that decides which handles get compared at all |
-| **shortlist key** | A normalized value used for that lookup: a name word, an event type and year bucket, a toponym word; made by layer 1 (`valuecompare.WordKeys`, `YearReach`) and indexed by `core/shortlist` |
+| **shortlist key** | A normalized value used for that lookup: a name word, an event type and year bucket, a toponym word; made by layer 1 as index and lookup lists (`valuecompare.WordKeys`, `YearReach`) and indexed by `core/shortlist` |
 | **shortlisted handle** | A handle the lookup returned; nothing has been compared yet |
 | **nominated handle** | A handle reached through a link from an accepted pair; no lookup needed |
 | **candidate** | A shortlisted or nominated handle that has been scored and kept (top K of a shortlist, or of one placed pair's nominations) |
