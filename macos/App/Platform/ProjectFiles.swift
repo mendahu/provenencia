@@ -107,15 +107,27 @@ enum ProjectFiles {
         return checked
     }
 
-    /// Opens a stored object in the default app. Returns `nil` when it opened,
-    /// else why not: `.unsafe` from `openableObjectURL`, `.missing` when the path
-    /// is rejected or Launch Services declines it.
+    /// The app that opens `url`, chosen from the file's type alone: the default
+    /// handler for the type its extension names. Nothing stored on the file (a
+    /// `com.apple.LaunchServices.OpenWith` attribute travels with a copied or
+    /// zipped file) chooses it. Nil when the extension names no type or no app
+    /// opens it.
+    static func openingApplication(for url: URL) -> URL? {
+        guard let type = UTType(filenameExtension: url.pathExtension) else { return nil }
+        return NSWorkspace.shared.urlForApplication(toOpen: type)
+    }
+
+    /// Opens a stored object in the app for its type. Returns `nil` when it was
+    /// handed to that app, else why not: `.unsafe` from `openableObjectURL`,
+    /// `.missing` when the path is rejected or no app opens the type.
     static func openObject(projectDir: String, relPath: String) -> ObjectRefusal? {
         switch openableObjectURL(projectDir: projectDir, relPath: relPath) {
         case .failure(let refusal):
             return refusal
         case .success(let url):
-            return NSWorkspace.shared.open(url) ? nil : .missing
+            guard let app = openingApplication(for: url) else { return .missing }
+            NSWorkspace.shared.open([url], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+            return nil
         }
     }
 

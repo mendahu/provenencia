@@ -1,5 +1,7 @@
+import AppKit
 import Foundation
 import Testing
+import UniformTypeIdentifiers
 @testable import Provenencia
 
 @Suite
@@ -246,5 +248,31 @@ struct ProjectFilesTests {
                 relPath: "../etc/passwd"
             ) == .missing
         )
+    }
+
+    /// A per-file Open With attribute (it survives a zip, `cp -p` and exFAT, so a
+    /// shared project can carry one) must not choose the app: it comes from the
+    /// file's type. Nothing is launched.
+    @Test func openingApplicationIgnoresPerFileOverride() throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        let rel = "objects/aa/bb/aabb.txt"
+        try ArtifactFileFixtures.write(Data("x".utf8), projectDir: project, relPath: rel, mode: 0o644)
+        let url = URL(fileURLWithPath: project).appendingPathComponent(rel)
+
+        let override: [String: Any] = [
+            "bundleidentifier": "com.apple.Preview",
+            "path": "/System/Applications/Preview.app",
+            "version": 0,
+        ]
+        let plist = try PropertyListSerialization.data(fromPropertyList: override, format: .binary, options: 0)
+        let set = plist.withUnsafeBytes {
+            setxattr(url.path, "com.apple.LaunchServices.OpenWith", $0.baseAddress, $0.count, 0, 0)
+        }
+        #expect(set == 0)
+
+        let expected = NSWorkspace.shared.urlForApplication(toOpen: UTType.plainText)
+        #expect(expected != nil)
+        #expect(ProjectFiles.openingApplication(for: url) == expected)
     }
 }
