@@ -334,6 +334,14 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 			wantIs: ErrCorruptObject,
 		},
 		{
+			name: "raster type off the allowlist has no object path",
+			srcID: func(t *testing.T) []byte {
+				jpgSum := sha256.Sum256([]byte("image/jpg is not a stored type"))
+				return installFileRow(t, c, hex.EncodeToString(jpgSum[:]), "image/jpg", 10)
+			},
+			wantIs: ErrUnprocessable,
+		},
+		{
 			name: "pixel bomb png over decode budget",
 			srcID: func(t *testing.T) []byte {
 				return installSourceFile(t, c, bombPNG(t, 100000, 100000), "image/png", "bomb.png")

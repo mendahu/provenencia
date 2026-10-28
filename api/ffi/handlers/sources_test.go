@@ -386,6 +386,62 @@ func TestGetSourceWorkspace(t *testing.T) {
 			},
 		},
 		{
+			name: "cover thumbnail with a damaged type has no path",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, sourceID, artifactID := sourceWithPNG(t)
+				mustRPC(t, SetSourceCover, &engine.SetSourceCoverRequest{
+					ProjectDir: dir, UserId: userID, SourceId: sourceID,
+					CoverMode: "artifact", PrimaryArtifactId: artifactID,
+				}, &engine.SetSourceCoverResponse{})
+				var before engine.GetSourceWorkspaceResponse
+				mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: dir, SourceId: sourceID}, &before)
+				if before.Source.GetThumbnailRelPath() == "" {
+					t.Fatalf("want a cover thumbnail before the damage, got %+v", before.Source)
+				}
+				damageCatalog(t, dir, `UPDATE files SET media_type = 'application/x-sh'
+					WHERE id IN (SELECT derived_file_id FROM file_derivatives)`)
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: dir, SourceId: sourceID}
+			},
+			after: func(t *testing.T, raw []byte, _ proto.Message) {
+				var resp engine.GetSourceWorkspaceResponse
+				if err := proto.Unmarshal(raw, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if resp.Source.GetThumbnailRelPath() != "" {
+					t.Fatalf("thumbnail_rel_path %q want empty", resp.Source.GetThumbnailRelPath())
+				}
+			},
+		},
+		{
+			name: "a raster type off the allowlist keeps the file and drops its path",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, sourceID, _ := sourceWithPNG(t)
+				damageCatalog(t, dir, `DELETE FROM file_derivatives`)
+				damageCatalog(t, dir, `UPDATE files SET media_type = 'image/jpg'
+					WHERE id IN (SELECT file_id FROM artifacts)`)
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: dir, SourceId: sourceID}
+			},
+			after: func(t *testing.T, raw []byte, _ proto.Message) {
+				var resp engine.GetSourceWorkspaceResponse
+				if err := proto.Unmarshal(raw, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if len(resp.Artifacts) != 1 {
+					t.Fatalf("artifacts %+v", resp.Artifacts)
+				}
+				file := resp.Artifacts[0].GetFile()
+				if file.GetRelPath() != "" {
+					t.Fatalf("rel_path %q want empty", file.GetRelPath())
+				}
+				if file.GetOriginalFilename() != "page.png" || file.GetMediaType() != "image/jpg" {
+					t.Fatalf("file %+v", file)
+				}
+				if resp.Artifacts[0].GetThumbnailRelPath() != "" {
+					t.Fatalf("thumbnail_rel_path %q want empty", resp.Artifacts[0].GetThumbnailRelPath())
+				}
+			},
+		},
+		{
 			name: "url metadata carries the web link Go computes",
 			reqFn: func(t *testing.T) proto.Message {
 				req := urlMetadataSetFixture(t)
