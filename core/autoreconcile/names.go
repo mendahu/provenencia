@@ -19,7 +19,8 @@ import (
 //   - Format-agnostic. A part type is only an identifier: a name splits into
 //     one unit per part type, and units are compared only with units of the
 //     same type. No type behaves differently from another. A type's role in
-//     the name format decides only whether an alias table or the prefix rule applies (Fold).
+//     the name format decides only whether an alias table or the prefix rule
+//     applies (Fold).
 //   - A unit is the type's words, read as value compare reads them: each part
 //     normalized (case, punctuation and whitespace ignored; accents are not
 //     folded), split into words, and a particle rejoined with the word after
