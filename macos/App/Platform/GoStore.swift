@@ -1075,7 +1075,7 @@ struct GoStore: GenealogyStore {
         var row = Provenencia_Engine_V1_PromoteGraphAlignmentFixed()
         row.subjectID = f.subjectID
         row.handleID = f.handleID
-        row.target = f.target
+        row.target = f.target.wire
         return row
     }
 

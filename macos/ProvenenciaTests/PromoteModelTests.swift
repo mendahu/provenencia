@@ -409,8 +409,8 @@ struct PromoteModelTests {
         _ = await waitUntil { !model.isProposing }
         let held = store.lastPromoteFixed.sorted { $0.subjectID < $1.subjectID }
         #expect(held == [
-            CatalogPromoteGraphAlignmentFixed(subjectID: "a", target: "new"),
-            CatalogPromoteGraphAlignmentFixed(subjectID: "b", target: "skip"),
+            CatalogPromoteGraphAlignmentFixed(subjectID: "a", target: .new),
+            CatalogPromoteGraphAlignmentFixed(subjectID: "b", target: .skip),
         ])
     }
 

@@ -487,6 +487,9 @@ struct PromoteFlowTests {
             #expect(PromoteTargetCode(wire: code) == expected)
         }
         #expect(PromoteTargetCode(wire: "later") == .unrecognized("later"))
+        for (_, c) in targets {
+            #expect(PromoteTargetCode(wire: c.wire) == c)
+        }
 
         func reason(_ code: PromoteReasonCode, neighbor: String = "") -> PromoteFlow.Reason {
             PromoteFlow.Reason(code: code, propertyKey: "name", propertyOrigin: "provenencia", neighborID: neighbor)

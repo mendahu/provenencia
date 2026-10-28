@@ -296,7 +296,7 @@ struct CatalogPromoteResult: Sendable, Equatable {
 struct CatalogPromoteGraphAlignmentFixed: Sendable, Equatable {
     var subjectID: String
     var handleID: String = ""
-    var target: String = "handle"
+    var target: PromoteTargetCode = .handle
 }
 
 /// A runner-up handle on a graph-alignment row.

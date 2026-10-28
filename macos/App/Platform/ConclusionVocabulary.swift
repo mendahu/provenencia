@@ -111,6 +111,17 @@ enum PromoteTargetCode: Sendable, Equatable {
         default: self = .unrecognized(wire)
         }
     }
+
+    /// The code `init(wire:)` reads, for the send side.
+    var wire: String {
+        switch self {
+        case .unplaced: ""
+        case .handle: "handle"
+        case .new: "new"
+        case .skip: "skip"
+        case .unrecognized(let code): code
+        }
+    }
 }
 
 /// How a claim evidence line or relationship stands (`propertycompare.Outcome`).

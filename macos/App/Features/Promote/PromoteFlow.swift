@@ -505,9 +505,9 @@ struct PromoteFlow: Equatable, Sendable {
             case .handle(let id, _, _):
                 return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, handleID: id)
             case .newKind:
-                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, target: "new")
+                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, target: .new)
             case .skip:
-                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, target: "skip")
+                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, target: .skip)
             case .unset:
                 return nil
             }
