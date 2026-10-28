@@ -138,4 +138,33 @@ Noted in round 2, not raised (round 2 raises blockers only):
 Nits (logged): `MNT-10 · ProjectFiles.swift:33,72 · checkedObject / objectRefusal only produce .missing; Result and ObjectRefusal? shapes are vestigial` · `MNT-11 · ProjectFiles.swift:16-17,95-97 · .unsafe and openableObjectURL docs should add "or open another item"` (SEC also flagged it) · `MNT-12 · IngestMediaPolicy.swift:157 · isExecutableType now also covers links; name could say so` · `CON-8 · ProjectFilesTests.swift:~255 · openingApplicationIgnoresPerFileOverride pins the helper, not openObject; the F-12 rg check is the guard`
 
 ## Result
-Gate PASS (`099690ce`; `origin/main` unmoved since the branch was cut) · CI pending · open: none at blocker or major · to user: ingest copy for link and Terminal files (round-2 note) · follow-ups: SEC-3 (check a search hit's stored thumbnail path on read), MNT-6 remainder (`thumbnails_test.go:205-223`), Open reports no Launch Services failure after F-12, MNT-10 to MNT-12 · CON miss: none
+Gate PASS (`51e1fc37`; `origin/main` unmoved since the branch was cut) · CI pending · open: none at blocker or major · to user: ingest copy for link and Terminal files → user said fix it on this PR (F-13, done) · follow-ups: SEC-3 (check a search hit's stored thumbnail path on read), MNT-6 remainder (`thumbnails_test.go:205-223`), Open reports no Launch Services failure after F-12, MNT-10 · CON miss: none
+
+## Round 3 — fix (user-approved)
+User (2026-10-28), on the round-2 note about the ingest copy for link and Terminal files: "Fix it on this PR". This is a fix round only; there is no third review round. The orchestrator reads the fix.
+
+### Fix plan 2
+
+**F-13 — Ingest keeps the generic message for link and Terminal files; Open still refuses them** (from the round-2 UX note; MNT-11 and MNT-12 ride along)
+Files: `macos/App/Platform/IngestMediaPolicy.swift`, `macos/App/Platform/ProjectFiles.swift`, `macos/ProvenenciaTests/IngestMediaPolicyTests.swift`, `.cursor/rules/macos-client.mdc:21`, `docs/deployment-plan/spike-12/completed.md` (S12-23 paragraph), the plan's Landed note. Skill: `add-swift-test`.
+Failing test first: `IngestMediaPolicyTests.rejectsALinkFileAsAGenericType` *(new)*: write a temp `x.webloc` (and `x.terminal`) as `rejectsUnknownExtension` does → `validate(url:) == .reject(.genericType)`. It is red at head, which gives `.executable`.
+Do:
+- `isExecutableType` goes back to D-6's four conformances (executable, Unix executable, application, script) and its D-6 doc.
+- Add `static func opensAnotherItem(_ type: UTType) -> Bool`, which conforms to one of `opensAnotherItemTypes`. Its doc: a stored link or a Terminal file; not a program, but the system opens another item when it opens one.
+- Ingest's `.generic` branch keeps calling only `isExecutableType`, so a link or Terminal file falls through to `.genericType`.
+- `ProjectFiles.openableObjectURL` refuses when `isExecutableType(type) || opensAnotherItem(type)`.
+- `ObjectRefusal.unsafe`'s and `openableObjectURL`'s docs say "could run a program or open another item" (MNT-11).
+- The `IngestMediaPolicy` type doc names both predicates and which caller uses which.
+- `isExecutableTypeCoversScriptsAndApps` drops its six link and Terminal rows and adds `!isExecutableType` for them. A new `opensAnotherItemCoversLinksAndTerminalFiles` checks the six extensions → true and `.pdf`, `.shellScript` → false.
+- T-14's `.webloc` and `.terminal` rows stay `.unsafe`.
+- `macos-client.mdc:21` names both predicates.
+- The `completed.md` paragraph and the Landed note replace the F-10 ingest side-effect sentence: ingest keeps the generic-type message for link and Terminal files; only Open refuses them, through `opensAnotherItem`.
+Check: `rg -n 'isExecutableType|opensAnotherItem' macos/App` shows ingest calling only `isExecutableType` and `openableObjectURL` calling both; scripts/check-pr.sh PASS.
+
+## Round 3 — fix
+Head `51e1fc37`. Gate PASS (orchestrator). F-13 done: `rejectsALinkFileAsAGenericType` went red first (`.reject(.executable)`), then green. Orchestrator read the diff:
+- `isExecutableType` is back to D-6's four conformances, and ingest asks only it.
+- `opensAnotherItem` is new, and `openableObjectURL` asks both predicates.
+- MNT-11 and MNT-12 are **Resolved** (docs say "or open another item"; the link and Terminal types have their own name).
+
+Deviations: none.
