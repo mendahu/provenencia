@@ -14,41 +14,14 @@ func TestSetSourceCover(t *testing.T) {
 		{
 			name: "pin artifact cover and revert to type icon",
 			reqFn: func(t *testing.T) proto.Message {
-				dir, userID, typeID := sourceFixture(t)
-				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
-					ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Cover",
-				}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var created engine.CreateSourceResponse
-				if err := proto.Unmarshal(cout, &created); err != nil {
-					t.Fatal(err)
-				}
-				aout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
-					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Label: "Scan",
-				}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var art engine.CreateArtifactResponse
-				if err := proto.Unmarshal(aout, &art); err != nil {
-					t.Fatal(err)
-				}
-				path := filepath.Join(t.TempDir(), "page.png")
-				writePNG(t, path)
-				if _, err := IngestArtifactFile(marshalProto(t, &engine.IngestArtifactFileRequest{
-					ProjectDir: dir, UserId: userID, ArtifactId: art.Artifact.Id, Path: path,
-				})); err != nil {
-					t.Fatal(err)
-				}
+				f := sourceWithPNG(t)
 				// Ingest does not auto-pin; this call is the first cover set.
 				return &engine.SetSourceCoverRequest{
-					ProjectDir:        dir,
-					UserId:            userID,
-					SourceId:          created.Source.Id,
+					ProjectDir:        f.dir,
+					UserId:            f.userID,
+					SourceId:          f.sourceID,
 					CoverMode:         "artifact",
-					PrimaryArtifactId: art.Artifact.Id,
+					PrimaryArtifactId: f.artifactID,
 				}
 			},
 			after: func(t *testing.T, out []byte, req proto.Message) {
@@ -150,41 +123,14 @@ func TestGetSourceWorkspaceCover(t *testing.T) {
 		{
 			name: "enriched cover on workspace source after explicit pin",
 			reqFn: func(t *testing.T) proto.Message {
-				dir, userID, typeID := sourceFixture(t)
-				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
-					ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "WS",
-				}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var created engine.CreateSourceResponse
-				if err := proto.Unmarshal(cout, &created); err != nil {
-					t.Fatal(err)
-				}
-				aout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
-					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Label: "A",
-				}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var art engine.CreateArtifactResponse
-				if err := proto.Unmarshal(aout, &art); err != nil {
-					t.Fatal(err)
-				}
-				path := filepath.Join(t.TempDir(), "ws.png")
-				writePNG(t, path)
-				if _, err := IngestArtifactFile(marshalProto(t, &engine.IngestArtifactFileRequest{
-					ProjectDir: dir, UserId: userID, ArtifactId: art.Artifact.Id, Path: path,
-				})); err != nil {
-					t.Fatal(err)
-				}
+				f := sourceWithPNG(t)
 				if _, err := SetSourceCover(marshalProto(t, &engine.SetSourceCoverRequest{
-					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id,
-					CoverMode: "artifact", PrimaryArtifactId: art.Artifact.Id,
+					ProjectDir: f.dir, UserId: f.userID, SourceId: f.sourceID,
+					CoverMode: "artifact", PrimaryArtifactId: f.artifactID,
 				})); err != nil {
 					t.Fatal(err)
 				}
-				return &engine.GetSourceWorkspaceRequest{ProjectDir: dir, SourceId: created.Source.Id}
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: f.dir, SourceId: f.sourceID}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
 				var ws engine.GetSourceWorkspaceResponse

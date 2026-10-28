@@ -8,14 +8,31 @@ enum ProjectFiles {
     /// The project folder that holds every object; mirrors `objectpath.Dir`.
     private static let objectsDir = "objects"
 
+    /// Why a stored object was not opened.
+    enum ObjectRefusal: Error, Equatable {
+        /// The object is not there to open: an empty, rejected or missing path, or a
+        /// symlink, Finder alias or other non-regular file at it.
+        case missing
+        /// The object is there but its name has no extension, or its type could
+        /// run a program or open another item.
+        case unsafe
+    }
+
     /// Joins `projectDir` with a slash-separated `relPath` from the catalog
     /// (e.g. `objects/ab/cd/abcd…`). Returns `nil` when `relPath` is empty,
     /// is not under `objects/`, contains `..` / absolute-ish segments, resolves
     /// outside `projectDir`, names a missing file, passes through a symlink at
-    /// or under `objects/`, is a Finder alias, or is not a regular file.
+    /// or under `objects/`, is a Finder alias, or is not a regular file. It does
+    /// not refuse by extension: thumbnails and the viewer read through it.
     static func objectURL(projectDir: String, relPath: String) -> URL? {
+        try? checkedObject(projectDir: projectDir, relPath: relPath).get()
+    }
+
+    /// The URL `objectURL` would return, or why it refuses: always `.missing` (a
+    /// symlink, alias or non-regular object counts as not there).
+    private static func checkedObject(projectDir: String, relPath: String) -> Result<URL, ObjectRefusal> {
         let trimmed = relPath.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
+        guard !trimmed.isEmpty else { return .failure(.missing) }
 
         let projectURL = URL(fileURLWithPath: projectDir, isDirectory: true).standardizedFileURL
         var url = projectURL
@@ -23,16 +40,16 @@ enum ProjectFiles {
         for part in trimmed.split(separator: "/") where !part.isEmpty {
             let segment = String(part)
             if segment == ".." || segment == "." {
-                return nil
+                return .failure(.missing)
             }
             // Absolute or home-relative segments must not be joined as relatives.
             if segment.hasPrefix("/") || segment.hasPrefix("~") {
-                return nil
+                return .failure(.missing)
             }
             url.appendPathComponent(segment, isDirectory: false)
             segments.append(segment)
         }
-        guard segments.count >= 2, segments[0] == objectsDir else { return nil }
+        guard segments.count >= 2, segments[0] == objectsDir else { return .failure(.missing) }
 
         let resolved = url.standardizedFileURL
         let projectPath = projectURL.path
@@ -40,25 +57,27 @@ enum ProjectFiles {
         // The segment rules above already guarantee a real child of the project
         // directory; this stays as defence in depth in case they change.
         guard resolvedPath.hasPrefix(projectPath + "/") else {
-            return nil
+            return .failure(.missing)
         }
-        guard isSafeObject(segments: segments, projectURL: projectURL) else { return nil }
-        return resolved
+        if let refusal = objectRefusal(segments: segments, projectURL: projectURL) {
+            return .failure(refusal)
+        }
+        return .success(resolved)
     }
 
     /// Mirrors core/objectstore openObjectsRoot + openRegular: every folder from
     /// objects/ down is a real folder and the object is a regular file (lstat,
-    /// never followed) and not a Finder alias. The project folder path itself
-    /// may be a symlink.
-    private static func isSafeObject(segments: [String], projectURL: URL) -> Bool {
+    /// never followed), not a Finder alias. Every refusal is `.missing`. The
+    /// project folder path itself may be a symlink.
+    private static func objectRefusal(segments: [String], projectURL: URL) -> ObjectRefusal? {
         var url = projectURL
         for (i, segment) in segments.enumerated() {
             url.appendPathComponent(segment, isDirectory: false)
             var st = stat()
-            guard lstat(url.path, &st) == 0 else { return false }
+            guard lstat(url.path, &st) == 0 else { return .missing }
             let kind = st.st_mode & S_IFMT
             let isObject = i == segments.count - 1
-            guard kind == (isObject ? S_IFREG : S_IFDIR) else { return false }
+            guard kind == (isObject ? S_IFREG : S_IFDIR) else { return .missing }
             if isObject {
                 // A Finder alias is a regular file to lstat, but Launch Services
                 // resolves it when the object is opened. Read the key from a
@@ -67,20 +86,52 @@ enum ProjectFiles {
                 let fresh = URL(fileURLWithPath: url.path)
                 guard let isAlias = try? fresh.resourceValues(forKeys: [.isAliasFileKey]).isAliasFile,
                       !isAlias
-                else { return false }
+                else { return .missing }
             }
         }
-        return true
+        return nil
     }
 
-    /// Opens a stored object in the default app. Returns false when missing
-    /// or when `relPath` is rejected by `objectURL`.
-    @discardableResult
-    static func openObject(projectDir: String, relPath: String) -> Bool {
-        guard let url = objectURL(projectDir: projectDir, relPath: relPath) else {
-            return false
+    /// The URL to hand to Launch Services for a stored object: `checkedObject`'s,
+    /// then `.unsafe` when the name has no extension or its type could run a
+    /// program (`IngestMediaPolicy.isExecutableType`) or open another item
+    /// (`IngestMediaPolicy.opensAnotherItem`). Go decides which types are stored;
+    /// this refuses only what no stored type should look like.
+    static func openableObjectURL(projectDir: String, relPath: String) -> Result<URL, ObjectRefusal> {
+        let checked = checkedObject(projectDir: projectDir, relPath: relPath)
+        guard case .success(let url) = checked else { return checked }
+        let ext = url.pathExtension
+        if ext.isEmpty { return .failure(.unsafe) }
+        if let type = UTType(filenameExtension: ext),
+           IngestMediaPolicy.isExecutableType(type) || IngestMediaPolicy.opensAnotherItem(type)
+        {
+            return .failure(.unsafe)
         }
-        return NSWorkspace.shared.open(url)
+        return checked
+    }
+
+    /// The app that opens `url`, chosen from the file's type alone: the default
+    /// handler for the type its extension names. Nothing stored on the file (a
+    /// `com.apple.LaunchServices.OpenWith` attribute travels with a copied or
+    /// zipped file) chooses it. Nil when the extension names no type or no app
+    /// opens it.
+    static func openingApplication(for url: URL) -> URL? {
+        guard let type = UTType(filenameExtension: url.pathExtension) else { return nil }
+        return NSWorkspace.shared.urlForApplication(toOpen: type)
+    }
+
+    /// Opens a stored object in the app for its type. Returns `nil` when it was
+    /// handed to that app, else why not: `.unsafe` from `openableObjectURL`,
+    /// `.missing` when the path is rejected or no app opens the type.
+    static func openObject(projectDir: String, relPath: String) -> ObjectRefusal? {
+        switch openableObjectURL(projectDir: projectDir, relPath: relPath) {
+        case .failure(let refusal):
+            return refusal
+        case .success(let url):
+            guard let app = openingApplication(for: url) else { return .missing }
+            NSWorkspace.shared.open([url], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+            return nil
+        }
     }
 
     /// Presents a single-file open panel. Returns an absolute path, or nil if cancelled.

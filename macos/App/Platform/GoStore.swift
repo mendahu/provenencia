@@ -2447,7 +2447,8 @@ struct GoStore: GenealogyStore {
             valueText: e.valueText,
             hasValue: e.hasValue_p,
             suggested: e.suggested,
-            sortOrder: e.sortOrder
+            sortOrder: e.sortOrder,
+            openHref: e.openHref
         )
     }
 

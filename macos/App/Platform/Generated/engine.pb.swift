@@ -1289,6 +1289,9 @@ public nonisolated struct Provenencia_Engine_V1_MetadataWorkspaceEntry: Sendable
 
   public var sortOrder: Int32 = 0
 
+  /// web link to open, from sourcemetadata OpenHref; empty when the value is not one
+  public var openHref: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -9003,7 +9006,7 @@ nonisolated extension Provenencia_Engine_V1_MetadataField: SwiftProtobuf.Message
 
 nonisolated extension Provenencia_Engine_V1_MetadataWorkspaceEntry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".MetadataWorkspaceEntry"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}field\0\u{3}value_text\0\u{4}\u{2}has_value\0\u{1}suggested\0\u{3}sort_order\0\u{b}date_value_id\0\u{b}date\0\u{b}date_summary\0\u{c}\u{3}\u{1}\u{c}\u{8}\u{1}\u{c}\u{7}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}field\0\u{3}value_text\0\u{4}\u{2}has_value\0\u{1}suggested\0\u{3}sort_order\0\u{4}\u{3}open_href\0\u{b}date_value_id\0\u{b}date\0\u{b}date_summary\0\u{c}\u{3}\u{1}\u{c}\u{8}\u{1}\u{c}\u{7}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -9016,6 +9019,7 @@ nonisolated extension Provenencia_Engine_V1_MetadataWorkspaceEntry: SwiftProtobu
       case 4: try { try decoder.decodeSingularBoolField(value: &self.hasValue_p) }()
       case 5: try { try decoder.decodeSingularBoolField(value: &self.suggested) }()
       case 6: try { try decoder.decodeSingularInt32Field(value: &self.sortOrder) }()
+      case 9: try { try decoder.decodeSingularStringField(value: &self.openHref) }()
       default: break
       }
     }
@@ -9041,6 +9045,9 @@ nonisolated extension Provenencia_Engine_V1_MetadataWorkspaceEntry: SwiftProtobu
     if self.sortOrder != 0 {
       try visitor.visitSingularInt32Field(value: self.sortOrder, fieldNumber: 6)
     }
+    if !self.openHref.isEmpty {
+      try visitor.visitSingularStringField(value: self.openHref, fieldNumber: 9)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -9050,6 +9057,7 @@ nonisolated extension Provenencia_Engine_V1_MetadataWorkspaceEntry: SwiftProtobu
     if lhs.hasValue_p != rhs.hasValue_p {return false}
     if lhs.suggested != rhs.suggested {return false}
     if lhs.sortOrder != rhs.sortOrder {return false}
+    if lhs.openHref != rhs.openHref {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

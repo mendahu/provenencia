@@ -273,20 +273,7 @@ func TestLikenessReadHidesDamagedValue(t *testing.T) {
 			dir, userID, sourceID, artifactID, personID, likenessID := likenessFixture(t)
 			saved := saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 128))
 			row := saved.Observations[0]
-			err := catalogsession.Do(dir, func(c *database.Catalog) error {
-				db, err := c.DB()
-				if err != nil {
-					return err
-				}
-				_, err = db.Exec(tt.damage, tt.args...)
-				return err
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := catalogsession.CloseAll(); err != nil {
-				t.Fatal(err)
-			}
+			damageCatalog(t, dir, tt.damage, tt.args...)
 			check := func(t *testing.T, rows []*engine.Observation) {
 				t.Helper()
 				if len(rows) != 1 || rows[0].GetValueDepictionId() != row.GetValueDepictionId() {

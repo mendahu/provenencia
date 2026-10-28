@@ -1,6 +1,7 @@
 package objectpath_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/objectpath"
@@ -8,51 +9,32 @@ import (
 
 func TestRel(t *testing.T) {
 	const sum = "8fce3b0000000000000000000000000000000000000000000000000000000000"
-	got, err := objectpath.Rel(sum, "image/jpeg")
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := "objects/8f/ce/" + sum + ".jpg"
-	if got != want {
-		t.Fatalf("got %q want %q", got, want)
-	}
-	got, err = objectpath.Rel(sum, "image/jpg")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got != want {
-		t.Fatalf("jpg alias: got %q want %q", got, want)
-	}
-	if _, err := objectpath.Rel("abcd", ""); err == nil {
-		t.Fatal("short checksum: want error")
-	}
-}
-
-func TestExtension(t *testing.T) {
+	const dir = "objects/8f/ce/" + sum
 	tests := []struct {
-		in   string
-		want string
+		name      string
+		checksum  string
+		mediaType string
+		want      string
+		wantErr   error
 	}{
-		{in: "image/jpeg", want: ".jpg"},
-		{in: "image/jpg", want: ".jpg"},
-		{in: "IMAGE/PNG", want: ".png"},
-		{in: "video/quicktime", want: ".mov"},
-		{in: "audio/x-wav", want: ".wav"},
-		{in: "text/plain; charset=utf-8", want: ".txt"},
-		{in: "text/csv", want: ".csv"},
-		{in: "text/markdown", want: ".md"},
-		{in: "application/msword", want: ".doc"},
-		{in: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", want: ".docx"},
-		{in: "audio/flac", want: ".flac"},
-		{in: "image/heic", want: ".heic"},
-		{in: "image/webp", want: ".webp"},
-		{in: "image/gif", want: ".gif"},
-		{in: "application/pdf", want: ".pdf"},
-		{in: "", want: ""},
+		{name: "jpeg", checksum: sum, mediaType: "image/jpeg", want: dir + ".jpg"},
+		{name: "pdf", checksum: sum, mediaType: "application/pdf", want: dir + ".pdf"},
+		{name: "plain text with charset", checksum: sum, mediaType: "text/plain; charset=utf-8", want: dir + ".txt"},
+		{name: "upper case type", checksum: sum, mediaType: "IMAGE/PNG", want: dir + ".png"},
+		{name: "shell script", checksum: sum, mediaType: "application/x-sh", wantErr: objectpath.ErrDisallowedType},
+		{name: "octet stream", checksum: sum, mediaType: "application/octet-stream", wantErr: objectpath.ErrDisallowedType},
+		{name: "empty type", checksum: sum, mediaType: "", wantErr: objectpath.ErrDisallowedType},
+		{name: "jpg alias is not stored", checksum: sum, mediaType: "image/jpg", wantErr: objectpath.ErrDisallowedType},
+		{name: "short checksum", checksum: "abcd", mediaType: "image/png", wantErr: objectpath.ErrInvalidChecksum},
+		{name: "short checksum, empty type", checksum: "abcd", mediaType: "", wantErr: objectpath.ErrInvalidChecksum},
 	}
 	for _, tt := range tests {
-		t.Run(tt.in, func(t *testing.T) {
-			if got := objectpath.Extension(tt.in); got != tt.want {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := objectpath.Rel(tt.checksum, tt.mediaType)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("err %v want %v", err, tt.wantErr)
+			}
+			if got != tt.want {
 				t.Fatalf("got %q want %q", got, tt.want)
 			}
 		})

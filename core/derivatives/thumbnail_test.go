@@ -151,7 +151,7 @@ func TestEnsureThumbnailSkipsNonImage(t *testing.T) {
 		t.Fatalf("%v %+v", err, list)
 	}
 
-	binID := installSourceFile(t, c, []byte{0, 1, 2}, "application/octet-stream", "blob.bin")
+	binID := installSourceFile(t, c, []byte{0, 1, 2}, "audio/mpeg", "blob.mp3")
 	res, err = EnsureThumbnail(c, binID)
 	if err != nil || !res.Skipped {
 		t.Fatalf("%+v %v", res, err)
@@ -332,6 +332,14 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 				return id
 			},
 			wantIs: ErrCorruptObject,
+		},
+		{
+			name: "raster type off the allowlist has no object path",
+			srcID: func(t *testing.T) []byte {
+				jpgSum := sha256.Sum256([]byte("image/jpg is not a stored type"))
+				return installFileRow(t, c, hex.EncodeToString(jpgSum[:]), "image/jpg", 10)
+			},
+			wantIs: ErrUnprocessable,
 		},
 		{
 			name: "pixel bomb png over decode budget",

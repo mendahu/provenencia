@@ -478,8 +478,7 @@ struct SourcePageArtifactsView: View {
 
     private func previewLabel(_ art: CatalogArtifact) -> String {
         if art.hasFile {
-            let name = art.file?.originalFilename ?? ""
-            return L10n.Sources.openArtifactFile(name: name.isEmpty ? art.ref : name)
+            return L10n.Sources.openArtifactFile(name: art.fileDisplayName)
         }
         return L10n.Sources.addFileToArtifact(ref: art.ref)
     }

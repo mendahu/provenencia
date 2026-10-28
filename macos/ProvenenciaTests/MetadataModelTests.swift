@@ -307,6 +307,16 @@ struct MetadataModelTests {
         #expect(store.fieldsByProject[projectDir]?.isEmpty == true)
     }
 
+    @Test func openURLUsesOnlyOpenHref() {
+        var entry = CatalogMetadataEntry(
+            field: seededField(), valueText: "www.example.org", hasValue: true, suggested: false, sortOrder: 0
+        )
+        #expect(entry.openURL == nil)
+
+        entry.openHref = "https://example.org"
+        #expect(entry.openURL == URL(string: "https://example.org"))
+    }
+
     @Test func fieldUsedByTwoSourcesShowsInboundNotice() async {
         let store = FakeStore()
         let field = userField(usedBy: 2)

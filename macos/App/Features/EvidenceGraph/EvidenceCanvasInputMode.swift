@@ -23,7 +23,7 @@ extension EvidenceGraphModel {
 enum EvidenceGraphCanvasNotice: Equatable {
     case readError(String)
     case deleteError(String)
-    case fileNotFound(String)
+    case fileOpenFailed(String)
     case noArtifact
     case placing(EvidencePrimaryKind)
     case connecting
@@ -38,7 +38,7 @@ extension EvidenceGraphModel {
         if pendingImpact == nil, deleteError == nil, let fileOpenError,
            resolvedFileArtifactID == selectedFileArtifactID
         {
-            return .fileNotFound(fileOpenError)
+            return .fileOpenFailed(fileOpenError)
         }
         if let graphReadError { return .readError(graphReadError) }
         if !canCite { return .noArtifact }

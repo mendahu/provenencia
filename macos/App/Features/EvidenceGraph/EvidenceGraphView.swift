@@ -301,10 +301,10 @@ private struct EvidenceGraphContent: View {
                     case .deleteError(let deleteError):
                         PVCallout(tone: .danger, message: deleteError)
                             .frame(width: 360, alignment: .trailing)
-                    case .fileNotFound(let fileOpenError):
+                    case .fileOpenFailed(let fileOpenError):
                         PVCallout(
                             tone: .danger,
-                            title: L10n.EvidenceGraph.fileNotFoundTitle,
+                            title: L10n.EvidenceGraph.fileOpenFailedTitle,
                             message: fileOpenError
                         )
                         .frame(width: 360, alignment: .trailing)

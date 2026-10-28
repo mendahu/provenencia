@@ -637,6 +637,7 @@ func metadataEntryProto(_ *database.Catalog, e sourcemetadata.WorkspaceEntry) *e
 		},
 		Suggested: e.Suggested,
 		SortOrder: int32(e.SortOrder),
+		OpenHref:  e.OpenHref(),
 	}
 	if e.Value != nil {
 		out.HasValue = true

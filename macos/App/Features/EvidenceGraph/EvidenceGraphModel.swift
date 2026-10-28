@@ -335,7 +335,12 @@ final class EvidenceGraphModel {
         guard let row = fileRows.first(where: { $0.id == id }) else { return }
         selectedFileArtifactID = id
         fileOpenError = nil
-        if !ProjectFiles.openObject(projectDir: session.projectKey.projectDir, relPath: row.relPath) {
+        switch ProjectFiles.openObject(projectDir: session.projectKey.projectDir, relPath: row.relPath) {
+        case nil:
+            break
+        case .unsafe:
+            fileOpenError = L10n.ObjectOpen.refused(filename: row.displayFilename)
+        case .missing:
             fileOpenError = L10n.EvidenceGraph.fileNotFoundMessage(
                 name: row.title,
                 filename: row.displayFilename

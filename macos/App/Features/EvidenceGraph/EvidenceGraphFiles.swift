@@ -16,15 +16,9 @@ enum EvidenceGraphFiles {
         var thumbnailRelPath: String
         var isCover: Bool
 
-        /// The stored original name, else the stored path's last component,
-        /// else the Artifact ref.
+        /// `CatalogArtifact.fileDisplayName` for this row.
         var displayFilename: String {
-            let trimmed = filename.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.isEmpty { return trimmed }
-            if let last = relPath.split(separator: "/").last, !last.isEmpty {
-                return String(last)
-            }
-            return ref
+            CatalogArtifact.fileDisplayName(originalFilename: filename, relPath: relPath, ref: ref)
         }
     }
 

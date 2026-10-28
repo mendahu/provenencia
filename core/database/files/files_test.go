@@ -8,6 +8,7 @@ import (
 
 	"github.com/mattn/go-sqlite3"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/objectpath"
 )
 
 func TestStorageRelPath(t *testing.T) {
@@ -16,19 +17,20 @@ func TestStorageRelPath(t *testing.T) {
 		name      string
 		mediaType string
 		want      string
+		wantErr   error
 	}{
 		{name: "jpeg", mediaType: "image/jpeg", want: "objects/8f/ce/" + sum + ".jpg"},
 		{name: "jpeg with charset", mediaType: "image/jpeg; charset=binary", want: "objects/8f/ce/" + sum + ".jpg"},
 		{name: "png", mediaType: "image/png", want: "objects/8f/ce/" + sum + ".png"},
 		{name: "pdf", mediaType: "application/pdf", want: "objects/8f/ce/" + sum + ".pdf"},
-		{name: "unknown", mediaType: "application/octet-stream", want: "objects/8f/ce/" + sum},
-		{name: "empty", mediaType: "", want: "objects/8f/ce/" + sum},
+		{name: "unknown", mediaType: "application/octet-stream", wantErr: objectpath.ErrDisallowedType},
+		{name: "empty", mediaType: "", wantErr: objectpath.ErrDisallowedType},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := StorageRelPath(sum, tt.mediaType)
-			if err != nil {
-				t.Fatal(err)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("err %v want %v", err, tt.wantErr)
 			}
 			if got != tt.want {
 				t.Fatalf("got %q want %q", got, tt.want)
@@ -235,6 +237,32 @@ func TestLookupByChecksumTx(t *testing.T) {
 	}
 }
 
+func TestReadRelPath(t *testing.T) {
+	const sum = "8fce3b0000000000000000000000000000000000000000000000000000000000"
+	tests := []struct {
+		name    string
+		file    File
+		want    string
+		wantErr error
+	}{
+		{name: "png", file: File{ChecksumSHA256: sum, MediaType: "image/png"}, want: "objects/8f/ce/" + sum + ".png"},
+		{name: "disallowed type has no path", file: File{ChecksumSHA256: sum, MediaType: "application/x-sh"}},
+		{name: "empty type has no path", file: File{ChecksumSHA256: sum}},
+		{name: "bad checksum", file: File{ChecksumSHA256: "abcd", MediaType: "image/png"}, wantErr: ErrInvalid},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ReadRelPath(tt.file)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("err %v want %v", err, tt.wantErr)
+			}
+			if got != tt.want {
+				t.Fatalf("got %q want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestRelPaths(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
@@ -264,6 +292,14 @@ func TestRelPaths(t *testing.T) {
 		}
 		stored = append(stored, f)
 	}
+	// A damaged row: its type is off the allowlist, so it has no path.
+	disallowedID, err := NewID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Insert(tx, File{ID: disallowedID, ChecksumSHA256: strings.Repeat("c", 64), MediaType: "application/x-sh", ByteSize: 3}); err != nil {
+		t.Fatal(err)
+	}
 	if err := tx.Commit(); err != nil {
 		t.Fatal(err)
 	}
@@ -278,6 +314,7 @@ func TestRelPaths(t *testing.T) {
 	}{
 		{name: "no ids", ids: nil, want: map[string]string{}},
 		{name: "unknown id omitted", ids: [][]byte{stored[0].ID, stored[1].ID, unknown}, want: map[string]string{}},
+		{name: "disallowed type omitted", ids: [][]byte{stored[0].ID, disallowedID}, want: map[string]string{}},
 	}
 	for _, f := range stored {
 		rel, err := StorageRelPath(f.ChecksumSHA256, f.MediaType)
@@ -286,6 +323,7 @@ func TestRelPaths(t *testing.T) {
 		}
 		tests[1].want[string(f.ID)] = rel
 	}
+	tests[2].want[string(stored[0].ID)] = tests[1].want[string(stored[0].ID)]
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := RelPaths(c, tt.ids)

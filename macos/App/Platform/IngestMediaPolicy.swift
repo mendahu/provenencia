@@ -2,7 +2,11 @@ import Foundation
 import UniformTypeIdentifiers
 
 /// Fail-fast ingest allowlist / reject taxonomy. Keep in sync with
-/// `core/ingest/mediatypes` — Go remains authoritative on sniff.
+/// `core/ingest/mediatypes` — Go remains authoritative on sniff. Two predicates name
+/// the types no stored file should have: `isExecutableType` (could run a program) is
+/// asked by ingest and by `ProjectFiles` when it opens a stored object; `opensAnotherItem`
+/// (a stored link or Terminal file) is asked only by `ProjectFiles`, so ingest keeps
+/// its generic-type message for those.
 enum IngestMediaPolicy {
     /// Largest file ingest accepts (matches `ingest.MaxBytes`).
     static let maxBytes: Int64 = 512 << 20
@@ -133,14 +137,36 @@ enum IngestMediaPolicy {
                 if type.conforms(to: .archive) || type.conforms(to: .diskImage) {
                     return .reject(.archive)
                 }
-                if type.conforms(to: .executable) || type.conforms(to: .unixExecutable)
-                    || type.conforms(to: .application)
-                {
+                if isExecutableType(type) {
                     return .reject(.executable)
                 }
             }
             return .reject(.genericType)
         }
+    }
+
+    /// True when `type` could run a program: an executable, a Unix executable, an
+    /// application bundle, or a script. Ingest rejects a picked file of such a type,
+    /// and `ProjectFiles` refuses to open a stored object of one.
+    static func isExecutableType(_ type: UTType) -> Bool {
+        type.conforms(to: .executable) || type.conforms(to: .unixExecutable)
+            || type.conforms(to: .application) || type.conforms(to: .script)
+    }
+
+    /// Types that open another item when the system opens them, though they are not
+    /// programs: a stored link (`.webloc`, `.fileloc`, `.inetloc`, `.url`) and Terminal's
+    /// settings and session files (`.terminal`, `.term`). An identifier the system does
+    /// not know is left out.
+    private static let opensAnotherItemTypes: [UTType] = [
+        "public.stored-url", "com.apple.terminal.settings", "com.apple.terminal.session",
+    ].compactMap { UTType($0) }
+
+    /// True when `type` is a stored link or a Terminal file: not a program, but the
+    /// system opens another item when it opens one. `ProjectFiles` refuses to open a
+    /// stored object of such a type; ingest does not ask, so a picked one is rejected
+    /// as a generic type.
+    static func opensAnotherItem(_ type: UTType) -> Bool {
+        opensAnotherItemTypes.contains { type.conforms(to: $0) }
     }
 
     static func byteSize(of url: URL) -> Int64 {

@@ -4974,6 +4974,18 @@
         }
       }
     },
+    "objectOpen.refused.message": {
+      "comment": "Error when Open refuses a stored file; argument is the file name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provenencia won't open “%@”. Its file type could run a program, or it isn't a type Provenencia stores."
+          }
+        }
+      }
+    },
     "origin.badge.provenencia": {
       "comment": "Origin badge for a vocabulary row seeded by Provenencia",
       "extractionState": "manual",
@@ -11270,14 +11282,14 @@
         }
       }
     },
-    "evidenceGraph.fileNotFound.title": {
-      "comment": "Title of the danger callout when Open cannot find the Artifact file",
+    "evidenceGraph.fileOpenFailed.title": {
+      "comment": "Title of the danger callout when Open cannot find or refuses the Artifact file",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "File not found"
+            "value": "Can't open the file"
           }
         }
       }

@@ -246,7 +246,8 @@ func artifactProto(c *database.Catalog, a artifacts.Artifact) (*engine.Artifact,
 		if err != nil {
 			return nil, err
 		}
-		rel, err := files.StorageRelPath(f.ChecksumSHA256, f.MediaType)
+		// A stored type off the allowlist has no path: the file ref stays, rel_path is empty.
+		rel, err := files.ReadRelPath(f)
 		if err != nil {
 			return nil, err
 		}

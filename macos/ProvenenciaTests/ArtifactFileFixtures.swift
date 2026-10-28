@@ -194,12 +194,15 @@ enum ArtifactFileFixtures {
         return drawn ? data : []
     }
 
-    static func write(_ data: Data, projectDir: String, relPath: String) throws {
+    /// Writes `data` at `relPath` under `projectDir` and sets its permission bits to
+    /// `mode`, so a test can make an object with an execute bit.
+    static func write(_ data: Data, projectDir: String, relPath: String, mode: mode_t = 0o644) throws {
         let url = URL(fileURLWithPath: projectDir).appendingPathComponent(relPath)
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
         try data.write(to: url)
+        guard chmod(url.path, mode) == 0 else { throw ArtifactFileFixtureError.failed }
     }
 }

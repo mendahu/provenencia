@@ -306,7 +306,7 @@ SHA-256: 8fce3b...
 storage: objects/8f/ce/8fce3b....jpg
 ```
 
-The basename is the full lowercase hex checksum plus an optional MIME-derived extension (`.jpg`, `.pdf`, …) from `media_type`. Unknown or empty media types keep the bare hex name. The exact sharding convention (`objects/{first two hex}/{next two}/{full hex}{ext}`) is fixed as above unless a migration notes otherwise.
+The basename is the full lowercase hex checksum plus the extension (`.jpg`, `.pdf`, …) that the ingest allowlist (`core/ingest/mediatypes`) gives `media_type`. Every object name has an extension: a `media_type` off the allowlist (unknown, empty, or a damaged row) has no path, and a read returns the file with an empty path. The exact sharding convention (`objects/{first two hex}/{next two}/{full hex}{ext}`) is fixed as above unless a migration notes otherwise.
 
 The stored object is the **original file bytes** of an import (JPEG, PNG, PDF, …). Hash names do not encrypt or wrap the payload. A user who opens the object in a normal viewer sees the picture or document. The ingest filename is `files.original_filename`, not the path on disk.
 

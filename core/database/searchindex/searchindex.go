@@ -13,7 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/effects"
-	"github.com/mendahu/provenencia/core/objectpath"
+	"github.com/mendahu/provenencia/core/database/files"
 )
 
 // Kind ids must match core/search constants (wire SearchHit.kind).
@@ -589,7 +589,8 @@ func listIDs(q Querier, query string) ([][]byte, error) {
 
 // existingSourceCoverThumb returns objects/… when cover is an artifact and a
 // thumbnail derivative already exists (lookup-only; no EnsureThumbnail).
-// Paths come from objectpath (same helper as files.StorageRelPath).
+// The path is files.ReadRelPath's: a thumbnail whose type is off the
+// allowlist (a damaged row) gives the Source no cover thumbnail.
 func existingSourceCoverThumb(q Querier, sourceID []byte) (string, error) {
 	var checksum, mediaType string
 	err := q.QueryRow(`
@@ -614,15 +615,13 @@ func existingSourceCoverThumb(q Querier, sourceID []byte) (string, error) {
 	if checksum == "" {
 		return "", nil
 	}
-	return objectsRelPath(checksum, mediaType)
-}
-
-func objectsRelPath(checksumHex, mediaType string) (string, error) {
 	// Catalog checksums are lowercase; tolerate mixed case from legacy rows.
-	checksumHex = strings.TrimSpace(strings.ToLower(checksumHex))
-	p, err := objectpath.Rel(checksumHex, mediaType)
+	rel, err := files.ReadRelPath(files.File{
+		ChecksumSHA256: strings.TrimSpace(strings.ToLower(checksum)),
+		MediaType:      mediaType,
+	})
 	if err != nil {
 		return "", fmt.Errorf("searchindex: bad checksum for object path")
 	}
-	return p, nil
+	return rel, nil
 }

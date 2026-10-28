@@ -2635,6 +2635,7 @@ type MetadataWorkspaceEntry struct {
 	HasValue      bool                   `protobuf:"varint,4,opt,name=has_value,json=hasValue,proto3" json:"has_value,omitempty"`
 	Suggested     bool                   `protobuf:"varint,5,opt,name=suggested,proto3" json:"suggested,omitempty"`
 	SortOrder     int32                  `protobuf:"varint,6,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	OpenHref      string                 `protobuf:"bytes,9,opt,name=open_href,json=openHref,proto3" json:"open_href,omitempty"` // web link to open, from sourcemetadata OpenHref; empty when the value is not one
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2702,6 +2703,13 @@ func (x *MetadataWorkspaceEntry) GetSortOrder() int32 {
 		return x.SortOrder
 	}
 	return 0
+}
+
+func (x *MetadataWorkspaceEntry) GetOpenHref() string {
+	if x != nil {
+		return x.OpenHref
+	}
+	return ""
 }
 
 // DateValueInput maps to datevalues.Insert (kind point|range; see docs/structured-date-model.md).
@@ -19504,7 +19512,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x05label\x18\x04 \x01(\tR\x05label\x12\x1b\n" +
 	"\tdata_type\x18\x05 \x01(\tR\bdataType\x12 \n" +
 	"\vdescription\x18\x06 \x01(\tR\vdescription\x12\x17\n" +
-	"\aused_by\x18\a \x01(\x05R\x06usedBy\"\x82\x02\n" +
+	"\aused_by\x18\a \x01(\x05R\x06usedBy\"\x9f\x02\n" +
 	"\x16MetadataWorkspaceEntry\x12:\n" +
 	"\x05field\x18\x01 \x01(\v2$.provenencia.engine.v1.MetadataFieldR\x05field\x12\x1d\n" +
 	"\n" +
@@ -19512,7 +19520,8 @@ const file_engine_proto_rawDesc = "" +
 	"\thas_value\x18\x04 \x01(\bR\bhasValue\x12\x1c\n" +
 	"\tsuggested\x18\x05 \x01(\bR\tsuggested\x12\x1d\n" +
 	"\n" +
-	"sort_order\x18\x06 \x01(\x05R\tsortOrderJ\x04\b\x03\x10\x04J\x04\b\b\x10\tJ\x04\b\a\x10\bR\rdate_value_idR\x04dateR\fdate_summary\"\x8a\a\n" +
+	"sort_order\x18\x06 \x01(\x05R\tsortOrder\x12\x1b\n" +
+	"\topen_href\x18\t \x01(\tR\bopenHrefJ\x04\b\x03\x10\x04J\x04\b\b\x10\tJ\x04\b\a\x10\bR\rdate_value_idR\x04dateR\fdate_summary\"\x8a\a\n" +
 	"\x0eDateValueInput\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x1c\n" +
 	"\tqualifier\x18\x02 \x01(\tR\tqualifier\x12\x1a\n" +
