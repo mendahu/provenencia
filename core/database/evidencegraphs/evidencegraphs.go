@@ -203,19 +203,13 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Graph, []rowchange.
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Graph{}, nil, err
 	}
-	want := make([]Pair, len(in.ArtifactIDs))
-	for i, id := range in.ArtifactIDs {
-		want[i] = Pair{ArtifactID: id}
-	}
-	if err := requireDistinctPairs(want); err != nil {
-		return Graph{}, nil, err
-	}
 	g, change, err := insert(tx.Tx, in.SourceID, in.Name, in.Description)
 	if err != nil {
 		return Graph{}, nil, err
 	}
-	for i := range want {
-		want[i].GraphID = g.ID
+	want := make([]Pair, len(in.ArtifactIDs))
+	for i, id := range in.ArtifactIDs {
+		want[i] = Pair{GraphID: g.ID, ArtifactID: id}
 	}
 	changes := []rowchange.Change{change}
 	linked, err := applyLinks(tx, userID, nil, want)
