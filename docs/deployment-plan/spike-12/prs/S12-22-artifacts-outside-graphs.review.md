@@ -5,7 +5,7 @@
 
 ## To user
 
-- **M-6: retire the card's Swift last-link rule in S12-22 instead of S12-38?** Recommendation: yes. The card would look the same; `isOnlyArtifact` and the per-graph lock loop go one PR earlier. Map row S12-38 and this plan's Out change with the answer. The plan stays Draft until this is answered (§12).
+- **M-6:** should the card's Swift copy of the "graph's last Artifact" rule go in S12-22 rather than S12-38? Answered yes by the user (2026-10-28). Nothing else is open.
 
 ## Writer's own calls
 
@@ -40,7 +40,10 @@ Maintainability.
 
 ### M-6 · major · Retire `isOnlyArtifact` now through the pair-shaped preflight
 Maintainability.
-**Answer:** To user. It moves scope from S12-38 (see To user above).
+**Answer:** To user, answered yes (2026-10-28). Fixed:
+- D-13: `loadLinkLocks` makes one call and maps `last_artifact` and `artifact_in_use` to today's copy, and `isOnlyArtifact` goes.
+- Scope In, Out, Deletes and STEP-6 change to match, and T-16 covers it.
+- The map's S12-22 and S12-38 scope entries are updated.
 
 ### M-7 · minor · `parseGraphLinks` beside `parseIDs`
 Maintainability.
