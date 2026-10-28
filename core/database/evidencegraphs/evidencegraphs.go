@@ -522,7 +522,13 @@ func CitationsUsingArtifactTx(tx *sql.Tx, graphID, artifactID []byte) ([]deletei
 	if tx == nil || len(graphID) != 16 || len(artifactID) != 16 {
 		return nil, ErrInvalid
 	}
-	rows, err := tx.Query(sqlCitationsUsing, artifactID, graphID)
+	return queryCitationRows(tx, sqlCitationsUsing, artifactID, graphID)
+}
+
+// queryCitationRows runs a query selecting Citation id and ref and returns the
+// rows as Listed, in the query's order.
+func queryCitationRows(tx *sql.Tx, q string, args ...any) ([]deleteimpact.Listed, error) {
+	rows, err := tx.Query(q, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -636,20 +642,8 @@ func checkUnlink(tx *sql.Tx, p Pair) (*UnlinkBlock, []deleteimpact.Listed, error
 	if n == 1 {
 		return block(ErrLastArtifact), nil, nil
 	}
-	rows, err := tx.Query(sqlCitationsNeedGraph, p.GraphID, p.ArtifactID)
+	need, err := queryCitationRows(tx, sqlCitationsNeedGraph, p.GraphID, p.ArtifactID)
 	if err != nil {
-		return nil, nil, err
-	}
-	defer rows.Close()
-	var need []deleteimpact.Listed
-	for rows.Next() {
-		var row deleteimpact.Listed
-		if err := rows.Scan(&row.ID, &row.Ref); err != nil {
-			return nil, nil, err
-		}
-		need = append(need, row)
-	}
-	if err := rows.Err(); err != nil {
 		return nil, nil, err
 	}
 	if len(need) > 0 {
