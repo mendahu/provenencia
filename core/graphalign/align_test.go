@@ -847,11 +847,15 @@ func TestPartialNameWithGrandparentClearsWeak(t *testing.T) {
 	relKey := vocabkey.BridgeKey{Type: vocabkey.BridgeRelationship, Term: vocabkey.BridgeTerm("grandchild")}
 	segA := segmentcompare.Segment{Key: relKey, NeighborKind: vocabkey.Person, Neighbor: vals(nameProp("Carol Jane Breakell"))}
 	segB := segmentcompare.Segment{Key: relKey, NeighborKind: vocabkey.Person, Neighbor: vals(nameProp("Carol Breakell"))}
-	seg := segmentcompare.Compare(segA, segB, segmentcompare.Together, own.Evidence, metas, cfg.Segment, cfg.Subject, cfg.Value)
-	sc := graphalign.ScoreCandidate(own, seg.Evidence, 1)
-	if sc.Score < cfg.Alignment.Bands.Weak || sc.Score >= cfg.Alignment.Bands.Medium {
-		t.Fatalf("score %.4f, want >= Weak %v and < Medium %v (own %.4f, segment %.4f)",
-			sc.Score, cfg.Alignment.Bands.Weak, cfg.Alignment.Bands.Medium, own.Evidence, seg.Evidence)
+	for _, placed := range []segmentcompare.Placement{segmentcompare.Together, segmentcompare.Unplaced} {
+		t.Run(string(placed), func(t *testing.T) {
+			seg := segmentcompare.Compare(segA, segB, placed, own.Evidence, metas, cfg.Segment, cfg.Subject, cfg.Value)
+			sc := graphalign.ScoreCandidate(own, seg.Evidence, 1)
+			if sc.Score < cfg.Alignment.Bands.Weak || sc.Score >= cfg.Alignment.Bands.Medium {
+				t.Fatalf("score %.4f, want >= Weak %v and < Medium %v (own %.4f, segment %.4f)",
+					sc.Score, cfg.Alignment.Bands.Weak, cfg.Alignment.Bands.Medium, own.Evidence, seg.Evidence)
+			}
+		})
 	}
 }
 
