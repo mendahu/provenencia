@@ -56,11 +56,16 @@ func slDate(d *datevalue.Value) valuecompare.Value {
 	return valuecompare.Value{Type: propertymeta.ValueTypeDate, Date: d}
 }
 
-// plain drops the prefix keys, the only keys the two sides do not share.
+// prefixKey is whether k is a prefix key, the only kind the two sides do not share.
+func prefixKey(k string) bool {
+	return strings.HasPrefix(k, "p:") || strings.HasPrefix(k, "g:")
+}
+
+// plain drops the prefix keys.
 func plain(keys []string) []string {
 	var out []string
 	for _, k := range keys {
-		if !strings.HasPrefix(k, "p:") && !strings.HasPrefix(k, "g:") {
+		if !prefixKey(k) {
 			out = append(out, k)
 		}
 	}
@@ -78,27 +83,28 @@ func TestWordKeys(t *testing.T) {
 		return "=" + k
 	}
 	tests := []struct {
-		name string
-		v    valuecompare.Value
-		want []string // exact when set
-		has  []string
-		not  []string
+		name     string
+		v        valuecompare.Value
+		want     []string // exact when set
+		has      []string
+		not      []string
+		noPrefix bool // neither list holds a prefix key
 	}{
-		{name: "initial is no key", v: slName("J. Robins"), want: []string{whole(slName("J. Robins")), "w:robins"}},
-		{name: "lone initial keys only its whole key", v: slGiven("J."), want: []string{whole(slGiven("J."))}},
+		{name: "initial is no key", v: slName("J. Robins"), want: []string{whole(slName("J. Robins")), "w:robins"}, noPrefix: true},
+		{name: "lone initial keys only its whole key", v: slGiven("J."), want: []string{whole(slGiven("J."))}, noPrefix: true},
 		{name: "folded word", v: slName("José Robins"), has: []string{"w:jose", "w:robins"}},
 		{name: "generation word", v: slGeneration(), has: []string{"w:john", "w:smith"}, not: []string{"w:jr"}},
 		{name: "alias set", v: slName("Bill"), has: []string{"a:" + billKey}},
-		{name: "text words", v: slText("New York"), has: []string{"w:new", "w:york"}, not: []string{"a:" + billKey}},
+		{name: "text words", v: slText("New York"), has: []string{"w:new", "w:york"}, not: []string{"a:" + billKey}, noPrefix: true},
 		{name: "integer", v: valuecompare.Value{Type: propertymeta.ValueTypeInteger, Integer: 4}},
 		{name: "empty name", v: valuecompare.Value{Type: propertymeta.ValueTypeName, NamePattern: valuecompare.WesternPattern}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			index, lookup := valuecompare.WordKeys(tt.v, rules)
-			if tt.v.Type == propertymeta.ValueTypeText || tt.name == "initial is no key" || tt.name == "lone initial keys only its whole key" {
+			if tt.noPrefix {
 				for _, k := range append(slices.Clone(index), lookup...) {
-					if strings.HasPrefix(k, "p:") || strings.HasPrefix(k, "g:") {
+					if prefixKey(k) {
 						t.Errorf("keys %q %q hold a prefix key %q", index, lookup, k)
 					}
 				}
@@ -169,14 +175,11 @@ func TestWordKeysReachPrefixes(t *testing.T) {
 			}
 		})
 	}
-	hasPrefix := func(keys []string) bool {
-		return slices.ContainsFunc(keys, func(k string) bool { return strings.HasPrefix(k, "p:") || strings.HasPrefix(k, "g:") })
-	}
 	t.Run("off keeps today's keys", func(t *testing.T) {
 		rules := matchregistry.Default().Value
 		rules.Names.PrefixMinLength = 0
 		index, lookup := valuecompare.WordKeys(slGiven("Desiree"), rules)
-		if !slices.Equal(index, lookup) || hasPrefix(index) {
+		if !slices.Equal(index, lookup) || slices.ContainsFunc(index, prefixKey) {
 			t.Errorf("index %q lookup %q, want equal and no prefix key", index, lookup)
 		}
 	})
@@ -187,7 +190,7 @@ func TestWordKeysReachPrefixes(t *testing.T) {
 			words[i] = "Desiree" + strings.Repeat("a", i)
 		}
 		index, lookup := valuecompare.WordKeys(slGiven(strings.Join(words, " ")), rules)
-		if hasPrefix(index) || hasPrefix(lookup) {
+		if slices.ContainsFunc(index, prefixKey) || slices.ContainsFunc(lookup, prefixKey) {
 			t.Errorf("index %q lookup %q hold a prefix key", index, lookup)
 		}
 		if !slices.Contains(index, "w:desiree") || !slices.Contains(lookup, "w:desiree") {
@@ -197,7 +200,7 @@ func TestWordKeysReachPrefixes(t *testing.T) {
 	t.Run("run-on word", func(t *testing.T) {
 		rules := matchregistry.Default().Value
 		index, lookup := valuecompare.WordKeys(slGiven(strings.Repeat("x", rules.Words.MaxSpellingLength+1)), rules)
-		if hasPrefix(index) || hasPrefix(lookup) {
+		if slices.ContainsFunc(index, prefixKey) || slices.ContainsFunc(lookup, prefixKey) {
 			t.Errorf("index %q lookup %q hold a prefix key", index, lookup)
 		}
 	})
