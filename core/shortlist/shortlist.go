@@ -60,11 +60,12 @@ func positive(kind vocabkey.SubjectType, lead vocabkey.PropertyKey, v subjectcom
 // lookup key. Both lists are sorted, with no duplicates.
 //
 // Word leads file every index word key of every positive value and look up
-// every lookup word key (valuecompare.WordKeys). A dated kind keys its type tokens with the year buckets its date can
-// still be Near to (a reach wider than MaxBuckets counts as open): a closed reach is filed under each bucket it covers and
-// looked up under each, an open one meets every closed one through "wide" and
-// "any" keys. An event with no type is filed under every type, and a probe
-// with no type meets every event.
+// every lookup word key (valuecompare.WordKeys). A dated kind keys its type
+// tokens with the year buckets its date can still be Near to (a reach wider
+// than MaxBuckets counts as open): a closed reach is filed under each bucket it
+// covers and looked up under each, an open one meets every closed one through
+// "wide" and "any" keys. An event with no type is filed under every type, and a
+// probe with no type meets every event.
 func Keys(kind vocabkey.SubjectType, v subjectcompare.Values, metas subjectcompare.Metas, r Rules, subject subjectcompare.Rules, value valuecompare.Rules) (index, lookup []string) {
 	for _, lead := range r.Words[kind] {
 		for _, x := range positive(kind, lead, v, metas, subject) {

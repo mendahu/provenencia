@@ -51,13 +51,13 @@ func keyList(v Value, r Rules, words []string, extra []string) []string {
 			out = append(out, keyWord+FoldWord(word, r.Words.Folds))
 		}
 	}
-	out = append(out, extra...)
-	sort.Strings(out)
-	return slices.Compact(out)
+	return sortedUnique(append(out, extra...))
 }
 
 // wordKeys: the name's words as nameWords reads them, so ignored parts and
-// generation words are never keys, plus the alias sets that hold a word.
+// generation words are never keys, plus the alias sets that hold a word, and
+// the given-like words' prefix keys (prefixKeys), the only keys index and
+// lookup do not share.
 func (name) wordKeys(v Value, r Rules) (index, lookup []string) {
 	words, generation := nameWords(v, r)
 	if len(words) == 0 {
@@ -101,6 +101,7 @@ func prefixKeys(words []nameWord, r Rules) (index, lookup []string) {
 	return index, lookup
 }
 
+// sortedUnique sorts keys in place and drops the duplicates.
 func sortedUnique(keys []string) []string {
 	sort.Strings(keys)
 	return slices.Compact(keys)
