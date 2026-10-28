@@ -64,9 +64,14 @@ type NameRules struct {
 	MaxWords int
 	// Generation is the weight of a generation word (Jr., III) on either side.
 	Generation float64
-	// PrefixMinLength is the fewest letters a given, nickname or untyped word's
-	// prefix has to be a shortlist key (Des for Desiree). 0 turns prefix keys off.
+	// PrefixMinLength is the fewest letters a given, nickname or untyped word
+	// needs to take part in the prefix rule: a shortlist prefix key and a
+	// comparer prefix hit (Des for Desiree). 0 turns both off.
 	PrefixMinLength int
+	// PrefixCredit is what a given, nickname or untyped word earns when it is
+	// the start of the other's word (Des for Desiree), below an alias and above
+	// an initial.
+	PrefixCredit float64
 	// Western is the pattern for a name that names no pattern, or one this
 	// catalog does not have.
 	Western NamePattern

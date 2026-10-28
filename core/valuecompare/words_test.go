@@ -74,31 +74,39 @@ func aliasIndexOf(kind valuecompare.AliasKind, sets ...[]string) valuecompare.Al
 	return valuecompare.NewAliasIndex([]valuecompare.AliasTable{{Key: "t", Kind: kind, Roles: nameRoles, Sets: sets}}, matchregistry.Default().Value.Words)
 }
 
-// Names add initials and alias tables to the word table; text adds neither.
+// Names add initials, alias tables and prefixes to the word table; text adds none.
 func TestWordSimilarityNames(t *testing.T) {
 	words := matchregistry.Default().Value.Words
 	abbreviations := aliasIndexOf(valuecompare.AliasAbbreviation, []string{"james", "jas"})
 	nicknames := aliasIndexOf(valuecompare.AliasNickname, []string{"james", "jim"})
 	given, family := valuecompare.RoleGiven, valuecompare.RoleFamily
+	prefixes := valuecompare.WithPrefixes(valuecompare.WordOptions(true, valuecompare.AliasIndex{}, given, given), 0.7)
 	for _, tc := range []struct {
-		name string
-		x, y string
-		opts valuecompare.WordOptionsType
-		sim  float64
-		rel  valuecompare.Relation
-		why  valuecompare.Cause
+		name    string
+		x, y    string
+		opts    valuecompare.WordOptionsType
+		sim     float64
+		rel     valuecompare.Relation
+		why     valuecompare.Cause
+		broader valuecompare.Side
 	}{
-		{"initial with initials", "j", "james", valuecompare.WordOptions(true, valuecompare.AliasIndex{}, given, given), words.InitialCredit, valuecompare.Contains, valuecompare.CauseInitial},
-		{"initial without initials", "j", "james", valuecompare.WordOptions(false, valuecompare.AliasIndex{}, given, given), 0, valuecompare.Different, valuecompare.CauseNoMatch},
-		{"initial of another word", "w", "james", valuecompare.WordOptions(true, valuecompare.AliasIndex{}, given, given), 0, valuecompare.Different, valuecompare.CauseNoMatch},
-		{"abbreviation", "jas", "james", valuecompare.WordOptions(true, abbreviations, given, given), words.AliasCredit, valuecompare.Equivalent, valuecompare.CauseAbbreviation},
-		{"nickname", "jim", "james", valuecompare.WordOptions(true, nicknames, given, given), words.AliasCredit, valuecompare.Equivalent, valuecompare.CauseAlias},
-		{"nickname as surnames", "jim", "james", valuecompare.WordOptions(true, nicknames, family, family), 0, valuecompare.Different, valuecompare.CauseNoMatch},
+		{"initial with initials", "j", "james", valuecompare.WordOptions(true, valuecompare.AliasIndex{}, given, given), words.InitialCredit, valuecompare.Contains, valuecompare.CauseInitial, valuecompare.SideA},
+		{"initial without initials", "j", "james", valuecompare.WordOptions(false, valuecompare.AliasIndex{}, given, given), 0, valuecompare.Different, valuecompare.CauseNoMatch, valuecompare.SideNone},
+		{"initial of another word", "w", "james", valuecompare.WordOptions(true, valuecompare.AliasIndex{}, given, given), 0, valuecompare.Different, valuecompare.CauseNoMatch, valuecompare.SideNone},
+		{"abbreviation", "jas", "james", valuecompare.WordOptions(true, abbreviations, given, given), words.AliasCredit, valuecompare.Equivalent, valuecompare.CauseAbbreviation, valuecompare.SideNone},
+		{"nickname", "jim", "james", valuecompare.WordOptions(true, nicknames, given, given), words.AliasCredit, valuecompare.Equivalent, valuecompare.CauseAlias, valuecompare.SideNone},
+		{"nickname as surnames", "jim", "james", valuecompare.WordOptions(true, nicknames, family, family), 0, valuecompare.Different, valuecompare.CauseNoMatch, valuecompare.SideNone},
+		{"prefix", "des", "desiree", prefixes, 0.7, valuecompare.Contains, valuecompare.CausePrefix, valuecompare.SideA},
+		{"prefix, longer first", "desiree", "des", prefixes, 0.7, valuecompare.Contains, valuecompare.CausePrefix, valuecompare.SideB},
+		{"prefix off", "des", "desiree", valuecompare.WordOptions(true, valuecompare.AliasIndex{}, given, given), 0, valuecompare.Different, valuecompare.CauseNoMatch, valuecompare.SideNone},
+		{"spelling before prefix", "ann", "anne", prefixes, 0.75, valuecompare.Near, valuecompare.CauseSpelling, valuecompare.SideNone},
+		{"alias before prefix", "jim", "jimmy", valuecompare.WithPrefixes(valuecompare.WordOptions(true, aliasIndexOf(valuecompare.AliasNickname, []string{"jim", "jimmy"}), given, given), 0.7), words.AliasCredit, valuecompare.Equivalent, valuecompare.CauseAlias, valuecompare.SideNone},
+		{"not a prefix", "desmond", "desiree", prefixes, 0, valuecompare.Different, valuecompare.CauseNoMatch, valuecompare.SideNone},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			sim, rel, why := valuecompare.WordSimilarity(tc.x, tc.y, words, tc.opts)
-			if math.Abs(sim-tc.sim) > 1e-9 || rel != tc.rel || why != tc.why {
-				t.Errorf("got %v %s %s, want %v %s %s", sim, rel, why, tc.sim, tc.rel, tc.why)
+			sim, rel, why, broader := valuecompare.WordSimilarity(tc.x, tc.y, words, tc.opts)
+			if math.Abs(sim-tc.sim) > 1e-9 || rel != tc.rel || why != tc.why || broader != tc.broader {
+				t.Errorf("got %v %s %s broader %q, want %v %s %s broader %q", sim, rel, why, broader, tc.sim, tc.rel, tc.why, tc.broader)
 			}
 		})
 	}
@@ -158,7 +166,7 @@ func TestAliasIndexKeysTokens(t *testing.T) {
 			idx := valuecompare.NewAliasIndex([]valuecompare.AliasTable{{
 				Key: "t", Kind: valuecompare.AliasNickname, Roles: []valuecompare.NameRole{tc.role}, Sets: [][]string{tc.set},
 			}}, words)
-			sim, _, _ := valuecompare.WordSimilarity(tc.x, tc.y, words, valuecompare.WordOptions(true, idx, tc.role, tc.role))
+			sim, _, _, _ := valuecompare.WordSimilarity(tc.x, tc.y, words, valuecompare.WordOptions(true, idx, tc.role, tc.role))
 			if math.Abs(sim-words.AliasCredit) > 1e-9 {
 				t.Errorf("%s ~ %s scored %v, want AliasCredit %v", tc.x, tc.y, sim, words.AliasCredit)
 			}

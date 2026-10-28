@@ -171,7 +171,7 @@ func (n name) compare(a, b Value, r Rules) (Result, Detail) {
 	for i, x := range lo {
 		earned[i] = make([]float64, len(hi))
 		for j, y := range hi {
-			sim, _, _ := n.word(x, y, r)
+			sim, _, _, _ := n.word(x, y, r)
 			earned[i][j] = sim * n.affinity(x.role, y.role, r.Names) * (x.weight + y.weight)
 		}
 	}
@@ -304,7 +304,7 @@ func sortedBy(n int, key func(int) int) []int {
 // pair is what a word pair says about the relation and the similarity it
 // earns: a role mismatch is Near, for the role unless the spelling already was.
 func (n name) pair(x, y nameWord, r Rules) (contributor, float64) {
-	sim, rel, why := n.word(x, y, r)
+	sim, rel, why, broader := n.word(x, y, r)
 	c := contributor{rel: rel, why: why}
 	switch {
 	case x.role != y.role:
@@ -313,10 +313,7 @@ func (n name) pair(x, y nameWord, r Rules) (contributor, float64) {
 			c.why = CauseSpelling
 		}
 	case rel == Contains:
-		c.broader = SideB
-		if IsInitial(x.text) {
-			c.broader = SideA
-		}
+		c.broader = broader
 	}
 	return c, sim * n.affinity(x.role, y.role, r.Names)
 }
@@ -366,11 +363,16 @@ func weakestOf(contributors []contributor) contributor {
 	return weakest
 }
 
-// word is the word table for two name words: initials count and the catalog's
-// aliases apply, each under its own role.
-func (name) word(x, y nameWord, r Rules) (float64, Relation, Cause) {
+// word is the word table for two name words: initials count, the catalog's
+// aliases apply, each under its own role, and a word that starts the other
+// counts when both take part in the prefix rule.
+func (name) word(x, y nameWord, r Rules) (float64, Relation, Cause, Side) {
+	credit := 0.0
+	if prefixWord(x, r) && prefixWord(y, r) {
+		credit = r.Names.PrefixCredit
+	}
 	return wordSimilarity(x.text, y.text, x.fold, y.fold, r.Words,
-		wordOptions{initials: true, aliases: r.Names.Aliases, roleX: x.role, roleY: y.role})
+		wordOptions{initials: true, aliases: r.Names.Aliases, roleX: x.role, roleY: y.role, prefixCredit: credit})
 }
 
 // sameParts pairs two names with the same key: their sorted words position by

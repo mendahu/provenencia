@@ -812,6 +812,30 @@ func TestProposeExtraGivenNamesAreAWeakMatch(t *testing.T) {
 	}
 }
 
+// A given name that starts another's is offered the record and is a weak match
+// with the same surname, whichever side is filed. No nickname set holds ros, so
+// the shortlist's prefix keys and the comparer's prefix rule carry it (S11-45).
+func TestProposeAPrefixNameIsAWeakMatch(t *testing.T) {
+	for _, tc := range []struct{ filed, other, probe string }{
+		{"Rosalind Long", "Mary Long", "Ros Long"},
+		{"Ros Long", "Mary Long", "Rosalind Long"},
+	} {
+		t.Run(tc.filed+" and "+tc.probe, func(t *testing.T) {
+			f := newFixture(t)
+			known := f.promote(f.person(f.source, f.artifact, tc.filed))
+			f.promote(f.person(f.source, f.artifact, tc.other))
+			srcB, artB := f.newSource("Census")
+			again := f.person(srcB, artB, tc.probe)
+			row := rowFor(f.propose(f.graph(srcB), nil), again.ID)
+			bands := matchregistry.Default().AlignConfig().Alignment.Bands
+			if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, known.Entity.ID) ||
+				row.Assessment != graphalign.AssessWeak || row.Score < bands.Weak || row.Score >= bands.Medium {
+				t.Fatalf("%s: target %s assessment %s score %.4f", tc.probe, row.Target, row.Assessment, row.Score)
+			}
+		})
+	}
+}
+
 // namedMembers files n people called name, each on a Source of its own titled
 // "Census 1851", "Census 1861", ...: the first on a new handle, the rest joined
 // to it. It returns the handle and the members in filing order.

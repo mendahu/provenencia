@@ -138,7 +138,8 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `value.Names.CrossRole` | 0.5 | `DefaultNames.CrossRole` | Any other role mismatch |
 | `value.Names.MaxWords` | 32 | estimate | Most words, generation words included, either name may have for the pairing to run; beyond it `too_long` |
 | `value.Names.Generation` | 0.5 | estimate | Weight of a generation word, Jr. or III, on either side |
-| `value.Names.PrefixMinLength` | 2 | decided: user, 2026-10-24 | Fewest letters of a given-name prefix the shortlist files and looks up; 0 turns prefix keys off |
+| `value.Names.PrefixMinLength` | 2 | decided: user, 2026-10-24 | Fewest letters of a given-name prefix the shortlist keys and the comparer counts; 0 turns the prefix rule off |
+| `value.Names.PrefixCredit` | 0.7 | estimate | A given, nickname or untyped word that is the start of the other's word |
 | `value.Names.Western.Weights.Family` | 1.5 | `WesternNamePattern.Weights` | Surname word weight |
 | `value.Names.Western.Weights.FirstGiven` | 1 | `WesternNamePattern.Weights` | First given name weight |
 | `value.Names.Western.Weights.OtherGiven` | 0.5 | `WesternNamePattern.Weights` | Middle names and initials |

@@ -55,6 +55,8 @@ func defaultValue() valuecompare.Rules {
 			Generation: 0.5,
 			// decided: user, 2026-10-24: "Al", "Ed" and "Jo" count (S11-46 measured the wider shortlist on the large fixture: +13% hits, no cap)
 			PrefixMinLength: 2,
+			// An estimate (name-candidates.md, user 2026-10-24): above an initial (InitialCredit 0.5), below a nickname table hit (AliasCredit 0.98).
+			PrefixCredit: 0.7,
 			// carried from match.WesternNamePattern: given names then surname, with
 			// GEDCOM-style part types. Every product part type
 			// (namevalue.PartTypes) must have a role.

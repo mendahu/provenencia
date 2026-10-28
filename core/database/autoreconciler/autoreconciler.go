@@ -77,7 +77,8 @@ import (
 //	17: text ignores word breaks: god-father is godfather (S11-07).
 //	18: a nickname or abbreviation of a given name folds into its formal name; the reconciler reads the product alias seed and its nickname heads (S11-28).
 //	19: Des is a nickname of Desiree and of Desirae (S11-44).
-const CacheVersion = 19
+//	20: a given name that is the start of another folds into it, like an initial (S11-45).
+const CacheVersion = 20
 
 // ValueRules are the value compare rules reconciling reads: the shipped
 // registry and the product alias seed, never a catalog's own alias rows or name

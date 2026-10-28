@@ -1440,6 +1440,7 @@ enum L10n {
                 case .precision: return lineContainsPrecision
                 case .missingPart: return lineContainsMissingPart
                 case .initial: return lineContainsInitial
+                case .prefix: return lineContainsPrefix
                 default: return lineContainsOther
                 }
             case .overlaps:
@@ -1584,6 +1585,7 @@ enum L10n {
         static let lineContainsPrecision = LocalizedStringResource("promote.sheet.line.containsPrecision", defaultValue: "Same date, recorded less precisely", comment: "Evidence sentence: a date that contains the other, less precise")
         static let lineContainsMissingPart = LocalizedStringResource("promote.sheet.line.containsMissingPart", defaultValue: "Matches; part of the name is missing", comment: "Evidence sentence: a name missing a word the other has")
         static let lineContainsInitial = LocalizedStringResource("promote.sheet.line.containsInitial", defaultValue: "Matches by initial", comment: "Evidence sentence: a name that matches by an initial")
+        static let lineContainsPrefix = LocalizedStringResource("promote.sheet.line.containsPrefix", defaultValue: "Matches by a shortened name", comment: "Evidence sentence: a name that matches by a shortened name (Des for Desiree)")
         static let lineContainsOther = LocalizedStringResource("promote.sheet.line.containsOther", defaultValue: "Matches, with less detail", comment: "Evidence sentence: a value that contains the other with less detail")
         static let lineOverlapsDates = LocalizedStringResource("promote.sheet.line.overlapsDates", defaultValue: "The dates overlap", comment: "Evidence sentence: dates that overlap")
         static let lineOverlapsOther = LocalizedStringResource("promote.sheet.line.overlapsOther", defaultValue: "Partly the same", comment: "Evidence sentence: values that partly overlap")

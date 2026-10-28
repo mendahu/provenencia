@@ -18909,6 +18909,18 @@
         }
       }
     },
+    "promote.sheet.line.containsPrefix": {
+      "comment": "Evidence sentence: a name that matches by a shortened name (Des for Desiree)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Matches by a shortened name"
+          }
+        }
+      }
+    },
     "promote.sheet.line.overlapsDates": {
       "comment": "Evidence sentence: dates that overlap",
       "extractionState": "manual",

@@ -1,6 +1,6 @@
 # S11-45 — Prefix names
 
-**Status:** Planned
+**Status:** Landed in [#607](https://github.com/mendahu/provenencia/pull/607)
 **Spike / slice:** Spike 11 · Slice 10 — Name candidates
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the evidence sheet's existing name line gains one sentence; nothing new is drawn)
@@ -12,6 +12,7 @@
 **Skills to load:** [`add-match-rule`](../../../../.agents/skills/add-match-rule/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/match-rules.mdc`, `.cursor/rules/go-tests.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`
 **Context:** [name candidates § Prefix rule, in detail](../name-candidates.md#prefix-rule-in-detail), [§ Decided](../name-candidates.md#decided-user-2026-10-24), [comparison layers § Relations](../comparison-layers.md#relations), [`conclusion-reconciliation.md`](../../../conclusion-reconciliation.md), [`matching-model.md` § Knob inventory](../../../matching-model.md#knob-inventory); working rules: "A prefix is an initial generalised", "The reconciler keeps its own decisions", "One wire vocabulary", "Registry numbers: carry over, then estimate", "High tolerance for churn"
+**Landed:** The `CausePrefix` comment is a trailing comment (gofmt alignment), worded per D-2. Review round 1 added two doc-only commits the plan did not name: `name-candidates.md` now names `valuecompare.PrefixRuleRole` and gives the built word order (exact, initial, alias, fold, spelling, then prefix), and the format-agnostic bullet in the `core/autoreconcile/names.go` header is rewrapped. Otherwise none.
 **Planned:** 2026-10-28 against `main` @ `784c7ae`
 **Review:** [`S11-45-prefix-names.review.md`](S11-45-prefix-names.review.md) — Fits with changes / Ready with changes, 2 rounds (every finding answered)
 

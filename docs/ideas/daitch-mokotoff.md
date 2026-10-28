@@ -10,7 +10,7 @@ Call it Daitch–Mokotoff. Do not call it a Jewish chart, Jewish Soundex, Easter
 
 ## Where it sits
 
-[`wordSimilarity`](../../core/valuecompare/words.go) already returns, in order: exact (1), initial, alias (0.98), fold (0.95), then the edit-distance ratio. Phonetics runs only when that ratio is 0, on the already-folded word.
+[`wordSimilarity`](../../core/valuecompare/words.go) already returns, in order: exact (1), initial, alias (0.98), fold (0.95), then the edit-distance ratio, then a prefix (S11-45). Phonetics runs only when that ratio is 0, and is ordered against the prefix rung, on the already-folded word.
 
 A shared code scores **0.7**. That is above 0 and below the lowest one-edit score the spelling tier returns (Ann/Anne is 0.75, Smyth/Smith is 0.8). Exact, alias, fold, and near-spelling never reach it. An initial is decided earlier and does not fall through.
 

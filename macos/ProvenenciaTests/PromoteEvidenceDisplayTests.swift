@@ -90,6 +90,7 @@ struct PromoteEvidenceDisplayTests {
             #expect(sentence(.contains, cause: .precision, value) == key(L10n.Promote.lineContainsPrecision))
             #expect(sentence(.contains, cause: .missingPart, value) == key(L10n.Promote.lineContainsMissingPart))
             #expect(sentence(.contains, cause: .initial, value) == key(L10n.Promote.lineContainsInitial))
+            #expect(sentence(.contains, cause: .prefix, value) == key(L10n.Promote.lineContainsPrefix))
             #expect(sentence(.contains, cause: .none, value) == key(L10n.Promote.lineContainsOther))
             #expect(sentence(.near, cause: .spelling, value) == key(L10n.Promote.lineNearSpelling))
             #expect(sentence(.near, cause: .gap, value) == key(L10n.Promote.lineNearGap))

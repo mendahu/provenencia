@@ -70,6 +70,8 @@ var samples = map[string][]samplePair{
 		ofName("g=W.|s=Robins", "g=James|s=Robins"), ofName("g=Ada|s=Lovelace", "g=James|s=Robins"),
 		ofName("g=Robins|s=James", "g=James|s=Robins"), ofName("g=J.|s=Robbins", "g=James|s=Robins"),
 		ofName("g=James|s=Robins|x=Jr.", "g=James|s=Robins|x=Sr."), ofName("p=Rev.|x=Jr.", "g=James"),
+		ofName("g=Des|s=Long", "g=Desiree|s=Long"), ofName("g=Desiree", "g=Des"), ofName("n=Des", "g=Desiree"),
+		ofName("g=Mary|s=Mac", "g=Mary|s=MacDonald"), ofName("g=James|g=Des", "g=J.|g=Desiree"),
 		{formOnly("James Robins"), nv("g=James")}, {valuecompare.Value{Type: propertymeta.ValueTypeName}, nv("g=James")},
 	},
 	propertymeta.ValueTypeDate: {
@@ -142,9 +144,9 @@ func variantText(rng *rand.Rand, s string) string {
 
 // Name parts come from pools per part code (the codes of nv).
 var namePools = map[string][]string{
-	"g":  {"James", "Jim", "Mary", "William", "Johann", "Johan", "Jon", "John", "José", "Jose", "Maria Luisa", "浩", "J.", "K.", "W", "M."},
+	"g":  {"James", "Jim", "Mary", "William", "Johann", "Johan", "Jon", "John", "José", "Jose", "Maria Luisa", "浩", "J.", "K.", "W", "M.", "Des", "Desiree", "Al", "Albert"},
 	"n":  {"Jim", "Bill", "Polly"},
-	"s":  {"Robins", "Robbins", "Smith", "Smyth", "Silva Costa", "Costa", "Gogh", "Núñez", "Nunez", "蒋"},
+	"s":  {"Robins", "Robbins", "Smith", "Smyth", "Silva Costa", "Costa", "Gogh", "Núñez", "Nunez", "蒋", "Mac", "MacDonald"},
 	"sp": {"van", "von", "de"},
 	"x":  {"Jr.", "Sr.", "III"},
 	"p":  {"Rev.", "Dr."},
