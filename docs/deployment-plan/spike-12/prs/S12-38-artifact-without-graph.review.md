@@ -1,7 +1,7 @@
 # Review — S12-38 Add an Artifact without a graph; the card saves links in one write
 
 **Verdict:** Fits with changes — Ready with changes (both rounds' blockers Fixed; plan Planned 2026-10-28)
-**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet), fresh each round. Both reviewed the plan and brief [S12-D7](../design/S12-D7-artifact-in-no-graph.md).
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet), fresh each round. Both reviewed the plan and brief [S12-D7](../design/archive/S12-D7-artifact-in-no-graph.md).
 
 ## To user
 
