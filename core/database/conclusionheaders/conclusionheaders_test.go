@@ -315,55 +315,38 @@ func TestListPersonsQueryCountIsConstant(t *testing.T) {
 	}
 }
 
-// eventSubject creates and promotes an Event Subject; returns subject and handle.
-func (f *fixture) eventSubject() (subjects.Subject, []byte) {
+// subjectAndHandle creates and promotes a Subject of kind; returns subject and handle.
+func (f *fixture) subjectAndHandle(kind string) (subjects.Subject, []byte) {
 	f.t.Helper()
-	s := subjectstest.OfType(f.t, f.c, userID, f.graph, f.typeID("event"), "")
+	s := subjectstest.OfType(f.t, f.c, userID, f.graph, f.typeID(kind), "")
 	p := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
 	return s, p.Entity.ID
 }
 
-// placePictureSubject creates and promotes a Place Subject; returns subject and
-// handle. Named distinctly from placeSubject in placechains_test.go.
-func (f *fixture) placePictureSubject() (subjects.Subject, []byte) {
-	f.t.Helper()
-	s := subjectstest.OfType(f.t, f.c, userID, f.graph, f.typeID("place"), "")
-	p := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
-	return s, p.Entity.ID
-}
-
-func personLeads(rows []conclusionheaders.PersonHeader) map[string][]byte {
+func pictureLeads[H any](rows []H, id, pic func(H) []byte) map[string][]byte {
 	out := map[string][]byte{}
 	for _, r := range rows {
-		out[string(r.Entity.ID)] = r.PictureImageFileID
+		out[string(id(r))] = pic(r)
 	}
 	return out
 }
 
-func eventLeads(rows []conclusionheaders.EventHeader) map[string][]byte {
-	out := map[string][]byte{}
-	for _, r := range rows {
-		out[string(r.Entity.ID)] = r.PictureImageFileID
-	}
-	return out
+type headerPictureCase struct {
+	name  string
+	key   string
+	setup func(f *fixture) (subjects.Subject, []byte)
+	list  func(f *fixture) (map[string][]byte, error)
+	byIDs func(f *fixture, ids [][]byte) (map[string][]byte, error)
 }
 
-func placeLeads(rows []conclusionheaders.PlaceHeader) map[string][]byte {
-	out := map[string][]byte{}
-	for _, r := range rows {
-		out[string(r.Entity.ID)] = r.PictureImageFileID
-	}
-	return out
-}
-
-func TestHeaderLeadsWithEarliestPicture(t *testing.T) {
-	cases := []struct {
-		name  string
-		key   string
-		setup func(f *fixture) (subjects.Subject, []byte)
-		list  func(f *fixture) (map[string][]byte, error)
-		byIDs func(f *fixture, ids [][]byte) (map[string][]byte, error)
-	}{
+func headerPictureCases() []headerPictureCase {
+	personID := func(r conclusionheaders.PersonHeader) []byte { return r.Entity.ID }
+	personPic := func(r conclusionheaders.PersonHeader) []byte { return r.PictureImageFileID }
+	eventID := func(r conclusionheaders.EventHeader) []byte { return r.Entity.ID }
+	eventPic := func(r conclusionheaders.EventHeader) []byte { return r.PictureImageFileID }
+	placeID := func(r conclusionheaders.PlaceHeader) []byte { return r.Entity.ID }
+	placePic := func(r conclusionheaders.PlaceHeader) []byte { return r.PictureImageFileID }
+	return []headerPictureCase{
 		{
 			name: "person",
 			key:  vocabkey.PropertyLikeness,
@@ -372,43 +355,46 @@ func TestHeaderLeadsWithEarliestPicture(t *testing.T) {
 				return s, h
 			},
 			list: func(f *fixture) (map[string][]byte, error) {
-				return personLeads(f.list()), nil
+				return pictureLeads(f.list(), personID, personPic), nil
 			},
 			byIDs: func(f *fixture, ids [][]byte) (map[string][]byte, error) {
 				rows, err := conclusionheaders.PersonsByIDs(f.c, ids)
-				return personLeads(rows), err
+				return pictureLeads(rows, personID, personPic), err
 			},
 		},
 		{
 			name: "event",
 			key:  vocabkey.PropertyEventPicture,
 			setup: func(f *fixture) (subjects.Subject, []byte) {
-				return f.eventSubject()
+				return f.subjectAndHandle("event")
 			},
 			list: func(f *fixture) (map[string][]byte, error) {
-				return eventLeads(f.events()), nil
+				return pictureLeads(f.events(), eventID, eventPic), nil
 			},
 			byIDs: func(f *fixture, ids [][]byte) (map[string][]byte, error) {
 				rows, err := conclusionheaders.EventsByIDs(f.c, ids)
-				return eventLeads(rows), err
+				return pictureLeads(rows, eventID, eventPic), err
 			},
 		},
 		{
 			name: "place",
 			key:  vocabkey.PropertyPlacePicture,
 			setup: func(f *fixture) (subjects.Subject, []byte) {
-				return f.placePictureSubject()
+				return f.subjectAndHandle("place")
 			},
 			list: func(f *fixture) (map[string][]byte, error) {
-				return placeLeads(f.places()), nil
+				return pictureLeads(f.places(), placeID, placePic), nil
 			},
 			byIDs: func(f *fixture, ids [][]byte) (map[string][]byte, error) {
 				rows, err := conclusionheaders.PlacesByIDs(f.c, ids)
-				return placeLeads(rows), err
+				return pictureLeads(rows, placeID, placePic), err
 			},
 		},
 	}
-	for _, tc := range cases {
+}
+
+func TestHeaderLeadsWithEarliestPicture(t *testing.T) {
+	for _, tc := range headerPictureCases() {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			s, h := tc.setup(f)
@@ -472,58 +458,7 @@ func TestPersonHeaderSkipsNegativeLikeness(t *testing.T) {
 }
 
 func TestHeaderLeadsWithChosenPicture(t *testing.T) {
-	cases := []struct {
-		name  string
-		key   string
-		setup func(f *fixture) (subjects.Subject, []byte)
-		list  func(f *fixture) (map[string][]byte, error)
-		byIDs func(f *fixture, ids [][]byte) (map[string][]byte, error)
-	}{
-		{
-			name: "person",
-			key:  vocabkey.PropertyLikeness,
-			setup: func(f *fixture) (subjects.Subject, []byte) {
-				s, _, h := f.person("Ann Lee")
-				return s, h
-			},
-			list: func(f *fixture) (map[string][]byte, error) {
-				return personLeads(f.list()), nil
-			},
-			byIDs: func(f *fixture, ids [][]byte) (map[string][]byte, error) {
-				rows, err := conclusionheaders.PersonsByIDs(f.c, ids)
-				return personLeads(rows), err
-			},
-		},
-		{
-			name: "event",
-			key:  vocabkey.PropertyEventPicture,
-			setup: func(f *fixture) (subjects.Subject, []byte) {
-				return f.eventSubject()
-			},
-			list: func(f *fixture) (map[string][]byte, error) {
-				return eventLeads(f.events()), nil
-			},
-			byIDs: func(f *fixture, ids [][]byte) (map[string][]byte, error) {
-				rows, err := conclusionheaders.EventsByIDs(f.c, ids)
-				return eventLeads(rows), err
-			},
-		},
-		{
-			name: "place",
-			key:  vocabkey.PropertyPlacePicture,
-			setup: func(f *fixture) (subjects.Subject, []byte) {
-				return f.placePictureSubject()
-			},
-			list: func(f *fixture) (map[string][]byte, error) {
-				return placeLeads(f.places()), nil
-			},
-			byIDs: func(f *fixture, ids [][]byte) (map[string][]byte, error) {
-				rows, err := conclusionheaders.PlacesByIDs(f.c, ids)
-				return placeLeads(rows), err
-			},
-		},
-	}
-	for _, tc := range cases {
+	for _, tc := range headerPictureCases() {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			s, h := tc.setup(f)
