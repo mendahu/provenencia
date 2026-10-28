@@ -289,32 +289,6 @@ func (f fixture) bareCitation(t *testing.T, artifactID []byte) citations.Citatio
 	return res.Citation
 }
 
-// graphsOf returns the ids of the graphs the Artifact is linked to.
-func graphsOf(t *testing.T, c *database.Catalog, artifactID []byte) [][]byte {
-	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	rows, err := db.Query(`SELECT graph_id FROM evidence_graph_artifacts WHERE artifact_id = ?`, artifactID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	var out [][]byte
-	for rows.Next() {
-		var id []byte
-		if err := rows.Scan(&id); err != nil {
-			t.Fatal(err)
-		}
-		out = append(out, id)
-	}
-	if err := rows.Err(); err != nil {
-		t.Fatal(err)
-	}
-	return out
-}
-
 func TestLink(t *testing.T) {
 	f := newFixture(t)
 	src, _ := f.createSource(t, "Census 1881")
@@ -392,7 +366,7 @@ func TestLinkArtifact(t *testing.T) {
 		_, err := run(t, f.c, func(tx *database.Tx) ([]rowchange.Change, error) {
 			return evidencegraphs.LinkArtifact(tx, userID, src.ID, b, links)
 		})
-		return graphsOf(t, f.c, b), err
+		return evidencegraphstest.ArtifactGraphs(t, f.c, b), err
 	}
 	for name, tt := range map[string]struct {
 		links evidencegraphs.GraphLinks
@@ -407,7 +381,8 @@ func TestLinkArtifact(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
-		if !sameSet(got, tt.want) {
+		sort.Slice(tt.want, func(i, j int) bool { return bytes.Compare(tt.want[i], tt.want[j]) < 0 })
+		if !sameIDs(got, tt.want) {
 			t.Fatalf("%s: linked %x, want %x", name, got, tt.want)
 		}
 	}
@@ -420,19 +395,6 @@ func TestLinkArtifact(t *testing.T) {
 			t.Fatalf("%s: got %v", name, err)
 		}
 	}
-}
-
-// sameSet reports whether a and b hold the same ids, in any order.
-func sameSet(a, b [][]byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for _, id := range a {
-		if !database.ContainsBlobID(b, id) {
-			return false
-		}
-	}
-	return true
 }
 
 func TestSetArtifactGraphs(t *testing.T) {
@@ -466,7 +428,7 @@ func TestSetArtifactGraphs(t *testing.T) {
 		if !bytes.Equal(ch[0].EntityID, jones.ID) || !bytes.Equal(ch[1].EntityID, def) {
 			t.Fatalf("change order %+v", ch)
 		}
-		if got := graphsOf(t, f.c, p); !sameSet(got, [][]byte{jones.ID}) {
+		if got := evidencegraphstest.ArtifactGraphs(t, f.c, p); !sameIDs(got, [][]byte{jones.ID}) {
 			t.Fatalf("linked %x", got)
 		}
 	})
@@ -484,7 +446,7 @@ func TestSetArtifactGraphs(t *testing.T) {
 		if want := []string{"evidence_graph_artifact delete", "evidence_graph_artifact delete"}; !reflect.DeepEqual(changeKinds(ch), want) {
 			t.Fatalf("changes %v", changeKinds(ch))
 		}
-		if got := graphsOf(t, f.c, p); len(got) != 0 {
+		if got := evidencegraphstest.ArtifactGraphs(t, f.c, p); len(got) != 0 {
 			t.Fatalf("linked %x", got)
 		}
 	})
@@ -495,13 +457,13 @@ func TestSetArtifactGraphs(t *testing.T) {
 		if _, err := set(x); !errors.Is(err, evidencegraphs.ErrCitationsNeedGraph) {
 			t.Fatalf("none: got %v", err)
 		}
-		if got := graphsOf(t, f.c, x); !sameSet(got, [][]byte{def}) {
+		if got := evidencegraphstest.ArtifactGraphs(t, f.c, x); !sameIDs(got, [][]byte{def}) {
 			t.Fatalf("link dropped: %x", got)
 		}
 		if _, err := set(x, jones.ID); err != nil {
 			t.Fatalf("swap: %v", err)
 		}
-		if got := graphsOf(t, f.c, x); !sameSet(got, [][]byte{jones.ID}) {
+		if got := evidencegraphstest.ArtifactGraphs(t, f.c, x); !sameIDs(got, [][]byte{jones.ID}) {
 			t.Fatalf("linked %x", got)
 		}
 	})
@@ -579,7 +541,7 @@ func TestUnlink(t *testing.T) {
 		if err := unlink(jones.ID, x); !errors.Is(err, evidencegraphs.ErrCitationsNeedGraph) {
 			t.Fatalf("last graph: %v", err)
 		}
-		if got := graphsOf(t, f.c, x); !sameSet(got, [][]byte{jones.ID}) {
+		if got := evidencegraphstest.ArtifactGraphs(t, f.c, x); !sameIDs(got, [][]byte{jones.ID}) {
 			t.Fatalf("link dropped: %x", got)
 		}
 		if err := unlink(jones.ID, y); err != nil {
@@ -647,11 +609,7 @@ func TestMembership(t *testing.T) {
 	f.link(t, graph, b)
 	subject, cit := f.subjectAndCitation(t, src, a)
 	// A second Citation on the same Artifact with no Observation belongs to no graph.
-	if _, err := writes.Call(f.c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: a, LocatorJSON: pageLocator}, nil)
-	}); err != nil {
-		t.Fatal(err)
-	}
+	f.bareCitation(t, a)
 
 	db, err := f.c.DB()
 	if err != nil {
@@ -1524,7 +1482,7 @@ func TestDelete(t *testing.T) {
 		if _, err := f.deleteGraph(t, def.ID); err != nil {
 			t.Fatal(err)
 		}
-		if got := graphsOf(t, f.c, p1); len(got) != 0 {
+		if got := evidencegraphstest.ArtifactGraphs(t, f.c, p1); len(got) != 0 {
 			t.Fatalf("p1 linked %x", got)
 		}
 	})
@@ -1543,7 +1501,7 @@ func TestDelete(t *testing.T) {
 		if _, err := f.deleteGraph(t, jones.ID); err != nil {
 			t.Fatal(err)
 		}
-		if got := graphsOf(t, f.c, x); !sameSet(got, [][]byte{def.ID}) {
+		if got := evidencegraphstest.ArtifactGraphs(t, f.c, x); !sameIDs(got, [][]byte{def.ID}) {
 			t.Fatalf("x linked %x", got)
 		}
 	})

@@ -102,3 +102,30 @@ func Split(t testing.TB, c *database.Catalog, userID, sourceID []byte, name stri
 	}
 	return def, graph
 }
+
+// ArtifactGraphs returns the ids of the graphs the Artifact is linked to,
+// ordered by graph id.
+func ArtifactGraphs(t *testing.T, c *database.Catalog, artifactID []byte) [][]byte {
+	t.Helper()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, err := db.Query(`SELECT graph_id FROM evidence_graph_artifacts WHERE artifact_id = ? ORDER BY graph_id`, artifactID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var out [][]byte
+	for rows.Next() {
+		var id []byte
+		if err := rows.Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		out = append(out, id)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	return out
+}

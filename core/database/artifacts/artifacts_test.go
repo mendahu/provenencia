@@ -50,28 +50,6 @@ func changeKinds(changes []rowchange.Change) []string {
 	return out
 }
 
-func linkedGraphs(t *testing.T, c *database.Catalog, artifactID []byte) [][]byte {
-	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	rows, err := db.Query(`SELECT graph_id FROM evidence_graph_artifacts WHERE artifact_id = ? ORDER BY graph_id`, artifactID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	var out [][]byte
-	for rows.Next() {
-		var id []byte
-		if err := rows.Scan(&id); err != nil {
-			t.Fatal(err)
-		}
-		out = append(out, id)
-	}
-	return out
-}
-
 func TestArtifacts(t *testing.T) {
 	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
 
@@ -177,7 +155,7 @@ func TestArtifacts(t *testing.T) {
 					if got := changeKinds(changes); len(got) != 2 || got[0] != "artifact create" || got[1] != "evidence_graph_artifact create" {
 						t.Fatalf("%s: changes %v", name, got)
 					}
-					if links := linkedGraphs(t, c, a.ID); len(links) != 1 || !bytes.Equal(links[0], graph) {
+					if links := evidencegraphstest.ArtifactGraphs(t, c, a.ID); len(links) != 1 || !bytes.Equal(links[0], graph) {
 						t.Fatalf("%s: links %x", name, links)
 					}
 				}
@@ -664,7 +642,7 @@ func TestArtifactDelete(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(linkedGraphs(t, c, linked.ID)) != 1 {
+		if len(evidencegraphstest.ArtifactGraphs(t, c, linked.ID)) != 1 {
 			t.Fatal("create did not link")
 		}
 		var got []rowchange.Change
@@ -678,7 +656,7 @@ func TestArtifactDelete(t *testing.T) {
 		if kinds := changeKinds(got); len(kinds) != 2 || kinds[0] != "evidence_graph_artifact delete" || kinds[1] != "artifact delete" {
 			t.Fatalf("changes %v", kinds)
 		}
-		if len(linkedGraphs(t, c, linked.ID)) != 0 {
+		if len(evidencegraphstest.ArtifactGraphs(t, c, linked.ID)) != 0 {
 			t.Fatal("link row left")
 		}
 	})
@@ -1094,7 +1072,7 @@ func TestArtifactUpdateGraphs(t *testing.T) {
 	}
 	sameLinks := func(t *testing.T, id []byte, want ...[]byte) {
 		t.Helper()
-		got := linkedGraphs(t, c, id)
+		got := evidencegraphstest.ArtifactGraphs(t, c, id)
 		if len(got) != len(want) {
 			t.Fatalf("linked %x, want %x", got, want)
 		}
