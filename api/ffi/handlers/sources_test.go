@@ -1,60 +1,15 @@
 package handlers
 
 import (
-	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
-	"github.com/mendahu/provenencia/core/catalogsession"
-	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"google.golang.org/protobuf/proto"
 )
-
-// sourceWithPNG creates a Source whose one Artifact holds an ingested PNG.
-func sourceWithPNG(t *testing.T) (dir, userID, sourceID, artifactID string) {
-	t.Helper()
-	dir, userID, typeID := sourceFixture(t)
-	var created engine.CreateSourceResponse
-	mustRPC(t, CreateSource, &engine.CreateSourceRequest{
-		ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Scan",
-	}, &created)
-	var art engine.CreateArtifactResponse
-	mustRPC(t, CreateArtifact, &engine.CreateArtifactRequest{
-		ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Label: "Page",
-	}, &art)
-	path := filepath.Join(t.TempDir(), "page.png")
-	writePNG(t, path)
-	var ingested engine.IngestArtifactFileResponse
-	mustRPC(t, IngestArtifactFile, &engine.IngestArtifactFileRequest{
-		ProjectDir: dir, UserId: userID, ArtifactId: art.Artifact.Id, Path: path,
-	}, &ingested)
-	return dir, userID, created.Source.Id, art.Artifact.Id
-}
-
-// damageCatalog runs one statement against the project's catalog, as a
-// hand-edited or crafted project would, and closes the held session so the next
-// read opens fresh.
-func damageCatalog(t *testing.T, dir, query string, args ...any) {
-	t.Helper()
-	err := catalogsession.Do(dir, func(c *database.Catalog) error {
-		db, err := c.DB()
-		if err != nil {
-			return err
-		}
-		_, err = db.Exec(query, args...)
-		return err
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := catalogsession.CloseAll(); err != nil {
-		t.Fatal(err)
-	}
-}
 
 func TestListSources(t *testing.T) {
 	runRPC(t, ListSources, []rpcTest{
@@ -121,19 +76,19 @@ func TestListSources(t *testing.T) {
 		{
 			name: "cover thumbnail with a damaged type has no path",
 			reqFn: func(t *testing.T) proto.Message {
-				dir, userID, sourceID, artifactID := sourceWithPNG(t)
+				f := sourceWithPNG(t)
 				mustRPC(t, SetSourceCover, &engine.SetSourceCoverRequest{
-					ProjectDir: dir, UserId: userID, SourceId: sourceID,
-					CoverMode: "artifact", PrimaryArtifactId: artifactID,
+					ProjectDir: f.dir, UserId: f.userID, SourceId: f.sourceID,
+					CoverMode: "artifact", PrimaryArtifactId: f.artifactID,
 				}, &engine.SetSourceCoverResponse{})
 				var before engine.ListSourcesResponse
-				mustRPC(t, ListSources, &engine.ListSourcesRequest{ProjectDir: dir}, &before)
+				mustRPC(t, ListSources, &engine.ListSourcesRequest{ProjectDir: f.dir}, &before)
 				if len(before.Sources) != 1 || before.Sources[0].GetThumbnailRelPath() == "" {
 					t.Fatalf("want a cover thumbnail before the damage, got %+v", before.Sources)
 				}
-				damageCatalog(t, dir, `UPDATE files SET media_type = 'application/x-sh'
+				damageCatalog(t, f.dir, `UPDATE files SET media_type = 'application/x-sh'
 					WHERE id IN (SELECT derived_file_id FROM file_derivatives)`)
-				return &engine.ListSourcesRequest{ProjectDir: dir}
+				return &engine.ListSourcesRequest{ProjectDir: f.dir}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
 				var list engine.ListSourcesResponse
@@ -363,10 +318,10 @@ func TestGetSourceWorkspace(t *testing.T) {
 		{
 			name: "a stored type off the allowlist keeps the file and drops its path",
 			reqFn: func(t *testing.T) proto.Message {
-				dir, _, sourceID, _ := sourceWithPNG(t)
-				damageCatalog(t, dir, `UPDATE files SET media_type = 'application/x-sh'
+				f := sourceWithPNG(t)
+				damageCatalog(t, f.dir, `UPDATE files SET media_type = 'application/x-sh'
 					WHERE id IN (SELECT file_id FROM artifacts)`)
-				return &engine.GetSourceWorkspaceRequest{ProjectDir: dir, SourceId: sourceID}
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: f.dir, SourceId: f.sourceID}
 			},
 			after: func(t *testing.T, raw []byte, _ proto.Message) {
 				var resp engine.GetSourceWorkspaceResponse
@@ -388,19 +343,19 @@ func TestGetSourceWorkspace(t *testing.T) {
 		{
 			name: "cover thumbnail with a damaged type has no path",
 			reqFn: func(t *testing.T) proto.Message {
-				dir, userID, sourceID, artifactID := sourceWithPNG(t)
+				f := sourceWithPNG(t)
 				mustRPC(t, SetSourceCover, &engine.SetSourceCoverRequest{
-					ProjectDir: dir, UserId: userID, SourceId: sourceID,
-					CoverMode: "artifact", PrimaryArtifactId: artifactID,
+					ProjectDir: f.dir, UserId: f.userID, SourceId: f.sourceID,
+					CoverMode: "artifact", PrimaryArtifactId: f.artifactID,
 				}, &engine.SetSourceCoverResponse{})
 				var before engine.GetSourceWorkspaceResponse
-				mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: dir, SourceId: sourceID}, &before)
+				mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: f.dir, SourceId: f.sourceID}, &before)
 				if before.Source.GetThumbnailRelPath() == "" {
 					t.Fatalf("want a cover thumbnail before the damage, got %+v", before.Source)
 				}
-				damageCatalog(t, dir, `UPDATE files SET media_type = 'application/x-sh'
+				damageCatalog(t, f.dir, `UPDATE files SET media_type = 'application/x-sh'
 					WHERE id IN (SELECT derived_file_id FROM file_derivatives)`)
-				return &engine.GetSourceWorkspaceRequest{ProjectDir: dir, SourceId: sourceID}
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: f.dir, SourceId: f.sourceID}
 			},
 			after: func(t *testing.T, raw []byte, _ proto.Message) {
 				var resp engine.GetSourceWorkspaceResponse
@@ -415,11 +370,11 @@ func TestGetSourceWorkspace(t *testing.T) {
 		{
 			name: "a raster type off the allowlist keeps the file and drops its path",
 			reqFn: func(t *testing.T) proto.Message {
-				dir, _, sourceID, _ := sourceWithPNG(t)
-				damageCatalog(t, dir, `DELETE FROM file_derivatives`)
-				damageCatalog(t, dir, `UPDATE files SET media_type = 'image/jpg'
+				f := sourceWithPNG(t)
+				damageCatalog(t, f.dir, `DELETE FROM file_derivatives`)
+				damageCatalog(t, f.dir, `UPDATE files SET media_type = 'image/jpg'
 					WHERE id IN (SELECT file_id FROM artifacts)`)
-				return &engine.GetSourceWorkspaceRequest{ProjectDir: dir, SourceId: sourceID}
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: f.dir, SourceId: f.sourceID}
 			},
 			after: func(t *testing.T, raw []byte, _ proto.Message) {
 				var resp engine.GetSourceWorkspaceResponse
