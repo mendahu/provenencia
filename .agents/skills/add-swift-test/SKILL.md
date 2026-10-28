@@ -17,6 +17,7 @@ Product logic under test lives in `macos/App/`. Tests live in **`macos/Provenenc
 - Artifact files on disk (an image via `writeImage(fileType:)` in PNG, JPEG or TIFF, raw bytes via `write(_:)`, a PDF, the catalog row that points at them): use `ArtifactFileFixtures` in `macos/ProvenenciaTests/ArtifactFileFixtures.swift`; do not write another copy.
 - Inject `FakeStore` and `OnboardingFolders` with dirs under `FileManager.default.temporaryDirectory`.
 - When adding a catalog `GenealogyStore` API on `FakeStore`, call `markCatalogSessionHeld` (same as real traffic) so `CatalogSessionStoreTests` / overlap coverage stay honest.
+- To pause a fake call mid-write, give it a `FakeHold` (`isOn`, `count`, `release()`); do not hand-roll continuations.
 - **No** `GoStore`, `provenencia_call`, dylib, or generated `engine.pb.swift`.
 - **No** XCUITest / view snapshots unless the user asks.
 
