@@ -179,6 +179,20 @@ struct SourcePageModelTests {
         #expect(model.pageError == L10n.ObjectOpen.refused(filename: "run.sh"))
     }
 
+    @Test func openRefusalNamesAFileWithNoNameByItsRef() async {
+        let art = CatalogArtifact(
+            id: "art-2", ref: "ART-X", sourceID: sourceID, fileID: "file-2", label: "",
+            description: "",
+            file: CatalogFileRef(
+                id: "file-2", relPath: "", originalFilename: "  ", mediaType: "application/x-sh", byteSize: 10
+            )
+        )
+        let model = makeModel(store: makeStore(artifacts: [art]))
+        await model.warmFromSession()
+        model.artifacts.open(art)
+        #expect(model.pageError == L10n.ObjectOpen.refused(filename: "ART-X"))
+    }
+
     @Test func addNoteFailureSurfacesPageError() async {
         let store = makeStore()
         store.addSourceNoteError = CoreInvokeError.coded(

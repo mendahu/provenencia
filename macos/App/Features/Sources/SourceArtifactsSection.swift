@@ -684,7 +684,7 @@ final class SourceArtifactsSection {
     func open(_ art: CatalogArtifact) {
         guard let file = art.file else { return }
         context.clearPageError()
-        let name = file.originalFilename.isEmpty ? art.label : file.originalFilename
+        let name = art.fileDisplayName
         guard !file.relPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             context.pageError = L10n.ObjectOpen.refused(filename: name)
             return

@@ -136,6 +136,26 @@ extension CatalogArtifact {
         return trimmed.isEmpty ? ref : trimmed
     }
 
+    /// The stored original name, else the stored path's last component, else the
+    /// Artifact ref: the one name every surface gives an Artifact's file.
+    static func fileDisplayName(originalFilename: String, relPath: String, ref: String) -> String {
+        let trimmed = originalFilename.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { return trimmed }
+        if let last = relPath.split(separator: "/").last, !last.isEmpty {
+            return String(last)
+        }
+        return ref
+    }
+
+    /// `fileDisplayName` for this Artifact's own file (the ref when it has none).
+    var fileDisplayName: String {
+        Self.fileDisplayName(
+            originalFilename: file?.originalFilename ?? "",
+            relPath: file?.relPath ?? "",
+            ref: ref
+        )
+    }
+
     /// True when the label is non-empty after trimming (`displayTitle` is the label, not the ref).
     var hasDisplayLabel: Bool {
         !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
