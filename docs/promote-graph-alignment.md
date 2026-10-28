@@ -30,7 +30,7 @@ A vertical link's strongest evidence is the horizontal structure around it linin
 2. **Decisions are fixed.** A choice the researcher made is never overridden by a re-run. Everything not yet decided follows the decisions.
 3. **One claim per Subject.** A batch is many independent claims, and any one can be rejected later on its own.
 4. **No hard-coded lists of Properties or relationships.** What counts as evidence, and how much, comes from metadata (value types, cardinality, bridge types and roles) and from the catalog's own data. A Property or bridge kind added later takes part with no code change.
-5. **Precision over recall.** A false merge is the costliest mistake. The core never proposes a merge below the accept bar: such a row comes back **Skip** (New only when it has no candidate at all). The page starts a row with no match **unset**, so Done waits for the researcher's Skip or New, and drafts a weak one on its best match for review.
+5. **Precision over recall.** A false merge is the costliest mistake. The core never proposes a merge below the accept bar: such a row comes back with no target, its candidates as alternatives. The page starts it **unset**, so Done waits for the researcher's Skip or New, and drafts a weak one on its best match for review.
 6. **Explainable, deterministic, local.**
    - Every suggestion carries its reasons.
    - The same inputs give the same proposal.
@@ -49,7 +49,7 @@ Promote is one workspace page; the choose-target screen and the separate claim s
 - **Assessment:** each row shows **strong**, **medium**, **weak** or **no match**. Clicking it opens a **sheet** that opens with why the row was suggested (its band and Contested marks at the title, the reason as their tooltip, the Updated caption under it) and then the evidence that the row is the record. The sheet loads the row's claim evidence when it opens and draws it as sentences, with no weights: a Card per property with a line per distinct value (identical members collapse into one line that expands to each record), likenesses as two crops side by side, and a relationship line for each mapped neighbor that corresponds, named by the connection that matched. The lines and relationships that agree are preselected as pins and can be toggled.
 - **Claim fields per row:** status, confidence and argument. The argument is the researcher's own: Promote drafts none.
 - **Bridges aren't rows** (participation, location, relationship, place relationship). Each shows as a subrow under every end that is a row on the page (a connection between two rows shows under both). A subrow says whether it files on Done, waits for a named end, or has both ends on one record; when the other end is not a row, a note says it is already filed or not on the page. The footer counts the connections that file. Filing rules: §9.1.
-- **Possible duplicates:** two rows landing on the same existing handle, or two New rows whose properties clear the accept bar, get a warning ("these may be the same record; combine them on the Evidence graph"). A link key both rows have neighbors for suppresses the warning when none of those neighbors are the same subject or a match; a directed key compares only neighbors on the same end (a son with a son, not with a father). A row whose best record another row took starts with no target and the warning, whatever its band, so Done can't file both on one handle without a choice. There is no row-to-row option.
+- **Possible duplicates:** two rows landing on the same existing handle, or two rows that would both be new records (unplaced or decided New) whose properties clear the accept bar, get a warning ("these may be the same record; combine them on the Evidence graph"). A link key both rows have neighbors for suppresses the warning when none of those neighbors are the same subject or a match; a directed key compares only neighbors on the same end (a son with a son, not with a father). A row whose best record another row took starts with no target and the warning, whatever its band, so Done can't file both on one handle without a choice. There is no row-to-row option.
 - **Done** writes the whole batch in one transaction (§9).
 - **Leaving:** the leave guard covers accidental navigation. Drafts aren't persisted: re-opening re-proposes everything, and only manual changes are lost.
 
@@ -70,7 +70,7 @@ Every row is **suggested** (the machine filled it) or **decided**: the researche
 One pure function, called on open and after every decision:
 
 ```go
-// Align proposes a handle, New or Skip for every primary Subject on one
+// Align proposes a handle or nothing for every primary Subject on one
 // Evidence layer (graph alignment), holding the fixed pairs as given.
 func Align(layer Layer, canon Canon, fixed []Fixed, cfg Config) Proposal
 ```
@@ -105,7 +105,7 @@ This is collective entity resolution: graph alignment by propagation (cf. PARIS,
 3. **Unplaced neighbors.** A link whose neighbor is not placed yet is judged by entity compare on the neighbor's own properties: alike counts as lined up, a differing one counts against the pair from the start, and an unsure one adds nothing. Once the neighbor is placed on that canon neighbor the same number follows, so a score does not depend on which pair the walk placed first.
 4. **Placing a pair** nominates, for each neighbor, the most similar of the handles its links point at (as step 1 bounds them), re-scores the neighbors that are not placed, and marks the placed ones dirty. A candidate a free neighbor already had keeps its own reason; only a fixed row's existing candidate gains the nominating `via`, so a decided row has the handles its neighbors point at.
 5. **Settling.** When the queue empties, only dirty pairs are re-scored. A pair is released when it falls under the accept bar or a free rival leads it by the settle margin; the released Subjects walk again. At most `SettleRounds` rounds. A released Subject that ends on another handle carries a move reason (`neighbor_placed`, `neighbor_moved`, `neighbor_released`) and the neighbor behind it. A fixed pair is never released. Every score is replaced, never kept higher, so support from a neighbor that moved is dropped and a "via" reason stays only while that neighbor still supports the pair.
-6. **Rows.** A row's band is its evidence against `Alignment.Bands`. A row is **contested** when any comparison behind its reported pair conflicts, whatever its band. A candidate that cleared no bar comes back Skip with the candidate as an alternative (New only when there is no candidate at all); a decided row whose neighbors point at a handle that leads by the settle margin is flagged `ConflictWithFixed`.
+6. **Rows.** A row's band is its evidence against `Alignment.Bands`. A row is **contested** when any comparison behind its reported pair conflicts, whatever its band. A row with no accepted candidate comes back with no target and its candidates as alternatives; a decided row whose neighbors point at a handle that leads by the settle margin is flagged `ConflictWithFixed`.
 
 The work is about (Subjects + bridges) × candidates × log: well under a millisecond at obituary scale.
 
@@ -122,7 +122,7 @@ A layer is **one Evidence graph’s Subjects**, not one connected component. *Ma
 | Unpromoted | Promoted | Same mechanism, other direction (e.g. open Promote on a new person whose event neighbor was filed earlier). |
 | Promoted | Promoted | Not an identity proposal for those rows. It is a **missing / unfiled relationship**: the Evidence bridge exists and both ends are handles, so §9.1 files the canonical association (shown on the page as a connection that will be filed). |
 
-**Orphans and disconnected islands** are expected. A primary Subject with no bridges, or a cluster that shares no path with any fixed/promoted anchor, is **unreachable** (§5 step 1): property-only matching only; a match below the bar comes back Skip, never New, and a row with no match starts unset on the page. Structure-backed scoring never assumes a path from the entry card to every row.
+**Orphans and disconnected islands** are expected. A primary Subject with no bridges, or a cluster that shares no path with any fixed/promoted anchor, is **unreachable** (§5 step 1): property-only matching only; a match below the bar comes back as an alternative with no target, and the row starts unset on the page. Structure-backed scoring never assumes a path from the entry card to every row.
 
 ---
 

@@ -75,7 +75,7 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 
 A relation, a relation cause or a unit is layer 1's: add the constant in `core/valuecompare/valuecompare.go`, a new relation also in `relationOrder` at its strength, its outcome in `propertycompare.outcomeOf` and whether a negative contradicts it in `contradicts` (`TestEveryRelationHasAnOutcome` fails until both are decided), and a cause to the cause list in `comparison-layers.md` §Detail. An outcome cause or an exclude reason is layer 2's: add it in `core/propertycompare/propertycompare.go` and to `comparison-layers.md` §Layer 2 Output. A segment cause is layer 5's: add it in `core/segmentcompare` and to the layer 5 output list in `comparison-layers.md` §Segments. A segment cause stays in Go: the evidence sheet does not read it, so it has no Swift enum. Codes are strings. A code that reaches the wire (a relation, a value cause, an outcome or an outcome cause) also gets a case in its enum in `macos/App/Platform/ConclusionVocabulary.swift` (`ValueRelation`, `ValueCause`, `EvidenceOutcome`, `EvidencePropertyCause`), and stays in its row of `TestSwiftVocabularyMatchesGo` (`api/ffi/swift_vocabulary_test.go`), which fails when the two sides drift. UI copy built from it follows.
 
-A move reason is layer 6's: a `Reason` constant in `core/graphalign/types.go`.
+A row or move reason is layer 6's: a `Reason` constant in `core/graphalign/types.go`, its `PromoteReasonCode` wire case with its row in `TestSwiftVocabularyMatchesGo`, its `PromoteFlow.Reason` case, and its `PromoteModel.reasonText` arm with an L10n line.
 
 ## Add a link rule
 
