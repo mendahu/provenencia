@@ -1,5 +1,7 @@
-// Package mediatypes is the ingest allowlist and reject-reason classifier.
-// Go remains authoritative; clients may mirror for fail-fast UX.
+// Package mediatypes is the ingest allowlist and reject-reason classifier. It
+// also owns each stored type's object-file extension (StoredExtension), which
+// core/objectpath reads. Go remains authoritative; clients may mirror for
+// fail-fast UX.
 package mediatypes
 
 import (

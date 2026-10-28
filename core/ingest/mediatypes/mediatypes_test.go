@@ -101,6 +101,12 @@ func TestStoredExtension(t *testing.T) {
 			t.Fatalf("%s: extension %q is empty or has no leading dot", mt, ext)
 		}
 	}
+	// The extension index may only name stored types.
+	for ext, mt := range extAllowed {
+		if !Allowed(mt) {
+			t.Fatalf("extAllowed[%q] = %s: not an allowed (stored) type", ext, mt)
+		}
+	}
 }
 
 func TestClassifyFilename(t *testing.T) {
