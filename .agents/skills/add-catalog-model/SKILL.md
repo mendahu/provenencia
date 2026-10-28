@@ -20,9 +20,9 @@ Update the model in the **same PR** as the migration that adds, changes, or drop
 
 1. One `Tables` row: `Name`, `PK` when the table has one, `Bucket`. Skip `sqlite_%` and `catalog_search_fts%`.
 2. A `Kind` constant when delete policy or a probe names the table. The value is the stable machine key (`source`), not the table name (`sources`). Set `Table.Kind` to that constant, and set `PK` to the primary-key column. `tableByKind` returns the row only when that kind is in `deleteimpact`'s deletable set; add it there only for an official delete lookup. The existence query is `SELECT 1 FROM <name> WHERE <pk> = ?`, taken from the table row. Facet, skip, and pool tables usually have a bucket and no kind.
-3. One `FKs` row per live FK: `From`, `Column` (the leading column), `To`, `OnDelete`, `Bucket`. A composite key sets `FromCols` to the full column tuple in `PRAGMA` order and is keyed by seq 0 (`identity_claims` `subject_id` + `subject_type_id`). `Audited: true` only on a `CASCADE` whose rows official deletes release and audit. Empty and `RESTRICT` compare as `NO ACTION`.
+3. One `FKs` row per live FK: `From`, `Column` (the leading column), `To`, `OnDelete`, `Bucket`. A composite key sets `FromCols` to the full column tuple in `PRAGMA` order and is keyed by seq 0 (`identity_claims` `subject_id` + `subject_type_id`). `Audited: true` only on a `CASCADE` whose rows official deletes release and audit — not on `BucketOptional` `SET NULL` back-pointers (those use `optionalPointer` in `deleteimpact`). Empty and `RESTRICT` compare as `NO ACTION`.
 4. The leading column needs a covering index (explicit, `UNIQUE`, or primary key leftmost).
-5. A resource FK needs a list probe and an audited `CASCADE` needs one facet release. Those stay in `deleteimpact`. An owned-outbound FK is the whole registration: `deleteimpact` derives the release from it, and an owned-outbound row table registers `PK`.
+5. A resource FK needs a list probe; an audited `CASCADE` needs one facet release; a deletable parent's `BucketOptional` `SET NULL` FK needs one `optionalPointer` release. Those stay in `deleteimpact`. An owned-outbound FK is the whole registration: `deleteimpact` derives the release from it, and an owned-outbound row table registers `PK`.
 6. A table outside the skip bucket also needs an `effects` entry in the same PR (`core/database/effects/registry.go`). One `Effect` per table. The field set is `type Effect` in that file; what each field moves and how to add a catalog-wide list are in [`core/database/effects/README.md`](../../../core/database/effects/README.md). Read them there, not from a copy here. An empty field means that job is unaffected; `None: true` is the explicit empty entry. Skip tables stay out of the registry. A path step that names an edge has to be a real `catalogmodel.FKs` row; package init panics when it is not.
 
 ```go
@@ -48,7 +48,7 @@ CGO_ENABLED=1 go test -tags fts5 ./core/database/catalogmodel ./core/database/de
 
 `catalogmodel.TestPragmaHonesty`: every non-FTS catalog table is registered; every live FK matches `To`, `OnDelete`, and `FromCols`; no registered FK is missing; the leading column has a covering index.
 
-`deleteimpact` then checks that a resource FK has a list probe, an owned-outbound row child has a `PK`, a deletable kind has a projector section, and each audited `CASCADE` has one facet release. Every deletable kind resolves to one table with a primary key.
+`deleteimpact` then checks that a resource FK has a list probe, an owned-outbound row child has a `PK`, a deletable kind has a projector section, each audited `CASCADE` has one facet release, and each deletable-parent `BucketOptional` `SET NULL` FK has one `optionalPointer` release. Every deletable kind resolves to one table with a primary key.
 
 `effects` checks that every non-skip table has an entry, and that a `CASCADE` into a table with effects is `Audited`. Package init already panics when a path names a missing foreign key.
 

@@ -318,7 +318,7 @@ CREATE TABLE canonical_entities (
 
 `ref` is required: `{ref_prefix}-{token}` from the Subject type — `PER-7KD45` for a person. Candidate person Subjects are minted off the same type's `candidate_ref_prefix` (`CPR-…`), so the two layers stay distinct by prefix while sharing one ref format.
 
-`preferred_likeness_observation_id` is a display pointer for a Person: the likeness Observation the Person page and the Persons list lead with. It is not evidence and not a Reconciliation Claim. A reader honours it only when that likeness is in the handle's gallery; otherwise the earliest likeness leads. Deleting the Observation clears it.
+`preferred_likeness_observation_id` is a display pointer for a Person: the likeness Observation the Person page and the Persons list lead with. It is not evidence and not a Reconciliation Claim. A reader honours it only when that likeness is in the handle's gallery; otherwise the earliest likeness leads. Deleting the Observation clears it; official `observations.Delete` releases and audits that clear through `deleteimpact` (same fields as `SetPreferredLikeness`).
 
 A Person's **gallery** is its likeness values with their gallery records: each record whose own outcome is `kept` or `weak`. A negative, denied, or provisional record of the same picture is not a gallery record. The gallery is ordered by each likeness's first recorded gallery record (the smallest Observation id), then by value rank; a redraw keeps its Observation, so it keeps its place. The earliest likeness is the first in that order.
 
