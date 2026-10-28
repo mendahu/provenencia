@@ -151,7 +151,7 @@ func TestEnsureThumbnailSkipsNonImage(t *testing.T) {
 		t.Fatalf("%v %+v", err, list)
 	}
 
-	binID := installSourceFile(t, c, []byte{0, 1, 2}, "application/octet-stream", "blob.bin")
+	binID := installSourceFile(t, c, []byte{0, 1, 2}, "audio/mpeg", "blob.mp3")
 	res, err = EnsureThumbnail(c, binID)
 	if err != nil || !res.Skipped {
 		t.Fatalf("%+v %v", res, err)

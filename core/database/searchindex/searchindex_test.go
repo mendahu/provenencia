@@ -76,14 +76,11 @@ func TestObjectsRelPathAgreesWithObjectpath(t *testing.T) {
 	const sum = "8fce3b0000000000000000000000000000000000000000000000000000000000"
 	for _, mt := range []string{
 		"image/jpeg",
-		"image/jpg",
 		"image/png",
 		"image/webp",
 		"image/gif",
 		"application/pdf",
 		"text/plain",
-		"application/octet-stream",
-		"",
 	} {
 		got, err := objectsRelPath(sum, mt)
 		if err != nil {
@@ -96,6 +93,16 @@ func TestObjectsRelPathAgreesWithObjectpath(t *testing.T) {
 		if got != want {
 			t.Fatalf("%s: searchindex %q != objectpath %q", mt, got, want)
 		}
+	}
+	// A type off the allowlist has no object path: no cover thumbnail, no error.
+	for _, mt := range []string{"image/jpg", "application/octet-stream", ""} {
+		got, err := objectsRelPath(sum, mt)
+		if err != nil || got != "" {
+			t.Fatalf("%q: got (%q, %v) want (\"\", nil)", mt, got, err)
+		}
+	}
+	if _, err := objectsRelPath("abcd", "image/png"); err == nil {
+		t.Fatal("short checksum: want error")
 	}
 }
 

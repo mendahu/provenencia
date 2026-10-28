@@ -39,9 +39,9 @@ type File struct {
 }
 
 // StorageRelPath returns objects/{hh}/{hh}/{fullhex}{ext} for a 64-char
-// lowercase hex checksum. Extension comes from objectpath.Extension;
-// unknown media types keep the bare hex basename. Invalid checksums map to
-// ErrInvalid.
+// lowercase hex checksum. The extension comes from the ingest allowlist; a
+// media type off it returns objectpath.ErrDisallowedType (no path). Invalid
+// checksums map to ErrInvalid.
 func StorageRelPath(checksumHex, mediaType string) (string, error) {
 	p, err := objectpath.Rel(checksumHex, mediaType)
 	if errors.Is(err, objectpath.ErrInvalidChecksum) {

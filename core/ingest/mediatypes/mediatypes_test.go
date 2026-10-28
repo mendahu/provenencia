@@ -59,6 +59,50 @@ func TestAllowed(t *testing.T) {
 	}
 }
 
+func TestStoredExtension(t *testing.T) {
+	tests := []struct {
+		in     string
+		want   string
+		wantOK bool
+	}{
+		{in: "image/jpeg", want: ".jpg", wantOK: true},
+		{in: "IMAGE/PNG", want: ".png", wantOK: true},
+		{in: "video/quicktime", want: ".mov", wantOK: true},
+		{in: "audio/x-wav", want: ".wav", wantOK: true},
+		{in: "text/plain; charset=utf-8", want: ".txt", wantOK: true},
+		{in: "text/csv", want: ".csv", wantOK: true},
+		{in: "text/markdown", want: ".md", wantOK: true},
+		{in: "application/msword", want: ".doc", wantOK: true},
+		{in: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", want: ".docx", wantOK: true},
+		{in: "audio/flac", want: ".flac", wantOK: true},
+		{in: "image/heic", want: ".heic", wantOK: true},
+		{in: "image/webp", want: ".webp", wantOK: true},
+		{in: "image/gif", want: ".gif", wantOK: true},
+		{in: "application/pdf", want: ".pdf", wantOK: true},
+		{in: "image/jpg"},
+		{in: "application/zip"},
+		{in: "application/x-sh"},
+		{in: "application/octet-stream"},
+		{in: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.in, func(t *testing.T) {
+			got, ok := StoredExtension(tt.in)
+			if got != tt.want || ok != tt.wantOK {
+				t.Fatalf("got (%q, %v) want (%q, %v)", got, ok, tt.want, tt.wantOK)
+			}
+		})
+	}
+	for mt, ext := range allowed {
+		if !Allowed(mt) {
+			t.Fatalf("%s: in the table but not Allowed", mt)
+		}
+		if len(ext) < 2 || ext[0] != '.' {
+			t.Fatalf("%s: extension %q is empty or has no leading dot", mt, ext)
+		}
+	}
+}
+
 func TestClassifyFilename(t *testing.T) {
 	tests := []struct {
 		name string

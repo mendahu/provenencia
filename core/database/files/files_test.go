@@ -8,6 +8,7 @@ import (
 
 	"github.com/mattn/go-sqlite3"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/objectpath"
 )
 
 func TestStorageRelPath(t *testing.T) {
@@ -16,19 +17,20 @@ func TestStorageRelPath(t *testing.T) {
 		name      string
 		mediaType string
 		want      string
+		wantErr   error
 	}{
 		{name: "jpeg", mediaType: "image/jpeg", want: "objects/8f/ce/" + sum + ".jpg"},
 		{name: "jpeg with charset", mediaType: "image/jpeg; charset=binary", want: "objects/8f/ce/" + sum + ".jpg"},
 		{name: "png", mediaType: "image/png", want: "objects/8f/ce/" + sum + ".png"},
 		{name: "pdf", mediaType: "application/pdf", want: "objects/8f/ce/" + sum + ".pdf"},
-		{name: "unknown", mediaType: "application/octet-stream", want: "objects/8f/ce/" + sum},
-		{name: "empty", mediaType: "", want: "objects/8f/ce/" + sum},
+		{name: "unknown", mediaType: "application/octet-stream", wantErr: objectpath.ErrDisallowedType},
+		{name: "empty", mediaType: "", wantErr: objectpath.ErrDisallowedType},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := StorageRelPath(sum, tt.mediaType)
-			if err != nil {
-				t.Fatal(err)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("err %v want %v", err, tt.wantErr)
 			}
 			if got != tt.want {
 				t.Fatalf("got %q want %q", got, tt.want)

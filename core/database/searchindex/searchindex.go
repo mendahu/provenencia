@@ -7,6 +7,7 @@ package searchindex
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -621,6 +622,10 @@ func objectsRelPath(checksumHex, mediaType string) (string, error) {
 	// Catalog checksums are lowercase; tolerate mixed case from legacy rows.
 	checksumHex = strings.TrimSpace(strings.ToLower(checksumHex))
 	p, err := objectpath.Rel(checksumHex, mediaType)
+	if errors.Is(err, objectpath.ErrDisallowedType) {
+		// A damaged row's type has no object path: the Source has no cover thumbnail.
+		return "", nil
+	}
 	if err != nil {
 		return "", fmt.Errorf("searchindex: bad checksum for object path")
 	}
