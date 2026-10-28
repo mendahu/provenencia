@@ -1,6 +1,7 @@
 # S12-34 — One descriptor per cache key
 
-**Status:** Planned
+**Status:** Landed in [#614](https://github.com/mendahu/provenencia/pull/614) (2026-10-28)
+**Landed:** No difference from the plan.
 **Spike / slice:** Spike 12 · Slice 6 — Audit fixes: Medium
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: session and registry structure only; no view draws differently)
