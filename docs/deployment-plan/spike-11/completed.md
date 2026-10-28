@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-46 — Prefix keys in the shortlist
+
+**Landed 2026-10-27** in [#602](https://github.com/mendahu/provenencia/pull/602). The shortlist now hands graph alignment every record whose given name starts another, in both directions: a Source person "Des" reaches the record "Desiree" and the reverse. `valuecompare.WordKeys` returns the keys a value is filed under and the keys it is looked up by, and given, nickname and untyped words add `g:` and `p:` prefix keys from `PrefixMinLength` (2) letters; surnames and text never do. Until S11-45 the comparer still calls Des and Desiree `Different`, so the candidate gate drops the new pair and no row changes for that case. On S11-21's large fixture the change added 46% index keys and 13% shortlist hits inside every budget, so there is no cap.
+
 ## S11-47 — Promote suggests a record or nothing
 
 **Landed 2026-10-27** in [#598](https://github.com/mendahu/provenencia/pull/598). Promote now proposes a record for a row or nothing: a row it cannot place opens unset, and New and Skip are only ever the researcher's choice. Align leaves such a row's target empty (reasons `empty` and `taken` stay; `weak` and `no_match` are gone from rows, and `weak` stays on a menu record), the possible-duplicate check covers every row that would be a new record, and Swift reads the row target as a typed `PromoteTargetCode`. A suggested row that loses its record on a re-proposal reads "Updated · No record suggested". A row drafted onto a weak record still captions that record's reason.

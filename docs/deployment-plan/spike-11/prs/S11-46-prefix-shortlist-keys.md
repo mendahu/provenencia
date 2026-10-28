@@ -1,6 +1,6 @@
 # S11-46 — Prefix keys in the shortlist
 
-**Status:** Planned
+**Status:** Landed in #602 (2026-10-27)
 **Spike / slice:** Spike 11 · Slice 10 — Name candidates
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the shortlist feeds the target menu that already lists a row's candidates; nothing new is drawn)
