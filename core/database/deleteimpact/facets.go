@@ -13,11 +13,13 @@ import (
 )
 
 // Facet release: research rows an official Delete removes explicitly — and
-// audits — before its parent DELETE. Each facetRelease is the single
-// definition of one such relationship: the honesty test checks it against the
-// FK, Impact reads it for Report.Cascades when Named, and ReleaseFacets
-// mutates through it. The schema's ON DELETE CASCADE is only a backstop:
-// ReleaseFacets fails the delete if any row it owns is still there afterwards.
+// audits — before its parent DELETE, plus optional back-pointers cleared with
+// an update change before the parent DELETE (see optionalPointer). Each
+// facetRelease is the single definition of one such relationship: the honesty
+// test checks it against the FK, Impact reads it for Report.Cascades when
+// Named, and ReleaseFacets mutates through it. The schema's ON DELETE CASCADE
+// and SET NULL are only backstops: ReleaseFacets fails the delete if any row
+// it owns is still there afterwards.
 
 // ErrReleaseIncomplete means a facet release left rows its backstop would
 // silently delete. It is a programming error, never a researcher outcome.
@@ -43,7 +45,8 @@ func (r *released) merge(o released) {
 type facetRelease struct {
 	Parent catalogmodel.Kind
 	// Via is the FK this release covers ("child_table.fk_col"). A CASCADE FK
-	// registered Audited must have exactly one release.
+	// registered Audited and a BucketOptional SET NULL FK whose parent is
+	// deletable must each have exactly one release.
 	Via string
 	// Named facets appear in Report.Cascades: Child is the listed kind, and
 	// Count / List must select exactly what Release removes.
@@ -52,8 +55,8 @@ type facetRelease struct {
 	Count func(tx *sql.Tx, parentID []byte) (int, error)
 	List  func(tx *sql.Tx, parentID []byte, limit int) ([]probeRow, error)
 	// Remaining counts rows still pointing at the parent after Release; it
-	// must be zero. Empty only for non-CASCADE releases (connection facets),
-	// whose leftovers Impact has already refused.
+	// must be zero. Empty only for connection-facet releases, whose leftovers
+	// Impact has already refused. Required for CASCADE and optional SET NULL.
 	Remaining string
 	Release   func(tx *sql.Tx, parentID []byte) (released, error)
 }
@@ -189,11 +192,13 @@ func buildFacetReleases() []facetRelease {
 		},
 		rowFacet(catalogmodel.KindObservation, "observation_notes", "observation_id", "observation_note", "id",
 			col{"id", colUUID}, col{"observation_id", colUUID}, col{"body", colText}),
+		optionalPointer(catalogmodel.KindObservation, "canonical_entities", "preferred_likeness_observation_id", "canonical_entity", "id"),
 		rowFacet(catalogmodel.KindCitation, "citation_notes", "citation_id", "citation_note", "id",
 			col{"id", colUUID}, col{"citation_id", colUUID}, col{"body", colText}),
 		// A link is audited under its graph's id, like the graph's own create.
 		rowFacet(catalogmodel.KindArtifact, "evidence_graph_artifacts", "artifact_id", "evidence_graph_artifact", "graph_id",
 			col{"graph_id", colUUID}, col{"artifact_id", colUUID}),
+		optionalPointer(catalogmodel.KindArtifact, "sources", "primary_artifact_id", "source", "id", "cover_mode"),
 		// A graph's links go with it, audited under its id.
 		rowFacet(catalogmodel.KindEvidenceGraph, "evidence_graph_artifacts", "graph_id", "evidence_graph_artifact", "graph_id",
 			col{"graph_id", colUUID}, col{"artifact_id", colUUID}),
@@ -515,6 +520,102 @@ func rowFacet(parent catalogmodel.Kind, table, fkCol, entityType, entityIDCol st
 					EntityID:   r.entityID,
 					Action:     rowchange.ActionDelete,
 					Fields:     rowchange.DeletedRow(r.fields),
+				})
+			}
+			return out, nil
+		},
+	}
+}
+
+// optionalPointer clears a BucketOptional SET NULL FK on parent delete: it
+// nulls the FK, re-reads side-effect columns (for example cover_mode after
+// sources_clear_cover_on_primary_null), and emits one update change per row.
+func optionalPointer(parent catalogmodel.Kind, table, fkCol, entityType, entityIDCol string, sideEffectCols ...string) facetRelease {
+	selectCols := entityIDCol + ", " + fkCol
+	reReadCols := fkCol
+	for _, c := range sideEffectCols {
+		selectCols += ", " + c
+		reReadCols += ", " + c
+	}
+	selectSQL := fmt.Sprintf(`SELECT %s FROM %s WHERE %s = ? ORDER BY %s`, selectCols, table, fkCol, entityIDCol)
+	updateSQL := fmt.Sprintf(`UPDATE %s SET %s = NULL WHERE %s = ?`, table, fkCol, entityIDCol)
+	reReadSQL := fmt.Sprintf(`SELECT %s FROM %s WHERE %s = ?`, reReadCols, table, entityIDCol)
+	return facetRelease{
+		Parent:    parent,
+		Via:       table + "." + fkCol,
+		Remaining: fmt.Sprintf(`SELECT COUNT(*) FROM %s WHERE %s = ?`, table, fkCol),
+		Release: func(tx *sql.Tx, parentID []byte) (released, error) {
+			rows, err := tx.Query(selectSQL, parentID)
+			if err != nil {
+				return released{}, err
+			}
+			type pointed struct {
+				entityID []byte
+				fkOld    []byte
+				sideOld  []any
+			}
+			var found []pointed
+			for rows.Next() {
+				var entityID, fkVal []byte
+				sideScanners := make([]sql.NullString, len(sideEffectCols))
+				dest := make([]any, 2+len(sideEffectCols))
+				dest[0] = &entityID
+				dest[1] = &fkVal
+				for i := range sideEffectCols {
+					dest[i+2] = &sideScanners[i]
+				}
+				if err := rows.Scan(dest...); err != nil {
+					rows.Close()
+					return released{}, err
+				}
+				sideOld := make([]any, len(sideEffectCols))
+				for i, s := range sideScanners {
+					if s.Valid {
+						sideOld[i] = s.String
+					} else {
+						sideOld[i] = nil
+					}
+				}
+				found = append(found, pointed{
+					entityID: append([]byte(nil), entityID...),
+					fkOld:    append([]byte(nil), fkVal...),
+					sideOld:  sideOld,
+				})
+			}
+			if err := rows.Close(); err != nil {
+				return released{}, err
+			}
+			var out released
+			for _, r := range found {
+				if _, err := tx.Exec(updateSQL, r.entityID); err != nil {
+					return released{}, err
+				}
+				var fkAfter []byte
+				sideAfter := make([]sql.NullString, len(sideEffectCols))
+				dest := make([]any, 1+len(sideEffectCols))
+				dest[0] = &fkAfter
+				for i := range sideEffectCols {
+					dest[i+1] = &sideAfter[i]
+				}
+				if err := tx.QueryRow(reReadSQL, r.entityID).Scan(dest...); err != nil {
+					return released{}, err
+				}
+				fields := map[string]rowchange.FieldDiff{
+					fkCol: {Old: database.UUIDJSON(r.fkOld), New: database.UUIDJSON(fkAfter)},
+				}
+				for i, col := range sideEffectCols {
+					oldVal := r.sideOld[i]
+					var newVal any
+					if sideAfter[i].Valid {
+						newVal = sideAfter[i].String
+					}
+					fields[col] = rowchange.FieldDiff{Old: oldVal, New: newVal}
+				}
+				out.Changes = append(out.Changes, rowchange.Change{
+					EntityType: entityType,
+					EntityID:   r.entityID,
+					Action:     rowchange.ActionUpdate,
+					Fields:     fields,
 				})
 			}
 			return out, nil

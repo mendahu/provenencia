@@ -129,6 +129,19 @@ func TestFacetReleaseHonesty(t *testing.T) {
 			if fk.Audited {
 				t.Errorf("%s is Audited but not CASCADE", key)
 			}
+			if fk.Bucket == catalogmodel.BucketOptional && normalizeOnDelete(fk.OnDelete) == "SET NULL" && deletable[fk.To] {
+				f, ok := releases[key]
+				if !ok {
+					t.Errorf("optional SET NULL %s has no facet release (parent %s is deletable)", key, fk.To)
+				} else {
+					if f.Remaining == "" {
+						t.Errorf("optional SET NULL release %s needs Remaining", key)
+					}
+					if f.Release == nil {
+						t.Errorf("optional SET NULL release %s has no Release", key)
+					}
+				}
+			}
 			continue
 		}
 		switch {
