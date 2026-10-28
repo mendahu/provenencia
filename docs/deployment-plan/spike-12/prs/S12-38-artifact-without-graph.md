@@ -1,7 +1,7 @@
 # S12-38 — Add an Artifact without a graph; the card saves links in one write
 
 **Status:** Landed in [#605](https://github.com/mendahu/provenencia/pull/605) (2026-10-28)
-**Landed:** Differences from the plan: steps 2 – 4 were committed together and the resting-card and graph-form steps share a commit, because T-3 and T-5 assert the one-write Save; STEP-3's check ran with STEP-4's. The manual check (section 10) was not run in the app by the implementer.
+**Landed:** Differences from the plan: STEPs 1 – 4 were committed together and STEPs 5 – 6 share a commit, because T-3 and T-5 assert the one-write Save; STEP-3's check ran with STEP-4's; STEP-7 and the docs are their own commits. Review round 1 added fix commits: the fake OCR engine holds with `FakeHold`, a card in edit gets its graph group when the list arrives, nothing is marked "in no graph" while the list refetches, `CatalogWriteEffects.merging` and `CoreInvokeError.code` are deleted, and one `lockHints(by:)` reduction serves the card and the graph form. The manual check (section 10) was not run in the app by the implementer.
 **Spike / slice:** Spike 12 · Slice 5 — Audit fixes: High
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S12-D7](../design/archive/S12-D7-artifact-in-no-graph.md), board agreed 2026-10-28
