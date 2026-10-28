@@ -1,6 +1,8 @@
 # S11-46 — Prefix keys in the shortlist
 
 **Status:** Landed in #602 (2026-10-27)
+
+**Landed:** Differences from the plan: `main` moved to `b1bf4c54` before the build (the Current state rows were rechecked and still hold). D-8's comparison-layers sentence reads "index keys and lookup keys", so STEP-5's grep misses that file (the wording is kept). T-1's no-prefix-key check runs on the text rows and the two initial rows only. A name with more words than `Names.MaxWords` files no prefix keys (`tooManyWords`, shared with `Compare`'s `CauseTooLong` guard): a D-4 bound that reuses the knob and loses no recall, since such a name never scores; added from review SEC-1. `sortedUnique` stays per package (`core/valuecompare` and `core/shortlist` each keep theirs; review MNT-1). STEP-4 timings, three runs on and off: warm proposal 86-90 ms on vs 87-90 ms off (budget 350 ms); cold proposal about 485 ms on vs about 410 ms off (budget 2.5 s). A throwaway measurement for review PRF-1 (20k persons drawn from a 40-name pool of short stems, with probes Jo, Al, Ed and Ann in the Source; nothing committed) gave, with `PrefixMinLength` 2 vs 0, three runs each: cold 1.92-1.95 s vs 1.83-1.89 s, warm 231-245 ms vs 229-253 ms, after a handle commit 1.93-1.96 s vs 1.79-1.83 s. The fan-out of a short stem adds about 5% to a cold or post-commit proposal on that fixture, and nothing to a warm one.
 **Spike / slice:** Spike 11 · Slice 10 — Name candidates
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the shortlist feeds the target menu that already lists a row's candidates; nothing new is drawn)
