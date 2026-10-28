@@ -127,8 +127,6 @@ const (
 	Method_METHOD_CREATE_EVIDENCE_GRAPH                Method = 104
 	Method_METHOD_UPDATE_EVIDENCE_GRAPH                Method = 105
 	Method_METHOD_DELETE_EVIDENCE_GRAPH                Method = 106
-	Method_METHOD_LINK_EVIDENCE_GRAPH_ARTIFACT         Method = 107
-	Method_METHOD_UNLINK_EVIDENCE_GRAPH_ARTIFACT       Method = 108
 	Method_METHOD_GET_EVIDENCE_GRAPH_UNLINK_IMPACT     Method = 109
 	Method_METHOD_GET_PROMOTE_CLAIM_EVIDENCE           Method = 110
 	Method_METHOD_REORDER_SUBJECT_TYPE_PROPERTIES      Method = 111
@@ -238,8 +236,6 @@ var (
 		104: "METHOD_CREATE_EVIDENCE_GRAPH",
 		105: "METHOD_UPDATE_EVIDENCE_GRAPH",
 		106: "METHOD_DELETE_EVIDENCE_GRAPH",
-		107: "METHOD_LINK_EVIDENCE_GRAPH_ARTIFACT",
-		108: "METHOD_UNLINK_EVIDENCE_GRAPH_ARTIFACT",
 		109: "METHOD_GET_EVIDENCE_GRAPH_UNLINK_IMPACT",
 		110: "METHOD_GET_PROMOTE_CLAIM_EVIDENCE",
 		111: "METHOD_REORDER_SUBJECT_TYPE_PROPERTIES",
@@ -346,8 +342,6 @@ var (
 		"METHOD_CREATE_EVIDENCE_GRAPH":                104,
 		"METHOD_UPDATE_EVIDENCE_GRAPH":                105,
 		"METHOD_DELETE_EVIDENCE_GRAPH":                106,
-		"METHOD_LINK_EVIDENCE_GRAPH_ARTIFACT":         107,
-		"METHOD_UNLINK_EVIDENCE_GRAPH_ARTIFACT":       108,
 		"METHOD_GET_EVIDENCE_GRAPH_UNLINK_IMPACT":     109,
 		"METHOD_GET_PROMOTE_CLAIM_EVIDENCE":           110,
 		"METHOD_REORDER_SUBJECT_TYPE_PROPERTIES":      111,
@@ -3955,230 +3949,6 @@ func (x *DeleteEvidenceGraphResponse) GetEffects() *WriteEffects {
 	return nil
 }
 
-type LinkEvidenceGraphArtifactRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
-	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	GraphId       string                 `protobuf:"bytes,3,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"`
-	ArtifactId    string                 `protobuf:"bytes,4,opt,name=artifact_id,json=artifactId,proto3" json:"artifact_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *LinkEvidenceGraphArtifactRequest) Reset() {
-	*x = LinkEvidenceGraphArtifactRequest{}
-	mi := &file_engine_proto_msgTypes[52]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *LinkEvidenceGraphArtifactRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*LinkEvidenceGraphArtifactRequest) ProtoMessage() {}
-
-func (x *LinkEvidenceGraphArtifactRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[52]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use LinkEvidenceGraphArtifactRequest.ProtoReflect.Descriptor instead.
-func (*LinkEvidenceGraphArtifactRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{52}
-}
-
-func (x *LinkEvidenceGraphArtifactRequest) GetProjectDir() string {
-	if x != nil {
-		return x.ProjectDir
-	}
-	return ""
-}
-
-func (x *LinkEvidenceGraphArtifactRequest) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
-}
-
-func (x *LinkEvidenceGraphArtifactRequest) GetGraphId() string {
-	if x != nil {
-		return x.GraphId
-	}
-	return ""
-}
-
-func (x *LinkEvidenceGraphArtifactRequest) GetArtifactId() string {
-	if x != nil {
-		return x.ArtifactId
-	}
-	return ""
-}
-
-type LinkEvidenceGraphArtifactResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Effects       *WriteEffects          `protobuf:"bytes,1,opt,name=effects,proto3" json:"effects,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *LinkEvidenceGraphArtifactResponse) Reset() {
-	*x = LinkEvidenceGraphArtifactResponse{}
-	mi := &file_engine_proto_msgTypes[53]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *LinkEvidenceGraphArtifactResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*LinkEvidenceGraphArtifactResponse) ProtoMessage() {}
-
-func (x *LinkEvidenceGraphArtifactResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[53]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use LinkEvidenceGraphArtifactResponse.ProtoReflect.Descriptor instead.
-func (*LinkEvidenceGraphArtifactResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{53}
-}
-
-func (x *LinkEvidenceGraphArtifactResponse) GetEffects() *WriteEffects {
-	if x != nil {
-		return x.Effects
-	}
-	return nil
-}
-
-type UnlinkEvidenceGraphArtifactRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
-	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	GraphId       string                 `protobuf:"bytes,3,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"`
-	ArtifactId    string                 `protobuf:"bytes,4,opt,name=artifact_id,json=artifactId,proto3" json:"artifact_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UnlinkEvidenceGraphArtifactRequest) Reset() {
-	*x = UnlinkEvidenceGraphArtifactRequest{}
-	mi := &file_engine_proto_msgTypes[54]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UnlinkEvidenceGraphArtifactRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UnlinkEvidenceGraphArtifactRequest) ProtoMessage() {}
-
-func (x *UnlinkEvidenceGraphArtifactRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[54]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UnlinkEvidenceGraphArtifactRequest.ProtoReflect.Descriptor instead.
-func (*UnlinkEvidenceGraphArtifactRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{54}
-}
-
-func (x *UnlinkEvidenceGraphArtifactRequest) GetProjectDir() string {
-	if x != nil {
-		return x.ProjectDir
-	}
-	return ""
-}
-
-func (x *UnlinkEvidenceGraphArtifactRequest) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
-}
-
-func (x *UnlinkEvidenceGraphArtifactRequest) GetGraphId() string {
-	if x != nil {
-		return x.GraphId
-	}
-	return ""
-}
-
-func (x *UnlinkEvidenceGraphArtifactRequest) GetArtifactId() string {
-	if x != nil {
-		return x.ArtifactId
-	}
-	return ""
-}
-
-type UnlinkEvidenceGraphArtifactResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Effects       *WriteEffects          `protobuf:"bytes,1,opt,name=effects,proto3" json:"effects,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UnlinkEvidenceGraphArtifactResponse) Reset() {
-	*x = UnlinkEvidenceGraphArtifactResponse{}
-	mi := &file_engine_proto_msgTypes[55]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UnlinkEvidenceGraphArtifactResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UnlinkEvidenceGraphArtifactResponse) ProtoMessage() {}
-
-func (x *UnlinkEvidenceGraphArtifactResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[55]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UnlinkEvidenceGraphArtifactResponse.ProtoReflect.Descriptor instead.
-func (*UnlinkEvidenceGraphArtifactResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{55}
-}
-
-func (x *UnlinkEvidenceGraphArtifactResponse) GetEffects() *WriteEffects {
-	if x != nil {
-		return x.Effects
-	}
-	return nil
-}
-
 type EvidenceGraphArtifactPair struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	GraphId       string                 `protobuf:"bytes,1,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"`
@@ -4189,7 +3959,7 @@ type EvidenceGraphArtifactPair struct {
 
 func (x *EvidenceGraphArtifactPair) Reset() {
 	*x = EvidenceGraphArtifactPair{}
-	mi := &file_engine_proto_msgTypes[56]
+	mi := &file_engine_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4201,7 +3971,7 @@ func (x *EvidenceGraphArtifactPair) String() string {
 func (*EvidenceGraphArtifactPair) ProtoMessage() {}
 
 func (x *EvidenceGraphArtifactPair) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[56]
+	mi := &file_engine_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4214,7 +3984,7 @@ func (x *EvidenceGraphArtifactPair) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EvidenceGraphArtifactPair.ProtoReflect.Descriptor instead.
 func (*EvidenceGraphArtifactPair) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{56}
+	return file_engine_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *EvidenceGraphArtifactPair) GetGraphId() string {
@@ -4242,7 +4012,7 @@ type GetEvidenceGraphUnlinkImpactRequest struct {
 
 func (x *GetEvidenceGraphUnlinkImpactRequest) Reset() {
 	*x = GetEvidenceGraphUnlinkImpactRequest{}
-	mi := &file_engine_proto_msgTypes[57]
+	mi := &file_engine_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4254,7 +4024,7 @@ func (x *GetEvidenceGraphUnlinkImpactRequest) String() string {
 func (*GetEvidenceGraphUnlinkImpactRequest) ProtoMessage() {}
 
 func (x *GetEvidenceGraphUnlinkImpactRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[57]
+	mi := &file_engine_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4267,7 +4037,7 @@ func (x *GetEvidenceGraphUnlinkImpactRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use GetEvidenceGraphUnlinkImpactRequest.ProtoReflect.Descriptor instead.
 func (*GetEvidenceGraphUnlinkImpactRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{57}
+	return file_engine_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *GetEvidenceGraphUnlinkImpactRequest) GetProjectDir() string {
@@ -4296,7 +4066,7 @@ type EvidenceGraphUnlinkBlock struct {
 
 func (x *EvidenceGraphUnlinkBlock) Reset() {
 	*x = EvidenceGraphUnlinkBlock{}
-	mi := &file_engine_proto_msgTypes[58]
+	mi := &file_engine_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4308,7 +4078,7 @@ func (x *EvidenceGraphUnlinkBlock) String() string {
 func (*EvidenceGraphUnlinkBlock) ProtoMessage() {}
 
 func (x *EvidenceGraphUnlinkBlock) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[58]
+	mi := &file_engine_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4321,7 +4091,7 @@ func (x *EvidenceGraphUnlinkBlock) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EvidenceGraphUnlinkBlock.ProtoReflect.Descriptor instead.
 func (*EvidenceGraphUnlinkBlock) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{58}
+	return file_engine_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *EvidenceGraphUnlinkBlock) GetArtifactId() string {
@@ -4361,7 +4131,7 @@ type GetEvidenceGraphUnlinkImpactResponse struct {
 
 func (x *GetEvidenceGraphUnlinkImpactResponse) Reset() {
 	*x = GetEvidenceGraphUnlinkImpactResponse{}
-	mi := &file_engine_proto_msgTypes[59]
+	mi := &file_engine_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4373,7 +4143,7 @@ func (x *GetEvidenceGraphUnlinkImpactResponse) String() string {
 func (*GetEvidenceGraphUnlinkImpactResponse) ProtoMessage() {}
 
 func (x *GetEvidenceGraphUnlinkImpactResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[59]
+	mi := &file_engine_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4386,7 +4156,7 @@ func (x *GetEvidenceGraphUnlinkImpactResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use GetEvidenceGraphUnlinkImpactResponse.ProtoReflect.Descriptor instead.
 func (*GetEvidenceGraphUnlinkImpactResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{59}
+	return file_engine_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *GetEvidenceGraphUnlinkImpactResponse) GetBlocked() []*EvidenceGraphUnlinkBlock {
@@ -4410,7 +4180,7 @@ type UpdateSourceRequest struct {
 
 func (x *UpdateSourceRequest) Reset() {
 	*x = UpdateSourceRequest{}
-	mi := &file_engine_proto_msgTypes[60]
+	mi := &file_engine_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4422,7 +4192,7 @@ func (x *UpdateSourceRequest) String() string {
 func (*UpdateSourceRequest) ProtoMessage() {}
 
 func (x *UpdateSourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[60]
+	mi := &file_engine_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4435,7 +4205,7 @@ func (x *UpdateSourceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSourceRequest.ProtoReflect.Descriptor instead.
 func (*UpdateSourceRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{60}
+	return file_engine_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *UpdateSourceRequest) GetProjectDir() string {
@@ -4489,7 +4259,7 @@ type UpdateSourceResponse struct {
 
 func (x *UpdateSourceResponse) Reset() {
 	*x = UpdateSourceResponse{}
-	mi := &file_engine_proto_msgTypes[61]
+	mi := &file_engine_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4501,7 +4271,7 @@ func (x *UpdateSourceResponse) String() string {
 func (*UpdateSourceResponse) ProtoMessage() {}
 
 func (x *UpdateSourceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[61]
+	mi := &file_engine_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4514,7 +4284,7 @@ func (x *UpdateSourceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSourceResponse.ProtoReflect.Descriptor instead.
 func (*UpdateSourceResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{61}
+	return file_engine_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *UpdateSourceResponse) GetSource() *Source {
@@ -4535,7 +4305,7 @@ type DeleteSourceRequest struct {
 
 func (x *DeleteSourceRequest) Reset() {
 	*x = DeleteSourceRequest{}
-	mi := &file_engine_proto_msgTypes[62]
+	mi := &file_engine_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4547,7 +4317,7 @@ func (x *DeleteSourceRequest) String() string {
 func (*DeleteSourceRequest) ProtoMessage() {}
 
 func (x *DeleteSourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[62]
+	mi := &file_engine_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4560,7 +4330,7 @@ func (x *DeleteSourceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSourceRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSourceRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{62}
+	return file_engine_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *DeleteSourceRequest) GetProjectDir() string {
@@ -4592,7 +4362,7 @@ type DeleteSourceResponse struct {
 
 func (x *DeleteSourceResponse) Reset() {
 	*x = DeleteSourceResponse{}
-	mi := &file_engine_proto_msgTypes[63]
+	mi := &file_engine_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4604,7 +4374,7 @@ func (x *DeleteSourceResponse) String() string {
 func (*DeleteSourceResponse) ProtoMessage() {}
 
 func (x *DeleteSourceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[63]
+	mi := &file_engine_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4617,7 +4387,7 @@ func (x *DeleteSourceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSourceResponse.ProtoReflect.Descriptor instead.
 func (*DeleteSourceResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{63}
+	return file_engine_proto_rawDescGZIP(), []int{59}
 }
 
 type SetSourceCoverRequest struct {
@@ -4635,7 +4405,7 @@ type SetSourceCoverRequest struct {
 
 func (x *SetSourceCoverRequest) Reset() {
 	*x = SetSourceCoverRequest{}
-	mi := &file_engine_proto_msgTypes[64]
+	mi := &file_engine_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4647,7 +4417,7 @@ func (x *SetSourceCoverRequest) String() string {
 func (*SetSourceCoverRequest) ProtoMessage() {}
 
 func (x *SetSourceCoverRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[64]
+	mi := &file_engine_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4660,7 +4430,7 @@ func (x *SetSourceCoverRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetSourceCoverRequest.ProtoReflect.Descriptor instead.
 func (*SetSourceCoverRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{64}
+	return file_engine_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *SetSourceCoverRequest) GetProjectDir() string {
@@ -4707,7 +4477,7 @@ type SetSourceCoverResponse struct {
 
 func (x *SetSourceCoverResponse) Reset() {
 	*x = SetSourceCoverResponse{}
-	mi := &file_engine_proto_msgTypes[65]
+	mi := &file_engine_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4719,7 +4489,7 @@ func (x *SetSourceCoverResponse) String() string {
 func (*SetSourceCoverResponse) ProtoMessage() {}
 
 func (x *SetSourceCoverResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[65]
+	mi := &file_engine_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4732,7 +4502,7 @@ func (x *SetSourceCoverResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetSourceCoverResponse.ProtoReflect.Descriptor instead.
 func (*SetSourceCoverResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{65}
+	return file_engine_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *SetSourceCoverResponse) GetSource() *Source {
@@ -4754,7 +4524,7 @@ type AddSourceNoteRequest struct {
 
 func (x *AddSourceNoteRequest) Reset() {
 	*x = AddSourceNoteRequest{}
-	mi := &file_engine_proto_msgTypes[66]
+	mi := &file_engine_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4766,7 +4536,7 @@ func (x *AddSourceNoteRequest) String() string {
 func (*AddSourceNoteRequest) ProtoMessage() {}
 
 func (x *AddSourceNoteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[66]
+	mi := &file_engine_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4779,7 +4549,7 @@ func (x *AddSourceNoteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddSourceNoteRequest.ProtoReflect.Descriptor instead.
 func (*AddSourceNoteRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{66}
+	return file_engine_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *AddSourceNoteRequest) GetProjectDir() string {
@@ -4820,7 +4590,7 @@ type AddSourceNoteResponse struct {
 
 func (x *AddSourceNoteResponse) Reset() {
 	*x = AddSourceNoteResponse{}
-	mi := &file_engine_proto_msgTypes[67]
+	mi := &file_engine_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4832,7 +4602,7 @@ func (x *AddSourceNoteResponse) String() string {
 func (*AddSourceNoteResponse) ProtoMessage() {}
 
 func (x *AddSourceNoteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[67]
+	mi := &file_engine_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4845,7 +4615,7 @@ func (x *AddSourceNoteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddSourceNoteResponse.ProtoReflect.Descriptor instead.
 func (*AddSourceNoteResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{67}
+	return file_engine_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *AddSourceNoteResponse) GetNote() *SourceNote {
@@ -4874,7 +4644,7 @@ type UpdateSourceNoteRequest struct {
 
 func (x *UpdateSourceNoteRequest) Reset() {
 	*x = UpdateSourceNoteRequest{}
-	mi := &file_engine_proto_msgTypes[68]
+	mi := &file_engine_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4886,7 +4656,7 @@ func (x *UpdateSourceNoteRequest) String() string {
 func (*UpdateSourceNoteRequest) ProtoMessage() {}
 
 func (x *UpdateSourceNoteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[68]
+	mi := &file_engine_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4899,7 +4669,7 @@ func (x *UpdateSourceNoteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSourceNoteRequest.ProtoReflect.Descriptor instead.
 func (*UpdateSourceNoteRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{68}
+	return file_engine_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *UpdateSourceNoteRequest) GetProjectDir() string {
@@ -4940,7 +4710,7 @@ type UpdateSourceNoteResponse struct {
 
 func (x *UpdateSourceNoteResponse) Reset() {
 	*x = UpdateSourceNoteResponse{}
-	mi := &file_engine_proto_msgTypes[69]
+	mi := &file_engine_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4952,7 +4722,7 @@ func (x *UpdateSourceNoteResponse) String() string {
 func (*UpdateSourceNoteResponse) ProtoMessage() {}
 
 func (x *UpdateSourceNoteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[69]
+	mi := &file_engine_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4965,7 +4735,7 @@ func (x *UpdateSourceNoteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSourceNoteResponse.ProtoReflect.Descriptor instead.
 func (*UpdateSourceNoteResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{69}
+	return file_engine_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *UpdateSourceNoteResponse) GetNote() *SourceNote {
@@ -4993,7 +4763,7 @@ type DeleteSourceNoteRequest struct {
 
 func (x *DeleteSourceNoteRequest) Reset() {
 	*x = DeleteSourceNoteRequest{}
-	mi := &file_engine_proto_msgTypes[70]
+	mi := &file_engine_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5005,7 +4775,7 @@ func (x *DeleteSourceNoteRequest) String() string {
 func (*DeleteSourceNoteRequest) ProtoMessage() {}
 
 func (x *DeleteSourceNoteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[70]
+	mi := &file_engine_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5018,7 +4788,7 @@ func (x *DeleteSourceNoteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSourceNoteRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSourceNoteRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{70}
+	return file_engine_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *DeleteSourceNoteRequest) GetProjectDir() string {
@@ -5051,7 +4821,7 @@ type DeleteSourceNoteResponse struct {
 
 func (x *DeleteSourceNoteResponse) Reset() {
 	*x = DeleteSourceNoteResponse{}
-	mi := &file_engine_proto_msgTypes[71]
+	mi := &file_engine_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5063,7 +4833,7 @@ func (x *DeleteSourceNoteResponse) String() string {
 func (*DeleteSourceNoteResponse) ProtoMessage() {}
 
 func (x *DeleteSourceNoteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[71]
+	mi := &file_engine_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5076,7 +4846,7 @@ func (x *DeleteSourceNoteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSourceNoteResponse.ProtoReflect.Descriptor instead.
 func (*DeleteSourceNoteResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{71}
+	return file_engine_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *DeleteSourceNoteResponse) GetEffects() *WriteEffects {
@@ -5099,7 +4869,7 @@ type SetSourceMetadataRequest struct {
 
 func (x *SetSourceMetadataRequest) Reset() {
 	*x = SetSourceMetadataRequest{}
-	mi := &file_engine_proto_msgTypes[72]
+	mi := &file_engine_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5111,7 +4881,7 @@ func (x *SetSourceMetadataRequest) String() string {
 func (*SetSourceMetadataRequest) ProtoMessage() {}
 
 func (x *SetSourceMetadataRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[72]
+	mi := &file_engine_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5124,7 +4894,7 @@ func (x *SetSourceMetadataRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetSourceMetadataRequest.ProtoReflect.Descriptor instead.
 func (*SetSourceMetadataRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{72}
+	return file_engine_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *SetSourceMetadataRequest) GetProjectDir() string {
@@ -5174,7 +4944,7 @@ type SetSourceMetadataResponse struct {
 
 func (x *SetSourceMetadataResponse) Reset() {
 	*x = SetSourceMetadataResponse{}
-	mi := &file_engine_proto_msgTypes[73]
+	mi := &file_engine_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5186,7 +4956,7 @@ func (x *SetSourceMetadataResponse) String() string {
 func (*SetSourceMetadataResponse) ProtoMessage() {}
 
 func (x *SetSourceMetadataResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[73]
+	mi := &file_engine_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5199,7 +4969,7 @@ func (x *SetSourceMetadataResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetSourceMetadataResponse.ProtoReflect.Descriptor instead.
 func (*SetSourceMetadataResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{73}
+	return file_engine_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *SetSourceMetadataResponse) GetEntry() *MetadataWorkspaceEntry {
@@ -5228,7 +4998,7 @@ type ClearSourceMetadataRequest struct {
 
 func (x *ClearSourceMetadataRequest) Reset() {
 	*x = ClearSourceMetadataRequest{}
-	mi := &file_engine_proto_msgTypes[74]
+	mi := &file_engine_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5240,7 +5010,7 @@ func (x *ClearSourceMetadataRequest) String() string {
 func (*ClearSourceMetadataRequest) ProtoMessage() {}
 
 func (x *ClearSourceMetadataRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[74]
+	mi := &file_engine_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5253,7 +5023,7 @@ func (x *ClearSourceMetadataRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClearSourceMetadataRequest.ProtoReflect.Descriptor instead.
 func (*ClearSourceMetadataRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{74}
+	return file_engine_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *ClearSourceMetadataRequest) GetProjectDir() string {
@@ -5293,7 +5063,7 @@ type ClearSourceMetadataResponse struct {
 
 func (x *ClearSourceMetadataResponse) Reset() {
 	*x = ClearSourceMetadataResponse{}
-	mi := &file_engine_proto_msgTypes[75]
+	mi := &file_engine_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5305,7 +5075,7 @@ func (x *ClearSourceMetadataResponse) String() string {
 func (*ClearSourceMetadataResponse) ProtoMessage() {}
 
 func (x *ClearSourceMetadataResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[75]
+	mi := &file_engine_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5318,7 +5088,7 @@ func (x *ClearSourceMetadataResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClearSourceMetadataResponse.ProtoReflect.Descriptor instead.
 func (*ClearSourceMetadataResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{75}
+	return file_engine_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *ClearSourceMetadataResponse) GetEffects() *WriteEffects {
@@ -5342,7 +5112,7 @@ type DismissSourceMetadataSuggestionRequest struct {
 
 func (x *DismissSourceMetadataSuggestionRequest) Reset() {
 	*x = DismissSourceMetadataSuggestionRequest{}
-	mi := &file_engine_proto_msgTypes[76]
+	mi := &file_engine_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5354,7 +5124,7 @@ func (x *DismissSourceMetadataSuggestionRequest) String() string {
 func (*DismissSourceMetadataSuggestionRequest) ProtoMessage() {}
 
 func (x *DismissSourceMetadataSuggestionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[76]
+	mi := &file_engine_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5367,7 +5137,7 @@ func (x *DismissSourceMetadataSuggestionRequest) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use DismissSourceMetadataSuggestionRequest.ProtoReflect.Descriptor instead.
 func (*DismissSourceMetadataSuggestionRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{76}
+	return file_engine_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *DismissSourceMetadataSuggestionRequest) GetProjectDir() string {
@@ -5408,7 +5178,7 @@ type DismissSourceMetadataSuggestionResponse struct {
 
 func (x *DismissSourceMetadataSuggestionResponse) Reset() {
 	*x = DismissSourceMetadataSuggestionResponse{}
-	mi := &file_engine_proto_msgTypes[77]
+	mi := &file_engine_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5420,7 +5190,7 @@ func (x *DismissSourceMetadataSuggestionResponse) String() string {
 func (*DismissSourceMetadataSuggestionResponse) ProtoMessage() {}
 
 func (x *DismissSourceMetadataSuggestionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[77]
+	mi := &file_engine_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5433,7 +5203,7 @@ func (x *DismissSourceMetadataSuggestionResponse) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use DismissSourceMetadataSuggestionResponse.ProtoReflect.Descriptor instead.
 func (*DismissSourceMetadataSuggestionResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{77}
+	return file_engine_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *DismissSourceMetadataSuggestionResponse) GetMetadata() []*MetadataWorkspaceEntry {
@@ -5464,7 +5234,7 @@ type ReorderSourceMetadataRequest struct {
 
 func (x *ReorderSourceMetadataRequest) Reset() {
 	*x = ReorderSourceMetadataRequest{}
-	mi := &file_engine_proto_msgTypes[78]
+	mi := &file_engine_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5476,7 +5246,7 @@ func (x *ReorderSourceMetadataRequest) String() string {
 func (*ReorderSourceMetadataRequest) ProtoMessage() {}
 
 func (x *ReorderSourceMetadataRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[78]
+	mi := &file_engine_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5489,7 +5259,7 @@ func (x *ReorderSourceMetadataRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReorderSourceMetadataRequest.ProtoReflect.Descriptor instead.
 func (*ReorderSourceMetadataRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{78}
+	return file_engine_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *ReorderSourceMetadataRequest) GetProjectDir() string {
@@ -5530,7 +5300,7 @@ type ReorderSourceMetadataResponse struct {
 
 func (x *ReorderSourceMetadataResponse) Reset() {
 	*x = ReorderSourceMetadataResponse{}
-	mi := &file_engine_proto_msgTypes[79]
+	mi := &file_engine_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5542,7 +5312,7 @@ func (x *ReorderSourceMetadataResponse) String() string {
 func (*ReorderSourceMetadataResponse) ProtoMessage() {}
 
 func (x *ReorderSourceMetadataResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[79]
+	mi := &file_engine_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5555,7 +5325,7 @@ func (x *ReorderSourceMetadataResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReorderSourceMetadataResponse.ProtoReflect.Descriptor instead.
 func (*ReorderSourceMetadataResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{79}
+	return file_engine_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *ReorderSourceMetadataResponse) GetMetadata() []*MetadataWorkspaceEntry {
@@ -5587,7 +5357,7 @@ type CreateArtifactRequest struct {
 
 func (x *CreateArtifactRequest) Reset() {
 	*x = CreateArtifactRequest{}
-	mi := &file_engine_proto_msgTypes[80]
+	mi := &file_engine_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5599,7 +5369,7 @@ func (x *CreateArtifactRequest) String() string {
 func (*CreateArtifactRequest) ProtoMessage() {}
 
 func (x *CreateArtifactRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[80]
+	mi := &file_engine_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5612,7 +5382,7 @@ func (x *CreateArtifactRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateArtifactRequest.ProtoReflect.Descriptor instead.
 func (*CreateArtifactRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{80}
+	return file_engine_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *CreateArtifactRequest) GetProjectDir() string {
@@ -5675,7 +5445,7 @@ type GraphLinks struct {
 
 func (x *GraphLinks) Reset() {
 	*x = GraphLinks{}
-	mi := &file_engine_proto_msgTypes[81]
+	mi := &file_engine_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5687,7 +5457,7 @@ func (x *GraphLinks) String() string {
 func (*GraphLinks) ProtoMessage() {}
 
 func (x *GraphLinks) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[81]
+	mi := &file_engine_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5700,7 +5470,7 @@ func (x *GraphLinks) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GraphLinks.ProtoReflect.Descriptor instead.
 func (*GraphLinks) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{81}
+	return file_engine_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *GraphLinks) GetGraphIds() []string {
@@ -5720,7 +5490,7 @@ type CreateArtifactResponse struct {
 
 func (x *CreateArtifactResponse) Reset() {
 	*x = CreateArtifactResponse{}
-	mi := &file_engine_proto_msgTypes[82]
+	mi := &file_engine_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5732,7 +5502,7 @@ func (x *CreateArtifactResponse) String() string {
 func (*CreateArtifactResponse) ProtoMessage() {}
 
 func (x *CreateArtifactResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[82]
+	mi := &file_engine_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5745,7 +5515,7 @@ func (x *CreateArtifactResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateArtifactResponse.ProtoReflect.Descriptor instead.
 func (*CreateArtifactResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{82}
+	return file_engine_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *CreateArtifactResponse) GetArtifact() *Artifact {
@@ -5779,7 +5549,7 @@ type UpdateArtifactRequest struct {
 
 func (x *UpdateArtifactRequest) Reset() {
 	*x = UpdateArtifactRequest{}
-	mi := &file_engine_proto_msgTypes[83]
+	mi := &file_engine_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5791,7 +5561,7 @@ func (x *UpdateArtifactRequest) String() string {
 func (*UpdateArtifactRequest) ProtoMessage() {}
 
 func (x *UpdateArtifactRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[83]
+	mi := &file_engine_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5804,7 +5574,7 @@ func (x *UpdateArtifactRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateArtifactRequest.ProtoReflect.Descriptor instead.
 func (*UpdateArtifactRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{83}
+	return file_engine_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *UpdateArtifactRequest) GetProjectDir() string {
@@ -5859,7 +5629,7 @@ type UpdateArtifactResponse struct {
 
 func (x *UpdateArtifactResponse) Reset() {
 	*x = UpdateArtifactResponse{}
-	mi := &file_engine_proto_msgTypes[84]
+	mi := &file_engine_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5871,7 +5641,7 @@ func (x *UpdateArtifactResponse) String() string {
 func (*UpdateArtifactResponse) ProtoMessage() {}
 
 func (x *UpdateArtifactResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[84]
+	mi := &file_engine_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5884,7 +5654,7 @@ func (x *UpdateArtifactResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateArtifactResponse.ProtoReflect.Descriptor instead.
 func (*UpdateArtifactResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{84}
+	return file_engine_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *UpdateArtifactResponse) GetArtifact() *Artifact {
@@ -5912,7 +5682,7 @@ type DeleteArtifactRequest struct {
 
 func (x *DeleteArtifactRequest) Reset() {
 	*x = DeleteArtifactRequest{}
-	mi := &file_engine_proto_msgTypes[85]
+	mi := &file_engine_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5924,7 +5694,7 @@ func (x *DeleteArtifactRequest) String() string {
 func (*DeleteArtifactRequest) ProtoMessage() {}
 
 func (x *DeleteArtifactRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[85]
+	mi := &file_engine_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5937,7 +5707,7 @@ func (x *DeleteArtifactRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteArtifactRequest.ProtoReflect.Descriptor instead.
 func (*DeleteArtifactRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{85}
+	return file_engine_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *DeleteArtifactRequest) GetProjectDir() string {
@@ -5970,7 +5740,7 @@ type DeleteArtifactResponse struct {
 
 func (x *DeleteArtifactResponse) Reset() {
 	*x = DeleteArtifactResponse{}
-	mi := &file_engine_proto_msgTypes[86]
+	mi := &file_engine_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5982,7 +5752,7 @@ func (x *DeleteArtifactResponse) String() string {
 func (*DeleteArtifactResponse) ProtoMessage() {}
 
 func (x *DeleteArtifactResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[86]
+	mi := &file_engine_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5995,7 +5765,7 @@ func (x *DeleteArtifactResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteArtifactResponse.ProtoReflect.Descriptor instead.
 func (*DeleteArtifactResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{86}
+	return file_engine_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *DeleteArtifactResponse) GetEffects() *WriteEffects {
@@ -6016,7 +5786,7 @@ type DeleteCitationRequest struct {
 
 func (x *DeleteCitationRequest) Reset() {
 	*x = DeleteCitationRequest{}
-	mi := &file_engine_proto_msgTypes[87]
+	mi := &file_engine_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6028,7 +5798,7 @@ func (x *DeleteCitationRequest) String() string {
 func (*DeleteCitationRequest) ProtoMessage() {}
 
 func (x *DeleteCitationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[87]
+	mi := &file_engine_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6041,7 +5811,7 @@ func (x *DeleteCitationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCitationRequest.ProtoReflect.Descriptor instead.
 func (*DeleteCitationRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{87}
+	return file_engine_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *DeleteCitationRequest) GetProjectDir() string {
@@ -6074,7 +5844,7 @@ type DeleteCitationResponse struct {
 
 func (x *DeleteCitationResponse) Reset() {
 	*x = DeleteCitationResponse{}
-	mi := &file_engine_proto_msgTypes[88]
+	mi := &file_engine_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6086,7 +5856,7 @@ func (x *DeleteCitationResponse) String() string {
 func (*DeleteCitationResponse) ProtoMessage() {}
 
 func (x *DeleteCitationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[88]
+	mi := &file_engine_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6099,7 +5869,7 @@ func (x *DeleteCitationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCitationResponse.ProtoReflect.Descriptor instead.
 func (*DeleteCitationResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{88}
+	return file_engine_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *DeleteCitationResponse) GetEffects() *WriteEffects {
@@ -6142,7 +5912,7 @@ type WriteEffects struct {
 
 func (x *WriteEffects) Reset() {
 	*x = WriteEffects{}
-	mi := &file_engine_proto_msgTypes[89]
+	mi := &file_engine_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6154,7 +5924,7 @@ func (x *WriteEffects) String() string {
 func (*WriteEffects) ProtoMessage() {}
 
 func (x *WriteEffects) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[89]
+	mi := &file_engine_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6167,7 +5937,7 @@ func (x *WriteEffects) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WriteEffects.ProtoReflect.Descriptor instead.
 func (*WriteEffects) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{89}
+	return file_engine_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *WriteEffects) GetHandles() []string {
@@ -6252,7 +6022,7 @@ type IngestArtifactFileRequest struct {
 
 func (x *IngestArtifactFileRequest) Reset() {
 	*x = IngestArtifactFileRequest{}
-	mi := &file_engine_proto_msgTypes[90]
+	mi := &file_engine_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6264,7 +6034,7 @@ func (x *IngestArtifactFileRequest) String() string {
 func (*IngestArtifactFileRequest) ProtoMessage() {}
 
 func (x *IngestArtifactFileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[90]
+	mi := &file_engine_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6277,7 +6047,7 @@ func (x *IngestArtifactFileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IngestArtifactFileRequest.ProtoReflect.Descriptor instead.
 func (*IngestArtifactFileRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{90}
+	return file_engine_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *IngestArtifactFileRequest) GetProjectDir() string {
@@ -6320,7 +6090,7 @@ type IngestArtifactFileResponse struct {
 
 func (x *IngestArtifactFileResponse) Reset() {
 	*x = IngestArtifactFileResponse{}
-	mi := &file_engine_proto_msgTypes[91]
+	mi := &file_engine_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6332,7 +6102,7 @@ func (x *IngestArtifactFileResponse) String() string {
 func (*IngestArtifactFileResponse) ProtoMessage() {}
 
 func (x *IngestArtifactFileResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[91]
+	mi := &file_engine_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6345,7 +6115,7 @@ func (x *IngestArtifactFileResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IngestArtifactFileResponse.ProtoReflect.Descriptor instead.
 func (*IngestArtifactFileResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{91}
+	return file_engine_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *IngestArtifactFileResponse) GetArtifact() *Artifact {
@@ -6385,7 +6155,7 @@ type ListSourceCredibilityGradesRequest struct {
 
 func (x *ListSourceCredibilityGradesRequest) Reset() {
 	*x = ListSourceCredibilityGradesRequest{}
-	mi := &file_engine_proto_msgTypes[92]
+	mi := &file_engine_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6397,7 +6167,7 @@ func (x *ListSourceCredibilityGradesRequest) String() string {
 func (*ListSourceCredibilityGradesRequest) ProtoMessage() {}
 
 func (x *ListSourceCredibilityGradesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[92]
+	mi := &file_engine_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6410,7 +6180,7 @@ func (x *ListSourceCredibilityGradesRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ListSourceCredibilityGradesRequest.ProtoReflect.Descriptor instead.
 func (*ListSourceCredibilityGradesRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{92}
+	return file_engine_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *ListSourceCredibilityGradesRequest) GetProjectDir() string {
@@ -6429,7 +6199,7 @@ type ListSourceCredibilityGradesResponse struct {
 
 func (x *ListSourceCredibilityGradesResponse) Reset() {
 	*x = ListSourceCredibilityGradesResponse{}
-	mi := &file_engine_proto_msgTypes[93]
+	mi := &file_engine_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6441,7 +6211,7 @@ func (x *ListSourceCredibilityGradesResponse) String() string {
 func (*ListSourceCredibilityGradesResponse) ProtoMessage() {}
 
 func (x *ListSourceCredibilityGradesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[93]
+	mi := &file_engine_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6454,7 +6224,7 @@ func (x *ListSourceCredibilityGradesResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ListSourceCredibilityGradesResponse.ProtoReflect.Descriptor instead.
 func (*ListSourceCredibilityGradesResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{93}
+	return file_engine_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *ListSourceCredibilityGradesResponse) GetGrades() []*SourceCredibilityGrade {
@@ -6479,7 +6249,7 @@ type UpsertSourceCredibilityAssessmentRequest struct {
 
 func (x *UpsertSourceCredibilityAssessmentRequest) Reset() {
 	*x = UpsertSourceCredibilityAssessmentRequest{}
-	mi := &file_engine_proto_msgTypes[94]
+	mi := &file_engine_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6491,7 +6261,7 @@ func (x *UpsertSourceCredibilityAssessmentRequest) String() string {
 func (*UpsertSourceCredibilityAssessmentRequest) ProtoMessage() {}
 
 func (x *UpsertSourceCredibilityAssessmentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[94]
+	mi := &file_engine_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6504,7 +6274,7 @@ func (x *UpsertSourceCredibilityAssessmentRequest) ProtoReflect() protoreflect.M
 
 // Deprecated: Use UpsertSourceCredibilityAssessmentRequest.ProtoReflect.Descriptor instead.
 func (*UpsertSourceCredibilityAssessmentRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{94}
+	return file_engine_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *UpsertSourceCredibilityAssessmentRequest) GetProjectDir() string {
@@ -6566,7 +6336,7 @@ type UpsertSourceCredibilityAssessmentResponse struct {
 
 func (x *UpsertSourceCredibilityAssessmentResponse) Reset() {
 	*x = UpsertSourceCredibilityAssessmentResponse{}
-	mi := &file_engine_proto_msgTypes[95]
+	mi := &file_engine_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6578,7 +6348,7 @@ func (x *UpsertSourceCredibilityAssessmentResponse) String() string {
 func (*UpsertSourceCredibilityAssessmentResponse) ProtoMessage() {}
 
 func (x *UpsertSourceCredibilityAssessmentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[95]
+	mi := &file_engine_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6591,7 +6361,7 @@ func (x *UpsertSourceCredibilityAssessmentResponse) ProtoReflect() protoreflect.
 
 // Deprecated: Use UpsertSourceCredibilityAssessmentResponse.ProtoReflect.Descriptor instead.
 func (*UpsertSourceCredibilityAssessmentResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{95}
+	return file_engine_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *UpsertSourceCredibilityAssessmentResponse) GetAssessment() *SourceCredibilityAssessment {
@@ -6617,7 +6387,7 @@ type ListSourceTypesRequest struct {
 
 func (x *ListSourceTypesRequest) Reset() {
 	*x = ListSourceTypesRequest{}
-	mi := &file_engine_proto_msgTypes[96]
+	mi := &file_engine_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6629,7 +6399,7 @@ func (x *ListSourceTypesRequest) String() string {
 func (*ListSourceTypesRequest) ProtoMessage() {}
 
 func (x *ListSourceTypesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[96]
+	mi := &file_engine_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6642,7 +6412,7 @@ func (x *ListSourceTypesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSourceTypesRequest.ProtoReflect.Descriptor instead.
 func (*ListSourceTypesRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{96}
+	return file_engine_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *ListSourceTypesRequest) GetProjectDir() string {
@@ -6661,7 +6431,7 @@ type ListSourceTypesResponse struct {
 
 func (x *ListSourceTypesResponse) Reset() {
 	*x = ListSourceTypesResponse{}
-	mi := &file_engine_proto_msgTypes[97]
+	mi := &file_engine_proto_msgTypes[93]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6673,7 +6443,7 @@ func (x *ListSourceTypesResponse) String() string {
 func (*ListSourceTypesResponse) ProtoMessage() {}
 
 func (x *ListSourceTypesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[97]
+	mi := &file_engine_proto_msgTypes[93]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6686,7 +6456,7 @@ func (x *ListSourceTypesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSourceTypesResponse.ProtoReflect.Descriptor instead.
 func (*ListSourceTypesResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{97}
+	return file_engine_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *ListSourceTypesResponse) GetTypes() []*SourceType {
@@ -6709,7 +6479,7 @@ type CreateSourceTypeRequest struct {
 
 func (x *CreateSourceTypeRequest) Reset() {
 	*x = CreateSourceTypeRequest{}
-	mi := &file_engine_proto_msgTypes[98]
+	mi := &file_engine_proto_msgTypes[94]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6721,7 +6491,7 @@ func (x *CreateSourceTypeRequest) String() string {
 func (*CreateSourceTypeRequest) ProtoMessage() {}
 
 func (x *CreateSourceTypeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[98]
+	mi := &file_engine_proto_msgTypes[94]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6734,7 +6504,7 @@ func (x *CreateSourceTypeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSourceTypeRequest.ProtoReflect.Descriptor instead.
 func (*CreateSourceTypeRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{98}
+	return file_engine_proto_rawDescGZIP(), []int{94}
 }
 
 func (x *CreateSourceTypeRequest) GetProjectDir() string {
@@ -6781,7 +6551,7 @@ type CreateSourceTypeResponse struct {
 
 func (x *CreateSourceTypeResponse) Reset() {
 	*x = CreateSourceTypeResponse{}
-	mi := &file_engine_proto_msgTypes[99]
+	mi := &file_engine_proto_msgTypes[95]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6793,7 +6563,7 @@ func (x *CreateSourceTypeResponse) String() string {
 func (*CreateSourceTypeResponse) ProtoMessage() {}
 
 func (x *CreateSourceTypeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[99]
+	mi := &file_engine_proto_msgTypes[95]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6806,7 +6576,7 @@ func (x *CreateSourceTypeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSourceTypeResponse.ProtoReflect.Descriptor instead.
 func (*CreateSourceTypeResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{99}
+	return file_engine_proto_rawDescGZIP(), []int{95}
 }
 
 func (x *CreateSourceTypeResponse) GetType() *SourceType {
@@ -6825,7 +6595,7 @@ type ListMetadataFieldsRequest struct {
 
 func (x *ListMetadataFieldsRequest) Reset() {
 	*x = ListMetadataFieldsRequest{}
-	mi := &file_engine_proto_msgTypes[100]
+	mi := &file_engine_proto_msgTypes[96]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6837,7 +6607,7 @@ func (x *ListMetadataFieldsRequest) String() string {
 func (*ListMetadataFieldsRequest) ProtoMessage() {}
 
 func (x *ListMetadataFieldsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[100]
+	mi := &file_engine_proto_msgTypes[96]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6850,7 +6620,7 @@ func (x *ListMetadataFieldsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMetadataFieldsRequest.ProtoReflect.Descriptor instead.
 func (*ListMetadataFieldsRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{100}
+	return file_engine_proto_rawDescGZIP(), []int{96}
 }
 
 func (x *ListMetadataFieldsRequest) GetProjectDir() string {
@@ -6869,7 +6639,7 @@ type ListMetadataFieldsResponse struct {
 
 func (x *ListMetadataFieldsResponse) Reset() {
 	*x = ListMetadataFieldsResponse{}
-	mi := &file_engine_proto_msgTypes[101]
+	mi := &file_engine_proto_msgTypes[97]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6881,7 +6651,7 @@ func (x *ListMetadataFieldsResponse) String() string {
 func (*ListMetadataFieldsResponse) ProtoMessage() {}
 
 func (x *ListMetadataFieldsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[101]
+	mi := &file_engine_proto_msgTypes[97]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6894,7 +6664,7 @@ func (x *ListMetadataFieldsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMetadataFieldsResponse.ProtoReflect.Descriptor instead.
 func (*ListMetadataFieldsResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{101}
+	return file_engine_proto_rawDescGZIP(), []int{97}
 }
 
 func (x *ListMetadataFieldsResponse) GetFields() []*MetadataField {
@@ -6917,7 +6687,7 @@ type CreateMetadataFieldRequest struct {
 
 func (x *CreateMetadataFieldRequest) Reset() {
 	*x = CreateMetadataFieldRequest{}
-	mi := &file_engine_proto_msgTypes[102]
+	mi := &file_engine_proto_msgTypes[98]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6929,7 +6699,7 @@ func (x *CreateMetadataFieldRequest) String() string {
 func (*CreateMetadataFieldRequest) ProtoMessage() {}
 
 func (x *CreateMetadataFieldRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[102]
+	mi := &file_engine_proto_msgTypes[98]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6942,7 +6712,7 @@ func (x *CreateMetadataFieldRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMetadataFieldRequest.ProtoReflect.Descriptor instead.
 func (*CreateMetadataFieldRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{102}
+	return file_engine_proto_rawDescGZIP(), []int{98}
 }
 
 func (x *CreateMetadataFieldRequest) GetProjectDir() string {
@@ -6989,7 +6759,7 @@ type CreateMetadataFieldResponse struct {
 
 func (x *CreateMetadataFieldResponse) Reset() {
 	*x = CreateMetadataFieldResponse{}
-	mi := &file_engine_proto_msgTypes[103]
+	mi := &file_engine_proto_msgTypes[99]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7001,7 +6771,7 @@ func (x *CreateMetadataFieldResponse) String() string {
 func (*CreateMetadataFieldResponse) ProtoMessage() {}
 
 func (x *CreateMetadataFieldResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[103]
+	mi := &file_engine_proto_msgTypes[99]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7014,7 +6784,7 @@ func (x *CreateMetadataFieldResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMetadataFieldResponse.ProtoReflect.Descriptor instead.
 func (*CreateMetadataFieldResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{103}
+	return file_engine_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *CreateMetadataFieldResponse) GetField() *MetadataField {
@@ -7038,7 +6808,7 @@ type UpdateMetadataFieldRequest struct {
 
 func (x *UpdateMetadataFieldRequest) Reset() {
 	*x = UpdateMetadataFieldRequest{}
-	mi := &file_engine_proto_msgTypes[104]
+	mi := &file_engine_proto_msgTypes[100]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7050,7 +6820,7 @@ func (x *UpdateMetadataFieldRequest) String() string {
 func (*UpdateMetadataFieldRequest) ProtoMessage() {}
 
 func (x *UpdateMetadataFieldRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[104]
+	mi := &file_engine_proto_msgTypes[100]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7063,7 +6833,7 @@ func (x *UpdateMetadataFieldRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMetadataFieldRequest.ProtoReflect.Descriptor instead.
 func (*UpdateMetadataFieldRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{104}
+	return file_engine_proto_rawDescGZIP(), []int{100}
 }
 
 func (x *UpdateMetadataFieldRequest) GetProjectDir() string {
@@ -7117,7 +6887,7 @@ type UpdateMetadataFieldResponse struct {
 
 func (x *UpdateMetadataFieldResponse) Reset() {
 	*x = UpdateMetadataFieldResponse{}
-	mi := &file_engine_proto_msgTypes[105]
+	mi := &file_engine_proto_msgTypes[101]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7129,7 +6899,7 @@ func (x *UpdateMetadataFieldResponse) String() string {
 func (*UpdateMetadataFieldResponse) ProtoMessage() {}
 
 func (x *UpdateMetadataFieldResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[105]
+	mi := &file_engine_proto_msgTypes[101]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7142,7 +6912,7 @@ func (x *UpdateMetadataFieldResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateMetadataFieldResponse.ProtoReflect.Descriptor instead.
 func (*UpdateMetadataFieldResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{105}
+	return file_engine_proto_rawDescGZIP(), []int{101}
 }
 
 func (x *UpdateMetadataFieldResponse) GetField() *MetadataField {
@@ -7166,7 +6936,7 @@ type UpdateSourceTypeRequest struct {
 
 func (x *UpdateSourceTypeRequest) Reset() {
 	*x = UpdateSourceTypeRequest{}
-	mi := &file_engine_proto_msgTypes[106]
+	mi := &file_engine_proto_msgTypes[102]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7178,7 +6948,7 @@ func (x *UpdateSourceTypeRequest) String() string {
 func (*UpdateSourceTypeRequest) ProtoMessage() {}
 
 func (x *UpdateSourceTypeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[106]
+	mi := &file_engine_proto_msgTypes[102]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7191,7 +6961,7 @@ func (x *UpdateSourceTypeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSourceTypeRequest.ProtoReflect.Descriptor instead.
 func (*UpdateSourceTypeRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{106}
+	return file_engine_proto_rawDescGZIP(), []int{102}
 }
 
 func (x *UpdateSourceTypeRequest) GetProjectDir() string {
@@ -7245,7 +7015,7 @@ type UpdateSourceTypeResponse struct {
 
 func (x *UpdateSourceTypeResponse) Reset() {
 	*x = UpdateSourceTypeResponse{}
-	mi := &file_engine_proto_msgTypes[107]
+	mi := &file_engine_proto_msgTypes[103]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7257,7 +7027,7 @@ func (x *UpdateSourceTypeResponse) String() string {
 func (*UpdateSourceTypeResponse) ProtoMessage() {}
 
 func (x *UpdateSourceTypeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[107]
+	mi := &file_engine_proto_msgTypes[103]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7270,7 +7040,7 @@ func (x *UpdateSourceTypeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSourceTypeResponse.ProtoReflect.Descriptor instead.
 func (*UpdateSourceTypeResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{107}
+	return file_engine_proto_rawDescGZIP(), []int{103}
 }
 
 func (x *UpdateSourceTypeResponse) GetType() *SourceType {
@@ -7290,7 +7060,7 @@ type ListTypeSuggestionsRequest struct {
 
 func (x *ListTypeSuggestionsRequest) Reset() {
 	*x = ListTypeSuggestionsRequest{}
-	mi := &file_engine_proto_msgTypes[108]
+	mi := &file_engine_proto_msgTypes[104]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7302,7 +7072,7 @@ func (x *ListTypeSuggestionsRequest) String() string {
 func (*ListTypeSuggestionsRequest) ProtoMessage() {}
 
 func (x *ListTypeSuggestionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[108]
+	mi := &file_engine_proto_msgTypes[104]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7315,7 +7085,7 @@ func (x *ListTypeSuggestionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTypeSuggestionsRequest.ProtoReflect.Descriptor instead.
 func (*ListTypeSuggestionsRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{108}
+	return file_engine_proto_rawDescGZIP(), []int{104}
 }
 
 func (x *ListTypeSuggestionsRequest) GetProjectDir() string {
@@ -7341,7 +7111,7 @@ type ListTypeSuggestionsResponse struct {
 
 func (x *ListTypeSuggestionsResponse) Reset() {
 	*x = ListTypeSuggestionsResponse{}
-	mi := &file_engine_proto_msgTypes[109]
+	mi := &file_engine_proto_msgTypes[105]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7353,7 +7123,7 @@ func (x *ListTypeSuggestionsResponse) String() string {
 func (*ListTypeSuggestionsResponse) ProtoMessage() {}
 
 func (x *ListTypeSuggestionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[109]
+	mi := &file_engine_proto_msgTypes[105]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7366,7 +7136,7 @@ func (x *ListTypeSuggestionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTypeSuggestionsResponse.ProtoReflect.Descriptor instead.
 func (*ListTypeSuggestionsResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{109}
+	return file_engine_proto_rawDescGZIP(), []int{105}
 }
 
 func (x *ListTypeSuggestionsResponse) GetSuggestions() []*TypeSuggestion {
@@ -7392,7 +7162,7 @@ type AssignTypeFieldRequest struct {
 
 func (x *AssignTypeFieldRequest) Reset() {
 	*x = AssignTypeFieldRequest{}
-	mi := &file_engine_proto_msgTypes[110]
+	mi := &file_engine_proto_msgTypes[106]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7404,7 +7174,7 @@ func (x *AssignTypeFieldRequest) String() string {
 func (*AssignTypeFieldRequest) ProtoMessage() {}
 
 func (x *AssignTypeFieldRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[110]
+	mi := &file_engine_proto_msgTypes[106]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7417,7 +7187,7 @@ func (x *AssignTypeFieldRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssignTypeFieldRequest.ProtoReflect.Descriptor instead.
 func (*AssignTypeFieldRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{110}
+	return file_engine_proto_rawDescGZIP(), []int{106}
 }
 
 func (x *AssignTypeFieldRequest) GetProjectDir() string {
@@ -7457,7 +7227,7 @@ type AssignTypeFieldResponse struct {
 
 func (x *AssignTypeFieldResponse) Reset() {
 	*x = AssignTypeFieldResponse{}
-	mi := &file_engine_proto_msgTypes[111]
+	mi := &file_engine_proto_msgTypes[107]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7469,7 +7239,7 @@ func (x *AssignTypeFieldResponse) String() string {
 func (*AssignTypeFieldResponse) ProtoMessage() {}
 
 func (x *AssignTypeFieldResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[111]
+	mi := &file_engine_proto_msgTypes[107]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7482,7 +7252,7 @@ func (x *AssignTypeFieldResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssignTypeFieldResponse.ProtoReflect.Descriptor instead.
 func (*AssignTypeFieldResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{111}
+	return file_engine_proto_rawDescGZIP(), []int{107}
 }
 
 func (x *AssignTypeFieldResponse) GetSuggestions() []*TypeSuggestion {
@@ -7507,7 +7277,7 @@ type RemoveTypeFieldRequest struct {
 
 func (x *RemoveTypeFieldRequest) Reset() {
 	*x = RemoveTypeFieldRequest{}
-	mi := &file_engine_proto_msgTypes[112]
+	mi := &file_engine_proto_msgTypes[108]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7519,7 +7289,7 @@ func (x *RemoveTypeFieldRequest) String() string {
 func (*RemoveTypeFieldRequest) ProtoMessage() {}
 
 func (x *RemoveTypeFieldRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[112]
+	mi := &file_engine_proto_msgTypes[108]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7532,7 +7302,7 @@ func (x *RemoveTypeFieldRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveTypeFieldRequest.ProtoReflect.Descriptor instead.
 func (*RemoveTypeFieldRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{112}
+	return file_engine_proto_rawDescGZIP(), []int{108}
 }
 
 func (x *RemoveTypeFieldRequest) GetProjectDir() string {
@@ -7572,7 +7342,7 @@ type RemoveTypeFieldResponse struct {
 
 func (x *RemoveTypeFieldResponse) Reset() {
 	*x = RemoveTypeFieldResponse{}
-	mi := &file_engine_proto_msgTypes[113]
+	mi := &file_engine_proto_msgTypes[109]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7584,7 +7354,7 @@ func (x *RemoveTypeFieldResponse) String() string {
 func (*RemoveTypeFieldResponse) ProtoMessage() {}
 
 func (x *RemoveTypeFieldResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[113]
+	mi := &file_engine_proto_msgTypes[109]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7597,7 +7367,7 @@ func (x *RemoveTypeFieldResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveTypeFieldResponse.ProtoReflect.Descriptor instead.
 func (*RemoveTypeFieldResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{113}
+	return file_engine_proto_rawDescGZIP(), []int{109}
 }
 
 func (x *RemoveTypeFieldResponse) GetSuggestions() []*TypeSuggestion {
@@ -7618,7 +7388,7 @@ type DeleteSourceTypeRequest struct {
 
 func (x *DeleteSourceTypeRequest) Reset() {
 	*x = DeleteSourceTypeRequest{}
-	mi := &file_engine_proto_msgTypes[114]
+	mi := &file_engine_proto_msgTypes[110]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7630,7 +7400,7 @@ func (x *DeleteSourceTypeRequest) String() string {
 func (*DeleteSourceTypeRequest) ProtoMessage() {}
 
 func (x *DeleteSourceTypeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[114]
+	mi := &file_engine_proto_msgTypes[110]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7643,7 +7413,7 @@ func (x *DeleteSourceTypeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSourceTypeRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSourceTypeRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{114}
+	return file_engine_proto_rawDescGZIP(), []int{110}
 }
 
 func (x *DeleteSourceTypeRequest) GetProjectDir() string {
@@ -7675,7 +7445,7 @@ type DeleteSourceTypeResponse struct {
 
 func (x *DeleteSourceTypeResponse) Reset() {
 	*x = DeleteSourceTypeResponse{}
-	mi := &file_engine_proto_msgTypes[115]
+	mi := &file_engine_proto_msgTypes[111]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7687,7 +7457,7 @@ func (x *DeleteSourceTypeResponse) String() string {
 func (*DeleteSourceTypeResponse) ProtoMessage() {}
 
 func (x *DeleteSourceTypeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[115]
+	mi := &file_engine_proto_msgTypes[111]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7700,7 +7470,7 @@ func (x *DeleteSourceTypeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSourceTypeResponse.ProtoReflect.Descriptor instead.
 func (*DeleteSourceTypeResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{115}
+	return file_engine_proto_rawDescGZIP(), []int{111}
 }
 
 type DeleteMetadataFieldRequest struct {
@@ -7714,7 +7484,7 @@ type DeleteMetadataFieldRequest struct {
 
 func (x *DeleteMetadataFieldRequest) Reset() {
 	*x = DeleteMetadataFieldRequest{}
-	mi := &file_engine_proto_msgTypes[116]
+	mi := &file_engine_proto_msgTypes[112]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7726,7 +7496,7 @@ func (x *DeleteMetadataFieldRequest) String() string {
 func (*DeleteMetadataFieldRequest) ProtoMessage() {}
 
 func (x *DeleteMetadataFieldRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[116]
+	mi := &file_engine_proto_msgTypes[112]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7739,7 +7509,7 @@ func (x *DeleteMetadataFieldRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMetadataFieldRequest.ProtoReflect.Descriptor instead.
 func (*DeleteMetadataFieldRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{116}
+	return file_engine_proto_rawDescGZIP(), []int{112}
 }
 
 func (x *DeleteMetadataFieldRequest) GetProjectDir() string {
@@ -7771,7 +7541,7 @@ type DeleteMetadataFieldResponse struct {
 
 func (x *DeleteMetadataFieldResponse) Reset() {
 	*x = DeleteMetadataFieldResponse{}
-	mi := &file_engine_proto_msgTypes[117]
+	mi := &file_engine_proto_msgTypes[113]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7783,7 +7553,7 @@ func (x *DeleteMetadataFieldResponse) String() string {
 func (*DeleteMetadataFieldResponse) ProtoMessage() {}
 
 func (x *DeleteMetadataFieldResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[117]
+	mi := &file_engine_proto_msgTypes[113]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7796,7 +7566,7 @@ func (x *DeleteMetadataFieldResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteMetadataFieldResponse.ProtoReflect.Descriptor instead.
 func (*DeleteMetadataFieldResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{117}
+	return file_engine_proto_rawDescGZIP(), []int{113}
 }
 
 // VocabularyOriginCounts is the sidebar / vocabulary-header split for a
@@ -7814,7 +7584,7 @@ type VocabularyOriginCounts struct {
 
 func (x *VocabularyOriginCounts) Reset() {
 	*x = VocabularyOriginCounts{}
-	mi := &file_engine_proto_msgTypes[118]
+	mi := &file_engine_proto_msgTypes[114]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7826,7 +7596,7 @@ func (x *VocabularyOriginCounts) String() string {
 func (*VocabularyOriginCounts) ProtoMessage() {}
 
 func (x *VocabularyOriginCounts) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[118]
+	mi := &file_engine_proto_msgTypes[114]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7839,7 +7609,7 @@ func (x *VocabularyOriginCounts) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VocabularyOriginCounts.ProtoReflect.Descriptor instead.
 func (*VocabularyOriginCounts) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{118}
+	return file_engine_proto_rawDescGZIP(), []int{114}
 }
 
 func (x *VocabularyOriginCounts) GetTotal() int32 {
@@ -7882,7 +7652,7 @@ type GetWorkspaceNavCountsRequest struct {
 
 func (x *GetWorkspaceNavCountsRequest) Reset() {
 	*x = GetWorkspaceNavCountsRequest{}
-	mi := &file_engine_proto_msgTypes[119]
+	mi := &file_engine_proto_msgTypes[115]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7894,7 +7664,7 @@ func (x *GetWorkspaceNavCountsRequest) String() string {
 func (*GetWorkspaceNavCountsRequest) ProtoMessage() {}
 
 func (x *GetWorkspaceNavCountsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[119]
+	mi := &file_engine_proto_msgTypes[115]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7907,7 +7677,7 @@ func (x *GetWorkspaceNavCountsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorkspaceNavCountsRequest.ProtoReflect.Descriptor instead.
 func (*GetWorkspaceNavCountsRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{119}
+	return file_engine_proto_rawDescGZIP(), []int{115}
 }
 
 func (x *GetWorkspaceNavCountsRequest) GetProjectDir() string {
@@ -7931,7 +7701,7 @@ type GetWorkspaceNavCountsResponse struct {
 
 func (x *GetWorkspaceNavCountsResponse) Reset() {
 	*x = GetWorkspaceNavCountsResponse{}
-	mi := &file_engine_proto_msgTypes[120]
+	mi := &file_engine_proto_msgTypes[116]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7943,7 +7713,7 @@ func (x *GetWorkspaceNavCountsResponse) String() string {
 func (*GetWorkspaceNavCountsResponse) ProtoMessage() {}
 
 func (x *GetWorkspaceNavCountsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[120]
+	mi := &file_engine_proto_msgTypes[116]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7956,7 +7726,7 @@ func (x *GetWorkspaceNavCountsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWorkspaceNavCountsResponse.ProtoReflect.Descriptor instead.
 func (*GetWorkspaceNavCountsResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{120}
+	return file_engine_proto_rawDescGZIP(), []int{116}
 }
 
 func (x *GetWorkspaceNavCountsResponse) GetSources() int32 {
@@ -8013,7 +7783,7 @@ type EnsureFileThumbnailRequest struct {
 
 func (x *EnsureFileThumbnailRequest) Reset() {
 	*x = EnsureFileThumbnailRequest{}
-	mi := &file_engine_proto_msgTypes[121]
+	mi := &file_engine_proto_msgTypes[117]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8025,7 +7795,7 @@ func (x *EnsureFileThumbnailRequest) String() string {
 func (*EnsureFileThumbnailRequest) ProtoMessage() {}
 
 func (x *EnsureFileThumbnailRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[121]
+	mi := &file_engine_proto_msgTypes[117]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8038,7 +7808,7 @@ func (x *EnsureFileThumbnailRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnsureFileThumbnailRequest.ProtoReflect.Descriptor instead.
 func (*EnsureFileThumbnailRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{121}
+	return file_engine_proto_rawDescGZIP(), []int{117}
 }
 
 func (x *EnsureFileThumbnailRequest) GetProjectDir() string {
@@ -8065,7 +7835,7 @@ type EnsureFileThumbnailResponse struct {
 
 func (x *EnsureFileThumbnailResponse) Reset() {
 	*x = EnsureFileThumbnailResponse{}
-	mi := &file_engine_proto_msgTypes[122]
+	mi := &file_engine_proto_msgTypes[118]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8077,7 +7847,7 @@ func (x *EnsureFileThumbnailResponse) String() string {
 func (*EnsureFileThumbnailResponse) ProtoMessage() {}
 
 func (x *EnsureFileThumbnailResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[122]
+	mi := &file_engine_proto_msgTypes[118]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8090,7 +7860,7 @@ func (x *EnsureFileThumbnailResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnsureFileThumbnailResponse.ProtoReflect.Descriptor instead.
 func (*EnsureFileThumbnailResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{122}
+	return file_engine_proto_rawDescGZIP(), []int{118}
 }
 
 func (x *EnsureFileThumbnailResponse) GetRelPath() string {
@@ -8116,7 +7886,7 @@ type CloseCatalogSessionRequest struct {
 
 func (x *CloseCatalogSessionRequest) Reset() {
 	*x = CloseCatalogSessionRequest{}
-	mi := &file_engine_proto_msgTypes[123]
+	mi := &file_engine_proto_msgTypes[119]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8128,7 +7898,7 @@ func (x *CloseCatalogSessionRequest) String() string {
 func (*CloseCatalogSessionRequest) ProtoMessage() {}
 
 func (x *CloseCatalogSessionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[123]
+	mi := &file_engine_proto_msgTypes[119]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8141,7 +7911,7 @@ func (x *CloseCatalogSessionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseCatalogSessionRequest.ProtoReflect.Descriptor instead.
 func (*CloseCatalogSessionRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{123}
+	return file_engine_proto_rawDescGZIP(), []int{119}
 }
 
 func (x *CloseCatalogSessionRequest) GetProjectDir() string {
@@ -8159,7 +7929,7 @@ type CloseCatalogSessionResponse struct {
 
 func (x *CloseCatalogSessionResponse) Reset() {
 	*x = CloseCatalogSessionResponse{}
-	mi := &file_engine_proto_msgTypes[124]
+	mi := &file_engine_proto_msgTypes[120]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8171,7 +7941,7 @@ func (x *CloseCatalogSessionResponse) String() string {
 func (*CloseCatalogSessionResponse) ProtoMessage() {}
 
 func (x *CloseCatalogSessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[124]
+	mi := &file_engine_proto_msgTypes[120]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8184,7 +7954,7 @@ func (x *CloseCatalogSessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CloseCatalogSessionResponse.ProtoReflect.Descriptor instead.
 func (*CloseCatalogSessionResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{124}
+	return file_engine_proto_rawDescGZIP(), []int{120}
 }
 
 // WorkspaceLocation is the navigable place payload shared by search hits and
@@ -8216,7 +7986,7 @@ type WorkspaceLocation struct {
 
 func (x *WorkspaceLocation) Reset() {
 	*x = WorkspaceLocation{}
-	mi := &file_engine_proto_msgTypes[125]
+	mi := &file_engine_proto_msgTypes[121]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8228,7 +7998,7 @@ func (x *WorkspaceLocation) String() string {
 func (*WorkspaceLocation) ProtoMessage() {}
 
 func (x *WorkspaceLocation) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[125]
+	mi := &file_engine_proto_msgTypes[121]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8241,7 +8011,7 @@ func (x *WorkspaceLocation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorkspaceLocation.ProtoReflect.Descriptor instead.
 func (*WorkspaceLocation) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{125}
+	return file_engine_proto_rawDescGZIP(), []int{121}
 }
 
 func (x *WorkspaceLocation) GetSection() string {
@@ -8392,7 +8162,7 @@ type SearchCatalogRequest struct {
 
 func (x *SearchCatalogRequest) Reset() {
 	*x = SearchCatalogRequest{}
-	mi := &file_engine_proto_msgTypes[126]
+	mi := &file_engine_proto_msgTypes[122]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8404,7 +8174,7 @@ func (x *SearchCatalogRequest) String() string {
 func (*SearchCatalogRequest) ProtoMessage() {}
 
 func (x *SearchCatalogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[126]
+	mi := &file_engine_proto_msgTypes[122]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8417,7 +8187,7 @@ func (x *SearchCatalogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchCatalogRequest.ProtoReflect.Descriptor instead.
 func (*SearchCatalogRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{126}
+	return file_engine_proto_rawDescGZIP(), []int{122}
 }
 
 func (x *SearchCatalogRequest) GetProjectDir() string {
@@ -8480,7 +8250,7 @@ type SearchHit struct {
 
 func (x *SearchHit) Reset() {
 	*x = SearchHit{}
-	mi := &file_engine_proto_msgTypes[127]
+	mi := &file_engine_proto_msgTypes[123]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8492,7 +8262,7 @@ func (x *SearchHit) String() string {
 func (*SearchHit) ProtoMessage() {}
 
 func (x *SearchHit) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[127]
+	mi := &file_engine_proto_msgTypes[123]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8505,7 +8275,7 @@ func (x *SearchHit) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchHit.ProtoReflect.Descriptor instead.
 func (*SearchHit) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{127}
+	return file_engine_proto_rawDescGZIP(), []int{123}
 }
 
 func (x *SearchHit) GetKind() string {
@@ -8650,7 +8420,7 @@ type SearchCatalogResponse struct {
 
 func (x *SearchCatalogResponse) Reset() {
 	*x = SearchCatalogResponse{}
-	mi := &file_engine_proto_msgTypes[128]
+	mi := &file_engine_proto_msgTypes[124]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8662,7 +8432,7 @@ func (x *SearchCatalogResponse) String() string {
 func (*SearchCatalogResponse) ProtoMessage() {}
 
 func (x *SearchCatalogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[128]
+	mi := &file_engine_proto_msgTypes[124]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8675,7 +8445,7 @@ func (x *SearchCatalogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchCatalogResponse.ProtoReflect.Descriptor instead.
 func (*SearchCatalogResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{128}
+	return file_engine_proto_rawDescGZIP(), []int{124}
 }
 
 func (x *SearchCatalogResponse) GetHits() []*SearchHit {
@@ -8701,7 +8471,7 @@ type SubjectType struct {
 
 func (x *SubjectType) Reset() {
 	*x = SubjectType{}
-	mi := &file_engine_proto_msgTypes[129]
+	mi := &file_engine_proto_msgTypes[125]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8713,7 +8483,7 @@ func (x *SubjectType) String() string {
 func (*SubjectType) ProtoMessage() {}
 
 func (x *SubjectType) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[129]
+	mi := &file_engine_proto_msgTypes[125]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8726,7 +8496,7 @@ func (x *SubjectType) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubjectType.ProtoReflect.Descriptor instead.
 func (*SubjectType) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{129}
+	return file_engine_proto_rawDescGZIP(), []int{125}
 }
 
 func (x *SubjectType) GetId() string {
@@ -8793,7 +8563,7 @@ type Subject struct {
 
 func (x *Subject) Reset() {
 	*x = Subject{}
-	mi := &file_engine_proto_msgTypes[130]
+	mi := &file_engine_proto_msgTypes[126]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8805,7 +8575,7 @@ func (x *Subject) String() string {
 func (*Subject) ProtoMessage() {}
 
 func (x *Subject) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[130]
+	mi := &file_engine_proto_msgTypes[126]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8818,7 +8588,7 @@ func (x *Subject) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Subject.ProtoReflect.Descriptor instead.
 func (*Subject) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{130}
+	return file_engine_proto_rawDescGZIP(), []int{126}
 }
 
 func (x *Subject) GetId() string {
@@ -8875,7 +8645,7 @@ type SubjectPosition struct {
 
 func (x *SubjectPosition) Reset() {
 	*x = SubjectPosition{}
-	mi := &file_engine_proto_msgTypes[131]
+	mi := &file_engine_proto_msgTypes[127]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8887,7 +8657,7 @@ func (x *SubjectPosition) String() string {
 func (*SubjectPosition) ProtoMessage() {}
 
 func (x *SubjectPosition) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[131]
+	mi := &file_engine_proto_msgTypes[127]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8900,7 +8670,7 @@ func (x *SubjectPosition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubjectPosition.ProtoReflect.Descriptor instead.
 func (*SubjectPosition) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{131}
+	return file_engine_proto_rawDescGZIP(), []int{127}
 }
 
 func (x *SubjectPosition) GetSubjectId() string {
@@ -8933,7 +8703,7 @@ type ListSubjectTypesRequest struct {
 
 func (x *ListSubjectTypesRequest) Reset() {
 	*x = ListSubjectTypesRequest{}
-	mi := &file_engine_proto_msgTypes[132]
+	mi := &file_engine_proto_msgTypes[128]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8945,7 +8715,7 @@ func (x *ListSubjectTypesRequest) String() string {
 func (*ListSubjectTypesRequest) ProtoMessage() {}
 
 func (x *ListSubjectTypesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[132]
+	mi := &file_engine_proto_msgTypes[128]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8958,7 +8728,7 @@ func (x *ListSubjectTypesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSubjectTypesRequest.ProtoReflect.Descriptor instead.
 func (*ListSubjectTypesRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{132}
+	return file_engine_proto_rawDescGZIP(), []int{128}
 }
 
 func (x *ListSubjectTypesRequest) GetProjectDir() string {
@@ -8977,7 +8747,7 @@ type ListSubjectTypesResponse struct {
 
 func (x *ListSubjectTypesResponse) Reset() {
 	*x = ListSubjectTypesResponse{}
-	mi := &file_engine_proto_msgTypes[133]
+	mi := &file_engine_proto_msgTypes[129]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -8989,7 +8759,7 @@ func (x *ListSubjectTypesResponse) String() string {
 func (*ListSubjectTypesResponse) ProtoMessage() {}
 
 func (x *ListSubjectTypesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[133]
+	mi := &file_engine_proto_msgTypes[129]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9002,7 +8772,7 @@ func (x *ListSubjectTypesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSubjectTypesResponse.ProtoReflect.Descriptor instead.
 func (*ListSubjectTypesResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{133}
+	return file_engine_proto_rawDescGZIP(), []int{129}
 }
 
 func (x *ListSubjectTypesResponse) GetTypes() []*SubjectType {
@@ -9029,7 +8799,7 @@ type CreateSubjectRequest struct {
 
 func (x *CreateSubjectRequest) Reset() {
 	*x = CreateSubjectRequest{}
-	mi := &file_engine_proto_msgTypes[134]
+	mi := &file_engine_proto_msgTypes[130]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9041,7 +8811,7 @@ func (x *CreateSubjectRequest) String() string {
 func (*CreateSubjectRequest) ProtoMessage() {}
 
 func (x *CreateSubjectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[134]
+	mi := &file_engine_proto_msgTypes[130]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9054,7 +8824,7 @@ func (x *CreateSubjectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSubjectRequest.ProtoReflect.Descriptor instead.
 func (*CreateSubjectRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{134}
+	return file_engine_proto_rawDescGZIP(), []int{130}
 }
 
 func (x *CreateSubjectRequest) GetProjectDir() string {
@@ -9130,7 +8900,7 @@ type CreateSubjectResponse struct {
 
 func (x *CreateSubjectResponse) Reset() {
 	*x = CreateSubjectResponse{}
-	mi := &file_engine_proto_msgTypes[135]
+	mi := &file_engine_proto_msgTypes[131]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9142,7 +8912,7 @@ func (x *CreateSubjectResponse) String() string {
 func (*CreateSubjectResponse) ProtoMessage() {}
 
 func (x *CreateSubjectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[135]
+	mi := &file_engine_proto_msgTypes[131]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9155,7 +8925,7 @@ func (x *CreateSubjectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSubjectResponse.ProtoReflect.Descriptor instead.
 func (*CreateSubjectResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{135}
+	return file_engine_proto_rawDescGZIP(), []int{131}
 }
 
 func (x *CreateSubjectResponse) GetSubject() *Subject {
@@ -9185,7 +8955,7 @@ type UpdateSubjectRequest struct {
 
 func (x *UpdateSubjectRequest) Reset() {
 	*x = UpdateSubjectRequest{}
-	mi := &file_engine_proto_msgTypes[136]
+	mi := &file_engine_proto_msgTypes[132]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9197,7 +8967,7 @@ func (x *UpdateSubjectRequest) String() string {
 func (*UpdateSubjectRequest) ProtoMessage() {}
 
 func (x *UpdateSubjectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[136]
+	mi := &file_engine_proto_msgTypes[132]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9210,7 +8980,7 @@ func (x *UpdateSubjectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSubjectRequest.ProtoReflect.Descriptor instead.
 func (*UpdateSubjectRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{136}
+	return file_engine_proto_rawDescGZIP(), []int{132}
 }
 
 func (x *UpdateSubjectRequest) GetProjectDir() string {
@@ -9258,7 +9028,7 @@ type UpdateSubjectResponse struct {
 
 func (x *UpdateSubjectResponse) Reset() {
 	*x = UpdateSubjectResponse{}
-	mi := &file_engine_proto_msgTypes[137]
+	mi := &file_engine_proto_msgTypes[133]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9270,7 +9040,7 @@ func (x *UpdateSubjectResponse) String() string {
 func (*UpdateSubjectResponse) ProtoMessage() {}
 
 func (x *UpdateSubjectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[137]
+	mi := &file_engine_proto_msgTypes[133]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9283,7 +9053,7 @@ func (x *UpdateSubjectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSubjectResponse.ProtoReflect.Descriptor instead.
 func (*UpdateSubjectResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{137}
+	return file_engine_proto_rawDescGZIP(), []int{133}
 }
 
 func (x *UpdateSubjectResponse) GetSubject() *Subject {
@@ -9311,7 +9081,7 @@ type DeleteSubjectRequest struct {
 
 func (x *DeleteSubjectRequest) Reset() {
 	*x = DeleteSubjectRequest{}
-	mi := &file_engine_proto_msgTypes[138]
+	mi := &file_engine_proto_msgTypes[134]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9323,7 +9093,7 @@ func (x *DeleteSubjectRequest) String() string {
 func (*DeleteSubjectRequest) ProtoMessage() {}
 
 func (x *DeleteSubjectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[138]
+	mi := &file_engine_proto_msgTypes[134]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9336,7 +9106,7 @@ func (x *DeleteSubjectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSubjectRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSubjectRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{138}
+	return file_engine_proto_rawDescGZIP(), []int{134}
 }
 
 func (x *DeleteSubjectRequest) GetProjectDir() string {
@@ -9369,7 +9139,7 @@ type DeleteSubjectResponse struct {
 
 func (x *DeleteSubjectResponse) Reset() {
 	*x = DeleteSubjectResponse{}
-	mi := &file_engine_proto_msgTypes[139]
+	mi := &file_engine_proto_msgTypes[135]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9381,7 +9151,7 @@ func (x *DeleteSubjectResponse) String() string {
 func (*DeleteSubjectResponse) ProtoMessage() {}
 
 func (x *DeleteSubjectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[139]
+	mi := &file_engine_proto_msgTypes[135]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9394,7 +9164,7 @@ func (x *DeleteSubjectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSubjectResponse.ProtoReflect.Descriptor instead.
 func (*DeleteSubjectResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{139}
+	return file_engine_proto_rawDescGZIP(), []int{135}
 }
 
 func (x *DeleteSubjectResponse) GetEffects() *WriteEffects {
@@ -9417,7 +9187,7 @@ type CanonicalEntity struct {
 
 func (x *CanonicalEntity) Reset() {
 	*x = CanonicalEntity{}
-	mi := &file_engine_proto_msgTypes[140]
+	mi := &file_engine_proto_msgTypes[136]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9429,7 +9199,7 @@ func (x *CanonicalEntity) String() string {
 func (*CanonicalEntity) ProtoMessage() {}
 
 func (x *CanonicalEntity) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[140]
+	mi := &file_engine_proto_msgTypes[136]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9442,7 +9212,7 @@ func (x *CanonicalEntity) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CanonicalEntity.ProtoReflect.Descriptor instead.
 func (*CanonicalEntity) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{140}
+	return file_engine_proto_rawDescGZIP(), []int{136}
 }
 
 func (x *CanonicalEntity) GetId() string {
@@ -9488,7 +9258,7 @@ type IdentityClaim struct {
 
 func (x *IdentityClaim) Reset() {
 	*x = IdentityClaim{}
-	mi := &file_engine_proto_msgTypes[141]
+	mi := &file_engine_proto_msgTypes[137]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9500,7 +9270,7 @@ func (x *IdentityClaim) String() string {
 func (*IdentityClaim) ProtoMessage() {}
 
 func (x *IdentityClaim) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[141]
+	mi := &file_engine_proto_msgTypes[137]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9513,7 +9283,7 @@ func (x *IdentityClaim) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IdentityClaim.ProtoReflect.Descriptor instead.
 func (*IdentityClaim) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{141}
+	return file_engine_proto_rawDescGZIP(), []int{137}
 }
 
 func (x *IdentityClaim) GetId() string {
@@ -9573,7 +9343,7 @@ type ClaimConfidenceGrade struct {
 
 func (x *ClaimConfidenceGrade) Reset() {
 	*x = ClaimConfidenceGrade{}
-	mi := &file_engine_proto_msgTypes[142]
+	mi := &file_engine_proto_msgTypes[138]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9585,7 +9355,7 @@ func (x *ClaimConfidenceGrade) String() string {
 func (*ClaimConfidenceGrade) ProtoMessage() {}
 
 func (x *ClaimConfidenceGrade) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[142]
+	mi := &file_engine_proto_msgTypes[138]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9598,7 +9368,7 @@ func (x *ClaimConfidenceGrade) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClaimConfidenceGrade.ProtoReflect.Descriptor instead.
 func (*ClaimConfidenceGrade) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{142}
+	return file_engine_proto_rawDescGZIP(), []int{138}
 }
 
 func (x *ClaimConfidenceGrade) GetId() string {
@@ -9645,7 +9415,7 @@ type ListClaimConfidenceGradesRequest struct {
 
 func (x *ListClaimConfidenceGradesRequest) Reset() {
 	*x = ListClaimConfidenceGradesRequest{}
-	mi := &file_engine_proto_msgTypes[143]
+	mi := &file_engine_proto_msgTypes[139]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9657,7 +9427,7 @@ func (x *ListClaimConfidenceGradesRequest) String() string {
 func (*ListClaimConfidenceGradesRequest) ProtoMessage() {}
 
 func (x *ListClaimConfidenceGradesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[143]
+	mi := &file_engine_proto_msgTypes[139]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9670,7 +9440,7 @@ func (x *ListClaimConfidenceGradesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListClaimConfidenceGradesRequest.ProtoReflect.Descriptor instead.
 func (*ListClaimConfidenceGradesRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{143}
+	return file_engine_proto_rawDescGZIP(), []int{139}
 }
 
 func (x *ListClaimConfidenceGradesRequest) GetProjectDir() string {
@@ -9689,7 +9459,7 @@ type ListClaimConfidenceGradesResponse struct {
 
 func (x *ListClaimConfidenceGradesResponse) Reset() {
 	*x = ListClaimConfidenceGradesResponse{}
-	mi := &file_engine_proto_msgTypes[144]
+	mi := &file_engine_proto_msgTypes[140]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9701,7 +9471,7 @@ func (x *ListClaimConfidenceGradesResponse) String() string {
 func (*ListClaimConfidenceGradesResponse) ProtoMessage() {}
 
 func (x *ListClaimConfidenceGradesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[144]
+	mi := &file_engine_proto_msgTypes[140]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9714,7 +9484,7 @@ func (x *ListClaimConfidenceGradesResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ListClaimConfidenceGradesResponse.ProtoReflect.Descriptor instead.
 func (*ListClaimConfidenceGradesResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{144}
+	return file_engine_proto_rawDescGZIP(), []int{140}
 }
 
 func (x *ListClaimConfidenceGradesResponse) GetGrades() []*ClaimConfidenceGrade {
@@ -9742,7 +9512,7 @@ type PromoteSubjectRequest struct {
 
 func (x *PromoteSubjectRequest) Reset() {
 	*x = PromoteSubjectRequest{}
-	mi := &file_engine_proto_msgTypes[145]
+	mi := &file_engine_proto_msgTypes[141]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9754,7 +9524,7 @@ func (x *PromoteSubjectRequest) String() string {
 func (*PromoteSubjectRequest) ProtoMessage() {}
 
 func (x *PromoteSubjectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[145]
+	mi := &file_engine_proto_msgTypes[141]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9767,7 +9537,7 @@ func (x *PromoteSubjectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteSubjectRequest.ProtoReflect.Descriptor instead.
 func (*PromoteSubjectRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{145}
+	return file_engine_proto_rawDescGZIP(), []int{141}
 }
 
 func (x *PromoteSubjectRequest) GetProjectDir() string {
@@ -9822,7 +9592,7 @@ type PromoteSubjectResponse struct {
 
 func (x *PromoteSubjectResponse) Reset() {
 	*x = PromoteSubjectResponse{}
-	mi := &file_engine_proto_msgTypes[146]
+	mi := &file_engine_proto_msgTypes[142]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9834,7 +9604,7 @@ func (x *PromoteSubjectResponse) String() string {
 func (*PromoteSubjectResponse) ProtoMessage() {}
 
 func (x *PromoteSubjectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[146]
+	mi := &file_engine_proto_msgTypes[142]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9847,7 +9617,7 @@ func (x *PromoteSubjectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteSubjectResponse.ProtoReflect.Descriptor instead.
 func (*PromoteSubjectResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{146}
+	return file_engine_proto_rawDescGZIP(), []int{142}
 }
 
 func (x *PromoteSubjectResponse) GetEntity() *CanonicalEntity {
@@ -9878,7 +9648,7 @@ type UnpromoteSubjectRequest struct {
 
 func (x *UnpromoteSubjectRequest) Reset() {
 	*x = UnpromoteSubjectRequest{}
-	mi := &file_engine_proto_msgTypes[147]
+	mi := &file_engine_proto_msgTypes[143]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9890,7 +9660,7 @@ func (x *UnpromoteSubjectRequest) String() string {
 func (*UnpromoteSubjectRequest) ProtoMessage() {}
 
 func (x *UnpromoteSubjectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[147]
+	mi := &file_engine_proto_msgTypes[143]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9903,7 +9673,7 @@ func (x *UnpromoteSubjectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnpromoteSubjectRequest.ProtoReflect.Descriptor instead.
 func (*UnpromoteSubjectRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{147}
+	return file_engine_proto_rawDescGZIP(), []int{143}
 }
 
 func (x *UnpromoteSubjectRequest) GetProjectDir() string {
@@ -9936,7 +9706,7 @@ type UnpromoteSubjectResponse struct {
 
 func (x *UnpromoteSubjectResponse) Reset() {
 	*x = UnpromoteSubjectResponse{}
-	mi := &file_engine_proto_msgTypes[148]
+	mi := &file_engine_proto_msgTypes[144]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9948,7 +9718,7 @@ func (x *UnpromoteSubjectResponse) String() string {
 func (*UnpromoteSubjectResponse) ProtoMessage() {}
 
 func (x *UnpromoteSubjectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[148]
+	mi := &file_engine_proto_msgTypes[144]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9961,7 +9731,7 @@ func (x *UnpromoteSubjectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnpromoteSubjectResponse.ProtoReflect.Descriptor instead.
 func (*UnpromoteSubjectResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{148}
+	return file_engine_proto_rawDescGZIP(), []int{144}
 }
 
 func (x *UnpromoteSubjectResponse) GetEffects() *WriteEffects {
@@ -9986,7 +9756,7 @@ type SetPreferredLikenessRequest struct {
 
 func (x *SetPreferredLikenessRequest) Reset() {
 	*x = SetPreferredLikenessRequest{}
-	mi := &file_engine_proto_msgTypes[149]
+	mi := &file_engine_proto_msgTypes[145]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9998,7 +9768,7 @@ func (x *SetPreferredLikenessRequest) String() string {
 func (*SetPreferredLikenessRequest) ProtoMessage() {}
 
 func (x *SetPreferredLikenessRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[149]
+	mi := &file_engine_proto_msgTypes[145]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10011,7 +9781,7 @@ func (x *SetPreferredLikenessRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetPreferredLikenessRequest.ProtoReflect.Descriptor instead.
 func (*SetPreferredLikenessRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{149}
+	return file_engine_proto_rawDescGZIP(), []int{145}
 }
 
 func (x *SetPreferredLikenessRequest) GetProjectDir() string {
@@ -10051,7 +9821,7 @@ type SetPreferredLikenessResponse struct {
 
 func (x *SetPreferredLikenessResponse) Reset() {
 	*x = SetPreferredLikenessResponse{}
-	mi := &file_engine_proto_msgTypes[150]
+	mi := &file_engine_proto_msgTypes[146]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10063,7 +9833,7 @@ func (x *SetPreferredLikenessResponse) String() string {
 func (*SetPreferredLikenessResponse) ProtoMessage() {}
 
 func (x *SetPreferredLikenessResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[150]
+	mi := &file_engine_proto_msgTypes[146]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10076,7 +9846,7 @@ func (x *SetPreferredLikenessResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetPreferredLikenessResponse.ProtoReflect.Descriptor instead.
 func (*SetPreferredLikenessResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{150}
+	return file_engine_proto_rawDescGZIP(), []int{146}
 }
 
 func (x *SetPreferredLikenessResponse) GetEffects() *WriteEffects {
@@ -10102,7 +9872,7 @@ type SubjectMembership struct {
 
 func (x *SubjectMembership) Reset() {
 	*x = SubjectMembership{}
-	mi := &file_engine_proto_msgTypes[151]
+	mi := &file_engine_proto_msgTypes[147]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10114,7 +9884,7 @@ func (x *SubjectMembership) String() string {
 func (*SubjectMembership) ProtoMessage() {}
 
 func (x *SubjectMembership) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[151]
+	mi := &file_engine_proto_msgTypes[147]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10127,7 +9897,7 @@ func (x *SubjectMembership) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubjectMembership.ProtoReflect.Descriptor instead.
 func (*SubjectMembership) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{151}
+	return file_engine_proto_rawDescGZIP(), []int{147}
 }
 
 func (x *SubjectMembership) GetSubjectId() string {
@@ -10175,7 +9945,7 @@ type EventTitleSubject struct {
 
 func (x *EventTitleSubject) Reset() {
 	*x = EventTitleSubject{}
-	mi := &file_engine_proto_msgTypes[152]
+	mi := &file_engine_proto_msgTypes[148]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10187,7 +9957,7 @@ func (x *EventTitleSubject) String() string {
 func (*EventTitleSubject) ProtoMessage() {}
 
 func (x *EventTitleSubject) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[152]
+	mi := &file_engine_proto_msgTypes[148]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10200,7 +9970,7 @@ func (x *EventTitleSubject) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventTitleSubject.ProtoReflect.Descriptor instead.
 func (*EventTitleSubject) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{152}
+	return file_engine_proto_rawDescGZIP(), []int{148}
 }
 
 func (x *EventTitleSubject) GetName() *NameValueInput {
@@ -10228,7 +9998,7 @@ type EventTitle struct {
 
 func (x *EventTitle) Reset() {
 	*x = EventTitle{}
-	mi := &file_engine_proto_msgTypes[153]
+	mi := &file_engine_proto_msgTypes[149]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10240,7 +10010,7 @@ func (x *EventTitle) String() string {
 func (*EventTitle) ProtoMessage() {}
 
 func (x *EventTitle) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[153]
+	mi := &file_engine_proto_msgTypes[149]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10253,7 +10023,7 @@ func (x *EventTitle) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventTitle.ProtoReflect.Descriptor instead.
 func (*EventTitle) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{153}
+	return file_engine_proto_rawDescGZIP(), []int{149}
 }
 
 func (x *EventTitle) GetRule() EventTitleRule {
@@ -10331,7 +10101,7 @@ type ListEvidenceGraphEventTitlesRequest struct {
 
 func (x *ListEvidenceGraphEventTitlesRequest) Reset() {
 	*x = ListEvidenceGraphEventTitlesRequest{}
-	mi := &file_engine_proto_msgTypes[154]
+	mi := &file_engine_proto_msgTypes[150]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10343,7 +10113,7 @@ func (x *ListEvidenceGraphEventTitlesRequest) String() string {
 func (*ListEvidenceGraphEventTitlesRequest) ProtoMessage() {}
 
 func (x *ListEvidenceGraphEventTitlesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[154]
+	mi := &file_engine_proto_msgTypes[150]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10356,7 +10126,7 @@ func (x *ListEvidenceGraphEventTitlesRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ListEvidenceGraphEventTitlesRequest.ProtoReflect.Descriptor instead.
 func (*ListEvidenceGraphEventTitlesRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{154}
+	return file_engine_proto_rawDescGZIP(), []int{150}
 }
 
 func (x *ListEvidenceGraphEventTitlesRequest) GetProjectDir() string {
@@ -10383,7 +10153,7 @@ type SourceEventTitle struct {
 
 func (x *SourceEventTitle) Reset() {
 	*x = SourceEventTitle{}
-	mi := &file_engine_proto_msgTypes[155]
+	mi := &file_engine_proto_msgTypes[151]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10395,7 +10165,7 @@ func (x *SourceEventTitle) String() string {
 func (*SourceEventTitle) ProtoMessage() {}
 
 func (x *SourceEventTitle) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[155]
+	mi := &file_engine_proto_msgTypes[151]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10408,7 +10178,7 @@ func (x *SourceEventTitle) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SourceEventTitle.ProtoReflect.Descriptor instead.
 func (*SourceEventTitle) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{155}
+	return file_engine_proto_rawDescGZIP(), []int{151}
 }
 
 func (x *SourceEventTitle) GetSubjectId() string {
@@ -10434,7 +10204,7 @@ type ListEvidenceGraphEventTitlesResponse struct {
 
 func (x *ListEvidenceGraphEventTitlesResponse) Reset() {
 	*x = ListEvidenceGraphEventTitlesResponse{}
-	mi := &file_engine_proto_msgTypes[156]
+	mi := &file_engine_proto_msgTypes[152]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10446,7 +10216,7 @@ func (x *ListEvidenceGraphEventTitlesResponse) String() string {
 func (*ListEvidenceGraphEventTitlesResponse) ProtoMessage() {}
 
 func (x *ListEvidenceGraphEventTitlesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[156]
+	mi := &file_engine_proto_msgTypes[152]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10459,7 +10229,7 @@ func (x *ListEvidenceGraphEventTitlesResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ListEvidenceGraphEventTitlesResponse.ProtoReflect.Descriptor instead.
 func (*ListEvidenceGraphEventTitlesResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{156}
+	return file_engine_proto_rawDescGZIP(), []int{152}
 }
 
 func (x *ListEvidenceGraphEventTitlesResponse) GetTitles() []*SourceEventTitle {
@@ -10481,7 +10251,7 @@ type ListSubjectMembershipsRequest struct {
 
 func (x *ListSubjectMembershipsRequest) Reset() {
 	*x = ListSubjectMembershipsRequest{}
-	mi := &file_engine_proto_msgTypes[157]
+	mi := &file_engine_proto_msgTypes[153]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10493,7 +10263,7 @@ func (x *ListSubjectMembershipsRequest) String() string {
 func (*ListSubjectMembershipsRequest) ProtoMessage() {}
 
 func (x *ListSubjectMembershipsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[157]
+	mi := &file_engine_proto_msgTypes[153]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10506,7 +10276,7 @@ func (x *ListSubjectMembershipsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSubjectMembershipsRequest.ProtoReflect.Descriptor instead.
 func (*ListSubjectMembershipsRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{157}
+	return file_engine_proto_rawDescGZIP(), []int{153}
 }
 
 func (x *ListSubjectMembershipsRequest) GetProjectDir() string {
@@ -10532,7 +10302,7 @@ type ListSubjectMembershipsResponse struct {
 
 func (x *ListSubjectMembershipsResponse) Reset() {
 	*x = ListSubjectMembershipsResponse{}
-	mi := &file_engine_proto_msgTypes[158]
+	mi := &file_engine_proto_msgTypes[154]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10544,7 +10314,7 @@ func (x *ListSubjectMembershipsResponse) String() string {
 func (*ListSubjectMembershipsResponse) ProtoMessage() {}
 
 func (x *ListSubjectMembershipsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[158]
+	mi := &file_engine_proto_msgTypes[154]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10557,7 +10327,7 @@ func (x *ListSubjectMembershipsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSubjectMembershipsResponse.ProtoReflect.Descriptor instead.
 func (*ListSubjectMembershipsResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{158}
+	return file_engine_proto_rawDescGZIP(), []int{154}
 }
 
 func (x *ListSubjectMembershipsResponse) GetMemberships() []*SubjectMembership {
@@ -10584,7 +10354,7 @@ type HeaderPlace struct {
 
 func (x *HeaderPlace) Reset() {
 	*x = HeaderPlace{}
-	mi := &file_engine_proto_msgTypes[159]
+	mi := &file_engine_proto_msgTypes[155]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10596,7 +10366,7 @@ func (x *HeaderPlace) String() string {
 func (*HeaderPlace) ProtoMessage() {}
 
 func (x *HeaderPlace) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[159]
+	mi := &file_engine_proto_msgTypes[155]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10609,7 +10379,7 @@ func (x *HeaderPlace) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeaderPlace.ProtoReflect.Descriptor instead.
 func (*HeaderPlace) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{159}
+	return file_engine_proto_rawDescGZIP(), []int{155}
 }
 
 func (x *HeaderPlace) GetNames() []string {
@@ -10658,7 +10428,7 @@ type LifeFacts struct {
 
 func (x *LifeFacts) Reset() {
 	*x = LifeFacts{}
-	mi := &file_engine_proto_msgTypes[160]
+	mi := &file_engine_proto_msgTypes[156]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10670,7 +10440,7 @@ func (x *LifeFacts) String() string {
 func (*LifeFacts) ProtoMessage() {}
 
 func (x *LifeFacts) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[160]
+	mi := &file_engine_proto_msgTypes[156]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10683,7 +10453,7 @@ func (x *LifeFacts) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LifeFacts.ProtoReflect.Descriptor instead.
 func (*LifeFacts) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{160}
+	return file_engine_proto_rawDescGZIP(), []int{156}
 }
 
 func (x *LifeFacts) GetDate() *DateValueInput {
@@ -10733,7 +10503,7 @@ type EventSubject struct {
 
 func (x *EventSubject) Reset() {
 	*x = EventSubject{}
-	mi := &file_engine_proto_msgTypes[161]
+	mi := &file_engine_proto_msgTypes[157]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10745,7 +10515,7 @@ func (x *EventSubject) String() string {
 func (*EventSubject) ProtoMessage() {}
 
 func (x *EventSubject) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[161]
+	mi := &file_engine_proto_msgTypes[157]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10758,7 +10528,7 @@ func (x *EventSubject) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventSubject.ProtoReflect.Descriptor instead.
 func (*EventSubject) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{161}
+	return file_engine_proto_rawDescGZIP(), []int{157}
 }
 
 func (x *EventSubject) GetEntity() *CanonicalEntity {
@@ -10812,7 +10582,7 @@ type PersonHeader struct {
 
 func (x *PersonHeader) Reset() {
 	*x = PersonHeader{}
-	mi := &file_engine_proto_msgTypes[162]
+	mi := &file_engine_proto_msgTypes[158]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10824,7 +10594,7 @@ func (x *PersonHeader) String() string {
 func (*PersonHeader) ProtoMessage() {}
 
 func (x *PersonHeader) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[162]
+	mi := &file_engine_proto_msgTypes[158]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10837,7 +10607,7 @@ func (x *PersonHeader) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PersonHeader.ProtoReflect.Descriptor instead.
 func (*PersonHeader) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{162}
+	return file_engine_proto_rawDescGZIP(), []int{158}
 }
 
 func (x *PersonHeader) GetEntity() *CanonicalEntity {
@@ -10908,7 +10678,7 @@ type ListPersonHeadersRequest struct {
 
 func (x *ListPersonHeadersRequest) Reset() {
 	*x = ListPersonHeadersRequest{}
-	mi := &file_engine_proto_msgTypes[163]
+	mi := &file_engine_proto_msgTypes[159]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10920,7 +10690,7 @@ func (x *ListPersonHeadersRequest) String() string {
 func (*ListPersonHeadersRequest) ProtoMessage() {}
 
 func (x *ListPersonHeadersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[163]
+	mi := &file_engine_proto_msgTypes[159]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10933,7 +10703,7 @@ func (x *ListPersonHeadersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPersonHeadersRequest.ProtoReflect.Descriptor instead.
 func (*ListPersonHeadersRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{163}
+	return file_engine_proto_rawDescGZIP(), []int{159}
 }
 
 func (x *ListPersonHeadersRequest) GetProjectDir() string {
@@ -10952,7 +10722,7 @@ type ListPersonHeadersResponse struct {
 
 func (x *ListPersonHeadersResponse) Reset() {
 	*x = ListPersonHeadersResponse{}
-	mi := &file_engine_proto_msgTypes[164]
+	mi := &file_engine_proto_msgTypes[160]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10964,7 +10734,7 @@ func (x *ListPersonHeadersResponse) String() string {
 func (*ListPersonHeadersResponse) ProtoMessage() {}
 
 func (x *ListPersonHeadersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[164]
+	mi := &file_engine_proto_msgTypes[160]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10977,7 +10747,7 @@ func (x *ListPersonHeadersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPersonHeadersResponse.ProtoReflect.Descriptor instead.
 func (*ListPersonHeadersResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{164}
+	return file_engine_proto_rawDescGZIP(), []int{160}
 }
 
 func (x *ListPersonHeadersResponse) GetHeaders() []*PersonHeader {
@@ -11024,7 +10794,7 @@ type EventHeader struct {
 
 func (x *EventHeader) Reset() {
 	*x = EventHeader{}
-	mi := &file_engine_proto_msgTypes[165]
+	mi := &file_engine_proto_msgTypes[161]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11036,7 +10806,7 @@ func (x *EventHeader) String() string {
 func (*EventHeader) ProtoMessage() {}
 
 func (x *EventHeader) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[165]
+	mi := &file_engine_proto_msgTypes[161]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11049,7 +10819,7 @@ func (x *EventHeader) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventHeader.ProtoReflect.Descriptor instead.
 func (*EventHeader) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{165}
+	return file_engine_proto_rawDescGZIP(), []int{161}
 }
 
 func (x *EventHeader) GetEntity() *CanonicalEntity {
@@ -11175,7 +10945,7 @@ type ListEventHeadersRequest struct {
 
 func (x *ListEventHeadersRequest) Reset() {
 	*x = ListEventHeadersRequest{}
-	mi := &file_engine_proto_msgTypes[166]
+	mi := &file_engine_proto_msgTypes[162]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11187,7 +10957,7 @@ func (x *ListEventHeadersRequest) String() string {
 func (*ListEventHeadersRequest) ProtoMessage() {}
 
 func (x *ListEventHeadersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[166]
+	mi := &file_engine_proto_msgTypes[162]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11200,7 +10970,7 @@ func (x *ListEventHeadersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEventHeadersRequest.ProtoReflect.Descriptor instead.
 func (*ListEventHeadersRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{166}
+	return file_engine_proto_rawDescGZIP(), []int{162}
 }
 
 func (x *ListEventHeadersRequest) GetProjectDir() string {
@@ -11219,7 +10989,7 @@ type ListEventHeadersResponse struct {
 
 func (x *ListEventHeadersResponse) Reset() {
 	*x = ListEventHeadersResponse{}
-	mi := &file_engine_proto_msgTypes[167]
+	mi := &file_engine_proto_msgTypes[163]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11231,7 +11001,7 @@ func (x *ListEventHeadersResponse) String() string {
 func (*ListEventHeadersResponse) ProtoMessage() {}
 
 func (x *ListEventHeadersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[167]
+	mi := &file_engine_proto_msgTypes[163]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11244,7 +11014,7 @@ func (x *ListEventHeadersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEventHeadersResponse.ProtoReflect.Descriptor instead.
 func (*ListEventHeadersResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{167}
+	return file_engine_proto_rawDescGZIP(), []int{163}
 }
 
 func (x *ListEventHeadersResponse) GetHeaders() []*EventHeader {
@@ -11271,7 +11041,7 @@ type PlaceRelationship struct {
 
 func (x *PlaceRelationship) Reset() {
 	*x = PlaceRelationship{}
-	mi := &file_engine_proto_msgTypes[168]
+	mi := &file_engine_proto_msgTypes[164]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11283,7 +11053,7 @@ func (x *PlaceRelationship) String() string {
 func (*PlaceRelationship) ProtoMessage() {}
 
 func (x *PlaceRelationship) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[168]
+	mi := &file_engine_proto_msgTypes[164]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11296,7 +11066,7 @@ func (x *PlaceRelationship) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlaceRelationship.ProtoReflect.Descriptor instead.
 func (*PlaceRelationship) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{168}
+	return file_engine_proto_rawDescGZIP(), []int{164}
 }
 
 func (x *PlaceRelationship) GetEntity() *CanonicalEntity {
@@ -11365,7 +11135,7 @@ type PlaceHeader struct {
 
 func (x *PlaceHeader) Reset() {
 	*x = PlaceHeader{}
-	mi := &file_engine_proto_msgTypes[169]
+	mi := &file_engine_proto_msgTypes[165]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11377,7 +11147,7 @@ func (x *PlaceHeader) String() string {
 func (*PlaceHeader) ProtoMessage() {}
 
 func (x *PlaceHeader) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[169]
+	mi := &file_engine_proto_msgTypes[165]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11390,7 +11160,7 @@ func (x *PlaceHeader) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlaceHeader.ProtoReflect.Descriptor instead.
 func (*PlaceHeader) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{169}
+	return file_engine_proto_rawDescGZIP(), []int{165}
 }
 
 func (x *PlaceHeader) GetEntity() *CanonicalEntity {
@@ -11496,7 +11266,7 @@ type ListPlaceHeadersRequest struct {
 
 func (x *ListPlaceHeadersRequest) Reset() {
 	*x = ListPlaceHeadersRequest{}
-	mi := &file_engine_proto_msgTypes[170]
+	mi := &file_engine_proto_msgTypes[166]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11508,7 +11278,7 @@ func (x *ListPlaceHeadersRequest) String() string {
 func (*ListPlaceHeadersRequest) ProtoMessage() {}
 
 func (x *ListPlaceHeadersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[170]
+	mi := &file_engine_proto_msgTypes[166]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11521,7 +11291,7 @@ func (x *ListPlaceHeadersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPlaceHeadersRequest.ProtoReflect.Descriptor instead.
 func (*ListPlaceHeadersRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{170}
+	return file_engine_proto_rawDescGZIP(), []int{166}
 }
 
 func (x *ListPlaceHeadersRequest) GetProjectDir() string {
@@ -11540,7 +11310,7 @@ type ListPlaceHeadersResponse struct {
 
 func (x *ListPlaceHeadersResponse) Reset() {
 	*x = ListPlaceHeadersResponse{}
-	mi := &file_engine_proto_msgTypes[171]
+	mi := &file_engine_proto_msgTypes[167]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11552,7 +11322,7 @@ func (x *ListPlaceHeadersResponse) String() string {
 func (*ListPlaceHeadersResponse) ProtoMessage() {}
 
 func (x *ListPlaceHeadersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[171]
+	mi := &file_engine_proto_msgTypes[167]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11565,7 +11335,7 @@ func (x *ListPlaceHeadersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPlaceHeadersResponse.ProtoReflect.Descriptor instead.
 func (*ListPlaceHeadersResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{171}
+	return file_engine_proto_rawDescGZIP(), []int{167}
 }
 
 func (x *ListPlaceHeadersResponse) GetHeaders() []*PlaceHeader {
@@ -11594,7 +11364,7 @@ type ConclusionValue struct {
 
 func (x *ConclusionValue) Reset() {
 	*x = ConclusionValue{}
-	mi := &file_engine_proto_msgTypes[172]
+	mi := &file_engine_proto_msgTypes[168]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11606,7 +11376,7 @@ func (x *ConclusionValue) String() string {
 func (*ConclusionValue) ProtoMessage() {}
 
 func (x *ConclusionValue) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[172]
+	mi := &file_engine_proto_msgTypes[168]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11619,7 +11389,7 @@ func (x *ConclusionValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConclusionValue.ProtoReflect.Descriptor instead.
 func (*ConclusionValue) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{172}
+	return file_engine_proto_rawDescGZIP(), []int{168}
 }
 
 func (x *ConclusionValue) GetKind() isConclusionValue_Kind {
@@ -11736,7 +11506,7 @@ type ConclusionTerm struct {
 
 func (x *ConclusionTerm) Reset() {
 	*x = ConclusionTerm{}
-	mi := &file_engine_proto_msgTypes[173]
+	mi := &file_engine_proto_msgTypes[169]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11748,7 +11518,7 @@ func (x *ConclusionTerm) String() string {
 func (*ConclusionTerm) ProtoMessage() {}
 
 func (x *ConclusionTerm) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[173]
+	mi := &file_engine_proto_msgTypes[169]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11761,7 +11531,7 @@ func (x *ConclusionTerm) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConclusionTerm.ProtoReflect.Descriptor instead.
 func (*ConclusionTerm) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{173}
+	return file_engine_proto_rawDescGZIP(), []int{169}
 }
 
 func (x *ConclusionTerm) GetId() string {
@@ -11807,7 +11577,7 @@ type ReconciledValueDetail struct {
 
 func (x *ReconciledValueDetail) Reset() {
 	*x = ReconciledValueDetail{}
-	mi := &file_engine_proto_msgTypes[174]
+	mi := &file_engine_proto_msgTypes[170]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11819,7 +11589,7 @@ func (x *ReconciledValueDetail) String() string {
 func (*ReconciledValueDetail) ProtoMessage() {}
 
 func (x *ReconciledValueDetail) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[174]
+	mi := &file_engine_proto_msgTypes[170]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11832,7 +11602,7 @@ func (x *ReconciledValueDetail) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReconciledValueDetail.ProtoReflect.Descriptor instead.
 func (*ReconciledValueDetail) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{174}
+	return file_engine_proto_rawDescGZIP(), []int{170}
 }
 
 func (x *ReconciledValueDetail) GetRank() int32 {
@@ -11904,7 +11674,7 @@ type ReconcilerOutcomeDetail struct {
 
 func (x *ReconcilerOutcomeDetail) Reset() {
 	*x = ReconcilerOutcomeDetail{}
-	mi := &file_engine_proto_msgTypes[175]
+	mi := &file_engine_proto_msgTypes[171]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11916,7 +11686,7 @@ func (x *ReconcilerOutcomeDetail) String() string {
 func (*ReconcilerOutcomeDetail) ProtoMessage() {}
 
 func (x *ReconcilerOutcomeDetail) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[175]
+	mi := &file_engine_proto_msgTypes[171]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11929,7 +11699,7 @@ func (x *ReconcilerOutcomeDetail) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReconcilerOutcomeDetail.ProtoReflect.Descriptor instead.
 func (*ReconcilerOutcomeDetail) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{175}
+	return file_engine_proto_rawDescGZIP(), []int{171}
 }
 
 func (x *ReconcilerOutcomeDetail) GetObservationId() string {
@@ -12089,7 +11859,7 @@ type ConclusionField struct {
 
 func (x *ConclusionField) Reset() {
 	*x = ConclusionField{}
-	mi := &file_engine_proto_msgTypes[176]
+	mi := &file_engine_proto_msgTypes[172]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12101,7 +11871,7 @@ func (x *ConclusionField) String() string {
 func (*ConclusionField) ProtoMessage() {}
 
 func (x *ConclusionField) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[176]
+	mi := &file_engine_proto_msgTypes[172]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12114,7 +11884,7 @@ func (x *ConclusionField) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConclusionField.ProtoReflect.Descriptor instead.
 func (*ConclusionField) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{176}
+	return file_engine_proto_rawDescGZIP(), []int{172}
 }
 
 func (x *ConclusionField) GetPropertyId() string {
@@ -12179,7 +11949,7 @@ type GetConclusionDetailRequest struct {
 
 func (x *GetConclusionDetailRequest) Reset() {
 	*x = GetConclusionDetailRequest{}
-	mi := &file_engine_proto_msgTypes[177]
+	mi := &file_engine_proto_msgTypes[173]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12191,7 +11961,7 @@ func (x *GetConclusionDetailRequest) String() string {
 func (*GetConclusionDetailRequest) ProtoMessage() {}
 
 func (x *GetConclusionDetailRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[177]
+	mi := &file_engine_proto_msgTypes[173]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12204,7 +11974,7 @@ func (x *GetConclusionDetailRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConclusionDetailRequest.ProtoReflect.Descriptor instead.
 func (*GetConclusionDetailRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{177}
+	return file_engine_proto_rawDescGZIP(), []int{173}
 }
 
 func (x *GetConclusionDetailRequest) GetProjectDir() string {
@@ -12242,7 +12012,7 @@ type LikenessDetail struct {
 
 func (x *LikenessDetail) Reset() {
 	*x = LikenessDetail{}
-	mi := &file_engine_proto_msgTypes[178]
+	mi := &file_engine_proto_msgTypes[174]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12254,7 +12024,7 @@ func (x *LikenessDetail) String() string {
 func (*LikenessDetail) ProtoMessage() {}
 
 func (x *LikenessDetail) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[178]
+	mi := &file_engine_proto_msgTypes[174]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12267,7 +12037,7 @@ func (x *LikenessDetail) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LikenessDetail.ProtoReflect.Descriptor instead.
 func (*LikenessDetail) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{178}
+	return file_engine_proto_rawDescGZIP(), []int{174}
 }
 
 func (x *LikenessDetail) GetImageRelPath() string {
@@ -12320,7 +12090,7 @@ type ConclusionDetail struct {
 
 func (x *ConclusionDetail) Reset() {
 	*x = ConclusionDetail{}
-	mi := &file_engine_proto_msgTypes[179]
+	mi := &file_engine_proto_msgTypes[175]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12332,7 +12102,7 @@ func (x *ConclusionDetail) String() string {
 func (*ConclusionDetail) ProtoMessage() {}
 
 func (x *ConclusionDetail) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[179]
+	mi := &file_engine_proto_msgTypes[175]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12345,7 +12115,7 @@ func (x *ConclusionDetail) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConclusionDetail.ProtoReflect.Descriptor instead.
 func (*ConclusionDetail) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{179}
+	return file_engine_proto_rawDescGZIP(), []int{175}
 }
 
 func (x *ConclusionDetail) GetEntity() *CanonicalEntity {
@@ -12446,7 +12216,7 @@ type ProposePromoteGraphAlignmentRequest struct {
 
 func (x *ProposePromoteGraphAlignmentRequest) Reset() {
 	*x = ProposePromoteGraphAlignmentRequest{}
-	mi := &file_engine_proto_msgTypes[180]
+	mi := &file_engine_proto_msgTypes[176]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12458,7 +12228,7 @@ func (x *ProposePromoteGraphAlignmentRequest) String() string {
 func (*ProposePromoteGraphAlignmentRequest) ProtoMessage() {}
 
 func (x *ProposePromoteGraphAlignmentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[180]
+	mi := &file_engine_proto_msgTypes[176]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12471,7 +12241,7 @@ func (x *ProposePromoteGraphAlignmentRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ProposePromoteGraphAlignmentRequest.ProtoReflect.Descriptor instead.
 func (*ProposePromoteGraphAlignmentRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{180}
+	return file_engine_proto_rawDescGZIP(), []int{176}
 }
 
 func (x *ProposePromoteGraphAlignmentRequest) GetProjectDir() string {
@@ -12508,7 +12278,7 @@ type PromoteGraphAlignmentFixed struct {
 
 func (x *PromoteGraphAlignmentFixed) Reset() {
 	*x = PromoteGraphAlignmentFixed{}
-	mi := &file_engine_proto_msgTypes[181]
+	mi := &file_engine_proto_msgTypes[177]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12520,7 +12290,7 @@ func (x *PromoteGraphAlignmentFixed) String() string {
 func (*PromoteGraphAlignmentFixed) ProtoMessage() {}
 
 func (x *PromoteGraphAlignmentFixed) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[181]
+	mi := &file_engine_proto_msgTypes[177]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12533,7 +12303,7 @@ func (x *PromoteGraphAlignmentFixed) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteGraphAlignmentFixed.ProtoReflect.Descriptor instead.
 func (*PromoteGraphAlignmentFixed) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{181}
+	return file_engine_proto_rawDescGZIP(), []int{177}
 }
 
 func (x *PromoteGraphAlignmentFixed) GetSubjectId() string {
@@ -12572,7 +12342,7 @@ type GetPromoteClaimEvidenceRequest struct {
 
 func (x *GetPromoteClaimEvidenceRequest) Reset() {
 	*x = GetPromoteClaimEvidenceRequest{}
-	mi := &file_engine_proto_msgTypes[182]
+	mi := &file_engine_proto_msgTypes[178]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12584,7 +12354,7 @@ func (x *GetPromoteClaimEvidenceRequest) String() string {
 func (*GetPromoteClaimEvidenceRequest) ProtoMessage() {}
 
 func (x *GetPromoteClaimEvidenceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[182]
+	mi := &file_engine_proto_msgTypes[178]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12597,7 +12367,7 @@ func (x *GetPromoteClaimEvidenceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPromoteClaimEvidenceRequest.ProtoReflect.Descriptor instead.
 func (*GetPromoteClaimEvidenceRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{182}
+	return file_engine_proto_rawDescGZIP(), []int{178}
 }
 
 func (x *GetPromoteClaimEvidenceRequest) GetProjectDir() string {
@@ -12646,7 +12416,7 @@ type PromoteClaimEvidencePin struct {
 
 func (x *PromoteClaimEvidencePin) Reset() {
 	*x = PromoteClaimEvidencePin{}
-	mi := &file_engine_proto_msgTypes[183]
+	mi := &file_engine_proto_msgTypes[179]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12658,7 +12428,7 @@ func (x *PromoteClaimEvidencePin) String() string {
 func (*PromoteClaimEvidencePin) ProtoMessage() {}
 
 func (x *PromoteClaimEvidencePin) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[183]
+	mi := &file_engine_proto_msgTypes[179]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12671,7 +12441,7 @@ func (x *PromoteClaimEvidencePin) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteClaimEvidencePin.ProtoReflect.Descriptor instead.
 func (*PromoteClaimEvidencePin) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{183}
+	return file_engine_proto_rawDescGZIP(), []int{179}
 }
 
 func (x *PromoteClaimEvidencePin) GetId() string {
@@ -12712,7 +12482,7 @@ type PromoteClaimEvidenceLine struct {
 
 func (x *PromoteClaimEvidenceLine) Reset() {
 	*x = PromoteClaimEvidenceLine{}
-	mi := &file_engine_proto_msgTypes[184]
+	mi := &file_engine_proto_msgTypes[180]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12724,7 +12494,7 @@ func (x *PromoteClaimEvidenceLine) String() string {
 func (*PromoteClaimEvidenceLine) ProtoMessage() {}
 
 func (x *PromoteClaimEvidenceLine) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[184]
+	mi := &file_engine_proto_msgTypes[180]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12737,7 +12507,7 @@ func (x *PromoteClaimEvidenceLine) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteClaimEvidenceLine.ProtoReflect.Descriptor instead.
 func (*PromoteClaimEvidenceLine) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{184}
+	return file_engine_proto_rawDescGZIP(), []int{180}
 }
 
 func (x *PromoteClaimEvidenceLine) GetPropertyKey() string {
@@ -12813,7 +12583,7 @@ type PromoteClaimEvidenceSection struct {
 
 func (x *PromoteClaimEvidenceSection) Reset() {
 	*x = PromoteClaimEvidenceSection{}
-	mi := &file_engine_proto_msgTypes[185]
+	mi := &file_engine_proto_msgTypes[181]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12825,7 +12595,7 @@ func (x *PromoteClaimEvidenceSection) String() string {
 func (*PromoteClaimEvidenceSection) ProtoMessage() {}
 
 func (x *PromoteClaimEvidenceSection) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[185]
+	mi := &file_engine_proto_msgTypes[181]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12838,7 +12608,7 @@ func (x *PromoteClaimEvidenceSection) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteClaimEvidenceSection.ProtoReflect.Descriptor instead.
 func (*PromoteClaimEvidenceSection) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{185}
+	return file_engine_proto_rawDescGZIP(), []int{181}
 }
 
 func (x *PromoteClaimEvidenceSection) GetPropertyKey() string {
@@ -12864,7 +12634,7 @@ type PromoteClaimEvidenceBundle struct {
 
 func (x *PromoteClaimEvidenceBundle) Reset() {
 	*x = PromoteClaimEvidenceBundle{}
-	mi := &file_engine_proto_msgTypes[186]
+	mi := &file_engine_proto_msgTypes[182]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12876,7 +12646,7 @@ func (x *PromoteClaimEvidenceBundle) String() string {
 func (*PromoteClaimEvidenceBundle) ProtoMessage() {}
 
 func (x *PromoteClaimEvidenceBundle) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[186]
+	mi := &file_engine_proto_msgTypes[182]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12889,7 +12659,7 @@ func (x *PromoteClaimEvidenceBundle) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteClaimEvidenceBundle.ProtoReflect.Descriptor instead.
 func (*PromoteClaimEvidenceBundle) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{186}
+	return file_engine_proto_rawDescGZIP(), []int{182}
 }
 
 func (x *PromoteClaimEvidenceBundle) GetId() string {
@@ -12918,7 +12688,7 @@ type PromoteClaimEvidenceShape struct {
 
 func (x *PromoteClaimEvidenceShape) Reset() {
 	*x = PromoteClaimEvidenceShape{}
-	mi := &file_engine_proto_msgTypes[187]
+	mi := &file_engine_proto_msgTypes[183]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -12930,7 +12700,7 @@ func (x *PromoteClaimEvidenceShape) String() string {
 func (*PromoteClaimEvidenceShape) ProtoMessage() {}
 
 func (x *PromoteClaimEvidenceShape) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[187]
+	mi := &file_engine_proto_msgTypes[183]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -12943,7 +12713,7 @@ func (x *PromoteClaimEvidenceShape) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteClaimEvidenceShape.ProtoReflect.Descriptor instead.
 func (*PromoteClaimEvidenceShape) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{187}
+	return file_engine_proto_rawDescGZIP(), []int{183}
 }
 
 func (x *PromoteClaimEvidenceShape) GetPattern() string {
@@ -13029,7 +12799,7 @@ type PromoteClaimEvidenceRelationship struct {
 
 func (x *PromoteClaimEvidenceRelationship) Reset() {
 	*x = PromoteClaimEvidenceRelationship{}
-	mi := &file_engine_proto_msgTypes[188]
+	mi := &file_engine_proto_msgTypes[184]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13041,7 +12811,7 @@ func (x *PromoteClaimEvidenceRelationship) String() string {
 func (*PromoteClaimEvidenceRelationship) ProtoMessage() {}
 
 func (x *PromoteClaimEvidenceRelationship) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[188]
+	mi := &file_engine_proto_msgTypes[184]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13054,7 +12824,7 @@ func (x *PromoteClaimEvidenceRelationship) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteClaimEvidenceRelationship.ProtoReflect.Descriptor instead.
 func (*PromoteClaimEvidenceRelationship) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{188}
+	return file_engine_proto_rawDescGZIP(), []int{184}
 }
 
 func (x *PromoteClaimEvidenceRelationship) GetNeighborSubjectId() string {
@@ -13152,7 +12922,7 @@ type PromoteClaimEvidenceOffer struct {
 
 func (x *PromoteClaimEvidenceOffer) Reset() {
 	*x = PromoteClaimEvidenceOffer{}
-	mi := &file_engine_proto_msgTypes[189]
+	mi := &file_engine_proto_msgTypes[185]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13164,7 +12934,7 @@ func (x *PromoteClaimEvidenceOffer) String() string {
 func (*PromoteClaimEvidenceOffer) ProtoMessage() {}
 
 func (x *PromoteClaimEvidenceOffer) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[189]
+	mi := &file_engine_proto_msgTypes[185]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13177,7 +12947,7 @@ func (x *PromoteClaimEvidenceOffer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteClaimEvidenceOffer.ProtoReflect.Descriptor instead.
 func (*PromoteClaimEvidenceOffer) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{189}
+	return file_engine_proto_rawDescGZIP(), []int{185}
 }
 
 func (x *PromoteClaimEvidenceOffer) GetId() string {
@@ -13204,7 +12974,7 @@ type PromoteClaimEvidenceSource struct {
 
 func (x *PromoteClaimEvidenceSource) Reset() {
 	*x = PromoteClaimEvidenceSource{}
-	mi := &file_engine_proto_msgTypes[190]
+	mi := &file_engine_proto_msgTypes[186]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13216,7 +12986,7 @@ func (x *PromoteClaimEvidenceSource) String() string {
 func (*PromoteClaimEvidenceSource) ProtoMessage() {}
 
 func (x *PromoteClaimEvidenceSource) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[190]
+	mi := &file_engine_proto_msgTypes[186]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13229,7 +12999,7 @@ func (x *PromoteClaimEvidenceSource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteClaimEvidenceSource.ProtoReflect.Descriptor instead.
 func (*PromoteClaimEvidenceSource) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{190}
+	return file_engine_proto_rawDescGZIP(), []int{186}
 }
 
 func (x *PromoteClaimEvidenceSource) GetId() string {
@@ -13258,7 +13028,7 @@ type GetPromoteClaimEvidenceResponse struct {
 
 func (x *GetPromoteClaimEvidenceResponse) Reset() {
 	*x = GetPromoteClaimEvidenceResponse{}
-	mi := &file_engine_proto_msgTypes[191]
+	mi := &file_engine_proto_msgTypes[187]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13270,7 +13040,7 @@ func (x *GetPromoteClaimEvidenceResponse) String() string {
 func (*GetPromoteClaimEvidenceResponse) ProtoMessage() {}
 
 func (x *GetPromoteClaimEvidenceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[191]
+	mi := &file_engine_proto_msgTypes[187]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13283,7 +13053,7 @@ func (x *GetPromoteClaimEvidenceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPromoteClaimEvidenceResponse.ProtoReflect.Descriptor instead.
 func (*GetPromoteClaimEvidenceResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{191}
+	return file_engine_proto_rawDescGZIP(), []int{187}
 }
 
 func (x *GetPromoteClaimEvidenceResponse) GetSections() []*PromoteClaimEvidenceSection {
@@ -13340,7 +13110,7 @@ type PromoteGraphAlignmentAlternative struct {
 
 func (x *PromoteGraphAlignmentAlternative) Reset() {
 	*x = PromoteGraphAlignmentAlternative{}
-	mi := &file_engine_proto_msgTypes[192]
+	mi := &file_engine_proto_msgTypes[188]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13352,7 +13122,7 @@ func (x *PromoteGraphAlignmentAlternative) String() string {
 func (*PromoteGraphAlignmentAlternative) ProtoMessage() {}
 
 func (x *PromoteGraphAlignmentAlternative) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[192]
+	mi := &file_engine_proto_msgTypes[188]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13365,7 +13135,7 @@ func (x *PromoteGraphAlignmentAlternative) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteGraphAlignmentAlternative.ProtoReflect.Descriptor instead.
 func (*PromoteGraphAlignmentAlternative) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{192}
+	return file_engine_proto_rawDescGZIP(), []int{188}
 }
 
 func (x *PromoteGraphAlignmentAlternative) GetHandleId() string {
@@ -13525,7 +13295,7 @@ type PromoteGraphAlignmentRow struct {
 
 func (x *PromoteGraphAlignmentRow) Reset() {
 	*x = PromoteGraphAlignmentRow{}
-	mi := &file_engine_proto_msgTypes[193]
+	mi := &file_engine_proto_msgTypes[189]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13537,7 +13307,7 @@ func (x *PromoteGraphAlignmentRow) String() string {
 func (*PromoteGraphAlignmentRow) ProtoMessage() {}
 
 func (x *PromoteGraphAlignmentRow) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[193]
+	mi := &file_engine_proto_msgTypes[189]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13550,7 +13320,7 @@ func (x *PromoteGraphAlignmentRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteGraphAlignmentRow.ProtoReflect.Descriptor instead.
 func (*PromoteGraphAlignmentRow) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{193}
+	return file_engine_proto_rawDescGZIP(), []int{189}
 }
 
 func (x *PromoteGraphAlignmentRow) GetSubjectId() string {
@@ -13760,7 +13530,7 @@ type ProposePromoteGraphAlignmentResponse struct {
 
 func (x *ProposePromoteGraphAlignmentResponse) Reset() {
 	*x = ProposePromoteGraphAlignmentResponse{}
-	mi := &file_engine_proto_msgTypes[194]
+	mi := &file_engine_proto_msgTypes[190]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13772,7 +13542,7 @@ func (x *ProposePromoteGraphAlignmentResponse) String() string {
 func (*ProposePromoteGraphAlignmentResponse) ProtoMessage() {}
 
 func (x *ProposePromoteGraphAlignmentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[194]
+	mi := &file_engine_proto_msgTypes[190]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13785,7 +13555,7 @@ func (x *ProposePromoteGraphAlignmentResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ProposePromoteGraphAlignmentResponse.ProtoReflect.Descriptor instead.
 func (*ProposePromoteGraphAlignmentResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{194}
+	return file_engine_proto_rawDescGZIP(), []int{190}
 }
 
 func (x *ProposePromoteGraphAlignmentResponse) GetRows() []*PromoteGraphAlignmentRow {
@@ -13818,7 +13588,7 @@ type ApplyPromoteGraphAlignmentRequest struct {
 
 func (x *ApplyPromoteGraphAlignmentRequest) Reset() {
 	*x = ApplyPromoteGraphAlignmentRequest{}
-	mi := &file_engine_proto_msgTypes[195]
+	mi := &file_engine_proto_msgTypes[191]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13830,7 +13600,7 @@ func (x *ApplyPromoteGraphAlignmentRequest) String() string {
 func (*ApplyPromoteGraphAlignmentRequest) ProtoMessage() {}
 
 func (x *ApplyPromoteGraphAlignmentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[195]
+	mi := &file_engine_proto_msgTypes[191]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13843,7 +13613,7 @@ func (x *ApplyPromoteGraphAlignmentRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ApplyPromoteGraphAlignmentRequest.ProtoReflect.Descriptor instead.
 func (*ApplyPromoteGraphAlignmentRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{195}
+	return file_engine_proto_rawDescGZIP(), []int{191}
 }
 
 func (x *ApplyPromoteGraphAlignmentRequest) GetProjectDir() string {
@@ -13898,7 +13668,7 @@ type ApplyPromoteGraphAlignmentRow struct {
 
 func (x *ApplyPromoteGraphAlignmentRow) Reset() {
 	*x = ApplyPromoteGraphAlignmentRow{}
-	mi := &file_engine_proto_msgTypes[196]
+	mi := &file_engine_proto_msgTypes[192]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13910,7 +13680,7 @@ func (x *ApplyPromoteGraphAlignmentRow) String() string {
 func (*ApplyPromoteGraphAlignmentRow) ProtoMessage() {}
 
 func (x *ApplyPromoteGraphAlignmentRow) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[196]
+	mi := &file_engine_proto_msgTypes[192]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -13923,7 +13693,7 @@ func (x *ApplyPromoteGraphAlignmentRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplyPromoteGraphAlignmentRow.ProtoReflect.Descriptor instead.
 func (*ApplyPromoteGraphAlignmentRow) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{196}
+	return file_engine_proto_rawDescGZIP(), []int{192}
 }
 
 func (x *ApplyPromoteGraphAlignmentRow) GetSubjectId() string {
@@ -13986,7 +13756,7 @@ type ApplyPromoteGraphAlignmentWritten struct {
 
 func (x *ApplyPromoteGraphAlignmentWritten) Reset() {
 	*x = ApplyPromoteGraphAlignmentWritten{}
-	mi := &file_engine_proto_msgTypes[197]
+	mi := &file_engine_proto_msgTypes[193]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -13998,7 +13768,7 @@ func (x *ApplyPromoteGraphAlignmentWritten) String() string {
 func (*ApplyPromoteGraphAlignmentWritten) ProtoMessage() {}
 
 func (x *ApplyPromoteGraphAlignmentWritten) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[197]
+	mi := &file_engine_proto_msgTypes[193]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14011,7 +13781,7 @@ func (x *ApplyPromoteGraphAlignmentWritten) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ApplyPromoteGraphAlignmentWritten.ProtoReflect.Descriptor instead.
 func (*ApplyPromoteGraphAlignmentWritten) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{197}
+	return file_engine_proto_rawDescGZIP(), []int{193}
 }
 
 func (x *ApplyPromoteGraphAlignmentWritten) GetEntity() *CanonicalEntity {
@@ -14045,7 +13815,7 @@ type ApplyPromoteGraphAlignmentResponse struct {
 
 func (x *ApplyPromoteGraphAlignmentResponse) Reset() {
 	*x = ApplyPromoteGraphAlignmentResponse{}
-	mi := &file_engine_proto_msgTypes[198]
+	mi := &file_engine_proto_msgTypes[194]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14057,7 +13827,7 @@ func (x *ApplyPromoteGraphAlignmentResponse) String() string {
 func (*ApplyPromoteGraphAlignmentResponse) ProtoMessage() {}
 
 func (x *ApplyPromoteGraphAlignmentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[198]
+	mi := &file_engine_proto_msgTypes[194]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14070,7 +13840,7 @@ func (x *ApplyPromoteGraphAlignmentResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ApplyPromoteGraphAlignmentResponse.ProtoReflect.Descriptor instead.
 func (*ApplyPromoteGraphAlignmentResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{198}
+	return file_engine_proto_rawDescGZIP(), []int{194}
 }
 
 func (x *ApplyPromoteGraphAlignmentResponse) GetRevision() int64 {
@@ -14097,7 +13867,7 @@ type ListSubjectsRequest struct {
 
 func (x *ListSubjectsRequest) Reset() {
 	*x = ListSubjectsRequest{}
-	mi := &file_engine_proto_msgTypes[199]
+	mi := &file_engine_proto_msgTypes[195]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14109,7 +13879,7 @@ func (x *ListSubjectsRequest) String() string {
 func (*ListSubjectsRequest) ProtoMessage() {}
 
 func (x *ListSubjectsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[199]
+	mi := &file_engine_proto_msgTypes[195]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14122,7 +13892,7 @@ func (x *ListSubjectsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSubjectsRequest.ProtoReflect.Descriptor instead.
 func (*ListSubjectsRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{199}
+	return file_engine_proto_rawDescGZIP(), []int{195}
 }
 
 func (x *ListSubjectsRequest) GetProjectDir() string {
@@ -14148,7 +13918,7 @@ type ListSubjectsResponse struct {
 
 func (x *ListSubjectsResponse) Reset() {
 	*x = ListSubjectsResponse{}
-	mi := &file_engine_proto_msgTypes[200]
+	mi := &file_engine_proto_msgTypes[196]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14160,7 +13930,7 @@ func (x *ListSubjectsResponse) String() string {
 func (*ListSubjectsResponse) ProtoMessage() {}
 
 func (x *ListSubjectsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[200]
+	mi := &file_engine_proto_msgTypes[196]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14173,7 +13943,7 @@ func (x *ListSubjectsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSubjectsResponse.ProtoReflect.Descriptor instead.
 func (*ListSubjectsResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{200}
+	return file_engine_proto_rawDescGZIP(), []int{196}
 }
 
 func (x *ListSubjectsResponse) GetSubjects() []*Subject {
@@ -14195,7 +13965,7 @@ type SetSubjectPositionRequest struct {
 
 func (x *SetSubjectPositionRequest) Reset() {
 	*x = SetSubjectPositionRequest{}
-	mi := &file_engine_proto_msgTypes[201]
+	mi := &file_engine_proto_msgTypes[197]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14207,7 +13977,7 @@ func (x *SetSubjectPositionRequest) String() string {
 func (*SetSubjectPositionRequest) ProtoMessage() {}
 
 func (x *SetSubjectPositionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[201]
+	mi := &file_engine_proto_msgTypes[197]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14220,7 +13990,7 @@ func (x *SetSubjectPositionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetSubjectPositionRequest.ProtoReflect.Descriptor instead.
 func (*SetSubjectPositionRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{201}
+	return file_engine_proto_rawDescGZIP(), []int{197}
 }
 
 func (x *SetSubjectPositionRequest) GetProjectDir() string {
@@ -14260,7 +14030,7 @@ type SetSubjectPositionResponse struct {
 
 func (x *SetSubjectPositionResponse) Reset() {
 	*x = SetSubjectPositionResponse{}
-	mi := &file_engine_proto_msgTypes[202]
+	mi := &file_engine_proto_msgTypes[198]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14272,7 +14042,7 @@ func (x *SetSubjectPositionResponse) String() string {
 func (*SetSubjectPositionResponse) ProtoMessage() {}
 
 func (x *SetSubjectPositionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[202]
+	mi := &file_engine_proto_msgTypes[198]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14285,7 +14055,7 @@ func (x *SetSubjectPositionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetSubjectPositionResponse.ProtoReflect.Descriptor instead.
 func (*SetSubjectPositionResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{202}
+	return file_engine_proto_rawDescGZIP(), []int{198}
 }
 
 func (x *SetSubjectPositionResponse) GetPosition() *SubjectPosition {
@@ -14305,7 +14075,7 @@ type ClearSubjectPositionRequest struct {
 
 func (x *ClearSubjectPositionRequest) Reset() {
 	*x = ClearSubjectPositionRequest{}
-	mi := &file_engine_proto_msgTypes[203]
+	mi := &file_engine_proto_msgTypes[199]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14317,7 +14087,7 @@ func (x *ClearSubjectPositionRequest) String() string {
 func (*ClearSubjectPositionRequest) ProtoMessage() {}
 
 func (x *ClearSubjectPositionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[203]
+	mi := &file_engine_proto_msgTypes[199]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14330,7 +14100,7 @@ func (x *ClearSubjectPositionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClearSubjectPositionRequest.ProtoReflect.Descriptor instead.
 func (*ClearSubjectPositionRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{203}
+	return file_engine_proto_rawDescGZIP(), []int{199}
 }
 
 func (x *ClearSubjectPositionRequest) GetProjectDir() string {
@@ -14355,7 +14125,7 @@ type ClearSubjectPositionResponse struct {
 
 func (x *ClearSubjectPositionResponse) Reset() {
 	*x = ClearSubjectPositionResponse{}
-	mi := &file_engine_proto_msgTypes[204]
+	mi := &file_engine_proto_msgTypes[200]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14367,7 +14137,7 @@ func (x *ClearSubjectPositionResponse) String() string {
 func (*ClearSubjectPositionResponse) ProtoMessage() {}
 
 func (x *ClearSubjectPositionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[204]
+	mi := &file_engine_proto_msgTypes[200]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14380,7 +14150,7 @@ func (x *ClearSubjectPositionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClearSubjectPositionResponse.ProtoReflect.Descriptor instead.
 func (*ClearSubjectPositionResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{204}
+	return file_engine_proto_rawDescGZIP(), []int{200}
 }
 
 type ListSubjectPositionsRequest struct {
@@ -14393,7 +14163,7 @@ type ListSubjectPositionsRequest struct {
 
 func (x *ListSubjectPositionsRequest) Reset() {
 	*x = ListSubjectPositionsRequest{}
-	mi := &file_engine_proto_msgTypes[205]
+	mi := &file_engine_proto_msgTypes[201]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14405,7 +14175,7 @@ func (x *ListSubjectPositionsRequest) String() string {
 func (*ListSubjectPositionsRequest) ProtoMessage() {}
 
 func (x *ListSubjectPositionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[205]
+	mi := &file_engine_proto_msgTypes[201]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14418,7 +14188,7 @@ func (x *ListSubjectPositionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSubjectPositionsRequest.ProtoReflect.Descriptor instead.
 func (*ListSubjectPositionsRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{205}
+	return file_engine_proto_rawDescGZIP(), []int{201}
 }
 
 func (x *ListSubjectPositionsRequest) GetProjectDir() string {
@@ -14444,7 +14214,7 @@ type ListSubjectPositionsResponse struct {
 
 func (x *ListSubjectPositionsResponse) Reset() {
 	*x = ListSubjectPositionsResponse{}
-	mi := &file_engine_proto_msgTypes[206]
+	mi := &file_engine_proto_msgTypes[202]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14456,7 +14226,7 @@ func (x *ListSubjectPositionsResponse) String() string {
 func (*ListSubjectPositionsResponse) ProtoMessage() {}
 
 func (x *ListSubjectPositionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[206]
+	mi := &file_engine_proto_msgTypes[202]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14469,7 +14239,7 @@ func (x *ListSubjectPositionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSubjectPositionsResponse.ProtoReflect.Descriptor instead.
 func (*ListSubjectPositionsResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{206}
+	return file_engine_proto_rawDescGZIP(), []int{202}
 }
 
 func (x *ListSubjectPositionsResponse) GetPositions() []*SubjectPosition {
@@ -14496,7 +14266,7 @@ type Property struct {
 
 func (x *Property) Reset() {
 	*x = Property{}
-	mi := &file_engine_proto_msgTypes[207]
+	mi := &file_engine_proto_msgTypes[203]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14508,7 +14278,7 @@ func (x *Property) String() string {
 func (*Property) ProtoMessage() {}
 
 func (x *Property) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[207]
+	mi := &file_engine_proto_msgTypes[203]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14521,7 +14291,7 @@ func (x *Property) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Property.ProtoReflect.Descriptor instead.
 func (*Property) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{207}
+	return file_engine_proto_rawDescGZIP(), []int{203}
 }
 
 func (x *Property) GetId() string {
@@ -14595,7 +14365,7 @@ type PropertyTerm struct {
 
 func (x *PropertyTerm) Reset() {
 	*x = PropertyTerm{}
-	mi := &file_engine_proto_msgTypes[208]
+	mi := &file_engine_proto_msgTypes[204]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14607,7 +14377,7 @@ func (x *PropertyTerm) String() string {
 func (*PropertyTerm) ProtoMessage() {}
 
 func (x *PropertyTerm) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[208]
+	mi := &file_engine_proto_msgTypes[204]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14620,7 +14390,7 @@ func (x *PropertyTerm) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PropertyTerm.ProtoReflect.Descriptor instead.
 func (*PropertyTerm) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{208}
+	return file_engine_proto_rawDescGZIP(), []int{204}
 }
 
 func (x *PropertyTerm) GetId() string {
@@ -14676,7 +14446,7 @@ type SubjectTypeProperty struct {
 
 func (x *SubjectTypeProperty) Reset() {
 	*x = SubjectTypeProperty{}
-	mi := &file_engine_proto_msgTypes[209]
+	mi := &file_engine_proto_msgTypes[205]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14688,7 +14458,7 @@ func (x *SubjectTypeProperty) String() string {
 func (*SubjectTypeProperty) ProtoMessage() {}
 
 func (x *SubjectTypeProperty) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[209]
+	mi := &file_engine_proto_msgTypes[205]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14701,7 +14471,7 @@ func (x *SubjectTypeProperty) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubjectTypeProperty.ProtoReflect.Descriptor instead.
 func (*SubjectTypeProperty) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{209}
+	return file_engine_proto_rawDescGZIP(), []int{205}
 }
 
 func (x *SubjectTypeProperty) GetProperty() *Property {
@@ -14747,7 +14517,7 @@ type SubjectTypePresentation struct {
 
 func (x *SubjectTypePresentation) Reset() {
 	*x = SubjectTypePresentation{}
-	mi := &file_engine_proto_msgTypes[210]
+	mi := &file_engine_proto_msgTypes[206]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14759,7 +14529,7 @@ func (x *SubjectTypePresentation) String() string {
 func (*SubjectTypePresentation) ProtoMessage() {}
 
 func (x *SubjectTypePresentation) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[210]
+	mi := &file_engine_proto_msgTypes[206]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14772,7 +14542,7 @@ func (x *SubjectTypePresentation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubjectTypePresentation.ProtoReflect.Descriptor instead.
 func (*SubjectTypePresentation) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{210}
+	return file_engine_proto_rawDescGZIP(), []int{206}
 }
 
 func (x *SubjectTypePresentation) GetTypeKey() string {
@@ -14888,7 +14658,7 @@ type ConnectRule struct {
 
 func (x *ConnectRule) Reset() {
 	*x = ConnectRule{}
-	mi := &file_engine_proto_msgTypes[211]
+	mi := &file_engine_proto_msgTypes[207]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14900,7 +14670,7 @@ func (x *ConnectRule) String() string {
 func (*ConnectRule) ProtoMessage() {}
 
 func (x *ConnectRule) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[211]
+	mi := &file_engine_proto_msgTypes[207]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -14913,7 +14683,7 @@ func (x *ConnectRule) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectRule.ProtoReflect.Descriptor instead.
 func (*ConnectRule) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{211}
+	return file_engine_proto_rawDescGZIP(), []int{207}
 }
 
 func (x *ConnectRule) GetFromTypeKey() string {
@@ -14975,7 +14745,7 @@ type ConnectEdge struct {
 
 func (x *ConnectEdge) Reset() {
 	*x = ConnectEdge{}
-	mi := &file_engine_proto_msgTypes[212]
+	mi := &file_engine_proto_msgTypes[208]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -14987,7 +14757,7 @@ func (x *ConnectEdge) String() string {
 func (*ConnectEdge) ProtoMessage() {}
 
 func (x *ConnectEdge) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[212]
+	mi := &file_engine_proto_msgTypes[208]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15000,7 +14770,7 @@ func (x *ConnectEdge) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectEdge.ProtoReflect.Descriptor instead.
 func (*ConnectEdge) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{212}
+	return file_engine_proto_rawDescGZIP(), []int{208}
 }
 
 func (x *ConnectEdge) GetPropertyKey() string {
@@ -15026,7 +14796,7 @@ type ListPropertiesRequest struct {
 
 func (x *ListPropertiesRequest) Reset() {
 	*x = ListPropertiesRequest{}
-	mi := &file_engine_proto_msgTypes[213]
+	mi := &file_engine_proto_msgTypes[209]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15038,7 +14808,7 @@ func (x *ListPropertiesRequest) String() string {
 func (*ListPropertiesRequest) ProtoMessage() {}
 
 func (x *ListPropertiesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[213]
+	mi := &file_engine_proto_msgTypes[209]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15051,7 +14821,7 @@ func (x *ListPropertiesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPropertiesRequest.ProtoReflect.Descriptor instead.
 func (*ListPropertiesRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{213}
+	return file_engine_proto_rawDescGZIP(), []int{209}
 }
 
 func (x *ListPropertiesRequest) GetProjectDir() string {
@@ -15070,7 +14840,7 @@ type ListPropertiesResponse struct {
 
 func (x *ListPropertiesResponse) Reset() {
 	*x = ListPropertiesResponse{}
-	mi := &file_engine_proto_msgTypes[214]
+	mi := &file_engine_proto_msgTypes[210]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15082,7 +14852,7 @@ func (x *ListPropertiesResponse) String() string {
 func (*ListPropertiesResponse) ProtoMessage() {}
 
 func (x *ListPropertiesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[214]
+	mi := &file_engine_proto_msgTypes[210]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15095,7 +14865,7 @@ func (x *ListPropertiesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPropertiesResponse.ProtoReflect.Descriptor instead.
 func (*ListPropertiesResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{214}
+	return file_engine_proto_rawDescGZIP(), []int{210}
 }
 
 func (x *ListPropertiesResponse) GetProperties() []*Property {
@@ -15120,7 +14890,7 @@ type CreatePropertyRequest struct {
 
 func (x *CreatePropertyRequest) Reset() {
 	*x = CreatePropertyRequest{}
-	mi := &file_engine_proto_msgTypes[215]
+	mi := &file_engine_proto_msgTypes[211]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15132,7 +14902,7 @@ func (x *CreatePropertyRequest) String() string {
 func (*CreatePropertyRequest) ProtoMessage() {}
 
 func (x *CreatePropertyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[215]
+	mi := &file_engine_proto_msgTypes[211]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15145,7 +14915,7 @@ func (x *CreatePropertyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePropertyRequest.ProtoReflect.Descriptor instead.
 func (*CreatePropertyRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{215}
+	return file_engine_proto_rawDescGZIP(), []int{211}
 }
 
 func (x *CreatePropertyRequest) GetProjectDir() string {
@@ -15199,7 +14969,7 @@ type CreatePropertyResponse struct {
 
 func (x *CreatePropertyResponse) Reset() {
 	*x = CreatePropertyResponse{}
-	mi := &file_engine_proto_msgTypes[216]
+	mi := &file_engine_proto_msgTypes[212]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15211,7 +14981,7 @@ func (x *CreatePropertyResponse) String() string {
 func (*CreatePropertyResponse) ProtoMessage() {}
 
 func (x *CreatePropertyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[216]
+	mi := &file_engine_proto_msgTypes[212]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15224,7 +14994,7 @@ func (x *CreatePropertyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePropertyResponse.ProtoReflect.Descriptor instead.
 func (*CreatePropertyResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{216}
+	return file_engine_proto_rawDescGZIP(), []int{212}
 }
 
 func (x *CreatePropertyResponse) GetProperty() *Property {
@@ -15250,7 +15020,7 @@ type UpdatePropertyRequest struct {
 
 func (x *UpdatePropertyRequest) Reset() {
 	*x = UpdatePropertyRequest{}
-	mi := &file_engine_proto_msgTypes[217]
+	mi := &file_engine_proto_msgTypes[213]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15262,7 +15032,7 @@ func (x *UpdatePropertyRequest) String() string {
 func (*UpdatePropertyRequest) ProtoMessage() {}
 
 func (x *UpdatePropertyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[217]
+	mi := &file_engine_proto_msgTypes[213]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15275,7 +15045,7 @@ func (x *UpdatePropertyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePropertyRequest.ProtoReflect.Descriptor instead.
 func (*UpdatePropertyRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{217}
+	return file_engine_proto_rawDescGZIP(), []int{213}
 }
 
 func (x *UpdatePropertyRequest) GetProjectDir() string {
@@ -15336,7 +15106,7 @@ type UpdatePropertyResponse struct {
 
 func (x *UpdatePropertyResponse) Reset() {
 	*x = UpdatePropertyResponse{}
-	mi := &file_engine_proto_msgTypes[218]
+	mi := &file_engine_proto_msgTypes[214]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15348,7 +15118,7 @@ func (x *UpdatePropertyResponse) String() string {
 func (*UpdatePropertyResponse) ProtoMessage() {}
 
 func (x *UpdatePropertyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[218]
+	mi := &file_engine_proto_msgTypes[214]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15361,7 +15131,7 @@ func (x *UpdatePropertyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePropertyResponse.ProtoReflect.Descriptor instead.
 func (*UpdatePropertyResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{218}
+	return file_engine_proto_rawDescGZIP(), []int{214}
 }
 
 func (x *UpdatePropertyResponse) GetProperty() *Property {
@@ -15382,7 +15152,7 @@ type DeletePropertyRequest struct {
 
 func (x *DeletePropertyRequest) Reset() {
 	*x = DeletePropertyRequest{}
-	mi := &file_engine_proto_msgTypes[219]
+	mi := &file_engine_proto_msgTypes[215]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15394,7 +15164,7 @@ func (x *DeletePropertyRequest) String() string {
 func (*DeletePropertyRequest) ProtoMessage() {}
 
 func (x *DeletePropertyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[219]
+	mi := &file_engine_proto_msgTypes[215]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15407,7 +15177,7 @@ func (x *DeletePropertyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePropertyRequest.ProtoReflect.Descriptor instead.
 func (*DeletePropertyRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{219}
+	return file_engine_proto_rawDescGZIP(), []int{215}
 }
 
 func (x *DeletePropertyRequest) GetProjectDir() string {
@@ -15439,7 +15209,7 @@ type DeletePropertyResponse struct {
 
 func (x *DeletePropertyResponse) Reset() {
 	*x = DeletePropertyResponse{}
-	mi := &file_engine_proto_msgTypes[220]
+	mi := &file_engine_proto_msgTypes[216]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15451,7 +15221,7 @@ func (x *DeletePropertyResponse) String() string {
 func (*DeletePropertyResponse) ProtoMessage() {}
 
 func (x *DeletePropertyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[220]
+	mi := &file_engine_proto_msgTypes[216]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15464,7 +15234,7 @@ func (x *DeletePropertyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePropertyResponse.ProtoReflect.Descriptor instead.
 func (*DeletePropertyResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{220}
+	return file_engine_proto_rawDescGZIP(), []int{216}
 }
 
 type ListSubjectTypePropertiesRequest struct {
@@ -15477,7 +15247,7 @@ type ListSubjectTypePropertiesRequest struct {
 
 func (x *ListSubjectTypePropertiesRequest) Reset() {
 	*x = ListSubjectTypePropertiesRequest{}
-	mi := &file_engine_proto_msgTypes[221]
+	mi := &file_engine_proto_msgTypes[217]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15489,7 +15259,7 @@ func (x *ListSubjectTypePropertiesRequest) String() string {
 func (*ListSubjectTypePropertiesRequest) ProtoMessage() {}
 
 func (x *ListSubjectTypePropertiesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[221]
+	mi := &file_engine_proto_msgTypes[217]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15502,7 +15272,7 @@ func (x *ListSubjectTypePropertiesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSubjectTypePropertiesRequest.ProtoReflect.Descriptor instead.
 func (*ListSubjectTypePropertiesRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{221}
+	return file_engine_proto_rawDescGZIP(), []int{217}
 }
 
 func (x *ListSubjectTypePropertiesRequest) GetProjectDir() string {
@@ -15528,7 +15298,7 @@ type ListSubjectTypePropertiesResponse struct {
 
 func (x *ListSubjectTypePropertiesResponse) Reset() {
 	*x = ListSubjectTypePropertiesResponse{}
-	mi := &file_engine_proto_msgTypes[222]
+	mi := &file_engine_proto_msgTypes[218]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15540,7 +15310,7 @@ func (x *ListSubjectTypePropertiesResponse) String() string {
 func (*ListSubjectTypePropertiesResponse) ProtoMessage() {}
 
 func (x *ListSubjectTypePropertiesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[222]
+	mi := &file_engine_proto_msgTypes[218]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15553,7 +15323,7 @@ func (x *ListSubjectTypePropertiesResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ListSubjectTypePropertiesResponse.ProtoReflect.Descriptor instead.
 func (*ListSubjectTypePropertiesResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{222}
+	return file_engine_proto_rawDescGZIP(), []int{218}
 }
 
 func (x *ListSubjectTypePropertiesResponse) GetProperties() []*SubjectTypeProperty {
@@ -15575,7 +15345,7 @@ type AssignSubjectTypePropertyRequest struct {
 
 func (x *AssignSubjectTypePropertyRequest) Reset() {
 	*x = AssignSubjectTypePropertyRequest{}
-	mi := &file_engine_proto_msgTypes[223]
+	mi := &file_engine_proto_msgTypes[219]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15587,7 +15357,7 @@ func (x *AssignSubjectTypePropertyRequest) String() string {
 func (*AssignSubjectTypePropertyRequest) ProtoMessage() {}
 
 func (x *AssignSubjectTypePropertyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[223]
+	mi := &file_engine_proto_msgTypes[219]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15600,7 +15370,7 @@ func (x *AssignSubjectTypePropertyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssignSubjectTypePropertyRequest.ProtoReflect.Descriptor instead.
 func (*AssignSubjectTypePropertyRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{223}
+	return file_engine_proto_rawDescGZIP(), []int{219}
 }
 
 func (x *AssignSubjectTypePropertyRequest) GetProjectDir() string {
@@ -15639,7 +15409,7 @@ type AssignSubjectTypePropertyResponse struct {
 
 func (x *AssignSubjectTypePropertyResponse) Reset() {
 	*x = AssignSubjectTypePropertyResponse{}
-	mi := &file_engine_proto_msgTypes[224]
+	mi := &file_engine_proto_msgTypes[220]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15651,7 +15421,7 @@ func (x *AssignSubjectTypePropertyResponse) String() string {
 func (*AssignSubjectTypePropertyResponse) ProtoMessage() {}
 
 func (x *AssignSubjectTypePropertyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[224]
+	mi := &file_engine_proto_msgTypes[220]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15664,7 +15434,7 @@ func (x *AssignSubjectTypePropertyResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use AssignSubjectTypePropertyResponse.ProtoReflect.Descriptor instead.
 func (*AssignSubjectTypePropertyResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{224}
+	return file_engine_proto_rawDescGZIP(), []int{220}
 }
 
 type RemoveSubjectTypePropertyRequest struct {
@@ -15679,7 +15449,7 @@ type RemoveSubjectTypePropertyRequest struct {
 
 func (x *RemoveSubjectTypePropertyRequest) Reset() {
 	*x = RemoveSubjectTypePropertyRequest{}
-	mi := &file_engine_proto_msgTypes[225]
+	mi := &file_engine_proto_msgTypes[221]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15691,7 +15461,7 @@ func (x *RemoveSubjectTypePropertyRequest) String() string {
 func (*RemoveSubjectTypePropertyRequest) ProtoMessage() {}
 
 func (x *RemoveSubjectTypePropertyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[225]
+	mi := &file_engine_proto_msgTypes[221]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15704,7 +15474,7 @@ func (x *RemoveSubjectTypePropertyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveSubjectTypePropertyRequest.ProtoReflect.Descriptor instead.
 func (*RemoveSubjectTypePropertyRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{225}
+	return file_engine_proto_rawDescGZIP(), []int{221}
 }
 
 func (x *RemoveSubjectTypePropertyRequest) GetProjectDir() string {
@@ -15743,7 +15513,7 @@ type RemoveSubjectTypePropertyResponse struct {
 
 func (x *RemoveSubjectTypePropertyResponse) Reset() {
 	*x = RemoveSubjectTypePropertyResponse{}
-	mi := &file_engine_proto_msgTypes[226]
+	mi := &file_engine_proto_msgTypes[222]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15755,7 +15525,7 @@ func (x *RemoveSubjectTypePropertyResponse) String() string {
 func (*RemoveSubjectTypePropertyResponse) ProtoMessage() {}
 
 func (x *RemoveSubjectTypePropertyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[226]
+	mi := &file_engine_proto_msgTypes[222]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15768,7 +15538,7 @@ func (x *RemoveSubjectTypePropertyResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use RemoveSubjectTypePropertyResponse.ProtoReflect.Descriptor instead.
 func (*RemoveSubjectTypePropertyResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{226}
+	return file_engine_proto_rawDescGZIP(), []int{222}
 }
 
 // ReorderSubjectTypePropertiesRequest sets a type's binding order. property_ids
@@ -15785,7 +15555,7 @@ type ReorderSubjectTypePropertiesRequest struct {
 
 func (x *ReorderSubjectTypePropertiesRequest) Reset() {
 	*x = ReorderSubjectTypePropertiesRequest{}
-	mi := &file_engine_proto_msgTypes[227]
+	mi := &file_engine_proto_msgTypes[223]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15797,7 +15567,7 @@ func (x *ReorderSubjectTypePropertiesRequest) String() string {
 func (*ReorderSubjectTypePropertiesRequest) ProtoMessage() {}
 
 func (x *ReorderSubjectTypePropertiesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[227]
+	mi := &file_engine_proto_msgTypes[223]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15810,7 +15580,7 @@ func (x *ReorderSubjectTypePropertiesRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ReorderSubjectTypePropertiesRequest.ProtoReflect.Descriptor instead.
 func (*ReorderSubjectTypePropertiesRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{227}
+	return file_engine_proto_rawDescGZIP(), []int{223}
 }
 
 func (x *ReorderSubjectTypePropertiesRequest) GetProjectDir() string {
@@ -15851,7 +15621,7 @@ type ReorderSubjectTypePropertiesResponse struct {
 
 func (x *ReorderSubjectTypePropertiesResponse) Reset() {
 	*x = ReorderSubjectTypePropertiesResponse{}
-	mi := &file_engine_proto_msgTypes[228]
+	mi := &file_engine_proto_msgTypes[224]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15863,7 +15633,7 @@ func (x *ReorderSubjectTypePropertiesResponse) String() string {
 func (*ReorderSubjectTypePropertiesResponse) ProtoMessage() {}
 
 func (x *ReorderSubjectTypePropertiesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[228]
+	mi := &file_engine_proto_msgTypes[224]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15876,7 +15646,7 @@ func (x *ReorderSubjectTypePropertiesResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ReorderSubjectTypePropertiesResponse.ProtoReflect.Descriptor instead.
 func (*ReorderSubjectTypePropertiesResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{228}
+	return file_engine_proto_rawDescGZIP(), []int{224}
 }
 
 func (x *ReorderSubjectTypePropertiesResponse) GetProperties() []*SubjectTypeProperty {
@@ -15901,7 +15671,7 @@ type ListPlaceableSubjectTypesRequest struct {
 
 func (x *ListPlaceableSubjectTypesRequest) Reset() {
 	*x = ListPlaceableSubjectTypesRequest{}
-	mi := &file_engine_proto_msgTypes[229]
+	mi := &file_engine_proto_msgTypes[225]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15913,7 +15683,7 @@ func (x *ListPlaceableSubjectTypesRequest) String() string {
 func (*ListPlaceableSubjectTypesRequest) ProtoMessage() {}
 
 func (x *ListPlaceableSubjectTypesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[229]
+	mi := &file_engine_proto_msgTypes[225]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15926,7 +15696,7 @@ func (x *ListPlaceableSubjectTypesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPlaceableSubjectTypesRequest.ProtoReflect.Descriptor instead.
 func (*ListPlaceableSubjectTypesRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{229}
+	return file_engine_proto_rawDescGZIP(), []int{225}
 }
 
 type ListPlaceableSubjectTypesResponse struct {
@@ -15938,7 +15708,7 @@ type ListPlaceableSubjectTypesResponse struct {
 
 func (x *ListPlaceableSubjectTypesResponse) Reset() {
 	*x = ListPlaceableSubjectTypesResponse{}
-	mi := &file_engine_proto_msgTypes[230]
+	mi := &file_engine_proto_msgTypes[226]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15950,7 +15720,7 @@ func (x *ListPlaceableSubjectTypesResponse) String() string {
 func (*ListPlaceableSubjectTypesResponse) ProtoMessage() {}
 
 func (x *ListPlaceableSubjectTypesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[230]
+	mi := &file_engine_proto_msgTypes[226]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -15963,7 +15733,7 @@ func (x *ListPlaceableSubjectTypesResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ListPlaceableSubjectTypesResponse.ProtoReflect.Descriptor instead.
 func (*ListPlaceableSubjectTypesResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{230}
+	return file_engine_proto_rawDescGZIP(), []int{226}
 }
 
 func (x *ListPlaceableSubjectTypesResponse) GetTypes() []*SubjectTypePresentation {
@@ -15982,7 +15752,7 @@ type GetSubjectTypePresentationRequest struct {
 
 func (x *GetSubjectTypePresentationRequest) Reset() {
 	*x = GetSubjectTypePresentationRequest{}
-	mi := &file_engine_proto_msgTypes[231]
+	mi := &file_engine_proto_msgTypes[227]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -15994,7 +15764,7 @@ func (x *GetSubjectTypePresentationRequest) String() string {
 func (*GetSubjectTypePresentationRequest) ProtoMessage() {}
 
 func (x *GetSubjectTypePresentationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[231]
+	mi := &file_engine_proto_msgTypes[227]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16007,7 +15777,7 @@ func (x *GetSubjectTypePresentationRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use GetSubjectTypePresentationRequest.ProtoReflect.Descriptor instead.
 func (*GetSubjectTypePresentationRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{231}
+	return file_engine_proto_rawDescGZIP(), []int{227}
 }
 
 func (x *GetSubjectTypePresentationRequest) GetTypeKey() string {
@@ -16026,7 +15796,7 @@ type GetSubjectTypePresentationResponse struct {
 
 func (x *GetSubjectTypePresentationResponse) Reset() {
 	*x = GetSubjectTypePresentationResponse{}
-	mi := &file_engine_proto_msgTypes[232]
+	mi := &file_engine_proto_msgTypes[228]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16038,7 +15808,7 @@ func (x *GetSubjectTypePresentationResponse) String() string {
 func (*GetSubjectTypePresentationResponse) ProtoMessage() {}
 
 func (x *GetSubjectTypePresentationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[232]
+	mi := &file_engine_proto_msgTypes[228]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16051,7 +15821,7 @@ func (x *GetSubjectTypePresentationResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use GetSubjectTypePresentationResponse.ProtoReflect.Descriptor instead.
 func (*GetSubjectTypePresentationResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{232}
+	return file_engine_proto_rawDescGZIP(), []int{228}
 }
 
 func (x *GetSubjectTypePresentationResponse) GetPresentation() *SubjectTypePresentation {
@@ -16069,7 +15839,7 @@ type ListConnectRulesRequest struct {
 
 func (x *ListConnectRulesRequest) Reset() {
 	*x = ListConnectRulesRequest{}
-	mi := &file_engine_proto_msgTypes[233]
+	mi := &file_engine_proto_msgTypes[229]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16081,7 +15851,7 @@ func (x *ListConnectRulesRequest) String() string {
 func (*ListConnectRulesRequest) ProtoMessage() {}
 
 func (x *ListConnectRulesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[233]
+	mi := &file_engine_proto_msgTypes[229]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16094,7 +15864,7 @@ func (x *ListConnectRulesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListConnectRulesRequest.ProtoReflect.Descriptor instead.
 func (*ListConnectRulesRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{233}
+	return file_engine_proto_rawDescGZIP(), []int{229}
 }
 
 type ListConnectRulesResponse struct {
@@ -16106,7 +15876,7 @@ type ListConnectRulesResponse struct {
 
 func (x *ListConnectRulesResponse) Reset() {
 	*x = ListConnectRulesResponse{}
-	mi := &file_engine_proto_msgTypes[234]
+	mi := &file_engine_proto_msgTypes[230]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16118,7 +15888,7 @@ func (x *ListConnectRulesResponse) String() string {
 func (*ListConnectRulesResponse) ProtoMessage() {}
 
 func (x *ListConnectRulesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[234]
+	mi := &file_engine_proto_msgTypes[230]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16131,7 +15901,7 @@ func (x *ListConnectRulesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListConnectRulesResponse.ProtoReflect.Descriptor instead.
 func (*ListConnectRulesResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{234}
+	return file_engine_proto_rawDescGZIP(), []int{230}
 }
 
 func (x *ListConnectRulesResponse) GetRules() []*ConnectRule {
@@ -16151,7 +15921,7 @@ type ListPropertyTermsRequest struct {
 
 func (x *ListPropertyTermsRequest) Reset() {
 	*x = ListPropertyTermsRequest{}
-	mi := &file_engine_proto_msgTypes[235]
+	mi := &file_engine_proto_msgTypes[231]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16163,7 +15933,7 @@ func (x *ListPropertyTermsRequest) String() string {
 func (*ListPropertyTermsRequest) ProtoMessage() {}
 
 func (x *ListPropertyTermsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[235]
+	mi := &file_engine_proto_msgTypes[231]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16176,7 +15946,7 @@ func (x *ListPropertyTermsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPropertyTermsRequest.ProtoReflect.Descriptor instead.
 func (*ListPropertyTermsRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{235}
+	return file_engine_proto_rawDescGZIP(), []int{231}
 }
 
 func (x *ListPropertyTermsRequest) GetProjectDir() string {
@@ -16202,7 +15972,7 @@ type ListPropertyTermsResponse struct {
 
 func (x *ListPropertyTermsResponse) Reset() {
 	*x = ListPropertyTermsResponse{}
-	mi := &file_engine_proto_msgTypes[236]
+	mi := &file_engine_proto_msgTypes[232]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16214,7 +15984,7 @@ func (x *ListPropertyTermsResponse) String() string {
 func (*ListPropertyTermsResponse) ProtoMessage() {}
 
 func (x *ListPropertyTermsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[236]
+	mi := &file_engine_proto_msgTypes[232]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16227,7 +15997,7 @@ func (x *ListPropertyTermsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPropertyTermsResponse.ProtoReflect.Descriptor instead.
 func (*ListPropertyTermsResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{236}
+	return file_engine_proto_rawDescGZIP(), []int{232}
 }
 
 func (x *ListPropertyTermsResponse) GetTerms() []*PropertyTerm {
@@ -16250,7 +16020,7 @@ type CreatePropertyTermRequest struct {
 
 func (x *CreatePropertyTermRequest) Reset() {
 	*x = CreatePropertyTermRequest{}
-	mi := &file_engine_proto_msgTypes[237]
+	mi := &file_engine_proto_msgTypes[233]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16262,7 +16032,7 @@ func (x *CreatePropertyTermRequest) String() string {
 func (*CreatePropertyTermRequest) ProtoMessage() {}
 
 func (x *CreatePropertyTermRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[237]
+	mi := &file_engine_proto_msgTypes[233]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16275,7 +16045,7 @@ func (x *CreatePropertyTermRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePropertyTermRequest.ProtoReflect.Descriptor instead.
 func (*CreatePropertyTermRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{237}
+	return file_engine_proto_rawDescGZIP(), []int{233}
 }
 
 func (x *CreatePropertyTermRequest) GetProjectDir() string {
@@ -16322,7 +16092,7 @@ type CreatePropertyTermResponse struct {
 
 func (x *CreatePropertyTermResponse) Reset() {
 	*x = CreatePropertyTermResponse{}
-	mi := &file_engine_proto_msgTypes[238]
+	mi := &file_engine_proto_msgTypes[234]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16334,7 +16104,7 @@ func (x *CreatePropertyTermResponse) String() string {
 func (*CreatePropertyTermResponse) ProtoMessage() {}
 
 func (x *CreatePropertyTermResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[238]
+	mi := &file_engine_proto_msgTypes[234]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16347,7 +16117,7 @@ func (x *CreatePropertyTermResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreatePropertyTermResponse.ProtoReflect.Descriptor instead.
 func (*CreatePropertyTermResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{238}
+	return file_engine_proto_rawDescGZIP(), []int{234}
 }
 
 func (x *CreatePropertyTermResponse) GetTerm() *PropertyTerm {
@@ -16370,7 +16140,7 @@ type UpdatePropertyTermRequest struct {
 
 func (x *UpdatePropertyTermRequest) Reset() {
 	*x = UpdatePropertyTermRequest{}
-	mi := &file_engine_proto_msgTypes[239]
+	mi := &file_engine_proto_msgTypes[235]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16382,7 +16152,7 @@ func (x *UpdatePropertyTermRequest) String() string {
 func (*UpdatePropertyTermRequest) ProtoMessage() {}
 
 func (x *UpdatePropertyTermRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[239]
+	mi := &file_engine_proto_msgTypes[235]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16395,7 +16165,7 @@ func (x *UpdatePropertyTermRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePropertyTermRequest.ProtoReflect.Descriptor instead.
 func (*UpdatePropertyTermRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{239}
+	return file_engine_proto_rawDescGZIP(), []int{235}
 }
 
 func (x *UpdatePropertyTermRequest) GetProjectDir() string {
@@ -16442,7 +16212,7 @@ type UpdatePropertyTermResponse struct {
 
 func (x *UpdatePropertyTermResponse) Reset() {
 	*x = UpdatePropertyTermResponse{}
-	mi := &file_engine_proto_msgTypes[240]
+	mi := &file_engine_proto_msgTypes[236]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16454,7 +16224,7 @@ func (x *UpdatePropertyTermResponse) String() string {
 func (*UpdatePropertyTermResponse) ProtoMessage() {}
 
 func (x *UpdatePropertyTermResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[240]
+	mi := &file_engine_proto_msgTypes[236]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16467,7 +16237,7 @@ func (x *UpdatePropertyTermResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePropertyTermResponse.ProtoReflect.Descriptor instead.
 func (*UpdatePropertyTermResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{240}
+	return file_engine_proto_rawDescGZIP(), []int{236}
 }
 
 func (x *UpdatePropertyTermResponse) GetTerm() *PropertyTerm {
@@ -16488,7 +16258,7 @@ type DeletePropertyTermRequest struct {
 
 func (x *DeletePropertyTermRequest) Reset() {
 	*x = DeletePropertyTermRequest{}
-	mi := &file_engine_proto_msgTypes[241]
+	mi := &file_engine_proto_msgTypes[237]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16500,7 +16270,7 @@ func (x *DeletePropertyTermRequest) String() string {
 func (*DeletePropertyTermRequest) ProtoMessage() {}
 
 func (x *DeletePropertyTermRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[241]
+	mi := &file_engine_proto_msgTypes[237]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16513,7 +16283,7 @@ func (x *DeletePropertyTermRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePropertyTermRequest.ProtoReflect.Descriptor instead.
 func (*DeletePropertyTermRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{241}
+	return file_engine_proto_rawDescGZIP(), []int{237}
 }
 
 func (x *DeletePropertyTermRequest) GetProjectDir() string {
@@ -16545,7 +16315,7 @@ type DeletePropertyTermResponse struct {
 
 func (x *DeletePropertyTermResponse) Reset() {
 	*x = DeletePropertyTermResponse{}
-	mi := &file_engine_proto_msgTypes[242]
+	mi := &file_engine_proto_msgTypes[238]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16557,7 +16327,7 @@ func (x *DeletePropertyTermResponse) String() string {
 func (*DeletePropertyTermResponse) ProtoMessage() {}
 
 func (x *DeletePropertyTermResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[242]
+	mi := &file_engine_proto_msgTypes[238]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16570,7 +16340,7 @@ func (x *DeletePropertyTermResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletePropertyTermResponse.ProtoReflect.Descriptor instead.
 func (*DeletePropertyTermResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{242}
+	return file_engine_proto_rawDescGZIP(), []int{238}
 }
 
 // NameValuePartInput is one ordered segment when inserting a NameValue.
@@ -16584,7 +16354,7 @@ type NameValuePartInput struct {
 
 func (x *NameValuePartInput) Reset() {
 	*x = NameValuePartInput{}
-	mi := &file_engine_proto_msgTypes[243]
+	mi := &file_engine_proto_msgTypes[239]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16596,7 +16366,7 @@ func (x *NameValuePartInput) String() string {
 func (*NameValuePartInput) ProtoMessage() {}
 
 func (x *NameValuePartInput) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[243]
+	mi := &file_engine_proto_msgTypes[239]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16609,7 +16379,7 @@ func (x *NameValuePartInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NameValuePartInput.ProtoReflect.Descriptor instead.
 func (*NameValuePartInput) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{243}
+	return file_engine_proto_rawDescGZIP(), []int{239}
 }
 
 func (x *NameValuePartInput) GetValue() string {
@@ -16637,7 +16407,7 @@ type NameValueInput struct {
 
 func (x *NameValueInput) Reset() {
 	*x = NameValueInput{}
-	mi := &file_engine_proto_msgTypes[244]
+	mi := &file_engine_proto_msgTypes[240]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16649,7 +16419,7 @@ func (x *NameValueInput) String() string {
 func (*NameValueInput) ProtoMessage() {}
 
 func (x *NameValueInput) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[244]
+	mi := &file_engine_proto_msgTypes[240]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16662,7 +16432,7 @@ func (x *NameValueInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NameValueInput.ProtoReflect.Descriptor instead.
 func (*NameValueInput) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{244}
+	return file_engine_proto_rawDescGZIP(), []int{240}
 }
 
 func (x *NameValueInput) GetForm() string {
@@ -16693,7 +16463,7 @@ type DepictionValueInput struct {
 
 func (x *DepictionValueInput) Reset() {
 	*x = DepictionValueInput{}
-	mi := &file_engine_proto_msgTypes[245]
+	mi := &file_engine_proto_msgTypes[241]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16705,7 +16475,7 @@ func (x *DepictionValueInput) String() string {
 func (*DepictionValueInput) ProtoMessage() {}
 
 func (x *DepictionValueInput) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[245]
+	mi := &file_engine_proto_msgTypes[241]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16718,7 +16488,7 @@ func (x *DepictionValueInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DepictionValueInput.ProtoReflect.Descriptor instead.
 func (*DepictionValueInput) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{245}
+	return file_engine_proto_rawDescGZIP(), []int{241}
 }
 
 func (x *DepictionValueInput) GetRegionJson() string {
@@ -16749,7 +16519,7 @@ type DepictionValue struct {
 
 func (x *DepictionValue) Reset() {
 	*x = DepictionValue{}
-	mi := &file_engine_proto_msgTypes[246]
+	mi := &file_engine_proto_msgTypes[242]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16761,7 +16531,7 @@ func (x *DepictionValue) String() string {
 func (*DepictionValue) ProtoMessage() {}
 
 func (x *DepictionValue) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[246]
+	mi := &file_engine_proto_msgTypes[242]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16774,7 +16544,7 @@ func (x *DepictionValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DepictionValue.ProtoReflect.Descriptor instead.
 func (*DepictionValue) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{246}
+	return file_engine_proto_rawDescGZIP(), []int{242}
 }
 
 func (x *DepictionValue) GetRegionJson() string {
@@ -16808,7 +16578,7 @@ type Citation struct {
 
 func (x *Citation) Reset() {
 	*x = Citation{}
-	mi := &file_engine_proto_msgTypes[247]
+	mi := &file_engine_proto_msgTypes[243]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16820,7 +16590,7 @@ func (x *Citation) String() string {
 func (*Citation) ProtoMessage() {}
 
 func (x *Citation) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[247]
+	mi := &file_engine_proto_msgTypes[243]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16833,7 +16603,7 @@ func (x *Citation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Citation.ProtoReflect.Descriptor instead.
 func (*Citation) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{247}
+	return file_engine_proto_rawDescGZIP(), []int{243}
 }
 
 func (x *Citation) GetId() string {
@@ -16926,7 +16696,7 @@ type Observation struct {
 
 func (x *Observation) Reset() {
 	*x = Observation{}
-	mi := &file_engine_proto_msgTypes[248]
+	mi := &file_engine_proto_msgTypes[244]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16938,7 +16708,7 @@ func (x *Observation) String() string {
 func (*Observation) ProtoMessage() {}
 
 func (x *Observation) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[248]
+	mi := &file_engine_proto_msgTypes[244]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16951,7 +16721,7 @@ func (x *Observation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Observation.ProtoReflect.Descriptor instead.
 func (*Observation) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{248}
+	return file_engine_proto_rawDescGZIP(), []int{244}
 }
 
 func (x *Observation) GetId() string {
@@ -17124,7 +16894,7 @@ type ObservationDraft struct {
 
 func (x *ObservationDraft) Reset() {
 	*x = ObservationDraft{}
-	mi := &file_engine_proto_msgTypes[249]
+	mi := &file_engine_proto_msgTypes[245]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17136,7 +16906,7 @@ func (x *ObservationDraft) String() string {
 func (*ObservationDraft) ProtoMessage() {}
 
 func (x *ObservationDraft) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[249]
+	mi := &file_engine_proto_msgTypes[245]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17149,7 +16919,7 @@ func (x *ObservationDraft) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ObservationDraft.ProtoReflect.Descriptor instead.
 func (*ObservationDraft) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{249}
+	return file_engine_proto_rawDescGZIP(), []int{245}
 }
 
 func (x *ObservationDraft) GetSubjectId() string {
@@ -17261,7 +17031,7 @@ type CreateCitationWithObservationsRequest struct {
 
 func (x *CreateCitationWithObservationsRequest) Reset() {
 	*x = CreateCitationWithObservationsRequest{}
-	mi := &file_engine_proto_msgTypes[250]
+	mi := &file_engine_proto_msgTypes[246]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17273,7 +17043,7 @@ func (x *CreateCitationWithObservationsRequest) String() string {
 func (*CreateCitationWithObservationsRequest) ProtoMessage() {}
 
 func (x *CreateCitationWithObservationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[250]
+	mi := &file_engine_proto_msgTypes[246]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17286,7 +17056,7 @@ func (x *CreateCitationWithObservationsRequest) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use CreateCitationWithObservationsRequest.ProtoReflect.Descriptor instead.
 func (*CreateCitationWithObservationsRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{250}
+	return file_engine_proto_rawDescGZIP(), []int{246}
 }
 
 func (x *CreateCitationWithObservationsRequest) GetProjectDir() string {
@@ -17370,7 +17140,7 @@ type CreateCitationWithObservationsResponse struct {
 
 func (x *CreateCitationWithObservationsResponse) Reset() {
 	*x = CreateCitationWithObservationsResponse{}
-	mi := &file_engine_proto_msgTypes[251]
+	mi := &file_engine_proto_msgTypes[247]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17382,7 +17152,7 @@ func (x *CreateCitationWithObservationsResponse) String() string {
 func (*CreateCitationWithObservationsResponse) ProtoMessage() {}
 
 func (x *CreateCitationWithObservationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[251]
+	mi := &file_engine_proto_msgTypes[247]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17395,7 +17165,7 @@ func (x *CreateCitationWithObservationsResponse) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use CreateCitationWithObservationsResponse.ProtoReflect.Descriptor instead.
 func (*CreateCitationWithObservationsResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{251}
+	return file_engine_proto_rawDescGZIP(), []int{247}
 }
 
 func (x *CreateCitationWithObservationsResponse) GetCitation() *Citation {
@@ -17431,7 +17201,7 @@ type AddObservationsToCitationRequest struct {
 
 func (x *AddObservationsToCitationRequest) Reset() {
 	*x = AddObservationsToCitationRequest{}
-	mi := &file_engine_proto_msgTypes[252]
+	mi := &file_engine_proto_msgTypes[248]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17443,7 +17213,7 @@ func (x *AddObservationsToCitationRequest) String() string {
 func (*AddObservationsToCitationRequest) ProtoMessage() {}
 
 func (x *AddObservationsToCitationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[252]
+	mi := &file_engine_proto_msgTypes[248]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17456,7 +17226,7 @@ func (x *AddObservationsToCitationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddObservationsToCitationRequest.ProtoReflect.Descriptor instead.
 func (*AddObservationsToCitationRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{252}
+	return file_engine_proto_rawDescGZIP(), []int{248}
 }
 
 func (x *AddObservationsToCitationRequest) GetProjectDir() string {
@@ -17497,7 +17267,7 @@ type AddObservationsToCitationResponse struct {
 
 func (x *AddObservationsToCitationResponse) Reset() {
 	*x = AddObservationsToCitationResponse{}
-	mi := &file_engine_proto_msgTypes[253]
+	mi := &file_engine_proto_msgTypes[249]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17509,7 +17279,7 @@ func (x *AddObservationsToCitationResponse) String() string {
 func (*AddObservationsToCitationResponse) ProtoMessage() {}
 
 func (x *AddObservationsToCitationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[253]
+	mi := &file_engine_proto_msgTypes[249]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17522,7 +17292,7 @@ func (x *AddObservationsToCitationResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use AddObservationsToCitationResponse.ProtoReflect.Descriptor instead.
 func (*AddObservationsToCitationResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{253}
+	return file_engine_proto_rawDescGZIP(), []int{249}
 }
 
 func (x *AddObservationsToCitationResponse) GetObservations() []*Observation {
@@ -17549,7 +17319,7 @@ type ListObservationsByEvidenceGraphRequest struct {
 
 func (x *ListObservationsByEvidenceGraphRequest) Reset() {
 	*x = ListObservationsByEvidenceGraphRequest{}
-	mi := &file_engine_proto_msgTypes[254]
+	mi := &file_engine_proto_msgTypes[250]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17561,7 +17331,7 @@ func (x *ListObservationsByEvidenceGraphRequest) String() string {
 func (*ListObservationsByEvidenceGraphRequest) ProtoMessage() {}
 
 func (x *ListObservationsByEvidenceGraphRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[254]
+	mi := &file_engine_proto_msgTypes[250]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17574,7 +17344,7 @@ func (x *ListObservationsByEvidenceGraphRequest) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use ListObservationsByEvidenceGraphRequest.ProtoReflect.Descriptor instead.
 func (*ListObservationsByEvidenceGraphRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{254}
+	return file_engine_proto_rawDescGZIP(), []int{250}
 }
 
 func (x *ListObservationsByEvidenceGraphRequest) GetProjectDir() string {
@@ -17600,7 +17370,7 @@ type ListObservationsByEvidenceGraphResponse struct {
 
 func (x *ListObservationsByEvidenceGraphResponse) Reset() {
 	*x = ListObservationsByEvidenceGraphResponse{}
-	mi := &file_engine_proto_msgTypes[255]
+	mi := &file_engine_proto_msgTypes[251]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17612,7 +17382,7 @@ func (x *ListObservationsByEvidenceGraphResponse) String() string {
 func (*ListObservationsByEvidenceGraphResponse) ProtoMessage() {}
 
 func (x *ListObservationsByEvidenceGraphResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[255]
+	mi := &file_engine_proto_msgTypes[251]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17625,7 +17395,7 @@ func (x *ListObservationsByEvidenceGraphResponse) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use ListObservationsByEvidenceGraphResponse.ProtoReflect.Descriptor instead.
 func (*ListObservationsByEvidenceGraphResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{255}
+	return file_engine_proto_rawDescGZIP(), []int{251}
 }
 
 func (x *ListObservationsByEvidenceGraphResponse) GetObservations() []*Observation {
@@ -17645,7 +17415,7 @@ type CitationCountsByEvidenceGraphRequest struct {
 
 func (x *CitationCountsByEvidenceGraphRequest) Reset() {
 	*x = CitationCountsByEvidenceGraphRequest{}
-	mi := &file_engine_proto_msgTypes[256]
+	mi := &file_engine_proto_msgTypes[252]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17657,7 +17427,7 @@ func (x *CitationCountsByEvidenceGraphRequest) String() string {
 func (*CitationCountsByEvidenceGraphRequest) ProtoMessage() {}
 
 func (x *CitationCountsByEvidenceGraphRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[256]
+	mi := &file_engine_proto_msgTypes[252]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17670,7 +17440,7 @@ func (x *CitationCountsByEvidenceGraphRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use CitationCountsByEvidenceGraphRequest.ProtoReflect.Descriptor instead.
 func (*CitationCountsByEvidenceGraphRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{256}
+	return file_engine_proto_rawDescGZIP(), []int{252}
 }
 
 func (x *CitationCountsByEvidenceGraphRequest) GetProjectDir() string {
@@ -17697,7 +17467,7 @@ type ArtifactCitationCount struct {
 
 func (x *ArtifactCitationCount) Reset() {
 	*x = ArtifactCitationCount{}
-	mi := &file_engine_proto_msgTypes[257]
+	mi := &file_engine_proto_msgTypes[253]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17709,7 +17479,7 @@ func (x *ArtifactCitationCount) String() string {
 func (*ArtifactCitationCount) ProtoMessage() {}
 
 func (x *ArtifactCitationCount) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[257]
+	mi := &file_engine_proto_msgTypes[253]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17722,7 +17492,7 @@ func (x *ArtifactCitationCount) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArtifactCitationCount.ProtoReflect.Descriptor instead.
 func (*ArtifactCitationCount) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{257}
+	return file_engine_proto_rawDescGZIP(), []int{253}
 }
 
 func (x *ArtifactCitationCount) GetArtifactId() string {
@@ -17748,7 +17518,7 @@ type CitationCountsByEvidenceGraphResponse struct {
 
 func (x *CitationCountsByEvidenceGraphResponse) Reset() {
 	*x = CitationCountsByEvidenceGraphResponse{}
-	mi := &file_engine_proto_msgTypes[258]
+	mi := &file_engine_proto_msgTypes[254]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17760,7 +17530,7 @@ func (x *CitationCountsByEvidenceGraphResponse) String() string {
 func (*CitationCountsByEvidenceGraphResponse) ProtoMessage() {}
 
 func (x *CitationCountsByEvidenceGraphResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[258]
+	mi := &file_engine_proto_msgTypes[254]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17773,7 +17543,7 @@ func (x *CitationCountsByEvidenceGraphResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use CitationCountsByEvidenceGraphResponse.ProtoReflect.Descriptor instead.
 func (*CitationCountsByEvidenceGraphResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{258}
+	return file_engine_proto_rawDescGZIP(), []int{254}
 }
 
 func (x *CitationCountsByEvidenceGraphResponse) GetCounts() []*ArtifactCitationCount {
@@ -17795,7 +17565,7 @@ type ListedCitation struct {
 
 func (x *ListedCitation) Reset() {
 	*x = ListedCitation{}
-	mi := &file_engine_proto_msgTypes[259]
+	mi := &file_engine_proto_msgTypes[255]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17807,7 +17577,7 @@ func (x *ListedCitation) String() string {
 func (*ListedCitation) ProtoMessage() {}
 
 func (x *ListedCitation) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[259]
+	mi := &file_engine_proto_msgTypes[255]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17820,7 +17590,7 @@ func (x *ListedCitation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListedCitation.ProtoReflect.Descriptor instead.
 func (*ListedCitation) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{259}
+	return file_engine_proto_rawDescGZIP(), []int{255}
 }
 
 func (x *ListedCitation) GetCitation() *Citation {
@@ -17855,7 +17625,7 @@ type ListCitationsByArtifactRequest struct {
 
 func (x *ListCitationsByArtifactRequest) Reset() {
 	*x = ListCitationsByArtifactRequest{}
-	mi := &file_engine_proto_msgTypes[260]
+	mi := &file_engine_proto_msgTypes[256]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17867,7 +17637,7 @@ func (x *ListCitationsByArtifactRequest) String() string {
 func (*ListCitationsByArtifactRequest) ProtoMessage() {}
 
 func (x *ListCitationsByArtifactRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[260]
+	mi := &file_engine_proto_msgTypes[256]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17880,7 +17650,7 @@ func (x *ListCitationsByArtifactRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCitationsByArtifactRequest.ProtoReflect.Descriptor instead.
 func (*ListCitationsByArtifactRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{260}
+	return file_engine_proto_rawDescGZIP(), []int{256}
 }
 
 func (x *ListCitationsByArtifactRequest) GetProjectDir() string {
@@ -17913,7 +17683,7 @@ type ListCitationsByArtifactResponse struct {
 
 func (x *ListCitationsByArtifactResponse) Reset() {
 	*x = ListCitationsByArtifactResponse{}
-	mi := &file_engine_proto_msgTypes[261]
+	mi := &file_engine_proto_msgTypes[257]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17925,7 +17695,7 @@ func (x *ListCitationsByArtifactResponse) String() string {
 func (*ListCitationsByArtifactResponse) ProtoMessage() {}
 
 func (x *ListCitationsByArtifactResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[261]
+	mi := &file_engine_proto_msgTypes[257]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17938,7 +17708,7 @@ func (x *ListCitationsByArtifactResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCitationsByArtifactResponse.ProtoReflect.Descriptor instead.
 func (*ListCitationsByArtifactResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{261}
+	return file_engine_proto_rawDescGZIP(), []int{257}
 }
 
 func (x *ListCitationsByArtifactResponse) GetCitations() []*ListedCitation {
@@ -17959,7 +17729,7 @@ type GetCitationRequest struct {
 
 func (x *GetCitationRequest) Reset() {
 	*x = GetCitationRequest{}
-	mi := &file_engine_proto_msgTypes[262]
+	mi := &file_engine_proto_msgTypes[258]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -17971,7 +17741,7 @@ func (x *GetCitationRequest) String() string {
 func (*GetCitationRequest) ProtoMessage() {}
 
 func (x *GetCitationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[262]
+	mi := &file_engine_proto_msgTypes[258]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -17984,7 +17754,7 @@ func (x *GetCitationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCitationRequest.ProtoReflect.Descriptor instead.
 func (*GetCitationRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{262}
+	return file_engine_proto_rawDescGZIP(), []int{258}
 }
 
 func (x *GetCitationRequest) GetProjectDir() string {
@@ -18019,7 +17789,7 @@ type GetCitationResponse struct {
 
 func (x *GetCitationResponse) Reset() {
 	*x = GetCitationResponse{}
-	mi := &file_engine_proto_msgTypes[263]
+	mi := &file_engine_proto_msgTypes[259]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18031,7 +17801,7 @@ func (x *GetCitationResponse) String() string {
 func (*GetCitationResponse) ProtoMessage() {}
 
 func (x *GetCitationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[263]
+	mi := &file_engine_proto_msgTypes[259]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18044,7 +17814,7 @@ func (x *GetCitationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCitationResponse.ProtoReflect.Descriptor instead.
 func (*GetCitationResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{263}
+	return file_engine_proto_rawDescGZIP(), []int{259}
 }
 
 func (x *GetCitationResponse) GetCitation() *Citation {
@@ -18091,7 +17861,7 @@ type CreateCitedBridgeRequest struct {
 
 func (x *CreateCitedBridgeRequest) Reset() {
 	*x = CreateCitedBridgeRequest{}
-	mi := &file_engine_proto_msgTypes[264]
+	mi := &file_engine_proto_msgTypes[260]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18103,7 +17873,7 @@ func (x *CreateCitedBridgeRequest) String() string {
 func (*CreateCitedBridgeRequest) ProtoMessage() {}
 
 func (x *CreateCitedBridgeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[264]
+	mi := &file_engine_proto_msgTypes[260]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18116,7 +17886,7 @@ func (x *CreateCitedBridgeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCitedBridgeRequest.ProtoReflect.Descriptor instead.
 func (*CreateCitedBridgeRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{264}
+	return file_engine_proto_rawDescGZIP(), []int{260}
 }
 
 func (x *CreateCitedBridgeRequest) GetProjectDir() string {
@@ -18236,7 +18006,7 @@ type CreateCitedBridgeResponse struct {
 
 func (x *CreateCitedBridgeResponse) Reset() {
 	*x = CreateCitedBridgeResponse{}
-	mi := &file_engine_proto_msgTypes[265]
+	mi := &file_engine_proto_msgTypes[261]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18248,7 +18018,7 @@ func (x *CreateCitedBridgeResponse) String() string {
 func (*CreateCitedBridgeResponse) ProtoMessage() {}
 
 func (x *CreateCitedBridgeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[265]
+	mi := &file_engine_proto_msgTypes[261]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18261,7 +18031,7 @@ func (x *CreateCitedBridgeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCitedBridgeResponse.ProtoReflect.Descriptor instead.
 func (*CreateCitedBridgeResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{265}
+	return file_engine_proto_rawDescGZIP(), []int{261}
 }
 
 func (x *CreateCitedBridgeResponse) GetSubject() *Subject {
@@ -18308,7 +18078,7 @@ type UpdateCitationRequest struct {
 
 func (x *UpdateCitationRequest) Reset() {
 	*x = UpdateCitationRequest{}
-	mi := &file_engine_proto_msgTypes[266]
+	mi := &file_engine_proto_msgTypes[262]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18320,7 +18090,7 @@ func (x *UpdateCitationRequest) String() string {
 func (*UpdateCitationRequest) ProtoMessage() {}
 
 func (x *UpdateCitationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[266]
+	mi := &file_engine_proto_msgTypes[262]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18333,7 +18103,7 @@ func (x *UpdateCitationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCitationRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCitationRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{266}
+	return file_engine_proto_rawDescGZIP(), []int{262}
 }
 
 func (x *UpdateCitationRequest) GetProjectDir() string {
@@ -18402,7 +18172,7 @@ type UpdateCitationResponse struct {
 
 func (x *UpdateCitationResponse) Reset() {
 	*x = UpdateCitationResponse{}
-	mi := &file_engine_proto_msgTypes[267]
+	mi := &file_engine_proto_msgTypes[263]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18414,7 +18184,7 @@ func (x *UpdateCitationResponse) String() string {
 func (*UpdateCitationResponse) ProtoMessage() {}
 
 func (x *UpdateCitationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[267]
+	mi := &file_engine_proto_msgTypes[263]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18427,7 +18197,7 @@ func (x *UpdateCitationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCitationResponse.ProtoReflect.Descriptor instead.
 func (*UpdateCitationResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{267}
+	return file_engine_proto_rawDescGZIP(), []int{263}
 }
 
 func (x *UpdateCitationResponse) GetCitation() *Citation {
@@ -18458,7 +18228,7 @@ type UpdateObservationRequest struct {
 
 func (x *UpdateObservationRequest) Reset() {
 	*x = UpdateObservationRequest{}
-	mi := &file_engine_proto_msgTypes[268]
+	mi := &file_engine_proto_msgTypes[264]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18470,7 +18240,7 @@ func (x *UpdateObservationRequest) String() string {
 func (*UpdateObservationRequest) ProtoMessage() {}
 
 func (x *UpdateObservationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[268]
+	mi := &file_engine_proto_msgTypes[264]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18483,7 +18253,7 @@ func (x *UpdateObservationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateObservationRequest.ProtoReflect.Descriptor instead.
 func (*UpdateObservationRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{268}
+	return file_engine_proto_rawDescGZIP(), []int{264}
 }
 
 func (x *UpdateObservationRequest) GetProjectDir() string {
@@ -18524,7 +18294,7 @@ type UpdateObservationResponse struct {
 
 func (x *UpdateObservationResponse) Reset() {
 	*x = UpdateObservationResponse{}
-	mi := &file_engine_proto_msgTypes[269]
+	mi := &file_engine_proto_msgTypes[265]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18536,7 +18306,7 @@ func (x *UpdateObservationResponse) String() string {
 func (*UpdateObservationResponse) ProtoMessage() {}
 
 func (x *UpdateObservationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[269]
+	mi := &file_engine_proto_msgTypes[265]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18549,7 +18319,7 @@ func (x *UpdateObservationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateObservationResponse.ProtoReflect.Descriptor instead.
 func (*UpdateObservationResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{269}
+	return file_engine_proto_rawDescGZIP(), []int{265}
 }
 
 func (x *UpdateObservationResponse) GetObservation() *Observation {
@@ -18577,7 +18347,7 @@ type DeleteObservationRequest struct {
 
 func (x *DeleteObservationRequest) Reset() {
 	*x = DeleteObservationRequest{}
-	mi := &file_engine_proto_msgTypes[270]
+	mi := &file_engine_proto_msgTypes[266]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18589,7 +18359,7 @@ func (x *DeleteObservationRequest) String() string {
 func (*DeleteObservationRequest) ProtoMessage() {}
 
 func (x *DeleteObservationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[270]
+	mi := &file_engine_proto_msgTypes[266]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18602,7 +18372,7 @@ func (x *DeleteObservationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteObservationRequest.ProtoReflect.Descriptor instead.
 func (*DeleteObservationRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{270}
+	return file_engine_proto_rawDescGZIP(), []int{266}
 }
 
 func (x *DeleteObservationRequest) GetProjectDir() string {
@@ -18635,7 +18405,7 @@ type DeleteObservationResponse struct {
 
 func (x *DeleteObservationResponse) Reset() {
 	*x = DeleteObservationResponse{}
-	mi := &file_engine_proto_msgTypes[271]
+	mi := &file_engine_proto_msgTypes[267]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18647,7 +18417,7 @@ func (x *DeleteObservationResponse) String() string {
 func (*DeleteObservationResponse) ProtoMessage() {}
 
 func (x *DeleteObservationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[271]
+	mi := &file_engine_proto_msgTypes[267]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18660,7 +18430,7 @@ func (x *DeleteObservationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteObservationResponse.ProtoReflect.Descriptor instead.
 func (*DeleteObservationResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{271}
+	return file_engine_proto_rawDescGZIP(), []int{267}
 }
 
 func (x *DeleteObservationResponse) GetEffects() *WriteEffects {
@@ -18679,7 +18449,7 @@ type GetPropertiesWorkspaceRequest struct {
 
 func (x *GetPropertiesWorkspaceRequest) Reset() {
 	*x = GetPropertiesWorkspaceRequest{}
-	mi := &file_engine_proto_msgTypes[272]
+	mi := &file_engine_proto_msgTypes[268]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18691,7 +18461,7 @@ func (x *GetPropertiesWorkspaceRequest) String() string {
 func (*GetPropertiesWorkspaceRequest) ProtoMessage() {}
 
 func (x *GetPropertiesWorkspaceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[272]
+	mi := &file_engine_proto_msgTypes[268]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18704,7 +18474,7 @@ func (x *GetPropertiesWorkspaceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPropertiesWorkspaceRequest.ProtoReflect.Descriptor instead.
 func (*GetPropertiesWorkspaceRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{272}
+	return file_engine_proto_rawDescGZIP(), []int{268}
 }
 
 func (x *GetPropertiesWorkspaceRequest) GetProjectDir() string {
@@ -18725,7 +18495,7 @@ type SubjectTypePropertiesGroup struct {
 
 func (x *SubjectTypePropertiesGroup) Reset() {
 	*x = SubjectTypePropertiesGroup{}
-	mi := &file_engine_proto_msgTypes[273]
+	mi := &file_engine_proto_msgTypes[269]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18737,7 +18507,7 @@ func (x *SubjectTypePropertiesGroup) String() string {
 func (*SubjectTypePropertiesGroup) ProtoMessage() {}
 
 func (x *SubjectTypePropertiesGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[273]
+	mi := &file_engine_proto_msgTypes[269]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18750,7 +18520,7 @@ func (x *SubjectTypePropertiesGroup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubjectTypePropertiesGroup.ProtoReflect.Descriptor instead.
 func (*SubjectTypePropertiesGroup) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{273}
+	return file_engine_proto_rawDescGZIP(), []int{269}
 }
 
 func (x *SubjectTypePropertiesGroup) GetSubjectTypeId() string {
@@ -18785,7 +18555,7 @@ type GetPropertiesWorkspaceResponse struct {
 
 func (x *GetPropertiesWorkspaceResponse) Reset() {
 	*x = GetPropertiesWorkspaceResponse{}
-	mi := &file_engine_proto_msgTypes[274]
+	mi := &file_engine_proto_msgTypes[270]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18797,7 +18567,7 @@ func (x *GetPropertiesWorkspaceResponse) String() string {
 func (*GetPropertiesWorkspaceResponse) ProtoMessage() {}
 
 func (x *GetPropertiesWorkspaceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[274]
+	mi := &file_engine_proto_msgTypes[270]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18810,7 +18580,7 @@ func (x *GetPropertiesWorkspaceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPropertiesWorkspaceResponse.ProtoReflect.Descriptor instead.
 func (*GetPropertiesWorkspaceResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{274}
+	return file_engine_proto_rawDescGZIP(), []int{270}
 }
 
 func (x *GetPropertiesWorkspaceResponse) GetProperties() []*Property {
@@ -18848,7 +18618,7 @@ type EvidenceGraphProgress struct {
 
 func (x *EvidenceGraphProgress) Reset() {
 	*x = EvidenceGraphProgress{}
-	mi := &file_engine_proto_msgTypes[275]
+	mi := &file_engine_proto_msgTypes[271]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18860,7 +18630,7 @@ func (x *EvidenceGraphProgress) String() string {
 func (*EvidenceGraphProgress) ProtoMessage() {}
 
 func (x *EvidenceGraphProgress) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[275]
+	mi := &file_engine_proto_msgTypes[271]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18873,7 +18643,7 @@ func (x *EvidenceGraphProgress) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EvidenceGraphProgress.ProtoReflect.Descriptor instead.
 func (*EvidenceGraphProgress) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{275}
+	return file_engine_proto_rawDescGZIP(), []int{271}
 }
 
 func (x *EvidenceGraphProgress) GetSourceId() string {
@@ -18920,7 +18690,7 @@ type ListEvidenceGraphProgressRequest struct {
 
 func (x *ListEvidenceGraphProgressRequest) Reset() {
 	*x = ListEvidenceGraphProgressRequest{}
-	mi := &file_engine_proto_msgTypes[276]
+	mi := &file_engine_proto_msgTypes[272]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18932,7 +18702,7 @@ func (x *ListEvidenceGraphProgressRequest) String() string {
 func (*ListEvidenceGraphProgressRequest) ProtoMessage() {}
 
 func (x *ListEvidenceGraphProgressRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[276]
+	mi := &file_engine_proto_msgTypes[272]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18945,7 +18715,7 @@ func (x *ListEvidenceGraphProgressRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListEvidenceGraphProgressRequest.ProtoReflect.Descriptor instead.
 func (*ListEvidenceGraphProgressRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{276}
+	return file_engine_proto_rawDescGZIP(), []int{272}
 }
 
 func (x *ListEvidenceGraphProgressRequest) GetProjectDir() string {
@@ -18964,7 +18734,7 @@ type ListEvidenceGraphProgressResponse struct {
 
 func (x *ListEvidenceGraphProgressResponse) Reset() {
 	*x = ListEvidenceGraphProgressResponse{}
-	mi := &file_engine_proto_msgTypes[277]
+	mi := &file_engine_proto_msgTypes[273]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -18976,7 +18746,7 @@ func (x *ListEvidenceGraphProgressResponse) String() string {
 func (*ListEvidenceGraphProgressResponse) ProtoMessage() {}
 
 func (x *ListEvidenceGraphProgressResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[277]
+	mi := &file_engine_proto_msgTypes[273]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -18989,7 +18759,7 @@ func (x *ListEvidenceGraphProgressResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ListEvidenceGraphProgressResponse.ProtoReflect.Descriptor instead.
 func (*ListEvidenceGraphProgressResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{277}
+	return file_engine_proto_rawDescGZIP(), []int{273}
 }
 
 func (x *ListEvidenceGraphProgressResponse) GetRows() []*EvidenceGraphProgress {
@@ -19009,7 +18779,7 @@ type GetEvidenceGraphProgressRequest struct {
 
 func (x *GetEvidenceGraphProgressRequest) Reset() {
 	*x = GetEvidenceGraphProgressRequest{}
-	mi := &file_engine_proto_msgTypes[278]
+	mi := &file_engine_proto_msgTypes[274]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19021,7 +18791,7 @@ func (x *GetEvidenceGraphProgressRequest) String() string {
 func (*GetEvidenceGraphProgressRequest) ProtoMessage() {}
 
 func (x *GetEvidenceGraphProgressRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[278]
+	mi := &file_engine_proto_msgTypes[274]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19034,7 +18804,7 @@ func (x *GetEvidenceGraphProgressRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEvidenceGraphProgressRequest.ProtoReflect.Descriptor instead.
 func (*GetEvidenceGraphProgressRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{278}
+	return file_engine_proto_rawDescGZIP(), []int{274}
 }
 
 func (x *GetEvidenceGraphProgressRequest) GetProjectDir() string {
@@ -19060,7 +18830,7 @@ type GetEvidenceGraphProgressResponse struct {
 
 func (x *GetEvidenceGraphProgressResponse) Reset() {
 	*x = GetEvidenceGraphProgressResponse{}
-	mi := &file_engine_proto_msgTypes[279]
+	mi := &file_engine_proto_msgTypes[275]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19072,7 +18842,7 @@ func (x *GetEvidenceGraphProgressResponse) String() string {
 func (*GetEvidenceGraphProgressResponse) ProtoMessage() {}
 
 func (x *GetEvidenceGraphProgressResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[279]
+	mi := &file_engine_proto_msgTypes[275]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19085,7 +18855,7 @@ func (x *GetEvidenceGraphProgressResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEvidenceGraphProgressResponse.ProtoReflect.Descriptor instead.
 func (*GetEvidenceGraphProgressResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{279}
+	return file_engine_proto_rawDescGZIP(), []int{275}
 }
 
 func (x *GetEvidenceGraphProgressResponse) GetProgress() *EvidenceGraphProgress {
@@ -19106,7 +18876,7 @@ type GetDeleteImpactRequest struct {
 
 func (x *GetDeleteImpactRequest) Reset() {
 	*x = GetDeleteImpactRequest{}
-	mi := &file_engine_proto_msgTypes[280]
+	mi := &file_engine_proto_msgTypes[276]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19118,7 +18888,7 @@ func (x *GetDeleteImpactRequest) String() string {
 func (*GetDeleteImpactRequest) ProtoMessage() {}
 
 func (x *GetDeleteImpactRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[280]
+	mi := &file_engine_proto_msgTypes[276]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19131,7 +18901,7 @@ func (x *GetDeleteImpactRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDeleteImpactRequest.ProtoReflect.Descriptor instead.
 func (*GetDeleteImpactRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{280}
+	return file_engine_proto_rawDescGZIP(), []int{276}
 }
 
 func (x *GetDeleteImpactRequest) GetProjectDir() string {
@@ -19168,7 +18938,7 @@ type GetDeleteImpactResponse struct {
 
 func (x *GetDeleteImpactResponse) Reset() {
 	*x = GetDeleteImpactResponse{}
-	mi := &file_engine_proto_msgTypes[281]
+	mi := &file_engine_proto_msgTypes[277]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19180,7 +18950,7 @@ func (x *GetDeleteImpactResponse) String() string {
 func (*GetDeleteImpactResponse) ProtoMessage() {}
 
 func (x *GetDeleteImpactResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[281]
+	mi := &file_engine_proto_msgTypes[277]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19193,7 +18963,7 @@ func (x *GetDeleteImpactResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDeleteImpactResponse.ProtoReflect.Descriptor instead.
 func (*GetDeleteImpactResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{281}
+	return file_engine_proto_rawDescGZIP(), []int{277}
 }
 
 func (x *GetDeleteImpactResponse) GetAllowed() bool {
@@ -19236,7 +19006,7 @@ type DeleteImpactGroup struct {
 
 func (x *DeleteImpactGroup) Reset() {
 	*x = DeleteImpactGroup{}
-	mi := &file_engine_proto_msgTypes[282]
+	mi := &file_engine_proto_msgTypes[278]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19248,7 +19018,7 @@ func (x *DeleteImpactGroup) String() string {
 func (*DeleteImpactGroup) ProtoMessage() {}
 
 func (x *DeleteImpactGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[282]
+	mi := &file_engine_proto_msgTypes[278]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19261,7 +19031,7 @@ func (x *DeleteImpactGroup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteImpactGroup.ProtoReflect.Descriptor instead.
 func (*DeleteImpactGroup) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{282}
+	return file_engine_proto_rawDescGZIP(), []int{278}
 }
 
 func (x *DeleteImpactGroup) GetVia() string {
@@ -19304,7 +19074,7 @@ type DeleteImpactListed struct {
 
 func (x *DeleteImpactListed) Reset() {
 	*x = DeleteImpactListed{}
-	mi := &file_engine_proto_msgTypes[283]
+	mi := &file_engine_proto_msgTypes[279]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19316,7 +19086,7 @@ func (x *DeleteImpactListed) String() string {
 func (*DeleteImpactListed) ProtoMessage() {}
 
 func (x *DeleteImpactListed) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[283]
+	mi := &file_engine_proto_msgTypes[279]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19329,7 +19099,7 @@ func (x *DeleteImpactListed) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteImpactListed.ProtoReflect.Descriptor instead.
 func (*DeleteImpactListed) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{283}
+	return file_engine_proto_rawDescGZIP(), []int{279}
 }
 
 func (x *DeleteImpactListed) GetId() string {
@@ -19369,7 +19139,7 @@ type GetNameFormatRequest struct {
 
 func (x *GetNameFormatRequest) Reset() {
 	*x = GetNameFormatRequest{}
-	mi := &file_engine_proto_msgTypes[284]
+	mi := &file_engine_proto_msgTypes[280]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19381,7 +19151,7 @@ func (x *GetNameFormatRequest) String() string {
 func (*GetNameFormatRequest) ProtoMessage() {}
 
 func (x *GetNameFormatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[284]
+	mi := &file_engine_proto_msgTypes[280]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19394,7 +19164,7 @@ func (x *GetNameFormatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNameFormatRequest.ProtoReflect.Descriptor instead.
 func (*GetNameFormatRequest) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{284}
+	return file_engine_proto_rawDescGZIP(), []int{280}
 }
 
 func (x *GetNameFormatRequest) GetProjectDir() string {
@@ -19414,7 +19184,7 @@ type NameFormatPart struct {
 
 func (x *NameFormatPart) Reset() {
 	*x = NameFormatPart{}
-	mi := &file_engine_proto_msgTypes[285]
+	mi := &file_engine_proto_msgTypes[281]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19426,7 +19196,7 @@ func (x *NameFormatPart) String() string {
 func (*NameFormatPart) ProtoMessage() {}
 
 func (x *NameFormatPart) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[285]
+	mi := &file_engine_proto_msgTypes[281]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19439,7 +19209,7 @@ func (x *NameFormatPart) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NameFormatPart.ProtoReflect.Descriptor instead.
 func (*NameFormatPart) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{285}
+	return file_engine_proto_rawDescGZIP(), []int{281}
 }
 
 func (x *NameFormatPart) GetPartType() string {
@@ -19466,7 +19236,7 @@ type GetNameFormatResponse struct {
 
 func (x *GetNameFormatResponse) Reset() {
 	*x = GetNameFormatResponse{}
-	mi := &file_engine_proto_msgTypes[286]
+	mi := &file_engine_proto_msgTypes[282]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19478,7 +19248,7 @@ func (x *GetNameFormatResponse) String() string {
 func (*GetNameFormatResponse) ProtoMessage() {}
 
 func (x *GetNameFormatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[286]
+	mi := &file_engine_proto_msgTypes[282]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19491,7 +19261,7 @@ func (x *GetNameFormatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetNameFormatResponse.ProtoReflect.Descriptor instead.
 func (*GetNameFormatResponse) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{286}
+	return file_engine_proto_rawDescGZIP(), []int{282}
 }
 
 func (x *GetNameFormatResponse) GetNatural() []*NameFormatPart {
@@ -19521,7 +19291,7 @@ type Error struct {
 
 func (x *Error) Reset() {
 	*x = Error{}
-	mi := &file_engine_proto_msgTypes[287]
+	mi := &file_engine_proto_msgTypes[283]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -19533,7 +19303,7 @@ func (x *Error) String() string {
 func (*Error) ProtoMessage() {}
 
 func (x *Error) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[287]
+	mi := &file_engine_proto_msgTypes[283]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -19546,7 +19316,7 @@ func (x *Error) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Error.ProtoReflect.Descriptor instead.
 func (*Error) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{287}
+	return file_engine_proto_rawDescGZIP(), []int{283}
 }
 
 func (x *Error) GetCode() string {
@@ -19866,24 +19636,6 @@ const file_engine_proto_rawDesc = "" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x19\n" +
 	"\bgraph_id\x18\x03 \x01(\tR\agraphId\"\\\n" +
 	"\x1bDeleteEvidenceGraphResponse\x12=\n" +
-	"\aeffects\x18\x01 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\x98\x01\n" +
-	" LinkEvidenceGraphArtifactRequest\x12\x1f\n" +
-	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x19\n" +
-	"\bgraph_id\x18\x03 \x01(\tR\agraphId\x12\x1f\n" +
-	"\vartifact_id\x18\x04 \x01(\tR\n" +
-	"artifactId\"b\n" +
-	"!LinkEvidenceGraphArtifactResponse\x12=\n" +
-	"\aeffects\x18\x01 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\x9a\x01\n" +
-	"\"UnlinkEvidenceGraphArtifactRequest\x12\x1f\n" +
-	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x19\n" +
-	"\bgraph_id\x18\x03 \x01(\tR\agraphId\x12\x1f\n" +
-	"\vartifact_id\x18\x04 \x01(\tR\n" +
-	"artifactId\"d\n" +
-	"#UnlinkEvidenceGraphArtifactResponse\x12=\n" +
 	"\aeffects\x18\x01 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"W\n" +
 	"\x19EvidenceGraphArtifactPair\x12\x19\n" +
 	"\bgraph_id\x18\x01 \x01(\tR\agraphId\x12\x1f\n" +
@@ -21159,7 +20911,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x05Error\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x124\n" +
 	"\x04kind\x18\x02 \x01(\x0e2 .provenencia.engine.v1.ErrorKindR\x04kind\x12\x16\n" +
-	"\x06params\x18\x03 \x03(\tR\x06params*\xa5\x1d\n" +
+	"\x06params\x18\x03 \x03(\tR\x06params*\xa9\x1d\n" +
 	"\x06Method\x12\x16\n" +
 	"\x12METHOD_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vMETHOD_PING\x10\x01\x12\x16\n" +
@@ -21262,12 +21014,10 @@ const file_engine_proto_rawDesc = "" +
 	"\x1bMETHOD_LIST_EVIDENCE_GRAPHS\x10g\x12 \n" +
 	"\x1cMETHOD_CREATE_EVIDENCE_GRAPH\x10h\x12 \n" +
 	"\x1cMETHOD_UPDATE_EVIDENCE_GRAPH\x10i\x12 \n" +
-	"\x1cMETHOD_DELETE_EVIDENCE_GRAPH\x10j\x12'\n" +
-	"#METHOD_LINK_EVIDENCE_GRAPH_ARTIFACT\x10k\x12)\n" +
-	"%METHOD_UNLINK_EVIDENCE_GRAPH_ARTIFACT\x10l\x12+\n" +
+	"\x1cMETHOD_DELETE_EVIDENCE_GRAPH\x10j\x12+\n" +
 	"'METHOD_GET_EVIDENCE_GRAPH_UNLINK_IMPACT\x10m\x12%\n" +
 	"!METHOD_GET_PROMOTE_CLAIM_EVIDENCE\x10n\x12*\n" +
-	"&METHOD_REORDER_SUBJECT_TYPE_PROPERTIES\x10o\"\x04\b\x1b\x10\x1b\"\x04\bG\x10G\"\x04\bX\x10X\"\x04\b\\\x10\\\"\x04\b^\x10^\"\x04\b_\x10_*\x12METHOD_COUNT_FILES*(METHOD_UPDATE_CITATION_WITH_OBSERVATIONS*&METHOD_LIST_PROMOTE_TARGET_SUGGESTIONS*\x17METHOD_GET_EVENT_HEADER*\x17METHOD_GET_PLACE_HEADER*\x18METHOD_GET_PERSON_HEADER*\xa5\x02\n" +
+	"&METHOD_REORDER_SUBJECT_TYPE_PROPERTIES\x10o\"\x04\b\x1b\x10\x1b\"\x04\bG\x10G\"\x04\bX\x10X\"\x04\b\\\x10\\\"\x04\b^\x10^\"\x04\b_\x10_\"\x04\bk\x10k\"\x04\bl\x10l*\x12METHOD_COUNT_FILES*(METHOD_UPDATE_CITATION_WITH_OBSERVATIONS*&METHOD_LIST_PROMOTE_TARGET_SUGGESTIONS*\x17METHOD_GET_EVENT_HEADER*\x17METHOD_GET_PLACE_HEADER*\x18METHOD_GET_PERSON_HEADER*#METHOD_LINK_EVIDENCE_GRAPH_ARTIFACT*%METHOD_UNLINK_EVIDENCE_GRAPH_ARTIFACT*\xa5\x02\n" +
 	"\x0eEventTitleRule\x12 \n" +
 	"\x1cEVENT_TITLE_RULE_UNSPECIFIED\x10\x00\x12\"\n" +
 	"\x1eEVENT_TITLE_RULE_RECORDED_NAME\x10\x01\x12\x1c\n" +
@@ -21307,7 +21057,7 @@ func file_engine_proto_rawDescGZIP() []byte {
 }
 
 var file_engine_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 288)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 284)
 var file_engine_proto_goTypes = []any{
 	(Method)(0),                                       // 0: provenencia.engine.v1.Method
 	(EventTitleRule)(0),                               // 1: provenencia.engine.v1.EventTitleRule
@@ -21365,242 +21115,238 @@ var file_engine_proto_goTypes = []any{
 	(*UpdateEvidenceGraphResponse)(nil),               // 53: provenencia.engine.v1.UpdateEvidenceGraphResponse
 	(*DeleteEvidenceGraphRequest)(nil),                // 54: provenencia.engine.v1.DeleteEvidenceGraphRequest
 	(*DeleteEvidenceGraphResponse)(nil),               // 55: provenencia.engine.v1.DeleteEvidenceGraphResponse
-	(*LinkEvidenceGraphArtifactRequest)(nil),          // 56: provenencia.engine.v1.LinkEvidenceGraphArtifactRequest
-	(*LinkEvidenceGraphArtifactResponse)(nil),         // 57: provenencia.engine.v1.LinkEvidenceGraphArtifactResponse
-	(*UnlinkEvidenceGraphArtifactRequest)(nil),        // 58: provenencia.engine.v1.UnlinkEvidenceGraphArtifactRequest
-	(*UnlinkEvidenceGraphArtifactResponse)(nil),       // 59: provenencia.engine.v1.UnlinkEvidenceGraphArtifactResponse
-	(*EvidenceGraphArtifactPair)(nil),                 // 60: provenencia.engine.v1.EvidenceGraphArtifactPair
-	(*GetEvidenceGraphUnlinkImpactRequest)(nil),       // 61: provenencia.engine.v1.GetEvidenceGraphUnlinkImpactRequest
-	(*EvidenceGraphUnlinkBlock)(nil),                  // 62: provenencia.engine.v1.EvidenceGraphUnlinkBlock
-	(*GetEvidenceGraphUnlinkImpactResponse)(nil),      // 63: provenencia.engine.v1.GetEvidenceGraphUnlinkImpactResponse
-	(*UpdateSourceRequest)(nil),                       // 64: provenencia.engine.v1.UpdateSourceRequest
-	(*UpdateSourceResponse)(nil),                      // 65: provenencia.engine.v1.UpdateSourceResponse
-	(*DeleteSourceRequest)(nil),                       // 66: provenencia.engine.v1.DeleteSourceRequest
-	(*DeleteSourceResponse)(nil),                      // 67: provenencia.engine.v1.DeleteSourceResponse
-	(*SetSourceCoverRequest)(nil),                     // 68: provenencia.engine.v1.SetSourceCoverRequest
-	(*SetSourceCoverResponse)(nil),                    // 69: provenencia.engine.v1.SetSourceCoverResponse
-	(*AddSourceNoteRequest)(nil),                      // 70: provenencia.engine.v1.AddSourceNoteRequest
-	(*AddSourceNoteResponse)(nil),                     // 71: provenencia.engine.v1.AddSourceNoteResponse
-	(*UpdateSourceNoteRequest)(nil),                   // 72: provenencia.engine.v1.UpdateSourceNoteRequest
-	(*UpdateSourceNoteResponse)(nil),                  // 73: provenencia.engine.v1.UpdateSourceNoteResponse
-	(*DeleteSourceNoteRequest)(nil),                   // 74: provenencia.engine.v1.DeleteSourceNoteRequest
-	(*DeleteSourceNoteResponse)(nil),                  // 75: provenencia.engine.v1.DeleteSourceNoteResponse
-	(*SetSourceMetadataRequest)(nil),                  // 76: provenencia.engine.v1.SetSourceMetadataRequest
-	(*SetSourceMetadataResponse)(nil),                 // 77: provenencia.engine.v1.SetSourceMetadataResponse
-	(*ClearSourceMetadataRequest)(nil),                // 78: provenencia.engine.v1.ClearSourceMetadataRequest
-	(*ClearSourceMetadataResponse)(nil),               // 79: provenencia.engine.v1.ClearSourceMetadataResponse
-	(*DismissSourceMetadataSuggestionRequest)(nil),    // 80: provenencia.engine.v1.DismissSourceMetadataSuggestionRequest
-	(*DismissSourceMetadataSuggestionResponse)(nil),   // 81: provenencia.engine.v1.DismissSourceMetadataSuggestionResponse
-	(*ReorderSourceMetadataRequest)(nil),              // 82: provenencia.engine.v1.ReorderSourceMetadataRequest
-	(*ReorderSourceMetadataResponse)(nil),             // 83: provenencia.engine.v1.ReorderSourceMetadataResponse
-	(*CreateArtifactRequest)(nil),                     // 84: provenencia.engine.v1.CreateArtifactRequest
-	(*GraphLinks)(nil),                                // 85: provenencia.engine.v1.GraphLinks
-	(*CreateArtifactResponse)(nil),                    // 86: provenencia.engine.v1.CreateArtifactResponse
-	(*UpdateArtifactRequest)(nil),                     // 87: provenencia.engine.v1.UpdateArtifactRequest
-	(*UpdateArtifactResponse)(nil),                    // 88: provenencia.engine.v1.UpdateArtifactResponse
-	(*DeleteArtifactRequest)(nil),                     // 89: provenencia.engine.v1.DeleteArtifactRequest
-	(*DeleteArtifactResponse)(nil),                    // 90: provenencia.engine.v1.DeleteArtifactResponse
-	(*DeleteCitationRequest)(nil),                     // 91: provenencia.engine.v1.DeleteCitationRequest
-	(*DeleteCitationResponse)(nil),                    // 92: provenencia.engine.v1.DeleteCitationResponse
-	(*WriteEffects)(nil),                              // 93: provenencia.engine.v1.WriteEffects
-	(*IngestArtifactFileRequest)(nil),                 // 94: provenencia.engine.v1.IngestArtifactFileRequest
-	(*IngestArtifactFileResponse)(nil),                // 95: provenencia.engine.v1.IngestArtifactFileResponse
-	(*ListSourceCredibilityGradesRequest)(nil),        // 96: provenencia.engine.v1.ListSourceCredibilityGradesRequest
-	(*ListSourceCredibilityGradesResponse)(nil),       // 97: provenencia.engine.v1.ListSourceCredibilityGradesResponse
-	(*UpsertSourceCredibilityAssessmentRequest)(nil),  // 98: provenencia.engine.v1.UpsertSourceCredibilityAssessmentRequest
-	(*UpsertSourceCredibilityAssessmentResponse)(nil), // 99: provenencia.engine.v1.UpsertSourceCredibilityAssessmentResponse
-	(*ListSourceTypesRequest)(nil),                    // 100: provenencia.engine.v1.ListSourceTypesRequest
-	(*ListSourceTypesResponse)(nil),                   // 101: provenencia.engine.v1.ListSourceTypesResponse
-	(*CreateSourceTypeRequest)(nil),                   // 102: provenencia.engine.v1.CreateSourceTypeRequest
-	(*CreateSourceTypeResponse)(nil),                  // 103: provenencia.engine.v1.CreateSourceTypeResponse
-	(*ListMetadataFieldsRequest)(nil),                 // 104: provenencia.engine.v1.ListMetadataFieldsRequest
-	(*ListMetadataFieldsResponse)(nil),                // 105: provenencia.engine.v1.ListMetadataFieldsResponse
-	(*CreateMetadataFieldRequest)(nil),                // 106: provenencia.engine.v1.CreateMetadataFieldRequest
-	(*CreateMetadataFieldResponse)(nil),               // 107: provenencia.engine.v1.CreateMetadataFieldResponse
-	(*UpdateMetadataFieldRequest)(nil),                // 108: provenencia.engine.v1.UpdateMetadataFieldRequest
-	(*UpdateMetadataFieldResponse)(nil),               // 109: provenencia.engine.v1.UpdateMetadataFieldResponse
-	(*UpdateSourceTypeRequest)(nil),                   // 110: provenencia.engine.v1.UpdateSourceTypeRequest
-	(*UpdateSourceTypeResponse)(nil),                  // 111: provenencia.engine.v1.UpdateSourceTypeResponse
-	(*ListTypeSuggestionsRequest)(nil),                // 112: provenencia.engine.v1.ListTypeSuggestionsRequest
-	(*ListTypeSuggestionsResponse)(nil),               // 113: provenencia.engine.v1.ListTypeSuggestionsResponse
-	(*AssignTypeFieldRequest)(nil),                    // 114: provenencia.engine.v1.AssignTypeFieldRequest
-	(*AssignTypeFieldResponse)(nil),                   // 115: provenencia.engine.v1.AssignTypeFieldResponse
-	(*RemoveTypeFieldRequest)(nil),                    // 116: provenencia.engine.v1.RemoveTypeFieldRequest
-	(*RemoveTypeFieldResponse)(nil),                   // 117: provenencia.engine.v1.RemoveTypeFieldResponse
-	(*DeleteSourceTypeRequest)(nil),                   // 118: provenencia.engine.v1.DeleteSourceTypeRequest
-	(*DeleteSourceTypeResponse)(nil),                  // 119: provenencia.engine.v1.DeleteSourceTypeResponse
-	(*DeleteMetadataFieldRequest)(nil),                // 120: provenencia.engine.v1.DeleteMetadataFieldRequest
-	(*DeleteMetadataFieldResponse)(nil),               // 121: provenencia.engine.v1.DeleteMetadataFieldResponse
-	(*VocabularyOriginCounts)(nil),                    // 122: provenencia.engine.v1.VocabularyOriginCounts
-	(*GetWorkspaceNavCountsRequest)(nil),              // 123: provenencia.engine.v1.GetWorkspaceNavCountsRequest
-	(*GetWorkspaceNavCountsResponse)(nil),             // 124: provenencia.engine.v1.GetWorkspaceNavCountsResponse
-	(*EnsureFileThumbnailRequest)(nil),                // 125: provenencia.engine.v1.EnsureFileThumbnailRequest
-	(*EnsureFileThumbnailResponse)(nil),               // 126: provenencia.engine.v1.EnsureFileThumbnailResponse
-	(*CloseCatalogSessionRequest)(nil),                // 127: provenencia.engine.v1.CloseCatalogSessionRequest
-	(*CloseCatalogSessionResponse)(nil),               // 128: provenencia.engine.v1.CloseCatalogSessionResponse
-	(*WorkspaceLocation)(nil),                         // 129: provenencia.engine.v1.WorkspaceLocation
-	(*SearchCatalogRequest)(nil),                      // 130: provenencia.engine.v1.SearchCatalogRequest
-	(*SearchHit)(nil),                                 // 131: provenencia.engine.v1.SearchHit
-	(*SearchCatalogResponse)(nil),                     // 132: provenencia.engine.v1.SearchCatalogResponse
-	(*SubjectType)(nil),                               // 133: provenencia.engine.v1.SubjectType
-	(*Subject)(nil),                                   // 134: provenencia.engine.v1.Subject
-	(*SubjectPosition)(nil),                           // 135: provenencia.engine.v1.SubjectPosition
-	(*ListSubjectTypesRequest)(nil),                   // 136: provenencia.engine.v1.ListSubjectTypesRequest
-	(*ListSubjectTypesResponse)(nil),                  // 137: provenencia.engine.v1.ListSubjectTypesResponse
-	(*CreateSubjectRequest)(nil),                      // 138: provenencia.engine.v1.CreateSubjectRequest
-	(*CreateSubjectResponse)(nil),                     // 139: provenencia.engine.v1.CreateSubjectResponse
-	(*UpdateSubjectRequest)(nil),                      // 140: provenencia.engine.v1.UpdateSubjectRequest
-	(*UpdateSubjectResponse)(nil),                     // 141: provenencia.engine.v1.UpdateSubjectResponse
-	(*DeleteSubjectRequest)(nil),                      // 142: provenencia.engine.v1.DeleteSubjectRequest
-	(*DeleteSubjectResponse)(nil),                     // 143: provenencia.engine.v1.DeleteSubjectResponse
-	(*CanonicalEntity)(nil),                           // 144: provenencia.engine.v1.CanonicalEntity
-	(*IdentityClaim)(nil),                             // 145: provenencia.engine.v1.IdentityClaim
-	(*ClaimConfidenceGrade)(nil),                      // 146: provenencia.engine.v1.ClaimConfidenceGrade
-	(*ListClaimConfidenceGradesRequest)(nil),          // 147: provenencia.engine.v1.ListClaimConfidenceGradesRequest
-	(*ListClaimConfidenceGradesResponse)(nil),         // 148: provenencia.engine.v1.ListClaimConfidenceGradesResponse
-	(*PromoteSubjectRequest)(nil),                     // 149: provenencia.engine.v1.PromoteSubjectRequest
-	(*PromoteSubjectResponse)(nil),                    // 150: provenencia.engine.v1.PromoteSubjectResponse
-	(*UnpromoteSubjectRequest)(nil),                   // 151: provenencia.engine.v1.UnpromoteSubjectRequest
-	(*UnpromoteSubjectResponse)(nil),                  // 152: provenencia.engine.v1.UnpromoteSubjectResponse
-	(*SetPreferredLikenessRequest)(nil),               // 153: provenencia.engine.v1.SetPreferredLikenessRequest
-	(*SetPreferredLikenessResponse)(nil),              // 154: provenencia.engine.v1.SetPreferredLikenessResponse
-	(*SubjectMembership)(nil),                         // 155: provenencia.engine.v1.SubjectMembership
-	(*EventTitleSubject)(nil),                         // 156: provenencia.engine.v1.EventTitleSubject
-	(*EventTitle)(nil),                                // 157: provenencia.engine.v1.EventTitle
-	(*ListEvidenceGraphEventTitlesRequest)(nil),       // 158: provenencia.engine.v1.ListEvidenceGraphEventTitlesRequest
-	(*SourceEventTitle)(nil),                          // 159: provenencia.engine.v1.SourceEventTitle
-	(*ListEvidenceGraphEventTitlesResponse)(nil),      // 160: provenencia.engine.v1.ListEvidenceGraphEventTitlesResponse
-	(*ListSubjectMembershipsRequest)(nil),             // 161: provenencia.engine.v1.ListSubjectMembershipsRequest
-	(*ListSubjectMembershipsResponse)(nil),            // 162: provenencia.engine.v1.ListSubjectMembershipsResponse
-	(*HeaderPlace)(nil),                               // 163: provenencia.engine.v1.HeaderPlace
-	(*LifeFacts)(nil),                                 // 164: provenencia.engine.v1.LifeFacts
-	(*EventSubject)(nil),                              // 165: provenencia.engine.v1.EventSubject
-	(*PersonHeader)(nil),                              // 166: provenencia.engine.v1.PersonHeader
-	(*ListPersonHeadersRequest)(nil),                  // 167: provenencia.engine.v1.ListPersonHeadersRequest
-	(*ListPersonHeadersResponse)(nil),                 // 168: provenencia.engine.v1.ListPersonHeadersResponse
-	(*EventHeader)(nil),                               // 169: provenencia.engine.v1.EventHeader
-	(*ListEventHeadersRequest)(nil),                   // 170: provenencia.engine.v1.ListEventHeadersRequest
-	(*ListEventHeadersResponse)(nil),                  // 171: provenencia.engine.v1.ListEventHeadersResponse
-	(*PlaceRelationship)(nil),                         // 172: provenencia.engine.v1.PlaceRelationship
-	(*PlaceHeader)(nil),                               // 173: provenencia.engine.v1.PlaceHeader
-	(*ListPlaceHeadersRequest)(nil),                   // 174: provenencia.engine.v1.ListPlaceHeadersRequest
-	(*ListPlaceHeadersResponse)(nil),                  // 175: provenencia.engine.v1.ListPlaceHeadersResponse
-	(*ConclusionValue)(nil),                           // 176: provenencia.engine.v1.ConclusionValue
-	(*ConclusionTerm)(nil),                            // 177: provenencia.engine.v1.ConclusionTerm
-	(*ReconciledValueDetail)(nil),                     // 178: provenencia.engine.v1.ReconciledValueDetail
-	(*ReconcilerOutcomeDetail)(nil),                   // 179: provenencia.engine.v1.ReconcilerOutcomeDetail
-	(*ConclusionField)(nil),                           // 180: provenencia.engine.v1.ConclusionField
-	(*GetConclusionDetailRequest)(nil),                // 181: provenencia.engine.v1.GetConclusionDetailRequest
-	(*LikenessDetail)(nil),                            // 182: provenencia.engine.v1.LikenessDetail
-	(*ConclusionDetail)(nil),                          // 183: provenencia.engine.v1.ConclusionDetail
-	(*ProposePromoteGraphAlignmentRequest)(nil),       // 184: provenencia.engine.v1.ProposePromoteGraphAlignmentRequest
-	(*PromoteGraphAlignmentFixed)(nil),                // 185: provenencia.engine.v1.PromoteGraphAlignmentFixed
-	(*GetPromoteClaimEvidenceRequest)(nil),            // 186: provenencia.engine.v1.GetPromoteClaimEvidenceRequest
-	(*PromoteClaimEvidencePin)(nil),                   // 187: provenencia.engine.v1.PromoteClaimEvidencePin
-	(*PromoteClaimEvidenceLine)(nil),                  // 188: provenencia.engine.v1.PromoteClaimEvidenceLine
-	(*PromoteClaimEvidenceSection)(nil),               // 189: provenencia.engine.v1.PromoteClaimEvidenceSection
-	(*PromoteClaimEvidenceBundle)(nil),                // 190: provenencia.engine.v1.PromoteClaimEvidenceBundle
-	(*PromoteClaimEvidenceShape)(nil),                 // 191: provenencia.engine.v1.PromoteClaimEvidenceShape
-	(*PromoteClaimEvidenceRelationship)(nil),          // 192: provenencia.engine.v1.PromoteClaimEvidenceRelationship
-	(*PromoteClaimEvidenceOffer)(nil),                 // 193: provenencia.engine.v1.PromoteClaimEvidenceOffer
-	(*PromoteClaimEvidenceSource)(nil),                // 194: provenencia.engine.v1.PromoteClaimEvidenceSource
-	(*GetPromoteClaimEvidenceResponse)(nil),           // 195: provenencia.engine.v1.GetPromoteClaimEvidenceResponse
-	(*PromoteGraphAlignmentAlternative)(nil),          // 196: provenencia.engine.v1.PromoteGraphAlignmentAlternative
-	(*PromoteGraphAlignmentRow)(nil),                  // 197: provenencia.engine.v1.PromoteGraphAlignmentRow
-	(*ProposePromoteGraphAlignmentResponse)(nil),      // 198: provenencia.engine.v1.ProposePromoteGraphAlignmentResponse
-	(*ApplyPromoteGraphAlignmentRequest)(nil),         // 199: provenencia.engine.v1.ApplyPromoteGraphAlignmentRequest
-	(*ApplyPromoteGraphAlignmentRow)(nil),             // 200: provenencia.engine.v1.ApplyPromoteGraphAlignmentRow
-	(*ApplyPromoteGraphAlignmentWritten)(nil),         // 201: provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten
-	(*ApplyPromoteGraphAlignmentResponse)(nil),        // 202: provenencia.engine.v1.ApplyPromoteGraphAlignmentResponse
-	(*ListSubjectsRequest)(nil),                       // 203: provenencia.engine.v1.ListSubjectsRequest
-	(*ListSubjectsResponse)(nil),                      // 204: provenencia.engine.v1.ListSubjectsResponse
-	(*SetSubjectPositionRequest)(nil),                 // 205: provenencia.engine.v1.SetSubjectPositionRequest
-	(*SetSubjectPositionResponse)(nil),                // 206: provenencia.engine.v1.SetSubjectPositionResponse
-	(*ClearSubjectPositionRequest)(nil),               // 207: provenencia.engine.v1.ClearSubjectPositionRequest
-	(*ClearSubjectPositionResponse)(nil),              // 208: provenencia.engine.v1.ClearSubjectPositionResponse
-	(*ListSubjectPositionsRequest)(nil),               // 209: provenencia.engine.v1.ListSubjectPositionsRequest
-	(*ListSubjectPositionsResponse)(nil),              // 210: provenencia.engine.v1.ListSubjectPositionsResponse
-	(*Property)(nil),                                  // 211: provenencia.engine.v1.Property
-	(*PropertyTerm)(nil),                              // 212: provenencia.engine.v1.PropertyTerm
-	(*SubjectTypeProperty)(nil),                       // 213: provenencia.engine.v1.SubjectTypeProperty
-	(*SubjectTypePresentation)(nil),                   // 214: provenencia.engine.v1.SubjectTypePresentation
-	(*ConnectRule)(nil),                               // 215: provenencia.engine.v1.ConnectRule
-	(*ConnectEdge)(nil),                               // 216: provenencia.engine.v1.ConnectEdge
-	(*ListPropertiesRequest)(nil),                     // 217: provenencia.engine.v1.ListPropertiesRequest
-	(*ListPropertiesResponse)(nil),                    // 218: provenencia.engine.v1.ListPropertiesResponse
-	(*CreatePropertyRequest)(nil),                     // 219: provenencia.engine.v1.CreatePropertyRequest
-	(*CreatePropertyResponse)(nil),                    // 220: provenencia.engine.v1.CreatePropertyResponse
-	(*UpdatePropertyRequest)(nil),                     // 221: provenencia.engine.v1.UpdatePropertyRequest
-	(*UpdatePropertyResponse)(nil),                    // 222: provenencia.engine.v1.UpdatePropertyResponse
-	(*DeletePropertyRequest)(nil),                     // 223: provenencia.engine.v1.DeletePropertyRequest
-	(*DeletePropertyResponse)(nil),                    // 224: provenencia.engine.v1.DeletePropertyResponse
-	(*ListSubjectTypePropertiesRequest)(nil),          // 225: provenencia.engine.v1.ListSubjectTypePropertiesRequest
-	(*ListSubjectTypePropertiesResponse)(nil),         // 226: provenencia.engine.v1.ListSubjectTypePropertiesResponse
-	(*AssignSubjectTypePropertyRequest)(nil),          // 227: provenencia.engine.v1.AssignSubjectTypePropertyRequest
-	(*AssignSubjectTypePropertyResponse)(nil),         // 228: provenencia.engine.v1.AssignSubjectTypePropertyResponse
-	(*RemoveSubjectTypePropertyRequest)(nil),          // 229: provenencia.engine.v1.RemoveSubjectTypePropertyRequest
-	(*RemoveSubjectTypePropertyResponse)(nil),         // 230: provenencia.engine.v1.RemoveSubjectTypePropertyResponse
-	(*ReorderSubjectTypePropertiesRequest)(nil),       // 231: provenencia.engine.v1.ReorderSubjectTypePropertiesRequest
-	(*ReorderSubjectTypePropertiesResponse)(nil),      // 232: provenencia.engine.v1.ReorderSubjectTypePropertiesResponse
-	(*ListPlaceableSubjectTypesRequest)(nil),          // 233: provenencia.engine.v1.ListPlaceableSubjectTypesRequest
-	(*ListPlaceableSubjectTypesResponse)(nil),         // 234: provenencia.engine.v1.ListPlaceableSubjectTypesResponse
-	(*GetSubjectTypePresentationRequest)(nil),         // 235: provenencia.engine.v1.GetSubjectTypePresentationRequest
-	(*GetSubjectTypePresentationResponse)(nil),        // 236: provenencia.engine.v1.GetSubjectTypePresentationResponse
-	(*ListConnectRulesRequest)(nil),                   // 237: provenencia.engine.v1.ListConnectRulesRequest
-	(*ListConnectRulesResponse)(nil),                  // 238: provenencia.engine.v1.ListConnectRulesResponse
-	(*ListPropertyTermsRequest)(nil),                  // 239: provenencia.engine.v1.ListPropertyTermsRequest
-	(*ListPropertyTermsResponse)(nil),                 // 240: provenencia.engine.v1.ListPropertyTermsResponse
-	(*CreatePropertyTermRequest)(nil),                 // 241: provenencia.engine.v1.CreatePropertyTermRequest
-	(*CreatePropertyTermResponse)(nil),                // 242: provenencia.engine.v1.CreatePropertyTermResponse
-	(*UpdatePropertyTermRequest)(nil),                 // 243: provenencia.engine.v1.UpdatePropertyTermRequest
-	(*UpdatePropertyTermResponse)(nil),                // 244: provenencia.engine.v1.UpdatePropertyTermResponse
-	(*DeletePropertyTermRequest)(nil),                 // 245: provenencia.engine.v1.DeletePropertyTermRequest
-	(*DeletePropertyTermResponse)(nil),                // 246: provenencia.engine.v1.DeletePropertyTermResponse
-	(*NameValuePartInput)(nil),                        // 247: provenencia.engine.v1.NameValuePartInput
-	(*NameValueInput)(nil),                            // 248: provenencia.engine.v1.NameValueInput
-	(*DepictionValueInput)(nil),                       // 249: provenencia.engine.v1.DepictionValueInput
-	(*DepictionValue)(nil),                            // 250: provenencia.engine.v1.DepictionValue
-	(*Citation)(nil),                                  // 251: provenencia.engine.v1.Citation
-	(*Observation)(nil),                               // 252: provenencia.engine.v1.Observation
-	(*ObservationDraft)(nil),                          // 253: provenencia.engine.v1.ObservationDraft
-	(*CreateCitationWithObservationsRequest)(nil),     // 254: provenencia.engine.v1.CreateCitationWithObservationsRequest
-	(*CreateCitationWithObservationsResponse)(nil),    // 255: provenencia.engine.v1.CreateCitationWithObservationsResponse
-	(*AddObservationsToCitationRequest)(nil),          // 256: provenencia.engine.v1.AddObservationsToCitationRequest
-	(*AddObservationsToCitationResponse)(nil),         // 257: provenencia.engine.v1.AddObservationsToCitationResponse
-	(*ListObservationsByEvidenceGraphRequest)(nil),    // 258: provenencia.engine.v1.ListObservationsByEvidenceGraphRequest
-	(*ListObservationsByEvidenceGraphResponse)(nil),   // 259: provenencia.engine.v1.ListObservationsByEvidenceGraphResponse
-	(*CitationCountsByEvidenceGraphRequest)(nil),      // 260: provenencia.engine.v1.CitationCountsByEvidenceGraphRequest
-	(*ArtifactCitationCount)(nil),                     // 261: provenencia.engine.v1.ArtifactCitationCount
-	(*CitationCountsByEvidenceGraphResponse)(nil),     // 262: provenencia.engine.v1.CitationCountsByEvidenceGraphResponse
-	(*ListedCitation)(nil),                            // 263: provenencia.engine.v1.ListedCitation
-	(*ListCitationsByArtifactRequest)(nil),            // 264: provenencia.engine.v1.ListCitationsByArtifactRequest
-	(*ListCitationsByArtifactResponse)(nil),           // 265: provenencia.engine.v1.ListCitationsByArtifactResponse
-	(*GetCitationRequest)(nil),                        // 266: provenencia.engine.v1.GetCitationRequest
-	(*GetCitationResponse)(nil),                       // 267: provenencia.engine.v1.GetCitationResponse
-	(*CreateCitedBridgeRequest)(nil),                  // 268: provenencia.engine.v1.CreateCitedBridgeRequest
-	(*CreateCitedBridgeResponse)(nil),                 // 269: provenencia.engine.v1.CreateCitedBridgeResponse
-	(*UpdateCitationRequest)(nil),                     // 270: provenencia.engine.v1.UpdateCitationRequest
-	(*UpdateCitationResponse)(nil),                    // 271: provenencia.engine.v1.UpdateCitationResponse
-	(*UpdateObservationRequest)(nil),                  // 272: provenencia.engine.v1.UpdateObservationRequest
-	(*UpdateObservationResponse)(nil),                 // 273: provenencia.engine.v1.UpdateObservationResponse
-	(*DeleteObservationRequest)(nil),                  // 274: provenencia.engine.v1.DeleteObservationRequest
-	(*DeleteObservationResponse)(nil),                 // 275: provenencia.engine.v1.DeleteObservationResponse
-	(*GetPropertiesWorkspaceRequest)(nil),             // 276: provenencia.engine.v1.GetPropertiesWorkspaceRequest
-	(*SubjectTypePropertiesGroup)(nil),                // 277: provenencia.engine.v1.SubjectTypePropertiesGroup
-	(*GetPropertiesWorkspaceResponse)(nil),            // 278: provenencia.engine.v1.GetPropertiesWorkspaceResponse
-	(*EvidenceGraphProgress)(nil),                     // 279: provenencia.engine.v1.EvidenceGraphProgress
-	(*ListEvidenceGraphProgressRequest)(nil),          // 280: provenencia.engine.v1.ListEvidenceGraphProgressRequest
-	(*ListEvidenceGraphProgressResponse)(nil),         // 281: provenencia.engine.v1.ListEvidenceGraphProgressResponse
-	(*GetEvidenceGraphProgressRequest)(nil),           // 282: provenencia.engine.v1.GetEvidenceGraphProgressRequest
-	(*GetEvidenceGraphProgressResponse)(nil),          // 283: provenencia.engine.v1.GetEvidenceGraphProgressResponse
-	(*GetDeleteImpactRequest)(nil),                    // 284: provenencia.engine.v1.GetDeleteImpactRequest
-	(*GetDeleteImpactResponse)(nil),                   // 285: provenencia.engine.v1.GetDeleteImpactResponse
-	(*DeleteImpactGroup)(nil),                         // 286: provenencia.engine.v1.DeleteImpactGroup
-	(*DeleteImpactListed)(nil),                        // 287: provenencia.engine.v1.DeleteImpactListed
-	(*GetNameFormatRequest)(nil),                      // 288: provenencia.engine.v1.GetNameFormatRequest
-	(*NameFormatPart)(nil),                            // 289: provenencia.engine.v1.NameFormatPart
-	(*GetNameFormatResponse)(nil),                     // 290: provenencia.engine.v1.GetNameFormatResponse
-	(*Error)(nil),                                     // 291: provenencia.engine.v1.Error
+	(*EvidenceGraphArtifactPair)(nil),                 // 56: provenencia.engine.v1.EvidenceGraphArtifactPair
+	(*GetEvidenceGraphUnlinkImpactRequest)(nil),       // 57: provenencia.engine.v1.GetEvidenceGraphUnlinkImpactRequest
+	(*EvidenceGraphUnlinkBlock)(nil),                  // 58: provenencia.engine.v1.EvidenceGraphUnlinkBlock
+	(*GetEvidenceGraphUnlinkImpactResponse)(nil),      // 59: provenencia.engine.v1.GetEvidenceGraphUnlinkImpactResponse
+	(*UpdateSourceRequest)(nil),                       // 60: provenencia.engine.v1.UpdateSourceRequest
+	(*UpdateSourceResponse)(nil),                      // 61: provenencia.engine.v1.UpdateSourceResponse
+	(*DeleteSourceRequest)(nil),                       // 62: provenencia.engine.v1.DeleteSourceRequest
+	(*DeleteSourceResponse)(nil),                      // 63: provenencia.engine.v1.DeleteSourceResponse
+	(*SetSourceCoverRequest)(nil),                     // 64: provenencia.engine.v1.SetSourceCoverRequest
+	(*SetSourceCoverResponse)(nil),                    // 65: provenencia.engine.v1.SetSourceCoverResponse
+	(*AddSourceNoteRequest)(nil),                      // 66: provenencia.engine.v1.AddSourceNoteRequest
+	(*AddSourceNoteResponse)(nil),                     // 67: provenencia.engine.v1.AddSourceNoteResponse
+	(*UpdateSourceNoteRequest)(nil),                   // 68: provenencia.engine.v1.UpdateSourceNoteRequest
+	(*UpdateSourceNoteResponse)(nil),                  // 69: provenencia.engine.v1.UpdateSourceNoteResponse
+	(*DeleteSourceNoteRequest)(nil),                   // 70: provenencia.engine.v1.DeleteSourceNoteRequest
+	(*DeleteSourceNoteResponse)(nil),                  // 71: provenencia.engine.v1.DeleteSourceNoteResponse
+	(*SetSourceMetadataRequest)(nil),                  // 72: provenencia.engine.v1.SetSourceMetadataRequest
+	(*SetSourceMetadataResponse)(nil),                 // 73: provenencia.engine.v1.SetSourceMetadataResponse
+	(*ClearSourceMetadataRequest)(nil),                // 74: provenencia.engine.v1.ClearSourceMetadataRequest
+	(*ClearSourceMetadataResponse)(nil),               // 75: provenencia.engine.v1.ClearSourceMetadataResponse
+	(*DismissSourceMetadataSuggestionRequest)(nil),    // 76: provenencia.engine.v1.DismissSourceMetadataSuggestionRequest
+	(*DismissSourceMetadataSuggestionResponse)(nil),   // 77: provenencia.engine.v1.DismissSourceMetadataSuggestionResponse
+	(*ReorderSourceMetadataRequest)(nil),              // 78: provenencia.engine.v1.ReorderSourceMetadataRequest
+	(*ReorderSourceMetadataResponse)(nil),             // 79: provenencia.engine.v1.ReorderSourceMetadataResponse
+	(*CreateArtifactRequest)(nil),                     // 80: provenencia.engine.v1.CreateArtifactRequest
+	(*GraphLinks)(nil),                                // 81: provenencia.engine.v1.GraphLinks
+	(*CreateArtifactResponse)(nil),                    // 82: provenencia.engine.v1.CreateArtifactResponse
+	(*UpdateArtifactRequest)(nil),                     // 83: provenencia.engine.v1.UpdateArtifactRequest
+	(*UpdateArtifactResponse)(nil),                    // 84: provenencia.engine.v1.UpdateArtifactResponse
+	(*DeleteArtifactRequest)(nil),                     // 85: provenencia.engine.v1.DeleteArtifactRequest
+	(*DeleteArtifactResponse)(nil),                    // 86: provenencia.engine.v1.DeleteArtifactResponse
+	(*DeleteCitationRequest)(nil),                     // 87: provenencia.engine.v1.DeleteCitationRequest
+	(*DeleteCitationResponse)(nil),                    // 88: provenencia.engine.v1.DeleteCitationResponse
+	(*WriteEffects)(nil),                              // 89: provenencia.engine.v1.WriteEffects
+	(*IngestArtifactFileRequest)(nil),                 // 90: provenencia.engine.v1.IngestArtifactFileRequest
+	(*IngestArtifactFileResponse)(nil),                // 91: provenencia.engine.v1.IngestArtifactFileResponse
+	(*ListSourceCredibilityGradesRequest)(nil),        // 92: provenencia.engine.v1.ListSourceCredibilityGradesRequest
+	(*ListSourceCredibilityGradesResponse)(nil),       // 93: provenencia.engine.v1.ListSourceCredibilityGradesResponse
+	(*UpsertSourceCredibilityAssessmentRequest)(nil),  // 94: provenencia.engine.v1.UpsertSourceCredibilityAssessmentRequest
+	(*UpsertSourceCredibilityAssessmentResponse)(nil), // 95: provenencia.engine.v1.UpsertSourceCredibilityAssessmentResponse
+	(*ListSourceTypesRequest)(nil),                    // 96: provenencia.engine.v1.ListSourceTypesRequest
+	(*ListSourceTypesResponse)(nil),                   // 97: provenencia.engine.v1.ListSourceTypesResponse
+	(*CreateSourceTypeRequest)(nil),                   // 98: provenencia.engine.v1.CreateSourceTypeRequest
+	(*CreateSourceTypeResponse)(nil),                  // 99: provenencia.engine.v1.CreateSourceTypeResponse
+	(*ListMetadataFieldsRequest)(nil),                 // 100: provenencia.engine.v1.ListMetadataFieldsRequest
+	(*ListMetadataFieldsResponse)(nil),                // 101: provenencia.engine.v1.ListMetadataFieldsResponse
+	(*CreateMetadataFieldRequest)(nil),                // 102: provenencia.engine.v1.CreateMetadataFieldRequest
+	(*CreateMetadataFieldResponse)(nil),               // 103: provenencia.engine.v1.CreateMetadataFieldResponse
+	(*UpdateMetadataFieldRequest)(nil),                // 104: provenencia.engine.v1.UpdateMetadataFieldRequest
+	(*UpdateMetadataFieldResponse)(nil),               // 105: provenencia.engine.v1.UpdateMetadataFieldResponse
+	(*UpdateSourceTypeRequest)(nil),                   // 106: provenencia.engine.v1.UpdateSourceTypeRequest
+	(*UpdateSourceTypeResponse)(nil),                  // 107: provenencia.engine.v1.UpdateSourceTypeResponse
+	(*ListTypeSuggestionsRequest)(nil),                // 108: provenencia.engine.v1.ListTypeSuggestionsRequest
+	(*ListTypeSuggestionsResponse)(nil),               // 109: provenencia.engine.v1.ListTypeSuggestionsResponse
+	(*AssignTypeFieldRequest)(nil),                    // 110: provenencia.engine.v1.AssignTypeFieldRequest
+	(*AssignTypeFieldResponse)(nil),                   // 111: provenencia.engine.v1.AssignTypeFieldResponse
+	(*RemoveTypeFieldRequest)(nil),                    // 112: provenencia.engine.v1.RemoveTypeFieldRequest
+	(*RemoveTypeFieldResponse)(nil),                   // 113: provenencia.engine.v1.RemoveTypeFieldResponse
+	(*DeleteSourceTypeRequest)(nil),                   // 114: provenencia.engine.v1.DeleteSourceTypeRequest
+	(*DeleteSourceTypeResponse)(nil),                  // 115: provenencia.engine.v1.DeleteSourceTypeResponse
+	(*DeleteMetadataFieldRequest)(nil),                // 116: provenencia.engine.v1.DeleteMetadataFieldRequest
+	(*DeleteMetadataFieldResponse)(nil),               // 117: provenencia.engine.v1.DeleteMetadataFieldResponse
+	(*VocabularyOriginCounts)(nil),                    // 118: provenencia.engine.v1.VocabularyOriginCounts
+	(*GetWorkspaceNavCountsRequest)(nil),              // 119: provenencia.engine.v1.GetWorkspaceNavCountsRequest
+	(*GetWorkspaceNavCountsResponse)(nil),             // 120: provenencia.engine.v1.GetWorkspaceNavCountsResponse
+	(*EnsureFileThumbnailRequest)(nil),                // 121: provenencia.engine.v1.EnsureFileThumbnailRequest
+	(*EnsureFileThumbnailResponse)(nil),               // 122: provenencia.engine.v1.EnsureFileThumbnailResponse
+	(*CloseCatalogSessionRequest)(nil),                // 123: provenencia.engine.v1.CloseCatalogSessionRequest
+	(*CloseCatalogSessionResponse)(nil),               // 124: provenencia.engine.v1.CloseCatalogSessionResponse
+	(*WorkspaceLocation)(nil),                         // 125: provenencia.engine.v1.WorkspaceLocation
+	(*SearchCatalogRequest)(nil),                      // 126: provenencia.engine.v1.SearchCatalogRequest
+	(*SearchHit)(nil),                                 // 127: provenencia.engine.v1.SearchHit
+	(*SearchCatalogResponse)(nil),                     // 128: provenencia.engine.v1.SearchCatalogResponse
+	(*SubjectType)(nil),                               // 129: provenencia.engine.v1.SubjectType
+	(*Subject)(nil),                                   // 130: provenencia.engine.v1.Subject
+	(*SubjectPosition)(nil),                           // 131: provenencia.engine.v1.SubjectPosition
+	(*ListSubjectTypesRequest)(nil),                   // 132: provenencia.engine.v1.ListSubjectTypesRequest
+	(*ListSubjectTypesResponse)(nil),                  // 133: provenencia.engine.v1.ListSubjectTypesResponse
+	(*CreateSubjectRequest)(nil),                      // 134: provenencia.engine.v1.CreateSubjectRequest
+	(*CreateSubjectResponse)(nil),                     // 135: provenencia.engine.v1.CreateSubjectResponse
+	(*UpdateSubjectRequest)(nil),                      // 136: provenencia.engine.v1.UpdateSubjectRequest
+	(*UpdateSubjectResponse)(nil),                     // 137: provenencia.engine.v1.UpdateSubjectResponse
+	(*DeleteSubjectRequest)(nil),                      // 138: provenencia.engine.v1.DeleteSubjectRequest
+	(*DeleteSubjectResponse)(nil),                     // 139: provenencia.engine.v1.DeleteSubjectResponse
+	(*CanonicalEntity)(nil),                           // 140: provenencia.engine.v1.CanonicalEntity
+	(*IdentityClaim)(nil),                             // 141: provenencia.engine.v1.IdentityClaim
+	(*ClaimConfidenceGrade)(nil),                      // 142: provenencia.engine.v1.ClaimConfidenceGrade
+	(*ListClaimConfidenceGradesRequest)(nil),          // 143: provenencia.engine.v1.ListClaimConfidenceGradesRequest
+	(*ListClaimConfidenceGradesResponse)(nil),         // 144: provenencia.engine.v1.ListClaimConfidenceGradesResponse
+	(*PromoteSubjectRequest)(nil),                     // 145: provenencia.engine.v1.PromoteSubjectRequest
+	(*PromoteSubjectResponse)(nil),                    // 146: provenencia.engine.v1.PromoteSubjectResponse
+	(*UnpromoteSubjectRequest)(nil),                   // 147: provenencia.engine.v1.UnpromoteSubjectRequest
+	(*UnpromoteSubjectResponse)(nil),                  // 148: provenencia.engine.v1.UnpromoteSubjectResponse
+	(*SetPreferredLikenessRequest)(nil),               // 149: provenencia.engine.v1.SetPreferredLikenessRequest
+	(*SetPreferredLikenessResponse)(nil),              // 150: provenencia.engine.v1.SetPreferredLikenessResponse
+	(*SubjectMembership)(nil),                         // 151: provenencia.engine.v1.SubjectMembership
+	(*EventTitleSubject)(nil),                         // 152: provenencia.engine.v1.EventTitleSubject
+	(*EventTitle)(nil),                                // 153: provenencia.engine.v1.EventTitle
+	(*ListEvidenceGraphEventTitlesRequest)(nil),       // 154: provenencia.engine.v1.ListEvidenceGraphEventTitlesRequest
+	(*SourceEventTitle)(nil),                          // 155: provenencia.engine.v1.SourceEventTitle
+	(*ListEvidenceGraphEventTitlesResponse)(nil),      // 156: provenencia.engine.v1.ListEvidenceGraphEventTitlesResponse
+	(*ListSubjectMembershipsRequest)(nil),             // 157: provenencia.engine.v1.ListSubjectMembershipsRequest
+	(*ListSubjectMembershipsResponse)(nil),            // 158: provenencia.engine.v1.ListSubjectMembershipsResponse
+	(*HeaderPlace)(nil),                               // 159: provenencia.engine.v1.HeaderPlace
+	(*LifeFacts)(nil),                                 // 160: provenencia.engine.v1.LifeFacts
+	(*EventSubject)(nil),                              // 161: provenencia.engine.v1.EventSubject
+	(*PersonHeader)(nil),                              // 162: provenencia.engine.v1.PersonHeader
+	(*ListPersonHeadersRequest)(nil),                  // 163: provenencia.engine.v1.ListPersonHeadersRequest
+	(*ListPersonHeadersResponse)(nil),                 // 164: provenencia.engine.v1.ListPersonHeadersResponse
+	(*EventHeader)(nil),                               // 165: provenencia.engine.v1.EventHeader
+	(*ListEventHeadersRequest)(nil),                   // 166: provenencia.engine.v1.ListEventHeadersRequest
+	(*ListEventHeadersResponse)(nil),                  // 167: provenencia.engine.v1.ListEventHeadersResponse
+	(*PlaceRelationship)(nil),                         // 168: provenencia.engine.v1.PlaceRelationship
+	(*PlaceHeader)(nil),                               // 169: provenencia.engine.v1.PlaceHeader
+	(*ListPlaceHeadersRequest)(nil),                   // 170: provenencia.engine.v1.ListPlaceHeadersRequest
+	(*ListPlaceHeadersResponse)(nil),                  // 171: provenencia.engine.v1.ListPlaceHeadersResponse
+	(*ConclusionValue)(nil),                           // 172: provenencia.engine.v1.ConclusionValue
+	(*ConclusionTerm)(nil),                            // 173: provenencia.engine.v1.ConclusionTerm
+	(*ReconciledValueDetail)(nil),                     // 174: provenencia.engine.v1.ReconciledValueDetail
+	(*ReconcilerOutcomeDetail)(nil),                   // 175: provenencia.engine.v1.ReconcilerOutcomeDetail
+	(*ConclusionField)(nil),                           // 176: provenencia.engine.v1.ConclusionField
+	(*GetConclusionDetailRequest)(nil),                // 177: provenencia.engine.v1.GetConclusionDetailRequest
+	(*LikenessDetail)(nil),                            // 178: provenencia.engine.v1.LikenessDetail
+	(*ConclusionDetail)(nil),                          // 179: provenencia.engine.v1.ConclusionDetail
+	(*ProposePromoteGraphAlignmentRequest)(nil),       // 180: provenencia.engine.v1.ProposePromoteGraphAlignmentRequest
+	(*PromoteGraphAlignmentFixed)(nil),                // 181: provenencia.engine.v1.PromoteGraphAlignmentFixed
+	(*GetPromoteClaimEvidenceRequest)(nil),            // 182: provenencia.engine.v1.GetPromoteClaimEvidenceRequest
+	(*PromoteClaimEvidencePin)(nil),                   // 183: provenencia.engine.v1.PromoteClaimEvidencePin
+	(*PromoteClaimEvidenceLine)(nil),                  // 184: provenencia.engine.v1.PromoteClaimEvidenceLine
+	(*PromoteClaimEvidenceSection)(nil),               // 185: provenencia.engine.v1.PromoteClaimEvidenceSection
+	(*PromoteClaimEvidenceBundle)(nil),                // 186: provenencia.engine.v1.PromoteClaimEvidenceBundle
+	(*PromoteClaimEvidenceShape)(nil),                 // 187: provenencia.engine.v1.PromoteClaimEvidenceShape
+	(*PromoteClaimEvidenceRelationship)(nil),          // 188: provenencia.engine.v1.PromoteClaimEvidenceRelationship
+	(*PromoteClaimEvidenceOffer)(nil),                 // 189: provenencia.engine.v1.PromoteClaimEvidenceOffer
+	(*PromoteClaimEvidenceSource)(nil),                // 190: provenencia.engine.v1.PromoteClaimEvidenceSource
+	(*GetPromoteClaimEvidenceResponse)(nil),           // 191: provenencia.engine.v1.GetPromoteClaimEvidenceResponse
+	(*PromoteGraphAlignmentAlternative)(nil),          // 192: provenencia.engine.v1.PromoteGraphAlignmentAlternative
+	(*PromoteGraphAlignmentRow)(nil),                  // 193: provenencia.engine.v1.PromoteGraphAlignmentRow
+	(*ProposePromoteGraphAlignmentResponse)(nil),      // 194: provenencia.engine.v1.ProposePromoteGraphAlignmentResponse
+	(*ApplyPromoteGraphAlignmentRequest)(nil),         // 195: provenencia.engine.v1.ApplyPromoteGraphAlignmentRequest
+	(*ApplyPromoteGraphAlignmentRow)(nil),             // 196: provenencia.engine.v1.ApplyPromoteGraphAlignmentRow
+	(*ApplyPromoteGraphAlignmentWritten)(nil),         // 197: provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten
+	(*ApplyPromoteGraphAlignmentResponse)(nil),        // 198: provenencia.engine.v1.ApplyPromoteGraphAlignmentResponse
+	(*ListSubjectsRequest)(nil),                       // 199: provenencia.engine.v1.ListSubjectsRequest
+	(*ListSubjectsResponse)(nil),                      // 200: provenencia.engine.v1.ListSubjectsResponse
+	(*SetSubjectPositionRequest)(nil),                 // 201: provenencia.engine.v1.SetSubjectPositionRequest
+	(*SetSubjectPositionResponse)(nil),                // 202: provenencia.engine.v1.SetSubjectPositionResponse
+	(*ClearSubjectPositionRequest)(nil),               // 203: provenencia.engine.v1.ClearSubjectPositionRequest
+	(*ClearSubjectPositionResponse)(nil),              // 204: provenencia.engine.v1.ClearSubjectPositionResponse
+	(*ListSubjectPositionsRequest)(nil),               // 205: provenencia.engine.v1.ListSubjectPositionsRequest
+	(*ListSubjectPositionsResponse)(nil),              // 206: provenencia.engine.v1.ListSubjectPositionsResponse
+	(*Property)(nil),                                  // 207: provenencia.engine.v1.Property
+	(*PropertyTerm)(nil),                              // 208: provenencia.engine.v1.PropertyTerm
+	(*SubjectTypeProperty)(nil),                       // 209: provenencia.engine.v1.SubjectTypeProperty
+	(*SubjectTypePresentation)(nil),                   // 210: provenencia.engine.v1.SubjectTypePresentation
+	(*ConnectRule)(nil),                               // 211: provenencia.engine.v1.ConnectRule
+	(*ConnectEdge)(nil),                               // 212: provenencia.engine.v1.ConnectEdge
+	(*ListPropertiesRequest)(nil),                     // 213: provenencia.engine.v1.ListPropertiesRequest
+	(*ListPropertiesResponse)(nil),                    // 214: provenencia.engine.v1.ListPropertiesResponse
+	(*CreatePropertyRequest)(nil),                     // 215: provenencia.engine.v1.CreatePropertyRequest
+	(*CreatePropertyResponse)(nil),                    // 216: provenencia.engine.v1.CreatePropertyResponse
+	(*UpdatePropertyRequest)(nil),                     // 217: provenencia.engine.v1.UpdatePropertyRequest
+	(*UpdatePropertyResponse)(nil),                    // 218: provenencia.engine.v1.UpdatePropertyResponse
+	(*DeletePropertyRequest)(nil),                     // 219: provenencia.engine.v1.DeletePropertyRequest
+	(*DeletePropertyResponse)(nil),                    // 220: provenencia.engine.v1.DeletePropertyResponse
+	(*ListSubjectTypePropertiesRequest)(nil),          // 221: provenencia.engine.v1.ListSubjectTypePropertiesRequest
+	(*ListSubjectTypePropertiesResponse)(nil),         // 222: provenencia.engine.v1.ListSubjectTypePropertiesResponse
+	(*AssignSubjectTypePropertyRequest)(nil),          // 223: provenencia.engine.v1.AssignSubjectTypePropertyRequest
+	(*AssignSubjectTypePropertyResponse)(nil),         // 224: provenencia.engine.v1.AssignSubjectTypePropertyResponse
+	(*RemoveSubjectTypePropertyRequest)(nil),          // 225: provenencia.engine.v1.RemoveSubjectTypePropertyRequest
+	(*RemoveSubjectTypePropertyResponse)(nil),         // 226: provenencia.engine.v1.RemoveSubjectTypePropertyResponse
+	(*ReorderSubjectTypePropertiesRequest)(nil),       // 227: provenencia.engine.v1.ReorderSubjectTypePropertiesRequest
+	(*ReorderSubjectTypePropertiesResponse)(nil),      // 228: provenencia.engine.v1.ReorderSubjectTypePropertiesResponse
+	(*ListPlaceableSubjectTypesRequest)(nil),          // 229: provenencia.engine.v1.ListPlaceableSubjectTypesRequest
+	(*ListPlaceableSubjectTypesResponse)(nil),         // 230: provenencia.engine.v1.ListPlaceableSubjectTypesResponse
+	(*GetSubjectTypePresentationRequest)(nil),         // 231: provenencia.engine.v1.GetSubjectTypePresentationRequest
+	(*GetSubjectTypePresentationResponse)(nil),        // 232: provenencia.engine.v1.GetSubjectTypePresentationResponse
+	(*ListConnectRulesRequest)(nil),                   // 233: provenencia.engine.v1.ListConnectRulesRequest
+	(*ListConnectRulesResponse)(nil),                  // 234: provenencia.engine.v1.ListConnectRulesResponse
+	(*ListPropertyTermsRequest)(nil),                  // 235: provenencia.engine.v1.ListPropertyTermsRequest
+	(*ListPropertyTermsResponse)(nil),                 // 236: provenencia.engine.v1.ListPropertyTermsResponse
+	(*CreatePropertyTermRequest)(nil),                 // 237: provenencia.engine.v1.CreatePropertyTermRequest
+	(*CreatePropertyTermResponse)(nil),                // 238: provenencia.engine.v1.CreatePropertyTermResponse
+	(*UpdatePropertyTermRequest)(nil),                 // 239: provenencia.engine.v1.UpdatePropertyTermRequest
+	(*UpdatePropertyTermResponse)(nil),                // 240: provenencia.engine.v1.UpdatePropertyTermResponse
+	(*DeletePropertyTermRequest)(nil),                 // 241: provenencia.engine.v1.DeletePropertyTermRequest
+	(*DeletePropertyTermResponse)(nil),                // 242: provenencia.engine.v1.DeletePropertyTermResponse
+	(*NameValuePartInput)(nil),                        // 243: provenencia.engine.v1.NameValuePartInput
+	(*NameValueInput)(nil),                            // 244: provenencia.engine.v1.NameValueInput
+	(*DepictionValueInput)(nil),                       // 245: provenencia.engine.v1.DepictionValueInput
+	(*DepictionValue)(nil),                            // 246: provenencia.engine.v1.DepictionValue
+	(*Citation)(nil),                                  // 247: provenencia.engine.v1.Citation
+	(*Observation)(nil),                               // 248: provenencia.engine.v1.Observation
+	(*ObservationDraft)(nil),                          // 249: provenencia.engine.v1.ObservationDraft
+	(*CreateCitationWithObservationsRequest)(nil),     // 250: provenencia.engine.v1.CreateCitationWithObservationsRequest
+	(*CreateCitationWithObservationsResponse)(nil),    // 251: provenencia.engine.v1.CreateCitationWithObservationsResponse
+	(*AddObservationsToCitationRequest)(nil),          // 252: provenencia.engine.v1.AddObservationsToCitationRequest
+	(*AddObservationsToCitationResponse)(nil),         // 253: provenencia.engine.v1.AddObservationsToCitationResponse
+	(*ListObservationsByEvidenceGraphRequest)(nil),    // 254: provenencia.engine.v1.ListObservationsByEvidenceGraphRequest
+	(*ListObservationsByEvidenceGraphResponse)(nil),   // 255: provenencia.engine.v1.ListObservationsByEvidenceGraphResponse
+	(*CitationCountsByEvidenceGraphRequest)(nil),      // 256: provenencia.engine.v1.CitationCountsByEvidenceGraphRequest
+	(*ArtifactCitationCount)(nil),                     // 257: provenencia.engine.v1.ArtifactCitationCount
+	(*CitationCountsByEvidenceGraphResponse)(nil),     // 258: provenencia.engine.v1.CitationCountsByEvidenceGraphResponse
+	(*ListedCitation)(nil),                            // 259: provenencia.engine.v1.ListedCitation
+	(*ListCitationsByArtifactRequest)(nil),            // 260: provenencia.engine.v1.ListCitationsByArtifactRequest
+	(*ListCitationsByArtifactResponse)(nil),           // 261: provenencia.engine.v1.ListCitationsByArtifactResponse
+	(*GetCitationRequest)(nil),                        // 262: provenencia.engine.v1.GetCitationRequest
+	(*GetCitationResponse)(nil),                       // 263: provenencia.engine.v1.GetCitationResponse
+	(*CreateCitedBridgeRequest)(nil),                  // 264: provenencia.engine.v1.CreateCitedBridgeRequest
+	(*CreateCitedBridgeResponse)(nil),                 // 265: provenencia.engine.v1.CreateCitedBridgeResponse
+	(*UpdateCitationRequest)(nil),                     // 266: provenencia.engine.v1.UpdateCitationRequest
+	(*UpdateCitationResponse)(nil),                    // 267: provenencia.engine.v1.UpdateCitationResponse
+	(*UpdateObservationRequest)(nil),                  // 268: provenencia.engine.v1.UpdateObservationRequest
+	(*UpdateObservationResponse)(nil),                 // 269: provenencia.engine.v1.UpdateObservationResponse
+	(*DeleteObservationRequest)(nil),                  // 270: provenencia.engine.v1.DeleteObservationRequest
+	(*DeleteObservationResponse)(nil),                 // 271: provenencia.engine.v1.DeleteObservationResponse
+	(*GetPropertiesWorkspaceRequest)(nil),             // 272: provenencia.engine.v1.GetPropertiesWorkspaceRequest
+	(*SubjectTypePropertiesGroup)(nil),                // 273: provenencia.engine.v1.SubjectTypePropertiesGroup
+	(*GetPropertiesWorkspaceResponse)(nil),            // 274: provenencia.engine.v1.GetPropertiesWorkspaceResponse
+	(*EvidenceGraphProgress)(nil),                     // 275: provenencia.engine.v1.EvidenceGraphProgress
+	(*ListEvidenceGraphProgressRequest)(nil),          // 276: provenencia.engine.v1.ListEvidenceGraphProgressRequest
+	(*ListEvidenceGraphProgressResponse)(nil),         // 277: provenencia.engine.v1.ListEvidenceGraphProgressResponse
+	(*GetEvidenceGraphProgressRequest)(nil),           // 278: provenencia.engine.v1.GetEvidenceGraphProgressRequest
+	(*GetEvidenceGraphProgressResponse)(nil),          // 279: provenencia.engine.v1.GetEvidenceGraphProgressResponse
+	(*GetDeleteImpactRequest)(nil),                    // 280: provenencia.engine.v1.GetDeleteImpactRequest
+	(*GetDeleteImpactResponse)(nil),                   // 281: provenencia.engine.v1.GetDeleteImpactResponse
+	(*DeleteImpactGroup)(nil),                         // 282: provenencia.engine.v1.DeleteImpactGroup
+	(*DeleteImpactListed)(nil),                        // 283: provenencia.engine.v1.DeleteImpactListed
+	(*GetNameFormatRequest)(nil),                      // 284: provenencia.engine.v1.GetNameFormatRequest
+	(*NameFormatPart)(nil),                            // 285: provenencia.engine.v1.NameFormatPart
+	(*GetNameFormatResponse)(nil),                     // 286: provenencia.engine.v1.GetNameFormatResponse
+	(*Error)(nil),                                     // 287: provenencia.engine.v1.Error
 }
 var file_engine_proto_depIdxs = []int32{
 	26,  // 0: provenencia.engine.v1.CompleteOnboardingResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
@@ -21617,228 +21363,226 @@ var file_engine_proto_depIdxs = []int32{
 	31,  // 11: provenencia.engine.v1.GetSourceWorkspaceResponse.artifacts:type_name -> provenencia.engine.v1.Artifact
 	33,  // 12: provenencia.engine.v1.GetSourceWorkspaceResponse.credibility:type_name -> provenencia.engine.v1.SourceCredibilityAssessment
 	28,  // 13: provenencia.engine.v1.CreateSourceResponse.source:type_name -> provenencia.engine.v1.Source
-	93,  // 14: provenencia.engine.v1.CreateSourceResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	89,  // 14: provenencia.engine.v1.CreateSourceResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
 	28,  // 15: provenencia.engine.v1.CopySourceResponse.source:type_name -> provenencia.engine.v1.Source
-	93,  // 16: provenencia.engine.v1.CopySourceResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	89,  // 16: provenencia.engine.v1.CopySourceResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
 	47,  // 17: provenencia.engine.v1.ListEvidenceGraphsResponse.graphs:type_name -> provenencia.engine.v1.EvidenceGraph
 	47,  // 18: provenencia.engine.v1.CreateEvidenceGraphResponse.graph:type_name -> provenencia.engine.v1.EvidenceGraph
-	93,  // 19: provenencia.engine.v1.CreateEvidenceGraphResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	93,  // 20: provenencia.engine.v1.UpdateEvidenceGraphResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	93,  // 21: provenencia.engine.v1.DeleteEvidenceGraphResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	93,  // 22: provenencia.engine.v1.LinkEvidenceGraphArtifactResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	93,  // 23: provenencia.engine.v1.UnlinkEvidenceGraphArtifactResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	60,  // 24: provenencia.engine.v1.GetEvidenceGraphUnlinkImpactRequest.pairs:type_name -> provenencia.engine.v1.EvidenceGraphArtifactPair
-	286, // 25: provenencia.engine.v1.EvidenceGraphUnlinkBlock.citations:type_name -> provenencia.engine.v1.DeleteImpactGroup
-	62,  // 26: provenencia.engine.v1.GetEvidenceGraphUnlinkImpactResponse.blocked:type_name -> provenencia.engine.v1.EvidenceGraphUnlinkBlock
-	28,  // 27: provenencia.engine.v1.UpdateSourceResponse.source:type_name -> provenencia.engine.v1.Source
-	28,  // 28: provenencia.engine.v1.SetSourceCoverResponse.source:type_name -> provenencia.engine.v1.Source
-	29,  // 29: provenencia.engine.v1.AddSourceNoteResponse.note:type_name -> provenencia.engine.v1.SourceNote
-	93,  // 30: provenencia.engine.v1.AddSourceNoteResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	29,  // 31: provenencia.engine.v1.UpdateSourceNoteResponse.note:type_name -> provenencia.engine.v1.SourceNote
-	93,  // 32: provenencia.engine.v1.UpdateSourceNoteResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	93,  // 33: provenencia.engine.v1.DeleteSourceNoteResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	37,  // 34: provenencia.engine.v1.SetSourceMetadataResponse.entry:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
-	93,  // 35: provenencia.engine.v1.SetSourceMetadataResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	93,  // 36: provenencia.engine.v1.ClearSourceMetadataResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	37,  // 37: provenencia.engine.v1.DismissSourceMetadataSuggestionResponse.metadata:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
-	93,  // 38: provenencia.engine.v1.DismissSourceMetadataSuggestionResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	37,  // 39: provenencia.engine.v1.ReorderSourceMetadataResponse.metadata:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
-	93,  // 40: provenencia.engine.v1.ReorderSourceMetadataResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	85,  // 41: provenencia.engine.v1.CreateArtifactRequest.graph_links:type_name -> provenencia.engine.v1.GraphLinks
-	31,  // 42: provenencia.engine.v1.CreateArtifactResponse.artifact:type_name -> provenencia.engine.v1.Artifact
-	93,  // 43: provenencia.engine.v1.CreateArtifactResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	85,  // 44: provenencia.engine.v1.UpdateArtifactRequest.graph_links:type_name -> provenencia.engine.v1.GraphLinks
-	31,  // 45: provenencia.engine.v1.UpdateArtifactResponse.artifact:type_name -> provenencia.engine.v1.Artifact
-	93,  // 46: provenencia.engine.v1.UpdateArtifactResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	93,  // 47: provenencia.engine.v1.DeleteArtifactResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	93,  // 48: provenencia.engine.v1.DeleteCitationResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	31,  // 49: provenencia.engine.v1.IngestArtifactFileResponse.artifact:type_name -> provenencia.engine.v1.Artifact
-	30,  // 50: provenencia.engine.v1.IngestArtifactFileResponse.file:type_name -> provenencia.engine.v1.SourceFileRef
-	93,  // 51: provenencia.engine.v1.IngestArtifactFileResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	32,  // 52: provenencia.engine.v1.ListSourceCredibilityGradesResponse.grades:type_name -> provenencia.engine.v1.SourceCredibilityGrade
-	33,  // 53: provenencia.engine.v1.UpsertSourceCredibilityAssessmentResponse.assessment:type_name -> provenencia.engine.v1.SourceCredibilityAssessment
-	93,  // 54: provenencia.engine.v1.UpsertSourceCredibilityAssessmentResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	34,  // 55: provenencia.engine.v1.ListSourceTypesResponse.types:type_name -> provenencia.engine.v1.SourceType
-	34,  // 56: provenencia.engine.v1.CreateSourceTypeResponse.type:type_name -> provenencia.engine.v1.SourceType
-	36,  // 57: provenencia.engine.v1.ListMetadataFieldsResponse.fields:type_name -> provenencia.engine.v1.MetadataField
-	36,  // 58: provenencia.engine.v1.CreateMetadataFieldResponse.field:type_name -> provenencia.engine.v1.MetadataField
-	36,  // 59: provenencia.engine.v1.UpdateMetadataFieldResponse.field:type_name -> provenencia.engine.v1.MetadataField
-	34,  // 60: provenencia.engine.v1.UpdateSourceTypeResponse.type:type_name -> provenencia.engine.v1.SourceType
-	35,  // 61: provenencia.engine.v1.ListTypeSuggestionsResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
-	35,  // 62: provenencia.engine.v1.AssignTypeFieldResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
-	35,  // 63: provenencia.engine.v1.RemoveTypeFieldResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
-	122, // 64: provenencia.engine.v1.GetWorkspaceNavCountsResponse.source_types:type_name -> provenencia.engine.v1.VocabularyOriginCounts
-	122, // 65: provenencia.engine.v1.GetWorkspaceNavCountsResponse.metadata_fields:type_name -> provenencia.engine.v1.VocabularyOriginCounts
-	129, // 66: provenencia.engine.v1.SearchCatalogRequest.location:type_name -> provenencia.engine.v1.WorkspaceLocation
-	129, // 67: provenencia.engine.v1.SearchHit.location:type_name -> provenencia.engine.v1.WorkspaceLocation
-	166, // 68: provenencia.engine.v1.SearchHit.person:type_name -> provenencia.engine.v1.PersonHeader
-	169, // 69: provenencia.engine.v1.SearchHit.event:type_name -> provenencia.engine.v1.EventHeader
-	173, // 70: provenencia.engine.v1.SearchHit.place:type_name -> provenencia.engine.v1.PlaceHeader
-	131, // 71: provenencia.engine.v1.SearchCatalogResponse.hits:type_name -> provenencia.engine.v1.SearchHit
-	133, // 72: provenencia.engine.v1.ListSubjectTypesResponse.types:type_name -> provenencia.engine.v1.SubjectType
-	134, // 73: provenencia.engine.v1.CreateSubjectResponse.subject:type_name -> provenencia.engine.v1.Subject
-	93,  // 74: provenencia.engine.v1.CreateSubjectResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	134, // 75: provenencia.engine.v1.UpdateSubjectResponse.subject:type_name -> provenencia.engine.v1.Subject
-	93,  // 76: provenencia.engine.v1.UpdateSubjectResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	93,  // 77: provenencia.engine.v1.DeleteSubjectResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	146, // 78: provenencia.engine.v1.ListClaimConfidenceGradesResponse.grades:type_name -> provenencia.engine.v1.ClaimConfidenceGrade
-	144, // 79: provenencia.engine.v1.PromoteSubjectResponse.entity:type_name -> provenencia.engine.v1.CanonicalEntity
-	145, // 80: provenencia.engine.v1.PromoteSubjectResponse.claim:type_name -> provenencia.engine.v1.IdentityClaim
-	93,  // 81: provenencia.engine.v1.UnpromoteSubjectResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	93,  // 82: provenencia.engine.v1.SetPreferredLikenessResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	144, // 83: provenencia.engine.v1.SubjectMembership.entity:type_name -> provenencia.engine.v1.CanonicalEntity
-	248, // 84: provenencia.engine.v1.SubjectMembership.name:type_name -> provenencia.engine.v1.NameValueInput
-	248, // 85: provenencia.engine.v1.EventTitleSubject.name:type_name -> provenencia.engine.v1.NameValueInput
-	1,   // 86: provenencia.engine.v1.EventTitle.rule:type_name -> provenencia.engine.v1.EventTitleRule
-	156, // 87: provenencia.engine.v1.EventTitle.subjects:type_name -> provenencia.engine.v1.EventTitleSubject
-	157, // 88: provenencia.engine.v1.SourceEventTitle.title:type_name -> provenencia.engine.v1.EventTitle
-	159, // 89: provenencia.engine.v1.ListEvidenceGraphEventTitlesResponse.titles:type_name -> provenencia.engine.v1.SourceEventTitle
-	155, // 90: provenencia.engine.v1.ListSubjectMembershipsResponse.memberships:type_name -> provenencia.engine.v1.SubjectMembership
-	144, // 91: provenencia.engine.v1.HeaderPlace.entity:type_name -> provenencia.engine.v1.CanonicalEntity
-	38,  // 92: provenencia.engine.v1.LifeFacts.date:type_name -> provenencia.engine.v1.DateValueInput
-	163, // 93: provenencia.engine.v1.LifeFacts.places:type_name -> provenencia.engine.v1.HeaderPlace
-	144, // 94: provenencia.engine.v1.LifeFacts.event:type_name -> provenencia.engine.v1.CanonicalEntity
-	144, // 95: provenencia.engine.v1.EventSubject.entity:type_name -> provenencia.engine.v1.CanonicalEntity
-	248, // 96: provenencia.engine.v1.EventSubject.name:type_name -> provenencia.engine.v1.NameValueInput
-	144, // 97: provenencia.engine.v1.PersonHeader.entity:type_name -> provenencia.engine.v1.CanonicalEntity
-	248, // 98: provenencia.engine.v1.PersonHeader.name:type_name -> provenencia.engine.v1.NameValueInput
-	164, // 99: provenencia.engine.v1.PersonHeader.birth:type_name -> provenencia.engine.v1.LifeFacts
-	164, // 100: provenencia.engine.v1.PersonHeader.death:type_name -> provenencia.engine.v1.LifeFacts
-	166, // 101: provenencia.engine.v1.ListPersonHeadersResponse.headers:type_name -> provenencia.engine.v1.PersonHeader
-	144, // 102: provenencia.engine.v1.EventHeader.entity:type_name -> provenencia.engine.v1.CanonicalEntity
-	177, // 103: provenencia.engine.v1.EventHeader.event_type:type_name -> provenencia.engine.v1.ConclusionTerm
-	38,  // 104: provenencia.engine.v1.EventHeader.date:type_name -> provenencia.engine.v1.DateValueInput
-	38,  // 105: provenencia.engine.v1.EventHeader.start_date:type_name -> provenencia.engine.v1.DateValueInput
-	38,  // 106: provenencia.engine.v1.EventHeader.end_date:type_name -> provenencia.engine.v1.DateValueInput
-	165, // 107: provenencia.engine.v1.EventHeader.subjects:type_name -> provenencia.engine.v1.EventSubject
-	163, // 108: provenencia.engine.v1.EventHeader.places:type_name -> provenencia.engine.v1.HeaderPlace
-	157, // 109: provenencia.engine.v1.EventHeader.title:type_name -> provenencia.engine.v1.EventTitle
-	169, // 110: provenencia.engine.v1.ListEventHeadersResponse.headers:type_name -> provenencia.engine.v1.EventHeader
-	144, // 111: provenencia.engine.v1.PlaceRelationship.entity:type_name -> provenencia.engine.v1.CanonicalEntity
-	38,  // 112: provenencia.engine.v1.PlaceRelationship.start_date:type_name -> provenencia.engine.v1.DateValueInput
-	38,  // 113: provenencia.engine.v1.PlaceRelationship.end_date:type_name -> provenencia.engine.v1.DateValueInput
-	144, // 114: provenencia.engine.v1.PlaceHeader.entity:type_name -> provenencia.engine.v1.CanonicalEntity
-	38,  // 115: provenencia.engine.v1.PlaceHeader.start_date:type_name -> provenencia.engine.v1.DateValueInput
-	38,  // 116: provenencia.engine.v1.PlaceHeader.end_date:type_name -> provenencia.engine.v1.DateValueInput
-	172, // 117: provenencia.engine.v1.PlaceHeader.part_of:type_name -> provenencia.engine.v1.PlaceRelationship
-	172, // 118: provenencia.engine.v1.PlaceHeader.contains:type_name -> provenencia.engine.v1.PlaceRelationship
-	172, // 119: provenencia.engine.v1.PlaceHeader.predecessors:type_name -> provenencia.engine.v1.PlaceRelationship
-	172, // 120: provenencia.engine.v1.PlaceHeader.successors:type_name -> provenencia.engine.v1.PlaceRelationship
-	173, // 121: provenencia.engine.v1.ListPlaceHeadersResponse.headers:type_name -> provenencia.engine.v1.PlaceHeader
-	177, // 122: provenencia.engine.v1.ConclusionValue.term:type_name -> provenencia.engine.v1.ConclusionTerm
-	38,  // 123: provenencia.engine.v1.ConclusionValue.date:type_name -> provenencia.engine.v1.DateValueInput
-	248, // 124: provenencia.engine.v1.ConclusionValue.name:type_name -> provenencia.engine.v1.NameValueInput
-	250, // 125: provenencia.engine.v1.ConclusionValue.depiction:type_name -> provenencia.engine.v1.DepictionValue
-	176, // 126: provenencia.engine.v1.ReconciledValueDetail.value:type_name -> provenencia.engine.v1.ConclusionValue
-	176, // 127: provenencia.engine.v1.ReconcilerOutcomeDetail.recorded:type_name -> provenencia.engine.v1.ConclusionValue
-	178, // 128: provenencia.engine.v1.ConclusionField.values:type_name -> provenencia.engine.v1.ReconciledValueDetail
-	179, // 129: provenencia.engine.v1.ConclusionField.outcomes:type_name -> provenencia.engine.v1.ReconcilerOutcomeDetail
-	179, // 130: provenencia.engine.v1.LikenessDetail.record:type_name -> provenencia.engine.v1.ReconcilerOutcomeDetail
-	144, // 131: provenencia.engine.v1.ConclusionDetail.entity:type_name -> provenencia.engine.v1.CanonicalEntity
-	180, // 132: provenencia.engine.v1.ConclusionDetail.fields:type_name -> provenencia.engine.v1.ConclusionField
-	166, // 133: provenencia.engine.v1.ConclusionDetail.person:type_name -> provenencia.engine.v1.PersonHeader
-	169, // 134: provenencia.engine.v1.ConclusionDetail.event:type_name -> provenencia.engine.v1.EventHeader
-	173, // 135: provenencia.engine.v1.ConclusionDetail.place:type_name -> provenencia.engine.v1.PlaceHeader
-	182, // 136: provenencia.engine.v1.ConclusionDetail.likenesses:type_name -> provenencia.engine.v1.LikenessDetail
-	185, // 137: provenencia.engine.v1.ProposePromoteGraphAlignmentRequest.fixed:type_name -> provenencia.engine.v1.PromoteGraphAlignmentFixed
-	185, // 138: provenencia.engine.v1.GetPromoteClaimEvidenceRequest.neighbors:type_name -> provenencia.engine.v1.PromoteGraphAlignmentFixed
-	176, // 139: provenencia.engine.v1.PromoteClaimEvidencePin.value:type_name -> provenencia.engine.v1.ConclusionValue
-	176, // 140: provenencia.engine.v1.PromoteClaimEvidenceLine.incoming:type_name -> provenencia.engine.v1.ConclusionValue
-	187, // 141: provenencia.engine.v1.PromoteClaimEvidenceLine.members:type_name -> provenencia.engine.v1.PromoteClaimEvidencePin
-	188, // 142: provenencia.engine.v1.PromoteClaimEvidenceSection.lines:type_name -> provenencia.engine.v1.PromoteClaimEvidenceLine
-	166, // 143: provenencia.engine.v1.PromoteClaimEvidenceShape.person:type_name -> provenencia.engine.v1.PersonHeader
-	169, // 144: provenencia.engine.v1.PromoteClaimEvidenceShape.event:type_name -> provenencia.engine.v1.EventHeader
-	190, // 145: provenencia.engine.v1.PromoteClaimEvidenceRelationship.bundles:type_name -> provenencia.engine.v1.PromoteClaimEvidenceBundle
-	189, // 146: provenencia.engine.v1.PromoteClaimEvidenceRelationship.sections:type_name -> provenencia.engine.v1.PromoteClaimEvidenceSection
-	177, // 147: provenencia.engine.v1.PromoteClaimEvidenceRelationship.neighbor_term:type_name -> provenencia.engine.v1.ConclusionTerm
-	177, // 148: provenencia.engine.v1.PromoteClaimEvidenceRelationship.event_type:type_name -> provenencia.engine.v1.ConclusionTerm
-	191, // 149: provenencia.engine.v1.PromoteClaimEvidenceRelationship.layer:type_name -> provenencia.engine.v1.PromoteClaimEvidenceShape
-	191, // 150: provenencia.engine.v1.PromoteClaimEvidenceRelationship.canon:type_name -> provenencia.engine.v1.PromoteClaimEvidenceShape
-	189, // 151: provenencia.engine.v1.GetPromoteClaimEvidenceResponse.sections:type_name -> provenencia.engine.v1.PromoteClaimEvidenceSection
-	192, // 152: provenencia.engine.v1.GetPromoteClaimEvidenceResponse.relationships:type_name -> provenencia.engine.v1.PromoteClaimEvidenceRelationship
-	193, // 153: provenencia.engine.v1.GetPromoteClaimEvidenceResponse.offers:type_name -> provenencia.engine.v1.PromoteClaimEvidenceOffer
-	194, // 154: provenencia.engine.v1.GetPromoteClaimEvidenceResponse.sources:type_name -> provenencia.engine.v1.PromoteClaimEvidenceSource
-	166, // 155: provenencia.engine.v1.PromoteGraphAlignmentAlternative.person:type_name -> provenencia.engine.v1.PersonHeader
-	169, // 156: provenencia.engine.v1.PromoteGraphAlignmentAlternative.event:type_name -> provenencia.engine.v1.EventHeader
-	173, // 157: provenencia.engine.v1.PromoteGraphAlignmentAlternative.place:type_name -> provenencia.engine.v1.PlaceHeader
-	196, // 158: provenencia.engine.v1.PromoteGraphAlignmentRow.alternatives:type_name -> provenencia.engine.v1.PromoteGraphAlignmentAlternative
-	166, // 159: provenencia.engine.v1.PromoteGraphAlignmentRow.person:type_name -> provenencia.engine.v1.PersonHeader
-	169, // 160: provenencia.engine.v1.PromoteGraphAlignmentRow.event:type_name -> provenencia.engine.v1.EventHeader
-	173, // 161: provenencia.engine.v1.PromoteGraphAlignmentRow.place:type_name -> provenencia.engine.v1.PlaceHeader
-	197, // 162: provenencia.engine.v1.ProposePromoteGraphAlignmentResponse.rows:type_name -> provenencia.engine.v1.PromoteGraphAlignmentRow
-	200, // 163: provenencia.engine.v1.ApplyPromoteGraphAlignmentRequest.rows:type_name -> provenencia.engine.v1.ApplyPromoteGraphAlignmentRow
-	144, // 164: provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten.entity:type_name -> provenencia.engine.v1.CanonicalEntity
-	145, // 165: provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten.claim:type_name -> provenencia.engine.v1.IdentityClaim
-	201, // 166: provenencia.engine.v1.ApplyPromoteGraphAlignmentResponse.written:type_name -> provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten
-	134, // 167: provenencia.engine.v1.ListSubjectsResponse.subjects:type_name -> provenencia.engine.v1.Subject
-	135, // 168: provenencia.engine.v1.SetSubjectPositionResponse.position:type_name -> provenencia.engine.v1.SubjectPosition
-	135, // 169: provenencia.engine.v1.ListSubjectPositionsResponse.positions:type_name -> provenencia.engine.v1.SubjectPosition
-	211, // 170: provenencia.engine.v1.SubjectTypeProperty.property:type_name -> provenencia.engine.v1.Property
-	216, // 171: provenencia.engine.v1.ConnectRule.edges:type_name -> provenencia.engine.v1.ConnectEdge
-	211, // 172: provenencia.engine.v1.ListPropertiesResponse.properties:type_name -> provenencia.engine.v1.Property
-	211, // 173: provenencia.engine.v1.CreatePropertyResponse.property:type_name -> provenencia.engine.v1.Property
-	211, // 174: provenencia.engine.v1.UpdatePropertyResponse.property:type_name -> provenencia.engine.v1.Property
-	213, // 175: provenencia.engine.v1.ListSubjectTypePropertiesResponse.properties:type_name -> provenencia.engine.v1.SubjectTypeProperty
-	213, // 176: provenencia.engine.v1.ReorderSubjectTypePropertiesResponse.properties:type_name -> provenencia.engine.v1.SubjectTypeProperty
-	93,  // 177: provenencia.engine.v1.ReorderSubjectTypePropertiesResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	214, // 178: provenencia.engine.v1.ListPlaceableSubjectTypesResponse.types:type_name -> provenencia.engine.v1.SubjectTypePresentation
-	214, // 179: provenencia.engine.v1.GetSubjectTypePresentationResponse.presentation:type_name -> provenencia.engine.v1.SubjectTypePresentation
-	215, // 180: provenencia.engine.v1.ListConnectRulesResponse.rules:type_name -> provenencia.engine.v1.ConnectRule
-	212, // 181: provenencia.engine.v1.ListPropertyTermsResponse.terms:type_name -> provenencia.engine.v1.PropertyTerm
-	212, // 182: provenencia.engine.v1.CreatePropertyTermResponse.term:type_name -> provenencia.engine.v1.PropertyTerm
-	212, // 183: provenencia.engine.v1.UpdatePropertyTermResponse.term:type_name -> provenencia.engine.v1.PropertyTerm
-	247, // 184: provenencia.engine.v1.NameValueInput.parts:type_name -> provenencia.engine.v1.NameValuePartInput
-	38,  // 185: provenencia.engine.v1.Observation.date:type_name -> provenencia.engine.v1.DateValueInput
-	248, // 186: provenencia.engine.v1.Observation.name:type_name -> provenencia.engine.v1.NameValueInput
-	250, // 187: provenencia.engine.v1.Observation.depiction:type_name -> provenencia.engine.v1.DepictionValue
-	38,  // 188: provenencia.engine.v1.ObservationDraft.date:type_name -> provenencia.engine.v1.DateValueInput
-	248, // 189: provenencia.engine.v1.ObservationDraft.name:type_name -> provenencia.engine.v1.NameValueInput
-	249, // 190: provenencia.engine.v1.ObservationDraft.depiction:type_name -> provenencia.engine.v1.DepictionValueInput
-	253, // 191: provenencia.engine.v1.CreateCitationWithObservationsRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
-	251, // 192: provenencia.engine.v1.CreateCitationWithObservationsResponse.citation:type_name -> provenencia.engine.v1.Citation
-	252, // 193: provenencia.engine.v1.CreateCitationWithObservationsResponse.observations:type_name -> provenencia.engine.v1.Observation
-	93,  // 194: provenencia.engine.v1.CreateCitationWithObservationsResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	253, // 195: provenencia.engine.v1.AddObservationsToCitationRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
-	252, // 196: provenencia.engine.v1.AddObservationsToCitationResponse.observations:type_name -> provenencia.engine.v1.Observation
-	93,  // 197: provenencia.engine.v1.AddObservationsToCitationResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	252, // 198: provenencia.engine.v1.ListObservationsByEvidenceGraphResponse.observations:type_name -> provenencia.engine.v1.Observation
-	261, // 199: provenencia.engine.v1.CitationCountsByEvidenceGraphResponse.counts:type_name -> provenencia.engine.v1.ArtifactCitationCount
-	251, // 200: provenencia.engine.v1.ListedCitation.citation:type_name -> provenencia.engine.v1.Citation
-	263, // 201: provenencia.engine.v1.ListCitationsByArtifactResponse.citations:type_name -> provenencia.engine.v1.ListedCitation
-	251, // 202: provenencia.engine.v1.GetCitationResponse.citation:type_name -> provenencia.engine.v1.Citation
-	252, // 203: provenencia.engine.v1.GetCitationResponse.observations:type_name -> provenencia.engine.v1.Observation
-	253, // 204: provenencia.engine.v1.CreateCitedBridgeRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
-	134, // 205: provenencia.engine.v1.CreateCitedBridgeResponse.subject:type_name -> provenencia.engine.v1.Subject
-	251, // 206: provenencia.engine.v1.CreateCitedBridgeResponse.citation:type_name -> provenencia.engine.v1.Citation
-	252, // 207: provenencia.engine.v1.CreateCitedBridgeResponse.observations:type_name -> provenencia.engine.v1.Observation
-	93,  // 208: provenencia.engine.v1.CreateCitedBridgeResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	251, // 209: provenencia.engine.v1.UpdateCitationResponse.citation:type_name -> provenencia.engine.v1.Citation
-	93,  // 210: provenencia.engine.v1.UpdateCitationResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	252, // 211: provenencia.engine.v1.UpdateObservationRequest.observation:type_name -> provenencia.engine.v1.Observation
-	249, // 212: provenencia.engine.v1.UpdateObservationRequest.depiction_input:type_name -> provenencia.engine.v1.DepictionValueInput
-	252, // 213: provenencia.engine.v1.UpdateObservationResponse.observation:type_name -> provenencia.engine.v1.Observation
-	93,  // 214: provenencia.engine.v1.UpdateObservationResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	93,  // 215: provenencia.engine.v1.DeleteObservationResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
-	213, // 216: provenencia.engine.v1.SubjectTypePropertiesGroup.properties:type_name -> provenencia.engine.v1.SubjectTypeProperty
-	214, // 217: provenencia.engine.v1.SubjectTypePropertiesGroup.presentation:type_name -> provenencia.engine.v1.SubjectTypePresentation
-	211, // 218: provenencia.engine.v1.GetPropertiesWorkspaceResponse.properties:type_name -> provenencia.engine.v1.Property
-	133, // 219: provenencia.engine.v1.GetPropertiesWorkspaceResponse.types:type_name -> provenencia.engine.v1.SubjectType
-	277, // 220: provenencia.engine.v1.GetPropertiesWorkspaceResponse.groups:type_name -> provenencia.engine.v1.SubjectTypePropertiesGroup
-	279, // 221: provenencia.engine.v1.ListEvidenceGraphProgressResponse.rows:type_name -> provenencia.engine.v1.EvidenceGraphProgress
-	279, // 222: provenencia.engine.v1.GetEvidenceGraphProgressResponse.progress:type_name -> provenencia.engine.v1.EvidenceGraphProgress
-	2,   // 223: provenencia.engine.v1.GetDeleteImpactResponse.gate:type_name -> provenencia.engine.v1.DeleteImpactGate
-	286, // 224: provenencia.engine.v1.GetDeleteImpactResponse.groups:type_name -> provenencia.engine.v1.DeleteImpactGroup
-	286, // 225: provenencia.engine.v1.GetDeleteImpactResponse.cascades:type_name -> provenencia.engine.v1.DeleteImpactGroup
-	287, // 226: provenencia.engine.v1.DeleteImpactGroup.listed:type_name -> provenencia.engine.v1.DeleteImpactListed
-	129, // 227: provenencia.engine.v1.DeleteImpactListed.location:type_name -> provenencia.engine.v1.WorkspaceLocation
-	289, // 228: provenencia.engine.v1.GetNameFormatResponse.natural:type_name -> provenencia.engine.v1.NameFormatPart
-	289, // 229: provenencia.engine.v1.GetNameFormatResponse.sorted:type_name -> provenencia.engine.v1.NameFormatPart
-	3,   // 230: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
-	231, // [231:231] is the sub-list for method output_type
-	231, // [231:231] is the sub-list for method input_type
-	231, // [231:231] is the sub-list for extension type_name
-	231, // [231:231] is the sub-list for extension extendee
-	0,   // [0:231] is the sub-list for field type_name
+	89,  // 19: provenencia.engine.v1.CreateEvidenceGraphResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	89,  // 20: provenencia.engine.v1.UpdateEvidenceGraphResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	89,  // 21: provenencia.engine.v1.DeleteEvidenceGraphResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	56,  // 22: provenencia.engine.v1.GetEvidenceGraphUnlinkImpactRequest.pairs:type_name -> provenencia.engine.v1.EvidenceGraphArtifactPair
+	282, // 23: provenencia.engine.v1.EvidenceGraphUnlinkBlock.citations:type_name -> provenencia.engine.v1.DeleteImpactGroup
+	58,  // 24: provenencia.engine.v1.GetEvidenceGraphUnlinkImpactResponse.blocked:type_name -> provenencia.engine.v1.EvidenceGraphUnlinkBlock
+	28,  // 25: provenencia.engine.v1.UpdateSourceResponse.source:type_name -> provenencia.engine.v1.Source
+	28,  // 26: provenencia.engine.v1.SetSourceCoverResponse.source:type_name -> provenencia.engine.v1.Source
+	29,  // 27: provenencia.engine.v1.AddSourceNoteResponse.note:type_name -> provenencia.engine.v1.SourceNote
+	89,  // 28: provenencia.engine.v1.AddSourceNoteResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	29,  // 29: provenencia.engine.v1.UpdateSourceNoteResponse.note:type_name -> provenencia.engine.v1.SourceNote
+	89,  // 30: provenencia.engine.v1.UpdateSourceNoteResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	89,  // 31: provenencia.engine.v1.DeleteSourceNoteResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	37,  // 32: provenencia.engine.v1.SetSourceMetadataResponse.entry:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
+	89,  // 33: provenencia.engine.v1.SetSourceMetadataResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	89,  // 34: provenencia.engine.v1.ClearSourceMetadataResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	37,  // 35: provenencia.engine.v1.DismissSourceMetadataSuggestionResponse.metadata:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
+	89,  // 36: provenencia.engine.v1.DismissSourceMetadataSuggestionResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	37,  // 37: provenencia.engine.v1.ReorderSourceMetadataResponse.metadata:type_name -> provenencia.engine.v1.MetadataWorkspaceEntry
+	89,  // 38: provenencia.engine.v1.ReorderSourceMetadataResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	81,  // 39: provenencia.engine.v1.CreateArtifactRequest.graph_links:type_name -> provenencia.engine.v1.GraphLinks
+	31,  // 40: provenencia.engine.v1.CreateArtifactResponse.artifact:type_name -> provenencia.engine.v1.Artifact
+	89,  // 41: provenencia.engine.v1.CreateArtifactResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	81,  // 42: provenencia.engine.v1.UpdateArtifactRequest.graph_links:type_name -> provenencia.engine.v1.GraphLinks
+	31,  // 43: provenencia.engine.v1.UpdateArtifactResponse.artifact:type_name -> provenencia.engine.v1.Artifact
+	89,  // 44: provenencia.engine.v1.UpdateArtifactResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	89,  // 45: provenencia.engine.v1.DeleteArtifactResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	89,  // 46: provenencia.engine.v1.DeleteCitationResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	31,  // 47: provenencia.engine.v1.IngestArtifactFileResponse.artifact:type_name -> provenencia.engine.v1.Artifact
+	30,  // 48: provenencia.engine.v1.IngestArtifactFileResponse.file:type_name -> provenencia.engine.v1.SourceFileRef
+	89,  // 49: provenencia.engine.v1.IngestArtifactFileResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	32,  // 50: provenencia.engine.v1.ListSourceCredibilityGradesResponse.grades:type_name -> provenencia.engine.v1.SourceCredibilityGrade
+	33,  // 51: provenencia.engine.v1.UpsertSourceCredibilityAssessmentResponse.assessment:type_name -> provenencia.engine.v1.SourceCredibilityAssessment
+	89,  // 52: provenencia.engine.v1.UpsertSourceCredibilityAssessmentResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	34,  // 53: provenencia.engine.v1.ListSourceTypesResponse.types:type_name -> provenencia.engine.v1.SourceType
+	34,  // 54: provenencia.engine.v1.CreateSourceTypeResponse.type:type_name -> provenencia.engine.v1.SourceType
+	36,  // 55: provenencia.engine.v1.ListMetadataFieldsResponse.fields:type_name -> provenencia.engine.v1.MetadataField
+	36,  // 56: provenencia.engine.v1.CreateMetadataFieldResponse.field:type_name -> provenencia.engine.v1.MetadataField
+	36,  // 57: provenencia.engine.v1.UpdateMetadataFieldResponse.field:type_name -> provenencia.engine.v1.MetadataField
+	34,  // 58: provenencia.engine.v1.UpdateSourceTypeResponse.type:type_name -> provenencia.engine.v1.SourceType
+	35,  // 59: provenencia.engine.v1.ListTypeSuggestionsResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
+	35,  // 60: provenencia.engine.v1.AssignTypeFieldResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
+	35,  // 61: provenencia.engine.v1.RemoveTypeFieldResponse.suggestions:type_name -> provenencia.engine.v1.TypeSuggestion
+	118, // 62: provenencia.engine.v1.GetWorkspaceNavCountsResponse.source_types:type_name -> provenencia.engine.v1.VocabularyOriginCounts
+	118, // 63: provenencia.engine.v1.GetWorkspaceNavCountsResponse.metadata_fields:type_name -> provenencia.engine.v1.VocabularyOriginCounts
+	125, // 64: provenencia.engine.v1.SearchCatalogRequest.location:type_name -> provenencia.engine.v1.WorkspaceLocation
+	125, // 65: provenencia.engine.v1.SearchHit.location:type_name -> provenencia.engine.v1.WorkspaceLocation
+	162, // 66: provenencia.engine.v1.SearchHit.person:type_name -> provenencia.engine.v1.PersonHeader
+	165, // 67: provenencia.engine.v1.SearchHit.event:type_name -> provenencia.engine.v1.EventHeader
+	169, // 68: provenencia.engine.v1.SearchHit.place:type_name -> provenencia.engine.v1.PlaceHeader
+	127, // 69: provenencia.engine.v1.SearchCatalogResponse.hits:type_name -> provenencia.engine.v1.SearchHit
+	129, // 70: provenencia.engine.v1.ListSubjectTypesResponse.types:type_name -> provenencia.engine.v1.SubjectType
+	130, // 71: provenencia.engine.v1.CreateSubjectResponse.subject:type_name -> provenencia.engine.v1.Subject
+	89,  // 72: provenencia.engine.v1.CreateSubjectResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	130, // 73: provenencia.engine.v1.UpdateSubjectResponse.subject:type_name -> provenencia.engine.v1.Subject
+	89,  // 74: provenencia.engine.v1.UpdateSubjectResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	89,  // 75: provenencia.engine.v1.DeleteSubjectResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	142, // 76: provenencia.engine.v1.ListClaimConfidenceGradesResponse.grades:type_name -> provenencia.engine.v1.ClaimConfidenceGrade
+	140, // 77: provenencia.engine.v1.PromoteSubjectResponse.entity:type_name -> provenencia.engine.v1.CanonicalEntity
+	141, // 78: provenencia.engine.v1.PromoteSubjectResponse.claim:type_name -> provenencia.engine.v1.IdentityClaim
+	89,  // 79: provenencia.engine.v1.UnpromoteSubjectResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	89,  // 80: provenencia.engine.v1.SetPreferredLikenessResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	140, // 81: provenencia.engine.v1.SubjectMembership.entity:type_name -> provenencia.engine.v1.CanonicalEntity
+	244, // 82: provenencia.engine.v1.SubjectMembership.name:type_name -> provenencia.engine.v1.NameValueInput
+	244, // 83: provenencia.engine.v1.EventTitleSubject.name:type_name -> provenencia.engine.v1.NameValueInput
+	1,   // 84: provenencia.engine.v1.EventTitle.rule:type_name -> provenencia.engine.v1.EventTitleRule
+	152, // 85: provenencia.engine.v1.EventTitle.subjects:type_name -> provenencia.engine.v1.EventTitleSubject
+	153, // 86: provenencia.engine.v1.SourceEventTitle.title:type_name -> provenencia.engine.v1.EventTitle
+	155, // 87: provenencia.engine.v1.ListEvidenceGraphEventTitlesResponse.titles:type_name -> provenencia.engine.v1.SourceEventTitle
+	151, // 88: provenencia.engine.v1.ListSubjectMembershipsResponse.memberships:type_name -> provenencia.engine.v1.SubjectMembership
+	140, // 89: provenencia.engine.v1.HeaderPlace.entity:type_name -> provenencia.engine.v1.CanonicalEntity
+	38,  // 90: provenencia.engine.v1.LifeFacts.date:type_name -> provenencia.engine.v1.DateValueInput
+	159, // 91: provenencia.engine.v1.LifeFacts.places:type_name -> provenencia.engine.v1.HeaderPlace
+	140, // 92: provenencia.engine.v1.LifeFacts.event:type_name -> provenencia.engine.v1.CanonicalEntity
+	140, // 93: provenencia.engine.v1.EventSubject.entity:type_name -> provenencia.engine.v1.CanonicalEntity
+	244, // 94: provenencia.engine.v1.EventSubject.name:type_name -> provenencia.engine.v1.NameValueInput
+	140, // 95: provenencia.engine.v1.PersonHeader.entity:type_name -> provenencia.engine.v1.CanonicalEntity
+	244, // 96: provenencia.engine.v1.PersonHeader.name:type_name -> provenencia.engine.v1.NameValueInput
+	160, // 97: provenencia.engine.v1.PersonHeader.birth:type_name -> provenencia.engine.v1.LifeFacts
+	160, // 98: provenencia.engine.v1.PersonHeader.death:type_name -> provenencia.engine.v1.LifeFacts
+	162, // 99: provenencia.engine.v1.ListPersonHeadersResponse.headers:type_name -> provenencia.engine.v1.PersonHeader
+	140, // 100: provenencia.engine.v1.EventHeader.entity:type_name -> provenencia.engine.v1.CanonicalEntity
+	173, // 101: provenencia.engine.v1.EventHeader.event_type:type_name -> provenencia.engine.v1.ConclusionTerm
+	38,  // 102: provenencia.engine.v1.EventHeader.date:type_name -> provenencia.engine.v1.DateValueInput
+	38,  // 103: provenencia.engine.v1.EventHeader.start_date:type_name -> provenencia.engine.v1.DateValueInput
+	38,  // 104: provenencia.engine.v1.EventHeader.end_date:type_name -> provenencia.engine.v1.DateValueInput
+	161, // 105: provenencia.engine.v1.EventHeader.subjects:type_name -> provenencia.engine.v1.EventSubject
+	159, // 106: provenencia.engine.v1.EventHeader.places:type_name -> provenencia.engine.v1.HeaderPlace
+	153, // 107: provenencia.engine.v1.EventHeader.title:type_name -> provenencia.engine.v1.EventTitle
+	165, // 108: provenencia.engine.v1.ListEventHeadersResponse.headers:type_name -> provenencia.engine.v1.EventHeader
+	140, // 109: provenencia.engine.v1.PlaceRelationship.entity:type_name -> provenencia.engine.v1.CanonicalEntity
+	38,  // 110: provenencia.engine.v1.PlaceRelationship.start_date:type_name -> provenencia.engine.v1.DateValueInput
+	38,  // 111: provenencia.engine.v1.PlaceRelationship.end_date:type_name -> provenencia.engine.v1.DateValueInput
+	140, // 112: provenencia.engine.v1.PlaceHeader.entity:type_name -> provenencia.engine.v1.CanonicalEntity
+	38,  // 113: provenencia.engine.v1.PlaceHeader.start_date:type_name -> provenencia.engine.v1.DateValueInput
+	38,  // 114: provenencia.engine.v1.PlaceHeader.end_date:type_name -> provenencia.engine.v1.DateValueInput
+	168, // 115: provenencia.engine.v1.PlaceHeader.part_of:type_name -> provenencia.engine.v1.PlaceRelationship
+	168, // 116: provenencia.engine.v1.PlaceHeader.contains:type_name -> provenencia.engine.v1.PlaceRelationship
+	168, // 117: provenencia.engine.v1.PlaceHeader.predecessors:type_name -> provenencia.engine.v1.PlaceRelationship
+	168, // 118: provenencia.engine.v1.PlaceHeader.successors:type_name -> provenencia.engine.v1.PlaceRelationship
+	169, // 119: provenencia.engine.v1.ListPlaceHeadersResponse.headers:type_name -> provenencia.engine.v1.PlaceHeader
+	173, // 120: provenencia.engine.v1.ConclusionValue.term:type_name -> provenencia.engine.v1.ConclusionTerm
+	38,  // 121: provenencia.engine.v1.ConclusionValue.date:type_name -> provenencia.engine.v1.DateValueInput
+	244, // 122: provenencia.engine.v1.ConclusionValue.name:type_name -> provenencia.engine.v1.NameValueInput
+	246, // 123: provenencia.engine.v1.ConclusionValue.depiction:type_name -> provenencia.engine.v1.DepictionValue
+	172, // 124: provenencia.engine.v1.ReconciledValueDetail.value:type_name -> provenencia.engine.v1.ConclusionValue
+	172, // 125: provenencia.engine.v1.ReconcilerOutcomeDetail.recorded:type_name -> provenencia.engine.v1.ConclusionValue
+	174, // 126: provenencia.engine.v1.ConclusionField.values:type_name -> provenencia.engine.v1.ReconciledValueDetail
+	175, // 127: provenencia.engine.v1.ConclusionField.outcomes:type_name -> provenencia.engine.v1.ReconcilerOutcomeDetail
+	175, // 128: provenencia.engine.v1.LikenessDetail.record:type_name -> provenencia.engine.v1.ReconcilerOutcomeDetail
+	140, // 129: provenencia.engine.v1.ConclusionDetail.entity:type_name -> provenencia.engine.v1.CanonicalEntity
+	176, // 130: provenencia.engine.v1.ConclusionDetail.fields:type_name -> provenencia.engine.v1.ConclusionField
+	162, // 131: provenencia.engine.v1.ConclusionDetail.person:type_name -> provenencia.engine.v1.PersonHeader
+	165, // 132: provenencia.engine.v1.ConclusionDetail.event:type_name -> provenencia.engine.v1.EventHeader
+	169, // 133: provenencia.engine.v1.ConclusionDetail.place:type_name -> provenencia.engine.v1.PlaceHeader
+	178, // 134: provenencia.engine.v1.ConclusionDetail.likenesses:type_name -> provenencia.engine.v1.LikenessDetail
+	181, // 135: provenencia.engine.v1.ProposePromoteGraphAlignmentRequest.fixed:type_name -> provenencia.engine.v1.PromoteGraphAlignmentFixed
+	181, // 136: provenencia.engine.v1.GetPromoteClaimEvidenceRequest.neighbors:type_name -> provenencia.engine.v1.PromoteGraphAlignmentFixed
+	172, // 137: provenencia.engine.v1.PromoteClaimEvidencePin.value:type_name -> provenencia.engine.v1.ConclusionValue
+	172, // 138: provenencia.engine.v1.PromoteClaimEvidenceLine.incoming:type_name -> provenencia.engine.v1.ConclusionValue
+	183, // 139: provenencia.engine.v1.PromoteClaimEvidenceLine.members:type_name -> provenencia.engine.v1.PromoteClaimEvidencePin
+	184, // 140: provenencia.engine.v1.PromoteClaimEvidenceSection.lines:type_name -> provenencia.engine.v1.PromoteClaimEvidenceLine
+	162, // 141: provenencia.engine.v1.PromoteClaimEvidenceShape.person:type_name -> provenencia.engine.v1.PersonHeader
+	165, // 142: provenencia.engine.v1.PromoteClaimEvidenceShape.event:type_name -> provenencia.engine.v1.EventHeader
+	186, // 143: provenencia.engine.v1.PromoteClaimEvidenceRelationship.bundles:type_name -> provenencia.engine.v1.PromoteClaimEvidenceBundle
+	185, // 144: provenencia.engine.v1.PromoteClaimEvidenceRelationship.sections:type_name -> provenencia.engine.v1.PromoteClaimEvidenceSection
+	173, // 145: provenencia.engine.v1.PromoteClaimEvidenceRelationship.neighbor_term:type_name -> provenencia.engine.v1.ConclusionTerm
+	173, // 146: provenencia.engine.v1.PromoteClaimEvidenceRelationship.event_type:type_name -> provenencia.engine.v1.ConclusionTerm
+	187, // 147: provenencia.engine.v1.PromoteClaimEvidenceRelationship.layer:type_name -> provenencia.engine.v1.PromoteClaimEvidenceShape
+	187, // 148: provenencia.engine.v1.PromoteClaimEvidenceRelationship.canon:type_name -> provenencia.engine.v1.PromoteClaimEvidenceShape
+	185, // 149: provenencia.engine.v1.GetPromoteClaimEvidenceResponse.sections:type_name -> provenencia.engine.v1.PromoteClaimEvidenceSection
+	188, // 150: provenencia.engine.v1.GetPromoteClaimEvidenceResponse.relationships:type_name -> provenencia.engine.v1.PromoteClaimEvidenceRelationship
+	189, // 151: provenencia.engine.v1.GetPromoteClaimEvidenceResponse.offers:type_name -> provenencia.engine.v1.PromoteClaimEvidenceOffer
+	190, // 152: provenencia.engine.v1.GetPromoteClaimEvidenceResponse.sources:type_name -> provenencia.engine.v1.PromoteClaimEvidenceSource
+	162, // 153: provenencia.engine.v1.PromoteGraphAlignmentAlternative.person:type_name -> provenencia.engine.v1.PersonHeader
+	165, // 154: provenencia.engine.v1.PromoteGraphAlignmentAlternative.event:type_name -> provenencia.engine.v1.EventHeader
+	169, // 155: provenencia.engine.v1.PromoteGraphAlignmentAlternative.place:type_name -> provenencia.engine.v1.PlaceHeader
+	192, // 156: provenencia.engine.v1.PromoteGraphAlignmentRow.alternatives:type_name -> provenencia.engine.v1.PromoteGraphAlignmentAlternative
+	162, // 157: provenencia.engine.v1.PromoteGraphAlignmentRow.person:type_name -> provenencia.engine.v1.PersonHeader
+	165, // 158: provenencia.engine.v1.PromoteGraphAlignmentRow.event:type_name -> provenencia.engine.v1.EventHeader
+	169, // 159: provenencia.engine.v1.PromoteGraphAlignmentRow.place:type_name -> provenencia.engine.v1.PlaceHeader
+	193, // 160: provenencia.engine.v1.ProposePromoteGraphAlignmentResponse.rows:type_name -> provenencia.engine.v1.PromoteGraphAlignmentRow
+	196, // 161: provenencia.engine.v1.ApplyPromoteGraphAlignmentRequest.rows:type_name -> provenencia.engine.v1.ApplyPromoteGraphAlignmentRow
+	140, // 162: provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten.entity:type_name -> provenencia.engine.v1.CanonicalEntity
+	141, // 163: provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten.claim:type_name -> provenencia.engine.v1.IdentityClaim
+	197, // 164: provenencia.engine.v1.ApplyPromoteGraphAlignmentResponse.written:type_name -> provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten
+	130, // 165: provenencia.engine.v1.ListSubjectsResponse.subjects:type_name -> provenencia.engine.v1.Subject
+	131, // 166: provenencia.engine.v1.SetSubjectPositionResponse.position:type_name -> provenencia.engine.v1.SubjectPosition
+	131, // 167: provenencia.engine.v1.ListSubjectPositionsResponse.positions:type_name -> provenencia.engine.v1.SubjectPosition
+	207, // 168: provenencia.engine.v1.SubjectTypeProperty.property:type_name -> provenencia.engine.v1.Property
+	212, // 169: provenencia.engine.v1.ConnectRule.edges:type_name -> provenencia.engine.v1.ConnectEdge
+	207, // 170: provenencia.engine.v1.ListPropertiesResponse.properties:type_name -> provenencia.engine.v1.Property
+	207, // 171: provenencia.engine.v1.CreatePropertyResponse.property:type_name -> provenencia.engine.v1.Property
+	207, // 172: provenencia.engine.v1.UpdatePropertyResponse.property:type_name -> provenencia.engine.v1.Property
+	209, // 173: provenencia.engine.v1.ListSubjectTypePropertiesResponse.properties:type_name -> provenencia.engine.v1.SubjectTypeProperty
+	209, // 174: provenencia.engine.v1.ReorderSubjectTypePropertiesResponse.properties:type_name -> provenencia.engine.v1.SubjectTypeProperty
+	89,  // 175: provenencia.engine.v1.ReorderSubjectTypePropertiesResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	210, // 176: provenencia.engine.v1.ListPlaceableSubjectTypesResponse.types:type_name -> provenencia.engine.v1.SubjectTypePresentation
+	210, // 177: provenencia.engine.v1.GetSubjectTypePresentationResponse.presentation:type_name -> provenencia.engine.v1.SubjectTypePresentation
+	211, // 178: provenencia.engine.v1.ListConnectRulesResponse.rules:type_name -> provenencia.engine.v1.ConnectRule
+	208, // 179: provenencia.engine.v1.ListPropertyTermsResponse.terms:type_name -> provenencia.engine.v1.PropertyTerm
+	208, // 180: provenencia.engine.v1.CreatePropertyTermResponse.term:type_name -> provenencia.engine.v1.PropertyTerm
+	208, // 181: provenencia.engine.v1.UpdatePropertyTermResponse.term:type_name -> provenencia.engine.v1.PropertyTerm
+	243, // 182: provenencia.engine.v1.NameValueInput.parts:type_name -> provenencia.engine.v1.NameValuePartInput
+	38,  // 183: provenencia.engine.v1.Observation.date:type_name -> provenencia.engine.v1.DateValueInput
+	244, // 184: provenencia.engine.v1.Observation.name:type_name -> provenencia.engine.v1.NameValueInput
+	246, // 185: provenencia.engine.v1.Observation.depiction:type_name -> provenencia.engine.v1.DepictionValue
+	38,  // 186: provenencia.engine.v1.ObservationDraft.date:type_name -> provenencia.engine.v1.DateValueInput
+	244, // 187: provenencia.engine.v1.ObservationDraft.name:type_name -> provenencia.engine.v1.NameValueInput
+	245, // 188: provenencia.engine.v1.ObservationDraft.depiction:type_name -> provenencia.engine.v1.DepictionValueInput
+	249, // 189: provenencia.engine.v1.CreateCitationWithObservationsRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
+	247, // 190: provenencia.engine.v1.CreateCitationWithObservationsResponse.citation:type_name -> provenencia.engine.v1.Citation
+	248, // 191: provenencia.engine.v1.CreateCitationWithObservationsResponse.observations:type_name -> provenencia.engine.v1.Observation
+	89,  // 192: provenencia.engine.v1.CreateCitationWithObservationsResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	249, // 193: provenencia.engine.v1.AddObservationsToCitationRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
+	248, // 194: provenencia.engine.v1.AddObservationsToCitationResponse.observations:type_name -> provenencia.engine.v1.Observation
+	89,  // 195: provenencia.engine.v1.AddObservationsToCitationResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	248, // 196: provenencia.engine.v1.ListObservationsByEvidenceGraphResponse.observations:type_name -> provenencia.engine.v1.Observation
+	257, // 197: provenencia.engine.v1.CitationCountsByEvidenceGraphResponse.counts:type_name -> provenencia.engine.v1.ArtifactCitationCount
+	247, // 198: provenencia.engine.v1.ListedCitation.citation:type_name -> provenencia.engine.v1.Citation
+	259, // 199: provenencia.engine.v1.ListCitationsByArtifactResponse.citations:type_name -> provenencia.engine.v1.ListedCitation
+	247, // 200: provenencia.engine.v1.GetCitationResponse.citation:type_name -> provenencia.engine.v1.Citation
+	248, // 201: provenencia.engine.v1.GetCitationResponse.observations:type_name -> provenencia.engine.v1.Observation
+	249, // 202: provenencia.engine.v1.CreateCitedBridgeRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
+	130, // 203: provenencia.engine.v1.CreateCitedBridgeResponse.subject:type_name -> provenencia.engine.v1.Subject
+	247, // 204: provenencia.engine.v1.CreateCitedBridgeResponse.citation:type_name -> provenencia.engine.v1.Citation
+	248, // 205: provenencia.engine.v1.CreateCitedBridgeResponse.observations:type_name -> provenencia.engine.v1.Observation
+	89,  // 206: provenencia.engine.v1.CreateCitedBridgeResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	247, // 207: provenencia.engine.v1.UpdateCitationResponse.citation:type_name -> provenencia.engine.v1.Citation
+	89,  // 208: provenencia.engine.v1.UpdateCitationResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	248, // 209: provenencia.engine.v1.UpdateObservationRequest.observation:type_name -> provenencia.engine.v1.Observation
+	245, // 210: provenencia.engine.v1.UpdateObservationRequest.depiction_input:type_name -> provenencia.engine.v1.DepictionValueInput
+	248, // 211: provenencia.engine.v1.UpdateObservationResponse.observation:type_name -> provenencia.engine.v1.Observation
+	89,  // 212: provenencia.engine.v1.UpdateObservationResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	89,  // 213: provenencia.engine.v1.DeleteObservationResponse.effects:type_name -> provenencia.engine.v1.WriteEffects
+	209, // 214: provenencia.engine.v1.SubjectTypePropertiesGroup.properties:type_name -> provenencia.engine.v1.SubjectTypeProperty
+	210, // 215: provenencia.engine.v1.SubjectTypePropertiesGroup.presentation:type_name -> provenencia.engine.v1.SubjectTypePresentation
+	207, // 216: provenencia.engine.v1.GetPropertiesWorkspaceResponse.properties:type_name -> provenencia.engine.v1.Property
+	129, // 217: provenencia.engine.v1.GetPropertiesWorkspaceResponse.types:type_name -> provenencia.engine.v1.SubjectType
+	273, // 218: provenencia.engine.v1.GetPropertiesWorkspaceResponse.groups:type_name -> provenencia.engine.v1.SubjectTypePropertiesGroup
+	275, // 219: provenencia.engine.v1.ListEvidenceGraphProgressResponse.rows:type_name -> provenencia.engine.v1.EvidenceGraphProgress
+	275, // 220: provenencia.engine.v1.GetEvidenceGraphProgressResponse.progress:type_name -> provenencia.engine.v1.EvidenceGraphProgress
+	2,   // 221: provenencia.engine.v1.GetDeleteImpactResponse.gate:type_name -> provenencia.engine.v1.DeleteImpactGate
+	282, // 222: provenencia.engine.v1.GetDeleteImpactResponse.groups:type_name -> provenencia.engine.v1.DeleteImpactGroup
+	282, // 223: provenencia.engine.v1.GetDeleteImpactResponse.cascades:type_name -> provenencia.engine.v1.DeleteImpactGroup
+	283, // 224: provenencia.engine.v1.DeleteImpactGroup.listed:type_name -> provenencia.engine.v1.DeleteImpactListed
+	125, // 225: provenencia.engine.v1.DeleteImpactListed.location:type_name -> provenencia.engine.v1.WorkspaceLocation
+	285, // 226: provenencia.engine.v1.GetNameFormatResponse.natural:type_name -> provenencia.engine.v1.NameFormatPart
+	285, // 227: provenencia.engine.v1.GetNameFormatResponse.sorted:type_name -> provenencia.engine.v1.NameFormatPart
+	3,   // 228: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
+	229, // [229:229] is the sub-list for method output_type
+	229, // [229:229] is the sub-list for method input_type
+	229, // [229:229] is the sub-list for extension type_name
+	229, // [229:229] is the sub-list for extension extendee
+	0,   // [0:229] is the sub-list for field type_name
 }
 
 func init() { file_engine_proto_init() }
@@ -21847,12 +21591,12 @@ func file_engine_proto_init() {
 		return
 	}
 	file_engine_proto_msgTypes[34].OneofWrappers = []any{}
-	file_engine_proto_msgTypes[127].OneofWrappers = []any{
+	file_engine_proto_msgTypes[123].OneofWrappers = []any{
 		(*SearchHit_Person)(nil),
 		(*SearchHit_Event)(nil),
 		(*SearchHit_Place)(nil),
 	}
-	file_engine_proto_msgTypes[172].OneofWrappers = []any{
+	file_engine_proto_msgTypes[168].OneofWrappers = []any{
 		(*ConclusionValue_Text)(nil),
 		(*ConclusionValue_Integer)(nil),
 		(*ConclusionValue_Term)(nil),
@@ -21860,34 +21604,34 @@ func file_engine_proto_init() {
 		(*ConclusionValue_Name)(nil),
 		(*ConclusionValue_Depiction)(nil),
 	}
-	file_engine_proto_msgTypes[179].OneofWrappers = []any{
+	file_engine_proto_msgTypes[175].OneofWrappers = []any{
 		(*ConclusionDetail_Person)(nil),
 		(*ConclusionDetail_Event)(nil),
 		(*ConclusionDetail_Place)(nil),
 	}
-	file_engine_proto_msgTypes[187].OneofWrappers = []any{
+	file_engine_proto_msgTypes[183].OneofWrappers = []any{
 		(*PromoteClaimEvidenceShape_Person)(nil),
 		(*PromoteClaimEvidenceShape_Event)(nil),
 	}
-	file_engine_proto_msgTypes[192].OneofWrappers = []any{
+	file_engine_proto_msgTypes[188].OneofWrappers = []any{
 		(*PromoteGraphAlignmentAlternative_Person)(nil),
 		(*PromoteGraphAlignmentAlternative_Event)(nil),
 		(*PromoteGraphAlignmentAlternative_Place)(nil),
 	}
-	file_engine_proto_msgTypes[193].OneofWrappers = []any{
+	file_engine_proto_msgTypes[189].OneofWrappers = []any{
 		(*PromoteGraphAlignmentRow_Person)(nil),
 		(*PromoteGraphAlignmentRow_Event)(nil),
 		(*PromoteGraphAlignmentRow_Place)(nil),
 	}
-	file_engine_proto_msgTypes[248].OneofWrappers = []any{}
-	file_engine_proto_msgTypes[249].OneofWrappers = []any{}
+	file_engine_proto_msgTypes[244].OneofWrappers = []any{}
+	file_engine_proto_msgTypes[245].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   288,
+			NumMessages:   284,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

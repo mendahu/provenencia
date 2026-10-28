@@ -5,10 +5,10 @@
 **View:** Source page — the Add artifact dialog, an Artifact card at rest and in edit; in the graph form, its locks and one line of its Kept linked group
 **Implements later as:** PR **S12-38**
 **Board:** agreed 2026-10-28 — [Claude Design](https://claude.ai/design/p/de1e1ccc-aa35-455f-9b9c-3ae269593dc7), the "S12-D7 · Artifact in no graph" frame row on the Source page board. The board kept this brief's copy; the mark row's Button sits at the row's end (ND-4), and the web kit has no `PVFlowLayout`, so the board drew a wrapping flex row
-**Depends on:** S12-22 (the engine lets an Artifact stand in no graph, landed [#600](https://github.com/mendahu/provenencia/pull/600)); [S12-D4](archive/S12-D4-artifact-graph-links.md) (the graph checkboxes this board extends)
-**Related:** [`../source-structure.md`](../source-structure.md#rules) (the link rules), [`../deployment-plan.md`](../deployment-plan.md) working rules "An Artifact is the parent; it may stand in no graph", "An Artifact in no graph says so on its card", "An Artifact with Citations keeps at least one graph", "An Artifact card's Save is one write", "A new graph starts with the Artifacts in no graph checked". [S12-D4](archive/S12-D4-artifact-graph-links.md) drew the checkbox group, its locks, the card's loading and read-error states and the refused-save callout; this board changes when they show and what they say. [S12-D3](archive/S12-D3-graph-form.md) drew the graph form; this board changes which of its rows lock and one line of its Kept linked group, and draws nothing else there. [`docs/ideas/artifact-outside-graph-marker.md`](../../../ideas/artifact-outside-graph-marker.md) holds the part left out (the graph delete confirm).
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Depends on:** S12-22 (the engine lets an Artifact stand in no graph, landed [#600](https://github.com/mendahu/provenencia/pull/600)); [S12-D4](S12-D4-artifact-graph-links.md) (the graph checkboxes this board extends)
+**Related:** [`../source-structure.md`](../../source-structure.md#rules) (the link rules), [`../deployment-plan.md`](../../deployment-plan.md) working rules "An Artifact is the parent; it may stand in no graph", "An Artifact in no graph says so on its card", "An Artifact with Citations keeps at least one graph", "An Artifact card's Save is one write", "A new graph starts with the Artifacts in no graph checked". [S12-D4](S12-D4-artifact-graph-links.md) drew the checkbox group, its locks, the card's loading and read-error states and the refused-save callout; this board changes when they show and what they say. [S12-D3](S12-D3-graph-form.md) drew the graph form; this board changes which of its rows lock and one line of its Kept linked group, and draws nothing else there. [`docs/ideas/artifact-outside-graph-marker.md`](../../../../ideas/artifact-outside-graph-marker.md) holds the part left out (the graph delete confirm).
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -78,7 +78,7 @@ A researcher adds a new page of a census and does not yet know which household i
 
 ### 2.1 What this board is not
 
-- Naming, in a graph delete's confirm, the Artifacts the delete leaves in no graph ([`docs/ideas/artifact-outside-graph-marker.md`](../../../ideas/artifact-outside-graph-marker.md)).
+- Naming, in a graph delete's confirm, the Artifacts the delete leaves in no graph ([`docs/ideas/artifact-outside-graph-marker.md`](../../../../ideas/artifact-outside-graph-marker.md)).
 - Showing an Artifact's graphs on a card at rest when it has any.
 - A filter or count of the Artifacts in no graph on the section header or the Sources list.
 - Creating a graph from the dialog or the card (the Evidence graphs section's **Add evidence graph**, S12-D3).

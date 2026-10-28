@@ -309,7 +309,7 @@ struct CitationAutoTranscribeTests {
         try ArtifactFileFixtures.writePNG(projectDir: projectDir, relPath: "objects/ab/cd/sample.png")
         ArtifactFileFixtures.seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/sample.png")
         let engine = FakeOCREngine()
-        engine.shouldHold = true
+        engine.hold.isOn = true
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
         await model.prepare()
         let task = Task { await model.runAutoTranscribe() }
@@ -322,7 +322,7 @@ struct CitationAutoTranscribeTests {
             to: CGPoint(x: 0.2, y: 0.2)
         )
         #expect(!model.setRegion(ArtifactRegionDraft(kind: .rectangle, points: points)))
-        engine.release()
+        engine.hold.release()
         await task.value
         #expect(!model.isTranscribing)
         #expect(model.canAutoTranscribe)
@@ -431,33 +431,18 @@ private enum TestOCRError: Error {
 private final class FakeOCREngine: OCREngine, @unchecked Sendable {
     private let lock = NSLock()
     var result: Result<String, Error> = .success("recognized")
-    var shouldHold = false
-    private var hold: CheckedContinuation<Void, Never>?
+    let hold = FakeHold()
     private(set) var lastSize: CGSize?
     private(set) var recognizeCount = 0
 
     func recognizeText(in image: CGImage) async throws -> String {
-        let (shouldHold, result) = lock.withLock {
+        let result = lock.withLock {
             recognizeCount += 1
             lastSize = CGSize(width: image.width, height: image.height)
-            return (self.shouldHold, self.result)
+            return self.result
         }
-        if shouldHold {
-            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-                lock.lock()
-                hold = continuation
-                lock.unlock()
-            }
-        }
+        await hold.wait()
         return try result.get()
-    }
-
-    func release() {
-        lock.lock()
-        let continuation = hold
-        hold = nil
-        lock.unlock()
-        continuation?.resume()
     }
 
     func resetCount() {

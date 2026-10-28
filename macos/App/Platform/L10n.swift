@@ -6959,7 +6959,7 @@ enum L10n {
 
         static let graphFormKeptLinkedMessage = LocalizedStringResource(
             "sources.graphForm.keptLinkedMessage",
-            defaultValue: "These artifacts stay linked while citations in this graph use them.",
+            defaultValue: "These artifacts stay linked: citations need them in this evidence graph.",
             comment: "Callout above the Citations that keep an Artifact linked to the graph"
         )
 
@@ -7009,17 +7009,32 @@ enum L10n {
             comment: "Hint under the evidence graph checkbox group label in the Add artifact dialog and on an artifact card in edit"
         )
 
-        static let artifactGraphsNeedsOne = LocalizedStringResource(
-            "sources.page.artifact.graphs.needsOne",
-            defaultValue: "Check at least one evidence graph.",
-            comment: "Muted line under the evidence graph group in the Add artifact dialog when every box is unchecked"
+        static let artifactGraphsNone = LocalizedStringResource(
+            "sources.page.artifact.graphs.none",
+            defaultValue: "This artifact won’t be in an evidence graph. Citations can’t use it until it is linked.",
+            comment: "Muted line under the evidence graph group in the Add artifact dialog and on an artifact card in edit when no box is checked"
         )
 
-        static let artifactGraphOnlyArtifact = LocalizedStringResource(
-            "sources.page.artifact.graphs.onlyArtifact",
-            defaultValue: "The only artifact in this evidence graph",
-            comment: "Hint on a locked evidence graph checkbox on an artifact card when the artifact is the graph's only one"
+        static let artifactNotInGraph = LocalizedStringResource(
+            "sources.page.artifact.notInGraph",
+            defaultValue: "Not in an evidence graph",
+            comment: "Badge on a resting artifact card when no evidence graph links the artifact"
         )
+
+        static let artifactLinkToGraph = LocalizedStringResource(
+            "sources.page.artifact.linkToGraph",
+            defaultValue: "Link to a graph",
+            comment: "Button on a resting artifact card in no evidence graph; opens the card's edit with the graph boxes"
+        )
+
+        /// Argument is the ART- ref.
+        static func artifactLinkToGraphLabel(ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.page.artifact.linkToGraphLabel",
+                defaultValue: "Link %@ to an evidence graph",
+                comment: "VoiceOver label of the Link to a graph button; argument is the artifact ref"
+            ), ref)
+        }
 
         static let artifactGraphsLoading = LocalizedStringResource(
             "sources.page.artifact.graphs.loading",
@@ -7058,17 +7073,9 @@ enum L10n {
         static func artifactCardSaveErrorGraphKeeps(graph: String, error: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "sources.page.artifact.saveErrorGraphKeeps",
-                defaultValue: "%1$@ keeps this artifact. %2$@",
-                comment: "Callout message on an artifact card in edit when an Evidence graph refused to drop the artifact and nothing else is left to save; %1$@ is the graph name, %2$@ is the error text"
+                defaultValue: "%1$@ keeps this artifact. Your changes are kept. %2$@",
+                comment: "Callout message on an artifact card in edit when an evidence graph refused to drop the artifact and nothing was saved; %1$@ is the graph name, %2$@ is the error text"
             ), graph, error)
-        }
-
-        static func artifactCardSaveErrorMessage(_ error: String) -> String {
-            return L10n.format(LocalizedStringResource(
-                "sources.page.artifact.saveErrorMessage",
-                defaultValue: "Some changes may not be saved. Every field and box keeps its value — save again to finish. %@",
-                comment: "Callout message on an artifact card in edit when saving it fails; argument is the error text"
-            ), error)
         }
 
         static let toastGraphAddedTitle = LocalizedStringResource(

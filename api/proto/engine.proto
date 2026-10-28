@@ -42,6 +42,9 @@ enum Method {
   reserved 88, 92, 94, 95;
   reserved "METHOD_LIST_PROMOTE_TARGET_SUGGESTIONS";
   reserved "METHOD_GET_EVENT_HEADER", "METHOD_GET_PLACE_HEADER", "METHOD_GET_PERSON_HEADER";
+  // An Artifact's graph links ride UpdateArtifact and CreateArtifact.
+  reserved 107, 108;
+  reserved "METHOD_LINK_EVIDENCE_GRAPH_ARTIFACT", "METHOD_UNLINK_EVIDENCE_GRAPH_ARTIFACT";
   METHOD_UPDATE_METADATA_FIELD = 28;
   METHOD_DELETE_SOURCE_TYPE = 29;
   METHOD_DELETE_METADATA_FIELD = 30;
@@ -116,8 +119,6 @@ enum Method {
   METHOD_CREATE_EVIDENCE_GRAPH = 104;
   METHOD_UPDATE_EVIDENCE_GRAPH = 105;
   METHOD_DELETE_EVIDENCE_GRAPH = 106;
-  METHOD_LINK_EVIDENCE_GRAPH_ARTIFACT = 107;
-  METHOD_UNLINK_EVIDENCE_GRAPH_ARTIFACT = 108;
   METHOD_GET_EVIDENCE_GRAPH_UNLINK_IMPACT = 109;
   METHOD_GET_PROMOTE_CLAIM_EVIDENCE = 110;
   METHOD_REORDER_SUBJECT_TYPE_PROPERTIES = 111;
@@ -500,28 +501,6 @@ message DeleteEvidenceGraphRequest {
 }
 
 message DeleteEvidenceGraphResponse {
-  WriteEffects effects = 1;
-}
-
-message LinkEvidenceGraphArtifactRequest {
-  string project_dir = 1;
-  string user_id = 2;
-  string graph_id = 3;
-  string artifact_id = 4;
-}
-
-message LinkEvidenceGraphArtifactResponse {
-  WriteEffects effects = 1;
-}
-
-message UnlinkEvidenceGraphArtifactRequest {
-  string project_dir = 1;
-  string user_id = 2;
-  string graph_id = 3;
-  string artifact_id = 4;
-}
-
-message UnlinkEvidenceGraphArtifactResponse {
   WriteEffects effects = 1;
 }
 

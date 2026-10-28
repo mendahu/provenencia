@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-38 — Add an Artifact without a graph; the card saves links in one write
+
+**Landed 2026-10-28** in [#605](https://github.com/mendahu/provenencia/pull/605). A researcher can add an Artifact with no Evidence graph checked: the graph boxes show on every Source with graphs, one graph included, and a line says citations can't use the Artifact until it is linked. A card in no graph shows "Not in an evidence graph" and **Link to a graph**, which opens card edit. A card's Save is one `updateArtifact` with the label, description and every link, so a refusal leaves nothing half applied; every box the engine's preflight reports is locked, and a refused save names the graph and says the changes are kept. The graph form locks every Artifact the engine says it must keep, re-reads its locks after any refused edit, and a new graph starts with the Artifacts in no graph checked. `LinkEvidenceGraphArtifact` and `UnlinkEvidenceGraphArtifact` are gone on both sides.
+
 ## S12-22 — Artifacts can stand outside every graph
 
 **Landed 2026-10-28** in [#600](https://github.com/mendahu/provenencia/pull/600). The engine lets an Artifact stand in no Evidence graph while every Citation stays reachable. A new or edited Artifact names its graphs with one `GraphLinks` message (absent is the default, present and empty is none), and an Artifact update saves its fields and links in one revision through `applyLinks`. One check, `checkUnlink`, backs `Unlink` and the pair-shaped `UnlinkImpact`, and refuses the last graph of an Artifact with Citations (`evidencegraphs.citations_need_graph`). A graph delete that would strand such Citations is refused with `evidencegraphs.in_use` and lists them. The card's link locks come from one preflight call; no view changes otherwise, and S12-38 builds the chrome.

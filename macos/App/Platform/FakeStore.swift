@@ -1,6 +1,46 @@
 #if DEBUG
 import Foundation
 
+/// A pause a test switches on for one store method: while `isOn`, each call
+/// suspends in `wait()` until `release()`, so a test can act mid-write. Its own
+/// lock guards the flag and the waiting calls, taken only in synchronous
+/// members (never across an `await`).
+final class FakeHold: @unchecked Sendable {
+    private let lock = NSLock()
+    private var on = false
+    private var waiting: [CheckedContinuation<Void, Never>] = []
+
+    /// While true, a call to `wait()` suspends.
+    var isOn: Bool {
+        get { lock.withLock { on } }
+        set { lock.withLock { on = newValue } }
+    }
+
+    /// The number of calls suspended in `wait()`.
+    var count: Int { lock.withLock { waiting.count } }
+
+    /// Returns at once when the hold is off at call time, else suspends until `release()`.
+    func wait() async {
+        guard isOn else { return }
+        await withCheckedContinuation { continuation in
+            append(continuation)
+        }
+    }
+
+    /// Resumes the oldest suspended call.
+    func release() {
+        takeOldest()?.resume()
+    }
+
+    private func append(_ continuation: CheckedContinuation<Void, Never>) {
+        lock.withLock { waiting.append(continuation) }
+    }
+
+    private func takeOldest() -> CheckedContinuation<Void, Never>? {
+        lock.withLock { waiting.isEmpty ? nil : waiting.removeFirst() }
+    }
+}
+
 /// In-memory `GenealogyStore` for SwiftUI previews and tests. Not used in the shipped app.
 /// Store methods run on the cooperative pool, so callers like the citation
 /// composer can have several in flight at once. Every method body that touches
@@ -101,6 +141,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var updateArtifactGraphIDs: [[String]?] = []
     /// When set, `updateArtifact` throws.
     var updateArtifactError: Error?
+    /// While on, `updateArtifact` suspends after recording the call and before it
+    /// throws or writes, so a test can act mid-save.
+    let updateArtifactHold = FakeHold()
     var deleteEvidenceGraphCalls = 0
     var createEvidenceGraphCalls = 0
     var updateEvidenceGraphCalls = 0
@@ -116,13 +159,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var createEvidenceGraphError: Error?
     var updateEvidenceGraphError: Error?
     var getEvidenceGraphUnlinkImpactError: Error?
-    var linkEvidenceGraphArtifactError: Error?
-    /// When true, each `linkEvidenceGraphArtifact` suspends until
-    /// `releaseLinkEvidenceGraphArtifact()`, so a test can act mid-save.
-    var holdsLinkEvidenceGraphArtifact = false
-    private var heldLinkEvidenceGraphArtifacts: [CheckedContinuation<Void, Never>] = []
-    var listEvidenceGraphsCalls = 0
-    var unlinkEvidenceGraphArtifactError: Error?
     var getEvidenceGraphProgressError: Error?
     /// Monotonic stand-in for audit_transactions.revision (Sources Updated sort).
     private var nextAuditRevision: Int64 = 1
@@ -147,13 +183,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var setPreferredLikenessError: Error?
     /// When set, `setSubjectPosition` throws (Evidence graph drag should revert).
     var setSubjectPositionError: Error?
-    /// When true, each `setSubjectPosition` suspends until `releaseSetSubjectPosition()`
-    /// so generation-guard tests can order completions without sleeping.
-    var holdsSetSubjectPosition = false
+    /// While on, each `setSubjectPosition` suspends until released, so
+    /// generation-guard tests can order completions without sleeping.
+    let setSubjectPositionHold = FakeHold()
     /// Per-call errors assigned in call order; `nil` means that call succeeds.
     var setSubjectPositionErrors: [Error?] = []
     private var setSubjectPositionCallIndex = 0
-    private var heldSetSubjectPositions: [CheckedContinuation<Void, Never>] = []
     var listSubjectsError: Error?
     var listConnectRulesError: Error?
     var createPropertyTermError: Error?
@@ -709,9 +744,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         description: String,
         graphIDs: [String]?
     ) async throws -> (CatalogArtifact, CatalogWriteEffects) {
-        return try withState {
+        withState {
             updateArtifactCalls += 1
             updateArtifactGraphIDs.append(graphIDs)
+        }
+        await updateArtifactHold.wait()
+        return try withState {
             if let updateArtifactError { throw updateArtifactError }
             for (sourceID, arts) in artifactsBySource {
                 if let idx = arts.firstIndex(where: { $0.id == artifactID }) {
@@ -758,7 +796,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func listEvidenceGraphs(projectDir: String) async throws -> [CatalogEvidenceGraph] {
         try withState {
-            listEvidenceGraphsCalls += 1
             if let listEvidenceGraphsError { throw listEvidenceGraphsError }
             markCatalogSessionHeld(projectDir)
             return (evidenceGraphsByProject[projectDir] ?? []).sorted(by: Self.graphListOrder)
@@ -820,62 +857,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             }
             evidenceGraphsByProject[projectDir]?.removeAll { $0.id == graphID }
             return Self.graphEffects(sourceID: nil)
-        }
-    }
-
-    func linkEvidenceGraphArtifact(
-        projectDir: String,
-        userID _: String,
-        graphID: String,
-        artifactID: String
-    ) async throws -> CatalogWriteEffects {
-        if withState({ holdsLinkEvidenceGraphArtifact }) {
-            await withCheckedContinuation { continuation in
-                withState { heldLinkEvidenceGraphArtifacts.append(continuation) }
-            }
-        }
-        return try withState {
-            if let linkEvidenceGraphArtifactError { throw linkEvidenceGraphArtifactError }
-            markCatalogSessionHeld(projectDir)
-            guard let idx = evidenceGraphsByProject[projectDir]?.firstIndex(where: { $0.id == graphID }) else {
-                throw StoreBoom.boom
-            }
-            recordedCalls.append("linkEvidenceGraphArtifact graph=\(graphID) artifact=\(artifactID)")
-            if evidenceGraphsByProject[projectDir]?[idx].artifactIDs.contains(artifactID) == false {
-                evidenceGraphsByProject[projectDir]?[idx].artifactIDs.append(artifactID)
-            }
-            return Self.graphEffects(sourceID: evidenceGraphsByProject[projectDir]?[idx].sourceID)
-        }
-    }
-
-    /// Number of `linkEvidenceGraphArtifact` calls suspended by `holdsLinkEvidenceGraphArtifact`.
-    var heldLinkEvidenceGraphArtifactCount: Int {
-        withState { heldLinkEvidenceGraphArtifacts.count }
-    }
-
-    /// Resumes the oldest held `linkEvidenceGraphArtifact` call.
-    func releaseLinkEvidenceGraphArtifact() {
-        let continuation = withState {
-            heldLinkEvidenceGraphArtifacts.isEmpty ? nil : heldLinkEvidenceGraphArtifacts.removeFirst()
-        }
-        continuation?.resume()
-    }
-
-    func unlinkEvidenceGraphArtifact(
-        projectDir: String,
-        userID _: String,
-        graphID: String,
-        artifactID: String
-    ) async throws -> CatalogWriteEffects {
-        try withState {
-            if let unlinkEvidenceGraphArtifactError { throw unlinkEvidenceGraphArtifactError }
-            markCatalogSessionHeld(projectDir)
-            guard let idx = evidenceGraphsByProject[projectDir]?.firstIndex(where: { $0.id == graphID }) else {
-                throw StoreBoom.boom
-            }
-            recordedCalls.append("unlinkEvidenceGraphArtifact graph=\(graphID) artifact=\(artifactID)")
-            evidenceGraphsByProject[projectDir]?[idx].artifactIDs.removeAll { $0 == artifactID }
-            return Self.graphEffects(sourceID: evidenceGraphsByProject[projectDir]?[idx].sourceID)
         }
     }
 
@@ -2229,44 +2210,25 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         gridX: Int64,
         gridY: Int64
     ) async throws -> CatalogSubjectPosition {
-        let (error, holds): (Error?, Bool) = withState {
+        let error: Error? = withState {
             markCatalogSessionHeld(projectDir)
             recordedCalls.append("setSubjectPosition subjectID=\(subjectID) \(gridX),\(gridY)")
-            let error: Error?
+            let scripted: Error?
             if setSubjectPositionCallIndex < setSubjectPositionErrors.count {
-                error = setSubjectPositionErrors[setSubjectPositionCallIndex]
+                scripted = setSubjectPositionErrors[setSubjectPositionCallIndex]
             } else {
-                error = setSubjectPositionError
+                scripted = setSubjectPositionError
             }
             setSubjectPositionCallIndex += 1
-            return (error, holdsSetSubjectPosition)
+            return scripted
         }
-        if holds {
-            await withCheckedContinuation { continuation in
-                withState {
-                    heldSetSubjectPositions.append(continuation)
-                }
-            }
-        }
+        await setSubjectPositionHold.wait()
         if let error { throw error }
         let position = CatalogSubjectPosition(subjectID: subjectID, gridX: gridX, gridY: gridY)
         withState {
             subjectPositionsBySubject[subjectID] = position
         }
         return position
-    }
-
-    /// Number of `setSubjectPosition` calls suspended by `holdsSetSubjectPosition`.
-    var heldSetSubjectPositionCount: Int {
-        withState { heldSetSubjectPositions.count }
-    }
-
-    /// Resumes the oldest held `setSubjectPosition` call.
-    func releaseSetSubjectPosition() {
-        let continuation = withState {
-            heldSetSubjectPositions.isEmpty ? nil : heldSetSubjectPositions.removeFirst()
-        }
-        continuation?.resume()
     }
 
     func clearSubjectPosition(projectDir: String, subjectID: String) async throws {

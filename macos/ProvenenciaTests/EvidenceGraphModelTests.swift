@@ -704,7 +704,7 @@ struct EvidenceGraphModelTests {
             CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: []),
             nil,
         ]
-        store.holdsSetSubjectPosition = true
+        store.setSubjectPositionHold.isOn = true
         _ = model.commitDrag(
             subjectID: "s1",
             originGridX: 1,
@@ -712,7 +712,7 @@ struct EvidenceGraphModelTests {
             delta: CGSize(width: 160, height: 0)
         )
         let olderWrite = model.lastPositionWrite
-        try #require(await waitUntil(timeout: .seconds(5)) { store.heldSetSubjectPositionCount == 1 })
+        try #require(await waitUntil(timeout: .seconds(5)) { store.setSubjectPositionHold.count == 1 })
         _ = model.commitDrag(
             subjectID: "s1",
             originGridX: 5,
@@ -720,11 +720,11 @@ struct EvidenceGraphModelTests {
             delta: CGSize(width: 160, height: 0)
         )
         let newerWrite = model.lastPositionWrite
-        try #require(await waitUntil(timeout: .seconds(5)) { store.heldSetSubjectPositionCount == 2 })
+        try #require(await waitUntil(timeout: .seconds(5)) { store.setSubjectPositionHold.count == 2 })
         // Settle the older write (fails) before the newer one (succeeds).
-        store.releaseSetSubjectPosition()
+        store.setSubjectPositionHold.release()
         await olderWrite?.value
-        store.releaseSetSubjectPosition()
+        store.setSubjectPositionHold.release()
         await newerWrite?.value
         let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
         #expect(handle?.value?.positions.first?.gridX == 9)
@@ -761,7 +761,7 @@ struct EvidenceGraphModelTests {
             nil,
             CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: []),
         ]
-        store.holdsSetSubjectPosition = true
+        store.setSubjectPositionHold.isOn = true
         _ = model.commitDrag(
             subjectID: "s1",
             originGridX: 1,
@@ -769,7 +769,7 @@ struct EvidenceGraphModelTests {
             delta: CGSize(width: 160, height: 0)
         )
         let olderWrite = model.lastPositionWrite
-        try #require(await waitUntil(timeout: .seconds(5)) { store.heldSetSubjectPositionCount == 1 })
+        try #require(await waitUntil(timeout: .seconds(5)) { store.setSubjectPositionHold.count == 1 })
         _ = model.commitDrag(
             subjectID: "s1",
             originGridX: 5,
@@ -777,11 +777,11 @@ struct EvidenceGraphModelTests {
             delta: CGSize(width: 160, height: 0)
         )
         let newerWrite = model.lastPositionWrite
-        try #require(await waitUntil(timeout: .seconds(5)) { store.heldSetSubjectPositionCount == 2 })
+        try #require(await waitUntil(timeout: .seconds(5)) { store.setSubjectPositionHold.count == 2 })
         // Settle the older write (succeeds) before the newer one (fails).
-        store.releaseSetSubjectPosition()
+        store.setSubjectPositionHold.release()
         await olderWrite?.value
-        store.releaseSetSubjectPosition()
+        store.setSubjectPositionHold.release()
         await newerWrite?.value
         let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
         #expect(handle?.value?.positions.first?.gridX == 5)

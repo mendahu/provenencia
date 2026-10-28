@@ -252,36 +252,6 @@ func TestDeleteEvidenceGraph(t *testing.T) {
 	})
 }
 
-func TestLinkUnlinkEvidenceGraphArtifact(t *testing.T) {
-	f := newGraphFixture(t)
-	id := f.createGraph(t, "Jones", f.page1).GetGraph().GetId()
-
-	var linked engine.LinkEvidenceGraphArtifactResponse
-	mustRPC(t, LinkEvidenceGraphArtifact, &engine.LinkEvidenceGraphArtifactRequest{
-		ProjectDir: f.dir, UserId: f.userID, GraphId: id, ArtifactId: f.page2,
-	}, &linked)
-	assertGraphEffects(t, linked.GetEffects())
-	if got := f.graph(t, id).GetArtifactIds(); len(got) != 2 || !slices.Contains(got, f.page2) {
-		t.Fatalf("after link %v", got)
-	}
-
-	var unlinked engine.UnlinkEvidenceGraphArtifactResponse
-	mustRPC(t, UnlinkEvidenceGraphArtifact, &engine.UnlinkEvidenceGraphArtifactRequest{
-		ProjectDir: f.dir, UserId: f.userID, GraphId: id, ArtifactId: f.page2,
-	}, &unlinked)
-	assertGraphEffects(t, unlinked.GetEffects())
-	if got := f.graph(t, id).GetArtifactIds(); !slices.Equal(got, []string{f.page1}) {
-		t.Fatalf("after unlink %v", got)
-	}
-
-	err := rpc(t, UnlinkEvidenceGraphArtifact, &engine.UnlinkEvidenceGraphArtifactRequest{
-		ProjectDir: f.dir, UserId: f.userID, GraphId: id, ArtifactId: f.page1,
-	}, &engine.UnlinkEvidenceGraphArtifactResponse{})
-	if !errors.Is(err, evidencegraphs.ErrLastArtifact) {
-		t.Fatalf("last link: %v", err)
-	}
-}
-
 func TestGetEvidenceGraphUnlinkImpact(t *testing.T) {
 	f := newGraphFixture(t)
 	// page1 has a Citation with an Observation in Default (artifact_in_use).

@@ -105,8 +105,6 @@ const (
 	MethodCreateEvidenceGraph               = int32(engine.Method_METHOD_CREATE_EVIDENCE_GRAPH)
 	MethodUpdateEvidenceGraph               = int32(engine.Method_METHOD_UPDATE_EVIDENCE_GRAPH)
 	MethodDeleteEvidenceGraph               = int32(engine.Method_METHOD_DELETE_EVIDENCE_GRAPH)
-	MethodLinkEvidenceGraphArtifact         = int32(engine.Method_METHOD_LINK_EVIDENCE_GRAPH_ARTIFACT)
-	MethodUnlinkEvidenceGraphArtifact       = int32(engine.Method_METHOD_UNLINK_EVIDENCE_GRAPH_ARTIFACT)
 	MethodGetEvidenceGraphUnlinkImpact      = int32(engine.Method_METHOD_GET_EVIDENCE_GRAPH_UNLINK_IMPACT)
 	MethodGetPromoteClaimEvidence           = int32(engine.Method_METHOD_GET_PROMOTE_CLAIM_EVIDENCE)
 	MethodReorderSubjectTypeProperties      = int32(engine.Method_METHOD_REORDER_SUBJECT_TYPE_PROPERTIES)
@@ -300,10 +298,6 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.UpdateEvidenceGraph(in)
 	case MethodDeleteEvidenceGraph:
 		return handlers.DeleteEvidenceGraph(in)
-	case MethodLinkEvidenceGraphArtifact:
-		return handlers.LinkEvidenceGraphArtifact(in)
-	case MethodUnlinkEvidenceGraphArtifact:
-		return handlers.UnlinkEvidenceGraphArtifact(in)
 	case MethodGetEvidenceGraphUnlinkImpact:
 		return handlers.GetEvidenceGraphUnlinkImpact(in)
 	case MethodGetPromoteClaimEvidence:

@@ -82,7 +82,7 @@ private struct SourceGraphForm: View {
                 ) {
                     checklist
                 }
-                if model.loadState == .ready, !model.blocks.isEmpty {
+                if model.loadState == .ready, !model.keptLinked.isEmpty {
                     keptLinked
                 }
             }

@@ -1229,21 +1229,4 @@ struct CatalogQueryRegistryTests {
     @Test func navCountTriggersAreSourceAndPromoteWrites() {
         #expect(CatalogQueryRegistry.navCountTriggers == [.createdSource, .deletedSource, .promotedSubject])
     }
-
-    @Test func mergedEffectsListEachIDOnceAndKeepTheLaterActivity() {
-        let first = CatalogWriteEffects(
-            citationSources: ["s1"], lists: [.evidenceGraphs],
-            sourceScopes: ["s1"], activity: CatalogActivity(revision: 4, at: "t4")
-        )
-        let second = CatalogWriteEffects(
-            citationSources: ["s1", "s2"], sourceScopes: ["s1"],
-            activity: CatalogActivity(revision: 5, at: "t5")
-        )
-        let merged = first.merging(second)
-        #expect(merged.citationSources == ["s1", "s2"])
-        #expect(merged.sourceScopes == ["s1"])
-        #expect(merged.lists == [.evidenceGraphs])
-        #expect(merged.activity == CatalogActivity(revision: 5, at: "t5"))
-        #expect(second.merging(first).activity.revision == 5)
-    }
 }
