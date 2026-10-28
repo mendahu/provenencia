@@ -10579,13 +10579,13 @@ type PersonHeader struct {
 	// List*Headers responses only.
 	UpdatedRevision int64  `protobuf:"varint,6,opt,name=updated_revision,json=updatedRevision,proto3" json:"updated_revision,omitempty"`
 	UpdatedAt       string `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	// likeness_image_rel_path is the objects/… path of the likeness the Person
+	// picture_image_rel_path is the objects/… path of the picture the Person
 	// leads with on its page and in the Persons list (the preferred portrait,
-	// else the earliest gallery likeness); empty when none. Filled on ListPersonHeaders and
+	// else the earliest gallery picture); empty when none. Filled on ListPersonHeaders and
 	// GetConclusionDetail only.
-	LikenessImageRelPath string `protobuf:"bytes,8,opt,name=likeness_image_rel_path,json=likenessImageRelPath,proto3" json:"likeness_image_rel_path,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	PictureImageRelPath string `protobuf:"bytes,8,opt,name=picture_image_rel_path,json=pictureImageRelPath,proto3" json:"picture_image_rel_path,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *PersonHeader) Reset() {
@@ -10667,9 +10667,9 @@ func (x *PersonHeader) GetUpdatedAt() string {
 	return ""
 }
 
-func (x *PersonHeader) GetLikenessImageRelPath() string {
+func (x *PersonHeader) GetPictureImageRelPath() string {
 	if x != nil {
-		return x.LikenessImageRelPath
+		return x.PictureImageRelPath
 	}
 	return ""
 }
@@ -10796,8 +10796,12 @@ type EventHeader struct {
 	// List*Headers responses only.
 	UpdatedRevision int64  `protobuf:"varint,15,opt,name=updated_revision,json=updatedRevision,proto3" json:"updated_revision,omitempty"`
 	UpdatedAt       string `protobuf:"bytes,16,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// picture_image_rel_path is the objects/… path of the picture the Event
+	// leads with; empty when none. Filled on ListEventHeaders and
+	// GetConclusionDetail only.
+	PictureImageRelPath string `protobuf:"bytes,17,opt,name=picture_image_rel_path,json=pictureImageRelPath,proto3" json:"picture_image_rel_path,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *EventHeader) Reset() {
@@ -10938,6 +10942,13 @@ func (x *EventHeader) GetUpdatedRevision() int64 {
 func (x *EventHeader) GetUpdatedAt() string {
 	if x != nil {
 		return x.UpdatedAt
+	}
+	return ""
+}
+
+func (x *EventHeader) GetPictureImageRelPath() string {
+	if x != nil {
+		return x.PictureImageRelPath
 	}
 	return ""
 }
@@ -11137,8 +11148,12 @@ type PlaceHeader struct {
 	// List*Headers responses only.
 	UpdatedRevision int64  `protobuf:"varint,12,opt,name=updated_revision,json=updatedRevision,proto3" json:"updated_revision,omitempty"`
 	UpdatedAt       string `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// picture_image_rel_path is the objects/… path of the picture the Place
+	// leads with; empty when none. Filled on ListPlaceHeaders and
+	// GetConclusionDetail only.
+	PictureImageRelPath string `protobuf:"bytes,14,opt,name=picture_image_rel_path,json=pictureImageRelPath,proto3" json:"picture_image_rel_path,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *PlaceHeader) Reset() {
@@ -11258,6 +11273,13 @@ func (x *PlaceHeader) GetUpdatedRevision() int64 {
 func (x *PlaceHeader) GetUpdatedAt() string {
 	if x != nil {
 		return x.UpdatedAt
+	}
+	return ""
+}
+
+func (x *PlaceHeader) GetPictureImageRelPath() string {
+	if x != nil {
+		return x.PictureImageRelPath
 	}
 	return ""
 }
@@ -11999,39 +12021,39 @@ func (x *GetConclusionDetailRequest) GetEntityId() string {
 	return ""
 }
 
-// LikenessDetail is one likeness a Person page's gallery shows (S10-35),
+// PictureDetail is one picture a handle's gallery shows (S10-35 / S14-01),
 // earliest recorded first. record is its earliest Observation, as the Why
 // shows it; the tile opens that record's Citation. image_rel_path is empty
 // when the File's path cannot be derived.
-type LikenessDetail struct {
+type PictureDetail struct {
 	state        protoimpl.MessageState   `protogen:"open.v1"`
 	ImageRelPath string                   `protobuf:"bytes,1,opt,name=image_rel_path,json=imageRelPath,proto3" json:"image_rel_path,omitempty"`
 	Record       *ReconcilerOutcomeDetail `protobuf:"bytes,2,opt,name=record,proto3" json:"record,omitempty"`
-	// preferred is true for the likeness chosen as the Person's portrait
-	// (S10-39); at most one.
+	// preferred is true for the picture chosen as the handle's portrait or
+	// thumbnail (S10-39); at most one.
 	Preferred bool `protobuf:"varint,3,opt,name=preferred,proto3" json:"preferred,omitempty"`
-	// leads is true for the likeness the Person's header leads with: the
-	// preferred one when set, else the earliest; exactly one per gallery. The
-	// tile that leads shows the Portrait Badge (user, 2026-10-17).
+	// leads is true for the picture the header leads with: the preferred one
+	// when set, else the earliest; exactly one per gallery. The tile that
+	// leads shows the Portrait Badge on a Person (user, 2026-10-17).
 	Leads         bool `protobuf:"varint,4,opt,name=leads,proto3" json:"leads,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *LikenessDetail) Reset() {
-	*x = LikenessDetail{}
+func (x *PictureDetail) Reset() {
+	*x = PictureDetail{}
 	mi := &file_engine_proto_msgTypes[174]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *LikenessDetail) String() string {
+func (x *PictureDetail) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*LikenessDetail) ProtoMessage() {}
+func (*PictureDetail) ProtoMessage() {}
 
-func (x *LikenessDetail) ProtoReflect() protoreflect.Message {
+func (x *PictureDetail) ProtoReflect() protoreflect.Message {
 	mi := &file_engine_proto_msgTypes[174]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -12043,33 +12065,33 @@ func (x *LikenessDetail) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use LikenessDetail.ProtoReflect.Descriptor instead.
-func (*LikenessDetail) Descriptor() ([]byte, []int) {
+// Deprecated: Use PictureDetail.ProtoReflect.Descriptor instead.
+func (*PictureDetail) Descriptor() ([]byte, []int) {
 	return file_engine_proto_rawDescGZIP(), []int{174}
 }
 
-func (x *LikenessDetail) GetImageRelPath() string {
+func (x *PictureDetail) GetImageRelPath() string {
 	if x != nil {
 		return x.ImageRelPath
 	}
 	return ""
 }
 
-func (x *LikenessDetail) GetRecord() *ReconcilerOutcomeDetail {
+func (x *PictureDetail) GetRecord() *ReconcilerOutcomeDetail {
 	if x != nil {
 		return x.Record
 	}
 	return nil
 }
 
-func (x *LikenessDetail) GetPreferred() bool {
+func (x *PictureDetail) GetPreferred() bool {
 	if x != nil {
 		return x.Preferred
 	}
 	return false
 }
 
-func (x *LikenessDetail) GetLeads() bool {
+func (x *PictureDetail) GetLeads() bool {
 	if x != nil {
 		return x.Leads
 	}
@@ -12091,7 +12113,7 @@ type ConclusionDetail struct {
 	//	*ConclusionDetail_Event
 	//	*ConclusionDetail_Place
 	Header        isConclusionDetail_Header `protobuf_oneof:"header"`
-	Likenesses    []*LikenessDetail         `protobuf:"bytes,7,rep,name=likenesses,proto3" json:"likenesses,omitempty"`
+	Pictures      []*PictureDetail          `protobuf:"bytes,7,rep,name=pictures,proto3" json:"pictures,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -12181,9 +12203,9 @@ func (x *ConclusionDetail) GetPlace() *PlaceHeader {
 	return nil
 }
 
-func (x *ConclusionDetail) GetLikenesses() []*LikenessDetail {
+func (x *ConclusionDetail) GetPictures() []*PictureDetail {
 	if x != nil {
-		return x.Likenesses
+		return x.Pictures
 	}
 	return nil
 }
@@ -20166,7 +20188,7 @@ const file_engine_proto_rawDesc = "" +
 	"\fEventSubject\x12>\n" +
 	"\x06entity\x18\x01 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\x129\n" +
 	"\x04name\x18\x02 \x01(\v2%.provenencia.engine.v1.NameValueInputR\x04name\x12(\n" +
-	"\x10name_value_count\x18\x03 \x01(\x05R\x0enameValueCount\"\xa4\x03\n" +
+	"\x10name_value_count\x18\x03 \x01(\x05R\x0enameValueCount\"\xa2\x03\n" +
 	"\fPersonHeader\x12>\n" +
 	"\x06entity\x18\x01 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\x129\n" +
 	"\x04name\x18\x02 \x01(\v2%.provenencia.engine.v1.NameValueInputR\x04name\x12(\n" +
@@ -20175,13 +20197,13 @@ const file_engine_proto_rawDesc = "" +
 	"\x05death\x18\x05 \x01(\v2 .provenencia.engine.v1.LifeFactsR\x05death\x12)\n" +
 	"\x10updated_revision\x18\x06 \x01(\x03R\x0fupdatedRevision\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\tR\tupdatedAt\x125\n" +
-	"\x17likeness_image_rel_path\x18\b \x01(\tR\x14likenessImageRelPath\";\n" +
+	"updated_at\x18\a \x01(\tR\tupdatedAt\x123\n" +
+	"\x16picture_image_rel_path\x18\b \x01(\tR\x13pictureImageRelPath\";\n" +
 	"\x18ListPersonHeadersRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\"Z\n" +
 	"\x19ListPersonHeadersResponse\x12=\n" +
-	"\aheaders\x18\x01 \x03(\v2#.provenencia.engine.v1.PersonHeaderR\aheaders\"\xb8\x06\n" +
+	"\aheaders\x18\x01 \x03(\v2#.provenencia.engine.v1.PersonHeaderR\aheaders\"\xed\x06\n" +
 	"\vEventHeader\x12>\n" +
 	"\x06entity\x18\x01 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\x12\x1d\n" +
 	"\n" +
@@ -20204,7 +20226,8 @@ const file_engine_proto_rawDesc = "" +
 	"\x05title\x18\x0e \x01(\v2!.provenencia.engine.v1.EventTitleR\x05title\x12)\n" +
 	"\x10updated_revision\x18\x0f \x01(\x03R\x0fupdatedRevision\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x10 \x01(\tR\tupdatedAt\":\n" +
+	"updated_at\x18\x10 \x01(\tR\tupdatedAt\x123\n" +
+	"\x16picture_image_rel_path\x18\x11 \x01(\tR\x13pictureImageRelPath\":\n" +
 	"\x17ListEventHeadersRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\"X\n" +
@@ -20216,7 +20239,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x04kind\x18\x03 \x01(\tR\x04kind\x12D\n" +
 	"\n" +
 	"start_date\x18\x04 \x01(\v2%.provenencia.engine.v1.DateValueInputR\tstartDate\x12@\n" +
-	"\bend_date\x18\x05 \x01(\v2%.provenencia.engine.v1.DateValueInputR\aendDate\"\xba\x05\n" +
+	"\bend_date\x18\x05 \x01(\v2%.provenencia.engine.v1.DateValueInputR\aendDate\"\xef\x05\n" +
 	"\vPlaceHeader\x12>\n" +
 	"\x06entity\x18\x01 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\x12\x14\n" +
 	"\x05names\x18\x02 \x03(\tR\x05names\x12D\n" +
@@ -20235,7 +20258,8 @@ const file_engine_proto_rawDesc = "" +
 	"successors\x12)\n" +
 	"\x10updated_revision\x18\f \x01(\x03R\x0fupdatedRevision\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\r \x01(\tR\tupdatedAt\":\n" +
+	"updated_at\x18\r \x01(\tR\tupdatedAt\x123\n" +
+	"\x16picture_image_rel_path\x18\x0e \x01(\tR\x13pictureImageRelPath\":\n" +
 	"\x17ListPlaceHeadersRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\"X\n" +
@@ -20301,22 +20325,20 @@ const file_engine_proto_rawDesc = "" +
 	"\x1aGetConclusionDetailRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x1b\n" +
-	"\tentity_id\x18\x02 \x01(\tR\bentityId\"\xb2\x01\n" +
-	"\x0eLikenessDetail\x12$\n" +
+	"\tentity_id\x18\x02 \x01(\tR\bentityId\"\xb1\x01\n" +
+	"\rPictureDetail\x12$\n" +
 	"\x0eimage_rel_path\x18\x01 \x01(\tR\fimageRelPath\x12F\n" +
 	"\x06record\x18\x02 \x01(\v2..provenencia.engine.v1.ReconcilerOutcomeDetailR\x06record\x12\x1c\n" +
 	"\tpreferred\x18\x03 \x01(\bR\tpreferred\x12\x14\n" +
-	"\x05leads\x18\x04 \x01(\bR\x05leads\"\xbd\x03\n" +
+	"\x05leads\x18\x04 \x01(\bR\x05leads\"\xb8\x03\n" +
 	"\x10ConclusionDetail\x12>\n" +
 	"\x06entity\x18\x01 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\x12>\n" +
 	"\x06fields\x18\x02 \x03(\v2&.provenencia.engine.v1.ConclusionFieldR\x06fields\x12!\n" +
 	"\fmember_count\x18\x03 \x01(\x05R\vmemberCount\x12=\n" +
 	"\x06person\x18\x04 \x01(\v2#.provenencia.engine.v1.PersonHeaderH\x00R\x06person\x12:\n" +
 	"\x05event\x18\x05 \x01(\v2\".provenencia.engine.v1.EventHeaderH\x00R\x05event\x12:\n" +
-	"\x05place\x18\x06 \x01(\v2\".provenencia.engine.v1.PlaceHeaderH\x00R\x05place\x12E\n" +
-	"\n" +
-	"likenesses\x18\a \x03(\v2%.provenencia.engine.v1.LikenessDetailR\n" +
-	"likenessesB\b\n" +
+	"\x05place\x18\x06 \x01(\v2\".provenencia.engine.v1.PlaceHeaderH\x00R\x05place\x12@\n" +
+	"\bpictures\x18\a \x03(\v2$.provenencia.engine.v1.PictureDetailR\bpicturesB\b\n" +
 	"\x06header\"\xbb\x01\n" +
 	"#ProposePromoteGraphAlignmentRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
@@ -21246,7 +21268,7 @@ var file_engine_proto_goTypes = []any{
 	(*ReconcilerOutcomeDetail)(nil),                   // 175: provenencia.engine.v1.ReconcilerOutcomeDetail
 	(*ConclusionField)(nil),                           // 176: provenencia.engine.v1.ConclusionField
 	(*GetConclusionDetailRequest)(nil),                // 177: provenencia.engine.v1.GetConclusionDetailRequest
-	(*LikenessDetail)(nil),                            // 178: provenencia.engine.v1.LikenessDetail
+	(*PictureDetail)(nil),                             // 178: provenencia.engine.v1.PictureDetail
 	(*ConclusionDetail)(nil),                          // 179: provenencia.engine.v1.ConclusionDetail
 	(*ProposePromoteGraphAlignmentRequest)(nil),       // 180: provenencia.engine.v1.ProposePromoteGraphAlignmentRequest
 	(*PromoteGraphAlignmentFixed)(nil),                // 181: provenencia.engine.v1.PromoteGraphAlignmentFixed
@@ -21486,13 +21508,13 @@ var file_engine_proto_depIdxs = []int32{
 	172, // 125: provenencia.engine.v1.ReconcilerOutcomeDetail.recorded:type_name -> provenencia.engine.v1.ConclusionValue
 	174, // 126: provenencia.engine.v1.ConclusionField.values:type_name -> provenencia.engine.v1.ReconciledValueDetail
 	175, // 127: provenencia.engine.v1.ConclusionField.outcomes:type_name -> provenencia.engine.v1.ReconcilerOutcomeDetail
-	175, // 128: provenencia.engine.v1.LikenessDetail.record:type_name -> provenencia.engine.v1.ReconcilerOutcomeDetail
+	175, // 128: provenencia.engine.v1.PictureDetail.record:type_name -> provenencia.engine.v1.ReconcilerOutcomeDetail
 	140, // 129: provenencia.engine.v1.ConclusionDetail.entity:type_name -> provenencia.engine.v1.CanonicalEntity
 	176, // 130: provenencia.engine.v1.ConclusionDetail.fields:type_name -> provenencia.engine.v1.ConclusionField
 	162, // 131: provenencia.engine.v1.ConclusionDetail.person:type_name -> provenencia.engine.v1.PersonHeader
 	165, // 132: provenencia.engine.v1.ConclusionDetail.event:type_name -> provenencia.engine.v1.EventHeader
 	169, // 133: provenencia.engine.v1.ConclusionDetail.place:type_name -> provenencia.engine.v1.PlaceHeader
-	178, // 134: provenencia.engine.v1.ConclusionDetail.likenesses:type_name -> provenencia.engine.v1.LikenessDetail
+	178, // 134: provenencia.engine.v1.ConclusionDetail.pictures:type_name -> provenencia.engine.v1.PictureDetail
 	181, // 135: provenencia.engine.v1.ProposePromoteGraphAlignmentRequest.fixed:type_name -> provenencia.engine.v1.PromoteGraphAlignmentFixed
 	181, // 136: provenencia.engine.v1.GetPromoteClaimEvidenceRequest.neighbors:type_name -> provenencia.engine.v1.PromoteGraphAlignmentFixed
 	172, // 137: provenencia.engine.v1.PromoteClaimEvidencePin.value:type_name -> provenencia.engine.v1.ConclusionValue

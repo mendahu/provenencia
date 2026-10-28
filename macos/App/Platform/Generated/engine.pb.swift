@@ -3395,106 +3395,73 @@ public nonisolated struct Provenencia_Engine_V1_SearchCatalogRequest: Sendable {
   fileprivate var _location: Provenencia_Engine_V1_WorkspaceLocation? = nil
 }
 
-public nonisolated struct Provenencia_Engine_V1_SearchHit: @unchecked Sendable {
+public nonisolated struct Provenencia_Engine_V1_SearchHit: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   /// source | source_type | metadata_field | person | event | place | evidence_graph
-  public var kind: String {
-    get {_storage._kind}
-    set {_uniqueStorage()._kind = newValue}
-  }
+  public var kind: String = String()
 
-  public var id: String {
-    get {_storage._id}
-    set {_uniqueStorage()._id = newValue}
-  }
+  public var id: String = String()
 
-  public var ref: String {
-    get {_storage._ref}
-    set {_uniqueStorage()._ref = newValue}
-  }
+  public var ref: String = String()
 
-  public var title: String {
-    get {_storage._title}
-    set {_uniqueStorage()._title = newValue}
-  }
+  public var title: String = String()
 
-  public var subtitle: String {
-    get {_storage._subtitle}
-    set {_uniqueStorage()._subtitle = newValue}
-  }
+  public var subtitle: String = String()
 
   /// Stable match field code (title|ref|label|key|notes|metadata|filename|description|fuzzy).
   /// Not user-facing copy — Mac localizes via L10n.
-  public var matchReason: String {
-    get {_storage._matchReason}
-    set {_uniqueStorage()._matchReason = newValue}
-  }
+  public var matchReason: String = String()
 
   public var location: Provenencia_Engine_V1_WorkspaceLocation {
-    get {_storage._location ?? Provenencia_Engine_V1_WorkspaceLocation()}
-    set {_uniqueStorage()._location = newValue}
+    get {_location ?? Provenencia_Engine_V1_WorkspaceLocation()}
+    set {_location = newValue}
   }
   /// Returns true if `location` has been explicitly set.
-  public var hasLocation: Bool {_storage._location != nil}
+  public var hasLocation: Bool {self._location != nil}
   /// Clears the value of `location`. Subsequent reads from it will return its default value.
-  public mutating func clearLocation() {_uniqueStorage()._location = nil}
+  public mutating func clearLocation() {self._location = nil}
 
   /// Display stubs for omnibar lead chrome (avoid a second full-list fetch).
-  public var thumbnailRelPath: String {
-    get {_storage._thumbnailRelPath}
-    set {_uniqueStorage()._thumbnailRelPath = newValue}
-  }
+  public var thumbnailRelPath: String = String()
 
   /// Source type icon, or type hit icon; empty for fields
-  public var iconKey: String {
-    get {_storage._iconKey}
-    set {_uniqueStorage()._iconKey = newValue}
-  }
+  public var iconKey: String = String()
 
   /// Optional raw snippet for body/rollup matches (notes/metadata/filename). No English prefix.
-  public var matchSnippet: String {
-    get {_storage._matchSnippet}
-    set {_uniqueStorage()._matchSnippet = newValue}
-  }
+  public var matchSnippet: String = String()
 
   /// accepted members, for person / event / place hits
-  public var memberCount: Int32 {
-    get {_storage._memberCount}
-    set {_uniqueStorage()._memberCount = newValue}
-  }
+  public var memberCount: Int32 = 0
 
   /// The list header for a person, event, or place hit. Title and subtitle
   /// stay match text; the app formats the row from this header (S9-35).
-  public var header: OneOf_Header? {
-    get {return _storage._header}
-    set {_uniqueStorage()._header = newValue}
-  }
+  public var header: Provenencia_Engine_V1_SearchHit.OneOf_Header? = nil
 
   public var person: Provenencia_Engine_V1_PersonHeader {
     get {
-      if case .person(let v)? = _storage._header {return v}
+      if case .person(let v)? = header {return v}
       return Provenencia_Engine_V1_PersonHeader()
     }
-    set {_uniqueStorage()._header = .person(newValue)}
+    set {header = .person(newValue)}
   }
 
   public var event: Provenencia_Engine_V1_EventHeader {
     get {
-      if case .event(let v)? = _storage._header {return v}
+      if case .event(let v)? = header {return v}
       return Provenencia_Engine_V1_EventHeader()
     }
-    set {_uniqueStorage()._header = .event(newValue)}
+    set {header = .event(newValue)}
   }
 
   public var place: Provenencia_Engine_V1_PlaceHeader {
     get {
-      if case .place(let v)? = _storage._header {return v}
+      if case .place(let v)? = header {return v}
       return Provenencia_Engine_V1_PlaceHeader()
     }
-    set {_uniqueStorage()._header = .place(newValue)}
+    set {header = .place(newValue)}
   }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -3510,7 +3477,7 @@ public nonisolated struct Provenencia_Engine_V1_SearchHit: @unchecked Sendable {
 
   public init() {}
 
-  fileprivate var _storage = _StorageClass.defaultInstance
+  fileprivate var _location: Provenencia_Engine_V1_WorkspaceLocation? = nil
 }
 
 public nonisolated struct Provenencia_Engine_V1_SearchCatalogResponse: Sendable {
@@ -4338,13 +4305,13 @@ public nonisolated struct Provenencia_Engine_V1_PersonHeader: @unchecked Sendabl
     set {_uniqueStorage()._updatedAt = newValue}
   }
 
-  /// likeness_image_rel_path is the objects/… path of the likeness the Person
+  /// picture_image_rel_path is the objects/… path of the picture the Person
   /// leads with on its page and in the Persons list (the preferred portrait,
-  /// else the earliest gallery likeness); empty when none. Filled on ListPersonHeaders and
+  /// else the earliest gallery picture); empty when none. Filled on ListPersonHeaders and
   /// GetConclusionDetail only.
-  public var likenessImageRelPath: String {
-    get {_storage._likenessImageRelPath}
-    set {_uniqueStorage()._likenessImageRelPath = newValue}
+  public var pictureImageRelPath: String {
+    get {_storage._pictureImageRelPath}
+    set {_uniqueStorage()._pictureImageRelPath = newValue}
   }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -4503,6 +4470,14 @@ public nonisolated struct Provenencia_Engine_V1_EventHeader: @unchecked Sendable
     set {_uniqueStorage()._updatedAt = newValue}
   }
 
+  /// picture_image_rel_path is the objects/… path of the picture the Event
+  /// leads with; empty when none. Filled on ListEventHeaders and
+  /// GetConclusionDetail only.
+  public var pictureImageRelPath: String {
+    get {_storage._pictureImageRelPath}
+    set {_uniqueStorage()._pictureImageRelPath = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -4592,68 +4567,104 @@ public nonisolated struct Provenencia_Engine_V1_PlaceRelationship: Sendable {
 /// parents_are_candidates is true when several parents hold at once.
 /// Relationship lists are filled on GetConclusionDetail only. kind stays
 /// empty (place_nature deferred).
-public nonisolated struct Provenencia_Engine_V1_PlaceHeader: Sendable {
+public nonisolated struct Provenencia_Engine_V1_PlaceHeader: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   public var entity: Provenencia_Engine_V1_CanonicalEntity {
-    get {_entity ?? Provenencia_Engine_V1_CanonicalEntity()}
-    set {_entity = newValue}
+    get {_storage._entity ?? Provenencia_Engine_V1_CanonicalEntity()}
+    set {_uniqueStorage()._entity = newValue}
   }
   /// Returns true if `entity` has been explicitly set.
-  public var hasEntity: Bool {self._entity != nil}
+  public var hasEntity: Bool {_storage._entity != nil}
   /// Clears the value of `entity`. Subsequent reads from it will return its default value.
-  public mutating func clearEntity() {self._entity = nil}
+  public mutating func clearEntity() {_uniqueStorage()._entity = nil}
 
-  public var names: [String] = []
+  public var names: [String] {
+    get {_storage._names}
+    set {_uniqueStorage()._names = newValue}
+  }
 
   public var startDate: Provenencia_Engine_V1_DateValueInput {
-    get {_startDate ?? Provenencia_Engine_V1_DateValueInput()}
-    set {_startDate = newValue}
+    get {_storage._startDate ?? Provenencia_Engine_V1_DateValueInput()}
+    set {_uniqueStorage()._startDate = newValue}
   }
   /// Returns true if `startDate` has been explicitly set.
-  public var hasStartDate: Bool {self._startDate != nil}
+  public var hasStartDate: Bool {_storage._startDate != nil}
   /// Clears the value of `startDate`. Subsequent reads from it will return its default value.
-  public mutating func clearStartDate() {self._startDate = nil}
+  public mutating func clearStartDate() {_uniqueStorage()._startDate = nil}
 
   public var endDate: Provenencia_Engine_V1_DateValueInput {
-    get {_endDate ?? Provenencia_Engine_V1_DateValueInput()}
-    set {_endDate = newValue}
+    get {_storage._endDate ?? Provenencia_Engine_V1_DateValueInput()}
+    set {_uniqueStorage()._endDate = newValue}
   }
   /// Returns true if `endDate` has been explicitly set.
-  public var hasEndDate: Bool {self._endDate != nil}
+  public var hasEndDate: Bool {_storage._endDate != nil}
   /// Clears the value of `endDate`. Subsequent reads from it will return its default value.
-  public mutating func clearEndDate() {self._endDate = nil}
+  public mutating func clearEndDate() {_uniqueStorage()._endDate = nil}
 
-  public var kind: String = String()
+  public var kind: String {
+    get {_storage._kind}
+    set {_uniqueStorage()._kind = newValue}
+  }
 
-  public var parents: [String] = []
+  public var parents: [String] {
+    get {_storage._parents}
+    set {_uniqueStorage()._parents = newValue}
+  }
 
-  public var parentsAreCandidates: Bool = false
+  public var parentsAreCandidates: Bool {
+    get {_storage._parentsAreCandidates}
+    set {_uniqueStorage()._parentsAreCandidates = newValue}
+  }
 
-  public var partOf: [Provenencia_Engine_V1_PlaceRelationship] = []
+  public var partOf: [Provenencia_Engine_V1_PlaceRelationship] {
+    get {_storage._partOf}
+    set {_uniqueStorage()._partOf = newValue}
+  }
 
-  public var contains: [Provenencia_Engine_V1_PlaceRelationship] = []
+  public var contains: [Provenencia_Engine_V1_PlaceRelationship] {
+    get {_storage._contains}
+    set {_uniqueStorage()._contains = newValue}
+  }
 
-  public var predecessors: [Provenencia_Engine_V1_PlaceRelationship] = []
+  public var predecessors: [Provenencia_Engine_V1_PlaceRelationship] {
+    get {_storage._predecessors}
+    set {_uniqueStorage()._predecessors = newValue}
+  }
 
-  public var successors: [Provenencia_Engine_V1_PlaceRelationship] = []
+  public var successors: [Provenencia_Engine_V1_PlaceRelationship] {
+    get {_storage._successors}
+    set {_uniqueStorage()._successors = newValue}
+  }
 
   /// updated_revision is the latest canonical_entity audit revision (0 = none);
   /// updated_at is its RFC3339 UTC time, empty when 0. Filled on the
   /// List*Headers responses only.
-  public var updatedRevision: Int64 = 0
+  public var updatedRevision: Int64 {
+    get {_storage._updatedRevision}
+    set {_uniqueStorage()._updatedRevision = newValue}
+  }
 
-  public var updatedAt: String = String()
+  public var updatedAt: String {
+    get {_storage._updatedAt}
+    set {_uniqueStorage()._updatedAt = newValue}
+  }
+
+  /// picture_image_rel_path is the objects/… path of the picture the Place
+  /// leads with; empty when none. Filled on ListPlaceHeaders and
+  /// GetConclusionDetail only.
+  public var pictureImageRelPath: String {
+    get {_storage._pictureImageRelPath}
+    set {_uniqueStorage()._pictureImageRelPath = newValue}
+  }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
-  fileprivate var _startDate: Provenencia_Engine_V1_DateValueInput? = nil
-  fileprivate var _endDate: Provenencia_Engine_V1_DateValueInput? = nil
+  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 /// ListPlaceHeaders returns every unmerged Place in list order: by the title
@@ -4979,11 +4990,11 @@ public nonisolated struct Provenencia_Engine_V1_GetConclusionDetailRequest: Send
   public init() {}
 }
 
-/// LikenessDetail is one likeness a Person page's gallery shows (S10-35),
+/// PictureDetail is one picture a handle's gallery shows (S10-35 / S14-01),
 /// earliest recorded first. record is its earliest Observation, as the Why
 /// shows it; the tile opens that record's Citation. image_rel_path is empty
 /// when the File's path cannot be derived.
-public nonisolated struct Provenencia_Engine_V1_LikenessDetail: Sendable {
+public nonisolated struct Provenencia_Engine_V1_PictureDetail: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -4999,13 +5010,13 @@ public nonisolated struct Provenencia_Engine_V1_LikenessDetail: Sendable {
   /// Clears the value of `record`. Subsequent reads from it will return its default value.
   public mutating func clearRecord() {self._record = nil}
 
-  /// preferred is true for the likeness chosen as the Person's portrait
-  /// (S10-39); at most one.
+  /// preferred is true for the picture chosen as the handle's portrait or
+  /// thumbnail (S10-39); at most one.
   public var preferred: Bool = false
 
-  /// leads is true for the likeness the Person's header leads with: the
-  /// preferred one when set, else the earliest; exactly one per gallery. The
-  /// tile that leads shows the Portrait Badge (user, 2026-10-17).
+  /// leads is true for the picture the header leads with: the preferred one
+  /// when set, else the earliest; exactly one per gallery. The tile that
+  /// leads shows the Portrait Badge on a Person (user, 2026-10-17).
   public var leads: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -5015,67 +5026,55 @@ public nonisolated struct Provenencia_Engine_V1_LikenessDetail: Sendable {
   fileprivate var _record: Provenencia_Engine_V1_ReconcilerOutcomeDetail? = nil
 }
 
-public nonisolated struct Provenencia_Engine_V1_ConclusionDetail: @unchecked Sendable {
+public nonisolated struct Provenencia_Engine_V1_ConclusionDetail: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   public var entity: Provenencia_Engine_V1_CanonicalEntity {
-    get {_storage._entity ?? Provenencia_Engine_V1_CanonicalEntity()}
-    set {_uniqueStorage()._entity = newValue}
+    get {_entity ?? Provenencia_Engine_V1_CanonicalEntity()}
+    set {_entity = newValue}
   }
   /// Returns true if `entity` has been explicitly set.
-  public var hasEntity: Bool {_storage._entity != nil}
+  public var hasEntity: Bool {self._entity != nil}
   /// Clears the value of `entity`. Subsequent reads from it will return its default value.
-  public mutating func clearEntity() {_uniqueStorage()._entity = nil}
+  public mutating func clearEntity() {self._entity = nil}
 
-  public var fields: [Provenencia_Engine_V1_ConclusionField] {
-    get {_storage._fields}
-    set {_uniqueStorage()._fields = newValue}
-  }
+  public var fields: [Provenencia_Engine_V1_ConclusionField] = []
 
   /// accepted members
-  public var memberCount: Int32 {
-    get {_storage._memberCount}
-    set {_uniqueStorage()._memberCount = newValue}
-  }
+  public var memberCount: Int32 = 0
 
   /// header is the handle's row for its kind, read with the detail so a page
   /// has one load, one error, and one consistent read. Absent for a kind
   /// with no header composer.
-  public var header: OneOf_Header? {
-    get {return _storage._header}
-    set {_uniqueStorage()._header = newValue}
-  }
+  public var header: Provenencia_Engine_V1_ConclusionDetail.OneOf_Header? = nil
 
   public var person: Provenencia_Engine_V1_PersonHeader {
     get {
-      if case .person(let v)? = _storage._header {return v}
+      if case .person(let v)? = header {return v}
       return Provenencia_Engine_V1_PersonHeader()
     }
-    set {_uniqueStorage()._header = .person(newValue)}
+    set {header = .person(newValue)}
   }
 
   public var event: Provenencia_Engine_V1_EventHeader {
     get {
-      if case .event(let v)? = _storage._header {return v}
+      if case .event(let v)? = header {return v}
       return Provenencia_Engine_V1_EventHeader()
     }
-    set {_uniqueStorage()._header = .event(newValue)}
+    set {header = .event(newValue)}
   }
 
   public var place: Provenencia_Engine_V1_PlaceHeader {
     get {
-      if case .place(let v)? = _storage._header {return v}
+      if case .place(let v)? = header {return v}
       return Provenencia_Engine_V1_PlaceHeader()
     }
-    set {_uniqueStorage()._header = .place(newValue)}
+    set {header = .place(newValue)}
   }
 
-  public var likenesses: [Provenencia_Engine_V1_LikenessDetail] {
-    get {_storage._likenesses}
-    set {_uniqueStorage()._likenesses = newValue}
-  }
+  public var pictures: [Provenencia_Engine_V1_PictureDetail] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -5091,7 +5090,7 @@ public nonisolated struct Provenencia_Engine_V1_ConclusionDetail: @unchecked Sen
 
   public init() {}
 
-  fileprivate var _storage = _StorageClass.defaultInstance
+  fileprivate var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
 }
 
 /// ProposePromoteGraphAlignment loads one Evidence graph's layer and proposes
@@ -5431,83 +5430,56 @@ public nonisolated struct Provenencia_Engine_V1_GetPromoteClaimEvidenceResponse:
   public init() {}
 }
 
-public nonisolated struct Provenencia_Engine_V1_PromoteGraphAlignmentAlternative: @unchecked Sendable {
+public nonisolated struct Provenencia_Engine_V1_PromoteGraphAlignmentAlternative: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var handleID: String {
-    get {_storage._handleID}
-    set {_uniqueStorage()._handleID = newValue}
-  }
+  public var handleID: String = String()
 
-  public var handleRef: String {
-    get {_storage._handleRef}
-    set {_uniqueStorage()._handleRef = newValue}
-  }
+  public var handleRef: String = String()
 
-  public var score: Double {
-    get {_storage._score}
-    set {_uniqueStorage()._score = newValue}
-  }
+  public var score: Double = 0
 
-  public var header: OneOf_Header? {
-    get {return _storage._header}
-    set {_uniqueStorage()._header = newValue}
-  }
+  public var header: Provenencia_Engine_V1_PromoteGraphAlignmentAlternative.OneOf_Header? = nil
 
   public var person: Provenencia_Engine_V1_PersonHeader {
     get {
-      if case .person(let v)? = _storage._header {return v}
+      if case .person(let v)? = header {return v}
       return Provenencia_Engine_V1_PersonHeader()
     }
-    set {_uniqueStorage()._header = .person(newValue)}
+    set {header = .person(newValue)}
   }
 
   public var event: Provenencia_Engine_V1_EventHeader {
     get {
-      if case .event(let v)? = _storage._header {return v}
+      if case .event(let v)? = header {return v}
       return Provenencia_Engine_V1_EventHeader()
     }
-    set {_uniqueStorage()._header = .event(newValue)}
+    set {header = .event(newValue)}
   }
 
   public var place: Provenencia_Engine_V1_PlaceHeader {
     get {
-      if case .place(let v)? = _storage._header {return v}
+      if case .place(let v)? = header {return v}
       return Provenencia_Engine_V1_PlaceHeader()
     }
-    set {_uniqueStorage()._header = .place(newValue)}
+    set {header = .place(newValue)}
   }
 
   /// This record's own band and why, so the page can show it when the
   /// researcher selects this record. strong, medium, weak, none.
-  public var assessment: String {
-    get {_storage._assessment}
-    set {_uniqueStorage()._assessment = newValue}
-  }
+  public var assessment: String = String()
 
   /// via, agrees, or weak. The page words it. With agrees, the Property.
-  public var reason: String {
-    get {_storage._reason}
-    set {_uniqueStorage()._reason = newValue}
-  }
+  public var reason: String = String()
 
-  public var reasonPropertyKey: String {
-    get {_storage._reasonPropertyKey}
-    set {_uniqueStorage()._reasonPropertyKey = newValue}
-  }
+  public var reasonPropertyKey: String = String()
 
-  public var reasonPropertyOrigin: String {
-    get {_storage._reasonPropertyOrigin}
-    set {_uniqueStorage()._reasonPropertyOrigin = newValue}
-  }
+  public var reasonPropertyOrigin: String = String()
 
   /// Set when reason is via: the layer neighbor that reached this record.
-  public var viaNeighborSubjectID: String {
-    get {_storage._viaNeighborSubjectID}
-    set {_uniqueStorage()._viaNeighborSubjectID = newValue}
-  }
+  public var viaNeighborSubjectID: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -5519,8 +5491,6 @@ public nonisolated struct Provenencia_Engine_V1_PromoteGraphAlignmentAlternative
   }
 
   public init() {}
-
-  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 public nonisolated struct Provenencia_Engine_V1_PromoteGraphAlignmentRow: @unchecked Sendable {
@@ -13224,194 +13194,136 @@ nonisolated extension Provenencia_Engine_V1_SearchHit: SwiftProtobuf.Message, Sw
   public static let protoMessageName: String = _protobuf_package + ".SearchHit"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{1}id\0\u{1}ref\0\u{1}title\0\u{1}subtitle\0\u{3}match_reason\0\u{1}location\0\u{3}thumbnail_rel_path\0\u{3}icon_key\0\u{3}match_snippet\0\u{3}member_count\0\u{1}person\0\u{1}event\0\u{1}place\0")
 
-  fileprivate class _StorageClass {
-    var _kind: String = String()
-    var _id: String = String()
-    var _ref: String = String()
-    var _title: String = String()
-    var _subtitle: String = String()
-    var _matchReason: String = String()
-    var _location: Provenencia_Engine_V1_WorkspaceLocation? = nil
-    var _thumbnailRelPath: String = String()
-    var _iconKey: String = String()
-    var _matchSnippet: String = String()
-    var _memberCount: Int32 = 0
-    var _header: Provenencia_Engine_V1_SearchHit.OneOf_Header?
-
-      // This property is used as the initial default value for new instances of the type.
-      // The type itself is protecting the reference to its storage via CoW semantics.
-      // This will force a copy to be made of this reference when the first mutation occurs;
-      // hence, it is safe to mark this as `nonisolated(unsafe)`.
-      static nonisolated(unsafe) let defaultInstance = _StorageClass()
-
-    private init() {}
-
-    init(copying source: _StorageClass) {
-      _kind = source._kind
-      _id = source._id
-      _ref = source._ref
-      _title = source._title
-      _subtitle = source._subtitle
-      _matchReason = source._matchReason
-      _location = source._location
-      _thumbnailRelPath = source._thumbnailRelPath
-      _iconKey = source._iconKey
-      _matchSnippet = source._matchSnippet
-      _memberCount = source._memberCount
-      _header = source._header
-    }
-  }
-
-  fileprivate mutating func _uniqueStorage() -> _StorageClass {
-    if !isKnownUniquelyReferenced(&_storage) {
-      _storage = _StorageClass(copying: _storage)
-    }
-    return _storage
-  }
-
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
-        switch fieldNumber {
-        case 1: try { try decoder.decodeSingularStringField(value: &_storage._kind) }()
-        case 2: try { try decoder.decodeSingularStringField(value: &_storage._id) }()
-        case 3: try { try decoder.decodeSingularStringField(value: &_storage._ref) }()
-        case 4: try { try decoder.decodeSingularStringField(value: &_storage._title) }()
-        case 5: try { try decoder.decodeSingularStringField(value: &_storage._subtitle) }()
-        case 6: try { try decoder.decodeSingularStringField(value: &_storage._matchReason) }()
-        case 7: try { try decoder.decodeSingularMessageField(value: &_storage._location) }()
-        case 8: try { try decoder.decodeSingularStringField(value: &_storage._thumbnailRelPath) }()
-        case 9: try { try decoder.decodeSingularStringField(value: &_storage._iconKey) }()
-        case 10: try { try decoder.decodeSingularStringField(value: &_storage._matchSnippet) }()
-        case 11: try { try decoder.decodeSingularInt32Field(value: &_storage._memberCount) }()
-        case 12: try {
-          var v: Provenencia_Engine_V1_PersonHeader?
-          var hadOneofValue = false
-          if let current = _storage._header {
-            hadOneofValue = true
-            if case .person(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._header = .person(v)
-          }
-        }()
-        case 13: try {
-          var v: Provenencia_Engine_V1_EventHeader?
-          var hadOneofValue = false
-          if let current = _storage._header {
-            hadOneofValue = true
-            if case .event(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._header = .event(v)
-          }
-        }()
-        case 14: try {
-          var v: Provenencia_Engine_V1_PlaceHeader?
-          var hadOneofValue = false
-          if let current = _storage._header {
-            hadOneofValue = true
-            if case .place(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._header = .place(v)
-          }
-        }()
-        default: break
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.kind) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.ref) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.title) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.subtitle) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self.matchReason) }()
+      case 7: try { try decoder.decodeSingularMessageField(value: &self._location) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.thumbnailRelPath) }()
+      case 9: try { try decoder.decodeSingularStringField(value: &self.iconKey) }()
+      case 10: try { try decoder.decodeSingularStringField(value: &self.matchSnippet) }()
+      case 11: try { try decoder.decodeSingularInt32Field(value: &self.memberCount) }()
+      case 12: try {
+        var v: Provenencia_Engine_V1_PersonHeader?
+        var hadOneofValue = false
+        if let current = self.header {
+          hadOneofValue = true
+          if case .person(let m) = current {v = m}
         }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.header = .person(v)
+        }
+      }()
+      case 13: try {
+        var v: Provenencia_Engine_V1_EventHeader?
+        var hadOneofValue = false
+        if let current = self.header {
+          hadOneofValue = true
+          if case .event(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.header = .event(v)
+        }
+      }()
+      case 14: try {
+        var v: Provenencia_Engine_V1_PlaceHeader?
+        var hadOneofValue = false
+        if let current = self.header {
+          hadOneofValue = true
+          if case .place(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.header = .place(v)
+        }
+      }()
+      default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every if/case branch local when no optimizations
-      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-      // https://github.com/apple/swift-protobuf/issues/1182
-      if !_storage._kind.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._kind, fieldNumber: 1)
-      }
-      if !_storage._id.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._id, fieldNumber: 2)
-      }
-      if !_storage._ref.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._ref, fieldNumber: 3)
-      }
-      if !_storage._title.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._title, fieldNumber: 4)
-      }
-      if !_storage._subtitle.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._subtitle, fieldNumber: 5)
-      }
-      if !_storage._matchReason.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._matchReason, fieldNumber: 6)
-      }
-      try { if let v = _storage._location {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
-      } }()
-      if !_storage._thumbnailRelPath.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._thumbnailRelPath, fieldNumber: 8)
-      }
-      if !_storage._iconKey.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._iconKey, fieldNumber: 9)
-      }
-      if !_storage._matchSnippet.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._matchSnippet, fieldNumber: 10)
-      }
-      if _storage._memberCount != 0 {
-        try visitor.visitSingularInt32Field(value: _storage._memberCount, fieldNumber: 11)
-      }
-      switch _storage._header {
-      case .person?: try {
-        guard case .person(let v)? = _storage._header else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
-      }()
-      case .event?: try {
-        guard case .event(let v)? = _storage._header else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
-      }()
-      case .place?: try {
-        guard case .place(let v)? = _storage._header else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
-      }()
-      case nil: break
-      }
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.kind.isEmpty {
+      try visitor.visitSingularStringField(value: self.kind, fieldNumber: 1)
+    }
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 2)
+    }
+    if !self.ref.isEmpty {
+      try visitor.visitSingularStringField(value: self.ref, fieldNumber: 3)
+    }
+    if !self.title.isEmpty {
+      try visitor.visitSingularStringField(value: self.title, fieldNumber: 4)
+    }
+    if !self.subtitle.isEmpty {
+      try visitor.visitSingularStringField(value: self.subtitle, fieldNumber: 5)
+    }
+    if !self.matchReason.isEmpty {
+      try visitor.visitSingularStringField(value: self.matchReason, fieldNumber: 6)
+    }
+    try { if let v = self._location {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    } }()
+    if !self.thumbnailRelPath.isEmpty {
+      try visitor.visitSingularStringField(value: self.thumbnailRelPath, fieldNumber: 8)
+    }
+    if !self.iconKey.isEmpty {
+      try visitor.visitSingularStringField(value: self.iconKey, fieldNumber: 9)
+    }
+    if !self.matchSnippet.isEmpty {
+      try visitor.visitSingularStringField(value: self.matchSnippet, fieldNumber: 10)
+    }
+    if self.memberCount != 0 {
+      try visitor.visitSingularInt32Field(value: self.memberCount, fieldNumber: 11)
+    }
+    switch self.header {
+    case .person?: try {
+      guard case .person(let v)? = self.header else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
+    }()
+    case .event?: try {
+      guard case .event(let v)? = self.header else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
+    }()
+    case .place?: try {
+      guard case .place(let v)? = self.header else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
+    }()
+    case nil: break
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_SearchHit, rhs: Provenencia_Engine_V1_SearchHit) -> Bool {
-    if lhs._storage !== rhs._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
-        let _storage = _args.0
-        let rhs_storage = _args.1
-        if _storage._kind != rhs_storage._kind {return false}
-        if _storage._id != rhs_storage._id {return false}
-        if _storage._ref != rhs_storage._ref {return false}
-        if _storage._title != rhs_storage._title {return false}
-        if _storage._subtitle != rhs_storage._subtitle {return false}
-        if _storage._matchReason != rhs_storage._matchReason {return false}
-        if _storage._location != rhs_storage._location {return false}
-        if _storage._thumbnailRelPath != rhs_storage._thumbnailRelPath {return false}
-        if _storage._iconKey != rhs_storage._iconKey {return false}
-        if _storage._matchSnippet != rhs_storage._matchSnippet {return false}
-        if _storage._memberCount != rhs_storage._memberCount {return false}
-        if _storage._header != rhs_storage._header {return false}
-        return true
-      }
-      if !storagesAreEqual {return false}
-    }
+    if lhs.kind != rhs.kind {return false}
+    if lhs.id != rhs.id {return false}
+    if lhs.ref != rhs.ref {return false}
+    if lhs.title != rhs.title {return false}
+    if lhs.subtitle != rhs.subtitle {return false}
+    if lhs.matchReason != rhs.matchReason {return false}
+    if lhs._location != rhs._location {return false}
+    if lhs.thumbnailRelPath != rhs.thumbnailRelPath {return false}
+    if lhs.iconKey != rhs.iconKey {return false}
+    if lhs.matchSnippet != rhs.matchSnippet {return false}
+    if lhs.memberCount != rhs.memberCount {return false}
+    if lhs.header != rhs.header {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -14867,7 +14779,7 @@ nonisolated extension Provenencia_Engine_V1_EventSubject: SwiftProtobuf.Message,
 
 nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PersonHeader"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}name\0\u{3}name_value_count\0\u{1}birth\0\u{1}death\0\u{3}updated_revision\0\u{3}updated_at\0\u{3}likeness_image_rel_path\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}name\0\u{3}name_value_count\0\u{1}birth\0\u{1}death\0\u{3}updated_revision\0\u{3}updated_at\0\u{3}picture_image_rel_path\0")
 
   fileprivate class _StorageClass {
     var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
@@ -14877,7 +14789,7 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
     var _death: Provenencia_Engine_V1_LifeFacts? = nil
     var _updatedRevision: Int64 = 0
     var _updatedAt: String = String()
-    var _likenessImageRelPath: String = String()
+    var _pictureImageRelPath: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -14895,7 +14807,7 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
       _death = source._death
       _updatedRevision = source._updatedRevision
       _updatedAt = source._updatedAt
-      _likenessImageRelPath = source._likenessImageRelPath
+      _pictureImageRelPath = source._pictureImageRelPath
     }
   }
 
@@ -14921,7 +14833,7 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
         case 5: try { try decoder.decodeSingularMessageField(value: &_storage._death) }()
         case 6: try { try decoder.decodeSingularInt64Field(value: &_storage._updatedRevision) }()
         case 7: try { try decoder.decodeSingularStringField(value: &_storage._updatedAt) }()
-        case 8: try { try decoder.decodeSingularStringField(value: &_storage._likenessImageRelPath) }()
+        case 8: try { try decoder.decodeSingularStringField(value: &_storage._pictureImageRelPath) }()
         default: break
         }
       }
@@ -14955,8 +14867,8 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
       if !_storage._updatedAt.isEmpty {
         try visitor.visitSingularStringField(value: _storage._updatedAt, fieldNumber: 7)
       }
-      if !_storage._likenessImageRelPath.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._likenessImageRelPath, fieldNumber: 8)
+      if !_storage._pictureImageRelPath.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._pictureImageRelPath, fieldNumber: 8)
       }
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -14974,7 +14886,7 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
         if _storage._death != rhs_storage._death {return false}
         if _storage._updatedRevision != rhs_storage._updatedRevision {return false}
         if _storage._updatedAt != rhs_storage._updatedAt {return false}
-        if _storage._likenessImageRelPath != rhs_storage._likenessImageRelPath {return false}
+        if _storage._pictureImageRelPath != rhs_storage._pictureImageRelPath {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -15046,7 +14958,7 @@ nonisolated extension Provenencia_Engine_V1_ListPersonHeadersResponse: SwiftProt
 
 nonisolated extension Provenencia_Engine_V1_EventHeader: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".EventHeader"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{3}event_name\0\u{3}event_name_count\0\u{3}event_type\0\u{3}event_type_count\0\u{1}date\0\u{3}date_count\0\u{3}start_date\0\u{3}start_date_count\0\u{3}end_date\0\u{3}end_date_count\0\u{1}subjects\0\u{1}places\0\u{1}title\0\u{3}updated_revision\0\u{3}updated_at\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{3}event_name\0\u{3}event_name_count\0\u{3}event_type\0\u{3}event_type_count\0\u{1}date\0\u{3}date_count\0\u{3}start_date\0\u{3}start_date_count\0\u{3}end_date\0\u{3}end_date_count\0\u{1}subjects\0\u{1}places\0\u{1}title\0\u{3}updated_revision\0\u{3}updated_at\0\u{3}picture_image_rel_path\0")
 
   fileprivate class _StorageClass {
     var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
@@ -15065,6 +14977,7 @@ nonisolated extension Provenencia_Engine_V1_EventHeader: SwiftProtobuf.Message, 
     var _title: Provenencia_Engine_V1_EventTitle? = nil
     var _updatedRevision: Int64 = 0
     var _updatedAt: String = String()
+    var _pictureImageRelPath: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -15091,6 +15004,7 @@ nonisolated extension Provenencia_Engine_V1_EventHeader: SwiftProtobuf.Message, 
       _title = source._title
       _updatedRevision = source._updatedRevision
       _updatedAt = source._updatedAt
+      _pictureImageRelPath = source._pictureImageRelPath
     }
   }
 
@@ -15125,6 +15039,7 @@ nonisolated extension Provenencia_Engine_V1_EventHeader: SwiftProtobuf.Message, 
         case 14: try { try decoder.decodeSingularMessageField(value: &_storage._title) }()
         case 15: try { try decoder.decodeSingularInt64Field(value: &_storage._updatedRevision) }()
         case 16: try { try decoder.decodeSingularStringField(value: &_storage._updatedAt) }()
+        case 17: try { try decoder.decodeSingularStringField(value: &_storage._pictureImageRelPath) }()
         default: break
         }
       }
@@ -15185,6 +15100,9 @@ nonisolated extension Provenencia_Engine_V1_EventHeader: SwiftProtobuf.Message, 
       if !_storage._updatedAt.isEmpty {
         try visitor.visitSingularStringField(value: _storage._updatedAt, fieldNumber: 16)
       }
+      if !_storage._pictureImageRelPath.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._pictureImageRelPath, fieldNumber: 17)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -15210,6 +15128,7 @@ nonisolated extension Provenencia_Engine_V1_EventHeader: SwiftProtobuf.Message, 
         if _storage._title != rhs_storage._title {return false}
         if _storage._updatedRevision != rhs_storage._updatedRevision {return false}
         if _storage._updatedAt != rhs_storage._updatedAt {return false}
+        if _storage._pictureImageRelPath != rhs_storage._pictureImageRelPath {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -15335,93 +15254,160 @@ nonisolated extension Provenencia_Engine_V1_PlaceRelationship: SwiftProtobuf.Mes
 
 nonisolated extension Provenencia_Engine_V1_PlaceHeader: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PlaceHeader"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}names\0\u{3}start_date\0\u{3}end_date\0\u{1}kind\0\u{1}parents\0\u{3}parents_are_candidates\0\u{3}part_of\0\u{1}contains\0\u{1}predecessors\0\u{1}successors\0\u{3}updated_revision\0\u{3}updated_at\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}names\0\u{3}start_date\0\u{3}end_date\0\u{1}kind\0\u{1}parents\0\u{3}parents_are_candidates\0\u{3}part_of\0\u{1}contains\0\u{1}predecessors\0\u{1}successors\0\u{3}updated_revision\0\u{3}updated_at\0\u{3}picture_image_rel_path\0")
+
+  fileprivate class _StorageClass {
+    var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
+    var _names: [String] = []
+    var _startDate: Provenencia_Engine_V1_DateValueInput? = nil
+    var _endDate: Provenencia_Engine_V1_DateValueInput? = nil
+    var _kind: String = String()
+    var _parents: [String] = []
+    var _parentsAreCandidates: Bool = false
+    var _partOf: [Provenencia_Engine_V1_PlaceRelationship] = []
+    var _contains: [Provenencia_Engine_V1_PlaceRelationship] = []
+    var _predecessors: [Provenencia_Engine_V1_PlaceRelationship] = []
+    var _successors: [Provenencia_Engine_V1_PlaceRelationship] = []
+    var _updatedRevision: Int64 = 0
+    var _updatedAt: String = String()
+    var _pictureImageRelPath: String = String()
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _entity = source._entity
+      _names = source._names
+      _startDate = source._startDate
+      _endDate = source._endDate
+      _kind = source._kind
+      _parents = source._parents
+      _parentsAreCandidates = source._parentsAreCandidates
+      _partOf = source._partOf
+      _contains = source._contains
+      _predecessors = source._predecessors
+      _successors = source._successors
+      _updatedRevision = source._updatedRevision
+      _updatedAt = source._updatedAt
+      _pictureImageRelPath = source._pictureImageRelPath
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._entity) }()
-      case 2: try { try decoder.decodeRepeatedStringField(value: &self.names) }()
-      case 3: try { try decoder.decodeSingularMessageField(value: &self._startDate) }()
-      case 4: try { try decoder.decodeSingularMessageField(value: &self._endDate) }()
-      case 5: try { try decoder.decodeSingularStringField(value: &self.kind) }()
-      case 6: try { try decoder.decodeRepeatedStringField(value: &self.parents) }()
-      case 7: try { try decoder.decodeSingularBoolField(value: &self.parentsAreCandidates) }()
-      case 8: try { try decoder.decodeRepeatedMessageField(value: &self.partOf) }()
-      case 9: try { try decoder.decodeRepeatedMessageField(value: &self.contains) }()
-      case 10: try { try decoder.decodeRepeatedMessageField(value: &self.predecessors) }()
-      case 11: try { try decoder.decodeRepeatedMessageField(value: &self.successors) }()
-      case 12: try { try decoder.decodeSingularInt64Field(value: &self.updatedRevision) }()
-      case 13: try { try decoder.decodeSingularStringField(value: &self.updatedAt) }()
-      default: break
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularMessageField(value: &_storage._entity) }()
+        case 2: try { try decoder.decodeRepeatedStringField(value: &_storage._names) }()
+        case 3: try { try decoder.decodeSingularMessageField(value: &_storage._startDate) }()
+        case 4: try { try decoder.decodeSingularMessageField(value: &_storage._endDate) }()
+        case 5: try { try decoder.decodeSingularStringField(value: &_storage._kind) }()
+        case 6: try { try decoder.decodeRepeatedStringField(value: &_storage._parents) }()
+        case 7: try { try decoder.decodeSingularBoolField(value: &_storage._parentsAreCandidates) }()
+        case 8: try { try decoder.decodeRepeatedMessageField(value: &_storage._partOf) }()
+        case 9: try { try decoder.decodeRepeatedMessageField(value: &_storage._contains) }()
+        case 10: try { try decoder.decodeRepeatedMessageField(value: &_storage._predecessors) }()
+        case 11: try { try decoder.decodeRepeatedMessageField(value: &_storage._successors) }()
+        case 12: try { try decoder.decodeSingularInt64Field(value: &_storage._updatedRevision) }()
+        case 13: try { try decoder.decodeSingularStringField(value: &_storage._updatedAt) }()
+        case 14: try { try decoder.decodeSingularStringField(value: &_storage._pictureImageRelPath) }()
+        default: break
+        }
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._entity {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
-    if !self.names.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.names, fieldNumber: 2)
-    }
-    try { if let v = self._startDate {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    } }()
-    try { if let v = self._endDate {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
-    } }()
-    if !self.kind.isEmpty {
-      try visitor.visitSingularStringField(value: self.kind, fieldNumber: 5)
-    }
-    if !self.parents.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.parents, fieldNumber: 6)
-    }
-    if self.parentsAreCandidates != false {
-      try visitor.visitSingularBoolField(value: self.parentsAreCandidates, fieldNumber: 7)
-    }
-    if !self.partOf.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.partOf, fieldNumber: 8)
-    }
-    if !self.contains.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.contains, fieldNumber: 9)
-    }
-    if !self.predecessors.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.predecessors, fieldNumber: 10)
-    }
-    if !self.successors.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.successors, fieldNumber: 11)
-    }
-    if self.updatedRevision != 0 {
-      try visitor.visitSingularInt64Field(value: self.updatedRevision, fieldNumber: 12)
-    }
-    if !self.updatedAt.isEmpty {
-      try visitor.visitSingularStringField(value: self.updatedAt, fieldNumber: 13)
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      try { if let v = _storage._entity {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+      } }()
+      if !_storage._names.isEmpty {
+        try visitor.visitRepeatedStringField(value: _storage._names, fieldNumber: 2)
+      }
+      try { if let v = _storage._startDate {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+      } }()
+      try { if let v = _storage._endDate {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+      } }()
+      if !_storage._kind.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._kind, fieldNumber: 5)
+      }
+      if !_storage._parents.isEmpty {
+        try visitor.visitRepeatedStringField(value: _storage._parents, fieldNumber: 6)
+      }
+      if _storage._parentsAreCandidates != false {
+        try visitor.visitSingularBoolField(value: _storage._parentsAreCandidates, fieldNumber: 7)
+      }
+      if !_storage._partOf.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._partOf, fieldNumber: 8)
+      }
+      if !_storage._contains.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._contains, fieldNumber: 9)
+      }
+      if !_storage._predecessors.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._predecessors, fieldNumber: 10)
+      }
+      if !_storage._successors.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._successors, fieldNumber: 11)
+      }
+      if _storage._updatedRevision != 0 {
+        try visitor.visitSingularInt64Field(value: _storage._updatedRevision, fieldNumber: 12)
+      }
+      if !_storage._updatedAt.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._updatedAt, fieldNumber: 13)
+      }
+      if !_storage._pictureImageRelPath.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._pictureImageRelPath, fieldNumber: 14)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_PlaceHeader, rhs: Provenencia_Engine_V1_PlaceHeader) -> Bool {
-    if lhs._entity != rhs._entity {return false}
-    if lhs.names != rhs.names {return false}
-    if lhs._startDate != rhs._startDate {return false}
-    if lhs._endDate != rhs._endDate {return false}
-    if lhs.kind != rhs.kind {return false}
-    if lhs.parents != rhs.parents {return false}
-    if lhs.parentsAreCandidates != rhs.parentsAreCandidates {return false}
-    if lhs.partOf != rhs.partOf {return false}
-    if lhs.contains != rhs.contains {return false}
-    if lhs.predecessors != rhs.predecessors {return false}
-    if lhs.successors != rhs.successors {return false}
-    if lhs.updatedRevision != rhs.updatedRevision {return false}
-    if lhs.updatedAt != rhs.updatedAt {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._entity != rhs_storage._entity {return false}
+        if _storage._names != rhs_storage._names {return false}
+        if _storage._startDate != rhs_storage._startDate {return false}
+        if _storage._endDate != rhs_storage._endDate {return false}
+        if _storage._kind != rhs_storage._kind {return false}
+        if _storage._parents != rhs_storage._parents {return false}
+        if _storage._parentsAreCandidates != rhs_storage._parentsAreCandidates {return false}
+        if _storage._partOf != rhs_storage._partOf {return false}
+        if _storage._contains != rhs_storage._contains {return false}
+        if _storage._predecessors != rhs_storage._predecessors {return false}
+        if _storage._successors != rhs_storage._successors {return false}
+        if _storage._updatedRevision != rhs_storage._updatedRevision {return false}
+        if _storage._updatedAt != rhs_storage._updatedAt {return false}
+        if _storage._pictureImageRelPath != rhs_storage._pictureImageRelPath {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -16009,8 +15995,8 @@ nonisolated extension Provenencia_Engine_V1_GetConclusionDetailRequest: SwiftPro
   }
 }
 
-nonisolated extension Provenencia_Engine_V1_LikenessDetail: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".LikenessDetail"
+nonisolated extension Provenencia_Engine_V1_PictureDetail: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".PictureDetail"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}image_rel_path\0\u{1}record\0\u{1}preferred\0\u{1}leads\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -16048,7 +16034,7 @@ nonisolated extension Provenencia_Engine_V1_LikenessDetail: SwiftProtobuf.Messag
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Provenencia_Engine_V1_LikenessDetail, rhs: Provenencia_Engine_V1_LikenessDetail) -> Bool {
+  public static func ==(lhs: Provenencia_Engine_V1_PictureDetail, rhs: Provenencia_Engine_V1_PictureDetail) -> Bool {
     if lhs.imageRelPath != rhs.imageRelPath {return false}
     if lhs._record != rhs._record {return false}
     if lhs.preferred != rhs.preferred {return false}
@@ -16060,147 +16046,103 @@ nonisolated extension Provenencia_Engine_V1_LikenessDetail: SwiftProtobuf.Messag
 
 nonisolated extension Provenencia_Engine_V1_ConclusionDetail: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ConclusionDetail"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}fields\0\u{3}member_count\0\u{1}person\0\u{1}event\0\u{1}place\0\u{1}likenesses\0")
-
-  fileprivate class _StorageClass {
-    var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
-    var _fields: [Provenencia_Engine_V1_ConclusionField] = []
-    var _memberCount: Int32 = 0
-    var _header: Provenencia_Engine_V1_ConclusionDetail.OneOf_Header?
-    var _likenesses: [Provenencia_Engine_V1_LikenessDetail] = []
-
-      // This property is used as the initial default value for new instances of the type.
-      // The type itself is protecting the reference to its storage via CoW semantics.
-      // This will force a copy to be made of this reference when the first mutation occurs;
-      // hence, it is safe to mark this as `nonisolated(unsafe)`.
-      static nonisolated(unsafe) let defaultInstance = _StorageClass()
-
-    private init() {}
-
-    init(copying source: _StorageClass) {
-      _entity = source._entity
-      _fields = source._fields
-      _memberCount = source._memberCount
-      _header = source._header
-      _likenesses = source._likenesses
-    }
-  }
-
-  fileprivate mutating func _uniqueStorage() -> _StorageClass {
-    if !isKnownUniquelyReferenced(&_storage) {
-      _storage = _StorageClass(copying: _storage)
-    }
-    return _storage
-  }
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}fields\0\u{3}member_count\0\u{1}person\0\u{1}event\0\u{1}place\0\u{1}pictures\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
-        switch fieldNumber {
-        case 1: try { try decoder.decodeSingularMessageField(value: &_storage._entity) }()
-        case 2: try { try decoder.decodeRepeatedMessageField(value: &_storage._fields) }()
-        case 3: try { try decoder.decodeSingularInt32Field(value: &_storage._memberCount) }()
-        case 4: try {
-          var v: Provenencia_Engine_V1_PersonHeader?
-          var hadOneofValue = false
-          if let current = _storage._header {
-            hadOneofValue = true
-            if case .person(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._header = .person(v)
-          }
-        }()
-        case 5: try {
-          var v: Provenencia_Engine_V1_EventHeader?
-          var hadOneofValue = false
-          if let current = _storage._header {
-            hadOneofValue = true
-            if case .event(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._header = .event(v)
-          }
-        }()
-        case 6: try {
-          var v: Provenencia_Engine_V1_PlaceHeader?
-          var hadOneofValue = false
-          if let current = _storage._header {
-            hadOneofValue = true
-            if case .place(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._header = .place(v)
-          }
-        }()
-        case 7: try { try decoder.decodeRepeatedMessageField(value: &_storage._likenesses) }()
-        default: break
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._entity) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.fields) }()
+      case 3: try { try decoder.decodeSingularInt32Field(value: &self.memberCount) }()
+      case 4: try {
+        var v: Provenencia_Engine_V1_PersonHeader?
+        var hadOneofValue = false
+        if let current = self.header {
+          hadOneofValue = true
+          if case .person(let m) = current {v = m}
         }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.header = .person(v)
+        }
+      }()
+      case 5: try {
+        var v: Provenencia_Engine_V1_EventHeader?
+        var hadOneofValue = false
+        if let current = self.header {
+          hadOneofValue = true
+          if case .event(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.header = .event(v)
+        }
+      }()
+      case 6: try {
+        var v: Provenencia_Engine_V1_PlaceHeader?
+        var hadOneofValue = false
+        if let current = self.header {
+          hadOneofValue = true
+          if case .place(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.header = .place(v)
+        }
+      }()
+      case 7: try { try decoder.decodeRepeatedMessageField(value: &self.pictures) }()
+      default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every if/case branch local when no optimizations
-      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-      // https://github.com/apple/swift-protobuf/issues/1182
-      try { if let v = _storage._entity {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-      } }()
-      if !_storage._fields.isEmpty {
-        try visitor.visitRepeatedMessageField(value: _storage._fields, fieldNumber: 2)
-      }
-      if _storage._memberCount != 0 {
-        try visitor.visitSingularInt32Field(value: _storage._memberCount, fieldNumber: 3)
-      }
-      switch _storage._header {
-      case .person?: try {
-        guard case .person(let v)? = _storage._header else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
-      }()
-      case .event?: try {
-        guard case .event(let v)? = _storage._header else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
-      }()
-      case .place?: try {
-        guard case .place(let v)? = _storage._header else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
-      }()
-      case nil: break
-      }
-      if !_storage._likenesses.isEmpty {
-        try visitor.visitRepeatedMessageField(value: _storage._likenesses, fieldNumber: 7)
-      }
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._entity {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    if !self.fields.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.fields, fieldNumber: 2)
+    }
+    if self.memberCount != 0 {
+      try visitor.visitSingularInt32Field(value: self.memberCount, fieldNumber: 3)
+    }
+    switch self.header {
+    case .person?: try {
+      guard case .person(let v)? = self.header else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    }()
+    case .event?: try {
+      guard case .event(let v)? = self.header else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    }()
+    case .place?: try {
+      guard case .place(let v)? = self.header else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    }()
+    case nil: break
+    }
+    if !self.pictures.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.pictures, fieldNumber: 7)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_ConclusionDetail, rhs: Provenencia_Engine_V1_ConclusionDetail) -> Bool {
-    if lhs._storage !== rhs._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
-        let _storage = _args.0
-        let rhs_storage = _args.1
-        if _storage._entity != rhs_storage._entity {return false}
-        if _storage._fields != rhs_storage._fields {return false}
-        if _storage._memberCount != rhs_storage._memberCount {return false}
-        if _storage._header != rhs_storage._header {return false}
-        if _storage._likenesses != rhs_storage._likenesses {return false}
-        return true
-      }
-      if !storagesAreEqual {return false}
-    }
+    if lhs._entity != rhs._entity {return false}
+    if lhs.fields != rhs.fields {return false}
+    if lhs.memberCount != rhs.memberCount {return false}
+    if lhs.header != rhs.header {return false}
+    if lhs.pictures != rhs.pictures {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -16862,173 +16804,121 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentAlternative: Sw
   public static let protoMessageName: String = _protobuf_package + ".PromoteGraphAlignmentAlternative"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}handle_id\0\u{3}handle_ref\0\u{1}score\0\u{1}person\0\u{1}event\0\u{1}place\0\u{1}assessment\0\u{1}reason\0\u{3}reason_property_key\0\u{3}reason_property_origin\0\u{3}via_neighbor_subject_id\0")
 
-  fileprivate class _StorageClass {
-    var _handleID: String = String()
-    var _handleRef: String = String()
-    var _score: Double = 0
-    var _header: Provenencia_Engine_V1_PromoteGraphAlignmentAlternative.OneOf_Header?
-    var _assessment: String = String()
-    var _reason: String = String()
-    var _reasonPropertyKey: String = String()
-    var _reasonPropertyOrigin: String = String()
-    var _viaNeighborSubjectID: String = String()
-
-      // This property is used as the initial default value for new instances of the type.
-      // The type itself is protecting the reference to its storage via CoW semantics.
-      // This will force a copy to be made of this reference when the first mutation occurs;
-      // hence, it is safe to mark this as `nonisolated(unsafe)`.
-      static nonisolated(unsafe) let defaultInstance = _StorageClass()
-
-    private init() {}
-
-    init(copying source: _StorageClass) {
-      _handleID = source._handleID
-      _handleRef = source._handleRef
-      _score = source._score
-      _header = source._header
-      _assessment = source._assessment
-      _reason = source._reason
-      _reasonPropertyKey = source._reasonPropertyKey
-      _reasonPropertyOrigin = source._reasonPropertyOrigin
-      _viaNeighborSubjectID = source._viaNeighborSubjectID
-    }
-  }
-
-  fileprivate mutating func _uniqueStorage() -> _StorageClass {
-    if !isKnownUniquelyReferenced(&_storage) {
-      _storage = _StorageClass(copying: _storage)
-    }
-    return _storage
-  }
-
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
-        switch fieldNumber {
-        case 1: try { try decoder.decodeSingularStringField(value: &_storage._handleID) }()
-        case 2: try { try decoder.decodeSingularStringField(value: &_storage._handleRef) }()
-        case 3: try { try decoder.decodeSingularDoubleField(value: &_storage._score) }()
-        case 4: try {
-          var v: Provenencia_Engine_V1_PersonHeader?
-          var hadOneofValue = false
-          if let current = _storage._header {
-            hadOneofValue = true
-            if case .person(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._header = .person(v)
-          }
-        }()
-        case 5: try {
-          var v: Provenencia_Engine_V1_EventHeader?
-          var hadOneofValue = false
-          if let current = _storage._header {
-            hadOneofValue = true
-            if case .event(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._header = .event(v)
-          }
-        }()
-        case 6: try {
-          var v: Provenencia_Engine_V1_PlaceHeader?
-          var hadOneofValue = false
-          if let current = _storage._header {
-            hadOneofValue = true
-            if case .place(let m) = current {v = m}
-          }
-          try decoder.decodeSingularMessageField(value: &v)
-          if let v = v {
-            if hadOneofValue {try decoder.handleConflictingOneOf()}
-            _storage._header = .place(v)
-          }
-        }()
-        case 7: try { try decoder.decodeSingularStringField(value: &_storage._assessment) }()
-        case 8: try { try decoder.decodeSingularStringField(value: &_storage._reason) }()
-        case 9: try { try decoder.decodeSingularStringField(value: &_storage._reasonPropertyKey) }()
-        case 10: try { try decoder.decodeSingularStringField(value: &_storage._reasonPropertyOrigin) }()
-        case 11: try { try decoder.decodeSingularStringField(value: &_storage._viaNeighborSubjectID) }()
-        default: break
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.handleID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.handleRef) }()
+      case 3: try { try decoder.decodeSingularDoubleField(value: &self.score) }()
+      case 4: try {
+        var v: Provenencia_Engine_V1_PersonHeader?
+        var hadOneofValue = false
+        if let current = self.header {
+          hadOneofValue = true
+          if case .person(let m) = current {v = m}
         }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.header = .person(v)
+        }
+      }()
+      case 5: try {
+        var v: Provenencia_Engine_V1_EventHeader?
+        var hadOneofValue = false
+        if let current = self.header {
+          hadOneofValue = true
+          if case .event(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.header = .event(v)
+        }
+      }()
+      case 6: try {
+        var v: Provenencia_Engine_V1_PlaceHeader?
+        var hadOneofValue = false
+        if let current = self.header {
+          hadOneofValue = true
+          if case .place(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.header = .place(v)
+        }
+      }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.assessment) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.reason) }()
+      case 9: try { try decoder.decodeSingularStringField(value: &self.reasonPropertyKey) }()
+      case 10: try { try decoder.decodeSingularStringField(value: &self.reasonPropertyOrigin) }()
+      case 11: try { try decoder.decodeSingularStringField(value: &self.viaNeighborSubjectID) }()
+      default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every if/case branch local when no optimizations
-      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-      // https://github.com/apple/swift-protobuf/issues/1182
-      if !_storage._handleID.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._handleID, fieldNumber: 1)
-      }
-      if !_storage._handleRef.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._handleRef, fieldNumber: 2)
-      }
-      if _storage._score.bitPattern != 0 {
-        try visitor.visitSingularDoubleField(value: _storage._score, fieldNumber: 3)
-      }
-      switch _storage._header {
-      case .person?: try {
-        guard case .person(let v)? = _storage._header else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
-      }()
-      case .event?: try {
-        guard case .event(let v)? = _storage._header else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
-      }()
-      case .place?: try {
-        guard case .place(let v)? = _storage._header else { preconditionFailure() }
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
-      }()
-      case nil: break
-      }
-      if !_storage._assessment.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._assessment, fieldNumber: 7)
-      }
-      if !_storage._reason.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._reason, fieldNumber: 8)
-      }
-      if !_storage._reasonPropertyKey.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._reasonPropertyKey, fieldNumber: 9)
-      }
-      if !_storage._reasonPropertyOrigin.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._reasonPropertyOrigin, fieldNumber: 10)
-      }
-      if !_storage._viaNeighborSubjectID.isEmpty {
-        try visitor.visitSingularStringField(value: _storage._viaNeighborSubjectID, fieldNumber: 11)
-      }
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.handleID.isEmpty {
+      try visitor.visitSingularStringField(value: self.handleID, fieldNumber: 1)
+    }
+    if !self.handleRef.isEmpty {
+      try visitor.visitSingularStringField(value: self.handleRef, fieldNumber: 2)
+    }
+    if self.score.bitPattern != 0 {
+      try visitor.visitSingularDoubleField(value: self.score, fieldNumber: 3)
+    }
+    switch self.header {
+    case .person?: try {
+      guard case .person(let v)? = self.header else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    }()
+    case .event?: try {
+      guard case .event(let v)? = self.header else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    }()
+    case .place?: try {
+      guard case .place(let v)? = self.header else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    }()
+    case nil: break
+    }
+    if !self.assessment.isEmpty {
+      try visitor.visitSingularStringField(value: self.assessment, fieldNumber: 7)
+    }
+    if !self.reason.isEmpty {
+      try visitor.visitSingularStringField(value: self.reason, fieldNumber: 8)
+    }
+    if !self.reasonPropertyKey.isEmpty {
+      try visitor.visitSingularStringField(value: self.reasonPropertyKey, fieldNumber: 9)
+    }
+    if !self.reasonPropertyOrigin.isEmpty {
+      try visitor.visitSingularStringField(value: self.reasonPropertyOrigin, fieldNumber: 10)
+    }
+    if !self.viaNeighborSubjectID.isEmpty {
+      try visitor.visitSingularStringField(value: self.viaNeighborSubjectID, fieldNumber: 11)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_PromoteGraphAlignmentAlternative, rhs: Provenencia_Engine_V1_PromoteGraphAlignmentAlternative) -> Bool {
-    if lhs._storage !== rhs._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
-        let _storage = _args.0
-        let rhs_storage = _args.1
-        if _storage._handleID != rhs_storage._handleID {return false}
-        if _storage._handleRef != rhs_storage._handleRef {return false}
-        if _storage._score != rhs_storage._score {return false}
-        if _storage._header != rhs_storage._header {return false}
-        if _storage._assessment != rhs_storage._assessment {return false}
-        if _storage._reason != rhs_storage._reason {return false}
-        if _storage._reasonPropertyKey != rhs_storage._reasonPropertyKey {return false}
-        if _storage._reasonPropertyOrigin != rhs_storage._reasonPropertyOrigin {return false}
-        if _storage._viaNeighborSubjectID != rhs_storage._viaNeighborSubjectID {return false}
-        return true
-      }
-      if !storagesAreEqual {return false}
-    }
+    if lhs.handleID != rhs.handleID {return false}
+    if lhs.handleRef != rhs.handleRef {return false}
+    if lhs.score != rhs.score {return false}
+    if lhs.header != rhs.header {return false}
+    if lhs.assessment != rhs.assessment {return false}
+    if lhs.reason != rhs.reason {return false}
+    if lhs.reasonPropertyKey != rhs.reasonPropertyKey {return false}
+    if lhs.reasonPropertyOrigin != rhs.reasonPropertyOrigin {return false}
+    if lhs.viaNeighborSubjectID != rhs.viaNeighborSubjectID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
