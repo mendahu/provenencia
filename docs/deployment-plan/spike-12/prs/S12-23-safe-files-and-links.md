@@ -1,6 +1,7 @@
 # S12-23 — The app opens only safe files and links
 
-**Status:** Planned
+**Status:** Landed in [#608](https://github.com/mendahu/provenencia/pull/608) (2026-10-28)
+**Landed:** Differences from the plan: `ProjectFiles.ObjectRefusal` also conforms to `Error`, which `Result<URL, ObjectRefusal>` needs. Beyond T-1 – T-18 there is one more Swift test (`openObjectReportsUnsafeForExecutableObject`) and the Go test helpers `sourceWithPNG`, `damageCatalog`, `urlMetadataSetFixture` and `writeObject`. STEP-7's check `rg -n 'bare hex' docs core` still hits this plan and its review log, which name the phrase; no code or other doc holds it. `add-ffi-handler` still tells handlers to return one path through `files.StorageRelPath`; reads now use `files.ReadRelPath`, and the plan did not name that line. Otherwise none.
 **Spike / slice:** Spike 12 · Slice 5 — Audit fixes: High
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the refusal reuses the Source page's error banner and the canvas's file callout, with new copy only)
