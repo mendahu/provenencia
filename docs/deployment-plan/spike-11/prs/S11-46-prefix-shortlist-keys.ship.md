@@ -73,4 +73,4 @@ Reviewers: CON (Sonnet; CON-1 major), SEC+PRF (SEC-1 major). Not sent: MNT (mino
 No new findings. Nits (logged): `CON-4 · plan:6 · no blank line before **Spike / slice:**` (orchestrator added the blank line in the ship-log commit).
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: PRF-2 (noted in `docs/ideas/name-index-on-commit.md`) · to user: PRF-1 → keep no cap · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: PRF-2 (noted in `docs/ideas/name-index-on-commit.md`) · to user: PRF-1 → keep no cap · CON miss: none
