@@ -255,6 +255,31 @@ func TestWordKeysShareOnSameOrEquivalent(t *testing.T) {
 	}
 }
 
+// A pair the comparer gives the cause prefix meets across index and lookup, in
+// both directions.
+func TestWordKeysMeetOnPrefixPairs(t *testing.T) {
+	rules := billRules()
+	corpus := []string{"Des Long", "Desiree Long", "Al Robins", "Albert Robins", "Mary Mac", "Mary MacDonald", "Desmond Long"}
+	met := false
+	for _, x := range corpus {
+		for _, y := range corpus {
+			a, b := slName(x), slName(y)
+			if _, det := valuecompare.Compare(a, b, rules); det.Cause != valuecompare.CausePrefix {
+				continue
+			}
+			met = true
+			ia, la := valuecompare.WordKeys(a, rules)
+			ib, lb := valuecompare.WordKeys(b, rules)
+			if !shares(ia, lb) || !shares(ib, la) {
+				t.Errorf("%q ~ %q is a prefix pair but the sides do not meet: index %q lookup %q vs index %q lookup %q", x, y, ia, la, ib, lb)
+			}
+		}
+	}
+	if !met {
+		t.Error("the corpus met no prefix pair")
+	}
+}
+
 func TestAliasSetKeys(t *testing.T) {
 	w := matchregistry.Default().Value.Words
 	given := []valuecompare.NameRole{valuecompare.RoleGiven}

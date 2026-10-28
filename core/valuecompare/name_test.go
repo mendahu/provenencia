@@ -33,6 +33,8 @@ const (
 const (
 	robbins = 6.0 / 7 // robins ~ robbins
 	anne    = 3.0 / 4 // ann ~ anne: one added letter in a short word
+
+	prefixCredit = 0.7 // des ~ desiree: Names.PrefixCredit
 )
 
 // nv builds a name value from "code=value" parts separated by "|", with a form
@@ -85,6 +87,11 @@ func withTables(tables ...valuecompare.AliasTable) func(*valuecompare.Rules) {
 	return func(r *valuecompare.Rules) {
 		r.Names.Aliases = valuecompare.NewAliasIndex(tables, matchregistry.Default().Value.Words)
 	}
+}
+
+// withPrefixMin sets the fewest letters a word needs for the prefix rule.
+func withPrefixMin(n int) func(*valuecompare.Rules) {
+	return func(r *valuecompare.Rules) { r.Names.PrefixMinLength = n }
 }
 
 // flipped is the Western pattern with given and surname trading roles.
@@ -243,6 +250,32 @@ var nameCases = []nameCase{
 	// AC-1.14
 	differentWhy("AC-1.14 generation conflict", nv("g=James|s=Robins|x=Jr."), nv("g=James|s=Robins|x=Sr."), valuecompare.CauseGenerationConflict),
 
+	// S11-45
+	{name: "S11-45 AC-1.1 prefix", a: nv("g=Desiree"), b: nv("g=Des"), rel: valuecompare.Contains, sim: prefixCredit,
+		why: valuecompare.CausePrefix, broader: valuecompare.SideB,
+		parts: []valuecompare.PartMatch{pair(valuecompare.PartGiven, "desiree", "des", valuecompare.Contains, prefixCredit, valuecompare.CausePrefix)}},
+	{name: "S11-45 AC-1.1 prefix, swapped", a: nv("g=Des"), b: nv("g=Desiree"), rel: valuecompare.Contains, sim: prefixCredit,
+		why: valuecompare.CausePrefix, broader: valuecompare.SideA,
+		parts: []valuecompare.PartMatch{pair(valuecompare.PartGiven, "des", "desiree", valuecompare.Contains, prefixCredit, valuecompare.CausePrefix)}},
+	{name: "S11-45 AC-1.2 prefix with a surname", a: nv("g=Des|s=Long"), b: nv("g=Desiree|s=Long"), rel: valuecompare.Contains,
+		sim: (prefixCredit*2*G1 + 2*F) / (2*G1 + 2*F), why: valuecompare.CausePrefix, broader: valuecompare.SideA},
+	differentWhy("S11-45 AC-1.3 not a prefix", nv("g=Desmond"), nv("g=Desiree"), valuecompare.CauseNoMatch),
+	differentWhy("S11-45 AC-1.4 surname prefix", nv("s=Mac"), nv("s=MacDonald"), valuecompare.CauseNoMatch),
+	differentWhy("S11-45 AC-1.4 surname prefix with a given name", nv("g=Mary|s=Mac"), nv("g=Mary|s=MacDonald"), valuecompare.CauseNoMatch),
+	{name: "S11-45 AC-1.5 spelling before prefix", a: nv("g=Des"), b: nv("g=Desi"), rel: valuecompare.Near, sim: anne, why: valuecompare.CauseSpelling},
+	{name: "S11-45 AC-1.5 initial before prefix", a: nv("g=D."), b: nv("g=Desiree"), rel: valuecompare.Contains, sim: 0.5,
+		why: valuecompare.CauseInitial, broader: valuecompare.SideA},
+	{name: "S11-45 AC-1.5 fold then prefix", a: nv("g=Dés"), b: nv("g=Desiree"), rel: valuecompare.Contains, sim: prefixCredit,
+		why: valuecompare.CausePrefix, broader: valuecompare.SideA},
+	{name: "S11-45 AC-1.6 word of the minimum length", a: nv("g=De"), b: nv("g=Desiree"), rel: valuecompare.Contains, sim: prefixCredit,
+		why: valuecompare.CausePrefix, broader: valuecompare.SideA},
+	{name: "S11-45 AC-1.6 under the minimum", rules: withPrefixMin(3), a: nv("g=De"), b: nv("g=Desiree"),
+		rel: valuecompare.Different, why: valuecompare.CauseNoMatch},
+	{name: "S11-45 AC-1.6 prefix rule off", rules: withPrefixMin(0), a: nv("g=Des"), b: nv("g=Desiree"),
+		rel: valuecompare.Different, why: valuecompare.CauseNoMatch},
+	differentWhy("S11-45 AC-1.7 role mismatch is not a prefix", nv("n=Des"), nv("g=Desiree"), valuecompare.CauseBelowMinimum),
+	differentWhy("S11-45 AC-1.7 two broader sides", nv("g=James|g=Des"), nv("g=J.|g=Desiree"), valuecompare.CauseBelowMinimum),
+
 	// AC-1.15
 	{name: "AC-1.15 form only", a: formOnly("James Robins"), b: nv("g=James"), rel: valuecompare.Unknown, why: valuecompare.CauseEmpty},
 	{name: "AC-1.15 title and suffix only", a: nv("p=Rev.|x=Jr."), b: nv("g=James"), rel: valuecompare.Unknown, why: valuecompare.CauseEmpty},
@@ -381,6 +414,9 @@ func TestNameLadders(t *testing.T) {
 			[]string{"g=Luisa|s=Pereira"}},
 		// Across formats: the same words typed differently still rank above
 		// a different person typed the same way.
+		{"g=Desiree|s=Long",
+			[]string{"g=Desiree|s=Long", "g=Désirée|s=Long", "g=Des|s=Long", "g=D.|s=Long"},
+			[]string{"g=Desmond|s=Long", "g=Desiree|s=Short"}},
 		{"g=James|s=Robins",
 			[]string{"g=James|s=Robins", "u=James|u=Robins", "u=Mary|u=Robins"},
 			[]string{"g=Robins|s=James", "g=Ada|s=Lovelace"}},
@@ -414,6 +450,7 @@ func TestNameLadders(t *testing.T) {
 		{"g=James|s=Robins|x=Jr.", "g=Jim|n=James|s=Robbins", (0.9*(G1+N) + robbins*2*F) / (G1 + F + Gen + G1 + N + F)},
 		{"g=Maria|g=Luisa|s=Silva Costa", "g=M.|s=Costa", (0.5*2*G1 + 2*F) / (G1 + G2 + 2*F + G1 + F)},
 		{"g=James|s=Robins", "u=Mary|u=Robins", 0.8 * (F + U) / (G1 + F + 2*U)},
+		{"g=Desiree|s=Long", "g=Des|s=Long", (prefixCredit*2*G1 + 2*F) / (2*G1 + 2*F)},
 	} {
 		if res, _ := valuecompare.Compare(nv(tc.a), nv(tc.b), rules); math.Abs(res.Similarity-tc.want) > 1e-9 {
 			t.Errorf("%s / %s: %.6f, want %.6f", tc.a, tc.b, res.Similarity, tc.want)

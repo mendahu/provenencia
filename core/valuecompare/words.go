@@ -67,11 +67,18 @@ func IsInitial(word string) bool {
 	return len(r) == 1 && unicode.ToUpper(r[0]) != unicode.ToLower(r[0])
 }
 
+// PrefixRuleRole says whether a name part of this role takes part in the
+// prefix rule: given, nickname and untyped words, never a surname. The
+// shortlist, the comparer and the reconciler's fold read it.
+func PrefixRuleRole(role NameRole) bool {
+	return slices.Contains(AliasRoles(), role)
+}
+
 // prefixWord says whether a name word takes part in the prefix rule: the
-// shortlist's prefix keys and, from S11-45, the comparer's prefix hit read it,
-// so the two never disagree.
+// shortlist's prefix keys and the comparer's prefix hit read it, so the two
+// never disagree.
 func prefixWord(w nameWord, r Rules) bool {
-	if r.Names.PrefixMinLength < 1 || !slices.Contains(AliasRoles(), w.role) || IsInitial(w.text) {
+	if r.Names.PrefixMinLength < 1 || !PrefixRuleRole(w.role) || IsInitial(w.text) {
 		return false
 	}
 	n := utf8.RuneCountInString(w.fold)
@@ -257,12 +264,13 @@ func EditDistance(a, b []rune) int {
 	return d[len(a)][len(b)]
 }
 
-// wordOptions are what a caller adds to the word table: names read initials
-// and alias tables, text neither.
+// wordOptions are what a caller adds to the word table: names read initials,
+// alias tables and prefixes, text none.
 type wordOptions struct {
 	initials     bool       // whether lone letters match as initials
 	aliases      AliasIndex // abbreviation and nickname tables
 	roleX, roleY NameRole   // the roles an alias hit must allow
+	prefixCredit float64    // what a prefix hit earns (Names.PrefixCredit); 0 when either word is not a prefix word, so there is no prefix rung
 }
 
 // wordSimilarity is how two comparison tokens relate, in this order: byte-equal
@@ -272,36 +280,50 @@ type wordOptions struct {
 // roles are Equivalent at AliasCredit (abbreviation for an abbreviation table,
 // alias for any other); tokens equal after folding are Equivalent at
 // FoldCredit (fold); a word over MaxSpellingLength runes has no spelling pair;
-// a spelling variant is Near at its ratio (spelling); else no pair, 0. A
-// relation of Different means no pair. fx and fy are x and y folded by the
-// caller, once per word.
-func wordSimilarity(x, y, fx, fy string, w WordRules, o wordOptions) (float64, Relation, Cause) {
+// a spelling variant is Near at its ratio (spelling); a word that is the start
+// of the other after folding, when the options carry a prefix credit, is a pair
+// at that credit, Contains (prefix); else no pair, 0. broader is the side of
+// the initial or the prefix on a Contains pair, else SideNone. A relation of
+// Different means no pair. fx and fy are x and y folded by the caller, once per
+// word.
+func wordSimilarity(x, y, fx, fy string, w WordRules, o wordOptions) (float64, Relation, Cause, Side) {
 	if x == y {
-		return 1, Same, CauseExact
+		return 1, Same, CauseExact, SideNone
 	}
 	if IsInitial(x) || IsInitial(y) {
 		if o.initials && []rune(x)[0] == []rune(y)[0] {
-			return w.InitialCredit, Contains, CauseInitial
+			if IsInitial(x) {
+				return w.InitialCredit, Contains, CauseInitial, SideA
+			}
+			return w.InitialCredit, Contains, CauseInitial, SideB
 		}
-		return 0, Different, CauseNoMatch
+		return 0, Different, CauseNoMatch, SideNone
 	}
 	if kind, ok := o.aliases.Hit(x, y, o.roleX, o.roleY); ok {
 		if kind == AliasAbbreviation {
-			return w.AliasCredit, Equivalent, CauseAbbreviation
+			return w.AliasCredit, Equivalent, CauseAbbreviation, SideNone
 		}
-		return w.AliasCredit, Equivalent, CauseAlias
+		return w.AliasCredit, Equivalent, CauseAlias, SideNone
 	}
 	if fx == fy {
-		return w.FoldCredit, Equivalent, CauseFold
+		return w.FoldCredit, Equivalent, CauseFold, SideNone
 	}
 	// The edit-distance table is the product of the lengths: bound it.
 	if utf8.RuneCountInString(fx) > w.MaxSpellingLength || utf8.RuneCountInString(fy) > w.MaxSpellingLength {
-		return 0, Different, CauseNoMatch
+		return 0, Different, CauseNoMatch, SideNone
 	}
 	if sim := SpellingSimilarity(fx, fy, w.FuzzyFloor, w.ShortVariantMinLength); sim > 0 {
-		return sim, Near, CauseSpelling
+		return sim, Near, CauseSpelling, SideNone
 	}
-	return 0, Different, CauseNoMatch
+	if o.prefixCredit > 0 {
+		if strings.HasPrefix(fy, fx) {
+			return o.prefixCredit, Contains, CausePrefix, SideA
+		}
+		if strings.HasPrefix(fx, fy) {
+			return o.prefixCredit, Contains, CausePrefix, SideB
+		}
+	}
+	return 0, Different, CauseNoMatch, SideNone
 }
 
 // wordPair is one aligned pair, by index into each side's words.
@@ -337,7 +359,7 @@ func alignWords(a, b, fa, fb []string, w WordRules) (pairs []wordPair, onlyA, on
 	for i := range a {
 		sims[i] = make([]wordPair, len(b))
 		for j := range b {
-			sim, rel, why := wordSimilarity(a[i], b[j], fa[i], fb[j], w, wordOptions{})
+			sim, rel, why, _ := wordSimilarity(a[i], b[j], fa[i], fb[j], w, wordOptions{})
 			sims[i][j] = wordPair{i: i, j: j, sim: sim, rel: rel, why: why}
 		}
 	}

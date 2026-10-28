@@ -36,8 +36,8 @@ type AliasTable struct {
 // is kept, Nickname folds into it.
 type AliasDirection struct{ Formal, Nickname string }
 
-// AliasRoles are the part roles the product alias tables and the prefix keys
-// read: given, nickname and untyped words, never a surname.
+// AliasRoles are the part roles the product alias tables read: given,
+// nickname and untyped words, never a surname. PrefixRuleRole reads them too.
 func AliasRoles() []NameRole {
 	return []NameRole{RoleGiven, RoleNick, RoleUntyped}
 }
