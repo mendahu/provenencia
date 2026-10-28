@@ -908,8 +908,8 @@ struct PromoteFlowTests {
         let got = flow.evidenceNeighbors(for: "a")
         #expect(got.map(\.subjectID).sorted() == ["h", "n", "s"])
         #expect(got.first { $0.subjectID == "h" }?.handleID == "e7")
-        #expect(got.first { $0.subjectID == "n" }?.target == "new")
-        #expect(got.first { $0.subjectID == "s" }?.target == "skip")
+        #expect(got.first { $0.subjectID == "n" }?.target == .new)
+        #expect(got.first { $0.subjectID == "s" }?.target == .skip)
         flow.mappedRest = false
         #expect(flow.evidenceNeighbors(for: "a").isEmpty)
     }
