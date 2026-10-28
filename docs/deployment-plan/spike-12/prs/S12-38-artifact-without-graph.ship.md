@@ -72,4 +72,4 @@ Round 2 result: MNT-1 **Resolved**: `FakeOCREngine` holds with `FakeHold`; `rg C
 Merged `origin/main` @ `e5253258` (Spike 11 plan docs only); gate PASS again on the merge.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: UX-3 (dirty-card confirm for Link to a graph and the pencil), ORC nit (fold the F-3 loading branch into the edit branch) · to user: — · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: UX-3 (dirty-card confirm for Link to a graph and the pencil), ORC nit (fold the F-3 loading branch into the edit branch) · to user: — · CON miss: none
