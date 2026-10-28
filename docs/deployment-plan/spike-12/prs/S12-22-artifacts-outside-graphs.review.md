@@ -1,7 +1,7 @@
 # Review — S12-22 Artifacts can stand outside every graph
 
 **Verdict:** Fits with changes — Ready with changes
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 
@@ -15,6 +15,7 @@
 - An unlink pair reports only its first reason, in this order: in use, last artifact, citations need graph.
 - `artifacts.Update` takes the links as a fourth parameter, not an input struct.
 - No migration repairs a Citation that A-3 already stranded in an existing project.
+- X-17: one lock's wording changes on the card. A graph whose only Artifact is also used by that graph's Citations used to show the "only artifact" lock line. It now shows the "N citations in this graph use this artifact" heading, because the engine checks "in use" first and has since S12-05. The box is locked either way.
 
 ## Round 1
 
@@ -90,3 +91,52 @@ Executability.
 **Answer:** Fixed.
 - The map row links the plan.
 - The test line reference now reads ~153.
+
+## Round 2
+
+The answers to M-1 through M-7 hold. One new maintainability blocker came back, and the executability dry run found that the step order broke the build between steps.
+
+### M-8 · blocker · Feature code compares raw `reasonCode` strings
+Maintainability. `.cursor/rules/macos-client.mdc` says Go wire vocabulary is spelled once in Swift, as a typed enum indexed in `api/ffi/swift_vocabulary_test.go`.
+**Answer:** Fixed.
+- `EvidenceGraphUnlinkReason` lives in `ConclusionVocabulary.swift`, in the shape of `PromoteReasonCode`.
+- `GoStore` maps the wire value once.
+- D-13 and D-15 switch on the typed cases.
+- T-17 adds the vocabulary-test row.
+- The STEP-6 check greps feature code for the literals.
+
+### X-10 – X-13 · blocker · Step checks could not pass in order
+Executability.
+**Answer:** Fixed.
+- STEP-1 now also renames `CreateInput.Graphs` and edits `TestArtifacts` and `TestLink`.
+- STEP-1 and STEP-2 each add a named stop-gap in the handler, so `./api/...` builds and its existing tests pass. STEP-5 removes both stop-gaps.
+- Every Go step's check runs `./core/... ./api/...`.
+
+### X-14 · major · `Unlink` on a pair that is not linked
+Executability.
+**Answer:** Fixed. D-6 says `Unlink` keeps its `IsLinkedTx` early return.
+
+### X-15 · major · `requireDistinct`
+Executability.
+**Answer:** Fixed. It becomes `requireDistinctPairs`, called by `applyLinks` and `UnlinkImpact` (D-5).
+
+### X-16 · major · Fixtures need a second Artifact
+Executability.
+**Answer:** Fixed. AC-1.5, AC-1.6, AC-1.7, T-2, T-8 and T-10 name Q, an Artifact linked to both graphs. T-16 names P2, which no graph links.
+
+### X-17 · major · The engine's order changes one lock's wording
+Executability.
+**Answer:** Fixed as a writer's call, recorded above. D-13 and §1 "What stays" state it.
+
+### X-18 · minor
+Executability.
+**Answer:** Fixed.
+- `SetArtifactGraphs` relies on its caller's row read (D-5).
+- D-14 gives the fake's exact expression.
+- The empty group is what `mapDeleteImpactGroup` returns for an unset message.
+
+### STEP-8 paths
+Executability.
+**Answer:** Fixed.
+- `completed.md` is `docs/deployment-plan/spike-12/completed.md`.
+- The stale text is the map's working rule at `deployment-plan.md` line 108, not `source-structure.md`; STEP-8 edits it.
