@@ -1,15 +1,60 @@
 package handlers
 
 import (
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"google.golang.org/protobuf/proto"
 )
+
+// sourceWithPNG creates a Source whose one Artifact holds an ingested PNG.
+func sourceWithPNG(t *testing.T) (dir, userID, sourceID, artifactID string) {
+	t.Helper()
+	dir, userID, typeID := sourceFixture(t)
+	var created engine.CreateSourceResponse
+	mustRPC(t, CreateSource, &engine.CreateSourceRequest{
+		ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Scan",
+	}, &created)
+	var art engine.CreateArtifactResponse
+	mustRPC(t, CreateArtifact, &engine.CreateArtifactRequest{
+		ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Label: "Page",
+	}, &art)
+	path := filepath.Join(t.TempDir(), "page.png")
+	writePNG(t, path)
+	var ingested engine.IngestArtifactFileResponse
+	mustRPC(t, IngestArtifactFile, &engine.IngestArtifactFileRequest{
+		ProjectDir: dir, UserId: userID, ArtifactId: art.Artifact.Id, Path: path,
+	}, &ingested)
+	return dir, userID, created.Source.Id, art.Artifact.Id
+}
+
+// damageCatalog runs one statement against the project's catalog, as a
+// hand-edited or crafted project would, and closes the held session so the next
+// read opens fresh.
+func damageCatalog(t *testing.T, dir, query string, args ...any) {
+	t.Helper()
+	err := catalogsession.Do(dir, func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		_, err = db.Exec(query, args...)
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := catalogsession.CloseAll(); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestListSources(t *testing.T) {
 	runRPC(t, ListSources, []rpcTest{
@@ -70,6 +115,33 @@ func TestListSources(t *testing.T) {
 				}
 				if len(list.Sources) != 1 || !list.Sources[0].GetHasArtifact() {
 					t.Fatalf("want has_artifact true got %+v", list.Sources)
+				}
+			},
+		},
+		{
+			name: "cover thumbnail with a damaged type has no path",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, sourceID, artifactID := sourceWithPNG(t)
+				mustRPC(t, SetSourceCover, &engine.SetSourceCoverRequest{
+					ProjectDir: dir, UserId: userID, SourceId: sourceID,
+					CoverMode: "artifact", PrimaryArtifactId: artifactID,
+				}, &engine.SetSourceCoverResponse{})
+				var before engine.ListSourcesResponse
+				mustRPC(t, ListSources, &engine.ListSourcesRequest{ProjectDir: dir}, &before)
+				if len(before.Sources) != 1 || before.Sources[0].GetThumbnailRelPath() == "" {
+					t.Fatalf("want a cover thumbnail before the damage, got %+v", before.Sources)
+				}
+				damageCatalog(t, dir, `UPDATE files SET media_type = 'application/x-sh'
+					WHERE id IN (SELECT derived_file_id FROM file_derivatives)`)
+				return &engine.ListSourcesRequest{ProjectDir: dir}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var list engine.ListSourcesResponse
+				if err := proto.Unmarshal(out, &list); err != nil {
+					t.Fatal(err)
+				}
+				if len(list.Sources) != 1 || list.Sources[0].GetThumbnailRelPath() != "" {
+					t.Fatalf("want an empty thumbnail_rel_path, got %+v", list.Sources)
 				}
 			},
 		},
@@ -272,6 +344,31 @@ func TestGetSourceWorkspace(t *testing.T) {
 				// vocabulary lists, which each have their own RPC.
 				if len(resp.Metadata) == 0 {
 					t.Fatal("expected suggested metadata rows for the seeded type")
+				}
+			},
+		},
+		{
+			name: "a stored type off the allowlist keeps the file and drops its path",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, sourceID, _ := sourceWithPNG(t)
+				damageCatalog(t, dir, `UPDATE files SET media_type = 'application/x-sh'
+					WHERE id IN (SELECT file_id FROM artifacts)`)
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: dir, SourceId: sourceID}
+			},
+			after: func(t *testing.T, raw []byte, _ proto.Message) {
+				var resp engine.GetSourceWorkspaceResponse
+				if err := proto.Unmarshal(raw, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if len(resp.Artifacts) != 1 {
+					t.Fatalf("artifacts %+v", resp.Artifacts)
+				}
+				file := resp.Artifacts[0].GetFile()
+				if file.GetRelPath() != "" {
+					t.Fatalf("rel_path %q want empty", file.GetRelPath())
+				}
+				if file.GetOriginalFilename() != "page.png" || file.GetMediaType() != "application/x-sh" {
+					t.Fatalf("file %+v", file)
 				}
 			},
 		},
