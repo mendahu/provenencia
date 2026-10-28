@@ -63,4 +63,4 @@ Reviewers: UX (UX-1 major), MNT (MNT-1 major). Not sent: CON (minors only), SEC+
 No new findings. MNT-2, MNT-3, MNT-4 **Resolved** (orchestrator read of `9847e04d`; MNT reviewer saw the same).
 
 ## Result
-Gate PASS · CI <pending> · open: none · follow-ups: MNT-1 (batch row: type `CatalogPromoteBatchRow.target` / `promote.Target` in Swift, reusing `PromoteTargetCode.wire` or its own enum), MNT-6 (nit) · to user: — · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: MNT-1 (batch row: type `CatalogPromoteBatchRow.target` / `promote.Target` in Swift, reusing `PromoteTargetCode.wire` or its own enum), MNT-6 (nit) · to user: — · CON miss: none
