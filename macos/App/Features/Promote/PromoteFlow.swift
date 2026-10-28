@@ -212,8 +212,10 @@ struct PromoteFlow: Equatable, Sendable {
             menu.first { Target.handleToken($0.id) == token }
         }
 
-        /// What the Updated caption words: the move when settling moved this row, else its reason.
-        var captionReason: Reason { move ?? reason }
+        /// What the Updated caption words: the move when settling moved this row,
+        /// else, for a row Promote suggested no record for but the page drafted
+        /// onto one, that record's reason, else its own reason.
+        var captionReason: Reason { move ?? (reason == .unplaced ? selectionReadout?.reason : nil) ?? reason }
 
         /// The ref the page names this row by: its record's when it has one, else its Source ref.
         var shownRef: String { target.handleRef ?? ref }

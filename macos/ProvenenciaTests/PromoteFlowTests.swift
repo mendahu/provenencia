@@ -201,6 +201,26 @@ struct PromoteFlowTests {
         #expect(bea?.captionReason == .unplaced)
     }
 
+    /// A row Promote suggests no record for, drafted onto a weak record by the
+    /// page, captions that record's reason, not "No record suggested".
+    @Test func anUnplacedRowDraftedOntoAWeakRecordCaptionsItsReason() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [row(id: "a")]), subjects: [fact("a")], bridges: [])
+        var weak = row(id: "a", target: .unplaced, handleID: "", assessment: "weak")
+        weak.reason = .unplaced
+        weak.alternatives = [
+            CatalogPromoteGraphAlignmentAlternative(
+                handleID: "e9", handleRef: "PER-9", score: 1,
+                assessment: "weak", reason: .weak
+            ),
+        ]
+        flow.merge(proposal(rows: [weak], revision: 4), subjects: [fact("a")])
+        let ada = flow.rows.first
+        #expect(ada?.updated == true)
+        #expect(ada?.target == .handle(id: "e9", ref: "PER-9", title: "PER-9"))
+        #expect(ada?.captionReason == .weak)
+    }
+
     /// A row whose record another row took starts open, whatever its band,
     /// so Done can't file two subjects on one handle without a choice.
     @Test func aRowWhoseRecordWasTakenStartsUnset() {
