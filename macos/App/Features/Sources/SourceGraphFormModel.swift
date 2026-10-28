@@ -114,11 +114,15 @@ final class SourceGraphFormModel {
         guard let graph, graph.hasArtifact else { return }
         loadState = .loading
         do {
-            blocks = try await context.store.getEvidenceGraphUnlinkImpact(
+            let read = try await context.store.getEvidenceGraphUnlinkImpact(
                 projectDir: context.projectDir,
-                graphID: graph.id,
-                artifactIDs: graph.artifactIDs
+                pairs: graph.artifactIDs.map {
+                    CatalogEvidenceGraphArtifactPair(graphID: graph.id, artifactID: $0)
+                }
             )
+            // The form shows only the Artifacts its Citations use; the other
+            // reasons are the card's.
+            blocks = read.filter { $0.reason == .artifactInUse }
             loadState = .ready
         } catch {
             loadState = .failed(L10n.Errors.message(for: error))

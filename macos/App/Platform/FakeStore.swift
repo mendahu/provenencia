@@ -20,8 +20,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// Default graph, as the engine does; tests seed more directly, with ids that
     /// differ from their Source's.
     var evidenceGraphsByProject: [String: [CatalogEvidenceGraph]] = [:]
-    /// What `getEvidenceGraphUnlinkImpact` returns for each graph, filtered to the Artifacts asked.
-    var unlinkImpactBlocksByGraph: [String: [CatalogEvidenceGraphUnlinkBlock]] = [:]
+    /// What `getEvidenceGraphUnlinkImpact` returns: each scripted block whose
+    /// (graph, Artifact) is a requested pair, in pair order.
+    var unlinkImpactBlocks: [CatalogEvidenceGraphUnlinkBlock] = []
     var credibilityBySource: [String: CatalogCredibilityAssessment] = [:]
     var credibilityGradesByProject: [String: [CatalogCredibilityGrade]] = [:]
     var sourceTypesByProject: [String: [CatalogSourceType]] = [:]
@@ -94,14 +95,18 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var deleteSourceCalls = 0
     var deleteArtifactCalls = 0
     var updateArtifactCalls = 0
+    /// The `graphIDs` of each `createArtifact` call, in order (nil: no links sent).
+    var createArtifactGraphIDs: [[String]?] = []
+    /// The `graphIDs` of each `updateArtifact` call, in order. The fake moves no link.
+    var updateArtifactGraphIDs: [[String]?] = []
     /// When set, `updateArtifact` throws.
     var updateArtifactError: Error?
     var deleteEvidenceGraphCalls = 0
     var createEvidenceGraphCalls = 0
     var updateEvidenceGraphCalls = 0
     var getEvidenceGraphUnlinkImpactCalls = 0
-    /// The graph id of each `getEvidenceGraphUnlinkImpact` call, in order.
-    var getEvidenceGraphUnlinkImpactGraphIDs: [String] = []
+    /// The pairs of every `getEvidenceGraphUnlinkImpact` call, in order.
+    var getEvidenceGraphUnlinkImpactPairs: [CatalogEvidenceGraphArtifactPair] = []
     /// Optional Impact override keyed by entity id (tests).
     var deleteImpactByID: [String: CatalogDeleteImpact] = [:]
     /// Optional override for graph-progress rows by graph id (tests). Missing keys compute from subjects/observations.
@@ -669,9 +674,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         fileID: String,
         label: String,
         description: String,
-        graphIDs: [String]
+        graphIDs: [String]?
     ) async throws -> (CatalogArtifact, CatalogWriteEffects) {
         return withState {
+            createArtifactGraphIDs.append(graphIDs)
             let art = CatalogArtifact(
                 id: UUID().uuidString.lowercased(),
                 ref: "ART-FAKE1",
@@ -684,7 +690,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             artifactsBySource[sourceID, default: []].append(art)
             var graphs = evidenceGraphsByProject[projectDir] ?? []
             for i in graphs.indices where graphs[i].sourceID == sourceID
-                && (graphIDs.isEmpty || graphIDs.contains(graphs[i].id))
+                && (graphIDs.map { $0.contains(graphs[i].id) } ?? true)
             {
                 graphs[i].artifactIDs.append(art.id)
             }
@@ -700,10 +706,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         userID _: String,
         artifactID: String,
         label: String,
-        description: String
+        description: String,
+        graphIDs: [String]?
     ) async throws -> (CatalogArtifact, CatalogWriteEffects) {
         return try withState {
             updateArtifactCalls += 1
+            updateArtifactGraphIDs.append(graphIDs)
             if let updateArtifactError { throw updateArtifactError }
             for (sourceID, arts) in artifactsBySource {
                 if let idx = arts.firstIndex(where: { $0.id == artifactID }) {
@@ -873,16 +881,16 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func getEvidenceGraphUnlinkImpact(
         projectDir: String,
-        graphID: String,
-        artifactIDs: [String]
+        pairs: [CatalogEvidenceGraphArtifactPair]
     ) async throws -> [CatalogEvidenceGraphUnlinkBlock] {
         try withState {
             getEvidenceGraphUnlinkImpactCalls += 1
-            getEvidenceGraphUnlinkImpactGraphIDs.append(graphID)
+            getEvidenceGraphUnlinkImpactPairs.append(contentsOf: pairs)
             if let getEvidenceGraphUnlinkImpactError { throw getEvidenceGraphUnlinkImpactError }
             markCatalogSessionHeld(projectDir)
-            let blocks = unlinkImpactBlocksByGraph[graphID] ?? []
-            return artifactIDs.compactMap { id in blocks.first { $0.artifactID == id } }
+            return pairs.compactMap { pair in
+                unlinkImpactBlocks.first { $0.graphID == pair.graphID && $0.artifactID == pair.artifactID }
+            }
         }
     }
 

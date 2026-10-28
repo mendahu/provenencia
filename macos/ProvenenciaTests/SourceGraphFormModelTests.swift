@@ -64,7 +64,7 @@ struct SourceGraphFormModelTests {
         model: SourcePageModel,
         blocks: [CatalogEvidenceGraphUnlinkBlock]? = nil
     ) async -> SourceGraphFormModel? {
-        store.unlinkImpactBlocksByGraph["g-smith"] = blocks ?? [unlinkBlock("a3", citations: 2)]
+        store.unlinkImpactBlocks = blocks ?? [unlinkBlock("a3", graphID: "g-smith", citations: 2)]
         model.graphs.openEdit(id: "g-smith")
         guard let form = model.graphs.form else { return nil }
         _ = await waitUntil { form.loadState != .loading }
@@ -186,7 +186,7 @@ struct SourceGraphFormModelTests {
     @Test func editRefusedInUseRereadsKeptLinks() async throws {
         let linked = evidenceGraph("g-pair", name: "Pair", artifactIDs: ["a2", "a3"])
         let (model, store, _) = await makeModel(graphs: [linked])
-        store.unlinkImpactBlocksByGraph["g-pair"] = []
+        store.unlinkImpactBlocks = []
         model.graphs.openEdit(id: "g-pair")
         let form = try #require(model.graphs.form)
         _ = await waitUntil { form.loadState != .loading }
@@ -195,7 +195,7 @@ struct SourceGraphFormModelTests {
         store.updateEvidenceGraphError = CoreInvokeError.coded(
             status: 1, code: "evidencegraphs.artifact_in_use", kind: .conflict, params: []
         )
-        store.unlinkImpactBlocksByGraph["g-pair"] = [unlinkBlock("a2", citations: 1)]
+        store.unlinkImpactBlocks = [unlinkBlock("a2", graphID: "g-pair", citations: 1)]
         let before = form.draft
         let saved = await form.save()
         #expect(!saved)
@@ -208,7 +208,7 @@ struct SourceGraphFormModelTests {
     @Test func editPreflightFailureThenReadAgain() async throws {
         let (model, store, _) = await makeModel(graphs: [smith()])
         store.getEvidenceGraphUnlinkImpactError = Boom()
-        store.unlinkImpactBlocksByGraph["g-smith"] = [unlinkBlock("a3", citations: 2)]
+        store.unlinkImpactBlocks = [unlinkBlock("a3", graphID: "g-smith", citations: 2)]
         model.graphs.openEdit(id: "g-smith")
         let form = try #require(model.graphs.form)
         _ = await waitUntil { form.loadState != .loading }

@@ -227,40 +227,37 @@ final class SourceArtifactsSection {
         return Set(checkedGraphIDs) != Set(linkedGraphIDs)
     }
 
-    /// Reads which graphs must keep the Artifact. A graph whose only Artifact
-    /// this is locks locally; every other graph that links it gets one unlink
-    /// preflight, in order, and a block locks it with its Citation count. A
-    /// result for a card that is no longer in edit is dropped.
+    /// Reads which graphs must keep the Artifact: one unlink preflight over a
+    /// pair for every graph that links it. A block locks its graph, worded by
+    /// its reason. A result for a card that is no longer in edit is dropped.
     func loadLinkLocks() async {
         guard let edit = linkEdit else { return }
         let artifactID = edit.artifactID
-        var locked: [String: String] = [:]
-        var reads: [String] = []
-        for graphID in edit.graphIDs {
-            guard let graph = context.session.evidenceGraph(id: graphID),
-                  graph.links(artifactID)
-            else { continue }
-            if graph.isOnlyArtifact(artifactID) {
-                locked[graphID] = L10n.string(L10n.Sources.artifactGraphOnlyArtifact)
-            } else {
-                reads.append(graphID)
-            }
+        let pairs = edit.graphIDs.compactMap { graphID -> CatalogEvidenceGraphArtifactPair? in
+            guard context.session.evidenceGraph(id: graphID)?.links(artifactID) == true else { return nil }
+            return CatalogEvidenceGraphArtifactPair(graphID: graphID, artifactID: artifactID)
         }
-        if reads.isEmpty {
-            linkEdit?.locked = locked
+        if pairs.isEmpty {
+            linkEdit?.locked = [:]
             linkEdit?.loadState = .ready
             return
         }
         linkEdit?.loadState = .loading
         do {
-            for graphID in reads {
-                let blocks = try await context.store.getEvidenceGraphUnlinkImpact(
-                    projectDir: context.projectDir,
-                    graphID: graphID,
-                    artifactIDs: [artifactID]
-                )
-                if let block = blocks.first(where: { $0.artifactID == artifactID }) {
-                    locked[graphID] = PVDeleteImpactCopy.heading(block.citations)
+            let blocks = try await context.store.getEvidenceGraphUnlinkImpact(
+                projectDir: context.projectDir,
+                pairs: pairs
+            )
+            var locked: [String: String] = [:]
+            for block in blocks where block.artifactID == artifactID {
+                switch block.reason {
+                case .artifactInUse:
+                    locked[block.graphID] = PVDeleteImpactCopy.heading(block.citations)
+                case .lastArtifact:
+                    locked[block.graphID] = L10n.string(L10n.Sources.artifactGraphOnlyArtifact)
+                case .citationsNeedGraph, .unrecognized:
+                    // No lock yet: S12-38 shows this reason on the card.
+                    break
                 }
             }
             guard linkEdit?.artifactID == artifactID else { return }
@@ -358,7 +355,8 @@ final class SourceArtifactsSection {
                     userID: context.userID,
                     artifactID: id,
                     label: label,
-                    description: desc
+                    description: desc,
+                    graphIDs: nil
                 )
                 wroteAnything = true
                 replace(updated, effects: effects)
@@ -545,7 +543,8 @@ final class SourceArtifactsSection {
                         userID: context.userID,
                         artifactID: id,
                         label: label,
-                        description: description
+                        description: description,
+                        graphIDs: nil
                     )
                     art = updated
                     show(art, effects: effects)
@@ -558,7 +557,9 @@ final class SourceArtifactsSection {
                     fileID: "",
                     label: label,
                     description: description,
-                    graphIDs: draftGraphIDs
+                    // `[]` means the boxes are hidden (one graph): send no links,
+                    // so the engine takes the default.
+                    graphIDs: draftGraphIDs.isEmpty ? nil : draftGraphIDs
                 )
                 art = created
                 // Shown before the file is ingested: if the file is refused,

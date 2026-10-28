@@ -420,3 +420,35 @@ enum DateQualifier {
     static let before = "BEF"
     static let after = "AFT"
 }
+
+/// Why the engine refuses to unlink an Artifact from a graph (the code of the
+/// refusal: `evidencegraphs.artifact_in_use`, `.last_artifact`,
+/// `.citations_need_graph`).
+enum EvidenceGraphUnlinkReason: Sendable, Equatable {
+    /// The graph's Citations use the Artifact.
+    case artifactInUse
+    /// The graph keeps at least one Artifact.
+    case lastArtifact
+    /// The Artifact's Citations need it to stay in a graph.
+    case citationsNeedGraph
+    /// A reason this build doesn't know.
+    case unrecognized(String)
+
+    init(wire: String) {
+        switch wire {
+        case "evidencegraphs.artifact_in_use": self = .artifactInUse
+        case "evidencegraphs.last_artifact": self = .lastArtifact
+        case "evidencegraphs.citations_need_graph": self = .citationsNeedGraph
+        default: self = .unrecognized(wire)
+        }
+    }
+
+    var wire: String {
+        switch self {
+        case .artifactInUse: "evidencegraphs.artifact_in_use"
+        case .lastArtifact: "evidencegraphs.last_artifact"
+        case .citationsNeedGraph: "evidencegraphs.citations_need_graph"
+        case .unrecognized(let code): code
+        }
+    }
+}
