@@ -74,7 +74,33 @@ func (name) wordKeys(v Value, r Rules) (index, lookup []string) {
 		}
 	}
 	keys := keyList(v, r, texts, sets)
-	return keys, slices.Clone(keys)
+	pi, pl := prefixKeys(words, r)
+	return sortedUnique(append(slices.Clone(keys), pi...)), sortedUnique(append(keys, pl...))
+}
+
+// prefixKeys are the given-like words' prefix keys. A word files itself whole
+// (g:) and its strict prefixes (p:); a lookup asks for the same word as a
+// prefix (p:) and its strict prefixes as whole words (g:). So a word meets the
+// words it starts and the words that start it, and a filed prefix never meets
+// a filed prefix.
+func prefixKeys(words []nameWord, r Rules) (index, lookup []string) {
+	for _, w := range words {
+		if !prefixWord(w, r) {
+			continue
+		}
+		index = append(index, keyGiven+w.fold)
+		lookup = append(lookup, keyPrefix+w.fold)
+		for _, p := range prefixesOf(w.fold, r) {
+			index = append(index, keyPrefix+p)
+			lookup = append(lookup, keyGiven+p)
+		}
+	}
+	return index, lookup
+}
+
+func sortedUnique(keys []string) []string {
+	sort.Strings(keys)
+	return slices.Compact(keys)
 }
 
 // wordKeys: text has no alias keys, because text compare never reads aliases.

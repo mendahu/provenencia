@@ -139,6 +139,56 @@ func TestWordKeys(t *testing.T) {
 	}
 }
 
+func TestWordKeysReachPrefixes(t *testing.T) {
+	tests := []struct {
+		name         string
+		filed, probe valuecompare.Value
+		min          int
+		meets        bool
+	}{
+		{"longer filed, shorter probed", slGiven("Desiree"), slGiven("Des"), 2, true},
+		{"shorter filed, longer probed", slGiven("Des"), slGiven("Desiree"), 2, true},
+		{"not a prefix", slGiven("Desiree"), slGiven("Desmond"), 2, false},
+		{"Albert and Al", slGiven("Albert"), slGiven("Al"), 2, true},
+		{"word of the minimum length", slGiven("De"), slGiven("Desiree"), 2, true},
+		{"under the minimum", slGiven("Desiree"), slGiven("De"), 3, false},
+		{"accent folds", slGiven("Desiree"), slGiven("Dés"), 2, true},
+		{"surname filed", slName("Mary MacDonald"), slName("John Mac"), 2, false},
+		{"surname filed, given probed", slName("Mary MacDonald"), slGiven("Mac"), 2, false},
+		{"nickname filed", slNick("Des"), slGiven("Desiree"), 2, true},
+		{"prefix keys off", slGiven("Desiree"), slGiven("Des"), 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rules := matchregistry.Default().Value
+			rules.Names.PrefixMinLength = tt.min
+			index, _ := valuecompare.WordKeys(tt.filed, rules)
+			_, lookup := valuecompare.WordKeys(tt.probe, rules)
+			if got := shares(index, lookup); got != tt.meets {
+				t.Errorf("meets = %v, want %v: index %q lookup %q", got, tt.meets, index, lookup)
+			}
+		})
+	}
+	hasPrefix := func(keys []string) bool {
+		return slices.ContainsFunc(keys, func(k string) bool { return strings.HasPrefix(k, "p:") || strings.HasPrefix(k, "g:") })
+	}
+	t.Run("off keeps today's keys", func(t *testing.T) {
+		rules := matchregistry.Default().Value
+		rules.Names.PrefixMinLength = 0
+		index, lookup := valuecompare.WordKeys(slGiven("Desiree"), rules)
+		if !slices.Equal(index, lookup) || hasPrefix(index) {
+			t.Errorf("index %q lookup %q, want equal and no prefix key", index, lookup)
+		}
+	})
+	t.Run("run-on word", func(t *testing.T) {
+		rules := matchregistry.Default().Value
+		index, lookup := valuecompare.WordKeys(slGiven(strings.Repeat("x", rules.Words.MaxSpellingLength+1)), rules)
+		if hasPrefix(index) || hasPrefix(lookup) {
+			t.Errorf("index %q lookup %q hold a prefix key", index, lookup)
+		}
+	})
+}
+
 func shares(a, b []string) bool {
 	return slices.ContainsFunc(a, func(k string) bool { return slices.Contains(b, k) })
 }

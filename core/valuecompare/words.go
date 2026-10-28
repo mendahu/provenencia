@@ -67,6 +67,28 @@ func IsInitial(word string) bool {
 	return len(r) == 1 && unicode.ToUpper(r[0]) != unicode.ToLower(r[0])
 }
 
+// prefixWord says whether a name word takes part in the prefix rule: the
+// shortlist's prefix keys and, from S11-45, the comparer's prefix hit read it,
+// so the two never disagree.
+func prefixWord(w nameWord, r Rules) bool {
+	if r.Names.PrefixMinLength < 1 || !slices.Contains(AliasRoles(), w.role) || IsInitial(w.text) {
+		return false
+	}
+	n := utf8.RuneCountInString(w.fold)
+	return n >= r.Names.PrefixMinLength && n <= r.Words.MaxSpellingLength
+}
+
+// prefixesOf are the strict prefixes of a folded word from PrefixMinLength
+// runes up to one rune short of the word, cut on runes.
+func prefixesOf(fold string, r Rules) []string {
+	runes := []rune(fold)
+	var out []string
+	for k := r.Names.PrefixMinLength; k < len(runes); k++ {
+		out = append(out, string(runes[:k]))
+	}
+	return out
+}
+
 // SplitWords is s as comparison tokens: split on whitespace, dashes and
 // slashes, each token normalized, and a particle (w.Particles) rejoined with
 // the word that follows it. It is the one split every comparer and the
