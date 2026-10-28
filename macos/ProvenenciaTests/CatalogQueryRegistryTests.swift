@@ -457,13 +457,15 @@ struct CatalogQueryRegistryTests {
     }
 
     @Test func lastUpdatedPatchesAreDeclaredOnTheFourLists() {
-        let registry = CatalogQueryRegistry.standard
         let project = ProjectKey(projectDir: projectDir)
-        for key in [CatalogQueryKey.personsList(project: project), .eventsList(project: project), .placesList(project: project)] {
-            #expect(registry.lastUpdatedPatch(key)?.scope == .handle, "\(key)")
+        func follows(_ key: CatalogQueryKey) -> CatalogQueryFollows? {
+            key.kind.descriptor.patches.compactMap(\.follows).first
         }
-        #expect(registry.lastUpdatedPatch(.sourcesList(project: project))?.scope == .source)
-        #expect(registry.lastUpdatedPatch(.sourceTypesList(project: project)) == nil)
+        for key in [CatalogQueryKey.personsList(project: project), .eventsList(project: project), .placesList(project: project)] {
+            #expect(follows(key) == .handle, "\(key)")
+        }
+        #expect(follows(.sourcesList(project: project)) == .source)
+        #expect(follows(.sourceTypesList(project: project)) == nil)
     }
 
     @Test func conclusionDetailOfAnUnknownHandleIsCodedNotFound() async throws {

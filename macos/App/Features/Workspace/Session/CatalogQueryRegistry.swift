@@ -23,7 +23,7 @@ enum CatalogHiddenPolicy: Sendable, Equatable {
 }
 
 /// One catalog cache kind: its policies, how a mutation invalidates it, and
-/// the last-updated patch for lists that move a row in place.
+/// the in-place patches for lists and the Source page.
 struct CatalogQueryDescriptor: Sendable {
     let kind: CatalogQueryKey.Kind
     let stalePolicy: CatalogQueryStalePolicy
@@ -33,9 +33,9 @@ struct CatalogQueryDescriptor: Sendable {
     /// doesn't reload every list or page the researcher has opened.
     var whenHidden: CatalogHiddenPolicy = .revalidate
     let invalidation: @Sendable (ProjectKey, CatalogMutation) -> CatalogQueryInvalidation
-    /// How a write that reports its activity moves this list's rows in
-    /// place (no load). `nil` for lists without a last-updated cell.
-    var lastUpdated: CatalogLastUpdatedPatch?
+    /// In-place updates run, in order, before invalidation. Empty for kinds
+    /// that only reload.
+    var patches: [CatalogQueryPatch] = []
     /// Starts the typed load for this kind. Closed over `Value` by `make`.
     let warm: @MainActor @Sendable (WorkspaceSession, CatalogQueryKey) -> Void
 }
@@ -50,7 +50,7 @@ extension CatalogQueryDescriptor {
         invalidateOn: Set<CatalogMutationKind>,
         whenHidden: CatalogHiddenPolicy = .revalidate,
         invalidation: @escaping @Sendable (ProjectKey, CatalogMutation) -> CatalogQueryInvalidation,
-        lastUpdated: CatalogLastUpdatedPatch? = nil,
+        patches: [CatalogQueryPatch] = [],
         load: @escaping @Sendable (CatalogQueryKey, any GenealogyStore) async throws -> Value
     ) -> CatalogQueryDescriptor {
         CatalogQueryDescriptor(
@@ -59,7 +59,7 @@ extension CatalogQueryDescriptor {
             invalidateOn: invalidateOn,
             whenHidden: whenHidden,
             invalidation: invalidation,
-            lastUpdated: lastUpdated,
+            patches: patches,
             warm: { session, key in
                 let store = session.store
                 let _: QueryHandle<Value> = session.ensureQuery(key) {
@@ -100,7 +100,7 @@ struct CatalogQueryRegistry: Sendable {
     /// follows what feeds it: each Evidence graph per `evidenceGraphs`, the citation
     /// reads per `citationSources`, the catalog-wide lists per `lists`, and the
     /// Properties workspace on structure. Handle scopes invalidate nothing: they move
-    /// through `lastUpdatedPatch`.
+    /// through each list's `patches`.
     func invalidations(for effects: CatalogWriteEffects, project: ProjectKey) -> [CatalogQueryInvalidation] {
         var out: [CatalogQueryInvalidation] = []
         for graphID in effects.evidenceGraphs {
@@ -171,11 +171,6 @@ struct CatalogQueryRegistry: Sendable {
         descriptor(for: key).whenHidden
     }
 
-    /// How a write that reports its activity moves `key`'s rows in place.
-    func lastUpdatedPatch(_ key: CatalogQueryKey) -> CatalogLastUpdatedPatch? {
-        descriptor(for: key).lastUpdated
-    }
-
     /// The kind's descriptor. A kind whose arm reported a different kind cannot
     /// happen with the exhaustive switch; that is a programmer error.
     private func descriptor(for key: CatalogQueryKey) -> CatalogQueryDescriptor {
@@ -201,7 +196,10 @@ extension CatalogQueryKey.Kind {
                 invalidateOn: [.createdSource, .deletedSource],
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.sourcesList(project: project)) },
-                lastUpdated: .rows(CatalogSource.self, scope: .source),
+                patches: [
+                    .lastUpdated(CatalogSource.self, follows: .source),
+                    .updatedSourceRow(),
+                ],
                 load: { key, store in
                     guard case .sourcesList(let project) = key else {
                         mismatchedCatalogKey(key, .sourcesList)
@@ -298,6 +296,7 @@ extension CatalogQueryKey.Kind {
                         return .allCached(.sourceWorkspace)
                     }
                 },
+                patches: [.updatedSourceShell()],
                 load: { key, store in
                     guard case .sourceWorkspace(let project, let sourceId) = key else {
                         mismatchedCatalogKey(key, .sourceWorkspace)
@@ -516,7 +515,7 @@ extension CatalogQueryKey.Kind {
                 invalidateOn: CatalogQueryRegistry.conclusionTriggers,
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.personsList(project: project)) },
-                lastUpdated: .rows(CatalogPersonHeader.self, scope: .handle),
+                patches: [.lastUpdated(CatalogPersonHeader.self, follows: .handle)],
                 load: { key, store in
                     guard case .personsList(let project) = key else {
                         mismatchedCatalogKey(key, .personsList)
@@ -531,7 +530,7 @@ extension CatalogQueryKey.Kind {
                 invalidateOn: CatalogQueryRegistry.conclusionTriggers,
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.eventsList(project: project)) },
-                lastUpdated: .rows(CatalogEventHeader.self, scope: .handle),
+                patches: [.lastUpdated(CatalogEventHeader.self, follows: .handle)],
                 load: { key, store in
                     guard case .eventsList(let project) = key else {
                         mismatchedCatalogKey(key, .eventsList)
@@ -546,7 +545,7 @@ extension CatalogQueryKey.Kind {
                 invalidateOn: CatalogQueryRegistry.conclusionTriggers,
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.placesList(project: project)) },
-                lastUpdated: .rows(CatalogPlaceHeader.self, scope: .handle),
+                patches: [.lastUpdated(CatalogPlaceHeader.self, follows: .handle)],
                 load: { key, store in
                     guard case .placesList(let project) = key else {
                         mismatchedCatalogKey(key, .placesList)

@@ -171,9 +171,9 @@ final class WorkspaceSession {
     }
 
     /// The one application of a write. Patches in place first, with no load:
-    /// every cached row whose last activity the effects moved
-    /// (`patchLastUpdated`), then the mutation's enriched Source row and cached
-    /// page shell. Then it invalidates the deduped union of what the effects
+    /// each warmed key runs its descriptor `patches` in order (last-updated
+    /// cells from the effects, then an enriched Source row and page shell).
+    /// Then it invalidates the deduped union of what the effects
     /// reported (each Evidence graph it names, its Sources' citation reads, the Conclusions whose
     /// handles changed) and what the mutation names (the Source page's own
     /// workspace, the metadata field list), so a key both name is invalidated
@@ -184,10 +184,7 @@ final class WorkspaceSession {
     /// `CatalogQueryRegistry.navCountTriggers`. Features only call `apply`;
     /// they do not query afterward or tell sibling views to refresh.
     func apply(_ effects: CatalogWriteEffects = .empty, _ mutation: CatalogMutation? = nil) {
-        patchLastUpdated(effects)
-        if let source = mutation?.patchedSource {
-            patchUpdatedSource(source)
-        }
+        applyPatches(effects, mutation)
         apply(invalidations: registry.invalidations(for: effects, by: mutation, project: projectKey))
         var progressGraphs = effects.evidenceGraphs
         if let graphId = mutation?.evidenceGraphId, !progressGraphs.contains(graphId) {
@@ -209,16 +206,21 @@ final class WorkspaceSession {
         apply(.empty, mutation)
     }
 
-    /// Moves the last-updated cell of every cached row the write reports, using
-    /// the write's own activity. Each list declares its patch in the registry.
-    /// No loader runs.
-    private func patchLastUpdated(_ effects: CatalogWriteEffects) {
-        guard effects.activity.revision > 0 else { return }
+    /// Runs each warmed key's descriptor patches. A patch with `follows` gets
+    /// the ids that slot names, and only when the write reported activity.
+    /// A patch with no `follows` reads the mutation.
+    private func applyPatches(_ effects: CatalogWriteEffects, _ mutation: CatalogMutation?) {
         for key in Array(handles.keys) where key.project == projectKey {
-            guard let patch = registry.lastUpdatedPatch(key) else { continue }
-            let ids = Set(patch.scope.ids(in: effects))
-            if !ids.isEmpty {
-                patch.apply(self, key, ids, effects.activity)
+            for patch in key.kind.descriptor.patches {
+                if let follows = patch.follows {
+                    guard effects.activity.revision > 0 else { continue }
+                    let ids = Set(follows.ids(in: effects, mutation: mutation))
+                    if !ids.isEmpty {
+                        patch.apply(self, key, ids, effects.activity, mutation)
+                    }
+                } else {
+                    patch.apply(self, key, [], effects.activity, mutation)
+                }
             }
         }
     }
@@ -366,23 +368,6 @@ final class WorkspaceSession {
         for key in handles.keys where predicate(key) {
             invalidate(key)
         }
-    }
-
-    private func patchUpdatedSource(_ source: CatalogSource) {
-        let listKey = CatalogQueryKey.sourcesList(project: projectKey)
-        // Leaves any stale flag on the list: other rows may still owe a reload.
-        patchCached(listKey, as: [CatalogSource].self) { sources in
-            guard let index = sources.firstIndex(where: { $0.id == source.id }) else { return false }
-            sources[index] = source
-            return true
-        }
-
-        let workspaceKey = CatalogQueryKey.sourceWorkspace(project: projectKey, sourceId: source.id)
-        let patched = patchCached(workspaceKey, as: CatalogSourceWorkspace.self) {
-            $0.source = source
-            return true
-        }
-        if patched { invalidatedKeys.remove(workspaceKey) }  // that page is now current
     }
 
     private func typedHandle<Value>(for key: CatalogQueryKey, as type: Value.Type) -> QueryHandle<Value> {
