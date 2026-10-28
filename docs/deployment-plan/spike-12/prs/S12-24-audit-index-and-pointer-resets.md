@@ -1,6 +1,7 @@
 # S12-24 — Audit history: indexed note authors, audited pointer resets
 
 **Status:** Landed in [#610](https://github.com/mendahu/provenencia/pull/610) (2026-10-28)
+**Landed:** Round-1 fix review: `optionalPointer` side-effect columns are typed `col` values scanned through `colJSON`; the cleared FK field records `New: nil` without re-reading the column after `UPDATE`. `TestFacetReleaseHonesty` requires every `BucketOptional` FK to be `SET NULL` and checks `Remaining` once for CASCADE and optional SET NULL releases. Cover and preferred-likeness parity tests build twin rows through domain setters only and share `dbtest.RequireUpdateBeforeDelete`.
 **Spike / slice:** Spike 12 · Slice 5 — Audit fixes: High
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: an index and two audited releases; no view change)
