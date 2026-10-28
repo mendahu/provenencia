@@ -525,16 +525,24 @@ message UnlinkEvidenceGraphArtifactResponse {
   WriteEffects effects = 1;
 }
 
-// Which of the Artifacts a graph edit removes are used by the graph's Citations.
+message EvidenceGraphArtifactPair {
+  string graph_id = 1;
+  string artifact_id = 2;
+}
+
+// Which of the (graph, Artifact) pairs an edit would unlink are refused, and why.
 message GetEvidenceGraphUnlinkImpactRequest {
   string project_dir = 1;
-  string graph_id = 2;
-  repeated string artifact_ids = 3;
+  reserved 2, 3;
+  reserved "graph_id", "artifact_ids";
+  repeated EvidenceGraphArtifactPair pairs = 4;
 }
 
 message EvidenceGraphUnlinkBlock {
   string artifact_id = 1;
-  DeleteImpactGroup citations = 2;
+  DeleteImpactGroup citations = 2; // empty for last_artifact
+  string graph_id = 3;
+  string reason_code = 4; // the refusal's apperr code
 }
 
 message GetEvidenceGraphUnlinkImpactResponse {
@@ -673,7 +681,15 @@ message CreateArtifactRequest {
   string file_id = 4; // empty = fileless
   string description = 5;
   string label = 6; // required
-  repeated string graph_ids = 7; // empty = every graph of the Source
+  reserved 7;
+  reserved "graph_ids";
+  GraphLinks graph_links = 8; // absent = every graph of the Source
+}
+
+// Which graphs of its Source an Artifact is in. A message field has presence,
+// so an absent GraphLinks (the default) and a present, empty one (none) differ.
+message GraphLinks {
+  repeated string graph_ids = 1; // present and empty = none
 }
 
 message CreateArtifactResponse {
@@ -681,7 +697,8 @@ message CreateArtifactResponse {
   WriteEffects effects = 2;
 }
 
-// UpdateArtifactRequest patches label and/or description only.
+// UpdateArtifactRequest patches label and/or description, and, when graph_links
+// is present, sets the Artifact's graph links in the same write.
 // File attach stays IngestArtifactFile (first-attach only).
 message UpdateArtifactRequest {
   string project_dir = 1;
@@ -689,6 +706,7 @@ message UpdateArtifactRequest {
   string artifact_id = 3;
   string label = 4;
   string description = 5;
+  GraphLinks graph_links = 6; // absent = links unchanged
 }
 
 message UpdateArtifactResponse {

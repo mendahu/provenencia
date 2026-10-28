@@ -211,7 +211,7 @@ func TestDeleteArtifact(t *testing.T) {
 	})
 }
 
-func TestCreateArtifactGraphIDs(t *testing.T) {
+func TestCreateArtifactGraphLinks(t *testing.T) {
 	f := newGraphFixture(t)
 	second := f.createGraph(t, "Jones", f.page1).GetGraph().GetId()
 	linkedTo := func(artifactID string) []string {
@@ -224,23 +224,29 @@ func TestCreateArtifactGraphIDs(t *testing.T) {
 		return graphs
 	}
 
-	chosenResp := f.createArtifactResp(t, f.sourceID, "Chosen", []string{second})
-	assertGraphEffects(t, chosenResp.GetEffects())
-	chosen := chosenResp.GetArtifact().GetId()
-	if got := linkedTo(chosen); !slices.Equal(got, []string{"Jones"}) {
-		t.Fatalf("chosen graph only: %v", got)
-	}
 	everyResp := f.createArtifactResp(t, f.sourceID, "Every", nil)
 	assertGraphEffects(t, everyResp.GetEffects())
-	every := everyResp.GetArtifact().GetId()
-	if got := linkedTo(every); !slices.Equal(got, []string{"Default", "Jones"}) {
-		t.Fatalf("every graph: %v", got)
+	if got := linkedTo(everyResp.GetArtifact().GetId()); !slices.Equal(got, []string{"Default", "Jones"}) {
+		t.Fatalf("absent links, every graph: %v", got)
+	}
+	chosenResp := f.createArtifactResp(t, f.sourceID, "Chosen", &engine.GraphLinks{GraphIds: []string{second}})
+	assertGraphEffects(t, chosenResp.GetEffects())
+	if got := linkedTo(chosenResp.GetArtifact().GetId()); !slices.Equal(got, []string{"Jones"}) {
+		t.Fatalf("chosen graph only: %v", got)
+	}
+	noneResp := f.createArtifactResp(t, f.sourceID, "None", &engine.GraphLinks{})
+	if got := linkedTo(noneResp.GetArtifact().GetId()); len(got) != 0 {
+		t.Fatalf("present and empty, none: %v", got)
+	}
+	if lists := noneResp.GetEffects().GetLists(); slices.Contains(lists, "evidence_graphs") {
+		t.Fatalf("no link row was written, but effects list %v", lists)
 	}
 
 	srcB, _ := f.otherSource(t)
 	foreign := f.graphsOf(t, srcB)[0].GetId()
 	err := rpc(t, CreateArtifact, &engine.CreateArtifactRequest{
-		ProjectDir: f.dir, UserId: f.userID, SourceId: f.sourceID, Label: "Foreign", GraphIds: []string{foreign},
+		ProjectDir: f.dir, UserId: f.userID, SourceId: f.sourceID, Label: "Foreign",
+		GraphLinks: &engine.GraphLinks{GraphIds: []string{foreign}},
 	}, &engine.CreateArtifactResponse{})
 	if !errors.Is(err, evidencegraphs.ErrInvalid) {
 		t.Fatalf("another Source's graph: %v", err)
@@ -252,4 +258,79 @@ func TestCreateArtifactGraphIDs(t *testing.T) {
 			t.Fatal("the refused Artifact was created")
 		}
 	}
+}
+
+func TestUpdateArtifactGraphLinks(t *testing.T) {
+	f := newGraphFixture(t)
+	// page1 stays in Default and Jones throughout, so no unlink here is a
+	// graph's last link.
+	jones := f.createGraph(t, "Jones", f.page1).GetGraph().GetId()
+	def := f.defaultGraphID
+	newPage := func(label string) *engine.CreateArtifactResponse {
+		return f.createArtifactResp(t, f.sourceID, label, &engine.GraphLinks{GraphIds: []string{def}})
+	}
+	linkedTo := func(artifactID string) []string {
+		var ids []string
+		for _, g := range f.list(t) {
+			if slices.Contains(g.GetArtifactIds(), artifactID) {
+				ids = append(ids, g.GetId())
+			}
+		}
+		return ids
+	}
+	labelOf := func(artifactID string) string {
+		var ws engine.GetSourceWorkspaceResponse
+		mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: f.dir, SourceId: f.sourceID}, &ws)
+		for _, a := range ws.GetArtifacts() {
+			if a.GetId() == artifactID {
+				return a.GetLabel()
+			}
+		}
+		t.Fatalf("artifact %s not found", artifactID)
+		return ""
+	}
+	update := func(artifactID, label string, links *engine.GraphLinks) (*engine.UpdateArtifactResponse, error) {
+		var out engine.UpdateArtifactResponse
+		err := rpc(t, UpdateArtifact, &engine.UpdateArtifactRequest{
+			ProjectDir: f.dir, UserId: f.userID, ArtifactId: artifactID, Label: label, GraphLinks: links,
+		}, &out)
+		return &out, err
+	}
+
+	t.Run("label and links are one revision", func(t *testing.T) {
+		created := newPage("P")
+		id := created.GetArtifact().GetId()
+		resp, err := update(id, "P renamed", &engine.GraphLinks{GraphIds: []string{jones}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp.GetEffects().GetRevision() != created.GetEffects().GetRevision()+1 {
+			t.Fatalf("revisions %d -> %d", created.GetEffects().GetRevision(), resp.GetEffects().GetRevision())
+		}
+		if got := linkedTo(id); !slices.Equal(got, []string{jones}) || labelOf(id) != "P renamed" {
+			t.Fatalf("linked %v, label %q", got, labelOf(id))
+		}
+	})
+	t.Run("absent links leave the links alone", func(t *testing.T) {
+		id := newPage("P2").GetArtifact().GetId()
+		if _, err := update(id, "P2 renamed", nil); err != nil {
+			t.Fatal(err)
+		}
+		if got := linkedTo(id); !slices.Equal(got, []string{def}) || labelOf(id) != "P2 renamed" {
+			t.Fatalf("linked %v, label %q", got, labelOf(id))
+		}
+	})
+	t.Run("a refused unlink rolls back the label", func(t *testing.T) {
+		id := newPage("P3").GetArtifact().GetId()
+		mustRPC(t, CreateCitationWithObservations, &engine.CreateCitationWithObservationsRequest{
+			ProjectDir: f.dir, UserId: f.userID, ArtifactId: id, LocatorJson: validLocatorJSON,
+		}, &engine.CreateCitationWithObservationsResponse{})
+		_, err := update(id, "P3 renamed", &engine.GraphLinks{})
+		if !errors.Is(err, evidencegraphs.ErrCitationsNeedGraph) {
+			t.Fatalf("got %v", err)
+		}
+		if got := linkedTo(id); !slices.Equal(got, []string{def}) || labelOf(id) != "P3" {
+			t.Fatalf("linked %v, label %q", got, labelOf(id))
+		}
+	})
 }

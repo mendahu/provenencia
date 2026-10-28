@@ -1556,9 +1556,11 @@ struct SourcePageModelTests {
         #expect(store.getEvidenceGraphUnlinkImpactCalls == 0)
     }
 
+    /// T-16 (D-13): one preflight call covers every graph that links the Artifact, and
+    /// the block's reason words the lock.
     @Test func cardEditLocksInUseAndOnlyArtifactGraphs() async {
         let (model, store, _) = await makeCensus()
-        store.unlinkImpactBlocksByGraph["g-s"] = [unlinkBlock("P3", citations: 2)]
+        store.unlinkImpactBlocks = [unlinkBlock("P3", graphID: "g-s", citations: 2)]
         model.artifacts.beginEdit("P3")
         #expect(model.artifacts.linkEdit?.loadState == .loading || model.artifacts.linkEdit?.loadState == .ready)
         await model.artifacts.linkLoadTask?.value
@@ -1567,14 +1569,60 @@ struct SourcePageModelTests {
         #expect(edit?.locked["g-s"] == "2 citations in this graph use this artifact")
         #expect(edit?.locked["g-j"] == nil)
         #expect(edit?.excluded == ["g-b"])
-        #expect(store.getEvidenceGraphUnlinkImpactGraphIDs == ["g-j", "g-s"])
+        #expect(store.getEvidenceGraphUnlinkImpactCalls == 1)
+        #expect(store.getEvidenceGraphUnlinkImpactPairs == [
+            CatalogEvidenceGraphArtifactPair(graphID: "g-j", artifactID: "P3"),
+            CatalogEvidenceGraphArtifactPair(graphID: "g-s", artifactID: "P3"),
+        ])
 
-        store.getEvidenceGraphUnlinkImpactGraphIDs = []
+        store.unlinkImpactBlocks = [unlinkBlock("P9", graphID: "g-b", citations: 0, reason: .lastArtifact)]
         model.artifacts.beginEdit("P9")
         await model.artifacts.linkLoadTask?.value
         #expect(model.artifacts.linkEdit?.locked["g-b"] == L10n.string(L10n.Sources.artifactGraphOnlyArtifact))
         #expect(model.artifacts.linkEdit?.excluded == ["g-j", "g-s"])
-        #expect(store.getEvidenceGraphUnlinkImpactGraphIDs.isEmpty)
+
+        // A reason the card does not word yet locks nothing.
+        store.unlinkImpactBlocks = [unlinkBlock("P3", graphID: "g-j", citations: 1, reason: .citationsNeedGraph)]
+        model.artifacts.beginEdit("P3")
+        await model.artifacts.linkLoadTask?.value
+        #expect(model.artifacts.linkEdit?.loadState == .ready)
+        #expect(model.artifacts.linkEdit?.locked.isEmpty == true)
+
+        // No graph links the Artifact: no call.
+        let calls = store.getEvidenceGraphUnlinkImpactCalls
+        let (bare, bareStore, _) = await makeCensus(graphs: [graph("g-1", "Default", ["P3"]), graph("g-2", "Jones", ["P3"])])
+        bare.artifacts.beginEdit("P9")
+        await bare.artifacts.linkLoadTask?.value
+        #expect(bare.artifacts.linkEdit?.loadState == .ready)
+        #expect(bare.artifacts.linkEdit?.locked.isEmpty == true)
+        #expect(bareStore.getEvidenceGraphUnlinkImpactCalls == 0)
+        #expect(store.getEvidenceGraphUnlinkImpactCalls == calls)
+    }
+
+    /// T-12 (D-13): a hidden graph choice (one graph) sends no links; a visible one
+    /// sends the checked ids; a card label save sends none.
+    @Test func addArtifactSendsDefaultGraphLinksWhenBoxesHidden() async {
+        let (one, oneStore, _) = await makeCensus(graphs: [graph("g-1", "Default", [])])
+        one.artifacts.openAdd()
+        one.artifacts.draft.label = "Page 7"
+        await one.artifacts.create()
+        #expect(oneStore.createArtifactGraphIDs.count == 1)
+        #expect(oneStore.createArtifactGraphIDs.first! == nil)
+
+        let (model, store, _) = await makeCensus()
+        model.artifacts.openAdd()
+        model.artifacts.draft.label = "Page 8"
+        model.artifacts.draft.excludedGraphIDs = ["g-b", "g-s"]
+        await model.artifacts.create()
+        #expect(store.createArtifactGraphIDs.count == 1)
+        #expect(store.createArtifactGraphIDs.first! == ["g-j"])
+
+        model.artifacts.beginEdit("P3")
+        await model.artifacts.linkLoadTask?.value
+        model.artifacts.labels["P3"] = "Page 3, front"
+        await model.artifacts.saveFields(id: "P3")
+        #expect(store.updateArtifactGraphIDs.count == 1)
+        #expect(store.updateArtifactGraphIDs.first! == nil)
     }
 
     @Test func cardSaveLinksThenUnlinks() async {
@@ -1618,7 +1666,7 @@ struct SourcePageModelTests {
             status: 1, code: "evidencegraphs.artifact_in_use", kind: .conflict, params: []
         )
         store.unlinkEvidenceGraphArtifactError = refusal
-        store.unlinkImpactBlocksByGraph["g-j"] = [unlinkBlock("P3", citations: 1)]
+        store.unlinkImpactBlocks = [unlinkBlock("P3", graphID: "g-j", citations: 1)]
         let impactCalls = store.getEvidenceGraphUnlinkImpactCalls
         await model.artifacts.saveFields(id: "P3")
 
@@ -1638,7 +1686,7 @@ struct SourcePageModelTests {
         ))
 
         store.unlinkEvidenceGraphArtifactError = nil
-        store.unlinkImpactBlocksByGraph["g-j"] = []
+        store.unlinkImpactBlocks = []
         await model.artifacts.loadLinkLocks()
         await model.artifacts.saveFields(id: "P3")
         #expect(linkCalls(store) == [

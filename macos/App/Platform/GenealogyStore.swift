@@ -105,9 +105,6 @@ extension CatalogEvidenceGraph {
     /// The graph links this Artifact.
     func links(_ artifactID: String) -> Bool { artifactIDs.contains(artifactID) }
 
-    /// This Artifact is the only one the graph links.
-    func isOnlyArtifact(_ artifactID: String) -> Bool { artifactIDs == [artifactID] }
-
     /// `artifacts` filtered to the ones this graph links, in the order given
     /// (the Source page's Artifact order, not the link order).
     func linkedArtifacts(_ artifacts: [CatalogArtifact]) -> [CatalogArtifact] {
@@ -116,10 +113,19 @@ extension CatalogEvidenceGraph {
     }
 }
 
-/// An Artifact a graph edit would unlink that the graph's Citations still use,
-/// with those Citations shaped for the DeleteImpact recipe.
-struct CatalogEvidenceGraphUnlinkBlock: Sendable, Equatable {
+/// One (graph, Artifact) link.
+struct CatalogEvidenceGraphArtifactPair: Sendable, Equatable {
+    var graphID: String
     var artifactID: String
+}
+
+/// A pair whose unlink the engine refuses, with why and, for a Citation
+/// reason, those Citations shaped for the DeleteImpact recipe (empty for
+/// `.lastArtifact`).
+struct CatalogEvidenceGraphUnlinkBlock: Sendable, Equatable {
+    var graphID: String
+    var artifactID: String
+    var reason: EvidenceGraphUnlinkReason
     var citations: CatalogDeleteImpactGroup
 }
 
@@ -1219,6 +1225,7 @@ protocol GenealogyStore: Sendable {
         sourceID: String,
         fieldIDs: [String]
     ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects)
+    /// `graphIDs` nil is every graph of the Source; `[]` is none.
     func createArtifact(
         projectDir: String,
         userID: String,
@@ -1226,15 +1233,18 @@ protocol GenealogyStore: Sendable {
         fileID: String,
         label: String,
         description: String,
-        graphIDs: [String]
+        graphIDs: [String]?
     ) async throws -> (CatalogArtifact, CatalogWriteEffects)
     func deleteArtifact(projectDir: String, userID: String, artifactID: String) async throws -> CatalogWriteEffects
+    /// `graphIDs` nil leaves the Artifact's links as they are; otherwise it is
+    /// the full set, and `[]` is none.
     func updateArtifact(
         projectDir: String,
         userID: String,
         artifactID: String,
         label: String,
-        description: String
+        description: String,
+        graphIDs: [String]?
     ) async throws -> (CatalogArtifact, CatalogWriteEffects)
     func ingestArtifactFile(
         projectDir: String,
@@ -1273,11 +1283,10 @@ protocol GenealogyStore: Sendable {
         graphID: String,
         artifactID: String
     ) async throws -> CatalogWriteEffects
-    /// Which of `artifactIDs` a graph edit would unlink that the graph's Citations use.
+    /// Which of `pairs` an edit would unlink that the engine refuses, in pair order.
     func getEvidenceGraphUnlinkImpact(
         projectDir: String,
-        graphID: String,
-        artifactIDs: [String]
+        pairs: [CatalogEvidenceGraphArtifactPair]
     ) async throws -> [CatalogEvidenceGraphUnlinkBlock]
     func listSourceCredibilityGrades(projectDir: String) async throws -> [CatalogCredibilityGrade]
     func upsertSourceCredibilityAssessment(

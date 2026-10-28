@@ -372,7 +372,7 @@ struct GoStore: GenealogyStore {
         fileID: String,
         label: String,
         description: String,
-        graphIDs: [String]
+        graphIDs: [String]?
     ) async throws -> (CatalogArtifact, CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_CreateArtifactRequest()
         req.projectDir = projectDir
@@ -381,7 +381,9 @@ struct GoStore: GenealogyStore {
         req.fileID = fileID
         req.label = label
         req.description_p = description
-        req.graphIds = graphIDs
+        if let graphIDs {
+            req.graphLinks = Provenencia_Engine_V1_GraphLinks.with { $0.graphIds = graphIDs }
+        }
         let resp: Provenencia_Engine_V1_CreateArtifactResponse = try await provenenciaCall(
             method: CoreMethod.createArtifact,
             request: req
@@ -394,7 +396,8 @@ struct GoStore: GenealogyStore {
         userID: String,
         artifactID: String,
         label: String,
-        description: String
+        description: String,
+        graphIDs: [String]?
     ) async throws -> (CatalogArtifact, CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_UpdateArtifactRequest()
         req.projectDir = projectDir
@@ -402,6 +405,9 @@ struct GoStore: GenealogyStore {
         req.artifactID = artifactID
         req.label = label
         req.description_p = description
+        if let graphIDs {
+            req.graphLinks = Provenencia_Engine_V1_GraphLinks.with { $0.graphIds = graphIDs }
+        }
         let resp: Provenencia_Engine_V1_UpdateArtifactResponse = try await provenenciaCall(
             method: CoreMethod.updateArtifact,
             request: req
@@ -546,20 +552,25 @@ struct GoStore: GenealogyStore {
 
     func getEvidenceGraphUnlinkImpact(
         projectDir: String,
-        graphID: String,
-        artifactIDs: [String]
+        pairs: [CatalogEvidenceGraphArtifactPair]
     ) async throws -> [CatalogEvidenceGraphUnlinkBlock] {
         var req = Provenencia_Engine_V1_GetEvidenceGraphUnlinkImpactRequest()
         req.projectDir = projectDir
-        req.graphID = graphID
-        req.artifactIds = artifactIDs
+        req.pairs = pairs.map { pair in
+            Provenencia_Engine_V1_EvidenceGraphArtifactPair.with {
+                $0.graphID = pair.graphID
+                $0.artifactID = pair.artifactID
+            }
+        }
         let resp: Provenencia_Engine_V1_GetEvidenceGraphUnlinkImpactResponse = try await provenenciaCall(
             method: CoreMethod.getEvidenceGraphUnlinkImpact,
             request: req
         )
         return resp.blocked.map {
             CatalogEvidenceGraphUnlinkBlock(
+                graphID: $0.graphID,
                 artifactID: $0.artifactID,
+                reason: EvidenceGraphUnlinkReason(wire: $0.reasonCode),
                 citations: Self.mapDeleteImpactGroup($0.citations)
             )
         }

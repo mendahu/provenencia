@@ -678,7 +678,7 @@ func writeFile(t *testing.T, path, body string) {
 func runArtifactUpdate(c *database.Catalog, userID []byte, a artifacts.Artifact) error {
 	_, _, err := writes.Run(c, writes.Op{Action: "update_artifact", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-			changes, err := artifacts.Update(tx, userID, a)
+			changes, err := artifacts.Update(tx, userID, a, evidencegraphs.GraphLinks{})
 			return struct{}{}, changes, err
 		})
 	return err

@@ -23,7 +23,10 @@ var (
 	ErrInvalid       = apperr.New(apperr.CodeEvidenceGraphsInvalid, apperr.KindUser)
 	ErrArtifactInUse = apperr.New(apperr.CodeEvidenceGraphsArtifactInUse, apperr.KindUser)
 	ErrLastArtifact  = apperr.New(apperr.CodeEvidenceGraphsLastArtifact, apperr.KindUser)
-	// ErrInUse is returned by Delete while Subjects belong to the graph.
+	// ErrCitationsNeedGraph: an Artifact with Citations keeps at least one graph.
+	ErrCitationsNeedGraph = apperr.New(apperr.CodeEvidenceGraphsCitationsNeedGraph, apperr.KindUser)
+	// ErrInUse is returned by Delete while Subjects belong to the graph or while
+	// it is the only graph of an Artifact with Citations.
 	ErrInUse = apperr.New(apperr.CodeEvidenceGraphsInUse, apperr.KindConflict)
 	// ErrLastGraph: a Source keeps at least one graph.
 	ErrLastGraph = apperr.New(apperr.CodeEvidenceGraphsLastGraph, apperr.KindUser)
@@ -68,6 +71,13 @@ const (
 	sqlLinkInsert = `INSERT INTO evidence_graph_artifacts (graph_id, artifact_id) VALUES (?, ?)`
 	sqlLinkDelete = `DELETE FROM evidence_graph_artifacts WHERE graph_id = ? AND artifact_id = ?`
 	sqlLinkCount  = `SELECT COUNT(*) FROM evidence_graph_artifacts WHERE graph_id = ?`
+	// sqlArtifactGraphs reads one Artifact's links inside a write.
+	sqlArtifactGraphs = `SELECT graph_id FROM evidence_graph_artifacts
+		WHERE artifact_id = ? ORDER BY graph_id`
+	// sqlCitationsNeedGraph lists the Artifact's Citations that this graph alone
+	// holds, built from the one spelling the graph delete probe uses.
+	sqlCitationsNeedGraph = `SELECT c.id, c.ref FROM ` + deleteimpact.SQLCitationsOnlyInGraph +
+		` AND c.artifact_id = ? ORDER BY c.ref COLLATE NOCASE`
 	// The ref is selected for the order and dropped.
 	sqlCitationsUsing = `SELECT c.id, c.ref FROM citations c
 		WHERE c.artifact_id = ? AND EXISTS (SELECT 1 FROM ` + SQLObservationsInGraph + `)
@@ -85,6 +95,17 @@ type Graph struct {
 	Description string
 	ArtifactIDs [][]byte // linked Artifacts: by Artifact ref from List, in input order from Create
 }
+
+// GraphLinks says which graphs an Artifact is in. The zero value is the
+// default: every graph of its Source on create, unchanged on update. Given
+// with no IDs is none.
+type GraphLinks struct {
+	Given bool
+	IDs   [][]byte
+}
+
+// Pair is one (graph, Artifact) link.
+type Pair struct{ GraphID, ArtifactID []byte }
 
 // List returns the graphs of one Source, or of the whole project when sourceID
 // is empty, by name (case-insensitive), each with its linked Artifact ids by
@@ -183,30 +204,29 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Graph, []rowchange.
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Graph{}, nil, err
 	}
-	if err := requireDistinct(in.ArtifactIDs); err != nil {
-		return Graph{}, nil, err
-	}
 	g, change, err := insert(tx.Tx, in.SourceID, in.Name, in.Description)
 	if err != nil {
 		return Graph{}, nil, err
 	}
-	changes := []rowchange.Change{change}
-	for _, id := range in.ArtifactIDs {
-		ch, err := Link(tx, userID, g.ID, id)
-		if err != nil {
-			return Graph{}, nil, err
-		}
-		changes = append(changes, ch...)
+	want := make([]Pair, len(in.ArtifactIDs))
+	for i, id := range in.ArtifactIDs {
+		want[i] = Pair{GraphID: g.ID, ArtifactID: id}
 	}
+	changes := []rowchange.Change{change}
+	linked, err := applyLinks(tx, userID, nil, want)
+	if err != nil {
+		return Graph{}, nil, err
+	}
+	changes = append(changes, linked...)
 	for _, id := range in.ArtifactIDs {
 		g.ArtifactIDs = append(g.ArtifactIDs, append([]byte(nil), id...))
 	}
 	return g, changes, nil
 }
 
-// Delete deletes a graph that is not its Source's last and has no Subjects,
-// releasing its links. Deleteimpact's report decides, so the delete preview and
-// this write agree.
+// Delete deletes a graph that is not its Source's last, has no Subjects and is
+// not the only graph of an Artifact with Citations, releasing its links.
+// Deleteimpact's report decides, so the delete preview and this write agree.
 func Delete(tx *database.Tx, userID, graphID []byte) ([]rowchange.Change, error) {
 	if tx == nil || len(graphID) != 16 {
 		return nil, ErrInvalid
@@ -265,9 +285,6 @@ func Update(tx *database.Tx, userID, graphID []byte, in UpdateInput) ([]rowchang
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return nil, err
 	}
-	if err := requireDistinct(in.ArtifactIDs); err != nil {
-		return nil, err
-	}
 	g, err := getTx(tx.Tx, graphID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrInvalid
@@ -299,37 +316,27 @@ func Update(tx *database.Tx, userID, graphID []byte, in UpdateInput) ([]rowchang
 	if len(in.ArtifactIDs) == 0 {
 		return changes, nil
 	}
+	want := make([]Pair, len(in.ArtifactIDs))
+	for i, id := range in.ArtifactIDs {
+		want[i] = Pair{GraphID: graphID, ArtifactID: id}
+	}
 	graphs, err := list(tx.Tx, g.SourceID)
 	if err != nil {
 		return nil, err
 	}
-	var stored [][]byte
+	var stored []Pair
 	for _, x := range graphs {
 		if bytes.Equal(x.ID, graphID) {
-			stored = x.ArtifactIDs
+			for _, id := range x.ArtifactIDs {
+				stored = append(stored, Pair{GraphID: graphID, ArtifactID: id})
+			}
 		}
 	}
-	for _, id := range in.ArtifactIDs {
-		if database.ContainsBlobID(stored, id) {
-			continue
-		}
-		ch, err := Link(tx, userID, graphID, id)
-		if err != nil {
-			return nil, err
-		}
-		changes = append(changes, ch...)
+	linked, err := applyLinks(tx, userID, stored, want)
+	if err != nil {
+		return nil, err
 	}
-	for _, id := range stored {
-		if database.ContainsBlobID(in.ArtifactIDs, id) {
-			continue
-		}
-		ch, err := Unlink(tx, userID, graphID, id)
-		if err != nil {
-			return nil, err
-		}
-		changes = append(changes, ch...)
-	}
-	return changes, nil
+	return append(changes, linked...), nil
 }
 
 // getTx loads one graph row; sql.ErrNoRows when there is none. It does not fill
@@ -338,16 +345,59 @@ func getTx(tx *sql.Tx, id []byte) (Graph, error) {
 	return scanGraph(tx.QueryRow(sqlGet, id))
 }
 
-// requireDistinct refuses a repeated id.
-func requireDistinct(ids [][]byte) error {
+// requireDistinctPairs refuses a repeated pair.
+func requireDistinctPairs(pairs []Pair) error {
 	seen := map[string]bool{}
-	for _, id := range ids {
-		if seen[string(id)] {
+	for _, p := range pairs {
+		k := string(p.GraphID) + string(p.ArtifactID)
+		if seen[k] {
 			return ErrInvalid
 		}
-		seen[string(id)] = true
+		seen[k] = true
 	}
 	return nil
+}
+
+// applyLinks is the one link writer: it links every pair of want that is not
+// in stored, in want order, then unlinks every pair of stored that is not in
+// want, in stored order. Links come first, so a swap never leaves an Artifact
+// or a graph with no link between the two. The first refusal is returned
+// unchanged; the caller's write rolls everything back.
+func applyLinks(tx *database.Tx, userID []byte, stored, want []Pair) ([]rowchange.Change, error) {
+	if err := requireDistinctPairs(want); err != nil {
+		return nil, err
+	}
+	var changes []rowchange.Change
+	for _, p := range want {
+		if containsPair(stored, p) {
+			continue
+		}
+		ch, err := Link(tx, userID, p.GraphID, p.ArtifactID)
+		if err != nil {
+			return nil, err
+		}
+		changes = append(changes, ch...)
+	}
+	for _, p := range stored {
+		if containsPair(want, p) {
+			continue
+		}
+		ch, err := Unlink(tx, userID, p.GraphID, p.ArtifactID)
+		if err != nil {
+			return nil, err
+		}
+		changes = append(changes, ch...)
+	}
+	return changes, nil
+}
+
+func containsPair(pairs []Pair, p Pair) bool {
+	for _, q := range pairs {
+		if bytes.Equal(q.GraphID, p.GraphID) && bytes.Equal(q.ArtifactID, p.ArtifactID) {
+			return true
+		}
+	}
+	return false
 }
 
 // CreateDefault inserts the Default graph of a new Source. Its only caller is
@@ -467,7 +517,13 @@ func CitationsUsingArtifactTx(tx *sql.Tx, graphID, artifactID []byte) ([]deletei
 	if tx == nil || len(graphID) != 16 || len(artifactID) != 16 {
 		return nil, ErrInvalid
 	}
-	rows, err := tx.Query(sqlCitationsUsing, artifactID, graphID)
+	return queryCitationRows(tx, sqlCitationsUsing, artifactID, graphID)
+}
+
+// queryCitationRows runs a query selecting Citation id and ref and returns the
+// rows as Listed, in the query's order.
+func queryCitationRows(tx *sql.Tx, q string, args ...any) ([]deleteimpact.Listed, error) {
+	rows, err := tx.Query(q, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -483,30 +539,37 @@ func CitationsUsingArtifactTx(tx *sql.Tx, graphID, artifactID []byte) ([]deletei
 	return out, rows.Err()
 }
 
-// UnlinkVia names the preflight group of Citations that keep an Artifact
-// linked. A domain-preflight via is named for its refusal code, not an FK edge.
-const UnlinkVia = "evidencegraphs.artifact_in_use"
-
-// UnlinkBlock is one Artifact an edit would remove that the graph's Citations
-// still use, with those Citations shaped for the DeleteImpact recipe.
-type UnlinkBlock struct {
-	ArtifactID []byte
-	Citations  deleteimpact.Group
+// citationRowsExist reports whether a query selecting Citation id and ref
+// returns any row.
+func citationRowsExist(tx *sql.Tx, q string, args ...any) (bool, error) {
+	var found bool
+	err := tx.QueryRow("SELECT EXISTS("+q+")", args...).Scan(&found)
+	return found, err
 }
 
-// UnlinkImpact reports which of the Artifacts an edit would unlink from the
-// graph are used by the graph's Citations, in the order given. An Artifact that
-// is not linked, or that no Citation uses, has no block.
-func UnlinkImpact(c *database.Catalog, graphID []byte, artifactIDs [][]byte) ([]UnlinkBlock, error) {
-	if len(graphID) != 16 {
-		return nil, ErrInvalid
-	}
-	for _, id := range artifactIDs {
-		if len(id) != 16 {
+// UnlinkVia names the preflight group of Citations that keep an Artifact
+// linked. A domain-preflight via is named for its refusal code, not an FK edge.
+const UnlinkVia = apperr.CodeEvidenceGraphsArtifactInUse
+
+// UnlinkBlock is one pair whose unlink is refused, with the refusal and, for a
+// Citation reason, those Citations shaped for the DeleteImpact recipe.
+type UnlinkBlock struct {
+	GraphID, ArtifactID []byte
+	Reason              error // ErrArtifactInUse, ErrLastArtifact or ErrCitationsNeedGraph
+	Citations           deleteimpact.Group
+}
+
+// UnlinkImpact reports which of the (graph, Artifact) pairs an edit would
+// unlink are refused, in the order given, each with its reason. A pair that is
+// not linked, or whose unlink is allowed, has no block. Pairs may span graphs
+// and Artifacts.
+func UnlinkImpact(c *database.Catalog, pairs []Pair) ([]UnlinkBlock, error) {
+	for _, p := range pairs {
+		if len(p.GraphID) != 16 || len(p.ArtifactID) != 16 {
 			return nil, ErrInvalid
 		}
 	}
-	if err := requireDistinct(artifactIDs); err != nil {
+	if err := requireDistinctPairs(pairs); err != nil {
 		return nil, err
 	}
 	db, err := c.DB()
@@ -518,35 +581,96 @@ func UnlinkImpact(c *database.Catalog, graphID []byte, artifactIDs [][]byte) ([]
 		return nil, err
 	}
 	defer tx.Rollback()
-	if _, err := getTx(tx, graphID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrInvalid
-		}
-		return nil, err
-	}
 	var out []UnlinkBlock
-	for _, artifactID := range artifactIDs {
-		linked, err := IsLinkedTx(tx, graphID, artifactID)
+	for _, p := range pairs {
+		if _, err := getTx(tx, p.GraphID); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, ErrInvalid
+			}
+			return nil, err
+		}
+		block, rows, err := checkUnlink(tx, p, true)
 		if err != nil {
 			return nil, err
 		}
-		if !linked {
+		if block == nil {
 			continue
 		}
-		rows, err := CitationsUsingArtifactTx(tx, graphID, artifactID)
+		if len(rows) > 0 {
+			block.Citations, err = deleteimpact.ListedGroup(tx, apperr.From(block.Reason).Code(), catalogmodel.KindCitation, rows)
+		}
 		if err != nil {
 			return nil, err
 		}
-		if len(rows) == 0 {
-			continue
-		}
-		group, err := deleteimpact.ListedGroup(tx, UnlinkVia, catalogmodel.KindCitation, rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, UnlinkBlock{ArtifactID: append([]byte(nil), artifactID...), Citations: group})
+		out = append(out, *block)
 	}
 	return out, nil
+}
+
+// checkUnlink is the one unlink check behind Unlink and UnlinkImpact: nil when
+// the pair is not linked or may be unlinked. Otherwise the first reason, in
+// order: the graph's Citations use the Artifact (ErrArtifactInUse), it is the
+// graph's only link (ErrLastArtifact), or the Artifact's Citations that this
+// graph alone holds are not empty (ErrCitationsNeedGraph). The rows are the
+// Citations behind the first and third reason; they are listed only when list
+// is true, since Unlink needs just the reason and UnlinkImpact the rows.
+func checkUnlink(tx *sql.Tx, p Pair, list bool) (*UnlinkBlock, []deleteimpact.Listed, error) {
+	linked, err := IsLinkedTx(tx, p.GraphID, p.ArtifactID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if !linked {
+		return nil, nil, nil
+	}
+	block := func(reason error) *UnlinkBlock {
+		return &UnlinkBlock{
+			GraphID:    append([]byte(nil), p.GraphID...),
+			ArtifactID: append([]byte(nil), p.ArtifactID...),
+			Reason:     reason,
+		}
+	}
+	if !list {
+		used, err := citationRowsExist(tx, sqlCitationsUsing, p.ArtifactID, p.GraphID)
+		if err != nil {
+			return nil, nil, err
+		}
+		if used {
+			return block(ErrArtifactInUse), nil, nil
+		}
+	} else {
+		using, err := CitationsUsingArtifactTx(tx, p.GraphID, p.ArtifactID)
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(using) > 0 {
+			return block(ErrArtifactInUse), using, nil
+		}
+	}
+	var n int
+	if err := tx.QueryRow(sqlLinkCount, p.GraphID).Scan(&n); err != nil {
+		return nil, nil, err
+	}
+	if n == 1 {
+		return block(ErrLastArtifact), nil, nil
+	}
+	if !list {
+		needed, err := citationRowsExist(tx, sqlCitationsNeedGraph, p.GraphID, p.ArtifactID)
+		if err != nil {
+			return nil, nil, err
+		}
+		if needed {
+			return block(ErrCitationsNeedGraph), nil, nil
+		}
+		return nil, nil, nil
+	}
+	need, err := queryCitationRows(tx, sqlCitationsNeedGraph, p.GraphID, p.ArtifactID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(need) > 0 {
+		return block(ErrCitationsNeedGraph), need, nil
+	}
+	return nil, nil, nil
 }
 
 // checkLink validates the shared input of Link and Unlink: the graph and the
@@ -604,8 +728,9 @@ func Link(tx *database.Tx, userID, graphID, artifactID []byte) ([]rowchange.Chan
 }
 
 // Unlink removes an Artifact from a graph. A link that is not there returns no
-// changes. The graph's Citations keep the Artifact linked (ErrArtifactInUse),
-// and a graph keeps at least one Artifact (ErrLastArtifact).
+// changes. checkUnlink decides: the graph's Citations keep the Artifact linked
+// (ErrArtifactInUse), a graph keeps at least one Artifact (ErrLastArtifact),
+// and an Artifact with Citations keeps at least one graph (ErrCitationsNeedGraph).
 func Unlink(tx *database.Tx, userID, graphID, artifactID []byte) ([]rowchange.Change, error) {
 	if err := checkLink(tx, userID, graphID, artifactID); err != nil {
 		return nil, err
@@ -617,19 +742,12 @@ func Unlink(tx *database.Tx, userID, graphID, artifactID []byte) ([]rowchange.Ch
 	if !linked {
 		return nil, nil
 	}
-	using, err := CitationsUsingArtifactTx(tx.Tx, graphID, artifactID)
+	block, _, err := checkUnlink(tx.Tx, Pair{GraphID: graphID, ArtifactID: artifactID}, false)
 	if err != nil {
 		return nil, err
 	}
-	if len(using) > 0 {
-		return nil, ErrArtifactInUse
-	}
-	var n int
-	if err := tx.QueryRow(sqlLinkCount, graphID).Scan(&n); err != nil {
-		return nil, err
-	}
-	if n == 1 {
-		return nil, ErrLastArtifact
+	if block != nil {
+		return nil, block.Reason
 	}
 	if _, err := tx.Exec(sqlLinkDelete, graphID, artifactID); err != nil {
 		return nil, err
@@ -642,35 +760,66 @@ func Unlink(tx *database.Tx, userID, graphID, artifactID []byte) ([]rowchange.Ch
 	}}, nil
 }
 
-// LinkArtifact links a new Artifact to the given graphs of its Source; no ids
-// means every graph of the Source. A Source with no graph (only direct-SQL
-// fixtures) gets no link.
-func LinkArtifact(tx *database.Tx, userID, sourceID, artifactID []byte, graphIDs [][]byte) ([]rowchange.Change, error) {
+// LinkArtifact links a new Artifact to the graphs of its Source that links
+// names: every graph when links is not Given, exactly links.IDs when it is,
+// and none when it is Given with no ids. A repeated id, or a graph of another
+// Source, is ErrInvalid. A Source with no graph (only direct-SQL fixtures)
+// gets no link.
+func LinkArtifact(tx *database.Tx, userID, sourceID, artifactID []byte, links GraphLinks) ([]rowchange.Change, error) {
 	if tx == nil || len(sourceID) != 16 || len(artifactID) != 16 {
 		return nil, ErrInvalid
 	}
-	if len(graphIDs) == 0 {
+	ids := links.IDs
+	if !links.Given {
 		graphs, err := list(tx.Tx, sourceID)
 		if err != nil {
 			return nil, err
 		}
+		ids = nil
 		for _, g := range graphs {
-			graphIDs = append(graphIDs, g.ID)
-		}
-	} else {
-		if err := requireDistinct(graphIDs); err != nil {
-			return nil, err
+			ids = append(ids, g.ID)
 		}
 	}
-	var changes []rowchange.Change
-	for _, id := range graphIDs {
-		ch, err := Link(tx, userID, id, artifactID)
-		if err != nil {
+	want := make([]Pair, len(ids))
+	for i, id := range ids {
+		want[i] = Pair{GraphID: id, ArtifactID: artifactID}
+	}
+	return applyLinks(tx, userID, nil, want)
+}
+
+// SetArtifactGraphs makes graphIDs the full set of graphs an existing
+// Artifact is linked to, in one write: it links first, then unlinks, so a swap
+// is allowed, and every refusal is Unlink's. It does not check that the
+// Artifact exists; its caller has read the row, and every pair it links goes
+// through Link's checks.
+func SetArtifactGraphs(tx *database.Tx, userID, artifactID []byte, graphIDs [][]byte) ([]rowchange.Change, error) {
+	if tx == nil || len(artifactID) != 16 {
+		return nil, ErrInvalid
+	}
+	rows, err := tx.Query(sqlArtifactGraphs, artifactID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var stored []Pair
+	for rows.Next() {
+		var graphID []byte
+		if err := rows.Scan(&graphID); err != nil {
 			return nil, err
 		}
-		changes = append(changes, ch...)
+		stored = append(stored, Pair{GraphID: graphID, ArtifactID: artifactID})
 	}
-	return changes, nil
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	want := make([]Pair, len(graphIDs))
+	for i, id := range graphIDs {
+		want[i] = Pair{GraphID: id, ArtifactID: artifactID}
+	}
+	return applyLinks(tx, userID, stored, want)
 }
 
 // EnsureRefs mints GPH-… refs for any evidence_graphs row missing one: the

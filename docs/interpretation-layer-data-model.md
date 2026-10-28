@@ -956,6 +956,7 @@ The current design aims to preserve these invariants:
 22. Source credibility assessments are Interpretation entities (`source_credibility_assessments`), not columns on `sources` and not Observation confidence scores.
 23. Citation transcription certainty is the boolean `transcription_uncertain` (+ optional note), media-agnostic; it is not Claim confidence.
 24. An Observation is saved only when its Subject, its Subject value and its Citation's Artifact are in, or linked to, one Evidence graph; a reification Subject (type `source`) may be the value of a non-edge row in any graph (`observations.other_graph` otherwise).
+25. An Artifact with Citations stays linked to at least one Evidence graph (`evidencegraphs.citations_need_graph`); an Artifact with none may stand in no graph. A Citation with no Observation belongs to no graph and is reached through any graph that links its Artifact.
 
 ---
 

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -231,33 +232,42 @@ func UnlinkEvidenceGraphArtifact(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-// GetEvidenceGraphUnlinkImpact is a read: which of the Artifacts a graph edit
-// removes are used by the graph's Citations.
+// GetEvidenceGraphUnlinkImpact is a read: which of the (graph, Artifact) pairs
+// an edit would unlink are refused, each with its reason.
 func GetEvidenceGraphUnlinkImpact(in []byte) ([]byte, error) {
 	var req engine.GetEvidenceGraphUnlinkImpactRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, unmarshalErr("get_evidence_graph_unlink_impact", err)
 	}
-	graphID, err := parseID(req.GetGraphId())
-	if err != nil {
-		return nil, err
-	}
-	artifactIDs, err := parseIDs(req.GetArtifactIds())
-	if err != nil {
-		return nil, err
+	var pairs []evidencegraphs.Pair
+	for _, p := range req.GetPairs() {
+		graphID, err := parseID(p.GetGraphId())
+		if err != nil {
+			return nil, err
+		}
+		artifactID, err := parseID(p.GetArtifactId())
+		if err != nil {
+			return nil, err
+		}
+		pairs = append(pairs, evidencegraphs.Pair{GraphID: graphID, ArtifactID: artifactID})
 	}
 	var out *engine.GetEvidenceGraphUnlinkImpactResponse
-	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		blocks, err := evidencegraphs.UnlinkImpact(c, graphID, artifactIDs)
+	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		blocks, err := evidencegraphs.UnlinkImpact(c, pairs)
 		if err != nil {
 			return err
 		}
 		out = &engine.GetEvidenceGraphUnlinkImpactResponse{}
 		for _, b := range blocks {
-			out.Blocked = append(out.Blocked, &engine.EvidenceGraphUnlinkBlock{
+			block := &engine.EvidenceGraphUnlinkBlock{
+				GraphId:    database.UUIDString(b.GraphID),
 				ArtifactId: database.UUIDString(b.ArtifactID),
-				Citations:  groupToProto(b.Citations),
-			})
+				ReasonCode: apperr.From(b.Reason).Code(),
+			}
+			if b.Citations.Via != "" {
+				block.Citations = groupToProto(b.Citations)
+			}
+			out.Blocked = append(out.Blocked, block)
 		}
 		return nil
 	})

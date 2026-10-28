@@ -1,6 +1,7 @@
 # S12-22 — Artifacts can stand outside every graph
 
-**Status:** Planned
+**Status:** Landed in [#600](https://github.com/mendahu/provenencia/pull/600) (2026-10-28)
+**Landed:** Differences from the plan: the STEP-1 and STEP-2 stop-gaps (the `len(graphIDs) > 0` wrapper in `CreateArtifact`, the single-graph `GetEvidenceGraphUnlinkImpact`) were never written, because the proto, handlers and core changed in one commit; the `wireCase` regexp in `api/ffi/swift_vocabulary_test.go` now accepts `.` so the dotted unlink-reason codes are read (T-17); commits are grouped as engine, Swift and docs. The manual check (section 10) was not run in the app by the implementer. AC-4.1's copy changed to "An artifact with citations must stay in at least one evidence graph." by the user's answer to review UX-1 (2026-10-27).
 **Spike / slice:** Spike 12 · Slice 5 — Audit fixes: High
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the engine half of A-3 and A-8; the views keep what they show today, and S12-38 builds the chrome on brief S12-D7)

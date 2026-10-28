@@ -9183,6 +9183,11 @@ enum L10n {
                 defaultValue: "%lld citations in this graph use this artifact",
                 comment: "Heading over the Citations that keep an Artifact linked to a graph; argument is how many"
             ),
+            "evidencegraphs.citations_need_graph": LocalizedStringResource(
+                "deleteImpact.via.evidenceGraphsCitationsNeedGraph",
+                defaultValue: "%lld citations would be left in no evidence graph",
+                comment: "Heading over the Citations an unlink or a graph delete would leave in no graph; argument is how many"
+            ),
             "citations.artifact_id": LocalizedStringResource(
                 "deleteImpact.via.citationsArtifactId",
                 defaultValue: "%lld citations are drawn from this artifact",
@@ -10947,9 +10952,14 @@ enum L10n {
             defaultValue: "An evidence graph needs at least one artifact.",
             comment: "FFI error evidencegraphs.last_artifact"
         )
+        static let evidenceGraphsCitationsNeedGraph = LocalizedStringResource(
+            "error.evidencegraphs.citations_need_graph",
+            defaultValue: "An artifact with citations must stay in at least one evidence graph.",
+            comment: "FFI error evidencegraphs.citations_need_graph"
+        )
         static let evidenceGraphsInUse = LocalizedStringResource(
             "error.evidencegraphs.in_use",
-            defaultValue: "This evidence graph still has subjects.",
+            defaultValue: "Subjects or citations still need this evidence graph.",
             comment: "FFI error evidencegraphs.in_use"
         )
         static let evidenceGraphsLastGraph = LocalizedStringResource(
@@ -11200,6 +11210,8 @@ enum L10n {
                 return L10n.string(evidenceGraphsArtifactInUse)
             case "evidencegraphs.last_artifact":
                 return L10n.string(evidenceGraphsLastArtifact)
+            case "evidencegraphs.citations_need_graph":
+                return L10n.string(evidenceGraphsCitationsNeedGraph)
             case "evidencegraphs.in_use":
                 return L10n.string(evidenceGraphsInUse)
             case "evidencegraphs.last_graph":

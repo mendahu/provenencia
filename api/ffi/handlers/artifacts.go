@@ -4,6 +4,7 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/ingest"
@@ -31,7 +32,7 @@ func CreateArtifact(in []byte) ([]byte, error) {
 			return nil, err
 		}
 	}
-	graphIDs, err := parseIDs(req.GetGraphIds())
+	graphs, err := parseGraphLinks(req.GetGraphLinks())
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +45,7 @@ func CreateArtifact(in []byte) ([]byte, error) {
 					FileID:      fileID,
 					Label:       req.GetLabel(),
 					Description: req.GetDescription(),
-					GraphIDs:    graphIDs,
+					Graphs:      graphs,
 				})
 			})
 		if err != nil {
@@ -76,6 +77,10 @@ func UpdateArtifact(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	graphs, err := parseGraphLinks(req.GetGraphLinks())
+	if err != nil {
+		return nil, err
+	}
 	var out *engine.UpdateArtifactResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		prev, err := artifacts.Get(c, artifactID)
@@ -92,7 +97,7 @@ func UpdateArtifact(in []byte) ([]byte, error) {
 		}
 		_, wrote, err := writes.Run(c, writes.Op{Action: "update_artifact", UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-				changes, err := artifacts.Update(tx, userID, updated)
+				changes, err := artifacts.Update(tx, userID, updated, graphs)
 				return struct{}{}, changes, err
 			})
 		if err != nil {
@@ -183,7 +188,7 @@ func IngestArtifactFile(in []byte) ([]byte, error) {
 		}
 		_, wrote, err := writes.Run(c, writes.Op{Action: "update_artifact", UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-				changes, err := artifacts.Update(tx, userID, updated)
+				changes, err := artifacts.Update(tx, userID, updated, evidencegraphs.GraphLinks{})
 				return struct{}{}, changes, err
 			})
 		if err != nil {
