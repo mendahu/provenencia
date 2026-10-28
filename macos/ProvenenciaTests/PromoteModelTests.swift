@@ -37,7 +37,7 @@ struct PromoteModelTests {
 
     private func row(_ id: String, handleID: String, assessment: String = "strong") -> CatalogPromoteGraphAlignmentRow {
         CatalogPromoteGraphAlignmentRow(
-            subjectID: id, kind: "person", target: "handle", handleID: handleID, handleRef: "PER-\(handleID)",
+            subjectID: id, kind: "person", target: .handle, handleID: handleID, handleRef: "PER-\(handleID)",
             score: 5, assessment: assessment, reason: .agrees, reasonPropertyKey: "name", reasonPropertyOrigin: "provenencia",
             alternatives: [
                 CatalogPromoteGraphAlignmentAlternative(handleID: "other", handleRef: "PER-OTHER", score: 1),
@@ -409,8 +409,8 @@ struct PromoteModelTests {
         _ = await waitUntil { !model.isProposing }
         let held = store.lastPromoteFixed.sorted { $0.subjectID < $1.subjectID }
         #expect(held == [
-            CatalogPromoteGraphAlignmentFixed(subjectID: "a", target: "new"),
-            CatalogPromoteGraphAlignmentFixed(subjectID: "b", target: "skip"),
+            CatalogPromoteGraphAlignmentFixed(subjectID: "a", target: .new),
+            CatalogPromoteGraphAlignmentFixed(subjectID: "b", target: .skip),
         ])
     }
 
@@ -656,6 +656,14 @@ struct PromoteModelTests {
             kind: .participation, edgeKeys: ("person", "event"),
             term: ("role", "godparent", "user", "Godparent")
         ) == L10n.Promote.via(neighbor: "Ada", ref: "PER-e1", role: "godparent"))
+    }
+
+    @Test func anUnplacedRowIsWordedNoRecordSuggested() async {
+        let model = await loadedAdaAndBea(row("a", handleID: "e1"), row("b", handleID: "e2"))
+        let bea = model.flow.row("b")!
+        let text = model.reasonText(.unplaced, on: bea)
+        #expect(text == L10n.string(L10n.Promote.reasonUnplaced))
+        #expect(text == "No record suggested")
     }
 
     @Test func movesAreWordedNamingTheNeighbor() async {

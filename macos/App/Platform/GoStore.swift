@@ -982,7 +982,7 @@ struct GoStore: GenealogyStore {
             return CatalogPromoteGraphAlignmentRow(
                 subjectID: r.subjectID,
                 kind: r.kind,
-                target: r.target,
+                target: PromoteTargetCode(wire: r.target),
                 handleID: r.handleID,
                 handleRef: r.handleRef,
                 score: r.score,
@@ -1075,7 +1075,7 @@ struct GoStore: GenealogyStore {
         var row = Provenencia_Engine_V1_PromoteGraphAlignmentFixed()
         row.subjectID = f.subjectID
         row.handleID = f.handleID
-        row.target = f.target
+        row.target = f.target.wire
         return row
     }
 

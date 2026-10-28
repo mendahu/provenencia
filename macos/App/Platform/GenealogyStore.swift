@@ -296,7 +296,7 @@ struct CatalogPromoteResult: Sendable, Equatable {
 struct CatalogPromoteGraphAlignmentFixed: Sendable, Equatable {
     var subjectID: String
     var handleID: String = ""
-    var target: String = "handle"
+    var target: PromoteTargetCode = .handle
 }
 
 /// A runner-up handle on a graph-alignment row.
@@ -320,13 +320,13 @@ struct CatalogPromoteGraphAlignmentAlternative: Sendable, Equatable {
 struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
     var subjectID: String
     var kind: String
-    var target: String
+    var target: PromoteTargetCode
     var handleID: String
     var handleRef: String
     var score: Double
     var assessment: String
     /// A row reason, worded by the page.
-    var reason: PromoteReasonCode = .empty
+    var reason: PromoteReasonCode = .unplaced
     /// With reason agrees: the Property that agrees most.
     var reasonPropertyKey: String = ""
     var reasonPropertyOrigin: String = ""

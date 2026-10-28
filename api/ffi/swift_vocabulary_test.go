@@ -322,9 +322,13 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		{
 			name: "promote reasons", path: swiftVocabulary, enum: "PromoteReasonCode", re: wireCase,
 			want: sorted(string(graphalign.ReasonVia), string(graphalign.ReasonDecided), string(graphalign.ReasonAgrees),
-				string(graphalign.ReasonWeak), string(graphalign.ReasonTaken), string(graphalign.ReasonNoMatch),
+				string(graphalign.ReasonWeak), string(graphalign.ReasonTaken), string(graphalign.ReasonUnplaced),
 				string(graphalign.ReasonEmpty), string(graphalign.ReasonNeighborPlaced), string(graphalign.ReasonNeighborMoved),
 				string(graphalign.ReasonNeighborReleased)),
+		},
+		{
+			name: "promote row targets", path: swiftVocabulary, enum: "PromoteTargetCode", re: wireCase,
+			want: sorted("", string(graphalign.TargetHandle), string(graphalign.TargetNew), string(graphalign.TargetSkip)),
 		},
 		{
 			name: "evidence outcomes", path: swiftVocabulary, enum: "EvidenceOutcome", re: wireCase,

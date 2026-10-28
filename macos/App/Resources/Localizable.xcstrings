@@ -17674,7 +17674,7 @@
       }
     },
     "promote.reason.weak": {
-      "comment": "Reason on a row whose best candidate is below the bar",
+      "comment": "Reason on a record in a row's menu whose score is below the weak bar",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -17697,14 +17697,14 @@
         }
       }
     },
-    "promote.reason.noMatch": {
-      "comment": "Reason on a row with no candidate handle",
+    "promote.reason.unplaced": {
+      "comment": "Reason on a Promote row that Promote suggests no record for",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No matching record"
+            "value": "No record suggested"
           }
         }
       }

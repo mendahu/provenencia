@@ -1,6 +1,7 @@
 # S11-47 — Promote suggests a record or nothing
 
-**Status:** Planned
+**Status:** Landed in #598 (2026-10-27)
+**Landed:** The proto output was regenerated with `./scripts/generate-proto.sh`. Review round 1 changed three things. A row Promote suggests no record for, drafted onto a weak record by the page, now captions that record's reason instead of "No record suggested" (`PromoteFlow.Row.captionReason`, F-1). `CatalogPromoteGraphAlignmentFixed.target` is now a typed `PromoteTargetCode` (with `wire`), which supersedes the Out line "Typing the send side" for that type only (same-pass cleanup, MNT-1); the batch row stays Out as a follow-up. Comment edits beyond D-6, D-9 and D-15: the `possible_duplicate` comments (proto field 19, `RowFlags.PossibleDuplicate`), the `flagAlikeNewRows` doc comment, `name-candidates.md`, and the add-match-rule row-reason recipe (F-3).
 **Spike / slice:** Spike 11 · Slice 10 — Name candidates
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: the row, its menu, its Updated badge and caption already exist; this PR changes which target a row opens on and one caption sentence)

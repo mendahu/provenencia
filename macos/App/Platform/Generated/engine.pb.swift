@@ -5566,7 +5566,7 @@ public nonisolated struct Provenencia_Engine_V1_PromoteGraphAlignmentRow: @unche
     set {_uniqueStorage()._kind = newValue}
   }
 
-  /// handle, new, skip
+  /// handle, new or skip; empty when Promote suggests no record
   public var target: String {
     get {_storage._target}
     set {_uniqueStorage()._target = newValue}
@@ -5654,14 +5654,15 @@ public nonisolated struct Provenencia_Engine_V1_PromoteGraphAlignmentRow: @unche
   }
 
   /// With possible_duplicate: the other row on this layer this one may be the
-  /// same as (it took the handle this row wanted, or both are New and alike).
+  /// same as (it took the handle this row wanted, or both would be new records
+  /// (unplaced or decided New) and score alike).
   public var duplicateOfSubjectID: String {
     get {_storage._duplicateOfSubjectID}
     set {_uniqueStorage()._duplicateOfSubjectID = newValue}
   }
 
-  /// Why the row reads as it does: via, decided, agrees, weak, taken,
-  /// no_match, empty. The page words it. With agrees, the agreeing Property.
+  /// Why the row reads as it does: via, decided, agrees, taken, empty, or
+  /// nothing when Promote suggests no record. The page words it. With agrees, the agreeing Property.
   public var reason: String {
     get {_storage._reason}
     set {_uniqueStorage()._reason = newValue}

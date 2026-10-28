@@ -13369,7 +13369,7 @@ type PromoteGraphAlignmentRow struct {
 	state             protoimpl.MessageState              `protogen:"open.v1"`
 	SubjectId         string                              `protobuf:"bytes,1,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
 	Kind              string                              `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
-	Target            string                              `protobuf:"bytes,3,opt,name=target,proto3" json:"target,omitempty"` // handle, new, skip
+	Target            string                              `protobuf:"bytes,3,opt,name=target,proto3" json:"target,omitempty"` // handle, new or skip; empty when Promote suggests no record
 	HandleId          string                              `protobuf:"bytes,4,opt,name=handle_id,json=handleId,proto3" json:"handle_id,omitempty"`
 	HandleRef         string                              `protobuf:"bytes,5,opt,name=handle_ref,json=handleRef,proto3" json:"handle_ref,omitempty"`
 	Score             float64                             `protobuf:"fixed64,6,opt,name=score,proto3" json:"score,omitempty"`
@@ -13388,10 +13388,11 @@ type PromoteGraphAlignmentRow struct {
 	ViaBridgeType        string `protobuf:"bytes,17,opt,name=via_bridge_type,json=viaBridgeType,proto3" json:"via_bridge_type,omitempty"`
 	ViaRole              string `protobuf:"bytes,18,opt,name=via_role,json=viaRole,proto3" json:"via_role,omitempty"`
 	// With possible_duplicate: the other row on this layer this one may be the
-	// same as (it took the handle this row wanted, or both are New and alike).
+	// same as (it took the handle this row wanted, or both would be new records
+	// (unplaced or decided New) and score alike).
 	DuplicateOfSubjectId string `protobuf:"bytes,19,opt,name=duplicate_of_subject_id,json=duplicateOfSubjectId,proto3" json:"duplicate_of_subject_id,omitempty"`
-	// Why the row reads as it does: via, decided, agrees, weak, taken,
-	// no_match, empty. The page words it. With agrees, the agreeing Property.
+	// Why the row reads as it does: via, decided, agrees, taken, empty, or
+	// nothing when Promote suggests no record. The page words it. With agrees, the agreeing Property.
 	Reason               string `protobuf:"bytes,20,opt,name=reason,proto3" json:"reason,omitempty"`
 	ReasonPropertyKey    string `protobuf:"bytes,21,opt,name=reason_property_key,json=reasonPropertyKey,proto3" json:"reason_property_key,omitempty"`
 	ReasonPropertyOrigin string `protobuf:"bytes,22,opt,name=reason_property_origin,json=reasonPropertyOrigin,proto3" json:"reason_property_origin,omitempty"`

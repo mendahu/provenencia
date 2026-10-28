@@ -336,7 +336,7 @@ final class PromoteModel {
         case .agrees(let key, let origin): return L10n.Promote.agreesOn(property: propertyLabel(key: key, origin: origin))
         case .weak: return L10n.string(L10n.Promote.reasonWeak)
         case .taken: return L10n.string(L10n.Promote.reasonTaken)
-        case .noMatch: return L10n.string(L10n.Promote.reasonNoMatch)
+        case .unplaced: return L10n.string(L10n.Promote.reasonUnplaced)
         case .empty: return L10n.string(L10n.Promote.reasonEmpty)
         case .neighborPlaced(let id), .neighborMoved(let id), .neighborReleased(let id):
             guard let neighbor = neighbor(id) else { return L10n.string(L10n.Promote.reasonMoveUnknown) }

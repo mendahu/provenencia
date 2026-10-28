@@ -113,13 +113,15 @@ type Via struct {
 type Reason string
 
 const (
-	ReasonVia     Reason = "via"      // reached from a mapped neighbor (Row.Via)
-	ReasonDecided Reason = "decided"  // held as given (a decision or an existing claim)
-	ReasonAgrees  Reason = "agrees"   // property-only match; ReasonProperty agrees most
-	ReasonWeak    Reason = "weak"     // the best candidate is below the accept bar
-	ReasonTaken   Reason = "taken"    // another row took the handle (Flags.DuplicateOf)
-	ReasonNoMatch Reason = "no_match" // no candidate at all: New
-	ReasonEmpty   Reason = "empty"    // nothing to match on: Skip
+	ReasonVia     Reason = "via"     // reached from a mapped neighbor (Row.Via)
+	ReasonDecided Reason = "decided" // held as given (a decision or an existing claim)
+	ReasonAgrees  Reason = "agrees"  // property-only match; ReasonProperty agrees most
+	ReasonWeak    Reason = "weak"    // an alternative below the weak bar: too little agrees to name
+	ReasonTaken   Reason = "taken"   // another row took the handle (Flags.DuplicateOf)
+	ReasonEmpty   Reason = "empty"   // nothing to match on
+	// ReasonUnplaced is the zero value: Align placed nothing and nothing else
+	// applies; the page says no record is suggested.
+	ReasonUnplaced Reason = ""
 )
 
 // Move reasons: why settling released a row's earlier pair. They extend Reason
@@ -157,7 +159,8 @@ type RowFlags struct {
 	ConflictWithFixed bool
 	// PossibleDuplicate: DuplicateOf may be the same entity as this row. It
 	// took the handle this row would have matched, holds the same handle,
-	// or both rows are New and score alike.
+	// or both rows would be new records (unplaced or decided New) and score
+	// alike.
 	PossibleDuplicate bool
 	DuplicateOf       []byte
 	// Contested: a comparison behind the pair this row reports conflicts,
@@ -167,8 +170,10 @@ type RowFlags struct {
 
 // Row is one Subject's proposal.
 type Row struct {
-	SubjectID    []byte
-	Kind         string
+	SubjectID []byte
+	Kind      string
+	// Target is TargetHandle when Align places the Subject; a held decision
+	// keeps its TargetNew or TargetSkip; otherwise empty: Align suggests nothing.
 	Target       Target
 	HandleID     []byte
 	HandleRef    string

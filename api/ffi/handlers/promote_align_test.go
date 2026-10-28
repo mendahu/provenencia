@@ -98,7 +98,7 @@ func TestProposeSendsContested(t *testing.T) {
 		wantReason string
 		wantFlag   bool
 	}{
-		{"negative, unfixed", observations.PolarityNegative, false, "skip", "weak", true},
+		{"negative, unfixed", observations.PolarityNegative, false, "", "", true},
 		{"negative, fixed", observations.PolarityNegative, true, "handle", "decided", true},
 		{"positive", observations.PolarityPositive, false, "handle", "agrees", false},
 	}
@@ -182,8 +182,8 @@ func TestProposalProtoSendsMove(t *testing.T) {
 	dir, _, _, _ := subjectFixture(t)
 	a, b, n := uuid.New(), uuid.New(), uuid.New()
 	prop := graphalign.Proposal{Rows: []graphalign.Row{
-		{SubjectID: a[:], Target: graphalign.TargetSkip, Move: &graphalign.Move{Reason: graphalign.ReasonNeighborPlaced, NeighborSubjectID: n[:]}},
-		{SubjectID: b[:], Target: graphalign.TargetSkip},
+		{SubjectID: a[:], Move: &graphalign.Move{Reason: graphalign.ReasonNeighborPlaced, NeighborSubjectID: n[:]}},
+		{SubjectID: b[:]},
 	}}
 	var resp *engine.ProposePromoteGraphAlignmentResponse
 	if err := withProjectCatalog(dir, func(c *database.Catalog) error {

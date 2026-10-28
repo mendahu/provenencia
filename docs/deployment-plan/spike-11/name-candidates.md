@@ -8,7 +8,7 @@ Matching today: [`comparison-layers.md`](comparison-layers.md) (layer 1 names, l
 
 1. **Shortlist** (`core/shortlist`): records of the row's kind that share a key with the Subject, such as a name word (`name|w:amy`) or an alias set (`name|a:…`).
 2. **Candidate gate** (`graphalign.Candidates`): a shortlisted record is a candidate only if subject compare's similarity is at least `alignment.MinSimilarity` (0.4 since S11-43; 0.5 before). The top `TopK` (5) are kept, plus ties up to `TieCap`.
-3. **Menu:** the proposed record, then up to `alignment.Alternatives` (3) other candidates. With no candidate, a Subject with values opens New (`no_match`) and an empty menu.
+3. **Menu:** the proposed record, then up to `alignment.Alternatives` (3) other candidates. With no candidate, a row opens unset with an empty menu.
 
 ## Case 1 — "Amy" against "Amy Lee Anne Long"
 
@@ -66,8 +66,8 @@ With `{desiree, des}` as a nickname set, the pair shortlists and compares at sim
 
 ## Promote suggests a record or nothing
 
-Go today gives every row it does not place a target: Skip (`weak`) when a candidate fell short, New (`no_match`) when there was none (`graphalign/rows.go`). Swift drafts neither. A row with no band opens unset (`PromoteFlow.draftTarget`), and the Skip / New it receives survive only in a rare fallback (an unplaced row with a band that was not taken falls through to Skip). The user's call (2026-10-24): remove it (S11-47). A proposal row carries a handle or no target; its alternatives stay. New and Skip are only ever the researcher's choice. A decided New or Skip still goes to Go as a fixed pair (`PromoteGraphAlignmentFixed`), unchanged.
+Until S11-47, Go gave every row it did not place a target: Skip (`weak`) when a candidate fell short, New (`no_match`) when there was none (`graphalign/rows.go`). Swift drafted neither. A row with no band opens unset (`PromoteFlow.draftTarget`), and the Skip / New it received survived only in a rare fallback (an unplaced row with a band that was not taken fell through to Skip). The user's call (2026-10-24): remove it (S11-47). A proposal row carries a handle or no target; its alternatives stay. New and Skip are only ever the researcher's choice. A decided New or Skip still goes to Go as a fixed pair (`PromoteGraphAlignmentFixed`), unchanged.
 
 So lowering the gate does not change how a row opens: "Amy" still opens unset, now with "Amy Lee Anne Long" in its menu.
 
-Go's possible-duplicate check (`rows.go`, two look-alike rows that would both be new records) finds its rows by `TargetNew` today; S11-47 finds them as unplaced rows instead, so the "also new" note still works.
+Go's possible-duplicate check (`rows.go`, two look-alike rows that would both be new records) found its rows by `TargetNew` before S11-47; it now checks unplaced rows and decided New rows, so the "also new" note still works.
