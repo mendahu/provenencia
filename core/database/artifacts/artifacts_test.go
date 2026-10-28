@@ -9,12 +9,12 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/filederivatives"
@@ -646,21 +646,40 @@ func TestArtifactDelete(t *testing.T) {
 			}
 		})
 		t.Run("records cover clear in revision", func(t *testing.T) {
-			coverArt := newCoverArtifact()
-			setCover(src.ID, coverArt.ID)
+			coverFor := func(sourceID []byte) Artifact {
+				t.Helper()
+				pngPath := filepath.Join(t.TempDir(), "cover.png")
+				img := image.NewRGBA(image.Rect(0, 0, 8, 8))
+				var buf bytes.Buffer
+				if err := png.Encode(&buf, img); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(pngPath, buf.Bytes(), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				ingested, err := ingest.File(c, pngPath, userID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				art, err := runCreate(c, userID, CreateInput{
+					SourceID: sourceID, FileID: ingested.File.ID, Label: "Cover scan",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				return art
+			}
 			src2, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
 				return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Second Bible"})
 			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := db.Exec(`UPDATE sources SET cover_mode = ?, primary_artifact_id = ? WHERE id = ?`,
-				sources.CoverModeArtifact, coverArt.ID, src2.ID); err != nil {
-				t.Fatal(err)
-			}
+			coverArt2 := coverFor(src2.ID)
+			setCover(src2.ID, coverArt2.ID)
 			var wantFields map[string]rowchange.FieldDiff
 			if _, err := writes.Call(c, writes.Op{Action: "set_source_cover", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-				_, ch, err := sources.SetCover(tx, userID, src.ID, sources.CoverModeTypeIcon, nil)
+				_, ch, err := sources.SetCover(tx, userID, src2.ID, sources.CoverModeTypeIcon, nil)
 				if len(ch) == 1 {
 					wantFields = ch[0].Fields
 				}
@@ -668,6 +687,8 @@ func TestArtifactDelete(t *testing.T) {
 			}); err != nil {
 				t.Fatal(err)
 			}
+			setCover(src2.ID, coverArt2.ID)
+			coverArt := coverFor(src.ID)
 			setCover(src.ID, coverArt.ID)
 			var got []rowchange.Change
 			if _, err := writes.Call(c, writes.Op{Action: "delete_artifact", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
@@ -677,35 +698,7 @@ func TestArtifactDelete(t *testing.T) {
 			}); err != nil {
 				t.Fatal(err)
 			}
-			deleteIdx := -1
-			for i, ch := range got {
-				if ch.EntityType == "artifact" && ch.Action == rowchange.ActionDelete {
-					deleteIdx = i
-				}
-			}
-			if deleteIdx < 0 {
-				t.Fatal("no artifact delete change")
-			}
-			var sourceUpdate *rowchange.Change
-			for i, ch := range got {
-				if ch.EntityType != "source" || ch.Action != rowchange.ActionUpdate || !bytes.Equal(ch.EntityID, src2.ID) {
-					continue
-				}
-				if sourceUpdate != nil {
-					t.Fatal("duplicate source update for src2")
-				}
-				c := ch
-				sourceUpdate = &c
-				if i >= deleteIdx {
-					t.Fatalf("source update after artifact delete at %d", i)
-				}
-			}
-			if sourceUpdate == nil {
-				t.Fatal("no source update for src2")
-			}
-			if !reflect.DeepEqual(sourceUpdate.Fields, wantFields) {
-				t.Fatalf("fields %+v want %+v", sourceUpdate.Fields, wantFields)
-			}
+			dbtest.RequireUpdateBeforeDelete(t, got, "artifact", "source", src.ID, wantFields)
 		})
 		t.Run("non-cover artifact emits no source change", func(t *testing.T) {
 			plain, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "Plain scan"})

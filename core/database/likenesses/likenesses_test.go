@@ -3,7 +3,6 @@ package likenesses_test
 import (
 	"bytes"
 	"errors"
-	"reflect"
 	"slices"
 	"testing"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/likenesses"
@@ -397,21 +397,21 @@ func TestForEntitiesPreferred(t *testing.T) {
 		t.Run("records pointer clear in revision", func(t *testing.T) {
 			f := newFixture(t)
 			h, _, b, _ := f.twoLikenesses()
-			h2 := f.promote(f.personOn(f.source("Diary")), nil)
-			f.setPreferred(h, b.ID)
-			db, err := f.c.DB()
-			must(t, err)
-			_, err = db.Exec(`UPDATE canonical_entities SET preferred_likeness_observation_id = ? WHERE id = ?`, b.ID, h2)
-			must(t, err)
+			diary := f.source("Diary")
+			sd := f.personOn(diary)
+			h2 := f.promote(sd, nil)
+			ob2 := observationstest.SaveLikeness(f.t, f.c, userID, diary.ID, sd.ID, 150)
+			f.setPreferred(h2, ob2.ID)
 			var wantFields map[string]rowchange.FieldDiff
-			_, err = writes.Call(f.c, writes.Op{Action: "set_preferred_likeness", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-				ch, err := canonicalentities.SetPreferredLikeness(tx, userID, h, nil)
+			_, err := writes.Call(f.c, writes.Op{Action: "set_preferred_likeness", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				ch, err := canonicalentities.SetPreferredLikeness(tx, userID, h2, nil)
 				if len(ch) == 1 {
 					wantFields = ch[0].Fields
 				}
 				return struct{}{}, ch, err
 			})
 			must(t, err)
+			f.setPreferred(h2, ob2.ID)
 			f.setPreferred(h, b.ID)
 			var got []rowchange.Change
 			_, err = writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
@@ -420,35 +420,7 @@ func TestForEntitiesPreferred(t *testing.T) {
 				return struct{}{}, ch, err
 			})
 			must(t, err)
-			deleteIdx := -1
-			for i, ch := range got {
-				if ch.EntityType == "observation" && ch.Action == rowchange.ActionDelete {
-					deleteIdx = i
-				}
-			}
-			if deleteIdx < 0 {
-				t.Fatal("no observation delete change")
-			}
-			var entityUpdate *rowchange.Change
-			for i, ch := range got {
-				if ch.EntityType != "canonical_entity" || ch.Action != rowchange.ActionUpdate || !bytes.Equal(ch.EntityID, h2) {
-					continue
-				}
-				if entityUpdate != nil {
-					t.Fatal("duplicate canonical_entity update for h2")
-				}
-				c := ch
-				entityUpdate = &c
-				if i >= deleteIdx {
-					t.Fatalf("canonical_entity update after observation delete at %d", i)
-				}
-			}
-			if entityUpdate == nil {
-				t.Fatal("no canonical_entity update for h2")
-			}
-			if !reflect.DeepEqual(entityUpdate.Fields, wantFields) {
-				t.Fatalf("fields %+v want %+v", entityUpdate.Fields, wantFields)
-			}
+			dbtest.RequireUpdateBeforeDelete(t, got, "observation", "canonical_entity", h, wantFields)
 		})
 		t.Run("non-preferred delete emits no canonical_entity change", func(t *testing.T) {
 			f := newFixture(t)
