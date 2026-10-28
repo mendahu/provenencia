@@ -150,9 +150,9 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Artifact, []rowchan
 // Update patches label, description, and/or first-attach file_id, and, when
 // graphs is Given, sets the Artifact's graph links in the same write. The
 // caller records the returned changes. An unchanged row with no links given
-// returns no changes. Clearing
-// a set file_id back to null is rejected. Replacing a set file_id with a
-// different File is rejected (first-attach only).
+// returns no changes. Clearing a set file_id back to null is rejected.
+// Replacing a set file_id with a different File is rejected (first-attach
+// only).
 func Update(tx *database.Tx, userID []byte, a Artifact, graphs evidencegraphs.GraphLinks) ([]rowchange.Change, error) {
 	if tx == nil {
 		return nil, ErrInvalid

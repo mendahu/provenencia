@@ -25,7 +25,8 @@ var (
 	ErrLastArtifact  = apperr.New(apperr.CodeEvidenceGraphsLastArtifact, apperr.KindUser)
 	// ErrCitationsNeedGraph: an Artifact with Citations keeps at least one graph.
 	ErrCitationsNeedGraph = apperr.New(apperr.CodeEvidenceGraphsCitationsNeedGraph, apperr.KindUser)
-	// ErrInUse is returned by Delete while Subjects belong to the graph.
+	// ErrInUse is returned by Delete while Subjects belong to the graph or while
+	// it is the only graph of an Artifact with Citations.
 	ErrInUse = apperr.New(apperr.CodeEvidenceGraphsInUse, apperr.KindConflict)
 	// ErrLastGraph: a Source keeps at least one graph.
 	ErrLastGraph = apperr.New(apperr.CodeEvidenceGraphsLastGraph, apperr.KindUser)
@@ -223,9 +224,9 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Graph, []rowchange.
 	return g, changes, nil
 }
 
-// Delete deletes a graph that is not its Source's last and has no Subjects,
-// releasing its links. Deleteimpact's report decides, so the delete preview and
-// this write agree.
+// Delete deletes a graph that is not its Source's last, has no Subjects and is
+// not the only graph of an Artifact with Citations, releasing its links.
+// Deleteimpact's report decides, so the delete preview and this write agree.
 func Delete(tx *database.Tx, userID, graphID []byte) ([]rowchange.Change, error) {
 	if tx == nil || len(graphID) != 16 {
 		return nil, ErrInvalid
