@@ -294,6 +294,7 @@ final class SourceMetadataSection {
         if list[idx].suggested {
             list[idx].valueText = ""
             list[idx].hasValue = false
+            list[idx].openHref = ""
         } else {
             list.remove(at: idx)
         }

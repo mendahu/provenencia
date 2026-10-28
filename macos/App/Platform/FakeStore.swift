@@ -624,6 +624,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if let idx = list.firstIndex(where: { $0.field.id == fieldID }) {
                 list[idx].valueText = valueText
                 list[idx].hasValue = true
+                // The fake computes no web link; a test that needs one seeds `openHref`.
+                list[idx].openHref = ""
                 entry = list[idx]
             } else {
                 let field = (fieldsByProject[projectDir] ?? []).first { $0.id == fieldID }

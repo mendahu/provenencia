@@ -1073,6 +1073,14 @@ struct CatalogMetadataEntry: Sendable, Equatable, Identifiable {
     var hasValue: Bool
     var suggested: Bool
     var sortOrder: Int32
+    /// The web link Go computed for a url-typed value (`sourcemetadata.WorkspaceEntry.OpenHref`);
+    /// empty when the value is not one. The only link the app opens from metadata.
+    var openHref: String = ""
+
+    /// `openHref` as a URL, or nil when Go computed no link.
+    var openURL: URL? {
+        openHref.isEmpty ? nil : URL(string: openHref)
+    }
 }
 
 struct CatalogSourceWorkspace: Sendable, Equatable {
