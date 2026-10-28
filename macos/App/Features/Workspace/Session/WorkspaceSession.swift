@@ -93,16 +93,11 @@ final class WorkspaceSession {
     /// Registry-backed get-or-load.
     @discardableResult
     func query<Value>(_ key: CatalogQueryKey) -> QueryHandle<Value> {
-        ensureQuery(key) { [store, registry] in
-            let result = try await registry.load(key: key, store: store)
-            guard let typed = result as? Value else {
-                #if DEBUG
-                assertionFailure("CatalogQueryKey \(key) value type mismatch for \(Value.self)")
-                #endif
-                throw CatalogQueryRegistryError.typeMismatch
-            }
-            return typed
+        key.kind.descriptor.warm(self, key)
+        guard let handle: QueryHandle<Value> = queryHandle(key) else {
+            preconditionFailure("CatalogQueryKey \(key) warmed a different value type than \(Value.self)")
         }
+        return handle
     }
 
     /// Invalidates the key, then queries it: the read-it-again path. Keeps any
@@ -171,7 +166,7 @@ final class WorkspaceSession {
         }
         #endif
         for key in place.queryKeys {
-            warmQuery(key)
+            key.kind.descriptor.warm(self, key)
         }
     }
 
@@ -364,55 +359,12 @@ final class WorkspaceSession {
     /// Unwarmed keys load on the next `apply(location:)` / `query`.
     private func revalidate(_ key: CatalogQueryKey) {
         guard handles[key] != nil else { return }
-        warmQuery(key)
+        key.kind.descriptor.warm(self, key)
     }
 
     func invalidateAll(matching predicate: (CatalogQueryKey) -> Bool) {
         for key in handles.keys where predicate(key) {
             invalidate(key)
-        }
-    }
-
-    private func warmQuery(_ key: CatalogQueryKey) {
-        switch key {
-        case .sourcesList:
-            let _: QueryHandle<[CatalogSource]> = query(key)
-        case .sourceTypesList:
-            let _: QueryHandle<[CatalogSourceType]> = query(key)
-        case .metadataFieldsList:
-            let _: QueryHandle<[CatalogMetadataField]> = query(key)
-        case .credibilityGradesList:
-            let _: QueryHandle<[CatalogCredibilityGrade]> = query(key)
-        case .confidenceGradesList:
-            let _: QueryHandle<[CatalogClaimConfidenceGrade]> = query(key)
-        case .sourceWorkspace:
-            let _: QueryHandle<CatalogSourceWorkspace> = query(key)
-        case .typeSuggestions:
-            let _: QueryHandle<[CatalogTypeSuggestion]> = query(key)
-        case .evidenceGraph:
-            let _: QueryHandle<EvidenceGraphRows> = query(key)
-        case .citationCounts:
-            let _: QueryHandle<[String: Int]> = query(key)
-        case .propertiesWorkspace:
-            let _: QueryHandle<PropertiesSnapshot> = query(key)
-        case .connectRules:
-            let _: QueryHandle<[CatalogConnectRule]> = query(key)
-        case .propertyTerms:
-            let _: QueryHandle<[CatalogPropertyTerm]> = query(key)
-        case .citationsByArtifact:
-            let _: QueryHandle<[CatalogListedCitation]> = query(key)
-        case .evidenceGraphProgress:
-            let _: QueryHandle<[String: EvidenceGraphProgress]> = query(key)
-        case .evidenceGraphsList:
-            let _: QueryHandle<[CatalogEvidenceGraph]> = query(key)
-        case .personsList:
-            let _: QueryHandle<[CatalogPersonHeader]> = query(key)
-        case .eventsList:
-            let _: QueryHandle<[CatalogEventHeader]> = query(key)
-        case .placesList:
-            let _: QueryHandle<[CatalogPlaceHeader]> = query(key)
-        case .conclusionDetail:
-            let _: QueryHandle<CatalogConclusionDetail> = query(key)
         }
     }
 

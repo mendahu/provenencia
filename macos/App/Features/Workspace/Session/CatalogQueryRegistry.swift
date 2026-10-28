@@ -1,7 +1,7 @@
 import Foundation
 
-enum CatalogQueryRegistryError: Error {
-    case typeMismatch
+private func mismatchedCatalogKey(_ key: CatalogQueryKey, _ kind: CatalogQueryKey.Kind) -> Never {
+    preconditionFailure("CatalogQueryKey \(key) is not \(kind)")
 }
 
 /// One cache effect of a mutation. Keys carrying an id resolve to `allCached`
@@ -36,6 +36,38 @@ struct CatalogQueryDescriptor: Sendable {
     /// How a write that reports its activity moves this list's rows in
     /// place (no load). `nil` for lists without a last-updated cell.
     var lastUpdated: CatalogLastUpdatedPatch?
+    /// Starts the typed load for this kind. Closed over `Value` by `make`.
+    let warm: @MainActor @Sendable (WorkspaceSession, CatalogQueryKey) -> Void
+}
+
+extension CatalogQueryDescriptor {
+    /// One factory per kind so the loader and the warm path share `Value`.
+    /// `load` `guard case`s the key; a mismatch is unreachable when warm runs
+    /// from `key.kind.descriptor`.
+    static func make<Value>(
+        kind: CatalogQueryKey.Kind,
+        stalePolicy: CatalogQueryStalePolicy,
+        invalidateOn: Set<CatalogMutationKind>,
+        whenHidden: CatalogHiddenPolicy = .revalidate,
+        invalidation: @escaping @Sendable (ProjectKey, CatalogMutation) -> CatalogQueryInvalidation,
+        lastUpdated: CatalogLastUpdatedPatch? = nil,
+        load: @escaping @Sendable (CatalogQueryKey, any GenealogyStore) async throws -> Value
+    ) -> CatalogQueryDescriptor {
+        CatalogQueryDescriptor(
+            kind: kind,
+            stalePolicy: stalePolicy,
+            invalidateOn: invalidateOn,
+            whenHidden: whenHidden,
+            invalidation: invalidation,
+            lastUpdated: lastUpdated,
+            warm: { session, key in
+                let store = session.store
+                let _: QueryHandle<Value> = session.ensureQuery(key) {
+                    try await load(key, store)
+                }
+            }
+        )
+    }
 }
 
 /// Declarative catalog read loaders and mutation invalidation map.
@@ -62,91 +94,6 @@ struct CatalogQueryRegistry: Sendable {
 
     func stalePolicy(for key: CatalogQueryKey) -> CatalogQueryStalePolicy {
         descriptor(for: key).stalePolicy
-    }
-
-    func load(key: CatalogQueryKey, store: any GenealogyStore) async throws -> Any {
-        switch key {
-        case .sourcesList(let project):
-            return try await store.listSources(projectDir: project.projectDir)
-        case .sourceTypesList(let project):
-            return try await store.listSourceTypes(projectDir: project.projectDir)
-        case .metadataFieldsList(let project):
-            return try await store.listMetadataFields(projectDir: project.projectDir)
-        case .credibilityGradesList(let project):
-            return try await store.listSourceCredibilityGrades(projectDir: project.projectDir)
-        case .confidenceGradesList(let project):
-            return try await store.listClaimConfidenceGrades(projectDir: project.projectDir)
-        case .sourceWorkspace(let project, let sourceId):
-            return try await store.getSourceWorkspace(projectDir: project.projectDir, sourceID: sourceId)
-        case .typeSuggestions(let project, let typeId):
-            return try await store.listTypeSuggestions(projectDir: project.projectDir, typeID: typeId)
-        case .citationCounts(let project, let graphId):
-            return try await store.citationCountsByEvidenceGraph(
-                projectDir: project.projectDir,
-                graphID: graphId
-            )
-        case .evidenceGraph(let project, let graphId):
-            async let subjects = store.listSubjects(
-                projectDir: project.projectDir,
-                graphID: graphId
-            )
-            async let positions = store.listSubjectPositions(
-                projectDir: project.projectDir,
-                graphID: graphId
-            )
-            async let observations = store.listObservationsByEvidenceGraph(
-                projectDir: project.projectDir,
-                graphID: graphId
-            )
-            async let memberships = store.listSubjectMemberships(
-                projectDir: project.projectDir,
-                graphID: graphId
-            )
-            async let eventTitles = store.listEvidenceGraphEventTitles(
-                projectDir: project.projectDir,
-                graphID: graphId
-            )
-            return EvidenceGraphRows(
-                graphId: graphId,
-                subjects: try await subjects,
-                positions: try await positions,
-                observations: try await observations,
-                memberships: try await memberships,
-                eventTitles: try await eventTitles
-            )
-        case .connectRules:
-            return try await store.listConnectRules()
-        case .propertyTerms(let project, let propertyId):
-            return try await store.listPropertyTerms(
-                projectDir: project.projectDir,
-                propertyID: propertyId
-            )
-        case .citationsByArtifact(let project, let graphId, let artifactId):
-            return try await store.listCitationsByArtifact(
-                projectDir: project.projectDir,
-                graphID: graphId,
-                artifactID: artifactId
-            )
-        case .evidenceGraphProgress(let project):
-            let rows = try await store.listEvidenceGraphProgress(projectDir: project.projectDir)
-            var map: [String: EvidenceGraphProgress] = [:]
-            for row in rows {
-                map[row.graphId] = row
-            }
-            return map
-        case .evidenceGraphsList(let project):
-            return try await store.listEvidenceGraphs(projectDir: project.projectDir)
-        case .propertiesWorkspace(let project):
-            return try await store.getPropertiesWorkspace(projectDir: project.projectDir)
-        case .personsList(let project):
-            return try await store.listPersonHeaders(projectDir: project.projectDir)
-        case .eventsList(let project):
-            return try await store.listEventHeaders(projectDir: project.projectDir)
-        case .placesList(let project):
-            return try await store.listPlaceHeaders(projectDir: project.projectDir)
-        case .conclusionDetail(let project, let entityId):
-            return try await store.getConclusionDetail(projectDir: project.projectDir, entityID: entityId)
-        }
     }
 
     /// Cache effects of one write's reported handles and Sources. Each read
@@ -248,60 +195,90 @@ extension CatalogQueryKey.Kind {
         case .sourcesList:
             // Work under a Source reports its activity in `WriteEffects`, which
             // patches the row through `lastUpdated`.
-            return CatalogQueryDescriptor(
+            return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [.createdSource, .deletedSource],
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.sourcesList(project: project)) },
-                lastUpdated: .rows(CatalogSource.self, scope: .source)
+                lastUpdated: .rows(CatalogSource.self, scope: .source),
+                load: { key, store in
+                    guard case .sourcesList(let project) = key else {
+                        mismatchedCatalogKey(key, .sourcesList)
+                    }
+                    return try await store.listSources(projectDir: project.projectDir)
+                }
             )
         case .sourceTypesList:
             // `usedBy` counts sources per type, so adding a source or moving one
             // restates rows no type edit touched.
-            return CatalogQueryDescriptor(
+            return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [
                     .createdSourceType, .updatedSourceType, .deletedSourceType,
                     .createdSource, .deletedSource, .changedSourceType,
                 ],
-                invalidation: { project, _ in .key(.sourceTypesList(project: project)) }
+                invalidation: { project, _ in .key(.sourceTypesList(project: project)) },
+                load: { key, store in
+                    guard case .sourceTypesList(let project) = key else {
+                        mismatchedCatalogKey(key, .sourceTypesList)
+                    }
+                    return try await store.listSourceTypes(projectDir: project.projectDir)
+                }
             )
         case .metadataFieldsList:
             // `usedBy` counts sources holding a value for the field, and it
             // gates Delete.
-            return CatalogQueryDescriptor(
+            return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [
                     .createdMetadataField, .updatedMetadataField, .deletedMetadataField,
                     .mutatedSourceMetadata,
                 ],
-                invalidation: { project, _ in .key(.metadataFieldsList(project: project)) }
+                invalidation: { project, _ in .key(.metadataFieldsList(project: project)) },
+                load: { key, store in
+                    guard case .metadataFieldsList(let project) = key else {
+                        mismatchedCatalogKey(key, .metadataFieldsList)
+                    }
+                    return try await store.listMetadataFields(projectDir: project.projectDir)
+                }
             )
         case .credibilityGradesList:
             // Seeded vocabulary with no CRUD surface, so nothing stales it.
-            return CatalogQueryDescriptor(
+            return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [],
-                invalidation: { project, _ in .key(.credibilityGradesList(project: project)) }
+                invalidation: { project, _ in .key(.credibilityGradesList(project: project)) },
+                load: { key, store in
+                    guard case .credibilityGradesList(let project) = key else {
+                        mismatchedCatalogKey(key, .credibilityGradesList)
+                    }
+                    return try await store.listSourceCredibilityGrades(projectDir: project.projectDir)
+                }
             )
         case .confidenceGradesList:
             // Seeded vocabulary with no CRUD surface, so nothing stales it.
-            return CatalogQueryDescriptor(
+            return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [],
-                invalidation: { project, _ in .key(.confidenceGradesList(project: project)) }
+                invalidation: { project, _ in .key(.confidenceGradesList(project: project)) },
+                load: { key, store in
+                    guard case .confidenceGradesList(let project) = key else {
+                        mismatchedCatalogKey(key, .confidenceGradesList)
+                    }
+                    return try await store.listClaimConfidenceGrades(projectDir: project.projectDir)
+                }
             )
         case .sourceWorkspace:
             // Vocabulary lists are no longer folded in here, so plain
             // create/relabel of a type or field leaves the page alone. What
             // remains is the metadata row set the engine derives per source:
             // suggestions ∪ values, each row embedding its field.
-            return CatalogQueryDescriptor(
+            return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [
@@ -320,12 +297,18 @@ extension CatalogQueryKey.Kind {
                     default:
                         return .allCached(.sourceWorkspace)
                     }
+                },
+                load: { key, store in
+                    guard case .sourceWorkspace(let project, let sourceId) = key else {
+                        mismatchedCatalogKey(key, .sourceWorkspace)
+                    }
+                    return try await store.getSourceWorkspace(projectDir: project.projectDir, sourceID: sourceId)
                 }
             )
         case .evidenceGraph:
             // Writes that report effects reload the graphs they name
             // (`WriteEffects.evidenceGraphs`); Promote reports none.
-            return CatalogQueryDescriptor(
+            return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [.deletedSource, .promotedSubject],
@@ -334,21 +317,63 @@ extension CatalogQueryKey.Kind {
                         return .key(.evidenceGraph(project: project, graphId: graphId))
                     }
                     return .allCached(.evidenceGraph)
+                },
+                load: { key, store in
+                    guard case .evidenceGraph(let project, let graphId) = key else {
+                        mismatchedCatalogKey(key, .evidenceGraph)
+                    }
+                    async let subjects = store.listSubjects(
+                        projectDir: project.projectDir,
+                        graphID: graphId
+                    )
+                    async let positions = store.listSubjectPositions(
+                        projectDir: project.projectDir,
+                        graphID: graphId
+                    )
+                    async let observations = store.listObservationsByEvidenceGraph(
+                        projectDir: project.projectDir,
+                        graphID: graphId
+                    )
+                    async let memberships = store.listSubjectMemberships(
+                        projectDir: project.projectDir,
+                        graphID: graphId
+                    )
+                    async let eventTitles = store.listEvidenceGraphEventTitles(
+                        projectDir: project.projectDir,
+                        graphID: graphId
+                    )
+                    return EvidenceGraphRows(
+                        graphId: graphId,
+                        subjects: try await subjects,
+                        positions: try await positions,
+                        observations: try await observations,
+                        memberships: try await memberships,
+                        eventTitles: try await eventTitles
+                    )
                 }
             )
         case .citationCounts:
             // Reloads follow the write's `citationSources` effects.
-            return CatalogQueryDescriptor(
+            return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [],
                 whenHidden: .markStale,
-                invalidation: { _, _ in .allCached(.citationCounts) }
+                invalidation: { _, _ in .allCached(.citationCounts) },
+                load: { key, store in
+                    guard case .citationCounts(let project, let graphId) = key else {
+                        mismatchedCatalogKey(key, .citationCounts)
+                    }
+                    return try await store.citationCountsByEvidenceGraph(
+                        projectDir: project.projectDir,
+                        graphID: graphId
+                    )
+                }
             )
         case .typeSuggestions:
             // Each suggestion embeds a full field row, so relabelling or
             // deleting a field reaches types the edit never named.
-            return CatalogQueryDescriptor(
+            return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [
@@ -363,12 +388,18 @@ extension CatalogQueryKey.Kind {
                     default:
                         return .allCached(.typeSuggestions)
                     }
+                },
+                load: { key, store in
+                    guard case .typeSuggestions(let project, let typeId) = key else {
+                        mismatchedCatalogKey(key, .typeSuggestions)
+                    }
+                    return try await store.listTypeSuggestions(projectDir: project.projectDir, typeID: typeId)
                 }
             )
         case .propertiesWorkspace:
             // `usedBy` counts Observations per property. Observation writes
             // report their Source in `WriteEffects`, which invalidates it.
-            return CatalogQueryDescriptor(
+            return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [
@@ -376,18 +407,30 @@ extension CatalogQueryKey.Kind {
                     .mutatedSubjectTypeProperties, .deletedSubject,
                 ],
                 whenHidden: .markStale,
-                invalidation: { project, _ in .key(.propertiesWorkspace(project: project)) }
+                invalidation: { project, _ in .key(.propertiesWorkspace(project: project)) },
+                load: { key, store in
+                    guard case .propertiesWorkspace(let project) = key else {
+                        mismatchedCatalogKey(key, .propertiesWorkspace)
+                    }
+                    return try await store.getPropertiesWorkspace(projectDir: project.projectDir)
+                }
             )
         case .connectRules:
             // Seeded product matrix with no CRUD surface.
-            return CatalogQueryDescriptor(
+            return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [],
-                invalidation: { project, _ in .key(.connectRules(project: project)) }
+                invalidation: { project, _ in .key(.connectRules(project: project)) },
+                load: { key, store in
+                    guard case .connectRules = key else {
+                        mismatchedCatalogKey(key, .connectRules)
+                    }
+                    return try await store.listConnectRules()
+                }
             )
         case .propertyTerms:
-            return CatalogQueryDescriptor(
+            return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [.createdPropertyTerm],
@@ -398,74 +441,134 @@ extension CatalogQueryKey.Kind {
                     default:
                         return .allCached(.propertyTerms)
                     }
+                },
+                load: { key, store in
+                    guard case .propertyTerms(let project, let propertyId) = key else {
+                        mismatchedCatalogKey(key, .propertyTerms)
+                    }
+                    return try await store.listPropertyTerms(
+                        projectDir: project.projectDir,
+                        propertyID: propertyId
+                    )
                 }
             )
         case .citationsByArtifact:
             // Reloads follow the write's `citationSources` effects.
-            return CatalogQueryDescriptor(
+            return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [],
                 whenHidden: .markStale,
-                invalidation: { _, _ in .allCached(.citationsByArtifact) }
+                invalidation: { _, _ in .allCached(.citationsByArtifact) },
+                load: { key, store in
+                    guard case .citationsByArtifact(let project, let graphId, let artifactId) = key else {
+                        mismatchedCatalogKey(key, .citationsByArtifact)
+                    }
+                    return try await store.listCitationsByArtifact(
+                        projectDir: project.projectDir,
+                        graphID: graphId,
+                        artifactID: artifactId
+                    )
+                }
             )
         case .evidenceGraphProgress:
             // Canvas writes patch one graph via Get + setQueryValue — do not
             // restale the project-wide map (or sourcesList).
-            return CatalogQueryDescriptor(
+            return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [],
-                invalidation: { project, _ in .key(.evidenceGraphProgress(project: project)) }
+                invalidation: { project, _ in .key(.evidenceGraphProgress(project: project)) },
+                load: { key, store in
+                    guard case .evidenceGraphProgress(let project) = key else {
+                        mismatchedCatalogKey(key, .evidenceGraphProgress)
+                    }
+                    let rows = try await store.listEvidenceGraphProgress(projectDir: project.projectDir)
+                    var map: [String: EvidenceGraphProgress] = [:]
+                    for row in rows {
+                        map[row.graphId] = row
+                    }
+                    return map
+                }
             )
         case .evidenceGraphsList:
             // Graph and link writes report the `evidence_graphs` list in
             // `WriteEffects`; `deleteSource` reports none, so `.deletedSource` drops it.
             // A visible key still revalidates (`WorkspaceSession.apply(invalidations:)`);
             // a hidden list just goes stale until it is shown again.
-            return CatalogQueryDescriptor(
+            return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [.deletedSource],
                 whenHidden: .markStale,
-                invalidation: { project, _ in .key(.evidenceGraphsList(project: project)) }
+                invalidation: { project, _ in .key(.evidenceGraphsList(project: project)) },
+                load: { key, store in
+                    guard case .evidenceGraphsList(let project) = key else {
+                        mismatchedCatalogKey(key, .evidenceGraphsList)
+                    }
+                    return try await store.listEvidenceGraphs(projectDir: project.projectDir)
+                }
             )
         case .personsList:
-            return CatalogQueryDescriptor(
+            return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: CatalogQueryRegistry.conclusionTriggers,
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.personsList(project: project)) },
-                lastUpdated: .rows(CatalogPersonHeader.self, scope: .handle)
+                lastUpdated: .rows(CatalogPersonHeader.self, scope: .handle),
+                load: { key, store in
+                    guard case .personsList(let project) = key else {
+                        mismatchedCatalogKey(key, .personsList)
+                    }
+                    return try await store.listPersonHeaders(projectDir: project.projectDir)
+                }
             )
         case .eventsList:
-            return CatalogQueryDescriptor(
+            return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: CatalogQueryRegistry.conclusionTriggers,
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.eventsList(project: project)) },
-                lastUpdated: .rows(CatalogEventHeader.self, scope: .handle)
+                lastUpdated: .rows(CatalogEventHeader.self, scope: .handle),
+                load: { key, store in
+                    guard case .eventsList(let project) = key else {
+                        mismatchedCatalogKey(key, .eventsList)
+                    }
+                    return try await store.listEventHeaders(projectDir: project.projectDir)
+                }
             )
         case .placesList:
-            return CatalogQueryDescriptor(
+            return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: CatalogQueryRegistry.conclusionTriggers,
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.placesList(project: project)) },
-                lastUpdated: .rows(CatalogPlaceHeader.self, scope: .handle)
+                lastUpdated: .rows(CatalogPlaceHeader.self, scope: .handle),
+                load: { key, store in
+                    guard case .placesList(let project) = key else {
+                        mismatchedCatalogKey(key, .placesList)
+                    }
+                    return try await store.listPlaceHeaders(projectDir: project.projectDir)
+                }
             )
         case .conclusionDetail:
-            return CatalogQueryDescriptor(
+            return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: CatalogQueryRegistry.conclusionTriggers,
                 whenHidden: .evict,
                 // Any Conclusion edit can touch any handle (a merge, a member's
                 // Observation), so every cached detail is stale.
-                invalidation: { _, _ in .allCached(.conclusionDetail) }
+                invalidation: { _, _ in .allCached(.conclusionDetail) },
+                load: { key, store in
+                    guard case .conclusionDetail(let project, let entityId) = key else {
+                        mismatchedCatalogKey(key, .conclusionDetail)
+                    }
+                    return try await store.getConclusionDetail(projectDir: project.projectDir, entityID: entityId)
+                }
             )
         }
     }
