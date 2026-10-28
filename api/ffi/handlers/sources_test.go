@@ -301,6 +301,19 @@ func metadataSetFixture(t *testing.T, dataType string) *engine.SetSourceMetadata
 	}
 }
 
+// urlMetadataSetFixture is metadataSetFixture aimed at a new url-typed field
+// (the seeded fields are all text).
+func urlMetadataSetFixture(t *testing.T) *engine.SetSourceMetadataRequest {
+	t.Helper()
+	req := metadataSetFixture(t, "text")
+	var field engine.CreateMetadataFieldResponse
+	mustRPC(t, CreateMetadataField, &engine.CreateMetadataFieldRequest{
+		ProjectDir: req.ProjectDir, UserId: req.UserId, Label: "Catalogue URL", DataType: "url",
+	}, &field)
+	req.FieldId = field.Field.GetId()
+	return req
+}
+
 func unmarshalSetMetadataEntry(t *testing.T, raw []byte) *engine.MetadataWorkspaceEntry {
 	t.Helper()
 	var resp engine.SetSourceMetadataResponse
@@ -372,7 +385,73 @@ func TestGetSourceWorkspace(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "url metadata carries the web link Go computes",
+			reqFn: func(t *testing.T) proto.Message {
+				req := urlMetadataSetFixture(t)
+				req.ValueText = "www.example.org"
+				mustRPC(t, SetSourceMetadata, req, &engine.SetSourceMetadataResponse{})
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: req.ProjectDir, SourceId: req.SourceId}
+			},
+			after: func(t *testing.T, raw []byte, _ proto.Message) {
+				entry := onlyValuedMetadata(t, raw)
+				if entry.GetValueText() != "www.example.org" || entry.GetOpenHref() != "https://www.example.org" {
+					t.Fatalf("entry %+v", entry)
+				}
+			},
+		},
+		{
+			name: "text metadata has no web link",
+			reqFn: func(t *testing.T) proto.Message {
+				req := metadataSetFixture(t, "text")
+				req.ValueText = "www.example.org"
+				mustRPC(t, SetSourceMetadata, req, &engine.SetSourceMetadataResponse{})
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: req.ProjectDir, SourceId: req.SourceId}
+			},
+			after: func(t *testing.T, raw []byte, _ proto.Message) {
+				entry := onlyValuedMetadata(t, raw)
+				if entry.GetValueText() != "www.example.org" || entry.GetOpenHref() != "" {
+					t.Fatalf("entry %+v", entry)
+				}
+			},
+		},
+		{
+			name: "a url value damaged to a file scheme has no web link",
+			reqFn: func(t *testing.T) proto.Message {
+				req := urlMetadataSetFixture(t)
+				req.ValueText = "www.example.org"
+				mustRPC(t, SetSourceMetadata, req, &engine.SetSourceMetadataResponse{})
+				damageCatalog(t, req.ProjectDir, `UPDATE source_metadata SET value_text = 'file:///System/Applications/Calculator.app'`)
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: req.ProjectDir, SourceId: req.SourceId}
+			},
+			after: func(t *testing.T, raw []byte, _ proto.Message) {
+				entry := onlyValuedMetadata(t, raw)
+				if entry.GetValueText() != "file:///System/Applications/Calculator.app" || entry.GetOpenHref() != "" {
+					t.Fatalf("entry %+v", entry)
+				}
+			},
+		},
 	})
+}
+
+// onlyValuedMetadata returns the one entry of a GetSourceWorkspace reply that
+// holds a value (the rest are the type's unset suggestions).
+func onlyValuedMetadata(t *testing.T, raw []byte) *engine.MetadataWorkspaceEntry {
+	t.Helper()
+	var resp engine.GetSourceWorkspaceResponse
+	if err := proto.Unmarshal(raw, &resp); err != nil {
+		t.Fatal(err)
+	}
+	var valued []*engine.MetadataWorkspaceEntry
+	for _, e := range resp.Metadata {
+		if e.GetHasValue() {
+			valued = append(valued, e)
+		}
+	}
+	if len(valued) != 1 {
+		t.Fatalf("valued metadata %+v", valued)
+	}
+	return valued[0]
 }
 
 func TestSetSourceMetadata(t *testing.T) {
@@ -416,6 +495,20 @@ func TestSetSourceMetadata(t *testing.T) {
 			after: func(t *testing.T, raw []byte, _ proto.Message) {
 				entry := unmarshalSetMetadataEntry(t, raw)
 				if entry.GetValueText() != "www.url.com" || entry.GetField().GetDataType() != "url" {
+					t.Fatalf("entry %+v", entry)
+				}
+			},
+		},
+		{
+			name: "set url metadata returns the web link",
+			reqFn: func(t *testing.T) proto.Message {
+				req := urlMetadataSetFixture(t)
+				req.ValueText = "example.org/records"
+				return req
+			},
+			after: func(t *testing.T, raw []byte, _ proto.Message) {
+				entry := unmarshalSetMetadataEntry(t, raw)
+				if entry.GetValueText() != "example.org/records" || entry.GetOpenHref() != "https://example.org/records" {
 					t.Fatalf("entry %+v", entry)
 				}
 			},

@@ -62,6 +62,15 @@ func TestOpenHref(t *testing.T) {
 	if _, err := OpenHref("file:/tmp"); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("OpenHref file = %v", err)
 	}
+	for _, s := range []string{
+		"file:///System/Applications/Calculator.app",
+		"smb://server.example.org/share",
+		"vnc://host.example.org",
+	} {
+		if _, err := OpenHref(s); !errors.Is(err, ErrInvalid) {
+			t.Fatalf("OpenHref(%q) = %v, want ErrInvalid", s, err)
+		}
+	}
 	href, err = OpenHref("HTTPS://Example.COM/Record")
 	if err != nil {
 		t.Fatal(err)

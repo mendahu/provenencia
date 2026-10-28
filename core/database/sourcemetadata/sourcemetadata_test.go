@@ -656,6 +656,34 @@ func runCreateAll(c *database.Catalog, userID, sourceID []byte, values []Input, 
 	return changes, err
 }
 
+func TestWorkspaceEntryOpenHref(t *testing.T) {
+	entry := func(dataType, value string) WorkspaceEntry {
+		return WorkspaceEntry{
+			Field: metadatafields.Field{DataType: dataType},
+			Value: &Row{ValueText: value},
+		}
+	}
+	tests := []struct {
+		name  string
+		entry WorkspaceEntry
+		want  string
+	}{
+		{name: "url field, host-shaped value", entry: entry(metadatafields.DataTypeURL, "www.example.org"), want: "https://www.example.org"},
+		{name: "url field, https value", entry: entry(metadatafields.DataTypeURL, "https://example.org/records"), want: "https://example.org/records"},
+		{name: "url field, damaged file value", entry: entry(metadatafields.DataTypeURL, "file:///System/Applications/Calculator.app"), want: ""},
+		{name: "url field, damaged smb value", entry: entry(metadatafields.DataTypeURL, "smb://server.example.org/share"), want: ""},
+		{name: "text field, host-shaped value", entry: entry(metadatafields.DataTypeText, "www.example.org"), want: ""},
+		{name: "url field, suggested and unset", entry: WorkspaceEntry{Field: metadatafields.Field{DataType: metadatafields.DataTypeURL}, Suggested: true}, want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.entry.OpenHref(); got != tt.want {
+				t.Fatalf("OpenHref() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestCreateAll(t *testing.T) {
 	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
 

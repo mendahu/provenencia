@@ -90,6 +90,21 @@ type WorkspaceEntry struct {
 	SortOrder int
 }
 
+// OpenHref is the web link to open for this entry: the browser-ready form of a
+// url-typed value (urlshape.OpenHref), or "" when the entry has no value, is not
+// a url field, or holds a value that is not a web address (a damaged row). It
+// is the only link the app opens from metadata.
+func (e WorkspaceEntry) OpenHref() string {
+	if e.Value == nil || e.Field.DataType != metadatafields.DataTypeURL {
+		return ""
+	}
+	href, err := urlshape.OpenHref(e.Value.ValueText)
+	if err != nil {
+		return ""
+	}
+	return href
+}
+
 // LayoutRow is one source_metadata_layout row for a field.
 type LayoutRow struct {
 	FieldID   []byte
