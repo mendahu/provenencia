@@ -481,7 +481,11 @@ struct CatalogQueryRegistryTests {
         for key in [CatalogQueryKey.personsList(project: project), .eventsList(project: project), .placesList(project: project)] {
             #expect(follows(key) == .handle, "\(key)")
         }
-        #expect(follows(.sourcesList(project: project)) == .source)
+        let sourcesList = CatalogQueryKey.sourcesList(project: project)
+        let sourcePatches = sourcesList.kind.descriptor.patches
+        #expect(sourcePatches.count == 2)
+        #expect(sourcePatches[0].follows == .source)
+        #expect(sourcePatches[1].follows == nil)
         #expect(follows(.sourceTypesList(project: project)) == nil)
     }
 
