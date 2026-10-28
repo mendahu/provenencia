@@ -1,7 +1,7 @@
 # Ship log — S12-38 Add an Artifact without a graph; the card saves links in one write
 
 **Plan:** [`S12-38-artifact-without-graph.md`](S12-38-artifact-without-graph.md) · **Branch:** `s12-38-artifact-without-graph` · **PR:** #605
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 Head `972b0de1`. Gate PASS (orchestrator, on the pushed head). Report: deviations: commits are coarser than one per behavior (STEPs 1–4 in one commit, STEPs 5–6 in another); the review log's link to the brief now points at the archive; `design/README.md` "Scheduled" reads "None open."; `sources.page.artifact.graphs.none` is at the end of `Localizable.xcstrings`; the manual check was not run (noted in the Landed note).
@@ -53,3 +53,23 @@ Do: next to `lockHint`, add `extension Sequence where Element == CatalogEvidence
 Check: `rg -n "where hints\[" macos/App` prints nothing; scripts/check-pr.sh PASS.
 
 Also: fix the plan's Landed note (CON-2) so it lists the commits as the log has them (STEPs 1–4, STEPs 5–6, STEP-7, docs), and add any fix commits.
+
+## Round 1 — fix
+Head `263f1f5c`. Gate PASS (orchestrator). F-1 to F-5 done, and the Landed note matches the log (CON-2). Report deviations: F-3's test could not fail before the fix because it calls the new `awaitingGraphs(id:)` and `graphsChanged()`, so it did not compile; F-3 triggers on `.onChange(of: visibleGraphs?.map(\.id))` in `graphLinks`, since the section had no list-change hook; F-2 left `show` in its order, because it appends the card and applies the effects in one synchronous turn.
+
+## Round 2 — review
+Reviewers: MNT (MNT-1 was a Fix-now major). The orchestrator read the minor fixes in `972b0de1...263f1f5c`:
+- UX-1 **Resolved**: `artifactIDsInNoGraph` guards `evidenceGraphsHandle?.isSettled == true`; test `artifactIDsInNoGraphIsNilWhileTheListRefetches`.
+- UX-2 **Resolved**: `startLinkEdit` is shared by `beginEdit` and `graphsChanged()`, and `awaitingGraphs` shows `SourceFormLoadArea(.loading)` only while the read is `.loading`; test `cardEditBeforeTheListLoadsGetsTheGroup`.
+- CON-1 **Resolved**: `merging`, its test and `CoreInvokeError.code` are deleted.
+- MNT-2 **Resolved**: `lockHints(by:)` in `SourceArtifactGraphLinks.swift`, and both models call it; MNT-3 and MNT-4 nits are done too.
+
+Nit (logged): `ORC · SourcePageArtifactsView.swift graphLinksGroup · the loading branch repeats the edit branch's PVField and SourceFormLoadArea arguments with an empty onReadAgain`.
+
+Round 2 result: MNT-1 **Resolved**: `FakeOCREngine` holds with `FakeHold`; `rg CheckedContinuation macos/ProvenenciaTests` finds only `Gate` (Out, M-5); the `add-swift-test` bullet is in. No new blockers. MNT also noted the F-3 loading-branch copy as minor (same as the orchestrator's nit) and, outside its lens, that no test drives the view's `.onChange` → `graphsChanged()` (the manual check covers it). No Fix plan 2.
+
+## Finish
+Merged `origin/main` @ `e5253258` (Spike 11 plan docs only); gate PASS again on the merge.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: UX-3 (dirty-card confirm for Link to a graph and the pencil), ORC nit (fold the F-3 loading branch into the edit branch) · to user: — · CON miss: none
