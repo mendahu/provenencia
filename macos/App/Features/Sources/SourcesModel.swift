@@ -147,9 +147,8 @@ final class SourcesModel {
     /// must not apply stale counts silently.
     var statusCountsError: Error? {
         guard settings.status != nil else { return nil }
-        if let handle = graphsHandle, handle.status == .error { return handle.error }
-        guard let handle = session.evidenceGraphProgressHandle, handle.status == .error else { return nil }
-        return handle.error
+        if let failure = graphsHandle?.failure { return failure }
+        return session.evidenceGraphProgressHandle?.failure
     }
 
     /// A status or restored type is set and the data to apply it has not arrived.
@@ -204,7 +203,7 @@ final class SourcesModel {
         guard sources.isEmpty else { return nil }
         let sourcesHandle: QueryHandle<[CatalogSource]>? = session.queryHandle(Self.sourcesListKey(for: session))
         let typesHandle: QueryHandle<[CatalogSourceType]>? = session.queryHandle(Self.sourceTypesListKey(for: session))
-        return sourcesHandle?.error ?? typesHandle?.error
+        return sourcesHandle?.failure ?? typesHandle?.failure
     }
 
     // MARK: Derived

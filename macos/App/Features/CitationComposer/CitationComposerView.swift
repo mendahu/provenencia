@@ -64,7 +64,7 @@ struct CitationComposerView: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(L10n.CitationComposer.accessibilityTitle))
         .accessibilityHint(Text(verbatim: model.identityAnnouncement))
-        .task(id: entry.identityKey) {
+        .task {
             await model.prepare()
         }
         .pvFormDialog(

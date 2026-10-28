@@ -177,7 +177,7 @@ Decisions on the [app-health audit](app-health-audit.md) and its [map review](de
 | S12-19 | Typed omnibar hit kinds | 4 | `CatalogSearchKind` spells the search kinds once in Swift, pinned to `core/search` `Registry`, so a graph kind can't be missed in the app | — | — | [Plan](prs/S12-19-catalog-search-kind.md) | Landed #582 |
 | S12-15 | Graphs in the omnibar | 4 | Graphs as a searchable kind; a hit opens the graph; the hit's Source projected on two new search-index display columns (migration) | — | S12-08, S12-19 | [Plan](prs/S12-15-graph-search.md) | Landed #583 |
 | S12-20 | Docs and skills match the code | 5 | Audit A-6, A-23, A-33: stale skills and rules, domain docs that contradict the code, six missing DesignSystem README rows and a `check-guidance-names.py` check that fails on a kit folder with no row | — | — | [Plan](prs/S12-20-docs-match-code.md) | Landed #591 |
-| S12-21 | The canvas keeps its graph and shows its failures | 5 | A-2, A-11, A-19: `.id(graphID)` on the canvas; a failed-read state and a deleted-graph fallback; the composer shows a failed Citation load; Swift only | — | — | [Plan](prs/S12-21-canvas-keeps-its-graph.md) | Planned |
+| S12-21 | The canvas keeps its graph and shows its failures | 5 | A-2, A-11, A-19: `.id(graphID)` on the canvas; a failed-read state and a deleted-graph fallback; the composer shows a failed Citation load; Swift only | — | — | [Plan](prs/S12-21-canvas-keeps-its-graph.md) | Landed #596 |
 | S12-22 | Artifacts can stand outside every graph | 5 | A-3, A-8 engine half and the user's fix: `GraphLinks` on Artifact create and update; the update links in one write through `applyLinks`; one unlink check behind `Unlink` and a pair-shaped `UnlinkImpact`; an Artifact with Citations keeps a graph (an inbound probe on graph delete) | — | — | — | Scoped |
 | S12-38 | Add an Artifact without a graph; the card saves links in one write | 5 | A-3, A-8 Swift half and the user's fixes: graph boxes on every Source with a graph, none allowed; a card in no graph says so; one card write and preflight; a new graph starts with the Artifacts in no graph checked; the link and unlink RPCs go | S12-D7 | S12-22, S12-D7 | — | Scoped |
 | S12-23 | The app opens only safe files and links | 5 | A-1, A-5: stored types filtered on read; executable objects refused in Go and Swift; metadata links open through Go's `open_href` | — | — | — | Scoped |
@@ -611,7 +611,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S12-37 — Canvas tool and sheet state as enums
 
-**Ships.** `EvidenceGraphModel` holds one `tool: EvidenceCanvasInputMode` (shift stays a modifier) and one optional sheet enum (create or edit, with its kind) in place of its eight flags; the old reads derive from them.
+**Ships.** `EvidenceGraphModel` holds one `tool: EvidenceCanvasInputMode` (shift stays a modifier) and one optional sheet enum (create or edit, with its kind) in place of its eight flags; the old reads derive from them. `EvidenceGraphCanvasNotice` and `EvidenceGraphModel.canvasNotice` move out of `EvidenceCanvasInputMode.swift` into their own file (deferred by S12-21's Out line).
 **Not this PR.** A behavior change.
 **Check.** The canvas model tests pass unchanged, plus one per flag combination that can no longer be built.
 **Context.** Audit A-32; maintainability Q9; precedent `CitationComposerModel.Phase`. After S12-21 (same files).

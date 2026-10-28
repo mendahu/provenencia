@@ -127,13 +127,20 @@ final class EvidenceGraphModel {
     }
 
     /// False when this graph links no Artifact — disables cite controls (S7-09).
-    /// True while the graph list has no value (unknown); a graph missing from a
-    /// loaded list cannot be cited.
+    /// True while the graph list cannot say (no value yet or refetching); a graph
+    /// missing from a settled list cannot be cited.
     var canCite: Bool {
-        guard let graph = session.evidenceGraph(id: graphID) else {
-            return session.evidenceGraphsHandle?.value == nil
+        switch session.evidenceGraphPresence(id: graphID) {
+        case .present(let graph): graph.hasArtifact
+        case .unknown: true
+        case .gone: false
         }
-        return graph.hasArtifact
+    }
+
+    /// True once the settled graph list no longer has this graph.
+    var graphIsGone: Bool {
+        if case .gone = session.evidenceGraphPresence(id: graphID) { return true }
+        return false
     }
 
     var connectRules: [CatalogConnectRule] {
@@ -142,10 +149,26 @@ final class EvidenceGraphModel {
     }
 
     var connectRulesError: String? {
-        guard let handle: QueryHandle<[CatalogConnectRule]> = session.queryHandle(connectRulesKey),
-              handle.status == .error
-        else { return nil }
-        return handle.error.map { L10n.Errors.message(for: $0) }
+        errorMessage(session.queryHandle(connectRulesKey) as QueryHandle<[CatalogConnectRule]>?)
+    }
+
+    /// The graph rows' load error, shown whether or not a stale value is kept.
+    var graphReadError: String? {
+        errorMessage(session.queryHandle(graphKey) as QueryHandle<EvidenceGraphRows>?)
+    }
+
+    /// True while a read of the graph rows is running beside their stale value.
+    var isRereadingGraph: Bool {
+        (session.queryHandle(graphKey) as QueryHandle<EvidenceGraphRows>?)?.isFetching ?? false
+    }
+
+    /// Reads the graph rows again after a failed read.
+    func readGraphAgain() {
+        let _: QueryHandle<EvidenceGraphRows> = session.reread(graphKey)
+    }
+
+    private func errorMessage<Value>(_ handle: QueryHandle<Value>?) -> String? {
+        handle?.failure.map(L10n.Errors.message(for:))
     }
 
     var isSheetPresented: Bool {
@@ -243,7 +266,7 @@ final class EvidenceGraphModel {
 
     func prepare() async {
         let _: QueryHandle<EvidenceGraphRows> = session.query(graphKey)
-        let rules: QueryHandle<[CatalogConnectRule]> = session.query(connectRulesKey)
+        let _: QueryHandle<[CatalogConnectRule]> = session.query(connectRulesKey)
         let _: QueryHandle<PropertiesSnapshot> = session.query(fieldsKey)
         let _: QueryHandle<[CatalogSource]> = session.query(sourcesListKey)
         let _: QueryHandle<[CatalogEvidenceGraph]> = session.query(session.evidenceGraphsKey)
@@ -256,7 +279,7 @@ final class EvidenceGraphModel {
         _ = await session.readyValue(session.evidenceGraphsKey) as [CatalogEvidenceGraph]?
         _ = await session.readyValue(workspaceKey) as CatalogSourceWorkspace?
         _ = await session.readyValue(citationCountsKey) as [String: Int]?
-        if rules.status == .error, let message = connectRulesError {
+        if let message = connectRulesError {
             toast = VocabularyToast(
                 title: L10n.string(L10n.EvidenceGraph.connectRulesUnavailableTitle),
                 body: message,

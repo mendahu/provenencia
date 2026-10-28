@@ -140,9 +140,7 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View 
                 Self.page(identifier: pageIdentifier) { Self.loading }
             }
         }
-        // A new handle starts with every disclosure closed.
-        .id(entityId)
-        .task(id: entityId) {
+        .task {
             let _: QueryHandle<CatalogConclusionDetail> = session.query(key)
         }
     }

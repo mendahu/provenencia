@@ -1620,6 +1620,87 @@ struct CitationComposerModelTests {
         #expect(model.transcription == "unsaved")
     }
 
+    @Test func artifactSwitchShowsAFailedCitationLoad() async {
+        let store = makeStore()
+        seedArtifact(store)
+        store.artifactsBySource[sourceID]?.append(
+            CatalogArtifact(
+                id: "art-1",
+                ref: "ART-1",
+                sourceID: sourceID,
+                fileID: "file-1",
+                label: "Scan 2",
+                description: "",
+                file: CatalogFileRef(
+                    id: "file-1",
+                    relPath: "objects/file-1.pdf",
+                    originalFilename: "scan-2.pdf",
+                    mediaType: "application/pdf",
+                    byteSize: 10
+                )
+            )
+        )
+        seedCitation(store)
+        store.citationsByID["cit-2"] = CatalogCitation(
+            id: "cit-2",
+            ref: "CIT-2",
+            artifactID: "art-1",
+            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
+            transcription: "other",
+            description: "",
+            transcriptionUncertain: false,
+            transcriptionNote: ""
+        )
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        let listKey = CatalogQueryKey.citationsByArtifact(
+            project: model.session.projectKey, graphId: graphID, artifactId: "art-1"
+        )
+        let _: QueryHandle<[CatalogListedCitation]> = model.session.query(listKey)
+        _ = await model.session.readyValue(listKey) as [CatalogListedCitation]?
+
+        // The Citation can no longer be fetched, and the graph's cache cannot answer for it.
+        store.citationsByID["cit-2"] = nil
+        store.listSubjectsError = ComposerLoadFailure()
+        let graphHandle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(model.graphKey)
+        graphHandle?.resetForInvalidation()
+
+        model.requestSelectArtifact("art-1")
+        let switched = await waitUntil { !model.isSwitchingCitation && model.selectedArtifactID == "art-1" }
+        #expect(switched)
+        #expect(model.fields.error != nil)
+        #expect(model.activeCitationID == nil)
+    }
+
+    @Test func lineRefreshShowsAFailedCitationLoad() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(
+            store,
+            observations: [occupationObservation(id: "obs-1", ref: "OBS-1", citationID: "cit-1")]
+        )
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        let rowCount = model.observationRows.rows.count
+        #expect(rowCount == 1)
+
+        let kept = store.citationsByID["cit-1"]
+        store.citationsByID["cit-1"] = nil
+        model.session.invalidate(
+            .citationsByArtifact(project: model.session.projectKey, graphId: graphID, artifactId: "art-0")
+        )
+        await model.refreshCitationLines()
+        #expect(model.fields.error != nil)
+        #expect(model.observationRows.rows.count == rowCount)
+
+        store.citationsByID["cit-1"] = kept
+        model.session.invalidate(
+            .citationsByArtifact(project: model.session.projectKey, graphId: graphID, artifactId: "art-0")
+        )
+        await model.refreshCitationLines()
+        #expect(model.fields.error == nil)
+    }
+
     @Test func customTermReturnsToTheNewObservationDialog() async {
         let store = makeStore()
         seedArtifact(store)
@@ -1852,3 +1933,5 @@ struct CitationAuthoringNavigationTests {
             == "Every citation needs an artifact linked to this evidence graph. Add one on the Source page, or link an existing one from its card, then return here.")
     }
 }
+
+private struct ComposerLoadFailure: Error {}

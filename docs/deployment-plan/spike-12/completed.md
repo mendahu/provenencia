@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-21 — The canvas keeps its graph and shows its failures
+
+**Landed 2026-10-27** in [#596](https://github.com/mendahu/provenencia/pull/596). Opening one Evidence graph's canvas from another's (omnibar graph hit, Back / Forward) now builds a fresh canvas, so a Person placed there lands on the graph on screen. Each workspace place declares `viewIdentity` and `WorkspaceDestinationHost` applies `.id(…)` once from it, replacing the hand-written `.id`s, four id-keyed tasks and `SourcePageModel.prepare(for:)`. A failed graph read shows a danger callout with Read again, a graph the list no longer has falls back to the Sources list, and the Citation composer shows the error when a Citation fails to load on an Artifact switch or a line refresh.
+
 ## S12-20 — Docs and skills match the code
 
 **Landed 2026-10-27** in [#591](https://github.com/mendahu/provenencia/pull/591). The skills, rules and docs that described code the audit found changed now match it: `add-catalog-model` step 6 points at the `Effect` struct and the effects README instead of listing fields, `add-searchable-kind` names `fieldValuesForKind`, and the reserved ref prefixes and delete gates are named by their owners (`reservedPrefixes`, `extraGateList`) instead of copied. `conclusion-reconciliation.md`, `matching.md`, `matching-model.md`, `catalog-deletes.md`, `macos-client-patterns.md`, the effects and proto READMEs, `source-layer-data-model.md` §4.2 and `promote-graph-alignment.md` say what the code does. The DesignSystem README has rows for Chip, Copy, FloatingMenuSelection, HoverEffect, InlineEdit and LastUpdated, `add-ui-component` asks for a row, and `scripts/check-guidance-names.py` (so `check-pr.sh`) fails on a kit folder with none. The settled-list count idea is archived and the done query-wait item is gone from `shared-list-helpers.md`.

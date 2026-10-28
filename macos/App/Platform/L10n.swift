@@ -2214,6 +2214,18 @@ enum L10n {
             comment: "Callout action that navigates to the Source page to link an Artifact"
         )
 
+        static let readErrorTitle = LocalizedStringResource(
+            "evidenceGraph.readError.title",
+            defaultValue: "This evidence graph could not be read",
+            comment: "Title on the canvas callout when the Evidence graph's rows failed to load; the body is the error text"
+        )
+
+        static let readAgain = LocalizedStringResource(
+            "evidenceGraph.readError.readAgain",
+            defaultValue: "Read again",
+            comment: "Button that reads a canvas's Evidence graph again after it failed to load"
+        )
+
         static let labelField = LocalizedStringResource(
             "evidenceGraph.create.labelField",
             defaultValue: "Label",

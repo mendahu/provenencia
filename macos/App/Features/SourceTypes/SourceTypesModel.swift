@@ -100,7 +100,7 @@ final class SourceTypesModel {
         guard types.isEmpty else { return nil }
         let typesHandle: QueryHandle<[CatalogSourceType]>? = session.queryHandle(Self.typesListKey(for: session))
         let fieldsHandle: QueryHandle<[CatalogMetadataField]>? = session.queryHandle(Self.fieldsListKey(for: session))
-        return typesHandle?.error ?? fieldsHandle?.error
+        return typesHandle?.failure ?? fieldsHandle?.failure
     }
 
     var selectedTypeID: String? {

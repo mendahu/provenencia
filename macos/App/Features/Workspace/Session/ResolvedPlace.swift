@@ -5,6 +5,6 @@ struct ResolvedPlace: Equatable, Sendable {
     let placeID: PlaceID
     let presentation: WorkspacePresentationID
     let queryKeys: [CatalogQueryKey]
-    /// Active deep id for this place (`sourceId`, `typeId`, or `fieldId`); nil at list roots.
-    let deepId: String?
+    /// The id this place's view resets on: a different value remounts the destination. `nil` keeps one view across locations (list roots, master–detail places that follow `currentLocation`).
+    let viewIdentity: String?
 }

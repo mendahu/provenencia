@@ -105,6 +105,14 @@ final class WorkspaceSession {
         }
     }
 
+    /// Invalidates the key, then queries it: the read-it-again path. Keeps any
+    /// stale value on the handle while the new read runs.
+    @discardableResult
+    func reread<Value>(_ key: CatalogQueryKey) -> QueryHandle<Value> {
+        invalidate(key)
+        return query(key)
+    }
+
     /// Synchronous cache write. Clears stale flag without calling the loader.
     /// If a load was in flight, the patch wins immediately and that load is
     /// restarted so a later refetch is not dropped.

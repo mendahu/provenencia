@@ -30,6 +30,9 @@ final class QueryHandle<Value> {
     /// Loaded and not refetching: `value` is the latest the loader returned.
     var isSettled: Bool { status == .ready && !isFetching }
 
+    /// The last load's error while the handle is in the error state, even beside a stale value.
+    var failure: Error? { status == .error ? error : nil }
+
     /// Folds value / error / loading: a value wins (even a stale one), else a
     /// failure, else still loading.
     var read: QueryRead<Value> {
