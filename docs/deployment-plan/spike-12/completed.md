@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-22 — Artifacts can stand outside every graph
+
+**Landed 2026-10-28** in [#600](https://github.com/mendahu/provenencia/pull/600). The engine lets an Artifact stand in no Evidence graph while every Citation stays reachable. A new or edited Artifact names its graphs with one `GraphLinks` message (absent is the default, present and empty is none), and an Artifact update saves its fields and links in one revision through `applyLinks`. One check, `checkUnlink`, backs `Unlink` and the pair-shaped `UnlinkImpact`, and refuses the last graph of an Artifact with Citations (`evidencegraphs.citations_need_graph`). A graph delete that would strand such Citations is refused with `evidencegraphs.in_use` and lists them. The card's link locks come from one preflight call; no view changes otherwise, and S12-38 builds the chrome.
+
 ## S12-21 — The canvas keeps its graph and shows its failures
 
 **Landed 2026-10-27** in [#596](https://github.com/mendahu/provenencia/pull/596). Opening one Evidence graph's canvas from another's (omnibar graph hit, Back / Forward) now builds a fresh canvas, so a Person placed there lands on the graph on screen. Each workspace place declares `viewIdentity` and `WorkspaceDestinationHost` applies `.id(…)` once from it, replacing the hand-written `.id`s, four id-keyed tasks and `SourcePageModel.prepare(for:)`. A failed graph read shows a danger callout with Read again, a graph the list no longer has falls back to the Sources list, and the Citation composer shows the error when a Citation fails to load on an Artifact switch or a line refresh.
