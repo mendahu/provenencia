@@ -1,10 +1,10 @@
 # S12-38 — Add an Artifact without a graph; the card saves links in one write
 
-**Status:** Blocked — on board S12-D7
+**Status:** Blocked — on review round 2
 **Spike / slice:** Spike 12 · Slice 5 — Audit fixes: High
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S12-D7](../design/S12-D7-artifact-in-no-graph.md), board not agreed yet
-**Board:** the S12-D7 frame row on the Source page board ([Claude Design](https://claude.ai/design/p/de1e1ccc-aa35-455f-9b9c-3ae269593dc7?via=share)); until it is agreed, §6 macOS describes each frame in words from the brief
+**Brief:** [S12-D7](../design/S12-D7-artifact-in-no-graph.md), board agreed 2026-10-28
+**Board:** [Claude Design](https://claude.ai/design/p/de1e1ccc-aa35-455f-9b9c-3ae269593dc7), the "S12-D7 · Artifact in no graph" frame row (frames 1–11) on the Source page board. Its copy matches §6 Strings word for word; §6 macOS says where the board's web stand-ins map to Swift
 **Depends on:** S12-22 (landed [#600](https://github.com/mendahu/provenencia/pull/600)), S12-D7
 **Blocks:** S12-30 (map: "S12-38 before S12-30, which then opts the card's and the graph form's rewritten error callouts into announcing")
 **Branch:** `s12-38-artifact-without-graph`
@@ -212,17 +212,17 @@ From brief S12-D7's inventory (binding).
 | Add dialog group | `PVField` + `SourceArtifactGraphLinks` | `SourcePageArtifactsView.addForm` | Shows when `visibleGraphs != nil`; `noGraphLine` when `draftInNoGraph`, id `sources.page.addArtifact.graphs.none` (replaces `…graphs.needsGraph`) |
 | Card edit group | same | `SourcePageArtifactsView.graphLinks` | `locked:` is `lockedGraphs`; `noGraphLine` under the group, below `SourceFormLoadArea`, when `cardInNoGraph(id:)` = `linkEdit?.artifactID == id`, `loadState == .ready`, `checkedGraphIDs.isEmpty`; id `sources.page.artifact.<id>.graphs.none` |
 | No-graph line | `noGraphLine(_ id: String)` *(new, private)* | `SourcePageArtifactsView.swift` | Today's needs-one style: `PVFont.body(size: PVTypeScale.caption, italic: true)`, `PVColor.textMuted` |
-| Resting row | `PVFlowLayout(spacing: PVSpacing.space4, lineSpacing: PVSpacing.space3)` holding `PVBadge(L10n.Sources.artifactNotInGraph, tone: .neutral, icon: .link)` and `PVButton(L10n.Sources.artifactLinkToGraph, variant: .ghost, size: .sm)` | `SourcePageArtifactsView.restingText` | Last child of the `VStack`, under `descriptionLine`, only for `inNoGraph`. Both children `.fixedSize()`, so the Button wraps under the Badge. Cards are not levelled: a card with the row is taller, as a card in edit is (the grid aligns tops). Button `.accessibilityLabel(L10n.Sources.artifactLinkToGraphLabel(ref: art.ref))`; ids `sources.page.artifact.<id>.noGraph` (badge), `sources.page.artifact.<id>.linkToGraph` |
+| Resting row | `ViewThatFits(in: .horizontal)` over two arrangements of `PVBadge(L10n.Sources.artifactNotInGraph, tone: .neutral, icon: .link)` and `PVButton(L10n.Sources.artifactLinkToGraph, variant: .ghost, size: .sm)`: first `HStack(spacing: PVSpacing.space3) { badge; Spacer(minLength: 0); button }`, then `VStack(alignment: .leading, spacing: PVSpacing.space3) { badge; button.frame(maxWidth: .infinity, alignment: .trailing) }` | `SourcePageArtifactsView.restingText` | Last child of the `VStack`, under `descriptionLine`, only for `inNoGraph`. The board puts the Button at the row's end and, when the row is too narrow, on its own line at the end (its web stand-in is a wrapping flex row with `margin-left: auto`). `PVFlowLayout` packs left, so it is not used here. Badge and Button are `.fixedSize()`. Cards are not levelled: a card with the row is taller, as a card in edit is (the grid aligns tops). Button `.accessibilityLabel(L10n.Sources.artifactLinkToGraphLabel(ref: art.ref))`; ids `sources.page.artifact.<id>.noGraph` (badge), `sources.page.artifact.<id>.linkToGraph` |
 | Refused save | `PVCallout` danger compact | `editFields` (unchanged position) | Body from D-5 |
 | Graph form kept group | `keptLinked` | `SourceGraphFormDialog.swift` | ND-12 copy |
 
-Frames in words (until the board is agreed): **Add, one graph** — the dialog with one checked "Default" row and its ref. **Add, nothing checked** — every row unchecked, Add enabled, the ND-3 caption under the group. **Resting cards** — a card in no graph shows, under its description, a neutral badge "Not in an evidence graph" and a ghost "Link to a graph" button; other cards unchanged. **Cited Artifact** — Brown locked with "1 citation would be left in no evidence graph"; checking Jones leaves Brown locked. **Save refused** — the danger callout above Label, naming the graph; that row checked and locked.
+Frames in words, for reading beside the board: **Add, one graph** — the dialog with one checked "Default" row and its ref. **Add, nothing checked** — every row unchecked, Add enabled, the ND-3 caption under the group. **Resting cards** — a card in no graph shows, under its description, a neutral badge "Not in an evidence graph" and a ghost "Link to a graph" button; other cards unchanged. **Cited Artifact** — Brown locked with "1 citation would be left in no evidence graph"; checking Jones leaves Brown locked. **Save refused** — the danger callout above Label, naming the graph; that row checked and locked.
 
 States: no graphs for the Source → no group, no badge; read error → S12-D4's compact callout with Read again (the ND-6 line hides, since `loadState` is not ready); many graphs → the group scrolls past six rows (S12-D4). Accessibility per ND-10, ND-11.
 
 ### Strings
 
-Final copy is the agreed board's; these are the brief's and are replaced by the board's at agreement.
+The agreed board uses exactly this copy.
 
 - *(new)* `L10n.Sources.artifactGraphsNone`, key `sources.page.artifact.graphs.none` = "This artifact won’t be in an evidence graph. Citations can’t use it until it is linked." Comment: "Muted line under the evidence graph group in the Add artifact dialog and on an artifact card in edit when no box is checked".
 - *(new)* `L10n.Sources.artifactNotInGraph`, key `sources.page.artifact.notInGraph` = "Not in an evidence graph". Comment: "Badge on a resting artifact card when no evidence graph links the artifact".
@@ -354,7 +354,7 @@ Seed: a project with Source A (one graph, Default, linking ART-1) and Source B, 
 
 ## 12. Open questions
 
-1. **Board S12-D7.** The brief's copy and the resting row's layout are recommendations until the board is agreed. Recommended: agree the brief as written; this plan's Strings follow the board.
+None. (Board S12-D7 agreed 2026-10-28; review M-1 answered 2026-10-28.)
 
 ## 13. PR
 
