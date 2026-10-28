@@ -1686,7 +1686,8 @@ message PromoteGraphAlignmentRow {
   string via_bridge_type = 17;
   string via_role = 18;
   // With possible_duplicate: the other row on this layer this one may be the
-  // same as (it took the handle this row wanted, or both are New and alike).
+  // same as (it took the handle this row wanted, or both would be new records
+  // (unplaced or decided New) and score alike).
   string duplicate_of_subject_id = 19;
   // Why the row reads as it does: via, decided, agrees, taken, empty, or
   // nothing when Promote suggests no record. The page words it. With agrees, the agreeing Property.

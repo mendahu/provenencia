@@ -129,9 +129,10 @@ func wouldBeNew(r Row) bool {
 
 // flagAlikeNewRows marks two rows of one kind that would both be new records
 // (wouldBeNew) and would clear the accept bar against each other: filing both
-// New mints two handles for what may be one entity. A signature both rows have neighbors for suppresses the warning
-// when none of those neighbors are the same subject or a match. It only
-// warns, so the bar is acceptance, not strong.
+// New mints two handles for what may be one entity. A signature both rows have
+// neighbors for suppresses the warning when none of those neighbors are the
+// same subject or a match. It only warns, so the bar is acceptance, not
+// strong.
 func (st *state) flagAlikeNewRows(rows []Row) {
 	for i := range rows {
 		if !wouldBeNew(rows[i]) || rows[i].Flags.PossibleDuplicate {

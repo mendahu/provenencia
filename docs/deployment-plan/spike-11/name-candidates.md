@@ -66,7 +66,7 @@ With `{desiree, des}` as a nickname set, the pair shortlists and compares at sim
 
 ## Promote suggests a record or nothing
 
-Until S11-47, Go gave every row it did not place a target: Skip (`weak`) when a candidate fell short, New (`no_match`) when there was none (`graphalign/rows.go`). Swift drafted neither. A row with no band opens unset (`PromoteFlow.draftTarget`), and the Skip / New it receives survive only in a rare fallback (an unplaced row with a band that was not taken falls through to Skip). The user's call (2026-10-24): remove it (S11-47). A proposal row carries a handle or no target; its alternatives stay. New and Skip are only ever the researcher's choice. A decided New or Skip still goes to Go as a fixed pair (`PromoteGraphAlignmentFixed`), unchanged.
+Until S11-47, Go gave every row it did not place a target: Skip (`weak`) when a candidate fell short, New (`no_match`) when there was none (`graphalign/rows.go`). Swift drafted neither. A row with no band opens unset (`PromoteFlow.draftTarget`), and the Skip / New it received survived only in a rare fallback (an unplaced row with a band that was not taken fell through to Skip). The user's call (2026-10-24): remove it (S11-47). A proposal row carries a handle or no target; its alternatives stay. New and Skip are only ever the researcher's choice. A decided New or Skip still goes to Go as a fixed pair (`PromoteGraphAlignmentFixed`), unchanged.
 
 So lowering the gate does not change how a row opens: "Amy" still opens unset, now with "Amy Lee Anne Long" in its menu.
 

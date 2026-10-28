@@ -13388,7 +13388,8 @@ type PromoteGraphAlignmentRow struct {
 	ViaBridgeType        string `protobuf:"bytes,17,opt,name=via_bridge_type,json=viaBridgeType,proto3" json:"via_bridge_type,omitempty"`
 	ViaRole              string `protobuf:"bytes,18,opt,name=via_role,json=viaRole,proto3" json:"via_role,omitempty"`
 	// With possible_duplicate: the other row on this layer this one may be the
-	// same as (it took the handle this row wanted, or both are New and alike).
+	// same as (it took the handle this row wanted, or both would be new records
+	// (unplaced or decided New) and score alike).
 	DuplicateOfSubjectId string `protobuf:"bytes,19,opt,name=duplicate_of_subject_id,json=duplicateOfSubjectId,proto3" json:"duplicate_of_subject_id,omitempty"`
 	// Why the row reads as it does: via, decided, agrees, taken, empty, or
 	// nothing when Promote suggests no record. The page words it. With agrees, the agreeing Property.

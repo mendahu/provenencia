@@ -5654,7 +5654,8 @@ public nonisolated struct Provenencia_Engine_V1_PromoteGraphAlignmentRow: @unche
   }
 
   /// With possible_duplicate: the other row on this layer this one may be the
-  /// same as (it took the handle this row wanted, or both are New and alike).
+  /// same as (it took the handle this row wanted, or both would be new records
+  /// (unplaced or decided New) and score alike).
   public var duplicateOfSubjectID: String {
     get {_storage._duplicateOfSubjectID}
     set {_uniqueStorage()._duplicateOfSubjectID = newValue}

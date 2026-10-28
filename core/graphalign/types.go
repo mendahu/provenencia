@@ -159,7 +159,8 @@ type RowFlags struct {
 	ConflictWithFixed bool
 	// PossibleDuplicate: DuplicateOf may be the same entity as this row. It
 	// took the handle this row would have matched, holds the same handle,
-	// or both rows are New and score alike.
+	// or both rows would be new records (unplaced or decided New) and score
+	// alike.
 	PossibleDuplicate bool
 	DuplicateOf       []byte
 	// Contested: a comparison behind the pair this row reports conflicts,
