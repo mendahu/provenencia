@@ -198,7 +198,7 @@ func buildFacetReleases() []facetRelease {
 		// A link is audited under its graph's id, like the graph's own create.
 		rowFacet(catalogmodel.KindArtifact, "evidence_graph_artifacts", "artifact_id", "evidence_graph_artifact", "graph_id",
 			col{"graph_id", colUUID}, col{"artifact_id", colUUID}),
-		optionalPointer(catalogmodel.KindArtifact, "sources", "primary_artifact_id", "source", "id", "cover_mode"),
+		optionalPointer(catalogmodel.KindArtifact, "sources", "primary_artifact_id", "source", "id", col{"cover_mode", colText}),
 		// A graph's links go with it, audited under its id.
 		rowFacet(catalogmodel.KindEvidenceGraph, "evidence_graph_artifacts", "graph_id", "evidence_graph_artifact", "graph_id",
 			col{"graph_id", colUUID}, col{"artifact_id", colUUID}),
@@ -530,16 +530,22 @@ func rowFacet(parent catalogmodel.Kind, table, fkCol, entityType, entityIDCol st
 // optionalPointer clears a BucketOptional SET NULL FK on parent delete: it
 // nulls the FK, re-reads side-effect columns (for example cover_mode after
 // sources_clear_cover_on_primary_null), and emits one update change per row.
-func optionalPointer(parent catalogmodel.Kind, table, fkCol, entityType, entityIDCol string, sideEffectCols ...string) facetRelease {
-	selectCols := entityIDCol + ", " + fkCol
-	reReadCols := fkCol
-	for _, c := range sideEffectCols {
-		selectCols += ", " + c
-		reReadCols += ", " + c
+func optionalPointer(parent catalogmodel.Kind, table, fkCol, entityType, entityIDCol string, sideEffectCols ...col) facetRelease {
+	readCols := append([]col{{entityIDCol, colUUID}, {fkCol, colUUID}}, sideEffectCols...)
+	selectNames := readCols[0].name
+	for i := 1; i < len(readCols); i++ {
+		selectNames += ", " + readCols[i].name
 	}
-	selectSQL := fmt.Sprintf(`SELECT %s FROM %s WHERE %s = ? ORDER BY %s`, selectCols, table, fkCol, entityIDCol)
+	selectSQL := fmt.Sprintf(`SELECT %s FROM %s WHERE %s = ? ORDER BY %s`, selectNames, table, fkCol, entityIDCol)
 	updateSQL := fmt.Sprintf(`UPDATE %s SET %s = NULL WHERE %s = ?`, table, fkCol, entityIDCol)
-	reReadSQL := fmt.Sprintf(`SELECT %s FROM %s WHERE %s = ?`, reReadCols, table, entityIDCol)
+	var reReadSQL string
+	if len(sideEffectCols) > 0 {
+		reReadNames := sideEffectCols[0].name
+		for i := 1; i < len(sideEffectCols); i++ {
+			reReadNames += ", " + sideEffectCols[i].name
+		}
+		reReadSQL = fmt.Sprintf(`SELECT %s FROM %s WHERE %s = ?`, reReadNames, table, entityIDCol)
+	}
 	return facetRelease{
 		Parent:    parent,
 		Via:       table + "." + fkCol,
@@ -556,25 +562,16 @@ func optionalPointer(parent catalogmodel.Kind, table, fkCol, entityType, entityI
 			}
 			var found []pointed
 			for rows.Next() {
-				var entityID, fkVal []byte
-				sideScanners := make([]sql.NullString, len(sideEffectCols))
-				dest := make([]any, 2+len(sideEffectCols))
-				dest[0] = &entityID
-				dest[1] = &fkVal
-				for i := range sideEffectCols {
-					dest[i+2] = &sideScanners[i]
-				}
+				dest, vals := colScanDest(readCols)
 				if err := rows.Scan(dest...); err != nil {
 					rows.Close()
 					return released{}, err
 				}
+				entityID, _ := vals[0].([]byte)
+				fkVal, _ := vals[1].([]byte)
 				sideOld := make([]any, len(sideEffectCols))
-				for i, s := range sideScanners {
-					if s.Valid {
-						sideOld[i] = s.String
-					} else {
-						sideOld[i] = nil
-					}
+				for i, c := range sideEffectCols {
+					sideOld[i] = colJSON(c.kind, vals[i+2])
 				}
 				found = append(found, pointed{
 					entityID: append([]byte(nil), entityID...),
@@ -590,26 +587,21 @@ func optionalPointer(parent catalogmodel.Kind, table, fkCol, entityType, entityI
 				if _, err := tx.Exec(updateSQL, r.entityID); err != nil {
 					return released{}, err
 				}
-				var fkAfter []byte
-				sideAfter := make([]sql.NullString, len(sideEffectCols))
-				dest := make([]any, 1+len(sideEffectCols))
-				dest[0] = &fkAfter
-				for i := range sideEffectCols {
-					dest[i+1] = &sideAfter[i]
-				}
-				if err := tx.QueryRow(reReadSQL, r.entityID).Scan(dest...); err != nil {
-					return released{}, err
+				sideNew := make([]any, len(sideEffectCols))
+				if len(sideEffectCols) > 0 {
+					dest, vals := colScanDest(sideEffectCols)
+					if err := tx.QueryRow(reReadSQL, r.entityID).Scan(dest...); err != nil {
+						return released{}, err
+					}
+					for i, c := range sideEffectCols {
+						sideNew[i] = colJSON(c.kind, vals[i])
+					}
 				}
 				fields := map[string]rowchange.FieldDiff{
-					fkCol: {Old: database.UUIDJSON(r.fkOld), New: database.UUIDJSON(fkAfter)},
+					fkCol: {Old: colJSON(colUUID, r.fkOld), New: nil},
 				}
-				for i, col := range sideEffectCols {
-					oldVal := r.sideOld[i]
-					var newVal any
-					if sideAfter[i].Valid {
-						newVal = sideAfter[i].String
-					}
-					fields[col] = rowchange.FieldDiff{Old: oldVal, New: newVal}
+				for i, c := range sideEffectCols {
+					fields[c.name] = rowchange.FieldDiff{Old: r.sideOld[i], New: sideNew[i]}
 				}
 				out.Changes = append(out.Changes, rowchange.Change{
 					EntityType: entityType,
@@ -621,6 +613,15 @@ func optionalPointer(parent catalogmodel.Kind, table, fkCol, entityType, entityI
 			return out, nil
 		},
 	}
+}
+
+func colScanDest(cols []col) (dest []any, vals []any) {
+	vals = make([]any, len(cols))
+	dest = make([]any, len(cols))
+	for i := range cols {
+		dest[i] = &vals[i]
+	}
+	return dest, vals
 }
 
 func colJSON(kind colKind, v any) any {
