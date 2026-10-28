@@ -30,6 +30,18 @@ func slName(form string) valuecompare.Value {
 	return valuecompare.Value{Type: propertymeta.ValueTypeName, Name: namevaluetest.Western(form), NamePattern: valuecompare.WesternPattern}
 }
 
+func slGiven(form string) valuecompare.Value {
+	return valuecompare.Value{Type: propertymeta.ValueTypeName, Name: namevaluetest.Given(form), NamePattern: valuecompare.WesternPattern}
+}
+
+func slNick(form string) valuecompare.Value {
+	return valuecompare.Value{
+		Type:        propertymeta.ValueTypeName,
+		Name:        &namevalue.Value{Form: form, Parts: []namevalue.Part{{Idx: 0, Value: form, Type: namevalue.PartTypeNick}}},
+		NamePattern: valuecompare.WesternPattern,
+	}
+}
+
 func slGeneration() valuecompare.Value {
 	v := slName("John Smith")
 	v.Name.Parts = append(v.Name.Parts, namevalue.Part{Idx: 2, Value: "Jr", Type: namevalue.PartTypeSuffix})
@@ -42,6 +54,17 @@ func slText(s string) valuecompare.Value {
 
 func slDate(d *datevalue.Value) valuecompare.Value {
 	return valuecompare.Value{Type: propertymeta.ValueTypeDate, Date: d}
+}
+
+// plain drops the prefix keys, the only keys the two sides do not share.
+func plain(keys []string) []string {
+	var out []string
+	for _, k := range keys {
+		if !strings.HasPrefix(k, "p:") && !strings.HasPrefix(k, "g:") {
+			out = append(out, k)
+		}
+	}
+	return out
 }
 
 func TestWordKeys(t *testing.T) {
@@ -62,6 +85,7 @@ func TestWordKeys(t *testing.T) {
 		not  []string
 	}{
 		{name: "initial is no key", v: slName("J. Robins"), want: []string{whole(slName("J. Robins")), "w:robins"}},
+		{name: "lone initial keys only its whole key", v: slGiven("J."), want: []string{whole(slGiven("J."))}},
 		{name: "folded word", v: slName("José Robins"), has: []string{"w:jose", "w:robins"}},
 		{name: "generation word", v: slGeneration(), has: []string{"w:john", "w:smith"}, not: []string{"w:jr"}},
 		{name: "alias set", v: slName("Bill"), has: []string{"a:" + billKey}},
@@ -71,7 +95,18 @@ func TestWordKeys(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := valuecompare.WordKeys(tt.v, rules)
+			index, lookup := valuecompare.WordKeys(tt.v, rules)
+			if tt.v.Type == propertymeta.ValueTypeText || tt.name == "initial is no key" || tt.name == "lone initial keys only its whole key" {
+				for _, k := range append(slices.Clone(index), lookup...) {
+					if strings.HasPrefix(k, "p:") || strings.HasPrefix(k, "g:") {
+						t.Errorf("keys %q %q hold a prefix key %q", index, lookup, k)
+					}
+				}
+			}
+			got := plain(index)
+			if !slices.Equal(got, plain(lookup)) {
+				t.Fatalf("plain index %q != plain lookup %q", got, plain(lookup))
+			}
 			if tt.want != nil {
 				want := slices.Clone(tt.want)
 				slices.Sort(want)
@@ -79,8 +114,8 @@ func TestWordKeys(t *testing.T) {
 					t.Fatalf("WordKeys = %q, want %q", got, want)
 				}
 			}
-			if tt.want == nil && tt.has == nil && tt.not == nil && got != nil {
-				t.Fatalf("WordKeys = %q, want nil", got)
+			if tt.want == nil && tt.has == nil && tt.not == nil && (index != nil || lookup != nil) {
+				t.Fatalf("WordKeys = %q, %q, want nil", index, lookup)
 			}
 			for _, k := range tt.has {
 				if !slices.Contains(got, k) {
@@ -92,13 +127,15 @@ func TestWordKeys(t *testing.T) {
 					t.Errorf("WordKeys %q holds %q", got, k)
 				}
 			}
-			if !slices.IsSorted(got) || len(slices.Compact(slices.Clone(got))) != len(got) {
-				t.Errorf("WordKeys %q is not sorted and unique", got)
+			for _, list := range [][]string{index, lookup} {
+				if !slices.IsSorted(list) || len(slices.Compact(slices.Clone(list))) != len(list) {
+					t.Errorf("WordKeys %q is not sorted and unique", list)
+				}
 			}
 		})
 	}
-	if got := valuecompare.WordKeys(slText("New York"), rules); slices.ContainsFunc(got, func(k string) bool { return len(k) > 1 && k[:2] == "a:" }) {
-		t.Errorf("text keys %q hold an alias key", got)
+	if index, _ := valuecompare.WordKeys(slText("New York"), rules); slices.ContainsFunc(index, func(k string) bool { return strings.HasPrefix(k, "a:") }) {
+		t.Errorf("text keys %q hold an alias key", index)
 	}
 }
 
@@ -128,9 +165,11 @@ func TestWordKeysShareOnSameOrEquivalent(t *testing.T) {
 				if res.Relation != valuecompare.Same && res.Relation != valuecompare.Equivalent {
 					continue
 				}
-				if !shares(valuecompare.WordKeys(a, rules), valuecompare.WordKeys(b, rules)) {
-					t.Errorf("%s %q ~ %q is %s but shares no key: %q vs %q", typ, x, y, res.Relation,
-						valuecompare.WordKeys(a, rules), valuecompare.WordKeys(b, rules))
+				ia, la := valuecompare.WordKeys(a, rules)
+				ib, lb := valuecompare.WordKeys(b, rules)
+				if !shares(ia, lb) || !shares(ib, la) {
+					t.Errorf("%s %q ~ %q is %s but the sides do not meet: index %q lookup %q vs index %q lookup %q", typ, x, y, res.Relation,
+						ia, la, ib, lb)
 				}
 				if typ == propertymeta.ValueTypeName && res.Relation == valuecompare.Equivalent && det.Cause == valuecompare.CauseAlias {
 					equivalentAlias = true
