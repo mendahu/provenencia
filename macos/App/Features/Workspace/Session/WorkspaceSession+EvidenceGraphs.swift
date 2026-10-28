@@ -119,10 +119,12 @@ extension WorkspaceSession {
     }
 
     /// The ids of `artifactIDs` that none of the Source's graphs links. `nil`
-    /// unless the Source's graphs are loaded (`evidenceGraphsRead`), so a list
-    /// not yet refreshed marks nothing.
+    /// unless the Source's graphs are loaded (`evidenceGraphsRead`) and the list
+    /// has settled, so a list not yet refreshed, or refetching after a write,
+    /// marks nothing.
     func artifactIDsInNoGraph(sourceID: String, artifactIDs: [String]) -> Set<String>? {
-        guard case .loaded = evidenceGraphsRead(sourceID: sourceID),
+        guard evidenceGraphsHandle?.isSettled == true,
+              case .loaded = evidenceGraphsRead(sourceID: sourceID),
               let index = currentEvidenceGraphIndex
         else { return nil }
         let linked = index.linkedArtifactIDsBySource[sourceID] ?? []

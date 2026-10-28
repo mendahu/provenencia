@@ -101,6 +101,30 @@ struct WorkspaceSessionTests {
         #expect(session.artifactIDsInNoGraph(sourceID: "s9", artifactIDs: ["a1"]) == nil)
     }
 
+    @Test func artifactIDsInNoGraphIsNilWhileTheListRefetches() async {
+        let session = makeSession()
+        let rows = [evidenceGraph("g1", sourceID: "s1", name: "Default", artifactIDs: ["a1"])]
+        session.setQueryValue(session.evidenceGraphsKey, value: rows)
+        #expect(session.artifactIDsInNoGraph(sourceID: "s1", artifactIDs: ["a1", "a2"]) == ["a2"])
+
+        // A refetch of the loaded list: the old value stays readable, but it
+        // may lack a link just saved, so nothing is marked until it settles.
+        let hold = FakeHold()
+        hold.isOn = true
+        session.invalidate(session.evidenceGraphsKey)
+        let handle = session.ensureQuery(session.evidenceGraphsKey) { () async throws -> [CatalogEvidenceGraph] in
+            await hold.wait()
+            return [evidenceGraph("g1", sourceID: "s1", name: "Default", artifactIDs: ["a1", "a2"])]
+        }
+        #expect(handle.isFetching)
+        #expect(session.artifactIDsInNoGraph(sourceID: "s1", artifactIDs: ["a1", "a2"]) == nil)
+
+        _ = await waitUntil { hold.count == 1 }
+        hold.release()
+        await waitForQuery(handle)
+        #expect(session.artifactIDsInNoGraph(sourceID: "s1", artifactIDs: ["a1", "a2"]) == [])
+    }
+
     @Test func queryReadAndProgressReads() async {
         struct TestFailure: Error {}
         let handle = QueryHandle<Int>()
