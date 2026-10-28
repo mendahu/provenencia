@@ -216,11 +216,7 @@ final class SourceArtifactsSection {
     /// Graph id to the hint under its locked row: one lock per graph, from the
     /// first block that names it.
     var lockedGraphs: [String: String] {
-        var hints: [String: String] = [:]
-        for block in linkEdit?.blocks ?? [] where hints[block.graphID] == nil {
-            hints[block.graphID] = block.lockHint
-        }
-        return hints
+        (linkEdit?.blocks ?? []).lockHints(by: \.graphID)
     }
 
     /// The edit's checked graph ids in list order; a locked graph is always checked.
@@ -324,7 +320,7 @@ final class SourceArtifactsSection {
     /// The full set of graph ids a links Save sends: the checked ones in list
     /// order, then the graphs made since edit opened that link the Artifact (the
     /// card never showed them, so a Save must not drop them).
-    var savedGraphIDs: [String] {
+    private var savedGraphIDs: [String] {
         guard let edit = linkEdit else { return [] }
         let shown = Set(edit.graphIDs)
         let added = (context.session.evidenceGraphs(sourceID: context.sourceID) ?? [])

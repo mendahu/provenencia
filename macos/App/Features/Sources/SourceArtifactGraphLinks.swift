@@ -46,3 +46,16 @@ extension CatalogEvidenceGraphUnlinkBlock {
             : L10n.Errors.message(code: reason.wire)
     }
 }
+
+extension Sequence where Element == CatalogEvidenceGraphUnlinkBlock {
+    /// Key (a graph or Artifact id) to the hint under its locked row: one lock
+    /// per key, from the first block that names it. Every block the engine
+    /// reports locks; Swift decides no lock.
+    func lockHints(by key: KeyPath<Element, String>) -> [String: String] {
+        var hints: [String: String] = [:]
+        for block in self where hints[block[keyPath: key]] == nil {
+            hints[block[keyPath: key]] = block.lockHint
+        }
+        return hints
+    }
+}

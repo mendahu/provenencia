@@ -80,15 +80,9 @@ final class SourceGraphFormModel {
         context.sourceTypeIconKey
     }
 
-    /// Artifact id to the hint under its locked row: every block the engine
-    /// reports locks its Artifact; Swift decides no lock.
-    var locked: [String: String] {
-        var hints: [String: String] = [:]
-        for block in blocks where hints[block.artifactID] == nil {
-            hints[block.artifactID] = block.lockHint
-        }
-        return hints
-    }
+    /// Artifact id to the hint under its locked row; see `lockHints(by:)` in
+    /// `SourceArtifactGraphLinks.swift`.
+    var locked: [String: String] { blocks.lockHints(by: \.artifactID) }
 
     /// The locked Artifacts that Citations need, with those Citations, in page
     /// order: the Kept linked group lists Citations, so a lock with none (the
