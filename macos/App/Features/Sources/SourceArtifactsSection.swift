@@ -682,14 +682,14 @@ final class SourceArtifactsSection {
     /// for a type Provenencia does not store) or one `ProjectFiles` refuses shows the
     /// shared refusal naming the file; a missing one keeps its own message.
     func open(_ art: CatalogArtifact) {
-        guard let file = art.file else { return }
+        guard art.file != nil else { return }
         context.clearPageError()
         let name = art.fileDisplayName
-        guard !file.relPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        guard let rel = art.openableRelPath else {
             context.pageError = L10n.ObjectOpen.refused(filename: name)
             return
         }
-        switch ProjectFiles.openObject(projectDir: context.projectDir, relPath: file.relPath) {
+        switch ProjectFiles.openObject(projectDir: context.projectDir, relPath: rel) {
         case nil:
             break
         case .unsafe:
