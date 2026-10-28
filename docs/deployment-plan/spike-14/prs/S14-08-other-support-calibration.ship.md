@@ -32,4 +32,4 @@ Head `5d1c4ce2`. Gate PASS (orchestrator). F-1 done — Together and Unplaced su
 
 ## Result
 
-Gate PASS · CI pending · open: none · follow-ups: none · to user: §10 manual check · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: none · to user: §10 manual check · CON miss: none
