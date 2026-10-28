@@ -6,7 +6,7 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 
 ## Scheduled
 
-- **S12-D7** — Source page, Artifacts section: an Artifact in no graph (the card's "Not in an evidence graph" line and its link action, and the graph boxes on a one-graph Source). Gates **S12-38**; written just before it.
+- [S12-D7](S12-D7-artifact-in-no-graph.md) — Source page, Artifacts section: an Artifact in no graph (the card's "Not in an evidence graph" mark and its link action, the graph boxes on a one-graph Source, the swap-aware Citations lock, the one-write refused save). Gates **S12-38**; written 2026-10-28, board not agreed.
 
 ## Archived
 
