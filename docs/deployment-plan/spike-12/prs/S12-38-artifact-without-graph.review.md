@@ -1,12 +1,12 @@
 # Review — S12-38 Add an Artifact without a graph; the card saves links in one write
 
-**Verdict:** Fits with changes — Not ready (gated on board S12-D7; round 2 runs on the agreed board)
-**Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet). Both reviewed the plan and brief [S12-D7](../design/S12-D7-artifact-in-no-graph.md).
+**Verdict:** Fits with changes — Ready with changes (both rounds' blockers Fixed; plan Planned 2026-10-28)
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet), fresh each round. Both reviewed the plan and brief [S12-D7](../design/S12-D7-artifact-in-no-graph.md).
 
 ## To user
 
 - **M-1** (answered 2026-10-28): should the card lift the `citations_need_graph` lock in Swift when another box is checked, so a cited Artifact moves graphs in one Save? The user's answer: "Let's do it in two steps. No logic in Swift." The plan has no lift. Every preflight block locks its box on the card and in the graph form (D-3, D-7). A cited Artifact moves in two Saves (AC-3.7). The map's working rule "An Artifact with Citations keeps at least one graph" now records it.
-- **X-1 / Open question 1:** the board S12-D7 is not agreed. The plan stays `Blocked — on board S12-D7` until it is, and round 2 runs on the final Strings.
+- **X-1 / Open question 1** (answered 2026-10-28): board S12-D7 is agreed. The user shared the board URL and its export. The writer checked the export against the plan: the copy matches word for word, and the lock, refusal and graph-form behaviour match. The one layout difference, **Link to a graph** at the row's end, changed the plan's row from `PVFlowLayout` to `ViewThatFits` (§6 macOS, brief inventory).
 
 ## Writer's own calls
 
@@ -85,3 +85,36 @@ The Swift lift of the Citations lock re-derives the engine's `checkUnlink` third
 
 ### X-13 · minor · Brief gaps: loading frames, card heights, ND-6 placement
 **Answer:** Fixed. Brief frame 11 (loading), ND-4 (heights) and ND-6 (below the group, never over the load states).
+
+## Round 2
+
+Both reviewers confirmed every round-1 answer against the code at `df5d4785` (nothing under `macos/`, `api/` or `core/` moved since `b1bf4c5`).
+
+### M-10 · blocker · D-1 writes "loaded" a second time, beside `evidenceGraphsRead`
+`SourceGraphsSection.rows` and `SourcesModel.statuses(for:)` already read `evidenceGraphsRead(sourceID:)`. D-1's "non-nil and non-empty" re-spelled it.
+**Answer:** Fixed. D-1, D-6 and `visibleGraphs` read `case .loaded = evidenceGraphsRead(sourceID:)`. Tests make "no graphs" with `makeCensus(graphs: [])`.
+
+### M-11 · blocker · Two re-read rules for a refused save (card vs graph form)
+**Answer:** Fixed. D-7's form now re-reads on any refusal in `.edit` with `graph.hasArtifact`, as the card does (D-5), with no sorting of codes. T-13's nil-code case now expects a re-read.
+
+### X-14 · blocker · The graph form would draw an empty Kept linked group
+`SourceGraphFormDialog` gates on `!model.blocks.isEmpty`, and `last_artifact` blocks are now kept.
+**Answer:** Fixed. D-7 gates on `!model.keptLinked.isEmpty`. STEP-6 lists the dialog, and T-11 asserts an empty `keptLinked` for a `last_artifact`-only read.
+
+### X-15 · major · STEP-4's `rg` check could not pass before STEP-7
+**Answer:** Fixed. STEP-4's check covers only `macos/App/Features` and the two test files it edits.
+
+### X-16 · major · The "no graphs" test setup was not reachable through `makeCensus`
+**Answer:** Fixed with M-10: `makeCensus(graphs: [])`. T-4's unrecognized case says `citations: 0`, and T-10 names its graphs.
+
+### X-17 · minor · T-5's reseed and the badge-clears path
+**Answer:** Fixed. T-5 spells out the store edit, the `lists: [.evidenceGraphs]` effects and `waitForQuery`. The risk row says the badge-clears check is manual only, since the fake reports no list.
+
+### X-18 · minor · `FakeHold.wait()` with an `NSLock` in async code
+**Answer:** Fixed. D-10 uses the lock only through `withLock` in synchronous members, reads `isOn` at call time, and resumes outside the lock.
+
+### X-19 · minor · `noGraphLine`'s argument and the card line's place
+**Answer:** Fixed. It is `noGraphLine(identifier:)`, and the card line sits inside the `PVField` after `SourceFormLoadArea`, where the Add dialog's line sits.
+
+### X-20 · nit and the round-2 notes
+**Answer:** Fixed. The stale `SourceGraphFormModel` comments (type doc, `loadKeptLinks`, `save`'s re-read) are in **Deletes** and STEP-6. The view reads `inNoGraph` once per body (D-6, Scale). Logged, not changed: `lockHint` stays an extension in `SourceArtifactGraphLinks.swift`, the feature file both models use; the card's and form's hint maps differ only by key (graph vs Artifact).
