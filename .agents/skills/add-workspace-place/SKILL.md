@@ -24,7 +24,7 @@ Spike decisions: [`docs/deployment-plan/archive/spike-4/README.md`](../../../doc
 | Change | This skill | Also use |
 | --- | --- | --- |
 | New sidebar destination / list / detail page | **Yes** | [`add-workspace-location`](../add-workspace-location/SKILL.md) |
-| New catalog read cached across navigation | **Yes** | registry loader in `CatalogQueryRegistry` |
+| New catalog read cached across navigation | **Yes** | descriptor arm in `CatalogQueryRegistry` (loader, `patches` / `refresh`, invalidateOn, whenHidden) |
 | Omnibar-searchable entity | Partial (location + queries) | [`add-searchable-kind`](../add-searchable-kind/SKILL.md) |
 | History-only deep id on existing place | No | `add-workspace-location` |
 | Go table SQL / FFI handler | No | `add-catalog-query`, `add-ffi-handler` |
@@ -94,7 +94,7 @@ In [`PlaceRegistry.swift`](../../../macos/App/Features/Workspace/Session/PlaceRe
 Extend [`PlaceRegistryTests`](../../../macos/ProvenenciaTests/PlaceRegistryTests.swift):
 `registryCoversAllPlaceIDs`, query key table row for the new place.
 
-### 3. `CatalogQueryKey` + registry loader
+### 3. `CatalogQueryKey` + descriptor arm
 
 In `Session/`:
 
