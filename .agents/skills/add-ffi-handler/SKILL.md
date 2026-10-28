@@ -64,7 +64,7 @@ Resource / vocab **Delete** RPCs: preview is `GetDeleteImpact` (report proto). T
 
 ## Files from the client, paths to the client
 
-A request names a client file by its absolute path, never as bytes. The handler stages it inside `withProjectCatalog`, before `writes.Run`, and defers the discard: `ingest.StageDepictions(c, inputs)` for depictions, `ingest.File` for Artifacts. Examples: `IngestArtifactFile` (one file, one path back) and `CreateCitationWithObservations` (drafts that carry a depiction path). Never take a File id from the client, and never read a saved `objects/…` path from a request: a response message holds saved data and a request holds only the input. Return `objects/…` paths through `files.RelPaths` (many Files, one query) or `files.StorageRelPath` (one). See `add-depiction-value`.
+A request names a client file by its absolute path, never as bytes. The handler stages it inside `withProjectCatalog`, before `writes.Run`, and defers the discard: `ingest.StageDepictions(c, inputs)` for depictions, `ingest.File` for Artifacts. Examples: `IngestArtifactFile` (one file, one path back) and `CreateCitationWithObservations` (drafts that carry a depiction path). Never take a File id from the client, and never read a saved `objects/…` path from a request: a response message holds saved data and a request holds only the input. Return `objects/…` paths through `files.RelPaths` (many Files, one query) or `files.ReadRelPath` (one; a type off the allowlist returns no path). `files.StorageRelPath` is the ingest, stage and purge path and refuses a type off the allowlist. See `add-depiction-value`.
 
 ## Do not
 
