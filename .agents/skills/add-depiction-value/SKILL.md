@@ -2,9 +2,9 @@
 name: add-depiction-value
 description: >-
   Uses or extends Provenencia depiction values (pure type in core/depictionvalue, queries in core/database/depictionvalues):
-  a region of a Citation's page plus an image File, the likeness gallery and the preferred portrait.
+  a region of a Citation's page plus an image File, the gallery and the preferred portrait or thumbnail.
   Use when saving, reading, redrawing or reconciling a depiction, value_depiction_id,
-  depiction_values, likeness, Readable, FromJoin, StageDepictions, the gallery or the portrait.
+  depiction_values, likeness, gallery, Readable, FromJoin, StageDepictions, the gallery or the portrait.
 ---
 
 # Add or use a depiction value
@@ -44,14 +44,15 @@ Every reader that returns a depiction to the app goes through `depictionvalue.Re
 ## Reconcile, gallery and portrait
 
 - Depictions group by image File id (`core/autoreconcile/modules.go`).
-- The gallery is `likenesses.ForEntities`, admitted by `autoreconcile.Reason.InGallery`; the rule is in [`docs/conclusion-layer-data-model.md`](../../../docs/conclusion-layer-data-model.md) §6 and [`docs/conclusion-reconciliation.md`](../../../docs/conclusion-reconciliation.md). Do not restate it here.
-- The `likeness` Property is the face key. `likenesses.Lead` is the one lead rule.
-- The preferred portrait is `canonical_entities.preferred_likeness_observation_id`, written by `canonicalentities.SetPreferredLikeness`.
+- The gallery is `gallery.ForEntities`, admitted by `autoreconcile.Reason.InGallery` and filtered on `vocabkey.GalleryKeys()` (`likeness`, `event_picture`, `place_picture`); the rule is in [`docs/conclusion-layer-data-model.md`](../../../docs/conclusion-layer-data-model.md) §6 and [`docs/conclusion-reconciliation.md`](../../../docs/conclusion-reconciliation.md). Do not restate it here.
+- Each gallery tile's image is the Observation's own `depiction_values.image_file_id`, not the reconciler cache's `value_image_file_id`.
+- `gallery.Lead` is the one lead rule. The preferred portrait or thumbnail is `canonical_entities.preferred_likeness_observation_id`, written by `canonicalentities.SetPreferredLikeness`.
+- Tests save depictions with `observationstest.SaveDepiction` (or `SaveLikeness` / `SaveNegativeLikeness` for the Person key).
 
 ## Tests
 
 - Pure tests use `depictionvaluetest.Locator` and `depictionvaluetest.Region`; check with `go test ./core/depictionvalue/...`.
-- Database tests use `observationstest.SaveLikeness`, `Crop`, `LikenessRegion`, `ImageOf`, `FileArtifact`, `SaveCitation`; run `CGO_ENABLED=1 go test -tags fts5 ./core/database/depictionvalues/ ./core/database/likenesses/`.
+- Database tests use `observationstest.SaveDepiction`, `SaveLikeness`, `Crop`, `LikenessRegion`, `ImageOf`, `FileArtifact`, `SaveCitation`; run `CGO_ENABLED=1 go test -tags fts5 ./core/database/depictionvalues/ ./core/database/gallery/`.
 
 ## Do not
 

@@ -53,17 +53,17 @@ const (
 
 // Seeded Property keys that matching and search read by name.
 const (
-	PropertyName       = "name"
-	PropertySexAtBirth = "sex_at_birth"
-	PropertyGender     = "gender"
-	PropertyEventType  = "event_type"
-	PropertyDate       = "date"
-	PropertyStartDate  = "start_date"
-	PropertyEndDate    = "end_date"
-	PropertyToponym       = "toponym"
-	PropertyLikeness      = "likeness"
-	PropertyEventPicture  = "event_picture"
-	PropertyPlacePicture  = "place_picture"
+	PropertyName         = "name"
+	PropertySexAtBirth   = "sex_at_birth"
+	PropertyGender       = "gender"
+	PropertyEventType    = "event_type"
+	PropertyDate         = "date"
+	PropertyStartDate    = "start_date"
+	PropertyEndDate      = "end_date"
+	PropertyToponym      = "toponym"
+	PropertyLikeness     = "likeness"
+	PropertyEventPicture = "event_picture"
+	PropertyPlacePicture = "place_picture"
 
 	PropertyPerson    = "person"
 	PropertyEvent     = "event"

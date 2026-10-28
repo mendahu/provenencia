@@ -1,6 +1,6 @@
 ---
 description: Depiction values: pure type in core/depictionvalue, queries in core/database/depictionvalues
-globs: core/depictionvalue/**,core/database/depictionvalues/**,core/database/likenesses/**,core/ingest/depictions.go,core/locator/depiction.go
+globs: core/depictionvalue/**,core/database/depictionvalues/**,core/database/gallery/**,core/ingest/depictions.go,core/locator/depiction.go
 alwaysApply: false
 ---
 

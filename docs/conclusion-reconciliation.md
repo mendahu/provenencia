@@ -141,7 +141,7 @@ Each module answers three questions:
 | **name** | §7.2 | containment per part type (§7.2) | §7.2 | no parts |
 | **depiction** | the same image File (the same pixels) | none | the image | an image `depictionvalue.Readable` refuses |
 
-A depiction's value is its image File; the loader reads it through `depictionvalue.Readable`, and the cache stores it as `value_image_file_id`. `likeness` is `multiple`, so a person's images form a gallery, built from the records whose own outcome is `kept` or `weak` ([conclusion layer §6](conclusion-layer-data-model.md#6-canonical_entities)). The Person page lists no depiction field.
+A depiction's value is its image File; the loader reads it through `depictionvalue.Readable`, and the cache stores it as `value_image_file_id`. Gallery keys (`likeness`, `event_picture`, `place_picture`) are `multiple`, so a handle's images form a gallery, built from the records whose own outcome is `kept` or `weak` ([conclusion layer §6](conclusion-layer-data-model.md#6-canonical_entities)). The gallery shows each record's own `depiction_values.image_file_id`, not the reconciler cache copy. The Person page lists no depiction field.
 
 Promote pins a comparison line only when value compare says the values are the same ([`matching-model.md`](matching-model.md)). Scoring uses value compare's similarity, so a partial resemblance can raise a match without being pinned.
 

@@ -339,6 +339,8 @@ remark              text          free-text commentary about a source subject
 toponym             text          place name as interpreted from a Source (not a personal NameValue); cardinality `multiple`
 interests           text          free-text interests; cardinality `multiple`; unlocked on person
 likeness            depiction     region plus image; cardinality `multiple`; locked on person; new catalogs only (S10-32)
+event_picture       depiction     Picture of an event; region plus image; cardinality `multiple`; locked on event; new catalogs only (S14-01)
+place_picture       depiction     Picture of a place; region plus image; cardinality `multiple`; locked on place; new catalogs only (S14-01)
 religion            term          religion or denomination as recorded; cardinality `multiple`; unlocked on person; terms §3.10
 languages_spoken    term          languages the person spoke; cardinality `multiple`; unlocked on person; terms §3.11
 ```
@@ -370,10 +372,12 @@ event           event_name          # text; unlocked
 event           date                # locked
 event           start_date          # locked
 event           end_date            # locked
+event           event_picture       # depiction; multiple; locked (S14-01)
 
 place           toponym             # locked
 place           start_date          # locked; period start (S9-38)
 place           end_date            # locked; period end (S9-38)
+place           place_picture       # depiction; multiple; locked (S14-01)
 
 participation   person
 participation   event
