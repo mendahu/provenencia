@@ -32,8 +32,9 @@ enum CatalogQueryKey: Hashable, Sendable {
     /// same call. Evicted, not revalidated, while off screen.
     case conclusionDetail(project: ProjectKey, entityId: String)
 
-    /// Case identity without associated payload — used by `CatalogQueryRegistry` specs.
-    enum Kind: Hashable, Sendable {
+    /// Case identity without associated payload. Each kind has one
+    /// `CatalogQueryDescriptor` (`Kind.descriptor`).
+    enum Kind: Hashable, Sendable, CaseIterable {
         case sourcesList
         case sourceTypesList
         case metadataFieldsList

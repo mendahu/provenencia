@@ -22,6 +22,22 @@ enum CatalogHiddenPolicy: Sendable, Equatable {
     case evict
 }
 
+/// One catalog cache kind: its policies, how a mutation invalidates it, and
+/// the last-updated patch for lists that move a row in place.
+struct CatalogQueryDescriptor: Sendable {
+    let kind: CatalogQueryKey.Kind
+    let stalePolicy: CatalogQueryStalePolicy
+    let invalidateOn: Set<CatalogMutationKind>
+    /// What an invalidated key that isn't on screen does. The exception
+    /// to cache rule 2 for lists and per-handle pages, so one trigger
+    /// doesn't reload every list or page the researcher has opened.
+    var whenHidden: CatalogHiddenPolicy = .revalidate
+    let invalidation: @Sendable (ProjectKey, CatalogMutation) -> CatalogQueryInvalidation
+    /// How a write that reports its activity moves this list's rows in
+    /// place (no load). `nil` for lists without a last-updated cell.
+    var lastUpdated: CatalogLastUpdatedPatch?
+}
+
 /// Declarative catalog read loaders and mutation invalidation map.
 struct CatalogQueryRegistry: Sendable {
     static let standard = CatalogQueryRegistry()
@@ -44,177 +60,8 @@ struct CatalogQueryRegistry: Sendable {
         .createdSource, .deletedSource, .promotedSubject,
     ]
 
-    private struct Spec {
-        let kind: CatalogQueryKey.Kind
-        let stalePolicy: CatalogQueryStalePolicy
-        let invalidateOn: Set<CatalogMutationKind>
-        /// What an invalidated key that isn't on screen does. The exception
-        /// to cache rule 2 for lists and per-handle pages, so one trigger
-        /// doesn't reload every list or page the researcher has opened.
-        var whenHidden: CatalogHiddenPolicy = .revalidate
-        /// How a write that reports its activity moves this list's rows in
-        /// place (no load). `nil` for lists without a last-updated cell.
-        var lastUpdated: CatalogLastUpdatedPatch?
-    }
-
-    private let specs: [Spec] = [
-        Spec(
-            kind: .sourcesList,
-            stalePolicy: .sessionFresh,
-            invalidateOn: [.createdSource, .deletedSource],
-            // Work under a Source reports its activity in `WriteEffects`, which
-            // patches the row through `lastUpdated`.
-            whenHidden: .markStale,
-            lastUpdated: .rows(CatalogSource.self, scope: .source)
-        ),
-        Spec(
-            kind: .sourceTypesList,
-            stalePolicy: .sessionFresh,
-            // `usedBy` counts sources per type, so adding a source or moving one
-            // restates rows no type edit touched.
-            invalidateOn: [
-                .createdSourceType, .updatedSourceType, .deletedSourceType,
-                .createdSource, .deletedSource, .changedSourceType,
-            ]
-        ),
-        Spec(
-            kind: .metadataFieldsList,
-            stalePolicy: .sessionFresh,
-            // `usedBy` counts sources holding a value for the field, and it
-            // gates Delete.
-            invalidateOn: [
-                .createdMetadataField, .updatedMetadataField, .deletedMetadataField,
-                .mutatedSourceMetadata,
-            ]
-        ),
-        Spec(
-            kind: .credibilityGradesList,
-            stalePolicy: .sessionFresh,
-            // Seeded vocabulary with no CRUD surface, so nothing stales it.
-            invalidateOn: []
-        ),
-        Spec(
-            kind: .confidenceGradesList,
-            stalePolicy: .sessionFresh,
-            // Seeded vocabulary with no CRUD surface, so nothing stales it.
-            invalidateOn: []
-        ),
-        Spec(
-            kind: .sourceWorkspace,
-            stalePolicy: .sessionFresh,
-            // Vocabulary lists are no longer folded in here, so plain
-            // create/relabel of a type or field leaves the page alone. What
-            // remains is the metadata row set the engine derives per source:
-            // suggestions ∪ values, each row embedding its field.
-            invalidateOn: [
-                .mutatedSourceWorkspace, .mutatedSourceMetadata, .changedSourceType,
-                .updatedMetadataField, .deletedMetadataField,
-                .assignedTypeSuggestion, .removedTypeSuggestion,
-                .deletedSource,
-            ]
-        ),
-        Spec(
-            kind: .typeSuggestions,
-            stalePolicy: .sessionFresh,
-            // Each suggestion embeds a full field row, so relabelling or
-            // deleting a field reaches types the edit never named.
-            invalidateOn: [
-                .assignedTypeSuggestion, .removedTypeSuggestion,
-                .updatedMetadataField, .deletedMetadataField,
-                .deletedSourceType,
-            ]
-        ),
-        Spec(
-            kind: .evidenceGraph,
-            stalePolicy: .sessionFresh,
-            // Writes that report effects reload the graphs they name
-            // (`WriteEffects.evidenceGraphs`); Promote reports none.
-            invalidateOn: [.deletedSource, .promotedSubject]
-        ),
-        Spec(
-            kind: .citationCounts,
-            stalePolicy: .sessionFresh,
-            // Reloads follow the write's `citationSources` effects.
-            invalidateOn: [],
-            whenHidden: .markStale
-        ),
-        Spec(
-            kind: .propertiesWorkspace,
-            stalePolicy: .sessionFresh,
-            // `usedBy` counts Observations per property. Observation writes
-            // report their Source in `WriteEffects`, which invalidates it.
-            invalidateOn: [
-                .createdProperty, .updatedProperty, .deletedProperty,
-                .mutatedSubjectTypeProperties, .deletedSubject,
-            ],
-            whenHidden: .markStale
-        ),
-        Spec(
-            kind: .connectRules,
-            stalePolicy: .sessionFresh,
-            // Seeded product matrix with no CRUD surface.
-            invalidateOn: []
-        ),
-        Spec(
-            kind: .propertyTerms,
-            stalePolicy: .sessionFresh,
-            invalidateOn: [.createdPropertyTerm]
-        ),
-        Spec(
-            kind: .citationsByArtifact,
-            stalePolicy: .sessionFresh,
-            // Reloads follow the write's `citationSources` effects.
-            invalidateOn: [],
-            whenHidden: .markStale
-        ),
-        Spec(
-            kind: .evidenceGraphProgress,
-            stalePolicy: .sessionFresh,
-            // Canvas writes patch one graph via Get + setQueryValue — do not
-            // restale the project-wide map (or sourcesList).
-            invalidateOn: []
-        ),
-        Spec(
-            kind: .evidenceGraphsList,
-            stalePolicy: .sessionFresh,
-            // Graph and link writes report the `evidence_graphs` list in
-            // `WriteEffects`; `deleteSource` reports none, so `.deletedSource` drops it.
-            invalidateOn: [.deletedSource],
-            // A visible key still revalidates (`WorkspaceSession.apply(invalidations:)`);
-            // a hidden list just goes stale until it is shown again.
-            whenHidden: .markStale
-        ),
-        Spec(
-            kind: .personsList,
-            stalePolicy: .sessionFresh,
-            invalidateOn: CatalogQueryRegistry.conclusionTriggers,
-            whenHidden: .markStale,
-            lastUpdated: .rows(CatalogPersonHeader.self, scope: .handle)
-        ),
-        Spec(
-            kind: .eventsList,
-            stalePolicy: .sessionFresh,
-            invalidateOn: CatalogQueryRegistry.conclusionTriggers,
-            whenHidden: .markStale,
-            lastUpdated: .rows(CatalogEventHeader.self, scope: .handle)
-        ),
-        Spec(
-            kind: .placesList,
-            stalePolicy: .sessionFresh,
-            invalidateOn: CatalogQueryRegistry.conclusionTriggers,
-            whenHidden: .markStale,
-            lastUpdated: .rows(CatalogPlaceHeader.self, scope: .handle)
-        ),
-        Spec(
-            kind: .conclusionDetail,
-            stalePolicy: .sessionFresh,
-            invalidateOn: CatalogQueryRegistry.conclusionTriggers,
-            whenHidden: .evict
-        ),
-    ]
-
     func stalePolicy(for key: CatalogQueryKey) -> CatalogQueryStalePolicy {
-        specs.first { $0.kind == key.kind }?.stalePolicy ?? .sessionFresh
+        descriptor(for: key).stalePolicy
     }
 
     func load(key: CatalogQueryKey, store: any GenealogyStore) async throws -> Any {
@@ -362,92 +209,264 @@ struct CatalogQueryRegistry: Sendable {
         return all.filter { seen.insert($0).inserted }
     }
 
-    /// Resolves cache effects from registry `invalidateOn` tags + mutation payload.
+    /// Resolves cache effects from each kind's `invalidateOn` tags + mutation payload.
     func invalidations(by mutation: CatalogMutation, project: ProjectKey) -> [CatalogQueryInvalidation] {
         guard let mutationKind = mutation.invalidationKind else { return [] }
-        return specs
-            .filter { $0.invalidateOn.contains(mutationKind) }
-            .map { $0.kind.invalidation(project: project, mutation: mutation) }
+        return CatalogQueryKey.Kind.allCases.compactMap { kind in
+            let descriptor = kind.descriptor
+            guard descriptor.invalidateOn.contains(mutationKind) else { return nil }
+            return descriptor.invalidation(project, mutation)
+        }
     }
 
-    /// What an invalidated `key` does while off screen (see `Spec`).
+    /// What an invalidated `key` does while off screen.
     func hiddenPolicy(_ key: CatalogQueryKey) -> CatalogHiddenPolicy {
-        specs.first { $0.kind == key.kind }?.whenHidden ?? .revalidate
+        descriptor(for: key).whenHidden
     }
 
     /// How a write that reports its activity moves `key`'s rows in place.
     func lastUpdatedPatch(_ key: CatalogQueryKey) -> CatalogLastUpdatedPatch? {
-        specs.first { $0.kind == key.kind }?.lastUpdated
+        descriptor(for: key).lastUpdated
     }
 
+    /// The kind's descriptor. A kind whose arm reported a different kind cannot
+    /// happen with the exhaustive switch; that is a programmer error.
+    private func descriptor(for key: CatalogQueryKey) -> CatalogQueryDescriptor {
+        let descriptor = key.kind.descriptor
+        guard descriptor.kind == key.kind else {
+            preconditionFailure("missing descriptor for \(key.kind)")
+        }
+        return descriptor
+    }
 }
 
-private extension CatalogQueryKey.Kind {
-    /// Builds the cache effect for one registry row and mutation. Id-bearing
-    /// kinds fall back to `allCached` when the mutation names no single owner.
-    func invalidation(project: ProjectKey, mutation: CatalogMutation) -> CatalogQueryInvalidation {
+extension CatalogQueryKey.Kind {
+    /// One arm owns this kind's policies and invalidation. Id-bearing kinds
+    /// fall back to `allCached` when the mutation names no single owner.
+    var descriptor: CatalogQueryDescriptor {
         switch self {
         case .sourcesList:
-            return .key(.sourcesList(project: project))
+            // Work under a Source reports its activity in `WriteEffects`, which
+            // patches the row through `lastUpdated`.
+            return CatalogQueryDescriptor(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: [.createdSource, .deletedSource],
+                whenHidden: .markStale,
+                invalidation: { project, _ in .key(.sourcesList(project: project)) },
+                lastUpdated: .rows(CatalogSource.self, scope: .source)
+            )
         case .sourceTypesList:
-            return .key(.sourceTypesList(project: project))
+            // `usedBy` counts sources per type, so adding a source or moving one
+            // restates rows no type edit touched.
+            return CatalogQueryDescriptor(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: [
+                    .createdSourceType, .updatedSourceType, .deletedSourceType,
+                    .createdSource, .deletedSource, .changedSourceType,
+                ],
+                invalidation: { project, _ in .key(.sourceTypesList(project: project)) }
+            )
         case .metadataFieldsList:
-            return .key(.metadataFieldsList(project: project))
+            // `usedBy` counts sources holding a value for the field, and it
+            // gates Delete.
+            return CatalogQueryDescriptor(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: [
+                    .createdMetadataField, .updatedMetadataField, .deletedMetadataField,
+                    .mutatedSourceMetadata,
+                ],
+                invalidation: { project, _ in .key(.metadataFieldsList(project: project)) }
+            )
         case .credibilityGradesList:
-            return .key(.credibilityGradesList(project: project))
+            // Seeded vocabulary with no CRUD surface, so nothing stales it.
+            return CatalogQueryDescriptor(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: [],
+                invalidation: { project, _ in .key(.credibilityGradesList(project: project)) }
+            )
         case .confidenceGradesList:
-            return .key(.confidenceGradesList(project: project))
+            // Seeded vocabulary with no CRUD surface, so nothing stales it.
+            return CatalogQueryDescriptor(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: [],
+                invalidation: { project, _ in .key(.confidenceGradesList(project: project)) }
+            )
         case .sourceWorkspace:
-            switch mutation {
-            case .mutatedSourceWorkspace(let sourceId), .mutatedSourceMetadata(let sourceId),
-                 .deletedSource(let sourceId):
-                return .key(.sourceWorkspace(project: project, sourceId: sourceId))
-            case .changedSourceType(let source):
-                return .key(.sourceWorkspace(project: project, sourceId: source.id))
-            default:
-                return .allCached(.sourceWorkspace)
-            }
-        case .typeSuggestions:
-            switch mutation {
-            case .assignedTypeSuggestion(let typeId), .removedTypeSuggestion(let typeId):
-                return .key(.typeSuggestions(project: project, typeId: typeId))
-            default:
-                return .allCached(.typeSuggestions)
-            }
+            // Vocabulary lists are no longer folded in here, so plain
+            // create/relabel of a type or field leaves the page alone. What
+            // remains is the metadata row set the engine derives per source:
+            // suggestions ∪ values, each row embedding its field.
+            return CatalogQueryDescriptor(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: [
+                    .mutatedSourceWorkspace, .mutatedSourceMetadata, .changedSourceType,
+                    .updatedMetadataField, .deletedMetadataField,
+                    .assignedTypeSuggestion, .removedTypeSuggestion,
+                    .deletedSource,
+                ],
+                invalidation: { project, mutation in
+                    switch mutation {
+                    case .mutatedSourceWorkspace(let sourceId), .mutatedSourceMetadata(let sourceId),
+                         .deletedSource(let sourceId):
+                        return .key(.sourceWorkspace(project: project, sourceId: sourceId))
+                    case .changedSourceType(let source):
+                        return .key(.sourceWorkspace(project: project, sourceId: source.id))
+                    default:
+                        return .allCached(.sourceWorkspace)
+                    }
+                }
+            )
         case .evidenceGraph:
-            if let graphId = mutation.evidenceGraphId {
-                return .key(.evidenceGraph(project: project, graphId: graphId))
-            }
-            return .allCached(.evidenceGraph)
+            // Writes that report effects reload the graphs they name
+            // (`WriteEffects.evidenceGraphs`); Promote reports none.
+            return CatalogQueryDescriptor(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: [.deletedSource, .promotedSubject],
+                invalidation: { project, mutation in
+                    if let graphId = mutation.evidenceGraphId {
+                        return .key(.evidenceGraph(project: project, graphId: graphId))
+                    }
+                    return .allCached(.evidenceGraph)
+                }
+            )
         case .citationCounts:
-            return .allCached(.citationCounts)
+            // Reloads follow the write's `citationSources` effects.
+            return CatalogQueryDescriptor(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: [],
+                whenHidden: .markStale,
+                invalidation: { _, _ in .allCached(.citationCounts) }
+            )
+        case .typeSuggestions:
+            // Each suggestion embeds a full field row, so relabelling or
+            // deleting a field reaches types the edit never named.
+            return CatalogQueryDescriptor(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: [
+                    .assignedTypeSuggestion, .removedTypeSuggestion,
+                    .updatedMetadataField, .deletedMetadataField,
+                    .deletedSourceType,
+                ],
+                invalidation: { project, mutation in
+                    switch mutation {
+                    case .assignedTypeSuggestion(let typeId), .removedTypeSuggestion(let typeId):
+                        return .key(.typeSuggestions(project: project, typeId: typeId))
+                    default:
+                        return .allCached(.typeSuggestions)
+                    }
+                }
+            )
         case .propertiesWorkspace:
-            return .key(.propertiesWorkspace(project: project))
+            // `usedBy` counts Observations per property. Observation writes
+            // report their Source in `WriteEffects`, which invalidates it.
+            return CatalogQueryDescriptor(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: [
+                    .createdProperty, .updatedProperty, .deletedProperty,
+                    .mutatedSubjectTypeProperties, .deletedSubject,
+                ],
+                whenHidden: .markStale,
+                invalidation: { project, _ in .key(.propertiesWorkspace(project: project)) }
+            )
         case .connectRules:
-            return .key(.connectRules(project: project))
+            // Seeded product matrix with no CRUD surface.
+            return CatalogQueryDescriptor(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: [],
+                invalidation: { project, _ in .key(.connectRules(project: project)) }
+            )
         case .propertyTerms:
-            switch mutation {
-            case .createdPropertyTerm(let propertyId):
-                return .key(.propertyTerms(project: project, propertyId: propertyId))
-            default:
-                return .allCached(.propertyTerms)
-            }
+            return CatalogQueryDescriptor(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: [.createdPropertyTerm],
+                invalidation: { project, mutation in
+                    switch mutation {
+                    case .createdPropertyTerm(let propertyId):
+                        return .key(.propertyTerms(project: project, propertyId: propertyId))
+                    default:
+                        return .allCached(.propertyTerms)
+                    }
+                }
+            )
         case .citationsByArtifact:
-            return .allCached(.citationsByArtifact)
+            // Reloads follow the write's `citationSources` effects.
+            return CatalogQueryDescriptor(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: [],
+                whenHidden: .markStale,
+                invalidation: { _, _ in .allCached(.citationsByArtifact) }
+            )
         case .evidenceGraphProgress:
-            return .key(.evidenceGraphProgress(project: project))
+            // Canvas writes patch one graph via Get + setQueryValue — do not
+            // restale the project-wide map (or sourcesList).
+            return CatalogQueryDescriptor(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: [],
+                invalidation: { project, _ in .key(.evidenceGraphProgress(project: project)) }
+            )
         case .evidenceGraphsList:
-            return .key(.evidenceGraphsList(project: project))
+            // Graph and link writes report the `evidence_graphs` list in
+            // `WriteEffects`; `deleteSource` reports none, so `.deletedSource` drops it.
+            // A visible key still revalidates (`WorkspaceSession.apply(invalidations:)`);
+            // a hidden list just goes stale until it is shown again.
+            return CatalogQueryDescriptor(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: [.deletedSource],
+                whenHidden: .markStale,
+                invalidation: { project, _ in .key(.evidenceGraphsList(project: project)) }
+            )
         case .personsList:
-            return .key(.personsList(project: project))
+            return CatalogQueryDescriptor(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: CatalogQueryRegistry.conclusionTriggers,
+                whenHidden: .markStale,
+                invalidation: { project, _ in .key(.personsList(project: project)) },
+                lastUpdated: .rows(CatalogPersonHeader.self, scope: .handle)
+            )
         case .eventsList:
-            return .key(.eventsList(project: project))
+            return CatalogQueryDescriptor(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: CatalogQueryRegistry.conclusionTriggers,
+                whenHidden: .markStale,
+                invalidation: { project, _ in .key(.eventsList(project: project)) },
+                lastUpdated: .rows(CatalogEventHeader.self, scope: .handle)
+            )
         case .placesList:
-            return .key(.placesList(project: project))
+            return CatalogQueryDescriptor(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: CatalogQueryRegistry.conclusionTriggers,
+                whenHidden: .markStale,
+                invalidation: { project, _ in .key(.placesList(project: project)) },
+                lastUpdated: .rows(CatalogPlaceHeader.self, scope: .handle)
+            )
         case .conclusionDetail:
-            // Any Conclusion edit can touch any handle (a merge, a member's
-            // Observation), so every cached detail is stale.
-            return .allCached(.conclusionDetail)
+            return CatalogQueryDescriptor(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: CatalogQueryRegistry.conclusionTriggers,
+                whenHidden: .evict,
+                // Any Conclusion edit can touch any handle (a merge, a member's
+                // Observation), so every cached detail is stale.
+                invalidation: { _, _ in .allCached(.conclusionDetail) }
+            )
         }
     }
 }
