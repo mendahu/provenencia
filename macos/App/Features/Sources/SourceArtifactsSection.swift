@@ -145,6 +145,12 @@ final class SourceArtifactsSection {
         attachDraft.filePath != nil
     }
 
+    /// The page's Artifacts that none of the Source's graphs links; empty while
+    /// the session has no graphs for the Source, so no card is marked.
+    var inNoGraph: Set<String> {
+        context.session.artifactIDsInNoGraph(sourceID: context.sourceID, artifactIDs: items.map(\.id)) ?? []
+    }
+
     /// Seeds edit buffers for artifacts that do not have one yet.
     func seedDrafts() {
         for art in items {

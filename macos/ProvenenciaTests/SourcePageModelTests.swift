@@ -1858,6 +1858,22 @@ struct SourcePageModelTests {
         #expect(model.artifacts.editingArtifactID == nil)
     }
 
+    @Test func restingCardMarksAnArtifactInNoGraph() async {
+        let (model, _, _) = await makeCensus(graphs: [
+            graph("g-j", "Jones household", ["P3", "P4"]),
+            graph("g-s", "Smith household", ["P3", "P9"]),
+        ])
+        #expect(model.artifacts.inNoGraph == ["P6"])
+        model.artifacts.beginEdit("P6")
+        await model.artifacts.linkLoadTask?.value
+        #expect(model.artifacts.linkEdit?.excluded == ["g-j", "g-s"])
+        #expect(model.artifacts.checkedGraphIDs.isEmpty)
+        #expect(model.artifacts.cardInNoGraph(id: "P6"))
+
+        let (bare, _, _) = await makeCensus(graphs: [])
+        #expect(bare.artifacts.inNoGraph.isEmpty)
+    }
+
     @Test func cardSaveReloadFailureOffersReadAgain() async {
         let (model, store, _) = await makeCensus()
         model.artifacts.beginEdit("P3")

@@ -41,9 +41,10 @@ struct SourcePageArtifactsView: View {
                 }
                 .accessibilityIdentifier("sources.page.artifacts.empty")
             } else {
+                let inNoGraph = model.artifacts.inNoGraph
                 LazyVGrid(columns: cardColumns, spacing: PVSpacing.space6) {
                     ForEach(model.artifacts.items, id: \.id) { art in
-                        artifactCard(art)
+                        artifactCard(art, noGraph: inNoGraph.contains(art.id))
                             .frame(maxWidth: .infinity, alignment: .top)
                     }
                 }
@@ -151,7 +152,7 @@ struct SourcePageArtifactsView: View {
         }
     }
 
-    private func artifactCard(_ art: CatalogArtifact) -> some View {
+    private func artifactCard(_ art: CatalogArtifact, noGraph: Bool) -> some View {
         let editing = model.artifacts.editingArtifactID == art.id
         return PVCard(elevated: false, padding: 0) {
             VStack(alignment: .leading, spacing: 0) {
@@ -161,7 +162,7 @@ struct SourcePageArtifactsView: View {
                     if editing {
                         editFields(art)
                     } else {
-                        restingText(art)
+                        restingText(art, noGraph: noGraph)
                     }
                 }
                 .padding(.horizontal, PVSpacing.space6)
@@ -262,13 +263,42 @@ struct SourcePageArtifactsView: View {
         .frame(minHeight: 28)
     }
 
-    private func restingText(_ art: CatalogArtifact) -> some View {
+    private func restingText(_ art: CatalogArtifact, noGraph: Bool) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space3) {
             Text(verbatim: art.displayTitle)
                 .font(PVFont.body(size: PVTypeScale.body, weight: PVFontWeight.semibold))
                 .foregroundStyle(PVColor.textPrimary)
                 .lineLimit(2)
             descriptionLine(art)
+            if noGraph {
+                noGraphRow(art)
+            }
+        }
+    }
+
+    /// The badge and **Link to a graph** on a card in no graph: one row with the
+    /// button at the end, else the button on its own line at the end. A card
+    /// with the row is taller than its neighbours, as a card in edit is.
+    private func noGraphRow(_ art: CatalogArtifact) -> some View {
+        let badge = PVBadge(L10n.Sources.artifactNotInGraph, tone: .neutral, icon: .link)
+            .fixedSize()
+            .accessibilityIdentifier("sources.page.artifact.\(art.id).noGraph")
+        let button = PVButton(L10n.Sources.artifactLinkToGraph, variant: .ghost, size: .sm) {
+            model.artifacts.beginEdit(art.id)
+        }
+        .fixedSize()
+        .accessibilityLabel(L10n.Sources.artifactLinkToGraphLabel(ref: art.ref))
+        .accessibilityIdentifier("sources.page.artifact.\(art.id).linkToGraph")
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: PVSpacing.space3) {
+                badge
+                Spacer(minLength: 0)
+                button
+            }
+            VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                badge
+                button.frame(maxWidth: .infinity, alignment: .trailing)
+            }
         }
     }
 

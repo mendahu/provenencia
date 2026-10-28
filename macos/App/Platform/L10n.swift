@@ -6959,7 +6959,7 @@ enum L10n {
 
         static let graphFormKeptLinkedMessage = LocalizedStringResource(
             "sources.graphForm.keptLinkedMessage",
-            defaultValue: "These artifacts stay linked while citations in this graph use them.",
+            defaultValue: "These artifacts stay linked: citations need them in this evidence graph.",
             comment: "Callout above the Citations that keep an Artifact linked to the graph"
         )
 
@@ -7014,6 +7014,27 @@ enum L10n {
             defaultValue: "This artifact won’t be in an evidence graph. Citations can’t use it until it is linked.",
             comment: "Muted line under the evidence graph group in the Add artifact dialog and on an artifact card in edit when no box is checked"
         )
+
+        static let artifactNotInGraph = LocalizedStringResource(
+            "sources.page.artifact.notInGraph",
+            defaultValue: "Not in an evidence graph",
+            comment: "Badge on a resting artifact card when no evidence graph links the artifact"
+        )
+
+        static let artifactLinkToGraph = LocalizedStringResource(
+            "sources.page.artifact.linkToGraph",
+            defaultValue: "Link to a graph",
+            comment: "Button on a resting artifact card in no evidence graph; opens the card's edit with the graph boxes"
+        )
+
+        /// Argument is the ART- ref.
+        static func artifactLinkToGraphLabel(ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.page.artifact.linkToGraphLabel",
+                defaultValue: "Link %@ to an evidence graph",
+                comment: "VoiceOver label of the Link to a graph button; argument is the artifact ref"
+            ), ref)
+        }
 
         static let artifactGraphsLoading = LocalizedStringResource(
             "sources.page.artifact.graphs.loading",

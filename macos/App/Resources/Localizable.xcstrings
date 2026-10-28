@@ -22414,7 +22414,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "These artifacts stay linked while citations in this graph use them."
+            "value": "These artifacts stay linked: citations need them in this evidence graph."
           }
         }
       }
@@ -22883,6 +22883,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "This artifact won’t be in an evidence graph. Citations can’t use it until it is linked."
+          }
+        }
+      }
+    },
+    "sources.page.artifact.notInGraph": {
+      "comment": "Badge on a resting artifact card when no evidence graph links the artifact",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not in an evidence graph"
+          }
+        }
+      }
+    },
+    "sources.page.artifact.linkToGraph": {
+      "comment": "Button on a resting artifact card in no evidence graph; opens the card's edit with the graph boxes",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link to a graph"
+          }
+        }
+      }
+    },
+    "sources.page.artifact.linkToGraphLabel": {
+      "comment": "VoiceOver label of the Link to a graph button; argument is the artifact ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link %@ to an evidence graph"
           }
         }
       }
