@@ -830,6 +830,31 @@ func TestSexAgreementAloneStaysUnderWeak(t *testing.T) {
 	}
 }
 
+func TestPartialNameWithGrandparentClearsWeak(t *testing.T) {
+	cfg := matchregistry.Default().AlignConfig()
+	if cfg.Segment.OtherSupport != 0.75 {
+		t.Fatalf("OtherSupport = %.2f, want 0.75", cfg.Segment.OtherSupport)
+	}
+	metas := nameMetas()
+	own := subjectcompare.Compare(vocabkey.Person, vals(givenProp("Jake")), vals(nameProp("Jake James Kenneth Robins")), metas, cfg.Subject, cfg.Value)
+	wantOwn := 2.5 * (2.0 / 4.5)
+	if math.Abs(own.Evidence-wantOwn) > 1e-9 {
+		t.Fatalf("own evidence %.4f, want %.4f", own.Evidence, wantOwn)
+	}
+	if own.Evidence >= cfg.Alignment.Bands.Weak {
+		t.Fatalf("own alone %.4f, want under Weak %v", own.Evidence, cfg.Alignment.Bands.Weak)
+	}
+	relKey := vocabkey.BridgeKey{Type: vocabkey.BridgeRelationship, Term: vocabkey.BridgeTerm("grandchild")}
+	segA := segmentcompare.Segment{Key: relKey, NeighborKind: vocabkey.Person, Neighbor: vals(nameProp("Carol Jane Breakell"))}
+	segB := segmentcompare.Segment{Key: relKey, NeighborKind: vocabkey.Person, Neighbor: vals(nameProp("Carol Breakell"))}
+	seg := segmentcompare.Compare(segA, segB, segmentcompare.Together, own.Evidence, metas, cfg.Segment, cfg.Subject, cfg.Value)
+	sc := graphalign.ScoreCandidate(own, seg.Evidence, 1)
+	if sc.Score < cfg.Alignment.Bands.Weak || sc.Score >= cfg.Alignment.Bands.Medium {
+		t.Fatalf("score %.4f, want >= Weak %v and < Medium %v (own %.4f, segment %.4f)",
+			sc.Score, cfg.Alignment.Bands.Weak, cfg.Alignment.Bands.Medium, own.Evidence, seg.Evidence)
+	}
+}
+
 func TestSharedHandleIsDecidedTheSameEveryRun(t *testing.T) {
 	tests := []struct {
 		name   string
