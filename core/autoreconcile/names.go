@@ -19,7 +19,7 @@ import (
 //   - Format-agnostic. A part type is only an identifier: a name splits into
 //     one unit per part type, and units are compared only with units of the
 //     same type. No type behaves differently from another. A type's role in
-//     the name format decides only whether an alias table applies (Fold).
+//     the name format decides only whether an alias table or the prefix rule applies (Fold).
 //   - A unit is the type's words, read as value compare reads them: each part
 //     normalized (case, punctuation and whitespace ignored; accents are not
 //     folded), split into words, and a particle rejoined with the word after
@@ -28,8 +28,9 @@ import (
 //     the same (word order within a type does not matter). The recorded
 //     parts are what's displayed.
 //   - Fold: a unit folds into a fuller one when value compare finds the fuller
-//     one contains it and every word they pair is the same word or an initial
-//     of it. [J] → [James], [James] → [James, Kenneth]. A nickname or
+//     one contains it and every word they pair is the same word, an initial
+//     of it, or a given name it starts (never a surname). [J] → [James],
+//     [Des] → [Desiree], [James] → [James, Kenneth]. A nickname or
 //     abbreviation folds into the formal name it stands for, as the product
 //     alias seed lists it (Chris → Christopher, Wm → William, Ebbie → Abel;
 //     decided 2026-10-19, S11-28). A name alone never folds, and a pair the
@@ -63,7 +64,7 @@ type nameUnit struct {
 // compareValue is the unit as a name for value compare: its raw parts with no
 // type, renumbered from 0, and no name pattern, so every word is untyped and
 // no part type weighs more than another (S11-06 D-4). fold re-reads the part
-// type's role for the alias check.
+// type's role for the alias and prefix checks.
 func (u nameUnit) compareValue() valuecompare.Value {
 	parts := make([]namevalue.Part, len(u.raw))
 	for i, p := range u.raw {
@@ -114,9 +115,10 @@ func (m nameModule) split(v Value) (map[string]unit, bool) {
 }
 
 // fold: value compare finds into contains from, or the two equivalent, and
-// every word they pair is the same word, an initial of it, or a nickname or
-// abbreviation the alias list pairs toward the into word. The type only says
-// which part role an alias table must allow (compareValue strips it).
+// every word they pair is the same word, an initial of it, a prefix of it (for
+// a part type whose role takes prefixes), or a nickname or abbreviation the
+// alias list pairs toward the into word. The type only says which part role an
+// alias table or a prefix must allow (compareValue strips it).
 func (m nameModule) fold(typ string, from, into unit) bool {
 	res, det := valuecompare.Compare(from.data.(nameUnit).cmp, into.data.(nameUnit).cmp, m.rules)
 	switch {
@@ -131,6 +133,8 @@ func (m nameModule) fold(typ string, from, into unit) bool {
 		switch {
 		case p.Relation == valuecompare.Same:
 		case p.Cause == valuecompare.CauseInitial:
+			changed = true
+		case p.Cause == valuecompare.CausePrefix && valuecompare.PrefixRuleRole(role):
 			changed = true
 		case (p.Cause == valuecompare.CauseAlias || p.Cause == valuecompare.CauseAbbreviation) &&
 			m.rules.Names.Aliases.Expands(p.A.Text, p.B.Text, role):
