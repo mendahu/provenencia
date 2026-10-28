@@ -1,7 +1,7 @@
 # Review — S11-45 Prefix names
 
-**Verdict:** round 1 Fits with changes / Ready with changes; round 2 pending
-**Rounds:** 1 so far. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 - None.
@@ -16,7 +16,7 @@
 
 ### M-1 · blocker · The prefix role test is stated a second time in the reconciler
 D-6 called `slices.Contains(valuecompare.AliasRoles(), role)` in `nameModule.fold`, while `prefixWord` already holds the same test; `AliasRoles` then stood for two ideas.
-**Answer:** Fixed. D-4 adds `valuecompare.PrefixRole(role NameRole) bool`; `prefixWord` and D-6's fold case both call it, and the `AliasRoles` doc no longer claims the prefix rule. Codebase fit and Deletes list it.
+**Answer:** Fixed. D-4 adds `valuecompare.PrefixRole(role NameRole) bool` (renamed `PrefixRuleRole` in round 2, M-10); `prefixWord` and D-6's fold case both call it, and the `AliasRoles` doc no longer claims the prefix rule. Codebase fit and Deletes list it.
 
 ### M-2 · major · `name.pair` guesses the broader side from word length
 **Answer:** Fixed. D-3: `wordSimilarity` returns a fourth result, `broader Side`, decided where it makes the initial or prefix match; D-5: `name.pair` copies it. The length rule, its edge case and the `unicode/utf8` import are gone. T-1 checks the side.
@@ -56,3 +56,43 @@ D-6 called `slices.Contains(valuecompare.AliasRoles(), role)` in `nameModule.fol
 
 ### X-7 · nit · No step creates the branch
 **Answer:** Fixed: STEP-1 creates `s11-45-prefix-names` from an up-to-date `main`.
+
+## Round 2
+
+Both reviewers found every round-1 answer held and raised no new blocker.
+
+### X-8 · blocker · STEP-1 branches from `main`, which does not hold the plan
+**Answer:** Fixed. STEP-1 says `main` holds this plan at status Planned before the build (it lands on `main` first, as every Spike 11 plan has), and the PR carries no plan commit; a Stop condition covers a `main` without it.
+
+### X-9 · major · STEP-2 cannot compile as written
+**Answer:** Fixed. STEP-2 lists `name.go`: `name.word` returns four results there, `compare` and `pair` discard the fourth until STEP-3.
+
+### X-10 · major · A second `WordSimilarity` caller
+**Answer:** Fixed. STEP-2 names the alias-index loop's `sim, _, _, _ :=` edit.
+
+### X-11 · major · STEP-7's check does not discriminate
+**Answer:** Fixed. The check greps D-12's new phrases, one per file, and that the old "decides only whether an alias table applies" is gone.
+
+### X-12 · major · Two "role decides only the alias table" statements
+**Answer:** Fixed (with M-9). D-12 rewrites both Format-agnostic statements, and the sweep covers the old phrase.
+
+### X-13 · minor · T-6 helper and metas
+**Answer:** Fixed. T-6 names `rowBySubject` and `nameMetas()` for the second subtest.
+
+### X-14 · minor · Pool words and corpus pairs
+**Answer:** Declined. T-5 needs at least one prefix pair, which the plan says; the planning probe ran the widened pools green, and the Stop condition covers a generated failure.
+
+### X-15 · nit · Rewrap layout
+**Answer:** Logged.
+
+### M-8 · major · D-12's name-candidates text false after M-2
+**Answer:** Fixed. D-12 says the word table names the broader side, and rewrites the "`prefixes` flag" sentence to `prefixCredit`.
+
+### M-9 · major · Statements that the role decides only the alias table
+**Answer:** Fixed. D-12 covers the Format-agnostic bullet in `names.go`, the same sentence in `conclusion-reconciliation.md`, and `compareValue`'s doc; STEP-5 edits the code comments.
+
+### M-10 · minor · `PrefixRole` reads as the `prefix` part type's role
+**Answer:** Fixed: renamed `PrefixRuleRole`.
+
+### M-11 · minor · `daitch-mokotoff.md` word-table order
+**Answer:** Fixed: D-12 adds the prefix rung to the idea's order, and STEP-7 lists the file.
