@@ -73,7 +73,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-05 | Event and Place headers lead with a picture | — | Folded into S14-01 | — | — | — | Descoped (2026-10-27) → S14-01 |
 | S14-06 | Choose an Event or Place thumbnail | — | Folded into S14-02 | — | — | — | Descoped (2026-10-27) → S14-02 |
 | S14-07 | Events and Places lists lead with a picture | — | Folded into S14-02 | — | — | — | Descoped (2026-10-27) → S14-02 |
-| S14-08 | Other-link support calibration | 2 | Raise `segment.OtherSupport` 0.25 → 0.75 so a thin name plus kinship clears Weak | — | — | [S14-08-other-support-calibration.md](prs/S14-08-other-support-calibration.md) | Planned |
+| S14-08 | Other-link support calibration | 2 | Raise `segment.OtherSupport` 0.25 → 0.75 so a thin name plus kinship clears Weak | — | — | [S14-08-other-support-calibration.md](prs/S14-08-other-support-calibration.md) | Landed #613 |
 | S14-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
