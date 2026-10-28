@@ -54,4 +54,4 @@ Reviewers: CON, MNT, SEC+PRF (had Fix-now blocker/major). Skipped: UX (Clean in 
 No new blockers.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: MNT-3 (hoist refresh queryHandle), MNT-4 (rename CatalogLastUpdated.swift → S12-31) · to user: — · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: MNT-3 (hoist refresh queryHandle), MNT-4 (rename CatalogLastUpdated.swift → S12-31) · to user: — · CON miss: none
