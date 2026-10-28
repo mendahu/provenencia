@@ -201,7 +201,7 @@ JSON remains useful for logs, debug dumps, and tests if a message is printed; it
 
 Structured messages carry ids, catalog fields, and small metadata. **File bytes do not go in protobuf** (no `bytes` fields for scans).
 
-**Read path:** Go returns `file_id`, MIME type, `original_filename`, and a path **relative to the project directory** (e.g. `objects/8f/ce/8fce3b…`). Swift already holds the folder it opened and reads the file with AppKit/SwiftUI. Go returns that path only for a media type on the ingest allowlist (`core/ingest/mediatypes`); a stored type off it has no path, so the file is listed with an empty `rel_path` and nothing opens it. Swift reads a relative path only through `ProjectFiles.objectURL`, which refuses what `core/objectstore` refuses and a Finder alias at the object path. It opens an object only through `ProjectFiles.openObject`, which also refuses a name with no extension and a type that could run a program or open another item, opens the object with the app for its file type (never one stored on the file), and names the file it refuses. A saved metadata link opens only through the `open_href` Go computes (`sourcemetadata.WorkspaceEntry.OpenHref`: web links only). Thumbnails decode through `ThumbnailCache`, which decodes only a PNG or JPEG declaring at most `raster.MaxEdgeLimit` pixels on each edge, and caps concurrent decodes at `ThumbnailCache.maxConcurrentDecodes`, dropping a queued decode when no caller still wants it. SQLite still stores no absolute paths.
+**Read path:** Go returns `file_id`, MIME type, `original_filename`, and a path **relative to the project directory** (e.g. `objects/8f/ce/8fce3b…`). Swift already holds the folder it opened and reads the file with AppKit/SwiftUI. The `files` read returns that path only for a media type on the ingest allowlist (`core/ingest/mediatypes`); a stored type off it has no path, so the file is listed with an empty `rel_path` and nothing opens it. A search hit's thumbnail path is not read from `files` again: it is the one stored in the search index when the Source was last projected, and that projection keeps only allowlisted types too. Swift reads a relative path only through `ProjectFiles.objectURL`, which refuses what `core/objectstore` refuses and a Finder alias at the object path. It opens an object only through `ProjectFiles.openObject`, which also refuses a name with no extension and a type that could run a program or open another item, opens the object with the app for its file type (never one stored on the file), and names the file it refuses. A saved metadata link opens only through the `open_href` Go computes (`sourcemetadata.WorkspaceEntry.OpenHref`: web links only). Thumbnails decode through `ThumbnailCache`, which decodes only a PNG or JPEG declaring at most `raster.MaxEdgeLimit` pixels on each edge, and caps concurrent decodes at `ThumbnailCache.maxConcurrentDecodes`, dropping a queued decode when no caller still wants it. SQLite still stores no absolute paths.
 
 **Write path:** ingest only through a use-case (`ingestFile` / equivalent). Swift must not rewrite `objects/` itself.
 
@@ -345,7 +345,7 @@ SHA-256(file contents)
 8fce3b...
         │
         ▼
-objects/8f/ce/8fce3b....jpg   (MIME-derived extension when known)
+objects/8f/ce/8fce3b....jpg   (extension from the ingest allowlist)
 ```
 
 Benefits include automatic duplicate detection, integrity checking, efficient synchronization, immutable blob identity, independence from OS filename rules, and the same paths on every platform. The object is still a normal JPEG/PDF: hash names are identity, not encryption. `original_filename` remains File metadata.
@@ -688,7 +688,7 @@ Settled:
 
 - **FFI codec:** Protocol Buffers (see §7).
 - **SQLite:** cgo + official amalgamation, `github.com/mattn/go-sqlite3` (see §10). WAL, busy timeout, tiny `MaxOpenConns`. In-process held catalog session + serial queue (`core/catalogsession`).
-- **Project format:** inspectable directory named `*.provenencia`; catalog is `provenencia.sqlite`; Files on disk as SHA-256 object names (`objects/{hh}/{hh}/{hex}{ext}`, MIME-derived extension when known); copy whole folder across Mac/Windows. Suffix is a hint; ownership is `application_id` + schema (see §12).
+- **Project format:** inspectable directory named `*.provenencia`; catalog is `provenencia.sqlite`; Files on disk as SHA-256 object names (`objects/{hh}/{hh}/{hex}{ext}`, extension from the ingest allowlist); copy whole folder across Mac/Windows. Suffix is a hint; ownership is `application_id` + schema (see §12).
 - **Runtime:** app and live project on **local disk** only. Backups to NAS/internet/object storage are post-MVP (copy or sync a closed project).
 - **Encryption:** live project is plaintext; rely on OS disk encryption. Optional locked projects and encrypted backups are post-MVP (see §12).
 - **Locking:** one writer per project; second process refused. In-process session serializes catalog RPCs; `catalog.already_open` is a bypass signal. Multi-pane UI later, same engine (see §12).
