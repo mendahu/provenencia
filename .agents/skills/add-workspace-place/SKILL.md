@@ -88,7 +88,7 @@ In [`PlaceRegistry.swift`](../../../macos/App/Features/Workspace/Session/PlaceRe
 - `matches`: `WorkspaceLocation` predicate (ignore cross-section stray ids).
 - `queryKeys`: `[CatalogQueryKey]` for this place (include shared pool keys, e.g. types list on source list).
 - `presentation`: `WorkspacePresentationID` for the host router.
-- `deepId`: optional id string for history restore / selection.
+- `viewIdentity`: the id the place's view resets on. `WorkspaceDestinationHost` applies `.id(place.viewIdentity)` once for every place; a different value remounts the destination and its `@State` model. Declare the deep id a view is built from (graph, Source, entity, composer or Promote entry key); declare `nil` for list roots and for master–detail places that follow `currentLocation` themselves. Do not add `.id` in a host arm and do not rebind a model in place on an id change.
 
 Extend [`PlaceRegistryTests`](../../../macos/ProvenenciaTests/PlaceRegistryTests.swift):
 `registryCoversAllPlaceIDs`, query key table row for the new place.
@@ -119,9 +119,9 @@ Add [`CatalogQueryRegistryTests`](../../../macos/ProvenenciaTests/CatalogQueryRe
 ### 4. Presentation + host
 
 - Add `WorkspacePresentationID` case if the host needs a distinct view family.
-- Add arm in [`WorkspaceDestinationHost`](../../../macos/App/Features/Workspace/WorkspaceDestinationHost.swift).
+- Add arm in [`WorkspaceDestinationHost`](../../../macos/App/Features/Workspace/WorkspaceDestinationHost.swift). The host applies identity from the spec; an arm adds no `.id`.
 - List vs detail = **two presentations**, two views (Sources pattern). Master–detail
-  vocabulary = one presentation, selection from `currentLocation` deep id (Fields/Types).
+  vocabulary = one presentation, selection from `currentLocation`'s row id (Fields/Types); their `viewIdentity` is `nil`.
 
 ### 5. View + model (observation pattern)
 
@@ -160,7 +160,7 @@ private struct ListContent: View {
 `onChange(of: navigation.currentLocation)` + `onChange(of: handle.status/value)` —
 sync apply from history after list is ready; `fallbackToSectionRoot()` if deep id missing.
 
-**Source-style detail:** `SourcePageView` pattern — `.task(id: sourceID)` warms workspace key;
+**Source-style detail:** `SourcePageView` pattern — the host remounts it per Source through `viewIdentity`; a plain `.task` warms the workspace key;
 `@Bindable workspaceHandle` syncs into section models; fingerprint skips redundant section resets.
 
 ### 6. Mutations from section models
@@ -169,7 +169,7 @@ sync apply from history after list is ready; `fallbackToSectionRoot()` if deep i
 - Source type moved: `context.applySource(updated, typeChanged: true)` — patches the row, then refetches the page because the engine derives suggested rows from the type.
 - Metadata values: `context.applyMetadataWrite(effects)` with the write's effects (also busts the field list's `usedBy`).
 - Other page edits (notes, artifacts, credibility): `context.applyWrite(effects)` → bust the `sourceWorkspace` key, and the effects move the lists.
-- Graph and composer writes (`createSubject`, `updateSubject`, `deleteSubject`) and Artifact ↔ graph link writes (`linkEvidenceGraphArtifact`, `unlinkEvidenceGraphArtifact`, `updateEvidenceGraph`): `session.apply(effects)`, plus `.deletedSubject` for a delete (it reloads Observation `usedBy`; the citation reads follow the effects).
+- Graph and composer writes (`createSubject`, `updateSubject`, `deleteSubject`) and Artifact ↔ graph link writes (`updateArtifact` with `graphIDs`, `updateEvidenceGraph`): `session.apply(effects)`, plus `.deletedSubject` for a delete (it reloads Observation `usedBy`; the citation reads follow the effects).
 - Any write under a Source moves its `updated` activity (engine audit scopes). Every write under a Source returns `WriteEffects` with its activity, and `apply(effects)` patches the Sources row in place; the mutations that ride along (`mutatedSourceWorkspace`, `mutatedSourceMetadata`, `deletedSubject`) never invalidate `sourcesList` or the Conclusion lists — the Sources row follows the effects' `sourceScopes`, each graph's rows follow `evidenceGraphs`, and the citation reads (keyed by graph) are dropped project-wide when `citationSources` is non-empty, and the Conclusion lists follow `handles`. A new Source child write returns `WriteEffects` (`writeEffectsProto(wrote)` in its handler); the writes that still report none (`updateSource`, `setSourceCover`, `deleteSource`, promote, Property writes) keep their mutation kinds. `createSource` returns `WriteEffects` and is applied with `apply(effects, .createdSource)`, as Copy Source is.
 - A new list with a last-updated cell: conform its row to `CatalogLastUpdatedRow` and add `lastUpdated: .rows(Row.self, scope: …)` to its registry row.
 - Vocabulary CRUD: registry `invalidateOn` + list patch where cheap. A patch is an

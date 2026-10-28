@@ -16,17 +16,28 @@ func evidenceGraph(
     )
 }
 
-/// An unlink block for tests: `artifactID` is in use by `citations` Citations of the graph.
-func unlinkBlock(_ artifactID: String, citations: Int) -> CatalogEvidenceGraphUnlinkBlock {
-    CatalogEvidenceGraphUnlinkBlock(
-        artifactID: artifactID,
-        citations: CatalogDeleteImpactGroup(
-            via: "evidencegraphs.artifact_in_use",
+/// An unlink block for tests: `artifactID` is refused in `graphID` for `reason`. For
+/// `.artifactInUse` and `.citationsNeedGraph` its `citations` group lists that many
+/// Citations; `.lastArtifact` has an empty group, what `GoStore` maps from an unset `citations`.
+func unlinkBlock(
+    _ artifactID: String,
+    graphID: String,
+    citations: Int,
+    reason: EvidenceGraphUnlinkReason = .artifactInUse
+) -> CatalogEvidenceGraphUnlinkBlock {
+    let group: CatalogDeleteImpactGroup
+    switch reason {
+    case .lastArtifact:
+        group = CatalogDeleteImpactGroup(via: "", kind: "", total: 0, listed: [])
+    default:
+        group = CatalogDeleteImpactGroup(
+            via: reason.wire,
             kind: "citation",
             total: citations,
             listed: (0..<citations).map {
                 PVDeleteImpactPreviewData.listed(ref: "CIT-\(artifactID)\($0 + 1)", title: "Smith, John")
             }
         )
-    )
+    }
+    return CatalogEvidenceGraphUnlinkBlock(graphID: graphID, artifactID: artifactID, reason: reason, citations: group)
 }

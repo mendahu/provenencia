@@ -19,8 +19,10 @@
 // are one set. Sets that only share a nickname stay separate. Pairs that
 // join two different given names (a masculine and a feminine form such as
 // andrew and andrea, or an upstream error such as wilma and william) were
-// removed after a review in 2026-10; a set left with one name was dropped. Tokens
-// are comparison forms, lowercase with punctuation removed (k.c. is kc).
+// removed after a review in 2026-10; a set left with one name was dropped.
+// Sets that are not in names.csv were added after review: desirae/des and
+// desiree/des (S11-44, 2026-10). Tokens are comparison forms, lowercase with
+// punctuation removed (k.c. is kc).
 package namealiases
 
 // nicknameSets is the product nickname table. Install writes it.
@@ -359,6 +361,8 @@ var nicknameSets = [][]string{
 	{"derek", "derrek", "rick", "ricky"},
 	{"derick", "rick", "ricky"},
 	{"derrick", "eric", "rick", "ricky"},
+	{"desirae", "des"},
+	{"desiree", "des"},
 	{"deuteronomy", "duty"},
 	{"diana", "di", "dicey", "didi"},
 	{"diane", "di", "dian", "dianne", "dicey", "didi"},

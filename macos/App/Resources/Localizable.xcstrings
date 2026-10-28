@@ -2358,6 +2358,30 @@
         }
       }
     },
+    "deleteImpact.via.evidenceGraphsCitationsNeedGraph": {
+      "comment": "Heading over the Citations an unlink or a graph delete would leave in no graph; argument is how many",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld citation would be left in no evidence graph"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld citations would be left in no evidence graph"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "deleteImpact.via.subjectsGraphId": {
       "comment": "Inbound heading for subjects.graph_id; argument is how many",
       "extractionState": "manual",
@@ -2646,6 +2670,18 @@
         }
       }
     },
+    "error.evidencegraphs.citations_need_graph": {
+      "comment": "FFI error evidencegraphs.citations_need_graph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An artifact with citations must stay in at least one evidence graph."
+          }
+        }
+      }
+    },
     "error.evidencegraphs.in_use": {
       "comment": "FFI error evidencegraphs.in_use",
       "extractionState": "manual",
@@ -2653,7 +2689,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This evidence graph still has subjects."
+            "value": "Subjects or citations still need this evidence graph."
           }
         }
       }
@@ -11402,6 +11438,30 @@
         }
       }
     },
+    "evidenceGraph.readError.title": {
+      "comment": "Title on the canvas callout when the Evidence graph's rows failed to load; the body is the error text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This evidence graph could not be read"
+          }
+        }
+      }
+    },
+    "evidenceGraph.readError.readAgain": {
+      "comment": "Button that reads a canvas's Evidence graph again after it failed to load",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read again"
+          }
+        }
+      }
+    },
     "artifactViewer.previousPage": {
       "comment": "Artifact viewer: go to previous PDF page",
       "extractionState": "manual",
@@ -17650,7 +17710,7 @@
       }
     },
     "promote.reason.weak": {
-      "comment": "Reason on a row whose best candidate is below the bar",
+      "comment": "Reason on a record in a row's menu whose score is below the weak bar",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -17673,14 +17733,14 @@
         }
       }
     },
-    "promote.reason.noMatch": {
-      "comment": "Reason on a row with no candidate handle",
+    "promote.reason.unplaced": {
+      "comment": "Reason on a Promote row that Promote suggests no record for",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No matching record"
+            "value": "No record suggested"
           }
         }
       }
@@ -22354,7 +22414,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "These artifacts stay linked while citations in this graph use them."
+            "value": "These artifacts stay linked: citations need them in this evidence graph."
           }
         }
       }
@@ -22599,30 +22659,6 @@
         }
       }
     },
-    "sources.page.artifact.graphs.needsOne": {
-      "comment": "Muted line under the evidence graph group in the Add artifact dialog when every box is unchecked",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Check at least one evidence graph."
-          }
-        }
-      }
-    },
-    "sources.page.artifact.graphs.onlyArtifact": {
-      "comment": "Hint on a locked evidence graph checkbox on an artifact card when the artifact is the graph's only one",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The only artifact in this evidence graph"
-          }
-        }
-      }
-    },
     "sources.page.artifact.graphs.loading": {
       "comment": "Loading line on an artifact card in edit while its evidence graph links are read",
       "extractionState": "manual",
@@ -22672,13 +22708,13 @@
       }
     },
     "sources.page.artifact.saveErrorGraphKeeps": {
-      "comment": "Callout message on an artifact card in edit when an Evidence graph refused to drop the artifact and nothing else is left to save; %1$@ is the graph name, %2$@ is the error text",
+      "comment": "Callout message on an artifact card in edit when an evidence graph refused to drop the artifact and nothing was saved; %1$@ is the graph name, %2$@ is the error text",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ keeps this artifact. %2$@"
+            "value": "%1$@ keeps this artifact. Your changes are kept. %2$@"
           }
         }
       }
@@ -22691,18 +22727,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Your changes are kept. %@"
-          }
-        }
-      }
-    },
-    "sources.page.artifact.saveErrorMessage": {
-      "comment": "Callout message on an artifact card in edit when saving it fails; argument is the error text",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Some changes may not be saved. Every field and box keeps its value — save again to finish. %@"
           }
         }
       }
@@ -22847,6 +22871,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "sources.page.artifact.graphs.none": {
+      "comment": "Muted line under the evidence graph group in the Add artifact dialog and on an artifact card in edit when no box is checked",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This artifact won’t be in an evidence graph. Citations can’t use it until it is linked."
+          }
+        }
+      }
+    },
+    "sources.page.artifact.notInGraph": {
+      "comment": "Badge on a resting artifact card when no evidence graph links the artifact",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not in an evidence graph"
+          }
+        }
+      }
+    },
+    "sources.page.artifact.linkToGraph": {
+      "comment": "Button on a resting artifact card in no evidence graph; opens the card's edit with the graph boxes",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link to a graph"
+          }
+        }
+      }
+    },
+    "sources.page.artifact.linkToGraphLabel": {
+      "comment": "VoiceOver label of the Link to a graph button; argument is the artifact ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link %@ to an evidence graph"
           }
         }
       }

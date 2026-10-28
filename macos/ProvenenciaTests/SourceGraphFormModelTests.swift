@@ -64,7 +64,7 @@ struct SourceGraphFormModelTests {
         model: SourcePageModel,
         blocks: [CatalogEvidenceGraphUnlinkBlock]? = nil
     ) async -> SourceGraphFormModel? {
-        store.unlinkImpactBlocksByGraph["g-smith"] = blocks ?? [unlinkBlock("a3", citations: 2)]
+        store.unlinkImpactBlocks = blocks ?? [unlinkBlock("a3", graphID: "g-smith", citations: 2)]
         model.graphs.openEdit(id: "g-smith")
         guard let form = model.graphs.form else { return nil }
         _ = await waitUntil { form.loadState != .loading }
@@ -168,6 +168,45 @@ struct SourceGraphFormModelTests {
         #expect(form.loadState == .ready)
     }
 
+    @Test func editLocksEveryBlock() async throws {
+        let (model, store, _) = await makeModel(graphs: [smith()])
+        let form = try #require(await openSmithEdit(store: store, model: model, blocks: [
+            unlinkBlock("a3", graphID: "g-smith", citations: 1, reason: .citationsNeedGraph),
+            unlinkBlock("a4", graphID: "g-smith", citations: 0, reason: .lastArtifact),
+        ]))
+        #expect(form.locked == [
+            "a3": "1 citation would be left in no evidence graph",
+            "a4": "An evidence graph needs at least one artifact.",
+        ])
+        #expect(form.keptLinked.map(\.artifact.id) == ["a3"])
+        #expect(form.checkedArtifactIDs == ["a3", "a4"])
+
+        let (other, otherStore, _) = await makeModel(graphs: [smith()])
+        let lastOnly = try #require(await openSmithEdit(store: otherStore, model: other, blocks: [
+            unlinkBlock("a4", graphID: "g-smith", citations: 0, reason: .lastArtifact),
+        ]))
+        #expect(lastOnly.locked.keys.sorted() == ["a4"])
+        #expect(lastOnly.keptLinked.isEmpty)
+    }
+
+    @Test func createPrefillsTheArtifactsInNoGraph() async throws {
+        let (model, _, _) = await makeModel(graphs: [
+            evidenceGraph("g-default", name: "Default", artifactIDs: ["a1", "a2", "a3", "a4"]),
+        ])
+        model.graphs.openAdd()
+        let form = try #require(model.graphs.form)
+        #expect(form.checkedArtifactIDs == ["a5", "a6"])
+        #expect(!form.isDirty)
+
+        let (full, _, _) = await makeModel(graphs: [
+            evidenceGraph("g-default", name: "Default", artifactIDs: ["a1", "a2", "a3", "a4", "a5", "a6"]),
+        ])
+        full.graphs.openAdd()
+        let fullForm = try #require(full.graphs.form)
+        #expect(fullForm.checkedArtifactIDs == ["a1", "a2", "a3", "a4", "a5", "a6"])
+        #expect(!fullForm.isDirty)
+    }
+
     @Test func editSavesNameAndFullLinkSet() async throws {
         let (model, store, _) = await makeModel(graphs: [smith()])
         let form = try #require(await openSmithEdit(store: store, model: model))
@@ -186,7 +225,7 @@ struct SourceGraphFormModelTests {
     @Test func editRefusedInUseRereadsKeptLinks() async throws {
         let linked = evidenceGraph("g-pair", name: "Pair", artifactIDs: ["a2", "a3"])
         let (model, store, _) = await makeModel(graphs: [linked])
-        store.unlinkImpactBlocksByGraph["g-pair"] = []
+        store.unlinkImpactBlocks = []
         model.graphs.openEdit(id: "g-pair")
         let form = try #require(model.graphs.form)
         _ = await waitUntil { form.loadState != .loading }
@@ -195,7 +234,7 @@ struct SourceGraphFormModelTests {
         store.updateEvidenceGraphError = CoreInvokeError.coded(
             status: 1, code: "evidencegraphs.artifact_in_use", kind: .conflict, params: []
         )
-        store.unlinkImpactBlocksByGraph["g-pair"] = [unlinkBlock("a2", citations: 1)]
+        store.unlinkImpactBlocks = [unlinkBlock("a2", graphID: "g-pair", citations: 1)]
         let before = form.draft
         let saved = await form.save()
         #expect(!saved)
@@ -205,10 +244,39 @@ struct SourceGraphFormModelTests {
         #expect(form.checkedArtifactIDs.contains("a2"))
     }
 
+    @Test func editRefusedCitationsNeedGraphRereadsKeptLinks() async throws {
+        let linked = evidenceGraph("g-pair", name: "Pair", artifactIDs: ["a2", "a3"])
+        let (model, store, _) = await makeModel(graphs: [linked])
+        store.unlinkImpactBlocks = []
+        model.graphs.openEdit(id: "g-pair")
+        let form = try #require(model.graphs.form)
+        _ = await waitUntil { form.loadState != .loading }
+        form.draft.excludedArtifactIDs.insert("a2")
+        store.updateEvidenceGraphError = CoreInvokeError.coded(
+            status: 1, code: "evidencegraphs.citations_need_graph", kind: .conflict, params: []
+        )
+        store.unlinkImpactBlocks = [unlinkBlock("a2", graphID: "g-pair", citations: 1, reason: .citationsNeedGraph)]
+        let calls = store.getEvidenceGraphUnlinkImpactCalls
+        let saved = await form.save()
+        #expect(!saved)
+        #expect(store.getEvidenceGraphUnlinkImpactCalls == calls + 1)
+        #expect(form.saveError != nil)
+        #expect(form.locked["a2"] == "1 citation would be left in no evidence graph")
+        #expect(form.checkedArtifactIDs.contains("a2"))
+
+        // A refusal with no code re-reads too and keeps the refusal in view.
+        store.updateEvidenceGraphError = CoreInvokeError.failed(status: 3)
+        let again = store.getEvidenceGraphUnlinkImpactCalls
+        let savedAgain = await form.save()
+        #expect(!savedAgain)
+        #expect(store.getEvidenceGraphUnlinkImpactCalls == again + 1)
+        #expect(form.saveError != nil)
+    }
+
     @Test func editPreflightFailureThenReadAgain() async throws {
         let (model, store, _) = await makeModel(graphs: [smith()])
         store.getEvidenceGraphUnlinkImpactError = Boom()
-        store.unlinkImpactBlocksByGraph["g-smith"] = [unlinkBlock("a3", citations: 2)]
+        store.unlinkImpactBlocks = [unlinkBlock("a3", graphID: "g-smith", citations: 2)]
         model.graphs.openEdit(id: "g-smith")
         let form = try #require(model.graphs.form)
         _ = await waitUntil { form.loadState != .loading }

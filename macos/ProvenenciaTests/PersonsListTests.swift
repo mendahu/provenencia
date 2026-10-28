@@ -98,7 +98,6 @@ struct PersonsListTests {
         #expect(place?.queryKeys == [
             .conclusionDetail(project: ProjectKey(projectDir: "/tmp/p.provenencia"), entityId: "id-PER-1"),
         ])
-        #expect(place?.deepId == "id-PER-1")
         let list = PlaceRegistry.standard.resolve(.sectionRoot(.persons), project: ProjectKey(projectDir: "/tmp/p.provenencia"))
         #expect(list?.placeID == .personsList)
         #expect(list?.queryKeys == [.personsList(project: ProjectKey(projectDir: "/tmp/p.provenencia"))])

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -159,105 +160,42 @@ func DeleteEvidenceGraph(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func LinkEvidenceGraphArtifact(in []byte) ([]byte, error) {
-	var req engine.LinkEvidenceGraphArtifactRequest
-	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("link_evidence_graph_artifact", err)
-	}
-	userID, err := parseUserID(req.GetUserId())
-	if err != nil {
-		return nil, err
-	}
-	graphID, err := parseID(req.GetGraphId())
-	if err != nil {
-		return nil, err
-	}
-	artifactID, err := parseID(req.GetArtifactId())
-	if err != nil {
-		return nil, err
-	}
-	var out *engine.LinkEvidenceGraphArtifactResponse
-	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		_, wrote, err := writes.Run(c, writes.Op{Action: "link_evidence_graph_artifact", UserID: userID},
-			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-				changes, err := evidencegraphs.Link(tx, userID, graphID, artifactID)
-				return struct{}{}, changes, err
-			})
-		if err != nil {
-			return err
-		}
-		out = &engine.LinkEvidenceGraphArtifactResponse{Effects: writeEffectsProto(wrote)}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return proto.Marshal(out)
-}
-
-func UnlinkEvidenceGraphArtifact(in []byte) ([]byte, error) {
-	var req engine.UnlinkEvidenceGraphArtifactRequest
-	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("unlink_evidence_graph_artifact", err)
-	}
-	userID, err := parseUserID(req.GetUserId())
-	if err != nil {
-		return nil, err
-	}
-	graphID, err := parseID(req.GetGraphId())
-	if err != nil {
-		return nil, err
-	}
-	artifactID, err := parseID(req.GetArtifactId())
-	if err != nil {
-		return nil, err
-	}
-	var out *engine.UnlinkEvidenceGraphArtifactResponse
-	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		_, wrote, err := writes.Run(c, writes.Op{Action: "unlink_evidence_graph_artifact", UserID: userID},
-			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-				changes, err := evidencegraphs.Unlink(tx, userID, graphID, artifactID)
-				return struct{}{}, changes, err
-			})
-		if err != nil {
-			return err
-		}
-		out = &engine.UnlinkEvidenceGraphArtifactResponse{Effects: writeEffectsProto(wrote)}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return proto.Marshal(out)
-}
-
-// GetEvidenceGraphUnlinkImpact is a read: which of the Artifacts a graph edit
-// removes are used by the graph's Citations.
+// GetEvidenceGraphUnlinkImpact is a read: which of the (graph, Artifact) pairs
+// an edit would unlink are refused, each with its reason.
 func GetEvidenceGraphUnlinkImpact(in []byte) ([]byte, error) {
 	var req engine.GetEvidenceGraphUnlinkImpactRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, unmarshalErr("get_evidence_graph_unlink_impact", err)
 	}
-	graphID, err := parseID(req.GetGraphId())
-	if err != nil {
-		return nil, err
-	}
-	artifactIDs, err := parseIDs(req.GetArtifactIds())
-	if err != nil {
-		return nil, err
+	var pairs []evidencegraphs.Pair
+	for _, p := range req.GetPairs() {
+		graphID, err := parseID(p.GetGraphId())
+		if err != nil {
+			return nil, err
+		}
+		artifactID, err := parseID(p.GetArtifactId())
+		if err != nil {
+			return nil, err
+		}
+		pairs = append(pairs, evidencegraphs.Pair{GraphID: graphID, ArtifactID: artifactID})
 	}
 	var out *engine.GetEvidenceGraphUnlinkImpactResponse
-	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		blocks, err := evidencegraphs.UnlinkImpact(c, graphID, artifactIDs)
+	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		blocks, err := evidencegraphs.UnlinkImpact(c, pairs)
 		if err != nil {
 			return err
 		}
 		out = &engine.GetEvidenceGraphUnlinkImpactResponse{}
 		for _, b := range blocks {
-			out.Blocked = append(out.Blocked, &engine.EvidenceGraphUnlinkBlock{
+			block := &engine.EvidenceGraphUnlinkBlock{
+				GraphId:    database.UUIDString(b.GraphID),
 				ArtifactId: database.UUIDString(b.ArtifactID),
-				Citations:  groupToProto(b.Citations),
-			})
+				ReasonCode: apperr.From(b.Reason).Code(),
+			}
+			if b.Citations.Via != "" {
+				block.Citations = groupToProto(b.Citations)
+			}
+			out.Blocked = append(out.Blocked, block)
 		}
 		return nil
 	})

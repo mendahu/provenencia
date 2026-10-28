@@ -8,6 +8,8 @@ Promote's name index (`promotealign`'s shortlist, built over every person, event
 
 S11-50 moves the first build behind the open spinner. It does not help after a commit.
 
+S11-46 (#602) widened the rebuild: prefix keys file about 46% more index keys. On S11-21's large fixture a proposal after a handle commit went from about 424 to 512 ms. On a 20,000-person catalog with short shared given-name stems ("Jo", "Al", "Ed", "Ann"), a proposal after a handle commit took about 1.94 s with prefix keys and 1.82 s without, both over the 1.5 s budget. The user kept prefix keys uncapped (2026-10-28); this idea is the fix for that cost.
+
 ## A shape
 
 - The commit updates the index in place: remove the committed handles' old keys, add their new ones, keep the generation stable for handles it did not touch.

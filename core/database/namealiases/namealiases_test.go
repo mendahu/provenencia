@@ -149,7 +149,7 @@ func TestInstallStoresComparisonTokens(t *testing.T) {
 	t.Cleanup(ResetAliasTablesForTest)
 	Register(valuecompare.AliasTable{
 		Key: "test-nicks", Origin: vocabkey.OriginUser, Label: "Test", Kind: valuecompare.AliasNickname,
-		Roles: aliasPartRoles(),
+		Roles: valuecompare.AliasRoles(),
 		Sets:  [][]string{{"Jim", "JAMES"}, {"Jim", "jim", "James"}, {"Mary-Ann", "Polly"}},
 	})
 	c := newCatalog(t)
@@ -173,6 +173,26 @@ func TestInstallStoresComparisonTokens(t *testing.T) {
 	assertScore(t, rules, "Jim", "James", matchregistry.Default().Value.Words.AliasCredit)
 	// No seed set holds maryann: only the registered set scores this.
 	assertScore(t, rules, "Maryann", "Polly", matchregistry.Default().Value.Words.AliasCredit)
+}
+
+func TestDesIsANicknameOfDesireeAndDesirae(t *testing.T) {
+	c := newCatalog(t)
+	if err := Install(c); err != nil {
+		t.Fatal(err)
+	}
+	if err := Warm(c); err != nil {
+		t.Fatal(err)
+	}
+	rules, err := Rules(c.Graph(), mustDB(t, c), matchregistry.Default().Value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	credit := matchregistry.Default().Value.Words.AliasCredit
+	assertScore(t, rules, "Des", "Desiree", credit)
+	assertScore(t, rules, "Des", "Desirae", credit)
+	if got, ok := compareGiven(rules, "Desiree", "Desirae"); ok && got >= credit {
+		t.Fatalf("Desiree vs Desirae scored %.4f, want below %.4f", got, credit)
+	}
 }
 
 func newCatalog(t *testing.T) *database.Catalog {

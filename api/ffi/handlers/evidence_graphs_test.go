@@ -42,16 +42,17 @@ func newGraphFixture(t *testing.T) graphFixture {
 	return f
 }
 
-func (f graphFixture) createArtifact(t *testing.T, sourceID, label string, graphIDs []string) string {
+// createArtifact sends links as given: nil is absent, the default (every graph).
+func (f graphFixture) createArtifact(t *testing.T, sourceID, label string, links *engine.GraphLinks) string {
 	t.Helper()
-	return f.createArtifactResp(t, sourceID, label, graphIDs).GetArtifact().GetId()
+	return f.createArtifactResp(t, sourceID, label, links).GetArtifact().GetId()
 }
 
-func (f graphFixture) createArtifactResp(t *testing.T, sourceID, label string, graphIDs []string) *engine.CreateArtifactResponse {
+func (f graphFixture) createArtifactResp(t *testing.T, sourceID, label string, links *engine.GraphLinks) *engine.CreateArtifactResponse {
 	t.Helper()
 	var art engine.CreateArtifactResponse
 	mustRPC(t, CreateArtifact, &engine.CreateArtifactRequest{
-		ProjectDir: f.dir, UserId: f.userID, SourceId: sourceID, Label: label, GraphIds: graphIDs,
+		ProjectDir: f.dir, UserId: f.userID, SourceId: sourceID, Label: label, GraphLinks: links,
 	}, &art)
 	return &art
 }
@@ -251,66 +252,77 @@ func TestDeleteEvidenceGraph(t *testing.T) {
 	})
 }
 
-func TestLinkUnlinkEvidenceGraphArtifact(t *testing.T) {
-	f := newGraphFixture(t)
-	id := f.createGraph(t, "Jones", f.page1).GetGraph().GetId()
-
-	var linked engine.LinkEvidenceGraphArtifactResponse
-	mustRPC(t, LinkEvidenceGraphArtifact, &engine.LinkEvidenceGraphArtifactRequest{
-		ProjectDir: f.dir, UserId: f.userID, GraphId: id, ArtifactId: f.page2,
-	}, &linked)
-	assertGraphEffects(t, linked.GetEffects())
-	if got := f.graph(t, id).GetArtifactIds(); len(got) != 2 || !slices.Contains(got, f.page2) {
-		t.Fatalf("after link %v", got)
-	}
-
-	var unlinked engine.UnlinkEvidenceGraphArtifactResponse
-	mustRPC(t, UnlinkEvidenceGraphArtifact, &engine.UnlinkEvidenceGraphArtifactRequest{
-		ProjectDir: f.dir, UserId: f.userID, GraphId: id, ArtifactId: f.page2,
-	}, &unlinked)
-	assertGraphEffects(t, unlinked.GetEffects())
-	if got := f.graph(t, id).GetArtifactIds(); !slices.Equal(got, []string{f.page1}) {
-		t.Fatalf("after unlink %v", got)
-	}
-
-	err := rpc(t, UnlinkEvidenceGraphArtifact, &engine.UnlinkEvidenceGraphArtifactRequest{
-		ProjectDir: f.dir, UserId: f.userID, GraphId: id, ArtifactId: f.page1,
-	}, &engine.UnlinkEvidenceGraphArtifactResponse{})
-	if !errors.Is(err, evidencegraphs.ErrLastArtifact) {
-		t.Fatalf("last link: %v", err)
-	}
-}
-
 func TestGetEvidenceGraphUnlinkImpact(t *testing.T) {
 	f := newGraphFixture(t)
+	// page1 has a Citation with an Observation in Default (artifact_in_use).
+	// solo's only Artifact is lone (last_artifact). needy has a Citation with no
+	// Observation and only the Default graph (citations_need_graph).
+	needy := f.createArtifact(t, f.sourceID, "Needy", &engine.GraphLinks{GraphIds: []string{f.defaultGraphID}})
+	var needyCit engine.CreateCitationWithObservationsResponse
+	mustRPC(t, CreateCitationWithObservations, &engine.CreateCitationWithObservationsRequest{
+		ProjectDir: f.dir, UserId: f.userID, ArtifactId: needy, LocatorJson: validLocatorJSON,
+	}, &needyCit)
+	lone := f.createArtifact(t, f.sourceID, "Lone", &engine.GraphLinks{GraphIds: []string{f.defaultGraphID}})
+	solo := f.createGraph(t, "Solo", lone).GetGraph().GetId()
+	pair := func(graph, artifact string) *engine.EvidenceGraphArtifactPair {
+		return &engine.EvidenceGraphArtifactPair{GraphId: graph, ArtifactId: artifact}
+	}
+
 	var resp engine.GetEvidenceGraphUnlinkImpactResponse
 	mustRPC(t, GetEvidenceGraphUnlinkImpact, &engine.GetEvidenceGraphUnlinkImpactRequest{
-		ProjectDir: f.dir, GraphId: f.defaultGraphID, ArtifactIds: []string{f.page2, f.page1},
+		ProjectDir: f.dir,
+		Pairs: []*engine.EvidenceGraphArtifactPair{
+			pair(f.defaultGraphID, f.page2), // allowed
+			pair(f.defaultGraphID, f.page1),
+			pair(solo, lone),
+			pair(f.defaultGraphID, needy),
+			pair(solo, f.page2), // not linked
+		},
 	}, &resp)
-	if len(resp.GetBlocked()) != 1 {
+	if len(resp.GetBlocked()) != 3 {
 		t.Fatalf("blocked %+v", resp.GetBlocked())
 	}
-	b := resp.GetBlocked()[0]
-	g := b.GetCitations()
-	if b.GetArtifactId() != f.page1 || g.GetVia() != evidencegraphs.UnlinkVia || g.GetKind() != "citation" ||
-		g.GetTotal() != 1 || len(g.GetListed()) != 1 {
-		t.Fatalf("block %+v", b)
+	inUse, last, need := resp.GetBlocked()[0], resp.GetBlocked()[1], resp.GetBlocked()[2]
+
+	g := inUse.GetCitations()
+	if inUse.GetGraphId() != f.defaultGraphID || inUse.GetArtifactId() != f.page1 || inUse.GetReasonCode() != "evidencegraphs.artifact_in_use" ||
+		g.GetVia() != evidencegraphs.UnlinkVia || g.GetKind() != "citation" || g.GetTotal() != 1 || len(g.GetListed()) != 1 {
+		t.Fatalf("in use %+v", inUse)
 	}
 	if l := g.GetListed()[0]; l.GetId() != f.citationID || l.GetRef() != f.citationRef || l.GetLocation().GetSourceSurface() != "citationComposer" {
 		t.Fatalf("listed %+v", l)
 	}
+	if last.GetGraphId() != solo || last.GetArtifactId() != lone || last.GetReasonCode() != "evidencegraphs.last_artifact" || last.GetCitations() != nil {
+		t.Fatalf("last artifact %+v", last)
+	}
+	ng := need.GetCitations()
+	if need.GetGraphId() != f.defaultGraphID || need.GetArtifactId() != needy || need.GetReasonCode() != "evidencegraphs.citations_need_graph" ||
+		ng.GetVia() != "evidencegraphs.citations_need_graph" || ng.GetKind() != "citation" || ng.GetTotal() != 1 ||
+		len(ng.GetListed()) != 1 || ng.GetListed()[0].GetId() != needyCit.GetCitation().GetId() {
+		t.Fatalf("citations need graph %+v", need)
+	}
 
-	t.Run("malformed graph id", func(t *testing.T) {
-		err := rpc(t, GetEvidenceGraphUnlinkImpact, &engine.GetEvidenceGraphUnlinkImpactRequest{
-			ProjectDir: f.dir, GraphId: "nope", ArtifactIds: []string{f.page1},
-		}, &engine.GetEvidenceGraphUnlinkImpactResponse{})
-		if !errors.Is(err, errInvalidID) {
-			t.Fatalf("got %v", err)
+	t.Run("bad proto", func(t *testing.T) {
+		if _, err := GetEvidenceGraphUnlinkImpact([]byte{0xff}); err == nil {
+			t.Fatal("expected error")
+		}
+	})
+	t.Run("malformed id", func(t *testing.T) {
+		for name, p := range map[string]*engine.EvidenceGraphArtifactPair{
+			"graph":    pair("nope", f.page1),
+			"artifact": pair(f.defaultGraphID, "nope"),
+		} {
+			err := rpc(t, GetEvidenceGraphUnlinkImpact, &engine.GetEvidenceGraphUnlinkImpactRequest{
+				ProjectDir: f.dir, Pairs: []*engine.EvidenceGraphArtifactPair{p},
+			}, &engine.GetEvidenceGraphUnlinkImpactResponse{})
+			if !errors.Is(err, errInvalidID) {
+				t.Fatalf("%s: got %v", name, err)
+			}
 		}
 	})
 	t.Run("unknown graph", func(t *testing.T) {
 		err := rpc(t, GetEvidenceGraphUnlinkImpact, &engine.GetEvidenceGraphUnlinkImpactRequest{
-			ProjectDir: f.dir, GraphId: f.page1, ArtifactIds: []string{f.page1},
+			ProjectDir: f.dir, Pairs: []*engine.EvidenceGraphArtifactPair{pair(f.page1, f.page1)},
 		}, &engine.GetEvidenceGraphUnlinkImpactResponse{})
 		if !errors.Is(err, evidencegraphs.ErrInvalid) {
 			t.Fatalf("got %v", err)

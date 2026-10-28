@@ -7,10 +7,6 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-func aliasPartRoles() []valuecompare.NameRole {
-	return []valuecompare.NameRole{valuecompare.RoleGiven, valuecompare.RoleNick, valuecompare.RoleUntyped}
-}
-
 // productAliasTables is the create-time seed. Install writes this list.
 // Matching reads the catalog rows; the reconciler cache reads the product seed
 // through valuerules.Product. Tokens are normalized comparison forms. Each set
@@ -18,7 +14,7 @@ func aliasPartRoles() []valuecompare.NameRole {
 var productAliasTables = []valuecompare.AliasTable{
 	{
 		Key: "abbreviations", Origin: vocabkey.OriginProvenencia, Label: "Abbreviations",
-		Kind: valuecompare.AliasAbbreviation, Roles: aliasPartRoles(), FormalFirst: true,
+		Kind: valuecompare.AliasAbbreviation, Roles: valuecompare.AliasRoles(), FormalFirst: true,
 		Sets: [][]string{
 			{"james", "jas"},
 			{"william", "wm"},
@@ -32,7 +28,7 @@ var productAliasTables = []valuecompare.AliasTable{
 	},
 	{
 		Key: "nicknames", Origin: vocabkey.OriginProvenencia, Label: "Nicknames",
-		Kind: valuecompare.AliasNickname, Roles: aliasPartRoles(),
+		Kind: valuecompare.AliasNickname, Roles: valuecompare.AliasRoles(),
 		// Each set is one canonical name and its direct nicknames, from
 		// carltonnorthern/nicknames. A nickname shared by two canonical
 		// names does not join those sets. License and credit:

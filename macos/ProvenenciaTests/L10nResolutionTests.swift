@@ -86,7 +86,8 @@ struct L10nResolutionTests {
             "evidencegraphs.invalid": "That evidence graph isn’t valid.",
             "evidencegraphs.artifact_in_use": "Citations in this evidence graph still use an artifact you removed, so it stays linked.",
             "evidencegraphs.last_artifact": "An evidence graph needs at least one artifact.",
-            "evidencegraphs.in_use": "This evidence graph still has subjects.",
+            "evidencegraphs.citations_need_graph": "An artifact with citations must stay in at least one evidence graph.",
+            "evidencegraphs.in_use": "Subjects or citations still need this evidence graph.",
             "evidencegraphs.last_graph": "A source keeps at least one evidence graph.",
             "observations.other_graph": "That subject or artifact is in another evidence graph.",
         ]

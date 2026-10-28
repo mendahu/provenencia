@@ -2,6 +2,18 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-38 — Add an Artifact without a graph; the card saves links in one write
+
+**Landed 2026-10-28** in [#605](https://github.com/mendahu/provenencia/pull/605). A researcher can add an Artifact with no Evidence graph checked: the graph boxes show on every Source with graphs, one graph included, and a line says citations can't use the Artifact until it is linked. A card in no graph shows "Not in an evidence graph" and **Link to a graph**, which opens card edit. A card's Save is one `updateArtifact` with the label, description and every link, so a refusal leaves nothing half applied; every box the engine's preflight reports is locked, and a refused save names the graph and says the changes are kept. The graph form locks every Artifact the engine says it must keep, re-reads its locks after any refused edit, and a new graph starts with the Artifacts in no graph checked. `LinkEvidenceGraphArtifact` and `UnlinkEvidenceGraphArtifact` are gone on both sides.
+
+## S12-22 — Artifacts can stand outside every graph
+
+**Landed 2026-10-28** in [#600](https://github.com/mendahu/provenencia/pull/600). The engine lets an Artifact stand in no Evidence graph while every Citation stays reachable. A new or edited Artifact names its graphs with one `GraphLinks` message (absent is the default, present and empty is none), and an Artifact update saves its fields and links in one revision through `applyLinks`. One check, `checkUnlink`, backs `Unlink` and the pair-shaped `UnlinkImpact`, and refuses the last graph of an Artifact with Citations (`evidencegraphs.citations_need_graph`). A graph delete that would strand such Citations is refused with `evidencegraphs.in_use` and lists them. The card's link locks come from one preflight call; no view changes otherwise, and S12-38 builds the chrome.
+
+## S12-21 — The canvas keeps its graph and shows its failures
+
+**Landed 2026-10-27** in [#596](https://github.com/mendahu/provenencia/pull/596). Opening one Evidence graph's canvas from another's (omnibar graph hit, Back / Forward) now builds a fresh canvas, so a Person placed there lands on the graph on screen. Each workspace place declares `viewIdentity` and `WorkspaceDestinationHost` applies `.id(…)` once from it, replacing the hand-written `.id`s, four id-keyed tasks and `SourcePageModel.prepare(for:)`. A failed graph read shows a danger callout with Read again, a graph the list no longer has falls back to the Sources list, and the Citation composer shows the error when a Citation fails to load on an Artifact switch or a line refresh.
+
 ## S12-20 — Docs and skills match the code
 
 **Landed 2026-10-27** in [#591](https://github.com/mendahu/provenencia/pull/591). The skills, rules and docs that described code the audit found changed now match it: `add-catalog-model` step 6 points at the `Effect` struct and the effects README instead of listing fields, `add-searchable-kind` names `fieldValuesForKind`, and the reserved ref prefixes and delete gates are named by their owners (`reservedPrefixes`, `extraGateList`) instead of copied. `conclusion-reconciliation.md`, `matching.md`, `matching-model.md`, `catalog-deletes.md`, `macos-client-patterns.md`, the effects and proto READMEs, `source-layer-data-model.md` §4.2 and `promote-graph-alignment.md` say what the code does. The DesignSystem README has rows for Chip, Copy, FloatingMenuSelection, HoverEffect, InlineEdit and LastUpdated, `add-ui-component` asks for a row, and `scripts/check-guidance-names.py` (so `check-pr.sh`) fails on a kit folder with none. The settled-list count idea is archived and the done query-wait item is gone from `shared-list-helpers.md`.

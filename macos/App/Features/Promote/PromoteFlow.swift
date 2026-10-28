@@ -7,7 +7,7 @@ struct PromoteFlow: Equatable, Sendable {
     var nameOrders = NameFormatOrders()
 
     enum Target: Equatable, Sendable {
-        /// No choice yet. A no-match row starts here so Skip and New are explicit.
+        /// No choice yet. Every row Promote suggests no record for starts here, so Skip and New are explicit.
         case unset
         case handle(id: String, ref: String, title: String)
         case newKind
@@ -65,7 +65,8 @@ struct PromoteFlow: Equatable, Sendable {
         case weak
         /// Another row on the page took this match.
         case taken
-        case noMatch
+        /// Promote suggests no record for this row.
+        case unplaced
         case empty
 
         init(code: PromoteReasonCode, propertyKey: String, propertyOrigin: String, neighborID: String) {
@@ -78,7 +79,7 @@ struct PromoteFlow: Equatable, Sendable {
             case .agrees: self = .agrees(key: propertyKey, origin: propertyOrigin)
             case .weak: self = .weak
             case .taken: self = .taken
-            case .noMatch: self = .noMatch
+            case .unplaced: self = .unplaced
             case .via, .neighborPlaced, .neighborMoved, .neighborReleased, .empty, .unrecognized: self = .empty
             }
         }
@@ -211,8 +212,10 @@ struct PromoteFlow: Equatable, Sendable {
             menu.first { Target.handleToken($0.id) == token }
         }
 
-        /// What the Updated caption words: the move when settling moved this row, else its reason.
-        var captionReason: Reason { move ?? reason }
+        /// What the Updated caption words: the move when settling moved this row,
+        /// else, for a row Promote suggested no record for but the page drafted
+        /// onto one, that record's reason, else its own reason.
+        var captionReason: Reason { move ?? (reason == .unplaced ? selectionReadout?.reason : nil) ?? reason }
 
         /// The ref the page names this row by: its record's when it has one, else its Source ref.
         var shownRef: String { target.handleRef ?? ref }
@@ -318,7 +321,7 @@ struct PromoteFlow: Equatable, Sendable {
     /// Rows with no target yet.
     var unsetCount: Int { scope.filter { !$0.anchor && $0.target == .unset }.count }
 
-    /// Every visible row has a target. An unselected no-match menu blocks Done.
+    /// Every visible row has a target. An unset row blocks Done.
     var targetsChosen: Bool {
         unsetCount == 0
     }
@@ -504,9 +507,9 @@ struct PromoteFlow: Equatable, Sendable {
             case .handle(let id, _, _):
                 return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, handleID: id)
             case .newKind:
-                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, target: "new")
+                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, target: .new)
             case .skip:
-                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, target: "skip")
+                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, target: .skip)
             case .unset:
                 return nil
             }
@@ -691,7 +694,7 @@ struct PromoteFlow: Equatable, Sendable {
             // so refresh that record's band. "Your choice" stays off the column;
             // the match sentence already on the menu item remains.
             if case .handle(let id, _, _) = kept.target,
-               proposal.target == "handle", proposal.handleID == id,
+               proposal.target == .handle, proposal.handleID == id,
                let menuIndex = kept.menu.firstIndex(where: { $0.id == id }) {
                 kept.menu[menuIndex].assessment = Assessment(wire: proposal.assessment)
                 let matchReason = Reason(proposal)
@@ -726,11 +729,11 @@ struct PromoteFlow: Equatable, Sendable {
 
     private static func draftTarget(_ proposal: CatalogPromoteGraphAlignmentRow, menu: [Alternative]) -> Target {
         let assessment = Assessment(wire: proposal.assessment)
-        // No match: leave the menu empty so Skip and New are a choice.
+        // No suggestion: leave the choice open so Skip and New are the researcher's.
         if assessment == .none {
             return .unset
         }
-        if proposal.target == "handle", let first = menu.first, first.id == proposal.handleID {
+        if proposal.target == .handle, let first = menu.first, first.id == proposal.handleID {
             return .handle(id: first.id, ref: first.ref, title: first.title)
         }
         // Another row on the page took this record. Drafting it again would
@@ -745,15 +748,12 @@ struct PromoteFlow: Equatable, Sendable {
         if assessment == .weak, let match = menu.first {
             return .handle(id: match.id, ref: match.ref, title: match.title)
         }
-        if assessment == .strong, proposal.target == "new" {
-            return .newKind
-        }
-        return .skip
+        return .unset
     }
 
     private static func menu(for proposal: CatalogPromoteGraphAlignmentRow, kind: EvidencePrimaryKind, orders: NameFormatOrders) -> [Alternative] {
         var out: [Alternative] = []
-        if proposal.target == "handle", !proposal.handleID.isEmpty {
+        if proposal.target == .handle, !proposal.handleID.isEmpty {
             out.append(item(
                 id: proposal.handleID, ref: proposal.handleRef,
                 kind: EvidencePrimaryKind(rawValue: proposal.kind),

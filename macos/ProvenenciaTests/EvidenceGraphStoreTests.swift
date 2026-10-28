@@ -39,7 +39,7 @@ struct EvidenceGraphStoreTests {
         store.evidenceGraphsByProject[otherDir] = [evidenceGraph("g2", name: "Default", artifactIDs: [])]
         let (art, _) = try await store.createArtifact(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
-            fileID: "f1", label: "Page 1", description: "", graphIDs: []
+            fileID: "f1", label: "Page 1", description: "", graphIDs: nil
         )
         #expect(store.evidenceGraphsByProject[projectDir]?.first?.artifactIDs == [art.id])
         #expect(store.evidenceGraphsByProject[otherDir]?.first?.artifactIDs == [])
@@ -56,14 +56,8 @@ struct EvidenceGraphStoreTests {
             projectDir: projectDir, userID: userID, graphID: made.id,
             name: "Jones family", description: "", artifactIDs: ["a2"]
         )
-        let linked = try await store.linkEvidenceGraphArtifact(
-            projectDir: projectDir, userID: userID, graphID: made.id, artifactID: "a1"
-        )
-        let unlinked = try await store.unlinkEvidenceGraphArtifact(
-            projectDir: projectDir, userID: userID, graphID: made.id, artifactID: "a1"
-        )
         let deleted = try await store.deleteEvidenceGraph(projectDir: projectDir, userID: userID, graphID: made.id)
-        for effects in [created, updated, linked, unlinked, deleted] {
+        for effects in [created, updated, deleted] {
             #expect(effects.lists == expected)
         }
         #expect(try await store.listEvidenceGraphs(projectDir: projectDir).isEmpty)
@@ -108,7 +102,7 @@ struct EvidenceGraphStoreTests {
         ]
         let (every, effects) = try await store.createArtifact(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
-            fileID: "", label: "Page 2", description: "", graphIDs: []
+            fileID: "", label: "Page 2", description: "", graphIDs: nil
         )
         #expect(effects.lists.contains(.evidenceGraphs))
         let (chosen, _) = try await store.createArtifact(
@@ -139,7 +133,7 @@ struct EvidenceGraphStoreTests {
 
         let (artifact, _) = try await store.createArtifact(
             projectDir: projectDir, userID: userID, sourceID: created.id,
-            fileID: "", label: "Page 1", description: "", graphIDs: []
+            fileID: "", label: "Page 1", description: "", graphIDs: nil
         )
         let linked = try await store.listEvidenceGraphs(projectDir: projectDir)
         #expect(linked.first?.artifactIDs == [artifact.id])
@@ -182,12 +176,33 @@ struct EvidenceGraphStoreTests {
         #expect(try await store.listEvidenceGraphs(projectDir: projectDir).isEmpty)
     }
 
-    @Test func unlinkImpactFiltersToAskedArtifacts() async throws {
+    /// T-13 (D-14): the fake answers with each scripted block whose pair was asked,
+    /// in pair order, and records the pairs.
+    @Test func unlinkImpactReturnsScriptedBlocksPerPair() async throws {
         let store = seededStore()
-        store.unlinkImpactBlocksByGraph["g1"] = [unlinkBlock("a1", citations: 1), unlinkBlock("a2", citations: 1)]
-        let blocks = try await store.getEvidenceGraphUnlinkImpact(
-            projectDir: projectDir, graphID: "g1", artifactIDs: ["a2"]
+        store.unlinkImpactBlocks = [
+            unlinkBlock("a1", graphID: "g1", citations: 1),
+            unlinkBlock("a1", graphID: "g2", citations: 1),
+        ]
+        let pairs = [
+            CatalogEvidenceGraphArtifactPair(graphID: "g2", artifactID: "a1"),
+            CatalogEvidenceGraphArtifactPair(graphID: "g1", artifactID: "a1"),
+            CatalogEvidenceGraphArtifactPair(graphID: "g2", artifactID: "a9"),
+        ]
+        let blocks = try await store.getEvidenceGraphUnlinkImpact(projectDir: projectDir, pairs: pairs)
+        #expect(blocks.map(\.graphID) == ["g2", "g1"])
+        #expect(store.getEvidenceGraphUnlinkImpactPairs == pairs)
+    }
+
+    /// T-12 (D-14): `[]` links no graph, `nil` links every graph of the Source.
+    @Test func createArtifactRecordsItsGraphIDs() async throws {
+        let store = seededStore()
+        store.evidenceGraphsByProject[projectDir] = [evidenceGraph("g1", name: "Default", artifactIDs: [])]
+        let (none, _) = try await store.createArtifact(
+            projectDir: projectDir, userID: userID, sourceID: sourceID,
+            fileID: "", label: "Page 4", description: "", graphIDs: []
         )
-        #expect(blocks.map(\.artifactID) == ["a2"])
+        #expect(store.createArtifactGraphIDs == [[]])
+        #expect(store.evidenceGraphsByProject[projectDir]?.first?.artifactIDs.contains(none.id) == false)
     }
 }

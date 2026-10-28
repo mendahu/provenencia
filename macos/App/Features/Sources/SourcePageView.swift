@@ -36,17 +36,15 @@ struct SourcePageView: View {
             if let workspaceHandle: QueryHandle<CatalogSourceWorkspace> = session.queryHandle(workspaceKey) {
                 SourcePageContent(
                     workspaceHandle: workspaceHandle,
-                    sourceID: sourceID,
                     model: model
                 )
             } else {
                 SourcePageLoadingShell(model: model)
             }
         }
-        .task(id: sourceID) {
-            model.prepare(for: sourceID)
+        .task {
             let handle: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
-            model.sync(from: handle, sourceID: sourceID)
+            model.sync(from: handle)
         }
     }
 }
@@ -76,7 +74,6 @@ private struct SourcePageLoadingShell: View {
 private struct SourcePageContent: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Bindable var workspaceHandle: QueryHandle<CatalogSourceWorkspace>
-    let sourceID: String
     @Bindable var model: SourcePageModel
     /// Metadata column height so the left column can stretch and pin Credibility.
     @State private var metadataColumnHeight: CGFloat = 0
@@ -244,17 +241,17 @@ private struct SourcePageContent: View {
             }
         )
         .onChange(of: workspaceHandle.status) {
-            model.sync(from: workspaceHandle, sourceID: sourceID)
+            model.sync(from: workspaceHandle)
             if case .failed = workspaceHandle.read {
                 navigation.fallbackToSectionRoot()
             }
         }
         .onChange(of: workspaceHandle.value) { _, newValue in
             guard newValue != nil else { return }
-            model.sync(from: workspaceHandle, sourceID: sourceID)
+            model.sync(from: workspaceHandle)
         }
         .onAppear {
-            model.sync(from: workspaceHandle, sourceID: sourceID)
+            model.sync(from: workspaceHandle)
         }
         .accessibilityIdentifier("sources.page")
     }

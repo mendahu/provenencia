@@ -12,8 +12,8 @@ struct SourceGraphFormDraft: Equatable {
 }
 
 /// State of the Evidence graph form, for one new graph or one existing one:
-/// the draft, the Artifacts the graph's Citations keep linked (read once when
-/// an edit opens), and the one write that saves it. The Source page presents
+/// the draft, the Artifacts the engine says the graph must keep linked (read
+/// when an edit opens), and the one write that saves it. The Source page presents
 /// it through `View.sourceGraphFormDialog`.
 @MainActor
 @Observable
@@ -30,7 +30,7 @@ final class SourceGraphFormModel {
     var saveError: String?
     private(set) var isSaving = false
     private(set) var loadState: SourceFormLoadState
-    /// The linked Artifacts the graph's Citations still use.
+    /// The linked Artifacts the engine refuses to unlink, with why.
     private(set) var blocks: [CatalogEvidenceGraphUnlinkBlock] = []
 
     private let context: SourcePageContext
@@ -41,7 +41,15 @@ final class SourceGraphFormModel {
         let artifactIDs = (context.workspace?.artifacts ?? []).map(\.id)
         switch mode {
         case .create:
-            prefill = SourceGraphFormDraft()
+            // A new graph starts with the Artifacts in no graph checked; when
+            // the session cannot say, or every Artifact is in a graph, all are.
+            var excluded: Set<String> = []
+            if let none = context.session.artifactIDsInNoGraph(
+                sourceID: context.sourceID, artifactIDs: artifactIDs
+            ), !none.isEmpty {
+                excluded = Set(artifactIDs.filter { !none.contains($0) })
+            }
+            prefill = SourceGraphFormDraft(excludedArtifactIDs: excluded)
             loadState = .ready
         case .edit(let graph):
             let linked = Set(graph.artifactIDs)
@@ -72,20 +80,17 @@ final class SourceGraphFormModel {
         context.sourceTypeIconKey
     }
 
-    /// Artifact id to the hint under its locked row: the S12-05 heading for
-    /// the Citations that use it.
-    var locked: [String: String] {
-        var hints: [String: String] = [:]
-        for block in blocks where hints[block.artifactID] == nil {
-            hints[block.artifactID] = PVDeleteImpactCopy.heading(block.citations)
-        }
-        return hints
-    }
+    /// Artifact id to the hint under its locked row; see `lockHints(by:)` in
+    /// `SourceArtifactGraphLinks.swift`.
+    var locked: [String: String] { blocks.lockHints(by: \.artifactID) }
 
-    /// The Artifacts that stay linked, with their Citations, in page order.
+    /// The locked Artifacts that Citations need, with those Citations, in page
+    /// order: the Kept linked group lists Citations, so a lock with none (the
+    /// graph's last Artifact) shows only on its row.
     var keptLinked: [(artifact: CatalogArtifact, block: CatalogEvidenceGraphUnlinkBlock)] {
         artifacts.compactMap { artifact in
-            blocks.first { $0.artifactID == artifact.id }.map { (artifact, $0) }
+            blocks.first { $0.artifactID == artifact.id && $0.citations.total > 0 }
+                .map { (artifact, $0) }
         }
     }
 
@@ -107,18 +112,20 @@ final class SourceGraphFormModel {
 
     // MARK: Actions
 
-    /// Asks the engine which of the graph's linked Artifacts its Citations
-    /// use. One call covers the whole form. A graph with no links has nothing
+    /// Asks the engine which of the graph's linked Artifacts it will not
+    /// unlink. One call covers the whole form. A graph with no links has nothing
     /// to read. Read again calls this too.
     func loadKeptLinks() async {
         guard let graph, graph.hasArtifact else { return }
         loadState = .loading
         do {
-            blocks = try await context.store.getEvidenceGraphUnlinkImpact(
+            let read = try await context.store.getEvidenceGraphUnlinkImpact(
                 projectDir: context.projectDir,
-                graphID: graph.id,
-                artifactIDs: graph.artifactIDs
+                pairs: graph.artifactIDs.map {
+                    CatalogEvidenceGraphArtifactPair(graphID: graph.id, artifactID: $0)
+                }
             )
+            blocks = read
             loadState = .ready
         } catch {
             loadState = .failed(L10n.Errors.message(for: error))
@@ -173,11 +180,10 @@ final class SourceGraphFormModel {
         } catch {
             let message = L10n.Sources.graphFormSaveErrorMessage(L10n.Errors.message(for: error))
             saveError = message
-            // A Citation took the Artifact since the form opened: read the
-            // kept links again so the row locks, and keep the refusal in view.
-            if (error as? CoreInvokeError)?.code == "evidencegraphs.artifact_in_use",
-               graph != nil
-            {
+            // Any refusal of an edit: the engine's locks may have moved since
+            // the form opened (a Citation took an Artifact), so read them again
+            // and keep the refusal in view.
+            if let graph, graph.hasArtifact {
                 await loadKeptLinks()
                 saveError = message
             }

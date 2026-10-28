@@ -1,17 +1,29 @@
 import Foundation
 
 /// The graph list indexed for reads: by graph id and grouped by Source, each
-/// Source's graphs in list order (sorted by name). Valid for one handle revision.
+/// Source's graphs in list order (sorted by name), plus the Artifact ids each
+/// Source's graphs link. Valid for one handle revision.
 struct EvidenceGraphIndex {
     let revision: Int
     let byID: [String: CatalogEvidenceGraph]
     let bySource: [String: [CatalogEvidenceGraph]]
+    let linkedArtifactIDsBySource: [String: Set<String>]
 
     init(revision: Int, rows: [CatalogEvidenceGraph]) {
         self.revision = revision
         byID = Dictionary(rows.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         bySource = Dictionary(grouping: rows, by: \.sourceID)
+        linkedArtifactIDsBySource = bySource.mapValues { Set($0.flatMap(\.artifactIDs)) }
     }
+}
+
+/// Whether the graph list has a graph: `unknown` while the list cannot say (no
+/// value yet, refetching after a write, or failed), `gone` only once a settled
+/// list lacks it.
+enum EvidenceGraphPresence {
+    case unknown
+    case present(CatalogEvidenceGraph)
+    case gone
 }
 
 /// The session's cached Evidence graph list and graph progress: the one place
@@ -72,6 +84,13 @@ extension WorkspaceSession {
         currentEvidenceGraphIndex?.byID[id]
     }
 
+    /// Whether the graph list has graph `id`; see `EvidenceGraphPresence`.
+    func evidenceGraphPresence(id: String) -> EvidenceGraphPresence {
+        if let graph = evidenceGraph(id: id) { return .present(graph) }
+        if let handle = evidenceGraphsHandle, handle.isSettled, handle.value != nil { return .gone }
+        return .unknown
+    }
+
     /// One Source's graphs in list order (sorted by name); `nil` while the graph
     /// list has no value.
     func evidenceGraphs(sourceID: String) -> [CatalogEvidenceGraph]? {
@@ -97,5 +116,18 @@ extension WorkspaceSession {
             guard let graphs = evidenceGraphs(sourceID: sourceID), !graphs.isEmpty else { return .loading }
             return .loaded(graphs)
         }
+    }
+
+    /// The ids of `artifactIDs` that none of the Source's graphs links. `nil`
+    /// unless the Source's graphs are loaded (`evidenceGraphsRead`) and the list
+    /// has settled, so a list not yet refreshed, or refetching after a write,
+    /// marks nothing.
+    func artifactIDsInNoGraph(sourceID: String, artifactIDs: [String]) -> Set<String>? {
+        guard evidenceGraphsHandle?.isSettled == true,
+              case .loaded = evidenceGraphsRead(sourceID: sourceID),
+              let index = currentEvidenceGraphIndex
+        else { return nil }
+        let linked = index.linkedArtifactIDsBySource[sourceID] ?? []
+        return Set(artifactIDs.filter { !linked.contains($0) })
     }
 }

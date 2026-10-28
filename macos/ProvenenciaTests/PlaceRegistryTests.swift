@@ -16,7 +16,6 @@ struct PlaceRegistryTests {
         let sources = resolve(.sectionRoot(.sources))
         #expect(sources?.placeID == .sourcesList)
         #expect(sources?.presentation == .sourcesList)
-        #expect(sources?.deepId == nil)
         #expect(sources?.queryKeys == [
             .sourcesList(project: project),
             .sourceTypesList(project: project),
@@ -50,7 +49,6 @@ struct PlaceRegistryTests {
         let place = resolve(location)
         #expect(place?.placeID == .sourceDetail)
         #expect(place?.presentation == .sourcePage)
-        #expect(place?.deepId == "src-1")
         #expect(place?.queryKeys == [
             .sourceWorkspace(project: project, sourceId: "src-1"),
             .sourceTypesList(project: project),
@@ -73,7 +71,6 @@ struct PlaceRegistryTests {
         let graphPlace = resolve(graph)
         #expect(graphPlace?.placeID == .sourceGraph)
         #expect(graphPlace?.presentation == .sourceGraph)
-        #expect(graphPlace?.deepId == "g-1")
         #expect(graphPlace?.queryKeys == [
             .evidenceGraph(project: project, graphId: "g-1"),
             .propertiesWorkspace(project: project),
@@ -90,7 +87,6 @@ struct PlaceRegistryTests {
         let place = resolve(location)
         #expect(place?.placeID == .sourceTypesDetail)
         #expect(place?.presentation == .sourceTypes)
-        #expect(place?.deepId == "typ-1")
         #expect(place?.queryKeys == [
             .sourceTypesList(project: project),
             .metadataFieldsList(project: project),
@@ -106,8 +102,6 @@ struct PlaceRegistryTests {
         #expect(row?.placeID == .metadata)
         #expect(root?.presentation == row?.presentation)
         #expect(root?.queryKeys == row?.queryKeys)
-        #expect(root?.deepId == nil)
-        #expect(row?.deepId == "fld-1")
     }
 
     @Test func ignoresCrossSectionDeepIds() {
@@ -118,7 +112,6 @@ struct PlaceRegistryTests {
         )
         let place = resolve(location)
         #expect(place?.placeID == .metadata)
-        #expect(place?.deepId == "fld-1")
         #expect(place?.queryKeys == [.metadataFieldsList(project: project)])
     }
 
@@ -274,7 +267,6 @@ struct PlaceRegistryTests {
         #expect(detail?.queryKeys == [
             .conclusionDetail(project: project, entityId: "evt-1"),
         ])
-        #expect(detail?.deepId == "evt-1")
         let persons = resolve(.sectionRoot(.persons))
         #expect(persons?.placeID == .personsList)
     }
@@ -286,7 +278,47 @@ struct PlaceRegistryTests {
         let detail = resolve(.placeDetail(entityId: "plc-1", ref: "PLC-1", title: "York"))
         #expect(detail?.placeID == .placeDetail)
         #expect(detail?.queryKeys == [.conclusionDetail(project: project, entityId: "plc-1")])
-        #expect(detail?.deepId == "plc-1")
+    }
+
+    @Test func viewIdentityResetsOnTheViewsOwnId() {
+        func identity(_ location: WorkspaceLocation) -> String? {
+            resolve(location)?.viewIdentity
+        }
+        let graphA = WorkspaceLocation.evidenceGraph(sourceId: "src-1", graphId: "g-a", title: "A")
+        let graphB = WorkspaceLocation.evidenceGraph(sourceId: "src-1", graphId: "g-b", title: "B")
+        #expect(identity(graphA) == "g-a")
+        #expect(identity(graphB) == "g-b")
+
+        #expect(identity(WorkspaceLocation(section: .sources, sourceId: "src-1", title: "A")) == "src-1")
+        #expect(identity(WorkspaceLocation(section: .sources, sourceId: "src-2", title: "B")) == "src-2")
+
+        let composer = WorkspaceLocation(
+            section: .sources,
+            sourceId: "s1",
+            graphId: "g-1",
+            citationId: "cit-1",
+            artifactId: "art-0",
+            sourceSurface: .citationComposer,
+            ref: "CIT-AAAAA",
+            title: "CIT-AAAAA"
+        )
+        #expect(identity(composer) != nil)
+        #expect(identity(composer) == CitationComposerEntry(location: composer)?.identityKey)
+
+        let promote = WorkspaceLocation.promote(
+            sourceId: "src-1", graphId: "g-1", subjectId: "sub-1", kind: .event, ref: "CEV-1", title: nil, sourceTitle: nil
+        )
+        #expect(identity(promote) != nil)
+        #expect(identity(promote) == PromoteEntry(location: promote)?.identityKey)
+
+        #expect(identity(.personDetail(entityId: "e1", ref: "PER-1", title: "Ann")) == "e1")
+        #expect(identity(.eventDetail(entityId: "e1", ref: "EVT-1", title: "Fire")) == "e1")
+        #expect(identity(.placeDetail(entityId: "e1", ref: "PLC-1", title: "York")) == "e1")
+
+        #expect(identity(WorkspaceLocation(section: .metadata, fieldId: "fld-1", title: "Author")) == nil)
+        #expect(identity(WorkspaceLocation(section: .sourceTypes, typeId: "typ-1", title: "Book")) == nil)
+        #expect(identity(.sectionRoot(.sources)) == nil)
+        #expect(identity(.sectionRoot(.properties)) == nil)
     }
 
     @Test func citationJumpResolvesComposerWithoutSubjectId() {
@@ -303,7 +335,6 @@ struct PlaceRegistryTests {
         let place = resolve(location)
         #expect(place?.placeID == .sourceCitationComposer)
         #expect(place?.presentation == .sourceCitationComposer)
-        #expect(place?.deepId == "cit-1")
         #expect(CitationComposerEntry(location: location)?.citationID == "cit-1")
         #expect(CitationComposerEntry(location: location)?.subjectID == "")
     }

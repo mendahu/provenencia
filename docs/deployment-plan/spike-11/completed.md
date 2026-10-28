@@ -2,6 +2,18 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S11-46 — Prefix keys in the shortlist
+
+**Landed 2026-10-27** in [#602](https://github.com/mendahu/provenencia/pull/602). The shortlist now hands graph alignment every record whose given name starts another, in both directions: a Source person "Des" reaches the record "Desiree" and the reverse. `valuecompare.WordKeys` returns the keys a value is filed under and the keys it is looked up by, and given, nickname and untyped words add `g:` and `p:` prefix keys from `PrefixMinLength` (2) letters; surnames, text and a name with more words than `Names.MaxWords` never do. Until S11-45 the comparer still calls Des and Desiree `Different`, so the candidate gate drops the new pair and no row changes for that case. On S11-21's large fixture the change added 46% index keys and 13% shortlist hits inside every budget, so there is no cap.
+
+## S11-47 — Promote suggests a record or nothing
+
+**Landed 2026-10-27** in [#598](https://github.com/mendahu/provenencia/pull/598). Promote now proposes a record for a row or nothing: a row it cannot place opens unset, and New and Skip are only ever the researcher's choice. Align leaves such a row's target empty (reasons `empty` and `taken` stay; `weak` and `no_match` are gone from rows, and `weak` stays on a menu record), the possible-duplicate check covers every row that would be a new record, and Swift reads the row target as a typed `PromoteTargetCode`. A suggested row that loses its record on a re-proposal reads "Updated · No record suggested". A row drafted onto a weak record still captions that record's reason.
+
+## S11-44 — Des as a nickname of Desiree and Desirae
+
+**Landed 2026-10-27** in [#594](https://github.com/mendahu/provenencia/pull/594). New projects treat Des as a nickname of Desiree and of Desirae, so Promote offers one for the other and the reconciler shows the formal name. `{desirae, des}` and `{desiree, des}` join `nicknameSets` (1229 sets), Desiree and Desirae stay separate names, and `CacheVersion` is 19. Existing catalogs get the sets from a one-off command the user runs by hand.
+
 ## S11-28 — Fold a nickname into the given name it stands for
 
 **Landed 2026-10-27** in [#589](https://github.com/mendahu/provenencia/pull/589). A Person recorded as *Chris Robins* and *Christopher Robins* now shows one given name, *Christopher*, on the Persons list and the Person page. The reconciler folds a nickname or abbreviation into the head of the product alias set that holds it (*Chris* into *Christopher*, *Wm* into *William*, *Ebbie* into *Abel*); `nicknameDirections` says which name to keep for the 108 pairs the list gives both ways, and 35 spelling variants stay two names. Accent folds, surnames and names of different part types never alias-fold. The cache reads the product alias seed through `valuerules.Product` (`autoreconciler.ValueRules`, also used by promote's profiles) and `CacheVersion` is 18; a guard test fails when the seed changes without a bump.

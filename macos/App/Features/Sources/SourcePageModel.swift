@@ -92,8 +92,7 @@ final class SourcePageModel {
     func warmFromSession() async {
         let session = context.session
         let key = CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: context.sourceID)
-        session.invalidate(key)
-        let handle: QueryHandle<CatalogSourceWorkspace> = session.query(key)
+        let handle: QueryHandle<CatalogSourceWorkspace> = session.reread(key)
         let types: QueryHandle<[CatalogSourceType]> = session.query(
             .sourceTypesList(project: session.projectKey)
         )
@@ -117,24 +116,11 @@ final class SourcePageModel {
             try? await Task.sleep(nanoseconds: step)
             waited += step
         }
-        sync(from: handle, sourceID: context.sourceID)
-    }
-
-    /// Rebinds section state when history switches to another source id.
-    func prepare(for sourceID: String) {
-        guard context.sourceID != sourceID else { return }
-        context.sourceID = sourceID
-        context.workspace = nil
-        context.pageError = nil
-        appliedWorkspace = nil
-        resetSections()
-        isLoading = false
-        loadError = nil
+        sync(from: handle)
     }
 
     /// Mirrors `QueryHandle` state into the page observation graph.
-    func sync(from handle: QueryHandle<CatalogSourceWorkspace>, sourceID: String) {
-        guard context.sourceID == sourceID else { return }
+    func sync(from handle: QueryHandle<CatalogSourceWorkspace>) {
         isLoading = handle.status == .loading && handle.value == nil
         if case .failed(let error) = handle.read {
             loadError = error
@@ -266,13 +252,5 @@ final class SourcePageModel {
         if deleteImpact.request == nil, let message = deleteImpact.error {
             context.pageError = message
         }
-    }
-
-    private func resetSections() {
-        identity.reset()
-        credibility.resetDrafts()
-        metadata.resetDrafts()
-        notes.reset()
-        artifacts.seedDrafts()
     }
 }

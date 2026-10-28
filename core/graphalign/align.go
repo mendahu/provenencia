@@ -11,7 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// Align proposes a handle, New, or Skip for every primary Subject on layer,
+// Align proposes a handle or nothing for every primary Subject on layer,
 // holding fixed pairs as anchors. It is the layer 6 procedure: fixed pairs are
 // placed; each Subject's candidates (Canon.Candidates, plus the handles a
 // placed pair's links nominate) enter one best-first queue; a placed pair

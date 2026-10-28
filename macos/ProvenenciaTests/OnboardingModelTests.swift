@@ -436,7 +436,7 @@ private struct ThrowingStore: GenealogyStore {
         fileID _: String,
         label _: String,
         description _: String,
-        graphIDs _: [String]
+        graphIDs _: [String]?
     ) async throws -> (CatalogArtifact, CatalogWriteEffects) { throw StoreBoom.boom }
     func deleteArtifact(projectDir _: String, userID _: String, artifactID _: String) async throws -> CatalogWriteEffects {
         throw StoreBoom.boom
@@ -446,7 +446,8 @@ private struct ThrowingStore: GenealogyStore {
         userID _: String,
         artifactID _: String,
         label _: String,
-        description _: String
+        description _: String,
+        graphIDs _: [String]?
     ) async throws -> (CatalogArtifact, CatalogWriteEffects) { throw StoreBoom.boom }
     func ingestArtifactFile(
         projectDir _: String,
@@ -475,22 +476,9 @@ private struct ThrowingStore: GenealogyStore {
     func deleteEvidenceGraph(projectDir _: String, userID _: String, graphID _: String) async throws -> CatalogWriteEffects {
         throw StoreBoom.boom
     }
-    func linkEvidenceGraphArtifact(
-        projectDir _: String,
-        userID _: String,
-        graphID _: String,
-        artifactID _: String
-    ) async throws -> CatalogWriteEffects { throw StoreBoom.boom }
-    func unlinkEvidenceGraphArtifact(
-        projectDir _: String,
-        userID _: String,
-        graphID _: String,
-        artifactID _: String
-    ) async throws -> CatalogWriteEffects { throw StoreBoom.boom }
     func getEvidenceGraphUnlinkImpact(
         projectDir _: String,
-        graphID _: String,
-        artifactIDs _: [String]
+        pairs _: [CatalogEvidenceGraphArtifactPair]
     ) async throws -> [CatalogEvidenceGraphUnlinkBlock] { throw StoreBoom.boom }
     func listSourceCredibilityGrades(projectDir _: String) async throws -> [CatalogCredibilityGrade] {
         throw StoreBoom.boom

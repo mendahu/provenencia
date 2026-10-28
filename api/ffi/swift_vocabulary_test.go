@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/effects"
@@ -236,7 +237,7 @@ func sorted(in ...string) []string {
 }
 
 var (
-	wireCase  = regexp.MustCompile(`case "([a-z_]*)": self = `)
+	wireCase  = regexp.MustCompile(`case "([a-z_.]*)": self = `)
 	staticLet = regexp.MustCompile(`static let \w+ = "([^"]*)"`)
 	// swiftNamedKey reads `static let spouse = "spouse"`; swiftInverseEntry reads `parent: child,`.
 	swiftNamedKey     = regexp.MustCompile(`static let (\w+) = "([^"]*)"`)
@@ -322,9 +323,18 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		{
 			name: "promote reasons", path: swiftVocabulary, enum: "PromoteReasonCode", re: wireCase,
 			want: sorted(string(graphalign.ReasonVia), string(graphalign.ReasonDecided), string(graphalign.ReasonAgrees),
-				string(graphalign.ReasonWeak), string(graphalign.ReasonTaken), string(graphalign.ReasonNoMatch),
+				string(graphalign.ReasonWeak), string(graphalign.ReasonTaken), string(graphalign.ReasonUnplaced),
 				string(graphalign.ReasonEmpty), string(graphalign.ReasonNeighborPlaced), string(graphalign.ReasonNeighborMoved),
 				string(graphalign.ReasonNeighborReleased)),
+		},
+		{
+			name: "evidence graph unlink reasons", path: swiftVocabulary, enum: "EvidenceGraphUnlinkReason", re: wireCase,
+			want: sorted(apperr.CodeEvidenceGraphsArtifactInUse, apperr.CodeEvidenceGraphsLastArtifact,
+				apperr.CodeEvidenceGraphsCitationsNeedGraph),
+		},
+		{
+			name: "promote row targets", path: swiftVocabulary, enum: "PromoteTargetCode", re: wireCase,
+			want: sorted("", string(graphalign.TargetHandle), string(graphalign.TargetNew), string(graphalign.TargetSkip)),
 		},
 		{
 			name: "evidence outcomes", path: swiftVocabulary, enum: "EvidenceOutcome", re: wireCase,

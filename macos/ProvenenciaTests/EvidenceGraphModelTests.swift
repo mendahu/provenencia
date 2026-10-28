@@ -704,7 +704,7 @@ struct EvidenceGraphModelTests {
             CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: []),
             nil,
         ]
-        store.holdsSetSubjectPosition = true
+        store.setSubjectPositionHold.isOn = true
         _ = model.commitDrag(
             subjectID: "s1",
             originGridX: 1,
@@ -712,7 +712,7 @@ struct EvidenceGraphModelTests {
             delta: CGSize(width: 160, height: 0)
         )
         let olderWrite = model.lastPositionWrite
-        try #require(await waitUntil(timeout: .seconds(5)) { store.heldSetSubjectPositionCount == 1 })
+        try #require(await waitUntil(timeout: .seconds(5)) { store.setSubjectPositionHold.count == 1 })
         _ = model.commitDrag(
             subjectID: "s1",
             originGridX: 5,
@@ -720,11 +720,11 @@ struct EvidenceGraphModelTests {
             delta: CGSize(width: 160, height: 0)
         )
         let newerWrite = model.lastPositionWrite
-        try #require(await waitUntil(timeout: .seconds(5)) { store.heldSetSubjectPositionCount == 2 })
+        try #require(await waitUntil(timeout: .seconds(5)) { store.setSubjectPositionHold.count == 2 })
         // Settle the older write (fails) before the newer one (succeeds).
-        store.releaseSetSubjectPosition()
+        store.setSubjectPositionHold.release()
         await olderWrite?.value
-        store.releaseSetSubjectPosition()
+        store.setSubjectPositionHold.release()
         await newerWrite?.value
         let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
         #expect(handle?.value?.positions.first?.gridX == 9)
@@ -761,7 +761,7 @@ struct EvidenceGraphModelTests {
             nil,
             CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: []),
         ]
-        store.holdsSetSubjectPosition = true
+        store.setSubjectPositionHold.isOn = true
         _ = model.commitDrag(
             subjectID: "s1",
             originGridX: 1,
@@ -769,7 +769,7 @@ struct EvidenceGraphModelTests {
             delta: CGSize(width: 160, height: 0)
         )
         let olderWrite = model.lastPositionWrite
-        try #require(await waitUntil(timeout: .seconds(5)) { store.heldSetSubjectPositionCount == 1 })
+        try #require(await waitUntil(timeout: .seconds(5)) { store.setSubjectPositionHold.count == 1 })
         _ = model.commitDrag(
             subjectID: "s1",
             originGridX: 5,
@@ -777,11 +777,11 @@ struct EvidenceGraphModelTests {
             delta: CGSize(width: 160, height: 0)
         )
         let newerWrite = model.lastPositionWrite
-        try #require(await waitUntil(timeout: .seconds(5)) { store.heldSetSubjectPositionCount == 2 })
+        try #require(await waitUntil(timeout: .seconds(5)) { store.setSubjectPositionHold.count == 2 })
         // Settle the older write (succeeds) before the newer one (fails).
-        store.releaseSetSubjectPosition()
+        store.setSubjectPositionHold.release()
         await olderWrite?.value
-        store.releaseSetSubjectPosition()
+        store.setSubjectPositionHold.release()
         await newerWrite?.value
         let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
         #expect(handle?.value?.positions.first?.gridX == 5)
@@ -835,6 +835,148 @@ struct EvidenceGraphModelTests {
         #expect(L10n.string(L10n.EvidenceGraph.noArtifactMessage)
             == "Citing needs an artifact linked to this evidence graph. Place tools, Connect, and Add property stay disabled until one is linked.")
         #expect(L10n.string(L10n.EvidenceGraph.noArtifactAction) == "Go to Source page")
+    }
+
+    @Test func graphReadFailureShowsAndReadsAgain() async {
+        let store = makeStore()
+        store.listSubjectsError = TestFailure()
+        let model = makeModel(store: store)
+        await model.prepare()
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
+        #expect(handle?.status == .error)
+        #expect(model.graphReadError != nil)
+
+        store.listSubjectsError = nil
+        model.readGraphAgain()
+        let settled = await waitUntil { handle?.isSettled == true }
+        #expect(settled)
+        #expect(model.graphReadError == nil)
+    }
+
+    @Test func readAgainShowsItIsReading() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.prepare()
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
+        #expect(!model.isRereadingGraph)
+
+        // A failed refetch keeps the stale rows beside the error.
+        store.listSubjectsError = TestFailure()
+        model.readGraphAgain()
+        let failed = await waitUntil { handle?.status == .error && handle?.isFetching == false }
+        #expect(failed)
+        #expect(model.graphReadError != nil)
+        #expect(!model.isRereadingGraph)
+
+        model.readGraphAgain()
+        #expect(model.isRereadingGraph)
+        let failedAgain = await waitUntil { handle?.isFetching == false }
+        #expect(failedAgain)
+        #expect(!model.isRereadingGraph)
+        #expect(model.graphReadError != nil)
+    }
+
+    @Test func graphPresenceFollowsTheList() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        let session = model.session
+        func isGone() -> Bool {
+            if case .gone = session.evidenceGraphPresence(id: graphID) { return true }
+            return false
+        }
+        func isUnknown() -> Bool {
+            if case .unknown = session.evidenceGraphPresence(id: graphID) { return true }
+            return false
+        }
+
+        // (a) No graph list handle yet.
+        #expect(isUnknown())
+        #expect(!model.graphIsGone)
+        #expect(model.canCite)
+
+        // (b) A settled list with the graph.
+        await model.prepare()
+        guard case .present(let graph) = session.evidenceGraphPresence(id: graphID) else {
+            Issue.record("expected the graph to be present")
+            return
+        }
+        #expect(model.canCite == graph.hasArtifact)
+
+        // (c) A settled list without it.
+        session.setQueryValue(session.evidenceGraphsKey, value: [CatalogEvidenceGraph]())
+        #expect(isGone())
+        #expect(model.graphIsGone)
+        #expect(!model.canCite)
+
+        // (e) Refetching: the list keeps its stale value, so the graph is not yet gone.
+        session.invalidate(session.evidenceGraphsKey)
+        let _: QueryHandle<[CatalogEvidenceGraph]> = session.query(session.evidenceGraphsKey)
+        #expect(session.evidenceGraphsHandle?.isFetching == true)
+        #expect(isUnknown())
+        #expect(!model.graphIsGone)
+        #expect(model.canCite)
+    }
+
+    @Test func graphPresenceIsUnknownWhenTheListFailed() async {
+        let store = makeStore()
+        store.listEvidenceGraphsError = TestFailure()
+        let model = makeModel(store: store)
+        await model.prepare()
+        if case .unknown = model.session.evidenceGraphPresence(id: graphID) {} else {
+            Issue.record("expected unknown after a failed list read")
+        }
+        #expect(!model.graphIsGone)
+        #expect(model.canCite)
+    }
+
+    @Test func canvasNoticeOrder() async {
+        // (a) A failed graph read outranks the placing and No-artifact notices.
+        let failing = makeStore()
+        failing.listSubjectsError = TestFailure()
+        let failed = makeModel(store: failing)
+        await failed.prepare()
+        if case .readError = failed.canvasNotice {} else {
+            Issue.record("expected the read error, got \(String(describing: failed.canvasNotice))")
+        }
+
+        // (b) A graph with no Artifact.
+        let bare = makeStore()
+        bare.evidenceGraphsByProject[projectDir] = [
+            CatalogEvidenceGraph(
+                id: graphID, ref: "GPH-1", sourceID: sourceID, name: "Default", description: "", artifactIDs: []
+            ),
+        ]
+        let noArtifact = makeModel(store: bare)
+        await noArtifact.prepare()
+        #expect(noArtifact.canvasNotice == .noArtifact)
+
+        // (c) A graph with an Artifact, idle.
+        let ok = makeModel(store: makeStore())
+        await ok.prepare()
+        #expect(ok.canvasNotice == nil)
+
+        // (d) Armed.
+        ok.armedKind = .person
+        #expect(ok.canvasNotice == .placing(.person))
+
+        // (e) The No-artifact callout outranks the placing banner.
+        noArtifact.armedKind = .person
+        #expect(noArtifact.canvasNotice == .noArtifact)
+
+        // (f) A failed delete and a missing file, which the researcher just asked for, show ahead of the read error.
+        await failed.deleteImpact.ask(kind: "subject", id: "s-1", ref: "CPR-1", title: "Alice") {
+            throw TestFailure()
+        }
+        if case .deleteError = failed.canvasNotice {} else {
+            Issue.record("expected the delete error, got \(String(describing: failed.canvasNotice))")
+        }
+        failed.deleteImpact.cancel()
+        failed.fileOpenError = "File not found"
+        if case .fileNotFound = failed.canvasNotice {} else {
+            Issue.record("expected the file-not-found notice, got \(String(describing: failed.canvasNotice))")
+        }
     }
 
     @Test func fileRowsAreTheGraphsLinkedArtifacts() async {
@@ -2331,3 +2473,5 @@ struct EvidenceGraphModelTests {
         #expect(model.armedSelect == false)
     }
 }
+
+private struct TestFailure: Error {}

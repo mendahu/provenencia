@@ -41,9 +41,10 @@ struct SourcePageArtifactsView: View {
                 }
                 .accessibilityIdentifier("sources.page.artifacts.empty")
             } else {
+                let inNoGraph = model.artifacts.inNoGraph
                 LazyVGrid(columns: cardColumns, spacing: PVSpacing.space6) {
                     ForEach(model.artifacts.items, id: \.id) { art in
-                        artifactCard(art)
+                        artifactCard(art, noGraph: inNoGraph.contains(art.id))
                             .frame(maxWidth: .infinity, alignment: .top)
                     }
                 }
@@ -91,11 +92,8 @@ struct SourcePageArtifactsView: View {
                         isDisabled: model.artifacts.draftGraphsLocked,
                         accessibilityIdentifierPrefix: "sources.page.addArtifact.graphs"
                     )
-                    if model.artifacts.draftNeedsGraph {
-                        Text(L10n.Sources.artifactGraphsNeedsOne)
-                            .font(PVFont.body(size: PVTypeScale.caption, italic: true))
-                            .foregroundStyle(PVColor.textMuted)
-                            .accessibilityIdentifier("sources.page.addArtifact.graphs.needsGraph")
+                    if model.artifacts.draftInNoGraph {
+                        noGraphLine(identifier: "sources.page.addArtifact.graphs.none")
                     }
                 }
             }
@@ -115,6 +113,14 @@ struct SourcePageArtifactsView: View {
                 }
             }
         }
+    }
+
+    /// The muted line under a graph group with no box checked.
+    private func noGraphLine(identifier: String) -> some View {
+        Text(L10n.Sources.artifactGraphsNone)
+            .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+            .foregroundStyle(PVColor.textMuted)
+            .accessibilityIdentifier(identifier)
     }
 
     /// Form for the first-attach Add File dialog.
@@ -146,7 +152,7 @@ struct SourcePageArtifactsView: View {
         }
     }
 
-    private func artifactCard(_ art: CatalogArtifact) -> some View {
+    private func artifactCard(_ art: CatalogArtifact, noGraph: Bool) -> some View {
         let editing = model.artifacts.editingArtifactID == art.id
         return PVCard(elevated: false, padding: 0) {
             VStack(alignment: .leading, spacing: 0) {
@@ -156,7 +162,7 @@ struct SourcePageArtifactsView: View {
                     if editing {
                         editFields(art)
                     } else {
-                        restingText(art)
+                        restingText(art, noGraph: noGraph)
                     }
                 }
                 .padding(.horizontal, PVSpacing.space6)
@@ -257,13 +263,42 @@ struct SourcePageArtifactsView: View {
         .frame(minHeight: 28)
     }
 
-    private func restingText(_ art: CatalogArtifact) -> some View {
+    private func restingText(_ art: CatalogArtifact, noGraph: Bool) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space3) {
             Text(verbatim: art.displayTitle)
                 .font(PVFont.body(size: PVTypeScale.body, weight: PVFontWeight.semibold))
                 .foregroundStyle(PVColor.textPrimary)
                 .lineLimit(2)
             descriptionLine(art)
+            if noGraph {
+                noGraphRow(art)
+            }
+        }
+    }
+
+    /// The badge and **Link to a graph** on a card in no graph: one row with the
+    /// button at the end, else the button on its own line at the end. A card
+    /// with the row is taller than its neighbours, as a card in edit is.
+    private func noGraphRow(_ art: CatalogArtifact) -> some View {
+        let badge = PVBadge(L10n.Sources.artifactNotInGraph, tone: .neutral, icon: .link)
+            .fixedSize()
+            .accessibilityIdentifier("sources.page.artifact.\(art.id).noGraph")
+        let button = PVButton(L10n.Sources.artifactLinkToGraph, variant: .ghost, size: .sm) {
+            model.artifacts.beginEdit(art.id)
+        }
+        .fixedSize()
+        .accessibilityLabel(L10n.Sources.artifactLinkToGraphLabel(ref: art.ref))
+        .accessibilityIdentifier("sources.page.artifact.\(art.id).linkToGraph")
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: PVSpacing.space3) {
+                badge
+                Spacer(minLength: 0)
+                button
+            }
+            VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                badge
+                button.frame(maxWidth: .infinity, alignment: .trailing)
+            }
         }
     }
 
@@ -285,11 +320,37 @@ struct SourcePageArtifactsView: View {
         .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .topLeading)
     }
 
-    /// The Evidence graphs the card in edit links the Artifact to; absent on a
-    /// Source with one graph.
+    /// The Evidence graphs the card in edit links the Artifact to; absent when
+    /// the session has no graphs for the Source. The line under the boxes shows
+    /// when none is checked.
     @ViewBuilder
     private func graphLinks(_ art: CatalogArtifact) -> some View {
-        if let edit = model.artifacts.linkEdit, edit.artifactID == art.id {
+        graphLinksGroup(art)
+            .onChange(of: model.artifacts.visibleGraphs?.map(\.id)) { _, _ in
+                model.artifacts.graphsChanged()
+            }
+    }
+
+    @ViewBuilder
+    private func graphLinksGroup(_ art: CatalogArtifact) -> some View {
+        if model.artifacts.awaitingGraphs(id: art.id) {
+            PVField(
+                label: L10n.Sources.artifactGraphsLabel,
+                hint: L10n.Sources.artifactGraphsHint
+            ) {
+                SourceFormLoadArea(
+                    state: .loading,
+                    loadingText: L10n.Sources.artifactGraphsLoading,
+                    errorTitle: L10n.Sources.artifactGraphsLoadErrorTitle,
+                    errorMessage: L10n.Sources.artifactGraphsLoadErrorMessage,
+                    onReadAgain: {},
+                    compact: true,
+                    accessibilityIdentifierPrefix: "sources.page.artifact.\(art.id).graphs"
+                ) {
+                    EmptyView()
+                }
+            }
+        } else if let edit = model.artifacts.linkEdit, edit.artifactID == art.id {
             let prefix = "sources.page.artifact.\(art.id).graphs"
             PVField(
                 label: L10n.Sources.artifactGraphsLabel,
@@ -310,10 +371,13 @@ struct SourcePageArtifactsView: View {
                             get: { model.artifacts.linkEdit?.excluded ?? [] },
                             set: { model.artifacts.linkEdit?.excluded = $0 }
                         ),
-                        locked: edit.locked,
+                        locked: model.artifacts.lockedGraphs,
                         isDisabled: model.artifacts.savingID == art.id,
                         accessibilityIdentifierPrefix: prefix
                     )
+                }
+                if model.artifacts.cardInNoGraph(id: art.id) {
+                    noGraphLine(identifier: "\(prefix).none")
                 }
             }
         }
