@@ -456,6 +456,23 @@ struct CatalogQueryRegistryTests {
         #expect(registry.hiddenPolicy(.sourceWorkspace(project: project, sourceId: "s1")) == .revalidate)
     }
 
+    @Test func everyKindHasOneDescriptor() {
+        let kinds = CatalogQueryKey.Kind.allCases
+        #expect(kinds.count == 19)
+        let described = kinds.map { kind -> CatalogQueryKey.Kind in
+            let descriptor = kind.descriptor
+            #expect(descriptor.kind == kind)
+            return descriptor.kind
+        }
+        #expect(Set(described) == Set(kinds))
+
+        // Omitting one kind from the observed set fails the same equality and names it.
+        let planted = Set(described.filter { $0 != .sourcesList })
+        let missing = Set(kinds).subtracting(planted)
+        #expect(missing == [.sourcesList])
+        #expect(planted != Set(kinds))
+    }
+
     @Test func lastUpdatedPatchesAreDeclaredOnTheFourLists() {
         let project = ProjectKey(projectDir: projectDir)
         func follows(_ key: CatalogQueryKey) -> CatalogQueryFollows? {
