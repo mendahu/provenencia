@@ -1,7 +1,7 @@
 # Ship log — S14-01 Pictures engine
 
 **Plan:** [`S14-01-pictures-engine.md`](S14-01-pictures-engine.md) · **Branch:** `s14-01-pictures-engine` · **PR:** #615
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 
@@ -43,3 +43,19 @@ Do: Update README Status so it no longer says no PR has landed (S14-01 and S14-0
 Check: `rg 'TestForEntityLikenesses|TestGetConclusionDetailListsLikenesses|no PR has landed' docs/deployment-plan/spike-14 core/database/conclusiondetails api/ffi/handlers` empty for those strings; `scripts/check-pr.sh` PASS.
 
 **Later PR notes (written into map):** S14-02 scope adds: Properties list VoiceOver must distinguish two Properties that share label Picture (include key and/or bound kind labels in `rowAccessibilityLabel`); Promote depiction wording (already in scope).
+
+## Round 1 — fix
+
+Head `510de8e7`. Gate PASS (orchestrator). F-1 done; F-2 done; F-3 done. MNT-1–4 Resolved (round-2 MNT). CON nits Resolved via F-3.
+
+## Round 2 — review
+
+Reviewers: MNT only (had Fix-now major). Skipped: CON / UX / SEC+PRF (no Fix-now blocker or major in round 1).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| — | MNT | — | — | — | Clean; F-1–F-2 hold; no new blockers in `d4c82b3e...510de8e7` |
+
+## Result
+
+Gate PASS · CI pending · open: none · follow-ups: UX-1 (S14-02 Properties VO), UX-2 (S14-02 Promote wording) · to user: §10 manual check · CON miss: none
