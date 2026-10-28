@@ -181,14 +181,13 @@ struct ProjectFilesTests {
         #expect(url?.path == link + "/objects/ab/cd/x.png")
     }
 
-    @Test func objectURLRefusesExecutableObject() throws {
+    /// A file system that cannot hold a permission bit (exFAT, FAT) reports every
+    /// file as executable, so the bit alone never refuses an object.
+    @Test func objectURLAcceptsExecuteBit() throws {
         let project = ArtifactFileFixtures.uniqueProjectDir()
         defer { try? FileManager.default.removeItem(atPath: project) }
         let rel = "objects/ab/cd/x.png"
         try ArtifactFileFixtures.write(Data("x".utf8), projectDir: project, relPath: rel, mode: 0o755)
-        #expect(ProjectFiles.objectURL(projectDir: project, relPath: rel) == nil)
-
-        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: rel)
         #expect(ProjectFiles.objectURL(projectDir: project, relPath: rel) != nil)
     }
 
@@ -197,7 +196,6 @@ struct ProjectFilesTests {
         ("objects/aa/bb/aabb.sh", mode_t(0o644)),
         ("objects/aa/bb/aabb.command", mode_t(0o644)),
         ("objects/aa/bb/aabb.app", mode_t(0o644)),
-        ("objects/aa/bb/aabb.pdf", mode_t(0o755)),
     ])
     func openableObjectURLRefusesUnsafeObjects(relPath: String, mode: mode_t) throws {
         let project = ArtifactFileFixtures.uniqueProjectDir()
@@ -217,6 +215,11 @@ struct ProjectFilesTests {
         try ArtifactFileFixtures.writeBlankPDF(projectDir: project, relPath: rel, pageCount: 1)
         let opened = try? ProjectFiles.openableObjectURL(projectDir: project, relPath: rel).get()
         #expect(opened?.path == project + "/" + rel)
+
+        // The execute bit alone is not a reason to refuse (exFAT and FAT report it on every file).
+        #expect(chmod(project + "/" + rel, 0o755) == 0)
+        let withBit = try? ProjectFiles.openableObjectURL(projectDir: project, relPath: rel).get()
+        #expect(withBit?.path == project + "/" + rel)
 
         try fm.removeItem(atPath: project + "/" + rel)
         let outside = try ArtifactFileFixtures.linkToOutsidePNG(at: project + "/" + rel)
@@ -243,13 +246,5 @@ struct ProjectFilesTests {
                 relPath: "../etc/passwd"
             ) == .missing
         )
-    }
-
-    @Test func openObjectReportsUnsafeForExecutableObject() throws {
-        let project = ArtifactFileFixtures.uniqueProjectDir()
-        defer { try? FileManager.default.removeItem(atPath: project) }
-        let rel = "objects/ab/cd/abcd.png"
-        try ArtifactFileFixtures.write(Data("x".utf8), projectDir: project, relPath: rel, mode: 0o755)
-        #expect(ProjectFiles.openObject(projectDir: project, relPath: rel) == .unsafe)
     }
 }

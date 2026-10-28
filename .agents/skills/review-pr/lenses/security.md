@@ -105,7 +105,8 @@ lens ([`review-pr`](../SKILL.md) "Close the loop").
 - **Launch Services decides from a stored value.** An object's extension came
   from the stored `media_type`; a type off the allowlist gave no extension and
   `NSWorkspace.open` ran whatever was there. Validate the stored type on read,
-  refuse an object with an execute bit, and open only allowed types.
+  open only allowed types, and pick the app from the type, not from the file. An
+  execute bit alone is no signal: exFAT and FAT report it on every file.
 - **A URL opened by Swift's own sniffing.** Open only an href Go built with
   `urlshape.OpenHref`; the same for link clicks inside a `PDFView`.
 - **Swift arithmetic on catalog numbers.** `+` and `Int64(_:)` trap on

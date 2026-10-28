@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -54,7 +55,9 @@ func writeObject(t *testing.T, projectDir, rel string, data []byte) string {
 	return filepath.Join(projectDir, filepath.FromSlash(rel))
 }
 
-func TestOpenObjectExecutable(t *testing.T) {
+// A file system that cannot hold a permission bit (exFAT, FAT) reports every
+// file as executable, so the execute bit alone never refuses an object.
+func TestOpenObjectIgnoresExecuteBit(t *testing.T) {
 	const rel = "objects/ab/cd/abcd.png"
 	p := t.TempDir()
 	path := writeObject(t, p, rel, []byte("data"))
@@ -62,36 +65,15 @@ func TestOpenObjectExecutable(t *testing.T) {
 		t.Fatal(err)
 	}
 	f, err := objectstore.OpenObject(p, rel)
-	if f != nil {
-		_ = f.Close()
+	if err != nil {
+		t.Fatalf("OpenObject with an execute bit: %v", err)
 	}
-	if !errors.Is(err, objectstore.ErrExecutable) || !errors.Is(err, objectstore.ErrNotRegular) {
-		t.Fatalf("err %v, want ErrExecutable and ErrNotRegular", err)
-	}
-}
-
-func TestWriteIfAbsentReplacesExecutable(t *testing.T) {
-	const rel = "objects/ab/cd/abcd.png"
-	data := []byte("data")
-	sum := sha256.Sum256(data)
-	checksum := hex.EncodeToString(sum[:])
-	p := t.TempDir()
-	path := writeObject(t, p, rel, data)
-	if err := os.Chmod(path, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	wrote, err := objectstore.WriteIfAbsent(p, rel, checksum, data)
+	defer f.Close()
+	got, err := io.ReadAll(f)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !wrote {
-		t.Fatal("wrote = false, want the executable object replaced")
-	}
-	st, err := os.Stat(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if st.Mode().Perm()&0o111 != 0 {
-		t.Fatalf("mode %v still has an execute bit", st.Mode().Perm())
+	if string(got) != "data" {
+		t.Fatalf("read %q, want %q", got, "data")
 	}
 }

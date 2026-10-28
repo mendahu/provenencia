@@ -13,8 +13,8 @@ enum ProjectFiles {
         /// The object is not there to open: an empty, rejected or missing path, or a
         /// symlink, Finder alias or other non-regular file at it.
         case missing
-        /// The object is there but could run a program: it has an execute bit, no
-        /// extension, or an executable type.
+        /// The object is there but its name has no extension, or its type could
+        /// run a program.
         case unsafe
     }
 
@@ -22,15 +22,14 @@ enum ProjectFiles {
     /// (e.g. `objects/ab/cd/abcd…`). Returns `nil` when `relPath` is empty,
     /// is not under `objects/`, contains `..` / absolute-ish segments, resolves
     /// outside `projectDir`, names a missing file, passes through a symlink at
-    /// or under `objects/`, is a Finder alias, is not a regular file, or has an
-    /// execute bit. It does not refuse by extension: thumbnails and the viewer
-    /// read through it.
+    /// or under `objects/`, is a Finder alias, or is not a regular file. It does
+    /// not refuse by extension: thumbnails and the viewer read through it.
     static func objectURL(projectDir: String, relPath: String) -> URL? {
         try? checkedObject(projectDir: projectDir, relPath: relPath).get()
     }
 
-    /// The URL `objectURL` would return, or why it refuses. A symlink, alias or
-    /// non-regular object stays `.missing`; an execute bit is `.unsafe`.
+    /// The URL `objectURL` would return, or why it refuses: always `.missing` (a
+    /// symlink, alias or non-regular object counts as not there).
     private static func checkedObject(projectDir: String, relPath: String) -> Result<URL, ObjectRefusal> {
         let trimmed = relPath.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return .failure(.missing) }
@@ -68,8 +67,8 @@ enum ProjectFiles {
 
     /// Mirrors core/objectstore openObjectsRoot + openRegular: every folder from
     /// objects/ down is a real folder and the object is a regular file (lstat,
-    /// never followed), not a Finder alias, with no execute bit (`.unsafe`; the
-    /// rest are `.missing`). The project folder path itself may be a symlink.
+    /// never followed), not a Finder alias. Every refusal is `.missing`. The
+    /// project folder path itself may be a symlink.
     private static func objectRefusal(segments: [String], projectURL: URL) -> ObjectRefusal? {
         var url = projectURL
         for (i, segment) in segments.enumerated() {
@@ -88,7 +87,6 @@ enum ProjectFiles {
                 guard let isAlias = try? fresh.resourceValues(forKeys: [.isAliasFileKey]).isAliasFile,
                       !isAlias
                 else { return .missing }
-                if st.st_mode & 0o111 != 0 { return .unsafe }
             }
         }
         return nil
