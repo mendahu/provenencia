@@ -2152,10 +2152,10 @@ enum L10n {
             ), filename, kind, size)
         }
 
-        static let fileNotFoundTitle = LocalizedStringResource(
-            "evidenceGraph.fileNotFound.title",
-            defaultValue: "File not found",
-            comment: "Title of the danger callout when Open cannot find the Artifact file"
+        static let fileOpenFailedTitle = LocalizedStringResource(
+            "evidenceGraph.fileOpenFailed.title",
+            defaultValue: "Can't open the file",
+            comment: "Title of the danger callout when Open cannot find or refuses the Artifact file"
         )
 
         static func fileNotFoundMessage(name: String, filename: String) -> String {
@@ -5714,6 +5714,18 @@ enum L10n {
                 defaultValue: "Supplied by the %@ plugin",
                 comment: "Accessibility label and tooltip for the pill marking a plugin-owned row in a vocabulary list; argument is the plugin id"
             ), pluginID)
+        }
+    }
+
+    /// Opening a stored file in its own app, shared by every surface that offers
+    /// Open (the Source page, the Evidence graph's Files pane).
+    enum ObjectOpen {
+        static func refused(filename: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "objectOpen.refused.message",
+                defaultValue: "Provenencia won't open “%@”. Its file type could run a program, or it isn't a type Provenencia stores.",
+                comment: "Error when Open refuses a stored file; argument is the file name"
+            ), filename)
         }
     }
 

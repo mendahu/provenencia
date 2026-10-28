@@ -133,14 +133,20 @@ enum IngestMediaPolicy {
                 if type.conforms(to: .archive) || type.conforms(to: .diskImage) {
                     return .reject(.archive)
                 }
-                if type.conforms(to: .executable) || type.conforms(to: .unixExecutable)
-                    || type.conforms(to: .application)
-                {
+                if isExecutableType(type) {
                     return .reject(.executable)
                 }
             }
             return .reject(.genericType)
         }
+    }
+
+    /// True when `type` could run a program: an executable, a Unix executable, an
+    /// application bundle, or a script. Ingest rejects a picked file of such a type,
+    /// and `ProjectFiles` refuses to open a stored object of one.
+    static func isExecutableType(_ type: UTType) -> Bool {
+        type.conforms(to: .executable) || type.conforms(to: .unixExecutable)
+            || type.conforms(to: .application) || type.conforms(to: .script)
     }
 
     static func byteSize(of url: URL) -> Int64 {

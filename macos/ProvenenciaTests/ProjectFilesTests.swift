@@ -181,7 +181,50 @@ struct ProjectFilesTests {
         #expect(url?.path == link + "/objects/ab/cd/x.png")
     }
 
-    @Test func openObjectReturnsFalseForSymlinkedObject() throws {
+    @Test func objectURLRefusesExecutableObject() throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        let rel = "objects/ab/cd/x.png"
+        try ArtifactFileFixtures.write(Data("x".utf8), projectDir: project, relPath: rel, mode: 0o755)
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: rel) == nil)
+
+        try ArtifactFileFixtures.writePNG(projectDir: project, relPath: rel)
+        #expect(ProjectFiles.objectURL(projectDir: project, relPath: rel) != nil)
+    }
+
+    @Test(arguments: [
+        ("objects/aa/bb/aabb", mode_t(0o644)),
+        ("objects/aa/bb/aabb.sh", mode_t(0o644)),
+        ("objects/aa/bb/aabb.command", mode_t(0o644)),
+        ("objects/aa/bb/aabb.app", mode_t(0o644)),
+        ("objects/aa/bb/aabb.pdf", mode_t(0o755)),
+    ])
+    func openableObjectURLRefusesUnsafeObjects(relPath: String, mode: mode_t) throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        try ArtifactFileFixtures.write(Data("x".utf8), projectDir: project, relPath: relPath, mode: mode)
+
+        #expect(ProjectFiles.openableObjectURL(projectDir: project, relPath: relPath) == .failure(.unsafe))
+    }
+
+    @Test func openableObjectURLAcceptsAStoredPDF() throws {
+        let fm = FileManager.default
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        let rel = "objects/aa/bb/aabb.pdf"
+        defer { try? fm.removeItem(atPath: project) }
+        #expect(ProjectFiles.openableObjectURL(projectDir: project, relPath: rel) == .failure(.missing))
+
+        try ArtifactFileFixtures.writeBlankPDF(projectDir: project, relPath: rel, pageCount: 1)
+        let opened = try? ProjectFiles.openableObjectURL(projectDir: project, relPath: rel).get()
+        #expect(opened?.path == project + "/" + rel)
+
+        try fm.removeItem(atPath: project + "/" + rel)
+        let outside = try ArtifactFileFixtures.linkToOutsidePNG(at: project + "/" + rel)
+        defer { try? fm.removeItem(atPath: outside) }
+        #expect(ProjectFiles.openableObjectURL(projectDir: project, relPath: rel) == .failure(.missing))
+    }
+
+    @Test func openObjectReportsMissingForSymlinkedObject() throws {
         let fm = FileManager.default
         let project = ArtifactFileFixtures.uniqueProjectDir()
         let rel = "objects/ab/cd/x.png"
@@ -190,15 +233,23 @@ struct ProjectFilesTests {
             try? fm.removeItem(atPath: project)
             try? fm.removeItem(atPath: outside)
         }
-        #expect(ProjectFiles.openObject(projectDir: project, relPath: rel) == false)
+        #expect(ProjectFiles.openObject(projectDir: project, relPath: rel) == .missing)
     }
 
-    @Test func openObjectReturnsFalseForRejectedRelPath() {
+    @Test func openObjectReportsMissingForRejectedRelPath() {
         #expect(
             ProjectFiles.openObject(
                 projectDir: "/tmp/proj.provenencia",
                 relPath: "../etc/passwd"
-            ) == false
+            ) == .missing
         )
+    }
+
+    @Test func openObjectReportsUnsafeForExecutableObject() throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        let rel = "objects/ab/cd/abcd.png"
+        try ArtifactFileFixtures.write(Data("x".utf8), projectDir: project, relPath: rel, mode: 0o755)
+        #expect(ProjectFiles.openObject(projectDir: project, relPath: rel) == .unsafe)
     }
 }

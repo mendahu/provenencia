@@ -56,6 +56,13 @@ struct IngestMediaPolicyTests {
         #expect(callout!.message.contains("link to another location"))
     }
 
+    @Test func isExecutableTypeCoversScriptsAndApps() {
+        #expect(IngestMediaPolicy.isExecutableType(.shellScript))
+        #expect(IngestMediaPolicy.isExecutableType(.unixExecutable))
+        #expect(IngestMediaPolicy.isExecutableType(.applicationBundle))
+        #expect(!IngestMediaPolicy.isExecutableType(.pdf))
+    }
+
     private func writeTemp(name: String, data: Data) throws -> URL {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("ingest-policy-\(UUID().uuidString)", isDirectory: true)

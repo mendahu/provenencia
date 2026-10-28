@@ -974,8 +974,8 @@ struct EvidenceGraphModelTests {
         }
         failed.deleteImpact.cancel()
         failed.fileOpenError = "File not found"
-        if case .fileNotFound = failed.canvasNotice {} else {
-            Issue.record("expected the file-not-found notice, got \(String(describing: failed.canvasNotice))")
+        if case .fileOpenFailed = failed.canvasNotice {} else {
+            Issue.record("expected the file-open-failed notice, got \(String(describing: failed.canvasNotice))")
         }
     }
 
