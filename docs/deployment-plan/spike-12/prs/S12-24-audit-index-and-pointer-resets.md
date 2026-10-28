@@ -1,6 +1,6 @@
 # S12-24 — Audit history: indexed note authors, audited pointer resets
 
-**Status:** Planned
+**Status:** Landed in [#610](https://github.com/mendahu/provenencia/pull/610) (2026-10-28)
 **Spike / slice:** Spike 12 · Slice 5 — Audit fixes: High
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: an index and two audited releases; no view change)

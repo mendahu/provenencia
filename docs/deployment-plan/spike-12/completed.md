@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-24 — Audit history: indexed note authors, audited pointer resets
+
+**Landed 2026-10-28** in [#610](https://github.com/mendahu/provenencia/pull/610). Source note attribution seeks `audit_changes` by `entity_id` (catalog format 57) instead of scanning history, and official Artifact and Observation deletes clear cover and preferred-portrait pointers through new `optionalPointer` facet releases that emit the same update fields as `SetCover` and `SetPreferredLikeness`. `TestFacetReleaseHonesty` now requires a release for every deletable-parent `BucketOptional` `SET NULL` FK; delete policy docs and skills name optional pointers beside audited CASCADE facets.
+
 ## S12-23 — The app opens only safe files and links
 
 **Landed 2026-10-28** in [#608](https://github.com/mendahu/provenencia/pull/608). A project folder someone shares can no longer make Provenencia launch a program. `mediatypes` holds one table of stored types and their extensions, and `objectpath.Rel` returns a path only for a type on it, so a `files` row damaged to another type is listed with an empty path instead of failing the page, and the Source page and canvas Open say "Provenencia won't open “name”…". Open refuses a name with no extension or a type that could run a program or open another item (`IngestMediaPolicy.isExecutableType`, now shared with ingest, and `opensAnotherItem` for stored links and Terminal files, which only Open refuses: ingest keeps its generic-type message for them) and opens everything else with the app for its file type, never one a setting stored on the file names; the execute bit alone refuses nothing, because exFAT and FAT volumes report it on every file. A saved metadata link opens only through `open_href`, computed in Go for url fields from `urlshape.OpenHref`, so `file:` and `smb:` values show as plain text. The canvas callout's title is now "Can't open the file". Nothing else changes for researchers.
