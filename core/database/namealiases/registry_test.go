@@ -32,7 +32,7 @@ func TestRegisterAddsAnAliasTable(t *testing.T) {
 	t.Cleanup(ResetAliasTablesForTest)
 	Register(valuecompare.AliasTable{
 		Key: "zz", Origin: "plugin:example", Kind: valuecompare.AliasNickname,
-		Roles: aliasPartRoles(), Sets: [][]string{{"zz", "zzzz"}},
+		Roles: valuecompare.AliasRoles(), Sets: [][]string{{"zz", "zzzz"}},
 	})
 	var found bool
 	for _, table := range AliasTables() {

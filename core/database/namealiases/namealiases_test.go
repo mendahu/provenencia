@@ -149,7 +149,7 @@ func TestInstallStoresComparisonTokens(t *testing.T) {
 	t.Cleanup(ResetAliasTablesForTest)
 	Register(valuecompare.AliasTable{
 		Key: "test-nicks", Origin: vocabkey.OriginUser, Label: "Test", Kind: valuecompare.AliasNickname,
-		Roles: aliasPartRoles(),
+		Roles: valuecompare.AliasRoles(),
 		Sets:  [][]string{{"Jim", "JAMES"}, {"Jim", "jim", "James"}, {"Mary-Ann", "Polly"}},
 	})
 	c := newCatalog(t)

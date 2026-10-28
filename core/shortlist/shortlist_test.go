@@ -30,6 +30,11 @@ func person(id byte, form string) entry {
 	return entry{id, subjectcompare.Values{vocabkey.PropertyName: {pt.Name(form)}}}
 }
 
+// given is a person whose one word is a given name, not a surname.
+func given(id byte, form string) entry {
+	return entry{id, subjectcompare.Values{vocabkey.PropertyName: {pt.Given(form)}}}
+}
+
 func place(id byte, s string) entry {
 	return entry{id, subjectcompare.Values{vocabkey.PropertyToponym: {pt.Text(s)}}}
 }
@@ -105,6 +110,14 @@ func TestLookup(t *testing.T) {
 		{"shared word", "AC-1.1", plain, vocabkey.Person,
 			[]entry{person(1, "James Robins"), person(2, "Robins"), person(3, "Mary Robins"), person(4, "James Robbins"), person(5, "Ann Ames")},
 			person(0, "J. Robins"), []byte{1, 2, 3}},
+		{"prefix reaches the longer name", "S11-46 AC-1.1", plain, vocabkey.Person,
+			[]entry{given(1, "Desiree"), given(2, "Desmond"), given(3, "Mary")}, given(0, "Des"), []byte{1, 2}},
+		{"prefix reaches the shorter name", "S11-46 AC-1.2", plain, vocabkey.Person,
+			[]entry{given(1, "Des"), given(2, "Desmond"), given(3, "De")}, given(0, "Desiree"), []byte{1, 3}},
+		{"no shared prefix", "S11-46 AC-1.3", plain, vocabkey.Person,
+			[]entry{given(1, "Desiree")}, given(0, "Desmond"), nil},
+		{"surname prefix", "S11-46 AC-1.4", plain, vocabkey.Person,
+			[]entry{person(1, "John MacDonald")}, person(0, "Mary Mac"), nil},
 		{"alias set", "AC-1.2", billRules(), vocabkey.Person,
 			[]entry{person(1, "William"), person(2, "Robert")},
 			person(0, "Bill"), []byte{1}},
