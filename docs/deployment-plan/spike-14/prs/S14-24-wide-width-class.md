@@ -1,6 +1,6 @@
 # S14-24 — Give every workspace page its width class
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 14 · Slice 6 — Wide layout
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: a token, an environment value and a measurement at the workspace host; nothing on screen changes)
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/swift-tests.mdc`
 **Context:** [`docs/macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide), [`add-design-brief` Wide layout](../../../../.agents/skills/add-design-brief/SKILL.md#wide-layout-binding), [S14-D1](../design/S14-D1-wide-layout.md) (the kit side of the same token), working rule "(Batch 6) One breakpoint, 1600pt of pane width"
 **Planned:** 2026-10-29 against `main` @ `b8ca4cfc`
-**Review:** [`S14-24-wide-width-class.review.md`](S14-24-wide-width-class.review.md) — Fits with changes — Ready with changes, 2 rounds; two To user items open
+**Review:** [`S14-24-wide-width-class.review.md`](S14-24-wide-width-class.review.md) — Fits with changes — Ready with changes, 2 rounds; To user answered 2026-10-29
 
 ### Implementer — read this first
 
@@ -74,7 +74,7 @@ Every workspace page can tell whether it has a Regular pane (below 1600pt) or a 
 | Moving `SourcesListColumns` onto the width class | not planned: it picks columns at its own widths, not at the breakpoint |
 | The CSS token in the Claude Design kit | S14-D1 WL-1 |
 | A compact class or a third breakpoint | not planned |
-| `CitationComposerView.composeSplit`'s own 1400pt `threeUp` breakpoint moving onto `pvWidthClass` | To user (review M-2); recommended home: the composer's next brief, because moving it here changes the composer between 1400 and 1599pt |
+| `CitationComposerView.composeSplit`'s own 1400pt `threeUp` breakpoint moving onto `pvWidthClass` | The composer's next brief ([`ideas/wide-layout.md`](../../../ideas/wide-layout.md)); the user chose to leave it, 2026-10-29, because moving it here changes the composer between 1400 and 1599pt |
 | An animation or transaction on a class flip | not planned |
 | A Wide arrangement for the pages that already have a side pane (Properties, Metadata, Source types) | Each page's Wide brief; listed in [`ideas/wide-layout.md`](../../../ideas/wide-layout.md) |
 
@@ -90,7 +90,7 @@ Every workspace page can tell whether it has a Regular pane (below 1600pt) or a 
 | Kit README | `macos/App/DesignSystem/README.md` component table | One row per `Components/` folder; `scripts/check-guidance-names.py` fails on a folder with no row |
 | Project file | `macos/Provenencia.xcodeproj/project.pbxproj` | Lists every Swift file by hand (S14-15 has not landed). An app file is five entries: `PBXBuildFile`, `PBXFileReference`, its folder group with the file as child, the group in the `Components` group's children, and the build file in the app's Sources phase (`PVFlowLayout.swift` and the `FlowLayout` group are the shape to copy). A test file is four, per `add-swift-test` |
 | Pages with a side pane | `macos/App/Features/Properties/PropertiesView.swift` `PropertiesContent.body` (340pt inspector); `macos/App/Features/Metadata/MetadataView.swift` `MetadataContent.body` and `macos/App/Features/SourceTypes/SourceTypesView.swift` `SourceTypesContent.body` (380pt detail pane) | Each lays out a list and a fixed side pane in an `HStack`. D-6: they read the class of the whole page |
-| Second breakpoint | `macos/App/Features/CitationComposer/CitationComposerView.swift` `composeSplit` | `GeometryReader` with `threeUp = geo.size.width >= 1400`: a private width switch at another number (Out, To user) |
+| Second breakpoint | `macos/App/Features/CitationComposer/CitationComposerView.swift` `composeSplit` | `GeometryReader` with `threeUp = geo.size.width >= 1400`: a private width switch at another number (Out) |
 | Window mounts in tests | `macos/ProvenenciaTests/WorkspaceDestinationHostTests.swift` `mountHost`; `macos/ProvenenciaTests/PVSelectPlacementTests.swift` `aLongClosedLabelStaysInsideTheCallerWidth`, `aShortClosedLabelHugsItsText` | Three hand copies of `NSHostingView` → frame → borderless `NSWindow` → `contentView` |
 | Host tests | `macos/ProvenenciaTests/WorkspaceDestinationHostTests.swift` `mountHost` | Mounts the host in a borderless `NSWindow` at 1200 × 800 with a `FakeStore`; `waitUntil` in `macos/ProvenenciaTests/QueryHandleWaiting.swift` |
 
@@ -105,7 +105,7 @@ Every workspace page can tell whether it has a Regular pane (below 1600pt) or a 
 | D-3 | The environment value is `EnvironmentValues.pvWidthClass` through a `private struct PVWidthClassKey: EnvironmentKey`, default `.regular` | Matches the kit's only environment-key idiom (`PVContextMenu`). `.regular` is what every page is designed for today, so a view outside the host is correct by default | `@Entry` — not used in the repo |
 | D-4 | `View.pvMeasuresWidthClass()` is a `ViewModifier` with `@State var widthClass: PVWidthClass = .regular`; it applies `.environment(\.pvWidthClass, widthClass)` to its content and `onGeometryChange(for: PVWidthClass.self)` with `PVWidthClass(paneWidth: $0.size.width)` | One measurement serves every child. The geometry action runs only on a class change, so a resize within a class costs nothing | A `GeometryReader` wrapper — it takes all offered space and changes the host's layout |
 | D-5 | `WorkspaceDestinationHost.body` applies `.frame(maxWidth: .infinity, maxHeight: .infinity)` and then `.pvMeasuresWidthClass()` after `.id(place?.viewIdentity)`. The frame keeps the default center alignment, so a destination root that fills is unchanged; manual checks 2 – 4 and a Stop condition catch one that relied on the host hugging it | Outside the `.id`, the measured class survives navigation, so a new page starts with the right class instead of `.regular` for one frame. The frame makes the host measure the pane, not its child (review round 2 X-9) | Inside the `.id`, or per destination — re-measures on every navigation and repeats the call 15 times. A `.background` probe — a second view for what a frame does |
-| D-6 | The width class is the whole page's. A page with a fixed side pane (Properties, Metadata, Source types) reads the same class as every page and plans its whole arrangement, side pane included, in its own Wide frame. No page re-measures | One measurement and one definition: the CSS container query (S14-D1 WL-10), § 9 and the code agree on the pane. Round 1 re-measured Properties only; round 2 found two more side-pane pages and that a re-measured column also drops the gap and gutters, so it drifts from the rule (review M-5, M-6). **Changes the working rule; To user** | Re-measuring the column beside each side pane — three call sites, a fourth definition of pane. Subtracting pane widths at the host — the host does not know which destination has one |
+| D-6 | The width class is the whole page's. A page with a fixed side pane (Properties, Metadata, Source types) reads the same class as every page and plans its whole arrangement, side pane included, in its own Wide frame. No page re-measures | One measurement and one definition: the CSS container query (S14-D1 WL-10), § 9 and the code agree on the pane. Round 1 re-measured Properties only; round 2 found two more side-pane pages and that a re-measured column also drops the gap and gutters, so it drifts from the rule (review M-5, M-6). **Changes the working rule; the user confirmed 2026-10-29: the whole inside view is what a page designs for, and an inspector is one page's own arrangement** | Re-measuring the column beside each side pane — three call sites, a fourth definition of pane. Subtracting pane widths at the host — the host does not know which destination has one |
 | D-7 | New folder `macos/App/DesignSystem/Components/WidthClass/` holding `PVWidthClass.swift` (new) | A kit-wide, domain-free layout value, read by Page columns (S14-25) and by any page; layer **component** per `design-system-layers.md` | `Tokens/` — tokens are values transcribed from CSS, not types with behavior. `Platform/` — this is design-system, not process plumbing |
 | D-9 | `func hostInBorderlessWindow<V: View>(_ view: V, windowSize: CGSize, hostSize: CGSize? = nil, orderFront: Bool = true) -> (NSWindow, NSHostingView<V>)` (new) in `macos/ProvenenciaTests/HostedWindow.swift` (new): it makes the borderless window at `windowSize`, sets the hosting view as its content view, sets the hosting view's frame to `hostSize ?? windowSize` after that, and orders the window front when asked. Callers hold the returned window for the test's length. `mountHost` calls it with 1200 × 800; the two `PVSelectPlacementTests` cases with `windowSize` 900 × 200, `hostSize` 900 × 80 and `orderFront: false`, and keep their own `layoutSubtreeIfNeeded`, so they lay out as today | T-2 and T-3 would be the fourth and fifth copy, and S14-25 needs it again (review M-3) | Copying the mount into T-2 |
 | D-10 | `PVWidthClass` is `Sendable`; `PVWidthClassKey.defaultValue` is a plain `static let` | A `Sendable` enum needs no `nonisolated(unsafe)` under complete concurrency checking | Copying `PVContextMenu`'s key annotations |
@@ -113,7 +113,7 @@ Every workspace page can tell whether it has a Regular pane (below 1600pt) or a 
 
 **Rules this plan bends.**
 
-- The map's working rule "(Batch 6) One breakpoint, 1600pt of pane width" measured the pane "minus any inspector". D-6 measures the whole page. The rule, § 9, the `add-design-brief` Paste block and S14-D1 were reworded on the planning branch to match (2026-10-29). **To user** to confirm (see the review log); the plan stays Draft until then.
+- The map's working rule "(Batch 6) One breakpoint, 1600pt of pane width" measured the pane "minus any inspector". D-6 measures the whole page. The rule, § 9, the `add-design-brief` Paste block and S14-D1 were reworded on the planning branch to match. The user confirmed on 2026-10-29: "the whole inside view is what we're talking about here, and the inspector is just a specific implementation that those particular views have."
 - `macos/App/DesignSystem/README.md` "Every value in these files is transcribed from the CSS, not invented": `widthWideBreakpoint` lands in Swift before `--width-wide-breakpoint` exists in the Claude Design kit. The user asked for the utility first and the brief alongside it (2026-10-29). STEP-5 adds a note to the README's token section that this one value was set in Swift first and S14-D1 WL-1 adds the CSS, and S14-25 checks the two agree.
 
 ## 6. Design
@@ -123,7 +123,7 @@ Every workspace page can tell whether it has a Regular pane (below 1600pt) or a 
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
 | `PVSpacing.widthWideBreakpoint` (new) | token | `PVSpacing.widthContentMax` | A different number; it sits beside it |
-| `PVWidthClass` (new) | type | `SourcesListColumns`; `CitationComposerView` `composeSplit` (searched: `onGeometryChange`, `GeometryReader`, `ViewThatFits`, `horizontalSizeClass`) | `SourcesListColumns` is the Sources list's own column widths, not a kit-wide class. The composer's 1400pt switch is a second breakpoint; whether it moves is To user (Out) |
+| `PVWidthClass` (new) | type | `SourcesListColumns`; `CitationComposerView` `composeSplit` (searched: `onGeometryChange`, `GeometryReader`, `ViewThatFits`, `horizontalSizeClass`) | `SourcesListColumns` is the Sources list's own column widths, not a kit-wide class. The composer's 1400pt switch is a second breakpoint; it moves with the composer's brief (Out, user 2026-10-29) |
 | `pvWidthClass` environment value, `PVWidthClassKey` (new) | key | `PVContextMenuDismissKey` | Same idiom, different value |
 | `pvMeasuresWidthClass()` (new) | modifier | `SourcesListView`'s `onGeometryChange` | That one sets feature state; this one sets the environment for every child |
 | `Components/WidthClass/` (new) | folder | `Components/FlowLayout/` | Same shape: a domain-free layout piece |

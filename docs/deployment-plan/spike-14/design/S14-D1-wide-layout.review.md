@@ -5,7 +5,7 @@
 
 ## To user
 
-- The pane definition for a page with a side pane is the S14-24 To user item (its review log); this brief already says a page with a side pane plans it in its own Wide frame.
+- The pane definition for a page with a side pane is the S14-24 To user item (its review log); this brief already says a page with a side pane plans it in its own Wide frame. The user confirmed it on 2026-10-29.
 
 ## Writer's own calls
 

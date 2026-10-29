@@ -1,12 +1,14 @@
 # Review — S14-24 Give every workspace page its width class
 
-**Verdict:** Fits with changes — Ready with changes, after 2 rounds. Two To user items open; the plan stays Draft until they are answered
+**Verdict:** Fits with changes — Ready with changes, after 2 rounds. To user answered 2026-10-29; Planned
 **Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet, the implementer's model)
 
 ## To user
 
 - **Round 2 M-5 / M-6: what the pane is for a page with a side pane.** The working rule said "minus any inspector". Round 1 re-measured Properties beside its inspector; round 2 found Metadata and Source types have the same shape, and that a re-measured column also drops the gap and the gutters, so the code would drift from the rule. **Recommendation, written into the plan (D-6) and reworded on this branch in the working rule, § 9, the Paste block and S14-D1:** the class is the whole page's (window minus sidebar); a page with a side pane plans that pane in its own Wide frame. One measurement, and the CSS container query measures the same thing. If you prefer the old rule, D-6 goes back to re-measuring beside each side pane (three call sites) and § 9 says that such a page turns Wide later.
+  **User, 2026-10-29:** whole page. "Depending on the canvas size available to a view, I want it to adjust its design … the whole inside view is what we're talking about here, and the inspector is just a specific implementation that those particular views have."
 - **M-2: the Citation composer's own breakpoint.** `CitationComposerView.composeSplit` switches its evidence area from two-up to three-up at 1400pt with a private `GeometryReader`. That is a second breakpoint beside the new 1600 class. Moving it onto `pvWidthClass` in this PR would change the composer for panes between 1400 and 1599pt, against US-2 ("nothing I see changes"). **Recommendation:** leave it in this PR, logged as an Out row, and move it in the composer's next brief, where its Wide frame is drawn.
+  **User, 2026-10-29:** leave it for now.
 
 ## Writer's own calls
 
