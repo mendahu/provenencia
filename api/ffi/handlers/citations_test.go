@@ -366,8 +366,11 @@ func TestCreateCitationWithObservations(t *testing.T) {
 				if created.Citation.GetTranscription() != "transcribe first" {
 					t.Fatalf("transcription %q", created.Citation.GetTranscription())
 				}
-				if created.GetEffects() == nil || len(created.GetEffects().GetEvidenceGraphs()) == 0 {
-					t.Fatalf("effects %+v", created.GetEffects())
+				// With no Observation the Citation shows in the graphs its Artifact is
+				// linked to: a citations read, and no graph for graphcache.
+				eff := created.GetEffects()
+				if len(eff.GetEvidenceGraphs()) != 0 || len(eff.GetReads()) != 1 || eff.GetReads()[0].GetRead() != "citations" {
+					t.Fatalf("effects %+v", eff)
 				}
 				cr := req.(*engine.CreateCitationWithObservationsRequest)
 				assertLatestAuditAction(t, cr.ProjectDir, "create_citation_with_observations")

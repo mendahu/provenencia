@@ -3332,7 +3332,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         let observations = observationsByGraph[graphID] ?? []
         return EvidenceGraphProgress(
             graphId: graphID,
-            sourceId: sourceOfGraph(graphID) ?? "",
             subjectCount: subjects.count,
             observationCount: observations.count,
             filedCount: 0

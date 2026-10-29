@@ -4,27 +4,24 @@ package graphprogress
 
 import (
 	"database/sql"
-	"errors"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-var ErrInvalid = apperr.New(apperr.CodeSourcesInvalid, apperr.KindUser)
+var ErrInvalid = apperr.New(apperr.CodeEvidenceGraphsInvalid, apperr.KindUser)
 
 const (
 	// sqlCountSubjectsByType reads subjects once per call: per graph and
 	// type, how many subjects exist and how many carry an accepted claim
 	// (the unique accepted-claim index makes the second count the filed one).
-	// The composite foreign key makes s.source_id the graph's Source.
-	sqlCountSubjectsByType = `SELECT s.graph_id, s.source_id, t.key, t.origin, COUNT(*), COUNT(ic.subject_id)
+	sqlCountSubjectsByType = `SELECT s.graph_id, t.key, t.origin, COUNT(*), COUNT(ic.subject_id)
 		FROM subjects s
 		JOIN subject_types t ON t.id = s.subject_type_id
 		LEFT JOIN identity_claims ic ON ic.subject_id = s.id AND ic.status = 'accepted'
-		GROUP BY s.graph_id, s.source_id, t.key, t.origin`
+		GROUP BY s.graph_id, t.key, t.origin`
 
 	sqlCountSubjectsByTypeOne = `SELECT t.key, t.origin, COUNT(*), COUNT(ic.subject_id)
 		FROM subjects s
@@ -33,10 +30,10 @@ const (
 		WHERE s.graph_id = ?
 		GROUP BY t.key, t.origin`
 
-	sqlCountObservationsByGraph = `SELECT s.graph_id, s.source_id, COUNT(*)
+	sqlCountObservationsByGraph = `SELECT s.graph_id, COUNT(*)
 		FROM observations o
 		JOIN subjects s ON s.id = o.subject_id
-		GROUP BY s.graph_id, s.source_id`
+		GROUP BY s.graph_id`
 
 	sqlCountObservationsOne = `SELECT COUNT(*)
 		FROM observations o
@@ -46,9 +43,7 @@ const (
 
 // Progress is graph-progress counts for one Evidence graph.
 type Progress struct {
-	GraphID []byte
-	// SourceID is the graph's Source; empty when the graph does not exist.
-	SourceID         []byte
+	GraphID          []byte
 	SubjectCount     int32
 	ObservationCount int32
 	// FiledCount is the subjects of a Promote primary kind (person, event,
@@ -99,11 +94,6 @@ func Get(c *database.Catalog, graphID []byte) (Progress, error) {
 		return Progress{}, ErrInvalid
 	}
 	p := Progress{GraphID: append([]byte(nil), graphID...)}
-	sourceID, err := evidencegraphs.SourceOf(db, graphID)
-	if err != nil && !errors.Is(err, evidencegraphs.ErrInvalid) {
-		return Progress{}, err
-	}
-	p.SourceID = sourceID
 	if err := scanSubjectsOne(db, graphID, &p); err != nil {
 		return Progress{}, err
 	}
@@ -120,9 +110,9 @@ func scanGrouped(db *sql.DB, query string, set func(*Progress, int32), byID map[
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var graphID, sourceID []byte
+		var graphID []byte
 		var n int32
-		if err := rows.Scan(&graphID, &sourceID, &n); err != nil {
+		if err := rows.Scan(&graphID, &n); err != nil {
 			return err
 		}
 		key, err := uuid.FromBytes(graphID)
@@ -131,7 +121,7 @@ func scanGrouped(db *sql.DB, query string, set func(*Progress, int32), byID map[
 		}
 		p := byID[key.String()]
 		if p == nil {
-			p = &Progress{GraphID: append([]byte(nil), graphID...), SourceID: append([]byte(nil), sourceID...)}
+			p = &Progress{GraphID: append([]byte(nil), graphID...)}
 			byID[key.String()] = p
 		}
 		set(p, n)
@@ -146,10 +136,10 @@ func scanSubjects(db *sql.DB, byID map[string]*Progress) error {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var graphID, sourceID []byte
+		var graphID []byte
 		var key, origin string
 		var n, filed int32
-		if err := rows.Scan(&graphID, &sourceID, &key, &origin, &n, &filed); err != nil {
+		if err := rows.Scan(&graphID, &key, &origin, &n, &filed); err != nil {
 			return err
 		}
 		// A graph whose only subject is its Source's reification has no entry.
@@ -162,7 +152,7 @@ func scanSubjects(db *sql.DB, byID map[string]*Progress) error {
 		}
 		p := byID[id.String()]
 		if p == nil {
-			p = &Progress{GraphID: append([]byte(nil), graphID...), SourceID: append([]byte(nil), sourceID...)}
+			p = &Progress{GraphID: append([]byte(nil), graphID...)}
 			byID[id.String()] = p
 		}
 		p.add(key, origin, n, filed)

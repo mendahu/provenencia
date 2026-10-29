@@ -63,16 +63,32 @@ enum CatalogList: String, Sendable, CaseIterable {
     case evidenceGraphs = "evidence_graphs"
 }
 
+/// A keyed partial read a write moved, per Evidence graph. The raw values are
+/// Go's `effects.Read` wire keys (`WriteEffects.reads`); a key this build does
+/// not know is dropped when the effects are decoded.
+enum CatalogRead: String, Sendable, CaseIterable {
+    /// The citation counts and the citations by Artifact of a graph.
+    case citations = "citations"
+    /// The Subject, filed and Observation counts of a graph.
+    case evidenceGraphProgress = "evidence_graph_progress"
+}
+
+/// One keyed read and the Evidence graphs it moved for.
+struct CatalogWriteEffectsRead: Sendable, Equatable {
+    var read: CatalogRead
+    var ids: [String]
+}
+
 /// Handles and Sources a write reported. The session drops those cached
 /// reads and patches the rows whose last activity it moved.
 struct CatalogWriteEffects: Sendable, Equatable {
     var handles: [String] = []
-    /// Evidence graphs whose loaded rows changed (the graph's rows and graph
-    /// progress). A note, metadata, or credibility change is only in `sourceScopes`.
+    /// Evidence graphs whose loaded rows changed (graphcache drops each). A
+    /// note, metadata, or credibility change is only in `sourceScopes`.
     var evidenceGraphs: [String] = []
-    /// Sources whose citation reads moved: citation counts and citations by
-    /// artifact. A Subject edit is in `evidenceGraphs` and not here.
-    var citationSources: [String] = []
+    /// Keyed partial reads this write moved, each with the graphs it moved
+    /// them for: citation counts, citations by Artifact and graph progress.
+    var reads: [CatalogWriteEffectsRead] = []
     /// Catalog-wide lists this write changed. Each is a cached read the write
     /// cannot patch row by row; see `CatalogQueryRegistry.invalidations(for:project:)`.
     var lists: Set<CatalogList> = []

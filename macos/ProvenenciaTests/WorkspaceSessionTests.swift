@@ -151,7 +151,7 @@ struct WorkspaceSessionTests {
 
         let store = FakeStore()
         store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
-            graphId: "g-1", sourceId: "s1", subjectCount: 3, observationCount: 5
+            graphId: "g-1", subjectCount: 3, observationCount: 5
         )
         store.evidenceGraphsByProject[projectDir] = [evidenceGraph("g-1", sourceID: "s1", name: "Default")]
         let session = makeSession(store: store)
@@ -177,7 +177,7 @@ struct WorkspaceSessionTests {
                 == .unavailable(message: L10n.Errors.message(for: TestFailure()))
         )
 
-        let kept = EvidenceGraphProgress(graphId: "g-1", sourceId: "s1", subjectCount: 3, observationCount: 5)
+        let kept = EvidenceGraphProgress(graphId: "g-1", subjectCount: 3, observationCount: 5)
         progress.applySuccess(["g-1": kept])
         progress.applyFailure(TestFailure(), clearValue: false)
         #expect(
@@ -898,12 +898,21 @@ struct WorkspaceSessionTests {
         #expect(!properties.isFetching && !graph.isFetching && !citations.isFetching)
     }
 
+    private func citation(_ id: String, artifactID: String) -> CatalogCitation {
+        CatalogCitation(
+            id: id, ref: "CIT-\(id)", artifactID: artifactID, locatorJSON: "{}", transcription: "",
+            description: "", transcriptionUncertain: false, transcriptionNote: ""
+        )
+    }
+
     /// Each read follows only what feeds it (D-27): with the graph on screen, a
     /// Subject create reloads the graph and nothing else, and an Observation
     /// create also reloads the citation counts and the Properties `usedBy`.
     @Test func eachReadFollowsOnlyWhatFeedsIt() async throws {
         let store = FakeStore()
         seedStore(store)
+        store.evidenceGraphsByProject[projectDir] = [evidenceGraph("g-1", sourceID: "s1", artifactIDs: ["a1"])]
+        store.citationsByID["c1"] = citation("c1", artifactID: "a1")
         let session = makeSession(store: store)
         let project = session.projectKey
         session.apply(location: WorkspaceLocation(
@@ -917,39 +926,84 @@ struct WorkspaceSessionTests {
         let counts: QueryHandle<[String: Int]> = session.query(countsKey)
         await waitForQuery(properties)
         await waitForQuery(counts)
+        #expect(counts.value == ["a1": 1])
 
+        store.citationsByID["c2"] = citation("c2", artifactID: "a1")
         session.apply(CatalogWriteEffects(evidenceGraphs: ["g-1"]))
         #expect(!properties.isFetching && !counts.isFetching)
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        #expect(counts.value == ["a1": 1])
 
         session.apply(CatalogWriteEffects(
-            evidenceGraphs: ["g-1"], citationSources: ["s1"], lists: [.propertyUsage]
+            evidenceGraphs: ["g-1"],
+            reads: [CatalogWriteEffectsRead(read: .citations, ids: ["g-1"])],
+            lists: [.propertyUsage]
         ))
         #expect(properties.isFetching)
-        #expect(counts.isFetching)
+        #expect(await waitUntil { counts.value == ["a1": 2] })
     }
 
-    /// The composer's location cannot name its Artifact without remounting it,
-    /// so its write funnel reloads the Artifact list it shows (D-28).
+    /// T-7: a `citations` read for one graph reloads that graph's visible
+    /// counts and leaves another graph's warmed counts alone.
+    @Test func citationReadsRefreshOnlyTheirGraph() async throws {
+        let store = FakeStore()
+        seedStore(store)
+        store.evidenceGraphsByProject[projectDir] = [
+            evidenceGraph("g-1", sourceID: "s1", artifactIDs: ["a1"]),
+            evidenceGraph("g-2", sourceID: "s1", artifactIDs: ["a2"]),
+        ]
+        store.citationsByID["c1"] = citation("c1", artifactID: "a1")
+        store.citationsByID["c2"] = citation("c2", artifactID: "a2")
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        session.apply(location: WorkspaceLocation(
+            section: .sources, sourceId: "s1", graphId: "g-1", sourceSurface: .graph, title: "Alpha"
+        ))
+        let first: QueryHandle<[String: Int]> = session.query(.citationCounts(project: project, graphId: "g-1"))
+        let second: QueryHandle<[String: Int]> = session.query(.citationCounts(project: project, graphId: "g-2"))
+        await waitForQuery(first)
+        await waitForQuery(second)
+        #expect(first.value == ["a1": 1] && second.value == ["a2": 1])
+
+        store.citationsByID["c3"] = citation("c3", artifactID: "a1")
+        store.citationsByID["c4"] = citation("c4", artifactID: "a2")
+        session.apply(CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .citations, ids: ["g-1"])]))
+
+        #expect(await waitUntil { first.value == ["a1": 2] })
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        #expect(second.value == ["a2": 1])
+    }
+
+    /// T-8: the composer's location names its Artifact, so the Artifact's
+    /// citations key is visible and `applyWrite` is `apply` alone; the key
+    /// revalidates from the write's `citations` read, with no `query` after.
     @Test func composerWriteReloadsTheArtifactListItShows() async throws {
         let store = FakeStore()
         seedStore(store)
+        store.evidenceGraphsByProject[projectDir] = [evidenceGraph("g-1", sourceID: "s1", artifactIDs: ["a1"])]
+        store.citationsByID["c1"] = citation("c1", artifactID: "a1")
         let session = makeSession(store: store)
         let project = session.projectKey
         let key = CatalogQueryKey.citationsByArtifact(project: project, graphId: "g-1", artifactId: "a1")
-        session.setQueryValue(key, value: [CatalogListedCitation]())
         session.apply(location: WorkspaceLocation(
-            section: .sources, sourceId: "s1", graphId: "g-1", citationId: "c1", sourceSurface: .citationComposer, title: "Alpha"
+            section: .sources, sourceId: "s1", graphId: "g-1", citationId: "c1", artifactId: "a1",
+            sourceSurface: .citationComposer, title: "Alpha"
         ))
-        #expect(!session.visibleKeys.contains(key))
+        #expect(session.visibleKeys.contains(key))
+        let handle: QueryHandle<[CatalogListedCitation]> = session.query(key)
+        await waitForQuery(handle)
+        #expect(handle.value?.count == 1)
         let context = CitationComposerContext(
             store: store, session: session, userID: "u1", sourceID: "s1", graphID: "g-1"
         )
         context.artifactID = "a1"
 
-        context.applyWrite(CatalogWriteEffects(evidenceGraphs: ["g-1"], citationSources: ["s1"]))
+        store.citationsByID["c2"] = citation("c2", artifactID: "a1")
+        context.applyWrite(CatalogWriteEffects(
+            evidenceGraphs: ["g-1"], reads: [CatalogWriteEffectsRead(read: .citations, ids: ["g-1"])]
+        ))
 
-        let handle: QueryHandle<[CatalogListedCitation]> = try #require(session.queryHandle(key))
-        #expect(handle.isFetching)
+        #expect(await waitUntil { handle.value?.count == 2 })
     }
 
     /// `usedBy` on the Properties inspector counts Observations, and it
@@ -975,7 +1029,7 @@ struct WorkspaceSessionTests {
         #expect(fields.value?.properties.first?.usedBy == 2)
 
         store.propertiesByProject[projectDir]?[0].usedBy = 1
-        session.apply(CatalogWriteEffects(evidenceGraphs: ["g-1"], citationSources: ["s1"], lists: [.propertyUsage]))
+        session.apply(CatalogWriteEffects(evidenceGraphs: ["g-1"], lists: [.propertyUsage]))
 
         let _: QueryHandle<PropertiesSnapshot> = session.query(fieldsKey)
         await waitForQuery(fields)
@@ -1080,10 +1134,10 @@ struct WorkspaceSessionTests {
         let store = FakeStore()
         seedStore(store)
         store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
-            graphId: "g-1", sourceId: "s1", subjectCount: 12, observationCount: 48
+            graphId: "g-1", subjectCount: 12, observationCount: 48
         )
         store.graphProgressByGraph["g-2"] = EvidenceGraphProgress(
-            graphId: "g-2", sourceId: "s1", subjectCount: 4, observationCount: 0
+            graphId: "g-2", subjectCount: 4, observationCount: 0
         )
         let session = makeSession(store: store)
         let listKey = CatalogQueryKey.sourcesList(project: session.projectKey)
@@ -1099,12 +1153,14 @@ struct WorkspaceSessionTests {
         let sourcesAtLoad = listHandle.value
 
         store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
-            graphId: "g-1", sourceId: "s1", subjectCount: 99, observationCount: 48
+            graphId: "g-1", subjectCount: 99, observationCount: 48
         )
         store.graphProgressByGraph["g-2"] = EvidenceGraphProgress(
-            graphId: "g-2", sourceId: "s1", subjectCount: 5, observationCount: 0
+            graphId: "g-2", subjectCount: 5, observationCount: 0
         )
-        session.apply(CatalogWriteEffects(evidenceGraphs: ["g-2"]))
+        session.apply(CatalogWriteEffects(
+            evidenceGraphs: ["g-2"], reads: [CatalogWriteEffectsRead(read: .evidenceGraphProgress, ids: ["g-2"])]
+        ))
         var waited: UInt64 = 0
         while waited < 2_000_000_000 {
             if progressHandle.value?["g-2"]?.subjectCount == 5 { break }
@@ -1124,7 +1180,7 @@ struct WorkspaceSessionTests {
         let store = FakeStore()
         seedStore(store)
         store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
-            graphId: "g-1", sourceId: "s1", subjectCount: 2, observationCount: 1, filedCount: 0
+            graphId: "g-1", subjectCount: 2, observationCount: 1, filedCount: 0
         )
         let session = makeSession(store: store)
         let progressHandle: QueryHandle<[String: EvidenceGraphProgress]> = session.query(
@@ -1135,7 +1191,7 @@ struct WorkspaceSessionTests {
         let callsBefore = store.getEvidenceGraphProgressCalls
 
         store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
-            graphId: "g-1", sourceId: "s1", subjectCount: 2, observationCount: 1, filedCount: 2
+            graphId: "g-1", subjectCount: 2, observationCount: 1, filedCount: 2
         )
         session.apply(.promotedSubject(graphId: "g-1"))
         var waited: UInt64 = 0
@@ -1153,7 +1209,7 @@ struct WorkspaceSessionTests {
         let store = FakeStore()
         seedStore(store)
         store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
-            graphId: "g-1", sourceId: "s1", subjectCount: 1, observationCount: 1
+            graphId: "g-1", subjectCount: 1, observationCount: 1
         )
         let session = makeSession(store: store)
         let listHandle: QueryHandle<[CatalogSource]> = session.query(
@@ -1166,9 +1222,11 @@ struct WorkspaceSessionTests {
         await waitForQuery(progressHandle)
         let sourcesAtLoad = listHandle.value
         store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
-            graphId: "g-1", sourceId: "s1", subjectCount: 1, observationCount: 2
+            graphId: "g-1", subjectCount: 1, observationCount: 2
         )
-        session.apply(CatalogWriteEffects(evidenceGraphs: ["g-1"]))
+        session.apply(CatalogWriteEffects(
+            evidenceGraphs: ["g-1"], reads: [CatalogWriteEffectsRead(read: .evidenceGraphProgress, ids: ["g-1"])]
+        ))
         var waited: UInt64 = 0
         while waited < 2_000_000_000 {
             if progressHandle.value?["g-1"]?.observationCount == 2 { break }

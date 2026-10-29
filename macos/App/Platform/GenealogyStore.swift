@@ -1621,8 +1621,6 @@ protocol GenealogyStore: Sendable {
 struct EvidenceGraphProgress: Sendable, Equatable, Identifiable {
     var id: String { graphId }
     var graphId: String
-    /// The graph's Source; empty when no graph has this id.
-    var sourceId: String
     var subjectCount: Int
     var observationCount: Int
     /// Subjects of a Promote primary kind (person, event, place) with an
@@ -1630,7 +1628,7 @@ struct EvidenceGraphProgress: Sendable, Equatable, Identifiable {
     var filedCount: Int = 0
 
     static func zeros(graphId: String) -> EvidenceGraphProgress {
-        EvidenceGraphProgress(graphId: graphId, sourceId: "", subjectCount: 0, observationCount: 0)
+        EvidenceGraphProgress(graphId: graphId, subjectCount: 0, observationCount: 0)
     }
 
     var isZero: Bool {

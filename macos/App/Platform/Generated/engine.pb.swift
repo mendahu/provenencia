@@ -2592,17 +2592,31 @@ public nonisolated struct Provenencia_Engine_V1_WriteEffects: Sendable {
   /// Swift patches the cached Sources list rows with (revision, revision_at).
   public var sourceScopes: [String] = []
 
-  /// Sources whose citation reads (citation counts, citations by artifact) this
-  /// write moved.
-  public var citationSources: [String] = []
-
   /// Catalog-wide lists this write changed: effects.List values ("vocabulary",
   /// "property_usage", "evidence_graphs"). Swift drops the reads that show each.
   public var lists: [String] = []
 
-  /// Evidence graphs whose loaded rows this write changed: what the graph's rows
-  /// and graph progress read.
+  /// Evidence graphs whose loaded rows this write changed (graphcache drops each).
   public var evidenceGraphs: [String] = []
+
+  /// Keyed partial reads this write moved, each with the Evidence graphs it
+  /// moved them for: effects.Read values ("citations", "evidence_graph_progress").
+  /// Swift refreshes only those graphs' reads.
+  public var reads: [Provenencia_Engine_V1_WriteEffectsRead] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_WriteEffectsRead: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var read: String = String()
+
+  public var ids: [String] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -7387,9 +7401,6 @@ public nonisolated struct Provenencia_Engine_V1_EvidenceGraphProgress: Sendable 
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// The graph's Source.
-  public var sourceID: String = String()
-
   public var subjectCount: Int32 = 0
 
   public var observationCount: Int32 = 0
@@ -11529,7 +11540,7 @@ nonisolated extension Provenencia_Engine_V1_DeleteCitationResponse: SwiftProtobu
 
 nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WriteEffects"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}handles\0\u{2}\u{4}structure\0\u{3}header_handles\0\u{3}handle_scopes\0\u{1}revision\0\u{3}revision_at\0\u{3}source_scopes\0\u{3}citation_sources\0\u{2}\u{2}lists\0\u{3}evidence_graphs\0\u{b}sources\0\u{c}\u{2}\u{1}\u{c}\u{3}\u{1}\u{c}\u{4}\u{1}\u{c}\u{c}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}handles\0\u{2}\u{4}structure\0\u{3}header_handles\0\u{3}handle_scopes\0\u{1}revision\0\u{3}revision_at\0\u{3}source_scopes\0\u{2}\u{3}lists\0\u{3}evidence_graphs\0\u{1}reads\0\u{b}sources\0\u{b}citation_sources\0\u{c}\u{2}\u{1}\u{c}\u{3}\u{1}\u{c}\u{4}\u{1}\u{c}\u{c}\u{1}\u{c}\u{b}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -11544,9 +11555,9 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
       case 8: try { try decoder.decodeSingularInt64Field(value: &self.revision) }()
       case 9: try { try decoder.decodeSingularStringField(value: &self.revisionAt) }()
       case 10: try { try decoder.decodeRepeatedStringField(value: &self.sourceScopes) }()
-      case 11: try { try decoder.decodeRepeatedStringField(value: &self.citationSources) }()
       case 13: try { try decoder.decodeRepeatedStringField(value: &self.lists) }()
       case 14: try { try decoder.decodeRepeatedStringField(value: &self.evidenceGraphs) }()
+      case 15: try { try decoder.decodeRepeatedMessageField(value: &self.reads) }()
       default: break
       }
     }
@@ -11574,14 +11585,14 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
     if !self.sourceScopes.isEmpty {
       try visitor.visitRepeatedStringField(value: self.sourceScopes, fieldNumber: 10)
     }
-    if !self.citationSources.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.citationSources, fieldNumber: 11)
-    }
     if !self.lists.isEmpty {
       try visitor.visitRepeatedStringField(value: self.lists, fieldNumber: 13)
     }
     if !self.evidenceGraphs.isEmpty {
       try visitor.visitRepeatedStringField(value: self.evidenceGraphs, fieldNumber: 14)
+    }
+    if !self.reads.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.reads, fieldNumber: 15)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -11594,9 +11605,44 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
     if lhs.revision != rhs.revision {return false}
     if lhs.revisionAt != rhs.revisionAt {return false}
     if lhs.sourceScopes != rhs.sourceScopes {return false}
-    if lhs.citationSources != rhs.citationSources {return false}
     if lhs.lists != rhs.lists {return false}
     if lhs.evidenceGraphs != rhs.evidenceGraphs {return false}
+    if lhs.reads != rhs.reads {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_WriteEffectsRead: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WriteEffectsRead"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}read\0\u{1}ids\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.read) }()
+      case 2: try { try decoder.decodeRepeatedStringField(value: &self.ids) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.read.isEmpty {
+      try visitor.visitSingularStringField(value: self.read, fieldNumber: 1)
+    }
+    if !self.ids.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.ids, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_WriteEffectsRead, rhs: Provenencia_Engine_V1_WriteEffectsRead) -> Bool {
+    if lhs.read != rhs.read {return false}
+    if lhs.ids != rhs.ids {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -20784,7 +20830,7 @@ nonisolated extension Provenencia_Engine_V1_GetPropertiesWorkspaceResponse: Swif
 
 nonisolated extension Provenencia_Engine_V1_EvidenceGraphProgress: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".EvidenceGraphProgress"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}source_id\0\u{3}subject_count\0\u{3}observation_count\0\u{4}\u{3}filed_count\0\u{3}graph_id\0\u{b}uncited_count\0\u{b}primary_count\0\u{c}\u{4}\u{1}\u{c}\u{5}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}subject_count\0\u{3}observation_count\0\u{4}\u{3}filed_count\0\u{3}graph_id\0\u{b}source_id\0\u{b}uncited_count\0\u{b}primary_count\0\u{c}\u{1}\u{1}\u{c}\u{4}\u{1}\u{c}\u{5}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -20792,7 +20838,6 @@ nonisolated extension Provenencia_Engine_V1_EvidenceGraphProgress: SwiftProtobuf
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.sourceID) }()
       case 2: try { try decoder.decodeSingularInt32Field(value: &self.subjectCount) }()
       case 3: try { try decoder.decodeSingularInt32Field(value: &self.observationCount) }()
       case 6: try { try decoder.decodeSingularInt32Field(value: &self.filedCount) }()
@@ -20803,9 +20848,6 @@ nonisolated extension Provenencia_Engine_V1_EvidenceGraphProgress: SwiftProtobuf
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.sourceID.isEmpty {
-      try visitor.visitSingularStringField(value: self.sourceID, fieldNumber: 1)
-    }
     if self.subjectCount != 0 {
       try visitor.visitSingularInt32Field(value: self.subjectCount, fieldNumber: 2)
     }
@@ -20822,7 +20864,6 @@ nonisolated extension Provenencia_Engine_V1_EvidenceGraphProgress: SwiftProtobuf
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_EvidenceGraphProgress, rhs: Provenencia_Engine_V1_EvidenceGraphProgress) -> Bool {
-    if lhs.sourceID != rhs.sourceID {return false}
     if lhs.subjectCount != rhs.subjectCount {return false}
     if lhs.observationCount != rhs.observationCount {return false}
     if lhs.filedCount != rhs.filedCount {return false}

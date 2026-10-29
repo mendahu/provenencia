@@ -137,7 +137,7 @@ struct CatalogQueryRegistryTests {
         let store = FakeStore()
         seedStore(store)
         store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
-            graphId: "g-1", sourceId: "s1", subjectCount: 12, observationCount: 48
+            graphId: "g-1", subjectCount: 12, observationCount: 48
         )
         let session = makeSession(store: store)
         let handle: QueryHandle<[String: EvidenceGraphProgress]> = session.query(
@@ -914,13 +914,14 @@ struct CatalogQueryRegistryTests {
         #expect(registry.invalidations(for: CatalogWriteEffects(
             handles: ["e1"],
             evidenceGraphs: ["g-1"],
-            citationSources: ["s1"],
+            reads: [
+                CatalogWriteEffectsRead(read: .citations, ids: ["g-1"]),
+                CatalogWriteEffectsRead(read: .evidenceGraphProgress, ids: ["g-1"]),
+            ],
             lists: [.propertyUsage],
             headerHandles: ["e2"]
         ), project: project) == [
             .key(.evidenceGraph(project: project, graphId: "g-1")),
-            .allCached(.citationCounts),
-            .allCached(.citationsByArtifact),
             .key(.propertiesWorkspace(project: project)),
             .key(.personsList(project: project)),
             .key(.eventsList(project: project)),
@@ -937,15 +938,28 @@ struct CatalogQueryRegistryTests {
         #expect(both.filter { $0 == .key(.evidenceGraph(project: project, graphId: "g-1")) }.count == 1)
         // A Subject delete reports its handles and its graph in `WriteEffects`, so
         // the lists, the details and the graph are not named here.
-        // The citation reads follow the write's `citationSources`, not this mutation.
+        // The citation reads follow the write's `reads`, not this mutation.
         #expect(registry.invalidations(by: .deletedSubject, project: project) == [
             .key(.propertiesWorkspace(project: project)),
         ])
         let erased = registry.invalidations(by: .deletedSubject, project: project)
         #expect(!erased.contains(.allCached(.citationCounts)) && !erased.contains(.allCached(.citationsByArtifact)))
-        #expect(registry.invalidations(for: CatalogWriteEffects(citationSources: ["s1"]), project: project) == [
-            .allCached(.citationCounts), .allCached(.citationsByArtifact),
-        ])
+        // Keyed reads invalidate nothing: each kind's `refresh` follows them.
+        #expect(registry.invalidations(for: CatalogWriteEffects(
+            reads: [CatalogWriteEffectsRead(read: .citations, ids: ["g-1"])]
+        ), project: project).isEmpty)
+        #expect(CatalogQueryKey.Kind.citationCounts.descriptor.refresh?.follows == .reads(.citations))
+        #expect(CatalogQueryKey.Kind.citationsByArtifact.descriptor.refresh?.follows == .reads(.citations))
+        #expect(CatalogQueryKey.Kind.evidenceGraphProgress.descriptor.refresh?.follows == .reads(.evidenceGraphProgress))
+        // A read follows only its own entry; progress also follows a mutation's graph.
+        let reads = CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .citations, ids: ["g-1"])])
+        #expect(CatalogQueryFollows.reads(.citations).ids(in: reads, mutation: nil) == ["g-1"])
+        #expect(CatalogQueryFollows.reads(.evidenceGraphProgress).ids(in: reads, mutation: nil).isEmpty)
+        #expect(
+            CatalogQueryFollows.reads(.evidenceGraphProgress)
+                .ids(in: .empty, mutation: .promotedSubject(graphId: "g-9")) == ["g-9"]
+        )
+        #expect(CatalogQueryFollows.reads(.citations).ids(in: .empty, mutation: .promotedSubject(graphId: "g-9")).isEmpty)
         #expect(registry.hiddenPolicy(.citationCounts(project: project, graphId: "g1")) == .markStale)
         // A Promote changes that graph's cards (their membership row) and every
         // Conclusion key.

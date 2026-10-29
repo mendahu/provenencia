@@ -174,13 +174,14 @@ final class WorkspaceSession {
     /// each warmed key runs its descriptor `patches` in order (last-updated
     /// cells from the effects, then an enriched Source row and page shell).
     /// Then it invalidates the deduped union of what the effects
-    /// reported (each Evidence graph it names, its Sources' citation reads, the Conclusions whose
+    /// reported (each Evidence graph it names, the Conclusions whose
     /// handles changed) and what the mutation names (the Source page's own
     /// workspace, the metadata field list), so a key both name is invalidated
     /// once, not cancelled and restarted twice. Keys the registry evicts or
     /// marks stale when hidden are not loaded unless on screen. Last, it
-    /// refreshes graph progress for the Evidence graphs the effects and the mutation
-    /// moved, and runs `onNavCountsMoved` for a mutation in
+    /// runs each warmed key's descriptor `refresh` for the keyed `reads` the
+    /// effects reported (a graph's citation reads and progress, only the
+    /// graphs named), and runs `onNavCountsMoved` for a mutation in
     /// `CatalogQueryRegistry.navCountTriggers`. Features only call `apply`;
     /// they do not query afterward or tell sibling views to refresh.
     func apply(_ effects: CatalogWriteEffects = .empty, _ mutation: CatalogMutation? = nil) {
@@ -226,22 +227,25 @@ final class WorkspaceSession {
     }
 
     private func apply(invalidations: [CatalogQueryInvalidation]) {
-        var keys: [CatalogQueryKey] = []
-        for key in cachedKeys(for: invalidations) {
-            switch visibleKeys.contains(key) ? CatalogHiddenPolicy.revalidate : registry.hiddenPolicy(key) {
-            case .evict:
-                evict(key)
-            case .markStale:
-                // The old value stays; the next `query` reloads it.
-                if handles[key] != nil { invalidatedKeys.insert(key) }
-            case .revalidate:
-                keys.append(key)
-            }
+        var seen = Set<CatalogQueryKey>()
+        for key in cachedKeys(for: invalidations) where seen.insert(key).inserted {
+            applyHiddenPolicy(to: key)
         }
-        for key in keys {
+    }
+
+    /// What an invalidated key does: a visible one reloads, a hidden one
+    /// follows its descriptor's `whenHidden` (evict, mark stale, or reload).
+    /// The one path for `apply(invalidations:)` and for a descriptor `refresh`
+    /// that revalidates a key rather than patching it.
+    func applyHiddenPolicy(to key: CatalogQueryKey) {
+        switch visibleKeys.contains(key) ? CatalogHiddenPolicy.revalidate : registry.hiddenPolicy(key) {
+        case .evict:
+            evict(key)
+        case .markStale:
+            // The old value stays; the next `query` reloads it.
+            if handles[key] != nil { invalidatedKeys.insert(key) }
+        case .revalidate:
             invalidate(key)
-        }
-        for key in keys {
             revalidate(key)
         }
     }

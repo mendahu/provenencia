@@ -92,7 +92,7 @@ func TestGetEvidenceGraphProgress(t *testing.T) {
 			},
 		},
 		{
-			name: "zeros with the request's graph id and no Source for a graph no row names",
+			name: "zeros with the request's graph id for a graph no row names",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _, _, _ := subjectFixture(t)
 				return &engine.GetEvidenceGraphProgressRequest{ProjectDir: dir, GraphId: uuid.Must(uuid.NewV7()).String()}
@@ -143,7 +143,7 @@ func TestGetEvidenceGraphProgress(t *testing.T) {
 	})
 }
 
-// Two graphs of one Source count apart, and each row names its graph and its Source.
+// Two graphs of one Source count apart, and each row names its graph.
 func TestEvidenceGraphProgressPerGraph(t *testing.T) {
 	f := newGraphFixture(t)
 	jones := f.createGraph(t, "Jones", f.page2).GetGraph().GetId()
@@ -157,7 +157,7 @@ func TestEvidenceGraphProgressPerGraph(t *testing.T) {
 
 	var got engine.GetEvidenceGraphProgressResponse
 	mustRPC(t, GetEvidenceGraphProgress, &engine.GetEvidenceGraphProgressRequest{ProjectDir: f.dir, GraphId: jones}, &got)
-	if p := got.GetProgress(); p.GetGraphId() != jones || p.GetSourceId() != f.sourceID || p.GetSubjectCount() != 1 || p.GetObservationCount() != 0 {
+	if p := got.GetProgress(); p.GetGraphId() != jones || p.GetSubjectCount() != 1 || p.GetObservationCount() != 0 {
 		t.Fatalf("Jones progress %+v", p)
 	}
 
@@ -171,7 +171,7 @@ func TestEvidenceGraphProgressPerGraph(t *testing.T) {
 		t.Fatalf("rows %+v", list.GetRows())
 	}
 	for _, id := range []string{f.defaultGraphID, jones} {
-		if row := byGraph[id]; row == nil || row.GetSourceId() != f.sourceID {
+		if row := byGraph[id]; row == nil {
 			t.Fatalf("row for %s: %+v", id, row)
 		}
 	}
