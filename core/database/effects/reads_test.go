@@ -7,7 +7,7 @@ import (
 )
 
 // TestReadsDeclare pins which tables move each keyed read, that every read
-// path ends at evidence_graphs, and that a bad entry does not validate.
+// path ends at its key table, and that a bad entry does not validate.
 func TestReadsDeclare(t *testing.T) {
 	want := map[Read][]string{
 		ReadCitations: {
@@ -25,12 +25,15 @@ func TestReadsDeclare(t *testing.T) {
 			end, err := r.Path.check(table)
 			if err != nil {
 				t.Errorf("%s %s: %v", table, r.Read, err)
-			} else if end != "evidence_graphs" {
-				t.Errorf("%s %s ends at %s, want evidence_graphs", table, r.Read, end)
+			} else if end != r.Read.KeyTable() {
+				t.Errorf("%s %s ends at %s, want %s", table, r.Read, end, r.Read.KeyTable())
 			}
 		}
 	}
 	for _, read := range Reads {
+		if read.KeyTable() == "" {
+			t.Errorf("%s has no key table", read)
+		}
 		sort.Strings(got[read])
 		if !slices.Equal(got[read], want[read]) {
 			t.Errorf("tables with %s = %v, want %v", read, got[read], want[read])

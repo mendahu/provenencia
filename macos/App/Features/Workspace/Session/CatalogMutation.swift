@@ -63,7 +63,8 @@ enum CatalogList: String, Sendable, CaseIterable {
     case evidenceGraphs = "evidence_graphs"
 }
 
-/// A keyed partial read a write moved, per Evidence graph. The raw values are
+/// A keyed partial read a write moved, per id of the read's key table
+/// (Evidence graphs for `citations` and `evidence_graph_progress`). The raw values are
 /// Go's `effects.Read` wire keys (`WriteEffects.reads`); a key this build does
 /// not know is dropped when the effects are decoded.
 enum CatalogRead: String, Sendable, CaseIterable {
@@ -73,7 +74,8 @@ enum CatalogRead: String, Sendable, CaseIterable {
     case evidenceGraphProgress = "evidence_graph_progress"
 }
 
-/// One keyed read and the Evidence graphs it moved for.
+/// One keyed read and the key ids (Evidence graphs for both current reads) it
+/// moved for.
 struct CatalogWriteEffectsRead: Sendable, Equatable {
     var read: CatalogRead
     var ids: [String]
@@ -86,7 +88,7 @@ struct CatalogWriteEffects: Sendable, Equatable {
     /// Evidence graphs whose loaded rows changed (graphcache drops each). A
     /// note, metadata, or credibility change is only in `sourceScopes`.
     var evidenceGraphs: [String] = []
-    /// Keyed partial reads this write moved, each with the graphs it moved
+    /// Keyed partial reads this write moved, each with the key ids it moved
     /// them for: citation counts, citations by Artifact and graph progress.
     var reads: [CatalogWriteEffectsRead] = []
     /// Catalog-wide lists this write changed. Each is a cached read the write

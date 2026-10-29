@@ -446,10 +446,12 @@ func readRowsColumn(w *walk, table string, ids [][]byte, col string) ([][]byte, 
 	q := fmt.Sprintf(`SELECT %s FROM %s WHERE %s = ?`, ident(col), ident(table), ident(pk))
 	entity := entityTable[table]
 	var out [][]byte
+	seen := map[string]bool{}
 	for _, id := range ids {
-		if len(id) != 16 {
+		if len(id) != 16 || seen[string(id)] {
 			continue
 		}
+		seen[string(id)] = true
 		var raw []byte
 		err := w.q.QueryRow(q, id).Scan(&raw)
 		if err == sql.ErrNoRows {

@@ -27,9 +27,9 @@ type SearchIDs struct {
 	IDs  [][]byte
 }
 
-// Read names a partial read the app keeps per Evidence graph: a write that
-// moves its rows reports the graphs, and the app refreshes only those. The
-// values are the wire keys (WriteEffects.reads) and Swift's CatalogRead raw
+// Read names a partial read the app keeps per key: a write that moves its
+// rows reports the key ids (the rows of KeyTable), and the app refreshes only
+// those. The values are the wire keys (WriteEffects.reads) and Swift's CatalogRead raw
 // values.
 type Read string
 
@@ -42,16 +42,27 @@ const (
 	ReadEvidenceGraphProgress Read = "evidence_graph_progress"
 )
 
+// KeyTable is the table whose ids key the read: Evidence graphs for
+// citations and evidence_graph_progress. "" for an unknown read.
+func (r Read) KeyTable() string {
+	switch r {
+	case ReadCitations, ReadEvidenceGraphProgress:
+		return "evidence_graphs"
+	}
+	return ""
+}
+
 // Reads is every keyed read, in the order Set.Reads reports them.
 var Reads = []Read{ReadCitations, ReadEvidenceGraphProgress}
 
-// ReadPath is one keyed read: Read says which, Path says whose graph ids.
+// ReadPath is one keyed read: Read says which, Path says whose key ids (it
+// ends at Read.KeyTable()).
 type ReadPath struct {
 	Read Read
 	Path Path
 }
 
-// ReadIDs is a resolved keyed read: one read and its Evidence graph ids.
+// ReadIDs is a resolved keyed read: one read and its key ids.
 type ReadIDs struct {
 	Read Read
 	IDs  [][]byte
@@ -84,8 +95,8 @@ type Set struct {
 	// EvidenceGraphs are the Evidence graphs whose loaded rows changed
 	// (Effect.EvidenceGraph): graphcache drops each.
 	EvidenceGraphs [][]byte
-	// Reads are the keyed partial reads a batch moved, each with the Evidence
-	// graphs it moved them for (Effect.Reads), in the order of Reads.
+	// Reads are the keyed partial reads a batch moved, each with the key ids
+	// it moved them for (Effect.Reads), in the order of Reads.
 	Reads []ReadIDs
 	// SourceScopes are the Sources whose last activity a change moves
 	// (Effect.SourceScope), the audit source scope.
@@ -117,7 +128,7 @@ type Effect struct {
 	// graph cache does not load leaves it empty.
 	EvidenceGraph Path
 	// Reads are the keyed partial reads this change moves, each with a Path
-	// that ends at evidence_graphs.
+	// that ends at the read's KeyTable.
 	Reads []ReadPath
 	// SourceScope is the Source whose last activity (audit source scope) this
 	// change moves.
@@ -181,6 +192,16 @@ func valueMembers(col string) Path {
 
 // observationGraph is an Observation to the Evidence graph of its Subject.
 var observationGraph = up("subject_id", "graph_id")
+
+// subjectGraph is a Subject to its Evidence graph.
+var subjectGraph = field("graph_id")
+
+// claimGraph is an Identity Claim to the Evidence graph of its Subject.
+var claimGraph = from("subject_id", field("graph_id"))
+
+// claimEvidenceGraph is Identity Claim evidence to the Evidence graph of its
+// claim's Subject.
+var claimEvidenceGraph = up("identity_claim_id", "subject_id", "graph_id")
 
 // graphsOfSource is a path ending at a Source, to every Evidence graph of it.
 func graphsOfSource(p Path) Path {
@@ -313,8 +334,8 @@ var registry = map[string]Effect{
 	},
 	"subjects": {
 		Entity:        "subject",
-		EvidenceGraph: field("graph_id"),
-		Reads:         []ReadPath{{ReadEvidenceGraphProgress, field("graph_id")}},
+		EvidenceGraph: subjectGraph,
+		Reads:         []ReadPath{{ReadEvidenceGraphProgress, subjectGraph}},
 		SourceScope:   field("source_id"),
 	},
 	"evidence_graphs": {
@@ -372,8 +393,8 @@ var registry = map[string]Effect{
 	"canonical_entities": {Entity: "canonical_entity", Handles: self(), HandleScope: self()},
 	"identity_claims": {
 		Entity:        "identity_claim",
-		EvidenceGraph: from("subject_id", field("graph_id")),
-		Reads:         []ReadPath{{ReadEvidenceGraphProgress, from("subject_id", field("graph_id"))}},
+		EvidenceGraph: claimGraph,
+		Reads:         []ReadPath{{ReadEvidenceGraphProgress, claimGraph}},
 		Handles: union(
 			field("entity_id"),
 			onStatus("accepted", from("subject_id", observers)),
@@ -382,8 +403,8 @@ var registry = map[string]Effect{
 	},
 	"identity_claim_evidence": {
 		Entity:        "identity_claim_evidence",
-		EvidenceGraph: up("identity_claim_id", "subject_id", "graph_id"),
-		Reads:         []ReadPath{{ReadEvidenceGraphProgress, up("identity_claim_id", "subject_id", "graph_id")}},
+		EvidenceGraph: claimEvidenceGraph,
+		Reads:         []ReadPath{{ReadEvidenceGraphProgress, claimEvidenceGraph}},
 		Handles:       up("identity_claim_id", "entity_id"),
 		HandleScope:   up("identity_claim_id", "entity_id"),
 	},
@@ -469,6 +490,9 @@ func (e Effect) validate(table string) error {
 		}
 		if r.Path.zero() {
 			return errf("%s: read %q has no path", table, r.Read)
+		}
+		if end, err := r.Path.check(table); err == nil && end != "" && end != r.Read.KeyTable() {
+			return errf("%s: read %q ends at %s, want %s", table, r.Read, end, r.Read.KeyTable())
 		}
 	}
 	for _, l := range e.Lists {
