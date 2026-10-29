@@ -21,6 +21,12 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Type-select can land on a disabled menu row
+
+- **Date:** 2026-10-29
+- **Where:** Action menus (Sources list Clear, and others on `PVActionMenuItem`)
+- **Annoyance:** Typing a letter can highlight a disabled row (`keyboardTitles` keeps disabled titles), and Return on it closes the menu with no action (S12-17 ship log).
+
 ### An impossible date is saved and then ignored by matching
 
 - **Date:** 2026-10-29

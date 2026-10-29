@@ -1,6 +1,6 @@
 # Name index kept current on commit
 
-**Status:** idea, 2026-10-26. Scheduled as Spike 12's S12-43 (2026-10-28, [audit 2](../deployment-plan/spike-12/app-health-audit-2.md) B-8). From the S11-39 ship loop (#567) and the slice 9 re-cut.
+**Status:** idea, 2026-10-26. Was scheduled in Spike 12 (S12-43 / S12-51); parked 2026-10-29 with [`promote-ranking.md`](promote-ranking.md) when Spike 12 closed ([audit 2](../deployment-plan/spike-14/app-health-audit-2.md) B-8). From the S11-39 ship loop (#567) and the slice 9 re-cut.
 
 ## The problem
 

@@ -1,5 +1,7 @@
 # App-health audit — 2026-10-27
 
+**Moved to Spike 14 on 2026-10-29** when Spike 12 closed. PR IDs below are Spike 12's: open ones moved to Spike 14 (S14-10 – S14-23, the [map](deployment-plan.md#where-the-notes-went) maps them), and the rest were descoped to [`promote-ranking.md`](../../ideas/promote-ranking.md), [`share-packages.md`](../../ideas/share-packages.md) and [`structural-debt.md`](../../ideas/structural-debt.md).
+
 The findings behind slices 5–7 of the [map](deployment-plan.md). An area audit of the whole app at `main` @ 731e423 with [`review-pr`](../../../.agents/skills/review-pr/SKILL.md) ("Area audit"), all five lenses, with Evidence graphs (slices 1–4) read closest. PR order and status are in the map; the decisions taken on these findings are its working rules under "Audit fixes".
 
 **How to use this doc.** A scope entry names its items (`A-n`). `plan-pr` reads those items here for where, evidence and fix, and re-checks each against the code first: line numbers are from 731e423 and move. Go findings marked *probe* were proven by a failing test; Swift findings come from reading the code (no Xcode on the audit machine) and carry manual steps.

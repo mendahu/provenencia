@@ -8,7 +8,7 @@ The Person page becomes the place a researcher goes to understand one canonical 
 
 Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
 
-**Spikes 11 and 12 run in parallel.** Spike 12's S12-32, S12-43, S12-44 and S12-48 change Promote code that slice 0 removes and wait on it (working rule "Spike 12's Promote PRs build on the removal"). PRs that touch code Spike 11 is still changing name the Spike 11 PR in **Depends on**. The overlaps are in [person-detail.md § Cross-spike dependencies](person-detail.md#cross-spike-dependencies). A PR plan written before its Spike 11 dependency lands stops at `Blocked — on S11-NN`.
+**Spikes 11 and 12 are closed; Spike 14 runs in parallel.** Spike 14's S14-16, S14-20 and S14-22 (moved from Spike 12) change Promote code that slice 0 removes and wait on it (working rule "Spike 14's Promote PRs build on the removal"). PRs that touch code Spike 11 is still changing name the Spike 11 PR in **Depends on**. The overlaps are in [person-detail.md § Cross-spike dependencies](person-detail.md#cross-spike-dependencies). A PR plan written before its Spike 11 dependency lands stops at `Blocked — on S11-NN`.
 
 ## Status
 
@@ -66,9 +66,9 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 - **Pins leave in three PRs, the client first** (user, 2026-10-29). S13-23 stops the Mac app asking for or sending pins, confidence and argument, so those wire fields fall idle; S13-24 deletes the engine that offers and writes pins and reserves its wire; S13-25 drops the table. Each step leaves a working app, and no step keeps a shim for the one before. Binds S13-23 – S13-25.
 - **No brief for the removal.** The Promote row's assessment column goes: its band, Contested mark, reason and chevron are not shown, and the target menu, connection subrows, row notes (conflicting decisions, possible duplicates) and the Updated caption stay as they look today. Nothing new is drawn. Binds S13-23.
 - **Promote files accepted claims and nothing else** ([conclusion §5.3](../../conclusion-layer-data-model.md#53-promote)). Done sends no pin ids, `default_pins` false, no confidence and no argument; every filed row is accepted. The Identity Claim's `confidence_grade_id` and `argument` columns stay. Binds S13-23, S13-24.
-- **The score ranks, unseen** (user, 2026-10-29). Graph alignment's scoring keeps choosing and ordering Promote's suggestions (the shortlist gate, the accept bar, settling), but the page shows no band, Contested mark or reason. No PR in Spikes 12 – 14 types, extends or explains the band further. Replacing the scoring waits until the comparison of slice 7 has proven itself; Promote could then rank with it. Binds S13-23, S13-24 and Spike 12's S12-41 and S12-48.
+- **The score ranks, unseen** (user, 2026-10-29). Graph alignment's scoring keeps choosing and ordering Promote's suggestions (the shortlist gate, the accept bar, settling), but the page shows no band, Contested mark or reason. No PR in Spikes 13 – 14 types, extends or explains the band further. Replacing the scoring waits until the comparison of slice 7 has proven itself; Promote could then rank with it ([`ideas/promote-ranking.md`](../../ideas/promote-ranking.md)). Binds S13-23, S13-24 and Spike 14's S14-22.
 - **Audit history keeps its pin rows.** The migration drops the table without recording a removal per pin. `audit_changes` and `audit_transaction_scopes` rows already written for `identity_claim_evidence` stay untouched. Nothing reads audit rows back by entity type (only `sources/notes.go` reads `source_note`), so no retired-type handling is built; the effects registry entry leaves with the `catalogmodel` table, since its init refuses an entry for an unknown table. Binds S13-25.
-- **Spike 12's Promote PRs build on the removal.** S12-43 and S12-44 change `promotealign`, and S12-32 rewrites `ApplyPromoteGraphAlignment`'s handler and Swift mapping and deletes `promoteSubject`; all three land after S13-24. S12-48 changes the Promote rows and lands after S13-23. Their scopes no longer mention evidence reads, pins or the sheet. S12-31 (synchronized folders) and S13-23 both touch `project.pbxproj`: whichever lands second rebases, and S13-23 removes the `PromoteEvidence*` file entries only if S12-31 has not landed. Spike 14's S14-02 is re-planned after S13-23, which deletes the Promote files it was to rename. Binds S13-23, S13-24.
+- **Spike 14's Promote PRs build on the removal.** S14-20 changes `promotealign`, and S14-16 rewrites `ApplyPromoteGraphAlignment`'s handler and Swift mapping and deletes `promoteSubject`; both land after S13-24. S14-22 changes the Promote rows and lands after S13-23. (All three moved from Spike 12 on 2026-10-29, as S12-44, S12-32 and S12-48.) S14-15 (synchronized folders) and S13-23 both touch `project.pbxproj`: whichever lands second rebases, and S13-23 removes the `PromoteEvidence*` file entries only if S14-15 has not landed. Spike 14's S14-02 is re-planned after S13-23, which deletes the Promote files it was to rename. Binds S13-23, S13-24.
 - **Claim review becomes how the records connect** (user, 2026-10-29). S13-07 is descoped: there are no stored pins for it to read back. S13-18 and brief S13-D7 are descoped: the Person page shows the person's Evidence graphs and the links between them instead (slice 7, [`evidence-graph-comparison.md`](evidence-graph-comparison.md)).
 - **Each removal PR updates what it makes false.** Each PR's Definition of done `rg`s the names it deletes across `.agents/skills`, `.cursor/rules` and `docs/`.
   - S13-23: [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §3 and §8 (the page's draft) and line 7's "Until the code catches up"; [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) (binding order's "sheet is to be removed"); [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md) (its example key `promote.sheet.subtitle.*`); [`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md) line 80 (share phrases, `recordedDirect`, the sheet's caption); the ideas [`term-management.md`](../../ideas/term-management.md), [`international-names.md`](../../ideas/international-names.md) and [`binding-order-editing.md`](../../ideas/binding-order-editing.md), which describe the sheet as current.
@@ -227,7 +227,7 @@ S13-99 — Dogfood close / docs
 
 ```text
 S13-23 ──▶ S13-24 ──▶ S13-25 ──▶ S13-08
-S13-23 ──▶ S12-48, S14-02    S13-24 ──▶ S12-32, S12-43, S12-44      (Spikes 12, 14)
+S13-23 ──▶ S14-02, S14-22    S13-24 ──▶ S14-16, S14-20      (Spike 14)
 S11-30 ──▶ S13-02 ──┬──────────────▶ S13-04 ──▶ S13-12 ──▶ S13-13
 S11-39 ──▶ S13-03 ──┤                  ▲                     ▲
 S11-39 ──▶ S11-51 ──┘                  │                     │
@@ -263,7 +263,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Chrome scopes ar
 - **The store and wire mapping:** `getPromoteClaimEvidence` in `GenealogyStore`, `GoStore` (with every evidence mapper), `FakeStore` and the `OnboardingModelTests` conformer; `CoreMethod.getPromoteClaimEvidence`; `CatalogPromoteBatchRow`'s `confidenceGradeID`, `argument`, `defaultPins`, `pinIDs` and `CatalogPromoteBatchWritten.pins`, and their assignments in `GoStore.applyPromoteGraphAlignment`. Done sends none of them, which Go reads as no pins (`ResolvePins` skips a row with neither).
 - **The column:** `PromoteView`'s assessment column goes, with `PromoteReadoutBadges` and the band and Contested display. `PromoteFlow.draftTarget` still reads `assessment` and the `taken` reason to decide what a row starts on until S13-24 moves that rule into Go. The Updated caption shows move reasons only (`Row.captionReason` reads `move_reason`), so the row's own and the alternatives' `reason` stop being read. The target menu, connection subrows, row notes and `PromoteUpdatedCaption` stay; the caption's comments drop the sheet as a caller.
 - **Strings and tests:** the `promote.sheet.*` keys and the keys the column alone read (`promote.assessment.*`, `assessment.chosenNone`, `row.contested`, `row.assessmentContested`, `row.evidenceFor`, `page.column.assessment`, and the `reason.*` keys off the caption path) from `Localizable.xcstrings`; the assessment and contested cases in `PromoteFlowTests` and `PromoteModelTests` (the draft cases stay until S13-24); the evidence tests; the matching rows and the "every term a sentence shares has its share phrases" subtest in `api/ffi/swift_vocabulary_test.go`, the only Go edit.
-- **The project file:** the `PromoteEvidence*` entries in `project.pbxproj` if S12-31 has not landed.
+- **The project file:** the `PromoteEvidence*` entries in `project.pbxproj` if S14-15 has not landed.
 
 **Not this PR.** The Go evidence engine and wire (S13-24); the table (S13-25); any change to proposals or to the band.
 **Check.** Bar 9, app half: on a Source with people, no Promote row opens a sheet and Done files every row; `identity_claim_evidence` gains no rows for that Done; `rg 'pinIds|defaultPins|getPromoteClaimEvidence|ClaimEvidence|confidenceGradesList' macos/App macos/ProvenenciaTests` finds hits only in `Generated/`; Swift tests and `go test ./api/ffi/...` pass. Fan-out at Scale: no evidence read per row, one Apply.
@@ -283,7 +283,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Chrome scopes ar
 Go, plus deleting Swift's draft rule.
 **Not this PR.** The table, `identityclaims` pins and the delete facet (S13-25).
 **Check.** `go test ./...`; a Promote Apply test files claims and bridges and calls no pin writer; `TestLargeSourceBudgets` without its evidence subtests; `TestKnobInventoryMatchesRegistry` with the evidence rows gone; `rg 'claimevidence|ResolvePins|PinOffers|acceptedClaims' core api` finds nothing.
-**Context.** Working rules "Pins leave in three PRs", "Each removal PR updates what it makes false"; what S11-19, S11-25 and S11-40 built; `add-ffi-handler` (reserving Methods and fields), `add-match-rule`. S12-32, S12-43 and S12-44 wait on this PR.
+**Context.** Working rules "Pins leave in three PRs", "Each removal PR updates what it makes false"; what S11-19, S11-25 and S11-40 built; `add-ffi-handler` (reserving Methods and fields), `add-match-rule`. Spike 14's S14-16 and S14-20 wait on this PR.
 
 #### S13-25 — The pin table goes
 
@@ -453,9 +453,9 @@ Go, plus deleting Swift's draft rule.
 #### S13-29 — One loader for a Subject's comparable values
 
 **Ships.** A preparatory move: `promotealign`'s per-Evidence-graph layer loader (`loadLayer`, `loadLayerMemo`, `loadLayerBridges`, `layerValues`, `lifeEvent`, `decode`, `loadMetas`), which builds each primary Subject's values through `subjectprofile.ForSubject` with lifespans and its bridges as `kinship.Edge`s, moves into a shared `core/database` package with one memo key. Promote reads it from there; no behavior change. Go only.
-**Not this PR.** The record-links read (S13-27); profile memos (Spike 12's S12-43).
+**Not this PR.** The record-links read (S13-27); profile memos (parked in [`ideas/promote-ranking.md`](../../ideas/promote-ranking.md)).
 **Check.** `promotealign` tests and `TestLargeSourceBudgets` unchanged; `PROVENENCIA_GRAPH_VERIFY=1` passes.
-**Context.** Working rule "A new comparison, not the band"; `core/database/promotealign/layer.go`; `use-catalog-session`. Spike 12's S12-43 changes `promotealign`'s profile loading too: whichever lands second rebases (named in both maps).
+**Context.** Working rule "A new comparison, not the band"; `core/database/promotealign/layer.go`; `use-catalog-session`. 
 
 #### S13-27 — Person record links read
 

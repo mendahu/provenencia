@@ -104,7 +104,7 @@ On each claim in the Sources section.
 
 ## Cross-spike dependencies
 
-Spike 12 is expected to close before Spike 13 starts. Spike 11 may still be open, and Spike 13 runs alongside it.
+Spikes 11 and 12 closed on 2026-10-29; their open work moved to Spike 14.
 
 **Spike 12 (assumed closed):** Source grouping (R-34) relies on multiple Evidence graphs per Source (S12-03 onward) and on per-graph unpromote (S12-09) for R-38. If any S12 PR is still open when Spike 13 starts, the PR that needs it names it as a dependency.
 

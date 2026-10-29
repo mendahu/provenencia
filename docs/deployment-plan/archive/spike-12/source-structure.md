@@ -1,6 +1,6 @@
 # Source structure: Copy Source and multiple Evidence graphs
 
-Design for Spike 12. PR order and status are in the [map](deployment-plan.md). Captured from dogfooding on real Sources (2026-10-10) and settled with the product owner (2026-10-18).
+The design Spike 12 built (closed 2026-10-29; [decisions](README.md)). Kept as the reasoning behind the Source and Interpretation layer docs, which hold the rules; where they differ, those docs and the code win. Captured from dogfooding on real Sources (2026-10-10) and settled with the product owner (2026-10-18).
 
 ## Problem
 
@@ -55,7 +55,7 @@ CREATE TABLE evidence_graph_artifacts (
 -- so a Subject's graph is always on its home Source.
 ```
 
-The exact `ON DELETE` classes and `catalogmodel` buckets are set by the schema PR through [`add-catalog-migration`](../../../.agents/skills/add-catalog-migration/SKILL.md) and [`add-catalog-model`](../../../.agents/skills/add-catalog-model/SKILL.md): a graph is part of its Source's record (it goes when the Source goes, and a Source can only be deleted with no Artifacts and no Subjects, so its graphs are empty by then); a link row is part of both ends.
+The exact `ON DELETE` classes and `catalogmodel` buckets are set by the schema PR through [`add-catalog-migration`](../../../../.agents/skills/add-catalog-migration/SKILL.md) and [`add-catalog-model`](../../../../.agents/skills/add-catalog-model/SKILL.md): a graph is part of its Source's record (it goes when the Source goes, and a Source can only be deleted with no Artifacts and no Subjects, so its graphs are empty by then); a link row is part of both ends.
 
 `subjects.source_id` stays. Code that is about the *document* (the auto-reconciler's agreement count, credibility, audit scope, delete impact) keeps reading it. Code that is about *the graph* reads `graph_id`.
 
@@ -65,7 +65,7 @@ The exact `ON DELETE` classes and `catalogmodel` buckets are set by the schema P
 - **A graph has a `GPH-` ref, a name and an optional description.** Name and description are editable. Graphs are listed alphabetically by name.
 - **A graph with Subjects can't be deleted.** An empty graph that is not the last one can.
 - **Graphs are fully isolated.** A Subject belongs to exactly one graph and never moves. An Observation's Subject, the Subject it points at (relationships, participations), and its Citation's Artifact must all be in, or linked to, that one graph. Go refuses anything else at write time.
-- **Artifacts and graphs are many-to-many. The Artifact is the parent** (amended 2026-10-27, [audit](app-health-audit.md) slice 5): an Artifact may stand in no graph; a graph needs at least one Artifact.
+- **Artifacts and graphs are many-to-many. The Artifact is the parent** (amended 2026-10-27, [audit](../../spike-14/app-health-audit.md) slice 5): an Artifact may stand in no graph; a graph needs at least one Artifact.
   - A graph created by the researcher needs at least one linked Artifact. Its form starts with the Artifacts that are in no graph checked when there are any, otherwise with every Artifact checked (amended 2026-10-27).
   - The Default graph may have none until the Source's first Artifact, which links to it automatically. "Add graph" is unavailable until the Source has an Artifact.
   - A new Artifact starts linked to the graphs checked when it is added: all of them by default, or none (amended 2026-10-27; it was every graph).
@@ -85,18 +85,14 @@ The exact `ON DELETE` classes and `catalogmodel` buckets are set by the schema P
 - **Navigation:** a graph is a place. Its location carries the graph id, so Back / Forward and restore return to that exact graph, its Citation composer, and its Promote page. Breadcrumbs read Source › graph name.
 - **Omnibar:** graphs are a searchable kind, by name, description and `GPH-` ref; a hit opens the graph.
 
-### Migration
-
-One `Default` graph per existing Source, with an id of its own; its `GPH-` ref is minted in Go when the project next opens. Every Subject moves into its Source's Default graph, and every Artifact is linked to it. Positions are keyed by Subject, so the canvas looks the same. Existing projects look unchanged.
-
 ## Not this spike
 
-These were weighed and parked. Their reasoning is in [`ideas/source-structure-later.md`](../../ideas/source-structure-later.md).
+These were weighed and parked. Their reasoning is in [`ideas/source-structure-later.md`](../../../ideas/source-structure-later.md).
 
 - Nested Sources (`parent_source_id`, metadata inheritance).
 - Derivation links (`derived_from`: an index or abstract of an original) and the original / derivative / authored form.
 - Named Source templates. Copy Source covers the case for now.
 - Per-graph credibility.
 - Layered citation output (Evidence Explained style "…; citing …").
-- Canvas focus views (one connected component at a time, filter by Citation): [`ideas/archive/graph-focus-views.md`](../../ideas/archive/graph-focus-views.md) (archived 2026-10-24).
-- `source` Subjects, `mentions` and `remark`: [`ideas/source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md). None exist yet; graph isolation will forbid cross-graph subject values when that idea is picked up, so it has to be re-thought then.
+- Canvas focus views (one connected component at a time, filter by Citation): [`ideas/archive/graph-focus-views.md`](../../../ideas/archive/graph-focus-views.md) (archived 2026-10-24).
+- `source` Subjects, `mentions` and `remark`: [`ideas/source-to-source-relationships.md`](../../../ideas/source-to-source-relationships.md). None exist yet; graph isolation will forbid cross-graph subject values when that idea is picked up, so it has to be re-thought then.
