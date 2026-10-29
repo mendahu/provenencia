@@ -1,6 +1,6 @@
 # S12-35 — FakeStore is a seeded fake
 
-**Status:** Planned
+**Status:** Landed #617 (2026-10-28)
 **Spike / slice:** Spike 12 · Slice 6 — Audit fixes: Medium
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: FakeStore and fixture pins only; no view draws differently)
@@ -274,6 +274,10 @@ Must stay green: everything `scripts/check-pr.sh` runs. Suites most likely to br
 ## 12. Open questions
 
 None.
+
+### Landed
+
+None — matches the plan.
 
 ## 13. PR
 

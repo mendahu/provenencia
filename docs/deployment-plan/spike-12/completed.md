@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-35 — FakeStore is a seeded fake
+
+**Landed 2026-10-28** in [#617](https://github.com/mendahu/provenencia/pull/617). FakeStore no longer invents graph list order, citation graph membership, write effects, or graph/copy refusals: tests seed rows and script `nextWriteEffects`, error hooks, and impact maps instead. Property and term creates mint keys through `FieldSlug.kebab`, and Go reads `FieldSlug.fixtures` and `ProjectSlug.folderNameFixtures` with Swift escape decoding so fixture drift fails in CI. Nothing a researcher sees changes.
+
 ## S12-34 — One descriptor per cache key
 
 **Landed 2026-10-28** in [#614](https://github.com/mendahu/provenencia/pull/614). Each catalog cache kind now has one descriptor: its value, loader, stale and hidden policy, invalidation, in-place patches, and optional refresh. Adding a kind fails to compile until that arm exists, and a test fails if the arms and the kind list disagree. List last-updated cells, an enriched Source row and page, and Evidence graph progress still move the same way; they are entries on the descriptor, so later reads add an entry instead of a new session function. Nothing a researcher sees changes.
