@@ -119,7 +119,7 @@ Promote becomes a quick filing action: the researcher picks a target per row and
 
 ## 3. Implementation gate
 
-| Ships in **S13-23** | Ships in **S13-30** | Stays out |
+| Ships in **S13-23** (shipped in #633) | Ships in **S13-30** | Stays out |
 | --- | --- | --- |
 | PA-1 – PA-8, PA-W1 (as §8 revises it), and the promote wording: the sheet and the assessment column removed; the list widened and centered at Wide; the row, headings and Already filed rows laid out without it; the Updated caption's rule; VoiceOver. Every row files Accepted, with no status control yet. | PS-1 – PS-6: the status control, its default, a provisional row coming back preselected, its connections waiting. | What a row starts on moving into Go (S13-24, no visible change). Rejected at Promote. Any redesign of the target menu or subrows (S14-22 changes the rows' Promote copy after this board). |
 

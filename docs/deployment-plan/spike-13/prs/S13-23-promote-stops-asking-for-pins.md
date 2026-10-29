@@ -1,6 +1,6 @@
 # S13-23 — Promote stops asking for pins
 
-**Status:** Planned
+**Status:** Landed in #633 (2026-10-29)
 **Spike / slice:** Spike 13 · Slice 0 — Removing Observation pins
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S13-D11](../design/S13-D11-promote-without-assessment.md), board agreed 2026-10-29 (§8 Board notes there)
@@ -450,3 +450,17 @@ None.
 
 **Title:** S13-23 — Promote stops asking for pins
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-13/prs/S13-23-promote-stops-asking-for-pins.md`.
+
+## Landed note
+
+The code differs from the plan in these ways:
+
+- STEP-1 and STEP-2 are one commit, and STEP-3 and STEP-4 are one commit: the sheet and the column share `PromoteFlow` and `PromoteModel`, and the store calls and Done's mapping share `GenealogyStore`, `GoStore` and `FakeStore`, so neither pair built apart. STEP-3 also deleted `ConnectionSentenceRegistry.ShareInput.init?(_:neighborName:)` early, because it named `CatalogClaimEvidenceRelationship`.
+- STEP-6's `rg` also matches "profile", "Filed" and "Files" in test names: `doneFilesEveryRowWithATargetOnly` is `donePromotesEveryRowWithATargetOnly`, `doneSendsATargetPerFiledRow` is `doneSendsATargetPerPromotedRow`, `promoteAllStartsExpandedAndHidesFiledBridges` is `promoteAllStartsExpandedAndHidesPromotedBridges`, `aFoundRecordIsProposedHeldAndFiled` is `aFoundRecordIsProposedHeldAndPromoted`, and the `PromoteFlow` comment "Default profile orders" reads "Default name orders".
+- T-2 drops the two assertions that named `getPromoteClaimEvidence` and `listClaimConfidenceGrades` calls (AC-3.1 forbids the names; the calls no longer exist). It sends one New and one Skip row, because the fake holds no record to promote onto.
+- T-10's two tests arm the guard with a target change, not `setArgument` (deleted).
+- T-6's `reasonsAreWordedWithLabelsAndRefs` became `aViaCaptionNamesTheNeighborByItsRecord`.
+- `CatalogQueryRegistryTests.everyKindHasOneDescriptor` counts 18 kinds, not 19.
+- `GenealogyStore` and `FakeStore` doc comments that called the process filing say promote or apply; `add-localized-string`'s "a share phrase with its article" example reads "a phrase with its article".
+- The manual check (section 10) was not run in the app.
+
