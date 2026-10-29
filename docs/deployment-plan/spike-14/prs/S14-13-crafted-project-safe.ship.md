@@ -1,7 +1,7 @@
 # Ship log — S14-13 A crafted project can't crash the app
 
 **Plan:** [`S14-13-crafted-project-safe.md`](S14-13-crafted-project-safe.md) · **Branch:** `s14-13-crafted-project-safe` · **PR:** #632
-**State:** fixing 2
+**State:** ready
 
 ## Round 0 — implement
 Head `ecf72552`. Gate PASS (orchestrator run, base `51cf4aef`). PR #632 (draft).
@@ -112,3 +112,12 @@ Files: `macos/App/Platform/FakeStore.swift`, `api/ffi/swift_vocabulary_test.go`,
 Failing test first: the new Go test below, with one Swift row deliberately wrong locally, fails; then fix the row. (Do not commit the wrong row.)
 Do: replace the `switch` in `FakeStore.typeIdentifiers(forMediaType:)` with `static let imageTypeIdentifierFixtures: [(String, String)]`, one row per image media type in Go's table, the second element the identifiers joined by a single space in Go's order (`("image/heic", "public.heic public.heif")`). `typeIdentifiers(forMediaType:)` reads that table and splits on spaces (unknown → `[]`). In `swift_vocabulary_test.go` add `TestFakeStoreTypeIdentifiersMatchGo`: read the pairs with `swiftFixturePairs(t, <FakeStore path>, "FakeStore", "imageTypeIdentifierFixtures")`; assert each row's second element equals `strings.Join(mediatypes.TypeIdentifiers(row[0]), " ")`, and that the rows' media types are exactly the set of image media types in Go's table that have identifiers. If `mediatypes` has no way to list them, add exported `ImageMediaTypes() []string` (sorted) beside `TypeIdentifiers` and use it. If `swiftFixturePairs` cannot read a `static let` on a `final class` (it was written for enums), extend its matcher minimally and add a case to `TestSwiftFixturePairsDecodesEscapes` or its sibling.
 Check: `go test -tags fts5 ./api/ffi/...` passes; Swift tests that call `typeIdentifiers(forMediaType:)` pass unchanged; scripts/check-pr.sh PASS.
+
+## Round 2 — fix
+Head `86416e20`. Gate PASS (orchestrator run). F-10 done: `TestFakeStoreTypeIdentifiersMatchGo` red with one row wrong, green after; `mediatypes.ImageMediaTypes()` added; `swiftFixturePairs` also reads a `final class` (covered by `TestSwiftFixturePairsReadsFinalClass`). MNT-8 Resolved (orchestrator check; round 2 has no re-review).
+
+## Finish
+Merged `origin/main` (`cb828f82`, plan docs only) → `b431fee0`. Gate PASS against `cb828f82`.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: flaky `SourceGraphFormModelTests` edit cases and `SourcesModelTests.listReadsEachGraphsProgress` (one failing run on the round-1 head, green on rerun); UX-4 copy nit · to user: UX-1, SEC-1, UX-2, MNT-3 (answered 2026-10-29) · CON miss: none
