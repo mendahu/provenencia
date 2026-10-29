@@ -358,10 +358,10 @@ extension CatalogQueryKey.Kind {
                 invalidateOn: [],
                 whenHidden: .markStale,
                 invalidation: { _, _ in .allCached(.citationCounts) },
-                refresh: CatalogQueryRefresh(follows: .reads(.citations)) { session, key, ids in
-                    guard case .citationCounts(_, let graphId) = key, ids.contains(graphId) else { return }
-                    session.applyHiddenPolicy(to: key)
-                },
+                refresh: .applyHiddenPolicy(follows: .citations, id: { key in
+                    guard case .citationCounts(_, let graphId) = key else { return nil }
+                    return graphId
+                }),
                 load: { key, store in
                     guard case .citationCounts(let project, let graphId) = key else {
                         mismatchedCatalogKey(key, .citationCounts)
@@ -462,10 +462,10 @@ extension CatalogQueryKey.Kind {
                 invalidateOn: [],
                 whenHidden: .markStale,
                 invalidation: { _, _ in .allCached(.citationsByArtifact) },
-                refresh: CatalogQueryRefresh(follows: .reads(.citations)) { session, key, ids in
-                    guard case .citationsByArtifact(_, let graphId, _) = key, ids.contains(graphId) else { return }
-                    session.applyHiddenPolicy(to: key)
-                },
+                refresh: .applyHiddenPolicy(follows: .citations, id: { key in
+                    guard case .citationsByArtifact(_, let graphId, _) = key else { return nil }
+                    return graphId
+                }),
                 load: { key, store in
                     guard case .citationsByArtifact(let project, let graphId, let artifactId) = key else {
                         mismatchedCatalogKey(key, .citationsByArtifact)
