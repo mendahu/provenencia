@@ -19,7 +19,7 @@ A function takes two Evidence graphs and says how strongly they connect, in a wa
 - **Derived structure.** The same fact recorded in different shapes must compare across: one record gives two people a spouse relationship, the other gives them a shared marriage event (the implied links matching already derives, [`matching-model.md`](../../matching-model.md)).
 - **The page's own entity.** On a handle's page every pair of its graphs shares that handle, so the connection between two graphs is read from what they share other than it, while the handle's own pair stays visible as the thing being proved.
 - **Constraints:** pure, layered and driven by the match registry like matching, so its knobs are tuned in one place; Subject compare is the starting point to draw on; it reads none of graph alignment's weights, band or accept bar (Promote keeps ranking with those, unseen).
-- **Computed, never stored.** Nothing is added to the catalog. Each Identity Claim keeps its status and argument. Knowledge outside the records enters as a cited Source.
+- **Computed, never stored.** Nothing is added to the catalog. Each Identity Claim keeps its status; it carries no argument (2026-10-29). Knowledge outside the records enters as a cited Source.
 
 ## Requirement 2 — Visualize the connections
 
