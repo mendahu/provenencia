@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/design-system-layers.mdc`
 **Context:** [event-place-pictures.md § What already works](../event-place-pictures.md#what-already-works), [§ Thumbnail parity](../event-place-pictures.md#thumbnail-parity), [§ What changes](../event-place-pictures.md#what-changes); working rules: "The gallery is one slot on the detail body", "An Event or Place chooses its thumbnail as a Person chooses its portrait", "A depiction is worded as a picture outside the Person's own copy", "The gallery layer is named gallery, not likeness", "Batch 1 is cut by layer"; S14-01 ship follow-ups UX-1 (Properties VO) and UX-2 (Promote wording)
 **Planned:** 2026-10-29 against `main` @ `504f4f9b`
-**Review:** — (not reviewed yet)
+**Review:** [`S14-02-pictures-in-the-app.review.md`](S14-02-pictures-in-the-app.review.md) — Fits with changes / Ready with changes (round 1 Fixed); round 2 pending
 
 ### Implementer — read this first
 
@@ -62,8 +62,9 @@ Event and Place pages show a Pictures section, lead their headers with the pictu
 | --- | --- | --- |
 | AC-3.1 | `L10n.Promote.lineSentence(relation: .same, cause: .exact, propertyCause: .none, value: depictionValue)` | Resource key is `promote.sheet.line.samePicture` with default "Same picture" |
 | AC-3.2 | `lineSentence(relation: .unknown, cause: .unjudged, propertyCause: .none, value: depictionValue)` | Resource key is `promote.sheet.line.comparePictures` with default "Compare these pictures" |
-| AC-3.3 | `EvidenceBoard.build(evidence:kind:neighbor:labels:worded:orders:)` with `kind: .place` for a depiction line | `line.isPicture == true`; `line.value` is `.crops(paths:…, mark: .subjectPlace)`; spoken label uses `spokenPicture` / `spokenPictureCount` |
-| AC-3.4 | Same build with `kind: .person` | `line.value` mark is `.subjectPerson`; sentence still "Same picture" / "Compare these pictures" (value-type wording, every kind) |
+| AC-3.3 | `EvidenceBoard.build(…)` with row `kind: .place` for a depiction line on the Subject's own cards | `line.value` is `.crops(paths:…, mark: .subjectPlace)`; spoken label uses `spokenPicture` / `spokenPictureCount`; no `isPicture` / `isLikeness` property on `Line` |
+| AC-3.4 | Same build with row `kind: .person` | Own-card depiction mark is `.subjectPerson`; sentence still "Same picture" / "Compare these pictures" (value-type wording, every kind) |
+| AC-3.5 | Person-row board with a relationship group whose neighbor is an Event that has a depiction line; `neighbor(id)?.kind == .event` | That relationship depiction line's crop mark is `.subjectEvent`, not `.subjectPerson` |
 
 **US-4.** As a researcher using VoiceOver on the Properties list, I can tell `event_picture` from `place_picture` even though both labels are "Picture".
 
@@ -76,7 +77,7 @@ Event and Place pages show a Pictures section, lead their headers with the pictu
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-5.1 | After the PR, `rg 'ConclusionDetailLikeness|LikenessTileView|likenessCrop|ValueFamily\.likeness|isLikeness|depictionPerson' macos` | Exit 1 / no matches |
+| AC-5.1 | After the PR, `rg 'ConclusionDetailLikeness|LikenessTileView|likenessCrop|ValueFamily\.likeness|isLikeness|isPicture|depictionPerson' macos` | Exit 1 / no matches |
 | AC-5.2 | `CachedThumbnail.pictureCrop` | Equals `96`; symbol `likenessCrop` is gone |
 | AC-5.3 | `CitationComposerSubjectGroups` depiction helper | Named `depictionSubject`; no `depictionPerson`; comments say Subject |
 
@@ -87,9 +88,9 @@ Event and Place pages show a Pictures section, lead their headers with the pictu
 | `ConclusionDetailGallery` *(new)* + `ConclusionDetailPicture` *(new)* on `ConclusionDetailBody`; remove `likenesses` | STEP-1, AC-1.*, D-1, D-2 |
 | Rename `ConclusionDetailLikenessSection` → `ConclusionDetailGallerySection`; `LikenessTileView` → `GalleryTileView`; `CachedThumbnail.likenessCrop` → `pictureCrop`; a11y id `\(identifierRoot).picture.\(tile.id)` | STEP-1, AC-5.1, AC-5.2, D-3 |
 | Shared `ConclusionDetailGallery.tiles(from:)` mapping; Person/Event/Place contents fill `gallery` + Event/Place header thumb from `pictureImageRelPath` | STEP-2, AC-1.*, AC-2.1, AC-2.2, D-4, D-5 |
-| Event/Place `ConclusionPortraitModel` + toast/lead copy packs; wire `EventDetailView` / `PlaceDetailView` / `WorkspaceDestinationHost` with `userID` | STEP-3, AC-2.2, AC-2.3, AC-2.5, D-6, D-7 |
+| Static `ChooseCopy` packs (copy + a11y id leaves); page owns `ConclusionPortraitModel` from `userID` + pack; Event/Place/Person views pass `userID` + pack | STEP-3, AC-2.2, AC-2.3, AC-2.5, D-3, D-6, D-7 |
 | `EventsList` / `PlacesList` `thumbnailRelPath` → `pictureImageRelPath` | STEP-4, AC-2.4, D-8 |
-| Promote: `ValueFamily.picture`, `isPicture`, picture sentence/spoken keys, `EvidenceBoard.build` takes `kind`, `cropFallbackMark` on crops | STEP-5, AC-3.*, D-9, D-10 |
+| Promote: `ValueFamily.picture`, drop `isLikeness`/`isPicture`, picture sentence/spoken keys, crop mark from row kind on own cards and neighbor kind on relationship cards; Promote `worded` maps depiction → Picture noun | STEP-5, AC-3.*, D-9, D-10, D-14 |
 | Composer `depictionSubject` rename + Subject comments | STEP-6, AC-5.3, D-11 |
 | Properties `rowAccessibilityLabel` includes `property.key` and bound type labels | STEP-7, AC-4.*, D-12 |
 | L10n: Pictures section, Event/Place picture/thumbnail strings, Promote picture keys; prune renamed Promote likeness keys | STEP-1–5, D-13 |
@@ -106,7 +107,7 @@ Event and Place pages show a Pictures section, lead their headers with the pictu
 | Person Timeline event picture | Spike 13 R-26 |
 | Pictures as matching weight for Event/Place | not planned ([event-place-pictures.md](../event-place-pictures.md) Stays later) |
 | New kit primitive under `DesignSystem/` | not planned (compose existing `PVSectionHeader`, `CachedThumbnail`, `PVBadge`, `PVButton`, `PVActionMenu`) |
-| `ReconciledValueDisplay.string(for: .depiction)` / `L10n.Conclusions.likenessValue` ("Likeness") | not planned — Person text fallback when no crop is drawn (working rule keeps Person likeness copy); Event/Place pages do not list picture Properties as Details rows (gallery slot only) |
+| Changing `ReconciledValueDisplay.string(for: .depiction)` / `L10n.Conclusions.likenessValue` | not planned — Person Details rows keep "Likeness"; Promote sheet uses D-14 `worded` override instead |
 | CitationComposer L10n catalog comments that still say "person" on `depictionThumbLabel` / `depictionLineLabel` | not planned — values already take any Subject label; D-11 renames the Swift helper and its call-site comments only |
 
 ## 4. Current state
@@ -141,19 +142,20 @@ Event and Place pages show a Pictures section, lead their headers with the pictu
 
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
-| D-1 | Replace `likenesses` with one `gallery: ConclusionDetailGallery` on `ConclusionDetailBody` (default empty tiles). Page draws the gallery section iff `!gallery.tiles.isEmpty` | Working rule "one slot"; Spike 13 builds on it | Keep `likenesses` array + parallel Event array — two mechanisms |
-| D-2 | `ConclusionDetailGallery` holds: `title`, `openTip`, `fromSourceLabel` and `tileLabel` (`LocalizedStringResource` with `%@`), `fallbackMark`, `identifierRoot` (Person `"persons.detail"`, Event `"events.detail"`, Place `"places.detail"`), `tiles: [ConclusionDetailPicture]`, optional `choose: ChooseCopy?`. `ConclusionDetailPicture` is the renamed tile (`isLead` replaces `isPortrait`). Format helpers on the gallery: `func fromSource(_ title: String) -> String` and `func tileAccessibility(_ title: String) -> String` call `L10n.format` with those resources | Slot carries wording (working rule); Equatable without closures; S13-14 can pass its own resources later | Enum of kinds inside the section that switches L10n — couples the section to Person/Event/Place; closures for formatters — not Equatable |
-| D-3 | Rename view symbols: section → `ConclusionDetailGallerySection`; tile view → `GalleryTileView`; `CachedThumbnail.pictureCrop`. Tile id root: `\(identifierRoot).picture.\(tile.id)`. Choose-control leaf suffixes: Person keeps `.portraitBadge` / `.usePortrait`; Event/Place use `.thumbnailBadge` / `.useThumbnail`. Header thumb when `choose != nil`: Person keeps today's stable ids `persons.detail.portrait`, `persons.detail.portrait.menu`, `persons.detail.portrait.useEarliest`; Event/Place use `\(identifierRoot).lead`, `.lead.menu`, `.lead.useEarliest` | Working rule gallery/picture naming; Person portrait header ids stay (S12-17 UI-test contract); Event/Place get parallel lead ids without renaming Person | One `lead.*` scheme that renames Person portrait ids this PR — breaks shipped identifiers; keep `persons.detail.likeness` on Event pages — wrong kind |
-| D-4 | One shared mapper `ConclusionDetailGallery.tiles(from: CatalogConclusionDetail) -> [ConclusionDetailPicture]` as a static function on `ConclusionDetailGallery` in `ConclusionDetailPage.swift` (same file as the types). Person, Event and Place call it | One mapping; bodies only differ on copy and header path | Three copy-pasted `detail.pictures.map` blocks; a new helper file |
-| D-5 | Event/Place `thumbnail` reads `header?.pictureImageRelPath`, sets `imageLabel` via gallery `fromSourceLabel`, `offersEarliest` from first tile `!isLead`, empty label stays `eventNoImage` / `placeNoImage`; add filled-thumb labels `eventPictureThumb` / `placePictureThumb` ("Picture") parallel to `personLikenessThumb` | Header lead already on wire (S14-01); parity with Person | Derive lead only from tiles and ignore header path — header is the list/detail contract |
-| D-6 | Keep type name `ConclusionPortraitModel`; inject `ChooseCopy` toast fields at init (`toastTitle`, `toastChosenBody` resource, `toastEarliestBody`). `choose` takes `ConclusionDetailPicture`. Event/Place views construct the model with thumbnail `ChooseCopy`; Person keeps portrait `ChooseCopy` from existing L10n | Working rule names this model; one write path | Rename type to `ConclusionLeadModel` this PR — churn without product need; hard-code portrait toasts for Event — wrong copy |
-| D-7 | `EventDetailView` / `PlaceDetailView` take `userID` like Person; `WorkspaceDestinationHost` passes `userID`. Pass `portrait:` into `ConclusionDetailPage` whenever the body has `gallery.choose != nil` | Same wiring as Person | Skip choose chrome on Event/Place and only show the image — fails bar outcome 5 |
-| D-8 | `EventsList.thumbnailRelPath` / `PlacesList.thumbnailRelPath` return `header.pictureImageRelPath` | Same as Persons; protocol already requires the override | Custom per-row image load — engine already leads |
-| D-9 | Promote: rename `ValueFamily.likeness` → `.picture`; `isLikeness` → `isPicture`; id prefix `"picture"`; change sentence defaults to "Same picture" / "Compare these pictures" under new keys `lineSamePicture` / `lineComparePictures`; rename `spokenLikeness*` → `spokenPicture*`; prune old likeness Promote keys from L10n + xcstrings. Person depiction lines use the same picture sentences (working rule: by value type for every kind) | Working rule "worded as a picture outside the Person's own copy" | Keep "likeness" sentences for Person rows and "picture" for Event/Place — second mechanism; only change Event/Place — violates value-type rule |
-| D-10 | `EvidenceBoard.build(evidence:kind:neighbor:labels:worded:orders:)` adds `kind: EvidencePrimaryKind` as the second parameter. `EvidenceBoard.Value.crops` becomes `crops(paths: [String], mark: PVMarkKey)`; picture lines pass `kind.markKey`. `EvidenceCrops` reads that mark. `PromoteModel.board(of:)` passes `self.kind`. Member crops for depiction pins use the same mark | Working rule fallback mark from the line's kind | Infer mark from property key — fragile; leave `.subjectPerson` — wrong for Place; separate `cropFallbackMark` on `Line` beside `Value` — duplicate |
-| D-11 | Rename `depictionPerson` → `depictionSubject`; update comments to Subject; leave `depictionThumbLabel` / `depictionLineLabel` catalog keys and `"%1$@ of %2$@"` values (already kind-agnostic) | Scope: translator comments + helper name | Retitle catalog keys to say Subject — optional churn; Out unless comments-only is insufficient for AC-5.3 |
-| D-12 | `rowAccessibilityLabel` calls `L10n.Properties.rowAccessibility(label:key:valueType:origin:bound:kinds:)` with one catalog key whose English default is `"%1$@, %2$@, %3$@, %4$@, %5$@, %6$@"` (label, key, valueType, origin, bound announcement, bound type labels joined with `", "`). When unbound, `kinds` is `""`. Spoken string for `event_picture` ≠ spoken string for `place_picture` | S14-01 UX-1; key is stable; bound labels help VoiceOver | Key only without kinds — weaker; kinds only without key — two customs with same bindings could collide later |
-| D-13 | New Conclusions L10n: `picturesSection` "Pictures"; `eventPictureThumb` / `placePictureThumb`; `pictureFrom` / `pictureTile` resources; thumbnail choose pack (`thumbnailBadge` "Thumbnail", `useAsThumbnail`, `useAsThumbnailLabel`, `useEarliestPicture`, `eventThumbnailMenuTitle` "Event thumbnail", `placeThumbnailMenuTitle` "Place thumbnail", `thumbnailMenuHint`, toast title/bodies). Person gallery passes existing `likenessesSection`, `likenessOpenTip`, and extracted `likenessFrom` / `likenessTile` `LocalizedStringResource` static lets (same catalog keys as today's format helpers). Promote keys per D-9 | add-localized-string; Person copy unchanged | Reuse Person "Use as portrait" on Event — wrong word |
+| D-1 | Replace `likenesses` with one required `gallery: ConclusionDetailGallery` on `ConclusionDetailBody` (like `thumbnail`; no protocol default). Page draws the gallery section iff `!gallery.tiles.isEmpty`. Bodies with no pictures set `tiles: []` and still fill the other gallery fields they own, or use `ConclusionDetailGallery(tiles: [])` with the kind's chrome only when they also set choose — Person/Event/Place always construct a full gallery value in STEP-2 | Working rule "one slot"; avoids a fake `.empty` hybrid (M-6) | Default `gallery` that embeds Pictures title + `.subjectPerson`; keep `likenesses` array |
+| D-2 | `ConclusionDetailGallery` holds: `title`, `openTip`, `fromSourceLabel`, `tileLabel`, `fallbackMark`, `identifierRoot`, `tiles`, optional `choose: ChooseCopy?`. `ConclusionDetailPicture` replaces `ConclusionDetailLikeness` (`isLead` replaces `isPortrait`). Format helpers `fromSource` / `tileAccessibility` on the gallery | Slot carries wording; Equatable | Kind enum inside the section |
+| D-3 | Rename view symbols to gallery/picture (`ConclusionDetailGallerySection`, `GalleryTileView`, `pictureCrop`). Section and header are kind-blind: tile id `\(gallery.identifierRoot).picture.\(tile.id).\(choose.badgeSuffix)` / `.\(choose.useAsSuffix)`; header uses `choose.headerIdentifier`, `choose.headerIdentifier + ".menu"`, `choose.headerIdentifier + ".useEarliest"`. `ChooseCopy` carries those id strings plus all choose/toast L10n. Static packs: `ChooseCopy.personPortrait` (`badgeSuffix: "portraitBadge"`, `useAsSuffix: "usePortrait"`, `headerIdentifier: "persons.detail.portrait"`, Person portrait L10n), `ChooseCopy.eventThumbnail` / `.placeThumbnail` (`badgeSuffix: "thumbnailBadge"`, `useAsSuffix: "useThumbnail"`, `headerIdentifier: "events.detail.lead"` / `"places.detail.lead"`, thumbnail L10n). Content types and the page's portrait model both take the same pack | Working rule one slot; S13-14 is another pack; Person portrait ids preserved via the Person pack | Per-kind `if identifierRoot ==` in the section; hard-code Person vs Event leaf names in D-3 without putting them on `ChooseCopy` |
+| D-4 | `ConclusionDetailGallery.tiles(from:)` static mapper in `ConclusionDetailPage.swift`; Person, Event and Place call it | One mapping | Three copy-pasted maps; a new helper file |
+| D-5 | Event/Place `thumbnail` from `header?.pictureImageRelPath`, `imageLabel` via gallery `fromSource`, `offersEarliest` from first tile `!isLead`, empty labels `eventNoImage` / `placeNoImage`; filled-thumb labels `eventPictureThumb` / `placePictureThumb` | Header lead on wire (S14-01) | Ignore header path |
+| D-6 | Keep type name `ConclusionPortraitModel`; init takes `ChooseCopy` (toast fields from the pack). `choose` takes `ConclusionDetailPicture` | One write path; pack is the single copy+id source (D-3) | Rename type; duplicate toast strings outside the pack |
+| D-7 | `ConclusionDetailPage` takes `userID: String` and `leadChoose: ChooseCopy?`. When `leadChoose != nil`, the page owns `@State ConclusionPortraitModel` (init with that pack) and `.vocabularyToastOverlay` with id `"\(pageIdentifier).toast"`. Kind views pass the matching static pack (`PersonDetailView` → `.personPortrait`, Event → `.eventThumbnail`, Place → `.placeThumbnail`) and the body's `gallery.choose` is that same static (one source). Host passes `userID` into all three detail views | Page owns the machine once; kind views stay thin; S13-14 passes another pack | Copy PersonDetailView's portrait `@State` + overlay into Event and Place views |
+| D-8 | `EventsList` / `PlacesList` `thumbnailRelPath` → `header.pictureImageRelPath` | Same as Persons | Custom load |
+| D-9 | Promote: `ValueFamily.likeness` → `.picture`; delete `Line.isLikeness` (do not add `isPicture`); branch on `if case .crops = value` for id prefix `"picture"`, spoken path, and suppressing `thisSource`; new keys `lineSamePicture` / `lineComparePictures` / `spokenPicture*`; prune old likeness Promote keys. Person depiction lines use picture sentences | Working rule value-type wording; one depiction test (M-3) | Keep a bool beside `.crops`; per-kind sentences |
+| D-10 | `EvidenceBoard.build(evidence:kind:neighbor:labels:worded:orders:)`. Own cards (`evidence.sections`): crop mark = `kind.markKey`. Relationship groups: crop mark = `neighbor(relationship.neighborSubjectID)?.kind.markKey ?? kind.markKey`. `Value.crops(paths:mark:)`. No new proto field | Working rule "line's kind"; engine relationship grain is neighbor kind; Swift already has `PromoteFlow.Row.kind` | Stamp row kind on every depiction including neighbors; infer from property key; add relationship kind to proto |
+| D-11 | Rename `depictionPerson` → `depictionSubject`; comments say Subject; leave catalog keys/values | Scope | Retitle catalog keys |
+| D-12 | `L10n.Properties.rowAccessibility(label:key:valueType:origin:bound:kinds:)` with default `"%1$@, %2$@, %3$@, %4$@, %5$@, %6$@"`; kinds joined with `", "`; unbound kinds `""` | S14-01 UX-1 | Key only or kinds only |
+| D-13 | New Conclusions L10n for Pictures section, picture from/tile, Event/Place thumbs, thumbnail choose pack strings used by `ChooseCopy.eventThumbnail` / `.placeThumbnail`. Person pack uses existing likeness/portrait keys (extract `likenessFrom` / `likenessTile` static resources). Promote keys per D-9. Add `L10n.Promote.pictureValue` "Picture" for D-14 | add-localized-string | Reuse "Use as portrait" on Event |
+| D-14 | In `PromoteModel.board(of:)` only, `worded` maps `.depiction` to `L10n.string(L10n.Promote.pictureValue)` ("Picture"); all other values still use `ReconciledValueDisplay.string`. Leave `ReconciledValueDisplay` / `likenessValue` unchanged for Person Details rows | Working rule picture wording on the sheet; Person page copy stays | Change shared `likenessValue` globally; leave Promote members saying "Likeness" |
 
 **Rules this plan bends.** None.
 
@@ -165,25 +167,25 @@ Event and Place pages show a Pictures section, lead their headers with the pictu
 | --- | --- | --- | --- |
 | `ConclusionDetailGallery` *(new)* | type | `ConclusionDetailThumbnail` | Thumbnail is the header slot; gallery is the section slot — same pattern, different field |
 | `ConclusionDetailPicture` *(new)* | type | `ConclusionDetailLikeness` | Rename/replace that type (Deletes) |
-| `ConclusionDetailGallery.ChooseCopy` *(new)* | type | Person L10n portrait constants inlined in the section | Move copy onto the slot so Event/Place and S13-14 pass their own |
+| `ConclusionDetailGallery.ChooseCopy` *(new)* + static `.personPortrait` / `.eventThumbnail` / `.placeThumbnail` | type | Person L10n + hard-coded ids in the section | One pack for copy, toast, and a11y leaves; section stays kind-blind |
 | `ConclusionDetailGallery.tiles(from:)` *(new)* | func | `PersonDetailContent` init `detail.pictures.map` | Lift to one mapper |
 | `GalleryTileView` *(new name)* | view | `LikenessTileView` | Rename; take `fallbackMark` from gallery |
-| Event/Place picture + thumbnail L10n keys *(new)* | keys | Person likeness/portrait keys | Parallel wording; do not reuse portrait strings |
-| Promote `lineSamePicture` / `lineComparePictures` / `spokenPicture*` *(new)* | keys | `lineSameLikeness` / `lineCompareLikenesses` / `spokenLikeness*` | Replace those keys (Deletes) |
+| Event/Place picture + thumbnail L10n keys *(new)* | keys | Person likeness/portrait keys | Parallel wording |
+| Promote `lineSamePicture` / `lineComparePictures` / `spokenPicture*` / `pictureValue` *(new)* | keys | `lineSameLikeness` / `lineCompareLikenesses` / `spokenLikeness*` | Replace those keys (Deletes) |
 | `L10n.Properties.rowAccessibility(label:key:valueType:origin:bound:kinds:)` *(new)* | key | Inline string concat in `rowAccessibilityLabel` | Format via L10n |
 
-**Builds on.** `ConclusionDetailThumbnail` slot pattern; `ConclusionPortraitModel` + `setPreferredLikeness`; `ConclusionListKind.thumbnailRelPath`; S14-01 wire (`pictures`, `pictureImageRelPath`); `EvidencePrimaryKind.markKey`.
-**Deletes.** Types/aliases `ConclusionDetailLikeness`, `ConclusionDetailLikenessSection`, `LikenessTileView`; protocol member `likenesses`; `CachedThumbnail.likenessCrop`; `ValueFamily.likeness` (case name; enum `ValueFamily` stays); `Line.isLikeness`; `depictionPerson`; Promote L10n keys `lineSameLikeness`, `lineCompareLikenesses`, `spokenLikeness`, `spokenLikenessCount` (and matching xcstrings); a11y id segment `.likeness.` rewritten to `.picture.` (Person header `persons.detail.portrait*` ids stay per D-3).
-**Next adds.** S13-14 sets a second gallery presentation on the same `gallery` slot (or replaces Person's) without forking Event/Place. A fourth conclusion kind with pictures fills `gallery` + list `thumbnailRelPath` + optional `ChooseCopy`.
+**Builds on.** `ConclusionDetailThumbnail` slot pattern; `ConclusionPortraitModel` + `setPreferredLikeness`; `ConclusionListKind.thumbnailRelPath`; S14-01 wire; `EvidencePrimaryKind.markKey`; `PromoteFlow.Row.kind`.
+**Deletes.** `ConclusionDetailLikeness`, `ConclusionDetailLikenessSection`, `LikenessTileView`; protocol member `likenesses`; `CachedThumbnail.likenessCrop`; `ValueFamily.likeness` case; `Line.isLikeness` (no `isPicture` replacement); `depictionPerson`; Promote likeness sentence/spoken keys; a11y `.likeness.` → `.picture.` (Person header ids live on `ChooseCopy.personPortrait.headerIdentifier`).
+**Next adds.** S13-14 is another `ChooseCopy` pack on the same slot. A fourth kind adds a pack + list `thumbnailRelPath`.
 
 ### Reach
 
 | New path or state | Destination | Checked: resets on the new id · handles a missing referent · shows the state |
 | --- | --- | --- |
 | Event/Place page with non-empty `gallery.tiles` | `ConclusionDetailGallerySection` | Section absent when tiles empty; tile navigation uses `tile.location` from records (same as Person); missing image path → `CachedThumbnail` fallback mark from gallery |
-| Event/Place `choose` non-nil + portrait model | Header lead menu + tile badge/button | `offersEarliest` false → no menu (existing PDP-11); `setPreferredLikeness` failure → danger toast (existing model) |
-| Events/Places list row with `pictureImageRelPath` | `ConclusionListRow` thumb | Empty path → kind mark (existing list behavior) |
-| Promote depiction line for event/place kind | `EvidenceCrops` | Mark from `kind`; empty path still shows mark |
+| Event/Place `gallery.choose` non-nil | Page-owned portrait model + header menu + tile badge/button | `offersEarliest` false → no menu (PDP-11); write failure → danger toast |
+| Events/Places list row with `pictureImageRelPath` | `ConclusionListRow` thumb | Empty path → kind mark |
+| Promote depiction on own cards / relationship neighbor | `EvidenceCrops` | Mark from row kind or neighbor kind (D-10); empty path still shows mark |
 
 ### Scale
 
@@ -207,12 +209,12 @@ None — `SetPreferredLikeness` already used.
 | --- | --- | --- | --- |
 | Gallery section | `PVSectionHeader` + `LazyVGrid` + `GalleryTileView` | `ConclusionDetailPage.swift` `ConclusionDetailGallerySection` | Snowflakes stay in Features/Conclusions; no new DesignSystem type |
 | Tile crop | `CachedThumbnail` | `GalleryTileView` | `size: pictureCrop`, `fallbackMark` from gallery |
-| Choose badge / button | `PVBadge`, `PVButton` | gallery section when `choose != nil` && `portrait != nil` | |
-| Lead menu | `pvRightClickMenu` / `PVActionMenuItem` | `ConclusionDetailHeader` | Copy from `gallery.choose`; ids from `identifierRoot` |
+| Choose badge / button | `PVBadge`, `PVButton` | gallery section when `gallery.choose != nil` and page has a portrait model | Ids from `ChooseCopy` suffixes |
+| Lead menu | `pvRightClickMenu` / `PVActionMenuItem` | `ConclusionDetailHeader` | Copy + `headerIdentifier` from `ChooseCopy` |
 | List thumb | existing list row thumb | `EventsList` / `PlacesList` | |
-| Promote crops | `EvidenceCrops` | `PromoteEvidenceCards.swift` | Mark from line |
+| Promote crops | `EvidenceCrops` | `PromoteEvidenceCards.swift` | Mark on `Value.crops` |
 
-States: empty gallery → no section (unchanged rule); loading/error → existing page presentation; large gallery → same adaptive grid as Person. Accessibility: section label = gallery title; tile labels from `tileLabel`; choose controls from `ChooseCopy`; Properties row per D-12.
+States: empty `tiles` → no section; loading/error → existing page presentation; large gallery → same adaptive grid. Accessibility from gallery + `ChooseCopy`; Properties per D-12.
 
 Sketch — gallery type:
 
@@ -220,7 +222,7 @@ Sketch — gallery type:
 struct ConclusionDetailGallery: Equatable {
     var title: LocalizedStringResource
     var openTip: LocalizedStringResource
-    var fromSourceLabel: LocalizedStringResource  // "%@" Source title
+    var fromSourceLabel: LocalizedStringResource
     var tileLabel: LocalizedStringResource
     var fallbackMark: PVMarkKey
     var identifierRoot: String
@@ -237,18 +239,13 @@ struct ConclusionDetailGallery: Equatable {
         var toastTitle: String
         var toastChosenBody: LocalizedStringResource
         var toastEarliestBody: String
+        var badgeSuffix: String       // "portraitBadge" | "thumbnailBadge"
+        var useAsSuffix: String       // "usePortrait" | "useThumbnail"
+        var headerIdentifier: String  // "persons.detail.portrait" | "events.detail.lead" | …
+        static let personPortrait: ChooseCopy = /* D-3 / D-13 */
+        static let eventThumbnail: ChooseCopy = /* … */
+        static let placeThumbnail: ChooseCopy = /* … */
     }
-
-    /// Default for bodies with no gallery; `tiles` empty hides the section.
-    static let empty = ConclusionDetailGallery(
-        title: L10n.Conclusions.picturesSection,
-        openTip: L10n.Conclusions.likenessOpenTip,
-        fromSourceLabel: L10n.Conclusions.pictureFrom,
-        tileLabel: L10n.Conclusions.pictureTile,
-        fallbackMark: .subjectPerson,
-        identifierRoot: "",
-        tiles: []
-    )
 
     static func tiles(from detail: CatalogConclusionDetail) -> [ConclusionDetailPicture] {
         detail.pictures.map {
@@ -272,24 +269,7 @@ struct ConclusionDetailPicture: Equatable, Identifiable {
 }
 ```
 
-Protocol:
-
-```swift
-protocol ConclusionDetailBody: Equatable {
-    var title: ConclusionTitleSource { get }
-    var ref: String { get }
-    var showsRef: Bool { get }
-    var members: String { get }
-    var rows: [ReconciledValueRowModel] { get }
-    var sections: [ConclusionDetailSection] { get }
-    var thumbnail: ConclusionDetailThumbnail { get }
-    var badge: ConclusionDetailBadge? { get }
-    var gallery: ConclusionDetailGallery { get }
-}
-extension ConclusionDetailBody {
-    var gallery: ConclusionDetailGallery { .empty }
-}
-```
+Protocol: required `var gallery: ConclusionDetailGallery { get }` (no default). Person sets `choose: .personPortrait`; Event `.eventThumbnail`; Place `.placeThumbnail`.
 
 ### Strings
 
@@ -314,28 +294,29 @@ New / replaced (exact English defaults):
 | `promote.sheet.line.samePicture` | Same picture | replaces sameLikeness |
 | `promote.sheet.line.comparePictures` | Compare these pictures | replaces compareLikenesses |
 | `promote.sheet.spokenPicture` / `spokenPictureCount` | Picture from this source and %1$@. %2$@. (count variant keeps today's plural shape) | replaces spokenLikeness* |
+| `promote.sheet.pictureValue` / `L10n.Promote.pictureValue` | Picture | D-14 Promote `worded` for depiction |
 | `properties.table.rowAccessibility` | %1$@, %2$@, %3$@, %4$@, %5$@, %6$@ | label, key, valueType, origin, bound, kinds |
 
-Removed: Promote likeness sentence/spoken keys above; `CachedThumbnail.likenessCrop` name. **Old-scope copy to sweep:** a11y ids containing `.likeness.`; Promote id prefix `likeness`; comments saying Event/Place likeness. Person keys `conclusions.detail.likenesses`, portrait L10n keys, and `persons.detail.portrait*` ids **stay**.
+Removed: Promote likeness sentence/spoken keys; `CachedThumbnail.likenessCrop`; `Line.isLikeness`. **Sweep:** `.likeness.` a11y segments; Promote id prefix `likeness`. Person L10n and `ChooseCopy.personPortrait` header ids **stay**.
 
-Event/Place `openTip` passes `L10n.Conclusions.likenessOpenTip` ("Open citation") — one shared tip key; no second identical key.
+Event/Place `openTip` passes `L10n.Conclusions.likenessOpenTip` ("Open citation").
 
 ## 7. Steps
 
 **STEP-1 — Gallery slot types and view-layer rename**
 Files: `macos/App/Features/Conclusions/ConclusionDetailPage.swift`, `macos/App/Platform/CachedThumbnail.swift`, call sites of `likenessCrop` (`PromoteEvidenceCards.swift`). Skill: `add-ui-component` (compose only; no new kit type).
-Do: Add `ConclusionDetailGallery` / `ConclusionDetailPicture` / `tiles(from:)` per D-2/D-4. Replace protocol `likenesses` with `gallery`. Rename section and tile view; section reads all chrome from `gallery` + optional `portrait`; `GalleryTileView` takes `fallbackMark`. Rename `likenessCrop` → `pictureCrop`. Header menu uses `gallery.choose` copy and D-3 ids when choose is non-nil; if `portrait == nil` or `choose == nil`, no choose chrome (Person always passes both). Land STEP-1 and STEP-2 in one commit so conformers never miss `gallery`.
-Check: `rg 'ConclusionDetailLikeness|LikenessTileView|likenessCrop' macos` empty; no new `.swift` file added for the gallery types; App target builds before STEP-3.
+Do: Add `ConclusionDetailGallery` / `ConclusionDetailPicture` / `ChooseCopy` (+ three static packs) / `tiles(from:)` per D-2/D-3/D-4. Required `gallery` on the protocol. Rename section and tile view; section and header read chrome and ids only from `gallery` / `choose` (kind-blind). `GalleryTileView` takes `fallbackMark`. Rename `likenessCrop` → `pictureCrop`. Land STEP-1 and STEP-2 in one commit.
+Check: `rg 'ConclusionDetailLikeness|LikenessTileView|likenessCrop' macos` empty; no new `.swift` file for gallery types; App target builds before STEP-3.
 
 **STEP-2 — Person / Event / Place contents**
-Files: `PersonDetailContent.swift`, `EventDetailContent.swift`, `PlaceDetailContent.swift`. Skill: `add-localized-string` (add Pictures / picture thumb keys used here).
-Do: Person builds `gallery` with likeness title/labels, `.subjectPerson`, `identifierRoot: "persons.detail"`, portrait `ChooseCopy`, tiles from mapper; keep thumbnail behavior, switch `likenesses` → `gallery.tiles` / `isLead`. Event/Place: map tiles; set Pictures title and picture labels; `choose` thumbnail pack; fill `thumbnail.imageRelPath` from header `pictureImageRelPath` (D-5).
-Check: App target builds; `PersonDetailTests` updated expectations still expressible (STEP-8 runs them).
+Files: `PersonDetailContent.swift`, `EventDetailContent.swift`, `PlaceDetailContent.swift`. Skill: `add-localized-string`.
+Do: Each body builds a full `gallery` (D-1): Person likeness chrome + `choose: .personPortrait`; Event/Place Pictures chrome + `.eventThumbnail` / `.placeThumbnail`; tiles from mapper; Event/Place thumbnails per D-5.
+Check: App target builds; gallery title keys match AC-1.*.
 
-**STEP-3 — Portrait model + Event/Place views**
-Files: `ConclusionPortraitModel.swift`, `PersonDetailView.swift`, `EventDetailView.swift`, `PlaceDetailView.swift`, `WorkspaceDestinationHost.swift`. Skill: —.
-Do: Portrait model takes full `ConclusionDetailGallery.ChooseCopy` at init (toast fields read from it; badge/button copy stay on the gallery for the section). `choose(_ picture: ConclusionDetailPicture)`. Person view passes portrait `ChooseCopy`. Event/Place take `userID`, own model + thumbnail `ChooseCopy`, `.vocabularyToastOverlay`, pass `portrait:`. Host passes `userID`.
-Check: `rg 'EventDetailView\\(session' macos` shows `userID:`; Person toast tests still match portrait English.
+**STEP-3 — Page owns portrait model**
+Files: `ConclusionDetailPage.swift`, `ConclusionPortraitModel.swift`, `PersonDetailView.swift`, `EventDetailView.swift`, `PlaceDetailView.swift`, `WorkspaceDestinationHost.swift`. Skill: —.
+Do: D-6/D-7 — page takes `userID` + `leadChoose`; owns model and toast overlay when `leadChoose != nil`. Kind views pass `userID` and the static pack (same as `gallery.choose`); drop per-view portrait `@State`. Host passes `userID` to Event and Place. Model `choose(_ picture:)`.
+Check: `rg 'EventDetailView\\(session' macos` shows `userID:`; Person toast English unchanged; `ConclusionPortraitModel(` constructed only inside `ConclusionDetailPage` (or its private loaded child), not in Event/Place views.
 
 **STEP-4 — List thumbnails**
 Files: `EventsListView.swift`, `PlacesListView.swift`. Skill: —.
@@ -344,8 +325,8 @@ Check: unit expectations in STEP-8; `PersonsList.thumbnailRelPath` unchanged.
 
 **STEP-5 — Promote picture wording and crop mark**
 Files: `L10n.swift`, `Localizable.xcstrings`, `PromoteEvidenceBoard.swift`, `PromoteEvidenceCards.swift`, `PromoteEvidenceDisplay.swift`, `PromoteModel.swift`. Skill: `add-localized-string`.
-Do: D-9 and D-10. Update `lineSentence` family case `.picture`. Pass `kind` from `PromoteModel.board(of:)`.
-Check: `rg 'lineSameLikeness|lineCompareLikenesses|spokenLikeness|isLikeness|ValueFamily\.likeness' macos` empty; `python3 scripts/check-localizable-xcstrings.py` passes.
+Do: D-9, D-10, D-14. `lineSentence` `.picture`; delete `isLikeness`; pass `kind`; relationship groups use neighbor mark; `worded` depiction → `pictureValue`.
+Check: `rg 'lineSameLikeness|lineCompareLikenesses|spokenLikeness|isLikeness|isPicture|ValueFamily\.likeness' macos` empty; `python3 scripts/check-localizable-xcstrings.py` passes.
 
 **STEP-6 — Composer Subject helper**
 Files: `CitationComposerSubjectGroups.swift`. Skill: —.
@@ -359,7 +340,7 @@ Check: a test in STEP-8 can build two labels that differ on key.
 
 **STEP-8 — Tests**
 Files: `PersonDetailTests.swift`, `EventDetailTests.swift`, `PlaceDetailTests.swift`, `PersonsListTests.swift` (extend T-5 list-thumb cases here beside the existing `EventsList.thumbnailRelPath` assert), `PromoteEvidenceDisplayTests.swift`, `PromoteEvidenceBoardTests.swift`, `PromoteFlowTests.swift` (its `EvidenceBoard.build` call), `PropertiesRowAccessibilityTests.swift` *(new)* wired into the ProvenenciaTests target in `macos/Provenencia.xcodeproj/project.pbxproj`. Skill: `add-swift-test`.
-Do: Implement T-1 through T-9. Update Person tests for `gallery` / `isLead` / `pictureCrop` renames. Every `EvidenceBoard.build` call site gains `kind:`. Update `.crops` equality assertions to include the associated mark. Run the AC-5.1 `rg` as the T-9 check.
+Do: Implement T-1 through T-9 (including T-6b, T-7b, T-7c). Update Person tests for `gallery` / `isLead` / pack. Every `EvidenceBoard.build` gains `kind:`. Update `.crops` assertions for marks; drop `isLikeness` expects. Run the AC-5.1 `rg` as T-9.
 Check: `scripts/check-pr.sh` PASS.
 
 **STEP-9 — Docs**
@@ -380,9 +361,11 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-4 | Swift | `PersonDetailTests` portrait model tests | Event toast pack on model → thumbnail toast English; Person pack unchanged | AC-2.3, AC-2.5, D-6 |
 | T-5 | Swift | `PersonsListTests` (extend) | `EventsList.thumbnailRelPath` / `PlacesList.thumbnailRelPath` equal `pictureImageRelPath`; empty when unset | AC-2.4, D-8 |
 | T-6 | Swift | `PromoteEvidenceDisplayTests` `lineSentencesFollowTheTable` | depiction → `lineSamePicture` / `lineComparePictures` keys | AC-3.1, AC-3.2, D-9 |
-| T-6b | Swift | `PromoteEvidenceDisplayTests` spoken likeness cases (rename with D-9) | `spokenPicture` / `spokenPictureCount` English starts with "Picture…"; update `twoLikenessLinesNeverReadAlike` and relationship/likeness count tests to picture helpers | D-9 |
-| T-7 | Swift | `PromoteEvidenceBoardTests` | `build(evidence:kind:.place,…)` depiction line → `isPicture` and `.crops(..., mark: .subjectPlace)`; `kind: .person` → mark `.subjectPerson` | AC-3.3, AC-3.4, D-10 |
-| T-8 | Swift | `PropertiesRowAccessibilityTests` *(new)* or Properties test file | Two Picture properties different keys → different `rowAccessibilityLabel` strings containing each key and bound type label | AC-4.1, AC-4.2, D-12 |
+| T-6b | Swift | `PromoteEvidenceDisplayTests` spoken likeness cases (rename with D-9) | `spokenPicture` / `spokenPictureCount` English starts with "Picture from this source"; rename former likeness spoken tests to picture helpers/English | D-9 |
+| T-7 | Swift | `PromoteEvidenceBoardTests` | Own-card depiction with `kind: .place` → `.crops(..., mark: .subjectPlace)`; `kind: .person` → `.subjectPerson`; no `isLikeness`/`isPicture` on `Line` | AC-3.3, AC-3.4, D-9, D-10 |
+| T-7b | Swift | `PromoteEvidenceBoardTests` *(new case)* | Person-row board + Event neighbor relationship with a depiction line → crop mark `.subjectEvent` | AC-3.5, D-10 |
+| T-7c | Swift | `PromoteEvidenceBoardTests` or display test | Expanded depiction member spoken value uses "Picture", not "Likeness" (D-14 `worded`) | D-14 |
+| T-8 | Swift | `PropertiesRowAccessibilityTests` *(new)* | Two Picture properties different keys → different labels containing each key and bound type label | AC-4.1, AC-4.2, D-12 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. Suites most likely to break: `PersonDetailTests`, `PromoteEvidenceDisplayTests`, `PromoteEvidenceBoardTests`, `PersonsListTests`.
 
