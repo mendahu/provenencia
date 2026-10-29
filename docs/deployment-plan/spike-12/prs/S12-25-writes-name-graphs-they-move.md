@@ -1,6 +1,6 @@
 # S12-25 — Writes name only the graphs they move
 
-**Status:** Planned
+**Status:** Landed #621 (2026-10-29)
 **Spike / slice:** Spike 12 · Slice 6 — Audit fixes: Medium
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: effects, wire and session cache only; no view draws differently)
@@ -293,6 +293,13 @@ Must stay green: everything `scripts/check-pr.sh` runs. Suites most likely to br
 ## 12. Open questions
 
 None.
+
+### Landed
+
+- `TestCitationReadsPreferArtifactGraphs` is in `reads_resolve_test.go` (package `effects_test`), not `reads_test.go`, because `TestReadsDeclare` needs the unexported registry and one file cannot be both packages.
+- `SourcePageModelTests` and `SourcesModelTests` progress tests apply a `reads` progress entry; they relied on progress following `evidenceGraphs`.
+- `WorkspaceSession.apply(invalidations:)` dedupes keys before `applyHiddenPolicy(to:)`, so a key named twice still reloads once.
+- A link-row delete (graph delete) now names the deleted graph in the `citations` read; the `citation_sources` Source-less case it replaces named none.
 
 ## 13. PR
 

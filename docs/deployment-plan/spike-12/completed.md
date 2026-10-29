@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S12-25 — Writes name only the graphs they move
+
+**Landed 2026-10-29** in [#621](https://github.com/mendahu/provenencia/pull/621). A Citation save now names only the Evidence graphs of its Observations (the graphs of its Artifact's links when it has none), an Artifact edit names none, and a Source title edit still names every graph of the Source. Citation counts, citations by Artifact and graph progress ride one keyed `WriteEffects.reads` (`Effect.Reads` → `Set.Reads`, replacing `citation_sources`), so the app refreshes only the graphs named; progress follows Subjects, Observations and Identity Claims alone. `EvidenceGraphProgress.source_id` is gone, and the composer's location names its Artifact so its list refreshes from the write with no extra query. Nothing a researcher sees changes except fewer reloads on a many-graph Source.
+
 ## S12-35 — FakeStore is a seeded fake
 
 **Landed 2026-10-28** in [#617](https://github.com/mendahu/provenencia/pull/617). FakeStore no longer invents graph list order, citation graph membership, write effects, or graph/copy refusals: tests seed rows and script `nextWriteEffects`, error hooks, and impact maps instead. Property and term creates mint keys through `FieldSlug.kebab`, and Go reads `FieldSlug.fixtures` and `ProjectSlug.folderNameFixtures` with Swift escape decoding so fixture drift fails in CI. Nothing a researcher sees changes.
