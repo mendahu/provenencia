@@ -332,7 +332,7 @@ Check: compile; `PersonDetailTests` updated expectations still expressible (STEP
 
 **STEP-3 — Portrait model + Event/Place views**
 Files: `ConclusionPortraitModel.swift`, `PersonDetailView.swift`, `EventDetailView.swift`, `PlaceDetailView.swift`, `WorkspaceDestinationHost.swift`. Skill: —.
-Do: Portrait model takes `ChooseCopy` (or a toast subset) at init; `choose(_ picture: ConclusionDetailPicture)`. Person view passes portrait ChooseCopy. Event/Place take `userID`, own model + thumbnail ChooseCopy, `.vocabularyToastOverlay`, pass `portrait:`. Host passes `userID`.
+Do: Portrait model takes full `ConclusionDetailGallery.ChooseCopy` at init (toast fields read from it; badge/button copy stay on the gallery for the section). `choose(_ picture: ConclusionDetailPicture)`. Person view passes portrait `ChooseCopy`. Event/Place take `userID`, own model + thumbnail `ChooseCopy`, `.vocabularyToastOverlay`, pass `portrait:`. Host passes `userID`.
 Check: `rg 'EventDetailView\\(session' macos` shows `userID:`; Person toast tests still match portrait English.
 
 **STEP-4 — List thumbnails**
@@ -356,8 +356,8 @@ Do: D-12. Bound kinds = `bound.map(\.label).joined(separator: ", ")`.
 Check: a test in STEP-8 can build two labels that differ on key.
 
 **STEP-8 — Tests**
-Files: `PersonDetailTests.swift`, `EventDetailTests.swift`, `PlaceDetailTests.swift`, `PersonsListTests.swift` (or new `EventsList`/`PlacesList` cases in that file / `PlacesListTests.swift`), `PromoteEvidenceDisplayTests.swift`, `PromoteEvidenceBoardTests.swift`, new or extended Properties test if one exists for row labels — else add `PropertiesRowAccessibilityTests.swift` *(new)* wired in `project.pbxproj`. Skill: `add-swift-test`.
-Do: Implement T-1 through T-9. Update Person tests for `gallery` / `isLead` / `pictureCrop` renames. Extend `EvidenceBoard.build` call sites with `kind:`. Run the AC-5.1 `rg` as the T-9 check.
+Files: `PersonDetailTests.swift`, `EventDetailTests.swift`, `PlaceDetailTests.swift`, `PersonsListTests.swift` (extend T-5 list-thumb cases here beside the existing `EventsList.thumbnailRelPath` assert), `PromoteEvidenceDisplayTests.swift`, `PromoteEvidenceBoardTests.swift`, `PromoteFlowTests.swift` (its `EvidenceBoard.build` call), `PropertiesRowAccessibilityTests.swift` *(new)* wired into the ProvenenciaTests target in `macos/Provenencia.xcodeproj/project.pbxproj`. Skill: `add-swift-test`.
+Do: Implement T-1 through T-9. Update Person tests for `gallery` / `isLead` / `pictureCrop` renames. Every `EvidenceBoard.build` call site gains `kind:`. Update `.crops` equality assertions to include the associated mark. Run the AC-5.1 `rg` as the T-9 check.
 Check: `scripts/check-pr.sh` PASS.
 
 **STEP-9 — Docs**
