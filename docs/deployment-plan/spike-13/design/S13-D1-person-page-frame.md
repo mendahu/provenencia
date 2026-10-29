@@ -1,5 +1,10 @@
 # S13-D1 — Person page: header, section switching, Vitals
 
+> **Update 2026-10-29: Wide layout.** Since the first version of this brief, the design system gained a Wide width class (a pane of 1600pt and up) and a **Page columns** component (Spike 14 brief S14-D1, archived by [#629](https://github.com/mendahu/provenencia/pull/629), board agreed 2026-10-29). If you already started this board, **extend your frames**; do not start a second page. For this revision:
+> - **Pull the fresh design-system kit first.** It has Page columns, the `--width-wide-breakpoint` and `--width-secondary-max` tokens, and the Width classes README section.
+> - The **"Two widths — draw both"** block is now in the Paste block, and the brief gains Page columns in the domain facts and inventory, requirements **PPF-W1 – PPF-W5**, a **Wide layout** table (§ 4.1), and Wide frames **14 – 19**.
+> - PPF-3 now places the header and switcher in Page columns' header slot, pinned or scrolling; PPF-13 asks for Tab between switcher items, not arrow keys.
+
 **Kind:** Claude Design board (**rethink** of the Person page layout below the header; the header itself is an **enhancement**)
 **Spike:** Provenencia Spike 13 (Person detail page)
 **View:** Person detail: the fixed header, the section switcher, and the five sections as places
