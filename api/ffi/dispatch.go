@@ -1,6 +1,8 @@
 package ffi
 
 import (
+	"log"
+	"runtime/debug"
 	"strconv"
 
 	"github.com/mendahu/provenencia/api/ffi/handlers"
@@ -115,8 +117,28 @@ const (
 	MethodListEvidenceGraphEventTitles      = int32(engine.Method_METHOD_LIST_EVIDENCE_GRAPH_EVENT_TITLES)
 )
 
-// Call routes one coarse FFI operation to api/ffi/handlers.
+// Call routes one coarse FFI operation to api/ffi/handlers. A panic in a
+// handler comes back as internal.unknown instead of ending the process.
 func Call(method int32, in []byte) ([]byte, error) {
+	return recovered(method, func() ([]byte, error) { return route(method, in) })
+}
+
+// recovered runs fn and turns a panic into internal.unknown, logging the cause
+// and the stack. The core is a library inside the app, so a panic that escaped
+// would kill the app.
+func recovered(method int32, fn func() ([]byte, error)) (out []byte, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("provenencia: panic in method %d: %v\n%s", method, r, debug.Stack())
+			out = nil
+			err = apperr.New(apperr.CodeInternalUnknown, apperr.KindInternal)
+		}
+	}()
+	return fn()
+}
+
+// route is the method switch. A new method is a case here.
+func route(method int32, in []byte) ([]byte, error) {
 	switch method {
 	case MethodPing:
 		return handlers.Ping(in)

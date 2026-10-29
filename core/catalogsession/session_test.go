@@ -99,6 +99,43 @@ func TestDo(t *testing.T) {
 			},
 		},
 		{
+			name: "panic drops the session",
+			run: func(t *testing.T, projectDir string) {
+				var first *database.Catalog
+				func() {
+					defer func() {
+						if recover() == nil {
+							t.Error("the panic did not reach the caller")
+						}
+					}()
+					_ = catalogsession.Do(projectDir, func(c *database.Catalog) error {
+						first = c
+						panic("x")
+					})
+				}()
+				done := make(chan error, 1)
+				var second *database.Catalog
+				go func() {
+					done <- catalogsession.Do(projectDir, func(c *database.Catalog) error {
+						second = c
+						_, err := c.DB()
+						return err
+					})
+				}()
+				select {
+				case err := <-done:
+					if err != nil {
+						t.Fatal(err)
+					}
+				case <-time.After(5 * time.Second):
+					t.Fatal("the next Do waited on a lock the panic left held")
+				}
+				if second == nil || second == first {
+					t.Fatalf("the next Do ran on the dropped catalog: %p %p", first, second)
+				}
+			},
+		},
+		{
 			name: "switch dir closes previous",
 			run: func(t *testing.T, projectDir string) {
 				ident := t.TempDir()
