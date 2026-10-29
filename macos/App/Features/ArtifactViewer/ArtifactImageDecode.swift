@@ -50,10 +50,10 @@ enum ArtifactImageDecode {
               typeIdentifiers.contains(where: { identifier in
                   UTType(identifier).map { sniffed.conforms(to: $0) } ?? false
               }),
-              let declared = ThumbnailDecodePolicy.declaredImage(
+              let declared = ImageHeaderDecode.declaredImage(
                   source, maxEdge: maxEdge, maxPixels: maxDeclaredPixels
               ),
-              let raster = ThumbnailDecodePolicy.decode(
+              let raster = ImageHeaderDecode.decode(
                   source,
                   maxPixelSize: maxPixelSize(width: declared.width, height: declared.height),
                   applyTransform: appliesOrientation

@@ -136,6 +136,7 @@
 		AA00000000000000000003D3 /* IngestFileDropRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003D2 /* IngestFileDropRow.swift */; };
 		AA00000000000000000003D5 /* IngestMediaPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003D4 /* IngestMediaPolicyTests.swift */; };
 		AA0000000000000000000391 /* ThumbnailCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000390 /* ThumbnailCache.swift */; };
+		AA0000000000000000000397 /* ImageHeaderDecode.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000396 /* ImageHeaderDecode.swift */; };
 		AA0000000000000000000393 /* CachedThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000392 /* CachedThumbnail.swift */; };
 		AA00000000000000000003C1 /* PVContextMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003C0 /* PVContextMenu.swift */; };
 		AA00000000000000000FE006 /* PVActionMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000FE005 /* PVActionMenu.swift */; };
@@ -586,6 +587,7 @@
 		AA00000000000000000003D2 /* IngestFileDropRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IngestFileDropRow.swift; sourceTree = "<group>"; };
 		AA00000000000000000003D4 /* IngestMediaPolicyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IngestMediaPolicyTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000390 /* ThumbnailCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThumbnailCache.swift; sourceTree = "<group>"; };
+		AA0000000000000000000396 /* ImageHeaderDecode.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ImageHeaderDecode.swift; sourceTree = "<group>"; };
 		AA0000000000000000000392 /* CachedThumbnail.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CachedThumbnail.swift; sourceTree = "<group>"; };
 		AA00000000000000000003C0 /* PVContextMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVContextMenu.swift; sourceTree = "<group>"; };
 		AA00000000000000000FE005 /* PVActionMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVActionMenu.swift; sourceTree = "<group>"; };
@@ -1192,6 +1194,7 @@
 				AA00000000000000000009F2 /* FocusClaim.swift */,
 				AA00000000000000000003D0 /* IngestMediaPolicy.swift */,
 				AA0000000000000000000390 /* ThumbnailCache.swift */,
+				AA0000000000000000000396 /* ImageHeaderDecode.swift */,
 				AA0000000000000000000392 /* CachedThumbnail.swift */,
 				AA0000000000000000000350 /* TimestampFormat.swift */,
 				AA000000000000000000001D /* InstallPaths.swift */,
@@ -2440,6 +2443,7 @@
 				AA00000000000000000003D1 /* IngestMediaPolicy.swift in Sources */,
 				AA00000000000000000003D3 /* IngestFileDropRow.swift in Sources */,
 				AA0000000000000000000391 /* ThumbnailCache.swift in Sources */,
+				AA0000000000000000000397 /* ImageHeaderDecode.swift in Sources */,
 				AA0000000000000000000393 /* CachedThumbnail.swift in Sources */,
 				AA00000000000000000003C1 /* PVContextMenu.swift in Sources */,
 				AA00000000000000000FE006 /* PVActionMenu.swift in Sources */,
