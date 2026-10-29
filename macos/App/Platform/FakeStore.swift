@@ -3606,11 +3606,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return nil
     }
 
-    private static func unique(_ ids: [String]) -> [String] {
-        var seen = Set<String>()
-        return ids.filter { seen.insert($0).inserted }
-    }
-
     /// Moves a Source row's Updated revision when it lives in a project list.
     private func bumpActivity(_ sourceID: String?) {
         guard let sourceID else { return }
