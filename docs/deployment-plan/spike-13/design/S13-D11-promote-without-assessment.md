@@ -45,6 +45,27 @@ Work **in place** on this board. Do not fork a parallel copy of the surface.
 
 Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 
+### Two widths — draw both
+
+The window opens at 1366 × 900pt but is often stretched across a large monitor.
+Every view has two width classes, measured on the view's own pane (the window
+minus the sidebar), not the screen. A view with a side pane (an inspector, a detail
+pane) plans that pane inside its Wide frame:
+
+- **Regular** — pane below 1600pt. Draw at the default window: 1366 × 900, sidebar open.
+- **Wide** — pane 1600pt and up. Draw at 2560 × 1440, sidebar open.
+
+Rules for Wide:
+
+1. **The extra space does a job.** Show more at once: a second column of supporting content, the detail beside its list, more grid or table columns, an inspector docked open. If the view truly has nothing to add, center its content. Content jammed to one side with empty space beside it is never the Wide design.
+2. **Readable things keep their measure.** Prose, forms and the primary column keep their Regular maximum widths. Wide adds columns; it does not stretch text or fields.
+3. **Lists, tables, grids and canvases fill the width.** Cards keep their size and add columns.
+4. **Same content, same actions.** Width changes arrangement only. Anything in the Wide second column is stacked below, in an inspector, or behind a disclosure at Regular.
+5. **Crossing the line keeps state.** Selection, scroll position, focus and unsaved edits survive a resize across 1600.
+6. **Past every column's maximum, center the group.** Page gutters are never narrower than at Regular; they take what is left.
+
+Draw the **Regular** and **Wide** frame of each view side by side, using the same kit pieces in both.
+
 ### This brief is an enhancement that removes
 
 Work on the Promote page frames that exist: the header, the kind sections, the rows (kind tile, name and ref, arrow, target menu, assessment column, Updated / Decided badges), the Updated caption, the conflict and duplicate callouts, the connection subrows, the record search in the target cell (S11-D3), the Already filed block, the footer, and the evidence sheet frames (S11-D2). **Delete** the evidence sheet frames and every frame or state that only exists to show the sheet. **Redraw** the row and the column headings without the assessment column. Do not redraw the header, the target menu and its items, the record search, the subrows, the callouts or the footer.
@@ -100,7 +121,7 @@ Promote becomes a quick filing action: the researcher picks a target per row and
 
 | Ships in **S13-23** | Ships in **S13-30** | Stays out |
 | --- | --- | --- |
-| PA-1 – PA-8: the sheet and the assessment column removed; the row, headings and Already filed rows laid out without it; the Updated caption's rule; VoiceOver. Every row files Accepted, with no status control yet. | PS-1 – PS-6: the status control, its default, a provisional row coming back preselected, its connections waiting. | What a row starts on moving into Go (S13-24, no visible change). Rejected at Promote. Any redesign of the target menu or subrows (S14-22 changes the rows' Promote copy after this board). |
+| PA-1 – PA-8, PA-W1: the sheet and the assessment column removed; the page centered at Wide; the row, headings and Already filed rows laid out without it; the Updated caption's rule; VoiceOver. Every row files Accepted, with no status control yet. | PS-1 – PS-6: the status control, its default, a provisional row coming back preselected, its connections waiting. | What a row starts on moving into Go (S13-24, no visible change). Rejected at Promote. Any redesign of the target menu or subrows (S14-22 changes the rows' Promote copy after this board). |
 
 ---
 
@@ -128,9 +149,21 @@ Promote becomes a quick filing action: the researcher picks a target per row and
 | PS-5 | The footer summary counts a Provisional row as filed ("File 12"). Whether it says how many are provisional is the board's call; if it does, show the count as one more part of the summary, in the same style. |
 | PS-6 | VoiceOver reads the control as "Status for Mary Smith, Accepted" (or Provisional), and a waiting subrow as today. |
 
+### 4.2 Wide layout
+
+| View | Regular (pane below 1600 pt) | Wide (pane 1600 pt and up) | What moves where |
+| --- | --- | --- | --- |
+| Promote page | The header and footer bars span the pane; the sections and rows sit in one column at most 1200 pt wide, left-aligned in today's build | The header and footer bars span the pane; the sections and rows keep their 1200 pt maximum and center as a group | Nothing moves into a second column: the page has no supporting content to add beside its rows, so it centers (Wide rules 1 and 6). The target menu keeps its 330 pt and the row grid its widths (rule 2) |
+
+| ID | Requirement |
+| --- | --- |
+| PA-W1 | At Wide the row list (sections, headings, rows, Already filed block, Map the rest) keeps its Regular maximum width and centers in the pane; the header and footer bars span the pane; the page gutters are never narrower than at Regular. No column, row control or caption changes between widths, and a resize across 1600 keeps the open record search, the selection in each menu and the scroll position. If the board finds a job for the extra width instead (rule 1), it draws it and says so in its notes. |
+
 ---
 
 ## 5. Suggested frames
+
+Frames 1 and 5 are drawn at **Regular 1366 × 900** and again at **Wide 2560 × 1440** (frames 1b and 5b), sidebar open; the others at Regular.
 
 1. **Rows, both PA-2 options side by side** (the board then keeps the one picked and deletes the other): a People section with a Strong row on a record, a Weak row drafted onto a record, an unset row with the red placeholder, and a decided row; an Already filed block of two rows under it (PA-2, PA-3, PA-4, PA-7).
 2. **After deciding Gracie** on the picked layout: one row with "Updated · after Gracie Smith moved to PER-7QH3D", one with "Updated · via Gracie Smith → PER-7QH3D (spouse)", one with "Updated · after a connected row changed" (its neighbor is not on the page), and one with the Updated badge and no caption (PA-5, PA-6).

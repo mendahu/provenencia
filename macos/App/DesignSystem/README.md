@@ -39,7 +39,7 @@ components directly.
 | `tokens/motion.css` | `Tokens/PVMotion.swift` | Durations, easing curves, press-scale, lift-hover |
 | — | `Tokens/PVStroke.swift` | The 1 pt dashed outline (`dashed`, `dashPattern`), used by `PVCard`, `PVEmptyState`, `PVChip`, the Evidence card and the Sources list blocked graph buttons |
 
-Every value in these files is transcribed from the CSS, not invented.
+Every value in these files is transcribed from the CSS, not invented. One exception: `PVSpacing.widthWideBreakpoint` was set in Swift first; S14-D1 WL-1 adds `--width-wide-breakpoint` to the CSS, and S14-25 checks the two agree.
 Reach for `PVColor`/`PVFont`/`PVSpacing`/`PVRadius`/`PVElevation`/`PVMotion`/`PVStroke`
 at call sites — never a literal color, font, or number.
 
@@ -183,6 +183,7 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | ScrollRowIntoView | `Components/ScrollRowIntoView/PVScrollRowIntoView.swift` (`.pvScrollsRowIntoView`: keeps the highlighted or selected row in view as the keyboard moves it, and can send a new list back to its first row; `PVTable`, `PVList`, `PVSelect`, `PVComboBox` and the omnibar results scroll through it — do not add another `ScrollViewReader` for this) |
 | SkeletonBar | `Components/SkeletonBar/PVSkeletonBar.swift` (added for S12-02: a rounded `borderSubtle` placeholder bar, fixed or fill width; used by `PVListSkeleton` and the Copy Source loading body) |
 | FlowLayout | `Components/FlowLayout/PVFlowLayout.swift` (S12-14: promoted from the Citation composer; wraps children by ideal width, callers cap long children; used by the composer) |
+| WidthClass | `Components/WidthClass/PVWidthClass.swift` (the Regular / Wide class of the pane, measured once by `WorkspaceDestinationHost`; read `\.pvWidthClass`) |
 | Thumbnail | `Components/Thumbnail/PVThumbnail.swift` (added for S2-17 Sources list rows; image / mark / SF glyph / empty / loading tile); content takes an image or a `PVGlyph` (S10-49); optional `colors:`: tint and line on mark and symbol states; the line also outlines an image (S10-23, S10-35) |
 | Card | `Components/Card/PVCard.swift` (surface container: tone / border / radius / optional elevation + padding; mirrors web `Card.jsx`; no header/footer slots yet — compose those outside) |
 | Marks | `Recipes/Marks/PVMark.swift` (`file_*` + `type_*` + `subject_*`; see colocated `MARKS.md`; not SF Symbols); `PVGlyph` / `PVGlyphView` for a symbol-or-mark slot |
