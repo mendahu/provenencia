@@ -101,8 +101,9 @@ Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 ### Two widths — draw both
 
 The window opens at 1366 × 900pt but is often stretched across a large monitor.
-Every view has two width classes, measured on the view's own pane (window minus
-sidebar and any inspector), not the screen:
+Every view has two width classes, measured on the view's own pane (the window
+minus the sidebar), not the screen. A view with a side pane (an inspector, a detail
+pane) plans that pane inside its Wide frame:
 
 - **Regular** — pane below 1600pt. Draw at the default window: 1366 × 900, sidebar open.
 - **Wide** — pane 1600pt and up. Draw at 2560 × 1440, sidebar open.

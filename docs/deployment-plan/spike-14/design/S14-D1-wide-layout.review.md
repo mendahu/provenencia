@@ -1,11 +1,11 @@
 # Review — S14-D1 Wide layout in the design system
 
-**Verdict:** Fits with changes — Not ready (round 1); round 2 below
+**Verdict:** Fits with changes — Ready, after 2 rounds
 **Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 
-None.
+- The pane definition for a page with a side pane is the S14-24 To user item (its review log); this brief already says a page with a side pane plans it in its own Wide frame.
 
 ## Writer's own calls
 
@@ -66,4 +66,17 @@ None.
 
 ## Round 2
 
-See the end of this file once round 2 reports.
+Reviewers: maintainability (Opus), executability (Sonnet). Fresh agents with the brief and this log.
+
+**Round 1 answers.** All hold except M-1's "changes nothing on screen", which depended on slot spacing (M-8). The WL-5 arithmetic, the frames' window and pane widths, and the six rules (word for word in § 9, the Paste block and this brief) were checked.
+
+### M-8 · blocker · "Changes nothing" depends on slot spacing; the header slot has no caller
+**Answer:** Fixed — WL-3: a slot holds the page's view as it is and Page columns adds no spacing inside it; § 3: the two Conclusion scaffolds keep their own `VStack` and header in the primary slot; the header slot and pinned mode are drawn on the board (WL-W4) but built with their first caller, the Source page, listed in `docs/ideas/wide-layout.md`. Map scope entry matches.
+
+### X-13 · minor · CSS and Swift panes differ for a page with an inspector
+**Answer:** Fixed with S14-24's To user recommendation — both measure the whole pane; the domain fact says so.
+
+### X-14 · nit · The secondary slot's states
+**Answer:** Logged for S14-25's plan: what the secondary slot shows while its content loads or fails.
+
+**Verdict:** Fits with changes — Ready. No open blocker.

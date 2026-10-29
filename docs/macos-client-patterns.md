@@ -232,7 +232,7 @@ Product version remains [`versioning.md`](versioning.md) (`VERSION` / About box)
 
 ## 9. Window widths: Regular and Wide
 
-The window opens at `PVSpacing.widthWorkspaceDefault` × `heightWorkspaceDefault` (1366 × 900pt, clamped to the screen), which is laptop-shaped. People also stretch it across a large external monitor. A view designed only for the default size then sits in its 1180pt `widthContentMax` column, left-aligned, with a wall of empty space to its right. Every view is designed for both widths.
+The window opens at `PVSpacing.widthWorkspaceDefault` × `heightWorkspaceDefault` (1366 × 900pt, clamped to the screen), which is laptop-shaped. People also stretch it across a large external monitor. A view designed only for the default size then sits in its 1180pt `widthContentMax` column, with a wall of empty space beside it (left-aligned on the Source page, centered on the Person, Event and Place pages and lists). Every view is designed for both widths.
 
 ### The breakpoint
 
@@ -243,7 +243,7 @@ The window opens at `PVSpacing.widthWorkspaceDefault` × `heightWorkspaceDefault
 | Regular | below 1600pt | The default window; any MacBook, even full screen; half of a big monitor |
 | Wide | 1600pt and up | Full screen or most of a 1920pt-or-wider monitor; a 16" MacBook full screen with the sidebar collapsed |
 
-**Pane width** is what the destination itself gets: the window minus the sidebar (264pt, 78pt collapsed) and minus any inspector beside it. It is not the screen or the window. Measure it with `onGeometryChange` on the destination's root, the way `SourcesListView` picks its columns. Collapsing the sidebar or opening an inspector can move a view across the line, and that is intended. A page with an inspector beside its content measures the content column instead; that column also excludes the gap and the page gutters, so such a page turns Wide at a wider window.
+**Pane width** is what the destination itself gets: the window minus the sidebar (264pt, 78pt collapsed). A page with a side pane (an inspector, a detail pane) plans that pane in its own Wide frame; it does not re-measure. It is not the screen or the window. Measure it with `onGeometryChange` on the destination's root, the way `SourcesListView` picks its columns. Collapsing the sidebar can move a view across the line, and that is intended.
 
 Where the numbers come from (points, sidebar open):
 
@@ -281,5 +281,6 @@ The same six rules are in the [`add-design-brief`](../.agents/skills/add-design-
 | Table | Essential columns | Columns that were hidden at Regular |
 | Form / editor | One column at the form measure | Field groups in two columns, or the form beside a live preview or reference panel |
 | Canvas (evidence graph, viewer) | Canvas; inspector on demand | Canvas with the inspector docked open |
+| List with a side pane (Properties, Metadata, Source types) | List and a fixed side pane | The list takes the extra width (more columns), or the side pane widens; drawn in the page's brief |
 
 A view that fits none of these says in its brief what its Wide frame does and why. Briefs carry these rules in their Paste block, because Claude Design does not follow links ([`add-design-brief`](../.agents/skills/add-design-brief/SKILL.md)).

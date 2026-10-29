@@ -48,8 +48,9 @@ Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 ### Two widths — draw both
 
 The window opens at 1366 × 900pt but is often stretched across a large monitor.
-Every view has two width classes, measured on the view's own pane (window minus
-sidebar and any inspector), not the screen:
+Every view has two width classes, measured on the view's own pane (the window
+minus the sidebar), not the screen. A view with a side pane (an inspector, a detail
+pane) plans that pane inside its Wide frame:
 
 - **Regular** — pane below 1600pt. Draw at the default window: 1366 × 900, sidebar open.
 - **Wide** — pane 1600pt and up. Draw at 2560 × 1440, sidebar open.
@@ -86,7 +87,7 @@ Provenencia opens at a laptop-sized window, 1366 × 900pt. Researchers also stre
 | Fact | What it means on this board |
 | --- | --- |
 | One breakpoint | Regular is a pane below 1600pt; Wide is 1600pt and up. There is no third class. |
-| The pane, not the screen | The pane is what the page gets: the window minus the sidebar (264pt, 78pt collapsed). In the app the workspace measures the pane once and every page reads its width class. A page with an inspector beside its content measures the content column instead. |
+| The pane, not the screen | The pane is what the page gets: the window minus the sidebar (264pt, 78pt collapsed). In the app the workspace measures the pane once and every page reads its width class. A page with a side pane (an inspector, a detail pane) plans that pane in its own Wide frame. The CSS container query (WL-10) measures the same pane. |
 | Why 1600 | Every MacBook full screen is Regular (a 16" MacBook Pro gives a 1464pt pane). A 1920pt-wide monitor gives 1656 and a 2560pt one 2296: Wide. 1600 is about the smallest pane that holds the 1180 primary column, a 32 gap, a 340 secondary column and two 32 gutters (1616); between 1600 and 1616 the primary gives up the difference. |
 | Pages are one column at page level today | The Person, Event and Place pages and their lists center one column of up to 1180. The Source page left-aligns its column and pins its title header above the scroll; inside, its overview already has two columns of its own. All leave the extra width empty at Wide. |
 | The app is native macOS | The kit renders in a browser for review. The CSS mirrors the app with a container query on the page element, not a viewport media query. |
@@ -104,7 +105,7 @@ Provenencia opens at a laptop-sized window, 1366 × 900pt. Researchers also stre
 
 | Ships in **S14-25** | Stays out |
 | --- | --- |
-| `PVPageColumns` in the Swift kit, matching the agreed component. `ConclusionDetailPage.page` and `ConclusionListPage.page` move onto it as primary-only pages, which changes nothing on screen, and their hand-written column code goes. `PVSpacing` gains `widthSecondaryMax` (480), transcribed from WL-1, and S14-24's `widthWideBreakpoint` is checked against it. The Swift kit README gets a Page columns row and a link to § 9 of `docs/macos-client-patterns.md`, not a copy of the rules. | The Source page moving onto Page columns, with its pinned header (its own brief). A secondary column on any page. A list-beside-detail layout for the Conclusion lists (their own brief). |
+| `PVPageColumns` in the Swift kit with the primary and secondary slots, matching the agreed component. `ConclusionDetailPage.page` and `ConclusionListPage.page` move onto it as primary-only pages, each keeping its own `VStack` and header inside the primary slot, which changes nothing on screen; their hand-written column code goes. `PVSpacing` gains `widthSecondaryMax` (480), transcribed from WL-1, and S14-24's `widthWideBreakpoint` is checked against it. The Swift kit README gets a Page columns row and a link to § 9 of `docs/macos-client-patterns.md`, not a copy of the rules. | The header slot and pinned mode (built with their first caller, the Source page, in its own brief: [`ideas/wide-layout.md`](../../../ideas/wide-layout.md)). A secondary column on any page. A list-beside-detail layout for the Conclusion lists (their own brief). |
 
 ---
 
@@ -114,7 +115,7 @@ Provenencia opens at a laptop-sized window, 1366 × 900pt. Researchers also stre
 | --- | --- |
 | WL-1 | `tokens/spacing.css` gains two layout widths: `--width-wide-breakpoint: 1600px` (comment: compared with the page's pane, not the viewport) and `--width-secondary-max: 480px` (comment: the secondary column of Page columns grows from `--width-inspector` to this). |
 | WL-2 | The Claude Design kit README gains a **Width classes** section: the two classes and the breakpoint, the six Wide rules exactly as in this brief's "Two widths — draw both" block, the Page columns sizing rule (WL-5), and the pattern table (§ 4.1). |
-| WL-3 | A **Page columns** component with three slots: an optional **header** that spans the column group, a **primary** slot, and an optional **secondary** slot. It owns the scroll; the page owns its background. The header either scrolls with the page or is pinned above the scroll, chosen by the page. Loading, error and empty states go in the primary slot. Vertical padding is `--space-8` top and bottom. |
+| WL-3 | A **Page columns** component with three slots: an optional **header** that spans the column group, a **primary** slot, and an optional **secondary** slot. It owns the scroll; the page owns its background. The header either scrolls with the page or is pinned above the scroll, chosen by the page. Loading, error and empty states go in the primary slot. A slot holds the page's view as it is: Page columns adds no spacing inside a slot, so a page keeps its own stack and its own header spacing. Vertical padding is `--space-8` top and bottom. |
 | WL-4 | At **Regular**: one column, as wide as the pane allows inside `--gutter-page` on each side, up to `--width-content-max`, **centered** in the pane. The secondary slot's content stacks below the primary at the same width, `--space-9` below it. |
 | WL-5 | At **Wide** with a secondary slot, with `available = pane − 2 × --gutter-page − --space-9`: primary = min(`--width-content-max`, available − `--width-inspector`); secondary = available − primary, between `--width-inspector` and `--width-secondary-max`. The primary grows first (full at a 1616 pane), then the secondary (full at a 1756 pane). Primary on the leading side, secondary on the trailing side, `--space-9` between, both top-aligned, scrolling together. |
 | WL-6 | At **Wide** with no secondary slot: the same centered column as Regular. It is never left-aligned with empty space beside it. |

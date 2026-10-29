@@ -1,15 +1,16 @@
 # Review — S14-24 Give every workspace page its width class
 
-**Verdict:** Fits with changes — Ready with changes (round 1); round 2 below
+**Verdict:** Fits with changes — Ready with changes, after 2 rounds. Two To user items open; the plan stays Draft until they are answered
 **Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet, the implementer's model)
 
 ## To user
 
+- **Round 2 M-5 / M-6: what the pane is for a page with a side pane.** The working rule said "minus any inspector". Round 1 re-measured Properties beside its inspector; round 2 found Metadata and Source types have the same shape, and that a re-measured column also drops the gap and the gutters, so the code would drift from the rule. **Recommendation, written into the plan (D-6) and reworded on this branch in the working rule, § 9, the Paste block and S14-D1:** the class is the whole page's (window minus sidebar); a page with a side pane plans that pane in its own Wide frame. One measurement, and the CSS container query measures the same thing. If you prefer the old rule, D-6 goes back to re-measuring beside each side pane (three call sites) and § 9 says that such a page turns Wide later.
 - **M-2: the Citation composer's own breakpoint.** `CitationComposerView.composeSplit` switches its evidence area from two-up to three-up at 1400pt with a private `GeometryReader`. That is a second breakpoint beside the new 1600 class. Moving it onto `pvWidthClass` in this PR would change the composer for panes between 1400 and 1599pt, against US-2 ("nothing I see changes"). **Recommendation:** leave it in this PR, logged as an Out row, and move it in the composer's next brief, where its Wide frame is drawn.
 
 ## Writer's own calls
 
-- D-6: a page with an inspector measures its content column, which also excludes the gap and the gutters, so Properties turns Wide at a wider window than a page with no inspector. § 9 says so. The alternative, measuring "pane minus inspector" exactly, needs the page to know its gutters.
+- D-5: the host fills the detail area before measuring. Round 2 found the host otherwise measures its child.
 - D-9: the test-mount helper moves the three existing copies in this PR (review M-3), which touches two test files outside the feature.
 - Version bump none: nothing a researcher sees changes.
 
@@ -54,4 +55,32 @@ The working rule and § 9 measure the pane minus any inspector; D-6 measured Pro
 
 ## Round 2
 
-See the end of this file once round 2 reports.
+Reviewers: maintainability (Opus), executability (Sonnet). Fresh agents with the plan and this log.
+
+**Round 1 answers.** Executability: X-1, X-2, X-4 – X-8, M-1, M-4 hold; X-3 holds in part (below, X-9). Maintainability: M-2, M-3, M-4 and X-1 – X-8 hold; M-1 does not (below, M-5, M-6).
+
+### X-9 · blocker · The host measures its child, not the pane
+`WorkspaceDestinationHost.body` has no frame, and several branches render nothing; a hugging root would read Regular at any width.
+**Answer:** Fixed — D-5 adds `.frame(maxWidth: .infinity, maxHeight: .infinity)` before the modifier; Current state row corrected; AC-1.6 and T-3 (a non-filling probe under the frame reads Wide); a Stop condition for a destination that moves.
+
+### X-10 · major · Where the Properties re-measure goes
+**Answer:** Moot — D-6 no longer re-measures (To user above).
+
+### X-11 · major · The helper does not fit the `PVSelectPlacementTests` mounts
+**Answer:** Fixed — D-9 gives the signature: `windowSize`, `hostSize` (default the window's), `orderFront` (default true); the PVSelect cases pass 900 × 200, 900 × 80 and `orderFront: false` and keep their own layout call; callers hold the window.
+
+### X-12 · minor · Small T-2 / T-3 choices
+**Answer:** Fixed — T-2 resizes with `window.setContentSize`; each T-3 case is its own mount; STEP-4 repeats the `rg` rule for the test files' IDs.
+
+### M-5 · blocker · Metadata and Source types also have a side pane
+**Answer:** To user (above), with the recommendation applied: no page re-measures; Out row and `docs/ideas/wide-layout.md` list the three side-pane pages for their own Wide briefs.
+
+### M-6 · blocker · The re-measure bent the working rule
+**Answer:** To user (above). The plan's **Rules this plan bends** names it; the rule is reworded on this branch pending the answer.
+
+### Noted below blocker
+- The S14-24 map scope entry omitted round 1's changes. **Answer:** Fixed.
+- § 9's intro said pages sit left-aligned. **Answer:** Fixed — left on the Source page, centered elsewhere.
+- The helper's `orderFront` against the PVSelect tests. **Answer:** Fixed with X-11.
+
+**Verdict:** Fits with changes — Ready with changes. No open blocker once the two To user items are answered.
