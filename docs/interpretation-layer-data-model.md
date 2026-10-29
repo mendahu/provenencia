@@ -626,7 +626,7 @@ Product value types are **`text`**, **`integer`**, **`date`**, **`name`**, **`su
 
 `value_type = 'term'` means the Observation value is a row in `property_terms` for that Property (§5.1.1). Kind and edge Properties (`event_type`, `role`, `relationship_type`) use `term`.
 
-`value_type = 'depiction'` means the value is a `depiction_values` row (`value_depiction_id`): a region locator on the Citation's page and `image_file_id`, an image File Go stored from the app's rendering of that region. The row is owned by its Observation and released with it. `likeness` on `person` is the seeded depiction Property.
+`value_type = 'depiction'` means the value is a `depiction_values` row (`value_depiction_id`): a region locator on the Citation's page and `image_file_id`, an image File Go stored from the app's rendering of that region. The row is owned by its Observation and released with it. Seeded depiction Properties: `likeness` on `person`, `event_picture` on `event`, and `place_picture` on `place` (Install only; new catalogs).
 
 Over the FFI a save sends `DepictionValueInput` (the region and the absolute path of the app's rendering); Go stages it before the write. Responses and reads return `DepictionValue`: the region and the image's `objects/…` path. The client never sends or receives the image's File id.
 

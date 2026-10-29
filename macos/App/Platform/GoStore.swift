@@ -1258,7 +1258,7 @@ struct GoStore: GenealogyStore {
             birth: mapLifeFacts(h.birth),
             death: mapLifeFacts(h.death),
             updated: CatalogActivity(revision: h.updatedRevision, at: h.updatedAt),
-            likenessImageRelPath: h.likenessImageRelPath
+            pictureImageRelPath: h.pictureImageRelPath
         )
     }
 
@@ -1307,7 +1307,8 @@ struct GoStore: GenealogyStore {
             subjects: h.subjects.map(mapEventSubject),
             places: h.places.map(mapHeaderPlace),
             title: mapEventTitle(h.title),
-            updated: CatalogActivity(revision: h.updatedRevision, at: h.updatedAt)
+            updated: CatalogActivity(revision: h.updatedRevision, at: h.updatedAt),
+            pictureImageRelPath: h.pictureImageRelPath
         )
     }
 
@@ -1324,7 +1325,8 @@ struct GoStore: GenealogyStore {
             contains: h.contains.map(mapPlaceRelationship),
             predecessors: h.predecessors.map(mapPlaceRelationship),
             successors: h.successors.map(mapPlaceRelationship),
-            updated: CatalogActivity(revision: h.updatedRevision, at: h.updatedAt)
+            updated: CatalogActivity(revision: h.updatedRevision, at: h.updatedAt),
+            pictureImageRelPath: h.pictureImageRelPath
         )
     }
 
@@ -1372,8 +1374,8 @@ struct GoStore: GenealogyStore {
             },
             memberCount: Int(resp.memberCount),
             header: Self.mapConclusionHeader(resp.header),
-            likenesses: resp.likenesses.map {
-                CatalogLikeness(
+            pictures: resp.pictures.map {
+                CatalogPicture(
                     imageRelPath: $0.imageRelPath,
                     record: Self.mapReconcilerOutcome($0.record),
                     preferred: $0.preferred,

@@ -22,8 +22,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/gallery"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
-	"github.com/mendahu/provenencia/core/database/likenesses"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
@@ -728,9 +728,9 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 		w.f.t.Fatalf("no outcome for %x", id)
 		return outcome{}
 	}
-	gallery := func(w *world) []likenesses.Likeness {
+	galleryOf := func(w *world) []gallery.Picture {
 		t.Helper()
-		g, err := likenesses.ForEntities(w.f.c.Graph(), [][]byte{w.h})
+		g, err := gallery.ForEntities(w.f.c.Graph(), [][]byte{w.h})
 		must(t, err)
 		return g[string(w.h)]
 	}
@@ -774,7 +774,7 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 				t.Fatalf("outcome %+v", o)
 			}
 		}
-		g := gallery(w)
+		g := galleryOf(w)
 		if len(g) != 2 || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, w.f.c, w.oa.ID)) ||
 			len(g[0].ObservationIDs) != 1 || !bytes.Equal(g[0].ObservationIDs[0], w.oa.ID) ||
 			!bytes.Equal(g[1].ImageFileID, observationstest.ImageOf(t, w.f.c, w.ob.ID)) || !bytes.Equal(g[1].ObservationIDs[0], w.ob.ID) {
@@ -789,7 +789,7 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 			ID: w.oa.ID, SubjectID: w.a.ID, PropertyID: w.f.props["likeness"].ID,
 			Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 40, 30, 150)}})
 		must(t, err)
-		g := gallery(w)
+		g := galleryOf(w)
 		if len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], w.oa.ID) || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, w.f.c, w.oa.ID)) {
 			t.Fatalf("gallery %+v", g)
 		}
@@ -811,7 +811,7 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 				t.Fatalf("outcome %+v", o)
 			}
 		}
-		if g := gallery(w); len(g) != 1 || len(g[0].ObservationIDs) != 2 ||
+		if g := galleryOf(w); len(g) != 1 || len(g[0].ObservationIDs) != 2 ||
 			bytes.Compare(g[0].ObservationIDs[0], g[0].ObservationIDs[1]) >= 0 {
 			t.Fatalf("gallery %+v", g)
 		}
@@ -835,7 +835,7 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 		if o := outcomeOf(w, w.ob.ID); o.Reason != "denied" || !bytes.Equal(o.DeniedBy, oc.ID) {
 			t.Fatalf("outcome %+v", o)
 		}
-		if g := gallery(w); len(g) != 1 || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, f.c, w.oa.ID)) {
+		if g := galleryOf(w); len(g) != 1 || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, f.c, w.oa.ID)) {
 			t.Fatalf("gallery %+v", g)
 		}
 		finish(t, w, "denied")
@@ -855,7 +855,7 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 		if o := outcomeOf(w, w.ob.ID); o.Reason != "provisional" {
 			t.Fatalf("outcome %+v", o)
 		}
-		if g := gallery(w); len(g) != 1 || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, w.f.c, w.oa.ID)) {
+		if g := galleryOf(w); len(g) != 1 || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, w.f.c, w.oa.ID)) {
 			t.Fatalf("gallery %+v", g)
 		}
 		finish(t, w, "provisional")
@@ -870,7 +870,7 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 		if r := byImage(t, w, observationstest.ImageOf(t, w.f.c, w.oa.ID)); r.Reason != "kept" {
 			t.Fatalf("shade 100 %+v", r)
 		}
-		if g := gallery(w); len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], w.oa.ID) || !bytes.Equal(g[1].ObservationIDs[0], w.ob.ID) {
+		if g := galleryOf(w); len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], w.oa.ID) || !bytes.Equal(g[1].ObservationIDs[0], w.ob.ID) {
 			t.Fatalf("gallery %+v", g)
 		}
 		finish(t, w, "weak")
@@ -890,7 +890,7 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 		if o := outcomeOf(w, w.ob.ID); o.Reason != "no_evidence" {
 			t.Fatalf("outcome %+v", o)
 		}
-		if g := gallery(w); len(g) != 1 {
+		if g := galleryOf(w); len(g) != 1 {
 			t.Fatalf("gallery %+v", g)
 		}
 	})

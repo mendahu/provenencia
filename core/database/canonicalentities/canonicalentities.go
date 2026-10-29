@@ -13,7 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/likenesses"
+	"github.com/mendahu/provenencia/core/database/gallery"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -251,8 +251,8 @@ func requireTypePrefix(tx *sql.Tx, typeID []byte) (string, error) {
 	return prefix, nil
 }
 
-// SetPreferredLikeness chooses one of the handle's gallery likenesses as its
-// portrait by the likeness's record Observation, or clears the choice when
+// SetPreferredLikeness chooses one of the handle's gallery pictures as its
+// portrait by the picture's record Observation, or clears the choice when
 // observationID is empty. A display pointer, not evidence. An unchanged
 // choice returns no changes.
 func SetPreferredLikeness(tx *database.Tx, userID, entityID, observationID []byte) ([]rowchange.Change, error) {
@@ -272,11 +272,11 @@ func SetPreferredLikeness(tx *database.Tx, userID, entityID, observationID []byt
 		if len(observationID) != 16 {
 			return nil, ErrInvalid
 		}
-		gallery, err := likenesses.ForEntities(tx.Tx, [][]byte{entityID})
+		tiles, err := gallery.ForEntities(tx.Tx, [][]byte{entityID})
 		if err != nil {
 			return nil, err
 		}
-		if _, ok := likenesses.ByObservation(gallery[string(entityID)], observationID); !ok {
+		if _, ok := gallery.ByObservation(tiles[string(entityID)], observationID); !ok {
 			return nil, ErrInvalid
 		}
 	}

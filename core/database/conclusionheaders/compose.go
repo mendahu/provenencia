@@ -10,8 +10,8 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/gallery"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/database/likenesses"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/hops"
@@ -482,17 +482,13 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 	for _, n := range nodes {
 		byID[string(n.ID)] = n
 	}
-	gallery, err := likenesses.ForEntities(g, need)
+	leads, err := leadPictures(g, need)
 	if err != nil {
 		return nil, err
 	}
 	fresh := map[string]PersonHeader{}
 	for _, id := range need {
-		var lead []byte
-		if l, ok := likenesses.Lead(gallery[string(id)]); ok {
-			lead = l.ImageFileID
-		}
-		h, err := onePerson(v, byID[string(id)], g, pg, lead)
+		h, err := onePerson(v, byID[string(id)], g, pg, leads[string(id)])
 		if err != nil {
 			return nil, err
 		}
@@ -513,8 +509,24 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 	return out, nil
 }
 
+// leadPictures returns each handle's leading gallery image File id, keyed by
+// string(entity id). A handle with no gallery picture is absent.
+func leadPictures(g *graphcache.Graph, ids [][]byte) (map[string][]byte, error) {
+	tiles, err := gallery.ForEntities(g, ids)
+	if err != nil {
+		return nil, err
+	}
+	out := map[string][]byte{}
+	for _, id := range ids {
+		if l, ok := gallery.Lead(tiles[string(id)]); ok {
+			out[string(id)] = l.ImageFileID
+		}
+	}
+	return out, nil
+}
+
 func onePerson(v vocab, n *graphcache.Node, g *graphcache.Graph, pg *placeGraph, lead []byte) (PersonHeader, error) {
-	h := PersonHeader{Entity: entityOf(n), LikenessImageFileID: lead}
+	h := PersonHeader{Entity: entityOf(n), PictureImageFileID: lead}
 	name, count, err := keptName(n, v.prop(vocabkey.PropertyName))
 	if err != nil {
 		return PersonHeader{}, err
@@ -645,12 +657,21 @@ func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 	if err != nil {
 		return nil, err
 	}
+	needIDs := make([][]byte, len(need))
+	for i, n := range need {
+		needIDs[i] = n.ID
+	}
+	leads, err := leadPictures(g, needIDs)
+	if err != nil {
+		return nil, err
+	}
 	fresh := map[string]EventHeader{}
 	for _, n := range need {
 		h, err := oneEvent(g, v, pg, n)
 		if err != nil {
 			return nil, err
 		}
+		h.PictureImageFileID = leads[string(n.ID)]
 		fresh[string(n.ID)] = h
 		if store {
 			g.SetDisplay(n.ID, h)
@@ -837,12 +858,21 @@ func composePlaces(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 		}
 		need = append(need, n)
 	}
+	needIDs := make([][]byte, len(need))
+	for i, n := range need {
+		needIDs[i] = n.ID
+	}
+	leads, err := leadPictures(g, needIDs)
+	if err != nil {
+		return nil, err
+	}
 	fresh := map[string]PlaceHeader{}
 	for _, n := range need {
 		h, err := placeShell(n, v)
 		if err != nil {
 			return nil, err
 		}
+		h.PictureImageFileID = leads[string(n.ID)]
 		fresh[string(n.ID)] = h
 		if store {
 			g.SetDisplay(n.ID, h)

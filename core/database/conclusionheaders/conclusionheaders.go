@@ -37,11 +37,11 @@ type PersonHeader struct {
 	// death event. Places are folded location chains at the event's date.
 	Birth LifeFacts
 	Death LifeFacts
-	// LikenessImageFileID is the image of the likeness the Person leads with
+	// PictureImageFileID is the image of the picture the Person leads with
 	// on its page and in the Persons list; nil when none. The preferred
-	// portrait when its likeness is in the gallery, else the earliest
-	// (likenesses.Lead).
-	LikenessImageFileID []byte
+	// portrait when its picture is in the gallery, else the earliest
+	// (gallery.Lead).
+	PictureImageFileID []byte
 	// Updated is the handle's latest canonical_entity revision and its time.
 	// Filled by List only; zero means none.
 	Updated effects.Activity

@@ -1,6 +1,6 @@
 # S14-01 — Pictures engine
 
-**Status:** Planned
+**Status:** Landed in #615 (2026-10-28)
 **Spike / slice:** Spike 14 · Slice 1 — Event and Place pictures
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: engine, proto and Swift wire mapping only; Event and Place pages still show no Pictures section)
@@ -14,6 +14,7 @@
 **Context:** [event-place-pictures.md § What changes](../event-place-pictures.md#what-changes), [§ Thumbnail parity](../event-place-pictures.md#thumbnail-parity), [§ Domain docs](../event-place-pictures.md#domain-docs-the-prs-update); working rules: "Event and Place each get their own picture Property", "The gallery layer is named gallery", "The gallery reads one list of gallery keys", "New seeds reach new catalogs only", "An Event or Place chooses its thumbnail"; [`seeded-vocabulary.md`](../../../seeded-vocabulary.md), [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md), [`conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md), [`conclusion-reconciliation.md`](../../../conclusion-reconciliation.md)
 **Planned:** 2026-10-28 against `main` @ `aae1f6b7`
 **Review:** [`S14-01-pictures-engine.review.md`](S14-01-pictures-engine.review.md) — Fits / Ready, 2 rounds; every blocker Fixed
+**Landed:** Place lead-test helper is `placePictureSubject` because `placeSubject` already exists in `placechains_test.go`. S12-24 preferred-delete audit assertions were preserved in `gallery_test.go`.
 
 ### Implementer — read this first
 

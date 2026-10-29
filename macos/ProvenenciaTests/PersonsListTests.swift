@@ -14,7 +14,7 @@ struct PersonsListTests {
 
     @Test func listThumbIsTheLikenessPath() {
         var withLikeness = header("PER-1", name: "A")
-        withLikeness.likenessImageRelPath = "objects/ab/cd.png"
+        withLikeness.pictureImageRelPath = "objects/ab/cd.png"
         #expect(PersonsList.thumbnailRelPath(withLikeness) == "objects/ab/cd.png")
         #expect(PersonsList.thumbnailRelPath(header("PER-2")) == "")
         let event = CatalogEventHeader(entity: CatalogCanonicalEntity(id: "e", ref: "EVT-1", subjectTypeID: "t", label: ""), title: CatalogEventTitle(rule: .ref, ref: "EVT-1"))
@@ -27,7 +27,7 @@ struct PersonsListTests {
 
     @Test func listThumbDispatchesThroughTheKind() {
         var withLikeness = header("PER-1", name: "A")
-        withLikeness.likenessImageRelPath = "objects/ab/cd.png"
+        withLikeness.pictureImageRelPath = "objects/ab/cd.png"
         #expect(listThumb(PersonsList.self, withLikeness) == "objects/ab/cd.png")
         let event = CatalogEventHeader(entity: CatalogCanonicalEntity(id: "e", ref: "EVT-1", subjectTypeID: "t", label: ""), title: CatalogEventTitle(rule: .ref, ref: "EVT-1"))
         #expect(listThumb(EventsList.self, event) == "")
