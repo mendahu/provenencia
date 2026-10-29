@@ -1,6 +1,6 @@
 # S14-02 — Pictures in the app
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 14 · Slice 1 — Event and Place pictures
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: reuses the Person gallery section, header thumb, portrait controls and list thumbnail with Event/Place headings and wording; Promote and Properties change copy only)
@@ -9,11 +9,11 @@
 **Blocks:** —
 **Branch:** `s14-02-pictures-in-the-app`
 **Version bump:** none — Spike 11–14 PRs leave `VERSION` at 0.2.0 until a release is cut, as S14-01 did ([`docs/versioning.md`](../../../versioning.md))
-**Skills to load:** [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md), [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
-**Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/design-system-layers.mdc`
+**Skills to load:** [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md), [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-ffi-handler`](../../../../.agents/skills/add-ffi-handler/SKILL.md) (D-10 wire field only — no new Method)
+**Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/design-system-layers.mdc`, `.cursor/rules/ffi-handlers.mdc`
 **Context:** [event-place-pictures.md § What already works](../event-place-pictures.md#what-already-works), [§ Thumbnail parity](../event-place-pictures.md#thumbnail-parity), [§ What changes](../event-place-pictures.md#what-changes); working rules: "The gallery is one slot on the detail body", "An Event or Place chooses its thumbnail as a Person chooses its portrait", "A depiction is worded as a picture outside the Person's own copy", "The gallery layer is named gallery, not likeness", "Batch 1 is cut by layer"; S14-01 ship follow-ups UX-1 (Properties VO) and UX-2 (Promote wording)
 **Planned:** 2026-10-29 against `main` @ `504f4f9b`
-**Review:** [`S14-02-pictures-in-the-app.review.md`](S14-02-pictures-in-the-app.review.md) — Fits with changes / Ready with changes (round 1 Fixed); round 2 pending
+**Review:** [`S14-02-pictures-in-the-app.review.md`](S14-02-pictures-in-the-app.review.md) — Fits with changes / Ready, 2 rounds; every blocker Fixed
 
 ### Implementer — read this first
 
@@ -34,7 +34,7 @@ Event and Place pages show a Pictures section, lead their headers with the pictu
 
 **Why now.** S14-01 landed the seeds, gallery keys, header leads and wire rename. Bar outcomes 3, 5, 6 and 7 need the app. Spike 13's Gallery section (S13-14) builds from the same slot.
 
-**What stays.** RPC `SetPreferredLikeness` / column `preferred_likeness_observation_id`; Property key `likeness` and Person section title / portrait strings; Go/proto (no engine change); Spike 13's redesigned Gallery section chrome (S13-14); rectangle-only drawing (S14-03).
+**What stays.** RPC `SetPreferredLikeness` / column `preferred_likeness_observation_id`; Property key `likeness` and Person section title / portrait strings; gallery SQL/seeds (S14-01); Spike 13's redesigned Gallery section chrome (S13-14); rectangle-only drawing (S14-03). One wire field is added: neighbor kind on `PromoteClaimEvidenceRelationship` (D-10) — no new Method.
 
 ## 2. User stories
 
@@ -64,7 +64,7 @@ Event and Place pages show a Pictures section, lead their headers with the pictu
 | AC-3.2 | `lineSentence(relation: .unknown, cause: .unjudged, propertyCause: .none, value: depictionValue)` | Resource key is `promote.sheet.line.comparePictures` with default "Compare these pictures" |
 | AC-3.3 | `EvidenceBoard.build(…)` with row `kind: .place` for a depiction line on the Subject's own cards | `line.value` is `.crops(paths:…, mark: .subjectPlace)`; spoken label uses `spokenPicture` / `spokenPictureCount`; no `isPicture` / `isLikeness` property on `Line` |
 | AC-3.4 | Same build with row `kind: .person` | Own-card depiction mark is `.subjectPerson`; sentence still "Same picture" / "Compare these pictures" (value-type wording, every kind) |
-| AC-3.5 | Person-row board with a relationship group whose neighbor is an Event that has a depiction line; `neighbor(id)?.kind == .event` | That relationship depiction line's crop mark is `.subjectEvent`, not `.subjectPerson` |
+| AC-3.5 | Person-row board with a relationship whose `CatalogClaimEvidenceRelationship.kind == "event"` and a depiction line in that relationship's sections | Line and member crop marks are `.subjectEvent`, not `.subjectPerson` (mark from `relationship.kind`, not from `PromoteFlow.row`) |
 
 **US-4.** As a researcher using VoiceOver on the Properties list, I can tell `event_picture` from `place_picture` even though both labels are "Picture".
 
@@ -90,7 +90,8 @@ Event and Place pages show a Pictures section, lead their headers with the pictu
 | Shared `ConclusionDetailGallery.tiles(from:)` mapping; Person/Event/Place contents fill `gallery` + Event/Place header thumb from `pictureImageRelPath` | STEP-2, AC-1.*, AC-2.1, AC-2.2, D-4, D-5 |
 | Static `ChooseCopy` packs (copy + a11y id leaves); page owns `ConclusionPortraitModel` from `userID` + pack; Event/Place/Person views pass `userID` + pack | STEP-3, AC-2.2, AC-2.3, AC-2.5, D-3, D-6, D-7 |
 | `EventsList` / `PlacesList` `thumbnailRelPath` → `pictureImageRelPath` | STEP-4, AC-2.4, D-8 |
-| Promote: `ValueFamily.picture`, drop `isLikeness`/`isPicture`, picture sentence/spoken keys, crop mark from row kind on own cards and neighbor kind on relationship cards; Promote `worded` maps depiction → Picture noun | STEP-5, AC-3.*, D-9, D-10, D-14 |
+| Promote: `ValueFamily.picture`, drop `isLikeness`/`isPicture`, picture sentence/spoken keys; crop mark from row kind on own cards and from wired `relationship.kind` on relationship cards; Promote `worded` maps depiction → Picture noun | STEP-5, AC-3.*, D-9, D-10, D-14 |
+| Wire `PromoteClaimEvidenceRelationship.kind` (neighbor subject-type key string); map in handler + `GoStore` + `CatalogClaimEvidenceRelationship.kind` | STEP-5, AC-3.5, D-10 |
 | Composer `depictionSubject` rename + Subject comments | STEP-6, AC-5.3, D-11 |
 | Properties `rowAccessibilityLabel` includes `property.key` and bound type labels | STEP-7, AC-4.*, D-12 |
 | L10n: Pictures section, Event/Place picture/thumbnail strings, Promote picture keys; prune renamed Promote likeness keys | STEP-1–5, D-13 |
@@ -103,7 +104,8 @@ Event and Place pages show a Pictures section, lead their headers with the pictu
 | Rectangle-only depiction drawing; composer draw feedback | S14-03 |
 | Renaming column `preferred_likeness_observation_id` or RPC `SetPreferredLikeness` | not planned (working rule) |
 | Changing Person section title away from "Likenesses" / portrait copy | not planned (working rule: likeness stays on Person) |
-| Go / proto / seeds / gallery SQL | S14-01 (landed) |
+| Seeds / gallery SQL / gallery package rename | S14-01 (landed) |
+| New Promote Method or changing claim-evidence build rules in Go | not planned — D-10 only exposes `rel.Kind` already computed |
 | Person Timeline event picture | Spike 13 R-26 |
 | Pictures as matching weight for Event/Place | not planned ([event-place-pictures.md](../event-place-pictures.md) Stays later) |
 | New kit primitive under `DesignSystem/` | not planned (compose existing `PVSectionHeader`, `CachedThumbnail`, `PVBadge`, `PVButton`, `PVActionMenu`) |
@@ -127,8 +129,9 @@ Event and Place pages show a Pictures section, lead their headers with the pictu
 | Event / Place views | `EventDetailView.swift`, `PlaceDetailView.swift` | No `userID`, no portrait model |
 | Destination host | `macos/App/Features/Workspace/WorkspaceDestinationHost.swift` | Passes `userID` into `PersonDetailView` only (lines ~98–110) |
 | List thumbs | `PersonsListView.swift` `thumbnailRelPath`; `EventsListView.swift` / `PlacesListView.swift` | Persons returns `pictureImageRelPath`; Events/Places use protocol default `""` (`ConclusionListPage.swift` extension) |
-| Promote board | `macos/App/Features/Promote/PromoteEvidenceBoard.swift` | `isLikeness`; `EvidenceBoard.build` has no kind; crops have no mark |
+| Promote board | `macos/App/Features/Promote/PromoteEvidenceBoard.swift` | `isLikeness`; `EvidenceBoard.build` has no kind; crops have no mark; relationship cards call `neighbor` for names only |
 | Promote cards | `macos/App/Features/Promote/PromoteEvidenceCards.swift` `EvidenceCrops` | `fallbackMark: .subjectPerson`; id prefix `"likeness"` |
+| Promote relationship wire | `api/proto/engine.proto` `PromoteClaimEvidenceRelationship`; `api/ffi/handlers/promote_evidence.go` `claimEvidenceProto`; `GenealogyStore.swift` `CatalogClaimEvidenceRelationship`; `GoStore.swift` map | Go `claimevidence.Relationship.Kind` is the neighbor's kind and already drives `evidenceSectionsProto(rel.Kind, …)`; proto/Swift omit `kind` (fields through 19; next free is 20) |
 | Promote L10n | `macos/App/Platform/L10n.swift` `L10n.Promote.lineSentence` / `ValueFamily` | `.depiction` → `.likeness`; `lineSameLikeness` "Same likeness"; `lineCompareLikenesses` "Compare these likenesses"; `spokenLikeness*` |
 | Composer | `macos/App/Features/CitationComposer/CitationComposerSubjectGroups.swift` | `depictionPerson`; comments say person |
 | Properties VO | `macos/App/Features/Properties/PropertiesView.swift` `rowAccessibilityLabel` | `"\(label), \(valueType), \(origin), \(boundText)"` — no key, no kind labels; two Picture rows collide for VoiceOver (S14-01 UX-1) |
@@ -151,7 +154,7 @@ Event and Place pages show a Pictures section, lead their headers with the pictu
 | D-7 | `ConclusionDetailPage` takes `userID: String` and `leadChoose: ChooseCopy?`. When `leadChoose != nil`, the page owns `@State ConclusionPortraitModel` (init with that pack) and `.vocabularyToastOverlay` with id `"\(pageIdentifier).toast"`. Kind views pass the matching static pack (`PersonDetailView` → `.personPortrait`, Event → `.eventThumbnail`, Place → `.placeThumbnail`) and the body's `gallery.choose` is that same static (one source). Host passes `userID` into all three detail views | Page owns the machine once; kind views stay thin; S13-14 passes another pack | Copy PersonDetailView's portrait `@State` + overlay into Event and Place views |
 | D-8 | `EventsList` / `PlacesList` `thumbnailRelPath` → `header.pictureImageRelPath` | Same as Persons | Custom load |
 | D-9 | Promote: `ValueFamily.likeness` → `.picture`; delete `Line.isLikeness` (do not add `isPicture`); branch on `if case .crops = value` for id prefix `"picture"`, spoken path, and suppressing `thisSource`; new keys `lineSamePicture` / `lineComparePictures` / `spokenPicture*`; prune old likeness Promote keys. Person depiction lines use picture sentences | Working rule value-type wording; one depiction test (M-3) | Keep a bool beside `.crops`; per-kind sentences |
-| D-10 | `EvidenceBoard.build(evidence:kind:neighbor:labels:worded:orders:)`. Own cards (`evidence.sections`): crop mark = `kind.markKey`. Relationship groups: crop mark = `neighbor(relationship.neighborSubjectID)?.kind.markKey ?? kind.markKey`. `Value.crops(paths:mark:)`. No new proto field | Working rule "line's kind"; engine relationship grain is neighbor kind; Swift already has `PromoteFlow.Row.kind` | Stamp row kind on every depiction including neighbors; infer from property key; add relationship kind to proto |
+| D-10 | Wire neighbor kind: `PromoteClaimEvidenceRelationship.kind = 20` (string subject-type key: `person` / `event` / `place`, same shape as `PromoteGraphAlignmentRow.kind`). Handler sets `Kind: string(rel.Kind)` in `claimEvidenceProto` (always; `rel.Kind` is required on Go relationships). `CatalogClaimEvidenceRelationship.kind: String` (default `""` only for decoding empty fixtures — production maps non-empty). `GoStore` maps `r.kind`; FakeStore / board fixtures set `kind` on every relationship under test. `EvidenceBoard.build`: own cards use `kind.markKey`; relationship groups use `EvidencePrimaryKind(rawValue: relationship.kind)!.markKey` (force-unwrap: empty or unknown kind is a Stop condition, not a sheet-kind fallback). Pass that mark into `lineRow` and depiction `memberRow` crops. Regenerate with `./scripts/generate-proto.sh`. Skill: `add-ffi-handler` (field only) | Engine already has `rel.Kind`; page-row lookup misses off-page neighbors (`shareHeaderBare`); working rule line's kind | Rebuild kind from `PromoteFlow.row`; `?? kind.markKey` fallback; infer from property key |
 | D-11 | Rename `depictionPerson` → `depictionSubject`; comments say Subject; leave catalog keys/values | Scope | Retitle catalog keys |
 | D-12 | `L10n.Properties.rowAccessibility(label:key:valueType:origin:bound:kinds:)` with default `"%1$@, %2$@, %3$@, %4$@, %5$@, %6$@"`; kinds joined with `", "`; unbound kinds `""` | S14-01 UX-1 | Key only or kinds only |
 | D-13 | New Conclusions L10n for Pictures section, picture from/tile, Event/Place thumbs, thumbnail choose pack strings used by `ChooseCopy.eventThumbnail` / `.placeThumbnail`. Person pack uses existing likeness/portrait keys (extract `likenessFrom` / `likenessTile` static resources). Promote keys per D-9. Add `L10n.Promote.pictureValue` "Picture" for D-14 | add-localized-string | Reuse "Use as portrait" on Event |
@@ -173,10 +176,11 @@ Event and Place pages show a Pictures section, lead their headers with the pictu
 | Event/Place picture + thumbnail L10n keys *(new)* | keys | Person likeness/portrait keys | Parallel wording |
 | Promote `lineSamePicture` / `lineComparePictures` / `spokenPicture*` / `pictureValue` *(new)* | keys | `lineSameLikeness` / `lineCompareLikenesses` / `spokenLikeness*` | Replace those keys (Deletes) |
 | `L10n.Properties.rowAccessibility(label:key:valueType:origin:bound:kinds:)` *(new)* | key | Inline string concat in `rowAccessibilityLabel` | Format via L10n |
+| `CatalogClaimEvidenceRelationship.kind` *(new field)* | wire field | `claimevidence.Relationship.Kind` already in Go; `PromoteGraphAlignmentRow.kind` string pattern | Expose existing value; do not invent a second kind source |
 
-**Builds on.** `ConclusionDetailThumbnail` slot pattern; `ConclusionPortraitModel` + `setPreferredLikeness`; `ConclusionListKind.thumbnailRelPath`; S14-01 wire; `EvidencePrimaryKind.markKey`; `PromoteFlow.Row.kind`.
+**Builds on.** `ConclusionDetailThumbnail` slot pattern; `ConclusionPortraitModel` + `setPreferredLikeness`; `ConclusionListKind.thumbnailRelPath`; S14-01 wire; `EvidencePrimaryKind.markKey`; `claimevidence.Relationship.Kind`.
 **Deletes.** `ConclusionDetailLikeness`, `ConclusionDetailLikenessSection`, `LikenessTileView`; protocol member `likenesses`; `CachedThumbnail.likenessCrop`; `ValueFamily.likeness` case; `Line.isLikeness` (no `isPicture` replacement); `depictionPerson`; Promote likeness sentence/spoken keys; a11y `.likeness.` → `.picture.` (Person header ids live on `ChooseCopy.personPortrait.headerIdentifier`).
-**Next adds.** S13-14 is another `ChooseCopy` pack on the same slot. A fourth kind adds a pack + list `thumbnailRelPath`.
+**Next adds.** S13-14 is another `ChooseCopy` pack on the same slot. A fourth kind adds a pack + list `thumbnailRelPath`. Relationship kind on the wire is available to any later sheet chrome that needs neighbor marks.
 
 ### Reach
 
@@ -185,7 +189,7 @@ Event and Place pages show a Pictures section, lead their headers with the pictu
 | Event/Place page with non-empty `gallery.tiles` | `ConclusionDetailGallerySection` | Section absent when tiles empty; tile navigation uses `tile.location` from records (same as Person); missing image path → `CachedThumbnail` fallback mark from gallery |
 | Event/Place `gallery.choose` non-nil | Page-owned portrait model + header menu + tile badge/button | `offersEarliest` false → no menu (PDP-11); write failure → danger toast |
 | Events/Places list row with `pictureImageRelPath` | `ConclusionListRow` thumb | Empty path → kind mark |
-| Promote depiction on own cards / relationship neighbor | `EvidenceCrops` | Mark from row kind or neighbor kind (D-10); empty path still shows mark |
+| Promote depiction on own cards / relationship neighbor | `EvidenceCrops` | Mark from row `kind` or wired `relationship.kind` (D-10); empty path still shows mark; off-page neighbor still has kind |
 
 ### Scale
 
@@ -197,11 +201,11 @@ None — no catalog change.
 
 ### Go core
 
-None — engine unchanged (S14-01).
+None for gallery/seeds. `claimevidence.Relationship.Kind` already set; no build-logic change.
 
 ### FFI
 
-None — `SetPreferredLikeness` already used.
+`api/proto/engine.proto` `PromoteClaimEvidenceRelationship.kind = 20` *(new)* — string subject-type key. Handler `claimEvidenceProto` sets it from `rel.Kind`. Regenerate with `./scripts/generate-proto.sh`. No new `Method`. Skill: `add-ffi-handler`.
 
 ### macOS
 
@@ -323,10 +327,10 @@ Files: `EventsListView.swift`, `PlacesListView.swift`. Skill: —.
 Do: Override `thumbnailRelPath` to `header.pictureImageRelPath` on both lists.
 Check: unit expectations in STEP-8; `PersonsList.thumbnailRelPath` unchanged.
 
-**STEP-5 — Promote picture wording and crop mark**
-Files: `L10n.swift`, `Localizable.xcstrings`, `PromoteEvidenceBoard.swift`, `PromoteEvidenceCards.swift`, `PromoteEvidenceDisplay.swift`, `PromoteModel.swift`. Skill: `add-localized-string`.
-Do: D-9, D-10, D-14. `lineSentence` `.picture`; delete `isLikeness`; pass `kind`; relationship groups use neighbor mark; `worded` depiction → `pictureValue`.
-Check: `rg 'lineSameLikeness|lineCompareLikenesses|spokenLikeness|isLikeness|isPicture|ValueFamily\.likeness' macos` empty; `python3 scripts/check-localizable-xcstrings.py` passes.
+**STEP-5 — Promote picture wording, relationship kind wire, and crop marks**
+Files: `api/proto/engine.proto`, generated protobuf under `api/` and `macos/App/Platform/Generated/`, `api/ffi/handlers/promote_evidence.go`, `GenealogyStore.swift`, `GoStore.swift`, `FakeStore.swift` (relationship fixtures), `L10n.swift`, `Localizable.xcstrings`, `PromoteEvidenceBoard.swift`, `PromoteEvidenceCards.swift`, `PromoteEvidenceDisplay.swift`, `PromoteModel.swift`. Skills: `add-localized-string`, `add-ffi-handler`.
+Do: D-10 wire field + map; D-9 / D-14 wording; own cards use row `kind.markKey`; relationship groups use `EvidencePrimaryKind(rawValue: relationship.kind)!.markKey` per D-10. Apply mark to line and member depiction crops.
+Check: `./scripts/generate-proto.sh` then `rg 'lineSameLikeness|lineCompareLikenesses|spokenLikeness|isLikeness|isPicture|ValueFamily\.likeness' macos` empty; a handler or board test asserts relationship `kind` round-trips; `python3 scripts/check-localizable-xcstrings.py` passes.
 
 **STEP-6 — Composer Subject helper**
 Files: `CitationComposerSubjectGroups.swift`. Skill: —.
@@ -363,7 +367,8 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-6 | Swift | `PromoteEvidenceDisplayTests` `lineSentencesFollowTheTable` | depiction → `lineSamePicture` / `lineComparePictures` keys | AC-3.1, AC-3.2, D-9 |
 | T-6b | Swift | `PromoteEvidenceDisplayTests` spoken likeness cases (rename with D-9) | `spokenPicture` / `spokenPictureCount` English starts with "Picture from this source"; rename former likeness spoken tests to picture helpers/English | D-9 |
 | T-7 | Swift | `PromoteEvidenceBoardTests` | Own-card depiction with `kind: .place` → `.crops(..., mark: .subjectPlace)`; `kind: .person` → `.subjectPerson`; no `isLikeness`/`isPicture` on `Line` | AC-3.3, AC-3.4, D-9, D-10 |
-| T-7b | Swift | `PromoteEvidenceBoardTests` *(new case)* | Person-row board + Event neighbor relationship with a depiction line → crop mark `.subjectEvent` | AC-3.5, D-10 |
+| T-7b | Swift | `PromoteEvidenceBoardTests` *(new case)* | Person-row `kind: .person` + relationship with `kind: "event"` and a depiction line (neighbor callback may return nil) → crop mark `.subjectEvent` on line and member | AC-3.5, D-10 |
+| T-7d | Go | `api/ffi/handlers` promote evidence test *(extend)* | Fixture with an Event-kind relationship → response relationship `kind == "event"` | D-10 |
 | T-7c | Swift | `PromoteEvidenceBoardTests` or display test | Expanded depiction member spoken value uses "Picture", not "Likeness" (D-14 `worded`) | D-14 |
 | T-8 | Swift | `PropertiesRowAccessibilityTests` *(new)* | Two Picture properties different keys → different labels containing each key and bound type label | AC-4.1, AC-4.2, D-12 |
 
@@ -415,6 +420,8 @@ Makes slice Check bar outcomes 3, 5, 6, 7 true for this PR (1–2 and 8 need S14
 - `ConclusionDetailBody` already gained a different gallery slot from S13-14 that conflicts with D-1 (two gallery fields).
 - Implementing Promote picture keys forces a second `ValueFamily` path per kind (would violate D-9).
 - A Step cannot pass without renaming `SetPreferredLikeness` or the preferred column (Out).
+- Field number 20 on `PromoteClaimEvidenceRelationship` is already taken on `main` (rebase and pick the next free number).
+- `claimevidence.Relationship.Kind` is empty for a shipped relationship (handler cannot set a truthful kind).
 - `scripts/check-pr.sh` fails on an unrelated main breakage; report, do not expand scope.
 
 ## 12. Open questions

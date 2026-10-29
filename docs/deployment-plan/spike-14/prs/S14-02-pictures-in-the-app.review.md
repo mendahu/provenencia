@@ -1,7 +1,7 @@
 # Review — S14-02 Pictures in the app
 
-**Verdict:** Fits with changes — Ready with changes (round 1 Fixed; round 2 pending)
-**Rounds:** 1. **Reviewers:** maintainability (cursor-grok-4.6-xhigh), executability (composer-2.5)
+**Verdict:** Fits with changes — Ready (round 2 Fixed M-7; formal loop capped at 2 rounds)
+**Rounds:** 2. **Reviewers:** maintainability (cursor-grok-4.6-xhigh), executability (composer-2.5)
 
 ## To user
 
@@ -65,5 +65,12 @@ None.
 ### X-7 · minor · Depiction crop mark on expanded Promote members
 **Answer:** Fixed — D-10 / STEP-5: the group's crop mark applies to line and depiction `memberRow` crops.
 
-### Maintainability round 2
-Pending.
+### M-7 · blocker · D-10 rebuilds neighbor kind from page rows and falls back to the sheet kind
+**Plan:** D-10 used `neighbor()?.kind ?? kind.markKey`; rejected adding relationship kind to proto.
+**Codebase:** `claimevidence.Relationship.Kind` already exists; handler uses `rel.Kind` for sections; proto omits it; `PromoteFlow.row` is nil for off-page neighbors.
+**Better shape:** Wire `kind` on `PromoteClaimEvidenceRelationship`; board reads `relationship.kind`.
+**Answer:** Fixed — D-10 / AC-3.5 / T-7b / T-7d / STEP-5 / FFI section: field 20, handler map, no page-row lookup, no sheet-kind fallback (Stop on empty/unknown). Skills + Out updated.
+
+## Close
+
+No open blockers. Executability round 2: **Ready** (X-6/X-7 Fixed). Maintainability round 2: **Fits with changes** → M-7 Fixed. Plan may go to **Planned**.
