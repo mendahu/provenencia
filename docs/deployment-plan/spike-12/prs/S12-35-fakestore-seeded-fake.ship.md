@@ -36,4 +36,4 @@ Reviewers: MNT only (had Fix-now major). Scope: `5667b777...fef49d45`.
 Nits (logged): `MNT-4 · FakeStore.swift:3536 · Reword insertSource doc away from “like the engine”`
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · to user: — · CON miss: none
+Gate PASS · CI green (Go + macOS) · open: none · follow-ups: none · to user: — · CON miss: none
