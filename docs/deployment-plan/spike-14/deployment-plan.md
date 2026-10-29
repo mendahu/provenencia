@@ -16,7 +16,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 
 **Batch 6 — Wide layout** (user, 2026-10-29):
 
-21. **A wide window is ready for Wide pages.** Every workspace page can read whether its pane is Regular or Wide (1600pt), and the design system has the Wide rules and a Page columns component that stacks at Regular and sits side by side at Wide. Pages adopt it one brief at a time.
+21. **A wide window is ready for Wide pages.** Every workspace page can read whether its pane is Regular or Wide (1600pt), and the design system has the Wide rules and a Page columns component (S14-D1) that stacks at Regular and sits side by side at Wide. Pages adopt it in their own redesigns, starting with Spike 13's Person page frame (S13-10), which builds it in Swift.
 
 **Batch 5 — Audit fixes** (moved from Spike 12, 2026-10-29):
 
@@ -59,7 +59,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 
 | Dogfood note or idea | PR | Brief |
 | --- | --- | --- |
-| Pages jammed to one side on a large monitor, with empty space beside them (user, 2026-10-29); breakpoint and rules in [`macos-client-patterns.md` § 9](../../macos-client-patterns.md#9-window-widths-regular-and-wide) | S14-24, S14-25 | S14-D1 |
+| Pages jammed to one side on a large monitor, with empty space beside them (user, 2026-10-29); breakpoint and rules in [`macos-client-patterns.md` § 9](../../macos-client-patterns.md#9-window-widths-regular-and-wide) | S14-24; Page columns is built by the first page redesign that uses it (S13-10) | S14-D1 |
 | Spike 12's open PRs when it closed (user, 2026-10-29): S12-52, S12-26, S12-27 (Batch 4); S12-28, S12-29 + S12-30 + S12-45, S12-31, S12-32, S12-33, S12-40, S12-43's stale-link fix, S12-44, S12-47 + S12-50, S12-48 (Batch 5); S12-39 (Batch 1). The rest were descoped ([Spike 12's note](../archive/spike-12/README.md)) | S14-10 – S14-23 | — |
 | Spike 11's S11-29, planned and never built, moved here when Spike 11 closes (user, 2026-10-29) | S14-09 | — |
 | Promote Jake + grandparent read "Little evidence" under Weak (user, 2026-10-28); raise `segment.OtherSupport` | S14-08 | — |
@@ -104,7 +104,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 - **(Batch 5) A name that heads its own nickname set never folds into another set's head** unless `nicknameDirections` names the pair (audit 2 B-3, option a). Correct folds not yet reviewed, such as Jack → John (`jack` heads `{jack, jackie}`), stop until a Direction is added; until then the Person page shows both names. Binds S14-18.
 - **(Batch 5) Audit items keep their IDs.** Each PR names its audit items (`A-n` from [`app-health-audit.md`](app-health-audit.md), `B-n` from [`app-health-audit-2.md`](app-health-audit-2.md)); `plan-pr` reads them there and re-checks each against the code, because the audits' line numbers are from Spike 12. Binds S14-13 – S14-22.
 - **(Batch 3) S14-09 is Spike 11's S11-29, refreshed.** Its plan and review moved with it and keep their decisions (the user chose the treatment on 2026-10-19: curly quotes, parentheses, italic surname on the two titles; no migration of existing catalogs). The plan is refreshed against `main` with `plan-pr` because S11-28's alias fold and S11-44 changed name display after it was written. Binds S14-09.
-- **(Batch 6) One breakpoint, 1600pt of pane width.** Regular below 1600pt, Wide at and above, measured on the page's pane (the window minus the sidebar), not the window or screen; a page with a side pane plans it in its own Wide frame and does not re-measure (user, 2026-10-29: the whole inside view is what a page designs for; an inspector is one page's own arrangement). Every brief draws each view at Regular and Wide ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md#wide-layout-binding)); the rules and patterns are [`macos-client-patterns.md` § 9](../../macos-client-patterns.md#9-window-widths-regular-and-wide). The Swift token lands before the kit's CSS (S14-24, user 2026-10-29), and S14-25 checks they agree. Binds S14-24, S14-25 and every later brief.
+- **(Batch 6) One breakpoint, 1600pt of pane width.** Regular below 1600pt, Wide at and above, measured on the page's pane (the window minus the sidebar), not the window or screen; a page with a side pane plans it in its own Wide frame and does not re-measure (user, 2026-10-29: the whole inside view is what a page designs for; an inspector is one page's own arrangement). Every brief draws each view at Regular and Wide ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md#wide-layout-binding)); the rules and patterns are [`macos-client-patterns.md` § 9](../../macos-client-patterns.md#9-window-widths-regular-and-wide). The Swift token lands before the kit's CSS (S14-24, user 2026-10-29), and the PR that builds Page columns checks they agree. Page columns has no PR of its own: each page moves onto it in its own redesign (user, 2026-10-29). Binds S14-24 and every later brief.
 - **(Batch 2) Other-link support is 0.75.** `segment.OtherSupport` is 0.75 (`OtherCredit` stays 0.25): a partial given name plus one lined-up non-birth/death link clears Weak on the 2026-10-28 Jake + grandparent dogfood shape, without a kinship-only tier or a name-curve change. Decided user 2026-10-28 (option A). Binds S14-08.
 
 ## PR map
@@ -135,12 +135,12 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-22 | Promote's wire says what Go decided | 5 | The proposal says whether each connection will file and why not through one pure cycle rule; name part types guarded (was S12-48) | — | S14-09, S13-23 | — | Scoped |
 | S14-23 | Thumbnails for oversized JPEGs | 1 | A pure-Go reduced decoder in `core/raster` gives a JPEG over the 64-megapixel budget a 1/8-scale thumbnail; bounded and fuzzed; Go only (was S12-39) | — | — | — | Scoped |
 | S14-24 | Give every workspace page its width class | 6 | `PVSpacing.widthWideBreakpoint` (1600), `PVWidthClass` and the `pvWidthClass` environment value, measured once at `WorkspaceDestinationHost`; no visible change | — | — | [S14-24-wide-width-class.md](prs/S14-24-wide-width-class.md) | Landed #628 |
-| S14-25 | Page columns in the kit | 6 | `PVPageColumns`: primary and secondary columns that stack at Regular and sit side by side at Wide; the Person, Event and Place pages and their lists move onto it, primary only, with no visible change | S14-D1 | S14-24, S14-D1 | — | Blocked — on board S14-D1 |
+| S14-25 | Page columns in the kit | — | Folded into the page redesigns: Spike 13's S13-10 builds `PVPageColumns` with the Person page frame (user, 2026-10-29) | — | — | — | Descoped (2026-10-29) → S13-10 |
 | S14-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
 
-[`design/README.md`](design/README.md). **S14-D1** (Wide layout in the design system) gates S14-25. S14-02 reuses the Person page's gallery section, header thumb, portrait controls and list thumbnail with new headings and wording; S14-03 shows fewer radios on an existing strip.
+[`design/README.md`](design/README.md). **S14-D1** (Wide layout in the design system) puts Page columns in the Claude Design kit before Spike 13's S13-D1 draws the Person page frame; S13-10 builds it in Swift. S14-02 reuses the Person page's gallery section, header thumb, portrait controls and list thumbnail with new headings and wording; S14-03 shows fewer radios on an existing strip.
 
 ## Slices
 
@@ -180,7 +180,7 @@ SLICE 5 — Audit fixes (batch 5)
 SLICE 6 — Wide layout (batch 6)
   S14-24  Give every workspace page its width class
   ✎ S14-D1  Wide layout in the design system
-  S14-25  Page columns in the kit   (after S14-24 and the S14-D1 board)
+  (S14-25 descoped 2026-10-29: Page columns is built by S13-10)
   Check: bar outcome 21; at the default window and at 2560pt wide every page looks as before.
 
 SLICE 3 — Name display (batch 3)
@@ -204,8 +204,7 @@ S13-24 ──▶ S14-16, S14-20      (Spike 13)
 S13-23 ──▶ S14-22             (Spike 13)
 S14-09 ──▶ S14-22
 S14-08  (independent)
-S14-24 ──▶ S14-25
-S14-D1 ──▶ S14-25
+S14-D1 ──▶ S13-D1, S13-10      (Spike 13)
 ```
 
 ---
@@ -249,16 +248,13 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 #### S14-24 — Give every workspace page its width class
 
 **Ships.** `PVSpacing.widthWideBreakpoint` = 1600; `PVWidthClass` (`.regular`, `.wide`), the `pvWidthClass` environment value and `pvMeasuresWidthClass()` in a new kit folder `Components/WidthClass/`; `WorkspaceDestinationHost` fills the detail area and measures it once, outside the place's `.id`; one borderless-window test helper replaces three copies. Kit README row; `macos-client-patterns.md` § 9 names the symbols. No page reads it yet.
-**Not this PR.** Page columns (S14-25); any page's Wide frame.
+**Not this PR.** Page columns (built by Spike 13's S13-10); any page's Wide frame.
 **Check.** Swift tests for the class at 1599 and 1600 and for the modifier in a hosted window; every page looks as on `main` at both widths.
 **Context.** Working rule "One breakpoint, 1600pt of pane width"; [`macos-client-patterns.md` § 9](../../macos-client-patterns.md#9-window-widths-regular-and-wide); `SourcesListView`'s `onGeometryChange`; `add-ui-component`, `add-swift-test`.
 
 #### S14-25 — Page columns in the kit
 
-**Ships.** `PVPageColumns` from the agreed S14-D1 board: a primary column up to `widthContentMax`, and an optional secondary column from `widthInspector` to `widthSecondaryMax` (480, new) that stacks below at Regular and sits beside at Wide; the group centers past both maximums with `gutterPage` gutters at both widths (S14-D1 WL-3 – WL-8). `ConclusionDetailPage.page` and `ConclusionListPage.page` move onto it, primary only, each keeping its own stack and header in the primary slot, and their column code goes. The Swift kit README gets a row and a link to § 9.
-**Not this PR.** The header slot and pinned mode, built with the Source page in its own brief ([`ideas/wide-layout.md`](../../ideas/wide-layout.md)); any secondary column on a page; a list-beside-detail layout for the Conclusion lists.
-**Check.** Swift tests for the WL-5 sizes at panes 1102, 1600, 1656 and 2296; the Person page and Persons list look as on `main` at both widths.
-**Context.** [S14-D1](design/S14-D1-wide-layout.md); `add-ui-component`. Planned with `plan-pr` once the board is agreed.
+**Descoped (2026-10-29).** The pages it would have moved are being redesigned in Spike 13, so each moves onto Page columns in its own redesign instead of in a separate migration (user). Spike 13's S13-10 builds `PVPageColumns` from the S14-D1 board with the Person page frame, and `ConclusionDetailPage.page` moves onto it there, so the Event and Place pages follow. What this entry listed is now in S14-D1 § 3 and Spike 13's working rule "Redesigns adopt Page columns".
 
 ### Slice 3 — Name display
 

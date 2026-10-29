@@ -3,7 +3,7 @@
 **Kind:** Claude Design board (**enhancement** of the Provenencia design-system project: tokens, kit README, one new layout component)
 **Spike:** Provenencia Spike 14 (odds and ends), Batch 6 — Wide layout
 **View:** The design system itself: `tokens/spacing.css`, the Claude Design kit README, and a Page columns specimen. No product screen.
-**Implements later as:** PR **S14-25** (Page columns in the kit). S14-24 adds the Swift token and width class first and is not gated by this board.
+**Implements later as:** no PR of its own. The first page redesign that uses Page columns builds it: Spike 13's **S13-10** (Person page frame, brief S13-D1). S14-24 added the Swift token and width class (landed #628). S14-25 was descoped on 2026-10-29.
 **Depends on:** —
 **Related:** [`docs/macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide) (the breakpoint and the rules), [`../deployment-plan.md`](../deployment-plan.md) working rule "(Batch 6) One breakpoint, 1600pt of pane width", [S14-24](../prs/S14-24-wide-width-class.md)
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
@@ -101,11 +101,11 @@ Provenencia opens at a laptop-sized window, 1366 × 900pt. Researchers also stre
 
 ---
 
-## 3. Implementation gate (S14-25)
+## 3. Implementation gate (the first redesign that uses it)
 
-| Ships in **S14-25** | Stays out |
+| Ships in **S13-10**, with the Person page frame | Stays out |
 | --- | --- |
-| `PVPageColumns` in the Swift kit with the primary and secondary slots, matching the agreed component. `ConclusionDetailPage.page` and `ConclusionListPage.page` move onto it as primary-only pages, each keeping its own `VStack` and header inside the primary slot, which changes nothing on screen; their hand-written column code goes. `PVSpacing` gains `widthSecondaryMax` (480), transcribed from WL-1, and S14-24's `widthWideBreakpoint` is checked against it. The Swift kit README gets a Page columns row and a link to § 9 of `docs/macos-client-patterns.md`, not a copy of the rules. | The header slot and pinned mode (built with their first caller, the Source page, in its own brief: [`ideas/wide-layout.md`](../../../ideas/wide-layout.md)). A secondary column on any page. A list-beside-detail layout for the Conclusion lists (their own brief). |
+| `PVPageColumns` in the Swift kit with the primary and secondary slots, matching the agreed component. `ConclusionDetailPage.page` moves onto it, so the Person, Event and Place pages share it; what goes in each slot at Wide is the S13-D1 board's call. `PVSpacing` gains `widthSecondaryMax` (480), transcribed from WL-1, and S14-24's `widthWideBreakpoint` is checked against it. The Swift kit README gets a Page columns row and a link to § 9 of `docs/macos-client-patterns.md`, not a copy of the rules. | The header slot and pinned mode, built with their first caller (the S13-D1 board decides whether the Person header uses it; otherwise the Source page's redesign, [`ideas/wide-layout.md`](../../../ideas/wide-layout.md)). `ConclusionListPage.page` (its own list redesign). A list-beside-detail layout for the Conclusion lists (their own brief). |
 
 ---
 
@@ -167,7 +167,7 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Breakpoint token | Token | New | `DesignSystem/Tokens/PVSpacing.swift` | `--width-wide-breakpoint`. S14-24 adds `widthWideBreakpoint` there first; this board adds the CSS. Read by the width class and by WL-10's comment. |
 | Secondary-column maximum | Token | New | `DesignSystem/Tokens/PVSpacing.swift` | `--width-secondary-max` (480). Read by Page columns; the pattern table's list column is the next reader when its brief comes. |
 | Width class | Component | New | `DesignSystem/Components/WidthClass/` (new, S14-24) | Not drawn. Regular or Wide, measured by the workspace, read by Page columns. Ship once S14-24 lands. |
-| Page columns | Component | New | `DesignSystem/Components/PageColumns/` (new, S14-25) | First callers in S14-25: `Features/Conclusions/ConclusionDetailPage.swift` `page` (Person, Event and Place pages) and `Features/Conclusions/ConclusionListPage.swift` `page`, primary only. Next: the Source page content column and its pinned `Features/Sources/SourcePageIdentityHeader.swift` header, in the Source page's own brief. The Conclusion lists stay primary-only until their own list-beside-detail brief. |
+| Page columns | Component | New | `DesignSystem/Components/PageColumns/` (new, S13-10) | First caller in S13-10: `Features/Conclusions/ConclusionDetailPage.swift` `page` (Person, Event and Place pages). Later: `Features/Conclusions/ConclusionListPage.swift` `page` in the lists' redesign. Next: the Source page content column and its pinned `Features/Sources/SourcePageIdentityHeader.swift` header, in the Source page's own brief. The Conclusion lists stay primary-only until their own list-beside-detail brief. |
 | Placeholder blocks | Component | Ship | `DesignSystem/Components/Card/PVCard.swift`, `DesignSystem/Components/SectionHeader/PVSectionHeader.swift`, `DesignSystem/Components/Field/PVField.swift` | Specimen content only. |
 | Spacing tokens | Token | Ship | `DesignSystem/Tokens/PVSpacing.swift` | `--width-content-max`, `--width-inspector`, `--gutter-page`, `--space-8`, `--space-9`. Values unchanged. `--gutter-page-wide` is not used. |
 
@@ -177,4 +177,4 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 
 ## 7. Handoff
 
-When the board is agreed: move this brief to [`archive/`](archive/), update [`README.md`](README.md), write the board's paragraph in `docs/deployment-plan/spike-14/completed.md`, and plan S14-25 with `plan-pr`. S14-25 checks `--width-wide-breakpoint` against the 1600 S14-24 shipped; a different value on the board is a question for the user, not a silent change.
+When the board is agreed: move this brief to [`archive/`](archive/), update [`README.md`](README.md), write the board's paragraph in `docs/deployment-plan/spike-14/completed.md`, and tell Spike 13: S13-D1 pulls the fresh kit and draws the Person frame on Page columns, and S13-10 builds it. That PR checks `--width-wide-breakpoint` against the 1600 S14-24 shipped; a different value on the board is a question for the user, not a silent change.
