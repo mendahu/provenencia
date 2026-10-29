@@ -577,7 +577,7 @@ struct CitationComposerModelTests {
         let created = jones.activeCitationID
         #expect(created != nil)
         await jones.prepare()
-        #expect(jones.listedCitations.contains { $0.id == created })
+        #expect(jones.listedCitations.contains { $0.citation.id == created })
 
         let smith = makeModel(store: store, graphID: "g-2", subjectID: "sub-person-2")
         await smith.prepare()

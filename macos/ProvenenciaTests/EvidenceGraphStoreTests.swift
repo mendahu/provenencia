@@ -94,7 +94,7 @@ struct EvidenceGraphStoreTests {
             projectDir: projectDir, userID: userID, sourceID: sourceID,
             fileID: "f1", label: "Page 1", description: "", graphIDs: nil
         )
-        #expect(store.createArtifactGraphIDs.last == nil)
+        #expect(store.createArtifactGraphIDs == [nil])
         #expect(store.evidenceGraphsByProject[projectDir]?.map(\.artifactIDs) == [["a0"], ["a0"]])
         let (chosen, _) = try await store.createArtifact(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
@@ -130,7 +130,7 @@ struct EvidenceGraphStoreTests {
             projectDir: projectDir, userID: userID, sourceID: created.id,
             fileID: "", label: "Page 1", description: "", graphIDs: nil
         )
-        #expect(store.createArtifactGraphIDs.last == nil)
+        #expect(store.createArtifactGraphIDs == [nil])
         let linked = try await store.listEvidenceGraphs(projectDir: projectDir)
         #expect(linked.first?.artifactIDs == [])
 
