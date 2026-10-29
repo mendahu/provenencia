@@ -87,8 +87,9 @@ struct ConclusionDetailBadge: Equatable {
 
 /// The fields a Conclusion detail page lays out. Each kind owns how it
 /// fills them (mark, title, the line under the title, and the rows). The
-/// page only places them. Giving a kind its own page later does not need a
-/// new query or history entry.
+/// page places the header and then the kind-supplied `pageSections` slot,
+/// so a kind does not get its own page type. `sections` here is the Place
+/// hierarchy data, not the page's sections.
 protocol ConclusionDetailBody: Equatable {
     var title: ConclusionTitleSource { get }
     var ref: String { get }
@@ -107,10 +108,17 @@ extension ConclusionDetailBody {
     var likenesses: [ConclusionDetailLikeness] { [] }
 }
 
+/// What the `pageSections` slot receives beside the content.
+struct ConclusionDetailPageSectionsContext {
+    var projectDir: String
+    var refreshing: Bool
+    var portrait: ConclusionPortraitModel?
+}
+
 /// Shared Conclusion detail chrome (S9-24). A view, not a place: the caller
 /// names the entity, and the place registry warms `conclusionDetail` for
 /// that id. Person, Event, and Place stay separate history entries.
-struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View {
+struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View, PageSections: View>: View {
     let session: WorkspaceSession
     let entityId: String
     let pageIdentifier: String
@@ -119,6 +127,8 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View 
     let summary: (Content) -> Summary
     /// Handed only by a kind whose likenesses can be chosen as the portrait (the Person page).
     var portrait: ConclusionPortraitModel? = nil
+    /// Everything below the header. The convenience initializer supplies `ConclusionDetailDefaultPageSections`.
+    let pageSections: (Content, ConclusionDetailPageSectionsContext) -> PageSections
 
     private var key: CatalogQueryKey {
         .conclusionDetail(project: session.projectKey, entityId: entityId)
@@ -134,7 +144,8 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View 
                     errorIdentifier: errorIdentifier,
                     make: make,
                     summary: summary,
-                    portrait: portrait
+                    portrait: portrait,
+                    pageSections: pageSections
                 )
             } else {
                 Self.page(identifier: pageIdentifier) { Self.loading }
@@ -167,7 +178,59 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View 
     }
 }
 
-private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: View>: View {
+extension ConclusionDetailPage where PageSections == ConclusionDetailDefaultPageSections<Content> {
+    init(
+        session: WorkspaceSession,
+        entityId: String,
+        pageIdentifier: String,
+        errorIdentifier: String,
+        make: @escaping (CatalogConclusionDetail) -> Content,
+        summary: @escaping (Content) -> Summary,
+        portrait: ConclusionPortraitModel? = nil
+    ) {
+        self.init(
+            session: session,
+            entityId: entityId,
+            pageIdentifier: pageIdentifier,
+            errorIdentifier: errorIdentifier,
+            make: make,
+            summary: summary,
+            portrait: portrait,
+            pageSections: { ConclusionDetailDefaultPageSections(content: $0, context: $1) }
+        )
+    }
+}
+
+/// Today's below-header fill: Details, the likeness gallery, then the Place relationship sections.
+struct ConclusionDetailDefaultPageSections<Content: ConclusionDetailBody>: View {
+    let content: Content
+    let context: ConclusionDetailPageSectionsContext
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            PVSectionHeader(title: L10n.Conclusions.detailsSection, aside: {
+                if context.refreshing {
+                    ProgressView().controlSize(.small)
+                }
+            })
+            ForEach(content.rows) { row in
+                ReconciledValueRow(model: row)
+            }
+        }
+        if !content.likenesses.isEmpty {
+            ConclusionDetailLikenessSection(
+                projectDir: context.projectDir,
+                likenesses: content.likenesses,
+                portrait: context.portrait
+            )
+        }
+        ForEach(content.sections) { section in
+            ConclusionDetailRelationshipSection(section: section)
+        }
+    }
+}
+
+private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: View, PageSections: View>: View {
     @Bindable var handle: QueryHandle<CatalogConclusionDetail>
     let projectDir: String
     let pageIdentifier: String
@@ -175,16 +238,17 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
     let make: (CatalogConclusionDetail) -> Content
     let summary: (Content) -> Summary
     let portrait: ConclusionPortraitModel?
+    let pageSections: (Content, ConclusionDetailPageSectionsContext) -> PageSections
 
     private var presentation: ConclusionDetailPresentation<Content> {
         ConclusionDetailPresentation(handle.read, isFetching: handle.isFetching, content: make)
     }
 
     var body: some View {
-        ConclusionDetailPage<Content, Summary>.page(identifier: pageIdentifier) {
+        ConclusionDetailPage<Content, Summary, PageSections>.page(identifier: pageIdentifier) {
             switch presentation {
             case .loading:
-                ConclusionDetailPage<Content, Summary>.loading
+                ConclusionDetailPage<Content, Summary, PageSections>.loading
             case .failed(let message):
                 PVCallout(tone: .danger, message: message)
                     .accessibilityIdentifier(errorIdentifier)
@@ -195,26 +259,14 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
                     summary: summary,
                     portrait: portrait
                 )
-                VStack(alignment: .leading, spacing: 0) {
-                    PVSectionHeader(title: L10n.Conclusions.detailsSection, aside: {
-                        if refreshing {
-                            ProgressView().controlSize(.small)
-                        }
-                    })
-                    ForEach(content.rows) { row in
-                        ReconciledValueRow(model: row)
-                    }
-                }
-                if !content.likenesses.isEmpty {
-                    ConclusionDetailLikenessSection(
+                pageSections(
+                    content,
+                    ConclusionDetailPageSectionsContext(
                         projectDir: projectDir,
-                        likenesses: content.likenesses,
+                        refreshing: refreshing,
                         portrait: portrait
                     )
-                }
-                ForEach(content.sections) { section in
-                    ConclusionDetailRelationshipSection(section: section)
-                }
+                )
             }
         }
     }
