@@ -24,10 +24,14 @@ struct PVWidthClassTests {
     @Test(arguments: [
         (-1, PVWidthClass.regular), (0, .regular), (1102, .regular), (1464, .regular),
         (1599, .regular), (1599.5, .regular),
-        (PVSpacing.widthWideBreakpoint, .wide), (1600, .wide), (1656, .wide), (2296, .wide),
+        (PVSpacing.widthWideBreakpoint, .wide), (1656, .wide), (2296, .wide),
     ] as [(CGFloat, PVWidthClass)])
     func classFollowsPaneWidth(width: CGFloat, expected: PVWidthClass) {
         #expect(PVWidthClass(paneWidth: width) == expected)
+    }
+
+    @Test func breakpointIsSixteenHundred() {
+        #expect(PVSpacing.widthWideBreakpoint == 1600)
     }
 
     @Test func modifierFollowsTheWindow() async {
