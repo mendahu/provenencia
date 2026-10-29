@@ -55,6 +55,6 @@ struct PVWidthClassTests {
             WidthClassProbe(box: bare), windowSize: CGSize(width: 2000, height: 400)
         )
         #expect(await waitUntil { bare.seen == .regular })
-        _ = (window, bareWindow)
+        withExtendedLifetime((window, bareWindow)) {}
     }
 }

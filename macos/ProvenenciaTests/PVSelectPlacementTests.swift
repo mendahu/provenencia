@@ -143,11 +143,11 @@ struct PVSelectPlacementTests {
             hostSize: CGSize(width: 900, height: 80),
             orderFront: false
         )
-        _ = window
         host.layoutSubtreeIfNeeded()
         let frames = PVSelectLayoutProbe.collect(in: host)
         let selects = frames.filter { $0.width > 200 && $0.width <= column + 1 && $0.height >= 20 }
         #expect(selects.count >= 2, "frames \(frames)")
+        withExtendedLifetime(window) {}
     }
 
     @Test @MainActor func aShortClosedLabelHugsItsText() {
@@ -161,10 +161,10 @@ struct PVSelectPlacementTests {
             hostSize: CGSize(width: 900, height: 80),
             orderFront: false
         )
-        _ = window
         host.layoutSubtreeIfNeeded()
         let frames = PVSelectLayoutProbe.collect(in: host)
         #expect(frames.contains { $0.width > 36 && $0.width < 160 && $0.height >= 20 }, "frames \(frames)")
+        withExtendedLifetime(window) {}
     }
 }
 
