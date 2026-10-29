@@ -4,10 +4,11 @@
 **Spike:** Provenencia Spike 14 (odds and ends), Batch 6 — Wide layout
 **View:** The design system itself: `tokens/spacing.css`, the Claude Design kit README, and a Page columns specimen. No product screen.
 **Implements later as:** no PR of its own. The first page redesign that uses Page columns builds it: Spike 13's **S13-10** (Person page frame, brief S13-D1). S14-24 added the Swift token and width class (landed #628). S14-25 was descoped on 2026-10-29.
+**Board:** agreed 2026-10-29 in the Provenencia design-system project ([Claude Design](https://claude.ai/design/p/0f6c1f29-8408-4735-b114-5ae4c4c18445)); archived the same day
 **Depends on:** —
-**Related:** [`docs/macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide) (the breakpoint and the rules), [`../deployment-plan.md`](../deployment-plan.md) working rule "(Batch 6) One breakpoint, 1600pt of pane width", [S14-24](../prs/S14-24-wide-width-class.md)
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Related:** [`docs/macos-client-patterns.md` § 9](../../../../macos-client-patterns.md#9-window-widths-regular-and-wide) (the breakpoint and the rules), [`../deployment-plan.md`](../../deployment-plan.md) working rule "(Batch 6) One breakpoint, 1600pt of pane width", [S14-24](../../prs/S14-24-wide-width-class.md)
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 **Review:** [`S14-D1-wide-layout.review.md`](S14-D1-wide-layout.review.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
@@ -105,7 +106,7 @@ Provenencia opens at a laptop-sized window, 1366 × 900pt. Researchers also stre
 
 | Ships in **S13-10**, with the Person page frame | Stays out |
 | --- | --- |
-| `PVPageColumns` in the Swift kit with the primary and secondary slots, matching the agreed component. `ConclusionDetailPage.page` moves onto it, so the Person, Event and Place pages share it; what goes in each slot at Wide is the S13-D1 board's call. `PVSpacing` gains `widthSecondaryMax` (480), transcribed from WL-1, and S14-24's `widthWideBreakpoint` is checked against it. The Swift kit README gets a Page columns row and a link to § 9 of `docs/macos-client-patterns.md`, not a copy of the rules. | The header slot and pinned mode, built with their first caller (the S13-D1 board decides whether the Person header uses it; otherwise the Source page's redesign, [`ideas/wide-layout.md`](../../../ideas/wide-layout.md)). `ConclusionListPage.page` (its own list redesign). A list-beside-detail layout for the Conclusion lists (their own brief). |
+| `PVPageColumns` in the Swift kit with the primary and secondary slots, matching the agreed component. `ConclusionDetailPage.page` moves onto it, so the Person, Event and Place pages share it; what goes in each slot at Wide is the S13-D1 board's call. `PVSpacing` gains `widthSecondaryMax` (480), transcribed from WL-1, and S14-24's `widthWideBreakpoint` is checked against it. The Swift kit README gets a Page columns row and a link to § 9 of `docs/macos-client-patterns.md`, not a copy of the rules. | The header slot and pinned mode, built with their first caller (the S13-D1 board decides whether the Person header uses it; otherwise the Source page's redesign, [`ideas/wide-layout.md`](../../../../ideas/wide-layout.md)). `ConclusionListPage.page` (its own list redesign). A list-beside-detail layout for the Conclusion lists (their own brief). |
 
 ---
 
@@ -177,4 +178,4 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 
 ## 7. Handoff
 
-When the board is agreed: move this brief to [`archive/`](archive/), update [`README.md`](README.md), write the board's paragraph in `docs/deployment-plan/spike-14/completed.md`, and tell Spike 13: S13-D1 pulls the fresh kit and draws the Person frame on Page columns, and S13-10 builds it. That PR checks `--width-wide-breakpoint` against the 1600 S14-24 shipped; a different value on the board is a question for the user, not a silent change.
+When the board is agreed: move this brief to `archive/`, update [`README.md`](../README.md), write the board's paragraph in `docs/deployment-plan/spike-14/completed.md`, and tell Spike 13: S13-D1 pulls the fresh kit and draws the Person frame on Page columns, and S13-10 builds it. That PR checks `--width-wide-breakpoint` against the 1600 S14-24 shipped; a different value on the board is a question for the user, not a silent change.

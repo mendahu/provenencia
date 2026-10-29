@@ -140,7 +140,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 
 ## Design track
 
-[`design/README.md`](design/README.md). **S14-D1** (Wide layout in the design system) puts Page columns in the Claude Design kit before Spike 13's S13-D1 draws the Person page frame; S13-10 builds it in Swift. S14-02 reuses the Person page's gallery section, header thumb, portrait controls and list thumbnail with new headings and wording; S14-03 shows fewer radios on an existing strip.
+[`design/README.md`](design/README.md). **S14-D1** (Wide layout in the design system) put Page columns in the Claude Design kit; board agreed and brief archived 2026-10-29. Spike 13's S13-D1 draws the Person page frame from it, and S13-10 builds it in Swift. S14-02 reuses the Person page's gallery section, header thumb, portrait controls and list thumbnail with new headings and wording; S14-03 shows fewer radios on an existing strip.
 
 ## Slices
 

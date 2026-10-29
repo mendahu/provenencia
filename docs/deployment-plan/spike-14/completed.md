@@ -13,3 +13,7 @@ One short paragraph per landed PR, newest first. Written by the PR that lands it
 ## S14-24 — Workspace width class
 
 **Landed 2026-10-29** in [#628](https://github.com/mendahu/provenencia/pull/628). `PVSpacing.widthWideBreakpoint` (1600) and `PVWidthClass` with the `pvWidthClass` environment value; `WorkspaceDestinationHost` fills the detail area and measures the pane once, outside the place's `.id`, so any page reads `.regular` or `.wide` without measuring itself. No page reads it yet and nothing on screen changes; a shared `hostInBorderlessWindow` test helper replaces three hand-written window mounts.
+
+## S14-D1 — Wide layout in the design system (board)
+
+**Agreed 2026-10-29** in the Provenencia [design-system project](https://claude.ai/design/p/0f6c1f29-8408-4735-b114-5ae4c4c18445); brief archived in [`design/archive/`](design/archive/S14-D1-wide-layout.md). Per the brief, the kit gains `--width-wide-breakpoint` (1600) and `--width-secondary-max` (480), a Width classes README section with the six Wide rules, and the Page columns component: a centered primary column at Regular, primary plus a 340–480 secondary column at Wide, the group centered past both maximums, an optional header slot that scrolls or pins. No PR of its own: Spike 13's S13-10 builds `PVPageColumns` from it with the Person page frame (S14-25 descoped).

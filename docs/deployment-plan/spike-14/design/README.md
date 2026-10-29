@@ -8,8 +8,10 @@ Briefs are written one at a time, just before the PR they gate. Design track and
 
 | Brief | View | Gates |
 | --- | --- | --- |
-| [S14-D1](S14-D1-wide-layout.md) | Design system: the Wide breakpoint token, the Width classes README section and Page columns | S13-D1 and S13-10 (Spike 13), the first redesign to use Page columns |
+None.
 
 ## Archived
 
-None yet.
+| Brief | View | Board | Built by |
+| --- | --- | --- | --- |
+| [S14-D1](archive/S14-D1-wide-layout.md) | Design system: the Wide breakpoint token, the Width classes README section and Page columns | Agreed 2026-10-29 in the [design-system project](https://claude.ai/design/p/0f6c1f29-8408-4735-b114-5ae4c4c18445) | S13-10 (Spike 13), the first redesign to use Page columns |
