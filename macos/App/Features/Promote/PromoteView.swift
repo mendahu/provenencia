@@ -4,6 +4,7 @@ import SwiftUI
 struct PromoteView: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @State private var model: PromoteModel
+    @Environment(\.pvWidthClass) private var widthClass
 
     init(
         entry: PromoteEntry,
@@ -39,8 +40,8 @@ struct PromoteView: View {
                 }
                 .padding(.horizontal, PVSpacing.space10)
                 .padding(.vertical, PVSpacing.space6)
-                .frame(maxWidth: 1200, alignment: .leading)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: PromoteLayout.listMax(widthClass), alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .center)
             }
             footer
         }
@@ -56,15 +57,11 @@ struct PromoteView: View {
         }
         .task {
             let _: QueryHandle<EvidenceGraphRows> = model.session.query(model.graphKey)
-            let _: QueryHandle<[CatalogClaimConfidenceGrade]> = model.session.query(model.confidenceKey)
             let _: QueryHandle<PropertiesSnapshot> = model.session.query(model.propertiesKey)
             let _: QueryHandle<[CatalogConnectRule]> = model.session.query(model.rulesKey)
             let _: QueryHandle<[CatalogSource]> = model.session.query(model.sourcesKey)
             let _: QueryHandle<[CatalogSourceType]> = model.session.query(model.sourceTypesKey)
             await model.load()
-        }
-        .pvSheet(item: sheetBinding) { row in
-            PromoteEvidenceSheet(row: row, grades: model.grades, model: model)
         }
         .pvConfirm(
             item: leaveBinding,
@@ -212,13 +209,16 @@ struct PromoteView: View {
     }
 
     private var columnHeaders: some View {
-        HStack(spacing: PromoteLayout.columnGap) {
-            Color.clear.frame(width: PromoteLayout.kindTile, height: 1)
+        PromoteGridRow(showsArrow: false) {
+            Color.clear.frame(height: 1)
+        } source: {
             columnLabel(L10n.Promote.columnSource)
-            Color.clear.frame(width: 14, height: 1)
-            columnLabel(L10n.Promote.columnTarget).frame(width: PromoteLayout.targetColumn, alignment: .leading)
-            columnLabel(L10n.Promote.columnAssessment)
-            Color.clear.frame(width: PromoteLayout.badgeColumn, height: 1)
+        } target: { _ in
+            columnLabel(L10n.Promote.columnTarget)
+        } freed: {
+            Color.clear.frame(height: 1)
+        } badges: {
+            Color.clear.frame(height: 1)
         }
         .padding(.top, PVSpacing.space5)
         .padding(.bottom, PVSpacing.space3)
@@ -291,13 +291,6 @@ struct PromoteView: View {
         return Section(id: id, title: title, meta: meta, rows: rows, anchors: filed)
     }
 
-    private var sheetBinding: Binding<PromoteFlow.Row?> {
-        Binding(
-            get: { model.flow.row(model.flow.sheetSubjectID) },
-            set: { model.setSheetSubject($0?.subjectID) }
-        )
-    }
-
     private var leaveBinding: Binding<PromoteModel.PendingLeave?> {
         Binding(
             get: { model.pendingLeave },
@@ -316,8 +309,9 @@ private struct PromoteAlignmentRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space2) {
-            HStack(alignment: .center, spacing: PromoteLayout.columnGap) {
+            PromoteGridRow {
                 kindMark
+            } source: {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(verbatim: row.name)
                         .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
@@ -326,46 +320,16 @@ private struct PromoteAlignmentRow: View {
                         .font(PVFont.mono(size: PVTypeScale.caption))
                         .foregroundStyle(PVColor.textMuted)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                PVIcon(.arrowRight, size: 14)
-                    .foregroundStyle(PVColor.textMuted)
-                    .frame(width: 14)
+            } target: { width in
                 if model.recordSearch?.subjectID == row.subjectID {
                     PromoteRecordSearch(row: row, model: model)
-                        .frame(width: PromoteLayout.targetColumn)
                 } else {
-                    targetSelect
-                        .frame(width: PromoteLayout.targetColumn)
+                    targetSelect(width: width)
                 }
-                // A real stack, not a Group: Group forwards its frame to each
-                // child, so an empty assessment column collapses and the
-                // target menu slides into the gap.
-                HStack(spacing: PVSpacing.space3) {
-                    if let readout = row.selectionReadout {
-                        Button { model.openSheet(row.subjectID) } label: {
-                            HStack(spacing: PVSpacing.space3) {
-                                PromoteReadoutBadges(readout: readout)
-                                Text(verbatim: model.reasonText(readout.reason, on: row))
-                                    .font(PVFont.body(size: PVTypeScale.caption))
-                                    .italic()
-                                    .foregroundStyle(PVColor.textSecondary)
-                                    .lineLimit(1)
-                                Spacer(minLength: 0)
-                                PVIcon(.chevronForward, size: 14)
-                                    .foregroundStyle(PVColor.textMuted)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .accessibilityLabel(Text(verbatim: L10n.Promote.evidenceFor(
-                            name: row.name,
-                            assessment: model.assessmentText(readout),
-                            reason: model.reasonText(readout.reason, on: row)
-                        )))
-                        .accessibilityIdentifier("promote.row.\(row.ref).evidence")
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+            } freed: {
+                // Empty on a working row. S13-30 puts the claim's status control here.
+                Color.clear.frame(height: 1)
+            } badges: {
                 HStack(spacing: PVSpacing.space2) {
                     if row.updated {
                         PVBadge(L10n.Promote.updated, tone: .info, icon: .refresh)
@@ -374,10 +338,9 @@ private struct PromoteAlignmentRow: View {
                         PVBadge(L10n.Promote.decided, tone: .neutral, icon: .check, subtle: true)
                     }
                 }
-                .frame(width: PromoteLayout.badgeColumn, alignment: .trailing)
             }
-            if row.updated {
-                PromoteUpdatedCaption(reason: model.reasonText(row.captionReason, on: row))
+            if row.updated, let caption = row.caption {
+                PromoteUpdatedCaption(reason: model.reasonText(caption, on: row))
                     .padding(.leading, PromoteLayout.noteIndent)
             }
             if let ref = row.conflictNote {
@@ -420,13 +383,13 @@ private struct PromoteAlignmentRow: View {
         }
     }
 
-    private var targetSelect: some View {
+    private func targetSelect(width: CGFloat) -> some View {
         PVSelect(
             selection: targetBinding,
             options: targetOptions,
             size: .sm,
             placeholder: row.target == .unset ? L10n.string(L10n.Promote.targetPlaceholder) : nil,
-            menuWidth: PromoteLayout.targetColumn,
+            menuWidth: width,
             fillsWidth: true,
             rowHeight: 46,
             isDisabled: model.isSaving,
@@ -623,10 +586,10 @@ private struct PromoteAnchorRow: View {
     let row: PromoteFlow.Row
 
     var body: some View {
-        HStack(alignment: .center, spacing: PromoteLayout.columnGap) {
+        PromoteGridRow {
             PVMark(row.kind.markKey, size: 16, decorative: true)
                 .foregroundStyle(PVColor.textMuted)
-                .frame(width: PromoteLayout.kindTile, height: PromoteLayout.kindTile)
+        } source: {
             VStack(alignment: .leading, spacing: 0) {
                 Text(verbatim: row.name)
                     .font(PVFont.body(size: PVTypeScale.bodySmall))
@@ -636,10 +599,7 @@ private struct PromoteAnchorRow: View {
                     .font(PVFont.mono(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textMuted)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            PVIcon(.arrowRight, size: 14)
-                .foregroundStyle(PVColor.textMuted)
-                .frame(width: 14)
+        } target: { _ in
             if case .handle(_, let ref, let title) = row.target {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(verbatim: title)
@@ -650,29 +610,105 @@ private struct PromoteAnchorRow: View {
                         .font(PVFont.mono(size: PVTypeScale.caption))
                         .foregroundStyle(PVColor.textMuted)
                 }
-                .frame(width: PromoteLayout.targetColumn, alignment: .leading)
+            } else {
+                Color.clear.frame(height: 1)
             }
+        } freed: {
             Text(L10n.Promote.filedEarlier)
                 .font(PVFont.body(size: PVTypeScale.caption))
                 .italic()
                 .foregroundStyle(PVColor.textMuted)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Color.clear.frame(width: PromoteLayout.badgeColumn, height: 1)
+        } badges: {
+            Color.clear.frame(height: 1)
         }
         .padding(.vertical, PVSpacing.space2)
         .overlay(alignment: .top) { PVDivider() }
     }
 }
 
-/// The board's column grid, shared by the header row and every row so the
-/// columns line up.
+/// The board's column grid (frame 27a), widths and all.
 private enum PromoteLayout {
     static let columnGap = PVSpacing.space5
     static let kindTile: CGFloat = 28
-    static let targetColumn: CGFloat = 330
+    static let arrowColumn: CGFloat = 14
     static let badgeColumn: CGFloat = 112
     /// Notes under a row start where its name does.
     static let noteIndent = kindTile + columnGap
+    static let listMaxRegular: CGFloat = 1200
+    static let listMaxWide: CGFloat = 1600
+    static let targetColumnRegular: CGFloat = 330
+    static let targetColumnWide: CGFloat = 460
+
+    static func listMax(_ widthClass: PVWidthClass) -> CGFloat {
+        widthClass == .wide ? listMaxWide : listMaxRegular
+    }
+
+    static func targetColumn(_ widthClass: PVWidthClass) -> CGFloat {
+        widthClass == .wide ? targetColumnWide : targetColumnRegular
+    }
+}
+
+/// The one grid every Promote row spells: kind tile, Source, an arrow, the target, a slot that
+/// stays free of copy on a working row, and the badges. The Source and the free slot share the
+/// width the fixed columns leave. It reads the width class once and hands the target column's
+/// width to its target slot.
+private struct PromoteGridRow<Tile: View, Source: View, Target: View, Freed: View, Badges: View>: View {
+    @Environment(\.pvWidthClass) private var widthClass
+    let showsArrow: Bool
+    let tile: Tile
+    let source: Source
+    let target: (CGFloat) -> Target
+    let freed: Freed
+    let badges: Badges
+
+    init(
+        showsArrow: Bool = true,
+        @ViewBuilder tile: () -> Tile,
+        @ViewBuilder source: () -> Source,
+        @ViewBuilder target: @escaping (CGFloat) -> Target,
+        @ViewBuilder freed: () -> Freed,
+        @ViewBuilder badges: () -> Badges
+    ) {
+        self.showsArrow = showsArrow
+        self.tile = tile()
+        self.source = source()
+        self.target = target
+        self.freed = freed()
+        self.badges = badges()
+    }
+
+    var body: some View {
+        let targetWidth = PromoteLayout.targetColumn(widthClass)
+        HStack(alignment: .center, spacing: PromoteLayout.columnGap) {
+            tile.frame(width: PromoteLayout.kindTile, height: PromoteLayout.kindTile)
+            source.frame(maxWidth: .infinity, alignment: .leading)
+            Group {
+                if showsArrow {
+                    PVIcon(.arrowRight, size: PromoteLayout.arrowColumn)
+                        .foregroundStyle(PVColor.textMuted)
+                } else {
+                    Color.clear
+                }
+            }
+            .frame(width: PromoteLayout.arrowColumn)
+            target(targetWidth).frame(width: targetWidth, alignment: .leading)
+            freed.frame(maxWidth: .infinity, alignment: .leading)
+            badges.frame(width: PromoteLayout.badgeColumn, alignment: .trailing)
+        }
+    }
+}
+
+/// "Updated · …": why a suggested row moved on the last proposal.
+private struct PromoteUpdatedCaption: View {
+    /// Why it moved, as `PromoteModel.reasonText` words it.
+    let reason: String
+
+    var body: some View {
+        Text(verbatim: L10n.Promote.updatedDetail(reason))
+            .font(PVFont.body(size: PVTypeScale.caption))
+            .italic()
+            .foregroundStyle(PVColor.infoForeground)
+    }
 }
 
 private struct PromoteKindTile: View {

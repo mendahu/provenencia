@@ -77,13 +77,6 @@ extension WorkspaceLocation {
 @MainActor
 @Observable
 final class PromoteModel {
-    /// Where the open sheet's evidence read stands.
-    enum SheetEvidence: Equatable {
-        case idle
-        case loading
-        case failed(String)
-    }
-
     struct PendingLeave: Identifiable, Equatable {
         let navigation: PendingNavigation
         var id: String { String(describing: navigation) }
@@ -99,16 +92,9 @@ final class PromoteModel {
     private(set) var grades: [CatalogClaimConfidenceGrade] = []
     private(set) var sourceRef: String = ""
     private(set) var sourceMark: PVMarkKey = .defaultTypeMark
-    /// Property labels by "key|origin", from the Properties snapshot.
-    private(set) var propertyLabels: [String: String] = [:]
-    /// Property labels by key alone: the product's, else a researcher's.
-    private var propertyLabelsByKey: [String: String] = [:]
     private(set) var loadError: String?
     private(set) var saveError: String?
     private(set) var proposeError: String?
-    /// The open sheet's claim evidence read: the loaded value lives on its row.
-    private(set) var sheetEvidence = SheetEvidence.idle
-    private var evidenceGeneration = 0
     /// A proposal after a decision is in flight; Done waits for it.
     private(set) var isProposing = false
     /// Bumped per proposal; only the latest one's answer is merged.
@@ -227,72 +213,8 @@ final class PromoteModel {
         Task { await repropose(generation: generation) }
     }
 
-    func togglePin(subjectID: String, pinIDs: [String]) {
-        flow.togglePin(subjectID: subjectID, pinIDs: pinIDs)
-    }
-
-    func setArgument(subjectID: String, argument: String) {
-        flow.setArgument(subjectID: subjectID, argument: argument)
-    }
-
-    func setConfidence(subjectID: String, gradeID: String?) {
-        flow.setConfidence(subjectID: subjectID, gradeID: gradeID)
-    }
-
-    func openSheet(_ subjectID: String) { setSheetSubject(subjectID) }
-    func closeSheet() { setSheetSubject(nil) }
-
-    /// Reads the open sheet's evidence again, after a failed read.
-    func reloadEvidence() { setSheetSubject(flow.sheetSubjectID) }
-
-    /// Opens, switches or closes the sheet. A row filed on a handle reads its
-    /// claim evidence each time its sheet opens; any other row has none.
-    func setSheetSubject(_ id: String?) {
-        evidenceGeneration += 1
-        sheetEvidence = .idle
-        syncNameOrders()
-        flow.sheetSubjectID = id
-        guard let id, let row = flow.row(id), !row.anchor, case .handle(let handleID, _, _) = row.target else { return }
-        loadEvidence(subjectID: id, handleID: handleID)
-    }
-
-    private func loadEvidence(subjectID: String, handleID: String) {
-        let generation = evidenceGeneration
-        let neighbors = flow.evidenceNeighbors(for: subjectID)
-        sheetEvidence = .loading
-        Task {
-            do {
-                let evidence = try await store.getPromoteClaimEvidence(
-                    projectDir: session.projectKey.projectDir,
-                    graphID: entry.graphID,
-                    subjectID: subjectID,
-                    handleID: handleID,
-                    neighbors: neighbors
-                )
-                guard generation == evidenceGeneration else { return }
-                flow.setEvidence(subjectID: subjectID, handleID: handleID, board: board(of: evidence))
-                sheetEvidence = .idle
-            } catch {
-                guard generation == evidenceGeneration else { return }
-                sheetEvidence = .failed(L10n.Errors.message(for: error))
-            }
-        }
-    }
-
-    /// The evidence worded for the sheet, once: the page's names for the connected rows and the
-    /// researcher's name order.
-    private func board(of evidence: CatalogClaimEvidence) -> EvidenceBoard {
-        EvidenceBoard.build(
-            evidence: evidence,
-            neighbor: { [flow] id in flow.row(id) },
-            labels: { [self] key in propertyLabel(key: key) },
-            worded: { [session] value in ReconciledValueDisplay.string(for: value, orders: session.nameFormat) },
-            orders: session.nameFormat
-        )
-    }
-
-    /// The one place the page takes the researcher's name order from the session: when it loads,
-    /// proposes again and opens a sheet, whose evidence is worded in the same order.
+    /// The one place the page takes the researcher's name order from the session: when it loads
+    /// and proposes again.
     private func syncNameOrders() {
         flow.nameOrders = session.nameFormat
     }
@@ -331,13 +253,6 @@ final class PromoteModel {
             return role.isEmpty
                 ? L10n.Promote.viaNeighbor(neighbor: neighbor.name, ref: neighbor.shownRef)
                 : L10n.Promote.via(neighbor: neighbor.name, ref: neighbor.shownRef, role: role)
-        case .filed: return L10n.string(L10n.Promote.alreadyFiled)
-        case .decided: return L10n.string(L10n.Promote.reasonDecided)
-        case .agrees(let key, let origin): return L10n.Promote.agreesOn(property: propertyLabel(key: key, origin: origin))
-        case .weak: return L10n.string(L10n.Promote.reasonWeak)
-        case .taken: return L10n.string(L10n.Promote.reasonTaken)
-        case .unplaced: return L10n.string(L10n.Promote.reasonUnplaced)
-        case .empty: return L10n.string(L10n.Promote.reasonEmpty)
         case .neighborPlaced(let id), .neighborMoved(let id), .neighborReleased(let id):
             guard let neighbor = neighbor(id) else { return L10n.string(L10n.Promote.reasonMoveUnknown) }
             switch reason {
@@ -354,23 +269,6 @@ final class PromoteModel {
                 return L10n.string(L10n.Promote.reasonMoveUnknown)
             }
         }
-    }
-
-    /// The band as the row's button speaks it: "Strong", or "Strong, contested".
-    func assessmentText(_ readout: PromoteFlow.SelectionReadout) -> String {
-        let band = L10n.string(L10n.Promote.assessment(readout))
-        return readout.contested ? L10n.Promote.assessmentContested(band) : band
-    }
-
-    /// The catalog label for a Property, or its key when the snapshot lacks it.
-    func propertyLabel(key: String, origin: String) -> String {
-        propertyLabels[key + "|" + origin] ?? key
-    }
-
-    /// The label for a Property known by its key alone: the product's Property, else a researcher's
-    /// own with that key, else the key.
-    func propertyLabel(key: String) -> String {
-        propertyLabelsByKey[key] ?? key
     }
 
     private func nextProposal() -> Int {
@@ -441,22 +339,12 @@ final class PromoteModel {
         }
     }
 
-    /// The Source graph as a snapshot, with the property labels refreshed from the same read. Nil
+    /// The Source graph as a snapshot. Nil
     /// when the graph read isn't ready (never loaded, or failed with nothing cached).
     private func graphSnapshot() async -> EvidenceGraphSnapshot? {
         let rows: EvidenceGraphRows? = await session.readyValue(graphKey)
         let properties: PropertiesSnapshot? = await session.readyValue(propertiesKey)
         let rules: [CatalogConnectRule]? = await session.readyValue(rulesKey)
-        if let properties {
-            propertyLabels = Dictionary(
-                properties.properties.map { ($0.key + "|" + $0.origin, $0.label) },
-                uniquingKeysWith: { first, _ in first }
-            )
-            propertyLabelsByKey = [:]
-            for property in properties.properties where propertyLabelsByKey[property.key] == nil || CatalogOrigin.isProduct(property.origin) {
-                propertyLabelsByKey[property.key] = property.label
-            }
-        }
         guard let rows else { return nil }
         return EvidenceGraphSnapshot.build(
             rows: rows,
