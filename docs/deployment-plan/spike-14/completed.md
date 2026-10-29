@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-13 — A crafted project can't crash the app
+
+**Landed 2026-10-29** in [#632](https://github.com/mendahu/provenencia/pull/632). `subjectpositions.MaxCell` (±1,000,000) is refused on write and clamped on every read, and Swift placement and moves use saturating cells (`EvidenceGraphPlacement.cellLimit`, held to Go's by `TestSwiftVocabularyMatchesGo`). The Artifact viewer decodes once through `ArtifactImageDecode`: the sniffed type must conform to one of the type identifiers Go's stored-type table sends with the file (`SourceFileRef.type_identifiers`), a declaration over 256 MP is refused with its own "Image too large to show" state, both budgets count bytes (divided by the bytes per color component), and the decode is held to `raster.MaxDecodePixels` (64 MP) for display, crop and OCR, with `displayImage` keeping the original point size; `ImageHeaderDecode` now owns the shared header read and decode. `ffi.Call` recovers a panic into `internal.unknown` (the switch is `route`), and a panicking `catalogsession.Do` callback drops its session so the next call reopens, and a researcher catalog that panics while opening is closed. The PDF cut reopens its file through `ProjectFiles.objectURL`. Version 0.2.2. Audit A-26 to A-28.
+
 ## S14-01 — Pictures engine
 
 **Landed 2026-10-28** in [#615](https://github.com/mendahu/provenencia/pull/615). New catalogs seed locked `event_picture` / `place_picture` (Label Picture). Package `core/database/gallery` admits `GalleryKeys()`, reads each tile from `depiction_values.image_file_id` (SEC-4), and `leadPictures` fills `PictureImageFileID` on Person, Event and Place headers. Proto/Swift wire rename to `PictureDetail` / `pictures` / `pictureImageRelPath`; preferred column and `SetPreferredLikeness` stay. View-layer gallery chrome remains S14-02.

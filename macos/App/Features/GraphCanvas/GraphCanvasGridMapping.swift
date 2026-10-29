@@ -30,8 +30,23 @@ enum GraphCanvasGridMapping {
         gridPoint: CGPoint,
         spacing: CGFloat = defaultSpacing
     ) -> (gridX: Int64, gridY: Int64) {
-        let x = Int64(floor(gridPoint.x / spacing))
-        let y = Int64(floor(gridPoint.y / spacing))
-        return (x, y)
+        (saturatingFloor(gridPoint.x / spacing), saturatingFloor(gridPoint.y / spacing))
+    }
+
+    /// `cell` moved by `delta`, held at `Int64.min` / `Int64.max` instead of trapping.
+    static func offsetCell(_ cell: Int64, by delta: Int64) -> Int64 {
+        let (sum, overflow) = cell.addingReportingOverflow(delta)
+        guard overflow else { return sum }
+        return delta < 0 ? Int64.min : Int64.max
+    }
+
+    /// `floor(value)` as an `Int64`: NaN is 0, and a value past the `Int64` range
+    /// (infinity included) is `Int64.min` / `Int64.max`.
+    static func saturatingFloor(_ value: CGFloat) -> Int64 {
+        if value.isNaN { return 0 }
+        let floored = floor(Double(value))
+        if floored >= 9_223_372_036_854_775_808.0 { return Int64.max }
+        if floored < -9_223_372_036_854_775_808.0 { return Int64.min }
+        return Int64(floored)
     }
 }

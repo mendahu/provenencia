@@ -66,6 +66,8 @@ struct CatalogFileRef: Sendable, Equatable {
     var originalFilename: String
     var mediaType: String
     var byteSize: Int64
+    /// The type identifiers a stored image may sniff as, from Go's stored-type table. Empty for a non-image.
+    var typeIdentifiers: [String] = []
 }
 
 struct CatalogArtifact: Sendable, Equatable {

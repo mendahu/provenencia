@@ -11690,6 +11690,30 @@
         }
       }
     },
+    "artifactViewer.imageTooLargeTitle": {
+      "comment": "Title when an image declares a size over the viewer's budget",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Image too large to show"
+          }
+        }
+      }
+    },
+    "artifactViewer.imageTooLargeMessage": {
+      "comment": "Body when an image declares a size over the viewer's budget",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This image is larger than Provenencia can display. A smaller copy of the file will open."
+          }
+        }
+      }
+    },
     "citationComposer.breadcrumb.citationFor": {
       "comment": "Composer breadcrumb leaf; argument is subject label or bridge edge sentence",
       "extractionState": "manual",

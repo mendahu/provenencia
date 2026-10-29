@@ -2115,7 +2115,8 @@ struct GoStore: GenealogyStore {
             relPath: f.relPath,
             originalFilename: f.originalFilename,
             mediaType: f.mediaType,
-            byteSize: f.byteSize
+            byteSize: f.byteSize,
+            typeIdentifiers: f.typeIdentifiers
         )
     }
 

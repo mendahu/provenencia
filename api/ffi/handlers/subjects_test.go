@@ -2,11 +2,15 @@ package handlers
 
 import (
 	"errors"
+	"math"
 	"slices"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/apperr"
+	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"google.golang.org/protobuf/proto"
 )
@@ -451,6 +455,59 @@ func TestSubjectPositions(t *testing.T) {
 			},
 		},
 	})
+}
+
+// A position outside the grid's range is refused on write; a stored row the
+// app did not write reads back held to the edge.
+func TestSubjectPositionsAreBounded(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	f := newGraphFixture(t)
+	set := func(x, y int64) error {
+		var resp engine.SetSubjectPositionResponse
+		return rpc(t, SetSubjectPosition, &engine.SetSubjectPositionRequest{
+			ProjectDir: f.dir, SubjectId: f.subjectID, GridX: x, GridY: y,
+		}, &resp)
+	}
+	list := func() *engine.SubjectPosition {
+		var resp engine.ListSubjectPositionsResponse
+		mustRPC(t, ListSubjectPositions, &engine.ListSubjectPositionsRequest{ProjectDir: f.dir, GraphId: f.defaultGraphID}, &resp)
+		for _, p := range resp.GetPositions() {
+			if p.GetSubjectId() == f.subjectID {
+				return p
+			}
+		}
+		t.Fatalf("no position for %s in %+v", f.subjectID, resp.GetPositions())
+		return nil
+	}
+
+	if err := set(1000000, -1000000); err != nil {
+		t.Fatal(err)
+	}
+	if p := list(); p.GetGridX() != 1000000 || p.GetGridY() != -1000000 {
+		t.Fatalf("%+v", p)
+	}
+	err := set(1000001, 0)
+	var ae *apperr.Error
+	if !errors.As(err, &ae) || ae.Code() != apperr.CodeSubjectPositionsInvalid {
+		t.Fatalf("got %v", err)
+	}
+	if p := list(); p.GetGridX() != 1000000 || p.GetGridY() != -1000000 {
+		t.Fatalf("row changed: %+v", p)
+	}
+
+	if err := catalogsession.Do(f.dir, func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		_, err = db.Exec(`UPDATE subject_positions SET grid_x = ?, grid_y = ?`, int64(math.MaxInt64), int64(math.MinInt64))
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if p := list(); p.GetGridX() != 1000000 || p.GetGridY() != -1000000 {
+		t.Fatalf("not clamped: %+v", p)
+	}
 }
 
 func TestClearSubjectPositionBadProto(t *testing.T) {

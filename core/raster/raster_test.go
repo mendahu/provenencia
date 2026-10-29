@@ -136,8 +136,8 @@ func TestEncodeJPEGAtBudgetBoundaries(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if int64(cfg.Width)*int64(cfg.Height) > maxDecodePixels {
-		t.Fatalf("8000x8000 must sit inside the pixel budget (%d)", maxDecodePixels)
+	if int64(cfg.Width)*int64(cfg.Height) > MaxDecodePixels {
+		t.Fatalf("8000x8000 must sit inside the pixel budget (%d)", MaxDecodePixels)
 	}
 }
 

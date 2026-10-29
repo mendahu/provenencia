@@ -106,6 +106,7 @@
 		A70800000000000000000002 /* CitationComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70800000000000000000001 /* CitationComposerView.swift */; };
 
 		A70B00000000000000000002 /* ArtifactViewerKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000001 /* ArtifactViewerKind.swift */; };
+		A70B00000000000000000100 /* ArtifactImageDecode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000101 /* ArtifactImageDecode.swift */; };
 		A70B00000000000000000004 /* ArtifactViewerContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000003 /* ArtifactViewerContent.swift */; };
 		A70B00000000000000000006 /* ArtifactViewerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000005 /* ArtifactViewerModel.swift */; };
 		A70B00000000000000000008 /* ArtifactMediaViewport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000007 /* ArtifactMediaViewport.swift */; };
@@ -135,6 +136,7 @@
 		AA00000000000000000003D3 /* IngestFileDropRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003D2 /* IngestFileDropRow.swift */; };
 		AA00000000000000000003D5 /* IngestMediaPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003D4 /* IngestMediaPolicyTests.swift */; };
 		AA0000000000000000000391 /* ThumbnailCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000390 /* ThumbnailCache.swift */; };
+		AA0000000000000000000397 /* ImageHeaderDecode.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000396 /* ImageHeaderDecode.swift */; };
 		AA0000000000000000000393 /* CachedThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000392 /* CachedThumbnail.swift */; };
 		AA00000000000000000003C1 /* PVContextMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003C0 /* PVContextMenu.swift */; };
 		AA00000000000000000FE006 /* PVActionMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000FE005 /* PVActionMenu.swift */; };
@@ -555,6 +557,7 @@
 		A70800000000000000000001 /* CitationComposerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerView.swift; sourceTree = "<group>"; };
 
 		A70B00000000000000000001 /* ArtifactViewerKind.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactViewerKind.swift; sourceTree = "<group>"; };
+		A70B00000000000000000101 /* ArtifactImageDecode.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactImageDecode.swift; sourceTree = "<group>"; };
 		A70B00000000000000000003 /* ArtifactViewerContent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactViewerContent.swift; sourceTree = "<group>"; };
 		A70B00000000000000000005 /* ArtifactViewerModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactViewerModel.swift; sourceTree = "<group>"; };
 		A70B00000000000000000007 /* ArtifactMediaViewport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactMediaViewport.swift; sourceTree = "<group>"; };
@@ -584,6 +587,7 @@
 		AA00000000000000000003D2 /* IngestFileDropRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IngestFileDropRow.swift; sourceTree = "<group>"; };
 		AA00000000000000000003D4 /* IngestMediaPolicyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IngestMediaPolicyTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000390 /* ThumbnailCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThumbnailCache.swift; sourceTree = "<group>"; };
+		AA0000000000000000000396 /* ImageHeaderDecode.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ImageHeaderDecode.swift; sourceTree = "<group>"; };
 		AA0000000000000000000392 /* CachedThumbnail.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CachedThumbnail.swift; sourceTree = "<group>"; };
 		AA00000000000000000003C0 /* PVContextMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVContextMenu.swift; sourceTree = "<group>"; };
 		AA00000000000000000FE005 /* PVActionMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVActionMenu.swift; sourceTree = "<group>"; };
@@ -1190,6 +1194,7 @@
 				AA00000000000000000009F2 /* FocusClaim.swift */,
 				AA00000000000000000003D0 /* IngestMediaPolicy.swift */,
 				AA0000000000000000000390 /* ThumbnailCache.swift */,
+				AA0000000000000000000396 /* ImageHeaderDecode.swift */,
 				AA0000000000000000000392 /* CachedThumbnail.swift */,
 				AA0000000000000000000350 /* TimestampFormat.swift */,
 				AA000000000000000000001D /* InstallPaths.swift */,
@@ -1354,6 +1359,7 @@
 			isa = PBXGroup;
 			children = (
 				A70B00000000000000000001 /* ArtifactViewerKind.swift */,
+				A70B00000000000000000101 /* ArtifactImageDecode.swift */,
 				A70B00000000000000000003 /* ArtifactViewerContent.swift */,
 				A70B00000000000000000005 /* ArtifactViewerModel.swift */,
 				A70B00000000000000000007 /* ArtifactMediaViewport.swift */,
@@ -2410,6 +2416,7 @@
 				A9070000000000000000000C /* PlaceTitleDisplay.swift in Sources */,
 				A9C4200000000000000000A1 /* ConclusionHeaderDisplay.swift in Sources */,
 				A70B00000000000000000002 /* ArtifactViewerKind.swift in Sources */,
+				A70B00000000000000000100 /* ArtifactImageDecode.swift in Sources */,
 				A70B00000000000000000004 /* ArtifactViewerContent.swift in Sources */,
 				A70B00000000000000000006 /* ArtifactViewerModel.swift in Sources */,
 				A70B00000000000000000008 /* ArtifactMediaViewport.swift in Sources */,
@@ -2436,6 +2443,7 @@
 				AA00000000000000000003D1 /* IngestMediaPolicy.swift in Sources */,
 				AA00000000000000000003D3 /* IngestFileDropRow.swift in Sources */,
 				AA0000000000000000000391 /* ThumbnailCache.swift in Sources */,
+				AA0000000000000000000397 /* ImageHeaderDecode.swift in Sources */,
 				AA0000000000000000000393 /* CachedThumbnail.swift in Sources */,
 				AA00000000000000000003C1 /* PVContextMenu.swift in Sources */,
 				AA00000000000000000FE006 /* PVActionMenu.swift in Sources */,
@@ -2722,7 +2730,7 @@
 					"$(PROJECT_DIR)/Core",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.1;
+				MARKETING_VERSION = 0.2.2;
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -2764,7 +2772,7 @@
 					"$(PROJECT_DIR)/Core",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.1;
+				MARKETING_VERSION = 0.2.2;
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -2785,7 +2793,7 @@
 				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.1;
+				MARKETING_VERSION = 0.2.2;
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -2806,7 +2814,7 @@
 				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.1;
+				MARKETING_VERSION = 0.2.2;
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;

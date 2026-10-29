@@ -616,7 +616,7 @@ final class EvidenceGraphModel {
 
     func updateHover(gridPoint: CGPoint) {
         guard armedKind != nil, !isCreating else { return }
-        let cell = GraphCanvasGridMapping.gridCell(gridPoint: gridPoint)
+        let cell = EvidenceGraphPlacement.cell(at: gridPoint)
         hoverGridX = cell.gridX
         hoverGridY = cell.gridY
     }
@@ -638,7 +638,7 @@ final class EvidenceGraphModel {
     /// Opens the create dialog at the snapped cell (tool must be armed).
     func beginCreate(at gridPoint: CGPoint) {
         guard canCite, let kind = armedKind, !isCreating, !isSaving, editingSubjectID == nil else { return }
-        let cell = GraphCanvasGridMapping.gridCell(gridPoint: gridPoint)
+        let cell = EvidenceGraphPlacement.cell(at: gridPoint)
         pendingGridX = cell.gridX
         pendingGridY = cell.gridY
         draft = CreateDraft(
@@ -1190,8 +1190,8 @@ final class EvidenceGraphModel {
         deltaY: Int64
     ) async -> (gridX: Int64, gridY: Int64)? {
         guard allowsCardMoves else { return nil }
-        let nextX = fromGridX + deltaX
-        let nextY = fromGridY + deltaY
+        let nextX = EvidenceGraphPlacement.offsetCell(fromGridX, by: deltaX)
+        let nextY = EvidenceGraphPlacement.offsetCell(fromGridY, by: deltaY)
         let generation = bumpPositionGeneration(subjectID: subjectID)
         applyPositionPatch(subjectID: subjectID, gridX: nextX, gridY: nextY)
         let ok = await persistPositionOrRevert(
@@ -1209,8 +1209,8 @@ final class EvidenceGraphModel {
         guard allowsCardMoves else { return }
         var writes: [PositionWrite] = []
         for move in moves {
-            let nextX = move.fromX + move.deltaX
-            let nextY = move.fromY + move.deltaY
+            let nextX = EvidenceGraphPlacement.offsetCell(move.fromX, by: move.deltaX)
+            let nextY = EvidenceGraphPlacement.offsetCell(move.fromY, by: move.deltaY)
             let generation = bumpPositionGeneration(subjectID: move.subjectID)
             applyPositionPatch(subjectID: move.subjectID, gridX: nextX, gridY: nextY)
             writes.append(
@@ -1395,7 +1395,7 @@ final class EvidenceGraphModel {
             x: origin.x + delta.width,
             y: origin.y + delta.height
         )
-        let cell = GraphCanvasGridMapping.gridCell(gridPoint: dropped)
+        let cell = EvidenceGraphPlacement.cell(at: dropped)
         let generation = bumpPositionGeneration(subjectID: subjectID)
         applyPositionPatch(subjectID: subjectID, gridX: cell.gridX, gridY: cell.gridY)
         return (cell.gridX, cell.gridY, generation)

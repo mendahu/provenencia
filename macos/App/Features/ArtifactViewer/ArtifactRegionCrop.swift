@@ -60,8 +60,9 @@ enum ArtifactRegionCrop {
     /// to another thread.
     enum Snapshot: Sendable {
         case image(CGImage)
-        /// The file the viewer opened and the 0-based page; `cut` opens its own copy.
-        case pdf(url: URL, pageIndex: Int)
+        /// What the viewer opened and the 0-based page; `cut` opens its own copy
+        /// through ``ProjectFiles/objectURL(projectDir:relPath:)``.
+        case pdf(source: ArtifactViewerSource, pageIndex: Int)
     }
 
     /// Reads the viewer on the main actor. `page` is the 1-based PDF page. Nil
@@ -70,11 +71,11 @@ enum ArtifactRegionCrop {
     static func snapshot(_ viewer: ArtifactViewerModel, page: Int?) -> Snapshot? {
         switch viewer.kind {
         case .image:
-            guard let raster = viewer.displayImage, let image = cgImage(from: raster) else { return nil }
-            return .image(image)
+            guard let raster = viewer.displayRaster else { return nil }
+            return .image(raster)
         case .pdf:
-            guard let page, page >= 1, let url = viewer.pdfDocument?.documentURL else { return nil }
-            return .pdf(url: url, pageIndex: page - 1)
+            guard let page, page >= 1, viewer.pdfDocument != nil, let source = viewer.source else { return nil }
+            return .pdf(source: source, pageIndex: page - 1)
         default:
             return nil
         }
@@ -89,8 +90,8 @@ enum ArtifactRegionCrop {
         switch snapshot {
         case .image(let image):
             box = boundingBox(of: image, region: region)
-        case .pdf(let url, let pageIndex):
-            box = pageBox(url: url, pageIndex: pageIndex, region: region)
+        case .pdf(let source, let pageIndex):
+            box = pageBox(source: source, pageIndex: pageIndex, region: region)
         }
         guard let box else { return nil }
         return scaledToFit(box, maxLongEdge: maxLongEdge)
@@ -109,9 +110,11 @@ enum ArtifactRegionCrop {
 
     /// Draws only the region's box of the page as displayed (rotation applied),
     /// at the scale that brings the box to `maxLongEdge` where `maxPageScale` allows.
-    private nonisolated static func pageBox(url: URL, pageIndex: Int, region: ArtifactRegionDraft) -> CGImage? {
+    private nonisolated static func pageBox(source: ArtifactViewerSource, pageIndex: Int, region: ArtifactRegionDraft) -> CGImage? {
         // Task-owned: PDFKit draws the annotations the viewer shows; nothing from the viewer's document crosses.
-        guard let document = PDFDocument(url: url),
+        // The object is checked again here: the file may have changed since the viewer opened it.
+        guard let url = ProjectFiles.objectURL(projectDir: source.projectDir, relPath: source.relPath),
+              let document = PDFDocument(url: url),
               let page = document.page(at: pageIndex)
         else { return nil }
         let media = page.bounds(for: .mediaBox)

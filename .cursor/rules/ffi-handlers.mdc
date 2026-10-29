@@ -1,5 +1,5 @@
 ---
-description: FFI RPCs are a thin Call switch plus handlers package tests via runRPC
+description: FFI RPCs are a thin route switch plus handlers package tests via runRPC
 globs: api/ffi/**/*.go,api/proto/engine.proto
 alwaysApply: false
 ---
@@ -8,6 +8,6 @@ alwaysApply: false
 
 Follow the project skill `.agents/skills/add-ffi-handler/SKILL.md`.
 
-- `dispatch.go` only routes to `api/ffi/handlers`. New RPCs get a handler file and `runRPC` table tests, not a `run` closure in the table.
+- `dispatch.go` only routes to `api/ffi/handlers`: add the `case` in `route`. `Call` recovers a panic into `internal.unknown`, so handlers never `recover`. New RPCs get a handler file and `runRPC` table tests, not a `run` closure in the table.
 - Failed `provenencia_call` returns protobuf `Error` in `out` (status 1), not UTF-8 English. Domain errors use `core/apperr` codes.
 - Catalog SQLite RPCs use `withProjectCatalog` / `catalogsession` — see `.agents/skills/use-catalog-session/SKILL.md` and `.cursor/rules/catalog-session.mdc`.

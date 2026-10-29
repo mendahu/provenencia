@@ -338,6 +338,44 @@ struct EvidenceGraphModelTests {
         #expect(model.toast?.title == L10n.string(L10n.EvidenceGraph.positionPersistFailedTitle))
     }
 
+    @Test func arrowAtTheGridEdgeStays() async {
+        let store = makeStore()
+        let limit = EvidenceGraphPlacement.cellLimit
+        let subject = CatalogSubject(
+            id: "s1", ref: "CPR-1", sourceID: sourceID, subjectTypeID: personTypeID,
+            label: "A", description: ""
+        )
+        store.subjectsByGraph[graphID] = [subject]
+        store.subjectPositionsBySubject["s1"] = CatalogSubjectPosition(subjectID: "s1", gridX: limit, gridY: 2)
+        let model = makeModel(store: store)
+        await model.prepare()
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
+        model.session.setQueryValue(
+            key,
+            value: EvidenceGraphRows(
+                graphId: graphID,
+                subjects: [subject],
+                positions: [CatalogSubjectPosition(subjectID: "s1", gridX: limit, gridY: 2)]
+            )
+        )
+        let result = await model.moveSubject(
+            subjectID: "s1", fromGridX: limit, fromGridY: 2, deltaX: 1, deltaY: 0
+        )
+        #expect(result?.gridX == limit)
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
+        #expect(handle?.value?.positions.first?.gridX == limit)
+        #expect(store.subjectPositionsBySubject["s1"]?.gridX == limit)
+        #expect(model.toast == nil)
+
+        model.moveSubjects([
+            EvidenceGraphModel.KeyEffect.SubjectMove(
+                subjectID: "s1", fromX: Int64.max, fromY: Int64.min, deltaX: 1, deltaY: -1
+            ),
+        ])
+        #expect(handle?.value?.positions.first?.gridX == limit)
+        #expect(handle?.value?.positions.first?.gridY == -limit)
+    }
+
     @Test func updatingPositionPatchesSnapshot() {
         let subject = CatalogSubject(
             id: "s1",

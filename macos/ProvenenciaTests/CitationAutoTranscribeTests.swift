@@ -260,8 +260,9 @@ struct CitationAutoTranscribeTests {
         await model.runAutoTranscribe()
         #expect(engine.recognizeCount == 1)
 
-        model.artifactViewer.installImageRasterForTesting(
-            NSImage(size: NSSize(width: 6200, height: 8400))
+        model.artifactViewer.installImageForTesting(
+            NSImage(size: NSSize(width: 6200, height: 8400)),
+            raster: ArtifactRegionCrop.cgImage(from: try #require(pixelExactImage(width: 1, height: 1)))
         )
         engine.resetCount()
         model.requestAutoTranscribe()
@@ -273,7 +274,7 @@ struct CitationAutoTranscribeTests {
             from: CGPoint(x: 0.1, y: 0.1),
             to: CGPoint(x: 0.4, y: 0.4)
         )
-        model.artifactViewer.installImageRasterForTesting(
+        model.artifactViewer.installImageForTesting(
             try #require(pixelExactImage(width: 8, height: 8))
         )
         #expect(model.setRegion(ArtifactRegionDraft(kind: .rectangle, points: points)))
@@ -293,7 +294,7 @@ struct CitationAutoTranscribeTests {
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
         await model.prepare()
         let raster = try #require(pixelExactImage(width: 8, height: 8))
-        model.artifactViewer.installImageRasterForTesting(raster)
+        model.artifactViewer.installImageForTesting(raster)
         let points = ArtifactRegionGeometry.rectanglePoints(
             from: CGPoint(x: 0.25, y: 0.25),
             to: CGPoint(x: 0.75, y: 0.75)
@@ -301,6 +302,40 @@ struct CitationAutoTranscribeTests {
         #expect(model.setRegion(ArtifactRegionDraft(kind: .rectangle, points: points)))
         await model.runAutoTranscribe()
         #expect(engine.lastSize == CGSize(width: 4, height: 4))
+    }
+
+    @Test func autoTranscribeUsesTheDecodedRaster() async throws {
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
+        let store = makeStore(projectDir: projectDir)
+        try ArtifactFileFixtures.writeImage(
+            projectDir: projectDir, relPath: "objects/ab/cd/big.png", width: 3000, height: 2000, fileType: .png
+        )
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/big.png")
+        let engine = FakeOCREngine()
+        let model = makeModel(store: store, projectDir: projectDir, engine: engine)
+        await model.prepare()
+        let points = ArtifactRegionGeometry.rectanglePoints(
+            from: CGPoint(x: 0, y: 0),
+            to: CGPoint(x: 1, y: 0.5)
+        )
+        #expect(model.setRegion(ArtifactRegionDraft(kind: .rectangle, points: points)))
+        await model.runAutoTranscribe()
+        #expect(engine.lastSize == CGSize(width: 3000, height: 1000))
+    }
+
+    @Test func refusedImageCannotTranscribe() async throws {
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
+        let store = makeStore(projectDir: projectDir)
+        try ArtifactFileFixtures.writeDeclaredPNGHeader(
+            projectDir: projectDir, relPath: "objects/ab/cd/huge.png", width: 20000, height: 20000
+        )
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/huge.png")
+        let engine = FakeOCREngine()
+        let model = makeModel(store: store, projectDir: projectDir, engine: engine)
+        await model.prepare()
+        #expect(model.artifactViewer.emptyReason == .imageTooLarge)
+        #expect(!model.canAutoTranscribe)
+        #expect(engine.recognizeCount == 0)
     }
 
     @Test func disabledWhileRunningAndLocatorHeld() async throws {

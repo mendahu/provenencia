@@ -1208,7 +1208,8 @@ final class CitationComposerModel {
             ArtifactViewerSource(
                 projectDir: session.projectKey.projectDir,
                 relPath: relPath,
-                mediaType: mediaType.isEmpty ? "application/octet-stream" : mediaType
+                mediaType: mediaType.isEmpty ? "application/octet-stream" : mediaType,
+                typeIdentifiers: artifact.file?.typeIdentifiers ?? []
             )
         )
         if let preferredPage, artifactViewer.supportsPages {

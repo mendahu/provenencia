@@ -202,6 +202,26 @@ struct EvidenceGraphPlacementTests {
         #expect(slot.cell.gridY <= EvidenceGraphPlacement.maxCell.gridY)
     }
 
+    @Test func extremePositionsDoNotTrap() {
+        let limit = EvidenceGraphPlacement.cellLimit
+        let snapshot = snapshot(
+            subjects: [placedSubject(id: "p1", x: Int64.max, y: Int64.min)],
+            bridges: [placedBridge(id: "b1", x: Int64.min, y: Int64.max)]
+        )
+        let slot = EvidenceGraphPlacement.composerSlot(in: snapshot, landingColumn: nil)
+        let stacked = EvidenceGraphPlacement.composerSlot(in: snapshot, landingColumn: slot.landingColumn)
+        let canvas = EvidenceGraphPlacement.canvas(fitting: EvidenceGraphPlacement.cardFrames(in: snapshot))
+        let maxCell = EvidenceGraphPlacement.maxCell(on: canvas)
+        for cell in [slot.cell, stacked.cell, maxCell] {
+            #expect(abs(cell.gridX) <= limit)
+            #expect(abs(cell.gridY) <= limit)
+        }
+        #expect(abs(slot.landingColumn) <= limit)
+        #expect(EvidenceGraphPlacement.clampedCell(Int64.max) == limit)
+        #expect(EvidenceGraphPlacement.clampedCell(Int64.min) == -limit)
+        #expect(EvidenceGraphPlacement.clampedCell(7) == 7)
+    }
+
     /// Hand-written cells are the pre-reserve layout. Composer results are already absolute.
     private func downtown(_ cell: Int64) -> Int64 {
         cell + EvidenceGraphPlacement.originReserveCells

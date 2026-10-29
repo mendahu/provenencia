@@ -872,6 +872,24 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
+    /// What Go's stored-type table gives an image of each media type a test writes: the type, then its
+    /// identifiers joined by a space, in Go's order. `TestFakeStoreTypeIdentifiersMatchGo` pins the rows.
+    static let imageTypeIdentifierFixtures: [(String, String)] = [
+        ("image/bmp", "com.microsoft.bmp"),
+        ("image/gif", "com.compuserve.gif"),
+        ("image/heic", "public.heic public.heif"),
+        ("image/heif", "public.heif public.heic"),
+        ("image/jpeg", "public.jpeg"),
+        ("image/png", "public.png"),
+        ("image/tif", "public.tiff"),
+        ("image/tiff", "public.tiff"),
+        ("image/webp", "org.webmproject.webp"),
+    ]
+
+    static func typeIdentifiers(forMediaType mediaType: String) -> [String] {
+        guard let row = imageTypeIdentifierFixtures.first(where: { $0.0 == mediaType }) else { return [] }
+        return row.1.split(separator: " ").map(String.init)
+    }
 
     func ingestArtifactFile(
         projectDir: String,
@@ -904,7 +922,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 relPath: "objects/aa/bb/aabb",
                 originalFilename: filename,
                 mediaType: mediaType,
-                byteSize: 0
+                byteSize: 0,
+                typeIdentifiers: Self.typeIdentifiers(forMediaType: mediaType)
             )
             for (sourceID, arts) in artifactsBySource {
                 if let idx = arts.firstIndex(where: { $0.id == artifactID }) {

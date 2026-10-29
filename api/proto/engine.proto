@@ -283,6 +283,7 @@ message SourceFileRef {
   string original_filename = 3;
   string media_type = 4;
   int64 byte_size = 5;
+  repeated string type_identifiers = 6; // UTIs a stored image may sniff as; Go's stored-type table. Empty for non-images.
 }
 
 message Artifact {

@@ -5,6 +5,8 @@ struct ArtifactViewerSource: Equatable, Sendable {
     var projectDir: String
     var relPath: String
     var mediaType: String
+    /// The types a file of `mediaType` may sniff as, from Go; an image that sniffs as none of them is refused.
+    var typeIdentifiers: [String] = []
 }
 
 /// MIME → viewer kind. Hosts pass `mediaType` through; they do not branch on strings.

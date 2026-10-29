@@ -14,7 +14,7 @@ Product logic under test lives in `macos/App/`. Tests live in **`macos/Provenenc
 ## What to test
 
 - Models (`OnboardingModel`), path helpers (`InstallPaths`), store fakes.
-- Artifact files on disk (an image via `writeImage(fileType:)` in PNG, JPEG or TIFF, raw bytes via `write(_:)`, a PDF, the catalog row that points at them): use `ArtifactFileFixtures` in `macos/ProvenenciaTests/ArtifactFileFixtures.swift`; do not write another copy.
+- Artifact files on disk (an image via `writeImage(fileType:)` in PNG, JPEG or TIFF, with `dpi:`, `orientation:` or `grayscale:` when the test needs them, a PNG header that only declares a size via `writeDeclaredPNGHeader`, raw bytes via `write(_:)`, a PDF, the catalog row that points at them): use `ArtifactFileFixtures` in `macos/ProvenenciaTests/ArtifactFileFixtures.swift`; do not write another copy.
 - Inject `FakeStore` and `OnboardingFolders` with dirs under `FileManager.default.temporaryDirectory`.
 - **FakeStore:** new methods seed rows and script return values (`nextWriteEffects`, `…Error` hooks, impact maps); do not add graph-list order, Citation membership, effects-resolution, or graph / Copy Source refusal logic.
 - When adding a catalog `GenealogyStore` API on `FakeStore`, call `markCatalogSessionHeld` (same as real traffic) so `CatalogSessionStoreTests` / overlap coverage stay honest.

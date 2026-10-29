@@ -1,7 +1,8 @@
 // Package subjectpositions accesses graph layout for subjects.
 // Arranging bubbles is UI state, not a research assertion. Set and Clear
 // return a subject_position change and nothing else, so the caller commits
-// without a revision.
+// without a revision. A position is held to [-MaxCell, MaxCell] on both axes:
+// a write outside it is refused and a stored row outside it reads back clamped.
 package subjectpositions
 
 import (
@@ -12,6 +13,10 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 )
+
+// MaxCell bounds grid_x and grid_y in cells. The sum of two in-range cells
+// cannot overflow, and the macOS client mirrors it (EvidenceGraphPlacement.cellLimit).
+const MaxCell int64 = 1_000_000
 
 var ErrInvalid = apperr.New(apperr.CodeSubjectPositionsInvalid, apperr.KindUser)
 
@@ -77,7 +82,7 @@ func Set(tx *database.Tx, subjectID []byte, gridX, gridY int64) (Position, []row
 
 // SetTx places or moves a subject on an open transaction (no commit).
 func SetTx(tx *sql.Tx, subjectID []byte, gridX, gridY int64) (Position, error) {
-	if len(subjectID) != 16 {
+	if len(subjectID) != 16 || !inRange(gridX) || !inRange(gridY) {
 		return Position{}, ErrInvalid
 	}
 	var one int
@@ -182,5 +187,11 @@ func scanPosition(row rowScanner) (Position, error) {
 	if err := row.Scan(&p.SubjectID, &p.GridX, &p.GridY); err != nil {
 		return Position{}, err
 	}
+	p.GridX = clamp(p.GridX)
+	p.GridY = clamp(p.GridY)
 	return p, nil
 }
+
+func inRange(v int64) bool { return v >= -MaxCell && v <= MaxCell }
+
+func clamp(v int64) int64 { return max(-MaxCell, min(MaxCell, v)) }

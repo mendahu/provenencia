@@ -1,6 +1,10 @@
 package mediatypes
 
-import "testing"
+import (
+	"slices"
+	"strings"
+	"testing"
+)
 
 func TestResolve(t *testing.T) {
 	tests := []struct {
@@ -93,7 +97,8 @@ func TestStoredExtension(t *testing.T) {
 			}
 		})
 	}
-	for mt, ext := range allowed {
+	for mt, st := range allowed {
+		ext := st.ext
 		if !Allowed(mt) {
 			t.Fatalf("%s: in the table but not Allowed", mt)
 		}
@@ -135,5 +140,26 @@ func TestClassifyFilename(t *testing.T) {
 func TestShortLabel(t *testing.T) {
 	if ShortLabel("text/html") != "HTML" {
 		t.Fatal(ShortLabel("text/html"))
+	}
+}
+
+func TestTypeIdentifiers(t *testing.T) {
+	for mt := range allowed {
+		if strings.HasPrefix(mt, "image/") && len(TypeIdentifiers(mt)) == 0 {
+			t.Errorf("%s has no type identifier", mt)
+		}
+	}
+	if got := TypeIdentifiers("image/heif"); !slices.Contains(got, "public.heic") {
+		t.Errorf("image/heif = %v, want public.heic among them", got)
+	}
+	if got := TypeIdentifiers("application/pdf"); got != nil {
+		t.Errorf("application/pdf = %v, want nil", got)
+	}
+	if got := TypeIdentifiers("image/x-unknown"); got != nil {
+		t.Errorf("unknown = %v, want nil", got)
+	}
+	TypeIdentifiers("image/png")[0] = "changed"
+	if got := TypeIdentifiers("image/png"); got[0] != "public.png" {
+		t.Errorf("table mutated: %v", got)
 	}
 }

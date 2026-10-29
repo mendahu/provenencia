@@ -38,12 +38,12 @@ const DefaultQuality = 85
 // output allocations even if callers become externally parameterized.
 const MaxEdgeLimit = 4096
 
-// maxDecodePixels caps declared width*height before full decode. Decoders
+// MaxDecodePixels caps declared width*height before full decode. Decoders
 // allocate pixel buffers from header dimensions, so this is the primary
 // defense against decompression bombs (see image package security notes).
-const maxDecodePixels = 64_000_000 // 64 MP ≈ 256 MiB RGBA
+const MaxDecodePixels = 64_000_000 // 64 MP ≈ 256 MiB RGBA
 
-// ErrTooLarge means the image declares more pixels than maxDecodePixels
+// ErrTooLarge means the image declares more pixels than MaxDecodePixels
 // allows, so it was rejected before full decode.
 var ErrTooLarge = errors.New("raster: image dimensions exceed decode budget")
 
@@ -99,7 +99,7 @@ func Supported(mediaType string) bool {
 
 // EncodeJPEG decodes src, scales to MaxEdge, applies Transforms, and encodes JPEG.
 // Before full decode it checks the sniffed format against the package allowlist
-// (ErrUnsupportedFormat) and the declared pixel count against maxDecodePixels
+// (ErrUnsupportedFormat) and the declared pixel count against MaxDecodePixels
 // (ErrTooLarge), so header-declared decompression bombs never allocate.
 func EncodeJPEG(src []byte, opts Options) ([]byte, error) {
 	if err := checkMaxEdge(opts); err != nil {
@@ -152,7 +152,7 @@ func checkMaxEdge(opts Options) error {
 }
 
 // decode refuses a format outside formats (or outside supportedFormats) and an
-// image declaring more than maxDecodePixels before any full decode.
+// image declaring more than MaxDecodePixels before any full decode.
 func decode(src []byte, formats []string) (image.Image, error) {
 	cfg, format, err := image.DecodeConfig(bytes.NewReader(src))
 	if err != nil {
@@ -165,7 +165,7 @@ func decode(src []byte, formats []string) (image.Image, error) {
 		return nil, ErrUnsupportedFormat
 	}
 	if cfg.Width < 1 || cfg.Height < 1 ||
-		int64(cfg.Width)*int64(cfg.Height) > maxDecodePixels {
+		int64(cfg.Width)*int64(cfg.Height) > MaxDecodePixels {
 		return nil, ErrTooLarge
 	}
 	img, _, err := image.Decode(bytes.NewReader(src))

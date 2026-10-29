@@ -1093,6 +1093,9 @@ public nonisolated struct Provenencia_Engine_V1_SourceFileRef: Sendable {
 
   public var byteSize: Int64 = 0
 
+  /// UTIs a stored image may sniff as; Go's stored-type table. Empty for non-images.
+  public var typeIdentifiers: [String] = []
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -8599,7 +8602,7 @@ nonisolated extension Provenencia_Engine_V1_SourceNote: SwiftProtobuf.Message, S
 
 nonisolated extension Provenencia_Engine_V1_SourceFileRef: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SourceFileRef"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}rel_path\0\u{3}original_filename\0\u{3}media_type\0\u{3}byte_size\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}rel_path\0\u{3}original_filename\0\u{3}media_type\0\u{3}byte_size\0\u{3}type_identifiers\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -8612,6 +8615,7 @@ nonisolated extension Provenencia_Engine_V1_SourceFileRef: SwiftProtobuf.Message
       case 3: try { try decoder.decodeSingularStringField(value: &self.originalFilename) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.mediaType) }()
       case 5: try { try decoder.decodeSingularInt64Field(value: &self.byteSize) }()
+      case 6: try { try decoder.decodeRepeatedStringField(value: &self.typeIdentifiers) }()
       default: break
       }
     }
@@ -8633,6 +8637,9 @@ nonisolated extension Provenencia_Engine_V1_SourceFileRef: SwiftProtobuf.Message
     if self.byteSize != 0 {
       try visitor.visitSingularInt64Field(value: self.byteSize, fieldNumber: 5)
     }
+    if !self.typeIdentifiers.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.typeIdentifiers, fieldNumber: 6)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -8642,6 +8649,7 @@ nonisolated extension Provenencia_Engine_V1_SourceFileRef: SwiftProtobuf.Message
     if lhs.originalFilename != rhs.originalFilename {return false}
     if lhs.mediaType != rhs.mediaType {return false}
     if lhs.byteSize != rhs.byteSize {return false}
+    if lhs.typeIdentifiers != rhs.typeIdentifiers {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

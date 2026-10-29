@@ -21,9 +21,29 @@ final class ArtifactViewerModel {
     private(set) var pageCount: Int = 1
     private(set) var zoom: CGFloat = 1
 
-    /// Raster for the image spatial viewport. PDF Artifacts keep ``pdfDocument``
-    /// and do not flatten a page into this (S8-03).
-    private(set) var displayImage: NSImage?
+    /// What the viewer loaded from, set once the object file checks out. Nil before a
+    /// load, after an unload and when the file is missing.
+    private(set) var source: ArtifactViewerSource?
+
+    /// The image for the spatial viewport, at the size the file declares in points.
+    /// PDF Artifacts keep ``pdfDocument`` and do not flatten a page into this (S8-03).
+    var displayImage: NSImage? {
+        guard case .image(let decoded) = content else { return nil }
+        return decoded.image
+    }
+
+    /// The decoded pixels behind ``displayImage``, at most ``ArtifactImageDecode/maxDecodePixels``.
+    /// Crop and OCR read these.
+    var displayRaster: CGImage? {
+        guard case .image(let decoded) = content else { return nil }
+        return decoded.raster
+    }
+
+    /// The full size the file declares, as the image is shown.
+    var imagePixelSize: (width: Int, height: Int)? {
+        guard case .image(let decoded) = content else { return nil }
+        return decoded.pixelSize
+    }
 
     /// Live PDFKit document when ``kind`` is ``ArtifactViewerKind/pdf``.
     var pdfDocument: PDFDocument? {
@@ -112,7 +132,7 @@ final class ArtifactViewerModel {
         loadGeneration += 1
         kind = .unsupported
         content = nil
-        displayImage = nil
+        source = nil
         emptyReason = .idle
         isLoading = false
         page = 1
@@ -122,11 +142,15 @@ final class ArtifactViewerModel {
         clearUserSelection()
     }
 
-    /// Test hook: install an in-memory image raster without going through ``load``.
-    func installImageRasterForTesting(_ image: NSImage) {
+    /// Test hook: install an in-memory image without going through ``load``. The
+    /// raster is `raster` or else the image's own pixels; with neither, nothing installs.
+    func installImageForTesting(_ image: NSImage, raster: CGImage? = nil) {
+        guard let raster = raster ?? ArtifactRegionCrop.cgImage(from: image) else { return }
         kind = .image
-        content = .image(image)
-        displayImage = image
+        source = nil
+        content = .image(ArtifactImageDecode.Decoded(
+            raster: raster, image: image, pixelSize: (raster.width, raster.height)
+        ))
         emptyReason = .idle
         isLoading = false
         page = 1
@@ -167,14 +191,16 @@ final class ArtifactViewerModel {
             isLoading = false
             return
         }
+        self.source = source
 
         let loaded: Result<ArtifactViewerContent, Error> = await Task.detached(priority: .userInitiated) {
             switch kind {
             case .image:
-                guard let image = NSImage(contentsOf: url) else {
-                    return .failure(ArtifactViewerLoadError.decodeFailed)
+                switch ArtifactImageDecode.decode(url: url, typeIdentifiers: source.typeIdentifiers) {
+                case .success(let decoded): return .success(.image(decoded))
+                case .failure(.tooLarge): return .failure(ArtifactViewerLoadError.tooLarge)
+                case .failure(.unreadable): return .failure(ArtifactViewerLoadError.decodeFailed)
                 }
-                return .success(.image(image))
             case .pdf:
                 guard let document = PDFDocument(url: url) else {
                     return .failure(ArtifactViewerLoadError.decodeFailed)
@@ -193,21 +219,19 @@ final class ArtifactViewerModel {
             emptyReason = .idle
             zoom = 1
             switch content {
-            case .image(let image):
+            case .image:
                 page = 1
                 pageCount = 1
-                displayImage = image
                 findHasTextLayer = true
             case .pdf(let document):
                 pageCount = max(document.pageCount, 1)
                 page = 1
-                displayImage = nil
                 findHasTextLayer = Self.documentHasTextLayer(document)
             }
-        case .failure:
+        case .failure(let error):
             content = nil
-            displayImage = nil
-            emptyReason = .loadFailed
+            self.source = nil
+            emptyReason = (error as? ArtifactViewerLoadError) == .tooLarge ? .imageTooLarge : .loadFailed
         }
         isLoading = false
     }
@@ -307,7 +331,7 @@ final class ArtifactViewerModel {
     private func unloadPreservingGeneration() {
         kind = .unsupported
         content = nil
-        displayImage = nil
+        source = nil
         emptyReason = .idle
         page = 1
         pageCount = 1
@@ -496,4 +520,5 @@ private enum ArtifactFindWrap {
 
 private enum ArtifactViewerLoadError: Error {
     case decodeFailed
+    case tooLarge
 }
