@@ -24,6 +24,8 @@ import (
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/objectpath"
+	"github.com/mendahu/provenencia/core/onboarding"
+	"github.com/mendahu/provenencia/core/slug"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/raster"
@@ -48,6 +50,8 @@ const (
 	swiftRegionGeometry = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
 	swiftProjectFiles   = "../../macos/App/Platform/ProjectFiles.swift"
 	swiftTextMatch      = "../../macos/App/Platform/TextMatch.swift"
+	swiftFieldSlug      = "../../macos/App/Platform/FieldSlug.swift"
+	swiftProjectSlug    = "../../macos/App/Platform/ProjectSlug.swift"
 	swiftThumbnailCache = "../../macos/App/Platform/ThumbnailCache.swift"
 )
 
@@ -129,19 +133,89 @@ func swiftArrayLiteral(t *testing.T, body, name string) string {
 	return rest[:end]
 }
 
+// decodeSwiftStringLiteral decodes Swift string-literal escapes in `s` (the
+// capture inside the quotes, not including the quotes).
+func decodeSwiftStringLiteral(s string) (string, error) {
+	var out strings.Builder
+	for i := 0; i < len(s); {
+		if s[i] != '\\' {
+			out.WriteByte(s[i])
+			i++
+			continue
+		}
+		i++
+		if i >= len(s) {
+			return "", fmt.Errorf("trailing backslash")
+		}
+		switch s[i] {
+		case '\\':
+			out.WriteByte('\\')
+			i++
+		case '"':
+			out.WriteByte('"')
+			i++
+		case '\'':
+			out.WriteByte('\'')
+			i++
+		case 'n':
+			out.WriteByte('\n')
+			i++
+		case 'r':
+			out.WriteByte('\r')
+			i++
+		case 't':
+			out.WriteByte('\t')
+			i++
+		case '0':
+			out.WriteByte(0)
+			i++
+		case 'u':
+			i++
+			if i >= len(s) || s[i] != '{' {
+				return "", fmt.Errorf("unknown escape")
+			}
+			i++
+			start := i
+			for i < len(s) && s[i] != '}' {
+				c := s[i]
+				if (c < '0' || c > '9') && (c < 'a' || c > 'f') && (c < 'A' || c > 'F') {
+					return "", fmt.Errorf("unknown escape")
+				}
+				i++
+			}
+			if i >= len(s) || i-start == 0 || i-start > 8 {
+				return "", fmt.Errorf("unknown escape")
+			}
+			n, err := strconv.ParseUint(s[start:i], 16, 32)
+			if err != nil {
+				return "", fmt.Errorf("unknown escape")
+			}
+			out.WriteRune(rune(n))
+			i++ // closing '}'
+		default:
+			return "", fmt.Errorf("unknown escape")
+		}
+	}
+	return out.String(), nil
+}
+
 // readSwiftFixturePairs returns the ("a", "b") literal pairs of the array
-// `static let <decl>` in `enum <enum>`. A pair with a backslash is an error:
-// the reader does not decode escapes, and a skipped row would be an
-// unchecked mirror.
+// `static let <decl>` in `enum <enum>`, decoding Swift string escapes in each
+// capture.
 func readSwiftFixturePairs(t *testing.T, path, enum, decl string) ([][2]string, error) {
 	t.Helper()
 	literal := swiftArrayLiteral(t, swiftEnumBody(t, path, enum), decl)
 	var out [][2]string
 	for _, m := range swiftFixturePair.FindAllStringSubmatch(literal, -1) {
-		if strings.Contains(m[1], `\`) || strings.Contains(m[2], `\`) {
-			return nil, fmt.Errorf("%s: fixture has a backslash escape: %s", path, m[0])
+		a, err := decodeSwiftStringLiteral(m[1])
+		if err != nil {
+			return nil, fmt.Errorf("%s: fixture decode: %w", path, err)
 		}
-		out = append(out, [2]string{m[1], m[2]})
+		b, err := decodeSwiftStringLiteral(m[2])
+		if err != nil {
+			return nil, fmt.Errorf("%s: fixture decode: %w", path, err)
+		}
+		out = append(out, [2]string{a, b})
 	}
 	if len(out) == 0 {
 		return nil, fmt.Errorf("%s: %s.%s has no fixture pairs", path, enum, decl)
@@ -158,7 +232,7 @@ func swiftFixturePairs(t *testing.T, path, enum, decl string) [][2]string {
 	return out
 }
 
-func TestSwiftFixturePairsRefusesEscapes(t *testing.T) {
+func TestSwiftFixturePairsDecodesEscapes(t *testing.T) {
 	tests := []struct {
 		name    string
 		array   string
@@ -166,19 +240,24 @@ func TestSwiftFixturePairsRefusesEscapes(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name:    "escape in a text",
-			array:   `("God\u{2010}father", "godfather"), ("a", "b")`,
-			wantErr: "backslash",
-		},
-		{
-			name:    "escape in a key",
-			array:   `("a", "b\\c")`,
-			wantErr: "backslash",
-		},
-		{
 			name:  "plain pairs",
 			array: `("a", "b"), ("C d", "cd")`,
 			want:  [][2]string{{"a", "b"}, {"C d", "cd"}},
+		},
+		{
+			name:  "unicode escape",
+			array: `("Grandma\u{2019}s album code", "grandmas-album-code")`,
+			want:  [][2]string{{"Grandma\u2019s album code", "grandmas-album-code"}},
+		},
+		{
+			name:  "backslash and quote",
+			array: `("Robins\\Family", "robins-family"), ("Robins\"Family", "robins-family")`,
+			want:  [][2]string{{`Robins\Family`, "robins-family"}, {`Robins"Family`, "robins-family"}},
+		},
+		{
+			name:    "unknown escape",
+			array:   `("a", "b\x00")`,
+			wantErr: "unknown escape",
 		},
 	}
 	for _, tt := range tests {
@@ -203,6 +282,27 @@ func TestSwiftFixturePairsRefusesEscapes(t *testing.T) {
 				t.Fatalf("got %v want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestSwiftFieldSlugMirrorsKebab(t *testing.T) {
+	for _, p := range swiftFixturePairs(t, swiftFieldSlug, "FieldSlug", "fixtures") {
+		want := slug.Kebab(p[0])
+		if want != p[1] {
+			t.Errorf("FieldSlug.fixtures %q: Swift says %q, Go Kebab says %q", p[0], p[1], want)
+		}
+	}
+}
+
+func TestSwiftProjectSlugMirrorsFolderName(t *testing.T) {
+	for _, p := range swiftFixturePairs(t, swiftProjectSlug, "ProjectSlug", "folderNameFixtures") {
+		want, err := onboarding.FolderName(p[0])
+		if err != nil {
+			want = ""
+		}
+		if want != p[1] {
+			t.Errorf("ProjectSlug.folderNameFixtures %q: Swift says %q, Go FolderName says %q", p[0], p[1], want)
+		}
 	}
 }
 
