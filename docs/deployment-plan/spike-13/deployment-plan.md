@@ -78,8 +78,8 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 ### Slice 7 — How a person's records connect
 
 - **Links between Evidence graphs are computed, never stored** (user, 2026-10-29). A node is an Evidence graph holding an accepted member of the person; a link compares the person's two members in two graphs. Nothing is added to the catalog: no researcher-chosen links and no research log. Each Identity Claim keeps its status and argument. Binds S13-26 – S13-28.
-- **A new comparison, layered like matching** (user, 2026-10-29). Two pure layers, each with its own `core/matchregistry` section for its knobs: one compares two Subjects filed on one handle, the other compares two Evidence graphs from the Subjects they share. The Subject layer starts from Subject compare: its per-Property router (leads, pools, periods and the now-exported lifespan, moved from `claimevidence.routeOf` into `subjectcompare` in S13-24) over value compare and property compare, with no points, and which Properties count is the subject section's list per kind. The graph layer names no Property or relationship: two graphs are linked by every pair of their Subjects filed on the same canonical entity, so shared relatives are the family support. Neither reads a graph alignment weight, band or accept bar; Promote keeps its own scoring (working rule "The score ranks, unseen"). Each Subject's comparable values come from one shared loader (S13-29). Binds S13-26.
-- **Each PR updates what it makes false.** S13-26: [conclusion §5.1](../../conclusion-layer-data-model.md#51-two-lenses) and §13 item 4 (the comparison is designed), [`matching-model.md`](../../matching-model.md) and [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md) (the two new layers, their registry sections and knob rows), [`research-judgment-model.md`](../../research-judgment-model.md) §5 if strength reads credibility. Binds S13-26.
+- **Slice 7 captures requirements, not an implementation** (user, 2026-10-29). Scoring the connection between two Evidence graphs and visualizing the connections are two concerns, specified in [`evidence-graph-comparison.md`](evidence-graph-comparison.md) Requirements 1 and 2 and built separately. The scoring must be pure, layered and driven by the match registry like matching, start from Subject compare, and read none of graph alignment's weights, band or accept bar; how it is built and expressed is open question 11. The slice runs last, after the Promote cleanup, the pin removal and the Person page, and its PRs stay `Blocked` until the design is settled; their scopes are re-cut then. S13-24 still moves `claimevidence`'s per-Property router into `subjectcompare` rather than deleting it, so the starting point survives. Binds S13-26 – S13-29.
+- **Each PR updates what it makes false.** S13-26: [conclusion §5.1](../../conclusion-layer-data-model.md#51-two-lenses) and §13 item 4 (the comparison is designed), [`matching-model.md`](../../matching-model.md) and [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md) (the new scoring layers, their registry sections and knob rows), [`research-judgment-model.md`](../../research-judgment-model.md) §5 if strength reads credibility. Binds S13-26.
 
 ### Engine
 
@@ -133,10 +133,10 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 | S13-20 | Source date engine | 6 | An optional publication date on `sources` as a `date_values` reference (migration, model, read and write RPCs); `ListPersonClaims` groups carry it | — | S13-01 | — | Scoped |
 | S13-07 | Stored claim read | 7 | Identity Claims have no stored pins to read back (conclusion §5) | — | — | — | Descoped (2026-10-29) → open question 9 |
 | S13-18 | Claim review | 7 | Replaced by slice 7's view of how the records connect | — | — | — | Descoped (2026-10-29) → S13-26 – S13-28 |
-| S13-26 | Comparing two Evidence graphs | 7 | Two pure layers with registry sections: two Subjects on one handle compared through Subject compare's router; two Evidence graphs compared from every Subject pair they share on a canonical entity; returns the shared entities, each pair's agreements and conflicts, and a strength | — | S13-24 | — | Scoped |
-| S13-29 | One loader for a Subject's comparable values | 7 | Preparatory: `promotealign`'s per-graph layer loader (values with lifespans, bridges, metas) moves into a shared `core/database` package with one memo key; Promote and `persondetail` read it; Go only | — | S13-24 | — | Scoped |
-| S13-27 | Person record links read | 7 | `GetPersonRecordLinks` RPC in `persondetail`: the person's Evidence graphs (Source title, type) and a link for each pair, from S13-26; its key joins the per-person invalidation spec | — | S13-01, S13-26, S13-29 | — | Scoped |
-| S13-28 | How the records connect | 7 | The view of the person's Evidence graphs and their links on the Person page, with what each link agrees and conflicts on | S13-D10 | S13-16, S13-27 | — | Scoped |
+| S13-26 | Scoring two Evidence graphs | 7 | Requirement 1: a pure, registry-driven function that scores the connection between two Evidence graphs from the Subjects they share, explained in GPS terms; shape decided with open question 11 | — | S13-24 | — | Blocked — on open question 11 |
+| S13-29 | One loader for a Subject's comparable values | 7 | Preparatory: `promotealign`'s per-graph layer loader (values with lifespans, bridges, metas) moves into a shared `core/database` package with one memo key; Promote and `persondetail` read it; Go only | — | S13-24 | — | Blocked — on open question 11 |
+| S13-27 | Person record links read | 7 | `GetPersonRecordLinks` RPC in `persondetail`: the person's Evidence graphs (Source title, type) and a link for each pair, from S13-26; its key joins the per-person invalidation spec | — | S13-01, S13-26, S13-29 | — | Blocked — on open question 11 |
+| S13-28 | How the records connect | 7 | The view of the person's Evidence graphs and their links on the Person page, with what each link agrees and conflicts on | S13-D10 | S13-16, S13-27 | — | Blocked — on open question 11 |
 | S13-21 | Source date on the Source page | 8 | Set and show the Source date where the board puts it | S13-D8 | S13-20 | — | Scoped |
 | S13-22 | Source date on the Sources list | 8 | Each Sources list row shows the date; the list sorts by it, undated last | S13-D9 | S13-20 | — | Scoped |
 | S13-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
@@ -205,8 +205,8 @@ SLICE 6 — Sources
                S13-17  Remove a claim
   Check: bar 6 and the removal half of 7
 
-SLICE 7 — How a person's records connect
-  S13-26  Comparing two Evidence graphs   (engine, after S13-24)
+SLICE 7 — How a person's records connect   (last; blocked on open question 11)
+  S13-26  Scoring two Evidence graphs   (after S13-24 and open question 11)
   S13-29  One loader for a Subject's comparable values   (preparatory)
   S13-27  Person record links read
   ✎ S13-D10 ──▶ S13-28  How the records connect
@@ -221,7 +221,7 @@ SLICE 8 — Source date on the Source pages   (any time after S13-20)
 S13-99 — Dogfood close / docs
 ```
 
-**Order and parallel work:** slice 0 runs first, its three PRs in order; S13-09 and the other engine PRs may run alongside it, except S13-08, which waits on S13-25 because both change `deleteimpact.ReleaseClaim`. The design-and-build slices run in order, 1 to 7, one brief at a time. Slice 8 touches other pages and may run alongside any of them once S13-20 lands. Engine PRs can be planned and landed ahead of their slice: S13-01, S13-06 and S13-09 have no unmet dependencies, and S13-08 waits on S13-25; S13-02 waits on S11-30, S13-03 and S11-51 on S11-39.
+**Order and parallel work:** slice 0 runs first, its three PRs in order; S13-09 and the other engine PRs may run alongside it, except S13-08, which waits on S13-25 because both change `deleteimpact.ReleaseClaim`. The design-and-build slices run in order, 1 to 7, one brief at a time; slice 7 waits on open question 11. Slice 8 touches other pages and may run alongside any of them once S13-20 lands. Engine PRs can be planned and landed ahead of their slice: S13-01, S13-06 and S13-09 have no unmet dependencies, and S13-08 waits on S13-25; S13-02 waits on S11-30, S13-03 and S11-51 on S11-39.
 
 ### Dependencies at a glance
 
@@ -444,16 +444,11 @@ Go, plus deleting Swift's draft rule.
 
 ### Slice 7 — How a person's records connect
 
-#### S13-26 — Comparing two Evidence graphs
+#### S13-26 — Scoring two Evidence graphs
 
-**Ships.** Two pure layers (no `core/database` import), each with its own `core/matchregistry` section and knob rows in [`matching-model.md`](../../matching-model.md):
-- **Subject pair:** two Subjects filed on one handle compared through the `subjectcompare` per-Property router S13-24 moved there, over the subject section's Properties per kind; each Property's agreement or conflict with its values.
-- **Graph pair:** two Evidence graphs compared from every pair of their Subjects filed on the same canonical entity (primaries and filed bridges alike): the shared entities, each pair's Subject result, and a strength as open question 11 settles.
-
-Table tests over the obituary and census fixtures: a household and an obituary sharing five people; a pair that shares only the person, by a nickname ("Robert, Air Force" against "Bob"); a shared person whose birth year conflicts.
-**Not this PR.** The read and RPC (S13-27); Source quality and independence unless open question 12 brings them in; any change to Promote.
-**Check.** `go test` on both layers: two graphs sharing a family read stronger than two sharing one person by a nickname; a conflicting birth year shows as a conflict beside the agreements; `TestKnobInventoryMatchesRegistry` holds the new sections.
-**Context.** [`evidence-graph-comparison.md`](evidence-graph-comparison.md); working rules "Links between Evidence graphs are computed, never stored", "A new comparison, not the band"; `core/propertycompare`, `core/subjectcompare` (pools, periods, lifespan), `core/subjectprofile` (how a Subject's values are built); [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md) for layer use. Blocked on open question 11 when planned.
+**Blocked — on open question 11.** Ships [Requirement 1](evidence-graph-comparison.md#requirement-1--score-the-connection-between-two-evidence-graphs): a function that takes two Evidence graphs and scores their connection from the Subjects they share on canonical entities (primary and relationship entities), the strength of each shared pair, conflicts and contested values, and derived structure such as a spouse relationship against a shared marriage event, every result explaining itself. Pure, layered and driven by the match registry; Subject compare and the per-Property router S13-24 moved into `subjectcompare` are the starting point. The scope is re-cut, and may split by layer, when the design settles.
+**Not this PR.** The read (S13-27); the view (S13-28); any change to Promote.
+**Context.** [`evidence-graph-comparison.md`](evidence-graph-comparison.md); working rule "Slice 7 captures requirements, not an implementation"; [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md).
 
 #### S13-29 — One loader for a Subject's comparable values
 
@@ -471,7 +466,7 @@ Table tests over the obituary and census fixtures: a household and an obituary s
 
 #### S13-28 — How the records connect
 
-**Ships.** The view from S13-D10 on the Person page: the person's Evidence graphs and their links, a link opening its agreements and conflicts, a record that stands apart, and groups that do not connect. Each graph opens its Evidence graph.
+**Ships.** [Requirement 2](evidence-graph-comparison.md#requirement-2--visualize-the-connections), from S13-D10 on the Person page: the person's Evidence graphs and their connections, a connection opening what explains it, a record that stands apart, and groups that do not connect. Each graph opens its Evidence graph. The form (a node web, a chord diagram, or another) is the board's, and the view reads only S13-27's output.
 **Not this PR.** Editing claims or links; Event and Place pages.
 **Check.** Bar 10.
 **Context.** Brief S13-D10; [`evidence-graph-comparison.md`](evidence-graph-comparison.md); S13-16's Sources section, which the board places it in or beside; [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) (a graph view may reuse the `GraphCanvas` host: [`ideas/graph-canvas-second-host.md`](../../ideas/graph-canvas-second-host.md)).
@@ -495,6 +490,6 @@ Table tests over the obituary and census fixtures: a household and an obituary s
 Questions 1–8 were answered 2026-10-26 and are now working rules or requirements. New ones go here; a PR that depends on one stays `Scoped` and `plan-pr` asks it again.
 
 9. ~~**What does a claim review show now that pins are gone?**~~ Answered 2026-10-29: the Person page shows how the person's records connect (slice 7); S13-18 and S13-D7 are descoped.
-10. ~~**Which Properties a comparison counts.**~~ Answered 2026-10-29: start from Subject compare's subject section; the graph layer counts shared entities and names no Property (working rule "A new comparison, layered like matching").
-11. **How a link's strength is expressed, and what joins two graphs into one group** (question 2). Every pair of a person's graphs shares at least the person, so groups and a record standing apart come only from this rule. Blocks S13-26.
-12. **Source quality and independence in the first version** (question 4). S13-26's plan asks; the default is no. Family support is answered: shared entities are the link.
+10. ~~**Which Properties a comparison counts.**~~ Superseded 2026-10-29 by question 11: slice 7 captures requirements first.
+11. **How the connection between two Evidence graphs is scored** ([Requirement 1](evidence-graph-comparison.md#requirement-1--score-the-connection-between-two-evidence-graphs) and its Open list): how shared Subjects, each pair's strength, conflicts and derived structure combine; how the result is expressed (named levels, an explained number, or other); what joins two graphs into one group; whether Source quality and independence weigh in. The user is thinking it through (2026-10-29). Blocks S13-26 – S13-29.
+12. **The visualization's form** (Requirement 2): a node web, a chord diagram, or another. Settled by brief S13-D10, after question 11.
