@@ -1,7 +1,7 @@
 # Ship log — S14-13 A crafted project can't crash the app
 
 **Plan:** [`S14-13-crafted-project-safe.md`](S14-13-crafted-project-safe.md) · **Branch:** `s14-13-crafted-project-safe` · **PR:** #632
-**State:** fixing 1
+**State:** review 2
 
 ## Round 0 — implement
 Head `ecf72552`. Gate PASS (orchestrator run, base `51cf4aef`). PR #632 (draft).
@@ -83,3 +83,12 @@ Check: `refusedImageCannotTranscribe` and `autoTranscribeUsesTheDecodedRaster` p
 Files: `docs/deployment-plan/spike-14/prs/S14-13-crafted-project-safe.md`.
 Do: add to the Landed note every round-0 deviation (`installImageRasterForTesting` no-op, T-1 raw column, T-8 filler, D-5 helper) and each round-1 supersession above (D-9, D-10, D-11 home, D-6/D-7 depth scaling), each as "User, 2026-10-29".
 Check: scripts/check-pr.sh PASS (plan-docs).
+
+## Round 1 — fix
+Head `31bc43f5`. Gate: first run FAIL in `xcode-test` (23 issues, all `SourceGraphFormModelTests` edit cases and `SourcesModelTests.listReadsEachGraphsProgress`, in suites and code this PR does not touch); immediate rerun on the same head PASS. Logged as a flaky-test follow-up.
+F-1, F-2, F-3, F-4, F-5, F-7, F-8, F-9 done. F-6: the failing `.heif` row was **not reproduced**: ImageIO sniffs a `.heif`-named file as `public.heif` (`CGImageSourceCreateWithURL` uses the extension), so the old check accepted it; the reviewers' `public.heic` sniff came from the same bytes without a `.heif` name. UX-1/CON-1 → Rejected as a defect (evidence: implementer probe). F-6 kept as the user's design answer (Go supplies the type identifiers; replaces D-10's extension fallback and its `isDynamic` special case).
+Deviations: `writeImage` takes an optional `contentType: UTType?` for HEIC; identifiers default to `[]` (an image with none is refused); the 16-bit header fixture's filler scales with depth; F-2 added a third private helper `flooredCell(_:)` for `maxGridX`/`maxGridY`; F-3 has no test (no seam in `openResearcher`).
+Nits MNT-5 and MNT-7 folded in.
+
+## Round 2 — review
+Reviewers: CON (Sonnet), MNT, UX, SEC+PRF — each had a round-1 blocker or major. Scope `ecf72552...31bc43f5`.
