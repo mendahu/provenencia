@@ -1,6 +1,7 @@
 # S14-13 — A crafted project can't crash the app
 
-**Status:** Planned
+**Status:** Landed in #632 (2026-10-29)
+**Landed:** Differences from the plan: re-saving a clamped position rolls back (`writes.Run` rolls back a write with no changes), so the raw column keeps the file's value and every read clamps it, rather than being rewritten (T-1 asserts the raw value unchanged). `declaredPNGHeaderData` carries filler IDAT data (one byte per 3,000 declared pixels) because ImageIO reads no size from an IHDR-then-IEND header. D-10's "macOS has none" treats a dynamic `UTType` (what `image/tif` gets) as none. The `Do` close-and-forget sits in a `runLocked` helper. Manual check 1 to 5 not run in the app by the implementer.
 **Spike / slice:** Spike 14 · Slice 5 — Audit fixes
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: a refused image uses the viewer's existing load-failed state; no control, copy or layout changes)
