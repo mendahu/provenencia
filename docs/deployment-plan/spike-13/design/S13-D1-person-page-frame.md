@@ -1,5 +1,12 @@
 # S13-D1 — Person page: header, section switching, Vitals
 
+> **Update 2026-10-29: Wide layout.** Since this brief was drafted, the design system gained a Wide width class (a pane of 1600pt and up) and a **Page columns** component (Spike 14 brief S14-D1, archived by [#629](https://github.com/mendahu/provenencia/pull/629), board agreed 2026-10-29). For this board:
+> - **Pull the fresh design-system kit first.** It has Page columns, the `--width-wide-breakpoint` and `--width-secondary-max` tokens, and the Width classes README section.
+> - **Draw the Person page at Regular (1366 × 900) and Wide (2560 × 1440), on Page columns.** At Wide, decide what sits in the secondary column beside the primary (supporting content, never the only copy of an action), and whether the header uses Page columns' header slot, scrolling or pinned.
+> - The **"Two widths — draw both"** block is now part of the Paste block below (added from [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md)).
+> - Before the board is agreed, this brief gains a Wide layout table, `PPF-W` requirements and a Wide frame for each view, per `add-design-brief` "Wide layout (binding)".
+> - S13-10 builds `PVPageColumns` from the S14-D1 board with this frame (S14-25 was descoped; Spike 13 working rule "Redesigns adopt Page columns").
+
 **Kind:** Claude Design board (**rethink** of the Person page layout below the header; the header itself is an **enhancement**)
 **Spike:** Provenencia Spike 13 (Person detail page)
 **View:** Person detail: the fixed header, the section switcher, and the five sections as places
@@ -44,6 +51,27 @@ Work **in place** on this board. Do not fork a parallel copy of the surface.
 | Native menu of actions | ContextMenu |
 
 Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
+
+### Two widths — draw both
+
+The window opens at 1366 × 900pt but is often stretched across a large monitor.
+Every view has two width classes, measured on the view's own pane (the window
+minus the sidebar), not the screen. A view with a side pane (an inspector, a detail
+pane) plans that pane inside its Wide frame:
+
+- **Regular** — pane below 1600pt. Draw at the default window: 1366 × 900, sidebar open.
+- **Wide** — pane 1600pt and up. Draw at 2560 × 1440, sidebar open.
+
+Rules for Wide:
+
+1. **The extra space does a job.** Show more at once: a second column of supporting content, the detail beside its list, more grid or table columns, an inspector docked open. If the view truly has nothing to add, center its content. Content jammed to one side with empty space beside it is never the Wide design.
+2. **Readable things keep their measure.** Prose, forms and the primary column keep their Regular maximum widths. Wide adds columns; it does not stretch text or fields.
+3. **Lists, tables, grids and canvases fill the width.** Cards keep their size and add columns.
+4. **Same content, same actions.** Width changes arrangement only. Anything in the Wide second column is stacked below, in an inspector, or behind a disclosure at Regular.
+5. **Crossing the line keeps state.** Selection, scroll position, focus and unsaved edits survive a resize across 1600.
+6. **Past every column's maximum, center the group.** Page gutters are never narrower than at Regular; they take what is left.
+
+Draw the **Regular** and **Wide** frame of each view side by side, using the same kit pieces in both.
 
 ### This brief is a rethink below the header
 

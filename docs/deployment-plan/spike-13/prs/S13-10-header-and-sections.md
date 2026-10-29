@@ -1,5 +1,11 @@
 # S13-10 — Header and sections
 
+> **Update 2026-10-29: Wide layout.** Written before Spike 14's Wide layout changes; refresh against `main` before this plan is Planned.
+> - **S14-24 landed** ([#628](https://github.com/mendahu/provenencia/pull/628)): every workspace page reads `@Environment(\.pvWidthClass)` (`.regular` below a 1600pt pane, `.wide` at and above), measured once at `WorkspaceDestinationHost`.
+> - **S14-25 is descoped; this PR builds Page columns.** Build `PVPageColumns` from the agreed Spike 14 brief S14-D1, archived by [#629](https://github.com/mendahu/provenencia/pull/629) board (WL-3 – WL-10) and move `ConclusionDetailPage.page` onto it, so the Event and Place pages share it with no other change. Build the header slot and pinned mode only if S13-D1 uses them. Add `PVSpacing.widthSecondaryMax` (480) and check the kit's `--width-wide-breakpoint` is 1600.
+> - **Owes:** Steps and a Codebase fit row for `PVPageColumns`; tests for the WL-5 sizes at panes 1102, 1600, 1656 and 2296; S13-D1's `PPF-W` requirements in Scope; a manual check at Regular and Wide, plus the Event and Place pages unchanged at Regular; **Depends on** gains S14-D1 (board agreed 2026-10-29) and S14-24.
+> - Source: Spike 13 working rule "Redesigns adopt Page columns" and the S13-10 scope entry ([#629](https://github.com/mendahu/provenencia/pull/629)).
+
 **Status:** Blocked — on board S13-D1
 **Spike / slice:** Spike 13 · Slice 1 — Page frame and Vitals
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
