@@ -62,6 +62,27 @@ struct EvidenceGraphStoreTests {
         #expect(listed[0].artifactIDs == ["a1", "a2"])
     }
 
+    @Test func copySourceErrorIsScripted() async throws {
+        let store = seededStore()
+        struct Boom: Error {}
+        store.copySourceError = Boom()
+        await #expect(throws: (any Error).self) {
+            _ = try await store.copySource(
+                projectDir: projectDir, userID: userID, sourceID: sourceID, title: "Copy",
+                sourceTypeID: "t", copyDescription: false, copyMetadata: false,
+                copyCredibility: false, artifactIDs: []
+            )
+        }
+        store.copySourceError = nil
+        let (copy, _) = try await store.copySource(
+            projectDir: projectDir, userID: userID, sourceID: sourceID, title: "",
+            sourceTypeID: "t", copyDescription: false, copyMetadata: false,
+            copyCredibility: false, artifactIDs: []
+        )
+        #expect(copy.title == "")
+        #expect(copy.id != sourceID)
+    }
+
     @Test func createEvidenceGraphErrorIsScripted() async {
         let store = seededStore()
         struct Boom: Error {}
