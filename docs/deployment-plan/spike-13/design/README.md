@@ -10,7 +10,7 @@ In order; S13-D8 and S13-D9 may run alongside once S13-20 lands.
 
 | Brief | View | Gates |
 | --- | --- | --- |
-| S13-D1 | Person page: header, section switching, Vitals | S13-10 |
+| [S13-D1](S13-D1-person-page-frame.md) | Person page: header, section switching, Vitals (written 2026-10-29; board not agreed) | S13-10 |
 | S13-D2 | Provenance sheet | S13-11 |
 | S13-D3 | Family section (and the shared person tile) | S13-12 |
 | S13-D4 | Timeline section | S13-13 |
