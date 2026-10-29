@@ -1,6 +1,6 @@
 # S14-02 — Pictures in the app
 
-**Status:** Planned
+**Status:** Blocked — re-plan (2026-10-29): US-3, D-10, D-14 and their steps leave this PR. The Promote evidence sheet they change is removed by Spike 13's [S13-23](../../spike-13/deployment-plan.md#s13-23--promote-stops-asking-for-pins), so the plan is refreshed with `plan-pr` before `ship-pr` runs it.
 **Spike / slice:** Spike 14 · Slice 1 — Event and Place pictures
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: reuses the Person gallery section, header thumb, portrait controls and list thumbnail with Event/Place headings and wording; Promote and Properties change copy only)

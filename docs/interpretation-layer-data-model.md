@@ -578,7 +578,7 @@ CREATE TABLE subjects (
 
 `source_id` is the subject's home Source — typically the Source being interpreted when the subject was created. It exists so the application can efficiently surface Subjects that belong with a given Source during common same-source workflows. An Observation's Subject, Subject value and Citation Artifact must share one Evidence graph (the Artifact linked to it), except that a reification Subject (type `source`) may be the value of a non-edge Observation in any graph; `observations.requireSameGraph` refuses the rest with `observations.other_graph`.
 
-For Subjects of type `source`, `source_id` has a stronger meaning: it identifies the Source this subject reifies. The application should maintain at most one `source` subject per Source row. Another Source refers to that subject only as the value of a non-edge `mentions` Observation (“this book mentions that marriage certificate”). Observations whose Subject is another Source's `source` subject, `remark` included, are refused with `observations.other_graph`; a `remark` on a `source` subject is written from that Source's own graph. Cross-Source commentary is a preliminary idea ([`ideas/source-to-source-relationships.md`](ideas/source-to-source-relationships.md)), not supported yet. None of this requires structured Source-quality columns.
+For Subjects of type `source`, `source_id` has a stronger meaning: it identifies the Source this subject reifies. The application should maintain at most one `source` subject per Source row. Another Source refers to that subject only as the value of a non-edge Observation, such as `mentions` (“this book mentions that marriage certificate”). Observations whose Subject is another Source's `source` subject, `remark` included, are refused with `observations.other_graph`; a `remark` on a `source` subject is written from that Source's own graph. Cross-Source commentary is a preliminary idea ([`ideas/source-to-source-relationships.md`](ideas/source-to-source-relationships.md)), not supported yet. None of this requires structured Source-quality columns.
 
 Subjects deliberately contain little domain data. A person's name, an Event's date, a Place's name, or a Participation's role belongs in cited Observations rather than fixed subject columns.
 
@@ -690,7 +690,7 @@ CREATE TABLE subject_type_properties (
 ) STRICT;
 ```
 
-`sort_order` orders Add-property menus and Properties lists, the conclusion page's fields and the claim evidence sheet's sections (one order, cached with the vocabulary as `graphcache.Vocabulary.BindingOrder`). Binding writes (assign, remove, reorder) are audited as `subject_type_property`. Locked bindings (cannot unbind while required for connect macros, Conclusion ordering, or other product integrity) live in the compiled Interpretation subject registry (`subjectvocab`), not as a column here.
+`sort_order` orders Add-property menus and Properties lists, the conclusion page's fields and the claim evidence sheet's sections (one order, cached with the vocabulary as `graphcache.Vocabulary.BindingOrder`). The sheet is to be removed ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3). Binding writes (assign, remove, reorder) are audited as `subject_type_property`. Locked bindings (cannot unbind while required for connect macros, Conclusion ordering, or other product integrity) live in the compiled Interpretation subject registry (`subjectvocab`), not as a column here.
 
 For example (full matrix in [`seeded-vocabulary.md`](seeded-vocabulary.md)):
 

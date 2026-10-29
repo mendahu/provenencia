@@ -49,13 +49,9 @@ Spike 10 and earlier cut each PR as an In / Out / Testable table inside `deploym
 
 ## Current
 
-[Spike 11 — Promote matching refinement](spike-11/) is open. Plan: [`spike-11/deployment-plan.md`](spike-11/deployment-plan.md).
+[Spike 13 — Person detail page](spike-13/) is open. Plan: [`spike-13/deployment-plan.md`](spike-13/deployment-plan.md). Slice 0 comes first: it removes Identity Claim Observation pins and Promote's evidence sheet (2026-10-29). Each brief is designed, then implemented, before the next.
 
-[Spike 12 — Source structure](spike-12/) is open alongside it. Plan: [`spike-12/deployment-plan.md`](spike-12/deployment-plan.md). Briefs are authored just before the PR they gate. Slices 1–4 have landed; slices 5–7 fix what the [app-health audit](spike-12/app-health-audit.md) of 2026-10-27 found, and slices 5b and 6b what the [second audit](spike-12/app-health-audit-2.md) of 2026-10-28 found.
-
-[Spike 13 — Person detail page](spike-13/) is open. Plan: [`spike-13/deployment-plan.md`](spike-13/deployment-plan.md). Each brief is designed, then implemented, before the next.
-
-[Spike 14 — Odds and ends](spike-14/) is open. Plan: [`spike-14/deployment-plan.md`](spike-14/deployment-plan.md). Batch 1 is Event and Place pictures.
+[Spike 14 — Odds and ends](spike-14/) is open. Plan: [`spike-14/deployment-plan.md`](spike-14/deployment-plan.md). Batch 1 is Event and Place pictures; Batches 4 and 5 are what remained of Spike 12, with the [app-health audit](spike-14/app-health-audit.md) and the [second audit](spike-14/app-health-audit-2.md).
 
 Ideas: [`ideas/`](../ideas/). Claude Design briefs: [`add-design-brief`](../../.agents/skills/add-design-brief/SKILL.md).
 
@@ -63,6 +59,8 @@ Ideas: [`ideas/`](../ideas/). Claude Design briefs: [`add-design-brief`](../../.
 
 | Spike | What we decided |
 | --- | --- |
+| [Spike 12](archive/spike-12/) | A Source holds several isolated Evidence graphs; Copy Source for citable parts. Agreement and credibility stay per Source. |
+| [Spike 11](archive/spike-11/) | Matching is six pure layers over one registry. Bands come from evidence; frequency weighting is gone. Kinship matches in any shape through implied links. |
 | [Spike 10](archive/spike-10/) | Dogfood fixes. Names match across accents and abbreviations. A face on a photo is a depiction value. |
 | [Spike 9](archive/spike-9/) | Canonical entities via Identity Claims. One auto-reconciler cache. Promote is one page. |
 | [Spike 8](archive/spike-8/) | Pause-and-refine data entry. Citation is the document. Named delete via Impact. |

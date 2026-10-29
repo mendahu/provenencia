@@ -68,7 +68,7 @@ A Source person recorded only as a short given name, with a matching kinship lin
 
 | Out | Home |
 | --- | --- |
-| Relax the partial-name similarity curve | dogfood / later calibration PR; [`name-candidates.md`](../../spike-11/name-candidates.md) "What stays later" |
+| Relax the partial-name similarity curve | dogfood / later calibration PR; [`name-candidates.md`](../../archive/spike-11/README.md) "What stays later" |
 | Lower `alignment.Bands.Weak` | not planned for this case |
 | Raise `OtherCredit` or restore old parent-scale `1.0` / `0.5` | not planned (user rejected option C, 2026-10-28) |
 | Kinship-only support map / middle tier for parent·spouse·grandparent | not planned (user rejected option B, 2026-10-28) |

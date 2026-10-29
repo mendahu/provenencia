@@ -1,6 +1,6 @@
 # Source structure: what Spike 12 left for later
 
-**Status:** idea only — not roadmapped. Spike 12 ([design](../deployment-plan/spike-12/source-structure.md)) solved large graphs and the "obituary or newspaper?" confusion with **Copy Source** and **multiple Evidence graphs per Source**. These options were weighed on 2026-10-18 and parked.
+**Status:** idea only — not roadmapped. Spike 12 ([design](../deployment-plan/archive/spike-12/source-structure.md)) solved large graphs and the "obituary or newspaper?" confusion with **Copy Source** and **multiple Evidence graphs per Source**. These options were weighed on 2026-10-18 and parked.
 
 ## Nested Sources
 

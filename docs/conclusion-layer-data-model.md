@@ -16,7 +16,7 @@ This draft treats canonical rows as the **working set** (handles the researcher 
 
 # 1. Invariants versus conventions
 
-The graph is built to **accept** research the schema cannot judge. A toponym `York, Upper Canada, North America` on one Place, an Identity Claim that puts a town subject and a colony subject on the same Place, a Location with only one end filled, or an Observation that stretches what a Citation supports: these must **persist**. The evidence trail (Citations, Observation subjects, claim pins, `argument`) is how a later reader evaluates them. Product UI may warn, badge, or suggest splits; it must not refuse to save because a convention was skipped.
+The graph is built to **accept** research the schema cannot judge. A toponym `York, Upper Canada, North America` on one Place, an Identity Claim that puts a town subject and a colony subject on the same Place, a Location with only one end filled, or an Observation that stretches what a Citation supports: these must **persist**. The evidence trail (Citations, Observation subjects, the members' Observations side by side, `argument`) is how a later reader evaluates them. Product UI may warn, badge, or suggest splits; it must not refuse to save because a convention was skipped.
 
 This document therefore uses three strengths of “must”:
 
@@ -51,7 +51,7 @@ This is valid. It is a **workspace handle**, not an Observation. Genealogical na
 
 ## 2.2 Membership versus committed properties
 
-**Membership** (which Interpretation subjects are this subject) is the set of **accepted Identity Claims** that point at the handle. Each claim is one subject joining that handle, with its own exhibit. A new source subject joins by a new claim; it does not inherit membership through some other subject.
+**Membership** (which Interpretation subjects are this subject) is the set of **accepted Identity Claims** that point at the handle. Each claim is one subject joining that handle, with its own status and `argument`. A new source subject joins by a new claim; it does not inherit membership through some other subject.
 
 **Committed values** (name, date, location ends, …) are accepted Reconciliation Claims. If there is no claim, the UI may **project** values from Observations on member Subjects. That projection is not stored.
 
@@ -118,8 +118,7 @@ Observations ──subject──► subject
                               ▼
                        canonical_entities
                               │
-                              ├── reconciliation_claims (committed Property values)
-                              └── exhibit pins live on claims, not on the handle
+                              └── reconciliation_claims (committed Property values)
 ```
 
 ```text
@@ -135,7 +134,7 @@ canonical_entities
 Important separations:
 
 1. **Canonical entity** — working subject; creating it *is* origination. No `origination_claims` table.
-2. **Identity Claim** — one Subject is a reading of one entity, with Observation exhibit. Accepting the claim makes the subject a member.
+2. **Identity Claim** — one Subject is a reading of one entity: a status and the researcher's `argument`, with no Observation exhibit (§5). Accepting the claim makes the subject a member.
 3. **Membership** — the accepted Identity Claims for that entity. Not a separate join table, and not a graph closure over other subjects.
 4. **Reconciliation Claim** — concluded value of one Property on one entity. Exhibit Observations may be about **other** Subjects; they are not retargeted.
 5. **Canonical merge** — `merged_into_id` within the same Subject type. Explicit; identifying a subject does not merge two handles.
@@ -202,73 +201,59 @@ A subject has at most one **accepted** Identity Claim, so it belongs to at most 
 
 `confidence_grade_id` is optional epistemic stance (three-point Claim confidence vocabulary). It is **orthogonal to `status`**: accepted + low confidence and provisional + high confidence are both valid. Do not overload `provisional` to mean “I am unsure.” Authoritative rules: [`research-judgment-model.md`](research-judgment-model.md). Grade keys: [`seeded-vocabulary.md`](seeded-vocabulary.md).
 
-`argument` holds the researcher's reasoning chain for why this subject is (or is not) this entity — name and age against the members already on the handle, a testimony that identifies a photograph, or a short note when a single Observation already makes the case. Reasoning stays here rather than scattered across evidence rows. Comparisons to another subject are written in `argument` and supported by pinning that subject's Observations; they are not a separate edge. Confirmed matches and exhibit backfill are §5.1.
+`argument` is optional free text: the researcher's reasoning for why this subject is (or is not) this entity — name and age against the members already on the handle, a testimony that identifies a photograph, a nickname that is the only link between two records. It is the one place an Identity Claim holds reasoning. Comparisons to another subject are written here; they are not a separate edge and not a stored list of Observations (§5).
 
 The subject and the entity must share one Subject type. `subject_type_id` is copied onto the claim so SQLite can enforce that with composite foreign keys. `subjects` already has `UNIQUE (id, subject_type_id)`; `canonical_entities` carries the same unique pair (§6). That copy cannot drift: subject type is immutable on both rows.
 
 ---
 
-# 5. `identity_claim_evidence`
+# 5. Membership evidence
 
-Evidence rows are pointers to Observations that participate in the claim's exhibit list. An individual Observation does not carry a stance toward the Identity Claim; the claim's `status` and `argument` express the researcher's conclusion over the whole set.
+**Decided 2026-10-29:** an Identity Claim carries **no Observation exhibit**. The `identity_claim_evidence` table, its pins, backfill onto other members' claims, and the review rules built on them are dropped. Removing them from the schema and the code is planned work; until it lands, the table and the code that writes it are still there, and no new feature should build on them.
 
-```sql
-CREATE TABLE identity_claim_evidence (
-    identity_claim_id   BLOB NOT NULL REFERENCES identity_claims(id) ON DELETE CASCADE,
-    observation_id      BLOB NOT NULL REFERENCES observations(id) ON DELETE CASCADE,
+Pins recorded which agreements Promote's matching found when a subject was filed. That was the wrong record to keep:
 
-    PRIMARY KEY (identity_claim_id, observation_id)
-) STRICT;
-```
+- **They only recorded agreements.** A refused comparison left nothing, so a claim with one pin looked documented even when half the evidence disagreed.
+- **They froze at filing.** A later record that strengthened or weakened the link never reached them.
+- **They asked the researcher to confirm what the machine had decided.** A line started pinned only when value compare called the values the same, so confirming it added no judgment.
 
-A pin is a facet of **both** its claim and its Observation. Deleting a pinned Observation is allowed: its pins go with it, and every claim that pinned it stays, with a weaker exhibit (§5.2). Deleting a claim (or the Subject that carries it) drops that claim's pins. The application removes pins and claims **explicitly** in the same transaction so each removal is audited; the `CASCADE` is only a backstop for a writer that forgets. The delete confirm names the handles whose claims lose evidence.
+The researcher's judgment on a claim is its `status` and, where it helps, its `argument`. Everything that can be computed from the members' Observations is computed on read and never stored, like the handle badges (§6.1).
 
-Pin every relevant Observation here; write the conclusion and inference in `identity_claims.argument`. Exhibit pins are **Observations only** — not Citations, Sources, or other Claims. A confirmed match pins Observations that already exist on the two subjects, or on a neighbor one bridge away (a birth event's date for a person, §5.3) (§5.1). Broader exhibit types can wait until a concrete workflow needs them.
+## 5.1 Two lenses
 
-The Observation's `subject_id` is unchanged. Pins mean “this assertion is part of my proof,” not “this Observation is now about the claim.” Creating a match does not insert an Observation, a Citation, or a subject. The source did not state the match; the Identity Claim does.
+Correlating the members of a handle happens at two levels, and they answer different questions:
 
-## 5.1 Confirmed matches and backfill
+| Lens | Question | Computed by | The researcher resolves it with |
+|---|---|---|---|
+| **Property** | Across the members, what is the value of this Property? | the auto-reconciler, one Property at a time ([`conclusion-reconciliation.md`](conclusion-reconciliation.md)) | a Reconciliation Claim (§7) |
+| **Entity** | Does this subject belong to this handle at all? | a comparison of the subject against the handle's other members, across every Property and neighbor, derived on read | the Identity Claim's `status` |
 
-One confirmed comparison is enough to accept an Identity Claim. The birth certificate can ground the person with no comparison at all. The marriage claim can pin only the birth certificate. The census claim can pin only the birth certificate and leave the marriage record uncited. Each claim justifies one arrival. Earlier proofs stay on earlier claims.
+A conflict on one Property has two possible stories. The records are about the same person and one of them is wrong; that is a Reconciliation Claim on that Property. Or the records are about different people; that is a rejected Identity Claim. The entity lens is what tells them apart: a subject that agrees on most things with one conflict points to the first, one that conflicts on what identifies a person points to the second.
 
-A confirmation records that two existing Observations agree. Both are pinned. A refusal leaves that pair unpinned. It does not create a negative Observation. A conflict the researcher wants to remember goes in `argument`, or stays visible because both Observations sit on members of the handle. Choosing a concluded value is a Reconciliation Claim.
+**The entity comparison compares a handle's records pairwise** (decided 2026-10-29): the connection between two of the handle's Evidence graphs is scored from the Subjects they share on canonical entities, the strength of each shared pair, conflicts and derived structure, so a household that matches as a family connects more strongly than one person does. The handle's page shows the graphs and their connections, computed on read and never stored. How the score is built is open; the requirements are in Spike 13's design. A record linking to nothing, or two groups of records that do not connect, is what the entity lens surfaces. Its detailed rules are still open ([Spike 13's design](deployment-plan/spike-13/evidence-graph-comparison.md)). It must count conflicts as well as agreements, weigh a link like a nickname alone (Bob for Robert) as weak against one carried by names, family and places together, and show its reasons as sentences. A Reconciliation Claim that settles a conflict does not raise it: the conflict stays visible, marked as settled by that claim. Promote's alignment score (§5.3) is not this comparison and is not to be extended into it.
 
-When the incoming subject is confirmed against a subject that already has an **accepted** Identity Claim on the same entity, the application writes those Observation pins onto **both** claims. The existing member's exhibit grows. Its `argument` stays as written. The added pins are audited, so a later reader can see that a subsequent join contributed them.
+## 5.2 When a member leaves
 
-That backfill is what keeps a proof standing when one member leaves. If the census claim pins the birth record and the marriage record, and the marriage claim also receives the census pins, removing the birth certificate still leaves each of those claims with a live comparison. Backfill onto the new claim alone does not repair an older claim that cited only the departing subject.
-
-Pins are the machine-readable comparison. An `argument` that only names the other record in prose does not.
-
-## 5.2 When a comparison subject leaves
-
-Rejecting, deleting, or moving an accepted Identity Claim does not change any other subject's membership. Other Identity Claims on that entity whose exhibit pins an Observation of the departing subject are surfaced for review. The application does not auto-reject them and does not strip their remaining pins.
-
-A claim that still pins another remaining member has a live comparison. A claim whose only comparison pins were the departing subject has an exhibit that no longer explains membership. Both are shown. Neither is evicted. The researcher re-pins against a member who is still there, accepts the claim again with no exhibit, or rejects it.
-
-The same review applies when a pinned Observation is deleted or its value changes materially. Deleting a pinned Observation is never refused (§5); the claims it supported are left for this review instead.
-
-**Weak claims (review alert, future UI).** A claim is surfaced for review when it is accepted, has **zero pins**, and its handle has **more than one** accepted member — it explains membership with no confirmed comparison. A handle's only member (a grounding claim, §5.1) is not flagged. No column stores this; it is a query over `identity_claims` and `identity_claim_evidence`. The audit history of `identity_claim_evidence` (removals are recorded under the claim's id) says *why* a claim is weak: never pinned, or evidence removed when an Observation or member was deleted. The alert offers the same three actions as above — re-pin against a remaining member, accept as-is, or reject — and never acts on its own. Planned with claim management, which is unscheduled; see [`ideas/identity-claim-review.md`](ideas/identity-claim-review.md).
+Rejecting, deleting, or moving an accepted Identity Claim does not change any other subject's membership and does not touch any other claim. Nothing stored on the remaining claims refers to the departing subject; the entity comparison (§5.1) reads the members that are left.
 
 Unpromote on the Evidence graph deletes a primary Subject's accepted claim and, in the same revision, the accepted claims of the bridges on that Evidence graph that have it as an end. It does not reject, and it deletes no handle.
 
 ## 5.3 Promote
 
-The researcher files an Evidence graph's Subjects onto handles from one page. This is the Promote that shipped. The design (graph alignment, the page) is [`promote-graph-alignment.md`](promote-graph-alignment.md), and its scoring is [`matching-model.md`](matching-model.md); this section holds the model rules. The schema doesn't require the page: accepting a claim with an empty exhibit stays valid, and that claim may show as undocumented. The product proposes; it never blocks an accept.
+Promote is a quick filing action: the researcher files an Evidence graph's Subjects onto handles from one page, and is asked for nothing else. The design (graph alignment, the page) is [`promote-graph-alignment.md`](promote-graph-alignment.md), and its scoring is [`matching-model.md`](matching-model.md); this section holds the model rules. The schema doesn't require the page. The product proposes; it never blocks an accept.
 
 1. Promote from any unpromoted primary Subject (person, event, place) opens the page with that Subject matched to its best handle. *Map the rest of this graph* adds a row for every other primary Subject on the Evidence graph.
-2. Each row's target is **proposed by aligning** the graph with the canonical graph. A Subject's own Properties *and its neighbors'* (its birth event's date, its places, its family) are compared with each candidate's reconciled values (the pins pair them with its members' Observations), and each comparison agrees, conflicts or is unknown. Subjects that are already members are anchors. A handle with no members is grounding: there's nothing to compare.
+2. Each row's target is **proposed by aligning** the graph with the canonical graph. A Subject's own Properties *and its neighbors'* (its birth event's date, its places, its family) are compared with each candidate's reconciled values. Subjects that are already members are anchors. A handle with no members is grounding: there's nothing to compare.
 3. The researcher accepts, retargets, mints new, or skips each row. Their choices are fixed; everything not yet decided is re-proposed around them.
-4. Each row's evidence lists its comparisons. The agreeing ones are preselected as pins, and any can be toggled. A comparison may reach **one hop through a bridge**: the incoming person's birth date (on their birth event) against a member's pins both date Observations on the person claims.
-5. **Done** writes everything in one transaction:
-   - one Identity Claim per filed Subject, and the minted handles;
-   - the pins from §5.1, with backfill onto the members' claims;
+4. **Done** writes everything in one transaction:
+   - one accepted Identity Claim per filed Subject, and the minted handles;
    - the bridges (§5.4).
 
-   A new claim's `argument` is what the researcher writes; Promote drafts none. Older claims' arguments are not rewritten.
+   Promote writes no Observation pins, drafts no `argument`, and sets no confidence. The researcher edits those on the claim afterward.
 
-A skipped row or an unpinned comparison is not stored. Opening Promote again proposes it afresh.
+A skipped row is not stored. Opening Promote again proposes it afresh.
 
-The review in §5.2 is the other half of this: when a member leaves or a pinned Observation changes, list the affected Identity Claims on that entity and say whether each still cites a remaining member.
+**The score ranks, unseen** (decided 2026-10-29): the alignment score still chooses and orders each row's suggestions, but the page shows no band (strong, medium, weak, no match), Contested mark or reason. It is not the measure of whether a member belongs (§5.1), and replacing it waits until the entity comparison has proven itself. The row's evidence sheet and its pin toggles are dropped with the pins.
 
 ## 5.4 Bridges and the rest of the graph
 
@@ -433,7 +418,7 @@ Property name_format -> text   # value is a name_format_profiles.key, e.g. "west
 
 - `project_settings.default_name_format_id` supplies the UI default when a person entity has no accepted `name_format` Reconciliation Claim.
 - When the researcher commits a format for a Person (including as part of reconciling names across cultures), they persist a Reconciliation Claim for `name_format`.
-- Evidence pins are optional for `name_format` (it is often a preference rather than source-derived); `argument` may still record why that profile was chosen.
+- Evidence is optional for `name_format` (it is often a preference rather than source-derived); `argument` may still record why that profile was chosen.
 - Concluded `name` values remain separate Reconciliation Claims (Property `name`, NameValue). Format and name content are related in the UI but distinct Properties.
 
 See [`structured-name-model.md`](structured-name-model.md).
@@ -461,6 +446,8 @@ CREATE TABLE reconciliation_claim_evidence (
 ```
 
 Evidence rows are pointers to Observations in the claim's exhibit list. Individual Observations do not carry a stance toward the claim; `argument` and the concluded value express the conclusion over the set.
+
+**Open:** this table is not built. Identity Claims dropped their exhibit (§5); whether Reconciliation Claims keep one is §13 item 5.
 
 ## 7.2 Example (person dates)
 
@@ -595,9 +582,9 @@ These are **schema and application invariants** (see §1). Grain, gazetteer use,
 17. Association ends are Properties on the association entity (projected from member Observations and/or Reconciliation), not a separate endpoints table.
 18. There is no `origination_claims` table and no `identity_anchor_id`; the canonical row is the working-subject insert, and membership is Identity Claims.
 19. Optional `confidence_grade_id` on Identity and Reconciliation Claims is epistemic stance only; it does not replace `status` and must use Claim confidence vocabulary, not Source credibility grades ([`research-judgment-model.md`](research-judgment-model.md)).
-20. Confirming that two Observations agree pins those Observations. It does not create an Observation, Citation, or subject (§5.1).
-21. A confirmed match between an incoming subject and an existing accepted member pins both Observations on both Identity Claims, including Observations one bridge away (§5.3). The existing claim's `argument` is not rewritten.
-22. Removing one member does not remove the others. Identity Claims on that entity that pin the departing subject's Observations are surfaced for review (§5.2). Their remaining pins stay.
+20. Identity Claims carry no Observation exhibit. Whether a member belongs is computed from the members' Observations on read and is never stored (§5).
+21. Promote writes accepted Identity Claims, minted handles and bridges only. It drafts no `argument` and sets no confidence (§5.3).
+22. Removing one member does not remove the others and does not change their claims (§5.2).
 23. A bridge is filed onto an association only when both its ends are members of handles, keyed as in §5.4. Filing a bridge never creates or chooses a handle for its ends.
 
 ---
@@ -633,7 +620,7 @@ Testimony Source
 Conclusion
   canonical_entities E1 (kind=person)
   identity_claim: N1 → E1 (accepted)
-  identity_claim: N2 → E1 (accepted), exhibit includes the testimony Observation
+  identity_claim: N2 → E1 (accepted), argument → the testimony names the depicted person
   members(E1) = {N1, N2}
 ```
 
@@ -653,7 +640,7 @@ Letter Source L
 Conclusion
   canonical_entities E (kind=person)
   identity_claim: NC → E (accepted)
-  identity_claim: NL → E (accepted), exhibit cites both Sources' Observations
+  identity_claim: NL → E (accepted), argument → the letter is about the certificate's person
   members(E) = {NC, NL}
   reconciliation_claim on E, property birth_date:
     value → DateValue(2 JAN 1800)   # researcher choice, or synthesized
@@ -715,6 +702,8 @@ Conclusion
 1. **Gazetteer runtime** — which editioned packs to ship or download (WOF vs GeoNames SQLite, Newberry, OHM extracts), license and ingest-as-Source UX. Product, not a third identity model.
 2. **Place containment** — answered for Spike 9 by place relationships (`part_of`). Several Locations on one Event that share a containment graph fold into one display chain; unrealted Places stay competing values. Optional concluded `contained_in` vs search-only gazetteer parents, and any place-nature vocabulary, remain open for later. **Convention:** do not infer containment from two Locations alone — only from filed `part_of` (or a later gazetteer write of the same).
 3. **Relationship endpoints** — seeded `participant` is a single Property; multi-party relationships may need repeated Properties, ordered parts, or a later shape. Out of scope for this Place pass.
+4. **The entity comparison** (§5.1) — scoring the connection between two Evidence graphs, computed, shown on the handle's page (Spike 13 slice 7). Requirements are captured; how it is built and expressed is open there. Not ported from Promote's alignment score.
+5. **Reconciliation exhibit** (§7.1) — Identity Claims dropped their Observation pins (§5). Reconciliation Claims are not built yet. Whether one keeps an exhibit list, names only the Observation whose value it concludes, or holds neither is open. A memberless handle (§8.3) has no members to compare, so its exhibit may be the only link to evidence.
 
 ---
 

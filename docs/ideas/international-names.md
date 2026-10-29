@@ -29,7 +29,7 @@ A `generation` weight slot, and one declared slot list read by both `nameformats
 
 ## Name changes
 
-- **Name changes as a signal.** Married, religious and anglicized names connect today only when one of a handle's names matches. A "known as" relationship between names, or the marriage event, could carry it. Spike 11 treats Mary Smith / Mary Robins as `Different` at the value level, and leaves marriage evidence to links. Maiden names in the conclusion are the intended path ([`comparison-layers.md`](../deployment-plan/spike-11/comparison-layers.md#entities-compare-against-the-conclusion)).
+- **Name changes as a signal.** Married, religious and anglicized names connect today only when one of a handle's names matches. A "known as" relationship between names, or the marriage event, could carry it. Spike 11 treats Mary Smith / Mary Robins as `Different` at the value level, and leaves marriage evidence to links. Maiden names in the conclusion are the intended path ([`comparison-layers.md`](../deployment-plan/archive/spike-11/comparison-layers.md#entities-compare-against-the-conclusion)).
 
 ## Format and sort, beyond the project default
 
