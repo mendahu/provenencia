@@ -56,8 +56,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var sourcesByProject: [String: [CatalogSource]] = [:]
     var notesBySource: [String: [CatalogSourceNote]] = [:]
     var artifactsBySource: [String: [CatalogArtifact]] = [:]
-    /// Every Evidence graph of a project. `createSource` and `copySource` add a
-    /// Default graph, as the engine does; tests seed more directly, with ids that
+    /// Every Evidence graph of a project. `createSource` and `copySource` seed a
+    /// Default graph for tests; tests may also seed graphs directly, with ids that
     /// differ from their Source's.
     var evidenceGraphsByProject: [String: [CatalogEvidenceGraph]] = [:]
     /// What `getEvidenceGraphUnlinkImpact` returns: each scripted block whose
@@ -157,6 +157,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var listEvidenceGraphProgressError: Error?
     var listEvidenceGraphsError: Error?
     var createEvidenceGraphError: Error?
+    /// Effects every write returns until a test assigns another value.
+    var nextWriteEffects: CatalogWriteEffects = .empty
+    /// When set, `copySource` throws instead of copying.
+    var copySourceError: Error?
     var updateEvidenceGraphError: Error?
     var getEvidenceGraphUnlinkImpactError: Error?
     var getEvidenceGraphProgressError: Error?
@@ -445,6 +449,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         artifactIDs: [String]
     ) async throws -> (CatalogSource, CatalogWriteEffects) {
         return try withState {
+            if let copySourceError { throw copySourceError }
             guard let original = sourcesByProject[projectDir]?.first(where: { $0.id == sourceID }) else {
                 throw StoreBoom.boom
             }
@@ -558,7 +563,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 createdAt: formatter.string(from: Date())
             )
             notesBySource[sourceID, default: []].append(note)
-            return (note, bumpSource(sourceID, graphs: []))
+            bumpActivity(sourceID); return (note, nextWriteEffects)
         }
     }
 
@@ -571,7 +576,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     var copy = notes
                     copy[idx].body = body
                     notesBySource[sourceID] = copy
-                    return (copy[idx], bumpSource(sourceID, graphs: []))
+                    bumpActivity(sourceID); return (copy[idx], nextWriteEffects)
                 }
             }
             throw StoreBoom.boom
@@ -601,12 +606,11 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func deleteSourceNote(projectDir _: String, userID _: String, noteID: String) async throws -> CatalogWriteEffects {
         withState {
-            var effects = CatalogWriteEffects.empty
             for (sourceID, notes) in notesBySource where notes.contains(where: { $0.id == noteID }) {
                 notesBySource[sourceID] = notes.filter { $0.id != noteID }
-                effects = bumpSource(sourceID, graphs: [])
+                bumpActivity(sourceID)
             }
-            return effects
+            return nextWriteEffects
         }
     }
 
@@ -643,7 +647,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 list.append(entry)
             }
             metadataBySource[sourceID] = list
-            return (entry, bumpSource(sourceID, graphs: []))
+            bumpActivity(sourceID); return (entry, nextWriteEffects)
         }
     }
 
@@ -652,7 +656,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     ) async throws -> CatalogWriteEffects {
         withState {
             var list = metadataBySource[sourceID] ?? []
-            guard let idx = list.firstIndex(where: { $0.field.id == fieldID }) else { return .empty }
+            guard let idx = list.firstIndex(where: { $0.field.id == fieldID }) else { return nextWriteEffects }
             if list[idx].suggested {
                 list[idx].valueText = ""
                 list[idx].hasValue = false
@@ -660,7 +664,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 list.remove(at: idx)
             }
             metadataBySource[sourceID] = list
-            return bumpSource(sourceID, graphs: [])
+            bumpActivity(sourceID); return nextWriteEffects
         }
     }
 
@@ -674,7 +678,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             var list = metadataBySource[sourceID] ?? []
             list.removeAll { $0.field.id == fieldID && !$0.hasValue }
             metadataBySource[sourceID] = list
-            return (list, bumpSource(sourceID, graphs: []))
+            bumpActivity(sourceID); return (list, nextWriteEffects)
         }
     }
 
@@ -700,7 +704,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 next.append(entry)
             }
             metadataBySource[sourceID] = next
-            return (next, bumpSource(sourceID, graphs: []))
+            bumpActivity(sourceID); return (next, nextWriteEffects)
         }
     }
 
@@ -725,16 +729,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 file: nil
             )
             artifactsBySource[sourceID, default: []].append(art)
-            var graphs = evidenceGraphsByProject[projectDir] ?? []
-            for i in graphs.indices where graphs[i].sourceID == sourceID
-                && (graphIDs.map { $0.contains(graphs[i].id) } ?? true)
-            {
-                graphs[i].artifactIDs.append(art.id)
-            }
-            evidenceGraphsByProject[projectDir] = graphs
-            var effects = bumpSource(sourceID, graphs: graphIDsOfSource(sourceID))
-            effects.lists.insert(.evidenceGraphs)
-            return (art, effects)
+            bumpActivity(sourceID)
+            return (art, nextWriteEffects)
         }
     }
 
@@ -759,7 +755,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     copy[idx].label = label
                     copy[idx].description = description
                     artifactsBySource[sourceID] = copy
-                    return (copy[idx], bumpSource(sourceID, graphs: graphIDsOfSource(sourceID)))
+                    bumpActivity(sourceID)
+                    return (copy[idx], nextWriteEffects)
                 }
             }
             throw StoreBoom.boom
@@ -772,10 +769,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         withState {
             markCatalogSessionHeld(projectDir)
             deleteArtifactCalls += 1
-            var effects = CatalogWriteEffects.empty
             for (sourceID, arts) in artifactsBySource where arts.contains(where: { $0.id == artifactID }) {
                 artifactsBySource[sourceID] = arts.filter { $0.id != artifactID }
-                effects = bumpSource(sourceID, graphs: graphIDsOfSource(sourceID))
+                bumpActivity(sourceID)
             }
             for (project, var graphs) in evidenceGraphsByProject {
                 for i in graphs.indices {
@@ -792,7 +788,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 sourcesByProject[project] = sources
             }
             citationsByID = citationsByID.filter { $0.value.artifactID != artifactID }
-            return effects
+            return nextWriteEffects
         }
     }
 
@@ -800,7 +796,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         try withState {
             if let listEvidenceGraphsError { throw listEvidenceGraphsError }
             markCatalogSessionHeld(projectDir)
-            return (evidenceGraphsByProject[projectDir] ?? []).sorted(by: Self.graphListOrder)
+            return evidenceGraphsByProject[projectDir] ?? []
         }
     }
 
@@ -817,12 +813,11 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if let createEvidenceGraphError { throw createEvidenceGraphError }
             markCatalogSessionHeld(projectDir)
             let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty, !artifactIDs.isEmpty else { throw StoreBoom.boom }
             let graph = appendGraph(
                 projectDir: projectDir, sourceID: sourceID, name: trimmed, description: description,
                 artifactIDs: artifactIDs
             )
-            return (graph, Self.graphEffects(sourceID: sourceID))
+            return (graph, nextWriteEffects)
         }
     }
 
@@ -846,7 +841,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if !artifactIDs.isEmpty {
                 evidenceGraphsByProject[projectDir]?[idx].artifactIDs = artifactIDs
             }
-            return Self.graphEffects(sourceID: evidenceGraphsByProject[projectDir]?[idx].sourceID)
+            return nextWriteEffects
         }
     }
 
@@ -858,7 +853,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 throw StoreBoom.boom
             }
             evidenceGraphsByProject[projectDir]?.removeAll { $0.id == graphID }
-            return Self.graphEffects(sourceID: nil)
+            return nextWriteEffects
         }
     }
 
@@ -877,12 +872,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    /// Every graph write reports the graph list, as Go does. A create, link,
-    /// unlink or edit also reports its Source for the citation reads (graph
-    /// delete has no Source to report: the link rows go with it).
-    private static func graphEffects(sourceID: String?) -> CatalogWriteEffects {
-        CatalogWriteEffects(citationSources: sourceID.map { [$0] } ?? [], lists: [.evidenceGraphs])
-    }
 
     func ingestArtifactFile(
         projectDir: String,
@@ -934,7 +923,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         copy[idx].thumbnailRelPath = "objects/aa/bb/thumb-\(file.id.prefix(8))"
                     }
                     artifactsBySource[sourceID] = copy
-                    return (copy[idx], file, false, bumpSource(sourceID, graphs: graphIDsOfSource(sourceID)))
+                    bumpActivity(sourceID)
+                    return (copy[idx], file, false, nextWriteEffects)
                 }
             }
             throw StoreBoom.boom
@@ -973,7 +963,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 argument: argument
             )
             credibilityBySource[sourceID] = assessment
-            return (assessment, bumpSource(sourceID, graphs: []))
+            bumpActivity(sourceID); return (assessment, nextWriteEffects)
         }
     }
 
@@ -1602,7 +1592,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 description: description
             )
             subjectsByGraph[graphID, default: []].append(subject)
-            let effects = bumpSource(sourceID, graphs: [graphID])
+            bumpActivity(sourceID)
             if let placement {
                 subjectPositionsBySubject[subject.id] = CatalogSubjectPosition(
                     subjectID: subject.id,
@@ -1629,7 +1619,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 list[idx].label = label
                 list[idx].description = description
                 subjectsByGraph[graphID] = list
-                return (list[idx], bumpSource(sourceOfGraph(graphID), graphs: [graphID]))
+                bumpActivity(sourceOfGraph(graphID))
+                return (list[idx], nextWriteEffects)
             }
             throw StoreBoom.boom
         }
@@ -1711,7 +1702,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             guard let graphID = graphOfSubject(subjectID) else {
                 throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
             }
-            guard membershipBySubject[subjectID] != nil else { return .empty }
+            guard membershipBySubject[subjectID] != nil else { return nextWriteEffects }
             let ends = (observationsByGraph[graphID] ?? [])
                 .filter { $0.valueSubjectID == subjectID }
                 .map(\.subjectID)
@@ -1722,7 +1713,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 membershipBySubject[id] = nil
                 claimBySubject[id] = nil
             }
-            return CatalogWriteEffects(handles: removed, evidenceGraphs: [graphID], handleScopes: removed)
+            return nextWriteEffects
         }
     }
 
@@ -1737,7 +1728,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             markCatalogSessionHeld(projectDir)
             recordedCalls.append("setPreferredLikeness entity=\(entityID) observation=\(observationID)")
             if let setPreferredLikenessError { throw setPreferredLikenessError }
-            return CatalogWriteEffects(handles: [entityID], handleScopes: [entityID])
+            return nextWriteEffects
         }
     }
 
@@ -2186,10 +2177,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 guard let idx = list.firstIndex(where: { $0.id == subjectID }) else { continue }
                 list.remove(at: idx)
                 subjectsByGraph[graphID] = list
-                let effects = bumpSource(sourceOfGraph(graphID), graphs: [graphID])
+                bumpActivity(sourceOfGraph(graphID))
                 subjectPositionsBySubject[subjectID] = nil
                 membershipBySubject[subjectID] = nil
-                return effects
+                return nextWriteEffects
             }
             throw StoreBoom.boom
         }
@@ -2263,10 +2254,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     ) async throws -> CatalogProperty {
         return try withState {
             markCatalogSessionHeld(projectDir)
-            let key = label
-                .lowercased()
-                .replacingOccurrences(of: " ", with: "-")
-                .filter { $0.isLetter || $0.isNumber || $0 == "-" }
+            let key = FieldSlug.kebab(label)
+            if key.isEmpty {
+                throw StoreBoom.boom
+            }
             let stored = cardinality.isEmpty ? "single" : cardinality
             guard stored == "single" || stored == "multiple" else {
                 throw CoreInvokeError.coded(status: 1, code: "properties.invalid", kind: .user, params: [])
@@ -2368,10 +2359,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if let createPropertyTermError {
                 throw createPropertyTermError
             }
-            let key = label
-                .lowercased()
-                .replacingOccurrences(of: " ", with: "-")
-                .filter { $0.isLetter || $0.isNumber || $0 == "-" }
+            let key = FieldSlug.kebab(label)
+            if key.isEmpty {
+                throw StoreBoom.boom
+            }
             if let property = (propertiesByProject[projectDir] ?? []).first(where: { $0.id == propertyID }),
                property.key == "place_relationship_type",
                property.origin == CatalogOrigin.provenencia
@@ -2605,7 +2596,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 }
             }
         }
-        return (subject, citation, observations, CatalogWriteEffects(evidenceGraphs: [plan.graphID], citationSources: [plan.sourceID], lists: [.propertyUsage]))
+        return (subject, citation, observations, nextWriteEffects)
     }
 
     private static func floorDiv(_ a: Int64, _ b: Int64) -> Int64 {
@@ -2675,8 +2666,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             )
             let owner = owningSource(ofCitation: citation.id)
             let graphs = owner.map { graphIDsOfSource($0) } ?? []
-            bumpSource(owner, graphs: graphs)
-            return (citation, created, CatalogWriteEffects(evidenceGraphs: graphs, citationSources: owner.map { [$0] } ?? []))
+            bumpActivity(owner)
+            return (citation, created, nextWriteEffects)
         }
     }
 
@@ -2714,11 +2705,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 let owner = owningSource(ofCitation: citationID).map { [$0] } ?? []
                 // The Observations land on their Subjects' graphs.
                 let graphs = written.compactMap { graphOfSubject($0.subjectID) }
-                return CatalogWriteEffects(
-                    evidenceGraphs: Self.unique(graphs),
-                    citationSources: owner,
-                    lists: [.propertyUsage]
-                )
+                return nextWriteEffects
             }
         }())
     }
@@ -2748,7 +2735,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 }
             }
             let owner = owningSource(ofCitation: citationID)
-            bumpSource(owner, graphs: owner.map { graphIDsOfSource($0) } ?? [])
+            bumpActivity(owner)
             return written
         }
     }
@@ -2775,8 +2762,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             citationsByID[citationID] = citation
             let owner = owningSource(ofCitation: citationID)
             let graphs = owner.map { graphIDsOfSource($0) } ?? []
-            bumpSource(owner, graphs: graphs)
-            return (citation, CatalogWriteEffects(evidenceGraphs: graphs, citationSources: owner.map { [$0] } ?? []))
+            bumpActivity(owner)
+            return (citation, nextWriteEffects)
         }
     }
 
@@ -2819,11 +2806,11 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             var graphs: [String] = []
             for (graphID, list) in observationsByGraph where list.contains(where: { $0.id == next.id }) {
                 observationsByGraph[graphID] = list.map { $0.id == next.id ? next : $0 }
-                bumpSource(sourceOfGraph(graphID), graphs: [graphID])
+                bumpActivity(sourceOfGraph(graphID))
                 graphs.append(graphID)
                 owners.append(contentsOf: sourceOfGraph(graphID).map { [$0] } ?? [])
             }
-            return (next, CatalogWriteEffects(evidenceGraphs: graphs, citationSources: Self.unique(owners)))
+            return (next, nextWriteEffects)
         }
     }
 
@@ -2842,10 +2829,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 graphs.append(graphID)
                 owners.append(contentsOf: sourceOfGraph(graphID).map { [$0] } ?? [])
                 observationsByGraph[graphID] = list.filter { $0.id != observationID }
-                bumpSource(sourceOfGraph(graphID), graphs: [graphID])
+                bumpActivity(sourceOfGraph(graphID))
             }
             pinsByObservation[observationID] = nil
-            return CatalogWriteEffects(evidenceGraphs: graphs, citationSources: Self.unique(owners), lists: [.propertyUsage])
+            return nextWriteEffects
         }
     }
 
@@ -2869,8 +2856,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             citationsByID.removeValue(forKey: citationID)
             citationNotesByID.removeValue(forKey: citationID)
             let graphs = owner.map { graphIDsOfSource($0) } ?? []
-            bumpSource(owner, graphs: graphs)
-            return CatalogWriteEffects(evidenceGraphs: graphs, citationSources: owner.map { [$0] } ?? [])
+            bumpActivity(owner)
+            return nextWriteEffects
         }
     }
 
@@ -2910,7 +2897,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             let artifactIDs = Set(graph.artifactIDs)
             var counts: [String: Int] = [:]
             for citation in citationsByID.values
-            where artifactIDs.contains(citation.artifactID) && citationIsInGraph(citation.id, graphID: graphID) {
+            where artifactIDs.contains(citation.artifactID) {
                 counts[citation.artifactID, default: 0] += 1
             }
             return counts
@@ -3373,14 +3360,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         )
     }
 
-    /// The engine's rule for a graph's Citations: one with an Observation in the
-    /// graph, or one with no Observation anywhere yet.
-    private func citationIsInGraph(_ citationID: String, graphID: String) -> Bool {
-        if (observationsByGraph[graphID] ?? []).contains(where: { $0.citationID == citationID }) {
-            return true
-        }
-        return !observationsByGraph.values.contains { $0.contains { $0.citationID == citationID } }
-    }
 
     private func personNames(for citationID: String, graphID: String, projectDir: String) -> [String] {
         let personTypeIDs = Set(
@@ -3422,8 +3401,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return withState {
             markCatalogSessionHeld(projectDir)
             let listed = citationsByID.values
-                .filter { $0.artifactID == artifactID && citationIsInGraph($0.id, graphID: graphID) }
-                .sorted { $0.ref.localizedCaseInsensitiveCompare($1.ref) == .orderedAscending }
+                .filter { $0.artifactID == artifactID }
             return listed.map { citation in
                 let count = (observationsByGraph[graphID] ?? [])
                     .filter { $0.citationID == citation.id }
@@ -3588,7 +3566,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             projectDir: projectDir, sourceID: source.id, name: "Default", description: "",
             artifactIDs: (artifactsBySource[source.id] ?? []).map(\.id)
         )
-        let effects = bumpSource(source.id, graphs: [graph.id])
+        bumpActivity(source.id)
         return (sourcesByProject[projectDir]?.first { $0.id == source.id } ?? source, effects)
     }
 
@@ -3639,20 +3617,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         subjectsByGraph.first(where: { $0.value.contains { $0.id == subjectID } })?.key
     }
 
-    /// The graph list order, as `evidencegraphs.sqlListOrder`: name without
-    /// case, then ref, then id.
-    private static func graphListOrder(_ a: CatalogEvidenceGraph, _ b: CatalogEvidenceGraph) -> Bool {
-        let order = a.name.localizedCaseInsensitiveCompare(b.name)
-        if order != .orderedSame { return order == .orderedAscending }
-        return a.ref == b.ref ? a.id < b.id : a.ref < b.ref
-    }
-
-    /// The first graph, by name, an Artifact is linked to. Call inside `withState`.
+    /// The first graph whose `artifactIDs` contains the Artifact. Call inside `withState`.
     private func firstGraphID(ofArtifact artifactID: String) -> String? {
-        evidenceGraphsByProject.values.flatMap { $0 }
-            .filter { $0.artifactIDs.contains(artifactID) }
-            .sorted(by: Self.graphListOrder)
-            .first?.id
+        for graphs in evidenceGraphsByProject.values {
+            if let graph = graphs.first(where: { $0.artifactIDs.contains(artifactID) }) {
+                return graph.id
+            }
+        }
+        return nil
     }
 
     private static func unique(_ ids: [String]) -> [String] {
@@ -3660,35 +3632,16 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return ids.filter { seen.insert($0).inserted }
     }
 
-    /// Runs `body` under `stateLock`. Never spans an `await`: methods that
-    /// suspend take the lock separately for each synchronous stretch.
-    /// Mirrors the engine's audit scopes: any write under a Source moves its
-    /// "Updated" revision, not just edits to the Source row.
-    /// Returns the effects the engine would report for that write: the Source
-    /// scope and the new revision, plus the Evidence graphs whose rows it
-    /// changes (`graphs`: a Subject write names its Subject's graph, an
-    /// Artifact or Citation write every graph of the Source) and the Source in
-    /// `citationSources` when `graphs` is not empty. A Source in no list
-    /// reports its graphs and no activity; no Source reports nothing.
-    @discardableResult
-    private func bumpSource(_ sourceID: String?, graphs: [String]) -> CatalogWriteEffects {
-        guard let sourceID else { return .empty }
+    /// Moves a Source row's Updated revision when it lives in a project list.
+    private func bumpActivity(_ sourceID: String?) {
+        guard let sourceID else { return }
         for (project, var list) in sourcesByProject {
             guard let idx = list.firstIndex(where: { $0.id == sourceID }) else { continue }
-            let activity = CatalogActivity(revision: nextAuditRevision, at: "2026-10-15T16:00:00Z")
-            list[idx].updated = activity
+            list[idx].updated = CatalogActivity(revision: nextAuditRevision, at: "2026-10-15T16:00:00Z")
             nextAuditRevision += 1
             sourcesByProject[project] = list
-            return CatalogWriteEffects(
-                evidenceGraphs: graphs,
-                citationSources: graphs.isEmpty ? [] : [sourceID],
-                sourceScopes: [sourceID],
-                activity: activity
-            )
+            return
         }
-        // A Source no list holds has no activity to move, but the write still
-        // reports the graphs it changed.
-        return CatalogWriteEffects(evidenceGraphs: graphs, citationSources: graphs.isEmpty ? [] : [sourceID])
     }
 
     private func owningSource(ofCitation citationID: String) -> String? {
