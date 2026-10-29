@@ -146,11 +146,7 @@ final class CitationTranscriptionModel {
     }
 
     func runAutoTranscribe() async {
-        guard canAutoTranscribe, let nsImage = imageRaster else { return }
-        guard let cgImage = ArtifactRegionCrop.cgImage(from: nsImage) else {
-            ocrMessage = L10n.string(L10n.CitationComposer.autoTranscribeFailed)
-            return
-        }
+        guard canAutoTranscribe, let cgImage = artifactViewer.displayRaster else { return }
         let source: CGImage
         if let region = fields.locator.region, region.isValid {
             guard let cropped = ArtifactRegionCrop.boundingBox(of: cgImage, region: region) else {

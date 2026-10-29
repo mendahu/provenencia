@@ -261,7 +261,8 @@ struct CitationAutoTranscribeTests {
         #expect(engine.recognizeCount == 1)
 
         model.artifactViewer.installImageRasterForTesting(
-            NSImage(size: NSSize(width: 6200, height: 8400))
+            NSImage(size: NSSize(width: 6200, height: 8400)),
+            raster: ArtifactRegionCrop.cgImage(from: try #require(pixelExactImage(width: 1, height: 1)))
         )
         engine.resetCount()
         model.requestAutoTranscribe()
@@ -301,6 +302,40 @@ struct CitationAutoTranscribeTests {
         #expect(model.setRegion(ArtifactRegionDraft(kind: .rectangle, points: points)))
         await model.runAutoTranscribe()
         #expect(engine.lastSize == CGSize(width: 4, height: 4))
+    }
+
+    @Test func autoTranscribeUsesTheDecodedRaster() async throws {
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
+        let store = makeStore(projectDir: projectDir)
+        try ArtifactFileFixtures.writeImage(
+            projectDir: projectDir, relPath: "objects/ab/cd/big.png", width: 3000, height: 2000, fileType: .png
+        )
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/big.png")
+        let engine = FakeOCREngine()
+        let model = makeModel(store: store, projectDir: projectDir, engine: engine)
+        await model.prepare()
+        let points = ArtifactRegionGeometry.rectanglePoints(
+            from: CGPoint(x: 0, y: 0),
+            to: CGPoint(x: 1, y: 0.5)
+        )
+        #expect(model.setRegion(ArtifactRegionDraft(kind: .rectangle, points: points)))
+        await model.runAutoTranscribe()
+        #expect(engine.lastSize == CGSize(width: 3000, height: 1000))
+    }
+
+    @Test func refusedImageCannotTranscribe() async throws {
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
+        let store = makeStore(projectDir: projectDir)
+        try ArtifactFileFixtures.writeDeclaredPNGHeader(
+            projectDir: projectDir, relPath: "objects/ab/cd/huge.png", width: 20000, height: 20000
+        )
+        ArtifactFileFixtures.seedArtifact(store, mediaType: "image/png", relPath: "objects/ab/cd/huge.png")
+        let engine = FakeOCREngine()
+        let model = makeModel(store: store, projectDir: projectDir, engine: engine)
+        await model.prepare()
+        #expect(model.artifactViewer.emptyReason == .loadFailed)
+        #expect(!model.canAutoTranscribe)
+        #expect(engine.recognizeCount == 0)
     }
 
     @Test func disabledWhileRunningAndLocatorHeld() async throws {
