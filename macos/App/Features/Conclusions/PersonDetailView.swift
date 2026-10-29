@@ -17,7 +17,7 @@ struct PersonDetailView: View {
     }
 
     var body: some View {
-        ConclusionDetailPage<PersonDetailContent, PersonDetailVitals>(
+        ConclusionDetailPage(
             session: session,
             entityId: entityId,
             pageIdentifier: "persons.detail",
