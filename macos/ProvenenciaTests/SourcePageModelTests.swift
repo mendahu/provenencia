@@ -47,6 +47,7 @@ struct SourcePageModelTests {
         if let credibility {
             store.credibilityBySource[sourceID] = credibility
         }
+        store.nextWriteEffects = CatalogWriteEffects(lists: [.evidenceGraphs])
         return store
     }
 
@@ -1196,7 +1197,7 @@ struct SourcePageModelTests {
         let model = makeModel(store: store, session: session)
         await model.warmFromSession()
         await waitForQuery(session.evidenceGraphsHandle!)
-        #expect(model.graphs.rows?.map(\.name) == ["Default", "Jones household", "Smith household"])
+        #expect(model.graphs.rows?.map(\.name) == ["Smith household", "Default", "Jones household"])
         #expect(model.graphs.rows?.first?.name == "Default")
         #expect(L10n.Sources.graphsCount(3) == "3 evidence graphs")
     }

@@ -3541,7 +3541,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         projectDir: String
     ) -> (CatalogSource, CatalogWriteEffects) {
         sourcesByProject[projectDir, default: []].append(source)
-        let graph = appendGraph(
+        _ = appendGraph(
             projectDir: projectDir, sourceID: source.id, name: "Default", description: "",
             artifactIDs: (artifactsBySource[source.id] ?? []).map(\.id)
         )

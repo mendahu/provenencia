@@ -111,6 +111,7 @@ struct EvidenceGraphModelTests {
                 description: ""
             ),
         ]
+        store.nextWriteEffects = CatalogWriteEffects(evidenceGraphs: [graphID])
         return store
     }
 
@@ -1892,6 +1893,10 @@ struct EvidenceGraphModelTests {
         #expect(!store.recordedCalls.contains { $0.hasPrefix("unpromoteSubject") })
 
         model.beginUnpromote(subjectID: "s-james")
+        let removed = ["s-james", "b1-sonof", "b2-part"].compactMap { store.membershipBySubject[$0]?.entity.id }
+        store.nextWriteEffects = CatalogWriteEffects(
+            handles: removed, evidenceGraphs: [graphID], handleScopes: removed
+        )
         await model.confirmUnpromote()
         #expect(store.recordedCalls.contains("unpromoteSubject id=s-james"))
         #expect(model.pendingUnpromote == nil)
