@@ -93,7 +93,7 @@ enum ArtifactFileFixtures {
     /// A PNG that declares `width` x `height` at `bitDepth` bits per component and holds no real pixels: its IDAT is filler.
     /// ImageIO reads the declared size from it and nothing decodes. ImageIO refuses a header
     /// whose data is far too small for the size it declares, so the filler is one byte in
-    /// 3,000 pixels.
+    /// 3,000 pixels (per byte of depth).
     static func declaredPNGHeaderData(width: Int, height: Int, bitDepth: Int = 8) -> Data {
         func be32(_ value: UInt32) -> [UInt8] {
             [UInt8(value >> 24), UInt8((value >> 16) & 0xff), UInt8((value >> 8) & 0xff), UInt8(value & 0xff)]
@@ -103,7 +103,7 @@ enum ArtifactFileFixtures {
             return be32(UInt32(body.count)) + typed + be32(crc32(typed))
         }
         let ihdr = be32(UInt32(width)) + be32(UInt32(height)) + [UInt8(bitDepth), 2, 0, 0, 0]
-        let filler = [UInt8(0x78), 0x9c] + [UInt8](repeating: 0, count: max(1, width * height / 3000))
+        let filler = [UInt8(0x78), 0x9c] + [UInt8](repeating: 0, count: max(1, width * height * (bitDepth / 8) / 3000))
         let signature: [UInt8] = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
         return Data(signature + chunk("IHDR", ihdr) + chunk("IDAT", filler) + chunk("IEND", []))
     }

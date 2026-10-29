@@ -15,18 +15,20 @@ enum ImageHeaderDecode {
         /// Bits per color component (8 when the header gives none or an odd one), so a 16-bit or
         /// float image counts for the bytes it holds.
         var bitsPerComponent: Int
+
+        /// True when both edges are in `1...maxEdge` and `width * height <= maxPixels`.
+        func fits(maxEdge: Int, maxPixels: Int) -> Bool {
+            (1...maxEdge).contains(width) && (1...maxEdge).contains(height) && width * height <= maxPixels
+        }
     }
 
-    /// The first image's declared size, or nil unless both edges are in
-    /// `1...maxEdge` and `width * height <= maxPixels`. One header read; no
-    /// pixels decode. A resolution that is absent, zero, negative or beyond
+    /// What the first image's header declares, or nil when it declares no size. One header
+    /// read; no pixels decode. The caller applies its own bounds through ``DeclaredImage/fits(maxEdge:maxPixels:)``. A resolution that is absent, zero, negative or beyond
     /// 100,000 reads as 72, an orientation outside 1...8 as 1, and a depth outside 1...64 as 8.
-    static func declaredImage(_ source: CGImageSource, maxEdge: Int, maxPixels: Int) -> DeclaredImage? {
+    static func declaredImage(_ source: CGImageSource) -> DeclaredImage? {
         guard let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
               let width = (props[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue,
-              let height = (props[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue,
-              (1...maxEdge).contains(width), (1...maxEdge).contains(height),
-              width * height <= maxPixels
+              let height = (props[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue
         else { return nil }
         func dpi(_ key: CFString) -> CGFloat {
             guard let value = (props[key] as? NSNumber)?.doubleValue, value.isFinite,

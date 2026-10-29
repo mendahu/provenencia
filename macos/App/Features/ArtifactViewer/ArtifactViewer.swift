@@ -292,6 +292,7 @@ struct ArtifactViewer: View {
         case .mediaNotYetAvailable: L10n.ArtifactViewer.mediaComingSoonTitle
         case .missingFile: L10n.ArtifactViewer.missingFileTitle
         case .loadFailed: L10n.ArtifactViewer.loadFailedTitle
+        case .imageTooLarge: L10n.ArtifactViewer.imageTooLargeTitle
         }
     }
 
@@ -302,6 +303,7 @@ struct ArtifactViewer: View {
         case .mediaNotYetAvailable: L10n.ArtifactViewer.mediaComingSoonMessage
         case .missingFile: L10n.ArtifactViewer.missingFileMessage
         case .loadFailed: L10n.ArtifactViewer.loadFailedMessage
+        case .imageTooLarge: L10n.ArtifactViewer.imageTooLargeMessage
         }
     }
 

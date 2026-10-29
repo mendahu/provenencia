@@ -180,7 +180,7 @@ struct ArtifactViewerModelTests {
             projectDir: project, relPath: "objects/ab/cd/x.png", width: 20000, height: 20000)
         let model = ArtifactViewerModel()
         await loadImage(model, project: project, relPath: "objects/ab/cd/x.png", mediaType: "image/png")
-        #expect(model.emptyReason == .loadFailed)
+        #expect(model.emptyReason == .imageTooLarge)
         #expect(model.displayImage == nil)
     }
 
@@ -191,7 +191,7 @@ struct ArtifactViewerModelTests {
             projectDir: project, relPath: "objects/ab/cd/x.png", width: 12000, height: 12000, bitDepth: 16)
         let model = ArtifactViewerModel()
         await loadImage(model, project: project, relPath: "objects/ab/cd/x.png", mediaType: "image/png")
-        #expect(model.emptyReason == .loadFailed)
+        #expect(model.emptyReason == .imageTooLarge)
         #expect(model.displayImage == nil)
     }
 

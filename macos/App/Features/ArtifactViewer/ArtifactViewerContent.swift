@@ -29,4 +29,6 @@ enum ArtifactViewerEmptyReason: Equatable, Sendable {
     case mediaNotYetAvailable
     case missingFile
     case loadFailed
+    /// The image declares a size over the viewer's budget.
+    case imageTooLarge
 }

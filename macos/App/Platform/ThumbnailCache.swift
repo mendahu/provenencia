@@ -191,8 +191,7 @@ enum ThumbnailDecodePolicy {
         guard let type = CGImageSourceGetType(source) as String?, allowedTypes.contains(type) else {
             return false
         }
-        return ImageHeaderDecode.declaredImage(
-            source, maxEdge: maxDeclaredEdge, maxPixels: maxDeclaredEdge * maxDeclaredEdge
-        ) != nil
+        return ImageHeaderDecode.declaredImage(source)?
+            .fits(maxEdge: maxDeclaredEdge, maxPixels: maxDeclaredEdge * maxDeclaredEdge) == true
     }
 }

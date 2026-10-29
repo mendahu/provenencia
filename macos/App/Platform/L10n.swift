@@ -3818,6 +3818,18 @@ enum L10n {
             comment: "Body when decode fails"
         )
 
+        static let imageTooLargeTitle = LocalizedStringResource(
+            "artifactViewer.imageTooLargeTitle",
+            defaultValue: "Image too large to show",
+            comment: "Title when an image declares a size over the viewer's budget"
+        )
+
+        static let imageTooLargeMessage = LocalizedStringResource(
+            "artifactViewer.imageTooLargeMessage",
+            defaultValue: "This image is larger than Provenencia can display. A smaller copy of the file will open.",
+            comment: "Body when an image declares a size over the viewer's budget"
+        )
+
         static let setPage = LocalizedStringResource(
             "artifactViewer.setPage",
             defaultValue: "Set page",

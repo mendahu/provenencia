@@ -333,7 +333,7 @@ struct CitationAutoTranscribeTests {
         let engine = FakeOCREngine()
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
         await model.prepare()
-        #expect(model.artifactViewer.emptyReason == .loadFailed)
+        #expect(model.artifactViewer.emptyReason == .imageTooLarge)
         #expect(!model.canAutoTranscribe)
         #expect(engine.recognizeCount == 0)
     }

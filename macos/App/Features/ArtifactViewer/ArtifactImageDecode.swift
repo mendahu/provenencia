@@ -49,25 +49,34 @@ enum ArtifactImageDecode {
         max(1, bitsPerComponent / 8)
     }
 
-    /// Decodes the image at `url`, or nil for any refusal: a sniffed type that conforms to none
-    /// of `typeIdentifiers` (an empty list refuses), a declared size over budget, an
-    /// unreadable header, or a failed decode.
-    static func decode(url: URL, typeIdentifiers: [String]) -> Decoded? {
+    /// Why a decode refused.
+    enum Refusal: Error, Equatable, Sendable {
+        /// The header declares a size outside the edge or depth-scaled pixel budget.
+        case tooLarge
+        /// Anything else: a sniffed type that conforms to none of the identifiers, an unreadable
+        /// header, or a failed decode.
+        case unreadable
+    }
+
+    /// Decodes the image at `url`, or the reason it refused. The sniffed type must conform to one
+    /// of `typeIdentifiers` (an empty list refuses); the declared size must be within budget.
+    static func decode(url: URL, typeIdentifiers: [String]) -> Result<Decoded, Refusal> {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let sniffed = (CGImageSourceGetType(source) as String?).flatMap({ UTType($0) }),
               typeIdentifiers.contains(where: { identifier in
                   UTType(identifier).map { sniffed.conforms(to: $0) } ?? false
               }),
-              let declared = ImageHeaderDecode.declaredImage(source, maxEdge: maxEdge, maxPixels: .max),
-              declared.width * declared.height <= maxDeclaredPixels / depthFactor(declared.bitsPerComponent),
-              let raster = ImageHeaderDecode.decode(
-                  source,
-                  maxPixelSize: maxPixelSize(
-                      width: declared.width, height: declared.height, depth: declared.bitsPerComponent
-                  ),
-                  applyTransform: appliesOrientation
-              )
-        else { return nil }
+              let declared = ImageHeaderDecode.declaredImage(source)
+        else { return .failure(.unreadable) }
+        guard declared.fits(maxEdge: maxEdge, maxPixels: maxDeclaredPixels / depthFactor(declared.bitsPerComponent))
+        else { return .failure(.tooLarge) }
+        guard let raster = ImageHeaderDecode.decode(
+            source,
+            maxPixelSize: maxPixelSize(
+                width: declared.width, height: declared.height, depth: declared.bitsPerComponent
+            ),
+            applyTransform: appliesOrientation
+        ) else { return .failure(.unreadable) }
         let turned = appliesOrientation && declared.orientation >= 5
         let pixelWidth = turned ? declared.height : declared.width
         let pixelHeight = turned ? declared.width : declared.height
@@ -77,10 +86,10 @@ enum ArtifactImageDecode {
             width: CGFloat(pixelWidth) * 72 / dpiWidth,
             height: CGFloat(pixelHeight) * 72 / dpiHeight
         )
-        return Decoded(
+        return .success(Decoded(
             raster: raster,
             image: NSImage(cgImage: raster, size: size),
             pixelSize: (pixelWidth, pixelHeight)
-        )
+        ))
     }
 }

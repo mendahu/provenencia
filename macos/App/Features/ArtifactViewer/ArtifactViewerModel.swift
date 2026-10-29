@@ -196,12 +196,11 @@ final class ArtifactViewerModel {
         let loaded: Result<ArtifactViewerContent, Error> = await Task.detached(priority: .userInitiated) {
             switch kind {
             case .image:
-                guard let decoded = ArtifactImageDecode.decode(
-                    url: url, typeIdentifiers: source.typeIdentifiers
-                ) else {
-                    return .failure(ArtifactViewerLoadError.decodeFailed)
+                switch ArtifactImageDecode.decode(url: url, typeIdentifiers: source.typeIdentifiers) {
+                case .success(let decoded): return .success(.image(decoded))
+                case .failure(.tooLarge): return .failure(ArtifactViewerLoadError.tooLarge)
+                case .failure(.unreadable): return .failure(ArtifactViewerLoadError.decodeFailed)
                 }
-                return .success(.image(decoded))
             case .pdf:
                 guard let document = PDFDocument(url: url) else {
                     return .failure(ArtifactViewerLoadError.decodeFailed)
@@ -229,10 +228,10 @@ final class ArtifactViewerModel {
                 page = 1
                 findHasTextLayer = Self.documentHasTextLayer(document)
             }
-        case .failure:
+        case .failure(let error):
             content = nil
             self.source = nil
-            emptyReason = .loadFailed
+            emptyReason = (error as? ArtifactViewerLoadError) == .tooLarge ? .imageTooLarge : .loadFailed
         }
         isLoading = false
     }
@@ -521,4 +520,5 @@ private enum ArtifactFindWrap {
 
 private enum ArtifactViewerLoadError: Error {
     case decodeFailed
+    case tooLarge
 }
