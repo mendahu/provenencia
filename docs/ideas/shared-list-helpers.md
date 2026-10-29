@@ -1,6 +1,6 @@
 # Shared list helpers
 
-**Status:** idea only — not roadmapped. "Go reads every Swift mirror" and "Fake store keys" went to Spike 12 S12-35 (2026-10-27). Small duplication found while planning S10-41 (the Sources list filters). Each item is a cleanup, not a feature. "In-list text matching" (closed by S11-08: `TextMatch`) and "Primary Subject kinds" (S11-23) moved into Spike 11.
+**Status:** idea only — not roadmapped. "Go reads every Swift mirror" and "Fake store keys" closed by Spike 12 S12-35 (2026-10-28). Small duplication found while planning S10-41 (the Sources list filters). Each item is a cleanup, not a feature. "In-list text matching" (closed by S11-08: `TextMatch`) and "Primary Subject kinds" (S11-23) moved into Spike 11.
 
 ## Properties empty search state
 
