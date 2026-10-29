@@ -1,13 +1,13 @@
 # Review — S13-10 Header and sections (and brief S13-D1)
 
-**Verdict:** Fits with changes — Not ready → every finding Fixed; plan stays `Blocked — on board S13-D1`
-**Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet). Both reviewed the plan and the brief together. Round 2 runs when the plan is refreshed after the board (Q-1 – Q-5), and checks the round-1 fixes against the code with it.
+**Verdict:** Round 1 Fits with changes — Not ready; round 2 Fits with changes — Ready with changes → every finding Fixed; the plan is Planned
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet), fresh each round. Round 1 reviewed the plan and the brief; round 2 reviewed the Wide rework and the agreed board's answers.
 
 ## To user
 
-- **M-2 (part).** The segmented picker (`PVChipGroup(style: .segmented)` + `PVChip(…, expands: true, selectionLift: true)` + a group label) is hand-written in `DateValueEditorForm`, `CitationComposerAuthoringBox` and `PropertiesView`; the Person switcher would be the fourth. Extract a selection-driven segmented initializer on `PVChipGroup` and move all four onto it? **Recommendation:** not in S13-10. It touches three unrelated features and their tests in a Person page PR. Add a small kit PR to the Spike 14 odds-and-ends batch instead. S13-10 already moves the selected trait and focus ring into `PVChip` itself, so the copies do not drift on accessibility meanwhile.
+- **M-2 / M2-4 — answered 2026-10-29.** Extract the segmented picker? The writer recommended a separate kit PR. **User:** "Let's fix it on this plan. I think we have a segmented picker in the design kit, so we should definitely be consolidating this and moving all the callers over to it." The kit's segmented control is `PVChipGroup variant="segmented"` with `PVChip expands selectionLift` (S14-D1 design system, `PVChip.jsx`). Plan D-20 builds `PVSegmentedControl` and moves the three callers; map scope S13-10 "One segmented control".
 
-## Rework after the Wide layout landed (2026-10-29, not yet reviewed)
+## Rework after the Wide layout landed (2026-10-29; reviewed in round 2)
 
 `main` gained the Wide width class (S14-24, #628), the S14-D1 Page columns board, the binding "Wide layout" section of `add-design-brief`, and the working rule "Redesigns adopt Page columns", which folds S14-25 into S13-10. The branch was rebased; the map conflict kept `main`'s new S13-10 scope and dependencies with this branch's brief, plan and status. Changes since round 1:
 
@@ -98,3 +98,71 @@ Round 2 runs on this rework together with the board's answers.
 
 ### X-11 · nit · Ordering and Edge notes
 **Answer:** Fixed — STEP-6 says it runs after the board; D-1 says raw values are frozen.
+
+## Board answers (2026-10-29)
+
+The S13-D1 board was agreed; its archive was checked against the brief (frames 4a – 4y rendered and compared). Every frame is the pane only, with no sidebar. It answered Q-1 – Q-6 and drew five changes the plan absorbed: 36pt chips with glyph + label (D-6), a compact header on scroll (D-17), the refresh indicator in the switcher row (D-18), a 28pt reserved slot on Vitals rows (D-19), and per-section empty-state lines (D-10). Frames F2 (pattern B), F11 (narrow, set aside at the user's request) and F15 (Wide growing, moot with no secondary column) were not drawn.
+
+## Round 2 — maintainability
+
+### M2-1 · blocker · `PVChip.Size { regular, large }` is a second control-size vocabulary beside `PVControlSize`
+**Answer:** Fixed — D-6: `size: PVControlSize = .md`, height from `size.height`, glyph size from a private `PVControlSize.chipGlyphSize`.
+
+### M2-2 · major · `ConclusionDetailSectioning` and D-3's glue repeat what the page can derive
+**Answer:** Fixed — D-5: the page reads navigation, draws the switcher and pins when `offered(by:)` is non-empty, and passes `section` in `ConclusionDetailPageSectionsContext`; `ConclusionDetailSectioning` is gone; D-3: `PersonDetailView` no longer reads navigation; T-10 checks it.
+
+### M2-3 · major · `reservesProvenanceSlot: Bool` is a one-caller flag S13-11 must pile onto
+**Answer:** Fixed — D-19: `ReconciledValueRow.Provenance { why, sheet }`; S13-11 changes only `.sheet`.
+
+### M2-4 · major · Round-1 M-2 not answered: the switcher is a fourth segmented copy
+**Answer:** Fixed with the user's answer (To user above) — D-20 `PVSegmentedControl`, STEP-3 moves the three callers, AC-4.1, AC-4.2, AC-5.5, T-16, T-17.
+
+### M2-5 · major · D-12's reset is a second `ScrollViewReader` beside `PVScrollRowIntoView`
+**Answer:** Fixed — D-12 extends `pvScrollsRowIntoView` with `restartsAt:whenChanged:`; `PVPageColumns` applies it.
+
+### M2-6 · major · `PVChip`'s focus ring via a private `@FocusState`
+**Answer:** Fixed — D-6: a private `PVChipStyle: ButtonStyle` reads `\.isFocused`, as `PVButtonBody` does; no `.focused` binding in the kit.
+
+### M2-7 · major · The pinned bar's kit fill contradicts WL-3
+**Answer:** Fixed — D-14: no fill; only the rule spans the pane; the page keeps its background.
+
+### M2-8 · major · `add-design-brief` does not offer Page columns
+**Answer:** Fixed — STEP-9 adds "Page columns" and "Segmented control" rows to the Paste block's Reach for (kit) and replaces the "raised once a second view needs it" sentence; DoD line.
+
+## Round 2 — executability
+
+### X2-1 · blocker · The compact header's one-line summary has no mechanism
+**Answer:** Fixed — D-17, D-21: `\.conclusionDetailHeaderCompact` environment value; `PersonDetailLifeLines` switches its stack.
+
+### X2-2 · blocker · The scroll reset lands at 24pt, which reads as scrolled
+**Answer:** Fixed — D-12: the anchor is the zero-height sentinel before the `space8` padding, at offset 0; AC-2.9 now says the full header returns.
+
+### X2-3 · major · Sentinel, offset sign and short-content oscillation underspecified
+**Answer:** Fixed — D-17 names the coordinate space, `offset = −minY`, the sentinel's place, no animation, and `compactMinOverflow` (120pt) so compacting cannot undo itself; AC-1.10; T-15 covers overflow 119 / 120.
+
+### X2-4 · major · `PVPageColumns` API and layout guesses
+**Answer:** Fixed — D-14 gives the three inits, `hasSecondary` from `Secondary.self`, the band layout sharing `columnWidths`, the pinned and unpinned stacks, no fill; D-16 gives the band's padding from the board; T-14 names `hostInBorderlessWindow` and `waitUntil`.
+
+### X2-5 · major · D-16 page plumbing
+**Answer:** Fixed — D-16: `page` deleted; one `PVPageColumns` in `ConclusionDetailLoaded` with the header closure and a `switch` in the primary; no new page property; `refreshing` comes from the presentation; band spacing stated.
+
+### X2-6 · major · `locationLabels` would change non-Person jump rows
+**Answer:** Fixed — D-8: `leaf` is `title ?? ref` (today's jump-row rule), `String?`; the non-entity crumb branch is untouched; T-7 covers a Source location and a metadata root.
+
+### X2-7 · major · STEP-2's check cannot pass
+**Answer:** Fixed — STEP-2 searches `macos/App/Features`, `macos/App/Platform` and the tests (not the kit's "Vital records" preview) and adds `vital`; D-13 renames the closure variable and the test local.
+
+### X2-8 · major · `PVChip` large/glyph details and Tab focus
+**Answer:** Fixed — D-6: both inits, padding unchanged, the style carries focus; AC-1.6 and §10 say Full Keyboard Access is on for Tab.
+
+### X2-9 · minor · D-14 needs a clamp
+**Answer:** Fixed — `max(0, …)` in both primary formulas.
+
+### X2-10 · minor · Board numbers missing
+**Answer:** Fixed — D-16 and §6 give the band's paddings from the board (`space9`, `space7`, `space5`) and the rule.
+
+### X2-11 · minor · Compaction should be gated
+**Answer:** Fixed — only a pinned page compacts; unpinned `isScrolled` is always false (D-14, D-17).
+
+### X2-12 · minor · Stale text
+**Answer:** Fixed — Status Planned, map row Planned, Q-references removed, Review line updated.
