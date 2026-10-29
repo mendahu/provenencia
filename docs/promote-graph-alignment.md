@@ -4,7 +4,7 @@
 
 **Agreed 2026-10-06; scheduled as Spike 9 slice 9** (§10). Renamed from “Promote alignment” to **Promote graph alignment** (2026-10-07) so the name names the graph-to-graph proposal, not property-only matching. It replaced the per-Property compare checklist and the per-Subject walk; [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3–§5.4 now state its model rules. How we got here, and the directions we turned down: [`ideas/archive/promote-matching.md`](ideas/archive/promote-matching.md). Matching today: [`matching.md`](matching.md).
 
-**Revised 2026-10-29:** Promote is a quick filing action. Identity Claims no longer carry Observation pins, so the row's evidence sheet, its pin toggles and the per-row claim fields are dropped ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5). Graph alignment still proposes and orders each row's targets, but the page no longer shows its band, Contested mark or reason: the score ranks, unseen. Whether a member belongs is shown on the handle's page by a separate comparison (§5.1 there). Until the code catches up, the sheet and the pin writes described in older PR plans still run.
+**Revised 2026-10-29:** Promote is a quick filing action. Identity Claims no longer carry Observation pins, so the row's evidence sheet, its pin toggles and the per-row claim fields are dropped ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5). Graph alignment still proposes and orders each row's targets, but the page no longer shows its band, Contested mark or reason: the score ranks, unseen. Whether a member belongs is shown on the handle's page by a separate comparison (§5.1 there).
 
 **The data model:** one Identity Claim per Subject and handle, with a status (accepted or provisional at Promote; no confidence and no argument since 2026-10-29).
 
@@ -32,7 +32,7 @@ A vertical link's strongest evidence is the horizontal structure around it linin
 2. **Decisions are fixed.** A choice the researcher made is never overridden by a re-run. Everything not yet decided follows the decisions.
 3. **One claim per Subject.** A batch is many independent claims, and any one can be rejected later on its own.
 4. **No hard-coded lists of Properties or relationships.** What counts as evidence, and how much, comes from metadata (value types, cardinality, bridge types and roles) and from the catalog's own data. A Property or bridge kind added later takes part with no code change.
-5. **Precision over recall.** A false merge is the costliest mistake. The core never proposes a merge below the accept bar: such a row comes back with no target, its candidates as alternatives. The page starts it **unset**, so Done waits for the researcher's Skip or New, and drafts a weak one on its best match for review. **Proposals are liberal; the researcher decides** (user, 2026-10-28): precision is about what files, not what is suggested. A candidate the comparers accept on forgiving evidence (a prefix pair of two full names, a namesake inside the lifespan slack) is surfaced, and every conflict the engine found shows as *contested*.
+5. **Precision over recall.** A false merge is the costliest mistake. The core never proposes a merge below the accept bar: such a row comes back with no target, its candidates as alternatives. The page starts it **unset**, so Done waits for the researcher's Skip or New, and drafts a weak one on its best match for review. **Proposals are liberal; the researcher decides** (user, 2026-10-28): precision is about what files, not what is suggested. A candidate the comparers accept on forgiving evidence (a prefix pair of two full names, a namesake inside the lifespan slack) is surfaced.
 6. **Explainable, deterministic, local.**
    - Every suggestion carries its reasons.
    - The same inputs give the same proposal.
@@ -61,7 +61,7 @@ Every row is **suggested** (the machine filled it) or **decided**: the researche
 
 - **On open,** the only fixed points are the already-promoted rows; the clicked Subject's row is proposed like the rest.
 - **On any change,** that row becomes decided, and graph alignment re-runs over the whole page with every decided row held fixed. Suggested rows are recomputed; decided rows are never touched. A row decided New or Skip is held too: it takes no handle and the walk doesn't pass through it.
-- **Rows whose suggestion changed** get a brief "updated" mark with the reason ("via Gracie → PER-Z"), or, when settling moved the row because of a neighbor, what that neighbor did ("after Gracie moved to PER-Z").
+- **Rows whose suggestion changed** get a brief "updated" mark with the reason ("via Gracie → PER-Z"), or, when settling moved the row because of a neighbor, what that neighbor did ("after Gracie moved to PER-Z"). A row whose suggestion changed for any other reason shows the mark alone.
 - **A contested row** (a comparison behind its pair conflicts) is flagged in the proposal, at any band; since 2026-10-29 the page does not show it.
 - **A decided row that the new context contradicts** keeps its choice and gets a warning. The researcher resolves it.
 

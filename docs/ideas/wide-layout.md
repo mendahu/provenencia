@@ -12,4 +12,5 @@ Spike 14's Batch 6 gives every page a Regular / Wide width class (1600pt of pane
 | Properties, Metadata, Source types | List with a side pane | Each has a fixed side pane today; its brief decides whether the list or the pane takes the width (S14-24 D-6). `MetadataView` and `SourceTypesView` are near-copies of each other |
 | Citation composer | Canvas / editor | Has its own 1400pt two-up / three-up switch in `CitationComposerView.composeSplit`; moves onto the width class with its brief (S14-24 review M-2) |
 | Evidence graph | Canvas with the inspector docked open | |
-| Promote | To be decided in its brief | |
+
+Promote widened in S13-23: its list goes to 1600 pt and its target menu to 460 pt at Wide (S13-D11 frame 27W).

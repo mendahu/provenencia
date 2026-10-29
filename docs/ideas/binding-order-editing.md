@@ -4,7 +4,7 @@
 
 ## What happens
 
-The order of a subject type's properties (`subject_type_properties.sort_order`) sets the conclusion page's fields and the claim evidence sheet's sections. S11-32 added the engine side: `ReorderSubjectTypeProperties` takes a type and every bound property in the new order, audits the move, and drops the cached vocabulary so the next evidence open follows it. No screen calls it. The Properties page is property-centric: a type's bindings are toggles on a property (`PropertiesView.swift`), so there is no ordered list per type to drag.
+The order of a subject type's properties (`subject_type_properties.sort_order`) sets the conclusion page's fields. S11-32 added the engine side: `ReorderSubjectTypeProperties` takes a type and every bound property in the new order, audits the move, and drops the cached vocabulary so the next evidence open follows it. No screen calls it. The Properties page is property-centric: a type's bindings are toggles on a property (`PropertiesView.swift`), so there is no ordered list per type to drag.
 
 ## Suggested shape
 
