@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -561,27 +562,27 @@ func TestLinkWritesMoveCitationReads(t *testing.T) {
 	for _, step := range []struct {
 		name string
 		fn   func(tx *database.Tx) ([]rowchange.Change, error)
+		// graph is the one graph whose citation reads the write moves.
+		graph func() []byte
 	}{
 		{"link", func(tx *database.Tx) ([]rowchange.Change, error) {
 			return evidencegraphs.Link(tx, userID, graph, a2)
-		}},
+		}, func() []byte { return graph }},
 		{"unlink", func(tx *database.Tx) ([]rowchange.Change, error) {
 			return evidencegraphs.Unlink(tx, userID, graph, a2)
-		}},
+		}, func() []byte { return graph }},
 		{"create", func(tx *database.Tx) ([]rowchange.Change, error) {
 			g, changes, err := evidencegraphs.Create(tx, userID, evidencegraphs.CreateInput{
 				SourceID: src.ID, Name: "Smith", ArtifactIDs: [][]byte{a2},
 			})
 			created = g.ID
 			return changes, err
-		}},
+		}, func() []byte { return created }},
 		{"delete", func(tx *database.Tx) ([]rowchange.Change, error) {
 			return evidencegraphs.Delete(tx, userID, created)
-		}},
+		}, func() []byte { return created }},
 	} {
 		name, fn := step.name, step.fn
-		// A graph delete reports no Source: its link rows go with it.
-		wantSource := name != "delete"
 		_, res, err := writes.Run(f.c, writes.Op{Action: name + "_artifact", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			changes, err := fn(tx)
 			return struct{}{}, changes, err
@@ -589,12 +590,14 @@ func TestLinkWritesMoveCitationReads(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
-		cs := res.Effects.CitationSources
-		if wantSource && (len(cs) != 1 || !bytes.Equal(cs[0], src.ID)) {
-			t.Fatalf("%s: citation sources %x want the graph's Source", name, cs)
+		var got [][]byte
+		for _, r := range res.Effects.Reads {
+			if r.Read == effects.ReadCitations {
+				got = r.IDs
+			}
 		}
-		if !wantSource && len(cs) != 0 {
-			t.Fatalf("%s: citation sources %x want none", name, cs)
+		if want := step.graph(); len(got) != 1 || !bytes.Equal(got[0], want) {
+			t.Fatalf("%s: citation reads %x, want the linked graph %x", name, got, want)
 		}
 	}
 }

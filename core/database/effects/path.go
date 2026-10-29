@@ -310,6 +310,34 @@ func union(steps ...Path) Path {
 	}
 }
 
+// prefer runs primary and, when it finds no ids, fallback. Both arms must end
+// at the same table.
+func prefer(primary, fallback Path) Path {
+	return Path{
+		run: func(w *walk, in [][]byte, fromChange bool) ([][]byte, error) {
+			ids, err := primary.run(w, in, fromChange)
+			if err != nil || len(ids) > 0 {
+				return ids, err
+			}
+			return fallback.run(w, in, fromChange)
+		},
+		check: func(start string) (string, error) {
+			a, err := primary.check(start)
+			if err != nil {
+				return "", err
+			}
+			b, err := fallback.check(start)
+			if err != nil {
+				return "", err
+			}
+			if a != b {
+				return "", fmt.Errorf("prefer ends at %s and %s", a, b)
+			}
+			return a, nil
+		},
+	}
+}
+
 func onField(field string, inner Path) Path {
 	ident(field)
 	return Path{

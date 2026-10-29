@@ -28,8 +28,11 @@ import (
 // TestEvidenceGraphsResolve checks Resolve over the changes of real writes: a
 // graph or link row flags the graph list and scopes its Source's activity;
 // each write names the Evidence graphs whose loaded rows it moves (a Subject
-// and its Observations their one graph, an Artifact or Citation every graph of
-// the Source, a link row none); no other write flags the list.
+// and its Observations their one graph, a Citation the graphs of its
+// Observations, a Source title every graph of the Source, an Artifact and a
+// link row none); and the keyed reads name the same graphs (a Citation create
+// moves citations, a Subject create moves graph progress, an Artifact label
+// moves neither); no other write flags the list.
 func TestEvidenceGraphsResolve(t *testing.T) {
 	userID := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
 	c, err := database.Create(t.TempDir(), "t.provenencia")
@@ -207,9 +210,30 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 	}
 	_ = cited
 	sameIDs("observation on Jones", resolve("observation on Jones", only(citChanges, "observation")).EvidenceGraphs, jones.ID)
-	sameIDs("citation", resolve("citation", only(citChanges, "citation")).EvidenceGraphs, def, jones.ID)
+	sameIDs("citation", resolve("citation", only(citChanges, "citation")).EvidenceGraphs, jones.ID)
 
-	// A Source title edit and an Artifact create name every graph of the Source.
+	// readIDs is the graphs a batch moved one keyed read for.
+	readIDs := func(set effects.Set, read effects.Read) [][]byte {
+		for _, r := range set.Reads {
+			if r.Read == read {
+				return r.IDs
+			}
+		}
+		return nil
+	}
+	citSet := resolve("citation create", citChanges)
+	sameIDs("citation create reads", readIDs(citSet, effects.ReadCitations), jones.ID)
+	sameIDs("citation create graphs", citSet.EvidenceGraphs, jones.ID)
+	sameIDs("subject create progress", readIDs(resolve("subject", subjChange), effects.ReadEvidenceGraphProgress), jones.ID)
+	claim := rowchange.Change{
+		EntityType: "identity_claim", EntityID: []byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9},
+		Action: rowchange.ActionCreate,
+		Fields: rowchange.FullRow(map[string]any{"subject_id": subjectID}),
+	}
+	sameIDs("claim create progress", readIDs(resolve("claim", []rowchange.Change{claim}), effects.ReadEvidenceGraphProgress), jones.ID)
+
+	// A Source title edit names every graph of the Source; an Artifact create
+	// and label edit name none and move no progress.
 	titleChanges, err := sources.Update(tx, userID, sources.Source{ID: src.ID, SourceTypeID: typeID, Title: "Census 1851"})
 	if err != nil {
 		t.Fatal(err)
@@ -219,7 +243,21 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sameIDs("artifact create", resolve("artifact create", only(newArtChanges, "artifact")).EvidenceGraphs, def, jones.ID)
+	artSet := resolve("artifact create", only(newArtChanges, "artifact"))
+	sameIDs("artifact create", artSet.EvidenceGraphs)
+	sameIDs("artifact create progress", readIDs(artSet, effects.ReadEvidenceGraphProgress))
+	sameIDs("artifact create reads", readIDs(artSet, effects.ReadCitations))
+	labelChanges, err := artifacts.Update(tx, userID, artifacts.Artifact{
+		ID: srcArt.ID, SourceID: src.ID, Label: "Page one",
+	}, evidencegraphs.GraphLinks{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	labelSet := resolve("artifact label", only(labelChanges, "artifact"))
+	sameIDs("artifact label", labelSet.EvidenceGraphs)
+	if len(labelSet.Reads) != 0 {
+		t.Fatalf("artifact label moved reads %v", labelSet.Reads)
+	}
 
 	// No other write flags the list.
 	_, otherChanges, err := subjects.Create(tx, userID, subjects.CreateInput{

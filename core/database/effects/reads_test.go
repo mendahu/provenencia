@@ -1,0 +1,51 @@
+package effects
+
+import (
+	"slices"
+	"sort"
+	"testing"
+)
+
+// TestReadsDeclare pins which tables move each keyed read, that every read
+// path ends at evidence_graphs, and that a bad entry does not validate.
+func TestReadsDeclare(t *testing.T) {
+	want := map[Read][]string{
+		ReadCitations: {
+			"citations", "date_values", "depiction_values", "evidence_graph_artifacts",
+			"name_values", "observations",
+		},
+		ReadEvidenceGraphProgress: {
+			"identity_claim_evidence", "identity_claims", "observations", "subjects",
+		},
+	}
+	got := map[Read][]string{}
+	for table, eff := range registry {
+		for _, r := range eff.Reads {
+			got[r.Read] = append(got[r.Read], table)
+			end, err := r.Path.check(table)
+			if err != nil {
+				t.Errorf("%s %s: %v", table, r.Read, err)
+			} else if end != "evidence_graphs" {
+				t.Errorf("%s %s ends at %s, want evidence_graphs", table, r.Read, end)
+			}
+		}
+	}
+	for _, read := range Reads {
+		sort.Strings(got[read])
+		if !slices.Equal(got[read], want[read]) {
+			t.Errorf("tables with %s = %v, want %v", read, got[read], want[read])
+		}
+	}
+	if eff := registry["artifacts"]; len(eff.Reads) != 0 || !eff.EvidenceGraph.zero() {
+		t.Errorf("artifacts name graphs or reads: %+v", eff)
+	}
+	if err := (Effect{Reads: []ReadPath{{"nope", self()}}}).validate("x"); err == nil {
+		t.Fatal("an undeclared read validated")
+	}
+	if err := (Effect{Reads: []ReadPath{{ReadCitations, Path{}}}}).validate("x"); err == nil {
+		t.Fatal("a read with no path validated")
+	}
+	if err := (Effect{None: true, Reads: []ReadPath{{ReadCitations, self()}}}).validate("x"); err == nil {
+		t.Fatal("a None entry with Reads validated")
+	}
+}

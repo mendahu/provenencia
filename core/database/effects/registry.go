@@ -27,6 +27,36 @@ type SearchIDs struct {
 	IDs  [][]byte
 }
 
+// Read names a partial read the app keeps per Evidence graph: a write that
+// moves its rows reports the graphs, and the app refreshes only those. The
+// values are the wire keys (WriteEffects.reads) and Swift's CatalogRead raw
+// values.
+type Read string
+
+const (
+	// ReadCitations: the citation counts and the citations by Artifact of a
+	// graph.
+	ReadCitations Read = "citations"
+	// ReadEvidenceGraphProgress: the Subject, filed and Observation counts of
+	// a graph.
+	ReadEvidenceGraphProgress Read = "evidence_graph_progress"
+)
+
+// Reads is every keyed read, in the order Set.Reads reports them.
+var Reads = []Read{ReadCitations, ReadEvidenceGraphProgress}
+
+// ReadPath is one keyed read: Read says which, Path says whose graph ids.
+type ReadPath struct {
+	Read Read
+	Path Path
+}
+
+// ReadIDs is a resolved keyed read: one read and its Evidence graph ids.
+type ReadIDs struct {
+	Read Read
+	IDs  [][]byte
+}
+
 // List names a catalog-wide list a write changed: one the app caches whole
 // and a row change cannot be patched into. The values are the wire keys
 // (WriteEffects.lists) and Swift's CatalogList raw values.
@@ -52,13 +82,11 @@ var Lists = []List{ListVocabulary, ListPropertyUsage, ListEvidenceGraphs}
 type Set struct {
 	Handles [][]byte
 	// EvidenceGraphs are the Evidence graphs whose loaded rows changed
-	// (Effect.EvidenceGraph): graphcache drops each, and graph progress counts
-	// them.
+	// (Effect.EvidenceGraph): graphcache drops each.
 	EvidenceGraphs [][]byte
-	// CitationSources are the Sources whose citation reads (citation counts,
-	// citations by artifact) a change moves (Effect.CitationSource). The app
-	// keys those reads by graph and drops every graph's.
-	CitationSources [][]byte
+	// Reads are the keyed partial reads a batch moved, each with the Evidence
+	// graphs it moved them for (Effect.Reads), in the order of Reads.
+	Reads []ReadIDs
 	// SourceScopes are the Sources whose last activity a change moves
 	// (Effect.SourceScope), the audit source scope.
 	SourceScopes [][]byte
@@ -85,13 +113,12 @@ type Set struct {
 type Effect struct {
 	Entity string
 	// EvidenceGraph is the Evidence graph whose loaded rows this change moves
-	// (a Path that ends at evidence_graphs): graphcache drops it, and graph
-	// progress counts it. A table neither loads leaves it empty.
+	// (a Path that ends at evidence_graphs): graphcache drops it. A table the
+	// graph cache does not load leaves it empty.
 	EvidenceGraph Path
-	// CitationSource is the Source whose change drops the citation reads
-	// (citation counts, citations by artifact) of every graph (the app keys
-	// them by graph). A table neither loads leaves it empty.
-	CitationSource Path
+	// Reads are the keyed partial reads this change moves, each with a Path
+	// that ends at evidence_graphs.
+	Reads []ReadPath
 	// SourceScope is the Source whose last activity (audit source scope) this
 	// change moves.
 	SourceScope Path
@@ -166,9 +193,20 @@ func valueGraph(col string) Path {
 	return chain(inbound("observations", col), observationGraph)
 }
 
+// citationObservationGraphs is a Citation to the Evidence graphs of its
+// Observations.
+var citationObservationGraphs = chain(inbound("observations", "citation_id"), observationGraph)
+
+// citationArtifactGraphs is a Citation to the Evidence graphs its Artifact is
+// linked to.
+var citationArtifactGraphs = chain(
+	up("artifact_id"),
+	across("evidence_graph_artifacts", "artifact_id", "graph_id"),
+)
+
 // valueSource is a value row to the Source of the Observations that hold it
-// in col, through each Observation's Citation. CitationSource and SourceScope
-// walk it; EvidenceGraph walks valueGraph, through the Observation's Subject.
+// in col, through each Observation's Citation. SourceScope walks it;
+// EvidenceGraph walks valueGraph, through the Observation's Subject.
 func valueSource(col string) Path {
 	return chain(inbound("observations", col), up("citation_id", "artifact_id", "source_id"))
 }
@@ -178,12 +216,12 @@ func valueSource(col string) Path {
 // Observations that hold it.
 func ownedValue(entity, col string) Effect {
 	return Effect{
-		Entity:         entity,
-		EvidenceGraph:  valueGraph(col),
-		CitationSource: valueSource(col),
-		SourceScope:    valueSource(col),
-		Handles:        valueMembers(col),
-		HandleScope:    valueMembers(col),
+		Entity:        entity,
+		EvidenceGraph: valueGraph(col),
+		Reads:         []ReadPath{{ReadCitations, valueGraph(col)}},
+		SourceScope:   valueSource(col),
+		Handles:       valueMembers(col),
+		HandleScope:   valueMembers(col),
 	}
 }
 
@@ -238,37 +276,47 @@ var registry = map[string]Effect{
 		SourceScope: field("source_id"),
 		Search:      []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
 	},
+	// An Artifact's own fields move no loaded graph row and no citation
+	// membership: its links, Citations and Observations carry their own graphs.
 	"artifacts": {
-		Entity:         "artifact",
-		EvidenceGraph:  graphsOfSource(field("source_id")),
-		CitationSource: field("source_id"),
-		SourceScope:    field("source_id"),
-		Search:         []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
+		Entity:      "artifact",
+		SourceScope: field("source_id"),
+		Search:      []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
 	},
 	"citations": {
-		Entity:         "citation",
-		EvidenceGraph:  graphsOfSource(up("artifact_id", "source_id")),
-		CitationSource: up("artifact_id", "source_id"),
-		SourceScope:    up("artifact_id", "source_id"),
-		Handles:        onField("transcription_uncertain", sqlPath(sqlHandlesForCitation)),
+		Entity:        "citation",
+		EvidenceGraph: citationObservationGraphs,
+		// A Citation with no Observation yet shows in the graphs its Artifact
+		// is linked to.
+		Reads:       []ReadPath{{ReadCitations, prefer(citationObservationGraphs, citationArtifactGraphs)}},
+		SourceScope: up("artifact_id", "source_id"),
+		Handles:     onField("transcription_uncertain", sqlPath(sqlHandlesForCitation)),
 	},
 	"citation_notes": {Entity: "citation_note", SourceScope: up("citation_id", "artifact_id", "source_id")},
 	"observations": {
-		Entity:         "observation",
-		EvidenceGraph:  observationGraph,
-		CitationSource: up("citation_id", "artifact_id", "source_id"),
-		Lists:          []List{ListPropertyUsage},
-		ListsOnField:   "property_id",
-		SourceScope:    up("citation_id", "artifact_id", "source_id"),
-		Handles:        observationMembers,
-		HandleScope:    observationMembers,
+		Entity:        "observation",
+		EvidenceGraph: observationGraph,
+		Reads: []ReadPath{
+			{ReadCitations, observationGraph},
+			{ReadEvidenceGraphProgress, observationGraph},
+		},
+		Lists:        []List{ListPropertyUsage},
+		ListsOnField: "property_id",
+		SourceScope:  up("citation_id", "artifact_id", "source_id"),
+		Handles:      observationMembers,
+		HandleScope:  observationMembers,
 	},
 	"observation_notes": {
 		Entity:      "observation_note",
 		SourceScope: up("observation_id", "citation_id", "artifact_id", "source_id"),
 		HandleScope: chain(up("observation_id", "subject_id"), membersOf),
 	},
-	"subjects": {Entity: "subject", EvidenceGraph: field("graph_id"), SourceScope: field("source_id")},
+	"subjects": {
+		Entity:        "subject",
+		EvidenceGraph: field("graph_id"),
+		Reads:         []ReadPath{{ReadEvidenceGraphProgress, field("graph_id")}},
+		SourceScope:   field("source_id"),
+	},
 	"evidence_graphs": {
 		Entity:        "evidence_graph",
 		EvidenceGraph: self(),
@@ -277,10 +325,10 @@ var registry = map[string]Effect{
 		Search:        []SearchDoc{{Kind: DocEvidenceGraph, Path: self()}},
 	},
 	"evidence_graph_artifacts": {
-		Entity:         "evidence_graph_artifact",
-		SourceScope:    up("graph_id", "source_id"),
-		CitationSource: up("graph_id", "source_id"),
-		Lists:          []List{ListEvidenceGraphs},
+		Entity:      "evidence_graph_artifact",
+		Reads:       []ReadPath{{ReadCitations, field("graph_id")}},
+		SourceScope: up("graph_id", "source_id"),
+		Lists:       []List{ListEvidenceGraphs},
 	},
 	"files": {
 		Entity:      "file",
@@ -325,6 +373,7 @@ var registry = map[string]Effect{
 	"identity_claims": {
 		Entity:        "identity_claim",
 		EvidenceGraph: from("subject_id", field("graph_id")),
+		Reads:         []ReadPath{{ReadEvidenceGraphProgress, from("subject_id", field("graph_id"))}},
 		Handles: union(
 			field("entity_id"),
 			onStatus("accepted", from("subject_id", observers)),
@@ -334,6 +383,7 @@ var registry = map[string]Effect{
 	"identity_claim_evidence": {
 		Entity:        "identity_claim_evidence",
 		EvidenceGraph: up("identity_claim_id", "subject_id", "graph_id"),
+		Reads:         []ReadPath{{ReadEvidenceGraphProgress, up("identity_claim_id", "subject_id", "graph_id")}},
 		Handles:       up("identity_claim_id", "entity_id"),
 		HandleScope:   up("identity_claim_id", "entity_id"),
 	},
@@ -394,7 +444,11 @@ func init() {
 
 // paths lists every path field of the effect.
 func (e Effect) paths() []Path {
-	return []Path{e.EvidenceGraph, e.CitationSource, e.SourceScope, e.Handles, e.HandleScope, e.Structure}
+	out := []Path{e.EvidenceGraph, e.SourceScope, e.Handles, e.HandleScope, e.Structure}
+	for _, r := range e.Reads {
+		out = append(out, r.Path)
+	}
+	return out
 }
 
 func (e Effect) validate(table string) error {
@@ -404,10 +458,18 @@ func (e Effect) validate(table string) error {
 				return errf("%s: None entry still has effects", table)
 			}
 		}
-		if len(e.Search) > 0 || len(e.Lists) > 0 {
+		if len(e.Search) > 0 || len(e.Lists) > 0 || len(e.Reads) > 0 {
 			return errf("%s: None entry still has effects", table)
 		}
 		return nil
+	}
+	for _, r := range e.Reads {
+		if !slices.Contains(Reads, r.Read) {
+			return errf("%s: undeclared read %q", table, r.Read)
+		}
+		if r.Path.zero() {
+			return errf("%s: read %q has no path", table, r.Read)
+		}
 	}
 	for _, l := range e.Lists {
 		if !slices.Contains(Lists, l) {
