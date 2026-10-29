@@ -79,7 +79,7 @@ final class ThumbnailCache {
                         guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
                               ThumbnailDecodePolicy.accepts(src),
                               let cg = ImageHeaderDecode.decode(
-                                  src, maxPixelSize: ThumbnailCache.maxPixelSize, applyTransform: true
+                                  src, maxPixelSize: ThumbnailCache.maxPixelSize
                               )
                         else { return nil as NSImage? }
                         return NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))

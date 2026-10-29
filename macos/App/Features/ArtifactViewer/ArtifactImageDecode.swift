@@ -13,11 +13,9 @@ enum ArtifactImageDecode {
     /// An image declaring more 8-bit pixels than this is refused before any pixel decodes;
     /// the count is divided by the bytes per color component.
     static let maxDeclaredPixels = 256000000
-    /// Most 8-bit pixels the viewer holds decoded; divided by the bytes per color component. Keep equal to Go's `raster.MaxDecodePixels`;
-    /// `TestSwiftVocabularyMatchesGo` holds them.
+    /// Most 8-bit pixels the viewer holds decoded; divided by the bytes per color component.
+    /// Keep equal to Go's `raster.MaxDecodePixels`; `TestSwiftVocabularyMatchesGo` holds them.
     static let maxDecodePixels = 64000000
-    /// Whether the decode turns an EXIF-rotated image upright, as `NSImage(contentsOf:)` shows it.
-    static let appliesOrientation = true
 
     /// The decoded image and what describes it.
     ///
@@ -74,10 +72,9 @@ enum ArtifactImageDecode {
             source,
             maxPixelSize: maxPixelSize(
                 width: declared.width, height: declared.height, depth: declared.bitsPerComponent
-            ),
-            applyTransform: appliesOrientation
+            )
         ) else { return .failure(.unreadable) }
-        let turned = appliesOrientation && declared.orientation >= 5
+        let turned = declared.orientation >= 5
         let pixelWidth = turned ? declared.height : declared.width
         let pixelHeight = turned ? declared.width : declared.height
         let dpiWidth = turned ? declared.dpiHeight : declared.dpiWidth

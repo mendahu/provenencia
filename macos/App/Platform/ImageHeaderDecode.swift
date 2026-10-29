@@ -49,11 +49,11 @@ enum ImageHeaderDecode {
     }
 
     /// The first image decoded eagerly at no more than `maxPixelSize` on its
-    /// longest edge, turned upright when `applyTransform` is set.
-    static func decode(_ source: CGImageSource, maxPixelSize: Int, applyTransform: Bool) -> CGImage? {
+    /// longest edge, turned upright by its EXIF orientation.
+    static func decode(_ source: CGImageSource, maxPixelSize: Int) -> CGImage? {
         CGImageSourceCreateThumbnailAtIndex(source, 0, [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: applyTransform,
+            kCGImageSourceCreateThumbnailWithTransform: true,
             kCGImageSourceShouldCacheImmediately: true,
             kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
         ] as CFDictionary)
