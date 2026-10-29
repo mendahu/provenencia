@@ -166,6 +166,18 @@ final class WorkspaceNavigation {
         refreshHistoryIssue()
     }
 
+    /// Updates the current entry in place, without a push. A place whose
+    /// visible keys change within one mount (the composer's Artifact) uses it
+    /// so the session and the persisted entry follow.
+    func replaceCurrent(with location: WorkspaceLocation) {
+        guard let history else {
+            apply(location)
+            return
+        }
+        apply(history.replaceCurrent(with: location))
+        refreshHistoryIssue()
+    }
+
     private func hold(_ pending: PendingNavigation) -> Bool {
         guard let leaveGuard, leaveGuard.shouldHoldNavigation(pending) else { return false }
         heldNavigation = pending

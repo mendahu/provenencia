@@ -42,6 +42,25 @@ struct WorkspaceNavigationTests {
         #expect(navigation.currentLocation == .sectionRoot(.sources))
     }
 
+    @Test func replaceCurrentUpdatesTheEntryWithoutAPush() throws {
+        let (navigation, url) = try attachedNavigation()
+        navigation.go(to: .sectionRoot(.events))
+        let before = entryCount(navigation)
+        var recorded: [WorkspaceLocation] = []
+        navigation.onLocationCommit = { recorded.append($0) }
+
+        var next = WorkspaceLocation(section: .sources, sourceId: "s1", graphId: "g-1", sourceSurface: .citationComposer)
+        next.artifactId = "art-1"
+        navigation.replaceCurrent(with: next)
+
+        #expect(navigation.currentLocation == next)
+        #expect(entryCount(navigation) == before)
+        #expect(recorded == [next])
+        let reloaded = WorkspaceNavigation()
+        reloaded.attachProject(uuid: projectUuid, fileURL: url)
+        #expect(reloaded.currentLocation == next)
+    }
+
     @Test func attachProjectSetsUuidAndCommitsSynchronously() throws {
         let (seed, url) = try attachedNavigation()
         seed.go(to: WorkspaceLocation.sectionRoot(.sources).withListScrollAnchor("s3"))

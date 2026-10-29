@@ -124,7 +124,8 @@ struct CitationComposerModelTests {
             subjectID: placeID, gridX: 16, gridY: 0
         )
         store.nextWriteEffects = CatalogWriteEffects(
-            evidenceGraphs: [graphID], citationSources: [sourceID], lists: [.propertyUsage]
+            evidenceGraphs: [graphID], reads: [CatalogWriteEffectsRead(read: .citations, ids: [graphID])],
+            lists: [.propertyUsage]
         )
         return store
     }
@@ -574,7 +575,9 @@ struct CitationComposerModelTests {
             $0.values.propertyID = occupationPropertyID
             $0.values.valueText = "miller"
         }
-        store.nextWriteEffects = CatalogWriteEffects(citationSources: [sourceID], lists: [.propertyUsage])
+        store.nextWriteEffects = CatalogWriteEffects(
+            reads: [CatalogWriteEffectsRead(read: .citations, ids: [graphID])], lists: [.propertyUsage]
+        )
         await jones.saveAuthoring()
         let created = jones.activeCitationID
         #expect(created != nil)
@@ -1674,6 +1677,36 @@ struct CitationComposerModelTests {
         #expect(switched)
         #expect(model.fields.error != nil)
         #expect(model.activeCitationID == nil)
+    }
+
+    /// D-8: selecting an Artifact rewrites the current location's Artifact in
+    /// place and keeps every other id and display field; nothing is pushed.
+    @Test func selectingAnArtifactRewritesTheLocationInPlace() async throws {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store, citationID: "cit-1")
+        let navigation = WorkspaceNavigation()
+        let location = WorkspaceLocation(
+            section: .sources, sourceId: sourceID, graphId: graphID, subjectId: subjectID,
+            citationId: "cit-1", artifactId: "art-0", observationId: "obs-1",
+            sourceSurface: .citationComposer, ref: "CIT-1", title: "Ada", sourceTitle: "Census"
+        )
+        navigation.replaceCurrent(with: location)
+        model.navigation = navigation
+
+        model.selectedArtifactID = "art-1"
+
+        var expected = location
+        expected.artifactId = "art-1"
+        #expect(navigation.currentLocation == expected)
+        #expect(navigation.currentLocation.observationId == "obs-1")
+        #expect(navigation.currentLocation.title == "Ada")
+        #expect(navigation.currentLocation.sourceTitle == "Census")
+        #expect(CitationComposerEntry(location: expected)?.identityKey
+            == CitationComposerEntry(location: location)?.identityKey)
+
+        model.selectedArtifactID = nil
+        #expect(navigation.currentLocation.artifactId == nil)
     }
 
     @Test func lineRefreshShowsAFailedCitationLoad() async {
