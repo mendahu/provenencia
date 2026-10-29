@@ -1,6 +1,6 @@
 # S12-25 — Writes name only the graphs they move
 
-**Status:** Landed #621 (2026-10-29)
+**Status:** Landed in [#621](https://github.com/mendahu/provenencia/pull/621) (2026-10-29)
 **Spike / slice:** Spike 12 · Slice 6 — Audit fixes: Medium
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: effects, wire and session cache only; no view draws differently)
