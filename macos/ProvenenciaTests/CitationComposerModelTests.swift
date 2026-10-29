@@ -123,7 +123,9 @@ struct CitationComposerModelTests {
         store.subjectPositionsBySubject[placeID] = CatalogSubjectPosition(
             subjectID: placeID, gridX: 16, gridY: 0
         )
-        store.nextWriteEffects = CatalogWriteEffects(evidenceGraphs: [graphID], lists: [.propertyUsage])
+        store.nextWriteEffects = CatalogWriteEffects(
+            evidenceGraphs: [graphID], citationSources: [sourceID], lists: [.propertyUsage]
+        )
         return store
     }
 
@@ -572,11 +574,10 @@ struct CitationComposerModelTests {
             $0.values.propertyID = occupationPropertyID
             $0.values.valueText = "miller"
         }
-        store.nextWriteEffects = CatalogWriteEffects(lists: [.propertyUsage])
+        store.nextWriteEffects = CatalogWriteEffects(citationSources: [sourceID], lists: [.propertyUsage])
         await jones.saveAuthoring()
         let created = jones.activeCitationID
         #expect(created != nil)
-        await jones.prepare()
         #expect(jones.listedCitations.contains { $0.citation.id == created })
 
         let smith = makeModel(store: store, graphID: "g-2", subjectID: "sub-person-2")
