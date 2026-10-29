@@ -145,15 +145,47 @@ struct ArtifactRegionCropTests {
         let projectDir = ArtifactFileFixtures.uniqueProjectDir()
         try ArtifactFileFixtures.writeMarkedPDF(projectDir: projectDir, relPath: "objects/m.pdf", rotation: 0)
         await viewer.load(source(projectDir, "objects/m.pdf", "application/pdf"))
-        guard case .pdf(let url, let pageIndex) = ArtifactRegionCrop.snapshot(viewer, page: 1) else {
+        guard case .pdf(let source, let pageIndex) = ArtifactRegionCrop.snapshot(viewer, page: 1) else {
             Issue.record("a loaded PDF should snapshot")
             return
         }
         #expect(pageIndex == 0)
-        #expect(url == viewer.pdfDocument?.documentURL)
+        #expect(source == self.source(projectDir, "objects/m.pdf", "application/pdf"))
         #expect(ArtifactRegionCrop.snapshot(viewer, page: 0) == nil)
         viewer.unload()
         #expect(ArtifactRegionCrop.snapshot(viewer, page: 1) == nil)
+    }
+
+    @Test func pdfSnapshotCarriesTheSource() async throws {
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
+        try ArtifactFileFixtures.writeMarkedPDF(projectDir: projectDir, relPath: "objects/m.pdf", rotation: 0)
+        let viewer = ArtifactViewerModel()
+        await viewer.load(source(projectDir, "objects/m.pdf", "application/pdf"))
+        let snapshot = try #require(ArtifactRegionCrop.snapshot(viewer, page: 1))
+        guard case .pdf(let carried, let pageIndex) = snapshot else {
+            Issue.record("a loaded PDF should snapshot as .pdf")
+            return
+        }
+        #expect(carried == source(projectDir, "objects/m.pdf", "application/pdf"))
+        #expect(pageIndex == 0)
+    }
+
+    @Test func pdfCutRefusesASwappedObject() async throws {
+        let fm = FileManager.default
+        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? fm.removeItem(atPath: projectDir) }
+        try ArtifactFileFixtures.writeMarkedPDF(projectDir: projectDir, relPath: "objects/m.pdf", rotation: 0)
+        let viewer = ArtifactViewerModel()
+        await viewer.load(source(projectDir, "objects/m.pdf", "application/pdf"))
+        let snapshot = try #require(ArtifactRegionCrop.snapshot(viewer, page: 1))
+        let region = rectangle(0, 0, 0.05, 0.1)
+        #expect(ArtifactRegionCrop.cut(snapshot, region: region) != nil)
+
+        let object = projectDir + "/objects/m.pdf"
+        let copy = projectDir + "/elsewhere.pdf"
+        try fm.moveItem(atPath: object, toPath: copy)
+        try fm.createSymbolicLink(atPath: object, withDestinationPath: copy)
+        #expect(ArtifactRegionCrop.cut(snapshot, region: region) == nil)
     }
 
     @Test func temporaryPNGIsAPNG() throws {
