@@ -478,7 +478,8 @@ struct CitationComposerDepictionTests {
                 description: "",
                 file: CatalogFileRef(
                     id: "file-1", relPath: "objects/photo.png", originalFilename: "photo.png",
-                    mediaType: "image/png", byteSize: 10
+                    mediaType: "image/png", byteSize: 10,
+                    typeIdentifiers: ["public.png"]
                 )
             )
         )

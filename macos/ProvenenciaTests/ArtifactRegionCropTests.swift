@@ -201,7 +201,10 @@ struct ArtifactRegionCropTests {
     // MARK: - Helpers
 
     private func source(_ projectDir: String, _ relPath: String, _ mediaType: String) -> ArtifactViewerSource {
-        ArtifactViewerSource(projectDir: projectDir, relPath: relPath, mediaType: mediaType)
+        ArtifactViewerSource(
+            projectDir: projectDir, relPath: relPath, mediaType: mediaType,
+            typeIdentifiers: FakeStore.typeIdentifiers(forMediaType: mediaType)
+        )
     }
 
     private func rectangle(_ x0: CGFloat, _ y0: CGFloat, _ x1: CGFloat, _ y1: CGFloat) -> ArtifactRegionDraft {

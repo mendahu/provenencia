@@ -2040,6 +2040,7 @@ type SourceFileRef struct {
 	OriginalFilename string                 `protobuf:"bytes,3,opt,name=original_filename,json=originalFilename,proto3" json:"original_filename,omitempty"`
 	MediaType        string                 `protobuf:"bytes,4,opt,name=media_type,json=mediaType,proto3" json:"media_type,omitempty"`
 	ByteSize         int64                  `protobuf:"varint,5,opt,name=byte_size,json=byteSize,proto3" json:"byte_size,omitempty"`
+	TypeIdentifiers  []string               `protobuf:"bytes,6,rep,name=type_identifiers,json=typeIdentifiers,proto3" json:"type_identifiers,omitempty"` // UTIs a stored image may sniff as; Go's stored-type table. Empty for non-images.
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -2107,6 +2108,13 @@ func (x *SourceFileRef) GetByteSize() int64 {
 		return x.ByteSize
 	}
 	return 0
+}
+
+func (x *SourceFileRef) GetTypeIdentifiers() []string {
+	if x != nil {
+		return x.TypeIdentifiers
+	}
+	return nil
 }
 
 type Artifact struct {
@@ -19524,14 +19532,15 @@ const file_engine_proto_rawDesc = "" +
 	"\x04body\x18\x03 \x01(\tR\x04body\x12.\n" +
 	"\x13author_display_name\x18\x04 \x01(\tR\x11authorDisplayName\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x05 \x01(\tR\tcreatedAt\"\xa3\x01\n" +
+	"created_at\x18\x05 \x01(\tR\tcreatedAt\"\xce\x01\n" +
 	"\rSourceFileRef\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\brel_path\x18\x02 \x01(\tR\arelPath\x12+\n" +
 	"\x11original_filename\x18\x03 \x01(\tR\x10originalFilename\x12\x1d\n" +
 	"\n" +
 	"media_type\x18\x04 \x01(\tR\tmediaType\x12\x1b\n" +
-	"\tbyte_size\x18\x05 \x01(\x03R\bbyteSize\"\x82\x02\n" +
+	"\tbyte_size\x18\x05 \x01(\x03R\bbyteSize\x12)\n" +
+	"\x10type_identifiers\x18\x06 \x03(\tR\x0ftypeIdentifiers\"\x82\x02\n" +
 	"\bArtifact\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03ref\x18\x02 \x01(\tR\x03ref\x12\x1b\n" +

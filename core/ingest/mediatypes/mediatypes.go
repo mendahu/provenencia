@@ -43,8 +43,19 @@ func Allowed(mediaType string) bool {
 // mediaType is stored under, and whether mediaType is on the allowlist. A type
 // off the allowlist has no stored extension and so no object path.
 func StoredExtension(mediaType string) (string, bool) {
-	ext, ok := allowed[Normalize(mediaType)]
-	return ext, ok
+	t, ok := allowed[Normalize(mediaType)]
+	return t.ext, ok
+}
+
+// TypeIdentifiers returns the Uniform Type Identifiers a stored file of
+// mediaType may sniff as on macOS: Go's stored-type table decides, so a client
+// does not keep its own map. Nil for a type that is unknown or has none.
+func TypeIdentifiers(mediaType string) []string {
+	t := allowed[Normalize(mediaType)]
+	if len(t.typeIdentifiers) == 0 {
+		return nil
+	}
+	return append([]string(nil), t.typeIdentifiers...)
 }
 
 // Resolve picks the stored media type from a sniff result and original filename.
@@ -108,47 +119,56 @@ func ClassifyFilename(originalFilename string) Reason {
 	return classifyExtension(originalFilename)
 }
 
+// stored is one stored type: the extension (leading dot) its object file
+// carries on disk, and the Uniform Type Identifiers a file of that type may
+// sniff as on macOS (images only; empty for every other type).
+type stored struct {
+	ext             string
+	typeIdentifiers []string
+}
+
 // allowed is the one table of stored types: each media type Provenencia
-// stores, with the extension (leading dot) its object file carries on disk.
-// Allowed and StoredExtension both read it, so a type is either stored with
-// an extension or not stored at all.
-var allowed = map[string]string{
-	"image/jpeg": ".jpg",
-	"image/png":  ".png",
-	"image/gif":  ".gif",
-	"image/webp": ".webp",
-	"image/tiff": ".tiff",
-	"image/tif":  ".tiff",
-	"image/bmp":  ".bmp",
-	"image/heic": ".heic",
-	"image/heif": ".heif",
+// stores, with the extension its object file carries on disk and, for an
+// image, the type identifiers macOS may sniff it as. Allowed, StoredExtension
+// and TypeIdentifiers all read it, so a type is either stored with an
+// extension or not stored at all.
+var allowed = map[string]stored{
+	"image/jpeg": {ext: ".jpg", typeIdentifiers: []string{"public.jpeg"}},
+	"image/png":  {ext: ".png", typeIdentifiers: []string{"public.png"}},
+	"image/gif":  {ext: ".gif", typeIdentifiers: []string{"com.compuserve.gif"}},
+	"image/webp": {ext: ".webp", typeIdentifiers: []string{"org.webmproject.webp"}},
+	"image/tiff": {ext: ".tiff", typeIdentifiers: []string{"public.tiff"}},
+	"image/tif":  {ext: ".tiff", typeIdentifiers: []string{"public.tiff"}},
+	"image/bmp":  {ext: ".bmp", typeIdentifiers: []string{"com.microsoft.bmp"}},
+	"image/heic": {ext: ".heic", typeIdentifiers: []string{"public.heic", "public.heif"}},
+	"image/heif": {ext: ".heif", typeIdentifiers: []string{"public.heif", "public.heic"}},
 
-	"application/pdf":    ".pdf",
-	"application/msword": ".doc",
-	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
-	"text/plain":      ".txt",
-	"text/csv":        ".csv",
-	"application/csv": ".csv",
-	"text/markdown":   ".md",
-	"text/x-markdown": ".md",
+	"application/pdf":    {ext: ".pdf"},
+	"application/msword": {ext: ".doc"},
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": {ext: ".docx"},
+	"text/plain":      {ext: ".txt"},
+	"text/csv":        {ext: ".csv"},
+	"application/csv": {ext: ".csv"},
+	"text/markdown":   {ext: ".md"},
+	"text/x-markdown": {ext: ".md"},
 
-	"audio/mpeg":   ".mp3",
-	"audio/mp4":    ".m4a",
-	"audio/x-m4a":  ".m4a",
-	"audio/aac":    ".aac",
-	"audio/wav":    ".wav",
-	"audio/wave":   ".wav",
-	"audio/x-wav":  ".wav",
-	"audio/ogg":    ".ogg",
-	"audio/flac":   ".flac",
-	"audio/aiff":   ".aiff",
-	"audio/x-aiff": ".aiff",
+	"audio/mpeg":   {ext: ".mp3"},
+	"audio/mp4":    {ext: ".m4a"},
+	"audio/x-m4a":  {ext: ".m4a"},
+	"audio/aac":    {ext: ".aac"},
+	"audio/wav":    {ext: ".wav"},
+	"audio/wave":   {ext: ".wav"},
+	"audio/x-wav":  {ext: ".wav"},
+	"audio/ogg":    {ext: ".ogg"},
+	"audio/flac":   {ext: ".flac"},
+	"audio/aiff":   {ext: ".aiff"},
+	"audio/x-aiff": {ext: ".aiff"},
 
-	"video/mp4":       ".mp4",
-	"video/quicktime": ".mov",
-	"video/webm":      ".webm",
-	"video/x-m4v":     ".m4v",
-	"video/x-msvideo": ".avi",
+	"video/mp4":       {ext: ".mp4"},
+	"video/quicktime": {ext: ".mov"},
+	"video/webm":      {ext: ".webm"},
+	"video/x-m4v":     {ext: ".m4v"},
+	"video/x-msvideo": {ext: ".avi"},
 }
 
 // extAllowed maps extension (no dot) → MIME for octet-stream fallback and

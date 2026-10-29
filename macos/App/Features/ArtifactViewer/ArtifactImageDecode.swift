@@ -4,8 +4,8 @@ import Foundation
 import ImageIO
 import UniformTypeIdentifiers
 
-/// The Artifact viewer's bounded image decode: the file's sniffed type must match
-/// the type Go assigned, the declared size must be within budget, and the one
+/// The Artifact viewer's bounded image decode: the file's sniffed type must conform to one of
+/// the type identifiers Go's stored-type table gives its media type, the declared size must be within budget, and the one
 /// decode is held to ``maxDecodePixels``. That one raster serves display, crop and OCR.
 enum ArtifactImageDecode {
     /// An edge outside 1 to this is refused.
@@ -41,14 +41,15 @@ enum ArtifactImageDecode {
         return Int((Double(longEdge) * (Double(maxDecodePixels) / Double(pixels)).squareRoot()).rounded(.down))
     }
 
-    /// Decodes the image at `url`, or nil for any refusal: a type that does not match
-    /// `mediaType` (else the extension of `relPath`), a declared size over budget, an
+    /// Decodes the image at `url`, or nil for any refusal: a sniffed type that conforms to none
+    /// of `typeIdentifiers` (an empty list refuses), a declared size over budget, an
     /// unreadable header, or a failed decode.
-    static func decode(url: URL, mediaType: String, relPath: String) -> Decoded? {
+    static func decode(url: URL, typeIdentifiers: [String]) -> Decoded? {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-              let sniffed = CGImageSourceGetType(source) as String?,
-              let expected = expectedType(mediaType: mediaType, relPath: relPath),
-              UTType(sniffed)?.conforms(to: expected) == true,
+              let sniffed = (CGImageSourceGetType(source) as String?).flatMap({ UTType($0) }),
+              typeIdentifiers.contains(where: { identifier in
+                  UTType(identifier).map { sniffed.conforms(to: $0) } ?? false
+              }),
               let declared = ThumbnailDecodePolicy.declaredImage(
                   source, maxEdge: maxEdge, maxPixels: maxDeclaredPixels
               ),
@@ -72,13 +73,5 @@ enum ArtifactImageDecode {
             image: NSImage(cgImage: raster, size: size),
             pixelSize: (pixelWidth, pixelHeight)
         )
-    }
-
-    /// The type Go assigned: what macOS knows for its media type, else for the extension
-    /// Go gave the object from the same table. A media type macOS only makes up a
-    /// placeholder for (`image/tif`) counts as unknown.
-    private static func expectedType(mediaType: String, relPath: String) -> UTType? {
-        if let known = UTType(mimeType: mediaType), !known.isDynamic { return known }
-        return UTType(filenameExtension: (relPath as NSString).pathExtension)
     }
 }

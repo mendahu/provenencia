@@ -2,15 +2,18 @@ import AppKit
 import Foundation
 import PDFKit
 import Testing
+import UniformTypeIdentifiers
 @testable import Provenencia
 
-private let allowedImageTypes: [(String, String, NSBitmapImageRep.FileType)] = [
-    ("image/jpeg", ".jpg", .jpeg),
-    ("image/png", ".png", .png),
-    ("image/gif", ".gif", .gif),
-    ("image/tiff", ".tiff", .tiff),
-    ("image/tif", ".tiff", .tiff),
-    ("image/bmp", ".bmp", .bmp),
+private let allowedImageTypes: [(String, String, NSBitmapImageRep.FileType, UTType?)] = [
+    ("image/jpeg", ".jpg", .jpeg, nil),
+    ("image/png", ".png", .png, nil),
+    ("image/gif", ".gif", .gif, nil),
+    ("image/tiff", ".tiff", .tiff, nil),
+    ("image/tif", ".tiff", .tiff, nil),
+    ("image/bmp", ".bmp", .bmp, nil),
+    ("image/heic", ".heic", .png, .heic),
+    ("image/heif", ".heif", .png, .heic),
 ]
 
 @Suite
@@ -96,7 +99,8 @@ struct ArtifactViewerModelTests {
             ArtifactViewerSource(
                 projectDir: project.path,
                 relPath: "objects/aa/bb/nope.png",
-                mediaType: "image/png"
+                mediaType: "image/png",
+                typeIdentifiers: FakeStore.typeIdentifiers(forMediaType: "image/png")
             )
         )
         #expect(model.emptyReason == .missingFile)
@@ -112,7 +116,10 @@ struct ArtifactViewerModelTests {
             try? fm.removeItem(atPath: project)
             try? fm.removeItem(atPath: outside)
         }
-        let source = ArtifactViewerSource(projectDir: project, relPath: rel, mediaType: "image/png")
+        let source = ArtifactViewerSource(
+            projectDir: project, relPath: rel, mediaType: "image/png",
+            typeIdentifiers: FakeStore.typeIdentifiers(forMediaType: "image/png")
+        )
         await model.load(source)
         #expect(model.emptyReason == .missingFile)
 
@@ -135,7 +142,8 @@ struct ArtifactViewerModelTests {
             ArtifactViewerSource(
                 projectDir: project.path,
                 relPath: rel,
-                mediaType: "image/png"
+                mediaType: "image/png",
+                typeIdentifiers: FakeStore.typeIdentifiers(forMediaType: "image/png")
             )
         )
         #expect(model.kind == .image)
@@ -148,7 +156,10 @@ struct ArtifactViewerModelTests {
     private func loadImage(
         _ model: ArtifactViewerModel, project: String, relPath: String, mediaType: String
     ) async {
-        await model.load(ArtifactViewerSource(projectDir: project, relPath: relPath, mediaType: mediaType))
+        await model.load(ArtifactViewerSource(
+            projectDir: project, relPath: relPath, mediaType: mediaType,
+            typeIdentifiers: FakeStore.typeIdentifiers(forMediaType: mediaType)
+        ))
     }
 
     @Test func refusesAMismatchedType() async throws {
@@ -234,11 +245,15 @@ struct ArtifactViewerModelTests {
     /// Every image type on Go's allowlist that ImageIO writes opens under the media type
     /// Go stores it with, or the extension Go gives it when macOS has no type for that string.
     @Test(arguments: allowedImageTypes)
-    func opensEveryAllowedImageType(_ mediaType: String, _ ext: String, _ fileType: NSBitmapImageRep.FileType) async throws {
+    func opensEveryAllowedImageType(
+        _ mediaType: String, _ ext: String, _ fileType: NSBitmapImageRep.FileType, _ contentType: UTType?
+    ) async throws {
         let project = ArtifactFileFixtures.uniqueProjectDir()
         defer { try? FileManager.default.removeItem(atPath: project) }
         let rel = "objects/ab/cd/x" + ext
-        try ArtifactFileFixtures.writeImage(projectDir: project, relPath: rel, fileType: fileType)
+        try ArtifactFileFixtures.writeImage(
+            projectDir: project, relPath: rel, fileType: fileType, contentType: contentType
+        )
         let model = ArtifactViewerModel()
         await loadImage(model, project: project, relPath: rel, mediaType: mediaType)
         #expect(model.emptyReason == .idle)
@@ -444,7 +459,8 @@ struct ArtifactViewerModelTests {
             ArtifactViewerSource(
                 projectDir: project.path,
                 relPath: rel,
-                mediaType: "image/png"
+                mediaType: "image/png",
+                typeIdentifiers: FakeStore.typeIdentifiers(forMediaType: "image/png")
             )
         )
         model.openFind()
@@ -467,7 +483,8 @@ struct ArtifactViewerModelTests {
             ArtifactViewerSource(
                 projectDir: project.path,
                 relPath: rel,
-                mediaType: "image/png"
+                mediaType: "image/png",
+                typeIdentifiers: FakeStore.typeIdentifiers(forMediaType: "image/png")
             )
         )
         model.zoomOut()

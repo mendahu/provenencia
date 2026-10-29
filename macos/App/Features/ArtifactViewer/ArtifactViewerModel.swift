@@ -197,7 +197,7 @@ final class ArtifactViewerModel {
             switch kind {
             case .image:
                 guard let decoded = ArtifactImageDecode.decode(
-                    url: url, mediaType: source.mediaType, relPath: source.relPath
+                    url: url, typeIdentifiers: source.typeIdentifiers
                 ) else {
                     return .failure(ArtifactViewerLoadError.decodeFailed)
                 }

@@ -35,6 +35,7 @@ enum ArtifactFileFixtures {
     /// An all-red image of `fileType`, or with `topHalfRed` a red top half over a blue bottom half.
     /// `dpi` and `orientation` (EXIF 1...8) are written into the file when given;
     /// `grayscale` writes one gray channel, so a large JPEG stays small in memory.
+    /// `contentType` names a type `NSBitmapImageRep.FileType` has no case for (HEIC) and wins over `fileType`.
     static func writeImage(
         projectDir: String,
         relPath: String,
@@ -44,7 +45,8 @@ enum ArtifactFileFixtures {
         topHalfRed: Bool = false,
         dpi: CGFloat? = nil,
         orientation: Int? = nil,
-        grayscale: Bool = false
+        grayscale: Bool = false,
+        contentType: UTType? = nil
     ) throws {
         // A bitmap context, not NSImage.lockFocus: that draws at the display's
         // backing scale and would double the pixel size on a Retina Mac.
@@ -72,6 +74,7 @@ enum ArtifactFileFixtures {
         case .gif: type = .gif
         default: type = .png
         }
+        let writtenType = contentType ?? type
         var properties: [CFString: Any] = [:]
         if let dpi {
             properties[kCGImagePropertyDPIWidth] = dpi
@@ -80,7 +83,7 @@ enum ArtifactFileFixtures {
         if let orientation { properties[kCGImagePropertyOrientation] = orientation }
         let data = NSMutableData()
         guard let cgImage = context.makeImage(),
-              let destination = CGImageDestinationCreateWithData(data, type.identifier as CFString, 1, nil)
+              let destination = CGImageDestinationCreateWithData(data, writtenType.identifier as CFString, 1, nil)
         else { throw ArtifactFileFixtureError.failed }
         CGImageDestinationAddImage(destination, cgImage, properties as CFDictionary)
         guard CGImageDestinationFinalize(destination) else { throw ArtifactFileFixtureError.failed }
@@ -219,7 +222,8 @@ enum ArtifactFileFixtures {
                     relPath: relPath,
                     originalFilename: URL(fileURLWithPath: relPath).lastPathComponent,
                     mediaType: mediaType,
-                    byteSize: 10
+                    byteSize: 10,
+                    typeIdentifiers: FakeStore.typeIdentifiers(forMediaType: mediaType)
                 )
             ),
         ]
