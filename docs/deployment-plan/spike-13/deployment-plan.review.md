@@ -46,3 +46,23 @@ No blocker was raised and no fix reshaped the slice, so no round 2.
 - **The claim confidence read goes with Promote's grade picker** (K-18): `ListClaimConfidenceGrades` is reserved, not kept for a future editor; it is a few lines to bring back when open question 9 or claim editing needs it.
 - **No brief for S13-23.** The assessment column keeps today's look and loses only its button and chevron.
 - **S13-08 waits on S13-25** because both change `deleteimpact.ReleaseClaim`.
+
+## Slice 7 and the hidden band (2026-10-29)
+
+Map review of slice 7 (how a person's records connect: S13-26 – S13-29, brief S13-D10, replacing S13-18 / S13-D7) and of S13-23 / S13-24 hiding Promote's band while graph alignment keeps ranking. Round 1: one fresh maintainability reviewer. Verdict: **Fits with changes**.
+
+| ID | Finding | Answer |
+| --- | --- | --- |
+| K-26 | S13-26 would rebuild the per-Property router (`claimevidence.routeOf`) that S13-24 deletes | **Fixed.** S13-24 moves the router into `subjectcompare` (exported, no points, `lifespan` exported); S13-26 consumes it and depends on S13-24; `add-match-rule` says where it moved |
+| K-27 | S13-27 would add a third loader for member values; `promotealign`'s layer memo already builds them | **Fixed.** New preparatory S13-29 moves the layer loader into a shared `core/database` package; S13-27 depends on it; order with S12-43 named in both maps |
+| K-28 | Reserving `assessment` and `reason` breaks Swift's draft rule and the Updated caption; alternatives' fields and the L10n/test inventory unassigned | **Fixed.** S13-24 owns B-26 (Go decides what a row starts on) and reserves row and alternative fields; the caption shows move reasons only; S13-23 lists the keys and tests |
+| K-29 | `Flags.Contested` would survive only for S12-41's test | **Fixed.** S13-24 drops it unless `move` reads it; S12-41's Check and bar 17 assert the pair compares Apart |
+| K-30 | S13-27's refresh on a neighbor's claim named no mechanism | **Fixed.** Its key joins the `.allCached` promote and unpromote clause; registry test in its Check |
+| K-31 | Feature doc said "slice 9"; Scale line covered slice 0 only | **Fixed** |
+
+No blocker; no round 2.
+
+### Writer's own calls
+
+- **The Updated caption keeps only move reasons** (K-28): "why this row was suggested" is the hidden reason; "why it moved" stays.
+- **S13-24 is Go plus deleting Swift's draft rule**, so the rule moves in one change instead of a Swift-only PR carrying it.

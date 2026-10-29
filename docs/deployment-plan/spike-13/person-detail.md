@@ -89,13 +89,14 @@ On each claim in the Sources section.
 
 - **R-38. Remove.** Un-promote the Subject from this person, the same behavior as the un-promote control in the Evidence graph today.
 - **R-39. Removing the last claim** deletes the canonical person, wherever the unpromote happens (the Evidence graph too). A warning says so before it happens; if the user proceeds, the app returns to the Persons list.
-- **R-40. Review (view only).** Open the claim's pinned evidence and its argument, so the user can see why the Subject was connected to this person. Editing pins or the argument is not this spike. **Reopened 2026-10-29:** Identity Claims no longer carry pins ([`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5); what a review shows is [open question 9](deployment-plan.md#open-questions).
+- **R-40. Review (view only).** Open the claim's pinned evidence and its argument, so the user can see why the Subject was connected to this person. Editing pins or the argument is not this spike. **Reopened 2026-10-29:** Identity Claims no longer carry pins ([`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5); the review is replaced by a view of how the person's records connect ([`evidence-graph-comparison.md`](evidence-graph-comparison.md), slice 7).
 
 ## Not this spike
 
 - **Event and Place pages in the new layout:** later; the provenance sheet is built to be reused (R-13). They keep the Why accordion until then; it is deleted when they adopt the sheet.
 - **Reconciliation Claims** (manual reconciliation) in the provenance sheet: later; the sheet leaves room (R-10).
-- **Editing an identity claim's pins or argument:** later; this spike is view only (R-40).
+- **Editing an identity claim's argument:** later; this spike is view only (R-40). Pins are gone ([`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5).
+- **How the records connect on Event and Place pages, Promote ranking with the new comparison, and a research log:** later ([`evidence-graph-comparison.md`](evidence-graph-comparison.md#later)).
 - **Weak-claim alerts and the claim review queue:** stay parked in [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md).
 - **Event depictions:** Spike 14 batch 1 adds `event_picture` and the Event page's gallery ([Spike 14](../spike-14/deployment-plan.md)); the Timeline keeps its placeholder (R-26) until this spike chooses to fill it.
 - **Unpromoted Subjects anywhere on the page:** refused (R-2).

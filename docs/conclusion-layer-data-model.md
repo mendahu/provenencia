@@ -230,7 +230,7 @@ Correlating the members of a handle happens at two levels, and they answer diffe
 
 A conflict on one Property has two possible stories. The records are about the same person and one of them is wrong; that is a Reconciliation Claim on that Property. Or the records are about different people; that is a rejected Identity Claim. The entity lens is what tells them apart: a subject that agrees on most things with one conflict points to the first, one that conflicts on what identifies a person points to the second.
 
-The entity comparison is **not designed yet**. It must count conflicts as well as agreements, weigh a link like a nickname alone (Bob for Robert) as weak against one carried by names, family and places together, and show its reasons as sentences. A Reconciliation Claim that settles a conflict does not raise it: the conflict stays visible, marked as settled by that claim. Promote's alignment score (§5.3) is not this comparison and is not to be extended into it.
+**The entity comparison compares a handle's records pairwise** (decided 2026-10-29): it compares the members in two of the handle's Evidence graphs on every shared fact and on relationships whose neighbors are filed on one handle, and the handle's page shows the graphs and the links between them, computed on read and never stored. A record linking to nothing, or two groups of records that do not connect, is what the entity lens surfaces. Its detailed rules are still open ([Spike 13's design](deployment-plan/spike-13/evidence-graph-comparison.md)). It must count conflicts as well as agreements, weigh a link like a nickname alone (Bob for Robert) as weak against one carried by names, family and places together, and show its reasons as sentences. A Reconciliation Claim that settles a conflict does not raise it: the conflict stays visible, marked as settled by that claim. Promote's alignment score (§5.3) is not this comparison and is not to be extended into it.
 
 ## 5.2 When a member leaves
 
@@ -253,7 +253,7 @@ Promote is a quick filing action: the researcher files an Evidence graph's Subje
 
 A skipped row is not stored. Opening Promote again proposes it afresh.
 
-**Deprecated:** the alignment score and its band (strong, medium, weak, no match) were built to propose a target. They stay on the row only as a signal about the proposal until the entity comparison (§5.1) replaces them. The row's evidence sheet and its pin toggles are dropped with the pins.
+**The score ranks, unseen** (decided 2026-10-29): the alignment score still chooses and orders each row's suggestions, but the page shows no band (strong, medium, weak, no match), Contested mark or reason. It is not the measure of whether a member belongs (§5.1), and replacing it waits until the entity comparison has proven itself. The row's evidence sheet and its pin toggles are dropped with the pins.
 
 ## 5.4 Bridges and the rest of the graph
 
@@ -702,7 +702,7 @@ Conclusion
 1. **Gazetteer runtime** — which editioned packs to ship or download (WOF vs GeoNames SQLite, Newberry, OHM extracts), license and ingest-as-Source UX. Product, not a third identity model.
 2. **Place containment** — answered for Spike 9 by place relationships (`part_of`). Several Locations on one Event that share a containment graph fold into one display chain; unrealted Places stay competing values. Optional concluded `contained_in` vs search-only gazetteer parents, and any place-nature vocabulary, remain open for later. **Convention:** do not infer containment from two Locations alone — only from filed `part_of` (or a later gazetteer write of the same).
 3. **Relationship endpoints** — seeded `participant` is a single Property; multi-party relationships may need repeated Properties, ordered parts, or a later shape. Out of scope for this Place pass.
-4. **The entity comparison** (§5.1) — how a member is compared with the rest of its handle, the words its result uses, and where it shows. To be designed new, not ported from Promote's alignment score.
+4. **The entity comparison** (§5.1) — pairwise between a handle's Evidence graphs, computed, shown on the handle's page (Spike 13 slice 7). Which Properties count and how a link's strength is expressed are open there. Not ported from Promote's alignment score.
 5. **Reconciliation exhibit** (§7.1) — Identity Claims dropped their Observation pins (§5). Reconciliation Claims are not built yet. Whether one keeps an exhibit list, names only the Observation whose value it concludes, or holds neither is open. A memberless handle (§8.3) has no members to compare, so its exhibit may be the only link to evidence.
 
 ---

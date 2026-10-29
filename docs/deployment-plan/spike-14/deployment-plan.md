@@ -20,7 +20,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 
 **Batch 2 — Matching calibration:**
 
-10. **Thin name plus kinship is Weak.** Promoting a Source person recorded only as a short given name who shares a lined-up grandparent (or other non-birth/death link) with a matching neighbor reaches at least the Weak band — not "Little evidence" for that shape.
+10. **Thin name plus kinship is Weak.** Promoting a Source person recorded only as a short given name who shares a lined-up grandparent (or other non-birth/death link) with a matching neighbor reaches at least the Weak band — not "Little evidence" for that shape. (Since 2026-10-29 the page shows no band; the calibration test checks this.)
 
 **Batch 1 — Event and Place pictures** (new catalogs; working rule "New seeds reach new catalogs only"):
 

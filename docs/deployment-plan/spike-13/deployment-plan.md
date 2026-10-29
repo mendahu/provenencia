@@ -14,7 +14,7 @@ Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
 
 **Open.** Per-PR status is the [PR map](#pr-map).
 
-> **Goal of this spike:** from any Person page a researcher can read the person's facts with their provenance, see and walk their nuclear family and their life's events, browse their likenesses, and see, review and remove the claims that make them up.
+> **Goal of this spike:** from any Person page a researcher can read the person's facts with their provenance, see and walk their nuclear family and their life's events, browse their likenesses, see and remove the claims that make them up, and see how the person's records connect.
 
 ## Goal (dogfood bar)
 
@@ -26,11 +26,12 @@ Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
 4. **A life in order.** The Timeline lists every event the person took part in, earliest first, each with its name, date, place, the person's role, a depiction placeholder, and the other canonical participants with their roles; undated events sit in an Undated group at the end. Every event and participant opens its page.
 5. **Likenesses.** The Gallery shows every likeness; one opens a viewer that steps through them; from the gallery or viewer a likeness can be set as the portrait or opened at its Citation.
 6. **Sources.** The Sources section lists every identity claim, grouped under its Source (title, type, date) and ordered by Source title, with each claim's Subject card; a census contributing two claims from two graphs shows one group. Each Source opens its page.
-7. **Claims.** Removing a claim un-promotes the Subject; removing the last one warns that the person will be deleted, and proceeding lands on the Persons list. (A claim's review waits on [open question 9](#open-questions); 2026-10-29.)
+7. **Claims.** Removing a claim un-promotes the Subject; removing the last one warns that the person will be deleted, and proceeding lands on the Persons list. (A claim's review became bar 10 on 2026-10-29.)
 8. **Matching is unchanged.** Promote proposals are the same as before the spike: a shared parent is not sibling evidence ([R-18a](person-detail.md#2-family)).
-9. **Promote only files.** On a Source of 100 new people, Promote asks for a target per row and nothing else: no evidence sheet, no pins, no confidence or argument. Done files the claims and connections, and an existing project opens with no `identity_claim_evidence` table. (Added 2026-10-29 for slice 0.)
+9. **Promote only files.** On a Source of 100 new people, Promote asks for a target per row and nothing else: no evidence sheet, no pins, no confidence or argument, and no strong, medium or weak band (the score still ranks the suggestions). Done files the claims and connections, and an existing project opens with no `identity_claim_evidence` table. (Added 2026-10-29 for slice 0.)
+10. **How the records connect.** The Person page shows the person's Evidence graphs and the links between them: a link opens what the two records agree and conflict on, a record that links to no other stands apart, and two groups of records that do not connect show as two groups. (Added 2026-10-29 for slice 7; replaces the claim review.)
 
-**Scale** (slice 0, 2026-10-29): Spike 12's — a Source of 100 new people on one Promote page, the 41-Subject obituary, a project whose every accepted claim has pins. Removal only takes work away: Done writes one claim per filed row and its bridges, and no evidence read runs before it.
+**Scale** (slice 0, 2026-10-29): Spike 12's — a Source of 100 new people on one Promote page, the 41-Subject obituary, a project whose every accepted claim has pins. Removal only takes work away: Done writes one claim per filed row and its bridges, and no evidence read runs before it. **Slice 7:** a person with 5 – 20 Evidence graphs is typical and 50 is the budget (1,225 pair comparisons per read).
 
 ## Where the notes went
 
@@ -45,7 +46,7 @@ Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
 | R-33 – R-37 Sources | S13-01, S13-16 | S13-D6 |
 | R-35 Source date; [`source-provenance-date.md`](source-provenance-date.md) (was `ideas/`) | S13-20, S13-21, S13-22 | S13-D8, S13-D9 |
 | R-38, R-39 remove a claim, last claim deletes the person | S13-08, S13-17 | S13-D6 |
-| R-40 claim review | S13-18 (S13-07 descoped 2026-10-29; waits on open question 9) | S13-D7 |
+| R-40 claim review, replaced 2026-10-29 by how a person's records connect ([`evidence-graph-comparison.md`](evidence-graph-comparison.md)) | S13-26, S13-27, S13-28 (S13-07, S13-18 descoped) | S13-D10 (S13-D7 descoped) |
 
 **Back in the ideas folder** — [`ideas/kinship-view.md`](../../ideas/kinship-view.md) keeps kinship beyond the nuclear family, conflicts between shapes, a project's own patterns, citing an implied fact on a tree, and sibling evidence for matching (R-18a). [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md) keeps weak-claim alerts, the review queue, re-pinning and claim editing. The rest of [person-detail.md § Not this spike](person-detail.md#not-this-spike).
 
@@ -63,21 +64,27 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 ### Slice 0 — Removing Observation pins
 
 - **Pins leave in three PRs, the client first** (user, 2026-10-29). S13-23 stops the Mac app asking for or sending pins, confidence and argument, so those wire fields fall idle; S13-24 deletes the engine that offers and writes pins and reserves its wire; S13-25 drops the table. Each step leaves a working app, and no step keeps a shim for the one before. Binds S13-23 – S13-25.
-- **No brief for the removal.** The Promote row's assessment column keeps its band, Contested mark and reason as they look today; it stops being a button and loses its chevron. Nothing new is drawn. Binds S13-23.
+- **No brief for the removal.** The Promote row's assessment column goes: its band, Contested mark, reason and chevron are not shown, and the target menu, connection subrows, row notes (conflicting decisions, possible duplicates) and the Updated caption stay as they look today. Nothing new is drawn. Binds S13-23.
 - **Promote files accepted claims and nothing else** ([conclusion §5.3](../../conclusion-layer-data-model.md#53-promote)). Done sends no pin ids, `default_pins` false, no confidence and no argument; every filed row is accepted. The Identity Claim's `confidence_grade_id` and `argument` columns stay. Binds S13-23, S13-24.
-- **The band stays, deprecated, and nothing new builds on it.** Graph alignment, its band and its Contested mark remain Promote's proposal. No PR in Spikes 12 – 14 types, extends or explains the band further. Its replacement, the comparison of a member against its handle ([conclusion §5.1](../../conclusion-layer-data-model.md#51-two-lenses)), is not in this spike. Binds S13-23 – S13-25 and Spike 12's S12-48.
+- **The score ranks, unseen** (user, 2026-10-29). Graph alignment's scoring keeps choosing and ordering Promote's suggestions (the shortlist gate, the accept bar, settling), but the page shows no band, Contested mark or reason. No PR in Spikes 12 – 14 types, extends or explains the band further. Replacing the scoring waits until the comparison of slice 7 has proven itself; Promote could then rank with it. Binds S13-23, S13-24 and Spike 12's S12-41 and S12-48.
 - **Audit history keeps its pin rows.** The migration drops the table without recording a removal per pin. `audit_changes` and `audit_transaction_scopes` rows already written for `identity_claim_evidence` stay untouched. Nothing reads audit rows back by entity type (only `sources/notes.go` reads `source_note`), so no retired-type handling is built; the effects registry entry leaves with the `catalogmodel` table, since its init refuses an entry for an unknown table. Binds S13-25.
 - **Spike 12's Promote PRs build on the removal.** S12-43 and S12-44 change `promotealign`, and S12-32 rewrites `ApplyPromoteGraphAlignment`'s handler and Swift mapping and deletes `promoteSubject`; all three land after S13-24. S12-48 changes the Promote rows and lands after S13-23. Their scopes no longer mention evidence reads, pins or the sheet. S12-31 (synchronized folders) and S13-23 both touch `project.pbxproj`: whichever lands second rebases, and S13-23 removes the `PromoteEvidence*` file entries only if S12-31 has not landed. Spike 14's S14-02 is re-planned after S13-23, which deletes the Promote files it was to rename. Binds S13-23, S13-24.
-- **Claim review waits.** S13-07 is descoped: there are no stored pins for it to read back. S13-18 and brief S13-D7 wait on open question 9.
+- **Claim review becomes how the records connect** (user, 2026-10-29). S13-07 is descoped: there are no stored pins for it to read back. S13-18 and brief S13-D7 are descoped: the Person page shows the person's Evidence graphs and the links between them instead (slice 7, [`evidence-graph-comparison.md`](evidence-graph-comparison.md)).
 - **Each removal PR updates what it makes false.** Each PR's Definition of done `rg`s the names it deletes across `.agents/skills`, `.cursor/rules` and `docs/`.
   - S13-23: [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §3 and §8 (the page's draft) and line 7's "Until the code catches up"; [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) (binding order's "sheet is to be removed"); [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md) (its example key `promote.sheet.subtitle.*`); [`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md) line 80 (share phrases, `recordedDirect`, the sheet's caption); the ideas [`term-management.md`](../../ideas/term-management.md), [`international-names.md`](../../ideas/international-names.md) and [`binding-order-editing.md`](../../ideas/binding-order-editing.md), which describe the sheet as current.
-  - S13-24: [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md) in full (the description's package list, the claim evidence lines, `Reader.Relationships`, the five Swift enums, the `core/claimevidence` bullet and its test command); [`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md) line 58 (`claimevidence`'s `seedOrder`); `.cursor/rules/match-rules.mdc` (its `core/claimevidence/**` glob); the path lists in [`ship-pr`](../../../.agents/skills/ship-pr/SKILL.md) and [`review-pr/lenses/security.md`](../../../.agents/skills/review-pr/lenses/security.md); [`matching-model.md`](../../matching-model.md) (the `evidence` section and its knob rows); [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §4 and §9; [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) (the Promote package row); the claim evidence mentions in the archived [`comparison-layers.md`](../archive/spike-11/comparison-layers.md).
+  - S13-24: [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md) in full (the description's package list, the claim evidence lines, `Reader.Relationships`, the five Swift enums, the `core/claimevidence` bullet, which now says the per-Property router moved to `subjectcompare`, and its test command); [`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md) line 58 (`claimevidence`'s `seedOrder`); `.cursor/rules/match-rules.mdc` (its `core/claimevidence/**` glob); the path lists in [`ship-pr`](../../../.agents/skills/ship-pr/SKILL.md) and [`review-pr/lenses/security.md`](../../../.agents/skills/review-pr/lenses/security.md); [`matching-model.md`](../../matching-model.md) (the `evidence` section and its knob rows); [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §4 and §9; [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) (the Promote package row); the claim evidence mentions in the archived [`comparison-layers.md`](../archive/spike-11/comparison-layers.md).
   - S13-25: [`catalog-deletes.md`](../../catalog-deletes.md); [`audit-revision-history.md`](../../audit-revision-history.md) (the handle scope's "evidence pins"); [`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md); [`add-audit-scope`](../../../.agents/skills/add-audit-scope/SKILL.md); `.cursor/rules/catalog-audit.mdc` ("claims, pins, promote"); [conclusion §5](../../conclusion-layer-data-model.md#5-membership-evidence)'s "planned work" sentence and §10 invariant 20 in the past tense.
+
+### Slice 7 — How a person's records connect
+
+- **Links between Evidence graphs are computed, never stored** (user, 2026-10-29). A node is an Evidence graph holding an accepted member of the person; a link compares the person's two members in two graphs. Nothing is added to the catalog: no researcher-chosen links and no research log. Each Identity Claim keeps its status and argument. Binds S13-26 – S13-28.
+- **A new comparison, not the band.** The comparison is a new pure package built on value compare and property compare (layers 1 and 2) and on layer 3's per-Property router: `claimevidence.routeOf` and its section compare move into `subjectcompare` in S13-24 as an exported compare over every Property both sides record, with no points (leads, pools, periods and the now-exported lifespan, and any other Property on its own), so graph alignment's weighted compare and this comparison share one router. Each Subject's comparable values come from one shared loader (S13-29); it reads no graph alignment weight, band or accept bar, and Promote keeps its own scoring (working rule "The score ranks, unseen"). Relationships compare by whether the neighbors are filed on the same handle, read from the canonical graph, not by segment compare's points. Binds S13-26.
+- **Each PR updates what it makes false.** S13-26: [conclusion §5.1](../../conclusion-layer-data-model.md#51-two-lenses) and §13 item 4 (the comparison is designed), [`matching-model.md`](../../matching-model.md) and [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md) (a consumer of layers 1 and 2 that is not matching), [`research-judgment-model.md`](../../research-judgment-model.md) §5 if strength reads credibility. Binds S13-26.
 
 ### Engine
 
 - **Each section reads its own query.** The Person page is several reads, each with its own RPC and `CatalogQueryKey`, so a section loads and refreshes on its own: today's `GetConclusionDetail` (header, Vitals, Gallery) plus one each for claims (S13-01), family (S13-04) and timeline (S13-05). `GetConclusionDetail` does not grow the other sections ([`add-workspace-place`](../../../.agents/skills/add-workspace-place/SKILL.md)). The three new reads are composed in one package, `core/database/persondetail` (beside `conclusiondetails`); handlers stay thin ([`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md)). Binds S13-01, S13-04, S13-05.
-- **One invalidation rule for person-section keys.** Today `CatalogQueryRegistry.invalidations(for:project:)` hand-writes the `touchedHandles` → `.conclusionDetail` fan-out. S13-01 turns that into a descriptor entry with its own `CatalogQueryFollows` selector (per-handle keys refreshed for every touched handle) and declares its key with it; S13-04 and S13-05 add one entry each. A relative's or co-participant's change touches their id, not this person's, so the family and timeline keys also refresh on any promote or unpromote effect (`.allCached` for that kind) unless the plan finds a keyed effect. Binds S13-01, S13-04, S13-05.
+- **One invalidation rule for person-section keys.** Today `CatalogQueryRegistry.invalidations(for:project:)` hand-writes the `touchedHandles` → `.conclusionDetail` fan-out. S13-01 turns that into a descriptor entry with its own `CatalogQueryFollows` selector (per-handle keys refreshed for every touched handle) and declares its key with it; S13-04 and S13-05 add one entry each. A relative's or co-participant's change touches their id, not this person's, so the family, timeline and record-links keys also refresh on any promote or unpromote effect (`.allCached` for that kind) unless the plan finds a keyed effect. Binds S13-01, S13-04, S13-05, S13-27.
 - **One person header for every tile.** Family tiles and Timeline participants carry `PersonHeader` (`conclusionheaders.PersonsByIDs`), which already holds name, birth and death `LifeFacts` and likeness, and whose package doc already names "later tree nodes". S13-02 adds the gender and sex terms to it; no new summary type. `PersonsByIDs` returns rows in title order, so S13-04 and S13-05 read through `conclusionheaders.ByIDs` (S11-40), which finds a header by id, instead of re-keying. Binds S13-02, S13-04, S13-05.
 - **Canonical only, filtered in Go** (R-2). Reads return canonical entities with at least one accepted member; unpromoted Subjects never cross the wire. One `graphcache` `Node` accepted-members helper (S13-01) replaces the private copies `promotealign.acceptedClaims` and `conclusiondetails.acceptedMembers`, and every reader uses it. Binds S13-01, S13-04, S13-05.
 - **Siblings are page-only** (R-18a). The shared-parent sibling derivation lives in `core/kinship` but is **not** in the pattern set `canonlinks.Reader.For` gives matching; `promotealign` and S11-39's goldens see no change, and a test proves it. The Family read asks for siblings explicitly. S13-03 updates [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md) (which today says a sibling pattern "changes `Derive`") with where page-only derivations go. Binds S13-03, S13-04.
@@ -103,8 +110,8 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 
 | PR | Title | Slice | Scope | Brief | Depends on | Plan | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| S13-23 | Promote stops asking for pins | 0 | Swift, plus the Swift-parity rows in `api/ffi/swift_vocabulary_test.go`: the evidence sheet and everything only it uses (board, cards, display, wire enums, share wording, grade picker read, store methods, batch-row pin and claim fields) go; the assessment column stops being a button; Done sends no pins, confidence or argument | — | — | — | Scoped |
-| S13-24 | The pin engine goes | 0 | Go: `GetPromoteClaimEvidence` and `ListClaimConfidenceGrades` and their wire, Apply's pin and claim-field inputs (reserved), `promotealign` evidence and pins, `core/claimevidence`, the registry's `evidence` section, Promote's pin writes and backfill, and the helpers only they call; proto regenerated | — | S13-23 | — | Scoped |
+| S13-23 | Promote stops asking for pins | 0 | Swift, plus the Swift-parity rows in `api/ffi/swift_vocabulary_test.go`: the evidence sheet and everything only it uses (board, cards, display, wire enums, share wording, grade picker read, store methods, batch-row pin and claim fields) go; the assessment column (band, Contested, reason) goes; Done sends no pins, confidence or argument | — | — | — | Scoped |
+| S13-24 | The pin engine goes | 0 | Go: `GetPromoteClaimEvidence` and `ListClaimConfidenceGrades` and their wire, Apply's pin and claim-field inputs and the proposal row's display-only fields (reserved), `promotealign` evidence and pins, `core/claimevidence`, the registry's `evidence` section, Promote's pin writes and backfill, and the helpers only they call; proto regenerated | — | S13-23 | — | Scoped |
 | S13-25 | The pin table goes | 0 | Migration drops `identity_claim_evidence`; catalog model, `identityclaims` pins, the delete facet and `ReleaseClaim`'s pin step, the effects entry; audit history keeps its old rows | — | S13-24 | — | Scoped |
 | S13-09 | Sections slot on the Conclusion page | 1 | Preparatory: `ConclusionDetailPage` gains a sections slot; Person, Event and Place pass one section; no visible change | — | — | [S13-09](prs/S13-09-sections-slot.md) | Planned |
 | S13-10 | Header and sections | 1 | The fixed header, the section switcher, and Vitals as the first section (today's rows) | S13-D1 | S13-09 | — | Scoped |
@@ -125,7 +132,11 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 | S13-17 | Remove a claim | 6 | Remove on a claim, the last-claim warning, and landing on the Persons list | S13-D6 | S13-08, S13-16 | — | Scoped |
 | S13-20 | Source date engine | 6 | An optional publication date on `sources` as a `date_values` reference (migration, model, read and write RPCs); `ListPersonClaims` groups carry it | — | S13-01 | — | Scoped |
 | S13-07 | Stored claim read | 7 | Identity Claims have no stored pins to read back (conclusion §5) | — | — | — | Descoped (2026-10-29) → open question 9 |
-| S13-18 | Claim review | 7 | A read-only view of a claim; what it shows is open question 9 | S13-D7 | S13-16, open question 9 | — | Blocked — on open question 9 |
+| S13-18 | Claim review | 7 | Replaced by slice 7's view of how the records connect | — | — | — | Descoped (2026-10-29) → S13-26 – S13-28 |
+| S13-26 | Comparing two of a person's records | 7 | A pure package: two members of one handle compared on every Property both record (layers 1 and 2, through layer 3's router) and on relationships whose neighbors are filed on one handle; returns agreements and conflicts and a strength | — | S13-24 | — | Scoped |
+| S13-29 | One loader for a Subject's comparable values | 7 | Preparatory: `promotealign`'s per-graph layer loader (values with lifespans, bridges, metas) moves into a shared `core/database` package with one memo key; Promote and `persondetail` read it; Go only | — | S13-24 | — | Scoped |
+| S13-27 | Person record links read | 7 | `GetPersonRecordLinks` RPC in `persondetail`: the person's Evidence graphs (Source title, type) and a link for each pair, from S13-26; its key joins the per-person invalidation spec | — | S13-01, S13-26, S13-29 | — | Scoped |
+| S13-28 | How the records connect | 7 | The view of the person's Evidence graphs and their links on the Person page, with what each link agrees and conflicts on | S13-D10 | S13-16, S13-27 | — | Scoped |
 | S13-21 | Source date on the Source page | 8 | Set and show the Source date where the board puts it | S13-D8 | S13-20 | — | Scoped |
 | S13-22 | Source date on the Sources list | 8 | Each Sources list row shows the date; the list sorts by it, undated last | S13-D9 | S13-20 | — | Scoped |
 | S13-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
@@ -142,7 +153,8 @@ Each brief is written just before the PR it gates, its board agreed, and that PR
 | S13-D4 | Timeline section | **S13-13** | Reuses S13-D3's tile; depiction placeholder; Undated group |
 | S13-D5 | Gallery section and likeness viewer | **S13-14**, **S13-15** | Viewer options: expand, slideshow (R-30) |
 | S13-D6 | Sources section | **S13-16**, **S13-17** | Source groups, claim cards, Remove and the last-claim warning |
-| S13-D7 | Claim review sheet | **S13-18** | Read only. Waits on open question 9; the Promote evidence sheet it was to reuse is removed in S13-23 |
+| S13-D7 | Claim review sheet | — | **Descoped (2026-10-29)** with S13-18 |
+| S13-D10 | Person page: how the records connect | **S13-28** | The person's Evidence graphs as nodes and their links, a link's agreements and conflicts, a record that stands apart, two groups that do not connect. Where it sits (inside Sources or beside it) is the board's call |
 | S13-D8 | Source page: the Source date | **S13-21** | Where the date lives so it reads as the Source's own date, not another metadata row ([UI](source-provenance-date.md#what-this-idea-still-owns)) |
 | S13-D9 | Sources list: the Source date | **S13-22** | The date on each row and the sort; beside S12-D5's graph buttons |
 
@@ -193,8 +205,12 @@ SLICE 6 — Sources
                S13-17  Remove a claim
   Check: bar 6 and the removal half of 7
 
-SLICE 7 — Claim review   (waits on open question 9)
-  ✎ S13-D7 ──▶ S13-18  Claim review
+SLICE 7 — How a person's records connect
+  S13-26  Comparing two of a person's records   (engine, any time)
+  S13-29  One loader for a Subject's comparable values   (preparatory)
+  S13-27  Person record links read
+  ✎ S13-D10 ──▶ S13-28  How the records connect
+  Check: bar 10
 
 SLICE 8 — Source date on the Source pages   (any time after S13-20)
   ✎ S13-D8 ──▶ S13-21  Source date on the Source page
@@ -222,7 +238,8 @@ S13-09 ──▶ S13-10 ──┬──▶ S13-11 ◀── S13-06
                     ├──▶ S13-12
                     ├──▶ S13-14 ──▶ S13-15
                     └──▶ S13-16 ──┬──▶ S13-17 ◀── S13-08
-                                  └──▶ S13-18 ◀── open question 9
+                                  └──▶ S13-28 ◀── S13-27 ◀── S13-26, S13-29, S13-01
+S13-24 ──▶ S13-26, S13-29
 each brief S13-Dn ──▶ the PR(s) it gates; slice n's chrome ──▶ slice n+1's brief (1 … 7)
 S13-01 ──▶ S13-20 ──┬──▶ S13-21
                     ├──▶ S13-22
@@ -244,8 +261,8 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Chrome scopes ar
 - **The share wording:** `ConnectionSentenceRegistry`'s `KindEntry.share`, `ShareInput`, `share(_:similar:)`, `seededShare`, `namedShare` and its initializer from `CatalogClaimEvidenceRelationship`; `L10n.EvidenceGraph.share*` and the `shareHeader*` keys; `L10n.PropertyTerm.Wording`'s `share`, `shareSimilar`, `shareOtherEnd`, `shareOtherEndSimilar` and `recordedDirect`; the share cases in `ConnectionSentenceRegistryTests`.
 - **The grade picker's read:** `PromoteModel.grades` and `confidenceKey`, `PromoteView`'s query, the Promote place's warm of `.confidenceGradesList` in `PlaceRegistry`, `CatalogQueryKey.confidenceGradesList` and its `CatalogQueryRegistry` entry, and `listClaimConfidenceGrades` in `GenealogyStore`, `GoStore` and `FakeStore`.
 - **The store and wire mapping:** `getPromoteClaimEvidence` in `GenealogyStore`, `GoStore` (with every evidence mapper), `FakeStore` and the `OnboardingModelTests` conformer; `CoreMethod.getPromoteClaimEvidence`; `CatalogPromoteBatchRow`'s `confidenceGradeID`, `argument`, `defaultPins`, `pinIDs` and `CatalogPromoteBatchWritten.pins`, and their assignments in `GoStore.applyPromoteGraphAlignment`. Done sends none of them, which Go reads as no pins (`ResolvePins` skips a row with neither).
-- **The column:** `PromoteView`'s assessment column shows the band, Contested mark and reason as today but is not a button; its accessibility label is reworded as a readout (`promote.row.evidenceFor`, `promote.row.assessmentContested`). `PromoteReadout`'s doc comments drop the sheet title as a caller, and its views stay feature-private or fold into `PromoteView`.
-- **Strings and tests:** the `promote.sheet.*` and other removed keys from `Localizable.xcstrings`; the evidence tests; the matching rows and the "every term a sentence shares has its share phrases" subtest in `api/ffi/swift_vocabulary_test.go`, the only Go edit.
+- **The column:** `PromoteView`'s assessment column goes, with `PromoteReadoutBadges` and the band and Contested display. `PromoteFlow.draftTarget` still reads `assessment` and the `taken` reason to decide what a row starts on until S13-24 moves that rule into Go. The Updated caption shows move reasons only (`Row.captionReason` reads `move_reason`), so the row's own and the alternatives' `reason` stop being read. The target menu, connection subrows, row notes and `PromoteUpdatedCaption` stay; the caption's comments drop the sheet as a caller.
+- **Strings and tests:** the `promote.sheet.*` keys and the keys the column alone read (`promote.assessment.*`, `assessment.chosenNone`, `row.contested`, `row.assessmentContested`, `row.evidenceFor`, `page.column.assessment`, and the `reason.*` keys off the caption path) from `Localizable.xcstrings`; the assessment and contested cases in `PromoteFlowTests` and `PromoteModelTests` (the draft cases stay until S13-24); the evidence tests; the matching rows and the "every term a sentence shares has its share phrases" subtest in `api/ffi/swift_vocabulary_test.go`, the only Go edit.
 - **The project file:** the `PromoteEvidence*` entries in `project.pbxproj` if S12-31 has not landed.
 
 **Not this PR.** The Go evidence engine and wire (S13-24); the table (S13-25); any change to proposals or to the band.
@@ -257,11 +274,13 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Chrome scopes ar
 **Ships.**
 - **The RPCs:** `GetPromoteClaimEvidence` and `ListClaimConfidenceGrades` (handlers, dispatch entries, Methods reserved in `engine.proto`, messages deleted). The grades vocabulary table and its seed stay; the RPC comes back with a claim editor that reads it.
 - **Apply's inputs:** on `ApplyPromoteGraphAlignmentRow`, `pin_ids`, `default_pins`, `confidence_grade_id` and `argument` are reserved and the result's `pins` count goes; `core/database/promote` loses `BatchRow.ConfidenceGradeID`, `Argument`, their validation, `Written.Pins`, its pin sets and the backfill onto members' claims, so Done files accepted claims and bridges only.
-- **The evidence engine:** `promotealign` loses `evidence.go` (with `acceptedClaims`, which has no other caller), `pins.go` (`PinOffers`, `ResolvePins`) and `values.go`; `core/claimevidence` goes; the registry's `evidence` section goes with its knob rows and guard entries; and helpers whose only caller was the evidence read go: `canonlinks.Reader.Relationships`, `kinship.Recording.Shown`, `graphcache.Vocabulary.BindingOrder`.
+- **The evidence engine:** `promotealign` loses `evidence.go` (with `acceptedClaims`, which has no other caller), `pins.go` (`PinOffers`, `ResolvePins`) and `values.go`. `core/claimevidence`'s per-Property router (`routeOf`, the section compare) moves into `subjectcompare` as an exported compare over every Property both sides record, with `lifespan` exported, and its tests move with it; the rest of `core/claimevidence` (`Build`, relationships, pins, `Rules.Checked`, `ByEye`, `Defining`) goes; the registry's `evidence` section goes with its knob rows and guard entries; and helpers whose only caller was the evidence read go: `canonlinks.Reader.Relationships`, `kinship.Recording.Shown`, `graphcache.Vocabulary.BindingOrder`.
 - **Tests:** the evidence budgets in `promotealign/perf_test.go`, `TestEvidenceWarmIssuesNoQuery` and the evidence calls in `TestMemoFollowsCommit` and `TestMemoIsNotMutated`, the `membersMemoKey` snapshot in `export_test.go`, `matchregistry/evidence_test.go`, `promote/pins_test.go`, and the pin parts of `batch_test.go`, `bridges_test.go` and `api/ffi/handlers/promote_batch_test.go`.
-- The proto is regenerated; Swift's generated file changes and nothing else in Swift.
+- **What a row starts on is Go's** (audit 2 B-26, moved here from Spike 12): the proposal's `target` says whether a row starts on a record, a weak draft on its best match, or unset, and Swift's `PromoteFlow.draftTarget` rule goes with its draft tests.
+- **The display-only wire goes:** `PromoteGraphAlignmentRow`'s `score`, `assessment`, `contested`, `reason`, `reason_property_key`, `reason_property_origin` and `PromoteGraphAlignmentAlternative`'s `score`, `assessment`, `reason` and `reason_property_*` are reserved; `graphalign` drops `Flags.Contested` and the row-level comparisons it was built from unless `move` reads them; the `swift_vocabulary_test.go` "promote reasons" row shrinks to the move codes.
+- The proto is regenerated; Swift's generated file changes, and the only other Swift edit is the draft rule above.
 
-Go only.
+Go, plus deleting Swift's draft rule.
 **Not this PR.** The table, `identityclaims` pins and the delete facet (S13-25).
 **Check.** `go test ./...`; a Promote Apply test files claims and bridges and calls no pin writer; `TestLargeSourceBudgets` without its evidence subtests; `TestKnobInventoryMatchesRegistry` with the evidence rows gone; `rg 'claimevidence|ResolvePins|PinOffers|acceptedClaims' core api` finds nothing.
 **Context.** Working rules "Pins leave in three PRs", "Each removal PR updates what it makes false"; what S11-19, S11-25 and S11-40 built; `add-ffi-handler` (reserving Methods and fields), `add-match-rule`. S12-32, S12-43 and S12-44 wait on this PR.
@@ -421,9 +440,37 @@ Go only.
 
 #### S13-18 — Claim review
 
-**Blocked — on open question 9.** It was the read-only sheet from S13-D7 showing a claim's pinned evidence and argument, read from S13-07. With pins gone, what it shows (status and argument alone, or the member comparison of [conclusion §5.1](../../conclusion-layer-data-model.md#51-two-lenses)) is open.
-**Not this PR.** Editing (R-40).
-**Context.** R-40; working rule "Claim review waits".
+**Descoped (2026-10-29).** Replaced by slice 7: the Person page shows the person's Evidence graphs and the links between them (working rule "Claim review becomes how the records connect").
+
+### Slice 7 — How a person's records connect
+
+#### S13-26 — Comparing two of a person's records
+
+**Ships.** A pure package (no `core/database` import) that compares two Subjects that are members of one handle: every Property both record, through the `subjectcompare` per-Property compare S13-24 moved there (pools, periods, lifespan, and any other Property on its own), and every relationship whose neighbor on each side is filed on the same handle (read as input, not walked). It returns each agreement and conflict with the facts and the Property or relationship behind it, and a strength read from that list as open questions 10 and 11 settle. Table tests over the obituary and census fixtures, including the "Robert, Air Force" against "Bob" case.
+**Not this PR.** The read and RPC (S13-27); Source quality and independence unless open question 12 brings them in; any change to Promote.
+**Check.** `go test` on the package: a pair that agrees on name, birth and father reads stronger than one that shares only a nickname; a conflicting birth year shows as a conflict beside the agreements.
+**Context.** [`evidence-graph-comparison.md`](evidence-graph-comparison.md); working rules "Links between Evidence graphs are computed, never stored", "A new comparison, not the band"; `core/propertycompare`, `core/subjectcompare` (pools, periods, lifespan), `core/subjectprofile` (how a Subject's values are built); [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md) for layer use. Blocked on open questions 10 and 11 when planned.
+
+#### S13-29 — One loader for a Subject's comparable values
+
+**Ships.** A preparatory move: `promotealign`'s per-Evidence-graph layer loader (`loadLayer`, `loadLayerMemo`, `loadLayerBridges`, `layerValues`, `lifeEvent`, `decode`, `loadMetas`), which builds each primary Subject's values through `subjectprofile.ForSubject` with lifespans and its bridges as `kinship.Edge`s, moves into a shared `core/database` package with one memo key. Promote reads it from there; no behavior change. Go only.
+**Not this PR.** The record-links read (S13-27); profile memos (Spike 12's S12-43).
+**Check.** `promotealign` tests and `TestLargeSourceBudgets` unchanged; `PROVENENCIA_GRAPH_VERIFY=1` passes.
+**Context.** Working rule "A new comparison, not the band"; `core/database/promotealign/layer.go`; `use-catalog-session`. Spike 12's S12-43 changes `promotealign`'s profile loading too: whichever lands second rebases (named in both maps).
+
+#### S13-27 — Person record links read
+
+**Ships.** `GetPersonRecordLinks(personId)` in `core/database/persondetail`: the person's Evidence graphs that hold an accepted member (graph id and name, Source id, title and type), and for each pair a link from S13-26 with its agreements, conflicts and strength. Members and graphs come from the `graphcache` accepted-members helper (S13-01); each member's values and bridges from the shared loader (S13-29); neighbors' handles from the canonical graph. Its key joins the per-person invalidation spec, refreshed on the person's touched handles and, like the family and timeline keys, on any promote or unpromote effect.
+**Not this PR.** The view (S13-28); Event and Place.
+**Check.** A handler test: three graphs where two share a matching birth and the third shares only a nickname give one strong link and two weak ones; a graph whose member conflicts on everything stands apart. A registry test: promoting the father in another graph refreshes the son's record-links key. Fan-out at Scale: 50 graphs give 1,225 pair comparisons, within a budget subtest.
+**Context.** [`evidence-graph-comparison.md`](evidence-graph-comparison.md) § Scale; working rules "Each section reads its own query", "One invalidation rule for person-section keys", "Canonical only".
+
+#### S13-28 — How the records connect
+
+**Ships.** The view from S13-D10 on the Person page: the person's Evidence graphs and their links, a link opening its agreements and conflicts, a record that stands apart, and groups that do not connect. Each graph opens its Evidence graph.
+**Not this PR.** Editing claims or links; Event and Place pages.
+**Check.** Bar 10.
+**Context.** Brief S13-D10; [`evidence-graph-comparison.md`](evidence-graph-comparison.md); S13-16's Sources section, which the board places it in or beside; [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) (a graph view may reuse the `GraphCanvas` host: [`ideas/graph-canvas-second-host.md`](../../ideas/graph-canvas-second-host.md)).
 
 ### Slice 8 — Source date on the Source pages
 
@@ -443,4 +490,7 @@ Go only.
 
 Questions 1–8 were answered 2026-10-26 and are now working rules or requirements. New ones go here; a PR that depends on one stays `Scoped` and `plan-pr` asks it again.
 
-9. **What does a claim review show now that pins are gone?** (2026-10-29.) Options: the claim's status and argument only, which could fold into the Sources section's claim card (S13-16) and retire S13-18 and S13-D7; or the comparison of the member against the rest of the person ([conclusion §5.1](../../conclusion-layer-data-model.md#51-two-lenses)), which is not designed and would leave S13-18 for a later spike. Blocks S13-18 and S13-D7.
+9. ~~**What does a claim review show now that pins are gone?**~~ Answered 2026-10-29: the Person page shows how the person's records connect (slice 7); S13-18 and S13-D7 are descoped.
+10. **Which Properties a comparison counts** ([feature doc](evidence-graph-comparison.md#open-questions) question 1). Blocks S13-26.
+11. **How a link's strength is expressed, and what joins two graphs into one group** (question 2). Blocks S13-26.
+12. **Family support, Source quality and independence in the first version** (questions 3 and 4). S13-26's plan asks; the default is no.

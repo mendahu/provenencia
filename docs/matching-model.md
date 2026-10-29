@@ -2,7 +2,7 @@
 
 The matching model Spike 11 built; all six layers run, and [`matching.md`](matching.md) says where. The reasoning behind each choice is in [`deployment-plan/spike-11/comparison-layers.md`](deployment-plan/archive/spike-11/comparison-layers.md); this page is the "what".
 
-**Revised 2026-10-29:** these layers propose Promote's targets. They are not the measure of whether a member belongs to its handle: that comparison is to be designed new ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.1), not built from layer 6's band. The band and the registry's `evidence` section are deprecated.
+**Revised 2026-10-29:** these layers propose Promote's targets. They are not the measure of whether a member belongs to its handle: that comparison is built new on layers 1 and 2 ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.1), not from layer 6's band. Layer 6's score still ranks Promote's suggestions, but the page no longer shows the band. The registry's `evidence` section goes with the claim evidence sheet.
 
 ## The stack
 
@@ -89,7 +89,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 | **queue** | The one best-first list of candidate pairs the walk pops |
 | **dirty pair** | A pair scored before a neighbor was placed, moved or released; it is re-scored when the queue empties |
 | **settle** | Re-score dirty pairs until none changes or the round cap is reached |
-| **band** | Strong, medium, weak or no match, for a whole row, from its evidence. Deprecated: a signal about the proposal only |
+| **band** | Strong, medium, weak or no match, for a whole row, from its evidence. Ranks suggestions; not shown on the page since 2026-10-29 |
 | **contested** | A visible mark on a row whose comparisons include a conflict, whatever its band |
 | **kinship pattern** | A row of `core/kinship`'s table that says a fact recorded one way implies a relationship link: a marriage's two subjects imply spouses, a birth's father or mother and subject imply a parent, and a parent of a parent implies a grandparent |
 | **implied link** | A relationship link a kinship pattern adds to one side, keyed as a recorded relationship; never stored or filed |
