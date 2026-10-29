@@ -4,7 +4,9 @@
 
 **Agreed 2026-10-06; scheduled as Spike 9 slice 9** (§10). Renamed from “Promote alignment” to **Promote graph alignment** (2026-10-07) so the name names the graph-to-graph proposal, not property-only matching. It replaced the per-Property compare checklist and the per-Subject walk; [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3–§5.4 now state its model rules. How we got here, and the directions we turned down: [`ideas/archive/promote-matching.md`](ideas/archive/promote-matching.md). Matching today: [`matching.md`](matching.md).
 
-**The data model doesn't change:** one Identity Claim per Subject and handle, with Observation pins on the claim and backfill (§5, §5.1).
+**Revised 2026-10-29:** Promote is a quick filing action. Identity Claims no longer carry Observation pins, so the row's evidence sheet, its pin toggles and the per-row claim fields are dropped ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5). Graph alignment still proposes each row's target. Its band is **deprecated**: it was built to rank a proposal, not to say whether a member belongs, and a new comparison of each member against its handle will be designed in its place (§5.1 there). Until the code catches up, the sheet and the pin writes described in older PR plans still run.
+
+**The data model:** one Identity Claim per Subject and handle, with a status and an optional `argument`.
 
 ---
 
@@ -46,8 +48,8 @@ Promote is one workspace page; the choose-target screen and the separate claim s
 - **Rows:** one per primary Subject on the Evidence graph (person, event, place).
   - **Already promoted:** shown read-only, with no controls. They are anchors for the graph alignment, and editing them is a separate workflow ([`ideas/identity-claim-review.md`](ideas/identity-claim-review.md)), not this page.
   - **Unpromoted:** a target dropdown with the best match preselected, the next few alternatives, **New**, and **Skip**.
-- **Assessment:** each row shows **strong**, **medium**, **weak** or **no match**. Clicking it opens a **sheet** that opens with why the row was suggested (its band and Contested marks at the title, the reason as their tooltip, the Updated caption under it) and then the evidence that the row is the record. The sheet loads the row's claim evidence when it opens and draws it as sentences, with no weights: a Card per property with a line per distinct value (identical members collapse into one line that expands to each record), likenesses as two crops side by side, and a relationship line for each mapped neighbor that corresponds, named by the connection that matched. The lines and relationships that agree are preselected as pins and can be toggled.
-- **Claim fields per row:** status, confidence and argument. The argument is the researcher's own: Promote drafts none.
+- **Assessment (deprecated):** each row shows **strong**, **medium**, **weak** or **no match**, with a Contested mark when a comparison conflicts, and the reason the row was suggested. It is a signal about the proposal only, until the comparison in [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.1 replaces it. There is no evidence sheet and nothing to pin.
+- **No claim fields:** Done files every row as an accepted claim. Status, argument and confidence are edited on the claim afterward; Promote asks for none.
 - **Bridges aren't rows** (participation, location, relationship, place relationship). Each shows as a subrow under every end that is a row on the page (a connection between two rows shows under both). A subrow says whether it files on Done, waits for a named end, or has both ends on one record; when the other end is not a row, a note says it is already filed or not on the page. The footer counts the connections that file. Filing rules: §9.1.
 - **Possible duplicates:** two rows landing on the same existing handle, or two rows that would both be new records (unplaced or decided New) whose properties clear the accept bar, get a warning ("these may be the same record; combine them on the Evidence graph"). A link key both rows have neighbors for suppresses the warning when none of those neighbors are the same subject or a match; a directed key compares only neighbors on the same end (a son with a son, not with a father). A row whose best record another row took starts with no target and the warning, whatever its band, so Done can't file both on one handle without a choice. There is no row-to-row option.
 - **Done** writes the whole batch in one transaction (§9).
@@ -55,10 +57,10 @@ Promote is one workspace page; the choose-target screen and the separate claim s
 
 ## 3.1 Suggested and decided rows
 
-Every row is **suggested** (the machine filled it) or **decided**: the researcher changed its dropdown or toggled anything in its sheet.
+Every row is **suggested** (the machine filled it) or **decided**: the researcher changed its dropdown.
 
 - **On open,** the only fixed points are the already-promoted rows; the clicked Subject's row is proposed like the rest.
-- **On any change,** that row becomes decided, and graph alignment re-runs over the whole page with every decided row held fixed. Suggested rows and their sheets are recomputed; decided rows are never touched. A row decided New or Skip is held too: it takes no handle and the walk doesn't pass through it.
+- **On any change,** that row becomes decided, and graph alignment re-runs over the whole page with every decided row held fixed. Suggested rows are recomputed; decided rows are never touched. A row decided New or Skip is held too: it takes no handle and the walk doesn't pass through it.
 - **Rows whose suggestion changed** get a brief "updated" mark with the reason ("via Gracie → PER-Z"), or, when settling moved the row because of a neighbor, what that neighbor did ("after Gracie moved to PER-Z").
 - **A contested row** (a comparison behind its pair conflicts) shows a Contested mark beside its band, at any band; the band is unchanged.
 - **A decided row that the new context contradicts** keeps its choice and gets a warning. The researcher resolves it.
@@ -84,7 +86,7 @@ func Align(layer Layer, canon Canon, fixed []Fixed, cfg Config) Proposal
 `Proposal` is one row per Subject:
 - the target, plus the next 2–3 alternatives;
 - the assessment;
-- the comparisons (the score's inputs); pins come from the claim evidence (§9);
+- the comparisons (the score's inputs);
 - the reasons;
 - flags (conflicts with decided rows, possible duplicates).
 
@@ -132,8 +134,6 @@ Nothing names a Property or a relationship. Every weight comes from metadata or 
 
 **Node comparisons.** The score does not name a property. Entity compare (`subjectcompare.Compare` on the two sides' profiles) runs layer 2 on each lead property in the registry's subject section and returns evidence in points: agree earns the agree weight, partial the agree weight × similarity, conflict loses the conflict penalty, unknown counts nothing. Weights are in the [knob inventory](matching-model.md#knob-inventory): name 2.5 / 3, sex at birth (with gender) 0.6 / 1, toponym 3 / 3, event type 0.5 / 20, date 2 / 3, a person's lifespan 0.1 / 20. A property the subject section does not list scores nothing. A neutral term is no evidence.
 
-A line starts pinned only when value compare says the values are the same; the researcher can pin any other line. A partial name can make the row weak without starting pinned.
-
 **Provenance scales each comparison:** Source credibility, transcription uncertainty, and the claim confidence of the member the evidence came from. These are the same inputs the auto-reconciler's provenance uses ([`conclusion-reconciliation.md`](conclusion-reconciliation.md) §4).
 
 **Edge comparisons.**
@@ -161,7 +161,7 @@ Every read is batched (`sqlbatch`, 500 ids per IN list), so the query count foll
 
 # 8. Caching and decisions
 
-- **Decisions live in the page's draft:** the Swift row list (suggested or decided, target, sheet toggles, claim fields). They're sent as `fixed` on every call and never stored.
+- **Decisions live in the page's draft:** the Swift row list (suggested or decided, target). They're sent as `fixed` on every call and never stored.
 - **Loads read the catalog's in-memory graph** (`graphcache`), which keeps handles, Evidence graphs (keyed by graph id) and the match index between calls, so re-runs after decisions skip loading. Each commit drops what it touched (its effects), not a whole revision. It keeps at most `maxEvidenceGraphs` Evidence graphs (`graphcache`); loading one more drops the least recently used graph with its memos, and a dropped graph loads again on its next read. One Evidence request reads each graph once, whatever the cap.
 - **The match index** (the shortlist index) is cached on the graph and dropped by any commit that names a handle, by a vocabulary commit (its keys read term keys and metas), and by a new alias index (`SetAliasIndex`) or name format (`SetNameFormat`).
 - **The candidates memo** holds each Subject's ranked candidate ids on that graph's memo. It is valid for one match index generation: it is dropped with the Evidence graph memo and ignored when the index generation changes.
@@ -172,9 +172,8 @@ Every read is batched (`sqlbatch`, 500 ids per IN list), so the query count foll
 # 9. Writing
 
 - **Done is one transaction for the whole batch:** all or nothing. Bridges need handles minted in the same batch, so a partial write could leave things half-linked. It's re-validated against the current state first: a write elsewhere since the proposal fails Done cleanly, and the page re-proposes. One audit revision covers the batch.
-- **Per row:** the Identity Claim with status, confidence and argument; a minted handle for New; nothing for Skip.
-- **Pins:** Go pins what the claim evidence offers. For a row whose sheet was never opened, Done pins the lines and relationships that start checked; for an opened row, the ones the researcher left checked (a pin the evidence no longer offers is dropped). A pin's Observations land on the new claim and on the claim of each member it names, so joining an entity with five named members pins all five. The evidence reaches **one hop through a bridge** ("her birth date matches" is pinned on the person's claim), and compares a neighbor only with the handle that neighbor is filed on, in this Done or earlier: this birth with that birth, never with another of the handle's events. A neighbor filed New or skipped pins nothing.
-- **Duplicate pins are accepted on purpose.** The same agreement may be pinned on several claims (the person's and the birth event's). The machine drafts the pins, so this costs the researcher nothing.
+- **Per row:** an accepted Identity Claim with no confidence and no `argument`; a minted handle for New; nothing for Skip.
+- **No pins.** Done writes no Observation pins and touches no other member's claim.
 - **Bridges** are filed by the rules in §9.1.
 
 ## 9.1 Bridge filing
@@ -195,7 +194,7 @@ A bridge (participation, relationship, location, place relationship) has **no id
 - **Inverse terms:** a directed term can name its inverse (`property_terms.inverse_key`: parent ↔ child, grandparent ↔ grandchild, pibling ↔ nibling, guardian ↔ ward). Matching reads a term and its inverse under one key, the one that sorts first, with the ends swapped, so "Mary parent of John" and "John child of Mary" correspond. Filing still keys an association on the recorded term: joining the two readings onto one association needs the auto-reconciler to swap a member's ends too, which it does not yet.
 - **A link from a handle to itself** (both ends on one handle: a duplicate on the graph, or a wrong match) is refused. On the page it's flagged before Done.
 - **Refused filings don't fail the claim.** A place relationship that would close a hierarchy cycle (S9-38), or a self-link, leaves the bridge unfiled, with its reason visible. On the page, graph alignment flags it before Done, so the batch never fails on it.
-- **An end that leaves later** (its member deleted) leaves the bridge's claim in place. The association loses that end's evidence, and the reconciler shows it. That's §5.2 review territory, not a special case.
+- **An end that leaves later** (its member deleted) leaves the bridge's claim in place. The association loses that end's evidence, and the reconciler shows it. Nothing else is rewritten ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.2).
 
 ---
 
@@ -241,4 +240,4 @@ Spike 9 was replanned around this on 2026-10-06. The close note is [`deployment-
 - **Properties compared (§6):** only the lead properties of the registry's subject section, with their pools and periods, not every Property both sides carry.
 - **Provenance (§6):** not applied. Every Subject's provenance is 1; credibility, transcription certainty, and member claim confidence don't scale comparisons yet.
 - **Kinship shapes:** both loaders add the links `core/kinship` implies (spouse, parent, grandparent) through their one merge (`kinship.LinkSet`, whose implied links enter through `AddImplied`, or `PlaceImplied` in `loadCanon`, each recorded by `Implied.Recording`): the layer loader derives them, `loadCanon` reads them from the graph cache through `canonlinks.Reader.For`. Implied links are never filed and never shown as connections; a row reached through one says "via <neighbor>" with no relationship phrase. A link both sides imply through a paired event or middle parent counts once.
-- **Bridge kinds in the loaders:** the layer loader lists its hops (participation, location, relationship, part of, succeeded by) in code. The canon follows every link the graph holds for a `connectrules` bridge, as pins and filing do.
+- **Bridge kinds in the loaders:** the layer loader lists its hops (participation, location, relationship, part of, succeeded by) in code. The canon follows every link the graph holds for a `connectrules` bridge, as filing does.

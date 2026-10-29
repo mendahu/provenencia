@@ -143,7 +143,7 @@ Each module answers three questions:
 
 A depiction's value is its image File; the loader reads it through `depictionvalue.Readable`, and the cache stores it as `value_image_file_id`. Gallery keys (`likeness`, `event_picture`, `place_picture`) are `multiple`, so a handle's images form a gallery, built from the records whose own outcome is `kept` or `weak` ([conclusion layer §6](conclusion-layer-data-model.md#6-canonical_entities)). The gallery shows each record's own `depiction_values.image_file_id`, not the reconciler cache copy. The Person page lists no depiction field.
 
-Promote pins a comparison line only when value compare says the values are the same ([`matching-model.md`](matching-model.md)). Scoring uses value compare's similarity, so a partial resemblance can raise a match without being pinned.
+Promote's scoring uses value compare's similarity ([`matching-model.md`](matching-model.md)), so a partial resemblance can raise a match. Promote writes no Observation pins ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5).
 
 ## 7.1 Dates
 
@@ -285,7 +285,7 @@ The auto-reconciler, its cache, the pages that read it, place chains, Promote, a
 | Subject-valued bridges filed by their ends | `core/database/identityclaims` |
 | Place chains at a date, folded from `part_of` | `core/database/conclusionheaders` |
 | Graph alignment and the proposal read | `core/graphalign`, `core/database/promotealign` |
-| Batch Promote: claims, one-hop pins, and bridges in one transaction | `core/database/promote` |
+| Batch Promote: claims, one-hop pins (to be removed, [conclusion layer §5](conclusion-layer-data-model.md#5-membership-evidence)), and bridges in one transaction | `core/database/promote` |
 | Search documents composed from the list headers | `core/database/searchindex`, `core/search` |
 
 Reconciliation Claims, which would override a cached value, are not built. An earlier names-first cut of the name and evidence work was closed; its migrations landed with the schema that shipped.

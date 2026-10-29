@@ -2,6 +2,8 @@
 
 The matching model Spike 11 built; all six layers run, and [`matching.md`](matching.md) says where. The reasoning behind each choice is in [`deployment-plan/spike-11/comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md); this page is the "what".
 
+**Revised 2026-10-29:** these layers propose Promote's targets. They are not the measure of whether a member belongs to its handle: that comparison is to be designed new ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.1), not built from layer 6's band. The band and the registry's `evidence` section are deprecated.
+
 ## The stack
 
 Six pure layers. Each layer reads only the layers under it and its own section of the match registry. Nothing in layers 1 to 5 reads the catalog, the clock or a database.
@@ -87,7 +89,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 | **queue** | The one best-first list of candidate pairs the walk pops |
 | **dirty pair** | A pair scored before a neighbor was placed, moved or released; it is re-scored when the queue empties |
 | **settle** | Re-score dirty pairs until none changes or the round cap is reached |
-| **band** | Strong, medium, weak or no match, for a whole row, from its evidence |
+| **band** | Strong, medium, weak or no match, for a whole row, from its evidence. Deprecated: a signal about the proposal only |
 | **contested** | A visible mark on a row whose comparisons include a conflict, whatever its band |
 | **kinship pattern** | A row of `core/kinship`'s table that says a fact recorded one way implies a relationship link: a marriage's two subjects imply spouses, a birth's father or mother and subject imply a parent, and a parent of a parent implies a grandparent |
 | **implied link** | A relationship link a kinship pattern adds to one side, keyed as a recorded relationship; never stored or filed |
@@ -117,7 +119,7 @@ Both vocabularies are in the code for several PRs. These old words go.
 
 ## Knob inventory
 
-Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Field`. A Capitalized part is a registry field. A lowercase part is a typed map key: a Subject kind, a property key, a derived property (`lifespan`), or a bridge or participation key; a pair compared together is keyed by its lead property (`sex_at_birth` covers `gender`). The subject section's weights are `subject.Weights.<kind>.<property>`, a derived property's (`lifespan`) included; a pool is keyed by its lead in `subject.Pools`, a period by its lead in `subject.Periods`, a lifespan by its lead (the window) in `subject.Lifespans`. The `evidence` section is the claim evidence sheet's line policy ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md)), not evidence points; `core/claimevidence` reads it, no comparison layer does. The Go registry is the only source of a current value. Start is the value a knob started with. The registry's drift guard compares keys only: every registry field has a row, and every row is a field. `TestKnobInventoryMatchesRegistry` enforces it; rows whose layer has not landed are listed in its `notYetBuilt`. Tuning a knob is one edit, in the registry.
+Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Field`. A Capitalized part is a registry field. A lowercase part is a typed map key: a Subject kind, a property key, a derived property (`lifespan`), or a bridge or participation key; a pair compared together is keyed by its lead property (`sex_at_birth` covers `gender`). The subject section's weights are `subject.Weights.<kind>.<property>`, a derived property's (`lifespan`) included; a pool is keyed by its lead in `subject.Pools`, a period by its lead in `subject.Periods`, a lifespan by its lead (the window) in `subject.Lifespans`. The `evidence` section is the claim evidence sheet's line policy ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md)), not evidence points; `core/claimevidence` reads it, no comparison layer does. It is deprecated and goes with the sheet and the pins ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5). The Go registry is the only source of a current value. Start is the value a knob started with. The registry's drift guard compares keys only: every registry field has a row, and every row is a field. `TestKnobInventoryMatchesRegistry` enforces it; rows whose layer has not landed are listed in its `notYetBuilt`. Tuning a knob is one edit, in the registry.
 
 | Key | Start | Source | Changes |
 | --- | --- | --- | --- |

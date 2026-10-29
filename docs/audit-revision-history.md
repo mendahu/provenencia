@@ -334,7 +334,7 @@ There are two scope types, both declared in `effects.Scopes`:
 - `source`, from `Set.SourceScopes`: a Source's row and everything under it (notes, metadata, layout, credibility, artifacts and their files, subjects, citations, observations, their notes and values). It drives the Sources list "Updated" sort.
 - `canonical_entity`, from `Set.HandleScopes`: work on a Person, Event, or Place handle. It covers the handle's own row, its identity claims and evidence pins, and evidence on a member Subject (its Observations and their date and name values and notes). `graphcache.Graph.Activity` reads it for the People, Events, and Places lists (and `source` for the Sources list): one grouped query on the first read, then each commit moves the loaded map forward.
 
-Vocabulary and conclusion-layer changes (identity claims, evidence pins, canonical entities) still carry no Source scope; the handle scope is additional. A new scope type is one `effects.Scopes` entry, one effect path field, and a backfill migration.
+Vocabulary and conclusion-layer changes (identity claims, evidence pins until they are removed, canonical entities) still carry no Source scope; the handle scope is additional. A new scope type is one `effects.Scopes` entry, one effect path field, and a backfill migration.
 
 ---
 
