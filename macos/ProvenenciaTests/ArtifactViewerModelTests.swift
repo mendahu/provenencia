@@ -184,6 +184,17 @@ struct ArtifactViewerModelTests {
         #expect(model.displayImage == nil)
     }
 
+    @Test func refusesA16BitDeclarationOverHalfTheBudget() async throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        try ArtifactFileFixtures.writeDeclaredPNGHeader(
+            projectDir: project, relPath: "objects/ab/cd/x.png", width: 12000, height: 12000, bitDepth: 16)
+        let model = ArtifactViewerModel()
+        await loadImage(model, project: project, relPath: "objects/ab/cd/x.png", mediaType: "image/png")
+        #expect(model.emptyReason == .loadFailed)
+        #expect(model.displayImage == nil)
+    }
+
     @Test func reducesAnImageOverTheDecodeBudget() async throws {
         let project = ArtifactFileFixtures.uniqueProjectDir()
         defer { try? FileManager.default.removeItem(atPath: project) }
@@ -240,6 +251,8 @@ struct ArtifactViewerModelTests {
         #expect(ArtifactImageDecode.maxPixelSize(width: 8000, height: 8001) == 8000)
         #expect(ArtifactImageDecode.maxPixelSize(width: 3000, height: 2000) == 3000)
         #expect(ArtifactImageDecode.maxPixelSize(width: 12000, height: 6000) == 11313)
+        #expect(ArtifactImageDecode.maxPixelSize(width: 10000, height: 10000, depth: 16) == 5656)
+        #expect(ArtifactImageDecode.maxPixelSize(width: 10000, height: 10000, depth: 8) == 8000)
     }
 
     /// Every image type on Go's allowlist that ImageIO writes opens under the media type

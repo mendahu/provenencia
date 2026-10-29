@@ -10,9 +10,10 @@ import UniformTypeIdentifiers
 enum ArtifactImageDecode {
     /// An edge outside 1 to this is refused.
     static let maxEdge = 65535
-    /// An image declaring more pixels than this is refused before any pixel decodes.
+    /// An image declaring more 8-bit pixels than this is refused before any pixel decodes;
+    /// the count is divided by the bytes per color component.
     static let maxDeclaredPixels = 256000000
-    /// Most pixels the viewer holds decoded. Keep equal to Go's `raster.MaxDecodePixels`;
+    /// Most 8-bit pixels the viewer holds decoded; divided by the bytes per color component. Keep equal to Go's `raster.MaxDecodePixels`;
     /// `TestSwiftVocabularyMatchesGo` holds them.
     static let maxDecodePixels = 64000000
     /// Whether the decode turns an EXIF-rotated image upright, as `NSImage(contentsOf:)` shows it.
@@ -31,14 +32,21 @@ enum ArtifactImageDecode {
         let pixelSize: (width: Int, height: Int)
     }
 
-    /// The `MaxPixelSize` that brings a `width` x `height` image within ``maxDecodePixels``:
+    /// The `MaxPixelSize` that brings a `width` x `height` image of `depth` bits per component
+    /// within ``maxDecodePixels`` (scaled by bytes per component):
     /// the long edge itself when it fits, else the long edge scaled by the square root of
     /// the ratio. Orientation does not change the long edge or the product.
-    static func maxPixelSize(width: Int, height: Int) -> Int {
+    static func maxPixelSize(width: Int, height: Int, depth: Int = 8) -> Int {
         let longEdge = max(width, height)
         let pixels = width * height
-        guard pixels > maxDecodePixels else { return longEdge }
-        return Int((Double(longEdge) * (Double(maxDecodePixels) / Double(pixels)).squareRoot()).rounded(.down))
+        let budget = maxDecodePixels / depthFactor(depth)
+        guard pixels > budget else { return longEdge }
+        return Int((Double(longEdge) * (Double(budget) / Double(pixels)).squareRoot()).rounded(.down))
+    }
+
+    /// Bytes per color component, at least 1: a 16-bit image counts twice, a 32-bit float image four times.
+    private static func depthFactor(_ bitsPerComponent: Int) -> Int {
+        max(1, bitsPerComponent / 8)
     }
 
     /// Decodes the image at `url`, or nil for any refusal: a sniffed type that conforms to none
@@ -50,12 +58,13 @@ enum ArtifactImageDecode {
               typeIdentifiers.contains(where: { identifier in
                   UTType(identifier).map { sniffed.conforms(to: $0) } ?? false
               }),
-              let declared = ImageHeaderDecode.declaredImage(
-                  source, maxEdge: maxEdge, maxPixels: maxDeclaredPixels
-              ),
+              let declared = ImageHeaderDecode.declaredImage(source, maxEdge: maxEdge, maxPixels: .max),
+              declared.width * declared.height <= maxDeclaredPixels / depthFactor(declared.bitsPerComponent),
               let raster = ImageHeaderDecode.decode(
                   source,
-                  maxPixelSize: maxPixelSize(width: declared.width, height: declared.height),
+                  maxPixelSize: maxPixelSize(
+                      width: declared.width, height: declared.height, depth: declared.bitsPerComponent
+                  ),
                   applyTransform: appliesOrientation
               )
         else { return nil }

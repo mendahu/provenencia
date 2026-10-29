@@ -77,6 +77,12 @@ struct ThumbnailCacheTests {
             try fixture("zero.png", dpi: 0), maxEdge: edge, maxPixels: edge * edge))
         #expect(zero.dpiWidth == 72)
 
+        let deep = try #require(ImageHeaderDecode.declaredImage(
+            try source(ArtifactFileFixtures.declaredPNGHeaderData(width: 100, height: 100, bitDepth: 16)),
+            maxEdge: edge, maxPixels: edge * edge))
+        #expect(deep.bitsPerComponent == 16)
+        #expect(plain.bitsPerComponent == 8)
+
         let budget = 256_000_000
         #expect(ImageHeaderDecode.declaredImage(
             try source(ArtifactFileFixtures.declaredPNGHeaderData(width: 16000, height: 16000)),

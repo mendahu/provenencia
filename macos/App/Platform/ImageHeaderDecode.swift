@@ -12,12 +12,15 @@ enum ImageHeaderDecode {
         var dpiWidth: CGFloat
         var dpiHeight: CGFloat
         var orientation: Int
+        /// Bits per color component (8 when the header gives none or an odd one), so a 16-bit or
+        /// float image counts for the bytes it holds.
+        var bitsPerComponent: Int
     }
 
     /// The first image's declared size, or nil unless both edges are in
     /// `1...maxEdge` and `width * height <= maxPixels`. One header read; no
     /// pixels decode. A resolution that is absent, zero, negative or beyond
-    /// 100,000 reads as 72, and an orientation outside 1...8 as 1.
+    /// 100,000 reads as 72, an orientation outside 1...8 as 1, and a depth outside 1...64 as 8.
     static func declaredImage(_ source: CGImageSource, maxEdge: Int, maxPixels: Int) -> DeclaredImage? {
         guard let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
               let width = (props[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue,
@@ -32,12 +35,14 @@ enum ImageHeaderDecode {
             return CGFloat(value)
         }
         let orientation = (props[kCGImagePropertyOrientation] as? NSNumber)?.intValue ?? 1
+        let depth = (props[kCGImagePropertyDepth] as? NSNumber)?.intValue ?? 8
         return DeclaredImage(
             width: width,
             height: height,
             dpiWidth: dpi(kCGImagePropertyDPIWidth),
             dpiHeight: dpi(kCGImagePropertyDPIHeight),
-            orientation: (1...8).contains(orientation) ? orientation : 1
+            orientation: (1...8).contains(orientation) ? orientation : 1,
+            bitsPerComponent: (1...64).contains(depth) ? depth : 8
         )
     }
 
