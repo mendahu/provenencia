@@ -267,21 +267,21 @@ func TestSubjectPositions(t *testing.T) {
 					})
 					return nil, err
 				}
-				max := subjectpositions.MaxCell
-				if _, err := set(max, -max); err != nil {
+				edge := subjectpositions.MaxCell
+				if _, err := set(edge, -edge); err != nil {
 					t.Fatalf("edge: %v", err)
 				}
 				got, err := subjectpositions.Get(c, sub)
-				if err != nil || got.GridX != max || got.GridY != -max {
+				if err != nil || got.GridX != edge || got.GridY != -edge {
 					t.Fatalf("%v %+v", err, got)
 				}
-				for _, bad := range [][2]int64{{max + 1, 0}, {0, -max - 1}, {math.MaxInt64, 0}, {0, math.MinInt64}} {
+				for _, bad := range [][2]int64{{edge + 1, 0}, {0, -edge - 1}, {math.MaxInt64, 0}, {0, math.MinInt64}} {
 					if _, err := set(bad[0], bad[1]); !errors.Is(err, subjectpositions.ErrInvalid) {
 						t.Fatalf("%v: got %v", bad, err)
 					}
 				}
 				got, err = subjectpositions.Get(c, sub)
-				if err != nil || got.GridX != max || got.GridY != -max {
+				if err != nil || got.GridX != edge || got.GridY != -edge {
 					t.Fatalf("row changed: %v %+v", err, got)
 				}
 
@@ -293,7 +293,7 @@ func TestSubjectPositions(t *testing.T) {
 					t.Fatal(err)
 				}
 				got, err = subjectpositions.Get(c, sub)
-				if err != nil || got.GridX != max || got.GridY != -max {
+				if err != nil || got.GridX != edge || got.GridY != -edge {
 					t.Fatalf("get: %v %+v", err, got)
 				}
 				tx, err := db.Begin()
@@ -302,18 +302,18 @@ func TestSubjectPositions(t *testing.T) {
 				}
 				got, err = subjectpositions.GetTx(tx, sub)
 				_ = tx.Rollback()
-				if err != nil || got.GridX != max || got.GridY != -max {
+				if err != nil || got.GridX != edge || got.GridY != -edge {
 					t.Fatalf("get tx: %v %+v", err, got)
 				}
 				list, err := subjectpositions.ListByEvidenceGraph(c, evidencegraphstest.SoleGraph(t, c, src.ID).ID)
-				if err != nil || len(list) != 1 || list[0].GridX != max || list[0].GridY != -max {
+				if err != nil || len(list) != 1 || list[0].GridX != edge || list[0].GridY != -edge {
 					t.Fatalf("list: %v %+v", err, list)
 				}
 
 				// Saving the clamped value back is no change: the write rolls back, the stored row stays
 				// as the file had it and every read still clamps it.
 				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
-					pos, ch, err := subjectpositions.Set(tx, sub, max, -max)
+					pos, ch, err := subjectpositions.Set(tx, sub, edge, -edge)
 					if err == nil && len(ch) != 0 {
 						t.Errorf("changes %+v", ch)
 					}

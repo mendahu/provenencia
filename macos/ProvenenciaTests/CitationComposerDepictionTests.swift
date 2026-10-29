@@ -487,7 +487,7 @@ struct CitationComposerDepictionTests {
         await model.prepare()
         let line = try #require(model.subjectGroups.flatMap(\.lines).first { $0.observationID == "obs-1" })
         model.discardEdit()
-        model.artifactViewer.installImageRasterForTesting(try #require(solidImage(width: 8, height: 8)))
+        model.artifactViewer.installImageForTesting(try #require(solidImage(width: 8, height: 8)))
         model.transcription = "existing"
         #expect(model.locator.hasRegion)
         #expect(model.canAutoTranscribe)

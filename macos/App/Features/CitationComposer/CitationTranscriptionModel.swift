@@ -33,7 +33,7 @@ final class CitationTranscriptionModel {
     }
 
     var canAutoTranscribe: Bool {
-        imageRaster != nil && !isTranscribing
+        artifactViewer.kind == .image && artifactViewer.displayRaster != nil && !isTranscribing
     }
 
     var canPasteTranscription: Bool {

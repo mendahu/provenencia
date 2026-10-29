@@ -260,7 +260,7 @@ struct CitationAutoTranscribeTests {
         await model.runAutoTranscribe()
         #expect(engine.recognizeCount == 1)
 
-        model.artifactViewer.installImageRasterForTesting(
+        model.artifactViewer.installImageForTesting(
             NSImage(size: NSSize(width: 6200, height: 8400)),
             raster: ArtifactRegionCrop.cgImage(from: try #require(pixelExactImage(width: 1, height: 1)))
         )
@@ -274,7 +274,7 @@ struct CitationAutoTranscribeTests {
             from: CGPoint(x: 0.1, y: 0.1),
             to: CGPoint(x: 0.4, y: 0.4)
         )
-        model.artifactViewer.installImageRasterForTesting(
+        model.artifactViewer.installImageForTesting(
             try #require(pixelExactImage(width: 8, height: 8))
         )
         #expect(model.setRegion(ArtifactRegionDraft(kind: .rectangle, points: points)))
@@ -294,7 +294,7 @@ struct CitationAutoTranscribeTests {
         let model = makeModel(store: store, projectDir: projectDir, engine: engine)
         await model.prepare()
         let raster = try #require(pixelExactImage(width: 8, height: 8))
-        model.artifactViewer.installImageRasterForTesting(raster)
+        model.artifactViewer.installImageForTesting(raster)
         let points = ArtifactRegionGeometry.rectanglePoints(
             from: CGPoint(x: 0.25, y: 0.25),
             to: CGPoint(x: 0.75, y: 0.75)

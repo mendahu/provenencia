@@ -144,7 +144,7 @@ final class ArtifactViewerModel {
 
     /// Test hook: install an in-memory image without going through ``load``. The
     /// raster is `raster` or else the image's own pixels; with neither, nothing installs.
-    func installImageRasterForTesting(_ image: NSImage, raster: CGImage? = nil) {
+    func installImageForTesting(_ image: NSImage, raster: CGImage? = nil) {
         guard let raster = raster ?? ArtifactRegionCrop.cgImage(from: image) else { return }
         kind = .image
         source = nil
