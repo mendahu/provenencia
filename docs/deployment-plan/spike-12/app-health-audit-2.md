@@ -14,6 +14,7 @@ User, 2026-10-28. They are the map's working rules under "Audit 2 fixes".
 
 - **Proposals are liberal; the researcher decides.** The audit rated a prefix pair of two full names (Joseph / Josephine, Jean / Jeanne) and a namesake inside the lifespan slack as defects. Both are accepted as intended: Promote surfaces a candidate on forgiving evidence, and what files is the researcher's choice. Dropped as findings: the prefix pair in matching and in the reconciler fold, an exact tie placed on the lowest ref, and the lifespan slack (reworded in Spike 11's bar, B-25).
 - **A name that heads its own nickname set never folds into another set's head** unless `nicknameDirections` names the pair (option a of B-3). Correct folds that are not yet reviewed, such as Jack → John (`jack` heads `{jack, jackie}`), stop until they are added to that table; the page shows both names meanwhile.
+- **B-14 is descoped** (2026-10-29). The pin policy for an opened sheet goes back to the user to rethink; no PR in slices 5b and 6b changes how pins are chosen.
 
 ## Scheduled
 
@@ -32,7 +33,7 @@ User, 2026-10-28. They are the map's working rules under "Audit 2 fixes".
 | B-11 | The possible-duplicate check is quadratic per proposal | Medium | PRF | S12-51 |
 | B-12 | Quick row decisions queue full proposals | Medium | PRF | S12-44 |
 | B-13 | A Subject deleted or merged elsewhere dead-ends the Promote page | Medium | UX, CON | S12-44 |
-| B-14 | Opening a row's sheet freezes its pins | Medium | UX, CON | S12-45 |
+| B-14 | Opening a row's sheet freezes its pins | Medium | UX, CON | Descoped (2026-10-29) |
 | B-15 | A row set to New cannot open its sheet | Medium | UX | S12-45 |
 | B-16 | The page says unplaced rows start as Skip | Medium | UX | S12-44 |
 | B-17 | Promote errors appear away from Done and are not announced | Medium | UX | S12-44 |
@@ -136,6 +137,7 @@ User, 2026-10-28. They are the map's working rules under "Audit 2 fixes".
 
 ### B-14 — Opening a row's sheet freezes its pins
 
+**Status.** Descoped by the user, 2026-10-29: how pins are chosen once a sheet has been opened is a bigger question than this item, and the user is rethinking it. The defect below stands as found; map review K-32's proposal (Go composes every row's pins at Apply from its defaults plus the researcher's overrides) is in the [map review log](deployment-plan.review.md) as input, not a decision.
 **Where.** `macos/App/Features/Promote/PromoteFlow.swift` `setEvidence` (about lines 528–538: the first read takes `checkedPinIDs`, a later read only intersects with `offeredPinIDs`) and `batchRow` (589–597: `defaultPins` only while `board == nil`); `core/database/promotealign/pins.go` `ResolvePins`.
 **Problem.** Once a row's sheet has been opened, Done sends that read's pin ids. A line or relationship Go would check by default that is offered only after a neighbor row is placed is never pinned, and starts unchecked when the sheet reopens. A row whose sheet was never opened gets it from Go's defaults, so the same page files different evidence depending on whether the researcher looked first. This bends the working rule "The pin policy has one owner, in Go".
 **Evidence.** Manual: Ada suggested on PER-1, her spouse John unset; open and close Ada's sheet untouched; set John to PER-1's spouse; reopen: "…they share a spouse" is unchecked, though `core/claimevidence/build.go` checks an agreeing relationship; Done without reopening sends the old ids only.

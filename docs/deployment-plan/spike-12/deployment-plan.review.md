@@ -189,7 +189,7 @@ Round-1 answers: 19 of 20 resolved. K-8 held only for S12-23 (the viewer half is
 **Rounds:** 1. **Reviewers:** maintainability (map review), fresh agent, on the branch that added slices 5b and 6b. Findings K-30 – K-47.
 
 ## To user
-- **K-32: who composes pins for an opened row.** Recommendation: yes. Swift sends `defaultPins: true` plus the researcher's overrides for every row, and `ResolvePins` applies the defaults and then the overrides against the final targets, so the sheet and Done cannot disagree. This changes Spike 11's rule "The pin policy has one owner, in Go" (evidence RPC for opened rows → Apply for every row) and makes S12-45 Go and Swift. S12-45 stays Scoped until answered.
+- **K-32: who composes pins for an opened row.** Descoped by the user (2026-10-29) with audit B-14: the pin policy for an opened sheet is a bigger question, and the user is rethinking it. The proposal below stays as input. S12-45 no longer touches pins.
 - **K-33 follow-on: how a dropped alias table is surfaced** (a log line, or a notice on the Promote page). Left to S12-42's plan, which asks it.
 
 ## Writer's own calls
@@ -207,7 +207,8 @@ Round-1 answers: 19 of 20 resolved. K-8 held only for S12-23 (the viewer half is
 **Answer:** Fixed, in two (see Writer's own calls): S12-43 "A commit invalidates only what it names" and S12-51 "Each proposal's own work is bounded", S12-51 after S12-43.
 
 ### K-32 · major · S12-45 kept pin merging in Swift
-**Answer:** To user (above). S12-45 carries an **Open** line.
+Proposal: Swift sends `defaultPins: true` plus the researcher's overrides for every row; `ResolvePins` applies the defaults, then the overrides, against the final targets.
+**Answer:** To user; descoped by the user (2026-10-29) with B-14. S12-45 keeps B-15 and B-18 only.
 
 ### K-33 · major · The bounds rule's refusal precedent would stop the project opening
 **Answer:** Fixed. The rule now drops an over-bound table from the built index with `namealiases.ProductTables` standing in, sets bounds above the shipped seed's maximum, and leaves the surfacing to S12-42's plan. Audit B-5's Fix updated.
@@ -254,4 +255,4 @@ Round-1 answers: 19 of 20 resolved. K-8 held only for S12-23 (the viewer half is
 ### K-47 · nit · The S12-D8 row rendered outside the Design track table
 **Answer:** Fixed.
 
-**Stop:** one round. Its blocker is Fixed; **To user** has K-32 and the K-33 follow-on, both recorded on the PRs they gate.
+**Stop:** one round. Its blocker is Fixed; K-32 was descoped by the user, and the K-33 follow-on is recorded on S12-42.
