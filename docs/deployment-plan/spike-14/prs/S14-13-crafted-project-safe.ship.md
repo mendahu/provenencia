@@ -1,7 +1,7 @@
 # Ship log — S14-13 A crafted project can't crash the app
 
 **Plan:** [`S14-13-crafted-project-safe.md`](S14-13-crafted-project-safe.md) · **Branch:** `s14-13-crafted-project-safe` · **PR:** #632
-**State:** review 2
+**State:** fixing 2
 
 ## Round 0 — implement
 Head `ecf72552`. Gate PASS (orchestrator run, base `51cf4aef`). PR #632 (draft).
@@ -92,3 +92,23 @@ Nits MNT-5 and MNT-7 folded in.
 
 ## Round 2 — review
 Reviewers: CON (Sonnet), MNT, UX, SEC+PRF — each had a round-1 blocker or major. Scope `ecf72552...31bc43f5`.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| UX-1, CON-1 | UX, CON | — | `.heif` refused | Resolved | F-6; `opensEveryAllowedImageType` heic and heif rows |
+| UX-2 | UX | — | Size refusal copy | Resolved | F-8; `.imageTooLarge` with its own strings |
+| SEC-1 | SEC, PRF | — | Bytes per pixel | Resolved | F-7; reviewer probe: 16-bit, float and 10-bit HEIC all held at 4 bytes per budgeted pixel |
+| MNT-1, CON-2 | MNT, CON | — | Single-valued orientation flag | Resolved | F-1 |
+| MNT-2 | MNT | — | Clamped-cell copies | Resolved | F-2; `flooredCell` third helper accepted |
+| SEC-2, MNT-3, MNT-4, CON-3 | — | — | Minors | Resolved (orchestrator check) | F-3 `ok`/deferred Close in `openResearcher`; F-9 `ImageHeaderDecode.swift`; F-4 `canAutoTranscribe` reads `displayRaster`; F-5 Landed note |
+| MNT-8 | MNT | blocker | `FakeStore.typeIdentifiers(forMediaType:)` copies Go's identifier table with no parity test; the Swift test that proves every type opens reads the copy | Fix now → F-10 | verified `FakeStore.swift:875-888`; CON noted the same copy as a minor. Kept at blocker: Fix plan 1 created the copy, and the user's F-6 answer (Go owns the identifiers) is unproven in Swift without the pin; a Go typo would ship refused images with every test green |
+
+Nits (logged): `UX-4 · L10n.swift:3829 · "A smaller copy of the file will open." reads as if the app opens one; suggest "Attach a smaller copy of the file to view it here."`
+
+### Fix plan 2
+
+**F-10 — Pin FakeStore's type identifiers to Go's table** (from MNT-8)
+Files: `macos/App/Platform/FakeStore.swift`, `api/ffi/swift_vocabulary_test.go`, `.cursor/rules/macos-client.mdc:22` (add the new fixture to the mirror list).
+Failing test first: the new Go test below, with one Swift row deliberately wrong locally, fails; then fix the row. (Do not commit the wrong row.)
+Do: replace the `switch` in `FakeStore.typeIdentifiers(forMediaType:)` with `static let imageTypeIdentifierFixtures: [(String, String)]`, one row per image media type in Go's table, the second element the identifiers joined by a single space in Go's order (`("image/heic", "public.heic public.heif")`). `typeIdentifiers(forMediaType:)` reads that table and splits on spaces (unknown → `[]`). In `swift_vocabulary_test.go` add `TestFakeStoreTypeIdentifiersMatchGo`: read the pairs with `swiftFixturePairs(t, <FakeStore path>, "FakeStore", "imageTypeIdentifierFixtures")`; assert each row's second element equals `strings.Join(mediatypes.TypeIdentifiers(row[0]), " ")`, and that the rows' media types are exactly the set of image media types in Go's table that have identifiers. If `mediatypes` has no way to list them, add exported `ImageMediaTypes() []string` (sorted) beside `TypeIdentifiers` and use it. If `swiftFixturePairs` cannot read a `static let` on a `final class` (it was written for enums), extend its matcher minimally and add a case to `TestSwiftFixturePairsDecodesEscapes` or its sibling.
+Check: `go test -tags fts5 ./api/ffi/...` passes; Swift tests that call `typeIdentifiers(forMediaType:)` pass unchanged; scripts/check-pr.sh PASS.
