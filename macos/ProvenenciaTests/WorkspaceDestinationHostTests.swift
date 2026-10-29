@@ -44,22 +44,17 @@ struct WorkspaceDestinationHostTests {
         session: WorkspaceSession,
         store: FakeStore
     ) -> (NSWindow, NSHostingView<some View>) {
-        let frame = NSRect(x: 0, y: 0, width: 1200, height: 800)
-        let host = NSHostingView(
-            rootView: WorkspaceDestinationHost(
+        hostInBorderlessWindow(
+            WorkspaceDestinationHost(
                 userID: "user-1",
                 sessionDisplayName: "",
                 store: store,
                 catalogCounts: CatalogCounts(projectDir: projectDir, store: store)
             )
             .environment(navigation)
-            .environment(session)
+            .environment(session),
+            windowSize: CGSize(width: 1200, height: 800)
         )
-        host.frame = frame
-        let window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
-        window.contentView = host
-        window.orderFrontRegardless()
-        return (window, host)
     }
 
     @Test func canvasToCanvasBuildsTheSecondGraphsModel() async {

@@ -1,6 +1,7 @@
 # S14-24 — Give every workspace page its width class
 
-**Status:** Planned
+**Status:** Landed in #628 (2026-10-29)
+**Landed:** No differences from the plan. The base check ran against `08eb109e`, not the Planned `b8ca4cfc`; `git diff b8ca4cfc 08eb109e -- macos` was empty.
 **Spike / slice:** Spike 14 · Slice 6 — Wide layout
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: a token, an environment value and a measurement at the workspace host; nothing on screen changes)

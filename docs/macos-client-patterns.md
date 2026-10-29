@@ -243,7 +243,7 @@ The window opens at `PVSpacing.widthWorkspaceDefault` × `heightWorkspaceDefault
 | Regular | below 1600pt | The default window; any MacBook, even full screen; half of a big monitor |
 | Wide | 1600pt and up | Full screen or most of a 1920pt-or-wider monitor; a 16" MacBook full screen with the sidebar collapsed |
 
-**Pane width** is what the destination itself gets: the window minus the sidebar (264pt, 78pt collapsed). A page with a side pane (an inspector, a detail pane) plans that pane in its own Wide frame; it does not re-measure. It is not the screen or the window. Measure it with `onGeometryChange` on the destination's root, the way `SourcesListView` picks its columns. Collapsing the sidebar can move a view across the line, and that is intended.
+**Pane width** is what the destination itself gets: the window minus the sidebar (264pt, 78pt collapsed). A page with a side pane (an inspector, a detail pane) plans that pane in its own Wide frame; it does not re-measure. It is not the screen or the window. Read it with `@Environment(\.pvWidthClass)`; `WorkspaceDestinationHost` fills the detail area and measures it once. Collapsing the sidebar can move a view across the line, and that is intended.
 
 Where the numbers come from (points, sidebar open):
 
@@ -258,7 +258,7 @@ Where the numbers come from (points, sidebar open):
 
 1600 is also the smallest pane that holds a full `widthContentMax` column (1180), a gap (32), an inspector-width column (`widthInspector`, 340) and two page gutters (2 × 32) without squeezing either column much. Below that, a second column steals from the first.
 
-The breakpoint becomes a token (`PVSpacing` `widthWideBreakpoint = 1600`) in the first PR that builds a Wide frame, with a tiny shared width-class helper beside it so views do not each re-measure. Until then, use the number.
+The breakpoint is a token (`PVSpacing.widthWideBreakpoint = 1600`) and the class is `PVWidthClass` (`Components/WidthClass/PVWidthClass.swift`): `WorkspaceDestinationHost` measures the pane once with `pvMeasuresWidthClass()`, and a page reads `@Environment(\.pvWidthClass)` instead of measuring itself.
 
 ### Rules for Wide
 
