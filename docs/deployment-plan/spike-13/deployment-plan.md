@@ -57,6 +57,7 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 ### Process
 
 - **Design, then build, one brief at a time.** A slice writes its brief just before its chrome PR ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md), from [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md)), agrees the board, and implements it; the next slice's brief starts after (user, 2026-10-26; supersedes "nine briefs, one approval"). Briefs for slices that do not touch each other's views (the Source date briefs S13-D8 and S13-D9) may run alongside.
+- **Redesigns adopt Page columns** (user, 2026-10-29). Spike 14's Wide layout ([`macos-client-patterns.md` § 9](../../macos-client-patterns.md#9-window-widths-regular-and-wide), brief [S14-D1](../spike-14/design/archive/S14-D1-wide-layout.md)) has no migration PR of its own: each page moves onto Page columns when it is redesigned here. Every brief draws its view at Regular and Wide ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md#wide-layout-binding)). S13-D1 composes the Person frame from Page columns (the S14-D1 board was agreed 2026-10-29: pull the fresh kit), and S13-10 builds `PVPageColumns` from that board and moves `ConclusionDetailPage.page` onto it, so the Event and Place pages share it. S13-D8 (Source page) and S13-D9 (Sources list) draw their Wide frames too; whether the Source page moves onto Page columns in S13-21 is S13-D8's call. Pages not redesigned in this spike stay on [`ideas/wide-layout.md`](../../ideas/wide-layout.md).
 - **S13-D1 draws the whole frame.** The first board draws the header, the switcher and all five sections as named places, the four later ones as placeholders, so later boards fill a frame instead of moving it. A later board that needs the landed frame or tile changed adds a follow-up PR to the map; landed PRs are not reopened (R-D2).
 - **Engine PRs run ahead of their slice.** Each engine PR is listed in the slice whose chrome needs it, but it may be planned and landed any time its dependencies allow (R-D3). Each read returns **data, not layout**: grouping into families or Sources happens in Go, placement on the page happens in Swift. If a board asks for data a landed read lacks, a follow-up PR adds it.
 - **Each PR updates the docs and skills it makes false.** S13-03: [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md) (page-only derivations), [`matching-model.md`](../../matching-model.md) only if a knob is added, and [`ideas/kinship-view.md`](../../ideas/kinship-view.md) (siblings shipped for the page). S13-08: [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5 (Unpromote of the last member), [`catalog-deletes.md`](../../catalog-deletes.md). S13-01: [`add-workspace-place`](../../../.agents/skills/add-workspace-place/SKILL.md) (per-handle invalidation spec). S13-06: the `LifeFacts` and `ReconciledValueRowModel.derived` comments ("its page owns the Why"). S13-09: [`macos-client-patterns.md`](../../macos-client-patterns.md) (sectioned detail page).
@@ -114,7 +115,7 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 | S13-24 | The pin engine goes | 0 | Go: `GetPromoteClaimEvidence` and `ListClaimConfidenceGrades` and their wire, Apply's pin and claim-field inputs and the proposal row's display-only fields (reserved), `promotealign` evidence and pins, `core/claimevidence`, the registry's `evidence` section, Promote's pin writes and backfill, and the helpers only they call; proto regenerated | — | S13-23 | — | Scoped |
 | S13-25 | The pin table goes | 0 | Migration drops `identity_claim_evidence`; catalog model, `identityclaims` pins, the delete facet and `ReleaseClaim`'s pin step, the effects entry; audit history keeps its old rows | — | S13-24 | — | Scoped |
 | S13-09 | Sections slot on the Conclusion page | 1 | Preparatory: `ConclusionDetailPage` gains a sections slot; Person, Event and Place pass one section; no visible change | — | — | [S13-09](prs/S13-09-sections-slot.md) | Landed #624 |
-| S13-10 | Header and sections | 1 | The fixed header, the section switcher, and Vitals as the first section (today's rows) | S13-D1 | S13-09 | — | Scoped |
+| S13-10 | Header and sections | 1 | The fixed header, the section switcher, and Vitals as the first section (today's rows), on `PVPageColumns` (built here from the S14-D1 board) | S13-D1 | S13-09, S14-D1 (board agreed 2026-10-29), S14-24 (landed #628) | — | Scoped |
 | S13-06 | Derived rows carry their records | 2 | `ConclusionDetail` carries, for each derived row, the reconciler records of the owning entity's field (birth and death event date and place) | — | — | — | Scoped |
 | S13-11 | Provenance sheet | 2 | The provenance control and sheet replace the Why accordion on every Vitals row, with links to Source, Citation and Observation | S13-D2 | S13-06, S13-10 | — | Scoped |
 | S13-01 | Person claims read | 3 | `ListPersonClaims` RPC from the graph cache: a person's accepted claims grouped by Source (title, type), ordered by title, each with its Subject card data, graph and claim id; one accepted-members helper; per-handle invalidation spec | — | — | — | Scoped |
@@ -147,7 +148,7 @@ Each brief is written just before the PR it gates, its board agreed, and that PR
 
 | Brief | View | Gates | Notes |
 | --- | --- | --- | --- |
-| S13-D1 | Person page: header, section switching, Vitals | **S13-10** | Explores stacked-with-shortcuts versus tabs (R-7). Draws the whole frame, all five sections as places (working rule "S13-D1 draws the whole frame") |
+| S13-D1 | Person page: header, section switching, Vitals | **S13-10** | Explores stacked-with-shortcuts versus tabs (R-7). Draws the whole frame, all five sections as places (working rule "S13-D1 draws the whole frame"), at Regular and Wide on Page columns, after the S14-D1 board (working rule "Redesigns adopt Page columns") |
 | S13-D2 | Provenance sheet | **S13-11** | Reusable beyond Person (R-13); leaves room for Reconciliation Claims (R-10) |
 | S13-D3 | Family section | **S13-12** | Draws the shared person tile; two marriages and conflicting parents |
 | S13-D4 | Timeline section | **S13-13** | Reuses S13-D3's tile; depiction placeholder; Undated group |
@@ -155,8 +156,8 @@ Each brief is written just before the PR it gates, its board agreed, and that PR
 | S13-D6 | Sources section | **S13-16**, **S13-17** | Source groups, claim cards, Remove and the last-claim warning |
 | S13-D7 | Claim review sheet | — | **Descoped (2026-10-29)** with S13-18 |
 | S13-D10 | Person page: how the records connect | **S13-28** | The person's Evidence graphs as nodes and their links, a link's agreements and conflicts, a record that stands apart, two groups that do not connect. Where it sits (inside Sources or beside it) is the board's call |
-| S13-D8 | Source page: the Source date | **S13-21** | Where the date lives so it reads as the Source's own date, not another metadata row ([UI](source-provenance-date.md#what-this-idea-still-owns)) |
-| S13-D9 | Sources list: the Source date | **S13-22** | The date on each row and the sort; beside S12-D5's graph buttons |
+| S13-D8 | Source page: the Source date | **S13-21** | Where the date lives so it reads as the Source's own date, not another metadata row ([UI](source-provenance-date.md#what-this-idea-still-owns)). Draws the Source page at Wide; decides whether it moves onto Page columns with its pinned header |
+| S13-D9 | Sources list: the Source date | **S13-22** | The date on each row and the sort; beside S12-D5's graph buttons. Draws the list at Wide |
 
 ## Slices
 
@@ -309,8 +310,9 @@ Go, plus deleting Swift's draft rule.
 
 **Ships.** The fixed, display-only header and the section switcher from S13-D1, with Vitals (today's rows) as the first section and the other four as the places the board draws. The section is part of the `WorkspaceLocation`: switching pushes history.
 **Reuse first (from S13-09 review MNT-1).** `ConclusionDetailDefaultPageSections` is one block: Details, likenesses and Place relationship sections, with `ConclusionDetailLikenessSection` private. Before building Person's fill, split it into named internal parts (a Details view taking `content` and `refreshing`, and the likeness section), and rebuild the default fill from them. Person's Vitals then reuses the Details view instead of copying the header, spinner and rows.
-**Check.** Bar 1: the frame with Vitals; the other four sections are places that later slices fill.
-**Context.** R-4 – R-7, R-14, R-15; brief S13-D1.
+**Page columns (user, 2026-10-29).** Build `PVPageColumns` from the agreed S14-D1 board (WL-3 – WL-10; its tokens `widthSecondaryMax` and the check of `widthWideBreakpoint` against the CSS) and move `ConclusionDetailPage.page` onto it; the Person frame fills its slots as S13-D1 draws them at Regular and Wide. The Event and Place pages take the shared scaffold with no other change. Build the header slot and pinned mode only if S13-D1 uses them. Read the page's class from `@Environment(\.pvWidthClass)` (S14-24).
+**Check.** Bar 1: the frame with Vitals; the other four sections are places that later slices fill. At 1366 and 2560pt wide the Person page matches the board's Regular and Wide frames; the Event and Place pages look as before at Regular.
+**Context.** R-4 – R-7, R-14, R-15; brief S13-D1; [S14-D1](../spike-14/design/archive/S14-D1-wide-layout.md); working rule "Redesigns adopt Page columns".
 
 ### Slice 2 — Provenance sheet
 

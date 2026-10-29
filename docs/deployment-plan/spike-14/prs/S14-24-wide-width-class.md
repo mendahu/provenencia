@@ -12,7 +12,7 @@
 **Version bump:** none — no researcher-visible change; the first page that reads the width class (S14-25 and later) takes the bump ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/swift-tests.mdc`
-**Context:** [`docs/macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide), [`add-design-brief` Wide layout](../../../../.agents/skills/add-design-brief/SKILL.md#wide-layout-binding), [S14-D1](../design/S14-D1-wide-layout.md) (the kit side of the same token), working rule "(Batch 6) One breakpoint, 1600pt of pane width"
+**Context:** [`docs/macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide), [`add-design-brief` Wide layout](../../../../.agents/skills/add-design-brief/SKILL.md#wide-layout-binding), [S14-D1](../design/archive/S14-D1-wide-layout.md) (the kit side of the same token), working rule "(Batch 6) One breakpoint, 1600pt of pane width"
 **Planned:** 2026-10-29 against `main` @ `b8ca4cfc`
 **Review:** [`S14-24-wide-width-class.review.md`](S14-24-wide-width-class.review.md) — Fits with changes — Ready with changes, 2 rounds; To user answered 2026-10-29
 
@@ -70,7 +70,7 @@ Every workspace page can tell whether it has a Regular pane (below 1600pt) or a 
 
 | Out | Home |
 | --- | --- |
-| The Page columns component and any page reading the width class | S14-25, gated by [S14-D1](../design/S14-D1-wide-layout.md) |
+| The Page columns component and any page reading the width class | S14-25, gated by [S14-D1](../design/archive/S14-D1-wide-layout.md) |
 | A Wide frame for any page (Source page, Person page, lists, Promote, composer) | Each view's next brief, per `add-design-brief` "Wide layout (binding)" |
 | Moving `SourcesListColumns` onto the width class | not planned: it picks columns at its own widths, not at the breakpoint |
 | The CSS token in the Claude Design kit | S14-D1 WL-1 |
