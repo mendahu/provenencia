@@ -59,4 +59,11 @@ None.
 
 ## Round 2
 
-Pending — fresh maintainability + executability on the Fixed reshape (M-1, M-2, M-5 especially).
+### X-6 · minor · Per-kind `gallery.identifierRoot` not named
+**Answer:** Fixed — STEP-2 sets `identifierRoot` to each kind's `pageIdentifier` (`persons.detail` / `events.detail` / `places.detail`).
+
+### X-7 · minor · Depiction crop mark on expanded Promote members
+**Answer:** Fixed — D-10 / STEP-5: the group's crop mark applies to line and depiction `memberRow` crops.
+
+### Maintainability round 2
+Pending.

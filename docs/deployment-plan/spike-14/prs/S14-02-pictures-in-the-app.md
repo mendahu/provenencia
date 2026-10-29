@@ -310,8 +310,8 @@ Check: `rg 'ConclusionDetailLikeness|LikenessTileView|likenessCrop' macos` empty
 
 **STEP-2 — Person / Event / Place contents**
 Files: `PersonDetailContent.swift`, `EventDetailContent.swift`, `PlaceDetailContent.swift`. Skill: `add-localized-string`.
-Do: Each body builds a full `gallery` (D-1): Person likeness chrome + `choose: .personPortrait`; Event/Place Pictures chrome + `.eventThumbnail` / `.placeThumbnail`; tiles from mapper; Event/Place thumbnails per D-5.
-Check: App target builds; gallery title keys match AC-1.*.
+Do: Each body builds a full `gallery` (D-1): Person likeness chrome + `choose: .personPortrait`; Event/Place Pictures chrome + `.eventThumbnail` / `.placeThumbnail`; `identifierRoot` equals that kind's `pageIdentifier` (`"persons.detail"`, `"events.detail"`, `"places.detail"`); tiles from mapper; Event/Place thumbnails per D-5.
+Check: App target builds; gallery title keys match AC-1.*; Person tile ids start with `persons.detail.picture.`.
 
 **STEP-3 — Page owns portrait model**
 Files: `ConclusionDetailPage.swift`, `ConclusionPortraitModel.swift`, `PersonDetailView.swift`, `EventDetailView.swift`, `PlaceDetailView.swift`, `WorkspaceDestinationHost.swift`. Skill: —.
