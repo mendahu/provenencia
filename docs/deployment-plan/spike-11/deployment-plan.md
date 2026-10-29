@@ -40,10 +40,10 @@ Promote's matching is rebuilt as a stack of pure, registry-driven layers that th
 | [Connection subrows](promote-connection-subrows.md) (was `ideas/promote-connection-subrows.md`) | S11-26, S11-27 | S11-D1 |
 | Spike 10 S10-36 — Promote compares two likeness crops (moved 2026-10-17) | S11-32 (lines), S11-20 (crops) | S11-D2 |
 | Reuse inventory ([`comparison-layers.md`](comparison-layers.md#reuse-across-the-app)) | S11-05 – S11-08, S11-13, S11-19 | — |
-| S11-27 follow-up — the evidence button's hover on the S11-D1 board was not built (user, 2026-10-24) | S11-34 | — (S11-D1, agreed) |
+| S11-27 follow-up — the evidence button's hover on the S11-D1 board was not built (user, 2026-10-24) | S11-34 (descoped 2026-10-29: the button and its sheet go in Spike 13's S13-23) | — (S11-D1, agreed) |
 | Dogfood, 2026-10-24: "Amy" not offered "Amy Lee Anne Long"; "Desiree" not offered "Des" ([name candidates](name-candidates.md)) | S11-43, S11-44, S11-46, S11-45, S11-47 | — |
 | [Kinship shapes](kinship-shapes.md) (was `ideas/relationships-from-shared-events.md`, from S11-14; grandparent added by the user; pulled in 2026-10-24) | S11-41, S11-38, S11-39, S11-40, S11-42 | — |
-| Dogfood, 2026-10-27 (S11-40 review): a spouse's name lines under a relationship Card compare only with the member from the Source that records the link, so "Jake Robins" conflicts with the marriage certificate's "James Kenneth Robins" while the entity's three "Jake" Sources go unseen | S11-52 | — |
+| Dogfood, 2026-10-27 (S11-40 review): a spouse's name lines under a relationship Card compare only with the member from the Source that records the link, so "Jake Robins" conflicts with the marriage certificate's "James Kenneth Robins" while the entity's three "Jake" Sources go unseen | S11-52 (descoped 2026-10-29: the evidence sheet's lines go in Spike 13's slice 0; comparing with every member is input to the member comparison of [conclusion §5.1](../../conclusion-layer-data-model.md#51-two-lenses)) | — |
 | [Find another record](promote-find-another-record.md) (was `ideas/promote-find-another-record.md`, from S11-05 D-16; pulled in 2026-10-24) | S11-35, S11-37, S11-36 | S11-D3 |
 
 **Stays in the ideas folder** — the kinship view for trees and person pages, and patterns beyond spouse, parent and grandparent: [`ideas/kinship-view.md`](../../ideas/kinship-view.md). And the rest of [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md): scenario files and goldens runner, random-graph invariants, the simulated world, the scoreboard, the labeler, fitting, and dogfood export. Whether they join this spike is decided after the re-implementation.
@@ -120,7 +120,7 @@ These are the calls for this spike. PR plans treat them as binding.
 - **A separate, lazy query per row** ([claim evidence](claim-evidence.md#separate-from-matching)): inputs are the page's targets, not matching internals.
 - **Lines** ([lines](claim-evidence.md#lines)): one per member per property, grouped by property, identical values collapsed; `Same` / `Equivalent` start checked; every line can be pinned, only the default check depends on the relation. No "select all".
 - **Relationships** ([relationships](claim-evidence.md#evidence-through-relationships)): a corresponding segment is its own checkable line that pins the bundled plumbing (bridge ends, everything on the bridge, the neighbor's defining properties, e.g. `event_type`); the neighbor's other properties are checkable lines under it.
-- **A related person's lines compare with every member** (user, 2026-10-27; S11-52). Under a relationship Card whose neighbor is a person, the neighbor's other properties are compared with all of that entity's accepted members, as the row's own property lines are: a spouse is one person recorded across many Sources, and the evidence that the Source's "Jake Robins" is that person lives in every Source that names him. An event neighbor keeps S11-19 D-13's scope, the members of the Source that records the link ("this birth with that birth only"). Which kinds widen is a registry entry in the evidence section, not a kind check in `bundles`. Supersedes S11-19 D-13 for person neighbors.
+- **Superseded 2026-10-29** (S11-52 descoped with the evidence sheet; the idea that a related person compares with every member carries into [conclusion §5.1](../../conclusion-layer-data-model.md#51-two-lenses)). **A related person's lines compare with every member** (user, 2026-10-27; S11-52). Under a relationship Card whose neighbor is a person, the neighbor's other properties are compared with all of that entity's accepted members, as the row's own property lines are: a spouse is one person recorded across many Sources, and the evidence that the Source's "Jake Robins" is that person lives in every Source that names him. An event neighbor keeps S11-19 D-13's scope, the members of the Source that records the link ("this birth with that birth only"). Which kinds widen is a registry entry in the evidence section, not a kind check in `bundles`. Supersedes S11-19 D-13 for person neighbors.
 
 ## PR map
 
@@ -159,7 +159,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-28 | Fold a nickname into its given name | 2 | Reconciler folds a nickname or abbreviation into its formal name, keeping the set's head; a reviewed table directs two-way pairs; cache reads the product alias tables | — | S11-06 | [plan](prs/S11-28-alias-fold.md) | Landed #589 |
 | S11-29 | Quote nicknames and add former surnames | 2 | Nicknames in quotes everywhere; `former_surname` part type in parentheses, italic on the Person titles | — | — | [plan](prs/S11-29-name-display.md) | Planned |
 | S11-30 | Gender meets sex at birth in its own words | 3 | The sex / gender pool maps gender terms into sex at birth terms through a registry crosswalk; `man` agrees with `male` | — | S11-10 | — (bugfix, user 2026-10-21) | In review |
-| S11-34 | Evidence button hover on Promote rows | 6 | The row's assessment button (band, Contested, reason, chevron) takes the hover the S11-D1 board draws, on the kit's `PVHoverEffect` | — (S11-D1, agreed) | S11-27 | — | Scoped |
+| S11-34 | Evidence button hover on Promote rows | 6 | The assessment column stops being a button when the evidence sheet goes | — (S11-D1, agreed) | S11-27 | — | Descoped (2026-10-29) → Spike 13 S13-23 |
 | S11-35 | Hold a record Promote did not offer | 8 | `PromoteFlow` takes a record from outside the menu and holds it as a decided row; Go tests pin that a fixed off-shortlist handle is loaded, banded, has evidence and files; `FakeStore` holds it | — | — | [plan](prs/S11-35-hold-found-record.md) | Landed #543 |
 | S11-37 | One kind-scoped catalog search | 8 | The omnibar's results model and hit row move out of `Features/Workspace` to a shared home, with a `kinds` input and an optional location; the omnibar uses them unchanged | — | — | [plan](prs/S11-37-kind-scoped-search.md) | Landed #551 |
 | S11-36 | Find another record in the target menu | 8 | "Find another record…" at the end of the target menu opens a search of the row's kind on S11-37's model; the pick goes through S11-35 | [S11-D3](design/archive/S11-D3-promote-target-menu.md) | S11-35, S11-37, S11-D3 | [plan](prs/S11-36-find-another-record.md) | Landed #558 |
@@ -171,7 +171,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-51 | One person's links for every reader | 9 | S11-39's `linkSet` merge moves from `promotealign` to `core/kinship` and takes in `loadCanon`'s implied-link merge; `canonlinks.Reader.Relationships` returns a person's recorded and implied links for S11-40 and Spike 13's Person page | — | S11-39 | [plan](prs/S11-51-person-links.md) | Landed #575 |
 | S11-40 | Implied links in claim evidence | 9 | `canonLinks` reads the canon's implied links from the graph cache; a corresponding implied link gives a relationship line with how each side recorded it and the event behind it, a bundle of every bridge behind it, through the RPC to Swift | — | S11-39, S11-51 | [plan](prs/S11-40-implied-links-evidence.md) | Landed #579 |
 | S11-42 | Implied links on the evidence sheet | 9 | The relationship Card says how each side recorded the fact ("This source: married in the marriage dated 12 May 1842 · The record: recorded as spouses") in a muted line under its header; L10n | — | S11-40 | [plan](prs/S11-42-implied-links-sheet.md) | Landed #585 |
-| S11-52 | A related person's lines compare with every member | 5 | Under a relationship Card, a person neighbor's property lines compare with all of the entity's accepted members, not only the linking Source's; event neighbors unchanged; a registry entry names the kinds | — | S11-40 | — | Scoped |
+| S11-52 | A related person's lines compare with every member | 5 | The evidence sheet and `core/claimevidence` it changes are removed (Spike 13 slice 0) | — | S11-40 | — | Descoped (2026-10-29) → conclusion §5.1 |
 | S11-43 | Lower the candidate gate | 10 | `alignment.MinSimilarity` 0.5 → 0.4 with its inventory row; a test that "Amy" gets "Amy Lee Anne Long" as an alternative | — | — | [plan](prs/S11-43-candidate-gate.md) | Landed #588 |
 | S11-44 | Des as a nickname of Desiree and Desirae | 10 | `{desiree, des}` and `{desirae, des}` in `nicknameSets` with a `CacheVersion` bump. Existing catalogs get them, and S11-48's Properties, from a one-off command the user runs by hand, not shipped (user 2026-10-27) | — | S11-28 | [plan](prs/S11-44-des-nickname.md) | Landed #594 |
 | S11-47 | Promote suggests a record or nothing | 10 | Unplaced proposal rows carry no target and no `weak` / `no_match` reason; possible duplicates found among unplaced rows; Swift drafts a handle or unset only | — | — | [plan](prs/S11-47-suggest-a-record-or-nothing.md) | Landed #598 |
@@ -241,18 +241,14 @@ SLICE 5 — Claim evidence
   ✎ S11-D2 ──▶ S11-20  Claim evidence sheet
   Check: five named members show as matches with identical values collapsed;
          "They have a matching birth event" pins its bundle; pins land on every member; two people with a likeness show both crops.
-  S11-52  A related person's lines compare with every member   (follow-up, after S11-40)
-  Check (S11-52): a spouse recorded as "Jake Robins" or "Jake" in three Sources and
-         "James Kenneth Robins" in three shows the Jake lines as matches under
-         "they share a spouse", beside the James Kenneth Robins line.
+  S11-52  (descoped 2026-10-29)
 
 SLICE 6 — Connection subrows
   S11-26  Connections file by their ends   (any time)
   ✎ S11-D1 ──▶ S11-27  Connection subrows on Promote
-  S11-34  Evidence button hover on Promote rows   (follow-up, after S11-27)
+  S11-34  (descoped 2026-10-29)
   Check: setting John to Skip dims "Mary · parent of · John" under its row; nothing
-         toggles by itself; the bottom connections panel is gone; the evidence
-         button answers the pointer as the board draws it.
+         toggles by itself; the bottom connections panel is gone.
 
 SLICE 7 — Performance
   S11-21  Large-Source performance check
@@ -301,7 +297,7 @@ PERSON VOCABULARY (one-off, user 2026-10-25)
 S11-99 — Dogfood close / docs
 ```
 
-Parallel: S11-01 with S11-22; S11-03 with S11-04; S11-24 with slice 3 after S11-05; S11-06, S11-07 and S11-09 after S11-05; S11-14 with S11-15; slice 5 with slice 7 after S11-16; slice 6 any time (S11-26 has no dependency); S11-34 any time after S11-27; S11-43, S11-46 and S11-47 any time, S11-44 and S11-45 after S11-28; S11-41 and S11-50 any time, and slice 9 runs beside slice 8; S11-35 and S11-37 any time, in parallel, and S11-D3 can be drawn while they run. S11-D1 and S11-D2 can be drawn while slice 4's engine PRs run.
+Parallel: S11-01 with S11-22; S11-03 with S11-04; S11-24 with slice 3 after S11-05; S11-06, S11-07 and S11-09 after S11-05; S11-14 with S11-15; slice 5 with slice 7 after S11-16; slice 6 any time (S11-26 has no dependency); S11-43, S11-46 and S11-47 any time, S11-44 and S11-45 after S11-28; S11-41 and S11-50 any time, and slice 9 runs beside slice 8; S11-35 and S11-37 any time, in parallel, and S11-D3 can be drawn while they run. S11-D1 and S11-D2 can be drawn while slice 4's engine PRs run.
 
 ### Dependencies at a glance
 
@@ -544,11 +540,13 @@ Split from S11-20 when it was planned (user, 2026-10-22): the engine half of the
 
 #### S11-52 — A related person's lines compare with every member
 
+**Descoped (2026-10-29).** Identity Claims no longer carry pins and Spike 13's slice 0 removes the evidence sheet and `core/claimevidence` ([`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5). The finding below, that a related person is one person across all their Sources, is input to the member comparison of §5.1 there. Kept as written for the record:
+
 Found in dogfood on 2026-10-27, reviewing S11-40 (user): under "they share a spouse", the spouse's name section showed one line, the marriage certificate's "James Kenneth Robins", as a conflict with the Source's "Jake Robins", while three of the entity's six Sources say "Jake Robins" or "Jake". The Card itself agrees, because the relationship compares with the entity's merged values; the lines under it do not.
 **Ships.** Working rule "A related person's lines compare with every member". `bundles` in `core/claimevidence/build.go` passes `Sections` all of a person neighbor's accepted members (`Neighbor.Members`), not only the ones a bundle names; an event neighbor keeps today's scope. The evidence section of `core/matchregistry` gains the entry that says which neighbor kinds compare with every member (person yes, event no), read by `bundles`. The evidence query loads values for those members: S11-19 PRF-1's `bridgedOnly` trim stays for event neighbors and is skipped for the kinds the entry widens. Pins and default checks follow the existing line rules (matches checked, the rest unchecked); bundles and their pin ids do not change. `claim-evidence.md` § Evidence through relationships says it. No new chrome: the Card already draws several records per section.
 **Not this PR.** Place neighbors (an event's place link) keep today's scope unless the plan finds a reason and the user agrees. Whether "Jake" and "James" compare as the same given name ([name candidates](name-candidates.md), S11-28's nickname sets).
 **Check.** The Jake Robins case above shows the "Jake Robins" and "Jake" members as matching lines, checked, and the three "James Kenneth Robins" members as one collapsed line, unchecked, as the row's own Name section would; a birth neighbor's date lines still show only the linking Source's birth; `TestLargeSourceBudgets` stays within budget.
-**Context.** [`claim-evidence.md`](claim-evidence.md#evidence-through-relationships); S11-19 plan D-13 and its ship log PRF-1; `core/claimevidence/build.go` `bundles`, `core/database/promotealign/evidence.go`; [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md). Spike 12's S12-43 waits on this PR: it memoizes the member reads this widens (audit 2 B-9).
+**Context.** [`claim-evidence.md`](claim-evidence.md#evidence-through-relationships); S11-19 plan D-13 and its ship log PRF-1; `core/claimevidence/build.go` `bundles`, `core/database/promotealign/evidence.go`; [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md). (Spike 12's S12-43 waited on this PR until 2026-10-29.)
 
 ### Slice 3 follow-up — Sex and gender
 
@@ -576,11 +574,13 @@ Found in dogfood on 2026-10-27, reviewing S11-40 (user): under "they share a spo
 
 #### S11-34 — Evidence button hover on Promote rows
 
+**Descoped (2026-10-29).** Spike 13's S13-23 removes the evidence sheet, and the assessment column stops being a button. Kept as written for the record:
+
 Follow-up to S11-27 (user, 2026-10-24): the S11-D1 board draws a hover on the row's evidence button, and neither S11-18 nor S11-27 built it.
 **Ships.** The assessment-column button in `PromoteAlignmentRow` (`PromoteView.swift`, identifier `promote.row.<ref>.evidence`: band and Contested Badges, the reason, the chevron) shows the board's hover state, reusing a hover style the kit already has (`PVMenuRowButtonStyle` in `PVButton.swift`, `PVListRowStyle` in `PVList.swift`; feature precedent `SourcesSplitZoneButtonStyle`) or extending one through `add-ui-component`, not a third hover fill. `PVHoverEffect` adds a press scale; the plan checks the board wants it. Its hit target stays the whole column.
 **Not this PR.** Hover on subrows (S11-D1 §6 non-goals: no hover action on a subrow), on the target menu, or on the anchor rows. A new kit primitive (S11-D1 non-goals); if the hover is a reusable shape, the plan says whether it belongs on an existing kit style.
 **Check.** Pointing at the evidence button shows the board's hover; moving off clears it; clicking still opens the sheet; VoiceOver reads as before.
-**Context.** [S11-D1](design/archive/S11-D1-promote-rows.md) and its board, [Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share) (user, 2026-10-24). The planner may not be able to open it; the implementing agent runs locally and reads the hover from the board, so the plan names the button and the board and leaves the hover's look to the board, not to prose; `macos/App/DesignSystem/Components/HoverEffect/PVHoverEffect.swift`; [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) if the kit changes. Spike 12's S12-45 waits on this PR: it adds a New row's opener to the same assessment-column button (audit 2 B-15).
+**Context.** [S11-D1](design/archive/S11-D1-promote-rows.md) and its board, [Claude Design](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share) (user, 2026-10-24). The planner may not be able to open it; the implementing agent runs locally and reads the hover from the board, so the plan names the button and the board and leaves the hover's look to the board, not to prose; `macos/App/DesignSystem/Components/HoverEffect/PVHoverEffect.swift`; [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) if the kit changes. (Spike 12's S12-45 waited on this PR until 2026-10-29.)
 
 ### Slice 7 — Performance
 

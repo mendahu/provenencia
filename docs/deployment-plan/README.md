@@ -53,7 +53,7 @@ Spike 10 and earlier cut each PR as an In / Out / Testable table inside `deploym
 
 [Spike 12 — Source structure](spike-12/) is open alongside it. Plan: [`spike-12/deployment-plan.md`](spike-12/deployment-plan.md). Briefs are authored just before the PR they gate. Slices 1–4 have landed; slices 5–7 fix what the [app-health audit](spike-12/app-health-audit.md) of 2026-10-27 found, and slices 5b and 6b what the [second audit](spike-12/app-health-audit-2.md) of 2026-10-28 found.
 
-[Spike 13 — Person detail page](spike-13/) is open. Plan: [`spike-13/deployment-plan.md`](spike-13/deployment-plan.md). Each brief is designed, then implemented, before the next.
+[Spike 13 — Person detail page](spike-13/) is open. Plan: [`spike-13/deployment-plan.md`](spike-13/deployment-plan.md). Slice 0 comes first: it removes Identity Claim Observation pins and Promote's evidence sheet (2026-10-29). Each brief is designed, then implemented, before the next.
 
 [Spike 14 — Odds and ends](spike-14/) is open. Plan: [`spike-14/deployment-plan.md`](spike-14/deployment-plan.md). Batch 1 is Event and Place pictures.
 
