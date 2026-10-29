@@ -6,7 +6,7 @@
 
 **Revised 2026-10-29:** Promote is a quick filing action. Identity Claims no longer carry Observation pins, so the row's evidence sheet, its pin toggles and the per-row claim fields are dropped ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5). Graph alignment still proposes and orders each row's targets, but the page no longer shows its band, Contested mark or reason: the score ranks, unseen. Whether a member belongs is shown on the handle's page by a separate comparison (§5.1 there). Until the code catches up, the sheet and the pin writes described in older PR plans still run.
 
-**The data model:** one Identity Claim per Subject and handle, with a status and an optional `argument`.
+**The data model:** one Identity Claim per Subject and handle, with a status (accepted or provisional at Promote; no confidence and no argument since 2026-10-29).
 
 ---
 

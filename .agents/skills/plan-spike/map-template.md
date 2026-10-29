@@ -51,7 +51,7 @@ What someone will ask about, and where it lives instead.
 
 One paragraph: what this spike pulls in (dogfood notes, [ideas](../../ideas/…), leftovers) and the PR rule (one note, one PR, unless two edit the same part of one view or the same comparer).
 
-**A brief covers one view.** A PR that changes chrome waits on a brief for each view it touches. Briefs and PR plans are written just before the PR ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md), [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md)). A bugfix or a behavior change with no new chrome is not gated.
+**A brief covers one view.** A PR that adds, changes or removes chrome waits on a brief for each view it touches; a removal is gated too. Briefs and PR plans are written just before the PR ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md), [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md)). Only a PR whose views look the same before and after is not gated.
 
 ## Status
 

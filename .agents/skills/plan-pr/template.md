@@ -13,7 +13,7 @@ planner; delete it from the finished plan.
 **Status:** Draft | Planned | Blocked — on … | In progress | Landed in [#N](https://github.com/mendahu/provenencia/pull/N) (YYYY-MM-DD) | Descoped
 **Spike / slice:** Spike N · Slice K — slice name
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S#-D#](../design/S#-D#-slug.md), board agreed YYYY-MM-DD | — (no new chrome: one clause why)
+**Brief:** [S#-D#](../design/S#-D#-slug.md), board agreed YYYY-MM-DD | — (no chrome change: one clause why)
 **Board:** where the implementer sees the agreed frames | —
 **Depends on:** S#-NN (landed [#N](…)), S#-D# | —
 **Blocks:** S#-NN | —
