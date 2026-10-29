@@ -37,7 +37,7 @@ struct ConclusionDetailRelationship: Equatable, Identifiable {
     }
 }
 
-/// One section under Details. Place hierarchy sections carry relationship
+/// One Place hierarchy section (Part of / Contains / Succession). Carries relationship
 /// rows when Go filled them; otherwise the empty sentence.
 struct ConclusionDetailSection: Equatable, Identifiable {
     var id: String
