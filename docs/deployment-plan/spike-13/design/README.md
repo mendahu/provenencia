@@ -11,7 +11,7 @@ In order; S13-D8 and S13-D9 may run alongside once S13-20 lands.
 | Brief | View | Gates |
 | --- | --- | --- |
 | [S13-D11](S13-D11-promote-without-assessment.md) | Promote page without the evidence sheet and the assessment column, with a status per row (slice 0, first); board agreed 2026-10-29 | S13-23, S13-30 |
-| S13-D1 | Person page: header, section switching, Vitals | S13-10 |
+| [S13-D1](S13-D1-person-page-frame.md) | Person page: header, section switching, Vitals (board agreed 2026-10-29) | S13-10 |
 | S13-D2 | Provenance sheet | S13-11 |
 | S13-D3 | Family section (and the shared person tile) | S13-12 |
 | S13-D4 | Timeline section | S13-13 |
