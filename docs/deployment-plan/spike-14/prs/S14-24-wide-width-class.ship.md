@@ -41,5 +41,17 @@ Head `2ba4aea4`. Gate PASS (orchestrator run). F-1 done (`84500d2f`), F-2 done (
 ## Round 2 — review
 Not run: round 1 left no Fix-now blocker or major (CON-1 re-rated minor). Fix commits read by the orchestrator: CON-1 **Resolved**, MNT-1 **Resolved**, MNT-3 **Resolved**.
 
+## CI — run 40946945949 (failure)
+`test` job: Swift Testing aborted with `Received unexpected event testCaseDidStart for 'PVWidthClassTests/classFollowsPaneWidth(width:expected:)' (iteration 1). Test already started.` The arguments `(PVSpacing.widthWideBreakpoint, .wide)` and `(1600, .wide)` are equal values, so the two parameterized cases share one ID. The local gate passed, so the duplicate trips only on the CI runner's Xcode.
+
+### Fix plan CI
+**F-4 — No duplicate arguments in T-1** (CI)
+Files: `macos/ProvenenciaTests/PVWidthClassTests.swift`.
+Do: drop the `(1600, .wide)` argument from `classFollowsPaneWidth`, and add `#expect(PVSpacing.widthWideBreakpoint == 1600)` in a separate `@Test func breakpointIsSixteenHundred()`, so the plan's T-1 inputs are all still covered and no two arguments are equal.
+Check: scripts/check-pr.sh PASS; CI `test` green.
+
+## CI fix
+Head `7e3bd31e`. Gate PASS (orchestrator run). F-4 done. CI run 40948499927: `test` and `localizable` green.
+
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none (nit MNT-4 logged) · to user: — · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: none (nit MNT-4 logged) · to user: — · CON miss: none
