@@ -1694,6 +1694,7 @@ struct CitationComposerModelTests {
         navigation.replaceCurrent(with: location)
         model.navigation = navigation
 
+        model.activeCitationID = "cit-1"
         model.selectedArtifactID = "art-1"
 
         var expected = location
@@ -1707,6 +1708,33 @@ struct CitationComposerModelTests {
 
         model.selectedArtifactID = nil
         #expect(navigation.currentLocation.artifactId == nil)
+    }
+
+    /// An Artifact switch that drops the open Citation (as selectArtifactAndLoad
+    /// does before it sets the Artifact) clears the Citation's ids from the
+    /// location; the display fields stay.
+    @Test func switchingArtifactsAwayFromAnEditedCitationClearsItsIds() async throws {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store, citationID: "cit-1")
+        let navigation = WorkspaceNavigation()
+        let location = WorkspaceLocation(
+            section: .sources, sourceId: sourceID, graphId: graphID, subjectId: subjectID,
+            citationId: "cit-1", artifactId: "art-0", observationId: "obs-1",
+            sourceSurface: .citationComposer, ref: "CIT-1", title: "Ada", sourceTitle: "Census"
+        )
+        navigation.replaceCurrent(with: location)
+        model.navigation = navigation
+
+        model.activeCitationID = nil
+        model.selectedArtifactID = "art-1"
+
+        #expect(navigation.currentLocation.artifactId == "art-1")
+        #expect(navigation.currentLocation.citationId == nil)
+        #expect(navigation.currentLocation.observationId == nil)
+        #expect(navigation.currentLocation.title == "Ada")
+        #expect(navigation.currentLocation.ref == "CIT-1")
+        #expect(navigation.currentLocation.sourceTitle == "Census")
     }
 
     @Test func lineRefreshShowsAFailedCitationLoad() async {

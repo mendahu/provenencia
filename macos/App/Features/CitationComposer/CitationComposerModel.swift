@@ -213,7 +213,9 @@ final class CitationComposerModel {
 
     /// Rewrites the current location's Artifact in place, so `PlaceRegistry`
     /// names the selected Artifact's citations as visible keys. Every other
-    /// id and display field of the location stays; nothing is pushed.
+    /// id and display field of the location stays, except that a switch which
+    /// dropped the open Citation clears its `citationId` and `observationId`;
+    /// nothing is pushed.
     private func followArtifactInLocation(_ artifactID: String?) {
         guard let navigation else { return }
         var location = navigation.currentLocation
@@ -221,6 +223,10 @@ final class CitationComposerModel {
         let value = (artifactID?.isEmpty ?? true) ? nil : artifactID
         guard location.artifactId != value else { return }
         location.artifactId = value
+        if activeCitationID == nil {
+            location.citationId = nil
+            location.observationId = nil
+        }
         navigation.replaceCurrent(with: location)
     }
     private var identityTask: Task<Void, Never>?
