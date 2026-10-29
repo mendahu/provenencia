@@ -229,3 +229,55 @@ CI for Go runs on Linux. Swift tests run on a macOS GitHub runner (`.github/work
 - **`WindowGroup`** is a generic window. A real `.provenencia` document flow may later use a document scene; do not force that until we open files.
 
 Product version remains [`versioning.md`](versioning.md) (`VERSION` / About box), not the bundle id.
+
+## 9. Window widths: Regular and Wide
+
+The window opens at `PVSpacing.widthWorkspaceDefault` × `heightWorkspaceDefault` (1366 × 900pt, clamped to the screen), which is laptop-shaped. People also stretch it across a large external monitor. A view designed only for the default size then sits in its 1180pt `widthContentMax` column, left-aligned, with a wall of empty space to its right. Every view is designed for both widths.
+
+### The breakpoint
+
+**One breakpoint: 1600pt of pane width.**
+
+| Width class | Pane width | Typical setup |
+| --- | --- | --- |
+| Regular | below 1600pt | The default window; any MacBook, even full screen; half of a big monitor |
+| Wide | 1600pt and up | Full screen or most of a 1920pt-or-wider monitor; a 16" MacBook full screen with the sidebar collapsed |
+
+**Pane width** is what the destination itself gets: the window minus the sidebar (264pt, 78pt collapsed) and minus any inspector beside it. It is not the screen or the window. Measure it with `onGeometryChange` on the destination's root, the way `SourcesListView` picks its columns. Collapsing the sidebar or opening an inspector can move a view across the line, and that is intended.
+
+Where the numbers come from (points, sidebar open):
+
+| Setup | Window | Pane | Class |
+| --- | --- | --- | --- |
+| Default window | 1366 | ~1102 | Regular |
+| 13"–15" MacBook Air full screen | 1470–1710 | ~1206–1446 | Regular |
+| 16" MacBook Pro full screen | 1728 | ~1464 | Regular |
+| 4K monitor at "looks like 1920 × 1080" | 1920 | ~1656 | Wide |
+| 27" 5K / 1440p monitor | 2560 | ~2296 | Wide |
+| 32" 6K monitor | 3008 | ~2744 | Wide |
+
+1600 is also the smallest pane that holds a full `widthContentMax` column (1180), a gap (32), an inspector-width column (`widthInspector`, 340) and two page gutters (2 × 32) without squeezing either column much. Below that, a second column steals from the first.
+
+The breakpoint becomes a token (`PVSpacing` `widthWideBreakpoint = 1600`) in the first PR that builds a Wide frame, with a tiny shared width-class helper beside it so views do not each re-measure. Until then, use the number.
+
+### Rules for Wide
+
+1. **The extra space does a job.** A Wide frame either shows more at once (a second column, the detail beside its list, more grid columns, more table columns) or, when the view truly has nothing to add, centers its content group. Left-aligned content with dead space beside it is never the Wide design.
+2. **Readable things keep their measure.** Prose stays at `measureProse`, forms at `measureForm` or their field widths, the primary column at `widthContentMax`. Wide adds columns; it does not stretch text or fields.
+3. **Lists, tables, grids and canvases fill.** Content made of many items uses the width. Cards keep their minimum width and add columns; they do not grow to fill.
+4. **Same content, same actions.** Width class changes arrangement only. Nothing exists only at Wide: what sits in the second column at Wide is stacked below, in an inspector, or behind a disclosure at Regular.
+5. **Crossing the line keeps state.** Selection, scroll position, focus and unsaved edits survive a resize across 1600.
+6. **Past the maximum, center.** When every column has hit its cap (very wide panes), the content group centers in the pane, and gutters grow to `gutterPageWide` (56) and beyond.
+
+### Patterns to reach for
+
+| View shape | Regular | Wide |
+| --- | --- | --- |
+| List → detail page (Sources, Conclusions, vocabulary) | List; select navigates to the detail | List column (about 420–520pt) and the selected detail side by side |
+| Record / detail page (Source page, Conclusion detail) | One column; supporting sections stacked below | Primary column (≤ `widthContentMax`) plus a secondary column (340–480pt) of supporting content: metadata, linked records, activity, artifacts |
+| Grid (artifacts, galleries) | Columns that fit at the card minimum | More columns at the same card size |
+| Table | Essential columns | Columns that were hidden at Regular |
+| Form / editor | One column at the form measure | Field groups in two columns, or the form beside a live preview or reference panel |
+| Canvas (evidence graph, viewer) | Canvas; inspector on demand | Canvas with the inspector docked open |
+
+A view that fits none of these says in its brief what its Wide frame does and why. Briefs carry these rules in their Paste block, because Claude Design does not follow links ([`add-design-brief`](../.agents/skills/add-design-brief/SKILL.md)).

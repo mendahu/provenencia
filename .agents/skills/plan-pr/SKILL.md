@@ -90,7 +90,7 @@ is not gated.
 | Situation | Do |
 | --- | --- |
 | No new chrome | Brief field: `— (no new chrome)`. Say why in one clause |
-| Brief agreed, board done | Link it. Copy its requirement IDs into **Scope** and its inventory into **Design → macOS** |
+| Brief agreed, board done | Link it. Copy its requirement IDs (the `-W` Wide ones too) into **Scope** and its inventory into **Design → macOS**. The manual check looks at each view at Regular and Wide |
 | Brief scheduled, not written | Write it now with [`add-design-brief`](../add-design-brief/SKILL.md). Plan status `Blocked — on board S#-D#` until the user says the board is agreed |
 | Brief written, board not agreed | Plan status `Blocked — on board S#-D#`. Draft everything that does not depend on frames |
 
