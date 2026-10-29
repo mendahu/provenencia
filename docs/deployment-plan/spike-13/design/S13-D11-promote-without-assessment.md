@@ -52,8 +52,10 @@ Every view has two width classes, measured on the view's own pane (the window
 minus the sidebar), not the screen. A view with a side pane (an inspector, a detail
 pane) plans that pane inside its Wide frame:
 
-- **Regular** — pane below 1600pt. Draw at the default window: 1366 × 900, sidebar open.
-- **Wide** — pane 1600pt and up. Draw at 2560 × 1440, sidebar open.
+- **Regular** — pane below 1600pt. Draw the pane at 1102 × 900 (the default 1366pt window minus the open sidebar).
+- **Wide** — pane 1600pt and up. Draw the pane at 2296 × 1440 (a 2560pt window minus the sidebar).
+
+Draw only the view's own pane. Do not draw the app's sidebar, its navigation items or the window's title bar: they are not part of the board. A frame that needs the toolbar (breadcrumbs, Back and Forward) says so in the brief, and draws only the toolbar above the pane.
 
 Rules for Wide:
 

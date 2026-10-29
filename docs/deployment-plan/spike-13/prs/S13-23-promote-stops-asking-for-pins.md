@@ -463,4 +463,4 @@ The code differs from the plan in these ways:
 - `CatalogQueryRegistryTests.everyKindHasOneDescriptor` counts 18 kinds, not 19.
 - `GenealogyStore` and `FakeStore` doc comments that called the process filing say promote or apply; `add-localized-string`'s "a share phrase with its article" example reads "a phrase with its article".
 - The manual check (section 10) was not run in the app.
-
+- The S13-D11 brief's Paste block was refreshed to the current `add-design-brief` wording (pane-only frames), because `check-plan-docs.py` fails a brief it checks that differs from the skill, and this PR changes the brief's gate table.
