@@ -1,7 +1,7 @@
 # Ship log — S12-25 Writes name only the graphs they move
 
 **Plan:** [`S12-25-writes-name-graphs-they-move.md`](S12-25-writes-name-graphs-they-move.md) · **Branch:** `s12-25-writes-name-graphs-they-move` · **PR:** [#621](https://github.com/mendahu/provenencia/pull/621)
-**State:** ready — finishing
+**State:** ready
 
 ## Round 0 — implement
 Base `4145ccdd` (origin/main at branch cut; docs-only since plan base). Head `6a8f6573`. Gate PASS (orchestrator re-ran `scripts/check-pr.sh`). Report deviations: `TestCitationReadsPreferArtifactGraphs` lives in `reads_resolve_test.go` (package `effects_test`) since `TestReadsDeclare` needs package `effects`; `SourcePageModelTests.aGraphWriteMovesOnlyItsRow` and `SourcesModelTests.listReadsEachGraphsProgress` now apply a `reads` progress entry; `apply(invalidations:)` dedupes keys before `applyHiddenPolicy`; a graph delete now names the deleted graph in the `citations` read; `TestLinkWritesMoveCitationReads` asserts the read; commits 2–3 do not build alone; manual check not run.
@@ -71,4 +71,4 @@ Reviewers: MNT only (had Fix-now majors MNT-1, MNT-2). Scope: `6a8f6573...9775a9
 Nits (logged): `MNT-7 · CatalogLastUpdated.swift:30 · ".reads" comment still says "graph ids"; say "key ids"` · `MNT-8 · effects/registry.go validate · end check repeats TestReadsDeclare's`
 
 ## Result
-Gate PASS · CI pending · open: none · later PR: CON-1 → S12-40 ([plan](S12-40-citation-in-one-graph.md), planned on this branch, user 2026-10-29) · follow-ups: none · to user: CON-1 (answered: leave on this PR, plan the schema change), UX-1 (answered: clear the ids now) · CON miss: none
+Gate PASS (after merging main @ `0fe0b280`) · CI green (Go + macOS) · open: none · later PR: CON-1 → S12-40 ([plan](S12-40-citation-in-one-graph.md), planned on this branch, user 2026-10-29) · follow-ups: none · to user: CON-1 (answered: leave on this PR, plan the schema change), UX-1 (answered: clear the ids now) · CON miss: none
