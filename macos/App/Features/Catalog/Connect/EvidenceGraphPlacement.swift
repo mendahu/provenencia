@@ -42,6 +42,22 @@ enum EvidenceGraphPlacement {
         max(-cellLimit, min(cellLimit, cell))
     }
 
+    /// `cell` moved by `delta`, then held within ±``cellLimit``; no overflow.
+    static func offsetCell(_ cell: Int64, by delta: Int64) -> Int64 {
+        clampedCell(GraphCanvasGridMapping.offsetCell(cell, by: delta))
+    }
+
+    /// The grid cell nearest `gridPoint`, each axis held within ±``cellLimit``.
+    static func cell(at gridPoint: CGPoint) -> (gridX: Int64, gridY: Int64) {
+        let cell = GraphCanvasGridMapping.gridCell(gridPoint: gridPoint)
+        return (clampedCell(cell.gridX), clampedCell(cell.gridY))
+    }
+
+    /// `floor(value)` held within ±``cellLimit``.
+    private static func flooredCell(_ value: CGFloat) -> Int64 {
+        clampedCell(GraphCanvasGridMapping.saturatingFloor(value))
+    }
+
     /// Keep in sync with `EvidenceSubjectCard.width` / `approximateHalfHeight`.
     static let subjectCardWidth: CGFloat = 264
     static let subjectCardHalfHeight: CGFloat = 36
@@ -178,19 +194,19 @@ enum EvidenceGraphPlacement {
         if placed.isEmpty {
             let cell = CatalogGridCell(
                 gridX: minCell.gridX,
-                gridY: clampedCell(GraphCanvasGridMapping.offsetCell(minCell.gridY, by: 2))
+                gridY: offsetCell(minCell.gridY, by: 2)
             )
             return (cell, minCell.gridX)
         }
 
         var column = landingColumn
-            ?? clampedCell(GraphCanvasGridMapping.offsetCell(placed.map(\.gridX).max()!, by: horizontalStep))
+            ?? offsetCell(placed.map(\.gridX).max()!, by: horizontalStep)
         var row = rowInColumn(column, placed: placed)
         let landing = subjectFrame(gridX: column, gridY: row)
         let board = canvas(fitting: cardFrames(in: snapshot) + [landing])
         let limit = maxCell(on: board)
         if row > limit.gridY, column < limit.gridX {
-            column = min(clampedCell(GraphCanvasGridMapping.offsetCell(column, by: horizontalStep)), limit.gridX)
+            column = min(offsetCell(column, by: horizontalStep), limit.gridX)
             row = rowInColumn(column, placed: placed)
         }
         column = min(column, limit.gridX)
@@ -210,7 +226,7 @@ enum EvidenceGraphPlacement {
         if inColumn.isEmpty {
             return max(placed.map(\.gridY).min() ?? minCell.gridY, minCell.gridY)
         }
-        return clampedCell(GraphCanvasGridMapping.offsetCell(inColumn.map(\.gridY).max()!, by: verticalStep))
+        return offsetCell(inColumn.map(\.gridY).max()!, by: verticalStep)
     }
 
     /// Smallest x such that the subject card's left edge stays at least `spacing` from the origin.
@@ -231,14 +247,14 @@ enum EvidenceGraphPlacement {
     private static func maxGridX(documentEdge: CGFloat) -> Int64 {
         let width = EvidenceSubjectCard.width
         let raw = (documentEdge - width / 2) / spacing - 0.5
-        return clampedCell(GraphCanvasGridMapping.saturatingFloor(raw + 1e-9))
+        return flooredCell(raw + 1e-9)
     }
 
     /// Largest y such that the card's bottom stays inside `documentEdge` (grid space).
     private static func maxGridY(documentEdge: CGFloat) -> Int64 {
         let half = EvidenceSubjectCard.approximateHalfHeight
         let raw = (documentEdge - half) / spacing - 0.5
-        return clampedCell(GraphCanvasGridMapping.saturatingFloor(raw + 1e-9))
+        return flooredCell(raw + 1e-9)
     }
 
     private static func cardFrame(
