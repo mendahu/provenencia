@@ -84,7 +84,7 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 
 | PR | Title | Slice | Scope | Brief | Depends on | Plan | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| S13-09 | Sections slot on the Conclusion page | 1 | Preparatory: `ConclusionDetailPage` gains a sections slot; Person, Event and Place pass one section; no visible change | — | — | — | Scoped |
+| S13-09 | Sections slot on the Conclusion page | 1 | Preparatory: `ConclusionDetailPage` gains a sections slot; Person, Event and Place pass one section; no visible change | — | — | [S13-09](prs/S13-09-sections-slot.md) | Planned |
 | S13-10 | Header and sections | 1 | The fixed header, the section switcher, and Vitals as the first section (today's rows) | S13-D1 | S13-09 | — | Scoped |
 | S13-06 | Derived rows carry their records | 2 | `ConclusionDetail` carries, for each derived row, the reconciler records of the owning entity's field (birth and death event date and place) | — | — | — | Scoped |
 | S13-11 | Provenance sheet | 2 | The provenance control and sheet replace the Why accordion on every Vitals row, with links to Source, Citation and Observation | S13-D2 | S13-06, S13-10 | — | Scoped |
@@ -211,8 +211,8 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Chrome scopes ar
 
 #### S13-09 — Sections slot on the Conclusion page
 
-**Ships.** A preparatory refactor: `ConclusionDetailPage` (and `ConclusionDetailBody`) gains a sections slot below the header; Person, Event and Place each pass today's content as one section.
-**Not this PR.** Any visible change; the switcher (S13-10).
+**Ships.** A preparatory refactor: `ConclusionDetailPage` gains a `pageSections` slot below the header; a convenience initializer supplies today's Details rows, likenesses and Place relationship rows as the default fill so Person, Event and Place call sites stay unchanged; no visible change.
+**Not this PR.** Any visible change; the switcher (S13-10); a custom `pageSections` at a call site (S13-10 for Person).
 **Check.** The Person, Event and Place pages look the same; existing detail page tests pass.
 **Context.** Working rule "One sectioned Conclusion page, not a Person fork"; R-1; `ConclusionDetailPage.swift`.
 
