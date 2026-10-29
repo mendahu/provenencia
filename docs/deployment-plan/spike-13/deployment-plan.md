@@ -152,7 +152,7 @@ Each brief is written just before the PR it gates, its board agreed, and that PR
 | Brief | View | Gates | Notes |
 | --- | --- | --- | --- |
 | S13-D11 | Promote page without the evidence sheet and the assessment column, with a status per row | **S13-23**, **S13-30** | Slice 0; an enhancement of the Promote flow board that removes frames. Decides what the freed column width becomes ([brief](design/S13-D11-promote-without-assessment.md)) |
-| [S13-D1](design/S13-D1-person-page-frame.md) | Person page: header, section switching, Vitals | **S13-10** | Written 2026-10-29; board not agreed. Explores stacked-with-shortcuts versus tabs (R-7). Draws the whole frame, all five sections as places (working rule "S13-D1 draws the whole frame"), at Regular and Wide on Page columns, after the S14-D1 board (working rule "Redesigns adopt Page columns") |
+| [S13-D1](design/S13-D1-person-page-frame.md) | Person page: header, section switching, Vitals | **S13-10** | Board agreed 2026-10-29. Explores stacked-with-shortcuts versus tabs (R-7). Draws the whole frame, all five sections as places (working rule "S13-D1 draws the whole frame"), at Regular and Wide on Page columns, after the S14-D1 board (working rule "Redesigns adopt Page columns") |
 | S13-D2 | Provenance sheet | **S13-11** | Reusable beyond Person (R-13); leaves room for Reconciliation Claims (R-10) |
 | S13-D3 | Family section | **S13-12** | Draws the shared person tile; two marriages and conflicting parents |
 | S13-D4 | Timeline section | **S13-13** | Reuses S13-D3's tile; depiction placeholder; Undated group |
