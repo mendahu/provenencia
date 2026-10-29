@@ -202,6 +202,8 @@ extension ConclusionDetailPage where PageSections == ConclusionDetailDefaultPage
 }
 
 /// Today's below-header fill: Details, the likeness gallery, then the Place relationship sections.
+/// The body returns sibling views that take their spacing from the page's `VStack`, so a custom
+/// fill returns siblings too; a modifier on the whole fill would join them into one block.
 struct ConclusionDetailDefaultPageSections<Content: ConclusionDetailBody>: View {
     let content: Content
     let context: ConclusionDetailPageSectionsContext
