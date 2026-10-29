@@ -3,6 +3,7 @@
 > **Update 2026-10-29: Wide layout.** Since the first version of this brief, the design system gained a Wide width class (a pane of 1600pt and up) and a **Page columns** component (Spike 14 brief S14-D1, archived by [#629](https://github.com/mendahu/provenencia/pull/629), board agreed 2026-10-29). If you already started this board, **extend your frames**; do not start a second page. For this revision:
 > - **Pull the fresh design-system kit first.** It has Page columns, the `--width-wide-breakpoint` and `--width-secondary-max` tokens, and the Width classes README section.
 > - The **"Two widths — draw both"** block is now in the Paste block, and the brief gains Page columns in the domain facts and inventory, requirements **PPF-W1 – PPF-W5**, a **Wide layout** table (§ 4.1), and Wide frames **14 – 19**.
+> - **Draw the page's pane only, without the app sidebar or its navigation items** (Regular pane 1102 × 900, Wide pane 2296 × 1440). If your frames show the sidebar, remove it.
 > - PPF-3 now places the header and switcher in Page columns' header slot, pinned or scrolling; PPF-13 asks for Tab between switcher items, not arrow keys.
 
 **Kind:** Claude Design board (**rethink** of the Person page layout below the header; the header itself is an **enhancement**)
@@ -57,8 +58,10 @@ Every view has two width classes, measured on the view's own pane (the window
 minus the sidebar), not the screen. A view with a side pane (an inspector, a detail
 pane) plans that pane inside its Wide frame:
 
-- **Regular** — pane below 1600pt. Draw at the default window: 1366 × 900, sidebar open.
-- **Wide** — pane 1600pt and up. Draw at 2560 × 1440, sidebar open.
+- **Regular** — pane below 1600pt. Draw the pane at 1102 × 900 (the default 1366pt window minus the open sidebar).
+- **Wide** — pane 1600pt and up. Draw the pane at 2296 × 1440 (a 2560pt window minus the sidebar).
+
+Draw only the view's own pane. Do not draw the app's sidebar, its navigation items or the window's title bar: they are not part of the board. A frame that needs the toolbar (breadcrumbs, Back and Forward) says so in the brief, and draws only the toolbar above the pane.
 
 Rules for Wide:
 
@@ -103,7 +106,7 @@ A researcher opens a Person and sees, at a glance, who the person is (the header
 | Family, Timeline, Sources are not built yet | Their content comes with S13-D3, S13-D4 and S13-D6. Until then each is a place that says the section is coming. The researcher can still choose it, and history still records it. |
 | Some persons are sparse | A person may have only a ref (no name, no dates, no likeness, one member). The header then shows the ref as the title. |
 | The page loads and can fail | Today: a small spinner while the first read loads; an error Callout if it fails; a spinner in the Details header while a stale page refreshes. |
-| The window can be narrow | The content column can be as narrow as the workspace allows with the sidebar open. Five section names must still fit or degrade cleanly. |
+| The window can be narrow | The content column can be as narrow as the workspace allows (the smallest window with the sidebar open). Five section names must still fit or degrade cleanly. |
 | Two widths (§ "Two widths — draw both") | Regular is a pane below 1600pt, Wide 1600pt and up. The app measures the pane once; the page reads its class. Most researchers work at Regular (every MacBook full screen is Regular); a 1920pt-or-wider monitor is Wide. |
 | Page columns is the page scaffold (S14-D1) | Three slots: an optional **header** that spans the column group and either scrolls with the page or is pinned above the scroll; a **primary** column (up to 1180pt); an optional **secondary** column (340 – 480pt). At Regular the secondary stacks below the primary at the same width; at Wide it sits on the trailing side, 32pt from the primary. With no secondary, the column is centered at both widths. Page columns owns the scroll. The Event and Place pages move onto it too, with no secondary and no other change. |
 | A section fills the primary column | The section the researcher chose is the page's primary content. What, if anything, goes in the secondary column is this board's call, per section (PPF-W2 – PPF-W4), within rule 4: anything in it at Wide is stacked below the primary at Regular. |
@@ -140,7 +143,7 @@ A researcher opens a Person and sees, at a glance, who the person is (the header
 | PPF-3 | **One action from anywhere (R-6).** From any scroll position in any section, the researcher reaches any other section in one click. Decide whether the header and switcher stay pinned while the section scrolls, or scroll with the page and the switcher stays reachable another way. Both go in Page columns' **header** slot, which is pinned or scrolling by the page's choice (S14-D1 WL-3, WL-8); do not build a second pinned bar. If pinned, decide whether the header compacts on scroll (for example the name and b./d. line only, thumb smaller) so a 120pt header does not take a third of a short window. Draw the scrolled state. |
 | PPF-4 | **The current section is plain to see.** The switcher marks the current section without relying on colour alone, and VoiceOver reads it as selected ("Vitals, selected, 1 of 5"). |
 | PPF-5 | **Sections are places.** Choosing a section adds one Back step. Back returns to the previous section on the same person, then to wherever the researcher came from. Choosing the section already showing adds nothing. Opening a Person from anywhere lands on Vitals. |
-| PPF-6 | **History says which section.** The breadcrumbs and the Back / Forward jump menu tell two sections of one person apart. Recommended: the breadcrumbs read *Persons › Jane Doe › Family*, with *Jane Doe* going to Vitals, and Vitals shows no third crumb; the jump menu row reads *Jane Doe · Family*, and a Vitals entry reads *Jane Doe* alone, as today. Draw the toolbar for one frame. |
+| PPF-6 | **History says which section.** The breadcrumbs and the Back / Forward jump menu tell two sections of one person apart. Recommended: the breadcrumbs read *Persons › Jane Doe › Family*, with *Jane Doe* going to Vitals, and Vitals shows no third crumb; the jump menu row reads *Jane Doe · Family*, and a Vitals entry reads *Jane Doe* alone, as today. Draw the toolbar for one frame, above the pane; still no sidebar. |
 | PPF-7 | **Each section opens at its top.** Switching to a section shows it from its first line; the page does not keep one section's scroll for another. |
 | PPF-8 | **Vitals is today's Details.** The rows, their order, Badges, Sources and Why disclosures are as today. Decide whether the section keeps a "Details" heading, takes "Vitals" as its heading, or has none because the switcher already names it. Keep the refreshing spinner somewhere visible while a stale page reloads. Leave room on each row's trailing edge for S13-D2's provenance control. |
 | PPF-9 | **Gallery shows today's grid.** The Likenesses grid as S10-D12 drew it (count, 96pt crops, Source captions, Portrait Badge, Use as portrait, open Citation) moves into Gallery unchanged. A person with no likeness shows an EmptyState: "No likenesses yet" with one line on where they come from (a likeness is drawn on a Citation's image). |
@@ -169,7 +172,7 @@ A researcher opens a Person and sees, at a glance, who the person is (the header
 
 ## 5. Suggested frames
 
-One Person page. Every later frame is this page with one thing changed. Draw each at **Regular** (1366 × 900, sidebar open) unless it says Wide; the Wide frames (14 – 18) sit beside their Regular frame.
+One Person page. Every later frame is this page with one thing changed. Draw each as the page's pane only, with no app sidebar: at **Regular** (pane 1102 × 900) unless it says Wide (pane 2296 × 1440); the Wide frames (14 – 19) sit beside their Regular frame.
 
 1. **Pattern A on Vitals.** A full person (name, both life lines, gender Woman, three likenesses, 20 Vitals rows, one Mixed row) on Vitals, switcher pattern A (PPF-2).
 2. **Pattern B on Vitals.** The same person, stacked sections with jump shortcuts (PPF-2). Then the recommendation.
@@ -178,17 +181,17 @@ One Person page. Every later frame is this page with one thing changed. Draw eac
 5. **Gallery, none.** A person with no likeness on Gallery: the EmptyState (PPF-9).
 6. **Family, Timeline, Sources.** Each section's empty state (PPF-10). One frame may show all three side by side.
 7. **Sparse person.** Only a ref, no name, no dates, no likeness, on Vitals: the ref as title, the four life rows stated empty.
-8. **History.** Frame 4 with the toolbar: breadcrumbs *Persons › Jane Doe › Gallery*, the Back jump menu open listing *Jane Doe* (the Vitals entry) and *Persons* (PPF-6).
+8. **History.** Frame 4 with the toolbar above the pane (no sidebar): breadcrumbs *Persons › Jane Doe › Gallery*, the Back jump menu open listing *Jane Doe* (the Vitals entry) and *Persons* (PPF-6).
 9. **Loading and failure.** The first-load state and the error Callout (PPF-11).
 10. **Refreshing.** Frame 1 while a stale page reloads (PPF-8).
-11. **Narrow.** Frame 1 at the narrowest content column with the sidebar open (PPF-12).
+11. **Narrow.** Frame 1 at the narrowest pane (a 700pt window with the sidebar open leaves a 436pt pane) (PPF-12).
 12. **Focus.** The switcher with keyboard focus on Timeline (PPF-13).
 13. **Dark mode.** Frames 1, 3 and 6 in dark mode (PPF-14).
-14. **Wide Vitals.** Frame 1 (the chosen pattern) at 2560 × 1440: the header slot spanning the group, Vitals in the primary column, the secondary column as PPF-W2 decides; the rule-5 note (PPF-W1, PPF-W2, PPF-W5).
-15. **Wide Vitals, growing.** Frame 14 at 1920 × 1080 (pane 1656), so the secondary column's 380pt width shows, if PPF-W2 uses one; otherwise the centered column (WL-5, WL-6).
-16. **Wide, scrolled.** Frame 3 at 2560 × 1440: the header slot pinned or scrolled as PPF-3 decides (PPF-W1).
-17. **Wide Gallery.** Frame 4 at 2560 × 1440: more tiles per row, same tile size (PPF-W3).
-18. **Wide empty section.** Frame 6's Family at 2560 × 1440: the EmptyState centered (PPF-W4).
+14. **Wide Vitals.** Frame 1 (the chosen pattern) at Wide (pane 2296 × 1440): the header slot spanning the group, Vitals in the primary column, the secondary column as PPF-W2 decides; the rule-5 note (PPF-W1, PPF-W2, PPF-W5).
+15. **Wide Vitals, growing.** Frame 14 at a 1656 × 1080 pane (a 1920pt window), so the secondary column's 380pt width shows, if PPF-W2 uses one; otherwise the centered column (WL-5, WL-6).
+16. **Wide, scrolled.** Frame 3 at Wide: the header slot pinned or scrolled as PPF-3 decides (PPF-W1).
+17. **Wide Gallery.** Frame 4 at Wide: more tiles per row, same tile size (PPF-W3).
+18. **Wide empty section.** Frame 6's Family at Wide: the EmptyState centered (PPF-W4).
 19. **Wide dark.** Frame 14 in dark mode.
 
 ---

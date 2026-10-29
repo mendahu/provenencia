@@ -105,8 +105,10 @@ Every view has two width classes, measured on the view's own pane (the window
 minus the sidebar), not the screen. A view with a side pane (an inspector, a detail
 pane) plans that pane inside its Wide frame:
 
-- **Regular** — pane below 1600pt. Draw at the default window: 1366 × 900, sidebar open.
-- **Wide** — pane 1600pt and up. Draw at 2560 × 1440, sidebar open.
+- **Regular** — pane below 1600pt. Draw the pane at 1102 × 900 (the default 1366pt window minus the open sidebar).
+- **Wide** — pane 1600pt and up. Draw the pane at 2296 × 1440 (a 2560pt window minus the sidebar).
+
+Draw only the view's own pane. Do not draw the app's sidebar, its navigation items or the window's title bar: they are not part of the board. A frame that needs the toolbar (breadcrumbs, Back and Forward) says so in the brief, and draws only the toolbar above the pane.
 
 Rules for Wide:
 
@@ -153,7 +155,7 @@ In the brief, for **each view** the board touches:
 | --- | --- |
 | A **Wide layout** table: view → Regular → Wide → what moves where | “Source page — Regular: one column, Artifacts and Citations stacked — Wide: primary column + 400pt secondary column holding Metadata and Citations” |
 | A requirement `XX-W1`… per view stating the Wide arrangement | “SP-W1: at Wide the Citations list sits in the secondary column, not below Artifacts” |
-| A Regular and a Wide frame in **Suggested frames** | “Frame 2a Regular 1366 × 900 · Frame 2b Wide 2560 × 1440” |
+| A Regular and a Wide frame in **Suggested frames**, each the pane only (no app sidebar) | “Frame 2a Regular pane 1102 × 900 · Frame 2b Wide pane 2296 × 1440” |
 
 Reach for the patterns in the doc's table first (list beside detail, primary +
 secondary column, more grid or table columns, docked inspector, two-column form).
