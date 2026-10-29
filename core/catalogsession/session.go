@@ -102,16 +102,22 @@ func openResearcher(projectDir string) (*database.Catalog, error) {
 	if err != nil {
 		return nil, err
 	}
+	// A return or a panic before the catalog is handed back closes it.
+	ok := false
+	defer func() {
+		if !ok {
+			_ = c.Close()
+		}
+	}()
 	if err := ReconcileOnOpen(c); err != nil {
-		_ = c.Close()
 		return nil, err
 	}
 	// What scoring reads stays warm for the life of this project, the shortlist
 	// index too when it builds. Close drops it.
 	if err := WarmOnOpen(c); err != nil {
-		_ = c.Close()
 		return nil, err
 	}
+	ok = true
 	return c, nil
 }
 
