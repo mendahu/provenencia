@@ -7,6 +7,15 @@
 
 - **M-2 (part).** The segmented picker (`PVChipGroup(style: .segmented)` + `PVChip(…, expands: true, selectionLift: true)` + a group label) is hand-written in `DateValueEditorForm`, `CitationComposerAuthoringBox` and `PropertiesView`; the Person switcher would be the fourth. Extract a selection-driven segmented initializer on `PVChipGroup` and move all four onto it? **Recommendation:** not in S13-10. It touches three unrelated features and their tests in a Person page PR. Add a small kit PR to the Spike 14 odds-and-ends batch instead. S13-10 already moves the selected trait and focus ring into `PVChip` itself, so the copies do not drift on accessibility meanwhile.
 
+## Rework after the Wide layout landed (2026-10-29, not yet reviewed)
+
+`main` gained the Wide width class (S14-24, #628), the S14-D1 Page columns board, the binding "Wide layout" section of `add-design-brief`, and the working rule "Redesigns adopt Page columns", which folds S14-25 into S13-10. The branch was rebased; the map conflict kept `main`'s new S13-10 scope and dependencies with this branch's brief, plan and status. Changes since round 1:
+
+- **Brief S13-D1:** the "Two widths — draw both" Paste block; Page columns in the domain facts, the gate and the inventory (New, built in S13-10); PPF-W1 – PPF-W5; a Wide layout table; Wide frames 14 – 19; non-goals for Wide-only content and new Page columns modes.
+- **Plan:** US-3 (Wide) and AC-4.4 (sizing); D-14 `PVPageColumns` from WL-3 – WL-9 with one pure `columnWidths` and a `Layout`; D-15 `widthSecondaryMax` and the breakpoint check; D-16 `ConclusionDetailPage.page` on Page columns; D-12 moves the scroll reset into `PVPageColumns`; D-5 now hands the page `ConclusionDetailSectioning` data and the page draws the switcher in the header slot, so pinned or not needs no second view slot; D-11 adds the kit file, its tests and their pbxproj entries (S14-24 precedent); Q-1 now uses Page columns' pinned mode; Q-6 asks the board for Vitals' and Gallery's Wide arrangement; T-12 – T-14; ten steps.
+
+Round 2 runs on this rework together with the board's answers.
+
 ## Writer's own calls
 
 - **D-1, kind-neutral sections.** M-1 accepted: one `ConclusionPageSection` and one `pageSection` field, with `offered(by:)` per `WorkspaceSection`, instead of a Person-only field. The section enum lives in `WorkspaceLocation.swift`; Event and Place adopt sections without a second field.
@@ -15,6 +24,8 @@
 - **D-9, Tab, not arrow keys.** Arrow-key movement between chips is dropped; the brief's PPF-13 now asks for Tab.
 - **D-13, "vitals" renamed in the header.** `PersonDetailContent.Vital`/`vitals`, `PersonDetailVitals` and `L10n.Conclusions.a11yVital` become life lines.
 - **Glyphs.** Family `gitBranch`, Timeline `calendar`, Gallery `photo`, Sources `library`; the board can swap within existing symbols.
+- **D-5 (rework), the page draws the switcher from data.** Rather than a header-accessory view slot, a kind passes `ConclusionDetailSectioning` (sections, selected, select).
+- **Q-6 recommendation.** Vitals and Gallery primary-only and centered at Wide in S13-10; the secondary column waits for S13-D2 and S13-D6.
 - **Version.** None, following S13-09, S14-01 and S14-02 (no bump until a release is cut), not "minor" as first drafted.
 - **Section keys.** `conclusions.section.*` and `conclusions.gallery.empty.*`, named so S14-02 can move the gallery keys onto its slot.
 

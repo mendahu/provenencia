@@ -5,8 +5,8 @@
 **View:** Person detail: the fixed header, the section switcher, and the five sections as places
 **Implements later as:** PR **S13-10** (header, switcher, Vitals, the four other sections as places). Later boards fill the frame: S13-D2 (provenance sheet, S13-11), S13-D3 (Family, S13-12), S13-D4 (Timeline, S13-13), S13-D5 (Gallery, S13-14 and S13-15), S13-D6 (Sources, S13-16 and S13-17), S13-D10 (how the records connect, S13-28).
 **Board:** not drawn yet. When agreed, record here: the Claude Design link, the frame numbers, and every change from this brief with the user's answer.
-**Depends on:** S13-09 (landed [#624](https://github.com/mendahu/provenencia/pull/624)): the page already places the header, then a below-header slot. The agreed S10-D12 Person board (header thumb, gender Badge, likeness gallery, portrait).
-**Related:** [`../person-detail.md`](../person-detail.md) R-1 – R-7, R-14, R-15, R-D1 – R-D3; [`../deployment-plan.md`](../deployment-plan.md) working rules "S13-D1 draws the whole frame", "Sections are places", "One sectioned Conclusion page, not a Person fork"; plan [`../prs/S13-10-header-and-sections.md`](../prs/S13-10-header-and-sections.md).
+**Depends on:** S13-09 (landed [#624](https://github.com/mendahu/provenencia/pull/624)): the page already places the header, then a below-header slot. The agreed S10-D12 Person board (header thumb, gender Badge, likeness gallery, portrait). The agreed S14-D1 board (Page columns and the Wide width class, agreed 2026-10-29, [archived brief](../../spike-14/design/archive/S14-D1-wide-layout.md)): pull the fresh kit, which has Page columns.
+**Related:** [`../person-detail.md`](../person-detail.md) R-1 – R-7, R-14, R-15, R-D1 – R-D3; [`../deployment-plan.md`](../deployment-plan.md) working rules "S13-D1 draws the whole frame", "Sections are places", "One sectioned Conclusion page, not a Person fork", "Redesigns adopt Page columns"; [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide) (Regular and Wide); plan [`../prs/S13-10-header-and-sections.md`](../prs/S13-10-header-and-sections.md).
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
 **Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
 
@@ -45,11 +45,32 @@ Work **in place** on this board. Do not fork a parallel copy of the surface.
 
 Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 
+### Two widths — draw both
+
+The window opens at 1366 × 900pt but is often stretched across a large monitor.
+Every view has two width classes, measured on the view's own pane (the window
+minus the sidebar), not the screen. A view with a side pane (an inspector, a detail
+pane) plans that pane inside its Wide frame:
+
+- **Regular** — pane below 1600pt. Draw at the default window: 1366 × 900, sidebar open.
+- **Wide** — pane 1600pt and up. Draw at 2560 × 1440, sidebar open.
+
+Rules for Wide:
+
+1. **The extra space does a job.** Show more at once: a second column of supporting content, the detail beside its list, more grid or table columns, an inspector docked open. If the view truly has nothing to add, center its content. Content jammed to one side with empty space beside it is never the Wide design.
+2. **Readable things keep their measure.** Prose, forms and the primary column keep their Regular maximum widths. Wide adds columns; it does not stretch text or fields.
+3. **Lists, tables, grids and canvases fill the width.** Cards keep their size and add columns.
+4. **Same content, same actions.** Width changes arrangement only. Anything in the Wide second column is stacked below, in an inspector, or behind a disclosure at Regular.
+5. **Crossing the line keeps state.** Selection, scroll position, focus and unsaved edits survive a resize across 1600.
+6. **Past every column's maximum, center the group.** Page gutters are never narrower than at Regular; they take what is left.
+
+Draw the **Regular** and **Wide** frame of each view side by side, using the same kit pieces in both.
+
 ### This brief is a rethink below the header
 
 Below the header, replace the old frames: today's single column (Details, then Likenesses) becomes five sections. Do not keep the old single column as a frame to ship. The header is an enhancement: keep its parts as the S10-D12 board drew them (thumb, gender Badge, name, b. and d. lines, ref and member count), and change only how it sits on the page.
 
-This board draws the **whole frame**: the header, the switcher, and all five sections as named places. Vitals is drawn in full. Family, Timeline, Gallery and Sources are drawn as they ship in S13-10 (see PPF-9 and PPF-10). Later boards fill those sections inside this frame; they do not move the header or the switcher.
+This board draws the **whole frame**, at Regular and at Wide, on the kit's **Page columns** component: the header, the switcher, and all five sections as named places. Vitals is drawn in full. Family, Timeline, Gallery and Sources are drawn as they ship in S13-10 (see PPF-9 and PPF-10). Later boards fill those sections inside this frame; they do not move the header or the switcher.
 
 ---
 
@@ -57,7 +78,7 @@ This board draws the **whole frame**: the header, the switcher, and all five sec
 
 A researcher opens a Person and sees, at a glance, who the person is (the header), and can move between five views of them (Vitals, Family, Timeline, Gallery, Sources) in one action from anywhere on the page. Back and Forward walk the sections the researcher visited.
 
-**What changes.** A section switcher sits under the header. The header stays the same whichever section shows. Today's Details rows become the Vitals section. Today's likeness grid moves, unchanged, into the Gallery section. Family, Timeline and Sources are places with an empty state until their PRs land.
+**What changes.** The page is laid out on the kit's Page columns (a header slot, a primary column and an optional secondary column, from the S14-D1 board), so it has a Regular and a Wide arrangement. A section switcher sits under the header. The header stays the same whichever section shows. Today's Details rows become the Vitals section. Today's likeness grid moves, unchanged, into the Gallery section. Family, Timeline and Sources are places with an empty state until their PRs land.
 
 **What stays.** Every part of the header; every Details row with its state Badge, Sources and Why disclosure (the provenance sheet replaces the Why in S13-D2, not here); the likeness tiles with Use as portrait, the Portrait Badge and open Citation; the header thumb's right-click menu "Use earliest likeness" (S13-D5 decides where it goes); the Event and Place pages, which keep today's layout (R-1).
 
@@ -78,6 +99,9 @@ A researcher opens a Person and sees, at a glance, who the person is (the header
 | Some persons are sparse | A person may have only a ref (no name, no dates, no likeness, one member). The header then shows the ref as the title. |
 | The page loads and can fail | Today: a small spinner while the first read loads; an error Callout if it fails; a spinner in the Details header while a stale page refreshes. |
 | The window can be narrow | The content column can be as narrow as the workspace allows with the sidebar open. Five section names must still fit or degrade cleanly. |
+| Two widths (§ "Two widths — draw both") | Regular is a pane below 1600pt, Wide 1600pt and up. The app measures the pane once; the page reads its class. Most researchers work at Regular (every MacBook full screen is Regular); a 1920pt-or-wider monitor is Wide. |
+| Page columns is the page scaffold (S14-D1) | Three slots: an optional **header** that spans the column group and either scrolls with the page or is pinned above the scroll; a **primary** column (up to 1180pt); an optional **secondary** column (340 – 480pt). At Regular the secondary stacks below the primary at the same width; at Wide it sits on the trailing side, 32pt from the primary. With no secondary, the column is centered at both widths. Page columns owns the scroll. The Event and Place pages move onto it too, with no secondary and no other change. |
+| A section fills the primary column | The section the researcher chose is the page's primary content. What, if anything, goes in the secondary column is this board's call, per section (PPF-W2 – PPF-W4), within rule 4: anything in it at Wide is stacked below the primary at Regular. |
 
 ### 2.1 What this board is not
 
@@ -87,6 +111,8 @@ A researcher opens a Person and sees, at a glance, who the person is (the header
 - Event or Place pages in sections (R-1).
 - Editing anything from the header.
 - A sixth section, or sections the researcher can reorder or hide.
+- New Page columns behavior: the component is drawn on the S14-D1 board. This board places the Person page on it; it does not add a slot, a mode or a full-width variant. A section that would need one says so as a note for its own board.
+- Wide frames for the Event and Place pages beyond "the same centered column as today" (their own redesigns).
 
 ---
 
@@ -94,9 +120,9 @@ A researcher opens a Person and sees, at a glance, who the person is (the header
 
 | | |
 | --- | --- |
-| Ships in **S13-10** | PPF-1 … PPF-14. The header placement, the switcher, section history, Vitals, Gallery with today's grid, the three empty sections, loading, error and refreshing states. |
+| Ships in **S13-10** | PPF-1 … PPF-14 and PPF-W1 … PPF-W5. The header placement, the switcher, section history, Vitals, Gallery with today's grid, the three empty sections, loading, error and refreshing states, at Regular and Wide. S13-10 also builds the Page columns component in the Swift kit from the S14-D1 board, and moves the Event and Place pages onto it. |
 | Later boards | S13-D2 adds the provenance control to Vitals rows. S13-D3, S13-D4, S13-D5, S13-D6 replace PPF-9 and PPF-10 with each section's content, inside this frame. |
-| Stays out | Event and Place pages. Any engine read. The provenance sheet. |
+| Stays out | Event and Place page redesigns (they keep today's look on Page columns). Any engine read. The provenance sheet. |
 
 ---
 
@@ -106,7 +132,7 @@ A researcher opens a Person and sees, at a glance, who the person is (the header
 | --- | --- |
 | PPF-1 | **The header is the same in every section.** Same parts as today (thumb, Badge, name, b. and d. lines, ref, member count). Switching sections never moves, resizes or redraws it. |
 | PPF-2 | **Explore the switching pattern (R-7).** Draw at least two patterns on Vitals with a long person (20 rows): (A) a switcher with one item per section that shows one section at a time, and (B) the five sections stacked on one scroll with jump shortcuts. Recommend one, and say why, against PPF-3, PPF-4 and PPF-12. The rest of the board draws the chosen pattern. |
-| PPF-3 | **One action from anywhere (R-6).** From any scroll position in any section, the researcher reaches any other section in one click. Decide whether the header and switcher stay pinned while the section scrolls, or scroll with the page and the switcher stays reachable another way. If pinned, decide whether the header compacts on scroll (for example the name and b./d. line only, thumb smaller) so a 120pt header does not take a third of a short window. Draw the scrolled state. |
+| PPF-3 | **One action from anywhere (R-6).** From any scroll position in any section, the researcher reaches any other section in one click. Decide whether the header and switcher stay pinned while the section scrolls, or scroll with the page and the switcher stays reachable another way. Both go in Page columns' **header** slot, which is pinned or scrolling by the page's choice (S14-D1 WL-3, WL-8); do not build a second pinned bar. If pinned, decide whether the header compacts on scroll (for example the name and b./d. line only, thumb smaller) so a 120pt header does not take a third of a short window. Draw the scrolled state. |
 | PPF-4 | **The current section is plain to see.** The switcher marks the current section without relying on colour alone, and VoiceOver reads it as selected ("Vitals, selected, 1 of 5"). |
 | PPF-5 | **Sections are places.** Choosing a section adds one Back step. Back returns to the previous section on the same person, then to wherever the researcher came from. Choosing the section already showing adds nothing. Opening a Person from anywhere lands on Vitals. |
 | PPF-6 | **History says which section.** The breadcrumbs and the Back / Forward jump menu tell two sections of one person apart. Recommended: the breadcrumbs read *Persons › Jane Doe › Family*, with *Jane Doe* going to Vitals, and Vitals shows no third crumb; the jump menu row reads *Jane Doe · Family*, and a Vitals entry reads *Jane Doe* alone, as today. Draw the toolbar for one frame. |
@@ -115,15 +141,30 @@ A researcher opens a Person and sees, at a glance, who the person is (the header
 | PPF-9 | **Gallery shows today's grid.** The Likenesses grid as S10-D12 drew it (count, 96pt crops, Source captions, Portrait Badge, Use as portrait, open Citation) moves into Gallery unchanged. A person with no likeness shows an EmptyState: "No likenesses yet" with one line on where they come from (a likeness is drawn on a Citation's image). |
 | PPF-10 | **Family, Timeline and Sources say they are coming.** Each shows an EmptyState with the section's glyph (Family: branch, Timeline: calendar, Sources: library; existing kit symbols, no new mark), its name and one muted line that the section arrives in a later version. Same component and layout for the three; only the words differ. No fake content, no skeleton rows. |
 | PPF-11 | **States.** First load: the header area and the switcher are not drawn until the person loads (today's single spinner), or draw their loading state from the kit. Failure: today's danger Callout in place of the page. Refreshing a stale page: the spinner from PPF-8. A section's own load and error states arrive with its later board. |
-| PPF-12 | **Narrow window.** At the narrowest content column, all five section names stay readable (no truncation to "Fam…") or the switcher degrades in a way the board shows. Draw it. |
+| PPF-12 | **Narrow window.** At the narrowest Regular content column, all five section names stay readable (no truncation to "Fam…") or the switcher degrades in a way the board shows. Draw it. |
 | PPF-13 | **Keyboard.** Every section is reachable from the keyboard: each switcher item takes focus with Tab and shows the kit focus ring, and ⌘1 – ⌘5 choose Vitals … Sources while a Person page is showing (no other screen uses ⌘1 – ⌘5 today). Confirm or replace the shortcuts. |
 | PPF-14 | **Dark mode.** The header, the switcher in its selected and unselected states, Vitals and one empty section in dark mode. |
+| PPF-W1 | **The frame at Wide.** The page sits on Page columns at both widths. The header and the switcher go in its header slot and span the column group (WL-8), pinned or scrolling as PPF-3 decides, at Regular and Wide alike. The header keeps its Regular measure: its name and lines do not stretch (rule 2). |
+| PPF-W2 | **Vitals at Wide.** Vitals' rows are the primary column at its Regular measure (rule 2). Decide what the secondary column holds on Vitals, if anything, from what the page already has: for example the likeness tiles or the member count and ref as supporting content. Rule 4 binds: whatever sits there at Wide is stacked below the rows at Regular, in the same order. If nothing earns the column, Vitals is primary-only and centered (WL-6); say so in one clause and leave the column for S13-D2's provenance sheet and S13-D6's Sources, which are the likely occupants. Recommended: primary-only for now. |
+| PPF-W3 | **Gallery at Wide.** The likeness grid is a grid (rule 3): at Wide it adds columns at the same 96pt tile size. Decide whether it fills the primary column (up to 1180pt, primary-only) or the whole column group; the second needs a full-width Page columns mode that does not exist, so it is a note for S13-D5, not this board. Recommended: primary-only, centered. |
+| PPF-W4 | **Empty sections at Wide.** Family, Timeline, Sources and the empty Gallery show their EmptyState centered in the primary column, primary-only (WL-6). |
+| PPF-W5 | **Crossing 1600 keeps the place (rule 5).** Resizing across the line keeps the section, the scroll position within it and keyboard focus. Show it as a note on the Wide Vitals frame. |
+
+### 4.1 Wide layout
+
+| View | Regular (pane below 1600) | Wide (pane 1600 and up) | What moves where |
+| --- | --- | --- | --- |
+| Person page frame | Page columns: header slot (header + switcher), one centered column up to 1180 | Same header slot spanning the column group; primary column up to 1180; secondary column per section | Nothing leaves the header slot; the secondary column is decided per section (PPF-W2 – PPF-W4) |
+| Vitals | Rows in the column; anything the board puts in the secondary column stacked below the rows | Rows in the primary column; the secondary column if PPF-W2 fills it, otherwise centered primary-only | Per PPF-W2 |
+| Gallery | Today's grid in the column | The grid in the primary column with more tiles per row | Nothing; more columns (rule 3) |
+| Family, Timeline, Sources (empty) | EmptyState in the column | EmptyState centered, primary-only | Nothing (nothing to add yet; their boards draw their own Wide arrangement) |
+| Event and Place pages | Today's page on Page columns, primary-only | The same centered column | Nothing (their own redesigns) |
 
 ---
 
 ## 5. Suggested frames
 
-One Person page. Every later frame is this page with one thing changed.
+One Person page. Every later frame is this page with one thing changed. Draw each at **Regular** (1366 × 900, sidebar open) unless it says Wide; the Wide frames (14 – 18) sit beside their Regular frame.
 
 1. **Pattern A on Vitals.** A full person (name, both life lines, gender Woman, three likenesses, 20 Vitals rows, one Mixed row) on Vitals, switcher pattern A (PPF-2).
 2. **Pattern B on Vitals.** The same person, stacked sections with jump shortcuts (PPF-2). Then the recommendation.
@@ -138,6 +179,12 @@ One Person page. Every later frame is this page with one thing changed.
 11. **Narrow.** Frame 1 at the narrowest content column with the sidebar open (PPF-12).
 12. **Focus.** The switcher with keyboard focus on Timeline (PPF-13).
 13. **Dark mode.** Frames 1, 3 and 6 in dark mode (PPF-14).
+14. **Wide Vitals.** Frame 1 (the chosen pattern) at 2560 × 1440: the header slot spanning the group, Vitals in the primary column, the secondary column as PPF-W2 decides; the rule-5 note (PPF-W1, PPF-W2, PPF-W5).
+15. **Wide Vitals, growing.** Frame 14 at 1920 × 1080 (pane 1656), so the secondary column's 380pt width shows, if PPF-W2 uses one; otherwise the centered column (WL-5, WL-6).
+16. **Wide, scrolled.** Frame 3 at 2560 × 1440: the header slot pinned or scrolled as PPF-3 decides (PPF-W1).
+17. **Wide Gallery.** Frame 4 at 2560 × 1440: more tiles per row, same tile size (PPF-W3).
+18. **Wide empty section.** Frame 6's Family at 2560 × 1440: the EmptyState centered (PPF-W4).
+19. **Wide dark.** Frame 14 in dark mode.
 
 ---
 
@@ -147,8 +194,10 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
-| Shared Conclusion page | Snowflake | **Extend** | `Features/Conclusions/ConclusionDetailPage.swift` `ConclusionDetailPage` | The one page for Person, Event and Place. Person passes its own below-header fill through the `pageSections` slot (S13-09). If PPF-3 pins the header and switcher, the page gains the pinned region for every kind; Event and Place leave it empty and look as today (R-1). Not a Person-only page. |
-| Header | Snowflake | Ship | same file `ConclusionDetailHeader` | PPF-1. Unchanged parts. A compact form (PPF-3) is a variant of this view, not a second header. |
+| Shared Conclusion page | Snowflake | **Extend** | `Features/Conclusions/ConclusionDetailPage.swift` `ConclusionDetailPage` | The one page for Person, Event and Place. Person passes its own below-header fill through the `pageSections` slot (S13-09). Its `page` scaffold moves onto Page columns; Event and Place pass no secondary and look as today (R-1). Not a Person-only page. |
+| Page columns | Component | **New** (agreed on S14-D1; built in S13-10) | `DesignSystem/Components/PageColumns/` *(new)* | PPF-W1 – PPF-W4. Header slot (pinned or scrolling), primary, optional secondary; owns the scroll. Draw from the fresh kit's component. Do not add slots, modes or a full-width variant on this board. Callers: the Person page, and the Event and Place pages through the same `ConclusionDetailPage.page` in S13-10; next, the Conclusion lists and the Source page in their own redesigns (S14-D1 inventory). |
+| Width class | Component | Ship | `DesignSystem/Components/WidthClass/PVWidthClass.swift` | Not drawn. Regular or Wide, measured once by the workspace; Page columns reads it. |
+| Header | Snowflake | Ship | same file `ConclusionDetailHeader` | PPF-1, PPF-W1. Unchanged parts, in Page columns' header slot with the switcher. A compact form (PPF-3) is a variant of this view, not a second header. |
 | Gender Badge, thumb, b./d. lines | Component / snowflake | Ship | `PVBadge`, `CachedThumbnail` over `PVThumbnail`, `ConclusionDatePlaceLine` | PPF-1. As S10-D12. |
 | Section switcher (pattern A) | Component | **Extend** | `PVChipGroup(style: .segmented)` with one `PVChip` per section (`DesignSystem/Components/Chip/PVChip.swift`) | PPF-2, PPF-4, PPF-13. The segmented track the date-kind picker and the Properties value-type picker use. Each item is a section name; the selected chip lifts. Extend: `PVChip` gains the selected accessibility trait and the kit focus ring, for every chip in the app. Not a new Tab component. If the board needs icons beside the names, use `PVChip`'s existing content; do not draw a tab bar. |
 | Narrow-window fallback | Component | Ship | `PVSelect` (`DesignSystem/Components/Select/PVSelect.swift`), or the same chips with shorter labels | PPF-12. Only if five names cannot fit. One of these two; nothing else. |
@@ -168,7 +217,9 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | A Tab or TabBar kit component, or a native `TabView` | The segmented `PVChipGroup` already switches between a few exclusive options. One page is not a second call site. |
 | A Person-only page type beside `ConclusionDetailPage` | Working rule "One sectioned Conclusion page, not a Person fork". |
 | Placeholder content (fake relatives, sample events, skeleton rows) in empty sections | They read as data. The empty state says the section is coming. |
-| A sidebar or outline of sections beside the page | The switcher is the one way to switch; the workspace sidebar stays as it is. |
+| A sidebar or outline of sections beside the page | The switcher is the one way to switch; the workspace sidebar stays as it is. At Wide the secondary column is supporting content (rule 4, WL-9), not a section navigator. |
+| A Wide-only element, or text and rows stretched to fill a Wide pane | Rules 2 and 4: Wide adds columns; it does not add content or widen the measure. |
+| A Page columns full-width mode, a third column, or a second pinned bar | Page columns is agreed (S14-D1). A section that needs more is a note for its own board. |
 | Section controls in the header | R-4: the header is display only. |
 | An overflow or More menu, or a horizontally scrolling tab strip, for a narrow window | PPF-12 falls back to `PVSelect` or shorter labels; a second switching control for one case is not added. |
 | A new mark or icon for an empty section | The four glyphs are existing kit symbols. |
@@ -178,6 +229,6 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 
 ## 7. Handoff
 
-1. When the board is agreed, record on the **Board** line: the Claude Design link, the chosen pattern (PPF-2), the pinned or scrolling answer (PPF-3), the section heading answer (PPF-8), the toolbar wording (PPF-6), the shortcuts (PPF-13), and every other change from this brief with the user's answer.
+1. When the board is agreed, record on the **Board** line: the Claude Design link, the chosen pattern (PPF-2), the pinned or scrolling answer (PPF-3), what Vitals' secondary column holds at Wide (PPF-W2) and the Gallery's Wide answer (PPF-W3), the section heading answer (PPF-8), the toolbar wording (PPF-6), the shortcuts (PPF-13), and every other change from this brief with the user's answer.
 2. Refresh the [S13-10 plan](../prs/S13-10-header-and-sections.md): copy the answers into its Decisions and **Design → macOS**, close its Open questions, run `review-plan` again, and set it to `Planned`.
 3. S13-10 archives this brief under `design/archive/` *(new)* and records it in [`../completed.md`](../completed.md). Later boards (S13-D2 – S13-D6, S13-D10) extend these frames.
