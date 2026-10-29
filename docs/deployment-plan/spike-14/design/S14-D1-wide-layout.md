@@ -2,12 +2,13 @@
 
 **Kind:** Claude Design board (**enhancement** of the Provenencia design-system project: tokens, kit README, one new layout component)
 **Spike:** Provenencia Spike 14 (odds and ends), Batch 6 — Wide layout
-**View:** The design system itself: `tokens/spacing.css`, the kit README, and a Page columns specimen. No product screen.
+**View:** The design system itself: `tokens/spacing.css`, the Claude Design kit README, and a Page columns specimen. No product screen.
 **Implements later as:** PR **S14-25** (Page columns in the kit). S14-24 adds the Swift token and width class first and is not gated by this board.
 **Depends on:** —
-**Related:** [`docs/macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide) (the breakpoint and the rules), [`../deployment-plan.md`](../deployment-plan.md) working rule "(Batch 6) One breakpoint, 1600pt of pane width"
+**Related:** [`docs/macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide) (the breakpoint and the rules), [`../deployment-plan.md`](../deployment-plan.md) working rule "(Batch 6) One breakpoint, 1600pt of pane width", [S14-24](../prs/S14-24-wide-width-class.md)
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
 **Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Review:** [`S14-D1-wide-layout.review.md`](S14-D1-wide-layout.review.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -55,27 +56,28 @@ sidebar and any inspector), not the screen:
 
 Rules for Wide:
 
-1. **Use the extra space.** Show more at once: a second column of supporting content, the detail beside its list, more grid or table columns, an inspector docked open. Content jammed left with empty space beside it is never the Wide design. If the view truly has nothing to add, center its content group and say so on the frame.
-2. **Keep readable things readable.** Prose, forms and the primary column keep their Regular maximum widths. Add columns; do not stretch text or fields.
+1. **The extra space does a job.** Show more at once: a second column of supporting content, the detail beside its list, more grid or table columns, an inspector docked open. If the view truly has nothing to add, center its content. Content jammed to one side with empty space beside it is never the Wide design.
+2. **Readable things keep their measure.** Prose, forms and the primary column keep their Regular maximum widths. Wide adds columns; it does not stretch text or fields.
 3. **Lists, tables, grids and canvases fill the width.** Cards keep their size and add columns.
 4. **Same content, same actions.** Width changes arrangement only. Anything in the Wide second column is stacked below, in an inspector, or behind a disclosure at Regular.
-5. **Past every column's maximum, center the group** and let the gutters grow.
+5. **Crossing the line keeps state.** Selection, scroll position, focus and unsaved edits survive a resize across 1600.
+6. **Past every column's maximum, center the group.** Page gutters are never narrower than at Regular; they take what is left.
 
 Draw the **Regular** and **Wide** frame of each view side by side, using the same kit pieces in both.
 
 ### This brief is an enhancement
 
-Work in the Provenencia design-system project. Add one token, one README section and one layout component with its specimen. Do not redraw existing components, tokens or the Onboarding Flow board. Product screens get their Wide frames in their own briefs, not here.
+Work in the Provenencia design-system project. Add two tokens, one README section and one layout component with its specimen. Do not redraw existing components, tokens or the Onboarding Flow board. Product screens get their Wide frames in their own briefs, not here.
 
 ---
 
 ## 1. Objective
 
-Provenencia opens at a laptop-sized window, 1366 × 900pt. Researchers also stretch it across a large monitor, and today every page keeps its 1180pt content column, so on a 2560pt-wide window the page sits in one column with about 1100pt of empty space beside it. The design system gets a **Wide** width class and a layout piece that uses the extra space, so every later brief draws a Wide frame from the kit instead of inventing one.
+Provenencia opens at a laptop-sized window, 1366 × 900pt. Researchers also stretch it across a large monitor, and today every page keeps its 1180pt content column, so on a 2560pt-wide window a page sits in one column with about 1100pt of empty space around it. The design system gets a **Wide** width class and a layout piece that uses the extra space, so every later brief draws its Wide frame from the kit instead of inventing one.
 
-**What changes.** A breakpoint token; a "Width classes" section in the kit README with the rules; a **Page columns** component: a primary column and an optional secondary column that stack at Regular and sit side by side at Wide.
+**What changes.** A breakpoint token and a secondary-column maximum token; a "Width classes" section in the kit README with the rules; a **Page columns** component: a primary column and an optional secondary column that stack at Regular and sit side by side at Wide.
 
-**What stays.** Every existing token value, including `--width-content-max` (1180), `--width-inspector` (340), `--gutter-page` (32) and `--gutter-page-wide` (56). Every existing component.
+**What stays.** Every existing token value, including `--width-content-max` (1180), `--width-inspector` (340), `--gutter-page` (32) and `--space-9` (32). Every existing component. A page with only a primary column looks the same at both widths.
 
 ---
 
@@ -84,17 +86,17 @@ Provenencia opens at a laptop-sized window, 1366 × 900pt. Researchers also stre
 | Fact | What it means on this board |
 | --- | --- |
 | One breakpoint | Regular is a pane below 1600pt; Wide is 1600pt and up. There is no third class. |
-| The pane, not the screen | The width is what the page itself gets: the window minus the sidebar (264pt, 78pt collapsed) and minus any inspector beside the page. Collapsing the sidebar can move a page from Regular to Wide. |
-| Why 1600 | Every MacBook full screen is Regular (a 16" MacBook Pro gives a 1464pt pane). A 1920pt-wide monitor gives 1656 and a 2560pt one 2296: Wide. 1600 is the smallest pane that holds the 1180 primary column, a 32 gap, a 340 secondary column and two 32 gutters. |
-| Pages are one column today | The Source page left-aligns its 1180 column; the Person, Event and Place pages and the lists center theirs. Both leave the extra width empty at Wide. |
-| The app is native macOS | The kit renders in a browser for review. In the app, the page measures its own width; the CSS here mirrors that with a container query on the page, not a viewport media query. |
+| The pane, not the screen | The pane is what the page gets: the window minus the sidebar (264pt, 78pt collapsed). In the app the workspace measures the pane once and every page reads its width class. A page with an inspector beside its content measures the content column instead. |
+| Why 1600 | Every MacBook full screen is Regular (a 16" MacBook Pro gives a 1464pt pane). A 1920pt-wide monitor gives 1656 and a 2560pt one 2296: Wide. 1600 is about the smallest pane that holds the 1180 primary column, a 32 gap, a 340 secondary column and two 32 gutters (1616); between 1600 and 1616 the primary gives up the difference. |
+| Pages are one column at page level today | The Person, Event and Place pages and their lists center one column of up to 1180. The Source page left-aligns its column and pins its title header above the scroll; inside, its overview already has two columns of its own. All leave the extra width empty at Wide. |
+| The app is native macOS | The kit renders in a browser for review. The CSS mirrors the app with a container query on the page element, not a viewport media query. |
 | Same content at both widths | Width changes arrangement only. Nothing exists only at Wide. |
 
 ### 2.1 What this board is not
 
 - A Wide frame for any product page (Source page, Person page, lists, Promote, the composer). Each gets one in its own brief.
 - A list-beside-detail layout, a docked inspector or a two-column form. They are in the pattern table in the README section, drawn when a view brief needs them.
-- A third breakpoint, a compact class or a change to the window's default size.
+- A third breakpoint, a compact class, a Wide-only gutter or a change to the window's default size.
 
 ---
 
@@ -102,7 +104,7 @@ Provenencia opens at a laptop-sized window, 1366 × 900pt. Researchers also stre
 
 | Ships in **S14-25** | Stays out |
 | --- | --- |
-| `PVPageColumns` in the Swift kit matching the agreed component; the kit README row and the "Width classes" section transcribed from this board. | Adopting it on any page (each page's own brief and PR). The token and the width class (S14-24, already planned). |
+| `PVPageColumns` in the Swift kit, matching the agreed component. `ConclusionDetailPage.page` and `ConclusionListPage.page` move onto it as primary-only pages, which changes nothing on screen, and their hand-written column code goes. `PVSpacing` gains `widthSecondaryMax` (480), transcribed from WL-1, and S14-24's `widthWideBreakpoint` is checked against it. The Swift kit README gets a Page columns row and a link to § 9 of `docs/macos-client-patterns.md`, not a copy of the rules. | The Source page moving onto Page columns, with its pinned header (its own brief). A secondary column on any page. A list-beside-detail layout for the Conclusion lists (their own brief). |
 
 ---
 
@@ -110,24 +112,22 @@ Provenencia opens at a laptop-sized window, 1366 × 900pt. Researchers also stre
 
 | ID | Requirement |
 | --- | --- |
-| WL-1 | `tokens/spacing.css` gains `--width-wide-breakpoint: 1600px` beside the other layout widths, with a comment: measured on the page's pane, not the viewport. |
-| WL-2 | The kit README gains a **Width classes** section: the two classes and the breakpoint, the five Wide rules below, and the pattern table (§ 4.1). |
-| WL-3 | A **Page columns** component: a primary slot and an optional secondary slot, in a scrolling page with the page gutters. |
-| WL-4 | At **Regular**: one column. The primary slot is as wide as the pane allows up to `--width-content-max`; the secondary slot's content stacks below the primary, at the same width. Gutters are `--gutter-page`. |
-| WL-5 | At **Wide** with a secondary slot: primary on the leading side up to `--width-content-max`, a `--space-9` gap, secondary on the trailing side at `--width-inspector` (340) growing to 480 as the pane grows. Both columns are top-aligned and scroll together with the page. Gutters are `--gutter-page-wide`. |
-| WL-6 | At **Wide** with no secondary slot: the primary column is centered in the pane. It is never left-aligned with empty space beside it. |
-| WL-7 | When both columns are at their maximum, the column group is centered in the pane and the gutters take the rest. |
-| WL-8 | The secondary column holds supporting content (metadata, linked records, activity), never the page's only copy of an action. At Regular the same content is below the primary, in the same order. |
-| WL-9 | Crossing 1600 keeps the page's scroll position and focus. Show a note on the specimen; there is nothing to draw. |
-| WL-W1 | This board's own Wide frame: the Page columns specimen at a 2560 × 1440 window, sidebar open, with a secondary column (WL-5). |
+| WL-1 | `tokens/spacing.css` gains two layout widths: `--width-wide-breakpoint: 1600px` (comment: compared with the page's pane, not the viewport) and `--width-secondary-max: 480px` (comment: the secondary column of Page columns grows from `--width-inspector` to this). |
+| WL-2 | The Claude Design kit README gains a **Width classes** section: the two classes and the breakpoint, the six Wide rules exactly as in this brief's "Two widths — draw both" block, the Page columns sizing rule (WL-5), and the pattern table (§ 4.1). |
+| WL-3 | A **Page columns** component with three slots: an optional **header** that spans the column group, a **primary** slot, and an optional **secondary** slot. It owns the scroll; the page owns its background. The header either scrolls with the page or is pinned above the scroll, chosen by the page. Loading, error and empty states go in the primary slot. Vertical padding is `--space-8` top and bottom. |
+| WL-4 | At **Regular**: one column, as wide as the pane allows inside `--gutter-page` on each side, up to `--width-content-max`, **centered** in the pane. The secondary slot's content stacks below the primary at the same width, `--space-9` below it. |
+| WL-5 | At **Wide** with a secondary slot, with `available = pane − 2 × --gutter-page − --space-9`: primary = min(`--width-content-max`, available − `--width-inspector`); secondary = available − primary, between `--width-inspector` and `--width-secondary-max`. The primary grows first (full at a 1616 pane), then the secondary (full at a 1756 pane). Primary on the leading side, secondary on the trailing side, `--space-9` between, both top-aligned, scrolling together. |
+| WL-6 | At **Wide** with no secondary slot: the same centered column as Regular. It is never left-aligned with empty space beside it. |
+| WL-7 | Past both maximums the column group (1692 wide) is centered in the pane, and the gutters take what is left. Gutters are never narrower than `--gutter-page`. |
+| WL-8 | The header spans the column group's width and aligns with it at every width, pinned or not. |
+| WL-9 | The secondary column holds supporting content (metadata, linked records, activity), never the page's only copy of an action. At Regular the same content is below the primary, in the same order, and keyboard focus moves through primary then secondary at both widths. |
+| WL-10 | The CSS switches classes with an `@container` query on the page element (`container-type: inline-size`, the full pane including gutters) at a literal `1600px`, with a comment naming `--width-wide-breakpoint`: a custom property cannot be used in a container condition. |
+| WL-W1 | Wide, growing: the specimen at a 1920 × 1080 window, sidebar open (pane 1656): primary 1180, secondary 380 (WL-5). |
+| WL-W2 | Wide, capped: the specimen at a 2560 × 1440 window (pane 2296): primary 1180, secondary 480, the group centered (WL-7). |
+| WL-W3 | Wide, primary only: the specimen with no secondary at 2560 × 1440, centered, beside its Regular frame at 1366 × 900 (WL-6). |
+| WL-W4 | Wide, pinned header: the specimen with a pinned header at 2560 × 1440; the header spans and aligns with the centered group (WL-8). |
 
-**The five Wide rules** (WL-2 copies these into the README):
-
-1. Use the extra space: a second column, the detail beside its list, more grid or table columns, or an inspector docked open. If a view has nothing to add, center it.
-2. Prose, forms and the primary column keep their Regular maximum widths. Add columns; do not stretch text or fields.
-3. Lists, tables, grids and canvases fill the width. Cards keep their size and add columns.
-4. Same content, same actions at both widths.
-5. Past every column's maximum, center the group and let the gutters grow.
+Crossing 1600 keeps the page's scroll position and focus (rule 5). Show it as a note on the specimen; a static frame cannot show it.
 
 ### 4.1 Pattern table (README, WL-2)
 
@@ -144,12 +144,14 @@ Provenencia opens at a laptop-sized window, 1366 × 900pt. Researchers also stre
 
 ## 5. Suggested frames
 
-1. **Token and README.** The spacing token sheet with `--width-wide-breakpoint` beside the layout widths (WL-1), and the Width classes README section (WL-2).
-2. **Page columns, Regular** at a 1366 × 900 window, sidebar open (pane ~1102): primary then secondary stacked, placeholder Cards in each (WL-3, WL-4).
-3. **Page columns, Wide** at a 2560 × 1440 window, sidebar open (pane ~2296): primary and secondary side by side (WL-5, WL-W1).
-4. **Page columns, Wide, primary only** at the same window: the centered column (WL-6).
-5. **Page columns, very wide** at a 3008 × 1692 window: both columns at maximum, the group centered (WL-7).
-6. **At the line**: the same page at pane 1599 (Regular) and 1600 (Wide), with the WL-9 note.
+1. **Tokens and README.** The spacing token sheet with the two new widths beside the layout widths (WL-1); the Width classes README section (WL-2).
+2. **Regular** at a 1366 × 900 window, sidebar open (pane 1102): primary then secondary stacked, a scrolling header above (WL-3, WL-4).
+3. **Regular, wide laptop** at a 1728 × 1117 window (pane 1464): the same page, the 1180 column centered (WL-4).
+4. **Wide, growing** at 1920 × 1080 (WL-W1).
+5. **Wide, capped** at 2560 × 1440 (WL-W2).
+6. **Primary only**, Regular 1366 × 900 and Wide 2560 × 1440 side by side (WL-W3).
+7. **Pinned header** at 2560 × 1440 (WL-W4).
+8. **At the line**: windows 1863 and 1864 wide (panes 1599 and 1600), Regular and Wide, with the rule-5 note.
 
 Use neutral placeholder content: Cards with SectionHeaders and a few Field rows. Not a real product page.
 
@@ -161,16 +163,17 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
-| Breakpoint token | Token | New | `DesignSystem/Tokens/PVSpacing.swift` | `--width-wide-breakpoint`. S14-24 adds `widthWideBreakpoint` there; this board adds the CSS it is transcribed from. |
-| Width class | Token | New | `DesignSystem/Components/WidthClass/` (new, S14-24) | Not drawn. Regular or Wide, read by Page columns. |
-| Page columns | Component | New | `DesignSystem/Components/PageColumns/` (new, S14-25) | Replaces three hand-written page scaffolds, each a known call site: `Features/Conclusions/ConclusionDetailPage.swift` `page`, `Features/Conclusions/ConclusionListPage.swift` `page`, and the content column in `Features/Sources/SourcePageView.swift`. |
+| Breakpoint token | Token | New | `DesignSystem/Tokens/PVSpacing.swift` | `--width-wide-breakpoint`. S14-24 adds `widthWideBreakpoint` there first; this board adds the CSS. Read by the width class and by WL-10's comment. |
+| Secondary-column maximum | Token | New | `DesignSystem/Tokens/PVSpacing.swift` | `--width-secondary-max` (480). Read by Page columns; the pattern table's list column is the next reader when its brief comes. |
+| Width class | Component | New | `DesignSystem/Components/WidthClass/` (new, S14-24) | Not drawn. Regular or Wide, measured by the workspace, read by Page columns. Ship once S14-24 lands. |
+| Page columns | Component | New | `DesignSystem/Components/PageColumns/` (new, S14-25) | First callers in S14-25: `Features/Conclusions/ConclusionDetailPage.swift` `page` (Person, Event and Place pages) and `Features/Conclusions/ConclusionListPage.swift` `page`, primary only. Next: the Source page content column and its pinned `Features/Sources/SourcePageIdentityHeader.swift` header, in the Source page's own brief. The Conclusion lists stay primary-only until their own list-beside-detail brief. |
 | Placeholder blocks | Component | Ship | `DesignSystem/Components/Card/PVCard.swift`, `DesignSystem/Components/SectionHeader/PVSectionHeader.swift`, `DesignSystem/Components/Field/PVField.swift` | Specimen content only. |
-| Spacing tokens | Token | Ship | `DesignSystem/Tokens/PVSpacing.swift` | `--width-content-max`, `--width-inspector`, `--gutter-page`, `--gutter-page-wide`, `--space-9`. Values unchanged. |
+| Spacing tokens | Token | Ship | `DesignSystem/Tokens/PVSpacing.swift` | `--width-content-max`, `--width-inspector`, `--gutter-page`, `--space-8`, `--space-9`. Values unchanged. `--gutter-page-wide` is not used. |
 
-**Non-goals.** No list-beside-detail, docked-inspector or two-column-form component on this board. No new Card or SectionHeader variant for the specimen. No viewport media query: the CSS uses a container query on the page.
+**Non-goals.** No list-beside-detail, docked-inspector or two-column-form component on this board. No new Card or SectionHeader variant for the specimen. No viewport media query. No Wide-only gutter.
 
 ---
 
 ## 7. Handoff
 
-When the board is agreed: move this brief to [`archive/`](archive/), update [`README.md`](README.md), and plan S14-25 with `plan-pr`. S14-25 transcribes `--width-wide-breakpoint` against the value S14-24 shipped; a different value on the board is a question for the user, not a silent change.
+When the board is agreed: move this brief to [`archive/`](archive/), update [`README.md`](README.md), write the board's paragraph in `docs/deployment-plan/spike-14/completed.md`, and plan S14-25 with `plan-pr`. S14-25 checks `--width-wide-breakpoint` against the 1600 S14-24 shipped; a different value on the board is a question for the user, not a silent change.

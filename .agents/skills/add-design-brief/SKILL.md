@@ -109,11 +109,12 @@ sidebar and any inspector), not the screen:
 
 Rules for Wide:
 
-1. **Use the extra space.** Show more at once: a second column of supporting content, the detail beside its list, more grid or table columns, an inspector docked open. Content jammed left with empty space beside it is never the Wide design. If the view truly has nothing to add, center its content group and say so on the frame.
-2. **Keep readable things readable.** Prose, forms and the primary column keep their Regular maximum widths. Add columns; do not stretch text or fields.
+1. **The extra space does a job.** Show more at once: a second column of supporting content, the detail beside its list, more grid or table columns, an inspector docked open. If the view truly has nothing to add, center its content. Content jammed to one side with empty space beside it is never the Wide design.
+2. **Readable things keep their measure.** Prose, forms and the primary column keep their Regular maximum widths. Wide adds columns; it does not stretch text or fields.
 3. **Lists, tables, grids and canvases fill the width.** Cards keep their size and add columns.
 4. **Same content, same actions.** Width changes arrangement only. Anything in the Wide second column is stacked below, in an inspector, or behind a disclosure at Regular.
-5. **Past every column's maximum, center the group** and let the gutters grow.
+5. **Crossing the line keeps state.** Selection, scroll position, focus and unsaved edits survive a resize across 1600.
+6. **Past every column's maximum, center the group.** Page gutters are never narrower than at Regular; they take what is left.
 
 Draw the **Regular** and **Wide** frame of each view side by side, using the same kit pieces in both.
 ```
@@ -143,7 +144,7 @@ site is already known. Otherwise snowflake + compose.
 Every brief says what each view does with a **Wide** pane (1600pt and up). The
 breakpoint, the reasoning and the pattern table are in
 [`docs/macos-client-patterns.md` § 9](../../../docs/macos-client-patterns.md#9-window-widths-regular-and-wide).
-The Paste block carries the rules, because Claude Design will not follow the link.
+The Paste block carries the six rules word for word, because Claude Design will not follow the link; change § 9 and the Paste block together.
 
 In the brief, for **each view** the board touches:
 

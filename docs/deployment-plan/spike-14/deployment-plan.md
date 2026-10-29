@@ -135,7 +135,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-22 | Promote's wire says what Go decided | 5 | The proposal says whether each connection will file and why not through one pure cycle rule; name part types guarded (was S12-48) | — | S14-09, S13-23 | — | Scoped |
 | S14-23 | Thumbnails for oversized JPEGs | 1 | A pure-Go reduced decoder in `core/raster` gives a JPEG over the 64-megapixel budget a 1/8-scale thumbnail; bounded and fuzzed; Go only (was S12-39) | — | — | — | Scoped |
 | S14-24 | Give every workspace page its width class | 6 | `PVSpacing.widthWideBreakpoint` (1600), `PVWidthClass` and the `pvWidthClass` environment value, measured once at `WorkspaceDestinationHost`; no visible change | — | — | [S14-24-wide-width-class.md](prs/S14-24-wide-width-class.md) | Draft |
-| S14-25 | Page columns in the kit | 6 | `PVPageColumns`: primary and secondary columns that stack at Regular and sit side by side at Wide; kit README Width classes section | S14-D1 | S14-24, S14-D1 | — | Blocked — on board S14-D1 |
+| S14-25 | Page columns in the kit | 6 | `PVPageColumns`: primary and secondary columns that stack at Regular and sit side by side at Wide; the Person, Event and Place pages and their lists move onto it, primary only, with no visible change | S14-D1 | S14-24, S14-D1 | — | Blocked — on board S14-D1 |
 | S14-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -255,9 +255,9 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S14-25 — Page columns in the kit
 
-**Ships.** `PVPageColumns` from the agreed S14-D1 board: a primary column up to `widthContentMax` and an optional secondary column (340–480pt) that stacks below it at Regular and sits beside it at Wide, centered past both maximums, gutters `gutterPage` / `gutterPageWide`. The kit README's Width classes section. The CSS `--width-wide-breakpoint` checked against S14-24's value.
-**Not this PR.** Adopting it on a page: `ConclusionDetailPage.page`, `ConclusionListPage.page` and the Source page's content column each move to it with their own brief.
-**Check.** Swift tests for the arrangement at each class; the board's specimen frames match.
+**Ships.** `PVPageColumns` from the agreed S14-D1 board: an optional header that spans the column group (scrolling or pinned), a primary column up to `widthContentMax`, and an optional secondary column from `widthInspector` to `widthSecondaryMax` (480, new) that stacks below at Regular and sits beside at Wide; the group centers past both maximums with `gutterPage` gutters at both widths (S14-D1 WL-3 – WL-8). `ConclusionDetailPage.page` and `ConclusionListPage.page` move onto it, primary only, and their column code goes. The Swift kit README gets a row and a link to § 9.
+**Not this PR.** The Source page and its pinned header (their own brief); any secondary column on a page; a list-beside-detail layout for the Conclusion lists.
+**Check.** Swift tests for the WL-5 sizes at panes 1102, 1600, 1656 and 2296; the Person page and Persons list look as on `main` at both widths.
 **Context.** [S14-D1](design/S14-D1-wide-layout.md); `add-ui-component`. Planned with `plan-pr` once the board is agreed.
 
 ### Slice 3 — Name display

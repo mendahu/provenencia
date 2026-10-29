@@ -243,7 +243,7 @@ The window opens at `PVSpacing.widthWorkspaceDefault` × `heightWorkspaceDefault
 | Regular | below 1600pt | The default window; any MacBook, even full screen; half of a big monitor |
 | Wide | 1600pt and up | Full screen or most of a 1920pt-or-wider monitor; a 16" MacBook full screen with the sidebar collapsed |
 
-**Pane width** is what the destination itself gets: the window minus the sidebar (264pt, 78pt collapsed) and minus any inspector beside it. It is not the screen or the window. Measure it with `onGeometryChange` on the destination's root, the way `SourcesListView` picks its columns. Collapsing the sidebar or opening an inspector can move a view across the line, and that is intended.
+**Pane width** is what the destination itself gets: the window minus the sidebar (264pt, 78pt collapsed) and minus any inspector beside it. It is not the screen or the window. Measure it with `onGeometryChange` on the destination's root, the way `SourcesListView` picks its columns. Collapsing the sidebar or opening an inspector can move a view across the line, and that is intended. A page with an inspector beside its content measures the content column instead; that column also excludes the gap and the page gutters, so such a page turns Wide at a wider window.
 
 Where the numbers come from (points, sidebar open):
 
@@ -262,12 +262,14 @@ The breakpoint becomes a token (`PVSpacing` `widthWideBreakpoint = 1600`) in the
 
 ### Rules for Wide
 
-1. **The extra space does a job.** A Wide frame either shows more at once (a second column, the detail beside its list, more grid columns, more table columns) or, when the view truly has nothing to add, centers its content group. Left-aligned content with dead space beside it is never the Wide design.
-2. **Readable things keep their measure.** Prose stays at `measureProse`, forms at `measureForm` or their field widths, the primary column at `widthContentMax`. Wide adds columns; it does not stretch text or fields.
-3. **Lists, tables, grids and canvases fill.** Content made of many items uses the width. Cards keep their minimum width and add columns; they do not grow to fill.
-4. **Same content, same actions.** Width class changes arrangement only. Nothing exists only at Wide: what sits in the second column at Wide is stacked below, in an inspector, or behind a disclosure at Regular.
+The same six rules are in the [`add-design-brief`](../.agents/skills/add-design-brief/SKILL.md) Paste block, word for word, because Claude Design does not follow links. Change both together.
+
+1. **The extra space does a job.** Show more at once: a second column of supporting content, the detail beside its list, more grid or table columns, an inspector docked open. If the view truly has nothing to add, center its content. Content jammed to one side with empty space beside it is never the Wide design.
+2. **Readable things keep their measure.** Prose, forms and the primary column keep their Regular maximum widths. Wide adds columns; it does not stretch text or fields.
+3. **Lists, tables, grids and canvases fill the width.** Cards keep their size and add columns.
+4. **Same content, same actions.** Width changes arrangement only. Anything in the Wide second column is stacked below, in an inspector, or behind a disclosure at Regular.
 5. **Crossing the line keeps state.** Selection, scroll position, focus and unsaved edits survive a resize across 1600.
-6. **Past the maximum, center.** When every column has hit its cap (very wide panes), the content group centers in the pane, and gutters grow to `gutterPageWide` (56) and beyond.
+6. **Past every column's maximum, center the group.** Page gutters are never narrower than at Regular; they take what is left.
 
 ### Patterns to reach for
 
