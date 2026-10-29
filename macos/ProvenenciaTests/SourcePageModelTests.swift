@@ -1815,6 +1815,7 @@ struct SourcePageModelTests {
         let (model, store, session) = await makeCensus()
         model.artifacts.beginEdit("P3")
         await model.artifacts.linkLoadTask?.value
+        store.nextWriteEffects = CatalogWriteEffects(lists: [.evidenceGraphs])
         let (created, effects) = try await store.createEvidenceGraph(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
             name: "Walker household", description: "", artifactIDs: ["P3"]
@@ -1912,6 +1913,7 @@ struct SourcePageModelTests {
         await model.artifacts.linkLoadTask?.value
         model.artifacts.linkEdit?.excluded = []
         #expect(model.artifacts.checkedGraphIDs.contains("g-b"))
+        store.nextWriteEffects = CatalogWriteEffects(lists: [.evidenceGraphs])
         let effects = try await store.deleteEvidenceGraph(projectDir: projectDir, userID: userID, graphID: "g-b")
         session.apply(effects)
         await waitForQuery(session.evidenceGraphsHandle!)
