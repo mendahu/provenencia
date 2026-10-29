@@ -271,7 +271,7 @@ func robinsSearchStore(projectDir: String) async throws -> (store: FakeStore, ja
     let james = try await store.promoteSubject(projectDir: projectDir, userID: "u", subjectID: "sub-1")
     _ = try await store.promoteSubject(
         projectDir: projectDir, userID: "u", subjectID: "sub-2",
-        entityID: james.entity.id, confidenceGradeID: nil, argument: ""
+        entityID: james.entity.id
     )
     return (store, james)
 }

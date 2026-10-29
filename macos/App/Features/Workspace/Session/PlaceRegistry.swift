@@ -32,7 +32,6 @@ struct PlaceRegistry: Sendable {
                     .evidenceGraph(project: project, graphId: graphId),
                     .sourcesList(project: project),
                     .sourceTypesList(project: project),
-                    .confidenceGradesList(project: project),
                     .propertiesWorkspace(project: project),
                     .connectRules(project: project),
                     .evidenceGraphsList(project: project),

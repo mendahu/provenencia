@@ -19,11 +19,10 @@ struct PromoteFlowTests {
             target: target,
             handleID: handleID,
             handleRef: "PER-1",
-            score: 5,
             assessment: assessment,
-            reason: .agrees, reasonPropertyKey: "name", reasonPropertyOrigin: "provenencia",
+            reason: .unplaced,
             alternatives: [
-                CatalogPromoteGraphAlignmentAlternative(handleID: "e2", handleRef: "PER-2", score: 1),
+                CatalogPromoteGraphAlignmentAlternative(handleID: "e2", handleRef: "PER-2"),
             ],
             conflictWithFixed: false,
             possibleDuplicate: false
@@ -61,36 +60,36 @@ struct PromoteFlowTests {
         var event = row(id: "e", assessment: "medium")
         event.kind = "event"
         event.handleRef = "EVT-D1JBR"
-        event.event = CatalogEventHeader(
+        event.header = .event(CatalogEventHeader(
             entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-D1JBR", subjectTypeID: "t", label: ""),
             eventName: "",
             title: birth
-        )
+        ))
         event.alternatives = [
             CatalogPromoteGraphAlignmentAlternative(
-                handleID: "e2", handleRef: "EVT-2", score: 1,
-                event: CatalogEventHeader(
+                handleID: "e2", handleRef: "EVT-2",
+                header: .event(CatalogEventHeader(
                     entity: CatalogCanonicalEntity(id: "e2", ref: "EVT-2", subjectTypeID: "t", label: ""),
                     title: CatalogEventTitle(rule: .label, label: "Working title", ref: "EVT-2")
-                )
+                ))
             ),
         ]
 
         var person = row(id: "p", assessment: "medium")
-        person.person = CatalogPersonHeader(
+        person.header = .person(CatalogPersonHeader(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: "Grandpa"),
             name: nil,
             nameValueCount: 0
-        )
+        ))
 
         var place = row(id: "l", assessment: "medium")
         place.kind = "place"
         place.handleRef = "PLC-1"
-        place.place = CatalogPlaceHeader(
+        place.header = .place(CatalogPlaceHeader(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PLC-1", subjectTypeID: "t", label: "The farm"),
             names: [],
             parents: ["Ontario", "Canada"]
-        )
+        ))
 
         var flow = PromoteFlow(entryID: "e")
         flow.load(
@@ -118,14 +117,14 @@ struct PromoteFlowTests {
 
     @Test func aPersonRecordReadsSortedInTheMenu() {
         var person = row(id: "p", assessment: "medium")
-        person.person = CatalogPersonHeader(
+        person.header = .person(CatalogPersonHeader(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: ""),
             name: CatalogNameValue(form: "John Smith", parts: [
                 CatalogNameValuePart(value: "John", type: "given"),
                 CatalogNameValuePart(value: "Smith", type: "surname"),
             ]),
             nameValueCount: 1
-        )
+        ))
         var flow = PromoteFlow(entryID: "e")
         flow.nameOrders = .givenSurname
         flow.load(entryID: "e", proposal: proposal(rows: [person]), subjects: [fact("p")], bridges: [])
@@ -164,7 +163,7 @@ struct PromoteFlowTests {
             var unplaced = row(id: "a", target: .unplaced, handleID: "", assessment: band)
             unplaced.reason = .unplaced
             unplaced.alternatives = [
-                CatalogPromoteGraphAlignmentAlternative(handleID: "e2", handleRef: "PER-2", score: 2.5, assessment: band, reason: .agrees),
+                CatalogPromoteGraphAlignmentAlternative(handleID: "e2", handleRef: "PER-2"),
             ]
             var flow = PromoteFlow(entryID: "a")
             flow.load(entryID: "a", proposal: proposal(rows: [unplaced]), subjects: [fact("a")], bridges: [])
@@ -202,7 +201,7 @@ struct PromoteFlowTests {
             loser.possibleDuplicate = true
             loser.duplicateOfSubjectID = "a"
             loser.alternatives = [
-                CatalogPromoteGraphAlignmentAlternative(handleID: "e1", handleRef: "PER-1", score: 2.5, assessment: band, reason: .agrees),
+                CatalogPromoteGraphAlignmentAlternative(handleID: "e1", handleRef: "PER-1"),
             ]
             var flow = PromoteFlow(entryID: "a")
             flow.mappedRest = true
@@ -222,8 +221,7 @@ struct PromoteFlowTests {
         below.reason = .unplaced
         below.alternatives = [
             CatalogPromoteGraphAlignmentAlternative(
-                handleID: "e9", handleRef: "PER-9", score: 1,
-                assessment: "weak", reason: .weak
+                handleID: "e9", handleRef: "PER-9"
             ),
         ]
         var flow = PromoteFlow(entryID: "a")
@@ -257,11 +255,11 @@ struct PromoteFlowTests {
         flow.setTarget(subjectID: "a", token: "new")
         #expect(flow.rows.first { $0.subjectID == "a" }?.target == .newKind)
         #expect(flow.targetsChosen)
-        #expect(flow.batchRows().first { $0.subjectID == "a" }?.target == "new")
+        #expect(flow.batchRows().first { $0.subjectID == "a" }?.target == .new)
 
         flow.setTarget(subjectID: "a", token: "skip")
         #expect(flow.rows.first { $0.subjectID == "a" }?.target == .skip)
-        #expect(flow.batchRows().first { $0.subjectID == "a" }?.target == "skip")
+        #expect(flow.batchRows().first { $0.subjectID == "a" }?.target == .skip)
     }
 
     @Test func decidedRowsSurviveAReproposal() {
@@ -384,7 +382,7 @@ struct PromoteFlowTests {
         #expect(batch.count == 2)
         #expect(batch[0].subjectID == "a")
         #expect(batch[1].subjectID == "b")
-        #expect(batch[1].target == "skip")
+        #expect(batch[1].target == .skip)
         flow.setTarget(subjectID: "b", token: "new")
         #expect(flow.connections.first?.state == .files)
     }
@@ -646,13 +644,14 @@ struct PromoteFlowTests {
             subjects: [fact("a"), fact("b"), fact("c"), fact("d")],
             bridges: []
         )
-        flow.setTarget(subjectID: "a", token: "handle:e2")
+        flow.setTarget(subjectID: "a", token: "handle:e1")
         flow.setTarget(subjectID: "b", token: "new")
         flow.setTarget(subjectID: "c", token: "skip")
-        let batch = flow.batchRows()
-        #expect(batch.map(\.subjectID) == ["a", "b", "c"])
-        #expect(batch.map(\.target) == ["handle", "new", "skip"])
-        #expect(batch.map(\.entityID) == ["e2", nil, nil])
+        #expect(flow.batchRows() == [
+            CatalogPromoteGraphAlignmentFixed(subjectID: "a", handleID: "e1", target: .handle),
+            CatalogPromoteGraphAlignmentFixed(subjectID: "b", handleID: "", target: .new),
+            CatalogPromoteGraphAlignmentFixed(subjectID: "c", handleID: "", target: .skip),
+        ])
     }
 
     @Test func duplicateNotesNameTheOtherRowAndItsRef() {
@@ -692,7 +691,7 @@ struct PromoteFlowTests {
         var held = row(id: "a", handleID: "e2")
         held.handleRef = "PER-2"
         held.conflictWithFixed = true
-        held.alternatives = [CatalogPromoteGraphAlignmentAlternative(handleID: "e1", handleRef: "PER-1", score: 6)]
+        held.alternatives = [CatalogPromoteGraphAlignmentAlternative(handleID: "e1", handleRef: "PER-1")]
         flow.merge(proposal(rows: [held], revision: 4), subjects: [fact("a")])
         #expect(flow.rows[0].conflictNote == "PER-1")
     }
@@ -742,8 +741,8 @@ struct PromoteFlowTests {
         let fixed = flow.fixed(for: flow.rows.filter(\.decided))
         #expect(fixed == [CatalogPromoteGraphAlignmentFixed(subjectID: "a", handleID: "e7")])
         let batch = flow.batchRows().first { $0.subjectID == "a" }
-        #expect(batch?.target == "handle")
-        #expect(batch?.entityID == "e7")
+        #expect(batch?.target == .handle)
+        #expect(batch?.handleID == "e7")
 
         var bare = started()
         let bareAccepted = bare.hold(subjectID: "a", id: "e7", ref: "PER-7", header: nil)

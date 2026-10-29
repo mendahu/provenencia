@@ -89,7 +89,6 @@ final class PromoteModel {
     weak var navigation: WorkspaceNavigation?
 
     private(set) var flow: PromoteFlow
-    private(set) var grades: [CatalogClaimConfidenceGrade] = []
     private(set) var sourceRef: String = ""
     private(set) var sourceMark: PVMarkKey = .defaultTypeMark
     private(set) var loadError: String?
@@ -101,7 +100,6 @@ final class PromoteModel {
     private var proposeGeneration = 0
 
     var graphKey: CatalogQueryKey { .evidenceGraph(project: session.projectKey, graphId: entry.graphID) }
-    var confidenceKey: CatalogQueryKey { .confidenceGradesList(project: session.projectKey) }
     var propertiesKey: CatalogQueryKey { .propertiesWorkspace(project: session.projectKey) }
     var rulesKey: CatalogQueryKey { .connectRules(project: session.projectKey) }
     var sourcesKey: CatalogQueryKey { .sourcesList(project: session.projectKey) }
@@ -140,7 +138,6 @@ final class PromoteModel {
                 loadError = L10n.string(L10n.Promote.graphUnavailable)
                 return
             }
-            grades = await session.readyValue(confidenceKey) ?? []
             await attachSource()
             syncNameOrders()
             let subjects = subjectFacts(snapshot)
@@ -312,7 +309,7 @@ final class PromoteModel {
         let batch = flow.batchRows()
         let seen = flow.revision
         do {
-            _ = try await store.applyPromoteGraphAlignment(
+            try await store.applyPromoteGraphAlignment(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 graphID: entry.graphID,

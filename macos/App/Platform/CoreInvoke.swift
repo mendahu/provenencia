@@ -122,14 +122,12 @@ enum CoreMethod {
     static let setPreferredLikeness = Int32(Provenencia_Engine_V1_Method.setPreferredLikeness.rawValue)
     static let listSubjectMemberships = Int32(Provenencia_Engine_V1_Method.listSubjectMemberships.rawValue)
     static let listPersonHeaders = Int32(Provenencia_Engine_V1_Method.listPersonHeaders.rawValue)
-    static let listClaimConfidenceGrades = Int32(Provenencia_Engine_V1_Method.listClaimConfidenceGrades.rawValue)
     static let getConclusionDetail = Int32(Provenencia_Engine_V1_Method.getConclusionDetail.rawValue)
     static let listEventHeaders = Int32(Provenencia_Engine_V1_Method.listEventHeaders.rawValue)
     static let listPlaceHeaders = Int32(Provenencia_Engine_V1_Method.listPlaceHeaders.rawValue)
     static let listEvidenceGraphEventTitles = Int32(Provenencia_Engine_V1_Method.listEvidenceGraphEventTitles.rawValue)
     static let proposePromoteGraphAlignment = Int32(Provenencia_Engine_V1_Method.proposePromoteGraphAlignment.rawValue)
     static let applyPromoteGraphAlignment = Int32(Provenencia_Engine_V1_Method.applyPromoteGraphAlignment.rawValue)
-    static let getPromoteClaimEvidence = Int32(Provenencia_Engine_V1_Method.getPromoteClaimEvidence.rawValue)
     static let getNameFormat = Int32(Provenencia_Engine_V1_Method.getNameFormat.rawValue)
 }
 

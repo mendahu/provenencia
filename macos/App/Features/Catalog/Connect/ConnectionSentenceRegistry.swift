@@ -62,19 +62,6 @@ enum ConnectionSentenceRegistry {
             self.eventType = eventType
             self.neighborName = neighborName
         }
-
-        /// A relationship on the evidence sheet; nil for a bridge type this build cannot word.
-        init?(_ relationship: CatalogClaimEvidenceRelationship, neighborName: String) {
-            guard let kind = EvidenceBridgeKind(rawValue: relationship.bridgeType) else { return nil }
-            self.init(
-                kind: kind,
-                neighborEnd: relationship.neighborEnd,
-                neighborTerm: relationship.neighborTerm,
-                namesNeighbor: relationship.neighborTermNamesNeighbor,
-                eventType: relationship.eventType,
-                neighborName: neighborName
-            )
-        }
     }
 
     /// Wording for one term key (and optionally one event type) of a kind.

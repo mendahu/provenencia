@@ -80,13 +80,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var promoteProposeDelays: [Duration] = []
     /// The decided rows the last proposal call held.
     var lastPromoteFixed: [CatalogPromoteGraphAlignmentFixed] = []
-    /// Claim evidence per Subject id, as Go would compose it. A Subject with no
-    /// entry gets empty evidence.
-    var promoteEvidence: [String: CatalogClaimEvidence] = [:]
-    /// Thrown by `getPromoteClaimEvidence` when set.
-    var promoteEvidenceError: Error?
     /// The last Done the page filed, for tests.
-    var lastPromoteBatch: [CatalogPromoteBatchRow]?
+    var lastPromoteBatch: [CatalogPromoteGraphAlignmentFixed]?
     /// Event and Place headers as Go would compose them, seeded by tests in
     /// list order. FakeStore does not reconcile, walk, or title them; Go owns
     /// those rules (`conclusionheaders`, `eventtitle`) and their tests.
@@ -97,7 +92,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// A handle's detail as Go would compose it, seeded by tests. Persons
     /// without a seed fall back to the name mirror below.
     var seededConclusionDetails: [String: CatalogConclusionDetail] = [:]
-    /// The Identity Claim Promote wrote per Subject id (confidence, argument).
+    /// The Identity Claim Promote wrote per Subject id.
     var claimBySubject: [String: CatalogIdentityClaim] = [:]
     var subjectPositionsBySubject: [String: CatalogSubjectPosition] = [:]
     /// Type↔field suggestion joins, keyed by source type id and held in the
@@ -1649,9 +1644,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         projectDir: String,
         userID _: String,
         subjectID: String,
-        entityID: String?,
-        confidenceGradeID: String?,
-        argument: String
+        entityID: String?
     ) async throws -> CatalogPromoteResult {
         let delay = withState { promoteSubjectDelayNanoseconds }
         if delay > 0 {
@@ -1692,9 +1685,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 id: UUID().uuidString.lowercased(),
                 subjectID: subjectID,
                 entityID: entity.id,
-                status: "accepted",
-                confidenceGradeID: confidenceGradeID,
-                argument: argument.trimmingCharacters(in: .whitespacesAndNewlines)
+                status: "accepted"
             )
             membershipBySubject[subjectID] = CatalogSubjectMembership(
                 subjectID: subjectID,
@@ -1800,7 +1791,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         target: .handle,
                         handleID: membership.entity.id,
                         handleRef: membership.entity.ref,
-                        score: 0,
                         assessment: "strong",
                         reason: .decided,
                         alternatives: [],
@@ -1817,7 +1807,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         target: .handle,
                         handleID: entity.id,
                         handleRef: entity.ref,
-                        score: 0,
                         assessment: "strong",
                         reason: .decided,
                         alternatives: [],
@@ -1831,7 +1820,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     target: .unplaced,
                     handleID: "",
                     handleRef: "",
-                    score: 0,
                     assessment: "none",
                     reason: .unplaced,
                     alternatives: [],
@@ -1843,75 +1831,34 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func getPromoteClaimEvidence(
-        projectDir: String,
-        graphID: String,
-        subjectID: String,
-        handleID: String,
-        neighbors: [CatalogPromoteGraphAlignmentFixed]
-    ) async throws -> CatalogClaimEvidence {
-        try withState {
-            markCatalogSessionHeld(projectDir)
-            recordedCalls.append("getPromoteClaimEvidence graph=\(graphID) subject=\(subjectID) handle=\(handleID) neighbors=\(neighbors.count)")
-            if let promoteEvidenceError { throw promoteEvidenceError }
-            return promoteEvidence[subjectID] ?? CatalogClaimEvidence()
-        }
-    }
-
-    /// Files claims. Which Observations a pin names is Go's (`promotealign.PinOffers`); the fake pins none.
+    /// Files what it is sent. The rules that refuse a row are Go's (`promotealign.Apply`); the fake
+    /// leaves a row it cannot place as it is, and refuses only a stale revision.
     func applyPromoteGraphAlignment(
         projectDir: String,
         userID _: String,
         graphID: String,
         seenRevision: Int64,
-        rows: [CatalogPromoteBatchRow]
-    ) async throws -> CatalogPromoteBatchResult {
+        rows: [CatalogPromoteGraphAlignmentFixed]
+    ) async throws {
         try withState {
             markCatalogSessionHeld(projectDir)
             recordedCalls.append("applyPromoteGraphAlignment graph=\(graphID) rows=\(rows.count)")
             lastPromoteBatch = rows
-            let current = nextAuditRevision - 1
-            guard seenRevision == current else {
+            guard seenRevision == nextAuditRevision - 1 else {
                 throw CoreInvokeError.coded(status: 1, code: "promote.stale", kind: .conflict, params: [])
             }
-            var written: [CatalogPromoteBatchWritten] = []
-            for row in rows {
-                // Go's applyRow: a Skip writes nothing and carries nothing; a New has no pins.
-                switch row.target {
-                case "skip":
-                    guard row.entityID == nil, row.pinIDs.isEmpty, row.confidenceGradeID == nil, row.argument.isEmpty else {
-                        throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
-                    }
-                    continue
-                case "new":
-                    guard row.entityID == nil, row.pinIDs.isEmpty else {
-                        throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
-                    }
-                case "handle":
-                    break
-                default:
-                    throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
-                }
-                guard let subject = (subjectsByGraph[graphID] ?? []).first(where: { $0.id == row.subjectID }),
+            var written = 0
+            for row in rows where row.target == .handle || row.target == .new {
+                guard membershipBySubject[row.subjectID] == nil,
+                      let subject = (subjectsByGraph[graphID] ?? []).first(where: { $0.id == row.subjectID }),
                       let type = subjectTypesByProject[projectDir]?.first(where: { $0.id == subject.subjectTypeID }),
                       Self.primaryTypeKeys.contains(type.key)
-                else {
-                    throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
-                }
-                if let existing = membershipBySubject[subject.id] {
-                    if row.target == "handle", existing.entity.id == row.entityID, row.pinIDs.isEmpty {
-                        continue
-                    }
-                    throw CoreInvokeError.coded(status: 1, code: "identityclaims.already_member", kind: .conflict, params: [])
-                }
+                else { continue }
                 let entity: CatalogCanonicalEntity
-                if row.target == "handle" {
-                    guard let entityID = row.entityID,
-                          let existing = membershipBySubject.values.first(where: { $0.entity.id == entityID })?.entity,
+                if row.target == .handle {
+                    guard let existing = membershipBySubject.values.first(where: { $0.entity.id == row.handleID })?.entity,
                           existing.subjectTypeID == type.id
-                    else {
-                        throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
-                    }
+                    else { continue }
                     entity = existing
                 } else {
                     entity = CatalogCanonicalEntity(
@@ -1925,9 +1872,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     id: UUID().uuidString.lowercased(),
                     subjectID: subject.id,
                     entityID: entity.id,
-                    status: "accepted",
-                    confidenceGradeID: row.confidenceGradeID,
-                    argument: row.argument.trimmingCharacters(in: .whitespacesAndNewlines)
+                    status: "accepted"
                 )
                 membershipBySubject[subject.id] = CatalogSubjectMembership(
                     subjectID: subject.id,
@@ -1936,27 +1881,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     kind: type.key
                 )
                 claimBySubject[subject.id] = claim
-                written.append(CatalogPromoteBatchWritten(entity: entity, claim: claim, pins: row.pinIDs.count))
+                written += 1
             }
-            let revision: Int64
-            if written.isEmpty {
-                revision = seenRevision
-            } else {
-                revision = nextAuditRevision
-                nextAuditRevision += 1
-            }
-            return CatalogPromoteBatchResult(revision: revision, written: written)
-        }
-    }
-
-    func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade] {
-        return withState {
-            markCatalogSessionHeld(projectDir)
-            return [
-                CatalogClaimConfidenceGrade(id: "cg-low", key: "low_confidence", origin: CatalogOrigin.provenencia, label: "Low confidence", sortOrder: 1),
-                CatalogClaimConfidenceGrade(id: "cg-mod", key: "moderate", origin: CatalogOrigin.provenencia, label: "Moderate", sortOrder: 2),
-                CatalogClaimConfidenceGrade(id: "cg-high", key: "high_confidence", origin: CatalogOrigin.provenencia, label: "High confidence", sortOrder: 3),
-            ]
+            if written > 0 { nextAuditRevision += 1 }
         }
     }
 

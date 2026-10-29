@@ -256,20 +256,6 @@ extension CatalogQueryKey.Kind {
                     return try await store.listSourceCredibilityGrades(projectDir: project.projectDir)
                 }
             )
-        case .confidenceGradesList:
-            // Seeded vocabulary with no CRUD surface, so nothing stales it.
-            return .make(
-                kind: self,
-                stalePolicy: .sessionFresh,
-                invalidateOn: [],
-                invalidation: { project, _ in .key(.confidenceGradesList(project: project)) },
-                load: { key, store in
-                    guard case .confidenceGradesList(let project) = key else {
-                        mismatchedCatalogKey(key, .confidenceGradesList)
-                    }
-                    return try await store.listClaimConfidenceGrades(projectDir: project.projectDir)
-                }
-            )
         case .sourceWorkspace:
             // Vocabulary lists are no longer folded in here, so plain
             // create/relabel of a type or field leaves the page alone. What

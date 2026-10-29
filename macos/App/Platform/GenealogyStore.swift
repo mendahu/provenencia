@@ -283,19 +283,6 @@ struct CatalogIdentityClaim: Sendable, Equatable, Identifiable {
     var subjectID: String
     var entityID: String
     var status: String
-    /// `nil` when the claim carries no confidence grade.
-    var confidenceGradeID: String? = nil
-    var argument: String = ""
-}
-
-/// One claim confidence grade (Low / Moderate / High): the scale on Identity
-/// Claims. Not Source credibility, though the shape matches.
-struct CatalogClaimConfidenceGrade: Sendable, Equatable, Identifiable {
-    var id: String
-    var key: String
-    var origin: String
-    var label: String
-    var sortOrder: Int
 }
 
 /// A view of one Subject's **accepted Identity Claim**: the claim and the handle
@@ -318,9 +305,8 @@ struct CatalogPromoteResult: Sendable, Equatable {
     var claim: CatalogIdentityClaim
 }
 
-/// One decided or already-chosen Subject→handle anchor for graph alignment.
-/// A decided row the proposal holds as given: on `handleID` (target handle),
-/// or off every handle (target new or skip, no handle).
+/// A row's target as the Promote page holds it, for a proposal or a Done: on `handleID` (target
+/// handle), or off every handle (target new or skip, no handle).
 struct CatalogPromoteGraphAlignmentFixed: Sendable, Equatable {
     var subjectID: String
     var handleID: String = ""
@@ -331,17 +317,7 @@ struct CatalogPromoteGraphAlignmentFixed: Sendable, Equatable {
 struct CatalogPromoteGraphAlignmentAlternative: Sendable, Equatable {
     var handleID: String
     var handleRef: String
-    var score: Double
-    var person: CatalogPersonHeader?
-    var event: CatalogEventHeader?
-    var place: CatalogPlaceHeader?
-    /// strong, medium, weak, none — this record's own band.
-    var assessment: String = ""
-    /// A row reason, worded by the page.
-    var reason: PromoteReasonCode = .empty
-    var reasonPropertyKey: String = ""
-    var reasonPropertyOrigin: String = ""
-    var viaNeighborSubjectID: String = ""
+    var header: CatalogConclusionHeader?
 }
 
 /// One Subject's proposal from `proposePromoteGraphAlignment` (S9-42).
@@ -351,29 +327,21 @@ struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
     var target: PromoteTargetCode
     var handleID: String
     var handleRef: String
-    var score: Double
+    /// strong, medium, weak, none. Read only by the draft rule (S13-24 moves it to Go).
     var assessment: String
-    /// A row reason, worded by the page.
+    /// Read only by the draft rule.
     var reason: PromoteReasonCode = .unplaced
-    /// With reason agrees: the Property that agrees most.
-    var reasonPropertyKey: String = ""
-    var reasonPropertyOrigin: String = ""
     var alternatives: [CatalogPromoteGraphAlignmentAlternative]
     var conflictWithFixed: Bool
     var possibleDuplicate: Bool
     /// With `possibleDuplicate`, the other row this one may be the same as.
     var duplicateOfSubjectID: String = ""
+    /// The neighbor row this one was reached from; empty when it was not.
     var viaNeighborSubjectID: String = ""
-    var viaBridgeType: String = ""
-    var viaRole: String = ""
-    /// A comparison behind the reported pair conflicts, whatever the band.
-    var contested: Bool = false
     /// A move reason when settling released an earlier pair of this row in this proposal; nil otherwise.
     var moveReason: PromoteReasonCode? = nil
     var moveNeighborSubjectID: String = ""
-    var person: CatalogPersonHeader?
-    var event: CatalogEventHeader?
-    var place: CatalogPlaceHeader?
+    var header: CatalogConclusionHeader?
 
     var id: String { subjectID }
 }
@@ -382,43 +350,6 @@ struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
 struct CatalogPromoteGraphAlignmentProposal: Sendable, Equatable {
     var revision: Int64
     var rows: [CatalogPromoteGraphAlignmentRow]
-}
-
-/// One member Observation a line would pin. `id` is Go's pin id.
-struct CatalogClaimEvidencePin: Sendable, Equatable, Identifiable {
-    var id: String
-    var sourceID: String
-    var value: CatalogConclusionValue
-}
-
-/// One incoming Observation against the members that say something about the
-/// same property (`claimevidence.Line`).
-struct CatalogClaimEvidenceLine: Sendable, Equatable, Identifiable {
-    var propertyKey: String
-    var outcome: EvidenceOutcome
-    var propertyCause: EvidencePropertyCause = .none
-    var relation: ValueRelation
-    var cause: ValueCause = .none
-    var incomingObservationID: String
-    var incoming: CatalogConclusionValue
-    /// The incoming value is a negative Observation: shown as "not <value>".
-    var incomingNegative: Bool = false
-    var members: [CatalogClaimEvidencePin]
-
-    var id: String { incomingObservationID + "|" + (members.first?.id ?? propertyKey) }
-}
-
-/// The lines for one property.
-struct CatalogClaimEvidenceSection: Sendable, Equatable, Identifiable {
-    var propertyKey: String
-    var lines: [CatalogClaimEvidenceLine]
-
-    var id: String { propertyKey }
-}
-
-/// One member's side of a relationship. `id` is Go's pin id.
-struct CatalogClaimEvidenceBundle: Sendable, Equatable, Identifiable {
-    var id: String
 }
 
 /// A term as the evidence wire names it: its key, the catalog's label, and whose term it is.
@@ -430,84 +361,6 @@ struct CatalogEvidenceTerm: Sendable, Equatable {
 
     /// The key, when it is a product term.
     var productKey: String? { CatalogOrigin.isProduct(origin) ? key : nil }
-}
-
-/// How one side records a relationship's fact (`claimevidence.Relationship.Layer` / `.Canon`):
-/// the kinship pattern, and the event or the parent in between. A layer pivot is a
-/// Subject on the page; only the entity's pivot carries a header.
-struct CatalogClaimEvidenceShape: Sendable, Equatable {
-    var pattern: KinshipPattern = .direct
-    var pivotID: String = ""
-    var pivot: CatalogConclusionHeader?
-}
-
-/// One link of the row's Subject that corresponds to a link between the
-/// entity's members and a neighbor's (`claimevidence.Relationship`).
-struct CatalogClaimEvidenceRelationship: Sendable, Equatable, Identifiable {
-    var neighborSubjectID: String
-    var key: String
-    var bridgeType: String = ""
-    var outcome: EvidenceOutcome
-    var bundles: [CatalogClaimEvidenceBundle]
-    var sections: [CatalogClaimEvidenceSection] = []
-    /// The link read from the neighbor's side: the endpoint property the neighbor is at ("" for a
-    /// symmetric link), the term it carries, and whether that term names the neighbor.
-    var neighborEnd: String = ""
-    var neighborTerm: CatalogEvidenceTerm?
-    var neighborTermNamesNeighbor: Bool = false
-    /// A participation's event type.
-    var eventType: CatalogEvidenceTerm?
-    /// How the row's Source and the entity record the fact the line stands for.
-    var layer = CatalogClaimEvidenceShape()
-    var canon = CatalogClaimEvidenceShape()
-
-    var id: String { neighborSubjectID + "|" + key }
-}
-
-/// A pin the evidence offers; checked ones are the defaults.
-struct CatalogClaimEvidenceOffer: Sendable, Equatable {
-    var id: String
-    var checked: Bool
-}
-
-/// One Promote row's claim evidence against its target (`getPromoteClaimEvidence`).
-struct CatalogClaimEvidence: Sendable, Equatable {
-    var sections: [CatalogClaimEvidenceSection] = []
-    var relationships: [CatalogClaimEvidenceRelationship] = []
-    var offers: [CatalogClaimEvidenceOffer] = []
-    /// Source id → title.
-    var sourceTitles: [String: String] = [:]
-
-    /// The pins that start checked.
-    var checkedPinIDs: Set<String> { Set(offers.filter(\.checked).map(\.id)) }
-    /// Every pin the evidence offers.
-    var offeredPinIDs: Set<String> { Set(offers.map(\.id)) }
-}
-
-/// One Subject on a Done.
-struct CatalogPromoteBatchRow: Sendable, Equatable {
-    var subjectID: String
-    var target: String
-    var entityID: String?
-    var confidenceGradeID: String?
-    var argument: String
-    /// The sheet was never opened: Go pins what the evidence checks.
-    var defaultPins: Bool = false
-    /// The pins the researcher left checked (ids from `CatalogClaimEvidence.offers`).
-    var pinIDs: [String] = []
-}
-
-/// One claim a Done filed.
-struct CatalogPromoteBatchWritten: Sendable, Equatable {
-    var entity: CatalogCanonicalEntity
-    var claim: CatalogIdentityClaim
-    var pins: Int
-}
-
-/// The revision a Done wrote, and the claims it filed.
-struct CatalogPromoteBatchResult: Sendable, Equatable {
-    var revision: Int64
-    var written: [CatalogPromoteBatchWritten]
 }
 
 struct CatalogSubjectPosition: Sendable, Equatable {
@@ -1432,9 +1285,7 @@ protocol GenealogyStore: Sendable {
         projectDir: String,
         userID: String,
         subjectID: String,
-        entityID: String?,
-        confidenceGradeID: String?,
-        argument: String
+        entityID: String?
     ) async throws -> CatalogPromoteResult
     /// Take a primary Subject's filing back: its accepted claim and, in the same write, the accepted
     /// claims of the bridges on its Source that have it as an end. No handle is deleted. A Subject with
@@ -1454,24 +1305,15 @@ protocol GenealogyStore: Sendable {
         graphID: String,
         fixed: [CatalogPromoteGraphAlignmentFixed]
     ) async throws -> CatalogPromoteGraphAlignmentProposal
-    /// One row's claim evidence against its target, on one Evidence graph. `neighbors` are the targets the page holds for its other rows.
-    func getPromoteClaimEvidence(
-        projectDir: String,
-        graphID: String,
-        subjectID: String,
-        handleID: String,
-        neighbors: [CatalogPromoteGraphAlignmentFixed]
-    ) async throws -> CatalogClaimEvidence
-    /// File one Done for one Evidence graph: claims, pins, and bridges. `seenRevision` is the proposal's revision.
+    /// File one Done for one Evidence graph: a claim per row on a handle or New, and bridges.
+    /// `seenRevision` is the proposal's revision.
     func applyPromoteGraphAlignment(
         projectDir: String,
         userID: String,
         graphID: String,
         seenRevision: Int64,
-        rows: [CatalogPromoteBatchRow]
-    ) async throws -> CatalogPromoteBatchResult
-    /// The claim confidence scale, in order.
-    func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade]
+        rows: [CatalogPromoteGraphAlignmentFixed]
+    ) async throws
     /// Accepted handle of every promoted Subject on one Evidence graph.
     func listSubjectMemberships(projectDir: String, graphID: String) async throws -> [CatalogSubjectMembership]
     /// The title of every Event Subject on one Evidence graph, keyed by Subject id.
@@ -1670,15 +1512,13 @@ extension GenealogyStore {
         )
     }
 
-    /// Promote onto a new handle with no grade or argument (the graph card's Confirm).
+    /// Promote onto a new handle (the graph card's Confirm).
     func promoteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogPromoteResult {
         try await promoteSubject(
             projectDir: projectDir,
             userID: userID,
             subjectID: subjectID,
-            entityID: nil,
-            confidenceGradeID: nil,
-            argument: ""
+            entityID: nil
         )
     }
 }

@@ -392,9 +392,7 @@ struct PromoteFlow: Equatable, Sendable {
             item = offered
         } else {
             item = Self.item(
-                id: id, ref: ref, kind: rows[index].kind,
-                person: header?.person, event: header?.event, place: header?.place,
-                orders: nameOrders
+                id: id, ref: ref, header: header, orders: nameOrders
             )
             rows[index].menu.append(item)
         }
@@ -445,34 +443,14 @@ struct PromoteFlow: Equatable, Sendable {
         noteDuplicates()
     }
 
-    /// One line per row to file.
-    func batchRows() -> [CatalogPromoteBatchRow] {
-        filedRows.map(batchRow)
+    /// The targets Done sends, one per row it files.
+    func batchRows() -> [CatalogPromoteGraphAlignmentFixed] {
+        fixed(for: filedRows)
     }
 
     /// The rows Done files: visible, not already filed, with a target.
     private var filedRows: [Row] {
         scope.filter { !$0.anchor && $0.target != .unset }
-    }
-
-    private func batchRow(_ row: Row) -> CatalogPromoteBatchRow {
-        let entityID: String?
-        let target: String
-        switch row.target {
-        case .handle(let id, _, _):
-            target = "handle"
-            entityID = id
-        case .newKind:
-            target = "new"
-            entityID = nil
-        case .skip, .unset:
-            target = "skip"
-            entityID = nil
-        }
-        return CatalogPromoteBatchRow(
-            subjectID: row.subjectID, target: target, entityID: entityID,
-            confidenceGradeID: nil, argument: "", defaultPins: false, pinIDs: []
-        )
     }
 
     mutating func requestLeave(_ pending: PendingNavigation) -> Bool {
@@ -539,7 +517,7 @@ struct PromoteFlow: Equatable, Sendable {
                 date: fact.date
             )
         }
-        let menu = menu(for: proposal, kind: fact.kind, orders: orders)
+        let menu = menu(for: proposal, orders: orders)
         let drafted = draftTarget(proposal, menu: menu)
         let caption = Reason(move: proposal) ?? Reason(via: proposal)
         if let previous, previous.decided {
@@ -588,22 +566,13 @@ struct PromoteFlow: Equatable, Sendable {
         return .unset
     }
 
-    private static func menu(for proposal: CatalogPromoteGraphAlignmentRow, kind: EvidencePrimaryKind, orders: NameFormatOrders) -> [Alternative] {
+    private static func menu(for proposal: CatalogPromoteGraphAlignmentRow, orders: NameFormatOrders) -> [Alternative] {
         var out: [Alternative] = []
         if proposal.target == .handle, !proposal.handleID.isEmpty {
-            out.append(item(
-                id: proposal.handleID, ref: proposal.handleRef,
-                kind: EvidencePrimaryKind(rawValue: proposal.kind),
-                person: proposal.person, event: proposal.event, place: proposal.place,
-                orders: orders
-            ))
+            out.append(item(id: proposal.handleID, ref: proposal.handleRef, header: proposal.header, orders: orders))
         }
         for alt in proposal.alternatives where alt.handleID != proposal.handleID {
-            out.append(item(
-                id: alt.handleID, ref: alt.handleRef, kind: kind,
-                person: alt.person, event: alt.event, place: alt.place,
-                orders: orders
-            ))
+            out.append(item(id: alt.handleID, ref: alt.handleRef, header: alt.header, orders: orders))
         }
         return out
     }
@@ -613,20 +582,10 @@ struct PromoteFlow: Equatable, Sendable {
     private static func item(
         id: String,
         ref: String,
-        kind: EvidencePrimaryKind?,
-        person: CatalogPersonHeader?,
-        event: CatalogEventHeader?,
-        place: CatalogPlaceHeader?,
+        header: CatalogConclusionHeader?,
         orders: NameFormatOrders
     ) -> Alternative {
-        let header: CatalogConclusionHeader?
-        switch kind {
-        case .person: header = person.map { .person($0) }
-        case .event: header = event.map { .event($0) }
-        case .place: header = place.map { .place($0) }
-        case nil: header = nil
-        }
-        return Alternative(
+        Alternative(
             id: id, ref: ref,
             title: header.map { ConclusionHeaderDisplay.title($0, style: .sorted, orders: orders) } ?? ref,
             subtitle: header.map(ConclusionHeaderDisplay.secondary) ?? ""

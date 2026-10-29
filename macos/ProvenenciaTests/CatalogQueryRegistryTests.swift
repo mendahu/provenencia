@@ -73,16 +73,6 @@ struct CatalogQueryRegistryTests {
         #expect(suggestionsHandle.value?.count == 1)
     }
 
-    @Test func confidenceGradesLoadInOrder() async {
-        let store = FakeStore()
-        let session = makeSession(store: store)
-        let handle: QueryHandle<[CatalogClaimConfidenceGrade]> = session.query(
-            CatalogQueryKey.confidenceGradesList(project: session.projectKey)
-        )
-        await waitForQuery(handle)
-        #expect(handle.value?.map(\.key) == ["low_confidence", "moderate", "high_confidence"])
-    }
-
     @Test func citationCountsLoadByEvidenceGraph() async {
         let store = FakeStore()
         seedStore(store)
@@ -458,7 +448,7 @@ struct CatalogQueryRegistryTests {
 
     @Test func everyKindHasOneDescriptor() {
         let kinds = CatalogQueryKey.Kind.allCases
-        #expect(kinds.count == 19)
+        #expect(kinds.count == 18)
         let described = kinds.map { kind -> CatalogQueryKey.Kind in
             let descriptor = kind.descriptor
             #expect(descriptor.kind == kind)
@@ -987,12 +977,6 @@ struct CatalogQueryRegistryTests {
         #expect(everyMutation.allSatisfy { mutation in
             !registry.invalidations(by: mutation, project: project).contains(
                 .key(.credibilityGradesList(project: project))
-            )
-        })
-        // Claim confidence grades are seeded the same way (S9-12).
-        #expect(everyMutation.allSatisfy { mutation in
-            !registry.invalidations(by: mutation, project: project).contains(
-                .key(.confidenceGradesList(project: project))
             )
         })
         // Writes that name their source stay narrow: a Source-page write reports

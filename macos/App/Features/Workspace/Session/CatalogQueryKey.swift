@@ -7,8 +7,6 @@ enum CatalogQueryKey: Hashable, Sendable {
     case sourceTypesList(project: ProjectKey)
     case metadataFieldsList(project: ProjectKey)
     case credibilityGradesList(project: ProjectKey)
-    /// Identity Claim confidence grades (seeded vocabulary; S9-12).
-    case confidenceGradesList(project: ProjectKey)
     case sourceWorkspace(project: ProjectKey, sourceId: String)
     /// One Evidence graph's rows: the canvas, the composer and Promote read it.
     case evidenceGraph(project: ProjectKey, graphId: String)
@@ -39,7 +37,6 @@ enum CatalogQueryKey: Hashable, Sendable {
         case sourceTypesList
         case metadataFieldsList
         case credibilityGradesList
-        case confidenceGradesList
         case sourceWorkspace
         case evidenceGraph
         case citationCounts
@@ -66,8 +63,6 @@ enum CatalogQueryKey: Hashable, Sendable {
             return .metadataFieldsList
         case .credibilityGradesList:
             return .credibilityGradesList
-        case .confidenceGradesList:
-            return .confidenceGradesList
         case .sourceWorkspace:
             return .sourceWorkspace
         case .evidenceGraph:
@@ -105,7 +100,6 @@ enum CatalogQueryKey: Hashable, Sendable {
              .sourceTypesList(let project),
              .metadataFieldsList(let project),
              .credibilityGradesList(let project),
-             .confidenceGradesList(let project),
              .sourceWorkspace(let project, _),
              .evidenceGraph(let project, _),
              .citationCounts(let project, _),

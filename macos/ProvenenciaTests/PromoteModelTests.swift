@@ -38,9 +38,9 @@ struct PromoteModelTests {
     private func row(_ id: String, handleID: String, assessment: String = "strong") -> CatalogPromoteGraphAlignmentRow {
         CatalogPromoteGraphAlignmentRow(
             subjectID: id, kind: "person", target: .handle, handleID: handleID, handleRef: "PER-\(handleID)",
-            score: 5, assessment: assessment, reason: .agrees, reasonPropertyKey: "name", reasonPropertyOrigin: "provenencia",
+            assessment: assessment, reason: .unplaced,
             alternatives: [
-                CatalogPromoteGraphAlignmentAlternative(handleID: "other", handleRef: "PER-OTHER", score: 1),
+                CatalogPromoteGraphAlignmentAlternative(handleID: "other", handleRef: "PER-OTHER"),
             ],
             conflictWithFixed: false, possibleDuplicate: false
         )
@@ -55,7 +55,6 @@ struct PromoteModelTests {
         let _: QueryHandle<EvidenceGraphRows> = session.query(model.graphKey)
         let _: QueryHandle<PropertiesSnapshot> = session.query(model.propertiesKey)
         let _: QueryHandle<[CatalogConnectRule]> = session.query(model.rulesKey)
-        let _: QueryHandle<[CatalogClaimConfidenceGrade]> = session.query(model.confidenceKey)
         return model
     }
 
@@ -169,14 +168,19 @@ struct PromoteModelTests {
         let model = model(store: store, subjectID: "a")
         await model.load()
         model.mapRest()
+        model.setTarget(subjectID: "a", token: "new")
+        _ = await waitUntil { !model.isProposing }
+        model.setTarget(subjectID: "b", token: "skip")
+        _ = await waitUntil { !model.isProposing }
         model.done()
         let filed = await waitUntil { store.lastPromoteBatch != nil }
         #expect(filed)
-        let rows = store.lastPromoteBatch ?? []
-        #expect(rows.map(\.subjectID) == ["a", "b"])
-        #expect(rows.map(\.entityID) == ["e1", "e2"])
-        #expect(store.recordedCalls.contains { $0.hasPrefix("getPromoteClaimEvidence") } == false)
-        #expect(store.recordedCalls.contains { $0.hasPrefix("listClaimConfidenceGrades") } == false)
+        #expect(store.lastPromoteBatch == [
+            CatalogPromoteGraphAlignmentFixed(subjectID: "a", target: .new),
+            CatalogPromoteGraphAlignmentFixed(subjectID: "b", target: .skip),
+        ])
+        #expect(store.claimBySubject["a"]?.status == "accepted")
+        #expect(store.claimBySubject["b"] == nil)
     }
 
     @Test func aStaleDoneReproposes() async {
@@ -279,8 +283,8 @@ struct PromoteModelTests {
         let filed = await waitUntil { store.lastPromoteBatch != nil }
         #expect(filed)
         let batch = store.lastPromoteBatch?.first { $0.subjectID == "a" }
-        #expect(batch?.target == "handle")
-        #expect(batch?.entityID == "e-far")
+        #expect(batch?.target == .handle)
+        #expect(batch?.handleID == "e-far")
     }
 
     private func storeWithFoundRecords(_ subjects: [CatalogSubject]) -> FakeStore {
@@ -358,7 +362,7 @@ struct PromoteModelTests {
         model.done()
         let filed = await waitUntil { store.lastPromoteBatch != nil }
         #expect(filed)
-        #expect(store.lastPromoteBatch?.first { $0.subjectID == "a" }?.entityID == "e-far")
+        #expect(store.lastPromoteBatch?.first { $0.subjectID == "a" }?.handleID == "e-far")
     }
 
     @Test func aRecordSearchShowsFailuresAndIgnoresUnknownHits() async {
