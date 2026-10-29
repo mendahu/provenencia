@@ -200,7 +200,7 @@ Do: D-9, D-10, D-11. Add T-5.
 Check: Xcode tests pass, including `PersonsListTests` and `PersonDetailTests` unchanged; manual check steps 2–3.
 
 **STEP-5 — Docs**
-Files: `docs/seeded-vocabulary.md` §4.1 (inside the code fence, after `surname`: `former_surname      -- no GEDCOM part tag (GEDCOM 7: a NAME with TYPE MAIDEN or BIRTH)`) and §4.3 (both orders per D-4); `docs/structured-name-model.md` §4.2a roles sentence (`former_surname` → `family`) and §4.5 (requirement 2 becomes "The key is that part order, undecorated: the row may add quotes and parentheses, the key never does"; the table gains a row "**Decoration** — nickname quotes, former-surname parentheses | The **part type**, in the client, localized by UI language; never in the sort key or the profile | *James “Jake” Robins*"); `docs/ideas/international-names.md` under "Name changes as a signal" ("The `former_surname` part type (S14-09) records a maiden or earlier surname; using it as a matching signal is still open.") and two parked lines (Out: `NameFormSplit` wrappers; the unused `Sort` field); `docs/deployment-plan/spike-11/deployment-plan.md` map row; `docs/deployment-plan/spike-11/completed.md`; this plan.
+Files: `docs/seeded-vocabulary.md` §4.1 (inside the code fence, after `surname`: `former_surname      -- no GEDCOM part tag (GEDCOM 7: a NAME with TYPE MAIDEN or BIRTH)`) and §4.3 (both orders per D-4); `docs/structured-name-model.md` §4.2a roles sentence (`former_surname` → `family`) and §4.5 (requirement 2 becomes "The key is that part order, undecorated: the row may add quotes and parentheses, the key never does"; the table gains a row "**Decoration** — nickname quotes, former-surname parentheses | The **part type**, in the client, localized by UI language; never in the sort key or the profile | *James “Jake” Robins*"); `docs/ideas/international-names.md` under "Name changes as a signal" ("The `former_surname` part type (S14-09) records a maiden or earlier surname; using it as a matching signal is still open.") and two parked lines (Out: `NameFormSplit` wrappers; the unused `Sort` field); `docs/deployment-plan/spike-14/deployment-plan.md` map row; `docs/deployment-plan/spike-14/completed.md`; this plan.
 Do: per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-09-name-display.md` reports no errors; links resolve.
 
@@ -233,7 +233,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `T
 - [ ] UI matches the brief inventory; no new kit primitive — not gated; no new component
 - [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together) — none
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
-- [ ] deployment-plan.md: map row status; docs/deployment-plan/spike-11/completed.md: one short paragraph of what shipped
+- [ ] deployment-plan.md: map row status; docs/deployment-plan/spike-14/completed.md: one short paragraph of what shipped
 - [ ] Brief moved to design/archive/ and design/README.md updated (if gated) — not gated
 - [ ] Domain doc updated: seeded-vocabulary §4.1 / §4.3, structured-name-model §4.2a / §4.5, international-names
 - [ ] PR description: what shipped, AC evidence, deviations, manual check

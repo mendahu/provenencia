@@ -12,7 +12,7 @@ description: >-
 
 # Add or change a matching rule
 
-The matching stack is layered ([`docs/deployment-plan/spike-11/comparison-layers.md`](../../../docs/deployment-plan/spike-11/comparison-layers.md), vocabulary in [`docs/matching-model.md`](../../../docs/matching-model.md)). Layer 1, `core/valuecompare`, relates two values of one type and returns a relation, a similarity and a detail. `core/matchregistry` holds every number. Promote is the layers' caller: `core/database/promotealign` builds each side with the profile builder and `core/graphalign` scores pairs with `subjectcompare.Compare`; a new knob reaches Promote through the registry, with no Promote change. This skill grows with each layer; later layer PRs extend it.
+The matching stack is layered ([`docs/deployment-plan/spike-11/comparison-layers.md`](../../../docs/deployment-plan/archive/spike-11/comparison-layers.md), vocabulary in [`docs/matching-model.md`](../../../docs/matching-model.md)). Layer 1, `core/valuecompare`, relates two values of one type and returns a relation, a similarity and a detail. `core/matchregistry` holds every number. Promote is the layers' caller: `core/database/promotealign` builds each side with the profile builder and `core/graphalign` scores pairs with `subjectcompare.Compare`; a new knob reaches Promote through the registry, with no Promote change. This skill grows with each layer; later layer PRs extend it.
 
 ## When it applies
 

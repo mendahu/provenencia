@@ -2,7 +2,7 @@
 
 **Status:** idea, not scheduled; likely the core of **Spike 11**, a large-scale matching refinement. Captured 2026-10-16 from a design conversation. It expands the **Calibration** bullet and the open question in [`name-matching-enhancements.md`](archive/name-matching-enhancements.md). Model: [`promote-graph-alignment.md`](../promote-graph-alignment.md), [`matching.md`](../matching.md).
 
-"Make the algorithm graspable" is in Spike 11: the design is [`deployment-plan/spike-11/comparison-layers.md`](../deployment-plan/spike-11/comparison-layers.md), and S11-01 writes the one-page model, glossary and knob inventory. Pieces 1–7 and the labeler wait until the re-implementation lands; whether they join Spike 11 is decided then.
+"Make the algorithm graspable" is in Spike 11: the design is [`deployment-plan/spike-11/comparison-layers.md`](../deployment-plan/archive/spike-11/comparison-layers.md), and S11-01 writes the one-page model, glossary and knob inventory. Pieces 1–7 and the labeler wait until the re-implementation lands; whether they join Spike 11 is decided then.
 
 ## The problem
 

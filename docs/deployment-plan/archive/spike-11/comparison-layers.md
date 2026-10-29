@@ -1,6 +1,6 @@
 # Comparison Layers
 
-**Status:** requirements, scoped 2026-10-16 – 17. Not a PR map yet. The matching design for [Spike 11](README.md): six layers from value comparison to graph alignment, bands, the match registry, and the reuse inventory. Background: [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md) ("First: make the algorithm graspable"). The lasting one-page model and knob inventory: [`matching-model.md`](../../matching-model.md). Today's code: [`matching.md`](../../matching.md), [`promote-graph-alignment.md`](../../promote-graph-alignment.md).
+**Status:** the matching design Spike 11 built (2026-10-16 – 2026-10-29): six layers from value comparison to graph alignment, bands, the match registry, and the reuse inventory. Kept as the reasoning behind [`matching-model.md`](../../../matching-model.md), which is the lasting one-page model and knob inventory; where they differ, the model and the code win. Spike 11's decisions: [README](README.md). Since 2026-10-29 the claim evidence consumers named below are being removed ([`conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md) §5), and the alignment band is deprecated as a measure of membership.
 
 ## Why
 
@@ -175,7 +175,7 @@ type PartMatch struct {
 - **`Parts` explains the match.** Which words or ends paired is what the UI shows and what the labeler records as features.
 - **No strings to parse.** The display text is for showing; logic reads the codes.
 - **Echoes the callers' value refs.** Each value can carry an opaque ref (an Observation id) that the layers never read and `Detail` hands back, so the claim evidence view knows exactly which Observations spoke without the layers knowing about the catalog. Segment comparison does the same for a whole segment: bridge ends, role or term, and the neighbor's agreeing values.
-- **Rich enough to word evidence lines.** The claim evidence view ([`claim-evidence.md`](claim-evidence.md)) builds each sentence ("same name, different spelling", "same date, recorded less precisely") from the relation and `Cause` alone.
+- **Rich enough to word evidence lines.** The claim evidence view (removed from 2026-10-29, [`conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md) §5) builds each sentence ("same name, different spelling", "same date, recorded less precisely") from the relation and `Cause` alone.
 
 ### Purity requirements
 
@@ -298,7 +298,7 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 - **Similarity (0–1):** are these alike? The weighted mean over the properties compared, with a conflict counting as 0. It is how candidates are chosen to show.
 - **Evidence (points):** for things that are alike, how strong is the connection? Agree weights minus conflict penalties. It is the main currency, because graph alignment adds relationship points on top, so both must be points.
 - **No verdict and no knockout flag.** A conflict that should rule a pair out is a large conflict penalty in the registry, large enough that nothing recovers from it. It stays one number, on the same scale as everything else.
-- **A 0–1 confidence (C), if wanted, is applied at the top of the stack,** to the total of properties + links. The labeler's ordered logistic regression is what fits it ([`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md)).
+- **A 0–1 confidence (C), if wanted, is applied at the top of the stack,** to the total of properties + links. The labeler's ordered logistic regression is what fits it ([`ideas/matching-test-suite.md`](../../../ideas/matching-test-suite.md)).
 
 | Case | Similarity | Evidence |
 |---|---|---|
@@ -354,7 +354,7 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 **Registry knobs this adds:** shortlist keys per kind, K, the accept bar, the settle margin and round cap.
 
-**Invariants** (from [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md)): order doesn't matter, decided rows don't move, stable on re-run, and the same proposal whether or not any row starts decided, given the same decisions.
+**Invariants** (from [`ideas/matching-test-suite.md`](../../../ideas/matching-test-suite.md)): order doesn't matter, decided rows don't move, stable on re-run, and the same proposal whether or not any row starts decided, given the same decisions.
 
 ### Bands
 
@@ -501,27 +501,11 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 - `match.indexAliases` doesn't normalize alias tokens. That's latent: only the lowercase product seed writes tables today. It matters once user or plugin tables exist; `Key` fixes it.
 - Text equality disagreed across six places (reconciler, match, search scoring, FTS, header sort, frequency stats). After S11-07 the reconciler, search scoring and the term duplicate check share `Key` (`valuecompare.TextKey`), and `core/match` went in S11-13. FTS and the header sort (`SortKey`, ordering only) keep their own rules on purpose.
 
-## What moves where in today's code
-
-| Today | Goes to |
-|---|---|
-| `match.Comparer`, `ComparerFor`, the five comparers | Layer 1, returning `Result` + `Detail` |
-| `NameComparer.Frequency`, `DiscountComparer`, `CompareDiscount`, `Stats.Words` | Removed (name frequency descoped) |
-| `TermComparer`'s neutral check | Layer 2, step 1 |
-| `autoreconcile.SpellingSimilarity`, `NormalizeForm`, `IsInitial` | Layer 1 |
-| `pairValues`' negatives and multiple cardinality (`pairs.go`) | Layer 2 |
-| `pairValues`' leaders and support weights | Gone: the entity profile (layer 4) contains only the conclusion |
-| `poolPeriods` (`periods.go`) | Layer 3 (spans properties) |
-| Promote's scale floors and outcome logic (`ApplyScale`) | Layer 2's outcome table |
-| Promote's scale weights and contradiction (`resolvedScale`) | Layer 3, as plain registry weights. Its frequency weights are removed |
-| `autoreconcile.Compatible` and grouping | Stays in the reconciler as its own decision logic, built on value compare (and property compare where it helps) instead of its own key rules |
-| `match.Value`'s reconciler fields (`Support`, `Against`, `Reason`, `Denied`) | The profile builder package. `Negative` stays as layer 2 polarity |
-
 ## Vocabulary: finding candidates
 
 Agreed 2026-10-17. Record linkage calls the first step "blocking", which reads as "rejected"; we don't use that word.
 
-The terms are defined in the model's [glossary](../../matching-model.md#glossary): shortlisting, shortlist key, shortlisted handle, nominated handle, candidate.
+The terms are defined in the model's [glossary](../../../matching-model.md#glossary): shortlisting, shortlist key, shortlisted handle, nominated handle, candidate.
 
 Flow: shortlist or nominate → score → keep the top K as candidates → accept.
 
@@ -533,4 +517,4 @@ Flow: shortlist or nominate → score → keep the top K as candidates → accep
 
 ## Open questions
 
-- None for the design. Starting registry numbers follow the map's working rule "Registry numbers: carry over, then estimate" ([`deployment-plan.md`](deployment-plan.md#working-rules)).
+- None for the design. Starting registry numbers follow the map's working rule "Registry numbers: carry over, then estimate" ([`deployment-plan.md`](README.md)).

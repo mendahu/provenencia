@@ -21,6 +21,25 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### An impossible date is saved and then ignored by matching
+
+- **Date:** 2026-10-29
+- **Where:** Date entry (any date)
+- **Annoyance:** Date validation accepts day 31 in any month (`datevalue` `dayOK`), so 30 February saves, but value compare finds no usable bound for it and matching silently ignores the date (Spike 11 S11-04 ship log).
+- **Wanted:** Refuse a day past the month's length when the date is entered.
+
+### Evidence graph card shadows fall upward
+
+- **Date:** 2026-10-29
+- **Where:** Evidence graph
+- **Annoyance:** `PVPainter` passes a positive shadow offset straight to `NSShadow` in a flipped view, so card shadows cast up instead of down (S11-21 ship log).
+
+### Card colors may shift on wide-gamut screens
+
+- **Date:** 2026-10-29
+- **Where:** Evidence graph
+- **Annoyance:** Cached card images are drawn in untagged device RGB (`GraphCanvasItemView`), so colors may differ from the live views on a P3 display. Check by eye before fixing (S11-21 ship log).
+
 ### Source page section counts differ
 
 - **Date:** 2026-10-25
