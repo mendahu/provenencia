@@ -60,7 +60,7 @@ Promote becomes a quick filing action: the researcher picks a target per row and
 1. The **evidence sheet** is gone. Nothing on a row opens a sheet: no pins, no Status, Confidence or argument fields.
 2. The **assessment column** is gone from every row: no band Badge (Strong, Medium, Weak, No match, Little evidence), no **Contested** Badge, no reason text ("Agrees on birth date", "Too little agrees…", "Another row took the best match"), no chevron. The column heading **Assessment** goes.
 3. The row, the column headings and the Already filed rows are laid out again without that column (PA-2, PA-3, PA-4: **this board decides how**).
-4. The **Updated caption** under a moved row says why it moved only when the page knows a neighbor behind it: a settling move, else the neighbor the row was reached from. Otherwise the row shows the Updated badge alone.
+4. The **Updated caption** under a moved row says why it moved only when the proposal names a settling move or a via neighbor. Otherwise the row shows the Updated badge alone.
 
 **What stays.** The header; the kind sections and their counts; Map the rest; the kind tile, name and Source ref; the target menu, New, Skip and Find another record…, with today's widths and items; the Updated and Decided badges; the conflict and duplicate callouts; the connection subrows; the Already filed block's content; the footer's summary, Cancel and Done; the leave confirm.
 
@@ -76,9 +76,11 @@ Promote becomes a quick filing action: the researcher picks a target per row and
 | Updated compares proposals | After a decision, the page re-proposes; a suggested row whose target changed shows the Updated badge (info tone, refresh icon). |
 | Why it moved | The page knows a neighbor behind the change in two cases. **Settling moved it:** "Updated · after Gracie Smith moved to PER-7QH3D", "… after Gracie Smith → PER-7QH3D was matched", "… after Gracie Smith was unmatched". **It was reached from a neighbor:** "Updated · via Gracie Smith → PER-7QH3D (spouse)", or without the term when the connection has none. Any other change has no reason the page can say. |
 | A neighbor not on the page | The caption reads "Updated · Reached from a matched neighbor" or "Updated · after a connected row changed", as today. |
-| Already filed rows | Read-only: kind mark, name and ref, arrow, the record's title and ref, and the italic "Filed earlier". They sit in the same column grid as the working rows today. |
+| Already filed rows | Read-only: kind mark, name and ref, arrow, the record's title and ref, and the italic "Filed from this Source earlier". They sit in the same column grid as the working rows today. |
 | Decided | A row the researcher changed shows the Decided badge (neutral, subtle, check). A decided row never shows the Updated caption. |
 | Widths | The page content is at most 1200 pt wide. Today's columns: kind tile 28 pt, Source name (flexible), arrow 14 pt, target 330 pt, assessment (flexible), badges 112 pt, with the same gap between each. |
+| Headings | Today the columns are headed **On this Source**, **Files on** and **Assessment**. |
+| VoiceOver today | The target menu reads "Files Mary Smith on" and the chosen option ("PER-4KX2M  Smith, Mary"); the assessment button reads "Evidence for Mary Smith: Strong, contested, via …". |
 
 ### 2.1 What this board is not
 
@@ -102,20 +104,20 @@ Promote becomes a quick filing action: the researcher picks a target per row and
 | ID | Requirement |
 | --- | --- |
 | PA-1 | No frame shows the evidence sheet. Clicking anywhere on a row except the target menu and its controls does nothing. |
-| PA-2 | A working row shows, left to right: kind tile, name over Source ref, arrow, target menu, and the Updated / Decided badges. No band, Contested, reason or chevron. **The board decides** what the freed width becomes. Draw both options in frame 1 and pick one: **(a)** the column's space stays empty, so the target menu and badges stay exactly where they are today; **(b)** the column closes and the name and target take the width, with the target menu keeping its 330 pt. Whichever is picked, the target menu is the same width on every row and lines up down the page. |
-| PA-3 | The column headings read **Source** and **Target** and line up with their columns. No Assessment heading. |
-| PA-4 | An Already filed row lines up with the working rows above it under the option PA-2 picks: its record title under the target menu, and "Filed earlier" placed where the board puts it (today it sits in the assessment column). |
-| PA-5 | A suggested row whose target changed shows the Updated badge and, under the row at the note indent, the caption in today's style (italic caption, info ink): the move sentence when settling moved it, else the via sentence when it was reached from a neighbor. |
+| PA-2 | A working row shows, left to right: kind tile, name over Source ref, arrow, target menu, and the Updated / Decided badges. No band, Contested, reason or chevron. **The board decides** what the freed width becomes. Draw both options in frame 1 and pick one: **(a)** the column's space stays empty, so the target menu and badges stay exactly where they are today; **(b)** the column closes and the Source name column takes the freed width; the target menu (330 pt) and the badges (112 pt) move right. Whichever is picked, the target menu is the same width on every row and lines up down the page. |
+| PA-3 | The column headings keep today's copy, **On this Source** and **Files on**, and line up with their columns. The **Assessment** heading goes. |
+| PA-4 | An Already filed row lines up with the working rows above it under the option PA-2 picks: its record title under the target menu, and "Filed from this Source earlier" placed where the board puts it (today it sits in the assessment column). |
+| PA-5 | A suggested row whose target changed shows the Updated badge and, under the row at the note indent, the caption in today's style (italic caption, info ink): the move sentence when settling moved it, else the via sentence when it was reached from a neighbor. When that neighbor is not a row on the page, the caption reads "Updated · after a connected row changed" (move) or "Updated · Reached from a matched neighbor" (via), as today. |
 | PA-6 | A row whose target changed for no reason the page can say shows the Updated badge and **no** caption line. The row's height is the same as a row with no caption. |
 | PA-7 | A decided row shows Decided and no Updated badge or caption, as today. |
-| PA-8 | VoiceOver: a row reads its name and its target menu ("Mary Smith files on PER-4KX2M Smith, Mary") and its badges. Nothing reads "Evidence for …", a band or "contested". The caption is read as text after the row. |
+| PA-8 | VoiceOver: the target menu reads as today ("Files Mary Smith on" and the chosen option), and the badges and caption read as today. Nothing reads "Evidence for …", a band or "contested": the assessment button is gone. |
 
 ---
 
 ## 5. Suggested frames
 
 1. **Rows, both PA-2 options side by side** (the board then keeps the one picked and deletes the other): a People section with a Strong row on a record, a Weak row drafted onto a record, an unset row with the red placeholder, and a decided row; an Already filed block of two rows under it (PA-2, PA-3, PA-4, PA-7).
-2. **After deciding Gracie** on the picked layout: one row with "Updated · after Gracie Smith moved to PER-7QH3D", one with "Updated · via Gracie Smith → PER-7QH3D (spouse)", and one with the Updated badge and no caption (PA-5, PA-6).
+2. **After deciding Gracie** on the picked layout: one row with "Updated · after Gracie Smith moved to PER-7QH3D", one with "Updated · via Gracie Smith → PER-7QH3D (spouse)", one with "Updated · after a connected row changed" (its neighbor is not on the page), and one with the Updated badge and no caption (PA-5, PA-6).
 3. **A busy row** on the picked layout: a Birth event with its connection subrows and a duplicate callout, so the indent of notes and subrows is checked against the new grid.
 4. **Deleted**: the evidence sheet frames and any row state that pointed at them (PA-1). List their frame numbers in the board notes.
 
@@ -128,11 +130,11 @@ This table is **binding**. Paths from `macos/App/` unless noted.
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
 | Promote row | Snowflake | **Extend** | `Features/Promote/PromoteView.swift` `PromoteAlignmentRow` | Loses the assessment cell; laid out per PA-2. No new control on the row. |
-| Column headings | Snowflake | **Extend** | `Features/Promote/PromoteView.swift` `PromoteView.columnHeaders` | Source and Target only (PA-3). |
+| Column headings | Snowflake | **Extend** | `Features/Promote/PromoteView.swift` `PromoteView.columnHeaders` | On this Source and Files on, as today; the Assessment heading goes (PA-3). |
 | Already filed row | Snowflake | **Extend** | `Features/Promote/PromoteView.swift` `PromoteAnchorRow` | Re-aligned per PA-4. |
-| Column grid | Snowflake | **Extend** | `Features/Promote/PromoteView.swift` `PromoteLayout` | Holds the widths the three grids share. Whatever PA-2 picks is expressed here, not as separate numbers in each grid. |
-| Band and Contested marks, reason line, chevron | Snowflake | **Remove** | `Features/Promote/PromoteReadout.swift` `PromoteReadoutBadges`, the row's evidence button | Gone. `PVBadge` stays in the kit. |
-| Updated caption | Snowflake | Ship | `Features/Promote/PromoteReadout.swift` `PromoteUpdatedCaption` (moves beside the row) | Same type, ink and indent; shown per PA-5, PA-6. |
+| Column grid | Snowflake | **Extend** | `Features/Promote/PromoteView.swift` `PromoteLayout`, and one private grid row view shared by the headings, the working row and the Already filed row | Today the headings, working row and Already filed row each spell the grid by hand. After this board they fill the slots of one grid row, and whatever PA-2 picks is drawn once there with the widths in `PromoteLayout`. |
+| Band and Contested marks, reason line, chevron | Snowflake | **Remove** | `Features/Promote/PromoteReadout.swift` `PromoteReadoutBadges`, the row's evidence button | Gone; `PromoteReadout.swift` is deleted. `PVBadge` stays in the kit. |
+| Updated caption | Snowflake | Ship | `Features/Promote/PromoteReadout.swift` `PromoteUpdatedCaption`, which becomes private in `PromoteView.swift` | Same type, ink and indent; shown per PA-5, PA-6. |
 | Updated, Decided badges | Component | Ship | `DesignSystem/Components/Badge/PVBadge.swift` | As today. |
 | Target menu, record search | Component | Ship | `DesignSystem/Components/Select/PVSelect.swift`, `DesignSystem/Components/ComboBox/PVComboBox.swift` | Unchanged. |
 | Conflict and duplicate notes | Component | Ship | `DesignSystem/Components/Callout/PVCallout.swift` (`compact: true`) | Unchanged. |

@@ -64,3 +64,15 @@
 
 ### X-7 · minor · Spots where I would have to pick
 **Answer:** Fixed — D-3 computes `caption` on every non-anchor row, a kept decided row included; T-3 names `moveNeighborSubjectID` and adds the empty-neighbor case; T-1 and AC-1.3 state the expected `CatalogPromoteGraphAlignmentFixed` values; D-10 and STEP-1/STEP-2 say which lines of `graphSnapshot()`'s label block each step removes; §4 notes that `board(of:)`'s `labels:` closure is `propertyLabel(key:)`'s only caller, so STEP-1 can remove both.
+
+## Brief S13-D11 review (maintainability, Opus)
+
+Verdict: Fits with changes. Paste block verbatim, no new kit piece, no safety rule waived. Findings and answers:
+
+- **M-1 · major · PA-3 renamed the headings.** The copy is "On this Source" and "Files on" (`L10n.Promote.columnSource`, `columnTarget`). **Fixed** — PA-3, the inventory row, AC-1.2, §6 Strings and the manual check keep today's copy; only Assessment goes.
+- **M-2 · major · Three hand-kept copies of the grid.** **Fixed** — the brief's Column grid row and the plan's D-8 make one private `PromoteGridRow` the headings, working row and Already filed row fill; `PromoteFreeColumn` and the "one grid view is a later tidy" Out line are gone.
+- **M-3 · minor · PA-2 (b) contradicted itself.** **Fixed** — (b) gives the freed width to the Source name; target (330 pt) and badges move right.
+- **M-4 · minor · "Filed earlier" copy and its catalog comment.** **Fixed** — the brief quotes "Filed from this Source earlier"; STEP-2 rewrites `promote.row.filedEarlier`'s comment.
+- **M-5 · minor · PA-8's spoken sentence.** **Fixed** — PA-8 says the menu reads as today ("Files Mary Smith on" and the chosen option); a Domain fact quotes today's reading.
+- **M-6 · minor · PA-5 left out the off-page fallbacks.** **Fixed** — PA-5 and frame 2 include them; Objective item 4 says "when the proposal names a settling move or a via neighbor".
+- **M-7 · nit · Name `PromoteReadout.swift`.** **Fixed** — the inventory says the file is deleted and the caption becomes private.
