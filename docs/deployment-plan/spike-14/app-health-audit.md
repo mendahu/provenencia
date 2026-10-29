@@ -219,18 +219,21 @@ The findings behind slices 5–7 of the [map](deployment-plan.md). An area audit
 **Where.** `core/database/subjectpositions` (no bound on write or read; any int64 over FFI); `Features/Catalog/Connect/EvidenceGraphPlacement.swift` (`max()! + horizontalStep`, `Int64(floor(raw))`); `GraphCanvasGridMapping.swift`.
 **Evidence.** *Probe:* `(9223372036854775807, -9223372036854775808)` is returned unchanged by `ListSubjectPositions`; Swift `+` and `Int64(_:)` trap on it.
 **Fix.** One cell range (for example ±1,000,000): `SetSubjectPosition` refuses outside it and the list read clamps; Swift placement uses checked or saturating arithmetic.
+**Fixed in S14-13.**
 
 ### A-27 — The Artifact viewer decodes originals unbounded
 
 **Where.** `Features/ArtifactViewer/ArtifactViewerModel.swift` `classify` (trusts the catalog's `media_type`; `NSImage(contentsOf:)`); `ArtifactRegionCrop.swift`.
 **Problem.** Thumbnails are bounded (`ThumbnailDecodePolicy`); the viewer decodes the full original through every ImageIO decoder, so a small file declaring a huge image exhausts memory.
 **Fix.** Check the declared pixel size and the sniffed type first with a viewer budget and the ingest allowlist; display through `CGImageSourceCreateThumbnailAtIndex` at screen size; crop from a bounded decode.
+**Fixed in S14-13.**
 
 ### A-28 — A Go panic kills the app
 
 **Where.** `api/ffi/dispatch.go` `Call` and `api/libprovenencia/main.go` (no `recover`); `core/catalogsession/session.go` `Do` (`s.mu.Unlock()` not deferred).
 **Problem.** The core is a c-shared library in the app process. The fuzz found no panic, but a decoder bug on a crafted file would crash, possibly on every launch.
 **Fix.** One `recover` in `ffi.Call` returning `internal.unknown`; `defer s.mu.Unlock()` in `Do`, so a recovered panic cannot leave the session locked.
+**Fixed in S14-13.**
 
 ### A-29 — Twenty-one audited writes drop their effects
 

@@ -8,12 +8,12 @@ description: >-
 
 # Add an FFI handler
 
-[`api/ffi/dispatch.go`](../../../api/ffi/dispatch.go) is **only** a method switch. Unmarshal, domain calls, and protobuf replies live in **`api/ffi/handlers/`**. `handlers` must not import `ffi` (cycle).
+[`api/ffi/dispatch.go`](../../../api/ffi/dispatch.go) is **only** the `route` method switch (`Call` wraps it in a recover, so a handler panic reaches the app as `internal.unknown`; handlers never `recover`). Unmarshal, domain calls, and protobuf replies live in **`api/ffi/handlers/`**. `handlers` must not import `ffi` (cycle).
 
 ## Layout
 
 1. Add the enum value and messages in [`api/proto/engine.proto`](../../../api/proto/engine.proto). Run `./scripts/generate-proto.sh` and commit generated Go + Swift.
-2. Add `Method…` next to the other constants in `dispatch.go` and one `case` that calls `handlers.<Name>`.
+2. Add `Method…` next to the other constants in `dispatch.go` and one `case` in `route` that calls `handlers.<Name>`.
 3. Implement `func <Name>(in []byte) ([]byte, error)` in `api/ffi/handlers/<name>.go` (copy ping/identity/onboarding).
    Parse a repeated id field with `parseIDs`.
 4. Test in `api/ffi/handlers/<name>_test.go` with **`runRPC`** from `harness_test.go`. Do **not** put a large `run func(*testing.T)` in the table.
