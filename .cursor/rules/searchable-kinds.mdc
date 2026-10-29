@@ -13,5 +13,5 @@ Behavior: `docs/deployment-plan/archive/spike-3/omnibar-search.md`.
 - Project documents via `core/database/searchindex`; reproject on writes; heal with `searchindex.EnsureCatalog`.
 - Do not put ad hoc SQL/`LIKE` search in FFI handlers or a permanent Swift engine.
 - Hits must include a navigable `WorkspaceLocation` (section + deep id).
-- Empty / whitespace queries return no hits; FakeStore mirrors Go kind rules and marks the catalog session held.
+- Empty / whitespace queries return no hits; FakeStore returns seeded hits in seeded order for the requested kinds, ranks nothing, and marks the catalog session held.
 - CGO builds require `-tags fts5`.

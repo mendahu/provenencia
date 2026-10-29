@@ -1,4 +1,4 @@
-# Review — S12-40 A Citation belongs to one Evidence graph
+# Review — S12-52 A Citation belongs to one Evidence graph
 
 **Verdict:** Fits with changes — Ready with changes → Fixed (no open blocker)
 **Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)

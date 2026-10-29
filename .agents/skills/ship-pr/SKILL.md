@@ -103,10 +103,14 @@ and `PRF-` IDs.
 | Conformance and regression | `review-pr/lenses/conformance.md` | Always |
 | Maintainability | `review-pr/lenses/maintainability.md` | Always |
 | User experience | `review-pr/lenses/ux.md` | `macos/App/**`, `Localizable.xcstrings`, `core/apperr`, new error codes |
-| Security and performance | `review-pr/lenses/security.md` and `review-pr/lenses/performance.md` | **Security:** `core/ingest`, `core/objectpath`, `core/objectstore`, `core/derivatives`, `core/raster`, `core/identity`, `core/catalogsession`, `api/ffi/**`, `macos/App/Platform/ProjectFiles.swift`, `macos/App/Platform/ThumbnailCache.swift`, migrations, `*.entitlements`, URL or locator code, the matching layers (`core/matchregistry`, `core/valuecompare`, `core/propertycompare`, `core/subjectcompare`, `core/subjectprofile`, `core/autoreconcile`, `core/database/namealiases`), and any code that loads a stored number, weight, or list from the catalog and trusts its size or range. **Performance:** `core/database/**`, `core/search`, `core/derivatives`, `core/raster`, graph, list, and cache code, `macos/App/Features/**` models |
+| Security and performance | `review-pr/lenses/security.md` and `review-pr/lenses/performance.md` | **Security:** `core/ingest`, `core/objectpath`, `core/objectstore`, `core/derivatives`, `core/raster`, `core/identity`, `core/catalogsession`, `api/ffi/**`, `macos/App/Platform/ProjectFiles.swift`, `macos/App/Platform/ThumbnailCache.swift`, migrations, `*.entitlements`, URL or locator code, the matching layers (`core/matchregistry`, `core/valuecompare`, `core/propertycompare`, `core/subjectcompare`, `core/subjectprofile`, `core/segmentcompare`, `core/kinship`, `core/shortlist`, `core/graphalign`, `core/claimevidence`, `core/autoreconcile`, `core/database/namealiases`), and any code that loads a stored number, weight, or list from the catalog and trusts its size or range. **Performance:** `core/database/**`, `core/search`, `core/derivatives`, `core/raster`, graph, list, and cache code, `macos/App/Features/**` models |
 
 Route from `git diff --name-only <base>...<head>`, and read the diff too: a
-path list cannot see "loads a stored weight". When you are unsure whether a
+path list cannot see "loads a stored weight". Route by what the code does as
+well as where it lives: code that loops over, keys, joins or derives from
+data the app did not write gets the security and performance reviewer
+wherever its package is, and a PR that adds such a package adds it to the
+paths above. When you are unsure whether a
 path matches, dispatch the reviewer. A skipped reviewer is cheap to add
 and a missed blocker is not. Write the reviewers you dispatched in the ship
 log, and say why each one you skipped did not match. The user can ask for every
@@ -171,7 +175,7 @@ Every finding gets exactly one decision, written in the ship log.
 | **Fix now** | Verified blocker or major whose Fit is this PR. A defect in code this PR adds or changes, whatever later PR would first reach it. A **same-pass cleanup** (below), whatever its severity and whatever Fit the reviewer wrote. A minor or a stale comment in a file this PR adds or changes |
 | **Later PR** | The finding belongs to a PR already on the map (copy for a code that S#-NN surfaces, a check S#-NN's DoD needs). Write it into that PR's plan now (its Scope, Strings or DoD), or into its map scope entry when it has no plan yet, and name where in the ship log. No user approval needed |
 | **Follow-up** | Fit is an idea, for code this PR does not add, change, or make worse; a Reshape. Goes to the PR body's follow-up list and the ship log's, and to `docs/ideas/` or the map if the user agrees. Spike close (S#-99) triages every ship log's list, so none is lost with the logs |
-| **Rejected** | Refuted, out of the plan's scope with no harm, or contradicted by a Decision or working rule. One line of evidence |
+| **Rejected** | Refuted, out of the plan's scope with no harm, or contradicted by a Decision or working rule. One line of evidence. A rejection that rests on a premise (how users will behave, how rare a case is, "inside budget") needs evidence for the premise: a test, a count, or a measurement at the map's **Scale**. Without it the finding is **To user**, not Rejected |
 | **To user** | Contradicts a plan Decision, an AC, or a working rule but looks right; a product call; two lenses that disagree and the code cannot settle it. Pauses the loop |
 | **Logged** | Nits. Copy each reviewer's one-line **Nits** list into the ship log under the round's table, as is: no row each, no evidence |
 
@@ -198,6 +202,12 @@ reviewer can prove none are left.
 A finding that contradicts the plan is never fixed by quietly changing the
 plan. The plan's Decisions bind the orchestrator too, except where the
 same-pass cleanup rule above supersedes a deferral.
+
+**A deferral is not a measurement.** A cost an earlier ship log or plan
+deferred (a Follow-up, an idea file, "inside budget") that this PR makes
+larger is measured again at the map's **Scale** before it is deferred a second
+time. If the gate's budget fixture is smaller than the Scale, say so in the
+ship log; a budget met there does not settle a performance finding.
 
 **Re-rate before you decide.** A reviewer's severity is a floor to check, not
 a ceiling. Raise it when the finding is rated down for a reason

@@ -301,7 +301,7 @@ None.
 - `WorkspaceSession.apply(invalidations:)` dedupes keys before `applyHiddenPolicy(to:)`, so a key named twice still reloads once.
 - A link-row delete (graph delete) now names the deleted graph in the `citations` read; the `citation_sources` Source-less case it replaces named none.
 - D-8 amended by the user in review: an Artifact switch that drops the open Citation also clears the location's `citationId` and `observationId` (a switch that keeps the Citation leaves them).
-- Known gap (CON-1): the first or last Observation of a Citation moves it in or out of every Artifact-linked graph's citation reads, but the `observations` Reads name only the Observation's graph, so other linked graphs' citation reads stay stale until their next load. [S12-40](S12-40-citation-in-one-graph.md) closes it by storing a Citation's graph and removing the no-Observation fallback.
+- Known gap (CON-1): the first or last Observation of a Citation moves it in or out of every Artifact-linked graph's citation reads, but the `observations` Reads name only the Observation's graph, so other linked graphs' citation reads stay stale until their next load. [S12-52](S12-52-citation-in-one-graph.md) closes it by storing a Citation's graph and removing the no-Observation fallback.
 - `Read.KeyTable()` names the table whose ids key each read (both current reads: `evidence_graphs`), so a Source-keyed read adds a case instead of changing the registry check.
 
 ## 13. PR

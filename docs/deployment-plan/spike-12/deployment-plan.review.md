@@ -182,3 +182,77 @@ Round-1 answers: 19 of 20 resolved. K-8 held only for S12-23 (the viewer half is
 **Answer:** Fixed. One predicate, `ArtifactRegionCrop.snapshot`, changed in place by S12-28; S14-03 depends on S12-28 in both maps.
 
 **Stop:** round 2 is the last round. No blocker is open and **To user** is answered.
+
+# Review — slices 5b and 6b (audit 2), 2026-10-28
+
+**Verdict:** Fits with changes
+**Rounds:** 1. **Reviewers:** maintainability (map review), fresh agent, on the branch that added slices 5b and 6b. Findings K-30 – K-47.
+
+## To user
+- **K-32: who composes pins for an opened row.** Descoped by the user (2026-10-29) with audit B-14: the pin policy for an opened sheet is a bigger question, and the user is rethinking it. The proposal below stays as input. S12-45 no longer touches pins.
+- **K-33 follow-on: how a dropped alias table is surfaced** (a log line, or a notice on the Promote page). Left to S12-42's plan, which asks it.
+
+## Writer's own calls
+- **K-30:** `checkFixed` stays the one judge. Go releases an invalid fixed pair and reports it on the proposal instead of failing; Swift words it. This departs from audit B-13's first Fix text, which the audit doc now records with the reason.
+- **K-31:** S12-43 splits in two, not three: commit-time invalidation (index, profile memos, member memos, LRU bypass, the fixture at Scale) stays together because the three share one mechanism, a commit that drops only what it names; the walk bound and the possible-duplicate shortlist become S12-51. This keeps the user's "combine where they overlap" while bringing each plan near ten steps.
+- **K-35:** B-7's code is its own 5b PR, S12-50, because S12-35 landed (#616, #617) without touching search and the user placed High items in 5b.
+- **K-40:** the minimum: S12-48 keeps the part-type guard row and depends on S11-29, and S11-29's Out row now points at S12-48 instead of an idea file. Moving the guard into S11-29 would re-plan a Planned plan for one row.
+
+## Round 1
+
+### K-30 · blocker · S12-44 judged dead fixed pairs in Swift and in Go's `checkFixed`
+**Answer:** Fixed. S12-44: Propose and the evidence read release a pair `checkFixed` finds invalid and return it with a typed reason; Swift words it with the row-note pattern; `promote.invalid` at Done is a real race. Audit B-13's Fix updated.
+
+### K-31 · major · S12-43 could not be planned in about ten steps
+**Answer:** Fixed, in two (see Writer's own calls): S12-43 "A commit invalidates only what it names" and S12-51 "Each proposal's own work is bounded", S12-51 after S12-43.
+
+### K-32 · major · S12-45 kept pin merging in Swift
+Proposal: Swift sends `defaultPins: true` plus the researcher's overrides for every row; `ResolvePins` applies the defaults, then the overrides, against the final targets.
+**Answer:** To user; descoped by the user (2026-10-29) with B-14. S12-45 keeps B-15 and B-18 only.
+
+### K-33 · major · The bounds rule's refusal precedent would stop the project opening
+**Answer:** Fixed. The rule now drops an over-bound table from the built index with `namealiases.ProductTables` standing in, sets bounds above the shipped seed's maximum, and leaves the surfacing to S12-42's plan. Audit B-5's Fix updated.
+
+### K-34 · major · Bar 16 promised one name for Ann, Anna and Hannah, which option a prevents
+**Answer:** Fixed. Bar 16: B., Bill and William show William; Ann, Anna and Hannah file and reopen without a crash.
+
+### K-35 · major · S12-35's search scope incomplete, a skill line still false, B-7 in slice 6
+**Answer:** Fixed. S12-50 in 5b removes the fake's ranking and the `SearchCatalogStoreTests` cases that test it; `add-searchable-kind`'s `searchPriority` line says what to do until then. S12-35 had already landed with its own scope, so its row and entry are main's.
+
+### K-36 · major · S12-42 combined B-6 with items it shares no file with
+**Answer:** Fixed. S12-42 is B-4 and B-5 (the shared key path); S12-49 takes B-6.
+
+### K-37 · major · Profile memos must drop when a person's events change
+**Answer:** Fixed. S12-43: profiles are a node memo whose `Deps` name the persons whose events a commit touches, like the `canonlinks` kinship memo; verify mode runs after an event edit.
+
+### K-38 · major · S12-48 would run the filer's SQL cycle check per proposal
+**Answer:** Fixed. One pure cycle rule over edges, fed from SQL by the filer and from the canon edges in memory by the proposal; the reasons are a typed enum with a guard row.
+
+### K-39 · major · S12-44 copied a precedent that lets calls overlap, twice
+**Answer:** Fixed. One serial, latest-wins runner for proposals and evidence reads, replacing `proposeGeneration` and `evidenceGeneration`.
+
+### K-40 · major · S11-29 still deferred the parity check S12-48 schedules
+**Answer:** Fixed, the minimum (see Writer's own calls). `NamePartType` stays beside its owner with a guard row, as `.cursor/rules/macos-client.mdc` allows.
+
+### K-41 · major · The Scale line lacked the dimensions 6b's budgets grow along
+**Answer:** Fixed. Scale gains, dated 2026-10-28: 37,000 canonical records, 100 member Sources on one record, 100 new people on one Source, 6,000 events on one place. The budgets rule cites them.
+
+### K-42 · major · Docs and skills the PRs make false were not named
+**Answer:** Fixed. S12-43 and S12-51 name `promote-graph-alignment.md`; S12-45 names it (pins), the `ApplyRow.DefaultPins` comment and the DesignSystem README's Field row; S12-46 names `matching-model.md` and `ideas/daitch-mokotoff.md`; S12-44 names `promote-graph-alignment.md` for released pairs.
+
+### K-43 · minor · Gaps in the preferred merge order
+**Answer:** Fixed. Added S12-41 before S12-51, S12-44 then S12-45 then S12-48 on the Promote Swift files, and S12-31 before the 5b and 6b Swift moves.
+
+### K-44 · minor · Two labelling mechanisms for the sheet's fields
+**Answer:** Fixed. S12-45 does the `PVField` kit change only, which labels the sheet's fields, and deletes the hand-made label in `CitationComposerEvidenceColumn.labelField`.
+
+### K-45 · minor · S12-47 committed to a migration; B-10 paired weakly
+**Answer:** Fixed in part. A folded alternate in the secondary text needs no column; a migration only if the plan finds one needed. B-10 stays with B-21 (both reproject through `searchindex`) and now serves bar 19.
+
+### K-46 · nit · Bar outcome labels
+**Answer:** Fixed. Five quick picks are bar 19; bar 19 gains the 6,000-event join (B-10); bar 20 gains the band guard (B-24).
+
+### K-47 · nit · The S12-D8 row rendered outside the Design track table
+**Answer:** Fixed.
+
+**Stop:** one round. Its blocker is Fixed; K-32 was descoped by the user, and the K-33 follow-on is recorded on S12-42.

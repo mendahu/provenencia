@@ -1,6 +1,6 @@
 # Narrower canon walk
 
-**Status:** idea, 2026-10-26. Not scheduled. From the S11-39 CI fix round, where the user raised the warm budget from 250 ms to 350 ms.
+**Status:** idea, 2026-10-26. Scheduled as Spike 12's S12-43 (2026-10-28, [audit 2](../deployment-plan/spike-12/app-health-audit-2.md) B-8). From the S11-39 CI fix round, where the user raised the warm budget from 250 ms to 350 ms.
 
 ## The problem
 

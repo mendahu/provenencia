@@ -8,7 +8,8 @@ reviewer never spends a round on a missing heading or a wrong path.
 PR plans (docs/deployment-plan/<spike>/prs/S#-NN-<slug>.md), per plan-pr:
   - every header field and section heading in the template is present; a
     Draft plan also has Reach, Scale and **Rules this plan bends.** (added
-    after the 2026-10-27 app-health audit, so older plans stay valid)
+    after the 2026-10-27 app-health audit) and Edges (after the 2026-10-28
+    audit), so older plans stay valid
   - Status uses the shared status words
   - the Implementer block matches the template word for word
   - no planner comments (<!-- -->) are left
@@ -73,7 +74,7 @@ PLAN_SECTIONS = [
     "## 13. PR",
 ]
 # Required of Draft plans only (see check_plan).
-DRAFT_SECTIONS = ["### Reach", "### Scale"]
+DRAFT_SECTIONS = ["### Reach", "### Scale", "### Edges"]
 STATUS_RE = re.compile(
     r"^(Draft|Planned|Blocked — .+|In progress|Landed in .+|Descoped.*)$"
 )
@@ -217,8 +218,9 @@ def check_plan(report: Report, text: str) -> None:
     for heading in PLAN_SECTIONS:
         if not any(line.strip() == heading for line in lines):
             report.error(0, f"missing heading: {heading}")
-    # Sections added after the 2026-10-27 app-health audit. Plans written
-    # before it stay valid; every new plan starts as a Draft and keeps them.
+    # Sections added after the 2026-10-27 and 2026-10-28 app-health audits.
+    # Plans written before them stay valid; every new plan starts as a Draft
+    # and keeps them.
     if status == "Draft":
         for heading in DRAFT_SECTIONS:
             if not any(line.strip() == heading for line in lines):

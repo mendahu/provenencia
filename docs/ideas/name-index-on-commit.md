@@ -1,6 +1,6 @@
 # Name index kept current on commit
 
-**Status:** idea, 2026-10-26. Not scheduled. From the S11-39 ship loop (#567) and the slice 9 re-cut.
+**Status:** idea, 2026-10-26. Scheduled as Spike 12's S12-43 (2026-10-28, [audit 2](../deployment-plan/spike-12/app-health-audit-2.md) B-8). From the S11-39 ship loop (#567) and the slice 9 re-cut.
 
 ## The problem
 
