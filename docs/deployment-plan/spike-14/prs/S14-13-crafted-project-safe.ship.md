@@ -120,4 +120,4 @@ Head `86416e20`. Gate PASS (orchestrator run). F-10 done: `TestFakeStoreTypeIden
 Merged `origin/main` (`cb828f82`, plan docs only) → `b431fee0`. Gate PASS against `cb828f82`.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: flaky `SourceGraphFormModelTests` edit cases and `SourcesModelTests.listReadsEachGraphsProgress` (one failing run on the round-1 head, green on rerun); UX-4 copy nit · to user: UX-1, SEC-1, UX-2, MNT-3 (answered 2026-10-29) · CON miss: none
+Gate PASS · CI green (Go tests, macOS tests) · open: none · follow-ups: flaky `SourceGraphFormModelTests` edit cases and `SourcesModelTests.listReadsEachGraphsProgress` (one failing run on the round-1 head, green on rerun); UX-4 copy nit · to user: UX-1, SEC-1, UX-2, MNT-3 (answered 2026-10-29) · CON miss: none
