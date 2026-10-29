@@ -50,4 +50,6 @@ For a Claude Design brief, the "implementer" is Claude Design and then the PR
 that builds the board. Ask: does each requirement say what to draw, with no
 choice left that changes the inventory? Does each inventory row say which kit
 piece to instance? Would a board drawn from this brief alone match the PR scope
-in the map?
+in the map? Does each view say what its Wide pane (1600pt and up) does with the
+extra space, with a `-W` requirement and a Wide frame, rather than leaving the
+Regular layout jammed left?
