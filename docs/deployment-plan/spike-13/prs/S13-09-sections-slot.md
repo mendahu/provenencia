@@ -1,6 +1,6 @@
 # S13-09 — Sections slot on the Conclusion page
 
-**Status:** Planned
+**Status:** Landed in #624 (2026-10-29)
 **Spike / slice:** Spike 13 · Slice 1 — Page frame and Vitals
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: preparatory layout slot only; Person, Event and Place look the same)

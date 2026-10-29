@@ -9,7 +9,7 @@ struct EventDetailView: View {
     let entityId: String
 
     var body: some View {
-        ConclusionDetailPage<EventDetailContent, EventDetailSummary>(
+        ConclusionDetailPage(
             session: session,
             entityId: entityId,
             pageIdentifier: "events.detail",

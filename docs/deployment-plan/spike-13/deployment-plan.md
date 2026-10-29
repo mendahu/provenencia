@@ -116,7 +116,7 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 | S13-24 | The pin engine goes | 0 | Go: `GetPromoteClaimEvidence` and `ListClaimConfidenceGrades` and their wire, Apply's pin and claim-field inputs, `confidence_grade_id` and `argument` on every message, and the proposal row's display-only fields (reserved), `promotealign` evidence and pins, `core/claimevidence`, the registry's `evidence` section, Promote's pin writes and backfill, the reconciler's claim-confidence tiebreak, and the helpers only they call; proto regenerated | — | S13-23 | — | Scoped |
 | S13-25 | The pin table goes | 0 | One migration drops `identity_claim_evidence`, `identity_claims.confidence_grade_id` and `.argument`, and `claim_confidence_grades` with its seed; catalog model, `identityclaims` pins, the delete facet and `ReleaseClaim`'s pin step, the effects entry; audit history keeps its old rows | — | S13-24 | — | Scoped |
 | S13-30 | Provisional claims at Promote | 0 | Go: `status` on the Apply row (accepted or provisional), a provisional claim written or replaced, an upgrade to accepted that files its waiting bridges, provisional-only Subjects unpromoted everywhere, and the proposal preselecting the provisional record and status; Swift: the row's status control and its connection states | S13-D11 | S13-24 | — | Scoped |
-| S13-09 | Sections slot on the Conclusion page | 1 | Preparatory: `ConclusionDetailPage` gains a sections slot; Person, Event and Place pass one section; no visible change | — | — | [S13-09](prs/S13-09-sections-slot.md) | Planned |
+| S13-09 | Sections slot on the Conclusion page | 1 | Preparatory: `ConclusionDetailPage` gains a sections slot; Person, Event and Place pass one section; no visible change | — | — | [S13-09](prs/S13-09-sections-slot.md) | Landed #624 |
 | S13-10 | Header and sections | 1 | The fixed header, the section switcher, and Vitals as the first section (today's rows) | S13-D1 | S13-09 | — | Scoped |
 | S13-06 | Derived rows carry their records | 2 | `ConclusionDetail` carries, for each derived row, the reconciler records of the owning entity's field (birth and death event date and place) | — | — | — | Scoped |
 | S13-11 | Provenance sheet | 2 | The provenance control and sheet replace the Why accordion on every Vitals row, with links to Source, Citation and Observation | S13-D2 | S13-06, S13-10 | — | Scoped |
@@ -330,6 +330,7 @@ Go, plus deleting Swift's draft rule.
 #### S13-10 — Header and sections
 
 **Ships.** The fixed, display-only header and the section switcher from S13-D1, with Vitals (today's rows) as the first section and the other four as the places the board draws. The section is part of the `WorkspaceLocation`: switching pushes history.
+**Reuse first (from S13-09 review MNT-1).** `ConclusionDetailDefaultPageSections` is one block: Details, likenesses and Place relationship sections, with `ConclusionDetailLikenessSection` private. Before building Person's fill, split it into named internal parts (a Details view taking `content` and `refreshing`, and the likeness section), and rebuild the default fill from them. Person's Vitals then reuses the Details view instead of copying the header, spinner and rows.
 **Check.** Bar 1: the frame with Vitals; the other four sections are places that later slices fill.
 **Context.** R-4 – R-7, R-14, R-15; brief S13-D1.
 
