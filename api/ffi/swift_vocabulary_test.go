@@ -21,6 +21,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/ingest/mediatypes"
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/matchregistry"
@@ -51,6 +52,7 @@ const (
 	swiftRegionGeometry      = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
 	swiftProjectFiles        = "../../macos/App/Platform/ProjectFiles.swift"
 	swiftTextMatch           = "../../macos/App/Platform/TextMatch.swift"
+	swiftFakeStore           = "../../macos/App/Platform/FakeStore.swift"
 	swiftFieldSlug           = "../../macos/App/Platform/FieldSlug.swift"
 	swiftProjectSlug         = "../../macos/App/Platform/ProjectSlug.swift"
 	swiftThumbnailCache      = "../../macos/App/Platform/ThumbnailCache.swift"
@@ -69,7 +71,10 @@ func swiftEnumBody(t *testing.T, path, name string) string {
 	src := string(b)
 	start := strings.Index(src, "enum "+name)
 	if start < 0 {
-		t.Fatalf("%s: no enum %s", path, name)
+		start = strings.Index(src, "final class "+name)
+	}
+	if start < 0 {
+		t.Fatalf("%s: no enum or final class %s", path, name)
 	}
 	end := strings.Index(src[start:], "\n}\n")
 	if end < 0 {
@@ -235,6 +240,18 @@ func swiftFixturePairs(t *testing.T, path, enum, decl string) [][2]string {
 	return out
 }
 
+func TestSwiftFixturePairsReadsFinalClass(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "C.swift")
+	src := "final class C: P {\n    static let fixtures: [(String, String)] = [\n        (\"a\", \"b c\"),\n    ]\n}\n"
+	if err := os.WriteFile(path, []byte(src), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got := swiftFixturePairs(t, path, "C", "fixtures")
+	if want := [][2]string{{"a", "b c"}}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
 func TestSwiftFixturePairsDecodesEscapes(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -285,6 +302,20 @@ func TestSwiftFixturePairsDecodesEscapes(t *testing.T) {
 				t.Fatalf("got %v want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestFakeStoreTypeIdentifiersMatchGo(t *testing.T) {
+	var swiftTypes []string
+	for _, p := range swiftFixturePairs(t, swiftFakeStore, "FakeStore", "imageTypeIdentifierFixtures") {
+		swiftTypes = append(swiftTypes, p[0])
+		if want := strings.Join(mediatypes.TypeIdentifiers(p[0]), " "); p[1] != want {
+			t.Errorf("FakeStore.imageTypeIdentifierFixtures %q: Swift says %q, Go says %q", p[0], p[1], want)
+		}
+	}
+	sort.Strings(swiftTypes)
+	if want := mediatypes.ImageMediaTypes(); !reflect.DeepEqual(swiftTypes, want) {
+		t.Errorf("FakeStore image media types %v; Go's table has %v", swiftTypes, want)
 	}
 }
 

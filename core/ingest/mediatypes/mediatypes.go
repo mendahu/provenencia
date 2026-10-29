@@ -6,6 +6,7 @@ package mediatypes
 
 import (
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -56,6 +57,19 @@ func TypeIdentifiers(mediaType string) []string {
 		return nil
 	}
 	return append([]string(nil), t.typeIdentifiers...)
+}
+
+// ImageMediaTypes lists, sorted, the stored media types that have Uniform Type
+// Identifiers (the images), so a client mirror can be pinned to the table.
+func ImageMediaTypes() []string {
+	var out []string
+	for mt, t := range allowed {
+		if len(t.typeIdentifiers) > 0 {
+			out = append(out, mt)
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 // Resolve picks the stored media type from a sniff result and original filename.
