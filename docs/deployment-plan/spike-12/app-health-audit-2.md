@@ -24,12 +24,12 @@ User, 2026-10-28. They are the map's working rules under "Audit 2 fixes".
 | B-3 | An alias fold keeps the set's head, even a nickname or another name | High | CON | S12-40 |
 | B-4 | A name containing the key separators forges its match key | High | SEC | S12-42 |
 | B-5 | A crafted alias table hangs project open | High | SEC, PRF | S12-42 |
-| B-6 | Grandparent derivation multiplies duplicate links by children | High | SEC, PRF | S12-42 |
-| B-7 | The search skill teaches FakeStore to rank like Go | High | MNT | Fixed with this audit's docs; code in S12-35 |
-| B-8 | Promote's cost grows with the catalog, not the Source | Medium | PRF | S12-43 |
+| B-6 | Grandparent derivation multiplies duplicate links by children | High | SEC, PRF | S12-49 |
+| B-7 | The search skill teaches FakeStore to rank like Go | High | MNT | Guidance fixed with this audit's docs; code in S12-50 |
+| B-8 | Promote's cost grows with the catalog, not the Source | Medium | PRF | S12-43, S12-51 |
 | B-9 | Evidence on a record with many member Sources thrashes the graph cache | Medium | PRF | S12-43 |
 | B-10 | A join onto a place with many events reprojects every dependent | Medium | PRF | S12-47 |
-| B-11 | The possible-duplicate check is quadratic per proposal | Medium | PRF | S12-43 |
+| B-11 | The possible-duplicate check is quadratic per proposal | Medium | PRF | S12-51 |
 | B-12 | Quick row decisions queue full proposals | Medium | PRF | S12-44 |
 | B-13 | A Subject deleted or merged elsewhere dead-ends the Promote page | Medium | UX, CON | S12-44 |
 | B-14 | Opening a row's sheet freezes its pins | Medium | UX, CON | S12-45 |
@@ -77,7 +77,7 @@ User, 2026-10-28. They are the map's working rules under "Audit 2 fixes".
 **Where.** `core/valuecompare/shortlist.go` `wordKeys` (one `a:` key per set holding a word); `core/valuecompare/aliases.go` `SetKeys` and `Hit`; `core/database/namealiases/namealiases.go` `Load` (no bound); `core/catalogsession` `WarmOnOpen` → `promotealign.Warm` → `loadShortlist`.
 **Problem.** `name_alias_*` rows come from the catalog, and nothing bounds how many sets one token is in. Every person whose given word sits in N sets is filed under N keys while the project opens, and `Hit` loops all N sets on every word-pair compare. S11-15's round-1 fix bounded a set's size, not the number of sets per token.
 **Evidence.** *Probe*: 100 people named John, one table of 100,000 sets `{a<i>, john}` (about 3 MB of rows): `WarmOnOpen` 4.8 ms without the table, 18.75 s and 6,862 MB allocated with it (452 MB live). `WordKeys("John Smith")` returns 200,006 keys in 220 ms with 200,000 sets.
-**Fix.** Validate alias tables on load, as `nameformats.LoadID` validates weights: registry bounds (`matchregistry`, with knob inventory rows) on sets per token and on sets and tokens per table; over a bound, refuse the table (open with the product tables and report it). A `promotealign` budget test with a hostile table.
+**Fix.** Validate alias tables on load, as `nameformats.LoadID` validates weights: registry bounds (`matchregistry`, with knob inventory rows) on sets per token and on sets and tokens per table; over a bound, leave the table out of the built index and let the product tables stand in, so the project still opens (returning an error, as `LoadID` does, would stop the open: map review K-33). A `promotealign` budget test with a hostile table.
 
 ### B-6 — Grandparent derivation multiplies duplicate links by children
 
@@ -90,7 +90,7 @@ User, 2026-10-28. They are the map's working rules under "Audit 2 fixes".
 
 **Where.** `.agents/skills/add-searchable-kind/SKILL.md` (checklist "FakeStore mirrors kinds + location rules + ref exact/prefix boost" and the Swift step "FakeStore scores in memory with the same kind/location rules"); `.cursor/rules/searchable-kinds.mdc` ("FakeStore mirrors Go kind rules"); the code they produced in `macos/App/Platform/FakeStore.swift` (`searchPriority`, `orderedByMixedScore`, `scoreRefRecord`, `scoreSearchFields`).
 **Problem.** Both contradict the binding rule "FakeStore is a seeded fake, not a second engine" and `.cursor/rules/swift-tests.mdc`. The next search kind, or the kind-scoped picker S11-36/37 runs on, grows a second ranking engine nothing pins to Go. S12-35's Ships list does not name these functions.
-**Fix.** Done with this audit's docs: the skill and the rule say FakeStore returns seeded hits in seeded order for the requested kinds, and S12-35's Ships list names the four functions.
+**Fix.** The skill and the rule are fixed with this audit's docs: FakeStore returns seeded hits in seeded order for the requested kinds. S12-35 landed without touching search, so S12-50 removes the fake's ranking (the four functions above, `classifyRefQuery`, `tokenizeSearch`, the location rules in `vocabularySearchHits`) and the `SearchCatalogStoreTests` cases that test it.
 
 ### B-8 — Promote's cost grows with the catalog, not the Source
 
@@ -132,7 +132,7 @@ User, 2026-10-28. They are the map's working rules under "Audit 2 fixes".
 **Where.** `PromoteModel.swift` `repropose` (about lines 382–411, sends `flow.fixed(for: flow.rows.filter(\.decided))` unfiltered) and `file` (413–441, only `promote.stale` re-proposes); `core/database/promotealign/promotealign.go` `checkFixed` (about 175–201: a Subject missing from `primary`, or a handle `nil` or merged, → `promote.ErrInvalid`); `api/ffi/handlers/promote_batch.go` (about line 55, `ResolvePins` runs before `SaveBatch`'s revision check); `core/database/promotealign/evidence.go` `mergeFixed`.
 **Problem.** After another window deletes a Subject the page holds as a row, or merges a decided row's record, every re-proposal fails (the decided pair reaches `checkFixed`), every evidence sheet fails (each row's neighbors include that pair), and every Done fails with `promote.invalid` from `ResolvePins`, or with `promote.stale`, which re-proposes and fails again. The only text is "This subject can't be promoted", naming no row; the stale callout claims "Provenencia proposed the rows again. Rows you decided are kept" although that proposal failed; Done stays enabled (`canFinish` ignores the proposal error). S11-35's review raised it (SEC-out-1) and it was Rejected on the premise that the researcher changes the row; nothing on the page says which.
 **Evidence.** Manual: open Promote, Map the rest, set "Mary Smith" to New Person; ⌘N, open the same graph, delete Mary's Subject; back in the first window pick any target on another row → the callout, every sheet reads "The evidence could not be loaded", every Done fails.
-**Fix.** Before proposing, drop decided pairs whose Subject is not in the fresh `subjectFacts(snapshot)`; name the failing Subject in the error (`apperr` params) and word it per row; treat `promote.invalid` from Apply like stale, re-proposing once and clearing the stale note when that proposal fails; run the revision check before `ResolvePins`.
+**Fix.** Keep `checkFixed` the one judge (map review K-30): Propose and the evidence read release a fixed pair it finds invalid (its Subject gone, its record gone or merged, its kind changed) instead of failing, and the proposal returns each released pair with a reason, typed on the wire with a guard row; Swift words a released row with the row-note pattern and keeps the other decisions. Run the revision check before `ResolvePins`; a `promote.invalid` at Done proposes again once, as stale does, clearing the stale note when that proposal fails. A Swift-side filter was considered and dropped: it reads a cached graph that can still list the deleted Subject, so it would give two behaviors for one case.
 
 ### B-14 — Opening a row's sheet freezes its pins
 
