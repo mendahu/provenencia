@@ -3,6 +3,7 @@ package subjectpositions_test
 import (
 	"database/sql"
 	"errors"
+	"math"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -250,6 +251,79 @@ func TestSubjectPositions(t *testing.T) {
 					return subjectpositions.Set(tx, []byte{1}, 0, 0)
 				}); !errors.Is(err, subjectpositions.ErrInvalid) {
 					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
+			name: "positions are bounded on write and clamped on read",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				src := mustSource(t, c, "Deed")
+				sub := mustPerson(t, c, src.ID, "Alice")
+				set := func(x, y int64) ([]rowchange.Change, error) {
+					_, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+						pos, ch, err := subjectpositions.Set(tx, sub, x, y)
+						return pos, ch, err
+					})
+					return nil, err
+				}
+				max := subjectpositions.MaxCell
+				if _, err := set(max, -max); err != nil {
+					t.Fatalf("edge: %v", err)
+				}
+				got, err := subjectpositions.Get(c, sub)
+				if err != nil || got.GridX != max || got.GridY != -max {
+					t.Fatalf("%v %+v", err, got)
+				}
+				for _, bad := range [][2]int64{{max + 1, 0}, {0, -max - 1}, {math.MaxInt64, 0}, {0, math.MinInt64}} {
+					if _, err := set(bad[0], bad[1]); !errors.Is(err, subjectpositions.ErrInvalid) {
+						t.Fatalf("%v: got %v", bad, err)
+					}
+				}
+				got, err = subjectpositions.Get(c, sub)
+				if err != nil || got.GridX != max || got.GridY != -max {
+					t.Fatalf("row changed: %v %+v", err, got)
+				}
+
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(`UPDATE subject_positions SET grid_x = ?, grid_y = ?`, int64(math.MaxInt64), int64(math.MinInt64)); err != nil {
+					t.Fatal(err)
+				}
+				got, err = subjectpositions.Get(c, sub)
+				if err != nil || got.GridX != max || got.GridY != -max {
+					t.Fatalf("get: %v %+v", err, got)
+				}
+				tx, err := db.Begin()
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err = subjectpositions.GetTx(tx, sub)
+				_ = tx.Rollback()
+				if err != nil || got.GridX != max || got.GridY != -max {
+					t.Fatalf("get tx: %v %+v", err, got)
+				}
+				list, err := subjectpositions.ListByEvidenceGraph(c, evidencegraphstest.SoleGraph(t, c, src.ID).ID)
+				if err != nil || len(list) != 1 || list[0].GridX != max || list[0].GridY != -max {
+					t.Fatalf("list: %v %+v", err, list)
+				}
+
+				// Saving the clamped value back is no change: the write rolls back, the stored row stays
+				// as the file had it and every read still clamps it.
+				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+					pos, ch, err := subjectpositions.Set(tx, sub, max, -max)
+					if err == nil && len(ch) != 0 {
+						t.Errorf("changes %+v", ch)
+					}
+					return pos, ch, err
+				}); err != nil {
+					t.Fatal(err)
+				}
+				var rx, ry int64
+				if err := db.QueryRow(`SELECT grid_x, grid_y FROM subject_positions`).Scan(&rx, &ry); err != nil || rx != math.MaxInt64 || ry != math.MinInt64 {
+					t.Fatalf("raw %v %d %d", err, rx, ry)
 				}
 			},
 		},
