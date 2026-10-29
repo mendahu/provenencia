@@ -1,14 +1,15 @@
 # Review — S13-23 Promote stops asking for pins
 
-**Verdict:** round 1: Fits with changes — Not ready. Every finding is answered below; round 2 runs on the refreshed plan once board S13-D11 is agreed.
-**Rounds:** 1 of 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** round 2: Fits with changes — Not ready → Ready after the fixes below. No blocker open; every To user item answered. Planned 2026-10-29.
+**Rounds:** 2 of 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 
 - **Does the removal need a brief?** Asked 2026-10-29. Answer (user): yes. Removing chrome changes how the page looks; briefs keep the boards in sync with the app and catch errors. Done in the planning commit: brief [S13-D11](../design/S13-D11-promote-without-assessment.md) written; the working rule "No brief for the removal" replaced by "Promote's removal has a brief"; the brief gate in `plan-pr` (SKILL and template) and `plan-spike` (SKILL and map template) now names removals. The plan is `Blocked — on board S13-D11`.
 - **What the Updated caption says** without the row's reason. Answer (user, 2026-10-29): the move, else the via neighbor, else nothing. Now D-3.
 - **Claim confidence and argument, and status at Promote.** Answer (user, 2026-10-29, two notes): Identity Claims carry no confidence and no argument; status stays and moves onto the Promote row, Accepted (default) or Provisional, not Rejected; a provisional claim files nothing else and only preselects the row next time; accepting later upgrades the same claim and files its connections; status needs the engine first, so it is a new PR, S13-30, after S13-24, and S13-23 stays the removal. Folded in: plan D-17 (the app drops the claim fields, including `promoteSubject`'s parameters, so S13-24 can reserve them with no Swift edit) and D-18 (no status control in this PR); map working rules "Promote files claims with a status…" and "Identity Claims carry no confidence and no argument", bar 9, S13-24 and S13-25 scopes, the new S13-30 row and scope; brief S13-D11 PS-1 – PS-6; conclusion §5.3 and §5.4. Writer's calls in that fold, for veto: S14-16 lands after S13-30 (both change Apply's handler); the domain docs on confidence and argument are updated by the PR that makes each true (S13-24, S13-25), listed in the map's working rule; whether a New row can be Provisional is left open for S13-30's plan (recommendation: no) and drawn both ways on the board.
-- **What the freed column becomes** (S13-D11 PA-2). Open until the board is agreed; the plan's D-8 and §12 take the board's choice at the refresh.
+- **What the freed column becomes** (S13-D11 PA-2). Answered by the agreed board (2026-10-29): option (a). The board also widened Wide to 1600 / 460 pt and set the copy rule "promote, never file".
+- **Promote wording details** (2026-10-29): the intro line drops its second half; the duplicate note names the kind; a promoting subrow says "Promotes on Done"; "promote" replaces "file" everywhere, copy and code names; "Also unfiled" becomes "Also unpromoted". Open until the board is agreed; the plan's D-8 and §12 take the board's choice at the refresh.
 
 ## Writer's own calls
 
@@ -19,6 +20,13 @@
 - D-12: two `add-match-rule` sentences move from S13-24 to S13-23, recorded in the map's working rule.
 - D-14: the fake keeps its stale-revision check (see M-2).
 - D-15: `Wording` goes and term labels become plain constants (answer to M-3).
+
+## Writer's own calls in round 2
+
+- D-8: the Source column and the freed slot share the extra width equally (the board's grid), and notes keep the app's 40 pt indent (the board's 42 pt is its web gap).
+- D-19: `PromoteGridRow` is the one reader of the width class.
+- D-20's identifier renames are limited to the Promote feature files, the `L10n.Promote` members and their keys; other features' names are untouched.
+- The via caption's term choice is logged for S14-22.
 
 ## Round 1
 
@@ -77,3 +85,19 @@ Verdict: Fits with changes. Paste block verbatim, no new kit piece, no safety ru
 - **M-5 · minor · PA-8's spoken sentence.** **Fixed** — PA-8 says the menu reads as today ("Files Mary Smith on" and the chosen option); a Domain fact quotes today's reading.
 - **M-6 · minor · PA-5 left out the off-page fallbacks.** **Fixed** — PA-5 and frame 2 include them; Objective item 4 says "when the proposal names a settling move or a via neighbor".
 - **M-7 · nit · Name `PromoteReadout.swift`.** **Fixed** — the inventory says the file is deleted and the caption becomes private.
+
+## Round 2
+
+Fresh reviewers on the board-agreed refresh: maintainability (Opus) Fits with changes; executability (Sonnet) Not ready. Every round-1 answer was checked and holds.
+
+- **M-8 / X-3 · blocker · "Also unfiled" missed by the sweep.** **Fixed** — To user, answered "Also unpromoted"; §6 Strings row, AC-1.8, T-13; STEP-6's checks drop the leading `\b` and match `(un)?fil…`.
+- **M-9 / X-1 · blocker · the docs step had no heading; Scope and DoD pointed at the wrong steps.** **Fixed** — STEP-7 "Docs and skills the removal makes false"; STEP-8 "Plan, map and brief status"; Scope and DoD point at them.
+- **X-2 · blocker · DoD archived the brief, STEP-8 kept it.** **Fixed** — the DoD keeps S13-D11 in `design/` until S13-30 lands, with S13-23 marked shipped.
+- **X-4 · blocker · STEP-1's line range also held kept members.** **Fixed** — STEP-1 deletes members whose only callers are deleted and names the in-range members that stay.
+- **X-5 · blocker · STEP-2's regex matched "mapping".** **Fixed** — `\bpins?\b`.
+- **X-6 · blocker · the freed slot's Wide width.** **Fixed** — D-8: the slot and the Source column share the extra width equally, as the board's grid does.
+- **X-7 · major · AC-3.4 hit two comments; wrong type name.** **Fixed** — STEP-4 rewords both comments; AC-3.4 names `CatalogCredibilityAssessment` and `mapCredibility`.
+- **X-8 · major · the fake's revision and type cases.** **Fixed** — D-14 says when the revision advances and leaves non-primary and mistyped rows as they are.
+- **X-9 · major · the `14` check; the anchor's empty target slot.** **Fixed** — the check looks for `frame(width: 14`; D-8 draws an empty target slot.
+- **X-10 · minor.** **Fixed** — line 64; T-1 and AC-1.3 in one order; T-6's fixtures; the `.label` lines; `default: return nil`.
+- **Below the bar (maintainability).** `docs/ideas/wide-layout.md` row: **Fixed** (STEP-7). Code names saying file: **To user**, answered "rename them too" (D-20 tables). The brief-review M-1 answer ("keep today's copy") is superseded by the board's copy rule. Via term from `bridge(between:and:)`: **Logged**, Out → S14-22. Note indent 42 vs 40: **Declined**, the app keeps its token gap (D-8). One owner for the target width: **Fixed** (D-19).
