@@ -83,13 +83,16 @@ Stop and tell the user instead of planning when:
 
 ## 3. Brief
 
-The repo rule: a PR that adds or changes chrome waits on a Claude Design brief
-for **each view** it touches. A bugfix or a behavior change with no new chrome
-is not gated.
+The repo rule: a PR that adds, changes or removes chrome waits on a Claude
+Design brief for **each view** it touches. Anything that changes how a page
+looks counts, a removal included: the boards stay in sync with the app, and the
+board catches errors before code does (user, 2026-10-29). Only a PR whose views
+look the same before and after (a bugfix or a behavior change that draws nothing
+different) is not gated.
 
 | Situation | Do |
 | --- | --- |
-| No new chrome | Brief field: `— (no new chrome)`. Say why in one clause |
+| No chrome change (every view looks the same) | Brief field: `— (no chrome change)`. Say why in one clause |
 | Brief agreed, board done | Link it. Copy its requirement IDs into **Scope** and its inventory into **Design → macOS** |
 | Brief scheduled, not written | Write it now with [`add-design-brief`](../add-design-brief/SKILL.md). Plan status `Blocked — on board S#-D#` until the user says the board is agreed |
 | Brief written, board not agreed | Plan status `Blocked — on board S#-D#`. Draft everything that does not depend on frames |

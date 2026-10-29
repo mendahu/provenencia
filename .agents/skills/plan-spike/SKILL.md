@@ -140,8 +140,9 @@ Split rules:
 - **Engine before chrome.** A schema or core change the UI needs lands first,
   as its own PR, when the UI waits on a brief. A small engine change with no
   brief can ride with its UI.
-- **A brief covers one view.** A PR that changes chrome waits on a brief for
-  each view it touches. A bugfix or behavior change with no new chrome is not
+- **A brief covers one view.** A PR that adds, changes or removes chrome waits
+  on a brief for each view it touches; a removal changes how the page looks and
+  is gated too. Only a PR whose views look the same before and after is not
   gated. Note the brief IDs (`S#-D#`); they are written later, just before the PR.
 - **Split** a PR that changes more than one view plus its engine path, needs two
   migrations, or would have a migration and a large briefed UI change together.
