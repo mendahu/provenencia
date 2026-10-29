@@ -308,6 +308,7 @@ Go, plus deleting Swift's draft rule.
 #### S13-10 — Header and sections
 
 **Ships.** The fixed, display-only header and the section switcher from S13-D1, with Vitals (today's rows) as the first section and the other four as the places the board draws. The section is part of the `WorkspaceLocation`: switching pushes history.
+**Reuse first (from S13-09 review MNT-1).** `ConclusionDetailDefaultPageSections` is one block: Details, likenesses and Place relationship sections, with `ConclusionDetailLikenessSection` private. Before building Person's fill, split it into named internal parts (a Details view taking `content` and `refreshing`, and the likeness section), and rebuild the default fill from them. Person's Vitals then reuses the Details view instead of copying the header, spinner and rows.
 **Check.** Bar 1: the frame with Vitals; the other four sections are places that later slices fill.
 **Context.** R-4 – R-7, R-14, R-15; brief S13-D1.
 
