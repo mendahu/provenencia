@@ -6,7 +6,7 @@
 **Implements later as:** PR **S13-23** (Promote stops asking for pins: PA-1 – PA-8) and PR **S13-30** (Provisional claims at Promote: PS-1 – PS-6)
 **Depends on:** — (the decision is [`conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md) §5, docs PR #623)
 **Related:** [`../../../promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3 and §3.1 (the page as it is after this board); working rules "The score ranks, unseen" and "Promote's removal has a brief" in [`../deployment-plan.md`](../deployment-plan.md#slice-0--removing-observation-pins); [`../prs/S13-23-promote-stops-asking-for-pins.md`](../prs/S13-23-promote-stops-asking-for-pins.md)
-**Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share) (the board S11-D1 and S11-D3 extended); not agreed yet
+**Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), agreed 2026-10-29. Frames 27a, 27W, 28 and 29 gate S13-23; 30, 30b, 30W and 31 gate S13-30 (see §8)
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
 **Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
 
@@ -121,7 +121,7 @@ Promote becomes a quick filing action: the researcher picks a target per row and
 
 | Ships in **S13-23** | Ships in **S13-30** | Stays out |
 | --- | --- | --- |
-| PA-1 – PA-8, PA-W1: the sheet and the assessment column removed; the page centered at Wide; the row, headings and Already filed rows laid out without it; the Updated caption's rule; VoiceOver. Every row files Accepted, with no status control yet. | PS-1 – PS-6: the status control, its default, a provisional row coming back preselected, its connections waiting. | What a row starts on moving into Go (S13-24, no visible change). Rejected at Promote. Any redesign of the target menu or subrows (S14-22 changes the rows' Promote copy after this board). |
+| PA-1 – PA-8, PA-W1 (as §8 revises it), and the promote wording: the sheet and the assessment column removed; the list widened and centered at Wide; the row, headings and Already filed rows laid out without it; the Updated caption's rule; VoiceOver. Every row files Accepted, with no status control yet. | PS-1 – PS-6: the status control, its default, a provisional row coming back preselected, its connections waiting. | What a row starts on moving into Go (S13-24, no visible change). Rejected at Promote. Any redesign of the target menu or subrows (S14-22 changes the rows' Promote copy after this board). |
 
 ---
 
@@ -200,3 +200,21 @@ This table is **binding**. Paths from `macos/App/` unless noted.
 ## 7. Handoff
 
 When the board is agreed: record the board link and the picked PA-2 option on this brief and in the S13-23 plan (**Board** line, Design → macOS, and the Decision that today reads the slot), move S13-23 from `Blocked — on board S13-D11` to `Planned` with `plan-pr`, and when S13-23 lands move this brief to the spike design archive folder and update [`README.md`](README.md).
+
+---
+
+## 8. Board notes (agreed 2026-10-29)
+
+Checked against the exported `Promote flow.dc.html`. Where the board differs from this brief, the board wins and the gated plans copy it.
+
+| Frame | Requirement | The board |
+| --- | --- | --- |
+| all | Copy | **User-facing copy says promote, never file** (user, 2026-10-29: promote everywhere). Headings "On this Source" and "Promotes to"; placeholder "Select where this promotes"; "Skip — not promoted yet"; "Already promoted"; "Promoted from this Source earlier"; footer "Promote N · Skip N · N unselected · N connections"; busy Done "Promoting"; toast "Promoted N subjects and N connections"; subrows "Promotes on Done", "…already promoted", "Not promoted · both ends are …". Supersedes PA-3's "keep today's copy". S13-23 changes every Promote string, the code names and keys that say file, and the Evidence graph's Unpromote confirm ("Keep promotion", "Also unpromoted"). |
+| 27a | PA-2 – PA-4, PA-7 | **Option (a), agreed**; option (b) deleted. The slot stays empty on a working row and holds "Promoted from this Source earlier" on an Already promoted row. Unset rows keep their danger outline. Weak rows start drafted onto their best record. |
+| 27W, 30W | PA-W1 | **Departure:** the list widens to a 1600 pt maximum and centers; the target menu and its open menu go from 330 to 460 pt; the slot and the badges keep their widths. At Regular the list stays at 1200 pt. |
+| 28 | PA-5 – PA-7 | As written: move caption, via caption with its term, off-page move fallback, badge alone, Decided with no Updated. |
+| 29 | PA-2, PA-5 | Captions, callouts and subrows hang at the 42 pt note indent. The duplicate body names the kind ("These may be the same event."); one sentence per kind (user, 2026-10-29). |
+| intro line | — | The mapped page's line reads "Opened from <name>" only (user, 2026-10-29); the board's "· weak and unmatched rows start unselected" is not shipped. |
+| 30, 30b | PS-1 – PS-3, PS-5, PS-6 | A 140 pt small Select in the slot, Accepted or Provisional, on rows with a record. Setting it marks the row Decided. A provisional end waits: "Waits for Robert Frickleton", spoken "…, who is provisional." The footer adds "1 provisional" (an optional part, shown on this board). 30b draws New without the control, the recommendation for S13-30's plan. |
+| 31 | PS-4, PS-5 | A provisional row comes back on its record, Provisional, not Decided; its connections still wait. |
+| deleted | PA-1 | S11-D2 frames E01–E14, frame 14 (Contested rows) and frame 25 (Little evidence). Every older frame on the board (S11-D3, S11-D1, S9-D16) is redrawn without the column. |
