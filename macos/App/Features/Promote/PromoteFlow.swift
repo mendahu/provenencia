@@ -1,9 +1,9 @@
 import Foundation
 
 /// One page of Promote (S9-44): a row list, not a step machine. Decisions
-/// live here. The model loads the proposal and files Done.
+/// live here. The model loads the proposal and promotes Done.
 struct PromoteFlow: Equatable, Sendable {
-    /// Default profile orders for row titles. Empty keeps stored part order.
+    /// Default name orders for row titles. Empty keeps stored part order.
     var nameOrders = NameFormatOrders()
 
     enum Target: Equatable, Sendable {
@@ -76,20 +76,20 @@ struct PromoteFlow: Equatable, Sendable {
         }
     }
 
-    /// Why a connection's end does not file.
+    /// Why a connection's end does not promote.
     enum WaitReason: Equatable, Sendable {
         case skipped, unset, notOnPage
     }
 
-    /// Whether a connection files on Done, and if not, why.
+    /// Whether a connection promotes on Done, and if not, why.
     enum ConnectionState: Equatable, Sendable {
-        case files
-        /// An end does not file: `endID` is the Subject that waits (the connection's first end when both do).
+        case promotes
+        /// An end does not promote: `endID` is the Subject that waits (the connection's first end when both do).
         case waits(endID: String?, why: WaitReason)
         /// Both ends land on one record; `ref` is that record's.
         case selfLink(ref: String)
 
-        /// The Subject the connection waits for; nil when it files or is a self-link.
+        /// The Subject the connection waits for; nil when it promotes or is a self-link.
         var waitingEndID: String? {
             if case .waits(let endID, _) = self { return endID }
             return nil
@@ -149,7 +149,7 @@ struct PromoteFlow: Equatable, Sendable {
         var fact: BridgeFact
         var state: ConnectionState
         var id: String { fact.id }
-        var files: Bool { state == .files }
+        var promotes: Bool { state == .promotes }
 
         subscript<T>(dynamicMember key: KeyPath<BridgeFact, T> & Sendable) -> T { fact[keyPath: key] }
 
@@ -159,8 +159,8 @@ struct PromoteFlow: Equatable, Sendable {
     /// What a row says of a connection's other end when that end is not a row to work on.
     struct OtherEnd: Equatable, Sendable {
         var name: String
-        /// The end is already filed (an anchor), not just missing from the page.
-        var filed: Bool
+        /// The end is already promoted (an anchor), not just missing from the page.
+        var promoted: Bool
     }
 
     /// A connection as one row shows it.
@@ -181,7 +181,7 @@ struct PromoteFlow: Equatable, Sendable {
         var kind: EvidencePrimaryKind
         var name: String
         var ref: String
-        /// Set when the subject is already filed.
+        /// Set when the subject is already promoted.
         var anchor: Anchor?
         /// An Event's date as the Events list lists it, without the source's words for it; empty for anything else.
         var date: String = ""
@@ -198,9 +198,9 @@ struct PromoteFlow: Equatable, Sendable {
         var mark: PVMarkKey = .subjectRelationship
         var endA: String?
         var endB: String?
-        /// Already an accepted association. Hidden from the will-file list;
-        /// Done does not file it again.
-        var alreadyFiled: Bool = false
+        /// Already an accepted association. Hidden from the will-promote list;
+        /// Done does not promote it again.
+        var alreadyPromoted: Bool = false
 
         /// The name of one end, as its row reads; empty when `endID` is neither end.
         func name(of endID: String?) -> String {
@@ -228,7 +228,7 @@ struct PromoteFlow: Equatable, Sendable {
 
     var restCount: Int { rows.filter { $0.subjectID != entryID }.count }
 
-    var fileCount: Int {
+    var promoteCount: Int {
         scope.filter { row in
             guard !row.anchor else { return false }
             switch row.target {
@@ -248,7 +248,7 @@ struct PromoteFlow: Equatable, Sendable {
         unsetCount == 0
     }
 
-    var connectionCount: Int { connections.filter(\.files).count }
+    var connectionCount: Int { connections.filter(\.promotes).count }
 
     private var scope: [Row] { visibleRows }
 
@@ -256,10 +256,10 @@ struct PromoteFlow: Equatable, Sendable {
         Bridge(fact: bridge, state: state)
     }
 
-    /// Every connection not yet filed, with whether it files and, if not, which end waits and why.
+    /// Every connection not yet promoted, with whether it promotes and, if not, which end waits and why.
     var connections: [Bridge] {
         let rowByID = Dictionary(rows.map { ($0.subjectID, $0) }, uniquingKeysWith: { first, _ in first })
-        return bridges.filter { !$0.alreadyFiled }.map { bridge in
+        return bridges.filter { !$0.alreadyPromoted }.map { bridge in
             let left = resolve(bridge.endA, in: rowByID)
             let right = resolve(bridge.endB, in: rowByID)
             switch (left, right) {
@@ -268,7 +268,7 @@ struct PromoteFlow: Equatable, Sendable {
             case (_, .waits(let why)):
                 return lined(bridge, .waits(endID: bridge.endB, why: why))
             case (.handle(let leftID, let ref), .handle(let rightID, _)):
-                return lined(bridge, leftID == rightID ? .selfLink(ref: ref) : .files)
+                return lined(bridge, leftID == rightID ? .selfLink(ref: ref) : .promotes)
             }
         }
     }
@@ -287,7 +287,7 @@ struct PromoteFlow: Equatable, Sendable {
                 var note: OtherEnd?
                 if let far, !working.contains(far) {
                     let name = bridge.name(of: far)
-                    if !name.isEmpty { note = OtherEnd(name: name, filed: anchors.contains(far)) }
+                    if !name.isEmpty { note = OtherEnd(name: name, promoted: anchors.contains(far)) }
                 }
                 byRow[end, default: []].append(RowConnection(bridge: bridge, otherEnd: note))
             }
@@ -300,7 +300,7 @@ struct PromoteFlow: Equatable, Sendable {
 
     private static func stateRank(_ state: ConnectionState) -> Int {
         switch state {
-        case .files: 0
+        case .promotes: 0
         case .waits: 1
         case .selfLink: 2
         }
@@ -333,7 +333,7 @@ struct PromoteFlow: Equatable, Sendable {
         case waits(WaitReason)
     }
 
-    /// The handle a subject will be, or why it stays unfiled. The one place that decides.
+    /// The handle a subject will be, or why it stays unpromoted. The one place that decides.
     private func resolve(_ subjectID: String?, in rowByID: [String: Row]) -> EndResolution {
         guard let subjectID, let row = rowByID[subjectID] else { return .waits(.notOnPage) }
         if row.anchor {
@@ -443,13 +443,13 @@ struct PromoteFlow: Equatable, Sendable {
         noteDuplicates()
     }
 
-    /// The targets Done sends, one per row it files.
+    /// The targets Done sends, one per row it promotes.
     func batchRows() -> [CatalogPromoteGraphAlignmentFixed] {
-        fixed(for: filedRows)
+        fixed(for: promotedRows)
     }
 
-    /// The rows Done files: visible, not already filed, with a target.
-    private var filedRows: [Row] {
+    /// The rows Done promotes: visible, not already promoted, with a target.
+    private var promotedRows: [Row] {
         scope.filter { !$0.anchor && $0.target != .unset }
     }
 
@@ -552,7 +552,7 @@ struct PromoteFlow: Equatable, Sendable {
             return .handle(id: first.id, ref: first.ref, title: first.title)
         }
         // Another row on the page took this record. Drafting it again would
-        // file two subjects on one handle, so the choice stays open, with the
+        // promote two subjects on one handle, so the choice stays open, with the
         // duplicate note naming the other row, whatever the band.
         if proposal.reason == .taken {
             return .unset

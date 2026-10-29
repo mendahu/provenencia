@@ -32,7 +32,7 @@ struct PromoteFlowTests {
     private func fact(_ id: String, anchor: Bool = false, handleID: String = "e-anchor") -> PromoteFlow.SubjectFact {
         PromoteFlow.SubjectFact(
             id: id, kind: .person, name: id, ref: "CPR-\(id)",
-            anchor: anchor ? PromoteFlow.Anchor(id: handleID, ref: "PER-A", title: "Filed") : nil
+            anchor: anchor ? PromoteFlow.Anchor(id: handleID, ref: "PER-A", title: "Promoted") : nil
         )
     }
 
@@ -45,7 +45,7 @@ struct PromoteFlowTests {
                 subjects: [
                     PromoteFlow.SubjectFact(
                         id: "m", kind: .event, name: "Marriage", ref: "EVT-M",
-                        anchor: anchored ? PromoteFlow.Anchor(id: "e-anchor", ref: "EVT-A", title: "Filed") : nil,
+                        anchor: anchored ? PromoteFlow.Anchor(id: "e-anchor", ref: "EVT-A", title: "Promoted") : nil,
                         date: "12 May 1842"
                     ),
                 ],
@@ -192,7 +192,7 @@ struct PromoteFlowTests {
     }
 
     /// A row whose record another row took starts open, whatever its band,
-    /// so Done can't file two subjects on one handle without a choice.
+    /// so Done can't promote two subjects on one handle without a choice.
     @Test func aRowWhoseRecordWasTakenStartsUnset() {
         let winner = row(id: "a", handleID: "e1", assessment: "weak")
         for band in ["weak", "medium", "strong"] {
@@ -375,7 +375,7 @@ struct PromoteFlowTests {
             subjects: [fact("a"), fact("b")],
             bridges: [PromoteFlow.BridgeFact(id: "br", sentence: "link", endA: "a", endB: "b")]
         )
-        #expect(flow.connections.first?.state == .files)
+        #expect(flow.connections.first?.state == .promotes)
         flow.setTarget(subjectID: "b", token: "skip")
         #expect(flow.connections.first?.state == .waits(endID: "b", why: .skipped))
         let batch = flow.batchRows()
@@ -384,17 +384,17 @@ struct PromoteFlowTests {
         #expect(batch[1].subjectID == "b")
         #expect(batch[1].target == .skip)
         flow.setTarget(subjectID: "b", token: "new")
-        #expect(flow.connections.first?.state == .files)
+        #expect(flow.connections.first?.state == .promotes)
     }
 
     private func link(
         _ id: String, _ a: String?, _ b: String?,
-        sentence: String? = nil, alreadyFiled: Bool = false
+        sentence: String? = nil, alreadyPromoted: Bool = false
     ) -> PromoteFlow.BridgeFact {
         var bridge = PromoteFlow.BridgeFact(id: id, sentence: sentence ?? id, endA: a, endB: b)
         bridge.endAName = a ?? ""
         bridge.endBName = b ?? ""
-        bridge.alreadyFiled = alreadyFiled
+        bridge.alreadyPromoted = alreadyPromoted
         return bridge
     }
 
@@ -434,12 +434,12 @@ struct PromoteFlowTests {
     }
 
     @Test func aConnectionWithOneRowEndShowsOnlyThere() {
-        // (a) The event is an anchor: it shows under the person only, with a note that it is filed.
-        let filed = mapped(ids: ["j", "b"], anchors: ["b"], bridges: [link("pa", "j", "b")])
-        let filedRows = filed.connectionsByRow
-        #expect(filedRows.keys.sorted() == ["j"])
-        #expect(filedRows["j"]?.first?.otherEnd == PromoteFlow.OtherEnd(name: "b", filed: true))
-        #expect(filedRows["j"]?.first?.bridge.state == .files)
+        // (a) The event is an anchor: it shows under the person only, with a note that it is promoted.
+        let promoted = mapped(ids: ["j", "b"], anchors: ["b"], bridges: [link("pa", "j", "b")])
+        let promotedRows = promoted.connectionsByRow
+        #expect(promotedRows.keys.sorted() == ["j"])
+        #expect(promotedRows["j"]?.first?.otherEnd == PromoteFlow.OtherEnd(name: "b", promoted: true))
+        #expect(promotedRows["j"]?.first?.bridge.state == .promotes)
 
         // (b) Not mapped: the other end is not on this page.
         var alone = PromoteFlow(entryID: "j")
@@ -452,20 +452,20 @@ struct PromoteFlowTests {
         let shown = alone.connectionsByRow
         #expect(shown.keys.sorted() == ["j"])
         #expect(shown["j"]?.first?.bridge.state == .waits(endID: "b", why: .notOnPage))
-        #expect(shown["j"]?.first?.otherEnd == PromoteFlow.OtherEnd(name: "b", filed: false))
+        #expect(shown["j"]?.first?.otherEnd == PromoteFlow.OtherEnd(name: "b", promoted: false))
 
         // (c) Both ends anchors: shown nowhere, still counted.
         let both = mapped(ids: ["a", "b"], anchors: ["a", "b"], bridges: [link("x", "a", "b")])
         #expect(both.connectionsByRow.isEmpty)
         #expect(both.connectionCount == 1)
 
-        // (d) Already filed: neither shown nor counted.
-        let old = mapped(ids: ["a", "b"], bridges: [link("old", "a", "b", alreadyFiled: true)])
+        // (d) Already promoted: neither shown nor counted.
+        let old = mapped(ids: ["a", "b"], bridges: [link("old", "a", "b", alreadyPromoted: true)])
         #expect(old.connectionsByRow.isEmpty)
         #expect(old.connections.isEmpty)
         #expect(old.connectionCount == 0)
 
-        // (e) Neither end is a row: shown nowhere, nothing files.
+        // (e) Neither end is a row: shown nowhere, nothing promotes.
         let neither = mapped(ids: ["xx", "ww"], bridges: [link("x", "zz", "yy")])
         #expect(neither.connectionsByRow.isEmpty)
         #expect(neither.connectionCount == 0)
@@ -539,7 +539,7 @@ struct PromoteFlowTests {
         #expect(flow.unsetCount == 0)
     }
 
-    @Test func promoteAllStartsExpandedAndHidesFiledBridges() {
+    @Test func promoteAllStartsExpandedAndHidesPromotedBridges() {
         var flow = PromoteFlow(entryID: "a")
         flow.mappedRest = true
         flow.load(
@@ -547,14 +547,14 @@ struct PromoteFlowTests {
             proposal: proposal(rows: [row(id: "a"), row(id: "b")]),
             subjects: [fact("a", anchor: true, handleID: "e-a"), fact("b", anchor: true, handleID: "e-b")],
             bridges: [
-                PromoteFlow.BridgeFact(id: "old", sentence: "old", endA: "a", endB: "b", alreadyFiled: true),
+                PromoteFlow.BridgeFact(id: "old", sentence: "old", endA: "a", endB: "b", alreadyPromoted: true),
                 PromoteFlow.BridgeFact(id: "new", sentence: "new", endA: "a", endB: "b"),
             ]
         )
         #expect(flow.visibleRows.map(\.subjectID) == ["a", "b"])
         #expect(flow.targetsChosen)
         #expect(flow.connections.map(\.id) == ["new"])
-        #expect(flow.connections.first?.state == .files)
+        #expect(flow.connections.first?.state == .promotes)
         #expect(flow.connectionCount == 1)
     }
 
@@ -630,7 +630,7 @@ struct PromoteFlowTests {
         #expect(flow.requestLeave(.back) == true)
     }
 
-    @Test func doneSendsATargetPerFiledRow() {
+    @Test func doneSendsATargetPerPromotedRow() {
         var flow = PromoteFlow(entryID: "a")
         flow.mappedRest = true
         flow.load(

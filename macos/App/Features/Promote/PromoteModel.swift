@@ -73,7 +73,7 @@ extension WorkspaceLocation {
     }
 }
 
-/// Runs the Promote page: loads the proposal, keeps the row list, and files Done.
+/// Runs the Promote page: loads the proposal, keeps the row list, and promotes Done.
 @MainActor
 @Observable
 final class PromoteModel {
@@ -222,7 +222,7 @@ final class PromoteModel {
         flow.saving = true
         flow.staleNote = nil
         saveError = nil
-        Task { await file() }
+        Task { await promote() }
     }
 
     func leave() {
@@ -305,7 +305,7 @@ final class PromoteModel {
         }
     }
 
-    private func file() async {
+    private func promote() async {
         let batch = flow.batchRows()
         let seen = flow.revision
         do {
@@ -318,8 +318,8 @@ final class PromoteModel {
             )
             session.apply(.promotedSubject(graphId: entry.graphID))
             session.noticeToast = VocabularyToast(
-                title: L10n.Promote.filedTitle(filed: flow.fileCount, connections: flow.connectionCount),
-                body: flow.skipCount > 0 ? L10n.Promote.filedBody(skipped: flow.skipCount) : "",
+                title: L10n.Promote.promotedTitle(promoted: flow.promoteCount, connections: flow.connectionCount),
+                body: flow.skipCount > 0 ? L10n.Promote.promotedBody(skipped: flow.skipCount) : "",
                 tone: .success
             )
             flow.saving = false
@@ -388,7 +388,7 @@ final class PromoteModel {
                 mark: bridge.kind.markKey,
                 endA: bridge.endpointAID,
                 endB: bridge.endpointBID,
-                alreadyFiled: bridge.membership != nil
+                alreadyPromoted: bridge.membership != nil
             )
         }
     }

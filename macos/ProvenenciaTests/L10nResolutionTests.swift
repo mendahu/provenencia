@@ -35,14 +35,19 @@ struct L10nResolutionTests {
 
     @Test func unpromoteCopyResolves() {
         #expect(L10n.string(L10n.EvidenceGraph.unpromote) == "Unpromote")
-        #expect(L10n.string(L10n.EvidenceGraph.unpromoteKeep) == "Keep filing")
+        #expect(L10n.string(L10n.EvidenceGraph.unpromoteKeep) == "Keep promotion")
         #expect(L10n.EvidenceGraph.unpromoteConfirmTitle(name: "James Robins") == "Unpromote James Robins?")
         #expect(
             L10n.string(L10n.EvidenceGraph.unpromoteConfirmMessage)
-                == "This filing is removed. The cards stay on the graph, and the handle stays."
+                == "This promotion is removed. The cards stay on the graph, and the handle stays."
         )
-        #expect(L10n.string(L10n.EvidenceGraph.unpromoteConfirmBridgesHeader) == "Also unfiled")
-        #expect(L10n.string(L10n.EvidenceGraph.unpromoteConfirmBridgesNote) == "The other end of each stays filed.")
+        #expect(L10n.string(L10n.EvidenceGraph.unpromoteConfirmBridgesHeader) == "Also unpromoted")
+        #expect(L10n.string(L10n.EvidenceGraph.unpromoteConfirmBridgesNote) == "The other end of each stays promoted.")
+        #expect(
+            L10n.Promote.duplicateBody(.event)
+                == "These may be the same event. Combine them on the Evidence graph, or pick another target for one row."
+        )
+        #expect(L10n.Promote.openedFrom(name: "Gracie") == "Opened from Gracie")
     }
 
     @Test func formatWithExplicitLocaleUsesIt() {

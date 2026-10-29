@@ -149,7 +149,7 @@ struct PromoteView: View {
         if model.flow.mappedRest {
             return L10n.Promote.rowSummary(
                 rows: model.flow.rows.count,
-                filed: model.flow.rows.filter(\.anchor).count
+                promoted: model.flow.rows.filter(\.anchor).count
             )
         }
         return L10n.Promote.singleSummary(more: model.flow.restCount)
@@ -193,7 +193,7 @@ struct PromoteView: View {
             }
             if !section.anchors.isEmpty {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(L10n.Promote.alreadyFiledHeading)
+                    Text(L10n.Promote.alreadyPromotedHeading)
                         .pvMicroCaps()
                         .foregroundStyle(PVColor.textMuted)
                         .padding(.top, PVSpacing.space3)
@@ -235,7 +235,7 @@ struct PromoteView: View {
         HStack(spacing: PVSpacing.space4) {
             Spacer()
             Text(verbatim: L10n.Promote.doneSummary(
-                file: model.flow.fileCount,
+                promote: model.flow.promoteCount,
                 skip: model.flow.skipCount,
                 unselected: model.flow.unsetCount,
                 connections: model.flow.connectionCount
@@ -245,7 +245,7 @@ struct PromoteView: View {
             PVButton(L10n.Promote.cancel, variant: .secondary) { model.leave() }
                 .disabled(model.isSaving)
                 .accessibilityIdentifier("promote.cancel")
-            PVButton(model.isSaving ? L10n.Promote.filing : L10n.Promote.done, variant: .primary, loading: model.isSaving) {
+            PVButton(model.isSaving ? L10n.Promote.promoting : L10n.Promote.done, variant: .primary, loading: model.isSaving) {
                 model.done()
             }
             .disabled(!model.canFinish)
@@ -283,12 +283,12 @@ struct PromoteView: View {
         _ anchors: [PromoteFlow.Row]
     ) -> Section {
         let rows = working.filter { $0.kind == kind }
-        let filed = anchors.filter { $0.kind == kind }
-        let total = rows.count + filed.count
-        let meta = filed.isEmpty
+        let promoted = anchors.filter { $0.kind == kind }
+        let total = rows.count + promoted.count
+        let meta = promoted.isEmpty
             ? L10n.Promote.sectionCount(total)
-            : L10n.Promote.sectionCountFiled(rows: total, filed: filed.count)
-        return Section(id: id, title: title, meta: meta, rows: rows, anchors: filed)
+            : L10n.Promote.sectionCountPromoted(rows: total, promoted: promoted.count)
+        return Section(id: id, title: title, meta: meta, rows: rows, anchors: promoted)
     }
 
     private var leaveBinding: Binding<PromoteModel.PendingLeave?> {
@@ -356,7 +356,7 @@ private struct PromoteAlignmentRow: View {
                 PVCallout(
                     tone: .warning,
                     title: duplicateTitle(note),
-                    message: L10n.string(L10n.Promote.duplicateBody),
+                    message: L10n.Promote.duplicateBody(row.kind),
                     compact: true
                 )
                 .padding(.leading, PromoteLayout.noteIndent)
@@ -394,7 +394,7 @@ private struct PromoteAlignmentRow: View {
             rowHeight: 46,
             isDisabled: model.isSaving,
             isInvalid: row.target == .unset,
-            accessibilitySpokenLabel: L10n.Promote.filesOn(name: row.name),
+            accessibilitySpokenLabel: L10n.Promote.promotesTo(name: row.name),
             accessibilityIdentifier: "promote.row.\(row.ref).target",
             focus: PVSelectFocus($targetFocus, equals: true)
         ) { option in
@@ -454,7 +454,7 @@ private struct PromoteConnectionSubrows: View {
     private func subrow(_ connection: PromoteFlow.RowConnection) -> some View {
         let bridge = connection.bridge
         let endName = bridge.name(of: bridge.state.waitingEndID)
-        let files = bridge.state == .files
+        let promotes = bridge.state == .promotes
         return VStack(alignment: .leading, spacing: PVSpacing.space1) {
             HStack(spacing: PVSpacing.space3) {
                 PVMark(bridge.mark, size: 14, decorative: true)
@@ -464,17 +464,17 @@ private struct PromoteConnectionSubrows: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .help(Text(verbatim: bridge.sentence))
-                    .foregroundStyle(files ? PVColor.textPrimary : PVColor.textMuted)
+                    .foregroundStyle(promotes ? PVColor.textPrimary : PVColor.textMuted)
                 Spacer(minLength: PVSpacing.space4)
                 if let text = L10n.Promote.connectionState(bridge.state, endName: endName) {
                     Text(verbatim: text)
                         .font(PVFont.body(size: PVTypeScale.caption))
                         .italic()
-                        .foregroundStyle(files ? PVColor.textSecondary : PVColor.textMuted)
+                        .foregroundStyle(promotes ? PVColor.textSecondary : PVColor.textMuted)
                 }
             }
             if let other = connection.otherEnd {
-                Text(verbatim: L10n.Promote.connectionOtherEnd(name: other.name, filed: other.filed))
+                Text(verbatim: L10n.Promote.connectionOtherEnd(name: other.name, promoted: other.promoted))
                     .font(PVFont.body(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textMuted)
                     .padding(.leading, 14 + PVSpacing.space3)
@@ -614,7 +614,7 @@ private struct PromoteAnchorRow: View {
                 Color.clear.frame(height: 1)
             }
         } freed: {
-            Text(L10n.Promote.filedEarlier)
+            Text(L10n.Promote.promotedEarlier)
                 .font(PVFont.body(size: PVTypeScale.caption))
                 .italic()
                 .foregroundStyle(PVColor.textMuted)

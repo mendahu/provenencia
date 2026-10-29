@@ -80,7 +80,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var promoteProposeDelays: [Duration] = []
     /// The decided rows the last proposal call held.
     var lastPromoteFixed: [CatalogPromoteGraphAlignmentFixed] = []
-    /// The last Done the page filed, for tests.
+    /// The last Done the page sent, for tests.
     var lastPromoteBatch: [CatalogPromoteGraphAlignmentFixed]?
     /// Event and Place headers as Go would compose them, seeded by tests in
     /// list order. FakeStore does not reconcile, walk, or title them; Go owns
@@ -1698,7 +1698,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    /// Removes the Subject's filing, and the filing of every Subject on its Source that has a membership
+    /// Removes the Subject's promotion, and the promotion of every Subject on its Source that has a membership
     /// and an Observation naming it as its value (the engine's rule for bridge ends). Handles stay.
     func unpromoteSubject(
         projectDir: String,
@@ -1831,7 +1831,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    /// Files what it is sent. The rules that refuse a row are Go's (`promotealign.Apply`); the fake
+    /// Promotes what it is sent. The rules that refuse a row are Go's (`promotealign.Apply`); the fake
     /// leaves a row it cannot place as it is, and refuses only a stale revision.
     func applyPromoteGraphAlignment(
         projectDir: String,

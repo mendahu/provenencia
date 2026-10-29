@@ -277,7 +277,7 @@ struct CatalogCanonicalEntity: Sendable, Equatable, Identifiable {
     var label: String
 }
 
-/// Files one Subject onto one handle; accepted claims are members.
+/// Promotes one Subject onto one handle; accepted claims are members.
 struct CatalogIdentityClaim: Sendable, Equatable, Identifiable {
     var id: String
     var subjectID: String
@@ -286,7 +286,7 @@ struct CatalogIdentityClaim: Sendable, Equatable, Identifiable {
 }
 
 /// A view of one Subject's **accepted Identity Claim**: the claim and the handle
-/// it files the Subject onto. "Membership" is the data model's word for that
+/// it promotes the Subject onto. "Membership" is the data model's word for that
 /// relation (§6); it is never stored on its own, and provisional / rejected
 /// claims are not memberships. `kind` is the handle's subject type key
 /// (person, event, place, …). Unpromoted Subjects have none.
@@ -1268,7 +1268,7 @@ protocol GenealogyStore: Sendable {
         description: String
     ) async throws -> (CatalogSubject, CatalogWriteEffects)
     func deleteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogWriteEffects
-    /// File an accepted claim for the Subject (one transaction): onto a new handle of its type when
+    /// Promote the Subject with an accepted claim (one transaction): onto a new handle of its type when
     /// `entityID` is `nil`, else onto that existing handle (same type, unmerged; claim only).
     func promoteSubject(
         projectDir: String,
@@ -1276,7 +1276,7 @@ protocol GenealogyStore: Sendable {
         subjectID: String,
         entityID: String?
     ) async throws -> CatalogPromoteResult
-    /// Take a primary Subject's filing back: its accepted claim and, in the same write, the accepted
+    /// Take a primary Subject's promotion back: its accepted claim and, in the same write, the accepted
     /// claims of the bridges on its Source that have it as an end. No handle is deleted. A Subject with
     /// no accepted claim writes nothing.
     func unpromoteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogWriteEffects
@@ -1294,7 +1294,7 @@ protocol GenealogyStore: Sendable {
         graphID: String,
         fixed: [CatalogPromoteGraphAlignmentFixed]
     ) async throws -> CatalogPromoteGraphAlignmentProposal
-    /// File one Done for one Evidence graph: a claim per row on a handle or New, and bridges.
+    /// Apply one Done for one Evidence graph: a claim per row on a handle or New, and bridges.
     /// `seenRevision` is the proposal's revision.
     func applyPromoteGraphAlignment(
         projectDir: String,

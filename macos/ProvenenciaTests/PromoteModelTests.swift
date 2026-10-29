@@ -152,8 +152,8 @@ struct PromoteModelTests {
         let model = model(store: store, subjectID: "z", graphID: "g-2")
         await model.load()
         model.done()
-        let filed = await waitUntil { store.lastPromoteBatch != nil }
-        #expect(filed)
+        let promoted = await waitUntil { store.lastPromoteBatch != nil }
+        #expect(promoted)
         #expect(store.recordedCalls.contains("proposePromoteGraphAlignment graph=g-2"))
         #expect(store.recordedCalls.contains("applyPromoteGraphAlignment graph=g-2 rows=1"))
         #expect((store.lastPromoteBatch ?? []).map(\.subjectID) == ["z"])
@@ -161,7 +161,7 @@ struct PromoteModelTests {
 
     // MARK: - T-12
 
-    @Test func doneFilesEveryRowWithATargetOnly() async {
+    @Test func donePromotesEveryRowWithATargetOnly() async {
         let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
         let store = store(subjects: subjects)
         store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e2")])]
@@ -173,8 +173,8 @@ struct PromoteModelTests {
         model.setTarget(subjectID: "b", token: "skip")
         _ = await waitUntil { !model.isProposing }
         model.done()
-        let filed = await waitUntil { store.lastPromoteBatch != nil }
-        #expect(filed)
+        let promoted = await waitUntil { store.lastPromoteBatch != nil }
+        #expect(promoted)
         #expect(store.lastPromoteBatch == [
             CatalogPromoteGraphAlignmentFixed(subjectID: "a", target: .new),
             CatalogPromoteGraphAlignmentFixed(subjectID: "b", target: .skip),
@@ -266,7 +266,7 @@ struct PromoteModelTests {
         ])
     }
 
-    @Test func aFoundRecordIsProposedHeldAndFiled() async {
+    @Test func aFoundRecordIsProposedHeldAndPromoted() async {
         let store = storeWithFoundRecords([subject("a", ref: "CPR-A", label: "Ada")])
         let model = model(store: store, subjectID: "a")
         await model.load()
@@ -280,8 +280,8 @@ struct PromoteModelTests {
         #expect(ada?.target.handleID == "e-far")
 
         model.done()
-        let filed = await waitUntil { store.lastPromoteBatch != nil }
-        #expect(filed)
+        let promoted = await waitUntil { store.lastPromoteBatch != nil }
+        #expect(promoted)
         let batch = store.lastPromoteBatch?.first { $0.subjectID == "a" }
         #expect(batch?.target == .handle)
         #expect(batch?.handleID == "e-far")
@@ -360,8 +360,8 @@ struct PromoteModelTests {
         #expect(model.flow.row("a")?.target.handleID == "e-far")
 
         model.done()
-        let filed = await waitUntil { store.lastPromoteBatch != nil }
-        #expect(filed)
+        let promoted = await waitUntil { store.lastPromoteBatch != nil }
+        #expect(promoted)
         #expect(store.lastPromoteBatch?.first { $0.subjectID == "a" }?.handleID == "e-far")
     }
 
@@ -531,6 +531,17 @@ struct PromoteModelTests {
         #expect(model.flow.row("m")?.date == DateRowDisplay.line(date: married, includesPhrase: false))
         #expect(model.flow.row("m")?.date.isEmpty == false)
         #expect(model.flow.row("a")?.date == "")
+    }
+
+    @Test func leaveDetailCountsRows() {
+        #expect(
+            L10n.Promote.leaveDetail(rows: 1)
+                == "You chose a target on 1 row. Nothing has been promoted; opening Promote again proposes the graph afresh."
+        )
+        #expect(
+            L10n.Promote.leaveDetail(rows: 3)
+                == "You chose targets on 3 rows. Nothing has been promoted; opening Promote again proposes the graph afresh."
+        )
     }
 
     @Test func leaveGuardAsksOnlyAfterAManualChange() async {

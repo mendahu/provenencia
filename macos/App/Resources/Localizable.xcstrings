@@ -15429,7 +15429,7 @@
       }
     },
     "evidenceGraph.subject.unpromote": {
-      "comment": "Footer icon button's tooltip and VoiceOver action on a promoted card, and the confirm button, that takes its filing back",
+      "comment": "Footer icon button's tooltip and VoiceOver action on a promoted card, and the confirm button, that takes its promotion back",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -15447,7 +15447,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keep filing"
+            "value": "Keep promotion"
           }
         }
       }
@@ -15471,7 +15471,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This filing is removed. The cards stay on the graph, and the handle stays."
+            "value": "This promotion is removed. The cards stay on the graph, and the handle stays."
           }
         }
       }
@@ -15483,7 +15483,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Also unfiled"
+            "value": "Also unpromoted"
           }
         }
       }
@@ -15495,7 +15495,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The other end of each stays filed."
+            "value": "The other end of each stays promoted."
           }
         }
       }
@@ -15639,7 +15639,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Leave Promote without filing %@?"
+            "value": "Leave Promote without promoting %@?"
           }
         }
       }
@@ -17596,19 +17596,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Select where this files"
+            "value": "Select where this promotes"
           }
         }
       }
     },
     "promote.target.skip": {
-      "comment": "Leave this subject unfiled; Skip is not a rejection",
+      "comment": "Leave this subject unpromoted; Skip is not a rejection",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skip — not filed yet"
+            "value": "Skip — not promoted yet"
           }
         }
       }
@@ -17709,26 +17709,26 @@
         }
       }
     },
-    "promote.done.filing": {
+    "promote.done.promoting": {
       "comment": "Done button while the batch is writing",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Filing"
+            "value": "Promoting"
           }
         }
       }
     },
-    "promote.done.file": {
-      "comment": "Footer part: how many rows Done files",
+    "promote.done.promote": {
+      "comment": "Footer part: how many rows Done promotes",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "File %lld"
+            "value": "Promote %lld"
           }
         }
       }
@@ -17758,7 +17758,7 @@
       }
     },
     "promote.done.connections": {
-      "comment": "Footer part: how many connections Done files",
+      "comment": "Footer part: how many connections Done promotes",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -17782,7 +17782,7 @@
       }
     },
     "promote.done.action": {
-      "comment": "Files the Promote page",
+      "comment": "Promotes the rows on the Promote page",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -17863,13 +17863,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "You chose a target on %lld row. Nothing has been filed; opening Promote again proposes the graph afresh."
+                  "value": "You chose a target on %lld row. Nothing has been promoted; opening Promote again proposes the graph afresh."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "You chose targets on %lld rows. Nothing has been filed; opening Promote again proposes the graph afresh."
+                  "value": "You chose targets on %lld rows. Nothing has been promoted; opening Promote again proposes the graph afresh."
                 }
               }
             }
@@ -17884,31 +17884,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nothing was filed — the catalog changed while this page was open"
+            "value": "Nothing was promoted — the catalog changed while this page was open"
           }
         }
       }
     },
-    "promote.toast.filedTitle": {
-      "comment": "Toast title after Done; 1 = subjects filed, 2 = connections filed",
+    "promote.toast.promotedTitle": {
+      "comment": "Toast title after Done; 1 = subjects promoted, 2 = connections promoted",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Filed %1$lld subjects and %2$lld connections"
+            "value": "Promoted %1$lld subjects and %2$lld connections"
           }
         }
       }
     },
-    "promote.toast.filedBody": {
+    "promote.toast.promotedBody": {
       "comment": "Toast body after Done; skipped subjects are not a rejection",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld subjects are still on the graph, not filed yet"
+            "value": "%lld subjects are still on the graph, not promoted yet"
           }
         }
       }
@@ -17920,7 +17920,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Opened from %@ · weak and unmatched rows start as Skip"
+            "value": "Opened from %@"
           }
         }
       }
@@ -17938,13 +17938,13 @@
       }
     },
     "promote.page.rowSummary": {
-      "comment": "Header once the whole graph is mapped; 1 = row count, 2 = already-filed anchors",
+      "comment": "Header once the whole graph is mapped; 1 = row count, 2 = already-promoted anchors",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$lld rows · %2$lld already filed"
+            "value": "%1$lld rows · %2$lld already promoted"
           }
         }
       }
@@ -17986,13 +17986,13 @@
       }
     },
     "promote.page.column.target": {
-      "comment": "Promote row column: the handle the subject will file on",
+      "comment": "Promote row column: the handle the subject will promote to",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Files on"
+            "value": "Promotes to"
           }
         }
       }
@@ -18009,50 +18009,50 @@
         }
       }
     },
-    "promote.section.countFiled": {
-      "comment": "Promote section count when some rows were filed earlier; 1 = rows, 2 = already filed",
+    "promote.section.countPromoted": {
+      "comment": "Promote section count when some rows were promoted earlier; 1 = rows, 2 = already promoted",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$lld · %2$lld already filed"
+            "value": "%1$lld · %2$lld already promoted"
           }
         }
       }
     },
-    "promote.row.alreadyFiledHeading": {
-      "comment": "Heading above read-only rows filed from this Source earlier",
+    "promote.row.alreadyPromotedHeading": {
+      "comment": "Heading above read-only rows promoted from this Source earlier",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Already filed"
+            "value": "Already promoted"
           }
         }
       }
     },
-    "promote.row.filedEarlier": {
-      "comment": "Assessment stand-in on a read-only already-filed row",
+    "promote.row.promotedEarlier": {
+      "comment": "On a read-only already-promoted row, in the slot after the record it was promoted to",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Filed from this Source earlier"
+            "value": "Promoted from this Source earlier"
           }
         }
       }
     },
-    "promote.target.filesOn": {
+    "promote.target.promotesTo": {
       "comment": "Accessibility label for a row's target menu; argument is the subject's name",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Files %@ on"
+            "value": "Promotes %@ to"
           }
         }
       }
@@ -18064,7 +18064,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ is also filed on %2$@"
+            "value": "%1$@ is also promoted to %2$@"
           }
         }
       }
@@ -18076,19 +18076,43 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ is also filed New and looks the same"
+            "value": "%@ is also promoted New and looks the same"
           }
         }
       }
     },
-    "promote.warning.duplicateBody": {
-      "comment": "Warning body when two rows may be the same record",
+    "promote.warning.duplicateBody.person": {
+      "comment": "Warning body when two person rows may be the same person",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "These may be the same record. Combine them on the Evidence graph, or pick another target for one row."
+            "value": "These may be the same person. Combine them on the Evidence graph, or pick another target for one row."
+          }
+        }
+      }
+    },
+    "promote.warning.duplicateBody.event": {
+      "comment": "Warning body when two event rows may be the same event",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These may be the same event. Combine them on the Evidence graph, or pick another target for one row."
+          }
+        }
+      }
+    },
+    "promote.warning.duplicateBody.place": {
+      "comment": "Warning body when two place rows may be the same place",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These may be the same place. Combine them on the Evidence graph, or pick another target for one row."
           }
         }
       }
@@ -18117,14 +18141,14 @@
         }
       }
     },
-    "promote.connection.files": {
-      "comment": "Subrow state of a Promote connection that files on Done",
+    "promote.connection.promotes": {
+      "comment": "Subrow state of a Promote connection that promotes on Done",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Files on Done"
+            "value": "Promotes on Done"
           }
         }
       }
@@ -18153,14 +18177,14 @@
         }
       }
     },
-    "promote.connection.spoken.files": {
-      "comment": "VoiceOver: a Promote connection that files on Done",
+    "promote.connection.spoken.promotes": {
+      "comment": "VoiceOver: a Promote connection that promotes on Done",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Files on Done."
+            "value": "Promotes on Done."
           }
         }
       }
@@ -18220,7 +18244,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Not filed, both ends are %@."
+            "value": "Not promoted, both ends are %@."
           }
         }
       }
@@ -18232,19 +18256,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Not filed · both ends are %@"
+            "value": "Not promoted · both ends are %@"
           }
         }
       }
     },
-    "promote.connection.otherEnd.filed": {
-      "comment": "Note under a Promote connection whose other end is already filed; argument is its name",
+    "promote.connection.otherEnd.promoted": {
+      "comment": "Note under a Promote connection whose other end is already promoted; argument is its name",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ is already filed"
+            "value": "%@ is already promoted"
           }
         }
       }
