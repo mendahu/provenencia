@@ -28,40 +28,6 @@ enum ConnectionSentenceRegistry {
         var phrase: @Sendable (String?) -> String
         /// Whether the kind has a term a reason can name.
         var namesTerm: Bool
-        /// What a row shares with a connected record, after "they share": "a spouse", "a birth
-        /// event". nil when the input names nothing this kind can word.
-        var share: @Sendable (ShareInput, _ similar: Bool) -> String?
-    }
-
-    /// What the engine reports of a connection between a row and a neighbor, read from the
-    /// neighbor's side (`segmentcompare.ReadFrom`).
-    struct ShareInput: Sendable, Equatable {
-        var kind: EvidenceBridgeKind
-        /// The endpoint property the neighbor is at ("person", "event", "to"); "" for a symmetric link.
-        var neighborEnd: String
-        /// The term the neighbor carries; nil when the connection has none.
-        var neighborTerm: CatalogEvidenceTerm?
-        /// The term names the neighbor ("the neighbor is the parent"), not the row.
-        var namesNeighbor: Bool
-        /// A participation's event type.
-        var eventType: CatalogEvidenceTerm?
-        var neighborName: String
-
-        init(
-            kind: EvidenceBridgeKind,
-            neighborEnd: String,
-            neighborTerm: CatalogEvidenceTerm? = nil,
-            namesNeighbor: Bool = true,
-            eventType: CatalogEvidenceTerm? = nil,
-            neighborName: String
-        ) {
-            self.kind = kind
-            self.neighborEnd = neighborEnd
-            self.neighborTerm = neighborTerm
-            self.namesNeighbor = namesNeighbor
-            self.eventType = eventType
-            self.neighborName = neighborName
-        }
     }
 
     /// Wording for one term key (and optionally one event type) of a kind.
@@ -86,45 +52,13 @@ enum ConnectionSentenceRegistry {
         return term.lowercased(with: .autoupdatingCurrent)
     }
 
-    // MARK: Share wording
-
-    /// A term as the sheet names it: a product term by its localized name, a researcher's by its label.
-    private static func termName(_ term: CatalogEvidenceTerm, property: String) -> String {
-        PropertyTermDisplay.name(key: term.key, origin: term.origin, propertyKey: property, catalogLabel: term.label)
-    }
-
-    /// A product term's share phrase, whole, from the one wording table; nil for a key it has no
-    /// share phrase for.
-    /// `namesRow` reads the phrase for a term that names the row, not the neighbor.
-    private static func seededShare(property: String, key: String?, similar: Bool, namesRow: Bool = false) -> String? {
-        guard let key,
-              let wording = L10n.PropertyTerm.wording(propertyKey: property, termKey: key)
-        else { return nil }
-        let phrase = namesRow
-            ? (similar ? wording.shareOtherEndSimilar : wording.shareOtherEnd)
-            : (similar ? wording.shareSimilar : wording.share)
-        return phrase.map { L10n.string($0) }
-    }
-
-    /// A term with no seeded wording (a researcher's), named as it is: "a connection (Godparent)".
-    /// nil when it has no label.
-    private static func namedShare(_ label: String?, similar: Bool) -> String? {
-        guard let label = label?.trimmingCharacters(in: .whitespacesAndNewlines), !label.isEmpty else { return nil }
-        return Text.shareConnectionNamed(term: label, similar: similar)
-    }
-
     static let entries: [KindEntry] = [
         KindEntry(
             kind: .location,
             termProperty: SeededPropertyKey.role,
             sentence: { Text.bridgeSummaryLocation(event: $0.a, place: $0.b) },
             phrase: { _ in L10n.string(Text.bridgeSummaryLocationBare) },
-            namesTerm: false,
-            share: { input, similar in
-                // The neighbor is a place only when it is the place endpoint.
-                guard input.neighborEnd == SeededPropertyKey.place else { return nil }
-                return Text.shareLocation(place: input.neighborName, similar: similar)
-            }
+            namesTerm: false
         ),
         KindEntry(
             kind: .relationship,
@@ -137,17 +71,7 @@ enum ConnectionSentenceRegistry {
                 guard let term else { return L10n.string(Text.bridgeSummaryRelationshipBare) }
                 return Text.bridgeSummaryRelationshipTypeOnly(type: term)
             },
-            namesTerm: true,
-            share: { input, similar in
-                // The engine read the term from the neighbor's side. A term that names the
-                // row (a researcher's, with no inverse) is only named: "a connection (Godparent)".
-                guard let term = input.neighborTerm else { return nil }
-                if input.namesNeighbor,
-                   let phrase = seededShare(property: SeededPropertyKey.relationshipType, key: term.productKey, similar: similar) {
-                    return phrase
-                }
-                return namedShare(termName(term, property: SeededPropertyKey.relationshipType), similar: similar)
-            }
+            namesTerm: true
         ),
         KindEntry(
             kind: .placeRelationship,
@@ -160,17 +84,7 @@ enum ConnectionSentenceRegistry {
                 guard let term else { return L10n.string(Text.bridgeSummaryPlaceRelationshipBare) }
                 return Text.bridgeSummaryPlaceRelationshipTypeOnly(type: term)
             },
-            namesTerm: true,
-            share: { input, similar in
-                // The term names the row when the neighbor is the "to" end ("Leeds is part of
-                // Yorkshire": from Leeds, Yorkshire is a parent place) and the neighbor otherwise.
-                seededShare(
-                    property: SeededPropertyKey.placeRelationshipType,
-                    key: input.neighborTerm?.productKey,
-                    similar: similar,
-                    namesRow: !input.namesNeighbor
-                )
-            }
+            namesTerm: true
         ),
         KindEntry(
             kind: .participation,
@@ -183,20 +97,7 @@ enum ConnectionSentenceRegistry {
                 guard let term else { return L10n.string(Text.bridgeSummaryParticipationBare) }
                 return Text.bridgeSummaryParticipationRoleOnly(role: term)
             },
-            namesTerm: true,
-            share: { input, similar in
-                // A person neighbor is worded by its role and name; an event neighbor, by its type.
-                if input.neighborEnd == SeededPropertyKey.person {
-                    guard let term = input.neighborTerm else { return nil }
-                    if let role = seededShare(property: SeededPropertyKey.role, key: term.productKey, similar: similar) {
-                        return Text.shareNamed(phrase: role, name: input.neighborName)
-                    }
-                    return namedShare(termName(term, property: SeededPropertyKey.role), similar: similar)
-                }
-                return seededShare(property: SeededPropertyKey.eventType, key: input.eventType?.productKey, similar: similar)
-                    ?? namedShare(input.eventType.map { termName($0, property: SeededPropertyKey.eventType) }, similar: similar)
-                    ?? Text.shareEventUntyped(similar: similar)
-            }
+            namesTerm: true
         ),
     ]
 
@@ -305,15 +206,5 @@ enum ConnectionSentenceRegistry {
         let entry = entry(kind)
         if term != nil { return entry.sentence(slots) }
         return (entry.noTerm ?? entry.sentence)(slots)
-    }
-
-    /// What a row shares with its neighbor, after "they share": "a spouse", "a similar birth
-    /// event". "a connection" when nothing names it (no connection on the page, or one this kind
-    /// cannot word from that side).
-    static func share(_ input: ShareInput?, similar: Bool) -> String {
-        guard let input, let phrase = entry(input.kind).share(input, similar) else {
-            return Text.shareConnection(similar: similar)
-        }
-        return phrase
     }
 }

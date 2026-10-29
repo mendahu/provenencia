@@ -352,17 +352,6 @@ struct CatalogPromoteGraphAlignmentProposal: Sendable, Equatable {
     var rows: [CatalogPromoteGraphAlignmentRow]
 }
 
-/// A term as the evidence wire names it: its key, the catalog's label, and whose term it is.
-/// `key` names a product term only when `CatalogOrigin.isProduct(origin)`.
-struct CatalogEvidenceTerm: Sendable, Equatable {
-    var key: String
-    var label: String
-    var origin: String
-
-    /// The key, when it is a product term.
-    var productKey: String? { CatalogOrigin.isProduct(origin) ? key : nil }
-}
-
 struct CatalogSubjectPosition: Sendable, Equatable {
     var subjectID: String
     var gridX: Int64
