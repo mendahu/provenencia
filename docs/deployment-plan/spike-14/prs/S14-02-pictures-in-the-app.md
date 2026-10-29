@@ -106,6 +106,8 @@ Event and Place pages show a Pictures section, lead their headers with the pictu
 | Person Timeline event picture | Spike 13 R-26 |
 | Pictures as matching weight for Event/Place | not planned ([event-place-pictures.md](../event-place-pictures.md) Stays later) |
 | New kit primitive under `DesignSystem/` | not planned (compose existing `PVSectionHeader`, `CachedThumbnail`, `PVBadge`, `PVButton`, `PVActionMenu`) |
+| `ReconciledValueDisplay.string(for: .depiction)` / `L10n.Conclusions.likenessValue` ("Likeness") | not planned — Person text fallback when no crop is drawn (working rule keeps Person likeness copy); Event/Place pages do not list picture Properties as Details rows (gallery slot only) |
+| CitationComposer L10n catalog comments that still say "person" on `depictionThumbLabel` / `depictionLineLabel` | not planned — values already take any Subject label; D-11 renames the Swift helper and its call-site comments only |
 
 ## 4. Current state
 
