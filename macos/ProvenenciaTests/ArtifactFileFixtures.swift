@@ -2,6 +2,7 @@ import AppKit
 import CoreGraphics
 import Foundation
 import PDFKit
+import UniformTypeIdentifiers
 @testable import Provenencia
 
 enum ArtifactFileFixtureError: Error {
@@ -32,13 +33,18 @@ enum ArtifactFileFixtures {
     }
 
     /// An all-red image of `fileType`, or with `topHalfRed` a red top half over a blue bottom half.
+    /// `dpi` and `orientation` (EXIF 1...8) are written into the file when given;
+    /// `grayscale` writes one gray channel, so a large JPEG stays small in memory.
     static func writeImage(
         projectDir: String,
         relPath: String,
         width: Int = 8,
         height: Int = 8,
         fileType: NSBitmapImageRep.FileType = .png,
-        topHalfRed: Bool = false
+        topHalfRed: Bool = false,
+        dpi: CGFloat? = nil,
+        orientation: Int? = nil,
+        grayscale: Bool = false
     ) throws {
         // A bitmap context, not NSImage.lockFocus: that draws at the display's
         // backing scale and would double the pixel size on a Retina Mac.
@@ -48,8 +54,8 @@ enum ArtifactFileFixtures {
             height: height,
             bitsPerComponent: 8,
             bytesPerRow: 0,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            space: grayscale ? CGColorSpaceCreateDeviceGray() : CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: grayscale ? CGImageAlphaInfo.none.rawValue : CGImageAlphaInfo.premultipliedLast.rawValue
         ) else { throw ArtifactFileFixtureError.failed }
         context.setFillColor(red: 1, green: 0, blue: 0, alpha: 1)
         context.fill(CGRect(x: 0, y: 0, width: width, height: height))
@@ -58,12 +64,60 @@ enum ArtifactFileFixtures {
             context.setFillColor(red: 0, green: 0, blue: 1, alpha: 1)
             context.fill(CGRect(x: 0, y: 0, width: width, height: height / 2))
         }
-        guard let cgImage = context.makeImage(),
-              let data = NSBitmapImageRep(cgImage: cgImage).representation(using: fileType, properties: [:])
-        else {
-            throw ArtifactFileFixtureError.failed
+        let type: UTType
+        switch fileType {
+        case .jpeg: type = .jpeg
+        case .tiff: type = .tiff
+        case .bmp: type = .bmp
+        case .gif: type = .gif
+        default: type = .png
         }
-        try write(data, projectDir: projectDir, relPath: relPath)
+        var properties: [CFString: Any] = [:]
+        if let dpi {
+            properties[kCGImagePropertyDPIWidth] = dpi
+            properties[kCGImagePropertyDPIHeight] = dpi
+        }
+        if let orientation { properties[kCGImagePropertyOrientation] = orientation }
+        let data = NSMutableData()
+        guard let cgImage = context.makeImage(),
+              let destination = CGImageDestinationCreateWithData(data, type.identifier as CFString, 1, nil)
+        else { throw ArtifactFileFixtureError.failed }
+        CGImageDestinationAddImage(destination, cgImage, properties as CFDictionary)
+        guard CGImageDestinationFinalize(destination) else { throw ArtifactFileFixtureError.failed }
+        try write(data as Data, projectDir: projectDir, relPath: relPath)
+    }
+
+    /// A PNG that declares `width` x `height` and holds no real pixels: its IDAT is filler.
+    /// ImageIO reads the declared size from it and nothing decodes. ImageIO refuses a header
+    /// whose data is far too small for the size it declares, so the filler is one byte in
+    /// 3,000 pixels.
+    static func declaredPNGHeaderData(width: Int, height: Int) -> Data {
+        func be32(_ value: UInt32) -> [UInt8] {
+            [UInt8(value >> 24), UInt8((value >> 16) & 0xff), UInt8((value >> 8) & 0xff), UInt8(value & 0xff)]
+        }
+        func chunk(_ type: String, _ body: [UInt8]) -> [UInt8] {
+            let typed = Array(type.utf8) + body
+            return be32(UInt32(body.count)) + typed + be32(crc32(typed))
+        }
+        let ihdr = be32(UInt32(width)) + be32(UInt32(height)) + [8, 2, 0, 0, 0]
+        let filler = [UInt8(0x78), 0x9c] + [UInt8](repeating: 0, count: max(1, width * height / 3000))
+        let signature: [UInt8] = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+        return Data(signature + chunk("IHDR", ihdr) + chunk("IDAT", filler) + chunk("IEND", []))
+    }
+
+    static func writeDeclaredPNGHeader(projectDir: String, relPath: String, width: Int, height: Int) throws {
+        try write(declaredPNGHeaderData(width: width, height: height), projectDir: projectDir, relPath: relPath)
+    }
+
+    private static func crc32(_ bytes: [UInt8]) -> UInt32 {
+        var crc: UInt32 = 0xffff_ffff
+        for byte in bytes {
+            crc ^= UInt32(byte)
+            for _ in 0..<8 {
+                crc = (crc & 1) != 0 ? (crc >> 1) ^ 0xedb8_8320 : crc >> 1
+            }
+        }
+        return ~crc
     }
 
     static func writeBlankPDF(projectDir: String, relPath: String, pageCount: Int) throws {
