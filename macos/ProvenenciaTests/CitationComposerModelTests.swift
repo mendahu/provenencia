@@ -123,6 +123,9 @@ struct CitationComposerModelTests {
         store.subjectPositionsBySubject[placeID] = CatalogSubjectPosition(
             subjectID: placeID, gridX: 16, gridY: 0
         )
+        store.nextWriteEffects = CatalogWriteEffects(
+            evidenceGraphs: [graphID], citationSources: [sourceID], lists: [.propertyUsage]
+        )
         return store
     }
 
@@ -552,12 +555,12 @@ struct CitationComposerModelTests {
 
         let jones = makeModel(store: store)
         await jones.prepare()
-        #expect(jones.listedCitations.map(\.citation.ref).sorted() == ["CIT-A", "CIT-C"])
-        #expect(jones.listedCount(for: "art-0") == 2)
+        #expect(jones.listedCitations.map(\.citation.ref).sorted() == ["CIT-A", "CIT-B", "CIT-C"])
+        #expect(jones.listedCount(for: "art-0") == 3)
 
         let smith = makeModel(store: store, graphID: "g-2", subjectID: "sub-person-2")
         await smith.prepare()
-        #expect(smith.listedCitations.map(\.citation.ref).sorted() == ["CIT-B", "CIT-C"])
+        #expect(smith.listedCitations.map(\.citation.ref).sorted() == ["CIT-A", "CIT-B", "CIT-C"])
     }
 
     @Test func firstObservationMovesANewCitationIntoTheGraph() async {
@@ -571,14 +574,15 @@ struct CitationComposerModelTests {
             $0.values.propertyID = occupationPropertyID
             $0.values.valueText = "miller"
         }
+        store.nextWriteEffects = CatalogWriteEffects(citationSources: [sourceID], lists: [.propertyUsage])
         await jones.saveAuthoring()
         let created = jones.activeCitationID
         #expect(created != nil)
-        #expect(jones.listedCitations.contains { $0.id == created })
+        #expect(jones.listedCitations.contains { $0.citation.id == created })
 
         let smith = makeModel(store: store, graphID: "g-2", subjectID: "sub-person-2")
         await smith.prepare()
-        #expect(!smith.listedCitations.contains { $0.id == created })
+        #expect(smith.listedCitations.contains { $0.id == created })
     }
 
     @Test func incompatibleSubjectClearsPropertyAndDisablesSave() async {

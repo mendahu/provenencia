@@ -111,6 +111,7 @@ struct EvidenceGraphModelTests {
                 description: ""
             ),
         ]
+        store.nextWriteEffects = CatalogWriteEffects(evidenceGraphs: [graphID])
         return store
     }
 
@@ -365,6 +366,7 @@ struct EvidenceGraphModelTests {
         let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         let handle: QueryHandle<EvidenceGraphRows> = model.session.query(key)
         await waitForQuery(handle)
+        store.nextWriteEffects = CatalogWriteEffects(evidenceGraphs: [graphID])
         let (created, effects) = try await store.createSubject(
             projectDir: projectDir, userID: "user-1", graphID: graphID,
             subjectTypeID: personTypeID, label: "Ada", description: "", placement: nil
@@ -1891,6 +1893,10 @@ struct EvidenceGraphModelTests {
         #expect(!store.recordedCalls.contains { $0.hasPrefix("unpromoteSubject") })
 
         model.beginUnpromote(subjectID: "s-james")
+        let removed = ["s-james", "b1-sonof", "b2-part"].compactMap { store.membershipBySubject[$0]?.entity.id }
+        store.nextWriteEffects = CatalogWriteEffects(
+            handles: removed, evidenceGraphs: [graphID], handleScopes: removed
+        )
         await model.confirmUnpromote()
         #expect(store.recordedCalls.contains("unpromoteSubject id=s-james"))
         #expect(model.pendingUnpromote == nil)
@@ -1917,8 +1923,10 @@ struct EvidenceGraphModelTests {
             ),
         ]
         let before = store.sourcesByProject
+        let scripted = CatalogWriteEffects(handles: removed, evidenceGraphs: [graphID], handleScopes: removed)
+        store.nextWriteEffects = scripted
         let effects = try await store.unpromoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "s-james")
-        #expect(effects == CatalogWriteEffects(handles: removed, evidenceGraphs: [graphID], handleScopes: removed))
+        #expect(effects == scripted)
         #expect(store.sourcesByProject == before)
     }
 

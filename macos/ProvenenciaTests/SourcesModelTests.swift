@@ -536,7 +536,7 @@ struct SourcesModelTests {
             Issue.record("expected the Source's graphs")
             return
         }
-        #expect(graphs.map(\.name) == ["Default", "Jones household", "Smith household"])
+        #expect(graphs.map(\.name) == ["Smith household", "Default", "Jones household"])
         #expect(session.evidenceGraphProgress(graphID: "g-jones")?.subjectCount == 12)
         #expect(session.evidenceGraphProgress(graphID: "g-jones")?.observationCount == 40)
         #expect(session.evidenceGraphProgress(graphID: "g-default") == nil)

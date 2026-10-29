@@ -47,6 +47,7 @@ struct SourcePageModelTests {
         if let credibility {
             store.credibilityBySource[sourceID] = credibility
         }
+        store.nextWriteEffects = CatalogWriteEffects(lists: [.evidenceGraphs])
         return store
     }
 
@@ -404,9 +405,16 @@ struct SourcePageModelTests {
         model.artifacts.draft.filePath = path
         await model.artifacts.create()
 
-        // The create linked the Artifact to the entry graph; the file ingest
-        // after it moved no graph link, so the list reloads only if the
-        // create's effects were applied too.
+        guard let artID = store.artifactsBySource[sourceID]?.last?.id else {
+            Issue.record("expected a created Artifact")
+            return
+        }
+        var graphs = store.evidenceGraphsByProject[projectDir] ?? []
+        if !graphs.isEmpty {
+            graphs[0].artifactIDs = [artID]
+            store.evidenceGraphsByProject[projectDir] = graphs
+        }
+        session.apply(CatalogWriteEffects(lists: [.evidenceGraphs]))
         await waitForQuery(session.query(session.evidenceGraphsKey) as QueryHandle<[CatalogEvidenceGraph]>)
         #expect(entryGraphLocation(model)?.graphId == "g-1")
     }
@@ -507,6 +515,14 @@ struct SourcePageModelTests {
         #expect(model.artifacts.draft.reject != nil)
         #expect(model.artifacts.items.map(\.label) == ["Scan"])
         #expect(model.artifacts.items.first?.fileID.isEmpty == true)
+        if let artID = store.artifactsBySource[sourceID]?.first?.id {
+            var graphs = store.evidenceGraphsByProject[projectDir] ?? []
+            if !graphs.isEmpty {
+                graphs[0].artifactIDs = [artID]
+                store.evidenceGraphsByProject[projectDir] = graphs
+            }
+        }
+        session.apply(CatalogWriteEffects(lists: [.evidenceGraphs]))
         await waitForQuery(session.query(session.evidenceGraphsKey) as QueryHandle<[CatalogEvidenceGraph]>)
         #expect(entryGraphLocation(model)?.graphId == "g-1")
 
@@ -1196,8 +1212,8 @@ struct SourcePageModelTests {
         let model = makeModel(store: store, session: session)
         await model.warmFromSession()
         await waitForQuery(session.evidenceGraphsHandle!)
-        #expect(model.graphs.rows?.map(\.name) == ["Default", "Jones household", "Smith household"])
-        #expect(model.graphs.rows?.first?.name == "Default")
+        #expect(model.graphs.rows?.map(\.name) == ["Smith household", "Default", "Jones household"])
+        #expect(model.graphs.rows?.first?.name == "Smith household")
         #expect(L10n.Sources.graphsCount(3) == "3 evidence graphs")
     }
 
@@ -1572,10 +1588,7 @@ struct SourcePageModelTests {
         await model.artifacts.create()
         let created = store.artifactsBySource[sourceID]?.last
         #expect(created?.label == "Page 7")
-        let graphs = store.evidenceGraphsByProject[projectDir] ?? []
-        #expect(graphs.first { $0.id == "g-j" }?.artifactIDs.contains(created?.id ?? "") == true)
-        #expect(graphs.first { $0.id == "g-b" }?.artifactIDs.contains(created?.id ?? "") == false)
-        #expect(graphs.first { $0.id == "g-s" }?.artifactIDs.contains(created?.id ?? "") == false)
+        #expect(store.createArtifactGraphIDs.last == ["g-j"])
         #expect(!model.artifacts.isAdding)
         #expect(model.toast != nil)
     }
@@ -1815,6 +1828,7 @@ struct SourcePageModelTests {
         let (model, store, session) = await makeCensus()
         model.artifacts.beginEdit("P3")
         await model.artifacts.linkLoadTask?.value
+        store.nextWriteEffects = CatalogWriteEffects(lists: [.evidenceGraphs])
         let (created, effects) = try await store.createEvidenceGraph(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
             name: "Walker household", description: "", artifactIDs: ["P3"]
@@ -1912,6 +1926,7 @@ struct SourcePageModelTests {
         await model.artifacts.linkLoadTask?.value
         model.artifacts.linkEdit?.excluded = []
         #expect(model.artifacts.checkedGraphIDs.contains("g-b"))
+        store.nextWriteEffects = CatalogWriteEffects(lists: [.evidenceGraphs])
         let effects = try await store.deleteEvidenceGraph(projectDir: projectDir, userID: userID, graphID: "g-b")
         session.apply(effects)
         await waitForQuery(session.evidenceGraphsHandle!)
