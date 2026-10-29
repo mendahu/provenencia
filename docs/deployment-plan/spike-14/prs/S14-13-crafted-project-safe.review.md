@@ -1,10 +1,11 @@
 # Review — S14-13 A crafted project can't crash the app
 
-**Verdict:** round 1: Fits with changes — Not ready. Round 2: pending.
-**Rounds:** 1 (round 2 pending). **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes (round 2); every finding fixed, no blocker open.
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
-- None open. Answered before planning (user, 2026-10-29): the viewer decodes once at no more than 64 MP for display, crop and OCR (D-8, replacing the map's "screen-sized decode"); the viewer refuses an image declaring over 256 MP, so the 198 MP scan stays viewable (D-7).
+- D-10 bends a working rule: the viewer checks against Go's media type, or, when macOS has no type for it, the extension Go assigned from the same table. **User, 2026-10-29: media type, else extension.** STEP-8 rewords the rule and the scope entry.
+- Answered before planning (user, 2026-10-29): the viewer decodes once at no more than 64 MP for display, crop and OCR (D-8, replacing the map's "screen-sized decode"); the viewer refuses an image declaring over 256 MP, so the 198 MP scan stays viewable (D-7).
 
 ## Writer's own calls
 - The grid range is ±1,000,000 cells (the audit's number) (D-1).
@@ -77,3 +78,43 @@ The limit was on `GraphCanvasGridMapping`; `macos/App/Features/GraphCanvas/READM
 
 ### X-9 · minor · Smaller gaps
 **Answer:** Fixed — `installImageRasterForTesting` nil case (D-14); the fixtures are decided (a grayscale 12,000 × 6,000 JPEG; a shared `pngHeaderData(width:height:)` with CRC); an Out line for the 40 M-point board; version 0.2.2; the map link in STEP-8 (and made at planning time).
+
+## Round 2
+
+Both reviewers confirmed the round-1 answers against the code. New findings:
+
+### M-12 · blocker · D-10 bends the working rule on the viewer's type check
+**Answer:** To user → answered (2026-10-29): media type, else extension. D-10 rewritten; listed under **Rules this plan bends**; STEP-8 rewords the working rule and the S14-13 scope entry; DoD line.
+
+### M-13 · blocker · New image fixtures sidestep `ArtifactFileFixtures`
+**Answer:** Fixed — §6 Codebase fit: `ArtifactFileFixtures.writeImage` gains `dpi:`, `orientation:`, `grayscale:`; `writeDeclaredPNGHeader` / `declaredPNGHeaderData` live there; STEP-4 updates the `add-swift-test` fixture line.
+
+### M-14 · blocker · A second NaN-and-saturate floor conversion
+**Answer:** Fixed — D-3: `GraphCanvasGridMapping.saturatingFloor(_:)`, used by `gridCell` and by `maxGridX` / `maxGridY`; T-5 tests it.
+
+### Below the bar (maintainability)
+**Answer:** Fixed — `maxDecodedPixels` renamed `maxDecodePixels`; the viewer's edge constant is `maxEdge`; `applyTransform:` and `appliesOrientation` go if T-11 settles on `true`; the migrations folder is excluded from the stop condition; the sweeps exclude this plan, its log and the audits, and name the unrelated `GraphCanvasItemView` hit; `cgImage(from:)` keeps only its test-hook caller (noted under Deletes).
+
+### X-10 · blocker · T-9 expects 7999 where D-12 gives 8000
+**Answer:** Fixed — T-9 and Edges expect 8000; ImageIO scales the short edge.
+
+### X-11 · major · The test hook's nil case breaks the whole-page OCR test
+**Answer:** Fixed — D-14: `installImageRasterForTesting(_:raster:)`; the whole-page case passes a 1 × 1 raster; STEP-6 changes it.
+
+### X-12 · major · DPI of 0 or absurd values
+**Answer:** Fixed — D-11: DPI only when finite and in 1…100,000, else 72; orientation outside 1…8 → 1; T-8 case for `dpi: 0`.
+
+### X-13 · major · Sweeps hit the plan itself
+**Answer:** Fixed — STEP-8 and DoD sweeps exclude the plan, its log and the audits.
+
+### X-14 · major · PDF snapshot non-nil while loading; rule contradiction
+**Answer:** Fixed — D-15 requires `pdfDocument != nil` as today; the rule wording went to the user (M-12).
+
+### X-15 · minor · Fixtures, tolerances, path constants
+**Answer:** Fixed — fixtures through `ArtifactFileFixtures`; 0.01 tolerances for DPI and point size; T-10's fixture named; `swiftEvidencePlacement` and `swiftArtifactImageDecode` path constants named.
+
+### X-16 · minor · STEP-3's `rg` misses sites
+**Answer:** Fixed — STEP-3 runs a broader `rg` and lists kept hits.
+
+### X-17 · minor · D-5 spin, defer placement, webp
+**Answer:** Fixed — Edges describes the spin and where the defer is registered; the Stop condition notes `image/webp` is untested.
