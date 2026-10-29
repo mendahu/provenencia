@@ -11,8 +11,10 @@ Genealogy's core work is linking records: showing that a mention in one record a
 The Person page shows the person's **Evidence graphs** and the **links** between them.
 
 - **A node is an Evidence graph** that holds an accepted member of the person: one record's reading of one group of people (a census household, an obituary, a birth certificate). Not a Source: one census Source can hold sixty household graphs.
-- **A link between two graphs** compares the person's two members in them: every Property both record, through value compare and property compare (matching's layers 1 and 2), and every relationship whose neighbors are filed on the same handle (the father on both records is PER-X). It lists what agrees and what conflicts, each with the facts behind it.
-- **Strength is read from that list**, not from points: how many facts agree, of which kinds, and whether anything conflicts. How it is expressed is open (below).
+- **A link between two graphs compares the graphs, not one person** (user, 2026-10-29). Two graphs are linked by the Subjects they have in common: each pair of Subjects, one in each graph, filed on the same canonical entity. A census household and an obituary that share five people share five pairs. The link carries that count and, for each shared entity, how its two Subjects compare. Shared relatives are the family support; no Property or relationship is named in code.
+- **Each shared pair is compared as Subject compare does** (user, 2026-10-29): its per-Property router (leads, pools, periods, lifespan) and value and property compare under it (matching's layers 1 – 3), as the starting point. Which Properties count follows the registry's subject section, so a kind's list is one registry entry.
+- **Layered and driven by the registry, as matching is.** One layer compares two Subjects; the layer above compares two graphs from their shared pairs. Each is a pure package with its own section of `core/matchregistry` for its knobs. The layers read nothing of graph alignment's weights, band or accept bar.
+- **Strength is read from what the layers return:** how many entities the graphs share, and for each shared pair what agrees and what conflicts. How it is expressed is open (below).
 - **What the shape shows:** a graph that links to no other is a record with nothing tying it to the rest; two groups of graphs that do not connect may be two people folded into one; a link with a conflict is where a Reconciliation Claim or a rejected claim is due.
 
 ## What is stored
@@ -28,13 +30,13 @@ Nothing new. The links are computed on read from Observations, Identity Claims a
 
 ## Scale
 
-A person with 50 Evidence graphs has 1,225 pairs, each comparing two Subjects; most people have 5 – 20. A place or event with thousands of members is not on this page this spike; when Event and Place adopt it, the read bounds its pairs (for example, only graphs that share a fact or a neighbor).
+A person with 50 Evidence graphs has 1,225 graph pairs; each compares only the Subjects the two graphs share (a household's few people, an obituary's few dozen at most); most people have 5 – 20 graphs. A place or event with thousands of members is not on this page this spike; when Event and Place adopt it, the read bounds its pairs (for example, only graphs that share a fact or a neighbor).
 
 ## Open questions
 
-1. **Which Properties count.** Every Property both members record, or a list per Subject type. Matching's lead list (name, sex, date, toponym, event type) misses occupation and military service, which are often the only thread (an obituary's "Robert, in the Air Force").
-2. **How strength is expressed.** A count of agreeing facts by kind, named levels, or something else, and what makes a link strong enough to join two graphs into one group for the islands view.
-3. **Family support.** Whether a link also shows the other people the two graphs share (a household that matches as a family is stronger than one person matching).
+1. ~~**Which Properties count.**~~ Answered 2026-10-29: start from Subject compare's subject section; the graph layer counts shared entities and names no Property. Whether a kind's list widens (occupation, military service: an obituary's "Robert, in the Air Force") is a registry entry later.
+2. **How strength is expressed.** A count of agreeing facts by kind, named levels, or something else, and what makes a link strong enough to join two graphs into one group for the islands view. On the Person page every pair of the person's graphs shares at least the person, so a link always exists: a record stands apart, and two groups separate, only by this strength rule (a conflicting or too-thin link does not join).
+3. ~~**Family support.**~~ Answered 2026-10-29: it is the link itself; two graphs are linked by every entity they share.
 4. **Source quality and independence.** Whether credibility, transcription certainty, and two graphs from one Source or informant change a link's strength in the first version.
 
 ## Later

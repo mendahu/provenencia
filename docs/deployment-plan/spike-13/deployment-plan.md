@@ -78,8 +78,8 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 ### Slice 7 — How a person's records connect
 
 - **Links between Evidence graphs are computed, never stored** (user, 2026-10-29). A node is an Evidence graph holding an accepted member of the person; a link compares the person's two members in two graphs. Nothing is added to the catalog: no researcher-chosen links and no research log. Each Identity Claim keeps its status and argument. Binds S13-26 – S13-28.
-- **A new comparison, not the band.** The comparison is a new pure package built on value compare and property compare (layers 1 and 2) and on layer 3's per-Property router: `claimevidence.routeOf` and its section compare move into `subjectcompare` in S13-24 as an exported compare over every Property both sides record, with no points (leads, pools, periods and the now-exported lifespan, and any other Property on its own), so graph alignment's weighted compare and this comparison share one router. Each Subject's comparable values come from one shared loader (S13-29); it reads no graph alignment weight, band or accept bar, and Promote keeps its own scoring (working rule "The score ranks, unseen"). Relationships compare by whether the neighbors are filed on the same handle, read from the canonical graph, not by segment compare's points. Binds S13-26.
-- **Each PR updates what it makes false.** S13-26: [conclusion §5.1](../../conclusion-layer-data-model.md#51-two-lenses) and §13 item 4 (the comparison is designed), [`matching-model.md`](../../matching-model.md) and [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md) (a consumer of layers 1 and 2 that is not matching), [`research-judgment-model.md`](../../research-judgment-model.md) §5 if strength reads credibility. Binds S13-26.
+- **A new comparison, layered like matching** (user, 2026-10-29). Two pure layers, each with its own `core/matchregistry` section for its knobs: one compares two Subjects filed on one handle, the other compares two Evidence graphs from the Subjects they share. The Subject layer starts from Subject compare: its per-Property router (leads, pools, periods and the now-exported lifespan, moved from `claimevidence.routeOf` into `subjectcompare` in S13-24) over value compare and property compare, with no points, and which Properties count is the subject section's list per kind. The graph layer names no Property or relationship: two graphs are linked by every pair of their Subjects filed on the same canonical entity, so shared relatives are the family support. Neither reads a graph alignment weight, band or accept bar; Promote keeps its own scoring (working rule "The score ranks, unseen"). Each Subject's comparable values come from one shared loader (S13-29). Binds S13-26.
+- **Each PR updates what it makes false.** S13-26: [conclusion §5.1](../../conclusion-layer-data-model.md#51-two-lenses) and §13 item 4 (the comparison is designed), [`matching-model.md`](../../matching-model.md) and [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md) (the two new layers, their registry sections and knob rows), [`research-judgment-model.md`](../../research-judgment-model.md) §5 if strength reads credibility. Binds S13-26.
 
 ### Engine
 
@@ -133,7 +133,7 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 | S13-20 | Source date engine | 6 | An optional publication date on `sources` as a `date_values` reference (migration, model, read and write RPCs); `ListPersonClaims` groups carry it | — | S13-01 | — | Scoped |
 | S13-07 | Stored claim read | 7 | Identity Claims have no stored pins to read back (conclusion §5) | — | — | — | Descoped (2026-10-29) → open question 9 |
 | S13-18 | Claim review | 7 | Replaced by slice 7's view of how the records connect | — | — | — | Descoped (2026-10-29) → S13-26 – S13-28 |
-| S13-26 | Comparing two of a person's records | 7 | A pure package: two members of one handle compared on every Property both record (layers 1 and 2, through layer 3's router) and on relationships whose neighbors are filed on one handle; returns agreements and conflicts and a strength | — | S13-24 | — | Scoped |
+| S13-26 | Comparing two Evidence graphs | 7 | Two pure layers with registry sections: two Subjects on one handle compared through Subject compare's router; two Evidence graphs compared from every Subject pair they share on a canonical entity; returns the shared entities, each pair's agreements and conflicts, and a strength | — | S13-24 | — | Scoped |
 | S13-29 | One loader for a Subject's comparable values | 7 | Preparatory: `promotealign`'s per-graph layer loader (values with lifespans, bridges, metas) moves into a shared `core/database` package with one memo key; Promote and `persondetail` read it; Go only | — | S13-24 | — | Scoped |
 | S13-27 | Person record links read | 7 | `GetPersonRecordLinks` RPC in `persondetail`: the person's Evidence graphs (Source title, type) and a link for each pair, from S13-26; its key joins the per-person invalidation spec | — | S13-01, S13-26, S13-29 | — | Scoped |
 | S13-28 | How the records connect | 7 | The view of the person's Evidence graphs and their links on the Person page, with what each link agrees and conflicts on | S13-D10 | S13-16, S13-27 | — | Scoped |
@@ -206,7 +206,7 @@ SLICE 6 — Sources
   Check: bar 6 and the removal half of 7
 
 SLICE 7 — How a person's records connect
-  S13-26  Comparing two of a person's records   (engine, any time)
+  S13-26  Comparing two Evidence graphs   (engine, after S13-24)
   S13-29  One loader for a Subject's comparable values   (preparatory)
   S13-27  Person record links read
   ✎ S13-D10 ──▶ S13-28  How the records connect
@@ -444,12 +444,16 @@ Go, plus deleting Swift's draft rule.
 
 ### Slice 7 — How a person's records connect
 
-#### S13-26 — Comparing two of a person's records
+#### S13-26 — Comparing two Evidence graphs
 
-**Ships.** A pure package (no `core/database` import) that compares two Subjects that are members of one handle: every Property both record, through the `subjectcompare` per-Property compare S13-24 moved there (pools, periods, lifespan, and any other Property on its own), and every relationship whose neighbor on each side is filed on the same handle (read as input, not walked). It returns each agreement and conflict with the facts and the Property or relationship behind it, and a strength read from that list as open questions 10 and 11 settle. Table tests over the obituary and census fixtures, including the "Robert, Air Force" against "Bob" case.
+**Ships.** Two pure layers (no `core/database` import), each with its own `core/matchregistry` section and knob rows in [`matching-model.md`](../../matching-model.md):
+- **Subject pair:** two Subjects filed on one handle compared through the `subjectcompare` per-Property router S13-24 moved there, over the subject section's Properties per kind; each Property's agreement or conflict with its values.
+- **Graph pair:** two Evidence graphs compared from every pair of their Subjects filed on the same canonical entity (primaries and filed bridges alike): the shared entities, each pair's Subject result, and a strength as open question 11 settles.
+
+Table tests over the obituary and census fixtures: a household and an obituary sharing five people; a pair that shares only the person, by a nickname ("Robert, Air Force" against "Bob"); a shared person whose birth year conflicts.
 **Not this PR.** The read and RPC (S13-27); Source quality and independence unless open question 12 brings them in; any change to Promote.
-**Check.** `go test` on the package: a pair that agrees on name, birth and father reads stronger than one that shares only a nickname; a conflicting birth year shows as a conflict beside the agreements.
-**Context.** [`evidence-graph-comparison.md`](evidence-graph-comparison.md); working rules "Links between Evidence graphs are computed, never stored", "A new comparison, not the band"; `core/propertycompare`, `core/subjectcompare` (pools, periods, lifespan), `core/subjectprofile` (how a Subject's values are built); [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md) for layer use. Blocked on open questions 10 and 11 when planned.
+**Check.** `go test` on both layers: two graphs sharing a family read stronger than two sharing one person by a nickname; a conflicting birth year shows as a conflict beside the agreements; `TestKnobInventoryMatchesRegistry` holds the new sections.
+**Context.** [`evidence-graph-comparison.md`](evidence-graph-comparison.md); working rules "Links between Evidence graphs are computed, never stored", "A new comparison, not the band"; `core/propertycompare`, `core/subjectcompare` (pools, periods, lifespan), `core/subjectprofile` (how a Subject's values are built); [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md) for layer use. Blocked on open question 11 when planned.
 
 #### S13-29 — One loader for a Subject's comparable values
 
@@ -491,6 +495,6 @@ Go, plus deleting Swift's draft rule.
 Questions 1–8 were answered 2026-10-26 and are now working rules or requirements. New ones go here; a PR that depends on one stays `Scoped` and `plan-pr` asks it again.
 
 9. ~~**What does a claim review show now that pins are gone?**~~ Answered 2026-10-29: the Person page shows how the person's records connect (slice 7); S13-18 and S13-D7 are descoped.
-10. **Which Properties a comparison counts** ([feature doc](evidence-graph-comparison.md#open-questions) question 1). Blocks S13-26.
-11. **How a link's strength is expressed, and what joins two graphs into one group** (question 2). Blocks S13-26.
-12. **Family support, Source quality and independence in the first version** (questions 3 and 4). S13-26's plan asks; the default is no.
+10. ~~**Which Properties a comparison counts.**~~ Answered 2026-10-29: start from Subject compare's subject section; the graph layer counts shared entities and names no Property (working rule "A new comparison, layered like matching").
+11. **How a link's strength is expressed, and what joins two graphs into one group** (question 2). Every pair of a person's graphs shares at least the person, so groups and a record standing apart come only from this rule. Blocks S13-26.
+12. **Source quality and independence in the first version** (question 4). S13-26's plan asks; the default is no. Family support is answered: shared entities are the link.
