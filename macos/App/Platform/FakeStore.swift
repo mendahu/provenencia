@@ -1600,7 +1600,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     gridY: placement.gridY
                 )
             }
-            return (subject, effects)
+            return (subject, nextWriteEffects)
         }
     }
 
@@ -2664,9 +2664,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 citationID: citation.id,
                 drafts: drafts
             )
-            let owner = owningSource(ofCitation: citation.id)
-            let graphs = owner.map { graphIDsOfSource($0) } ?? []
-            bumpActivity(owner)
+            bumpActivity(owningSource(ofCitation: citation.id))
             return (citation, created, nextWriteEffects)
         }
     }
@@ -2700,14 +2698,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             observations: drafts,
             allowEdgeRows: false
         )
-        return (written, {
-            withState {
-                let owner = owningSource(ofCitation: citationID).map { [$0] } ?? []
-                // The Observations land on their Subjects' graphs.
-                let graphs = written.compactMap { graphOfSubject($0.subjectID) }
-                return nextWriteEffects
-            }
-        }())
+        return withState { (written, nextWriteEffects) }
     }
 
     private func addObservationsToCitation(
@@ -2760,9 +2751,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             citation.transcriptionUncertain = transcriptionUncertain
             citation.transcriptionNote = transcriptionNote
             citationsByID[citationID] = citation
-            let owner = owningSource(ofCitation: citationID)
-            let graphs = owner.map { graphIDsOfSource($0) } ?? []
-            bumpActivity(owner)
+            bumpActivity(owningSource(ofCitation: citationID))
             return (citation, nextWriteEffects)
         }
     }
@@ -2802,13 +2791,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 next.valueDepictionID = existing.valueDepictionID
                 next.depiction = existing.depiction
             }
-            var owners: [String] = []
-            var graphs: [String] = []
             for (graphID, list) in observationsByGraph where list.contains(where: { $0.id == next.id }) {
                 observationsByGraph[graphID] = list.map { $0.id == next.id ? next : $0 }
                 bumpActivity(sourceOfGraph(graphID))
-                graphs.append(graphID)
-                owners.append(contentsOf: sourceOfGraph(graphID).map { [$0] } ?? [])
             }
             return (next, nextWriteEffects)
         }
@@ -2823,11 +2808,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if isEdgeLocked(observation: existing, projectDir: projectDir) {
                 throw edgeLockedError()
             }
-            var owners: [String] = []
-            var graphs: [String] = []
             for (graphID, list) in observationsByGraph where list.contains(where: { $0.id == observationID }) {
-                graphs.append(graphID)
-                owners.append(contentsOf: sourceOfGraph(graphID).map { [$0] } ?? [])
                 observationsByGraph[graphID] = list.filter { $0.id != observationID }
                 bumpActivity(sourceOfGraph(graphID))
             }
@@ -2852,11 +2833,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     params: []
                 )
             }
-            let owner = owningSource(ofCitation: citationID)
+            bumpActivity(owningSource(ofCitation: citationID))
             citationsByID.removeValue(forKey: citationID)
             citationNotesByID.removeValue(forKey: citationID)
-            let graphs = owner.map { graphIDsOfSource($0) } ?? []
-            bumpActivity(owner)
             return nextWriteEffects
         }
     }
@@ -3567,7 +3546,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             artifactIDs: (artifactsBySource[source.id] ?? []).map(\.id)
         )
         bumpActivity(source.id)
-        return (sourcesByProject[projectDir]?.first { $0.id == source.id } ?? source, effects)
+        return (sourcesByProject[projectDir]?.first { $0.id == source.id } ?? source, nextWriteEffects)
     }
 
     /// Appends an Evidence graph to the project's list. Call inside `withState`.

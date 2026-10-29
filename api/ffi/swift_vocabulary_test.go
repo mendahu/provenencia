@@ -25,11 +25,11 @@ import (
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/objectpath"
 	"github.com/mendahu/provenencia/core/onboarding"
-	"github.com/mendahu/provenencia/core/slug"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/raster"
 	"github.com/mendahu/provenencia/core/search"
+	"github.com/mendahu/provenencia/core/slug"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
