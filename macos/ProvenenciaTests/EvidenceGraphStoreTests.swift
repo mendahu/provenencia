@@ -113,8 +113,8 @@ struct EvidenceGraphStoreTests {
         _ = empty
     }
 
-    /// T-20 (D-14): a new Source has a Default graph, like the engine's, and its
-    /// first Artifact links to it; a copy's graph links the copied Artifacts.
+    /// T-20 (D-14): a new Source has a Default graph; a copy's Default graph
+    /// seeds the copied Artifact ids on that graph via `insertSource`.
     @Test func createSourceMakesADefaultGraph() async throws {
         let store = FakeStore()
         let (created, _) = try await store.createSource(
