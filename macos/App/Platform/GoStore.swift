@@ -1821,7 +1821,6 @@ struct GoStore: GenealogyStore {
     private static func mapEvidenceGraphProgress(_ row: Provenencia_Engine_V1_EvidenceGraphProgress) -> EvidenceGraphProgress {
         EvidenceGraphProgress(
             graphId: row.graphID,
-            sourceId: row.sourceID,
             subjectCount: Int(row.subjectCount),
             observationCount: Int(row.observationCount),
             filedCount: Int(row.filedCount)
@@ -1907,7 +1906,9 @@ struct GoStore: GenealogyStore {
         CatalogWriteEffects(
             handles: effects.handles,
             evidenceGraphs: effects.evidenceGraphs,
-            citationSources: effects.citationSources,
+            reads: effects.reads.compactMap { entry in
+                CatalogRead(rawValue: entry.read).map { CatalogWriteEffectsRead(read: $0, ids: entry.ids) }
+            },
             lists: Set(effects.lists.compactMap(CatalogList.init(rawValue:))),
             structure: effects.structure,
             headerHandles: effects.headerHandles,

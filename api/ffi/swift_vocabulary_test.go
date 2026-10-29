@@ -382,6 +382,15 @@ func listStrings() []string {
 	return out
 }
 
+// readStrings is every keyed read's wire key.
+func readStrings() []string {
+	var out []string
+	for _, r := range effects.Reads {
+		out = append(out, string(r))
+	}
+	return out
+}
+
 // searchKinds is the sorted Kind of every searchable kind in the registry.
 func searchKinds() []string {
 	var out []string
@@ -480,6 +489,10 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		{
 			name: "catalog-wide lists", path: swiftCatalogMut, enum: "CatalogList", re: listCase,
 			want: sorted(listStrings()...),
+		},
+		{
+			name: "catalog reads", path: swiftCatalogMut, enum: "CatalogRead", re: listCase,
+			want: sorted(readStrings()...),
 		},
 		{
 			name: "search kinds", path: swiftSearchKind, enum: "CatalogSearchKind", re: listCase,

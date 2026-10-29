@@ -10,17 +10,28 @@ import (
 func writeEffectsProto(res writes.Result) *engine.WriteEffects {
 	set := res.Effects
 	return &engine.WriteEffects{
-		Handles:         idStrings(set.Handles),
-		EvidenceGraphs:  idStrings(set.EvidenceGraphs),
-		SourceScopes:    idStrings(set.SourceScopes),
-		CitationSources: idStrings(set.CitationSources),
-		Lists:           listStrings(set.Lists),
-		Structure:       set.Structure,
-		HeaderHandles:   idStrings(set.HeaderDeps),
-		HandleScopes:    idStrings(set.HandleScopes),
-		Revision:        res.Revision,
-		RevisionAt:      res.At,
+		Handles:        idStrings(set.Handles),
+		EvidenceGraphs: idStrings(set.EvidenceGraphs),
+		SourceScopes:   idStrings(set.SourceScopes),
+		Reads:          readProtos(set.Reads),
+		Lists:          listStrings(set.Lists),
+		Structure:      set.Structure,
+		HeaderHandles:  idStrings(set.HeaderDeps),
+		HandleScopes:   idStrings(set.HandleScopes),
+		Revision:       res.Revision,
+		RevisionAt:     res.At,
 	}
+}
+
+func readProtos(reads []effects.ReadIDs) []*engine.WriteEffectsRead {
+	if len(reads) == 0 {
+		return nil
+	}
+	out := make([]*engine.WriteEffectsRead, len(reads))
+	for i, r := range reads {
+		out[i] = &engine.WriteEffectsRead{Read: string(r.Read), Ids: idStrings(r.IDs)}
+	}
+	return out
 }
 
 func idStrings(ids [][]byte) []string {

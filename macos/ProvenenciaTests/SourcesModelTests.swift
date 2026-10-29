@@ -104,7 +104,7 @@ struct SourcesModelTests {
         _ id: String, subjects: Int, filed: Int
     ) -> EvidenceGraphProgress {
         EvidenceGraphProgress(
-            graphId: "g-\(id)", sourceId: id, subjectCount: subjects, observationCount: 0,
+            graphId: "g-\(id)", subjectCount: subjects, observationCount: 0,
             filedCount: filed
         )
     }
@@ -437,7 +437,7 @@ struct SourcesModelTests {
     @Test func warmListQueriesLoadsGraphProgress() async {
         let store = FakeStore()
         store.graphProgressByGraph["g-s1"] = EvidenceGraphProgress(
-            graphId: "g-s1", sourceId: "s1", subjectCount: 4, observationCount: 0
+            graphId: "g-s1", subjectCount: 4, observationCount: 0
         )
         let (model, session) = makeModel(
             store: store,
@@ -458,7 +458,7 @@ struct SourcesModelTests {
         #expect(L10n.Sources.graphCountLine(subjects: 12, observations: 48) == "12 subjects · 48 observations")
         #expect(L10n.Sources.graphSubjectCount(0) == "0 subjects")
 
-        let jones = EvidenceGraphProgress(graphId: "g1", sourceId: "s1", subjectCount: 12, observationCount: 40)
+        let jones = EvidenceGraphProgress(graphId: "g1", subjectCount: 12, observationCount: 40)
         #expect(SourcesGraphCounts(progress: nil, countsLoading: true, countsError: nil) == .loading)
         #expect(SourcesGraphCounts(progress: nil, countsLoading: false, countsError: nil) == .notStarted)
         #expect(SourcesGraphCounts(progress: .zeros(graphId: "g1"), countsLoading: false, countsError: nil) == .notStarted)
@@ -526,7 +526,7 @@ struct SourcesModelTests {
             ),
         ]
         store.graphProgressByGraph["g-jones"] = EvidenceGraphProgress(
-            graphId: "g-jones", sourceId: "s1", subjectCount: 12, observationCount: 40
+            graphId: "g-jones", subjectCount: 12, observationCount: 40
         )
         let (model, session) = makeModel(store: store, sources: sources, types: [photoType()])
         await warmLists(model, session: session)
@@ -543,9 +543,11 @@ struct SourcesModelTests {
         #expect(session.evidenceGraphProgress(graphID: "g-smith") == nil)
 
         store.graphProgressByGraph["g-jones"] = EvidenceGraphProgress(
-            graphId: "g-jones", sourceId: "s1", subjectCount: 12, observationCount: 41
+            graphId: "g-jones", subjectCount: 12, observationCount: 41
         )
-        session.apply(CatalogWriteEffects(evidenceGraphs: ["g-jones"]))
+        session.apply(CatalogWriteEffects(
+            evidenceGraphs: ["g-jones"], reads: [CatalogWriteEffectsRead(read: .evidenceGraphProgress, ids: ["g-jones"])]
+        ))
         #expect(await waitUntil { session.evidenceGraphProgress(graphID: "g-jones")?.observationCount == 41 })
         #expect(session.evidenceGraphProgress(graphID: "g-default") == nil)
         #expect(session.evidenceGraphProgress(graphID: "g-smith") == nil)
@@ -608,10 +610,10 @@ struct SourcesModelTests {
             ),
         ]
         store.graphProgressByGraph["g-jones"] = EvidenceGraphProgress(
-            graphId: "g-jones", sourceId: "s1", subjectCount: 12, observationCount: 40
+            graphId: "g-jones", subjectCount: 12, observationCount: 40
         )
         store.graphProgressByGraph["g-smith"] = EvidenceGraphProgress(
-            graphId: "g-smith", sourceId: "s1", subjectCount: 7, observationCount: 19, filedCount: 1
+            graphId: "g-smith", subjectCount: 7, observationCount: 19, filedCount: 1
         )
         let (model, session) = makeModel(store: store, sources: sources, types: [photoType()])
         #expect(model.statuses(for: sources[0]).isEmpty)

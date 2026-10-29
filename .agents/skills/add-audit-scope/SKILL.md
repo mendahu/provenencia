@@ -21,7 +21,7 @@ entry of `effects.Scopes` (`core/database/effects/scopes.go`) names. `Record` do
 so a test that calls it resolves first (`effects.Resolve(tx, changes)`). The display cache reads
 the same `Scopes` list to keep last activity current. There are two scope types:
 
-- `source`, from `Set.SourceScopes` (the `Effect.SourceScope` path; `Effect.EvidenceGraph` is a different job, the Evidence graphs whose loaded rows a change moves: the graph's rows and graph progress; citation counts and citations-by-artifact are `Effect.CitationSource`) ([`effects.Resolve`](../../../core/database/effects/resolve.go)): the Source
+- `source`, from `Set.SourceScopes` (the `Effect.SourceScope` path; `Effect.EvidenceGraph` is a different job, the Evidence graphs whose loaded rows a change moves: what graphcache drops; citation counts, citations-by-artifact and graph progress are `Effect.Reads`) ([`effects.Resolve`](../../../core/database/effects/resolve.go)): the Source
   row and everything under it (notes, metadata, layout, credibility, artifacts and their
   files, subjects, citations, observations, their notes and values).
 - `canonical_entity`, from `Set.HandleScopes` (the `Effect.HandleScope` path): work on a
@@ -43,7 +43,7 @@ rows before `Record`, so they are stored with the revision and are not recorded.
 
 An owned value row (`date_value`, `name_value`, `depiction_value`) uses `effects.ownedValue`. A depiction's image `file` row is audited; thumbnails (`file_derivative`) stay `None`. See `add-depiction-value`.
 
-Source scopes come from the effect's `SourceScope` path, not a hand resolver. Set `Source` too only when a Source-graph, progress, or citation read loads the table.
+Source scopes come from the effect's `SourceScope` path, not a hand resolver. Set `EvidenceGraph` too only when the graph cache loads the table's rows, and `Reads` only when a keyed read (citations, graph progress) does; name only the graphs the change moves, never every graph of the Source.
 
 | Row shape | Effect |
 | --- | --- |

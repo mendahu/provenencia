@@ -27,9 +27,10 @@ enum CatalogQueryFollows: Sendable, Equatable {
     case handle
     /// `CatalogWriteEffects.sourceScopes`.
     case source
-    /// `CatalogWriteEffects.evidenceGraphs`, plus the mutation's graph when it
-    /// names one the effects did not.
-    case evidenceGraphs
+    /// The graph ids of one entry of `CatalogWriteEffects.reads`. Graph
+    /// progress also follows the mutation's graph when it names one the
+    /// effects did not (Promote reports no effects yet; S12-32 removes this special case).
+    case reads(CatalogRead)
 
     /// The ids of a write that this slot follows.
     func ids(in effects: CatalogWriteEffects, mutation: CatalogMutation?) -> [String] {
@@ -38,9 +39,11 @@ enum CatalogQueryFollows: Sendable, Equatable {
             return effects.handleScopes
         case .source:
             return effects.sourceScopes
-        case .evidenceGraphs:
-            var ids = effects.evidenceGraphs
-            if let graphId = mutation?.evidenceGraphId, !ids.contains(graphId) {
+        case .reads(let read):
+            var ids = effects.reads.first { $0.read == read }?.ids ?? []
+            if read == .evidenceGraphProgress,
+               let graphId = mutation?.evidenceGraphId, !ids.contains(graphId)
+            {
                 ids.append(graphId)
             }
             return ids
@@ -108,4 +111,16 @@ struct CatalogQueryPatch: Sendable {
 struct CatalogQueryRefresh: Sendable {
     var follows: CatalogQueryFollows
     var run: @MainActor @Sendable (WorkspaceSession, CatalogQueryKey, [String]) async -> Void
+
+    /// A refresh that re-applies the hidden policy to a warmed key whose id
+    /// (`id(key)`, nil for a key of another shape) the read named.
+    static func applyHiddenPolicy(
+        follows read: CatalogRead,
+        id: @escaping @Sendable (CatalogQueryKey) -> String?
+    ) -> CatalogQueryRefresh {
+        CatalogQueryRefresh(follows: .reads(read)) { session, key, ids in
+            guard let id = id(key), ids.contains(id) else { return }
+            session.applyHiddenPolicy(to: key)
+        }
+    }
 }

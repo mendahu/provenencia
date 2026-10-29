@@ -1,6 +1,6 @@
 # S12-25 — Writes name only the graphs they move
 
-**Status:** Planned
+**Status:** Landed in [#621](https://github.com/mendahu/provenencia/pull/621) (2026-10-29)
 **Spike / slice:** Spike 12 · Slice 6 — Audit fixes: Medium
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: effects, wire and session cache only; no view draws differently)
@@ -293,6 +293,16 @@ Must stay green: everything `scripts/check-pr.sh` runs. Suites most likely to br
 ## 12. Open questions
 
 None.
+
+### Landed
+
+- `TestCitationReadsPreferArtifactGraphs` is in `reads_resolve_test.go` (package `effects_test`), not `reads_test.go`, because `TestReadsDeclare` needs the unexported registry and one file cannot be both packages.
+- `SourcePageModelTests` and `SourcesModelTests` progress tests apply a `reads` progress entry; they relied on progress following `evidenceGraphs`.
+- `WorkspaceSession.apply(invalidations:)` dedupes keys before `applyHiddenPolicy(to:)`, so a key named twice still reloads once.
+- A link-row delete (graph delete) now names the deleted graph in the `citations` read; the `citation_sources` Source-less case it replaces named none.
+- D-8 amended by the user in review: an Artifact switch that drops the open Citation also clears the location's `citationId` and `observationId` (a switch that keeps the Citation leaves them).
+- Known gap (CON-1): the first or last Observation of a Citation moves it in or out of every Artifact-linked graph's citation reads, but the `observations` Reads name only the Observation's graph, so other linked graphs' citation reads stay stale until their next load. [S12-52](S12-52-citation-in-one-graph.md) closes it by storing a Citation's graph and removing the no-Observation fallback.
+- `Read.KeyTable()` names the table whose ids key each read (both current reads: `evidence_graphs`), so a Source-keyed read adds a case instead of changing the registry check.
 
 ## 13. PR
 

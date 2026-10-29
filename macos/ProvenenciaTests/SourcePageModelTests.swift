@@ -1241,7 +1241,7 @@ struct SourcePageModelTests {
             evidenceGraph("g-jones", name: "Jones household", artifactIDs: ["a-1"]),
         ]
         store.graphProgressByGraph["g-jones"] = EvidenceGraphProgress(
-            graphId: "g-jones", sourceId: sourceID, subjectCount: 12, observationCount: 40
+            graphId: "g-jones", subjectCount: 12, observationCount: 40
         )
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let model = makeModel(store: store, session: session)
@@ -1267,9 +1267,11 @@ struct SourcePageModelTests {
         let (model, session) = await progressSession(store)
         let graphs = model.graphs.rows ?? []
         store.graphProgressByGraph["g-jones"] = EvidenceGraphProgress(
-            graphId: "g-jones", sourceId: sourceID, subjectCount: 12, observationCount: 41
+            graphId: "g-jones", subjectCount: 12, observationCount: 41
         )
-        session.apply(CatalogWriteEffects(evidenceGraphs: ["g-jones"]))
+        session.apply(CatalogWriteEffects(
+            evidenceGraphs: ["g-jones"], reads: [CatalogWriteEffectsRead(read: .evidenceGraphProgress, ids: ["g-jones"])]
+        ))
         #expect(await waitUntil { model.graphs.progress(for: graphs[1])?.observationCount == 41 })
         #expect(model.graphs.progress(for: graphs[0]) == nil)
     }

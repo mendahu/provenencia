@@ -57,7 +57,6 @@ func GetEvidenceGraphProgress(in []byte) ([]byte, error) {
 func protoProgress(row graphprogress.Progress) *engine.EvidenceGraphProgress {
 	return &engine.EvidenceGraphProgress{
 		GraphId:          database.UUIDString(row.GraphID),
-		SourceId:         database.UUIDString(row.SourceID),
 		SubjectCount:     row.SubjectCount,
 		ObservationCount: row.ObservationCount,
 		FiledCount:       row.FiledCount,

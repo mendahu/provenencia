@@ -101,20 +101,15 @@ struct CatalogQueryRegistry: Sendable {
     }
 
     /// Cache effects of one write's reported handles and Sources. Each read
-    /// follows what feeds it: each Evidence graph per `evidenceGraphs`, the citation
-    /// reads per `citationSources`, the catalog-wide lists per `lists`, and the
-    /// Properties workspace on structure. Handle scopes invalidate nothing: they move
-    /// through each list's `patches`.
+    /// follows what feeds it: each Evidence graph per `evidenceGraphs`, the
+    /// catalog-wide lists per `lists`, and the Properties workspace on
+    /// structure. Keyed `reads` invalidate nothing here: each kind's `refresh`
+    /// follows them. Handle scopes invalidate nothing: they move through each
+    /// list's `patches`.
     func invalidations(for effects: CatalogWriteEffects, project: ProjectKey) -> [CatalogQueryInvalidation] {
         var out: [CatalogQueryInvalidation] = []
         for graphID in effects.evidenceGraphs {
             out.append(.key(.evidenceGraph(project: project, graphId: graphID)))
-        }
-        // The effects name Sources and the keys name graphs: drop every cached
-        // citation read once.
-        if !effects.citationSources.isEmpty {
-            out.append(.allCached(.citationCounts))
-            out.append(.allCached(.citationsByArtifact))
         }
         var listed = CatalogList.allCases.filter { effects.lists.contains($0) }
             .flatMap { Self.invalidations(for: $0, project: project) }
@@ -356,13 +351,17 @@ extension CatalogQueryKey.Kind {
                 }
             )
         case .citationCounts:
-            // Reloads follow the write's `citationSources` effects.
+            // Reloads follow the write's `citations` read for this key's graph.
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [],
                 whenHidden: .markStale,
                 invalidation: { _, _ in .allCached(.citationCounts) },
+                refresh: .applyHiddenPolicy(follows: .citations, id: { key in
+                    guard case .citationCounts(_, let graphId) = key else { return nil }
+                    return graphId
+                }),
                 load: { key, store in
                     guard case .citationCounts(let project, let graphId) = key else {
                         mismatchedCatalogKey(key, .citationCounts)
@@ -456,13 +455,17 @@ extension CatalogQueryKey.Kind {
                 }
             )
         case .citationsByArtifact:
-            // Reloads follow the write's `citationSources` effects.
+            // Reloads follow the write's `citations` read for this key's graph.
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [],
                 whenHidden: .markStale,
                 invalidation: { _, _ in .allCached(.citationsByArtifact) },
+                refresh: .applyHiddenPolicy(follows: .citations, id: { key in
+                    guard case .citationsByArtifact(_, let graphId, _) = key else { return nil }
+                    return graphId
+                }),
                 load: { key, store in
                     guard case .citationsByArtifact(let project, let graphId, let artifactId) = key else {
                         mismatchedCatalogKey(key, .citationsByArtifact)
@@ -482,7 +485,7 @@ extension CatalogQueryKey.Kind {
                 stalePolicy: .sessionFresh,
                 invalidateOn: [],
                 invalidation: { project, _ in .key(.evidenceGraphProgress(project: project)) },
-                refresh: CatalogQueryRefresh(follows: .evidenceGraphs) { session, key, ids in
+                refresh: CatalogQueryRefresh(follows: .reads(.evidenceGraphProgress)) { session, key, ids in
                     for graphId in ids {
                         guard let _: QueryHandle<[String: EvidenceGraphProgress]> = session.queryHandle(key) else {
                             return

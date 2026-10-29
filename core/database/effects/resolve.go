@@ -65,7 +65,7 @@ func AllNone(changes []rowchange.Change) (bool, error) {
 	return true, nil
 }
 
-// Resolve is the whole effect of a batch: evidence graphs, source scopes, handles, search documents,
+// Resolve is the whole effect of a batch: evidence graphs, keyed reads, source scopes, handles, search documents,
 // the catalog-wide lists that changed, and whether structure changed.
 func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 	if tx == nil {
@@ -76,6 +76,7 @@ func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 	search := map[string][][]byte{}
 	var searchOrder []string
 	listed := map[List]bool{}
+	reads := map[Read][][]byte{}
 	for _, ch := range changes {
 		table, ok := entityTable[ch.EntityType]
 		if !ok {
@@ -90,10 +91,6 @@ func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 		w := &walk{q: tx, ch: ch, ghosts: ghosts, table: table}
 		var err error
 		set.EvidenceGraphs, err = appendPath(w, table, eff.EvidenceGraph, set.EvidenceGraphs)
-		if err != nil {
-			return Set{}, err
-		}
-		set.CitationSources, err = appendPath(w, table, eff.CitationSource, set.CitationSources)
 		if err != nil {
 			return Set{}, err
 		}
@@ -118,6 +115,15 @@ func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 				set.Structure = true
 			}
 		}
+		for _, r := range eff.Reads {
+			ids, err := runPath(w, table, r.Path)
+			if err != nil {
+				return Set{}, err
+			}
+			if len(ids) > 0 {
+				reads[r.Read] = appendIDs(reads[r.Read], ids)
+			}
+		}
 		for _, doc := range eff.Search {
 			ids, err := runPath(w, table, doc.Path)
 			if err != nil {
@@ -135,6 +141,11 @@ func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 	for _, l := range Lists {
 		if listed[l] {
 			set.Lists = append(set.Lists, l)
+		}
+	}
+	for _, r := range Reads {
+		if ids := reads[r]; len(ids) > 0 {
+			set.Reads = append(set.Reads, ReadIDs{Read: r, IDs: ids})
 		}
 	}
 	for _, kind := range searchOrder {

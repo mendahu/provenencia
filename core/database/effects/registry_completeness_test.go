@@ -82,35 +82,34 @@ func hasWork(e Effect) bool {
 }
 
 // TestSourceEvidenceIsNotActivity pins which tables move a Source's evidence
-// (Effect.EvidenceGraph: what the Evidence graph cache and graph progress load;
-// Effect.CitationSource: what citation counts and citations by artifact load) and which move its last activity
-// (Effect.SourceScope: the audit source scope). Identity claims change the
-// evidence graph but have never been audited under a Source.
+// (Effect.EvidenceGraph: what the Evidence graph cache loads) and which move
+// its last activity (Effect.SourceScope: the audit source scope). Identity
+// claims change the evidence graph but have never been audited under a Source.
+// An Artifact moves neither graph rows nor reads: its links and Citations do.
 func TestSourceEvidenceIsNotActivity(t *testing.T) {
 	tests := []struct {
 		table    string
 		evidence bool
 		activity bool
-		citation bool // CitationSource: the citation reads load it
 	}{
-		{"sources", true, true, false},
-		{"source_notes", false, true, false},
-		{"source_metadata", false, true, false},
-		{"source_metadata_layout", false, true, false},
-		{"source_credibility_assessments", false, true, false},
-		{"evidence_graphs", true, true, false},
-		{"evidence_graph_artifacts", false, true, true},
-		{"files", false, true, false},
-		{"citation_notes", false, true, false},
-		{"observation_notes", false, true, false},
-		{"artifacts", true, true, true},
-		{"citations", true, true, true},
-		{"observations", true, true, true},
-		{"subjects", true, true, false},
-		{"date_values", true, true, true},
-		{"name_values", true, true, true},
-		{"identity_claims", true, false, false},
-		{"identity_claim_evidence", true, false, false},
+		{"sources", true, true},
+		{"source_notes", false, true},
+		{"source_metadata", false, true},
+		{"source_metadata_layout", false, true},
+		{"source_credibility_assessments", false, true},
+		{"evidence_graphs", true, true},
+		{"evidence_graph_artifacts", false, true},
+		{"files", false, true},
+		{"citation_notes", false, true},
+		{"observation_notes", false, true},
+		{"artifacts", false, true},
+		{"citations", true, true},
+		{"observations", true, true},
+		{"subjects", true, true},
+		{"date_values", true, true},
+		{"name_values", true, true},
+		{"identity_claims", true, false},
+		{"identity_claim_evidence", true, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.table, func(t *testing.T) {
@@ -123,9 +122,6 @@ func TestSourceEvidenceIsNotActivity(t *testing.T) {
 			}
 			if got := !eff.SourceScope.zero(); got != tt.activity {
 				t.Errorf("SourceScope set = %v, want %v", got, tt.activity)
-			}
-			if got := !eff.CitationSource.zero(); got != tt.citation {
-				t.Errorf("CitationSource set = %v, want %v", got, tt.citation)
 			}
 		})
 	}
@@ -186,7 +182,7 @@ func TestEvidenceGraphsList(t *testing.T) {
 // that every such path ends at evidence_graphs.
 func TestEvidenceGraphPathsEndAtGraphs(t *testing.T) {
 	want := []string{
-		"sources", "artifacts", "citations", "observations", "subjects",
+		"sources", "citations", "observations", "subjects",
 		"evidence_graphs", "identity_claims", "identity_claim_evidence",
 		"date_values", "name_values", "depiction_values",
 	}

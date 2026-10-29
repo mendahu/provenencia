@@ -304,6 +304,10 @@ struct PlaceRegistryTests {
         )
         #expect(identity(composer) != nil)
         #expect(identity(composer) == CitationComposerEntry(location: composer)?.identityKey)
+        // Switching Artifacts rewrites the location in place and does not remount.
+        var otherArtifact = composer
+        otherArtifact.artifactId = "art-1"
+        #expect(identity(otherArtifact) == identity(composer))
 
         let promote = WorkspaceLocation.promote(
             sourceId: "src-1", graphId: "g-1", subjectId: "sub-1", kind: .event, ref: "CEV-1", title: nil, sourceTitle: nil
