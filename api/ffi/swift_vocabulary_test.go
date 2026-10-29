@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
@@ -47,12 +48,13 @@ const (
 	swiftCatalogMut = "../../macos/App/Features/Workspace/Session/CatalogMutation.swift"
 	swiftSearchKind = "../../macos/App/Platform/CatalogSearchKind.swift"
 
-	swiftRegionGeometry = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
-	swiftProjectFiles   = "../../macos/App/Platform/ProjectFiles.swift"
-	swiftTextMatch      = "../../macos/App/Platform/TextMatch.swift"
-	swiftFieldSlug      = "../../macos/App/Platform/FieldSlug.swift"
-	swiftProjectSlug    = "../../macos/App/Platform/ProjectSlug.swift"
-	swiftThumbnailCache = "../../macos/App/Platform/ThumbnailCache.swift"
+	swiftRegionGeometry    = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
+	swiftProjectFiles      = "../../macos/App/Platform/ProjectFiles.swift"
+	swiftTextMatch         = "../../macos/App/Platform/TextMatch.swift"
+	swiftFieldSlug         = "../../macos/App/Platform/FieldSlug.swift"
+	swiftProjectSlug       = "../../macos/App/Platform/ProjectSlug.swift"
+	swiftThumbnailCache    = "../../macos/App/Platform/ThumbnailCache.swift"
+	swiftEvidencePlacement = "../../macos/App/Features/Catalog/Connect/EvidenceGraphPlacement.swift"
 )
 
 // swiftEnumBody returns the source between `enum <name>` and its closing
@@ -516,6 +518,11 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			name: "thumbnail decode edge", path: swiftThumbnailCache, enum: "ThumbnailDecodePolicy",
 			re:   regexp.MustCompile(`static let maxDeclaredEdge = (\d+)`),
 			want: []string{strconv.Itoa(raster.MaxEdgeLimit)},
+		},
+		{
+			name: "evidence grid cell limit", path: swiftEvidencePlacement, enum: "EvidenceGraphPlacement",
+			re:   regexp.MustCompile(`static let cellLimit: Int64 = (\d+)`),
+			want: []string{strconv.FormatInt(subjectpositions.MaxCell, 10)},
 		},
 	}
 	for _, tt := range tests {

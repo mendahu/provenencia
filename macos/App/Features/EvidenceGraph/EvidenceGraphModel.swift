@@ -617,8 +617,8 @@ final class EvidenceGraphModel {
     func updateHover(gridPoint: CGPoint) {
         guard armedKind != nil, !isCreating else { return }
         let cell = GraphCanvasGridMapping.gridCell(gridPoint: gridPoint)
-        hoverGridX = cell.gridX
-        hoverGridY = cell.gridY
+        hoverGridX = EvidenceGraphPlacement.clampedCell(cell.gridX)
+        hoverGridY = EvidenceGraphPlacement.clampedCell(cell.gridY)
     }
 
     func updateConnectHover(gridPoint: CGPoint) {
@@ -639,8 +639,8 @@ final class EvidenceGraphModel {
     func beginCreate(at gridPoint: CGPoint) {
         guard canCite, let kind = armedKind, !isCreating, !isSaving, editingSubjectID == nil else { return }
         let cell = GraphCanvasGridMapping.gridCell(gridPoint: gridPoint)
-        pendingGridX = cell.gridX
-        pendingGridY = cell.gridY
+        pendingGridX = EvidenceGraphPlacement.clampedCell(cell.gridX)
+        pendingGridY = EvidenceGraphPlacement.clampedCell(cell.gridY)
         draft = CreateDraft(
             label: defaultLabel(for: kind),
             description: ""
@@ -1190,8 +1190,8 @@ final class EvidenceGraphModel {
         deltaY: Int64
     ) async -> (gridX: Int64, gridY: Int64)? {
         guard allowsCardMoves else { return nil }
-        let nextX = fromGridX + deltaX
-        let nextY = fromGridY + deltaY
+        let nextX = Self.movedCell(fromGridX, by: deltaX)
+        let nextY = Self.movedCell(fromGridY, by: deltaY)
         let generation = bumpPositionGeneration(subjectID: subjectID)
         applyPositionPatch(subjectID: subjectID, gridX: nextX, gridY: nextY)
         let ok = await persistPositionOrRevert(
@@ -1209,8 +1209,8 @@ final class EvidenceGraphModel {
         guard allowsCardMoves else { return }
         var writes: [PositionWrite] = []
         for move in moves {
-            let nextX = move.fromX + move.deltaX
-            let nextY = move.fromY + move.deltaY
+            let nextX = Self.movedCell(move.fromX, by: move.deltaX)
+            let nextY = Self.movedCell(move.fromY, by: move.deltaY)
             let generation = bumpPositionGeneration(subjectID: move.subjectID)
             applyPositionPatch(subjectID: move.subjectID, gridX: nextX, gridY: nextY)
             writes.append(
@@ -1223,6 +1223,11 @@ final class EvidenceGraphModel {
             )
         }
         persistPositions(writes)
+    }
+
+    /// `cell` moved by `delta`, held to the grid's range so Go saves it.
+    private static func movedCell(_ cell: Int64, by delta: Int64) -> Int64 {
+        EvidenceGraphPlacement.clampedCell(GraphCanvasGridMapping.offsetCell(cell, by: delta))
     }
 
     func ghostPlacedSubject() -> EvidenceGraphPlacedSubject? {
@@ -1397,8 +1402,10 @@ final class EvidenceGraphModel {
         )
         let cell = GraphCanvasGridMapping.gridCell(gridPoint: dropped)
         let generation = bumpPositionGeneration(subjectID: subjectID)
-        applyPositionPatch(subjectID: subjectID, gridX: cell.gridX, gridY: cell.gridY)
-        return (cell.gridX, cell.gridY, generation)
+        let cellX = EvidenceGraphPlacement.clampedCell(cell.gridX)
+        let cellY = EvidenceGraphPlacement.clampedCell(cell.gridY)
+        applyPositionPatch(subjectID: subjectID, gridX: cellX, gridY: cellY)
+        return (cellX, cellY, generation)
     }
 
     /// One store task for a move: the writes persist in order.
