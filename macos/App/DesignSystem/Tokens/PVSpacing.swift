@@ -38,6 +38,10 @@ enum PVSpacing {
     static let widthSidebar: CGFloat = 264
     static let widthInspector: CGFloat = 340
     static let widthContentMax: CGFloat = 1180
+    /// Pane width at and above which a page is Wide. Compared with the width of
+    /// the workspace pane (`PVWidthClass`), not the window or the screen: a
+    /// collapsed sidebar changes the space a page has.
+    static let widthWideBreakpoint: CGFloat = 1600
     /// Hard resize floor for every phase (onboarding and workspace). Kept
     /// modest so smaller displays can still shrink the window; two-pane
     /// destinations may squeeze below the workspace default.
