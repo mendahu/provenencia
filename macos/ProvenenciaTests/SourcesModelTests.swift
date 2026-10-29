@@ -545,7 +545,9 @@ struct SourcesModelTests {
         store.graphProgressByGraph["g-jones"] = EvidenceGraphProgress(
             graphId: "g-jones", subjectCount: 12, observationCount: 41
         )
-        session.apply(CatalogWriteEffects(evidenceGraphs: ["g-jones"]))
+        session.apply(CatalogWriteEffects(
+            evidenceGraphs: ["g-jones"], reads: [CatalogWriteEffectsRead(read: .evidenceGraphProgress, ids: ["g-jones"])]
+        ))
         #expect(await waitUntil { session.evidenceGraphProgress(graphID: "g-jones")?.observationCount == 41 })
         #expect(session.evidenceGraphProgress(graphID: "g-default") == nil)
         #expect(session.evidenceGraphProgress(graphID: "g-smith") == nil)

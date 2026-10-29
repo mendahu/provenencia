@@ -1269,7 +1269,9 @@ struct SourcePageModelTests {
         store.graphProgressByGraph["g-jones"] = EvidenceGraphProgress(
             graphId: "g-jones", subjectCount: 12, observationCount: 41
         )
-        session.apply(CatalogWriteEffects(evidenceGraphs: ["g-jones"]))
+        session.apply(CatalogWriteEffects(
+            evidenceGraphs: ["g-jones"], reads: [CatalogWriteEffectsRead(read: .evidenceGraphProgress, ids: ["g-jones"])]
+        ))
         #expect(await waitUntil { model.graphs.progress(for: graphs[1])?.observationCount == 41 })
         #expect(model.graphs.progress(for: graphs[0]) == nil)
     }
