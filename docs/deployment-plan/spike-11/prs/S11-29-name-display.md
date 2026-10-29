@@ -75,7 +75,8 @@ A Person's name says which parts are a nickname and which a former surname. A ni
 | Italics anywhere but the Persons list row and Person detail title (value rows, omnibar, Promote, Evidence) | not planned; those surfaces are plain text and keep the parentheses |
 | Quotes in Go `nameformats.Format` (list sort key) and the Go-indexed omnibar title used when a hit has no person header | not planned; a sort or index key carries no punctuation (§4.5 rewritten in STEP-5) |
 | `NameFormSplit` recognising quoted nicknames and parenthesized former surnames when splitting a typed form | not planned; logged in [`docs/ideas/international-names.md`](../../../ideas/international-names.md) in STEP-5, pointing at `NamePartType.decoration` |
-| A Go↔Swift part-type parity check; dropping the unused `Sort` field | not planned; logged in `docs/ideas/international-names.md` in STEP-5 |
+| A Go↔Swift part-type parity check | Spike 12's S12-48 ([audit 2](../../spike-12/app-health-audit-2.md) B-24), after this PR |
+| Dropping the unused `Sort` field | not planned; logged in `docs/ideas/international-names.md` in STEP-5 |
 | The reconciler treating a former surname and a surname as related | not planned |
 | Nickname alias folding | S11-28 |
 | GEDCOM import / export of former surnames | not planned; no GEDCOM path exists |
@@ -199,7 +200,7 @@ Do: D-9, D-10, D-11. Add T-5.
 Check: Xcode tests pass, including `PersonsListTests` and `PersonDetailTests` unchanged; manual check steps 2–3.
 
 **STEP-5 — Docs**
-Files: `docs/seeded-vocabulary.md` §4.1 (inside the code fence, after `surname`: `former_surname      -- no GEDCOM part tag (GEDCOM 7: a NAME with TYPE MAIDEN or BIRTH)`) and §4.3 (both orders per D-4); `docs/structured-name-model.md` §4.2a roles sentence (`former_surname` → `family`) and §4.5 (requirement 2 becomes "The key is that part order, undecorated: the row may add quotes and parentheses, the key never does"; the table gains a row "**Decoration** — nickname quotes, former-surname parentheses | The **part type**, in the client, localized by UI language; never in the sort key or the profile | *James “Jake” Robins*"); `docs/ideas/international-names.md` under "Name changes as a signal" ("The `former_surname` part type (S11-29) records a maiden or earlier surname; using it as a matching signal is still open.") and two parked lines (Out: `NameFormSplit` wrappers; Go↔Swift part-type parity and `Sort`); `docs/deployment-plan/spike-11/deployment-plan.md` map row; `docs/deployment-plan/spike-11/completed.md`; this plan.
+Files: `docs/seeded-vocabulary.md` §4.1 (inside the code fence, after `surname`: `former_surname      -- no GEDCOM part tag (GEDCOM 7: a NAME with TYPE MAIDEN or BIRTH)`) and §4.3 (both orders per D-4); `docs/structured-name-model.md` §4.2a roles sentence (`former_surname` → `family`) and §4.5 (requirement 2 becomes "The key is that part order, undecorated: the row may add quotes and parentheses, the key never does"; the table gains a row "**Decoration** — nickname quotes, former-surname parentheses | The **part type**, in the client, localized by UI language; never in the sort key or the profile | *James “Jake” Robins*"); `docs/ideas/international-names.md` under "Name changes as a signal" ("The `former_surname` part type (S11-29) records a maiden or earlier surname; using it as a matching signal is still open.") and two parked lines (Out: `NameFormSplit` wrappers; the unused `Sort` field); `docs/deployment-plan/spike-11/deployment-plan.md` map row; `docs/deployment-plan/spike-11/completed.md`; this plan.
 Do: per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-11/prs/S11-29-name-display.md` reports no errors; links resolve.
 

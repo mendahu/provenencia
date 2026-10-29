@@ -59,6 +59,45 @@ still work?** This lens always runs. It catches more than any other.
 - FFI: a proto field renumbered or reused, a method whose Swift and Go sides
   disagree, an error code with no Swift mapping.
 
+### Rules and algorithms
+
+For every rule, comparison, ranking, fold, key or algorithm the diff adds or
+changes. Read the code the new case flows through, not only the diff.
+
+- **Assumptions a new case breaks.** List what the surrounding code relies
+  on: transitive, acyclic, symmetric, order-free, one key per value, two lists
+  of equal length, a result with a bound. Code written when every case had a
+  property keeps relying on it after a new kind of case arrives without it.
+  Test each property with the new case.
+- **Excluded is not neutral.** When a decision, a filter, a delete, a merge,
+  or another item's claim removes an input from a computation, ask what that
+  input contributed (a conflict, a constraint, a count) and whether removing
+  it flips the result. Test the result with the input decided, excluded and
+  held elsewhere, not only present.
+- **Results that depend on changing state.** For each cached, memoized or
+  queued result, list the state it was computed from. Every change to that
+  state must recompute or invalidate it; a score kept from before a
+  dependency changed reaches the output stale.
+- **Claims over all inputs.** "The order does not matter", "accepting the
+  output changes nothing", "equal keys mean equal values", "compare is
+  symmetric": prove or refute these with generated inputs (a seeded random
+  generator or a fuzz target over many small cases), not a few hand fixtures.
+- **A rule a table drives.** When behavior comes from a table, seed or
+  configuration, run the rule over the whole shipped table and read what it
+  produces: the counts and the surprising rows. A review of the plan's three
+  examples does not review the other thousand.
+- **Production configuration in tests.** Invariant, fuzz and property tests
+  run at least once with the shipped tables and settings. A minimal fixture
+  that omits the new data never reaches the new path.
+- **One equivalence, two implementations.** When two layers each implement
+  "the same" (a normalizer in the engine and in the client, a fold in code and
+  in the database's text search), check them against one table of hard cases
+  chosen to differ: decomposed and composed text, compatibility characters,
+  invisible characters, letters a library folds and the other does not.
+- **Neighbors of a widened rule.** A rule that now accepts more reaches
+  inputs next to its examples. List the nearest ones it now also reaches and
+  check the plan or the user accepted them; one nobody looked at is a finding.
+
 ### Tests
 
 - Domain changes in `core/` without Go tests; new store APIs without
@@ -125,6 +164,18 @@ lens ([`review-pr`](../SKILL.md) "Close the loop").
 - **A lock taken twice.** A new function that acquires a lock, a decode slot
   or the session that its callers may already hold deadlocks at the smallest
   pool. Name who holds it.
+- **A new kind of case in an old loop.** Two new fold kinds reached a loop
+  that assumed folds chain; three ordinary values with no chain left a nil
+  map and the process died. The invariant test ran without the shipped
+  tables that create the new kind, so it never generated one. See "Rules and
+  algorithms".
+- **A decision that drops evidence.** Marking an item decided removed it from
+  scoring, and with it the one conflict that kept a neighbor from matching
+  the wrong record. The row then read as agreement. Check what a skipped input
+  contributed.
+- **A table nobody read.** A rule took its direction from a third-party list
+  and was reviewed from its examples; run over the whole list it reversed
+  hundreds of entries.
 
 ## Good finding shape
 

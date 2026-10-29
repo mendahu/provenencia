@@ -26,7 +26,7 @@ risk and the fix. Do not write exploits.
 | Identity | `core/identity`, `identity.json`, `active-project.json` | Files under Documents another app or user can edit |
 | FFI | `api/ffi`, `api/ffi/handlers`, `macos/App/Platform/GoStore.swift`, `CoreInvoke.swift` | Bytes from Swift; errors going back |
 | Catalog values | `core/urlshape`, `core/locator`, `valuecodec` | URLs, locator JSON, text that later renders |
-| Stored numbers and lists | `core/matchregistry`, `core/valuecompare`, `core/propertycompare`, `core/subjectcompare`, `core/subjectprofile`, `core/autoreconcile`, `core/database/namealiases` | Weights, counts, and lists read back from a catalog another tool may have written: `NaN`, `+Inf`, `1e308`, a negative weight, a 10,000-word name |
+| Stored numbers and lists | `core/matchregistry`, `core/valuecompare`, `core/propertycompare`, `core/subjectcompare`, `core/subjectprofile`, `core/segmentcompare`, `core/kinship`, `core/shortlist`, `core/graphalign`, `core/claimevidence`, `core/autoreconcile`, `core/database/namealiases` | Weights, counts, and lists read back from a catalog another tool may have written: `NaN`, `+Inf`, `1e308`, a negative weight, a 10,000-word name |
 
 ## How to work
 
@@ -77,6 +77,24 @@ risk and the fix. Do not write exploits.
   than the feature needs; a debug default left on for release.
 - **Rendering.** A catalog URL opened without `urlshape`; text from a file
   rendered as markup.
+- **Every dimension of an untrusted collection.** A bound on one axis of a
+  list, map or graph read from untrusted data leaves the others open: items,
+  items per key, keys per item, duplicates, fan-out per node, depth. Find the
+  axes whose product the code pays (keys per item × items, duplicates ×
+  children) and test the adversarial product, not each axis alone.
+- **Bounds before the work.** A size check after the value is split, sorted,
+  keyed or allocated bounds nothing. Check the raw count first.
+- **Keys built by joining values.** A key, id or cache key made by
+  concatenating values with a separator is ambiguous when a value can hold the
+  separator. Check that the validator forbids it or the encoding escapes it,
+  and that code never treats equal keys as proof of equal inputs (an index
+  computed from one side then used on the other).
+- **Panics from crafted data.** Index arithmetic that assumes two lists match
+  in length, a write to a map that one branch never made, recursion with no
+  depth bound. In a process that hosts the app, a panic is a crash, and one
+  reached on open is a crash on every launch.
+- **Fuzz the comparers too.** Functions that compare, key, rank or index
+  untrusted values get a fuzz target, not only the parsers that read them.
 
 ## Allow
 
@@ -119,6 +137,13 @@ lens ([`review-pr`](../SKILL.md) "Close the loop").
 - **A value checked on its way in, trusted on its way out.** Every finding
   above is this rule ("Reads that pass untrusted values through") at one sink.
   Name the sink when you review a read.
+- **One axis bounded.** A fix capped the size of each set in a crafted table
+  but not how many sets one token joins; another made a loop linear and was
+  tested with one child, so duplicates × children still ran to gigabytes. Test
+  the product of two axes.
+- **A separator in the value.** A name that contained the key's own
+  delimiters keyed the same as a different name; the compare then indexed one
+  side's list with the other's length and panicked.
 
 ## Good finding shape
 

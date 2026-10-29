@@ -42,6 +42,12 @@ the input can be one control, and the work does not stop.
 5. For every write path, ask what the client does after it: patch the rows
    the write reported, or reload. For every read path, ask whether it reads
    rows it returns or scans everything to answer.
+6. **Measure growth, not one point.** When a budget test or a timing is the
+   evidence, run the path at the fixture's size and at about four times it, or
+   at the map's **Scale**, growing the input that grows. A cost that rises
+   with the catalog when it should rise with the change is the finding, even
+   when both runs are inside budget. A budget met only on a fixture smaller
+   than the Scale is not evidence that the path is fast.
 
 ## Look for
 
@@ -59,6 +65,14 @@ the input can be one control, and the work does not stop.
   on every list load or navigation, where a cache patched on commit would
   answer from memory. One load per session is the most it should cost.
 - Copying large buffers; decoding a full image where a thumbnail exists.
+- A whole index or memo thrown away because one entry changed, so the next
+  read rebuilds everything; update the entry instead.
+- Pairwise work over a set that grows (every pair of new rows, every pair of
+  candidates) on each request. Shortlist the pairs first.
+- A cache with a capacity: one request that touches more entries than the
+  cap evicts what the caller needs next. Test with a working set past the cap.
+- A loop over the candidates a lookup returns, each fully scored, when the
+  lookup's fan-out grows with the data (a short shared key meets thousands).
 
 ### FFI and the Mac client
 
@@ -81,6 +95,9 @@ the input can be one control, and the work does not stop.
   hidden value stale and let the next visit reload it, not rebuild it now.
 - Search: reprojecting FTS on every keystroke; a query per keystroke without
   the existing debounce.
+- One full request per user action with no coalescing: quick actions queue
+  whole requests behind a lock or session, every one runs, and only the last
+  result is used. Keep one in flight and send the latest.
 
 ### SwiftUI layout
 
@@ -155,6 +172,15 @@ lens ([`review-pr`](../SKILL.md) "Close the loop").
   `catalogsession.Do` stalls every pane until it ends.
 - **Work in `body` over the whole list.** A filter and sort of every row runs
   on each keystroke of any field the same view reads.
+- **"Inside budget" on a small fixture, four times.** A per-commit rebuild was
+  deferred in four reviews because a fixture a ninth of the real catalog met
+  its budget; at four times the fixture every proposal after a commit took
+  seconds. Grow the fixture before deferring a cost again.
+- **A cap smaller than one request.** An LRU sized for typical pages was
+  cycled by one request over a record with more members than the cap, and
+  evicted the page's own data.
+- **A plan's "most rows are cheap" never counted.** A pairwise check was
+  widened on the claim that few rows reach it; on the fixture most did.
 
 ## Good finding shape
 

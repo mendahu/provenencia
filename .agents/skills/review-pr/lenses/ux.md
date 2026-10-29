@@ -46,6 +46,13 @@ do; leave how it looks to the agreed board and the user's manual check.
 - Long content: a long title, a 70-observation citation, a long transcription.
   Truncation needs a way to read the whole value (S10-42).
 - An empty state that does not say what to do next.
+- **Every state has a way in.** For each view state or branch the diff adds,
+  name the control that reaches it in the running app. A branch only a test
+  reaches (a model method called directly) is not shipped.
+- **An id held across a round trip.** For each id the view keeps between
+  requests (a selection, a draft, a decided row), ask what happens when
+  another window deletes or merges it meanwhile. The page names the item,
+  recovers, and keeps the user's other work; it does not loop on an error.
 
 ### Copy
 
@@ -58,6 +65,10 @@ do; leave how it looks to the agreed board and the user's manual check.
 - Plurals and arguments: a count without a plural rule; more than one argument
   without numbered placeholders (`%1$@`). The catalog check catches some of this.
 - Stale strings the change no longer shows, left in the catalog.
+- **Copy that describes a behavior.** When the diff changes a default or a
+  behavior, search the strings for the concept in any phrasing (the state's
+  name, the default's name, "starts as", "by default"), not only for the old
+  sentence, and read each hit against the new behavior.
 
 ### Accessibility
 
@@ -82,6 +93,12 @@ do; leave how it looks to the agreed board and the user's manual check.
   knows.
 - Internal or debug text shown to the researcher; localization by matching
   English Go error strings.
+- **Errors where the researcher acted.** An error shown far from the control
+  that caused it (the top of a long scroll when the button is in a footer) and
+  not announced reads as "nothing happened". Show it by the action or move
+  focus or scroll to it, and announce it.
+- A form field whose visible label is a separate view, so VoiceOver reads its
+  value with no name.
 
 ## Allow
 
@@ -125,6 +142,14 @@ lens ([`review-pr`](../SKILL.md) "Close the loop").
 - **The old scope's word.** Copy that still says "this Source" after the
   action moved to one Evidence graph, and VoiceOver labels that name the
   container but not which one (the canvas, the history menu).
+- **A sheet branch with no opener.** A sheet drew fields for a row kind that
+  no control could open it for; the model tests called the open method
+  directly, and the plan's manual check was not run. Name the control.
+- **A header that kept the old default.** A behavior change swept the copy
+  for one phrasing; a sentence saying the same thing in other words stayed.
+- **A deleted item that blocks the page.** After another window deleted an
+  item the page held, every request failed with an error naming nothing, and
+  only Cancel, losing every decision, got out.
 
 ## Good finding shape
 
