@@ -229,7 +229,7 @@ Decisions on the [second app-health audit](app-health-audit-2.md) (user, 2026-10
 | S12-45 | Form fields are named | 6b | B-18: `PVField` labels its content in the kit, naming every form's fields; Swift only. B-15 descoped (2026-10-29) with the evidence sheet | — | — | — | Scoped |
 | S12-46 | Names compare the same however they are written | 6b | B-19, B-20, B-22: initials and aliases tried on folded tokens; NFC at `Same`, compatibility forms and format characters folded at `Equivalent`, mirrored in Swift `TextMatch`; one generation-token table; `CacheVersion` and `ProjectionVersion` bumps | — | — | — | Scoped |
 | S12-47 | Search finds every spelling; a join reprojects only what changed | 6b | B-21, B-10: the search document carries the folded spellings FTS retrieves on (a migration only if a column is needed); a join reprojects a root's dependents only when its visible header changed; Go only | — | — | — | Scoped |
-| S12-48 | Promote's wire says what Go decided | 6b | B-23, B-24: the proposal says whether each connection will file and why not, through one pure cycle rule the filer shares, and Swift's filing rule goes; name part types beside their owner with a guard row (the typed band dropped 2026-10-29) | — | S11-29, S13-23 | — | Scoped |
+| S12-48 | Promote's wire says what Go decided | 6b | B-23, B-24: the proposal says whether each connection will file and why not, through one pure cycle rule the filer shares, and Swift's filing rule goes; name part types beside their owner with a guard row (the typed band dropped 2026-10-29) | — | S14-09, S13-23 | — | Scoped |
 | S12-36 | Search kinds own their columns and locations | 7 | A-31: `KindSpec` names each field's column and carries its location builder; `Reproject` and `RebuildAll` read a projector table; a completeness test; Go only | — | — | — | Scoped |
 | S12-37 | Canvas tool and sheet state as enums | 7 | A-32: one tool enum and one sheet enum replace the canvas's flags | — | S12-21 | — | Scoped |
 | S12-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
@@ -386,7 +386,7 @@ slices 1–7, 5b, 6b ──▶ S12-99
 Spike 11:
 S11-14, S11-15 ──▶ S12-07
 S11-17, S11-25, S11-26, S11-27 ──▶ S12-09
-S11-29 ──▶ S12-48
+S14-09 ──▶ S12-48   (Spike 14; was S11-29)
 
 Spike 13:
 S13-24 ──▶ S12-32, S12-43, S12-44
@@ -741,7 +741,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Ships.** The proposal reports, per connection, whether it will file at Done and why not (a self-link, a `part_of` that would close a cycle). The cycle rule becomes one pure function over edges: the filer in `core/database/identityclaims/bridgefile.go` feeds it from SQL, and the proposal from the canon edges it already holds plus the page's fixed connections, so a proposal runs no catalog scan (its work at Scale is the place edges in memory). The reasons are a typed enum in `Platform/ConclusionVocabulary.swift` with a `swift_vocabulary_test.go` row. Swift's subrows and footer count read the result, a refused connection is drawn and worded as the self-link subrow is today (no new chrome), and Swift's own filing rule goes (B-23). `NamePartType` stays beside its owner, as `.cursor/rules/macos-client.mdc` allows; it gets a guard row, and `add-name-value` step 6 names the match-registry role, the format seed roles and the Swift case (B-24). `promote-graph-alignment.md` §9.1 says where the refusal is reported.
 **Not this PR.** Swift's weak-row draft (B-26); unread wire fields (B-37).
 **Check.** Bar outcome 20, footer: a page whose `part_of` connection would close a cycle shows it as not filing, and Done files what the footer counted; the guard row fails on a new part type.
-**Context.** Audit 2 B-23, B-24 (map review K-38, K-40); `.cursor/rules/macos-client.mdc` (wire enums with guard rows); S11-17 (reasons typed), S11-47 D-13; `add-ffi-handler`, `add-name-value`. After S11-29, which adds the part type the guard row covers (the S11-29 plan's Out row points here), and S13-23, which changes the same Promote rows. The typed band (B-24's first half) is dropped: the band is deprecated (Spike 13 working rule "The band stays, deprecated").
+**Context.** Audit 2 B-23, B-24 (map review K-38, K-40); `.cursor/rules/macos-client.mdc` (wire enums with guard rows); S11-17 (reasons typed), S11-47 D-13; `add-ffi-handler`, `add-name-value`. After S14-09 (Spike 11's S11-29, moved to Spike 14 on 2026-10-29), which adds the part type the guard row covers (its plan's Out row points here), and S13-23, which changes the same Promote rows. The typed band (B-24's first half) is dropped: the band is deprecated (Spike 13 working rule "The band stays, deprecated").
 
 ### Slice 7 — Structural debt
 

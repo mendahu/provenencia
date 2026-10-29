@@ -14,6 +14,10 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 
 **By spike close**, each of these is true on a real project. A batch adds its outcomes here when it is cut.
 
+**Batch 3 — Name display** (moved from Spike 11, 2026-10-29):
+
+11. **A name shows its nickname and former surname.** A Person recorded as James with the nickname Jake reads *James “Jake” Robins*; one with the former surname Smith reads *Jones, Mary (Smith)* on the Persons list, with *Smith* italic there and on the Person page title.
+
 **Batch 2 — Matching calibration:**
 
 10. **Thin name plus kinship is Weak.** Promoting a Source person recorded only as a short given name who shares a lined-up grandparent (or other non-birth/death link) with a matching neighbor reaches at least the Weak band — not "Little evidence" for that shape.
@@ -34,6 +38,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 
 | Dogfood note or idea | PR | Brief |
 | --- | --- | --- |
+| Spike 11's S11-29, planned and never built, moved here when Spike 11 closes (user, 2026-10-29) | S14-09 | — |
 | Promote Jake + grandparent read "Little evidence" under Weak (user, 2026-10-28); raise `segment.OtherSupport` | S14-08 | — |
 | [`depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) "Other keys of the same value type" (place and event) | S14-01, S14-02 | — |
 | Thumbnail parity for Event and Place (user, 2026-10-27) | S14-01, S14-02 | — |
@@ -60,6 +65,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 - **(Batch 1) The gallery is one slot on the detail body.** `ConclusionDetailBody` carries one gallery value (title, tile wording, chosen-badge and set wording, fallback mark, tiles) built by one tile mapping, in place of `likenesses` and the Person-only strings, ids and mark in `ConclusionDetailLikenessSection`. Precedent: `ConclusionDetailThumbnail`. Spike 13's Gallery section (S13-14) is built from the same slot, so the old and new galleries can live side by side and retiring the old one does not drop Event and Place galleries. Binds S14-02.
 - **(Batch 1) A depiction is worded as a picture outside the Person's own copy.** The Promote evidence sheet words a depiction line by value type ("Same picture", "Compare these pictures") for every kind, and takes its fallback mark from the line's kind. Binds S14-02. **Descoped for Promote (2026-10-29):** Identity Claims no longer carry pins and Spike 13's S13-23 removes the evidence sheet; S14-02 drops its Promote wording and the relationship `kind` wire field. The rule still holds for the Event and Place pages.
 - **(Batch 1) A depiction is drawn as a rectangle.** The composer arms the viewer with the rectangle tool alone for a depiction; a Citation's own region keeps all seven tools. "Use the citation's region" takes a non-rectangle region's bounding rectangle. Go keeps accepting any valid depiction region, so a depiction saved as a polygon loads, displays and saves as it is until redrawn. The transparent-polygon crop is refused. Binds S14-03.
+- **(Batch 3) S14-09 is Spike 11's S11-29, refreshed.** Its plan and review moved with it and keep their decisions (the user chose the treatment on 2026-10-19: curly quotes, parentheses, italic surname on the two titles; no migration of existing catalogs). The plan is refreshed against `main` with `plan-pr` because S11-28's alias fold and S11-44 changed name display after it was written. Binds S14-09.
 - **(Batch 2) Other-link support is 0.75.** `segment.OtherSupport` is 0.75 (`OtherCredit` stays 0.25): a partial given name plus one lined-up non-birth/death link clears Weak on the 2026-10-28 Jake + grandparent dogfood shape, without a kinship-only tier or a name-curve change. Decided user 2026-10-28 (option A). Binds S14-08.
 
 ## PR map
@@ -74,6 +80,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-06 | Choose an Event or Place thumbnail | — | Folded into S14-02 | — | — | — | Descoped (2026-10-27) → S14-02 |
 | S14-07 | Events and Places lists lead with a picture | — | Folded into S14-02 | — | — | — | Descoped (2026-10-27) → S14-02 |
 | S14-08 | Other-link support calibration | 2 | Raise `segment.OtherSupport` 0.25 → 0.75 so a thin name plus kinship clears Weak | — | — | [S14-08-other-support-calibration.md](prs/S14-08-other-support-calibration.md) | Landed #613 |
+| S14-09 | Quote nicknames and add former surnames | 3 | Nickname parts display in curly quotes; a `former_surname` product part type displays in parentheses, italic on the Persons list row and Person page title (was S11-29) | — | — | [S14-09-name-display.md](prs/S14-09-name-display.md) | Blocked — re-plan |
 | S14-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -95,10 +102,14 @@ SLICE 2 — Matching calibration (batch 2)
   S14-08  Other-link support calibration
   Check: bar outcome 10 on the Jake + grandparent dogfood Source (or the calibration test's shape).
 
+SLICE 3 — Name display (batch 3)
+  S14-09  Quote nicknames and add former surnames
+  Check: bar outcome 11 on a new project.
+
 S14-99 — Dogfood close / docs
 ```
 
-S14-01 and S14-03 can run in parallel; S14-02 follows S14-01. S14-03 waits on Spike 12's S12-28, which changes in place the one predicate that says whether the viewer can cut a file; S14-03 gates Draw on it (Spike 12 map review K-25). S14-08 is independent of batch 1.
+S14-01 and S14-03 can run in parallel; S14-02 follows S14-01. S14-03 waits on Spike 12's S12-28, which changes in place the one predicate that says whether the viewer can cut a file; S14-03 gates Draw on it (Spike 12 map review K-25). S14-08 is independent of batch 1. S14-09 is independent of the other batches; Spike 12's S12-48 waits on it.
 
 ### Dependencies at a glance
 
@@ -107,6 +118,7 @@ S14-01 ──▶ S14-02
 S13-23 ──▶ S14-02   (Spike 13: deletes the Promote files the old plan renamed)
 S12-28 ──▶ S14-03
 S14-08  (independent)
+S14-09 ──▶ S12-48   (Spike 12: its guard row covers the part type S14-09 adds)
 ```
 
 ---
@@ -137,6 +149,15 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Not this PR.** Removing shapes from Citation regions; Go-side rectangle enforcement; rewriting saved polygon depictions.
 **Check.** Draw on a likeness shows one radio; a Citation region shows seven; Swift tests for the strip's tool list and the bounding-rectangle conversion; an old polygon depiction still opens and saves; bar outcome 9, with Swift tests for the disabled controls, the blocked Draw and the failed-cut state.
 **Context.** Working rule "A depiction is drawn as a rectangle"; `ArtifactViewer.swift` `regionTools`, `CitationComposerModel+Depiction.swift` `startDepictionDrawing`, `depictionCitationRegion`, `useDepictionRegion`; the audit items in [`depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) (2026-10-18 likeness audit). If the plan runs past about ten steps, the composer feedback splits out as its own PR.
+
+### Slice 3 — Name display
+
+#### S14-09 — Quote nicknames and add former surnames
+
+**Ships.** Nickname parts display in curly quotes. A `former_surname` product part type (role `family`, after the nickname in both Western orders) displays in parentheses, with the surname italic on the Persons list row and the Person page title. Was Spike 11's S11-29; the plan is [S14-09-name-display.md](prs/S14-09-name-display.md), refreshed before it ships.
+**Not this PR.** Migrating existing catalogs; italics on other surfaces; a Go↔Swift part-type parity check (Spike 12's S12-48).
+**Check.** Bar outcome 11: *James “Jake” Robins*; *Jones, Mary (Smith)* with *Smith* italic.
+**Context.** Working rule "(Batch 3) S14-09 is Spike 11's S11-29, refreshed"; [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §4; [`structured-name-model.md`](../../structured-name-model.md) §4.2a, §4.5; [`ideas/international-names.md`](../../ideas/international-names.md); `add-name-value`, `add-localized-string`. Spike 12's S12-48 waits on this PR.
 
 ### Slice 2 — Matching calibration
 

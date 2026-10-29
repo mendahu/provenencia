@@ -1,4 +1,6 @@
-# Review — S11-29 Quote nicknames and add former surnames
+# Review — S14-09 Quote nicknames and add former surnames (was S11-29)
+
+Reviewed as S11-29 on 2026-10-19; moved to Spike 14 on 2026-10-29. The refresh by `plan-pr` gets its own review.
 
 **Verdict:** Fits with changes — Not ready → fixed in round 1; round 2 Ready
 **Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)

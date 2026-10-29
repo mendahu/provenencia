@@ -1,19 +1,19 @@
-# S11-29 — Quote nicknames and add former surnames
+# S14-09 — Quote nicknames and add former surnames
 
-**Status:** Planned
-**Spike / slice:** Spike 11 · Slice 2 — Value compare, everywhere (follow-up to S11-06; display only)
+**Status:** Blocked — re-plan (2026-10-29): moved from Spike 11, where it was S11-29, planned 2026-10-19 and never built. Name display has changed under it since (S11-28's alias fold, S11-44), so `plan-pr` refreshes it against `main` before `ship-pr` runs it.
+**Spike / slice:** Spike 14 · Slice 3 — Name display (batch 3; was Spike 11 slice 2, S11-29)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: existing name titles gain punctuation and one italic run; no new component, layout or state. The user chose the treatment on 2026-10-19)
 **Board:** —
 **Depends on:** —
 **Blocks:** —
-**Branch:** `s11-29-name-display`
-**Version bump:** none — Spike 11 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
+**Branch:** `s14-09-name-display`
+**Version bump:** none — Spike 11–14 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-name-value`](../../../../.agents/skills/add-name-value/SKILL.md), [`add-match-rule`](../../../../.agents/skills/add-match-rule/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md), [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
 **Rules that bind:** `.cursor/rules/name-values.mdc`, `.cursor/rules/match-rules.mdc`, `.cursor/rules/go-tests.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/macos-client.mdc`
 **Context:** [`docs/structured-name-model.md`](../../../structured-name-model.md) §4.2a roles, §4.5 display styles; [`docs/seeded-vocabulary.md`](../../../seeded-vocabulary.md) §4.1, §4.3; [`docs/ideas/international-names.md`](../../../ideas/international-names.md) "Name changes as a signal"; S9-D2 title anatomy in `macos/App/Features/Conclusions/ConclusionListRow.swift`
 **Planned:** 2026-10-19 against `main` @ `84a9b31`
-**Review:** [`S11-29-name-display.review.md`](S11-29-name-display.review.md) — Fits with changes / Not ready → fixed, 1 round
+**Review:** [`S14-09-name-display.review.md`](S14-09-name-display.review.md) — Fits with changes / Not ready → fixed, 1 round
 
 ### Implementer — read this first
 
@@ -200,9 +200,9 @@ Do: D-9, D-10, D-11. Add T-5.
 Check: Xcode tests pass, including `PersonsListTests` and `PersonDetailTests` unchanged; manual check steps 2–3.
 
 **STEP-5 — Docs**
-Files: `docs/seeded-vocabulary.md` §4.1 (inside the code fence, after `surname`: `former_surname      -- no GEDCOM part tag (GEDCOM 7: a NAME with TYPE MAIDEN or BIRTH)`) and §4.3 (both orders per D-4); `docs/structured-name-model.md` §4.2a roles sentence (`former_surname` → `family`) and §4.5 (requirement 2 becomes "The key is that part order, undecorated: the row may add quotes and parentheses, the key never does"; the table gains a row "**Decoration** — nickname quotes, former-surname parentheses | The **part type**, in the client, localized by UI language; never in the sort key or the profile | *James “Jake” Robins*"); `docs/ideas/international-names.md` under "Name changes as a signal" ("The `former_surname` part type (S11-29) records a maiden or earlier surname; using it as a matching signal is still open.") and two parked lines (Out: `NameFormSplit` wrappers; the unused `Sort` field); `docs/deployment-plan/spike-11/deployment-plan.md` map row; `docs/deployment-plan/spike-11/completed.md`; this plan.
+Files: `docs/seeded-vocabulary.md` §4.1 (inside the code fence, after `surname`: `former_surname      -- no GEDCOM part tag (GEDCOM 7: a NAME with TYPE MAIDEN or BIRTH)`) and §4.3 (both orders per D-4); `docs/structured-name-model.md` §4.2a roles sentence (`former_surname` → `family`) and §4.5 (requirement 2 becomes "The key is that part order, undecorated: the row may add quotes and parentheses, the key never does"; the table gains a row "**Decoration** — nickname quotes, former-surname parentheses | The **part type**, in the client, localized by UI language; never in the sort key or the profile | *James “Jake” Robins*"); `docs/ideas/international-names.md` under "Name changes as a signal" ("The `former_surname` part type (S14-09) records a maiden or earlier surname; using it as a matching signal is still open.") and two parked lines (Out: `NameFormSplit` wrappers; the unused `Sort` field); `docs/deployment-plan/spike-11/deployment-plan.md` map row; `docs/deployment-plan/spike-11/completed.md`; this plan.
 Do: per the Definition of done.
-Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-11/prs/S11-29-name-display.md` reports no errors; links resolve.
+Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-09-name-display.md` reports no errors; links resolve.
 
 Commits: one per behavior ("Show nicknames in quotes.", "Add a former surname name part, shown in parentheses and italics.").
 
@@ -267,5 +267,5 @@ None.
 
 ## 13. PR
 
-**Title:** S11-29 — Quote nicknames and add former surnames
-**Body:** objective in one sentence; what shipped against US-1 and US-2; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-11/prs/S11-29-name-display.md`.
+**Title:** S14-09 — Quote nicknames and add former surnames
+**Body:** objective in one sentence; what shipped against US-1 and US-2; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-14/prs/S14-09-name-display.md`.

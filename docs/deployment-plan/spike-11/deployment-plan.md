@@ -157,8 +157,8 @@ These are the calls for this spike. PR plans treat them as binding.
 | S11-21 | Large-Source performance check | 7 | 100-Subject budgeted test; bound nominations, memoize candidates, warm the name format and the alias index | — | S11-16, S11-19 | [plan](prs/S11-21-large-source-performance.md) | Landed #536 |
 | S11-31 | Bound the loaded Evidence graphs | 7 | Loaded Evidence graphs and their memos are evicted least recently used beyond a cap | — | S11-19, S11-21 | [plan](prs/S11-31-evidence-graph-cap.md) | Landed #541 |
 | S11-28 | Fold a nickname into its given name | 2 | Reconciler folds a nickname or abbreviation into its formal name, keeping the set's head; a reviewed table directs two-way pairs; cache reads the product alias tables | — | S11-06 | [plan](prs/S11-28-alias-fold.md) | Landed #589 |
-| S11-29 | Quote nicknames and add former surnames | 2 | Nicknames in quotes everywhere; `former_surname` part type in parentheses, italic on the Person titles | — | — | [plan](prs/S11-29-name-display.md) | Planned |
-| S11-30 | Gender meets sex at birth in its own words | 3 | The sex / gender pool maps gender terms into sex at birth terms through a registry crosswalk; `man` agrees with `male` | — | S11-10 | — (bugfix, user 2026-10-21) | In review |
+| S11-29 | Quote nicknames and add former surnames | 2 | Nicknames in quotes everywhere; `former_surname` part type in parentheses, italic on the Person titles | — | — | [plan](../spike-14/prs/S14-09-name-display.md) | Descoped (2026-10-29) → Spike 14 S14-09 |
+| S11-30 | Gender meets sex at birth in its own words | 3 | The sex / gender pool maps gender terms into sex at birth terms through a registry crosswalk; `man` agrees with `male` | — | S11-10 | — (bugfix, user 2026-10-21) | Landed #509 |
 | S11-34 | Evidence button hover on Promote rows | 6 | The assessment column stops being a button when the evidence sheet goes | — (S11-D1, agreed) | S11-27 | — | Descoped (2026-10-29) → Spike 13 S13-23 |
 | S11-35 | Hold a record Promote did not offer | 8 | `PromoteFlow` takes a record from outside the menu and holds it as a decided row; Go tests pin that a fixed off-shortlist handle is loaded, banded, has evidence and files; `FakeStore` holds it | — | — | [plan](prs/S11-35-hold-found-record.md) | Landed #543 |
 | S11-37 | One kind-scoped catalog search | 8 | The omnibar's results model and hit row move out of `Features/Workspace` to a shared home, with a `kinds` input and an optional location; the omnibar uses them unchanged | — | — | [plan](prs/S11-37-kind-scoped-search.md) | Landed #551 |
@@ -611,10 +611,12 @@ Asked by the user on 2026-10-19, after S11-06. Planned as two PRs, with no migra
 
 #### S11-29 — Quote nicknames and add former surnames
 
+**Moved to Spike 14 as S14-09 (2026-10-29).** Planned here and never built; the plan moved with it, to [`spike-14/prs/S14-09-name-display.md`](../spike-14/prs/S14-09-name-display.md). Kept as written for the record:
+
 **Ships.** Nickname parts display in curly quotes. A `former_surname` product part type (role `family`, after the nickname in both Western orders) displays in parentheses, with the surname italic on the Persons list row and the Person page title.
 **Not this PR.** Migrating existing catalogs; italics on other surfaces.
 **Check.** *James “Jake” Robins*; *Jones, Mary (Smith)* with *Smith* italic.
-**Context.** [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §4; [`ideas/international-names.md`](../../ideas/international-names.md). Spike 12's S12-48 waits on this PR: its guard row covers the part type this adds (audit 2 B-24).
+**Context.** [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §4; [`ideas/international-names.md`](../../ideas/international-names.md). Spike 12's S12-48 now waits on S14-09.
 
 ### Slice 8 — Find another record
 

@@ -114,7 +114,7 @@ Spike 12 is expected to close before Spike 13 starts. Spike 11 may still be open
 | S11-51 One person's links for every reader (was S13-19) | Scoped, right after S11-39 | Lifts S11-39's link merge into `canonlinks`; the Family read (S13-04) calls it |
 | S11-39 Matching reads kinship shapes | Blocked — re-plan | Siblings are page-only (R-18a), so the sibling inference must not reach matching's pattern set and S11-39's goldens do not move. Both still edit `core/kinship` and the graph cache's kinship results, so the sibling PR names S11-39 as a dependency or rebases on it |
 | S11-40 / S11-42 Implied links in claim evidence and on the evidence sheet | Scoped | Claim review (R-40) shows a claim's evidence and argument; S11-40 changes what the claim evidence query returns for relationships. The review view should reuse that query and sheet, so it follows S11-40 or is designed to absorb it |
-| S11-29 Quote nicknames and add former surnames | Planned | Changes how Person titles render: the header (R-4), Family tiles and Timeline participants |
+| S14-09 Quote nicknames and add former surnames (Spike 14; was S11-29, moved 2026-10-29) | Blocked — re-plan | Changes how Person titles render: the header (R-4), Family tiles and Timeline participants |
 | S11-30 Gender meets sex at birth | In review | Feeds the gender/sex color treatment reused on every tile (R-3) |
 | S11-28, S11-44, S11-45 Nickname fold, nickname sets, prefix names | Planned / Scoped | Change the reconciler's outcomes and causes, which the provenance sheet explains (R-9). The sheet should word causes from the reconciler's records, not a fixed list |
 
