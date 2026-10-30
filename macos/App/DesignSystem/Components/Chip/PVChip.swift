@@ -184,8 +184,9 @@ private extension PVControlSize {
     }
 }
 
-/// Draws keyboard focus for a chip, as `PVButtonBody` does for a button. A
-/// custom `ButtonStyle` gets no focus indication of its own.
+/// Draws keyboard focus, the disabled dimming and the press scale for a chip,
+/// as `PVButtonBody` does for a button. A custom `ButtonStyle` gets none of
+/// them on its own.
 private struct PVChipStyle: ButtonStyle {
     let cornerRadius: CGFloat
 
@@ -200,7 +201,7 @@ private struct PVChipStyleBody: View {
     @Environment(\.isFocused) private var isFocused
 
     var body: some View {
-        configuration.label
+        PVHoverEffect(isPressed: configuration.isPressed) { _ in configuration.label }
             .pvFocusRing(isFocused, cornerRadius: cornerRadius)
     }
 }
