@@ -20,8 +20,10 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`source-structure-later.md`](source-structure-later.md) — what Spike 12 parked: nested Sources, derivation links, named templates, per-graph credibility, layered citations
 - [`artifact-outside-graph-marker.md`](artifact-outside-graph-marker.md) — name, in a graph delete's confirm, the Artifacts it leaves in no Evidence graph; the card marker went to Spike 12 (S12-38)
 - [`graph-canvas-second-host.md`](graph-canvas-second-host.md) — what a family-tree canvas host still needs from GraphCanvas: hit targets from measured layout, a routed edge layer, selection, growable bounds, a host zoom range
-- [`name-index-on-commit.md`](name-index-on-commit.md) — a handle commit throws away Promote's name index and every Source's ranked candidates; update them in place instead
-- [`narrower-canon-walk.md`](narrower-canon-walk.md) — every proposal walks the whole connected component of the canon; walk only as far as alignment can use
+- [`promote-ranking.md`](promote-ranking.md) — rebuild Promote's ranking on the Evidence graph scoring; the matching work parked with it when Spike 12 closed
+- [`structural-debt.md`](structural-debt.md) — audit refactors with no visible change: search kind columns, canvas state enums
+- [`name-index-on-commit.md`](name-index-on-commit.md) — a handle commit throws away Promote's name index and every Source's ranked candidates; update them in place instead; parked with [`promote-ranking.md`](promote-ranking.md)
+- [`narrower-canon-walk.md`](narrower-canon-walk.md) — every proposal walks the whole connected component of the canon; walk only as far as alignment can use; parked with [`promote-ranking.md`](promote-ranking.md)
 - [`evidence-graph-card-memory.md`](evidence-graph-card-memory.md) — every card keeps its painted image after S11-21; about 585–774 MB for 110 cards on Retina. Options if it becomes a problem
 - [`evidence-graph-structure-shortcuts.md`](evidence-graph-structure-shortcuts.md) — place a common cluster (wedding, birth, residence) in one action, or paste a cluster already on the canvas
 - [`registry-source-import.md`](registry-source-import.md) — paste a record URL from Ancestry, FamilySearch and similar to create a Source; access (logins, OAuth) is unproven
@@ -34,9 +36,10 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`international-names.md`](international-names.md) — leftovers after Spike 10 (other name patterns, transliteration, calendars)
 - [`daitch-mokotoff.md`](daitch-mokotoff.md) — phonetic tier descoped from Spike 10 (S10-26)
 - [`matching-test-suite.md`](matching-test-suite.md) — scenario goldens, invariants, a simulated world, a scoreboard, and a labeler that fits the registry numbers. Its "make the algorithm graspable" part is Spike 11 (S11-01); the rest waits on the re-implementation
-- [`share-packages.md`](share-packages.md)
+- [`share-packages.md`](share-packages.md) — also holds the crafted-project hardening parked when Spike 12 closed
 - [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md)
 - [`identity-claim-review.md`](identity-claim-review.md)
+- [`provisional-identity-claims.md`](provisional-identity-claims.md) — a status per Promote row, Accepted or Provisional, with the provisional row coming back preselected; the schema holds it, the UI does not (S13-30, descoped 2026-10-30)
 - [`organizations.md`](organizations.md) — Organization as a Subject type (congregations, employers, schools, regiments, lodges) with part-of and succession like places; descoped from S11-48
 - [`binding-order-editing.md`](binding-order-editing.md) — a per-type ordered list of properties on the Properties page, calling `ReorderSubjectTypeProperties` (engine side shipped in S11-32)
 - [`place-gazetteer-service.md`](place-gazetteer-service.md)

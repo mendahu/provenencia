@@ -283,9 +283,9 @@ private struct SourcePageMetadataTextEditor: View {
     @ViewBuilder
     private var displayValue: some View {
         let fieldID = entry.field.id
-        if entry.field.dataType == CatalogFieldDataType.url {
+        if entry.field.dataType == CatalogFieldDataType.url, let url = entry.openURL {
             Button {
-                openSavedURL(entry.valueText)
+                openURL(url)
             } label: {
                 Text(verbatim: entry.valueText)
                     .font(PVFont.mono(size: PVTypeScale.caption))
@@ -304,16 +304,6 @@ private struct SourcePageMetadataTextEditor: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .sourcePageMetadataValueChrome()
                 .accessibilityIdentifier("sources.page.metadata.\(fieldID).value")
-        }
-    }
-
-    private func openSavedURL(_ typed: String) {
-        var s = typed.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !s.contains("://") {
-            s = "https://" + s
-        }
-        if let url = URL(string: s) {
-            openURL(url)
         }
     }
 }

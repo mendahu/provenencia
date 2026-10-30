@@ -37,6 +37,9 @@ type EventHeader struct {
 	EndDateCount   int
 	Subjects       []EventSubject
 	Places         []HeaderPlace
+	// PictureImageFileID is the image of the picture the Event leads with;
+	// nil when none. Preferred when set and in the gallery, else earliest.
+	PictureImageFileID []byte
 	// Title is the naming-matrix rule and parts, chosen from the above.
 	Title eventtitle.Plan
 	// Updated is the handle's latest canonical_entity revision and its time.

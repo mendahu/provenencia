@@ -73,16 +73,6 @@ struct CatalogQueryRegistryTests {
         #expect(suggestionsHandle.value?.count == 1)
     }
 
-    @Test func confidenceGradesLoadInOrder() async {
-        let store = FakeStore()
-        let session = makeSession(store: store)
-        let handle: QueryHandle<[CatalogClaimConfidenceGrade]> = session.query(
-            CatalogQueryKey.confidenceGradesList(project: session.projectKey)
-        )
-        await waitForQuery(handle)
-        #expect(handle.value?.map(\.key) == ["low_confidence", "moderate", "high_confidence"])
-    }
-
     @Test func citationCountsLoadByEvidenceGraph() async {
         let store = FakeStore()
         seedStore(store)
@@ -137,7 +127,7 @@ struct CatalogQueryRegistryTests {
         let store = FakeStore()
         seedStore(store)
         store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
-            graphId: "g-1", sourceId: "s1", subjectCount: 12, observationCount: 48
+            graphId: "g-1", subjectCount: 12, observationCount: 48
         )
         let session = makeSession(store: store)
         let handle: QueryHandle<[String: EvidenceGraphProgress]> = session.query(
@@ -456,14 +446,37 @@ struct CatalogQueryRegistryTests {
         #expect(registry.hiddenPolicy(.sourceWorkspace(project: project, sourceId: "s1")) == .revalidate)
     }
 
-    @Test func lastUpdatedPatchesAreDeclaredOnTheFourLists() {
-        let registry = CatalogQueryRegistry.standard
-        let project = ProjectKey(projectDir: projectDir)
-        for key in [CatalogQueryKey.personsList(project: project), .eventsList(project: project), .placesList(project: project)] {
-            #expect(registry.lastUpdatedPatch(key)?.scope == .handle, "\(key)")
+    @Test func everyKindHasOneDescriptor() {
+        let kinds = CatalogQueryKey.Kind.allCases
+        #expect(kinds.count == 18)
+        let described = kinds.map { kind -> CatalogQueryKey.Kind in
+            let descriptor = kind.descriptor
+            #expect(descriptor.kind == kind)
+            return descriptor.kind
         }
-        #expect(registry.lastUpdatedPatch(.sourcesList(project: project))?.scope == .source)
-        #expect(registry.lastUpdatedPatch(.sourceTypesList(project: project)) == nil)
+        #expect(Set(described) == Set(kinds))
+
+        // Omitting one kind from the observed set fails the same equality and names it.
+        let planted = Set(described.filter { $0 != .sourcesList })
+        let missing = Set(kinds).subtracting(planted)
+        #expect(missing == [.sourcesList])
+        #expect(planted != Set(kinds))
+    }
+
+    @Test func lastUpdatedPatchesAreDeclaredOnTheFourLists() {
+        let project = ProjectKey(projectDir: projectDir)
+        func follows(_ key: CatalogQueryKey) -> CatalogQueryFollows? {
+            key.kind.descriptor.patches.compactMap(\.follows).first
+        }
+        for key in [CatalogQueryKey.personsList(project: project), .eventsList(project: project), .placesList(project: project)] {
+            #expect(follows(key) == .handle, "\(key)")
+        }
+        let sourcesList = CatalogQueryKey.sourcesList(project: project)
+        let sourcePatches = sourcesList.kind.descriptor.patches
+        #expect(sourcePatches.count == 2)
+        #expect(sourcePatches[0].follows == .source)
+        #expect(sourcePatches[1].follows == nil)
+        #expect(follows(.sourceTypesList(project: project)) == nil)
     }
 
     @Test func conclusionDetailOfAnUnknownHandleIsCodedNotFound() async throws {
@@ -561,6 +574,33 @@ struct CatalogQueryRegistryTests {
         #expect(handle.status == .ready)
         #expect(handle.value == seeded)
         #expect(store.heldCatalogProjectDir == nil)
+    }
+
+    @Test func applyUpdatedSourceLeavesOtherCachedWorkspacesUntouched() async {
+        let store = FakeStore()
+        seedStore(store)
+        store.sourcesByProject[projectDir]?.append(
+            CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "t1", title: "Beta", description: "")
+        )
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        let firstKey = CatalogQueryKey.sourceWorkspace(project: project, sourceId: "s1")
+        let secondKey = CatalogQueryKey.sourceWorkspace(project: project, sourceId: "s2")
+
+        let firstHandle: QueryHandle<CatalogSourceWorkspace> = session.query(firstKey)
+        let secondHandle: QueryHandle<CatalogSourceWorkspace> = session.query(secondKey)
+        await waitForQuery(firstHandle)
+        await waitForQuery(secondHandle)
+        #expect(firstHandle.value?.source.title == "Alpha")
+        #expect(secondHandle.value?.source.title == "Beta")
+
+        let updated = CatalogSource(
+            id: "s1", ref: "SRC-1", sourceTypeID: "t1", title: "Renamed", description: "New desc"
+        )
+        session.apply(.updatedSource(updated))
+
+        #expect(firstHandle.value?.source.title == "Renamed")
+        #expect(secondHandle.value?.source.title == "Beta")
     }
 
     @Test func applyUpdatedSourcePatchesListAndWorkspace() async {
@@ -864,13 +904,14 @@ struct CatalogQueryRegistryTests {
         #expect(registry.invalidations(for: CatalogWriteEffects(
             handles: ["e1"],
             evidenceGraphs: ["g-1"],
-            citationSources: ["s1"],
+            reads: [
+                CatalogWriteEffectsRead(read: .citations, ids: ["g-1"]),
+                CatalogWriteEffectsRead(read: .evidenceGraphProgress, ids: ["g-1"]),
+            ],
             lists: [.propertyUsage],
             headerHandles: ["e2"]
         ), project: project) == [
             .key(.evidenceGraph(project: project, graphId: "g-1")),
-            .allCached(.citationCounts),
-            .allCached(.citationsByArtifact),
             .key(.propertiesWorkspace(project: project)),
             .key(.personsList(project: project)),
             .key(.eventsList(project: project)),
@@ -887,15 +928,28 @@ struct CatalogQueryRegistryTests {
         #expect(both.filter { $0 == .key(.evidenceGraph(project: project, graphId: "g-1")) }.count == 1)
         // A Subject delete reports its handles and its graph in `WriteEffects`, so
         // the lists, the details and the graph are not named here.
-        // The citation reads follow the write's `citationSources`, not this mutation.
+        // The citation reads follow the write's `reads`, not this mutation.
         #expect(registry.invalidations(by: .deletedSubject, project: project) == [
             .key(.propertiesWorkspace(project: project)),
         ])
         let erased = registry.invalidations(by: .deletedSubject, project: project)
         #expect(!erased.contains(.allCached(.citationCounts)) && !erased.contains(.allCached(.citationsByArtifact)))
-        #expect(registry.invalidations(for: CatalogWriteEffects(citationSources: ["s1"]), project: project) == [
-            .allCached(.citationCounts), .allCached(.citationsByArtifact),
-        ])
+        // Keyed reads invalidate nothing: each kind's `refresh` follows them.
+        #expect(registry.invalidations(for: CatalogWriteEffects(
+            reads: [CatalogWriteEffectsRead(read: .citations, ids: ["g-1"])]
+        ), project: project).isEmpty)
+        #expect(CatalogQueryKey.Kind.citationCounts.descriptor.refresh?.follows == .reads(.citations))
+        #expect(CatalogQueryKey.Kind.citationsByArtifact.descriptor.refresh?.follows == .reads(.citations))
+        #expect(CatalogQueryKey.Kind.evidenceGraphProgress.descriptor.refresh?.follows == .reads(.evidenceGraphProgress))
+        // A read follows only its own entry; progress also follows a mutation's graph.
+        let reads = CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .citations, ids: ["g-1"])])
+        #expect(CatalogQueryFollows.reads(.citations).ids(in: reads, mutation: nil) == ["g-1"])
+        #expect(CatalogQueryFollows.reads(.evidenceGraphProgress).ids(in: reads, mutation: nil).isEmpty)
+        #expect(
+            CatalogQueryFollows.reads(.evidenceGraphProgress)
+                .ids(in: .empty, mutation: .promotedSubject(graphId: "g-9")) == ["g-9"]
+        )
+        #expect(CatalogQueryFollows.reads(.citations).ids(in: .empty, mutation: .promotedSubject(graphId: "g-9")).isEmpty)
         #expect(registry.hiddenPolicy(.citationCounts(project: project, graphId: "g1")) == .markStale)
         // A Promote changes that graph's cards (their membership row) and every
         // Conclusion key.
@@ -923,12 +977,6 @@ struct CatalogQueryRegistryTests {
         #expect(everyMutation.allSatisfy { mutation in
             !registry.invalidations(by: mutation, project: project).contains(
                 .key(.credibilityGradesList(project: project))
-            )
-        })
-        // Claim confidence grades are seeded the same way (S9-12).
-        #expect(everyMutation.allSatisfy { mutation in
-            !registry.invalidations(by: mutation, project: project).contains(
-                .key(.confidenceGradesList(project: project))
             )
         })
         // Writes that name their source stay narrow: a Source-page write reports

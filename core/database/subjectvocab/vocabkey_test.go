@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -51,9 +52,24 @@ func TestVocabKeysMatchSeed(t *testing.T) {
 		vocabkey.PropertyName, vocabkey.PropertySexAtBirth, vocabkey.PropertyGender,
 		vocabkey.PropertyEventType, vocabkey.PropertyDate, vocabkey.PropertyStartDate,
 		vocabkey.PropertyEndDate, vocabkey.PropertyToponym,
+		vocabkey.PropertyLikeness, vocabkey.PropertyEventPicture, vocabkey.PropertyPlacePicture,
 	} {
 		if !seeded[key] {
 			t.Errorf("vocabkey Property %q is not a seeded Property", key)
+		}
+	}
+	byKey := map[string]seedProperty{}
+	for _, p := range seedProperties {
+		byKey[p.Key] = p
+	}
+	for _, key := range vocabkey.GalleryKeys() {
+		p, ok := byKey[key]
+		if !ok {
+			t.Errorf("GalleryKeys entry %q is not a seeded Property", key)
+			continue
+		}
+		if p.ValueType != propertymeta.ValueTypeDepiction {
+			t.Errorf("GalleryKeys entry %q ValueType %q, want depiction", key, p.ValueType)
 		}
 	}
 

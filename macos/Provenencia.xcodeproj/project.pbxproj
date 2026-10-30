@@ -75,7 +75,10 @@
 		AA0000000000000000000371 /* PVInlineEdit.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000370 /* PVInlineEdit.swift */; };
 		AA0000000000000000000373 /* PVTextArea.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000372 /* PVTextArea.swift */; };
 		AA0000000000000000000375 /* PVChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000374 /* PVChip.swift */; };
+		5C00000000000000000F25A1 /* PVSegmentedControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C00000000000000000F25A2 /* PVSegmentedControl.swift */; };
 		5C9BFD3B0C2E3E5E8C0A254F /* PVFlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C69060F19E0165B2C0587F1 /* PVFlowLayout.swift */; };
+		5C00000000000000000F24A1 /* PVWidthClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C00000000000000000F24A2 /* PVWidthClass.swift */; };
+		5C00000000000000000F25A3 /* PVPageColumns.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C00000000000000000F25A4 /* PVPageColumns.swift */; };
 		AA0000000000000000000377 /* PVCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000376 /* PVCard.swift */; };
 		AA0000000000000000000379 /* PVSectionHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000378 /* PVSectionHeader.swift */; };
 		AA0000000000000000000331 /* DateValueDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000330 /* DateValueDraft.swift */; };
@@ -105,6 +108,7 @@
 		A70800000000000000000002 /* CitationComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70800000000000000000001 /* CitationComposerView.swift */; };
 
 		A70B00000000000000000002 /* ArtifactViewerKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000001 /* ArtifactViewerKind.swift */; };
+		A70B00000000000000000100 /* ArtifactImageDecode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000101 /* ArtifactImageDecode.swift */; };
 		A70B00000000000000000004 /* ArtifactViewerContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000003 /* ArtifactViewerContent.swift */; };
 		A70B00000000000000000006 /* ArtifactViewerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000005 /* ArtifactViewerModel.swift */; };
 		A70B00000000000000000008 /* ArtifactMediaViewport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000007 /* ArtifactMediaViewport.swift */; };
@@ -134,6 +138,7 @@
 		AA00000000000000000003D3 /* IngestFileDropRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003D2 /* IngestFileDropRow.swift */; };
 		AA00000000000000000003D5 /* IngestMediaPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003D4 /* IngestMediaPolicyTests.swift */; };
 		AA0000000000000000000391 /* ThumbnailCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000390 /* ThumbnailCache.swift */; };
+		AA0000000000000000000397 /* ImageHeaderDecode.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000396 /* ImageHeaderDecode.swift */; };
 		AA0000000000000000000393 /* CachedThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000392 /* CachedThumbnail.swift */; };
 		AA00000000000000000003C1 /* PVContextMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003C0 /* PVContextMenu.swift */; };
 		AA00000000000000000FE006 /* PVActionMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000FE005 /* PVActionMenu.swift */; };
@@ -303,6 +308,10 @@
 		AA0000000000000000000607 /* PVSelectAccessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000606 /* PVSelectAccessibility.swift */; };
 		AA0000000000000000000611 /* PVSelectSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000610 /* PVSelectSessionTests.swift */; };
 		AA0000000000000000000613 /* PVSelectPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000612 /* PVSelectPlacementTests.swift */; };
+		AA00000000000000000F24B1 /* PVWidthClassTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000F24B2 /* PVWidthClassTests.swift */; };
+		AA00000000000000000F25B3 /* PVPageColumnsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000F25B4 /* PVPageColumnsTests.swift */; };
+		AA00000000000000000F25B1 /* PVSegmentedControlTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000F25B2 /* PVSegmentedControlTests.swift */; };
+		AA00000000000000000F24B3 /* HostedWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000F24B4 /* HostedWindow.swift */; };
 		AA0000000000000000000617 /* DateValueSelectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000616 /* DateValueSelectTests.swift */; };
 		537CBAF612C54F4F04ADA683 /* PVSpacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BEB8D3B3D1A6C08B3733B13 /* PVSpacing.swift */; };
 		563FA9B6FA344585CE32B2A7 /* PVIconButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68425DFE8D1974D7A4AC5BF8 /* PVIconButton.swift */; };
@@ -400,15 +409,8 @@
 		B91100000000000000000008 /* PromoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91100000000000000000007 /* PromoteView.swift */; };
 		B9110000000000000000000C /* PromoteModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000B /* PromoteModelTests.swift */; };
 		B9110000000000000000000E /* PromoteFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000D /* PromoteFlow.swift */; };
-		C1120094E727223A3EA7D87A /* PromoteEvidenceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C112000400E7D14ECD8AF111 /* PromoteEvidenceSheet.swift */; };
-		AA000000000000000005E00B /* PromoteEvidenceCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E00A /* PromoteEvidenceCards.swift */; };
-		C11200BD269354BE1FC4BDC0 /* PromoteEvidenceDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C112003C83C97BC64D181BED /* PromoteEvidenceDisplay.swift */; };
-		AA000000000000000005E007 /* PromoteEvidenceBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E006 /* PromoteEvidenceBoard.swift */; };
-		C11200E6D8FE13682466E995 /* PromoteReadout.swift in Sources */ = {isa = PBXBuildFile; fileRef = C112002B53DFC6E2EF560AC7 /* PromoteReadout.swift */; };
 		B91100000000000000000010 /* PromoteFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000F /* PromoteFlowTests.swift */; };
-		C112007CF5D40430AF417EA9 /* PromoteEvidenceDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C11200E484C4CD37DD9BA992 /* PromoteEvidenceDisplayTests.swift */; };
 		AA000000000000000005E009 /* TextEmphasisRenderingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E008 /* TextEmphasisRenderingTests.swift */; };
-		AA000000000000000005E005 /* PromoteEvidenceBoardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000005E004 /* PromoteEvidenceBoardTests.swift */; };
 		AA0000000000000000000FA2 /* StyledFormatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000FA1 /* StyledFormatTests.swift */; };
 		B02746CAC03F94127373BB92 /* DateRowDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B052AEDEE88EFC9ED8413469 /* DateRowDisplay.swift */; };
 		B0F71D26711A163E3B415FCB /* DerivedPlace.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0628D2BFA20C5351EA2685B /* DerivedPlace.swift */; };
@@ -521,7 +523,10 @@
 		AA0000000000000000000370 /* PVInlineEdit.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVInlineEdit.swift; sourceTree = "<group>"; };
 		AA0000000000000000000372 /* PVTextArea.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVTextArea.swift; sourceTree = "<group>"; };
 		AA0000000000000000000374 /* PVChip.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVChip.swift; sourceTree = "<group>"; };
+		5C00000000000000000F25A2 /* PVSegmentedControl.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSegmentedControl.swift; sourceTree = "<group>"; };
 		5C69060F19E0165B2C0587F1 /* PVFlowLayout.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFlowLayout.swift; sourceTree = "<group>"; };
+		5C00000000000000000F24A2 /* PVWidthClass.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVWidthClass.swift; sourceTree = "<group>"; };
+		5C00000000000000000F25A4 /* PVPageColumns.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVPageColumns.swift; sourceTree = "<group>"; };
 		AA0000000000000000000376 /* PVCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVCard.swift; sourceTree = "<group>"; };
 		AA0000000000000000000378 /* PVSectionHeader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSectionHeader.swift; sourceTree = "<group>"; };
 		AA0000000000000000000330 /* DateValueDraft.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDraft.swift; sourceTree = "<group>"; };
@@ -551,6 +556,7 @@
 		A70800000000000000000001 /* CitationComposerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerView.swift; sourceTree = "<group>"; };
 
 		A70B00000000000000000001 /* ArtifactViewerKind.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactViewerKind.swift; sourceTree = "<group>"; };
+		A70B00000000000000000101 /* ArtifactImageDecode.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactImageDecode.swift; sourceTree = "<group>"; };
 		A70B00000000000000000003 /* ArtifactViewerContent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactViewerContent.swift; sourceTree = "<group>"; };
 		A70B00000000000000000005 /* ArtifactViewerModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactViewerModel.swift; sourceTree = "<group>"; };
 		A70B00000000000000000007 /* ArtifactMediaViewport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactMediaViewport.swift; sourceTree = "<group>"; };
@@ -580,6 +586,7 @@
 		AA00000000000000000003D2 /* IngestFileDropRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IngestFileDropRow.swift; sourceTree = "<group>"; };
 		AA00000000000000000003D4 /* IngestMediaPolicyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IngestMediaPolicyTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000390 /* ThumbnailCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ThumbnailCache.swift; sourceTree = "<group>"; };
+		AA0000000000000000000396 /* ImageHeaderDecode.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ImageHeaderDecode.swift; sourceTree = "<group>"; };
 		AA0000000000000000000392 /* CachedThumbnail.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CachedThumbnail.swift; sourceTree = "<group>"; };
 		AA00000000000000000003C0 /* PVContextMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVContextMenu.swift; sourceTree = "<group>"; };
 		AA00000000000000000FE005 /* PVActionMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVActionMenu.swift; sourceTree = "<group>"; };
@@ -617,6 +624,10 @@
 		AA0000000000000000000606 /* PVSelectAccessibility.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSelectAccessibility.swift; sourceTree = "<group>"; };
 		AA0000000000000000000610 /* PVSelectSessionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSelectSessionTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000612 /* PVSelectPlacementTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSelectPlacementTests.swift; sourceTree = "<group>"; };
+		AA00000000000000000F24B2 /* PVWidthClassTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVWidthClassTests.swift; sourceTree = "<group>"; };
+		AA00000000000000000F25B4 /* PVPageColumnsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVPageColumnsTests.swift; sourceTree = "<group>"; };
+		AA00000000000000000F25B2 /* PVSegmentedControlTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSegmentedControlTests.swift; sourceTree = "<group>"; };
+		AA00000000000000000F24B4 /* HostedWindow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HostedWindow.swift; sourceTree = "<group>"; };
 		AA0000000000000000000616 /* DateValueSelectTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueSelectTests.swift; sourceTree = "<group>"; };
 		2B7FCE6BAF87CC79B6907492 /* PVRadius.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVRadius.swift; sourceTree = "<group>"; };
 		3555554CD714B1FD24C2DB2F /* PVEmptyState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVEmptyState.swift; sourceTree = "<group>"; };
@@ -852,15 +863,8 @@
 		B91100000000000000000007 /* PromoteView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteView.swift; sourceTree = "<group>"; };
 		B9110000000000000000000B /* PromoteModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteModelTests.swift; sourceTree = "<group>"; };
 		B9110000000000000000000D /* PromoteFlow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteFlow.swift; sourceTree = "<group>"; };
-		C112000400E7D14ECD8AF111 /* PromoteEvidenceSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceSheet.swift; sourceTree = "<group>"; };
-		AA000000000000000005E00A /* PromoteEvidenceCards.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceCards.swift; sourceTree = "<group>"; };
-		C112003C83C97BC64D181BED /* PromoteEvidenceDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceDisplay.swift; sourceTree = "<group>"; };
-		AA000000000000000005E006 /* PromoteEvidenceBoard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceBoard.swift; sourceTree = "<group>"; };
-		C112002B53DFC6E2EF560AC7 /* PromoteReadout.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteReadout.swift; sourceTree = "<group>"; };
 		B9110000000000000000000F /* PromoteFlowTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteFlowTests.swift; sourceTree = "<group>"; };
-		C11200E484C4CD37DD9BA992 /* PromoteEvidenceDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceDisplayTests.swift; sourceTree = "<group>"; };
 		AA000000000000000005E008 /* TextEmphasisRenderingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TextEmphasisRenderingTests.swift; sourceTree = "<group>"; };
-		AA000000000000000005E004 /* PromoteEvidenceBoardTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteEvidenceBoardTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000FA1 /* StyledFormatTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StyledFormatTests.swift; sourceTree = "<group>"; };
 		B052AEDEE88EFC9ED8413469 /* DateRowDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateRowDisplay.swift; sourceTree = "<group>"; };
 		B0628D2BFA20C5351EA2685B /* DerivedPlace.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DerivedPlace.swift; sourceTree = "<group>"; };
@@ -1184,6 +1188,7 @@
 				AA00000000000000000009F2 /* FocusClaim.swift */,
 				AA00000000000000000003D0 /* IngestMediaPolicy.swift */,
 				AA0000000000000000000390 /* ThumbnailCache.swift */,
+				AA0000000000000000000396 /* ImageHeaderDecode.swift */,
 				AA0000000000000000000392 /* CachedThumbnail.swift */,
 				AA0000000000000000000350 /* TimestampFormat.swift */,
 				AA000000000000000000001D /* InstallPaths.swift */,
@@ -1348,6 +1353,7 @@
 			isa = PBXGroup;
 			children = (
 				A70B00000000000000000001 /* ArtifactViewerKind.swift */,
+				A70B00000000000000000101 /* ArtifactImageDecode.swift */,
 				A70B00000000000000000003 /* ArtifactViewerContent.swift */,
 				A70B00000000000000000005 /* ArtifactViewerModel.swift */,
 				A70B00000000000000000007 /* ArtifactMediaViewport.swift */,
@@ -1447,6 +1453,10 @@
 				AA00000000000000000000C5 /* PVTableTests.swift */,
 				AA0000000000000000000610 /* PVSelectSessionTests.swift */,
 				AA0000000000000000000612 /* PVSelectPlacementTests.swift */,
+				AA00000000000000000F24B2 /* PVWidthClassTests.swift */,
+				AA00000000000000000F25B4 /* PVPageColumnsTests.swift */,
+				AA00000000000000000F25B2 /* PVSegmentedControlTests.swift */,
+				AA00000000000000000F24B4 /* HostedWindow.swift */,
 				AA0000000000000000000616 /* DateValueSelectTests.swift */,
 				4F0CB87F6EC5759DF8D0A7AF /* MetadataModelTests.swift */,
 				A70500000000000000000004 /* PropertiesModelTests.swift */,
@@ -1526,9 +1536,7 @@
 				AA0000000000000000000681 /* PVTextAreaTests.swift */,
 				B9110000000000000000000B /* PromoteModelTests.swift */,
 				B9110000000000000000000F /* PromoteFlowTests.swift */,
-				C11200E484C4CD37DD9BA992 /* PromoteEvidenceDisplayTests.swift */,
 				AA000000000000000005E008 /* TextEmphasisRenderingTests.swift */,
-				AA000000000000000005E004 /* PromoteEvidenceBoardTests.swift */,
 				AA0000000000000000000FA1 /* StyledFormatTests.swift */,
 				B0D89A265AAED569EA0CA31E /* DateRowDisplayTests.swift */,
 				B042B09EC818DE35F967C981 /* DerivedPlaceTests.swift */,
@@ -1658,6 +1666,24 @@
 			path = FlowLayout;
 			sourceTree = "<group>";
 		};
+		5C00000000000000000F24A3 /* WidthClass */ = {
+			isa = PBXGroup;
+			children = (
+				5C00000000000000000F24A2 /* PVWidthClass.swift */,
+			);
+			name = WidthClass;
+			path = WidthClass;
+			sourceTree = "<group>";
+		};
+		5C00000000000000000F25A5 /* PageColumns */ = {
+			isa = PBXGroup;
+			children = (
+				5C00000000000000000F25A4 /* PVPageColumns.swift */,
+			);
+			name = PageColumns;
+			path = PageColumns;
+			sourceTree = "<group>";
+		};
 		D5C000000000000000000007 /* Card */ = {
 			isa = PBXGroup;
 			children = (
@@ -1744,6 +1770,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000374 /* PVChip.swift */,
+				5C00000000000000000F25A2 /* PVSegmentedControl.swift */,
 			);
 			name = Chip;
 			path = Chip;
@@ -1927,6 +1954,8 @@
 				AA00000000000000000C12F1 /* SkeletonBar */,
 				D5C000000000000000000007 /* Card */,
 				5C00000000000000000F10A1 /* FlowLayout */,
+				5C00000000000000000F24A3 /* WidthClass */,
+				5C00000000000000000F25A5 /* PageColumns */,
 				A91600000000000000000010 /* Disclosure */,
 				D5C00000000000000000000D /* SectionHeader */,
 				D5C000000000000000000012 /* ContextMenu */,
@@ -2000,11 +2029,6 @@
 				B91100000000000000000005 /* PromoteModel.swift */,
 				B91100000000000000000007 /* PromoteView.swift */,
 				B9110000000000000000000D /* PromoteFlow.swift */,
-				C112000400E7D14ECD8AF111 /* PromoteEvidenceSheet.swift */,
-				AA000000000000000005E00A /* PromoteEvidenceCards.swift */,
-				C112003C83C97BC64D181BED /* PromoteEvidenceDisplay.swift */,
-				AA000000000000000005E006 /* PromoteEvidenceBoard.swift */,
-				C112002B53DFC6E2EF560AC7 /* PromoteReadout.swift */,
 			);
 			path = Promote;
 			sourceTree = "<group>";
@@ -2194,8 +2218,11 @@
 				AA0000000000000000000371 /* PVInlineEdit.swift in Sources */,
 				AA0000000000000000000373 /* PVTextArea.swift in Sources */,
 				AA0000000000000000000375 /* PVChip.swift in Sources */,
+				5C00000000000000000F25A1 /* PVSegmentedControl.swift in Sources */,
 				AA0000000000000000000377 /* PVCard.swift in Sources */,
 				5C9BFD3B0C2E3E5E8C0A254F /* PVFlowLayout.swift in Sources */,
+				5C00000000000000000F24A1 /* PVWidthClass.swift in Sources */,
+				5C00000000000000000F25A3 /* PVPageColumns.swift in Sources */,
 				A91600000000000000000002 /* PVDisclosureButton.swift in Sources */,
 				AA0000000000000000000379 /* PVSectionHeader.swift in Sources */,
 				504C4A2D17A9AC30A47D4E37 /* PVSelect.swift in Sources */,
@@ -2391,6 +2418,7 @@
 				A9070000000000000000000C /* PlaceTitleDisplay.swift in Sources */,
 				A9C4200000000000000000A1 /* ConclusionHeaderDisplay.swift in Sources */,
 				A70B00000000000000000002 /* ArtifactViewerKind.swift in Sources */,
+				A70B00000000000000000100 /* ArtifactImageDecode.swift in Sources */,
 				A70B00000000000000000004 /* ArtifactViewerContent.swift in Sources */,
 				A70B00000000000000000006 /* ArtifactViewerModel.swift in Sources */,
 				A70B00000000000000000008 /* ArtifactMediaViewport.swift in Sources */,
@@ -2417,6 +2445,7 @@
 				AA00000000000000000003D1 /* IngestMediaPolicy.swift in Sources */,
 				AA00000000000000000003D3 /* IngestFileDropRow.swift in Sources */,
 				AA0000000000000000000391 /* ThumbnailCache.swift in Sources */,
+				AA0000000000000000000397 /* ImageHeaderDecode.swift in Sources */,
 				AA0000000000000000000393 /* CachedThumbnail.swift in Sources */,
 				AA00000000000000000003C1 /* PVContextMenu.swift in Sources */,
 				AA00000000000000000FE006 /* PVActionMenu.swift in Sources */,
@@ -2430,11 +2459,6 @@
 				B91100000000000000000006 /* PromoteModel.swift in Sources */,
 				B91100000000000000000008 /* PromoteView.swift in Sources */,
 				B9110000000000000000000E /* PromoteFlow.swift in Sources */,
-				C1120094E727223A3EA7D87A /* PromoteEvidenceSheet.swift in Sources */,
-				AA000000000000000005E00B /* PromoteEvidenceCards.swift in Sources */,
-				C11200BD269354BE1FC4BDC0 /* PromoteEvidenceDisplay.swift in Sources */,
-				AA000000000000000005E007 /* PromoteEvidenceBoard.swift in Sources */,
-				C11200E6D8FE13682466E995 /* PromoteReadout.swift in Sources */,
 				B02746CAC03F94127373BB92 /* DateRowDisplay.swift in Sources */,
 				B0F71D26711A163E3B415FCB /* DerivedPlace.swift in Sources */,
 				B071F1D64BED98AE2965E8AD /* PersonLifeDisplay.swift in Sources */,
@@ -2477,6 +2501,10 @@
 				AA00000000000000000000C4 /* PVTableTests.swift in Sources */,
 				AA0000000000000000000611 /* PVSelectSessionTests.swift in Sources */,
 				AA0000000000000000000613 /* PVSelectPlacementTests.swift in Sources */,
+				AA00000000000000000F24B1 /* PVWidthClassTests.swift in Sources */,
+				AA00000000000000000F25B3 /* PVPageColumnsTests.swift in Sources */,
+				AA00000000000000000F25B1 /* PVSegmentedControlTests.swift in Sources */,
+				AA00000000000000000F24B3 /* HostedWindow.swift in Sources */,
 				AA0000000000000000000617 /* DateValueSelectTests.swift in Sources */,
 				CE7E43F00CA602E2794E0ADA /* MetadataModelTests.swift in Sources */,
 				A70500000000000000000008 /* PropertiesModelTests.swift in Sources */,
@@ -2556,9 +2584,7 @@
 				A71000000000000000000006 /* PropertyTermDisplayTests.swift in Sources */,
 				B9110000000000000000000C /* PromoteModelTests.swift in Sources */,
 				B91100000000000000000010 /* PromoteFlowTests.swift in Sources */,
-				C112007CF5D40430AF417EA9 /* PromoteEvidenceDisplayTests.swift in Sources */,
 				AA000000000000000005E009 /* TextEmphasisRenderingTests.swift in Sources */,
-				AA000000000000000005E005 /* PromoteEvidenceBoardTests.swift in Sources */,
 				AA0000000000000000000FA2 /* StyledFormatTests.swift in Sources */,
 				B0E27559D6CFFEBA2093C436 /* DateRowDisplayTests.swift in Sources */,
 				B0E8631619214033F0948729 /* DerivedPlaceTests.swift in Sources */,
@@ -2701,7 +2727,7 @@
 					"$(PROJECT_DIR)/Core",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.2;
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -2743,7 +2769,7 @@
 					"$(PROJECT_DIR)/Core",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.2;
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -2764,7 +2790,7 @@
 				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.2;
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -2785,7 +2811,7 @@
 				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.0;
+				MARKETING_VERSION = 0.2.2;
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;

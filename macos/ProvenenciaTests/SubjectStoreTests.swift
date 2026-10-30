@@ -124,7 +124,7 @@ struct SubjectStoreTests {
         }
     }
 
-    @Test func promoteJoinsExistingHandleWithGradeAndArgument() async throws {
+    @Test func promoteJoinsExistingHandle() async throws {
         let store = storeWithPersonType()
         store.subjectTypesByProject[projectDir]?.append(CatalogSubjectType(
             id: "type-event", key: "event", origin: "provenencia", label: "Event",
@@ -140,10 +140,10 @@ struct SubjectStoreTests {
         let second = try await make(typeID)
         let joined = try await store.promoteSubject(
             projectDir: projectDir, userID: "user-1", subjectID: second.id,
-            entityID: first.entity.id, confidenceGradeID: "cg-high", argument: " Same name. "
+            entityID: first.entity.id
         )
         #expect(joined.entity == first.entity)
-        #expect(joined.claim.confidenceGradeID == "cg-high" && joined.claim.argument == "Same name.")
+        #expect(joined.claim.status == "accepted")
         #expect(store.membershipBySubject[second.id]?.entity.ref == first.entity.ref)
 
         let event = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: try await make("type-event").id)
@@ -151,13 +151,10 @@ struct SubjectStoreTests {
         await #expect(throws: CoreInvokeError.self) {
             _ = try await store.promoteSubject(
                 projectDir: projectDir, userID: "user-1", subjectID: james.id,
-                entityID: event.entity.id, confidenceGradeID: nil, argument: ""
+                entityID: event.entity.id
             )
         }
         #expect(store.membershipBySubject[james.id] == nil)
-
-        let grades = try await store.listClaimConfidenceGrades(projectDir: projectDir)
-        #expect(grades.map(\.key) == ["low_confidence", "moderate", "high_confidence"])
     }
 
     @Test func deletingPromotedSubjectNamesHandleThenClearsMembership() async throws {

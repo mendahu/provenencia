@@ -398,24 +398,11 @@ struct CitationComposerEvidenceColumn: View {
             if model.artifactViewer.kind == .pdf, model.artifactViewer.pageCount > 0 {
                 return L10n.CitationComposer.pageCount(count: model.artifactViewer.pageCount)
             }
-            if model.artifactViewer.kind == .image,
-               let image = model.artifactViewer.displayImage,
-               let size = pixelSize(image)
-            {
+            if model.artifactViewer.kind == .image, let size = model.artifactViewer.imagePixelSize {
                 return L10n.CitationComposer.imagePixels(width: size.width, height: size.height)
             }
         }
         return ByteCountFormatter.string(fromByteCount: artifact.file?.byteSize ?? 0, countStyle: .file)
-    }
-
-    private func pixelSize(_ image: NSImage) -> (width: Int, height: Int)? {
-        if let rep = image.representations.first, rep.pixelsWide > 0, rep.pixelsHigh > 0 {
-            return (rep.pixelsWide, rep.pixelsHigh)
-        }
-        let width = Int(image.size.width.rounded())
-        let height = Int(image.size.height.rounded())
-        guard width > 0, height > 0 else { return nil }
-        return (width, height)
     }
 
     private func artifactMark(_ artifact: CatalogArtifact) -> PVMarkKey? {

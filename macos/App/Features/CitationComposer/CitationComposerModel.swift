@@ -205,7 +205,29 @@ final class CitationComposerModel {
     private(set) var loadFailureIsMissingCitation = false
     var selectedArtifactID: String? {
         get { context.artifactID }
-        set { context.artifactID = newValue }
+        set {
+            context.artifactID = newValue
+            followArtifactInLocation(newValue)
+        }
+    }
+
+    /// Rewrites the current location's Artifact in place, so `PlaceRegistry`
+    /// names the selected Artifact's citations as visible keys. Every other
+    /// id and display field of the location stays, except that a switch which
+    /// dropped the open Citation clears its `citationId` and `observationId`;
+    /// nothing is pushed.
+    private func followArtifactInLocation(_ artifactID: String?) {
+        guard let navigation else { return }
+        var location = navigation.currentLocation
+        guard location.sourceSurface == .citationComposer, location.graphId == entry.graphID else { return }
+        let value = (artifactID?.isEmpty ?? true) ? nil : artifactID
+        guard location.artifactId != value else { return }
+        location.artifactId = value
+        if activeCitationID == nil {
+            location.citationId = nil
+            location.observationId = nil
+        }
+        navigation.replaceCurrent(with: location)
     }
     private var identityTask: Task<Void, Never>?
 
@@ -1186,7 +1208,8 @@ final class CitationComposerModel {
             ArtifactViewerSource(
                 projectDir: session.projectKey.projectDir,
                 relPath: relPath,
-                mediaType: mediaType.isEmpty ? "application/octet-stream" : mediaType
+                mediaType: mediaType.isEmpty ? "application/octet-stream" : mediaType,
+                typeIdentifiers: artifact.file?.typeIdentifiers ?? []
             )
         )
         if let preferredPage, artifactViewer.supportsPages {

@@ -283,6 +283,7 @@ message SourceFileRef {
   string original_filename = 3;
   string media_type = 4;
   int64 byte_size = 5;
+  repeated string type_identifiers = 6; // UTIs a stored image may sniff as; Go's stored-type table. Empty for non-images.
 }
 
 message Artifact {
@@ -364,6 +365,7 @@ message MetadataWorkspaceEntry {
   int32 sort_order = 6;
   reserved 7;
   reserved "date_summary";
+  string open_href = 9; // web link to open, from sourcemetadata OpenHref; empty when the value is not one
 }
 
 // DateValueInput maps to datevalues.Insert (kind point|range; see docs/structured-date-model.md).
@@ -732,15 +734,22 @@ message WriteEffects {
   // Sources whose last activity this write moved (the audit source scope).
   // Swift patches the cached Sources list rows with (revision, revision_at).
   repeated string source_scopes = 10;
-  // Sources whose citation reads (citation counts, citations by artifact) this
-  // write moved.
-  repeated string citation_sources = 11;
+  reserved 11;
+  reserved "citation_sources";
   // Catalog-wide lists this write changed: effects.List values ("vocabulary",
   // "property_usage", "evidence_graphs"). Swift drops the reads that show each.
   repeated string lists = 13;
-  // Evidence graphs whose loaded rows this write changed: what the graph's rows
-  // and graph progress read.
+  // Evidence graphs whose loaded rows this write changed (graphcache drops each).
   repeated string evidence_graphs = 14;
+  // Keyed partial reads this write moved, each with the Evidence graphs it
+  // moved them for: effects.Read values ("citations", "evidence_graph_progress").
+  // Swift refreshes only those graphs' reads.
+  repeated WriteEffectsRead reads = 15;
+}
+
+message WriteEffectsRead {
+  string read = 1;
+  repeated string ids = 2;
 }
 
 message IngestArtifactFileRequest {
@@ -1298,11 +1307,11 @@ message PersonHeader {
   // List*Headers responses only.
   int64 updated_revision = 6;
   string updated_at = 7;
-  // likeness_image_rel_path is the objects/… path of the likeness the Person
+  // picture_image_rel_path is the objects/… path of the picture the Person
   // leads with on its page and in the Persons list (the preferred portrait,
-  // else the earliest gallery likeness); empty when none. Filled on ListPersonHeaders and
+  // else the earliest gallery picture); empty when none. Filled on ListPersonHeaders and
   // GetConclusionDetail only.
-  string likeness_image_rel_path = 8;
+  string picture_image_rel_path = 8;
 }
 
 // ListPersonHeaders returns every unmerged Person in list order: by the title
@@ -1346,6 +1355,10 @@ message EventHeader {
   // List*Headers responses only.
   int64 updated_revision = 15;
   string updated_at = 16;
+  // picture_image_rel_path is the objects/… path of the picture the Event
+  // leads with; empty when none. Filled on ListEventHeaders and
+  // GetConclusionDetail only.
+  string picture_image_rel_path = 17;
 }
 
 // ListEventHeaders returns every unmerged Event in list order: dated
@@ -1394,6 +1407,10 @@ message PlaceHeader {
   // List*Headers responses only.
   int64 updated_revision = 12;
   string updated_at = 13;
+  // picture_image_rel_path is the objects/… path of the picture the Place
+  // leads with; empty when none. Filled on ListPlaceHeaders and
+  // GetConclusionDetail only.
+  string picture_image_rel_path = 14;
 }
 
 // ListPlaceHeaders returns every unmerged Place in list order: by the title
@@ -1487,19 +1504,19 @@ message GetConclusionDetailRequest {
   string entity_id = 2;
 }
 
-// LikenessDetail is one likeness a Person page's gallery shows (S10-35),
+// PictureDetail is one picture a handle's gallery shows (S10-35 / S14-01),
 // earliest recorded first. record is its earliest Observation, as the Why
 // shows it; the tile opens that record's Citation. image_rel_path is empty
 // when the File's path cannot be derived.
-message LikenessDetail {
+message PictureDetail {
   string image_rel_path = 1;
   ReconcilerOutcomeDetail record = 2;
-  // preferred is true for the likeness chosen as the Person's portrait
-  // (S10-39); at most one.
+  // preferred is true for the picture chosen as the handle's portrait or
+  // thumbnail (S10-39); at most one.
   bool preferred = 3;
-  // leads is true for the likeness the Person's header leads with: the
-  // preferred one when set, else the earliest; exactly one per gallery. The
-  // tile that leads shows the Portrait Badge (user, 2026-10-17).
+  // leads is true for the picture the header leads with: the preferred one
+  // when set, else the earliest; exactly one per gallery. The tile that
+  // leads shows the Portrait Badge on a Person (user, 2026-10-17).
   bool leads = 4;
 }
 
@@ -1515,7 +1532,7 @@ message ConclusionDetail {
     EventHeader event = 5;
     PlaceHeader place = 6;
   }
-  repeated LikenessDetail likenesses = 7;
+  repeated PictureDetail pictures = 7;
 }
 
 // ProposePromoteGraphAlignment loads one Evidence graph's layer and proposes
@@ -2246,8 +2263,8 @@ message GetPropertiesWorkspaceResponse {
 }
 
 message EvidenceGraphProgress {
-  // The graph's Source.
-  string source_id = 1;
+  reserved 1;
+  reserved "source_id";
   int32 subject_count = 2;
   int32 observation_count = 3;
   reserved 4;

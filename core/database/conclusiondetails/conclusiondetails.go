@@ -7,8 +7,8 @@
 // Field values are the node's auto-reconciler ranks. Term labels come from
 // the graph vocabulary. The Why stays a SQL read each time the page opens.
 // A Property no
-// record mentions isn't returned. Likenesses are listed apart from the
-// fields, earliest first (likenesses.ForEntities). Which empty fields a page still shows is
+// record mentions isn't returned. Pictures are listed apart from the
+// fields, earliest first (gallery.ForEntities). Which empty fields a page still shows is
 // the page's choice. Go returns structures; the app formats text.
 // Reconciliation Claims are never in these tables: when they ship, a
 // composer lays an accepted claim over the auto-reconciled value here.
@@ -23,8 +23,8 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/gallery"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/database/likenesses"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/namevalue"
@@ -105,13 +105,13 @@ type Field struct {
 	Outcomes    []Outcome         // by value rank (none last), then Observation id
 }
 
-// LikenessTile is one likeness a gallery shows: its image, and the outcome of
+// PictureTile is one picture a gallery shows: its image, and the outcome of
 // its earliest gallery record, which the tile opens.
-type LikenessTile struct {
+type PictureTile struct {
 	ImageFileID []byte
 	Record      Outcome
-	Preferred   bool // the Person's chosen portrait (S10-39)
-	Leads       bool // the likeness the header leads with (likenesses.Likeness.Leads)
+	Preferred   bool // the handle's chosen portrait or thumbnail (S10-39)
+	Leads       bool // the picture the header leads with (gallery.Picture.Leads)
 }
 
 // Detail is one handle's detail.
@@ -119,7 +119,7 @@ type Detail struct {
 	Entity      canonicalentities.Entity
 	MemberCount int // accepted members
 	Fields      []Field
-	Likenesses  []LikenessTile // earliest recorded first
+	Pictures    []PictureTile // earliest recorded first
 }
 
 const (
@@ -176,21 +176,21 @@ func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
 	if err := attachValues(c.Graph(), n, byProp); err != nil {
 		return Detail{}, err
 	}
-	gallery, err := likenesses.ForEntities(db, [][]byte{entityID})
+	tiles, err := gallery.ForEntities(db, [][]byte{entityID})
 	if err != nil {
 		return Detail{}, err
 	}
 	leads := map[string]bool{}
-	for _, l := range gallery[string(entityID)] {
+	for _, l := range tiles[string(entityID)] {
 		leads[string(l.ObservationIDs[0])] = true
 	}
 	leadOutcomes, err := loadOutcomes(db, entityID, byProp, leads)
 	if err != nil {
 		return Detail{}, err
 	}
-	for _, l := range gallery[string(entityID)] {
+	for _, l := range tiles[string(entityID)] {
 		if o, ok := leadOutcomes[string(l.ObservationIDs[0])]; ok {
-			d.Likenesses = append(d.Likenesses, LikenessTile{ImageFileID: l.ImageFileID, Record: o, Preferred: l.Preferred, Leads: l.Leads})
+			d.Pictures = append(d.Pictures, PictureTile{ImageFileID: l.ImageFileID, Record: o, Preferred: l.Preferred, Leads: l.Leads})
 		}
 	}
 	for _, f := range fields {

@@ -4,16 +4,16 @@ import PDFKit
 
 /// Loaded document payload. Extend with `.audio` / `.video` without changing `load(source:)`.
 ///
-/// `@unchecked Sendable`: `NSImage` / `PDFDocument` are not Sendable, but we only
+/// `@unchecked Sendable`: `PDFDocument` and the decoded `NSImage` are not Sendable, but we only
 /// hand the value from a one-shot load task onto the main actor.
 enum ArtifactViewerContent: Equatable, @unchecked Sendable {
-    case image(NSImage)
+    case image(ArtifactImageDecode.Decoded)
     case pdf(PDFDocument)
 
     static func == (lhs: ArtifactViewerContent, rhs: ArtifactViewerContent) -> Bool {
         switch (lhs, rhs) {
         case (.image(let a), .image(let b)):
-            return a === b || a.tiffRepresentation == b.tiffRepresentation
+            return a.raster === b.raster
         case (.pdf(let a), .pdf(let b)):
             return a === b || a.documentURL == b.documentURL
         default:
@@ -29,4 +29,6 @@ enum ArtifactViewerEmptyReason: Equatable, Sendable {
     case mediaNotYetAvailable
     case missingFile
     case loadFailed
+    /// The image declares a size over the viewer's budget.
+    case imageTooLarge
 }

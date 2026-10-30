@@ -100,11 +100,35 @@ const (
 
 var objectPathPattern = regexp.MustCompile(`^objects/[0-9a-f]{2}/[0-9a-f]{2}/[0-9a-f]{64}\.png$`)
 
-// likenessFixture is a project whose Artifact has an 8 x 8 PNG File and whose
-// Source has a Person subject, plus the likeness Property.
+// likenessFixture is depictionFixture for a Person and the likeness Property.
 func likenessFixture(t *testing.T) (dir, userID, sourceID, artifactID, personID, likenessID string) {
 	t.Helper()
-	dir, userID, sourceID, personTypeID := subjectFixture(t)
+	return depictionFixture(t, "person", "likeness")
+}
+
+// depictionFixture is a project whose Artifact has an 8 x 8 PNG File and whose
+// Source has a Subject of kind with the given depiction Property key.
+func depictionFixture(t *testing.T, kind, key string) (dir, userID, sourceID, artifactID, subjectID, propertyID string) {
+	t.Helper()
+	dir, userID, sourceID, _ = subjectFixture(t)
+	typesOut, err := ListSubjectTypes(marshalProto(t, &engine.ListSubjectTypesRequest{ProjectDir: dir}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var types engine.ListSubjectTypesResponse
+	if err := proto.Unmarshal(typesOut, &types); err != nil {
+		t.Fatal(err)
+	}
+	typeID := ""
+	for _, typ := range types.Types {
+		if typ.GetKey() == kind {
+			typeID = typ.GetId()
+			break
+		}
+	}
+	if typeID == "" {
+		t.Fatalf("no subject type %q", kind)
+	}
 	aout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
 		ProjectDir: dir, UserId: userID, SourceId: sourceID, Label: "Photo",
 	}))
@@ -124,7 +148,7 @@ func likenessFixture(t *testing.T) (dir, userID, sourceID, artifactID, personID,
 		t.Fatal(err)
 	}
 	sout, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
-		ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: personTypeID, Label: "Ada",
+		ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: typeID, Label: "Ada",
 	}))
 	if err != nil {
 		t.Fatal(err)
@@ -133,7 +157,7 @@ func likenessFixture(t *testing.T) (dir, userID, sourceID, artifactID, personID,
 	if err := proto.Unmarshal(sout, &subj); err != nil {
 		t.Fatal(err)
 	}
-	return dir, userID, sourceID, artifactID, subj.Subject.GetId(), propertyIDByKey(t, dir, "likeness")
+	return dir, userID, sourceID, artifactID, subj.Subject.GetId(), propertyIDByKey(t, dir, key)
 }
 
 // objectRelPaths lists every regular file under dir/objects, relative to dir, sorted.
@@ -273,20 +297,7 @@ func TestLikenessReadHidesDamagedValue(t *testing.T) {
 			dir, userID, sourceID, artifactID, personID, likenessID := likenessFixture(t)
 			saved := saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 128))
 			row := saved.Observations[0]
-			err := catalogsession.Do(dir, func(c *database.Catalog) error {
-				db, err := c.DB()
-				if err != nil {
-					return err
-				}
-				_, err = db.Exec(tt.damage, tt.args...)
-				return err
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := catalogsession.CloseAll(); err != nil {
-				t.Fatal(err)
-			}
+			damageCatalog(t, dir, tt.damage, tt.args...)
 			check := func(t *testing.T, rows []*engine.Observation) {
 				t.Helper()
 				if len(rows) != 1 || rows[0].GetValueDepictionId() != row.GetValueDepictionId() {
@@ -355,8 +366,11 @@ func TestCreateCitationWithObservations(t *testing.T) {
 				if created.Citation.GetTranscription() != "transcribe first" {
 					t.Fatalf("transcription %q", created.Citation.GetTranscription())
 				}
-				if created.GetEffects() == nil || len(created.GetEffects().GetEvidenceGraphs()) == 0 {
-					t.Fatalf("effects %+v", created.GetEffects())
+				// With no Observation the Citation shows in the graphs its Artifact is
+				// linked to: a citations read, and no graph for graphcache.
+				eff := created.GetEffects()
+				if len(eff.GetEvidenceGraphs()) != 0 || len(eff.GetReads()) != 1 || eff.GetReads()[0].GetRead() != "citations" {
+					t.Fatalf("effects %+v", eff)
 				}
 				cr := req.(*engine.CreateCitationWithObservationsRequest)
 				assertLatestAuditAction(t, cr.ProjectDir, "create_citation_with_observations")

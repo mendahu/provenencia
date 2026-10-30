@@ -39,15 +39,28 @@ type File struct {
 }
 
 // StorageRelPath returns objects/{hh}/{hh}/{fullhex}{ext} for a 64-char
-// lowercase hex checksum. Extension comes from objectpath.Extension;
-// unknown media types keep the bare hex basename. Invalid checksums map to
-// ErrInvalid.
+// lowercase hex checksum. The extension comes from the ingest allowlist; a
+// media type off it returns objectpath.ErrDisallowedType (no path). Invalid
+// checksums map to ErrInvalid.
 func StorageRelPath(checksumHex, mediaType string) (string, error) {
 	p, err := objectpath.Rel(checksumHex, mediaType)
 	if errors.Is(err, objectpath.ErrInvalidChecksum) {
 		return "", ErrInvalid
 	}
 	return p, err
+}
+
+// ReadRelPath is the read-side object path of f: what a read returns to a
+// client that may open it. A File whose media type is off the allowlist (a
+// damaged or hand-edited row) has no path and returns ("", nil), so the read
+// hides that one file instead of failing. Other errors are StorageRelPath's.
+// Writes and purge keep StorageRelPath, which reports the refusal.
+func ReadRelPath(f File) (string, error) {
+	rel, err := StorageRelPath(f.ChecksumSHA256, f.MediaType)
+	if errors.Is(err, objectpath.ErrDisallowedType) {
+		return "", nil
+	}
+	return rel, err
 }
 
 // Lookup returns a File by id, or sql.ErrNoRows.
@@ -88,7 +101,8 @@ func LookupMany(c *database.Catalog, ids [][]byte) (map[string]File, error) {
 }
 
 // RelPaths returns the objects/… path of each File, keyed by id string. An id
-// with no row, or whose path cannot be derived, is omitted.
+// with no row, whose media type has no path, or whose path cannot be derived,
+// is omitted.
 func RelPaths(c *database.Catalog, ids [][]byte) (map[string]string, error) {
 	byID, err := LookupMany(c, ids)
 	if err != nil {
@@ -96,8 +110,8 @@ func RelPaths(c *database.Catalog, ids [][]byte) (map[string]string, error) {
 	}
 	out := make(map[string]string, len(byID))
 	for id, f := range byID {
-		rel, err := StorageRelPath(f.ChecksumSHA256, f.MediaType)
-		if err != nil {
+		rel, err := ReadRelPath(f)
+		if err != nil || rel == "" {
 			continue
 		}
 		out[id] = rel

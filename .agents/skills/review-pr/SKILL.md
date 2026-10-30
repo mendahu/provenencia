@@ -111,7 +111,11 @@ make worse.
 
 **Evidence rules.** A finding with no evidence is not a finding. Conformance and
 regression findings carry the failing test (see the conformance rubric). A
-low-confidence finding says what would confirm it.
+low-confidence finding says what would confirm it. A claim that holds for all
+inputs (symmetric, order-free, equal keys mean equal values, no panic) is
+checked with generated inputs, a seeded random probe or a short fuzz run, as
+well as the plan's examples. A timing is evidence at the size it was measured;
+say the size, and measure at the map's **Scale** when the claim is about it.
 
 **Verdict:** `Clean` (no blocker or major) or `Changes needed`, and one line on
 what matters most.

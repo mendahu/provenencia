@@ -8,12 +8,12 @@ description: >-
 
 # Add an FFI handler
 
-[`api/ffi/dispatch.go`](../../../api/ffi/dispatch.go) is **only** a method switch. Unmarshal, domain calls, and protobuf replies live in **`api/ffi/handlers/`**. `handlers` must not import `ffi` (cycle).
+[`api/ffi/dispatch.go`](../../../api/ffi/dispatch.go) is **only** the `route` method switch (`Call` wraps it in a recover, so a handler panic reaches the app as `internal.unknown`; handlers never `recover`). Unmarshal, domain calls, and protobuf replies live in **`api/ffi/handlers/`**. `handlers` must not import `ffi` (cycle).
 
 ## Layout
 
 1. Add the enum value and messages in [`api/proto/engine.proto`](../../../api/proto/engine.proto). Run `./scripts/generate-proto.sh` and commit generated Go + Swift.
-2. Add `Method…` next to the other constants in `dispatch.go` and one `case` that calls `handlers.<Name>`.
+2. Add `Method…` next to the other constants in `dispatch.go` and one `case` in `route` that calls `handlers.<Name>`.
 3. Implement `func <Name>(in []byte) ([]byte, error)` in `api/ffi/handlers/<name>.go` (copy ping/identity/onboarding).
    Parse a repeated id field with `parseIDs`.
 4. Test in `api/ffi/handlers/<name>_test.go` with **`runRPC`** from `harness_test.go`. Do **not** put a large `run func(*testing.T)` in the table.
@@ -64,7 +64,7 @@ Resource / vocab **Delete** RPCs: preview is `GetDeleteImpact` (report proto). T
 
 ## Files from the client, paths to the client
 
-A request names a client file by its absolute path, never as bytes. The handler stages it inside `withProjectCatalog`, before `writes.Run`, and defers the discard: `ingest.StageDepictions(c, inputs)` for depictions, `ingest.File` for Artifacts. Examples: `IngestArtifactFile` (one file, one path back) and `CreateCitationWithObservations` (drafts that carry a depiction path). Never take a File id from the client, and never read a saved `objects/…` path from a request: a response message holds saved data and a request holds only the input. Return `objects/…` paths through `files.RelPaths` (many Files, one query) or `files.StorageRelPath` (one). See `add-depiction-value`.
+A request names a client file by its absolute path, never as bytes. The handler stages it inside `withProjectCatalog`, before `writes.Run`, and defers the discard: `ingest.StageDepictions(c, inputs)` for depictions, `ingest.File` for Artifacts. Examples: `IngestArtifactFile` (one file, one path back) and `CreateCitationWithObservations` (drafts that carry a depiction path). Never take a File id from the client, and never read a saved `objects/…` path from a request: a response message holds saved data and a request holds only the input. Return `objects/…` paths through `files.RelPaths` (many Files, one query) or `files.ReadRelPath` (one; a type off the allowlist returns no path). `files.StorageRelPath` is the ingest, stage and purge path and refuses a type off the allowlist. See `add-depiction-value`.
 
 ## Do not
 

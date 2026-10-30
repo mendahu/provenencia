@@ -123,6 +123,10 @@ struct CitationComposerModelTests {
         store.subjectPositionsBySubject[placeID] = CatalogSubjectPosition(
             subjectID: placeID, gridX: 16, gridY: 0
         )
+        store.nextWriteEffects = CatalogWriteEffects(
+            evidenceGraphs: [graphID], reads: [CatalogWriteEffectsRead(read: .citations, ids: [graphID])],
+            lists: [.propertyUsage]
+        )
         return store
     }
 
@@ -552,12 +556,12 @@ struct CitationComposerModelTests {
 
         let jones = makeModel(store: store)
         await jones.prepare()
-        #expect(jones.listedCitations.map(\.citation.ref).sorted() == ["CIT-A", "CIT-C"])
-        #expect(jones.listedCount(for: "art-0") == 2)
+        #expect(jones.listedCitations.map(\.citation.ref).sorted() == ["CIT-A", "CIT-B", "CIT-C"])
+        #expect(jones.listedCount(for: "art-0") == 3)
 
         let smith = makeModel(store: store, graphID: "g-2", subjectID: "sub-person-2")
         await smith.prepare()
-        #expect(smith.listedCitations.map(\.citation.ref).sorted() == ["CIT-B", "CIT-C"])
+        #expect(smith.listedCitations.map(\.citation.ref).sorted() == ["CIT-A", "CIT-B", "CIT-C"])
     }
 
     @Test func firstObservationMovesANewCitationIntoTheGraph() async {
@@ -571,14 +575,17 @@ struct CitationComposerModelTests {
             $0.values.propertyID = occupationPropertyID
             $0.values.valueText = "miller"
         }
+        store.nextWriteEffects = CatalogWriteEffects(
+            reads: [CatalogWriteEffectsRead(read: .citations, ids: [graphID])], lists: [.propertyUsage]
+        )
         await jones.saveAuthoring()
         let created = jones.activeCitationID
         #expect(created != nil)
-        #expect(jones.listedCitations.contains { $0.id == created })
+        #expect(jones.listedCitations.contains { $0.citation.id == created })
 
         let smith = makeModel(store: store, graphID: "g-2", subjectID: "sub-person-2")
         await smith.prepare()
-        #expect(!smith.listedCitations.contains { $0.id == created })
+        #expect(smith.listedCitations.contains { $0.id == created })
     }
 
     @Test func incompatibleSubjectClearsPropertyAndDisablesSave() async {
@@ -1670,6 +1677,64 @@ struct CitationComposerModelTests {
         #expect(switched)
         #expect(model.fields.error != nil)
         #expect(model.activeCitationID == nil)
+    }
+
+    /// D-8: selecting an Artifact rewrites the current location's Artifact in
+    /// place and keeps every other id and display field; nothing is pushed.
+    @Test func selectingAnArtifactRewritesTheLocationInPlace() async throws {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store, citationID: "cit-1")
+        let navigation = WorkspaceNavigation()
+        let location = WorkspaceLocation(
+            section: .sources, sourceId: sourceID, graphId: graphID, subjectId: subjectID,
+            citationId: "cit-1", artifactId: "art-0", observationId: "obs-1",
+            sourceSurface: .citationComposer, ref: "CIT-1", title: "Ada", sourceTitle: "Census"
+        )
+        navigation.replaceCurrent(with: location)
+        model.navigation = navigation
+
+        model.activeCitationID = "cit-1"
+        model.selectedArtifactID = "art-1"
+
+        var expected = location
+        expected.artifactId = "art-1"
+        #expect(navigation.currentLocation == expected)
+        #expect(navigation.currentLocation.observationId == "obs-1")
+        #expect(navigation.currentLocation.title == "Ada")
+        #expect(navigation.currentLocation.sourceTitle == "Census")
+        #expect(CitationComposerEntry(location: expected)?.identityKey
+            == CitationComposerEntry(location: location)?.identityKey)
+
+        model.selectedArtifactID = nil
+        #expect(navigation.currentLocation.artifactId == nil)
+    }
+
+    /// An Artifact switch that drops the open Citation (as selectArtifactAndLoad
+    /// does before it sets the Artifact) clears the Citation's ids from the
+    /// location; the display fields stay.
+    @Test func switchingArtifactsAwayFromAnEditedCitationClearsItsIds() async throws {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store, citationID: "cit-1")
+        let navigation = WorkspaceNavigation()
+        let location = WorkspaceLocation(
+            section: .sources, sourceId: sourceID, graphId: graphID, subjectId: subjectID,
+            citationId: "cit-1", artifactId: "art-0", observationId: "obs-1",
+            sourceSurface: .citationComposer, ref: "CIT-1", title: "Ada", sourceTitle: "Census"
+        )
+        navigation.replaceCurrent(with: location)
+        model.navigation = navigation
+
+        model.activeCitationID = nil
+        model.selectedArtifactID = "art-1"
+
+        #expect(navigation.currentLocation.artifactId == "art-1")
+        #expect(navigation.currentLocation.citationId == nil)
+        #expect(navigation.currentLocation.observationId == nil)
+        #expect(navigation.currentLocation.title == "Ada")
+        #expect(navigation.currentLocation.ref == "CIT-1")
+        #expect(navigation.currentLocation.sourceTitle == "Census")
     }
 
     @Test func lineRefreshShowsAFailedCitationLoad() async {

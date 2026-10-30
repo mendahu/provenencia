@@ -20,7 +20,7 @@ Seed keys: [`seeded-vocabulary.md`](seeded-vocabulary.md). Audit: [`audit-revisi
 
 Persist only researcher judgments that cannot be recomputed from the evidence trail.
 
-Do **not** store a single subject- or fact-level “likelihood” pill. Product UI may synthesize badges from stored judgments, exhibit shape (pins, polarity mix), claim `status`, and handle grounding. Those pills are recomputable app policy and must not be written back as catalog truth.
+Do **not** store a single subject- or fact-level “likelihood” pill. Product UI may synthesize badges from stored judgments, the members' Observations compared side by side (agreement, conflict, polarity mix), claim `status`, and handle grounding. Those pills are recomputable app policy and must not be written back as catalog truth.
 
 Do **not** auto-multiply Source credibility × Citation certainty × Claim confidence into a stored rollup. The claim editor should **surface** Source assessments and Citation flags as context when the researcher sets Claim confidence.
 
@@ -41,7 +41,7 @@ These are related in research practice but must not share vocabulary keys. Credi
 - **No confidence score on Observations.** Competing or alternate readings are separate Observation rows (and polarity). See [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md).
 - **No credibility column on `sources`.** The Source layer answers what evidence we possess. Judging evidentiary value is Interpretation. Putting a grade on the catalog row is a layer leak.
 - **No claim polarity.** Polarity (`positive` / `negative`) lives on Observations. An Identity Claim's content is which entity a subject belongs to; refusal is `status = rejected` on that claim. Reconciliation stores a concluded value.
-- **Disputed / undocumented are not stored confidence grades.** Prefer derivation from exhibit conflict, empty pins, handle grounding badges, and claim `status`. An optional explicit conflict flag may be added later if derivation is too noisy; it remains separate from confidence.
+- **Disputed / undocumented are not stored confidence grades.** Prefer derivation from conflicts among the members' Observations, handle grounding badges, and claim `status`. An optional explicit conflict flag may be added later if derivation is too noisy; it remains separate from confidence.
 
 ## 1.4 Authorship and changing your mind
 
@@ -142,7 +142,7 @@ Do **not** put a rich ordinal confidence ladder on Citations. A boolean (plus no
 
 ## 4.1 Role
 
-Records how sure the researcher is of **this** conclusion (this Identity or Reconciliation Claim), given its exhibit and reasoning.
+Records how sure the researcher is of **this** conclusion (this Identity or Reconciliation Claim), given the evidence and reasoning behind it. Promote sets none ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3); whether Identity Claims keep confidence at all is open now that the entity comparison (§5.1 there) is to be derived.
 
 Confidence is claim-relative by design. It is the primary structured epistemic field for Conclusions.
 
@@ -190,13 +190,13 @@ high_confidence    -- above baseline; strongly trusted conclusion
 
 Same **shape** as Source credibility (below / baseline / above); **different keys and labels**. Do not share grade rows between the two scales.
 
-## 4.5 Polarity and conflict in the exhibit
+## 4.5 Polarity and conflict
 
-Observation polarity factors into Claims only through the exhibit and `argument`:
+Observation polarity factors into Claims only through the members' Observations and `argument`:
 
-- Mixed positive and negative pinned Observations may justify lower confidence and a contested UI badge.
+- Mixed positive and negative Observations across a handle's members may justify lower confidence and a contested UI badge.
 - An Identity Claim's stance is `status` on `(subject, entity)` — accepted membership, a provisional candidacy, or a rejection of that entity — not Observation polarity copied onto the claim.
-- Prefer **deriving** “disputed” / “contested exhibit” and “undocumented” (no pins) for display rather than storing them as confidence grades.
+- Prefer **deriving** “disputed” and “contested” for display rather than storing them as confidence grades. Identity Claims carry no exhibit ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5), so conflict is read from the members' Observations.
 
 ---
 
@@ -204,11 +204,11 @@ Observation polarity factors into Claims only through the exhibit and `argument`
 
 When authoring a Claim, the UI should make it easy to see:
 
-1. Pinned Observations (exhibit)
-2. Each pin’s Citation (`transcription_uncertain`, note)
-3. Each Citation’s root Source and any `source_credibility_assessments` row
+1. The Observations behind the claim: for an Identity Claim, the subject's Observations beside the other members' (agreements and conflicts, [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.1); for a Reconciliation Claim, the members' values for that Property
+2. Each Observation's Citation (`transcription_uncertain`, note)
+3. Each Citation's root Source and any `source_credibility_assessments` row
 
-The researcher then sets the Claim confidence grade deliberately. Derived subject/fact pills may later combine claim confidence, `status`, exhibit shape, and optional display hints from Source/Citation judgments — without persisting that synthesis.
+The researcher then sets the Claim confidence grade deliberately. Derived subject/fact pills may later combine claim confidence, `status`, the comparison of the members, and optional display hints from Source/Citation judgments — without persisting that synthesis.
 
 Handle provenencia badges (from records / inferred / asserted / unlinked) remain a separate computed grounding story; see [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md).
 

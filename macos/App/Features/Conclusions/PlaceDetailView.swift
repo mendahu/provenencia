@@ -8,7 +8,7 @@ struct PlaceDetailView: View {
     let entityId: String
 
     var body: some View {
-        ConclusionDetailPage<PlaceDetailContent, PlaceDetailChain>(
+        ConclusionDetailPage(
             session: session,
             entityId: entityId,
             pageIdentifier: "places.detail",

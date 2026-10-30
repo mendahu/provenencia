@@ -37,7 +37,7 @@ struct ConclusionDetailRelationship: Equatable, Identifiable {
     }
 }
 
-/// One section under Details. Place hierarchy sections carry relationship
+/// One Place hierarchy section (Part of / Contains / Succession). Carries relationship
 /// rows when Go filled them; otherwise the empty sentence.
 struct ConclusionDetailSection: Equatable, Identifiable {
     var id: String
@@ -87,8 +87,9 @@ struct ConclusionDetailBadge: Equatable {
 
 /// The fields a Conclusion detail page lays out. Each kind owns how it
 /// fills them (mark, title, the line under the title, and the rows). The
-/// page only places them. Giving a kind its own page later does not need a
-/// new query or history entry.
+/// page places the header and then the kind-supplied `pageSections` slot,
+/// so a kind does not get its own page type. `sections` here is the Place
+/// hierarchy data, not the page's sections.
 protocol ConclusionDetailBody: Equatable {
     var title: ConclusionTitleSource { get }
     var ref: String { get }
@@ -107,10 +108,32 @@ extension ConclusionDetailBody {
     var likenesses: [ConclusionDetailLikeness] { [] }
 }
 
+/// What the `pageSections` slot receives beside the content.
+struct ConclusionDetailPageSectionsContext {
+    var projectDir: String
+    var refreshing: Bool
+    var portrait: ConclusionPortraitModel?
+    /// The section of the page that is open; nil for a kind that offers none.
+    var pageSection: ConclusionPageSection? = nil
+}
+
+private struct ConclusionDetailHeaderCompactKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    /// True while a pinned page header is compact (the page scrolled). The header sets it
+    /// for the kind's `summary`, which may lay itself out more tightly.
+    var conclusionDetailHeaderCompact: Bool {
+        get { self[ConclusionDetailHeaderCompactKey.self] }
+        set { self[ConclusionDetailHeaderCompactKey.self] = newValue }
+    }
+}
+
 /// Shared Conclusion detail chrome (S9-24). A view, not a place: the caller
 /// names the entity, and the place registry warms `conclusionDetail` for
 /// that id. Person, Event, and Place stay separate history entries.
-struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View {
+struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View, PageSections: View>: View {
     let session: WorkspaceSession
     let entityId: String
     let pageIdentifier: String
@@ -119,6 +142,8 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View 
     let summary: (Content) -> Summary
     /// Handed only by a kind whose likenesses can be chosen as the portrait (the Person page).
     var portrait: ConclusionPortraitModel? = nil
+    /// Everything below the header. The convenience initializer supplies `ConclusionDetailDefaultPageSections`.
+    let pageSections: (Content, ConclusionDetailPageSectionsContext) -> PageSections
 
     private var key: CatalogQueryKey {
         .conclusionDetail(project: session.projectKey, entityId: entityId)
@@ -134,15 +159,24 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View 
                     errorIdentifier: errorIdentifier,
                     make: make,
                     summary: summary,
-                    portrait: portrait
+                    portrait: portrait,
+                    pageSections: pageSections
                 )
             } else {
-                Self.page(identifier: pageIdentifier) { Self.loading }
+                Self.loadingPage
             }
         }
+        .background(PVColor.surfacePage)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(pageIdentifier)
         .task {
             let _: QueryHandle<CatalogConclusionDetail> = session.query(key)
         }
+    }
+
+    /// The header-less page shown while the detail loads, before and after its handle exists.
+    static var loadingPage: some View {
+        PVPageColumns(primary: { loading })
     }
 
     static var loading: some View {
@@ -150,24 +184,83 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View 
             .controlSize(.small)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
+}
 
-    /// Page chrome shared by every state, in the content column.
-    static func page<Body: View>(identifier: String, @ViewBuilder body: () -> Body) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: PVSpacing.space9) {
-                body()
-            }
-            .frame(maxWidth: PVSpacing.widthContentMax, alignment: .leading)
-            .padding(.horizontal, PVSpacing.gutterPage)
-            .padding(.vertical, PVSpacing.space8)
-            .frame(maxWidth: .infinity)
-        }
-        .background(PVColor.surfacePage)
-        .accessibilityIdentifier(identifier)
+extension ConclusionDetailPage where PageSections == ConclusionDetailDefaultPageSections<Content> {
+    init(
+        session: WorkspaceSession,
+        entityId: String,
+        pageIdentifier: String,
+        errorIdentifier: String,
+        make: @escaping (CatalogConclusionDetail) -> Content,
+        summary: @escaping (Content) -> Summary,
+        portrait: ConclusionPortraitModel? = nil
+    ) {
+        self.init(
+            session: session,
+            entityId: entityId,
+            pageIdentifier: pageIdentifier,
+            errorIdentifier: errorIdentifier,
+            make: make,
+            summary: summary,
+            portrait: portrait,
+            pageSections: { ConclusionDetailDefaultPageSections(content: $0, context: $1) }
+        )
     }
 }
 
-private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: View>: View {
+/// Today's below-header fill: Details, the likeness gallery, then the Place relationship sections.
+/// The body returns sibling views that take their spacing from the page's `VStack`, so a custom
+/// fill returns siblings too; a modifier on the whole fill would join them into one block.
+struct ConclusionDetailDefaultPageSections<Content: ConclusionDetailBody>: View {
+    let content: Content
+    let context: ConclusionDetailPageSectionsContext
+
+    var body: some View {
+        ConclusionDetailRowsSection(
+            rows: content.rows,
+            refreshing: context.refreshing,
+            title: L10n.Conclusions.detailsSection
+        )
+        if !content.likenesses.isEmpty {
+            ConclusionDetailLikenessSection(
+                projectDir: context.projectDir,
+                likenesses: content.likenesses,
+                portrait: context.portrait
+            )
+        }
+        ForEach(content.sections) { section in
+            ConclusionDetailRelationshipSection(section: section)
+        }
+    }
+}
+
+/// A page's field rows, under a heading with the refreshing spinner when `title` is given.
+/// A page that draws neither (the Person page's Vitals, which shows refreshing in its
+/// section switcher) passes nil.
+struct ConclusionDetailRowsSection: View {
+    let rows: [ReconciledValueRowModel]
+    let refreshing: Bool
+    var title: LocalizedStringResource? = nil
+    var provenance: ReconciledValueRow.Provenance = .why
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let title {
+                PVSectionHeader(title: title, aside: {
+                    if refreshing {
+                        ProgressView().controlSize(.small)
+                    }
+                })
+            }
+            ForEach(rows) { row in
+                ReconciledValueRow(model: row, provenance: provenance)
+            }
+        }
+    }
+}
+
+private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: View, PageSections: View>: View {
     @Bindable var handle: QueryHandle<CatalogConclusionDetail>
     let projectDir: String
     let pageIdentifier: String
@@ -175,46 +268,132 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
     let make: (CatalogConclusionDetail) -> Content
     let summary: (Content) -> Summary
     let portrait: ConclusionPortraitModel?
+    let pageSections: (Content, ConclusionDetailPageSectionsContext) -> PageSections
+
+    @Environment(WorkspaceNavigation.self) private var navigation
 
     private var presentation: ConclusionDetailPresentation<Content> {
         ConclusionDetailPresentation(handle.read, isFetching: handle.isFetching, content: make)
     }
 
+    /// The page sections this kind of page offers; none for Event and Place.
+    private var offeredPageSections: [ConclusionPageSection] {
+        ConclusionPageSection.offered(by: navigation.currentLocation.section)
+    }
+
+    /// The open page section: the location's, else the kind's first.
+    private var pageSection: ConclusionPageSection? {
+        offeredPageSections.isEmpty ? nil : (navigation.currentLocation.pageSection ?? offeredPageSections[0])
+    }
+
     var body: some View {
-        ConclusionDetailPage<Content, Summary>.page(identifier: pageIdentifier) {
+        Group {
             switch presentation {
             case .loading:
-                ConclusionDetailPage<Content, Summary>.loading
+                ConclusionDetailPage<Content, Summary, PageSections>.loadingPage
             case .failed(let message):
-                PVCallout(tone: .danger, message: message)
-                    .accessibilityIdentifier(errorIdentifier)
+                PVPageColumns(primary: {
+                    PVCallout(tone: .danger, message: message)
+                        .accessibilityIdentifier(errorIdentifier)
+                })
             case .content(let content, let refreshing):
-                ConclusionDetailHeader(
-                    content: content,
-                    projectDir: projectDir,
-                    summary: summary,
-                    portrait: portrait
-                )
-                VStack(alignment: .leading, spacing: 0) {
-                    PVSectionHeader(title: L10n.Conclusions.detailsSection, aside: {
-                        if refreshing {
-                            ProgressView().controlSize(.small)
+                PVPageColumns(
+                    headerPinned: !offeredPageSections.isEmpty,
+                    scrollResetKey: pageSection,
+                    header: { isScrolled in
+                        ConclusionDetailHeaderBand(
+                            content: content,
+                            projectDir: projectDir,
+                            summary: summary,
+                            portrait: portrait,
+                            pageIdentifier: pageIdentifier,
+                            offeredPageSections: offeredPageSections,
+                            pageSection: pageSection,
+                            refreshing: refreshing,
+                            isScrolled: isScrolled,
+                            select: { navigation.go(to: navigation.currentLocation.withPageSection($0)) }
+                        )
+                    },
+                    primary: {
+                        VStack(alignment: .leading, spacing: PVSpacing.space9) {
+                            pageSections(
+                                content,
+                                ConclusionDetailPageSectionsContext(
+                                    projectDir: projectDir,
+                                    refreshing: refreshing,
+                                    portrait: portrait,
+                                    pageSection: pageSection
+                                )
+                            )
                         }
-                    })
-                    ForEach(content.rows) { row in
-                        ReconciledValueRow(model: row)
                     }
-                }
-                if !content.likenesses.isEmpty {
-                    ConclusionDetailLikenessSection(
-                        projectDir: projectDir,
-                        likenesses: content.likenesses,
-                        portrait: portrait
+                )
+            }
+        }
+    }
+}
+
+/// The header and, on a page with sections, the section switcher under it. Pinned pages
+/// supply the band's own padding, full or compact; an unpinned page has none.
+private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Summary: View>: View {
+    let content: Content
+    let projectDir: String
+    let summary: (Content) -> Summary
+    let portrait: ConclusionPortraitModel?
+    let pageIdentifier: String
+    let offeredPageSections: [ConclusionPageSection]
+    let pageSection: ConclusionPageSection?
+    let refreshing: Bool
+    let isScrolled: Bool
+    let select: (ConclusionPageSection) -> Void
+
+    /// A page with page sections pins its header; one without scrolls it away.
+    private var pinned: Bool { pageSection != nil }
+
+    private var bar: CGFloat { isScrolled ? PVSpacing.space5 : PVSpacing.space7 }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: bar) {
+            ConclusionDetailHeader(
+                content: content,
+                projectDir: projectDir,
+                summary: summary,
+                portrait: portrait,
+                compact: isScrolled
+            )
+            if let pageSection {
+                switcher(selection: pageSection)
+            }
+        }
+        .padding(.top, pinned ? (isScrolled ? PVSpacing.space5 : PVSpacing.space9) : 0)
+        .padding(.bottom, pinned ? bar : 0)
+    }
+
+    private func switcher(selection: ConclusionPageSection) -> some View {
+        HStack(spacing: PVSpacing.space6) {
+            PVSegmentedControl(
+                L10n.Conclusions.pageSectionsLabel,
+                items: offeredPageSections.enumerated().map { index, item in
+                    .init(
+                        item.label,
+                        value: item,
+                        glyph: item.glyph,
+                        shortcut: KeyEquivalent(Character(String(index + 1))),
+                        accessibilityIdentifier: "\(pageIdentifier).section.\(item.rawValue)"
                     )
+                },
+                selection: selection,
+                size: .lg,
+                select: select
+            )
+            if refreshing {
+                HStack(spacing: PVSpacing.space3) {
+                    ProgressView().controlSize(.small)
+                    Text(L10n.Conclusions.detailRefreshing)
+                        .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+                        .foregroundStyle(PVColor.textMuted)
                 }
-                ForEach(content.sections) { section in
-                    ConclusionDetailRelationshipSection(section: section)
-                }
+                .fixedSize()
             }
         }
     }
@@ -223,7 +402,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
 /// The Person page's likenesses: a header with the count, then one 96pt crop
 /// per likeness in a wrapping grid, each captioned with its Source. A tile
 /// opens the Citation that holds it (S10-35, S10-D12 PDP-7, PDP-8).
-private struct ConclusionDetailLikenessSection: View {
+struct ConclusionDetailLikenessSection: View {
     let projectDir: String
     let likenesses: [ConclusionDetailLikeness]
     let portrait: ConclusionPortraitModel?
@@ -335,28 +514,31 @@ private struct ConclusionDetailRelationshipSection: View {
     }
 }
 
-/// Thumbnail slot · badge, title and the kind's summary · ref and member count.
+/// Thumbnail slot · badge, title and the kind's summary · ref and member count. Compact
+/// (a pinned page that has scrolled): a 40pt thumb, no Badge, the title one size down.
 private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: View>: View {
     let content: Content
     let projectDir: String
     let summary: (Content) -> Summary
     let portrait: ConclusionPortraitModel?
+    var compact = false
 
     /// PDP-11: the menu exists only while the lead is not the earliest.
     private var showsPortraitMenu: Bool { portrait != nil && content.thumbnail.offersEarliest }
 
     var body: some View {
-        HStack(alignment: .top, spacing: PVSpacing.space7) {
+        HStack(alignment: compact ? .center : .top, spacing: compact ? PVSpacing.space5 : PVSpacing.space7) {
             thumbnail
-            VStack(alignment: .leading, spacing: PVSpacing.space4) {
-                if let badge = content.badge {
+            VStack(alignment: .leading, spacing: compact ? PVSpacing.space1 : PVSpacing.space4) {
+                if !compact, let badge = content.badge {
                     PVBadge(text: badge.text, tone: .neutral, subtle: false, foreground: badge.ink)
                         .accessibilityLabel(badge.accessibilityLabel)
                 }
                 title
                 summary(content)
+                    .environment(\.conclusionDetailHeaderCompact, compact)
             }
-            .padding(.top, PVSpacing.space3)
+            .padding(.top, compact ? 0 : PVSpacing.space3)
             .frame(maxWidth: .infinity, alignment: .leading)
             VStack(alignment: .trailing, spacing: PVSpacing.space2) {
                 if content.showsRef {
@@ -369,7 +551,7 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
                     .font(PVFont.mono(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textMuted)
             }
-            .padding(.top, PVSpacing.space6)
+            .padding(.top, compact ? 0 : PVSpacing.space6)
         }
     }
 
@@ -378,7 +560,7 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
         let thumb = CachedThumbnail(
             projectDir: projectDir,
             relPath: content.thumbnail.imageRelPath,
-            size: 120,
+            size: compact ? 40 : 120,
             fallbackMark: content.thumbnail.mark,
             fallbackLabel: content.thumbnail.label,
             imageLabel: content.thumbnail.imageLabel,
@@ -406,23 +588,25 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
         }
     }
 
+    private var titleSize: CGFloat { compact ? PVTypeScale.h3 : PVTypeScale.display3 }
+
     @ViewBuilder
     private var title: some View {
         switch content.title {
         case .name(let text):
             Text(verbatim: text)
-                .font(PVFont.display(size: PVTypeScale.display3, weight: PVFontWeight.medium))
-                .tracking(PVTypeScale.display3 * PVTracking.display)
+                .font(PVFont.display(size: titleSize, weight: PVFontWeight.medium))
+                .tracking(titleSize * PVTracking.display)
                 .foregroundStyle(PVColor.textDisplay)
                 .accessibilityAddTraits(.isHeader)
         case .label(let text):
             Text(verbatim: text)
-                .font(PVFont.display(size: PVTypeScale.display3, weight: PVFontWeight.medium).italic())
+                .font(PVFont.display(size: titleSize, weight: PVFontWeight.medium).italic())
                 .foregroundStyle(PVColor.textDisplay)
                 .accessibilityAddTraits(.isHeader)
         case .ref(let text):
             Text(verbatim: text)
-                .font(PVFont.mono(size: PVTypeScale.h1, weight: PVFontWeight.medium))
+                .font(PVFont.mono(size: compact ? PVTypeScale.h4 : PVTypeScale.h1, weight: PVFontWeight.medium))
                 .foregroundStyle(PVColor.textDisplay)
                 .accessibilityAddTraits(.isHeader)
         }

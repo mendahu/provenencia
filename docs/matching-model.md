@@ -1,6 +1,8 @@
 # Matching model
 
-The matching model Spike 11 built; all six layers run, and [`matching.md`](matching.md) says where. The reasoning behind each choice is in [`deployment-plan/spike-11/comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md); this page is the "what".
+The matching model Spike 11 built; all six layers run, and [`matching.md`](matching.md) says where. The reasoning behind each choice is in [`deployment-plan/spike-11/comparison-layers.md`](deployment-plan/archive/spike-11/comparison-layers.md); this page is the "what".
+
+**Revised 2026-10-29:** these layers propose Promote's targets. They are not the measure of whether a member belongs to its handle: that comparison is built new on layers 1 and 2 ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.1), not from layer 6's band. Layer 6's score still ranks Promote's suggestions, but the page no longer shows the band. The claim evidence sheet is gone (S13-23); the registry's `evidence` section goes with the pin engine (S13-24).
 
 ## The stack
 
@@ -27,7 +29,7 @@ matchregistry ──────────────────────
 
 The subject profile builder sits beside layer 4. It turns the reconciler's conclusion into a Subject-shaped profile and compares nothing: displayed values are positive, denied values negative, and outvoted, weak and provisional values are left out. It also builds a plain Subject's side from its own Observations.
 Before layer 6, each side's links are read through the kinship patterns (`core/kinship`): a shared marriage implies spouses, a birth's father or mother and subject imply a parent, and a parent of a parent implies a grandparent. The Source side is derived when its layer loads; the canon side is read through `canonlinks.Reader.For`, which answers from the graph cache's results. Both go through one `kinship.LinkSet` (implied links enter through `AddImplied`, or `PlaceImplied` in `loadCanon`, each recorded by `Implied.Recording`), so a fact recorded two ways on one side is one link. An implied link weighs as the relationship it stands for. A fact both sides record through the same pattern counts once when the walk has paired the event or middle parent it passes through.
-Layer 6 decides what to compare (shortlisting), in what order (one best-first queue), and what to place (the accept bar); a row's band comes from its evidence. See the reasoning in [`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-6-procedure).
+Layer 6 decides what to compare (shortlisting), in what order (one best-first queue), and what to place (the accept bar); a row's band comes from its evidence. See the reasoning in [`comparison-layers.md`](deployment-plan/archive/spike-11/comparison-layers.md#layer-6-procedure).
 
 ## Worked example
 
@@ -87,7 +89,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 | **queue** | The one best-first list of candidate pairs the walk pops |
 | **dirty pair** | A pair scored before a neighbor was placed, moved or released; it is re-scored when the queue empties |
 | **settle** | Re-score dirty pairs until none changes or the round cap is reached |
-| **band** | Strong, medium, weak or no match, for a whole row, from its evidence |
+| **band** | Strong, medium, weak or no match, for a whole row, from its evidence. Ranks suggestions; not shown on the page since 2026-10-29 |
 | **contested** | A visible mark on a row whose comparisons include a conflict, whatever its band |
 | **kinship pattern** | A row of `core/kinship`'s table that says a fact recorded one way implies a relationship link: a marriage's two subjects imply spouses, a birth's father or mother and subject imply a parent, and a parent of a parent implies a grandparent |
 | **implied link** | A relationship link a kinship pattern adds to one side, keyed as a recorded relationship; never stored or filed |
@@ -117,7 +119,7 @@ Both vocabularies are in the code for several PRs. These old words go.
 
 ## Knob inventory
 
-Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Field`. A Capitalized part is a registry field. A lowercase part is a typed map key: a Subject kind, a property key, a derived property (`lifespan`), or a bridge or participation key; a pair compared together is keyed by its lead property (`sex_at_birth` covers `gender`). The subject section's weights are `subject.Weights.<kind>.<property>`, a derived property's (`lifespan`) included; a pool is keyed by its lead in `subject.Pools`, a period by its lead in `subject.Periods`, a lifespan by its lead (the window) in `subject.Lifespans`. The `evidence` section is the claim evidence sheet's line policy ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md)), not evidence points; `core/claimevidence` reads it, no comparison layer does. The Go registry is the only source of a current value. Start is the value a knob started with. The registry's drift guard compares keys only: every registry field has a row, and every row is a field. `TestKnobInventoryMatchesRegistry` enforces it; rows whose layer has not landed are listed in its `notYetBuilt`. Tuning a knob is one edit, in the registry.
+Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Field`. A Capitalized part is a registry field. A lowercase part is a typed map key: a Subject kind, a property key, a derived property (`lifespan`), or a bridge or participation key; a pair compared together is keyed by its lead property (`sex_at_birth` covers `gender`). The subject section's weights are `subject.Weights.<kind>.<property>`, a derived property's (`lifespan`) included; a pool is keyed by its lead in `subject.Pools`, a period by its lead in `subject.Periods`, a lifespan by its lead (the window) in `subject.Lifespans`. The `evidence` section is the claim evidence sheet's line policy (Spike 11; removed by S13-24), not evidence points; `core/claimevidence` reads it, no comparison layer does. It is deprecated: the sheet it served is gone (S13-23), and it goes with the pins (S13-24) ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5). The Go registry is the only source of a current value. Start is the value a knob started with. The registry's drift guard compares keys only: every registry field has a row, and every row is a field. `TestKnobInventoryMatchesRegistry` enforces it; rows whose layer has not landed are listed in its `notYetBuilt`. Tuning a knob is one edit, in the registry.
 
 | Key | Start | Source | Changes |
 | --- | --- | --- | --- |
@@ -138,7 +140,8 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `value.Names.CrossRole` | 0.5 | `DefaultNames.CrossRole` | Any other role mismatch |
 | `value.Names.MaxWords` | 32 | estimate | Most words, generation words included, either name may have for the pairing to run; beyond it `too_long` |
 | `value.Names.Generation` | 0.5 | estimate | Weight of a generation word, Jr. or III, on either side |
-| `value.Names.PrefixMinLength` | 2 | decided: user, 2026-10-24 | Fewest letters of a given-name prefix the shortlist files and looks up; 0 turns prefix keys off |
+| `value.Names.PrefixMinLength` | 2 | decided: user, 2026-10-24 | Fewest letters of a given-name prefix the shortlist keys and the comparer counts; 0 turns the prefix rule off |
+| `value.Names.PrefixCredit` | 0.7 | estimate | A given, nickname or untyped word that is the start of the other's word |
 | `value.Names.Western.Weights.Family` | 1.5 | `WesternNamePattern.Weights` | Surname word weight |
 | `value.Names.Western.Weights.FirstGiven` | 1 | `WesternNamePattern.Weights` | First given name weight |
 | `value.Names.Western.Weights.OtherGiven` | 0.5 | `WesternNamePattern.Weights` | Middle names and initials |
@@ -176,11 +179,11 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `subject.Weights.place.toponym.Conflict` | 3 | `graphalign` `DefaultConfig.ConflictPenalty` | Points lost for different toponyms |
 | `subject.Periods.event.date.Start` | `start_date` | `match.DatePeriods` | Start of the period that stands for `date` on a side with no date |
 | `subject.Periods.event.date.End` | `end_date` | `match.DatePeriods` | End of that period |
-| `subject.Pools.person.sex_at_birth.With` | `gender` | decided ([`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-3-subject-comparison)) | Properties whose values join `sex_at_birth`'s on each side |
+| `subject.Pools.person.sex_at_birth.With` | `gender` | decided ([`comparison-layers.md`](deployment-plan/archive/spike-11/comparison-layers.md#layer-3-subject-comparison)) | Properties whose values join `sex_at_birth`'s on each side |
 | `subject.Pools.person.sex_at_birth.Terms.gender` | `man` → `male`, `woman` → `female` | decided (user, 2026-10-21) | Reads a gender term as the sex at birth term it names before comparing; a gender with no entry (`non_binary`) is left out, never a conflict |
 | `segment.OneSupport` | 1.5 | `graphalign` `EdgeSupportLow` | Points for a matching one-cardinality link (birth, death) |
 | `segment.OneCredit` | 0.5 | `graphalign` `NeighborCreditLow` | Share of the neighbor's own evidence passed on, one-cardinality |
-| `segment.OtherSupport` | 0.25 | `graphalign` `EdgeSupportHigh` | Points for any other matching link |
+| `segment.OtherSupport` | 0.75 | decided: user, 2026-10-28 (S14-08): dogfood Jake + grandparent under Weak at 0.25 | Points for any other matching link |
 | `segment.OtherCredit` | 0.25 | `graphalign` `NeighborCreditHigh` | Share of the neighbor's evidence passed on, other links |
 | `segment.One` | `participation·subject·birth`, `participation·subject·death` | decided 2026-10-17, both ends 2026-10-19 | Links where a differing neighbor conflicts, from either end |
 | `segment.OneConflict` | 3 | estimate: a differing birth or death is as strong as a differing name or date (`subject.Weights.person.name.Conflict`) | Points lost when a one-cardinality link's neighbor is placed elsewhere |
@@ -201,13 +204,13 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `alignment.SettleRounds` | 10 | estimate: a safety cap; dirty pairs normally settle in two or three | Most settle rounds |
 | `alignment.Shortlist.YearBucket` | 2 | estimate: the date tolerance, so a `Near` date shares a bucket | Width of an event's year bucket |
 | `alignment.Shortlist.MaxBuckets` | 100 | estimate: two centuries at `YearBucket` 2; a wider reach keys as open | Most year buckets a date may key |
-| `alignment.Shortlist.Words` | person `name`, place `toponym` | decided ([`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-6-procedure)) | Leads whose words key a Subject |
-| `alignment.Shortlist.Dated.event.Type` | `event_type` | decided ([`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-6-procedure)) | The term keyed with each year bucket |
-| `alignment.Shortlist.Dated.event.Date` | `date` | decided ([`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-6-procedure)) | The date whose reach is bucketed; a period stands for it |
+| `alignment.Shortlist.Words` | person `name`, place `toponym` | decided ([`comparison-layers.md`](deployment-plan/archive/spike-11/comparison-layers.md#layer-6-procedure)) | Leads whose words key a Subject |
+| `alignment.Shortlist.Dated.event.Type` | `event_type` | decided ([`comparison-layers.md`](deployment-plan/archive/spike-11/comparison-layers.md#layer-6-procedure)) | The term keyed with each year bucket |
+| `alignment.Shortlist.Dated.event.Date` | `date` | decided ([`comparison-layers.md`](deployment-plan/archive/spike-11/comparison-layers.md#layer-6-procedure)) | The date whose reach is bucketed; a period stands for it |
 | `kinship.MaxPivotEnd` | 10 | user, 2026-10-26 (S11-39): more than two, for unusual families, with a bound so one malformed event stays cheap | Most participants at either end of a pivot (an event, or the parent between in a chain) before it reads as malformed and implies nothing |
-| `evidence.Checked` | `Same`, `Equivalent` | decided ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md#lines)) | Relations whose lines start checked |
-| `evidence.ByEye` | `unjudged` | decided ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md#lines)) | Causes of an unknown line the researcher judges: kept, never checked |
-| `evidence.Defining` | event `event_type` | decided ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md#evidence-through-relationships)) | Neighbor properties bundled into a relationship line |
+| `evidence.Checked` | `Same`, `Equivalent` | decided (Spike 11; removed by S13-24) | Relations whose lines start checked |
+| `evidence.ByEye` | `unjudged` | decided (Spike 11; removed by S13-24) | Causes of an unknown line the researcher judges: kept, never checked |
+| `evidence.Defining` | event `event_type` | decided (Spike 11; removed by S13-24) | Neighbor properties bundled into a relationship line |
 
 ## Not knobs
 

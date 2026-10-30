@@ -2,7 +2,19 @@ import AppKit
 import Foundation
 import PDFKit
 import Testing
+import UniformTypeIdentifiers
 @testable import Provenencia
+
+private let allowedImageTypes: [(String, String, NSBitmapImageRep.FileType, UTType?)] = [
+    ("image/jpeg", ".jpg", .jpeg, nil),
+    ("image/png", ".png", .png, nil),
+    ("image/gif", ".gif", .gif, nil),
+    ("image/tiff", ".tiff", .tiff, nil),
+    ("image/tif", ".tiff", .tiff, nil),
+    ("image/bmp", ".bmp", .bmp, nil),
+    ("image/heic", ".heic", .png, .heic),
+    ("image/heif", ".heif", .png, .heic),
+]
 
 @Suite
 @MainActor
@@ -87,7 +99,8 @@ struct ArtifactViewerModelTests {
             ArtifactViewerSource(
                 projectDir: project.path,
                 relPath: "objects/aa/bb/nope.png",
-                mediaType: "image/png"
+                mediaType: "image/png",
+                typeIdentifiers: FakeStore.typeIdentifiers(forMediaType: "image/png")
             )
         )
         #expect(model.emptyReason == .missingFile)
@@ -103,7 +116,10 @@ struct ArtifactViewerModelTests {
             try? fm.removeItem(atPath: project)
             try? fm.removeItem(atPath: outside)
         }
-        let source = ArtifactViewerSource(projectDir: project, relPath: rel, mediaType: "image/png")
+        let source = ArtifactViewerSource(
+            projectDir: project, relPath: rel, mediaType: "image/png",
+            typeIdentifiers: FakeStore.typeIdentifiers(forMediaType: "image/png")
+        )
         await model.load(source)
         #expect(model.emptyReason == .missingFile)
 
@@ -126,7 +142,8 @@ struct ArtifactViewerModelTests {
             ArtifactViewerSource(
                 projectDir: project.path,
                 relPath: rel,
-                mediaType: "image/png"
+                mediaType: "image/png",
+                typeIdentifiers: FakeStore.typeIdentifiers(forMediaType: "image/png")
             )
         )
         #expect(model.kind == .image)
@@ -134,6 +151,126 @@ struct ArtifactViewerModelTests {
         #expect(model.displayImage != nil)
         #expect(model.pageCount == 1)
         #expect(model.supportsSpatialZoom)
+    }
+
+    private func loadImage(
+        _ model: ArtifactViewerModel, project: String, relPath: String, mediaType: String
+    ) async {
+        await model.load(ArtifactViewerSource(
+            projectDir: project, relPath: relPath, mediaType: mediaType,
+            typeIdentifiers: FakeStore.typeIdentifiers(forMediaType: mediaType)
+        ))
+    }
+
+    @Test func refusesAMismatchedType() async throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        try ArtifactFileFixtures.writeImage(projectDir: project, relPath: "objects/ab/cd/x.jpg", fileType: .png)
+        let model = ArtifactViewerModel()
+        await loadImage(model, project: project, relPath: "objects/ab/cd/x.jpg", mediaType: "image/jpeg")
+        #expect(model.emptyReason == .loadFailed)
+        #expect(model.displayImage == nil)
+        #expect(model.displayRaster == nil)
+    }
+
+    @Test func refusesAnOverBudgetDeclaration() async throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        try ArtifactFileFixtures.writeDeclaredPNGHeader(
+            projectDir: project, relPath: "objects/ab/cd/x.png", width: 20000, height: 20000)
+        let model = ArtifactViewerModel()
+        await loadImage(model, project: project, relPath: "objects/ab/cd/x.png", mediaType: "image/png")
+        #expect(model.emptyReason == .imageTooLarge)
+        #expect(model.displayImage == nil)
+    }
+
+    @Test func refusesA16BitDeclarationOverHalfTheBudget() async throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        try ArtifactFileFixtures.writeDeclaredPNGHeader(
+            projectDir: project, relPath: "objects/ab/cd/x.png", width: 12000, height: 12000, bitDepth: 16)
+        let model = ArtifactViewerModel()
+        await loadImage(model, project: project, relPath: "objects/ab/cd/x.png", mediaType: "image/png")
+        #expect(model.emptyReason == .imageTooLarge)
+        #expect(model.displayImage == nil)
+    }
+
+    @Test func reducesAnImageOverTheDecodeBudget() async throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        try ArtifactFileFixtures.writeImage(
+            projectDir: project, relPath: "objects/ab/cd/x.jpg",
+            width: 12000, height: 6000, fileType: .jpeg, grayscale: true)
+        let model = ArtifactViewerModel()
+        await loadImage(model, project: project, relPath: "objects/ab/cd/x.jpg", mediaType: "image/jpeg")
+        #expect(model.emptyReason == .idle)
+        let raster = try #require(model.displayRaster)
+        #expect(raster.width * raster.height <= ArtifactImageDecode.maxDecodePixels)
+        #expect(abs(raster.width - 2 * raster.height) <= 2)
+        #expect(model.imagePixelSize?.width == 12000)
+        #expect(model.imagePixelSize?.height == 6000)
+        #expect(model.displayImage?.size == CGSize(width: 12000, height: 6000))
+    }
+
+    @Test func keepsAnImageWithinTheBudgetAtFullSize() async throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        let rel = "objects/ab/cd/x.png"
+        try ArtifactFileFixtures.writeImage(
+            projectDir: project, relPath: rel, width: 3000, height: 2000, fileType: .png, dpi: 300)
+        let model = ArtifactViewerModel()
+        await loadImage(model, project: project, relPath: rel, mediaType: "image/png")
+        let raster = try #require(model.displayRaster)
+        #expect(raster.width == 3000 && raster.height == 2000)
+        let expected = try #require(NSImage(contentsOf: URL(fileURLWithPath: project).appendingPathComponent(rel)))
+        let size = try #require(model.displayImage?.size)
+        #expect(abs(size.width - expected.size.width) < 0.01)
+        #expect(abs(size.height - expected.size.height) < 0.01)
+        #expect(model.imagePixelSize?.width == 3000)
+    }
+
+    @Test func orientsAsNSImageDoes() async throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        let rel = "objects/ab/cd/x.jpg"
+        try ArtifactFileFixtures.writeImage(
+            projectDir: project, relPath: rel, width: 300, height: 200, fileType: .jpeg, orientation: 6)
+        let model = ArtifactViewerModel()
+        await loadImage(model, project: project, relPath: rel, mediaType: "image/jpeg")
+        let expected = try #require(NSImage(contentsOf: URL(fileURLWithPath: project).appendingPathComponent(rel)))
+        let size = try #require(model.displayImage?.size)
+        #expect(abs(size.width - expected.size.width) < 0.01)
+        #expect(abs(size.height - expected.size.height) < 0.01)
+        let raster = try #require(model.displayRaster)
+        #expect(raster.width == Int(expected.size.width.rounded()))
+        #expect(raster.height == Int(expected.size.height.rounded()))
+    }
+
+    @Test func maxPixelSizeAtTheBudget() {
+        #expect(ArtifactImageDecode.maxPixelSize(width: 8000, height: 8000) == 8000)
+        #expect(ArtifactImageDecode.maxPixelSize(width: 8000, height: 8001) == 8000)
+        #expect(ArtifactImageDecode.maxPixelSize(width: 3000, height: 2000) == 3000)
+        #expect(ArtifactImageDecode.maxPixelSize(width: 12000, height: 6000) == 11313)
+        #expect(ArtifactImageDecode.maxPixelSize(width: 10000, height: 10000, depth: 16) == 5656)
+        #expect(ArtifactImageDecode.maxPixelSize(width: 10000, height: 10000, depth: 8) == 8000)
+    }
+
+    /// Every image type on Go's allowlist that ImageIO writes opens under the media type
+    /// Go stores it with, or the extension Go gives it when macOS has no type for that string.
+    @Test(arguments: allowedImageTypes)
+    func opensEveryAllowedImageType(
+        _ mediaType: String, _ ext: String, _ fileType: NSBitmapImageRep.FileType, _ contentType: UTType?
+    ) async throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        let rel = "objects/ab/cd/x" + ext
+        try ArtifactFileFixtures.writeImage(
+            projectDir: project, relPath: rel, fileType: fileType, contentType: contentType
+        )
+        let model = ArtifactViewerModel()
+        await loadImage(model, project: project, relPath: rel, mediaType: mediaType)
+        #expect(model.emptyReason == .idle)
+        #expect(model.displayRaster != nil)
     }
 
     @Test func loadsPDFAndPages() async throws {
@@ -335,7 +472,8 @@ struct ArtifactViewerModelTests {
             ArtifactViewerSource(
                 projectDir: project.path,
                 relPath: rel,
-                mediaType: "image/png"
+                mediaType: "image/png",
+                typeIdentifiers: FakeStore.typeIdentifiers(forMediaType: "image/png")
             )
         )
         model.openFind()
@@ -358,7 +496,8 @@ struct ArtifactViewerModelTests {
             ArtifactViewerSource(
                 projectDir: project.path,
                 relPath: rel,
-                mediaType: "image/png"
+                mediaType: "image/png",
+                typeIdentifiers: FakeStore.typeIdentifiers(forMediaType: "image/png")
             )
         )
         model.zoomOut()

@@ -44,6 +44,15 @@ Recipients need not be Provenencia users. The package should remain useful as pl
 - Import path: first-class “import share package” into an existing project, vs open-as-read-only, vs leave import for later.
 - Privacy / redaction: notes and files may contain living-person data; any warn-before-share UX?
 
+## Harden before sharing
+
+Parked 2026-10-29 when Spike 12 closed: defenses that matter once a project or package comes from someone else. Each is described in the second app-health audit, now at [`deployment-plan/spike-14/app-health-audit-2.md`](../deployment-plan/spike-14/app-health-audit-2.md).
+
+| Item | Was | Problem |
+| --- | --- | --- |
+| B-4, B-5 | S12-42 | A name holding the name key's separators makes ambiguous keys, and an alias table with 100,000 sets for one name is loaded unchecked; keys should be unambiguous and fuzzed, and alias tables checked on load against registry bounds. Also: a researcher term and a seeded term may share a key on one Property, and the canon term loader keeps whichever row comes last. |
+| B-6 | S12-49 | A family with thousands of duplicate parent links makes grandparent derivation quadratic; chains should share each pair's edges and be bounded per middle person by a registry value. Also: implied-kinship shapes on one link are bounded by the number of pivots joining a pair, not per pivot, and `ParentStep` recomputes its keys on every edge. |
+
 ## Explicitly out of scope for this note
 
 - Real-time collaboration, permissions, or hosted “share links”

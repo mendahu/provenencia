@@ -1,9 +1,12 @@
-// Package mediatypes is the ingest allowlist and reject-reason classifier.
-// Go remains authoritative; clients may mirror for fail-fast UX.
+// Package mediatypes is the ingest allowlist and reject-reason classifier. It
+// also owns each stored type's object-file extension (StoredExtension), which
+// core/objectpath reads. Go remains authoritative; clients may mirror for
+// fail-fast UX.
 package mediatypes
 
 import (
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -33,8 +36,40 @@ func Normalize(mediaType string) string {
 
 // Allowed reports whether mediaType is accepted for new ingest.
 func Allowed(mediaType string) bool {
-	_, ok := allowed[Normalize(mediaType)]
+	_, ok := StoredExtension(mediaType)
 	return ok
+}
+
+// StoredExtension returns the extension (leading dot, e.g. ".jpg") an object of
+// mediaType is stored under, and whether mediaType is on the allowlist. A type
+// off the allowlist has no stored extension and so no object path.
+func StoredExtension(mediaType string) (string, bool) {
+	t, ok := allowed[Normalize(mediaType)]
+	return t.ext, ok
+}
+
+// TypeIdentifiers returns the Uniform Type Identifiers a stored file of
+// mediaType may sniff as on macOS: Go's stored-type table decides, so a client
+// does not keep its own map. Nil for a type that is unknown or has none.
+func TypeIdentifiers(mediaType string) []string {
+	t := allowed[Normalize(mediaType)]
+	if len(t.typeIdentifiers) == 0 {
+		return nil
+	}
+	return append([]string(nil), t.typeIdentifiers...)
+}
+
+// ImageMediaTypes lists, sorted, the stored media types that have Uniform Type
+// Identifiers (the images), so a client mirror can be pinned to the table.
+func ImageMediaTypes() []string {
+	var out []string
+	for mt, t := range allowed {
+		if len(t.typeIdentifiers) > 0 {
+			out = append(out, mt)
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 // Resolve picks the stored media type from a sniff result and original filename.
@@ -98,43 +133,56 @@ func ClassifyFilename(originalFilename string) Reason {
 	return classifyExtension(originalFilename)
 }
 
-var allowed = map[string]struct{}{
-	"image/jpeg": {},
-	"image/png":  {},
-	"image/gif":  {},
-	"image/webp": {},
-	"image/tiff": {},
-	"image/tif":  {},
-	"image/bmp":  {},
-	"image/heic": {},
-	"image/heif": {},
+// stored is one stored type: the extension (leading dot) its object file
+// carries on disk, and the Uniform Type Identifiers a file of that type may
+// sniff as on macOS (images only; empty for every other type).
+type stored struct {
+	ext             string
+	typeIdentifiers []string
+}
 
-	"application/pdf":    {},
-	"application/msword": {},
-	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": {},
-	"text/plain":      {},
-	"text/csv":        {},
-	"application/csv": {},
-	"text/markdown":   {},
-	"text/x-markdown": {},
+// allowed is the one table of stored types: each media type Provenencia
+// stores, with the extension its object file carries on disk and, for an
+// image, the type identifiers macOS may sniff it as. Allowed, StoredExtension
+// and TypeIdentifiers all read it, so a type is either stored with an
+// extension or not stored at all.
+var allowed = map[string]stored{
+	"image/jpeg": {ext: ".jpg", typeIdentifiers: []string{"public.jpeg"}},
+	"image/png":  {ext: ".png", typeIdentifiers: []string{"public.png"}},
+	"image/gif":  {ext: ".gif", typeIdentifiers: []string{"com.compuserve.gif"}},
+	"image/webp": {ext: ".webp", typeIdentifiers: []string{"org.webmproject.webp"}},
+	"image/tiff": {ext: ".tiff", typeIdentifiers: []string{"public.tiff"}},
+	"image/tif":  {ext: ".tiff", typeIdentifiers: []string{"public.tiff"}},
+	"image/bmp":  {ext: ".bmp", typeIdentifiers: []string{"com.microsoft.bmp"}},
+	"image/heic": {ext: ".heic", typeIdentifiers: []string{"public.heic", "public.heif"}},
+	"image/heif": {ext: ".heif", typeIdentifiers: []string{"public.heif", "public.heic"}},
 
-	"audio/mpeg":   {},
-	"audio/mp4":    {},
-	"audio/x-m4a":  {},
-	"audio/aac":    {},
-	"audio/wav":    {},
-	"audio/wave":   {},
-	"audio/x-wav":  {},
-	"audio/ogg":    {},
-	"audio/flac":   {},
-	"audio/aiff":   {},
-	"audio/x-aiff": {},
+	"application/pdf":    {ext: ".pdf"},
+	"application/msword": {ext: ".doc"},
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": {ext: ".docx"},
+	"text/plain":      {ext: ".txt"},
+	"text/csv":        {ext: ".csv"},
+	"application/csv": {ext: ".csv"},
+	"text/markdown":   {ext: ".md"},
+	"text/x-markdown": {ext: ".md"},
 
-	"video/mp4":       {},
-	"video/quicktime": {},
-	"video/webm":      {},
-	"video/x-m4v":     {},
-	"video/x-msvideo": {},
+	"audio/mpeg":   {ext: ".mp3"},
+	"audio/mp4":    {ext: ".m4a"},
+	"audio/x-m4a":  {ext: ".m4a"},
+	"audio/aac":    {ext: ".aac"},
+	"audio/wav":    {ext: ".wav"},
+	"audio/wave":   {ext: ".wav"},
+	"audio/x-wav":  {ext: ".wav"},
+	"audio/ogg":    {ext: ".ogg"},
+	"audio/flac":   {ext: ".flac"},
+	"audio/aiff":   {ext: ".aiff"},
+	"audio/x-aiff": {ext: ".aiff"},
+
+	"video/mp4":       {ext: ".mp4"},
+	"video/quicktime": {ext: ".mov"},
+	"video/webm":      {ext: ".webm"},
+	"video/x-m4v":     {ext: ".m4v"},
+	"video/x-msvideo": {ext: ".avi"},
 }
 
 // extAllowed maps extension (no dot) → MIME for octet-stream fallback and

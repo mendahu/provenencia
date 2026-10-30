@@ -84,10 +84,10 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 
 1. The registry is the only loader. Features do not rebuild a `CatalogQueryKey` payload from `GenealogyStore`.
 2. `session.apply(mutation)` patches if the mutation says so, then invalidates and **revalidates every already-warmed key**. Features never `session.query` after `apply`.
-   A write that returns `WriteEffects` is applied with `apply(effects)`; one that also has a mutation naming keys the effects cannot (a Source page's own workspace, the metadata field list) is applied with `apply(effects, mutation)`, which patches the moved rows, unions the invalidations, and never invalidates a key twice. Every write under a Source returns its effects, so the Sources list and the Conclusion lists are patched or invalidated from `sourceScopes` (activity: patches the Sources row) and `handles`, never from a blanket mutation trigger; `evidenceGraphs` names the Evidence graphs whose rows changed and reloads each (and `citationSources` the Sources whose citation reads moved), so a note does not. The exceptions are the Source row's own writes and promote, which keep their mutation kinds: `createSource` reports its effects and keeps `.createdSource` (a new row the effects cannot describe); `updateSource`, `setSourceCover`, `deleteSource` and promote report none.
+   A write that returns `WriteEffects` is applied with `apply(effects)`; one that also has a mutation naming keys the effects cannot (a Source page's own workspace, the metadata field list) is applied with `apply(effects, mutation)`, which patches the moved rows, unions the invalidations, and never invalidates a key twice. Every write under a Source returns its effects, so the Sources list and the Conclusion lists are patched or invalidated from `sourceScopes` (activity: patches the Sources row) and `handles`, never from a blanket mutation trigger; `evidenceGraphs` names the Evidence graphs whose rows changed and reloads each, so a note does not; `reads` names the keyed partial reads a write moved (`citations`, `evidence_graph_progress`) with only the graphs they moved for, and each cache kind's `refresh` follows its read for those graphs alone. The exceptions are the Source row's own writes and promote, which keep their mutation kinds: `createSource` reports its effects and keeps `.createdSource` (a new row the effects cannot describe); `updateSource`, `setSourceCover`, `deleteSource` and promote report none.
    A registry `whenHidden` policy says what an invalidated key that isn't on screen does ("on screen" is the keys of the place from the last `apply(location:)`, `visibleKeys`): `.revalidate` (the default) reloads it now; `.markStale` keeps the old value and reloads on the next `query`; `.evict` drops the handle and cancels its load, so the next visit loads it afresh. The People, Events, Places, and Sources lists are `.markStale`; Conclusion detail keys are `.evict` (S9-15). One save made away from a list reloads no list until the researcher looks at one.
 3. `readyValue` waits out in-flight work, then returns `nil` if the key is still stale.
-4. `setQueryValue` and `patchCached` are overlays (optimistic drag, a list-row patch). A patch is never a substitute for invalidation **unless the write reported everything the patch needs**: a write that reports its activity (`WriteEffects.revision`, `revision_at`) moves a list's last-updated cell through a `CatalogLastUpdatedPatch` declared on that list's registry row, with no read. Invalidation stays for changes the client cannot know (a value, title, or membership changed). Patches go through `WorkspaceSession.patchCached`, so an in-flight load is cancelled and restarted and an older answer cannot overwrite the patch.
+4. `setQueryValue` and `patchCached` are overlays (optimistic drag, a list-row patch). A patch is never a substitute for invalidation **unless the write reported everything the patch needs**: a write that reports its activity (`WriteEffects.revision`, `revision_at`) moves a list's last-updated cell through a `CatalogQueryPatch.lastUpdated` on that list's descriptor (`follows` names the ids), with no read. Invalidation stays for changes the client cannot know (a value, title, or membership changed). Patches go through `WorkspaceSession.patchCached`, so an in-flight load is cancelled and restarted and an older answer cannot overwrite the patch.
 5. Views observe handles. Models keep form/interaction state only. Evidence graph cards are a **pure join** of `evidenceGraph` (`EvidenceGraphRows`) and `propertiesWorkspace` types — that join is not a third cache key.
 6. If a place reads a key, that key is in `PlaceRegistry.queryKeys`.
 7. `getCitation` is the exception: a one-shot into the composer fields draft. Do not cache the open citation.
@@ -99,6 +99,7 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 - Every Conclusion key (the Persons, Events, and Places lists, Promote target suggestions, and `conclusionDetail`) invalidates on one set, `CatalogQueryRegistry.conclusionTriggers`. Go's auto-reconciler cache recomputes on the same writes, so busting them all together is cheap and never misses a dependency between handles.
 - **Exception to rule 2 (S9-15):** `conclusionDetail` keys are `whenHidden: .evict`. A trigger evicts the detail pages that aren't on screen rather than revalidating them, so it doesn't reload every Person page the researcher has visited. The visible page revalidates as usual. The three lists are `.markStale`: the visible one reloads, the others reload when shown.
 - **One detail key for every kind.** `conclusionDetail(project:, entityId:)` reads `GetConclusionDetail`: each bound Property's state, every auto-reconciled value with its reason, every Observation's outcome with its evidence, and the handle's **header** for its kind (a Person's birth and death, an Event's title and places, a Place's names) in the same call. Person, Event and Place pages read only this key, so a page has one load, one error, and one consistent read; don't add a per-entity header key beside it. `ReconciledValueDisplay` words its states and outcomes.
+- **One sectioned detail page.** `ConclusionDetailPage` draws the shared header, then fills everything below it from its `pageSections` slot. The convenience initializer supplies `ConclusionDetailDefaultPageSections` (Details rows, likeness gallery, Place relationship rows), so Event and Place pass nothing; a kind that wants its own sections uses the full initializer rather than a page type of its own. `ConclusionDetailBody.sections` and `ConclusionDetailSection` are the Place hierarchy rows (Part of, Contains, Succession) and are drawn inside the default page section; they are not the page's sections. A kind with sections is offered them by `ConclusionPageSection.offered(by:)` (the Person page: Vitals, Family, Timeline, Gallery, Sources); the open one lives on `WorkspaceLocation.pageSection` (nil is the first), so switching sections pushes history and a reopened project returns to it. The page, not the kind, reads it from navigation, draws the switcher (`PVSegmentedControl`) and pins and compacts the header, and passes the section to the fill in `ConclusionDetailPageSectionsContext.pageSection`; the kind's fill is one `switch` over it.
 - **Detail pages show what was recorded (S9-16).** The detail read returns only the Properties a handle's records speak to. A page names the few rows it always shows, empty or not (a Person: name and the four life rows); every other field appears once recorded.
 - **Detail pages share their rows (S9-16).** `ReconciledValueRow` (label · value · state badge · Sources · disclosures) and its Why (`ReconciliationReasoningView`, `ReconciliationOutcome`) are snowflakes in `Features/Conclusions/`, shared by the Person, Event and Place pages rather than promoted to recipes. A Why record's Source opens its Citation in the composer (`ReconciliationRecord.composerLocation`), so Back returns to the page. Disclosures are kit `PVDisclosureButton`s.
 - **Go returns structures; Swift makes text.** Payloads carry NameValues, DateValues, term ids, and title parts — never display strings. Formatting lives in the app (`NameValueDisplay`, `PersonHeaderDisplay`, `ReconciledValueDisplay`, `EventTitleDisplay`). Choosing *which* naming-matrix rule titles an Event is a rule, so Go does it (`core/eventtitle`) and sends `EventTitle { rule, parts }`; Swift only fills that rule's template.
@@ -228,3 +229,60 @@ CI for Go runs on Linux. Swift tests run on a macOS GitHub runner (`.github/work
 - **`WindowGroup`** is a generic window. A real `.provenencia` document flow may later use a document scene; do not force that until we open files.
 
 Product version remains [`versioning.md`](versioning.md) (`VERSION` / About box), not the bundle id.
+
+## 9. Window widths: Regular and Wide
+
+The window opens at `PVSpacing.widthWorkspaceDefault` × `heightWorkspaceDefault` (1366 × 900pt, clamped to the screen), which is laptop-shaped. People also stretch it across a large external monitor. A view designed only for the default size then sits in its 1180pt `widthContentMax` column, with a wall of empty space beside it (left-aligned on the Source page, centered on the Person, Event and Place pages and lists). Every view is designed for both widths.
+
+### The breakpoint
+
+**One breakpoint: 1600pt of pane width.**
+
+| Width class | Pane width | Typical setup |
+| --- | --- | --- |
+| Regular | below 1600pt | The default window; any MacBook, even full screen; half of a big monitor |
+| Wide | 1600pt and up | Full screen or most of a 1920pt-or-wider monitor; a 16" MacBook full screen with the sidebar collapsed |
+
+**Pane width** is what the destination itself gets: the window minus the sidebar (264pt, 78pt collapsed). A page with a side pane (an inspector, a detail pane) plans that pane in its own Wide frame; it does not re-measure. It is not the screen or the window. Read it with `@Environment(\.pvWidthClass)`; `WorkspaceDestinationHost` fills the detail area and measures it once. Collapsing the sidebar can move a view across the line, and that is intended.
+
+Where the numbers come from (points, sidebar open):
+
+| Setup | Window | Pane | Class |
+| --- | --- | --- | --- |
+| Default window | 1366 | ~1102 | Regular |
+| 13"–15" MacBook Air full screen | 1470–1710 | ~1206–1446 | Regular |
+| 16" MacBook Pro full screen | 1728 | ~1464 | Regular |
+| 4K monitor at "looks like 1920 × 1080" | 1920 | ~1656 | Wide |
+| 27" 5K / 1440p monitor | 2560 | ~2296 | Wide |
+| 32" 6K monitor | 3008 | ~2744 | Wide |
+
+1600 is also the smallest pane that holds a full `widthContentMax` column (1180), a gap (32), an inspector-width column (`widthInspector`, 340) and two page gutters (2 × 32) without squeezing either column much. Below that, a second column steals from the first.
+
+The breakpoint is a token (`PVSpacing.widthWideBreakpoint = 1600`) and the class is `PVWidthClass` (`Components/WidthClass/PVWidthClass.swift`): `WorkspaceDestinationHost` measures the pane once with `pvMeasuresWidthClass()`, and a page reads `@Environment(\.pvWidthClass)` instead of measuring itself.
+
+`PVPageColumns` (`Components/PageColumns/PVPageColumns.swift`) is the record-page scaffold: a header slot (scrolling, or pinned with an `isScrolled` flag so it can compact), a primary column and an optional secondary column, sized by `PVPageColumnsMetrics.columnWidths`, stacked at Regular, side by side at Wide, and centered. `ConclusionDetailPage` is built on it.
+
+### Rules for Wide
+
+The same six rules are in the [`add-design-brief`](../.agents/skills/add-design-brief/SKILL.md) Paste block, word for word, because Claude Design does not follow links. Change both together.
+
+1. **The extra space does a job.** Show more at once: a second column of supporting content, the detail beside its list, more grid or table columns, an inspector docked open. If the view truly has nothing to add, center its content. Content jammed to one side with empty space beside it is never the Wide design.
+2. **Readable things keep their measure.** Prose, forms and the primary column keep their Regular maximum widths. Wide adds columns; it does not stretch text or fields.
+3. **Lists, tables, grids and canvases fill the width.** Cards keep their size and add columns.
+4. **Same content, same actions.** Width changes arrangement only. Anything in the Wide second column is stacked below, in an inspector, or behind a disclosure at Regular.
+5. **Crossing the line keeps state.** Selection, scroll position, focus and unsaved edits survive a resize across 1600.
+6. **Past every column's maximum, center the group.** Page gutters are never narrower than at Regular; they take what is left.
+
+### Patterns to reach for
+
+| View shape | Regular | Wide |
+| --- | --- | --- |
+| List → detail page (Sources, Conclusions, vocabulary) | List; select navigates to the detail | List column (about 420–520pt) and the selected detail side by side |
+| Record / detail page (Source page, Conclusion detail) | One column; supporting sections stacked below | Primary column (≤ `widthContentMax`) plus a secondary column (340–480pt) of supporting content: metadata, linked records, activity, artifacts |
+| Grid (artifacts, galleries) | Columns that fit at the card minimum | More columns at the same card size |
+| Table | Essential columns | Columns that were hidden at Regular |
+| Form / editor | One column at the form measure | Field groups in two columns, or the form beside a live preview or reference panel |
+| Canvas (evidence graph, viewer) | Canvas; inspector on demand | Canvas with the inspector docked open |
+| List with a side pane (Properties, Metadata, Source types) | List and a fixed side pane | The list takes the extra width (more columns), or the side pane widens; drawn in the page's brief |
+
+A view that fits none of these says in its brief what its Wide frame does and why. Briefs carry these rules in their Paste block, because Claude Design does not follow links ([`add-design-brief`](../.agents/skills/add-design-brief/SKILL.md)).

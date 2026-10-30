@@ -29,4 +29,21 @@ struct GraphCanvasGridMappingTests {
         #expect(cell.gridX == 5)
         #expect(cell.gridY == 7)
     }
+
+    @Test func saturatesExtremeCells() {
+        #expect(GraphCanvasGridMapping.offsetCell(Int64.max, by: 1) == Int64.max)
+        #expect(GraphCanvasGridMapping.offsetCell(Int64.min, by: -1) == Int64.min)
+        #expect(GraphCanvasGridMapping.offsetCell(5, by: -7) == -2)
+
+        let infinite = GraphCanvasGridMapping.gridCell(gridPoint: CGPoint(x: CGFloat.infinity, y: CGFloat.nan))
+        #expect(infinite.gridX == Int64.max)
+        #expect(infinite.gridY == 0)
+        let far = GraphCanvasGridMapping.gridCell(gridPoint: CGPoint(x: -1e30, y: 40))
+        #expect(far.gridX == Int64.min)
+        #expect(far.gridY == 1)
+
+        #expect(GraphCanvasGridMapping.saturatingFloor(.nan) == 0)
+        #expect(GraphCanvasGridMapping.saturatingFloor(2.5) == 2)
+        #expect(GraphCanvasGridMapping.saturatingFloor(-2.5) == -3)
+    }
 }

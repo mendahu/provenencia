@@ -96,13 +96,16 @@ enum CitationComposerEntry: Equatable, Sendable {
         return nil
     }
 
-    /// Remount key: the frozen query, not the live document.
+    /// Remount key: the frozen query, not the live document. The Artifact is
+    /// not in it: switching Artifacts rewrites the current location in place
+    /// (`WorkspaceNavigation.replaceCurrent`) so `PlaceRegistry` names that
+    /// Artifact's citations as visible, and the composer stays mounted.
     var identityKey: String {
         switch self {
-        case let .addProperty(_, graphID, subjectID, artifactID):
-            return "add-\(graphID)-\(subjectID)-\(artifactID ?? "")"
-        case let .edit(_, graphID, subjectID, citationID, artifactID, observationID):
-            return "edit-\(graphID)-\(subjectID)-\(citationID)-\(artifactID ?? "")-\(observationID ?? "")"
+        case let .addProperty(_, graphID, subjectID, _):
+            return "add-\(graphID)-\(subjectID)"
+        case let .edit(_, graphID, subjectID, citationID, _, observationID):
+            return "edit-\(graphID)-\(subjectID)-\(citationID)-\(observationID ?? "")"
         case let .connect(_, graphID, fromID, toID, bridge):
             return "connect-\(graphID)-\(fromID)-\(toID)-\(bridge)"
         }

@@ -27,7 +27,7 @@ Authoritative reasoning is [`interpretation-graph-ui.md`](archive/interpretation
 | **`source` subjects never render on the Evidence graph** | A filing-cabinet document is not a historical person, event, or place. Query filter, not a schema change. |
 | **Keep `mentions` / `remark` as ordinary Observations** | Conclusion exhibit pins Observations. A bespoke `source_remarks` table would freeze vocabulary and break “the letter says this certificate is a forgery” as Reconciliation evidence. |
 | **At most one `source` subject per Source** | Source identity is already `sources.id` / `SRC-…`. Duplicates have no Conclusion reconciliation path (reification subjects do not get canonical rows). |
-| **Cross-Source commentary is not supported (S12-06)** | Graph isolation refuses an Observation whose Subject is another Source's `source` subject, `remark` included, with `observations.other_graph`. Only a non-edge `mentions` may name another Source's `source` subject. Preliminary idea, not current behavior. |
+| **Cross-Source commentary is not supported (S12-06)** | Graph isolation refuses an Observation whose Subject is another Source's `source` subject, `remark` included, with `observations.other_graph`. Only a non-edge Observation (such as `mentions`) may name another Source's `source` subject. Preliminary idea, not current behavior. |
 | **Do not give Sources a `canonical_entities` row** | That would be a second canonical handle for a row that already has one. |
 | **Home the UI on the Source page** | A “what other Sources say about this one” section — inbound commentary *and* outbound mentions from this Source. |
 

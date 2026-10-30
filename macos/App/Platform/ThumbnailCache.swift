@@ -78,12 +78,9 @@ final class ThumbnailCache {
                     let image = await Task.detached(priority: .userInitiated) {
                         guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
                               ThumbnailDecodePolicy.accepts(src),
-                              let cg = CGImageSourceCreateThumbnailAtIndex(src, 0, [
-                                  kCGImageSourceCreateThumbnailFromImageAlways: true,
-                                  kCGImageSourceCreateThumbnailWithTransform: true,
-                                  kCGImageSourceShouldCacheImmediately: true,
-                                  kCGImageSourceThumbnailMaxPixelSize: ThumbnailCache.maxPixelSize,
-                              ] as CFDictionary)
+                              let cg = ImageHeaderDecode.decode(
+                                  src, maxPixelSize: ThumbnailCache.maxPixelSize
+                              )
                         else { return nil as NSImage? }
                         return NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
                     }.value
@@ -191,14 +188,10 @@ enum ThumbnailDecodePolicy {
     /// True for a PNG or JPEG whose first image declares both edges within
     /// `maxDeclaredEdge`. Reads the header only; no pixels decode.
     static func accepts(_ source: CGImageSource) -> Bool {
-        guard let type = CGImageSourceGetType(source) as String?, allowedTypes.contains(type),
-              let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
-        else { return false }
-        for key in [kCGImagePropertyPixelWidth, kCGImagePropertyPixelHeight] {
-            guard let edge = (props[key] as? NSNumber)?.intValue, edge >= 1, edge <= maxDeclaredEdge else {
-                return false
-            }
+        guard let type = CGImageSourceGetType(source) as String?, allowedTypes.contains(type) else {
+            return false
         }
-        return true
+        return ImageHeaderDecode.declaredImage(source)?
+            .fits(maxEdge: maxDeclaredEdge, maxPixels: maxDeclaredEdge * maxDeclaredEdge) == true
     }
 }

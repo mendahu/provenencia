@@ -47,6 +47,7 @@ struct SourcePageModelTests {
         if let credibility {
             store.credibilityBySource[sourceID] = credibility
         }
+        store.nextWriteEffects = CatalogWriteEffects(lists: [.evidenceGraphs])
         return store
     }
 
@@ -163,6 +164,51 @@ struct SourcePageModelTests {
         #expect(model.identity.titleError != nil)
         #expect(model.identity.editingTitle == true)
         #expect(model.identity.title == "Family album")
+    }
+
+    @Test func openRefusesAFileWithNoPath() async {
+        let art = CatalogArtifact(
+            id: "art-1", ref: "ART-1", sourceID: sourceID, fileID: "file-1", label: "Script",
+            description: "",
+            file: CatalogFileRef(
+                id: "file-1", relPath: "", originalFilename: "run.sh", mediaType: "application/x-sh", byteSize: 10
+            )
+        )
+        let model = makeModel(store: makeStore(artifacts: [art]))
+        await model.warmFromSession()
+        model.artifacts.open(art)
+        #expect(model.pageError == L10n.ObjectOpen.refused(filename: "run.sh"))
+    }
+
+    @Test func openRefusalNamesAFileWithNoNameByItsRef() async {
+        let art = CatalogArtifact(
+            id: "art-2", ref: "ART-X", sourceID: sourceID, fileID: "file-2", label: "",
+            description: "",
+            file: CatalogFileRef(
+                id: "file-2", relPath: "", originalFilename: "  ", mediaType: "application/x-sh", byteSize: 10
+            )
+        )
+        let model = makeModel(store: makeStore(artifacts: [art]))
+        await model.warmFromSession()
+        model.artifacts.open(art)
+        #expect(model.pageError == L10n.ObjectOpen.refused(filename: "ART-X"))
+    }
+
+    @Test func openRefusesAStoredScriptByItsTypeAndNamesTheFile() async throws {
+        defer { try? FileManager.default.removeItem(atPath: projectDir) }
+        let rel = "objects/aa/bb/aabb.sh"
+        try ArtifactFileFixtures.write(Data("x".utf8), projectDir: projectDir, relPath: rel, mode: 0o644)
+        let art = CatalogArtifact(
+            id: "art-3", ref: "ART-3", sourceID: sourceID, fileID: "file-3", label: "Script",
+            description: "",
+            file: CatalogFileRef(
+                id: "file-3", relPath: rel, originalFilename: "run.sh", mediaType: "text/plain", byteSize: 1
+            )
+        )
+        let model = makeModel(store: makeStore(artifacts: [art]))
+        await model.warmFromSession()
+        model.artifacts.open(art)
+        #expect(model.pageError == L10n.ObjectOpen.refused(filename: art.fileDisplayName))
     }
 
     @Test func addNoteFailureSurfacesPageError() async {
@@ -359,9 +405,16 @@ struct SourcePageModelTests {
         model.artifacts.draft.filePath = path
         await model.artifacts.create()
 
-        // The create linked the Artifact to the entry graph; the file ingest
-        // after it moved no graph link, so the list reloads only if the
-        // create's effects were applied too.
+        guard let artID = store.artifactsBySource[sourceID]?.last?.id else {
+            Issue.record("expected a created Artifact")
+            return
+        }
+        var graphs = store.evidenceGraphsByProject[projectDir] ?? []
+        if !graphs.isEmpty {
+            graphs[0].artifactIDs = [artID]
+            store.evidenceGraphsByProject[projectDir] = graphs
+        }
+        session.apply(CatalogWriteEffects(lists: [.evidenceGraphs]))
         await waitForQuery(session.query(session.evidenceGraphsKey) as QueryHandle<[CatalogEvidenceGraph]>)
         #expect(entryGraphLocation(model)?.graphId == "g-1")
     }
@@ -462,6 +515,14 @@ struct SourcePageModelTests {
         #expect(model.artifacts.draft.reject != nil)
         #expect(model.artifacts.items.map(\.label) == ["Scan"])
         #expect(model.artifacts.items.first?.fileID.isEmpty == true)
+        if let artID = store.artifactsBySource[sourceID]?.first?.id {
+            var graphs = store.evidenceGraphsByProject[projectDir] ?? []
+            if !graphs.isEmpty {
+                graphs[0].artifactIDs = [artID]
+                store.evidenceGraphsByProject[projectDir] = graphs
+            }
+        }
+        session.apply(CatalogWriteEffects(lists: [.evidenceGraphs]))
         await waitForQuery(session.query(session.evidenceGraphsKey) as QueryHandle<[CatalogEvidenceGraph]>)
         #expect(entryGraphLocation(model)?.graphId == "g-1")
 
@@ -1151,8 +1212,8 @@ struct SourcePageModelTests {
         let model = makeModel(store: store, session: session)
         await model.warmFromSession()
         await waitForQuery(session.evidenceGraphsHandle!)
-        #expect(model.graphs.rows?.map(\.name) == ["Default", "Jones household", "Smith household"])
-        #expect(model.graphs.rows?.first?.name == "Default")
+        #expect(model.graphs.rows?.map(\.name) == ["Smith household", "Default", "Jones household"])
+        #expect(model.graphs.rows?.first?.name == "Smith household")
         #expect(L10n.Sources.graphsCount(3) == "3 evidence graphs")
     }
 
@@ -1180,7 +1241,7 @@ struct SourcePageModelTests {
             evidenceGraph("g-jones", name: "Jones household", artifactIDs: ["a-1"]),
         ]
         store.graphProgressByGraph["g-jones"] = EvidenceGraphProgress(
-            graphId: "g-jones", sourceId: sourceID, subjectCount: 12, observationCount: 40
+            graphId: "g-jones", subjectCount: 12, observationCount: 40
         )
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let model = makeModel(store: store, session: session)
@@ -1206,9 +1267,11 @@ struct SourcePageModelTests {
         let (model, session) = await progressSession(store)
         let graphs = model.graphs.rows ?? []
         store.graphProgressByGraph["g-jones"] = EvidenceGraphProgress(
-            graphId: "g-jones", sourceId: sourceID, subjectCount: 12, observationCount: 41
+            graphId: "g-jones", subjectCount: 12, observationCount: 41
         )
-        session.apply(CatalogWriteEffects(evidenceGraphs: ["g-jones"]))
+        session.apply(CatalogWriteEffects(
+            evidenceGraphs: ["g-jones"], reads: [CatalogWriteEffectsRead(read: .evidenceGraphProgress, ids: ["g-jones"])]
+        ))
         #expect(await waitUntil { model.graphs.progress(for: graphs[1])?.observationCount == 41 })
         #expect(model.graphs.progress(for: graphs[0]) == nil)
     }
@@ -1527,10 +1590,7 @@ struct SourcePageModelTests {
         await model.artifacts.create()
         let created = store.artifactsBySource[sourceID]?.last
         #expect(created?.label == "Page 7")
-        let graphs = store.evidenceGraphsByProject[projectDir] ?? []
-        #expect(graphs.first { $0.id == "g-j" }?.artifactIDs.contains(created?.id ?? "") == true)
-        #expect(graphs.first { $0.id == "g-b" }?.artifactIDs.contains(created?.id ?? "") == false)
-        #expect(graphs.first { $0.id == "g-s" }?.artifactIDs.contains(created?.id ?? "") == false)
+        #expect(store.createArtifactGraphIDs.last == ["g-j"])
         #expect(!model.artifacts.isAdding)
         #expect(model.toast != nil)
     }
@@ -1770,6 +1830,7 @@ struct SourcePageModelTests {
         let (model, store, session) = await makeCensus()
         model.artifacts.beginEdit("P3")
         await model.artifacts.linkLoadTask?.value
+        store.nextWriteEffects = CatalogWriteEffects(lists: [.evidenceGraphs])
         let (created, effects) = try await store.createEvidenceGraph(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
             name: "Walker household", description: "", artifactIDs: ["P3"]
@@ -1867,6 +1928,7 @@ struct SourcePageModelTests {
         await model.artifacts.linkLoadTask?.value
         model.artifacts.linkEdit?.excluded = []
         #expect(model.artifacts.checkedGraphIDs.contains("g-b"))
+        store.nextWriteEffects = CatalogWriteEffects(lists: [.evidenceGraphs])
         let effects = try await store.deleteEvidenceGraph(projectDir: projectDir, userID: userID, graphID: "g-b")
         session.apply(effects)
         await waitForQuery(session.evidenceGraphsHandle!)

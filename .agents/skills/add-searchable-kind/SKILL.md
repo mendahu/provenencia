@@ -29,8 +29,8 @@ Authoritative behavior: [`docs/deployment-plan/archive/spike-3/omnibar-search.md
 - [ ] A `fieldValuesForKind` case (`core/search/fts.go`) mapping the document's columns onto every registry field the kind declares.
 - [ ] Write-path reproject on domain mutators (same tx when practical)
 - [ ] Tagged Source body rollup when contributing child text (`note:` / `metadata:` / `filename:`)
-- [ ] Swift `CatalogSearchKind` case (`TestSwiftVocabularyMatchesGo` fails without it); the compiler then asks for its `kindLabel` and `leadThumbnail`, and for FakeStore's `searchPriority`
-- [ ] FakeStore mirrors kinds + location rules + ref exact/prefix boost; markCatalogSessionHeld; fake hits for the kind (the compiler does not ask for these)
+- [ ] Swift `CatalogSearchKind` case (`TestSwiftVocabularyMatchesGo` fails without it); the compiler then asks for its `kindLabel` and `leadThumbnail`, and, until S12-50 removes it, for FakeStore's `searchPriority` (give the kind the value the others have; the fake ranks nothing)
+- [ ] FakeStore returns seeded hits for the kind in seeded order, filtered only by the requested kinds; markCatalogSessionHeld. It ranks and scores nothing: ranking is Go's and is tested in `core/search` (`.cursor/rules/swift-tests.mdc`). The compiler does not ask for the fake hits
 - [ ] Package + FFI + Swift FakeStore tests
 ```
 
@@ -104,8 +104,9 @@ destination UI.
 
 - Handler already maps core hits ↔ proto (`SearchCatalog`). New kinds need no
   new Method if they fit `SearchHit`.
-- Swift: `CatalogSearchHit` + `GenealogyStore.searchCatalog`; FakeStore scores
-  in memory with the same kind/location rules; call `markCatalogSessionHeld`.
+- Swift: `CatalogSearchHit` + `GenealogyStore.searchCatalog`; FakeStore returns
+  seeded hits in seeded order for the requested kinds, with no scoring of its
+  own; call `markCatalogSessionHeld`.
 - Swift spells kinds once, in `macos/App/Platform/CatalogSearchKind.swift`
   (`hit.searchKind`; nil for a kind this build doesn't know). Switches on it
   are exhaustive, so a new case names each view spot. Never compare

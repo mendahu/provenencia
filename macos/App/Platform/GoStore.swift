@@ -903,17 +903,13 @@ struct GoStore: GenealogyStore {
         projectDir: String,
         userID: String,
         subjectID: String,
-        entityID: String?,
-        confidenceGradeID: String?,
-        argument: String
+        entityID: String?
     ) async throws -> CatalogPromoteResult {
         var req = Provenencia_Engine_V1_PromoteSubjectRequest()
         req.projectDir = projectDir
         req.userID = userID
         req.subjectID = subjectID
         req.entityID = entityID ?? ""
-        req.confidenceGradeID = confidenceGradeID ?? ""
-        req.argument = argument
         let resp: Provenencia_Engine_V1_PromoteSubjectResponse = try await provenenciaCall(
             method: CoreMethod.promoteSubject,
             request: req
@@ -924,9 +920,7 @@ struct GoStore: GenealogyStore {
                 id: resp.claim.id,
                 subjectID: resp.claim.subjectID,
                 entityID: resp.claim.entityID,
-                status: resp.claim.status,
-                confidenceGradeID: resp.claim.confidenceGradeID.isEmpty ? nil : resp.claim.confidenceGradeID,
-                argument: resp.claim.argument
+                status: resp.claim.status
             )
         )
     }
@@ -945,105 +939,31 @@ struct GoStore: GenealogyStore {
             request: req
         )
         let rows: [CatalogPromoteGraphAlignmentRow] = resp.rows.map { r in
-            var person: CatalogPersonHeader?
-            var event: CatalogEventHeader?
-            var place: CatalogPlaceHeader?
-            switch r.header {
-            case .person(let h): person = Self.mapPersonHeader(h)
-            case .event(let h): event = Self.mapEventHeader(h)
-            case .place(let h): place = Self.mapPlaceHeader(h)
-            case nil: break
-            }
-            return CatalogPromoteGraphAlignmentRow(
+            CatalogPromoteGraphAlignmentRow(
                 subjectID: r.subjectID,
                 kind: r.kind,
                 target: PromoteTargetCode(wire: r.target),
                 handleID: r.handleID,
                 handleRef: r.handleRef,
-                score: r.score,
                 assessment: r.assessment,
                 reason: PromoteReasonCode(wire: r.reason),
-                reasonPropertyKey: r.reasonPropertyKey,
-                reasonPropertyOrigin: r.reasonPropertyOrigin,
                 alternatives: r.alternatives.map { a in
-                    var altPerson: CatalogPersonHeader?
-                    var altEvent: CatalogEventHeader?
-                    var altPlace: CatalogPlaceHeader?
-                    switch a.header {
-                    case .person(let h): altPerson = Self.mapPersonHeader(h)
-                    case .event(let h): altEvent = Self.mapEventHeader(h)
-                    case .place(let h): altPlace = Self.mapPlaceHeader(h)
-                    case nil: break
-                    }
-                    return CatalogPromoteGraphAlignmentAlternative(
+                    CatalogPromoteGraphAlignmentAlternative(
                         handleID: a.handleID,
                         handleRef: a.handleRef,
-                        score: a.score,
-                        person: altPerson,
-                        event: altEvent,
-                        place: altPlace,
-                        assessment: a.assessment,
-                        reason: PromoteReasonCode(wire: a.reason),
-                        reasonPropertyKey: a.reasonPropertyKey,
-                        reasonPropertyOrigin: a.reasonPropertyOrigin,
-                        viaNeighborSubjectID: a.viaNeighborSubjectID
+                        header: Self.mapPromoteAlternativeHeader(a.header)
                     )
                 },
                 conflictWithFixed: r.conflictWithFixed,
                 possibleDuplicate: r.possibleDuplicate,
                 duplicateOfSubjectID: r.duplicateOfSubjectID,
                 viaNeighborSubjectID: r.viaNeighborSubjectID,
-                viaBridgeType: r.viaBridgeType,
-                viaRole: r.viaRole,
-                contested: r.contested,
                 moveReason: r.moveReason.isEmpty ? nil : PromoteReasonCode(wire: r.moveReason),
                 moveNeighborSubjectID: r.moveNeighborSubjectID,
-                person: person,
-                event: event,
-                place: place
+                header: Self.mapPromoteRowHeader(r.header)
             )
         }
         return CatalogPromoteGraphAlignmentProposal(revision: resp.revision, rows: rows)
-    }
-
-    func getPromoteClaimEvidence(
-        projectDir: String,
-        graphID: String,
-        subjectID: String,
-        handleID: String,
-        neighbors: [CatalogPromoteGraphAlignmentFixed]
-    ) async throws -> CatalogClaimEvidence {
-        var req = Provenencia_Engine_V1_GetPromoteClaimEvidenceRequest()
-        req.projectDir = projectDir
-        req.graphID = graphID
-        req.subjectID = subjectID
-        req.handleID = handleID
-        req.neighbors = neighbors.map(Self.mapFixed)
-        let resp: Provenencia_Engine_V1_GetPromoteClaimEvidenceResponse = try await provenenciaCall(
-            method: CoreMethod.getPromoteClaimEvidence,
-            request: req
-        )
-        return CatalogClaimEvidence(
-            sections: resp.sections.map(Self.mapEvidenceSection),
-            relationships: resp.relationships.map { r in
-                CatalogClaimEvidenceRelationship(
-                    neighborSubjectID: r.neighborSubjectID,
-                    key: r.key,
-                    bridgeType: r.bridgeType,
-                    outcome: EvidenceOutcome(wire: r.outcome),
-                    bundles: r.bundles.map { CatalogClaimEvidenceBundle(id: $0.id) },
-                    sections: r.sections.map(Self.mapEvidenceSection),
-                    neighborEnd: r.neighborEnd,
-                    neighborTerm: r.hasNeighborTerm ? Self.mapEvidenceTerm(r.neighborTerm) : nil,
-                    neighborTermNamesNeighbor: r.neighborTermNamesNeighbor,
-                    eventType: r.hasEventType ? Self.mapEvidenceTerm(r.eventType) : nil,
-                    layer: Self.mapEvidenceShape(r.layer),
-                    canon: Self.mapEvidenceShape(r.canon)
-                )
-            },
-            offers: resp.offers.map { CatalogClaimEvidenceOffer(id: $0.id, checked: $0.checked) },
-            sourceTitles: Dictionary(resp.sources.map { ($0.id, $0.title) }, uniquingKeysWith: { first, _ in first })
-        )
     }
 
     private static func mapFixed(_ f: CatalogPromoteGraphAlignmentFixed) -> Provenencia_Engine_V1_PromoteGraphAlignmentFixed {
@@ -1054,101 +974,29 @@ struct GoStore: GenealogyStore {
         return row
     }
 
-    private static func mapEvidenceTerm(_ t: Provenencia_Engine_V1_ConclusionTerm) -> CatalogEvidenceTerm {
-        CatalogEvidenceTerm(key: t.key, label: t.label, origin: t.origin)
-    }
-
-    private static func mapEvidenceShape(_ s: Provenencia_Engine_V1_PromoteClaimEvidenceShape) -> CatalogClaimEvidenceShape {
-        var shape = CatalogClaimEvidenceShape(pattern: KinshipPattern(wire: s.pattern), pivotID: s.pivotID)
-        switch s.pivotHeader {
-        case .person(let h)?: shape.pivot = .person(mapPersonHeader(h))
-        case .event(let h)?: shape.pivot = .event(mapEventHeader(h))
-        case nil: break
-        }
-        return shape
-    }
-
-    private static func mapEvidenceSection(_ s: Provenencia_Engine_V1_PromoteClaimEvidenceSection) -> CatalogClaimEvidenceSection {
-        CatalogClaimEvidenceSection(
-            propertyKey: s.propertyKey,
-            lines: s.lines.map { l in
-                CatalogClaimEvidenceLine(
-                    propertyKey: l.propertyKey,
-                    outcome: EvidenceOutcome(wire: l.outcome),
-                    propertyCause: EvidencePropertyCause(wire: l.propertyCause),
-                    relation: ValueRelation(wire: l.relation),
-                    cause: ValueCause(wire: l.cause),
-                    incomingObservationID: l.incomingObservationID,
-                    incoming: mapConclusionValue(l.incoming),
-                    incomingNegative: l.incomingNegative,
-                    members: l.members.map { p in
-                        CatalogClaimEvidencePin(
-                            id: p.id,
-                            sourceID: p.sourceID,
-                            value: mapConclusionValue(p.value)
-                        )
-                    }
-                )
-            }
-        )
-    }
-
     func applyPromoteGraphAlignment(
         projectDir: String,
         userID: String,
         graphID: String,
         seenRevision: Int64,
-        rows: [CatalogPromoteBatchRow]
-    ) async throws -> CatalogPromoteBatchResult {
+        rows: [CatalogPromoteGraphAlignmentFixed]
+    ) async throws {
         var req = Provenencia_Engine_V1_ApplyPromoteGraphAlignmentRequest()
         req.projectDir = projectDir
         req.userID = userID
         req.graphID = graphID
         req.seenRevision = seenRevision
-        req.rows = rows.map { row in
+        req.rows = rows.map { fixed in
             var proto = Provenencia_Engine_V1_ApplyPromoteGraphAlignmentRow()
-            proto.subjectID = row.subjectID
-            proto.target = row.target
-            if let entityID = row.entityID { proto.entityID = entityID }
-            if let gradeID = row.confidenceGradeID { proto.confidenceGradeID = gradeID }
-            proto.argument = row.argument
-            proto.defaultPins = row.defaultPins
-            proto.pinIds = row.pinIDs
+            proto.subjectID = fixed.subjectID
+            proto.target = fixed.target.wire
+            if !fixed.handleID.isEmpty { proto.entityID = fixed.handleID }
             return proto
         }
-        let resp: Provenencia_Engine_V1_ApplyPromoteGraphAlignmentResponse = try await provenenciaCall(
+        let _: Provenencia_Engine_V1_ApplyPromoteGraphAlignmentResponse = try await provenenciaCall(
             method: CoreMethod.applyPromoteGraphAlignment,
             request: req
         )
-        return CatalogPromoteBatchResult(
-            revision: resp.revision,
-            written: resp.written.map { w in
-                CatalogPromoteBatchWritten(
-                    entity: Self.mapCanonicalEntity(w.entity),
-                    claim: CatalogIdentityClaim(
-                        id: w.claim.id,
-                        subjectID: w.claim.subjectID,
-                        entityID: w.claim.entityID,
-                        status: w.claim.status,
-                        confidenceGradeID: w.claim.confidenceGradeID.isEmpty ? nil : w.claim.confidenceGradeID,
-                        argument: w.claim.argument
-                    ),
-                    pins: Int(w.pins)
-                )
-            }
-        )
-    }
-
-    func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade] {
-        var req = Provenencia_Engine_V1_ListClaimConfidenceGradesRequest()
-        req.projectDir = projectDir
-        let resp: Provenencia_Engine_V1_ListClaimConfidenceGradesResponse = try await provenenciaCall(
-            method: CoreMethod.listClaimConfidenceGrades,
-            request: req
-        )
-        return resp.grades.map { g in
-            CatalogClaimConfidenceGrade(id: g.id, key: g.key, origin: g.origin, label: g.label, sortOrder: Int(g.sortOrder))
-        }
     }
 
     func listEvidenceGraphEventTitles(projectDir: String, graphID: String) async throws -> [String: CatalogEventTitle] {
@@ -1250,6 +1098,37 @@ struct GoStore: GenealogyStore {
         }
     }
 
+    private static func mapPromoteRowHeader(
+        _ header: Provenencia_Engine_V1_PromoteGraphAlignmentRow.OneOf_Header?
+    ) -> CatalogConclusionHeader? {
+        switch header {
+        case .person(let h): .person(mapPersonHeader(h))
+        case .event(let h): .event(mapEventHeader(h))
+        case .place(let h): .place(mapPlaceHeader(h))
+        case nil: nil
+        }
+    }
+
+    private static func mapPromoteAlternativeHeader(
+        _ header: Provenencia_Engine_V1_PromoteGraphAlignmentAlternative.OneOf_Header?
+    ) -> CatalogConclusionHeader? {
+        switch header {
+        case .person(let h): .person(mapPersonHeader(h))
+        case .event(let h): .event(mapEventHeader(h))
+        case .place(let h): .place(mapPlaceHeader(h))
+        case nil: nil
+        }
+    }
+
+    private static func mapSearchHeader(_ h: Provenencia_Engine_V1_SearchHit) -> CatalogConclusionHeader? {
+        switch h.header {
+        case .person(let header): return .person(mapPersonHeader(header))
+        case .event(let header): return .event(mapEventHeader(header))
+        case .place(let header): return .place(mapPlaceHeader(header))
+        case nil: return nil
+        }
+    }
+
     private static func mapPersonHeader(_ h: Provenencia_Engine_V1_PersonHeader) -> CatalogPersonHeader {
         CatalogPersonHeader(
             entity: mapCanonicalEntity(h.entity),
@@ -1258,7 +1137,7 @@ struct GoStore: GenealogyStore {
             birth: mapLifeFacts(h.birth),
             death: mapLifeFacts(h.death),
             updated: CatalogActivity(revision: h.updatedRevision, at: h.updatedAt),
-            likenessImageRelPath: h.likenessImageRelPath
+            pictureImageRelPath: h.pictureImageRelPath
         )
     }
 
@@ -1307,7 +1186,8 @@ struct GoStore: GenealogyStore {
             subjects: h.subjects.map(mapEventSubject),
             places: h.places.map(mapHeaderPlace),
             title: mapEventTitle(h.title),
-            updated: CatalogActivity(revision: h.updatedRevision, at: h.updatedAt)
+            updated: CatalogActivity(revision: h.updatedRevision, at: h.updatedAt),
+            pictureImageRelPath: h.pictureImageRelPath
         )
     }
 
@@ -1324,7 +1204,8 @@ struct GoStore: GenealogyStore {
             contains: h.contains.map(mapPlaceRelationship),
             predecessors: h.predecessors.map(mapPlaceRelationship),
             successors: h.successors.map(mapPlaceRelationship),
-            updated: CatalogActivity(revision: h.updatedRevision, at: h.updatedAt)
+            updated: CatalogActivity(revision: h.updatedRevision, at: h.updatedAt),
+            pictureImageRelPath: h.pictureImageRelPath
         )
     }
 
@@ -1372,8 +1253,8 @@ struct GoStore: GenealogyStore {
             },
             memberCount: Int(resp.memberCount),
             header: Self.mapConclusionHeader(resp.header),
-            likenesses: resp.likenesses.map {
-                CatalogLikeness(
+            pictures: resp.pictures.map {
+                CatalogPicture(
                     imageRelPath: $0.imageRelPath,
                     record: Self.mapReconcilerOutcome($0.record),
                     preferred: $0.preferred,
@@ -1819,7 +1700,6 @@ struct GoStore: GenealogyStore {
     private static func mapEvidenceGraphProgress(_ row: Provenencia_Engine_V1_EvidenceGraphProgress) -> EvidenceGraphProgress {
         EvidenceGraphProgress(
             graphId: row.graphID,
-            sourceId: row.sourceID,
             subjectCount: Int(row.subjectCount),
             observationCount: Int(row.observationCount),
             filedCount: Int(row.filedCount)
@@ -1905,7 +1785,9 @@ struct GoStore: GenealogyStore {
         CatalogWriteEffects(
             handles: effects.handles,
             evidenceGraphs: effects.evidenceGraphs,
-            citationSources: effects.citationSources,
+            reads: effects.reads.compactMap { entry in
+                CatalogRead(rawValue: entry.read).map { CatalogWriteEffectsRead(read: $0, ids: entry.ids) }
+            },
             lists: Set(effects.lists.compactMap(CatalogList.init(rawValue:))),
             structure: effects.structure,
             headerHandles: effects.headerHandles,
@@ -2040,15 +1922,6 @@ struct GoStore: GenealogyStore {
         }
     }
 
-    private static func mapSearchHeader(_ h: Provenencia_Engine_V1_SearchHit) -> CatalogConclusionHeader? {
-        switch h.header {
-        case .person(let header): return .person(mapPersonHeader(header))
-        case .event(let header): return .event(mapEventHeader(header))
-        case .place(let header): return .place(mapPlaceHeader(header))
-        case nil: return nil
-        }
-    }
-
     private static func mapSearchHit(_ h: Provenencia_Engine_V1_SearchHit) -> CatalogSearchHit {
         CatalogSearchHit(
             kind: h.kind,
@@ -2112,7 +1985,8 @@ struct GoStore: GenealogyStore {
             relPath: f.relPath,
             originalFilename: f.originalFilename,
             mediaType: f.mediaType,
-            byteSize: f.byteSize
+            byteSize: f.byteSize,
+            typeIdentifiers: f.typeIdentifiers
         )
     }
 
@@ -2447,7 +2321,8 @@ struct GoStore: GenealogyStore {
             valueText: e.valueText,
             hasValue: e.hasValue_p,
             suggested: e.suggested,
-            sortOrder: e.sortOrder
+            sortOrder: e.sortOrder,
+            openHref: e.openHref
         )
     }
 

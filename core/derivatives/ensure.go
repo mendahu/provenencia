@@ -108,9 +108,13 @@ func Ensure(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, error)
 		return Result{}, ErrUnprocessable
 	}
 
-	rel, err := files.StorageRelPath(src.ChecksumSHA256, src.MediaType)
+	rel, err := files.ReadRelPath(src)
 	if err != nil {
 		return Result{}, err
+	}
+	if rel == "" {
+		// A stored type off the allowlist has no object path to read.
+		return Result{}, ErrUnprocessable
 	}
 	derivedJPEG, err := generate(c.Dir(), rel, src.ChecksumSHA256, spec.Raster)
 	if err != nil {

@@ -13,7 +13,7 @@ planner; delete it from the finished plan.
 **Status:** Draft | Planned | Blocked — on … | In progress | Landed in [#N](https://github.com/mendahu/provenencia/pull/N) (YYYY-MM-DD) | Descoped
 **Spike / slice:** Spike N · Slice K — slice name
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S#-D#](../design/S#-D#-slug.md), board agreed YYYY-MM-DD | — (no new chrome: one clause why)
+**Brief:** [S#-D#](../design/S#-D#-slug.md), board agreed YYYY-MM-DD | — (no chrome change: one clause why)
 **Board:** where the implementer sees the agreed frames | —
 **Depends on:** S#-NN (landed [#N](…)), S#-D# | —
 **Blocks:** S#-NN | —
@@ -120,9 +120,21 @@ None — no new path into existing code, no new state reachable. |
 
 ### Scale
 
-<!-- At the map's Scale line: for each write this PR adds or re-keys, the keys and caches it invalidates and what they reload; for each list or loop, the work per row. -->
+<!-- At the map's Scale line: for each write this PR adds or re-keys, the keys and caches it invalidates and what they reload; for each list or loop, the work per row. A budget this PR sets or leans on is measured at that Scale, growing the input that grows; one met only on a smaller fixture is not evidence. A cache with a capacity is tested with more entries than the cap. -->
 
 None — no write, list or loop changes. | At the map's Scale (…): …
+
+### Edges
+
+<!-- For each rule, comparison, ranking, fold, key or algorithm this PR adds or changes. A new kind of input reaching old code is where the old code's unstated assumptions break. Answer each line, or write None and one clause why. -->
+
+None — no rule, comparison or algorithm changes. |
+
+- **Assumptions.** What the code around the rule relies on (transitive, acyclic, symmetric, order-free, one key per value, lists of equal length, a bounded result), and the test that holds each with the new case.
+- **Neighbors.** The inputs closest to the new behavior on both sides, what now changes and what must not, each with its expected result and a test.
+- **Removed inputs.** What the result loses when an input is decided, excluded, deleted or held by something else, and the test that pins it.
+- **Real data.** For a rule driven by a table, seed or configuration: the run over the whole shipped table, its counts, and the outputs worth a second look.
+- **Untrusted size.** For each list, map or graph read from data the app did not write: every dimension that multiplies the cost (items, per key, per item, duplicates, depth), its bound, and where the bound is checked, before the work.
 
 ### Schema
 

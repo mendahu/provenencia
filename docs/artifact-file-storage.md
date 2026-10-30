@@ -10,7 +10,7 @@ That document is the authoritative reference for:
 - `files`
 - `file_derivatives`
 - offline-first file ingestion
-- content-addressed storage
+- content-addressed storage (a stored type off the ingest allowlist has no object path on read)
 - immutable primary files
 - first-attach only (no primary-File pointer-swap; better scan = new Artifact)
 - generated thumbnails and other disposable derivatives

@@ -17,17 +17,19 @@ import (
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
-	"github.com/mendahu/provenencia/core/kinship"
+	"github.com/mendahu/provenencia/core/ingest/mediatypes"
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/objectpath"
-	"github.com/mendahu/provenencia/core/propertycompare"
+	"github.com/mendahu/provenencia/core/onboarding"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/raster"
 	"github.com/mendahu/provenencia/core/search"
+	"github.com/mendahu/provenencia/core/slug"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -45,10 +47,15 @@ const (
 	swiftCatalogMut = "../../macos/App/Features/Workspace/Session/CatalogMutation.swift"
 	swiftSearchKind = "../../macos/App/Platform/CatalogSearchKind.swift"
 
-	swiftRegionGeometry = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
-	swiftProjectFiles   = "../../macos/App/Platform/ProjectFiles.swift"
-	swiftTextMatch      = "../../macos/App/Platform/TextMatch.swift"
-	swiftThumbnailCache = "../../macos/App/Platform/ThumbnailCache.swift"
+	swiftRegionGeometry      = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
+	swiftProjectFiles        = "../../macos/App/Platform/ProjectFiles.swift"
+	swiftTextMatch           = "../../macos/App/Platform/TextMatch.swift"
+	swiftFakeStore           = "../../macos/App/Platform/FakeStore.swift"
+	swiftFieldSlug           = "../../macos/App/Platform/FieldSlug.swift"
+	swiftProjectSlug         = "../../macos/App/Platform/ProjectSlug.swift"
+	swiftThumbnailCache      = "../../macos/App/Platform/ThumbnailCache.swift"
+	swiftEvidencePlacement   = "../../macos/App/Features/Catalog/Connect/EvidenceGraphPlacement.swift"
+	swiftArtifactImageDecode = "../../macos/App/Features/ArtifactViewer/ArtifactImageDecode.swift"
 )
 
 // swiftEnumBody returns the source between `enum <name>` and its closing
@@ -62,7 +69,10 @@ func swiftEnumBody(t *testing.T, path, name string) string {
 	src := string(b)
 	start := strings.Index(src, "enum "+name)
 	if start < 0 {
-		t.Fatalf("%s: no enum %s", path, name)
+		start = strings.Index(src, "final class "+name)
+	}
+	if start < 0 {
+		t.Fatalf("%s: no enum or final class %s", path, name)
 	}
 	end := strings.Index(src[start:], "\n}\n")
 	if end < 0 {
@@ -129,19 +139,89 @@ func swiftArrayLiteral(t *testing.T, body, name string) string {
 	return rest[:end]
 }
 
+// decodeSwiftStringLiteral decodes Swift string-literal escapes in `s` (the
+// capture inside the quotes, not including the quotes).
+func decodeSwiftStringLiteral(s string) (string, error) {
+	var out strings.Builder
+	for i := 0; i < len(s); {
+		if s[i] != '\\' {
+			out.WriteByte(s[i])
+			i++
+			continue
+		}
+		i++
+		if i >= len(s) {
+			return "", fmt.Errorf("trailing backslash")
+		}
+		switch s[i] {
+		case '\\':
+			out.WriteByte('\\')
+			i++
+		case '"':
+			out.WriteByte('"')
+			i++
+		case '\'':
+			out.WriteByte('\'')
+			i++
+		case 'n':
+			out.WriteByte('\n')
+			i++
+		case 'r':
+			out.WriteByte('\r')
+			i++
+		case 't':
+			out.WriteByte('\t')
+			i++
+		case '0':
+			out.WriteByte(0)
+			i++
+		case 'u':
+			i++
+			if i >= len(s) || s[i] != '{' {
+				return "", fmt.Errorf("unknown escape")
+			}
+			i++
+			start := i
+			for i < len(s) && s[i] != '}' {
+				c := s[i]
+				if (c < '0' || c > '9') && (c < 'a' || c > 'f') && (c < 'A' || c > 'F') {
+					return "", fmt.Errorf("unknown escape")
+				}
+				i++
+			}
+			if i >= len(s) || i-start == 0 || i-start > 8 {
+				return "", fmt.Errorf("unknown escape")
+			}
+			n, err := strconv.ParseUint(s[start:i], 16, 32)
+			if err != nil {
+				return "", fmt.Errorf("unknown escape")
+			}
+			out.WriteRune(rune(n))
+			i++ // closing '}'
+		default:
+			return "", fmt.Errorf("unknown escape")
+		}
+	}
+	return out.String(), nil
+}
+
 // readSwiftFixturePairs returns the ("a", "b") literal pairs of the array
-// `static let <decl>` in `enum <enum>`. A pair with a backslash is an error:
-// the reader does not decode escapes, and a skipped row would be an
-// unchecked mirror.
+// `static let <decl>` in `enum <enum>`, decoding Swift string escapes in each
+// capture.
 func readSwiftFixturePairs(t *testing.T, path, enum, decl string) ([][2]string, error) {
 	t.Helper()
 	literal := swiftArrayLiteral(t, swiftEnumBody(t, path, enum), decl)
 	var out [][2]string
 	for _, m := range swiftFixturePair.FindAllStringSubmatch(literal, -1) {
-		if strings.Contains(m[1], `\`) || strings.Contains(m[2], `\`) {
-			return nil, fmt.Errorf("%s: fixture has a backslash escape: %s", path, m[0])
+		a, err := decodeSwiftStringLiteral(m[1])
+		if err != nil {
+			return nil, fmt.Errorf("%s: fixture decode: %w", path, err)
 		}
-		out = append(out, [2]string{m[1], m[2]})
+		b, err := decodeSwiftStringLiteral(m[2])
+		if err != nil {
+			return nil, fmt.Errorf("%s: fixture decode: %w", path, err)
+		}
+		out = append(out, [2]string{a, b})
 	}
 	if len(out) == 0 {
 		return nil, fmt.Errorf("%s: %s.%s has no fixture pairs", path, enum, decl)
@@ -158,7 +238,19 @@ func swiftFixturePairs(t *testing.T, path, enum, decl string) [][2]string {
 	return out
 }
 
-func TestSwiftFixturePairsRefusesEscapes(t *testing.T) {
+func TestSwiftFixturePairsReadsFinalClass(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "C.swift")
+	src := "final class C: P {\n    static let fixtures: [(String, String)] = [\n        (\"a\", \"b c\"),\n    ]\n}\n"
+	if err := os.WriteFile(path, []byte(src), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got := swiftFixturePairs(t, path, "C", "fixtures")
+	if want := [][2]string{{"a", "b c"}}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v want %v", got, want)
+	}
+}
+
+func TestSwiftFixturePairsDecodesEscapes(t *testing.T) {
 	tests := []struct {
 		name    string
 		array   string
@@ -166,19 +258,24 @@ func TestSwiftFixturePairsRefusesEscapes(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name:    "escape in a text",
-			array:   `("God\u{2010}father", "godfather"), ("a", "b")`,
-			wantErr: "backslash",
-		},
-		{
-			name:    "escape in a key",
-			array:   `("a", "b\\c")`,
-			wantErr: "backslash",
-		},
-		{
 			name:  "plain pairs",
 			array: `("a", "b"), ("C d", "cd")`,
 			want:  [][2]string{{"a", "b"}, {"C d", "cd"}},
+		},
+		{
+			name:  "unicode escape",
+			array: `("Grandma\u{2019}s album code", "grandmas-album-code")`,
+			want:  [][2]string{{"Grandma\u2019s album code", "grandmas-album-code"}},
+		},
+		{
+			name:  "backslash and quote",
+			array: `("Robins\\Family", "robins-family"), ("Robins\"Family", "robins-family")`,
+			want:  [][2]string{{`Robins\Family`, "robins-family"}, {`Robins"Family`, "robins-family"}},
+		},
+		{
+			name:    "unknown escape",
+			array:   `("a", "b\x00")`,
+			wantErr: "unknown escape",
 		},
 	}
 	for _, tt := range tests {
@@ -203,6 +300,41 @@ func TestSwiftFixturePairsRefusesEscapes(t *testing.T) {
 				t.Fatalf("got %v want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestFakeStoreTypeIdentifiersMatchGo(t *testing.T) {
+	var swiftTypes []string
+	for _, p := range swiftFixturePairs(t, swiftFakeStore, "FakeStore", "imageTypeIdentifierFixtures") {
+		swiftTypes = append(swiftTypes, p[0])
+		if want := strings.Join(mediatypes.TypeIdentifiers(p[0]), " "); p[1] != want {
+			t.Errorf("FakeStore.imageTypeIdentifierFixtures %q: Swift says %q, Go says %q", p[0], p[1], want)
+		}
+	}
+	sort.Strings(swiftTypes)
+	if want := mediatypes.ImageMediaTypes(); !reflect.DeepEqual(swiftTypes, want) {
+		t.Errorf("FakeStore image media types %v; Go's table has %v", swiftTypes, want)
+	}
+}
+
+func TestSwiftFieldSlugMirrorsKebab(t *testing.T) {
+	for _, p := range swiftFixturePairs(t, swiftFieldSlug, "FieldSlug", "fixtures") {
+		want := slug.Kebab(p[0])
+		if want != p[1] {
+			t.Errorf("FieldSlug.fixtures %q: Swift says %q, Go Kebab says %q", p[0], p[1], want)
+		}
+	}
+}
+
+func TestSwiftProjectSlugMirrorsFolderName(t *testing.T) {
+	for _, p := range swiftFixturePairs(t, swiftProjectSlug, "ProjectSlug", "folderNameFixtures") {
+		want, err := onboarding.FolderName(p[0])
+		if err != nil {
+			want = ""
+		}
+		if want != p[1] {
+			t.Errorf("ProjectSlug.folderNameFixtures %q: Swift says %q, Go FolderName says %q", p[0], p[1], want)
+		}
 	}
 }
 
@@ -262,22 +394,21 @@ func subjectMarkSymbols() []string {
 	return out
 }
 
-// patternCodes is every kinship pattern code; Swift's KinshipPattern decodes
-// the claim evidence shapes with them.
-func patternCodes() []string {
-	var out []string
-	for _, p := range kinship.Patterns() {
-		out = append(out, string(p))
-	}
-	return out
-}
-
 // listStrings is every effects.List wire key; Swift's CatalogList decodes
 // WriteEffects.lists with them.
 func listStrings() []string {
 	var out []string
 	for _, l := range effects.Lists {
 		out = append(out, string(l))
+	}
+	return out
+}
+
+// readStrings is every keyed read's wire key.
+func readStrings() []string {
+	var out []string
+	for _, r := range effects.Reads {
+		out = append(out, string(r))
 	}
 	return out
 }
@@ -289,16 +420,6 @@ func searchKinds() []string {
 		out = append(out, spec.Kind)
 	}
 	return sorted(out...)
-}
-
-// sortedRelations is every valuecompare relation, sorted.
-func sortedRelations() []string {
-	var out []string
-	for _, r := range valuecompare.Relations() {
-		out = append(out, string(r))
-	}
-	sort.Strings(out)
-	return out
 }
 
 func TestSwiftVocabularyMatchesGo(t *testing.T) {
@@ -337,34 +458,6 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			want: sorted("", string(graphalign.TargetHandle), string(graphalign.TargetNew), string(graphalign.TargetSkip)),
 		},
 		{
-			name: "evidence outcomes", path: swiftVocabulary, enum: "EvidenceOutcome", re: wireCase,
-			want: sorted(string(propertycompare.OutcomeAgree), string(propertycompare.OutcomePartial),
-				string(propertycompare.OutcomeConflict), string(propertycompare.OutcomeUnknown)),
-		},
-		{
-			name: "evidence property causes", path: swiftVocabulary, enum: "EvidencePropertyCause", re: wireCase,
-			want: sorted("", string(propertycompare.CauseRelation), string(propertycompare.CauseNegative),
-				string(propertycompare.CauseNoValues), string(propertycompare.CauseCardinality)),
-		},
-		{
-			name: "kinship patterns", path: swiftVocabulary, enum: "KinshipPattern", re: wireCase,
-			want: sorted(append(patternCodes(), "")...),
-		},
-		{
-			name: "value relations", path: swiftVocabulary, enum: "ValueRelation", re: wireCase,
-			want: sorted(append(sortedRelations(), "")...),
-		},
-		{
-			name: "value causes", path: swiftVocabulary, enum: "ValueCause", re: wireCase,
-			want: sorted("", string(valuecompare.CauseExact), string(valuecompare.CauseCase), string(valuecompare.CauseFold),
-				string(valuecompare.CauseAlias), string(valuecompare.CauseAbbreviation), string(valuecompare.CauseInitial),
-				string(valuecompare.CauseSpelling), string(valuecompare.CausePrecision), string(valuecompare.CauseMissingPart),
-				string(valuecompare.CauseOverlap), string(valuecompare.CauseGap), string(valuecompare.CauseBeyondTolerance),
-				string(valuecompare.CauseGenerationConflict), string(valuecompare.CauseEmpty), string(valuecompare.CausePhraseOnly),
-				string(valuecompare.CauseBelowMinimum), string(valuecompare.CauseNoMatch), string(valuecompare.CauseTooLong),
-				string(valuecompare.CauseOrder), string(valuecompare.CauseRole), string(valuecompare.CauseUnsupported), string(valuecompare.CauseUnjudged)),
-		},
-		{
 			name: "date qualifiers", path: swiftVocabulary, enum: "DateQualifier", re: staticLet,
 			want: sorted(datevalue.QualifierABT, datevalue.QualifierBEF, datevalue.QualifierAFT),
 		},
@@ -380,6 +473,10 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		{
 			name: "catalog-wide lists", path: swiftCatalogMut, enum: "CatalogList", re: listCase,
 			want: sorted(listStrings()...),
+		},
+		{
+			name: "catalog reads", path: swiftCatalogMut, enum: "CatalogRead", re: listCase,
+			want: sorted(readStrings()...),
 		},
 		{
 			name: "search kinds", path: swiftSearchKind, enum: "CatalogSearchKind", re: listCase,
@@ -404,6 +501,16 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			re:   regexp.MustCompile(`static let maxDeclaredEdge = (\d+)`),
 			want: []string{strconv.Itoa(raster.MaxEdgeLimit)},
 		},
+		{
+			name: "evidence grid cell limit", path: swiftEvidencePlacement, enum: "EvidenceGraphPlacement",
+			re:   regexp.MustCompile(`static let cellLimit: Int64 = (\d+)`),
+			want: []string{strconv.FormatInt(subjectpositions.MaxCell, 10)},
+		},
+		{
+			name: "viewer decode pixels", path: swiftArtifactImageDecode, enum: "ArtifactImageDecode",
+			re:   regexp.MustCompile(`static let maxDecodePixels = (\d+)`),
+			want: []string{strconv.Itoa(raster.MaxDecodePixels)},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -414,8 +521,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		})
 	}
 	t.Run("states and reasons tolerate a value this build doesn't know", func(t *testing.T) {
-		for _, enum := range []string{"ReconciledState", "ReconcilerReason", "PromoteReasonCode",
-			"EvidenceOutcome", "EvidencePropertyCause", "KinshipPattern", "ValueRelation", "ValueCause"} {
+		for _, enum := range []string{"ReconciledState", "ReconcilerReason", "PromoteReasonCode"} {
 			if !unrecogniz.MatchString(swiftEnumBody(t, swiftVocabulary, enum)) {
 				t.Fatalf("%s has no unrecognized case", enum)
 			}
@@ -490,7 +596,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		}
 	})
 	t.Run("every seeded term has wording", func(t *testing.T) {
-		body := swiftFuncBody(t, swiftL10n, "static func wording(propertyKey")
+		body := swiftFuncBody(t, swiftL10n, "static func resource(propertyKey")
 		named := map[string]bool{}
 		for _, m := range wordingCase.FindAllStringSubmatch(body, -1) {
 			named[m[1]+"."+m[2]] = true
@@ -499,44 +605,9 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			enumBody := swiftEnumBody(t, swiftVocabulary, tc.enum)
 			for _, m := range swiftNamedKey.FindAllStringSubmatch(enumBody, -1) {
 				if !named[tc.enum+"."+m[1]] {
-					t.Errorf("Swift %s.%s (%s term %q) has no L10n.PropertyTerm wording", tc.enum, m[1], tc.property, m[2])
+					t.Errorf("Swift %s.%s (%s term %q) has no L10n.PropertyTerm resource", tc.enum, m[1], tc.property, m[2])
 				}
 			}
-		}
-	})
-	t.Run("every term a sentence shares has its share phrases", func(t *testing.T) {
-		body := swiftFuncBody(t, swiftL10n, "static func wording(propertyKey")
-		// A term of these enums is worded whole in "they share ...", for a similar outcome too;
-		// a place relationship term names the row from the other end as well.
-		fields := map[string][]string{
-			"SeededRoleTerm":                  {"share", "shareSimilar"},
-			"SeededEventTypeTerm":             {"share", "shareSimilar"},
-			"SeededRelationshipTypeTerm":      {"share", "shareSimilar"},
-			"SeededPlaceRelationshipTypeTerm": {"share", "shareSimilar", "shareOtherEnd", "shareOtherEndSimilar"},
-		}
-		src, err := os.ReadFile(swiftL10n)
-		if err != nil {
-			t.Fatal(err)
-		}
-		checked := 0
-		for _, m := range wordingCase.FindAllStringSubmatch(body, -1) {
-			want, ok := fields[m[1]]
-			if !ok {
-				continue
-			}
-			def := regexp.MustCompile(`(?s)static let ` + m[3] + ` = Wording\((.*?)\n        \)`).FindStringSubmatch(string(src))
-			if def == nil {
-				t.Fatalf("no Wording definition for %s", m[3])
-			}
-			for _, field := range want {
-				if !regexp.MustCompile(`\b` + field + `: LocalizedStringResource\(`).MatchString(def[1]) {
-					t.Errorf("%s.%s (%s) has no %s", m[1], m[2], m[3], field)
-				}
-			}
-			checked++
-		}
-		if checked == 0 {
-			t.Fatal("no wording read")
 		}
 	})
 	t.Run("the relationship inverse map is the seeded inverse", func(t *testing.T) {

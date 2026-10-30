@@ -37,6 +37,12 @@ Do not write code. Do not edit files. Walk the plan.
   package? Check the import graph (`go list -deps`); a cycle stops you mid-PR.
 - **Locks.** Does the step take a lock, a decode slot or the catalog session
   that a caller may already hold? Say who holds it.
+- **Edges.** For each loop, map, lookup or recursion the step touches, could
+  you say from the plan what happens with none, one, many, a duplicate, a
+  cycle, a value that contains the separator a key uses, and an input that was
+  deleted or decided meanwhile? Each one you would have to guess is a finding.
+- **Data.** Does a test in the step need the shipped tables or configuration
+  to reach the new path? If the plan's fixture leaves them out, say so.
 
 ## Briefs
 
@@ -44,4 +50,6 @@ For a Claude Design brief, the "implementer" is Claude Design and then the PR
 that builds the board. Ask: does each requirement say what to draw, with no
 choice left that changes the inventory? Does each inventory row say which kit
 piece to instance? Would a board drawn from this brief alone match the PR scope
-in the map?
+in the map? Does each view say what its Wide pane (1600pt and up) does with the
+extra space, with a `-W` requirement and a Wide frame, rather than leaving the
+Regular layout jammed left?

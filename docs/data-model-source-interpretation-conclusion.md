@@ -40,7 +40,7 @@ The boundaries are intentional. Evidence should be preserved without forcing int
 
 ## 1.0 Rigorous science and a casual tree
 
-The data model is built so **good science is convenient**: Citations, Observation-sized assertions, an Identity Claim with exhibit for each subject on a handle, Reconciliation with a stored value and optional pins, provenencia badges on working subjects. Use-case write-ups in these docs often describe that path — how the author wants to do genealogy.
+The data model is built so **good science is convenient**: Citations, Observation-sized assertions, an Identity Claim with a status and optional reasoning for each subject on a handle, members compared side by side on read, Reconciliation with a stored value, provenencia badges on working subjects. Use-case write-ups in these docs often describe that path — how the author wants to do genealogy.
 
 The same model must **allow a family tree with little or no evidence**. Empty canonical Persons, asserted Places, names typed only as Reconciliation, no Sources: that is a valid project. It will not withstand genealogical proof review. That is acceptable. The application should encourage and surface rigor (warnings, badges, “unlinked” filters, suggested Citations), not refuse to save a tree because the user skipped science.
 
@@ -141,7 +141,7 @@ canonical_entities E (kind = person)
   argument → optional existence rationale on the handle
 ```
 
-Identity Claims are higher-order than Observations. An Observation says what a particular Source appears to assert about a subject. An Identity Claim says the researcher concludes that this subject is a reading of this canonical entity, with its own evidence chain. Accepting the claim makes the subject a member. Two subjects are the same historical thing when both are accepted members of the same entity. A rejected claim means this subject is not that entity; absence of a claim is not a rejection. Exhibit pins do not retarget Observations. A confirmed match pins the existing Observations on the new Identity Claim and on the other member's claim; it does not create an Observation. See [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.1–§5.4. Promoting one subject does not promote its neighbors; a later UI may offer that walk.
+Identity Claims are higher-order than Observations. An Observation says what a particular Source appears to assert about a subject. An Identity Claim says the researcher concludes that this subject is a reading of this canonical entity; its evidence is the subject's own Observations, compared with the other members' on read. Accepting the claim makes the subject a member. Two subjects are the same historical thing when both are accepted members of the same entity. A rejected claim means this subject is not that entity; absence of a claim is not a rejection. An Identity Claim carries no Observation exhibit and creates no Observation. See [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.1–§5.4. Promoting one subject does not promote its neighbors; a later UI may offer that walk.
 
 The same handle pattern applies across Subject types (`person`, `event`, `place`, `relationship`, `participation`, `location`). Domain payload is projected from member-subject Observations and overridden by Reconciliation Claims. For `value_type = 'subject'`, Reconciliation points at another **canonical** entity (`value_entity_id`), so a Place without Interpretation members can still be an association end.
 
@@ -247,7 +247,7 @@ Testimony Source
 Conclusion
   canonical_entities E1 (kind=person)
   identity_claim: N1 → E1 (accepted)
-  identity_claim: N2 → E1 (accepted), exhibit includes the testimony Observation
+  identity_claim: N2 → E1 (accepted), argument → the testimony names the depicted person
   members(E1) = {N1, N2}
 ```
 
@@ -267,7 +267,7 @@ Letter Source L
 Conclusion
   canonical_entities E (kind=person)
   identity_claim: NC → E (accepted)
-  identity_claim: NL → E (accepted), exhibit cites both Sources' Observations
+  identity_claim: NL → E (accepted), argument → the letter is about the certificate's person
   members(E) = {NC, NL}
   reconciliation_claim on E, property birth_date:
     value → DateValue(2 JAN 1800)   # researcher choice, or synthesized

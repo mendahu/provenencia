@@ -102,16 +102,22 @@ func openResearcher(projectDir string) (*database.Catalog, error) {
 	if err != nil {
 		return nil, err
 	}
+	// A return or a panic before the catalog is handed back closes it.
+	ok := false
+	defer func() {
+		if !ok {
+			_ = c.Close()
+		}
+	}()
 	if err := ReconcileOnOpen(c); err != nil {
-		_ = c.Close()
 		return nil, err
 	}
 	// What scoring reads stays warm for the life of this project, the shortlist
 	// index too when it builds. Close drops it.
 	if err := WarmOnOpen(c); err != nil {
-		_ = c.Close()
 		return nil, err
 	}
+	ok = true
 	return c, nil
 }
 
@@ -121,6 +127,11 @@ func closeSession(s *session) error {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return closeLocked(s)
+}
+
+// closeLocked is the one body of closing a session. The caller holds s.mu.
+func closeLocked(s *session) error {
 	s.closed = true
 	if s.cat == nil {
 		return nil
@@ -128,6 +139,16 @@ func closeSession(s *session) error {
 	err := s.cat.Close()
 	s.cat = nil
 	return err
+}
+
+// forget drops s from the registry under dir, only when dir still holds s.
+// The caller holds no s.mu (lock order is reg.mu then s.mu).
+func forget(dir string, s *session) {
+	reg.mu.Lock()
+	defer reg.mu.Unlock()
+	if reg.sessions[dir] == s {
+		delete(reg.sessions, dir)
+	}
 }
 
 // getOrOpen returns the held session for projectDir, opening if needed.
@@ -183,13 +204,31 @@ func Do(projectDir string, fn func(*database.Catalog) error) error {
 			s.mu.Unlock()
 			continue
 		}
-		err = fn(s.cat)
-		if err == nil && s.cat.Graph().WarmNeeded() {
-			_ = warmGraph(s.cat)
+		return runLocked(dir, s, fn)
+	}
+}
+
+// runLocked runs fn on s, which Do has locked, and unlocks it. A panic in fn or
+// in the warm closes the session (its caches may disagree with the catalog) and
+// drops it from the registry, so the next Do reopens; the panic goes on to the
+// caller.
+func runLocked(dir string, s *session, fn func(*database.Catalog) error) error {
+	done := false
+	defer func() {
+		if !done {
+			_ = closeLocked(s)
 		}
 		s.mu.Unlock()
-		return err
+		if !done {
+			forget(dir, s)
+		}
+	}()
+	err := fn(s.cat)
+	if err == nil && s.cat.Graph().WarmNeeded() {
+		_ = warmGraph(s.cat)
 	}
+	done = true
+	return err
 }
 
 // Close releases the held catalog for projectDir, if any.

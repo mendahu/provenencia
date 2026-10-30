@@ -73,6 +73,33 @@ func TestListSources(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "cover thumbnail with a damaged type has no path",
+			reqFn: func(t *testing.T) proto.Message {
+				f := sourceWithPNG(t)
+				mustRPC(t, SetSourceCover, &engine.SetSourceCoverRequest{
+					ProjectDir: f.dir, UserId: f.userID, SourceId: f.sourceID,
+					CoverMode: "artifact", PrimaryArtifactId: f.artifactID,
+				}, &engine.SetSourceCoverResponse{})
+				var before engine.ListSourcesResponse
+				mustRPC(t, ListSources, &engine.ListSourcesRequest{ProjectDir: f.dir}, &before)
+				if len(before.Sources) != 1 || before.Sources[0].GetThumbnailRelPath() == "" {
+					t.Fatalf("want a cover thumbnail before the damage, got %+v", before.Sources)
+				}
+				damageCatalog(t, f.dir, `UPDATE files SET media_type = 'application/x-sh'
+					WHERE id IN (SELECT derived_file_id FROM file_derivatives)`)
+				return &engine.ListSourcesRequest{ProjectDir: f.dir}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var list engine.ListSourcesResponse
+				if err := proto.Unmarshal(out, &list); err != nil {
+					t.Fatal(err)
+				}
+				if len(list.Sources) != 1 || list.Sources[0].GetThumbnailRelPath() != "" {
+					t.Fatalf("want an empty thumbnail_rel_path, got %+v", list.Sources)
+				}
+			},
+		},
 	})
 }
 
@@ -229,6 +256,19 @@ func metadataSetFixture(t *testing.T, dataType string) *engine.SetSourceMetadata
 	}
 }
 
+// urlMetadataSetFixture is metadataSetFixture aimed at a new url-typed field
+// (the seeded fields are all text).
+func urlMetadataSetFixture(t *testing.T) *engine.SetSourceMetadataRequest {
+	t.Helper()
+	req := metadataSetFixture(t, "text")
+	var field engine.CreateMetadataFieldResponse
+	mustRPC(t, CreateMetadataField, &engine.CreateMetadataFieldRequest{
+		ProjectDir: req.ProjectDir, UserId: req.UserId, Label: "Catalogue URL", DataType: "url",
+	}, &field)
+	req.FieldId = field.Field.GetId()
+	return req
+}
+
 func unmarshalSetMetadataEntry(t *testing.T, raw []byte) *engine.MetadataWorkspaceEntry {
 	t.Helper()
 	var resp engine.SetSourceMetadataResponse
@@ -275,7 +315,154 @@ func TestGetSourceWorkspace(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "a stored type off the allowlist keeps the file and drops its path",
+			reqFn: func(t *testing.T) proto.Message {
+				f := sourceWithPNG(t)
+				damageCatalog(t, f.dir, `UPDATE files SET media_type = 'application/x-sh'
+					WHERE id IN (SELECT file_id FROM artifacts)`)
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: f.dir, SourceId: f.sourceID}
+			},
+			after: func(t *testing.T, raw []byte, _ proto.Message) {
+				var resp engine.GetSourceWorkspaceResponse
+				if err := proto.Unmarshal(raw, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if len(resp.Artifacts) != 1 {
+					t.Fatalf("artifacts %+v", resp.Artifacts)
+				}
+				file := resp.Artifacts[0].GetFile()
+				if file.GetRelPath() != "" {
+					t.Fatalf("rel_path %q want empty", file.GetRelPath())
+				}
+				if file.GetOriginalFilename() != "page.png" || file.GetMediaType() != "application/x-sh" {
+					t.Fatalf("file %+v", file)
+				}
+			},
+		},
+		{
+			name: "cover thumbnail with a damaged type has no path",
+			reqFn: func(t *testing.T) proto.Message {
+				f := sourceWithPNG(t)
+				mustRPC(t, SetSourceCover, &engine.SetSourceCoverRequest{
+					ProjectDir: f.dir, UserId: f.userID, SourceId: f.sourceID,
+					CoverMode: "artifact", PrimaryArtifactId: f.artifactID,
+				}, &engine.SetSourceCoverResponse{})
+				var before engine.GetSourceWorkspaceResponse
+				mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: f.dir, SourceId: f.sourceID}, &before)
+				if before.Source.GetThumbnailRelPath() == "" {
+					t.Fatalf("want a cover thumbnail before the damage, got %+v", before.Source)
+				}
+				damageCatalog(t, f.dir, `UPDATE files SET media_type = 'application/x-sh'
+					WHERE id IN (SELECT derived_file_id FROM file_derivatives)`)
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: f.dir, SourceId: f.sourceID}
+			},
+			after: func(t *testing.T, raw []byte, _ proto.Message) {
+				var resp engine.GetSourceWorkspaceResponse
+				if err := proto.Unmarshal(raw, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if resp.Source.GetThumbnailRelPath() != "" {
+					t.Fatalf("thumbnail_rel_path %q want empty", resp.Source.GetThumbnailRelPath())
+				}
+			},
+		},
+		{
+			name: "a raster type off the allowlist keeps the file and drops its path",
+			reqFn: func(t *testing.T) proto.Message {
+				f := sourceWithPNG(t)
+				damageCatalog(t, f.dir, `DELETE FROM file_derivatives`)
+				damageCatalog(t, f.dir, `UPDATE files SET media_type = 'image/jpg'
+					WHERE id IN (SELECT file_id FROM artifacts)`)
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: f.dir, SourceId: f.sourceID}
+			},
+			after: func(t *testing.T, raw []byte, _ proto.Message) {
+				var resp engine.GetSourceWorkspaceResponse
+				if err := proto.Unmarshal(raw, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if len(resp.Artifacts) != 1 {
+					t.Fatalf("artifacts %+v", resp.Artifacts)
+				}
+				file := resp.Artifacts[0].GetFile()
+				if file.GetRelPath() != "" {
+					t.Fatalf("rel_path %q want empty", file.GetRelPath())
+				}
+				if file.GetOriginalFilename() != "page.png" || file.GetMediaType() != "image/jpg" {
+					t.Fatalf("file %+v", file)
+				}
+				if resp.Artifacts[0].GetThumbnailRelPath() != "" {
+					t.Fatalf("thumbnail_rel_path %q want empty", resp.Artifacts[0].GetThumbnailRelPath())
+				}
+			},
+		},
+		{
+			name: "url metadata carries the web link Go computes",
+			reqFn: func(t *testing.T) proto.Message {
+				req := urlMetadataSetFixture(t)
+				req.ValueText = "www.example.org"
+				mustRPC(t, SetSourceMetadata, req, &engine.SetSourceMetadataResponse{})
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: req.ProjectDir, SourceId: req.SourceId}
+			},
+			after: func(t *testing.T, raw []byte, _ proto.Message) {
+				entry := onlyValuedMetadata(t, raw)
+				if entry.GetValueText() != "www.example.org" || entry.GetOpenHref() != "https://www.example.org" {
+					t.Fatalf("entry %+v", entry)
+				}
+			},
+		},
+		{
+			name: "text metadata has no web link",
+			reqFn: func(t *testing.T) proto.Message {
+				req := metadataSetFixture(t, "text")
+				req.ValueText = "www.example.org"
+				mustRPC(t, SetSourceMetadata, req, &engine.SetSourceMetadataResponse{})
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: req.ProjectDir, SourceId: req.SourceId}
+			},
+			after: func(t *testing.T, raw []byte, _ proto.Message) {
+				entry := onlyValuedMetadata(t, raw)
+				if entry.GetValueText() != "www.example.org" || entry.GetOpenHref() != "" {
+					t.Fatalf("entry %+v", entry)
+				}
+			},
+		},
+		{
+			name: "a url value damaged to a file scheme has no web link",
+			reqFn: func(t *testing.T) proto.Message {
+				req := urlMetadataSetFixture(t)
+				req.ValueText = "www.example.org"
+				mustRPC(t, SetSourceMetadata, req, &engine.SetSourceMetadataResponse{})
+				damageCatalog(t, req.ProjectDir, `UPDATE source_metadata SET value_text = 'file:///System/Applications/Calculator.app'`)
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: req.ProjectDir, SourceId: req.SourceId}
+			},
+			after: func(t *testing.T, raw []byte, _ proto.Message) {
+				entry := onlyValuedMetadata(t, raw)
+				if entry.GetValueText() != "file:///System/Applications/Calculator.app" || entry.GetOpenHref() != "" {
+					t.Fatalf("entry %+v", entry)
+				}
+			},
+		},
 	})
+}
+
+// onlyValuedMetadata returns the one entry of a GetSourceWorkspace reply that
+// holds a value (the rest are the type's unset suggestions).
+func onlyValuedMetadata(t *testing.T, raw []byte) *engine.MetadataWorkspaceEntry {
+	t.Helper()
+	var resp engine.GetSourceWorkspaceResponse
+	if err := proto.Unmarshal(raw, &resp); err != nil {
+		t.Fatal(err)
+	}
+	var valued []*engine.MetadataWorkspaceEntry
+	for _, e := range resp.Metadata {
+		if e.GetHasValue() {
+			valued = append(valued, e)
+		}
+	}
+	if len(valued) != 1 {
+		t.Fatalf("valued metadata %+v", valued)
+	}
+	return valued[0]
 }
 
 func TestSetSourceMetadata(t *testing.T) {
@@ -319,6 +506,20 @@ func TestSetSourceMetadata(t *testing.T) {
 			after: func(t *testing.T, raw []byte, _ proto.Message) {
 				entry := unmarshalSetMetadataEntry(t, raw)
 				if entry.GetValueText() != "www.url.com" || entry.GetField().GetDataType() != "url" {
+					t.Fatalf("entry %+v", entry)
+				}
+			},
+		},
+		{
+			name: "set url metadata returns the web link",
+			reqFn: func(t *testing.T) proto.Message {
+				req := urlMetadataSetFixture(t)
+				req.ValueText = "example.org/records"
+				return req
+			},
+			after: func(t *testing.T, raw []byte, _ proto.Message) {
+				entry := unmarshalSetMetadataEntry(t, raw)
+				if entry.GetValueText() != "example.org/records" || entry.GetOpenHref() != "https://example.org/records" {
 					t.Fatalf("entry %+v", entry)
 				}
 			},

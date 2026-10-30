@@ -73,41 +73,9 @@ func TestEnsureFileThumbnail(t *testing.T) {
 		{
 			name: "png ingest then ensure",
 			reqFn: func(t *testing.T) proto.Message {
-				dir, userID, typeID := sourceFixture(t)
-				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
-					ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Photo",
-				}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var created engine.CreateSourceResponse
-				if err := proto.Unmarshal(cout, &created); err != nil {
-					t.Fatal(err)
-				}
-				aout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
-					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Label: "Front",
-				}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var art engine.CreateArtifactResponse
-				if err := proto.Unmarshal(aout, &art); err != nil {
-					t.Fatal(err)
-				}
-				path := filepath.Join(t.TempDir(), "tiny.png")
-				writePNG(t, path)
-				iout, err := IngestArtifactFile(marshalProto(t, &engine.IngestArtifactFileRequest{
-					ProjectDir: dir, UserId: userID, ArtifactId: art.Artifact.Id, Path: path,
-				}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var ingested engine.IngestArtifactFileResponse
-				if err := proto.Unmarshal(iout, &ingested); err != nil {
-					t.Fatal(err)
-				}
+				f := sourceWithPNG(t)
 				return &engine.EnsureFileThumbnailRequest{
-					ProjectDir: dir, FileId: ingested.File.Id,
+					ProjectDir: f.dir, FileId: f.fileID,
 				}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
@@ -183,41 +151,14 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 		{
 			name: "list source thumb after explicit pin; workspace artifact has raster",
 			reqFn: func(t *testing.T) proto.Message {
-				dir, userID, typeID := sourceFixture(t)
-				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
-					ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Album",
-				}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var created engine.CreateSourceResponse
-				if err := proto.Unmarshal(cout, &created); err != nil {
-					t.Fatal(err)
-				}
-				aout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
-					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Label: "Page",
-				}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var art engine.CreateArtifactResponse
-				if err := proto.Unmarshal(aout, &art); err != nil {
-					t.Fatal(err)
-				}
-				path := filepath.Join(t.TempDir(), "page.png")
-				writePNG(t, path)
-				if _, err := IngestArtifactFile(marshalProto(t, &engine.IngestArtifactFileRequest{
-					ProjectDir: dir, UserId: userID, ArtifactId: art.Artifact.Id, Path: path,
-				})); err != nil {
-					t.Fatal(err)
-				}
+				f := sourceWithPNG(t)
 				if _, err := SetSourceCover(marshalProto(t, &engine.SetSourceCoverRequest{
-					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id,
-					CoverMode: "artifact", PrimaryArtifactId: art.Artifact.Id,
+					ProjectDir: f.dir, UserId: f.userID, SourceId: f.sourceID,
+					CoverMode: "artifact", PrimaryArtifactId: f.artifactID,
 				})); err != nil {
 					t.Fatal(err)
 				}
-				return &engine.ListSourcesRequest{ProjectDir: dir}
+				return &engine.ListSourcesRequest{ProjectDir: f.dir}
 			},
 			after: func(t *testing.T, out []byte, req proto.Message) {
 				var list engine.ListSourcesResponse
@@ -252,46 +193,19 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 		{
 			name: "list does not regenerate missing cover thumbnail",
 			reqFn: func(t *testing.T) proto.Message {
-				dir, userID, typeID := sourceFixture(t)
-				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
-					ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Album",
-				}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var created engine.CreateSourceResponse
-				if err := proto.Unmarshal(cout, &created); err != nil {
-					t.Fatal(err)
-				}
-				aout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
-					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Label: "Page",
-				}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var art engine.CreateArtifactResponse
-				if err := proto.Unmarshal(aout, &art); err != nil {
-					t.Fatal(err)
-				}
-				path := filepath.Join(t.TempDir(), "page.png")
-				writePNG(t, path)
-				if _, err := IngestArtifactFile(marshalProto(t, &engine.IngestArtifactFileRequest{
-					ProjectDir: dir, UserId: userID, ArtifactId: art.Artifact.Id, Path: path,
-				})); err != nil {
-					t.Fatal(err)
-				}
+				f := sourceWithPNG(t)
 				if _, err := SetSourceCover(marshalProto(t, &engine.SetSourceCoverRequest{
-					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id,
-					CoverMode: "artifact", PrimaryArtifactId: art.Artifact.Id,
+					ProjectDir: f.dir, UserId: f.userID, SourceId: f.sourceID,
+					CoverMode: "artifact", PrimaryArtifactId: f.artifactID,
 				})); err != nil {
 					t.Fatal(err)
 				}
 				// Drop the derivative SetCover created so ListSources must not
 				// regenerate it while holding the catalog session.
-				if err := catalogsession.Close(dir); err != nil {
+				if err := catalogsession.Close(f.dir); err != nil {
 					t.Fatal(err)
 				}
-				c, err := database.Open(dir)
+				c, err := database.Open(f.dir)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -307,7 +221,7 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 				if err := c.Close(); err != nil {
 					t.Fatal(err)
 				}
-				return &engine.ListSourcesRequest{ProjectDir: dir}
+				return &engine.ListSourcesRequest{ProjectDir: f.dir}
 			},
 			after: func(t *testing.T, out []byte, req proto.Message) {
 				var list engine.ListSourcesResponse
@@ -432,35 +346,8 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 		{
 			name: "png ingest leaves type icon until set cover",
 			reqFn: func(t *testing.T) proto.Message {
-				dir, userID, typeID := sourceFixture(t)
-				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
-					ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Mixed",
-				}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var created engine.CreateSourceResponse
-				if err := proto.Unmarshal(cout, &created); err != nil {
-					t.Fatal(err)
-				}
-				aout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
-					ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Label: "PNG",
-				}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var art engine.CreateArtifactResponse
-				if err := proto.Unmarshal(aout, &art); err != nil {
-					t.Fatal(err)
-				}
-				path := filepath.Join(t.TempDir(), "scan.png")
-				writePNG(t, path)
-				if _, err := IngestArtifactFile(marshalProto(t, &engine.IngestArtifactFileRequest{
-					ProjectDir: dir, UserId: userID, ArtifactId: art.Artifact.Id, Path: path,
-				})); err != nil {
-					t.Fatal(err)
-				}
-				return &engine.ListSourcesRequest{ProjectDir: dir}
+				f := sourceWithPNG(t)
+				return &engine.ListSourcesRequest{ProjectDir: f.dir}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
 				var list engine.ListSourcesResponse

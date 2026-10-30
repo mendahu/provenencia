@@ -39,7 +39,7 @@ components directly.
 | `tokens/motion.css` | `Tokens/PVMotion.swift` | Durations, easing curves, press-scale, lift-hover |
 | — | `Tokens/PVStroke.swift` | The 1 pt dashed outline (`dashed`, `dashPattern`), used by `PVCard`, `PVEmptyState`, `PVChip`, the Evidence card and the Sources list blocked graph buttons |
 
-Every value in these files is transcribed from the CSS, not invented.
+Every value in these files is transcribed from the CSS, not invented. One exception: `PVSpacing.widthWideBreakpoint` was set in Swift first; S14-D1 WL-1 adds `--width-wide-breakpoint` to the CSS, and S14-25 checks the two agree.
 Reach for `PVColor`/`PVFont`/`PVSpacing`/`PVRadius`/`PVElevation`/`PVMotion`/`PVStroke`
 at call sites — never a literal color, font, or number.
 
@@ -167,7 +167,8 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | IconButton | `Components/IconButton/PVIconButton.swift` (added for the workspace sidebar's collapse toggle, which needed real hover feedback; `label` is required per `IconButton.jsx` and doubles as the `.help` tooltip; pass `accessibilityLabel` when the spoken label has to name a target the tooltip can leave implicit; `tone: .danger` tints a destructive action; `isSelected` is the armed/radio fill used by Artifact region tools) |
 | HoverEffect | `Components/HoverEffect/PVHoverEffect.swift` (the interaction chrome inside a `ButtonStyle` body: hover tracking, disabled opacity, reduce-motion-aware press scale and one hit shape; callers draw from `showHover`) |
 | Badge | `Components/Badge/PVBadge.swift` (added for S2-02's data-type/origin badges; a glyph-only variant carries the S2-22 seeded pill) |
-| Chip | `Components/Chip/PVChip.swift` (a meaning-free selectable pill for exclusive options, and `PVChipGroup` to lay a set out; sibling to the display-only `PVBadge`; domain vocabulary stays in the feature that composes it) |
+| Chip | `Components/Chip/PVChip.swift` (a meaning-free selectable pill for exclusive options, and `PVChipGroup` to lay a set out; sizes from `PVControlSize` (`size:`, default `.md`), an optional leading `glyph:`, keyboard focus drawn through its button style, and the selected trait; sibling to the display-only `PVBadge`; domain vocabulary stays in the feature that composes it) |
+| SegmentedControl | `Components/Chip/PVSegmentedControl.swift` (a few exclusive options in one sunken track: `PVSegmentedControl(label, items:, selection:, size:, select:)`; items carry a title, glyph, ⌘ shortcut, disabled flag and accessibility identifier; the group reads its label to VoiceOver; use it instead of hand-building `PVChipGroup(style: .segmented)`) |
 | Divider | `Components/Divider/PVDivider.swift` (1pt hairline; horizontal/vertical) |
 | EmptyState | `Components/EmptyState/PVEmptyState.swift` (added for S2-02's empty/no-match states; the web spec's `action` slot isn't ported — see the file's header comment); the icon slot takes a `PVSymbol` or a `PVGlyph` (S10-19) |
 | Callout | `Components/Callout/PVCallout.swift` (tone / icon / title / body / compact; the title is `PVCopy`; optional `@ViewBuilder` actions under the body — call-site `PVButton`s; `onDismiss` / `detail` / `plain` deferred) |
@@ -180,9 +181,11 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Checkbox | `Components/Checkbox/PVCheckbox.swift` (`PVCheckbox` label + description, and the bare `PVCheckboxMark`; `isLocked` is the lock mark in that same box for a link or binding the researcher cannot clear, spoken "Locked"; `isIndeterminate` is spoken "partly checked") |
 | Switch | `Components/Switch/PVSwitch.swift` (32×18 track; immediate on/off — a saved form still uses Checkbox) |
 | List | `Components/List/PVList.swift` (added for S9-09, ported from the kit's `PVList`; its internal `PVListRowStyle(focused: nil)` is the row chrome the Sources list's Source and Type button also wears: navigation rows — thumbnail slot (a view; S10-35), title, secondary line, optional fixed-width detail column (icon and one line of text, with help) before the trailing mono ref, chevron — as buttons, not selection; one focus stop with ↑/↓ · Home/End · Page Up/Down · Return/Space; `PVListSkeleton` for first load. The counterpart to Table) |
-| ScrollRowIntoView | `Components/ScrollRowIntoView/PVScrollRowIntoView.swift` (`.pvScrollsRowIntoView`: keeps the highlighted or selected row in view as the keyboard moves it, and can send a new list back to its first row; `PVTable`, `PVList`, `PVSelect`, `PVComboBox` and the omnibar results scroll through it — do not add another `ScrollViewReader` for this) |
+| ScrollRowIntoView | `Components/ScrollRowIntoView/PVScrollRowIntoView.swift` (`.pvScrollsRowIntoView`: keeps the highlighted or selected row in view as the keyboard moves it, can send a new list back to its first row, and restarts a page at its top when a key changes (`restartsAt:whenChanged:`); `PVTable`, `PVList`, `PVSelect`, `PVComboBox` and the omnibar results scroll through it — do not add another `ScrollViewReader` for this) |
 | SkeletonBar | `Components/SkeletonBar/PVSkeletonBar.swift` (added for S12-02: a rounded `borderSubtle` placeholder bar, fixed or fill width; used by `PVListSkeleton` and the Copy Source loading body) |
 | FlowLayout | `Components/FlowLayout/PVFlowLayout.swift` (S12-14: promoted from the Citation composer; wraps children by ideal width, callers cap long children; used by the composer) |
+| WidthClass | `Components/WidthClass/PVWidthClass.swift` (the Regular / Wide class of the pane, measured once by `WorkspaceDestinationHost`; read `\.pvWidthClass`) |
+| PageColumns | `Components/PageColumns/PVPageColumns.swift` (the record-page scaffold: a header slot, a primary and an optional secondary column, centered in the pane; stacked at Regular, side by side at Wide; the header scrolls with the page or is pinned (`headerPinned`) and receives `isScrolled` to compact; owns the scroll and `scrollResetKey`; sizing lives in `PVPageColumnsMetrics`; reads `\.pvWidthClass`; sets no background; see [§ 9 of macos-client-patterns.md](../../../docs/macos-client-patterns.md#9-window-widths-regular-and-wide)) |
 | Thumbnail | `Components/Thumbnail/PVThumbnail.swift` (added for S2-17 Sources list rows; image / mark / SF glyph / empty / loading tile); content takes an image or a `PVGlyph` (S10-49); optional `colors:`: tint and line on mark and symbol states; the line also outlines an image (S10-23, S10-35) |
 | Card | `Components/Card/PVCard.swift` (surface container: tone / border / radius / optional elevation + padding; mirrors web `Card.jsx`; no header/footer slots yet — compose those outside) |
 | Marks | `Recipes/Marks/PVMark.swift` (`file_*` + `type_*` + `subject_*`; see colocated `MARKS.md`; not SF Symbols); `PVGlyph` / `PVGlyphView` for a symbol-or-mark slot |
@@ -401,7 +404,7 @@ VoiceOver will likely say **button** (or “adjustable”) rather than
 “pop-up button”. Same honesty bar as `PVTable` not claiming a table grid.
 
 Not `PVComboBox` (filter-as-you-type), not `PVContextMenu` action menus
-(`PVActionMenuItem` lists, button-opened or `.pvRightClickMenu`), and not segmented `PVChip` groups.
+(`PVActionMenuItem` lists, button-opened or `.pvRightClickMenu`), and not `PVSegmentedControl` (a few exclusive options chosen inline).
 Date-value calendar / month and `PVTable.filterMenu` remount on
 `PVSelect`. Do not add a second popup-select kit.
 

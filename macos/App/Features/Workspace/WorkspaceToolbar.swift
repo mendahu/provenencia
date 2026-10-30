@@ -287,9 +287,22 @@ struct WorkspaceToolbar: View {
         if location.sourceSurface == .graph, location.sourceId != nil {
             leaf = L10n.string(L10n.Workspace.evidenceGraphTitle)
         } else if location.entityId != nil {
-            leaf = location.title.flatMap { $0.nilIfEmpty }
-                ?? location.ref.flatMap { $0.nilIfEmpty }
-                ?? "…"
+            let labels = locationLabels(for: location)
+            leaf = labels.leaf ?? "…"
+            if let section = labels.section {
+                // A section of the page: the record's crumb goes back to its first section.
+                items.append(
+                    PVBreadcrumbItem(
+                        id: "entity-\(location.section.rawValue)",
+                        label: leaf,
+                        action: { goTo(location.withPageSection(nil)) }
+                    )
+                )
+                items.append(
+                    PVBreadcrumbItem(id: "leaf-\(location.section.rawValue)", label: section, action: nil)
+                )
+                return items
+            }
         } else {
             leaf = location.ref.flatMap { $0.nilIfEmpty }
                 ?? location.title.flatMap { $0.nilIfEmpty }
@@ -299,6 +312,15 @@ struct WorkspaceToolbar: View {
             PVBreadcrumbItem(id: "leaf-\(location.section.rawValue)", label: leaf, action: nil)
         )
         return items
+    }
+
+    /// What a location is called in the crumbs and the Back menu: the record
+    /// (`title ?? ref`) and, on a section of its page, the section's name.
+    nonisolated static func locationLabels(for location: WorkspaceLocation) -> (leaf: String?, section: String?) {
+        (
+            location.title?.nilIfEmpty ?? location.ref?.nilIfEmpty,
+            location.pageSection.map { L10n.string($0.label) }
+        )
     }
 }
 
@@ -456,9 +478,11 @@ private struct HistoryJumpRow: Identifiable {
     }
 
     var leafLabel: String? {
-        if let title = location.title?.nilIfEmpty { return title }
-        if let ref = location.ref?.nilIfEmpty { return ref }
-        return nil
+        let labels = WorkspaceToolbar.locationLabels(for: location)
+        if let leaf = labels.leaf, let section = labels.section {
+            return L10n.Conclusions.pageSectionLeaf(leaf, section)
+        }
+        return labels.leaf
     }
 
     var refLabel: String {

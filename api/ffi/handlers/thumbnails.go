@@ -73,9 +73,12 @@ func thumbnailRelPath(c *database.Catalog, sourceFileID []byte) (relPath string,
 	if err != nil {
 		return "", false, err
 	}
-	rel, err := files.StorageRelPath(f.ChecksumSHA256, f.MediaType)
+	rel, err := files.ReadRelPath(f)
 	if err != nil {
 		return "", false, err
+	}
+	if rel == "" {
+		return "", true, nil
 	}
 	return rel, false, nil
 }
@@ -103,7 +106,7 @@ func existingThumbnailRelPath(c *database.Catalog, sourceFileID []byte) (string,
 		}
 		return "", err
 	}
-	return files.StorageRelPath(f.ChecksumSHA256, f.MediaType)
+	return files.ReadRelPath(f)
 }
 
 // sourceCoverThumb is the ListSources / Source proto cover payload.

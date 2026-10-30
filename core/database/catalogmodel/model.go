@@ -71,6 +71,8 @@ type FK struct {
 	// Audited CASCADE facets are research rows: official deletes remove and
 	// audit them through a facet release, and the CASCADE is only a backstop.
 	// Unaudited CASCADEs (layout, vocab joins, value parts) stay silent.
+	// BucketOptional SET NULL back-pointers stay Audited false; deleteimpact
+	// optionalPointer releases clear them before the parent delete.
 	Audited bool
 }
 

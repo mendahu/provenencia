@@ -175,6 +175,8 @@ var seedProperties = []seedProperty{
 	{Key: "toponym", Label: "Toponym", Description: "Place name as interpreted from a Source", ValueType: propertymeta.ValueTypeText, Cardinality: propertymeta.CardinalityMultiple},
 	{Key: "interests", Label: "Interests", Description: "Free-text interests. More than one value is allowed.", ValueType: propertymeta.ValueTypeText, Cardinality: propertymeta.CardinalityMultiple},
 	{Key: "likeness", Label: "Likeness", Description: "A picture of this person: a region of a cited page and the image of it. More than one is allowed.", ValueType: propertymeta.ValueTypeDepiction, Cardinality: propertymeta.CardinalityMultiple},
+	{Key: "event_picture", Label: "Picture", Description: "A picture of this event: a region of a cited page and the image of it. More than one is allowed.", ValueType: propertymeta.ValueTypeDepiction, Cardinality: propertymeta.CardinalityMultiple},
+	{Key: "place_picture", Label: "Picture", Description: "A picture of this place: a region of a cited page and the image of it. More than one is allowed.", ValueType: propertymeta.ValueTypeDepiction, Cardinality: propertymeta.CardinalityMultiple},
 	{Key: "religion", Label: "Religion", Description: "Religion or denomination as recorded. More than one value is allowed. Product term vocabulary; add your own terms.", ValueType: propertymeta.ValueTypeTerm, Cardinality: propertymeta.CardinalityMultiple},
 	{Key: "languages_spoken", Label: "Languages spoken", Description: "Languages the person spoke. More than one value is allowed. Product term vocabulary; add your own terms.", ValueType: propertymeta.ValueTypeTerm, Cardinality: propertymeta.CardinalityMultiple},
 }
@@ -197,10 +199,12 @@ var seedBindings = []seedBinding{
 	{TypeKey: "event", PropertyKey: "date", SortOrder: 2, Locked: true},
 	{TypeKey: "event", PropertyKey: "start_date", SortOrder: 3, Locked: true},
 	{TypeKey: "event", PropertyKey: "end_date", SortOrder: 4, Locked: true},
+	{TypeKey: "event", PropertyKey: "event_picture", SortOrder: 5, Locked: true},
 
 	{TypeKey: "place", PropertyKey: "toponym", SortOrder: 0, Locked: true},
 	{TypeKey: "place", PropertyKey: "start_date", SortOrder: 1, Locked: true},
 	{TypeKey: "place", PropertyKey: "end_date", SortOrder: 2, Locked: true},
+	{TypeKey: "place", PropertyKey: "place_picture", SortOrder: 3, Locked: true},
 
 	// Bridge endpoints + type come from connectrules; membership span is here.
 	{TypeKey: "place_relationship", PropertyKey: "start_date", SortOrder: 3, Locked: true},

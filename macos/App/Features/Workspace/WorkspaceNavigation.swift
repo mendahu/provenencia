@@ -157,12 +157,18 @@ final class WorkspaceNavigation {
     /// When a deep id is missing after catalog load, land on the section list
     /// and rewrite the current stack entry so persistence stays honest.
     func fallbackToSectionRoot() {
-        let root = WorkspaceLocation.sectionRoot(currentLocation.section)
+        replaceCurrent(with: .sectionRoot(currentLocation.section))
+    }
+
+    /// Updates the current entry in place, without a push. A place whose
+    /// visible keys change within one mount (the composer's Artifact) uses it
+    /// so the session and the persisted entry follow.
+    func replaceCurrent(with location: WorkspaceLocation) {
         guard let history else {
-            apply(root)
+            apply(location)
             return
         }
-        apply(history.replaceCurrent(with: root))
+        apply(history.replaceCurrent(with: location))
         refreshHistoryIssue()
     }
 

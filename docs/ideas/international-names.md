@@ -29,7 +29,7 @@ A `generation` weight slot, and one declared slot list read by both `nameformats
 
 ## Name changes
 
-- **Name changes as a signal.** Married, religious and anglicized names connect today only when one of a handle's names matches. A "known as" relationship between names, or the marriage event, could carry it. Spike 11 treats Mary Smith / Mary Robins as `Different` at the value level, and leaves marriage evidence to links. Maiden names in the conclusion are the intended path ([`comparison-layers.md`](../deployment-plan/spike-11/comparison-layers.md#entities-compare-against-the-conclusion)).
+- **Name changes as a signal.** Married, religious and anglicized names connect today only when one of a handle's names matches. A "known as" relationship between names, or the marriage event, could carry it. Spike 11 treats Mary Smith / Mary Robins as `Different` at the value level, and leaves marriage evidence to links. Maiden names in the conclusion are the intended path ([`comparison-layers.md`](../deployment-plan/archive/spike-11/comparison-layers.md#entities-compare-against-the-conclusion)).
 
 ## Format and sort, beyond the project default
 
@@ -40,4 +40,4 @@ A `generation` weight slot, and one declared slot list read by both `nameformats
 
 ## Whole-phrase copy, app-wide
 
-S11-33 made every sentence on the Promote evidence sheet one whole translatable phrase (see `add-localized-string`, "Whole phrases"): an argument is data or a complete noun phrase from one table entry, never a bare translated word the sentence must agree with. Other copy still splices a translated word into a sentence, so a language that inflects or agrees an article cannot translate it: the `EventTitle` formats (`L10n.EventTitle`), `evidenceGraph.bridge.summary.*` (a term label inside "… participated as … at …"), the `CitationComposer` term formats, `sources.sortedBy`, and `conclusions.outcomeOutvotedBy` (a count and a Sources word). Each becomes a key per sentence, or takes its word whole from `L10n.PropertyTerm.wording`, when a second language is added and the copy is next touched.
+S11-33 made every sentence on the Promote evidence sheet (removed in S13-23) one whole translatable phrase (see `add-localized-string`, "Whole phrases"): an argument is data or a complete noun phrase from one table entry, never a bare translated word the sentence must agree with. Other copy still splices a translated word into a sentence, so a language that inflects or agrees an article cannot translate it: the `EventTitle` formats (`L10n.EventTitle`), `evidenceGraph.bridge.summary.*` (a term label inside "… participated as … at …"), the `CitationComposer` term formats, `sources.sortedBy`, and `conclusions.outcomeOutvotedBy` (a count and a Sources word). Each becomes a key per sentence, or takes its word whole from `L10n.PropertyTerm.resource`, when a second language is added and the copy is next touched.

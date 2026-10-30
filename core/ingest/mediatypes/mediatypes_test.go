@@ -1,6 +1,10 @@
 package mediatypes
 
-import "testing"
+import (
+	"slices"
+	"strings"
+	"testing"
+)
 
 func TestResolve(t *testing.T) {
 	tests := []struct {
@@ -59,6 +63,57 @@ func TestAllowed(t *testing.T) {
 	}
 }
 
+func TestStoredExtension(t *testing.T) {
+	tests := []struct {
+		in     string
+		want   string
+		wantOK bool
+	}{
+		{in: "image/jpeg", want: ".jpg", wantOK: true},
+		{in: "IMAGE/PNG", want: ".png", wantOK: true},
+		{in: "video/quicktime", want: ".mov", wantOK: true},
+		{in: "audio/x-wav", want: ".wav", wantOK: true},
+		{in: "text/plain; charset=utf-8", want: ".txt", wantOK: true},
+		{in: "text/csv", want: ".csv", wantOK: true},
+		{in: "text/markdown", want: ".md", wantOK: true},
+		{in: "application/msword", want: ".doc", wantOK: true},
+		{in: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", want: ".docx", wantOK: true},
+		{in: "audio/flac", want: ".flac", wantOK: true},
+		{in: "image/heic", want: ".heic", wantOK: true},
+		{in: "image/webp", want: ".webp", wantOK: true},
+		{in: "image/gif", want: ".gif", wantOK: true},
+		{in: "application/pdf", want: ".pdf", wantOK: true},
+		{in: "image/jpg"},
+		{in: "application/zip"},
+		{in: "application/x-sh"},
+		{in: "application/octet-stream"},
+		{in: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.in, func(t *testing.T) {
+			got, ok := StoredExtension(tt.in)
+			if got != tt.want || ok != tt.wantOK {
+				t.Fatalf("got (%q, %v) want (%q, %v)", got, ok, tt.want, tt.wantOK)
+			}
+		})
+	}
+	for mt, st := range allowed {
+		ext := st.ext
+		if !Allowed(mt) {
+			t.Fatalf("%s: in the table but not Allowed", mt)
+		}
+		if len(ext) < 2 || ext[0] != '.' {
+			t.Fatalf("%s: extension %q is empty or has no leading dot", mt, ext)
+		}
+	}
+	// The extension index may only name stored types.
+	for ext, mt := range extAllowed {
+		if !Allowed(mt) {
+			t.Fatalf("extAllowed[%q] = %s: not an allowed (stored) type", ext, mt)
+		}
+	}
+}
+
 func TestClassifyFilename(t *testing.T) {
 	tests := []struct {
 		name string
@@ -85,5 +140,26 @@ func TestClassifyFilename(t *testing.T) {
 func TestShortLabel(t *testing.T) {
 	if ShortLabel("text/html") != "HTML" {
 		t.Fatal(ShortLabel("text/html"))
+	}
+}
+
+func TestTypeIdentifiers(t *testing.T) {
+	for mt := range allowed {
+		if strings.HasPrefix(mt, "image/") && len(TypeIdentifiers(mt)) == 0 {
+			t.Errorf("%s has no type identifier", mt)
+		}
+	}
+	if got := TypeIdentifiers("image/heif"); !slices.Contains(got, "public.heic") {
+		t.Errorf("image/heif = %v, want public.heic among them", got)
+	}
+	if got := TypeIdentifiers("application/pdf"); got != nil {
+		t.Errorf("application/pdf = %v, want nil", got)
+	}
+	if got := TypeIdentifiers("image/x-unknown"); got != nil {
+		t.Errorf("unknown = %v, want nil", got)
+	}
+	TypeIdentifiers("image/png")[0] = "changed"
+	if got := TypeIdentifiers("image/png"); got[0] != "public.png" {
+		t.Errorf("table mutated: %v", got)
 	}
 }

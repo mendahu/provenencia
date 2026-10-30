@@ -119,6 +119,58 @@ func mustRPC(t *testing.T, fn func([]byte) ([]byte, error), req, resp proto.Mess
 	}
 }
 
+// pngSource is a Source whose one Artifact holds an ingested PNG.
+type pngSource struct {
+	dir, userID, sourceID, artifactID, fileID string
+}
+
+// sourceWithPNG creates a Source titled "Scan" whose one Artifact, labelled
+// "Page", holds the PNG ingested as page.png. A test that reads its own Source
+// title or Artifact label, or ingests another type, builds its own.
+func sourceWithPNG(t *testing.T) pngSource {
+	t.Helper()
+	dir, userID, typeID := sourceFixture(t)
+	var created engine.CreateSourceResponse
+	mustRPC(t, CreateSource, &engine.CreateSourceRequest{
+		ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Scan",
+	}, &created)
+	var art engine.CreateArtifactResponse
+	mustRPC(t, CreateArtifact, &engine.CreateArtifactRequest{
+		ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Label: "Page",
+	}, &art)
+	path := filepath.Join(t.TempDir(), "page.png")
+	writePNG(t, path)
+	var ingested engine.IngestArtifactFileResponse
+	mustRPC(t, IngestArtifactFile, &engine.IngestArtifactFileRequest{
+		ProjectDir: dir, UserId: userID, ArtifactId: art.Artifact.Id, Path: path,
+	}, &ingested)
+	return pngSource{
+		dir: dir, userID: userID, sourceID: created.Source.Id,
+		artifactID: art.Artifact.Id, fileID: ingested.File.Id,
+	}
+}
+
+// damageCatalog runs one statement against the project's catalog, as a
+// hand-edited or crafted project would, and closes the held session so the next
+// read opens fresh.
+func damageCatalog(t *testing.T, dir, query string, args ...any) {
+	t.Helper()
+	err := catalogsession.Do(dir, func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		_, err = db.Exec(query, args...)
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := catalogsession.CloseAll(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func assertWantEqual(t *testing.T, out []byte, want proto.Message) {
 	t.Helper()
 	got := want.ProtoReflect().New().Interface().(proto.Message)

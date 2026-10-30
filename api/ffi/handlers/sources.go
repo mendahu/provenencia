@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/ingest/mediatypes"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
@@ -637,6 +638,7 @@ func metadataEntryProto(_ *database.Catalog, e sourcemetadata.WorkspaceEntry) *e
 		},
 		Suggested: e.Suggested,
 		SortOrder: int32(e.SortOrder),
+		OpenHref:  e.OpenHref(),
 	}
 	if e.Value != nil {
 		out.HasValue = true
@@ -652,5 +654,6 @@ func fileRefProto(f files.File, relPath string) *engine.SourceFileRef {
 		OriginalFilename: f.OriginalFilename,
 		MediaType:        f.MediaType,
 		ByteSize:         f.ByteSize,
+		TypeIdentifiers:  mediatypes.TypeIdentifiers(f.MediaType),
 	}
 }

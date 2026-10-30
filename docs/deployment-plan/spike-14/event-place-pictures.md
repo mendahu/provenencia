@@ -28,7 +28,7 @@ Why not a Property named `depiction`: it would share its name with the value typ
 
 - **Reconcile.** `autoreconcile` groups depictions by value type, not key (`core/autoreconcile/modules.go`), so a Place's pictures reconcile like a Person's likenesses.
 - **Composer.** The composer offers any Property bound to the Subject's kind and treats a depiction by value type (`CitationComposerVocabulary.isDepiction`). Its depiction copy is built from the Property label and the Subject label (`depictionThumbLabel`: "%1$@ of %2$@"), so it already reads "Picture of St Mary's Church".
-- **Detail wire.** `conclusiondetails.ForEntity` calls `likenesses.ForEntities` for every kind, and `attachLikenesses` sends the tiles for every kind (`api/ffi/handlers/conclusion_detail.go`). Only the Person header gets a lead path.
+- **Detail wire.** `conclusiondetails.ForEntity` calls `gallery.ForEntities` for every kind, and `attachPictures` sends the tiles for every kind (`api/ffi/handlers/conclusion_detail.go`). Person, Event and Place headers carry the lead path (S14-01).
 - **Detail chrome.** `ConclusionDetailBody.likenesses` defaults to `[]`; `ConclusionDetailPage` draws `ConclusionDetailLikenessSection` for any body that returns tiles. The section's wording, accessibility ids and fallback mark still say Person (S14-02 makes them the body's).
 - **Promote.** `promotealign.Evidence` lists every bound Property per kind, so the evidence sheet will show Event and Place pictures. Its wording calls every depiction a likeness (`L10n.Promote.lineSentence`, `ValueFamily.likeness`); S14-02 words it by value type.
 
@@ -37,14 +37,14 @@ Why not a Property named `depiction`: it would share its name with the value typ
 - **Names.** The gallery layer is named for the gallery, not for the Person key: "gallery" for the layer and "picture" for one item, in Go, proto and Swift. "Likeness" stays for the Person key, the Person page's copy and the portrait. Proto field numbers are kept; the preferred-pointer column keeps its name (renaming it would be a migration for a name only).
 
 - **Seed.** Two Properties and two bindings in `subjectvocab/registry.go`; `vocabkey` constants for the keys.
-- **Gallery keys.** `likenesses.sqlGallery` filters `p.key = 'likeness'`. It reads one list of gallery keys instead, held in `core/vocabkey` beside `PropertyLikeness`, so the next depiction Property that belongs in a gallery is one entry.
+- **Gallery keys.** `gallery.sqlGallery` filters `p.key IN` `vocabkey.GalleryKeys()` (`likeness`, `event_picture`, `place_picture`), so the next depiction Property that belongs in a gallery is one entry.
 - **One gallery slot on the body.** `ConclusionDetailBody.likenesses` becomes one `gallery` value (title, tile wording, fallback mark, tiles), built by one tile mapping all three bodies call, as `ConclusionDetailThumbnail` is one slot. "Likenesses" on a Person, "Pictures" on an Event or Place; a body with no portrait marks no tile as the portrait.
 - **Rectangle-only drawing.** When the composer arms the viewer for a depiction, the region strip shows the rectangle tool alone. A Citation's own region keeps all seven tools.
 - **The Citation's region as a depiction.** "Use the citation's region" on a Citation whose region is not a rectangle sets the depiction to that region's bounding rectangle, built from `ArtifactRegionGeometry.boundingRect(of:)`, the rule the crop already uses, so the image is the same as before.
 
 ### Thumbnail parity
 
-An Event or Place chooses its thumbnail as a Person chooses its portrait: the earliest picture leads unless one is chosen, on the page header, the gallery and the list row. One mechanism serves all three kinds: `canonical_entities.preferred_likeness_observation_id`, `canonicalentities.SetPreferredLikeness` (it checks gallery membership, not kind), `likenesses.Lead`, and `ConclusionPortraitModel`. What is new is the lead on `EventHeader` and `PlaceHeader` (Go, wire, `GoStore`) and the pages and lists reading it. A Person's copy says "portrait"; an Event's or Place's says "thumbnail".
+An Event or Place chooses its thumbnail as a Person chooses its portrait: the earliest picture leads unless one is chosen, on the page header, the gallery and the list row. One mechanism serves all three kinds: `canonical_entities.preferred_likeness_observation_id` (the handle's preferred pointer), `canonicalentities.SetPreferredLikeness` (it checks gallery membership, not kind), `gallery.Lead`, and `ConclusionPortraitModel`. Event and Place headers carry the lead (S14-01); pages and lists reading it land in S14-02. A Person's copy says "portrait"; an Event's or Place's says "thumbnail".
 
 ### Data
 
@@ -54,7 +54,7 @@ No migration. New seeds reach new catalogs only (Spike 10 rule "New seeds are fo
 
 - [`seeded-vocabulary.md`](../../seeded-vocabulary.md): the Property table and the binding block gain `event_picture` and `place_picture` (S14-01).
 - [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §depiction: "`likeness` on `person` is the seeded depiction Property" names all three (S14-01).
-- [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md): the gallery paragraph says a Person's, Event's, or Place's gallery; the preferred pointer stays Person-only (S14-01).
+- [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md): the gallery paragraph says a Person's, Event's, or Place's gallery; the preferred pointer is the handle's (S14-01; working rule "An Event or Place chooses its thumbnail").
 - [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md): "a person's images form a gallery" covers Event and Place pictures (S14-01).
 - [`add-depiction-value`](../../../.agents/skills/add-depiction-value/SKILL.md): its description, the gallery keys, the `SaveDepiction` test helper, and the Do-not line about the Person page (S14-01); depictions are drawn as rectangles (S14-03).
 

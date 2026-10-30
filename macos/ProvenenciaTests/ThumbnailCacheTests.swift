@@ -42,6 +42,60 @@ struct ThumbnailCacheTests {
         #expect(accepted == c.expected)
     }
 
+    @Test func declaredImageBounds() throws {
+        func source(_ data: Data) throws -> CGImageSource {
+            try #require(CGImageSourceCreateWithData(data as CFData, nil))
+        }
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        func fixture(_ name: String, dpi: CGFloat? = nil, width: Int = 10, height: Int = 10) throws -> CGImageSource {
+            try ArtifactFileFixtures.writeImage(
+                projectDir: project, relPath: name, width: width, height: height, fileType: .png, dpi: dpi)
+            let url = URL(fileURLWithPath: project).appendingPathComponent(name)
+            return try #require(CGImageSourceCreateWithURL(url as CFURL, nil))
+        }
+        let edge = 4096
+        /// The header read, kept only when it fits the bounds.
+        func bounded(_ source: CGImageSource, maxEdge: Int, maxPixels: Int) -> ImageHeaderDecode.DeclaredImage? {
+            ImageHeaderDecode.declaredImage(source).flatMap { $0.fits(maxEdge: maxEdge, maxPixels: maxPixels) ? $0 : nil }
+        }
+
+        let plain = try #require(bounded(
+            try fixture("plain.png"), maxEdge: edge, maxPixels: edge * edge))
+        #expect(plain.width == 10 && plain.height == 10)
+        #expect(plain.dpiWidth == 72 && plain.dpiHeight == 72)
+        #expect(plain.orientation == 1)
+
+        #expect(bounded(
+            try source(ArtifactFileFixtures.declaredPNGHeaderData(width: 4097, height: 1)),
+            maxEdge: edge, maxPixels: edge * edge) == nil)
+
+        let square = try fixture("square.png", width: 100, height: 100)
+        #expect(bounded(square, maxEdge: edge, maxPixels: 9999) == nil)
+        #expect(bounded(square, maxEdge: edge, maxPixels: 10000) != nil)
+
+        let dense = try #require(bounded(
+            try fixture("dense.png", dpi: 300), maxEdge: edge, maxPixels: edge * edge))
+        #expect(abs(dense.dpiWidth - 300) < 0.01)
+        let zero = try #require(bounded(
+            try fixture("zero.png", dpi: 0), maxEdge: edge, maxPixels: edge * edge))
+        #expect(zero.dpiWidth == 72)
+
+        let deep = try #require(bounded(
+            try source(ArtifactFileFixtures.declaredPNGHeaderData(width: 100, height: 100, bitDepth: 16)),
+            maxEdge: edge, maxPixels: edge * edge))
+        #expect(deep.bitsPerComponent == 16)
+        #expect(plain.bitsPerComponent == 8)
+
+        let budget = 256_000_000
+        #expect(bounded(
+            try source(ArtifactFileFixtures.declaredPNGHeaderData(width: 16000, height: 16000)),
+            maxEdge: 65535, maxPixels: budget) != nil)
+        #expect(bounded(
+            try source(ArtifactFileFixtures.declaredPNGHeaderData(width: 16000, height: 16001)),
+            maxEdge: 65535, maxPixels: budget) == nil)
+    }
+
     @Test func loadsAGoJPEG() async throws {
         let project = ArtifactFileFixtures.uniqueProjectDir()
         defer { try? FileManager.default.removeItem(atPath: project) }

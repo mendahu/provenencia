@@ -39,6 +39,7 @@ Layers / implementing chrome: [`add-ui-component`](../add-ui-component/SKILL.md)
 - [ ] Objective, domain facts, what this board is not
 - [ ] Implementation gate table (what the PR ships)
 - [ ] Numbered requirements + suggested frames
+- [ ] **Wide layout** — each view's Regular and Wide (pane ≥ 1600pt) arrangement, a `-W` requirement, frames at both widths
 - [ ] **UI building-block inventory** — situation → kit component (binding)
 - [ ] Explicit non-goals: no new kit primitive for one call site
 - [ ] Wired into spike design/README.md, deployment-plan.md (design track + checklist)
@@ -94,8 +95,33 @@ Work **in place** on this board. Do not fork a parallel copy of the surface.
 | Section title | SectionHeader |
 | Transient after-save notice | Toast |
 | Native menu of actions | ContextMenu |
+| Record or detail page at Regular and Wide | Page columns |
+| Choose one of a few options inline | Segmented control (ChipGroup segmented) |
 
 Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
+
+### Two widths — draw both
+
+The window opens at 1366 × 900pt but is often stretched across a large monitor.
+Every view has two width classes, measured on the view's own pane (the window
+minus the sidebar), not the screen. A view with a side pane (an inspector, a detail
+pane) plans that pane inside its Wide frame:
+
+- **Regular** — pane below 1600pt. Draw the pane at 1102 × 900 (the default 1366pt window minus the open sidebar).
+- **Wide** — pane 1600pt and up. Draw the pane at 2296 × 1440 (a 2560pt window minus the sidebar).
+
+Draw only the view's own pane. Do not draw the app's sidebar, its navigation items or the window's title bar: they are not part of the board. A frame that needs the toolbar (breadcrumbs, Back and Forward) says so in the brief, and draws only the toolbar above the pane.
+
+Rules for Wide:
+
+1. **The extra space does a job.** Show more at once: a second column of supporting content, the detail beside its list, more grid or table columns, an inspector docked open. If the view truly has nothing to add, center its content. Content jammed to one side with empty space beside it is never the Wide design.
+2. **Readable things keep their measure.** Prose, forms and the primary column keep their Regular maximum widths. Wide adds columns; it does not stretch text or fields.
+3. **Lists, tables, grids and canvases fill the width.** Cards keep their size and add columns.
+4. **Same content, same actions.** Width changes arrangement only. Anything in the Wide second column is stacked below, in an inspector, or behind a disclosure at Regular.
+5. **Crossing the line keeps state.** Selection, scroll position, focus and unsaved edits survive a resize across 1600.
+6. **Past every column's maximum, center the group.** Page gutters are never narrower than at Regular; they take what is left.
+
+Draw the **Regular** and **Wide** frame of each view side by side, using the same kit pieces in both.
 ```
 
 ## Inventory (binding)
@@ -118,6 +144,30 @@ Field, not a new Transcribe control”; “conflict mark → Badge”.
 **New kit primitive** only if the inventory marks it New **and** a second call
 site is already known. Otherwise snowflake + compose.
 
+## Wide layout (binding)
+
+Every brief says what each view does with a **Wide** pane (1600pt and up). The
+breakpoint, the reasoning and the pattern table are in
+[`docs/macos-client-patterns.md` § 9](../../../docs/macos-client-patterns.md#9-window-widths-regular-and-wide).
+The Paste block carries the six rules word for word, because Claude Design will not follow the link; change § 9 and the Paste block together.
+
+In the brief, for **each view** the board touches:
+
+| Write | Example |
+| --- | --- |
+| A **Wide layout** table: view → Regular → Wide → what moves where | “Source page — Regular: one column, Artifacts and Citations stacked — Wide: primary column + 400pt secondary column holding Metadata and Citations” |
+| A requirement `XX-W1`… per view stating the Wide arrangement | “SP-W1: at Wide the Citations list sits in the secondary column, not below Artifacts” |
+| A Regular and a Wide frame in **Suggested frames**, each the pane only (no app sidebar) | “Frame 2a Regular pane 1102 × 900 · Frame 2b Wide pane 2296 × 1440” |
+
+Reach for the patterns in the doc's table first (list beside detail, primary +
+secondary column, more grid or table columns, docked inspector, two-column form).
+A view that centers instead of adding a column says why in one clause. An
+enhancement brief on a view that has no Wide frame yet adds one.
+
+Wide reuses the Regular frame's kit pieces. It is not a reason for a new kit
+primitive. Reach for Page columns (`PVPageColumns`) for a record page's primary
+and secondary columns.
+
 **A brief cannot waive a safety rule.** The board decides layout and wording.
 It does not decide that a dirty form closes without asking, that a destructive
 action skips its confirm, or that a failure says nothing. A frame that needs
@@ -134,10 +184,11 @@ Match an open spike brief (rethink vs enhancement):
 4. Domain facts table
 5. Out / not-this-board
 6. Implementation gate
-7. Requirements (`XX-1`…)
-8. Suggested frames
-9. Inventory + non-goals
-10. Handoff (archive under `design/archive/`, `completed.md`, then the PR)
+7. Requirements (`XX-1`…, and `XX-W1`… for Wide)
+8. Wide layout table
+9. Suggested frames (Regular and Wide for each view)
+10. Inventory + non-goals
+11. Handoff (archive under `design/archive/`, `completed.md`, then the PR)
 
 ## After the board
 

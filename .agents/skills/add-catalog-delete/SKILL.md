@@ -37,6 +37,8 @@ Every facet `CASCADE` FK is registered as `facet` and classified:
   - A custom `Release` when the row has facets of its own.
   - `Named: true` with `Count` / `List` / `Child` when the confirm should name what's affected. That fills `Report.Cascades` and never gates.
 
+Every `BucketOptional` `SET NULL` FK whose parent is deletable needs exactly one `optionalPointer(...)` entry (update change before the parent delete; pass side-effect columns as typed `col{...}` entries — for example `col{"cover_mode", colText}` — when a trigger may rewrite them). Do not set `Audited: true` on optional FKs — `Audited` stays CASCADE-only.
+
 `TestFacetReleaseHonesty` enforces the classification. `ReleaseFacets` fails a delete whose release leaves rows behind for the backstop. See [`docs/catalog-deletes.md`](../../../docs/catalog-deletes.md) § Facet release.
 
 ## Checklist (same PR as the table or the writer)

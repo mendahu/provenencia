@@ -13,7 +13,7 @@ When nothing an accepted member recorded survives for a field, show the provisio
 ## Open questions
 
 - **Where the rule lives.** Either the auto-reconciler gives such a value its own reason (say `possible`) and caches it, so lists, search and the detail read agree, or the page derives it from the cached `provisional` rows. The cache is the safer home: one rule, every reader.
-- **What else a possible value touches.** Should it reach the Persons list, search, or only the detail page? **Not matching:** Spike 11's entity profile is strict and leaves provisional values out ([`comparison-layers.md`](../deployment-plan/spike-11/comparison-layers.md#entities-compare-against-the-conclusion)).
+- **What else a possible value touches.** Should it reach the Persons list, search, or only the detail page? **Not matching:** Spike 11's entity profile is strict and leaves provisional values out ([`comparison-layers.md`](../deployment-plan/archive/spike-11/comparison-layers.md#entities-compare-against-the-conclusion)).
 - **Other set-aside evidence.** The same fallback could apply to a value denied by a stronger negative, or a weak one that stronger evidence disagrees with. Those were judged and lost, so they probably shouldn't come back; provisional records were never judged.
 - **Wording and mark.** *possibly X* in italics with a distinct badge? It should read without colour, like the other states (S9-D5).
 - **State.** Is it a fifth field state beside single / merged / mixed / empty, or an empty field with a hint?

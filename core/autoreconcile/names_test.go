@@ -131,6 +131,15 @@ func TestReconcileNames(t *testing.T) {
 		{"fold", "an initial never folds across types",
 			[]Candidate{nm(1, "nick=J|surname=Robins"), nm(2, "given=James|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=James|nick=J|surname=Robins"}}, StateMerged, "kept"},
+		{"fold", "a prefix expands: [Des] into [Desiree]",
+			[]Candidate{nm(1, "given=Des|surname=Long"), nm(2, "given=Desiree|surname=Long")},
+			[]cl{{[]byte{1, 2}, "given=Desiree|surname=Long"}}, StateMerged, "kept"},
+		{"fold", "the prefix expansion does not depend on rank",
+			[]Candidate{nm(1, "given=Desiree|surname=Long"), nm(2, "given=Des|surname=Long")},
+			[]cl{{[]byte{1, 2}, "given=Desiree|surname=Long"}}, StateMerged, "kept"},
+		{"fold", "an ambiguous prefix folds into the best ranked of equal support",
+			[]Candidate{nm(1, "given=Albert|surname=Long"), nm(2, "given=Alice|surname=Long"), nm(3, "given=Al|surname=Long")},
+			[]cl{{[]byte{1, 2, 3}, "given=Albert|given=Alice|surname=Long"}}, StateMerged, "kept"},
 
 		// Majority
 		{"majority", "two of three crowd out a misspelling",
@@ -680,6 +689,24 @@ var aliasRules = func() valuecompare.Rules {
 	return rules
 }()
 
+// sameResult fails unless reconciling in under with gives the result it gives
+// under without; label names the rule that must not have changed it.
+func sameResult(t *testing.T, label string, with, without valuecompare.Rules, in []Candidate) {
+	t.Helper()
+	w, err := Reconcile(with, propertymeta.ValueTypeName, in, nil, propertymeta.CardinalitySingle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wo, err := Reconcile(without, propertymeta.ValueTypeName, in, nil, propertymeta.CardinalitySingle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(specs(w), specs(wo)) || w.State() != wo.State() || reasonsOf(w) != reasonsOf(wo) {
+		t.Fatalf("%s changed the result:\nwith    %v %v %q\nwithout %v %v %q",
+			label, specs(w), w.State(), reasonsOf(w), specs(wo), wo.State(), reasonsOf(wo))
+	}
+}
+
 func TestReconcileNamesAliases(t *testing.T) {
 	folds := []struct {
 		name string
@@ -728,18 +755,30 @@ func TestReconcileNamesAliases(t *testing.T) {
 	}
 	for _, tc := range unchanged {
 		t.Run(tc.name, func(t *testing.T) {
-			with, err := Reconcile(aliasRules, propertymeta.ValueTypeName, tc.in, nil, propertymeta.CardinalitySingle)
-			if err != nil {
-				t.Fatal(err)
-			}
-			without, err := Reconcile(testRules, propertymeta.ValueTypeName, tc.in, nil, propertymeta.CardinalitySingle)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !reflect.DeepEqual(specs(with), specs(without)) || with.State() != without.State() || reasonsOf(with) != reasonsOf(without) {
-				t.Fatalf("aliases changed the result:\nwith    %v %v %q\nwithout %v %v %q",
-					specs(with), with.State(), reasonsOf(with), specs(without), without.State(), reasonsOf(without))
-			}
+			sameResult(t, "aliases", aliasRules, testRules, tc.in)
+		})
+	}
+}
+
+// A surname never prefix-folds, a fold never crosses part types, and a word
+// that is not a prefix does not fold: each result equals the one with the
+// prefix rule off (S11-45).
+func TestPrefixNeverFoldsASurnameOrAcrossTypes(t *testing.T) {
+	off := testRules
+	off.Names.PrefixMinLength = 0
+	for _, tc := range []struct {
+		name string
+		in   []Candidate
+	}{
+		{"AC-3.3 a surname never prefix-folds",
+			[]Candidate{nm(1, "given=Mary|surname=Mac"), nm(2, "given=Mary|surname=MacDonald")}},
+		{"AC-3.3 a prefix never folds across part types",
+			[]Candidate{nm(1, "nick=Des|surname=Long"), nm(2, "given=Desiree|surname=Long")}},
+		{"AC-3.3 a word that is not a prefix does not fold",
+			[]Candidate{nm(1, "given=Desmond|surname=Long"), nm(2, "given=Desiree|surname=Long")}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			sameResult(t, "the prefix rule", testRules, off, tc.in)
 		})
 	}
 }

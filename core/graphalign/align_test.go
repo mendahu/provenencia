@@ -615,6 +615,44 @@ func TestOneGivenNameIsOfferedAFullerRecord(t *testing.T) {
 	}
 }
 
+// A given name that starts another is offered the record, and the same
+// surname with it is a weak match (S11-45).
+func TestAPrefixNameIsOffered(t *testing.T) {
+	t.Run("a given name reaches the record it starts", func(t *testing.T) {
+		layer := graphalign.Layer{
+			Subjects: []graphalign.Subject{{ID: id("s-desiree"), Ref: "PER-S", Kind: "person", Values: vals(givenProp("Desiree"))}},
+			Metas:    subjectcomparetest.Metas(),
+		}
+		canon := graphalign.Canon{Handles: []graphalign.Handle{
+			{ID: id("h-des"), Ref: "PER-1", Kind: "person", Values: vals(givenProp("Des"))},
+			{ID: id("h-desmond"), Ref: "PER-2", Kind: "person", Values: vals(givenProp("Desmond"))},
+		}}
+		row := rowBySubject(alignWith(layer, canon, nil, matchregistry.Default().AlignConfig()), id("s-desiree"))
+		if row.Target == graphalign.TargetHandle || row.Assessment != graphalign.AssessNone {
+			t.Fatalf("row %+v, want unplaced with no band", row)
+		}
+		if len(row.Alternatives) != 1 || !bytes.Equal(row.Alternatives[0].HandleID, id("h-des")) || row.Alternatives[0].Assessment != graphalign.AssessNone {
+			t.Fatalf("alternatives %+v, want PER-1 with no band", row.Alternatives)
+		}
+	})
+	t.Run("a prefix with the same surname is a weak match", func(t *testing.T) {
+		layer := graphalign.Layer{
+			Subjects: []graphalign.Subject{{ID: id("s-desiree"), Ref: "PER-S", Kind: "person", Values: vals(nameProp("Desiree Long"))}},
+			Metas:    nameMetas(),
+		}
+		canon := graphalign.Canon{Handles: []graphalign.Handle{
+			{ID: id("h-des"), Ref: "PER-1", Kind: "person", Values: vals(nameProp("Des Long"))},
+		}}
+		row := rowBySubject(alignWith(layer, canon, nil, matchregistry.Default().AlignConfig()), id("s-desiree"))
+		if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, id("h-des")) || row.Assessment != graphalign.AssessWeak || row.Reason != graphalign.ReasonAgrees {
+			t.Fatalf("row %+v, want the record, weak, agrees", row)
+		}
+		if want := 2.5 * 0.88; math.Abs(row.Score-want) > 1e-9 {
+			t.Errorf("score %v, want %v", row.Score, want)
+		}
+	})
+}
+
 func TestIsolatedSubjectScoresOnTheWalkScale(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -789,6 +827,35 @@ func TestSexAgreementAloneStaysUnderWeak(t *testing.T) {
 	), s)
 	if row.Target == graphalign.TargetHandle || row.Assessment != graphalign.AssessNone {
 		t.Fatalf("sex alone published %+v", row)
+	}
+}
+
+func TestPartialNameWithGrandparentClearsWeak(t *testing.T) {
+	cfg := matchregistry.Default().AlignConfig()
+	if cfg.Segment.OtherSupport != 0.75 {
+		t.Fatalf("OtherSupport = %.2f, want 0.75", cfg.Segment.OtherSupport)
+	}
+	metas := nameMetas()
+	own := subjectcompare.Compare(vocabkey.Person, vals(givenProp("Jake")), vals(nameProp("Jake James Kenneth Robins")), metas, cfg.Subject, cfg.Value)
+	wantOwn := 2.5 * (2.0 / 4.5)
+	if math.Abs(own.Evidence-wantOwn) > 1e-9 {
+		t.Fatalf("own evidence %.4f, want %.4f", own.Evidence, wantOwn)
+	}
+	if own.Evidence >= cfg.Alignment.Bands.Weak {
+		t.Fatalf("own alone %.4f, want under Weak %v", own.Evidence, cfg.Alignment.Bands.Weak)
+	}
+	relKey := vocabkey.BridgeKey{Type: vocabkey.BridgeRelationship, Term: vocabkey.BridgeTerm("grandchild")}
+	segA := segmentcompare.Segment{Key: relKey, NeighborKind: vocabkey.Person, Neighbor: vals(nameProp("Carol Jane Breakell"))}
+	segB := segmentcompare.Segment{Key: relKey, NeighborKind: vocabkey.Person, Neighbor: vals(nameProp("Carol Breakell"))}
+	for _, placed := range []segmentcompare.Placement{segmentcompare.Together, segmentcompare.Unplaced} {
+		t.Run(string(placed), func(t *testing.T) {
+			seg := segmentcompare.Compare(segA, segB, placed, own.Evidence, metas, cfg.Segment, cfg.Subject, cfg.Value)
+			sc := graphalign.ScoreCandidate(own, seg.Evidence, 1)
+			if sc.Score < cfg.Alignment.Bands.Weak || sc.Score >= cfg.Alignment.Bands.Medium {
+				t.Fatalf("score %.4f, want >= Weak %v and < Medium %v (own %.4f, segment %.4f)",
+					sc.Score, cfg.Alignment.Bands.Weak, cfg.Alignment.Bands.Medium, own.Evidence, seg.Evidence)
+			}
+		})
 	}
 }
 

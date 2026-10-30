@@ -226,7 +226,8 @@ func Update(tx *database.Tx, userID []byte, a Artifact, graphs evidencegraphs.Gr
 // Delete erases an Artifact when no Citation points at it. File releases
 // ifUnused (snapshot file_id before DELETE). Orphan object bytes are unlinked
 // from AfterCommit, after Run commits, so a rollback leaves the files in place.
-// Cover SET NULL is SQLite's job. The caller records the returned changes.
+// Cover clear is released and audited through deleteimpact before the parent
+// delete. The caller records the returned changes.
 func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if tx == nil || len(id) != 16 {
 		return nil, ErrInvalid

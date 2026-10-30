@@ -111,6 +111,7 @@ struct EvidenceGraphModelTests {
                 description: ""
             ),
         ]
+        store.nextWriteEffects = CatalogWriteEffects(evidenceGraphs: [graphID])
         return store
     }
 
@@ -337,6 +338,44 @@ struct EvidenceGraphModelTests {
         #expect(model.toast?.title == L10n.string(L10n.EvidenceGraph.positionPersistFailedTitle))
     }
 
+    @Test func arrowAtTheGridEdgeStays() async {
+        let store = makeStore()
+        let limit = EvidenceGraphPlacement.cellLimit
+        let subject = CatalogSubject(
+            id: "s1", ref: "CPR-1", sourceID: sourceID, subjectTypeID: personTypeID,
+            label: "A", description: ""
+        )
+        store.subjectsByGraph[graphID] = [subject]
+        store.subjectPositionsBySubject["s1"] = CatalogSubjectPosition(subjectID: "s1", gridX: limit, gridY: 2)
+        let model = makeModel(store: store)
+        await model.prepare()
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
+        model.session.setQueryValue(
+            key,
+            value: EvidenceGraphRows(
+                graphId: graphID,
+                subjects: [subject],
+                positions: [CatalogSubjectPosition(subjectID: "s1", gridX: limit, gridY: 2)]
+            )
+        )
+        let result = await model.moveSubject(
+            subjectID: "s1", fromGridX: limit, fromGridY: 2, deltaX: 1, deltaY: 0
+        )
+        #expect(result?.gridX == limit)
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
+        #expect(handle?.value?.positions.first?.gridX == limit)
+        #expect(store.subjectPositionsBySubject["s1"]?.gridX == limit)
+        #expect(model.toast == nil)
+
+        model.moveSubjects([
+            EvidenceGraphModel.KeyEffect.SubjectMove(
+                subjectID: "s1", fromX: Int64.max, fromY: Int64.min, deltaX: 1, deltaY: -1
+            ),
+        ])
+        #expect(handle?.value?.positions.first?.gridX == limit)
+        #expect(handle?.value?.positions.first?.gridY == -limit)
+    }
+
     @Test func updatingPositionPatchesSnapshot() {
         let subject = CatalogSubject(
             id: "s1",
@@ -365,6 +404,7 @@ struct EvidenceGraphModelTests {
         let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         let handle: QueryHandle<EvidenceGraphRows> = model.session.query(key)
         await waitForQuery(handle)
+        store.nextWriteEffects = CatalogWriteEffects(evidenceGraphs: [graphID])
         let (created, effects) = try await store.createSubject(
             projectDir: projectDir, userID: "user-1", graphID: graphID,
             subjectTypeID: personTypeID, label: "Ada", description: "", placement: nil
@@ -974,8 +1014,8 @@ struct EvidenceGraphModelTests {
         }
         failed.deleteImpact.cancel()
         failed.fileOpenError = "File not found"
-        if case .fileNotFound = failed.canvasNotice {} else {
-            Issue.record("expected the file-not-found notice, got \(String(describing: failed.canvasNotice))")
+        if case .fileOpenFailed = failed.canvasNotice {} else {
+            Issue.record("expected the file-open-failed notice, got \(String(describing: failed.canvasNotice))")
         }
     }
 
@@ -1891,6 +1931,10 @@ struct EvidenceGraphModelTests {
         #expect(!store.recordedCalls.contains { $0.hasPrefix("unpromoteSubject") })
 
         model.beginUnpromote(subjectID: "s-james")
+        let removed = ["s-james", "b1-sonof", "b2-part"].compactMap { store.membershipBySubject[$0]?.entity.id }
+        store.nextWriteEffects = CatalogWriteEffects(
+            handles: removed, evidenceGraphs: [graphID], handleScopes: removed
+        )
         await model.confirmUnpromote()
         #expect(store.recordedCalls.contains("unpromoteSubject id=s-james"))
         #expect(model.pendingUnpromote == nil)
@@ -1917,8 +1961,10 @@ struct EvidenceGraphModelTests {
             ),
         ]
         let before = store.sourcesByProject
+        let scripted = CatalogWriteEffects(handles: removed, evidenceGraphs: [graphID], handleScopes: removed)
+        store.nextWriteEffects = scripted
         let effects = try await store.unpromoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "s-james")
-        #expect(effects == CatalogWriteEffects(handles: removed, evidenceGraphs: [graphID], handleScopes: removed))
+        #expect(effects == scripted)
         #expect(store.sourcesByProject == before)
     }
 
@@ -1997,11 +2043,11 @@ struct EvidenceGraphModelTests {
 
         _ = try await store.promoteSubject(
             projectDir: projectDir, userID: "user-1", subjectID: "s-fire",
-            entityID: nil, confidenceGradeID: nil, argument: ""
+            entityID: nil
         )
         _ = try await store.promoteSubject(
             projectDir: projectDir, userID: "user-1", subjectID: "s-york",
-            entityID: nil, confidenceGradeID: nil, argument: ""
+            entityID: nil
         )
         model.session.apply(.promotedSubject(graphId: graphID))
         let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
@@ -2158,7 +2204,7 @@ struct EvidenceGraphModelTests {
 
     /// A model whose Source has the given file-bearing Artifacts. The project folder does
     /// not exist, so every object is missing from disk.
-    private func fileModel(artifactIDs: [String]) async -> EvidenceGraphModel {
+    private func fileModel(artifactIDs: [String], relPath: String? = nil) async -> EvidenceGraphModel {
         let store = makeStore()
         let model = makeModel(store: store)
         await model.prepare()
@@ -2182,7 +2228,7 @@ struct EvidenceGraphModelTests {
                 source: source,
                 notes: [],
                 metadata: [],
-                artifacts: artifactIDs.map { artifact($0, label: "Page \($0)") },
+                artifacts: artifactIDs.map { artifact($0, label: "Page \($0)", relPath: relPath) },
                 credibility: nil
             )
         )
@@ -2203,6 +2249,19 @@ struct EvidenceGraphModelTests {
         model.selectFile("a")
         #expect(model.fileOpenError == nil)
         #expect(model.selectedFileArtifactID == "a")
+    }
+
+    @Test func openSelectedFileRefusesAScriptByItsTypeAndNamesTheFile() async throws {
+        defer { try? FileManager.default.removeItem(atPath: projectDir) }
+        let rel = "objects/aa/bb/aabb.sh"
+        try ArtifactFileFixtures.write(Data("x".utf8), projectDir: projectDir, relPath: rel, mode: 0o644)
+        let model = await fileModel(artifactIDs: ["a"], relPath: rel)
+        let row = try #require(model.fileRows.first)
+        model.openSelectedFile()
+        #expect(model.fileOpenError == L10n.ObjectOpen.refused(filename: row.displayFilename))
+        if case .fileOpenFailed = model.canvasNotice {} else {
+            Issue.record("canvasNotice \(String(describing: model.canvasNotice)), want .fileOpenFailed")
+        }
     }
 
     @Test func armingAToolClearsTheMissingFileError() async {

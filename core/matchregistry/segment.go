@@ -18,10 +18,11 @@ func defaultSegment() segmentcompare.Rules {
 			{Type: vocabkey.BridgeParticipation, Term: subject, EventType: vocabkey.EventBirth},
 			{Type: vocabkey.BridgeParticipation, Term: subject, EventType: vocabkey.EventDeath},
 		},
-		OneSupport:   1.5,  // carried from graphalign EdgeSupportLow
-		OneCredit:    0.5,  // carried from graphalign NeighborCreditLow
-		OneConflict:  3,    // estimate: a differing birth or death is as strong as a differing name or date (subject.Weights.person.name.Conflict)
-		OtherSupport: 0.25, // carried from graphalign EdgeSupportHigh
+		OneSupport:  1.5, // carried from graphalign EdgeSupportLow
+		OneCredit:   0.5, // carried from graphalign NeighborCreditLow
+		OneConflict: 3,   // estimate: a differing birth or death is as strong as a differing name or date (subject.Weights.person.name.Conflict)
+		// decided: user, 2026-10-28 (S14-08): dogfood Jake + grandparent under Weak at 0.25; 0.75 clears Weak (~2.43) without auto-placing kinship-alone pairs (still under AcceptBar 2)
+		OtherSupport: 0.75,
 		OtherCredit:  0.25, // carried from graphalign NeighborCreditHigh
 		// estimate: the accept bar, a neighbor that could be placed on its own properties
 		UnplacedAlike: 2,

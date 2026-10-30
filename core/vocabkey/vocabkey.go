@@ -53,15 +53,17 @@ const (
 
 // Seeded Property keys that matching and search read by name.
 const (
-	PropertyName       = "name"
-	PropertySexAtBirth = "sex_at_birth"
-	PropertyGender     = "gender"
-	PropertyEventType  = "event_type"
-	PropertyDate       = "date"
-	PropertyStartDate  = "start_date"
-	PropertyEndDate    = "end_date"
-	PropertyToponym    = "toponym"
-	PropertyLikeness   = "likeness"
+	PropertyName         = "name"
+	PropertySexAtBirth   = "sex_at_birth"
+	PropertyGender       = "gender"
+	PropertyEventType    = "event_type"
+	PropertyDate         = "date"
+	PropertyStartDate    = "start_date"
+	PropertyEndDate      = "end_date"
+	PropertyToponym      = "toponym"
+	PropertyLikeness     = "likeness"
+	PropertyEventPicture = "event_picture"
+	PropertyPlacePicture = "place_picture"
 
 	PropertyPerson    = "person"
 	PropertyEvent     = "event"
@@ -142,6 +144,12 @@ const (
 	PropertyLifespan     = "lifespan"
 	PropertyLifespanSpan = "lifespan_span"
 )
+
+// GalleryKeys returns the depiction Property keys admitted to a handle's
+// gallery, in registry order: Person likeness, then Event and Place pictures.
+func GalleryKeys() []string {
+	return []string{PropertyLikeness, PropertyEventPicture, PropertyPlacePicture}
+}
 
 // PrimaryKinds returns a new slice of the primary kinds on each call.
 func PrimaryKinds() []string {
