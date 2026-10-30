@@ -1,7 +1,7 @@
 # Ship log — S13-24 The pin engine goes
 
 **Plan:** [`S13-24-the-pin-engine-goes.md`](S13-24-the-pin-engine-goes.md) · **Branch:** `s13-24-the-pin-engine-goes` · **PR:** #639
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 Head `cc3bc843`. Gate PASS (orchestrator run against `705cd98c`). Report deviations:
@@ -52,3 +52,15 @@ Check: scripts/check-pr.sh PASS (xcode-test, swift-warnings).
 Files: `core/database/autoreconciler/autoreconciler.go`, `macos/App/Platform/GenealogyStore.swift`.
 Do: write the alias contract once, on `ProvenanceColumns`: the query binds `c` (`citations`) and `a` (`artifacts`) and includes `ProvenanceJoins`, after which `sg` is in scope for a caller's own column; `ProvenanceJoins`' comment points at it. `CatalogReconcilerOutcome`'s comment ends "(standard credibility)."
 Check: scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `a2c55088`. Gate PASS. F-1 (`7a48cd4e`), F-2 (`02f864f7`), F-3 (`f6ec8bd3`), F-4 (`a2c55088`) done. F-3 and F-4 read by the orchestrator: **Resolved** (`PromoteFlow.swift:62` `case .unrecognized`; alias contract once on `ProvenanceColumns`; `GenealogyStore.swift:587` ends "(standard credibility).").
+
+## Round 2 — review
+Reviewers: MNT (only lens with a Fix-now major). MNT-1 Resolved, MNT-2 Resolved. New findings: none. No Fix plan 2.
+
+## Finish
+Merged `origin/main` @ `cc870c65` (S13-30 descope: docs and one `PromoteView.swift` comment). Gate FAIL once in `xcode-test` (`SourceGraphFormModelTests`, load-state timing, code this PR does not touch; the implementer saw the same flake in round 0), rerun PASS with no change.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: none · to user: — · CON miss: none
