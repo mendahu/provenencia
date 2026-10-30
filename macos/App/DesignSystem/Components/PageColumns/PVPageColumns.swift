@@ -42,6 +42,23 @@ enum PVPageColumnsMetrics {
         return (primary, secondary, primary + PVSpacing.space9 + secondary)
     }
 
+    /// The pane and the column widths for a layout proposed `proposal`. An
+    /// unspecified or infinite width is sized as if the pane were as wide as
+    /// the content and its gutters; the pane is then the group itself.
+    static func columnWidths(
+        proposal: ProposedViewSize,
+        widthClass: PVWidthClass,
+        hasSecondary: Bool
+    ) -> (pane: CGFloat, primary: CGFloat, secondary: CGFloat?, group: CGFloat) {
+        let proposed = proposal.width.flatMap { $0.isFinite ? $0 : nil }
+        let widths = columnWidths(
+            pane: proposed ?? (PVSpacing.widthContentMax + 2 * PVSpacing.gutterPage),
+            widthClass: widthClass,
+            hasSecondary: hasSecondary
+        )
+        return (proposed ?? widths.group, widths.primary, widths.secondary, widths.group)
+    }
+
     /// Whether a pinned header shows compact. Hysteresis: past
     /// `compactOffset` it compacts, back at the top it expands, and in
     /// between it keeps its state. Content that barely overflows never starts
@@ -127,7 +144,7 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
     }
 
     private var columns: some View {
-        PVPageColumnsLayout(widthClass: widthClass) {
+        PVPageColumnsLayout(widthClass: widthClass, hasSecondary: hasSecondary) {
             VStack(alignment: .leading, spacing: 0) { primary }
             if hasSecondary {
                 VStack(alignment: .leading, spacing: 0) { secondary }
@@ -221,30 +238,22 @@ extension PVPageColumns where Header == EmptyView, Secondary == EmptyView {
 /// Wide breakpoint keeps the page's scroll and focus.
 private struct PVPageColumnsLayout: Layout {
     let widthClass: PVWidthClass
+    let hasSecondary: Bool
 
-    private func widths(_ proposal: ProposedViewSize, _ subviews: Subviews)
-        -> (primary: CGFloat, secondary: CGFloat?, group: CGFloat, pane: CGFloat) {
-        let proposed = proposal.width.flatMap { $0.isFinite ? $0 : nil }
-        let probe = PVPageColumnsMetrics.columnWidths(
-            pane: proposed ?? (PVSpacing.widthContentMax + 2 * PVSpacing.gutterPage),
-            widthClass: widthClass,
-            hasSecondary: subviews.count > 1
-        )
-        return (probe.primary, probe.secondary, probe.group, proposed ?? probe.group)
+    private func widths(_ proposal: ProposedViewSize) -> (pane: CGFloat, primary: CGFloat, secondary: CGFloat?, group: CGFloat) {
+        PVPageColumnsMetrics.columnWidths(proposal: proposal, widthClass: widthClass, hasSecondary: hasSecondary)
     }
 
-    private func sideBySide(_ subviews: Subviews) -> Bool {
-        widthClass == .wide && subviews.count > 1
-    }
+    private var sideBySide: Bool { widthClass == .wide && hasSecondary }
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         guard !subviews.isEmpty else { return .zero }
-        let w = widths(proposal, subviews)
+        let w = widths(proposal)
         let primary = subviews[0].sizeThatFits(ProposedViewSize(width: w.primary, height: nil))
         var height = primary.height
         if let secondaryWidth = w.secondary {
             let secondary = subviews[1].sizeThatFits(ProposedViewSize(width: secondaryWidth, height: nil))
-            height = sideBySide(subviews)
+            height = sideBySide
                 ? max(primary.height, secondary.height)
                 : primary.height + PVSpacing.space9 + secondary.height
         }
@@ -253,7 +262,7 @@ private struct PVPageColumnsLayout: Layout {
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         guard !subviews.isEmpty else { return }
-        let w = widths(ProposedViewSize(width: bounds.width, height: nil), subviews)
+        let w = widths(ProposedViewSize(width: bounds.width, height: nil))
         let x = bounds.minX + (bounds.width - w.group) / 2
         let primary = subviews[0].sizeThatFits(ProposedViewSize(width: w.primary, height: nil))
         subviews[0].place(
@@ -263,7 +272,7 @@ private struct PVPageColumnsLayout: Layout {
         )
         guard let secondaryWidth = w.secondary else { return }
         let secondary = subviews[1].sizeThatFits(ProposedViewSize(width: secondaryWidth, height: nil))
-        let origin = sideBySide(subviews)
+        let origin = sideBySide
             ? CGPoint(x: x + w.primary + PVSpacing.space9, y: bounds.minY)
             : CGPoint(x: x, y: bounds.minY + primary.height + PVSpacing.space9)
         subviews[1].place(
@@ -281,13 +290,8 @@ private struct PVPageColumnsBandLayout: Layout {
     let hasSecondary: Bool
 
     private func group(_ proposal: ProposedViewSize) -> (pane: CGFloat, group: CGFloat) {
-        let proposed = proposal.width.flatMap { $0.isFinite ? $0 : nil }
-        let probe = PVPageColumnsMetrics.columnWidths(
-            pane: proposed ?? (PVSpacing.widthContentMax + 2 * PVSpacing.gutterPage),
-            widthClass: widthClass,
-            hasSecondary: hasSecondary
-        )
-        return (proposed ?? probe.group, probe.group)
+        let widths = PVPageColumnsMetrics.columnWidths(proposal: proposal, widthClass: widthClass, hasSecondary: hasSecondary)
+        return (widths.pane, widths.group)
     }
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {

@@ -57,6 +57,20 @@ struct PVPageColumnsTests {
         #expect(widths.group == group)
     }
 
+    @Test func unboundedProposalSizesToTheGroup() {
+        for width in [nil, CGFloat.infinity] as [CGFloat?] {
+            let widths = PVPageColumnsMetrics.columnWidths(
+                proposal: ProposedViewSize(width: width, height: nil), widthClass: .wide, hasSecondary: true
+            )
+            #expect(widths.pane == widths.group)
+            #expect(widths.primary == PVSpacing.widthContentMax)
+        }
+        let bounded = PVPageColumnsMetrics.columnWidths(
+            proposal: ProposedViewSize(width: 2296, height: nil), widthClass: .wide, hasSecondary: true
+        )
+        #expect(bounded.pane == 2296 && bounded.group == 1692)
+    }
+
     @Test func tokensMatchTheBoard() {
         #expect(PVSpacing.widthWideBreakpoint == 1600)
         #expect(PVSpacing.widthSecondaryMax == 480)
