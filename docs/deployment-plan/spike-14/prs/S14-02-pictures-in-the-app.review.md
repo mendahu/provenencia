@@ -1,9 +1,11 @@
 # Review — S14-02 Pictures in the app
 
-**Verdict:** Refresh round 3 (2026-10-30): Fits with changes — Not ready (no board yet). Every finding answered below. Rounds 1–2 (2026-10-29) reviewed the earlier plan.
-**Rounds:** 3 (one refresh round). **Reviewers:** round 3: maintainability (Opus), executability (Sonnet, the implementer's model); rounds 1–2: maintainability (cursor-grok-4.6-xhigh), executability (composer-2.5)
+**Verdict:** Refresh rounds 3 – 4 (2026-10-30): Fits with changes — Ready with changes; every finding Fixed, no blocker open. Rounds 1–2 (2026-10-29) reviewed the earlier plan.
+**Rounds:** 4 (refresh rounds 3 and 4). **Reviewers:** round 3: maintainability (Opus), executability (Sonnet, the implementer's model); rounds 1–2: maintainability (cursor-grok-4.6-xhigh), executability (composer-2.5)
 
 ## To user
+
+- **Captions and Toast (round 4).** The boards wrap tile captions to two lines and put the Toast at the bottom; the plan keeps today's one-line caption (full title as tooltip) and top-trailing Toast for every kind, so the Person page does not change. Recommendation: keep; say if you want the boards' versions, which would change the Person's gallery and every toast on the shared overlay.
 
 - **S14-02 now depends on S13-10** (M-5). The S14-D2 board puts the Event and Place pages on Page columns, which S13-10 builds, and the plan is written against S13-10's `PersonDetailSections`. The map row, its dependency graph, and Spike 13's S13-14 row (which now also waits on S14-02) are updated. Recommendation: accept; it removes a two-branch design.
 - **A confirmation round still runs.** Round 3 had blockers (M-1, M-2, X-2, X-3), all Fixed. The confirming round runs with the post-board refresh, which `plan-pr` already requires before `Planned`, so the plan is reviewed once against the real frames instead of twice.
@@ -104,6 +106,52 @@ Scope change before review: S13-23 (#633) removed the Promote evidence sheet, so
 
 ### X-15 · minor · D-13's second order has no test
 **Answer:** Fixed — with M-5: one order only.
+
+## Refresh round 4 — confirming (2026-10-30)
+
+**Reviewers:** maintainability (Opus), executability (Sonnet, the implementer's model). **Verdicts:** Fits with changes — Ready with changes. All findings Fixed; no blocker open. The loop's two rounds for this refresh are done (rounds 3 and 4).
+
+### M2-1 · blocker · `spokenOrigin` misreads `OriginPill` (also X2-4)
+**Answer:** Fixed — D-11: a `plugin:` origin speaks `L10n.Origin.pluginPill(pluginID:)`, as the pill shows it; any other origin speaks the raw string, as today. T-7 adds a `plugin:findagrave` case.
+
+### M2-2 · blocker · Working rules and S13-14 name shapes the plan changes (also X2-5)
+**Answer:** Fixed — the slot carries `fallbackMark` again (D-2), so working rule "The gallery is one slot" holds as written and no rule is bent; `leading(…)` reads the mark from the gallery, keeping one source. STEP-6 renames `ConclusionPortraitModel` in working rule line 87, the Ships entry line 228, S13-14's Context (Spike 13 map line 422) and `event-place-pictures.md` lines 41 and 47; the DoD gains a wider sweep over both spike folders.
+
+### M2-3 · blocker · Two sources for the lead picture
+**Answer:** Fixed — checked `api/ffi/handlers/conclusion_detail.go`: `attachHeader` and `attachPictures` run in one call from one lead rule and one `RelPaths` map. D-5 reads the thumbnail from `gallery.lead` alone; the fallback and the old AC-2.4 case are gone. AC-2.4 now pins the Person's thumbnail (path, label, colors) through the new builder.
+
+### M2-4 · blocker · Two-line captions vs the one-line tile (also X2-3)
+**Answer:** Fixed — D-14(d): the caption stays one line, truncated, with the full title in `.help`, for every kind; the boards' two-line wrap is not built (it would change the Person's tiles). To user for veto.
+
+### X2-1 · major · AC-4.1 grep matches the sketch
+**Answer:** Fixed — the pattern is `thumbnail\.offersEarliest|offersEarliest: (true|false)`, plus `likenessImageRelPath`.
+
+### X2-2 · major · Toast position
+**Answer:** Fixed — D-14(e): top-trailing, as the overlay draws it today; the boards' bottom Toast is not built.
+
+### X2-6 · minor · Content storage
+**Answer:** Fixed — D-5: `gallery` then `thumbnail`, stored `var`s set in `init`.
+
+### X2-7 · minor · String-typed toast members
+**Answer:** Fixed — § Strings marks both `String`, as the Person's.
+
+### X2-8 · minor · D-3 `rg` claim
+**Answer:** Fixed — the command no longer matches the L10n key.
+
+### X2-9 · minor · Empty Source title
+**Answer:** Fixed — Edges: it shows the Observation ref, as today.
+
+### X2-10 · minor · Gates and test helper
+**Answer:** Fixed — T-8 names two `rg` gates; §8 puts a private builder in each test struct.
+
+### X2-11 · minor · STEP-1 checkpoints
+**Answer:** Fixed — STEP-1 lists six sub-steps and a build after the pbxproj edit.
+
+### X2-12 · nit · "· today" after the Place chain
+**Answer:** Fixed — D-14(f): S9-D7 mock text, not built.
+
+### X2-13 · nit · Earlier turns
+**Answer:** Fixed — Board line lists S9-D6, S9-D7 (pages) and S9-D3, S9-D4, S10-D10, S10-D11 (lists).
 
 ## Post-board refresh (2026-10-30)
 
