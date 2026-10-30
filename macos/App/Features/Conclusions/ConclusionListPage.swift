@@ -69,8 +69,6 @@ protocol ConclusionListKind {
 extension ConclusionListKind {
     static func extraCount(_: Row) -> Int { 0 }
 
-    static func thumbnailRelPath(_: Row) -> String { "" }
-
     static func titleSource(_ row: Row, orders: NameFormatOrders) -> ConclusionTitleSource {
         titleSource(row)
     }
