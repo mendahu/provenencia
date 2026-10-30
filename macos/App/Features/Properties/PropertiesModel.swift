@@ -162,12 +162,6 @@ final class PropertiesModel {
         return L10n.Properties.deletePropertyAccessibility(label: property.label)
     }
 
-    var canEditSelected: Bool {
-        guard let property = selectedProperty else { return false }
-        return !CatalogOrigin.isPlugin(property.origin)
-    }
-
-    /// Seeded and plugin Properties show Holds read-only. A researcher Property can change it.
     /// What VoiceOver reads for a Property's table row: label, key (two Properties may share a
     /// label), value type, origin, how many types it is bound to, and their labels.
     func rowAccessibilityLabel(for property: CatalogProperty) -> String {
@@ -183,6 +177,12 @@ final class PropertiesModel {
         return spoken + ", " + bound.map(\.label).joined(separator: ", ")
     }
 
+    var canEditSelected: Bool {
+        guard let property = selectedProperty else { return false }
+        return !CatalogOrigin.isPlugin(property.origin)
+    }
+
+    /// Seeded and plugin Properties show Holds read-only. A researcher Property can change it.
     var canEditCardinality: Bool {
         selectedProperty?.origin == CatalogOrigin.user
     }
