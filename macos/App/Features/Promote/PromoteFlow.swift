@@ -59,7 +59,7 @@ struct PromoteFlow: Equatable, Sendable {
             case .neighborPlaced: self = .neighborPlaced(neighborID: id)
             case .neighborMoved: self = .neighborMoved(neighborID: id)
             case .neighborReleased: self = .neighborReleased(neighborID: id)
-            default: return nil
+            case .unrecognized: return nil
             }
         }
 
