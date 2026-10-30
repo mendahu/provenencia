@@ -37,6 +37,8 @@ struct PVChip: View {
     /// Dashed border — e.g. “standard” credibility before an assessment exists.
     private let isDashed: Bool
     private let tone: Tone
+    private let size: PVControlSize
+    private let glyph: PVGlyph?
     /// Stretch to fill (segmented track).
     private let expands: Bool
     /// Drop a small elevation when selected (segmented kind toggle).
@@ -48,6 +50,8 @@ struct PVChip: View {
         _ titleKey: LocalizedStringResource,
         isSelected: Bool,
         tone: Tone = .neutral,
+        size: PVControlSize = .md,
+        glyph: PVGlyph? = nil,
         isDashed: Bool = false,
         expands: Bool = false,
         selectionLift: Bool = false,
@@ -57,6 +61,8 @@ struct PVChip: View {
         self.isSelected = isSelected
         self.isDashed = isDashed
         self.tone = tone
+        self.size = size
+        self.glyph = glyph
         self.expands = expands
         self.selectionLift = selectionLift
         self.action = action
@@ -67,6 +73,8 @@ struct PVChip: View {
         text: String,
         isSelected: Bool,
         tone: Tone = .neutral,
+        size: PVControlSize = .md,
+        glyph: PVGlyph? = nil,
         isDashed: Bool = false,
         expands: Bool = false,
         selectionLift: Bool = false,
@@ -76,6 +84,8 @@ struct PVChip: View {
         self.isSelected = isSelected
         self.isDashed = isDashed
         self.tone = tone
+        self.size = size
+        self.glyph = glyph
         self.expands = expands
         self.selectionLift = selectionLift
         self.action = action
@@ -84,22 +94,45 @@ struct PVChip: View {
     var body: some View {
         let colors = tone.colors
         Button(action: action) {
-            label
+            content
                 .font(PVFont.body(
-                    size: PVTypeScale.caption,
+                    size: size == .lg ? PVTypeScale.bodySmall : PVTypeScale.caption,
                     weight: isSelected ? PVFontWeight.semibold : PVFontWeight.regular
                 ))
                 .foregroundStyle(foreground(colors: colors))
                 .padding(.horizontal, expands ? PVSpacing.space4 : PVSpacing.space5)
                 .frame(maxWidth: expands ? .infinity : nil)
-                .frame(height: 28)
+                .frame(height: size.height)
                 .background(background(colors: colors))
                 .overlay(border(colors: colors))
                 .clipShape(RoundedRectangle(cornerRadius: chipRadius, style: .continuous))
                 .contentShape(Rectangle())
                 .pvShadow(selectionLift && isSelected ? PVElevation.sm : [])
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PVChipStyle(cornerRadius: chipRadius))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    /// The label, led by the glyph when there is one. A stretched chip in a
+    /// narrow column drops the glyph before the label would truncate.
+    @ViewBuilder
+    private var content: some View {
+        if let glyph {
+            let withGlyph = HStack(spacing: PVSpacing.space3) {
+                PVGlyphView(glyph, size: size.chipGlyphSize)
+                label
+            }
+            if expands {
+                ViewThatFits(in: .horizontal) {
+                    withGlyph
+                    label
+                }
+            } else {
+                withGlyph
+            }
+        } else {
+            label
+        }
     }
 
     private var chipRadius: CGFloat {
@@ -137,6 +170,38 @@ struct PVChip: View {
         if expands { return .clear }
         if isSelected { return colors.stroke }
         return PVColor.borderDefault
+    }
+}
+
+private extension PVControlSize {
+    /// Glyph beside a chip's label.
+    var chipGlyphSize: CGFloat {
+        switch self {
+        case .sm: return 12
+        case .md: return 13
+        case .lg: return 14
+        }
+    }
+}
+
+/// Draws keyboard focus for a chip, as `PVButtonBody` does for a button. A
+/// custom `ButtonStyle` gets no focus indication of its own.
+private struct PVChipStyle: ButtonStyle {
+    let cornerRadius: CGFloat
+
+    func makeBody(configuration: Configuration) -> some View {
+        PVChipStyleBody(configuration: configuration, cornerRadius: cornerRadius)
+    }
+}
+
+private struct PVChipStyleBody: View {
+    let configuration: ButtonStyleConfiguration
+    let cornerRadius: CGFloat
+    @Environment(\.isFocused) private var isFocused
+
+    var body: some View {
+        configuration.label
+            .pvFocusRing(isFocused, cornerRadius: cornerRadius)
     }
 }
 
