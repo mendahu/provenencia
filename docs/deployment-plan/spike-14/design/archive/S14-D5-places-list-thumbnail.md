@@ -1,14 +1,14 @@
-# S14-D4 — Events list: the lead picture in the row thumb
+# S14-D5 — Places list: the lead picture in the row thumb
 
-**Kind:** Claude Design board (**enhancement** of the Events list)
+**Kind:** Claude Design board (**enhancement** of the Places list)
 **Spike:** Provenencia Spike 14 (odds and ends), batch 1 — Event and Place pictures
-**View:** the Events list (`EventsListView`, on the shared Conclusion list page)
-**Implements later as:** PR **S14-02** (Pictures in the app), with [S14-D2](S14-D2-event-page-pictures.md) (Event page), [S14-D3](S14-D3-place-page-pictures.md) (Place page), [S14-D5](S14-D5-places-list-thumbnail.md) (Places list)
-**Board:** agreed 2026-10-30 — [*Events List*](https://claude.ai/design/p/2799d7a0-387e-4570-b138-fc387562ac91?via=share), file *Events List.dc.html*, "S14-D4", frames 1 – 2. Answers: dark mode is the board's theme toggle; at Wide the list keeps today's centered content column (EVL-W1 corrected).
-**Depends on:** S14-01 (landed [#615](https://github.com/mendahu/provenencia/pull/615)): each Event header carries the path of the picture it leads with. The Persons list as it ships today, whose row thumb already shows a Person's portrait. The agreed S14-D1 board (the Wide width class).
-**Related:** [`../event-place-pictures.md`](../event-place-pictures.md) § Thumbnail parity; [`../deployment-plan.md`](../deployment-plan.md) working rules "Event and Place each get their own picture Property, labelled Picture", "An Event or Place chooses its thumbnail as a Person chooses its portrait", "The gallery is one slot on the detail body", "A depiction is worded as a picture outside the Person's own copy"; [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide); plan [`../prs/S14-02-pictures-in-the-app.md`](../prs/S14-02-pictures-in-the-app.md).
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**View:** the Places list (`PlacesListView`, on the shared Conclusion list page)
+**Implements later as:** PR **S14-02** (Pictures in the app), with [S14-D2](S14-D2-event-page-pictures.md) (Event page), [S14-D3](S14-D3-place-page-pictures.md) (Place page), [S14-D4](S14-D4-events-list-thumbnail.md) (Events list)
+**Board:** agreed 2026-10-30 — [*Places List*](https://claude.ai/design/p/e8910bb1-f564-4d7a-b829-69de0e60af5a?via=share), file *Places List.dc.html*, "S14-D5", frames 1 – 2. Answers: dark mode is the board's theme toggle; at Wide the list keeps today's centered content column, which is what "nothing moves" means (PLL-W1 corrected; frame 2 draws it full width).
+**Depends on:** S14-01 (landed [#615](https://github.com/mendahu/provenencia/pull/615)): each Place header carries the path of the picture it leads with. The Persons list as it ships today, whose row thumb already shows a Person's portrait. The agreed S14-D1 board (the Wide width class).
+**Related:** [`../event-place-pictures.md`](../../event-place-pictures.md) § Thumbnail parity; [`../deployment-plan.md`](../../deployment-plan.md) working rules "Event and Place each get their own picture Property, labelled Picture", "An Event or Place chooses its thumbnail as a Person chooses its portrait", "The gallery is one slot on the detail body", "A depiction is worded as a picture outside the Person's own copy"; [`macos-client-patterns.md` § 9](../../../../macos-client-patterns.md#9-window-widths-regular-and-wide); plan [`../prs/S14-02-pictures-in-the-app.md`](../../prs/S14-02-pictures-in-the-app.md).
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -72,17 +72,17 @@ Draw the **Regular** and **Wide** frame of each view side by side, using the sam
 
 ### This brief is an enhancement
 
-Draw on the *Person Detail* project as a new turn "S14-D4 · Events list thumbnail". Add Events list frames only. Do not redraw the list's columns, sort or toolbar: only the row thumb changes.
+Draw on the *Person Detail* project as a new turn "S14-D5 · Places list thumbnail". Add Places list frames only. Do not redraw the list's columns, sort or toolbar: only the row thumb changes.
 
 ---
 
 ## 1. Objective
 
-A researcher scanning the Events list sees, on each Event that has a picture, that picture in the row thumb, the way the Persons list shows a Person's portrait.
+A researcher scanning the Places list sees, on each Place that has a picture, that picture in the row thumb, the way the Persons list shows a Person's portrait.
 
-**What changes.** The row thumb shows the Event's lead picture where it shows the Event mark today.
+**What changes.** The row thumb shows the Place's lead picture where it shows the Place mark today.
 
-**What stays.** Everything else in the list: its columns (title with its subjects, the place line under it, ref, updated), sort, row height, selection, empty and loading states.
+**What stays.** Everything else in the list: its columns (title, place chain, ref, updated), sort, row height, selection, empty and loading states.
 
 ---
 
@@ -90,14 +90,14 @@ A researcher scanning the Events list sees, on each Event that has a picture, th
 
 | Fact | What it means on this board |
 | --- | --- |
-| The lead picture | The earliest picture saved to the Event's Property **Picture** (`event_picture`), unless the researcher chose another on the Event page (S14-D2). The row shows that lead. |
-| Most events have none | Rows with a picture sit among rows with the mark. |
-| The row thumb slot exists | Every Conclusion list draws a 44pt thumbnail at the row's leading edge through the List component; the Persons list fills it with the portrait, the Events list with the Event mark. |
+| The lead picture | The earliest picture saved to the Place's Property **Picture** (`place_picture`), unless the researcher chose another on the Place page (S14-D3). The row shows that lead. |
+| Most places have none | Rows with a picture sit among rows with the mark. |
+| The row thumb slot exists | Every Conclusion list draws a 44pt thumbnail at the row's leading edge through the List component; the Persons list fills it with the portrait, the Places list with the Place mark. |
 | Two widths | Regular is a pane below 1600pt, Wide 1600pt and up. The list sits in the content column (up to 1180pt), centered, at both. |
 
 ### 2.1 What this board is not
 
-- The Event page (S14-D2) or the Places list (S14-D5).
+- The Place page (S14-D3) or the Events list (S14-D4).
 - A larger thumb, a hover preview, or a picture column.
 - Choosing the thumbnail from the list.
 
@@ -107,7 +107,7 @@ A researcher scanning the Events list sees, on each Event that has a picture, th
 
 | | |
 | --- | --- |
-| Ships in **S14-02** | EVL-1 … EVL-3 and EVL-W1: the row thumb at Regular and Wide, light and dark. |
+| Ships in **S14-02** | PLL-1 … PLL-3 and PLL-W1: the row thumb at Regular and Wide, light and dark. |
 | Stays out | Any other list change; the list's own redesign. |
 
 ---
@@ -116,16 +116,16 @@ A researcher scanning the Events list sees, on each Event that has a picture, th
 
 | ID | Requirement |
 | --- | --- |
-| EVL-1 | **Row thumb.** An Event with a picture shows its lead picture in the row thumb, at the size and corner the Persons list uses for a portrait (the List's 44pt thumbnail slot). |
-| EVL-2 | **No picture.** An Event with none shows the Event mark, as today. An image that cannot load shows the mark too. |
-| EVL-3 | **Accessibility and dark mode.** The row's spoken label is unchanged, as on the Persons list when a portrait shows. Draw frame 1 in dark mode. |
-| EVL-W1 | **Wide.** The list stays as today: its content column up to 1180pt, centered in the pane (`ConclusionListPage.page`); the row thumb keeps its size. (Corrected 2026-10-30: this line said the list fills the width, which is not today's layout.) |
+| PLL-1 | **Row thumb.** A Place with a picture shows its lead picture in the row thumb, at the size and corner the Persons list uses for a portrait (the List's 44pt thumbnail slot). |
+| PLL-2 | **No picture.** A Place with none shows the Place mark, as today. An image that cannot load shows the mark too. |
+| PLL-3 | **Accessibility and dark mode.** The row's spoken label is unchanged, as on the Persons list when a portrait shows. Draw frame 1 in dark mode. |
+| PLL-W1 | **Wide.** The list stays as today: its content column up to 1180pt, centered in the pane (`ConclusionListPage.page`); the row thumb keeps its size. (Corrected 2026-10-30: this line said the list fills the width, which is not today's layout.) |
 
 ### 4.1 Wide layout
 
 | View | Regular (pane below 1600) | Wide (pane 1600 and up) | What moves where |
 | --- | --- | --- | --- |
-| Events list | The list in the content column, row thumb at the leading edge | The same column, centered | Nothing (today's layout) |
+| Places list | The list in the content column, row thumb at the leading edge | The same column, centered | Nothing (today's layout) |
 
 ---
 
@@ -133,9 +133,9 @@ A researcher scanning the Events list sees, on each Event that has a picture, th
 
 Draw each as the pane only, with no app sidebar, at Regular (1102 × 900) unless it says Wide (2296 × 1440).
 
-1. **Events list.** Six rows: two with pictures, four with the mark (EVL-1, EVL-2).
-2. **Dark mode.** Frame 1 in dark mode (EVL-3).
-3. **Wide.** Frame 1 at Wide (EVL-W1).
+1. **Places list.** Six rows: two with pictures, four with the mark (PLL-1, PLL-2).
+2. **Dark mode.** Frame 1 in dark mode (PLL-3).
+3. **Wide.** Frame 1 at Wide (PLL-W1).
 
 ---
 
@@ -146,19 +146,19 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
 | Conclusion list page | Snowflake | Ship | `Features/Conclusions/ConclusionListPage.swift` | The one list page for Persons, Events and Places. Unchanged. |
-| Row thumb | Component | Ship | `PVList` thumbnail slot, `CachedThumbnail` over `PVThumbnail` | EVL-1, EVL-2. The slot every Conclusion list already has; only the image changes. |
+| Row thumb | Component | Ship | `PVList` thumbnail slot, `CachedThumbnail` over `PVThumbnail` | PLL-1, PLL-2. The slot every Conclusion list already has; only the image changes. |
 
 ### Explicit non-goals
 
 | Do not add | Why |
 | --- | --- |
-| A bigger thumb or a picture column | EVL-1: the Persons list's size. |
-| A thumbnail menu on the row | Choosing happens on the Event page. |
+| A bigger thumb or a picture column | PLL-1: the Persons list's size. |
+| A thumbnail menu on the row | Choosing happens on the Place page. |
 
 ---
 
 ## 7. Handoff
 
 1. When the board is agreed, record on the **Board** line: the Claude Design link, the turn and frame numbers, and every change from this brief with the user's answer.
-2. Refresh the [S14-02 plan](../prs/S14-02-pictures-in-the-app.md) once all four S14-02 boards are agreed ([S14-D2](S14-D2-event-page-pictures.md) (Event page), [S14-D3](S14-D3-place-page-pictures.md) (Place page), [S14-D5](S14-D5-places-list-thumbnail.md) (Places list) and this one): copy the answers into its Decisions and **Design → macOS**, describe each frame in words, run `review-plan` again, and set it to `Planned`.
-3. S14-02 archives this brief under `design/archive/` and records it in [`../completed.md`](../completed.md).
+2. Refresh the [S14-02 plan](../../prs/S14-02-pictures-in-the-app.md) once all four S14-02 boards are agreed ([S14-D2](S14-D2-event-page-pictures.md) (Event page), [S14-D3](S14-D3-place-page-pictures.md) (Place page), [S14-D4](S14-D4-events-list-thumbnail.md) (Events list) and this one): copy the answers into its Decisions and **Design → macOS**, describe each frame in words, run `review-plan` again, and set it to `Planned`.
+3. S14-02 archives this brief under `design/archive/` and records it in [`../completed.md`](../../completed.md).
