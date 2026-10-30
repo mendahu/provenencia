@@ -124,7 +124,7 @@ struct PersonDetailContent: ConclusionDetailBody {
                 let shown = DerivedPlace.shown(side?.places ?? [])
                 lead = DerivedPlace.name(side?.places ?? [])
                 mixed = competing || DerivedPlace.extra(side?.places ?? []) > 0
-                opens = shown.map(ReconciledValueRowModel.Opens.place)
+                opens = (shown ?? side?.places.first).map(ReconciledValueRowModel.Opens.place)
                 shownOwnerID = shown?.entity.id
             }
             rows.append(.derived(

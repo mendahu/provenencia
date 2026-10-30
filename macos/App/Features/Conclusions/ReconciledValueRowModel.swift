@@ -128,8 +128,9 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
 
     /// A date or place read off the canonical graph. A kept count above 1 is
     /// the mixed badge. Its Why lists the owning handles' fields: the shown
-    /// owner's first, each under a group line when there are several, and
-    /// only the shown owner's records in primary ink.
+    /// owner's first, each under a group line when there are several or when
+    /// the group is not the shown owner's, and only the shown owner's records
+    /// in primary ink.
     static func derived(
         id: String,
         label: String,
@@ -158,7 +159,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
                 for index in records.indices { records[index].counted = false }
             }
             return ReconciliationRecordGroup(
-                owner: ordered.count > 1 ? Self.ownerLine(owner, style: style, locale: locale, orders: orders) : nil,
+                owner: ordered.count > 1 || owner.entity.id != shownOwnerID ? Self.ownerLine(owner, style: style, locale: locale, orders: orders) : nil,
                 records: records
             )
         }
@@ -186,11 +187,8 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         if let event = owner.event {
             title = EventTitleDisplay.title(event, locale: locale, orders: orders)
         } else if style == .place {
-            let names = owner.field.displayedValues.map {
-                ReconciledValueDisplay.string(for: $0.value, locale: locale, orders: orders)
-            }
             title = PlaceTitleDisplay.titleSource(
-                PlaceTitleParts(names: names, label: owner.entity.label, ref: owner.entity.ref)
+                PlaceTitleParts(toponym: owner.field, entity: owner.entity, locale: locale, orders: orders)
             ).text
         } else {
             title = EventTitleDisplay.untitled(owner.entity).text

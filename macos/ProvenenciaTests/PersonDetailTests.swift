@@ -387,6 +387,20 @@ struct PersonDetailTests {
         #expect(empty.whyTitle == "Why “Birth date”")
     }
 
+    @Test func anOwnerThatIsNotTheShownOneIsNamed() {
+        // The lead event has no Place; another event is at York. The one
+        // group is not the shown value, so it is named and not in primary ink.
+        let york = entity("pl1", "PLC-1")
+        let header = lifeHeader(birth: CatalogLifeFacts(eventCount: 2))
+        let rows = [CatalogDerivedRow(kind: .birthPlace, owners: [
+            owner(york, key: "toponym", outcomes: [D.outcome("y", "kept")], values: [D.value(1, "kept", .text("York"))]),
+        ])]
+        let birth = PersonDetailContent(detail: detail(header: header, derivedRows: rows), locale: en).rows[2]
+        #expect(birth.recordGroups.count == 1)
+        #expect(birth.recordGroups[0].owner?.title == "York")
+        #expect(birth.recordGroups[0].records.allSatisfy { !$0.counted })
+    }
+
     @Test func competingOwnersAreGroupedAndSecondary() {
         let first = entity("ev1", "EVT-4KX2M"), second = entity("ev2", "EVT-9RW7P")
         let date = CatalogDateValueInput(kind: "point", startYear: 1822)
