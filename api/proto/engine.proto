@@ -45,6 +45,9 @@ enum Method {
   // An Artifact's graph links ride UpdateArtifact and CreateArtifact.
   reserved 107, 108;
   reserved "METHOD_LINK_EVIDENCE_GRAPH_ARTIFACT", "METHOD_UNLINK_EVIDENCE_GRAPH_ARTIFACT";
+  // Identity Claims carry no confidence, and Done files claims and bridges only.
+  reserved 89, 110;
+  reserved "METHOD_LIST_CLAIM_CONFIDENCE_GRADES", "METHOD_GET_PROMOTE_CLAIM_EVIDENCE";
   METHOD_UPDATE_METADATA_FIELD = 28;
   METHOD_DELETE_SOURCE_TYPE = 29;
   METHOD_DELETE_METADATA_FIELD = 30;
@@ -104,7 +107,6 @@ enum Method {
   METHOD_PROMOTE_SUBJECT = 85;
   METHOD_LIST_SUBJECT_MEMBERSHIPS = 86;
   METHOD_LIST_PERSON_HEADERS = 87;
-  METHOD_LIST_CLAIM_CONFIDENCE_GRADES = 89;
   METHOD_GET_CONCLUSION_DETAIL = 90;
   METHOD_LIST_EVENT_HEADERS = 91;
   METHOD_LIST_PLACE_HEADERS = 93;
@@ -120,7 +122,6 @@ enum Method {
   METHOD_UPDATE_EVIDENCE_GRAPH = 105;
   METHOD_DELETE_EVIDENCE_GRAPH = 106;
   METHOD_GET_EVIDENCE_GRAPH_UNLINK_IMPACT = 109;
-  METHOD_GET_PROMOTE_CLAIM_EVIDENCE = 110;
   METHOD_REORDER_SUBJECT_TYPE_PROPERTIES = 111;
 }
 
@@ -1114,26 +1115,8 @@ message IdentityClaim {
   string subject_id = 2;
   string entity_id = 3;
   string status = 4; // provisional | accepted | rejected
-  string confidence_grade_id = 5; // empty = no grade
-  string argument = 6;
-}
-
-// ClaimConfidenceGrade is one claim_confidence_grades vocabulary row: the
-// confidence scale on Identity Claims (not Source credibility).
-message ClaimConfidenceGrade {
-  string id = 1;
-  string key = 2;
-  string origin = 3;
-  string label = 4;
-  int32 sort_order = 5;
-}
-
-message ListClaimConfidenceGradesRequest {
-  string project_dir = 1;
-}
-
-message ListClaimConfidenceGradesResponse {
-  repeated ClaimConfidenceGrade grades = 1;
+  reserved 5, 6;
+  reserved "confidence_grade_id", "argument";
 }
 
 // PromoteSubject files an accepted claim for the Subject, one transaction:
@@ -1145,8 +1128,8 @@ message PromoteSubjectRequest {
   string user_id = 2;
   string subject_id = 3;
   string entity_id = 4; // empty = mint a new handle
-  string confidence_grade_id = 5; // empty = no grade
-  string argument = 6;
+  reserved 5, 6;
+  reserved "confidence_grade_id", "argument";
 }
 
 message PromoteSubjectResponse {
@@ -1471,11 +1454,11 @@ message ReconcilerOutcomeDetail {
   string source_title = 11;
   string credibility_key = 12;       // "" = no assessment (standard)
   bool transcription_uncertain = 13;
-  string claim_confidence_key = 14;  // "" = no grade (moderate)
-  // Grade sort_order minus the default grade's (standard, moderate), as the
+  reserved 14, 16;
+  reserved "claim_confidence_key", "claim_confidence_offset";
+  // Grade sort_order minus the default grade's (standard), as the
   // auto-reconciler weighed it: below 0 is weak evidence.
   int32 credibility_offset = 15;
-  int32 claim_confidence_offset = 16;
   string artifact_id = 17;
   // For "outvoted": the winning value's Sources of every Source that voted
   // on that unit (for a name, the part it lost on). 0 otherwise.
@@ -1554,137 +1537,29 @@ message PromoteGraphAlignmentFixed {
   string target = 3;
 }
 
-// GetPromoteClaimEvidence is one Promote row's claim evidence against its
-// target, from the targets the page holds for its rows (S11-25).
-message GetPromoteClaimEvidenceRequest {
-  string project_dir = 1;
-  reserved 2;
-  reserved "source_id";
-  string subject_id = 3;
-  string handle_id = 4;
-  repeated PromoteGraphAlignmentFixed neighbors = 5;
-  string graph_id = 6;
-}
-
-message PromoteClaimEvidencePin {
-  string id = 1;
-  reserved 2, 3;
-  reserved "member_subject_id", "member_observation_id";
-  string source_id = 4;
-  ConclusionValue value = 5;
-}
-
-message PromoteClaimEvidenceLine {
-  string property_key = 1;
-  string outcome = 2;        // propertycompare.Outcome
-  string property_cause = 3; // propertycompare.Cause
-  string relation = 4;       // valuecompare.Relation
-  string cause = 5;          // valuecompare.Cause
-  reserved 6, 7, 8;
-  reserved "pinnable", "points", "checked";
-  string incoming_observation_id = 9;
-  ConclusionValue incoming = 10;
-  bool incoming_negative = 11;
-  repeated PromoteClaimEvidencePin members = 12;
-}
-
-message PromoteClaimEvidenceSection {
-  string property_key = 1;
-  repeated PromoteClaimEvidenceLine lines = 2;
-}
-
-message PromoteClaimEvidenceBundle {
-  string id = 1;
-  reserved 2, 3;
-  reserved "member_subject_id", "source_id";
-}
-
-// How one side records a relationship's fact (S11-40): the kinship pattern ("" when
-// recorded directly) and the event or parent between it passes through (a layer
-// Subject on the row's side, a handle on the entity's). Only the entity's side
-// carries the pivot's header.
-message PromoteClaimEvidenceShape {
-  string pattern = 1;
-  string pivot_id = 2;
-  oneof pivot_header {
-    PersonHeader person = 3;
-    EventHeader event = 4;
-  }
-}
-
-message PromoteClaimEvidenceRelationship {
-  string neighbor_subject_id = 1;
-  string key = 2; // BridgeKey.String(): identity only
-  string bridge_type = 3;
-  reserved 4, 5, 6, 8, 9, 10, 11;
-  reserved "term", "end", "cause", "points", "pinnable", "checked";
-  string outcome = 7;
-  repeated PromoteClaimEvidenceBundle bundles = 12;
-  repeated PromoteClaimEvidenceSection sections = 13;
-  // The link read from the neighbor's side (segmentcompare.ReadFrom): the
-  // endpoint property the neighbor is at ("" for a symmetric link), the term it
-  // carries, and whether that term names the neighbor. The term is absent for a
-  // bridge type with no term.
-  string neighbor_end = 14;
-  ConclusionTerm neighbor_term = 15;
-  bool neighbor_term_names_neighbor = 16;
-  // A participation's event type (17 replaces the string at 6); absent for any
-  // other bridge type.
-  ConclusionTerm event_type = 17;
-  // How the row's Source (layer) and the entity (canon) record the fact the
-  // line stands for; always set.
-  PromoteClaimEvidenceShape layer = 18;
-  PromoteClaimEvidenceShape canon = 19;
-}
-
-// A pin the evidence offers; checked ones are the defaults.
-message PromoteClaimEvidenceOffer {
-  string id = 1;
-  bool checked = 2;
-}
-
-message PromoteClaimEvidenceSource {
-  string id = 1;
-  string title = 2;
-}
-
-message GetPromoteClaimEvidenceResponse {
-  repeated PromoteClaimEvidenceSection sections = 1;
-  repeated PromoteClaimEvidenceRelationship relationships = 2;
-  repeated PromoteClaimEvidenceOffer offers = 3;
-  repeated PromoteClaimEvidenceSource sources = 4;
-  reserved 5;
-  reserved "lifespan";
-}
-
 message PromoteGraphAlignmentAlternative {
   string handle_id = 1;
   string handle_ref = 2;
-  double score = 3;
+  reserved 3, 7, 8, 9, 10, 11;
+  reserved "score", "assessment", "reason", "reason_property_key", "reason_property_origin", "via_neighbor_subject_id";
   oneof header {
     PersonHeader person = 4;
     EventHeader event = 5;
     PlaceHeader place = 6;
   }
-  // This record's own band and why, so the page can show it when the
-  // researcher selects this record. strong, medium, weak, none.
-  string assessment = 7;
-  // via, agrees, or weak. The page words it. With agrees, the Property.
-  string reason = 8;
-  string reason_property_key = 9;
-  string reason_property_origin = 10;
-  // Set when reason is via: the layer neighbor that reached this record.
-  string via_neighbor_subject_id = 11;
 }
 
 message PromoteGraphAlignmentRow {
   string subject_id = 1;
   string kind = 2;
-  string target = 3; // handle, new or skip; empty when Promote suggests no record
+  // Where the page starts the row (graphalign.Row.Start): handle, new or skip;
+  // empty when Promote suggests no record. handle_id and handle_ref name the
+  // record when target is handle.
+  string target = 3;
   string handle_id = 4;
   string handle_ref = 5;
-  double score = 6;
-  string assessment = 7; // strong, medium, weak, none
+  reserved 6, 7;
+  reserved "score", "assessment";
   reserved 8; // reasons: English strings; see reason
   reserved 9; // comparisons: GetPromoteClaimEvidence
   repeated PromoteGraphAlignmentAlternative alternatives = 10;
@@ -1697,20 +1572,14 @@ message PromoteGraphAlignmentRow {
   }
   // Subject the walk reached this row from, when a neighbor seeded it.
   string via_neighbor_subject_id = 16;
-  string via_bridge_type = 17;
-  string via_role = 18;
+  reserved 17, 18;
+  reserved "via_bridge_type", "via_role";
   // With possible_duplicate: the other row on this layer this one may be the
   // same as (it took the handle this row wanted, or both would be new records
   // (unplaced or decided New) and score alike).
   string duplicate_of_subject_id = 19;
-  // Why the row reads as it does: via, decided, agrees, taken, empty, or
-  // nothing when Promote suggests no record. The page words it. With agrees, the agreeing Property.
-  string reason = 20;
-  string reason_property_key = 21;
-  string reason_property_origin = 22;
-  // A comparison behind the pair this row reports conflicts, whatever its
-  // band. The page marks it.
-  bool contested = 23;
+  reserved 20, 21, 22, 23;
+  reserved "reason", "reason_property_key", "reason_property_origin", "contested";
   // A graphalign.Reason move code, set when settling released an earlier
   // pair of this row. Empty when no move.
   string move_reason = 24;
@@ -1724,7 +1593,7 @@ message ProposePromoteGraphAlignmentResponse {
   int64 revision = 2;
 }
 
-// ApplyPromoteGraphAlignment files one Done: claims, pins, and bridges, in
+// ApplyPromoteGraphAlignment files one Done: claims and bridges, in
 // one transaction. seen_revision is the proposal's revision; a later write
 // fails the batch (promote.stale).
 message ApplyPromoteGraphAlignmentRequest {
@@ -1741,19 +1610,15 @@ message ApplyPromoteGraphAlignmentRow {
   string subject_id = 1;
   string target = 2; // handle, new, skip
   string entity_id = 3;
-  string confidence_grade_id = 4;
-  string argument = 5;
-  reserved 6; // pairs: pin_ids
-  // The pins the researcher left checked in the row's sheet.
-  repeated string pin_ids = 7;
-  // The sheet was never opened: Go pins what the evidence checks. Not with pin_ids.
-  bool default_pins = 8;
+  reserved 4, 5, 6, 7, 8; // pairs
+  reserved "confidence_grade_id", "argument", "pin_ids", "default_pins";
 }
 
 message ApplyPromoteGraphAlignmentWritten {
   CanonicalEntity entity = 1;
   IdentityClaim claim = 2;
-  int32 pins = 3;
+  reserved 3;
+  reserved "pins";
 }
 
 message ApplyPromoteGraphAlignmentResponse {
