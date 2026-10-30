@@ -107,20 +107,30 @@ struct PVPageColumnsTests {
     }
 
     @Test(arguments: [
-        (0, 500, false, false), (8, 500, false, false), (9, 500, false, true),
-        (4, 500, true, true), (0, 500, true, false), (-20, 500, true, false),
-        (50, 119, false, false), (50, 120, false, true),
-        (50, 70, true, true), (50, 0, true, false), (50, 70, false, false), (0, 300, true, false),
-    ] as [(CGFloat, CGFloat, Bool, Bool)])
-    func scrolledFollowsTheBoard(offset: CGFloat, overflow: CGFloat, was: Bool, expected: Bool) {
-        #expect(PVPageColumnsMetrics.isScrolled(offset: offset, overflow: overflow, wasScrolled: was) == expected)
+        (0, 500, false, 0, false), (8, 500, false, 0, false), (9, 500, false, 0, true),
+        (4, 500, true, 0, true), (0, 500, true, 0, false), (-20, 500, true, 0, false),
+        (50, 119, false, 0, false), (50, 120, false, 0, true),
+        (50, 70, true, 0, true), (50, 0, true, 0, false), (50, 70, false, 0, false), (0, 300, true, 0, false),
+        (50, 130, false, 150, false), (50, 170, false, 150, true), (50, 130, false, 116, true),
+    ] as [(CGFloat, CGFloat, Bool, CGFloat, Bool)])
+    func scrolledFollowsTheBoard(offset: CGFloat, overflow: CGFloat, was: Bool, bandShrink: CGFloat, expected: Bool) {
+        #expect(PVPageColumnsMetrics.isScrolled(
+            offset: offset, overflow: overflow, wasScrolled: was, bandShrink: bandShrink
+        ) == expected)
     }
 
-    @Test func compactingDoesNotUndoItself() {
-        for overflow in stride(from: CGFloat(120), to: 236, by: 4) {
-            let compact = PVPageColumnsMetrics.isScrolled(offset: 50, overflow: overflow, wasScrolled: false)
-            let after = PVPageColumnsMetrics.isScrolled(offset: 50, overflow: overflow - 116, wasScrolled: compact)
-            #expect(after == compact, "overflow \(overflow)")
+    /// 116 is a one-line header, 150 a wrapped name with its badge, 171 a
+    /// wrapped life line besides.
+    @Test(arguments: [116, 150, 171] as [CGFloat])
+    func compactingDoesNotUndoItself(bandShrink: CGFloat) {
+        for overflow in stride(from: CGFloat(120), to: bandShrink + 40, by: 4) {
+            let compact = PVPageColumnsMetrics.isScrolled(
+                offset: 50, overflow: overflow, wasScrolled: false, bandShrink: bandShrink
+            )
+            let after = PVPageColumnsMetrics.isScrolled(
+                offset: 50, overflow: overflow - bandShrink, wasScrolled: compact, bandShrink: bandShrink
+            )
+            #expect(after == compact, "shrink \(bandShrink), overflow \(overflow)")
         }
     }
 }

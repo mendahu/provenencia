@@ -9,9 +9,8 @@ enum PVPageColumnsMetrics {
     /// The scroll view's coordinate space, in which the top sentinel is measured.
     static let scrollSpace = "pv.pageColumns.scroll"
     /// A pinned header starts to compact only when the content overflows its
-    /// viewport by at least this much, measured under the full header. Compacting
-    /// hands the viewport back the height the header loses, so a smaller
-    /// overflow would be gone once compact and the header would flip back.
+    /// viewport by at least this much (or by its measured shrink plus
+    /// `compactOffset`, when that is more), measured under the full header.
     static let compactMinOverflow: CGFloat = 120
     /// How far the content scrolls before a pinned header compacts.
     static let compactOffset: CGFloat = 8
@@ -61,11 +60,22 @@ enum PVPageColumnsMetrics {
 
     /// Whether a pinned header shows compact. Hysteresis: past
     /// `compactOffset` it compacts, back at the top it expands, and in
-    /// between it keeps its state. Content that barely overflows never starts
-    /// to compact; once compact, it stays so while any overflow is left, since
-    /// the overflow is then measured under the shorter header.
-    static func isScrolled(offset: CGFloat, overflow: CGFloat, wasScrolled: Bool) -> Bool {
-        if !wasScrolled && overflow < compactMinOverflow { return false }
+    /// between it keeps its state.
+    ///
+    /// Compacting hands the viewport back `bandShrink`, the height the header
+    /// loses (a wrapped name makes it more than `compactMinOverflow`). So it
+    /// starts to compact only when the overflow, measured under the full
+    /// header, still leaves `compactOffset` of scroll under the compact one;
+    /// a smaller overflow would be gone once compact and the header would
+    /// flip back. Once compact it stays so while any overflow is left, the
+    /// overflow then being measured under the shorter header.
+    static func isScrolled(
+        offset: CGFloat,
+        overflow: CGFloat,
+        wasScrolled: Bool,
+        bandShrink: CGFloat
+    ) -> Bool {
+        if !wasScrolled && overflow < max(compactMinOverflow, bandShrink + compactOffset) { return false }
         if wasScrolled && overflow <= 0 { return false }
         if offset > compactOffset { return true }
         if offset <= 0 { return false }
@@ -98,6 +108,8 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
     @State private var contentHeight: CGFloat = 0
     @State private var viewportHeight: CGFloat = 0
     @State private var isScrolled = false
+    @State private var fullBandHeight: CGFloat = 0
+    @State private var compactBandHeight: CGFloat = 0
 
     init(
         headerPinned: Bool = false,
@@ -122,6 +134,13 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
                 PVPageColumnsBandLayout(widthClass: widthClass, hasSecondary: hasSecondary) {
                     header(isScrolled)
                 }
+                .background(alignment: .top) {
+                    // Both forms are drawn hidden at the band's width, so the
+                    // height the header loses on compacting is known before it
+                    // compacts.
+                    measuredBand(compact: false)
+                    measuredBand(compact: true)
+                }
                 PVColor.borderDefault.frame(height: 1)
                 scroll(measures: true) {
                     columns.padding(.vertical, PVSpacing.space8)
@@ -140,6 +159,20 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
                 }
                 .padding(.vertical, PVSpacing.space8)
             }
+        }
+    }
+
+    private func measuredBand(compact: Bool) -> some View {
+        PVPageColumnsBandLayout(widthClass: widthClass, hasSecondary: hasSecondary) {
+            header(compact)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .hidden()
+        .accessibilityHidden(true)
+        .allowsHitTesting(false)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+            if compact { compactBandHeight = $0 } else { fullBandHeight = $0 }
+            refreshScrolled()
         }
     }
 
@@ -194,7 +227,8 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
         let next = PVPageColumnsMetrics.isScrolled(
             offset: offset,
             overflow: contentHeight - viewportHeight,
-            wasScrolled: isScrolled
+            wasScrolled: isScrolled,
+            bandShrink: max(0, fullBandHeight - compactBandHeight)
         )
         if next != isScrolled { isScrolled = next }
     }
