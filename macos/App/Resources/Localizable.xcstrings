@@ -49,6 +49,18 @@
         }
       }
     },
+    "designSystem.segmentedControl.shortcutHelp": {
+      "comment": "Tooltip of a PVSegmentedControl segment that has a keyboard shortcut; arguments are the segment's label and the key pressed with Command",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ (⌘%2$@)"
+          }
+        }
+      }
+    },
     "artifactChecklist.heading": {
       "comment": "Heading of an Artifact checklist",
       "extractionState": "manual",

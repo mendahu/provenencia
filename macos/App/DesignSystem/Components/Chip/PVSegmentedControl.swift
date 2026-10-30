@@ -26,6 +26,17 @@ struct PVSegmentedControl<Value: Hashable>: View {
         var accessibilityIdentifier: String
         var id: String { accessibilityIdentifier }
 
+        /// The tooltip that names the shortcut; nil when the item has none.
+        fileprivate var shortcutHelp: String? {
+            guard let shortcut else { return nil }
+            let name: String
+            switch title {
+            case .key(let key): name = L10n.string(key)
+            case .text(let text): name = text
+            }
+            return L10n.DesignSystem.segmentShortcutHelp(name, key: String(shortcut.character))
+        }
+
         /// Fixed UI copy.
         init(
             _ title: LocalizedStringResource,
@@ -87,6 +98,7 @@ struct PVSegmentedControl<Value: Hashable>: View {
                 chip(item)
                     .disabled(item.isDisabled)
                     .modifier(PVSegmentShortcut(shortcut: item.shortcut))
+                    .help(item.shortcutHelp ?? "")
                     .accessibilityIdentifier(item.accessibilityIdentifier)
             }
         }

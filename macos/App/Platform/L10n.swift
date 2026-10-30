@@ -111,6 +111,13 @@ enum L10n {
             defaultValue: "Locked",
             comment: "Spoken value of a PVCheckbox for a link or binding the researcher cannot clear"
         )
+        static func segmentShortcutHelp(_ label: String, key: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "designSystem.segmentedControl.shortcutHelp",
+                defaultValue: "%1$@ (⌘%2$@)",
+                comment: "Tooltip of a PVSegmentedControl segment that has a keyboard shortcut; arguments are the segment's label and the key pressed with Command"
+            ), label, key)
+        }
 
         static let formDialogDiscardTitle = LocalizedStringResource(
             "designSystem.formDialog.discardTitle",
