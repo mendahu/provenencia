@@ -490,6 +490,24 @@ func (f *fixture) lifePerson() subjects.Subject {
 	return p
 }
 
+// deniedDate cites a date on event that a stronger negative of the same date
+// denies: the positive rides an uncertain transcription, the negative does not.
+func (f *fixture) deniedDate(event subjects.Subject, y int) {
+	f.t.Helper()
+	date := f.prop("date").ID
+	for _, c := range []struct {
+		uncertain bool
+		polarity  string
+	}{{true, observations.PolarityPositive}, {false, observations.PolarityNegative}} {
+		_, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				ArtifactID: f.artifact.ID, LocatorJSON: locator, TranscriptionUncertain: c.uncertain,
+			}, []observations.Input{{SubjectID: event.ID, PropertyID: date, Date: pointYear(y), Polarity: c.polarity}})
+		})
+		must(f.t, err)
+	}
+}
+
 func TestPersonLifeOwners(t *testing.T) {
 	type owner struct {
 		entity []byte
@@ -573,6 +591,24 @@ func TestPersonLifeOwners(t *testing.T) {
 			w.birth.places = []owner{{y, "toponym"}}
 			return w
 		}},
+		{"denied-only date", func(f *fixture) world {
+			p := f.lifePerson()
+			ev := f.lifeEvent(p, "birth", "", 0, 2)
+			f.deniedDate(ev, 1817)
+			var w world
+			w.person = f.promoteSubject(p)
+			w.birth.dates = []owner{{f.promoteSubject(ev), "date"}}
+			return w
+		}},
+		{"same event linked twice", func(f *fixture) world {
+			p := f.lifePerson()
+			ev := f.lifeEvent(p, "birth", "date", 1817, 2)
+			f.participation(p, ev, "subject")
+			var w world
+			w.person = f.promoteSubject(p)
+			w.birth.dates = []owner{{f.promoteSubject(ev), "date"}}
+			return w
+		}},
 		{"no events", func(f *fixture) world {
 			p := f.lifePerson()
 			return world{person: f.promoteSubject(p)}
@@ -633,81 +669,109 @@ func TestPersonLifeOwners(t *testing.T) {
 func bytes16(b byte) []byte { return bytes.Repeat([]byte{b}, 16) }
 
 func TestPersonDerivedRows(t *testing.T) {
-	t.Run("graph queries do not grow with events and Places", func(t *testing.T) {
-		f := newFixture(t)
-		york := f.placeSubject("York", nil, nil, 0, 0)
-		small := f.lifePerson()
-		smallBirth := f.lifeEvent(small, "birth", "date", 1817, 2, york)
-		big := f.lifePerson()
-		var bigPlaces []subjects.Subject
-		for i := range 2 {
-			bigPlaces = append(bigPlaces, f.placeSubject(fmt.Sprintf("Town %d", i), nil, nil, int64(4+2*i), 0))
-		}
-		bigBirths := []subjects.Subject{
-			f.lifeEvent(big, "birth", "date", 1818, 10, bigPlaces...),
-			f.lifeEvent(big, "birth", "date", 1819, 12, bigPlaces...),
-		}
-		smallID, bigID := f.promoteSubject(small), f.promoteSubject(big)
-		f.promoteSubject(smallBirth)
-		for _, b := range bigBirths {
-			f.promoteSubject(b)
-		}
-		f.promoteSubject(york)
-		for _, p := range bigPlaces {
-			f.promoteSubject(p)
-		}
-		count := func(id []byte) (int, []conclusiondetails.DerivedRow) {
-			t.Helper()
-			g := f.c.Graph()
-			g.Drop()
-			_, err := g.Vocabulary()
-			must(t, err)
-			n := 0
-			g.SetQueryCounterForTest(func() { n++ })
-			defer g.SetQueryCounterForTest(nil)
+	tests := []struct {
+		name string
+		run  func(t *testing.T, f *fixture)
+	}{
+		{"graph queries do not grow with events and Places", func(t *testing.T, f *fixture) {
+			york := f.placeSubject("York", nil, nil, 0, 0)
+			small := f.lifePerson()
+			smallBirth := f.lifeEvent(small, "birth", "date", 1817, 2, york)
+			big := f.lifePerson()
+			var bigPlaces []subjects.Subject
+			for i := range 2 {
+				bigPlaces = append(bigPlaces, f.placeSubject(fmt.Sprintf("Town %d", i), nil, nil, int64(4+2*i), 0))
+			}
+			bigBirths := []subjects.Subject{
+				f.lifeEvent(big, "birth", "date", 1818, 10, bigPlaces...),
+				f.lifeEvent(big, "birth", "date", 1819, 12, bigPlaces...),
+			}
+			smallID, bigID := f.promoteSubject(small), f.promoteSubject(big)
+			f.promoteSubject(smallBirth)
+			for _, b := range bigBirths {
+				f.promoteSubject(b)
+			}
+			f.promoteSubject(york)
+			for _, p := range bigPlaces {
+				f.promoteSubject(p)
+			}
+			count := func(id []byte) (int, []conclusiondetails.DerivedRow) {
+				t.Helper()
+				g := f.c.Graph()
+				g.Drop()
+				_, err := g.Vocabulary()
+				must(t, err)
+				n := 0
+				g.SetQueryCounterForTest(func() { n++ })
+				defer g.SetQueryCounterForTest(nil)
+				rows, err := conclusiondetails.PersonDerivedRows(f.c, id)
+				must(t, err)
+				return n, rows
+			}
+			smallN, smallRows := count(smallID)
+			bigN, bigRows := count(bigID)
+			if len(smallRows) != 2 || len(bigRows) != 2 {
+				t.Fatalf("rows: small %d, big %d, want a birth date and a birth place each", len(smallRows), len(bigRows))
+			}
+			if len(bigRows[0].Owners) != 2 || len(bigRows[1].Owners) != 2 {
+				t.Fatalf("big owners: %d dates, %d places", len(bigRows[0].Owners), len(bigRows[1].Owners))
+			}
+			if smallN == 0 || smallN != bigN {
+				t.Fatalf("graph queries: %d for one event and Place, %d for two events and two Places", smallN, bigN)
+			}
+		}},
+
+		{"born and died at York", func(t *testing.T, f *fixture) {
+			york := f.placeSubject("York", nil, nil, 0, 0)
+			p := f.lifePerson()
+			birth := f.lifeEvent(p, "birth", "date", 1817, 2, york)
+			death := f.lifeEvent(p, "death", "date", 1890, 4, york)
+			id := f.promoteSubject(p)
+			f.promoteSubject(birth)
+			f.promoteSubject(death)
+			yorkID := f.promoteSubject(york)
 			rows, err := conclusiondetails.PersonDerivedRows(f.c, id)
 			must(t, err)
-			return n, rows
-		}
-		smallN, smallRows := count(smallID)
-		bigN, bigRows := count(bigID)
-		if len(smallRows) != 2 || len(bigRows) != 2 {
-			t.Fatalf("rows: small %d, big %d, want a birth date and a birth place each", len(smallRows), len(bigRows))
-		}
-		if len(bigRows[0].Owners) != 2 || len(bigRows[1].Owners) != 2 {
-			t.Fatalf("big owners: %d dates, %d places", len(bigRows[0].Owners), len(bigRows[1].Owners))
-		}
-		if smallN == 0 || smallN != bigN {
-			t.Fatalf("graph queries: %d for one event and Place, %d for two events and two Places", smallN, bigN)
-		}
-	})
-
-	t.Run("born and died at York", func(t *testing.T) {
-		f := newFixture(t)
-		york := f.placeSubject("York", nil, nil, 0, 0)
-		p := f.lifePerson()
-		birth := f.lifeEvent(p, "birth", "date", 1817, 2, york)
-		death := f.lifeEvent(p, "death", "date", 1890, 4, york)
-		id := f.promoteSubject(p)
-		f.promoteSubject(birth)
-		f.promoteSubject(death)
-		yorkID := f.promoteSubject(york)
-		rows, err := conclusiondetails.PersonDerivedRows(f.c, id)
-		must(t, err)
-		kinds := map[conclusiondetails.DerivedRowKind]conclusiondetails.DerivedRow{}
-		for _, r := range rows {
-			kinds[r.Kind] = r
-		}
-		bp, dp := kinds[conclusiondetails.DerivedRowBirthPlace], kinds[conclusiondetails.DerivedRowDeathPlace]
-		if len(bp.Owners) != 1 || len(dp.Owners) != 1 ||
-			!bytes.Equal(bp.Owners[0].Entity.ID, yorkID) || !bytes.Equal(dp.Owners[0].Entity.ID, yorkID) {
-			t.Fatalf("place rows %+v / %+v", bp, dp)
-		}
-		if !reflect.DeepEqual(bp.Owners[0].Field, dp.Owners[0].Field) || len(bp.Owners[0].Field.Outcomes) != 1 {
-			t.Fatalf("York fields differ: %+v / %+v", bp.Owners[0].Field, dp.Owners[0].Field)
-		}
-		if bp.Owners[0].Event != nil || kinds[conclusiondetails.DerivedRowBirthDate].Owners[0].Event == nil {
-			t.Fatal("only date owners carry an Event header")
-		}
-	})
+			kinds := map[conclusiondetails.DerivedRowKind]conclusiondetails.DerivedRow{}
+			for _, r := range rows {
+				kinds[r.Kind] = r
+			}
+			bp, dp := kinds[conclusiondetails.DerivedRowBirthPlace], kinds[conclusiondetails.DerivedRowDeathPlace]
+			if len(bp.Owners) != 1 || len(dp.Owners) != 1 ||
+				!bytes.Equal(bp.Owners[0].Entity.ID, yorkID) || !bytes.Equal(dp.Owners[0].Entity.ID, yorkID) {
+				t.Fatalf("place rows %+v / %+v", bp, dp)
+			}
+			if !reflect.DeepEqual(bp.Owners[0].Field, dp.Owners[0].Field) || len(bp.Owners[0].Field.Outcomes) != 1 {
+				t.Fatalf("York fields differ: %+v / %+v", bp.Owners[0].Field, dp.Owners[0].Field)
+			}
+			if bp.Owners[0].Event != nil || kinds[conclusiondetails.DerivedRowBirthDate].Owners[0].Event == nil {
+				t.Fatal("only date owners carry an Event header")
+			}
+		}},
+		{"denied-only date", func(t *testing.T, f *fixture) {
+			p := f.lifePerson()
+			ev := f.lifeEvent(p, "birth", "", 0, 2)
+			f.deniedDate(ev, 1817)
+			id := f.promoteSubject(p)
+			evID := f.promoteSubject(ev)
+			rows, err := conclusiondetails.PersonDerivedRows(f.c, id)
+			must(t, err)
+			if len(rows) != 1 || rows[0].Kind != conclusiondetails.DerivedRowBirthDate || len(rows[0].Owners) != 1 {
+				t.Fatalf("rows %+v, want one birth date owner", rows)
+			}
+			o := rows[0].Owners[0]
+			denied := 0
+			for _, out := range o.Field.Outcomes {
+				if out.Reason == "denied" {
+					denied++
+				}
+			}
+			if !bytes.Equal(o.Entity.ID, evID) || denied != 1 {
+				t.Fatalf("owner %+v, want the event's date field with one denied outcome", o)
+			}
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) { tc.run(t, newFixture(t)) })
+	}
 }

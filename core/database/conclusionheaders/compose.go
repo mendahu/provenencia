@@ -457,24 +457,7 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 	if err := g.Nodes(eventIDs); err != nil {
 		return nil, err
 	}
-	var placeIDs [][]byte
-	for _, id := range eventIDs {
-		n, err := g.Node(id)
-		if err != nil {
-			return nil, err
-		}
-		if n == nil {
-			continue
-		}
-		locations, err := follow(g, id, hops.PlacesOfEvent)
-		if err != nil {
-			return nil, err
-		}
-		for _, l := range locations {
-			placeIDs = append(placeIDs, l.Neighbor)
-		}
-	}
-	pg, err := buildPlaceGraph(g, v, placeIDs)
+	pg, err := eventPlaceGraph(g, v, eventIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -674,17 +657,11 @@ func PersonLifeOwners(c *database.Catalog, personID []byte) (birth, death LifeOw
 	if err != nil {
 		return LifeOwners{}, LifeOwners{}, err
 	}
-	var placeIDs [][]byte
+	var eventIDs [][]byte
 	for _, pick := range append(append([]lifePick(nil), births...), deaths...) {
-		locations, err := follow(g, pick.event.ID, hops.PlacesOfEvent)
-		if err != nil {
-			return LifeOwners{}, LifeOwners{}, err
-		}
-		for _, l := range locations {
-			placeIDs = append(placeIDs, l.Neighbor)
-		}
+		eventIDs = append(eventIDs, pick.event.ID)
 	}
-	pg, err := buildPlaceGraph(g, v, placeIDs)
+	pg, err := eventPlaceGraph(g, v, eventIDs)
 	if err != nil {
 		return LifeOwners{}, LifeOwners{}, err
 	}
@@ -697,12 +674,39 @@ func PersonLifeOwners(c *database.Catalog, personID []byte) (birth, death LifeOw
 	return birth, death, nil
 }
 
+// eventPlaceGraph builds the placeGraph for every Place of the given events,
+// skipping events with no node.
+func eventPlaceGraph(g *graphcache.Graph, v vocab, eventIDs [][]byte) (*placeGraph, error) {
+	var placeIDs [][]byte
+	for _, id := range eventIDs {
+		n, err := g.Node(id)
+		if err != nil {
+			return nil, err
+		}
+		if n == nil {
+			continue
+		}
+		locations, err := follow(g, id, hops.PlacesOfEvent)
+		if err != nil {
+			return nil, err
+		}
+		for _, l := range locations {
+			placeIDs = append(placeIDs, l.Neighbor)
+		}
+	}
+	return buildPlaceGraph(g, v, placeIDs)
+}
+
 func lifeOwners(g *graphcache.Graph, v vocab, pg *placeGraph, picks []lifePick) (LifeOwners, error) {
 	sort.SliceStable(picks, func(i, j int) bool { return lifeBefore(picks[i], picks[j]) })
 	var out LifeOwners
 	listed := map[string]bool{}
+	dated := map[string]bool{}
 	for _, pick := range picks {
-		out.Dates = append(out.Dates, FieldOwner{Entity: entityOf(pick.event), PropertyID: pick.dateProp})
+		if !dated[string(pick.event.ID)] {
+			dated[string(pick.event.ID)] = true
+			out.Dates = append(out.Dates, FieldOwner{Entity: entityOf(pick.event), PropertyID: pick.dateProp})
+		}
 		places, err := eventPlaces(g, v, pg, pick.event)
 		if err != nil {
 			return LifeOwners{}, err
