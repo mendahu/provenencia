@@ -58,17 +58,8 @@ enum ReconcilerReason: Sendable, Equatable {
     }
 }
 
-/// Why a Promote row reads as it does, and why settling moved it
-/// (`graphalign.Reason`). The page words the typed cases.
-enum PromoteReasonCode: Sendable, Equatable {
-    /// Promote suggests no record for this row.
-    case unplaced
-    case via
-    case decided
-    case agrees
-    case weak
-    case taken
-    case empty
+/// Why settling moved a Promote row (`graphalign.Move.Reason`). The page words the typed cases.
+enum PromoteMoveReason: Sendable, Equatable {
     case neighborPlaced
     case neighborMoved
     case neighborReleased
@@ -77,13 +68,6 @@ enum PromoteReasonCode: Sendable, Equatable {
 
     init(wire: String) {
         switch wire {
-        case "": self = .unplaced
-        case "via": self = .via
-        case "decided": self = .decided
-        case "agrees": self = .agrees
-        case "weak": self = .weak
-        case "taken": self = .taken
-        case "empty": self = .empty
         case "neighbor_placed": self = .neighborPlaced
         case "neighbor_moved": self = .neighborMoved
         case "neighbor_released": self = .neighborReleased

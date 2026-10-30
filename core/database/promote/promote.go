@@ -1,8 +1,6 @@
 // Package promote is the Identity Claim write behind Promote: one transaction
 // per promoted Subject. A step either mints a new handle of the Subject's type
-// or joins an existing one, and files an accepted claim. A batch row may carry
-// pin sets: each pins its Observations on the new claim and backfills them onto
-// the named member's claim (conclusion-layer-data-model §5.1).
+// or joins an existing one, and files an accepted claim.
 package promote
 
 import (
@@ -31,17 +29,8 @@ var (
 // Input is one Promote step. A nil EntityID mints a new handle; otherwise
 // the Subject joins that handle, which must be unmerged and of its type.
 type Input struct {
-	SubjectID         []byte
-	EntityID          []byte
-	ConfidenceGradeID []byte // nil = no grade
-	Argument          string
-}
-
-// PinSet is evidence the researcher confirmed: Observations pinned on the new
-// claim and backfilled onto Member's accepted claim.
-type PinSet struct {
-	Member       []byte
-	Observations [][]byte
+	SubjectID []byte
+	EntityID  []byte
 }
 
 // Result is the handle and the claim one step wrote. On a join, Entity is
@@ -53,8 +42,7 @@ type Result struct {
 
 // Save files an accepted Identity Claim for the Subject in one transaction,
 // recorded as promote_subject: onto a newly minted handle of its type, or onto
-// in.EntityID. It pins nothing: SaveBatch is the one pin write. The caller
-// records the returned changes.
+// in.EntityID. The caller records the returned changes.
 func Save(tx *database.Tx, userID []byte, in Input) (Result, []rowchange.Change, error) {
 	if tx == nil {
 		return Result{}, nil, ErrInvalid
@@ -106,11 +94,9 @@ func Save(tx *database.Tx, userID []byte, in Input) (Result, []rowchange.Change,
 		}
 	}
 	claim, claimChange, err := identityclaims.InsertTx(q, identityclaims.CreateInput{
-		SubjectID:         subject.ID,
-		EntityID:          entity.ID,
-		Status:            identityclaims.StatusAccepted,
-		ConfidenceGradeID: in.ConfidenceGradeID,
-		Argument:          in.Argument,
+		SubjectID: subject.ID,
+		EntityID:  entity.ID,
+		Status:    identityclaims.StatusAccepted,
 	})
 	if err != nil {
 		return Result{}, nil, err
@@ -121,51 +107,6 @@ func Save(tx *database.Tx, userID []byte, in Input) (Result, []rowchange.Change,
 		return Result{}, nil, err
 	}
 	return Result{Entity: entity, Claim: claim}, changes, nil
-}
-
-// pinSets pins every Observation of every set on the new claim and on the
-// set's Member's accepted claim (backfill). Member and every Observation id
-// must be 16 bytes, and Member must have an accepted claim. Pins a claim
-// already carries are skipped; it returns how many the new claim carries and a
-// change per new pin.
-func pinSets(tx *sql.Tx, claim identityclaims.Claim, sets []PinSet) (int, []rowchange.Change, error) {
-	var (
-		changes []rowchange.Change
-		pins    int
-	)
-	for _, set := range sets {
-		if len(set.Member) != 16 {
-			return 0, nil, ErrInvalid
-		}
-		for _, obsID := range set.Observations {
-			if len(obsID) != 16 {
-				return 0, nil, ErrInvalid
-			}
-		}
-		member, err := identityclaims.AcceptedEntityForSubjectTx(tx, set.Member)
-		if errors.Is(err, sql.ErrNoRows) {
-			return 0, nil, ErrInvalid
-		}
-		if err != nil {
-			return 0, nil, err
-		}
-		for _, claimID := range [][]byte{claim.ID, member.ID} {
-			for _, obsID := range set.Observations {
-				change, ok, err := identityclaims.PinTx(tx, claimID, obsID)
-				if err != nil {
-					return 0, nil, err
-				}
-				if !ok {
-					continue
-				}
-				changes = append(changes, change)
-				if bytes.Equal(claimID, claim.ID) {
-					pins++
-				}
-			}
-		}
-	}
-	return pins, changes, nil
 }
 
 // joinTarget loads an existing handle for a join. A missing or merged handle

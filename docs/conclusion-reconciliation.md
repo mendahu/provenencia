@@ -37,7 +37,7 @@ Names and dates have the most interesting logic because they are structured, but
 # 2. Principles
 
 1. **Display policy, never truth.** Auto-reconciliation is stateless projection. It never writes a claim, an Observation, a DateValue or a NameValue row ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §2.5, §7). Its output lives only in the derived auto-reconciler cache, rebuildable from truth tables.
-2. **No stored scores.** Reconciliation weighs credibility, certainty and confidence but never multiplies them into a stored rollup ([`research-judgment-model.md`](research-judgment-model.md) §1.1). The cache stores order, counts and reasons, not a likelihood.
+2. **No stored scores.** Reconciliation weighs credibility and certainty but never multiplies them into a stored rollup ([`research-judgment-model.md`](research-judgment-model.md) §1.1). The cache stores order, counts and reasons, not a likelihood.
 3. **A Reconciliation Claim always wins.** An accepted Reconciliation Claim on (entity, Property) is the displayed value, whatever the reconciler would say. A provisional claim is a working choice the UI shows differently. A rejected claim is history only. This holds for **every** value type.
 4. **Be bold, and show why.** Because a researcher can always override with a claim, the reconciler may choose decisively. It must say what it considered and why each candidate won or lost, so the UI can explain it.
 5. **The Observation normalizes; the reconciler doesn't interpret.** Turning what a Source said into a comparable value is the Observation's job. A cited age becomes a birth DateValue on the Observation, with UI help for first-class events such as birth and death. The reconciler compares values of one type and does not reach into another Property to reinterpret them.
@@ -66,10 +66,9 @@ A **candidate** is one Observation of the Property on a member Subject of the en
 | Source | Citation → Artifact → Source | majority counts **Sources**, not Observations |
 | Source credibility | `source_credibility_assessments` (none = `standard`) | evidence strength |
 | Transcription certainty | `citations.transcription_uncertain` | evidence strength |
-| Identity Claim confidence | the member's claim (none = `moderate`) | evidence strength |
 | Identity Claim status | the member's claim | membership (below) |
 
-Credibility and confidence are read relative to their vocabulary's default grade by **sort order**, not by key. A candidate is **weak** if any of the three is below default. One candidate is **stronger** than another by comparing credibility, then certainty, then confidence.
+Credibility is read relative to its vocabulary's default grade by **sort order**, not by key. A candidate is **weak** if either is below default. One candidate is **stronger** than another by comparing credibility, then certainty.
 
 **Membership status:**
 
@@ -211,7 +210,7 @@ Writes that recompute affected entities:
 
 - Observation save or delete, Subject delete, Promote (claim create)
 - Source credibility change, Citation certainty change
-- Identity Claim status or confidence change (no edit path exists yet)
+- Identity Claim status change (no edit path exists yet)
 - **Property configuration change** (cardinality, and any per-Property reconciliation setting)
 - Reconciliation Claim write (when claims ship)
 
@@ -285,7 +284,7 @@ The auto-reconciler, its cache, the pages that read it, place chains, Promote, a
 | Subject-valued bridges filed by their ends | `core/database/identityclaims` |
 | Place chains at a date, folded from `part_of` | `core/database/conclusionheaders` |
 | Graph alignment and the proposal read | `core/graphalign`, `core/database/promotealign` |
-| Batch Promote: claims, one-hop pins (to be removed, [conclusion layer §5](conclusion-layer-data-model.md#5-membership-evidence)), and bridges in one transaction | `core/database/promote` |
+| Batch Promote: claims and bridges in one transaction | `core/database/promote` |
 | Search documents composed from the list headers | `core/database/searchindex`, `core/search` |
 
 Reconciliation Claims, which would override a cached value, are not built. An earlier names-first cut of the name and evidence work was closed; its migrations landed with the schema that shipped.

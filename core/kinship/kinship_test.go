@@ -542,28 +542,6 @@ func TestEdgeClone(t *testing.T) {
 	}
 }
 
-func TestRecordingShown(t *testing.T) {
-	s1 := kinship.Shape{Pattern: kinship.PatternMarriageSpouses, Pivot: []byte("E1")}
-	s2 := kinship.Shape{Pattern: kinship.PatternBirthParents, Pivot: []byte("E2")}
-	cases := []struct {
-		name string
-		r    kinship.Recording
-		want kinship.Shape
-	}{
-		{"zero is direct", kinship.Recording{}, kinship.Shape{}},
-		{"also recorded directly reads as direct", kinship.Recording{Shapes: []kinship.Shape{s1, s2}}, kinship.Shape{}},
-		{"only implied shows the first shape", kinship.Recording{Shapes: []kinship.Shape{s1, s2}, OnlyImplied: true}, s1},
-		{"implied with no shape is direct", kinship.Recording{OnlyImplied: true}, kinship.Shape{}},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			if got := c.r.Shown(); !reflect.DeepEqual(got, c.want) {
-				t.Fatalf("Shown() = %+v, want %+v", got, c.want)
-			}
-		})
-	}
-}
-
 func TestPatterns(t *testing.T) {
 	want := []kinship.Pattern{kinship.PatternMarriageSpouses, kinship.PatternBirthParents, kinship.PatternParentOfParent}
 	if got := kinship.Patterns(); !slices.Equal(got, want) {

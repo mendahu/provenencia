@@ -4,7 +4,6 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/promote"
-	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
@@ -24,7 +23,7 @@ func ApplyPromoteGraphAlignment(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	rows := make([]promotealign.ApplyRow, 0, len(req.GetRows()))
+	rows := make([]promote.BatchRow, 0, len(req.GetRows()))
 	for _, row := range req.GetRows() {
 		subjectID, err := parseID(row.GetSubjectId())
 		if err != nil {
@@ -34,33 +33,16 @@ func ApplyPromoteGraphAlignment(in []byte) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		gradeID, err := optionalID(row.GetConfidenceGradeId())
-		if err != nil {
-			return nil, err
-		}
-		br := promote.BatchRow{
-			SubjectID:         subjectID,
-			Target:            row.GetTarget(),
-			EntityID:          entityID,
-			ConfidenceGradeID: gradeID,
-			Argument:          row.GetArgument(),
-		}
-		rows = append(rows, promotealign.ApplyRow{BatchRow: br, DefaultPins: row.GetDefaultPins(), PinIDs: row.GetPinIds()})
+		rows = append(rows, promote.BatchRow{SubjectID: subjectID, Target: row.GetTarget(), EntityID: entityID})
 	}
 
 	var out *engine.ApplyPromoteGraphAlignmentResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		// The pins are read here, outside the write; a write between the two is
-		// refused by SaveBatch's SeenRevision check (promote.stale).
-		resolved, err := promotealign.ResolvePins(c, graphID, rows)
-		if err != nil {
-			return err
-		}
 		res, result, err := writes.Run(c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
 			return promote.SaveBatch(tx, userID, promote.Batch{
 				GraphID:      graphID,
 				SeenRevision: req.GetSeenRevision(),
-				Rows:         resolved,
+				Rows:         rows,
 			})
 		})
 		if err != nil {
@@ -74,7 +56,6 @@ func ApplyPromoteGraphAlignment(in []byte) ([]byte, error) {
 			out.Written = append(out.Written, &engine.ApplyPromoteGraphAlignmentWritten{
 				Entity: canonicalEntityProto(w.Entity),
 				Claim:  identityClaimProto(w.Claim),
-				Pins:   int32(w.Pins),
 			})
 		}
 		return nil

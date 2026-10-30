@@ -86,19 +86,9 @@ func newPinnedHandle(t *testing.T) pinnedHandle {
 	h := pinnedHandle{c: c, userID: userID, a: a, b: b,
 		aName: o[0].ID, aAlt: o[1].ID, bName: o[2].ID, bAlt: o[3].ID}
 
-	grounding := promotetest.Save(t, c, userID, promote.Input{SubjectID: a.ID, Argument: "The gazetteer entry."})
-	rev := int64(0)
-	db, err := c.DB()
+	grounding := promotetest.Save(t, c, userID, promote.Input{SubjectID: a.ID})
+	joined, err := joinPinned(c, userID, graph, b.ID, grounding, [][]byte{h.bName, h.aName, h.bAlt, h.aAlt})
 	must(err)
-	must(db.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev))
-	batch, err := writes.Call(c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
-		return promote.SaveBatch(tx, userID, promote.Batch{GraphID: graph, SeenRevision: rev, Rows: []promote.BatchRow{{
-			SubjectID: b.ID, Target: promote.TargetHandle, EntityID: grounding.Entity.ID,
-			PinSets: []promote.PinSet{{Member: a.ID, Observations: [][]byte{h.bName, h.aName, h.bAlt, h.aAlt}}},
-		}}})
-	})
-	must(err)
-	joined := batch.Written[0]
 	h.entityID, h.entityRef = string(grounding.Entity.ID), grounding.Entity.Ref
 	h.ca, h.cb = grounding.Claim.ID, joined.Claim.ID
 	return h
@@ -263,7 +253,7 @@ func TestPinnedObservationDeleteEndToEnd(t *testing.T) {
 		}
 	}
 	member, err := identityclaims.Get(h.c, h.ca)
-	if err != nil || member.Argument != "The gazetteer entry." {
+	if err != nil || member.Status != identityclaims.StatusAccepted {
 		t.Fatalf("claim should stay as written: %v %+v", err, member)
 	}
 
@@ -330,4 +320,42 @@ func TestPinnedMemberDeleteEndToEnd(t *testing.T) {
 		t.Fatalf("%v %+v", err, members)
 	}
 	h.cacheMatchesRebuild(t)
+}
+
+// joinPinned files subject onto the grounding handle in one Done, then pins
+// each Observation on both the grounding claim and the joined one, so the
+// fixture's pins and audit rows are what the S13-25 tests release.
+func joinPinned(c *database.Catalog, userID []byte, graphID, subjectID []byte, grounding promote.Result, obs [][]byte) (promote.Written, error) {
+	db, err := c.DB()
+	if err != nil {
+		return promote.Written{}, err
+	}
+	var rev int64
+	if err := db.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev); err != nil {
+		return promote.Written{}, err
+	}
+	batch, err := writes.Call(c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+		res, changes, err := promote.SaveBatch(tx, userID, promote.Batch{GraphID: graphID, SeenRevision: rev, Rows: []promote.BatchRow{{
+			SubjectID: subjectID, Target: promote.TargetHandle, EntityID: grounding.Entity.ID,
+		}}})
+		if err != nil {
+			return res, nil, err
+		}
+		for _, claimID := range [][]byte{res.Written[0].Claim.ID, grounding.Claim.ID} {
+			for _, obsID := range obs {
+				change, ok, err := identityclaims.PinTx(tx.Tx, claimID, obsID)
+				if err != nil {
+					return res, nil, err
+				}
+				if ok {
+					changes = append(changes, change)
+				}
+			}
+		}
+		return res, changes, nil
+	})
+	if err != nil {
+		return promote.Written{}, err
+	}
+	return batch.Written[0], nil
 }

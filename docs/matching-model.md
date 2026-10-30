@@ -2,7 +2,7 @@
 
 The matching model Spike 11 built; all six layers run, and [`matching.md`](matching.md) says where. The reasoning behind each choice is in [`deployment-plan/spike-11/comparison-layers.md`](deployment-plan/archive/spike-11/comparison-layers.md); this page is the "what".
 
-**Revised 2026-10-29:** these layers propose Promote's targets. They are not the measure of whether a member belongs to its handle: that comparison is built new on layers 1 and 2 ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.1), not from layer 6's band. Layer 6's score still ranks Promote's suggestions, but the page no longer shows the band. The claim evidence sheet is gone (S13-23); the registry's `evidence` section goes with the pin engine (S13-24).
+**Revised 2026-10-29:** these layers propose Promote's targets. They are not the measure of whether a member belongs to its handle: that comparison is built new on layers 1 and 2 ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.1), not from layer 6's band. Layer 6's score still ranks Promote's suggestions, but the page no longer shows the band. The claim evidence sheet and the registry's `evidence` section are gone (S13-23, S13-24).
 
 ## The stack
 
@@ -119,7 +119,7 @@ Both vocabularies are in the code for several PRs. These old words go.
 
 ## Knob inventory
 
-Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Field`. A Capitalized part is a registry field. A lowercase part is a typed map key: a Subject kind, a property key, a derived property (`lifespan`), or a bridge or participation key; a pair compared together is keyed by its lead property (`sex_at_birth` covers `gender`). The subject section's weights are `subject.Weights.<kind>.<property>`, a derived property's (`lifespan`) included; a pool is keyed by its lead in `subject.Pools`, a period by its lead in `subject.Periods`, a lifespan by its lead (the window) in `subject.Lifespans`. The `evidence` section is the claim evidence sheet's line policy (Spike 11; removed by S13-24), not evidence points; `core/claimevidence` reads it, no comparison layer does. It is deprecated: the sheet it served is gone (S13-23), and it goes with the pins (S13-24) ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5). The Go registry is the only source of a current value. Start is the value a knob started with. The registry's drift guard compares keys only: every registry field has a row, and every row is a field. `TestKnobInventoryMatchesRegistry` enforces it; rows whose layer has not landed are listed in its `notYetBuilt`. Tuning a knob is one edit, in the registry.
+Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Field`. A Capitalized part is a registry field. A lowercase part is a typed map key: a Subject kind, a property key, a derived property (`lifespan`), or a bridge or participation key; a pair compared together is keyed by its lead property (`sex_at_birth` covers `gender`). The subject section's weights are `subject.Weights.<kind>.<property>`, a derived property's (`lifespan`) included; a pool is keyed by its lead in `subject.Pools`, a period by its lead in `subject.Periods`, a lifespan by its lead (the window) in `subject.Lifespans`. The Go registry is the only source of a current value. Start is the value a knob started with. The registry's drift guard compares keys only: every registry field has a row, and every row is a field. `TestKnobInventoryMatchesRegistry` enforces it; rows whose layer has not landed are listed in its `notYetBuilt`. Tuning a knob is one edit, in the registry.
 
 | Key | Start | Source | Changes |
 | --- | --- | --- | --- |
@@ -208,9 +208,6 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `alignment.Shortlist.Dated.event.Type` | `event_type` | decided ([`comparison-layers.md`](deployment-plan/archive/spike-11/comparison-layers.md#layer-6-procedure)) | The term keyed with each year bucket |
 | `alignment.Shortlist.Dated.event.Date` | `date` | decided ([`comparison-layers.md`](deployment-plan/archive/spike-11/comparison-layers.md#layer-6-procedure)) | The date whose reach is bucketed; a period stands for it |
 | `kinship.MaxPivotEnd` | 10 | user, 2026-10-26 (S11-39): more than two, for unusual families, with a bound so one malformed event stays cheap | Most participants at either end of a pivot (an event, or the parent between in a chain) before it reads as malformed and implies nothing |
-| `evidence.Checked` | `Same`, `Equivalent` | decided (Spike 11; removed by S13-24) | Relations whose lines start checked |
-| `evidence.ByEye` | `unjudged` | decided (Spike 11; removed by S13-24) | Causes of an unknown line the researcher judges: kept, never checked |
-| `evidence.Defining` | event `event_type` | decided (Spike 11; removed by S13-24) | Neighbor properties bundled into a relationship line |
 
 ## Not knobs
 

@@ -327,10 +327,6 @@ struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
     var target: PromoteTargetCode
     var handleID: String
     var handleRef: String
-    /// strong, medium, weak, none. Read only by the draft rule (S13-24 moves it to Go).
-    var assessment: String
-    /// Read only by the draft rule.
-    var reason: PromoteReasonCode = .unplaced
     var alternatives: [CatalogPromoteGraphAlignmentAlternative]
     var conflictWithFixed: Bool
     var possibleDuplicate: Bool
@@ -339,7 +335,7 @@ struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
     /// The neighbor row this one was reached from; empty when it was not.
     var viaNeighborSubjectID: String = ""
     /// A move reason when settling released an earlier pair of this row in this proposal; nil otherwise.
-    var moveReason: PromoteReasonCode? = nil
+    var moveReason: PromoteMoveReason? = nil
     var moveNeighborSubjectID: String = ""
     var header: CatalogConclusionHeader?
 
@@ -588,7 +584,7 @@ struct CatalogReconciledValue: Sendable, Equatable, Identifiable {
 
 /// What the auto-reconciler did with one Observation, with the record's own
 /// value and the evidence it weighed. Empty keys are the scale defaults
-/// (standard credibility, moderate confidence).
+/// (standard credibility).
 struct CatalogReconcilerOutcome: Sendable, Equatable, Identifiable {
     var observationID: String
     var observationRef: String
@@ -608,11 +604,9 @@ struct CatalogReconcilerOutcome: Sendable, Equatable, Identifiable {
     var sourceTitle: String
     var credibilityKey: String
     var transcriptionUncertain: Bool
-    var claimConfidenceKey: String
     /// Grade order relative to the default grade, as the auto-reconciler
     /// weighed it: below 0 is weak evidence.
     var credibilityOffset: Int = 0
-    var claimConfidenceOffset: Int = 0
     /// For "outvoted": the winning value's Sources of every Source that
     /// voted on that unit. 0 otherwise.
     var voteSupport: Int = 0
@@ -620,7 +614,6 @@ struct CatalogReconcilerOutcome: Sendable, Equatable, Identifiable {
 
     var id: String { observationID }
     var isLowTrustSource: Bool { credibilityOffset < 0 }
-    var isLowConfidenceClaim: Bool { claimConfidenceOffset < 0 }
 }
 
 /// One Property of a handle's detail. Go computes `state`.

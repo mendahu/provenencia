@@ -36,7 +36,6 @@ var layerPackages = []struct {
 	{"core/kinship", true},
 	{"core/shortlist", true},
 	{"core/graphalign", true},
-	{"core/claimevidence", true},
 	{"core/matchregistry", false},
 	{"core/datevalue", false},
 	{"core/datevalue/datevaluetest", false},

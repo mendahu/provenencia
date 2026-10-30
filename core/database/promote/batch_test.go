@@ -29,6 +29,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
@@ -300,45 +301,91 @@ func TestSaveBatchStaleWritesNothing(t *testing.T) {
 	}
 }
 
-// A pin set names the Observations of a neighbor's records and the filed member
-// they belong to: the new claim and that member's claim both carry them.
-func TestSaveBatchPinsANeighborRecord(t *testing.T) {
+// A Done files the chosen rows' claims and their connections and nothing else:
+// no pin is written and no other member's claim changes.
+func TestSaveBatchFilesClaimsAndBridgesOnly(t *testing.T) {
 	f := newBatchFixture(t)
-	person := f.bare("person")
-	birth := f.bare("event")
-	birthDate := f.cite(birth, observations.Input{PropertyID: f.prop("date").ID, Date: yearDate(1849)})
-	f.participation(person, birth)
-	per := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: person.ID})
-	birthH := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: birth.ID})
-
-	// A second layer: the birth date sits on the event, one hop from the person.
-	personB := f.bare("person")
-	eventB := f.bare("event")
-	incoming := f.cite(eventB, observations.Input{PropertyID: f.prop("date").ID, Date: yearDate(1849)})
-	f.participation(personB, eventB)
+	b := f.bare("person")
+	f.cite(b, observations.Input{PropertyID: f.prop("name").ID, Name: namevaluetest.Western("Mary Smith")})
+	e1 := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: b.ID})
+	a := f.bare("person")
+	f.cite(a, observations.Input{PropertyID: f.prop("name").ID, Name: namevaluetest.Western("Mary Smith")})
+	c := f.bare("event")
+	d := f.bare("place")
+	f.participation(a, c)
+	memberBefore, err := identityclaims.Get(f.c, e1.Claim.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	res := f.save(promote.Batch{
 		GraphID: f.graph, SeenRevision: f.revision(),
-		Rows: []promote.BatchRow{{
-			SubjectID: personB.ID, Target: promote.TargetHandle, EntityID: per.Entity.ID,
-			PinSets: []promote.PinSet{{Member: birth.ID, Observations: [][]byte{incoming[0].ID, birthDate[0].ID}}},
-		}, {SubjectID: eventB.ID, Target: promote.TargetHandle, EntityID: birthH.Entity.ID}},
+		Rows: []promote.BatchRow{
+			{SubjectID: a.ID, Target: promote.TargetHandle, EntityID: e1.Entity.ID},
+			{SubjectID: c.ID, Target: promote.TargetNew},
+			{SubjectID: d.ID, Target: promote.TargetSkip},
+		},
 	})
-	if len(res.Written) != 2 || res.Written[0].Pins != 2 {
-		t.Fatalf("written %+v", res.Written)
+	if len(res.Written) != 2 {
+		t.Fatalf("written %d, want 2", len(res.Written))
+	}
+	for _, w := range res.Written {
+		if w.Claim.Status != identityclaims.StatusAccepted {
+			t.Fatalf("claim status %s", w.Claim.Status)
+		}
+	}
+	if n := f.bridgeClaims("participation"); n != 1 {
+		t.Fatalf("participation claims %d, want 1", n)
 	}
 	db, err := f.c.DB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, claimID := range [][]byte{res.Written[0].Claim.ID, birthH.Claim.ID} {
-		pins, err := identityclaims.PinnedObservations(db, claimID)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !database.ContainsBlobID(pins, incoming[0].ID) || !database.ContainsBlobID(pins, birthDate[0].ID) {
-			t.Fatalf("claim %x pins %d, want both dates", claimID, len(pins))
-		}
+	var pins int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM identity_claim_evidence`).Scan(&pins); err != nil {
+		t.Fatal(err)
+	}
+	if pins != 0 {
+		t.Fatalf("identity_claim_evidence has %d rows, want 0", pins)
+	}
+	memberAfter, err := identityclaims.Get(f.c, e1.Claim.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(memberBefore, memberAfter) {
+		t.Fatalf("the member's claim changed:\nbefore %+v\nafter  %+v", memberBefore, memberAfter)
+	}
+}
+
+// A row on the handle its Subject already belongs to is an anchor and writes
+// nothing; on any other handle it is refused. A Skip carries no record.
+func TestSaveBatchAnchorsARowOnItsOwnHandle(t *testing.T) {
+	f := newBatchFixture(t)
+	a := f.bare("person")
+	other := f.bare("person")
+	e1 := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: a.ID})
+	e2 := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: other.ID})
+
+	res := f.save(promote.Batch{
+		GraphID: f.graph, SeenRevision: f.revision(),
+		Rows: []promote.BatchRow{{SubjectID: a.ID, Target: promote.TargetHandle, EntityID: e1.Entity.ID}},
+	})
+	if len(res.Written) != 0 {
+		t.Fatalf("an anchor wrote %+v", res.Written)
+	}
+
+	try := func(row promote.BatchRow) error {
+		seen := f.revision()
+		_, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+			return promote.SaveBatch(tx, userID, promote.Batch{GraphID: f.graph, SeenRevision: seen, Rows: []promote.BatchRow{row}})
+		})
+		return err
+	}
+	if err := try(promote.BatchRow{SubjectID: a.ID, Target: promote.TargetHandle, EntityID: e2.Entity.ID}); !errors.Is(err, identityclaims.ErrAlreadyMember) {
+		t.Fatalf("another handle: err %v, want identityclaims.ErrAlreadyMember", err)
+	}
+	if err := try(promote.BatchRow{SubjectID: a.ID, Target: promote.TargetSkip, EntityID: e1.Entity.ID}); !errors.Is(err, promote.ErrInvalid) {
+		t.Fatalf("skip with a record: err %v, want promote.ErrInvalid", err)
 	}
 }
 

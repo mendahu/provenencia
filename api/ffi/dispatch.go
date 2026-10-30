@@ -108,9 +108,7 @@ const (
 	MethodUpdateEvidenceGraph               = int32(engine.Method_METHOD_UPDATE_EVIDENCE_GRAPH)
 	MethodDeleteEvidenceGraph               = int32(engine.Method_METHOD_DELETE_EVIDENCE_GRAPH)
 	MethodGetEvidenceGraphUnlinkImpact      = int32(engine.Method_METHOD_GET_EVIDENCE_GRAPH_UNLINK_IMPACT)
-	MethodGetPromoteClaimEvidence           = int32(engine.Method_METHOD_GET_PROMOTE_CLAIM_EVIDENCE)
 	MethodReorderSubjectTypeProperties      = int32(engine.Method_METHOD_REORDER_SUBJECT_TYPE_PROPERTIES)
-	MethodListClaimConfidenceGrades         = int32(engine.Method_METHOD_LIST_CLAIM_CONFIDENCE_GRADES)
 	MethodGetConclusionDetail               = int32(engine.Method_METHOD_GET_CONCLUSION_DETAIL)
 	MethodListEventHeaders                  = int32(engine.Method_METHOD_LIST_EVENT_HEADERS)
 	MethodListPlaceHeaders                  = int32(engine.Method_METHOD_LIST_PLACE_HEADERS)
@@ -322,8 +320,6 @@ func route(method int32, in []byte) ([]byte, error) {
 		return handlers.DeleteEvidenceGraph(in)
 	case MethodGetEvidenceGraphUnlinkImpact:
 		return handlers.GetEvidenceGraphUnlinkImpact(in)
-	case MethodGetPromoteClaimEvidence:
-		return handlers.GetPromoteClaimEvidence(in)
 	case MethodReorderSubjectTypeProperties:
 		return handlers.ReorderSubjectTypeProperties(in)
 	case MethodListSubjectMemberships:
@@ -336,8 +332,6 @@ func route(method int32, in []byte) ([]byte, error) {
 		return handlers.ApplyPromoteGraphAlignment(in)
 	case MethodGetNameFormat:
 		return handlers.GetNameFormat(in)
-	case MethodListClaimConfidenceGrades:
-		return handlers.ListClaimConfidenceGrades(in)
 	case MethodGetConclusionDetail:
 		return handlers.GetConclusionDetail(in)
 	case MethodListEventHeaders:

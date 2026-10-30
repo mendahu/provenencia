@@ -40,12 +40,6 @@ struct PromoteFlow: Equatable, Sendable {
         }
     }
 
-    enum Assessment: String, Equatable, Sendable {
-        case strong, medium, weak, none
-
-        init(wire: String) { self = Assessment(rawValue: wire) ?? .none }
-    }
-
     /// Why a suggested row moved on the last proposal. The page words it.
     enum Reason: Equatable, Sendable {
         /// Reached from this neighbor row once it was matched.
@@ -65,7 +59,7 @@ struct PromoteFlow: Equatable, Sendable {
             case .neighborPlaced: self = .neighborPlaced(neighborID: id)
             case .neighborMoved: self = .neighborMoved(neighborID: id)
             case .neighborReleased: self = .neighborReleased(neighborID: id)
-            default: return nil
+            case .unrecognized: return nil
             }
         }
 
@@ -542,26 +536,11 @@ struct PromoteFlow: Equatable, Sendable {
         proposal.possibleDuplicate && !proposal.duplicateOfSubjectID.isEmpty ? proposal.duplicateOfSubjectID : nil
     }
 
+    /// Where the row starts is Go's call (`graphalign.Row.Start`): a record named by `target` and
+    /// `handleID`, or nothing, which leaves the choice open so Skip and New are the researcher's.
     private static func draftTarget(_ proposal: CatalogPromoteGraphAlignmentRow, menu: [Alternative]) -> Target {
-        let assessment = Assessment(wire: proposal.assessment)
-        // No suggestion: leave the choice open so Skip and New are the researcher's.
-        if assessment == .none {
-            return .unset
-        }
         if proposal.target == .handle, let first = menu.first, first.id == proposal.handleID {
             return .handle(id: first.id, ref: first.ref, title: first.title)
-        }
-        // Another row on the page took this record. Drafting it again would
-        // promote two subjects on one handle, so the choice stays open, with the
-        // duplicate note naming the other row, whatever the band.
-        if proposal.reason == .taken {
-            return .unset
-        }
-        // Below the accept bar (a registry where the weak bar sits under it)
-        // the candidate is an alternative, not the row target. Still open on
-        // that match.
-        if assessment == .weak, let match = menu.first {
-            return .handle(id: match.id, ref: match.ref, title: match.title)
         }
         return .unset
     }

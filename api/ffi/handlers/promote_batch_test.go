@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
-	"github.com/mendahu/provenencia/core/database/observations"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -70,85 +69,6 @@ func TestApplyPromoteGraphAlignment(t *testing.T) {
 		}
 	})
 
-	// T-8: Done pins what the evidence offers, whether or not the sheet was opened.
-	t.Run("pins the evidence's offers", func(t *testing.T) {
-		apply := func(t *testing.T, f evidenceFixture, row *engine.ApplyPromoteGraphAlignmentRow) *engine.ApplyPromoteGraphAlignmentResponse {
-			t.Helper()
-			var proposal engine.ProposePromoteGraphAlignmentResponse
-			mustRPC(t, ProposePromoteGraphAlignment, &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: f.dir, GraphId: f.graphID}, &proposal)
-			row.SubjectId, row.Target, row.EntityId = f.incoming, "handle", f.handle
-			var res engine.ApplyPromoteGraphAlignmentResponse
-			err := rpc(t, ApplyPromoteGraphAlignment, &engine.ApplyPromoteGraphAlignmentRequest{
-				ProjectDir: f.dir, UserId: f.userID, GraphId: f.graphID, SeenRevision: proposal.GetRevision(),
-				Rows: []*engine.ApplyPromoteGraphAlignmentRow{row},
-			}, &res)
-			if err != nil {
-				t.Fatal(err)
-			}
-			return &res
-		}
-		// requireSexPins: the incoming Observation and each member's own are on
-		// the new claim, and each member's claim gained the incoming one.
-		requireSexPins := func(t *testing.T, f evidenceFixture, line *engine.PromoteClaimEvidenceLine, res *engine.ApplyPromoteGraphAlignmentResponse) {
-			t.Helper()
-			created := pinnedOn(t, f.dir, res.GetWritten()[0].GetClaim().GetId())
-			if !created[line.GetIncomingObservationId()] {
-				t.Errorf("the new claim lacks the incoming Observation")
-			}
-			for i, p := range line.GetMembers() {
-				if !created[memberObservation(p)] {
-					t.Errorf("the new claim lacks member %d's Observation", i)
-				}
-				member := pinnedOn(t, f.dir, f.claims[i])
-				if !member[line.GetIncomingObservationId()] || !member[memberObservation(p)] {
-					t.Errorf("member %d's claim pins %v", i, member)
-				}
-			}
-		}
-
-		t.Run("a row never opened pins its defaults", func(t *testing.T) {
-			f := newEvidenceFixture(t, observations.PolarityPositive)
-			line := sectionOf(f.evidence(t), "sex_at_birth").GetLines()[0]
-			requireSexPins(t, f, line, apply(t, f, &engine.ApplyPromoteGraphAlignmentRow{DefaultPins: true}))
-		})
-		t.Run("a row that kept the offered ids pins the same", func(t *testing.T) {
-			f := newEvidenceFixture(t, observations.PolarityPositive)
-			before := f.evidence(t)
-			var ids []string
-			for _, o := range before.GetOffers() {
-				ids = append(ids, o.GetId())
-			}
-			requireSexPins(t, f, sectionOf(before, "sex_at_birth").GetLines()[0], apply(t, f, &engine.ApplyPromoteGraphAlignmentRow{PinIds: ids}))
-		})
-		t.Run("default pins with ids is refused", func(t *testing.T) {
-			f := newEvidenceFixture(t, observations.PolarityPositive)
-			ids := []string{f.evidence(t).GetOffers()[0].GetId()}
-			var proposal engine.ProposePromoteGraphAlignmentResponse
-			mustRPC(t, ProposePromoteGraphAlignment, &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: f.dir, GraphId: f.graphID}, &proposal)
-			err := rpc(t, ApplyPromoteGraphAlignment, &engine.ApplyPromoteGraphAlignmentRequest{
-				ProjectDir: f.dir, UserId: f.userID, GraphId: f.graphID, SeenRevision: proposal.GetRevision(),
-				Rows: []*engine.ApplyPromoteGraphAlignmentRow{{SubjectId: f.incoming, Target: "handle", EntityId: f.handle, DefaultPins: true, PinIds: ids}},
-			}, &engine.ApplyPromoteGraphAlignmentResponse{})
-			if err == nil {
-				t.Fatal("expected error")
-			}
-		})
-		t.Run("a negative sex at birth pins nothing for the conflict", func(t *testing.T) {
-			f := newEvidenceFixture(t, observations.PolarityNegative)
-			line := sectionOf(f.evidence(t), "sex_at_birth").GetLines()[0]
-			res := apply(t, f, &engine.ApplyPromoteGraphAlignmentRow{DefaultPins: true})
-			created := pinnedOn(t, f.dir, res.GetWritten()[0].GetClaim().GetId())
-			if created[line.GetIncomingObservationId()] {
-				t.Errorf("the conflict's incoming Observation was pinned")
-			}
-			for _, p := range line.GetMembers() {
-				if created[memberObservation(p)] {
-					t.Errorf("a conflict member Observation was pinned")
-				}
-			}
-		})
-	})
-
 	t.Run("files a found record", func(t *testing.T) {
 		f := newFoundRecordFixture(t)
 		var proposal engine.ProposePromoteGraphAlignmentResponse
@@ -159,13 +79,13 @@ func TestApplyPromoteGraphAlignment(t *testing.T) {
 		var res engine.ApplyPromoteGraphAlignmentResponse
 		err := rpc(t, ApplyPromoteGraphAlignment, &engine.ApplyPromoteGraphAlignmentRequest{
 			ProjectDir: f.dir, UserId: f.userID, GraphId: f.graphID, SeenRevision: proposal.GetRevision(),
-			Rows: []*engine.ApplyPromoteGraphAlignmentRow{{SubjectId: f.incoming, Target: "handle", EntityId: f.handle, DefaultPins: true}},
+			Rows: []*engine.ApplyPromoteGraphAlignmentRow{{SubjectId: f.incoming, Target: "handle", EntityId: f.handle}},
 		}, &res)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(res.GetWritten()) != 1 || res.GetWritten()[0].GetEntity().GetId() != f.handle || res.GetWritten()[0].GetPins() == 0 {
-			t.Fatalf("written = %+v, want one row on %s with pins", res.GetWritten(), f.handle)
+		if len(res.GetWritten()) != 1 || res.GetWritten()[0].GetEntity().GetId() != f.handle {
+			t.Fatalf("written = %+v, want one row on %s", res.GetWritten(), f.handle)
 		}
 	})
 }

@@ -24,15 +24,11 @@ const (
 )
 
 // BatchRow is one Subject on a Done. Skip writes nothing. New mints a handle.
-// Handle joins EntityID. PinSets are the evidence the researcher confirmed
-// (join only; a New row with pin sets is invalid).
+// Handle joins EntityID.
 type BatchRow struct {
-	SubjectID         []byte
-	Target            string
-	EntityID          []byte
-	ConfidenceGradeID []byte
-	Argument          string
-	PinSets           []PinSet
+	SubjectID []byte
+	Target    string
+	EntityID  []byte
 }
 
 // Batch is one Done for an Evidence graph. SeenRevision is the audit revision
@@ -47,7 +43,6 @@ type Batch struct {
 type Written struct {
 	Entity canonicalentities.Entity
 	Claim  identityclaims.Claim
-	Pins   int
 }
 
 // BatchResult is the revision the batch wrote (or SeenRevision when nothing
@@ -57,8 +52,8 @@ type BatchResult struct {
 	Written  []Written
 }
 
-// SaveBatch files one Done in a single transaction: claims, pin sets,
-// and bridges whose ends are both handles. The caller records the returned
+// SaveBatch files one Done in a single transaction: claims and bridges whose
+// ends are both handles. The caller records the returned
 // changes as promote_batch. Revision on the result is SeenRevision; the
 // caller replaces it with the revision it recorded when that is non-zero,
 // so an all-skip batch still reports the revision the proposal was read at.
@@ -120,12 +115,12 @@ func latestRevision(tx *sql.Tx) (int64, error) {
 func applyRow(tx *sql.Tx, graphID []byte, row BatchRow) (*Written, []rowchange.Change, []byte, error) {
 	switch row.Target {
 	case TargetSkip:
-		if len(row.EntityID) != 0 || len(row.PinSets) != 0 || len(row.ConfidenceGradeID) != 0 || row.Argument != "" {
+		if len(row.EntityID) != 0 {
 			return nil, nil, nil, ErrInvalid
 		}
 		return nil, nil, nil, nil
 	case TargetNew:
-		if len(row.EntityID) != 0 || len(row.PinSets) != 0 {
+		if len(row.EntityID) != 0 {
 			return nil, nil, nil, ErrInvalid
 		}
 	case TargetHandle:
@@ -136,9 +131,6 @@ func applyRow(tx *sql.Tx, graphID []byte, row BatchRow) (*Written, []rowchange.C
 		return nil, nil, nil, ErrInvalid
 	}
 	if len(row.SubjectID) != 16 {
-		return nil, nil, nil, ErrInvalid
-	}
-	if len(row.ConfidenceGradeID) != 0 && len(row.ConfidenceGradeID) != 16 {
 		return nil, nil, nil, ErrInvalid
 	}
 
@@ -162,7 +154,7 @@ func applyRow(tx *sql.Tx, graphID []byte, row BatchRow) (*Written, []rowchange.C
 
 	existing, err := identityclaims.AcceptedEntityForSubjectTx(tx, subject.ID)
 	if err == nil {
-		if row.Target == TargetHandle && bytes.Equal(existing.EntityID, row.EntityID) && len(row.PinSets) == 0 {
+		if row.Target == TargetHandle && bytes.Equal(existing.EntityID, row.EntityID) {
 			return nil, nil, nil, nil
 		}
 		return nil, nil, nil, identityclaims.ErrAlreadyMember
@@ -190,20 +182,13 @@ func applyRow(tx *sql.Tx, graphID []byte, row BatchRow) (*Written, []rowchange.C
 		}
 	}
 	claim, claimChange, err := identityclaims.InsertTx(tx, identityclaims.CreateInput{
-		SubjectID:         subject.ID,
-		EntityID:          entity.ID,
-		Status:            identityclaims.StatusAccepted,
-		ConfidenceGradeID: row.ConfidenceGradeID,
-		Argument:          row.Argument,
+		SubjectID: subject.ID,
+		EntityID:  entity.ID,
+		Status:    identityclaims.StatusAccepted,
 	})
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	changes = append(changes, claimChange)
-	pins, pinChanges, err := pinSets(tx, claim, row.PinSets)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	changes = append(changes, pinChanges...)
-	return &Written{Entity: entity, Claim: claim, Pins: pins}, changes, entity.ID, nil
+	return &Written{Entity: entity, Claim: claim}, changes, entity.ID, nil
 }
