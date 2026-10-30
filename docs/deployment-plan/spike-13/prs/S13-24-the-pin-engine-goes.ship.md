@@ -63,4 +63,4 @@ Reviewers: MNT (only lens with a Fix-now major). MNT-1 Resolved, MNT-2 Resolved.
 Merged `origin/main` @ `cc870c65` (S13-30 descope: docs and one `PromoteView.swift` comment). Gate FAIL once in `xcode-test` (`SourceGraphFormModelTests`, load-state timing, code this PR does not touch; the implementer saw the same flake in round 0), rerun PASS with no change.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · to user: — · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: none · to user: — · CON miss: none
