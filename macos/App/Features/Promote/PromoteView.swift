@@ -209,7 +209,7 @@ struct PromoteView: View {
     }
 
     private var columnHeaders: some View {
-        PromoteGridRow(showsArrow: false) {
+        PromoteGridRow(showsArrow: false, tileHeight: 1) {
             Color.clear.frame(height: 1)
         } source: {
             columnLabel(L10n.Promote.columnSource)
@@ -655,6 +655,8 @@ private enum PromoteLayout {
 private struct PromoteGridRow<Tile: View, Source: View, Target: View, Freed: View, Badges: View>: View {
     @Environment(\.pvWidthClass) private var widthClass
     let showsArrow: Bool
+    /// The tile slot's height: a row that draws a tile keeps `kindTile`; the heading row keeps a hairline.
+    let tileHeight: CGFloat
     let tile: Tile
     let source: Source
     let target: (CGFloat) -> Target
@@ -663,6 +665,7 @@ private struct PromoteGridRow<Tile: View, Source: View, Target: View, Freed: Vie
 
     init(
         showsArrow: Bool = true,
+        tileHeight: CGFloat = PromoteLayout.kindTile,
         @ViewBuilder tile: () -> Tile,
         @ViewBuilder source: () -> Source,
         @ViewBuilder target: @escaping (CGFloat) -> Target,
@@ -670,6 +673,7 @@ private struct PromoteGridRow<Tile: View, Source: View, Target: View, Freed: Vie
         @ViewBuilder badges: () -> Badges
     ) {
         self.showsArrow = showsArrow
+        self.tileHeight = tileHeight
         self.tile = tile()
         self.source = source()
         self.target = target
@@ -680,7 +684,7 @@ private struct PromoteGridRow<Tile: View, Source: View, Target: View, Freed: Vie
     var body: some View {
         let targetWidth = PromoteLayout.targetColumn(widthClass)
         HStack(alignment: .center, spacing: PromoteLayout.columnGap) {
-            tile.frame(width: PromoteLayout.kindTile, height: PromoteLayout.kindTile)
+            tile.frame(width: PromoteLayout.kindTile, height: tileHeight)
             source.frame(maxWidth: .infinity, alignment: .leading)
             Group {
                 if showsArrow {
