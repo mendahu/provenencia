@@ -1,10 +1,10 @@
 # Review — S13-25 The pin table goes
 
-**Verdict:** Fits with changes — Ready with changes (round 1)
-**Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
-- None yet.
+- None.
 
 ## Writer's own calls
 - One format step that rebuilds `identity_claims` (D-1), not `DROP COLUMN`: SQLite refuses to drop a column with an FK or index.
@@ -52,3 +52,20 @@ Maintainability: no new blocker; every round-1 answer checked against the code a
 ### M-5 · major · `assertUpkeepEqualsRebuild` keeps a copy of the new helper
 Its values and outcomes blocks do the job of `autoreconcilertest.AssertCacheMatchesRebuild`; `autoreconciler_test` is an external package, so no cycle.
 **Answer:** Fixed — D-7 and Codebase fit: it calls the helper and keeps only its search-documents block; `rebuiltSnapshot` and `outcomesSnapshot` stay (line 373 and others read them). STEP-4 does it.
+
+Executability: no new blocker; every round-1 answer and every Current state row held. Verdict: Ready with changes.
+
+### X-6 · major · The prose sweep hits files STEP-6 does not name
+**Answer:** Fixed — D-9 lists the hits the sweep keeps (decision notes and Reconciliation Claim text, by file and line) and the DoD's prose sweep points at that list; `catalog-deletes.md` line 30 is added.
+
+### X-7 · major · D-9's rule and STEP-6 disagree for `research-judgment-model.md`
+**Answer:** Fixed — D-9 now gives per-doc edits: (a) conclusion, (b) seeded-vocabulary, (c) research-judgment keeps its §4 (the open Reconciliation question) and only reworded line 166, (d) catalog-deletes. STEP-6 points at D-9 (c).
+
+### X-8 · minor · The cache helper's body is only partly specified
+**Answer:** Fixed — D-7: `bridgeWorld.cacheMatchesRebuild` + `cacheDump`'s body, `c.DB()` inside, its failure message.
+
+### X-9 · minor · Small choices left open
+**Answer:** Fixed — D-7: `entityRef` is `grounding.Entity.Ref`, `testCatalog` setup stays, `countRows` is deleted (all three callers were pin checks), `lastRevision`, `assertLeaves`, `mustImpact` stay.
+
+### X-10 · minor · The migration sketch has a placeholder
+**Answer:** Fixed — §6 Schema writes out `identity_claims__new` in full.
