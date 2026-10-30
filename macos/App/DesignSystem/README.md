@@ -404,7 +404,7 @@ VoiceOver will likely say **button** (or “adjustable”) rather than
 “pop-up button”. Same honesty bar as `PVTable` not claiming a table grid.
 
 Not `PVComboBox` (filter-as-you-type), not `PVContextMenu` action menus
-(`PVActionMenuItem` lists, button-opened or `.pvRightClickMenu`), and not segmented `PVChip` groups.
+(`PVActionMenuItem` lists, button-opened or `.pvRightClickMenu`), and not `PVSegmentedControl` (a few exclusive options chosen inline).
 Date-value calendar / month and `PVTable.filterMenu` remount on
 `PVSelect`. Do not add a second popup-select kit.
 

@@ -6,6 +6,8 @@ import Testing
 @MainActor
 private final class Chosen {
     var values: [Int] = []
+    /// True once the hosted control has been laid out and can be clicked.
+    var isLaidOut = false
 }
 
 @MainActor @Suite
@@ -22,6 +24,7 @@ struct PVSegmentedControlTests {
             select: { chosen.values.append($0) }
         )
         .frame(width: 400)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { chosen.isLaidOut = $0 > 0 }
     }
 
     /// Clicks the middle of segment `index` of three equal ones in the 400pt
@@ -41,7 +44,7 @@ struct PVSegmentedControlTests {
     @Test func selectSendsTheItemValue() async {
         let chosen = Chosen()
         let (window, _) = hostInBorderlessWindow(control(chosen), windowSize: CGSize(width: 400, height: 80))
-        try? await Task.sleep(for: .milliseconds(200))
+        #expect(await waitUntil { chosen.isLaidOut })
         click(segment: 2, in: window)
         #expect(await waitUntil { chosen.values == [3] })
         click(segment: 0, in: window)
@@ -52,7 +55,7 @@ struct PVSegmentedControlTests {
     @Test func disabledItemDoesNotSelect() async {
         let chosen = Chosen()
         let (window, _) = hostInBorderlessWindow(control(chosen), windowSize: CGSize(width: 400, height: 80))
-        try? await Task.sleep(for: .milliseconds(200))
+        #expect(await waitUntil { chosen.isLaidOut })
         click(segment: 1, in: window)
         click(segment: 2, in: window)
         #expect(await waitUntil { chosen.values == [3] })
