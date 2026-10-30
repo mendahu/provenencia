@@ -32,18 +32,7 @@ struct EventDetailContent: ConclusionDetailBody {
         let place = header.map { DerivedPlace.name($0.places) } ?? ""
         summaryPlace = place.isEmpty ? nil : place
         rows = [Self.dateRow(detail.fields, locale: locale), Self.placeRow(header)]
-        gallery = ConclusionDetailGallery(
-            title: L10n.Conclusions.picturesSection,
-            openTip: L10n.Conclusions.pictureOpenTip,
-            fallbackMark: .subjectEvent,
-            tiles: ConclusionDetailGallery.tiles(
-                from: detail,
-                tileLabel: L10n.Conclusions.pictureTileLabel,
-                useAsLabel: L10n.Conclusions.useAsThumbnailLabel,
-                chosenBody: L10n.Conclusions.toastThumbnailChosenBody
-            ),
-            choose: .eventThumbnail
-        )
+        gallery = .pictures(from: detail, fallbackMark: .subjectEvent, choose: .eventThumbnail)
         thumbnail = .leading(
             gallery: gallery,
             noImage: L10n.Conclusions.eventNoImage,

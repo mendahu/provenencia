@@ -143,14 +143,32 @@ struct ConclusionDetailGallery: Equatable {
             toastTitle: L10n.Conclusions.toastThumbnailUpdatedTitle,
             toastEarliestBody: L10n.Conclusions.toastThumbnailEarliestBody
         )
-        static let placeThumbnail = LeadCopy(
-            badge: L10n.Conclusions.thumbnailBadge,
-            useAs: L10n.Conclusions.useAsThumbnail,
-            useEarliest: L10n.Conclusions.useEarliestPicture,
-            menuTitle: L10n.Conclusions.placeThumbnailMenuTitle,
-            menuHint: L10n.Conclusions.thumbnailMenuHint,
-            toastTitle: L10n.Conclusions.toastThumbnailUpdatedTitle,
-            toastEarliestBody: L10n.Conclusions.toastThumbnailEarliestBody
+        /// A Place's thumbnail copy is an Event's with its own menu title.
+        static let placeThumbnail: LeadCopy = {
+            var copy = eventThumbnail
+            copy.menuTitle = L10n.Conclusions.placeThumbnailMenuTitle
+            return copy
+        }()
+    }
+
+    /// The gallery of an Event or a Place: the shared section words and tile Strings, with the
+    /// kind's fallback mark and lead copy.
+    static func pictures(
+        from detail: CatalogConclusionDetail,
+        fallbackMark: PVMarkKey,
+        choose: LeadCopy
+    ) -> ConclusionDetailGallery {
+        ConclusionDetailGallery(
+            title: L10n.Conclusions.picturesSection,
+            openTip: L10n.Conclusions.pictureOpenTip,
+            fallbackMark: fallbackMark,
+            tiles: tiles(
+                from: detail,
+                tileLabel: L10n.Conclusions.pictureTileLabel,
+                useAsLabel: L10n.Conclusions.useAsThumbnailLabel,
+                chosenBody: L10n.Conclusions.toastThumbnailChosenBody
+            ),
+            choose: choose
         )
     }
 
@@ -591,7 +609,9 @@ struct ConclusionDetailGallerySection: View {
                     .accessibilityIdentifier("\(tileID).leadBadge")
             } else {
                 PVButton(gallery.choose.useAs, variant: .ghost, size: .sm) {
-                    Task { await lead.choose(tile, copy: gallery.choose) }
+                    Task {
+                        if await lead.choose(tile, copy: gallery.choose) { focusedID = tile.id }
+                    }
                 }
                 .disabled(lead.isSaving)
                 .fixedSize(horizontal: true, vertical: false)

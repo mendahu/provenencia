@@ -40,18 +40,7 @@ struct PlaceDetailContent: ConclusionDetailBody {
             Self.periodRow(detail: detail, header: header, locale: locale),
         ]
         sections = Self.relationshipSections(header: header)
-        gallery = ConclusionDetailGallery(
-            title: L10n.Conclusions.picturesSection,
-            openTip: L10n.Conclusions.pictureOpenTip,
-            fallbackMark: .subjectPlace,
-            tiles: ConclusionDetailGallery.tiles(
-                from: detail,
-                tileLabel: L10n.Conclusions.pictureTileLabel,
-                useAsLabel: L10n.Conclusions.useAsThumbnailLabel,
-                chosenBody: L10n.Conclusions.toastThumbnailChosenBody
-            ),
-            choose: .placeThumbnail
-        )
+        gallery = .pictures(from: detail, fallbackMark: .subjectPlace, choose: .placeThumbnail)
         thumbnail = .leading(
             gallery: gallery,
             noImage: L10n.Conclusions.placeNoImage,
