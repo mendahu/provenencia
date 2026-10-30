@@ -11,7 +11,7 @@ enum DerivedPlace {
     }
 
     static func name(_ places: [CatalogHeaderPlace]) -> String {
-        shown(places).map(PlaceChainDisplay.placeLine) ?? ""
+        shown(places).map { PlaceChainDisplay.placeLine($0) } ?? ""
     }
 
     /// Places beyond the one `name` shows: the list's +N.
