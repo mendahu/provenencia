@@ -29,5 +29,5 @@ A handle the researcher rejected for a Subject is suggested again, and merge hin
 ## Open questions
 
 - Is "accept as-is" a stored dismissal, or just the absence of an alert until the next change?
-- Do provisional claims get reviewed too, or only accepted ones?
+- Do provisional claims get reviewed too, or only accepted ones? (Nothing writes them yet: [`provisional-identity-claims.md`](provisional-identity-claims.md).)
 - Does the same alert cover Reconciliation Claims' evidence when they ship?

@@ -251,7 +251,7 @@ Promote is a quick action: the researcher promotes an Evidence graph's Subjects 
 
    Promote writes no Observation pins, and an Identity Claim carries no confidence and no `argument` (decided 2026-10-29; the columns go in Spike 13).
 
-A per-row status at Promote, Accepted or Provisional, was decided on 2026-10-29 and descoped on 2026-10-30 (Spike 13's S13-30): Promote writes no provisional claims. A provisional Identity Claim (§4) is still a valid row; Promote does not write one.
+A per-row status at Promote, Accepted or Provisional, was decided on 2026-10-29 and descoped on 2026-10-30 (Spike 13's S13-30): Promote writes no provisional claims. A provisional Identity Claim (§4) is still a valid row; Promote does not write one. The parked feature: [`ideas/provisional-identity-claims.md`](ideas/provisional-identity-claims.md).
 
 A skipped row is not stored. Opening Promote again proposes it afresh.
 

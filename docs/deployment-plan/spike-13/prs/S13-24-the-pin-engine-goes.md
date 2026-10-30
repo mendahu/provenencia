@@ -90,7 +90,7 @@ The engine half of the pin removal. After S13-23 the Mac app stopped asking for 
 | --- | --- |
 | The `identity_claim_evidence` table, `core/database/identityclaims/pins.go` (`PinTx`, `PinnedObservations`), the delete facet and `ReleaseClaim`'s pin step, `TestBridgeSubjectDeleteReleasesPins`, the effects entry | S13-25 |
 | The `identity_claims.confidence_grade_id` and `.argument` columns, `claim_confidence_grades` with its seed, `claimconfidencegrades`, its `Install` callers in tests, the onboarding readiness check, `deleteimpact`'s grade edge and `facets.go`'s read of the two columns | S13-25 |
-| `status` on the Apply row, provisional claims | not planned (S13-30 descoped 2026-10-30; working rule "Promote files accepted claims and nothing else") |
+| `status` on the Apply row, provisional claims | not planned (S13-30 descoped 2026-10-30, parked in [`ideas/provisional-identity-claims.md`](../../../ideas/provisional-identity-claims.md); working rule "Promote files accepted claims and nothing else") |
 | A Subject-pair compare over every Property (`CompareEvery`), and exporting `lifespan` | Slice 7 (S13-26), with open question 11 (user, 2026-10-30) |
 | `graphalign.Subject.Provenance` (always 1, `core/database/promotealign/layer.go`), the rest of audit 2 B-37 | S14-20 (user, 2026-10-30) |
 | One shared proto header message for the four `oneof header` copies (S13-23 review log) | S14-16, which rewrites the Promote mapping (user, 2026-10-30) |
