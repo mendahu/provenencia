@@ -24,22 +24,6 @@ type VocabBinding struct {
 	SortOrder          int
 }
 
-// BindingOrder returns, per provenencia subject type key, its bound property
-// keys in binding order. Types of other origins are left out: a key is only
-// unique within an origin.
-func (v Vocabulary) BindingOrder() map[vocabkey.SubjectType][]vocabkey.PropertyKey {
-	out := map[vocabkey.SubjectType][]vocabkey.PropertyKey{}
-	for _, t := range v.Types {
-		if t.Origin != vocabkey.OriginProvenencia {
-			continue
-		}
-		if order := v.TypeOrder(t.ID); len(order) > 0 {
-			out[vocabkey.SubjectType(t.Key)] = order
-		}
-	}
-	return out
-}
-
 // TypeOrder returns the property keys bound to one subject type, by SortOrder,
 // then key.
 func (v Vocabulary) TypeOrder(typeID []byte) []vocabkey.PropertyKey {

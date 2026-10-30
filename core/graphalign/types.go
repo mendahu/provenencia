@@ -21,8 +21,8 @@ type Subject struct {
 // Bridge links two primary Subjects on the layer (walked undirected).
 type Bridge struct {
 	// Edge's Associations are the bridge Subjects behind the edge. The layers
-	// never read them; the loader sets them and the claim evidence query reads
-	// them back, as it does a value's Ref.
+	// never read them; the loader sets them for a later reader of the bridge
+	// Subjects (S13-29's shared loader).
 	kinship.Edge
 	// Recording is how the kinship patterns imply the link; the zero value is a
 	// link only recorded.

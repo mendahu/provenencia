@@ -132,17 +132,6 @@ func (r Recording) Clone() Recording {
 	return out
 }
 
-// Shown is the one shape a side's recording shows: the zero Shape (direct)
-// unless the link is only implied, else the first shape it was implied
-// through. A link recorded directly reads as direct however many patterns
-// also imply it.
-func (r Recording) Shown() Shape {
-	if !r.OnlyImplied || len(r.Shapes) == 0 {
-		return Shape{}
-	}
-	return r.Shapes[0]
-}
-
 // Merge folds another recording of the same link into r: it appends each shape
 // of o that r lacks (same Pattern and pivot), copying its pivot, and the link
 // stays only implied when both were.
