@@ -193,4 +193,55 @@ struct WorkspaceToolbarBreadcrumbTests {
             L10n.CitationComposer.breadcrumbCitationFor(scope: "John Jones"),
         ])
     }
+
+    @Test func pageSectionAddsACrumb() {
+        var wentTo: WorkspaceLocation?
+        let gallery = WorkspaceLocation.personDetail(
+            entityId: "per-1", ref: "PER-1", title: "Jane Doe", section: .gallery
+        )
+        let items = WorkspaceToolbar.breadcrumbItems(for: gallery, goTo: { wentTo = $0 })
+        #expect(items.map(\.label) == [
+            L10n.string(L10n.Workspace.personsTitle), "Jane Doe", L10n.string(L10n.Conclusions.pageSectionGallery),
+        ])
+        #expect(items[2].action == nil)
+        items[1].action?()
+        #expect(wentTo == .personDetail(entityId: "per-1", ref: "PER-1", title: "Jane Doe"))
+        #expect(wentTo?.pageSection == nil)
+
+        let vitals = WorkspaceToolbar.breadcrumbItems(
+            for: .personDetail(entityId: "per-1", ref: "PER-1", title: "Jane Doe"),
+            goTo: { _ in }
+        )
+        #expect(vitals.map(\.label) == [L10n.string(L10n.Workspace.personsTitle), "Jane Doe"])
+        #expect(vitals[1].action == nil)
+    }
+
+    @Test func locationLabelsNameTheSection() {
+        let family = WorkspaceToolbar.locationLabels(
+            for: .personDetail(entityId: "per-1", ref: "PER-1", title: "Jane Doe", section: .family)
+        )
+        #expect(family.leaf == "Jane Doe")
+        #expect(family.section == L10n.string(L10n.Conclusions.pageSectionFamily))
+
+        let vitals = WorkspaceToolbar.locationLabels(
+            for: .personDetail(entityId: "per-1", ref: "PER-1", title: "Jane Doe")
+        )
+        #expect(vitals.leaf == "Jane Doe")
+        #expect(vitals.section == nil)
+
+        let bare = WorkspaceToolbar.locationLabels(
+            for: .personDetail(entityId: "per-1", ref: "PER-1", title: nil)
+        )
+        #expect(bare.leaf == "PER-1")
+
+        let source = WorkspaceToolbar.locationLabels(
+            for: .sourcePage(sourceId: "src-1", ref: "SRC-AAAA", title: "Deed")
+        )
+        #expect(source.leaf == "Deed")
+        #expect(source.section == nil)
+
+        let root = WorkspaceToolbar.locationLabels(for: .sectionRoot(.metadata))
+        #expect(root.leaf == nil)
+        #expect(root.section == nil)
+    }
 }
