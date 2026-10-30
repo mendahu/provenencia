@@ -40,7 +40,7 @@ Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
 | Drop Identity Claim Observation pins and the evidence sheet ([`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5, docs PR #623; user, 2026-10-29) | S13-23, S13-24, S13-25 | S13-D11 |
 | Drop Identity Claim confidence and argument; status on the Promote row, Accepted or Provisional (user, 2026-10-29) | S13-23 – S13-25, S13-30 | S13-D11 |
 | R-1 – R-7 layout, fixed header, section switching | S13-09, S13-10 | S13-D1 |
-| R-8 – R-15 provenance sheet, Vitals | S13-06, S13-11 | S13-D2 |
+| R-8 – R-15 provenance sheet, Vitals | S13-06, S13-11 | S13-D12, S13-D2 |
 | R-16 – R-22 Family; [`ideas/kinship-view.md`](../../ideas/kinship-view.md) "Family trees and person pages", siblings from shared parents | S13-02, S13-03, S11-51, S13-04, S13-12 | S13-D3 |
 | R-23 – R-28 Timeline | S13-05, S13-13 | S13-D4 |
 | R-29 – R-32 Gallery and viewer | S13-14, S13-15 | S13-D5 |
@@ -94,7 +94,7 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 - **One person's links, direct and implied, from one function.** S11-51 (moved to Spike 11 to ship right after S11-39, user 2026-10-26) moves S11-39's `linkSet` merge into `kinship.LinkSet` and adds `canonlinks.Reader.Relationships`, which returns a person's recorded and implied relationship links merged once. The Family read calls it. Binds S13-04.
 - **Family groups in Go.** One family per spouse (with the children who have both as parents), one per distinct parent set, and children with one known parent in their own group. Binds S13-04.
 - **Timeline is direct participation, any role** (R-23). S13-05 adds an unfiltered participation hop to `core/hops` (beside `EventsOfSubject`, which is `subject` role only) and returns, per event, `EventHeader` (title, date, folded places), the person's role term, and the other participants as {role, `PersonHeader`}, ordered by `conclusionheaders.sortEvents` (undated last). Swift titles events with `EventTitleDisplay` and groups the undated ones (R-24). Binds S13-05.
-- **A derived row carries its owning entity's records.** `ConclusionDetail` already carries `ReconcilerOutcomeDetail` records per field. S13-06 adds, for each derived row, the records of the field on the entity that owns it (the lead birth or death event's date; its Place), keyed by that entity on `ConclusionDetail`, not on `LifeFacts` (which lists and tiles also carry). Event's derived place row can take the same path later. No new provenance RPC. Binds S13-06, S13-11.
+- **A derived row carries its owning entity's records.** `ConclusionDetail` already carries `ReconcilerOutcomeDetail` records per field. S13-06 adds, for each derived row, the records of the field on the entity that owns it (every surviving birth or death event's date, the lead first; each of those events' Places' names, not their parent chain or the location link; user, 2026-10-30), keyed by that entity on `ConclusionDetail`, not on `LifeFacts` (which lists and tiles also carry). Event's derived place row can take the same path later. No new provenance RPC. Binds S13-06, S13-11.
 - **Claims are read per person from the graph cache, grouped by Source in Go.** S13-01 reads the person's accepted members from `graphcache` (`Member` has Subject, Source and graph ids; `EvidenceGraph` has the Source title), adds Source type through `sourcetypes`, and returns groups ordered by Source title (R-36). Each claim carries the existing `CatalogSubject` and Observation wire messages the Evidence graph's Subject card already renders. The Source date joins the groups in S13-20. Binds S13-01, S13-20.
 - **The Source date is one Source-level attribute, not a metadata key** ([settled](source-provenance-date.md#settled-do-not-reopen)). S13-20 adds it to `sources` with its migration ([`add-catalog-migration`](../../../.agents/skills/add-catalog-migration/SKILL.md), [`add-catalog-model`](../../../.agents/skills/add-catalog-model/SKILL.md)); (user, 2026-10-26): it means the **original publication date**, when the Source was created; it is stored as a structured date (`date_value_id` into the shared `date_values`, ABT / BEF like every other date); it is optional, and existing Sources start empty, filled by hand. Metadata date fields stay text and are never copied into it. Binds S13-20, S13-21, S13-22.
 - **The Sources list shows and sorts by the Source date** (user, 2026-10-26). Undated Sources sort last. Binds S13-22.
@@ -119,7 +119,7 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 | S13-30 | Provisional claims at Promote | 0 | Go: `status` on the Apply row (accepted or provisional), a provisional claim written or replaced, an upgrade to accepted that files its waiting bridges, provisional-only Subjects unpromoted everywhere, and the proposal preselecting the provisional record and status; Swift: the row's status control and its connection states | S13-D11 | S13-24 | — | Scoped |
 | S13-09 | Sections slot on the Conclusion page | 1 | Preparatory: `ConclusionDetailPage` gains a sections slot; Person, Event and Place pass one section; no visible change | — | — | [S13-09](prs/S13-09-sections-slot.md) | Landed #624 |
 | S13-10 | Header and sections | 1 | The fixed header, the section switcher, and Vitals as the first section (today's rows), on `PVPageColumns` (built here from the S14-D1 board) | [S13-D1](design/archive/S13-D1-person-page-frame.md) | S13-09, S14-D1 (board agreed 2026-10-29), S14-24 (landed #628) | [S13-10](prs/S13-10-header-and-sections.md) | Landed #634 |
-| S13-06 | Derived rows carry their records | 2 | `ConclusionDetail` carries, for each derived row, the reconciler records of the owning entity's field (birth and death event date and place) | — | — | — | Scoped |
+| S13-06 | Derived rows carry their records | 2 | `ConclusionDetail` carries, for each derived row, the reconciler records of the owning entity's field (every surviving birth and death event's date; their Places' names), and the four life rows show them in the Why | S13-D12 | S13-D12 | [S13-06](prs/S13-06-derived-rows-carry-their-records.md) | Blocked — on board S13-D12 |
 | S13-11 | Provenance sheet | 2 | The provenance control and sheet replace the Why accordion on every Vitals row, with links to Source, Citation and Observation | S13-D2 | S13-06, S13-10 | — | Scoped |
 | S13-01 | Person claims read | 3 | `ListPersonClaims` RPC from the graph cache: a person's accepted claims grouped by Source (title, type), ordered by title, each with its Subject card data, graph and claim id; one accepted-members helper; per-handle invalidation spec | — | — | — | Scoped |
 | S13-02 | Gender in the person header | 3 | `PersonHeader` gains the gender and sex terms; `PersonGenderTreatment` reads only the header | — | S11-30 | — | Scoped |
@@ -153,6 +153,7 @@ Each brief is written just before the PR it gates, its board agreed, and that PR
 | --- | --- | --- | --- |
 | S13-D11 | Promote page without the evidence sheet and the assessment column, with a status per row | **S13-23**, **S13-30** | Slice 0; an enhancement of the Promote flow board that removes frames. Decides what the freed column width becomes ([brief](design/S13-D11-promote-without-assessment.md)) |
 | [S13-D1](design/archive/S13-D1-person-page-frame.md) | Person page: header, section switching, Vitals | **S13-10** | Board agreed 2026-10-29. Explores stacked-with-shortcuts versus tabs (R-7). Draws the whole frame, all five sections as places (working rule "S13-D1 draws the whole frame"), at Regular and Wide on Page columns, after the S14-D1 board (working rule "Redesigns adopt Page columns") |
+| [S13-D12](design/S13-D12-life-rows-why.md) | Person page: the Why on the four life rows | **S13-06** | Added 2026-10-30 (user: the life rows show their records now). An enhancement of S13-D1's Vitals; decides how records from several events or Places are told apart. Interim: S13-D2 replaces the Why on the Person page |
 | S13-D2 | Provenance sheet | **S13-11** | Reusable beyond Person (R-13); leaves room for Reconciliation Claims (R-10) |
 | S13-D3 | Family section | **S13-12** | Draws the shared person tile; two marriages and conflicting parents |
 | S13-D4 | Timeline section | **S13-13** | Reuses S13-D3's tile; depiction placeholder; Undated group |
@@ -181,7 +182,7 @@ SLICE 1 — Page frame and Vitals
   Check: bar 1 — the header and switcher, Vitals filled, the other four as places
 
 SLICE 2 — Provenance sheet
-  S13-06  Derived rows carry their records
+  ✎ S13-D12 ──▶ S13-06  Derived rows carry their records
   ✎ S13-D2 ──▶ S13-11  Provenance sheet
   Check: bar 2
 
@@ -227,7 +228,7 @@ SLICE 8 — Source date on the Source pages   (any time after S13-20)
 S13-99 — Dogfood close / docs
 ```
 
-**Order and parallel work:** slice 0 runs first: S13-23, S13-24 and S13-25 in order, and S13-30 after S13-24; S13-09 and the other engine PRs may run alongside it, except S13-08, which waits on S13-25 because both change `deleteimpact.ReleaseClaim`. The design-and-build slices run in order, 1 to 7, one brief at a time; slice 7 waits on open question 11. Slice 8 touches other pages and may run alongside any of them once S13-20 lands. Engine PRs can be planned and landed ahead of their slice: S13-01, S13-06 and S13-09 have no unmet dependencies, and S13-08 waits on S13-25; S13-02 waits on S11-30, S13-03 and S11-51 on S11-39.
+**Order and parallel work:** slice 0 runs first: S13-23, S13-24 and S13-25 in order, and S13-30 after S13-24; S13-09 and the other engine PRs may run alongside it, except S13-08, which waits on S13-25 because both change `deleteimpact.ReleaseClaim`. The design-and-build slices run in order, 1 to 7, one brief at a time; slice 7 waits on open question 11. Slice 8 touches other pages and may run alongside any of them once S13-20 lands. Engine PRs can be planned and landed ahead of their slice: S13-01 and S13-09 have no unmet dependencies, S13-06 waits on its board S13-D12 (it now changes the life rows), and S13-08 waits on S13-25; S13-02 waits on S11-30, S13-03 and S11-51 on S11-39.
 
 ### Dependencies at a glance
 
@@ -342,7 +343,7 @@ Go, plus deleting Swift's draft rule.
 
 #### S13-06 — Derived rows carry their records
 
-**Ships.** `ConclusionDetail` carries, keyed by owning entity, the `ReconcilerOutcomeDetail` records of each derived row's field (the lead birth or death event's date and Place), so `ReconciledValueRowModel.derived` rows have records like other fields. Not on `LifeFacts`. The "its page owns the Why" comments are updated.
+**Ships.** `ConclusionDetail` carries, keyed by owning entity, the `ReconcilerOutcomeDetail` records of each derived row's field (every surviving birth or death event's date, and those events' Places' names), so `ReconciledValueRowModel.derived` rows have records like other fields and show today's Why (brief S13-D12; user, 2026-10-30). Not on `LifeFacts`. The "its page owns the Why" comments are updated.
 **Not this PR.** The sheet (S13-11).
 **Check.** A handler test: a person with two birth records on one birth event returns both on the birth-date row.
 **Context.** Working rule "A derived row carries its owning entity's records"; R-13a, R-14.
