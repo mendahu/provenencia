@@ -5,7 +5,7 @@
 
 ## To user
 
-- **Captions and Toast (round 4).** The boards wrap tile captions to two lines and put the Toast at the bottom; the plan keeps today's one-line caption (full title as tooltip) and top-trailing Toast for every kind, so the Person page does not change. Recommendation: keep; say if you want the boards' versions, which would change the Person's gallery and every toast on the shared overlay.
+- **Captions and Toast (round 4)** — answered by the user, 2026-10-30: two-line captions for every kind (the Person included); the Toast stays top-trailing. Plan D-14(d), §6, §4 and manual check 5 updated.
 
 - **S14-02 now depends on S13-10** (M-5). The S14-D2 board puts the Event and Place pages on Page columns, which S13-10 builds, and the plan is written against S13-10's `PersonDetailSections`. The map row, its dependency graph, and Spike 13's S13-14 row (which now also waits on S14-02) are updated. Recommendation: accept; it removes a two-branch design.
 - **A confirmation round still runs.** Round 3 had blockers (M-1, M-2, X-2, X-3), all Fixed. The confirming round runs with the post-board refresh, which `plan-pr` already requires before `Planned`, so the plan is reviewed once against the real frames instead of twice.
@@ -121,7 +121,7 @@ Scope change before review: S13-23 (#633) removed the Promote evidence sheet, so
 **Answer:** Fixed — checked `api/ffi/handlers/conclusion_detail.go`: `attachHeader` and `attachPictures` run in one call from one lead rule and one `RelPaths` map. D-5 reads the thumbnail from `gallery.lead` alone; the fallback and the old AC-2.4 case are gone. AC-2.4 now pins the Person's thumbnail (path, label, colors) through the new builder.
 
 ### M2-4 · blocker · Two-line captions vs the one-line tile (also X2-3)
-**Answer:** Fixed — D-14(d): the caption stays one line, truncated, with the full title in `.help`, for every kind; the boards' two-line wrap is not built (it would change the Person's tiles). To user for veto.
+**Answer:** To user → answered 2026-10-30: two lines for every kind, one shared `lineLimit(2)`, no per-kind parameter (D-14d).
 
 ### X2-1 · major · AC-4.1 grep matches the sketch
 **Answer:** Fixed — the pattern is `thumbnail\.offersEarliest|offersEarliest: (true|false)`, plus `likenessImageRelPath`.
