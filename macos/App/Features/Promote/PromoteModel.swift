@@ -250,21 +250,19 @@ final class PromoteModel {
             return role.isEmpty
                 ? L10n.Promote.viaNeighbor(neighbor: neighbor.name, ref: neighbor.shownRef)
                 : L10n.Promote.via(neighbor: neighbor.name, ref: neighbor.shownRef, role: role)
-        case .neighborPlaced(let id), .neighborMoved(let id), .neighborReleased(let id):
-            guard let neighbor = neighbor(id) else { return L10n.string(L10n.Promote.reasonMoveUnknown) }
-            switch reason {
-            case .neighborPlaced:
-                return neighbor.target.handleRef.map { L10n.Promote.neighborPlaced(neighbor: neighbor.name, ref: $0) }
-                    ?? L10n.string(L10n.Promote.reasonMoveUnknown)
-            case .neighborMoved:
-                return neighbor.target.handleRef.map { L10n.Promote.neighborMoved(neighbor: neighbor.name, ref: $0) }
-                    ?? L10n.string(L10n.Promote.reasonMoveUnknown)
-            case .neighborReleased:
-                return L10n.Promote.neighborReleased(neighbor: neighbor.name)
-            default:
-                // Only the three move reasons reach this arm.
+        case .neighborPlaced(let id):
+            guard let neighbor = neighbor(id), let ref = neighbor.target.handleRef else {
                 return L10n.string(L10n.Promote.reasonMoveUnknown)
             }
+            return L10n.Promote.neighborPlaced(neighbor: neighbor.name, ref: ref)
+        case .neighborMoved(let id):
+            guard let neighbor = neighbor(id), let ref = neighbor.target.handleRef else {
+                return L10n.string(L10n.Promote.reasonMoveUnknown)
+            }
+            return L10n.Promote.neighborMoved(neighbor: neighbor.name, ref: ref)
+        case .neighborReleased(let id):
+            guard let neighbor = neighbor(id) else { return L10n.string(L10n.Promote.reasonMoveUnknown) }
+            return L10n.Promote.neighborReleased(neighbor: neighbor.name)
         }
     }
 
