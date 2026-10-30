@@ -143,4 +143,57 @@ struct EventDetailTests {
         #expect(date.records.isEmpty)
         #expect(page.summaryDate == nil)
     }
+
+    private func picture(_ id: String, path: String, title: String, leads: Bool) -> CatalogPicture {
+        var picture = CatalogPicture(imageRelPath: path, record: D.outcome(id, "kept", title: title))
+        picture.leads = leads
+        return picture
+    }
+
+    @Test func noPictureLeavesTheMarkAndNoGallery() {
+        let page = content(detail())
+        #expect(page.gallery.tiles.isEmpty)
+        #expect(!page.gallery.offersEarliest)
+        #expect(page.thumbnail == .init(mark: .subjectEvent, label: L10n.Conclusions.eventNoImage))
+    }
+
+    @Test func aSinglePictureLeadsTheHeaderWithoutAMenu() {
+        var source = detail()
+        source.pictures = [picture("a", path: "objects/ab/cd.png", title: "Wedding photograph", leads: true)]
+        let page = content(source)
+        #expect(page.thumbnail.imageRelPath == "objects/ab/cd.png")
+        #expect(page.thumbnail.mark == .subjectEvent)
+        #expect(page.thumbnail.label == L10n.Conclusions.eventPictureThumb)
+        #expect(page.thumbnail.imageLabel == "Picture from Wedding photograph")
+        #expect(!page.gallery.offersEarliest)
+    }
+
+    @Test func aChosenLaterPictureOffersTheEarliest() {
+        var source = detail()
+        source.pictures = [
+            picture("a", path: "objects/ab/cd.png", title: "Wedding photograph", leads: false),
+            picture("b", path: "objects/ef/01.png", title: "Family album", leads: true),
+        ]
+        let gallery = content(source).gallery
+        #expect(gallery.title == L10n.Conclusions.picturesSection)
+        #expect(gallery.tiles.map(\.id) == ["a", "b"])
+        #expect(gallery.tiles.map(\.isLead) == [false, true])
+        #expect(gallery.offersEarliest)
+        #expect(gallery.choose == .eventThumbnail)
+        #expect(gallery.tiles[0].useAsLabel == "Use the picture from Wedding photograph as thumbnail")
+        #expect(gallery.tiles[1].useAsLabel == "Use the picture from Family album as thumbnail")
+        #expect(gallery.tiles[1].chosenToastBody == "Using the picture from Family album as the thumbnail.")
+        #expect(gallery.tiles[0].accessibilityLabel == "Picture from Wedding photograph. Open citation")
+    }
+
+    @Test func twoTilesSharingAPathNameTheLeadingSource() {
+        var source = detail()
+        source.pictures = [
+            picture("a", path: "objects/ab/cd.png", title: "First copy", leads: false),
+            picture("b", path: "objects/ab/cd.png", title: "Second copy", leads: true),
+        ]
+        let page = content(source)
+        #expect(page.thumbnail.imageLabel == "Picture from Second copy")
+        #expect(page.gallery.offersEarliest)
+    }
 }

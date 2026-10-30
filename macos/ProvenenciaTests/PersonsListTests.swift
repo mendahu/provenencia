@@ -19,6 +19,14 @@ struct PersonsListTests {
         #expect(PersonsList.thumbnailRelPath(header("PER-2")) == "")
         let event = CatalogEventHeader(entity: CatalogCanonicalEntity(id: "e", ref: "EVT-1", subjectTypeID: "t", label: ""), title: CatalogEventTitle(rule: .ref, ref: "EVT-1"))
         #expect(EventsList.thumbnailRelPath(event) == "")
+        var pictured = event
+        pictured.pictureImageRelPath = "objects/12/34.png"
+        #expect(EventsList.thumbnailRelPath(pictured) == "objects/12/34.png")
+        let place = CatalogPlaceHeader(entity: CatalogCanonicalEntity(id: "p", ref: "PLC-1", subjectTypeID: "t", label: ""))
+        #expect(PlacesList.thumbnailRelPath(place) == "")
+        var picturedPlace = place
+        picturedPlace.pictureImageRelPath = "objects/56/78.png"
+        #expect(PlacesList.thumbnailRelPath(picturedPlace) == "objects/56/78.png")
     }
 
     private func listThumb<K: ConclusionListKind>(_: K.Type, _ row: K.Row) -> String {

@@ -130,4 +130,31 @@ struct PlaceDetailTests {
         #expect(!page.showsRef)
         #expect(page.members == "1 member")
     }
+
+    @Test func aPictureFillsTheGalleryAndLeadsTheHeader() {
+        var source = detail()
+        var picture = CatalogPicture(
+            imageRelPath: "objects/ab/cd.png", record: D.outcome("a", "kept", title: "Church photo")
+        )
+        picture.leads = true
+        source.pictures = [picture]
+        let page = content(source)
+        #expect(page.gallery.title == L10n.Conclusions.picturesSection)
+        #expect(page.gallery.tiles.count == 1)
+        #expect(page.gallery.tiles[0].sourceTitle == "Church photo")
+        #expect(page.gallery.tiles[0].accessibilityLabel == "Picture from Church photo. Open citation")
+        #expect(page.gallery.choose == .placeThumbnail)
+        #expect(page.thumbnail.imageRelPath == "objects/ab/cd.png")
+        #expect(page.thumbnail.mark == .subjectPlace)
+        #expect(page.thumbnail.label == L10n.Conclusions.placePictureThumb)
+        #expect(page.thumbnail.imageLabel == "Picture from Church photo")
+    }
+
+    @Test func noPictureLeavesTheMarkAndNoGallery() {
+        let page = content(detail())
+        #expect(page.gallery.tiles.isEmpty)
+        #expect(page.thumbnail.imageRelPath == "")
+        #expect(page.thumbnail.label == L10n.Conclusions.placeNoImage)
+        #expect(page.thumbnail.imageLabel == nil)
+    }
 }
