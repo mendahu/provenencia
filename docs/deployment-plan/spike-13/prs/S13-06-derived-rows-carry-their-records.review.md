@@ -1,6 +1,6 @@
 # Review — S13-06 Derived rows carry their records
 
-**Verdict:** Fits with changes — Ready with changes. Every finding is Fixed or answered; no blocker is open. The plan stays `Blocked — on board S13-D12` until the board is agreed and LW-4 is copied in.
+**Verdict:** Fits with changes — Ready with changes. Every finding is Fixed or answered; no blocker is open. The S13-D12 board was agreed 2026-10-30 (option (a)); the plan copied its frames and moved to Planned.
 **Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet, the implementing model). Brief S13-D12 reviewed in the same pass.
 
 ## To user
@@ -139,3 +139,10 @@
 **Answer:** Fixed — D-12: one group never has a line. The brief's domain facts state the case.
 
 Brief: the group line wraps and is never cut (LW-4, D-14).
+
+## Board handoff (2026-10-30)
+
+The S13-D12 board, checked against the exported `Person Detail.dc.html`, meets the brief: frames 5a – 5h cover every requirement, at Regular and (5b, 5f) Wide. The plan was updated:
+- **D-14 is decided**: option (a), drawn as the board draws it (title in micro-caps plus a mono "· ref"). `OwnerLine` carries `title` and `ref` separately (D-11, D-13), and the planned `whyOwner` key is dropped: no new string.
+- **Two board samples are not followed, recorded in the brief's §8**: Place groups use the Places list title rather than the sample's chain line, and the empty text stays "No birth date recorded" rather than the sample's "No birth date kept".
+- §6 **macOS** describes each frame in words; the open question is closed.

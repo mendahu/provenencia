@@ -6,7 +6,7 @@
 **Implements later as:** PR **S13-06** (Derived rows carry their records: LW-1 – LW-7, LW-W1)
 **Depends on:** S13-D1 (board agreed 2026-10-29; built in S13-10, #634)
 **Related:** [`../prs/S13-06-derived-rows-carry-their-records.md`](../prs/S13-06-derived-rows-carry-their-records.md); [`../person-detail.md`](../person-detail.md) R-12, R-13a, R-14; working rule "A derived row carries its owning entity's records" in [`../deployment-plan.md`](../deployment-plan.md#engine); the provenance sheet that later replaces this Why on the Person page is S13-D2 (S13-11)
-**Board:** — (not drawn yet). Draw on the Claude Design project [*Person Detail*](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), beside the S13-D1 frames
+**Board:** agreed 2026-10-30 — Claude Design project [*Person Detail*](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail.dc.html*, turn 5 "S13-D12 · The Why on the four life rows", frames 5a – 5h. LW-4 option (a); 5e set aside (see §8)
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
 **Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
 
@@ -177,3 +177,18 @@ This table is **binding**. Paths from `macos/App/` unless noted.
 ## 7. Handoff
 
 When the board is agreed: record the board link, the frames and the LW-4 option on this brief and in the S13-06 plan (**Board** line, Design → macOS, D-row that reads LW-4), move S13-06 from `Blocked — on board S13-D12` to `Planned` with `plan-pr`, and note in S13-D2 (the provenance sheet) that it keeps the grouping this board picks for records from several owners, and when S13-06 lands move this brief to the spike design archive folder and update [`README.md`](README.md).
+
+---
+
+## 8. Board notes (agreed 2026-10-30)
+
+Checked against the exported `Person Detail.dc.html`. Where the board differs from this brief, the board wins and the S13-06 plan copies it, except where noted.
+
+| Frame | Requirement | The board |
+| --- | --- | --- |
+| 5a, 5b, 5c | LW-1 – LW-3, LW-5, LW-W1 | As written. One owner, no group line; the Why opens under its row in the centred 1180 column at Wide. |
+| 5d, 5f | LW-4, LW-5, LW-7 | **Option (a), picked.** The group line is two parts: the title in the micro-caps heading style, muted, then "· ref" in mono caption, muted; it wraps. It has a subtle top rule, and the first record under it has none. Spoken "title, ref" as a heading. Text, not a link. |
+| 5e | LW-4 | Option (b), set aside. Not built. |
+| 5g | LW-4 | The sample titles the Place groups with the row's chain line ("Toronto, Ontario"), but the note says "its title as the Places list shows it". The build uses the Places list title (`PlaceTitleDisplay`: "Toronto"). |
+| 5h | LW-1, LW-2 | As written. The sample's empty text "No birth date kept" is not shipped: the life rows keep today's "No birth date recorded". |
+| — | — | The board's open note that the open-arrow IconButton is now drawn on every life row of turn 4 only syncs the S13-D1 frames with the app; nothing to build. |

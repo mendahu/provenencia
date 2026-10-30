@@ -1,11 +1,11 @@
 # S13-06 — Derived rows carry their records
 
-**Status:** Blocked — on board S13-D12
+**Status:** Planned
 **Spike / slice:** Spike 13 · Slice 2 — Provenance sheet
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S13-D12](../design/S13-D12-life-rows-why.md), board not drawn yet. The Why disclosure appears on the four life rows, so the Vitals rows look different (user, 2026-10-30: "Why shows now")
-**Board:** — (not agreed yet; the handoff records where the implementer sees the frames)
-**Depends on:** S13-D12 (board). Shares `core/database/conclusiondetails/conclusiondetails.go` and `api/ffi/handlers/conclusion_detail.go` with S13-24 (Planned); either may land first, see §11
+**Brief:** [S13-D12](../design/S13-D12-life-rows-why.md), board agreed 2026-10-30. The Why disclosure appears on the four life rows, so the Vitals rows look different (user, 2026-10-30: "Why shows now")
+**Board:** [Claude Design, *Person Detail*](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail.dc.html*, turn 5 "S13-D12 · The Why on the four life rows", frames 5a – 5h. LW-4 option (a) is picked; frame 5e (option (b)) is set aside and not built. §6 **macOS** describes each frame in words; the brief's §8 records where the board and the plan differ
+**Depends on:** S13-D12 (board agreed 2026-10-30). Shares `core/database/conclusiondetails/conclusiondetails.go` and `api/ffi/handlers/conclusion_detail.go` with S13-24 (Planned); either may land first, see §11
 **Blocks:** S13-11
 **Branch:** `s13-06-derived-rows-carry-their-records`
 **Version bump:** none — Spike 11–14 PRs leave `VERSION` alone until a release is cut, as S13-10 and S13-23 did ([`docs/versioning.md`](../../../versioning.md))
@@ -124,10 +124,10 @@ On the Person page, the birth date, birth place, death date and death place rows
 | D-8 | The handler fills `derived_rows` in `attachHeader`'s Person case after the header is set (an absent header returns first, leaving it empty), through `conclusiondetails.PersonDerivedRows` and `derivedRowsProto([]conclusiondetails.DerivedRow) []*engine.DerivedRow` *(new)*, which maps each owner with `canonicalEntityProto`, `conclusionFieldProto` and, when `Event` is set, `eventHeaderProto`. `conclusionDetailProto`'s per-field body moves into `conclusionFieldProto(f conclusiondetails.Field) *engine.ConclusionField` *(new)* | Precedent `AttachPlaceRelationships` | Composing in the handler (Known traps) |
 | D-9 | Swift store: `enum CatalogDerivedRowKind { case birthDate, birthPlace, deathDate, deathPlace }` *(new)*; `struct CatalogOwnerField: Sendable, Equatable { var entity: CatalogCanonicalEntity; var event: CatalogEventHeader?; var field: CatalogConclusionField }` *(new)*; `struct CatalogDerivedRow: Sendable, Equatable { var kind: CatalogDerivedRowKind; var owners: [CatalogOwnerField] }` *(new)*; `CatalogConclusionDetail.derivedRows: [CatalogDerivedRow] = []`. GoStore maps them, dropping a row of kind `.unspecified` or an unknown case; the inline field mapping moves into `private static func mapConclusionField(_:)` *(new)*; the event header maps through the function `mapConclusionHeader` uses for `.event` | Default empty keeps every existing initializer call compiling | — |
 | D-10 | One shown Place (review M-4): `DerivedPlace.shown(_ places: [CatalogHeaderPlace]) -> CatalogHeaderPlace?` *(new)* returns the first Place whose `placeLine` is non-empty; `name` and `extra` use it; `PersonDetailContent.rows` opens `DerivedPlace.shown(side?.places ?? [])` instead of `.first`. The shown owner of a date row is the owner whose entity id is `side?.event?.id`; of a place row, the one whose id is `DerivedPlace.shown(…)?.entity.id` | The label, the open arrow and the ink read one fact | Go marking `shown` — Go does not know `placeLine`, a Swift formatter |
-| D-11 | Record groups (review M-13, M-6): `struct ReconciliationRecordGroup: Equatable, Identifiable { var owner: OwnerLine?; var records: [ReconciliationRecord] }` *(new)* with `struct OwnerLine: Equatable { var id: String; var text: String; var spoken: String }` *(new, nested)*; `id` is the owner's entity id, else `""`. `ReconciledValueRowModel.records` becomes `recordGroups: [ReconciliationRecordGroup]` plus a computed `var records: [ReconciliationRecord] { recordGroups.flatMap(\.records) }`. `private static func records(_ fields: [CatalogConclusionField], locale: Locale, orders: NameFormatOrders) -> [ReconciliationRecord]` *(new)* maps fields' outcomes to records; `init(field:)` and `spanning` use it and make one group with `owner: nil`; `empty` makes none | One mapper, one grouping structure the sheet can read | Grouping by comparing adjacent strings in the view |
+| D-11 | Record groups (review M-13, M-6): `struct ReconciliationRecordGroup: Equatable, Identifiable { var owner: OwnerLine?; var records: [ReconciliationRecord] }` *(new)* with `struct OwnerLine: Equatable { var id: String; var title: String; var ref: String?; var spoken: String }` *(new, nested)*; `id` is the owner's entity id; `ref` is nil when the title is the ref. `ReconciledValueRowModel.records` becomes `recordGroups: [ReconciliationRecordGroup]` plus a computed `var records: [ReconciliationRecord] { recordGroups.flatMap(\.records) }`. `private static func records(_ fields: [CatalogConclusionField], locale: Locale, orders: NameFormatOrders) -> [ReconciliationRecord]` *(new)* maps fields' outcomes to records; `init(field:)` and `spanning` use it and make one group with `owner: nil`; `empty` makes none | One mapper, one grouping structure the sheet can read | Grouping by comparing adjacent strings in the view |
 | D-12 | `derived` gains `owners: [CatalogOwnerField] = []`, `shownOwnerID: String? = nil`, `locale: Locale = .autoupdatingCurrent` and `orders: NameFormatOrders = NameFormatOrders()` (`PersonDetailContent.rows` passes its own; `EventDetailContent.placeRow`'s call compiles unchanged). Groups: the shown owner first, then the rest in Go's order, one group each, records from `records([owner.field], …)`; records of every group but the shown owner's get `counted = false` (LW-5); when no owner is the shown one, all are secondary. `owner` is set on every group when there are two or more groups; with one group it is nil, whether or not that owner is shown (LW-3). `whyTitle` is `L10n.Conclusions.whyTitle(shown ?? label)` when there are records, else `""` | The ink rule follows the value on screen | — |
-| D-13 | Group line (review M-1): title = `EventTitleDisplay.title(event, locale:orders:)` when `owner.event` is set, else `EventTitleDisplay.untitled(owner.entity).text` for a date row; for a place row `PlaceTitleDisplay.titleSource(PlaceTitleParts(names: <the field's displayed values as text>, label: entity.label, ref: entity.ref)).text`. `text` = the ref alone when the title equals the ref, else `L10n.Conclusions.whyOwner(title, ref:)` *(new)* "%1$@ · %2$@" ("Birth of Ada Lovelace · EVT-4KX2M"); `spoken` = `L10n.Conclusions.a11yList(title, rest: ref)` or the ref. Built by `private static func ownerLine(_:kind:locale:orders:)` *(new)* on `ReconciledValueRowModel` | The one titling rule per kind, as every list, header and Promote use; numbered format required by `scripts/check-localizable-xcstrings.py` | Label or value text — a third title form |
-| D-14 | **Pending the board (LW-4).** `ReconciliationReasoningView` takes `groups: [ReconciliationRecordGroup]` instead of `records`; `ReconciledValueRow` passes `model.recordGroups`. Before a group whose `owner` is set it draws one grid row: `Text(verbatim: owner.text)`, `pvMicroCaps()`, `PVColor.textMuted`, `.gridCellColumns(4)`, wrapping (`.fixedSize(horizontal: false, vertical: true)`, no line limit), `.accessibilityAddTraits(.isHeader)`, `.accessibilityLabel(owner.spoken)`. If the board picks LW-4 (b), this Decision, AC-1.4, AC-2.2 and AC-2.5 are rewritten before the plan is Planned | Brief recommendation (a) | — |
+| D-13 | Group line (review M-1): title = `EventTitleDisplay.title(event, locale:orders:)` when `owner.event` is set, else `EventTitleDisplay.untitled(owner.entity).text` for a date row; for a place row `PlaceTitleDisplay.titleSource(PlaceTitleParts(names: <the field's displayed values as text>, label: entity.label, ref: entity.ref)).text`. `title` is that title; `ref` is `entity.ref`, or nil when the title equals the ref; `spoken` = `L10n.Conclusions.a11yList(title, rest: ref)`, or the title alone when `ref` is nil ("Birth of Margaret Ellen Robins, EVT-4KX2M", board 5d). No new key: the view draws the two parts (D-14). Built by `private static func ownerLine(_:kind:locale:orders:)` *(new)* on `ReconciledValueRowModel` | The one titling rule per kind, as every list, header and Promote use | Label or value text — a third title form; the board's sample "Toronto, Ontario" reuses the row's chain line, while its note says "its title as the Places list shows it", which is `PlaceTitleDisplay` ("Toronto") |
+| D-14 | Board LW-4 (a), frame 5d. `ReconciliationReasoningView` takes `groups: [ReconciliationRecordGroup]` instead of `records`; `ReconciledValueRow` passes `model.recordGroups`. Before a group whose `owner` is set it draws one grid row spanning the columns (`.gridCellColumns(4)`), preceded by the usual 1pt `PVColor.borderSubtle` rule: a wrapping `HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4)` of `Text(verbatim: owner.title)` in `pvMicroCaps()` and `PVColor.textMuted`, then, when `ref` is set, `Text(verbatim: "· \(ref)")` in `PVFont.mono(size: PVTypeScale.caption)` and `PVColor.textMuted`; top padding `PVSpacing.space5`, bottom `PVSpacing.space2`; no line limit (`.fixedSize(horizontal: false, vertical: true)`); the row is one element with `.accessibilityAddTraits(.isHeader)` and `.accessibilityLabel(owner.spoken)`. The first record under a group line draws no rule above it. The group line is text, never a link | The board's frame 5d; the `·` separator is a glyph, so `Text(verbatim:)` per `add-localized-string` | Option (b), frame 5e — set aside on the board |
 
 **Rules this plan bends.** None open. D-1 changed the working rule "A derived row carries its owning entity's records" from the lead event to every surviving event (user, 2026-10-30); the rule and the scope entry were updated in the planning commit.
 
@@ -145,7 +145,6 @@ On the Person page, the birth date, birth place, death date and death place rows
 | `CatalogDerivedRowKind`, `CatalogOwnerField`, `CatalogDerivedRow`, `mapConclusionField` *(new)* | Swift type, func | `CatalogConclusionField`, GoStore inline mapping | Wrap and move |
 | `DerivedPlace.shown` *(new)* | func | `DerivedPlace.name` | `name` now calls it |
 | `ReconciliationRecordGroup`, `OwnerLine`, `recordGroups`, `records(_:locale:orders:)`, `ownerLine` *(new)* | type, property, func | `spanning`'s mapping, `records` | `records` stays as a computed view; `spanning` uses the shared mapper |
-| `L10n.Conclusions.whyOwner` *(new)* | key `conclusions.why.owner` | `pageSectionLeaf` ("%1$@ · %2$@") | Different meaning and translator comment |
 | `core/database/conclusiondetails/export_test.go` *(new)* | test helper | `conclusionheaders/export_test.go` | Same pattern |
 
 **Builds on.** `ForEntity`'s composition, `sqlbatch.Query`, the `attachHeader` page-only attach, `EventTitleDisplay` and `PlaceTitleDisplay`, the existing Why disclosure.
@@ -197,11 +196,23 @@ Errors: none new.
 | Shown Place | `DerivedPlace.shown` | `DerivedPlace.swift` | D-10 |
 | Disclosure, open arrow, badge, card | `PVDisclosureButton`, `PVIconButton`, `PVBadge`, `PVCard` | `macos/App/DesignSystem/Components/…` | Unchanged |
 
-`PersonDetailContent.rows` gains `derivedRows: [CatalogDerivedRow] = []`; `init(detail:)` passes `detail.derivedRows`; the `life` table gains a `CatalogDerivedRowKind` per entry, and each row takes `derivedRows.first { $0.kind == kind }?.owners ?? []`. States: no owners → no Why. Frames: copied from the board at handoff.
+`PersonDetailContent.rows` gains `derivedRows: [CatalogDerivedRow] = []`; `init(detail:)` passes `detail.derivedRows`; the `life` table gains a `CatalogDerivedRowKind` per entry, and each row takes `derivedRows.first { $0.kind == kind }?.owners ?? []`. States: no owners → no Why.
+
+**Board frames, in words** (turn 5 of *Person Detail*; the header, switcher, other rows and the reserved 28pt slot are S13-D1's and unchanged):
+
+- **5a — Regular, birth date, one event.** The Birth date row shows "3 Feb 1822", its Sources count and, at its trailing edge before the open arrow, the Why disclosure. Opened under the row at the disclosure indent: today's sunken Card, title "Why “3 Feb 1822”", columns Read as · Source · Outcome and the empty 88pt column. Two Kept records (primary ink) first, then the 1851 census "1821" Outvoted (2 of 3 Sources), secondary. No group line.
+- **5b — Wide, the same.** The Why opens under its row in the centred primary column at the Regular measure; the secondary column stays empty (S13-D2's). Stands for every frame at Wide.
+- **5c — Regular, birth place, one Place.** The toponym records of York: two Kept, the Family Bible's "Muddy York" Folded into York. No group line; no parent-chain names, no location link record.
+- **5d — Regular, two birth events, option (a): built.** The row shows "3 Feb 1822" and Mixed. The Why: a group line "BIRTH OF MARGARET ELLEN ROBINS · EVT-4KX2M" (micro-caps title, mono ref), its two Kept records in primary ink; a second group line with the same title and "· EVT-9RW7P", the obituary's "born June 2, 1823" reading Kept on its own event but in secondary ink. Each line is a heading for VoiceOver.
+- **5e — option (b): set aside, not built.**
+- **5f — Wide, option (a).** 5d in the centred column.
+- **5g — Regular, death place, two Places.** The row shows the shown Place and Mixed; the Why lists that Place's names first under its group line, then the other Place's under its own, secondary. (The board's sample titles the groups with the chain line; the build uses `PlaceTitleDisplay`, D-13.)
+- **5h — Regular, empty and all-lost.** Birth date stated empty with its one Denied record: the Why button shows; opened, the title is "Why “Birth date”". Death date has no event: no Why button and no open arrow, and the row keeps its layout.
+
 
 ### Strings
 
-L10n keys *(new)*: `L10n.Conclusions.whyOwner(_ title: String, ref: String)` → `conclusions.why.owner` = "%1$@ · %2$@", comment "Group line in a Why list naming the record the following rows belong to; arguments are its title and ref". Removed: none.
+None — no new key. The group line's title and ref are data, and its `·` is a glyph (`Text(verbatim:)`); its spoken label reuses `L10n.Conclusions.a11yList`. The life rows keep their empty text ("No birth date recorded"; the board's "No birth date kept" in 5h is not shipped, brief §8).
 
 ## 7. Steps
 
@@ -231,13 +242,13 @@ Do: D-10 (the open target only; records come in STEP-6); add T-5.
 Check: Xcode tests pass.
 
 **STEP-6 — Life rows carry record groups**
-Files: `ReconciledValueRowModel.swift`, `ReconciliationRecord.swift`, `PersonDetailContent.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, `macos/ProvenenciaTests/PersonDetailTests.swift`. Skills: `add-localized-string`, `add-swift-test`.
+Files: `ReconciledValueRowModel.swift`, `ReconciliationRecord.swift`, `PersonDetailContent.swift`, `macos/ProvenenciaTests/PersonDetailTests.swift`. Skills: `add-swift-test`.
 Do: D-11 – D-13. The existing `records.isEmpty` expectations (lines 60, 270, 306) stay: those details have no `derivedRows`. Add T-6, T-7.
-Check: Xcode tests pass; `python3 scripts/check-localizable-xcstrings.py` passes.
+Check: Xcode tests pass.
 
 **STEP-7 — Group lines in the Why**
 Files: `ReconciliationReasoningView.swift`, `ReconciledValueRow.swift`. Skill: `add-ui-component`.
-Do: D-14, matched to the agreed board's frames 3 and 4.
+Do: D-14, matched to the board's frames 5d and 5g. Skill: `add-localized-string` for the `Text(verbatim:)` rule.
 Check: manual check §10 steps 3 – 5.
 
 **STEP-8 — Comments**
@@ -261,7 +272,7 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-4 | Go | `TestGetConclusionDetailCarriesItsHeader` (extend each case) | Event and Place → `len(GetDerivedRows()) == 0` | AC-3.1 |
 | T-5 | Swift | `macos/ProvenenciaTests/DerivedPlaceTests.swift` `shownSkipsANamelessPlace` *(new)* | [nameless Place, Paris] → `shown` is Paris; `name` "Paris"; `extra` 1; Person life row opens Paris | AC-2.5, D-10 |
 | T-6 | Swift | `macos/ProvenenciaTests/PersonDetailTests.swift` `lifeRowsCarryTheirOwnersRecords` *(new)* | Birth date row with one owner, two outcomes → one group, `owner == nil`, 2 records, `whyTitle == "Why “14 May 1817”"`; no Death date row → records empty, `whyTitle == ""`; Birth date with one denied outcome and no displayed value → `lead == nil`, 1 record, `whyTitle == "Why “Birth date”"` | AC-1.2, AC-1.5, AC-1.6, D-12 |
-| T-7 | Swift | same file `competingOwnersAreGroupedAndSecondary` *(new)* | two Birth date owners, header's lead event the second in Go order → groups in shown-first order, the other group's `counted == false`, `owner.text` "Birth of Ada Lovelace · EVT-…" from a `CatalogEventHeader` with the subject rule; owner with no header → `EventTitleDisplay.untitled` text; two Death place owners → Place titles from `PlaceTitleDisplay`; `owner.spoken` "Birth of Ada Lovelace, EVT-…" | AC-1.4, AC-2.2, AC-2.5, D-12, D-13 |
+| T-7 | Swift | same file `competingOwnersAreGroupedAndSecondary` *(new)* | two Birth date owners, header's lead event the second in Go order → groups in shown-first order, the other group's `counted == false`, `owner.title` "Birth of Ada Lovelace" from a `CatalogEventHeader` with the subject rule and `owner.ref` "EVT-4KX2M"; owner with no header and no label → title is the ref, `ref == nil`; two Death place owners → titles "Toronto" and "Yorkville" from `PlaceTitleDisplay`; `owner.spoken` "Birth of Ada Lovelace, EVT-4KX2M" | AC-1.4, AC-2.2, AC-2.5, D-12, D-13 |
 | T-8 | Go | `core/database/conclusionheaders/placechains_test.go` `TestPersonDerivedRows` *(new; external test package `conclusionheaders_test`, which may import `conclusiondetails`)*, built with the T-1 helpers | (a) one birth event with one Place vs two birth events with two Places each → after `g.Drop()` and `g.Vocabulary()`, equal graph query counts (`g.SetQueryCounterForTest`, as `TestForEntityQueryCountIsConstant`); (b) born and died at York → birth place and death place rows each one owner, York, with equal fields | AC-3.3, AC-2.6, D-5, D-6 |
 
 AC-2.1 is covered by T-1 (a) and T-3's path and by the manual check; AC-3.2 by the unchanged `TestListPersonHeaders`.
@@ -309,11 +320,10 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 - A birth event's date records are not in `auto_reconciler_outcomes` under the event's entity id (T-3 finds no outcomes for a promoted event with two date records).
 - The participation bridge does not create the canonical link in T-3's fixture with `PromoteSubject` on each end.
 - T-8's counts differ because `PersonLifeOwners`' walk issues graph queries per event that `composePersons`' walk avoids.
-- The agreed board's LW-4 option or frames contradict D-12 – D-14 or AC-1.4, AC-2.2, AC-2.5.
 
 ## 12. Open questions
 
-1. **LW-4 grouping option** — decided by the S13-D12 board. Recommendation: (a), as D-14 drafts.
+None.
 
 ## 13. PR
 
