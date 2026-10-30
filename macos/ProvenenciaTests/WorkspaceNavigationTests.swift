@@ -753,6 +753,107 @@ struct WorkspaceNavigationTests {
         #expect(navigation.heldNavigation == nil)
         #expect(navigation.currentLocation == .sectionRoot(.sources))
     }
+
+    // MARK: - Page sections
+
+    private func person(_ section: ConclusionPageSection? = nil) -> WorkspaceLocation {
+        .personDetail(entityId: "per-1", ref: "PER-1", title: "Jane Doe", section: section)
+    }
+
+    @Test func pageSectionPushAndRestore() throws {
+        let (navigation, url) = try attachedNavigation()
+        navigation.go(to: .sectionRoot(.persons))
+        navigation.go(to: person())
+        navigation.go(to: navigation.currentLocation.withPageSection(.family))
+        navigation.go(to: navigation.currentLocation.withPageSection(.gallery))
+        #expect(navigation.currentLocation.pageSection == .gallery)
+
+        navigation.goBack()
+        #expect(navigation.currentLocation.pageSection == .family)
+        navigation.goBack()
+        #expect(navigation.currentLocation.pageSection == nil)
+        #expect(navigation.currentLocation.entityId == "per-1")
+        navigation.goBack()
+        #expect(navigation.currentLocation == .sectionRoot(.persons))
+
+        navigation.goForward()
+        navigation.goForward()
+        navigation.go(to: navigation.currentLocation.withPageSection(.timeline))
+        let reloaded = WorkspaceNavigation()
+        reloaded.attachProject(uuid: projectUuid, fileURL: url)
+        #expect(reloaded.currentLocation.pageSection == .timeline)
+        #expect(reloaded.currentLocation.entityId == "per-1")
+        #expect(reloaded.currentLocation.title == "Jane Doe")
+    }
+
+    @Test func firstSectionIsStoredAsNil() throws {
+        let linked = person()
+        #expect(person(.vitals) == linked)
+        #expect(person(.vitals).pageSection == nil)
+        #expect(person(.gallery).withPageSection(.vitals) == linked)
+        #expect(person(.gallery).withPageSection(.vitals).pageSection == nil)
+
+        let (navigation, _) = try attachedNavigation()
+        navigation.go(to: .sectionRoot(.persons))
+        navigation.go(to: linked)
+        let before = entryCount(navigation)
+        navigation.go(to: person(.vitals))
+        #expect(entryCount(navigation) == before)
+        navigation.go(to: person(.gallery))
+        let after = entryCount(navigation)
+        navigation.go(to: person(.gallery))
+        #expect(entryCount(navigation) == after)
+    }
+
+    @Test func pageSectionIsIdentity() {
+        #expect(person(.family) != person(.gallery))
+        #expect(person(.family) != person())
+        #expect(person(.family) == person(.family))
+    }
+
+    @Test func pageSectionOnlyWhereOffered() throws {
+        let locations: [WorkspaceLocation] = [
+            .eventDetail(entityId: "evt-1", ref: "EVT-1", title: nil),
+            .placeDetail(entityId: "plc-1", ref: "PLC-1", title: nil),
+            .sectionRoot(.persons),
+        ]
+        for location in locations {
+            let changed = location.withPageSection(.family)
+            #expect(changed.pageSection == nil)
+            #expect(changed == location)
+            let json = Data("""
+            {"section":"\(location.section.rawValue)","entityId":"\(location.entityId ?? "")","pageSection":"family"}
+            """.utf8)
+            let decoded = try JSONDecoder().decode(WorkspaceLocation.self, from: json)
+            #expect(decoded.pageSection == nil)
+        }
+        let built = WorkspaceLocation(section: .events, entityId: "evt-1", pageSection: .family)
+        #expect(built.pageSection == nil)
+    }
+
+    @Test func legacyAndUnknownPageSectionDecodeAsTheFirst() throws {
+        let legacy = Data("""
+        {"section":"persons","entityId":"per-1","ref":"PER-1"}
+        """.utf8)
+        #expect(try JSONDecoder().decode(WorkspaceLocation.self, from: legacy).pageSection == nil)
+        let unknown = Data("""
+        {"section":"persons","entityId":"per-1","pageSection":"lineage"}
+        """.utf8)
+        let decoded = try JSONDecoder().decode(WorkspaceLocation.self, from: unknown)
+        #expect(decoded.pageSection == nil)
+        #expect(decoded.entityId == "per-1")
+        let known = Data("""
+        {"section":"persons","entityId":"per-1","pageSection":"gallery"}
+        """.utf8)
+        #expect(try JSONDecoder().decode(WorkspaceLocation.self, from: known).pageSection == .gallery)
+    }
+
+    @Test func sectionsOfferedPerKind() {
+        #expect(ConclusionPageSection.offered(by: .persons) == [.vitals, .family, .timeline, .gallery, .sources])
+        for section in [WorkspaceSection.events, .places, .sources, .sourceTypes, .metadata, .properties] {
+            #expect(ConclusionPageSection.offered(by: section).isEmpty)
+        }
+    }
 }
 
 @MainActor

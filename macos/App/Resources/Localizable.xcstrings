@@ -16160,6 +16160,138 @@
         }
       }
     },
+    "conclusions.section.vitals": {
+      "comment": "Name of the Vitals section of a Person page: the Person's fields",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vitals"
+          }
+        }
+      }
+    },
+    "conclusions.section.family": {
+      "comment": "Name of the Family section of a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Family"
+          }
+        }
+      }
+    },
+    "conclusions.section.timeline": {
+      "comment": "Name of the Timeline section of a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timeline"
+          }
+        }
+      }
+    },
+    "conclusions.section.gallery": {
+      "comment": "Name of the Gallery section of a Person page: its likenesses",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gallery"
+          }
+        }
+      }
+    },
+    "conclusions.section.sources": {
+      "comment": "Name of the Sources section of a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sources"
+          }
+        }
+      }
+    },
+    "conclusions.sections": {
+      "comment": "VoiceOver label of the control that switches the sections of a record page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sections"
+          }
+        }
+      }
+    },
+    "conclusions.gallery.empty.title": {
+      "comment": "Title of the empty Gallery section of a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No likenesses yet"
+          }
+        }
+      }
+    },
+    "conclusions.gallery.empty.message": {
+      "comment": "Message of the empty Gallery section of a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A likeness is drawn on a Citation’s image — draw one there and it appears here."
+          }
+        }
+      }
+    },
+    "conclusions.detail.refreshing": {
+      "comment": "Shown beside a small spinner while a record page re-reads its data",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refreshing"
+          }
+        }
+      }
+    },
+    "conclusions.section.later": {
+      "comment": "Message of a Person page section that is not built yet; argument is the section name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ arrives in a later version of Provenencia."
+          }
+        }
+      }
+    },
+    "conclusions.section.leaf": {
+      "comment": "Back menu entry for a section of a record page; arguments are the record's title and the section name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        }
+      }
+    },
     "conclusions.detail.details": {
       "comment": "Section heading over a Person's fields",
       "extractionState": "manual",

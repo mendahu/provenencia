@@ -12,6 +12,50 @@ enum SourceSurface: String, Codable, Sendable, Equatable {
     case promote
 }
 
+/// A section of a record page (the Person page's Vitals, Family, …). The raw
+/// values are written to navigation history files, so they are frozen.
+/// `WorkspaceLocation.pageSection` stores one; the first a kind offers is
+/// stored as nil.
+enum ConclusionPageSection: String, Codable, CaseIterable, Sendable {
+    case vitals
+    case family
+    case timeline
+    case gallery
+    case sources
+
+    /// The sections a record page of `section` offers, in order. A kind that
+    /// has none returns `[]`; an Event or Place adopts sections by returning
+    /// cases here.
+    static func offered(by section: WorkspaceSection) -> [ConclusionPageSection] {
+        switch section {
+        case .persons:
+            return allCases
+        case .sources, .events, .places, .sourceTypes, .metadata, .properties:
+            return []
+        }
+    }
+
+    var label: LocalizedStringResource {
+        switch self {
+        case .vitals: return L10n.Conclusions.pageSectionVitals
+        case .family: return L10n.Conclusions.pageSectionFamily
+        case .timeline: return L10n.Conclusions.pageSectionTimeline
+        case .gallery: return L10n.Conclusions.pageSectionGallery
+        case .sources: return L10n.Conclusions.pageSectionSources
+        }
+    }
+
+    var glyph: PVGlyph {
+        switch self {
+        case .vitals: return .symbol(.account)
+        case .family: return .symbol(.gitBranch)
+        case .timeline: return .symbol(.calendar)
+        case .gallery: return .symbol(.photo)
+        case .sources: return .symbol(.library)
+        }
+    }
+}
+
 /// Result of reconciling a destination model to a navigation `WorkspaceLocation`.
 /// Views map `.missingDeepId` to `navigation.fallbackToSectionRoot()`.
 enum WorkspaceLocationReconcile: Equatable, Sendable {
@@ -70,12 +114,16 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     /// Ignored for navigation identity, like `title` and `ref`. Written when leaving
     /// the list. A missing key in older history files decodes as nil, which opens at the top.
     var listScrollAnchor: String?
+    /// The section of a record page that is open (Person: Vitals, Family, …). Part of
+    /// identity: a section is a place. Nil is the first section the kind offers, so a
+    /// link without a section and one to the first section are equal.
+    private(set) var pageSection: ConclusionPageSection?
 
     enum CodingKeys: String, CodingKey {
         case section, sourceId, graphId, fieldId, typeId, subjectId, citationId, artifactId, observationId
         case connectFromSubjectId, connectToSubjectId, connectBridgeTypeKey
         case subjectTypeKey, propertyId, entityId
-        case sourceSurface, promoteAll, ref, title, sourceTitle, listScrollAnchor
+        case sourceSurface, promoteAll, ref, title, sourceTitle, listScrollAnchor, pageSection
     }
 
     init(
@@ -94,6 +142,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         subjectTypeKey: String? = nil,
         propertyId: String? = nil,
         entityId: String? = nil,
+        pageSection: ConclusionPageSection? = nil,
         sourceSurface: SourceSurface = .page,
         promoteAll: Bool = false,
         ref: String? = nil,
@@ -116,6 +165,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         self.subjectTypeKey = Self.nilIfEmpty(subjectTypeKey)
         self.propertyId = Self.nilIfEmpty(propertyId)
         self.entityId = Self.nilIfEmpty(entityId)
+        self.pageSection = Self.normalizedPageSection(pageSection, section: section, entityId: self.entityId)
         self.sourceSurface = Self.normalizedSurface(sourceSurface, graphId: self.graphId)
         self.promoteAll = promoteAll
         self.ref = Self.nilIfEmpty(ref)
@@ -141,6 +191,11 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         subjectTypeKey = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .subjectTypeKey))
         propertyId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .propertyId))
         entityId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .entityId))
+        pageSection = Self.normalizedPageSection(
+            try container.decodeIfPresent(String.self, forKey: .pageSection).flatMap(ConclusionPageSection.init(rawValue:)),
+            section: section,
+            entityId: entityId
+        )
         sourceSurface = Self.normalizedSurface(
             try container.decodeIfPresent(SourceSurface.self, forKey: .sourceSurface) ?? .page,
             graphId: graphId
@@ -158,8 +213,13 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     }
 
     /// One Person's page (S9-09 stub; the page itself is S9-16).
-    static func personDetail(entityId: String, ref: String, title: String?) -> WorkspaceLocation {
-        WorkspaceLocation(section: .persons, entityId: entityId, ref: ref, title: title)
+    static func personDetail(
+        entityId: String,
+        ref: String,
+        title: String?,
+        section: ConclusionPageSection? = nil
+    ) -> WorkspaceLocation {
+        WorkspaceLocation(section: .persons, entityId: entityId, pageSection: section, ref: ref, title: title)
     }
 
     /// One Event's page (S9-23 stub; the page itself is S9-24).
@@ -251,8 +311,16 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         return copy
     }
 
+    /// Same record, on another section of its page. Nil, an unoffered section, or the
+    /// first section the kind offers is stored as nil. `ref`, `title` and `sourceTitle` are kept.
+    func withPageSection(_ pageSection: ConclusionPageSection?) -> WorkspaceLocation {
+        var copy = self
+        copy.pageSection = Self.normalizedPageSection(pageSection, section: section, entityId: entityId)
+        return copy
+    }
+
     /// Identity used for coalesce / equality of navigation — deep ids only.
-    /// `ref`, `title`, `sourceTitle`, and `listScrollAnchor` are not identity.
+    /// `ref`, `title`, `sourceTitle`, and `listScrollAnchor` are not identity; `pageSection` is.
     static func == (lhs: WorkspaceLocation, rhs: WorkspaceLocation) -> Bool {
         lhs.section == rhs.section
             && lhs.sourceId == rhs.sourceId
@@ -269,6 +337,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
             && lhs.subjectTypeKey == rhs.subjectTypeKey
             && lhs.propertyId == rhs.propertyId
             && lhs.entityId == rhs.entityId
+            && lhs.pageSection == rhs.pageSection
             && lhs.sourceSurface == rhs.sourceSurface
             && lhs.promoteAll == rhs.promoteAll
     }
@@ -292,6 +361,19 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         case .page:
             return .page
         }
+    }
+
+    /// A section needs a record page that offers it, and the first section the kind
+    /// offers is nil. Every way a location is built or changed goes through this.
+    private static func normalizedPageSection(
+        _ pageSection: ConclusionPageSection?,
+        section: WorkspaceSection,
+        entityId: String?
+    ) -> ConclusionPageSection? {
+        guard entityId != nil, let pageSection else { return nil }
+        let offered = ConclusionPageSection.offered(by: section)
+        guard offered.contains(pageSection), pageSection != offered.first else { return nil }
+        return pageSection
     }
 
     private static func nilIfEmpty(_ value: String?) -> String? {
