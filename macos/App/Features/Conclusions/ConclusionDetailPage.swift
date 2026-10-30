@@ -163,15 +163,20 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View, PageSe
                     pageSections: pageSections
                 )
             } else {
-                PVPageColumns(primary: { Self.loading })
-                    .background(PVColor.surfacePage)
-                    .accessibilityElement(children: .contain)
-                    .accessibilityIdentifier(pageIdentifier)
+                Self.loadingPage
             }
         }
+        .background(PVColor.surfacePage)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(pageIdentifier)
         .task {
             let _: QueryHandle<CatalogConclusionDetail> = session.query(key)
         }
+    }
+
+    /// The header-less page shown while the detail loads, before and after its handle exists.
+    static var loadingPage: some View {
+        PVPageColumns(primary: { loading })
     }
 
     static var loading: some View {
@@ -285,7 +290,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
         Group {
             switch presentation {
             case .loading:
-                PVPageColumns(primary: { ConclusionDetailPage<Content, Summary, PageSections>.loading })
+                ConclusionDetailPage<Content, Summary, PageSections>.loadingPage
             case .failed(let message):
                 PVPageColumns(primary: {
                     PVCallout(tone: .danger, message: message)
@@ -305,7 +310,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
                             offeredPageSections: offeredPageSections,
                             pageSection: pageSection,
                             refreshing: refreshing,
-                                                        isScrolled: isScrolled,
+                            isScrolled: isScrolled,
                             select: { navigation.go(to: navigation.currentLocation.withPageSection($0)) }
                         )
                     },
@@ -325,9 +330,6 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
                 )
             }
         }
-        .background(PVColor.surfacePage)
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier(pageIdentifier)
     }
 }
 
@@ -342,9 +344,11 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Summary
     let offeredPageSections: [ConclusionPageSection]
     let pageSection: ConclusionPageSection?
     let refreshing: Bool
-    let pinned: Bool
     let isScrolled: Bool
     let select: (ConclusionPageSection) -> Void
+
+    /// A page with page sections pins its header; one without scrolls it away.
+    private var pinned: Bool { pageSection != nil }
 
     private var bar: CGFloat { isScrolled ? PVSpacing.space5 : PVSpacing.space7 }
 
@@ -355,7 +359,7 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Summary
                 projectDir: projectDir,
                 summary: summary,
                 portrait: portrait,
-                compact: pinned && isScrolled
+                compact: isScrolled
             )
             if let pageSection {
                 switcher(selection: pageSection)
