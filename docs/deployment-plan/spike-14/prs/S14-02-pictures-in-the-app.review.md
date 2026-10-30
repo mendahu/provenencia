@@ -1,23 +1,165 @@
 # Review — S14-02 Pictures in the app
 
-**Verdict:** Fits with changes — Ready (round 2 Fixed M-7; formal loop capped at 2 rounds)
-**Rounds:** 2. **Reviewers:** maintainability (cursor-grok-4.6-xhigh), executability (composer-2.5)
+**Verdict:** Refresh rounds 3 – 4 (2026-10-30): Fits with changes — Ready with changes; every finding Fixed, no blocker open. Rounds 1–2 (2026-10-29) reviewed the earlier plan.
+**Rounds:** 4 (refresh rounds 3 and 4). **Reviewers:** round 3: maintainability (Opus), executability (Sonnet, the implementer's model); rounds 1–2: maintainability (cursor-grok-4.6-xhigh), executability (composer-2.5)
 
 ## To user
 
-None.
+- **Captions and Toast (round 4)** — answered by the user, 2026-10-30: two-line captions for every kind (the Person included); the Toast stays top-trailing. Plan D-14(d), §6, §4 and manual check 5 updated.
+
+- **S14-02 now depends on S13-10** (M-5). The S14-D2 board puts the Event and Place pages on Page columns, which S13-10 builds, and the plan is written against S13-10's `PersonDetailSections`. The map row, its dependency graph, and Spike 13's S13-14 row (which now also waits on S14-02) are updated. Recommendation: accept; it removes a two-branch design.
+- **A confirmation round still runs.** Round 3 had blockers (M-1, M-2, X-2, X-3), all Fixed. The confirming round runs with the post-board refresh, which `plan-pr` already requires before `Planned`, so the plan is reviewed once against the real frames instead of twice.
+
+## Brief split (2026-10-30)
+
+- The user asked for one brief per view. S14-D2 (Event and Place pages and lists) became four: S14-D2 Event page (EVP-*), S14-D3 Place page (PLP-*), S14-D4 Events list (EVL-*), S14-D5 Places list (PLL-*). Round 3's findings that cite EPP-* apply to the matching EVP/PLP/EVL/PLL rows; the brief findings (X-2, X-13, X-14) are carried into each. The plan's requirement references, Brief, Status and DoD were updated. No design change.
 
 ## Writer's own calls
 
-- Gallery slot as `ConclusionDetailGallery` carrying copy (not a kind enum in the section).
-- `ChooseCopy` static packs carry copy + a11y id leaves; section/header stay kind-blind.
-- Page owns `ConclusionPortraitModel` from `userID` + `leadChoose`.
-- Keep type name `ConclusionPortraitModel`.
-- Promote picture sentences for every kind (value type); drop `isPicture` bool; neighbor crop marks from `PromoteFlow.Row.kind`.
-- Promote `worded` maps depiction → `pictureValue`; leave `ReconciledValueDisplay.likenessValue` for Person rows.
-- Properties VO includes machine key and bound type labels.
+- Copy with arguments is formatted once in the content through L10n functions; tiles carry ready Strings (M-1).
+- One lead model per page, always built from `userID`; copy read at call time from `gallery.choose` (M-2).
+- Ids from `pageIdentifier` with fixed leaves; the Person's `persons.detail.portrait*` ids become `persons.detail.lead*` (no test reads them) (M-3).
+- Rename `ConclusionPortraitModel` → `ConclusionLeadModel`, with a hand pbxproj edit (M-9).
+- `offersEarliest` moves to the gallery; one `ConclusionDetailThumbnail.leading(…)` builder (M-4).
+- Delete the `thumbnailRelPath` default and the dead `L10n.Promote.ValueFamily`.
+- Properties label on `PropertiesModel`, origin spoken as the cell shows it, no trailing comma for an unbound Property.
+- New `pictureOpenTip` key rather than borrowing the Person-namespaced `likenessOpenTip`.
 
-## Round 1
+## Refresh round 3 (2026-10-30)
+
+Scope change before review: S13-23 (#633) removed the Promote evidence sheet, so US-3 (Promote), D-9/D-10/D-14 (Promote wording, wire `kind`) and their tests left the plan; the user chose to gate the PR on a new board, S14-D2.
+
+### M-1 · blocker · Format templates stored as data and filled outside L10n
+**Answer:** Fixed — D-2, D-12, § Strings: `ConclusionDetailPicture` carries `accessibilityLabel`, `useAsLabel`, `chosenToastBody` built by `tiles(from:tileLabel:useAsLabel:chosenBody:)` from L10n functions; the slot and `LeadCopy` hold only static resources; Person functions unchanged.
+
+### M-2 · blocker · `leadChoose` and `gallery.choose` carry the same pack
+**Answer:** Fixed — D-6, D-7: `leadChoose` removed; the page always builds `ConclusionLeadModel(session:userID:entityId:)`; `choose(_:copy:)` / `useEarliest(copy:)` take `content.gallery.choose`; `choose` is non-optional.
+
+### M-3 · major · Id and mark fields repeat what the page knows
+**Answer:** Fixed — D-3: ids from `pageIdentifier` with fixed leaves; context and header carry `pageIdentifier`; tile fallback is `content.thumbnail.mark`; `identifierRoot`, suffixes, `headerIdentifier`, `fallbackMark` dropped.
+
+### M-4 · major · Thumbnail logic repeated; `offersEarliest` a second copy
+**Answer:** Fixed — D-5: `ConclusionDetailThumbnail.leading(…)`; `offersEarliest` computed on the gallery, deleted from the thumbnail.
+
+### M-5 · major · Both landing orders planned; S13-10 overlap half described
+**Answer:** Fixed — Depends on S13-10 (plan, brief, both maps); D-7 and D-13 written once against S13-10's full init, context and `PersonDetailSections`; §4 rows marked *S13-10*. To user (dependency).
+
+### M-6 · major · Docs and comments left false
+**Answer:** Fixed — STEP-6 and DoD: `macos-client-patterns.md` line 102, `event-place-pictures.md` lines 32/33/64, `CachedThumbnail.swift` and `ConclusionListRow.swift` comments, the model doc comment.
+
+### M-7 · major · `thumbnailRelPath` default left with no user
+**Answer:** Fixed — D-8 deletes it; Deletes lists it.
+
+### M-8 · minor · Person-only empty fields on the shared slot
+**Answer:** Fixed — D-13: `PersonDetailSections` reads `galleryEmptyTitle` / `galleryEmptyMessage` directly.
+
+### M-9 · minor · Kind-neutral layer still says portrait
+**Answer:** Fixed — D-6: `ConclusionLeadModel`, `context.lead`, `LeadCopy`; pbxproj lines named in §4.
+
+### M-10 · minor · Raw origin in a new key; label away from the feature's spoken text
+**Answer:** Fixed — D-11: `PropertiesModel.rowAccessibilityLabel(for:)`, `PropertiesOriginCell.spokenOrigin(_:)`.
+
+### M-11 · nit · Shared page uses another feature's toast modifier
+**Answer:** Logged — Out row; not this PR.
+
+### X-1 · blocker · The board does not exist
+**Answer:** Declined as a plan change — the gate already exists: Status is `Blocked — on board S14-D2 and on S13-10`, and `ship-pr` starts only from a `Planned` plan (`.claude/skills/ship-pr/SKILL.md` line 47). The Implementer block is copied verbatim from the template and is not edited.
+
+### X-2 · blocker · "More tiles per row at Wide" cannot be true
+**Answer:** Fixed — brief EPP-W1, § 4.1, frame 9; plan §6 Wide row and §10 step 4: the primary column goes from 1038pt to at most 1180pt, so Wide gains about one tile per row and is otherwise the Regular page, centered.
+
+### X-3 · blocker · Page init change not specified
+**Answer:** Fixed — D-7 names both hand-written inits, the non-optional `@State` model, the overlay binding `$lead.toast`, and the context and header parameters.
+
+### X-4 · major · `LocalizedStringResource` cannot take `%@` after the fact
+**Answer:** Fixed — with M-1; § Strings lists the Person members reused.
+
+### X-5 · major · STEP-1 check unreachable; split steps do not build
+**Answer:** Fixed — STEP-1 is one buildable unit (slot, model, contents, views, host); checks scoped to `macos/App`; tests compile in STEP-5.
+
+### X-6 · major · Person behavior changes undecided
+**Answer:** Fixed — D-5 keeps the Person label keys and the `personLikenessThumb` fallback (`?? L10n.string(withImage)`); § Strings lists the Person tip and tile functions; AC-2.4, T-1, T-3.
+
+### X-7 · major · Lead held in two places
+**Answer:** Fixed — with M-2.
+
+### X-8 · major · Id gaps across packs
+**Answer:** Fixed — with M-3: one rule for every kind, Person ids old → new in D-3.
+
+### X-9 · major · Undecided edges
+**Answer:** Fixed — Reach row (saving guard, failure then success) and Edges (empty Source title, header path with no lead tile → AC-2.4).
+
+### X-10 · minor · Properties label slots and trailing comma
+**Answer:** Fixed — D-11: five slots, `bound` is `rowBoundAnnouncement`, kinds appended only when present; AC-3.3, T-7.
+
+### X-11 · minor · AC-4.1 grep scope
+**Answer:** Fixed — scoped to `macos/App`.
+
+### X-12 · nit · Host row wording
+**Answer:** Fixed — §4 Host row.
+
+### X-13 · major · Brief: relationship sections, tile spec source, list thumb size
+**Answer:** Fixed — brief frame 1 adds a "Part of" section and cites S13-D1 frames 4i/4j for tiles; EPP-8 names the List's 44pt slot.
+
+### X-14 · minor · Toast naming; Event frames
+**Answer:** Fixed — brief inventory Toast row names `PVToast` via `vocabularyToastOverlay`; frame 4 states the Event header lines and rows.
+
+### X-15 · minor · D-13's second order has no test
+**Answer:** Fixed — with M-5: one order only.
+
+## Refresh round 4 — confirming (2026-10-30)
+
+**Reviewers:** maintainability (Opus), executability (Sonnet, the implementer's model). **Verdicts:** Fits with changes — Ready with changes. All findings Fixed; no blocker open. The loop's two rounds for this refresh are done (rounds 3 and 4).
+
+### M2-1 · blocker · `spokenOrigin` misreads `OriginPill` (also X2-4)
+**Answer:** Fixed — D-11: a `plugin:` origin speaks `L10n.Origin.pluginPill(pluginID:)`, as the pill shows it; any other origin speaks the raw string, as today. T-7 adds a `plugin:findagrave` case.
+
+### M2-2 · blocker · Working rules and S13-14 name shapes the plan changes (also X2-5)
+**Answer:** Fixed — the slot carries `fallbackMark` again (D-2), so working rule "The gallery is one slot" holds as written and no rule is bent; `leading(…)` reads the mark from the gallery, keeping one source. STEP-6 renames `ConclusionPortraitModel` in working rule line 87, the Ships entry line 228, S13-14's Context (Spike 13 map line 422) and `event-place-pictures.md` lines 41 and 47; the DoD gains a wider sweep over both spike folders.
+
+### M2-3 · blocker · Two sources for the lead picture
+**Answer:** Fixed — checked `api/ffi/handlers/conclusion_detail.go`: `attachHeader` and `attachPictures` run in one call from one lead rule and one `RelPaths` map. D-5 reads the thumbnail from `gallery.lead` alone; the fallback and the old AC-2.4 case are gone. AC-2.4 now pins the Person's thumbnail (path, label, colors) through the new builder.
+
+### M2-4 · blocker · Two-line captions vs the one-line tile (also X2-3)
+**Answer:** To user → answered 2026-10-30: two lines for every kind, one shared `lineLimit(2)`, no per-kind parameter (D-14d).
+
+### X2-1 · major · AC-4.1 grep matches the sketch
+**Answer:** Fixed — the pattern is `thumbnail\.offersEarliest|offersEarliest: (true|false)`, plus `likenessImageRelPath`.
+
+### X2-2 · major · Toast position
+**Answer:** Fixed — D-14(e): top-trailing, as the overlay draws it today; the boards' bottom Toast is not built.
+
+### X2-6 · minor · Content storage
+**Answer:** Fixed — D-5: `gallery` then `thumbnail`, stored `var`s set in `init`.
+
+### X2-7 · minor · String-typed toast members
+**Answer:** Fixed — § Strings marks both `String`, as the Person's.
+
+### X2-8 · minor · D-3 `rg` claim
+**Answer:** Fixed — the command no longer matches the L10n key.
+
+### X2-9 · minor · Empty Source title
+**Answer:** Fixed — Edges: it shows the Observation ref, as today.
+
+### X2-10 · minor · Gates and test helper
+**Answer:** Fixed — T-8 names two `rg` gates; §8 puts a private builder in each test struct.
+
+### X2-11 · minor · STEP-1 checkpoints
+**Answer:** Fixed — STEP-1 lists six sub-steps and a build after the pbxproj edit.
+
+### X2-12 · nit · "· today" after the Place chain
+**Answer:** Fixed — D-14(f): S9-D7 mock text, not built.
+
+### X2-13 · nit · Earlier turns
+**Answer:** Fixed — Board line lists S9-D6, S9-D7 (pages) and S9-D3, S9-D4, S10-D10, S10-D11 (lists).
+
+## Post-board refresh (2026-10-30)
+
+- The four boards were agreed and exported; the writer rendered each export (React and Babel served locally) and checked its frames against the brief. Every EVP, PLP, EVL and PLL requirement is drawn, with three differences answered in D-14: (a) the Place board words the Pictures count ("3 pictures") where the Event board and the Person page show the bare count; the user chose the bare count. (b) The boards' no-picture thumb label "No picture record" is mock text; the app keeps "No image recorded". (c) EVL-W1 / PLL-W1 said the lists fill the width "as today", but `ConclusionListPage.page` already caps them at 1180pt and centers; the Events board draws that, the Places board draws full width while saying nothing moves. No list layout change; both briefs corrected.
+- S13-10 landed (#634). §4 rows re-read against `main`: the page, context, `PersonDetailSections` and gallery section are as its plan said, plus `ConclusionDetailHeaderBand` between `ConclusionDetailLoaded` and the header (now named in D-7). Line numbers updated (pbxproj, `ValueFamily`). The S13-10 conditionals and stop condition are gone.
+- The four briefs' paste blocks were updated to the skill's current text (S13-10 added Page columns and the segmented control rows); the boards were drawn from the earlier text, which differs only by those two rows.
+
+## Round 1 (2026-10-29, earlier plan)
 
 ### X-1 · major · STEP-5 grep cannot mean “empty” as written
 **Answer:** Fixed — greps `ValueFamily\.likeness` only.

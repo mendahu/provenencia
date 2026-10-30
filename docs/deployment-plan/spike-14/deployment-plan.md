@@ -63,8 +63,8 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 | Spike 12's open PRs when it closed (user, 2026-10-29): S12-52, S12-26, S12-27 (Batch 4); S12-28, S12-29 + S12-30 + S12-45, S12-31, S12-32, S12-33, S12-40, S12-43's stale-link fix, S12-44, S12-47 + S12-50, S12-48 (Batch 5); S12-39 (Batch 1). The rest were descoped ([Spike 12's note](../archive/spike-12/README.md)) | S14-10 – S14-23 | — |
 | Spike 11's S11-29, planned and never built, moved here when Spike 11 closes (user, 2026-10-29) | S14-09 | — |
 | Promote Jake + grandparent read "Little evidence" under Weak (user, 2026-10-28); raise `segment.OtherSupport` | S14-08 | — |
-| [`depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) "Other keys of the same value type" (place and event) | S14-01, S14-02 | — |
-| Thumbnail parity for Event and Place (user, 2026-10-27) | S14-01, S14-02 | — |
+| [`depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) "Other keys of the same value type" (place and event) | S14-01, S14-02 | S14-D2 – S14-D5 |
+| Thumbnail parity for Event and Place (user, 2026-10-27) | S14-01, S14-02 | S14-D2 – S14-D5 |
 | Promote wording for a non-Person depiction (map review K-4) | Descoped (2026-10-29): the evidence sheet goes in Spike 13's S13-23 | — |
 | Rename the gallery layer away from "likeness" (map review K-5) | S14-01, S14-02 | — |
 | Rectangle-only depiction drawing (user, 2026-10-27) | S14-03 | — |
@@ -112,7 +112,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | PR | Title | Slice | Scope | Brief | Depends on | Plan | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | S14-01 | Pictures engine | 1 | Rename the gallery layer (Go, proto, Swift wire mapping); seed `event_picture` and `place_picture`; the gallery reads the gallery keys and each picture's own image; Event and Place headers carry the lead picture | — | — | [S14-01-pictures-engine.md](prs/S14-01-pictures-engine.md) | Landed #615 |
-| S14-02 | Pictures in the app | 1 | The gallery slot and the Swift view-layer rename; Event and Place pages show Pictures, a header thumbnail and choosing a thumbnail; Events and Places lists lead with it (Promote wording dropped 2026-10-29) | — | S14-01, S13-23 | [S14-02-pictures-in-the-app.md](prs/S14-02-pictures-in-the-app.md) | Blocked — re-plan |
+| S14-02 | Pictures in the app | 1 | The gallery slot and the Swift view-layer rename; Event and Place pages show Pictures, a header thumbnail and choosing a thumbnail; Events and Places lists lead with it (Promote wording dropped 2026-10-29) | [S14-D2](design/S14-D2-event-page-pictures.md), [S14-D3](design/S14-D3-place-page-pictures.md), [S14-D4](design/S14-D4-events-list-thumbnail.md), [S14-D5](design/S14-D5-places-list-thumbnail.md) | S14-01, S13-23, S13-10 | [S14-02-pictures-in-the-app.md](prs/S14-02-pictures-in-the-app.md) | Planned |
 | S14-03 | Rectangle-only depiction drawing | 1 | Depiction drawing offers only the rectangle tool; the Citation's region as a depiction uses its bounding rectangle; the composer's drawing feedback, captions and cap announcement | — | S14-13 | — | Scoped |
 | S14-04 | Promote wording for pictures | — | Folded into S14-02 (working rule "Batch 1 is cut by layer") | — | — | — | Descoped (2026-10-27) → S14-02 |
 | S14-05 | Event and Place headers lead with a picture | — | Folded into S14-01 | — | — | — | Descoped (2026-10-27) → S14-01 |
@@ -140,7 +140,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 
 ## Design track
 
-[`design/README.md`](design/README.md). **S14-D1** (Wide layout in the design system) put Page columns in the Claude Design kit; board agreed and brief archived 2026-10-29. Spike 13's S13-D1 draws the Person page frame from it, and S13-10 builds it in Swift. S14-02 reuses the Person page's gallery section, header thumb, portrait controls and list thumbnail with new headings and wording; S14-03 shows fewer radios on an existing strip.
+[`design/README.md`](design/README.md). **S14-D1** (Wide layout in the design system) put Page columns in the Claude Design kit; board agreed and brief archived 2026-10-29. Spike 13's S13-D1 draws the Person page frame from it, and S13-10 builds it in Swift. Four briefs gate S14-02, one per view it changes (user, 2026-10-30): **S14-D2** the Event page and **S14-D3** the Place page (Pictures section, header thumb, choosing a thumbnail), **S14-D4** the Events list and **S14-D5** the Places list (the lead picture in the row thumb), each drawn as its own turn on the *Person Detail* project beside S13-D1. S14-02 reuses the Person page's gallery, portrait controls and list thumbnail, but every view whose look changes has a board. S14-03 shows fewer radios on an existing strip.
 
 ## Slices
 
@@ -197,6 +197,7 @@ S14-01 and S14-03 can run in parallel; S14-02 follows S14-01. S14-03 waits on S1
 ```text
 S14-01 ──▶ S14-02
 S13-23 ──▶ S14-02   (Spike 13: deletes the Promote files the old plan renamed)
+S13-10 ──▶ S14-02   (Spike 13: Page columns and PersonDetailSections, which S14-02 builds on)
 S14-13 ──▶ S14-03
 S14-16 ──▶ S14-17
 S14-14 ──▶ S14-20
@@ -226,7 +227,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 **Ships.** The gallery slot, with the Swift view-layer rename (`ConclusionDetailLikeness`, `ConclusionDetailLikenessSection`, `LikenessTileView`, `CachedThumbnail.likenessCrop`). The Event and Place pages show Pictures, lead their header thumbnail with the picture, and take a `ConclusionPortraitModel` (set as thumbnail, chosen badge, use the earliest). `EventsListView` and `PlacesListView` rows lead with it as `PersonsListView.thumbnailRelPath` does. The Promote sheet's wording left this PR on 2026-10-29: the sheet is removed by Spike 13's S13-23. The composer's depiction translator comments and `depictionPerson` say Subject. Strings through `add-localized-string`. Properties list VoiceOver distinguishes two Properties that share the label Picture (include the machine key and/or bound kind labels in `rowAccessibilityLabel` — S14-01 ship UX-1).
 **Not this PR.** Spike 13's redesigned Gallery section (S13-14).
-**Shares code with S13-10** (Spike 13, Blocked — on board S13-D1): S13-10 makes `ConclusionDetailLikenessSection` internal, calls it from the Person page's Gallery section, and adds `conclusions.gallery.empty.*` keys for Person. Whichever lands second rebases: S14-02 renames that call site with the rest and moves the two keys onto the `gallery` slot.
+**Shares code with S13-10** (Spike 13, Planned): S13-10 makes `ConclusionDetailLikenessSection` internal, calls it from the Person page's Gallery section, and adds `conclusions.gallery.empty.*` keys for Person. S14-02 lands after S13-10 (review 2026-10-30: S14-D2 needs Page columns): it renames that call site with the rest; the Person's Gallery empty state keeps reading the two keys directly. S13-14 then builds on the `gallery` slot.
 **Check.** On a new project: a Place picture shows under Pictures and opens its record; choosing a second picture leads the header and the Places list with it and badges it; use the earliest goes back; the same on an Event; a Person's page and list are unchanged; VoiceOver on the Properties list can tell `event_picture` from `place_picture`. Swift tests beside `PersonDetailTests` and `PersonsListTests`.
 **Context.** Working rules "The gallery is one slot on the detail body", "An Event or Place chooses its thumbnail", "A depiction is worded as a picture", "Batch 1 is cut by layer"; [design § What already works](event-place-pictures.md#what-already-works); `ConclusionDetailPage.swift`, `ConclusionDetailThumbnail`, `PersonDetailContent`, `PersonDetailView`, `ConclusionListRow.swift`, `PropertiesView.swift` `rowAccessibilityLabel`.
 
