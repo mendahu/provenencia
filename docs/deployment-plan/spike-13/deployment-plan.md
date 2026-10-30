@@ -119,7 +119,7 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 | S13-30 | Provisional claims at Promote | 0 | Promote files every row Accepted; no status control and no provisional claims (working rule "Promote files accepted claims and nothing else") | — | — | — | Descoped (2026-10-30) → [idea](../../ideas/provisional-identity-claims.md) |
 | S13-09 | Sections slot on the Conclusion page | 1 | Preparatory: `ConclusionDetailPage` gains a sections slot; Person, Event and Place pass one section; no visible change | — | — | [S13-09](prs/S13-09-sections-slot.md) | Landed #624 |
 | S13-10 | Header and sections | 1 | The fixed header, the section switcher, and Vitals as the first section (today's rows), on `PVPageColumns` (built here from the S14-D1 board) | [S13-D1](design/archive/S13-D1-person-page-frame.md) | S13-09, S14-D1 (board agreed 2026-10-29), S14-24 (landed #628) | [S13-10](prs/S13-10-header-and-sections.md) | Landed #634 |
-| S13-06 | Derived rows carry their records | 2 | `ConclusionDetail` carries, for each derived row, the reconciler records of the owning entity's field (every surviving birth and death event's date; their Places' names), and the four life rows show them in the Why | S13-D12 | S13-D12 | [S13-06](prs/S13-06-derived-rows-carry-their-records.md) | Planned |
+| S13-06 | Derived rows carry their records | 2 | `ConclusionDetail` carries, for each derived row, the reconciler records of the owning entity's field (every surviving birth and death event's date; their Places' names), and the four life rows show them in the Why | S13-D12 | S13-D12 | [S13-06](prs/S13-06-derived-rows-carry-their-records.md) | Landed #640 |
 | S13-11 | Provenance sheet | 2 | The provenance control and sheet replace the Why accordion on every Vitals row, with links to Source, Citation and Observation | S13-D2 | S13-06, S13-10 | — | Scoped |
 | S13-01 | Person claims read | 3 | `ListPersonClaims` RPC from the graph cache: a person's accepted claims grouped by Source (title, type), ordered by title, each with its Subject card data, graph and claim id; one accepted-members helper; per-handle invalidation spec | — | — | — | Scoped |
 | S13-02 | Gender in the person header | 3 | `PersonHeader` gains the gender and sex terms; `PersonGenderTreatment` reads only the header | — | S11-30 | — | Scoped |
@@ -153,7 +153,7 @@ Each brief is written just before the PR it gates, its board agreed, and that PR
 | --- | --- | --- | --- |
 | S13-D11 | Promote page without the evidence sheet and the assessment column | **S13-23** (S13-30 descoped) | Slice 0; an enhancement of the Promote flow board that removes frames. Decides what the freed column width becomes ([brief](design/archive/S13-D11-promote-without-assessment.md)) |
 | [S13-D1](design/archive/S13-D1-person-page-frame.md) | Person page: header, section switching, Vitals | **S13-10** | Board agreed 2026-10-29. Explores stacked-with-shortcuts versus tabs (R-7). Draws the whole frame, all five sections as places (working rule "S13-D1 draws the whole frame"), at Regular and Wide on Page columns, after the S14-D1 board (working rule "Redesigns adopt Page columns") |
-| [S13-D12](design/S13-D12-life-rows-why.md) | Person page: the Why on the four life rows | **S13-06** | Added 2026-10-30 (user: the life rows show their records now); board agreed 2026-10-30, option (a): a group line per owner. Interim: S13-D2 replaces the Why on the Person page |
+| [S13-D12](design/archive/S13-D12-life-rows-why.md) | Person page: the Why on the four life rows | **S13-06** | Added 2026-10-30 (user: the life rows show their records now); board agreed 2026-10-30, option (a): a group line per owner. Interim: S13-D2 replaces the Why on the Person page |
 | S13-D2 | Provenance sheet | **S13-11** | Reusable beyond Person (R-13); leaves room for Reconciliation Claims (R-10); keeps S13-D12's group line per owner for records from several events or Places |
 | S13-D3 | Family section | **S13-12** | Draws the shared person tile; two marriages and conflicting parents |
 | S13-D4 | Timeline section | **S13-13** | Reuses S13-D3's tile; depiction placeholder; Undated group |
@@ -343,7 +343,7 @@ Go, plus deleting Swift's draft rule.
 **Ships.** The provenance control beside every Vitals value and the sheet from S13-D2: every record, the reconciler's reasoning, and links to the Source, Citation and Observation. It replaces the Why accordion on the Person page only; Event and Place keep it.
 **Not this PR.** Reconciliation Claims (R-10); the control outside Vitals (R-13b).
 **Check.** Bar 2.
-**Context.** R-8 – R-13b; working rule "A derived row carries its owning entity's records"; `ReconciliationReasoningView`; working rule "The provenance sheet replaces the Why on the Person page only".
+**Context.** R-8 – R-13b; working rule "A derived row carries its owning entity's records"; `ReconciliationReasoningView`; removes the owner group-line branch S13-06 added to it, or moves it into the sheet, which keeps S13-D12's grouping; working rule "The provenance sheet replaces the Why on the Person page only".
 
 ### Slice 3 — Family and Timeline
 

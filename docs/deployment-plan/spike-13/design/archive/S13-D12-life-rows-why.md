@@ -5,10 +5,10 @@
 **View:** Person page — Vitals, the birth date, birth place, death date and death place rows
 **Implements later as:** PR **S13-06** (Derived rows carry their records: LW-1 – LW-7, LW-W1)
 **Depends on:** S13-D1 (board agreed 2026-10-29; built in S13-10, #634)
-**Related:** [`../prs/S13-06-derived-rows-carry-their-records.md`](../prs/S13-06-derived-rows-carry-their-records.md); [`../person-detail.md`](../person-detail.md) R-12, R-13a, R-14; working rule "A derived row carries its owning entity's records" in [`../deployment-plan.md`](../deployment-plan.md#engine); the provenance sheet that later replaces this Why on the Person page is S13-D2 (S13-11)
+**Related:** [`../prs/S13-06-derived-rows-carry-their-records.md`](../../prs/S13-06-derived-rows-carry-their-records.md); [`../person-detail.md`](../../person-detail.md) R-12, R-13a, R-14; working rule "A derived row carries its owning entity's records" in [`../deployment-plan.md`](../../deployment-plan.md#engine); the provenance sheet that later replaces this Why on the Person page is S13-D2 (S13-11)
 **Board:** agreed 2026-10-30 — Claude Design project [*Person Detail*](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail.dc.html*, turn 5 "S13-D12 · The Why on the four life rows", frames 5a – 5h. LW-4 option (a); 5e set aside (see §8)
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -176,7 +176,7 @@ This table is **binding**. Paths from `macos/App/` unless noted.
 
 ## 7. Handoff
 
-When the board is agreed: record the board link, the frames and the LW-4 option on this brief and in the S13-06 plan (**Board** line, Design → macOS, D-row that reads LW-4), move S13-06 from `Blocked — on board S13-D12` to `Planned` with `plan-pr`, and note in S13-D2 (the provenance sheet) that it keeps the grouping this board picks for records from several owners, and when S13-06 lands move this brief to the spike design archive folder and update [`README.md`](README.md).
+When the board is agreed: record the board link, the frames and the LW-4 option on this brief and in the S13-06 plan (**Board** line, Design → macOS, D-row that reads LW-4), move S13-06 from `Blocked — on board S13-D12` to `Planned` with `plan-pr`, and note in S13-D2 (the provenance sheet) that it keeps the grouping this board picks for records from several owners, and when S13-06 lands move this brief to the spike design archive folder and update [`README.md`](../README.md).
 
 ---
 

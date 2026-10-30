@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S13-06 — Derived rows carry their records
+
+**Landed 2026-10-30** in [#640](https://github.com/mendahu/provenencia/pull/640). The Person page's birth date, birth place, death date and death place rows now show a Why like every other Vitals row. `GetConclusionDetail` on a Person returns `derived_rows`: for each life row, the reconciler records of the field it reads, keyed by the Event or Place that owns it (every surviving birth or death event's date, lead first; each of those events' Places' names once). With several owners the Why groups the records under a line titled as the Events and Places lists title them, the shown owner's in primary ink and the rest secondary; the place row's open arrow now opens the shown Place. `fieldsOf` composes any number of handles' fields in constant queries, and `ForEntity` is its one-handle caller.
+
 ## S13-24 — The pin engine goes
 
 **Landed 2026-10-30** in [#639](https://github.com/mendahu/provenencia/pull/639). Done files accepted claims and their connections and nothing else: the claim evidence request, the evidence query, `core/claimevidence`, Apply's pin resolution and claim-field inputs, the confidence grade request and the registry's `evidence` section are deleted, and their wire is reserved. The reconciler no longer weakens or ranks a value by its claim's confidence grade (cache version 21), and one function now reads a record's provenance for the reconciler and the Person page. Go says where each Promote row starts (`graphalign.Row.Start`), so the proposal drops its score, band, Contested flag and reason and the app's draft rule shrinks to reading the target.
