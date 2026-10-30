@@ -125,10 +125,10 @@ This Why is interim: S13-D2 (S13-11) replaces the Why accordion on every Vitals 
 | LW-1 | Each life row that has records shows the **Why** disclosure button where other rows show it, before the open-arrow IconButton. A row with no records shows no Why button and keeps its layout. |
 | LW-2 | Opened, the Why is today's sunken Card and table under the row at the disclosure indent: Read as · Source · Outcome and the reserved column. The title is today's "Why “<value>”" ("Why “14 May 1817”", "Why “York, Yorkshire”"), or "Why “<label>”" ("Why “Birth date”") when the row is stated empty. |
 | LW-3 | **One owner.** When the records come from one event (date row) or one Place (place row), the table lists them as any other row's Why does: by the value they went into, then the rest. Nothing names the event or Place. |
-| LW-4 | **Several owners.** When the records come from two or more events or Places, the board shows which record belongs to which. **The board decides how.** Draw both and pick one: **(a)** one table, with a quiet group line before each owner's records naming it ("Birth · EVT-4KX2M", "Montréal · PLC-7QH3D"), the shown owner's group first; **(b)** one table with no group lines, each record's Outcome followed by the owner's name in secondary ink. Recommended: (a). |
+| LW-4 | **Several owners.** When the records come from two or more events or Places, the board shows which record belongs to which. **The board decides how.** Draw both and pick one: **(a)** one table, with a quiet group line before each owner's records naming it by the value it holds and its ref ("14 May 1817 · EVT-4KX2M", "Montréal · PLC-7QH3D"; the ref alone when it holds none), the shown owner's group first; **(b)** one table with no group lines, each record's Outcome followed by the owner's name in secondary ink. Recommended: (a). |
 | LW-5 | Records keep today's ink rule within each owner: a record that went into that owner's shown value is primary, the rest secondary. A record from an owner the row does not show (the second birth event) is secondary in its Read as column. |
 | LW-6 | The Source link opens the record's Citation with its Observation in focus, as today. If LW-4 picks (a), the group line is text, not a link (the open arrow already goes to the shown owner). |
-| LW-7 | VoiceOver: the Why button reads as it does on other rows. Inside, each record reads as today; under LW-4 (a) each group line is a heading read as "Birth, EVT-4KX2M". |
+| LW-7 | VoiceOver: the Why button reads as it does on other rows. Inside, each record reads as today; under LW-4 (a) each group line is a heading read as "14 May 1817, EVT-4KX2M". |
 
 ### 4.1 Wide layout
 
@@ -144,7 +144,7 @@ This Why is interim: S13-D2 (S13-11) replaces the Why accordion on every Vitals 
 
 ## 5. Suggested frames
 
-Frames 1 and 3 at **Regular** (pane 1102 × 900) and again at **Wide** (pane 2296 × 1440); the others at Regular. All on Vitals, from S13-D1's full person.
+Frames 1 and 3 at **Regular** (pane 1102 × 900) and again at **Wide** (pane 2296 × 1440); the others at Regular. Nothing moves at Wide (LW-W1), so the Wide frames of 1 and 3 stand for 2, 4 and 5. All on Vitals, from S13-D1's full person.
 
 1. **Birth date Why open, one event.** Three records: two Kept that merge ("14 May 1817"), one Outvoted ("1816") (LW-1 – LW-3, LW-5).
 2. **Birth place Why open, one Place.** Two records naming York and one naming "Eboracum" Folded (LW-3).
