@@ -197,7 +197,7 @@ struct WorkspaceToolbarBreadcrumbTests {
     @Test func pageSectionAddsACrumb() {
         var wentTo: WorkspaceLocation?
         let gallery = WorkspaceLocation.personDetail(
-            entityId: "per-1", ref: "PER-1", title: "Jane Doe", section: .gallery
+            entityId: "per-1", ref: "PER-1", title: "Jane Doe", pageSection: .gallery
         )
         let items = WorkspaceToolbar.breadcrumbItems(for: gallery, goTo: { wentTo = $0 })
         #expect(items.map(\.label) == [
