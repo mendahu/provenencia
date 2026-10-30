@@ -26,7 +26,7 @@ risk and the fix. Do not write exploits.
 | Identity | `core/identity`, `identity.json`, `active-project.json` | Files under Documents another app or user can edit |
 | FFI | `api/ffi`, `api/ffi/handlers`, `macos/App/Platform/GoStore.swift`, `CoreInvoke.swift` | Bytes from Swift; errors going back |
 | Catalog values | `core/urlshape`, `core/locator`, `valuecodec` | URLs, locator JSON, text that later renders |
-| Stored numbers and lists | `core/matchregistry`, `core/valuecompare`, `core/propertycompare`, `core/subjectcompare`, `core/subjectprofile`, `core/segmentcompare`, `core/kinship`, `core/shortlist`, `core/graphalign`, `core/claimevidence`, `core/autoreconcile`, `core/database/namealiases` | Weights, counts, and lists read back from a catalog another tool may have written: `NaN`, `+Inf`, `1e308`, a negative weight, a 10,000-word name |
+| Stored numbers and lists | `core/matchregistry`, `core/valuecompare`, `core/propertycompare`, `core/subjectcompare`, `core/subjectprofile`, `core/segmentcompare`, `core/kinship`, `core/shortlist`, `core/graphalign`, `core/autoreconcile`, `core/database/namealiases` | Weights, counts, and lists read back from a catalog another tool may have written: `NaN`, `+Inf`, `1e308`, a negative weight, a 10,000-word name |
 
 ## How to work
 

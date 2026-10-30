@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft architecture notes. This document is authoritative for how Provenencia persists researcher judgment about **Source credibility**, **Citation transcription certainty**, and **Claim confidence**, and for what remains derived UI rather than stored data.
+Draft architecture notes. This document is authoritative for how Provenencia persists researcher judgment about **Source credibility**, **Citation transcription certainty**, and **Claim confidence**, and for what remains derived UI rather than stored data. Identity Claims carry no confidence (working rule, 2026-10-29); Reconciliation Claim confidence is open, not decided.
 
 Layer schemas remain in:
 
@@ -22,7 +22,7 @@ Persist only researcher judgments that cannot be recomputed from the evidence tr
 
 Do **not** store a single subject- or fact-level “likelihood” pill. Product UI may synthesize badges from stored judgments, the members' Observations compared side by side (agreement, conflict, polarity mix), claim `status`, and handle grounding. Those pills are recomputable app policy and must not be written back as catalog truth.
 
-Do **not** auto-multiply Source credibility × Citation certainty × Claim confidence into a stored rollup. The claim editor should **surface** Source assessments and Citation flags as context when the researcher sets Claim confidence.
+Do **not** auto-multiply Source credibility × Citation certainty × Claim confidence into a stored rollup. A Reconciliation Claim editor, if one is built (its confidence is open, not decided), should **surface** Source assessments and Citation flags as context when the researcher sets Claim confidence.
 
 Cached auto-reconciler order and outcome labels (kept, folded, outvoted, and the rest) are the same kind of derived display. They are recomputed from member evidence and must not be written back as Claim confidence or any other stored judgment.
 
@@ -32,7 +32,7 @@ Cached auto-reconciler order and outcome labels (kept, folded, outvoted, and the
 |---|---|---|
 | How much do I trust this evidence? | Source **credibility** | Dedicated Interpretation assessment row (not a column on `sources`) |
 | How faithfully does this Citation represent the cited media? | Citation **transcription certainty** | Light columns on `citations` |
-| How sure am I of this conclusion? | Claim **confidence** | Columns on Identity and Reconciliation Claims |
+| How sure am I of this conclusion? | Claim **confidence** | Columns on Reconciliation Claims (open) |
 
 These are related in research practice but must not share vocabulary keys. Credibility is about trusting evidence; confidence is about standing behind a conclusion. Both use a **three-point scale with a baseline middle**, with separate labels and grade tables.
 
@@ -158,11 +158,12 @@ They are **not** the same thing. Valid combinations include accepted + low confi
 ## 4.3 Columns on Claims
 
 ```sql
--- additions to identity_claims and reconciliation_claims
+-- additions to identity_claims (dropped by S13-25) and reconciliation_claims (open)
 confidence_grade_id  BLOB REFERENCES claim_confidence_grades(id),  -- nullable
 ```
 
 ```sql
+-- claim_confidence_grades: dropped by S13-25 with the identity_claims columns
 CREATE TABLE claim_confidence_grades (
     id          BLOB PRIMARY KEY,              -- UUIDv7, 16 bytes
     key         TEXT NOT NULL,
