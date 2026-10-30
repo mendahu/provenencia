@@ -487,15 +487,16 @@ func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, erro
 	lists := []struct {
 		kind   DerivedRowKind
 		owners []conclusionheaders.FieldOwner
+		events bool // the owners are Events, so each carries its header
 	}{
-		{DerivedRowBirthDate, birth.Dates}, {DerivedRowBirthPlace, birth.Places},
-		{DerivedRowDeathDate, death.Dates}, {DerivedRowDeathPlace, death.Places},
+		{DerivedRowBirthDate, birth.Dates, true}, {DerivedRowBirthPlace, birth.Places, false},
+		{DerivedRowDeathDate, death.Dates, true}, {DerivedRowDeathPlace, death.Places, false},
 	}
 	var all, eventIDs [][]byte
 	for _, l := range lists {
 		for _, o := range l.owners {
 			all = append(all, o.Entity.ID)
-			if l.kind == DerivedRowBirthDate || l.kind == DerivedRowDeathDate {
+			if l.events {
 				eventIDs = append(eventIDs, o.Entity.ID)
 			}
 		}
@@ -541,7 +542,7 @@ func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, erro
 					continue
 				}
 				owner := OwnerField{Entity: o.Entity, Field: f}
-				if l.kind == DerivedRowBirthDate || l.kind == DerivedRowDeathDate {
+				if l.events {
 					owner.Event = eventOf[string(o.Entity.ID)]
 				}
 				row.Owners = append(row.Owners, owner)
