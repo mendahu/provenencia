@@ -27,7 +27,6 @@ struct ReconciledValueDisplayTests {
         deniedBy: String = "",
         credibilityOffset: Int = 0,
         uncertain: Bool = false,
-        claimConfidenceOffset: Int = 0,
         vote: (Int, Int) = (0, 0)
     ) -> CatalogReconcilerOutcome {
         CatalogReconcilerOutcome(
@@ -35,8 +34,8 @@ struct ReconciledValueDisplayTests {
             deniedByObservationID: deniedBy, recorded: recorded, subjectID: "sub-\(id)", subjectRef: "CPR-\(id)",
             graphID: "g-\(id)",
             citationID: "cit-\(id)", artifactID: "art-\(id)", sourceID: source, sourceTitle: title, credibilityKey: "",
-            transcriptionUncertain: uncertain, claimConfidenceKey: "",
-            credibilityOffset: credibilityOffset, claimConfidenceOffset: claimConfidenceOffset,
+            transcriptionUncertain: uncertain,
+            credibilityOffset: credibilityOffset,
             voteSupport: vote.0, voteTotal: vote.1
         )
     }
@@ -213,12 +212,12 @@ struct ReconciledValueDisplayTests {
     @Test func weakSaysWhichEvidenceIsWeak() {
         let f = Self.field("single", [Self.value(1, "kept")])
         func phrase(_ o: CatalogReconcilerOutcome) -> String { ReconciledValueDisplay.outcomePhrase(o, in: f) }
-        #expect(phrase(Self.outcome("a", "weak", claimConfidenceOffset: -1)) == "weak · low-confidence claim")
+        #expect(phrase(Self.outcome("a", "weak", credibilityOffset: -2, uncertain: true)) == "weak · " + ListFormatter.localizedString(byJoining: ["low-trust Source", "uncertain transcription"]))
         #expect(phrase(Self.outcome("a", "weak")) == "weak")
         // Above-default grades are not causes.
-        #expect(phrase(Self.outcome("a", "weak", credibilityOffset: 1, uncertain: true, claimConfidenceOffset: 1)) == "weak · uncertain transcription")
-        let all = Self.outcome("a", "weak", credibilityOffset: -2, uncertain: true, claimConfidenceOffset: -1)
-        #expect(ReconciledValueDisplay.weakCauses(all) == ["low-trust Source", "uncertain transcription", "low-confidence claim"])
+        #expect(phrase(Self.outcome("a", "weak", credibilityOffset: 1, uncertain: true)) == "weak · uncertain transcription")
+        let all = Self.outcome("a", "weak", credibilityOffset: -2, uncertain: true)
+        #expect(ReconciledValueDisplay.weakCauses(all) == ["low-trust Source", "uncertain transcription"])
         #expect(phrase(all) == "weak · " + ListFormatter.localizedString(byJoining: ReconciledValueDisplay.weakCauses(all)))
     }
 

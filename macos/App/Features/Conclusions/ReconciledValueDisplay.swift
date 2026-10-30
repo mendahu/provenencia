@@ -197,12 +197,11 @@ enum ReconciledValueDisplay {
     }
 
     /// Why a record's evidence is weak, in the auto-reconciler's order: the
-    /// Source, the transcription, then the claim.
+    /// Source, then the transcription.
     static func weakCauses(_ outcome: CatalogReconcilerOutcome) -> [String] {
         var causes: [String] = []
         if outcome.isLowTrustSource { causes.append(L10n.string(L10n.Conclusions.weakLowTrustSource)) }
         if outcome.transcriptionUncertain { causes.append(L10n.string(L10n.Conclusions.weakUncertainTranscription)) }
-        if outcome.isLowConfidenceClaim { causes.append(L10n.string(L10n.Conclusions.weakLowConfidenceClaim)) }
         return causes
     }
 

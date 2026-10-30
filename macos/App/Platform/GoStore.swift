@@ -1281,9 +1281,7 @@ struct GoStore: GenealogyStore {
             sourceTitle: o.sourceTitle,
             credibilityKey: o.credibilityKey,
             transcriptionUncertain: o.transcriptionUncertain,
-            claimConfidenceKey: o.claimConfidenceKey,
             credibilityOffset: Int(o.credibilityOffset),
-            claimConfidenceOffset: Int(o.claimConfidenceOffset),
             voteSupport: Int(o.voteSupport),
             voteTotal: Int(o.voteTotal)
         )

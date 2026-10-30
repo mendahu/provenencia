@@ -304,14 +304,11 @@ func TestReconcileNamesProvenance(t *testing.T) {
 		{"confidence", "an uncertain transcription drops",
 			[]Candidate{uncertain(nm(1, "given=Mary|surname=Robins")), nm(2, "given=James|surname=Robins")},
 			[]clAgainst{{[]byte{2}, "given=James|surname=Robins", 0}, {[]byte{1}, "given=Mary|surname=Robins", 0}}, StateSingle, "kept weak"},
-		{"confidence", "a low-confidence claim drops",
-			[]Candidate{lowClaim(nm(1, "given=Mary|surname=Robins")), nm(2, "given=James|surname=Robins")},
-			[]clAgainst{{[]byte{2}, "given=James|surname=Robins", 0}, {[]byte{1}, "given=Mary|surname=Robins", 0}}, StateSingle, "kept weak"},
 		{"confidence", "two weak values both stay when nothing stronger disagrees",
 			[]Candidate{lowTrust(nm(1, "given=Mary|surname=Robins")), uncertain(nm(2, "given=James|surname=Robins"))},
 			[]clAgainst{{[]byte{1, 2}, "given=James|given=Mary|surname=Robins", 0}}, StateMerged, "kept"},
 		{"confidence", "all weak and agreeing still reconcile",
-			[]Candidate{lowTrust(nm(1, "given=J.|surname=Robins")), lowClaim(nm(2, "given=James|surname=Robins"))},
+			[]Candidate{lowTrust(nm(1, "given=J.|surname=Robins")), uncertain(nm(2, "given=James|surname=Robins"))},
 			[]clAgainst{{[]byte{1, 2}, "given=James|surname=Robins", 0}}, StateMerged, "kept"},
 		{"confidence", "majority runs first: a weak two of three still wins",
 			[]Candidate{lowTrust(nm(1, "surname=Robbins")), lowTrust(nm(2, "surname=Robbins")), nm(3, "surname=Robins")},
@@ -442,7 +439,7 @@ func TestReconcileNamesInvariants(t *testing.T) {
 				v.Parts = append(v.Parts, namevalue.Part{Idx: i, Type: typ, Value: pool[rng.Intn(len(pool))]})
 			}
 			return Candidate{ObservationID: id(n), Value: Value{Name: v}, Negative: rng.Intn(8) == 0,
-				Provenance: Provenance{Credibility: rng.Intn(3) - 1, Uncertain: rng.Intn(5) == 0, ClaimConfidence: rng.Intn(3) - 1}}
+				Provenance: Provenance{Credibility: rng.Intn(3) - 1, Uncertain: rng.Intn(5) == 0}}
 		}
 		for list := 0; list < 500; list++ {
 			var in []Candidate

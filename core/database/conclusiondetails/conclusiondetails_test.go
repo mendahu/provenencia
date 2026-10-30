@@ -383,15 +383,29 @@ func TestForEntityEvidence(t *testing.T) {
 	neg := f.nameIn(c, "given=James|surname=Robbins")
 	neg.Polarity = observations.PolarityNegative
 	negative := f.cite(c, neg)
+	d := f.personOn(census)
+	uncertainRes, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			ArtifactID: f.arts[string(d.SourceID)].ID, LocatorJSON: locator, TranscriptionUncertain: true,
+		}, []observations.Input{f.nameIn(d, "given=James|surname=Robins")})
+	})
+	must(t, err)
+	uncertain := uncertainRes.Observations[0]
 	h := f.promote(a, nil)
 	f.promote(b, h)
 	f.promote(c, h)
+	f.promote(d, h)
 
 	name := field(f.detail(h), "name")
-	// Provenance is the auto-reconciler's own view: weak from the Source alone.
+	// Provenance is the auto-reconciler's own view: weak from the Source alone,
+	// or uncertain under a standard Source.
 	if o := outcomeOf(name, weak.ID); o.Reason != "weak" || o.CredibilityKey != "low_trust" ||
-		!o.Provenance.Weak() || o.Provenance.Credibility >= 0 || o.Provenance.Uncertain || o.Provenance.ClaimConfidence != 0 {
+		o.Provenance != (autoreconcile.Provenance{Credibility: -1, Uncertain: false}) {
 		t.Fatalf("weak outcome %+v", o)
+	}
+	if o := outcomeOf(name, uncertain.ID); o.CredibilityKey != "" ||
+		o.Provenance != (autoreconcile.Provenance{Credibility: 0, Uncertain: true}) {
+		t.Fatalf("uncertain outcome %+v", o)
 	}
 	// An outcome names the Evidence graph of its Observation's Subject.
 	if o := outcomeOf(name, weak.ID); !bytes.Equal(o.GraphID, evidencegraphstest.SoleGraph(t, f.c, register.ID).ID) {

@@ -21,6 +21,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/gallery"
@@ -71,22 +72,21 @@ func (v ReconciledValue) Displayed() bool { return v.Reason == string(autoreconc
 // Outcome is what the auto-reconciler did with one Observation, with the
 // evidence it weighed.
 type Outcome struct {
-	ObservationID      []byte
-	ObservationRef     string
-	Reason             string
-	ValueRank          int                // the value it went into; 0 for none
-	DeniedBy           []byte             // the negative Observation, for "denied"
-	Vote               autoreconcile.Vote // the majority that beat it, for "outvoted"
-	Recorded           Value              // what the record said
-	SubjectID          []byte
-	SubjectRef         string
-	GraphID            []byte // the Evidence graph of the Observation's Subject
-	CitationID         []byte
-	ArtifactID         []byte
-	SourceID           []byte
-	SourceTitle        string
-	CredibilityKey     string // "" = no assessment (standard)
-	ClaimConfidenceKey string // "" = no grade (moderate)
+	ObservationID  []byte
+	ObservationRef string
+	Reason         string
+	ValueRank      int                // the value it went into; 0 for none
+	DeniedBy       []byte             // the negative Observation, for "denied"
+	Vote           autoreconcile.Vote // the majority that beat it, for "outvoted"
+	Recorded       Value              // what the record said
+	SubjectID      []byte
+	SubjectRef     string
+	GraphID        []byte // the Evidence graph of the Observation's Subject
+	CitationID     []byte
+	ArtifactID     []byte
+	SourceID       []byte
+	SourceTitle    string
+	CredibilityKey string // "" = no assessment (standard)
 	// Provenance is the evidence as the auto-reconciler weighed it, relative
 	// to the default grades; Provenance.Weak says whether it is weak, and
 	// each part says why.
@@ -132,12 +132,7 @@ const (
 			o.value_text, o.value_integer, o.value_term_id, COALESCE(t.key, ''), COALESCE(t.label, ''), COALESCE(t.origin, ''),
 			o.value_date_id, o.value_name_id,
 			s.id, s.ref, s.graph_id, c.id, a.id, src.id, COALESCE(src.title, ''),
-			COALESCE(sg.key, ''), COALESCE(cg.key, ''),
-			COALESCE(sg.sort_order - (SELECT sort_order FROM source_credibility_grades
-				WHERE key = 'standard' AND origin = 'provenencia'), 0),
-			c.transcription_uncertain,
-			COALESCE(cg.sort_order - (SELECT sort_order FROM claim_confidence_grades
-				WHERE key = 'moderate' AND origin = 'provenencia'), 0)
+			COALESCE(sg.key, ''), ` + autoreconciler.ProvenanceColumns + `
 		FROM auto_reconciler_outcomes ao
 		JOIN observations o ON o.id = ao.observation_id
 		JOIN subjects s ON s.id = o.subject_id
@@ -145,10 +140,7 @@ const (
 		JOIN artifacts a ON a.id = c.artifact_id
 		JOIN sources src ON src.id = a.source_id
 		LEFT JOIN property_terms t ON t.id = o.value_term_id
-		LEFT JOIN source_credibility_assessments sca ON sca.source_id = src.id
-		LEFT JOIN source_credibility_grades sg ON sg.id = sca.credibility_grade_id
-		LEFT JOIN identity_claims ic ON ic.subject_id = o.subject_id AND ic.entity_id = ao.entity_id
-		LEFT JOIN claim_confidence_grades cg ON cg.id = ic.confidence_grade_id
+		` + autoreconciler.ProvenanceJoins + `
 		WHERE ao.entity_id = ?`
 )
 
@@ -362,12 +354,12 @@ func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field, leads ma
 			integer                            sql.NullInt64
 			o                                  Outcome
 		)
-		if err := rows.Scan(&propertyID, &o.ObservationID, &o.ObservationRef, &o.Reason, &rank, &o.DeniedBy,
+		dest := append([]any{&propertyID, &o.ObservationID, &o.ObservationRef, &o.Reason, &rank, &o.DeniedBy,
 			&o.Vote.Support, &o.Vote.Of,
 			&text, &integer, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &o.Recorded.TermOrigin, &dateID, &nameID,
 			&o.SubjectID, &o.SubjectRef, &o.GraphID, &o.CitationID, &o.ArtifactID, &o.SourceID, &o.SourceTitle,
-			&o.CredibilityKey, &o.ClaimConfidenceKey,
-			&o.Provenance.Credibility, &o.Provenance.Uncertain, &o.Provenance.ClaimConfidence); err != nil {
+			&o.CredibilityKey}, autoreconciler.ProvenanceDest(&o.Provenance)...)
+		if err := rows.Scan(dest...); err != nil {
 			_ = rows.Close()
 			return nil, err
 		}

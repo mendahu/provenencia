@@ -2028,8 +2028,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     sourceID: sourceID,
                     sourceTitle: sources.first { $0.id == sourceID }?.title ?? "",
                     credibilityKey: "",
-                    transcriptionUncertain: false,
-                    claimConfidenceKey: ""
+                    transcriptionUncertain: false
                 ))
             }
         }

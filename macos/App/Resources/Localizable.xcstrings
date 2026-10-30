@@ -15956,18 +15956,6 @@
         }
       }
     },
-    "conclusions.weak.lowConfidenceClaim": {
-      "comment": "Why evidence is weak: the member's Identity Claim confidence is below moderate",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "low-confidence claim"
-          }
-        }
-      }
-    },
     "conclusions.readAs.none": {
       "comment": "Why table, Read as column: the record states nothing for this field",
       "extractionState": "manual",
@@ -17061,7 +17049,7 @@
       }
     },
     "conclusions.outcome.weakBecause": {
-      "comment": "Auto-reconciler outcome: weak evidence; argument lists why (low-trust Source, uncertain transcription, low-confidence claim)",
+      "comment": "Auto-reconciler outcome: weak evidence; argument lists why (low-trust Source, uncertain transcription)",
       "extractionState": "manual",
       "localizations": {
         "en": {

@@ -915,7 +915,7 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 // A stale cache rebuilds on open: old versions, and the 3 and 4 stamped by
 // the closed PRs' builds, which must never read as current.
 // The auto-reconciler weighs real evidence (S9-14): each Observation's
-// Source, credibility, certainty, claim confidence and status, and polarity.
+// Source, credibility, certainty, status, and polarity.
 func TestReconciledEvidence(t *testing.T) {
 	texts := func(f *fixture, h []byte) string {
 		var out []string
@@ -1006,23 +1006,36 @@ func TestReconciledEvidence(t *testing.T) {
 		f.assertUpkeepEqualsRebuild("denied")
 	})
 
-	t.Run("a low-confidence claim's different given name is weak", func(t *testing.T) {
-		f := newFixture(t)
-		a, b := f.subject("person"), f.subjectOn(f.other, "person")
-		f.cite(nameIn(a, f.props["name"], "given=Jake|surname=Robins"))
-		f.cite(nameIn(b, f.props["name"], "given=James|surname=Robins"))
-		res := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: a.ID})
-		db, err := f.c.DB()
-		must(t, err)
-		_, err = db.Exec(`UPDATE identity_claims SET confidence_grade_id = ? WHERE subject_id = ?`, f.grade("low_confidence"), a.ID)
-		must(t, err)
-		f.join(b, res.Entity.ID)
-		names := rowsFor(f.rows(), res.Entity.ID, f.props["name"].ID)
-		if len(names) != 2 || names[0].Reason != "kept" || names[1].Reason != "weak" {
-			t.Fatalf("names %+v", names)
+	t.Run("a claim's grade does not weaken its values", func(t *testing.T) {
+		// run reconciles two members with different given names, the first
+		// claim set to the grade (none when ""), and returns each name row's
+		// reason and displayed form.
+		run := func(t *testing.T, grade string) []string {
+			f := newFixture(t)
+			a, b := f.subject("person"), f.subjectOn(f.other, "person")
+			f.cite(nameIn(a, f.props["name"], "given=Jake|surname=Robins"))
+			f.cite(nameIn(b, f.props["name"], "given=James|surname=Robins"))
+			res := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: a.ID})
+			if grade != "" {
+				db, err := f.c.DB()
+				must(t, err)
+				_, err = db.Exec(`UPDATE identity_claims SET confidence_grade_id = ? WHERE subject_id = ?`, f.grade(grade), a.ID)
+				must(t, err)
+			}
+			f.join(b, res.Entity.ID)
+			var out []string
+			for _, r := range rowsFor(f.rows(), res.Entity.ID, f.props["name"].ID) {
+				n, err := valuecodec.UnmarshalName(r.Name)
+				must(t, err)
+				if r.Reason == "weak" {
+					t.Fatalf("a graded claim's name is weak: %+v", r)
+				}
+				out = append(out, r.Reason+" "+n.Form)
+			}
+			return out
 		}
-		if n, err := valuecodec.UnmarshalName(names[0].Name); err != nil || n.Form != "James Robins" {
-			t.Fatalf("displayed %+v %v", n, err)
+		if graded, plain := run(t, "low_confidence"), run(t, ""); !reflect.DeepEqual(graded, plain) {
+			t.Fatalf("graded %v, ungraded %v", graded, plain)
 		}
 	})
 
@@ -1111,7 +1124,7 @@ func TestReconciledEvidence(t *testing.T) {
 }
 
 func TestEnsureCatalogRebuildsStaleVersion(t *testing.T) {
-	for _, stale := range []int{0, 2, 3, 4, 5, 6, 7, 14} {
+	for _, stale := range []int{0, 2, 3, 4, 5, 6, 7, 14, 20} {
 		t.Run(fmt.Sprint("version ", stale), func(t *testing.T) {
 			f := newFixture(t)
 			p := f.subject("person")
@@ -1685,7 +1698,7 @@ func TestValueRulesFoldNicknamesOnly(t *testing.T) {
 var productAliasPin = struct {
 	CacheVersion int
 	Hash         string
-}{CacheVersion: 20, Hash: "0dee1d25e240c9acebe8007415ea16eb365565cf345d8102e4ebcf22a6771065"}
+}{CacheVersion: 21, Hash: "0dee1d25e240c9acebe8007415ea16eb365565cf345d8102e4ebcf22a6771065"}
 
 // TestProductAliasTablesPinCacheVersion: the reconciler cache reads the product
 // alias seed, so a seed edit must come with a CacheVersion bump.

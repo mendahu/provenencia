@@ -8789,12 +8789,6 @@ enum L10n {
             comment: "Why evidence is weak: the Citation's transcription is marked uncertain"
         )
 
-        static let weakLowConfidenceClaim = LocalizedStringResource(
-            "conclusions.weak.lowConfidenceClaim",
-            defaultValue: "low-confidence claim",
-            comment: "Why evidence is weak: the member's Identity Claim confidence is below moderate"
-        )
-
         static let readAsNone = LocalizedStringResource(
             "conclusions.readAs.none",
             defaultValue: "—",
@@ -9418,7 +9412,7 @@ enum L10n {
             L10n.format(LocalizedStringResource(
                 "conclusions.outcome.weakBecause",
                 defaultValue: "weak · %@",
-                comment: "Auto-reconciler outcome: weak evidence; argument lists why (low-trust Source, uncertain transcription, low-confidence claim)"
+                comment: "Auto-reconciler outcome: weak evidence; argument lists why (low-trust Source, uncertain transcription)"
             ), causes)
         }
 

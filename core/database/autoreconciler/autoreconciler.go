@@ -15,8 +15,7 @@
 // Upkeep goes through writes.Run, which calls RecomputeTx with the handles
 // effects.Resolve named. Subject delete calls RecomputeTx once more after the
 // rows are gone, so header documents see the cleared values. HandlesFor* are
-// the sets the registry fixtures compare. Claim confidence and status have no
-// edit path yet.
+// the sets the registry fixtures compare. Claim status has no edit path yet.
 //
 // Recompute is per handle: all of a handle's Properties are rewritten together.
 // Narrowing to (handle, Property) waits for timings that need it.
@@ -28,7 +27,7 @@
 //
 // Inputs: every Observation on an accepted or provisional member (rejected
 // members don't count), with its Source, polarity, Source credibility,
-// transcription certainty, and claim confidence and status; each term's key
+// transcription certainty, and claim status; each term's key
 // and each name's parts. Subject-valued Properties wait for S9-28. Date
 // windows are stored as date_lo / date_hi.
 package autoreconciler
@@ -78,7 +77,8 @@ import (
 //	18: a nickname or abbreviation of a given name folds into its formal name; the reconciler reads the product alias seed and its nickname heads (S11-28).
 //	19: Des is a nickname of Desiree and of Desirae (S11-44).
 //	20: a given name that is the start of another folds into it, like an initial (S11-45).
-const CacheVersion = 20
+//	21: a claim's confidence grade no longer weakens or orders its values (S13-24).
+const CacheVersion = 21
 
 // ValueRules are the value compare rules reconciling reads: the shipped
 // registry and the product alias seed, never a catalog's own alias rows or name
@@ -91,6 +91,27 @@ type Querier interface {
 	Exec(query string, args ...any) (sql.Result, error)
 	Query(query string, args ...any) (*sql.Rows, error)
 	QueryRow(query string, args ...any) *sql.Row
+}
+
+// ProvenanceColumns is the select-list fragment that reads a candidate's
+// provenance: the Source's credibility grade as sort_order relative to the
+// provenencia default (standard), then whether the transcription is uncertain.
+// No assessment, no grade, or no vocabulary reads as 0. It binds the aliases c
+// for citations and sg for source_credibility_grades (ProvenanceJoins). Scan
+// it with ProvenanceDest.
+const ProvenanceColumns = `COALESCE(sg.sort_order - (SELECT sort_order FROM source_credibility_grades
+				WHERE key = 'standard' AND origin = 'provenencia'), 0),
+			c.transcription_uncertain`
+
+// ProvenanceJoins is the join fragment ProvenanceColumns needs. A query must
+// bind c for citations and a for artifacts; sg is then in scope for the
+// query's own extra column.
+const ProvenanceJoins = `LEFT JOIN source_credibility_assessments sca ON sca.source_id = a.source_id
+		LEFT JOIN source_credibility_grades sg ON sg.id = sca.credibility_grade_id`
+
+// ProvenanceDest are the scan targets for ProvenanceColumns, in its order.
+func ProvenanceDest(p *autoreconcile.Provenance) []any {
+	return []any{&p.Credibility, &p.Uncertain}
 }
 
 const (
@@ -110,18 +131,14 @@ const (
 	// One row per Observation on an accepted or provisional member of the
 	// batch (rejected members don't count), with its evidence: polarity, the
 	// Source it is cited under, and provenance as grade sort_order relative to
-	// the provenencia default grade (standard, moderate); no assessment, no
-	// grade, or no vocabulary reads as 0.
+	// the provenencia default grade (standard); no assessment, no grade, or no
+	// vocabulary reads as 0.
 	sqlLoadCandidates = `SELECT ic.entity_id, o.id, o.property_id, p.value_type, p.cardinality,
 			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_term_id,
 			COALESCE(t.key, ''), COALESCE(t.neutral, 0), o.value_subject_id,
 			o.value_depiction_id, dpv.region_json, dpv.image_file_id, c.locator_json, dpf.media_type,
 			ic.status = 'provisional', o.polarity = 'negative', a.source_id,
-			COALESCE(sg.sort_order - (SELECT sort_order FROM source_credibility_grades
-				WHERE key = 'standard' AND origin = 'provenencia'), 0),
-			c.transcription_uncertain,
-			COALESCE(cg.sort_order - (SELECT sort_order FROM claim_confidence_grades
-				WHERE key = 'moderate' AND origin = 'provenencia'), 0)
+			` + ProvenanceColumns + `
 		FROM identity_claims ic
 		JOIN observations o ON o.subject_id = ic.subject_id
 		JOIN properties p ON p.id = o.property_id
@@ -130,9 +147,7 @@ const (
 		LEFT JOIN property_terms t ON t.id = o.value_term_id
 		LEFT JOIN depiction_values dpv ON dpv.id = o.value_depiction_id
 		LEFT JOIN files dpf ON dpf.id = dpv.image_file_id
-		LEFT JOIN source_credibility_assessments sca ON sca.source_id = a.source_id
-		LEFT JOIN source_credibility_grades sg ON sg.id = sca.credibility_grade_id
-		LEFT JOIN claim_confidence_grades cg ON cg.id = ic.confidence_grade_id
+		` + ProvenanceJoins + `
 		WHERE ic.status IN ('accepted', 'provisional')
 		  AND ic.entity_id IN (`
 
@@ -398,12 +413,12 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			neutral                           bool
 			provisional, negative             bool
 			sourceID                          []byte
-			credibility, confidence           int
-			uncertain                         bool
+			provenance                        autoreconcile.Provenance
 		)
-		if err := rows.Scan(&entityID, &obsID, &propertyID, &valueType, &cardinality, &text, &integer, &dateID, &nameID, &termID, &termKey, &neutral, &subjectID,
+		dest := append([]any{&entityID, &obsID, &propertyID, &valueType, &cardinality, &text, &integer, &dateID, &nameID, &termID, &termKey, &neutral, &subjectID,
 			&depictionID, &region, &imageID, &locatorJSON, &mediaType,
-			&provisional, &negative, &sourceID, &credibility, &uncertain, &confidence); err != nil {
+			&provisional, &negative, &sourceID}, ProvenanceDest(&provenance)...)
+		if err := rows.Scan(dest...); err != nil {
 			_ = rows.Close()
 			return nil, err
 		}
@@ -420,7 +435,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			TermID: termID, TermKey: termKey, Neutral: neutral, SubjectID: subjectID,
 			Depiction: depictionvalues.FromJoin(depictionID, region, imageID, locatorJSON, mediaType),
 		}, SourceID: sourceID, Negative: negative, Provisional: provisional,
-			Provenance: autoreconcile.Provenance{Credibility: credibility, Uncertain: uncertain, ClaimConfidence: confidence}}
+			Provenance: provenance}
 		all = append(all, pending{g: g, c: c, dateID: dateID, nameID: nameID})
 		if len(dateID) > 0 {
 			dateIDs = append(dateIDs, dateID)
