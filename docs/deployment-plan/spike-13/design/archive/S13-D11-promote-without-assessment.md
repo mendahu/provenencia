@@ -1,14 +1,16 @@
 # S13-D11 — Promote page without the evidence sheet and the assessment column, with a status per row
 
+> **Update 2026-10-30: the status is descoped.** S13-30 (Provisional claims at Promote) is descoped: Promote files every row Accepted and shows no status control (working rule "Promote files accepted claims and nothing else" in [`../../deployment-plan.md`](../../deployment-plan.md#slice-0--removing-observation-pins)). Item 5 of §1, the Status, Provisional next time and A provisional end facts in §2, the S13-30 column of §3, §4.1 (PS-1 – PS-6), frames 5 and 6 of §5, and board frames 30, 30b, 30W and 31 in §8 are kept as the record of what was agreed and are not built. The board's frames 30 – 31 are marked descoped. The slot that PA-2 option (a) kept for the control stays empty on a working row.
+
 **Kind:** Claude Design board (**enhancement** of the Promote page board, S9-D16 / S11-D1 / S11-D3: frames are removed and the row is redrawn in place)
 **Spike:** Provenencia Spike 13 (Person page), slice 0 (removing Observation pins)
 **View:** Promote page — the rows, the column headings and the evidence sheet
-**Implements later as:** PR **S13-23** (Promote stops asking for pins: PA-1 – PA-8) and PR **S13-30** (Provisional claims at Promote: PS-1 – PS-6)
-**Depends on:** — (the decision is [`conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md) §5, docs PR #623)
-**Related:** [`../../../promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3 and §3.1 (the page as it is after this board); working rules "The score ranks, unseen" and "Promote's removal has a brief" in [`../deployment-plan.md`](../deployment-plan.md#slice-0--removing-observation-pins); [`../prs/S13-23-promote-stops-asking-for-pins.md`](../prs/S13-23-promote-stops-asking-for-pins.md)
-**Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), agreed 2026-10-29. Frames 27a, 27W, 28 and 29 gate S13-23; 30, 30b, 30W and 31 gate S13-30 (see §8)
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Implements later as:** PR **S13-23** (Promote stops asking for pins: PA-1 – PA-8) and PR **S13-30** (Provisional claims at Promote: PS-1 – PS-6; descoped 2026-10-30)
+**Depends on:** — (the decision is [`conclusion-layer-data-model.md`](../../../../conclusion-layer-data-model.md) §5, docs PR #623)
+**Related:** [`../../../promote-graph-alignment.md`](../../../../promote-graph-alignment.md) §3 and §3.1 (the page as it is after this board); working rules "The score ranks, unseen" and "Promote's removal has a brief" in [`../deployment-plan.md`](../../deployment-plan.md#slice-0--removing-observation-pins); [`../prs/S13-23-promote-stops-asking-for-pins.md`](../../prs/S13-23-promote-stops-asking-for-pins.md)
+**Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), agreed 2026-10-29. Frames 27a, 27W, 28 and 29 gate S13-23; 30, 30b, 30W and 31 gated S13-30, descoped 2026-10-30 (see §8)
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -112,7 +114,7 @@ Promote becomes a quick filing action: the researcher picks a target per row and
 ### 2.1 What this board is not
 
 - Confidence or argument. Identity Claims no longer carry either (decided 2026-10-29).
-- A Rejected status, or any way to see or edit a claim after Done other than reopening Promote ([identity-claim-review idea](../../../ideas/identity-claim-review.md)).
+- A Rejected status, or any way to see or edit a claim after Done other than reopening Promote ([identity-claim-review idea](../../../../ideas/identity-claim-review.md)).
 - Any other signal of match quality on the row or in the target menu (a dot, a percentage, a tint). The score ranks unseen.
 - Changes to the target menu items, the record search, the connection subrows or the footer.
 - The Person page's comparison of a person's records (S13-D10).
@@ -121,7 +123,7 @@ Promote becomes a quick filing action: the researcher picks a target per row and
 
 ## 3. Implementation gate
 
-| Ships in **S13-23** (shipped in #633) | Ships in **S13-30** | Stays out |
+| Ships in **S13-23** (shipped in #633) | Was **S13-30** (descoped 2026-10-30) | Stays out |
 | --- | --- | --- |
 | PA-1 – PA-8, PA-W1 (as §8 revises it), and the promote wording: the sheet and the assessment column removed; the list widened and centered at Wide; the row, headings and Already filed rows laid out without it; the Updated caption's rule; VoiceOver. Every row files Accepted, with no status control yet. | PS-1 – PS-6: the status control, its default, a provisional row coming back preselected, its connections waiting. | What a row starts on moving into Go (S13-24, no visible change). Rejected at Promote. Any redesign of the target menu or subrows (S14-22 changes the rows' Promote copy after this board). |
 
@@ -140,7 +142,7 @@ Promote becomes a quick filing action: the researcher picks a target per row and
 | PA-7 | A decided row shows Decided and no Updated badge or caption, as today. |
 | PA-8 | VoiceOver: the target menu reads as today ("Files Mary Smith on" and the chosen option), and the badges and caption read as today. Nothing reads "Evidence for …", a band or "contested": the assessment button is gone. |
 
-### 4.1 Status (S13-30)
+### 4.1 Status (S13-30, descoped 2026-10-30)
 
 | ID | Requirement |
 | --- | --- |
@@ -201,7 +203,7 @@ This table is **binding**. Paths from `macos/App/` unless noted.
 
 ## 7. Handoff
 
-When the board is agreed: record the board link and the picked PA-2 option on this brief and in the S13-23 plan (**Board** line, Design → macOS, and the Decision that today reads the slot), move S13-23 from `Blocked — on board S13-D11` to `Planned` with `plan-pr`, and when S13-23 lands move this brief to the spike design archive folder and update [`README.md`](README.md).
+When the board is agreed: record the board link and the picked PA-2 option on this brief and in the S13-23 plan (**Board** line, Design → macOS, and the Decision that today reads the slot), move S13-23 from `Blocked — on board S13-D11` to `Planned` with `plan-pr`, and when S13-23 lands move this brief to the spike design archive folder and update [`README.md`](../README.md).
 
 ---
 

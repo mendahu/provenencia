@@ -6,12 +6,12 @@
 **Brief:** — (no chrome change: the Promote page already shows no band or pins since S13-23, and Vitals loses one cause word, "low-confidence claim", which only a claim graded before S13-23 could show; user, 2026-10-30)
 **Board:** —
 **Depends on:** S13-23 (landed [#633](https://github.com/mendahu/provenencia/pull/633))
-**Blocks:** S13-25, S13-30, S13-26, S13-29, S14-16, S14-20
+**Blocks:** S13-25, S13-26, S13-29, S14-16, S14-20
 **Branch:** `s13-24-the-pin-engine-goes`
 **Version bump:** none — Spike 11–14 PRs leave `VERSION` at 0.2.0 until a release is cut ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ffi-handler`](../../../../.agents/skills/add-ffi-handler/SKILL.md) (deleting Methods, reserving fields), [`add-match-rule`](../../../../.agents/skills/add-match-rule/SKILL.md), [`use-catalog-session`](../../../../.agents/skills/use-catalog-session/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md) (removing one key), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/match-rules.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/catalog-audit.mdc`
-**Context:** [conclusion §5, §5.3](../../../conclusion-layer-data-model.md#53-promote), [`conclusion-reconciliation.md`](../../../conclusion-reconciliation.md) §4, [`promote-graph-alignment.md`](../../../promote-graph-alignment.md) §2, §3.1, §6, §8, §9, [`matching-model.md`](../../../matching-model.md#knob-inventory); working rules: "Pins leave in three PRs, the client first", "Promote files claims with a status", "Identity Claims carry no confidence and no argument", "The score ranks, unseen", "Spike 14's Promote PRs build on the removal", "Slice 7 captures requirements, not an implementation", "One person's links, direct and implied, from one function", "Each removal PR updates what it makes false"
+**Context:** [conclusion §5, §5.3](../../../conclusion-layer-data-model.md#53-promote), [`conclusion-reconciliation.md`](../../../conclusion-reconciliation.md) §4, [`promote-graph-alignment.md`](../../../promote-graph-alignment.md) §2, §3.1, §6, §8, §9, [`matching-model.md`](../../../matching-model.md#knob-inventory); working rules: "Pins leave in three PRs, the client first", "Promote files accepted claims and nothing else", "Identity Claims carry no confidence and no argument", "The score ranks, unseen", "Spike 14's Promote PRs build on the removal", "Slice 7 captures requirements, not an implementation", "One person's links, direct and implied, from one function", "Each removal PR updates what it makes false"
 **Planned:** 2026-10-30 against `main` @ `1253dfaa`
 **Review:** [`S13-24-the-pin-engine-goes.review.md`](S13-24-the-pin-engine-goes.review.md) — Fits with changes / Ready with changes, 2 rounds; every blocker Fixed; To user answered 2026-10-30
 
@@ -32,7 +32,7 @@
 
 The engine half of the pin removal. After S13-23 the Mac app stopped asking for pins, confidence and argument, so the engine that offers and writes them is dead weight: the claim evidence RPC, the evidence query in `promotealign`, `core/claimevidence`, Apply's pin resolution and its writes onto members' claims, the confidence grade RPC, and the auto-reconciler's claim-confidence weighing. This PR deletes them and reserves their wire. It also moves the last Promote rule the app still holds, what a row starts on, into Go, so the proposal's display-only fields (score, band, Contested, reason) can be reserved too. Done files accepted claims and their connections and nothing else, as [conclusion §5.3](../../../conclusion-layer-data-model.md#53-promote) states.
 
-**Why now.** Slice 0 runs first; S13-25 drops the tables only once nothing reads or writes them, S13-30 adds `status` to an Apply row without pin fields, and Spike 14's S14-16 and S14-20 rewrite the Apply handler and `promotealign` after it.
+**Why now.** Slice 0 runs first; S13-25 drops the tables only once nothing reads or writes them, and Spike 14's S14-16 and S14-20 rewrite the Apply handler and `promotealign` after it.
 
 **What stays.** Proposals rank and choose exactly as today (`graphalign` scoring, the accept bar, settling, Move reasons, conflict and duplicate flags); every row the page started on before starts on the same target after (D-8); `UnpromoteSubject`; `PromoteSubject` without its two claim fields; bridge filing; the `identity_claim_evidence` table, `identityclaims.PinTx` and `PinnedObservations`, the delete facet that releases pins, and the `claim_confidence_grades` table and seed (all S13-25's); `canonlinks.Reader.Relationships` (S13-04 calls it, D-12).
 
@@ -90,7 +90,7 @@ The engine half of the pin removal. After S13-23 the Mac app stopped asking for 
 | --- | --- |
 | The `identity_claim_evidence` table, `core/database/identityclaims/pins.go` (`PinTx`, `PinnedObservations`), the delete facet and `ReleaseClaim`'s pin step, `TestBridgeSubjectDeleteReleasesPins`, the effects entry | S13-25 |
 | The `identity_claims.confidence_grade_id` and `.argument` columns, `claim_confidence_grades` with its seed, `claimconfidencegrades`, its `Install` callers in tests, the onboarding readiness check, `deleteimpact`'s grade edge and `facets.go`'s read of the two columns | S13-25 |
-| `status` on the Apply row, provisional claims | S13-30 |
+| `status` on the Apply row, provisional claims | not planned (S13-30 descoped 2026-10-30; working rule "Promote files accepted claims and nothing else") |
 | A Subject-pair compare over every Property (`CompareEvery`), and exporting `lifespan` | Slice 7 (S13-26), with open question 11 (user, 2026-10-30) |
 | `graphalign.Subject.Provenance` (always 1, `core/database/promotealign/layer.go`), the rest of audit 2 B-37 | S14-20 (user, 2026-10-30) |
 | One shared proto header message for the four `oneof header` copies (S13-23 review log) | S14-16, which rewrites the Promote mapping (user, 2026-10-30) |
@@ -166,7 +166,7 @@ Verified at `1253dfaa`.
 
 **Builds on.** The proto's reserved blocks; `subjectcompare.Rules` methods (`Role`, `Lead`, `Derived`); `graphalign`'s pure row assembly.
 **Deletes.** Everything in D-1 – D-12 and §4's rows for them: `core/claimevidence` (6 files); `promotealign` `evidence.go`, `pins.go`, `values.go` and their tests; `api/ffi/handlers/promote_evidence.go` and its test; `ListClaimConfidenceGrades`; `promote.PinSet`, `pinSets`; `core/matchregistry/evidence.go`, `evidence_test.go`; `Recording.Shown`; `Vocabulary.BindingOrder`; `graphalign`'s display-only fields and `ReasonWeak`; `productOrigin`; `conclusiondetails.sqlOutcomes`' own credibility subquery and `sca`/`sg` join text (D-13); Swift's `PromoteFlow.Assessment`, five `PromoteReasonCode` row-reason cases, `CatalogPromoteGraphAlignmentRow.assessment` and `.reason`, the claim confidence outcome fields, `L10n.Conclusions.weakLowConfidenceClaim` and its key. `identityclaims.PinTx` loses its last non-test caller and stays for S13-25 (Out). `claimconfidencegrades` has no non-test caller outside `Install` and the readiness check, which S13-25 removes.
-**Next adds.** S13-30's provisional preselect is one more `RowStart` field (`Status`) and one more `Start` branch. S13-30 adds `status` to an Apply row of three fields and to `promote.BatchRow`; S13-25's migration drops columns nothing reads; S14-16 rewrites an Apply handler with no pre-write read; S13-26 starts from `subjectcompare.Rules.Role`, `Rules.Meta` and `Compare`.
+**Next adds.** S13-25's migration drops columns nothing reads; S14-16 rewrites an Apply handler with no pre-write read; S13-26 starts from `subjectcompare.Rules.Role`, `Rules.Meta` and `Compare`.
 
 ### Reach
 
