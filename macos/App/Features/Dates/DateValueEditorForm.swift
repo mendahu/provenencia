@@ -36,24 +36,23 @@ struct DateValueEditorForm: View {
             Text(L10n.Sources.dateKindLabel)
                 .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
                 .foregroundStyle(PVColor.textSecondary)
-            PVChipGroup(style: .segmented) {
-                PVChip(
-                    L10n.Sources.dateKindPoint,
-                    isSelected: draft.kind == "point",
-                    expands: true,
-                    selectionLift: true,
-                    action: { draft.setKind("point") }
-                )
-                .accessibilityIdentifier("\(accessibilityIdentifierPrefix).kind.point")
-                PVChip(
-                    L10n.Sources.dateKindRange,
-                    isSelected: draft.kind == "range",
-                    expands: true,
-                    selectionLift: true,
-                    action: { draft.setKind("range") }
-                )
-                .accessibilityIdentifier("\(accessibilityIdentifierPrefix).kind.range")
-            }
+            PVSegmentedControl(
+                L10n.Sources.dateKindLabel,
+                items: [
+                    .init(
+                        L10n.Sources.dateKindPoint,
+                        value: "point",
+                        accessibilityIdentifier: "\(accessibilityIdentifierPrefix).kind.point"
+                    ),
+                    .init(
+                        L10n.Sources.dateKindRange,
+                        value: "range",
+                        accessibilityIdentifier: "\(accessibilityIdentifierPrefix).kind.range"
+                    ),
+                ],
+                selection: draft.kind,
+                select: { draft.setKind($0) }
+            )
             if draft.isRange {
                 Text(L10n.Sources.dateKindRangeHint)
                     .font(PVFont.body(size: PVTypeScale.micro, italic: true))

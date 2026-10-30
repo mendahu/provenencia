@@ -574,27 +574,28 @@ struct CitationComposerModalLead: View {
                 }
             }
             VStack(alignment: .leading, spacing: PVSpacing.space3) {
-                PVChipGroup(style: .segmented) {
-                    PVChip(
-                        L10n.CitationComposer.kindProperty,
-                        isSelected: isProperty,
-                        expands: true,
-                        selectionLift: true,
-                        action: { if !lockKind { onProperty() } }
-                    )
-                    .disabled(lockKind && !isProperty)
-                    .accessibilityIdentifier("citationComposer.kind.property")
-                    PVChip(
-                        L10n.CitationComposer.kindBridge,
-                        isSelected: !isProperty,
-                        expands: true,
-                        selectionLift: true,
-                        action: { if !lockKind { onBridge() } }
-                    )
-                    .disabled(lockKind && isProperty)
-                    .accessibilityIdentifier("citationComposer.kind.bridge")
-                }
-                .accessibilityLabel(Text(L10n.CitationComposer.observationKind))
+                PVSegmentedControl(
+                    L10n.CitationComposer.observationKind,
+                    items: [
+                        .init(
+                            L10n.CitationComposer.kindProperty,
+                            value: true,
+                            isDisabled: lockKind && !isProperty,
+                            accessibilityIdentifier: "citationComposer.kind.property"
+                        ),
+                        .init(
+                            L10n.CitationComposer.kindBridge,
+                            value: false,
+                            isDisabled: lockKind && isProperty,
+                            accessibilityIdentifier: "citationComposer.kind.bridge"
+                        ),
+                    ],
+                    selection: isProperty,
+                    select: { chosenProperty in
+                        guard !lockKind else { return }
+                        if chosenProperty { onProperty() } else { onBridge() }
+                    }
+                )
                 if lockKind {
                     Text(L10n.CitationComposer.kindLocked)
                         .font(PVFont.body(size: 12, italic: true))

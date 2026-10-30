@@ -111,6 +111,13 @@ enum L10n {
             defaultValue: "Locked",
             comment: "Spoken value of a PVCheckbox for a link or binding the researcher cannot clear"
         )
+        static func segmentShortcutHelp(_ label: String, key: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "designSystem.segmentedControl.shortcutHelp",
+                defaultValue: "%1$@ (⌘%2$@)",
+                comment: "Tooltip of a PVSegmentedControl segment that has a keyboard shortcut; arguments are the segment's label and the key pressed with Command"
+            ), label, key)
+        }
 
         static let formDialogDiscardTitle = LocalizedStringResource(
             "designSystem.formDialog.discardTitle",
@@ -8954,6 +8961,76 @@ enum L10n {
             return L10n.format(resource, count)
         }
 
+        static let pageSectionVitals = LocalizedStringResource(
+            "conclusions.section.vitals",
+            defaultValue: "Vitals",
+            comment: "Name of the Vitals section of a Person page: the Person's fields"
+        )
+
+        static let pageSectionFamily = LocalizedStringResource(
+            "conclusions.section.family",
+            defaultValue: "Family",
+            comment: "Name of the Family section of a Person page"
+        )
+
+        static let pageSectionTimeline = LocalizedStringResource(
+            "conclusions.section.timeline",
+            defaultValue: "Timeline",
+            comment: "Name of the Timeline section of a Person page"
+        )
+
+        static let pageSectionGallery = LocalizedStringResource(
+            "conclusions.section.gallery",
+            defaultValue: "Gallery",
+            comment: "Name of the Gallery section of a Person page: its likenesses"
+        )
+
+        static let pageSectionSources = LocalizedStringResource(
+            "conclusions.section.sources",
+            defaultValue: "Sources",
+            comment: "Name of the Sources section of a Person page"
+        )
+
+        static let pageSectionsLabel = LocalizedStringResource(
+            "conclusions.sections",
+            defaultValue: "Sections",
+            comment: "VoiceOver label of the control that switches the sections of a record page"
+        )
+
+        static let galleryEmptyTitle = LocalizedStringResource(
+            "conclusions.gallery.empty.title",
+            defaultValue: "No likenesses yet",
+            comment: "Title of the empty Gallery section of a Person page"
+        )
+
+        static let galleryEmptyMessage = LocalizedStringResource(
+            "conclusions.gallery.empty.message",
+            defaultValue: "A likeness is drawn on a Citation’s image — draw one there and it appears here.",
+            comment: "Message of the empty Gallery section of a Person page"
+        )
+
+        static let detailRefreshing = LocalizedStringResource(
+            "conclusions.detail.refreshing",
+            defaultValue: "Refreshing",
+            comment: "Shown beside a small spinner while a record page re-reads its data"
+        )
+
+        static func pageSectionLater(_ section: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.section.later",
+                defaultValue: "%@ arrives in a later version of Provenencia.",
+                comment: "Message of a Person page section that is not built yet; argument is the section name"
+            ), section)
+        }
+
+        static func pageSectionLeaf(_ title: String, _ section: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.section.leaf",
+                defaultValue: "%1$@ · %2$@",
+                comment: "Back menu entry for a section of a record page; arguments are the record's title and the section name"
+            ), title, section)
+        }
+
         static let detailsSection = LocalizedStringResource(
             "conclusions.detail.details",
             defaultValue: "Details",
@@ -9441,7 +9518,7 @@ enum L10n {
             ), first, rest)
         }
 
-        static func a11yVital(_ word: String, date: String, place: String) -> String {
+        static func a11yLifeLine(_ word: String, date: String, place: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.a11y.vital",
                 defaultValue: "%1$@ %2$@, %3$@",
