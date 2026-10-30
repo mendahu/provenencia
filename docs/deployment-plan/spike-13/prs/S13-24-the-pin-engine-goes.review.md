@@ -1,7 +1,7 @@
 # Review — S13-24 The pin engine goes
 
-**Verdict:** Fits with changes — Not ready (round 1); round 2 pending
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Ready with changes (every round-2 blocker Fixed; the plan stays Draft until the To user items are answered)
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet), fresh each round
 
 ## To user
 - **M-2, remaining audit 2 B-37 item.** `graphalign.Subject.Provenance` is always 1 (`core/database/promotealign/layer.go`), and no PR holds B-37. This plan closes B-37's wire half (both `score` fields, `via_bridge_type`, `via_role`). Recommendation: add `Subject.Provenance` to S14-20's scope, which already changes `promotealign`; or drop it as not planned.
@@ -16,6 +16,8 @@
 - `identityclaims` stops reading and writing the two claim columns here, not in S13-25 (D-5); moved in the map in STEP-8.
 - A held New or Skip goes out on the wire as given, where Swift drafted it unset; unobservable, because the page keeps a decided row (D-8).
 - `Alternative.Score` stays for the goldens (X-6, D-9).
+- `TestUnpromoteKeepsOtherMembersPins` is deleted rather than re-fixtured: Unpromote releases pins through `deleteimpact.ReleaseClaim`, whose pin tests stay until S13-25 (X-11).
+- `TestProfilesLiveWithTheMatchIndex` reads the match index after a proposal instead of an evidence read (X-10); if a proposal keeps no profiles, the implementer stops (it is a test of the index, which Propose builds).
 
 ## Round 1
 ### M-1 · major · `Row.Start` returns a bare tuple; S13-30 adds a status
@@ -65,3 +67,34 @@
 
 ### X-9 · minor · Smaller gaps
 **Answer:** Declined with evidence. `sqlOutcomes` selects nothing from `ic` except through `cg` (`conclusiondetails.go` lines 130–152); `inventory_test.go` needs no edit; `vocabkey.PropertyLifespanSpan` has no lead in `matchregistry/subject.go`, and `end_date`/`start_date` are the event `date` period there.
+
+## Round 2
+### M-8 · blocker · `Route.Role` reads `RoleLead` for a property with no lead
+**Answer:** Fixed. D-11 adds only `subjectcompare.Rules.Meta`, built on `Role` like `Lead`; no `Route` type. T-4 is `TestMeta`; the `add-match-rule` sentence and the map scope entry match.
+
+### M-9 · blocker · STEP-5 and STEP-8 sweeps match code this PR may not touch
+**Answer:** Fixed (with X-13, X-14). STEP-5's check is case-sensitive on the names this PR removes; STEP-8's checks exclude `core/database/migrations/**` and S13-25's paths, `core/database/effects/**` included.
+
+### Round-1 answer notes from M (round 2)
+- M-2: `Via.Key` is kept as the walk's edge the goldens observe; D-9 says so.
+- M-6: the row and alternative oneofs are distinct wrapper types, so one `headerFor` would still branch per caller. The Go helper is withdrawn (Declined with that evidence); the proto message stays To user.
+- M-7: `add-match-rule` line 78 is rewritten for move reasons only (STEP-8); `swift_vocabulary_test.go`'s unrecognized-case subtest is in D-9.
+- X-1 to X-4: the moved fixture's comment is rewritten (STEP-1). The two `deleteimpact` fixtures each re-pin with a short `PinTx` loop; a shared helper is not worth it for tests S13-25 deletes.
+
+### X-10 · blocker · `filedBirth` lives in the deleted `evidence_test.go`
+**Answer:** Fixed. D-10 moves `filedBirth` to `promotealign_test.go`, drops `warmFixture.request` and `fixture.evidence`, says what each memo test keeps, and drops `TestMemoIsNotMutated`'s `Members` term.
+
+### X-11 · blocker · `unpromote_test.go` uses `pins_test.go`'s fixture
+**Answer:** Fixed. STEP-2 deletes `TestUnpromoteKeepsOtherMembersPins` (Writer's own calls) and lists `unpromote_test.go`.
+
+### X-12 · blocker · `identityclaims_test.go` reads `cl.ConfidenceGradeID`
+**Answer:** Fixed. STEP-4 drops the term and the then-unused `claimconfidencegrades` import.
+
+### X-13 · blocker · STEP-5's `rg` cannot pass
+**Answer:** Fixed. Case-sensitive pattern on the removed names only.
+
+### X-14 · blocker · STEP-8's `rg` checks cannot pass
+**Answer:** Fixed. Migrations and S13-25's paths are excluded; the `autoreconciler_test.go` line-918 comment is edited in STEP-5; `interpretation-layer-data-model.md` line 693 is in STEP-8.
+
+### Smaller round-2 points
+**Answer:** Fixed. §4's proto row lists 17 and 18; STEP-6 says every `row(…)` call drops `assessment:`. The unused `observations` import in STEP-1 is left to the compiler.
