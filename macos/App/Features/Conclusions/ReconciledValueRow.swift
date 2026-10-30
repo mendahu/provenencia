@@ -50,7 +50,7 @@ struct ReconciledValueRow: View {
                     title: model.whyTitle,
                     label: model.label,
                     style: model.style,
-                    records: model.records
+                    groups: model.recordGroups
                 )
                 .padding(.leading, Self.disclosureInset)
                 .padding(.bottom, PVSpacing.space5)

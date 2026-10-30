@@ -65,7 +65,7 @@ struct PersonDetailContent: ConclusionDetailBody {
             Self.lifeLine(L10n.Conclusions.personBornAbbr, spoken: L10n.Conclusions.a11yBorn, facts: header?.birth, locale: locale),
             Self.lifeLine(L10n.Conclusions.personDiedAbbr, spoken: L10n.Conclusions.a11yDied, facts: header?.death, locale: locale),
         ]
-        rows = Self.rows(detail.fields, header: header, locale: locale, orders: orders)
+        rows = Self.rows(detail.fields, header: header, derivedRows: detail.derivedRows, locale: locale, orders: orders)
         treatment = PersonGenderTreatment.read(detail.fields)
         likenessImageRelPath = header?.pictureImageRelPath ?? ""
         likenesses = detail.pictures.map {
@@ -87,6 +87,7 @@ struct PersonDetailContent: ConclusionDetailBody {
     static func rows(
         _ fields: [CatalogConclusionField],
         header: CatalogPersonHeader? = nil,
+        derivedRows: [CatalogDerivedRow] = [],
         locale: Locale,
         orders: NameFormatOrders = NameFormatOrders()
     ) -> [ReconciledValueRowModel] {
@@ -99,32 +100,38 @@ struct PersonDetailContent: ConclusionDetailBody {
                 emptyText: L10n.string(L10n.Conclusions.emptyName)
             ))
         }
-        let life: [(String, LocalizedStringResource, LocalizedStringResource, ReconciledValueRowModel.ValueStyle)] = [
-            ("life.birthDate", L10n.Conclusions.personBirthDate, L10n.Conclusions.emptyBirthDate, .date),
-            ("life.birthPlace", L10n.Conclusions.personBirthPlace, L10n.Conclusions.emptyBirthPlace, .place),
-            ("life.deathDate", L10n.Conclusions.personDeathDate, L10n.Conclusions.emptyDeathDate, .date),
-            ("life.deathPlace", L10n.Conclusions.personDeathPlace, L10n.Conclusions.emptyDeathPlace, .place),
+        let life: [(String, LocalizedStringResource, LocalizedStringResource, ReconciledValueRowModel.ValueStyle, CatalogDerivedRowKind)] = [
+            ("life.birthDate", L10n.Conclusions.personBirthDate, L10n.Conclusions.emptyBirthDate, .date, .birthDate),
+            ("life.birthPlace", L10n.Conclusions.personBirthPlace, L10n.Conclusions.emptyBirthPlace, .place, .birthPlace),
+            ("life.deathDate", L10n.Conclusions.personDeathDate, L10n.Conclusions.emptyDeathDate, .date, .deathDate),
+            ("life.deathPlace", L10n.Conclusions.personDeathPlace, L10n.Conclusions.emptyDeathPlace, .place, .deathPlace),
         ]
         let facts: [CatalogLifeFacts?] = [header?.birth, header?.birth, header?.death, header?.death]
         for (index, entry) in life.enumerated() {
-            let (id, label, empty, style) = entry
+            let (id, label, empty, style, kind) = entry
             let side = facts[index]
             let lead: String
             let mixed: Bool
             let opens: ReconciledValueRowModel.Opens?
+            let shownOwnerID: String?
             let competing = (side?.eventCount ?? 0) > 1
             if style == .date {
                 lead = PersonLifeDisplay.dateText(side?.date, locale: locale)
                 mixed = competing || (side?.dateCount ?? 0) > 1
                 opens = side?.event.map(ReconciledValueRowModel.Opens.event)
+                shownOwnerID = side?.event?.id
             } else {
+                let shown = DerivedPlace.shown(side?.places ?? [])
                 lead = DerivedPlace.name(side?.places ?? [])
                 mixed = competing || DerivedPlace.extra(side?.places ?? []) > 0
-                opens = side?.places.first.map(ReconciledValueRowModel.Opens.place)
+                opens = shown.map(ReconciledValueRowModel.Opens.place)
+                shownOwnerID = shown?.entity.id
             }
             rows.append(.derived(
                 id: id, label: L10n.string(label), style: style, lead: lead,
-                emptyText: L10n.string(empty), mixed: mixed, opens: opens
+                emptyText: L10n.string(empty), mixed: mixed, opens: opens,
+                owners: derivedRows.first { $0.kind == kind }?.owners ?? [],
+                shownOwnerID: shownOwnerID, locale: locale, orders: orders
             ))
         }
         for field in fields where field.propertyKey != SeededPropertyKey.name && !field.outcomes.isEmpty {

@@ -404,7 +404,8 @@ struct CatalogNameValue: Sendable, Equatable {
 /// One Place reached from a birth, death, or event. `names` are kept toponyms
 /// in rank order. `parents` is the hierarchical chain at the walk's date.
 struct CatalogHeaderPlace: Sendable, Equatable {
-    /// The Place; its page owns the names' Why.
+    /// The Place; a Person page's life rows carry its toponym records in
+    /// `CatalogConclusionDetail.derivedRows`.
     var entity: CatalogCanonicalEntity
     var names: [String] = []
     var parents: [String] = []
@@ -426,8 +427,8 @@ struct CatalogPlaceRelationship: Sendable, Equatable, Identifiable {
 
 /// A birth or a death composed from the canonical graph.
 struct CatalogLifeFacts: Sendable, Equatable {
-    /// The birth or death event read; `nil` when none is linked. Its page
-    /// owns the date's Why.
+    /// The birth or death event read; `nil` when none is linked. A Person page
+    /// reads its date's records from `CatalogConclusionDetail.derivedRows`.
     var event: CatalogCanonicalEntity?
     /// Surviving birth (or death) events; above 1 is a disagreement, and
     /// `event` is the earliest dated one.
@@ -657,6 +658,28 @@ struct CatalogConclusionDetail: Sendable, Equatable {
     var header: CatalogConclusionHeader?
     /// The handle's pictures, earliest recorded first.
     var pictures: [CatalogPicture] = []
+    /// A Person's life rows: the records of each field a row reads off another
+    /// handle, keyed by that handle (S13-06). Empty for every other kind.
+    var derivedRows: [CatalogDerivedRow] = []
+}
+
+/// A Person life row whose value is read off other handles.
+enum CatalogDerivedRowKind: Sendable, Equatable {
+    case birthDate, birthPlace, deathDate, deathPlace
+}
+
+/// The field a derived row reads off the entity that owns it. `event` is the
+/// owner's header when the owner is an Event.
+struct CatalogOwnerField: Sendable, Equatable {
+    var entity: CatalogCanonicalEntity
+    var event: CatalogEventHeader?
+    var field: CatalogConclusionField
+}
+
+/// One life row's records, one owner per entity it reads, in Go's order.
+struct CatalogDerivedRow: Sendable, Equatable {
+    var kind: CatalogDerivedRowKind
+    var owners: [CatalogOwnerField]
 }
 
 /// One handle's row for its kind, as the lists show it.

@@ -50,3 +50,22 @@ struct ReconciliationRecord: Equatable, Identifiable {
         )
     }
 }
+
+/// The records of one owning entity in a derived row's Why. `owner` is nil
+/// for a row with one owner, which needs no group line.
+struct ReconciliationRecordGroup: Equatable, Identifiable {
+    /// A group line: the owning entity as its list titles it.
+    struct OwnerLine: Equatable {
+        /// The owner's entity id.
+        var id: String
+        var title: String
+        /// The owner's ref; nil when the title is the ref.
+        var ref: String?
+        var spoken: String
+    }
+
+    var owner: OwnerLine?
+    var records: [ReconciliationRecord]
+
+    var id: String { owner?.id ?? "" }
+}

@@ -8,7 +8,7 @@ struct ReconciliationReasoningView: View {
     let title: String
     let label: String
     let style: ReconciledValueRowModel.ValueStyle
-    let records: [ReconciliationRecord]
+    let groups: [ReconciliationRecordGroup]
 
     @Environment(WorkspaceNavigation.self) private var navigation
 
@@ -34,27 +34,38 @@ struct ReconciliationReasoningView: View {
                     }
                     .padding(.vertical, PVSpacing.space2)
                     .accessibilityHidden(true)
-                    ForEach(records) { record in
-                        Rectangle()
-                            .fill(PVColor.borderSubtle)
-                            .frame(height: 1)
-                        GridRow {
-                            Text(record.readAs)
-                                .font(readAsFont(record))
-                                .foregroundStyle(record.counted ? PVColor.textPrimary : PVColor.textSecondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            PVButton(record.sourceTitle, variant: .link, size: .sm) {
-                                navigation.go(to: record.location)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .help(record.sourceTitle)
-                            .accessibilityIdentifier("conclusion.detail.why.\(record.id).source")
-                            ReconciliationOutcome(mark: record.mark, phrase: record.phrase)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            Color.clear.frame(width: Self.actionColumnWidth, height: 1)
-                                .accessibilityHidden(true)
+                    ForEach(groups) { group in
+                        if let owner = group.owner {
+                            Rectangle()
+                                .fill(PVColor.borderSubtle)
+                                .frame(height: 1)
+                            ownerLine(owner)
                         }
-                        .padding(.vertical, PVSpacing.space3)
+                        ForEach(Array(group.records.enumerated()), id: \.element.id) { index, record in
+                            // The first record under a group line follows the line, not a rule.
+                            if group.owner == nil || index > 0 {
+                                Rectangle()
+                                    .fill(PVColor.borderSubtle)
+                                    .frame(height: 1)
+                            }
+                            GridRow {
+                                Text(record.readAs)
+                                    .font(readAsFont(record))
+                                    .foregroundStyle(record.counted ? PVColor.textPrimary : PVColor.textSecondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                PVButton(record.sourceTitle, variant: .link, size: .sm) {
+                                    navigation.go(to: record.location)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .help(record.sourceTitle)
+                                .accessibilityIdentifier("conclusion.detail.why.\(record.id).source")
+                                ReconciliationOutcome(mark: record.mark, phrase: record.phrase)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                Color.clear.frame(width: Self.actionColumnWidth, height: 1)
+                                    .accessibilityHidden(true)
+                            }
+                            .padding(.vertical, PVSpacing.space3)
+                        }
                     }
                 }
                 .padding(.horizontal, PVSpacing.space5)
@@ -63,6 +74,29 @@ struct ReconciliationReasoningView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Conclusions.whyRecords(label))
+    }
+
+    /// A group's heading: the owning entity as its list titles it, then its
+    /// ref. Text, never a link.
+    private func ownerLine(_ owner: ReconciliationRecordGroup.OwnerLine) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
+            Text(verbatim: owner.title)
+                .pvMicroCaps()
+                .foregroundStyle(PVColor.textMuted)
+            if let ref = owner.ref {
+                Text(verbatim: "· \(ref)")
+                    .font(PVFont.mono(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .gridCellColumns(4)
+        .padding(.top, PVSpacing.space5)
+        .padding(.bottom, PVSpacing.space2)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+        .accessibilityLabel(owner.spoken)
     }
 
     private func heading(_ text: LocalizedStringResource) -> some View {
