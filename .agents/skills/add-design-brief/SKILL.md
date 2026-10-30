@@ -95,6 +95,8 @@ Work **in place** on this board. Do not fork a parallel copy of the surface.
 | Section title | SectionHeader |
 | Transient after-save notice | Toast |
 | Native menu of actions | ContextMenu |
+| Record or detail page at Regular and Wide | Page columns |
+| Choose one of a few options inline | Segmented control (ChipGroup segmented) |
 
 Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 
@@ -163,9 +165,8 @@ A view that centers instead of adding a column says why in one clause. An
 enhancement brief on a view that has no Wide frame yet adds one.
 
 Wide reuses the Regular frame's kit pieces. It is not a reason for a new kit
-primitive. A layout helper the Wide frames share (a two-column page scaffold) is
-a design-system question for [`add-ui-component`](../add-ui-component/SKILL.md),
-raised once a second view needs it.
+primitive. Reach for Page columns (`PVPageColumns`) for a record page's primary
+and secondary columns.
 
 **A brief cannot waive a safety rule.** The board decides layout and wording.
 It does not decide that a dirty form closes without asking, that a destructive

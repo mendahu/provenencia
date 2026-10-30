@@ -14,6 +14,8 @@ struct PVScrollRowIntoView<ID: Hashable>: ViewModifier {
     let animated: Bool
     let scrollsOnAppear: Bool
     let rows: [ID]?
+    let restartTop: ID?
+    let restartKey: AnyHashable?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
@@ -31,6 +33,12 @@ struct PVScrollRowIntoView<ID: Hashable>: ViewModifier {
                     guard let first = rows?.first else { return }
                     proxy.scrollTo(first, anchor: .top)
                 }
+                .onChange(of: restartKey) {
+                    // Another place on the same page starts at the top, not
+                    // where the last one was left. Never animated.
+                    guard let restartTop else { return }
+                    proxy.scrollTo(restartTop, anchor: .top)
+                }
         }
     }
 }
@@ -47,19 +55,26 @@ extension View {
     ///     menu that opens on its current choice.
     ///   - rows: When given, a change in these ids (a new query's results)
     ///     scrolls back to the first row.
+    ///   - restartTop: The id of a view at the very top of the scroll content.
+    ///   - restartKey: When this changes, scrolls to `restartTop` with no
+    ///     animation (`PVPageColumns` resets a page when its section changes).
     func pvScrollsRowIntoView<ID: Hashable>(
         _ row: ID?,
         anchor: UnitPoint? = nil,
         animated: Bool = true,
         scrollsOnAppear: Bool = false,
-        startsAtTopWhenRowsChange rows: [ID]? = nil
+        startsAtTopWhenRowsChange rows: [ID]? = nil,
+        restartsAt restartTop: ID? = nil,
+        whenChanged restartKey: AnyHashable? = nil
     ) -> some View {
         modifier(PVScrollRowIntoView(
             row: row,
             anchor: anchor,
             animated: animated,
             scrollsOnAppear: scrollsOnAppear,
-            rows: rows
+            rows: rows,
+            restartTop: restartTop,
+            restartKey: restartKey
         ))
     }
 }

@@ -265,8 +265,8 @@ struct PersonDetailTests {
         #expect(PersonLifeDisplay.line(james, locale: en).extraPlaces == 0)
 
         let page = PersonDetailContent(detail: detail(header: james), locale: en)
-        #expect(page.vitals.map(\.date) == ["1817", "1880"])
-        #expect(page.vitals.map(\.place) == ["York", "Toronto"])
+        #expect(page.lifeLines.map(\.date) == ["1817", "1880"])
+        #expect(page.lifeLines.map(\.place) == ["York", "Toronto"])
         #expect(page.rows[1].lead == "1817" && page.rows[1].badge == nil && page.rows[1].records.isEmpty)
         #expect(page.rows[2].lead == "York" && page.rows[2].style == .place)
         #expect(page.rows[4].lead == "Toronto")
@@ -314,11 +314,11 @@ struct PersonDetailTests {
         #expect(competing.rows[3].badge == nil && competing.rows[4].badge == nil)
     }
 
-    @Test func vitalsSayUnknownUntilLifeEventsArrive() {
-        let vitals = PersonDetailContent(detail: detail()).vitals
-        #expect(vitals.map(\.abbreviation) == ["b.", "d."])
-        #expect(vitals.allSatisfy { $0.date == nil && $0.place == nil })
-        #expect(vitals.map(\.accessibilityLabel) == ["Born date unknown, place unknown", "Died date unknown, place unknown"])
+    @Test func lifeLinesSayUnknownUntilLifeEventsArrive() {
+        let lines = PersonDetailContent(detail: detail()).lifeLines
+        #expect(lines.map(\.abbreviation) == ["b.", "d."])
+        #expect(lines.allSatisfy { $0.date == nil && $0.place == nil })
+        #expect(lines.map(\.accessibilityLabel) == ["Born date unknown, place unknown", "Died date unknown, place unknown"])
     }
 
     @Test func aSourceOpensTheRecordsCitationInTheComposer() throws {

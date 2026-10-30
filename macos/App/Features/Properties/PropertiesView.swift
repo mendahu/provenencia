@@ -828,19 +828,18 @@ private struct PropertiesCreateHost: View {
                 hint: L10n.Properties.createValueTypeHint,
                 marker: .required
             ) {
-                PVChipGroup(style: .segmented) {
-                    ForEach(SubjectPropertyValueType.researcherCreatable, id: \.self) { vt in
-                        PVChip(
+                PVSegmentedControl(
+                    L10n.Properties.createValueType,
+                    items: SubjectPropertyValueType.researcherCreatable.map { vt in
+                        .init(
                             text: vt,
-                            isSelected: (draft?.valueType ?? "text") == vt,
-                            expands: true,
-                            selectionLift: true,
-                            action: { draft?.valueType = vt }
+                            value: vt,
+                            accessibilityIdentifier: "properties.create.valueType.\(vt)"
                         )
-                        .accessibilityIdentifier("properties.create.valueType.\(vt)")
-                    }
-                }
-                .accessibilityLabel(Text(L10n.Properties.createValueType))
+                    },
+                    selection: draft?.valueType ?? "text",
+                    select: { draft?.valueType = $0 }
+                )
             }
 
             PVField(

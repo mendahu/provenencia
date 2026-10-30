@@ -5,7 +5,16 @@ import SwiftUI
 /// field's other values and for the Why. State is always text, never colour
 /// alone. Snowflake: Person, Event and Place pages share it from this folder.
 struct ReconciledValueRow: View {
+    /// How the row offers where its value came from. `.why` is the Why disclosure on
+    /// every page today; `.sheet` is the Person page's mode (S13-11 puts the provenance
+    /// control in the slot this reserves and takes the Why accordion out).
+    enum Provenance {
+        case why
+        case sheet
+    }
+
     let model: ReconciledValueRowModel
+    var provenance: Provenance = .why
     @Environment(WorkspaceNavigation.self) private var navigation
     @State private var showsOtherValues = false
     @State private var showsWhy = false
@@ -22,6 +31,12 @@ struct ReconciledValueRow: View {
             HStack(alignment: .center, spacing: PVSpacing.space6) {
                 summary
                 disclosures
+                if provenance == .sheet {
+                    // Reserved for the provenance control; VoiceOver skips it.
+                    Color.clear
+                        .frame(width: 28, height: 28)
+                        .accessibilityHidden(true)
+                }
             }
             .frame(minHeight: 52)
             .padding(.vertical, PVSpacing.space3)
