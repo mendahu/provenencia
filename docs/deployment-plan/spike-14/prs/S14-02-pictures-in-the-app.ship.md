@@ -1,7 +1,7 @@
 # Ship log — S14-02 Pictures in the app
 
 **Plan:** [`S14-02-pictures-in-the-app.md`](S14-02-pictures-in-the-app.md) · **Branch:** `s14-02-pictures-in-the-app` · **PR:** #641
-**State:** fixing 1
+**State:** review 2
 
 ## Round 0 — implement
 
@@ -61,3 +61,12 @@ Check: `rg -n "CatalogPicture\(" macos/ProvenenciaTests` prints only the new bui
 Files: `docs/deployment-plan/spike-14/prs/S14-02-pictures-in-the-app.md`.
 Do: append to the **Landed** line: the wider sweep still finds the old names in the landed S13-09, S13-10 and S14-01 plans, the Spike 13 map, and `deployment-plan.review.md`, which describe history and were left alone; F-2's shared builder and F-6's shared test builder supersede the plan's per-content blocks and its §8 "no shared test file" note.
 Check: `python3 scripts/check-plan-docs.py` 0 errors; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+
+Head `97984bda`. Gate PASS (orchestrator re-ran; the implementer's first run hit a `WorkspaceDestinationHostTests` flake in untouched code that passed on rerun). F-1 – F-7 done. F-2 sweep prints only the new builder (`ConclusionDetailPage.swift:167-169`); F-3 sweep prints only `pluginLabel` and the L10n definition. `choose` / `useEarliest` now return `@discardableResult Bool`.
+Orchestrator read: CON-1 / MNT-3 **Resolved** (method after `deleteAccessibilityLabel`, Holds doc back on `canEditCardinality`); CON-2 **Resolved** (Landed note names the historical hits and the supersessions).
+
+## Round 2 — review
+
+Reviewers: UX (UX-1 major), MNT (MNT-1, MNT-2 majors). Not sent: CON and SEC+PRF (no Fix-now blocker or major). Scope `1a6da81c...97984bda`.
