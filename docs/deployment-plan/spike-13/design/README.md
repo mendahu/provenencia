@@ -10,6 +10,7 @@ In order; S13-D8 and S13-D9 may run alongside once S13-20 lands.
 
 | Brief | View | Gates |
 | --- | --- | --- |
+| [S13-D12](S13-D12-life-rows-why.md) | Person page: the Why on the four life rows; board agreed 2026-10-30 in the [Claude Design project](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), turn 5 | S13-06 |
 | S13-D2 | Provenance sheet | S13-11 |
 | S13-D3 | Family section (and the shared person tile) | S13-12 |
 | S13-D4 | Timeline section | S13-13 |
