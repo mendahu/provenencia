@@ -97,15 +97,15 @@ type Querier interface {
 // provenance: the Source's credibility grade as sort_order relative to the
 // provenencia default (standard), then whether the transcription is uncertain.
 // No assessment, no grade, or no vocabulary reads as 0. It binds the aliases c
-// for citations and sg for source_credibility_grades (ProvenanceJoins). Scan
-// it with ProvenanceDest.
+// for citations and a for artifacts, and the query includes ProvenanceJoins,
+// after which sg (source_credibility_grades) is in scope for a caller's own
+// column. Scan it with ProvenanceDest.
 const ProvenanceColumns = `COALESCE(sg.sort_order - (SELECT sort_order FROM source_credibility_grades
 				WHERE key = 'standard' AND origin = 'provenencia'), 0),
 			c.transcription_uncertain`
 
-// ProvenanceJoins is the join fragment ProvenanceColumns needs. A query must
-// bind c for citations and a for artifacts; sg is then in scope for the
-// query's own extra column.
+// ProvenanceJoins is the join fragment ProvenanceColumns needs; the alias
+// contract is on ProvenanceColumns.
 const ProvenanceJoins = `LEFT JOIN source_credibility_assessments sca ON sca.source_id = a.source_id
 		LEFT JOIN source_credibility_grades sg ON sg.id = sca.credibility_grade_id`
 

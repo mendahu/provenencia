@@ -584,7 +584,7 @@ struct CatalogReconciledValue: Sendable, Equatable, Identifiable {
 
 /// What the auto-reconciler did with one Observation, with the record's own
 /// value and the evidence it weighed. Empty keys are the scale defaults
-/// (standard credibility, moderate confidence).
+/// (standard credibility).
 struct CatalogReconcilerOutcome: Sendable, Equatable, Identifiable {
     var observationID: String
     var observationRef: String
