@@ -55,6 +55,7 @@ struct DerivedPlaceTests {
         #expect(DerivedPlace.extra([nameless, paris]) == 1)
         let row = PersonDetailContent.rows([], header: CatalogPersonHeader(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: ""),
+            nameValueCount: 0,
             death: CatalogLifeFacts(places: [nameless, paris])
         ), locale: Locale(identifier: "en_US"))[4]
         #expect(row.opens?.location == .placeDetail(entityId: "p1", ref: "PLC-1", title: "Paris"))
