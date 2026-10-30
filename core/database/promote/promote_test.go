@@ -7,7 +7,6 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -189,44 +188,6 @@ func TestSave(t *testing.T) {
 					return promote.Save(tx, userID, promote.Input{SubjectID: james.ID, EntityID: a.Entity.ID})
 				}); !errors.Is(err, promote.ErrInvalid) {
 					t.Fatalf("merged: %v", err)
-				}
-			},
-		},
-		{
-			name: "confidence grade and argument land on the claim on both paths",
-			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
-				if err := claimconfidencegrades.Install(c); err != nil {
-					t.Fatal(err)
-				}
-				high, err := claimconfidencegrades.Lookup(c, "high_confidence", vocabkey.OriginProvenencia)
-				if err != nil {
-					t.Fatal(err)
-				}
-				minted := promotetest.Save(t, c, userID, promote.Input{
-					SubjectID: mk("person").ID, ConfidenceGradeID: high.ID, Argument: "  Grounding entry.  ",
-				})
-				joined := promotetest.Save(t, c, userID, promote.Input{
-					SubjectID: mk("person").ID, EntityID: minted.Entity.ID, ConfidenceGradeID: high.ID, Argument: "Same name and age.",
-				})
-				for _, tc := range []struct {
-					claim identityclaims.Claim
-					arg   string
-				}{{minted.Claim, "Grounding entry."}, {joined.Claim, "Same name and age."}} {
-					got, err := identityclaims.Get(c, tc.claim.ID)
-					if err != nil {
-						t.Fatal(err)
-					}
-					if string(got.ConfidenceGradeID) != string(high.ID) || got.Argument != tc.arg {
-						t.Fatalf("%+v", got)
-					}
-				}
-				in := promote.Input{
-					SubjectID: mk("person").ID, ConfidenceGradeID: make([]byte, 16),
-				}
-				if _, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, userID, in)
-				}); !errors.Is(err, identityclaims.ErrInvalid) {
-					t.Fatalf("unknown grade: %v", err)
 				}
 			},
 		},

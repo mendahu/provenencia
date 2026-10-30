@@ -1011,8 +1011,11 @@ func TestReconciledEvidence(t *testing.T) {
 		a, b := f.subject("person"), f.subjectOn(f.other, "person")
 		f.cite(nameIn(a, f.props["name"], "given=Jake|surname=Robins"))
 		f.cite(nameIn(b, f.props["name"], "given=James|surname=Robins"))
-		p6a4 := promote.Input{SubjectID: a.ID, ConfidenceGradeID: f.grade("low_confidence")}
-		res := promotetest.Save(t, f.c, userID, p6a4)
+		res := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: a.ID})
+		db, err := f.c.DB()
+		must(t, err)
+		_, err = db.Exec(`UPDATE identity_claims SET confidence_grade_id = ? WHERE subject_id = ?`, f.grade("low_confidence"), a.ID)
+		must(t, err)
 		f.join(b, res.Entity.ID)
 		names := rowsFor(f.rows(), res.Entity.ID, f.props["name"].ID)
 		if len(names) != 2 || names[0].Reason != "kept" || names[1].Reason != "weak" {
@@ -1472,7 +1475,6 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 			joins := 0
 			kinds := []string{"person", "person", "event", "place"}
 			credibilities := []string{"low_trust", "standard", "high_trust"}
-			grades := []string{"", "low_confidence", "moderate", "high_confidence"}
 			names := []string{"given=James|surname=Robins", "given=james|surname=robins", "given=Kenneth|surname=Robins",
 				"given=J.|surname=Robins", "given=James|given=K.|surname=Robins", "surname=Robbins",
 				"given=Mary|surname=Smith", "form:James Robins"}
@@ -1525,9 +1527,6 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 					// Mint, or join a handle of the Subject's kind already minted.
 					s := subs[rng.Intn(len(subs))]
 					in := promote.Input{SubjectID: s.ID}
-					if g := grades[rng.Intn(len(grades))]; g != "" {
-						in.ConfidenceGradeID = f.grade(g)
-					}
 					if same := handles[kindOf(f, s)]; len(same) > 0 && rng.Intn(2) == 0 {
 						in.EntityID = same[rng.Intn(len(same))]
 					}

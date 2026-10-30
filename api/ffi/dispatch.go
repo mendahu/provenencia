@@ -334,8 +334,6 @@ func route(method int32, in []byte) ([]byte, error) {
 		return handlers.ApplyPromoteGraphAlignment(in)
 	case MethodGetNameFormat:
 		return handlers.GetNameFormat(in)
-	case MethodListClaimConfidenceGrades:
-		return handlers.ListClaimConfidenceGrades(in)
 	case MethodGetConclusionDetail:
 		return handlers.GetConclusionDetail(in)
 	case MethodListEventHeaders:

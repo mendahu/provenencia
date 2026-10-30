@@ -29,10 +29,8 @@ var (
 // Input is one Promote step. A nil EntityID mints a new handle; otherwise
 // the Subject joins that handle, which must be unmerged and of its type.
 type Input struct {
-	SubjectID         []byte
-	EntityID          []byte
-	ConfidenceGradeID []byte // nil = no grade
-	Argument          string
+	SubjectID []byte
+	EntityID  []byte
 }
 
 // Result is the handle and the claim one step wrote. On a join, Entity is
@@ -96,11 +94,9 @@ func Save(tx *database.Tx, userID []byte, in Input) (Result, []rowchange.Change,
 		}
 	}
 	claim, claimChange, err := identityclaims.InsertTx(q, identityclaims.CreateInput{
-		SubjectID:         subject.ID,
-		EntityID:          entity.ID,
-		Status:            identityclaims.StatusAccepted,
-		ConfidenceGradeID: in.ConfidenceGradeID,
-		Argument:          in.Argument,
+		SubjectID: subject.ID,
+		EntityID:  entity.ID,
+		Status:    identityclaims.StatusAccepted,
 	})
 	if err != nil {
 		return Result{}, nil, err
