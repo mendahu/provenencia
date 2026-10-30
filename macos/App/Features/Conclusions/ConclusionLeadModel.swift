@@ -21,18 +21,21 @@ final class ConclusionLeadModel {
         self.entityId = entityId
     }
 
-    /// Makes `picture` the lead.
-    func choose(_ picture: ConclusionDetailPicture, copy: ConclusionDetailGallery.LeadCopy) async {
+    /// Makes `picture` the lead. Returns whether the save worked.
+    @discardableResult
+    func choose(_ picture: ConclusionDetailPicture, copy: ConclusionDetailGallery.LeadCopy) async -> Bool {
         await write(observationID: picture.id, copy: copy, body: picture.chosenToastBody)
     }
 
     /// Clears the choice, so the earliest picture leads.
-    func useEarliest(copy: ConclusionDetailGallery.LeadCopy) async {
+    @discardableResult
+    func useEarliest(copy: ConclusionDetailGallery.LeadCopy) async -> Bool {
         await write(observationID: "", copy: copy, body: copy.toastEarliestBody)
     }
 
-    private func write(observationID: String, copy: ConclusionDetailGallery.LeadCopy, body: String) async {
-        guard !isSaving else { return }
+    @discardableResult
+    private func write(observationID: String, copy: ConclusionDetailGallery.LeadCopy, body: String) async -> Bool {
+        guard !isSaving else { return false }
         isSaving = true
         defer { isSaving = false }
         do {
@@ -44,8 +47,13 @@ final class ConclusionLeadModel {
             )
             session.apply(effects)
             toast = VocabularyToast(title: copy.toastTitle, body: body, tone: .success)
+            AccessibilityAnnouncement.post(body.isEmpty ? copy.toastTitle : "\(copy.toastTitle), \(body)")
+            return true
         } catch {
-            toast = VocabularyToast(title: L10n.Errors.message(for: error), body: "", tone: .danger)
+            let message = L10n.Errors.message(for: error)
+            toast = VocabularyToast(title: message, body: "", tone: .danger)
+            AccessibilityAnnouncement.post(message, priority: .high)
+            return false
         }
     }
 }
