@@ -1352,8 +1352,6 @@ enum L10n {
             L10n.format(LocalizedStringResource("promote.reason.neighborReleased", defaultValue: "after %@ was unmatched", comment: "Why a row moved: a neighbor lost its match; argument is the neighbor name. Follows \"Updated · \""), neighbor)
         }
         static let reasonMoveUnknown = LocalizedStringResource("promote.reason.moveUnknown", defaultValue: "after a connected row changed", comment: "Why a row moved, when the neighbor is not on the page. Follows \"Updated · \"")
-        /// Which wording a value's type picks for a line sentence.
-        private enum ValueFamily { case name, date, likeness, other }
         /// The state text of a connection subrow: "Promotes on Done", or "Waits for <end>". nil for a
         /// self-link, whose copy is the warning under the sentence. `endName` is the waiting end's
         /// name; empty reads "its other end".
@@ -7264,6 +7262,13 @@ enum L10n {
                 comment: "VoiceOver fragment for how many types a property is bound to"
             ), count)
         }
+        static func rowAccessibility(label: String, key: String, valueType: String, origin: String, bound: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "properties.table.rowAccessibility",
+                defaultValue: "%1$@, %2$@, %3$@, %4$@, %5$@",
+                comment: "VoiceOver label of a Properties table row; 1 = label, 2 = key (tells Properties that share a label apart), 3 = value type, 4 = origin, 5 = how many types it is bound to"
+            ), label, key, valueType, origin, bound)
+        }
         static func emptySearchTitle(query: String) -> String {
             let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed.isEmpty {
@@ -9130,6 +9135,110 @@ enum L10n {
             "conclusions.person.toastPortraitEarliestBody",
             defaultValue: "Using the earliest likeness as the portrait.",
             comment: "Toast body after clearing the portrait"
+        ))
+
+        static let picturesSection = LocalizedStringResource(
+            "conclusions.detail.pictures",
+            defaultValue: "Pictures",
+            comment: "Section heading over an Event's or Place's picture crops"
+        )
+
+        static let pictureOpenTip = LocalizedStringResource(
+            "conclusions.picture.open",
+            defaultValue: "Open citation",
+            comment: "Help text on a picture tile in an Event's or Place's gallery"
+        )
+
+        static func pictureTileLabel(_ source: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.picture.tile",
+                defaultValue: "Picture from %@. Open citation",
+                comment: "Accessibility label of a picture tile in an Event's or Place's gallery; the argument is the Source title"
+            ), source)
+        }
+
+        static func pictureFrom(_ source: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.picture.from",
+                defaultValue: "Picture from %@",
+                comment: "Accessibility label of the Event or Place page header thumb when it shows a picture; the argument is that picture's Source title"
+            ), source)
+        }
+
+        static let eventPictureThumb = LocalizedStringResource(
+            "conclusions.event.pictureThumb",
+            defaultValue: "Event picture",
+            comment: "Label of the Event page header thumb when it shows a picture"
+        )
+
+        static let placePictureThumb = LocalizedStringResource(
+            "conclusions.place.pictureThumb",
+            defaultValue: "Place picture",
+            comment: "Label of the Place page header thumb when it shows a picture"
+        )
+
+        static let thumbnailBadge = LocalizedStringResource(
+            "conclusions.thumbnail.badge",
+            defaultValue: "Thumbnail",
+            comment: "Badge on the gallery picture chosen as the Event's or Place's thumbnail"
+        )
+
+        static let useAsThumbnail = LocalizedStringResource(
+            "conclusions.thumbnail.useAs",
+            defaultValue: "Use as thumbnail",
+            comment: "Button under a gallery picture that makes it the Event's or Place's thumbnail"
+        )
+
+        static func useAsThumbnailLabel(_ source: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.thumbnail.useAsLabel",
+                defaultValue: "Use the picture from %@ as thumbnail",
+                comment: "Accessibility label of the button that makes a gallery picture the thumbnail; the argument is the Source title (or the Observation ref when the title is empty)"
+            ), source)
+        }
+
+        static let useEarliestPicture = LocalizedStringResource(
+            "conclusions.thumbnail.useEarliest",
+            defaultValue: "Use earliest picture",
+            comment: "Header thumb menu item and accessibility action that clears the Event's or Place's thumbnail choice"
+        )
+
+        static let eventThumbnailMenuTitle = LocalizedStringResource(
+            "conclusions.event.thumbnailMenuTitle",
+            defaultValue: "Event thumbnail",
+            comment: "Title of the Event page header thumb menu"
+        )
+
+        static let placeThumbnailMenuTitle = LocalizedStringResource(
+            "conclusions.place.thumbnailMenuTitle",
+            defaultValue: "Place thumbnail",
+            comment: "Title of the Place page header thumb menu"
+        )
+
+        static let thumbnailMenuHint = LocalizedStringResource(
+            "conclusions.thumbnail.menuHint",
+            defaultValue: "Right-click for thumbnail options",
+            comment: "Help and accessibility hint on the Event or Place page header thumb while a thumbnail is chosen"
+        )
+
+        static let toastThumbnailUpdatedTitle = L10n.string(LocalizedStringResource(
+            "conclusions.thumbnail.toastTitle",
+            defaultValue: "Thumbnail updated",
+            comment: "Toast title after choosing or clearing an Event's or Place's thumbnail"
+        ))
+
+        static func toastThumbnailChosenBody(_ source: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.thumbnail.toastChosenBody",
+                defaultValue: "Using the picture from %@ as the thumbnail.",
+                comment: "Toast body after choosing a thumbnail; the argument is the tile's Source title"
+            ), source)
+        }
+
+        static let toastThumbnailEarliestBody = L10n.string(LocalizedStringResource(
+            "conclusions.thumbnail.toastEarliestBody",
+            defaultValue: "Using the earliest picture as the thumbnail.",
+            comment: "Toast body after clearing the thumbnail choice"
         ))
 
         static let eventNoImage = LocalizedStringResource(

@@ -6,6 +6,7 @@ import SwiftUI
 struct PlaceDetailView: View {
     let session: WorkspaceSession
     let entityId: String
+    let userID: String
 
     var body: some View {
         ConclusionDetailPage(
@@ -13,6 +14,7 @@ struct PlaceDetailView: View {
             entityId: entityId,
             pageIdentifier: "places.detail",
             errorIdentifier: "places.detail.error",
+            userID: userID,
             make: { PlaceDetailContent(detail: $0) },
             summary: { PlaceDetailChain(text: $0.chain, recorded: $0.chainIsRecorded) }
         )
