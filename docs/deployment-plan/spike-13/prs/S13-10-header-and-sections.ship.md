@@ -112,4 +112,4 @@ Check: scripts/check-pr.sh PASS.
 Head `32c9f390`. Gate PASS (orchestrator run). F-9 done: `.disabled(true)` on `measuredBand(compact:)`, three lines, only `PVPageColumns.swift`. `origin/main` still `1253dfaa`; no merge needed.
 
 ## Result
-Gate PASS · CI pending · open: none (§10 manual check is the user's) · follow-ups: ORC-1 (header drawn three times by the measured copies), nits CON-3, CON-4, CON-5/MNT-9, MNT-8, MNT-10, MNT-11 (fixed), MNT-12, UX-4; graph-progress `waitUntil` test flake · to user: MNT-2 (rename — yes), D-17 guard (yes), ORC-1 (one small fix — yes) · CON miss: none
+Gate PASS · CI green (test, localizable) · open: none (§10 manual check is the user's) · follow-ups: ORC-1 (header drawn three times by the measured copies), nits CON-3, CON-4, CON-5/MNT-9, MNT-8, MNT-10, MNT-11 (fixed), MNT-12, UX-4; graph-progress `waitUntil` test flake · to user: MNT-2 (rename — yes), D-17 guard (yes), ORC-1 (one small fix — yes) · CON miss: none
