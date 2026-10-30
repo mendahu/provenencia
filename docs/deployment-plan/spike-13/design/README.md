@@ -10,7 +10,7 @@ In order; S13-D8 and S13-D9 may run alongside once S13-20 lands.
 
 | Brief | View | Gates |
 | --- | --- | --- |
-| S13-D2 | Provenance sheet | S13-11 |
+| [S13-D2](S13-D2-provenance-sheet.md) | Provenance sheet | S13-11 |
 | S13-D3 | Family section (and the shared person tile) | S13-12 |
 | S13-D4 | Timeline section | S13-13 |
 | S13-D5 | Gallery section and likeness viewer | S13-14, S13-15 |
