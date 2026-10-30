@@ -162,6 +162,8 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
         }
     }
 
+    // The hidden copies are measured only; .disabled keeps them from registering
+    // the switcher's keyboard shortcuts.
     private func measuredBand(compact: Bool) -> some View {
         PVPageColumnsBandLayout(widthClass: widthClass, hasSecondary: hasSecondary) {
             header(compact)
@@ -170,6 +172,7 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
         .hidden()
         .accessibilityHidden(true)
         .allowsHitTesting(false)
+        .disabled(true)
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
             if compact { compactBandHeight = $0 } else { fullBandHeight = $0 }
             refreshScrolled()
