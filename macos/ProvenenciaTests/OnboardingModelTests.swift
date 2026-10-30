@@ -579,9 +579,7 @@ private struct ThrowingStore: GenealogyStore {
         projectDir _: String,
         userID _: String,
         subjectID _: String,
-        entityID _: String?,
-        confidenceGradeID _: String?,
-        argument _: String
+        entityID _: String?
     ) async throws -> CatalogPromoteResult {
         throw StoreBoom.boom
     }
@@ -592,25 +590,13 @@ private struct ThrowingStore: GenealogyStore {
     ) async throws -> CatalogPromoteGraphAlignmentProposal {
         throw StoreBoom.boom
     }
-    func getPromoteClaimEvidence(
-        projectDir _: String,
-        graphID _: String,
-        subjectID _: String,
-        handleID _: String,
-        neighbors _: [CatalogPromoteGraphAlignmentFixed]
-    ) async throws -> CatalogClaimEvidence {
-        throw StoreBoom.boom
-    }
     func applyPromoteGraphAlignment(
         projectDir _: String,
         userID _: String,
         graphID _: String,
         seenRevision _: Int64,
-        rows _: [CatalogPromoteBatchRow]
-    ) async throws -> CatalogPromoteBatchResult {
-        throw StoreBoom.boom
-    }
-    func listClaimConfidenceGrades(projectDir _: String) async throws -> [CatalogClaimConfidenceGrade] {
+        rows _: [CatalogPromoteGraphAlignmentFixed]
+    ) async throws {
         throw StoreBoom.boom
     }
     func listSubjectMemberships(projectDir _: String, graphID _: String) async throws -> [CatalogSubjectMembership] {

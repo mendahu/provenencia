@@ -35,14 +35,33 @@ struct L10nResolutionTests {
 
     @Test func unpromoteCopyResolves() {
         #expect(L10n.string(L10n.EvidenceGraph.unpromote) == "Unpromote")
-        #expect(L10n.string(L10n.EvidenceGraph.unpromoteKeep) == "Keep filing")
+        #expect(L10n.string(L10n.EvidenceGraph.unpromoteKeep) == "Keep promotion")
         #expect(L10n.EvidenceGraph.unpromoteConfirmTitle(name: "James Robins") == "Unpromote James Robins?")
         #expect(
             L10n.string(L10n.EvidenceGraph.unpromoteConfirmMessage)
-                == "This filing is removed. The cards stay on the graph, and the handle stays."
+                == "This promotion is removed. The cards stay on the graph, and the handle stays."
         )
-        #expect(L10n.string(L10n.EvidenceGraph.unpromoteConfirmBridgesHeader) == "Also unfiled")
-        #expect(L10n.string(L10n.EvidenceGraph.unpromoteConfirmBridgesNote) == "The other end of each stays filed.")
+        #expect(L10n.string(L10n.EvidenceGraph.unpromoteConfirmBridgesHeader) == "Also unpromoted")
+        #expect(L10n.string(L10n.EvidenceGraph.unpromoteConfirmBridgesNote) == "The other end of each stays promoted.")
+        #expect(
+            L10n.Promote.duplicateBody(.event)
+                == "These may be the same event. Combine them on the Evidence graph, or pick another target for one row."
+        )
+        #expect(L10n.Promote.openedFrom(name: "Gracie") == "Opened from Gracie")
+    }
+
+    @Test func promoteCountsUseSingularForms() {
+        #expect(L10n.Promote.promotedTitle(promoted: 1, connections: 0) == "Promoted 1 subject and 0 connections")
+        #expect(L10n.Promote.promotedTitle(promoted: 2, connections: 1) == "Promoted 2 subjects and 1 connection")
+        #expect(L10n.Promote.promotedBody(skipped: 1) == "1 subject is still on the graph, not promoted yet")
+        #expect(L10n.Promote.promotedBody(skipped: 3) == "3 subjects are still on the graph, not promoted yet")
+        #expect(L10n.Promote.rowSummary(rows: 1, promoted: 1) == "1 row · 1 already promoted")
+        #expect(L10n.Promote.rowSummary(rows: 4, promoted: 1) == "4 rows · 1 already promoted")
+    }
+
+    @Test func promoteDuplicateWarningsSayWhatIsSelected() {
+        #expect(L10n.Promote.duplicateTitle(name: "Gracie", ref: "PER-1") == "Gracie has also been selected to be promoted to PER-1")
+        #expect(L10n.Promote.duplicateNewTitle(name: "Gracie") == "Gracie has also been selected to be promoted as New and looks the same")
     }
 
     @Test func formatWithExplicitLocaleUsesIt() {

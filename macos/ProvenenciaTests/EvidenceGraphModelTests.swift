@@ -2043,11 +2043,11 @@ struct EvidenceGraphModelTests {
 
         _ = try await store.promoteSubject(
             projectDir: projectDir, userID: "user-1", subjectID: "s-fire",
-            entityID: nil, confidenceGradeID: nil, argument: ""
+            entityID: nil
         )
         _ = try await store.promoteSubject(
             projectDir: projectDir, userID: "user-1", subjectID: "s-york",
-            entityID: nil, confidenceGradeID: nil, argument: ""
+            entityID: nil
         )
         model.session.apply(.promotedSubject(graphId: graphID))
         let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)

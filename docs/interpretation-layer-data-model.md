@@ -690,7 +690,7 @@ CREATE TABLE subject_type_properties (
 ) STRICT;
 ```
 
-`sort_order` orders Add-property menus and Properties lists, the conclusion page's fields and the claim evidence sheet's sections (one order, cached with the vocabulary as `graphcache.Vocabulary.BindingOrder`). The sheet is to be removed ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3). Binding writes (assign, remove, reorder) are audited as `subject_type_property`. Locked bindings (cannot unbind while required for connect macros, Conclusion ordering, or other product integrity) live in the compiled Interpretation subject registry (`subjectvocab`), not as a column here.
+`sort_order` orders Add-property menus and Properties lists and the conclusion page's fields (one order, cached with the vocabulary as `graphcache.Vocabulary.BindingOrder`). Binding writes (assign, remove, reorder) are audited as `subject_type_property`. Locked bindings (cannot unbind while required for connect macros, Conclusion ordering, or other product integrity) live in the compiled Interpretation subject registry (`subjectvocab`), not as a column here.
 
 For example (full matrix in [`seeded-vocabulary.md`](seeded-vocabulary.md)):
 

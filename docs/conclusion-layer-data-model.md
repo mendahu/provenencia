@@ -240,18 +240,18 @@ Unpromote on the Evidence graph deletes a primary Subject's accepted claim and, 
 
 ## 5.3 Promote
 
-Promote is a quick filing action: the researcher files an Evidence graph's Subjects onto handles from one page, and is asked for nothing else. The design (graph alignment, the page) is [`promote-graph-alignment.md`](promote-graph-alignment.md), and its scoring is [`matching-model.md`](matching-model.md); this section holds the model rules. The schema doesn't require the page. The product proposes; it never blocks an accept.
+Promote is a quick action: the researcher promotes an Evidence graph's Subjects onto handles from one page, and is asked for nothing else. The design (graph alignment, the page) is [`promote-graph-alignment.md`](promote-graph-alignment.md), and its scoring is [`matching-model.md`](matching-model.md); this section holds the model rules. The schema doesn't require the page. The product proposes; it never blocks an accept.
 
 1. Promote from any unpromoted primary Subject (person, event, place) opens the page with that Subject matched to its best handle. *Map the rest of this graph* adds a row for every other primary Subject on the Evidence graph.
 2. Each row's target is **proposed by aligning** the graph with the canonical graph. A Subject's own Properties *and its neighbors'* (its birth event's date, its places, its family) are compared with each candidate's reconciled values. Subjects that are already members are anchors. A handle with no members is grounding: there's nothing to compare.
-3. The researcher accepts, retargets, mints new, or skips each row, and gives a filed row its **status**: **Accepted** (the default) or **Provisional**. Rejected is not offered at Promote. Their choices are fixed; everything not yet decided is re-proposed around them.
+3. The researcher accepts, retargets, mints new, or skips each row, and gives a promoted row its **status**: **Accepted** (the default) or **Provisional**. Rejected is not offered at Promote. Their choices are fixed; everything not yet decided is re-proposed around them.
 4. **Done** writes everything in one transaction:
-   - one Identity Claim per filed Subject, with its status, and the minted handles;
+   - one Identity Claim per promoted Subject, with its status, and the minted handles;
    - the bridges (§5.4).
 
    Promote writes no Observation pins, and an Identity Claim carries no confidence and no `argument` (decided 2026-10-29; the columns go in Spike 13).
 
-**Accepted** files a member, as before. **Provisional** writes a provisional Identity Claim and nothing else (decided 2026-10-29): the Subject still counts as not promoted (on its Evidence graph card, in the graph's status and progress, and among Promote's anchors), its bridges stay unfiled, and the auto-reconciler ignores the claim, so the handle's values do not change. The next time Promote runs on that graph, the row comes back preselected on the provisional handle, with status Provisional. Accepting it then turns the same claim accepted, an audited update of that `(subject, entity)` row, and files its waiting bridges in the same transaction. Choosing another handle or New, or filing Provisional on another handle, replaces the Subject's earlier provisional claim from that graph, so Promote leaves one claim per Subject; Skip leaves it as it is. Pages that read provisional claims (the Person page, entity pages) are later work.
+**Accepted** promotes a member, as before. **Provisional** writes a provisional Identity Claim and nothing else (decided 2026-10-29): the Subject still counts as not promoted (on its Evidence graph card, in the graph's status and progress, and among Promote's anchors), its bridges stay unfiled, and the auto-reconciler ignores the claim, so the handle's values do not change. The next time Promote runs on that graph, the row comes back preselected on the provisional handle, with status Provisional. Accepting it then turns the same claim accepted, an audited update of that `(subject, entity)` row, and files its waiting bridges in the same transaction. Choosing another handle or New, or promoting Provisional on another handle, replaces the Subject's earlier provisional claim from that graph, so Promote leaves one claim per Subject; Skip leaves it as it is. Pages that read provisional claims (the Person page, entity pages) are later work.
 
 A skipped row is not stored. Opening Promote again proposes it afresh.
 

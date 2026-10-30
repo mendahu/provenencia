@@ -22,12 +22,10 @@ import (
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/ingest/mediatypes"
-	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/objectpath"
 	"github.com/mendahu/provenencia/core/onboarding"
-	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/raster"
 	"github.com/mendahu/provenencia/core/search"
@@ -396,16 +394,6 @@ func subjectMarkSymbols() []string {
 	return out
 }
 
-// patternCodes is every kinship pattern code; Swift's KinshipPattern decodes
-// the claim evidence shapes with them.
-func patternCodes() []string {
-	var out []string
-	for _, p := range kinship.Patterns() {
-		out = append(out, string(p))
-	}
-	return out
-}
-
 // listStrings is every effects.List wire key; Swift's CatalogList decodes
 // WriteEffects.lists with them.
 func listStrings() []string {
@@ -432,16 +420,6 @@ func searchKinds() []string {
 		out = append(out, spec.Kind)
 	}
 	return sorted(out...)
-}
-
-// sortedRelations is every valuecompare relation, sorted.
-func sortedRelations() []string {
-	var out []string
-	for _, r := range valuecompare.Relations() {
-		out = append(out, string(r))
-	}
-	sort.Strings(out)
-	return out
 }
 
 func TestSwiftVocabularyMatchesGo(t *testing.T) {
@@ -478,34 +456,6 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		{
 			name: "promote row targets", path: swiftVocabulary, enum: "PromoteTargetCode", re: wireCase,
 			want: sorted("", string(graphalign.TargetHandle), string(graphalign.TargetNew), string(graphalign.TargetSkip)),
-		},
-		{
-			name: "evidence outcomes", path: swiftVocabulary, enum: "EvidenceOutcome", re: wireCase,
-			want: sorted(string(propertycompare.OutcomeAgree), string(propertycompare.OutcomePartial),
-				string(propertycompare.OutcomeConflict), string(propertycompare.OutcomeUnknown)),
-		},
-		{
-			name: "evidence property causes", path: swiftVocabulary, enum: "EvidencePropertyCause", re: wireCase,
-			want: sorted("", string(propertycompare.CauseRelation), string(propertycompare.CauseNegative),
-				string(propertycompare.CauseNoValues), string(propertycompare.CauseCardinality)),
-		},
-		{
-			name: "kinship patterns", path: swiftVocabulary, enum: "KinshipPattern", re: wireCase,
-			want: sorted(append(patternCodes(), "")...),
-		},
-		{
-			name: "value relations", path: swiftVocabulary, enum: "ValueRelation", re: wireCase,
-			want: sorted(append(sortedRelations(), "")...),
-		},
-		{
-			name: "value causes", path: swiftVocabulary, enum: "ValueCause", re: wireCase,
-			want: sorted("", string(valuecompare.CauseExact), string(valuecompare.CauseCase), string(valuecompare.CauseFold),
-				string(valuecompare.CauseAlias), string(valuecompare.CauseAbbreviation), string(valuecompare.CauseInitial), string(valuecompare.CausePrefix),
-				string(valuecompare.CauseSpelling), string(valuecompare.CausePrecision), string(valuecompare.CauseMissingPart),
-				string(valuecompare.CauseOverlap), string(valuecompare.CauseGap), string(valuecompare.CauseBeyondTolerance),
-				string(valuecompare.CauseGenerationConflict), string(valuecompare.CauseEmpty), string(valuecompare.CausePhraseOnly),
-				string(valuecompare.CauseBelowMinimum), string(valuecompare.CauseNoMatch), string(valuecompare.CauseTooLong),
-				string(valuecompare.CauseOrder), string(valuecompare.CauseRole), string(valuecompare.CauseUnsupported), string(valuecompare.CauseUnjudged)),
 		},
 		{
 			name: "date qualifiers", path: swiftVocabulary, enum: "DateQualifier", re: staticLet,
@@ -571,8 +521,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		})
 	}
 	t.Run("states and reasons tolerate a value this build doesn't know", func(t *testing.T) {
-		for _, enum := range []string{"ReconciledState", "ReconcilerReason", "PromoteReasonCode",
-			"EvidenceOutcome", "EvidencePropertyCause", "KinshipPattern", "ValueRelation", "ValueCause"} {
+		for _, enum := range []string{"ReconciledState", "ReconcilerReason", "PromoteReasonCode"} {
 			if !unrecogniz.MatchString(swiftEnumBody(t, swiftVocabulary, enum)) {
 				t.Fatalf("%s has no unrecognized case", enum)
 			}
@@ -647,7 +596,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		}
 	})
 	t.Run("every seeded term has wording", func(t *testing.T) {
-		body := swiftFuncBody(t, swiftL10n, "static func wording(propertyKey")
+		body := swiftFuncBody(t, swiftL10n, "static func resource(propertyKey")
 		named := map[string]bool{}
 		for _, m := range wordingCase.FindAllStringSubmatch(body, -1) {
 			named[m[1]+"."+m[2]] = true
@@ -656,44 +605,9 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			enumBody := swiftEnumBody(t, swiftVocabulary, tc.enum)
 			for _, m := range swiftNamedKey.FindAllStringSubmatch(enumBody, -1) {
 				if !named[tc.enum+"."+m[1]] {
-					t.Errorf("Swift %s.%s (%s term %q) has no L10n.PropertyTerm wording", tc.enum, m[1], tc.property, m[2])
+					t.Errorf("Swift %s.%s (%s term %q) has no L10n.PropertyTerm resource", tc.enum, m[1], tc.property, m[2])
 				}
 			}
-		}
-	})
-	t.Run("every term a sentence shares has its share phrases", func(t *testing.T) {
-		body := swiftFuncBody(t, swiftL10n, "static func wording(propertyKey")
-		// A term of these enums is worded whole in "they share ...", for a similar outcome too;
-		// a place relationship term names the row from the other end as well.
-		fields := map[string][]string{
-			"SeededRoleTerm":                  {"share", "shareSimilar"},
-			"SeededEventTypeTerm":             {"share", "shareSimilar"},
-			"SeededRelationshipTypeTerm":      {"share", "shareSimilar"},
-			"SeededPlaceRelationshipTypeTerm": {"share", "shareSimilar", "shareOtherEnd", "shareOtherEndSimilar"},
-		}
-		src, err := os.ReadFile(swiftL10n)
-		if err != nil {
-			t.Fatal(err)
-		}
-		checked := 0
-		for _, m := range wordingCase.FindAllStringSubmatch(body, -1) {
-			want, ok := fields[m[1]]
-			if !ok {
-				continue
-			}
-			def := regexp.MustCompile(`(?s)static let ` + m[3] + ` = Wording\((.*?)\n        \)`).FindStringSubmatch(string(src))
-			if def == nil {
-				t.Fatalf("no Wording definition for %s", m[3])
-			}
-			for _, field := range want {
-				if !regexp.MustCompile(`\b` + field + `: LocalizedStringResource\(`).MatchString(def[1]) {
-					t.Errorf("%s.%s (%s) has no %s", m[1], m[2], m[3], field)
-				}
-			}
-			checked++
-		}
-		if checked == 0 {
-			t.Fatal("no wording read")
 		}
 	})
 	t.Run("the relationship inverse map is the seeded inverse", func(t *testing.T) {

@@ -124,7 +124,6 @@ struct PlaceRegistryTests {
                     .evidenceGraph(project: project, graphId: "g-1"),
                     .sourcesList(project: project),
                     .sourceTypesList(project: project),
-                    .confidenceGradesList(project: project),
                     .propertiesWorkspace(project: project),
                     .connectRules(project: project),
                     .evidenceGraphsList(project: project),

@@ -1,9 +1,9 @@
 import Foundation
 
 /// One page of Promote (S9-44): a row list, not a step machine. Decisions
-/// live here. The model loads the proposal and files Done.
+/// live here. The model loads the proposal and promotes Done.
 struct PromoteFlow: Equatable, Sendable {
-    /// Default profile orders for row titles. Empty keeps stored part order.
+    /// Default name orders for row titles. Empty keeps stored part order.
     var nameOrders = NameFormatOrders()
 
     enum Target: Equatable, Sendable {
@@ -46,7 +46,7 @@ struct PromoteFlow: Equatable, Sendable {
         init(wire: String) { self = Assessment(rawValue: wire) ?? .none }
     }
 
-    /// Why a row reads as it does. The page words it.
+    /// Why a suggested row moved on the last proposal. The page words it.
     enum Reason: Equatable, Sendable {
         /// Reached from this neighbor row once it was matched.
         case via(neighborID: String)
@@ -56,73 +56,40 @@ struct PromoteFlow: Equatable, Sendable {
         case neighborMoved(neighborID: String)
         /// Settling released this row's pair because of this neighbor.
         case neighborReleased(neighborID: String)
-        /// Filed before this page opened.
-        case filed
-        /// The researcher's choice, held as given.
-        case decided
-        /// A property-only match; this Property agrees most.
-        case agrees(key: String, origin: String)
-        case weak
-        /// Another row on the page took this match.
-        case taken
-        /// Promote suggests no record for this row.
-        case unplaced
-        case empty
-
-        init(code: PromoteReasonCode, propertyKey: String, propertyOrigin: String, neighborID: String) {
-            switch code {
-            case .via where !neighborID.isEmpty: self = .via(neighborID: neighborID)
-            case .neighborPlaced where !neighborID.isEmpty: self = .neighborPlaced(neighborID: neighborID)
-            case .neighborMoved where !neighborID.isEmpty: self = .neighborMoved(neighborID: neighborID)
-            case .neighborReleased where !neighborID.isEmpty: self = .neighborReleased(neighborID: neighborID)
-            case .decided: self = .decided
-            case .agrees: self = .agrees(key: propertyKey, origin: propertyOrigin)
-            case .weak: self = .weak
-            case .taken: self = .taken
-            case .unplaced: self = .unplaced
-            case .via, .neighborPlaced, .neighborMoved, .neighborReleased, .empty, .unrecognized: self = .empty
-            }
-        }
-
-        init(_ row: CatalogPromoteGraphAlignmentRow) {
-            self.init(
-                code: row.reason,
-                propertyKey: row.reasonPropertyKey,
-                propertyOrigin: row.reasonPropertyOrigin,
-                neighborID: row.viaNeighborSubjectID
-            )
-        }
 
         /// Why settling released an earlier pair of this row; nil when it did not.
         init?(move proposal: CatalogPromoteGraphAlignmentRow) {
-            guard let moveReason = proposal.moveReason else { return nil }
-            self.init(code: moveReason, propertyKey: "", propertyOrigin: "", neighborID: proposal.moveNeighborSubjectID)
+            guard let code = proposal.moveReason, !proposal.moveNeighborSubjectID.isEmpty else { return nil }
+            let id = proposal.moveNeighborSubjectID
+            switch code {
+            case .neighborPlaced: self = .neighborPlaced(neighborID: id)
+            case .neighborMoved: self = .neighborMoved(neighborID: id)
+            case .neighborReleased: self = .neighborReleased(neighborID: id)
+            default: return nil
+            }
         }
 
-        init(_ alt: CatalogPromoteGraphAlignmentAlternative) {
-            self.init(
-                code: alt.reason,
-                propertyKey: alt.reasonPropertyKey,
-                propertyOrigin: alt.reasonPropertyOrigin,
-                neighborID: alt.viaNeighborSubjectID
-            )
+        /// The neighbor the proposal reached this row from; nil when it did not.
+        init?(via proposal: CatalogPromoteGraphAlignmentRow) {
+            guard !proposal.viaNeighborSubjectID.isEmpty else { return nil }
+            self = .via(neighborID: proposal.viaNeighborSubjectID)
         }
     }
 
-    /// Why a connection's end does not file.
+    /// Why a connection's end does not promote.
     enum WaitReason: Equatable, Sendable {
         case skipped, unset, notOnPage
     }
 
-    /// Whether a connection files on Done, and if not, why.
+    /// Whether a connection promotes on Done, and if not, why.
     enum ConnectionState: Equatable, Sendable {
-        case files
-        /// An end does not file: `endID` is the Subject that waits (the connection's first end when both do).
+        case promotes
+        /// An end does not promote: `endID` is the Subject that waits (the connection's first end when both do).
         case waits(endID: String?, why: WaitReason)
         /// Both ends land on one record; `ref` is that record's.
         case selfLink(ref: String)
 
-        /// The Subject the connection waits for; nil when it files or is a self-link.
+        /// The Subject the connection waits for; nil when it promotes or is a self-link.
         var waitingEndID: String? {
             if case .waits(let endID, _) = self { return endID }
             return nil
@@ -137,27 +104,13 @@ struct PromoteFlow: Equatable, Sendable {
         case alsoNew(otherName: String)
     }
 
-    /// The assessment column for one selected record.
-    struct SelectionReadout: Equatable, Sendable {
-        var assessment: Assessment
-        var reason: Reason
-        /// The proposal says this pair conflicts somewhere; the page marks it beside the band.
-        var contested = false
-        /// The researcher decided this row; the page words a band below Weak as their choice.
-        var chosen = false
-    }
-
     struct Alternative: Equatable, Sendable, Identifiable {
         var id: String
         var ref: String
         /// The menu's form: a person sorted ("Smith, John"). Events and places read the same everywhere.
         var title: String
-        /// How a sentence reads the record: a person in natural order ("John Smith").
-        var readingTitle: String
         /// Dates, place, or other secondary line under the name.
         var subtitle: String = ""
-        var assessment: Assessment = .none
-        var reason: Reason = .empty
     }
 
     struct Row: Equatable, Sendable, Identifiable {
@@ -166,17 +119,8 @@ struct PromoteFlow: Equatable, Sendable {
         var name: String
         var ref: String
         var anchor: Bool
-        var assessment: Assessment
-        var reason: Reason
         var target: Target
         var menu: [Alternative]
-        /// The row's claim evidence against its target, worded for the sheet; nil until its sheet opens.
-        var board: EvidenceBoard?
-        /// The pins left checked (ids from `board.offeredPinIDs`). Meaningful only once `board` is set.
-        var pins: Set<String>
-        var confidenceGradeID: String?
-        /// What the researcher typed; Promote drafts none.
-        var argument: String
         var decided: Bool
         /// A suggested row whose target moved on the last proposal.
         var updated: Bool
@@ -185,37 +129,16 @@ struct PromoteFlow: Equatable, Sendable {
         /// The row the proposal says this one may duplicate.
         var proposedDuplicateOf: String?
         var duplicateNote: DuplicateNote?
-        /// A comparison behind this row's pair conflicts, whatever its band; the page marks it.
-        var contested = false
-        /// Why settling released an earlier pair of this row in this proposal. Not `updated`, which compares with the previous proposal.
-        var move: Reason? = nil
+        /// What the Updated caption words: why settling moved this row, else the neighbor the proposal reached it from; nil when it names neither.
+        var caption: Reason? = nil
         /// An Event's date as the Events list lists it, without the source's words for it; empty for anything else.
         var date: String = ""
         var id: String { subjectID }
-
-        /// The record behind the target as a sentence reads it (a person in natural order); the
-        /// target's own title when the record is not in the menu, as with a filed anchor.
-        var readingTitle: String? {
-            guard case .handle(let id, _, let title) = target else { return nil }
-            return menu.first { $0.id == id }?.readingTitle ?? title
-        }
-
-        /// The selected record's band and why. Skip, New, and an empty menu show nothing.
-        var selectionReadout: SelectionReadout? {
-            guard case .handle(let id, _, _) = target,
-                  let alt = menu.first(where: { $0.id == id }) else { return nil }
-            return SelectionReadout(assessment: alt.assessment, reason: alt.reason, contested: contested, chosen: decided)
-        }
 
         /// The menu item a record token names, the one decoder of `Target.handleToken`.
         func menuItem(forToken token: String) -> Alternative? {
             menu.first { Target.handleToken($0.id) == token }
         }
-
-        /// What the Updated caption words: the move when settling moved this row,
-        /// else, for a row Promote suggested no record for but the page drafted
-        /// onto one, that record's reason, else its own reason.
-        var captionReason: Reason { move ?? (reason == .unplaced ? selectionReadout?.reason : nil) ?? reason }
 
         /// The ref the page names this row by: its record's when it has one, else its Source ref.
         var shownRef: String { target.handleRef ?? ref }
@@ -226,7 +149,7 @@ struct PromoteFlow: Equatable, Sendable {
         var fact: BridgeFact
         var state: ConnectionState
         var id: String { fact.id }
-        var files: Bool { state == .files }
+        var promotes: Bool { state == .promotes }
 
         subscript<T>(dynamicMember key: KeyPath<BridgeFact, T> & Sendable) -> T { fact[keyPath: key] }
 
@@ -236,8 +159,8 @@ struct PromoteFlow: Equatable, Sendable {
     /// What a row says of a connection's other end when that end is not a row to work on.
     struct OtherEnd: Equatable, Sendable {
         var name: String
-        /// The end is already filed (an anchor), not just missing from the page.
-        var filed: Bool
+        /// The end is already promoted (an anchor), not just missing from the page.
+        var promoted: Bool
     }
 
     /// A connection as one row shows it.
@@ -258,7 +181,7 @@ struct PromoteFlow: Equatable, Sendable {
         var kind: EvidencePrimaryKind
         var name: String
         var ref: String
-        /// Set when the subject is already filed.
+        /// Set when the subject is already promoted.
         var anchor: Anchor?
         /// An Event's date as the Events list lists it, without the source's words for it; empty for anything else.
         var date: String = ""
@@ -275,9 +198,9 @@ struct PromoteFlow: Equatable, Sendable {
         var mark: PVMarkKey = .subjectRelationship
         var endA: String?
         var endB: String?
-        /// Already an accepted association. Hidden from the will-file list;
-        /// Done does not file it again.
-        var alreadyFiled: Bool = false
+        /// Already an accepted association. Hidden from the will-promote list;
+        /// Done does not promote it again.
+        var alreadyPromoted: Bool = false
 
         /// The name of one end, as its row reads; empty when `endID` is neither end.
         func name(of endID: String?) -> String {
@@ -297,7 +220,6 @@ struct PromoteFlow: Equatable, Sendable {
     var staleNote: String?
     var manual = false
     var pendingLeave: PendingNavigation?
-    var sheetSubjectID: String?
 
     var visibleRows: [Row] {
         guard mappedRest else { return rows.filter { $0.subjectID == entryID } }
@@ -306,7 +228,7 @@ struct PromoteFlow: Equatable, Sendable {
 
     var restCount: Int { rows.filter { $0.subjectID != entryID }.count }
 
-    var fileCount: Int {
+    var promoteCount: Int {
         scope.filter { row in
             guard !row.anchor else { return false }
             switch row.target {
@@ -326,7 +248,7 @@ struct PromoteFlow: Equatable, Sendable {
         unsetCount == 0
     }
 
-    var connectionCount: Int { connections.filter(\.files).count }
+    var connectionCount: Int { connections.filter(\.promotes).count }
 
     private var scope: [Row] { visibleRows }
 
@@ -334,10 +256,10 @@ struct PromoteFlow: Equatable, Sendable {
         Bridge(fact: bridge, state: state)
     }
 
-    /// Every connection not yet filed, with whether it files and, if not, which end waits and why.
+    /// Every connection not yet promoted, with whether it promotes and, if not, which end waits and why.
     var connections: [Bridge] {
         let rowByID = Dictionary(rows.map { ($0.subjectID, $0) }, uniquingKeysWith: { first, _ in first })
-        return bridges.filter { !$0.alreadyFiled }.map { bridge in
+        return bridges.filter { !$0.alreadyPromoted }.map { bridge in
             let left = resolve(bridge.endA, in: rowByID)
             let right = resolve(bridge.endB, in: rowByID)
             switch (left, right) {
@@ -346,7 +268,7 @@ struct PromoteFlow: Equatable, Sendable {
             case (_, .waits(let why)):
                 return lined(bridge, .waits(endID: bridge.endB, why: why))
             case (.handle(let leftID, let ref), .handle(let rightID, _)):
-                return lined(bridge, leftID == rightID ? .selfLink(ref: ref) : .files)
+                return lined(bridge, leftID == rightID ? .selfLink(ref: ref) : .promotes)
             }
         }
     }
@@ -365,7 +287,7 @@ struct PromoteFlow: Equatable, Sendable {
                 var note: OtherEnd?
                 if let far, !working.contains(far) {
                     let name = bridge.name(of: far)
-                    if !name.isEmpty { note = OtherEnd(name: name, filed: anchors.contains(far)) }
+                    if !name.isEmpty { note = OtherEnd(name: name, promoted: anchors.contains(far)) }
                 }
                 byRow[end, default: []].append(RowConnection(bridge: bridge, otherEnd: note))
             }
@@ -378,7 +300,7 @@ struct PromoteFlow: Equatable, Sendable {
 
     private static func stateRank(_ state: ConnectionState) -> Int {
         switch state {
-        case .files: 0
+        case .promotes: 0
         case .waits: 1
         case .selfLink: 2
         }
@@ -411,7 +333,7 @@ struct PromoteFlow: Equatable, Sendable {
         case waits(WaitReason)
     }
 
-    /// The handle a subject will be, or why it stays unfiled. The one place that decides.
+    /// The handle a subject will be, or why it stays unpromoted. The one place that decides.
     private func resolve(_ subjectID: String?, in rowByID: [String: Row]) -> EndResolution {
         guard let subjectID, let row = rowByID[subjectID] else { return .waits(.notOnPage) }
         if row.anchor {
@@ -470,27 +392,20 @@ struct PromoteFlow: Equatable, Sendable {
             item = offered
         } else {
             item = Self.item(
-                id: id, ref: ref, kind: rows[index].kind,
-                person: header?.person, event: header?.event, place: header?.place,
-                orders: nameOrders, assessment: .none, reason: .decided
+                id: id, ref: ref, header: header, orders: nameOrders
             )
             rows[index].menu.append(item)
         }
         return select(.handle(id: item.id, ref: item.ref, title: item.title), at: index)
     }
 
-    /// Selects a target on a working row: the old target's evidence goes, the
+    /// Selects a target on a working row: the old target's caption goes, the
     /// row is decided. Returns true.
     private mutating func select(_ next: Target, at index: Int) -> Bool {
         if next != rows[index].target {
-            // The evidence, pins and contested flag compared the old target;
-            // the sheet reads them again for this one. The argument is the
-            // researcher's own and stays.
+            // The caption worded a move of the old target.
             rows[index].target = next
-            rows[index].board = nil
-            rows[index].pins = []
-            rows[index].contested = false
-            rows[index].move = nil
+            rows[index].caption = nil
         }
         rows[index].decided = true
         rows[index].updated = false
@@ -499,8 +414,8 @@ struct PromoteFlow: Equatable, Sendable {
         return true
     }
 
-    /// The targets for these rows as the page holds them, for a proposal or a
-    /// claim evidence read: a handle, New, or Skip. An unset row has none.
+    /// The targets for these rows as the page holds them, for a proposal: a handle, New, or Skip.
+    /// An unset row has none.
     func fixed(for rows: [Row]) -> [CatalogPromoteGraphAlignmentFixed] {
         rows.compactMap { row in
             switch row.target {
@@ -516,53 +431,6 @@ struct PromoteFlow: Equatable, Sendable {
         }
     }
 
-    /// The other rows Done files, as targets: the neighbors a row's evidence
-    /// is read against. Go adds the Subjects already filed.
-    func evidenceNeighbors(for subjectID: String) -> [CatalogPromoteGraphAlignmentFixed] {
-        fixed(for: filedRows.filter { $0.subjectID != subjectID })
-    }
-
-    /// Stores a row's evidence, unless its target moved on while it loaded.
-    /// The first read drafts the pins the evidence checks; a later one keeps
-    /// what the researcher left checked of what is still offered.
-    mutating func setEvidence(subjectID: String, handleID: String, board: EvidenceBoard) {
-        guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }),
-              rows[index].target.handleID == handleID
-        else { return }
-        if rows[index].board == nil {
-            rows[index].pins = board.checkedPinIDs
-        } else {
-            rows[index].pins.formIntersection(board.offeredPinIDs)
-        }
-        rows[index].board = board
-    }
-
-    /// Checks or unchecks every pin of a line or relationship together.
-    mutating func togglePin(subjectID: String, pinIDs: [String]) {
-        guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }), !pinIDs.isEmpty else { return }
-        if rows[index].pins.isSuperset(of: pinIDs) {
-            rows[index].pins.subtract(pinIDs)
-        } else {
-            rows[index].pins.formUnion(pinIDs)
-        }
-        rows[index].decided = true
-        manual = true
-    }
-
-    mutating func setArgument(subjectID: String, argument: String) {
-        guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }) else { return }
-        rows[index].argument = argument
-        rows[index].decided = true
-        manual = true
-    }
-
-    mutating func setConfidence(subjectID: String, gradeID: String?) {
-        guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }) else { return }
-        rows[index].confidenceGradeID = gradeID
-        rows[index].decided = true
-        manual = true
-    }
-
     /// Fold a new proposal. Decided rows keep their choice.
     mutating func merge(_ proposal: CatalogPromoteGraphAlignmentProposal, subjects: [SubjectFact]) {
         revision = proposal.revision
@@ -575,49 +443,14 @@ struct PromoteFlow: Equatable, Sendable {
         noteDuplicates()
     }
 
-    /// One line per row to file. A Skip writes nothing, so it carries no
-    /// argument, confidence, or pins, whatever the row was drafted with.
-    func batchRows() -> [CatalogPromoteBatchRow] {
-        filedRows.map(batchRow)
+    /// The targets Done sends, one per row it promotes.
+    func batchRows() -> [CatalogPromoteGraphAlignmentFixed] {
+        fixed(for: promotedRows)
     }
 
-    /// The rows Done files: visible, not already filed, with a target.
-    private var filedRows: [Row] {
+    /// The rows Done promotes: visible, not already promoted, with a target.
+    private var promotedRows: [Row] {
         scope.filter { !$0.anchor && $0.target != .unset }
-    }
-
-    private func batchRow(_ row: Row) -> CatalogPromoteBatchRow {
-        // A handle row whose sheet was never opened pins what the evidence
-        // checks, which Go decides; an opened one sends the pins it left.
-        var defaultPins = false
-        var pinIDs: [String] = []
-        if case .handle = row.target {
-            defaultPins = row.board == nil
-            pinIDs = row.board == nil ? [] : row.pins.sorted()
-        }
-        let entityID: String?
-        let target: String
-        switch row.target {
-        case .handle(let id, _, _):
-            target = "handle"
-            entityID = id
-        case .newKind:
-            target = "new"
-            entityID = nil
-        case .skip, .unset:
-            target = "skip"
-            entityID = nil
-        }
-        let files = target != "skip"
-        return CatalogPromoteBatchRow(
-            subjectID: row.subjectID,
-            target: target,
-            entityID: entityID,
-            confidenceGradeID: files ? row.confidenceGradeID : nil,
-            argument: files ? row.argument : "",
-            defaultPins: defaultPins,
-            pinIDs: pinIDs
-        )
     }
 
     mutating func requestLeave(_ pending: PendingNavigation) -> Bool {
@@ -677,49 +510,31 @@ struct PromoteFlow: Equatable, Sendable {
         if let anchor = fact.anchor {
             return Row(
                 subjectID: fact.id, kind: fact.kind, name: fact.name, ref: fact.ref,
-                anchor: true, assessment: .strong, reason: .filed,
+                anchor: true,
                 target: .handle(id: anchor.id, ref: anchor.ref, title: anchor.title),
-                menu: [], board: nil, pins: [], confidenceGradeID: nil, argument: "",
+                menu: [],
                 decided: false, updated: false, conflictNote: nil, proposedDuplicateOf: nil, duplicateNote: nil,
                 date: fact.date
             )
         }
-        let menu = menu(for: proposal, kind: fact.kind, orders: orders)
+        let menu = menu(for: proposal, orders: orders)
         let drafted = draftTarget(proposal, menu: menu)
+        let caption = Reason(move: proposal) ?? Reason(via: proposal)
         if let previous, previous.decided {
             var kept = previous
-            kept.assessment = Assessment(wire: proposal.assessment)
-            kept.reason = Reason(proposal)
-            // The column shows the selected record. A held handle is rescored,
-            // so refresh that record's band. "Your choice" stays off the column;
-            // the match sentence already on the menu item remains.
-            if case .handle(let id, _, _) = kept.target,
-               proposal.target == .handle, proposal.handleID == id,
-               let menuIndex = kept.menu.firstIndex(where: { $0.id == id }) {
-                kept.menu[menuIndex].assessment = Assessment(wire: proposal.assessment)
-                let matchReason = Reason(proposal)
-                if matchReason != .decided {
-                    kept.menu[menuIndex].reason = matchReason
-                }
-            }
             kept.conflictNote = proposal.conflictWithFixed ? proposal.alternatives.first?.handleRef : nil
-            kept.contested = proposal.contested
-            kept.move = Reason(move: proposal)
+            kept.caption = caption
             kept.proposedDuplicateOf = duplicateOf(proposal)
             return kept
         }
         let updated = previous.map { !$0.anchor && $0.target != drafted } ?? false
-        // The evidence and pins belong to the target they were read for.
-        let keeps = previous.map { $0.target == drafted } ?? false
         return Row(
             subjectID: fact.id, kind: fact.kind, name: fact.name, ref: fact.ref,
-            anchor: false, assessment: Assessment(wire: proposal.assessment),
-            reason: Reason(proposal),
-            target: drafted, menu: menu, board: keeps ? previous?.board : nil,
-            pins: keeps ? previous?.pins ?? [] : [], confidenceGradeID: nil, argument: previous?.argument ?? "",
+            anchor: false,
+            target: drafted, menu: menu,
             decided: false, updated: updated, conflictNote: nil,
             proposedDuplicateOf: duplicateOf(proposal), duplicateNote: nil,
-            contested: proposal.contested, move: Reason(move: proposal), date: fact.date
+            caption: caption, date: fact.date
         )
     }
 
@@ -737,9 +552,9 @@ struct PromoteFlow: Equatable, Sendable {
             return .handle(id: first.id, ref: first.ref, title: first.title)
         }
         // Another row on the page took this record. Drafting it again would
-        // file two subjects on one handle, so the choice stays open, with the
+        // promote two subjects on one handle, so the choice stays open, with the
         // duplicate note naming the other row, whatever the band.
-        if Reason(proposal) == .taken {
+        if proposal.reason == .taken {
             return .unset
         }
         // Below the accept bar (a registry where the weak bar sits under it)
@@ -751,52 +566,29 @@ struct PromoteFlow: Equatable, Sendable {
         return .unset
     }
 
-    private static func menu(for proposal: CatalogPromoteGraphAlignmentRow, kind: EvidencePrimaryKind, orders: NameFormatOrders) -> [Alternative] {
+    private static func menu(for proposal: CatalogPromoteGraphAlignmentRow, orders: NameFormatOrders) -> [Alternative] {
         var out: [Alternative] = []
         if proposal.target == .handle, !proposal.handleID.isEmpty {
-            out.append(item(
-                id: proposal.handleID, ref: proposal.handleRef,
-                kind: EvidencePrimaryKind(rawValue: proposal.kind),
-                person: proposal.person, event: proposal.event, place: proposal.place,
-                orders: orders, assessment: Assessment(wire: proposal.assessment), reason: Reason(proposal)
-            ))
+            out.append(item(id: proposal.handleID, ref: proposal.handleRef, header: proposal.header, orders: orders))
         }
         for alt in proposal.alternatives where alt.handleID != proposal.handleID {
-            out.append(item(
-                id: alt.handleID, ref: alt.handleRef, kind: kind,
-                person: alt.person, event: alt.event, place: alt.place,
-                orders: orders, assessment: Assessment(wire: alt.assessment), reason: Reason(alt)
-            ))
+            out.append(item(id: alt.handleID, ref: alt.handleRef, header: alt.header, orders: orders))
         }
         return out
     }
 
-    /// One menu item, titled sorted and natural and subtitled from the record's
-    /// header, whichever way the record reached the menu.
+    /// One menu item, titled sorted and subtitled from the record's header, whichever way the
+    /// record reached the menu.
     private static func item(
         id: String,
         ref: String,
-        kind: EvidencePrimaryKind?,
-        person: CatalogPersonHeader?,
-        event: CatalogEventHeader?,
-        place: CatalogPlaceHeader?,
-        orders: NameFormatOrders,
-        assessment: Assessment,
-        reason: Reason
+        header: CatalogConclusionHeader?,
+        orders: NameFormatOrders
     ) -> Alternative {
-        let header: CatalogConclusionHeader?
-        switch kind {
-        case .person: header = person.map { .person($0) }
-        case .event: header = event.map { .event($0) }
-        case .place: header = place.map { .place($0) }
-        case nil: header = nil
-        }
-        return Alternative(
+        Alternative(
             id: id, ref: ref,
             title: header.map { ConclusionHeaderDisplay.title($0, style: .sorted, orders: orders) } ?? ref,
-            readingTitle: header.map { ConclusionHeaderDisplay.title($0, style: .natural, orders: orders) } ?? ref,
-            subtitle: header.map(ConclusionHeaderDisplay.secondary) ?? "",
-            assessment: assessment, reason: reason
+            subtitle: header.map(ConclusionHeaderDisplay.secondary) ?? ""
         )
     }
 }
