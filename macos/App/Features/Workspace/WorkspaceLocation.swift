@@ -217,9 +217,9 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         entityId: String,
         ref: String,
         title: String?,
-        section: ConclusionPageSection? = nil
+        pageSection: ConclusionPageSection? = nil
     ) -> WorkspaceLocation {
-        WorkspaceLocation(section: .persons, entityId: entityId, pageSection: section, ref: ref, title: title)
+        WorkspaceLocation(section: .persons, entityId: entityId, pageSection: pageSection, ref: ref, title: title)
     }
 
     /// One Event's page (S9-23 stub; the page itself is S9-24).

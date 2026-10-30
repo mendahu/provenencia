@@ -114,7 +114,7 @@ struct ConclusionDetailPageSectionsContext {
     var refreshing: Bool
     var portrait: ConclusionPortraitModel?
     /// The section of the page that is open; nil for a kind that offers none.
-    var section: ConclusionPageSection? = nil
+    var pageSection: ConclusionPageSection? = nil
 }
 
 private struct ConclusionDetailHeaderCompactKey: EnvironmentKey {
@@ -271,14 +271,14 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
         ConclusionDetailPresentation(handle.read, isFetching: handle.isFetching, content: make)
     }
 
-    /// The sections this kind of page offers; none for Event and Place.
-    private var offered: [ConclusionPageSection] {
+    /// The page sections this kind of page offers; none for Event and Place.
+    private var offeredPageSections: [ConclusionPageSection] {
         ConclusionPageSection.offered(by: navigation.currentLocation.section)
     }
 
-    /// The open section: the location's, else the kind's first.
-    private var section: ConclusionPageSection? {
-        offered.isEmpty ? nil : (navigation.currentLocation.pageSection ?? offered[0])
+    /// The open page section: the location's, else the kind's first.
+    private var pageSection: ConclusionPageSection? {
+        offeredPageSections.isEmpty ? nil : (navigation.currentLocation.pageSection ?? offeredPageSections[0])
     }
 
     var body: some View {
@@ -293,8 +293,8 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
                 })
             case .content(let content, let refreshing):
                 PVPageColumns(
-                    headerPinned: !offered.isEmpty,
-                    scrollResetKey: section,
+                    headerPinned: !offeredPageSections.isEmpty,
+                    scrollResetKey: pageSection,
                     header: { isScrolled in
                         ConclusionDetailHeaderBand(
                             content: content,
@@ -302,11 +302,10 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
                             summary: summary,
                             portrait: portrait,
                             pageIdentifier: pageIdentifier,
-                            offered: offered,
-                            section: section,
+                            offeredPageSections: offeredPageSections,
+                            pageSection: pageSection,
                             refreshing: refreshing,
-                            pinned: !offered.isEmpty,
-                            isScrolled: isScrolled,
+                                                        isScrolled: isScrolled,
                             select: { navigation.go(to: navigation.currentLocation.withPageSection($0)) }
                         )
                     },
@@ -318,7 +317,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
                                     projectDir: projectDir,
                                     refreshing: refreshing,
                                     portrait: portrait,
-                                    section: section
+                                    pageSection: pageSection
                                 )
                             )
                         }
@@ -340,8 +339,8 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Summary
     let summary: (Content) -> Summary
     let portrait: ConclusionPortraitModel?
     let pageIdentifier: String
-    let offered: [ConclusionPageSection]
-    let section: ConclusionPageSection?
+    let offeredPageSections: [ConclusionPageSection]
+    let pageSection: ConclusionPageSection?
     let refreshing: Bool
     let pinned: Bool
     let isScrolled: Bool
@@ -358,8 +357,8 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Summary
                 portrait: portrait,
                 compact: pinned && isScrolled
             )
-            if let section {
-                switcher(selection: section)
+            if let pageSection {
+                switcher(selection: pageSection)
             }
         }
         .padding(.top, pinned ? (isScrolled ? PVSpacing.space5 : PVSpacing.space9) : 0)
@@ -370,7 +369,7 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Summary
         HStack(spacing: PVSpacing.space6) {
             PVSegmentedControl(
                 L10n.Conclusions.pageSectionsLabel,
-                items: offered.enumerated().map { index, item in
+                items: offeredPageSections.enumerated().map { index, item in
                     .init(
                         item.label,
                         value: item,

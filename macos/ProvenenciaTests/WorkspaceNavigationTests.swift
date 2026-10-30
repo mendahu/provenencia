@@ -757,7 +757,7 @@ struct WorkspaceNavigationTests {
     // MARK: - Page sections
 
     private func person(_ section: ConclusionPageSection? = nil) -> WorkspaceLocation {
-        .personDetail(entityId: "per-1", ref: "PER-1", title: "Jane Doe", section: section)
+        .personDetail(entityId: "per-1", ref: "PER-1", title: "Jane Doe", pageSection: section)
     }
 
     @Test func pageSectionPushAndRestore() throws {

@@ -38,7 +38,7 @@ private struct PersonDetailSections: View {
     let context: ConclusionDetailPageSectionsContext
 
     var body: some View {
-        switch context.section ?? .vitals {
+        switch context.pageSection ?? .vitals {
         case .vitals:
             ConclusionDetailRowsSection(
                 rows: content.rows,
@@ -61,7 +61,7 @@ private struct PersonDetailSections: View {
                 )
             }
         case .family, .timeline, .sources:
-            if let section = context.section {
+            if let section = context.pageSection {
                 PVEmptyState(
                     glyph: section.glyph,
                     title: section.label,

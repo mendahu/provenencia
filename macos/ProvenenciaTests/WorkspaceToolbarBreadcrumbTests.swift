@@ -218,7 +218,7 @@ struct WorkspaceToolbarBreadcrumbTests {
 
     @Test func locationLabelsNameTheSection() {
         let family = WorkspaceToolbar.locationLabels(
-            for: .personDetail(entityId: "per-1", ref: "PER-1", title: "Jane Doe", section: .family)
+            for: .personDetail(entityId: "per-1", ref: "PER-1", title: "Jane Doe", pageSection: .family)
         )
         #expect(family.leaf == "Jane Doe")
         #expect(family.section == L10n.string(L10n.Conclusions.pageSectionFamily))
