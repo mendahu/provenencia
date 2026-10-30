@@ -84,4 +84,4 @@ No new findings. Minors read by the orchestrator: UX-2 **Resolved** (`focusedID 
 Merged `origin/main` @ `14d8bf5d` (#643) at `3a2a95a4`; gate PASS against `14d8bf5d`.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: PRF-1 · to user: — · CON miss: none
+Gate PASS · CI green (test, localizable) · open: none · follow-ups: PRF-1 · to user: — · CON miss: none
