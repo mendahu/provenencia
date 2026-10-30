@@ -559,28 +559,40 @@ func TestFieldsOf(t *testing.T) {
 	must(t, err)
 	f.c.Graph().Drop()
 
-	got, err := conclusiondetails.FieldsOf(f.c, [][]byte{first, second, first, merged})
-	must(t, err)
-	if len(got) != 2 {
-		t.Fatalf("entities %d, want 2 (a repeat and a merged id add none)", len(got))
+	tests := []struct {
+		name  string
+		ids   [][]byte
+		check func(t *testing.T, got map[string][]conclusiondetails.Field)
+	}{
+		{"a repeat and a merged id add no entity", [][]byte{first, second, first, merged}, func(t *testing.T, got map[string][]conclusiondetails.Field) {
+			if len(got) != 2 {
+				t.Fatalf("entities %d, want 2 (a repeat and a merged id add none)", len(got))
+			}
+			one := got[string(first)]
+			if len(one) != 1 || one[0].PropertyKey != "date" || len(one[0].Outcomes) != 2 || len(one[0].Values) != 1 ||
+				one[0].State != autoreconcile.StateMerged || one[0].Values[0].Support != 2 {
+				t.Fatalf("first event %+v", one)
+			}
+			two := got[string(second)]
+			if len(two) != 1 || len(two[0].Outcomes) != 1 || two[0].State != autoreconcile.StateSingle {
+				t.Fatalf("second event %+v", two)
+			}
+			if _, ok := got[string(merged)]; ok {
+				t.Fatal("merged id composed")
+			}
+		}},
+		{"one node matches ForEntity", [][]byte{first}, func(t *testing.T, got map[string][]conclusiondetails.Field) {
+			d := f.detail(first)
+			if !reflect.DeepEqual(got[string(first)], d.Fields) {
+				t.Fatalf("one-node fieldsOf %+v\nForEntity %+v", got[string(first)], d.Fields)
+			}
+		}},
 	}
-	one := got[string(first)]
-	if len(one) != 1 || one[0].PropertyKey != "date" || len(one[0].Outcomes) != 2 || len(one[0].Values) != 1 ||
-		one[0].State != autoreconcile.StateMerged || one[0].Values[0].Support != 2 {
-		t.Fatalf("first event %+v", one)
-	}
-	two := got[string(second)]
-	if len(two) != 1 || len(two[0].Outcomes) != 1 || two[0].State != autoreconcile.StateSingle {
-		t.Fatalf("second event %+v", two)
-	}
-	if _, ok := got[string(merged)]; ok {
-		t.Fatal("merged id composed")
-	}
-
-	alone, err := conclusiondetails.FieldsOf(f.c, [][]byte{first})
-	must(t, err)
-	d := f.detail(first)
-	if !reflect.DeepEqual(alone[string(first)], d.Fields) {
-		t.Fatalf("one-node fieldsOf %+v\nForEntity %+v", alone[string(first)], d.Fields)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := conclusiondetails.FieldsOf(f.c, tc.ids)
+			must(t, err)
+			tc.check(t, got)
+		})
 	}
 }
