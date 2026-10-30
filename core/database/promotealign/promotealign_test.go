@@ -35,7 +35,6 @@ import (
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
-	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -710,7 +709,7 @@ func TestProposeRelationshipFromEitherEnd(t *testing.T) {
 			if r.Target != "" || r.Reason != graphalign.ReasonUnplaced {
 				t.Fatalf("target=%s reason=%s, want no target (under the accept bar)", r.Target, r.Reason)
 			}
-			if len(r.Alternatives) == 0 || !bytes.Equal(r.Alternatives[0].HandleID, want) || r.Alternatives[0].Reason != graphalign.ReasonVia {
+			if len(r.Alternatives) == 0 || !bytes.Equal(r.Alternatives[0].HandleID, want) {
 				t.Fatalf("alternatives %+v, want the other end's handle first, via the anchor", r.Alternatives)
 			}
 		})
@@ -769,11 +768,6 @@ func TestProposeIgnoresANeutralSex(t *testing.T) {
 	r := rowFor(f.propose(f.graph(src), nil), unknown.ID)
 	if r.Target != graphalign.TargetHandle || !bytes.Equal(r.HandleID, handle) {
 		t.Fatalf("unknown sex: target %s score %.2f, want the male John Smith", r.Target, r.Score)
-	}
-	for _, c := range r.Comparisons {
-		if c.Key == vocabkey.PropertySexAtBirth && c.Result.Outcome != propertycompare.OutcomeUnknown {
-			t.Fatalf("unknown sex compared as %s", c.Result.Outcome)
-		}
 	}
 
 	src2, art2 := f.newSource("Census")
@@ -859,17 +853,6 @@ func (f *fixture) join(s subjects.Subject, entityID []byte) {
 	promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
 }
 
-func comparisonOutcome(t *testing.T, row graphalign.Row, key string) propertycompare.Outcome {
-	t.Helper()
-	for _, c := range row.Comparisons {
-		if string(c.Key) == key {
-			return c.Result.Outcome
-		}
-	}
-	t.Fatalf("no %s comparison in %+v", key, row.Comparisons)
-	return ""
-}
-
 func TestProposeJudgesAgainstTheMajority(t *testing.T) {
 	t.Run("a stray name", func(t *testing.T) {
 		f := newFixture(t)
@@ -888,8 +871,8 @@ func TestProposeJudgesAgainstTheMajority(t *testing.T) {
 		src, art := f.newSource("Register")
 		incoming := f.person(src, art, "James Robins")
 		row := rowFor(f.propose(f.graph(src), []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
-		if got := comparisonOutcome(t, row, "name"); got != propertycompare.OutcomeConflict {
-			t.Fatalf("name comparison %s, want conflict", got)
+		if row.Score >= 0 {
+			t.Fatalf("score %.2f, want the name conflict to count against the pair", row.Score)
 		}
 	})
 
@@ -914,14 +897,14 @@ func TestProposeJudgesAgainstTheMajority(t *testing.T) {
 			Polarity: observations.PolarityNegative,
 		})
 		row := rowFor(f.propose(f.graph(src), []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
-		if got := comparisonOutcome(t, row, "sex_at_birth"); got != propertycompare.OutcomeConflict {
-			t.Fatalf("sex comparison %s, want conflict", got)
+		if row.Score >= 3 {
+			t.Fatalf("score %.2f, want the sex conflict to count against the name's agreement", row.Score)
 		}
 	})
 }
 
 // Likeness has no weight: a person proposed with likenesses on the Source and
-// on the handle gets the band, score and comparisons it gets without them.
+// on the handle gets the band and score it gets without them.
 func TestProposeIgnoresLikenesses(t *testing.T) {
 	score := func(t *testing.T, withLikeness bool) graphalign.Row {
 		f := newFixture(t)
@@ -939,8 +922,7 @@ func TestProposeIgnoresLikenesses(t *testing.T) {
 		return rowFor(f.propose(f.graph(src), nil), incoming.ID)
 	}
 	with, without := score(t, true), score(t, false)
-	if with.Target != without.Target || with.Assessment != without.Assessment || with.Score != without.Score || with.Flags.Contested != without.Flags.Contested || with.Reason != without.Reason ||
-		len(with.Comparisons) != len(without.Comparisons) {
+	if with.Target != without.Target || with.Assessment != without.Assessment || with.Score != without.Score || with.Reason != without.Reason {
 		t.Fatalf("with likenesses %+v\nwithout %+v", with, without)
 	}
 }
@@ -962,8 +944,8 @@ func TestProposeMultipleToponyms(t *testing.T) {
 	src, art := f.newSource("Roman itinerary")
 	incoming := f.place(src, art, "Eboracum")
 	row := rowFor(f.propose(f.graph(src), []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
-	if got := comparisonOutcome(t, row, "toponym"); got != propertycompare.OutcomeAgree {
-		t.Fatalf("toponym comparison %s, want agree", got)
+	if row.Score <= 0 {
+		t.Fatalf("score %.2f, want the minority toponym to agree", row.Score)
 	}
 }
 
@@ -1044,22 +1026,13 @@ func TestProposeLifespanFromLifeEvents(t *testing.T) {
 	})
 }
 
-// The lifespan counts in the row's score and comparisons.
+// The lifespan counts in the row's score: a man who died before the handle
+// was born takes its conflict from the score.
 func TestProposeComparesTheLifespan(t *testing.T) {
 	f, handle, src, person := lifeFixture(t, 1830)
 	row := rowFor(f.propose(f.graph(src), []graphalign.Fixed{{SubjectID: person.ID, HandleID: handle}}), person.ID)
-	var lifespans int
-	for _, c := range row.Comparisons {
-		if c.Key != vocabkey.PropertyLifespan {
-			continue
-		}
-		lifespans++
-		if c.Result.Outcome != propertycompare.OutcomeConflict || c.Points != -20 || !c.Derived {
-			t.Fatalf("lifespan comparison %+v", c)
-		}
-	}
-	if lifespans != 1 {
-		t.Fatalf("%d lifespan comparisons in %+v, want 1", lifespans, row.Comparisons)
+	if row.Score > -10 {
+		t.Fatalf("score %.2f, want the lifespan's -20 conflict counted", row.Score)
 	}
 }
 
@@ -1274,11 +1247,11 @@ func TestProposeMarksAConflictingRowContested(t *testing.T) {
 	got := f.propose(f.graph(src), nil)
 	person, birth := rowFor(got, pM.ID), rowFor(got, bM.ID)
 	if person.Target != graphalign.TargetHandle || !bytes.Equal(person.HandleID, annH) ||
-		person.Assessment != graphalign.AssessStrong || !person.Flags.Contested {
-		t.Fatalf("person row %+v, want the female Ann Ames, strong and contested", person)
+		person.Assessment != graphalign.AssessStrong {
+		t.Fatalf("person row %+v, want the female Ann Ames, strong", person)
 	}
-	if birth.Target != graphalign.TargetHandle || birth.Assessment != graphalign.AssessStrong || birth.Flags.Contested {
-		t.Fatalf("birth row %+v, want strong and not contested", birth)
+	if birth.Target != graphalign.TargetHandle || birth.Assessment != graphalign.AssessStrong {
+		t.Fatalf("birth row %+v, want strong", birth)
 	}
 }
 
@@ -1297,18 +1270,16 @@ func TestProposeDoesNotCompareAnUnshortlistedHandle(t *testing.T) {
 }
 
 // A handle no shortlist key reaches is still loaded, scored and marked
-// contested when the researcher fixes the pair, and is not offered unfixed.
+// held when the researcher fixes the pair, and is not offered unfixed.
 func TestProposeHoldsAnUnshortlistedHandle(t *testing.T) {
 	tests := []struct {
-		name          string
-		filedSex      string // "" cites none
-		incomingSex   string
-		wantOutcome   propertycompare.Outcome
-		wantContested bool
+		name        string
+		filedSex    string // "" cites none
+		incomingSex string
 	}{
-		{name: "no sex", wantOutcome: propertycompare.OutcomeUnknown},
-		{name: "same sex", filedSex: "female", incomingSex: "female", wantOutcome: propertycompare.OutcomeAgree},
-		{name: "conflicting sex", filedSex: "female", incomingSex: "male", wantOutcome: propertycompare.OutcomeConflict, wantContested: true},
+		{name: "no sex"},
+		{name: "same sex", filedSex: "female", incomingSex: "female"},
+		{name: "conflicting sex", filedSex: "female", incomingSex: "male"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1342,13 +1313,6 @@ func TestProposeHoldsAnUnshortlistedHandle(t *testing.T) {
 			if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, handle) ||
 				row.Reason != graphalign.ReasonDecided || row.Flags.ConflictWithFixed {
 				t.Fatalf("fixed row %+v, want the handle, decided, no conflict with fixed", row)
-			}
-			comparisonOutcome(t, row, "name")
-			if got := comparisonOutcome(t, row, "sex_at_birth"); got != tt.wantOutcome {
-				t.Fatalf("sex_at_birth outcome %q, want %q", got, tt.wantOutcome)
-			}
-			if row.Flags.Contested != tt.wantContested {
-				t.Fatalf("contested %v, want %v", row.Flags.Contested, tt.wantContested)
 			}
 		})
 	}
@@ -1492,13 +1456,13 @@ func onHandle(row graphalign.Row, handle []byte, band graphalign.Assessment) boo
 	return row.Target == graphalign.TargetHandle && bytes.Equal(row.HandleID, handle) && row.Assessment == band
 }
 
-// firstAlternative is the row's first alternative when it is the handle, via.
+// firstAlternative is the row's first alternative, and whether it is the handle.
 func firstAlternative(row graphalign.Row, handle []byte) (graphalign.Alternative, bool) {
 	if len(row.Alternatives) == 0 {
 		return graphalign.Alternative{}, false
 	}
 	alt := row.Alternatives[0]
-	return alt, bytes.Equal(alt.HandleID, handle) && alt.Reason == graphalign.ReasonVia
+	return alt, bytes.Equal(alt.HandleID, handle)
 }
 
 func sameScore(a, b float64) bool { return math.Abs(a-b) < 1e-9 }

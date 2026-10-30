@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"math"
+	"reflect"
 	"slices"
 	"testing"
 
@@ -275,7 +276,7 @@ func TestOneAgreeingPropertyStaysAWeakMatch(t *testing.T) {
 	row := rowBySubject(alignWith(layer, canon, nil, matchregistry.Default().AlignConfig()), orphan)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, known) ||
 		row.Assessment != graphalign.AssessMedium || row.Reason != graphalign.ReasonAgrees ||
-		row.ReasonProperty != vocabkey.PropertyToponym || math.Abs(row.Score-3) > 1e-9 {
+		math.Abs(row.Score-3) > 1e-9 {
 		t.Fatalf("same toponym: %+v", row)
 	}
 	if row.Score >= matchregistry.Default().AlignConfig().Alignment.Bands.Strong {
@@ -319,22 +320,8 @@ func TestSpellingVariantIsAWeakerTextMatch(t *testing.T) {
 	row := rowBySubject(alignWith(layer, canon, nil, matchregistry.Default().AlignConfig()), orphan)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, known) ||
 		row.Assessment != graphalign.AssessWeak || row.Reason != graphalign.ReasonAgrees ||
-		row.ReasonProperty != vocabkey.PropertyToponym ||
 		row.Score < cfg.Alignment.Bands.Weak || row.Score >= cfg.Alignment.Bands.Medium {
 		t.Fatalf("spelling variant: %+v", row)
-	}
-	var partial bool
-	for _, c := range row.Comparisons {
-		if c.Key != vocabkey.PropertyToponym {
-			continue
-		}
-		if c.Result.Outcome != propertycompare.OutcomePartial {
-			t.Fatalf("comparison %+v", c)
-		}
-		partial = true
-	}
-	if !partial {
-		t.Fatal("missing toponym comparison")
 	}
 
 	// Without the toponym scale, the text weight × the resemblance stays under weak. The toponym scale is what makes a spelling variant clear the bar.
@@ -610,7 +597,7 @@ func TestOneGivenNameIsOfferedAFullerRecord(t *testing.T) {
 	if row.Target == graphalign.TargetHandle || row.Assessment != graphalign.AssessNone {
 		t.Fatalf("row %+v, want unplaced with no band", row)
 	}
-	if len(row.Alternatives) != 1 || !bytes.Equal(row.Alternatives[0].HandleID, id("h-amy")) || row.Alternatives[0].Assessment != graphalign.AssessNone {
+	if len(row.Alternatives) != 1 || !bytes.Equal(row.Alternatives[0].HandleID, id("h-amy")) || row.Alternatives[0].Score >= matchregistry.Default().AlignConfig().Alignment.Bands.Weak {
 		t.Fatalf("alternatives %+v, want PER-1 with no band", row.Alternatives)
 	}
 }
@@ -631,7 +618,7 @@ func TestAPrefixNameIsOffered(t *testing.T) {
 		if row.Target == graphalign.TargetHandle || row.Assessment != graphalign.AssessNone {
 			t.Fatalf("row %+v, want unplaced with no band", row)
 		}
-		if len(row.Alternatives) != 1 || !bytes.Equal(row.Alternatives[0].HandleID, id("h-des")) || row.Alternatives[0].Assessment != graphalign.AssessNone {
+		if len(row.Alternatives) != 1 || !bytes.Equal(row.Alternatives[0].HandleID, id("h-des")) || row.Alternatives[0].Score >= matchregistry.Default().AlignConfig().Alignment.Bands.Weak {
 			t.Fatalf("alternatives %+v, want PER-1 with no band", row.Alternatives)
 		}
 	})
@@ -1076,7 +1063,7 @@ func TestAcceptedPropertyMatchNominatesItsNeighbor(t *testing.T) {
 		t.Fatalf("nominated neighbor %+v, want %s at %.4f", row, hMid, want)
 	}
 	if len(row.Alternatives) != 1 || !bytes.Equal(row.Alternatives[0].HandleID, hWrong) ||
-		len(row.Alternatives[0].ViaNeighbor) != 0 || row.Alternatives[0].Assessment != graphalign.AssessNone ||
+		row.Alternatives[0].Score >= matchregistry.Default().AlignConfig().Alignment.Bands.Weak ||
 		math.Abs(row.Alternatives[0].Score-term) > 1e-9 {
 		t.Fatalf("alternatives %+v, want only %s on its own properties at %.4f", row.Alternatives, hWrong, term)
 	}
@@ -1121,7 +1108,7 @@ func TestCandidateLoserDoesNotNominate(t *testing.T) {
 		t.Fatalf("loser nominated a neighbor: %+v", row)
 	}
 	if len(row.Alternatives) != 1 || !bytes.Equal(row.Alternatives[0].HandleID, hMid) ||
-		len(row.Alternatives[0].ViaNeighbor) != 0 || row.Alternatives[0].Assessment != graphalign.AssessNone ||
+		row.Alternatives[0].Score >= matchregistry.Default().AlignConfig().Alignment.Bands.Weak ||
 		math.Abs(row.Alternatives[0].Score-term) > 1e-9 {
 		t.Fatalf("alternatives %+v, want only %s on its own properties at %.4f", row.Alternatives, hMid, term)
 	}
@@ -1274,10 +1261,6 @@ func TestDecidedRowTheNeighborsContradict(t *testing.T) {
 	if !row.Flags.ConflictWithFixed || len(row.Alternatives) == 0 || !bytes.Equal(row.Alternatives[0].HandleID, id("h-gracie")) {
 		t.Fatalf("want a conflict naming PER-2 first, got flags %+v alts %+v", row.Flags, row.Alternatives)
 	}
-	alt := row.Alternatives[0]
-	if alt.Assessment == "" || (alt.Reason != graphalign.ReasonAgrees && alt.Reason != graphalign.ReasonVia) {
-		t.Fatalf("the other record should carry its own band, got %+v", alt)
-	}
 	if row.Assessment == graphalign.AssessStrong {
 		t.Fatalf("a conflicting decision should not read strong: %+v", row)
 	}
@@ -1411,7 +1394,6 @@ func TestNewEventsDisagreeWhenTheirParticipantsDo(t *testing.T) {
 }
 
 func TestRowReasons(t *testing.T) {
-	nameKey := vocabkey.PropertyKey(vocabkey.PropertyName)
 	sig := relLink("spouse")
 	tests := []struct {
 		name       string
@@ -1423,13 +1405,12 @@ func TestRowReasons(t *testing.T) {
 		subject    string
 		wantTarget graphalign.Target
 		want       graphalign.Reason
-		wantProp   vocabkey.PropertyKey
 	}{
 		{
 			name:    "a property-only match names the agreeing property",
 			layer:   []graphalign.Subject{{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")}},
 			handles: []graphalign.Handle{{ID: id("h-a"), Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")}},
-			subject: "s-a", wantTarget: graphalign.TargetHandle, want: graphalign.ReasonAgrees, wantProp: nameKey,
+			subject: "s-a", wantTarget: graphalign.TargetHandle, want: graphalign.ReasonAgrees,
 		},
 		{
 			name: "a neighbor-reached candidate below the bar suggests nothing",
@@ -1498,8 +1479,8 @@ func TestRowReasons(t *testing.T) {
 			layer := graphalign.Layer{Subjects: tt.layer, Bridges: tt.bridges, Metas: mergeMetas(nameMetas(), eventMetas())}
 			canon := graphalign.Canon{Handles: tt.handles, Edges: tt.edges}
 			row := rowBySubject(alignWith(layer, canon, tt.fixed, matchregistry.Default().AlignConfig()), id(tt.subject))
-			if row.Target != tt.wantTarget || row.Reason != tt.want || row.ReasonProperty != tt.wantProp {
-				t.Fatalf("target %q reason %q / %+v, want %q %q / %+v", row.Target, row.Reason, row.ReasonProperty, tt.wantTarget, tt.want, tt.wantProp)
+			if row.Target != tt.wantTarget || row.Reason != tt.want {
+				t.Fatalf("target %q reason %q, want %q %q", row.Target, row.Reason, tt.wantTarget, tt.want)
 			}
 		})
 	}
@@ -1556,7 +1537,7 @@ func TestPartOfChainIsStrongWithoutADecision(t *testing.T) {
 		row := rowBySubject(p, pair.sub)
 		if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, pair.handle) ||
 			row.Assessment != graphalign.AssessStrong || row.Score < cfg.Alignment.Bands.Strong ||
-			row.Reason != graphalign.ReasonAgrees || row.ReasonProperty != vocabkey.PropertyToponym {
+			row.Reason != graphalign.ReasonAgrees {
 			t.Fatalf("%s: %+v", pair.sub, row)
 		}
 	}
@@ -1757,8 +1738,8 @@ func TestSettlingDropsSupportFromAMovedNeighbor(t *testing.T) {
 			r.Target, r.HandleID, r.Score, r.Reason)
 	}
 	for _, alt := range r.Alternatives {
-		if bytes.Equal(alt.HandleID, bob) && (alt.Assessment != graphalign.AssessNone || alt.Reason == graphalign.ReasonVia) {
-			t.Fatalf("Bob still offered as %s via Ann (score %.2f)", alt.Assessment, alt.Score)
+		if bytes.Equal(alt.HandleID, bob) && alt.Score >= matchregistry.Default().AlignConfig().Alignment.Bands.Weak {
+			t.Fatalf("Bob still offered above the weak band via Ann (score %.2f)", alt.Score)
 		}
 	}
 }
@@ -1822,11 +1803,6 @@ func TestUnknownSexIsNoEvidence(t *testing.T) {
 	r := rowBySubject(alignWith(layer, canon, nil, matchregistry.Default().AlignConfig()), s)
 	if r.Target != graphalign.TargetHandle || !bytes.Equal(r.HandleID, h) {
 		t.Fatalf("target=%s score=%.2f, want John's handle", r.Target, r.Score)
-	}
-	for _, c := range r.Comparisons {
-		if c.Key == vocabkey.PropertySexAtBirth && c.Result.Outcome != propertycompare.OutcomeUnknown {
-			t.Fatalf("sex_at_birth outcome %s, want unknown", c.Result.Outcome)
-		}
 	}
 }
 
@@ -1930,7 +1906,7 @@ func TestBirthIsNeverProposedOnADeath(t *testing.T) {
 		if row.Target != "" || row.Assessment != graphalign.AssessNone || row.Reason != graphalign.ReasonUnplaced {
 			t.Fatalf("birth under a death's signature: %+v", row)
 		}
-		if len(row.Alternatives) != 1 || !bytes.Equal(row.Alternatives[0].HandleID, hd) || row.Alternatives[0].Assessment != graphalign.AssessNone {
+		if len(row.Alternatives) != 1 || !bytes.Equal(row.Alternatives[0].HandleID, hd) || row.Alternatives[0].Score >= matchregistry.Default().AlignConfig().Alignment.Bands.Weak {
 			t.Fatalf("alternatives %+v, want the death with no band", row.Alternatives)
 		}
 	})
@@ -1944,7 +1920,7 @@ func TestBirthIsNeverProposedOnADeath(t *testing.T) {
 		canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "EVT-1", Kind: "event", Values: vals(et, bv)}}}
 		row := rowBySubject(alignWith(layer, canon, nil, matchregistry.Default().AlignConfig()), s)
 		if row.Target != "" || row.Reason != graphalign.ReasonUnplaced || row.Assessment != graphalign.AssessNone ||
-			len(row.Alternatives) == 0 || !bytes.Equal(row.Alternatives[0].HandleID, h) || row.Alternatives[0].Assessment != graphalign.AssessNone {
+			len(row.Alternatives) == 0 || !bytes.Equal(row.Alternatives[0].HandleID, h) || row.Alternatives[0].Score >= matchregistry.Default().AlignConfig().Alignment.Bands.Weak {
 			t.Fatalf("undated birth against an undated birth: %+v", row)
 		}
 	})
@@ -1983,22 +1959,6 @@ func TestLifespanRulesOutAPerson(t *testing.T) {
 		if row.Target != graphalign.TargetHandle || row.Assessment != graphalign.AssessWeak || math.Abs(row.Score-2.6) > 1e-9 {
 			t.Fatalf("a consistent lifespan: %+v", row)
 		}
-		var found int
-		for _, c := range row.Comparisons {
-			if c.Key != vocabkey.PropertyLifespan {
-				continue
-			}
-			found++
-			if c.Result.Outcome != propertycompare.OutcomeAgree || math.Abs(c.Points-0.1) > 1e-9 || !c.Derived {
-				t.Fatalf("lifespan comparison %+v", c)
-			}
-		}
-		if found != 1 {
-			t.Fatalf("%d lifespan comparisons, want 1", found)
-		}
-		if row.ReasonProperty != vocabkey.PropertyName {
-			t.Fatalf("reason property %q, want name: the lifespan is never named", row.ReasonProperty)
-		}
 	})
 }
 
@@ -2016,16 +1976,6 @@ func TestGenderPoolsWithSex(t *testing.T) {
 	if row.Target != graphalign.TargetHandle || row.Assessment != graphalign.AssessMedium || math.Abs(row.Score-3.1) > 1e-9 {
 		t.Fatalf("gender against sex: %+v", row)
 	}
-	var keys []vocabkey.PropertyKey
-	for _, c := range row.Comparisons {
-		keys = append(keys, c.Key)
-		if c.Key == vocabkey.PropertySexAtBirth && c.Result.Outcome != propertycompare.OutcomeAgree {
-			t.Fatalf("sex_at_birth outcome %s, want agree", c.Result.Outcome)
-		}
-	}
-	if want := []vocabkey.PropertyKey{vocabkey.PropertyLifespan, vocabkey.PropertyName, vocabkey.PropertySexAtBirth}; !slices.Equal(keys, want) {
-		t.Fatalf("comparison keys %v, want %v", keys, want)
-	}
 }
 
 func TestEventPeriodStandsForTheDate(t *testing.T) {
@@ -2040,16 +1990,11 @@ func TestEventPeriodStandsForTheDate(t *testing.T) {
 	}
 	canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "EVT-1", Kind: "event", Values: vals(et, rv, dp, dv)}}}
 	fixed := []graphalign.Fixed{{SubjectID: s, HandleID: h}}
-	row := rowBySubject(alignWith(layer, canon, fixed, matchregistry.Default().AlignConfig()), s)
-	var keys []vocabkey.PropertyKey
-	for _, c := range row.Comparisons {
-		keys = append(keys, c.Key)
-		if c.Key == vocabkey.PropertyDate && c.Result.Outcome != propertycompare.OutcomePartial {
-			t.Fatalf("date outcome %s, want partial", c.Result.Outcome)
-		}
-	}
-	if want := []vocabkey.PropertyKey{vocabkey.PropertyDate, vocabkey.PropertyEventType}; !slices.Equal(keys, want) {
-		t.Fatalf("comparison keys %v, want %v", keys, want)
+	cfg := matchregistry.Default().AlignConfig()
+	row := rowBySubject(alignWith(layer, canon, fixed, cfg), s)
+	// The period reads as the date: it adds points beyond the event type's.
+	if eventType := cfg.Subject.Weights[vocabkey.Event][vocabkey.PropertyEventType].Agree; row.Score <= eventType {
+		t.Fatalf("score %.2f, want more than the event type's %.2f: the period stands for the date", row.Score, eventType)
 	}
 }
 
@@ -2315,23 +2260,20 @@ func TestContestedRow(t *testing.T) {
 	fixed := []graphalign.Fixed{{SubjectID: id("k"), Target: graphalign.TargetSkip}}
 	p := alignWith(layer, canon, fixed, cfg)
 	pr, er := rowBySubject(p, id("p")), rowBySubject(p, id("e"))
-	want := func(row graphalign.Row, handle string, score float64, contested bool) {
+	want := func(row graphalign.Row, handle string, score float64) {
 		t.Helper()
 		if !bytes.Equal(row.HandleID, id(handle)) || row.Assessment != graphalign.AssessStrong ||
-			math.Abs(row.Score-score) > 1e-9 || row.Flags.Contested != contested {
-			t.Fatalf("got %+v, want %s strong at %.2f contested %v", row, handle, score, contested)
+			math.Abs(row.Score-score) > 1e-9 {
+			t.Fatalf("got %+v, want %s strong at %.2f", row, handle, score)
 		}
 	}
 	name := cfg.Subject.Weights[vocabkey.Person][vocabkey.PropertyName].Agree
 	sexw := cfg.Subject.Weights[vocabkey.Person][vocabkey.PropertySexAtBirth]
 	event := cfg.Subject.Weights[vocabkey.Event][vocabkey.PropertyEventType].Agree + cfg.Subject.Weights[vocabkey.Event][vocabkey.PropertyDate].Agree
-	want(pr, "h", name-sexw.Conflict+cfg.Segment.OneSupport+cfg.Segment.OneCredit*event, true)
-	want(er, "he", event+cfg.Segment.OneSupport+cfg.Segment.OneCredit*(name-sexw.Conflict), false)
-	if r := rowBySubject(p, id("n")); r.Target != "" || r.Flags.Contested {
-		t.Fatalf("an unplaced row is not contested: %+v", r)
-	}
-	if r := rowBySubject(p, id("k")); r.Target != graphalign.TargetSkip || r.Flags.Contested {
-		t.Fatalf("a decided Skip row is not contested: %+v", r)
+	want(pr, "h", name-sexw.Conflict+cfg.Segment.OneSupport+cfg.Segment.OneCredit*event)
+	want(er, "he", event+cfg.Segment.OneSupport+cfg.Segment.OneCredit*(name-sexw.Conflict))
+	if r := rowBySubject(p, id("k")); r.Target != graphalign.TargetSkip {
+		t.Fatalf("a decided Skip row is not placed: %+v", r)
 	}
 }
 
@@ -2495,4 +2437,40 @@ func TestKinshipShapesCountOnce(t *testing.T) {
 		t.Errorf("(both, both) %.4f is not above (rel, rel) %.4f", twice, direct)
 	}
 	same(t, "dated (marriage, marriage)", bob("marriage", "marriage", true), bob("event", "event", true))
+}
+
+// T-1: what the page starts a row on.
+func TestRowStart(t *testing.T) {
+	e1, e2, e9 := id("e1"), id("e2"), id("e9")
+	alts := []graphalign.Alternative{{HandleID: e9, Ref: "PER-9"}, {HandleID: e2, Ref: "PER-2"}}
+	handle := func(h []byte, ref string) graphalign.RowStart {
+		return graphalign.RowStart{Target: graphalign.TargetHandle, HandleID: h, Ref: ref}
+	}
+	for _, tc := range []struct {
+		name string
+		row  graphalign.Row
+		want graphalign.RowStart
+	}{
+		{"placed and strong", graphalign.Row{Target: graphalign.TargetHandle, HandleID: e1, HandleRef: "PER-1", Assessment: graphalign.AssessStrong, Reason: graphalign.ReasonAgrees}, handle(e1, "PER-1")},
+		{"placed with no band", graphalign.Row{Target: graphalign.TargetHandle, HandleID: e1, HandleRef: "PER-1", Assessment: graphalign.AssessNone, Reason: graphalign.ReasonDecided}, graphalign.RowStart{}},
+		{"held New", graphalign.Row{Target: graphalign.TargetNew, Reason: graphalign.ReasonDecided}, graphalign.RowStart{Target: graphalign.TargetNew}},
+		{"held Skip", graphalign.Row{Target: graphalign.TargetSkip, Reason: graphalign.ReasonDecided}, graphalign.RowStart{Target: graphalign.TargetSkip}},
+		{"unplaced weak", graphalign.Row{Assessment: graphalign.AssessWeak, Reason: graphalign.ReasonUnplaced, Alternatives: alts}, handle(e9, "PER-9")},
+		{"unplaced weak and alike another New row", graphalign.Row{
+			Assessment: graphalign.AssessWeak, Reason: graphalign.ReasonUnplaced, Alternatives: alts,
+			Flags: graphalign.RowFlags{PossibleDuplicate: true, DuplicateOf: id("other")},
+		}, handle(e9, "PER-9")},
+		{"unplaced weak, record taken", graphalign.Row{Assessment: graphalign.AssessWeak, Reason: graphalign.ReasonTaken, Alternatives: alts}, graphalign.RowStart{}},
+		{"unplaced medium", graphalign.Row{Assessment: graphalign.AssessMedium, Reason: graphalign.ReasonUnplaced, Alternatives: alts}, graphalign.RowStart{}},
+		{"unplaced strong", graphalign.Row{Assessment: graphalign.AssessStrong, Reason: graphalign.ReasonUnplaced, Alternatives: alts}, graphalign.RowStart{}},
+		{"unplaced below the weak band", graphalign.Row{Assessment: graphalign.AssessNone, Reason: graphalign.ReasonUnplaced, Alternatives: alts}, graphalign.RowStart{}},
+		{"unplaced weak with no alternative", graphalign.Row{Assessment: graphalign.AssessWeak, Reason: graphalign.ReasonUnplaced}, graphalign.RowStart{}},
+		{"empty", graphalign.Row{Assessment: graphalign.AssessNone, Reason: graphalign.ReasonEmpty}, graphalign.RowStart{}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.row.Start(); !reflect.DeepEqual(got, tc.want) {
+				t.Fatalf("Start() = %+v, want %+v", got, tc.want)
+			}
+		})
+	}
 }

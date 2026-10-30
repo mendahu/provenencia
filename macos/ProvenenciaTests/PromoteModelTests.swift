@@ -35,10 +35,9 @@ struct PromoteModelTests {
         return store
     }
 
-    private func row(_ id: String, handleID: String, assessment: String = "strong") -> CatalogPromoteGraphAlignmentRow {
+    private func row(_ id: String, handleID: String) -> CatalogPromoteGraphAlignmentRow {
         CatalogPromoteGraphAlignmentRow(
             subjectID: id, kind: "person", target: .handle, handleID: handleID, handleRef: "PER-\(handleID)",
-            assessment: assessment, reason: .unplaced,
             alternatives: [
                 CatalogPromoteGraphAlignmentAlternative(handleID: "other", handleRef: "PER-OTHER"),
             ],
@@ -127,7 +126,7 @@ struct PromoteModelTests {
         let store = store(subjects: subjects)
         store.promoteProposals = [
             CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e1")]),
-            CatalogPromoteGraphAlignmentProposal(revision: 2, rows: [row("a", handleID: "e1"), row("b", handleID: "e9", assessment: "strong")]),
+            CatalogPromoteGraphAlignmentProposal(revision: 2, rows: [row("a", handleID: "e1"), row("b", handleID: "e9")]),
         ]
         let model = model(store: store, subjectID: "a")
         await model.load()

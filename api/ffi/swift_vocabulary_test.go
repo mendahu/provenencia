@@ -442,10 +442,8 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 				string(autoreconcile.ReasonNoEvidence), string(autoreconcile.ReasonAgainst)),
 		},
 		{
-			name: "promote reasons", path: swiftVocabulary, enum: "PromoteReasonCode", re: wireCase,
-			want: sorted(string(graphalign.ReasonVia), string(graphalign.ReasonDecided), string(graphalign.ReasonAgrees),
-				string(graphalign.ReasonWeak), string(graphalign.ReasonTaken), string(graphalign.ReasonUnplaced),
-				string(graphalign.ReasonEmpty), string(graphalign.ReasonNeighborPlaced), string(graphalign.ReasonNeighborMoved),
+			name: "promote reasons", path: swiftVocabulary, enum: "PromoteMoveReason", re: wireCase,
+			want: sorted(string(graphalign.ReasonNeighborPlaced), string(graphalign.ReasonNeighborMoved),
 				string(graphalign.ReasonNeighborReleased)),
 		},
 		{
@@ -521,7 +519,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		})
 	}
 	t.Run("states and reasons tolerate a value this build doesn't know", func(t *testing.T) {
-		for _, enum := range []string{"ReconciledState", "ReconcilerReason", "PromoteReasonCode"} {
+		for _, enum := range []string{"ReconciledState", "ReconcilerReason", "PromoteMoveReason"} {
 			if !unrecogniz.MatchString(swiftEnumBody(t, swiftVocabulary, enum)) {
 				t.Fatalf("%s has no unrecognized case", enum)
 			}

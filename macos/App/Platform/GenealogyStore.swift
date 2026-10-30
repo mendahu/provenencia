@@ -327,10 +327,6 @@ struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
     var target: PromoteTargetCode
     var handleID: String
     var handleRef: String
-    /// strong, medium, weak, none. Read only by the draft rule (S13-24 moves it to Go).
-    var assessment: String
-    /// Read only by the draft rule.
-    var reason: PromoteReasonCode = .unplaced
     var alternatives: [CatalogPromoteGraphAlignmentAlternative]
     var conflictWithFixed: Bool
     var possibleDuplicate: Bool
@@ -339,7 +335,7 @@ struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
     /// The neighbor row this one was reached from; empty when it was not.
     var viaNeighborSubjectID: String = ""
     /// A move reason when settling released an earlier pair of this row in this proposal; nil otherwise.
-    var moveReason: PromoteReasonCode? = nil
+    var moveReason: PromoteMoveReason? = nil
     var moveNeighborSubjectID: String = ""
     var header: CatalogConclusionHeader?
 

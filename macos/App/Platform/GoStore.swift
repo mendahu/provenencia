@@ -945,8 +945,6 @@ struct GoStore: GenealogyStore {
                 target: PromoteTargetCode(wire: r.target),
                 handleID: r.handleID,
                 handleRef: r.handleRef,
-                assessment: r.assessment,
-                reason: PromoteReasonCode(wire: r.reason),
                 alternatives: r.alternatives.map { a in
                     CatalogPromoteGraphAlignmentAlternative(
                         handleID: a.handleID,
@@ -958,7 +956,7 @@ struct GoStore: GenealogyStore {
                 possibleDuplicate: r.possibleDuplicate,
                 duplicateOfSubjectID: r.duplicateOfSubjectID,
                 viaNeighborSubjectID: r.viaNeighborSubjectID,
-                moveReason: r.moveReason.isEmpty ? nil : PromoteReasonCode(wire: r.moveReason),
+                moveReason: r.moveReason.isEmpty ? nil : PromoteMoveReason(wire: r.moveReason),
                 moveNeighborSubjectID: r.moveNeighborSubjectID,
                 header: Self.mapPromoteRowHeader(r.header)
             )

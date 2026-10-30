@@ -10,28 +10,17 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// contested reports whether a comparison behind the pair conflicts, whatever
-// its band (RowFlags.Contested).
-func (c *cand) contested() bool {
-	return c.result.Conflicts() || slices.ContainsFunc(c.links, func(l segmentcompare.Result) bool {
-		return l.Outcome == propertycompare.OutcomeConflict
-	})
-}
-
 func (st *state) proposal() Proposal {
 	var rows []Row
 	for _, s := range st.sortedSubjects() {
 		sk := string(s.ID)
 		row := Row{SubjectID: append([]byte(nil), s.ID...), Kind: s.Kind}
-		var reported *cand
 		if hid, ok := st.placed[sk]; ok {
 			row.Target = TargetHandle
 			row.HandleID = append([]byte(nil), hid...)
 			sc := st.cands[sk][string(hid)]
-			reported = sc
 			row.HandleRef = st.handles[string(hid)].Ref
 			row.Score = sc.score
-			row.Comparisons = comparisonsFrom(sc.result, s.Kind, st.cfg.Subject)
 			via, viaKey := st.viaOf(sk, sc)
 			switch {
 			case st.fixedSet[sk]:
@@ -44,7 +33,6 @@ func (st *state) proposal() Proposal {
 				}
 			default:
 				row.Reason = ReasonAgrees
-				row.ReasonProperty = strongestAgreement(row.Comparisons)
 			}
 			row.Assessment = st.band(sc.score)
 			row.Alternatives = st.alts(sk, hid)
@@ -66,7 +54,6 @@ func (st *state) proposal() Proposal {
 				row.Reason = ReasonUnplaced
 				row.Score = best.score
 				row.Alternatives = st.alts(sk, nil)
-				reported = best
 				if best.score >= st.cfg.Alignment.Bands.Weak {
 					row.Assessment = st.band(best.score)
 				}
@@ -80,9 +67,6 @@ func (st *state) proposal() Proposal {
 				row.Flags.PossibleDuplicate = true
 				row.Flags.DuplicateOf = []byte(owner)
 			}
-		}
-		if reported != nil {
-			row.Flags.Contested = reported.contested()
 		}
 		if from, ok := st.releasedFrom[sk]; ok && !(row.Target == TargetHandle && bytes.Equal(row.HandleID, from)) {
 			mv := st.move[sk]
@@ -221,35 +205,6 @@ func (st *state) newPairSegments(a, b *Subject, own float64) (float64, bool) {
 	return total, false
 }
 
-// strongestAgreement is the agreeing or resembling property that added the
-// most points. A derived property (the lifespan) is never named: it counts in
-// the score but has no copy on the page.
-func strongestAgreement(cs []Comparison) vocabkey.PropertyKey {
-	var top vocabkey.PropertyKey
-	best := 0.0
-	for _, c := range cs {
-		if c.Derived {
-			continue
-		}
-		if (c.Result.Outcome == propertycompare.OutcomeAgree || c.Result.Outcome == propertycompare.OutcomePartial) && c.Points > best {
-			top, best = c.Key, c.Points
-		}
-	}
-	return top
-}
-
-// comparisonsFrom lists one Comparison per lead property r compared.
-func comparisonsFrom(r subjectcompare.Result, kind string, rules subjectcompare.Rules) []Comparison {
-	out := make([]Comparison, 0, len(r.Properties))
-	for _, pr := range r.Properties {
-		out = append(out, Comparison{
-			PropertyResult: pr,
-			Derived:        rules.Derived(vocabkey.SubjectType(kind), pr.Key),
-		})
-	}
-	return out
-}
-
 func (st *state) bestNonAssigned(sk string, except []byte) *cand {
 	for _, c := range st.sortedCands(sk) {
 		if except != nil && bytes.Equal(c.handleID, except) {
@@ -261,14 +216,13 @@ func (st *state) bestNonAssigned(sk string, except []byte) *cand {
 }
 
 func (st *state) alts(sk string, except []byte) []Alternative {
-	kind := st.subjects[sk].Kind
 	limit := st.cfg.Alignment.Alternatives
 	var out []Alternative
 	for _, c := range st.sortedCands(sk) {
 		if except != nil && bytes.Equal(c.handleID, except) {
 			continue
 		}
-		out = append(out, st.alternative(sk, c, kind))
+		out = append(out, st.alternative(c))
 		if len(out) >= limit {
 			break
 		}
@@ -276,32 +230,13 @@ func (st *state) alts(sk string, except []byte) []Alternative {
 	return out
 }
 
-// alternative is one selectable record: its band, and the sentence that
-// explains that band. A via walk wins; otherwise the strongest agreeing
-// property; otherwise there was too little to name.
-func (st *state) alternative(sk string, c *cand, kind string) Alternative {
-	alt := Alternative{
-		HandleID:   append([]byte(nil), c.handleID...),
-		Ref:        c.ref,
-		Score:      c.score,
-		Assessment: st.band(c.score),
-		Reason:     ReasonWeak,
+// alternative is one selectable record and its score.
+func (st *state) alternative(c *cand) Alternative {
+	return Alternative{
+		HandleID: append([]byte(nil), c.handleID...),
+		Ref:      c.ref,
+		Score:    c.score,
 	}
-	if via, _ := st.viaOf(sk, c); len(via) > 0 {
-		alt.Reason = ReasonVia
-		alt.ViaNeighbor = append([]byte(nil), via...)
-		return alt
-	}
-	// Below the weak bar there is not enough to name an agreement.
-	if alt.Assessment == AssessNone {
-		return alt
-	}
-	prop := strongestAgreement(comparisonsFrom(c.result, kind, st.cfg.Subject))
-	if prop != "" {
-		alt.Reason = ReasonAgrees
-		alt.ReasonProperty = prop
-	}
-	return alt
 }
 
 // subjectHasValues reports whether the Subject records anything matching

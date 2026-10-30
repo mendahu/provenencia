@@ -1791,8 +1791,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         target: .handle,
                         handleID: membership.entity.id,
                         handleRef: membership.entity.ref,
-                        assessment: "strong",
-                        reason: .decided,
                         alternatives: [],
                         conflictWithFixed: false,
                         possibleDuplicate: false
@@ -1807,8 +1805,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         target: .handle,
                         handleID: entity.id,
                         handleRef: entity.ref,
-                        assessment: "strong",
-                        reason: .decided,
                         alternatives: [],
                         conflictWithFixed: false,
                         possibleDuplicate: false
@@ -1820,8 +1816,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     target: .unplaced,
                     handleID: "",
                     handleRef: "",
-                    assessment: "none",
-                    reason: .unplaced,
                     alternatives: [],
                     conflictWithFixed: false,
                     possibleDuplicate: false

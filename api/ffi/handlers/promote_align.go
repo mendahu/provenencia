@@ -80,9 +80,7 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 		}
 	}
 	for _, r := range prop.Rows {
-		if r.Target == graphalign.TargetHandle {
-			addHeaderID(r.Kind, r.HandleID)
-		}
+		addHeaderID(r.Kind, r.Start().HandleID)
 		for _, a := range r.Alternatives {
 			addHeaderID(r.Kind, a.HandleID)
 		}
@@ -93,26 +91,19 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 	}
 
 	for _, r := range prop.Rows {
+		start := r.Start()
 		row := &engine.PromoteGraphAlignmentRow{
 			SubjectId:            database.UUIDString(r.SubjectID),
 			Kind:                 r.Kind,
-			Target:               string(r.Target),
-			HandleId:             database.UUIDString(r.HandleID),
-			HandleRef:            r.HandleRef,
-			Score:                r.Score,
-			Assessment:           string(r.Assessment),
-			Reason:               string(r.Reason),
-			ReasonPropertyKey:    string(r.ReasonProperty),
-			ReasonPropertyOrigin: productOrigin(r.ReasonProperty),
+			Target:               string(start.Target),
+			HandleId:             database.UUIDString(start.HandleID),
+			HandleRef:            start.Ref,
 			ConflictWithFixed:    r.Flags.ConflictWithFixed,
-			Contested:            r.Flags.Contested,
 			PossibleDuplicate:    r.Flags.PossibleDuplicate,
 			DuplicateOfSubjectId: database.UUIDString(r.Flags.DuplicateOf),
 		}
 		if r.Via != nil {
 			row.ViaNeighborSubjectId = database.UUIDString(r.Via.NeighborSubjectID)
-			row.ViaBridgeType = string(r.Via.Key.Type)
-			row.ViaRole = string(r.Via.Key.Term)
 		}
 		if r.Move != nil {
 			row.MoveReason = string(r.Move.Reason)
@@ -120,14 +111,8 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 		}
 		for _, a := range r.Alternatives {
 			alt := &engine.PromoteGraphAlignmentAlternative{
-				HandleId:             database.UUIDString(a.HandleID),
-				HandleRef:            a.Ref,
-				Score:                a.Score,
-				Assessment:           string(a.Assessment),
-				Reason:               string(a.Reason),
-				ReasonPropertyKey:    string(a.ReasonProperty),
-				ReasonPropertyOrigin: productOrigin(a.ReasonProperty),
-				ViaNeighborSubjectId: database.UUIDString(a.ViaNeighbor),
+				HandleId:  database.UUIDString(a.HandleID),
+				HandleRef: a.Ref,
 			}
 			switch r.Kind {
 			case vocabkey.Person:
@@ -145,18 +130,18 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 			}
 			row.Alternatives = append(row.Alternatives, alt)
 		}
-		if r.Target == graphalign.TargetHandle && len(r.HandleID) == 16 {
+		if start.Target == graphalign.TargetHandle && len(start.HandleID) == 16 {
 			switch r.Kind {
 			case vocabkey.Person:
-				if h, ok := headers.Person(r.HandleID); ok {
+				if h, ok := headers.Person(start.HandleID); ok {
 					row.Header = &engine.PromoteGraphAlignmentRow_Person{Person: personHeaderProto(h)}
 				}
 			case vocabkey.Event:
-				if h, ok := headers.Event(r.HandleID); ok {
+				if h, ok := headers.Event(start.HandleID); ok {
 					row.Header = &engine.PromoteGraphAlignmentRow_Event{Event: eventHeaderProto(h)}
 				}
 			case vocabkey.Place:
-				if h, ok := headers.Place(r.HandleID); ok {
+				if h, ok := headers.Place(start.HandleID); ok {
 					row.Header = &engine.PromoteGraphAlignmentRow_Place{Place: placeHeaderProto(h)}
 				}
 			}
@@ -164,13 +149,4 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 		out.Rows = append(out.Rows, row)
 	}
 	return out, nil
-}
-
-// productOrigin is the origin a reason property's key goes out with: subject
-// compare leads are product properties, and an empty key has no origin.
-func productOrigin(key vocabkey.PropertyKey) string {
-	if key == "" {
-		return ""
-	}
-	return vocabkey.OriginProvenencia
 }

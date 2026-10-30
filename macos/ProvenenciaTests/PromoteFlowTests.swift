@@ -10,8 +10,7 @@ struct PromoteFlowTests {
     private func row(
         id: String,
         target: PromoteTargetCode = .handle,
-        handleID: String = "e1",
-        assessment: String = "strong"
+        handleID: String = "e1"
     ) -> CatalogPromoteGraphAlignmentRow {
         CatalogPromoteGraphAlignmentRow(
             subjectID: id,
@@ -19,8 +18,6 @@ struct PromoteFlowTests {
             target: target,
             handleID: handleID,
             handleRef: "PER-1",
-            assessment: assessment,
-            reason: .unplaced,
             alternatives: [
                 CatalogPromoteGraphAlignmentAlternative(handleID: "e2", handleRef: "PER-2"),
             ],
@@ -41,7 +38,7 @@ struct PromoteFlowTests {
             var flow = PromoteFlow(entryID: "m")
             flow.load(
                 entryID: "m",
-                proposal: proposal(rows: [row(id: "m", assessment: "medium")]),
+                proposal: proposal(rows: [row(id: "m")]),
                 subjects: [
                     PromoteFlow.SubjectFact(
                         id: "m", kind: .event, name: "Marriage", ref: "EVT-M",
@@ -57,7 +54,7 @@ struct PromoteFlowTests {
 
     @Test func matchMenusUseConclusionTitles() {
         let birth = CatalogEventTitle(rule: .typeAtPlace, ref: "EVT-D1JBR", typeLabel: "Birth", place: "Gumpertz")
-        var event = row(id: "e", assessment: "medium")
+        var event = row(id: "e")
         event.kind = "event"
         event.handleRef = "EVT-D1JBR"
         event.header = .event(CatalogEventHeader(
@@ -75,14 +72,14 @@ struct PromoteFlowTests {
             ),
         ]
 
-        var person = row(id: "p", assessment: "medium")
+        var person = row(id: "p")
         person.header = .person(CatalogPersonHeader(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: "Grandpa"),
             name: nil,
             nameValueCount: 0
         ))
 
-        var place = row(id: "l", assessment: "medium")
+        var place = row(id: "l")
         place.kind = "place"
         place.handleRef = "PLC-1"
         place.header = .place(CatalogPlaceHeader(
@@ -116,7 +113,7 @@ struct PromoteFlowTests {
     }
 
     @Test func aPersonRecordReadsSortedInTheMenu() {
-        var person = row(id: "p", assessment: "medium")
+        var person = row(id: "p")
         person.header = .person(CatalogPersonHeader(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: ""),
             name: CatalogNameValue(form: "John Smith", parts: [
@@ -132,44 +129,35 @@ struct PromoteFlowTests {
         #expect(personRow?.menu.first?.title == "Smith, John")
     }
 
-    @Test func aMediumMatchStartsOnItsHandle() {
-        var flow = PromoteFlow(entryID: "a")
-        flow.load(
-            entryID: "a",
-            proposal: proposal(rows: [row(id: "a", assessment: "medium")]),
-            subjects: [fact("a")],
-            bridges: []
-        )
-        #expect(flow.rows.first?.target == .handle(id: "e1", ref: "PER-1", title: "PER-1"))
-    }
-
-    @Test func aWeakMatchStartsOnItsHandle() {
-        var flow = PromoteFlow(entryID: "a")
-        flow.load(
-            entryID: "a",
-            proposal: proposal(rows: [row(id: "a", assessment: "weak")]),
-            subjects: [fact("a")],
-            bridges: []
-        )
-        let ada = flow.rows.first
-        #expect(ada?.target == .handle(id: "e1", ref: "PER-1", title: "PER-1"))
-        #expect(flow.targetsChosen)
-    }
-
-    /// Promote suggests no record for a row it did not place, whatever its
-    /// band, so Skip and New are the researcher's choice, never a draft.
-    @Test func anUnplacedRowNeverDraftsNewOrSkip() {
-        for band in ["medium", "strong"] {
-            var unplaced = row(id: "a", target: .unplaced, handleID: "", assessment: band)
-            unplaced.reason = .unplaced
-            unplaced.alternatives = [
-                CatalogPromoteGraphAlignmentAlternative(handleID: "e2", handleRef: "PER-2"),
-            ]
+    /// Where a row starts is Go's call (`graphalign.Row.Start`): the page reads `target` and `handleID`
+    /// and starts on that record when it heads the menu, else leaves the choice open, so Skip and New
+    /// are the researcher's and a record another row took is never drafted twice.
+    @Test func aRowStartsWhereTheProposalSays() {
+        func load(_ r: CatalogPromoteGraphAlignmentRow) -> PromoteFlow {
             var flow = PromoteFlow(entryID: "a")
-            flow.load(entryID: "a", proposal: proposal(rows: [unplaced]), subjects: [fact("a")], bridges: [])
-            #expect(flow.rows.first?.target == .unset, "band \(band)")
-            #expect(flow.targetsChosen == false, "band \(band)")
+            flow.load(entryID: "a", proposal: proposal(rows: [r]), subjects: [fact("a")], bridges: [])
+            return flow
         }
+        var placed = row(id: "a", handleID: "e9")
+        placed.handleRef = "PER-9"
+        placed.alternatives = [
+            CatalogPromoteGraphAlignmentAlternative(handleID: "e9", handleRef: "PER-9"),
+            CatalogPromoteGraphAlignmentAlternative(handleID: "e2", handleRef: "PER-2"),
+        ]
+        let started = load(placed)
+        #expect(started.rows.first?.target == .handle(id: "e9", ref: "PER-9", title: "PER-9"))
+        #expect(started.rows.first?.menu.map(\.id) == ["e9", "e2"])
+        #expect(started.targetsChosen)
+
+        var unplaced = row(id: "a", target: .unplaced, handleID: "")
+        unplaced.alternatives = [CatalogPromoteGraphAlignmentAlternative(handleID: "e2", handleRef: "PER-2")]
+        let open = load(unplaced)
+        #expect(open.rows.first?.target == .unset)
+        #expect(open.targetsChosen == false)
+
+        let new = load(row(id: "a", target: .new, handleID: ""))
+        #expect(new.rows.first?.target == .unset)
+        #expect(new.targetsChosen == false)
     }
 
     /// A row that had a suggested record and loses it on a re-proposal opens
@@ -182,8 +170,7 @@ struct PromoteFlowTests {
             subjects: [fact("a"), fact("b")],
             bridges: []
         )
-        var lost = row(id: "b", target: .unplaced, handleID: "", assessment: "none")
-        lost.reason = .unplaced
+        var lost = row(id: "b", target: .unplaced, handleID: "")
         lost.alternatives = []
         flow.merge(proposal(rows: [row(id: "a"), lost], revision: 4), subjects: [fact("a"), fact("b")])
         let bea = flow.rows.first { $0.subjectID == "b" }
@@ -191,58 +178,13 @@ struct PromoteFlowTests {
         #expect(bea?.updated == true)
     }
 
-    /// A row whose record another row took starts open, whatever its band,
-    /// so Done can't promote two subjects on one handle without a choice.
-    @Test func aRowWhoseRecordWasTakenStartsUnset() {
-        let winner = row(id: "a", handleID: "e1", assessment: "weak")
-        for band in ["weak", "medium", "strong"] {
-            var loser = row(id: "b", target: .unplaced, handleID: "", assessment: band)
-            loser.reason = .taken
-            loser.possibleDuplicate = true
-            loser.duplicateOfSubjectID = "a"
-            loser.alternatives = [
-                CatalogPromoteGraphAlignmentAlternative(handleID: "e1", handleRef: "PER-1"),
-            ]
-            var flow = PromoteFlow(entryID: "a")
-            flow.mappedRest = true
-            flow.load(entryID: "a", proposal: proposal(rows: [winner, loser]), subjects: [fact("a"), fact("b")], bridges: [])
-            let bea = flow.rows.first { $0.subjectID == "b" }
-            #expect(bea?.target == .unset, "band \(band)")
-            #expect(bea?.duplicateNote == .sharesHandle(otherName: "a", ref: "PER-1"), "band \(band)")
-            #expect(flow.targetsChosen == false, "band \(band)")
-        }
-    }
-
-    /// A score under the accept bar is still a named candidate. The menu
-    /// opens on it; a row with no band, or a medium or strong one Promote did
-    /// not place, stays empty.
-    @Test func aWeakCandidateBelowTheBarStartsSelected() {
-        var below = row(id: "a", target: .unplaced, handleID: "", assessment: "weak")
-        below.reason = .unplaced
-        below.alternatives = [
-            CatalogPromoteGraphAlignmentAlternative(
-                handleID: "e9", handleRef: "PER-9"
-            ),
-        ]
-        var flow = PromoteFlow(entryID: "a")
-        flow.load(
-            entryID: "a",
-            proposal: proposal(rows: [below]),
-            subjects: [fact("a")],
-            bridges: []
-        )
-        let ada = flow.rows.first
-        #expect(ada?.target == .handle(id: "e9", ref: "PER-9", title: "PER-9"))
-        #expect(flow.targetsChosen)
-    }
-
     @Test func anUnmatchedRowStartsUnselected() {
         var flow = PromoteFlow(entryID: "a")
         flow.load(
             entryID: "a",
             proposal: proposal(rows: [
-                row(id: "a", target: .unplaced, handleID: "", assessment: "none"),
-                row(id: "b", assessment: "strong"),
+                row(id: "a", target: .unplaced, handleID: ""),
+                row(id: "b"),
             ]),
             subjects: [fact("a"), fact("b")],
             bridges: []
@@ -316,7 +258,7 @@ struct PromoteFlowTests {
 
     @Test func theCaptionIsTheMoveElseTheViaNeighbor() {
         func caption(
-            move: PromoteReasonCode? = nil, moveNeighbor: String = "", via: String = ""
+            move: PromoteMoveReason? = nil, moveNeighbor: String = "", via: String = ""
         ) -> PromoteFlow.Reason? {
             var r = row(id: "a")
             r.moveReason = move
@@ -329,7 +271,6 @@ struct PromoteFlowTests {
         #expect(caption(move: .neighborMoved, moveNeighbor: "n", via: "a") == .neighborMoved(neighborID: "n"))
         #expect(caption(via: "a") == .via(neighborID: "a"))
         #expect(caption() == nil)
-        #expect(caption(move: .taken) == nil)
         #expect(caption(move: .neighborPlaced, moveNeighbor: "") == nil)
         #expect(caption(move: .unrecognized("later_move"), moveNeighbor: "n") == nil)
 
@@ -346,16 +287,15 @@ struct PromoteFlowTests {
     }
 
     @Test func reasonCodesParseThroughTheWireVocabulary() {
-        let wire: [(String, PromoteReasonCode)] = [
-            ("via", .via), ("decided", .decided), ("agrees", .agrees), ("weak", .weak), ("taken", .taken),
-            ("", .unplaced), ("empty", .empty), ("neighbor_placed", .neighborPlaced),
+        let wire: [(String, PromoteMoveReason)] = [
+            ("neighbor_placed", .neighborPlaced),
             ("neighbor_moved", .neighborMoved), ("neighbor_released", .neighborReleased),
         ]
         for (code, expected) in wire {
-            #expect(PromoteReasonCode(wire: code) == expected)
+            #expect(PromoteMoveReason(wire: code) == expected)
         }
-        #expect(PromoteReasonCode(wire: "later_code") == .unrecognized("later_code"))
-        #expect(PromoteReasonCode(wire: "no_match") == .unrecognized("no_match"))
+        #expect(PromoteMoveReason(wire: "later_code") == .unrecognized("later_code"))
+        #expect(PromoteMoveReason(wire: "taken") == .unrecognized("taken"))
         let targets: [(String, PromoteTargetCode)] = [("", .unplaced), ("handle", .handle), ("new", .new), ("skip", .skip)]
         for (code, expected) in targets {
             #expect(PromoteTargetCode(wire: code) == expected)
@@ -487,7 +427,7 @@ struct PromoteFlowTests {
         unset.mappedRest = true
         unset.load(
             entryID: "a",
-            proposal: proposal(rows: [row(id: "a", handleID: "e1"), row(id: "b", handleID: "", assessment: "none")]),
+            proposal: proposal(rows: [row(id: "a", handleID: "e1"), row(id: "b", handleID: "")]),
             subjects: [fact("a"), fact("b")],
             bridges: bridges
         )
@@ -527,7 +467,7 @@ struct PromoteFlowTests {
             entryID: "a",
             proposal: proposal(rows: [
                 row(id: "a", handleID: "e1"),
-                row(id: "b", handleID: "", assessment: "none"),
+                row(id: "b", handleID: ""),
                 row(id: "c"),
             ]),
             subjects: [fact("a"), fact("b"), fact("c", anchor: true)],
@@ -576,7 +516,7 @@ struct PromoteFlowTests {
 
     @Test func anUnresolvedTokenDecidesNothing() {
         var flow = PromoteFlow(entryID: "a")
-        let unset = row(id: "a", target: .unplaced, handleID: "", assessment: "none")
+        let unset = row(id: "a", target: .unplaced, handleID: "")
         flow.load(
             entryID: "a",
             proposal: proposal(rows: [unset, row(id: "b")]),
@@ -637,9 +577,9 @@ struct PromoteFlowTests {
             entryID: "a",
             proposal: proposal(rows: [
                 row(id: "a"),
-                row(id: "b", target: .unplaced, handleID: "", assessment: "none"),
-                row(id: "c", assessment: "weak"),
-                row(id: "d", target: .unplaced, handleID: "", assessment: "none"),
+                row(id: "b", target: .unplaced, handleID: ""),
+                row(id: "c"),
+                row(id: "d", target: .unplaced, handleID: ""),
             ]),
             subjects: [fact("a"), fact("b"), fact("c"), fact("d")],
             bridges: []
@@ -655,13 +595,13 @@ struct PromoteFlowTests {
     }
 
     @Test func duplicateNotesNameTheOtherRowAndItsRef() {
-        var lost = row(id: "b", target: .unplaced, handleID: "", assessment: "strong")
+        var lost = row(id: "b", target: .unplaced, handleID: "")
         lost.possibleDuplicate = true
         lost.duplicateOfSubjectID = "a"
-        var newA = row(id: "c", target: .unplaced, handleID: "", assessment: "strong")
+        var newA = row(id: "c", target: .unplaced, handleID: "")
         newA.possibleDuplicate = true
         newA.duplicateOfSubjectID = "d"
-        var newB = row(id: "d", target: .unplaced, handleID: "", assessment: "strong")
+        var newB = row(id: "d", target: .unplaced, handleID: "")
         newB.possibleDuplicate = true
         newB.duplicateOfSubjectID = "c"
         var flow = PromoteFlow(entryID: "a")
@@ -700,8 +640,7 @@ struct PromoteFlowTests {
 
     /// A row Promote found no record for: no target, no band, no alternatives, so it opens unset.
     private func unmatched(_ id: String) -> CatalogPromoteGraphAlignmentRow {
-        var unmatched = row(id: id, target: .unplaced, handleID: "", assessment: "none")
-        unmatched.reason = .unplaced
+        var unmatched = row(id: id, target: .unplaced, handleID: "")
         unmatched.alternatives = []
         return unmatched
     }
@@ -763,9 +702,8 @@ struct PromoteFlowTests {
         flow.mapRest()
         flow.hold(subjectID: "a", id: "e7", ref: "PER-7", header: nil)
 
-        var heldA = row(id: "a", handleID: "e7", assessment: "weak")
+        var heldA = row(id: "a", handleID: "e7")
         heldA.handleRef = "PER-7"
-        heldA.reason = .decided
         flow.merge(proposal(rows: [heldA, row(id: "b")], revision: 4), subjects: [fact("a"), fact("b")])
         var a = flow.rows.first { $0.subjectID == "a" }
         #expect(a?.menu.contains { $0.id == "e7" } == true)

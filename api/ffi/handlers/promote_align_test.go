@@ -86,21 +86,19 @@ func namedPersonOnNewSource(t *testing.T, dir, userID, typeID, personName, sexKe
 	return sourceID, subjectID
 }
 
-// The contested flag reaches the response at any band: a negative Observation
-// against a filed positive one conflicts whether the row is skipped, fixed or
-// (with a positive Observation) not contested at all.
-func TestProposeSendsContested(t *testing.T) {
+// The proposal sends where each row starts: unset when nothing is suggested or
+// the pair has no band, else the record the row sits on.
+func TestProposeSendsWhereARowStarts(t *testing.T) {
 	cases := []struct {
 		name       string
 		polarity   string
 		fix        bool
 		wantTarget string
-		wantReason string
-		wantFlag   bool
 	}{
-		{"negative, unfixed", observations.PolarityNegative, false, "", "", true},
-		{"negative, fixed", observations.PolarityNegative, true, "handle", "decided", true},
-		{"positive", observations.PolarityPositive, false, "handle", "agrees", false},
+		{"negative, unfixed", observations.PolarityNegative, false, ""},
+		// The conflict leaves the fixed pair under the weak band: no band, no start.
+		{"negative, fixed", observations.PolarityNegative, true, ""},
+		{"positive", observations.PolarityPositive, false, "handle"},
 	}
 	var tests []rpcTest
 	for _, tc := range cases {
@@ -128,9 +126,8 @@ func TestProposeSendsContested(t *testing.T) {
 					if row.GetSubjectId() != incoming {
 						continue
 					}
-					if row.GetTarget() != tc.wantTarget || row.GetReason() != tc.wantReason || row.GetContested() != tc.wantFlag {
-						t.Fatalf("row target %q reason %q contested %v; want %q %q %v",
-							row.GetTarget(), row.GetReason(), row.GetContested(), tc.wantTarget, tc.wantReason, tc.wantFlag)
+					if row.GetTarget() != tc.wantTarget {
+						t.Fatalf("row starts on %q, want %q", row.GetTarget(), tc.wantTarget)
 					}
 					return
 				}
@@ -196,9 +193,10 @@ func TestProposeHoldsAFoundRecord(t *testing.T) {
 	}
 
 	row := propose(&engine.PromoteGraphAlignmentFixed{SubjectId: f.incoming, HandleId: f.handle})
-	if row.GetTarget() != "handle" || row.GetHandleId() != f.handle || row.GetReason() != "decided" ||
-		row.GetAssessment() != "none" || !row.GetContested() {
-		t.Fatalf("fixed row %+v, want handle %s, decided, none, contested", row, f.handle)
+	// The pair has no band, so the page starts the row unset; it keeps the
+	// researcher's own decision.
+	if row.GetTarget() != "" || row.GetHandleId() != "" {
+		t.Fatalf("fixed row %+v, want it to start unset: the pair has no band", row)
 	}
 }
 
@@ -232,6 +230,46 @@ func TestProposalProtoSendsMove(t *testing.T) {
 	}
 }
 
+// An unplaced row whose best record is in the weak band starts on that record,
+// with its header; one whose record another row took starts unset.
+func TestProposalProtoStartsAWeakRow(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	dir, userID, _, typeID := subjectFixture(t)
+	_, handleSubject := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityPositive)
+	promoted := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: handleSubject})
+	h, r := promoted.Entity.GetId(), promoted.Entity.GetRef()
+	hid := uuid.MustParse(h)
+	s := uuid.New()
+	row := func(reason graphalign.Reason) graphalign.Row {
+		return graphalign.Row{
+			SubjectID: s[:], Kind: vocabkey.Person, Assessment: graphalign.AssessWeak, Reason: reason,
+			Alternatives: []graphalign.Alternative{{HandleID: hid[:], Ref: r}},
+		}
+	}
+	proposed := func(rw graphalign.Row) *engine.PromoteGraphAlignmentRow {
+		t.Helper()
+		var resp *engine.ProposePromoteGraphAlignmentResponse
+		if err := withProjectCatalog(dir, func(c *database.Catalog) error {
+			var err error
+			resp, err = proposalProto(c, graphalign.Proposal{Rows: []graphalign.Row{rw}})
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return resp.GetRows()[0]
+	}
+
+	started := proposed(row(graphalign.ReasonUnplaced))
+	if started.GetTarget() != "handle" || started.GetHandleId() != h || started.GetHandleRef() != r ||
+		started.GetPerson().GetEntity().GetId() != h {
+		t.Fatalf("weak row %+v, want it started on %s (%s) with a person header", started, h, r)
+	}
+	taken := proposed(row(graphalign.ReasonTaken))
+	if taken.GetTarget() != "" || taken.GetHandleId() != "" || taken.Header != nil {
+		t.Fatalf("taken row %+v, want it unset with no header", taken)
+	}
+}
+
 func TestProposePromoteGraphAlignment(t *testing.T) {
 	runRPC(t, ProposePromoteGraphAlignment, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
@@ -258,46 +296,6 @@ func TestProposePromoteGraphAlignment(t *testing.T) {
 				return &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, GraphId: soleGraphID(t, dir, sourceID)}
 			},
 			want: &engine.ProposePromoteGraphAlignmentResponse{},
-		},
-		{
-			// Two look-alike handles, so the row has a reason property and so
-			// does its alternative; each goes out as a product property.
-			name: "reason properties go out as product properties",
-			reqFn: func(t *testing.T) proto.Message {
-				dir, userID, _, typeID := subjectFixture(t)
-				for range 2 {
-					_, handleSubject := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityPositive)
-					promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: handleSubject})
-				}
-				sourceID, _ := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityPositive)
-				return &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, GraphId: soleGraphID(t, dir, sourceID)}
-			},
-			after: func(t *testing.T, out []byte, _ proto.Message) {
-				var resp engine.ProposePromoteGraphAlignmentResponse
-				if err := proto.Unmarshal(out, &resp); err != nil {
-					t.Fatal(err)
-				}
-				var named int
-				check := func(what, key, origin string) {
-					switch {
-					case key == "" && origin != "":
-						t.Fatalf("%s: origin %q without a key", what, origin)
-					case key != "" && origin != vocabkey.OriginProvenencia:
-						t.Fatalf("%s: key %q has origin %q, want %q", what, key, origin, vocabkey.OriginProvenencia)
-					case key != "":
-						named++
-					}
-				}
-				for _, row := range resp.GetRows() {
-					check("row", row.GetReasonPropertyKey(), row.GetReasonPropertyOrigin())
-					for _, alt := range row.GetAlternatives() {
-						check("alternative", alt.GetReasonPropertyKey(), alt.GetReasonPropertyOrigin())
-					}
-				}
-				if named < 2 {
-					t.Fatalf("%d reason properties in %+v, want the row's and an alternative's", named, resp.GetRows())
-				}
-			},
 		},
 	})
 }
