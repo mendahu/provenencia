@@ -105,6 +105,12 @@ Scope change before review: S13-23 (#633) removed the Promote evidence sheet, so
 ### X-15 · minor · D-13's second order has no test
 **Answer:** Fixed — with M-5: one order only.
 
+## Post-board refresh (2026-10-30)
+
+- The four boards were agreed and exported; the writer rendered each export (React and Babel served locally) and checked its frames against the brief. Every EVP, PLP, EVL and PLL requirement is drawn, with three differences answered in D-14: (a) the Place board words the Pictures count ("3 pictures") where the Event board and the Person page show the bare count; the user chose the bare count. (b) The boards' no-picture thumb label "No picture record" is mock text; the app keeps "No image recorded". (c) EVL-W1 / PLL-W1 said the lists fill the width "as today", but `ConclusionListPage.page` already caps them at 1180pt and centers; the Events board draws that, the Places board draws full width while saying nothing moves. No list layout change; both briefs corrected.
+- S13-10 landed (#634). §4 rows re-read against `main`: the page, context, `PersonDetailSections` and gallery section are as its plan said, plus `ConclusionDetailHeaderBand` between `ConclusionDetailLoaded` and the header (now named in D-7). Line numbers updated (pbxproj, `ValueFamily`). The S13-10 conditionals and stop condition are gone.
+- The four briefs' paste blocks were updated to the skill's current text (S13-10 added Page columns and the segmented control rows); the boards were drawn from the earlier text, which differs only by those two rows.
+
 ## Round 1 (2026-10-29, earlier plan)
 
 ### X-1 · major · STEP-5 grep cannot mean “empty” as written

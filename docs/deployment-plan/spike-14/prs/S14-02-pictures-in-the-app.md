@@ -1,19 +1,20 @@
 # S14-02 — Pictures in the app
 
-**Status:** Blocked — on boards S14-D2 – S14-D5 and on S13-10. Refreshed 2026-10-30 after S13-23 landed ([#633](https://github.com/mendahu/provenencia/pull/633)): the Promote wording, the relationship `kind` wire field and their steps left this PR. The PR waits on a board because it changes how the Event and Place pages and the Events and Places lists look, one board per view (user, 2026-10-30), and on S13-10 because it is written against the page S13-10 leaves (Page columns, `PersonDetailSections`).
+**Status:** Planned
+**Refreshed:** 2026-10-30 after S13-23 landed ([#633](https://github.com/mendahu/provenencia/pull/633)): the Promote wording, the relationship `kind` wire field and their steps left this PR. Again on 2026-10-30 after the four boards were agreed and S13-10 landed ([#634](https://github.com/mendahu/provenencia/pull/634)).
 **Spike / slice:** Spike 14 · Slice 1 — Event and Place pictures
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S14-D2](../design/S14-D2-event-page-pictures.md) (Event page), [S14-D3](../design/S14-D3-place-page-pictures.md) (Place page), [S14-D4](../design/S14-D4-events-list-thumbnail.md) (Events list), [S14-D5](../design/S14-D5-places-list-thumbnail.md) (Places list); no board agreed yet
-**Board:** — (when agreed: each board's Claude Design link and frame numbers go here, and **Design → macOS** describes each frame in words, as S13-10 does for S13-D1)
-**Depends on:** S14-01 (landed [#615](https://github.com/mendahu/provenencia/pull/615)), S13-23 (landed [#633](https://github.com/mendahu/provenencia/pull/633)), S13-10 (Spike 13, Planned), S14-D2, S14-D3, S14-D4, S14-D5
+**Brief:** [S14-D2](../design/S14-D2-event-page-pictures.md) (Event page), [S14-D3](../design/S14-D3-place-page-pictures.md) (Place page), [S14-D4](../design/S14-D4-events-list-thumbnail.md) (Events list), [S14-D5](../design/S14-D5-places-list-thumbnail.md) (Places list); boards agreed 2026-10-30
+**Board:** Four Claude Design projects, agreed 2026-10-30: S14-D2 [*Event Detail*](https://claude.ai/design/p/b3fd0cd4-787b-474d-b114-ea52e26537b2?via=share) (turn 3, frames 3a – 3g); S14-D3 [*Place Detail*](https://claude.ai/design/p/f7e0a599-285f-4099-ab92-532c68fd939d?via=share) (turn 2, frames 2a – 2g); S14-D4 [*Events List*](https://claude.ai/design/p/2799d7a0-387e-4570-b138-fc387562ac91?via=share) (frames 1 – 2); S14-D5 [*Places List*](https://claude.ai/design/p/e8910bb1-f564-4d7a-b829-69de0e60af5a?via=share) (frames 1 – 2). Earlier turns on those projects (S9-D6, S9-D7, S10-D10) are today's pages, not this PR. §6 **macOS** describes each frame in words; the implementer does not need the boards.
+**Depends on:** S14-01 (landed [#615](https://github.com/mendahu/provenencia/pull/615)), S13-23 (landed [#633](https://github.com/mendahu/provenencia/pull/633)), S13-10 (landed [#634](https://github.com/mendahu/provenencia/pull/634)), S14-D2, S14-D3, S14-D4, S14-D5 (agreed)
 **Blocks:** S13-14 (Spike 13's Gallery section reads the `gallery` slot)
 **Branch:** `s14-02-pictures-in-the-app`
 **Version bump:** none — Spike 11–14 PRs leave `VERSION` at 0.2.0 until a release is cut, as S14-01 did ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/design-system-layers.mdc`
 **Context:** [event-place-pictures.md § What already works](../event-place-pictures.md#what-already-works), [§ Thumbnail parity](../event-place-pictures.md#thumbnail-parity), [§ What changes](../event-place-pictures.md#what-changes); working rules: "The gallery is one slot on the detail body", "An Event or Place chooses its thumbnail as a Person chooses its portrait", "A depiction is worded as a picture outside the Person's own copy", "The gallery layer is named gallery, not likeness", "Batch 1 is cut by layer"; S14-01 ship follow-up UX-1 (Properties VoiceOver); Spike 13's [S13-10 plan](../../spike-13/prs/S13-10-header-and-sections.md) D-3, D-4, D-5, D-10, D-16
-**Planned:** 2026-10-30 against `main` @ `1253dfaa` (S13-10 not yet landed: §4 rows marked *S13-10* describe the code its plan leaves; redo them on its Landed note)
-**Review:** [`S14-02-pictures-in-the-app.review.md`](S14-02-pictures-in-the-app.review.md) — refresh round 3: Fits with changes / Not ready (board) → all findings answered
+**Planned:** 2026-10-30 against `main` @ `705cd98c` (S13-10 landed)
+**Review:** [`S14-02-pictures-in-the-app.review.md`](S14-02-pictures-in-the-app.review.md) — refresh rounds 3 – 4
 
 ### Implementer — read this first
 
@@ -109,27 +110,25 @@ Event and Place pages show a Pictures section, lead their headers with the pictu
 
 ## 4. Current state
 
-Rows marked *S13-10* are the code its plan leaves (S13-10 plan §6 and D-3 – D-5, D-16). Re-read them on S13-10's Landed note before STEP-1.
-
 | Area | Where | Today |
 | --- | --- | --- |
 | Body protocol | `macos/App/Features/Conclusions/ConclusionDetailPage.swift` `ConclusionDetailBody` | `var likenesses: [ConclusionDetailLikeness]`, extension default `[]` |
-| Default fill | same file `ConclusionDetailDefaultPageSections` (*S13-10*: `ConclusionDetailRowsSection`, the likeness `if`, the relationship `ForEach`) | Draws `ConclusionDetailLikenessSection` when `likenesses` is non-empty, between rows and relationship sections |
+| Default fill | same file `ConclusionDetailDefaultPageSections` | `ConclusionDetailRowsSection` titled `detailsSection` ("Details"), then `ConclusionDetailLikenessSection` when `likenesses` is non-empty, between rows and relationship sections |
 | Tile type | same file `ConclusionDetailLikeness` | `id`, `imageRelPath`, `sourceTitle`, `location`, `isPortrait` |
-| Gallery section | same file `ConclusionDetailLikenessSection` (private; *S13-10*: internal) | Init `(projectDir:likenesses:portrait:)`. Hard-codes `likenessesSection`, `likenessOpenTip`, `likenessTileLabel`, ids `persons.detail.likeness.\(tile.id).portraitBadge` / `.usePortrait`, `portraitBadge`, `useAsPortrait`, `useAsPortraitLabel` |
+| Gallery section | same file `ConclusionDetailLikenessSection` (internal since S13-10) | Init `(projectDir:likenesses:portrait:)`. Hard-codes `likenessesSection`, `likenessOpenTip`, `likenessTileLabel`, ids `persons.detail.likeness.\(tile.id).portraitBadge` / `.usePortrait`, `portraitBadge`, `useAsPortrait`, `useAsPortraitLabel` |
 | Tile view | same file `LikenessTileView` (private) | `CachedThumbnail.likenessCrop` (96), fallback mark `.subjectPerson` |
 | Thumbnail slot | same file `ConclusionDetailThumbnail` | `mark`, `label`, `imageRelPath`, `imageLabel`, `colors`, `offersEarliest` (read only by the header's `showsPortraitMenu`) |
-| Header | same file `ConclusionDetailHeader` | `portrait: ConclusionPortraitModel?`; menu iff `portrait != nil && thumbnail.offersEarliest`; `portraitMenuTitle`, `portraitMenuHint`, `useEarliestLikeness`; ids `persons.detail.portrait`, `.menu`, `.useEarliest` |
-| Page | same file `ConclusionDetailPage` | Synthesized memberwise init `(session, entityId, pageIdentifier, errorIdentifier, make, summary, portrait = nil, pageSections)` and a convenience init for the default fill. *S13-10* keeps that order (D-16), draws `PVPageColumns` in `ConclusionDetailLoaded`, and deletes `page(identifier:body:)` |
-| Context | same file `ConclusionDetailPageSectionsContext` | `projectDir`, `refreshing`, `portrait: ConclusionPortraitModel?` (*S13-10* adds `section`) |
+| Header | same file `ConclusionDetailHeaderBand` (private; holds `pageIdentifier`, passes `portrait` and `compact: isScrolled`) → `ConclusionDetailHeader` (private) | `portrait: ConclusionPortraitModel?`; thumb 120pt, 40pt when compact; menu iff `portrait != nil && thumbnail.offersEarliest`; `portraitMenuTitle`, `portraitMenuHint`, `useEarliestLikeness`; ids `persons.detail.portrait`, `.menu`, `.useEarliest` |
+| Page | same file `ConclusionDetailPage` | Synthesized memberwise init `(session, entityId, pageIdentifier, errorIdentifier, make, summary, portrait = nil, pageSections)` and a convenience init `(…, summary, portrait = nil)` in an extension for the default fill. `ConclusionDetailLoaded` (private; holds `portrait`) draws `PVPageColumns`; the loading page is `PVPageColumns(primary:)` |
+| Context | same file `ConclusionDetailPageSectionsContext` | `projectDir`, `refreshing`, `portrait: ConclusionPortraitModel?`, `pageSection: ConclusionPageSection? = nil` |
 | Person content | `PersonDetailContent.swift` | `likenessImageRelPath`, `likenesses`, `thumbnail` (labels `personNoLikeness` / `personLikenessThumb`, `colors`), `leadLabel` matched by path with fallback `personLikenessThumb` |
 | Event / Place content | `EventDetailContent.swift`, `PlaceDetailContent.swift` | `thumbnail` = mark + `eventNoImage` / `placeNoImage`; ignore `header.pictureImageRelPath` and `detail.pictures`. Place rows Names and Period, then relationship `sections` |
-| Portrait model | `ConclusionPortraitModel.swift` (pbxproj lines 99, 543, 1324, 2393) | `init(session:userID:entityId:)`; `choose(_: ConclusionDetailLikeness)`, `useEarliest()`; Person toast strings |
-| Person view | `PersonDetailView.swift` | Owns `@State portrait` and `.vocabularyToastOverlay($portrait.toast, identifier: "persons.detail.toast")`. *S13-10*: passes `portrait` through the full init with `pageSections: PersonDetailSections(…)`; `.gallery` case calls `ConclusionDetailLikenessSection(projectDir:likenesses:portrait:)` or `PVEmptyState` with `galleryEmptyTitle` / `galleryEmptyMessage` |
+| Portrait model | `ConclusionPortraitModel.swift` (pbxproj lines 101, 549, 1332, 2416) | `init(session:userID:entityId:)`; `choose(_: ConclusionDetailLikeness)`, `useEarliest()`; Person toast strings |
+| Person view | `PersonDetailView.swift` | Owns `@State portrait` and `.vocabularyToastOverlay($portrait.toast, identifier: "persons.detail.toast")`; passes `portrait` through the full init with `pageSections: { PersonDetailSections(content: $0, context: $1) }`; private `PersonDetailSections` switches on `context.pageSection ?? .vitals`; `.gallery` case calls `ConclusionDetailLikenessSection(projectDir:likenesses:portrait:)` or `PVEmptyState` with `galleryEmptyTitle` / `galleryEmptyMessage` |
 | Event / Place views | `EventDetailView.swift`, `PlaceDetailView.swift` | Convenience init; no `userID` |
 | Host | `macos/App/Features/Workspace/WorkspaceDestinationHost.swift` | Holds `userID` and passes it to several destinations, including `PersonDetailView` (line 101); not to `EventDetailView` (107) or `PlaceDetailView` (113). Pages are keyed by `viewIdentity` = entity id (`PlaceRegistry`) |
 | List thumbs | `ConclusionListPage.swift` | `ConclusionListKind.thumbnailRelPath` with extension default `""` (line 72); only `PersonsList` overrides it; `PVList` thumbnail at its default 44pt |
-| Leftover from S13-23 | `macos/App/Platform/L10n.swift` line 1349 | `private enum ValueFamily`, no reader |
+| Leftover from S13-23 | `macos/App/Platform/L10n.swift` line 1356 | `private enum ValueFamily`, no reader |
 | Composer | `CitationComposerSubjectGroups.swift` line 239 | `depictionPerson`, comments say person |
 | Properties VO | `PropertiesView.swift` `rowAccessibilityLabel` (private, line 416) | `"\(label), \(valueType), \(origin), \(boundText)"` with the raw origin string; `PropertiesSnapshot.boundTypes(for:)`; `PropertiesOriginCell` maps `CatalogOrigin.user` → `originUserShort`, `.provenencia` → `originSeededShort`; `PropertiesModel.deleteAccessibilityLabel` is the feature's other spoken label |
 | Stale text | `CachedThumbnail.swift` line 15 ("Promote evidence sheet"); `ConclusionListRow.swift` line 22 ("the likeness a Person leads with"); `docs/macos-client-patterns.md` line 102 ("likeness gallery"); `event-place-pictures.md` lines 32 (`likenesses` default), 33 and 64 (evidence sheet) | |
@@ -147,14 +146,14 @@ Rows marked *S13-10* are the code its plan leaves (S13-10 plan §6 and D-3 – D
 | D-4 | `LeadCopy` *(new, nested in `ConclusionDetailGallery`)* holds only static copy: `badge`, `useAs`, `useEarliest`, `menuTitle`, `menuHint` (`LocalizedStringResource`), `toastTitle`, `toastEarliestBody` (`String`, as today's Person toast members). Statics `.personPortrait` (today's Person members, table in § Strings), `.eventThumbnail`, `.placeThumbnail` (they differ only in `menuTitle`) | The section and header stay kind-blind; S13-14 is another pack | A kind enum in the section |
 | D-5 | `static func leading(mark: PVMarkKey, noImage: LocalizedStringResource, withImage: LocalizedStringResource, imageRelPath: String, gallery: ConclusionDetailGallery, leadLabel: (String) -> String, colors: PVThumbnail.Colors? = nil) -> ConclusionDetailThumbnail` *(new)*: `label` = `imageRelPath.isEmpty ? noImage : withImage`; `imageLabel` = nil when the path is empty, else `gallery.lead.map { leadLabel($0.sourceTitle) } ?? L10n.string(withImage)`. Person: `.subjectPerson`, `personNoLikeness`, `personLikenessThumb`, `likenessLabel`, `treatment?.thumbnailColors`. Event: `.subjectEvent`, `eventNoImage`, `eventPictureThumb`, `pictureFrom`. Place: `.subjectPlace`, `placeNoImage`, `placePictureThumb`, `pictureFrom`. Delete `ConclusionDetailThumbnail.offersEarliest`; the header reads `content.gallery.offersEarliest` | One builder for three kinds (review M-4); lead by `isLead` is right when two tiles share a path; the fallback keeps today's Person label | Three copies of the logic; matching by path |
 | D-6 | Rename `ConclusionPortraitModel` → `ConclusionLeadModel` and its file → `ConclusionLeadModel.swift` (edit the four pbxproj lines in §4 by hand: path, name and both comments). `init(session:userID:entityId:)` unchanged; `choose(_ picture: ConclusionDetailPicture, copy: LeadCopy)` toasts `copy.toastTitle` / `picture.chosenToastBody`; `useEarliest(copy: LeadCopy)` toasts `copy.toastTitle` / `copy.toastEarliestBody`. The `isSaving` guard and the danger toast on failure stay | Kind-neutral name beside `isLead` (review M-9); copy has one source, read at call time (review M-2) | Copy passed at init |
-| D-7 | **The page owns the model.** `ConclusionDetailPage` replaces `portrait` with `userID: String` and gains `@State private var lead: ConclusionLeadModel`. Both inits become hand-written: full `init(session:entityId:pageIdentifier:errorIdentifier:userID:make:summary:pageSections:)` and convenience `init(session:entityId:pageIdentifier:errorIdentifier:userID:make:summary:)`; each sets `_lead = State(initialValue: ConclusionLeadModel(session: session, userID: userID, entityId: entityId))`. The model is always built: every kind can choose. The outermost view adds `.vocabularyToastOverlay($lead.toast, identifier: "\(pageIdentifier).toast")`. `ConclusionDetailPageSectionsContext.portrait` becomes `lead: ConclusionLeadModel` and gains `pageIdentifier: String`; `ConclusionDetailLoaded` and `ConclusionDetailHeader` take `lead` and `pageIdentifier` in place of `portrait`. `PersonDetailView` drops its `@State` and overlay and passes `userID` (its toast id stays `persons.detail.toast`); `EventDetailView` / `PlaceDetailView` take `userID` and pass it; the host passes `userID` to both | One machine, one owner, no Optional nobody sets to nil (review M-2); the page is keyed by entity id, so the model resets per entity | A `leadChoose` page parameter beside `gallery.choose`; copying the Person's `@State` into each view |
+| D-7 | **The page owns the model.** `ConclusionDetailPage` replaces `portrait` with `userID: String` and gains `@State private var lead: ConclusionLeadModel`. Both inits become hand-written: full `init(session:entityId:pageIdentifier:errorIdentifier:userID:make:summary:pageSections:)` and convenience `init(session:entityId:pageIdentifier:errorIdentifier:userID:make:summary:)`; each sets `_lead = State(initialValue: ConclusionLeadModel(session: session, userID: userID, entityId: entityId))`. The model is always built: every kind can choose. The outermost view adds `.vocabularyToastOverlay($lead.toast, identifier: "\(pageIdentifier).toast")`. `ConclusionDetailPageSectionsContext.portrait` becomes `lead: ConclusionLeadModel` and gains `pageIdentifier: String`; `ConclusionDetailLoaded`, `ConclusionDetailHeaderBand` and `ConclusionDetailHeader` take `lead` (and the header `pageIdentifier`) in place of `portrait`; the header shows the menu iff `content.gallery.offersEarliest`, at both thumb sizes as today. `PersonDetailView` drops its `@State` and overlay and passes `userID` (its toast id stays `persons.detail.toast`); `EventDetailView` / `PlaceDetailView` take `userID` and pass it; the host passes `userID` to both | One machine, one owner, no Optional nobody sets to nil (review M-2); the page is keyed by entity id, so the model resets per entity | A `leadChoose` page parameter beside `gallery.choose`; copying the Person's `@State` into each view |
 | D-8 | `EventsList` / `PlacesList` implement `thumbnailRelPath` as `header.pictureImageRelPath`; delete the extension default in `ConclusionListPage.swift` so a fourth kind must answer | No dead default (review M-7) | Keeping the default |
 | D-9 | Delete `L10n.Promote.ValueFamily` | S13-23 removed its last reader; its `likeness` case is in this PR's rename sweep | Leaving it |
 | D-10 | Rename `depictionPerson` → `depictionSubject`; its comments and its two call sites' comments say Subject | Map scope | Retitling catalog keys |
 | D-11 | `PropertiesModel.rowAccessibilityLabel(for property: CatalogProperty) -> String` *(new)* beside `deleteAccessibilityLabel`. It reads `snapshot.boundTypes(for:)`, speaks the origin through `PropertiesOriginCell.spokenOrigin(_:) -> String` *(new static; `user` → `originUserShort`, `provenencia` → `originSeededShort`, else the raw string, as the cell's `OriginPill` branch shows it)* and formats with `L10n.Properties.rowAccessibility(label:key:valueType:origin:bound:)` *(new, "%1$@, %2$@, %3$@, %4$@, %5$@")*, where `bound` is today's `rowBoundAnnouncement(count:)`; when bound types exist it appends `", "` + their labels joined with `", "`. `PropertiesView` calls it; its private function goes | Testable through `makeModel` in `PropertiesModelTests`; origin spoken as the cell shows it (review M-10); no stray comma (X-10) | A raw origin string in a new key; a six-slot format with an empty last slot |
 | D-12 | New L10n per § Strings, each a `static let` resource or a `static func … -> String` through `L10n.format`, as `add-localized-string` step 4 says. Person functions are reused as they are | `macos-l10n.mdc` | Reusing "Use as portrait" on an Event |
-| D-13 | **Against S13-10's page.** STEP-1 starts from the page S13-10 leaves. `PersonDetailSections`' `.gallery` case becomes `ConclusionDetailGallerySection(projectDir: context.projectDir, pageIdentifier: context.pageIdentifier, gallery: content.gallery, fallbackMark: content.thumbnail.mark, lead: context.lead)` when `!content.gallery.tiles.isEmpty`, else its `PVEmptyState` reading `galleryEmptyTitle` / `galleryEmptyMessage` as S13-10 wrote it. No empty-state field on the slot | S14-D2 needs Page columns, which S13-10 builds; one design, not two (review M-5, M-8) | Branching on landing order |
-| D-14 | **The board binds the chrome.** Spacing, badge and button placement and the Wide arrangement follow the agreed S14-D2 – S14-D5 frames, written into §6 macOS when the board is agreed | Repo rule: each view change has a board (user, 2026-10-30) | Building from the Person page alone |
+| D-13 | **On S13-10's page.** `PersonDetailSections`' `.gallery` case becomes `ConclusionDetailGallerySection(projectDir: context.projectDir, pageIdentifier: context.pageIdentifier, gallery: content.gallery, fallbackMark: content.thumbnail.mark, lead: context.lead)` when `!content.gallery.tiles.isEmpty`, else its `PVEmptyState` reading `galleryEmptyTitle` / `galleryEmptyMessage` as S13-10 wrote it. No empty-state field on the slot | One design on the landed page (review M-5, M-8) | Adding empty-state fields to the slot |
+| D-14 | **The boards bind the chrome**, as §6 macOS describes them, with three answers. (a) The Pictures heading's meta is the bare count ("3"), as the Event board and the Person's Likenesses; the Place board's "3 pictures" is not built (user, 2026-10-30). (b) The no-picture header label stays `eventNoImage` / `placeNoImage` ("No image recorded"); the boards' mock text "No picture record" is not copy. (c) The lists keep today's Wide layout, the content column up to 1180pt, centered (`ConclusionListPage.page`); the briefs' "fills the width as today" was wrong about today, the Events board draws today's layout and the Places board's note says nothing moves | Repo rule: each view change has a board (user, 2026-10-30) | Building from the Person page alone; a worded count |
 
 **Rules this plan bends.** None.
 
@@ -212,17 +211,23 @@ None — S14-01 put pictures and header paths on the wire.
 
 ### macOS
 
-Draft from the S14-D2 – S14-D5 briefs; when the boards are agreed, each frame is described here in words and the rows take its answers (D-14).
+The agreed frames, in words (D-14). Every frame is the pane only, Regular 1102 × 900 unless marked Wide 2296 × 1440.
+
+**Event page (S14-D2).** 3a: "Wedding of John Smith and Mary Brown, 1902", header thumb is the lead crop (Wedding photograph, 1902), the date · place line, ref and member count at the right; "Details" with Date (Merged, 2 Sources, Why) and Place (1 Source, Why); then "Pictures" with meta "3" over a rule, three 96pt tiles left-aligned in the grid, each captioned with its Source title in two lines at most; under the lead tile the accent "Thumbnail" Badge, under the others the ghost "Use as thumbnail" button. 3c: after choosing "Family album, 1920", the header thumb shows it, the Badge sits under it, the first tile now offers the button, and the success Toast "Thumbnail updated" / "Using the picture from Family album, 1920 as the thumbnail." shows at the bottom. 3d: right-click on the chosen header thumb opens the menu titled "Event thumbnail" with one row "Use earliest picture". 3e: one picture, Badge, no button. 3f: no picture, the Event mark in the header, no Pictures section. 3g: 3a in dark mode. 3b (Wide): the same page centered at the 1180pt column; eight tiles in one row instead of seven; no secondary column.
+
+**Place page (S14-D3).** 2a: "St. Mary's Church", chain "Halifax, Nova Scotia, Canada", ref and members; "Details" with Names and Period; "Pictures" (meta "3", D-14a) with "Church photo, 1890" leading and badged; then "Part of", "Contains" and "Succession" as today. 2b: after choosing "Postcard, 1951", header, Badge and Toast as 3c. 2c: menu "Place thumbnail" / "Use earliest picture", hint "Right-click for thumbnail options". 2d: "Halifax" with one picture, Badge, no button, its Contains section below. 2e: no picture, Place mark, no section. 2f: 2a dark. 2g (Wide): centered 1180pt column, eight tiles a row, relationship sections share the column edge.
+
+**Events list (S14-D4)** and **Places list (S14-D5).** Frame 1: six rows; two show the lead picture in the 44pt thumb with the 3pt corner the Persons list uses, the rest the kind's mark, and one whose image fails to load shows the mark. Titles, secondary lines, Updated column, refs, row height and spoken labels are unchanged; dark mode is the board's theme toggle. Frame 2 (Wide): today's list, centered in the content column (D-14c).
 
 | Building block | Component | Home | Requirement |
 | --- | --- | --- | --- |
-| Gallery section | `PVSectionHeader` (title, count as meta) + `LazyVGrid` (adaptive 120pt columns, as today) + `GalleryTileView` | `ConclusionDetailPage.swift` `ConclusionDetailGallerySection` | EVP-1 – EVP-3, PLP-1 – PLP-3; below the rows, above a Place's relationship sections |
+| Gallery section | `PVSectionHeader` (title, bare count as meta, D-14a) + `LazyVGrid` (adaptive 120pt columns, as today) + `GalleryTileView` | `ConclusionDetailPage.swift` `ConclusionDetailGallerySection` | EVP-1 – EVP-3, PLP-1 – PLP-3; below the rows, above a Place's relationship sections |
 | Tile crop | `CachedThumbnail` | `GalleryTileView` | `pictureCrop`; fallback `content.thumbnail.mark` |
 | Badge / Use as | `PVBadge` accent + photo glyph, `PVButton` ghost small | gallery section | EVP-5, PLP-5; copy from `gallery.choose`, labels from the tile |
 | Earliest menu | `pvRightClickMenu` / `PVActionMenuItem` | `ConclusionDetailHeader` | EVP-6, PLP-6 |
 | Toast | `.vocabularyToastOverlay` (draws `PVToast`) | `ConclusionDetailPage` | EVP-7, PLP-7 |
 | Header thumb | `CachedThumbnail` 120pt | `ConclusionDetailHeader` | EVP-4, PLP-4 |
-| List thumb | `PVList` thumbnail slot, default 44pt | `ConclusionListPage` | EVL-1 – EVL-3, PLL-1 – PLL-3, EVL-W1, PLL-W1 |
+| List thumb | `PVList` thumbnail slot, default 44pt | `ConclusionListPage` | EVL-1 – EVL-3, PLL-1 – PLL-3; EVL-W1, PLL-W1: no layout change (D-14c) |
 | Wide | `PVPageColumns`, primary-only (S13-10) | `ConclusionDetailLoaded` | EVP-W1, PLP-W1: no code change; the grid fills the primary column (up to 1180pt, about one tile more per row than the 1038pt Regular column) |
 
 Sketch:
@@ -368,7 +373,7 @@ Makes the slice Check true for this PR. Each page at Regular and at Wide (pane 1
 1. New project. Compose a Place picture on a Citation (Property Picture). Open the Place: the Pictures section shows the crop below Names and Period and above any relationship section; a click opens the Citation; the header shows the picture. (PLP-1, PLP-3, PLP-4)
 2. Add a second Place picture. **Use as thumbnail** on it: the header and the Places list row show it, the Thumbnail Badge moves, the Toast reads "Thumbnail updated". Right-click the header thumb → **Use earliest picture** restores the first. (PLP-5 – PLP-7, PLL-1)
 3. Repeat 1–2 on an Event; open an Event with no picture: no Pictures section, the mark in the header. (EVP-2, PLP-2)
-4. Widen the window past 1600pt of pane: the page stays one centered column; the grid fills it. (EVP-W1, PLP-W1, EVL-W1, PLL-W1)
+4. Widen the window past 1600pt of pane: each page stays one centered column and the grid fills it; each list stays as today. (EVP-W1, PLP-W1, EVL-W1, PLL-W1)
 5. Open a Person with likenesses: Gallery shows "Likenesses", "Portrait" and "Use as portrait"; choosing shows "Portrait updated".
 6. VoiceOver (or Accessibility Inspector) on Properties: the `event_picture` and `place_picture` rows read differently.
 
@@ -376,13 +381,11 @@ Makes the slice Check true for this PR. Each page at Regular and at Wide (pane 1
 
 | Risk | Mitigation |
 | --- | --- |
-| S13-10 lands differently from its plan | §4 rows marked *S13-10* are redone on its Landed note before STEP-1 |
-| The board changes a requirement (a Pictures empty state, a list-thumb size) | D-14: the plan is refreshed from the agreed board before it is `Planned` |
+| A board detail §6 does not describe | §6 macOS is the spec; the boards are linked for reference only |
 | The pbxproj rename | Four lines named in §4; the build check in STEP-1 catches a missed one |
 
 **Stop and report if:**
 
-- S13-10 has not landed, or its `PersonDetailSections`, full init or context differ from §4's *S13-10* rows.
 - `CatalogConclusionDetail.pictures`, `CatalogPicture.leads` or a header's `pictureImageRelPath` is not as S14-01 left it.
 - `ConclusionDetailBody` already has a gallery field from another PR.
 - A Step cannot pass without renaming `SetPreferredLikeness` or the preferred column.
@@ -391,7 +394,7 @@ Makes the slice Check true for this PR. Each page at Regular and at Wide (pane 1
 
 ## 12. Open questions
 
-None. (The plan stays `Blocked` until the board is agreed and S13-10 has landed; then §4 and §6 macOS are refreshed and the status becomes `Planned`.)
+None.
 
 ## 13. PR
 

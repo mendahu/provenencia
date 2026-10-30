@@ -4,7 +4,7 @@
 **Spike:** Provenencia Spike 14 (odds and ends), batch 1 — Event and Place pictures
 **View:** the Place page (`PlaceDetailView`, on the shared Conclusion page)
 **Implements later as:** PR **S14-02** (Pictures in the app), with [S14-D2](S14-D2-event-page-pictures.md) (Event page), [S14-D4](S14-D4-events-list-thumbnail.md) (Events list), [S14-D5](S14-D5-places-list-thumbnail.md) (Places list)
-**Board:** — (not yet drawn; the user records the link and answers here, see § 7)
+**Board:** agreed 2026-10-30 — [*Place Detail*](https://claude.ai/design/p/f7e0a599-285f-4099-ab92-532c68fd939d?via=share), file *Place Detail.dc.html*, turn 2 "S14-D3 · Place page pictures", frames 2a – 2g. Answers: the board's "3 pictures" meta is not built; the Pictures meta is the bare count, as on the Event and Person pages (user, 2026-10-30).
 **Depends on:** S13-10 (Spike 13, Planned): builds Page columns in the app and moves the Place page onto it, primary-only. S14-01 (landed [#615](https://github.com/mendahu/provenencia/pull/615)): a Place's gallery and header lead come from the engine. The agreed S13-D1 board (*Person Detail* project): the Person page frame and its Gallery frames 4i and 4j, whose tiles, captions, Badge and button this board reuses. The agreed S14-D1 board (Page columns, the Wide width class).
 **Related:** [`../event-place-pictures.md`](../event-place-pictures.md) § Thumbnail parity, § What changes; [`../deployment-plan.md`](../deployment-plan.md) working rules "Event and Place each get their own picture Property, labelled Picture", "An Event or Place chooses its thumbnail as a Person chooses its portrait", "The gallery is one slot on the detail body", "A depiction is worded as a picture outside the Person's own copy"; [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide); plan [`../prs/S14-02-pictures-in-the-app.md`](../prs/S14-02-pictures-in-the-app.md).
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
@@ -42,6 +42,8 @@ Work **in place** on this board. Do not fork a parallel copy of the surface.
 | Section title | SectionHeader |
 | Transient after-save notice | Toast |
 | Native menu of actions | ContextMenu |
+| Record or detail page at Regular and Wide | Page columns |
+| Choose one of a few options inline | Segmented control (ChipGroup segmented) |
 
 Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 

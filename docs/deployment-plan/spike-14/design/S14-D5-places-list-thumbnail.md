@@ -4,7 +4,7 @@
 **Spike:** Provenencia Spike 14 (odds and ends), batch 1 — Event and Place pictures
 **View:** the Places list (`PlacesListView`, on the shared Conclusion list page)
 **Implements later as:** PR **S14-02** (Pictures in the app), with [S14-D2](S14-D2-event-page-pictures.md) (Event page), [S14-D3](S14-D3-place-page-pictures.md) (Place page), [S14-D4](S14-D4-events-list-thumbnail.md) (Events list)
-**Board:** — (not yet drawn; the user records the link and answers here, see § 7)
+**Board:** agreed 2026-10-30 — [*Places List*](https://claude.ai/design/p/e8910bb1-f564-4d7a-b829-69de0e60af5a?via=share), file *Places List.dc.html*, "S14-D5", frames 1 – 2. Answers: dark mode is the board's theme toggle; at Wide the list keeps today's centered content column, which is what "nothing moves" means (PLL-W1 corrected; frame 2 draws it full width).
 **Depends on:** S14-01 (landed [#615](https://github.com/mendahu/provenencia/pull/615)): each Place header carries the path of the picture it leads with. The Persons list as it ships today, whose row thumb already shows a Person's portrait. The agreed S14-D1 board (the Wide width class).
 **Related:** [`../event-place-pictures.md`](../event-place-pictures.md) § Thumbnail parity; [`../deployment-plan.md`](../deployment-plan.md) working rules "Event and Place each get their own picture Property, labelled Picture", "An Event or Place chooses its thumbnail as a Person chooses its portrait", "The gallery is one slot on the detail body", "A depiction is worded as a picture outside the Person's own copy"; [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide); plan [`../prs/S14-02-pictures-in-the-app.md`](../prs/S14-02-pictures-in-the-app.md).
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
@@ -42,6 +42,8 @@ Work **in place** on this board. Do not fork a parallel copy of the surface.
 | Section title | SectionHeader |
 | Transient after-save notice | Toast |
 | Native menu of actions | ContextMenu |
+| Record or detail page at Regular and Wide | Page columns |
+| Choose one of a few options inline | Segmented control (ChipGroup segmented) |
 
 Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 
@@ -91,7 +93,7 @@ A researcher scanning the Places list sees, on each Place that has a picture, th
 | The lead picture | The earliest picture saved to the Place's Property **Picture** (`place_picture`), unless the researcher chose another on the Place page (S14-D3). The row shows that lead. |
 | Most places have none | Rows with a picture sit among rows with the mark. |
 | The row thumb slot exists | Every Conclusion list draws a 44pt thumbnail at the row's leading edge through the List component; the Persons list fills it with the portrait, the Places list with the Place mark. |
-| Two widths | Regular is a pane below 1600pt, Wide 1600pt and up. The list fills the width at both. |
+| Two widths | Regular is a pane below 1600pt, Wide 1600pt and up. The list sits in the content column (up to 1180pt), centered, at both. |
 
 ### 2.1 What this board is not
 
@@ -117,13 +119,13 @@ A researcher scanning the Places list sees, on each Place that has a picture, th
 | PLL-1 | **Row thumb.** A Place with a picture shows its lead picture in the row thumb, at the size and corner the Persons list uses for a portrait (the List's 44pt thumbnail slot). |
 | PLL-2 | **No picture.** A Place with none shows the Place mark, as today. An image that cannot load shows the mark too. |
 | PLL-3 | **Accessibility and dark mode.** The row's spoken label is unchanged, as on the Persons list when a portrait shows. Draw frame 1 in dark mode. |
-| PLL-W1 | **Wide.** The list fills the width as today; the row thumb keeps its size (rule 3). |
+| PLL-W1 | **Wide.** The list stays as today: its content column up to 1180pt, centered in the pane (`ConclusionListPage.page`); the row thumb keeps its size. (Corrected 2026-10-30: this line said the list fills the width, which is not today's layout.) |
 
 ### 4.1 Wide layout
 
 | View | Regular (pane below 1600) | Wide (pane 1600 and up) | What moves where |
 | --- | --- | --- | --- |
-| Places list | Full-width list, row thumb at the leading edge | The same list across the width | Nothing (the list fills, rule 3) |
+| Places list | The list in the content column, row thumb at the leading edge | The same column, centered | Nothing (today's layout) |
 
 ---
 

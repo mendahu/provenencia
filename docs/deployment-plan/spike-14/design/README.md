@@ -8,10 +8,10 @@ Briefs are written one at a time, just before the PR they gate. Design track and
 
 | Brief | View | Gates |
 | --- | --- | --- |
-| [S14-D2](S14-D2-event-page-pictures.md) | Event page: Pictures section, header thumb, choosing a thumbnail | S14-02 |
-| [S14-D3](S14-D3-place-page-pictures.md) | Place page: Pictures section, header thumb, choosing a thumbnail | S14-02 |
-| [S14-D4](S14-D4-events-list-thumbnail.md) | Events list: the lead picture in the row thumb | S14-02 |
-| [S14-D5](S14-D5-places-list-thumbnail.md) | Places list: the lead picture in the row thumb | S14-02 |
+| [S14-D2](S14-D2-event-page-pictures.md) | Event page: Pictures section, header thumb, choosing a thumbnail | S14-02 (board agreed 2026-10-30) |
+| [S14-D3](S14-D3-place-page-pictures.md) | Place page: Pictures section, header thumb, choosing a thumbnail | S14-02 (board agreed 2026-10-30) |
+| [S14-D4](S14-D4-events-list-thumbnail.md) | Events list: the lead picture in the row thumb | S14-02 (board agreed 2026-10-30) |
+| [S14-D5](S14-D5-places-list-thumbnail.md) | Places list: the lead picture in the row thumb | S14-02 (board agreed 2026-10-30) |
 
 ## Archived
 
