@@ -44,3 +44,11 @@ Copies: `pinnedHandle.cacheMatchesRebuild`, `bridgeWorld.cacheMatchesRebuild` + 
 
 ### M-4 · minor · `cascadeLines` keys copy on via strings with no parity guard
 **Answer:** Logged — §3 Out, home S13-08's plan (its unpromote preflight confirm keys on vias too). This PR removes a case and adds none.
+
+## Round 2
+
+Maintainability: no new blocker; every round-1 answer checked against the code and held (X-1, X-3, M-1, M-2 and its decline, M-3, M-4). Verdict: Fits with changes.
+
+### M-5 · major · `assertUpkeepEqualsRebuild` keeps a copy of the new helper
+Its values and outcomes blocks do the job of `autoreconcilertest.AssertCacheMatchesRebuild`; `autoreconciler_test` is an external package, so no cycle.
+**Answer:** Fixed — D-7 and Codebase fit: it calls the helper and keeps only its search-documents block; `rebuiltSnapshot` and `outcomesSnapshot` stay (line 373 and others read them). STEP-4 does it.
