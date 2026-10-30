@@ -1,6 +1,6 @@
 # Review — S13-25 The pin table goes
 
-**Verdict:** (pending maintainability) — Ready with changes
+**Verdict:** Fits with changes — Ready with changes (round 1)
 **Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
@@ -31,3 +31,16 @@
 
 ### X-5 · minor · Swift and docs edits
 **Answer:** Fixed — D-8 says no new Swift test (the existing `alsoAffects` test covers the default branch); D-9 gives one rule for every doc: delete the DDL and paragraphs for dropped tables and columns, leave one "dropped by S13-25" sentence; `seeded-vocabulary.md` §5.5 becomes that sentence.
+
+### M-1 · major · `cacheMatchesRebuild` is the fourth copy of "cache upkeep equals a rebuild"
+Copies: `pinnedHandle.cacheMatchesRebuild`, `bridgeWorld.cacheMatchesRebuild` + `cacheDump`, `assertCacheMatchesRebuild` + `cacheLines`, `fixture.assertUpkeepEqualsRebuild`.
+**Answer:** Fixed — D-7 and Codebase fit add `autoreconcilertest.AssertCacheMatchesRebuild` (new package beside `autoreconciler`, the `promotetest` shape); T-2 and the five `promote` call sites use it; `bridgeWorld.cacheMatchesRebuild`, `cacheDump`, `assertCacheMatchesRebuild` and `cacheLines` are deleted. `assertUpkeepEqualsRebuild` stays: it also compares search documents.
+
+### M-2 · major · The sweep is name-based and misses prose the PR makes false
+**Answer:** Fixed — STEP-6 adds `add-audit-scope` lines 28 and 54, `catalog-deletes.md` line 46, conclusion §3 item 2; D-10 adds the `batch_test.go` line-305 comment; the DoD gains a prose `rg -w 'pins?|pinned|exhibit'` line. Declined for `docs/deployment-plan/spike-14/app-health-audit.md` L-2: it is a dated audit record, and its finding stays true for `deleteimpact.release_incomplete`.
+
+### M-3 · minor · Near-identical `newFixture` vocabulary setups
+**Answer:** Logged — §3 Out, not planned; it touches about 30 test files, and this PR shrinks the copies.
+
+### M-4 · minor · `cascadeLines` keys copy on via strings with no parity guard
+**Answer:** Logged — §3 Out, home S13-08's plan (its unpromote preflight confirm keys on vias too). This PR removes a case and adds none.
