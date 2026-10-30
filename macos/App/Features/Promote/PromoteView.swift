@@ -327,7 +327,7 @@ private struct PromoteAlignmentRow: View {
                     targetSelect(width: width)
                 }
             } freed: {
-                // Empty on a working row. S13-30 puts the claim's status control here.
+                // Empty on a working row; an Already promoted row holds its caption here.
                 Color.clear.frame(height: 1)
             } badges: {
                 HStack(spacing: PVSpacing.space2) {

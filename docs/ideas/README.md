@@ -39,6 +39,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`share-packages.md`](share-packages.md) — also holds the crafted-project hardening parked when Spike 12 closed
 - [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md)
 - [`identity-claim-review.md`](identity-claim-review.md)
+- [`provisional-identity-claims.md`](provisional-identity-claims.md) — a status per Promote row, Accepted or Provisional, with the provisional row coming back preselected; the schema holds it, the UI does not (S13-30, descoped 2026-10-30)
 - [`organizations.md`](organizations.md) — Organization as a Subject type (congregations, employers, schools, regiments, lodges) with part-of and succession like places; descoped from S11-48
 - [`binding-order-editing.md`](binding-order-editing.md) — a per-type ordered list of properties on the Properties page, calling `ReorderSubjectTypeProperties` (engine side shipped in S11-32)
 - [`place-gazetteer-service.md`](place-gazetteer-service.md)
