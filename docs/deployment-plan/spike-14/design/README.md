@@ -8,7 +8,7 @@ Briefs are written one at a time, just before the PR they gate. Design track and
 
 | Brief | View | Gates |
 | --- | --- | --- |
-None.
+| [S14-D2](S14-D2-event-place-pictures.md) | Event and Place pages: Pictures section, header thumb, choosing a thumbnail; Events and Places list-row thumbs | S14-02 |
 
 ## Archived
 
