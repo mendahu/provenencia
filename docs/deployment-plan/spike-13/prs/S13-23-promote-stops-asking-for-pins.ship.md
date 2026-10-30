@@ -81,4 +81,4 @@ Not run: round 1 had no Fix-now blocker or major. Fix commits read by the orches
 - UX-2 **Resolved** — both duplicate warnings read "has also been selected to be promoted…" per the user; plan §6 rows and Landed note updated; `promoteDuplicateWarningsSayWhatIsSelected` red first, then green.
 
 ## Result
-Gate PASS (`b3e966de`; `origin/main` unchanged at `b6185fe1`) · CI pending · open: none · follow-ups: none (nits logged) · to user: UX-2, answered · CON miss: none
+Gate PASS (`b3e966de`; `origin/main` unchanged at `b6185fe1`) · CI green (test, localizable) · open: none · follow-ups: none (nits logged) · to user: UX-2, answered · CON miss: none
