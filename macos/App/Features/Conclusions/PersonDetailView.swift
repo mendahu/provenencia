@@ -23,7 +23,7 @@ struct PersonDetailView: View {
             pageIdentifier: "persons.detail",
             errorIdentifier: "persons.detail.error",
             make: { PersonDetailContent(detail: $0, orders: session.nameFormat) },
-            summary: { PersonDetailVitals(vitals: $0.vitals) },
+            summary: { PersonDetailLifeLines(lines: $0.lifeLines) },
             portrait: portrait
         )
         .vocabularyToastOverlay($portrait.toast, identifier: "persons.detail.toast")
@@ -31,17 +31,17 @@ struct PersonDetailView: View {
 }
 
 /// The two life lines under a Person's name.
-private struct PersonDetailVitals: View {
-    let vitals: [PersonDetailContent.Vital]
+private struct PersonDetailLifeLines: View {
+    let lines: [PersonDetailContent.LifeLine]
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space1) {
-            ForEach(vitals, id: \.abbreviation) { vital in
+            ForEach(lines, id: \.abbreviation) { line in
                 ConclusionDatePlaceLine(
-                    leading: vital.abbreviation,
-                    date: vital.date,
-                    place: vital.place,
-                    accessibilityLabel: vital.accessibilityLabel
+                    leading: line.abbreviation,
+                    date: line.date,
+                    place: line.place,
+                    accessibilityLabel: line.accessibilityLabel
                 )
             }
         }
