@@ -78,7 +78,7 @@ struct PropertiesOriginCell: View {
             return L10n.string(L10n.Properties.originSeededShort)
         }
         if CatalogOrigin.isPlugin(origin) {
-            return L10n.Origin.pluginPill(pluginID: CatalogOrigin.pluginID(from: origin))
+            return OriginPill.pluginLabel(for: origin)
         }
         return origin
     }
