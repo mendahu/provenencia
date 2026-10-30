@@ -1,7 +1,7 @@
 # Ship log — S13-06 Derived rows carry their records
 
 **Plan:** [`S13-06-derived-rows-carry-their-records.md`](S13-06-derived-rows-carry-their-records.md) · **Branch:** `s13-06-derived-rows-carry-their-records` · **PR:** #640
-**State:** ready (local) — push blocked, see Result
+**State:** ready
 
 Base: `main` @ `588e4a82` (S13-24 has landed since the plan's `705cd98`; the plan's §11 says whichever lands second rebases).
 
@@ -87,4 +87,4 @@ Reviewers: CON (CON-1), MNT (MNT-1, MNT-2), UX (UX-1). Not sent: SEC+PRF (PRF-1 
 CON-1 **Resolved** (`TestPersonLifeOwners/denied-only date`, `TestPersonDerivedRows/denied-only date`). MNT-1 **Resolved** (`PlaceTitleParts(toponym:entity:locale:orders:)`, both callers moved). MNT-2 **Resolved** (`eventPlaceGraph`; `composeEvents` keeps its own gather to save a query round — reviewer agrees). UX-1 **Resolved** (`derived` names any group that is not the shown owner's; `anOwnerThatIsNotTheShownOneIsNamed`). No new blockers from any reviewer. No Fix plan 2.
 
 ## Result
-Gate PASS (`7e4a09ca`, after one rerun; `SourceGraphFormModelTests` / `SourcesModelTests` flaked on 2 of 4 runs, outside this PR) · `main` unmoved since `588e4a82`, no merge · CI not run yet: `github.com` does not resolve from this Mac's git, so origin and #640 sit at `6597238e` · open: none · follow-ups: PRF-1 + PRF-2 (user: accept the extra SQL for now, adjudicate once more of the page is built), MNT `placesOfEvents` ID gather shared by `composeEvents`, the Source-model test flake · Later PR: UX-3 → S13-11 · to user: answered (PRF-1, UX-1, UX-2, UX-3) · CON miss: none
+Gate PASS (`7e4a09ca`, after one rerun; `SourceGraphFormModelTests` / `SourcesModelTests` flaked on 2 of 4 runs, outside this PR) · `main` unmoved since `588e4a82`, no merge · CI green (`test` 2m36s, `localizable`; push worked on retry after the round-2 review) · open: none · follow-ups: PRF-1 + PRF-2 (user: accept the extra SQL for now, adjudicate once more of the page is built), MNT `placesOfEvents` ID gather shared by `composeEvents`, the Source-model test flake · Later PR: UX-3 → S13-11 · to user: answered (PRF-1, UX-1, UX-2, UX-3) · CON miss: none
