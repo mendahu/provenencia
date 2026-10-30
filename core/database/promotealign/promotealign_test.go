@@ -1226,8 +1226,8 @@ func TestProposeColdIndexBuildsNoUnshortlistedLife(t *testing.T) {
 }
 
 // A same-name, same-birth record whose sex conflicts still files strongly on
-// the links, and is marked contested for the conflict.
-func TestProposeMarksAConflictingRowContested(t *testing.T) {
+// the links.
+func TestProposeFilesAConflictingRowOnTheLinks(t *testing.T) {
 	f := newFixture(t)
 	sexed := func(src sources.Source, art artifacts.Artifact, sex string) (subjects.Subject, subjects.Subject) {
 		p := f.person(src, art, "Ann Ames")

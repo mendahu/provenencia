@@ -2233,7 +2233,7 @@ func TestSettlingMovesAPairAndSaysWhy(t *testing.T) {
 	})
 }
 
-func TestContestedRow(t *testing.T) {
+func TestAConflictCountsAgainstAPlacedPair(t *testing.T) {
 	cfg := matchregistry.Default().AlignConfig()
 	et, birth := termProp("event_type", "birth")
 	date := vocabkey.PropertyKey(vocabkey.PropertyDate)
