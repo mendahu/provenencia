@@ -322,8 +322,6 @@ func route(method int32, in []byte) ([]byte, error) {
 		return handlers.DeleteEvidenceGraph(in)
 	case MethodGetEvidenceGraphUnlinkImpact:
 		return handlers.GetEvidenceGraphUnlinkImpact(in)
-	case MethodGetPromoteClaimEvidence:
-		return handlers.GetPromoteClaimEvidence(in)
 	case MethodReorderSubjectTypeProperties:
 		return handlers.ReorderSubjectTypeProperties(in)
 	case MethodListSubjectMemberships:

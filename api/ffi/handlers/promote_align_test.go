@@ -141,6 +141,33 @@ func TestProposeSendsContested(t *testing.T) {
 	runRPC(t, ProposePromoteGraphAlignment, tests)
 }
 
+// foundRecordFixture is a handle and, on a Source of its own, a person the shortlist does not reach from it.
+type foundRecordFixture struct {
+	dir, userID, typeID string
+	handle              string
+	members, claims     []string // Subject ids and their accepted claims' ids
+	sourceID, incoming  string
+	graphID             string // the Evidence graph of sourceID
+}
+
+// newFoundRecordFixture is a handle of one Mary Smith (male) and, on a Source
+// of its own, a Polly Jones (male): a first name and surname the shortlist does
+// not reach from the handle, so only a fixed pair joins them.
+func newFoundRecordFixture(t *testing.T) foundRecordFixture {
+	t.Helper()
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	dir, userID, _, typeID := subjectFixture(t)
+	f := foundRecordFixture{dir: dir, userID: userID, typeID: typeID}
+	_, subject := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityPositive)
+	res := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: subject})
+	f.handle = res.Entity.GetId()
+	f.members = []string{subject}
+	f.claims = []string{res.Claim.GetId()}
+	f.sourceID, f.incoming = namedPersonOnNewSource(t, dir, userID, typeID, "Polly Jones", "male", observations.PolarityPositive)
+	f.graphID = soleGraphID(t, dir, f.sourceID)
+	return f
+}
+
 // A fixed pair on a record the shortlist does not reach: unfixed the row does
 // not offer it; fixed the row holds it, decided and contested on a conflict.
 func TestProposeHoldsAFoundRecord(t *testing.T) {
