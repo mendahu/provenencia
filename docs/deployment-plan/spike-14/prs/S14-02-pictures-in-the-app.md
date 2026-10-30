@@ -1,11 +1,11 @@
 # S14-02 — Pictures in the app
 
-**Status:** Blocked — on board S14-D2 and on S13-10. Refreshed 2026-10-30 after S13-23 landed ([#633](https://github.com/mendahu/provenencia/pull/633)): the Promote wording, the relationship `kind` wire field and their steps left this PR. The PR waits on a board because it changes how the Event and Place pages and lists look (user, 2026-10-30), and on S13-10 because it is written against the page S13-10 leaves (Page columns, `PersonDetailSections`).
+**Status:** Blocked — on boards S14-D2 – S14-D5 and on S13-10. Refreshed 2026-10-30 after S13-23 landed ([#633](https://github.com/mendahu/provenencia/pull/633)): the Promote wording, the relationship `kind` wire field and their steps left this PR. The PR waits on a board because it changes how the Event and Place pages and the Events and Places lists look, one board per view (user, 2026-10-30), and on S13-10 because it is written against the page S13-10 leaves (Page columns, `PersonDetailSections`).
 **Spike / slice:** Spike 14 · Slice 1 — Event and Place pictures
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S14-D2](../design/S14-D2-event-place-pictures.md), board not yet agreed
-**Board:** — (when agreed: the Claude Design link and frame numbers go here, and **Design → macOS** describes each frame in words, as S13-10 does for S13-D1)
-**Depends on:** S14-01 (landed [#615](https://github.com/mendahu/provenencia/pull/615)), S13-23 (landed [#633](https://github.com/mendahu/provenencia/pull/633)), S13-10 (Spike 13, Planned), S14-D2
+**Brief:** [S14-D2](../design/S14-D2-event-page-pictures.md) (Event page), [S14-D3](../design/S14-D3-place-page-pictures.md) (Place page), [S14-D4](../design/S14-D4-events-list-thumbnail.md) (Events list), [S14-D5](../design/S14-D5-places-list-thumbnail.md) (Places list); no board agreed yet
+**Board:** — (when agreed: each board's Claude Design link and frame numbers go here, and **Design → macOS** describes each frame in words, as S13-10 does for S13-D1)
+**Depends on:** S14-01 (landed [#615](https://github.com/mendahu/provenencia/pull/615)), S13-23 (landed [#633](https://github.com/mendahu/provenencia/pull/633)), S13-10 (Spike 13, Planned), S14-D2, S14-D3, S14-D4, S14-D5
 **Blocks:** S13-14 (Spike 13's Gallery section reads the `gallery` slot)
 **Branch:** `s14-02-pictures-in-the-app`
 **Version bump:** none — Spike 11–14 PRs leave `VERSION` at 0.2.0 until a release is cut, as S14-01 did ([`docs/versioning.md`](../../../versioning.md))
@@ -38,16 +38,16 @@ Event and Place pages show a Pictures section, lead their headers with the pictu
 
 ## 2. User stories
 
-**US-1.** As a researcher, when an Event or Place has pictures, I see a Pictures section on its page with crops that open their Citations, so I can browse them as I browse likenesses on a Person. (S14-D2 EPP-1 – EPP-3)
+**US-1.** As a researcher, when an Event or Place has pictures, I see a Pictures section on its page with crops that open their Citations, so I can browse them as I browse likenesses on a Person. (S14-D2 EVP-1 – EVP-3, S14-D3 PLP-1 – PLP-3)
 
 | AC | Given / when | Then |
 | --- | --- | --- |
 | AC-1.1 | Place detail whose `CatalogConclusionDetail.pictures` has one tile (Source title "Church photo") | `PlaceDetailContent.gallery.tiles` has one tile; `gallery.title` is `L10n.Conclusions.picturesSection` (key `conclusions.detail.pictures`, "Pictures"); tile `sourceTitle == "Church photo"`; tile `accessibilityLabel == "Picture from Church photo. Open citation"` |
 | AC-1.2 | Event detail with two pictures | Same title; tile ids are the two observation ids in wire order |
-| AC-1.3 | Event or Place detail with no pictures | `gallery.tiles` is empty; the default fill draws no gallery section (EPP-2) |
+| AC-1.3 | Event or Place detail with no pictures | `gallery.tiles` is empty; the default fill draws no gallery section (EVP-2, PLP-2) |
 | AC-1.4 | Person detail with likenesses | `gallery.title` is `L10n.Conclusions.likenessesSection`; tile `accessibilityLabel == L10n.Conclusions.likenessTileLabel(source)`; `gallery.choose == .personPortrait` |
 
-**US-2.** As a researcher, when an Event or Place has pictures, the page header and the list row lead with that picture, and I can choose another tile as the thumbnail or go back to the earliest. (EPP-4 – EPP-8)
+**US-2.** As a researcher, when an Event or Place has pictures, the page header and the list row lead with that picture, and I can choose another tile as the thumbnail or go back to the earliest. (EVP-4 – EVP-7, PLP-4 – PLP-7, EVL-1, PLL-1)
 
 | AC | Given / when | Then |
 | --- | --- | --- |
@@ -82,13 +82,13 @@ Event and Place pages show a Pictures section, lead their headers with the pictu
 | --- | --- |
 | `ConclusionDetailGallery` *(new)* + `ConclusionDetailPicture` *(new)* on `ConclusionDetailBody`; remove `likenesses` | STEP-1, AC-1.*, D-1, D-2 |
 | Rename `ConclusionDetailLikenessSection` → `ConclusionDetailGallerySection`, `LikenessTileView` → `GalleryTileView`, `CachedThumbnail.likenessCrop` → `pictureCrop`; ids per D-3 | STEP-1, AC-4.1, AC-4.2, D-3 |
-| `ConclusionDetailThumbnail.leading(…)` *(new)*; `offersEarliest` moves from the thumbnail to the gallery; Person, Event and Place contents fill `gallery` and their thumbnails (EPP-1, EPP-4) | STEP-1, AC-1.*, AC-2.1 – AC-2.4, AC-2.8, D-4, D-5 |
-| `ConclusionPortraitModel` → `ConclusionLeadModel`, built by the page from `userID`; copy read at call time from `gallery.choose`; Event and Place views pass `userID`; host passes it (EPP-5 – EPP-7) | STEP-1, AC-2.2, AC-2.5, AC-2.6, D-6, D-7 |
-| `EventsList` / `PlacesList` `thumbnailRelPath`; delete the protocol default (EPP-8) | STEP-2, AC-2.7, D-8 |
+| `ConclusionDetailThumbnail.leading(…)` *(new)*; `offersEarliest` moves from the thumbnail to the gallery; Person, Event and Place contents fill `gallery` and their thumbnails (EVP-1, EVP-4, PLP-1, PLP-4) | STEP-1, AC-1.*, AC-2.1 – AC-2.4, AC-2.8, D-4, D-5 |
+| `ConclusionPortraitModel` → `ConclusionLeadModel`, built by the page from `userID`; copy read at call time from `gallery.choose`; Event and Place views pass `userID`; host passes it (EVP-5 – EVP-7, PLP-5 – PLP-7) | STEP-1, AC-2.2, AC-2.5, AC-2.6, D-6, D-7 |
+| `EventsList` / `PlacesList` `thumbnailRelPath`; delete the protocol default (EVL-1, EVL-2, PLL-1, PLL-2) | STEP-2, AC-2.7, D-8 |
 | Delete `L10n.Promote.ValueFamily`; composer `depictionSubject` | STEP-3, AC-4.1, AC-4.3, D-9, D-10 |
 | Properties row VoiceOver label (S14-01 UX-1) | STEP-4, AC-3.*, D-11 |
-| L10n: Event/Place picture and thumbnail functions and resources (§ Strings), Properties row label (EPP-9) | STEP-1, STEP-4, D-12 |
-| The S14-D2 board's answers, at Regular and Wide | STEP-1, STEP-2, §6 macOS, §10 |
+| L10n: Event/Place picture and thumbnail functions and resources (§ Strings), Properties row label (EVP-8, PLP-8) | STEP-1, STEP-4, D-12 |
+| The four boards' answers (S14-D2 – S14-D5), at Regular and Wide | STEP-1, STEP-2, §6 macOS, §10 |
 | Swift tests | STEP-5, T-* |
 | Docs this PR makes false (D-13), map, `completed.md`, brief archive | STEP-6 |
 
@@ -105,7 +105,7 @@ Event and Place pages show a Pictures section, lead their headers with the pictu
 | Moving `vocabularyToastOverlay` into the kit under a neutral name | logged (review M-11); not planned |
 | Person Timeline event picture | Spike 13 R-26 |
 | Pictures as matching weight for Event or Place | not planned ([event-place-pictures.md](../event-place-pictures.md) Stays later) |
-| A new kit primitive under `DesignSystem/` | not planned (S14-D2 inventory) |
+| A new kit primitive under `DesignSystem/` | not planned (the S14-D2 – S14-D5 inventories) |
 
 ## 4. Current state
 
@@ -154,7 +154,7 @@ Rows marked *S13-10* are the code its plan leaves (S13-10 plan §6 and D-3 – D
 | D-11 | `PropertiesModel.rowAccessibilityLabel(for property: CatalogProperty) -> String` *(new)* beside `deleteAccessibilityLabel`. It reads `snapshot.boundTypes(for:)`, speaks the origin through `PropertiesOriginCell.spokenOrigin(_:) -> String` *(new static; `user` → `originUserShort`, `provenencia` → `originSeededShort`, else the raw string, as the cell's `OriginPill` branch shows it)* and formats with `L10n.Properties.rowAccessibility(label:key:valueType:origin:bound:)` *(new, "%1$@, %2$@, %3$@, %4$@, %5$@")*, where `bound` is today's `rowBoundAnnouncement(count:)`; when bound types exist it appends `", "` + their labels joined with `", "`. `PropertiesView` calls it; its private function goes | Testable through `makeModel` in `PropertiesModelTests`; origin spoken as the cell shows it (review M-10); no stray comma (X-10) | A raw origin string in a new key; a six-slot format with an empty last slot |
 | D-12 | New L10n per § Strings, each a `static let` resource or a `static func … -> String` through `L10n.format`, as `add-localized-string` step 4 says. Person functions are reused as they are | `macos-l10n.mdc` | Reusing "Use as portrait" on an Event |
 | D-13 | **Against S13-10's page.** STEP-1 starts from the page S13-10 leaves. `PersonDetailSections`' `.gallery` case becomes `ConclusionDetailGallerySection(projectDir: context.projectDir, pageIdentifier: context.pageIdentifier, gallery: content.gallery, fallbackMark: content.thumbnail.mark, lead: context.lead)` when `!content.gallery.tiles.isEmpty`, else its `PVEmptyState` reading `galleryEmptyTitle` / `galleryEmptyMessage` as S13-10 wrote it. No empty-state field on the slot | S14-D2 needs Page columns, which S13-10 builds; one design, not two (review M-5, M-8) | Branching on landing order |
-| D-14 | **The board binds the chrome.** Spacing, badge and button placement and the Wide arrangement follow the agreed S14-D2 frames, written into §6 macOS when the board is agreed | Repo rule: each view change has a board (user, 2026-10-30) | Building from the Person page alone |
+| D-14 | **The board binds the chrome.** Spacing, badge and button placement and the Wide arrangement follow the agreed S14-D2 – S14-D5 frames, written into §6 macOS when the board is agreed | Repo rule: each view change has a board (user, 2026-10-30) | Building from the Person page alone |
 
 **Rules this plan bends.** None.
 
@@ -212,18 +212,18 @@ None — S14-01 put pictures and header paths on the wire.
 
 ### macOS
 
-Draft from the S14-D2 brief; when the board is agreed, each frame is described here in words and the rows take its answers (D-14).
+Draft from the S14-D2 – S14-D5 briefs; when the boards are agreed, each frame is described here in words and the rows take its answers (D-14).
 
 | Building block | Component | Home | Requirement |
 | --- | --- | --- | --- |
-| Gallery section | `PVSectionHeader` (title, count as meta) + `LazyVGrid` (adaptive 120pt columns, as today) + `GalleryTileView` | `ConclusionDetailPage.swift` `ConclusionDetailGallerySection` | EPP-1 – EPP-3; below the rows, above relationship sections |
+| Gallery section | `PVSectionHeader` (title, count as meta) + `LazyVGrid` (adaptive 120pt columns, as today) + `GalleryTileView` | `ConclusionDetailPage.swift` `ConclusionDetailGallerySection` | EVP-1 – EVP-3, PLP-1 – PLP-3; below the rows, above a Place's relationship sections |
 | Tile crop | `CachedThumbnail` | `GalleryTileView` | `pictureCrop`; fallback `content.thumbnail.mark` |
-| Badge / Use as | `PVBadge` accent + photo glyph, `PVButton` ghost small | gallery section | EPP-5; copy from `gallery.choose`, labels from the tile |
-| Earliest menu | `pvRightClickMenu` / `PVActionMenuItem` | `ConclusionDetailHeader` | EPP-6 |
-| Toast | `.vocabularyToastOverlay` (draws `PVToast`) | `ConclusionDetailPage` | EPP-7 |
-| Header thumb | `CachedThumbnail` 120pt | `ConclusionDetailHeader` | EPP-4 |
-| List thumb | `PVList` thumbnail slot, default 44pt | `ConclusionListPage` | EPP-8, EPP-W2 |
-| Wide | `PVPageColumns`, primary-only (S13-10) | `ConclusionDetailLoaded` | EPP-W1: no code change; the grid fills the primary column (up to 1180pt, about one tile more per row than the 1038pt Regular column) |
+| Badge / Use as | `PVBadge` accent + photo glyph, `PVButton` ghost small | gallery section | EVP-5, PLP-5; copy from `gallery.choose`, labels from the tile |
+| Earliest menu | `pvRightClickMenu` / `PVActionMenuItem` | `ConclusionDetailHeader` | EVP-6, PLP-6 |
+| Toast | `.vocabularyToastOverlay` (draws `PVToast`) | `ConclusionDetailPage` | EVP-7, PLP-7 |
+| Header thumb | `CachedThumbnail` 120pt | `ConclusionDetailHeader` | EVP-4, PLP-4 |
+| List thumb | `PVList` thumbnail slot, default 44pt | `ConclusionListPage` | EVL-1 – EVL-3, PLL-1 – PLL-3, EVL-W1, PLL-W1 |
+| Wide | `PVPageColumns`, primary-only (S13-10) | `ConclusionDetailLoaded` | EVP-W1, PLP-W1: no code change; the grid fills the primary column (up to 1180pt, about one tile more per row than the 1038pt Regular column) |
 
 Sketch:
 
@@ -321,7 +321,7 @@ Do: T-1 – T-8. Update Person tests for `gallery`, `isLead`, `ConclusionLeadMod
 Check: `scripts/check-pr.sh` prints `check-pr: PASS`.
 
 **STEP-6 — Docs**
-Files: `docs/macos-client-patterns.md`, `docs/deployment-plan/spike-14/event-place-pictures.md`, `macos/App/Platform/CachedThumbnail.swift` (comment), `macos/App/Features/Conclusions/ConclusionListRow.swift` (comment), `ConclusionLeadModel.swift` (doc comment), this plan, `../completed.md`, `../deployment-plan.md`, `../design/S14-D2-event-place-pictures.md` → `../design/archive/`, `../design/README.md`. Skill: —.
+Files: `docs/macos-client-patterns.md`, `docs/deployment-plan/spike-14/event-place-pictures.md`, `macos/App/Platform/CachedThumbnail.swift` (comment), `macos/App/Features/Conclusions/ConclusionListRow.swift` (comment), `ConclusionLeadModel.swift` (doc comment), this plan, `../completed.md`, `../deployment-plan.md`, the four briefs `../design/S14-D2-event-page-pictures.md`, `../design/S14-D3-place-page-pictures.md`, `../design/S14-D4-events-list-thumbnail.md`, `../design/S14-D5-places-list-thumbnail.md` → `../design/archive/`, `../design/README.md`. Skill: —.
 Do: D-13 docs: in `macos-client-patterns.md` line 102, say "gallery slot" and add one sentence: a Conclusion kind passes `userID`, and the page owns the lead model and its toast. In `event-place-pictures.md`, line 32 says `gallery` (one slot, three kinds); rewrite the line-33 "Promote." bullet (the evidence sheet is gone, S13-23); drop "the evidence sheet only lists them (S14-02)" at line 64. The two Swift comments drop "Promote evidence sheet" and say "the picture a kind leads with"; the model's doc comment says it chooses the lead of any kind. Then the DoD's docs lines.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-02-pictures-in-the-app.md` reports no errors; `rg -n 'evidence sheet' docs/deployment-plan/spike-14/event-place-pictures.md macos/App/Platform/CachedThumbnail.swift` finds nothing.
 
@@ -356,19 +356,19 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `P
 - [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together) — or none
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
-- [ ] Brief moved to design/archive/ and design/README.md updated (if gated)
+- [ ] Brief moved to design/archive/ and design/README.md updated (if gated): S14-D2, S14-D3, S14-D4, S14-D5
 - [ ] Domain doc updated if a rule in docs/*.md changed: macos-client-patterns.md line 102 and event-place-pictures.md lines 32, 33, 64 (STEP-6)
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
 
 ## 10. Manual check
 
-Makes the slice Check true for this PR. Each page at Regular and at Wide (pane 1600pt or more), light and dark, against the S14-D2 frames.
+Makes the slice Check true for this PR. Each page at Regular and at Wide (pane 1600pt or more), light and dark, against the S14-D2 – S14-D5 frames.
 
-1. New project. Compose a Place picture on a Citation (Property Picture). Open the Place: the Pictures section shows the crop below Names and Period and above any relationship section; a click opens the Citation; the header shows the picture. (EPP-1, EPP-3, EPP-4)
-2. Add a second Place picture. **Use as thumbnail** on it: the header and the Places list row show it, the Thumbnail Badge moves, the Toast reads "Thumbnail updated". Right-click the header thumb → **Use earliest picture** restores the first. (EPP-5 – EPP-8)
-3. Repeat 1–2 on an Event; open an Event with no picture: no Pictures section, the mark in the header. (EPP-2)
-4. Widen the window past 1600pt of pane: the page stays one centered column; the grid fills it. (EPP-W1, EPP-W2)
+1. New project. Compose a Place picture on a Citation (Property Picture). Open the Place: the Pictures section shows the crop below Names and Period and above any relationship section; a click opens the Citation; the header shows the picture. (PLP-1, PLP-3, PLP-4)
+2. Add a second Place picture. **Use as thumbnail** on it: the header and the Places list row show it, the Thumbnail Badge moves, the Toast reads "Thumbnail updated". Right-click the header thumb → **Use earliest picture** restores the first. (PLP-5 – PLP-7, PLL-1)
+3. Repeat 1–2 on an Event; open an Event with no picture: no Pictures section, the mark in the header. (EVP-2, PLP-2)
+4. Widen the window past 1600pt of pane: the page stays one centered column; the grid fills it. (EVP-W1, PLP-W1, EVL-W1, PLL-W1)
 5. Open a Person with likenesses: Gallery shows "Likenesses", "Portrait" and "Use as portrait"; choosing shows "Portrait updated".
 6. VoiceOver (or Accessibility Inspector) on Properties: the `event_picture` and `place_picture` rows read differently.
 

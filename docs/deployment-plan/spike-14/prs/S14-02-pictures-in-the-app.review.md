@@ -8,6 +8,10 @@
 - **S14-02 now depends on S13-10** (M-5). The S14-D2 board puts the Event and Place pages on Page columns, which S13-10 builds, and the plan is written against S13-10's `PersonDetailSections`. The map row, its dependency graph, and Spike 13's S13-14 row (which now also waits on S14-02) are updated. Recommendation: accept; it removes a two-branch design.
 - **A confirmation round still runs.** Round 3 had blockers (M-1, M-2, X-2, X-3), all Fixed. The confirming round runs with the post-board refresh, which `plan-pr` already requires before `Planned`, so the plan is reviewed once against the real frames instead of twice.
 
+## Brief split (2026-10-30)
+
+- The user asked for one brief per view. S14-D2 (Event and Place pages and lists) became four: S14-D2 Event page (EVP-*), S14-D3 Place page (PLP-*), S14-D4 Events list (EVL-*), S14-D5 Places list (PLL-*). Round 3's findings that cite EPP-* apply to the matching EVP/PLP/EVL/PLL rows; the brief findings (X-2, X-13, X-14) are carried into each. The plan's requirement references, Brief, Status and DoD were updated. No design change.
+
 ## Writer's own calls
 
 - Copy with arguments is formatted once in the content through L10n functions; tiles carry ready Strings (M-1).
