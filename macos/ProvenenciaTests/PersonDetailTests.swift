@@ -373,7 +373,7 @@ struct PersonDetailTests {
         let page = PersonDetailContent(detail: detail(header: header, derivedRows: rows), locale: en)
         let birth = page.rows[1]
         #expect(birth.recordGroups.count == 1 && birth.recordGroups[0].owner == nil)
-        #expect(birth.records.count == 2 && birth.records.allSatisfy(\.counted))
+        #expect(birth.records.count == 2 && birth.records.allSatisfy { $0.counted })
         #expect(birth.whyTitle == "Why “\(birth.lead ?? "")”" && birth.lead != nil)
         // No death event: no Why.
         #expect(page.rows[3].records.isEmpty && page.rows[3].whyTitle == "")
@@ -407,7 +407,7 @@ struct PersonDetailTests {
         let birth = PersonDetailContent(detail: detail(header: header, derivedRows: rows), locale: en).rows[1]
         // The header's lead event (the second) is shown, so it comes first.
         #expect(birth.recordGroups.map(\.id) == ["ev2", "ev1"])
-        #expect(birth.recordGroups[0].records.allSatisfy(\.counted))
+        #expect(birth.recordGroups[0].records.allSatisfy { $0.counted })
         #expect(birth.recordGroups[1].records.allSatisfy { !$0.counted })
         #expect(birth.recordGroups[0].owner?.title == "Birth of Ada Lovelace")
         #expect(birth.recordGroups[0].owner?.ref == "EVT-9RW7P")
