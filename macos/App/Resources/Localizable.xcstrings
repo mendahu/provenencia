@@ -15632,18 +15632,6 @@
         }
       }
     },
-    "promote.leave.title": {
-      "comment": "Promote leave guard title; argument is the subject's name or ref",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Leave Promote without promoting %@?"
-          }
-        }
-      }
-    },
     "promote.leave.confirm": {
       "comment": "Promote leave guard: leave and drop the mapping",
       "extractionState": "manual",
@@ -17896,7 +17884,49 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Promoted %1$lld subjects and %2$lld connections"
+            "value": "Promoted %#@subjects@ and %#@connections@"
+          },
+          "substitutions": {
+            "subjects": {
+                "argNum": 1,
+                "formatSpecifier": "lld",
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%arg subject"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%arg subjects"
+                      }
+                    }
+                  }
+                }
+              },
+            "connections": {
+                "argNum": 2,
+                "formatSpecifier": "lld",
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%arg connection"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%arg connections"
+                      }
+                    }
+                  }
+                }
+              }
           }
         }
       }
@@ -17906,9 +17936,21 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld subjects are still on the graph, not promoted yet"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld subject is still on the graph, not promoted yet"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld subjects are still on the graph, not promoted yet"
+                }
+              }
+            }
           }
         }
       }
@@ -17944,7 +17986,29 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$lld rows · %2$lld already promoted"
+            "value": "%#@rows@ · %2$lld already promoted"
+          },
+          "substitutions": {
+            "rows": {
+                "argNum": 1,
+                "formatSpecifier": "lld",
+                "variations": {
+                  "plural": {
+                    "one": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%arg row"
+                      }
+                    },
+                    "other": {
+                      "stringUnit": {
+                        "state": "translated",
+                        "value": "%arg rows"
+                      }
+                    }
+                  }
+                }
+              }
           }
         }
       }
@@ -18064,7 +18128,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ is also promoted to %2$@"
+            "value": "%1$@ has also been selected to be promoted to %2$@"
           }
         }
       }
@@ -18076,7 +18140,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ is also promoted New and looks the same"
+            "value": "%@ has also been selected to be promoted as New and looks the same"
           }
         }
       }

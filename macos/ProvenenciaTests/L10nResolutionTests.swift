@@ -50,6 +50,20 @@ struct L10nResolutionTests {
         #expect(L10n.Promote.openedFrom(name: "Gracie") == "Opened from Gracie")
     }
 
+    @Test func promoteCountsUseSingularForms() {
+        #expect(L10n.Promote.promotedTitle(promoted: 1, connections: 0) == "Promoted 1 subject and 0 connections")
+        #expect(L10n.Promote.promotedTitle(promoted: 2, connections: 1) == "Promoted 2 subjects and 1 connection")
+        #expect(L10n.Promote.promotedBody(skipped: 1) == "1 subject is still on the graph, not promoted yet")
+        #expect(L10n.Promote.promotedBody(skipped: 3) == "3 subjects are still on the graph, not promoted yet")
+        #expect(L10n.Promote.rowSummary(rows: 1, promoted: 1) == "1 row · 1 already promoted")
+        #expect(L10n.Promote.rowSummary(rows: 4, promoted: 1) == "4 rows · 1 already promoted")
+    }
+
+    @Test func promoteDuplicateWarningsSayWhatIsSelected() {
+        #expect(L10n.Promote.duplicateTitle(name: "Gracie", ref: "PER-1") == "Gracie has also been selected to be promoted to PER-1")
+        #expect(L10n.Promote.duplicateNewTitle(name: "Gracie") == "Gracie has also been selected to be promoted as New and looks the same")
+    }
+
     @Test func formatWithExplicitLocaleUsesIt() {
         #expect(
             L10n.Dates.displayBetween(start: "1850", end: "1860", locale: Locale(identifier: "en_US"))
