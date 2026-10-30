@@ -63,7 +63,10 @@ struct PVPageColumnsTests {
                 proposal: ProposedViewSize(width: width, height: nil), widthClass: .wide, hasSecondary: true
             )
             #expect(widths.pane == widths.group)
-            #expect(widths.primary == PVSpacing.widthContentMax)
+            let alone = PVPageColumnsMetrics.columnWidths(
+                proposal: ProposedViewSize(width: width, height: nil), widthClass: .wide, hasSecondary: false
+            )
+            #expect(alone.pane == PVSpacing.widthContentMax && alone.primary == PVSpacing.widthContentMax)
         }
         let bounded = PVPageColumnsMetrics.columnWidths(
             proposal: ProposedViewSize(width: 2296, height: nil), widthClass: .wide, hasSecondary: true
