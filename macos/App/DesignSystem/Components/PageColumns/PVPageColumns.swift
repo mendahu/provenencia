@@ -8,9 +8,10 @@ enum PVPageColumnsMetrics {
     static let topAnchor = "pv.pageColumns.top"
     /// The scroll view's coordinate space, in which the top sentinel is measured.
     static let scrollSpace = "pv.pageColumns.scroll"
-    /// A pinned header compacts only when the content overflows its viewport
-    /// by at least this much: more than the full header is taller than the
-    /// compact one, so compacting cannot shrink the bar enough to undo itself.
+    /// A pinned header starts to compact only when the content overflows its
+    /// viewport by at least this much, measured under the full header. Compacting
+    /// hands the viewport back the height the header loses, so a smaller
+    /// overflow would be gone once compact and the header would flip back.
     static let compactMinOverflow: CGFloat = 120
     /// How far the content scrolls before a pinned header compacts.
     static let compactOffset: CGFloat = 8
@@ -43,9 +44,12 @@ enum PVPageColumnsMetrics {
 
     /// Whether a pinned header shows compact. Hysteresis: past
     /// `compactOffset` it compacts, back at the top it expands, and in
-    /// between it keeps its state. Content that barely overflows never compacts.
+    /// between it keeps its state. Content that barely overflows never starts
+    /// to compact; once compact, it stays so while any overflow is left, since
+    /// the overflow is then measured under the shorter header.
     static func isScrolled(offset: CGFloat, overflow: CGFloat, wasScrolled: Bool) -> Bool {
-        guard overflow >= compactMinOverflow else { return false }
+        if !wasScrolled && overflow < compactMinOverflow { return false }
+        if wasScrolled && overflow <= 0 { return false }
         if offset > compactOffset { return true }
         if offset <= 0 { return false }
         return wasScrolled

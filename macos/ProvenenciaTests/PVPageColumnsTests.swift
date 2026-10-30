@@ -93,8 +93,17 @@ struct PVPageColumnsTests {
         (0, 500, false, false), (8, 500, false, false), (9, 500, false, true),
         (4, 500, true, true), (0, 500, true, false), (-20, 500, true, false),
         (50, 119, false, false), (50, 120, false, true),
+        (50, 70, true, true), (50, 0, true, false), (50, 70, false, false), (0, 300, true, false),
     ] as [(CGFloat, CGFloat, Bool, Bool)])
     func scrolledFollowsTheBoard(offset: CGFloat, overflow: CGFloat, was: Bool, expected: Bool) {
         #expect(PVPageColumnsMetrics.isScrolled(offset: offset, overflow: overflow, wasScrolled: was) == expected)
+    }
+
+    @Test func compactingDoesNotUndoItself() {
+        for overflow in stride(from: CGFloat(120), to: 236, by: 4) {
+            let compact = PVPageColumnsMetrics.isScrolled(offset: 50, overflow: overflow, wasScrolled: false)
+            let after = PVPageColumnsMetrics.isScrolled(offset: 50, overflow: overflow - 116, wasScrolled: compact)
+            #expect(after == compact, "overflow \(overflow)")
+        }
     }
 }
