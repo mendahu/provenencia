@@ -1,6 +1,6 @@
 # S14-02 — Pictures in the app
 
-**Status:** Planned
+**Status:** Landed in #641 (2026-10-30)
 **Refreshed:** 2026-10-30 after S13-23 landed ([#633](https://github.com/mendahu/provenencia/pull/633)): the Promote wording, the relationship `kind` wire field and their steps left this PR. Again on 2026-10-30 after the four boards were agreed and S13-10 landed ([#634](https://github.com/mendahu/provenencia/pull/634)).
 **Spike / slice:** Spike 14 · Slice 1 — Event and Place pictures
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
@@ -15,6 +15,7 @@
 **Context:** [event-place-pictures.md § What already works](../event-place-pictures.md#what-already-works), [§ Thumbnail parity](../event-place-pictures.md#thumbnail-parity), [§ What changes](../event-place-pictures.md#what-changes); working rules: "The gallery is one slot on the detail body", "An Event or Place chooses its thumbnail as a Person chooses its portrait", "A depiction is worded as a picture outside the Person's own copy", "The gallery layer is named gallery, not likeness", "Batch 1 is cut by layer"; S14-01 ship follow-up UX-1 (Properties VoiceOver); Spike 13's [S13-10 plan](../../spike-13/prs/S13-10-header-and-sections.md) D-3, D-4, D-5, D-10, D-16
 **Planned:** 2026-10-30 against `main` @ `705cd98c` (S13-10 landed)
 **Review:** [`S14-02-pictures-in-the-app.review.md`](S14-02-pictures-in-the-app.review.md) — refresh rounds 3 – 4
+**Landed:** The page keeps `userID` only to build its `ConclusionLeadModel` (no stored property). `GalleryTileView` takes `fallbackMark` as an init argument, read from `gallery.fallbackMark`. `PropertiesModelTests` compares AC-3.1 against `rowBoundAnnouncement(count:)`, which reads "bound to 1 types". A test, `theLeadCopyIsReadAtCallTime`, covers `.eventThumbnail` copy on the lead model. The briefs' relative links gained one `../` when they moved to `design/archive/`. No board wording differed from the plan's Strings table.
 
 ### Implementer — read this first
 
