@@ -2,10 +2,13 @@ package conclusionheaders_test
 
 import (
 	"bytes"
+	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -628,3 +631,83 @@ func TestPersonLifeOwners(t *testing.T) {
 }
 
 func bytes16(b byte) []byte { return bytes.Repeat([]byte{b}, 16) }
+
+func TestPersonDerivedRows(t *testing.T) {
+	t.Run("graph queries do not grow with events and Places", func(t *testing.T) {
+		f := newFixture(t)
+		york := f.placeSubject("York", nil, nil, 0, 0)
+		small := f.lifePerson()
+		smallBirth := f.lifeEvent(small, "birth", "date", 1817, 2, york)
+		big := f.lifePerson()
+		var bigPlaces []subjects.Subject
+		for i := range 2 {
+			bigPlaces = append(bigPlaces, f.placeSubject(fmt.Sprintf("Town %d", i), nil, nil, int64(4+2*i), 0))
+		}
+		bigBirths := []subjects.Subject{
+			f.lifeEvent(big, "birth", "date", 1818, 10, bigPlaces...),
+			f.lifeEvent(big, "birth", "date", 1819, 12, bigPlaces...),
+		}
+		smallID, bigID := f.promoteSubject(small), f.promoteSubject(big)
+		f.promoteSubject(smallBirth)
+		for _, b := range bigBirths {
+			f.promoteSubject(b)
+		}
+		f.promoteSubject(york)
+		for _, p := range bigPlaces {
+			f.promoteSubject(p)
+		}
+		count := func(id []byte) (int, []conclusiondetails.DerivedRow) {
+			t.Helper()
+			g := f.c.Graph()
+			g.Drop()
+			_, err := g.Vocabulary()
+			must(t, err)
+			n := 0
+			g.SetQueryCounterForTest(func() { n++ })
+			defer g.SetQueryCounterForTest(nil)
+			rows, err := conclusiondetails.PersonDerivedRows(f.c, id)
+			must(t, err)
+			return n, rows
+		}
+		smallN, smallRows := count(smallID)
+		bigN, bigRows := count(bigID)
+		if len(smallRows) != 2 || len(bigRows) != 2 {
+			t.Fatalf("rows: small %d, big %d, want a birth date and a birth place each", len(smallRows), len(bigRows))
+		}
+		if len(bigRows[0].Owners) != 2 || len(bigRows[1].Owners) != 2 {
+			t.Fatalf("big owners: %d dates, %d places", len(bigRows[0].Owners), len(bigRows[1].Owners))
+		}
+		if smallN == 0 || smallN != bigN {
+			t.Fatalf("graph queries: %d for one event and Place, %d for two events and two Places", smallN, bigN)
+		}
+	})
+
+	t.Run("born and died at York", func(t *testing.T) {
+		f := newFixture(t)
+		york := f.placeSubject("York", nil, nil, 0, 0)
+		p := f.lifePerson()
+		birth := f.lifeEvent(p, "birth", "date", 1817, 2, york)
+		death := f.lifeEvent(p, "death", "date", 1890, 4, york)
+		id := f.promoteSubject(p)
+		f.promoteSubject(birth)
+		f.promoteSubject(death)
+		yorkID := f.promoteSubject(york)
+		rows, err := conclusiondetails.PersonDerivedRows(f.c, id)
+		must(t, err)
+		kinds := map[conclusiondetails.DerivedRowKind]conclusiondetails.DerivedRow{}
+		for _, r := range rows {
+			kinds[r.Kind] = r
+		}
+		bp, dp := kinds[conclusiondetails.DerivedRowBirthPlace], kinds[conclusiondetails.DerivedRowDeathPlace]
+		if len(bp.Owners) != 1 || len(dp.Owners) != 1 ||
+			!bytes.Equal(bp.Owners[0].Entity.ID, yorkID) || !bytes.Equal(dp.Owners[0].Entity.ID, yorkID) {
+			t.Fatalf("place rows %+v / %+v", bp, dp)
+		}
+		if !reflect.DeepEqual(bp.Owners[0].Field, dp.Owners[0].Field) || len(bp.Owners[0].Field.Outcomes) != 1 {
+			t.Fatalf("York fields differ: %+v / %+v", bp.Owners[0].Field, dp.Owners[0].Field)
+		}
+		if bp.Owners[0].Event != nil || kinds[conclusiondetails.DerivedRowBirthDate].Owners[0].Event == nil {
+			t.Fatal("only date owners carry an Event header")
+		}
+	})
+}

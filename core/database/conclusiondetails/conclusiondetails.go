@@ -12,9 +12,12 @@
 // the page's choice. Go returns structures; the app formats text.
 // Reconciliation Claims are never in these tables: when they ship, a
 // composer lays an accepted claim over the auto-reconciled value here.
+// A Person's life rows read other handles' fields through PersonDerivedRows,
+// composed by the same steps.
 package conclusiondetails
 
 import (
+	"bytes"
 	"database/sql"
 	"sort"
 
@@ -23,10 +26,12 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
+	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/gallery"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -125,9 +130,9 @@ type Detail struct {
 const (
 	// Property ids this handle's outcomes name. Labels, value types and the
 	// kind's binding order come from the graph vocabulary.
-	sqlPropertyIDs = `SELECT DISTINCT ao.property_id FROM auto_reconciler_outcomes ao WHERE ao.entity_id = ?`
+	sqlPropertyIDs = `SELECT DISTINCT ao.entity_id, ao.property_id FROM auto_reconciler_outcomes ao WHERE ao.entity_id IN (`
 
-	sqlOutcomes = `SELECT ao.property_id, ao.observation_id, o.ref, ao.reason, ao.value_rank, ao.denied_by,
+	sqlOutcomes = `SELECT ao.entity_id, ao.property_id, ao.observation_id, o.ref, ao.reason, ao.value_rank, ao.denied_by,
 			COALESCE(ao.vote_support, 0), COALESCE(ao.vote_total, 0),
 			o.value_text, o.value_integer, o.value_term_id, COALESCE(t.key, ''), COALESCE(t.label, ''), COALESCE(t.origin, ''),
 			o.value_date_id, o.value_name_id,
@@ -141,7 +146,7 @@ const (
 		JOIN sources src ON src.id = a.source_id
 		LEFT JOIN property_terms t ON t.id = o.value_term_id
 		` + autoreconciler.ProvenanceJoins + `
-		WHERE ao.entity_id = ?`
+		WHERE ao.entity_id IN (`
 )
 
 // ForEntity composes the detail of one unmerged handle.
@@ -161,13 +166,6 @@ func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
 		return Detail{}, err
 	}
 	d := Detail{Entity: entityOf(n), MemberCount: acceptedMembers(n)}
-	fields, byProp, err := loadProperties(c.Graph(), db, entityID, n.SubjectTypeID)
-	if err != nil {
-		return Detail{}, err
-	}
-	if err := attachValues(c.Graph(), n, byProp); err != nil {
-		return Detail{}, err
-	}
 	tiles, err := gallery.ForEntities(db, [][]byte{entityID})
 	if err != nil {
 		return Detail{}, err
@@ -176,30 +174,75 @@ func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
 	for _, l := range tiles[string(entityID)] {
 		leads[string(l.ObservationIDs[0])] = true
 	}
-	leadOutcomes, err := loadOutcomes(db, entityID, byProp, leads)
+	fields, leadOutcomes, err := fieldsOf(c.Graph(), db, []*graphcache.Node{n}, leads)
 	if err != nil {
 		return Detail{}, err
 	}
+	d.Fields = fields[string(entityID)]
 	for _, l := range tiles[string(entityID)] {
 		if o, ok := leadOutcomes[string(l.ObservationIDs[0])]; ok {
 			d.Pictures = append(d.Pictures, PictureTile{ImageFileID: l.ImageFileID, Record: o, Preferred: l.Preferred, Leads: l.Leads})
 		}
 	}
-	for _, f := range fields {
-		f.State = state(f.Values, f.cardinality)
-		sort.SliceStable(f.Outcomes, func(i, j int) bool {
-			ri, rj := f.Outcomes[i].ValueRank, f.Outcomes[j].ValueRank
-			if (ri == 0) != (rj == 0) {
-				return rj == 0
-			}
-			if ri != rj {
-				return ri < rj
-			}
-			return string(f.Outcomes[i].ObservationID) < string(f.Outcomes[j].ObservationID)
-		})
-		d.Fields = append(d.Fields, *f)
-	}
 	return d, nil
+}
+
+// fieldsOf composes the fields of several handles at once, keyed by entity
+// id: the one composition every page's fields come from. A nil or merged
+// node, or a repeated id, is skipped. It also returns the outcomes of the
+// Observations in leads (a gallery's earliest records), which belong to no
+// field.
+func fieldsOf(g *graphcache.Graph, q Querier, nodes []*graphcache.Node, leads map[string]bool) (map[string][]Field, map[string]Outcome, error) {
+	var use []*graphcache.Node
+	var ids [][]byte
+	seen := map[string]bool{}
+	for _, n := range nodes {
+		if n == nil || n.Merged || seen[string(n.ID)] {
+			continue
+		}
+		seen[string(n.ID)] = true
+		use = append(use, n)
+		ids = append(ids, n.ID)
+	}
+	out := map[string][]Field{}
+	if len(use) == 0 {
+		return out, map[string]Outcome{}, nil
+	}
+	ordered, byProp, err := loadProperties(g, q, use)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, n := range use {
+		if err := attachValues(g, n, byProp[string(n.ID)]); err != nil {
+			return nil, nil, err
+		}
+	}
+	leadOutcomes, err := loadOutcomes(q, ids, byProp, leads)
+	if err != nil {
+		return nil, nil, err
+	}
+	for id, fs := range ordered {
+		for _, f := range fs {
+			finish(f)
+			out[id] = append(out[id], *f)
+		}
+	}
+	return out, leadOutcomes, nil
+}
+
+// finish reads a field's state off its values and orders its outcomes.
+func finish(f *Field) {
+	f.State = state(f.Values, f.cardinality)
+	sort.SliceStable(f.Outcomes, func(i, j int) bool {
+		ri, rj := f.Outcomes[i].ValueRank, f.Outcomes[j].ValueRank
+		if (ri == 0) != (rj == 0) {
+			return rj == 0
+		}
+		if ri != rj {
+			return ri < rj
+		}
+		return string(f.Outcomes[i].ObservationID) < string(f.Outcomes[j].ObservationID)
+	})
 }
 
 func entityOf(n *graphcache.Node) canonicalentities.Entity {
@@ -247,45 +290,51 @@ func state(values []ReconciledValue, cardinality string) autoreconcile.State {
 	}
 }
 
-func loadProperties(g *graphcache.Graph, q Querier, entityID, subjectTypeID []byte) ([]*Field, map[string]*Field, error) {
+// loadProperties lists each node's fields in its kind's binding order, and
+// the same fields by entity id then property id.
+func loadProperties(g *graphcache.Graph, q Querier, nodes []*graphcache.Node) (map[string][]*Field, map[string]map[string]*Field, error) {
 	v, err := g.Vocabulary()
 	if err != nil {
 		return nil, nil, err
 	}
 	props := v.PropertiesByID()
-	order := v.TypeOrder(subjectTypeID)
-	rows, err := q.Query(sqlPropertyIDs, entityID)
-	if err != nil {
-		return nil, nil, err
+	ids := make([][]byte, 0, len(nodes))
+	typeOf := map[string][]byte{}
+	for _, n := range nodes {
+		ids = append(ids, n.ID)
+		typeOf[string(n.ID)] = n.SubjectTypeID
 	}
-	defer rows.Close()
-	var got []*Field
-	for rows.Next() {
-		var id []byte
-		if err := rows.Scan(&id); err != nil {
-			return nil, nil, err
+	ordered := map[string][]*Field{}
+	err = sqlbatch.Query(q, sqlPropertyIDs, ")", nil, ids, func(rows *sql.Rows) error {
+		var entityID, id []byte
+		if err := rows.Scan(&entityID, &id); err != nil {
+			return err
 		}
 		p, ok := props[string(id)]
 		if !ok || p.ValueType == propertymeta.ValueTypeSubject || p.ValueType == propertymeta.ValueTypeDepiction {
-			continue
+			return nil
 		}
-		f := &Field{
+		ordered[string(entityID)] = append(ordered[string(entityID)], &Field{
 			PropertyID: append([]byte(nil), p.ID...), PropertyKey: p.Key, Label: p.Label,
 			ValueType: p.ValueType, cardinality: p.Cardinality,
-		}
-		got = append(got, f)
-	}
-	if err := rows.Err(); err != nil {
+		})
+		return nil
+	})
+	if err != nil {
 		return nil, nil, err
 	}
-	sort.SliceStable(got, func(i, j int) bool {
-		return vocabkey.CompareByOrder(order, vocabkey.PropertyKey(got[i].PropertyKey), vocabkey.PropertyKey(got[j].PropertyKey)) < 0
-	})
-	byProp := map[string]*Field{}
-	for _, f := range got {
-		byProp[string(f.PropertyID)] = f
+	byProp := map[string]map[string]*Field{}
+	for id, got := range ordered {
+		order := v.TypeOrder(typeOf[id])
+		sort.SliceStable(got, func(i, j int) bool {
+			return vocabkey.CompareByOrder(order, vocabkey.PropertyKey(got[i].PropertyKey), vocabkey.PropertyKey(got[j].PropertyKey)) < 0
+		})
+		byProp[id] = map[string]*Field{}
+		for _, f := range got {
+			byProp[id][string(f.PropertyID)] = f
+		}
 	}
-	return got, byProp, nil
+	return ordered, byProp, nil
 }
 
 func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Field) error {
@@ -333,11 +382,7 @@ func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Fi
 // loadOutcomes attaches each field's outcomes to it. It also returns the
 // outcomes of the Observations in leads (a gallery's earliest records), which
 // belong to no field; their Recorded value has no Date or Name.
-func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field, leads map[string]bool) (map[string]Outcome, error) {
-	rows, err := q.Query(sqlOutcomes, entityID)
-	if err != nil {
-		return nil, err
-	}
+func loadOutcomes(q Querier, entityIDs [][]byte, byProp map[string]map[string]*Field, leads map[string]bool) (map[string]Outcome, error) {
 	leadOutcomes := map[string]Outcome{}
 	type pending struct {
 		f              *Field
@@ -346,33 +391,32 @@ func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field, leads ma
 	}
 	var all []pending
 	var dateIDs, nameIDs [][]byte
-	for rows.Next() {
+	err := sqlbatch.Query(q, sqlOutcomes, ")", nil, entityIDs, func(rows *sql.Rows) error {
 		var (
-			propertyID, termID, dateID, nameID []byte
-			rank                               sql.NullInt64
-			text                               sql.NullString
-			integer                            sql.NullInt64
-			o                                  Outcome
+			entityID, propertyID, termID, dateID, nameID []byte
+			rank                                         sql.NullInt64
+			text                                         sql.NullString
+			integer                                      sql.NullInt64
+			o                                            Outcome
 		)
-		dest := append([]any{&propertyID, &o.ObservationID, &o.ObservationRef, &o.Reason, &rank, &o.DeniedBy,
+		dest := append([]any{&entityID, &propertyID, &o.ObservationID, &o.ObservationRef, &o.Reason, &rank, &o.DeniedBy,
 			&o.Vote.Support, &o.Vote.Of,
 			&text, &integer, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &o.Recorded.TermOrigin, &dateID, &nameID,
 			&o.SubjectID, &o.SubjectRef, &o.GraphID, &o.CitationID, &o.ArtifactID, &o.SourceID, &o.SourceTitle,
 			&o.CredibilityKey}, autoreconciler.ProvenanceDest(&o.Provenance)...)
 		if err := rows.Scan(dest...); err != nil {
-			_ = rows.Close()
-			return nil, err
+			return err
 		}
 		o.ValueRank = int(rank.Int64)
 		o.Recorded.Text, o.Recorded.HasText = text.String, text.Valid
 		o.Recorded.Integer, o.Recorded.HasInteger = integer.Int64, integer.Valid
 		o.Recorded.TermID = termID
-		f, ok := byProp[string(propertyID)]
+		f, ok := byProp[string(entityID)][string(propertyID)]
 		if !ok {
 			if leads[string(o.ObservationID)] {
 				leadOutcomes[string(o.ObservationID)] = o
 			}
-			continue
+			return nil
 		}
 		all = append(all, pending{f: f, o: o, dateID: dateID, nameID: nameID})
 		if len(dateID) > 0 {
@@ -381,9 +425,8 @@ func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field, leads ma
 		if len(nameID) > 0 {
 			nameIDs = append(nameIDs, nameID)
 		}
-	}
-	err = rows.Err()
-	_ = rows.Close()
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -405,4 +448,109 @@ func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field, leads ma
 		p.f.Outcomes = append(p.f.Outcomes, p.o)
 	}
 	return leadOutcomes, nil
+}
+
+// DerivedRowKind names a Person life row.
+type DerivedRowKind string
+
+const (
+	DerivedRowBirthDate  DerivedRowKind = "birth_date"
+	DerivedRowBirthPlace DerivedRowKind = "birth_place"
+	DerivedRowDeathDate  DerivedRowKind = "death_date"
+	DerivedRowDeathPlace DerivedRowKind = "death_place"
+)
+
+// OwnerField is the field a derived row reads off the entity that owns it.
+// Event is the owner's header when the owner is an Event.
+type OwnerField struct {
+	Entity canonicalentities.Entity
+	Event  *conclusionheaders.EventHeader
+	Field  Field
+}
+
+// DerivedRow is one life row's records: one entry per owner, in the order
+// the row lists them (the lead event first; Places in the header's order).
+type DerivedRow struct {
+	Kind   DerivedRowKind
+	Owners []OwnerField
+}
+
+// PersonDerivedRows returns the records behind a Person's birth date, birth
+// place, death date and death place rows, in that order. A row with no
+// owners is not returned. An owner merged or gone, or without the field the
+// row reads, is dropped.
+func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, error) {
+	birth, death, err := conclusionheaders.PersonLifeOwners(c, personID)
+	if err != nil {
+		return nil, err
+	}
+	lists := []struct {
+		kind   DerivedRowKind
+		owners []conclusionheaders.FieldOwner
+	}{
+		{DerivedRowBirthDate, birth.Dates}, {DerivedRowBirthPlace, birth.Places},
+		{DerivedRowDeathDate, death.Dates}, {DerivedRowDeathPlace, death.Places},
+	}
+	var all, eventIDs [][]byte
+	for _, l := range lists {
+		for _, o := range l.owners {
+			all = append(all, o.Entity.ID)
+			if l.kind == DerivedRowBirthDate || l.kind == DerivedRowDeathDate {
+				eventIDs = append(eventIDs, o.Entity.ID)
+			}
+		}
+	}
+	ids := database.UniqueBlobIDs(all)
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	g := c.Graph()
+	if err := g.Nodes(ids); err != nil {
+		return nil, err
+	}
+	nodes := make([]*graphcache.Node, 0, len(ids))
+	for _, id := range ids {
+		n, err := g.Node(id)
+		if err != nil {
+			return nil, err
+		}
+		nodes = append(nodes, n)
+	}
+	db, err := c.DB()
+	if err != nil {
+		return nil, err
+	}
+	fields, _, err := fieldsOf(g, db, nodes, nil)
+	if err != nil {
+		return nil, err
+	}
+	headers, err := conclusionheaders.EventsByIDs(c, database.UniqueBlobIDs(eventIDs))
+	if err != nil {
+		return nil, err
+	}
+	eventOf := map[string]*conclusionheaders.EventHeader{}
+	for i := range headers {
+		eventOf[string(headers[i].Entity.ID)] = &headers[i]
+	}
+	var out []DerivedRow
+	for _, l := range lists {
+		row := DerivedRow{Kind: l.kind}
+		for _, o := range l.owners {
+			for _, f := range fields[string(o.Entity.ID)] {
+				if !bytes.Equal(f.PropertyID, o.PropertyID) {
+					continue
+				}
+				owner := OwnerField{Entity: o.Entity, Field: f}
+				if l.kind == DerivedRowBirthDate || l.kind == DerivedRowDeathDate {
+					owner.Event = eventOf[string(o.Entity.ID)]
+				}
+				row.Owners = append(row.Owners, owner)
+				break
+			}
+		}
+		if len(row.Owners) > 0 {
+			out = append(out, row)
+		}
+	}
+	return out, nil
 }
