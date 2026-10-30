@@ -1,7 +1,7 @@
 # Review — S13-06 Derived rows carry their records
 
-**Verdict:** round 1 Fits with changes — Not ready; every finding answered below. Round 2 pending (round 1 had blockers and reshaping fixes).
-**Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet, the implementing model). Brief S13-D12 reviewed in the same pass.
+**Verdict:** Fits with changes — Ready with changes. Every finding is Fixed or answered; no blocker is open. The plan stays `Blocked — on board S13-D12` until the board is agreed and LW-4 is copied in.
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet, the implementing model). Brief S13-D12 reviewed in the same pass.
 
 ## To user
 - None. The open item, the brief's LW-4 grouping option, is the board's call (plan §12).
@@ -106,3 +106,36 @@
 
 ### X-15 · minor · Inventory vs requirements
 **Answer:** Fixed with M-1 (LW-7 copy). The rest needs no change: the group row's style is named, and the S13-D1 references resolve.
+
+## Round 2 — maintainability
+
+### M2-1 · blocker · Batched reads build their own `IN` list instead of `sqlbatch`
+**Answer:** Fixed — D-5: `loadProperties` and `loadOutcomes` read through `sqlbatch.Query(q, head, ")", nil, ids, scan)`; Precedent and Edges updated (bounded by `sqlbatch.Size`).
+
+### M2-2 · blocker · `PersonLifeOwners` loads Event nodes one at a time
+**Answer:** Fixed — D-4: `lifePicks` follows `EventsOfSubject` and calls `g.Nodes` on the neighbors before its loop, so `onePerson` and `PersonLifeOwners` share the batching (same as X2-2).
+
+## Round 2 — executability
+
+### X2-1 · blocker · Duplicate owner nodes (same Place for birth and death)
+**Answer:** Fixed — D-6 passes `database.UniqueBlobIDs` of the owner ids; D-5's `fieldsOf` also drops duplicates; AC-2.6; T-2 and T-8 (b) cases.
+
+### X2-2 · blocker · Walk order breaks the constant-query bar
+**Answer:** Fixed — see M2-2.
+
+### X2-3 · major · Who skips merged or nil nodes
+**Answer:** Fixed — `fieldsOf` skips them (D-5); T-2's `FieldsOf(c, ids)` export is defined.
+
+### X2-4 · major · Fixtures lack helpers
+**Answer:** Fixed — T-8 moves into `conclusionheaders/placechains_test.go` (external test package, reuses its fixture); T-2 adds `f.date` and an inline date `Input`; T-3 names how it reads the `event_type` and `date` ids and the `birth` term.
+
+### X2-5 · minor · `derived`'s new parameters need defaults
+**Answer:** Fixed — D-12 gives `.autoupdatingCurrent` and `NameFormatOrders()`.
+
+### X2-6 · minor · Wrong precedent for the `IN` list
+**Answer:** Fixed with M2-1.
+
+### X2-7 · minor · A nameless sole Place gets a group line
+**Answer:** Fixed — D-12: one group never has a line. The brief's domain facts state the case.
+
+Brief: the group line wraps and is never cut (LW-4, D-14).
