@@ -129,7 +129,7 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 | S13-19 | One person's links | 3 | Moved to Spike 11 as S11-51 so it ships with S11-39 | — | — | — | Descoped (2026-10-26) → S11-51 |
 | S13-05 | Person timeline read | 4 | An any-role participation hop; `ListPersonEvents` RPC: `EventHeader`s sorted by `sortEvents`, with the person's role and the other participants as {role, `PersonHeader`} | — | S13-01, S13-02 | — | Scoped |
 | S13-13 | Timeline section | 4 | The chronological event list with roles, depiction placeholder, participants as person tiles, Undated group | S13-D4 | S13-05, S13-12 | — | Scoped |
-| S13-14 | Gallery section | 5 | The gallery as a section, with set as portrait and open Citation | S13-D5 | S13-10 | — | Scoped |
+| S13-14 | Gallery section | 5 | The gallery as a section, with set as portrait and open Citation | S13-D5 | S13-10, S14-02 (Spike 14: the `gallery` slot and lead model) | — | Scoped |
 | S13-15 | Likeness viewer | 5 | Expand a likeness and step through the gallery | S13-D5 | S13-14 | — | Scoped |
 | S13-08 | Unpromoting the last member | 6 | `UnpromoteSubject` on the last accepted member deletes the person through `deleteimpact`, wherever Unpromote runs; an unpromote Impact preflight for both confirms | — | S13-25 | — | Scoped |
 | S13-16 | Sources section | 6 | Claims grouped by Source (title, type, date) with Subject cards, each Source opening its page | S13-D6 | S13-01, S13-10, S13-20 | — | Scoped |

@@ -5,7 +5,7 @@
 **View:** the Event and Place pages (one shared Conclusion page) and their list rows
 **Implements later as:** PR **S14-02** (Pictures in the app)
 **Board:** — (not yet drawn; the user records the link and answers here, see § 7)
-**Depends on:** S14-01 (landed [#615](https://github.com/mendahu/provenencia/pull/615)): an Event's and a Place's gallery and header lead come from the engine. The agreed S13-D1 board (*Person Detail* project): the Person page frame, its Gallery section and the Page columns arrangement the Event and Place pages also sit on. The agreed S14-D1 board (Page columns, the Wide width class).
+**Depends on:** S13-10 (Spike 13, Planned): builds Page columns in the app and moves the Event and Place pages onto it, primary-only. S14-01 (landed [#615](https://github.com/mendahu/provenencia/pull/615)): an Event's and a Place's gallery and header lead come from the engine. The agreed S13-D1 board (*Person Detail* project): the Person page frame, its Gallery section and the Page columns arrangement the Event and Place pages also sit on. The agreed S14-D1 board (Page columns, the Wide width class).
 **Related:** [`../event-place-pictures.md`](../event-place-pictures.md) § Thumbnail parity, § What changes; [`../deployment-plan.md`](../deployment-plan.md) working rules "Event and Place each get their own picture Property, labelled Picture", "An Event or Place chooses its thumbnail as a Person chooses its portrait", "The gallery is one slot on the detail body", "A depiction is worded as a picture outside the Person's own copy"; [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide); plan [`../prs/S14-02-pictures-in-the-app.md`](../prs/S14-02-pictures-in-the-app.md).
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
 **Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
@@ -129,16 +129,16 @@ A researcher who draws a picture of a church on a Citation and saves it to a Pla
 | EPP-5 | **Choose the thumbnail.** With two or more pictures, the lead tile wears a Badge "Thumbnail" (accent, photo glyph, as the Person's "Portrait"), and every other tile a ghost small Button "Use as thumbnail". With one picture, that tile wears the Badge and there is no button. |
 | EPP-6 | **Back to the earliest.** When a chosen picture leads (not the earliest), a right-click on the header thumb opens the native menu with "Use earliest picture". The menu's title reads "Event thumbnail" or "Place thumbnail", and its hint "Right-click for thumbnail options". When the earliest leads, there is no menu, as on the Person. |
 | EPP-7 | **Toast.** After a choice, the success Toast "Thumbnail updated" with "Using the picture from <Source title> as the thumbnail." or "Using the earliest picture as the thumbnail.". A failed save shows the danger Toast with the error, as on the Person. |
-| EPP-8 | **List rows.** In the Events and Places lists, the row thumb shows the lead picture, at the size and corner the Persons list uses for a portrait. With no picture, the kind's mark as today. Nothing else in the row changes. |
+| EPP-8 | **List rows.** In the Events and Places lists, the row thumb shows the lead picture, at the size and corner the Persons list uses for a portrait (the List's 44pt thumbnail slot). With no picture, the kind's mark as today. Nothing else in the row changes. |
 | EPP-9 | **Accessibility and dark mode.** Each tile reads "Picture from <Source title>. Open citation"; the Badge and button read as on the Person, worded "thumbnail". The header thumb reads "Picture from <Source title>" when a picture leads. Draw the Place page frames and one list in dark mode. |
-| EPP-W1 | **Pages at Wide.** The Event and Place pages stay primary-only and centered (WL-6): their rows keep their Regular measure (rule 2), and the Pictures grid adds tiles per row inside the primary column at the same 96pt size (rule 3), as S13-D1 decided for the Person Gallery (PPF-W3). No secondary column: the page has nothing supporting to put in it. |
+| EPP-W1 | **Pages at Wide.** The Event and Place pages stay primary-only and centered (WL-6), as S13-D1 decided for the Person Gallery (PPF-W3): the rows keep their Regular measure (rule 2), and the Pictures grid fills the primary column at the same 96pt tiles. The primary column is 1038pt wide in the Regular pane and at most 1180pt at Wide, so Wide gains about one tile per row; it is otherwise the Regular page, centered. No secondary column: the page has nothing supporting to put in it, and a full-width grid needs a Page columns mode that does not exist (a note for S13-D5, not this board). |
 | EPP-W2 | **Lists at Wide.** The lists fill the width as today; the row thumb keeps its size. Show it on one Wide list frame. |
 
 ### 4.1 Wide layout
 
 | View | Regular (pane below 1600) | Wide (pane 1600 and up) | What moves where |
 | --- | --- | --- | --- |
-| Place page (and Event page, the same page) | Page columns, primary-only: header, rows, Pictures grid | The same centered primary column; the grid shows more tiles per row | Nothing (more grid columns, rule 3) |
+| Place page (and Event page, the same page) | Page columns, primary-only: header, rows, Pictures grid, relationship sections | The same centered primary column, up to 1180pt; the grid fills it (about one more tile per row) | Nothing |
 | Places list (and Events list) | Full-width list, row thumb at the left | The same list across the width | Nothing (the list fills, rule 3) |
 
 ---
@@ -147,15 +147,15 @@ A researcher who draws a picture of a church on a Citation and saves it to a Pla
 
 Draw each as the pane only, with no app sidebar, at Regular (1102 × 900) unless it says Wide (2296 × 1440).
 
-1. **Place with pictures.** A Place "St. Mary's Church, Halifax" with three pictures (Sources "Church photo, 1890", "Parish history, 1923", "Postcard, 1951"); the earliest leads: header thumb is the 1890 crop; the 1890 tile wears the Thumbnail Badge, the two others "Use as thumbnail" (EPP-1, EPP-4, EPP-5).
+1. **Place with pictures.** A Place "St. Mary's Church, Halifax" (Names and Period rows, and a "Part of: Halifax" relationship section) with three pictures (Sources "Church photo, 1890", "Parish history, 1923", "Postcard, 1951"); the earliest leads: header thumb is the 1890 crop; the Pictures section sits between the rows and the relationship section; the 1890 tile wears the Thumbnail Badge, the two others "Use as thumbnail". Tiles, captions, Badge and button are the Person page's, as the S13-D1 board draws them in its Gallery frames 4i and 4j (EPP-1, EPP-4, EPP-5).
 2. **Chosen thumbnail.** Frame 1 after "Use as thumbnail" on the 1951 tile: the header shows it, the Badge moved, the Toast showing (EPP-5, EPP-7).
 3. **Earliest menu.** Frame 2 with the header thumb's right-click menu open: "Use earliest picture" (EPP-6).
-4. **One picture.** An Event "Wedding of John Smith and Mary Brown, 1902" with one picture: Badge, no button (EPP-5).
+4. **One picture.** An Event "Wedding of John Smith and Mary Brown, 1902" (header date and place lines as today; Date and Place rows) with one picture: Badge, no button (EPP-5).
 5. **No picture.** The same Event with none: the mark in the header, no Pictures section (EPP-2, EPP-4).
 6. **Places list.** Five rows: two with pictures, three with the mark (EPP-8).
 7. **Events list.** The same, for Events (EPP-8).
 8. **Dark mode.** Frames 1 and 6 in dark mode (EPP-9).
-9. **Wide Place.** Frame 1 at Wide, with eight pictures so the grid shows more tiles per row (EPP-W1).
+9. **Wide Place.** Frame 1 at Wide, with eight pictures: the centered primary column, the grid filling it (EPP-W1).
 10. **Wide list.** Frame 6 at Wide (EPP-W2).
 
 ---
@@ -173,9 +173,9 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Thumbnail Badge | Component | Ship | `PVBadge` accent with the photo glyph | EPP-5. As the Person's Portrait Badge. |
 | Use as thumbnail | Component | Ship | `PVButton` ghost, small | EPP-5. As "Use as portrait". |
 | Earliest menu | Component | Ship | the header thumb's right-click menu (`pvRightClickMenu`, `PVActionMenuItem`) | EPP-6. As the Person's. |
-| Toast | Component | Ship | `PVToast` (the page's toast overlay) | EPP-7. Success and danger tones. |
+| Toast | Component | Ship | `PVToast`, drawn by the page's `vocabularyToastOverlay` | EPP-7. Success and danger tones. The kit's Toast. |
 | List row thumb | Component | Ship | `PVList` thumbnail slot in `Features/Conclusions/ConclusionListPage.swift` | EPP-8. The slot every Conclusion list already has; only the image changes. |
-| Page columns | Component | Ship | `DesignSystem/Components/PageColumns/` *(new, built in S13-10)* | EPP-W1. Primary-only. Not drawn anew. |
+| Page columns | Component | Ship (built in S13-10, a dependency of this board) | `DesignSystem/Components/PageColumns/` *(new)* | EPP-W1. Primary-only. Not drawn anew. |
 
 ### Explicit non-goals
 
