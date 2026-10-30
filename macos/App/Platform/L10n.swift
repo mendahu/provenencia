@@ -1460,10 +1460,10 @@ enum L10n {
             L10n.format(LocalizedStringResource("promote.target.promotesTo", defaultValue: "Promotes %@ to", comment: "Accessibility label for a row's target menu; argument is the subject's name"), name)
         }
         static func duplicateTitle(name: String, ref: String) -> String {
-            L10n.format(LocalizedStringResource("promote.warning.duplicateTitle", defaultValue: "%1$@ is also promoted to %2$@", comment: "Warning title when two rows share a handle; 1 = the other subject's name, 2 = the handle ref"), name, ref)
+            L10n.format(LocalizedStringResource("promote.warning.duplicateTitle", defaultValue: "%1$@ has also been selected to be promoted to %2$@", comment: "Warning title when two rows share a handle; 1 = the other subject's name, 2 = the handle ref"), name, ref)
         }
         static func duplicateNewTitle(name: String) -> String {
-            L10n.format(LocalizedStringResource("promote.warning.duplicateNewTitle", defaultValue: "%@ is also promoted New and looks the same", comment: "Warning title when two New rows on the page match each other; argument is the other subject's name"), name)
+            L10n.format(LocalizedStringResource("promote.warning.duplicateNewTitle", defaultValue: "%@ has also been selected to be promoted as New and looks the same", comment: "Warning title when two New rows on the page match each other; argument is the other subject's name"), name)
         }
         static func duplicateBody(_ kind: EvidencePrimaryKind) -> String {
             let resource: LocalizedStringResource = switch kind {
@@ -1505,9 +1505,6 @@ enum L10n {
             case .place: LocalizedStringResource("promote.search.noMatches.place", defaultValue: "No places match “%@”", comment: "Line of the Promote record search list when nothing of this kind matches; argument is the typed query")
             }
             return L10n.format(resource, query)
-        }
-        static func leaveTitle(name: String) -> String {
-            L10n.format(LocalizedStringResource("promote.leave.title", defaultValue: "Leave Promote without promoting %@?", comment: "Promote leave guard title; argument is the subject's name or ref"), name)
         }
         static let leaveConfirm = LocalizedStringResource("promote.leave.confirm", defaultValue: "Discard changes", comment: "Promote leave guard: leave and drop the mapping")
         static let leaveCancel = LocalizedStringResource("promote.leave.cancel", defaultValue: "Keep mapping", comment: "Promote leave guard: stay on the page")
@@ -1833,7 +1830,7 @@ enum L10n {
         static let jumpToSourcePage = LocalizedStringResource(
             "evidenceGraph.header.jumpToSourcePage",
             defaultValue: "Jump to Source page",
-            comment: "Secondary header button that opens this Source’s filing page"
+            comment: "Secondary header button that opens this Source’s page"
         )
 
         static func jumpToSourcePageAccessibility(title: String) -> String {
