@@ -3,7 +3,7 @@
 **Status:** Landed in #633 (2026-10-29)
 **Spike / slice:** Spike 13 · Slice 0 — Removing Observation pins
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S13-D11](../design/S13-D11-promote-without-assessment.md), board agreed 2026-10-29 (§8 Board notes there)
+**Brief:** [S13-D11](../design/archive/S13-D11-promote-without-assessment.md), board agreed 2026-10-29 (§8 Board notes there)
 **Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), the S13-D11 group: frames **27a** (rows, option (a)), **27W** (Wide), **28** (captions), **29** (busy rows) gate this PR; 30, 30b, 30W and 31 are S13-30's. Every frame on the board below them (S11-D3, S11-D1, S9-D16) is redrawn without the column and in the promote wording. Open the link and read each frame's note; §6 macOS repeats what they decide
 **Depends on:** S13-D11 (board agreed 2026-10-29)
 **Blocks:** S13-24, S14-02, S14-22
