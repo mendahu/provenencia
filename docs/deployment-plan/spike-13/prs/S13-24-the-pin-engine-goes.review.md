@@ -1,12 +1,13 @@
 # Review — S13-24 The pin engine goes
 
-**Verdict:** Fits with changes — Ready with changes (every round-2 blocker Fixed; the plan stays Draft until the To user items are answered)
+**Verdict:** Fits with changes — Ready with changes (every blocker Fixed; To user answered 2026-10-30; Planned)
 **Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet), fresh each round
 
 ## To user
-- **M-2, remaining audit 2 B-37 item.** `graphalign.Subject.Provenance` is always 1 (`core/database/promotealign/layer.go`), and no PR holds B-37. This plan closes B-37's wire half (both `score` fields, `via_bridge_type`, `via_role`). Recommendation: add `Subject.Provenance` to S14-20's scope, which already changes `promotealign`; or drop it as not planned.
-- **M-5, provenance read in two places.** `conclusiondetails.sqlOutcomes` rebuilds `autoreconcile.Provenance` with its own copy of `autoreconciler.sqlLoadCandidates`' credibility and certainty columns. The duplication predates this PR, which only narrows both. Recommendation: log an idea file for one owner of the provenance columns before Source quality is added, rather than merging cross-package SQL in a removal PR.
-- **M-6, shared proto header message.** One proto message for the four `oneof header` copies changes Swift's mappers, which this PR's working rule keeps out. Recommendation: not planned until a PR already edits those mappers (S14-16 rewrites the Promote mapping).
+Answered 2026-10-30:
+- **M-2, `graphalign.Subject.Provenance`:** goes in Spike 14's S14-20 (its map row and scope entry say so).
+- **M-5, provenance read in two places:** done in this PR: D-13 gives `autoreconciler` the one copy (`ProvenanceColumns`, `ProvenanceJoins`, `ProvenanceDest`), and `conclusiondetails` reads through it; AC-2.4, T-12.
+- **M-6, shared proto header message:** goes in Spike 14's S14-16, which rewrites the Promote mapping (its scope entry says so).
 
 ## Writer's own calls
 - The Vitals cause "low-confidence claim" and `ReconcilerOutcomeDetail`'s claim confidence fields go here, with no brief (user, 2026-10-30).
@@ -33,7 +34,7 @@
 **Answer:** Fixed. D-4, D-7 and D-12 name each comment; §4 has a Prose row; STEP-8 adds a case-insensitive prose `rg` over `core api` that leaves out the packages S13-25 owns.
 
 ### M-5 · major · Provenance columns read in two SQL copies
-**Answer:** To user (see above). It is existing duplication that this PR narrows; it adds no copy.
+**Answer:** To user; the user chose this PR (2026-10-30). Fixed: D-13.
 
 ### M-6 · minor · Shared header: Go switches duplicated, proto message "not planned" with no reason
 **Answer:** Fixed for Go: one `headerFor(kind, id)` in `promote_align.go` (D-8, Codebase fit). The proto message → To user, with the reason in Out.
