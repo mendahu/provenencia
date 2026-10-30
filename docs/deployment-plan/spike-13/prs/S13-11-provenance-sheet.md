@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/design-system-layers.mdc`, `.cursor/rules/swift-tests.mdc`
 **Context:** [`person-detail.md`](../person-detail.md) R-8 – R-13b, R-14, R-15; working rules: "The provenance sheet replaces the Why on the Person page only", "A derived row carries its owning entity's records", "Engine PRs run ahead of their slice", "Redesigns adopt Page columns"; [`../deployment-plan.md`](../deployment-plan.md) scope S13-11; brief S13-D12 ([archived](../design/archive/S13-D12-life-rows-why.md)) for the group line per owner; S13-06 review UX-3 (VoiceOver names the shown owner)
 **Planned:** 2026-10-30 against `main` @ `c54f34b`
-**Review:** — (not reviewed yet: runs once the board is agreed and the frame-dependent Decisions are filled; the brief's review is [`../design/S13-D2-provenance-sheet.review.md`](../design/S13-D2-provenance-sheet.review.md))
+**Review:** — (the plan's review runs once the board is agreed and D-10 is filled; the brief's review, whose fixes this plan carries in D-11 – D-15, is [`../design/S13-D2-provenance-sheet.review.md`](../design/S13-D2-provenance-sheet.review.md))
 
 ### Implementer — read this first
 
@@ -76,13 +76,13 @@ On the Person page, every Vitals value explains itself in one click: a provenanc
 | --- | --- |
 | The control on every Vitals row with records (PRV-1) | STEP-3, AC-1.1 – AC-1.3 |
 | No Why on the Person page's rows (PRV-2) | STEP-3, AC-1.1, AC-1.4 |
-| The sheet: header, summary, records, refs (PRV-3 – PRV-5) | STEP-4, STEP-5, AC-1.1 |
-| Value groups (PRV-6), per the board | STEP-5 |
-| Owner groups and the shown owner (PRV-7, PRV-8) | STEP-2, STEP-5, AC-3.1 – AC-3.3 |
-| Three links per record (PRV-9) | STEP-1, STEP-5, AC-2.1 – AC-2.3 |
-| Room for Reconciliation Claims (PRV-10) | STEP-5 |
+| The sheet: header, summary, records, refs (PRV-3 – PRV-5) | STEP-4, STEP-5, STEP-6, AC-1.1 |
+| Value groups (PRV-6) | STEP-6, T-5 |
+| Owner groups and the shown owner (PRV-7, PRV-8) | STEP-2, STEP-6, AC-3.1 – AC-3.3 |
+| Three links per record (PRV-9) | STEP-1, STEP-6, AC-2.1 – AC-2.3 |
+| Room for Reconciliation Claims (PRV-10) | STEP-5, STEP-6 |
 | Long and refreshing (PRV-11) | STEP-4, AC-4.1, AC-4.2 |
-| Keyboard, VoiceOver, dark mode (PRV-12 – PRV-14) | STEP-5, STEP-6 |
+| Keyboard, VoiceOver, dark mode (PRV-12 – PRV-14) | STEP-3, STEP-6 |
 | Wide (PRV-W1, PRV-W2) | STEP-4 |
 
 | Out | Home |
@@ -121,15 +121,20 @@ On the Person page, every Vitals value explains itself in one click: a provenanc
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
 | D-1 | The sheet body is one new snowflake, `ProvenanceSheet` *(new)* in `macos/App/Features/Conclusions/ProvenanceSheet.swift`, taking a `ReconciledValueRowModel` and a close action. Nothing Person-only in it | R-13: Event and Place adopt it later; the row model is already kind-neutral | A Person-only view — fails R-13; a kit component — one caller today ([`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)) |
-| D-2 | `ConclusionDetailRowsSection` owns the presentation in `.sheet` mode: `@State` holding the open row's id (`ProvenanceSheetItem` *(new)*, `Identifiable` on the row id) and one `.pvSheet(item:)`. The sheet looks up the current row in `rows` by id each render; when it is gone the item is set to nil (PRV-11) | One sheet per section, not 20; the live lookup keeps the sheet true across a refresh | A snapshot `item:` of the row model — goes stale on refresh (AC-4.1); a `.sheet` per row — 20 presenters |
+| D-2 | `ConclusionDetailRowsSection` owns the presentation in `.sheet` mode: `@State` holding the open row's id (`ProvenanceSheetItem` *(new)*, `Identifiable` on the row id) and one `.pvSheet(item:)`. The sheet looks up the current row in `rows` by id each render; when no row has that id, or its `records` is empty, the item is set to nil (PRV-11) | One sheet per section, not 20; the live lookup keeps the sheet true across a refresh | A snapshot `item:` of the row model — goes stale on refresh (AC-4.1); a `.sheet` per row — 20 presenters |
 | D-3 | `ReconciledValueRow` gains `var openProvenance: () -> Void = {}`. In `.sheet` mode the slot holds `PVIconButton(<board glyph>, label: L10n.Conclusions.provenanceOpen(label), size: .sm, action: openProvenance)` when `!model.records.isEmpty`, else stays `Color.clear`; the Why disclosure button and `ReconciliationReasoningView` are not drawn. `.why` mode is unchanged | Keeps the existing `Provenance` enum and both callers; one closure | An enum case carrying a closure — breaks the `== .sheet` comparisons for no gain |
-| D-4 | `ReconciliationRecord` gains `sourceLocation` (`.sourcePage(sourceId:title:)`), `citationLocation` (`.citationComposer` with `citationId`, `artifactId`, `subjectId`, `observationId: nil`), `observationRef`, `subjectRef`. `location` keeps its meaning (the Observation in focus) and its name, because the accordion and the gallery tiles use it | All from fields the outcome already carries; no wire change | A Citation title on the wire — no data today; becomes a follow-up PR if the board asks (Out) |
+| D-4 | `ReconciliationRecord` gains `sourceLocation` (`.sourcePage(sourceId:title:)`), `citationLocation` (`.citationComposer` with `citationId`, `artifactId`, `subjectId`, `observationId: nil`), `observationRef`, `subjectRef` and `valueRank: Int?` (from `CatalogReconcilerOutcome.valueRank`). `location` keeps its meaning (the Observation in focus) and its name, because the accordion and the gallery tiles use it | All from fields the outcome already carries; no wire change | A Citation title on the wire — no data today; becomes a follow-up PR if the board asks (Out) |
 | D-5 | A link closes the sheet first, then calls `navigation.go(to:)`. The sheet is not a place: Back lands on the Person page on Vitals with the sheet closed | Sheets are not in `WorkspaceLocation` anywhere in the app; a modal over a navigation would leave it orphaned | Reopening the sheet on Back — needs a new location field for one view |
-| D-6 | The owner group line moves out of `ReconciliationReasoningView` into `ProvenanceSheet`. `ReconciliationReasoningView` takes `records: [ReconciliationRecord]` instead of `groups:` and loses `ownerLine`; `ReconciledValueRow` passes `model.records` | After this PR only the Person page builds owner groups, and it uses the sheet; the branch would be dead (map scope: it "removes the owner group-line branch S13-06 added to it, or moves it into the sheet") | Keeping the branch in both — dead code in the accordion |
+| D-6 | The owner group line moves out of `ReconciliationReasoningView` into the shared rows view, which only `ProvenanceSheet` asks to draw group lines (D-12). `ReconciliationReasoningView` takes `records: [ReconciliationRecord]` instead of `groups:` and loses `ownerLine`; `ReconciledValueRow` passes `model.records` | After this PR only the Person page builds owner groups, and it uses the sheet; the branch would be dead (map scope: it "removes the owner group-line branch S13-06 added to it, or moves it into the sheet") | Keeping the branch in both — dead code in the accordion |
 | D-7 | `ReconciliationRecordGroup.OwnerLine` gains `shown: Bool`; `derived(…)` sets it on the shown owner's line when there are several groups. `spoken` appends the new key `L10n.Conclusions.provenanceOwnerShown` ("%@, shown value") when `shown` | S13-06 UX-3: VoiceOver names which group is behind the shown value; the model already knows the shown owner | A view-side check of "first group" — the first group is not always the shown one (no shown owner when its records are empty) |
 | D-8 | No engine, proto or FFI change | Working rule "A derived row carries its owning entity's records": no new provenance RPC; everything the sheet needs is on `CatalogReconcilerOutcome` | — |
 | D-9 | Tests are Swift Testing unit tests on the models (`PersonDetailTests`, a new `ProvenanceSheetTests` *(new)*); the view is checked by hand | Repo practice: no snapshot or UI tests for feature views ([`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)) | XCUITest — not used in the repo |
-| D-10 | *Board-dependent, filled when S13-D2 is agreed:* the form (PRV-3: sheet at both widths, or docked at Wide), the sheet's widths, the glyph (PRV-1), the close control (PRV-4), the record layout (PRV-5), value groups (PRV-6) and how the links show (PRV-9) | The board decides them | — |
+| D-10 | *Board-dependent, filled when S13-D2 is agreed:* the glyph (PRV-1), the close control (PRV-4), the shown mark's wording (PRV-8), how the links show (PRV-9) and the sheet's widths at Regular and Wide (PRV-W1) | The board decides them | — |
+| D-11 | The form is `.pvSheet` at both widths; no docked panel at Wide (brief domain fact "Form") | Event and Place, the next callers, have no secondary column; one presenter, one focus path (S13-D2 review M-5, X-12) | A docked panel at Wide — a width-switching presenter with one caller |
+| D-12 | One record rows view, `ReconciliationRecordRows` *(new)*, extracted from `ReconciliationReasoningView`'s grid: Read as · Source · Outcome · optional Record column (refs and the Citation and Observation links) · the 88pt reserved column, with optional group lines. `ReconciliationReasoningView` wraps it in its sunken Card with the Record column and group lines off; `ProvenanceSheet` wraps it with both on | One table for the accordion and the sheet until the accordion is deleted; Reconciliation Claims' column lands once (S13-D2 review M-1) | A second grid in the sheet — two copies of the ink, face and outcome rules |
+| D-13 | Value groups are built in the row model: `ReconciliationRecordGroup` gains `values: [ValueGroup]` *(new)* where `ValueGroup` has a `line` (value text + Source count from the field's `values`, as `otherValues` words it, or nil for "Other records") and its records. Per owner (or per field for a Property row): one group per value rank in rank order, then the records with no value rank under "Other records". A group whose records all went into one value has one `ValueGroup` with a nil line, so no value line shows (PRV-6) | Grouping lives where owner groups already do and is unit-tested (S13-D2 review M-3, X-5) | Grouping in the view — untestable, and Event and Place would redo it |
+| D-14 | The summary line (PRV-4) is `ReconciledValueRowModel.provenanceSummary` *(new)*: for a Property row, `ReconciledValueDisplay.spokenState(field)` and `againstLine(field)` joined with " · ", then the record count; for a life row, the record count, and with several owner groups the owner count. The row model keeps the field for this (`spokenState` needs it) | Only what the row knows; no new reconciler wording (S13-D2 review X-1, M-2) | Inventing "stated empty · 1 record denied" — the life rows have no state to say it from |
+| D-15 | The owner line's visibility stays as S13-06 built it: a line when there are several owners or the one owner is not the shown one | Matches the code and the corrected PRV-7 (review X-4) | — |
 
 **Rules this plan bends.** None.
 
@@ -140,6 +145,8 @@ On the Person page, every Vitals value explains itself in one click: a provenanc
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
 | `ProvenanceSheet` *(new)* | view | `ReconciliationReasoningView` | The accordion stays for Event and Place in its flat form; the sheet has a header, owner and value groups and three links. Shares `ReconciliationOutcome` and `ReconciliationRecord`; does not copy the grid code beyond the columns it adds |
+| `ReconciliationRecordRows` *(new)* | view | `ReconciliationReasoningView`'s grid | Extracted from it (D-12), not beside it |
+| `ReconciliationRecordGroup.ValueGroup`, `.values` *(new)*; `ReconciledValueRowModel.provenanceSummary` *(new)* | types, field | `ReconciliationRecordGroup`, `ReconciledValueDisplay.spokenState`, `againstLine`, `otherValues` | Extended; the summary composes the existing words (D-13, D-14) |
 | `ProvenanceSheetItem` *(new)* | type | `PVDeleteImpact`'s `item:` snapshot | The item is an id, not a snapshot (D-2) |
 | `ReconciliationRecord.sourceLocation`, `.citationLocation`, `.observationRef`, `.subjectRef` *(new)* | fields | `ReconciliationRecord.location`, `composerLocation(for:)` | Extended, not duplicated |
 | `OwnerLine.shown` *(new)* | field | `OwnerLine` | Extended |
@@ -147,7 +154,7 @@ On the Person page, every Vitals value explains itself in one click: a provenanc
 | `L10n.Conclusions.provenance*` *(new)* | keys | `L10n.Conclusions.why*` | The `why*` keys stay for the accordion; the sheet's copy is its own |
 
 **Builds on.** `.pvSheet` and `PVPanel` (the one sheet presenter), `PVIconButton`, `PVButton` `.link`, `ReconciledValueDisplay` for every outcome word, S13-06's owner groups.
-**Deletes.** `ReconciliationReasoningView.ownerLine` and its `groups:` parameter (D-6); the `Color.clear` placeholder in `.sheet` mode when the row has records. The "S13-11 puts the provenance control in the slot" comment on `ReconciledValueRow.Provenance` is rewritten to say what the slot holds.
+**Deletes.** `ReconciliationReasoningView`'s own grid (moved into `ReconciliationRecordRows`, D-12), `ReconciliationReasoningView.ownerLine` and its `groups:` parameter (D-6); the `Color.clear` placeholder in `.sheet` mode when the row has records. The "S13-11 puts the provenance control in the slot" comment on `ReconciledValueRow.Provenance` is rewritten to say what the slot holds.
 **Next adds.** The Event and Place redesign passes `.sheet` and deletes `ReconciliationReasoningView`; a Reconciliation Claims PR fills the reserved block and column (PRV-10).
 
 ### Reach
@@ -221,15 +228,15 @@ Files: `ConclusionDetailPage.swift` (`ConclusionDetailRowsSection`), `Provenance
 Do: D-2, D-5; the form and widths per D-10.
 Check: T-4 passes; manual 1 and 5.
 
-**STEP-5 — The sheet body**
-Files: `ProvenanceSheet.swift`, `L10n.swift`, `Localizable.xcstrings`. Skill: `add-localized-string`, `add-ui-component`.
-Do: header and summary, records, owner groups (moved from the accordion), value groups and links per D-10, the reserved block and column.
-Check: T-5 passes; manual 1 – 3.
+**STEP-5 — One record rows view, the accordion on it**
+Files: `ReconciliationRecordRows.swift` *(new)*, `ReconciliationReasoningView.swift`, `ReconciledValueRow.swift`, `project.pbxproj`. Skill: `add-ui-component`.
+Do: D-12, D-6.
+Check: `rg -n "ownerLine|groups:" macos/App/Features/Conclusions/ReconciliationReasoningView.swift` prints nothing; manual 4 (the Event page's Why looks as before).
 
-**STEP-6 — The accordion loses its owner branch**
-Files: `ReconciliationReasoningView.swift`, `ReconciledValueRow.swift`.
-Do: D-6.
-Check: `rg -n "ownerLine|groups:" macos/App/Features/Conclusions/ReconciliationReasoningView.swift` prints nothing; manual 4.
+**STEP-6 — The sheet body**
+Files: `ProvenanceSheet.swift`, `ReconciledValueRowModel.swift` (D-13, D-14), `L10n.swift`, `Localizable.xcstrings`. Skill: `add-localized-string`, `add-ui-component`.
+Do: header and summary (D-14), value and owner groups (D-13) through `ReconciliationRecordRows`, links per D-10, the reserved block and column.
+Check: T-5, T-7 pass; manual 1 – 3.
 
 **STEP-7 — Docs**
 Files: `completed.md`, `deployment-plan.md` (map row), this plan (status), `design/S13-D2-provenance-sheet.md` → `design/archive/`, `design/README.md`.
@@ -246,8 +253,9 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-2 | Swift | `PersonDetailTests.swift` `theShownOwnerIsSpokenAsShown` *(new)* | Two birth events, `EVT-4KX2M` shown → first group's `owner.shown` true and `spoken` "Birth of Ada Lovelace, EVT-4KX2M, shown value"; second group's `shown` false | AC-3.1, AC-3.2, D-7 |
 | T-3 | Swift | `PersonDetailTests.swift` `oneOwnerHasNoGroupLine` *(new)*; extend `anOwnerThatIsNotTheShownOneIsNamed` | One owner → `owner` nil; a shown owner with no records and one other owner → the other's line has `shown` false | AC-3.3, D-7 |
 | T-4 | Swift | `macos/ProvenenciaTests/ProvenanceSheetTests.swift` *(new)* `theSheetFollowsItsRowAcrossARefresh` | `ProvenanceSheetItem(id: "life.birthDate")` against rows with 3 then 4 records → resolves to the 4-record row; against rows without it → nil | AC-4.1, AC-4.2, D-2 |
-| T-5 | Swift | `ProvenanceSheetTests.swift` per the board's summary and value groups (D-10) | Named when the board is agreed | AC-1.1 |
+| T-5 | Swift | `ProvenanceSheetTests.swift` `valuesGroupTheirRecordsAndTheRestComeLast` *(new)* | A Mixed name with values rank 1 (2 records), rank 2 (1 record), and one weak record (no rank) → three value groups: rank 1 with its line, rank 2 with its line, "Other records" with nil value; a merged name with all records in rank 1 → one group, nil line | D-13 |
 | T-6 | Swift | `PersonDetailTests.swift` `onlyRowsWithRecordsOfferProvenance` *(new)* | A person with no birth event → the birth date row's `records` is empty; a birth date whose only record is Denied → `lead` nil and `records.count` 1 | AC-1.2, AC-1.3, D-3 |
+| T-7 | Swift | `ProvenanceSheetTests.swift` `theSummarySaysOnlyWhatTheRowKnows` *(new)* | A merged name, 3 Sources, 1 against, 4 records → "merged from 3 Sources · 1 record disagrees · 4 records"; a life row with 2 owners and 4 records → "4 records from 2 birth events" | D-14, AC-1.1 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `PersonDetailTests` (owner groups), `ReconciledValueDisplayTests`.
 
@@ -295,7 +303,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `P
 
 ## 12. Open questions
 
-1. **The board's answers to PRV-1, PRV-3, PRV-4, PRV-5, PRV-6, PRV-9** (D-10). Waits on S13-D2. Recommended: the `info` glyph, (A) a sheet at both widths, a "Done" Button, the widened table (a), value lines, and the Observation ref as a link with a small "Citation" link beside it.
+1. **The board's answers to PRV-1, PRV-4, PRV-8, PRV-9, PRV-W1** (D-10). Waits on S13-D2. Recommended: the `info` glyph, a "Done" Button, "· shown", the Observation ref as a link with a small "Citation" link beside it, and the widths the board draws.
 
 ## 13. PR
 
