@@ -338,3 +338,5 @@ The code differs from the plan in these ways:
 - `PersonDerivedRows` and `fieldsOf` live in `conclusiondetails.go` as planned; `lifeOwners` is a small helper in `compose.go` that `PersonLifeOwners` calls once per side.
 - T-4 checks `derived_rows` on the existing Event and Place cases of `TestGetConclusionDetailCarriesItsHeader` through a shared "not a Person" assertion.
 - The manual check (section 10) was not run in the app.
+- D-10's open target falls back to the first Place when none has a line (the ink still follows the shown Place) (user, 2026-10-30).
+- D-12 / LW-3: a single group whose owner is not the shown one gets its group line, so the row names that owner (user, 2026-10-30).

@@ -227,7 +227,7 @@ SLICE 8 — Source date on the Source pages   (any time after S13-20)
 S13-99 — Dogfood close / docs
 ```
 
-**Order and parallel work:** slice 0 runs first: S13-23, S13-24 and S13-25 in order; S13-09 and the other engine PRs may run alongside it, except S13-08, which waits on S13-25 because both change `deleteimpact.ReleaseClaim`. The design-and-build slices run in order, 1 to 7, one brief at a time; slice 7 waits on open question 11. Slice 8 touches other pages and may run alongside any of them once S13-20 lands. Engine PRs can be planned and landed ahead of their slice: S13-01 and S13-09 have no unmet dependencies, S13-06 is Planned (its board S13-D12 was agreed 2026-10-30), and S13-08 waits on S13-25; S13-02 waits on S11-30, S13-03 and S11-51 on S11-39.
+**Order and parallel work:** slice 0 runs first: S13-23, S13-24 and S13-25 in order; S13-09 and the other engine PRs may run alongside it, except S13-08, which waits on S13-25 because both change `deleteimpact.ReleaseClaim`. The design-and-build slices run in order, 1 to 7, one brief at a time; slice 7 waits on open question 11. Slice 8 touches other pages and may run alongside any of them once S13-20 lands. Engine PRs can be planned and landed ahead of their slice: S13-01 and S13-09 have no unmet dependencies, and S13-08 waits on S13-25; S13-02 waits on S11-30, S13-03 and S11-51 on S11-39.
 
 ### Dependencies at a glance
 
@@ -343,7 +343,7 @@ Go, plus deleting Swift's draft rule.
 **Ships.** The provenance control beside every Vitals value and the sheet from S13-D2: every record, the reconciler's reasoning, and links to the Source, Citation and Observation. It replaces the Why accordion on the Person page only; Event and Place keep it.
 **Not this PR.** Reconciliation Claims (R-10); the control outside Vitals (R-13b).
 **Check.** Bar 2.
-**Context.** R-8 – R-13b; working rule "A derived row carries its owning entity's records"; `ReconciliationReasoningView`; removes the owner group-line branch S13-06 added to it, or moves it into the sheet, which keeps S13-D12's grouping; working rule "The provenance sheet replaces the Why on the Person page only".
+**Context.** R-8 – R-13b; working rule "A derived row carries its owning entity's records"; `ReconciliationReasoningView`; removes the owner group-line branch S13-06 added to it, or moves it into the sheet, which keeps S13-D12's grouping; VoiceOver names which owner group is behind the shown value (S13-06 UX-3): the group's heading says so, a new L10n key; working rule "The provenance sheet replaces the Why on the Person page only".
 
 ### Slice 3 — Family and Timeline
 
