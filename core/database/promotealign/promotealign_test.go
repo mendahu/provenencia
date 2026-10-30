@@ -1609,3 +1609,29 @@ func TestProposeKinshipShapes(t *testing.T) {
 		}
 	})
 }
+
+// filedBirth files a person and his dated birth on src, joined by a subject
+// participation (year 0: no date), joins them to the given entities or
+// promotes them when an entity is nil, and returns them with their entities.
+func (f *fixture) filedBirth(src sources.Source, art artifacts.Artifact, name string, year int, personHandle, birthHandle []byte) (p, b subjects.Subject, ph, bh []byte) {
+	f.t.Helper()
+	p = f.person(src, art, name)
+	if year == 0 {
+		b = f.birth(src, art)
+	} else {
+		b = f.datedBirth(src, art, year)
+	}
+	f.participation(src, art, p, b, "subject")
+	ph, bh = personHandle, birthHandle
+	if ph == nil {
+		ph = f.promote(p).Entity.ID
+	} else {
+		f.join(p, ph)
+	}
+	if bh == nil {
+		bh = f.promote(b).Entity.ID
+	} else {
+		f.join(b, bh)
+	}
+	return p, b, ph, bh
+}

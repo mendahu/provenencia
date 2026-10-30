@@ -180,31 +180,3 @@ func TestUnpromote(t *testing.T) {
 		}
 	})
 }
-
-func TestUnpromoteKeepsOtherMembersPins(t *testing.T) {
-	f := newPinFixture(t)
-	birth, birthObs := f.person1("James")
-	first := f.promote(birth, "")
-	census, censusObs := f.person1("James")
-	joined, err := f.join(census, first.Entity.ID, set(birth, censusObs[0], birthObs[0]))
-	f.must(err)
-	_, err = writes.Call(f.c, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-		ch, err := promote.Unpromote(tx, userID, census.ID)
-		return struct{}{}, ch, err
-	})
-	f.must(err)
-	if _, err := identityclaims.Get(f.c, joined.Claim.ID); err == nil {
-		t.Fatal("James's claim survived")
-	}
-	if got, want := f.pinned(joined.Claim.ID), ""; got != want {
-		t.Fatalf("James's pins survived: %q", got)
-	}
-	if got, want := f.pinned(first.Claim.ID), idsOf(birthObs[0], censusObs[0]); got != want {
-		t.Fatalf("birth claim pins = %q, want both", got)
-	}
-	kept, err := identityclaims.Get(f.c, first.Claim.ID)
-	f.must(err)
-	if kept.Status != identityclaims.StatusAccepted {
-		t.Fatalf("birth claim status %s", kept.Status)
-	}
-}

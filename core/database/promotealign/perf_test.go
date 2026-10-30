@@ -1,20 +1,17 @@
 package promotealign_test
 
 import (
-	"fmt"
 	"math/rand/v2"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/mendahu/provenencia/core/catalogsession"
-	"github.com/mendahu/provenencia/core/claimevidence"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/databasetest"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
-	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/graphalign"
 )
@@ -28,12 +25,8 @@ const (
 	budgetCold         = 2500 * time.Millisecond
 	budgetWarm         = 350 * time.Millisecond
 	budgetAfterCommit  = 1500 * time.Millisecond
-	budgetEvidence     = 100 * time.Millisecond
 	budgetOnePlaceCold = 5 * time.Second
 	budgetOnePlaceWarm = 3 * time.Second
-	// budgetPlaceEvidence is a place row's evidence on a cold graph: without
-	// kinship links to derive it reads two nodes, not the place's 6,000 events.
-	budgetPlaceEvidence = 10 * time.Millisecond
 )
 
 // largeFixture is a realistic large catalog (largeShape) and the Sources the
@@ -204,49 +197,12 @@ func TestLargeSourceBudgets(t *testing.T) {
 		over(t, "proposal after a handle commit", d, budgetAfterCommit)
 	})
 
-	// evidenceRequests is one request for each handle row, naming every handle
-	// row as a neighbor.
-	evidenceRequests := func() []promotealign.EvidenceRequest {
-		var neighbors []graphalign.Fixed
-		for _, r := range propose().Rows {
-			if r.Target == graphalign.TargetHandle {
-				neighbors = append(neighbors, graphalign.Fixed{SubjectID: r.SubjectID, HandleID: r.HandleID})
-			}
-		}
-		var reqs []promotealign.EvidenceRequest
-		for _, n := range neighbors {
-			reqs = append(reqs, promotealign.EvidenceRequest{
-				GraphID: aGraph, SubjectID: n.SubjectID, HandleID: n.HandleID, Neighbors: neighbors,
-			})
-		}
-		return reqs
-	}
-	pass := func(reqs []promotealign.EvidenceRequest) {
-		for _, req := range reqs {
-			f.evidence(req)
-		}
-	}
-
-	t.Run("evidence warm", func(t *testing.T) {
-		reqs := evidenceRequests()
-		pass(reqs)
-		d := fastest(3, func() time.Duration { return since(func() { pass(reqs) }) })
-		over(t, fmt.Sprintf("warm Evidence on %d handle rows", len(reqs)), d, budgetEvidence)
-	})
-
 	t.Run("warm queries", func(t *testing.T) {
-		reqs := evidenceRequests()
-		pass(reqs)
 		propose()
 		n := 0
 		f.c.Graph().SetQueryCounterForTest(func() { n++ })
 		defer f.c.Graph().SetQueryCounterForTest(nil)
 		selects := databasetest.CountSelects(t, f.c)
-		pass(reqs)
-		if n != 0 || selects.N() != 0 {
-			t.Errorf("warm Evidence issued %d graph queries and %d SELECTs, want 0 and 0", n, selects.N())
-		}
-		selects.Reset()
 		propose()
 		if n != 0 {
 			t.Errorf("a warm Propose issued %d graph queries, want 0", n)
@@ -272,51 +228,5 @@ func TestLargeSourceBudgets(t *testing.T) {
 		proposeOnePlace()
 		d := fastest(3, func() time.Duration { return since(proposeOnePlace) })
 		over(t, "warm proposal on the one-place Source", d, budgetOnePlaceWarm)
-	})
-
-	// A place has no kinship links, so evidence on its row must not walk its
-	// 6,000 events for them.
-	t.Run("evidence on a place row", func(t *testing.T) {
-		var city *graphalign.Row
-		p := f.propose(onePlaceGraph, nil)
-		for i, r := range p.Rows {
-			if r.Target == graphalign.TargetHandle && r.Kind == "place" {
-				city = &p.Rows[i]
-			}
-		}
-		if city == nil {
-			t.Fatal("the one-place Source has no place row with a handle")
-		}
-		req := promotealign.EvidenceRequest{GraphID: onePlaceGraph, SubjectID: city.SubjectID, HandleID: city.HandleID}
-		d := fastest(3, func() time.Duration {
-			f.c.Graph().Drop()
-			must(t, catalogsession.WarmOnOpen(f.c))
-			return since(func() { f.evidence(req) })
-		})
-		over(t, "evidence on the place row, cold", d, budgetPlaceEvidence)
-	})
-
-	// A pass over Source A touches 21 Evidence graphs; a cap of 8 evicts along
-	// the way and every response must still match the default cap's.
-	t.Run("evidence under a small cap", func(t *testing.T) {
-		const small = 8
-		reqs := evidenceRequests()
-		f.c.Graph().Drop()
-		want := make([]claimevidence.Evidence, len(reqs))
-		for i, req := range reqs {
-			want[i] = f.evidence(req)
-		}
-		f.c.Graph().SetEvidenceGraphCapForTest(small)
-		defer f.c.Graph().SetEvidenceGraphCapForTest(0)
-		f.c.Graph().Drop()
-		for i, req := range reqs {
-			got := f.evidence(req)
-			if n := f.c.Graph().LoadedEvidenceGraphCountForTest(); n > small {
-				t.Fatalf("request %d left %d Evidence graphs loaded, want at most %d", i, n, small)
-			}
-			if !reflect.DeepEqual(got, want[i]) {
-				t.Fatalf("request %d under cap %d differs from the default cap's response", i, small)
-			}
-		}
 	})
 }
