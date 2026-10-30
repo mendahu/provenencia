@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S13-24 — The pin engine goes
+
+**Landed 2026-10-30** in [#639](https://github.com/mendahu/provenencia/pull/639). Done files accepted claims and their connections and nothing else: the claim evidence request, the evidence query, `core/claimevidence`, Apply's pin resolution and claim-field inputs, the confidence grade request and the registry's `evidence` section are deleted, and their wire is reserved. The reconciler no longer weakens or ranks a value by its claim's confidence grade (cache version 21), and one function now reads a record's provenance for the reconciler and the Person page. Go says where each Promote row starts (`graphalign.Row.Start`), so the proposal drops its score, band, Contested flag and reason and the app's draft rule shrinks to reading the target.
+
 ## S13-10 — Header and sections
 
 **Landed 2026-10-29** in [#634](https://github.com/mendahu/provenencia/pull/634). The Person page keeps its header and gains a Vitals / Family / Timeline / Gallery / Sources switcher under it. Each section is a history place (`WorkspaceLocation.pageSection`, kind-neutral, nil is the first), so Back, Forward and a reopened project return to it, and the crumbs and Back menu name it. Vitals holds the rows with a reserved slot for S13-11's provenance control, Gallery holds the likenesses, and the other three are empty states until their PRs. The header pins and compacts on scroll. `ConclusionDetailPage` now sits on the kit's new `PVPageColumns` (centered at Wide, shared by Event and Place), and the date-kind, Observation-kind and value-type pickers moved onto the new `PVSegmentedControl`; `PVChip` gained a size, a glyph, a focus ring and the selected trait. "Vitals" now names only the section: the header's b. and d. lines are life lines.
