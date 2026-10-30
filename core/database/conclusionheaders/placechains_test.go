@@ -1,6 +1,7 @@
 package conclusionheaders_test
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -458,3 +459,172 @@ func TestUndatedPlacesAlwaysHold(t *testing.T) {
 		}
 	}
 }
+
+// lifeEvent cites a birth or death event for person, dated by the Property
+// dateKey ("date" or "start_date"; "" for no date) at year, located at places.
+// It does not promote.
+func (f *fixture) lifeEvent(person subjects.Subject, kind, dateKey string, y int, y2 int64, places ...subjects.Subject) subjects.Subject {
+	f.t.Helper()
+	ev := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
+	f.at(ev, 6, y2)
+	in := []observations.Input{{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", kind).ID}}
+	if dateKey != "" {
+		in = append(in, observations.Input{PropertyID: f.prop(dateKey).ID, Date: pointYear(y)})
+	}
+	f.cite(ev, in...)
+	f.participation(person, ev, "subject")
+	for _, p := range places {
+		f.location(ev, p)
+	}
+	return ev
+}
+
+func (f *fixture) lifePerson() subjects.Subject {
+	f.t.Helper()
+	p := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	f.named(p, "Ann")
+	f.at(p, 0, 20)
+	return p
+}
+
+func TestPersonLifeOwners(t *testing.T) {
+	type owner struct {
+		entity []byte
+		prop   string
+	}
+	type world struct {
+		person       []byte
+		birth, death struct{ dates, places []owner }
+	}
+	cases := []struct {
+		name  string
+		build func(f *fixture) world
+	}{
+		{"one birth event with a date at York", func(f *fixture) world {
+			york := f.placeSubject("York", nil, nil, 0, 0)
+			p := f.lifePerson()
+			ev := f.lifeEvent(p, "birth", "date", 1817, 2, york)
+			var w world
+			w.person = f.promoteSubject(p)
+			e, y := f.promoteSubject(ev), f.promoteSubject(york)
+			w.birth.dates = []owner{{e, "date"}}
+			w.birth.places = []owner{{y, "toponym"}}
+			return w
+		}},
+		{"start_date only", func(f *fixture) world {
+			p := f.lifePerson()
+			ev := f.lifeEvent(p, "birth", "start_date", 1817, 2)
+			var w world
+			w.person = f.promoteSubject(p)
+			w.birth.dates = []owner{{f.promoteSubject(ev), "start_date"}}
+			return w
+		}},
+		{"earlier birth event first", func(f *fixture) world {
+			p := f.lifePerson()
+			late := f.lifeEvent(p, "birth", "date", 1818, 2)
+			early := f.lifeEvent(p, "birth", "date", 1817, 4)
+			var w world
+			w.person = f.promoteSubject(p)
+			l, e := f.promoteSubject(late), f.promoteSubject(early)
+			w.birth.dates = []owner{{e, "date"}, {l, "date"}}
+			return w
+		}},
+		{"death at two Places that do not fold", func(f *fixture) world {
+			mtl := f.placeSubject("Montréal", nil, nil, 0, 0)
+			paris := f.placeSubject("Paris", nil, nil, 0, 2)
+			p := f.lifePerson()
+			ev := f.lifeEvent(p, "death", "date", 1900, 4, mtl, paris)
+			var w world
+			w.person = f.promoteSubject(p)
+			w.death.dates = []owner{{f.promoteSubject(ev), "date"}}
+			// The order the header gives the Places: compared below against
+			// the header's own walk.
+			f.promoteSubject(mtl)
+			f.promoteSubject(paris)
+			return w
+		}},
+		{"York on two birth events is listed once", func(f *fixture) world {
+			york := f.placeSubject("York", nil, nil, 0, 0)
+			p := f.lifePerson()
+			a := f.lifeEvent(p, "birth", "date", 1817, 2, york)
+			b := f.lifeEvent(p, "birth", "date", 1818, 4, york)
+			var w world
+			w.person = f.promoteSubject(p)
+			ae, be := f.promoteSubject(a), f.promoteSubject(b)
+			y := f.promoteSubject(york)
+			w.birth.dates = []owner{{ae, "date"}, {be, "date"}}
+			w.birth.places = []owner{{y, "toponym"}}
+			return w
+		}},
+		{"a parent Place is not an owner", func(f *fixture) world {
+			york := f.placeSubject("York", nil, nil, 0, 0)
+			shire := f.placeSubject("Yorkshire", nil, nil, 2, 0)
+			f.placeRel(york, shire, propertyterms.KeyPartOf, nil, nil)
+			p := f.lifePerson()
+			ev := f.lifeEvent(p, "birth", "date", 1817, 2, york, shire)
+			var w world
+			w.person = f.promoteSubject(p)
+			e, y := f.promoteSubject(ev), f.promoteSubject(york)
+			f.promoteSubject(shire)
+			w.birth.dates = []owner{{e, "date"}}
+			w.birth.places = []owner{{y, "toponym"}}
+			return w
+		}},
+		{"no events", func(f *fixture) world {
+			p := f.lifePerson()
+			return world{person: f.promoteSubject(p)}
+		}},
+		{"unknown id", func(f *fixture) world {
+			return world{person: bytes16(0x7a)}
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newFixture(t)
+			w := tc.build(f)
+			birth, death, err := conclusionheaders.PersonLifeOwners(f.c, w.person)
+			must(t, err)
+			check := func(side string, got conclusionheaders.LifeOwners, want struct{ dates, places []owner }) {
+				t.Helper()
+				for _, part := range []struct {
+					name string
+					got  []conclusionheaders.FieldOwner
+					want []owner
+				}{{"dates", got.Dates, want.dates}, {"places", got.Places, want.places}} {
+					if len(part.got) != len(part.want) {
+						// A case that leaves the order to the header's walk.
+						if part.want == nil && side == "death" && part.name == "places" && len(part.got) == 2 {
+							continue
+						}
+						t.Fatalf("%s %s: %d owners, want %d", side, part.name, len(part.got), len(part.want))
+					}
+					for i := range part.got {
+						if !bytes.Equal(part.got[i].Entity.ID, part.want[i].entity) {
+							t.Fatalf("%s %s[%d]: wrong entity", side, part.name, i)
+						}
+						if wantID := f.prop(part.want[i].prop).ID; !bytes.Equal(part.got[i].PropertyID, wantID) {
+							t.Fatalf("%s %s[%d]: property %x, want %s", side, part.name, i, part.got[i].PropertyID, part.want[i].prop)
+						}
+					}
+				}
+			}
+			check("birth", birth, w.birth)
+			check("death", death, w.death)
+			if tc.name == "death at two Places that do not fold" {
+				persons, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{w.person})
+				must(t, err)
+				header := persons[0].Death.Places
+				if len(death.Places) != 2 || len(header) != 2 {
+					t.Fatalf("death places %d, header %d", len(death.Places), len(header))
+				}
+				for i := range header {
+					if !bytes.Equal(death.Places[i].Entity.ID, header[i].Entity.ID) {
+						t.Fatalf("death place %d is not the header's", i)
+					}
+				}
+			}
+		})
+	}
+}
+
+func bytes16(b byte) []byte { return bytes.Repeat([]byte{b}, 16) }

@@ -50,7 +50,8 @@ type PersonHeader struct {
 // LifeFacts is a birth or a death composed from the canonical graph.
 type LifeFacts struct {
 	// Event is the birth or death event read; nil when none is linked.
-	// Its page owns the date's Why. EventCount is how many such events
+	// A Person page reads its date's records through
+	// conclusiondetails.PersonDerivedRows. EventCount is how many such events
 	// survive; more than one is a disagreement.
 	Event      *canonicalentities.Entity
 	EventCount int
@@ -64,10 +65,23 @@ type LifeFacts struct {
 // Names are kept toponyms in rank order. Parents is the hierarchical chain
 // at the walk's date (nearest first); ParentsAreCandidates when several
 // parents hold at once. Entity is the Place (the leaf when folded), whose
-// page owns the names' Why.
+// toponym records a Person page reads through conclusiondetails.PersonDerivedRows.
 type HeaderPlace struct {
 	Entity               canonicalentities.Entity
 	Names                []string
 	Parents              []string
 	ParentsAreCandidates bool
+}
+
+// FieldOwner is one entity and the Property of it that a Person's life row
+// reads.
+type FieldOwner struct {
+	Entity     canonicalentities.Entity
+	PropertyID []byte
+}
+
+// LifeOwners are the owners behind one life row pair: the date owners (one
+// per surviving event, lead first) and the Place owners (each Place once).
+type LifeOwners struct {
+	Dates, Places []FieldOwner
 }
