@@ -6,6 +6,26 @@ struct PlaceTitleParts: Equatable, Sendable {
     var names: [String] = []
     var label: String = ""
     var ref: String = ""
+
+    init(names: [String] = [], label: String = "", ref: String = "") {
+        self.names = names
+        self.label = label
+        self.ref = ref
+    }
+
+    /// A Place read from its `toponym` field: the displayed values, as the
+    /// reconciled-value display words them, without the empty ones.
+    init(
+        toponym: CatalogConclusionField?,
+        entity: CatalogCanonicalEntity,
+        locale: Locale,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) {
+        let names = toponym?.displayedValues
+            .map { ReconciledValueDisplay.string(for: $0.value, locale: locale, orders: orders) }
+            .filter { !$0.isEmpty } ?? []
+        self.init(names: names, label: entity.label, ref: entity.ref)
+    }
 }
 
 enum PlaceTitleDisplay {

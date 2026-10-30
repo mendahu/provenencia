@@ -20,12 +20,8 @@ struct PlaceDetailContent: ConclusionDetailBody {
 
     init(detail: CatalogConclusionDetail, locale: Locale = .autoupdatingCurrent) {
         let toponym = detail.fields.first { $0.propertyKey == SeededPropertyKey.toponym }
-        let names = toponym?.displayedValues.compactMap { value -> String? in
-            let text = ReconciledValueDisplay.string(for: value.value, locale: locale)
-            return text.isEmpty ? nil : text
-        } ?? []
         title = PlaceTitleDisplay.titleSource(
-            PlaceTitleParts(names: names, label: detail.entity.label, ref: detail.entity.ref)
+            PlaceTitleParts(toponym: toponym, entity: detail.entity, locale: locale)
         )
         ref = detail.entity.ref
         members = L10n.Conclusions.memberCount(detail.memberCount)
