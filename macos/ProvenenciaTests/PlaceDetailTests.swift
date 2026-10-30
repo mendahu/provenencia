@@ -133,11 +133,7 @@ struct PlaceDetailTests {
 
     @Test func aPictureFillsTheGalleryAndLeadsTheHeader() {
         var source = detail()
-        var picture = CatalogPicture(
-            imageRelPath: "objects/ab/cd.png", record: D.outcome("a", "kept", title: "Church photo")
-        )
-        picture.leads = true
-        source.pictures = [picture]
+        source.pictures = [D.picture("a", path: "objects/ab/cd.png", title: "Church photo", leads: true)]
         let page = content(source)
         #expect(page.gallery.title == L10n.Conclusions.picturesSection)
         #expect(page.gallery.tiles.count == 1)

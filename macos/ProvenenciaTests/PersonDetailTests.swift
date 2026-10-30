@@ -85,10 +85,6 @@ struct PersonDetailTests {
         #expect(place.thumbnail == .init(mark: .subjectPlace, label: L10n.Conclusions.placeNoImage) && place.badge == nil)
     }
 
-    private func likeness(_ id: String, path: String, title: String) -> CatalogPicture {
-        CatalogPicture(imageRelPath: path, record: D.outcome(id, "kept", title: title))
-    }
-
     @Test func headerThumbIsTheLeadLikeness() {
         let woman = CatalogConclusionValue.term(id: "t", key: "woman", label: "Woman", origin: CatalogOrigin.provenencia)
         let gender = D.field(
@@ -101,7 +97,7 @@ struct PersonDetailTests {
         )
         header.pictureImageRelPath = "objects/ab/cd.png"
         var source = detail(extra: [gender], header: header)
-        var lead = likeness("a", path: "objects/ab/cd.png", title: "Register")
+        var lead = D.picture("a", path: "objects/ab/cd.png", title: "Register")
         lead.leads = true
         source.pictures = [lead]
         let thumb = PersonDetailContent(detail: source).thumbnail
@@ -117,9 +113,9 @@ struct PersonDetailTests {
 
     @Test func likenessesBecomeTilesEarliestFirst() {
         var source = detail()
-        var second = likeness("b", path: "objects/ef/01.png", title: "")
+        var second = D.picture("b", path: "objects/ef/01.png", title: "")
         second.record.observationRef = "OBS-2"
-        source.pictures = [likeness("a", path: "objects/ab/cd.png", title: "Register"), second]
+        source.pictures = [D.picture("a", path: "objects/ab/cd.png", title: "Register"), second]
         let content = PersonDetailContent(detail: source)
         let gallery = content.gallery
         #expect(gallery.tiles.map(\.id) == ["a", "b"])
@@ -142,8 +138,8 @@ struct PersonDetailTests {
                 name: nil, nameValueCount: 0
             )
             header.pictureImageRelPath = lead == "a" ? "objects/ab/cd.png" : "objects/ef/01.png"
-            var a = likeness("a", path: "objects/ab/cd.png", title: "Register")
-            var b = likeness("b", path: "objects/ef/01.png", title: "Census")
+            var a = D.picture("a", path: "objects/ab/cd.png", title: "Register")
+            var b = D.picture("b", path: "objects/ef/01.png", title: "Census")
             a.preferred = preferred == "a"
             b.preferred = preferred == "b"
             a.leads = lead == "a"
@@ -179,7 +175,7 @@ struct PersonDetailTests {
         ConclusionDetailGallery.tiles(
             from: {
                 var source = detail()
-                source.pictures = [likeness("obs-b", path: "objects/ef/01.png", title: "Census")]
+                source.pictures = [D.picture("obs-b", path: "objects/ef/01.png", title: "Census")]
                 return source
             }(),
             tileLabel: L10n.Conclusions.likenessTileLabel,

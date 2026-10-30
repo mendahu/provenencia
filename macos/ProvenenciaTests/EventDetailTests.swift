@@ -144,12 +144,6 @@ struct EventDetailTests {
         #expect(page.summaryDate == nil)
     }
 
-    private func picture(_ id: String, path: String, title: String, leads: Bool) -> CatalogPicture {
-        var picture = CatalogPicture(imageRelPath: path, record: D.outcome(id, "kept", title: title))
-        picture.leads = leads
-        return picture
-    }
-
     @Test func noPictureLeavesTheMarkAndNoGallery() {
         let page = content(detail())
         #expect(page.gallery.tiles.isEmpty)
@@ -159,7 +153,7 @@ struct EventDetailTests {
 
     @Test func aSinglePictureLeadsTheHeaderWithoutAMenu() {
         var source = detail()
-        source.pictures = [picture("a", path: "objects/ab/cd.png", title: "Wedding photograph", leads: true)]
+        source.pictures = [D.picture("a", path: "objects/ab/cd.png", title: "Wedding photograph", leads: true)]
         let page = content(source)
         #expect(page.thumbnail.imageRelPath == "objects/ab/cd.png")
         #expect(page.thumbnail.mark == .subjectEvent)
@@ -171,8 +165,8 @@ struct EventDetailTests {
     @Test func aChosenLaterPictureOffersTheEarliest() {
         var source = detail()
         source.pictures = [
-            picture("a", path: "objects/ab/cd.png", title: "Wedding photograph", leads: false),
-            picture("b", path: "objects/ef/01.png", title: "Family album", leads: true),
+            D.picture("a", path: "objects/ab/cd.png", title: "Wedding photograph", leads: false),
+            D.picture("b", path: "objects/ef/01.png", title: "Family album", leads: true),
         ]
         let gallery = content(source).gallery
         #expect(gallery.title == L10n.Conclusions.picturesSection)
@@ -189,8 +183,8 @@ struct EventDetailTests {
     @Test func twoTilesSharingAPathNameTheLeadingSource() {
         var source = detail()
         source.pictures = [
-            picture("a", path: "objects/ab/cd.png", title: "First copy", leads: false),
-            picture("b", path: "objects/ab/cd.png", title: "Second copy", leads: true),
+            D.picture("a", path: "objects/ab/cd.png", title: "First copy", leads: false),
+            D.picture("b", path: "objects/ab/cd.png", title: "Second copy", leads: true),
         ]
         let page = content(source)
         #expect(page.thumbnail.imageLabel == "Picture from Second copy")

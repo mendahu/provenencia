@@ -17,6 +17,12 @@ struct ReconciledValueDisplayTests {
         CatalogReconciledValue(rank: rank, reason: ReconcilerReason(wire: reason), support: support, against: against, value: v)
     }
 
+    static func picture(_ id: String, path: String, title: String, leads: Bool = false) -> CatalogPicture {
+        var picture = CatalogPicture(imageRelPath: path, record: outcome(id, "kept", title: title))
+        picture.leads = leads
+        return picture
+    }
+
     static func outcome(
         _ id: String,
         _ reason: String,
