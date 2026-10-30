@@ -1,7 +1,7 @@
 # Ship log — S14-02 Pictures in the app
 
 **Plan:** [`S14-02-pictures-in-the-app.md`](S14-02-pictures-in-the-app.md) · **Branch:** `s14-02-pictures-in-the-app` · **PR:** #641
-**State:** review 2
+**State:** ready
 
 ## Round 0 — implement
 
@@ -70,3 +70,18 @@ Orchestrator read: CON-1 / MNT-3 **Resolved** (method after `deleteAccessibility
 ## Round 2 — review
 
 Reviewers: UX (UX-1 major), MNT (MNT-1, MNT-2 majors). Not sent: CON and SEC+PRF (no Fix-now blocker or major). Scope `1a6da81c...97984bda`.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| UX-1 | UX | major | (round 1) VoiceOver silent on thumbnail result | Resolved | `ConclusionLeadModel.swift:50,55` announce success and failure through `AccessibilityAnnouncement.post` |
+| MNT-1 | MNT | major | (round 1) duplicated Event / Place gallery block | Resolved | `ConclusionDetailGallery.pictures(from:fallbackMark:choose:)`; sweep prints only the builder |
+| MNT-2 | MNT | major | (round 1) plugin origin words copied | Resolved | `OriginPill.pluginLabel(for:)`; sweep prints only it and the L10n definition |
+
+No new findings. Minors read by the orchestrator: UX-2 **Resolved** (`focusedID = tile.id` after a successful `choose`, `ConclusionDetailPage.swift:612-614`); MNT-4 **Resolved** (`rg "CatalogPicture\(" macos/ProvenenciaTests` prints only `ReconciledValueDisplayTests.picture`).
+
+## Finish
+
+Merged `origin/main` @ `14d8bf5d` (#643) at `3a2a95a4`; gate PASS against `14d8bf5d`.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: PRF-1 · to user: — · CON miss: none
