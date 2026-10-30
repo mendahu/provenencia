@@ -534,6 +534,53 @@ public nonisolated enum Provenencia_Engine_V1_EventTitleRule: SwiftProtobuf.Enum
 
 }
 
+/// DerivedRowKind names a Person life row.
+public nonisolated enum Provenencia_Engine_V1_DerivedRowKind: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case unspecified // = 0
+  case birthDate // = 1
+  case birthPlace // = 2
+  case deathDate // = 3
+  case deathPlace // = 4
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .unspecified
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .unspecified
+    case 1: self = .birthDate
+    case 2: self = .birthPlace
+    case 3: self = .deathDate
+    case 4: self = .deathPlace
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .unspecified: return 0
+    case .birthDate: return 1
+    case .birthPlace: return 2
+    case .deathDate: return 3
+    case .deathPlace: return 4
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Provenencia_Engine_V1_DerivedRowKind] = [
+    .unspecified,
+    .birthDate,
+    .birthPlace,
+    .deathDate,
+    .deathPlace,
+  ]
+
+}
+
 public nonisolated enum Provenencia_Engine_V1_DeleteImpactGate: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case unspecified // = 0
@@ -4093,7 +4140,8 @@ public nonisolated struct Provenencia_Engine_V1_HeaderPlace: Sendable {
 
   public var names: [String] = []
 
-  /// entity is the Place; its page owns the names' Why.
+  /// entity is the Place; a Person page's life rows carry its toponym records
+  /// in ConclusionDetail.derived_rows.
   public var entity: Provenencia_Engine_V1_CanonicalEntity {
     get {_entity ?? Provenencia_Engine_V1_CanonicalEntity()}
     set {_entity = newValue}
@@ -5018,6 +5066,11 @@ public nonisolated struct Provenencia_Engine_V1_ConclusionDetail: Sendable {
 
   public var pictures: [Provenencia_Engine_V1_PictureDetail] = []
 
+  /// derived_rows are a Person's life rows: the records of each field a row
+  /// reads off another handle, keyed by that handle (S13-06). Empty for every
+  /// other kind.
+  public var derivedRows: [Provenencia_Engine_V1_DerivedRow] = []
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   /// header is the handle's row for its kind, read with the detail so a page
@@ -5033,6 +5086,65 @@ public nonisolated struct Provenencia_Engine_V1_ConclusionDetail: Sendable {
   public init() {}
 
   fileprivate var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
+}
+
+/// ConclusionOwnerField is the field a derived row reads off the entity that
+/// owns it. event is set for an Event owner.
+public nonisolated struct Provenencia_Engine_V1_ConclusionOwnerField: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var entity: Provenencia_Engine_V1_CanonicalEntity {
+    get {_entity ?? Provenencia_Engine_V1_CanonicalEntity()}
+    set {_entity = newValue}
+  }
+  /// Returns true if `entity` has been explicitly set.
+  public var hasEntity: Bool {self._entity != nil}
+  /// Clears the value of `entity`. Subsequent reads from it will return its default value.
+  public mutating func clearEntity() {self._entity = nil}
+
+  public var field: Provenencia_Engine_V1_ConclusionField {
+    get {_field ?? Provenencia_Engine_V1_ConclusionField()}
+    set {_field = newValue}
+  }
+  /// Returns true if `field` has been explicitly set.
+  public var hasField: Bool {self._field != nil}
+  /// Clears the value of `field`. Subsequent reads from it will return its default value.
+  public mutating func clearField() {self._field = nil}
+
+  public var event: Provenencia_Engine_V1_EventHeader {
+    get {_event ?? Provenencia_Engine_V1_EventHeader()}
+    set {_event = newValue}
+  }
+  /// Returns true if `event` has been explicitly set.
+  public var hasEvent: Bool {self._event != nil}
+  /// Clears the value of `event`. Subsequent reads from it will return its default value.
+  public mutating func clearEvent() {self._event = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
+  fileprivate var _field: Provenencia_Engine_V1_ConclusionField? = nil
+  fileprivate var _event: Provenencia_Engine_V1_EventHeader? = nil
+}
+
+/// DerivedRow is one life row's records, one owner per entity it reads, in the
+/// order the row lists them.
+public nonisolated struct Provenencia_Engine_V1_DerivedRow: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var kind: Provenencia_Engine_V1_DerivedRowKind = .unspecified
+
+  public var owners: [Provenencia_Engine_V1_ConclusionOwnerField] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
 }
 
 /// ProposePromoteGraphAlignment loads one Evidence graph's layer and proposes
@@ -7140,6 +7252,10 @@ nonisolated extension Provenencia_Engine_V1_Method: SwiftProtobuf._ProtoNameProv
 
 nonisolated extension Provenencia_Engine_V1_EventTitleRule: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0EVENT_TITLE_RULE_UNSPECIFIED\0\u{1}EVENT_TITLE_RULE_RECORDED_NAME\0\u{1}EVENT_TITLE_RULE_SUBJECT\0\u{1}EVENT_TITLE_RULE_COUPLE\0\u{1}EVENT_TITLE_RULE_SUBJECTS\0\u{1}EVENT_TITLE_RULE_LABEL\0\u{1}EVENT_TITLE_RULE_TYPE_AT_PLACE\0\u{1}EVENT_TITLE_RULE_TYPE\0\u{1}EVENT_TITLE_RULE_REF\0")
+}
+
+nonisolated extension Provenencia_Engine_V1_DerivedRowKind: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0DERIVED_ROW_KIND_UNSPECIFIED\0\u{1}DERIVED_ROW_KIND_BIRTH_DATE\0\u{1}DERIVED_ROW_KIND_BIRTH_PLACE\0\u{1}DERIVED_ROW_KIND_DEATH_DATE\0\u{1}DERIVED_ROW_KIND_DEATH_PLACE\0")
 }
 
 nonisolated extension Provenencia_Engine_V1_DeleteImpactGate: SwiftProtobuf._ProtoNameProviding {
@@ -15469,7 +15585,7 @@ nonisolated extension Provenencia_Engine_V1_PictureDetail: SwiftProtobuf.Message
 
 nonisolated extension Provenencia_Engine_V1_ConclusionDetail: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ConclusionDetail"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}fields\0\u{3}member_count\0\u{1}person\0\u{1}event\0\u{1}place\0\u{1}pictures\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}fields\0\u{3}member_count\0\u{1}person\0\u{1}event\0\u{1}place\0\u{1}pictures\0\u{3}derived_rows\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -15520,6 +15636,7 @@ nonisolated extension Provenencia_Engine_V1_ConclusionDetail: SwiftProtobuf.Mess
         }
       }()
       case 7: try { try decoder.decodeRepeatedMessageField(value: &self.pictures) }()
+      case 8: try { try decoder.decodeRepeatedMessageField(value: &self.derivedRows) }()
       default: break
       }
     }
@@ -15557,6 +15674,9 @@ nonisolated extension Provenencia_Engine_V1_ConclusionDetail: SwiftProtobuf.Mess
     if !self.pictures.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.pictures, fieldNumber: 7)
     }
+    if !self.derivedRows.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.derivedRows, fieldNumber: 8)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -15566,6 +15686,86 @@ nonisolated extension Provenencia_Engine_V1_ConclusionDetail: SwiftProtobuf.Mess
     if lhs.memberCount != rhs.memberCount {return false}
     if lhs.header != rhs.header {return false}
     if lhs.pictures != rhs.pictures {return false}
+    if lhs.derivedRows != rhs.derivedRows {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_ConclusionOwnerField: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ConclusionOwnerField"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}field\0\u{1}event\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._entity) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._field) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._event) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._entity {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try { if let v = self._field {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try { if let v = self._event {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_ConclusionOwnerField, rhs: Provenencia_Engine_V1_ConclusionOwnerField) -> Bool {
+    if lhs._entity != rhs._entity {return false}
+    if lhs._field != rhs._field {return false}
+    if lhs._event != rhs._event {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_DerivedRow: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DerivedRow"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{1}owners\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.owners) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.kind != .unspecified {
+      try visitor.visitSingularEnumField(value: self.kind, fieldNumber: 1)
+    }
+    if !self.owners.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.owners, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_DerivedRow, rhs: Provenencia_Engine_V1_DerivedRow) -> Bool {
+    if lhs.kind != rhs.kind {return false}
+    if lhs.owners != rhs.owners {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

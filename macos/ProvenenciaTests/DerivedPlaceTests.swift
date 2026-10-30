@@ -41,4 +41,36 @@ struct DerivedPlaceTests {
         )
         #expect(DerivedPlace.name([place]) == "The Farm, York Township or York County")
     }
+
+    @Test func shownSkipsANamelessPlace() {
+        let nameless = CatalogHeaderPlace(
+            entity: CatalogCanonicalEntity(id: "p0", ref: "PLC-0", subjectTypeID: "t", label: ""), names: []
+        )
+        let paris = CatalogHeaderPlace(
+            entity: CatalogCanonicalEntity(id: "p1", ref: "PLC-1", subjectTypeID: "t", label: ""), names: ["Paris"]
+        )
+        #expect(DerivedPlace.shown([nameless, paris])?.entity.id == "p1")
+        #expect(DerivedPlace.shown([nameless]) == nil)
+        #expect(DerivedPlace.name([nameless, paris]) == "Paris")
+        #expect(DerivedPlace.extra([nameless, paris]) == 1)
+        let row = PersonDetailContent.rows([], header: CatalogPersonHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: ""),
+            nameValueCount: 0,
+            death: CatalogLifeFacts(places: [nameless, paris])
+        ), locale: Locale(identifier: "en_US"))[4]
+        #expect(row.opens?.location == .placeDetail(entityId: "p1", ref: "PLC-1", title: "Paris"))
+    }
+
+    @Test func aPlaceWithoutAKeptNameStillOpens() {
+        let bare = CatalogHeaderPlace(
+            entity: CatalogCanonicalEntity(id: "p0", ref: "PLC-0", subjectTypeID: "t", label: ""), names: []
+        )
+        #expect(DerivedPlace.shown([bare]) == nil)
+        let row = PersonDetailContent.rows([], header: CatalogPersonHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: ""),
+            nameValueCount: 0,
+            death: CatalogLifeFacts(places: [bare])
+        ), locale: Locale(identifier: "en_US"))[4]
+        #expect(row.opens?.location == .placeDetail(entityId: "p0", ref: "PLC-0", title: "PLC-0"))
+    }
 }

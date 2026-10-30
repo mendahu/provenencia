@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -32,6 +33,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
@@ -51,6 +53,7 @@ type fixture struct {
 	person subjecttypes.Type
 	name   properties.Property
 	sex    properties.Property
+	date   properties.Property
 }
 
 func must(t *testing.T, err error) {
@@ -79,6 +82,8 @@ func newFixture(t *testing.T) *fixture {
 	f.name, err = properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 	must(t, err)
 	f.sex, err = properties.Lookup(c, "sex_at_birth", vocabkey.OriginProvenencia)
+	must(t, err)
+	f.date, err = properties.Lookup(c, "date", vocabkey.OriginProvenencia)
 	must(t, err)
 	return f
 }
@@ -530,4 +535,64 @@ func termID(t *testing.T, f *fixture, key string) []byte {
 	var id []byte
 	must(t, db.QueryRow(`SELECT id FROM property_terms WHERE property_id = ? AND key = ?`, f.sex.ID, key).Scan(&id))
 	return id
+}
+
+func (f *fixture) dateIn(s subjects.Subject, year int) observations.Input {
+	return observations.Input{SubjectID: s.ID, PropertyID: f.date.ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &year}}
+}
+
+func TestFieldsOf(t *testing.T) {
+	f := newFixture(t)
+	register, census, bible := f.source("Register"), f.source("Census"), f.source("Bible")
+	a, b := f.subjectOn(register, "event"), f.subjectOn(census, "event")
+	c := f.subjectOn(bible, "event")
+	f.cite(a, f.dateIn(a, 1817))
+	f.cite(b, f.dateIn(b, 1817))
+	f.cite(c, f.dateIn(c, 1818))
+	first := f.promote(a, nil)
+	f.promote(b, first)
+	second := f.promote(c, nil)
+	merged := f.promote(f.subjectOn(f.source("Other"), "event"), nil)
+	db, err := f.c.DB()
+	must(t, err)
+	_, err = db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, first, merged)
+	must(t, err)
+	f.c.Graph().Drop()
+
+	tests := []struct {
+		name  string
+		ids   [][]byte
+		check func(t *testing.T, got map[string][]conclusiondetails.Field)
+	}{
+		{"a repeat and a merged id add no entity", [][]byte{first, second, first, merged}, func(t *testing.T, got map[string][]conclusiondetails.Field) {
+			if len(got) != 2 {
+				t.Fatalf("entities %d, want 2 (a repeat and a merged id add none)", len(got))
+			}
+			one := got[string(first)]
+			if len(one) != 1 || one[0].PropertyKey != "date" || len(one[0].Outcomes) != 2 || len(one[0].Values) != 1 ||
+				one[0].State != autoreconcile.StateMerged || one[0].Values[0].Support != 2 {
+				t.Fatalf("first event %+v", one)
+			}
+			two := got[string(second)]
+			if len(two) != 1 || len(two[0].Outcomes) != 1 || two[0].State != autoreconcile.StateSingle {
+				t.Fatalf("second event %+v", two)
+			}
+			if _, ok := got[string(merged)]; ok {
+				t.Fatal("merged id composed")
+			}
+		}},
+		{"one node matches ForEntity", [][]byte{first}, func(t *testing.T, got map[string][]conclusiondetails.Field) {
+			d := f.detail(first)
+			if !reflect.DeepEqual(got[string(first)], d.Fields) {
+				t.Fatalf("one-node fieldsOf %+v\nForEntity %+v", got[string(first)], d.Fields)
+			}
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := conclusiondetails.FieldsOf(f.c, tc.ids)
+			must(t, err)
+			tc.check(t, got)
+		})
+	}
 }

@@ -10,14 +10,16 @@ struct PersonDetailTests {
         label: String = "",
         members: Int = 4,
         extra: [CatalogConclusionField] = [],
-        header: CatalogPersonHeader? = nil
+        header: CatalogPersonHeader? = nil,
+        derivedRows: [CatalogDerivedRow] = []
     ) -> CatalogConclusionDetail {
         let sex = D.field("", key: "sex_at_birth", label: "Sex at birth", valueType: "term")
         return CatalogConclusionDetail(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "t", label: label),
             fields: (name.map { [$0] } ?? []) + [sex] + extra,
             memberCount: members,
-            header: header.map { .person($0) }
+            header: header.map { .person($0) },
+            derivedRows: derivedRows
         )
     }
 
@@ -333,5 +335,126 @@ struct PersonDetailTests {
         #expect(sourceID == "s-bible" && graphID == "g-bible" && subjectID == "sub-bible" && citationID == "cit-bible")
         #expect(location.graphId == "g-bible")
         #expect(artifactID == "art-bible" && observationID == "bible")
+    }
+
+    // MARK: Life rows carry their owners' records (S13-06)
+
+    private let en = Locale(identifier: "en_US")
+
+    private func entity(_ id: String, _ ref: String, label: String = "") -> CatalogCanonicalEntity {
+        CatalogCanonicalEntity(id: id, ref: ref, subjectTypeID: "t", label: label)
+    }
+
+    private func owner(
+        _ entity: CatalogCanonicalEntity,
+        key: String,
+        outcomes: [CatalogReconcilerOutcome],
+        values: [CatalogReconciledValue] = [],
+        event: CatalogEventHeader? = nil
+    ) -> CatalogOwnerField {
+        CatalogOwnerField(
+            entity: entity, event: event,
+            field: D.field(values.isEmpty ? "" : "single", key: key, label: key, valueType: key == "date" ? "date" : "text", values, outcomes: outcomes)
+        )
+    }
+
+    private func lifeHeader(birth: CatalogLifeFacts = CatalogLifeFacts(), death: CatalogLifeFacts = CatalogLifeFacts()) -> CatalogPersonHeader {
+        CatalogPersonHeader(entity: entity("e1", "PER-7KD45"), name: CatalogNameValue(form: "Ada"), nameValueCount: 1, birth: birth, death: death)
+    }
+
+    @Test func lifeRowsCarryTheirOwnersRecords() {
+        let event = entity("ev1", "EVT-1")
+        let date = CatalogDateValueInput(kind: "point", startYear: 1817, startMonth: 5, startDay: 14)
+        let header = lifeHeader(birth: CatalogLifeFacts(event: event, eventCount: 1, date: date, dateCount: 1))
+        let kept = [D.outcome("reg", "kept", title: "Register"), D.outcome("cen", "kept", title: "Census")]
+        let rows = [CatalogDerivedRow(kind: .birthDate, owners: [
+            owner(event, key: "date", outcomes: kept, values: [D.value(1, "kept", support: 2, .date(date))]),
+        ])]
+        let page = PersonDetailContent(detail: detail(header: header, derivedRows: rows), locale: en)
+        let birth = page.rows[1]
+        #expect(birth.recordGroups.count == 1 && birth.recordGroups[0].owner == nil)
+        #expect(birth.records.count == 2 && birth.records.allSatisfy { $0.counted })
+        #expect(birth.whyTitle == "Why “\(birth.lead ?? "")”" && birth.lead != nil)
+        // No death event: no Why.
+        #expect(page.rows[3].records.isEmpty && page.rows[3].whyTitle == "")
+
+        // A date whose only record is denied: stated empty, with its Why.
+        let denied = [CatalogDerivedRow(kind: .birthDate, owners: [
+            owner(event, key: "date", outcomes: [D.outcome("den", "denied", rank: nil)]),
+        ])]
+        let empty = PersonDetailContent(detail: detail(header: lifeHeader(), derivedRows: denied), locale: en).rows[1]
+        #expect(empty.lead == nil && empty.records.count == 1)
+        #expect(empty.whyTitle == "Why “Birth date”")
+    }
+
+    @Test func anOwnerThatIsNotTheShownOneIsNamed() {
+        // The lead event has no Place; another event is at York. The one
+        // group is not the shown value, so it is named and not in primary ink.
+        let york = entity("pl1", "PLC-1")
+        let header = lifeHeader(birth: CatalogLifeFacts(eventCount: 2))
+        let rows = [CatalogDerivedRow(kind: .birthPlace, owners: [
+            owner(york, key: "toponym", outcomes: [D.outcome("y", "kept")], values: [D.value(1, "kept", .text("York"))]),
+        ])]
+        let birth = PersonDetailContent(detail: detail(header: header, derivedRows: rows), locale: en).rows[2]
+        #expect(birth.recordGroups.count == 1)
+        #expect(birth.recordGroups[0].owner?.title == "York")
+        #expect(birth.recordGroups[0].records.allSatisfy { !$0.counted })
+    }
+
+    @Test func competingOwnersAreGroupedAndSecondary() {
+        let first = entity("ev1", "EVT-4KX2M"), second = entity("ev2", "EVT-9RW7P")
+        let date = CatalogDateValueInput(kind: "point", startYear: 1822)
+        let header = lifeHeader(birth: CatalogLifeFacts(event: second, eventCount: 2, date: date, dateCount: 1))
+        func eventHeader(_ entity: CatalogCanonicalEntity) -> CatalogEventHeader {
+            CatalogEventHeader(
+                entity: entity, eventTypeKey: "birth", eventTypeOrigin: CatalogOrigin.provenencia,
+                title: CatalogEventTitle(
+                    rule: .subject, ref: entity.ref, typeKey: "birth", typeOrigin: CatalogOrigin.provenencia,
+                    subjects: [CatalogNameValue(form: "Ada Lovelace")]
+                )
+            )
+        }
+        let rows = [CatalogDerivedRow(kind: .birthDate, owners: [
+            owner(first, key: "date", outcomes: [D.outcome("a", "kept")], event: eventHeader(first)),
+            owner(second, key: "date", outcomes: [D.outcome("b", "kept"), D.outcome("c", "kept")], event: eventHeader(second)),
+        ])]
+        let birth = PersonDetailContent(detail: detail(header: header, derivedRows: rows), locale: en).rows[1]
+        // The header's lead event (the second) is shown, so it comes first.
+        #expect(birth.recordGroups.map(\.id) == ["ev2", "ev1"])
+        #expect(birth.recordGroups[0].records.allSatisfy { $0.counted })
+        #expect(birth.recordGroups[1].records.allSatisfy { !$0.counted })
+        #expect(birth.recordGroups[0].owner?.title == "Birth of Ada Lovelace")
+        #expect(birth.recordGroups[0].owner?.ref == "EVT-9RW7P")
+        #expect(birth.recordGroups[0].owner?.spoken == "Birth of Ada Lovelace, EVT-9RW7P")
+
+        // An owner with no header and no label is titled by its ref, once.
+        let bare = [CatalogDerivedRow(kind: .birthDate, owners: [
+            owner(first, key: "date", outcomes: [D.outcome("a", "kept")]),
+            owner(second, key: "date", outcomes: [D.outcome("b", "kept")]),
+        ])]
+        let line = PersonDetailContent(detail: detail(header: header, derivedRows: bare), locale: en).rows[1].recordGroups[1].owner
+        #expect(line?.title == "EVT-4KX2M" && line?.ref == nil && line?.spoken == "EVT-4KX2M")
+
+        // Two Places are titled as the Places list titles them.
+        let toronto = entity("pl1", "PLC-1"), yorkville = entity("pl2", "PLC-2")
+        let name = { (text: String) in [D.value(1, "kept", .text(text))] }
+        let places = [CatalogDerivedRow(kind: .deathPlace, owners: [
+            owner(toronto, key: "toponym", outcomes: [D.outcome("t", "kept")], values: name("Toronto")),
+            owner(yorkville, key: "toponym", outcomes: [D.outcome("y", "kept")], values: name("Yorkville")),
+        ])]
+        let death = lifeHeader(death: CatalogLifeFacts(places: [
+            CatalogHeaderPlace(entity: toronto, names: ["Toronto"]), CatalogHeaderPlace(entity: yorkville, names: ["Yorkville"]),
+        ]))
+        let row = PersonDetailContent(detail: detail(header: death, derivedRows: places), locale: en).rows[4]
+        #expect(row.recordGroups.compactMap { $0.owner?.title } == ["Toronto", "Yorkville"])
+        #expect(row.recordGroups[1].records.allSatisfy { !$0.counted })
+
+        // A nameless first Place is not the shown one: the second leads the Why.
+        let nameless = CatalogHeaderPlace(entity: toronto, names: [])
+        let paris = CatalogHeaderPlace(entity: yorkville, names: ["Paris"])
+        let lopsided = lifeHeader(death: CatalogLifeFacts(places: [nameless, paris]))
+        let shown = PersonDetailContent(detail: detail(header: lopsided, derivedRows: places), locale: en).rows[4]
+        #expect(shown.lead == "Paris" && shown.recordGroups.first?.owner?.id == "pl2")
+        #expect(shown.opens?.location == .placeDetail(entityId: "pl2", ref: "PLC-2", title: "Paris"))
     }
 }

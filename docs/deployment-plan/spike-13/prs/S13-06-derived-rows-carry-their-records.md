@@ -1,9 +1,9 @@
 # S13-06 — Derived rows carry their records
 
-**Status:** Planned
+**Status:** Landed in #640 (2026-10-30)
 **Spike / slice:** Spike 13 · Slice 2 — Provenance sheet
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S13-D12](../design/S13-D12-life-rows-why.md), board agreed 2026-10-30. The Why disclosure appears on the four life rows, so the Vitals rows look different (user, 2026-10-30: "Why shows now")
+**Brief:** [S13-D12](../design/archive/S13-D12-life-rows-why.md), board agreed 2026-10-30. The Why disclosure appears on the four life rows, so the Vitals rows look different (user, 2026-10-30: "Why shows now")
 **Board:** [Claude Design, *Person Detail*](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail.dc.html*, turn 5 "S13-D12 · The Why on the four life rows", frames 5a – 5h. LW-4 option (a) is picked; frame 5e (option (b)) is set aside and not built. §6 **macOS** describes each frame in words; the brief's §8 records where the board and the plan differ
 **Depends on:** S13-D12 (board agreed 2026-10-30). Shares `core/database/conclusiondetails/conclusiondetails.go` and `api/ffi/handlers/conclusion_detail.go` with S13-24 (Planned); either may land first, see §11
 **Blocks:** S13-11
@@ -329,3 +329,14 @@ None.
 
 **Title:** S13-06 — Derived rows carry their records
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-13/prs/S13-06-derived-rows-carry-their-records.md`.
+
+## Landed note
+
+The code differs from the plan in these ways:
+
+- STEP-4 to STEP-7 (Swift store, shown Place, row model and group lines, tests) landed as one commit, not one per step.
+- `PersonDerivedRows` and `fieldsOf` live in `conclusiondetails.go` as planned; `lifeOwners` is a small helper in `compose.go` that `PersonLifeOwners` calls once per side.
+- T-4 checks `derived_rows` on the existing Event and Place cases of `TestGetConclusionDetailCarriesItsHeader` through a shared "not a Person" assertion.
+- The manual check (section 10) was not run in the app.
+- D-10's open target falls back to the first Place when none has a line (the ink still follows the shown Place) (user, 2026-10-30).
+- D-12 / LW-3: a single group whose owner is not the shown one gets its group line, so the row names that owner (user, 2026-10-30).

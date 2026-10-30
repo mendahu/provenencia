@@ -198,7 +198,7 @@ Many displayed values come from another entity. A Person's birth date is their b
 1. Each entity reconciles its own Properties, association ends included (the `subject` module).
 2. Derived values read the reconciled values of the entities they point at.
 
-The model allows a Person with two birth Events, and the reconciler must handle it: the derived value reconciles across the Events' reconciled values. The **UI should push the researcher toward a cleaner state**, merging duplicate Events into one canonical Event so reconciliation happens inside it.
+The model allows a Person with two birth Events, and the reconciler must handle it: the derived value reconciles across the Events' reconciled values. The **UI should push the researcher toward a cleaner state**, merging duplicate Events into one canonical Event so reconciliation happens inside it. A derived value's Why lists each owning entity's field records, judged on that entity.
 
 ---
 

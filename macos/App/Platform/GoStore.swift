@@ -1229,26 +1229,7 @@ struct GoStore: GenealogyStore {
         )
         return CatalogConclusionDetail(
             entity: Self.mapCanonicalEntity(resp.entity),
-            fields: resp.fields.map { f in
-                CatalogConclusionField(
-                    propertyID: f.propertyID,
-                    propertyKey: f.propertyKey,
-                    label: f.label,
-                    // A value type this build doesn't know is laid out as text.
-                    valueType: PropertyValueType(rawValue: f.valueType) ?? .text,
-                    state: ReconciledState(wire: f.state),
-                    values: f.values.map { v in
-                        CatalogReconciledValue(
-                            rank: Int(v.rank),
-                            reason: ReconcilerReason(wire: v.reason),
-                            support: Int(v.support),
-                            against: Int(v.against),
-                            value: Self.mapConclusionValue(v.value)
-                        )
-                    },
-                    outcomes: f.outcomes.map(Self.mapReconcilerOutcome)
-                )
-            },
+            fields: resp.fields.map(Self.mapConclusionField),
             memberCount: Int(resp.memberCount),
             header: Self.mapConclusionHeader(resp.header),
             pictures: resp.pictures.map {
@@ -1257,6 +1238,50 @@ struct GoStore: GenealogyStore {
                     record: Self.mapReconcilerOutcome($0.record),
                     preferred: $0.preferred,
                     leads: $0.leads
+                )
+            },
+            derivedRows: resp.derivedRows.compactMap(Self.mapDerivedRow)
+        )
+    }
+
+    private static func mapConclusionField(_ f: Provenencia_Engine_V1_ConclusionField) -> CatalogConclusionField {
+        CatalogConclusionField(
+            propertyID: f.propertyID,
+            propertyKey: f.propertyKey,
+            label: f.label,
+            // A value type this build doesn't know is laid out as text.
+            valueType: PropertyValueType(rawValue: f.valueType) ?? .text,
+            state: ReconciledState(wire: f.state),
+            values: f.values.map { v in
+                CatalogReconciledValue(
+                    rank: Int(v.rank),
+                    reason: ReconcilerReason(wire: v.reason),
+                    support: Int(v.support),
+                    against: Int(v.against),
+                    value: Self.mapConclusionValue(v.value)
+                )
+            },
+            outcomes: f.outcomes.map(Self.mapReconcilerOutcome)
+        )
+    }
+
+    /// A row of a kind this build doesn't know is dropped.
+    private static func mapDerivedRow(_ r: Provenencia_Engine_V1_DerivedRow) -> CatalogDerivedRow? {
+        let kind: CatalogDerivedRowKind
+        switch r.kind {
+        case .birthDate: kind = .birthDate
+        case .birthPlace: kind = .birthPlace
+        case .deathDate: kind = .deathDate
+        case .deathPlace: kind = .deathPlace
+        case .unspecified, .UNRECOGNIZED: return nil
+        }
+        return CatalogDerivedRow(
+            kind: kind,
+            owners: r.owners.map {
+                CatalogOwnerField(
+                    entity: mapCanonicalEntity($0.entity),
+                    event: $0.hasEvent ? mapEventHeader($0.event) : nil,
+                    field: mapConclusionField($0.field)
                 )
             }
         )

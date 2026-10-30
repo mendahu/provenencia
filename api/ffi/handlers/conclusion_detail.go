@@ -86,26 +86,54 @@ func SetPreferredLikeness(in []byte) ([]byte, error) {
 func conclusionDetailProto(d conclusiondetails.Detail) *engine.ConclusionDetail {
 	out := &engine.ConclusionDetail{Entity: canonicalEntityProto(d.Entity), MemberCount: int32(d.MemberCount)}
 	for _, f := range d.Fields {
-		pf := &engine.ConclusionField{
-			PropertyId:  database.UUIDString(f.PropertyID),
-			PropertyKey: f.PropertyKey,
-			Label:       f.Label,
-			ValueType:   f.ValueType,
-			State:       string(f.State),
+		out.Fields = append(out.Fields, conclusionFieldProto(f))
+	}
+	return out
+}
+
+func conclusionFieldProto(f conclusiondetails.Field) *engine.ConclusionField {
+	pf := &engine.ConclusionField{
+		PropertyId:  database.UUIDString(f.PropertyID),
+		PropertyKey: f.PropertyKey,
+		Label:       f.Label,
+		ValueType:   f.ValueType,
+		State:       string(f.State),
+	}
+	for _, v := range f.Values {
+		pf.Values = append(pf.Values, &engine.ReconciledValueDetail{
+			Rank:    int32(v.Rank),
+			Reason:  v.Reason,
+			Support: int32(v.Support),
+			Against: int32(v.Against),
+			Value:   conclusionValueProto(v.Value, nil),
+		})
+	}
+	for _, o := range f.Outcomes {
+		pf.Outcomes = append(pf.Outcomes, reconcilerOutcomeProto(o))
+	}
+	return pf
+}
+
+// derivedRowsProto maps a Person's life rows, each owner with its entity,
+// field and, for an Event, its header.
+func derivedRowsProto(rows []conclusiondetails.DerivedRow) []*engine.DerivedRow {
+	kinds := map[conclusiondetails.DerivedRowKind]engine.DerivedRowKind{
+		conclusiondetails.DerivedRowBirthDate:  engine.DerivedRowKind_DERIVED_ROW_KIND_BIRTH_DATE,
+		conclusiondetails.DerivedRowBirthPlace: engine.DerivedRowKind_DERIVED_ROW_KIND_BIRTH_PLACE,
+		conclusiondetails.DerivedRowDeathDate:  engine.DerivedRowKind_DERIVED_ROW_KIND_DEATH_DATE,
+		conclusiondetails.DerivedRowDeathPlace: engine.DerivedRowKind_DERIVED_ROW_KIND_DEATH_PLACE,
+	}
+	var out []*engine.DerivedRow
+	for _, r := range rows {
+		pr := &engine.DerivedRow{Kind: kinds[r.Kind]}
+		for _, o := range r.Owners {
+			po := &engine.ConclusionOwnerField{Entity: canonicalEntityProto(o.Entity), Field: conclusionFieldProto(o.Field)}
+			if o.Event != nil {
+				po.Event = eventHeaderProto(*o.Event)
+			}
+			pr.Owners = append(pr.Owners, po)
 		}
-		for _, v := range f.Values {
-			pf.Values = append(pf.Values, &engine.ReconciledValueDetail{
-				Rank:    int32(v.Rank),
-				Reason:  v.Reason,
-				Support: int32(v.Support),
-				Against: int32(v.Against),
-				Value:   conclusionValueProto(v.Value, nil),
-			})
-		}
-		for _, o := range f.Outcomes {
-			pf.Outcomes = append(pf.Outcomes, reconcilerOutcomeProto(o))
-		}
-		out.Fields = append(out.Fields, pf)
+		out = append(out, pr)
 	}
 	return out
 }
@@ -179,6 +207,11 @@ func attachHeader(c *database.Catalog, d conclusiondetails.Detail, out *engine.C
 			return nil, err
 		}
 		out.Header = &engine.ConclusionDetail_Person{Person: personHeaderProto(h[0])}
+		rows, err := conclusiondetails.PersonDerivedRows(c, d.Entity.ID)
+		if err != nil {
+			return nil, err
+		}
+		out.DerivedRows = derivedRowsProto(rows)
 		return h[0].PictureImageFileID, nil
 	case vocabkey.Event:
 		h, err := conclusionheaders.EventsByIDs(c, ids)

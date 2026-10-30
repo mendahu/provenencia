@@ -457,24 +457,7 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 	if err := g.Nodes(eventIDs); err != nil {
 		return nil, err
 	}
-	var placeIDs [][]byte
-	for _, id := range eventIDs {
-		n, err := g.Node(id)
-		if err != nil {
-			return nil, err
-		}
-		if n == nil {
-			continue
-		}
-		locations, err := follow(g, id, hops.PlacesOfEvent)
-		if err != nil {
-			return nil, err
-		}
-		for _, l := range locations {
-			placeIDs = append(placeIDs, l.Neighbor)
-		}
-	}
-	pg, err := buildPlaceGraph(g, v, placeIDs)
+	pg, err := eventPlaceGraph(g, v, eventIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -532,32 +515,9 @@ func onePerson(v vocab, n *graphcache.Node, g *graphcache.Graph, pg *placeGraph,
 		return PersonHeader{}, err
 	}
 	h.Name, h.NameValueCount = name, count
-	var births, deaths []lifePick
-	lifeLinks, err := follow(g, n.ID, hops.EventsOfSubject)
+	births, deaths, err := lifePicks(g, v, n)
 	if err != nil {
 		return PersonHeader{}, err
-	}
-	for _, l := range lifeLinks {
-		ev, err := g.Node(l.Neighbor)
-		if err != nil {
-			return PersonHeader{}, err
-		}
-		if ev == nil {
-			continue
-		}
-		_, key, _ := keptTerm(ev, v.prop(vocabkey.PropertyEventType))
-		if key != "birth" && key != "death" {
-			continue
-		}
-		item, err := lifeFrom(v, ev)
-		if err != nil {
-			return PersonHeader{}, err
-		}
-		if key == "birth" {
-			births = append(births, item)
-		} else {
-			deaths = append(deaths, item)
-		}
 	}
 	var errLife error
 	if h.Birth, errLife = leadLife(g, v, pg, births); errLife != nil {
@@ -572,23 +532,75 @@ func onePerson(v vocab, n *graphcache.Node, g *graphcache.Graph, pg *placeGraph,
 type lifePick struct {
 	event *graphcache.Node
 	date  *datevalue.Value
-	count int
-	sort  string
-	ok    bool
+	// dateProp is the Property the date was read from (eventDate).
+	dateProp []byte
+	count    int
+	sort     string
+	ok       bool
+}
+
+// lifePicks returns the person's surviving birth and death events, in the
+// order the person's links give them. It loads the events at once, so its
+// graph queries do not grow with their number.
+func lifePicks(g *graphcache.Graph, v vocab, n *graphcache.Node) (births, deaths []lifePick, err error) {
+	lifeLinks, err := follow(g, n.ID, hops.EventsOfSubject)
+	if err != nil {
+		return nil, nil, err
+	}
+	eventIDs := make([][]byte, 0, len(lifeLinks))
+	for _, l := range lifeLinks {
+		eventIDs = append(eventIDs, l.Neighbor)
+	}
+	if err := g.Nodes(eventIDs); err != nil {
+		return nil, nil, err
+	}
+	for _, l := range lifeLinks {
+		ev, err := g.Node(l.Neighbor)
+		if err != nil {
+			return nil, nil, err
+		}
+		if ev == nil {
+			continue
+		}
+		_, key, _ := keptTerm(ev, v.prop(vocabkey.PropertyEventType))
+		if key != "birth" && key != "death" {
+			continue
+		}
+		item, err := lifeFrom(v, ev)
+		if err != nil {
+			return nil, nil, err
+		}
+		if key == "birth" {
+			births = append(births, item)
+		} else {
+			deaths = append(deaths, item)
+		}
+	}
+	return births, deaths, nil
 }
 
 func lifeFrom(v vocab, ev *graphcache.Node) (lifePick, error) {
-	date, dateCount, dateKey, dateOK, err := keptDateAt(ev, v.prop(vocabkey.PropertyDate))
+	date, dateCount, dateKey, dateOK, propID, err := eventDate(v, ev)
 	if err != nil {
 		return lifePick{}, err
 	}
-	if date == nil {
-		date, dateCount, dateKey, dateOK, err = keptDateAt(ev, v.prop(vocabkey.PropertyStartDate))
-		if err != nil {
-			return lifePick{}, err
-		}
+	return lifePick{event: ev, date: date, dateProp: propID, count: dateCount, sort: dateKey, ok: dateOK}, nil
+}
+
+// eventDate reads an Event's date: the kept date, else the kept start date.
+// propID is the Property read; the date Property when neither has a value.
+func eventDate(v vocab, ev *graphcache.Node) (date *datevalue.Value, count int, sortKey string, ok bool, propID []byte, err error) {
+	propID = v.prop(vocabkey.PropertyDate)
+	date, count, sortKey, ok, err = keptDateAt(ev, propID)
+	if err != nil || date != nil {
+		return date, count, sortKey, ok, propID, err
 	}
-	return lifePick{event: ev, date: date, count: dateCount, sort: dateKey, ok: dateOK}, nil
+	start := v.prop(vocabkey.PropertyStartDate)
+	date, count, sortKey, ok, err = keptDateAt(ev, start)
+	if err == nil && date != nil {
+		propID = start
+	}
+	return date, count, sortKey, ok, propID, err
 }
 
 func leadLife(g *graphcache.Graph, v vocab, pg *placeGraph, items []lifePick) (LifeFacts, error) {
@@ -621,6 +633,93 @@ func lifeBefore(a, b lifePick) bool {
 		return a.sort < b.sort
 	}
 	return a.event.Ref < b.event.Ref
+}
+
+// PersonLifeOwners names, for a Person's birth and death rows, the entity
+// and Property each row reads: one date owner per surviving birth (or death)
+// event, lead first, and one toponym owner per Place of those events, in the
+// order the events give them (folded at each event's date). A nil or merged
+// Person gives none.
+func PersonLifeOwners(c *database.Catalog, personID []byte) (birth, death LifeOwners, err error) {
+	if c == nil || c.Graph() == nil || len(personID) != 16 {
+		return LifeOwners{}, LifeOwners{}, nil
+	}
+	g := c.Graph()
+	n, err := g.Node(personID)
+	if err != nil || n == nil || n.Merged {
+		return LifeOwners{}, LifeOwners{}, err
+	}
+	v, err := vocabulary(g)
+	if err != nil {
+		return LifeOwners{}, LifeOwners{}, err
+	}
+	births, deaths, err := lifePicks(g, v, n)
+	if err != nil {
+		return LifeOwners{}, LifeOwners{}, err
+	}
+	var eventIDs [][]byte
+	for _, pick := range append(append([]lifePick(nil), births...), deaths...) {
+		eventIDs = append(eventIDs, pick.event.ID)
+	}
+	pg, err := eventPlaceGraph(g, v, eventIDs)
+	if err != nil {
+		return LifeOwners{}, LifeOwners{}, err
+	}
+	if birth, err = lifeOwners(g, v, pg, births); err != nil {
+		return LifeOwners{}, LifeOwners{}, err
+	}
+	if death, err = lifeOwners(g, v, pg, deaths); err != nil {
+		return LifeOwners{}, LifeOwners{}, err
+	}
+	return birth, death, nil
+}
+
+// eventPlaceGraph builds the placeGraph for every Place of the given events,
+// skipping events with no node.
+func eventPlaceGraph(g *graphcache.Graph, v vocab, eventIDs [][]byte) (*placeGraph, error) {
+	var placeIDs [][]byte
+	for _, id := range eventIDs {
+		n, err := g.Node(id)
+		if err != nil {
+			return nil, err
+		}
+		if n == nil {
+			continue
+		}
+		locations, err := follow(g, id, hops.PlacesOfEvent)
+		if err != nil {
+			return nil, err
+		}
+		for _, l := range locations {
+			placeIDs = append(placeIDs, l.Neighbor)
+		}
+	}
+	return buildPlaceGraph(g, v, placeIDs)
+}
+
+func lifeOwners(g *graphcache.Graph, v vocab, pg *placeGraph, picks []lifePick) (LifeOwners, error) {
+	sort.SliceStable(picks, func(i, j int) bool { return lifeBefore(picks[i], picks[j]) })
+	var out LifeOwners
+	listed := map[string]bool{}
+	dated := map[string]bool{}
+	for _, pick := range picks {
+		if !dated[string(pick.event.ID)] {
+			dated[string(pick.event.ID)] = true
+			out.Dates = append(out.Dates, FieldOwner{Entity: entityOf(pick.event), PropertyID: pick.dateProp})
+		}
+		places, err := eventPlaces(g, v, pg, pick.event)
+		if err != nil {
+			return LifeOwners{}, err
+		}
+		for _, p := range places {
+			if listed[string(p.Entity.ID)] {
+				continue
+			}
+			listed[string(p.Entity.ID)] = true
+			out.Places = append(out.Places, FieldOwner{Entity: p.Entity, PropertyID: v.prop(vocabkey.PropertyToponym)})
+		}
+	}
+	return out, nil
 }
 
 func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool) ([]EventHeader, error) {
@@ -835,14 +934,7 @@ func eventPlaces(g *graphcache.Graph, v vocab, pg *placeGraph, ev *graphcache.No
 }
 
 func eventWhen(v vocab, ev *graphcache.Node) (*datevalue.Value, error) {
-	date, _, _, _, err := keptDateAt(ev, v.prop(vocabkey.PropertyDate))
-	if err != nil {
-		return nil, err
-	}
-	if date != nil {
-		return date, nil
-	}
-	date, _, _, _, err = keptDateAt(ev, v.prop(vocabkey.PropertyStartDate))
+	date, _, _, _, _, err := eventDate(v, ev)
 	return date, err
 }
 
