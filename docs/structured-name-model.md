@@ -130,7 +130,7 @@ CREATE TABLE name_format_profile_roles (
 ) STRICT;
 ```
 
-One role per part type. Matching reads these rows. A type with no row is untyped. The Western seed maps `surname` → `family`, `given` → `given`, `nick` → `nick`, `suffix` → `generation`, `prefix` and `surname_prefix` → `ignored`, `undetermined` → `untyped`.
+One role per part type. Matching reads these rows. A type with no row is untyped. The Western seed maps `surname` → `family`, `given` → `given`, `former_surname` → `family`, `nick` → `nick`, `suffix` → `generation`, `prefix` and `surname_prefix` → `ignored`, `undetermined` → `untyped`.
 
 ## 4.2b `name_format_profile_weights`
 
@@ -198,6 +198,7 @@ The profile does not replace `NameValue.form` or cited Observations. It tells th
 | --- | --- | --- |
 | **Culture order** — what order a name's parts go in | The **profile** (data): the Person's `name_format` claim, else the project default | Western: given then surname. Other cultures: surname first, patronymics, dual surnames |
 | **Display style** — which of the profile's orders to use here | The **call site** (a display parameter) | A profile page reads *James Robins*; a list reads *Robins, James* |
+| **Decoration** — nickname quotes, former-surname parentheses | The **part type**, in the client, localized by UI language; never in the sort key or the profile | *James “Jake” Robins* |
 
 Every profile therefore defines **both** styles:
 
@@ -207,7 +208,7 @@ Every profile therefore defines **both** styles:
 Requirements for the implementation:
 
 1. **One name display entry point** with a style parameter (`natural` / `sorted`). Call sites choose the style; they never assemble parts themselves.
-2. **The People list orders by the sorted style.** The key is that part order (the same string the row shows when the name has parts). The auto-reconciler cache `sort_key` is still the normalized form; it is not the list order. Changing that column is a cache version bump.
+2. **The People list orders by the sorted style.** The key is that part order, undecorated: the row may add quotes and parentheses, the key never does. The auto-reconciler cache `sort_key` is still the normalized form; it is not the list order. Changing that column is a cache version bump.
 3. **A name with no parts does not sort by `form`.** `form` is the transcription. The list uses the working label, then the ref. Display may still show `form` when there are no parts.
 4. **`form` is never rewritten.** Styles are presentation over typed parts; the recorded full form stays authoritative.
 5. Each profile stores its sorted order and the separator (for Western, `", "` after the surname group). Open details for that work: where `prefix` / `suffix` sit in the sorted Western order (*Robins, Rev. James, Jr.*), and whether `surname_prefix` leads the sort (*van Gogh* under V or G varies by culture — a per-profile rule).

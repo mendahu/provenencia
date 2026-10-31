@@ -65,7 +65,7 @@ Referencing tables use `name_value_id BLOB REFERENCES name_values(id)`. Observat
 3. Functions take `*database.Catalog` today (same as `datevalues`). Tx-scoped inserts wait until an audited write path needs them.
 4. Pure checks: table-driven tests in `core/namevalue/validate_test.go` (no catalog); run `go test ./core/namevalue/...`. Query tests: `namevalues_test.go`; run `CGO_ENABLED=1 go test ./core/database/namevalues/`.
 5. Do **not** add shipped-SQL substring greps in `migrate_test.go`.
-6. Adding a product part type: append to `core/namevalue/registry.go` + consts + seeded-vocabulary §4.1 + L10n in S7-02b — not a migration.
+6. Adding a product part type (not a migration): the Go const and `partTypeRegistry` row (`core/namevalue`); the Western seed parts in both styles and its role (`core/database/nameformats/registry.go`); the role in `core/matchregistry/value.go` `Western.PartRoles`; the Swift `NamePartType` case with its raw value, `label`, and a `decoration` arm when the type is displayed with punctuation (display only — never in `nameformats.Format`); the L10n key and xcstrings entry; seeded-vocabulary §4.1 and §4.3. The guard row in `api/ffi/swift_vocabulary_test.go` fails until Go and Swift agree.
 
 ## Do not
 

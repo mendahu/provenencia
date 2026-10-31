@@ -29,7 +29,11 @@ A `generation` weight slot, and one declared slot list read by both `nameformats
 
 ## Name changes
 
-- **Name changes as a signal.** Married, religious and anglicized names connect today only when one of a handle's names matches. A "known as" relationship between names, or the marriage event, could carry it. Spike 11 treats Mary Smith / Mary Robins as `Different` at the value level, and leaves marriage evidence to links. Maiden names in the conclusion are the intended path ([`comparison-layers.md`](../deployment-plan/archive/spike-11/comparison-layers.md#entities-compare-against-the-conclusion)).
+- **Name changes as a signal.** Married, religious and anglicized names connect today only when one of a handle's names matches. A "known as" relationship between names, or the marriage event, could carry it. Spike 11 treats Mary Smith / Mary Robins as `Different` at the value level, and leaves marriage evidence to links. Maiden names in the conclusion are the intended path ([`comparison-layers.md`](../deployment-plan/archive/spike-11/comparison-layers.md#entities-compare-against-the-conclusion)). The `former_surname` part type (S14-09) records a maiden or earlier surname, and a record carrying the former surname pairs it as a family name; reading a former and a current surname as one person across records is still open.
+- **Typed forms with decoration.** `NameFormSplit` does not recognise a quoted nickname or a parenthesized former surname when it splits a typed form; if it learns to, `NamePartType.decoration` is the table to read.
+- **The unused `Sort` field.** `namevalue.PartTypeInfo.Sort` orders the registry and nothing else reads it.
+- **Seed roles from `matchregistry`.** The Western seed's roles in `nameformats` repeat `matchregistry`'s Western `PartRoles`; deriving one from the other would retire `TestSeedMatchesRegistryWestern`.
+- **A fixture pin of the undecorated join.** A Go and Swift fixture that pins `nameformats.Format` against `NameValueDisplay` would catch drift in order and separators.
 
 ## Format and sort, beyond the project default
 
