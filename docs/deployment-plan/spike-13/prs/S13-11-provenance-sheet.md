@@ -93,7 +93,8 @@ On the Person page, every Vitals value explains itself in one click: a provenanc
 | The control in Family, Timeline, Gallery, Sources (R-13b) | not planned this spike |
 | The sheet on the Event and Place pages; deleting the Why accordion | their redesign ([`person-detail.md`](../person-detail.md#not-this-spike)) |
 | A formatted standard citation (*Evidence Explained* templates per Source type, short form, Copy citation) and the Source fields it needs | [`docs/ideas/citation-formats.md`](../../../ideas/citation-formats.md) |
-| Source type or date, or any other new wire field beyond the citation line's parts | a follow-up engine PR if the board asks (working rule "Engine PRs run ahead of their slice") |
+| The Source date (descoped 2026-10-31: [`docs/ideas/source-provenance-date.md`](../../../ideas/source-provenance-date.md), Spike 15) |
+| The Source type, or any other new wire field beyond the citation line's parts | a follow-up engine PR if the board asks (working rule "Engine PRs run ahead of their slice") |
 | New outcome words or causes | S11-28, S11-44, S11-45 (Spike 14) change the reconciler's causes; the sheet words what it is given |
 
 ## 4. Current state
@@ -316,7 +317,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `P
 
 | Risk | Mitigation |
 | --- | --- |
-| The board asks for data the wire lacks (the Source type or date) | Out: the board note becomes a follow-up engine PR; this PR ships the sheet without it |
+| The board asks for data the wire lacks (the Source type) | Out: the board note becomes a follow-up engine PR; this PR ships the sheet without it |
 | A researcher expects a formatted standard citation | The line is the first step; the rest is in [`docs/ideas/citation-formats.md`](../../../ideas/citation-formats.md) |
 | Focus does not return to the control after Escape | Manual 1; stop condition below |
 

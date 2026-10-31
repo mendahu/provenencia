@@ -120,7 +120,7 @@ A researcher clicks one control beside any value in Vitals and sees, in one plac
 - The provenance control in Family, Timeline, Gallery or Sources (R-13b).
 - Reconciliation Claims, a "conclude this value" action, or any editing in the sheet (R-10).
 - The Event and Place pages (they keep the Why accordion).
-- New data beyond the citation line. The sheet shows what the Person page already reads, plus the Artifact label, Citation label and page the citation line needs. If the board needs something more (the Source's type or date, an image crop), name it in a board note; it becomes a follow-up engine PR (working rule "Engine PRs run ahead of their slice"), not part of this board.
+- New data beyond the citation line. The sheet shows what the Person page already reads, plus the Artifact label, Citation label and page the citation line needs. The Source date is not built (descoped to Spike 15 with the citation fields). If the board needs something more (the Source's type, an image crop), name it in a board note; it becomes a follow-up engine PR (working rule "Engine PRs run ahead of their slice"), not part of this board.
 - A formatted *Evidence Explained* note, a short form, or Copy citation ([`docs/ideas/citation-formats.md`](../../../ideas/citation-formats.md)).
 - A change to the row's value, Badge, Source count or the other-values disclosure.
 

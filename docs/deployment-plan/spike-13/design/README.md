@@ -6,7 +6,7 @@ Briefs are written **one at a time, just before the PR they gate**; each board i
 
 ## Scheduled
 
-In order; S13-D8 and S13-D9 may run alongside once S13-20 lands.
+In order.
 
 | Brief | View | Gates |
 | --- | --- | --- |
@@ -17,8 +17,8 @@ In order; S13-D8 and S13-D9 may run alongside once S13-20 lands.
 | S13-D6 | Sources section, Remove and the last-claim warning | S13-16, S13-17 |
 | S13-D7 | Claim review sheet | Descoped 2026-10-29 with S13-18 |
 | S13-D10 | Person page: how the records connect | S13-28 |
-| S13-D8 | Source page: the Source date | S13-21 |
-| S13-D9 | Sources list: the Source date | S13-22 |
+| S13-D8 | Source page: the Source date | Descoped 2026-10-31 with S13-21 ([`ideas/source-provenance-date.md`](../../../ideas/source-provenance-date.md)) |
+| S13-D9 | Sources list: the Source date | Descoped 2026-10-31 with S13-22 ([`ideas/source-provenance-date.md`](../../../ideas/source-provenance-date.md)) |
 
 ## Archived
 
