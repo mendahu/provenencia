@@ -90,7 +90,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 - `GetDeleteImpact` on a missing id returns gate `not_found`. Domain `Delete` on a missing id returns `ErrInvalid`.
 - Keep domain sentinels (`citations.ErrInUse`) for `errors.Is`. Do not put refs in `apperr` params or on `Error`.
 - Do not `DELETE FROM observations WHERE citation_id = ?` as a cascade. Policy is refuse.
-- A row with its own `Delete` that is also an audited facet of another parent gets one `releaseX` / `ReleaseX` in `facets.go`, called by the parent's release (`releaseEach`) and by its own `Delete` (`ReleaseClaim`, `ReleaseCitation`), so both paths audit the same row.
+- A row with its own `Delete` that is also an audited facet of another parent gets one unexported release and one exported wrapper in `facets.go`, called by the parent's release (`releaseEach`) and by its own `Delete` (`releaseClaim` / `ReleaseClaim`, `releaseCitation` / `ReleaseCitation`), so both paths audit the same row.
 - Writers with **no UI** still cut over in the registry PR (`propertyterms.Delete`). Do not leave `sqlInUse`.
 
 ## New table
