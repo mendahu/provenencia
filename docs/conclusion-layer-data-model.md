@@ -51,7 +51,7 @@ This is valid. It is a **workspace handle**, not an Observation. Genealogical na
 
 ## 2.2 Membership versus committed properties
 
-**Membership** (which Interpretation subjects are this subject) is the set of **accepted Identity Claims** that point at the handle. Each claim is one subject joining that handle, with its own status and `argument`. A new source subject joins by a new claim; it does not inherit membership through some other subject.
+**Membership** (which Interpretation subjects are this subject) is the set of **accepted Identity Claims** that point at the handle. Each claim is one subject joining that handle, with its own status. A new source subject joins by a new claim; it does not inherit membership through some other subject.
 
 **Committed values** (name, date, location ends, …) are accepted Reconciliation Claims. If there is no claim, the UI may **project** values from Observations on member Subjects. That projection is not stored.
 
@@ -134,7 +134,7 @@ canonical_entities
 Important separations:
 
 1. **Canonical entity** — working subject; creating it *is* origination. No `origination_claims` table.
-2. **Identity Claim** — one Subject is a reading of one entity: a status and the researcher's `argument`, with no Observation exhibit (§5). Accepting the claim makes the subject a member.
+2. **Identity Claim** — one Subject is a reading of one entity: a status, with no Observation exhibit (§5). Accepting the claim makes the subject a member.
 3. **Membership** — the accepted Identity Claims for that entity. Not a separate join table, and not a graph closure over other subjects.
 4. **Reconciliation Claim** — concluded value of one Property on one entity. Exhibit Observations may be about **other** Subjects; they are not retargeted.
 5. **Canonical merge** — `merged_into_id` within the same Subject type. Explicit; identifying a subject does not merge two handles.
@@ -150,22 +150,6 @@ An Identity Claim asserts that one Interpretation subject is a reading of one ca
 
 This replaces pairwise sameness (`same_as` / `distinct_from` between subjects) and the identity anchor. Two subjects are the same historical thing when each has an accepted Identity Claim for the same entity. There is no edge between subjects and no transitive closure. A subject that has not been claimed yet is simply not a member of any handle; correlating two subjects before a handle exists means creating the handle (or choosing one) and claiming each subject.
 
-Claim confidence grades (shared with Reconciliation Claims):
-
-```sql
-CREATE TABLE claim_confidence_grades (
-    id          BLOB PRIMARY KEY,              -- UUIDv7, 16 bytes
-    key         TEXT NOT NULL,
-    origin      TEXT NOT NULL,                 -- provenencia | user | plugin:<id>
-    label       TEXT NOT NULL,
-    sort_order  INTEGER NOT NULL,
-
-    UNIQUE (key, origin)
-) STRICT;
-```
-
-Seed keys: [`seeded-vocabulary.md`](seeded-vocabulary.md) §5.5. Semantics: [`research-judgment-model.md`](research-judgment-model.md). Vocabulary origin: [`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1.
-
 ```sql
 CREATE TABLE identity_claims (
     id                   BLOB PRIMARY KEY,
@@ -173,8 +157,6 @@ CREATE TABLE identity_claims (
     entity_id            BLOB NOT NULL,
     subject_type_id      BLOB NOT NULL,
     status               TEXT NOT NULL,
-    confidence_grade_id  BLOB REFERENCES claim_confidence_grades(id),
-    argument             TEXT,
 
     CHECK (status IN ('provisional', 'accepted', 'rejected')),
     FOREIGN KEY (subject_id, subject_type_id)
@@ -191,7 +173,7 @@ CREATE UNIQUE INDEX identity_claims_one_accepted_per_subject
     WHERE status = 'accepted';
 ```
 
-There is at most one Identity Claim per `(subject, entity)`. Changing `status`, confidence, or `argument` updates that row (and is audited), rather than inserting a second Claim for the same pair.
+There is at most one Identity Claim per `(subject, entity)`. Changing `status` updates that row (and is audited), rather than inserting a second Claim for the same pair.
 
 A subject has at most one **accepted** Identity Claim, so it belongs to at most one handle. Provisional claims against other entities may stand beside that accepted row: the subject is a member of one handle and still a candidate for others. Two accepted claims for one subject cannot exist.
 
@@ -199,9 +181,7 @@ A subject has at most one **accepted** Identity Claim, so it belongs to at most 
 
 `provisional` is a real persisted conclusion-in-progress, not a missing row. The UI should surface provisional Claims differently from accepted ones (for example a distinct stroke, badge, or filter) so researchers can see candidates without treating them as membership. Rejected Claims remain for audit. A rejection means “not this entity,” which is scoped to that handle: the same subject can later be accepted for a different one. Absence of a row is not a rejection.
 
-`confidence_grade_id` is optional epistemic stance (three-point Claim confidence vocabulary). It is **orthogonal to `status`**: accepted + low confidence and provisional + high confidence are both valid. Do not overload `provisional` to mean “I am unsure.” Authoritative rules: [`research-judgment-model.md`](research-judgment-model.md). Grade keys: [`seeded-vocabulary.md`](seeded-vocabulary.md).
-
-`argument` is optional free text: the researcher's reasoning for why this subject is (or is not) this entity — name and age against the members already on the handle, a testimony that identifies a photograph, a nickname that is the only link between two records. It is the one place an Identity Claim holds reasoning. Comparisons to another subject are written here; they are not a separate edge and not a stored list of Observations (§5).
+An Identity Claim carries no confidence grade and no argument; S13-25 dropped both columns, the pin table and `claim_confidence_grades`.
 
 The subject and the entity must share one Subject type. `subject_type_id` is copied onto the claim so SQLite can enforce that with composite foreign keys. `subjects` already has `UNIQUE (id, subject_type_id)`; `canonical_entities` carries the same unique pair (§6). That copy cannot drift: subject type is immutable on both rows.
 
@@ -209,7 +189,7 @@ The subject and the entity must share one Subject type. `subject_type_id` is cop
 
 # 5. Membership evidence
 
-**Decided 2026-10-29:** an Identity Claim carries **no Observation exhibit**. The `identity_claim_evidence` table, its pins, backfill onto other members' claims, and the review rules built on them are dropped. Removing them from the schema and the code is planned work; until it lands, the table and the code that writes it are still there, and no new feature should build on them.
+**Decided 2026-10-29:** an Identity Claim carries **no Observation exhibit**. The `identity_claim_evidence` table, its pins, backfill onto other members' claims, and the review rules built on them were dropped by S13-25, from the schema and the code.
 
 Pins recorded which agreements Promote's matching found when a subject was filed. That was the wrong record to keep:
 
@@ -217,7 +197,7 @@ Pins recorded which agreements Promote's matching found when a subject was filed
 - **They froze at filing.** A later record that strengthened or weakened the link never reached them.
 - **They asked the researcher to confirm what the machine had decided.** A line started pinned only when value compare called the values the same, so confirming it added no judgment.
 
-The researcher's judgment on a claim is its `status` and, where it helps, its `argument`. Everything that can be computed from the members' Observations is computed on read and never stored, like the handle badges (§6.1).
+The researcher's judgment on a claim is its `status`. Everything that can be computed from the members' Observations is computed on read and never stored, like the handle badges (§6.1).
 
 ## 5.1 Two lenses
 
@@ -249,7 +229,7 @@ Promote is a quick action: the researcher promotes an Evidence graph's Subjects 
    - one accepted Identity Claim per promoted Subject, and the minted handles;
    - the bridges (§5.4).
 
-   Promote writes no Observation pins, and an Identity Claim carries no confidence and no `argument` (decided 2026-10-29; the columns go in Spike 13).
+   Promote writes no Observation pins, and an Identity Claim carries no confidence and no `argument` (decided 2026-10-29; the columns were dropped by S13-25).
 
 A per-row status at Promote, Accepted or Provisional, was decided on 2026-10-29 and descoped on 2026-10-30 (Spike 13's S13-30): Promote writes no provisional claims. A provisional Identity Claim (§4) is still a valid row; Promote does not write one. The parked feature: [`ideas/provisional-identity-claims.md`](ideas/provisional-identity-claims.md).
 
@@ -375,7 +355,7 @@ CREATE TABLE reconciliation_claims (
     entity_id            BLOB NOT NULL REFERENCES canonical_entities(id) ON DELETE CASCADE,
     property_id          BLOB NOT NULL REFERENCES properties(id),
     status               TEXT NOT NULL,
-    confidence_grade_id  BLOB REFERENCES claim_confidence_grades(id),
+    confidence_grade_id  BLOB,                 -- vocabulary open: claim_confidence_grades was dropped by S13-25
     argument             TEXT,
 
     value_text      TEXT,
@@ -404,7 +384,7 @@ There is at most one Reconciliation Claim per `(entity, property)`. **Planned ch
 
 `status` matches Identity Claims: `provisional`, `accepted`, or `rejected`. **Only `accepted` is the committed concluded value.** `provisional` is a persisted working choice the UI should show differently. `rejected` is kept for audit and is not the working value.
 
-`confidence_grade_id` matches Identity Claims: optional three-point Claim confidence, orthogonal to `status`. See [`research-judgment-model.md`](research-judgment-model.md). Grades live in `claim_confidence_grades` (§4).
+`confidence_grade_id` is optional Claim confidence, orthogonal to `status`. Its vocabulary is open (`claim_confidence_grades` was dropped by S13-25). See [`research-judgment-model.md`](research-judgment-model.md).
 
 From a modeling standpoint a Property on an entity either has a Reconciliation Claim or it does not. Soft blends of member Observations are **stateless display**. They are never persisted as automatic claims. There is no `origin` column and no `association_endpoints` table: association ends are ordinary Properties (`event`, `place`, `person`, `participant`) resolved like any other.
 
@@ -583,8 +563,8 @@ These are **schema and application invariants** (see §1). Grain, gazetteer use,
 16. Person name format is a Property (`name_format`) or the project default, not a column on `canonical_entities`.
 17. Association ends are Properties on the association entity (projected from member Observations and/or Reconciliation), not a separate endpoints table.
 18. There is no `origination_claims` table and no `identity_anchor_id`; the canonical row is the working-subject insert, and membership is Identity Claims.
-19. Optional `confidence_grade_id` on Identity and Reconciliation Claims is epistemic stance only; it does not replace `status` and must use Claim confidence vocabulary, not Source credibility grades ([`research-judgment-model.md`](research-judgment-model.md)).
-20. Identity Claims carry no Observation exhibit. Whether a member belongs is computed from the members' Observations on read and is never stored (§5).
+19. Identity Claims carry no confidence; Reconciliation Claim confidence is open ([`research-judgment-model.md`](research-judgment-model.md)).
+20. Identity Claims carry no Observation exhibit (S13-25 dropped it). Whether a member belongs is computed from the members' Observations on read and is never stored (§5).
 21. Promote writes accepted Identity Claims, minted handles and bridges only. It drafts no `argument` and sets no confidence (§5.3).
 22. Removing one member does not remove the others and does not change their claims (§5.2).
 23. A bridge is filed onto an association only when both its ends are members of handles, keyed as in §5.4. Filing a bridge never creates or chooses a handle for its ends.
@@ -622,7 +602,7 @@ Testimony Source
 Conclusion
   canonical_entities E1 (kind=person)
   identity_claim: N1 → E1 (accepted)
-  identity_claim: N2 → E1 (accepted), argument → the testimony names the depicted person
+  identity_claim: N2 → E1 (accepted)
   members(E1) = {N1, N2}
 ```
 
@@ -642,7 +622,7 @@ Letter Source L
 Conclusion
   canonical_entities E (kind=person)
   identity_claim: NC → E (accepted)
-  identity_claim: NL → E (accepted), argument → the letter is about the certificate's person
+  identity_claim: NL → E (accepted)
   members(E) = {NC, NL}
   reconciliation_claim on E, property birth_date:
     value → DateValue(2 JAN 1800)   # researcher choice, or synthesized

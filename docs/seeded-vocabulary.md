@@ -41,7 +41,6 @@ Applies to (authoritative schemas in the linked docs):
 | --- | --- |
 | `source_types`, `source_metadata_fields` | [`source-layer-data-model.md`](source-layer-data-model.md) |
 | `subject_types`, `properties`, `property_terms`, `source_credibility_grades` | [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md), [`research-judgment-model.md`](research-judgment-model.md) |
-| `claim_confidence_grades` | [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md), [`research-judgment-model.md`](research-judgment-model.md) |
 | `name_format_profiles` | [`structured-name-model.md`](structured-name-model.md) |
 
 Does **not** apply to join/suggestion tables (`source_type_metadata_fields`, `subject_type_properties`, `name_format_profile_parts`), domain instance rows, or NameValue part `type` keys (compiled product registry, not `property_terms`).
@@ -653,18 +652,7 @@ Handle provenencia badges (from records / inferred / asserted / unlinked) are co
 
 ## 5.5 Claim confidence grades
 
-Open vocabulary for `identity_claims.confidence_grade_id` and `reconciliation_claims.confidence_grade_id` (via `claim_confidence_grades`). Three-point scale with a baseline middle. **Do not** reuse Source credibility keys — same shape, different semantics ([`research-judgment-model.md`](research-judgment-model.md)).
-
-```text
-key                 sort_order    label (draft product copy)
-low_confidence      1             Low confidence
-moderate            2             Moderate
-high_confidence     3             High confidence
-```
-
-`confidence_grade_id` is nullable. Claim `status` remains the separate workflow vocabulary in §5.1–5.2.
-
-**Seeded** (Spike 9, S9-01): `claimconfidencegrades.Install` at catalog create, alongside Source credibility grades. Existing projects are not backfilled.
+Dropped by S13-25: Identity Claims carry no confidence; a Reconciliation Claim vocabulary is open.
 
 ---
 

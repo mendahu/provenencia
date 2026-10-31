@@ -163,7 +163,7 @@ confidence_grade_id  BLOB REFERENCES claim_confidence_grades(id),  -- nullable
 ```
 
 ```sql
--- claim_confidence_grades: dropped by S13-25 with the identity_claims columns
+-- claim_confidence_grades: dropped by S13-25; kept here as the shape an open Reconciliation Claim vocabulary would start from
 CREATE TABLE claim_confidence_grades (
     id          BLOB PRIMARY KEY,              -- UUIDv7, 16 bytes
     key         TEXT NOT NULL,

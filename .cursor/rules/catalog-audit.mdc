@@ -12,4 +12,4 @@ Follow the project skill `.agents/skills/add-audit-scope/SKILL.md` and `docs/aud
 - A new `EntityType` (or `rowFacet` entity type) needs a non-`None` entry in `core/database/effects/registry.go` (its `Source` / `HandleScope` paths). `Record` rejects a missing one; `TestResolversCoverEveryEntityType` fails CI.
 - Delete changes carry the parent FK (`source_id`, `artifact_id`, `citation_id`, …) in `DeletedRow`; the row is gone by `Record` time.
 - "Last activity under X" reads `audit_transaction_scopes`, never an `audit_changes` join on `entity_type`: the Sources list "Updated" (`scope_type = 'source'`) and Person / Event / Place last activity (`canonical_entity`). Read both from the display cache, `Graph.Activity(scopeType, id)`: one grouped query on the first read, then kept current on every commit. Do not query the scopes per list load.
-- Conclusion-layer work (claims, pins, promote) carries no Source scope; it stores a `canonical_entity` scope instead.
+- Conclusion-layer work (claims, promote) carries no Source scope; it stores a `canonical_entity` scope instead.

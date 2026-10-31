@@ -1,6 +1,6 @@
 # Identity Claim review (weak-claim alert)
 
-**Status:** parked. Claim management is not scheduled. Rules live in [`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) §5.2; this note is the UI shape.
+**Status:** superseded: Identity Claims carry no pins since S13-25; review of how a person's records connect is slice 7 (Spike 13). Was: parked, claim management not scheduled. Rules live in [`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) §5.2; this note is the UI shape.
 
 ## Why
 
