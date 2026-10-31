@@ -393,7 +393,8 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 		}}, nil
 }
 
-// Delete erases a Citation when no Observation remains. Notes CASCADE.
+// Delete erases a Citation when no Observation remains. Its notes are
+// released, audited, through deleteimpact.ReleaseCitation.
 // The caller records the returned changes.
 func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if tx == nil || len(id) != 16 {
@@ -402,7 +403,8 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return nil, err
 	}
-	if _, err := scanOne(tx.QueryRow(sqlGet, id)); errors.Is(err, sql.ErrNoRows) {
+	var one int
+	if err := tx.QueryRow(`SELECT 1 FROM citations WHERE id = ?`, id).Scan(&one); errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrInvalid
 	} else if err != nil {
 		return nil, err
