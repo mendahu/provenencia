@@ -232,6 +232,7 @@ func TestPage(t *testing.T) {
 		{"artifact selector only", `{"version":1,"selectors":[{"type":"artifact"}]}`, 0, ""},
 		{"two page selectors", `{"version":1,"selectors":[{"type":"page","artifact_page":1},{"type":"page","artifact_page":2}]}`, 0, ""},
 		{"page selector without artifact_page", `{"version":1,"selectors":[{"type":"page"}]}`, 0, ""},
+		{"page above int32", `{"version":1,"selectors":[{"type":"page","artifact_page":4294967333}]}`, 0, ""},
 		{"empty", ``, 0, ""},
 		{"truncated", `{`, 0, ""},
 		{"version 2", `{"version":2,"selectors":[{"type":"page","artifact_page":3}]}`, 0, ""},
