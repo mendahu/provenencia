@@ -330,8 +330,6 @@ func rowsFor(all []row, entityID, propertyID []byte) []row {
 	return out
 }
 
-// rebuiltSnapshot rebuilds inside a rolled-back transaction, so upkeep state
-// is left as it was.
 // outcome is one auto_reconciler_outcomes row as stored.
 type outcome struct {
 	EntityID, PropertyID, ObservationID []byte
@@ -363,17 +361,6 @@ func (f *fixture) outcomes() []outcome {
 	db, err := f.c.DB()
 	must(f.t, err)
 	return outcomesSnapshot(f.t, db)
-}
-
-func (f *fixture) rebuiltSnapshot() []row {
-	f.t.Helper()
-	db, err := f.c.DB()
-	must(f.t, err)
-	tx, err := db.Begin()
-	must(f.t, err)
-	defer func() { _ = tx.Rollback() }()
-	must(f.t, autoreconciler.Rebuild(tx))
-	return snapshot(f.t, tx)
 }
 
 func TestReconciledValues(t *testing.T) {
