@@ -1,7 +1,7 @@
 # Ship log — S13-11 Provenance sheet
 
 **Plan:** [`S13-11-provenance-sheet.md`](S13-11-provenance-sheet.md) · **Branch:** `s13-11-provenance-sheet` · **PR:** #650
-**State:** fixing 4 — user scope change
+**State:** fixing 5 — user scope change
 
 ## Round 0 — implement
 Base `main` @ `474ca934`. Head `5ec67292`. Gate PASS (orchestrator run). Report: §10 manual check not run (Escape focus return, Back after each link, VoiceOver wording, 1600pt resize, visual match to frames 6c – 6n; the Escape-focus stop condition is unverified). Deviations: (1) STEP-3 – STEP-7 in one commit; (2) `ReconciliationRecordGroup` gained `init(owner:records:values:)` with `values` defaulting to one headless run; (3) `actionColumnWidth` moved to `ReconciliationRecordRows`; (4) the sheet's Read as, Outcome and Record columns have fixed widths (140/190/112pt Regular, 220/280pt Wide) so the headings line up; (5) a record is not one VoiceOver element: the citation line and its links are separate controls; (6) `S13-D2-provenance-sheet.review.md` stays in `design/`; (7) PR body attribution added with `gh pr edit`.
@@ -184,3 +184,25 @@ Do:
 Check: `TestPersonLifeOwners` and the graph-query budget test pass.
 
 Add F-12 – F-15 to the plan's Landed note, including that F-14 narrows round-3 deviation (1).
+
+## Round 4 — fix
+Head `ed506193`. F-12 – F-15 done (report deviations: the growth subtest counts queries; F-12's failing test failed only on the blank toponym; fixtures in `placerecords_test.go`; F-14 is a `subjectValued` parameter; picker is `observations.FirstText`; `grapheventtitles` no longer lets a blank first toponym hide a named one). Orchestrator gate: first run FAIL `xcode-test` on `SourcePageModelTests.aGraphWriteMovesOnlyItsRow` (a file this PR does not touch; it flaked once in round 3 too), rerun PASS (flake confirmed; the test is not in this PR's diff).
+
+### Verification (one verifier per round-3 blocker group, no fourth review round)
+- **PRF-1: Not resolved.** `sqlToponyms` is one batched query, but SQLite plans it on `observations_property_id_idx` (`EXPLAIN QUERY PLAN` with IN lists of 1 – 500), so each Person load with a place link reads every toponym: 4.3 ms at 20,000 toponyms, linear; 0.11 ms with `INDEXED BY observations_subject_id_idx`. The query-count test cannot see it → F-16.
+- MNT-1 **Resolved** (`v.PropertyID` at `conclusiondetails.go:238`). MNT-3 **Resolved** (`observations.FirstText`, both callers). F-14 / CON-2 **Resolved** (`TestForEntityDropsSubjectValuedFields`; only `PersonDerivedRows` passes `subjectValued`).
+- UX-1 / MNT-2 ids **Resolved** (group per Place, unique ids; `twoLinksToOnePlaceFormOneGroup`). **New major (verifier V-1):** a pooled Place group builds its value headings from the joined records of every link but looks headings up in the first link's field only. With lk1 = [a kept, d lost] and lk2 = [b kept], the runs are [a][d][b]: York heading, "Other records", then York again, with lk1's Source count. Major in code this PR adds → F-17.
+
+### Fix plan 5
+
+**F-16 — The toponym load uses the subject index** (from PRF-1, round-4 verification)
+Files: `core/database/conclusiondetails/conclusiondetails.go`, `placerecords_test.go`.
+Failing test first: a test that runs `EXPLAIN QUERY PLAN` on `sqlToponyms` through the catalog's own driver and asserts the plan names `observations_subject_id_idx` and does not name `observations_property_id_idx`.
+Do: add `INDEXED BY observations_subject_id_idx` to the `observations` table in `sqlToponyms`, as `graphcache/load.go:249` does. Add a one-line comment saying why: there are no planner stats, and `property_id` would scan every toponym.
+Check: the test passes; scripts/check-pr.sh PASS.
+
+**F-17 — A pooled Place group has one heading per value** (from V-1)
+Files: `ReconciledValueRowModel.swift`, `ProvenanceSheetTests.swift`.
+Failing test first: York with two links, lk1 = [a kept rank 1, d lost rank 0] and lk2 = [b kept rank 1], plus Leeds so headings show. The York group must have exactly one `.value` York heading over a and b, then one `.otherRecords` over d. The York heading's support counts both links' Sources.
+Do: in `derived`, build each member link's `valueGroups` from its own records and field. Then merge them for the group: runs with the same displayed value (the Place) join in link order under one heading, with support summed across members (reuse `OtherValue`'s existing support wording; no new string). All `.otherRecords` runs join last. A group with a single member is unchanged. Do not change `valueGroups` for non-pooled rows.
+Check: the new test and `twoLinksToOnePlaceFormOneGroup` pass; scripts/check-pr.sh PASS.
