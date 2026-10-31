@@ -6,7 +6,7 @@
 **Implements later as:** PR **S13-11** (Provenance sheet: PRV-1 – PRV-15, PRV-W1 – PRV-W2)
 **Depends on:** S13-D1 (board agreed 2026-10-29; built in S13-10, #634), S13-D12 (board agreed 2026-10-30; built in S13-06, #640)
 **Related:** [`../prs/S13-11-provenance-sheet.md`](../prs/S13-11-provenance-sheet.md); [`../person-detail.md`](../person-detail.md) R-8 – R-13b, R-14, R-15; working rules "The provenance sheet replaces the Why on the Person page only" and "A derived row carries its owning entity's records" in [`../deployment-plan.md`](../deployment-plan.md#working-rules); the S13-D12 brief [`archive/S13-D12-life-rows-why.md`](archive/S13-D12-life-rows-why.md) (its group line per owner)
-**Board:** — (not drawn yet). Draw it in the Claude Design project [*Person Detail*](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail.dc.html*, as a new turn "S13-D2 · Provenance sheet"
+**Board:** agreed 2026-10-31 — Claude Design project [*Person Detail*](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail.dc.html*, turn 6 "S13-D2 · Provenance sheet", frames 6a – 6n (F1 – F11). Answers: `info` glyph (PRV-1); a primary "Done" in the sunken footer (PRV-4); "· shown" in italic (PRV-8); the citation line opens the Citation, with "Source" and "Observation" links under it (PRV-9); 880pt at Regular, 1280pt at Wide (PRV-W1). See §8
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
 **Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
 
@@ -225,3 +225,21 @@ This table is **binding**. Paths from `macos/App/` unless noted.
 ## 7. Handoff
 
 When the board is agreed: record the board link, the frames and the answers to PRV-1 (glyph), PRV-4 (close control), PRV-8 (the shown mark's wording), PRV-9 (how the links show) and PRV-W1 (the sheet's two widths) on the **Board** line of this brief and in the [S13-11 plan](../prs/S13-11-provenance-sheet.md) (**Board** line, Design → macOS, its Decisions), close the plan's Open questions, run `review-plan` on the plan, and move it from `Blocked — on board S13-D2` to `Planned` with `plan-pr`. When S13-11 lands, move this brief to `design/archive/` and update [`README.md`](README.md).
+
+---
+
+## 8. Board notes (agreed 2026-10-31)
+
+Checked against the exported `Person Detail.dc.html`, turn 6. Where the board differs from this brief, the board wins and the S13-11 plan copies it, except where noted.
+
+| Frame | Requirement | The board |
+| --- | --- | --- |
+| 6a, 6b, 6k, 6m | PRV-1, PRV-2, PRV-12 | As written. The board calls the IconButton "ghost"; the kit's `PVIconButton` default (neutral tone) is that look. |
+| 6c – 6e, 6i, 6j | PRV-3 – PRV-6, PRV-10, PRV-11 | As written. The Done Button sits in `PVPanel`'s sunken footer; the place for "Concluded by you" is zero height between the summary and the table. |
+| 6c, 6d | PRV-4 | The board notes that its web kit sheet does not close on an outside click. The Swift kit's `.pvSheet` does (`PVSheetChrome` uses `.pvOutsideClick`), so the build follows the Swift kit and PRV-4. |
+| 6d | PRV-9, PRV-15 | The citation line is a link in ink, not link colour (underline at 35%, link colour on hover), so a record's primary or secondary ink still reads. Local to the sheet; plan D-18. |
+| 6f, 6g, 6n | PRV-7, PRV-8, PRV-W1, PRV-W2 | As written. At Wide, Read as is capped at 220pt and Outcome at 280pt; the Citation column takes the rest. |
+| 6h | PRV-6 | The board draws a value line inside each Place, though each holds one value, and asks whether to drop it. **Dropped** (2026-10-31): within an owner group, headings show only when the group has two or more buckets; plan D-13. |
+| 6l | PRV-12 | The note lists Tab as Source → Observation → Citation. The build follows PRV-12's reading order: citation line, Source, Observation, then the next record; plan D-19. |
+| — | — | The board's data note (refs, value index, Source and Citation places, the citation line's parts) matches the plan's D-4, D-8 and D-13. |
+
