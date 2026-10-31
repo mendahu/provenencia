@@ -9,6 +9,8 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
+	"os"
+	"path/filepath"
 	"sync/atomic"
 	"testing"
 
@@ -35,6 +37,17 @@ func init() {
 func gifHeaderOnly(w, h uint16) []byte {
 	b := []byte("GIF89a")
 	b = append(b, byte(w), byte(w>>8), byte(h), byte(h>>8), 0, 0, 0)
+	return b
+}
+
+// goFixture reads a file from the Go distribution's image testdata copied
+// under testdata/third_party/go.
+func goFixture(t *testing.T, name string) []byte {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join("testdata", "third_party", "go", name))
+	if err != nil {
+		t.Fatal(err)
+	}
 	return b
 }
 
@@ -87,10 +100,19 @@ func TestEncodeJPEGRejects(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "garbage bytes",
-			src:     func(*testing.T) []byte { return []byte{0, 1, 2, 3} },
-			opts:    Options{MaxEdge: 256},
-			wantErr: true,
+			name:   "garbage bytes",
+			src:    func(*testing.T) []byte { return []byte{0, 1, 2, 3} },
+			opts:   Options{MaxEdge: 256},
+			wantIs: ErrUnsupportedFormat,
+		},
+		{
+			name: "truncated jpeg within budget",
+			src: func(t *testing.T) []byte {
+				b := goFixture(t, "video-001.jpeg")
+				return b[:len(b)/2]
+			},
+			opts:   Options{MaxEdge: 256},
+			wantIs: ErrUndecodable,
 		},
 	}
 	for _, tt := range tests {

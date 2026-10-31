@@ -316,6 +316,17 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 			wantIs: ErrUnprocessable,
 		},
 		{
+			name: "truncated jpeg",
+			srcID: func(t *testing.T) []byte {
+				b, err := os.ReadFile("../raster/testdata/third_party/go/video-001.jpeg")
+				if err != nil {
+					t.Fatal(err)
+				}
+				return installSourceFile(t, c, b[:len(b)/2], "image/jpeg", "half.jpg")
+			},
+			wantIs: ErrUnprocessable,
+		},
+		{
 			name: "pixel bomb png over decode budget",
 			srcID: func(t *testing.T) []byte {
 				return installSourceFile(t, c, rastertest.HeaderOnlyPNG(t, 100000, 100000), "image/png", "bomb.png")
