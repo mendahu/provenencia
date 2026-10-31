@@ -6484,6 +6484,8 @@ public nonisolated struct Provenencia_Engine_V1_CreateCitationWithObservationsRe
 
   public var observations: [Provenencia_Engine_V1_ObservationDraft] = []
 
+  public var graphID: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -18449,7 +18451,7 @@ nonisolated extension Provenencia_Engine_V1_ObservationDraft: SwiftProtobuf.Mess
 
 nonisolated extension Provenencia_Engine_V1_CreateCitationWithObservationsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CreateCitationWithObservationsRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}artifact_id\0\u{3}locator_json\0\u{1}transcription\0\u{1}label\0\u{3}transcription_uncertain\0\u{3}transcription_note\0\u{3}citation_notes\0\u{1}observations\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}artifact_id\0\u{3}locator_json\0\u{1}transcription\0\u{1}label\0\u{3}transcription_uncertain\0\u{3}transcription_note\0\u{3}citation_notes\0\u{1}observations\0\u{3}graph_id\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -18467,6 +18469,7 @@ nonisolated extension Provenencia_Engine_V1_CreateCitationWithObservationsReques
       case 8: try { try decoder.decodeSingularStringField(value: &self.transcriptionNote) }()
       case 9: try { try decoder.decodeRepeatedStringField(value: &self.citationNotes) }()
       case 10: try { try decoder.decodeRepeatedMessageField(value: &self.observations) }()
+      case 11: try { try decoder.decodeSingularStringField(value: &self.graphID) }()
       default: break
       }
     }
@@ -18503,6 +18506,9 @@ nonisolated extension Provenencia_Engine_V1_CreateCitationWithObservationsReques
     if !self.observations.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.observations, fieldNumber: 10)
     }
+    if !self.graphID.isEmpty {
+      try visitor.visitSingularStringField(value: self.graphID, fieldNumber: 11)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -18517,6 +18523,7 @@ nonisolated extension Provenencia_Engine_V1_CreateCitationWithObservationsReques
     if lhs.transcriptionNote != rhs.transcriptionNote {return false}
     if lhs.citationNotes != rhs.citationNotes {return false}
     if lhs.observations != rhs.observations {return false}
+    if lhs.graphID != rhs.graphID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

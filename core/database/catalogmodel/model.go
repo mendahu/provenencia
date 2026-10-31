@@ -154,6 +154,7 @@ var FKs = []FK{
 	{From: "file_derivatives", Column: "derived_file_id", To: "files", OnDelete: "NO ACTION", Bucket: BucketOwnedOutbound},
 
 	{From: "citations", Column: "artifact_id", To: "artifacts", OnDelete: "NO ACTION", Bucket: BucketResource},
+	{From: "citations", Column: "graph_id", To: "evidence_graphs", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 	{From: "citation_notes", Column: "citation_id", To: "citations", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 
 	{From: "observations", Column: "citation_id", To: "citations", OnDelete: "NO ACTION", Bucket: BucketResource},

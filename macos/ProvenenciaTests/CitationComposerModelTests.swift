@@ -280,7 +280,7 @@ struct CitationComposerModelTests {
             $0.values.valueText = "miller"
         }
         await model.saveAuthoring()
-        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations observations=0") })
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations graph=\(graphID) observations=0") })
         #expect(store.recordedCalls.contains { $0.hasPrefix("addObservationsToCitation") })
         #expect(model.activeCitationID != nil)
         #expect(model.observations.contains { $0.persistedRef == "OBS-FAKE1" && $0.state == .saved })
@@ -618,7 +618,7 @@ struct CitationComposerModelTests {
         await model.prepare()
         model.transcription = "note"
         await model.fields.saveCitation()
-        #expect(store.recordedCalls.contains { $0 == "createCitationWithObservations observations=0" })
+        #expect(store.recordedCalls.contains { $0 == "createCitationWithObservations graph=\(graphID) observations=0" })
         #expect(model.activeCitationID != nil)
         store.recordedCalls = []
         model.transcription = "changed"
@@ -647,7 +647,7 @@ struct CitationComposerModelTests {
         await model.saveAuthoring()
         let creates = store.recordedCalls.filter { $0.hasPrefix("createCitationWithObservations") }
         #expect(creates.count == 1)
-        #expect(creates.first == "createCitationWithObservations observations=0")
+        #expect(creates.first == "createCitationWithObservations graph=\(graphID) observations=0")
         let adds = store.recordedCalls.filter { $0.hasPrefix("addObservationsToCitation") }
         #expect(adds.count == 2)
         #expect(model.activeCitationID != nil)
@@ -770,7 +770,7 @@ struct CitationComposerModelTests {
         fresh.mutateBridge { $0.termID = "term-witness" }
         store.recordedCalls = []
         await fresh.saveAuthoring()
-        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations observations=0") })
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations graph=\(graphID) observations=0") })
         #expect(store.recordedCalls.contains { call in
             call.hasPrefix("createCitedBridge citationID=") && call.contains("observations=3")
                 && !call.contains("citationID=nil")
@@ -831,7 +831,7 @@ struct CitationComposerModelTests {
         #expect(model.shouldHoldNavigation(.back))
         store.recordedCalls = []
         await model.saveAuthoring()
-        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations observations=0") })
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations graph=\(graphID) observations=0") })
         #expect(store.recordedCalls.contains { call in
             call.hasPrefix("createCitedBridge citationID=") && call.contains("observations=2")
                 && !call.contains("citationID=nil")

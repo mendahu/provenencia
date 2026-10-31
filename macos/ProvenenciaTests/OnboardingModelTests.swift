@@ -708,6 +708,7 @@ private struct ThrowingStore: GenealogyStore {
     func createCitationWithObservations(
         projectDir _: String,
         userID _: String,
+        graphID _: String,
         artifactID _: String,
         locatorJSON _: String,
         transcription _: String,

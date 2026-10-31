@@ -83,7 +83,7 @@ func (f *handleFixture) subject(kind string, in func(s subjects.Subject) []obser
 	if in != nil {
 		obs := in(s)
 		if _, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: f.user}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, f.user, citations.CreateInput{ArtifactID: f.artifact, LocatorJSON: handleLocator}, obs)
+			return citations.CreateWithObservations(tx, f.user, citations.CreateInput{GraphID: f.graph, ArtifactID: f.artifact, LocatorJSON: handleLocator}, obs)
 		}); err != nil {
 			f.t.Fatal(err)
 		}

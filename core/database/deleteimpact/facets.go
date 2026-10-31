@@ -153,7 +153,7 @@ func buildFacetReleases() []facetRelease {
 				WHERE ic.subject_id = ?
 				ORDER BY e.ref COLLATE NOCASE LIMIT ?`),
 			Remaining: `SELECT COUNT(*) FROM identity_claims WHERE subject_id = ?`,
-			Release:   releaseSubjectClaims,
+			Release:   releaseEach(`SELECT id FROM identity_claims WHERE subject_id = ? ORDER BY id`, releaseClaim),
 		},
 
 		// --- Interpretation -------------------------------------------------
@@ -172,6 +172,16 @@ func buildFacetReleases() []facetRelease {
 		rowFacet(catalogmodel.KindArtifact, "evidence_graph_artifacts", "artifact_id", "evidence_graph_artifact", "graph_id",
 			col{"graph_id", colUUID}, col{"artifact_id", colUUID}),
 		optionalPointer(catalogmodel.KindArtifact, "sources", "primary_artifact_id", "source", "id", col{"cover_mode", colText}),
+		// A graph's Citations go with it, each through releaseCitation (a graph
+		// with Subjects is refused first, so none has an Observation).
+		{
+			Parent: catalogmodel.KindEvidenceGraph, Via: "citations.graph_id",
+			Named: true, Child: catalogmodel.KindCitation,
+			Count:     countSQLFn(`SELECT COUNT(*) FROM citations WHERE graph_id = ?`),
+			List:      listSQLFn(`SELECT id, ref FROM citations WHERE graph_id = ? ORDER BY ref COLLATE NOCASE LIMIT ?`),
+			Remaining: `SELECT COUNT(*) FROM citations WHERE graph_id = ?`,
+			Release:   releaseEach(`SELECT id FROM citations WHERE graph_id = ? ORDER BY id`, releaseCitation),
+		},
 		// A graph's links go with it, audited under its id.
 		rowFacet(catalogmodel.KindEvidenceGraph, "evidence_graph_artifacts", "graph_id", "evidence_graph_artifact", "graph_id",
 			col{"graph_id", colUUID}, col{"artifact_id", colUUID}),
@@ -203,32 +213,37 @@ func buildFacetReleases() []facetRelease {
 
 // --- Conclusion releases ----------------------------------------------------
 
-func releaseSubjectClaims(tx *sql.Tx, subjectID []byte) (released, error) {
-	rows, err := tx.Query(`SELECT id FROM identity_claims WHERE subject_id = ? ORDER BY id`, subjectID)
-	if err != nil {
-		return released{}, err
-	}
-	var ids [][]byte
-	for rows.Next() {
-		var id []byte
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			return released{}, err
-		}
-		ids = append(ids, id)
-	}
-	if err := rows.Close(); err != nil {
-		return released{}, err
-	}
-	var out released
-	for _, id := range ids {
-		r, err := releaseClaim(tx, id)
+// releaseEach releases every row selectIDs returns for the parent id through
+// one, in that order, and merges what they removed. The ids are read and the
+// rows closed before the first release, which writes on the same Tx.
+func releaseEach(selectIDs string, one func(*sql.Tx, []byte) (released, error)) func(*sql.Tx, []byte) (released, error) {
+	return func(tx *sql.Tx, parentID []byte) (released, error) {
+		rows, err := tx.Query(selectIDs, parentID)
 		if err != nil {
 			return released{}, err
 		}
-		out.merge(r)
+		var ids [][]byte
+		for rows.Next() {
+			var id []byte
+			if err := rows.Scan(&id); err != nil {
+				rows.Close()
+				return released{}, err
+			}
+			ids = append(ids, id)
+		}
+		if err := rows.Close(); err != nil {
+			return released{}, err
+		}
+		var out released
+		for _, id := range ids {
+			r, err := one(tx, id)
+			if err != nil {
+				return released{}, err
+			}
+			out.merge(r)
+		}
+		return out, nil
 	}
-	return out, nil
 }
 
 // ReleaseClaim is releaseClaim on the write's Tx: it schedules the purge of any
@@ -279,6 +294,66 @@ func releaseClaim(tx *sql.Tx, claimID []byte) (released, error) {
 			"entity_id":       database.UUIDJSON(entityID),
 			"subject_type_id": database.UUIDJSON(typeID),
 			"status":          status,
+		}),
+	})
+	return out, nil
+}
+
+// ReleaseCitation is releaseCitation on the write's Tx: it schedules the purge
+// of any File released and returns the audit changes.
+func ReleaseCitation(tx *database.Tx, citationID []byte) ([]rowchange.Change, error) {
+	if tx == nil {
+		return nil, ErrInvalid
+	}
+	r, err := releaseCitation(tx.Tx, citationID)
+	if err != nil {
+		return nil, err
+	}
+	files.PurgeAfterCommit(tx, r.Objects)
+	return r.Changes, nil
+}
+
+// releaseCitation removes one Citation, audited: its notes (through
+// releaseFacets), then the row, then the Citation's own delete change over
+// every column. It is the one Citation removal; citations.Delete and a graph
+// delete both call it. The caller has already refused a Citation that still has
+// Observations. Does not commit.
+func releaseCitation(tx *sql.Tx, citationID []byte) (released, error) {
+	if tx == nil || len(citationID) != 16 {
+		return released{}, ErrInvalid
+	}
+	var (
+		id, artifactID, graphID                 []byte
+		ref, locator                            string
+		transcription, label, transcriptionNote sql.NullString
+		uncertain                               int
+	)
+	if err := tx.QueryRow(`SELECT id, ref, artifact_id, graph_id, locator_json, transcription, label,
+		transcription_uncertain, transcription_note FROM citations WHERE id = ?`, citationID).
+		Scan(&id, &ref, &artifactID, &graphID, &locator, &transcription, &label, &uncertain, &transcriptionNote); err != nil {
+		return released{}, err
+	}
+	out, err := releaseFacets(tx, catalogmodel.KindCitation, id)
+	if err != nil {
+		return released{}, err
+	}
+	if _, err := tx.Exec(`DELETE FROM citations WHERE id = ?`, id); err != nil {
+		return released{}, err
+	}
+	out.Changes = append(out.Changes, rowchange.Change{
+		EntityType: "citation",
+		EntityID:   id,
+		Action:     rowchange.ActionDelete,
+		Fields: rowchange.DeletedRow(map[string]any{
+			"id":                      database.UUIDJSON(id),
+			"ref":                     ref,
+			"artifact_id":             database.UUIDJSON(artifactID),
+			"graph_id":                database.UUIDJSON(graphID),
+			"locator_json":            locator,
+			"transcription":           nullStringJSON(transcription),
+			"label":                   nullStringJSON(label),
+			"transcription_uncertain": uncertain != 0,
+			"transcription_note":      nullStringJSON(transcriptionNote),
 		}),
 	})
 	return out, nil

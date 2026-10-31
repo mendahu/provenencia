@@ -200,7 +200,7 @@ func likenessDraft(personID, likenessID, region, imagePath string) *engine.Obser
 func saveLikeness(t *testing.T, dir, userID, artifactID, personID, likenessID, crop string) *engine.CreateCitationWithObservationsResponse {
 	t.Helper()
 	out, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
-		ProjectDir: dir, UserId: userID, ArtifactId: artifactID, LocatorJson: likenessLocatorJSON,
+		ProjectDir: dir, UserId: userID, ArtifactId: artifactID, GraphId: graphLinking(t, dir, artifactID), LocatorJson: likenessLocatorJSON,
 		Observations: []*engine.ObservationDraft{likenessDraft(personID, likenessID, likenessRegionJSON, crop)},
 	}))
 	if err != nil {
@@ -257,7 +257,7 @@ func TestCreateCitationRefusesSymlinkedCrop(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
-		ProjectDir: dir, UserId: userID, ArtifactId: artifactID, LocatorJson: likenessLocatorJSON,
+		ProjectDir: dir, UserId: userID, ArtifactId: artifactID, GraphId: graphLinking(t, dir, artifactID), LocatorJson: likenessLocatorJSON,
 		Observations: []*engine.ObservationDraft{likenessDraft(personID, likenessID, likenessRegionJSON, link)},
 	}))
 	if !errors.Is(err, ingest.ErrSymlink) {
@@ -341,6 +341,16 @@ func TestCreateCitationWithObservations(t *testing.T) {
 	runRPC(t, CreateCitationWithObservations, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
+			name: "a missing graph id is refused",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _, artifactID, _, _ := citationFixture(t)
+				return &engine.CreateCitationWithObservationsRequest{
+					ProjectDir: dir, UserId: userID, ArtifactId: artifactID, LocatorJson: validLocatorJSON,
+				}
+			},
+			wantErr: true,
+		},
+		{
 			name: "creates citation with zero observations",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, _, artifactID, _, _ := citationFixture(t)
@@ -348,6 +358,7 @@ func TestCreateCitationWithObservations(t *testing.T) {
 					ProjectDir:    dir,
 					UserId:        userID,
 					ArtifactId:    artifactID,
+					GraphId:       graphLinking(t, dir, artifactID),
 					LocatorJson:   validLocatorJSON,
 					Transcription: "transcribe first",
 				}
@@ -366,13 +377,14 @@ func TestCreateCitationWithObservations(t *testing.T) {
 				if created.Citation.GetTranscription() != "transcribe first" {
 					t.Fatalf("transcription %q", created.Citation.GetTranscription())
 				}
-				// With no Observation the Citation shows in the graphs its Artifact is
-				// linked to: a citations read, and no graph for graphcache.
-				eff := created.GetEffects()
-				if len(eff.GetEvidenceGraphs()) != 0 || len(eff.GetReads()) != 1 || eff.GetReads()[0].GetRead() != "citations" {
-					t.Fatalf("effects %+v", eff)
-				}
+				// With no Observation the Citation reads as the graph it was made in:
+				// a citations read of that graph, and no graph for graphcache.
 				cr := req.(*engine.CreateCitationWithObservationsRequest)
+				eff := created.GetEffects()
+				if len(eff.GetEvidenceGraphs()) != 0 || len(eff.GetReads()) != 1 || eff.GetReads()[0].GetRead() != "citations" ||
+					!slices.Equal(eff.GetReads()[0].GetIds(), []string{cr.GetGraphId()}) {
+					t.Fatalf("effects %+v, want citations -> %s", eff, cr.GetGraphId())
+				}
 				assertLatestAuditAction(t, cr.ProjectDir, "create_citation_with_observations")
 			},
 		},
@@ -384,6 +396,7 @@ func TestCreateCitationWithObservations(t *testing.T) {
 					ProjectDir:  dir,
 					UserId:      userID,
 					ArtifactId:  artifactID,
+					GraphId:     graphLinking(t, dir, artifactID),
 					LocatorJson: `{}`,
 					Observations: []*engine.ObservationDraft{{
 						SubjectId:  placeID,
@@ -401,7 +414,7 @@ func TestCreateCitationWithObservations(t *testing.T) {
 				dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
 				objectsBefore = objectRelPaths(t, dir)
 				return &engine.CreateCitationWithObservationsRequest{
-					ProjectDir: dir, UserId: userID, ArtifactId: artifactID, LocatorJson: likenessLocatorJSON,
+					ProjectDir: dir, UserId: userID, ArtifactId: artifactID, GraphId: graphLinking(t, dir, artifactID), LocatorJson: likenessLocatorJSON,
 					Observations: []*engine.ObservationDraft{likenessDraft(personID, likenessID, likenessRegionJSON, writeCrop(t, 300, 200, 128))},
 				}
 			},
@@ -430,6 +443,7 @@ func TestCreateCitationWithObservations(t *testing.T) {
 					ProjectDir:    dir,
 					UserId:        userID,
 					ArtifactId:    artifactID,
+					GraphId:       graphLinking(t, dir, artifactID),
 					LocatorJson:   validLocatorJSON,
 					Transcription: "Boston",
 					Observations: []*engine.ObservationDraft{{
@@ -471,7 +485,7 @@ func TestAddObservationsToCitation(t *testing.T) {
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
 				createOut, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
-					ProjectDir: dir, UserId: userID, ArtifactId: artifactID, LocatorJson: likenessLocatorJSON,
+					ProjectDir: dir, UserId: userID, ArtifactId: artifactID, GraphId: graphLinking(t, dir, artifactID), LocatorJson: likenessLocatorJSON,
 				}))
 				if err != nil {
 					t.Fatal(err)
@@ -504,6 +518,7 @@ func TestAddObservationsToCitation(t *testing.T) {
 					ProjectDir:  dir,
 					UserId:      userID,
 					ArtifactId:  artifactID,
+					GraphId:     graphLinking(t, dir, artifactID),
 					LocatorJson: validLocatorJSON,
 					Observations: []*engine.ObservationDraft{{
 						SubjectId:  placeID,
@@ -579,6 +594,7 @@ func TestListObservationsByEvidenceGraph(t *testing.T) {
 					ProjectDir:  dir,
 					UserId:      userID,
 					ArtifactId:  artifactID,
+					GraphId:     graphLinking(t, dir, artifactID),
 					LocatorJson: validLocatorJSON,
 					Observations: []*engine.ObservationDraft{{
 						SubjectId:  placeID,
@@ -663,6 +679,7 @@ func TestListObservationsByEvidenceGraph(t *testing.T) {
 					ProjectDir:  dir,
 					UserId:      userID,
 					ArtifactId:  artifactID,
+					GraphId:     graphLinking(t, dir, artifactID),
 					LocatorJson: validLocatorJSON,
 					Observations: []*engine.ObservationDraft{{
 						SubjectId:   event.Subject.GetId(),
@@ -713,6 +730,7 @@ func TestCitationCountsByEvidenceGraph(t *testing.T) {
 					ProjectDir:  dir,
 					UserId:      userID,
 					ArtifactId:  artifactID,
+					GraphId:     graphLinking(t, dir, artifactID),
 					LocatorJson: validLocatorJSON,
 					Observations: []*engine.ObservationDraft{{
 						SubjectId:  placeID,
@@ -726,6 +744,7 @@ func TestCitationCountsByEvidenceGraph(t *testing.T) {
 					ProjectDir:  dir,
 					UserId:      userID,
 					ArtifactId:  artifactID,
+					GraphId:     graphLinking(t, dir, artifactID),
 					LocatorJson: validLocatorJSON,
 					Observations: []*engine.ObservationDraft{{
 						SubjectId:  placeID,
@@ -780,6 +799,7 @@ func TestListCitationsByArtifact(t *testing.T) {
 					ProjectDir:    dir,
 					UserId:        userID,
 					ArtifactId:    artifactID,
+					GraphId:       graphLinking(t, dir, artifactID),
 					LocatorJson:   validLocatorJSON,
 					Transcription: "empty reading",
 				})); err != nil {
@@ -789,6 +809,7 @@ func TestListCitationsByArtifact(t *testing.T) {
 					ProjectDir:    dir,
 					UserId:        userID,
 					ArtifactId:    artifactID,
+					GraphId:       graphLinking(t, dir, artifactID),
 					LocatorJson:   validLocatorJSON,
 					Transcription: "Boston",
 					Observations: []*engine.ObservationDraft{{
@@ -859,6 +880,7 @@ func TestGetCitation(t *testing.T) {
 					ProjectDir:    dir,
 					UserId:        userID,
 					ArtifactId:    artifactID,
+					GraphId:       graphLinking(t, dir, artifactID),
 					LocatorJson:   validLocatorJSON,
 					Transcription: "Boston",
 					CitationNotes: []string{"note A"},
@@ -951,6 +973,7 @@ func TestGetCitation(t *testing.T) {
 					ProjectDir:  dir,
 					UserId:      userID,
 					ArtifactId:  artifactID,
+					GraphId:     graphLinking(t, dir, artifactID),
 					LocatorJson: validLocatorJSON,
 					Observations: []*engine.ObservationDraft{{
 						SubjectId:   event.Subject.GetId(),
@@ -987,6 +1010,7 @@ func TestGetCitationSecondReadUsesTheLoadedSource(t *testing.T) {
 		ProjectDir:  dir,
 		UserId:      userID,
 		ArtifactId:  artifactID,
+		GraphId:     graphLinking(t, dir, artifactID),
 		LocatorJson: validLocatorJSON,
 		Observations: []*engine.ObservationDraft{
 			{SubjectId: placeID, PropertyId: propID, ValueText: "Boston"},
@@ -1004,6 +1028,7 @@ func TestGetCitationSecondReadUsesTheLoadedSource(t *testing.T) {
 		ProjectDir:  dir,
 		UserId:      userID,
 		ArtifactId:  artifactID,
+		GraphId:     graphLinking(t, dir, artifactID),
 		LocatorJson: validLocatorJSON,
 		Observations: []*engine.ObservationDraft{
 			{SubjectId: placeID, PropertyId: propID, ValueText: "Elsewhere"},
@@ -1077,6 +1102,7 @@ func TestUpdateCitation(t *testing.T) {
 					ProjectDir:    dir,
 					UserId:        userID,
 					ArtifactId:    artifactID,
+					GraphId:       graphLinking(t, dir, artifactID),
 					LocatorJson:   validLocatorJSON,
 					Transcription: "was",
 					Observations: []*engine.ObservationDraft{{
@@ -1214,6 +1240,7 @@ func TestUpdateObservation(t *testing.T) {
 					ProjectDir:  dir,
 					UserId:      userID,
 					ArtifactId:  artifactID,
+					GraphId:     graphLinking(t, dir, artifactID),
 					LocatorJson: validLocatorJSON,
 					Observations: []*engine.ObservationDraft{{
 						SubjectId:  placeID,
@@ -1262,6 +1289,7 @@ func TestDeleteCitation(t *testing.T) {
 					ProjectDir:  dir,
 					UserId:      userID,
 					ArtifactId:  artifactID,
+					GraphId:     graphLinking(t, dir, artifactID),
 					LocatorJson: validLocatorJSON,
 				}))
 				if err != nil {
@@ -1291,6 +1319,7 @@ func TestDeleteCitation(t *testing.T) {
 					ProjectDir:  dir,
 					UserId:      userID,
 					ArtifactId:  artifactID,
+					GraphId:     graphLinking(t, dir, artifactID),
 					LocatorJson: validLocatorJSON,
 					Observations: []*engine.ObservationDraft{{
 						SubjectId:  placeID,
@@ -1328,6 +1357,7 @@ func TestDeleteObservation(t *testing.T) {
 					ProjectDir:  dir,
 					UserId:      userID,
 					ArtifactId:  artifactID,
+					GraphId:     graphLinking(t, dir, artifactID),
 					LocatorJson: validLocatorJSON,
 					Observations: []*engine.ObservationDraft{{
 						SubjectId:  placeID,

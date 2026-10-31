@@ -103,7 +103,7 @@ func (f *fixture) person(forms ...string) (subjects.Subject, []observations.Obse
 			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.name.ID, Name: namevaluetest.Western(form)})
 		}
 		res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator}, in)
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: f.graph, ArtifactID: f.artifact.ID, LocatorJSON: locator}, in)
 		})
 		must(f.t, err)
 		obs = res.Observations
@@ -191,7 +191,7 @@ func TestListPersonsSortsBySortedPartsNotForm(t *testing.T) {
 	personType := f.typeID("person")
 	s := subjectstest.OfType(t, f.c, userID, f.graph, personType, "")
 	_, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator}, []observations.Input{{
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: f.graph, ArtifactID: f.artifact.ID, LocatorJSON: locator}, []observations.Input{{
 			SubjectID: s.ID, PropertyID: f.name.ID, Name: formOnly,
 		}})
 	})
@@ -546,7 +546,7 @@ func (f *fixture) event(in ...observations.Input) []byte {
 			in[i].SubjectID = s.ID
 		}
 		_, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator}, in)
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: f.graph, ArtifactID: f.artifact.ID, LocatorJSON: locator}, in)
 		})
 		must(f.t, err)
 	}
@@ -714,8 +714,9 @@ func (f *fixture) citeToponyms(art artifacts.Artifact, subjectID []byte, names .
 	for i, name := range names {
 		in[i] = observations.Input{SubjectID: subjectID, PropertyID: toponym.ID, ValueText: name, HasText: true}
 	}
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
 	_, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator}, in)
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: graph, ArtifactID: art.ID, LocatorJSON: locator}, in)
 	})
 	must(f.t, err)
 }

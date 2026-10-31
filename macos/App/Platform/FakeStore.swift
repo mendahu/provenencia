@@ -124,6 +124,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var listSubjectTypesCalls = 0
     var getSourceWorkspaceCalls = 0
     var listEvidenceGraphProgressCalls = 0
+    /// The graph id of each `citationCountsByEvidenceGraph` call, in order.
+    var citationCountsGraphIDs: [String] = []
     var getEvidenceGraphProgressCalls = 0
     var deleteSourceCalls = 0
     var deleteArtifactCalls = 0
@@ -2514,6 +2516,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             (citation, observations, _) = try await createCitationWithObservations(
                 projectDir: projectDir,
                 userID: userID,
+                graphID: plan.graphID,
                 artifactID: artifactID,
                 locatorJSON: locatorJSON,
                 transcription: transcription,
@@ -2566,6 +2569,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     func createCitationWithObservations(
         projectDir: String,
         userID _: String,
+        graphID: String,
         artifactID: String,
         locatorJSON: String,
         transcription: String,
@@ -2576,7 +2580,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         observations drafts: [CatalogObservationDraft]
     ) async throws -> (CatalogCitation, [CatalogObservation], CatalogWriteEffects) {
         let delay: UInt64 = withState {
-            recordedCalls.append("createCitationWithObservations observations=\(drafts.count)")
+            recordedCalls.append("createCitationWithObservations graph=\(graphID) observations=\(drafts.count)")
             return createCitationDelayNanoseconds
         }
         if delay > 0 {
@@ -2806,13 +2810,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     func citationCountsByEvidenceGraph(projectDir: String, graphID: String) async throws -> [String: Int] {
         return withState {
             markCatalogSessionHeld(projectDir)
-            guard let graph = evidenceGraphsByProject[projectDir]?.first(where: { $0.id == graphID }) else {
+            citationCountsGraphIDs.append(graphID)
+            guard evidenceGraphsByProject[projectDir]?.contains(where: { $0.id == graphID }) == true else {
                 return [:]
             }
-            let artifactIDs = Set(graph.artifactIDs)
+            // No membership rule in the fake: every seeded Citation counts on its Artifact,
+            // as `listCitationsByArtifact` lists every seeded Citation.
             var counts: [String: Int] = [:]
-            for citation in citationsByID.values
-            where artifactIDs.contains(citation.artifactID) {
+            for citation in citationsByID.values {
                 counts[citation.artifactID, default: 0] += 1
             }
             return counts

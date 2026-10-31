@@ -124,6 +124,7 @@ final class CitationComposerContext {
         let created = try await store.createCitationWithObservations(
             projectDir: projectDir,
             userID: userID,
+            graphID: graphID,
             artifactID: artifactID,
             locatorJSON: values.locator.encodeJSON(),
             transcription: values.transcription,

@@ -1563,6 +1563,7 @@ struct GoStore: GenealogyStore {
     func createCitationWithObservations(
         projectDir: String,
         userID: String,
+        graphID: String,
         artifactID: String,
         locatorJSON: String,
         transcription: String,
@@ -1575,6 +1576,7 @@ struct GoStore: GenealogyStore {
         var req = Provenencia_Engine_V1_CreateCitationWithObservationsRequest()
         req.projectDir = projectDir
         req.userID = userID
+        req.graphID = graphID
         req.artifactID = artifactID
         req.locatorJson = locatorJSON
         req.transcription = transcription

@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
@@ -238,6 +239,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	t.Run("citation with observations", func(t *testing.T) {
 		res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				GraphID:    graph,
 				ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "Leeds",
 			}, []observations.Input{{
 				SubjectID: place.ID, PropertyID: toponym.ID, ValueText: "Leeds", HasText: true,
@@ -274,6 +276,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		term := createTerm(t, c, userID, eventTypeProp.ID, "Land Grant")
 		if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				GraphID:    graph,
 				ArtifactID: art.ID, LocatorJSON: testLocator,
 			}, []observations.Input{{
 				SubjectID: wedding.ID, PropertyID: eventTypeProp.ID, ValueTermID: term.ID,
@@ -301,6 +304,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		}
 		res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				GraphID:    graph,
 				ArtifactID: art.ID, LocatorJSON: testLocator,
 			}, inputs)
 		})
@@ -449,6 +453,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		subjectvocabtest.Assign(t, c, userID, personType.ID, userRole.ID)
 		res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				GraphID:    graph,
 				ArtifactID: art.ID, LocatorJSON: testLocator,
 			}, []observations.Input{{
 				SubjectID: alice.ID, PropertyID: userRole.ID, ValueText: "witness", HasText: true,
@@ -501,6 +506,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		bob := subjectstest.At(t, c, userID, graph, personType.ID, "Bob", subjects.Placement{GridX: 8, GridY: 0})
 		if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				GraphID:    graph,
 				ArtifactID: art.ID, LocatorJSON: testLocator,
 			}, []observations.Input{{
 				SubjectID: bob.ID, PropertyID: roleProp.ID, ValueTermID: roleTerm.ID,
@@ -689,8 +695,10 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 		}
 	})
 
+	srcGraph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 	cit, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			GraphID:    srcGraph,
 			ArtifactID: art.ID, LocatorJSON: testLocator,
 			Transcription: "John Hartley, worsted weaver, of 14 Back Nile Street",
 		}, nil)
@@ -793,6 +801,26 @@ func TestImpactEvidenceGraph(t *testing.T) {
 		got := mustImpact(t, c, catalogmodel.KindEvidenceGraph, jones.ID)
 		if !got.Allowed || got.Gate != deleteimpact.GateOK || len(got.Groups) != 0 {
 			t.Fatalf("%+v", got)
+		}
+	})
+
+	t.Run("a graph's Citations go with it", func(t *testing.T) {
+		cit, err := writes.Call(c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				GraphID: jones.ID, ArtifactID: art.ID, LocatorJSON: testLocator,
+			}, nil)
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := mustImpact(t, c, catalogmodel.KindEvidenceGraph, jones.ID)
+		if !got.Allowed || got.Gate != deleteimpact.GateOK || len(got.Groups) != 0 || len(got.Cascades) != 1 {
+			t.Fatalf("%+v", got)
+		}
+		g := got.Cascades[0]
+		if g.Via != "citations.graph_id" || g.Kind != catalogmodel.KindCitation || g.Total != 1 ||
+			len(g.Listed) != 1 || g.Listed[0].Ref != cit.Citation.Ref || g.Listed[0].Location.GraphID != idString(jones.ID) {
+			t.Fatalf("cascade %+v", g)
 		}
 	})
 
@@ -959,10 +987,12 @@ func TestListedGroup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 	var rows []deleteimpact.Listed
 	for i := 0; i < 25; i++ {
 		res, err := writes.Call(c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				GraphID:    graph,
 				ArtifactID: art.ID, LocatorJSON: testLocator,
 			}, nil)
 		})
@@ -1058,14 +1088,24 @@ func TestLocationsNameTheirGraph(t *testing.T) {
 	}
 	cited, err := writes.Call(c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			GraphID:    jones.ID,
 			ArtifactID: page.ID, LocatorJSON: testLocator,
 		}, []observations.Input{{SubjectID: subject.ID, PropertyID: toponym.ID, ValueText: "Leeds", HasText: true}})
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The page is linked to Default too, which sorts before Jones: a Citation
+	// with no Observation still names the graph it was made in.
+	if _, _, err := writes.Run(c, writes.Op{Action: "link_artifact", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		changes, err := evidencegraphs.Link(tx, userID, def.ID, page.ID)
+		return struct{}{}, changes, err
+	}); err != nil {
+		t.Fatal(err)
+	}
 	bare, err := writes.Call(c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			GraphID:    jones.ID,
 			ArtifactID: page.ID, LocatorJSON: testLocator,
 		}, nil)
 	})

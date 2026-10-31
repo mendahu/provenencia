@@ -63,7 +63,7 @@ const (
 	sqlListNotesByObservation = `SELECT id, body FROM observation_notes WHERE observation_id = ? ORDER BY rowid`
 	sqlDeleteNote             = `DELETE FROM observation_notes WHERE id = ?`
 	sqlDeleteObservationByID  = `DELETE FROM observations WHERE id = ?`
-	sqlCitationArtifact       = `SELECT artifact_id FROM citations WHERE id = ?`
+	sqlCitationGraph          = `SELECT graph_id FROM citations WHERE id = ?`
 	sqlBindingExists          = `SELECT 1 FROM subject_type_properties WHERE subject_type_id = ? AND property_id = ?`
 	sqlTermOnProperty         = `SELECT 1 FROM property_terms WHERE id = ? AND property_id = ?`
 	sqlPropertyGet            = `SELECT id, key, origin, label, COALESCE(description, ''), value_type
@@ -232,8 +232,8 @@ type resolvedValue struct {
 	ValueChanges []rowchange.Change
 }
 
-// requireSameGraph refuses an Observation whose Subject, Subject value, or
-// Citation Artifact is not in, or linked to, the Subject's Evidence graph.
+// requireSameGraph refuses an Observation whose Subject or Subject value is
+// not in the Evidence graph its Citation belongs to.
 // A product reification (a source Subject) may be the value of a non-edge
 // row in any graph.
 func requireSameGraph(tx *sql.Tx, citationID, subjectID, valueSubjectID []byte, edge bool) error {
@@ -241,15 +241,11 @@ func requireSameGraph(tx *sql.Tx, citationID, subjectID, valueSubjectID []byte, 
 	if err != nil {
 		return mapMissing(err)
 	}
-	var artifactID []byte
-	if err := tx.QueryRow(sqlCitationArtifact, citationID).Scan(&artifactID); err != nil {
+	var citationGraph []byte
+	if err := tx.QueryRow(sqlCitationGraph, citationID).Scan(&citationGraph); err != nil {
 		return mapMissing(err)
 	}
-	linked, err := evidencegraphs.IsLinkedTx(tx, graph, artifactID)
-	if err != nil {
-		return mapMissing(err)
-	}
-	if !linked {
+	if !bytes.Equal(citationGraph, graph) {
 		return ErrOtherGraph
 	}
 	if len(valueSubjectID) == 0 {

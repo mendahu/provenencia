@@ -61,6 +61,7 @@ func TestImpactConclusion(t *testing.T) {
 	}
 	res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			GraphID:    graph,
 			ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "York",
 		}, []observations.Input{{
 			SubjectID: york.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true,

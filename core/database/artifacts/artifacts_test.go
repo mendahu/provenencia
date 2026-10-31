@@ -546,8 +546,10 @@ func TestArtifactDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	citedGraph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 	if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			GraphID:    citedGraph,
 			ArtifactID: cited.ID, LocatorJSON: locator,
 		}, nil)
 	}); err != nil {
@@ -1212,6 +1214,7 @@ func TestArtifactUpdateGraphs(t *testing.T) {
 		p := newPage("P4", def)
 		if _, err := writes.Call(c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				GraphID:    def,
 				ArtifactID: p.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
 			}, nil)
 		}); err != nil {
@@ -1220,7 +1223,7 @@ func TestArtifactUpdateGraphs(t *testing.T) {
 		p.Label = "P4 renamed"
 		before := revisions()
 		_, _, err := update(p, evidencegraphs.GraphLinks{Given: true})
-		if !errors.Is(err, evidencegraphs.ErrCitationsNeedGraph) {
+		if !errors.Is(err, evidencegraphs.ErrArtifactInUse) {
 			t.Fatalf("got %v", err)
 		}
 		if label(p.ID) != "P4" || revisions() != before {

@@ -122,9 +122,11 @@ func TestHandlePaths(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 	year := 1842
 	created, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			GraphID:    graph,
 			ArtifactID: art.ID, LocatorJSON: locator,
 		}, []observations.Input{{
 			SubjectID: boston.ID, PropertyID: dateProp.ID,

@@ -115,7 +115,7 @@ func (f *fixture) subjectOn(src sources.Source, kind string) subjects.Subject {
 func (f *fixture) cite(s subjects.Subject, in observations.Input) observations.Observation {
 	f.t.Helper()
 	res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: f.arts[string(s.SourceID)].ID, LocatorJSON: locator}, []observations.Input{in})
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: s.GraphID, ArtifactID: f.arts[string(s.SourceID)].ID, LocatorJSON: locator}, []observations.Input{in})
 	})
 	must(f.t, err)
 	return res.Observations[0]
@@ -389,7 +389,7 @@ func TestForEntityEvidence(t *testing.T) {
 	d := f.personOn(census)
 	uncertainRes, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-			ArtifactID: f.arts[string(d.SourceID)].ID, LocatorJSON: locator, TranscriptionUncertain: true,
+			GraphID: d.GraphID, ArtifactID: f.arts[string(d.SourceID)].ID, LocatorJSON: locator, TranscriptionUncertain: true,
 		}, []observations.Input{f.nameIn(d, "given=James|surname=Robins")})
 	})
 	must(t, err)

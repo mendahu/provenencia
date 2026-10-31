@@ -501,6 +501,7 @@ func (f *fixture) deniedDate(event subjects.Subject, y int) {
 	}{{true, observations.PolarityPositive}, {false, observations.PolarityNegative}} {
 		_, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				GraphID:    f.graph,
 				ArtifactID: f.artifact.ID, LocatorJSON: locator, TranscriptionUncertain: c.uncertain,
 			}, []observations.Input{{SubjectID: event.ID, PropertyID: date, Date: pointYear(y), Polarity: c.polarity}})
 		})

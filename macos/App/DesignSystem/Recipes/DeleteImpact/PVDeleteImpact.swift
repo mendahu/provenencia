@@ -73,10 +73,15 @@ enum PVDeleteImpactCopy {
         (report?.cascades ?? []).compactMap { group in
             let refs = group.listed.map(\.ref)
             guard !refs.isEmpty else { return nil }
-            let joined = refs.formatted(.list(type: .and))
+            let rest = group.total - refs.count
+            let joined = rest > 0
+                ? refs.joined(separator: ", ") + L10n.DeleteImpact.summaryMore(count: rest)
+                : refs.formatted(.list(type: .and))
             switch group.via {
             case "identity_claims.subject_id":
                 return L10n.DeleteImpact.leavesHandle(handleRefs: joined)
+            case "citations.graph_id":
+                return L10n.DeleteImpact.deletesCitations(count: group.total, refs: joined)
             default:
                 return L10n.DeleteImpact.alsoAffects(
                     noun: noun(group.kind, count: group.total),

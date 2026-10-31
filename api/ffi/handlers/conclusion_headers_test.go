@@ -49,12 +49,12 @@ func namedPerson(t *testing.T) (dir, handleRef string) {
 		if err != nil {
 			return err
 		}
-		var sourceID []byte
+		var sourceID, graphID []byte
 		db, err := c.DB()
 		if err != nil {
 			return err
 		}
-		if err := db.QueryRow(`SELECT source_id FROM subjects WHERE id = ?`, subjectID[:]).Scan(&sourceID); err != nil {
+		if err := db.QueryRow(`SELECT source_id, graph_id FROM subjects WHERE id = ?`, subjectID[:]).Scan(&sourceID, &graphID); err != nil {
 			return err
 		}
 		art, err := artifactstest.Create(c, userID[:], artifacts.CreateInput{SourceID: sourceID, Label: "Scan"})
@@ -63,7 +63,7 @@ func namedPerson(t *testing.T) (dir, handleRef string) {
 		}
 		_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID[:]}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID[:], citations.CreateInput{
-				ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
+				GraphID: graphID, ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
 			}, []observations.Input{
 				{SubjectID: subjectID[:], PropertyID: name.ID, Name: &namevalue.Value{Form: "James Robins", Parts: []namevalue.Part{
 					{Idx: 0, Value: "James", Type: namevalue.PartTypeGiven}, {Idx: 1, Value: "Robins", Type: namevalue.PartTypeSurname},
@@ -254,6 +254,7 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 		year := 1849
 		_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID[:]}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID[:], citations.CreateInput{
+				GraphID:    s.GraphID,
 				ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
 			}, []observations.Input{
 				{SubjectID: s.ID, PropertyID: name.ID, ValueText: "The Great Fire", HasText: true},
@@ -335,6 +336,7 @@ func citedPlace(t *testing.T) (dir, entityID string) {
 		}
 		_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID[:]}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID[:], citations.CreateInput{
+				GraphID:    s.GraphID,
 				ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
 			}, []observations.Input{
 				{SubjectID: s.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},

@@ -105,6 +105,7 @@ CREATE TABLE citations (
     id                        BLOB PRIMARY KEY,
     ref                       TEXT UNIQUE NOT NULL,      -- e.g. CIT-3K9M2
     artifact_id               BLOB NOT NULL REFERENCES artifacts(id),
+    graph_id                  BLOB NOT NULL REFERENCES evidence_graphs(id) ON DELETE CASCADE,
     locator_json              TEXT NOT NULL,
     transcription             TEXT,
     label                     TEXT,
@@ -117,6 +118,7 @@ CREATE TABLE citations (
 
 `ref` is a required short human-readable reference for UI and discussion (prefix `CIT`).
 `artifact_id` is `NO ACTION`: deleting an Artifact while Citations remain fails. Citation notes still CASCADE with the Citation.
+`graph_id` is the Evidence graph the Citation was made in ([`source-layer-data-model.md`](source-layer-data-model.md) § 7.1). It is required on create, the graph must be linked to the Citation's Artifact, and it never changes: a Citation belongs to one graph and never moves. It is an audited facet of the graph: a graph delete releases its Citations, each with its own delete change.
 `transcription` preserves the researcher's reading of textual or spoken content within the cited evidence. It is intended to remain faithful to the evidence, including uncertainty where appropriate, rather than silently normalizing abbreviations, names, places, or other values. For example, `Wm Robins` may be transcribed as written and normalized to `William Robins` later through an Observation.
 
 `label` is a short name the researcher gives this Citation. It is not the transcription and not researcher commentary (`citation_notes`).
@@ -576,7 +578,7 @@ CREATE TABLE subjects (
 
 `subject_type_id` is immutable after insert. Correcting a wrong type means a new subject (and new `ref`), not an UPDATE of the type. The UUID remains the machine identity; the type (via `candidate_ref_prefix`) is part of the public identity encoded in `ref`.
 
-`source_id` is the subject's home Source — typically the Source being interpreted when the subject was created. It exists so the application can efficiently surface Subjects that belong with a given Source during common same-source workflows. An Observation's Subject, Subject value and Citation Artifact must share one Evidence graph (the Artifact linked to it), except that a reification Subject (type `source`) may be the value of a non-edge Observation in any graph; `observations.requireSameGraph` refuses the rest with `observations.other_graph`.
+`source_id` is the subject's home Source — typically the Source being interpreted when the subject was created. It exists so the application can efficiently surface Subjects that belong with a given Source during common same-source workflows. An Observation is saved only when its Subject and its Subject value are in the Evidence graph its Citation belongs to, except that a reification Subject (type `source`) may be the value of a non-edge Observation in any graph; `observations.requireSameGraph` refuses the rest with `observations.other_graph`.
 
 For Subjects of type `source`, `source_id` has a stronger meaning: it identifies the Source this subject reifies. The application should maintain at most one `source` subject per Source row. Another Source refers to that subject only as the value of a non-edge Observation, such as `mentions` (“this book mentions that marriage certificate”). Observations whose Subject is another Source's `source` subject, `remark` included, are refused with `observations.other_graph`; a `remark` on a `source` subject is written from that Source's own graph. Cross-Source commentary is a preliminary idea ([`ideas/source-to-source-relationships.md`](ideas/source-to-source-relationships.md)), not supported yet. None of this requires structured Source-quality columns.
 
@@ -934,7 +936,7 @@ The current design aims to preserve these invariants:
 
 1. Every subject has exactly one Subject type. `subject_type_id` is immutable after insert.
 2. Every subject has a required `ref` of the form `{candidate_ref_prefix}-{token}`.
-3. Every subject has a home `source_id`. An Observation's Subject, Subject value and Citation Artifact share one Evidence graph, except a reification Subject value on a non-edge row (`observations.requireSameGraph`).
+3. Every subject has a home `source_id`. An Observation's Subject and Subject value are in the Evidence graph its Citation belongs to, except a reification Subject value on a non-edge row (`observations.requireSameGraph`).
 4. A subject of type `source` reifies the Source identified by its `source_id`; the application should keep at most one such subject per Source.
 5. Subject types and Properties are extensible persisted vocabulary with `origin` namespaces and `UNIQUE (key, origin)`, not closed application enums. A new Subject type includes a globally unique `ref_prefix` that is not a reserved catalog prefix or layer code. See [`seeded-vocabulary.md`](seeded-vocabulary.md) §1.1.
 6. Every Observation has its own stable identity and a required `OBS-…` `ref`.
@@ -955,8 +957,8 @@ The current design aims to preserve these invariants:
 21. First-class application behavior may recognize seeded `(key, origin = 'provenencia')` pairs and open values; it must not require the schema to close those vocabularies or encode every genealogical edge case.
 22. Source credibility assessments are Interpretation entities (`source_credibility_assessments`), not columns on `sources` and not Observation confidence scores.
 23. Citation transcription certainty is the boolean `transcription_uncertain` (+ optional note), media-agnostic; it is not Claim confidence.
-24. An Observation is saved only when its Subject, its Subject value and its Citation's Artifact are in, or linked to, one Evidence graph; a reification Subject (type `source`) may be the value of a non-edge row in any graph (`observations.other_graph` otherwise).
-25. An Artifact with Citations stays linked to at least one Evidence graph (`evidencegraphs.citations_need_graph`); an Artifact with none may stand in no graph. A Citation with no Observation belongs to no graph and is reached through any graph that links its Artifact.
+24. An Observation is saved only when its Subject and its Subject value are in the Evidence graph its Citation belongs to; a reification Subject (type `source`) may be the value of a non-edge row in any graph (`observations.other_graph` otherwise).
+25. A Citation belongs to the one Evidence graph it was made in (`citations.graph_id`); that graph stays linked to its Artifact, and the Citation goes with the graph when the graph is deleted. An Artifact with no Citations may stand in no graph.
 
 ---
 

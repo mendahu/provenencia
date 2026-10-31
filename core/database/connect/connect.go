@@ -114,8 +114,12 @@ func CreateCitedBridge(tx *database.Tx, userID []byte, in CreateInput) (Result, 
 		if _, err := citations.GetTx(q, in.CitationID); err != nil {
 			return Result{}, nil, ErrInvalid
 		}
-	} else if err := citations.NormalizeCreateInput(&in.Citation); err != nil {
-		return Result{}, nil, err
+	} else {
+		// The new Citation is made in the graph its endpoints are in.
+		in.Citation.GraphID = from.GraphID
+		if err := citations.NormalizeCreateInput(&in.Citation); err != nil {
+			return Result{}, nil, err
+		}
 	}
 
 	fromPos, err := subjectpositions.GetTx(q, from.ID)

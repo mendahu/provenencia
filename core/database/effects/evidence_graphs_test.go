@@ -203,6 +203,7 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 	sameIDs("subject on Jones", resolve("subject on Jones", subjChange).EvidenceGraphs, jones.ID)
 	subjectID := only(subjChange, "subject")[0].EntityID
 	cited, citChanges, err := citations.CreateWithObservations(tx, userID, citations.CreateInput{
+		GraphID:    jones.ID,
 		ArtifactID: srcArt.ID, LocatorJSON: evidenceLocator,
 	}, []observations.Input{{SubjectID: subjectID, PropertyID: nameProp.ID, Name: &namevalue.Value{Form: "Ada"}}})
 	if err != nil {
@@ -267,6 +268,7 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, baseCit, err := citations.CreateWithObservations(tx, userID, citations.CreateInput{
+		GraphID:    baseGraph,
 		ArtifactID: baseArt.ID, LocatorJSON: evidenceLocator,
 	}, nil)
 	if err != nil {

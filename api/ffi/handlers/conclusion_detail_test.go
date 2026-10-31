@@ -469,7 +469,7 @@ func TestGetConclusionDetailCarriesDerivedRows(t *testing.T) {
 		{{SubjectId: eventID, PropertyId: propID["date"], Date: day()}},
 	} {
 		if _, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
-			ProjectDir: dir, UserId: userID, ArtifactId: artifactID, LocatorJson: validLocatorJSON, Observations: drafts,
+			ProjectDir: dir, UserId: userID, ArtifactId: artifactID, GraphId: graphLinking(t, dir, artifactID), LocatorJson: validLocatorJSON, Observations: drafts,
 		})); err != nil {
 			t.Fatalf("citation %d: %v", i, err)
 		}

@@ -200,6 +200,7 @@ func TestDeleteArtifact(t *testing.T) {
 					ProjectDir:  dir,
 					UserId:      userID,
 					ArtifactId:  art.Artifact.Id,
+					GraphId:     graphLinking(t, dir, art.Artifact.Id),
 					LocatorJson: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
 				})); err != nil {
 					t.Fatal(err)
@@ -326,10 +327,10 @@ func TestUpdateArtifactGraphLinks(t *testing.T) {
 	t.Run("a refused unlink rolls back the label", func(t *testing.T) {
 		id := newPage("P3").GetArtifact().GetId()
 		mustRPC(t, CreateCitationWithObservations, &engine.CreateCitationWithObservationsRequest{
-			ProjectDir: f.dir, UserId: f.userID, ArtifactId: id, LocatorJson: validLocatorJSON,
+			ProjectDir: f.dir, UserId: f.userID, ArtifactId: id, GraphId: graphLinking(t, f.dir, id), LocatorJson: validLocatorJSON,
 		}, &engine.CreateCitationWithObservationsResponse{})
 		_, err := update(id, "P3 renamed", &engine.GraphLinks{})
-		if !errors.Is(err, evidencegraphs.ErrCitationsNeedGraph) {
+		if !errors.Is(err, evidencegraphs.ErrArtifactInUse) {
 			t.Fatalf("got %v", err)
 		}
 		if got := linkedTo(id); !slices.Equal(got, []string{def}) || labelOf(id) != "P3" {

@@ -74,8 +74,8 @@ func NewCanon(t testing.TB, c *database.Catalog) *Canon {
 	artifact := k.next(8)
 	k.exec(`INSERT INTO sources (id, ref, source_type_id, title) VALUES (?, 'SRC-TST', ?, 'Canon')`, k.source, typeID)
 	k.exec(`INSERT INTO artifacts (id, ref, source_id, label) VALUES (?, 'ART-TST', ?, 'Scan')`, artifact, k.source)
-	k.exec(`INSERT INTO citations (id, ref, artifact_id, locator_json) VALUES (?, 'CIT-TST', ?, '{"version":1,"selectors":[{"type":"page","artifact_page":1}]}')`, k.citation, artifact)
 	k.exec(`INSERT INTO evidence_graphs (id, ref, source_id, name) VALUES (?, 'EVG-TST', ?, 'Canon')`, k.graph, k.source)
+	k.exec(`INSERT INTO citations (id, ref, artifact_id, graph_id, locator_json) VALUES (?, 'CIT-TST', ?, ?, '{"version":1,"selectors":[{"type":"page","artifact_page":1}]}')`, k.citation, artifact, k.graph)
 	return k
 }
 
