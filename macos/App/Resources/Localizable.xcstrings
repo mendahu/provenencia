@@ -17300,6 +17300,18 @@
         }
       }
     },
+    "conclusions.why.title.name": {
+      "comment": "Heading of the records behind a name value; the argument is the displayed name, which may carry its own quotes",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Why %@"
+          }
+        }
+      }
+    },
     "conclusions.why.title": {
       "comment": "Heading of the records behind a value; argument is the value",
       "extractionState": "manual",

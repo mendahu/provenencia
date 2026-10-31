@@ -9559,6 +9559,14 @@ enum L10n {
             ), value)
         }
 
+        static func whyTitleName(_ value: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.why.title.name",
+                defaultValue: "Why %@",
+                comment: "Heading of the records behind a name value; the argument is the displayed name, which may carry its own quotes"
+            ), value)
+        }
+
         static func whyThese(_ count: Int, label: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.why.these",

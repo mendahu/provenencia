@@ -77,7 +77,9 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         listedValues = listed
         whyTitle = listed.count > 1
             ? L10n.Conclusions.whyThese(listed.count, label: field.label)
-            : L10n.Conclusions.whyTitle(lead ?? field.label)
+            : field.valueType == .name
+                ? L10n.Conclusions.whyTitleName(lead ?? field.label)
+                : L10n.Conclusions.whyTitle(lead ?? field.label)
         recordGroups = [ReconciliationRecordGroup(owner: nil, records: Self.records([field], locale: locale, orders: orders))]
         accessibilityLabel = ReconciledValueDisplay.accessibilityLabel(label: field.label, lead: spokenLead, field: field)
     }
