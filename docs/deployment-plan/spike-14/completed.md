@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-02 — Pictures in the app
+
+**Landed 2026-10-30** in [#641](https://github.com/mendahu/provenencia/pull/641). Event and Place pages show a Pictures section, lead their header with the engine's picture and choose a thumbnail as a Person chooses a portrait; the Events and Places lists lead with it. `ConclusionDetailBody.gallery` is one slot for all three kinds and `ConclusionLeadModel`, owned by the page, chooses any kind's lead; the Person's copy is unchanged and its ids and caption wrapping follow the shared rule. The Properties list reads the key and bound types, so `event_picture` and `place_picture` sound different. Briefs S14-D2 – S14-D5 are archived.
+
 ## S14-13 — A crafted project can't crash the app
 
 **Landed 2026-10-29** in [#632](https://github.com/mendahu/provenencia/pull/632). `subjectpositions.MaxCell` (±1,000,000) is refused on write and clamped on every read, and Swift placement and moves use saturating cells (`EvidenceGraphPlacement.cellLimit`, held to Go's by `TestSwiftVocabularyMatchesGo`). The Artifact viewer decodes once through `ArtifactImageDecode`: the sniffed type must conform to one of the type identifiers Go's stored-type table sends with the file (`SourceFileRef.type_identifiers`), a declaration over 256 MP is refused with its own "Image too large to show" state, both budgets count bytes (divided by the bytes per color component), and the decode is held to `raster.MaxDecodePixels` (64 MP) for display, crop and OCR, with `displayImage` keeping the original point size; `ImageHeaderDecode` now owns the shared header read and decode. `ffi.Call` recovers a panic into `internal.unknown` (the switch is `route`), and a panicking `catalogsession.Do` callback drops its session so the next call reopens, and a researcher catalog that panics while opening is closed. The PDF cut reopens its file through `ProjectFiles.objectURL`. Version 0.2.2. Audit A-26 to A-28.

@@ -7,6 +7,7 @@ import SwiftUI
 struct EventDetailView: View {
     let session: WorkspaceSession
     let entityId: String
+    let userID: String
 
     var body: some View {
         ConclusionDetailPage(
@@ -14,6 +15,7 @@ struct EventDetailView: View {
             entityId: entityId,
             pageIdentifier: "events.detail",
             errorIdentifier: "events.detail.error",
+            userID: userID,
             make: { EventDetailContent(detail: $0, orders: session.nameFormat) },
             summary: { EventDetailSummary(date: $0.summaryDate, place: $0.summaryPlace) }
         )

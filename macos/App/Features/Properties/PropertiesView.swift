@@ -336,7 +336,7 @@ private struct PropertiesContent: View {
                         .lineLimit(1)
                 }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(rowAccessibilityLabel(property))
+                .accessibilityLabel(model.rowAccessibilityLabel(for: property))
             },
             PVTableColumn(id: "valueType", title: L10n.Properties.columnValueType, width: 96) { property in
                 PropertiesValueTypePill(valueType: property.valueType)
@@ -411,13 +411,6 @@ private struct PropertiesContent: View {
                 }
             }
         }
-    }
-
-    private func rowAccessibilityLabel(_ property: CatalogProperty) -> String {
-        let bound = model.snapshot.boundTypes(for: property.id)
-        let valueType = L10n.string(SubjectPropertyValueType.label(property.valueType))
-        let boundText = L10n.Properties.rowBoundAnnouncement(count: bound.count)
-        return "\(property.label), \(valueType), \(property.origin), \(boundText)"
     }
 
     private var inspectorCard: some View {

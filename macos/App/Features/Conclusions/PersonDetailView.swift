@@ -6,15 +6,7 @@ import SwiftUI
 struct PersonDetailView: View {
     let session: WorkspaceSession
     let entityId: String
-    @State private var portrait: ConclusionPortraitModel
-
-    init(session: WorkspaceSession, entityId: String, userID: String) {
-        self.session = session
-        self.entityId = entityId
-        _portrait = State(
-            initialValue: ConclusionPortraitModel(session: session, userID: userID, entityId: entityId)
-        )
-    }
+    let userID: String
 
     var body: some View {
         ConclusionDetailPage(
@@ -22,12 +14,11 @@ struct PersonDetailView: View {
             entityId: entityId,
             pageIdentifier: "persons.detail",
             errorIdentifier: "persons.detail.error",
+            userID: userID,
             make: { PersonDetailContent(detail: $0, orders: session.nameFormat) },
             summary: { PersonDetailLifeLines(lines: $0.lifeLines) },
-            portrait: portrait,
             pageSections: { PersonDetailSections(content: $0, context: $1) }
         )
-        .vocabularyToastOverlay($portrait.toast, identifier: "persons.detail.toast")
     }
 }
 
@@ -48,17 +39,18 @@ private struct PersonDetailSections: View {
                 provenance: .sheet
             )
         case .gallery:
-            if content.likenesses.isEmpty {
+            if content.gallery.tiles.isEmpty {
                 PVEmptyState(
                     glyph: ConclusionPageSection.gallery.glyph,
                     title: L10n.Conclusions.galleryEmptyTitle,
                     message: L10n.string(L10n.Conclusions.galleryEmptyMessage)
                 )
             } else {
-                ConclusionDetailLikenessSection(
+                ConclusionDetailGallerySection(
                     projectDir: context.projectDir,
-                    likenesses: content.likenesses,
-                    portrait: context.portrait
+                    pageIdentifier: context.pageIdentifier,
+                    gallery: content.gallery,
+                    lead: context.lead
                 )
             }
         case .family, .timeline, .sources:

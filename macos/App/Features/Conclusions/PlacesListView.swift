@@ -16,6 +16,7 @@ enum PlacesList: ConclusionListKind {
 
     static func ref(_ header: CatalogPlaceHeader) -> String { header.entity.ref }
     static func updatedAt(_ header: CatalogPlaceHeader) -> String { header.updated.at }
+    static func thumbnailRelPath(_ header: CatalogPlaceHeader) -> String { header.pictureImageRelPath }
 
     static func titleSource(_ header: CatalogPlaceHeader) -> ConclusionTitleSource {
         PlaceTitleDisplay.titleSource(header.titleParts)

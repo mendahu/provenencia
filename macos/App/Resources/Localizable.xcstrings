@@ -10038,6 +10038,18 @@
         }
       }
     },
+    "properties.table.rowAccessibility": {
+      "comment": "VoiceOver label of a Properties table row; 1 = label, 2 = key (tells Properties that share a label apart), 3 = value type, 4 = origin, 5 = how many types it is bound to",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@, %3$@, %4$@, %5$@"
+          }
+        }
+      }
+    },
     "properties.table.rowBoundAnnouncement": {
       "comment": "VoiceOver fragment for how many types a property is bound to",
       "extractionState": "manual",
@@ -16480,6 +16492,198 @@
           "stringUnit": {
             "state": "translated",
             "value": "Using the earliest likeness as the portrait."
+          }
+        }
+      }
+    },
+    "conclusions.detail.pictures": {
+      "comment": "Section heading over an Event's or Place's picture crops",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pictures"
+          }
+        }
+      }
+    },
+    "conclusions.picture.open": {
+      "comment": "Help text on a picture tile in an Event's or Place's gallery",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open citation"
+          }
+        }
+      }
+    },
+    "conclusions.picture.tile": {
+      "comment": "Accessibility label of a picture tile in an Event's or Place's gallery; the argument is the Source title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Picture from %@. Open citation"
+          }
+        }
+      }
+    },
+    "conclusions.picture.from": {
+      "comment": "Accessibility label of the Event or Place page header thumb when it shows a picture; the argument is that picture's Source title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Picture from %@"
+          }
+        }
+      }
+    },
+    "conclusions.event.pictureThumb": {
+      "comment": "Label of the Event page header thumb when it shows a picture",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Event picture"
+          }
+        }
+      }
+    },
+    "conclusions.place.pictureThumb": {
+      "comment": "Label of the Place page header thumb when it shows a picture",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Place picture"
+          }
+        }
+      }
+    },
+    "conclusions.thumbnail.badge": {
+      "comment": "Badge on the gallery picture chosen as the Event's or Place's thumbnail",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thumbnail"
+          }
+        }
+      }
+    },
+    "conclusions.thumbnail.useAs": {
+      "comment": "Button under a gallery picture that makes it the Event's or Place's thumbnail",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use as thumbnail"
+          }
+        }
+      }
+    },
+    "conclusions.thumbnail.useAsLabel": {
+      "comment": "Accessibility label of the button that makes a gallery picture the thumbnail; the argument is the Source title (or the Observation ref when the title is empty)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use the picture from %@ as thumbnail"
+          }
+        }
+      }
+    },
+    "conclusions.thumbnail.useEarliest": {
+      "comment": "Header thumb menu item and accessibility action that clears the Event's or Place's thumbnail choice",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use earliest picture"
+          }
+        }
+      }
+    },
+    "conclusions.event.thumbnailMenuTitle": {
+      "comment": "Title of the Event page header thumb menu",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Event thumbnail"
+          }
+        }
+      }
+    },
+    "conclusions.place.thumbnailMenuTitle": {
+      "comment": "Title of the Place page header thumb menu",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Place thumbnail"
+          }
+        }
+      }
+    },
+    "conclusions.thumbnail.menuHint": {
+      "comment": "Help and accessibility hint on the Event or Place page header thumb while a thumbnail is chosen",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Right-click for thumbnail options"
+          }
+        }
+      }
+    },
+    "conclusions.thumbnail.toastTitle": {
+      "comment": "Toast title after choosing or clearing an Event's or Place's thumbnail",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thumbnail updated"
+          }
+        }
+      }
+    },
+    "conclusions.thumbnail.toastChosenBody": {
+      "comment": "Toast body after choosing a thumbnail; the argument is the tile's Source title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Using the picture from %@ as the thumbnail."
+          }
+        }
+      }
+    },
+    "conclusions.thumbnail.toastEarliestBody": {
+      "comment": "Toast body after clearing the thumbnail choice",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Using the earliest picture as the thumbnail."
           }
         }
       }

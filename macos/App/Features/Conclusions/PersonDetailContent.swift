@@ -22,32 +22,11 @@ struct PersonDetailContent: ConclusionDetailBody {
     var rows: [ReconciledValueRowModel]
     /// Nil when gender and sex at birth give nothing to show (S10-23).
     var treatment: PersonGenderTreatment?
-    /// The `objects/…` path of the likeness the Person header leads with; "" for none.
-    var likenessImageRelPath: String
-    /// The gallery, earliest recorded first.
-    var likenesses: [ConclusionDetailLikeness]
-    var thumbnail: ConclusionDetailThumbnail {
-        .init(
-            mark: .subjectPerson,
-            label: likenessImageRelPath.isEmpty
-                ? L10n.Conclusions.personNoLikeness : L10n.Conclusions.personLikenessThumb,
-            imageRelPath: likenessImageRelPath,
-            imageLabel: leadLabel,
-            colors: treatment?.thumbnailColors,
-            offersEarliest: likenesses.first.map { !$0.isPortrait } ?? false
-        )
-    }
+    /// The gallery of likenesses, earliest recorded first.
+    var gallery: ConclusionDetailGallery
+    /// Leads with the gallery's lead likeness.
+    var thumbnail: ConclusionDetailThumbnail
     var badge: ConclusionDetailBadge? { treatment?.badge }
-
-    /// Spoken label of the header thumb while it shows the lead likeness: the
-    /// gallery tile with that image gives its Source; nil when there is none.
-    private var leadLabel: String? {
-        guard !likenessImageRelPath.isEmpty else { return nil }
-        if let tile = likenesses.first(where: { $0.imageRelPath == likenessImageRelPath }) {
-            return L10n.Conclusions.likenessLabel(tile.sourceTitle)
-        }
-        return L10n.string(L10n.Conclusions.personLikenessThumb)
-    }
 
     init(
         detail: CatalogConclusionDetail,
@@ -67,16 +46,25 @@ struct PersonDetailContent: ConclusionDetailBody {
         ]
         rows = Self.rows(detail.fields, header: header, derivedRows: detail.derivedRows, locale: locale, orders: orders)
         treatment = PersonGenderTreatment.read(detail.fields)
-        likenessImageRelPath = header?.pictureImageRelPath ?? ""
-        likenesses = detail.pictures.map {
-            ConclusionDetailLikeness(
-                id: $0.record.observationID,
-                imageRelPath: $0.imageRelPath,
-                sourceTitle: ReconciliationRecord.sourceTitle(for: $0.record),
-                location: ReconciliationRecord.composerLocation(for: $0.record),
-                isPortrait: $0.leads
-            )
-        }
+        gallery = ConclusionDetailGallery(
+            title: L10n.Conclusions.likenessesSection,
+            openTip: L10n.Conclusions.likenessOpenTip,
+            fallbackMark: .subjectPerson,
+            tiles: ConclusionDetailGallery.tiles(
+                from: detail,
+                tileLabel: L10n.Conclusions.likenessTileLabel,
+                useAsLabel: L10n.Conclusions.useAsPortraitLabel,
+                chosenBody: L10n.Conclusions.toastPortraitChosenBody
+            ),
+            choose: .personPortrait
+        )
+        thumbnail = .leading(
+            gallery: gallery,
+            noImage: L10n.Conclusions.personNoLikeness,
+            withImage: L10n.Conclusions.personLikenessThumb,
+            leadLabel: L10n.Conclusions.likenessLabel,
+            colors: treatment?.thumbnailColors
+        )
     }
 
     /// A Person always shows its name and four life rows, stated empty when

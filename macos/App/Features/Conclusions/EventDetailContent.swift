@@ -13,7 +13,10 @@ struct EventDetailContent: ConclusionDetailBody {
     /// First place name under the title. Nil when none is recorded.
     var summaryPlace: String?
     var rows: [ReconciledValueRowModel]
-    var thumbnail: ConclusionDetailThumbnail { .init(mark: .subjectEvent, label: L10n.Conclusions.eventNoImage) }
+    /// The pictures recorded for the Event, earliest first.
+    var gallery: ConclusionDetailGallery
+    /// Leads with the gallery's lead picture.
+    var thumbnail: ConclusionDetailThumbnail
 
     init(
         detail: CatalogConclusionDetail,
@@ -29,6 +32,13 @@ struct EventDetailContent: ConclusionDetailBody {
         let place = header.map { DerivedPlace.name($0.places) } ?? ""
         summaryPlace = place.isEmpty ? nil : place
         rows = [Self.dateRow(detail.fields, locale: locale), Self.placeRow(header)]
+        gallery = .pictures(from: detail, fallbackMark: .subjectEvent, choose: .eventThumbnail)
+        thumbnail = .leading(
+            gallery: gallery,
+            noImage: L10n.Conclusions.eventNoImage,
+            withImage: L10n.Conclusions.eventPictureThumb,
+            leadLabel: L10n.Conclusions.pictureFrom
+        )
     }
 
     /// A recorded `date` wins. Otherwise the start–end span. Empty when

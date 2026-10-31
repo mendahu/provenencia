@@ -26,13 +26,18 @@ struct OriginBadge: View {
 struct OriginPill: View {
     let origin: String
 
+    /// The words a plugin origin wears, here and where VoiceOver speaks it.
+    static func pluginLabel(for origin: String) -> String {
+        L10n.Origin.pluginPill(pluginID: CatalogOrigin.pluginID(from: origin))
+    }
+
     var body: some View {
         if origin == CatalogOrigin.provenencia {
             PVBadge(icon: .shieldCheck, label: L10n.Origin.seededPill, tone: .accent, subtle: true)
         } else if CatalogOrigin.isPlugin(origin) {
             PVBadge(
                 icon: .plug,
-                label: L10n.Origin.pluginPill(pluginID: CatalogOrigin.pluginID(from: origin)),
+                label: Self.pluginLabel(for: origin),
                 tone: .info,
                 subtle: true
             )

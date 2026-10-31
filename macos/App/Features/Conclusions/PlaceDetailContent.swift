@@ -16,7 +16,10 @@ struct PlaceDetailContent: ConclusionDetailBody {
     var chainIsRecorded: Bool
     var rows: [ReconciledValueRowModel]
     var sections: [ConclusionDetailSection]
-    var thumbnail: ConclusionDetailThumbnail { .init(mark: .subjectPlace, label: L10n.Conclusions.placeNoImage) }
+    /// The pictures recorded for the Place, earliest first.
+    var gallery: ConclusionDetailGallery
+    /// Leads with the gallery's lead picture.
+    var thumbnail: ConclusionDetailThumbnail
 
     init(detail: CatalogConclusionDetail, locale: Locale = .autoupdatingCurrent) {
         let toponym = detail.fields.first { $0.propertyKey == SeededPropertyKey.toponym }
@@ -37,6 +40,13 @@ struct PlaceDetailContent: ConclusionDetailBody {
             Self.periodRow(detail: detail, header: header, locale: locale),
         ]
         sections = Self.relationshipSections(header: header)
+        gallery = .pictures(from: detail, fallbackMark: .subjectPlace, choose: .placeThumbnail)
+        thumbnail = .leading(
+            gallery: gallery,
+            noImage: L10n.Conclusions.placeNoImage,
+            withImage: L10n.Conclusions.placePictureThumb,
+            leadLabel: L10n.Conclusions.pictureFrom
+        )
     }
 
     /// The Names row is the `toponym` field, relabeled. Several kept names
