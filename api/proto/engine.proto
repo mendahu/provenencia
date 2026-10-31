@@ -1244,8 +1244,8 @@ message HeaderPlace {
   repeated string names = 1;
   reserved 2;
   reserved "name_count"; // always len(names)
-  // entity is the Place; a Person page's life rows carry its toponym records
-  // in ConclusionDetail.derived_rows.
+  // entity is the Place; a Person page's place rows carry the event–place
+  // link's records in ConclusionDetail.derived_rows (ConclusionOwnerField.place).
   CanonicalEntity entity = 3;
   // parents is the hierarchical chain at the walk's date (nearest first).
   // parents_are_candidates is true when several parents hold at once.
@@ -1540,11 +1540,13 @@ enum DerivedRowKind {
 }
 
 // ConclusionOwnerField is the field a derived row reads off the entity that
-// owns it. event is set for an Event owner.
+// owns it. event is set for an Event owner; place is set for a place row's
+// owner, an event–place link, and holds the Place its place end names.
 message ConclusionOwnerField {
   CanonicalEntity entity = 1;
   ConclusionField field = 2;
   EventHeader event = 3;
+  HeaderPlace place = 4;
 }
 
 // DerivedRow is one life row's records, one owner per entity it reads, in the

@@ -71,11 +71,15 @@ struct ProvenanceSheetTests {
     @Test func placeOwnersEachHoldOneValueWithoutHeadings() {
         let toronto = CatalogCanonicalEntity(id: "pl1", ref: "PLC-1", subjectTypeID: "t", label: "")
         let yorkville = CatalogCanonicalEntity(id: "pl2", ref: "PLC-2", subjectTypeID: "t", label: "")
-        func owner(_ entity: CatalogCanonicalEntity, _ name: String, _ id: String) -> CatalogOwnerField {
-            CatalogOwnerField(entity: entity, event: nil, field: D.field(
-                "single", key: "toponym", label: "toponym", valueType: "text", [D.value(1, "kept", .text(name))],
-                outcomes: [D.outcome(id, "kept")]
-            ))
+        func owner(_ place: CatalogCanonicalEntity, _ name: String, _ id: String, link: String? = nil) -> CatalogOwnerField {
+            CatalogOwnerField(
+                entity: CatalogCanonicalEntity(id: link ?? "lk-\(id)", ref: "LOC-\(id)", subjectTypeID: "t", label: ""),
+                event: nil, place: CatalogHeaderPlace(entity: place, names: [name]),
+                field: D.field(
+                    "single", key: "place", label: "place", valueType: "subject", [D.value(1, "kept", .text(name))],
+                    outcomes: [D.outcome(id, "kept")]
+                )
+            )
         }
         let row = ReconciledValueRowModel.derived(
             id: "life.deathPlace", label: "Death place", style: .place, lead: "Toronto", emptyText: "", mixed: true,
@@ -84,6 +88,27 @@ struct ProvenanceSheetTests {
         )
         #expect(row.recordGroups.count == 2)
         #expect(row.recordGroups.allSatisfy { $0.values.count == 1 && $0.values[0].heading == nil })
+    }
+
+    @Test func twoLinksToOnePlaceCountOnePlace() {
+        let york = CatalogCanonicalEntity(id: "pl1", ref: "PLC-1", subjectTypeID: "t", label: "")
+        func owner(_ link: String, _ id: String) -> CatalogOwnerField {
+            CatalogOwnerField(
+                entity: CatalogCanonicalEntity(id: link, ref: "LOC-\(link)", subjectTypeID: "t", label: ""),
+                event: nil, place: CatalogHeaderPlace(entity: york, names: ["York"]),
+                field: D.field(
+                    "single", key: "place", label: "place", valueType: "subject", [D.value(1, "kept", .text("York"))],
+                    outcomes: [D.outcome(id, "kept")]
+                )
+            )
+        }
+        let row = ReconciledValueRowModel.derived(
+            id: "life.birthPlace", label: "Birth place", style: .place, lead: "York", emptyText: "", mixed: false,
+            owners: [owner("lk1", "a"), owner("lk2", "b")], shownOwnerID: "pl1", kind: .birthPlace, locale: en
+        )
+        #expect(row.provenanceSummary == "2 records from 1 Place")
+        #expect(row.recordGroups.compactMap { $0.owner?.title } == ["York", "York"])
+        #expect(row.recordGroups.allSatisfy { $0.owner?.id == "pl1" })
     }
 
     @Test func theSummarySaysOnlyWhatTheRowKnows() {

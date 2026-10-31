@@ -391,10 +391,11 @@ struct PersonDetailTests {
         key: String,
         outcomes: [CatalogReconcilerOutcome],
         values: [CatalogReconciledValue] = [],
-        event: CatalogEventHeader? = nil
+        event: CatalogEventHeader? = nil,
+        place: CatalogHeaderPlace? = nil
     ) -> CatalogOwnerField {
         CatalogOwnerField(
-            entity: entity, event: event,
+            entity: entity, event: event, place: place,
             field: D.field(values.isEmpty ? "" : "single", key: key, label: key, valueType: key == "date" ? "date" : "text", values, outcomes: outcomes)
         )
     }
@@ -434,7 +435,8 @@ struct PersonDetailTests {
         let york = entity("pl1", "PLC-1")
         let header = lifeHeader(birth: CatalogLifeFacts(eventCount: 2))
         let rows = [CatalogDerivedRow(kind: .birthPlace, owners: [
-            owner(york, key: "toponym", outcomes: [D.outcome("y", "kept")], values: [D.value(1, "kept", .text("York"))]),
+            owner(entity("lk1", "LOC-1"), key: "place", outcomes: [D.outcome("y", "kept")], values: [D.value(1, "kept", .text("York"))],
+                  place: CatalogHeaderPlace(entity: york, names: ["York"])),
         ])]
         let birth = PersonDetailContent(detail: detail(header: header, derivedRows: rows), locale: en).rows[2]
         #expect(birth.recordGroups.count == 1)
@@ -480,8 +482,10 @@ struct PersonDetailTests {
         let toronto = entity("pl1", "PLC-1"), yorkville = entity("pl2", "PLC-2")
         let name = { (text: String) in [D.value(1, "kept", .text(text))] }
         let places = [CatalogDerivedRow(kind: .deathPlace, owners: [
-            owner(toronto, key: "toponym", outcomes: [D.outcome("t", "kept")], values: name("Toronto")),
-            owner(yorkville, key: "toponym", outcomes: [D.outcome("y", "kept")], values: name("Yorkville")),
+            owner(entity("lk1", "LOC-1"), key: "place", outcomes: [D.outcome("t", "kept")], values: name("Toronto"),
+                  place: CatalogHeaderPlace(entity: toronto, names: ["Toronto"])),
+            owner(entity("lk2", "LOC-2"), key: "place", outcomes: [D.outcome("y", "kept")], values: name("Yorkville"),
+                  place: CatalogHeaderPlace(entity: yorkville, names: ["Yorkville"])),
         ])]
         let death = lifeHeader(death: CatalogLifeFacts(places: [
             CatalogHeaderPlace(entity: toronto, names: ["Toronto"]), CatalogHeaderPlace(entity: yorkville, names: ["Yorkville"]),

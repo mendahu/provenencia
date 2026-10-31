@@ -131,6 +131,9 @@ func derivedRowsProto(rows []conclusiondetails.DerivedRow) []*engine.DerivedRow 
 			if o.Event != nil {
 				po.Event = eventHeaderProto(*o.Event)
 			}
+			if o.Place != nil {
+				po.Place = headerPlaceProto(*o.Place)
+			}
 			pr.Owners = append(pr.Owners, po)
 		}
 		out = append(out, pr)

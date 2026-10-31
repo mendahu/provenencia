@@ -20,6 +20,7 @@ import (
 	// promoteSubject after placeRel so bridges file with the ends.
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -513,6 +514,20 @@ func TestPersonLifeOwners(t *testing.T) {
 	type owner struct {
 		entity []byte
 		prop   string
+		place  []byte // the Place a place owner holds on its link's place end
+	}
+	// link is the association of event's `location` link to place.
+	link := func(f *fixture, event, place []byte) []byte {
+		f.t.Helper()
+		links, err := f.c.Graph().Follow(event, hops.PlacesOfEvent)
+		must(f.t, err)
+		for _, l := range links {
+			if bytes.Equal(l.Neighbor, place) {
+				return l.Association
+			}
+		}
+		f.t.Fatalf("event %x has no location link to %x", event, place)
+		return nil
 	}
 	type world struct {
 		person       []byte
@@ -529,8 +544,8 @@ func TestPersonLifeOwners(t *testing.T) {
 			var w world
 			w.person = f.promoteSubject(p)
 			e, y := f.promoteSubject(ev), f.promoteSubject(york)
-			w.birth.dates = []owner{{e, "date"}}
-			w.birth.places = []owner{{y, "toponym"}}
+			w.birth.dates = []owner{{e, "date", nil}}
+			w.birth.places = []owner{{link(f, e, y), "place", y}}
 			return w
 		}},
 		{"start_date only", func(f *fixture) world {
@@ -538,7 +553,7 @@ func TestPersonLifeOwners(t *testing.T) {
 			ev := f.lifeEvent(p, "birth", "start_date", 1817, 2)
 			var w world
 			w.person = f.promoteSubject(p)
-			w.birth.dates = []owner{{f.promoteSubject(ev), "start_date"}}
+			w.birth.dates = []owner{{f.promoteSubject(ev), "start_date", nil}}
 			return w
 		}},
 		{"earlier birth event first", func(f *fixture) world {
@@ -548,7 +563,7 @@ func TestPersonLifeOwners(t *testing.T) {
 			var w world
 			w.person = f.promoteSubject(p)
 			l, e := f.promoteSubject(late), f.promoteSubject(early)
-			w.birth.dates = []owner{{e, "date"}, {l, "date"}}
+			w.birth.dates = []owner{{e, "date", nil}, {l, "date", nil}}
 			return w
 		}},
 		{"death at two Places that do not fold", func(f *fixture) world {
@@ -558,7 +573,7 @@ func TestPersonLifeOwners(t *testing.T) {
 			ev := f.lifeEvent(p, "death", "date", 1900, 4, mtl, paris)
 			var w world
 			w.person = f.promoteSubject(p)
-			w.death.dates = []owner{{f.promoteSubject(ev), "date"}}
+			w.death.dates = []owner{{f.promoteSubject(ev), "date", nil}}
 			// The order the header gives the Places: compared below against
 			// the header's own walk.
 			f.promoteSubject(mtl)
@@ -574,8 +589,8 @@ func TestPersonLifeOwners(t *testing.T) {
 			w.person = f.promoteSubject(p)
 			ae, be := f.promoteSubject(a), f.promoteSubject(b)
 			y := f.promoteSubject(york)
-			w.birth.dates = []owner{{ae, "date"}, {be, "date"}}
-			w.birth.places = []owner{{y, "toponym"}}
+			w.birth.dates = []owner{{ae, "date", nil}, {be, "date", nil}}
+			w.birth.places = []owner{{link(f, ae, y), "place", y}, {link(f, be, y), "place", y}}
 			return w
 		}},
 		{"a parent Place is not an owner", func(f *fixture) world {
@@ -588,8 +603,8 @@ func TestPersonLifeOwners(t *testing.T) {
 			w.person = f.promoteSubject(p)
 			e, y := f.promoteSubject(ev), f.promoteSubject(york)
 			f.promoteSubject(shire)
-			w.birth.dates = []owner{{e, "date"}}
-			w.birth.places = []owner{{y, "toponym"}}
+			w.birth.dates = []owner{{e, "date", nil}}
+			w.birth.places = []owner{{link(f, e, y), "place", y}}
 			return w
 		}},
 		{"denied-only date", func(f *fixture) world {
@@ -598,7 +613,7 @@ func TestPersonLifeOwners(t *testing.T) {
 			f.deniedDate(ev, 1817)
 			var w world
 			w.person = f.promoteSubject(p)
-			w.birth.dates = []owner{{f.promoteSubject(ev), "date"}}
+			w.birth.dates = []owner{{f.promoteSubject(ev), "date", nil}}
 			return w
 		}},
 		{"same event linked twice", func(f *fixture) world {
@@ -607,7 +622,7 @@ func TestPersonLifeOwners(t *testing.T) {
 			f.participation(p, ev, "subject")
 			var w world
 			w.person = f.promoteSubject(p)
-			w.birth.dates = []owner{{f.promoteSubject(ev), "date"}}
+			w.birth.dates = []owner{{f.promoteSubject(ev), "date", nil}}
 			return w
 		}},
 		{"no events", func(f *fixture) world {
@@ -642,6 +657,10 @@ func TestPersonLifeOwners(t *testing.T) {
 						if !bytes.Equal(part.got[i].Entity.ID, part.want[i].entity) {
 							t.Fatalf("%s %s[%d]: wrong entity", side, part.name, i)
 						}
+						if (part.want[i].place == nil) != (part.got[i].Place == nil) ||
+							part.want[i].place != nil && !bytes.Equal(part.got[i].Place.Entity.ID, part.want[i].place) {
+							t.Fatalf("%s %s[%d]: wrong Place", side, part.name, i)
+						}
 						if wantID := f.prop(part.want[i].prop).ID; !bytes.Equal(part.got[i].PropertyID, wantID) {
 							t.Fatalf("%s %s[%d]: property %x, want %s", side, part.name, i, part.got[i].PropertyID, part.want[i].prop)
 						}
@@ -658,7 +677,7 @@ func TestPersonLifeOwners(t *testing.T) {
 					t.Fatalf("death places %d, header %d", len(death.Places), len(header))
 				}
 				for i := range header {
-					if !bytes.Equal(death.Places[i].Entity.ID, header[i].Entity.ID) {
+					if !bytes.Equal(death.Places[i].Place.Entity.ID, header[i].Entity.ID) {
 						t.Fatalf("death place %d is not the header's", i)
 					}
 				}
@@ -714,7 +733,7 @@ func TestPersonDerivedRows(t *testing.T) {
 			if len(smallRows) != 2 || len(bigRows) != 2 {
 				t.Fatalf("rows: small %d, big %d, want a birth date and a birth place each", len(smallRows), len(bigRows))
 			}
-			if len(bigRows[0].Owners) != 2 || len(bigRows[1].Owners) != 2 {
+			if len(bigRows[0].Owners) != 2 || len(bigRows[1].Owners) != 4 {
 				t.Fatalf("big owners: %d dates, %d places", len(bigRows[0].Owners), len(bigRows[1].Owners))
 			}
 			if smallN == 0 || smallN != bigN {
@@ -738,12 +757,19 @@ func TestPersonDerivedRows(t *testing.T) {
 				kinds[r.Kind] = r
 			}
 			bp, dp := kinds[conclusiondetails.DerivedRowBirthPlace], kinds[conclusiondetails.DerivedRowDeathPlace]
-			if len(bp.Owners) != 1 || len(dp.Owners) != 1 ||
-				!bytes.Equal(bp.Owners[0].Entity.ID, yorkID) || !bytes.Equal(dp.Owners[0].Entity.ID, yorkID) {
+			if len(bp.Owners) != 1 || len(dp.Owners) != 1 {
 				t.Fatalf("place rows %+v / %+v", bp, dp)
 			}
-			if !reflect.DeepEqual(bp.Owners[0].Field, dp.Owners[0].Field) || len(bp.Owners[0].Field.Outcomes) != 1 {
-				t.Fatalf("York fields differ: %+v / %+v", bp.Owners[0].Field, dp.Owners[0].Field)
+			for _, o := range []conclusiondetails.OwnerField{bp.Owners[0], dp.Owners[0]} {
+				if o.Place == nil || !bytes.Equal(o.Place.Entity.ID, yorkID) || !reflect.DeepEqual(o.Place.Names, []string{"York"}) {
+					t.Fatalf("owner %+v does not hold York", o)
+				}
+				if o.Field.PropertyKey != "place" || len(o.Field.Outcomes) != 1 || o.Field.Outcomes[0].Recorded.Text != "York" {
+					t.Fatalf("owner field %+v, want the link's one record read as York", o.Field)
+				}
+			}
+			if bytes.Equal(bp.Owners[0].Entity.ID, dp.Owners[0].Entity.ID) || bytes.Equal(bp.Owners[0].Entity.ID, yorkID) {
+				t.Fatal("birth and death owners should be their own links, not York")
 			}
 			if bp.Owners[0].Event != nil || kinds[conclusiondetails.DerivedRowBirthDate].Owners[0].Event == nil {
 				t.Fatal("only date owners carry an Event header")

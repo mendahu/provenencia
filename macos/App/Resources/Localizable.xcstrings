@@ -17483,7 +17483,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%#@records@ from %2$lld Places"
+            "value": "%#@records@ from %#@places@"
           },
           "substitutions": {
             "records": {
@@ -17501,6 +17501,26 @@
                     "stringUnit": {
                       "state": "translated",
                       "value": "%arg records"
+                    }
+                  }
+                }
+              }
+            },
+            "places": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Place"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg Places"
                     }
                   }
                 }

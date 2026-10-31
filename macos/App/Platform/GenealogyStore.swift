@@ -404,8 +404,8 @@ struct CatalogNameValue: Sendable, Equatable {
 /// One Place reached from a birth, death, or event. `names` are kept toponyms
 /// in rank order. `parents` is the hierarchical chain at the walk's date.
 struct CatalogHeaderPlace: Sendable, Equatable {
-    /// The Place; a Person page's life rows carry its toponym records in
-    /// `CatalogConclusionDetail.derivedRows`.
+    /// The Place; a Person page's place rows carry the event–place link's
+    /// records in `CatalogConclusionDetail.derivedRows`.
     var entity: CatalogCanonicalEntity
     var names: [String] = []
     var parents: [String] = []
@@ -678,11 +678,16 @@ enum CatalogDerivedRowKind: Sendable, Equatable {
 }
 
 /// The field a derived row reads off the entity that owns it. `event` is the
-/// owner's header when the owner is an Event.
+/// owner's header when the owner is an Event. `place` is the Place a place
+/// row's owner (an event–place link) holds on its place end.
 struct CatalogOwnerField: Sendable, Equatable {
     var entity: CatalogCanonicalEntity
     var event: CatalogEventHeader?
+    var place: CatalogHeaderPlace? = nil
     var field: CatalogConclusionField
+
+    /// What the row names, orders and inks the owner by: the Place, else the entity.
+    var ownerID: String { place?.entity.id ?? entity.id }
 }
 
 /// One life row's records, one owner per entity it reads, in Go's order.

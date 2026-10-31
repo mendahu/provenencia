@@ -1281,6 +1281,7 @@ struct GoStore: GenealogyStore {
                 CatalogOwnerField(
                     entity: mapCanonicalEntity($0.entity),
                     event: $0.hasEvent ? mapEventHeader($0.event) : nil,
+                    place: $0.hasPlace ? mapHeaderPlace($0.place) : nil,
                     field: mapConclusionField($0.field)
                 )
             }

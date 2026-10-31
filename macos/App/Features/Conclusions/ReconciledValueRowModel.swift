@@ -210,16 +210,16 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         } else {
             spoken = ReconciledValueDisplay.accessibilityLabel(label: label, lead: nil, field: nil)
         }
-        let ordered = owners.filter { $0.entity.id == shownOwnerID } + owners.filter { $0.entity.id != shownOwnerID }
+        let ordered = owners.filter { $0.ownerID == shownOwnerID } + owners.filter { $0.ownerID != shownOwnerID }
         let groups = ordered.map { owner in
             var records = Self.records([owner.field], locale: locale, orders: orders)
-            if owner.entity.id != shownOwnerID {
+            if owner.ownerID != shownOwnerID {
                 for index in records.indices { records[index].counted = false }
             }
             return ReconciliationRecordGroup(
-                owner: ordered.count > 1 || owner.entity.id != shownOwnerID
+                owner: ordered.count > 1 || owner.ownerID != shownOwnerID
                     ? Self.ownerLine(
-                        owner, style: style, shown: ordered.count > 1 && owner.entity.id == shownOwnerID,
+                        owner, style: style, shown: ordered.count > 1 && owner.ownerID == shownOwnerID,
                         locale: locale, orders: orders
                     )
                     : nil,
@@ -231,7 +231,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         if recordCount == 0 {
             summary = nil
         } else if groups.count > 1, let kind {
-            summary = L10n.Conclusions.provenanceRecordsFromOwners(records: recordCount, owners: groups.count, kind: kind)
+            summary = L10n.Conclusions.provenanceRecordsFromOwners(records: recordCount, owners: Set(ordered.map(\.ownerID)).count, kind: kind)
         } else {
             summary = L10n.Conclusions.provenanceRecordCount(recordCount)
         }
@@ -247,8 +247,8 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     }
 
     /// The group line of a derived row's owner, titled as its list titles it:
-    /// an Event by its header (else its label or ref), a Place by its kept
-    /// names (else its label or ref).
+    /// an Event by its header (else its label or ref), a Place by the kept
+    /// names of the Place its link names (else its label or ref).
     private static func ownerLine(
         _ owner: CatalogOwnerField,
         style: ValueStyle,
@@ -259,18 +259,19 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         let title: String
         if let event = owner.event {
             title = EventTitleDisplay.title(event, locale: locale, orders: orders)
-        } else if style == .place {
+        } else if let place = owner.place {
             title = PlaceTitleDisplay.titleSource(
-                PlaceTitleParts(toponym: owner.field, entity: owner.entity, locale: locale, orders: orders)
+                PlaceTitleParts(names: place.names, label: place.entity.label, ref: place.entity.ref)
             ).text
         } else {
             title = EventTitleDisplay.untitled(owner.entity).text
         }
-        let ref = title == owner.entity.ref ? nil : owner.entity.ref
+        let identity = owner.place?.entity ?? owner.entity
+        let ref = title == identity.ref ? nil : identity.ref
         let line = ref.map { L10n.Conclusions.a11yList(title, rest: $0) } ?? title
         let spoken = shown ? L10n.Conclusions.provenanceOwnerShown(line) : line
         return .init(
-            id: owner.entity.id,
+            id: identity.id,
             title: title,
             ref: ref,
             spoken: spoken,

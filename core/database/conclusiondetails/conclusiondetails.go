@@ -13,12 +13,14 @@
 // Reconciliation Claims are never in these tables: when they ship, a
 // composer lays an accepted claim over the auto-reconciled value here.
 // A Person's life rows read other handles' fields through PersonDerivedRows,
-// composed by the same steps.
+// composed by the same steps. A place row reads the event–place link's place
+// end, each record as its Place's toponym.
 package conclusiondetails
 
 import (
 	"bytes"
 	"database/sql"
+	"errors"
 	"sort"
 
 	"github.com/mendahu/provenencia/core/apperr"
@@ -140,7 +142,8 @@ const (
 
 	sqlOutcomes = `SELECT ao.entity_id, ao.property_id, ao.observation_id, o.ref, ao.reason, ao.value_rank, ao.denied_by,
 			COALESCE(ao.vote_support, 0), COALESCE(ao.vote_total, 0),
-			o.value_text, o.value_integer, o.value_term_id, COALESCE(t.key, ''), COALESCE(t.label, ''), COALESCE(t.origin, ''),
+			COALESCE(NULLIF(o.value_text, ''), (SELECT t.value_text FROM observations t WHERE t.subject_id = o.value_subject_id
+				AND t.property_id = ? AND t.polarity = 'positive' AND t.value_text <> '' ORDER BY t.ref LIMIT 1)), o.value_integer, o.value_term_id, COALESCE(t.key, ''), COALESCE(t.label, ''), COALESCE(t.origin, ''),
 			o.value_date_id, o.value_name_id,
 			s.id, s.ref, s.graph_id, c.id, a.id, src.id, COALESCE(src.title, ''),
 			COALESCE(a.label, ''), COALESCE(c.label, ''), c.locator_json,
@@ -340,7 +343,7 @@ func loadProperties(g *graphcache.Graph, q Querier, nodes []*graphcache.Node) (m
 			return err
 		}
 		p, ok := props[string(id)]
-		if !ok || p.ValueType == propertymeta.ValueTypeSubject || p.ValueType == propertymeta.ValueTypeDepiction {
+		if !ok || p.ValueType == propertymeta.ValueTypeDepiction {
 			return nil
 		}
 		ordered[string(entityID)] = append(ordered[string(entityID)], &Field{
@@ -375,7 +378,7 @@ func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Fi
 	for prop, ranks := range n.Values {
 		f, ok := byProp[prop]
 		if !ok {
-			continue // a subject-valued or depiction Property, or one the outcomes no longer name
+			continue // a depiction Property, or one the outcomes no longer name
 		}
 		for _, rank := range ranks {
 			v := ReconciledValue{
@@ -420,7 +423,23 @@ func loadOutcomes(q Querier, entityIDs [][]byte, byProp map[string]map[string]*F
 	}
 	var all []pending
 	var dateIDs, nameIDs [][]byte
-	err := sqlbatch.Query(q, sqlOutcomes, ")", nil, entityIDs, func(rows *sql.Rows) error {
+	// A record on an event–place link's place end holds a Place: it reads as
+	// that Place's first toponym text (D-21).
+	var toponym []byte
+	pr, err := q.Query(`SELECT id FROM properties WHERE key = ? AND origin = ?`, vocabkey.PropertyToponym, vocabkey.OriginProvenencia)
+	if err != nil {
+		return nil, err
+	}
+	for pr.Next() {
+		if err := pr.Scan(&toponym); err != nil {
+			pr.Close()
+			return nil, err
+		}
+	}
+	if err := errors.Join(pr.Err(), pr.Close()); err != nil {
+		return nil, err
+	}
+	err = sqlbatch.Query(q, sqlOutcomes, ")", []any{toponym}, entityIDs, func(rows *sql.Rows) error {
 		var (
 			entityID, propertyID, termID, dateID, nameID []byte
 			rank                                         sql.NullInt64
@@ -493,15 +512,18 @@ const (
 )
 
 // OwnerField is the field a derived row reads off the entity that owns it.
-// Event is the owner's header when the owner is an Event.
+// Event is the owner's header when the owner is an Event. Place is the Place
+// a place row's owner (an event–place link's association) holds on its place
+// end, with its own toponyms; nil for every other owner.
 type OwnerField struct {
 	Entity canonicalentities.Entity
 	Event  *conclusionheaders.EventHeader
+	Place  *conclusionheaders.HeaderPlace
 	Field  Field
 }
 
 // DerivedRow is one life row's records: one entry per owner, in the order
-// the row lists them (the lead event first; Places in the header's order).
+// the row lists them (the lead event first; place links in the header's order).
 type DerivedRow struct {
 	Kind   DerivedRowKind
 	Owners []OwnerField
@@ -573,7 +595,7 @@ func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, erro
 				if !bytes.Equal(f.PropertyID, o.PropertyID) {
 					continue
 				}
-				owner := OwnerField{Entity: o.Entity, Field: f}
+				owner := OwnerField{Entity: o.Entity, Place: o.Place, Field: f}
 				if l.events {
 					owner.Event = eventOf[string(o.Entity.ID)]
 				}

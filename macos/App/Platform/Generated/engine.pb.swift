@@ -4140,8 +4140,8 @@ public nonisolated struct Provenencia_Engine_V1_HeaderPlace: Sendable {
 
   public var names: [String] = []
 
-  /// entity is the Place; a Person page's life rows carry its toponym records
-  /// in ConclusionDetail.derived_rows.
+  /// entity is the Place; a Person page's place rows carry the event–place
+  /// link's records in ConclusionDetail.derived_rows (ConclusionOwnerField.place).
   public var entity: Provenencia_Engine_V1_CanonicalEntity {
     get {_entity ?? Provenencia_Engine_V1_CanonicalEntity()}
     set {_entity = newValue}
@@ -5119,46 +5119,54 @@ public nonisolated struct Provenencia_Engine_V1_ConclusionDetail: Sendable {
 }
 
 /// ConclusionOwnerField is the field a derived row reads off the entity that
-/// owns it. event is set for an Event owner.
-public nonisolated struct Provenencia_Engine_V1_ConclusionOwnerField: Sendable {
+/// owns it. event is set for an Event owner; place is set for a place row's
+/// owner, an event–place link, and holds the Place its place end names.
+public nonisolated struct Provenencia_Engine_V1_ConclusionOwnerField: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   public var entity: Provenencia_Engine_V1_CanonicalEntity {
-    get {_entity ?? Provenencia_Engine_V1_CanonicalEntity()}
-    set {_entity = newValue}
+    get {_storage._entity ?? Provenencia_Engine_V1_CanonicalEntity()}
+    set {_uniqueStorage()._entity = newValue}
   }
   /// Returns true if `entity` has been explicitly set.
-  public var hasEntity: Bool {self._entity != nil}
+  public var hasEntity: Bool {_storage._entity != nil}
   /// Clears the value of `entity`. Subsequent reads from it will return its default value.
-  public mutating func clearEntity() {self._entity = nil}
+  public mutating func clearEntity() {_uniqueStorage()._entity = nil}
 
   public var field: Provenencia_Engine_V1_ConclusionField {
-    get {_field ?? Provenencia_Engine_V1_ConclusionField()}
-    set {_field = newValue}
+    get {_storage._field ?? Provenencia_Engine_V1_ConclusionField()}
+    set {_uniqueStorage()._field = newValue}
   }
   /// Returns true if `field` has been explicitly set.
-  public var hasField: Bool {self._field != nil}
+  public var hasField: Bool {_storage._field != nil}
   /// Clears the value of `field`. Subsequent reads from it will return its default value.
-  public mutating func clearField() {self._field = nil}
+  public mutating func clearField() {_uniqueStorage()._field = nil}
 
   public var event: Provenencia_Engine_V1_EventHeader {
-    get {_event ?? Provenencia_Engine_V1_EventHeader()}
-    set {_event = newValue}
+    get {_storage._event ?? Provenencia_Engine_V1_EventHeader()}
+    set {_uniqueStorage()._event = newValue}
   }
   /// Returns true if `event` has been explicitly set.
-  public var hasEvent: Bool {self._event != nil}
+  public var hasEvent: Bool {_storage._event != nil}
   /// Clears the value of `event`. Subsequent reads from it will return its default value.
-  public mutating func clearEvent() {self._event = nil}
+  public mutating func clearEvent() {_uniqueStorage()._event = nil}
+
+  public var place: Provenencia_Engine_V1_HeaderPlace {
+    get {_storage._place ?? Provenencia_Engine_V1_HeaderPlace()}
+    set {_uniqueStorage()._place = newValue}
+  }
+  /// Returns true if `place` has been explicitly set.
+  public var hasPlace: Bool {_storage._place != nil}
+  /// Clears the value of `place`. Subsequent reads from it will return its default value.
+  public mutating func clearPlace() {_uniqueStorage()._place = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
-  fileprivate var _field: Provenencia_Engine_V1_ConclusionField? = nil
-  fileprivate var _event: Provenencia_Engine_V1_EventHeader? = nil
+  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 /// DerivedRow is one life row's records, one owner per entity it reads, in the
@@ -15761,43 +15769,90 @@ nonisolated extension Provenencia_Engine_V1_ConclusionDetail: SwiftProtobuf.Mess
 
 nonisolated extension Provenencia_Engine_V1_ConclusionOwnerField: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ConclusionOwnerField"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}field\0\u{1}event\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}field\0\u{1}event\0\u{1}place\0")
+
+  fileprivate class _StorageClass {
+    var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
+    var _field: Provenencia_Engine_V1_ConclusionField? = nil
+    var _event: Provenencia_Engine_V1_EventHeader? = nil
+    var _place: Provenencia_Engine_V1_HeaderPlace? = nil
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _entity = source._entity
+      _field = source._field
+      _event = source._event
+      _place = source._place
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._entity) }()
-      case 2: try { try decoder.decodeSingularMessageField(value: &self._field) }()
-      case 3: try { try decoder.decodeSingularMessageField(value: &self._event) }()
-      default: break
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularMessageField(value: &_storage._entity) }()
+        case 2: try { try decoder.decodeSingularMessageField(value: &_storage._field) }()
+        case 3: try { try decoder.decodeSingularMessageField(value: &_storage._event) }()
+        case 4: try { try decoder.decodeSingularMessageField(value: &_storage._place) }()
+        default: break
+        }
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._entity {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
-    try { if let v = self._field {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    } }()
-    try { if let v = self._event {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    } }()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      try { if let v = _storage._entity {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+      } }()
+      try { if let v = _storage._field {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      } }()
+      try { if let v = _storage._event {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+      } }()
+      try { if let v = _storage._place {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+      } }()
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_ConclusionOwnerField, rhs: Provenencia_Engine_V1_ConclusionOwnerField) -> Bool {
-    if lhs._entity != rhs._entity {return false}
-    if lhs._field != rhs._field {return false}
-    if lhs._event != rhs._event {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._entity != rhs_storage._entity {return false}
+        if _storage._field != rhs_storage._field {return false}
+        if _storage._event != rhs_storage._event {return false}
+        if _storage._place != rhs_storage._place {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
