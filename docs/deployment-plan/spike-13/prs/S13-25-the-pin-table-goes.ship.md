@@ -49,4 +49,4 @@ No new findings.
 `origin/main` unchanged since the branch was cut (`3f6af69f`); no merge needed. Gate PASS at `d19176ed`.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · to user: — · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: none · to user: — · CON miss: none
