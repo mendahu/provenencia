@@ -139,4 +139,64 @@ The orchestrator read the commit: the component matches the copies (`Text(verbat
 **MNT-7: Resolved.**
 
 ## Result
-Gate PASS (`5c5b2331`; `main` unmoved since `baecdfb8`, no merge) · CI green (test ×2, localizable) · open: none · follow-ups: UX-6 (a load error in `fields.error` can show under the Save page button), UX-4 (the caption while the viewer loads needs a new string), UX-5 (`depictionDrawingHint` "tools above", for the board's next pass) · to user: answered (MNT-1, UX-1 placement, UX-3 copy, MNT-7) · manual checks 1 – 8 not run · CON miss: none · flakes seen outside this PR: `SourcePageModelTests.aGraphWriteMovesOnlyItsRow`, `SourcesModelTests.listReadsEachGraphsProgress`, `PVSegmentedControlTests.disabledItemDoesNotSelect`, `SourceGraphFormModelTests` edit cases
+Gate PASS (`5c5b2331`; `main` unmoved since `baecdfb8`, no merge) · CI green (test ×2, localizable) · open: none · follow-ups: UX-6 (a load error in `fields.error` can show under the Save page button), UX-4 (the caption while the viewer loads needs a new string), UX-5 (`depictionDrawingHint` "tools above", for the board's next pass) · to user: answered (MNT-1, UX-1 placement, UX-3 copy, MNT-7) · manual checks 1 – 8 not run · CON miss: none · CI fix round: the flake family (`SourcesModelTests`, `SourcePageModelTests`, `SourceGraphFormModelTests`) now awaits its tasks (`settleWrites()`, `settleFormLoad()`) instead of polling a 2 s deadline
+
+## CI fix round (user, 2026-10-31: "fix the CI failures … make sure you're rebased from main")
+`main` has not moved since `baecdfb8`, so there is nothing to rebase. CI run 41225038287 (`macOS tests`) failed `SourcesModelTests.listReadsEachGraphsProgress` (`:551`), part of the flake family already logged above and in five earlier ship logs.
+
+Root cause: `WorkspaceSession.apply` (`WorkspaceSession.swift:187-202`) starts each descriptor `refresh` and the nav recount as untracked `Task { … }`. The test calls `session.apply(…)`, then polls `waitUntil` with a 2 s deadline. Under suite load the main actor is busy longer than that. CI took 4.8 s, and `QueryHandleWaiting.swift` notes CI runs of 17 s. `SourcePageModelTests.aGraphWriteMovesOnlyItsRow` has the same shape. `CatalogSearchModel.settle()` is the precedent for the fix: await the work, not a clock.
+
+### Fix plan CI-1
+
+**F-8 — Tests await the session's write refreshes instead of polling a deadline**
+Files: `macos/App/Features/Workspace/Session/WorkspaceSession.swift`, `macos/ProvenenciaTests/SourcesModelTests.swift`, `macos/ProvenenciaTests/SourcePageModelTests.swift`, and every other test file the Check's grep finds.
+Failing test first: none. This is a test-harness change; the two named tests must pass, and the whole suite must pass three gate runs in a row.
+Do:
+- In `apply(_:_:)`, keep the refresh and recount Tasks it starts in a private `writeRefreshes: [Task<Void, Never>]`.
+- Add `func settleWrites() async`. It awaits every task in `writeRefreshes` and loops until no new task was added while it waited (the `CatalogSearchModel.settle()` shape). It then drops the finished tasks.
+- Give it a doc comment in the same voice as `settle()`: tests await it instead of polling against a deadline.
+- Keep the list from growing: remove a finished task, or clear the list once `settleWrites` has drained it. Production behaviour is otherwise unchanged; nothing in the app awaits it.
+- In `listReadsEachGraphsProgress` and `aGraphWriteMovesOnlyItsRow`, replace `#expect(await waitUntil { … })` after `session.apply(…)` with `await session.settleWrites()` followed by a plain `#expect(…)`.
+- Same-pass: find every other test that calls `session.apply(` (or a model method that calls it) and then polls `waitUntil` for that refresh's result, and move it onto `settleWrites()`. Leave `waitUntil` where it waits on something other than `apply`'s refresh tasks.
+Check:
+- `rg -n -A3 'session\.apply\(' macos/ProvenenciaTests | rg 'waitUntil'` prints nothing, or only lines the report explains.
+- scripts/check-pr.sh PASS three runs in a row with no `SourcesModelTests` or `SourcePageModelTests` failure.
+
+### Round CI-1 — fix
+Head `b1dca0a8`.
+- F-8 is done. `trackWrite` keeps each task in `[UUID: Task]`, and each task removes itself when it ends; `settleWrites()` loops until the list is empty. The orchestrator read the diff.
+- Moved onto `settleWrites()`: the two named tests, the two nav-count hook tests, and the `WorkspaceSessionTests` citation-counts test (its 50 ms sleep is gone).
+- Two `EvidenceGraphModelTests` `waitUntil` calls are left. They wait on an invalidation load, not a refresh task.
+- Implementer gate: PASS, FAIL, PASS. The FAIL was `SourceGraphFormModelTests` (`editLocksEveryBlock`, `saveFailureKeepsChoices(edit:)`, `editPreflightFailureThenReadAgain`: "expected a failed load, got .loading").
+
+Root cause of that flake: `SourceGraphsSection.openEdit` (`SourceGraphsSection.swift:81`) starts `Task { await model.loadKeptLinks() }` untracked, and the tests poll `waitUntil { form.loadState != .loading }` against a 2 s deadline (`SourceGraphFormModelTests.swift:71, 232, 254, 283`). The pattern is the same, so it gets the same fix.
+
+**F-9 — Tests await the edit form's kept-links load instead of polling a deadline**
+Files: `macos/App/Features/Sources/SourceGraphsSection.swift`, `macos/ProvenenciaTests/SourceGraphFormModelTests.swift`, and any other test the Check finds.
+Do:
+- In `openEdit`, keep the load task: `formLoad = Task { await model.loadKeptLinks() }`, with a private `formLoad: Task<Void, Never>?`.
+- Add `func settleFormLoad() async { await formLoad?.value }`, with a doc comment in the `settle()` voice.
+- Replace each `_ = await waitUntil { form.loadState != .loading }` that follows `openEdit` with `await model.graphs.settleFormLoad()`. Use whatever the test's handle to the section is.
+- Same-pass: move any other test that polls `form.loadState` after `openEdit` onto it too.
+- Leave the `waitUntil` on `model.graphs.rows` (`:100, 220, 307`) alone unless it follows an untracked task the same way. If one does, say so in the report and do not fix it here.
+Check:
+- `rg -n 'loadState != \.loading' macos/ProvenenciaTests` prints nothing.
+- scripts/check-pr.sh PASS three runs in a row with no `SourceGraphFormModelTests`, `SourcesModelTests` or `SourcePageModelTests` failure.
+
+### Round CI-1 — F-9 fix
+Head `06410fb0`. F-9 done: `SourceGraphsSection.formLoad`, `settleFormLoad()`, four tests moved; `rg 'loadState != \.loading' macos/ProvenenciaTests` prints nothing. Implementer gate: FAIL, PASS, PASS, FAIL. Both FAILs are `WorkspaceSessionTests.citationReadsRefreshOnlyTheirGraph` (`:976`, `["a1": 1, …]` ≠ `["a1": 2, …]`). That is a regression from **F-8**. The `.citationCounts` refresh runs `applyHiddenPolicy` → `revalidate` → `warm`, which starts a query load kept in `inFlight` (`WorkspaceSession.swift:311-331`), not in `writeRefreshes`. So `settleWrites()` returns before the value lands. The old `waitUntil` covered it.
+
+**F-10 — `settleWrites()` also waits for the query loads the writes started**
+Files: `macos/App/Features/Workspace/Session/WorkspaceSession.swift`.
+Failing test first: `WorkspaceSessionTests.citationReadsRefreshOnlyTheirGraph`, already red in about half of all runs. Prove it fails reliably first by adding a one-hop `await Task.yield()`-free check, or accept the intermittent red from the gate runs as the evidence.
+Do:
+- Have `settleWrites()` drain both `writeRefreshes` and `inFlight` loads, looping until both are empty.
+- It must terminate. A load task that finished under a superseded generation does not clear its `inFlight` entry (`:327`). Await each task at most once: keep a set of tasks already awaited, and stop when no task is left that has not been awaited. Do not spin on a finished task.
+- Update the doc comment: it returns once every refresh `apply` started and every query load in flight have finished.
+- Change no other code path.
+Check:
+- `citationReadsRefreshOnlyTheirGraph`, the F-8 tests and the F-9 tests pass.
+- scripts/check-pr.sh PASS three runs in a row with no `WorkspaceSessionTests`, `SourceGraphFormModelTests`, `SourcesModelTests` or `SourcePageModelTests` failure. Report every run.
+
+### Round CI-1 — F-10 fix
+Head `2801a6d0`. F-10 done: `settleWrites()` drains `writeRefreshes` and the `inFlight` loads, and awaits each task once, so a load finished under a superseded generation cannot make it spin. The orchestrator read the diff. Implementer gate: PASS ×3 in a row. Orchestrator gate: PASS. `main` is unmoved since `baecdfb8`, so there is no rebase.
