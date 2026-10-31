@@ -74,7 +74,8 @@ func Delete(c *database.Catalog, userID, id []byte) error {
     if err := deleteimpact.Refuse(report, deleteimpact.Codes{
         InUse: ErrInUse, NotFound: ErrInvalid, // OriginLocked / EdgeLocked when the kind has those gates
     }); err != nil { return err }
-    changes, err := deleteimpact.ReleaseCitation(tx, id) // notes, the row, its delete change; a row with its own Delete that is also an audited facet of another parent
+    changes, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindX, id) // audited facets, connection facets, claims, pins
+    // a kind with a one-row release (ReleaseClaim, ReleaseCitation) calls that instead: it deletes the row and records its change, so skip "DELETE parent" and the parent change
     if err != nil { return err }
     // owned outbound: snap, err := deleteimpact.SnapshotOwned(tx, kind, id) — missing parent is ErrInvalid
     // DELETE parent
