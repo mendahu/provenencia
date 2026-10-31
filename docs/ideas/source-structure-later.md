@@ -28,4 +28,4 @@ Credibility stays per Source. A census household with a poor informant can only 
 
 ## Layered citation output
 
-Formatting Evidence Explained style citations ("…; citing …; image, FamilySearch, accessed …") from Source metadata. Depends on the metadata being consistent, which seeded fields for obituary, census and record-collection types would help.
+Moved to [`citation-formats.md`](citation-formats.md) (2026-10-31), which lists what Evidence Explained style citations need and what the provenance sheet ships first.
