@@ -35,6 +35,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 **Batch 3 — Name display** (moved from Spike 11, 2026-10-29):
 
 11. **A name shows its nickname and former surname.** A Person recorded as James with the nickname Jake reads *James “Jake” Robins*; one with the former surname Smith reads *Jones, Mary (Smith)* on the Persons list, with *Smith* italic there and on the Person page title.
+22. **A folded nickname reads as a nickname.** A Person recorded as James in one Source and as Jake (a given name) in another reads *James “Jake” Robins*, not *James Robins* (S14-26, user 2026-10-31).
 
 **Batch 2 — Matching calibration:**
 
@@ -136,6 +137,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-23 | Thumbnails for oversized JPEGs | 1 | A pure-Go reduced decoder in `core/raster` gives a JPEG over the 64-megapixel budget a 1/8-scale thumbnail; bounded and fuzzed; Go only (was S12-39) | — | — | [S14-23-oversized-jpeg-thumbnails.md](prs/S14-23-oversized-jpeg-thumbnails.md) | Planned |
 | S14-24 | Give every workspace page its width class | 6 | `PVSpacing.widthWideBreakpoint` (1600), `PVWidthClass` and the `pvWidthClass` environment value, measured once at `WorkspaceDestinationHost`; no visible change | — | — | [S14-24-wide-width-class.md](prs/S14-24-wide-width-class.md) | Landed #628 |
 | S14-25 | Page columns in the kit | — | Folded into the page redesigns: Spike 13's S13-10 builds `PVPageColumns` with the Person page frame (user, 2026-10-29) | — | — | — | Descoped (2026-10-29) → S13-10 |
+| S14-26 | A folded nickname shows as a nickname | 3 | When the reconciler folds a nickname recorded as a given name into its formal name (S11-28), the reconciled name keeps it as a `nick` part, so S14-09's quotes show it: *James “Jake” Robins* | — | S14-09, S14-18 | — | Scoped |
 | S14-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -186,12 +188,13 @@ SLICE 6 — Wide layout (batch 6)
 
 SLICE 3 — Name display (batch 3)
   S14-09  Quote nicknames and add former surnames
-  Check: bar outcome 11 on a new project.
+  S14-26  A folded nickname shows as a nickname   (after S14-09, S14-18)
+  Check: bar outcomes 11 and 22 on a new project.
 
 S14-99 — Dogfood close / docs
 ```
 
-S14-01 and S14-03 can run in parallel; S14-02 follows S14-01. S14-03 waits on S14-13 (was Spike 12's S12-28), which changes in place the one predicate that says whether the viewer can cut a file; S14-03 gates Draw on it. S14-08 is independent of batch 1. S14-09 is independent of the other batches.
+S14-01 and S14-03 can run in parallel; S14-02 follows S14-01. S14-03 waits on S14-13 (was Spike 12's S12-28), which changes in place the one predicate that says whether the viewer can cut a file; S14-03 gates Draw on it. S14-08 is independent of batch 1. S14-09 is independent of the other batches; S14-26 follows it and S14-18, which changes the same fold code.
 
 ### Dependencies at a glance
 
@@ -205,6 +208,8 @@ S14-16 ──▶ S14-17
 S14-14 ──▶ S14-20
 S13-24 ──▶ S14-16, S14-20      (Spike 13)
 S13-23 ──▶ S14-22             (Spike 13)
+S14-09 ──▶ S14-26
+S14-18 ──▶ S14-26
 S14-08  (independent)
 S14-D1 ──▶ S13-D1, S13-10      (Spike 13)
 ```
@@ -267,6 +272,14 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Not this PR.** Migrating existing catalogs; italics on other surfaces.
 **Check.** Bar outcome 11: *James “Jake” Robins*; *Jones, Mary (Smith)* with *Smith* italic.
 **Context.** Working rule "(Batch 3) S14-09 is Spike 11's S11-29, refreshed"; [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §4; [`structured-name-model.md`](../../structured-name-model.md) §4.2a, §4.5; [`ideas/international-names.md`](../../ideas/international-names.md); `add-name-value`, `add-localized-string`; audit 2 B-24.
+
+#### S14-26 — A folded nickname shows as a nickname
+
+**Ships.** When the reconciler folds a nickname or short form recorded as a given name into the formal name it stands for (S11-28's alias fold: *Jake* → *James*), the reconciled name keeps the folded word as a `nick` part instead of dropping it, so the Person reads *James “Jake” Robins* on every surface S14-09 decorates. The fold, its directions and which value wins are unchanged; only what the assembled name carries changes. `CacheVersion` bump and its pin; `conclusion-reconciliation.md` says what a folded nickname becomes. Added by the user on 2026-10-31, after S14-09 shipped quotes for recorded nickname parts only.
+**Decide in `plan-pr`.** Which folded words become nicknames: every alias fold, or only a nickname-table fold (not an initial such as *J.*, nor an abbreviation such as *Wm*), and whether a word recorded once beside many records of the formal name still shows. Where it lives: in the reconciler's assembled value in Go (recommended: the Swift display reads what Go stored, and the Why records already say "folded into"), not inferred in Swift.
+**Not this PR.** Folds of surnames (none exist); a nickname the researcher typed as a `nick` part (S14-09 already shows it); Promote and matching behaviour.
+**Check.** Bar outcome 22. A project holding *James Robins* and *Jake Robins* (given) on one Person reopens after the bump and reads *James “Jake” Robins* on the Persons list and the Person page; a Person recorded only as *J. Robins* and *James Robins* still reads *James Robins*.
+**Context.** S14-09 (quotes for `nick` parts); S14-18 (the fold graph it reshapes, which lands first); Spike 11's S11-28 plan; `core/autoreconcile/names.go` (Fold, Assemble); working rule "A name that heads its own nickname set never folds into another set's head"; `add-match-rule`, `add-name-value`.
 
 ### Slice 4 — Evidence graphs finished
 
