@@ -17630,6 +17630,30 @@
         }
       }
     },
+    "conclusions.provenance.copyCitation": {
+      "comment": "Tooltip and VoiceOver label of the provenance sheet button that copies a record's citation line",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy citation"
+          }
+        }
+      }
+    },
+    "conclusions.provenance.citationCopied": {
+      "comment": "VoiceOver announcement after the provenance sheet's copy citation button copies the citation line",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Citation copied"
+          }
+        }
+      }
+    },
     "conclusions.provenance.done": {
       "comment": "Button that closes the provenance sheet",
       "extractionState": "manual",

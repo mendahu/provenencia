@@ -24,6 +24,9 @@ struct ReconciliationRecordRows: View {
     /// Reserved for the conclude action.
     static let actionColumnWidth: CGFloat = 88
     static let columnSpacing: CGFloat = 14
+    /// The copy button's track beside the citation line, and the gap before it.
+    static let copyTrackWidth: CGFloat = 26
+    static let copyTrackSpacing: CGFloat = 6
 
     /// The sheet's fixed columns; the Citation column takes the rest.
     static func readAsWidth(_ widthClass: PVWidthClass) -> CGFloat { widthClass == .wide ? 220 : 140 }
@@ -111,7 +114,19 @@ struct ReconciliationRecordRows: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(record.spoken)
             VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                CitationLineButton(record: record) { open(record.citationLocation) }
+                HStack(alignment: .citationFirstLineCenter, spacing: Self.copyTrackSpacing) {
+                    CitationLineButton(record: record) { open(record.citationLocation) }
+                        // The first line's centre sits about a third of the type size above its baseline.
+                        .alignmentGuide(.citationFirstLineCenter) { $0[.firstTextBaseline] - PVTypeScale.bodySmall / 3 }
+                    PVClipboardButton(
+                        text: record.citationLine,
+                        label: L10n.Conclusions.provenanceCopyCitation,
+                        copiedAnnouncement: L10n.string(L10n.Conclusions.provenanceCitationCopied)
+                    )
+                    .frame(width: Self.copyTrackWidth)
+                    .alignmentGuide(.citationFirstLineCenter) { $0.height / 2 }
+                    .accessibilityIdentifier("conclusion.detail.provenance.\(record.id).copy")
+                }
                 HStack(spacing: PVSpacing.space5) {
                     PVButton(L10n.Conclusions.provenanceSourceLink, variant: .link, size: .sm) {
                         open(record.sourceLocation)
@@ -255,7 +270,6 @@ private struct CitationLineButton: View {
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .textSelection(.enabled)
         }
         .buttonStyle(CitationLineButtonStyle(counted: record.counted))
         .focused($focused)
@@ -280,4 +294,13 @@ private struct CitationLineButtonStyle: ButtonStyle {
                 .underline(true, color: ink.opacity(0.35))
         }
     }
+}
+
+private extension VerticalAlignment {
+    private enum CitationFirstLineCenter: AlignmentID {
+        static func defaultValue(in context: ViewDimensions) -> CGFloat { context[.top] }
+    }
+
+    /// The centre of a citation line's first line, so the copy button sits level with it at any line count.
+    static let citationFirstLineCenter = VerticalAlignment(CitationFirstLineCenter.self)
 }

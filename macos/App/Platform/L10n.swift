@@ -8960,6 +8960,18 @@ enum L10n {
             ), title)
         }
 
+        static let provenanceCopyCitation = LocalizedStringResource(
+            "conclusions.provenance.copyCitation",
+            defaultValue: "Copy citation",
+            comment: "Tooltip and VoiceOver label of the provenance sheet button that copies a record's citation line"
+        )
+
+        static let provenanceCitationCopied = LocalizedStringResource(
+            "conclusions.provenance.citationCopied",
+            defaultValue: "Citation copied",
+            comment: "VoiceOver announcement after the provenance sheet's copy citation button copies the citation line"
+        )
+
         static let provenanceDone = LocalizedStringResource(
             "conclusions.provenance.done",
             defaultValue: "Done",
