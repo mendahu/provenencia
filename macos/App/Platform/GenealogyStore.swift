@@ -1401,6 +1401,7 @@ protocol GenealogyStore: Sendable {
     func createCitationWithObservations(
         projectDir: String,
         userID: String,
+        graphID: String,
         artifactID: String,
         locatorJSON: String,
         transcription: String,

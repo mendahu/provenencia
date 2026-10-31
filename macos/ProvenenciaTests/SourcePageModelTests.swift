@@ -1656,10 +1656,10 @@ struct SourcePageModelTests {
         #expect(model.artifacts.lockedGraphs["g-b"] == "An evidence graph needs at least one artifact.")
         #expect(model.artifacts.linkEdit?.excluded == ["g-j", "g-s"])
 
-        store.unlinkImpactBlocks = [unlinkBlock("P9", graphID: "g-b", citations: 1, reason: .citationsNeedGraph)]
+        store.unlinkImpactBlocks = [unlinkBlock("P9", graphID: "g-b", citations: 1, reason: .artifactInUse)]
         model.artifacts.beginEdit("P9")
         await model.artifacts.linkLoadTask?.value
-        #expect(model.artifacts.lockedGraphs["g-b"] == "1 citation would be left in no evidence graph")
+        #expect(model.artifacts.lockedGraphs["g-b"] == "1 citation in this graph uses this artifact")
 
         // A reason this build does not know locks too, with the engine's wording.
         store.unlinkImpactBlocks = [unlinkBlock("P9", graphID: "g-b", citations: 0, reason: .unrecognized("x.y"))]
@@ -1708,7 +1708,7 @@ struct SourcePageModelTests {
             graph("g-s", "Smith household", ["P6"]),
         ]
         let (model, store, session) = await makeCensus(graphs: graphs)
-        store.unlinkImpactBlocks = [unlinkBlock("P9", graphID: "g-b", citations: 1, reason: .citationsNeedGraph)]
+        store.unlinkImpactBlocks = [unlinkBlock("P9", graphID: "g-b", citations: 1, reason: .artifactInUse)]
         model.artifacts.beginEdit("P9")
         await model.artifacts.linkLoadTask?.value
         model.artifacts.linkEdit?.excluded.remove("g-j")
@@ -1790,7 +1790,7 @@ struct SourcePageModelTests {
         #expect(model.artifacts.linkEdit?.excluded == ["g-j"])
         #expect(model.artifacts.labels["P3"] == "Page 3, front")
 
-        // A Citation took the last graph an Artifact had: the engine's other lock.
+        // A Citation of the graph is on the Artifact: the engine refuses the unlink.
         let graphs = [
             graph("g-b", "Brown household", ["P9", "P4"]),
             graph("g-j", "Jones household", ["P3", "P4"]),
@@ -1801,17 +1801,17 @@ struct SourcePageModelTests {
         await cited.artifacts.linkLoadTask?.value
         #expect(cited.artifacts.lockedGraphs.isEmpty)
         cited.artifacts.linkEdit?.excluded.insert("g-b")
-        let needGraph = CoreInvokeError.coded(
-            status: 1, code: "evidencegraphs.citations_need_graph", kind: .conflict, params: []
+        let inUse = CoreInvokeError.coded(
+            status: 1, code: "evidencegraphs.artifact_in_use", kind: .conflict, params: []
         )
-        citedStore.updateArtifactError = needGraph
-        citedStore.unlinkImpactBlocks = [unlinkBlock("P9", graphID: "g-b", citations: 1, reason: .citationsNeedGraph)]
+        citedStore.updateArtifactError = inUse
+        citedStore.unlinkImpactBlocks = [unlinkBlock("P9", graphID: "g-b", citations: 1, reason: .artifactInUse)]
         await cited.artifacts.saveFields(id: "P9")
         #expect(cited.artifacts.lockedGraphs["g-b"] != nil)
         #expect(cited.artifacts.checkedGraphIDs.contains("g-b"))
         let body = cited.artifacts.cardSaveError
         #expect(body == L10n.Sources.artifactCardSaveErrorGraphKeeps(
-            graph: "Brown household", error: L10n.Errors.message(for: needGraph)
+            graph: "Brown household", error: L10n.Errors.message(for: inUse)
         ))
         #expect(body?.contains("Brown household") == true)
         #expect(body?.lowercased().contains("save again") == false)

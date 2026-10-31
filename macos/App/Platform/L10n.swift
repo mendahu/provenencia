@@ -8333,6 +8333,15 @@ enum L10n {
             ), handleRefs)
         }
 
+        /// Allowed graph delete: the Citations it takes with it. Arguments: citation refs (joined).
+        static func deletesCitations(refs: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "deleteImpact.confirm.deletesCitations",
+                defaultValue: "The graph’s citations are deleted with it: %@.",
+                comment: "Allowed graph delete confirm, appended after the consequence; argument is the citation ref(s), e.g. CIT-7KD45"
+            ), refs)
+        }
+
         /// Fallback for a cascade via the Mac has no specific copy for. Arguments: kind noun, refs.
         static func alsoAffects(noun: String, refs: String) -> String {
             return L10n.format(LocalizedStringResource(
@@ -8459,11 +8468,6 @@ enum L10n {
                 "deleteImpact.via.evidenceGraphsArtifactInUse",
                 defaultValue: "%lld citations in this graph use this artifact",
                 comment: "Heading over the Citations that keep an Artifact linked to a graph; argument is how many"
-            ),
-            "evidencegraphs.citations_need_graph": LocalizedStringResource(
-                "deleteImpact.via.evidenceGraphsCitationsNeedGraph",
-                defaultValue: "%lld citations would be left in no evidence graph",
-                comment: "Heading over the Citations an unlink or a graph delete would leave in no graph; argument is how many"
             ),
             "citations.artifact_id": LocalizedStringResource(
                 "deleteImpact.via.citationsArtifactId",
@@ -10397,14 +10401,9 @@ enum L10n {
             defaultValue: "An evidence graph needs at least one artifact.",
             comment: "FFI error evidencegraphs.last_artifact"
         )
-        static let evidenceGraphsCitationsNeedGraph = LocalizedStringResource(
-            "error.evidencegraphs.citations_need_graph",
-            defaultValue: "An artifact with citations must stay in at least one evidence graph.",
-            comment: "FFI error evidencegraphs.citations_need_graph"
-        )
         static let evidenceGraphsInUse = LocalizedStringResource(
             "error.evidencegraphs.in_use",
-            defaultValue: "Subjects or citations still need this evidence graph.",
+            defaultValue: "Subjects still need this evidence graph.",
             comment: "FFI error evidencegraphs.in_use"
         )
         static let evidenceGraphsLastGraph = LocalizedStringResource(
@@ -10655,8 +10654,6 @@ enum L10n {
                 return L10n.string(evidenceGraphsArtifactInUse)
             case "evidencegraphs.last_artifact":
                 return L10n.string(evidenceGraphsLastArtifact)
-            case "evidencegraphs.citations_need_graph":
-                return L10n.string(evidenceGraphsCitationsNeedGraph)
             case "evidencegraphs.in_use":
                 return L10n.string(evidenceGraphsInUse)
             case "evidencegraphs.last_graph":

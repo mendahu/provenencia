@@ -49,6 +49,26 @@ struct PVDeleteImpactCopyTests {
         )])
     }
 
+    @Test func graphDeleteConfirmNamesTheCitationsItTakes() {
+        let report = CatalogDeleteImpact(
+            allowed: true,
+            gate: .ok,
+            groups: [],
+            cascades: [
+                CatalogDeleteImpactGroup(
+                    via: "citations.graph_id",
+                    kind: "citation",
+                    total: 2,
+                    listed: [
+                        PVDeleteImpactPreviewData.listed(ref: "CIT-A", title: "CIT-A"),
+                        PVDeleteImpactPreviewData.listed(ref: "CIT-B", title: "CIT-B"),
+                    ]
+                ),
+            ]
+        )
+        #expect(PVDeleteImpactCopy.cascadeLines(report) == ["The graph’s citations are deleted with it: CIT-A and CIT-B."])
+    }
+
     @Test func blockedCitationListsThreeObservations() {
         let report = PVDeleteImpactPreviewData.blockedCitation
         #expect(!PVDeleteImpactControls.showsDestructiveAction(report))
@@ -142,8 +162,6 @@ struct PVDeleteImpactCopyTests {
             ("subjects.graph_id", "subject", 3, "This graph has 3 subjects"),
             ("evidencegraphs.artifact_in_use", "citation", 1, "1 citation in this graph uses this artifact"),
             ("evidencegraphs.artifact_in_use", "citation", 2, "2 citations in this graph use this artifact"),
-            ("evidencegraphs.citations_need_graph", "citation", 1, "1 citation would be left in no evidence graph"),
-            ("evidencegraphs.citations_need_graph", "citation", 3, "3 citations would be left in no evidence graph"),
         ]
         for item in cases {
             #expect(PVDeleteImpactCopy.isKnownVia(item.0))

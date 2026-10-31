@@ -77,6 +77,8 @@ enum PVDeleteImpactCopy {
             switch group.via {
             case "identity_claims.subject_id":
                 return L10n.DeleteImpact.leavesHandle(handleRefs: joined)
+            case "citations.graph_id":
+                return L10n.DeleteImpact.deletesCitations(refs: joined)
             default:
                 return L10n.DeleteImpact.alsoAffects(
                     noun: noun(group.kind, count: group.total),

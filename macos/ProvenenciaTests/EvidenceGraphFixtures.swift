@@ -17,7 +17,7 @@ func evidenceGraph(
 }
 
 /// An unlink block for tests: `artifactID` is refused in `graphID` for `reason`. For
-/// `.artifactInUse` and `.citationsNeedGraph` its `citations` group lists that many
+/// `.artifactInUse` its `citations` group lists that many
 /// Citations; `.lastArtifact` has an empty group, what `GoStore` maps from an unset `citations`.
 func unlinkBlock(
     _ artifactID: String,
