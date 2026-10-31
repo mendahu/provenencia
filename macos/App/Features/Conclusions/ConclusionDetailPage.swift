@@ -409,7 +409,7 @@ struct ConclusionDetailRowsSection: View {
         }
         .pvSheet(item: $provenanceItem) { item in
             if let row = item.row(in: rows) {
-                ProvenanceSheet(row: row, isWide: widthClass == .wide, close: { provenanceItem = nil })
+                ProvenanceSheet(row: row, widthClass: widthClass, close: { provenanceItem = nil })
                     .environment(navigation)
             }
         }

@@ -50,6 +50,14 @@ struct ReconciliationRecord: Equatable, Identifiable {
         citationLine = CitationLineDisplay.line(outcome)
     }
 
+    /// The record as one VoiceOver line: what it was read as, its citation line,
+    /// the outcome, then its Observation and Subject refs. The sheet's links follow
+    /// as separate controls.
+    var spoken: String {
+        let parts = [readAs, citationLine, phrase, observationRef, subjectRef]
+        return parts.dropFirst().reduce(parts[0]) { L10n.Conclusions.a11yList($0, rest: $1) }
+    }
+
     /// The Source's title, else the Observation ref when the Source has none.
     static func sourceTitle(for outcome: CatalogReconcilerOutcome) -> String {
         outcome.sourceTitle.isEmpty ? outcome.observationRef : outcome.sourceTitle
@@ -91,8 +99,8 @@ struct ReconciliationRecordGroup: Equatable, Identifiable {
     }
 
     /// The records of one run of the group that count under the same displayed
-    /// value, in the order Go sent them. Only the provenance sheet reads these.
-    struct ValueGroup: Equatable, Identifiable {
+    /// value, in the order Go sent them. The provenance sheet draws these runs.
+    struct ValueGroup: Equatable {
         enum Heading: Equatable {
             /// The displayed value the records went into.
             case value(ReconciledValueRowModel.OtherValue)
@@ -102,20 +110,24 @@ struct ReconciliationRecordGroup: Equatable, Identifiable {
 
         var heading: Heading?
         var records: [ReconciliationRecord]
-
-        var id: String { records.first?.id ?? "" }
     }
 
     var owner: OwnerLine?
-    var records: [ReconciliationRecord]
-    /// `records` in runs by value. One run with no heading unless the group needs headings.
+    /// The group's records in runs by value, as the sheet draws them. One run with
+    /// no heading unless the group needs headings.
     var values: [ValueGroup]
+    /// Every record of the group, in order: what the Why draws.
+    var records: [ReconciliationRecord] { values.flatMap(\.records) }
 
     var id: String { owner?.id ?? "" }
 
-    init(owner: OwnerLine?, records: [ReconciliationRecord], values: [ValueGroup]? = nil) {
+    init(owner: OwnerLine?, values: [ValueGroup]) {
         self.owner = owner
-        self.records = records
-        self.values = values ?? (records.isEmpty ? [] : [ValueGroup(heading: nil, records: records)])
+        self.values = values
+    }
+
+    /// A group whose records form one run with no heading.
+    init(owner: OwnerLine?, records: [ReconciliationRecord]) {
+        self.init(owner: owner, values: records.isEmpty ? [] : [ValueGroup(heading: nil, records: records)])
     }
 }

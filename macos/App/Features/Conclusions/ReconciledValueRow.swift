@@ -75,32 +75,8 @@ struct ReconciledValueRow: View {
         .accessibilityLabel(model.accessibilityLabel)
     }
 
-    @ViewBuilder
     private var value: some View {
-        if !model.listedValues.isEmpty {
-            VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                ForEach(model.listedValues) { value in
-                    HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space5) {
-                        Text(verbatim: value.text)
-                            .font(Self.font(for: model.style))
-                            .foregroundStyle(PVColor.textPrimary)
-                            .textSelection(.enabled)
-                        Text(verbatim: value.support)
-                            .font(PVFont.mono(size: PVTypeScale.caption))
-                            .foregroundStyle(PVColor.textMuted)
-                    }
-                }
-            }
-        } else if let lead = model.lead {
-            Text(lead)
-                .font(Self.font(for: model.style))
-                .foregroundStyle(PVColor.textPrimary)
-                .textSelection(.enabled)
-        } else {
-            Text(model.emptyText)
-                .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
-                .foregroundStyle(PVColor.textMuted)
-        }
+        Self.valueContent(model)
     }
 
     private var state: some View {
@@ -185,6 +161,42 @@ struct ReconciledValueRow: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Conclusions.otherValuesList(model.label))
+    }
+
+    /// The row's value as the row and the provenance sheet's header show it:
+    /// every kept value of a multi-valued field, else the lead, else the field's
+    /// empty text in italic.
+    @ViewBuilder
+    static func valueContent(_ model: ReconciledValueRowModel) -> some View {
+        if !model.listedValues.isEmpty {
+            VStack(alignment: .leading, spacing: PVSpacing.space2) {
+                ForEach(model.listedValues) { value in
+                    valueLine(value, style: model.style)
+                }
+            }
+        } else if let lead = model.lead {
+            Text(lead)
+                .font(font(for: model.style))
+                .foregroundStyle(PVColor.textPrimary)
+                .textSelection(.enabled)
+        } else {
+            Text(model.emptyText)
+                .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
+                .foregroundStyle(PVColor.textMuted)
+        }
+    }
+
+    /// One value with its Source count beside it.
+    static func valueLine(_ value: ReconciledValueRowModel.OtherValue, style: ReconciledValueRowModel.ValueStyle) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space5) {
+            Text(verbatim: value.text)
+                .font(font(for: style))
+                .foregroundStyle(PVColor.textPrimary)
+                .textSelection(.enabled)
+            Text(verbatim: value.support)
+                .font(PVFont.mono(size: PVTypeScale.caption))
+                .foregroundStyle(PVColor.textMuted)
+        }
     }
 
     static func font(for style: ReconciledValueRowModel.ValueStyle) -> Font {

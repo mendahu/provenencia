@@ -17606,6 +17606,30 @@
         }
       }
     },
+    "conclusions.provenance.link.sourceSpoken": {
+      "comment": "VoiceOver label of the provenance sheet link that opens the record's Source; argument is the Source title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source %@"
+          }
+        }
+      }
+    },
+    "conclusions.provenance.stateSingle": {
+      "comment": "Provenance sheet summary state of a field with one value from one Source; argument is the Source count text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "from %@"
+          }
+        }
+      }
+    },
     "conclusions.provenance.done": {
       "comment": "Button that closes the provenance sheet",
       "extractionState": "manual",

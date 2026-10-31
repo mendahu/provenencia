@@ -8890,6 +8890,14 @@ enum L10n {
             return L10n.format(resource, records, owners)
         }
 
+        static func provenanceStateSingle(_ sources: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.provenance.stateSingle",
+                defaultValue: "from %@",
+                comment: "Provenance sheet summary state of a field with one value from one Source; argument is the Source count text"
+            ), sources)
+        }
+
         static func provenanceSummaryJoin(_ first: String, _ second: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.provenance.summaryJoin",
@@ -8942,6 +8950,14 @@ enum L10n {
                 defaultValue: "Observation %@",
                 comment: "Provenance sheet link that opens the record's Observation; argument is the Observation ref"
             ), ref)
+        }
+
+        static func provenanceSourceLinkSpoken(_ title: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.provenance.link.sourceSpoken",
+                defaultValue: "Source %@",
+                comment: "VoiceOver label of the provenance sheet link that opens the record's Source; argument is the Source title"
+            ), title)
         }
 
         static let provenanceDone = LocalizedStringResource(

@@ -19,15 +19,15 @@ struct ReconciliationRecordRows: View {
     /// Opens a record's place. The sheet closes itself first (D-5).
     let open: (WorkspaceLocation) -> Void
     /// The sheet at Wide: Read as and Outcome are capped, the Citation column takes the rest.
-    var isWide = false
+    var widthClass: PVWidthClass = .regular
 
     /// Reserved for the conclude action.
     static let actionColumnWidth: CGFloat = 88
     static let columnSpacing: CGFloat = 14
 
     /// The sheet's fixed columns; the Citation column takes the rest.
-    static func readAsWidth(wide: Bool) -> CGFloat { wide ? 220 : 140 }
-    static func outcomeWidth(wide: Bool) -> CGFloat { wide ? 280 : 190 }
+    static func readAsWidth(_ widthClass: PVWidthClass) -> CGFloat { widthClass == .wide ? 220 : 140 }
+    static func outcomeWidth(_ widthClass: PVWidthClass) -> CGFloat { widthClass == .wide ? 280 : 190 }
     static let recordWidth: CGFloat = 112
 
     private var isSheet: Bool { provenance == .sheet }
@@ -106,13 +106,17 @@ struct ReconciliationRecordRows: View {
     private func sheetRow(_ record: ReconciliationRecord) -> some View {
         GridRow {
             readAs(record)
-                .frame(width: Self.readAsWidth(wide: isWide), alignment: .leading)
+                .frame(width: Self.readAsWidth(widthClass), alignment: .leading)
+                // The record as one element; the citation line and the links follow as controls.
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(record.spoken)
             VStack(alignment: .leading, spacing: PVSpacing.space2) {
                 CitationLineButton(record: record) { open(record.citationLocation) }
                 HStack(spacing: PVSpacing.space5) {
                     PVButton(L10n.Conclusions.provenanceSourceLink, variant: .link, size: .sm) {
                         open(record.sourceLocation)
                     }
+                    .accessibilityLabel(L10n.Conclusions.provenanceSourceLinkSpoken(record.sourceTitle))
                     .accessibilityIdentifier("conclusion.detail.provenance.\(record.id).source")
                     PVButton(L10n.Conclusions.provenanceObservationLink(record.observationRef), variant: .link, size: .sm) {
                         open(record.location)
@@ -122,7 +126,8 @@ struct ReconciliationRecordRows: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             ReconciliationOutcome(mark: record.mark, phrase: record.phrase)
-                .frame(width: Self.outcomeWidth(wide: isWide), alignment: .leading)
+                .frame(width: Self.outcomeWidth(widthClass), alignment: .leading)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: PVSpacing.space1) {
                 Text(verbatim: record.observationRef)
                 Text(verbatim: record.subjectRef)
@@ -131,7 +136,7 @@ struct ReconciliationRecordRows: View {
             .foregroundStyle(PVColor.textMuted)
             .textSelection(.enabled)
             .frame(width: Self.recordWidth, alignment: .leading)
-            .accessibilityElement(children: .combine)
+            .accessibilityHidden(true)
             Color.clear.frame(width: Self.actionColumnWidth, height: 1)
                 .accessibilityHidden(true)
         }
@@ -178,15 +183,8 @@ struct ReconciliationRecordRows: View {
         Group {
             switch heading {
             case .value(let value):
-                HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
-                    Text(verbatim: value.text)
-                        .font(ReconciledValueRow.font(for: style))
-                        .foregroundStyle(PVColor.textPrimary)
-                    Text(verbatim: value.support)
-                        .font(PVFont.mono(size: PVTypeScale.caption))
-                        .foregroundStyle(PVColor.textMuted)
-                }
-                .accessibilityElement(children: .combine)
+                ReconciledValueRow.valueLine(value, style: style)
+                    .accessibilityElement(children: .combine)
             case .otherRecords:
                 Text(L10n.Conclusions.provenanceOtherRecords)
                     .pvMicroCaps()
@@ -221,16 +219,16 @@ struct ReconciliationRecordRows: View {
 
     /// The sheet's column headings, drawn above its scroll with the same widths as the table.
     struct SheetHeadings: View {
-        var isWide = false
+        var widthClass: PVWidthClass = .regular
 
         var body: some View {
             HStack(alignment: .firstTextBaseline, spacing: ReconciliationRecordRows.columnSpacing) {
                 Text(L10n.Conclusions.whyReadAs)
-                    .frame(width: ReconciliationRecordRows.readAsWidth(wide: isWide), alignment: .leading)
+                    .frame(width: ReconciliationRecordRows.readAsWidth(widthClass), alignment: .leading)
                 Text(L10n.Conclusions.provenanceColumnCitation)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text(L10n.Conclusions.whyOutcome)
-                    .frame(width: ReconciliationRecordRows.outcomeWidth(wide: isWide), alignment: .leading)
+                    .frame(width: ReconciliationRecordRows.outcomeWidth(widthClass), alignment: .leading)
                 Text(L10n.Conclusions.provenanceColumnRecord)
                     .frame(width: ReconciliationRecordRows.recordWidth, alignment: .leading)
                 Color.clear.frame(width: ReconciliationRecordRows.actionColumnWidth, height: 1)
@@ -249,24 +247,37 @@ private struct CitationLineButton: View {
     let record: ReconciliationRecord
     let action: () -> Void
 
-    @State private var hovering = false
+    @FocusState private var focused: Bool
 
     var body: some View {
-        let ink = record.counted ? PVColor.textPrimary : PVColor.textSecondary
         Button(action: action) {
             Text(verbatim: record.citationLine)
-                .font(PVFont.body(size: PVTypeScale.bodySmall))
-                .foregroundStyle(hovering ? PVColor.textLinkHover : ink)
-                .underline(true, color: (hovering ? PVColor.textLinkHover : ink).opacity(0.35))
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
                 .textSelection(.enabled)
         }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
+        .buttonStyle(CitationLineButtonStyle(counted: record.counted))
+        .focused($focused)
+        .pvFocusRing(focused, cornerRadius: PVRadius.xs)
         .accessibilityLabel(Text(verbatim: record.citationLine))
         .accessibilityIdentifier("conclusion.detail.provenance.\(record.id).citation")
+    }
+}
+
+/// Kit hover and press on the citation line: link ink on hover, else primary when
+/// the record counted, secondary when it did not.
+private struct CitationLineButtonStyle: ButtonStyle {
+    let counted: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        PVHoverEffect(isPressed: configuration.isPressed, hoverAnimation: PVMotion.fastStandard) { showHover in
+            let base = counted ? PVColor.textPrimary : PVColor.textSecondary
+            let ink = showHover || configuration.isPressed ? PVColor.textLinkHover : base
+            configuration.label
+                .font(PVFont.body(size: PVTypeScale.bodySmall))
+                .foregroundStyle(ink)
+                .underline(true, color: ink.opacity(0.35))
+        }
     }
 }

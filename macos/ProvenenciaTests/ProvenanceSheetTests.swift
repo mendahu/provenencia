@@ -29,6 +29,12 @@ struct ProvenanceSheetTests {
         )
     }
 
+    @Test func aRecordSpeaksAsOneLine() {
+        let r = record("r0", rank: 1)
+        let parts = [r.readAs, r.citationLine, r.phrase, r.observationRef, r.subjectRef]
+        #expect(r.spoken == parts.joined(separator: ", "))
+    }
+
     @Test func valuesGroupTheirRecordsAndTheRestComeLast() {
         let field = D.field("mixed", [
             D.value(1, "kept", support: 2, .name(D.jamesRobins)),
@@ -86,6 +92,11 @@ struct ProvenanceSheetTests {
         ], outcomes: (0..<4).map { D.outcome("r\($0)", "kept", source: "s\($0 % 3)") })
         #expect(ReconciledValueRowModel(field: merged, locale: en).provenanceSummary
             == "merged from 3 Sources · 1 record disagrees · 4 records")
+
+        let single = D.field("single", [
+            D.value(1, "kept", support: 1, .name(D.jamesRobins)),
+        ], outcomes: [D.outcome("r0", "kept", source: "s0")])
+        #expect(ReconciledValueRowModel(field: single, locale: en).provenanceSummary?.hasPrefix("from 1 Source") == true)
 
         let first = CatalogCanonicalEntity(id: "ev1", ref: "EVT-1", subjectTypeID: "t", label: "")
         let second = CatalogCanonicalEntity(id: "ev2", ref: "EVT-2", subjectTypeID: "t", label: "")

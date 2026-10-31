@@ -18,7 +18,7 @@ struct ProvenanceSheetItem: Identifiable, Equatable {
 /// Person-only: the Event and Place pages adopt it with `ReconciledValueRow.Provenance.sheet`.
 struct ProvenanceSheet: View {
     let row: ReconciledValueRowModel
-    var isWide = false
+    var widthClass: PVWidthClass = .regular
     let close: () -> Void
 
     @Environment(WorkspaceNavigation.self) private var navigation
@@ -27,12 +27,12 @@ struct ProvenanceSheet: View {
     /// column headings and Done stay.
     static let recordsMaxHeight: CGFloat = 560
 
-    static func width(wide: Bool) -> CGFloat { wide ? 1280 : 880 }
+    static func width(_ widthClass: PVWidthClass) -> CGFloat { widthClass == .wide ? 1280 : 880 }
 
     var body: some View {
         PVPanel(
-            title: Text(verbatim: row.label),
-            width: Self.width(wide: isWide)
+            title: Text(verbatim: row.label).accessibilityHeading(.h1),
+            width: Self.width(widthClass)
         ) {
             VStack(alignment: .leading, spacing: PVSpacing.space5) {
                 header
@@ -41,12 +41,12 @@ struct ProvenanceSheet: View {
                     .frame(height: 0)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 0) {
-                    ReconciliationRecordRows.SheetHeadings(isWide: isWide)
+                    ReconciliationRecordRows.SheetHeadings(widthClass: widthClass)
                     PVDivider()
                     ScrollView {
                         ReconciliationRecordRows(
                             groups: row.recordGroups, style: row.style, provenance: .sheet,
-                            open: open, isWide: isWide
+                            open: open, widthClass: widthClass
                         )
                     }
                     .frame(maxHeight: Self.recordsMaxHeight)
@@ -56,6 +56,7 @@ struct ProvenanceSheet: View {
             HStack {
                 Spacer(minLength: 0)
                 PVButton(L10n.Conclusions.provenanceDone, variant: .primary) { close() }
+                    .keyboardShortcut(.defaultAction)
                     .accessibilityIdentifier("conclusion.detail.provenance.done")
             }
         }
@@ -63,20 +64,11 @@ struct ProvenanceSheet: View {
         .accessibilityIdentifier("conclusion.detail.provenance.\(row.id)")
     }
 
-    /// The shown value (stated empty in italic when there is none), its state
+    /// The shown value or values (stated empty in italic when there is none), its state
     /// and the summary of the records behind it.
     private var header: some View {
         HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space5) {
-            if let lead = row.lead {
-                Text(lead)
-                    .font(ReconciledValueRow.font(for: row.style))
-                    .foregroundStyle(PVColor.textPrimary)
-                    .textSelection(.enabled)
-            } else {
-                Text(row.emptyText)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
-                    .foregroundStyle(PVColor.textMuted)
-            }
+            ReconciledValueRow.valueContent(row)
             if let badge = row.badge {
                 ReconciledValueRow.badge(badge)
             }

@@ -79,12 +79,14 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
                 : L10n.Conclusions.whyTitle(lead ?? field.label)
         let records = Self.records([field], locale: locale, orders: orders)
         recordGroups = [ReconciliationRecordGroup(
-            owner: nil, records: records,
+            owner: nil,
             values: Self.valueGroups(records, field: field, locale: locale, orders: orders)
         )]
         accessibilityLabel = ReconciledValueDisplay.accessibilityLabel(label: field.label, lead: spokenLead, field: field)
         provenanceSummary = Self.joinSummary([
-            ReconciledValueDisplay.spokenState(field),
+            field.state == .single
+                ? L10n.Conclusions.provenanceStateSingle(L10n.Conclusions.sourceCount(ReconciledValueDisplay.sourceCount(field)))
+                : ReconciledValueDisplay.spokenState(field),
             ReconciledValueDisplay.againstLine(field),
             records.isEmpty ? nil : L10n.Conclusions.provenanceRecordCount(records.count),
         ])
@@ -140,6 +142,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
             return .init(heading: heading, records: run.records)
         }
     }
+
     /// Every kept value of a multi-valued field, lead included. A weak
     /// spelling is not displayed, so it stays out of this list.
     private static func listedValues(
@@ -220,7 +223,6 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
                         locale: locale, orders: orders
                     )
                     : nil,
-                records: records,
                 values: Self.valueGroups(records, field: owner.field, locale: locale, orders: orders)
             )
         }
