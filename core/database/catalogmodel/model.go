@@ -29,10 +29,9 @@ const (
 	KindProject          Kind = "project"
 
 	// Conclusion kinds: registered for inbound probes; no delete path yet.
-	KindCanonicalEntity      Kind = "canonical_entity"
-	KindClaimConfidenceGrade Kind = "claim_confidence_grade"
-	// KindIdentityClaim parents facet releases (its pins) only; claims have no
-	// ref and no delete of their own yet.
+	KindCanonicalEntity Kind = "canonical_entity"
+	// KindIdentityClaim names the identity_claims table; claims have no ref and
+	// no delete of their own (deleteimpact.ReleaseClaim removes one).
 	KindIdentityClaim Kind = "identity_claim"
 	// KindEvidenceGraph is one Evidence graph of a Source.
 	KindEvidenceGraph Kind = "evidence_graph"
@@ -90,7 +89,6 @@ var Tables = []Table{
 	{Name: "properties", PK: "id", Kind: KindProperty, Bucket: BucketVocab},
 	{Name: "property_terms", PK: "id", Kind: KindPropertyTerm, Bucket: BucketVocab},
 	{Name: "canonical_entities", Kind: KindCanonicalEntity, Bucket: BucketResource},
-	{Name: "claim_confidence_grades", Bucket: BucketVocab},
 	{Name: "name_format_profiles", PK: "id", Bucket: BucketVocab},
 	{Name: "name_format_profile_parts", Bucket: BucketFacet},
 	{Name: "name_format_profile_roles", Bucket: BucketFacet},
@@ -115,7 +113,6 @@ var Tables = []Table{
 	{Name: "subject_type_properties", Bucket: BucketFacet},
 	{Name: "name_value_parts", Bucket: BucketFacet},
 	{Name: "identity_claims", Kind: KindIdentityClaim, Bucket: BucketFacet},
-	{Name: "identity_claim_evidence", Bucket: BucketFacet},
 	{Name: "date_values", PK: "id", Bucket: BucketOwnedOutbound},
 	{Name: "name_values", PK: "id", Bucket: BucketOwnedOutbound},
 	{Name: "depiction_values", PK: "id", Bucket: BucketOwnedOutbound},
@@ -193,9 +190,6 @@ var FKs = []FK{
 	{From: "canonical_entities", Column: "preferred_likeness_observation_id", To: "observations", OnDelete: "SET NULL", Bucket: BucketOptional},
 	{From: "identity_claims", Column: "subject_id", FromCols: []string{"subject_id", "subject_type_id"}, To: "subjects", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 	{From: "identity_claims", Column: "entity_id", FromCols: []string{"entity_id", "subject_type_id"}, To: "canonical_entities", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
-	{From: "identity_claims", Column: "confidence_grade_id", To: "claim_confidence_grades", OnDelete: "NO ACTION", Bucket: BucketResource},
-	{From: "identity_claim_evidence", Column: "identity_claim_id", To: "identity_claims", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
-	{From: "identity_claim_evidence", Column: "observation_id", To: "observations", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 	// Derived auto-reconciler cache: silent backstops; upkeep rewrites the rows.
 	{From: "auto_reconciler_values", Column: "entity_id", To: "canonical_entities", OnDelete: "CASCADE", Bucket: BucketSkip},
 	{From: "auto_reconciler_values", Column: "property_id", To: "properties", OnDelete: "CASCADE", Bucket: BucketSkip},

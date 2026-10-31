@@ -71,8 +71,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var subjectsByGraph: [String: [CatalogSubject]] = [:]
     /// Accepted Identity Claim per Subject id (Promote): the claim and its handle.
     var membershipBySubject: [String: CatalogSubjectMembership] = [:]
-    /// Distinct handles that pin an Observation, for delete-impact confirms.
-    var pinsByObservation: [String: [CatalogCanonicalEntity]] = [:]
     /// Queued graph-alignment proposals. The first is consumed; the last repeats.
     var promoteProposals: [CatalogPromoteGraphAlignmentProposal] = []
     /// Per-call delay before a proposal returns, consumed in call order, so
@@ -2751,7 +2749,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 observationsByGraph[graphID] = list.filter { $0.id != observationID }
                 bumpActivity(sourceOfGraph(graphID))
             }
-            pinsByObservation[observationID] = nil
             return nextWriteEffects
         }
     }
@@ -3129,30 +3126,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         if isEdgeLocked(observation: existing, projectDir: projectDir) {
             return CatalogDeleteImpact(allowed: false, gate: .edgeLocked, groups: [])
         }
-        let handles = pinsByObservation[id] ?? []
-        guard !handles.isEmpty else {
-            return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
-        }
-        return CatalogDeleteImpact(
-            allowed: true,
-            gate: .ok,
-            groups: [],
-            cascades: [
-                CatalogDeleteImpactGroup(
-                    via: "identity_claim_evidence.observation_id",
-                    kind: "canonical_entity",
-                    total: handles.count,
-                    listed: handles.map { entity in
-                        CatalogDeleteImpactListed(
-                            id: entity.id,
-                            ref: entity.ref,
-                            title: entity.ref,
-                            location: WorkspaceLocation(section: .sources, ref: entity.ref, title: entity.ref)
-                        )
-                    }
-                ),
-            ]
-        )
+        return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
     }
 
     private func subjectDeleteImpact(projectDir: String, id: String) -> CatalogDeleteImpact {

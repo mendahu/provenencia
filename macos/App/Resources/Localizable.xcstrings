@@ -15416,18 +15416,6 @@
         }
       }
     },
-    "deleteImpact.confirm.leavesEvidence": {
-      "comment": "Allowed Observation delete confirm, appended after the consequence; argument is the handle ref(s) whose Identity Claims pinned it",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "It’s also removed from the evidence for %@. Those claims stay, with less evidence."
-          }
-        }
-      }
-    },
     "deleteImpact.confirm.alsoAffects": {
       "comment": "Allowed-delete confirm line for a non-blocking cascade without specific copy; arguments are kind noun and ref list",
       "extractionState": "manual",

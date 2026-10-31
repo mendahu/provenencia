@@ -77,8 +77,6 @@ enum PVDeleteImpactCopy {
             switch group.via {
             case "identity_claims.subject_id":
                 return L10n.DeleteImpact.leavesHandle(handleRefs: joined)
-            case "identity_claim_evidence.observation_id":
-                return L10n.DeleteImpact.leavesEvidence(handleRefs: joined)
             default:
                 return L10n.DeleteImpact.alsoAffects(
                     noun: noun(group.kind, count: group.total),
@@ -468,19 +466,6 @@ enum PVDeleteImpactPreviewData {
     }
 
     static let allowed = CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
-    static let pinnedObservation = CatalogDeleteImpact(
-        allowed: true,
-        gate: .ok,
-        groups: [],
-        cascades: [
-            CatalogDeleteImpactGroup(
-                via: "identity_claim_evidence.observation_id",
-                kind: "canonical_entity",
-                total: 1,
-                listed: [listed(ref: "PER-7KD45", title: "PER-7KD45")]
-            ),
-        ]
-    )
     static let promotedSubject = CatalogDeleteImpact(
         allowed: true,
         gate: .ok,

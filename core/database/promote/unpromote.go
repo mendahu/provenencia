@@ -15,10 +15,9 @@ import (
 
 // Unpromote is the inverse of Save for one primary Subject: it deletes the
 // Subject's accepted Identity Claim and, in the same transaction, the accepted
-// claims of the bridges that have it as an end, each with its pins. It does not
-// reject a claim and deletes no handle; other members' claims and their pins
-// stay. A Subject with no accepted claim returns no changes and no error (a
-// stale second click). The caller records the changes (action
+// claims of the bridges that have it as an end. It does not reject a claim and
+// deletes no handle; other members' claims stay. A Subject with no accepted
+// claim returns no changes and no error (a stale second click). The caller records the changes (action
 // unpromote_subject); writes.Run recomputes the affected handles.
 func Unpromote(tx *database.Tx, userID, subjectID []byte) ([]rowchange.Change, error) {
 	if tx == nil {

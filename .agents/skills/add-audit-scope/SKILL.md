@@ -25,7 +25,7 @@ the same `Scopes` list to keep last activity current. There are two scope types:
   row and everything under it (notes, metadata, layout, credibility, artifacts and their
   files, subjects, citations, observations, their notes and values).
 - `canonical_entity`, from `Set.HandleScopes` (the `Effect.HandleScope` path): work on a
-  Person, Event, or Place handle: its row, its claims and pins, and evidence on a member
+  Person, Event, or Place handle: its row, its claims, and evidence on a member
   Subject. It is separate from `Effect.Handles`, which is the recompute set and also fans out
   on vocabulary, credibility, and uncertainty edits that are not work on the handle.
 
@@ -51,7 +51,7 @@ Source scopes come from the effect's `SourceScope` path, not a hand resolver. Se
 | Hangs off an artifact / citation / observation | `SourceScope: up(...)` along that chain |
 | Referenced by another row (values, files) | `SourceScope: chain(inbound(...), ...)` |
 | Vocabulary or conclusion layer | no `SourceScope` path — a deliberate decision, not a default |
-| Work on a handle (claim, pin, member evidence) | `HandleScope: ...` along the chain to the handle id |
+| Work on a handle (claim, member evidence) | `HandleScope: ...` along the chain to the handle id |
 
 ## Write changes so they resolve
 
@@ -106,7 +106,7 @@ display rows or the throwaway graph search composes during a write. Do **not** j
 
 - Tag scopes by hand at call sites or add an "extra scopes" field to `audit.Revision`
 - Give `scope_id` an FK (it is polymorphic, like `audit_changes.entity_id`)
-- Scope conclusion-layer work (identity claims, evidence pins, canonical entities, promote) to a
+- Scope conclusion-layer work (identity claims, canonical entities, promote) to a
   Source — decided: it does not move a Source's "Updated" revision
 - Drop a parent id from a delete change to "keep the diff small"
 - Add a hand-written resolver map. A recorded entity is a non-`None` effect

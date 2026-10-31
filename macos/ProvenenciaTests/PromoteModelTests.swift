@@ -553,26 +553,4 @@ struct PromoteModelTests {
         model.setTarget(subjectID: "a", token: "handle:other")
         #expect(model.shouldHoldNavigation(.back) == true)
     }
-
-    @Test func aPinnedObservationDeleteNamesThePerson() async throws {
-        let store = FakeStore()
-        let person = CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "type-person", label: "")
-        store.observationsByGraph[graphID] = [
-            CatalogObservation(
-                id: "obs-1", ref: "OBS-1", citationID: "c1", subjectID: "a", propertyID: "p-name",
-                polarity: "positive", valueText: "Ada", valueInteger: nil, valueDateID: "",
-                valueNameID: "n1", nameForm: "Ada", valueSubjectID: "", valueTermID: "",
-                propertyKey: "name", propertyLabel: "Name", propertyValueType: "name"
-            ),
-        ]
-        store.pinsByObservation["obs-1"] = [person]
-        let impact = try await store.getDeleteImpact(projectDir: projectDir, kind: "observation", id: "obs-1")
-        #expect(impact.allowed)
-        #expect(impact.cascades.first?.listed.map(\.ref) == ["PER-7KD45"])
-        let copy = PVDeleteImpactCopy.confirmCopy(
-            for: PVDeleteImpactTarget(kind: "observation", id: "obs-1", ref: "OBS-1", title: "Name"),
-            report: impact
-        )
-        #expect(copy.message.contains(L10n.DeleteImpact.leavesEvidence(handleRefs: "PER-7KD45")))
-    }
 }

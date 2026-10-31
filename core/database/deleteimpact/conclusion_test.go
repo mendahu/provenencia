@@ -96,8 +96,6 @@ func TestImpactConclusion(t *testing.T) {
 		}
 	})
 
-	var otherClaimID []byte // a second handle's claim, for cross-claim pins
-
 	t.Run("blocked promoted subject reports groups and the handle it leaves", func(t *testing.T) {
 		got := mustImpact(t, c, catalogmodel.KindSubject, york.ID)
 		if got.Allowed || len(got.Groups) == 0 {
@@ -119,33 +117,16 @@ func TestImpactConclusion(t *testing.T) {
 			t.Fatalf("%+v", got)
 		}
 		assertLeaves(t, got, res.Entity.Ref)
-		otherClaimID = res.Claim.ID
 	})
 
-	t.Run("pinned observation is allowed and names the handle its claims weaken", func(t *testing.T) {
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
-		// Pinned on its own member's claim and, as backfill would, on another claim.
-		for _, cid := range [][]byte{claim.ID, otherClaimID} {
-			if _, err := db.Exec(`INSERT INTO identity_claim_evidence (identity_claim_id, observation_id) VALUES (?, ?)`,
-				cid, obsID); err != nil {
-				t.Fatal(err)
-			}
-		}
+	t.Run("a member's observation names no handle", func(t *testing.T) {
 		got := mustImpact(t, c, catalogmodel.KindObservation, obsID)
-		if !got.Allowed || len(got.Groups) != 0 || len(got.Cascades) != 1 {
+		if !got.Allowed || got.Gate != deleteimpact.GateOK || len(got.Groups) != 0 || len(got.Cascades) != 0 {
 			t.Fatalf("%+v", got)
 		}
-		g := got.Cascades[0]
-		if g.Via != "identity_claim_evidence.observation_id" || g.Kind != catalogmodel.KindCanonicalEntity ||
-			g.Total != 2 || len(g.Listed) != 2 {
-			t.Fatalf("%+v", g)
-		}
 	})
 
-	t.Run("observation delete removes its pins explicitly and audits them", func(t *testing.T) {
+	t.Run("observation delete audits only the observation", func(t *testing.T) {
 		if _, err := writes.Call(c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			changes, err := observations.Delete(tx, userID, obsID)
 			return struct{}{}, changes, err
@@ -153,15 +134,11 @@ func TestImpactConclusion(t *testing.T) {
 			t.Fatal(err)
 		}
 		action, types := lastRevision(t, c)
-		if action != "delete_observation" ||
-			strings.Join(types, ",") != "identity_claim_evidence,identity_claim_evidence,observation" {
+		if action != "delete_observation" || strings.Join(types, ",") != "observation" {
 			t.Fatalf("%s %v", action, types)
 		}
-		if n := countRows(t, c, `SELECT COUNT(*) FROM identity_claim_evidence WHERE observation_id = ?`, obsID); n != 0 {
-			t.Fatalf("pins left %d", n)
-		}
 		if _, err := identityclaims.Get(c, claim.ID); err != nil {
-			t.Fatalf("claim should stay (weaker): %v", err)
+			t.Fatalf("claim should stay as written: %v", err)
 		}
 	})
 
@@ -207,19 +184,6 @@ func lastRevision(t *testing.T, c *database.Catalog) (string, []string) {
 		types = append(types, entityType)
 	}
 	return action, types
-}
-
-func countRows(t *testing.T, c *database.Catalog, q string, args ...any) int {
-	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var n int
-	if err := db.QueryRow(q, args...).Scan(&n); err != nil {
-		t.Fatal(err)
-	}
-	return n
 }
 
 func assertLeaves(t *testing.T, r deleteimpact.Report, handleRef string) {

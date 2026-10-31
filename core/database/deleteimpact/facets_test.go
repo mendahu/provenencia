@@ -167,8 +167,8 @@ func TestReleaseFacetsReportsHandles(t *testing.T) {
 		_ = tx.Rollback()
 		f.c.EndWrite()
 	}()
-	// obsA is pinned on both claims of one handle: one handle, reported once.
-	got, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindObservation, f.obsA)
+	// B's claim is released: one claim change, one handle.
+	got, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindSubject, f.b.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +184,7 @@ func TestReleaseFacetsReportsHandles(t *testing.T) {
 		types = append(types, ch.EntityType)
 	}
 	sort.Strings(types)
-	if strings.Join(types, ",") != "identity_claim_evidence,identity_claim_evidence" {
+	if strings.Join(types, ",") != "identity_claim" {
 		t.Fatalf("changes %v", types)
 	}
 }

@@ -89,7 +89,7 @@ On each claim in the Sources section.
 
 - **R-38. Remove.** Un-promote the Subject from this person, the same behavior as the un-promote control in the Evidence graph today.
 - **R-39. Removing the last claim** deletes the canonical person, wherever the unpromote happens (the Evidence graph too). A warning says so before it happens; if the user proceeds, the app returns to the Persons list.
-- **R-40. Review (view only).** Open the claim's pinned evidence and its argument, so the user can see why the Subject was connected to this person. Editing pins or the argument is not this spike. **Reopened 2026-10-29:** Identity Claims no longer carry pins ([`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5); the review is replaced by a view of how the person's records connect ([`evidence-graph-comparison.md`](evidence-graph-comparison.md), slice 7).
+- **R-40. Review (view only).** Open the claim's pinned evidence and its argument, so the user can see why the Subject was connected to this person. Editing pins or the argument is not this spike. **Reopened 2026-10-29:** Identity Claims no longer carry pins or an argument; the table and columns were dropped by S13-25 ([`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5); the review is replaced by a view of how the person's records connect ([`evidence-graph-comparison.md`](evidence-graph-comparison.md), slice 7).
 
 ## Not this spike
 

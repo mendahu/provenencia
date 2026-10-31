@@ -199,10 +199,6 @@ var subjectGraph = field("graph_id")
 // claimGraph is an Identity Claim to the Evidence graph of its Subject.
 var claimGraph = from("subject_id", field("graph_id"))
 
-// claimEvidenceGraph is Identity Claim evidence to the Evidence graph of its
-// claim's Subject.
-var claimEvidenceGraph = up("identity_claim_id", "subject_id", "graph_id")
-
 // graphsOfSource is a path ending at a Source, to every Evidence graph of it.
 func graphsOfSource(p Path) Path {
 	return chain(p, inbound("evidence_graphs", "source_id"))
@@ -401,16 +397,8 @@ var registry = map[string]Effect{
 		),
 		HandleScope: field("entity_id"),
 	},
-	"identity_claim_evidence": {
-		Entity:        "identity_claim_evidence",
-		EvidenceGraph: claimEvidenceGraph,
-		Reads:         []ReadPath{{ReadEvidenceGraphProgress, claimEvidenceGraph}},
-		Handles:       up("identity_claim_id", "entity_id"),
-		HandleScope:   up("identity_claim_id", "entity_id"),
-	},
 
 	"source_credibility_grades":   {None: true},
-	"claim_confidence_grades":     {None: true},
 	"users":                       {None: true},
 	"subject_positions":           {Entity: "subject_position", None: true},
 	"subject_type_properties":     {Entity: "subject_type_property", Lists: []List{ListVocabulary}},

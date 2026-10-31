@@ -6,7 +6,7 @@ package effects
 const ScopeSource = "source"
 
 // ScopeCanonicalEntity is the scope_type for work on a Person, Event, or Place
-// handle: its row, its claims and pins, and evidence on a member Subject.
+// handle: its row, its claims, and evidence on a member Subject.
 const ScopeCanonicalEntity = "canonical_entity"
 
 // Scope names an audit scope type and says which ids of a resolved Set belong

@@ -18,8 +18,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
+	"github.com/mendahu/provenencia/core/database/autoreconciler/autoreconcilertest"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/gallery"
@@ -83,7 +83,6 @@ func newFixture(t *testing.T) *fixture {
 	must(t, users.Upsert(c, userID, "Tester", r))
 	must(t, subjectvocab.Install(c))
 	must(t, sourcecredibilitygrades.Install(c))
-	must(t, claimconfidencegrades.Install(c))
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	must(t, err)
 	f := &fixture{t: t, c: c, typeID: typeID, arts: map[string]artifacts.Artifact{},
@@ -197,13 +196,6 @@ func (f *fixture) certainty(citationID []byte, uncertain bool) error {
 		return citations.Update(tx, userID, citationID, citations.CitationFieldsInput{LocatorJSON: locator, TranscriptionUncertain: uncertain})
 	})
 	return err
-}
-
-// grade is a seeded claim confidence grade's id.
-func (f *fixture) grade(key string) []byte {
-	g, err := claimconfidencegrades.Lookup(f.c, key, vocabkey.OriginProvenencia)
-	must(f.t, err)
-	return g.ID
 }
 
 func negative(in observations.Input) observations.Input {
@@ -338,8 +330,6 @@ func rowsFor(all []row, entityID, propertyID []byte) []row {
 	return out
 }
 
-// rebuiltSnapshot rebuilds inside a rolled-back transaction, so upkeep state
-// is left as it was.
 // outcome is one auto_reconciler_outcomes row as stored.
 type outcome struct {
 	EntityID, PropertyID, ObservationID []byte
@@ -371,17 +361,6 @@ func (f *fixture) outcomes() []outcome {
 	db, err := f.c.DB()
 	must(f.t, err)
 	return outcomesSnapshot(f.t, db)
-}
-
-func (f *fixture) rebuiltSnapshot() []row {
-	f.t.Helper()
-	db, err := f.c.DB()
-	must(f.t, err)
-	tx, err := db.Begin()
-	must(f.t, err)
-	defer func() { _ = tx.Rollback() }()
-	must(f.t, autoreconciler.Rebuild(tx))
-	return snapshot(f.t, tx)
 }
 
 func TestReconciledValues(t *testing.T) {
@@ -1006,39 +985,6 @@ func TestReconciledEvidence(t *testing.T) {
 		f.assertUpkeepEqualsRebuild("denied")
 	})
 
-	t.Run("a claim's grade does not weaken its values", func(t *testing.T) {
-		// run reconciles two members with different given names, the first
-		// claim set to the grade (none when ""), and returns each name row's
-		// reason and displayed form.
-		run := func(t *testing.T, grade string) []string {
-			f := newFixture(t)
-			a, b := f.subject("person"), f.subjectOn(f.other, "person")
-			f.cite(nameIn(a, f.props["name"], "given=Jake|surname=Robins"))
-			f.cite(nameIn(b, f.props["name"], "given=James|surname=Robins"))
-			res := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: a.ID})
-			if grade != "" {
-				db, err := f.c.DB()
-				must(t, err)
-				_, err = db.Exec(`UPDATE identity_claims SET confidence_grade_id = ? WHERE subject_id = ?`, f.grade(grade), a.ID)
-				must(t, err)
-			}
-			f.join(b, res.Entity.ID)
-			var out []string
-			for _, r := range rowsFor(f.rows(), res.Entity.ID, f.props["name"].ID) {
-				n, err := valuecodec.UnmarshalName(r.Name)
-				must(t, err)
-				if r.Reason == "weak" {
-					t.Fatalf("a graded claim's name is weak: %+v", r)
-				}
-				out = append(out, r.Reason+" "+n.Form)
-			}
-			return out
-		}
-		if graded, plain := run(t, "low_confidence"), run(t, ""); !reflect.DeepEqual(graded, plain) {
-			t.Fatalf("graded %v, ungraded %v", graded, plain)
-		}
-	})
-
 	t.Run("a misspelt surname from one Source in three is outvoted", func(t *testing.T) {
 		f := newFixture(t)
 		a, b, c := f.subject("person"), f.subjectOn(f.other, "person"), f.subjectOn(f.newSource("Bible"), "person")
@@ -1182,23 +1128,7 @@ func TestLoaderQueryCountIsConstant(t *testing.T) {
 // differs from a full rebuild (taken in a rolled-back transaction).
 func (f *fixture) assertUpkeepEqualsRebuild(at string) {
 	f.t.Helper()
-	if got, want := f.rows(), f.rebuiltSnapshot(); !reflect.DeepEqual(got, want) {
-		f.t.Fatalf("%s: upkeep has %d rows, rebuild %d", at, len(got), len(want))
-	}
-	// The outcomes (the auto-reconciler's reasoning) must match a rebuild too.
-	{
-		db, err := f.c.DB()
-		must(f.t, err)
-		got := outcomesSnapshot(f.t, db)
-		tx, err := db.Begin()
-		must(f.t, err)
-		must(f.t, autoreconciler.Rebuild(tx))
-		want := outcomesSnapshot(f.t, tx)
-		_ = tx.Rollback()
-		if !reflect.DeepEqual(got, want) {
-			f.t.Fatalf("%s: upkeep has %d outcomes, rebuild %d", at, len(got), len(want))
-		}
-	}
+	autoreconcilertest.AssertCacheMatchesRebuild(f.t, f.c)
 	// The handle search documents ride on the same upkeep (RecomputeTx), so
 	// they must equal a full search rebuild too.
 	db, err := f.c.DB()
