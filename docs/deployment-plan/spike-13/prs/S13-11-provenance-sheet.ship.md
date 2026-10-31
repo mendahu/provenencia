@@ -108,4 +108,4 @@ Reviewers: CON (Sonnet), MNT, UX — each had a Fix-now major. Not sent back: SE
 Nits (logged): `UX-10 · ReconciliationRecordRows.swift:201 · value heading gap now space5 (was space4) via shared valueLine`
 
 ## Result
-Gate PASS at `710f979a` (`main` unmoved) · CI pending · open: none · follow-ups: CON-4, MNT-9, MNT-10 · to user: UX-6 (manual check 1), §10 manual check not run · CON miss: none
+Gate PASS at `710f979a` (`main` unmoved) · CI green · open: none · follow-ups: CON-4, MNT-9, MNT-10 · to user: UX-6 (manual check 1), §10 manual check not run · CON miss: none
