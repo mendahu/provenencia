@@ -156,13 +156,15 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         var other: [ReconciliationRecord] = []
         for member in members {
             var counted: Set<String> = []
-            for run in member.records.reduce(into: [(rank: Int, records: [ReconciliationRecord])]()) { runs, record in
+            var runs: [(rank: Int, records: [ReconciliationRecord])] = []
+            for record in member.records {
                 if runs.last?.rank == record.groupRank {
                     runs[runs.count - 1].records.append(record)
                 } else {
                     runs.append((record.groupRank, [record]))
                 }
-            } {
+            }
+            for run in runs {
                 guard run.rank > 0, let value = member.field.displayedValues.first(where: { $0.rank == run.rank }) else {
                     other += run.records
                     continue
