@@ -166,4 +166,52 @@ struct ArtifactRegionGeometryTests {
         ]
         #expect(ArtifactRegionGeometry.isValidPolygon(bowtie) == false)
     }
+
+    @Test func boundingRectangleOfEachKind() {
+        func close(_ a: [CGPoint], _ b: [CGPoint]) -> Bool {
+            a.count == b.count && zip(a, b).allSatisfy { abs($0.x - $1.x) < 1e-6 && abs($0.y - $1.y) < 1e-6 }
+        }
+        let circle = ArtifactRegionDraft(
+            kind: .circle,
+            points: ArtifactRegionGeometry.circleRing(center: CGPoint(x: 0.5, y: 0.5), radius: 0.2)
+        )
+        let circleBox = circle.boundingRectangle
+        #expect(circleBox.kind == .rectangle)
+        #expect(close(circleBox.points, [
+            CGPoint(x: 0.3, y: 0.3), CGPoint(x: 0.7, y: 0.3), CGPoint(x: 0.7, y: 0.7), CGPoint(x: 0.3, y: 0.7),
+        ]))
+
+        let l = ArtifactRegionDraft(
+            kind: .lOpenTopRight,
+            points: ArtifactRegionGeometry.lShapePoints(
+                kind: .lOpenTopRight, from: CGPoint(x: 0.1, y: 0.2), to: CGPoint(x: 0.6, y: 0.9)
+            )
+        )
+        let lBox = l.boundingRectangle
+        #expect(lBox.kind == .rectangle)
+        #expect(close(lBox.points, ArtifactRegionGeometry.rectanglePoints(
+            from: CGPoint(x: 0.1, y: 0.2), to: CGPoint(x: 0.6, y: 0.9)
+        )))
+
+        let rectangle = ArtifactRegionDraft(
+            kind: .rectangle,
+            points: ArtifactRegionGeometry.rectanglePoints(from: CGPoint(x: 0.6, y: 0.7), to: CGPoint(x: 0.1, y: 0.2))
+        )
+        #expect(rectangle.boundingRectangle == rectangle)
+
+        let wide = ArtifactRegionDraft(
+            kind: .freeform,
+            points: [
+                CGPoint(x: 0, y: 0), CGPoint(x: 1, y: 0), CGPoint(x: 1, y: 1),
+                CGPoint(x: 0.5, y: 0.8), CGPoint(x: 0, y: 1),
+            ]
+        )
+        #expect(wide.isValid)
+        let wideBox = wide.boundingRectangle
+        #expect(wideBox.kind == .rectangle)
+        #expect(close(wideBox.points, [
+            CGPoint(x: 0, y: 0), CGPoint(x: 1, y: 0), CGPoint(x: 1, y: 1), CGPoint(x: 0, y: 1),
+        ]))
+        #expect(wideBox.isValid)
+    }
 }

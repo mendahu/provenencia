@@ -25,7 +25,7 @@ extension CitationComposerModel {
     }
 
     var authoringCanConfirm: Bool {
-        guard !isSwitchingCitation else { return false }
+        guard !isSwitchingCitation, !depictionImageBlocksSave else { return false }
         switch authoring {
         case .rest:
             return false
@@ -43,7 +43,9 @@ extension CitationComposerModel {
     }
 
     var editCanConfirm: Bool {
-        guard !isSwitchingCitation, let session = editSession, !session.isSaving else { return false }
+        guard !isSwitchingCitation, !depictionImageBlocksSave,
+              let session = editSession, !session.isSaving
+        else { return false }
         switch session.kind {
         case .property(let values, _, _):
             return Self.propertyValuesComplete(values, vocabulary: vocabulary)

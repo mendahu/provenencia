@@ -347,14 +347,9 @@ struct CitationComposerEvidenceColumn: View {
             ) {
                 Task { await model.fields.saveCitation() }
             }
-            .disabled(!canSaveCitation)
+            .disabled(!model.canSaveCitation)
             .accessibilityIdentifier("citationComposer.saveCitation")
         }
-    }
-
-    private var canSaveCitation: Bool {
-        !model.fields.isSaving && !model.isTranscribing && !model.isDrawingDepiction
-            && (model.fields.isDirty || model.activeCitationID == nil)
     }
 
     private func menuLocator(_ citation: CatalogCitation) -> String {

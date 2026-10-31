@@ -3161,6 +3161,14 @@ enum L10n {
             comment: "Region tool: click-to-place polygon vertices"
         )
 
+        static func freeformCapReached(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "artifactViewer.freeformCapReached",
+                defaultValue: "This freehand region holds its most points, %lld. Click the first point to close it.",
+                comment: "VoiceOver announcement when a freehand region has its most points; argument is that number"
+            ), count)
+        }
+
         static let findToggle = LocalizedStringResource(
             "artifactViewer.findToggle",
             defaultValue: "Find in PDF",
@@ -3356,7 +3364,7 @@ enum L10n {
 
         static let depictionNeedsPage = LocalizedStringResource(
             "citationComposer.depictionNeedsPage",
-            defaultValue: "Set this citation's page and save the citation to draw a region.",
+            defaultValue: "This citation has no page yet. Save the viewer's page to it to draw a region.",
             comment: "Warning when an existing PDF citation has no page, so a depiction cannot be drawn"
         )
 
@@ -3368,7 +3376,7 @@ enum L10n {
 
         static let depictionRegionHidden = LocalizedStringResource(
             "citationComposer.depictionRegionHidden",
-            defaultValue: "This region no longer matches the citation's page. Draw it again.",
+            defaultValue: "This region no longer matches the citation's page. Draw it again or use a region button below.",
             comment: "Warning when a saved depiction's region no longer matches its citation's page"
         )
 
@@ -3380,7 +3388,7 @@ enum L10n {
 
         static let depictionCaptionEmpty = LocalizedStringResource(
             "citationComposer.depictionCaptionEmpty",
-            defaultValue: "Nothing drawn yet. Draw the region on the file",
+            defaultValue: "Nothing drawn yet. Draw on the file, or use a region button below",
             comment: "Caption beside the depiction preview when no region is drawn"
         )
 
@@ -3398,7 +3406,7 @@ enum L10n {
 
         static let depictionCaptionNeedsPage = LocalizedStringResource(
             "citationComposer.depictionCaptionNeedsPage",
-            defaultValue: "Draw is unavailable until the citation has a page",
+            defaultValue: "Draw and the region buttons wait until the citation has a page",
             comment: "Caption beside the depiction preview when the citation has no page"
         )
 
@@ -3407,6 +3415,26 @@ enum L10n {
             defaultValue: "Save waits for the region to be drawn again",
             comment: "Caption beside the depiction preview when the saved region is hidden"
         )
+
+        static let depictionCaptionCannotCut = LocalizedStringResource(
+            "citationComposer.depictionCaptionCannotCut",
+            defaultValue: "Draw is unavailable: the file is not showing in the viewer",
+            comment: "Caption beside the depiction preview when the viewer holds nothing the region can be cut from"
+        )
+
+        static let depictionPreviewSavedLabel = LocalizedStringResource(
+            "citationComposer.depictionPreviewSavedLabel",
+            defaultValue: "Saved image",
+            comment: "VoiceOver label of the depiction preview when it shows the image already saved"
+        )
+
+        static func depictionSavePage(_ page: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.depictionSavePage",
+                defaultValue: "Save page %lld to this citation",
+                comment: "Button in the no-page warning that saves the viewer's page to the citation; argument is the viewer's page"
+            ), page)
+        }
 
         static func depictionWrongPage(_ page: Int) -> String {
             L10n.format(LocalizedStringResource(

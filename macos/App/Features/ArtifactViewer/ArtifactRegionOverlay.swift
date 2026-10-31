@@ -49,7 +49,13 @@ final class ArtifactRegionOverlayView: NSView {
 
     private var dragStart: CGPoint?
     private var dragCurrent: CGPoint?
-    private var inProgressPoints: [CGPoint] = []
+    private var inProgressPoints: [CGPoint] = [] {
+        didSet {
+            if inProgressPoints.count < ArtifactRegionGeometry.maxRegionPoints { capAnnounced = false }
+        }
+    }
+    /// VoiceOver has heard the freehand cap for this shape; re-armed when the shape shrinks or restarts.
+    private var capAnnounced = false
     private var activeHandle: ArtifactRegionHandle?
     private var isEditingCommitted = false
     private var moveDragOrigin: CGPoint?
@@ -271,6 +277,12 @@ final class ArtifactRegionOverlayView: NSView {
         }
         guard let next = ArtifactRegionGeometry.appendFreeformVertex(points: inProgressPoints, normalized) else {
             NSSound.beep()
+            if !capAnnounced {
+                capAnnounced = true
+                AccessibilityAnnouncement.post(
+                    L10n.ArtifactViewer.freeformCapReached(ArtifactRegionGeometry.maxRegionPoints)
+                )
+            }
             return
         }
         inProgressPoints = next

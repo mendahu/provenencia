@@ -529,10 +529,8 @@ struct CitationComposerDepictionTests {
     }
 
     @Test func drawingHoldsPasteTranscription() async throws {
-        // No file on disk: a blank PDF has no text layer, and paste needs one.
-        let projectDir = ArtifactFileFixtures.uniqueProjectDir()
-        let store = makeStore(projectDir: projectDir)
-        ArtifactFileFixtures.seedArtifact(store, mediaType: "application/pdf", relPath: "objects/news.pdf")
+        let (projectDir, store) = try seeded(.pdf)
+        try ArtifactFileFixtures.writeTextPDF(projectDir: projectDir, relPath: "objects/news.pdf", text: "a line")
         let model = makeModel(store: store, projectDir: projectDir)
         await model.prepare()
         model.artifactViewer.installUserSelectionForTesting(text: "a line", page: 1)
@@ -811,25 +809,6 @@ struct CitationComposerDepictionTests {
         #expect(image.size == CGSize(width: 8, height: 8))
     }
 
-    @Test func missingFileCutFails() async throws {
-        let (projectDir, store) = try seeded()
-        try FileManager.default.removeItem(atPath: projectDir + "/objects/photo.png")
-        let model = makeModel(store: store, projectDir: projectDir)
-        await model.prepare()
-        openLikenessDraft(model)
-        model.startDepictionDrawing()
-        #expect(model.commitViewerRegion(rect(0.25, 0.25, 0.75, 0.75)))
-        await model.renderDepictionPreview()
-        #expect(model.depictionPreviewState == .failed)
-        await model.saveAuthoring()
-        guard case .property(let draft) = model.authoring else {
-            Issue.record("the dialog should stay open")
-            return
-        }
-        #expect(draft.error == L10n.string(L10n.CitationComposer.depictionRenderFailed))
-        #expect(draft.values.depictionDraft.hasRegion)
-    }
-
     @Test func editWithNoSavedImageDoesNotCut() async throws {
         let (projectDir, store) = try seeded()
         let region = regionJSON(rect(0.1, 0.1, 0.4, 0.4))
@@ -1061,7 +1040,300 @@ struct CitationComposerDepictionTests {
         )
     }
 
+    // MARK: - S14-03: one tool, the locator lock, cut and page feedback
+
+    private let wrongPageJSON = #"{"version":1,"selectors":[{"type":"artifact"},{"type":"page","artifact_page":1}]}"#
+
+    @Test func depictionOffersTheRectangleAlone() async throws {
+        let (projectDir, store) = try seeded()
+        let model = makeModel(store: store, projectDir: projectDir)
+        await model.prepare()
+        #expect(model.viewerRegionTools == ArtifactRegionTool.allCases)
+        #expect(model.viewerRegionTools.count == 7)
+        openLikenessDraft(model)
+        #expect(model.viewerRegionTools == [.rectangle])
+        model.startDepictionDrawing()
+        #expect(model.viewerArmedRegionTool == .rectangle)
+        model.cancelDepictionDrawing()
+
+        model.armedRegionTool = .freeform
+        #expect(model.viewerArmedRegionTool == nil)
+        model.startDepictionDrawing()
+        #expect(model.viewerArmedRegionTool == .rectangle)
+        #expect(model.armedRegionTool == .rectangle)
+    }
+
+    @Test func citationToolDoesNotReachTheDepiction() async throws {
+        for tool in [ArtifactRegionTool.freeform, .rectangle] {
+            let (projectDir, store) = try seeded()
+            let model = makeModel(store: store, projectDir: projectDir)
+            await model.prepare()
+            model.viewerArmedRegionTool = tool
+            #expect(model.isDrawingRegion)
+            openLikenessDraft(model)
+            #expect(model.viewerRegionTools == [.rectangle])
+            #expect(model.viewerArmedRegionTool == nil)
+            #expect(!model.isDrawingDepiction)
+            #expect(!model.isDrawingRegion)
+            #expect(draftValues(model)?.depictionDraft.hasRegion == false)
+
+            model.viewerArmedRegionTool = .rectangle
+            #expect(model.presented == .drawingDepiction(over: .authoring))
+            #expect(model.viewerArmedRegionTool == .rectangle)
+        }
+    }
+
+    @Test func deselectingTheRectangleEndsDrawing() async throws {
+        let (projectDir, store) = try seeded()
+        let model = makeModel(store: store, projectDir: projectDir)
+        await model.prepare()
+        openLikenessDraft(model)
+        model.startDepictionDrawing()
+        #expect(model.isDrawingDepiction)
+        model.viewerArmedRegionTool = nil
+        #expect(model.presented == .authoring)
+        #expect(model.armedRegionTool == nil)
+    }
+
+    @Test func circledCitationRegionGivesItsBox() async throws {
+        let (projectDir, store) = try seeded()
+        let ring = ArtifactRegionDraft(
+            kind: .circle,
+            points: ArtifactRegionGeometry.circleRing(center: CGPoint(x: 0.5, y: 0.5), radius: 0.2)
+        )
+        seedCitation(store, locatorJSON: regionJSON(ring))
+        let model = makeModel(store: store, projectDir: projectDir, citationID: "cit-1")
+        await model.prepare()
+        openLikenessDraft(model)
+        let box = try #require(model.depictionCitationRegion)
+        #expect(box.kind == .rectangle)
+        #expect(box.points.count == 4)
+        let expected = [
+            CGPoint(x: 0.3, y: 0.3), CGPoint(x: 0.7, y: 0.3), CGPoint(x: 0.7, y: 0.7), CGPoint(x: 0.3, y: 0.7),
+        ]
+        for (point, want) in zip(box.points, expected) {
+            #expect(abs(point.x - want.x) < 1e-6 && abs(point.y - want.y) < 1e-6)
+        }
+        #expect(model.useDepictionRegion(box))
+        #expect(draftValues(model)?.depictionDraft.locator.region == box)
+    }
+
+    @Test func drawWaitsForACuttableFile() async throws {
+        let (projectDir, store) = try seeded()
+        try FileManager.default.removeItem(atPath: projectDir + "/objects/photo.png")
+        let model = makeModel(store: store, projectDir: projectDir)
+        await model.prepare()
+        openLikenessDraft(model)
+        #expect(model.artifactViewer.emptyReason == .missingFile)
+        #expect(!model.depictionCanCut)
+        #expect(!model.canStartDepictionDrawing)
+        #expect(!model.useDepictionRegion(.whole))
+        #expect(model.depictionCaptionState == .cannotCut)
+        #expect(!model.depictionCaptionState.isWarning)
+        model.startDepictionDrawing()
+        #expect(model.presented == .authoring)
+
+        model.mutateProperty { $0.values.depictionDraft.locator.region = rect(0.25, 0.25, 0.75, 0.75) }
+        #expect(model.depictionPreviewKey == nil)
+        #expect(model.depictionPreviewState == .unavailable)
+        #expect(model.depictionImageBlocksSave)
+    }
+
+    @Test func failedCutDisablesSaveAndRetries() async throws {
+        // An unchanged edit on a file that cannot be cut sends no image and stays savable.
+        let (missingDir, missingStore) = try seeded()
+        try FileManager.default.removeItem(atPath: missingDir + "/objects/photo.png")
+        seedCitation(missingStore, observations: [likenessObservation(region: regionJSON(rect(0.1, 0.1, 0.4, 0.4)))])
+        let unchanged = makeModel(
+            store: missingStore, projectDir: missingDir, citationID: "cit-1", observationID: "obs-1"
+        )
+        await unchanged.prepare()
+        #expect(unchanged.depictionCaptionState == .cannotCut)
+        #expect(unchanged.depictionPreviewState == .saved(relPath: savedRelPath))
+        #expect(unchanged.editCanConfirm)
+
+        // A PDF opened in the viewer, then its object file deleted.
+        let (projectDir, store) = try seeded(.pdf)
+        seedCitation(store, locatorJSON: regionJSON(nil, page: 1))
+        let model = makeModel(store: store, projectDir: projectDir, citationID: "cit-1")
+        await model.prepare()
+        openLikenessDraft(model)
+        let pdfPath = projectDir + "/objects/news.pdf"
+        try FileManager.default.removeItem(atPath: pdfPath)
+        model.startDepictionDrawing()
+        let region = rect(0.5, 0.5, 0.9, 0.9)
+        #expect(model.commitViewerRegion(region))
+        await model.renderDepictionPreview()
+        #expect(model.depictionPreviewState == .failed)
+        #expect(model.depictionCaptionState == .cutFailed)
+        #expect(model.depictionCaptionState.isWarning)
+        #expect(!model.authoringCanConfirm)
+        #expect(model.canStartDepictionDrawing)
+
+        // The file is back: the same region set again cuts.
+        try ArtifactFileFixtures.writeBlankPDF(projectDir: projectDir, relPath: "objects/news.pdf", pageCount: 2)
+        #expect(model.useDepictionRegion(region))
+        #expect(model.depictionPreviewState == .cutting)
+        await model.renderDepictionPreview()
+        guard case .cut = model.depictionPreviewState else {
+            Issue.record("the retried preview should be cut")
+            return
+        }
+        #expect(model.authoringCanConfirm)
+
+        // The same on an edit.
+        let (editDir, editStore) = try seeded(.pdf)
+        seedCitation(
+            editStore,
+            locatorJSON: regionJSON(nil, page: 1),
+            observations: [likenessObservation(region: regionJSON(rect(0.1, 0.1, 0.4, 0.4), page: 1))]
+        )
+        let edit = makeModel(store: editStore, projectDir: editDir, citationID: "cit-1", observationID: "obs-1")
+        await edit.prepare()
+        try FileManager.default.removeItem(atPath: editDir + "/objects/news.pdf")
+        edit.startDepictionDrawing()
+        #expect(edit.commitViewerRegion(rect(0.5, 0.5, 0.9, 0.9)))
+        await edit.renderDepictionPreview()
+        #expect(edit.depictionPreviewState == .failed)
+        #expect(!edit.editCanConfirm)
+    }
+
+    @Test func drawingLocksTheLocator() async throws {
+        let (projectDir, store) = try seeded(.pdf)
+        let model = makeModel(store: store, projectDir: projectDir)
+        await model.prepare()
+        #expect(!model.isDrawingRegion)
+        model.artifactViewer.setPage(2)
+        #expect(model.setPageFromViewer())
+        #expect(model.locator.page == 2)
+        #expect(model.setRegion(rect(0.2, 0.2, 0.6, 0.6)))
+
+        model.artifactViewer.openFind()
+        #expect(model.artifactViewer.isFindPresented)
+        model.viewerArmedRegionTool = .circle
+        #expect(model.isDrawingRegion)
+        #expect(!model.artifactViewer.isFindPresented)
+        model.artifactViewer.setPage(1)
+        let locked = model.locator
+        #expect(!model.setPageFromViewer())
+        model.removePage()
+        model.removeRegion()
+        model.clearRegion()
+        model.resetToEntireArtifact()
+        #expect(model.locator == locked)
+
+        model.viewerArmedRegionTool = nil
+        #expect(!model.isDrawingRegion)
+        #expect(model.setPageFromViewer())
+        #expect(model.locator.page == 1)
+
+        // A tool armed, then a likeness dialog opened: it is not drawn on screen, so it does not lock.
+        model.viewerArmedRegionTool = .freeform
+        openLikenessDraft(model)
+        #expect(!model.isDrawingRegion)
+
+        // Drawing a depiction locks the same five calls.
+        model.startDepictionDrawing()
+        #expect(model.isDrawingRegion)
+        let drawing = model.locator
+        #expect(!model.setPageFromViewer())
+        model.removePage()
+        model.removeRegion()
+        model.clearRegion()
+        model.resetToEntireArtifact()
+        #expect(model.locator == drawing)
+    }
+
+    @Test func calloutSavesTheCitationsPage() async throws {
+        let (projectDir, store) = try seeded(.pdf)
+        seedCitation(store)
+        let model = makeModel(store: store, projectDir: projectDir, citationID: "cit-1")
+        await model.prepare()
+        model.artifactViewer.setPage(2)
+        openLikenessDraft(model)
+        #expect(model.depictionNeedsPage)
+        #expect(model.canSaveDepictionCitationPage)
+        #expect(await model.saveDepictionCitationPage())
+        let stored = try #require(store.citationsByID["cit-1"])
+        #expect(CitationLocatorDraft.decode(stored.locatorJSON).page == 2)
+        #expect(!model.depictionNeedsPage)
+        #expect(model.canStartDepictionDrawing)
+
+        // A failed save keeps the unsaved page on the Citation draft for a retry.
+        let (failDir, failStore) = try seeded(.pdf)
+        seedCitation(failStore)
+        let failing = makeModel(store: failStore, projectDir: failDir, citationID: "cit-1")
+        await failing.prepare()
+        failing.artifactViewer.setPage(2)
+        openLikenessDraft(failing)
+        failStore.citationsByID["cit-1"] = nil
+        #expect(!(await failing.saveDepictionCitationPage()))
+        #expect(failing.depictionNeedsPage)
+        #expect(failing.fields.error != nil)
+        #expect(failing.fields.values.locator.page == 2)
+        #expect(failing.fields.isDirty)
+
+        // An image Citation, and a PDF Citation with a Citation tool armed, are refused.
+        let (imageDir, imageStore) = try seeded()
+        seedCitation(imageStore)
+        let image = makeModel(store: imageStore, projectDir: imageDir, citationID: "cit-1")
+        await image.prepare()
+        openLikenessDraft(image)
+        imageStore.recordedCalls = []
+        #expect(!image.canSaveDepictionCitationPage)
+        #expect(!(await image.saveDepictionCitationPage()))
+        #expect(!imageStore.recordedCalls.contains { $0.hasPrefix("updateCitation") })
+
+        let (armedDir, armedStore) = try seeded(.pdf)
+        seedCitation(armedStore)
+        let armed = makeModel(store: armedStore, projectDir: armedDir, citationID: "cit-1")
+        await armed.prepare()
+        armed.artifactViewer.setPage(2)
+        #expect(armed.depictionNeedsPage)
+        armed.viewerArmedRegionTool = .circle
+        armedStore.recordedCalls = []
+        #expect(!armed.canSaveDepictionCitationPage)
+        #expect(!(await armed.saveDepictionCitationPage()))
+        #expect(!armedStore.recordedCalls.contains { $0.hasPrefix("updateCitation") })
+    }
+
+    @Test func previewLabelFollowsTheSave() async throws {
+        let (model, store) = try await editingSavedLikeness()
+        #expect(model.depictionPreviewState == .saved(relPath: savedRelPath))
+        model.startDepictionDrawing()
+        #expect(model.commitViewerRegion(rect(0.5, 0.5, 0.9, 0.9)))
+        #expect(model.depictionPreviewState != .saved(relPath: savedRelPath))
+
+        let (projectDir, newStore) = try seeded()
+        let draft = makeModel(store: newStore, projectDir: projectDir)
+        await draft.prepare()
+        openLikenessDraft(draft)
+        #expect(draft.useDepictionRegion(rect(0.25, 0.25, 0.75, 0.75)))
+        #expect(draft.depictionPreviewState != .saved(relPath: savedRelPath))
+
+        let hexagon = ArtifactRegionDraft(
+            kind: .freeform,
+            points: [
+                CGPoint(x: 0.5, y: 0.1), CGPoint(x: 0.8, y: 0.3), CGPoint(x: 0.8, y: 0.7),
+                CGPoint(x: 0.5, y: 0.9), CGPoint(x: 0.2, y: 0.7), CGPoint(x: 0.2, y: 0.3),
+            ]
+        )
+        let (polygon, polygonStore) = try await editingSavedLikeness(region: regionJSON(hexagon))
+        #expect(polygon.depictionPreviewState == .saved(relPath: savedRelPath))
+        polygon.mutateEdit { session in
+            guard case .property(var values, let id, let ref) = session.kind else { return }
+            values.subjectID = claraID
+            session.kind = .property(values: values, persistedID: id, persistedRef: ref)
+        }
+        polygonStore.recordedCalls = []
+        await polygon.saveEdit()
+        let call = try #require(polygonStore.recordedCalls.first { $0.hasPrefix("updateObservation") })
+        #expect(call.contains(" valueDepictionID=dep-1"))
+        #expect(!call.contains(" depiction=1"))
+        _ = store
+    }
+
     private func caption(_ model: CitationComposerModel) -> String {
-        L10n.string(model.depictionCaption)
+        L10n.string(model.depictionCaptionState.text)
     }
 }

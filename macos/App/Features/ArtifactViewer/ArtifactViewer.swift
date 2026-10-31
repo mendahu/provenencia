@@ -1,12 +1,16 @@
 import SwiftUI
 
-/// Board Frames 1–2 page + zoom groups, plus optional Set page / region radios.
+/// Board Frames 1–2 page + zoom groups, plus Set page and the region radios.
 struct ArtifactViewerToolChrome: View {
     @Bindable var model: ArtifactViewerModel
 
     var locatorPage: Int?
-    var onSetPage: (() -> Void)?
-    var armedRegionTool: Binding<ArtifactRegionTool?>?
+    var onSetPage: () -> Void
+    /// False while a region is drawn: the Citation's page cannot move under it.
+    var isSetPageEnabled: Bool = true
+    /// The radios drawn, in order; the host narrows them (a depiction is a rectangle).
+    var regionTools: [ArtifactRegionTool]
+    @Binding var armedRegionTool: ArtifactRegionTool?
 
     @State private var pageFieldText = "1"
 
@@ -14,19 +18,17 @@ struct ArtifactViewerToolChrome: View {
         HStack(spacing: 12) {
             if model.supportsPages {
                 pageGroup
-                if onSetPage != nil {
-                    setPageButton
-                }
+                setPageButton
                 toolSep
             }
             if model.supportsSpatialZoom {
                 zoomGroup
             }
-            if model.locatorCapabilities.supportsRegionLocator, armedRegionTool != nil {
+            if model.locatorCapabilities.supportsRegionLocator {
                 if model.supportsPages || model.supportsSpatialZoom {
                     toolSep
                 }
-                regionTools
+                regionToolGroup
             }
         }
         .onAppear { syncPageField() }
@@ -76,47 +78,34 @@ struct ArtifactViewerToolChrome: View {
 
     private var setPageButton: some View {
         let isSet = locatorPage == model.page
-        return Button {
-            onSetPage?()
-        } label: {
-            Text(verbatim: isSet ? L10n.ArtifactViewer.pageSet(page: model.page) : L10n.string(L10n.ArtifactViewer.setPage))
-                .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
-                .foregroundStyle(isSet ? PVColor.accentSoftForeground : PVColor.textPrimary)
-                .padding(.horizontal, 8)
-                .frame(height: 24)
-                .background(
-                    RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                        .fill(isSet ? PVColor.accentSoft : PVColor.surfaceRaised)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                        .strokeBorder(isSet ? PVColor.accentLine : PVColor.borderDefault, lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
+        return PVChip(
+            text: isSet ? L10n.ArtifactViewer.pageSet(page: model.page) : L10n.string(L10n.ArtifactViewer.setPage),
+            isSelected: isSet,
+            tone: .accent,
+            size: .sm,
+            action: onSetPage
+        )
+        .disabled(!isSetPageEnabled)
         .accessibilityIdentifier("artifactViewer.setPage")
     }
 
-    @ViewBuilder
-    private var regionTools: some View {
-        if let armedRegionTool {
-            HStack(spacing: 2) {
-                ForEach(ArtifactRegionTool.allCases, id: \.self) { tool in
-                    regionRadio(tool, selection: armedRegionTool)
-                }
+    private var regionToolGroup: some View {
+        HStack(spacing: 2) {
+            ForEach(regionTools, id: \.self) { tool in
+                regionRadio(tool)
             }
         }
     }
 
-    private func regionRadio(_ tool: ArtifactRegionTool, selection: Binding<ArtifactRegionTool?>) -> some View {
-        let selected = selection.wrappedValue == tool
+    private func regionRadio(_ tool: ArtifactRegionTool) -> some View {
+        let selected = armedRegionTool == tool
         return PVIconButton(
             tool.symbol,
             label: label(for: tool),
             size: .sm,
             isSelected: selected
         ) {
-            selection.wrappedValue = selected ? nil : tool
+            armedRegionTool = selected ? nil : tool
         }
         .accessibilityIdentifier("artifactViewer.regionTool.\(tool.rawValue)")
     }
@@ -176,47 +165,20 @@ struct ArtifactViewerToolChrome: View {
     }
 }
 
-/// Self-contained Artifact document canvas (+ optional embedded tool strip).
-///
-/// Prefer composing ``ArtifactViewerToolChrome`` in a host strip (Citation Composer)
-/// and using `showsToolStrip: false` here.
+/// Self-contained Artifact document canvas. The page / zoom / region strip is
+/// ``ArtifactViewerToolChrome``, composed by the host.
 struct ArtifactViewer: View {
     @Bindable var model: ArtifactViewerModel
-    /// When true, paints page/zoom above the canvas (standalone hosts).
-    var showsToolStrip: Bool = true
     var locatorPage: Int?
-    var onSetPage: (() -> Void)?
-    var armedRegionTool: Binding<ArtifactRegionTool?>?
+    var armedRegionTool: ArtifactRegionTool?
     var committedRegion: ArtifactRegionDraft?
     var onCommitRegion: ((ArtifactRegionDraft) -> Void)?
     var onDisarmRegionTool: (() -> Void)?
     var freeformDeleteTooltip: String = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if showsToolStrip,
-               model.supportsPages || model.supportsSpatialZoom
-                || model.locatorCapabilities.supportsRegionLocator
-            {
-                ArtifactViewerToolChrome(
-                    model: model,
-                    locatorPage: locatorPage,
-                    onSetPage: onSetPage,
-                    armedRegionTool: armedRegionTool
-                )
-                    .frame(height: 44)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 16)
-                    .background(PVColor.surfaceCard)
-                    .overlay(alignment: .bottom) {
-                        Rectangle()
-                            .fill(PVColor.borderSubtle)
-                            .frame(height: 1)
-                    }
-            }
-            canvas
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
+        canvas
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     @ViewBuilder
@@ -313,7 +275,7 @@ struct ArtifactViewer: View {
 
     private var regionOverlayInput: ArtifactRegionOverlayInput {
         ArtifactRegionOverlayInput(
-            armedTool: armedRegionTool?.wrappedValue,
+            armedTool: armedRegionTool,
             committed: ArtifactRegionOverlayInput.committedOnCurrentPage(
                 committedRegion,
                 locatorPage: locatorPage,

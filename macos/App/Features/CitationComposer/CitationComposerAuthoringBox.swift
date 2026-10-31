@@ -843,7 +843,18 @@ struct CitationDepictionValueArea: View {
                 PVCallout(
                     tone: .warning,
                     message: L10n.string(L10n.CitationComposer.depictionNeedsPage)
-                )
+                ) {
+                    PVButton(
+                        L10n.CitationComposer.depictionSavePage(model.artifactViewer.page),
+                        variant: .secondary,
+                        size: .sm,
+                        loading: model.fields.isSaving
+                    ) {
+                        Task { await savePage() }
+                    }
+                    .disabled(!model.canSaveDepictionCitationPage)
+                    .accessibilityIdentifier("citationComposer.depiction.savePage")
+                }
             } else if draft.regionHidden {
                 PVCallout(
                     tone: .warning,
@@ -853,9 +864,10 @@ struct CitationDepictionValueArea: View {
             HStack(alignment: .top, spacing: PVSpacing.space5) {
                 preview
                 VStack(alignment: .leading, spacing: PVSpacing.space4) {
-                    Text(model.depictionCaption)
+                    let caption = model.depictionCaptionState
+                    Text(caption.text)
                         .font(PVFont.body(size: 12, italic: true))
-                        .foregroundStyle(PVColor.textMuted)
+                        .foregroundStyle(caption.isWarning ? PVColor.warningForeground : PVColor.textMuted)
                         .fixedSize(horizontal: false, vertical: true)
                     PVFlowLayout(spacing: PVSpacing.space4, lineSpacing: PVSpacing.space3) {
                         PVButton(
@@ -871,7 +883,7 @@ struct CitationDepictionValueArea: View {
                         .disabled(!model.canStartDepictionDrawing)
                         .focused(focus, equals: .value)
                         .accessibilityIdentifier("citationComposer.depiction.draw")
-                        PVButton(model.depictionWholeFileTitle, variant: .secondary, size: .sm) {
+                        PVButton(model.depictionWholeFileTitle, variant: .ghost, size: .sm) {
                             useRegion(.whole)
                         }
                         .disabled(!model.canStartDepictionDrawing)
@@ -879,7 +891,7 @@ struct CitationDepictionValueArea: View {
                         if let region = model.depictionCitationRegion {
                             PVButton(
                                 L10n.CitationComposer.depictionUseCitationRegion,
-                                variant: .secondary,
+                                variant: .ghost,
                                 size: .sm
                             ) {
                                 useRegion(region)
@@ -901,9 +913,9 @@ struct CitationDepictionValueArea: View {
     @ViewBuilder
     private var preview: some View {
         switch model.depictionPreviewState {
-        case .none, .failed:
+        case .none, .unavailable, .failed:
             PVThumbnail(PVThumbnail.Content(label: L10n.CitationComposer.depictionPreviewLabel), size: 96)
-        case .cutting:
+        case .waiting, .cutting:
             PVThumbnail(
                 PVThumbnail.Content(loading: true, label: L10n.CitationComposer.depictionPreviewLabel),
                 size: 96
@@ -925,14 +937,22 @@ struct CitationDepictionValueArea: View {
                 size: 96
             )
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(L10n.CitationComposer.depictionPreviewLabel))
+            .accessibilityLabel(Text(L10n.CitationComposer.depictionPreviewSavedLabel))
         }
     }
 
     /// Sets the region without drawing and announces the caption it produced.
     private func useRegion(_ region: ArtifactRegionDraft) {
         if model.useDepictionRegion(region) {
-            AccessibilityAnnouncement.post(L10n.string(model.depictionCaption))
+            AccessibilityAnnouncement.post(L10n.string(model.depictionCaptionState.text))
+            Task { await model.renderDepictionPreview() }
+        }
+    }
+
+    /// Saves the viewer's page to the Citation and announces the caption it produced.
+    private func savePage() async {
+        if await model.saveDepictionCitationPage() {
+            AccessibilityAnnouncement.post(L10n.string(model.depictionCaptionState.text))
         }
     }
 }

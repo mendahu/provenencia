@@ -12602,6 +12602,18 @@
         }
       }
     },
+    "artifactViewer.freeformCapReached": {
+      "comment": "VoiceOver announcement when a freehand region has its most points; argument is that number",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This freehand region holds its most points, %lld. Click the first point to close it."
+          }
+        }
+      }
+    },
     "artifactViewer.findToggle": {
       "comment": "Opens PDF Find on the citation composer tool strip; also the find field prompt",
       "extractionState": "manual",
@@ -14179,7 +14191,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Set this citation's page and save the citation to draw a region."
+            "value": "This citation has no page yet. Save the viewer's page to it to draw a region."
           }
         }
       }
@@ -14203,7 +14215,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This region no longer matches the citation's page. Draw it again."
+            "value": "This region no longer matches the citation's page. Draw it again or use a region button below."
           }
         }
       }
@@ -14227,7 +14239,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nothing drawn yet. Draw the region on the file"
+            "value": "Nothing drawn yet. Draw on the file, or use a region button below"
           }
         }
       }
@@ -14263,7 +14275,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Draw is unavailable until the citation has a page"
+            "value": "Draw and the region buttons wait until the citation has a page"
           }
         }
       }
@@ -14276,6 +14288,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Save waits for the region to be drawn again"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionCaptionCannotCut": {
+      "comment": "Caption beside the depiction preview when the viewer holds nothing the region can be cut from",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw is unavailable: the file is not showing in the viewer"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionPreviewSavedLabel": {
+      "comment": "VoiceOver label of the depiction preview when it shows the image already saved",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved image"
+          }
+        }
+      }
+    },
+    "citationComposer.depictionSavePage": {
+      "comment": "Button in the no-page warning that saves the viewer's page to the citation; argument is the viewer's page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save page %lld to this citation"
           }
         }
       }
