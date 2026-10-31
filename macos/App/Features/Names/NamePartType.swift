@@ -1,14 +1,22 @@
 import Foundation
 
+/// A localized format with one `%@` that wraps a decorated name word, and whether the word
+/// is emphasized where the title can draw it.
+struct NamePartDecoration {
+    let format: LocalizedStringResource
+    let emphasized: Bool
+}
+
 /// Product NameValue part-type registry. Keys match `namevalue.PartTypes()`.
 enum NamePartType: String, CaseIterable, Sendable {
-    case prefix
-    case given
-    case nick
+    case prefix = "prefix"
+    case given = "given"
+    case nick = "nick"
     case surnamePrefix = "surname_prefix"
-    case surname
-    case suffix
-    case undetermined
+    case surname = "surname"
+    case formerSurname = "former_surname"
+    case suffix = "suffix"
+    case undetermined = "undetermined"
 
     var label: LocalizedStringResource {
         switch self {
@@ -17,8 +25,19 @@ enum NamePartType: String, CaseIterable, Sendable {
         case .nick: L10n.NameValue.partTypeNick
         case .surnamePrefix: L10n.NameValue.partTypeSurnamePrefix
         case .surname: L10n.NameValue.partTypeSurname
+        case .formerSurname: L10n.NameValue.partTypeFormerSurname
         case .suffix: L10n.NameValue.partTypeSuffix
         case .undetermined: L10n.NameValue.partTypeUndetermined
+        }
+    }
+
+    /// How a displayed name decorates a word of this type; nil shows it as typed.
+    /// Display only: Go's `nameformats.Format` sort key never decorates.
+    var decoration: NamePartDecoration? {
+        switch self {
+        case .nick: NamePartDecoration(format: L10n.NameValue.displayNick, emphasized: false)
+        case .formerSurname: NamePartDecoration(format: L10n.NameValue.displayFormerSurname, emphasized: true)
+        case .prefix, .given, .surnamePrefix, .surname, .suffix, .undetermined: nil
         }
     }
 

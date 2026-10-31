@@ -2825,6 +2825,21 @@ enum L10n {
             defaultValue: "Surname",
             comment: "NameValue part type: surname"
         )
+        static let partTypeFormerSurname = LocalizedStringResource(
+            "nameValue.part.type.former_surname",
+            defaultValue: "Former surname",
+            comment: "NameValue part type: former_surname"
+        )
+        static let displayNick = LocalizedStringResource(
+            "nameValue.display.nick",
+            defaultValue: "“%@”",
+            comment: "A nickname inside a displayed name; the argument is the nickname. Keep exactly one %@"
+        )
+        static let displayFormerSurname = LocalizedStringResource(
+            "nameValue.display.former_surname",
+            defaultValue: "(%@)",
+            comment: "A former surname inside a displayed name; the argument is the surname. Keep exactly one %@"
+        )
         static let partTypeSuffix = LocalizedStringResource(
             "nameValue.part.type.suffix",
             defaultValue: "Suffix",

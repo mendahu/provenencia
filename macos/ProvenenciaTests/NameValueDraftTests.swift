@@ -98,6 +98,20 @@ struct NameValueDraftTests {
         #expect(!NamePartType.isAllowed("maiden"))
     }
 
+    @Test func formerSurnameIsAllowed() {
+        #expect(NamePartType.isAllowed("former_surname"))
+        let values = NamePartType.selectOptions.map(\.value)
+        #expect(values.firstIndex(of: "former_surname") == values.firstIndex(of: "surname").map { $0 + 1 })
+    }
+
+    @Test func decorations() {
+        #expect(NamePartType.formerSurname.decoration?.emphasized == true)
+        #expect(NamePartType.nick.decoration?.emphasized == false)
+        #expect(NamePartType.given.decoration == nil)
+        let nick = NamePartType.nick.decoration!
+        #expect(String(StyledFormat.attributed(nick.format, [.init(text: "Jake")]).characters) == "“Jake”")
+    }
+
     @Test func storedAsMatchesBoard() {
         var draft = NameValueDraft.empty()
         #expect(draft.storedFormLine == "—")

@@ -13226,6 +13226,42 @@
         }
       }
     },
+    "nameValue.part.type.former_surname": {
+      "comment": "NameValue part type: former_surname",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Former surname"
+          }
+        }
+      }
+    },
+    "nameValue.display.nick": {
+      "comment": "A nickname inside a displayed name; the argument is the nickname. Keep exactly one %@",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”"
+          }
+        }
+      }
+    },
+    "nameValue.display.former_surname": {
+      "comment": "A former surname inside a displayed name; the argument is the surname. Keep exactly one %@",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(%@)"
+          }
+        }
+      }
+    },
     "nameValue.part.type.suffix": {
       "comment": "NameValue part type: suffix",
       "extractionState": "manual",
