@@ -23,6 +23,10 @@ func CreateCitationWithObservations(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	graphID, err := parseID(req.GetGraphId())
+	if err != nil {
+		return nil, err
+	}
 	inputs, err := observationDraftsToInputs(req.GetObservations())
 	if err != nil {
 		return nil, err
@@ -38,6 +42,7 @@ func CreateCitationWithObservations(in []byte) ([]byte, error) {
 			func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 				return citations.CreateWithObservations(tx, userID, citations.CreateInput{
 					ArtifactID:             artifactID,
+					GraphID:                graphID,
 					LocatorJSON:            req.GetLocatorJson(),
 					Transcription:          req.GetTranscription(),
 					Label:                  req.GetLabel(),

@@ -132,9 +132,11 @@ func TestConclusionHandleSets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 	if _, _, err := writes.Run(c, writes.Op{Action: "create_citation_with_observations", UserID: userID},
 		func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				GraphID:    graph,
 				ArtifactID: art.ID, LocatorJSON: evidenceLocator,
 			}, []observations.Input{
 				{SubjectID: ada.ID, PropertyID: nameProp.ID, Name: &namevalue.Value{Form: "Ada"}},

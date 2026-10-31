@@ -46,6 +46,7 @@ func TestObservations(t *testing.T) {
 	type seed struct {
 		source      sources.Source
 		artifact    artifacts.Artifact
+		graph       []byte
 		person      subjects.Subject
 		place       subjects.Subject
 		event       subjects.Subject
@@ -142,7 +143,7 @@ func TestObservations(t *testing.T) {
 			t.Fatal(err)
 		}
 		return c, seed{
-			source: src, artifact: art, person: person, place: place, event: event,
+			source: src, artifact: art, graph: graph, person: person, place: place, event: event,
 			toponymProp: toponymProp, sexProp: sexProp, nameProp: nameProp, dateProp: dateProp, likeness: likeness,
 			femaleTerm: femaleTerm, maleTerm: maleTerm,
 		}
@@ -151,6 +152,7 @@ func TestObservations(t *testing.T) {
 		t.Helper()
 		res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				GraphID:    s.graph,
 				ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 			}, obs)
 		})
@@ -337,6 +339,7 @@ func TestObservations(t *testing.T) {
 				c, s := mustSeed(t)
 				_, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+						GraphID:    s.graph,
 						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 					}, []observations.Input{{
 						SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
@@ -348,6 +351,7 @@ func TestObservations(t *testing.T) {
 				}
 				_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+						GraphID:    s.graph,
 						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 					}, []observations.Input{{
 						SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
@@ -366,6 +370,7 @@ func TestObservations(t *testing.T) {
 				year := 1842
 				res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+						GraphID:    s.graph,
 						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 					}, []observations.Input{{
 						SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
@@ -400,6 +405,7 @@ func TestObservations(t *testing.T) {
 				year := 1842
 				res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+						GraphID:    s.graph,
 						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 					}, []observations.Input{{
 						SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
@@ -430,6 +436,7 @@ func TestObservations(t *testing.T) {
 				c, s := mustSeed(t)
 				res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+						GraphID:    s.graph,
 						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 					}, []observations.Input{{
 						SubjectID: s.person.ID, PropertyID: s.nameProp.ID,
@@ -460,6 +467,7 @@ func TestObservations(t *testing.T) {
 				c, s := mustSeed(t)
 				res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+						GraphID:    s.graph,
 						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 					}, []observations.Input{{
 						SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
@@ -500,6 +508,7 @@ func TestObservations(t *testing.T) {
 				c, s := mustSeed(t)
 				res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+						GraphID:    s.graph,
 						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 						Notes: []string{"keep me"},
 					}, []observations.Input{{
@@ -536,6 +545,7 @@ func TestObservations(t *testing.T) {
 				year := 1844
 				res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+						GraphID:    s.graph,
 						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 					}, []observations.Input{
 						{
@@ -589,7 +599,7 @@ func TestObservations(t *testing.T) {
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				year := 1844
-				res, _, err := observationstest.SaveCitation(c, userID, s.artifact, observations.Input{
+				res, _, err := observationstest.SaveCitation(c, userID, s.graph, s.artifact, observations.Input{
 					SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
 					Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
 				})
@@ -625,6 +635,7 @@ func TestObservations(t *testing.T) {
 				c, s := mustSeed(t)
 				res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+						GraphID:    s.graph,
 						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 					}, []observations.Input{{
 						SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
@@ -744,6 +755,7 @@ func TestObservations(t *testing.T) {
 				}
 				ordinary, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+						GraphID:    s.graph,
 						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 					}, []observations.Input{{
 						SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
@@ -768,7 +780,7 @@ func TestObservations(t *testing.T) {
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				art := observationstest.FileArtifact(t, c, userID, s.source.ID)
-				res, changes, err := observationstest.SaveCitation(c, userID, art, observations.Input{
+				res, changes, err := observationstest.SaveCitation(c, userID, s.graph, art, observations.Input{
 					SubjectID: s.person.ID, PropertyID: s.likeness.ID,
 					Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 300, 200, 128)},
 				})
@@ -858,7 +870,7 @@ func TestObservations(t *testing.T) {
 					t.Run(bad.name, func(t *testing.T) {
 						c, s := mustSeed(t)
 						art := observationstest.FileArtifact(t, c, userID, s.source.ID)
-						res, _, err := observationstest.SaveCitation(c, userID, art, observations.Input{
+						res, _, err := observationstest.SaveCitation(c, userID, s.graph, art, observations.Input{
 							SubjectID: s.person.ID, PropertyID: s.likeness.ID,
 							Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 300, 200, 128)},
 						})
@@ -962,10 +974,10 @@ func TestObservations(t *testing.T) {
 						var err error
 						if tt.unstaged {
 							_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-								return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: tt.art.ID, LocatorJSON: observationstest.LikenessLocator}, tt.inputs)
+								return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: s.graph, ArtifactID: tt.art.ID, LocatorJSON: observationstest.LikenessLocator}, tt.inputs)
 							})
 						} else {
-							_, _, err = observationstest.SaveCitation(c, userID, tt.art, tt.inputs...)
+							_, _, err = observationstest.SaveCitation(c, userID, s.graph, tt.art, tt.inputs...)
 						}
 						if !errors.Is(err, tt.want) {
 							t.Fatalf("got %v want %v", err, tt.want)
@@ -988,7 +1000,7 @@ func TestObservations(t *testing.T) {
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				art := observationstest.FileArtifact(t, c, userID, s.source.ID)
-				res, _, err := observationstest.SaveCitation(c, userID, art, observations.Input{
+				res, _, err := observationstest.SaveCitation(c, userID, s.graph, art, observations.Input{
 					SubjectID: s.person.ID, PropertyID: s.likeness.ID,
 					Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 300, 200, 128)},
 				})
@@ -1084,7 +1096,7 @@ func TestObservations(t *testing.T) {
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				art := observationstest.FileArtifact(t, c, userID, s.source.ID)
-				res, _, err := observationstest.SaveCitation(c, userID, art, observations.Input{
+				res, _, err := observationstest.SaveCitation(c, userID, s.graph, art, observations.Input{
 					SubjectID: s.person.ID, PropertyID: s.nameProp.ID, Name: &namevalue.Value{Form: "Ada"},
 				})
 				if err != nil {
@@ -1137,7 +1149,7 @@ func TestObservations(t *testing.T) {
 				c, s := mustSeed(t)
 				art := observationstest.FileArtifact(t, c, userID, s.source.ID)
 				objectsBefore := objectCount(t, c)
-				res, _, err := observationstest.SaveCitation(c, userID, art, observations.Input{
+				res, _, err := observationstest.SaveCitation(c, userID, s.graph, art, observations.Input{
 					SubjectID: s.person.ID, PropertyID: s.likeness.ID,
 					Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 300, 200, 128)},
 				})
@@ -1165,7 +1177,7 @@ func TestObservations(t *testing.T) {
 
 				// Two likenesses whose crops re-encode to the same PNG share one File.
 				same := observationstest.Crop(t, 300, 200, 90)
-				res, _, err = observationstest.SaveCitation(c, userID, art,
+				res, _, err = observationstest.SaveCitation(c, userID, s.graph, art,
 					observations.Input{SubjectID: s.person.ID, PropertyID: s.likeness.ID, Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: same}},
 					observations.Input{SubjectID: s.person.ID, PropertyID: s.likeness.ID, Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: same}},
 				)
@@ -1195,7 +1207,7 @@ func TestObservations(t *testing.T) {
 				c, s := mustSeed(t)
 				art := observationstest.FileArtifact(t, c, userID, s.source.ID)
 				objectsBefore := objectCount(t, c)
-				res, _, err := observationstest.SaveCitation(c, userID, art, observations.Input{
+				res, _, err := observationstest.SaveCitation(c, userID, s.graph, art, observations.Input{
 					SubjectID: s.person.ID, PropertyID: s.likeness.ID,
 					Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 300, 200, 128)},
 				})
@@ -1396,9 +1408,9 @@ func TestObservationsStayInOneGraph(t *testing.T) {
 		return observations.Input{SubjectID: s.ID, PropertyID: p.ID, ValueSubjectID: v.ID}
 	}
 
-	save := func(art artifacts.Artifact, edge bool, in observations.Input) (citations.CreateResult, error) {
+	save := func(graph []byte, art artifacts.Artifact, edge bool, in observations.Input) (citations.CreateResult, error) {
 		res, _, err := writes.Run(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.InsertWithObservationsTx(tx.Tx, citations.CreateInput{ArtifactID: art.ID, LocatorJSON: validLocator}, []observations.Input{in}, observations.InsertOptions{AllowEdgeRows: edge})
+			return citations.InsertWithObservationsTx(tx.Tx, citations.CreateInput{GraphID: graph, ArtifactID: art.ID, LocatorJSON: validLocator}, []observations.Input{in}, observations.InsertOptions{AllowEdgeRows: edge})
 		})
 		return res, err
 	}
@@ -1411,25 +1423,26 @@ func TestObservationsStayInOneGraph(t *testing.T) {
 
 	tests := []struct {
 		name  string
+		graph []byte
 		art   artifacts.Artifact
 		edge  bool
 		in    observations.Input
 		other bool
 	}{
-		{"AC-1.1 subject and artifact in one graph", p1, false, nameOn(ann, "Ann"), false},
-		{"AC-1.2 subject in the other graph", p1, false, nameOn(ben, "Ben"), true},
-		{"AC-1.3 artifact linked to the other graph", p2, false, nameOn(ann, "Ann"), true},
-		{"AC-1.4 subject of another source", p1, false, nameOn(cal, "Cal"), true},
-		{"AC-1.5 edge value in the other graph", p1, true, valueOn(part, personProp, ben), true},
-		{"AC-1.6 edge value in the same graph", p1, true, valueOn(part, personProp, ann), false},
-		{"AC-1.7 mentions a reification of another source", p1, false, valueOn(rec, mentionsProp, cert), false},
-		{"AC-1.8 mentions a non-reification of another source", p1, false, valueOn(rec, mentionsProp, cal), true},
-		{"AC-1.11 edge row is never exempt", p1, true, valueOn(part, personProp, otherSrc), true},
+		{"AC-1.1 subject and Citation in one graph", def.ID, p1, false, nameOn(ann, "Ann"), false},
+		{"AC-1.2 subject in the other graph", def.ID, p1, false, nameOn(ben, "Ben"), true},
+		{"AC-1.3 Citation in the other graph", jones.ID, p2, false, nameOn(ann, "Ann"), true},
+		{"AC-1.4 subject of another source", def.ID, p1, false, nameOn(cal, "Cal"), true},
+		{"AC-1.5 edge value in the other graph", def.ID, p1, true, valueOn(part, personProp, ben), true},
+		{"AC-1.6 edge value in the same graph", def.ID, p1, true, valueOn(part, personProp, ann), false},
+		{"AC-1.7 mentions a reification of another source", def.ID, p1, false, valueOn(rec, mentionsProp, cert), false},
+		{"AC-1.8 mentions a non-reification of another source", def.ID, p1, false, valueOn(rec, mentionsProp, cal), true},
+		{"AC-1.11 edge row is never exempt", def.ID, p1, true, valueOn(part, personProp, otherSrc), true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			before := counts()
-			_, err := save(tt.art, tt.edge, tt.in)
+			_, err := save(tt.graph, tt.art, tt.edge, tt.in)
 			if tt.other {
 				if !errors.Is(err, observations.ErrOtherGraph) {
 					t.Fatalf("got %v want ErrOtherGraph", err)
@@ -1446,7 +1459,7 @@ func TestObservationsStayInOneGraph(t *testing.T) {
 	}
 
 	t.Run("AC-1.9 and AC-1.10 update keeps the graph", func(t *testing.T) {
-		res, err := save(p1, false, nameOn(ann, "Ann Two"))
+		res, err := save(def.ID, p1, false, nameOn(ann, "Ann Two"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1465,6 +1478,22 @@ func TestObservationsStayInOneGraph(t *testing.T) {
 		in.ID = obs.ID
 		if _, err := observationstest.UpdateObservation(c, userID, in); err != nil {
 			t.Fatal(err)
+		}
+	})
+
+	t.Run("update refuses a Subject outside the Citation's graph", func(t *testing.T) {
+		res, err := save(jones.ID, p2, false, nameOn(ben, "Ben Two"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		obs := res.Observations[0]
+		in := nameOn(ann, "Ann")
+		in.ID = obs.ID
+		if _, err := observationstest.UpdateObservation(c, userID, in); !errors.Is(err, observations.ErrOtherGraph) {
+			t.Fatalf("got %v want ErrOtherGraph", err)
+		}
+		if rowCount(t, c, `SELECT COUNT(*) FROM observations WHERE id = ? AND subject_id = ?`, obs.ID, ben.ID) != 1 {
+			t.Fatal("stored row changed")
 		}
 	})
 }

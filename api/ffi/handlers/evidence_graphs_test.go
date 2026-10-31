@@ -26,7 +26,7 @@ func newGraphFixture(t *testing.T) graphFixture {
 	f.page2 = f.createArtifact(t, sourceID, "Page 2", nil)
 	var cit engine.CreateCitationWithObservationsResponse
 	mustRPC(t, CreateCitationWithObservations, &engine.CreateCitationWithObservationsRequest{
-		ProjectDir: dir, UserId: userID, ArtifactId: page1, LocatorJson: validLocatorJSON,
+		ProjectDir: dir, UserId: userID, ArtifactId: page1, GraphId: graphLinking(t, dir, page1), LocatorJson: validLocatorJSON,
 		Observations: []*engine.ObservationDraft{{SubjectId: subjectID, PropertyId: toponymID, ValueText: "Boston"}},
 	}, &cit)
 	f.citationID = cit.GetCitation().GetId()
@@ -256,11 +256,11 @@ func TestGetEvidenceGraphUnlinkImpact(t *testing.T) {
 	f := newGraphFixture(t)
 	// page1 has a Citation with an Observation in Default (artifact_in_use).
 	// solo's only Artifact is lone (last_artifact). needy has a Citation with no
-	// Observation and only the Default graph (citations_need_graph).
+	// Observation, made in Default (artifact_in_use).
 	needy := f.createArtifact(t, f.sourceID, "Needy", &engine.GraphLinks{GraphIds: []string{f.defaultGraphID}})
 	var needyCit engine.CreateCitationWithObservationsResponse
 	mustRPC(t, CreateCitationWithObservations, &engine.CreateCitationWithObservationsRequest{
-		ProjectDir: f.dir, UserId: f.userID, ArtifactId: needy, LocatorJson: validLocatorJSON,
+		ProjectDir: f.dir, UserId: f.userID, ArtifactId: needy, GraphId: graphLinking(t, f.dir, needy), LocatorJson: validLocatorJSON,
 	}, &needyCit)
 	lone := f.createArtifact(t, f.sourceID, "Lone", &engine.GraphLinks{GraphIds: []string{f.defaultGraphID}})
 	solo := f.createGraph(t, "Solo", lone).GetGraph().GetId()
@@ -296,10 +296,10 @@ func TestGetEvidenceGraphUnlinkImpact(t *testing.T) {
 		t.Fatalf("last artifact %+v", last)
 	}
 	ng := need.GetCitations()
-	if need.GetGraphId() != f.defaultGraphID || need.GetArtifactId() != needy || need.GetReasonCode() != "evidencegraphs.citations_need_graph" ||
-		ng.GetVia() != "evidencegraphs.citations_need_graph" || ng.GetKind() != "citation" || ng.GetTotal() != 1 ||
+	if need.GetGraphId() != f.defaultGraphID || need.GetArtifactId() != needy || need.GetReasonCode() != "evidencegraphs.artifact_in_use" ||
+		ng.GetVia() != evidencegraphs.UnlinkVia || ng.GetKind() != "citation" || ng.GetTotal() != 1 ||
 		len(ng.GetListed()) != 1 || ng.GetListed()[0].GetId() != needyCit.GetCitation().GetId() {
-		t.Fatalf("citations need graph %+v", need)
+		t.Fatalf("empty Citation in use %+v", need)
 	}
 
 	t.Run("bad proto", func(t *testing.T) {

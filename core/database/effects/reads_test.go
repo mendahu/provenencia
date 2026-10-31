@@ -11,8 +11,7 @@ import (
 func TestReadsDeclare(t *testing.T) {
 	want := map[Read][]string{
 		ReadCitations: {
-			"citations", "date_values", "depiction_values", "evidence_graph_artifacts",
-			"name_values", "observations",
+			"citations", "date_values", "depiction_values", "name_values", "observations",
 		},
 		ReadEvidenceGraphProgress: {
 			"identity_claims", "observations", "subjects",

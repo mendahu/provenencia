@@ -187,6 +187,7 @@ func (s scopeSeed) bumpsA(t *testing.T, act func()) {
 func (s scopeSeed) citation(t *testing.T, in citations.CreateInput, obs ...observations.Input) citations.CreateResult {
 	t.Helper()
 	in.ArtifactID = s.artifact.ID
+	in.GraphID = evidencegraphstest.SoleGraph(t, s.c, s.artifact.SourceID).ID
 	in.LocatorJSON = scopeLocator
 	res, err := writes.Call(s.c, writes.Op{Action: "create_citation_with_observations", UserID: scopeUserID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 		return citations.CreateWithObservations(tx, scopeUserID, in, obs)

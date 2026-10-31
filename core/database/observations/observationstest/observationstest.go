@@ -77,7 +77,7 @@ func FileArtifact(t testing.TB, c *database.Catalog, userID, sourceID []byte) ar
 
 // SaveCitation stages every depiction, then files the Citation and its
 // Observations in one write, discarding any stage left over afterwards.
-func SaveCitation(c *database.Catalog, userID []byte, art artifacts.Artifact, inputs ...observations.Input) (citations.CreateResult, []rowchange.Change, error) {
+func SaveCitation(c *database.Catalog, userID, graphID []byte, art artifacts.Artifact, inputs ...observations.Input) (citations.CreateResult, []rowchange.Change, error) {
 	discard, err := ingest.StageDepictions(c, inputs)
 	if err != nil {
 		return citations.CreateResult{}, nil, err
@@ -85,7 +85,7 @@ func SaveCitation(c *database.Catalog, userID []byte, art artifacts.Artifact, in
 	defer discard()
 	var changes []rowchange.Change
 	res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		r, ch, err := citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: art.ID, LocatorJSON: LikenessLocator}, inputs)
+		r, ch, err := citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: art.ID, GraphID: graphID, LocatorJSON: LikenessLocator}, inputs)
 		changes = ch
 		return r, ch, err
 	})
@@ -135,7 +135,15 @@ func saveDepiction(t testing.TB, c *database.Catalog, userID, sourceID, subjectI
 		t.Fatal(err)
 	}
 	art := FileArtifact(t, c, userID, sourceID)
-	res, _, err := SaveCitation(c, userID, art, observations.Input{
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var graphID []byte
+	if err := db.QueryRow(`SELECT graph_id FROM subjects WHERE id = ?`, subjectID).Scan(&graphID); err != nil {
+		t.Fatal(err)
+	}
+	res, _, err := SaveCitation(c, userID, graphID, art, observations.Input{
 		SubjectID: subjectID, PropertyID: prop.ID, Polarity: polarity,
 		Depiction: &observations.DepictionInput{RegionJSON: LikenessRegion, ImagePath: Crop(t, 40, 30, shade)},
 	})

@@ -355,6 +355,7 @@ func insertObservationOn(t *testing.T, c *database.Catalog, userID, propertyID [
 	place := subjectstest.OfType(t, c, userID, graph, placeType.ID, "Leeds")
 	res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			GraphID:    graph,
 			ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "Leeds",
 		}, []observations.Input{{
 			SubjectID: place.ID, PropertyID: propertyID, ValueText: "Leeds", HasText: true,

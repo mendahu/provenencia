@@ -2004,6 +2004,7 @@ message CreateCitationWithObservationsRequest {
   string transcription_note = 8;
   repeated string citation_notes = 9;
   repeated ObservationDraft observations = 10;
+  string graph_id = 11;
 }
 
 message CreateCitationWithObservationsResponse {

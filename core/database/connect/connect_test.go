@@ -336,8 +336,10 @@ func TestCreateCitedBridge(t *testing.T) {
 
 	t.Run("attach existing citation", func(t *testing.T) {
 		s := mustSeed(t)
+		graph := evidencegraphstest.SoleGraph(t, s.c, s.source.ID).ID
 		cited, err := writes.Call(s.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				GraphID:     graph,
 				ArtifactID:  s.artifact.ID,
 				LocatorJSON: validLocator,
 			}, nil)
@@ -370,8 +372,10 @@ func TestCreateCitedBridge(t *testing.T) {
 
 	t.Run("attach with citation fields invalid", func(t *testing.T) {
 		s := mustSeed(t)
+		graph := evidencegraphstest.SoleGraph(t, s.c, s.source.ID).ID
 		cited, err := writes.Call(s.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				GraphID:     graph,
 				ArtifactID:  s.artifact.ID,
 				LocatorJSON: validLocator,
 			}, nil)
@@ -451,6 +455,17 @@ func TestCreateCitedBridge(t *testing.T) {
 		if !bytes.Equal(res.Subject.GraphID, g.jones.ID) || !bytes.Equal(res.Subject.SourceID, g.source.ID) {
 			t.Fatalf("bridge graph %x source %x", res.Subject.GraphID, res.Subject.SourceID)
 		}
+		if !bytes.Equal(res.Citation.GraphID, g.jones.ID) {
+			t.Fatalf("new Citation graph %x, want the endpoints' graph %x", res.Citation.GraphID, g.jones.ID)
+		}
+		db, err := g.c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		var stored []byte
+		if err := db.QueryRow(`SELECT graph_id FROM citations WHERE id = ?`, res.Citation.ID).Scan(&stored); err != nil || !bytes.Equal(stored, g.jones.ID) {
+			t.Fatalf("stored Citation graph %x, err %v", stored, err)
+		}
 	})
 
 	t.Run("endpoints in two graphs refused", func(t *testing.T) {
@@ -469,11 +484,11 @@ func TestCreateCitedBridge(t *testing.T) {
 		}
 	})
 
-	t.Run("attached citation on an unlinked artifact refused", func(t *testing.T) {
+	t.Run("attached citation in another graph refused", func(t *testing.T) {
 		g := mustTwoGraphs(t)
 		cited, err := writes.Call(g.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-				ArtifactID: g.p2.ID, LocatorJSON: validLocator,
+				GraphID: g.jones.ID, ArtifactID: g.p2.ID, LocatorJSON: validLocator,
 			}, nil)
 		})
 		if err != nil {

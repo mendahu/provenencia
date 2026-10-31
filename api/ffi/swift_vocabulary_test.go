@@ -448,8 +448,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		},
 		{
 			name: "evidence graph unlink reasons", path: swiftVocabulary, enum: "EvidenceGraphUnlinkReason", re: wireCase,
-			want: sorted(apperr.CodeEvidenceGraphsArtifactInUse, apperr.CodeEvidenceGraphsLastArtifact,
-				apperr.CodeEvidenceGraphsCitationsNeedGraph),
+			want: sorted(apperr.CodeEvidenceGraphsArtifactInUse, apperr.CodeEvidenceGraphsLastArtifact),
 		},
 		{
 			name: "promote row targets", path: swiftVocabulary, enum: "PromoteTargetCode", re: wireCase,

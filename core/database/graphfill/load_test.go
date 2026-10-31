@@ -247,7 +247,7 @@ func newTwoGraphs(t *testing.T) twoGraphs {
 		t.Fatal(err)
 	}
 	if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: page2.ID, LocatorJSON: pageLocator},
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: f.jones.ID, ArtifactID: page2.ID, LocatorJSON: pageLocator},
 			[]observations.Input{{SubjectID: f.bea.ID, PropertyID: toponym.ID, ValueText: "Bea", HasText: true}})
 	}); err != nil {
 		t.Fatal(err)

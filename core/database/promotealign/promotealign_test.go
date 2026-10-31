@@ -125,6 +125,7 @@ func (f *fixture) cite(art artifacts.Artifact, s subjects.Subject, in ...observa
 	}
 	_, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			GraphID:    s.GraphID,
 			ArtifactID: art.ID, LocatorJSON: locator,
 		}, in)
 	})

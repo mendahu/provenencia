@@ -16163,6 +16163,7 @@ type CreateCitationWithObservationsRequest struct {
 	TranscriptionNote      string                 `protobuf:"bytes,8,opt,name=transcription_note,json=transcriptionNote,proto3" json:"transcription_note,omitempty"`
 	CitationNotes          []string               `protobuf:"bytes,9,rep,name=citation_notes,json=citationNotes,proto3" json:"citation_notes,omitempty"`
 	Observations           []*ObservationDraft    `protobuf:"bytes,10,rep,name=observations,proto3" json:"observations,omitempty"`
+	GraphId                string                 `protobuf:"bytes,11,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"`
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -16265,6 +16266,13 @@ func (x *CreateCitationWithObservationsRequest) GetObservations() []*Observation
 		return x.Observations
 	}
 	return nil
+}
+
+func (x *CreateCitationWithObservationsRequest) GetGraphId() string {
+	if x != nil {
+		return x.GraphId
+	}
+	return ""
 }
 
 type CreateCitationWithObservationsResponse struct {
@@ -19766,7 +19774,7 @@ const file_engine_proto_rawDesc = "" +
 	"\rvalue_term_id\x18\v \x01(\tR\vvalueTermId\x12\x14\n" +
 	"\x05notes\x18\f \x03(\tR\x05notes\x12H\n" +
 	"\tdepiction\x18\r \x01(\v2*.provenencia.engine.v1.DepictionValueInputR\tdepictionB\x10\n" +
-	"\x0e_value_integer\"\xbd\x03\n" +
+	"\x0e_value_integer\"\xd8\x03\n" +
 	"%CreateCitationWithObservationsRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
@@ -19780,7 +19788,8 @@ const file_engine_proto_rawDesc = "" +
 	"\x12transcription_note\x18\b \x01(\tR\x11transcriptionNote\x12%\n" +
 	"\x0ecitation_notes\x18\t \x03(\tR\rcitationNotes\x12K\n" +
 	"\fobservations\x18\n" +
-	" \x03(\v2'.provenencia.engine.v1.ObservationDraftR\fobservations\"\xec\x01\n" +
+	" \x03(\v2'.provenencia.engine.v1.ObservationDraftR\fobservations\x12\x19\n" +
+	"\bgraph_id\x18\v \x01(\tR\agraphId\"\xec\x01\n" +
 	"&CreateCitationWithObservationsResponse\x12;\n" +
 	"\bcitation\x18\x01 \x01(\v2\x1f.provenencia.engine.v1.CitationR\bcitation\x12F\n" +
 	"\fobservations\x18\x02 \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\x12=\n" +

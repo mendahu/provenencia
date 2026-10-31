@@ -67,15 +67,6 @@ func projectKind(tx *sql.Tx, kind catalogmodel.Kind, row probeRow) (string, work
 	}
 }
 
-// sqlFirstArtifactGraph is the first graph, by name, an Artifact is linked to.
-// The order is the graph list's (evidencegraphs.sqlListOrder): name without
-// case, then ref, then id.
-const sqlFirstArtifactGraph = `SELECT ega.graph_id FROM evidence_graph_artifacts ega
-	JOIN evidence_graphs g ON g.id = ega.graph_id
-	WHERE ega.artifact_id = ?
-	ORDER BY g.name COLLATE NOCASE, g.ref, g.id
-	LIMIT 1`
-
 func projectObservation(tx *sql.Tx, id []byte, ref string) (string, workspacelocation.Location, error) {
 	var (
 		propLabel, value, subLabel, srcTitle, srcID, citID, subID, graphID string
@@ -165,15 +156,15 @@ func projectSubject(tx *sql.Tx, id []byte, ref string) (string, workspacelocatio
 }
 
 func projectCitation(tx *sql.Tx, id []byte, ref string) (string, workspacelocation.Location, error) {
-	var srcID, artID []byte
+	var srcID, artID, graphID []byte
 	var srcTitle, transcription sql.NullString
 	err := tx.QueryRow(`
-		SELECT a.source_id, c.artifact_id, src.title, c.transcription
+		SELECT a.source_id, c.artifact_id, c.graph_id, src.title, c.transcription
 		FROM citations c
 		JOIN artifacts a ON a.id = c.artifact_id
 		JOIN sources src ON src.id = a.source_id
 		WHERE c.id = ?`, id,
-	).Scan(&srcID, &artID, &srcTitle, &transcription)
+	).Scan(&srcID, &artID, &graphID, &srcTitle, &transcription)
 	if err == sql.ErrNoRows {
 		return "", workspacelocation.Location{Section: workspacelocation.Sources, SourceSurface: workspacelocation.SurfaceCitationComposer, CitationID: database.UUIDString(id), Ref: ref, Title: ref}, nil
 	}
@@ -181,26 +172,18 @@ func projectCitation(tx *sql.Tx, id []byte, ref string) (string, workspacelocati
 		return "", workspacelocation.Location{}, err
 	}
 	locRef, locTitle := ref, ref
-	var subID, graphID []byte
+	var subID []byte
 	var subLabel, subRef sql.NullString
 	obsErr := tx.QueryRow(`
-		SELECT o.subject_id, sub.label, sub.ref, sub.graph_id
+		SELECT o.subject_id, sub.label, sub.ref
 		FROM observations o
 		JOIN subjects sub ON sub.id = o.subject_id
 		WHERE o.citation_id = ?
 		ORDER BY o.ref COLLATE NOCASE
 		LIMIT 1`, id,
-	).Scan(&subID, &subLabel, &subRef, &graphID)
+	).Scan(&subID, &subLabel, &subRef)
 	if obsErr != nil && obsErr != sql.ErrNoRows {
 		return "", workspacelocation.Location{}, obsErr
-	}
-	if obsErr == sql.ErrNoRows {
-		// No Observation: the first graph the Artifact is linked to, so the
-		// link still opens the composer.
-		err := tx.QueryRow(sqlFirstArtifactGraph, artID).Scan(&graphID)
-		if err != nil && err != sql.ErrNoRows {
-			return "", workspacelocation.Location{}, err
-		}
 	}
 	if subRef.Valid {
 		locRef, locTitle = subRef.String, titleOrRef(subLabel.String, subRef.String)

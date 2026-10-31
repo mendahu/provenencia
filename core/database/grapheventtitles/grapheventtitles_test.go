@@ -84,7 +84,7 @@ func (f *fixture) subject(kind, label string, in ...observations.Input) subjects
 			in[i].SubjectID = s.ID
 		}
 		_, err = writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: f.art.ID, LocatorJSON: locator}, in)
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: s.GraphID, ArtifactID: f.art.ID, LocatorJSON: locator}, in)
 		})
 		must(f.t, err)
 	}

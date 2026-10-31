@@ -167,8 +167,9 @@ func (f *fixture) cite(in ...observations.Input) []observations.Observation {
 		must(f.t, err)
 		art = f.arts[string(s.SourceID)]
 	}
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
 	res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator}, in)
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: graph, ArtifactID: art.ID, LocatorJSON: locator}, in)
 	})
 	must(f.t, err)
 	return res.Observations
@@ -661,7 +662,8 @@ func (f *fixture) likenessIn(s subjects.Subject, shade uint8) observations.Input
 // likeness save path.
 func (f *fixture) citeOn(art artifacts.Artifact, in ...observations.Input) []observations.Observation {
 	f.t.Helper()
-	res, _, err := observationstest.SaveCitation(f.c, userID, art, in...)
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
+	res, _, err := observationstest.SaveCitation(f.c, userID, graph, art, in...)
 	must(f.t, err)
 	return res.Observations
 }
@@ -930,9 +932,10 @@ func TestReconciledEvidence(t *testing.T) {
 	t.Run("an uncertain transcription is weak", func(t *testing.T) {
 		f := newFixture(t)
 		a, b := f.subject("place"), f.subjectOn(f.other, "place")
+		graph := evidencegraphstest.SoleGraph(t, f.c, f.artifact.SourceID).ID
 		res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-				ArtifactID: f.artifact.ID, LocatorJSON: locator, TranscriptionUncertain: true,
+				GraphID: graph, ArtifactID: f.artifact.ID, LocatorJSON: locator, TranscriptionUncertain: true,
 			}, []observations.Input{textIn(a, f.props["toponym"], "Yorke")})
 		})
 		must(t, err)

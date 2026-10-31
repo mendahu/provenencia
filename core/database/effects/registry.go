@@ -214,13 +214,6 @@ func valueGraph(col string) Path {
 // Observations.
 var citationObservationGraphs = chain(inbound("observations", "citation_id"), observationGraph)
 
-// citationArtifactGraphs is a Citation to the Evidence graphs its Artifact is
-// linked to.
-var citationArtifactGraphs = chain(
-	up("artifact_id"),
-	across("evidence_graph_artifacts", "artifact_id", "graph_id"),
-)
-
 // valueSource is a value row to the Source of the Observations that hold it
 // in col, through each Observation's Citation. SourceScope walks it;
 // EvidenceGraph walks valueGraph, through the Observation's Subject.
@@ -294,7 +287,7 @@ var registry = map[string]Effect{
 		Search:      []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
 	},
 	// An Artifact's own fields move no loaded graph row and no citation
-	// membership: its links, Citations and Observations carry their own graphs.
+	// membership: its Citations and Observations carry their own graphs.
 	"artifacts": {
 		Entity:      "artifact",
 		SourceScope: field("source_id"),
@@ -303,9 +296,8 @@ var registry = map[string]Effect{
 	"citations": {
 		Entity:        "citation",
 		EvidenceGraph: citationObservationGraphs,
-		// A Citation with no Observation yet shows in the graphs its Artifact
-		// is linked to.
-		Reads:       []ReadPath{{ReadCitations, prefer(citationObservationGraphs, citationArtifactGraphs)}},
+		// A Citation belongs to the one graph it was made in.
+		Reads:       []ReadPath{{ReadCitations, field("graph_id")}},
 		SourceScope: up("artifact_id", "source_id"),
 		Handles:     onField("transcription_uncertain", sqlPath(sqlHandlesForCitation)),
 	},
@@ -343,7 +335,6 @@ var registry = map[string]Effect{
 	},
 	"evidence_graph_artifacts": {
 		Entity:      "evidence_graph_artifact",
-		Reads:       []ReadPath{{ReadCitations, field("graph_id")}},
 		SourceScope: up("graph_id", "source_id"),
 		Lists:       []List{ListEvidenceGraphs},
 	},

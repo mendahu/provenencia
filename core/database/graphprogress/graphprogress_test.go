@@ -110,6 +110,7 @@ func TestGraphProgress(t *testing.T) {
 		}
 		if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				GraphID:    place.GraphID,
 				ArtifactID: art.ID, LocatorJSON: validLocator,
 			}, []observations.Input{{
 				SubjectID: place.ID, PropertyID: toponym.ID,
@@ -231,7 +232,7 @@ func TestGraphProgress(t *testing.T) {
 			t.Fatal(err)
 		}
 		if _, err := writes.Call(s.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: art1.ID, LocatorJSON: validLocator},
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: ada.GraphID, ArtifactID: art1.ID, LocatorJSON: validLocator},
 				[]observations.Input{{SubjectID: ada.ID, PropertyID: nameProp.ID, Name: namevaluetest.Western("Ada Lee")}})
 		}); err != nil {
 			t.Fatal(err)

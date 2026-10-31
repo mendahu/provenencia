@@ -292,6 +292,7 @@ func TestDeleteSubject(t *testing.T) {
 					ProjectDir:  dir,
 					UserId:      userID,
 					ArtifactId:  artifactID,
+					GraphId:     graphLinking(t, dir, artifactID),
 					LocatorJson: validLocatorJSON,
 					Observations: []*engine.ObservationDraft{{
 						SubjectId:  placeID,

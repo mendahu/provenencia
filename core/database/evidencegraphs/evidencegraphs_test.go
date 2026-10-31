@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -267,7 +268,7 @@ func (f fixture) subjectAndCitation(t *testing.T, src sources.Source, artifactID
 	subject := subjectstest.OfType(t, f.c, userID, graph, person.ID, "Ada")
 	res, err := writes.Call(f.c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-			ArtifactID: artifactID, LocatorJSON: pageLocator,
+			GraphID: graph, ArtifactID: artifactID, LocatorJSON: pageLocator,
 		}, []observations.Input{
 			{SubjectID: subject.ID, PropertyID: nameProp.ID, Name: &namevalue.Value{Form: "Ada"}},
 		})
@@ -278,11 +279,12 @@ func (f fixture) subjectAndCitation(t *testing.T, src sources.Source, artifactID
 	return subject, res.Citation
 }
 
-// bareCitation creates a Citation on the Artifact with no Observation.
-func (f fixture) bareCitation(t *testing.T, artifactID []byte) citations.Citation {
+// bareCitation creates a Citation on the Artifact, made in the graph, with no
+// Observation. The graph must be linked to the Artifact.
+func (f fixture) bareCitation(t *testing.T, graphID, artifactID []byte) citations.Citation {
 	t.Helper()
 	res, err := writes.Call(f.c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: artifactID, LocatorJSON: pageLocator}, nil)
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: graphID, ArtifactID: artifactID, LocatorJSON: pageLocator}, nil)
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -451,20 +453,22 @@ func TestSetArtifactGraphs(t *testing.T) {
 			t.Fatalf("linked %x", got)
 		}
 	})
-	t.Run("an Artifact with a Citation keeps a graph, but may swap", func(t *testing.T) {
+	t.Run("an Artifact keeps the graph its Citation is in, but may gain another", func(t *testing.T) {
 		x := f.newArtifact(t, src, "Page X")
 		f.link(t, def, x)
-		f.bareCitation(t, x)
-		if _, err := set(x); !errors.Is(err, evidencegraphs.ErrCitationsNeedGraph) {
-			t.Fatalf("none: got %v", err)
+		f.bareCitation(t, def, x)
+		for name, ids := range map[string][][]byte{"none": nil, "swap": {jones.ID}} {
+			if _, err := set(x, ids...); !errors.Is(err, evidencegraphs.ErrArtifactInUse) {
+				t.Fatalf("%s: got %v", name, err)
+			}
+			if got := evidencegraphstest.ArtifactGraphs(t, f.c, x); !sameIDs(got, [][]byte{def}) {
+				t.Fatalf("%s: link dropped: %x", name, got)
+			}
 		}
-		if got := evidencegraphstest.ArtifactGraphs(t, f.c, x); !sameIDs(got, [][]byte{def}) {
-			t.Fatalf("link dropped: %x", got)
+		if _, err := set(x, def, jones.ID); err != nil {
+			t.Fatalf("add: %v", err)
 		}
-		if _, err := set(x, jones.ID); err != nil {
-			t.Fatalf("swap: %v", err)
-		}
-		if got := evidencegraphstest.ArtifactGraphs(t, f.c, x); !sameIDs(got, [][]byte{jones.ID}) {
+		if got := evidencegraphstest.ArtifactGraphs(t, f.c, x); !sameIDs(got, [][]byte{def, jones.ID}) {
 			t.Fatalf("linked %x", got)
 		}
 	})
@@ -516,7 +520,7 @@ func TestUnlink(t *testing.T) {
 		t.Fatal("refused unlink dropped the link")
 	}
 
-	t.Run("an Artifact with a Citation keeps its last graph", func(t *testing.T) {
+	t.Run("an Artifact keeps the graph its Citation is in", func(t *testing.T) {
 		f := newFixture(t)
 		src, _ := f.createSource(t, "Census 1881")
 		def := evidencegraphstest.SoleGraph(t, f.c, src.ID).ID
@@ -529,7 +533,7 @@ func TestUnlink(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		f.bareCitation(t, x)
+		f.bareCitation(t, jones.ID, x)
 		unlink := func(g, a []byte) error {
 			_, err := run(t, f.c, func(tx *database.Tx) ([]rowchange.Change, error) {
 				return evidencegraphs.Unlink(tx, userID, g, a)
@@ -537,10 +541,10 @@ func TestUnlink(t *testing.T) {
 			return err
 		}
 		if err := unlink(def, x); err != nil {
-			t.Fatalf("first graph: %v", err)
+			t.Fatalf("a graph without the Citation: %v", err)
 		}
-		if err := unlink(jones.ID, x); !errors.Is(err, evidencegraphs.ErrCitationsNeedGraph) {
-			t.Fatalf("last graph: %v", err)
+		if err := unlink(jones.ID, x); !errors.Is(err, evidencegraphs.ErrArtifactInUse) {
+			t.Fatalf("the Citation's graph: %v", err)
 		}
 		if got := evidencegraphstest.ArtifactGraphs(t, f.c, x); !sameIDs(got, [][]byte{jones.ID}) {
 			t.Fatalf("link dropped: %x", got)
@@ -551,7 +555,9 @@ func TestUnlink(t *testing.T) {
 	})
 }
 
-func TestLinkWritesMoveCitationReads(t *testing.T) {
+// TestLinkWritesMoveNoCitationReads: a link row holds no Citation, so no link,
+// unlink or graph write names a graph's citations.
+func TestLinkWritesMoveNoCitationReads(t *testing.T) {
 	f := newFixture(t)
 	src, _ := f.createSource(t, "Census 1881")
 	graph := evidencegraphstest.SoleGraph(t, f.c, src.ID).ID
@@ -562,25 +568,23 @@ func TestLinkWritesMoveCitationReads(t *testing.T) {
 	for _, step := range []struct {
 		name string
 		fn   func(tx *database.Tx) ([]rowchange.Change, error)
-		// graph is the one graph whose citation reads the write moves.
-		graph func() []byte
 	}{
 		{"link", func(tx *database.Tx) ([]rowchange.Change, error) {
 			return evidencegraphs.Link(tx, userID, graph, a2)
-		}, func() []byte { return graph }},
+		}},
 		{"unlink", func(tx *database.Tx) ([]rowchange.Change, error) {
 			return evidencegraphs.Unlink(tx, userID, graph, a2)
-		}, func() []byte { return graph }},
+		}},
 		{"create", func(tx *database.Tx) ([]rowchange.Change, error) {
 			g, changes, err := evidencegraphs.Create(tx, userID, evidencegraphs.CreateInput{
 				SourceID: src.ID, Name: "Smith", ArtifactIDs: [][]byte{a2},
 			})
 			created = g.ID
 			return changes, err
-		}, func() []byte { return created }},
+		}},
 		{"delete", func(tx *database.Tx) ([]rowchange.Change, error) {
 			return evidencegraphs.Delete(tx, userID, created)
-		}, func() []byte { return created }},
+		}},
 	} {
 		name, fn := step.name, step.fn
 		_, res, err := writes.Run(f.c, writes.Op{Action: name + "_artifact", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
@@ -590,14 +594,10 @@ func TestLinkWritesMoveCitationReads(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
-		var got [][]byte
 		for _, r := range res.Effects.Reads {
 			if r.Read == effects.ReadCitations {
-				got = r.IDs
+				t.Fatalf("%s: citation reads %x, want none", name, r.IDs)
 			}
-		}
-		if want := step.graph(); len(got) != 1 || !bytes.Equal(got[0], want) {
-			t.Fatalf("%s: citation reads %x, want the linked graph %x", name, got, want)
 		}
 	}
 }
@@ -611,8 +611,9 @@ func TestMembership(t *testing.T) {
 	f.link(t, graph, a)
 	f.link(t, graph, b)
 	subject, cit := f.subjectAndCitation(t, src, a)
-	// A second Citation on the same Artifact with no Observation belongs to no graph.
-	f.bareCitation(t, a)
+	// A second Citation on the same Artifact with no Observation is in the
+	// graph it was made in, like the first.
+	bare := f.bareCitation(t, graph, a)
 
 	db, err := f.c.DB()
 	if err != nil {
@@ -642,8 +643,15 @@ func TestMembership(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(ids) != 1 || !bytes.Equal(ids[0].ID, cit.ID) || ids[0].Ref != cit.Ref {
-		t.Fatalf("citations %+v want %x %q", ids, cit.ID, cit.Ref)
+	if len(ids) != 2 {
+		t.Fatalf("citations %+v want two", ids)
+	}
+	got := map[string]string{}
+	for _, l := range ids {
+		got[string(l.ID)] = l.Ref
+	}
+	if got[string(cit.ID)] != cit.Ref || got[string(bare.ID)] != bare.Ref {
+		t.Fatalf("citations %+v want %q and %q", ids, cit.Ref, bare.Ref)
 	}
 	if ids, err := evidencegraphs.CitationsUsingArtifactTx(tx, graph, b); err != nil || len(ids) != 0 {
 		t.Fatalf("other Artifact: %v %x", err, ids)
@@ -693,17 +701,20 @@ func TestUnlinkImpact(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	citW := f.bareCitation(t, w)
-	f.bareCitation(t, x)
+	citW := f.bareCitation(t, def, w)
+	citX := f.bareCitation(t, jones.ID, x)
 
-	// Default,U: a Citation uses U in Default. Solo,P: Solo's only link.
-	// Default,W: W's Citation has no other graph. Jones,X: allowed, X stays in
-	// Default. Jones,Y: not linked.
+	// Default,U: a Citation with an Observation is in Default on U. Solo,P:
+	// Solo's only link. Default,W: a Citation with no Observation is in Default
+	// on W. Jones,X: a Citation with no Observation is in Jones on X, though X
+	// is also linked to Default, which sorts first. Default,X: allowed, no
+	// Citation of Default is on X. Jones,Y: not linked.
 	pairs := []evidencegraphs.Pair{
 		{GraphID: def, ArtifactID: u},
 		{GraphID: solo.ID, ArtifactID: p},
 		{GraphID: def, ArtifactID: w},
 		{GraphID: jones.ID, ArtifactID: x},
+		{GraphID: def, ArtifactID: x},
 		{GraphID: jones.ID, ArtifactID: y},
 	}
 	t.Run("one block per refused pair, in input order", func(t *testing.T) {
@@ -711,7 +722,7 @@ func TestUnlinkImpact(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(blocks) != 3 {
+		if len(blocks) != 4 {
 			t.Fatalf("blocks %+v", blocks)
 		}
 		want := []struct {
@@ -719,10 +730,12 @@ func TestUnlinkImpact(t *testing.T) {
 			reason          error
 			via             string
 			cit             []byte
+			locGraph        []byte
 		}{
-			{def, u, evidencegraphs.ErrArtifactInUse, evidencegraphs.UnlinkVia, citU.ID},
-			{solo.ID, p, evidencegraphs.ErrLastArtifact, "", nil},
-			{def, w, evidencegraphs.ErrCitationsNeedGraph, deleteimpact.ViaCitationsNeedGraph, citW.ID},
+			{def, u, evidencegraphs.ErrArtifactInUse, evidencegraphs.UnlinkVia, citU.ID, def},
+			{solo.ID, p, evidencegraphs.ErrLastArtifact, "", nil, nil},
+			{def, w, evidencegraphs.ErrArtifactInUse, evidencegraphs.UnlinkVia, citW.ID, def},
+			{jones.ID, x, evidencegraphs.ErrArtifactInUse, evidencegraphs.UnlinkVia, citX.ID, jones.ID},
 		}
 		for i, w := range want {
 			b := blocks[i]
@@ -739,8 +752,8 @@ func TestUnlinkImpact(t *testing.T) {
 			if g.Via != w.via || g.Kind != catalogmodel.KindCitation || g.Total != 1 || len(g.Listed) != 1 || !bytes.Equal(g.Listed[0].ID, w.cit) {
 				t.Fatalf("block %d: group %+v", i, g)
 			}
-			if l := g.Listed[0]; l.Title == "" || l.Location.SourceSurface != "citationComposer" {
-				t.Fatalf("block %d: listed %+v", i, l)
+			if l := g.Listed[0]; l.Title == "" || l.Location.SourceSurface != "citationComposer" || l.Location.GraphID != uuid.Must(uuid.FromBytes(w.locGraph)).String() {
+				t.Fatalf("block %d: listed %+v, want graph %x", i, l, w.locGraph)
 			}
 		}
 	})
@@ -1313,7 +1326,7 @@ func TestUpdate(t *testing.T) {
 		}
 	})
 
-	t.Run("dropping an Artifact's only graph while it has a Citation", func(t *testing.T) {
+	t.Run("dropping an Artifact a Citation of the graph is on", func(t *testing.T) {
 		f := newFixture(t)
 		s, _ := f.createSource(t, "Census 1881")
 		def := evidencegraphstest.SoleGraph(t, f.c, s.ID).ID
@@ -1321,9 +1334,9 @@ func TestUpdate(t *testing.T) {
 		y := f.newArtifact(t, s, "Page Y")
 		f.link(t, def, x)
 		f.link(t, def, y)
-		f.bareCitation(t, x)
+		f.bareCitation(t, def, x)
 		_, err := f.updateGraph(t, def, evidencegraphs.UpdateInput{Name: "Renamed", ArtifactIDs: [][]byte{y}})
-		if !errors.Is(err, evidencegraphs.ErrCitationsNeedGraph) {
+		if !errors.Is(err, evidencegraphs.ErrArtifactInUse) {
 			t.Fatalf("got %v", err)
 		}
 		if g := graphByID(t, f.c, s.ID, def); g.Name != "Default" || len(g.ArtifactIDs) != 2 {
@@ -1445,29 +1458,65 @@ func TestDelete(t *testing.T) {
 		}
 	})
 
-	t.Run("a graph that holds an Artifact's Citations alone", func(t *testing.T) {
+	t.Run("a graph takes its Citations with it", func(t *testing.T) {
 		f := newFixture(t)
 		s, _ := f.createSource(t, "Census 1881")
 		def := evidencegraphstest.SoleGraph(t, f.c, s.ID)
-		p1 := f.newArtifact(t, s, "Page 1")
-		p2 := f.newArtifact(t, s, "Page 2")
-		f.link(t, def.ID, p1)
-		f.link(t, def.ID, p2)
-		c1 := f.bareCitation(t, p1)
-		if _, _, err := f.createGraph(t, evidencegraphs.CreateInput{SourceID: s.ID, Name: "Jones", ArtifactIDs: [][]byte{p2}}); err != nil {
+		a := f.newArtifact(t, s, "Page A")
+		f.link(t, def.ID, a)
+		jones, _, err := f.createGraph(t, evidencegraphs.CreateInput{SourceID: s.ID, Name: "Jones", ArtifactIDs: [][]byte{a}})
+		if err != nil {
 			t.Fatal(err)
 		}
-		report := graphImpact(t, f.c, def.ID)
-		if report.Allowed || report.Gate != deleteimpact.GateInbound || len(report.Groups) != 1 ||
-			report.Groups[0].Via != deleteimpact.ViaCitationsNeedGraph || report.Groups[0].Kind != catalogmodel.KindCitation ||
-			report.Groups[0].Total != 1 || len(report.Groups[0].Listed) != 1 || report.Groups[0].Listed[0].Ref != c1.Ref {
+		c1 := f.bareCitation(t, jones.ID, a)
+		c2 := f.bareCitation(t, jones.ID, a)
+		db, err := f.c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Exec(`INSERT INTO citation_notes (id, citation_id, body) VALUES (?, ?, 'Faded')`, append([]byte{7}, make([]byte, 15)...), c1.ID); err != nil {
+			t.Fatal(err)
+		}
+		kept := f.bareCitation(t, def.ID, a)
+		report := graphImpact(t, f.c, jones.ID)
+		if !report.Allowed || report.Gate != deleteimpact.GateOK || len(report.Groups) != 0 || len(report.Cascades) != 1 {
 			t.Fatalf("impact %+v", report)
 		}
-		if _, err := f.deleteGraph(t, def.ID); !errors.Is(err, evidencegraphs.ErrInUse) {
-			t.Fatalf("got %v", err)
+		g := report.Cascades[0]
+		wantRefs := []string{c1.Ref, c2.Ref}
+		slices.Sort(wantRefs)
+		var gotRefs []string
+		for _, l := range g.Listed {
+			gotRefs = append(gotRefs, l.Ref)
 		}
-		if got := mustList(t, f.c, s.ID); len(got) != 2 || linkedArtifacts(t, f.c, def.ID) != 2 {
-			t.Fatalf("graph or links gone: %+v", got)
+		if g.Via != "citations.graph_id" || g.Kind != catalogmodel.KindCitation || g.Total != 2 || !slices.Equal(gotRefs, wantRefs) {
+			t.Fatalf("cascade %+v", g)
+		}
+		ch, err := f.deleteGraph(t, jones.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		deletes := map[string]int{}
+		for _, c := range ch {
+			if c.Action != rowchange.ActionDelete {
+				continue
+			}
+			deletes[c.EntityType]++
+			if c.EntityType == "citation" {
+				if _, ok := c.Fields["graph_id"]; !ok {
+					t.Fatalf("citation delete change lacks graph_id: %+v", c.Fields)
+				}
+			}
+		}
+		if deletes["citation"] != 2 || deletes["citation_note"] != 1 || deletes["evidence_graph"] != 1 {
+			t.Fatalf("deletes %v", deletes)
+		}
+		var n int
+		if err := db.QueryRow(`SELECT COUNT(*) FROM citations WHERE graph_id = ?`, jones.ID).Scan(&n); err != nil || n != 0 {
+			t.Fatalf("%d Citations left, err %v", n, err)
+		}
+		if _, err := citations.Get(f.c, kept.ID); err != nil {
+			t.Fatalf("Default's Citation: %v", err)
 		}
 	})
 
@@ -1496,7 +1545,7 @@ func TestDelete(t *testing.T) {
 		def := evidencegraphstest.SoleGraph(t, f.c, s.ID)
 		x := f.newArtifact(t, s, "Page X")
 		f.link(t, def.ID, x)
-		f.bareCitation(t, x)
+		f.bareCitation(t, def.ID, x)
 		jones, _, err := f.createGraph(t, evidencegraphs.CreateInput{SourceID: s.ID, Name: "Jones", ArtifactIDs: [][]byte{x}})
 		if err != nil {
 			t.Fatal(err)

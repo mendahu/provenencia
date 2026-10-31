@@ -72,6 +72,7 @@ func namedPersonOnNewSource(t *testing.T, dir, userID, typeID, personName, sexKe
 		}
 		_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: uid[:]}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, uid[:], citations.CreateInput{
+				GraphID:    s.GraphID,
 				ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
 			}, []observations.Input{
 				{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluetest.Western(personName)},
