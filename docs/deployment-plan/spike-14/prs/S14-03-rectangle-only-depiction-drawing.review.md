@@ -1,7 +1,7 @@
 # Review — S14-03 Rectangle-only depiction drawing
 
-**Verdict:** Fits with changes — Not ready (round 1; round 2 pending, and the plan is blocked on board S14-D6)
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet). Both reviewed the plan and the S14-D6 brief.
+**Verdict:** Fits with changes — Ready with changes. Every finding answered; the plan stays Blocked on board S14-D6 and is refreshed (and reviewed again) when the board is agreed.
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet). Both reviewed the plan and the S14-D6 brief.
 
 ## To user
 - None. The two product calls (a brief gates the PR; the needs-page Callout sets the page and saves) were answered by the user on 2026-10-31 before the review.
@@ -115,3 +115,41 @@
 ### Brief notes (executability)
 Frame 1 needs a Citation with a region; frame 2 and Set page on an image; DF-6 while loading.
 **Answer:** Fixed — frames 1 and 2 reworded (the Citation has a circle region; Set page and Find only on the PDF variant); DF-6 disabled while the viewer is opening the file.
+
+## Round 2
+
+Both reviewers confirmed the round-1 answers except where noted below.
+
+### M-15 · blocker · A Citation-armed rectangle still sets the depiction outside the one rule
+The getter hid a tool only while drawing, so a rectangle armed before the dialog stayed armed and committed into the depiction without Draw or the can-cut gate.
+**Answer:** Fixed — D-2: the getter is nil while a depiction dialog is open and not drawing; the setter's tool click there calls `startDepictionDrawing()`. AC-1.3 covers a rectangle too; AC-1.7 and T-2 cover the radio as Draw. Brief DF-1 updated.
+
+### M-16 · blocker · "Needs a new image and cannot get one" worked out in three places
+**Answer:** Fixed — D-7: one private `depictionNeedsCut`; `DepictionPreviewState.waiting` and `.unavailable`; D-9 `depictionImageBlocksSave` reads the state; `DepictionCutKey.isLoading` deleted. (Also X-4, X-5.)
+
+### M-17 · blocker · D-11 set the viewer's page through its own guard
+**Answer:** Fixed — D-11 calls `setPageFromViewer()`; `canSaveDepictionCitationPage` includes `!isDrawingRegion` and the button reads it; T-9 adds the armed-tool case.
+
+### M-3 / M-11 / M-14 leftovers (below blocker)
+**Answer:** Fixed — D-1 makes the chrome's binding and `onSetPage` non-optional and drops the `!= nil` check; M-14 gets a line in the idea file (STEP-9); D-12's flag clears in a `didSet` whenever the count drops below the cap; the board confirms Find closing on any arm (Stop condition).
+
+### X-1 · blocker · A region button cannot retry a failed cut: the preview task does not re-run
+**Answer:** Fixed — D-9: `useRegion` runs `renderDepictionPreview()` after a successful set; Save stays enabled while `.cutting`, as today. AC-4.5 and manual check 5 use a region button.
+
+### X-2 · major · Step order breaks two step checks
+**Answer:** Fixed — T-2 no longer asserts `isDrawingRegion` (T-8, STEP-3 does); T-6's Save cases moved to T-7 (STEP-5).
+
+### X-3 · major · `regionTools` parameter collides with the private view builder
+**Answer:** Fixed — D-1 renames the builder `regionToolGroup`.
+
+### X-6 · minor · No PDF edit fixture for AC-4.4
+**Answer:** Fixed — AC-4.4 gives the locator, the observation region and the steps with the file's existing helpers.
+
+### X-7 · minor · Page after a failed save
+**Answer:** Fixed — AC-5.4: the unsaved page stays on the draft.
+
+### X-8 · minor · Home of `canSaveCitation`
+**Answer:** Fixed — `CitationComposerModel.swift`, beside `setPageFromViewer`.
+
+### X-9, X-10, X-11 · minor
+**Answer:** Fixed — D-12 flag re-arms below the cap; D-5 applies `.disabled` after `.background`; D-6 keeps the accessibility identifier and names `PVChip`'s metrics.
