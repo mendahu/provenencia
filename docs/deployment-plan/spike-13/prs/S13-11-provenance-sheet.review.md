@@ -1,6 +1,6 @@
 # Review — S13-11 Provenance sheet
 
-**Verdict:** Round 1: Fits with changes — Not ready. Every finding is Fixed or Declined below; both To user items are answered. Round 2: see below.
+**Verdict:** Round 1 Fits with changes / Not ready; round 2 Fits with changes / Ready with changes. Every finding is Fixed or Declined below, both To user items are answered, and no blocker is open. The plan is Planned (2026-10-31).
 **Rounds:** 2. **Reviewers:** maintainability (fresh-context Explore agent), executability (fresh-context Explore agent). The brief's own review is [`../design/S13-D2-provenance-sheet.review.md`](../design/S13-D2-provenance-sheet.review.md).
 
 ## To user
@@ -78,4 +78,31 @@
 
 ## Round 2
 
-Pending.
+Both reviewers accepted the round-1 answers, except where noted below; these are the new findings.
+
+### M2-1 · blocker · `GroupRank` in Go leaves the same rule rebuilt in Swift
+`ReconciledValueDisplay.sourceCount` filters "kept or folded into a displayed rank" itself.
+**Answer:** Fixed. STEP-1: `sourceCount` filters on `groupRank > 0`; §6 Deletes names the old filter; `FakeStore` sets `groupRank` and sorts as `finish` does. New test T-12.
+
+### M2-2 · blocker · `ProvenanceOwnerKind` repeats `CatalogDerivedRowKind`
+**Answer:** Fixed. D-14: `derived(kind: CatalogDerivedRowKind? = nil)`, which `PersonDetailContent.rows` passes from its loop. `EventDetailContent.placeRow` is unchanged, and the new enum is dropped.
+
+### M2-3 / X2-2 · blocker · STEP-6's check and the DoD sweep contradict D-6
+**Answer:** Fixed. STEP-6 checks `rg -n "ownerLine|GridRow"`, and the sweep no longer lists `groups:`.
+
+### X2-1 · blocker · The order inside `GroupRank` 0 is not decided
+**Answer:** Fixed. D-13: `GroupRank` (0 last), then `ValueRank` (0 last, as today), then Observation id; `TestForEntity`'s last-outcome assertion stays. T-11 names the full order.
+
+### X2-3 · major · How Swift builds `ValueGroup` is not decided
+**Answer:** Fixed. D-13 names `ReconciledValueRowModel.valueGroups(_:field:locale:orders:)` and the one `otherValue(_:locale:orders:)` helper that `otherValues` and `listedValues` also use (M2's note on a third copy). It also says what each factory stores, and that a rank with no displayed value is `.otherRecords`. T-5 calls the builder.
+
+### Notes and X2-4 · minor · Leftover text contradicts the fixed Decisions
+**Answer:** Fixed:
+- Edges "Untrusted size" now says two page selectors give no page.
+- The §6 macOS table puts the citation line in `ReconciliationRecordRows`.
+- The `ProvenanceSheet` Codebase fit row says both callers wrap the shared rows.
+- §4 says the proto test goes through `conclusionDetailProto`.
+- STEP-1 updates the `Field.Outcomes` comment.
+
+### X2-5 · minor · The header still reads as pre-review
+**Answer:** Fixed. Status is Planned, and the Review line links this log.
