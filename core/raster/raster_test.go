@@ -11,16 +11,23 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
+	"sync/atomic"
 	"testing"
 
 	"golang.org/x/image/tiff"
 )
 
+// fakeConfigCalls counts calls to the fake format's config func.
+var fakeConfigCalls atomic.Int32
+
 func init() {
 	// A registered-but-not-allowlisted format to exercise ErrUnsupportedFormat.
 	image.RegisterFormat("fake", "FAKEIMG!",
 		func(io.Reader) (image.Image, error) { return nil, errors.New("fake: no decode") },
-		func(io.Reader) (image.Config, error) { return image.Config{Width: 1, Height: 1}, nil },
+		func(io.Reader) (image.Config, error) {
+			fakeConfigCalls.Add(1)
+			return image.Config{Width: 1, Height: 1}, nil
+		},
 	)
 }
 
@@ -255,6 +262,41 @@ func TestDecode(t *testing.T) {
 			_, err := decode(tt.src, tt.formats)
 			if !errors.Is(err, tt.want) || (tt.want == nil && err != nil) {
 				t.Fatalf("decode err = %v, want %v", err, tt.want)
+			}
+		})
+	}
+}
+
+func TestDecodeByteLimit(t *testing.T) {
+	old := maxDecodeBytes
+	maxDecodeBytes = 64
+	t.Cleanup(func() { maxDecodeBytes = old })
+
+	enc := map[string]func([]byte, Options) ([]byte, error){
+		"EncodeJPEG": EncodeJPEG,
+		"EncodePNG":  EncodePNG,
+	}
+	over := append([]byte("FAKEIMG!"), make([]byte, 57)...)
+	at := over[:64]
+	for name, fn := range enc {
+		t.Run(name+"/over the limit", func(t *testing.T) {
+			fakeConfigCalls.Store(0)
+			_, err := fn(over, Options{MaxEdge: 256})
+			if !errors.Is(err, ErrTooLarge) {
+				t.Fatalf("err = %v, want ErrTooLarge", err)
+			}
+			if n := fakeConfigCalls.Load(); n != 0 {
+				t.Fatalf("config func called %d times, want 0", n)
+			}
+		})
+		t.Run(name+"/at the limit", func(t *testing.T) {
+			fakeConfigCalls.Store(0)
+			_, err := fn(at, Options{MaxEdge: 256})
+			if !errors.Is(err, ErrUnsupportedFormat) {
+				t.Fatalf("err = %v, want ErrUnsupportedFormat", err)
+			}
+			if n := fakeConfigCalls.Load(); n != 1 {
+				t.Fatalf("config func called %d times, want 1", n)
 			}
 		})
 	}

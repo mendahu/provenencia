@@ -1,6 +1,7 @@
 // Package raster is the one bounded image codec: it decodes only allowlisted
-// formats within a pixel budget, and re-encodes. Thumbnails and staged images
-// both use it.
+// formats, refuses input over a byte limit (MaxDecodeBytes) and an image over
+// a pixel budget (MaxDecodePixels), and re-encodes. Thumbnails and staged
+// images both use it.
 //
 // Security: golang.org/x/image decoders (bmp, tiff, webp) parse fully
 // untrusted input here and have a history of memory-exhaustion CVEs.
@@ -43,9 +44,22 @@ const MaxEdgeLimit = 4096
 // defense against decompression bombs (see image package security notes).
 const MaxDecodePixels = 64_000_000 // 64 MP ≈ 256 MiB RGBA
 
-// ErrTooLarge means the image declares more pixels than MaxDecodePixels
-// allows, so it was rejected before full decode.
-var ErrTooLarge = errors.New("raster: image dimensions exceed decode budget")
+// MaxDecodeBytes caps how many bytes a decode may see. decode refuses larger
+// input before it reads a header.
+const MaxDecodeBytes = 128 << 20 // 128 MiB
+
+// maxDecodeBytes is MaxDecodeBytes; tests lower it so they do not allocate
+// 128 MiB.
+var maxDecodeBytes = MaxDecodeBytes
+
+// ErrTooLarge means the input is longer than MaxDecodeBytes, or the image
+// declares more pixels than MaxDecodePixels allows, so it was rejected before
+// full decode.
+var ErrTooLarge = errors.New("raster: image exceeds decode budget")
+
+// ErrUndecodable means the bytes are an allowlisted raster format but cannot
+// be decoded: truncated, corrupt, or a variant the decoder does not read.
+var ErrUndecodable = errors.New("raster: image bytes cannot be decoded")
 
 // ErrUnsupportedFormat means the bytes are not one of the allowlisted
 // raster formats, regardless of the recorded media type.
@@ -151,12 +165,19 @@ func checkMaxEdge(opts Options) error {
 	return nil
 }
 
-// decode refuses a format outside formats (or outside supportedFormats) and an
-// image declaring more than MaxDecodePixels before any full decode.
+// decode refuses input over maxDecodeBytes, a format outside formats (or
+// outside supportedFormats) and an image declaring more than MaxDecodePixels
+// before any full decode.
 func decode(src []byte, formats []string) (image.Image, error) {
+	if len(src) > maxDecodeBytes {
+		return nil, ErrTooLarge
+	}
 	cfg, format, err := image.DecodeConfig(bytes.NewReader(src))
 	if err != nil {
-		return nil, err
+		if errors.Is(err, image.ErrFormat) {
+			return nil, ErrUnsupportedFormat
+		}
+		return nil, fmt.Errorf("%w: %w", ErrUndecodable, err)
 	}
 	if _, ok := supportedFormats[format]; !ok {
 		return nil, ErrUnsupportedFormat
@@ -169,7 +190,10 @@ func decode(src []byte, formats []string) (image.Image, error) {
 		return nil, ErrTooLarge
 	}
 	img, _, err := image.Decode(bytes.NewReader(src))
-	return img, err
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrUndecodable, err)
+	}
+	return img, nil
 }
 
 // prepare decodes src, scales it to MaxEdge, and applies Transforms. It does

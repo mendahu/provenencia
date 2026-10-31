@@ -265,7 +265,7 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 		{
 			name: "declared ByteSize over source cap",
 			srcID: func(t *testing.T) []byte {
-				return installFileRow(t, c, hex.EncodeToString(tinySum[:]), "image/png", maxSourceBytes+1)
+				return installFileRow(t, c, hex.EncodeToString(tinySum[:]), "image/png", raster.MaxDecodeBytes+1)
 			},
 			wantIs: ErrUnprocessable,
 		},
