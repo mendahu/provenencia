@@ -75,8 +75,8 @@ type HeaderPlace struct {
 
 // FieldOwner is one entity and the Property of it that a Person's life row
 // reads. A Place row's owner is the event-place link's association and the
-// Property of its place end; Place is the Place that end holds, unfolded, with
-// its own toponyms. Place is nil for a date owner.
+// Property of its place end; Place is the Place that end holds, with its
+// own toponyms and no parents. Place is nil for a date owner.
 type FieldOwner struct {
 	Entity     canonicalentities.Entity
 	PropertyID []byte

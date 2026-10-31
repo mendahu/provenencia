@@ -704,13 +704,15 @@ func lifeOwners(g *graphcache.Graph, v vocab, pg *placeGraph, picks []lifePick) 
 	listed := map[string]bool{}
 	dated := map[string]bool{}
 	// One load for every link's association, so the walk's queries do not
-	// grow with the links.
+	// grow with the links. The links are kept for the walk below.
 	var assocIDs [][]byte
+	linksOf := map[string][]graphcache.Link{}
 	for _, pick := range picks {
 		links, err := follow(g, pick.event.ID, hops.PlacesOfEvent)
 		if err != nil {
 			return LifeOwners{}, err
 		}
+		linksOf[string(pick.event.ID)] = links
 		for _, l := range links {
 			assocIDs = append(assocIDs, l.Association)
 		}
@@ -727,12 +729,8 @@ func lifeOwners(g *graphcache.Graph, v vocab, pg *placeGraph, picks []lifePick) 
 		if err != nil {
 			return LifeOwners{}, err
 		}
-		locations, err := follow(g, pick.event.ID, hops.PlacesOfEvent)
-		if err != nil {
-			return LifeOwners{}, err
-		}
 		for _, p := range places {
-			for _, l := range locations {
+			for _, l := range linksOf[string(pick.event.ID)] {
 				if !bytes.Equal(l.Neighbor, p.Entity.ID) || listed[string(l.Association)] {
 					continue
 				}
@@ -747,13 +745,9 @@ func lifeOwners(g *graphcache.Graph, v vocab, pg *placeGraph, picks []lifePick) 
 				if assoc == nil {
 					return LifeOwners{}, fmt.Errorf("conclusionheaders: association %x is missing", l.Association)
 				}
-				place, err := g.Node(l.Neighbor)
-				if err != nil {
-					return LifeOwners{}, err
-				}
 				out.Places = append(out.Places, FieldOwner{
 					Entity: entityOf(assoc), PropertyID: v.prop(hops.PlacesOfEvent.To()),
-					Place: &HeaderPlace{Entity: p.Entity, Names: toponyms(place, v.prop(vocabkey.PropertyToponym))},
+					Place: &HeaderPlace{Entity: p.Entity, Names: p.Names},
 				})
 			}
 		}
