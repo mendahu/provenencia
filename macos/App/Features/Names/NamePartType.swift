@@ -6,7 +6,7 @@ struct NamePartDecoration {
     let format: LocalizedStringResource
     let emphasized: Bool
     /// The same word as VoiceOver should say it, since the punctuation is not read.
-    let spoken: LocalizedStringResource
+    let spoken: (String) -> String
 }
 
 /// Product NameValue part-type registry. Keys match `namevalue.PartTypes()`.

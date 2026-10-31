@@ -2835,16 +2835,20 @@ enum L10n {
             defaultValue: "“%@”",
             comment: "A nickname inside a displayed name; the argument is the nickname. Keep exactly one %@"
         )
-        static let a11yNick = LocalizedStringResource(
-            "nameValue.a11y.nick",
-            defaultValue: "%@, nickname",
-            comment: "VoiceOver: a nickname inside a spoken name; the argument is the nickname. Keep exactly one %@"
-        )
-        static let a11yFormerSurname = LocalizedStringResource(
-            "nameValue.a11y.former_surname",
-            defaultValue: "former surname %@",
-            comment: "VoiceOver: a former surname inside a spoken name; the argument is the surname. Keep exactly one %@"
-        )
+        static func a11yNick(_ nickname: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "nameValue.a11y.nick",
+                defaultValue: "%@, nickname",
+                comment: "VoiceOver: a nickname inside a spoken name; the argument is the nickname. Keep exactly one %@"
+            ), nickname)
+        }
+        static func a11yFormerSurname(_ surname: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "nameValue.a11y.former_surname",
+                defaultValue: "former surname %@",
+                comment: "VoiceOver: a former surname inside a spoken name; the argument is the surname. Keep exactly one %@"
+            ), surname)
+        }
         static let displayFormerSurname = LocalizedStringResource(
             "nameValue.display.former_surname",
             defaultValue: "(%@)",
@@ -9603,57 +9607,57 @@ enum L10n {
 
         static func a11ySingle(_ sources: String) -> String {
             L10n.format(LocalizedStringResource(
-                "conclusions.a11y.single",
-                defaultValue: "single, %@",
-                comment: "VoiceOver state of a field with one value from one Source; argument is the Source count text"
+                    "conclusions.a11y.single",
+                    defaultValue: "single, %@",
+                    comment: "VoiceOver state of a field with one value from one Source; argument is the Source count text"
             ), sources)
         }
 
         static func a11yMerged(_ sources: String) -> String {
             L10n.format(LocalizedStringResource(
-                "conclusions.a11y.merged",
-                defaultValue: "merged from %@",
-                comment: "VoiceOver state of a field whose value several Sources agree on; argument is the Source count text"
+                    "conclusions.a11y.merged",
+                    defaultValue: "merged from %@",
+                    comment: "VoiceOver state of a field whose value several Sources agree on; argument is the Source count text"
             ), sources)
         }
 
         static func a11yMixed(_ sources: String) -> String {
             L10n.format(LocalizedStringResource(
-                "conclusions.a11y.mixed",
-                defaultValue: "mixed from %@",
-                comment: "VoiceOver state of a field showing several values; argument is the Source count text"
+                    "conclusions.a11y.mixed",
+                    defaultValue: "mixed from %@",
+                    comment: "VoiceOver state of a field showing several values; argument is the Source count text"
             ), sources)
         }
 
         static func a11yMultiple(_ count: Int, sources: String) -> String {
             L10n.format(LocalizedStringResource(
-                "conclusions.a11y.multiple",
-                defaultValue: "%#@values@ from %2$@",
-                comment: "VoiceOver state of a field that keeps several values; arguments are how many values and the Source count text"
+                    "conclusions.a11y.multiple",
+                    defaultValue: "%#@values@ from %2$@",
+                    comment: "VoiceOver state of a field that keeps several values; arguments are how many values and the Source count text"
             ), count, sources)
         }
 
         static func a11yEmpty(_ label: String) -> String {
             L10n.format(LocalizedStringResource(
-                "conclusions.a11y.empty",
-                defaultValue: "%@, empty",
-                comment: "VoiceOver label of an empty field; argument is the field label"
+                    "conclusions.a11y.empty",
+                    defaultValue: "%@, empty",
+                    comment: "VoiceOver label of an empty field; argument is the field label"
             ), label)
         }
 
         static func a11yList(_ first: String, rest: String) -> String {
             L10n.format(LocalizedStringResource(
-                "conclusions.a11y.list",
-                defaultValue: "%1$@, %2$@",
-                comment: "Joins two parts of a spoken Conclusion field (label, value, state, disagreement)"
+                    "conclusions.a11y.list",
+                    defaultValue: "%1$@, %2$@",
+                    comment: "Joins two parts of a spoken Conclusion field (label, value, state, disagreement)"
             ), first, rest)
         }
 
         static func a11yLifeLine(_ word: String, date: String, place: String) -> String {
             L10n.format(LocalizedStringResource(
-                "conclusions.a11y.vital",
-                defaultValue: "%1$@ %2$@, %3$@",
-                comment: "VoiceOver for a Person header line; arguments are Born/Died, the date, and the place"
+                    "conclusions.a11y.vital",
+                    defaultValue: "%1$@ %2$@, %3$@",
+                    comment: "VoiceOver for a Person header line; arguments are Born/Died, the date, and the place"
             ), word, date, place)
         }
 
@@ -9667,9 +9671,9 @@ enum L10n {
 
         static func a11yRef(_ ref: String) -> String {
             L10n.format(LocalizedStringResource(
-                "conclusions.a11y.ref",
-                defaultValue: "Reference %@",
-                comment: "VoiceOver label of a handle's ref (PER-…)"
+                    "conclusions.a11y.ref",
+                    defaultValue: "Reference %@",
+                    comment: "VoiceOver label of a handle's ref (PER-…)"
             ), ref)
         }
     }
@@ -9719,17 +9723,17 @@ enum L10n {
     enum LastUpdated {
         static func a11yJoin(_ base: String, _ updated: String) -> String {
             L10n.format(LocalizedStringResource(
-                "lastUpdated.a11y.join",
-                defaultValue: "%1$@, %2$@",
-                comment: "Joins a list row's spoken label and its last-updated phrase"
+                    "lastUpdated.a11y.join",
+                    defaultValue: "%1$@, %2$@",
+                    comment: "Joins a list row's spoken label and its last-updated phrase"
             ), base, updated)
         }
 
         static func a11yUpdated(_ text: String) -> String {
             L10n.format(LocalizedStringResource(
-                "lastUpdated.a11y.updated",
-                defaultValue: "updated %@",
-                comment: "VoiceOver suffix of a list row; argument is the spoken time (Today at 3:15 PM, Yesterday, October 12, 2026)"
+                    "lastUpdated.a11y.updated",
+                    defaultValue: "updated %@",
+                    comment: "VoiceOver suffix of a list row; argument is the spoken time (Today at 3:15 PM, Yesterday, October 12, 2026)"
             ), text)
         }
 

@@ -151,7 +151,7 @@ private struct NameDisplayRun {
     /// The run as VoiceOver says it: a decorated word names its part type.
     var spokenText: String {
         guard let decoration else { return text }
-        return String(StyledFormat.attributed(decoration.spoken, [StyledFormat.Argument(text: text)]).characters)
+        return decoration.spoken(text)
     }
 
     /// The run with its decoration's punctuation; an emphasized word is marked.
