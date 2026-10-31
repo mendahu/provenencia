@@ -56,12 +56,12 @@ func TestCascadeIntoNonEmptyEffectIsAudited(t *testing.T) {
 	}
 }
 
-// TestGradeTablesHaveNoHandles checks that credibility and confidence grades
-// are an explicit empty effect. They are seed-stable: a grade edit must not
-// fan out to every handle weighed by sort order. Source credibility grades
-// are seed-locked in deleteimpact; claim confidence grades have no delete.
+// TestGradeTablesHaveNoHandles checks that credibility grades are an explicit
+// empty effect. They are seed-stable: a grade edit must not fan out to every
+// handle weighed by sort order. Source credibility grades are seed-locked in
+// deleteimpact.
 func TestGradeTablesHaveNoHandles(t *testing.T) {
-	for _, name := range []string{"source_credibility_grades", "claim_confidence_grades"} {
+	for _, name := range []string{"source_credibility_grades"} {
 		eff, ok := registry[name]
 		if !ok {
 			t.Fatalf("missing %s", name)
@@ -109,7 +109,6 @@ func TestSourceEvidenceIsNotActivity(t *testing.T) {
 		{"date_values", true, true},
 		{"name_values", true, true},
 		{"identity_claims", true, false},
-		{"identity_claim_evidence", true, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.table, func(t *testing.T) {
@@ -183,7 +182,7 @@ func TestEvidenceGraphsList(t *testing.T) {
 func TestEvidenceGraphPathsEndAtGraphs(t *testing.T) {
 	want := []string{
 		"sources", "citations", "observations", "subjects",
-		"evidence_graphs", "identity_claims", "identity_claim_evidence",
+		"evidence_graphs", "identity_claims",
 		"date_values", "name_values", "depiction_values",
 	}
 	var got []string

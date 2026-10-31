@@ -82,7 +82,6 @@ const (
 	CodeArtifactsInUse                   = "artifacts.in_use"
 	CodeArtifactsFileAlreadyAttached     = "artifacts.file_already_attached"
 	CodeSourceCredibilityInvalid         = "sourcecredibility.invalid"
-	CodeClaimConfidenceInvalid           = "claimconfidence.invalid"
 	CodeCanonicalEntitiesInvalid         = "canonicalentities.invalid"
 	CodeIdentityClaimsInvalid            = "identityclaims.invalid"
 	CodeIdentityClaimsAlreadyMember      = "identityclaims.already_member"

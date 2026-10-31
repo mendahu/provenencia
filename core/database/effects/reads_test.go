@@ -15,7 +15,7 @@ func TestReadsDeclare(t *testing.T) {
 			"name_values", "observations",
 		},
 		ReadEvidenceGraphProgress: {
-			"identity_claim_evidence", "identity_claims", "observations", "subjects",
+			"identity_claims", "observations", "subjects",
 		},
 	}
 	got := map[Read][]string{}

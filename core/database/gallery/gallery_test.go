@@ -10,7 +10,6 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/gallery"
@@ -62,7 +61,6 @@ func newFixture(t *testing.T) *fixture {
 	must(t, users.Upsert(c, userID, "Tester", r))
 	must(t, subjectvocab.Install(c))
 	must(t, sourcecredibilitygrades.Install(c))
-	must(t, claimconfidencegrades.Install(c))
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	must(t, err)
 	f := &fixture{t: t, c: c, typeID: typeID}

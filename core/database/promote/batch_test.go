@@ -10,7 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
-	"github.com/mendahu/provenencia/core/database/autoreconciler"
+	"github.com/mendahu/provenencia/core/database/autoreconciler/autoreconcilertest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
@@ -236,7 +236,7 @@ func TestSaveBatchFilesBothEndsOnce(t *testing.T) {
 	if n != 1 {
 		t.Fatalf("promote_batch revisions %d", n)
 	}
-	assertCacheMatchesRebuild(t, db)
+	autoreconcilertest.AssertCacheMatchesRebuild(t, f.c)
 }
 
 func TestSaveBatchFilesBridgeWhoseEndsWereAlreadyPromoted(t *testing.T) {
@@ -302,7 +302,7 @@ func TestSaveBatchStaleWritesNothing(t *testing.T) {
 }
 
 // A Done files the chosen rows' claims and their connections and nothing else:
-// no pin is written and no other member's claim changes.
+// no other member's claim changes.
 func TestSaveBatchFilesClaimsAndBridgesOnly(t *testing.T) {
 	f := newBatchFixture(t)
 	b := f.bare("person")
@@ -336,17 +336,6 @@ func TestSaveBatchFilesClaimsAndBridgesOnly(t *testing.T) {
 	}
 	if n := f.bridgeClaims("participation"); n != 1 {
 		t.Fatalf("participation claims %d, want 1", n)
-	}
-	db, err := f.c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var pins int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM identity_claim_evidence`).Scan(&pins); err != nil {
-		t.Fatal(err)
-	}
-	if pins != 0 {
-		t.Fatalf("identity_claim_evidence has %d rows, want 0", pins)
 	}
 	memberAfter, err := identityclaims.Get(f.c, e1.Claim.ID)
 	if err != nil {
@@ -387,51 +376,6 @@ func TestSaveBatchAnchorsARowOnItsOwnHandle(t *testing.T) {
 	if err := try(promote.BatchRow{SubjectID: a.ID, Target: promote.TargetSkip, EntityID: e1.Entity.ID}); !errors.Is(err, promote.ErrInvalid) {
 		t.Fatalf("skip with a record: err %v, want promote.ErrInvalid", err)
 	}
-}
-
-func assertCacheMatchesRebuild(t *testing.T, db *sql.DB) {
-	t.Helper()
-	got := cacheLines(t, db)
-	tx, err := db.Begin()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = tx.Rollback() }()
-	if err := autoreconciler.Rebuild(tx); err != nil {
-		t.Fatal(err)
-	}
-	want := cacheLines(t, tx)
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("upkeep %d cache lines, rebuild %d", len(got), len(want))
-	}
-}
-
-func cacheLines(t *testing.T, q interface {
-	Query(string, ...any) (*sql.Rows, error)
-}) []string {
-	t.Helper()
-	rows, err := q.Query(`SELECT 'v|' || hex(entity_id) || '|' || hex(property_id) || '|' || rank || '|' || reason
-		FROM auto_reconciler_values
-		UNION ALL
-		SELECT 'o|' || hex(entity_id) || '|' || hex(property_id) || '|' || hex(observation_id) || '|' || reason
-		FROM auto_reconciler_outcomes
-		ORDER BY 1`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	var out []string
-	for rows.Next() {
-		var s string
-		if err := rows.Scan(&s); err != nil {
-			t.Fatal(err)
-		}
-		out = append(out, s)
-	}
-	if err := rows.Err(); err != nil {
-		t.Fatal(err)
-	}
-	return out
 }
 
 // A Done files the Subjects of its own graph and the bridges between them; a

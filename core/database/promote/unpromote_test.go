@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/autoreconciler/autoreconcilertest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -107,7 +108,7 @@ func TestUnpromote(t *testing.T) {
 		if w.members(h.person) != 0 {
 			t.Fatalf("James's handle has %d members", w.members(h.person))
 		}
-		w.cacheMatchesRebuild()
+		autoreconcilertest.AssertCacheMatchesRebuild(t, w.c)
 	})
 
 	t.Run("a Subject with no filed bridges loses only its own claim", func(t *testing.T) {

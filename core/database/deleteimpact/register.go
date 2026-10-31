@@ -186,13 +186,6 @@ var inboundEdgeList = sync.OnceValue(func() []inboundEdge {
 		fkEdge(catalogmodel.KindFile, "artifacts.file_id", catalogmodel.KindArtifact, "artifacts", "file_id", "ref"),
 		fkEdge(catalogmodel.KindSubjectType, "canonical_entities.subject_type_id", catalogmodel.KindCanonicalEntity, "canonical_entities", "subject_type_id", "ref"),
 		fkEdge(catalogmodel.KindCanonicalEntity, "canonical_entities.merged_into_id", catalogmodel.KindCanonicalEntity, "canonical_entities", "merged_into_id", "ref"),
-		// Claims have no ref; name the handle each claim files onto.
-		joinEdge(catalogmodel.KindClaimConfidenceGrade, "identity_claims.confidence_grade_id", catalogmodel.KindCanonicalEntity,
-			`SELECT COUNT(DISTINCT entity_id) FROM identity_claims WHERE confidence_grade_id = ?`,
-			`SELECT DISTINCT e.id, e.ref FROM identity_claims ic
-				JOIN canonical_entities e ON e.id = ic.entity_id
-				WHERE ic.confidence_grade_id = ?
-				ORDER BY e.ref COLLATE NOCASE LIMIT ?`),
 	}
 })
 

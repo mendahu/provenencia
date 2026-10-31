@@ -7,6 +7,8 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
+	"github.com/mendahu/provenencia/core/database/autoreconciler/autoreconcilertest"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
@@ -26,19 +28,20 @@ import (
 )
 
 // A Subject emptied of its own Observations can be deleted while its claim
-// still pins another member's evidence (a confirmed comparison). Those pins
-// are removed explicitly and audited; the other member's claim keeps its own.
+// still files it onto a handle with another member. The claim is removed
+// explicitly and audited; the other member's claim keeps the handle.
 type conclusionFixture struct {
-	c                *database.Catalog
-	userID           []byte
-	a, b             subjects.Subject
-	obsA, obsB       []byte
-	entityID, ca, cb []byte
+	c         *database.Catalog
+	userID    []byte
+	a, b      subjects.Subject
+	obsB      []byte
+	entityID  []byte
+	entityRef string
+	ca        []byte
 }
 
 // newConclusionFixture: Subjects A and B on one Place, each with a toponym
-// Observation, and a confirmed comparison filed through Promote — both
-// Observations pinned on both claims.
+// Observation; A grounds a handle and B joins it through Promote.
 func newConclusionFixture(t *testing.T) conclusionFixture {
 	t.Helper()
 	c, userID := testCatalog(t)
@@ -87,44 +90,37 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	obsA, obsB := res.Observations[0].ID, res.Observations[1].ID
+	obsB := res.Observations[1].ID
 
 	grounding := promotetest.Save(t, c, userID, promote.Input{SubjectID: a.ID})
-	// B joins with its toponym pinned against A's: both Observations are pinned
-	// on both claims.
-	joined, err := joinPinned(c, userID, b.GraphID, b.ID, grounding, [][]byte{obsB, obsA})
-	if err != nil {
-		t.Fatal(err)
-	}
-	ca, cb := grounding.Claim.ID, joined.Claim.ID
+	promotetest.Save(t, c, userID, promote.Input{SubjectID: b.ID, EntityID: grounding.Entity.ID})
 
-	return conclusionFixture{c: c, userID: userID, a: a, b: b, obsA: obsA, obsB: obsB,
-		entityID: grounding.Entity.ID, ca: ca, cb: cb}
+	return conclusionFixture{c: c, userID: userID, a: a, b: b, obsB: obsB,
+		entityID: grounding.Entity.ID, entityRef: grounding.Entity.Ref, ca: grounding.Claim.ID}
 }
 
-func TestSubjectDeleteReleasesOwnClaimPins(t *testing.T) {
+func TestMemberDeleteEndToEnd(t *testing.T) {
 	f := newConclusionFixture(t)
-	c, userID, b, obsA, obsB, ca, cb := f.c, f.userID, f.b, f.obsA, f.obsB, f.ca, f.cb
-	pins := func(claimID, obsID []byte) int {
-		return countRows(t, c, `SELECT COUNT(*) FROM identity_claim_evidence
-			WHERE identity_claim_id = ? AND observation_id = ?`, claimID, obsID)
-	}
+	c, userID, b, obsB, ca := f.c, f.userID, f.b, f.obsB, f.ca
 
-	// B's own Observation blocks deleting B, so it goes first, taking its pins off both claims.
+	// B's own Observation blocks deleting B, so it goes first.
+	report := mustImpact(t, c, catalogmodel.KindObservation, obsB)
+	if !report.Allowed || len(report.Cascades) != 0 {
+		t.Fatalf("%+v", report)
+	}
 	if _, err := writes.Call(c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 		changes, err := observations.Delete(tx, userID, obsB)
 		return struct{}{}, changes, err
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if pins(ca, obsB)+pins(cb, obsB) != 0 {
-		t.Fatal("obsB pins left")
-	}
 
-	// B is now empty; its claim CB still pins A's Observation.
-	if pins(cb, obsA) != 1 {
-		t.Fatal("setup: CB should still pin obsA")
+	// B is now empty; its confirm names the handle it leaves.
+	report = mustImpact(t, c, catalogmodel.KindSubject, b.ID)
+	if !report.Allowed {
+		t.Fatalf("%+v", report)
 	}
+	assertLeaves(t, report, f.entityRef)
 	if _, err := writes.Call(c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 		changes, err := subjects.Delete(tx, userID, b.ID)
 		return struct{}{}, changes, err
@@ -132,20 +128,12 @@ func TestSubjectDeleteReleasesOwnClaimPins(t *testing.T) {
 		t.Fatal(err)
 	}
 	action, types := lastRevision(t, c)
-	if action != "delete_subject" || strings.Join(types, ",") != "identity_claim_evidence,identity_claim,subject" {
+	if action != "delete_subject" || strings.Join(types, ",") != "identity_claim,subject" {
 		t.Fatalf("%s %v", action, types)
-	}
-	if pins(cb, obsA) != 0 {
-		t.Fatal("CB pin on obsA left")
-	}
-	if pins(ca, obsA) != 1 {
-		t.Fatal("A's claim lost its own pin on obsA")
-	}
-	if n := countRows(t, c, `SELECT COUNT(*) FROM observations WHERE id = ?`, obsA); n != 1 {
-		t.Fatal("obsA should be untouched")
 	}
 	members, err := identityclaims.AcceptedMembers(c, f.entityID)
 	if err != nil || len(members) != 1 || string(members[0].ID) != string(ca) {
 		t.Fatalf("%v %+v", err, members)
 	}
+	autoreconcilertest.AssertCacheMatchesRebuild(t, c)
 }
