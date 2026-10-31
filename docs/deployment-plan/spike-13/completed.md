@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S13-11 — Provenance sheet
+
+**Landed 2026-10-31** in [#650](https://github.com/mendahu/provenencia/pull/650). Every Vitals row with records ends with a provenance control that opens a sheet: the shown value and its state, a summary, and each record's citation line (Source, Artifact, Citation, page), outcome and refs, with links to its Source, Citation and Observation. Records are grouped under their owning Event or Place (the shown one marked and spoken "shown value") and, for a mixed value, under the value they count under, with the rest last. The sheet follows its row across a refresh and closes when the row goes. The Person page no longer draws the Why; the Event and Place pages keep it, on the same `ReconciliationRecordRows`. `GetConclusionDetail`'s outcomes gain the Artifact label, Citation label, page and `group_rank` (Go groups the records; `locator.Page` reads the page).
+
 ## S13-25 — The pin table goes
 
 **Landed 2026-10-30** in [#644](https://github.com/mendahu/provenencia/pull/644). An Identity Claim is membership only: subject, entity, status. One format step (`000058.sql`) drops the Observation pin table, the claim's confidence grade and argument columns, and the `claim_confidence_grades` table, keeping every claim and every old audit row. The pin delete facet and its confirm line, `identityclaims` pins, the effects entries, the grades package and its create-time seed, and the Mac app's "removed from the evidence for" sentence are deleted. The data-model, delete and vocabulary docs say the table and columns were dropped.

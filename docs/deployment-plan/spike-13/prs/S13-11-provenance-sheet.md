@@ -1,9 +1,9 @@
 # S13-11 — Provenance sheet
 
-**Status:** Planned
+**Status:** Landed in #650 (2026-10-31)
 **Spike / slice:** Spike 13 · Slice 2 — Provenance sheet
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S13-D2](../design/S13-D2-provenance-sheet.md), board agreed 2026-10-31
+**Brief:** [S13-D2](../design/archive/S13-D2-provenance-sheet.md), board agreed 2026-10-31
 **Board:** agreed 2026-10-31 — [Claude Design, *Person Detail*](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail.dc.html*, turn 6 "S13-D2 · Provenance sheet", frames 6a – 6n. §6 **macOS** describes each frame in words; the brief's §8 records where the board and the plan differ
 **Depends on:** S13-06 (landed [#640](https://github.com/mendahu/provenencia/pull/640)), S13-10 (landed [#634](https://github.com/mendahu/provenencia/pull/634)), S13-D2 (board agreed 2026-10-31)
 **Blocks:** —
