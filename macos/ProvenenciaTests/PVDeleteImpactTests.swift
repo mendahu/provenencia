@@ -66,7 +66,40 @@ struct PVDeleteImpactCopyTests {
                 ),
             ]
         )
-        #expect(PVDeleteImpactCopy.cascadeLines(report) == ["The graph’s citations are deleted with it: CIT-A and CIT-B."])
+        #expect(PVDeleteImpactCopy.cascadeLines(report) == ["The graph’s 2 citations are deleted with it: CIT-A and CIT-B."])
+    }
+
+    @Test func graphDeleteConfirmCountsCitationsBeyondTheListedCap() {
+        let listed = (1...20).map { PVDeleteImpactPreviewData.listed(ref: "CIT-\($0)", title: "CIT-\($0)") }
+        let report = CatalogDeleteImpact(
+            allowed: true,
+            gate: .ok,
+            groups: [],
+            cascades: [
+                CatalogDeleteImpactGroup(via: "citations.graph_id", kind: "citation", total: 25, listed: listed),
+            ]
+        )
+        let lines = PVDeleteImpactCopy.cascadeLines(report)
+        #expect(lines.count == 1)
+        #expect(lines[0].hasPrefix("The graph’s 25 citations are deleted with it: CIT-1, "))
+        #expect(lines[0].hasSuffix(", and 5 more."))
+    }
+
+    @Test func graphDeleteConfirmReadsSingularForOneCitation() {
+        let report = CatalogDeleteImpact(
+            allowed: true,
+            gate: .ok,
+            groups: [],
+            cascades: [
+                CatalogDeleteImpactGroup(
+                    via: "citations.graph_id",
+                    kind: "citation",
+                    total: 1,
+                    listed: [PVDeleteImpactPreviewData.listed(ref: "CIT-A", title: "CIT-A")]
+                ),
+            ]
+        )
+        #expect(PVDeleteImpactCopy.cascadeLines(report) == ["The graph’s 1 citation is deleted with it: CIT-A."])
     }
 
     @Test func blockedCitationListsThreeObservations() {

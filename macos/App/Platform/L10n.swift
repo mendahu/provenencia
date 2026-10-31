@@ -8333,13 +8333,13 @@ enum L10n {
             ), handleRefs)
         }
 
-        /// Allowed graph delete: the Citations it takes with it. Arguments: citation refs (joined).
-        static func deletesCitations(refs: String) -> String {
+        /// Allowed graph delete: the Citations it takes with it. Arguments: how many, citation refs (joined).
+        static func deletesCitations(count: Int, refs: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "deleteImpact.confirm.deletesCitations",
-                defaultValue: "The graph’s citations are deleted with it: %@.",
-                comment: "Allowed graph delete confirm, appended after the consequence; argument is the citation ref(s), e.g. CIT-7KD45"
-            ), refs)
+                defaultValue: "The graph’s %1$lld citations are deleted with it: %2$@.",
+                comment: "Allowed graph delete confirm, appended after the consequence; arguments are how many Citations and the citation ref(s), e.g. CIT-7KD45"
+            ), count, refs)
         }
 
         /// Fallback for a cascade via the Mac has no specific copy for. Arguments: kind noun, refs.
