@@ -11,8 +11,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"golang.org/x/image/tiff"
 
@@ -106,6 +108,21 @@ func TestEncodeJPEGRejects(t *testing.T) {
 			wantIs: ErrUnsupportedFormat,
 		},
 		{
+			name:   "jpeg header 65535x65535 over even the reduced budget",
+			src:    func(*testing.T) []byte { return rastertest.JPEGHeader(65535, 65535, 1, nil) },
+			opts:   Options{MaxEdge: 256},
+			wantIs: ErrTooLarge,
+		},
+		{
+			name: "oversized jpeg cut at half",
+			src: func(t *testing.T) []byte {
+				b := rastertest.OversizedJPEG(t)
+				return b[:len(b)/2]
+			},
+			opts:   Options{MaxEdge: 256},
+			wantIs: ErrUndecodable,
+		},
+		{
 			name: "truncated jpeg within budget",
 			src: func(t *testing.T) []byte {
 				b := goFixture(t, "video-001.jpeg")
@@ -128,6 +145,43 @@ func TestEncodeJPEGRejects(t *testing.T) {
 	}
 }
 
+func TestEncodeJPEGOversized(t *testing.T) {
+	src := rastertest.OversizedJPEG(t)
+	for _, tc := range []struct{ edge, w, h int }{{256, 256, 255}, {2048, 1001, 1000}} {
+		start := time.Now()
+		out, err := EncodeJPEG(src, Options{MaxEdge: tc.edge})
+		elapsed := time.Since(start)
+		t.Logf("EncodeJPEG MaxEdge=%d took %s", tc.edge, elapsed)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if elapsed > 10*time.Second {
+			t.Errorf("EncodeJPEG took %s, want under 10s", elapsed)
+		}
+		cfg, _, err := image.DecodeConfig(bytes.NewReader(out))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.Width != tc.w || cfg.Height != tc.h {
+			t.Fatalf("MaxEdge %d: got %dx%d, want %dx%d", tc.edge, cfg.Width, cfg.Height, tc.w, tc.h)
+		}
+	}
+}
+
+func TestEncodeJPEGOversizedHeaderAllocation(t *testing.T) {
+	src := rastertest.JPEGHeader(60000, 60000, 1, make([]byte, 16))
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	_, err := EncodeJPEG(src, Options{MaxEdge: 256})
+	runtime.ReadMemStats(&after)
+	if !errors.Is(err, ErrUndecodable) || !errors.Is(err, errJPEGDC) {
+		t.Fatalf("err = %v, want ErrUndecodable wrapping errJPEGDC", err)
+	}
+	if grew := after.TotalAlloc - before.TotalAlloc; grew >= 16<<20 {
+		t.Fatalf("allocated %d bytes, want under 16 MiB", grew)
+	}
+}
+
 func TestEncodeJPEGAtBudgetBoundaries(t *testing.T) {
 	// 8000x8000 is exactly the 64 MP budget and must still decode.
 	// Header-only would fail at full decode, so use a real (small) image
@@ -135,6 +189,12 @@ func TestEncodeJPEGAtBudgetBoundaries(t *testing.T) {
 	out, err := EncodeJPEG(tinyPNG(t), Options{MaxEdge: MaxEdgeLimit})
 	if err != nil || len(out) == 0 {
 		t.Fatalf("MaxEdge=%d should be accepted: %v", MaxEdgeLimit, err)
+	}
+	// 8000x8000 JPEG keeps the standard library: a header with no scan fails
+	// there, not in the reduced decoder.
+	_, err = decode(rastertest.JPEGHeader(8000, 8000, 1, nil), nil, true)
+	if !errors.Is(err, ErrUndecodable) || errors.Is(err, errJPEGDC) {
+		t.Fatalf("at-budget jpeg err = %v, want ErrUndecodable from the standard library", err)
 	}
 	cfg, _, err := image.DecodeConfig(bytes.NewReader(rastertest.HeaderOnlyPNG(t, 8000, 8000)))
 	if err != nil {
@@ -254,9 +314,18 @@ func TestDecode(t *testing.T) {
 		{"tiff with nil list", tiffBytes(t, 4, 4), nil, nil},
 		{"bomb header", rastertest.HeaderOnlyPNG(t, 100000, 100000), both, ErrTooLarge},
 	}
+	t.Run("oversized jpeg reduces only when asked", func(t *testing.T) {
+		src := rastertest.JPEGHeader(65535, 65535, 1, nil)
+		if _, err := decode(src, both, false); !errors.Is(err, ErrTooLarge) {
+			t.Fatalf("reduce=false err = %v", err)
+		}
+		if _, err := decode(src, both, true); !errors.Is(err, ErrTooLarge) {
+			t.Fatalf("reduce=true err = %v", err)
+		}
+	})
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := decode(tt.src, tt.formats)
+			_, err := decode(tt.src, tt.formats, false)
 			if !errors.Is(err, tt.want) || (tt.want == nil && err != nil) {
 				t.Fatalf("decode err = %v, want %v", err, tt.want)
 			}
@@ -315,6 +384,12 @@ func TestEncodePNG(t *testing.T) {
 		}
 		if w, h := size(t, out); w != 2048 || h != 512 {
 			t.Fatalf("size = %dx%d, want 2048x512", w, h)
+		}
+	})
+	t.Run("oversized jpeg never reduces", func(t *testing.T) {
+		_, err := EncodePNG(rastertest.OversizedJPEG(t), Options{MaxEdge: 2048})
+		if !errors.Is(err, ErrTooLarge) {
+			t.Fatalf("err = %v, want ErrTooLarge", err)
 		}
 	})
 	t.Run("small png keeps its size", func(t *testing.T) {
