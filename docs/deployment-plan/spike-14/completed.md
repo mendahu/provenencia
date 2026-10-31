@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-09 — Quote nicknames and add former surnames
+
+**Landed 2026-10-31** in [#649](https://github.com/mendahu/provenencia/pull/649). A nickname part shows in curly quotes and the new `former_surname` product part type (role `family`, after the nickname in both Western orders, seeded in new catalogs only) shows in parentheses, in every name display. `NameValueDisplay.display` returns the text and, when a word is emphasized, a styled copy; the Persons list row and Person page title draw the former surname italic through `ConclusionTitleSource.name(_, styled:)` and `ConclusionListRow.italicizingEmphasis`. Go's `nameformats.Format` sort key stays undecorated. `NamePartType` spells every raw value and has a "name part types" row in `TestSwiftVocabularyMatchesGo`; `add-name-value` step 6 lists every place a part type lives.
+
 ## S14-10 — A Citation belongs to one Evidence graph
 
 **Landed 2026-10-30** in [#645](https://github.com/mendahu/provenencia/pull/645). `citations.graph_id` (migration `000059.sql`, NOT NULL, an audited CASCADE facet of its graph) stores the graph a Citation was made in, required on create and linked to its Artifact, and never changes. A graph lists and counts only its own Citations, an Observation must name a Subject in its Citation's graph, and the Citation `citations` read is its own `graph_id`. An unlink is refused while the graph has any Citation on the Artifact; `citations_need_graph` is gone. A graph delete releases its Citations through `ReleaseCitation` (the removal `citations.Delete` shares) and its confirm names them. The composer passes its graph (`CreateCitationWithObservationsRequest.graph_id`).

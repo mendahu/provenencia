@@ -1,6 +1,6 @@
 # S14-09 — Quote nicknames and add former surnames
 
-**Status:** Planned
+**Status:** Landed in #649 (2026-10-31)
 **Spike / slice:** Spike 14 · Slice 3 — Name display (batch 3; was Spike 11 slice 2, S11-29)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no board: the titles gain punctuation and one italic run, with no new component, layout or state. The user chose the treatment on 2026-10-19, and on 2026-10-31 exempted this PR from the board rule; the design board's examples are updated afterwards from a prompt, outside this PR)
@@ -14,6 +14,7 @@
 **Context:** [`docs/structured-name-model.md`](../../../structured-name-model.md) §4.2a roles, §4.5 display styles; [`docs/seeded-vocabulary.md`](../../../seeded-vocabulary.md) §4.1, §4.3; [`docs/ideas/international-names.md`](../../../ideas/international-names.md) "Name changes as a signal"; [audit 2](../app-health-audit-2.md) B-24 (part-type half, moved here from S14-22 on 2026-10-31); S9-D2 title anatomy in `macos/App/Features/Conclusions/ConclusionListRow.swift`; working rule "(Batch 3) S14-09 is Spike 11's S11-29, refreshed"
 **Planned:** 2026-10-19 against `main` @ `84a9b31`; refreshed 2026-10-31 against `main` @ `b6a8f3e2`
 **Review:** [`S14-09-name-display.review.md`](S14-09-name-display.review.md) — 2026-10-19: Ready after 2 rounds; 2026-10-31 refresh: Fits with changes / Ready with changes → fixed, 2 rounds
+**Landed:** T-6b asserts relation and cause only (a `Different` result carries no `OnlyA` / `OnlyB`). `NameValueDisplay` and `ConclusionListRow.italicizingEmphasis` read and set attributes through typed `AttributeScopes` subscripts, as `PVComboBox` does, because the `.inlinePresentationIntent` / `.font` dynamic members warn under Swift 6. `NameValueDisplay.display(for:style:orders:)` is the public entry; the order-only overload is private. Manual check (§10) is the user's: italic `Smith` in the display font was not seen in a running app.
 
 ### Implementer — read this first
 
