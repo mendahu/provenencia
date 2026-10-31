@@ -124,6 +124,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var listSubjectTypesCalls = 0
     var getSourceWorkspaceCalls = 0
     var listEvidenceGraphProgressCalls = 0
+    /// The graph id of each `citationCountsByEvidenceGraph` call, in order.
+    var citationCountsGraphIDs: [String] = []
     var getEvidenceGraphProgressCalls = 0
     var deleteSourceCalls = 0
     var deleteArtifactCalls = 0
@@ -2808,6 +2810,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     func citationCountsByEvidenceGraph(projectDir: String, graphID: String) async throws -> [String: Int] {
         return withState {
             markCatalogSessionHeld(projectDir)
+            citationCountsGraphIDs.append(graphID)
             guard evidenceGraphsByProject[projectDir]?.contains(where: { $0.id == graphID }) == true else {
                 return [:]
             }

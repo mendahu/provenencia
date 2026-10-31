@@ -944,7 +944,9 @@ struct WorkspaceSessionTests {
     }
 
     /// T-7: a `citations` read for one graph reloads that graph's visible
-    /// counts and leaves another graph's warmed counts alone.
+    /// counts and leaves another graph's warmed counts alone. The fake counts every
+    /// seeded Citation on its Artifact for any graph, so the reload shows in which
+    /// graph the store was asked, not in the values.
     @Test func citationReadsRefreshOnlyTheirGraph() async throws {
         let store = FakeStore()
         seedStore(store)
@@ -963,15 +965,18 @@ struct WorkspaceSessionTests {
         let second: QueryHandle<[String: Int]> = session.query(.citationCounts(project: project, graphId: "g-2"))
         await waitForQuery(first)
         await waitForQuery(second)
-        #expect(first.value == ["a1": 1] && second.value == ["a2": 1])
+        #expect(first.value == ["a1": 1, "a2": 1] && second.value == ["a1": 1, "a2": 1])
+        let loaded = store.citationCountsGraphIDs
+        #expect(loaded.filter { $0 == "g-1" }.count == 1 && loaded.filter { $0 == "g-2" }.count == 1)
 
         store.citationsByID["c3"] = citation("c3", artifactID: "a1")
-        store.citationsByID["c4"] = citation("c4", artifactID: "a2")
         session.apply(CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .citations, ids: ["g-1"])]))
 
-        #expect(await waitUntil { first.value == ["a1": 2] })
+        #expect(await waitUntil { first.value == ["a1": 2, "a2": 1] })
         try? await Task.sleep(nanoseconds: 50_000_000)
-        #expect(second.value == ["a2": 1])
+        #expect(store.citationCountsGraphIDs.filter { $0 == "g-1" }.count == 2)
+        #expect(store.citationCountsGraphIDs.filter { $0 == "g-2" }.count == 1)
+        #expect(second.value == ["a1": 1, "a2": 1])
     }
 
     /// T-8: the composer's location names its Artifact, so the Artifact's
