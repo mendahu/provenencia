@@ -1,7 +1,7 @@
 # Ship log — S13-11 Provenance sheet
 
 **Plan:** [`S13-11-provenance-sheet.md`](S13-11-provenance-sheet.md) · **Branch:** `s13-11-provenance-sheet` · **PR:** #650
-**State:** fixing 6 — user scope change
+**State:** ready
 
 ## Round 0 — implement
 Base `main` @ `474ca934`. Head `5ec67292`. Gate PASS (orchestrator run). Report: §10 manual check not run (Escape focus return, Back after each link, VoiceOver wording, 1600pt resize, visual match to frames 6c – 6n; the Escape-focus stop condition is unverified). Deviations: (1) STEP-3 – STEP-7 in one commit; (2) `ReconciliationRecordGroup` gained `init(owner:records:values:)` with `values` defaulting to one headless run; (3) `actionColumnWidth` moved to `ReconciliationRecordRows`; (4) the sheet's Read as, Outcome and Record columns have fixed widths (140/190/112pt Regular, 220/280pt Wide) so the headings line up; (5) a record is not one VoiceOver element: the citation line and its links are separate controls; (6) `S13-D2-provenance-sheet.review.md` stays in `design/`; (7) PR body attribution added with `gh pr edit`.
@@ -107,9 +107,6 @@ Reviewers: CON (Sonnet), MNT, UX — each had a Fix-now major. Not sent back: SE
 
 Nits (logged): `UX-10 · ReconciliationRecordRows.swift:201 · value heading gap now space5 (was space4) via shared valueLine`
 
-## Result
-Gate PASS at `710f979a` (`main` unmoved) · CI green · open: none · follow-ups: CON-4, MNT-9, MNT-10 · to user: UX-6 (manual check 1), §10 manual check not run · CON miss: none
-
 ## Scope change — user, 2026-10-31
 After round 2 the user asked, for this PR, that the birth and death place rows read the event–place `location` link instead of the Place's Toponym, with each record read as its own toponym for the place. The plan records it as D-20 – D-22 and AC-1.5 (header, "Scope change"). The user asked for it on this PR, which authorizes a third review round scoped to it. Separately, the user parked loading records on demand as [`docs/ideas/provenance-on-demand.md`](../../../ideas/provenance-on-demand.md), with S13-06 PRF-1.
 
@@ -208,7 +205,7 @@ Do: in `derived`, build each member link's `valueGroups` from its own records an
 Check: the new test and `twoLinksToOnePlaceFormOneGroup` pass; scripts/check-pr.sh PASS.
 
 ## Round 5 — fix
-Head `b56568f4`. F-16, F-17 done (`TestToponymLoadUsesSubjectIndex` red then green; `aPooledPlaceGroupHasOneHeadingPerValue`; `pooledValueGroups` for groups of more than one link). Orchestrator gate: FAIL `xcode-test` on `SourcesModelTests.listReadsEachGraphsProgress` and `SourcePageModelTests.aGraphWriteMovesOnlyItsRow` (same flake family, not in the diff); rerun below.
+Head `b56568f4`. F-16, F-17 done (`TestToponymLoadUsesSubjectIndex` red then green; `aPooledPlaceGroupHasOneHeadingPerValue`; `pooledValueGroups` for groups of more than one link). Orchestrator gate: FAIL `xcode-test` on `SourcesModelTests.listReadsEachGraphsProgress` and `SourcePageModelTests.aGraphWriteMovesOnlyItsRow` (same flake family, not in the diff); rerun PASS.
 
 ### Verification
 - **PRF-1 Resolved.** `INDEXED BY observations_subject_id_idx`; plan uses the subject index for IN lists of 1 – 500; the test fails with the hint removed.
@@ -221,3 +218,12 @@ Files: `ReconciledValueRowModel.swift`, `ProvenanceSheetTests.swift`.
 Failing test first: extend `aPooledPlaceGroupHasOneHeadingPerValue` (or add a case): two York links whose kept records cite the **same** Source → the York heading reads "1 Source"; with two Sources → "2 Sources".
 Do: for each merged value run, count distinct `sourceID`s of the member outcomes in that run (across all members), as `ReconciledValueDisplay.sourceCount` does, falling back to summed `support` only when no outcome carries a Source id. Reuse that counting rather than writing a third copy: extract the shared "distinct Sources of these outcomes" helper beside `sourceCount` if needed and call it from both.
 Check: tests pass; scripts/check-pr.sh PASS.
+
+## Round 6 — fix
+Head `5957c006`. F-18 done: `ReconciledValueDisplay.distinctSourceCount(of:fallback:)` shared by `sourceCount` and `pooledValueGroups`; `aPooledPlaceGroupHasOneHeadingPerValue` gains a same-Source case ("1 Source"), red before the fix. Orchestrator read the diff: each merged run gathers its outcomes across links by `groupRank == run.rank` and counts distinct Source ids. **V-2 Resolved.** Gate PASS (orchestrator run).
+
+## Finish
+`origin/main` moved to `6126e142` (#651, docs only). Merged as `ff8dadfd`; one conflict in `deployment-plan.md` resolved by keeping this branch's S13-11 row (archived brief link, Landed) and main's S13-01 row. Gate re-run after the merge.
+
+## Result
+Gate PASS after merging `main` · CI pending · open: none · follow-ups: CON-4 (r2), MNT-9, MNT-10 · parked: provenance on demand ([`docs/ideas/provenance-on-demand.md`](../../../ideas/provenance-on-demand.md), with S13-06 PRF-1) · to user: UX-6 (manual check 1), §10 manual check not run · CON miss: none · flakes seen outside this PR: `SourcePageModelTests.aGraphWriteMovesOnlyItsRow`, `SourcesModelTests.listReadsEachGraphsProgress`, `SourceGraphFormModelTests.editPrefillsAndLocksInUseArtifacts`
