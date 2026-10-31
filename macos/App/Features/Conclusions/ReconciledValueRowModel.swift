@@ -210,20 +210,29 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         } else {
             spoken = ReconciledValueDisplay.accessibilityLabel(label: label, lead: nil, field: nil)
         }
+        // One group per Place (or per other owner): the links to one Place
+        // pool their records, in link order, the shown owner's group first.
         let ordered = owners.filter { $0.ownerID == shownOwnerID } + owners.filter { $0.ownerID != shownOwnerID }
-        let groups = ordered.map { owner in
-            var records = Self.records([owner.field], locale: locale, orders: orders)
-            if owner.ownerID != shownOwnerID {
+        var ownerIDs: [String] = []
+        var membersOf: [String: [CatalogOwnerField]] = [:]
+        for owner in ordered {
+            if membersOf[owner.ownerID] == nil { ownerIDs.append(owner.ownerID) }
+            membersOf[owner.ownerID, default: []].append(owner)
+        }
+        let groups = ownerIDs.map { ownerID in
+            let members = membersOf[ownerID] ?? []
+            var records = Self.records(members.map(\.field), locale: locale, orders: orders)
+            if ownerID != shownOwnerID {
                 for index in records.indices { records[index].counted = false }
             }
             return ReconciliationRecordGroup(
-                owner: ordered.count > 1 || owner.ownerID != shownOwnerID
+                owner: ownerIDs.count > 1 || ownerID != shownOwnerID
                     ? Self.ownerLine(
-                        owner, style: style, shown: ordered.count > 1 && owner.ownerID == shownOwnerID,
+                        members[0], style: style, shown: ownerIDs.count > 1 && ownerID == shownOwnerID,
                         locale: locale, orders: orders
                     )
                     : nil,
-                values: Self.valueGroups(records, field: owner.field, locale: locale, orders: orders)
+                values: Self.valueGroups(records, field: members[0].field, locale: locale, orders: orders)
             )
         }
         let recordCount = groups.reduce(0) { $0 + $1.records.count }
@@ -231,7 +240,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         if recordCount == 0 {
             summary = nil
         } else if groups.count > 1, let kind {
-            summary = L10n.Conclusions.provenanceRecordsFromOwners(records: recordCount, owners: Set(ordered.map(\.ownerID)).count, kind: kind)
+            summary = L10n.Conclusions.provenanceRecordsFromOwners(records: recordCount, owners: groups.count, kind: kind)
         } else {
             summary = L10n.Conclusions.provenanceRecordCount(recordCount)
         }
@@ -260,9 +269,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         if let event = owner.event {
             title = EventTitleDisplay.title(event, locale: locale, orders: orders)
         } else if let place = owner.place {
-            title = PlaceTitleDisplay.titleSource(
-                PlaceTitleParts(names: place.names, label: place.entity.label, ref: place.entity.ref)
-            ).text
+            title = PlaceTitleDisplay.titleSource(place.titleParts).text
         } else {
             title = EventTitleDisplay.untitled(owner.entity).text
         }
@@ -336,12 +343,15 @@ extension ReconciledValueRowModel.Opens {
 
     /// The Place a place name is read from.
     static func place(_ place: CatalogHeaderPlace) -> Self {
-        let title = PlaceTitleDisplay.titleSource(
-            PlaceTitleParts(names: place.names, label: place.entity.label, ref: place.entity.ref)
-        ).text
+        let title = PlaceTitleDisplay.titleSource(place.titleParts).text
         return Self(
             location: .placeDetail(entityId: place.entity.id, ref: place.entity.ref, title: title),
             label: L10n.Conclusions.openPlace(title)
         )
     }
+}
+
+private extension CatalogOwnerField {
+    /// What the row names, orders and inks the owner by: the Place, else the entity.
+    var ownerID: String { place?.entity.id ?? entity.id }
 }

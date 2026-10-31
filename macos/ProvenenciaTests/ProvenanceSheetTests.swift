@@ -90,25 +90,38 @@ struct ProvenanceSheetTests {
         #expect(row.recordGroups.allSatisfy { $0.values.count == 1 && $0.values[0].heading == nil })
     }
 
-    @Test func twoLinksToOnePlaceCountOnePlace() {
+    @Test func twoLinksToOnePlaceFormOneGroup() {
         let york = CatalogCanonicalEntity(id: "pl1", ref: "PLC-1", subjectTypeID: "t", label: "")
-        func owner(_ link: String, _ id: String) -> CatalogOwnerField {
+        let leeds = CatalogCanonicalEntity(id: "pl2", ref: "PLC-2", subjectTypeID: "t", label: "")
+        func owner(_ link: String, _ id: String, place: CatalogCanonicalEntity = york, _ name: String = "York") -> CatalogOwnerField {
             CatalogOwnerField(
                 entity: CatalogCanonicalEntity(id: link, ref: "LOC-\(link)", subjectTypeID: "t", label: ""),
-                event: nil, place: CatalogHeaderPlace(entity: york, names: ["York"]),
+                event: nil, place: CatalogHeaderPlace(entity: place, names: [name]),
                 field: D.field(
-                    "single", key: "place", label: "place", valueType: "subject", [D.value(1, "kept", .text("York"))],
+                    "single", key: "place", label: "place", valueType: "subject", [D.value(1, "kept", .text(name))],
                     outcomes: [D.outcome(id, "kept")]
                 )
             )
         }
-        let row = ReconciledValueRowModel.derived(
+        // York is the only Place: no group line, and the summary counts records.
+        let only = ReconciledValueRowModel.derived(
             id: "life.birthPlace", label: "Birth place", style: .place, lead: "York", emptyText: "", mixed: false,
             owners: [owner("lk1", "a"), owner("lk2", "b")], shownOwnerID: "pl1", kind: .birthPlace, locale: en
         )
-        #expect(row.provenanceSummary == "2 records from 1 Place")
-        #expect(row.recordGroups.compactMap { $0.owner?.title } == ["York", "York"])
-        #expect(row.recordGroups.allSatisfy { $0.owner?.id == "pl1" })
+        #expect(only.recordGroups.count == 1 && only.recordGroups[0].owner == nil)
+        #expect(only.recordGroups[0].records.count == 2)
+        #expect(only.provenanceSummary == "2 records")
+
+        // York by two links and Leeds: one group each, York's holding both links' records in link order.
+        let both = ReconciledValueRowModel.derived(
+            id: "life.birthPlace", label: "Birth place", style: .place, lead: "York", emptyText: "", mixed: true,
+            owners: [owner("lk1", "a"), owner("lk3", "c", place: leeds, "Leeds"), owner("lk2", "b")],
+            shownOwnerID: "pl1", kind: .birthPlace, locale: en
+        )
+        #expect(both.recordGroups.map { $0.owner?.id } == ["pl1", "pl2"])
+        #expect(both.recordGroups.map { $0.owner?.title } == ["York", "Leeds"])
+        #expect(both.recordGroups[0].records.map(\.id) == ["a", "b"])
+        #expect(both.provenanceSummary == "3 records from 2 Places")
     }
 
     @Test func theSummarySaysOnlyWhatTheRowKnows() {

@@ -682,12 +682,9 @@ enum CatalogDerivedRowKind: Sendable, Equatable {
 /// row's owner (an event–place link) holds on its place end.
 struct CatalogOwnerField: Sendable, Equatable {
     var entity: CatalogCanonicalEntity
-    var event: CatalogEventHeader?
+    var event: CatalogEventHeader? = nil
     var place: CatalogHeaderPlace? = nil
     var field: CatalogConclusionField
-
-    /// What the row names, orders and inks the owner by: the Place, else the entity.
-    var ownerID: String { place?.entity.id ?? entity.id }
 }
 
 /// One life row's records, one owner per entity it reads, in Go's order.

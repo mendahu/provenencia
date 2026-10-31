@@ -63,3 +63,9 @@ extension CatalogPlaceHeader {
 
     var extraNameCount: Int { PlaceTitleDisplay.extraNameCount(titleParts) }
 }
+
+extension CatalogHeaderPlace {
+    var titleParts: PlaceTitleParts {
+        PlaceTitleParts(names: names, label: entity.label, ref: entity.ref)
+    }
+}
