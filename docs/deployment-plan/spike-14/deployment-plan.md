@@ -119,7 +119,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-06 | Choose an Event or Place thumbnail | — | Folded into S14-02 | — | — | — | Descoped (2026-10-27) → S14-02 |
 | S14-07 | Events and Places lists lead with a picture | — | Folded into S14-02 | — | — | — | Descoped (2026-10-27) → S14-02 |
 | S14-08 | Other-link support calibration | 2 | Raise `segment.OtherSupport` 0.25 → 0.75 so a thin name plus kinship clears Weak | — | — | [S14-08-other-support-calibration.md](prs/S14-08-other-support-calibration.md) | Landed #613 |
-| S14-09 | Quote nicknames and add former surnames | 3 | Nickname parts display in curly quotes; a `former_surname` product part type displays in parentheses, italic on the Persons list row and Person page title (was S11-29) | — | — | [S14-09-name-display.md](prs/S14-09-name-display.md) | Blocked — re-plan |
+| S14-09 | Quote nicknames and add former surnames | 3 | Nickname parts display in curly quotes; a `former_surname` product part type displays in parentheses, italic on the Persons list row and Person page title; `NamePartType` gets its Go guard row (was S11-29; B-24's part-type half from S14-22) | — | — | [S14-09-name-display.md](prs/S14-09-name-display.md) | Planned |
 | S14-10 | A Citation belongs to one Evidence graph | 4 | `citations.graph_id` (migration and backfill); a Citation is created in one linked graph and never moves; graph reads, Observation isolation and unlink go by it; a graph delete deletes its Citations (was S12-52) | — | — | [S14-10-citation-in-one-graph.md](prs/S14-10-citation-in-one-graph.md) | Landed #645 |
 | S14-11 | Reload only what moved, only when it is on screen | 4 | The graph list re-read per Source through a `reads` entry; Add Source inserts its row; hidden graph and Source page keys go stale until shown; the Sources list sorts once per change (was S12-26) | — | — | — | Scoped |
 | S14-12 | File work before the catalog session | 4 | One staged-object type stages ingest, depiction images and thumbnails outside `catalogsession.Do`; Go only (was S12-27) | — | — | — | Scoped |
@@ -132,7 +132,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-19 | A merge leaves no stale link in the graph cache | 5 | `PROVENENCIA_GRAPH_VERIFY=1` passes `TestMemoFollowsCommit/a_handle_merged`: a handle merge drops the link the catalog no longer has; Go only (was the bug half of S12-43) | — | — | — | Scoped |
 | S14-20 | The Promote page recovers and speaks | 5 | One serial, latest-wins proposal runner; Go releases a decided pair whose Subject or record went away and names it; errors scrolled into view and announced; the "start as Skip" line goes; `graphalign.Subject.Provenance` goes (was S12-44) | — | S14-14, S13-24 | — | Scoped |
 | S14-21 | Search finds every spelling | 5 | The search document carries folded spellings and nickname expansions; a join reprojects only what changed; FakeStore's search returns seeded hits in seeded order (was S12-47, S12-50) | — | — | — | Scoped |
-| S14-22 | Promote's wire says what Go decided | 5 | The proposal says whether each connection will file and why not through one pure cycle rule; name part types guarded (was S12-48) | — | S14-09, S13-23 | — | Scoped |
+| S14-22 | Promote's wire says what Go decided | 5 | The proposal says whether each connection will file and why not through one pure cycle rule (was S12-48) | — | S13-23 | — | Scoped |
 | S14-23 | Thumbnails for oversized JPEGs | 1 | A pure-Go reduced decoder in `core/raster` gives a JPEG over the 64-megapixel budget a 1/8-scale thumbnail; bounded and fuzzed; Go only (was S12-39) | — | — | [S14-23-oversized-jpeg-thumbnails.md](prs/S14-23-oversized-jpeg-thumbnails.md) | Planned |
 | S14-24 | Give every workspace page its width class | 6 | `PVSpacing.widthWideBreakpoint` (1600), `PVWidthClass` and the `pvWidthClass` environment value, measured once at `WorkspaceDestinationHost`; no visible change | — | — | [S14-24-wide-width-class.md](prs/S14-24-wide-width-class.md) | Landed #628 |
 | S14-25 | Page columns in the kit | — | Folded into the page redesigns: Spike 13's S13-10 builds `PVPageColumns` with the Person page frame (user, 2026-10-29) | — | — | — | Descoped (2026-10-29) → S13-10 |
@@ -174,7 +174,7 @@ SLICE 5 — Audit fixes (batch 5)
   S14-16  Promote and Source writes return their effects   (after S13-24)
   S14-17  Vocabulary writes return their effects
   S14-20  The Promote page recovers and speaks   (after S14-14, S13-24)
-  S14-22  Promote's wire says what Go decided   (after S14-09, S13-23)
+  S14-22  Promote's wire says what Go decided   (after S13-23)
   Check: bar outcomes 15 – 20.
 
 SLICE 6 — Wide layout (batch 6)
@@ -190,7 +190,7 @@ SLICE 3 — Name display (batch 3)
 S14-99 — Dogfood close / docs
 ```
 
-S14-01 and S14-03 can run in parallel; S14-02 follows S14-01. S14-03 waits on S14-13 (was Spike 12's S12-28), which changes in place the one predicate that says whether the viewer can cut a file; S14-03 gates Draw on it. S14-08 is independent of batch 1. S14-09 is independent of the other batches; S14-22 waits on it.
+S14-01 and S14-03 can run in parallel; S14-02 follows S14-01. S14-03 waits on S14-13 (was Spike 12's S12-28), which changes in place the one predicate that says whether the viewer can cut a file; S14-03 gates Draw on it. S14-08 is independent of batch 1. S14-09 is independent of the other batches.
 
 ### Dependencies at a glance
 
@@ -203,7 +203,6 @@ S14-16 ──▶ S14-17
 S14-14 ──▶ S14-20
 S13-24 ──▶ S14-16, S14-20      (Spike 13)
 S13-23 ──▶ S14-22             (Spike 13)
-S14-09 ──▶ S14-22
 S14-08  (independent)
 S14-D1 ──▶ S13-D1, S13-10      (Spike 13)
 ```
@@ -262,10 +261,10 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S14-09 — Quote nicknames and add former surnames
 
-**Ships.** Nickname parts display in curly quotes. A `former_surname` product part type (role `family`, after the nickname in both Western orders) displays in parentheses, with the surname italic on the Persons list row and the Person page title. Was Spike 11's S11-29; the plan is [S14-09-name-display.md](prs/S14-09-name-display.md), refreshed before it ships.
-**Not this PR.** Migrating existing catalogs; italics on other surfaces; a Go↔Swift part-type parity check (S14-22).
+**Ships.** Nickname parts display in curly quotes. A `former_surname` product part type (role `family`, after the nickname in both Western orders) displays in parentheses, with the surname italic on the Persons list row and the Person page title. `NamePartType` gets its row in `api/ffi/swift_vocabulary_test.go`, and `add-name-value` step 6 lists every place a part type lives (audit 2 B-24's part-type half, moved from S14-22 on 2026-10-31). Was Spike 11's S11-29; the plan is [S14-09-name-display.md](prs/S14-09-name-display.md), refreshed before it ships.
+**Not this PR.** Migrating existing catalogs; italics on other surfaces.
 **Check.** Bar outcome 11: *James “Jake” Robins*; *Jones, Mary (Smith)* with *Smith* italic.
-**Context.** Working rule "(Batch 3) S14-09 is Spike 11's S11-29, refreshed"; [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §4; [`structured-name-model.md`](../../structured-name-model.md) §4.2a, §4.5; [`ideas/international-names.md`](../../ideas/international-names.md); `add-name-value`, `add-localized-string`. Spike 12's S12-48 waits on this PR.
+**Context.** Working rule "(Batch 3) S14-09 is Spike 11's S11-29, refreshed"; [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §4; [`structured-name-model.md`](../../structured-name-model.md) §4.2a, §4.5; [`ideas/international-names.md`](../../ideas/international-names.md); `add-name-value`, `add-localized-string`; audit 2 B-24.
 
 ### Slice 4 — Evidence graphs finished
 
@@ -365,10 +364,10 @@ If the plan runs past about ten steps, it splits along these parts.
 
 #### S14-22 — Promote's wire says what Go decided
 
-**Ships.** The proposal reports, per connection, whether it will file at Done and why not (a self-link, a `part_of` that would close a cycle). The cycle rule becomes one pure function over edges: the filer in `core/database/identityclaims/bridgefile.go` feeds it from SQL, and the proposal from the canon edges it already holds plus the page's fixed connections, so a proposal runs no catalog scan (its work at Scale is the place edges in memory). The reasons are a typed enum in `Platform/ConclusionVocabulary.swift` with a `swift_vocabulary_test.go` row. Swift's subrows and footer count read the result, a refused connection is drawn and worded as the self-link subrow is today (no new chrome), and Swift's own filing rule goes (B-23). `NamePartType` stays beside its owner, as `.cursor/rules/macos-client.mdc` allows; it gets a guard row, and `add-name-value` step 6 names the match-registry role, the format seed roles and the Swift case (B-24). `promote-graph-alignment.md` §9.1 says where the refusal is reported.
+**Ships.** The proposal reports, per connection, whether it will file at Done and why not (a self-link, a `part_of` that would close a cycle). The cycle rule becomes one pure function over edges: the filer in `core/database/identityclaims/bridgefile.go` feeds it from SQL, and the proposal from the canon edges it already holds plus the page's fixed connections, so a proposal runs no catalog scan (its work at Scale is the place edges in memory). The reasons are a typed enum in `Platform/ConclusionVocabulary.swift` with a `swift_vocabulary_test.go` row. Swift's subrows and footer count read the result, a refused connection is drawn and worded as the self-link subrow is today (no new chrome), and Swift's own filing rule goes (B-23). `promote-graph-alignment.md` §9.1 says where the refusal is reported.
 **Not this PR.** Swift's weak-row draft (B-26, moved to Spike 13's S13-24 on 2026-10-29); unread wire fields (B-37: S13-24 reserves the wire half, and S14-20 removes `Subject.Provenance`).
-**Check.** Bar outcome 19, footer: a page whose `part_of` connection would close a cycle shows it as not filing, and Done files what the footer counted; the guard row fails on a new part type.
-**Context.** Audit 2 B-23, B-24 (map review K-38, K-40); `.cursor/rules/macos-client.mdc` (wire enums with guard rows); S11-17 (reasons typed), S11-47 D-13; `add-ffi-handler`, `add-name-value`. After S14-09 (Spike 11's S11-29, moved to Spike 14 on 2026-10-29), which adds the part type the guard row covers (its plan's Out row points here), and S13-23, which changes the same Promote rows. The typed band (B-24's first half) is dropped: the band is deprecated (Spike 13 working rule "The band stays, deprecated"). **Spike 11 leftover (2026-10-29):** the Swift-vocabulary guard tests hand-write their expected lists (`api/ffi/swift_vocabulary_test.go`), so a new Go reason passes unnoticed; this PR's typed enums read the list from Go.
+**Check.** Bar outcome 19, footer: a page whose `part_of` connection would close a cycle shows it as not filing, and Done files what the footer counted.
+**Context.** Audit 2 B-23 (map review K-38, K-40; B-24's part-type half moved to S14-09 on 2026-10-31); `.cursor/rules/macos-client.mdc` (wire enums with guard rows); S11-17 (reasons typed), S11-47 D-13; `add-ffi-handler`, `add-name-value`. After S13-23, which changes the same Promote rows. The typed band (B-24's other half) is dropped: the band is deprecated (Spike 13 working rule "The band stays, deprecated"). **Spike 11 leftover (2026-10-29):** the Swift-vocabulary guard tests hand-write their expected lists (`api/ffi/swift_vocabulary_test.go`), so a new Go reason passes unnoticed; this PR's typed enums read the list from Go.
 
 ### Slice 2 — Matching calibration
 
