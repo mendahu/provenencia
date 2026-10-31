@@ -637,8 +637,9 @@ func lifeBefore(a, b lifePick) bool {
 
 // PersonLifeOwners names, for a Person's birth and death rows, the entity
 // and Property each row reads: one date owner per surviving birth (or death)
-// event, lead first, and one toponym owner per Place of those events, in the
-// order the events give them (folded at each event's date). A nil or merged
+// event, lead first, and one owner per event–place link of those events, in
+// the order the events give their Places (folded at each event's date), each
+// holding its link's place end and that Place. A nil or merged
 // Person gives none.
 func PersonLifeOwners(c *database.Catalog, personID []byte) (birth, death LifeOwners, err error) {
 	if c == nil || c.Graph() == nil || len(personID) != 16 {
@@ -702,6 +703,23 @@ func lifeOwners(g *graphcache.Graph, v vocab, pg *placeGraph, picks []lifePick) 
 	var out LifeOwners
 	listed := map[string]bool{}
 	dated := map[string]bool{}
+	// One load for every link's association, so the walk's queries do not
+	// grow with the links. The links are kept for the walk below.
+	var assocIDs [][]byte
+	linksOf := map[string][]graphcache.Link{}
+	for _, pick := range picks {
+		links, err := follow(g, pick.event.ID, hops.PlacesOfEvent)
+		if err != nil {
+			return LifeOwners{}, err
+		}
+		linksOf[string(pick.event.ID)] = links
+		for _, l := range links {
+			assocIDs = append(assocIDs, l.Association)
+		}
+	}
+	if err := g.Nodes(assocIDs); err != nil {
+		return LifeOwners{}, err
+	}
 	for _, pick := range picks {
 		if !dated[string(pick.event.ID)] {
 			dated[string(pick.event.ID)] = true
@@ -712,11 +730,26 @@ func lifeOwners(g *graphcache.Graph, v vocab, pg *placeGraph, picks []lifePick) 
 			return LifeOwners{}, err
 		}
 		for _, p := range places {
-			if listed[string(p.Entity.ID)] {
-				continue
+			for _, l := range linksOf[string(pick.event.ID)] {
+				if !bytes.Equal(l.Neighbor, p.Entity.ID) || listed[string(l.Association)] {
+					continue
+				}
+				if len(l.Association) == 0 {
+					return LifeOwners{}, fmt.Errorf("conclusionheaders: location link of event %x to place %x has no association", pick.event.ID, l.Neighbor)
+				}
+				listed[string(l.Association)] = true
+				assoc, err := g.Node(l.Association)
+				if err != nil {
+					return LifeOwners{}, err
+				}
+				if assoc == nil {
+					return LifeOwners{}, fmt.Errorf("conclusionheaders: association %x is missing", l.Association)
+				}
+				out.Places = append(out.Places, FieldOwner{
+					Entity: entityOf(assoc), PropertyID: v.prop(hops.PlacesOfEvent.To()),
+					Place: &HeaderPlace{Entity: p.Entity, Names: p.Names},
+				})
 			}
-			listed[string(p.Entity.ID)] = true
-			out.Places = append(out.Places, FieldOwner{Entity: p.Entity, PropertyID: v.prop(vocabkey.PropertyToponym)})
 		}
 	}
 	return out, nil

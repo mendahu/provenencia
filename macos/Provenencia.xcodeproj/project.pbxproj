@@ -17,11 +17,15 @@
 		AA1214000000000000000F02 /* PVChecklistRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1214000000000000000F01 /* PVChecklistRows.swift */; };
 		A91600000000000000000034 /* PVSymbolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91600000000000000000033 /* PVSymbolTests.swift */; };
 		A91600000000000000000032 /* PersonDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91600000000000000000031 /* PersonDetailTests.swift */; };
+		A91311000000000000000008 /* ProvenanceSheetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91311000000000000000007 /* ProvenanceSheetTests.swift */; };
 		A91D00000000000000000008 /* EventDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91D00000000000000000007 /* EventDetailTests.swift */; };
 		A91F00000000000000000002 /* PlaceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91F00000000000000000001 /* PlaceDetailView.swift */; };
 		A91F00000000000000000004 /* PlaceDetailContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91F00000000000000000003 /* PlaceDetailContent.swift */; };
 		A91F00000000000000000006 /* PlaceDetailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91F00000000000000000005 /* PlaceDetailTests.swift */; };
 		A91600000000000000000030 /* ReconciliationOutcome.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91600000000000000000029 /* ReconciliationOutcome.swift */; };
+		A91311000000000000000006 /* ReconciliationRecordRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91311000000000000000005 /* ReconciliationRecordRows.swift */; };
+		A91311000000000000000004 /* ProvenanceSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91311000000000000000003 /* ProvenanceSheet.swift */; };
+		A91311000000000000000002 /* CitationLineDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91311000000000000000001 /* CitationLineDisplay.swift */; };
 		A91600000000000000000028 /* ReconciliationReasoningView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91600000000000000000027 /* ReconciliationReasoningView.swift */; };
 		A91600000000000000000026 /* ReconciledValueRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91600000000000000000025 /* ReconciledValueRow.swift */; };
 		A91600000000000000000024 /* PersonDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91600000000000000000023 /* PersonDetailView.swift */; };
@@ -314,6 +318,8 @@
 		AA00000000000000000F24B3 /* HostedWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000F24B4 /* HostedWindow.swift */; };
 		AA0000000000000000000617 /* DateValueSelectTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000616 /* DateValueSelectTests.swift */; };
 		537CBAF612C54F4F04ADA683 /* PVSpacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BEB8D3B3D1A6C08B3733B13 /* PVSpacing.swift */; };
+		C1B0000000000000000000A2 /* PVClipboardButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B0000000000000000000A1 /* PVClipboardButton.swift */; };
+		C1B0000000000000000000A4 /* PVClipboardButtonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1B0000000000000000000A3 /* PVClipboardButtonTests.swift */; };
 		563FA9B6FA344585CE32B2A7 /* PVIconButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68425DFE8D1974D7A4AC5BF8 /* PVIconButton.swift */; };
 		56FF85A0EB2688B0B226A023 /* PVTypography.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2789221068BF64015C43CA5 /* PVTypography.swift */; };
 		57420D5CDD1330745ACC33FD /* MetadataDetailPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAA7D6A46A5016665371A2C5 /* MetadataDetailPane.swift */; };
@@ -468,8 +474,12 @@
 		AA1214000000000000000001 /* PVArtifactChecklist.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVArtifactChecklist.swift; sourceTree = "<group>"; };
 		A91600000000000000000033 /* PVSymbolTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSymbolTests.swift; sourceTree = "<group>"; };
 		A91600000000000000000031 /* PersonDetailTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonDetailTests.swift; sourceTree = "<group>"; };
+		A91311000000000000000007 /* ProvenanceSheetTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProvenanceSheetTests.swift; sourceTree = "<group>"; };
 		A91D00000000000000000007 /* EventDetailTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EventDetailTests.swift; sourceTree = "<group>"; };
 		A91600000000000000000029 /* ReconciliationOutcome.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReconciliationOutcome.swift; sourceTree = "<group>"; };
+		A91311000000000000000005 /* ReconciliationRecordRows.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReconciliationRecordRows.swift; sourceTree = "<group>"; };
+		A91311000000000000000003 /* ProvenanceSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProvenanceSheet.swift; sourceTree = "<group>"; };
+		A91311000000000000000001 /* CitationLineDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationLineDisplay.swift; sourceTree = "<group>"; };
 		A91600000000000000000027 /* ReconciliationReasoningView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReconciliationReasoningView.swift; sourceTree = "<group>"; };
 		A91600000000000000000025 /* ReconciledValueRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReconciledValueRow.swift; sourceTree = "<group>"; };
 		A91600000000000000000023 /* PersonDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonDetailView.swift; sourceTree = "<group>"; };
@@ -766,6 +776,8 @@
 		40F72A548E04F25E0AA30CDB /* PVInput.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVInput.swift; sourceTree = "<group>"; };
 		48B417D5E38F11219198BF91 /* WorkspaceContent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceContent.swift; sourceTree = "<group>"; };
 		4F0CB87F6EC5759DF8D0A7AF /* MetadataModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetadataModelTests.swift; sourceTree = "<group>"; };
+		C1B0000000000000000000A1 /* PVClipboardButton.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVClipboardButton.swift; sourceTree = "<group>"; };
+		C1B0000000000000000000A3 /* PVClipboardButtonTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVClipboardButtonTests.swift; sourceTree = "<group>"; };
 		68425DFE8D1974D7A4AC5BF8 /* PVIconButton.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVIconButton.swift; sourceTree = "<group>"; };
 		6AAC04817D6F4CCC9CDC9B17 /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; path = README.md; sourceTree = "<group>"; };
 		8291342170CC4CB42EFA814C /* FieldSlugTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FieldSlugTests.swift; sourceTree = "<group>"; };
@@ -1318,6 +1330,9 @@
 				A91F00000000000000000003 /* PlaceDetailContent.swift */,
 				A91500000000000000000001 /* ReconciledValueDisplay.swift */,
 				A91600000000000000000029 /* ReconciliationOutcome.swift */,
+				A91311000000000000000005 /* ReconciliationRecordRows.swift */,
+				A91311000000000000000003 /* ProvenanceSheet.swift */,
+				A91311000000000000000001 /* CitationLineDisplay.swift */,
 				A91600000000000000000027 /* ReconciliationReasoningView.swift */,
 				A91600000000000000000025 /* ReconciledValueRow.swift */,
 				A91600000000000000000023 /* PersonDetailView.swift */,
@@ -1518,6 +1533,8 @@
 				A91500000000000000000003 /* ReconciledValueDisplayTests.swift */,
 				A91600000000000000000033 /* PVSymbolTests.swift */,
 				A91600000000000000000031 /* PersonDetailTests.swift */,
+				A91311000000000000000007 /* ProvenanceSheetTests.swift */,
+				C1B0000000000000000000A3 /* PVClipboardButtonTests.swift */,
 				A91D00000000000000000007 /* EventDetailTests.swift */,
 				A91F00000000000000000005 /* PlaceDetailTests.swift */,
 				A90900000000000000000003 /* PVListTests.swift */,
@@ -1583,6 +1600,15 @@
 			);
 			name = LogoMark;
 			path = LogoMark;
+			sourceTree = "<group>";
+		};
+		C1B0000000000000000000A5 /* ClipboardButton */ = {
+			isa = PBXGroup;
+			children = (
+				C1B0000000000000000000A1 /* PVClipboardButton.swift */,
+			);
+			name = ClipboardButton;
+			path = ClipboardButton;
 			sourceTree = "<group>";
 		};
 		D5C00000000000000000000F /* IconButton */ = {
@@ -1945,6 +1971,7 @@
 				AA000000000000000000010C /* Painter */,
 				D5C00000000000000000000E /* LogoMark */,
 				D5C00000000000000000000F /* IconButton */,
+				C1B0000000000000000000A5 /* ClipboardButton */,
 				D5C000000000000000000015 /* HoverEffect */,
 				D5C000000000000000000008 /* Badge */,
 				AA0000000000000000000674 /* Copy */,
@@ -2280,6 +2307,9 @@
 				A91F00000000000000000004 /* PlaceDetailContent.swift in Sources */,
 				A91500000000000000000002 /* ReconciledValueDisplay.swift in Sources */,
 				A91600000000000000000030 /* ReconciliationOutcome.swift in Sources */,
+				A91311000000000000000006 /* ReconciliationRecordRows.swift in Sources */,
+				A91311000000000000000004 /* ProvenanceSheet.swift in Sources */,
+				A91311000000000000000002 /* CitationLineDisplay.swift in Sources */,
 				A91600000000000000000028 /* ReconciliationReasoningView.swift in Sources */,
 				A91600000000000000000026 /* ReconciledValueRow.swift in Sources */,
 				A91600000000000000000024 /* PersonDetailView.swift in Sources */,
@@ -2322,6 +2352,7 @@
 				B2C3D4E5F60718293A4B5C6D /* WindowDragRegion.swift in Sources */,
 				327D9751467546DCB56EC478 /* WindowSizing.swift in Sources */,
 				563FA9B6FA344585CE32B2A7 /* PVIconButton.swift in Sources */,
+				C1B0000000000000000000A2 /* PVClipboardButton.swift in Sources */,
 				E3D046BD80595D1F07691D1F /* PVHoverEffect.swift in Sources */,
 				A790E2993DB9D42163403BA3 /* PreviewFixtures.swift in Sources */,
 				9BCF5ECCD155C02B71931BB5 /* FieldSlug.swift in Sources */,
@@ -2569,6 +2600,8 @@
 				A91500000000000000000004 /* ReconciledValueDisplayTests.swift in Sources */,
 				A91600000000000000000034 /* PVSymbolTests.swift in Sources */,
 				A91600000000000000000032 /* PersonDetailTests.swift in Sources */,
+				A91311000000000000000008 /* ProvenanceSheetTests.swift in Sources */,
+				C1B0000000000000000000A4 /* PVClipboardButtonTests.swift in Sources */,
 				A91D00000000000000000008 /* EventDetailTests.swift in Sources */,
 				A91F00000000000000000006 /* PlaceDetailTests.swift in Sources */,
 				A90900000000000000000004 /* PVListTests.swift in Sources */,

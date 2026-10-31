@@ -1281,6 +1281,7 @@ struct GoStore: GenealogyStore {
                 CatalogOwnerField(
                     entity: mapCanonicalEntity($0.entity),
                     event: $0.hasEvent ? mapEventHeader($0.event) : nil,
+                    place: $0.hasPlace ? mapHeaderPlace($0.place) : nil,
                     field: mapConclusionField($0.field)
                 )
             }
@@ -1306,7 +1307,12 @@ struct GoStore: GenealogyStore {
             transcriptionUncertain: o.transcriptionUncertain,
             credibilityOffset: Int(o.credibilityOffset),
             voteSupport: Int(o.voteSupport),
-            voteTotal: Int(o.voteTotal)
+            voteTotal: Int(o.voteTotal),
+            artifactLabel: o.artifactLabel,
+            citationLabel: o.citationLabel,
+            artifactPage: Int(o.artifactPage),
+            pageLabel: o.pageLabel,
+            groupRank: Int(o.groupRank)
         )
     }
 

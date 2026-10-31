@@ -13,7 +13,8 @@
 // Reconciliation Claims are never in these tables: when they ship, a
 // composer lays an accepted claim over the auto-reconciled value here.
 // A Person's life rows read other handles' fields through PersonDerivedRows,
-// composed by the same steps.
+// composed by the same steps. A place row reads the event–place link's place
+// end, each record as its Place's toponym.
 package conclusiondetails
 
 import (
@@ -31,8 +32,10 @@ import (
 	"github.com/mendahu/provenencia/core/database/gallery"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecodec"
@@ -81,6 +84,7 @@ type Outcome struct {
 	ObservationRef string
 	Reason         string
 	ValueRank      int                // the value it went into; 0 for none
+	GroupRank      int                // the displayed value it counts under; 0 for none
 	DeniedBy       []byte             // the negative Observation, for "denied"
 	Vote           autoreconcile.Vote // the majority that beat it, for "outvoted"
 	Recorded       Value              // what the record said
@@ -91,6 +95,10 @@ type Outcome struct {
 	ArtifactID     []byte
 	SourceID       []byte
 	SourceTitle    string
+	ArtifactLabel  string // "" = none
+	CitationLabel  string // "" = none
+	ArtifactPage   int    // the Citation locator's page; 0 = none
+	PageLabel      string // its printed label; "" = none
 	CredibilityKey string // "" = no assessment (standard)
 	// Provenance is the evidence as the auto-reconciler weighed it, relative
 	// to the default grades; Provenance.Weak says whether it is weak, and
@@ -107,7 +115,7 @@ type Field struct {
 	State       autoreconcile.State // read off the displayed values
 	cardinality string
 	Values      []ReconciledValue // rank order
-	Outcomes    []Outcome         // by value rank (none last), then Observation id
+	Outcomes    []Outcome         // by group rank (none last), value rank (none last), then Observation id
 }
 
 // PictureTile is one picture a gallery shows: its image, and the outcome of
@@ -132,11 +140,18 @@ const (
 	// kind's binding order come from the graph vocabulary.
 	sqlPropertyIDs = `SELECT DISTINCT ao.entity_id, ao.property_id FROM auto_reconciler_outcomes ao WHERE ao.entity_id IN (`
 
+	// A Subject-valued record reads as its Subject's toponym: every positive
+	// toponym Observation of the Subjects in the IN list. INDEXED BY: there are
+	// no planner stats, and property_id would scan every toponym.
+	sqlToponyms = `SELECT o.subject_id, o.ref, o.polarity, COALESCE(o.value_text, '') FROM observations o INDEXED BY observations_subject_id_idx
+		WHERE o.property_id = ? AND o.polarity = 'positive' AND o.subject_id IN (`
+
 	sqlOutcomes = `SELECT ao.entity_id, ao.property_id, ao.observation_id, o.ref, ao.reason, ao.value_rank, ao.denied_by,
 			COALESCE(ao.vote_support, 0), COALESCE(ao.vote_total, 0),
 			o.value_text, o.value_integer, o.value_term_id, COALESCE(t.key, ''), COALESCE(t.label, ''), COALESCE(t.origin, ''),
-			o.value_date_id, o.value_name_id,
+			o.value_date_id, o.value_name_id, o.value_subject_id,
 			s.id, s.ref, s.graph_id, c.id, a.id, src.id, COALESCE(src.title, ''),
+			COALESCE(a.label, ''), COALESCE(c.label, ''), c.locator_json,
 			COALESCE(sg.key, ''), ` + autoreconciler.ProvenanceColumns + `
 		FROM auto_reconciler_outcomes ao
 		JOIN observations o ON o.id = ao.observation_id
@@ -174,7 +189,7 @@ func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
 	for _, l := range tiles[string(entityID)] {
 		leads[string(l.ObservationIDs[0])] = true
 	}
-	fields, leadOutcomes, err := fieldsOf(c.Graph(), db, []*graphcache.Node{n}, leads)
+	fields, leadOutcomes, err := fieldsOf(c.Graph(), db, []*graphcache.Node{n}, leads, false)
 	if err != nil {
 		return Detail{}, err
 	}
@@ -192,7 +207,7 @@ func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
 // node, or a repeated id, is skipped. It also returns the outcomes of the
 // Observations in leads (a gallery's earliest records), which belong to no
 // field.
-func fieldsOf(g *graphcache.Graph, q Querier, nodes []*graphcache.Node, leads map[string]bool) (map[string][]Field, map[string]Outcome, error) {
+func fieldsOf(g *graphcache.Graph, q Querier, nodes []*graphcache.Node, leads map[string]bool, subjectValued bool) (map[string][]Field, map[string]Outcome, error) {
 	var use []*graphcache.Node
 	var ids [][]byte
 	seen := map[string]bool{}
@@ -208,7 +223,7 @@ func fieldsOf(g *graphcache.Graph, q Querier, nodes []*graphcache.Node, leads ma
 	if len(use) == 0 {
 		return out, map[string]Outcome{}, nil
 	}
-	ordered, byProp, err := loadProperties(g, q, use)
+	ordered, byProp, err := loadProperties(g, q, use, subjectValued)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -217,7 +232,12 @@ func fieldsOf(g *graphcache.Graph, q Querier, nodes []*graphcache.Node, leads ma
 			return nil, nil, err
 		}
 	}
-	leadOutcomes, err := loadOutcomes(q, ids, byProp, leads)
+	v, err := g.Vocabulary()
+	if err != nil {
+		return nil, nil, err
+	}
+	toponym := v.PropertyID(vocabkey.PropertyToponym, vocabkey.OriginProvenencia)
+	leadOutcomes, err := loadOutcomes(q, toponym, ids, byProp, leads)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -233,13 +253,35 @@ func fieldsOf(g *graphcache.Graph, q Querier, nodes []*graphcache.Node, leads ma
 // finish reads a field's state off its values and orders its outcomes.
 func finish(f *Field) {
 	f.State = state(f.Values, f.cardinality)
-	sort.SliceStable(f.Outcomes, func(i, j int) bool {
-		ri, rj := f.Outcomes[i].ValueRank, f.Outcomes[j].ValueRank
-		if (ri == 0) != (rj == 0) {
-			return rj == 0
+	displayed := map[int]bool{}
+	for _, v := range f.Values {
+		if v.Displayed() {
+			displayed[v.Rank] = true
 		}
-		if ri != rj {
-			return ri < rj
+	}
+	for i := range f.Outcomes {
+		o := &f.Outcomes[i]
+		o.GroupRank = 0
+		counts := autoreconcile.Reason(o.Reason).IntoValue()
+		if counts && displayed[o.ValueRank] {
+			o.GroupRank = o.ValueRank
+		}
+	}
+	less := func(a, b int) (decided, before bool) {
+		if (a == 0) != (b == 0) {
+			return true, b == 0
+		}
+		if a != b {
+			return true, a < b
+		}
+		return false, false
+	}
+	sort.SliceStable(f.Outcomes, func(i, j int) bool {
+		if d, b := less(f.Outcomes[i].GroupRank, f.Outcomes[j].GroupRank); d {
+			return b
+		}
+		if d, b := less(f.Outcomes[i].ValueRank, f.Outcomes[j].ValueRank); d {
+			return b
 		}
 		return string(f.Outcomes[i].ObservationID) < string(f.Outcomes[j].ObservationID)
 	})
@@ -292,7 +334,7 @@ func state(values []ReconciledValue, cardinality string) autoreconcile.State {
 
 // loadProperties lists each node's fields in its kind's binding order, and
 // the same fields by entity id then property id.
-func loadProperties(g *graphcache.Graph, q Querier, nodes []*graphcache.Node) (map[string][]*Field, map[string]map[string]*Field, error) {
+func loadProperties(g *graphcache.Graph, q Querier, nodes []*graphcache.Node, subjectValued bool) (map[string][]*Field, map[string]map[string]*Field, error) {
 	v, err := g.Vocabulary()
 	if err != nil {
 		return nil, nil, err
@@ -311,7 +353,7 @@ func loadProperties(g *graphcache.Graph, q Querier, nodes []*graphcache.Node) (m
 			return err
 		}
 		p, ok := props[string(id)]
-		if !ok || p.ValueType == propertymeta.ValueTypeSubject || p.ValueType == propertymeta.ValueTypeDepiction {
+		if !ok || p.ValueType == propertymeta.ValueTypeDepiction || (p.ValueType == propertymeta.ValueTypeSubject && !subjectValued) {
 			return nil
 		}
 		ordered[string(entityID)] = append(ordered[string(entityID)], &Field{
@@ -346,7 +388,7 @@ func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Fi
 	for prop, ranks := range n.Values {
 		f, ok := byProp[prop]
 		if !ok {
-			continue // a subject-valued or depiction Property, or one the outcomes no longer name
+			continue // a depiction Property, or one the outcomes no longer name
 		}
 		for _, rank := range ranks {
 			v := ReconciledValue{
@@ -382,32 +424,36 @@ func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Fi
 // loadOutcomes attaches each field's outcomes to it. It also returns the
 // outcomes of the Observations in leads (a gallery's earliest records), which
 // belong to no field; their Recorded value has no Date or Name.
-func loadOutcomes(q Querier, entityIDs [][]byte, byProp map[string]map[string]*Field, leads map[string]bool) (map[string]Outcome, error) {
+func loadOutcomes(q Querier, toponym []byte, entityIDs [][]byte, byProp map[string]map[string]*Field, leads map[string]bool) (map[string]Outcome, error) {
 	leadOutcomes := map[string]Outcome{}
 	type pending struct {
-		f              *Field
-		o              Outcome
-		dateID, nameID []byte
+		f                         *Field
+		o                         Outcome
+		dateID, nameID, subjectID []byte
 	}
 	var all []pending
 	var dateIDs, nameIDs [][]byte
+	var valueSubjectIDs [][]byte
 	err := sqlbatch.Query(q, sqlOutcomes, ")", nil, entityIDs, func(rows *sql.Rows) error {
 		var (
-			entityID, propertyID, termID, dateID, nameID []byte
-			rank                                         sql.NullInt64
-			text                                         sql.NullString
-			integer                                      sql.NullInt64
-			o                                            Outcome
+			entityID, propertyID, termID, dateID, nameID, valueSubjectID []byte
+			rank                                                         sql.NullInt64
+			text                                                         sql.NullString
+			integer                                                      sql.NullInt64
+			o                                                            Outcome
+			locatorJSON                                                  string
 		)
 		dest := append([]any{&entityID, &propertyID, &o.ObservationID, &o.ObservationRef, &o.Reason, &rank, &o.DeniedBy,
 			&o.Vote.Support, &o.Vote.Of,
-			&text, &integer, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &o.Recorded.TermOrigin, &dateID, &nameID,
+			&text, &integer, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &o.Recorded.TermOrigin, &dateID, &nameID, &valueSubjectID,
 			&o.SubjectID, &o.SubjectRef, &o.GraphID, &o.CitationID, &o.ArtifactID, &o.SourceID, &o.SourceTitle,
+			&o.ArtifactLabel, &o.CitationLabel, &locatorJSON,
 			&o.CredibilityKey}, autoreconciler.ProvenanceDest(&o.Provenance)...)
 		if err := rows.Scan(dest...); err != nil {
 			return err
 		}
 		o.ValueRank = int(rank.Int64)
+		o.ArtifactPage, o.PageLabel = locator.Page(locatorJSON)
 		o.Recorded.Text, o.Recorded.HasText = text.String, text.Valid
 		o.Recorded.Integer, o.Recorded.HasInteger = integer.Int64, integer.Valid
 		o.Recorded.TermID = termID
@@ -418,7 +464,10 @@ func loadOutcomes(q Querier, entityIDs [][]byte, byProp map[string]map[string]*F
 			}
 			return nil
 		}
-		all = append(all, pending{f: f, o: o, dateID: dateID, nameID: nameID})
+		all = append(all, pending{f: f, o: o, dateID: dateID, nameID: nameID, subjectID: valueSubjectID})
+		if len(valueSubjectID) > 0 {
+			valueSubjectIDs = append(valueSubjectIDs, valueSubjectID)
+		}
 		if len(dateID) > 0 {
 			dateIDs = append(dateIDs, dateID)
 		}
@@ -438,7 +487,17 @@ func loadOutcomes(q Querier, entityIDs [][]byte, byProp map[string]map[string]*F
 	if err != nil {
 		return nil, err
 	}
+	toponyms, err := toponymsOf(q, toponym, valueSubjectIDs)
+	if err != nil {
+		return nil, err
+	}
 	for _, p := range all {
+		if len(p.subjectID) > 0 {
+			// A record on an event–place link's place end holds a Place: it
+			// reads as that Place's first toponym (D-21).
+			p.o.Recorded.Text = toponyms[string(p.subjectID)]
+			p.o.Recorded.HasText = p.o.Recorded.Text != ""
+		}
 		if d, ok := dates[string(p.dateID)]; ok {
 			p.o.Recorded.Date = &d
 		}
@@ -448,6 +507,33 @@ func loadOutcomes(q Querier, entityIDs [][]byte, byProp map[string]map[string]*F
 		p.f.Outcomes = append(p.f.Outcomes, p.o)
 	}
 	return leadOutcomes, nil
+}
+
+// toponymsOf reads each Subject as its first toponym (observations.FirstText),
+// from one batched load. A Subject with none is absent.
+func toponymsOf(q Querier, toponym []byte, subjectIDs [][]byte) (map[string]string, error) {
+	subjectIDs = database.UniqueBlobIDs(subjectIDs)
+	out := map[string]string{}
+	if len(subjectIDs) == 0 {
+		return out, nil
+	}
+	records := map[string][]observations.TextRecord{}
+	err := sqlbatch.Query(q, sqlToponyms, ")", []any{toponym}, subjectIDs, func(rows *sql.Rows) error {
+		var id []byte
+		var r observations.TextRecord
+		if err := rows.Scan(&id, &r.Ref, &r.Polarity, &r.Text); err != nil {
+			return err
+		}
+		records[string(id)] = append(records[string(id)], r)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	for id, rs := range records {
+		out[id] = observations.FirstText(rs)
+	}
+	return out, nil
 }
 
 // DerivedRowKind names a Person life row.
@@ -461,15 +547,18 @@ const (
 )
 
 // OwnerField is the field a derived row reads off the entity that owns it.
-// Event is the owner's header when the owner is an Event.
+// Event is the owner's header when the owner is an Event. Place is the Place
+// a place row's owner (an event–place link's association) holds on its place
+// end, with its own toponyms; nil for every other owner.
 type OwnerField struct {
 	Entity canonicalentities.Entity
 	Event  *conclusionheaders.EventHeader
+	Place  *conclusionheaders.HeaderPlace
 	Field  Field
 }
 
 // DerivedRow is one life row's records: one entry per owner, in the order
-// the row lists them (the lead event first; Places in the header's order).
+// the row lists them (the lead event first; place links in the header's order).
 type DerivedRow struct {
 	Kind   DerivedRowKind
 	Owners []OwnerField
@@ -521,7 +610,7 @@ func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, erro
 	if err != nil {
 		return nil, err
 	}
-	fields, _, err := fieldsOf(g, db, nodes, nil)
+	fields, _, err := fieldsOf(g, db, nodes, nil, true)
 	if err != nil {
 		return nil, err
 	}
@@ -541,7 +630,7 @@ func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, erro
 				if !bytes.Equal(f.PropertyID, o.PropertyID) {
 					continue
 				}
-				owner := OwnerField{Entity: o.Entity, Field: f}
+				owner := OwnerField{Entity: o.Entity, Place: o.Place, Field: f}
 				if l.events {
 					owner.Event = eventOf[string(o.Entity.ID)]
 				}

@@ -65,7 +65,7 @@ type LifeFacts struct {
 // Names are kept toponyms in rank order. Parents is the hierarchical chain
 // at the walk's date (nearest first); ParentsAreCandidates when several
 // parents hold at once. Entity is the Place (the leaf when folded), whose
-// toponym records a Person page reads through conclusiondetails.PersonDerivedRows.
+// link records a Person page reads through conclusiondetails.PersonDerivedRows.
 type HeaderPlace struct {
 	Entity               canonicalentities.Entity
 	Names                []string
@@ -74,14 +74,17 @@ type HeaderPlace struct {
 }
 
 // FieldOwner is one entity and the Property of it that a Person's life row
-// reads.
+// reads. A Place row's owner is the event-place link's association and the
+// Property of its place end; Place is the Place that end holds, with its
+// own toponyms and no parents. Place is nil for a date owner.
 type FieldOwner struct {
 	Entity     canonicalentities.Entity
 	PropertyID []byte
+	Place      *HeaderPlace
 }
 
 // LifeOwners are the owners behind one life row pair: the date owners (one
-// per surviving event, lead first) and the Place owners (each Place once).
+// per surviving event, lead first) and the Place owners (each event–place link once).
 type LifeOwners struct {
 	Dates, Places []FieldOwner
 }

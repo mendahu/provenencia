@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/valuecodec"
@@ -51,6 +52,7 @@ func FromStored(eg graphcache.EvidenceGraph, propKey map[string]string, terms ma
 	}
 	sort.Slice(events, func(i, j int) bool { return events[i].ref < events[j].ref })
 	first := map[string]naming{}
+	toponyms := map[string][]observations.TextRecord{}
 	for _, o := range eg.Observations {
 		if o.Polarity != "positive" {
 			continue
@@ -59,6 +61,10 @@ func FromStored(eg graphcache.EvidenceGraph, propKey map[string]string, terms ma
 		switch keyName {
 		case "event_name", vocabkey.PropertyEventType, vocabkey.PropertyName, vocabkey.PropertyToponym:
 		default:
+			continue
+		}
+		if keyName == vocabkey.PropertyToponym {
+			toponyms[string(o.SubjectID)] = append(toponyms[string(o.SubjectID)], observations.TextRecord{Ref: o.Ref, Polarity: o.Polarity, Text: o.Text})
 			continue
 		}
 		n := naming{text: strings.TrimSpace(o.Text), nameID: o.NameID}
@@ -83,10 +89,14 @@ func FromStored(eg graphcache.EvidenceGraph, propKey map[string]string, terms ma
 		}
 		names[string(o.NameID)] = n
 	}
-	return assemble(events, first, eg.EventPeople, places, names)
+	placeNames := make(map[string]string, len(toponyms))
+	for id, records := range toponyms {
+		placeNames[id] = observations.FirstText(records)
+	}
+	return assemble(events, first, placeNames, eg.EventPeople, places, names)
 }
 
-func assemble(events []titledEvent, first map[string]naming, people, places []graphcache.EvidenceEdge, names map[string]namevalue.Value) []Title {
+func assemble(events []titledEvent, first map[string]naming, placeNames map[string]string, people, places []graphcache.EvidenceEdge, names map[string]namevalue.Value) []Title {
 	peopleOf := map[string][]eventtitle.Subject{}
 	seen := map[string]bool{}
 	for _, e := range people {
@@ -103,16 +113,16 @@ func assemble(events []titledEvent, first map[string]naming, people, places []gr
 		}
 		peopleOf[string(e.From)] = append(peopleOf[string(e.From)], subject)
 	}
-	// A place's name is its first-cited toponym; the event's place is the
-	// first named one by place ref.
+	// A place's name is its first toponym (observations.FirstText); the
+	// event's place is the first named one by place ref.
 	sort.SliceStable(places, func(i, j int) bool { return places[i].ToRef < places[j].ToRef })
 	placeOf := map[string]string{}
 	for _, e := range places {
 		if _, done := placeOf[string(e.From)]; done {
 			continue
 		}
-		if n, ok := first[key(e.To, vocabkey.PropertyToponym)]; ok && n.text != "" {
-			placeOf[string(e.From)] = n.text
+		if name := placeNames[string(e.To)]; name != "" {
+			placeOf[string(e.From)] = name
 		}
 	}
 

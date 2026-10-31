@@ -404,8 +404,8 @@ struct CatalogNameValue: Sendable, Equatable {
 /// One Place reached from a birth, death, or event. `names` are kept toponyms
 /// in rank order. `parents` is the hierarchical chain at the walk's date.
 struct CatalogHeaderPlace: Sendable, Equatable {
-    /// The Place; a Person page's life rows carry its toponym records in
-    /// `CatalogConclusionDetail.derivedRows`.
+    /// The Place; a Person page's place rows carry the event–place link's
+    /// records in `CatalogConclusionDetail.derivedRows`.
     var entity: CatalogCanonicalEntity
     var names: [String] = []
     var parents: [String] = []
@@ -612,6 +612,15 @@ struct CatalogReconcilerOutcome: Sendable, Equatable, Identifiable {
     /// voted on that unit. 0 otherwise.
     var voteSupport: Int = 0
     var voteTotal: Int = 0
+    /// The citation line's parts: the Artifact and Citation labels ("" for
+    /// none) and the Citation locator's page (0, "" for none).
+    var artifactLabel: String = ""
+    var citationLabel: String = ""
+    var artifactPage: Int = 0
+    var pageLabel: String = ""
+    /// The displayed value the record counts under: its value rank for a kept
+    /// or folded record of a displayed value, else 0.
+    var groupRank: Int = 0
 
     var id: String { observationID }
     var isLowTrustSource: Bool { credibilityOffset < 0 }
@@ -669,10 +678,12 @@ enum CatalogDerivedRowKind: Sendable, Equatable {
 }
 
 /// The field a derived row reads off the entity that owns it. `event` is the
-/// owner's header when the owner is an Event.
+/// owner's header when the owner is an Event. `place` is the Place a place
+/// row's owner (an event–place link) holds on its place end.
 struct CatalogOwnerField: Sendable, Equatable {
     var entity: CatalogCanonicalEntity
-    var event: CatalogEventHeader?
+    var event: CatalogEventHeader? = nil
+    var place: CatalogHeaderPlace? = nil
     var field: CatalogConclusionField
 }
 

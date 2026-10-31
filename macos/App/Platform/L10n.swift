@@ -8848,6 +8848,158 @@ enum L10n {
             comment: "Button on a Conclusion field that shows the records behind its value"
         )
 
+        static func provenanceOpen(_ label: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.provenance.open",
+                defaultValue: "Provenance of %@",
+                comment: "Tooltip and VoiceOver label of the control that opens the records behind a field's value; argument is the field label"
+            ), label)
+        }
+
+        static func provenanceRecordCount(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.provenance.recordCount",
+                defaultValue: "%lld records",
+                comment: "Provenance sheet summary: how many records sit behind the value; argument is the count"
+            ), count)
+        }
+
+        /// "4 records from 2 birth events", "… death events", "… Places".
+        static func provenanceRecordsFromOwners(records: Int, owners: Int, kind: CatalogDerivedRowKind) -> String {
+            let resource: LocalizedStringResource
+            switch kind {
+            case .birthDate:
+                resource = LocalizedStringResource(
+                    "conclusions.provenance.recordsFromBirthEvents",
+                    defaultValue: "%1$lld records from %2$lld birth events",
+                    comment: "Provenance sheet summary of a birth date backed by several birth events; arguments are the record count and the event count"
+                )
+            case .deathDate:
+                resource = LocalizedStringResource(
+                    "conclusions.provenance.recordsFromDeathEvents",
+                    defaultValue: "%1$lld records from %2$lld death events",
+                    comment: "Provenance sheet summary of a death date backed by several death events; arguments are the record count and the event count"
+                )
+            case .birthPlace, .deathPlace:
+                resource = LocalizedStringResource(
+                    "conclusions.provenance.recordsFromPlaces",
+                    defaultValue: "%1$lld records from %2$lld Places",
+                    comment: "Provenance sheet summary of a birth or death place backed by several Places; arguments are the record count and the Place count"
+                )
+            }
+            return L10n.format(resource, records, owners)
+        }
+
+        static func provenanceStateSingle(_ sources: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.provenance.stateSingle",
+                defaultValue: "from %@",
+                comment: "Provenance sheet summary state of a field with one value from one Source; argument is the Source count text"
+            ), sources)
+        }
+
+        static func provenanceSummaryJoin(_ first: String, _ second: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.provenance.summaryJoin",
+                defaultValue: "%1$@ · %2$@",
+                comment: "Joins two parts of the provenance sheet summary (state, disagreement, record count)"
+            ), first, second)
+        }
+
+        static let provenanceOtherRecords = LocalizedStringResource(
+            "conclusions.provenance.otherRecords",
+            defaultValue: "Other records",
+            comment: "Provenance sheet heading over the records that count under no displayed value"
+        )
+
+        static func provenanceOwnerShown(_ line: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.provenance.ownerShown",
+                defaultValue: "%@, shown value",
+                comment: "VoiceOver for the group line of the owner behind the shown value; argument is the spoken group line"
+            ), line)
+        }
+
+        static let provenanceOwnerShownMark = LocalizedStringResource(
+            "conclusions.provenance.ownerShownMark",
+            defaultValue: "· shown",
+            comment: "Visible mark after the group line of the owner behind the shown value"
+        )
+
+        static let provenanceColumnCitation = LocalizedStringResource(
+            "conclusions.provenance.column.citation",
+            defaultValue: "Citation",
+            comment: "Provenance sheet column heading: the record's citation line"
+        )
+
+        static let provenanceColumnRecord = LocalizedStringResource(
+            "conclusions.provenance.column.record",
+            defaultValue: "Record",
+            comment: "Provenance sheet column heading: the record's Observation and Subject refs"
+        )
+
+        static let provenanceSourceLink = LocalizedStringResource(
+            "conclusions.provenance.link.source",
+            defaultValue: "Source",
+            comment: "Provenance sheet link that opens the record's Source"
+        )
+
+        static func provenanceObservationLink(_ ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.provenance.link.observation",
+                defaultValue: "Observation %@",
+                comment: "Provenance sheet link that opens the record's Observation; argument is the Observation ref"
+            ), ref)
+        }
+
+        static func provenanceSourceLinkSpoken(_ title: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.provenance.link.sourceSpoken",
+                defaultValue: "Source %@",
+                comment: "VoiceOver label of the provenance sheet link that opens the record's Source; argument is the Source title"
+            ), title)
+        }
+
+        static let provenanceCopyCitation = LocalizedStringResource(
+            "conclusions.provenance.copyCitation",
+            defaultValue: "Copy citation",
+            comment: "Tooltip and VoiceOver label of the provenance sheet button that copies a record's citation line"
+        )
+
+        static let provenanceCitationCopied = LocalizedStringResource(
+            "conclusions.provenance.citationCopied",
+            defaultValue: "Citation copied",
+            comment: "VoiceOver announcement after the provenance sheet's copy citation button copies the citation line"
+        )
+
+        static let provenanceDone = LocalizedStringResource(
+            "conclusions.provenance.done",
+            defaultValue: "Done",
+            comment: "Button that closes the provenance sheet"
+        )
+
+        static let citationLineSeparator = LocalizedStringResource(
+            "conclusions.citationLine.separator",
+            defaultValue: ", ",
+            comment: "Joins the parts of a record's citation line (Source, Artifact, Citation, page)"
+        )
+
+        static func citationPagePrinted(_ label: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.citationLine.pagePrinted",
+                defaultValue: "p. %@",
+                comment: "Citation line: the page's printed label; argument is the label"
+            ), label)
+        }
+
+        static func citationPageImage(_ page: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.citationLine.pageImage",
+                defaultValue: "image %lld",
+                comment: "Citation line: the page of the digital image when the page has no printed label; argument is the page number"
+            ), page)
+        }
+
         static let openEvent = LocalizedStringResource(
             "conclusions.detail.openEvent",
             defaultValue: "Open event",

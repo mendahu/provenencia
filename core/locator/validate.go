@@ -59,11 +59,20 @@ type point struct {
 
 // Validate checks locator JSON against version-1 invariants for known selector types.
 func Validate(locatorJSON string) error {
+	_, err := parse(locatorJSON)
+	return err
+}
+
+// parse decodes locator JSON and validates every selector.
+func parse(locatorJSON string) (document, error) {
 	doc, err := decode(locatorJSON)
 	if err != nil {
-		return err
+		return document{}, err
 	}
-	return validateDoc(doc)
+	if err := validateDoc(doc); err != nil {
+		return document{}, err
+	}
+	return doc, nil
 }
 
 // decode parses locator JSON and checks the document envelope: non-empty,

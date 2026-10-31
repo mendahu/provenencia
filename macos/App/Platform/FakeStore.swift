@@ -2044,6 +2044,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             guard let rank = outcomes[i].valueRank.flatMap({ rankOf[$0] }) else { continue }
             outcomes[i].valueRank = rank
             outcomes[i].reason = rank == 1 ? .kept : .outvoted
+            outcomes[i].groupRank = rank == 1 ? 1 : 0
             if rank != 1 {
                 outcomes[i].voteSupport = ranked.first?.support ?? 0
                 outcomes[i].voteTotal = voters
@@ -2064,9 +2065,15 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             valueType: .name,
             state: state,
             values: ranked,
-            outcomes: outcomes.sorted { ($0.valueRank ?? .max, $0.observationID) < ($1.valueRank ?? .max, $1.observationID) }
+            outcomes: outcomes.sorted {
+                (Self.lastIfNone($0.groupRank), $0.valueRank ?? .max, $0.observationID)
+                    < (Self.lastIfNone($1.groupRank), $1.valueRank ?? .max, $1.observationID)
+            }
         )
     }
+
+    /// A group rank sorts after every real one when it is 0 (none).
+    private static func lastIfNone(_ rank: Int) -> Int { rank == 0 ? .max : rank }
 
     /// Go `autoreconcile` `nameModule.split`, simplified: by part type, untyped
     /// words at `Same`, so case and punctuation never matter and accents do

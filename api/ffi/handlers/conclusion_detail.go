@@ -131,6 +131,9 @@ func derivedRowsProto(rows []conclusiondetails.DerivedRow) []*engine.DerivedRow 
 			if o.Event != nil {
 				po.Event = eventHeaderProto(*o.Event)
 			}
+			if o.Place != nil {
+				po.Place = headerPlaceProto(*o.Place)
+			}
 			pr.Owners = append(pr.Owners, po)
 		}
 		out = append(out, pr)
@@ -157,6 +160,11 @@ func reconcilerOutcomeProto(o conclusiondetails.Outcome) *engine.ReconcilerOutco
 		CredibilityKey:         o.CredibilityKey,
 		TranscriptionUncertain: o.Provenance.Uncertain,
 		CredibilityOffset:      int32(o.Provenance.Credibility),
+		ArtifactLabel:          o.ArtifactLabel,
+		CitationLabel:          o.CitationLabel,
+		ArtifactPage:           int32(o.ArtifactPage),
+		PageLabel:              o.PageLabel,
+		GroupRank:              int32(o.GroupRank),
 	}
 	if len(o.DeniedBy) > 0 {
 		po.DeniedByObservationId = database.UUIDString(o.DeniedBy)
