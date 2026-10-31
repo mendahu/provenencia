@@ -1,7 +1,7 @@
 # Ship log — S13-11 Provenance sheet
 
 **Plan:** [`S13-11-provenance-sheet.md`](S13-11-provenance-sheet.md) · **Branch:** `s13-11-provenance-sheet` · **PR:** #650
-**State:** ready
+**State:** fixing 3 — user scope change
 
 ## Round 0 — implement
 Base `main` @ `474ca934`. Head `5ec67292`. Gate PASS (orchestrator run). Report: §10 manual check not run (Escape focus return, Back after each link, VoiceOver wording, 1600pt resize, visual match to frames 6c – 6n; the Escape-focus stop condition is unverified). Deviations: (1) STEP-3 – STEP-7 in one commit; (2) `ReconciliationRecordGroup` gained `init(owner:records:values:)` with `values` defaulting to one headless run; (3) `actionColumnWidth` moved to `ReconciliationRecordRows`; (4) the sheet's Read as, Outcome and Record columns have fixed widths (140/190/112pt Regular, 220/280pt Wide) so the headings line up; (5) a record is not one VoiceOver element: the citation line and its links are separate controls; (6) `S13-D2-provenance-sheet.review.md` stays in `design/`; (7) PR body attribution added with `gh pr edit`.
@@ -109,3 +109,19 @@ Nits (logged): `UX-10 · ReconciliationRecordRows.swift:201 · value heading gap
 
 ## Result
 Gate PASS at `710f979a` (`main` unmoved) · CI green · open: none · follow-ups: CON-4, MNT-9, MNT-10 · to user: UX-6 (manual check 1), §10 manual check not run · CON miss: none
+
+## Scope change — user, 2026-10-31
+After round 2 the user asked, for this PR, that the birth and death place rows read the event–place `location` link instead of the Place's Toponym, with each record read as its own toponym for the place. The plan records it as D-20 – D-22 and AC-1.5 (header, "Scope change"). The user asked for it on this PR, which authorizes a third review round scoped to it. Separately, the user parked loading records on demand as [`docs/ideas/provenance-on-demand.md`](../../../ideas/provenance-on-demand.md), with S13-06 PRF-1.
+
+### Fix plan 3
+
+**F-11 — Place rows read the event–place link** (plan D-20 – D-22, AC-1.5)
+Files: `core/database/conclusionheaders/compose.go`, `core/database/conclusionheaders/placechains_test.go`, `core/database/conclusiondetails/conclusiondetails.go` and its test, `api/proto/engine.proto` (+ `./scripts/generate-proto.sh`), `api/ffi/handlers/conclusion_detail.go` and its test, `macos/App/Platform/GoStore.swift`, `FakeStore.swift`, `macos/App/Features/Conclusions/ReconciledValueRowModel.swift`, `PersonDetailContent.swift`, Swift tests. Skill: `add-ffi-handler`.
+Failing tests first: `TestPersonLifeOwners` / `TestPersonDerivedRows` — a birth event linked to a Place through a `location` link: `birth.Places` owner is the link's association with the place end property and `Place` = that Place, not the Place with `PropertyToponym`. A `conclusiondetails` case: an outcome on the link's place end reads its place Subject's first positive toponym text.
+Do:
+1. **Go owners (D-20).** In `lifeOwners`, replace the Place owners: for each pick, `follow(g, pick.event.ID, hops.PlacesOfEvent)` and, in `eventPlaces` order, add `FieldOwner{Entity: entityOf(association node), PropertyID: l.EndpointPropertyID, Place: &HeaderPlace{…the end's Place, unfolded, toponyms(n, …)}}`. Keep one owner per association. If `Link.Association` is empty or `EndpointPropertyID` is not the place end's Property, **stop and report**. `PersonDerivedRows` loads the association nodes with the rest and copies `Place` onto `OwnerField`. Update the package doc and the `HeaderPlace.entity` proto comment ("carries its toponym records") to say place rows carry the link's records.
+2. **Read as (D-21).** In `sqlOutcomes`, add the record's toponym for a Subject-valued Observation: a correlated subquery on `observations` for `subject_id = o.value_subject_id`, the toponym Property (pass the id as a bound parameter from the vocabulary, not a key string in SQL), `polarity = 'positive'`, non-empty `value_text`, ordered by `ref`, `LIMIT 1`. When the outcome's recorded value is otherwise empty, use it as the recorded text. No other value changes.
+3. **Wire.** `ConclusionOwnerField.place = 4` (`HeaderPlace`), mapped in the handler, `GoStore` and `FakeStore` (the FakeStore person fixture's place owners become links with a place).
+4. **Swift (D-22).** Give `CatalogOwnerField` an optional `place`. In `ReconciledValueRowModel.derived`, compare, order and ink owners by `owner.place?.entity.id ?? owner.entity.id`. `ownerLine` titles a place owner from `owner.place` through the existing `DerivedPlace` / `PlaceTitleDisplay` helpers. Its id and ref are the Place's, so the group line reads as today. The "from N Places" summary counts distinct place ids. `PersonDetailContent` passes the shown Place's id as `shownOwnerID`, as it already does.
+Tests: update `lifeRowsCarryTheirOwnersRecords` and `placeOwnersEachHoldOneValueWithoutHeadings`. Add `ProvenanceSheetTests` `twoLinksToOnePlaceCountOnePlace`: the summary says one Place, and both group lines title the Place.
+Check: `rg -n "PropertyToponym" core/database/conclusionheaders/compose.go` shows no life-owner use; go tests and Swift tests pass; scripts/check-pr.sh PASS. Add F-11 to the plan's Landed note.

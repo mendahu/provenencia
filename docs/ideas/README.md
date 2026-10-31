@@ -23,6 +23,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`artifact-outside-graph-marker.md`](artifact-outside-graph-marker.md) — name, in a graph delete's confirm, the Artifacts it leaves in no Evidence graph; the card marker went to Spike 12 (S12-38)
 - [`graph-canvas-second-host.md`](graph-canvas-second-host.md) — what a family-tree canvas host still needs from GraphCanvas: hit targets from measured layout, a routed edge layer, selection, growable bounds, a host zoom range
 - [`promote-ranking.md`](promote-ranking.md) — rebuild Promote's ranking on the Evidence graph scoring; the matching work parked with it when Spike 12 closed
+- [`provenance-on-demand.md`](provenance-on-demand.md) — load a row's records when its provenance sheet opens instead of on every Person page load (S13-06 PRF-1); measure first
 - [`structural-debt.md`](structural-debt.md) — audit refactors with no visible change: search kind columns, canvas state enums
 - [`name-index-on-commit.md`](name-index-on-commit.md) — a handle commit throws away Promote's name index and every Source's ranked candidates; update them in place instead; parked with [`promote-ranking.md`](promote-ranking.md)
 - [`narrower-canon-walk.md`](narrower-canon-walk.md) — every proposal walks the whole connected component of the canon; walk only as far as alignment can use; parked with [`promote-ranking.md`](promote-ranking.md)
