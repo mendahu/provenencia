@@ -8,7 +8,7 @@ Briefs are written one at a time, just before the PR they gate. Design track and
 
 | Brief | View | Board | Gates |
 | --- | --- | --- | --- |
-| [S14-D6](S14-D6-composer-drawing-feedback.md) | Citation composer: depiction drawing feedback (one radio, locked locator while drawing, can't-cut and failed-cut states, needs-page Callout, captions) | Not drawn yet; *Citation Composer* project, beside S10-D15 | S14-03 |
+| [S14-D6](S14-D6-composer-drawing-feedback.md) | Citation composer: depiction drawing feedback (one radio, locked locator while drawing, can't-cut and failed-cut states, needs-page Callout, captions) | Agreed 2026-10-31 in the [Citation Composer project](https://claude.ai/design/p/8b120853-4ba4-4c0d-8492-75e76b9f9b7a?via=share) | S14-03 |
 
 ## Archived
 

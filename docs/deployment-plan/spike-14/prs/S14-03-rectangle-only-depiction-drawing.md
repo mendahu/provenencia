@@ -1,10 +1,10 @@
 # S14-03 — Rectangle-only depiction drawing
 
-**Status:** Blocked — on board S14-D6
+**Status:** Planned
 **Spike / slice:** Spike 14 · Slice 1 — Event and Place pictures
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S14-D6](../design/S14-D6-composer-drawing-feedback.md), board not drawn yet (user, 2026-10-31: the PR changes how the composer looks, so it waits on a brief)
-**Board:** — (when agreed: the *Citation Composer* Claude Design project, turn "S14-D6 · Drawing feedback"; until then § 6 macOS describes each frame in words)
+**Brief:** [S14-D6](../design/S14-D6-composer-drawing-feedback.md), board agreed 2026-10-31 (user, 2026-10-31: the PR changes how the composer looks, so it waits on a brief)
+**Board:** [*Citation Composer*](https://claude.ai/design/p/8b120853-4ba4-4c0d-8492-75e76b9f9b7a?via=share), file *Citation Composer.dc.html*, section "S14-D6 · Drawing feedback", frames 1 (with its PDF variant), 2 – 9, 10a, 10b, 11a, 11b. The board's one change from the brief: the two region buttons are ghost (Draw stays secondary), D-15. § 6 macOS describes each frame in words for an implementer who cannot open it.
 **Depends on:** S14-13 (landed [#632](https://github.com/mendahu/provenencia/pull/632)), S14-D6
 **Blocks:** —
 **Branch:** `s14-03-rectangle-only-depiction-drawing`
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/design-system-layers.mdc`, `.cursor/rules/depiction-values.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** working rules "A depiction is drawn as a rectangle", "FakeStore is a seeded fake, not a second engine"; bar outcomes 4 and 9; the 2026-10-18 likeness audit items UX-5, UX-6, UX-7 (composer feedback), UX-12, UX-13 (copy) and the freehand cap feedback, whose text is in `git show f88bef38^:docs/ideas/depictions-and-likenesses.md` lines 19 – 21; S14-13's Landed note (the "can cut" predicate is `ArtifactRegionCrop.snapshot`)
 **Planned:** 2026-10-31 against `main` @ `f2dc2a95`
-**Review:** [`S14-03-rectangle-only-depiction-drawing.review.md`](S14-03-rectangle-only-depiction-drawing.review.md) — Fits with changes — Ready with changes, 2 rounds; every finding answered; refreshed again when the board is agreed
+**Review:** [`S14-03-rectangle-only-depiction-drawing.review.md`](S14-03-rectangle-only-depiction-drawing.review.md) — Fits with changes — Ready with changes, 2 rounds; every finding answered; board checked against every DF requirement 2026-10-31
 
 ### Implementer — read this first
 
@@ -166,6 +166,7 @@ Verified at `f2dc2a95`.
 | D-11 | `canSaveDepictionCitationPage` *(new)* = `depictionNeedsPage && !citationSaveBlocked && !isDrawingRegion && depictionCanCut`. `saveDepictionCitationPage() async -> Bool` *(new)*: false unless `canSaveDepictionCitationPage`; false if `setPageFromViewer()` refuses (the one entry point for the viewer's page, D-5); then `await fields.saveCitation()`; returns `fields.error == nil && !depictionNeedsPage`. On a failed save the unsaved page stays on the Citation draft (AC-5.4). The Callout's Button reads `L10n.CitationComposer.depictionSavePage(artifactViewer.page)`, `loading: model.fields.isSaving`, disabled unless `model.canSaveDepictionCitationPage`; on true the view posts `depictionCaptionState.text`, as `useRegion` does. It saves the whole Citation draft, as Save does. | User, 2026-10-31: set the page and save in one click. A failure stays in `fields.error`, shown where the composer shows it today. The view posts, as every composer announcement does. | Setting the page only — the user chose save |
 | D-12 | The freehand cap: at the cap, `handleFreeformClick` beeps (as today) and, once per in-progress shape, posts `AccessibilityAnnouncement.post(L10n.ArtifactViewer.freeformCapReached(ArtifactRegionGeometry.maxRegionPoints))`. A private `capAnnounced` flag on the overlay is set when it posts and cleared in a `didSet` on `inProgressPoints` whenever the count is below `maxRegionPoints`, so a reset, a Delete-key removal or a new shape each re-arm it. Checked by hand (manual check 2). | One announcement per shape, not per click; the number has one source. The cap itself is already tested. | A closure seam and a test file to assert one line — announcement seams belong on `AccessibilityAnnouncement`, for every caller, if ever |
 | D-13 | A committed polygon depiction keeps its handle edits as they are (the overlay edits the committed shape in its own kind); only a new draw is a rectangle. | Working rule: a polygon depiction "saves as it is until redrawn". | Converting on handle edit — rewrites a saved polygon without a redraw (Out) |
+| D-15 | "Use the whole photo / page" and "Use the citation's region" become `PVButton` `variant: .ghost` (today `.secondary`); Draw stays `.secondary` with its crop icon. | The agreed board (frames 3 – 9) draws them ghost, so Draw reads as the row's main action. | Keeping `.secondary` — the app would differ from the agreed board |
 | D-14 | Tests live in `CitationComposerDepictionTests.swift` and `ArtifactRegionGeometryTests.swift`; no new test file. The Swift tests and the manual checks run on macOS (`scripts/check-pr.sh` runs `xcodebuild test` there). | — | — |
 
 **Rules this plan bends.** None.
@@ -221,7 +222,7 @@ None — no RPC changes.
 
 ### macOS
 
-Until the board is agreed, each frame in words (brief § 5):
+Each frame in words (board frames, brief § 5); the board is the reference:
 
 | Building block | Component | Home | Notes |
 | --- | --- | --- | --- |
@@ -229,6 +230,7 @@ Until the board is agreed, each frame in words (brief § 5):
 | Set page | `PVChip` accent, small, disabled while drawing | same | Frame 1 (PDF variant) |
 | Chip ×, Clear menu, Find | `PVIconButton`, `PVButton` link `.disabled(model.isDrawingRegion)` | `macos/App/Features/CitationComposer/CitationComposerViewerPane.swift` | Frames 1, 2 |
 | Locator hint | `Text(locatorDrawHint)` drawn only when `!model.isDrawingRegion` | same | Frames 1, 2: absent |
+| Region buttons | `PVButton` ghost, small (D-15); Draw `PVButton` secondary, small, crop icon | `macos/App/Features/CitationComposer/CitationComposerAuthoringBox.swift` | Frames 3 – 9 |
 | Needs-page Callout | `PVCallout(tone: .warning, message:) { PVButton(..., variant: .secondary, size: .sm, loading:) }` | `macos/App/Features/CitationComposer/CitationComposerAuthoringBox.swift` | Frames 7, 8 |
 | Preview | `PVThumbnail` (empty for `.failed`); `CachedThumbnail` for `.saved`, labelled `depictionPreviewSavedLabel` | same | Frames 5, 6 |
 | Caption | existing `Text(model.depictionCaptionState.text)`, `foregroundStyle(state.isWarning ? PVColor.warningForeground : PVColor.textMuted)` | same | Frames 3, 4, 5, 7 |
@@ -274,7 +276,7 @@ Check: T-6 passes; `missingFileCutFails` removed; `tabFromPropertySkipsADisabled
 
 **STEP-5 — A failed cut shows with Save disabled**
 Files: `CitationComposerModel+Depiction.swift`, `macos/App/Features/CitationComposer/CitationComposerModel+Authoring.swift`, `macos/App/Features/CitationComposer/CitationComposerAuthoringBox.swift`.
-Do: D-9.
+Do: D-9, D-15.
 Check: T-7 passes; `refusedSaveKeepsTheRegion`, `staleCutIsNotStored` still pass.
 
 **STEP-6 — Save the page from the Callout**
@@ -370,7 +372,7 @@ AC-4.2, AC-6.3 and AC-6.5 are manual checks (3, 6, 2). Must stay green: everythi
 
 ## 12. Open questions
 
-None. The plan is blocked on the board, not on a question.
+None.
 
 ## 13. PR
 

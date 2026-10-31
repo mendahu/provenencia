@@ -1,6 +1,6 @@
 # Review — S14-03 Rectangle-only depiction drawing
 
-**Verdict:** Fits with changes — Ready with changes. Every finding answered; the plan stays Blocked on board S14-D6 and is refreshed (and reviewed again) when the board is agreed.
+**Verdict:** Fits with changes — Ready with changes. Every finding answered. Board agreed 2026-10-31 and checked against the brief; plan Planned.
 **Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet). Both reviewed the plan and the S14-D6 brief.
 
 ## To user
@@ -153,3 +153,15 @@ The getter hid a tool only while drawing, so a rectangle armed before the dialog
 
 ### X-9, X-10, X-11 · minor
 **Answer:** Fixed — D-12 flag re-arms below the cap; D-5 applies `.disabled` after `.background`; D-6 keeps the accessibility identifier and names `PVChip`'s metrics.
+
+## Board check (2026-10-31)
+
+The writer read the agreed board archive (*Citation Composer.dc.html* and its components) against the brief. Every DF requirement has its frame, and every string matches § 6 Strings word for word. Covered:
+- one rectangle radio (DF-1) and seven radios (DF-2);
+- Set page as an accent Chip, and the lock on Set page, the chip ×s, Clear and Find (DF-3, frame 1's PDF variant);
+- the cannot-cut, failed-cut and needs-page states (DF-4, DF-5, DF-6);
+- the captions and the region-hidden Callout (DF-7, DF-8, DF-9);
+- the two VoiceOver notes (DF-10, DF-11);
+- Wide and dark (DF-W1, frames 11a, 11b, 10a, 10b).
+
+One difference: the region buttons are ghost where the app has secondary. The plan follows the board (D-15). No re-review: D-15 is a variant on two existing buttons and touches no other Decision.
