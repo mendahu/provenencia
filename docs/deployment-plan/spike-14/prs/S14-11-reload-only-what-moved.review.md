@@ -1,7 +1,7 @@
 # Review — S14-11 Reload only what moved, only when it is on screen
 
-**Verdict:** Fits with changes — Not ready → Fixed (round 2 pending)
-**Rounds:** 1 so far. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Not ready → Fixed (no open blocker after round 2)
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 None. Every finding was answerable from the code; no product call came up.
@@ -89,3 +89,55 @@ None. Every finding was answerable from the code; no product call came up.
 - D-12 says `visibleSources` reads the revisions itself.
 - STEP-6 names `copy`.
 - `TestEvidenceGraphsList`'s generic `Lists` checks move to `TestListsValidate` (T-4b).
+
+## Round 2
+
+### X-1 / M-10 · blocker · Round-1 fixes left the rejected shapes in §6 Go core, the macOS table, the Sketch, Edges, Next adds and STEP-9
+**Answer:** Fixed.
+- §6 Go core uses `optionalID`.
+- The macOS row and the Sketch say `sourceRow()` and `readIDs(for:)`.
+- The Sketch carries D-6's real signatures, plus `merged`, `beginRefresh` and the stale methods.
+- Edges and Next adds name `sourceRow()` and `readIDs(for:)`.
+- STEP-9 rule 4 names `sourceRow()`.
+- The sweep adds `insertedSourceRow|deletedSourceId`.
+
+### X-2 · blocker · DoD sweeps cannot print nothing, because the plan and audits sit under `docs/`
+**Answer:** Fixed. The sweep is scoped to `docs/*.md` and `docs/ideas/`, and says `docs/deployment-plan/` keeps history and is not swept. It notes that `check-guidance-names.py` does not scan `docs/`.
+
+### X-3 · blocker · `.createdSource` test edits under-specified
+**Answer:** Fixed. STEP-6:
+- renames and rewrites the test at 636–650 as `applyCreatedSourceInsertsRow`, with its expected cached value;
+- gives line 865's new expected array;
+- names the constructor for 1169, 1271 and 1284.
+
+STEP-5 deletes `deletedSourceInvalidatesEvidenceGraphsList`, which T-13 replaces.
+
+### M-11 · blocker · D-6 hand-wrote "invalidate and reload" beside `applyHiddenPolicy`
+**Answer:** Fixed. D-6 has one exit for "cannot merge", `applyHiddenPolicy(to:)`. It is used for no value with a load in flight, a hidden non-`.revalidate` key, a stale handle, and a failed read. T-7 gains case (d), a hidden key with a first load in flight, which expects no fetch.
+
+### X-4 · major · `sourceRow()` would append on any `patchedSource`
+**Answer:** Fixed. D-10 appends only for `.createdSource`; an update or type change only replaces. T-8 asserts both.
+
+### X-5 · major · `updatedSourceShell()`'s `setQueryValue` clears a hidden page's stale flag
+**Answer:** Fixed. D-10 has `updatedSourceShell()` write through `patchCached`. A visible page is never stale, so nothing changes there.
+
+### X-6 · major · `beginLoading` clears `isStale`, but the partial path called it
+**Answer:** Fixed. D-6 adds `QueryHandle.beginRefresh()`, which sets `isFetching` only. A stale handle takes the `applyHiddenPolicy` exit instead of merging, and the second `beginRefresh()` runs only if the key is not stale.
+
+### X-7 · minor · `readIDs` already exists in the test
+**Answer:** Fixed. STEP-1 hoists the existing closure above line 141 and adds no second helper.
+
+### X-8 · minor · Open choices
+**Answer:** Fixed.
+- The Sketch names `@MainActor` / `@Sendable` on `read` and `merge`.
+- The fallback is `applyHiddenPolicy`, so whether it runs off screen follows the kind's policy.
+- T-7(b) says the fallback also throws and the handle keeps its rows.
+- STEP-5 names the tests at 417, 525, 1726, 1834 and 1932, which switch to `settleWrites()` with their own expectations kept.
+- The ghost walk stays guarded by the Stop condition and T-1.
+
+### X-9 · minor · Checks
+**Answer:** Fixed. STEP-2 names the protoc tools to install first. The `xcodebuild` steps are unchanged; they run on a macOS machine, as `check-pr.sh` does.
+
+### Below blocker (round 2 maintainability)
+- `readIDs(for:)` now derives the Promote case from `evidenceGraphId` (D-8).
+- `resetForInvalidation()` is kept as is for its one test caller: removing it is outside this PR's files and scope. Logged, not changed.
