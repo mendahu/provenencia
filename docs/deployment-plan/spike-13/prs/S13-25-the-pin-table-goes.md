@@ -1,6 +1,6 @@
 # S13-25 — The pin table goes
 
-**Status:** Planned
+**Status:** Landed in #644 (2026-10-30)
 **Spike / slice:** Spike 13 · Slice 0 — Removing Observation pins
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the delete confirm's "removed from the evidence for …" line can show only for a pinned Observation, and the migration leaves none; every other confirm reads the same)
@@ -345,3 +345,11 @@ None.
 
 **Title:** S13-25 — The pin table goes
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-13/prs/S13-25-the-pin-table-goes.md`.
+
+## Landed note
+
+The code differs from the plan in these ways:
+
+- Three conclusion-layer lines the plan did not name were corrected because the removal made them false: §2's "with its own status and `argument`", §4's "Changing `status`, confidence, or `argument` updates that row", and invariant 20, which now says S13-25 dropped the exhibit.
+- §7's `reconciliation_claims.confidence_grade_id` DDL is a plain `BLOB` with a comment, since `claim_confidence_grades` is gone.
+- The manual check (section 10) and an upgrade run were not done; AC-1.1's row and audit-count halves rest on the manual check.

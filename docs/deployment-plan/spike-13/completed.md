@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S13-25 — The pin table goes
+
+**Landed 2026-10-30** in [#644](https://github.com/mendahu/provenencia/pull/644). An Identity Claim is membership only: subject, entity, status. One format step (`000058.sql`) drops the Observation pin table, the claim's confidence grade and argument columns, and the `claim_confidence_grades` table, keeping every claim and every old audit row. The pin delete facet and its confirm line, `identityclaims` pins, the effects entries, the grades package and its create-time seed, and the Mac app's "removed from the evidence for" sentence are deleted. The data-model, delete and vocabulary docs say the table and columns were dropped.
+
 ## S13-06 — Derived rows carry their records
 
 **Landed 2026-10-30** in [#640](https://github.com/mendahu/provenencia/pull/640). The Person page's birth date, birth place, death date and death place rows now show a Why like every other Vitals row. `GetConclusionDetail` on a Person returns `derived_rows`: for each life row, the reconciler records of the field it reads, keyed by the Event or Place that owns it (every surviving birth or death event's date, lead first; each of those events' Places' names once). With several owners the Why groups the records under a line titled as the Events and Places lists title them, the shown owner's in primary ink and the rest secondary; the place row's open arrow now opens the shown Place. `fieldsOf` composes any number of handles' fields in constant queries, and `ForEntity` is its one-handle caller.
