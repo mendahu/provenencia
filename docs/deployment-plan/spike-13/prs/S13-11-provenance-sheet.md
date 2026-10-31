@@ -9,9 +9,9 @@
 **Blocks:** —
 **Branch:** `s13-11-provenance-sheet`
 **Version bump:** none — Spike 11 – 14 PRs leave `VERSION` alone until a release is cut, as S13-06 and S13-10 did ([`docs/versioning.md`](../../../versioning.md))
-**Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
-**Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/design-system-layers.mdc`, `.cursor/rules/swift-tests.mdc`
-**Context:** [`person-detail.md`](../person-detail.md) R-8 – R-13b, R-14, R-15; working rules: "The provenance sheet replaces the Why on the Person page only", "A derived row carries its owning entity's records", "Engine PRs run ahead of their slice", "Redesigns adopt Page columns"; [`../deployment-plan.md`](../deployment-plan.md) scope S13-11; brief S13-D12 ([archived](../design/archive/S13-D12-life-rows-why.md)) for the group line per owner; S13-06 review UX-3 (VoiceOver names the shown owner)
+**Skills to load:** [`add-ffi-handler`](../../../../.agents/skills/add-ffi-handler/SKILL.md), [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
+**Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/ffi-handlers.mdc`, `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/design-system-layers.mdc`, `.cursor/rules/swift-tests.mdc`
+**Context:** [`person-detail.md`](../person-detail.md) R-8 – R-13b, R-14, R-15; working rules: "The provenance sheet replaces the Why on the Person page only", "A derived row carries its owning entity's records", "Engine PRs run ahead of their slice", "Redesigns adopt Page columns"; [`../deployment-plan.md`](../deployment-plan.md) scope S13-11; brief S13-D12 ([archived](../design/archive/S13-D12-life-rows-why.md)) for the group line per owner; S13-06 review UX-3 (VoiceOver names the shown owner); [`docs/ideas/citation-formats.md`](../../../ideas/citation-formats.md) (the citation line, user 2026-10-31)
 **Planned:** 2026-10-30 against `main` @ `c54f34b`
 **Review:** — (the plan's review runs once the board is agreed and D-10 is filled; the brief's review, whose fixes this plan carries in D-11 – D-15, is [`../design/S13-D2-provenance-sheet.review.md`](../design/S13-D2-provenance-sheet.review.md))
 
@@ -34,7 +34,7 @@ On the Person page, every Vitals value explains itself in one click: a provenanc
 
 **Why now.** S13-06 gave the four life rows their records, and S13-10 reserved a 28pt slot at the end of every Vitals row for this control. The slice's Check is bar 2.
 
-**What stays.** Each row's value, state Badge, Source count, disagree note, other-values disclosure and open arrow. The Event and Place pages keep the Why accordion (working rule "The provenance sheet replaces the Why on the Person page only"). The engine and the wire: the sheet reads what `GetConclusionDetail` already returns.
+**What stays.** Each row's value, state Badge, Source count, disagree note, other-values disclosure and open arrow. The Event and Place pages keep the Why accordion (working rule "The provenance sheet replaces the Why on the Person page only"). The read: `GetConclusionDetail` stays the one read; its outcomes gain the Artifact label, Citation label and page the citation line needs (D-8).
 
 ## 2. User stories
 
@@ -53,6 +53,7 @@ On the Person page, every Vitals value explains itself in one click: a provenanc
 | --- | --- | --- |
 | AC-2.1 | Click the record's Source | The sheet closes; the Source page of `source_id` opens; Back returns to the Person on Vitals |
 | AC-2.2 | Click the record's Citation | The sheet closes; the citation composer opens on `citation_id` with no Observation in focus |
+| AC-2.4 | A record on Citation "Baptism of Ada", Artifact "Vol. 3", Source "Register of Baptisms", locator page 37 with no printed label | Its citation line reads "Register of Baptisms, Vol. 3, Baptism of Ada, image 37"; with `page_label` "23" it reads "…, p. 23"; a Source with no Artifact label, Citation label or page reads "Register of Baptisms" |
 | AC-2.3 | Click the record's Observation | The sheet closes; the composer opens on `citation_id` with `observation_id` in focus (today's Why Source link) |
 
 **US-3.** As a researcher on a person with two birth events, the sheet tells me which records belong to which event and which event the row shows.
@@ -74,23 +75,25 @@ On the Person page, every Vitals value explains itself in one click: a provenanc
 
 | In | Covered by |
 | --- | --- |
-| The control on every Vitals row with records (PRV-1) | STEP-3, AC-1.1 – AC-1.3 |
-| No Why on the Person page's rows (PRV-2) | STEP-3, AC-1.1, AC-1.4 |
-| The sheet: header, summary, records, refs (PRV-3 – PRV-5) | STEP-4, STEP-5, STEP-6, AC-1.1 |
-| Value groups (PRV-6) | STEP-6, T-5 |
-| Owner groups and the shown owner (PRV-7, PRV-8) | STEP-2, STEP-6, AC-3.1 – AC-3.3 |
-| Three links per record (PRV-9) | STEP-1, STEP-6, AC-2.1 – AC-2.3 |
-| Room for Reconciliation Claims (PRV-10) | STEP-5, STEP-6 |
-| Long and refreshing (PRV-11) | STEP-4, AC-4.1, AC-4.2 |
-| Keyboard, VoiceOver, dark mode (PRV-12 – PRV-14) | STEP-3, STEP-6 |
-| Wide (PRV-W1, PRV-W2) | STEP-4 |
+| The control on every Vitals row with records (PRV-1) | STEP-4, AC-1.1 – AC-1.3 |
+| No Why on the Person page's rows (PRV-2) | STEP-4, AC-1.1, AC-1.4 |
+| The sheet: header, summary, records, refs (PRV-3 – PRV-5) | STEP-5, STEP-6, STEP-7, AC-1.1 |
+| Value groups (PRV-6) | STEP-7, T-5 |
+| Owner groups and the shown owner (PRV-7, PRV-8) | STEP-3, STEP-7, AC-3.1 – AC-3.3 |
+| The citation line (PRV-15) | STEP-1, STEP-2, AC-2.4 |
+| Three links per record (PRV-9) | STEP-2, STEP-7, AC-2.1 – AC-2.3 |
+| Room for Reconciliation Claims (PRV-10) | STEP-6, STEP-7 |
+| Long and refreshing (PRV-11) | STEP-5, AC-4.1, AC-4.2 |
+| Keyboard, VoiceOver, dark mode (PRV-12 – PRV-14) | STEP-4, STEP-7 |
+| Wide (PRV-W1, PRV-W2) | STEP-5 |
 
 | Out | Home |
 | --- | --- |
 | Reconciliation Claims and a "conclude this value" action (R-10) | not planned this spike ([`person-detail.md`](../person-detail.md#not-this-spike)) |
 | The control in Family, Timeline, Gallery, Sources (R-13b) | not planned this spike |
 | The sheet on the Event and Place pages; deleting the Why accordion | their redesign ([`person-detail.md`](../person-detail.md#not-this-spike)) |
-| A Citation title, Source type or date, or any other new wire field in the sheet | a follow-up engine PR if the board asks (working rule "Engine PRs run ahead of their slice") |
+| A formatted standard citation (*Evidence Explained* templates per Source type, short form, Copy citation) and the Source fields it needs | [`docs/ideas/citation-formats.md`](../../../ideas/citation-formats.md) |
+| Source type or date, or any other new wire field beyond the citation line's parts | a follow-up engine PR if the board asks (working rule "Engine PRs run ahead of their slice") |
 | New outcome words or causes | S11-28, S11-44, S11-45 (Spike 14) change the reconciler's causes; the sheet words what it is given |
 
 ## 4. Current state
@@ -107,7 +110,11 @@ On the Person page, every Vitals value explains itself in one click: a provenanc
 | Only caller with owner groups | `macos/App/Features/Conclusions/PersonDetailContent.swift` `PersonDetailContent.rows` | Passes `owners:` to `.derived`. `EventDetailContent.placeRow` calls `.derived` with no owners, so after this PR no `.why` row has an owner group |
 | Outcome text | `macos/App/Features/Conclusions/ReconciledValueDisplay.swift` `outcomePhrase`, `outcomeMark`, `weakCauses`, `spokenState`, `countLine`, `againstLine` | The reconciler's words, reused as is |
 | Outcome cell | `macos/App/Features/Conclusions/ReconciliationOutcome.swift` `ReconciliationOutcome` | Mark + phrase |
-| Wire | `macos/App/Platform/GenealogyStore.swift` `CatalogReconcilerOutcome` | Carries `observationRef`, `subjectID`, `subjectRef`, `graphID`, `citationID`, `artifactID`, `sourceID`, `sourceTitle`. No Citation ref or label |
+| Outcome read | `core/database/conclusiondetails/conclusiondetails.go` `sqlOutcomes`, `loadOutcomes`, `Outcome` | Joins `citations c`, `artifacts a` and `sources src` already, and selects `c.id`, `a.id`, `src.id`, `src.title`; not `a.label`, `c.label` or `c.locator_json` |
+| Outcome wire | `api/proto/engine.proto` `ReconcilerOutcomeDetail` (fields 1 – 20; 14, 16 reserved); `api/ffi/handlers/conclusion_detail.go` `reconcilerOutcomeProto` | No Artifact label, Citation label or page |
+| Locator | `core/locator/validate.go` `decode`, `document`, `selectorRaw` (`ArtifactPage`, `PageLabel`), `TypePage`, `MaxDocumentBytes` | Validates; nothing exported reads a page out of a document |
+| Swift wire | `macos/App/Platform/GenealogyStore.swift` `CatalogReconcilerOutcome`; `macos/App/Platform/GoStore.swift` (the `CatalogReconcilerOutcome(` mapping) | Carries `observationRef`, `subjectID`, `subjectRef`, `graphID`, `citationID`, `artifactID`, `sourceID`, `sourceTitle`. No Artifact label, Citation label or page |
+| Go tests | `core/database/conclusiondetails/conclusiondetails_test.go` (`outcomeOf`), `api/ffi/handlers/conclusion_detail_test.go` `TestGetConclusionDetail`, `core/locator/validate_test.go` | Cover outcomes' Source title and the locator's validation |
 | Locations | `macos/App/Features/Workspace/WorkspaceLocation.swift` `sourcePage(sourceId:ref:title:)`, `citationComposer(…)` | Both exist. A `citationComposer` with a `citationId` and no `observationId` opens the Citation for edit (`CitationComposerEntry.init?(location:)`, `.edit`) |
 | Sheet kit | `macos/App/DesignSystem/Components/Panel/PVSheet.swift` `.pvSheet(item:…)`; `PVPanel.swift` `PVPanel` | One presenter, Escape and outside click; `PVPanel` title, subtitle, body, optional footer |
 | Page columns | `macos/App/DesignSystem/Components/PageColumns/PVPageColumns.swift` `PVPageColumns` | Has a secondary slot; the Person page passes none |
@@ -127,7 +134,9 @@ On the Person page, every Vitals value explains itself in one click: a provenanc
 | D-5 | A link closes the sheet first, then calls `navigation.go(to:)`. The sheet is not a place: Back lands on the Person page on Vitals with the sheet closed | Sheets are not in `WorkspaceLocation` anywhere in the app; a modal over a navigation would leave it orphaned | Reopening the sheet on Back — needs a new location field for one view |
 | D-6 | The owner group line moves out of `ReconciliationReasoningView` into the shared rows view, which only `ProvenanceSheet` asks to draw group lines (D-12). `ReconciliationReasoningView` takes `records: [ReconciliationRecord]` instead of `groups:` and loses `ownerLine`; `ReconciledValueRow` passes `model.records` | After this PR only the Person page builds owner groups, and it uses the sheet; the branch would be dead (map scope: it "removes the owner group-line branch S13-06 added to it, or moves it into the sheet") | Keeping the branch in both — dead code in the accordion |
 | D-7 | `ReconciliationRecordGroup.OwnerLine` gains `shown: Bool`; `derived(…)` sets it on the shown owner's line when there are several groups. `spoken` appends the new key `L10n.Conclusions.provenanceOwnerShown` ("%@, shown value") when `shown` | S13-06 UX-3: VoiceOver names which group is behind the shown value; the model already knows the shown owner | A view-side check of "first group" — the first group is not always the shown one (no shown owner when its records are empty) |
-| D-8 | No engine, proto or FFI change | Working rule "A derived row carries its owning entity's records": no new provenance RPC; everything the sheet needs is on `CatalogReconcilerOutcome` | — |
+| D-8 | No new RPC. `GetConclusionDetail`'s outcomes gain the citation line's parts: `conclusiondetails.Outcome` gains `ArtifactLabel`, `CitationLabel`, `ArtifactPage int` (0 for none) and `PageLabel`, read by adding `COALESCE(a.label, '')`, `COALESCE(c.label, '')` and `c.locator_json` to `sqlOutcomes` and reading the page with `locator.Page` *(new)*; `ReconcilerOutcomeDetail` gains `artifact_label = 21`, `citation_label = 22`, `artifact_page = 23`, `page_label = 24` | Working rule "A derived row carries its owning entity's records" (no new provenance RPC) and "Each read returns data, not layout": Go reads the parts, Swift words them. The joins are already in the query (user, 2026-10-31: do what the data allows today) | A composed string from Go — the page words ("p.", "image") are localized copy; a second read for citations — the joins are already there |
+| D-16 | `locator.Page(locatorJSON string) (artifactPage int, pageLabel string)` *(new)* in `core/locator/validate.go`: the first `page` selector's `artifact_page` and trimmed `page_label`; `0, ""` when the document fails `decode`, has no page selector, or is longer than `MaxDocumentBytes`. It never errors: a bad locator leaves the line without a page and the read goes on | The package owns the document shape; `decode` already bounds the size | Parsing in SQL with `json_extract` — duplicates the selector rules; failing the read on a bad locator — one bad Citation would blank the whole Person page |
+| D-17 | The citation line is `CitationLineDisplay.line(_ outcome:)` *(new)* in `macos/App/Features/Conclusions/CitationLineDisplay.swift`: the parts Source title (else the Observation ref, as `ReconciliationRecord.sourceTitle(for:)` does), Artifact label, Citation label, page; each trimmed and dropped when empty; joined with `L10n.Conclusions.citationLineSeparator` (", "). The page is `L10n.Conclusions.citationPagePrinted(label)` ("p. %@") when `pageLabel` is not empty, else `citationPageImage(n)` ("image %lld") when `artifactPage` > 0, else nothing. `ReconciliationRecord` gains `citationLine` | One place to replace when the formatter of [`docs/ideas/citation-formats.md`](../../../ideas/citation-formats.md) lands; "image N" is the *Evidence Explained* word for a page of a digital image | "page N" for the file page — reads as a printed page and is often wrong |
 | D-9 | Tests are Swift Testing unit tests on the models (`PersonDetailTests`, a new `ProvenanceSheetTests` *(new)*); the view is checked by hand | Repo practice: no snapshot or UI tests for feature views ([`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)) | XCUITest — not used in the repo |
 | D-10 | *Board-dependent, filled when S13-D2 is agreed:* the glyph (PRV-1), the close control (PRV-4), the shown mark's wording (PRV-8), how the links show (PRV-9) and the sheet's widths at Regular and Wide (PRV-W1) | The board decides them | — |
 | D-11 | The form is `.pvSheet` at both widths; no docked panel at Wide (brief domain fact "Form") | Event and Place, the next callers, have no secondary column; one presenter, one focus path (S13-D2 review M-5, X-12) | A docked panel at Wide — a width-switching presenter with one caller |
@@ -145,6 +154,9 @@ On the Person page, every Vitals value explains itself in one click: a provenanc
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
 | `ProvenanceSheet` *(new)* | view | `ReconciliationReasoningView` | The accordion stays for Event and Place in its flat form; the sheet has a header, owner and value groups and three links. Shares `ReconciliationOutcome` and `ReconciliationRecord`; does not copy the grid code beyond the columns it adds |
+| `locator.Page` *(new)* | func | `core/locator` `decode` (unexported) | Exported reader over the existing decode, beside it |
+| `ReconcilerOutcomeDetail.artifact_label`, `citation_label`, `artifact_page`, `page_label` *(new)*; `conclusiondetails.Outcome` fields, `CatalogReconcilerOutcome` fields *(new)* | proto fields, fields | `ReconcilerOutcomeDetail.source_title` | Extended, same message |
+| `CitationLineDisplay` *(new)* | enum (static display helpers) | `ReconciliationRecord.sourceTitle(for:)`, `EventTitleDisplay`, `PlaceTitleDisplay` | The same display-helper shape as the title displays; `sourceTitle(for:)` becomes its first part |
 | `ReconciliationRecordRows` *(new)* | view | `ReconciliationReasoningView`'s grid | Extracted from it (D-12), not beside it |
 | `ReconciliationRecordGroup.ValueGroup`, `.values` *(new)*; `ReconciledValueRowModel.provenanceSummary` *(new)* | types, field | `ReconciliationRecordGroup`, `ReconciledValueDisplay.spokenState`, `againstLine`, `otherValues` | Extended; the summary composes the existing words (D-13, D-14) |
 | `ProvenanceSheetItem` *(new)* | type | `PVDeleteImpact`'s `item:` snapshot | The item is an id, not a snapshot (D-2) |
@@ -167,7 +179,7 @@ On the Person page, every Vitals value explains itself in one click: a provenanc
 
 ### Scale
 
-At a person with 20 Vitals rows and 30 records on one row: the sheet renders one row's records; no read, no cache key, no invalidation changes. The row adds one IconButton.
+At a person with 20 Vitals rows and 30 records on one row: the sheet renders one row's records; no cache key or invalidation changes. The one read gains two text columns and one locator decode per outcome row; a person's detail has tens to a few hundred outcomes, and `decode` is bounded at `MaxDocumentBytes` (64 KB), already decoded on every Citation read. The row adds one IconButton.
 
 ### Edges
 
@@ -175,7 +187,7 @@ At a person with 20 Vitals rows and 30 records on one row: the sheet renders one
 - **Neighbors.** A row with records but an empty value (all Denied) shows the control (AC-1.3); a row with no records does not (AC-1.2); one owner shows no group line (AC-3.3).
 - **Removed inputs.** A row that leaves `rows` on refresh closes the sheet (AC-4.2).
 - **Real data.** None — no table-driven rule.
-- **Untrusted size.** None — the record count per row is bounded by the reconciler's outcomes for one field, already drawn by the accordion today.
+- **Untrusted size.** The record count per row is bounded by the reconciler's outcomes for one field, already drawn by the accordion today. A locator is bounded by `MaxDocumentBytes` before it is unmarshalled (D-16); a locator with several page selectors gives the first; labels are shown as written and wrap (PRV-15).
 
 ### Schema
 
@@ -183,11 +195,16 @@ None — no catalog change.
 
 ### Go core
 
-None — D-8.
+| Package | Change |
+| --- | --- |
+| `core/locator` | `func Page(locatorJSON string) (int, string)` *(new)* — D-16 |
+| `core/database/conclusiondetails` | `Outcome` gains `ArtifactLabel`, `CitationLabel`, `ArtifactPage`, `PageLabel`; `sqlOutcomes` selects `COALESCE(a.label, '')`, `COALESCE(c.label, '')`, `c.locator_json`; `loadOutcomes` scans them and calls `locator.Page` — D-8 |
+
+Errors: none new; a bad locator yields no page (D-16).
 
 ### FFI
 
-None — D-8.
+`api/proto/engine.proto`: `ReconcilerOutcomeDetail` gains `string artifact_label = 21; string citation_label = 22; int32 artifact_page = 23; string page_label = 24;`. `api/ffi/handlers/conclusion_detail.go` `reconcilerOutcomeProto` fills them. Regenerate with `./scripts/generate-proto.sh`. Swift: `CatalogReconcilerOutcome` gains `artifactLabel`, `citationLabel`, `artifactPage: Int`, `pageLabel` (defaults `""` / 0 so `FakeStore` and test fixtures keep compiling), mapped in `GoStore`.
 
 ### macOS
 
@@ -204,41 +221,46 @@ States: a row with no records has no control; a row with records and no value sh
 
 ### Strings
 
-L10n keys *(new)* under `L10n.Conclusions`: `provenanceOpen(_ label:)` = "Provenance of %@" (control tooltip and label), `provenanceOwnerShown(_ line:)` = "%@, shown value", `provenanceCitation` = "Citation", `provenanceObservation(_ ref:)` (spoken "Observation %@"), and the summary and close copy the board words (D-10). Removed: none (`why*` keys stay for the accordion).
+L10n keys *(new)* under `L10n.Conclusions`: `provenanceOpen(_ label:)` = "Provenance of %@" (control tooltip and label), `provenanceOwnerShown(_ line:)` = "%@, shown value", `provenanceCitation` = "Citation", `provenanceObservation(_ ref:)` (spoken "Observation %@"), `citationLineSeparator` = ", ", `citationPagePrinted(_ label:)` = "p. %@", `citationPageImage(_ page:)` = "image %lld", and the summary and close copy the board words (D-10). Removed: none (`why*` keys stay for the accordion).
 
 ## 7. Steps
 
-**STEP-1 — Records carry their three places and refs**
-Files: `macos/App/Features/Conclusions/ReconciliationRecord.swift`, `macos/ProvenenciaTests/PersonDetailTests.swift`. Skill: `add-swift-test`.
-Do: D-4.
-Check: T-1 passes.
+**STEP-1 — The engine sends each record's citation parts**
+Files: `core/locator/validate.go`, `core/locator/validate_test.go`, `core/database/conclusiondetails/conclusiondetails.go`, `core/database/conclusiondetails/conclusiondetails_test.go`, `api/proto/engine.proto` (+ generated code), `api/ffi/handlers/conclusion_detail.go`, `api/ffi/handlers/conclusion_detail_test.go`, `macos/App/Platform/GenealogyStore.swift`, `macos/App/Platform/GoStore.swift`. Skill: `add-ffi-handler`.
+Do: D-8, D-16; `./scripts/generate-proto.sh`.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/locator/... ./core/database/conclusiondetails/... ./api/ffi/handlers/...` passes, with T-8 and T-9.
 
-**STEP-2 — The shown owner is marked**
+**STEP-2 — Records carry their citation line, three places and refs**
+Files: `macos/App/Features/Conclusions/ReconciliationRecord.swift`, `macos/App/Features/Conclusions/CitationLineDisplay.swift` *(new)*, `macos/Provenencia.xcodeproj/project.pbxproj`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, `macos/ProvenenciaTests/PersonDetailTests.swift`. Skill: `add-swift-test`, `add-localized-string`.
+Do: D-4, D-17.
+Check: T-1 and T-10 pass.
+
+**STEP-3 — The shown owner is marked**
 Files: `ReconciliationRecord.swift` (`OwnerLine`), `ReconciledValueRowModel.swift` (`derived`, `ownerLine`), `macos/App/Platform/L10n.swift`, `Localizable.xcstrings`. Skill: `add-localized-string`.
 Do: D-7.
 Check: T-2, T-3 pass.
 
-**STEP-3 — The row shows the control and no Why in `.sheet` mode**
+**STEP-4 — The row shows the control and no Why in `.sheet` mode**
 Files: `ReconciledValueRow.swift`. Skill: `add-ui-component`.
 Do: D-3; rewrite the `Provenance` comment.
 Check: T-6 passes; the Event page row still shows its Why (manual 4).
 
-**STEP-4 — The section presents the sheet**
+**STEP-5 — The section presents the sheet**
 Files: `ConclusionDetailPage.swift` (`ConclusionDetailRowsSection`), `ProvenanceSheet.swift` *(new)*, `project.pbxproj`.
 Do: D-2, D-5; the form and widths per D-10.
 Check: T-4 passes; manual 1 and 5.
 
-**STEP-5 — One record rows view, the accordion on it**
+**STEP-6 — One record rows view, the accordion on it**
 Files: `ReconciliationRecordRows.swift` *(new)*, `ReconciliationReasoningView.swift`, `ReconciledValueRow.swift`, `project.pbxproj`. Skill: `add-ui-component`.
 Do: D-12, D-6.
 Check: `rg -n "ownerLine|groups:" macos/App/Features/Conclusions/ReconciliationReasoningView.swift` prints nothing; manual 4 (the Event page's Why looks as before).
 
-**STEP-6 — The sheet body**
+**STEP-7 — The sheet body**
 Files: `ProvenanceSheet.swift`, `ReconciledValueRowModel.swift` (D-13, D-14), `L10n.swift`, `Localizable.xcstrings`. Skill: `add-localized-string`, `add-ui-component`.
 Do: header and summary (D-14), value and owner groups (D-13) through `ReconciliationRecordRows`, links per D-10, the reserved block and column.
 Check: T-5, T-7 pass; manual 1 – 3.
 
-**STEP-7 — Docs**
+**STEP-8 — Docs**
 Files: `completed.md`, `deployment-plan.md` (map row), this plan (status), `design/S13-D2-provenance-sheet.md` → `design/archive/`, `design/README.md`.
 Do: per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py` on the touched docs reports no errors.
@@ -256,6 +278,9 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-5 | Swift | `ProvenanceSheetTests.swift` `valuesGroupTheirRecordsAndTheRestComeLast` *(new)* | A Mixed name with values rank 1 (2 records), rank 2 (1 record), and one weak record (no rank) → three value groups: rank 1 with its line, rank 2 with its line, "Other records" with nil value; a merged name with all records in rank 1 → one group, nil line | D-13 |
 | T-6 | Swift | `PersonDetailTests.swift` `onlyRowsWithRecordsOfferProvenance` *(new)* | A person with no birth event → the birth date row's `records` is empty; a birth date whose only record is Denied → `lead` nil and `records.count` 1 | AC-1.2, AC-1.3, D-3 |
 | T-7 | Swift | `ProvenanceSheetTests.swift` `theSummarySaysOnlyWhatTheRowKnows` *(new)* | A merged name, 3 Sources, 1 against, 4 records → "merged from 3 Sources · 1 record disagrees · 4 records"; a life row with 2 owners and 4 records → "4 records from 2 birth events" | D-14, AC-1.1 |
+| T-8 | Go | `core/locator/validate_test.go` `TestPage` *(new)*, table-driven | `{"version":1,"selectors":[{"type":"artifact"},{"type":"page","artifact_page":37,"page_label":" 23 "}]}` → 37, "23"; artifact selector only → 0, ""; two page selectors → the first; `""`, `"{"`, version 2, and a 65,537-byte document → 0, "" | D-16 |
+| T-9 | Go | `core/database/conclusiondetails/conclusiondetails_test.go` (extend the outcome assertions beside `outcomeOf`) and `api/ffi/handlers/conclusion_detail_test.go` `TestGetConclusionDetail` (extend) | A Citation labelled "Baptism of Ada" on Artifact "Vol. 3" with locator page 37 → the outcome carries `ArtifactLabel` "Vol. 3", `CitationLabel` "Baptism of Ada", `ArtifactPage` 37, `PageLabel` ""; the wire carries the same in fields 21 – 24 | AC-2.4, D-8 |
+| T-10 | Swift | `PersonDetailTests.swift` `aRecordNamesItsCitation` *(new)* | Source "Register of Baptisms", Artifact "Vol. 3", Citation "Baptism of Ada", page 37 → "Register of Baptisms, Vol. 3, Baptism of Ada, image 37"; page label " 23 " → "…, p. 23"; only a title → "Register of Baptisms"; empty title → the Observation ref first | AC-2.4, D-17 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `PersonDetailTests` (owner groups), `ReconciledValueDisplayTests`.
 
@@ -284,13 +309,15 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `P
 2. (AC-2.1, AC-2.2, AC-2.3) From a record, click Source, then Back; click Citation, then Back; click Observation, then Back. Each opens its place and Back lands on Vitals with the sheet closed.
 3. (AC-3.1, AC-3.2) Open a person with two birth events (S13-D12's fixture): the birth date's sheet shows two groups, the shown one first and marked; VoiceOver reads it "…, shown value".
 4. (AC-1.4) Open an Event page: its rows show the Why disclosure and accordion as before.
-5. Resize the window across 1600pt with the sheet open: it stays open on the same row (PRV-W2).
+5. (AC-2.4) On a person whose birth record sits on a Citation with a label and a page, the birth date's sheet shows the citation line "Source title, Artifact label, Citation label, image N"; a long line wraps and is never cut.
+6. Resize the window across 1600pt with the sheet open: it stays open on the same row (PRV-W2).
 
 ## 11. Risks and stop conditions
 
 | Risk | Mitigation |
 | --- | --- |
-| The board asks for data the wire lacks (a Citation title) | Out: the board note becomes a follow-up engine PR; this PR ships the sheet without it |
+| The board asks for data the wire lacks (the Source type or date) | Out: the board note becomes a follow-up engine PR; this PR ships the sheet without it |
+| A researcher expects a formatted standard citation | The line is the first step; the rest is in [`docs/ideas/citation-formats.md`](../../../ideas/citation-formats.md) |
 | Focus does not return to the control after Escape | Manual 1; stop condition below |
 
 **Stop and report if:**
@@ -298,7 +325,8 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `P
 - `ReconciliationReasoningView`, `ReconciledValueRow` or `ReconciledValueRowModel.derived` no longer match §4.
 - Another caller of `ReconciliationReasoningView` passes owner groups (D-6 would drop them).
 - `.pvSheet(item:)` cannot follow a row id across a refresh without a stale snapshot (D-2).
-- The agreed board needs a field `CatalogReconcilerOutcome` does not carry.
+- The agreed board needs a field `CatalogReconcilerOutcome` does not carry beyond the citation line's parts.
+- `sqlOutcomes` no longer joins `citations` and `artifacts`, so the parts need a second query (D-8).
 - After Escape, focus does not return to the control, and no `PVSheet` change inside this PR's files fixes it.
 
 ## 12. Open questions

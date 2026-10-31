@@ -49,7 +49,7 @@ Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
 | R-38, R-39 remove a claim, last claim deletes the person | S13-08, S13-17 | S13-D6 |
 | R-40 claim review, replaced 2026-10-29 by how a person's records connect ([`evidence-graph-comparison.md`](evidence-graph-comparison.md)) | S13-26, S13-27, S13-28 (S13-07, S13-18 descoped) | S13-D10 (S13-D7 descoped) |
 
-**Back in the ideas folder** — [`ideas/kinship-view.md`](../../ideas/kinship-view.md) keeps kinship beyond the nuclear family, conflicts between shapes, a project's own patterns, citing an implied fact on a tree, and sibling evidence for matching (R-18a). [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md) keeps weak-claim alerts, the review queue, re-pinning and claim editing. The rest of [person-detail.md § Not this spike](person-detail.md#not-this-spike).
+**Back in the ideas folder** — [`ideas/kinship-view.md`](../../ideas/kinship-view.md) keeps kinship beyond the nuclear family, conflicts between shapes, a project's own patterns, citing an implied fact on a tree, and sibling evidence for matching (R-18a). [`ideas/citation-formats.md`](../../ideas/citation-formats.md) keeps standard genealogical citations beyond the provenance sheet's citation line. [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md) keeps weak-claim alerts, the review queue, re-pinning and claim editing. The rest of [person-detail.md § Not this spike](person-detail.md#not-this-spike).
 
 ## Working rules
 
@@ -340,8 +340,8 @@ Go, plus deleting Swift's draft rule.
 
 #### S13-11 — Provenance sheet
 
-**Ships.** The provenance control beside every Vitals value and the sheet from S13-D2: every record, the reconciler's reasoning, and links to the Source, Citation and Observation. It replaces the Why accordion on the Person page only; Event and Place keep it.
-**Not this PR.** Reconciliation Claims (R-10); the control outside Vitals (R-13b).
+**Ships.** The provenance control beside every Vitals value and the sheet from S13-D2: every record, named by its citation line (Source title, Artifact label, Citation label, page; user, 2026-10-31), the reconciler's reasoning, and links to the Source, Citation and Observation. It replaces the Why accordion on the Person page only; Event and Place keep it. `GetConclusionDetail`'s outcomes gain the Artifact label, Citation label and page; no new RPC.
+**Not this PR.** Reconciliation Claims (R-10); the control outside Vitals (R-13b); a formatted *Evidence Explained* citation and the Source fields it needs ([`ideas/citation-formats.md`](../../ideas/citation-formats.md)).
 **Check.** Bar 2.
 **Context.** R-8 – R-13b; working rule "A derived row carries its owning entity's records"; `ReconciliationReasoningView`; removes the owner group-line branch S13-06 added to it, or moves it into the sheet, which keeps S13-D12's grouping; VoiceOver names which owner group is behind the shown value (S13-06 UX-3): the group's heading says so, a new L10n key; working rule "The provenance sheet replaces the Why on the Person page only".
 
