@@ -60,7 +60,7 @@ enum ConclusionListRow {
         switch source {
         case .name(let text, let styled, _):
             if let styled {
-                Text(italicizingEmphasis(styled, font: PVFont.body(size: PVTypeScale.body)))
+                Text(italicizingEmphasis(styled, font: PVListText.titleFont))
             } else {
                 Text(verbatim: text)
             }

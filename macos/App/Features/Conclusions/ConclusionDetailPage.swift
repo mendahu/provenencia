@@ -740,9 +740,10 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
 
     private func nameText(_ text: String, styled: AttributedString?) -> Text {
         guard let styled else { return Text(verbatim: text) }
-        let font = PVFont.display(size: titleSize, weight: PVFontWeight.medium)
-        return Text(ConclusionListRow.italicizingEmphasis(styled, font: font))
+        return Text(ConclusionListRow.italicizingEmphasis(styled, font: titleFont))
     }
+
+    private var titleFont: Font { PVFont.display(size: titleSize, weight: PVFontWeight.medium) }
 
     private var titleSize: CGFloat { compact ? PVTypeScale.h3 : PVTypeScale.display3 }
 
@@ -751,14 +752,14 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
         switch content.title {
         case .name(let text, let styled, let spoken):
             nameText(text, styled: styled)
-                .font(PVFont.display(size: titleSize, weight: PVFontWeight.medium))
+                .font(titleFont)
                 .tracking(titleSize * PVTracking.display)
                 .foregroundStyle(PVColor.textDisplay)
                 .accessibilityLabel(Text(verbatim: spoken ?? text))
                 .accessibilityAddTraits(.isHeader)
         case .label(let text):
             Text(verbatim: text)
-                .font(PVFont.display(size: titleSize, weight: PVFontWeight.medium).italic())
+                .font(titleFont.italic())
                 .foregroundStyle(PVColor.textDisplay)
                 .accessibilityAddTraits(.isHeader)
         case .ref(let text):
