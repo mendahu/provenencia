@@ -1,7 +1,7 @@
 # Ship log — S14-09 Quote nicknames and add former surnames
 
 **Plan:** [`S14-09-name-display.md`](S14-09-name-display.md) · **Branch:** `s14-09-name-display` · **PR:** #649
-**State:** fixing 1
+**State:** fixing 2
 
 ## Round 0 — implement
 Base `5c5cdd35`. Head `fa80e134`. Gate PASS (orchestrator run). Report deviations:
@@ -57,3 +57,23 @@ Do: `PVList` gains `static let titleFont = PVFont.body(size: PVTypeScale.body)` 
 Check: no visual change; scripts/check-pr.sh PASS.
 
 Plan updates the fix round owes (the plan's Landed note): F-2 adds one string; F-3 supersedes §6 "VoiceOver reads `text`" (user, 2026-10-31) and adds two strings; F-1 adds a guidance line for D-7.
+
+## Round 1 — fix
+Head `ca7efce9`. Gate PASS (orchestrator run). F-1 `e9f9e6fb`, F-2 `ec75fb30`, F-3 `ddfb9b4a`, F-4 `ca7efce9`. Deviations: `titleFont` lives on a new non-generic `enum PVListText` in `PVList.swift` (a generic type cannot hold a stored static); one `PersonHeaderDisplayTests` expectation gained `spoken:`; the plan's Landed note rides in `ca7efce9`. A reviewer's `git checkout fa80e134` left the checkout detached; the orchestrator moved the branch to `49b203b3` before the fix round (no commit lost).
+
+Minors read by the orchestrator, not re-reviewed: UX-2 **Resolved** (`whyTitleName` on the single-value Name branch; test covers both names). UX-1 **Resolved** (spoken copy on both titles; list-row label and detail `.accessibilityLabel`). MNT-2, MNT-3 **Resolved** (`PVListText.titleFont`, `ConclusionDetailHeader.titleFont`).
+
+## Round 2 — review
+Reviewers: MNT (had the round-1 major). Scope `fa80e134...ca7efce9`.
+MNT-1 **Resolved** (reviewer: guidance lines in the skill and rule; stale example gone; no contradicting line).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-7 | MNT | blocker | Spoken copy, only ever plain, is filled through `StyledFormat`, against the F-1 line | Fix now → F-5 | verified: `NameDisplayRun.spokenText` calls `StyledFormat.attributed(decoration.spoken, …)`; `a11yNick` / `a11yFormerSurname` have no styled reader; `macos-l10n.mdc:22` sends plain-only copy through `L10n.format`. Fix plan 1's F-3 prescribed the shape (orchestrator's error) |
+
+### Fix plan 2
+
+**F-5 — Spoken name copy through `L10n.format`** (from MNT-7)
+Files: `macos/App/Platform/L10n.swift`, `macos/App/Features/Names/NamePartType.swift`, `macos/App/Features/Names/NameValueDisplay.swift`, `macos/ProvenenciaTests/NameValueDraftTests.swift`. Skill: `add-localized-string`.
+Do: replace the resources `L10n.NameValue.a11yNick` and `a11yFormerSurname` with functions `static func a11yNick(_ nickname: String) -> String` and `static func a11yFormerSurname(_ surname: String) -> String` that call `L10n.format` with the same keys, default values and comments (catalog entries unchanged). `NamePartDecoration.spoken` becomes `let spoken: (String) -> String`, set to `L10n.NameValue.a11yNick` / `L10n.NameValue.a11yFormerSurname`. `NameDisplayRun.spokenText` returns `decoration.spoken(text)` for a decorated run. `NameValueDraftTests.decorations` calls `decoration.spoken("Jake")` (expected strings unchanged). `rg -n "StyledFormat" macos/App` afterwards prints only `plainText` and `styledText` in `NameValueDisplay.swift` and the helper itself.
+Check: `PersonHeaderDisplayTests.spokenNameMarksDecoratedParts` and `NameValueDraftTests.decorations` pass unchanged in their expectations; scripts/check-pr.sh PASS.
