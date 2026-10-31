@@ -110,6 +110,9 @@ struct NameValueDraftTests {
         #expect(NamePartType.given.decoration == nil)
         let nick = NamePartType.nick.decoration!
         #expect(String(StyledFormat.attributed(nick.format, [.init(text: "Jake")]).characters) == "“Jake”")
+        #expect(String(StyledFormat.attributed(nick.spoken, [.init(text: "Jake")]).characters) == "Jake, nickname")
+        let former = NamePartType.formerSurname.decoration!
+        #expect(String(StyledFormat.attributed(former.spoken, [.init(text: "Smith")]).characters) == "former surname Smith")
     }
 
     @Test func storedAsMatchesBoard() {

@@ -749,11 +749,12 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
     @ViewBuilder
     private var title: some View {
         switch content.title {
-        case .name(let text, let styled):
+        case .name(let text, let styled, let spoken):
             nameText(text, styled: styled)
                 .font(PVFont.display(size: titleSize, weight: PVFontWeight.medium))
                 .tracking(titleSize * PVTracking.display)
                 .foregroundStyle(PVColor.textDisplay)
+                .accessibilityLabel(Text(verbatim: spoken ?? text))
                 .accessibilityAddTraits(.isHeader)
         case .label(let text):
             Text(verbatim: text)

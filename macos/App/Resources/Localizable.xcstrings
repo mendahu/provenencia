@@ -13238,6 +13238,30 @@
         }
       }
     },
+    "nameValue.a11y.nick": {
+      "comment": "VoiceOver: a nickname inside a spoken name; the argument is the nickname. Keep exactly one %@",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, nickname"
+          }
+        }
+      }
+    },
+    "nameValue.a11y.former_surname": {
+      "comment": "VoiceOver: a former surname inside a spoken name; the argument is the surname. Keep exactly one %@",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "former surname %@"
+          }
+        }
+      }
+    },
     "nameValue.display.nick": {
       "comment": "A nickname inside a displayed name; the argument is the nickname. Keep exactly one %@",
       "extractionState": "manual",

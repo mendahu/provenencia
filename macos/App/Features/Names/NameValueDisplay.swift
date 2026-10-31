@@ -71,14 +71,15 @@ enum NameValueDisplay {
 
     private static func display(for name: CatalogNameValue, order: [NameFormatPart]) -> NameDisplay {
         let runs = runs(name.parts, order: order)
-        guard !runs.isEmpty else { return NameDisplay(text: string(form: name.form), styled: nil) }
+        guard !runs.isEmpty else { return NameDisplay(text: string(form: name.form), styled: nil, spoken: nil) }
         let text = runs.map(\.plainText).joined()
+        let spoken = runs.contains(where: { $0.decoration != nil }) ? runs.map(\.spokenText).joined() : nil
         guard runs.contains(where: { $0.decoration?.emphasized == true }) else {
-            return NameDisplay(text: text, styled: nil)
+            return NameDisplay(text: text, styled: nil, spoken: spoken)
         }
         var styled = AttributedString()
         for run in runs { styled += run.styledText }
-        return NameDisplay(text: text, styled: styled)
+        return NameDisplay(text: text, styled: styled, spoken: spoken)
     }
 
     /// The same order and separators as Go `nameformats.Format`; only this side decorates.
@@ -128,10 +129,12 @@ enum NameValueDisplay {
     }
 }
 
-/// A displayed name: the plain text, and a styled copy when a word is emphasized.
+/// A displayed name: the plain text, a styled copy when a word is emphasized, and a spoken
+/// copy when a word is decorated (VoiceOver does not read the quotes or parentheses).
 struct NameDisplay: Equatable {
     var text: String
     var styled: AttributedString?
+    var spoken: String?
 }
 
 /// One word or separator of a displayed name, with the decoration of its part type.
@@ -143,6 +146,12 @@ private struct NameDisplayRun {
     var plainText: String {
         guard let decoration else { return text }
         return String(StyledFormat.attributed(decoration.format, [StyledFormat.Argument(text: text)]).characters)
+    }
+
+    /// The run as VoiceOver says it: a decorated word names its part type.
+    var spokenText: String {
+        guard let decoration else { return text }
+        return String(StyledFormat.attributed(decoration.spoken, [StyledFormat.Argument(text: text)]).characters)
     }
 
     /// The run with its decoration's punctuation; an emphasized word is marked.

@@ -15,7 +15,7 @@ enum PersonHeaderDisplay {
     ) -> TitleSource {
         if let name {
             let d = NameValueDisplay.display(for: name, style: style, orders: orders)
-            if !d.text.isEmpty { return .name(d.text, styled: d.styled) }
+            if !d.text.isEmpty { return .name(d.text, styled: d.styled, spoken: d.spoken) }
         }
         let label = entity.label.trimmingCharacters(in: .whitespacesAndNewlines)
         return label.isEmpty ? .ref(entity.ref) : .label(label)

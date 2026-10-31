@@ -4,15 +4,21 @@ import SwiftUI
 /// label is italic, and a ref is mono. Persons, Events, and Places share it. A name may carry
 /// a styled copy whose emphasized runs draw italic.
 enum ConclusionTitleSource: Equatable {
-    case name(String, styled: AttributedString? = nil)
+    case name(String, styled: AttributedString? = nil, spoken: String? = nil)
     case label(String)
     case ref(String)
 
     var text: String {
         switch self {
-        case .name(let text, _): text
+        case .name(let text, _, _): text
         case .label(let text), .ref(let text): text
         }
+    }
+
+    /// What VoiceOver reads: the spoken copy of a decorated name, else `text`.
+    var spokenText: String {
+        if case .name(_, _, let spoken?) = self { return spoken }
+        return text
     }
 }
 
@@ -52,7 +58,7 @@ enum ConclusionListRow {
     @ViewBuilder
     private static func titleText(_ source: ConclusionTitleSource) -> some View {
         switch source {
-        case .name(let text, let styled):
+        case .name(let text, let styled, _):
             if let styled {
                 Text(italicizingEmphasis(styled, font: PVFont.body(size: PVTypeScale.body)))
             } else {
@@ -89,6 +95,6 @@ enum ConclusionListRow {
     }
 
     static func accessibilityLabel(_ source: ConclusionTitleSource, ref: String) -> String {
-        L10n.Workspace.personRowAccessibility(title: source.text, ref: ref)
+        L10n.Workspace.personRowAccessibility(title: source.spokenText, ref: ref)
     }
 }

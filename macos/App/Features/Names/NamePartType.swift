@@ -5,6 +5,8 @@ import Foundation
 struct NamePartDecoration {
     let format: LocalizedStringResource
     let emphasized: Bool
+    /// The same word as VoiceOver should say it, since the punctuation is not read.
+    let spoken: LocalizedStringResource
 }
 
 /// Product NameValue part-type registry. Keys match `namevalue.PartTypes()`.
@@ -35,8 +37,8 @@ enum NamePartType: String, CaseIterable, Sendable {
     /// Display only: Go's `nameformats.Format` sort key never decorates.
     var decoration: NamePartDecoration? {
         switch self {
-        case .nick: NamePartDecoration(format: L10n.NameValue.displayNick, emphasized: false)
-        case .formerSurname: NamePartDecoration(format: L10n.NameValue.displayFormerSurname, emphasized: true)
+        case .nick: NamePartDecoration(format: L10n.NameValue.displayNick, emphasized: false, spoken: L10n.NameValue.a11yNick)
+        case .formerSurname: NamePartDecoration(format: L10n.NameValue.displayFormerSurname, emphasized: true, spoken: L10n.NameValue.a11yFormerSurname)
         case .prefix, .given, .surnamePrefix, .surname, .suffix, .undetermined: nil
         }
     }

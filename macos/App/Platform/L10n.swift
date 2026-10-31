@@ -2835,6 +2835,16 @@ enum L10n {
             defaultValue: "“%@”",
             comment: "A nickname inside a displayed name; the argument is the nickname. Keep exactly one %@"
         )
+        static let a11yNick = LocalizedStringResource(
+            "nameValue.a11y.nick",
+            defaultValue: "%@, nickname",
+            comment: "VoiceOver: a nickname inside a spoken name; the argument is the nickname. Keep exactly one %@"
+        )
+        static let a11yFormerSurname = LocalizedStringResource(
+            "nameValue.a11y.former_surname",
+            defaultValue: "former surname %@",
+            comment: "VoiceOver: a former surname inside a spoken name; the argument is the surname. Keep exactly one %@"
+        )
         static let displayFormerSurname = LocalizedStringResource(
             "nameValue.display.former_surname",
             defaultValue: "(%@)",

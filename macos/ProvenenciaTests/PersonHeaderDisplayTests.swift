@@ -112,7 +112,7 @@ struct PersonHeaderDisplayTests {
 
         let d = NameValueDisplay.display(for: mary, style: .natural, orders: orders)
         #expect(PersonHeaderDisplay.titleSource(header(name: mary), orders: orders)
-            == .name("Mary (Smith) Jones", styled: d.styled))
+            == .name("Mary (Smith) Jones", styled: d.styled, spoken: d.spoken))
         let plain = CatalogNameValue(form: "x", parts: [
             CatalogNameValuePart(value: "James", type: "given"),
             CatalogNameValuePart(value: "Robins", type: "surname"),
@@ -124,5 +124,17 @@ struct PersonHeaderDisplayTests {
             let isSmith = String(italic[run.range].characters) == "Smith"
             #expect((run[AttributeScopes.SwiftUIAttributes.FontAttribute.self] != nil) == isSmith)
         }
+    }
+
+    @Test func spokenNameMarksDecoratedParts() {
+        let orders = NameFormatOrders.western
+        let jake = NameValueDisplay.display(for: james(nicks: ["Jake"]), style: .natural, orders: orders)
+        #expect(jake.spoken == "James Jake, nickname Robins")
+        let m = NameValueDisplay.display(for: mary, style: .natural, orders: orders)
+        #expect(m.spoken == "Mary former surname Smith Jones")
+        #expect(NameValueDisplay.display(for: james(nicks: []), style: .natural, orders: orders).spoken == nil)
+        let source = PersonHeaderDisplay.titleSource(name: mary, entity: header(name: mary).entity, orders: orders)
+        #expect(source.text == "Mary (Smith) Jones")
+        #expect(ConclusionListRow.accessibilityLabel(source, ref: "PER-7KD45").contains("former surname Smith"))
     }
 }
