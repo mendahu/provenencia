@@ -42,18 +42,7 @@ struct PersonHeaderDisplayTests {
             CatalogNameValuePart(value: "van", type: "surname_prefix"),
             CatalogNameValuePart(value: "Gogh", type: "surname"),
         ])
-        let orders = NameFormatOrders(
-            natural: [
-                NameFormatPart(partType: "given", trailingSeparator: ""),
-                NameFormatPart(partType: "surname_prefix", trailingSeparator: ""),
-                NameFormatPart(partType: "surname", trailingSeparator: ""),
-            ],
-            sorted: [
-                NameFormatPart(partType: "surname_prefix", trailingSeparator: ""),
-                NameFormatPart(partType: "surname", trailingSeparator: ", "),
-                NameFormatPart(partType: "given", trailingSeparator: ""),
-            ]
-        )
+        let orders = NameFormatOrders.western
         #expect(NameValueDisplay.string(for: name, style: .sorted, orders: orders) == "van Gogh, Vincent")
         #expect(PersonHeaderDisplay.title(header(name: name), style: .sorted, orders: orders) == "van Gogh, Vincent")
         #expect(NameValueDisplay.string(for: name, style: .natural, orders: orders) == "Vincent van Gogh")
@@ -64,5 +53,43 @@ struct PersonHeaderDisplayTests {
         #expect(PersonHeaderDisplay.title(header(name: empty, label: "Mother of James")) == "Mother of James")
         #expect(PersonHeaderDisplay.title(header(name: nil, label: "Mother of James")) == "Mother of James")
         #expect(PersonHeaderDisplay.title(header(name: nil, label: "  ")) == "PER-7KD45")
+    }
+
+    private func james(nicks: [String]) -> CatalogNameValue {
+        CatalogNameValue(form: "unused", parts: [CatalogNameValuePart(value: "James", type: "given")]
+            + nicks.map { CatalogNameValuePart(value: $0, type: "nick") }
+            + [CatalogNameValuePart(value: "Robins", type: "surname")])
+    }
+
+    private var mary: CatalogNameValue {
+        CatalogNameValue(form: "unused", parts: [
+            CatalogNameValuePart(value: "Mary", type: "given"),
+            CatalogNameValuePart(value: "Smith", type: "former_surname"),
+            CatalogNameValuePart(value: "Jones", type: "surname"),
+        ])
+    }
+
+    @Test func nicknamesAreQuoted() {
+        let orders = NameFormatOrders.western
+        let name = james(nicks: ["Jake"])
+        #expect(PersonHeaderDisplay.title(header(name: name), orders: orders) == "James “Jake” Robins")
+        #expect(PersonHeaderDisplay.title(header(name: name), style: .sorted, orders: orders) == "Robins, James “Jake”")
+        #expect(PersonHeaderDisplay.title(header(name: james(nicks: ["Jake", "Jim"])), orders: orders)
+            == "James “Jake” “Jim” Robins")
+        let conclusion = CatalogConclusionHeader.person(header(name: name))
+        #expect(ConclusionHeaderDisplay.title(conclusion, orders: orders) == "James “Jake” Robins")
+    }
+
+    @Test func formerSurnameIsParenthesized() {
+        let orders = NameFormatOrders.western
+        #expect(PersonHeaderDisplay.title(header(name: mary), orders: orders) == "Mary (Smith) Jones")
+        #expect(PersonHeaderDisplay.title(header(name: mary), style: .sorted, orders: orders) == "Jones, Mary (Smith)")
+    }
+
+    @Test func unlistedFormerSurnameFollows() {
+        var orders = NameFormatOrders.western
+        orders.natural.removeAll { $0.partType == "former_surname" }
+        orders.sorted.removeAll { $0.partType == "former_surname" }
+        #expect(PersonHeaderDisplay.title(header(name: mary), orders: orders) == "Mary Jones (Smith)")
     }
 }
