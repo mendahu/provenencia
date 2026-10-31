@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E7A0000000000000000000A2 /* PVErrorText.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7A0000000000000000000A1 /* PVErrorText.swift */; };
 		AA121400000000000000000C /* SourceGraphFormModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA121400000000000000000B /* SourceGraphFormModelTests.swift */; };
 		AA121400000000000000000A /* SourceGraphFormDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1214000000000000000009 /* SourceGraphFormDialog.swift */; };
 		AA1214000000000000000008 /* SourceGraphFormModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1214000000000000000007 /* SourceGraphFormModel.swift */; };
@@ -464,6 +465,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		E7A0000000000000000000A1 /* PVErrorText.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVErrorText.swift; sourceTree = "<group>"; };
 		AA121400000000000000000B /* SourceGraphFormModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceGraphFormModelTests.swift; sourceTree = "<group>"; };
 		AA1214000000000000000009 /* SourceGraphFormDialog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceGraphFormDialog.swift; sourceTree = "<group>"; };
 		AA1214000000000000000007 /* SourceGraphFormModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceGraphFormModel.swift; sourceTree = "<group>"; };
@@ -1871,6 +1873,15 @@
 			path = Panel;
 			sourceTree = "<group>";
 		};
+		E7A0000000000000000000A3 /* ErrorText */ = {
+			isa = PBXGroup;
+			children = (
+				E7A0000000000000000000A1 /* PVErrorText.swift */,
+			);
+			name = ErrorText;
+			path = ErrorText;
+			sourceTree = "<group>";
+		};
 		D5C000000000000000000005 /* Callout */ = {
 			isa = PBXGroup;
 			children = (
@@ -2001,6 +2012,7 @@
 				D5C000000000000000000014 /* FormDialog */,
 				D5C000000000000000000021 /* Panel */,
 				D5C000000000000000000005 /* Callout */,
+				E7A0000000000000000000A3 /* ErrorText */,
 				D5C000000000000000000003 /* SidebarNav */,
 				D5C000000000000000000018 /* Breadcrumbs */,
 				D5C000000000000000000017 /* Table */,
@@ -2363,6 +2375,7 @@
 				AA00000000000000000000C6 /* PVConfirm.swift in Sources */,
 				AA00000000000000000000C1 /* PVTable.swift in Sources */,
 				A62122AE913D5F5B8B72D083 /* PVCallout.swift in Sources */,
+				E7A0000000000000000000A2 /* PVErrorText.swift in Sources */,
 				BD1582FF721A5711F38C97A0 /* MetadataModel.swift in Sources */,
 				A70500000000000000000005 /* PropertiesModel.swift in Sources */,
 				A70500000000000000000006 /* PropertiesView.swift in Sources */,
@@ -2760,7 +2773,7 @@
 					"$(PROJECT_DIR)/Core",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.2;
+				MARKETING_VERSION = 0.2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -2802,7 +2815,7 @@
 					"$(PROJECT_DIR)/Core",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.2;
+				MARKETING_VERSION = 0.2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -2823,7 +2836,7 @@
 				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.2;
+				MARKETING_VERSION = 0.2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -2844,7 +2857,7 @@
 				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.2.2;
+				MARKETING_VERSION = 0.2.3;
 				PRODUCT_BUNDLE_IDENTIFIER = app.provenencia.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;

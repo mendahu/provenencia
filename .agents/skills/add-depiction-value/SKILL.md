@@ -11,6 +11,8 @@ description: >-
 
 A depiction is a region of a Citation's page and the image File Go stored from it. The pure type and its read rules live in **`core/depictionvalue`**; the queries live in **`core/database/depictionvalues`**.
 
+The macOS client draws a depiction with the rectangle tool alone (`CitationComposerModel.viewerRegionTools`), and the saved image is the region's bounding box; Go accepts any valid region, so a polygon saved earlier opens, shows and saves as it is.
+
 ## Package
 
 ```

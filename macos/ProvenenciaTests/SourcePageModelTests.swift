@@ -1272,7 +1272,8 @@ struct SourcePageModelTests {
         session.apply(CatalogWriteEffects(
             evidenceGraphs: ["g-jones"], reads: [CatalogWriteEffectsRead(read: .evidenceGraphProgress, ids: ["g-jones"])]
         ))
-        #expect(await waitUntil { model.graphs.progress(for: graphs[1])?.observationCount == 41 })
+        await session.settleWrites()
+        #expect(model.graphs.progress(for: graphs[1])?.observationCount == 41)
         #expect(model.graphs.progress(for: graphs[0]) == nil)
     }
 

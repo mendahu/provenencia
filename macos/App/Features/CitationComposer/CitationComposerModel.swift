@@ -719,9 +719,19 @@ final class CitationComposerModel {
         artifactViewer.goToNextPage()
     }
 
+    /// One rule for when the Citation can be saved; the evidence column's Save
+    /// and the depiction's save-page action both read it.
+    var citationSaveBlocked: Bool {
+        fields.isSaving || isTranscribing || isDrawingDepiction
+    }
+
+    var canSaveCitation: Bool {
+        !citationSaveBlocked && (fields.isDirty || activeCitationID == nil)
+    }
+
     @discardableResult
     func setPageFromViewer() -> Bool {
-        guard !isDrawingDepiction else { return false }
+        guard !isDrawingRegion else { return false }
         return setPage(artifactViewer.page)
     }
 
@@ -740,20 +750,20 @@ final class CitationComposerModel {
     }
 
     func clearRegion() {
-        guard !isTranscribing, !isDrawingDepiction else { return }
+        guard !isTranscribing, !isDrawingRegion else { return }
         locator.clearRegion()
     }
     func resetToEntireArtifact() {
-        guard !isTranscribing, !isDrawingDepiction else { return }
+        guard !isTranscribing, !isDrawingRegion else { return }
         locator.resetToEntireArtifact()
         armedRegionTool = nil
     }
     func removePage() {
-        guard !isTranscribing, !isDrawingDepiction else { return }
+        guard !isTranscribing, !isDrawingRegion else { return }
         locator.removePage()
     }
     func removeRegion() {
-        guard !isTranscribing, !isDrawingDepiction else { return }
+        guard !isTranscribing, !isDrawingRegion else { return }
         locator.clearRegion()
     }
     func disarmRegionTool() {

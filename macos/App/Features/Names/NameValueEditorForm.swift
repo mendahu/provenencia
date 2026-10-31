@@ -75,9 +75,7 @@ struct NameValueEditorForm: View {
                 .accessibilityIdentifier("\(accessibilityIdentifierPrefix).split")
             }
             if let error = draft.formError {
-                Text(verbatim: error)
-                    .font(PVFont.body(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.danger)
+                PVErrorText(error, size: .caption)
             }
             Text(L10n.NameValue.formHint)
                 .font(PVFont.body(size: PVTypeScale.caption, italic: true))
@@ -223,9 +221,7 @@ struct NameValueEditorForm: View {
                 .frame(width: 88)
             }
             if let error = draft.partValueError(at: index) {
-                Text(verbatim: error)
-                    .font(PVFont.body(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.danger)
+                PVErrorText(error, size: .caption)
                     .padding(.leading, 30)
                     .accessibilityIdentifier("\(accessibilityIdentifierPrefix).part.\(index).error")
             }

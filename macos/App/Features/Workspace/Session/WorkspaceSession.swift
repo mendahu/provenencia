@@ -191,14 +191,45 @@ final class WorkspaceSession {
             guard let refresh = key.kind.descriptor.refresh else { continue }
             let ids = refresh.follows.ids(in: effects, mutation: mutation)
             if !ids.isEmpty {
-                Task { await refresh.run(self, key, ids) }
+                trackWrite { await refresh.run(self, key, ids) }
             }
         }
         if let kind = mutation?.invalidationKind,
            CatalogQueryRegistry.navCountTriggers.contains(kind),
            let recount = onNavCountsMoved
         {
-            Task { await recount() }
+            trackWrite { await recount() }
+        }
+    }
+
+    /// The refresh and recount tasks `apply` has started and not yet finished.
+    /// Each removes itself when it ends, so the list does not grow.
+    private var writeRefreshes: [UUID: Task<Void, Never>] = [:]
+
+    private func trackWrite(_ work: @escaping @MainActor () async -> Void) {
+        let id = UUID()
+        writeRefreshes[id] = Task { @MainActor [weak self] in
+            await work()
+            self?.writeRefreshes[id] = nil
+        }
+    }
+
+    /// Returns once every refresh and recount `apply` started and every query
+    /// load in flight have finished, following any started while it waited.
+    /// Tests await this instead of polling against a deadline, which a busy
+    /// main actor can outlast. Each task is awaited once, so a load that
+    /// finished under a superseded generation cannot keep it spinning.
+    func settleWrites() async {
+        var awaited = Set<Task<Void, Never>>()
+        while true {
+            let pending = Array(writeRefreshes.values) + inFlight.values.map(\.task)
+            let next = pending.filter { !awaited.contains($0) }
+            if next.isEmpty { return }
+            for task in next {
+                awaited.insert(task)
+                await task.value
+            }
+            await Task.yield()
         }
     }
 

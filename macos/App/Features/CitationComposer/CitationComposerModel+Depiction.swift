@@ -12,7 +12,6 @@ struct DepictionPreviewMemo {
 struct DepictionCutKey: Equatable, Sendable {
     let artifactID: String?
     let kind: ArtifactViewerKind
-    let isLoading: Bool
     let page: Int?
     let region: ArtifactRegionDraft
 }
@@ -20,10 +19,51 @@ struct DepictionCutKey: Equatable, Sendable {
 /// What the depiction preview shows, read from stored values only.
 enum DepictionPreviewState: Equatable {
     case none
+    /// The viewer is still loading the file, so nothing can be cut yet.
+    case waiting
+    /// The viewer holds nothing that can be cut (missing, unreadable, unsupported).
+    case unavailable
     case cutting
     case cut(NSImage)
+    /// The cut ran and failed.
     case failed
     case saved(relPath: String)
+}
+
+/// Whether the viewer can cut a region now: the one value the caption and the
+/// preview read.
+enum DepictionCutAvailability: Equatable {
+    case ready
+    /// The viewer is still loading the file.
+    case loading
+    /// The viewer holds nothing that can be cut (missing, unreadable, unsupported).
+    case unavailable
+}
+
+/// What the depiction caption says, first match wins: one place for the order
+/// and the tone.
+enum DepictionCaptionState: Equatable {
+    case needsPage
+    case cannotCut
+    case cutFailed
+    case hidden
+    case empty
+    case redrawn
+    case box
+
+    var text: LocalizedStringResource {
+        switch self {
+        case .needsPage: L10n.CitationComposer.depictionCaptionNeedsPage
+        case .cannotCut: L10n.CitationComposer.depictionCaptionCannotCut
+        case .cutFailed: L10n.CitationComposer.depictionCaptionCutFailed
+        case .hidden: L10n.CitationComposer.depictionCaptionHidden
+        case .empty: L10n.CitationComposer.depictionCaptionEmpty
+        case .redrawn: L10n.CitationComposer.depictionCaptionRedrawn
+        case .box: L10n.CitationComposer.depictionCaptionBox
+        }
+    }
+
+    var isWarning: Bool { self == .cutFailed }
 }
 
 /// The region could not be cut from the open file, or its image could not be written.
@@ -95,11 +135,11 @@ extension CitationComposerModel {
         depictionCitationLocator.page
     }
 
-    /// The Citation's own region, when it has a valid one, from the same locator
-    /// as ``depictionPage`` so the two cannot disagree.
+    /// The rectangle around the Citation's own region, when it has a valid one,
+    /// from the same locator as ``depictionPage`` so the two cannot disagree.
     var depictionCitationRegion: ArtifactRegionDraft? {
         guard let region = depictionCitationLocator.region, region.isValid else { return nil }
-        return region
+        return region.boundingRectangle
     }
 
     /// The title of the button that sets the region to the whole file: a page
@@ -138,13 +178,42 @@ extension CitationComposerModel {
         return true
     }
 
-    /// The tool the viewer overlay sees: unarmed while drawing could not commit
-    /// (wrong page, no page), so the overlay never offers a refused region.
+    /// The region tools the viewer strip offers: the rectangle alone while a
+    /// depiction dialog is open, since a depiction is drawn as a rectangle, else
+    /// all of them. Keyed on the open draft because ``commitViewerRegion(_:)``
+    /// sends any viewer commit to it.
+    var viewerRegionTools: [ArtifactRegionTool] {
+        currentDepictionDraft != nil ? [.rectangle] : ArtifactRegionTool.allCases
+    }
+
+    /// The one armed tool the strip, the overlay and the locator lock see. Nil
+    /// while a depiction dialog is open and not drawing (a tool armed for the
+    /// Citation never reaches the depiction), and while drawing could not commit
+    /// (wrong page, no page). Setting a tool with a depiction dialog open starts
+    /// drawing, as Draw does; any other tool closes Find; nil disarms.
     var viewerArmedRegionTool: ArtifactRegionTool? {
         get {
-            isDrawingDepiction && (depictionWrongPage || depictionNeedsPage) ? nil : armedRegionTool
+            if currentDepictionDraft != nil, !isDrawingDepiction { return nil }
+            return isDrawingDepiction && (depictionWrongPage || depictionNeedsPage) ? nil : armedRegionTool
         }
-        set { armedRegionTool = newValue }
+        set {
+            guard let tool = newValue else {
+                disarmRegionTool()
+                return
+            }
+            if currentDepictionDraft != nil, !isDrawingDepiction {
+                startDepictionDrawing()
+                return
+            }
+            artifactViewer.closeFind()
+            armedRegionTool = tool
+        }
+    }
+
+    /// A region is being drawn, for a depiction or for the Citation. Drawing
+    /// locks the Citation's locator controls.
+    var isDrawingRegion: Bool {
+        isDrawingDepiction || viewerArmedRegionTool != nil
     }
 
     /// True when the open edit has a region unlike the saved one.
@@ -155,15 +224,43 @@ extension CitationComposerModel {
         return values.depictionDraft.locator != session.propertyBaseline.depictionDraft.locator
     }
 
-    var depictionCaption: LocalizedStringResource {
+    var depictionCaptionState: DepictionCaptionState {
         let draft = currentDepictionDraft
-        if depictionNeedsPage { return L10n.CitationComposer.depictionCaptionNeedsPage }
-        if draft?.regionHidden == true { return L10n.CitationComposer.depictionCaptionHidden }
-        if draft?.hasRegion != true { return L10n.CitationComposer.depictionCaptionEmpty }
-        if dialogBase() == .edit, isDepictionRedrawn {
-            return L10n.CitationComposer.depictionCaptionRedrawn
+        if depictionNeedsPage { return .needsPage }
+        if depictionCutAvailability == .unavailable { return .cannotCut }
+        if depictionPreviewState == .failed { return .cutFailed }
+        if draft?.regionHidden == true { return .hidden }
+        if draft?.hasRegion != true { return .empty }
+        if dialogBase() == .edit, isDepictionRedrawn { return .redrawn }
+        return .box
+    }
+
+    /// The viewer holds something ``ArtifactRegionCrop`` can cut, on the page a
+    /// depiction is drawn on. The one can-cut predicate.
+    var depictionCanCut: Bool {
+        ArtifactRegionCrop.snapshot(artifactViewer, page: depictionPage ?? artifactViewer.page) != nil
+    }
+
+    /// ``depictionCanCut``, told apart from a viewer that is still loading.
+    var depictionCutAvailability: DepictionCutAvailability {
+        if depictionCanCut { return .ready }
+        return artifactViewer.isLoading ? .loading : .unavailable
+    }
+
+    /// The open depiction draft has a region and sends a new image with its
+    /// save: the one "this draft needs a new image" rule.
+    private var depictionNeedsCut: Bool {
+        guard let draft = currentDepictionDraft, draft.hasRegion else { return false }
+        return unchangedDepictionImagePath == nil
+    }
+
+    /// The preview cannot yield an image to save yet or at all, so Save waits.
+    var depictionImageBlocksSave: Bool {
+        guard currentDepictionDraft != nil else { return false }
+        switch depictionPreviewState {
+        case .waiting, .unavailable, .failed: return true
+        default: return false
         }
-        return L10n.CitationComposer.depictionCaptionBox
     }
 
     /// The saved image path of an edit whose region is unchanged (empty when Go
@@ -182,7 +279,6 @@ extension CitationComposerModel {
         return DepictionCutKey(
             artifactID: selectedArtifact?.id,
             kind: artifactViewer.kind,
-            isLoading: artifactViewer.isLoading,
             page: draft.locator.page,
             region: region
         )
@@ -190,14 +286,27 @@ extension CitationComposerModel {
 
     /// The key of the cut the preview needs now; nil when it needs none.
     var depictionPreviewKey: DepictionCutKey? {
-        guard let draft = currentDepictionDraft, unchangedDepictionImagePath == nil else { return nil }
+        guard depictionNeedsCut, depictionCanCut, let draft = currentDepictionDraft else { return nil }
         return depictionCutKey(for: draft)
+    }
+
+    /// The key of a cut that is waiting to run; nil when none is. A failed cut
+    /// is nil until ``commitViewerRegion(_:)`` clears its memo, which makes this
+    /// the key again, so the view's `.task(id:)` restarts with no help from it.
+    var depictionPendingCutKey: DepictionCutKey? {
+        depictionPreviewState == .cutting ? depictionPreviewKey : nil
     }
 
     /// What the preview shows, derived from stored values so `body` never cuts.
     var depictionPreviewState: DepictionPreviewState {
         if let path = unchangedDepictionImagePath {
             return path.isEmpty ? .none : .saved(relPath: path)
+        }
+        guard depictionNeedsCut else { return .none }
+        switch depictionCutAvailability {
+        case .loading: return .waiting
+        case .unavailable: return .unavailable
+        case .ready: break
         }
         guard let key = depictionPreviewKey else { return .none }
         guard let memo = depictionPreviewMemo, memo.key == key else { return .cutting }
@@ -226,12 +335,31 @@ extension CitationComposerModel {
         _ = await depictionImage(for: draft)
     }
 
+    // MARK: - Citation page
+
+    /// The needs-page Callout may save the viewer's page to the Citation now.
+    /// `!isDrawingRegion` also covers a tool armed for the Citation, which is
+    /// not ``isDrawingDepiction`` but still locks the Citation's locator.
+    var canSaveDepictionCitationPage: Bool {
+        depictionNeedsPage && !citationSaveBlocked && !isDrawingRegion && depictionCanCut
+    }
+
+    /// Sets the viewer's page on the Citation and saves the Citation, so Draw
+    /// can start. On a failed save the unsaved page stays on the Citation
+    /// draft, so Save or this button retries it.
+    func saveDepictionCitationPage() async -> Bool {
+        guard canSaveDepictionCitationPage, setPageFromViewer() else { return false }
+        await fields.saveCitation()
+        return fields.error == nil && !depictionNeedsPage
+    }
+
     // MARK: - Drawing
 
     /// What keeps Draw from starting whatever the draft: a transcription in
-    /// flight, or a PDF Citation saved with no page. The Tab order reads this
-    /// alone because the Property may not be committed to the draft yet.
-    var depictionDrawBlocked: Bool { isTranscribing || depictionNeedsPage }
+    /// flight, a PDF Citation saved with no page, or a file the viewer cannot
+    /// cut. The Tab order reads this alone because the Property may not be
+    /// committed to the draft yet.
+    var depictionDrawBlocked: Bool { isTranscribing || depictionNeedsPage || !depictionCanCut }
 
     /// The one rule for setting a depiction region: Draw, the two region
     /// buttons, and ``prepareDepictionRegion()`` read it, and the Tab order
@@ -263,7 +391,7 @@ extension CitationComposerModel {
     func startDepictionDrawing() {
         guard let base = prepareDepictionRegion() else { return }
         artifactViewer.closeFind()
-        if armedRegionTool == nil { armedRegionTool = .rectangle }
+        armedRegionTool = .rectangle
         show(.drawingDepiction(over: base))
     }
 
@@ -294,6 +422,7 @@ extension CitationComposerModel {
             viewerPage: artifactViewer.page
         ) else { return false }
         writeDepictionDraft(draft)
+        if let memo = depictionPreviewMemo, memo.cut == nil { depictionPreviewMemo = nil }
         armedRegionTool = nil
         if case .drawingDepiction(let over) = presented {
             restore(over)

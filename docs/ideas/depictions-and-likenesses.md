@@ -12,11 +12,12 @@
 
 ## From the 2026-10-18 likeness audit
 
-The Spike 10 follow-ups (S10-60 – S10-66) fixed the High items and Medium items 5, 7 and 8. Spike 14 takes the gallery image source (S14-01) and the composer feedback, copy and cap items (S14-03); Spike 12 takes decoding the crop before the session and one constant for the stored-image type (S12-27), the PDF cut's file check (S12-28) and a raster byte limit (S12-39). These remain:
+The Spike 10 follow-ups (S10-60 – S10-66) fixed the High items and Medium items 5, 7 and 8. Spike 14 took the gallery image source (S14-01) and the composer feedback, copy and cap items (S14-03); Spike 12 takes decoding the crop before the session and one constant for the stored-image type (S12-27), the PDF cut's file check (S12-28) and a raster byte limit (S12-39). These remain:
 
 - **A refused image (UX-11).** No distinct glyph or copy for an image the thumbnail check refuses.
 - **Thumbnail work (PRF-2, Medium items 6 and 13).** Cancel a decode that is already running, decode at the drawn size, bound the cache by bytes, and keep the evidence card's loaded likeness.
 - **Go crop work (PRF-4).** Store crops below 2,048 px. (Decoding the crop before the catalog session, PRF-3, and one stage-then-write entry point went to Spike 12 S12-27, 2026-10-27.)
+- **`CitationComposerViewerPane.regionSymbol` repeats `ArtifactRegionTool.symbol`.** The composer maps a region kind to a glyph a second time; one mapping on the kind would serve both.
 - **`CitationLocatorDraft.encodeJSON()` key order.** It serializes without `.sortedKeys`, so two encodings of one locator can differ as strings.
 
 ## Still out

@@ -20,10 +20,8 @@ struct CitationComposerViewerPane: View {
 
             ArtifactViewer(
                 model: model.artifactViewer,
-                showsToolStrip: false,
                 locatorPage: model.locator.page,
-                onSetPage: { model.setPageFromViewer() },
-                armedRegionTool: $model.viewerArmedRegionTool,
+                armedRegionTool: model.viewerArmedRegionTool,
                 committedRegion: model.viewerRegion,
                 onCommitRegion: { model.commitViewerRegion($0) },
                 onDisarmRegionTool: { model.disarmRegionTool() },
@@ -84,7 +82,9 @@ struct CitationComposerViewerPane: View {
                     model: model.artifactViewer,
                     locatorPage: model.locator.page,
                     onSetPage: { model.setPageFromViewer() },
-                    armedRegionTool: $model.armedRegionTool
+                    isSetPageEnabled: !model.isDrawingRegion,
+                    regionTools: model.viewerRegionTools,
+                    armedRegionTool: $model.viewerArmedRegionTool
                 )
 
                 Spacer(minLength: 0)
@@ -136,6 +136,7 @@ struct CitationComposerViewerPane: View {
             .opacity(0)
             .accessibilityHidden(true)
         }
+        .disabled(model.isDrawingRegion)
         .accessibilityIdentifier("artifactViewer.findToggle")
     }
 
@@ -218,7 +219,7 @@ struct CitationComposerViewerPane: View {
         PVButton(L10n.CitationComposer.clearMenu, variant: .link, size: .sm) {
             toggleClearMenu()
         }
-        .disabled(model.isLocatorArtifactOnly || model.isDrawingDepiction)
+        .disabled(model.isLocatorArtifactOnly || model.isDrawingRegion)
         .accessibilityIdentifier("citationComposer.clearMenu")
         .pvContextMenu(
             $clearMenu,
@@ -292,11 +293,13 @@ struct CitationComposerViewerPane: View {
                 )
             }
             Spacer(minLength: PVSpacing.space4)
-            Text(L10n.CitationComposer.locatorDrawHint)
-                .font(PVFont.body(size: PVTypeScale.caption, italic: true))
-                .foregroundStyle(PVColor.textMuted)
-                .lineLimit(1)
-                .layoutPriority(-1)
+            if !model.isDrawingRegion {
+                Text(L10n.CitationComposer.locatorDrawHint)
+                    .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+                    .foregroundStyle(PVColor.textMuted)
+                    .lineLimit(1)
+                    .layoutPriority(-1)
+            }
         }
         .frame(height: 36)
         .padding(.leading, PVSpacing.space6)
@@ -373,6 +376,7 @@ struct CitationComposerViewerPane: View {
                     .lineLimit(1)
             }
             PVIconButton(.dismiss, label: L10n.CitationComposer.removeLocatorLayer, size: .sm, action: onRemove)
+                .disabled(model.isDrawingRegion)
                 .accessibilityIdentifier("\(accessibilityIdentifier).remove")
         }
         .padding(.leading, PVSpacing.space4)

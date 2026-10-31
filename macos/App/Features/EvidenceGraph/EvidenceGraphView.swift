@@ -444,9 +444,7 @@ private struct EvidenceGraphContent: View {
                 }
             }
             if let createError = model.createError {
-                Text(verbatim: createError)
-                    .font(PVFont.body(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.danger)
+                PVErrorText(createError, size: .caption)
             }
             if !model.isEditingBridge {
                 PVField(

@@ -972,8 +972,8 @@ struct WorkspaceSessionTests {
         store.citationsByID["c3"] = citation("c3", artifactID: "a1")
         session.apply(CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .citations, ids: ["g-1"])]))
 
-        #expect(await waitUntil { first.value == ["a1": 2, "a2": 1] })
-        try? await Task.sleep(nanoseconds: 50_000_000)
+        await session.settleWrites()
+        #expect(first.value == ["a1": 2, "a2": 1])
         #expect(store.citationCountsGraphIDs.filter { $0 == "g-1" }.count == 2)
         #expect(store.citationCountsGraphIDs.filter { $0 == "g-2" }.count == 1)
         #expect(second.value == ["a1": 1, "a2": 1])
@@ -1271,7 +1271,8 @@ struct WorkspaceSessionTests {
         session.apply(.createdSource)
         session.apply(.deletedSource(id: "s1"))
         session.apply(.promotedSubject(graphId: "g-1"))
-        #expect(await waitUntil { calls == 3 })
+        await session.settleWrites()
+        #expect(calls == 3)
     }
 
     @Test func applySkipsNavCountsHookForOtherWrites() async {
@@ -1281,7 +1282,7 @@ struct WorkspaceSessionTests {
         session.apply(.mutatedSourceWorkspace(sourceId: "s1"))
         session.apply(CatalogWriteEffects(sourceScopes: ["s1"], activity: CatalogActivity(revision: 1)))
         session.apply(.createdSource)
-        #expect(await waitUntil { calls >= 1 })
+        await session.settleWrites()
         #expect(calls == 1)
     }
 }

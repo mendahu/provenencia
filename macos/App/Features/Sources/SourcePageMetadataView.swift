@@ -199,9 +199,7 @@ private struct SourcePageMetadataSuggestionRow: View {
                     .accessibilityIdentifier("sources.page.metadata.\(fieldID).dismiss")
                 }
                 if let error, !error.isEmpty {
-                    Text(error)
-                        .font(PVFont.body(size: PVTypeScale.caption))
-                        .foregroundStyle(PVColor.danger)
+                    PVErrorText(error, size: .caption)
                 }
             }
             .padding(.vertical, PVSpacing.space4)
