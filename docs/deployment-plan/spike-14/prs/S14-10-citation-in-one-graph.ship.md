@@ -61,4 +61,4 @@ UX-1 Resolved (UX round 2: true total, ", and N more" past the 20-ref cap on eve
 
 ## Result
 
-Gate PASS · CI pending · open: none · follow-ups: UX-2 (specific copy when a save races another window's unlink), MNT-5, MNT-6 (nits) · to user: §10 manual check · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: UX-2 (specific copy when a save races another window's unlink), MNT-5, MNT-6 (nits) · to user: §10 manual check · CON miss: none
