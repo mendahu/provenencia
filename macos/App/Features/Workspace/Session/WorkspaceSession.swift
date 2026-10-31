@@ -214,12 +214,21 @@ final class WorkspaceSession {
         }
     }
 
-    /// Returns once every refresh and recount `apply` started has finished,
-    /// following any started while it waited. Tests await this instead of
-    /// polling against a deadline, which a busy main actor can outlast.
+    /// Returns once every refresh and recount `apply` started and every query
+    /// load in flight have finished, following any started while it waited.
+    /// Tests await this instead of polling against a deadline, which a busy
+    /// main actor can outlast. Each task is awaited once, so a load that
+    /// finished under a superseded generation cannot keep it spinning.
     func settleWrites() async {
-        while let task = writeRefreshes.values.first {
-            await task.value
+        var awaited = Set<Task<Void, Never>>()
+        while true {
+            let pending = Array(writeRefreshes.values) + inFlight.values.map(\.task)
+            let next = pending.filter { !awaited.contains($0) }
+            if next.isEmpty { return }
+            for task in next {
+                awaited.insert(task)
+                await task.value
+            }
             await Task.yield()
         }
     }
