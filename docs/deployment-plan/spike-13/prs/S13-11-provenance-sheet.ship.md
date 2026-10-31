@@ -1,7 +1,7 @@
 # Ship log — S13-11 Provenance sheet
 
 **Plan:** [`S13-11-provenance-sheet.md`](S13-11-provenance-sheet.md) · **Branch:** `s13-11-provenance-sheet` · **PR:** #650
-**State:** fixing 5 — user scope change
+**State:** fixing 6 — user scope change
 
 ## Round 0 — implement
 Base `main` @ `474ca934`. Head `5ec67292`. Gate PASS (orchestrator run). Report: §10 manual check not run (Escape focus return, Back after each link, VoiceOver wording, 1600pt resize, visual match to frames 6c – 6n; the Escape-focus stop condition is unverified). Deviations: (1) STEP-3 – STEP-7 in one commit; (2) `ReconciliationRecordGroup` gained `init(owner:records:values:)` with `values` defaulting to one headless run; (3) `actionColumnWidth` moved to `ReconciliationRecordRows`; (4) the sheet's Read as, Outcome and Record columns have fixed widths (140/190/112pt Regular, 220/280pt Wide) so the headings line up; (5) a record is not one VoiceOver element: the citation line and its links are separate controls; (6) `S13-D2-provenance-sheet.review.md` stays in `design/`; (7) PR body attribution added with `gh pr edit`.
@@ -206,3 +206,18 @@ Files: `ReconciledValueRowModel.swift`, `ProvenanceSheetTests.swift`.
 Failing test first: York with two links, lk1 = [a kept rank 1, d lost rank 0] and lk2 = [b kept rank 1], plus Leeds so headings show. The York group must have exactly one `.value` York heading over a and b, then one `.otherRecords` over d. The York heading's support counts both links' Sources.
 Do: in `derived`, build each member link's `valueGroups` from its own records and field. Then merge them for the group: runs with the same displayed value (the Place) join in link order under one heading, with support summed across members (reuse `OtherValue`'s existing support wording; no new string). All `.otherRecords` runs join last. A group with a single member is unchanged. Do not change `valueGroups` for non-pooled rows.
 Check: the new test and `twoLinksToOnePlaceFormOneGroup` pass; scripts/check-pr.sh PASS.
+
+## Round 5 — fix
+Head `b56568f4`. F-16, F-17 done (`TestToponymLoadUsesSubjectIndex` red then green; `aPooledPlaceGroupHasOneHeadingPerValue`; `pooledValueGroups` for groups of more than one link). Orchestrator gate: FAIL `xcode-test` on `SourcesModelTests.listReadsEachGraphsProgress` and `SourcePageModelTests.aGraphWriteMovesOnlyItsRow` (same flake family, not in the diff); rerun below.
+
+### Verification
+- **PRF-1 Resolved.** `INDEXED BY observations_subject_id_idx`; plan uses the subject index for IN lists of 1 – 500; the test fails with the hint removed.
+- **V-1 partly resolved.** One heading per value, "Other records" last, single-link groups unchanged. **Still wrong (V-2):** `pooledValueGroups` sums each link's `support` (distinct Sources per link), so a Source cited by two links to York reads "2 Sources" → F-18.
+
+### Fix plan 6
+
+**F-18 — A pooled heading counts distinct Sources** (from V-2)
+Files: `ReconciledValueRowModel.swift`, `ProvenanceSheetTests.swift`.
+Failing test first: extend `aPooledPlaceGroupHasOneHeadingPerValue` (or add a case): two York links whose kept records cite the **same** Source → the York heading reads "1 Source"; with two Sources → "2 Sources".
+Do: for each merged value run, count distinct `sourceID`s of the member outcomes in that run (across all members), as `ReconciledValueDisplay.sourceCount` does, falling back to summed `support` only when no outcome carries a Source id. Reuse that counting rather than writing a third copy: extract the shared "distinct Sources of these outcomes" helper beside `sourceCount` if needed and call it from both.
+Check: tests pass; scripts/check-pr.sh PASS.
