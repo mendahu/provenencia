@@ -1,3 +1,4 @@
+import SwiftUI
 import Testing
 @testable import Provenencia
 
@@ -91,5 +92,37 @@ struct PersonHeaderDisplayTests {
         orders.natural.removeAll { $0.partType == "former_surname" }
         orders.sorted.removeAll { $0.partType == "former_surname" }
         #expect(PersonHeaderDisplay.title(header(name: mary), orders: orders) == "Mary Jones (Smith)")
+    }
+
+    private func emphasizedRuns(_ styled: AttributedString) -> [String] {
+        styled.runs.filter { $0[AttributeScopes.FoundationAttributes.InlinePresentationIntentAttribute.self] == .emphasized }
+            .map { String(styled[$0.range].characters) }
+    }
+
+    @Test func formerSurnameRunIsEmphasized() throws {
+        let orders = NameFormatOrders.western
+        for (style, text) in [(NameDisplayStyle.natural, "Mary (Smith) Jones"), (.sorted, "Jones, Mary (Smith)")] {
+            let d = NameValueDisplay.display(for: mary, style: style, orders: orders)
+            let styled = try #require(d.styled)
+            #expect(d.text == text)
+            #expect(String(styled.characters) == d.text)
+            #expect(emphasizedRuns(styled) == ["Smith"])
+        }
+        #expect(NameValueDisplay.display(for: james(nicks: ["Jake"]), style: .natural, orders: orders).styled == nil)
+
+        let d = NameValueDisplay.display(for: mary, style: .natural, orders: orders)
+        #expect(PersonHeaderDisplay.titleSource(header(name: mary), orders: orders)
+            == .name("Mary (Smith) Jones", styled: d.styled))
+        let plain = CatalogNameValue(form: "x", parts: [
+            CatalogNameValuePart(value: "James", type: "given"),
+            CatalogNameValuePart(value: "Robins", type: "surname"),
+        ])
+        #expect(PersonHeaderDisplay.titleSource(header(name: plain), orders: orders) == .name("James Robins"))
+
+        let italic = ConclusionListRow.italicizingEmphasis(try #require(d.styled), font: .body)
+        for run in italic.runs {
+            let isSmith = String(italic[run.range].characters) == "Smith"
+            #expect((run[AttributeScopes.SwiftUIAttributes.FontAttribute.self] != nil) == isSmith)
+        }
     }
 }

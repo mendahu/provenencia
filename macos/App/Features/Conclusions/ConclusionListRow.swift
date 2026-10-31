@@ -1,15 +1,17 @@
 import SwiftUI
 
 /// How a Conclusion row titles itself. A resolved value is plain, a working
-/// label is italic, and a ref is mono. Persons, Events, and Places share it.
+/// label is italic, and a ref is mono. Persons, Events, and Places share it. A name may carry
+/// a styled copy whose emphasized runs draw italic.
 enum ConclusionTitleSource: Equatable {
-    case name(String)
+    case name(String, styled: AttributedString? = nil)
     case label(String)
     case ref(String)
 
     var text: String {
         switch self {
-        case .name(let text), .label(let text), .ref(let text): text
+        case .name(let text, _): text
+        case .label(let text), .ref(let text): text
         }
     }
 }
@@ -50,8 +52,12 @@ enum ConclusionListRow {
     @ViewBuilder
     private static func titleText(_ source: ConclusionTitleSource) -> some View {
         switch source {
-        case .name(let text):
-            Text(verbatim: text)
+        case .name(let text, let styled):
+            if let styled {
+                Text(italicizingEmphasis(styled, font: PVFont.body(size: PVTypeScale.body)))
+            } else {
+                Text(verbatim: text)
+            }
         case .label(let text):
             Text(verbatim: text).italic()
         case .ref(let text):
@@ -59,6 +65,19 @@ enum ConclusionListRow {
                 .font(PVFont.mono(size: PVTypeScale.bodySmall))
                 .foregroundStyle(PVColor.textSecondary)
         }
+    }
+
+    /// `styled` with `font` italicized on each emphasized run. The italic is set explicitly,
+    /// so it does not depend on how SwiftUI draws `.emphasized` in the custom display font.
+    static func italicizingEmphasis(_ styled: AttributedString, font: Font) -> AttributedString {
+        var out = styled
+        var italic = AttributeContainer()
+        italic[AttributeScopes.SwiftUIAttributes.FontAttribute.self] = font.italic()
+        // Typed attribute subscripts, as in `PVComboBox`: the dynamic members warn under Swift 6.
+        for run in styled.runs where run[AttributeScopes.FoundationAttributes.InlinePresentationIntentAttribute.self] == .emphasized {
+            out[run.range].mergeAttributes(italic)
+        }
+        return out
     }
 
     /// The last-updated column: the history icon and the cell text, faint when

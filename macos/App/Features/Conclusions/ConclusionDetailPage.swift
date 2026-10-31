@@ -738,13 +738,19 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
         }
     }
 
+    private func nameText(_ text: String, styled: AttributedString?) -> Text {
+        guard let styled else { return Text(verbatim: text) }
+        let font = PVFont.display(size: titleSize, weight: PVFontWeight.medium)
+        return Text(ConclusionListRow.italicizingEmphasis(styled, font: font))
+    }
+
     private var titleSize: CGFloat { compact ? PVTypeScale.h3 : PVTypeScale.display3 }
 
     @ViewBuilder
     private var title: some View {
         switch content.title {
-        case .name(let text):
-            Text(verbatim: text)
+        case .name(let text, let styled):
+            nameText(text, styled: styled)
                 .font(PVFont.display(size: titleSize, weight: PVFontWeight.medium))
                 .tracking(titleSize * PVTracking.display)
                 .foregroundStyle(PVColor.textDisplay)

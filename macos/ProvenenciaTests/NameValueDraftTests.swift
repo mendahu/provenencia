@@ -100,7 +100,7 @@ struct NameValueDraftTests {
 
     @Test func formerSurnameIsAllowed() {
         #expect(NamePartType.isAllowed("former_surname"))
-        let values = NamePartType.selectOptions.map(\.value)
+        let values = NamePartType.selectOptions.map(\.id)
         #expect(values.firstIndex(of: "former_surname") == values.firstIndex(of: "surname").map { $0 + 1 })
     }
 

@@ -149,7 +149,7 @@ private struct NameDisplayRun {
     var styledText: AttributedString {
         guard let decoration else { return AttributedString(text) }
         var attributes = AttributeContainer()
-        if decoration.emphasized { attributes.inlinePresentationIntent = .emphasized }
+        if decoration.emphasized { attributes[AttributeScopes.FoundationAttributes.InlinePresentationIntentAttribute.self] = .emphasized }
         return StyledFormat.attributed(decoration.format, [StyledFormat.Argument(text: text, attributes: attributes)])
     }
 }
