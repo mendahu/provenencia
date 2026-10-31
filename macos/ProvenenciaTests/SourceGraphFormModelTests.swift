@@ -68,7 +68,7 @@ struct SourceGraphFormModelTests {
         store.unlinkImpactBlocks = blocks ?? [unlinkBlock("a3", graphID: "g-smith", citations: 2)]
         model.graphs.openEdit(id: "g-smith")
         guard let form = model.graphs.form else { return nil }
-        _ = await waitUntil { form.loadState != .loading }
+        await model.graphs.settleFormLoad()
         return form
     }
 
@@ -229,7 +229,7 @@ struct SourceGraphFormModelTests {
         store.unlinkImpactBlocks = []
         model.graphs.openEdit(id: "g-pair")
         let form = try #require(model.graphs.form)
-        _ = await waitUntil { form.loadState != .loading }
+        await model.graphs.settleFormLoad()
         #expect(form.locked.isEmpty)
         form.draft.excludedArtifactIDs.insert("a2")
         store.updateEvidenceGraphError = CoreInvokeError.coded(
@@ -251,7 +251,7 @@ struct SourceGraphFormModelTests {
         store.unlinkImpactBlocks = []
         model.graphs.openEdit(id: "g-pair")
         let form = try #require(model.graphs.form)
-        _ = await waitUntil { form.loadState != .loading }
+        await model.graphs.settleFormLoad()
         form.draft.excludedArtifactIDs.insert("a2")
         store.updateEvidenceGraphError = CoreInvokeError.coded(
             status: 1, code: "evidencegraphs.artifact_in_use", kind: .conflict, params: []
@@ -280,7 +280,7 @@ struct SourceGraphFormModelTests {
         store.unlinkImpactBlocks = [unlinkBlock("a3", graphID: "g-smith", citations: 2)]
         model.graphs.openEdit(id: "g-smith")
         let form = try #require(model.graphs.form)
-        _ = await waitUntil { form.loadState != .loading }
+        await model.graphs.settleFormLoad()
         guard case .failed = form.loadState else {
             Issue.record("expected a failed load, got \(form.loadState)")
             return

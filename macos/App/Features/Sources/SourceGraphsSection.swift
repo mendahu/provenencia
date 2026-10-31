@@ -12,6 +12,9 @@ final class SourceGraphsSection {
     /// The Add / Edit form while it is open.
     var form: SourceGraphFormModel?
 
+    @ObservationIgnored
+    private var formLoad: Task<Void, Never>?
+
     init(context: SourcePageContext) {
         self.context = context
     }
@@ -78,6 +81,13 @@ final class SourceGraphsSection {
         guard context.workspace != nil, let graph = ownGraph(id: id) else { return }
         let model = SourceGraphFormModel(context: context, mode: .edit(graph))
         form = model
-        Task { await model.loadKeptLinks() }
+        formLoad = Task { await model.loadKeptLinks() }
+    }
+
+    /// Returns once the open edit form's kept-links load has finished. Tests
+    /// await this instead of polling against a deadline, which a busy main
+    /// actor can outlast.
+    func settleFormLoad() async {
+        await formLoad?.value
     }
 }
