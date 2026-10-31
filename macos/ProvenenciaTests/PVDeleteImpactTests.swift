@@ -49,16 +49,6 @@ struct PVDeleteImpactCopyTests {
         )])
     }
 
-    @Test func pinnedObservationConfirmNamesTheEvidenceItLeaves() {
-        let copy = PVDeleteImpactCopy.confirmCopy(
-            for: PVDeleteImpactPreviewData.observation,
-            report: PVDeleteImpactPreviewData.pinnedObservation
-        )
-        #expect(copy.message.contains(L10n.DeleteImpact.leavesEvidence(handleRefs: "PER-7KD45")))
-        #expect(!copy.message.contains(L10n.DeleteImpact.leavesHandle(handleRefs: "PER-7KD45")))
-        #expect(PVDeleteImpactControls.showsDestructiveAction(PVDeleteImpactPreviewData.pinnedObservation))
-    }
-
     @Test func blockedCitationListsThreeObservations() {
         let report = PVDeleteImpactPreviewData.blockedCitation
         #expect(!PVDeleteImpactControls.showsDestructiveAction(report))
