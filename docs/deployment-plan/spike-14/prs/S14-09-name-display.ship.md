@@ -1,7 +1,7 @@
 # Ship log — S14-09 Quote nicknames and add former surnames
 
 **Plan:** [`S14-09-name-display.md`](S14-09-name-display.md) · **Branch:** `s14-09-name-display` · **PR:** #649
-**State:** fixing 2
+**State:** ready
 
 ## Round 0 — implement
 Base `5c5cdd35`. Head `fa80e134`. Gate PASS (orchestrator run). Report deviations:
@@ -77,3 +77,12 @@ MNT-1 **Resolved** (reviewer: guidance lines in the skill and rule; stale exampl
 Files: `macos/App/Platform/L10n.swift`, `macos/App/Features/Names/NamePartType.swift`, `macos/App/Features/Names/NameValueDisplay.swift`, `macos/ProvenenciaTests/NameValueDraftTests.swift`. Skill: `add-localized-string`.
 Do: replace the resources `L10n.NameValue.a11yNick` and `a11yFormerSurname` with functions `static func a11yNick(_ nickname: String) -> String` and `static func a11yFormerSurname(_ surname: String) -> String` that call `L10n.format` with the same keys, default values and comments (catalog entries unchanged). `NamePartDecoration.spoken` becomes `let spoken: (String) -> String`, set to `L10n.NameValue.a11yNick` / `L10n.NameValue.a11yFormerSurname`. `NameDisplayRun.spokenText` returns `decoration.spoken(text)` for a decorated run. `NameValueDraftTests.decorations` calls `decoration.spoken("Jake")` (expected strings unchanged). `rg -n "StyledFormat" macos/App` afterwards prints only `plainText` and `styledText` in `NameValueDisplay.swift` and the helper itself.
 Check: `PersonHeaderDisplayTests.spokenNameMarksDecoratedParts` and `NameValueDraftTests.decorations` pass unchanged in their expectations; scripts/check-pr.sh PASS.
+
+## Round 2 — fix
+Head `1f487638`. F-5 `b644ec49`. It also re-indented three unrelated `conclusions.a11y.*` hunks in `L10n.swift`; a one-item gate fix (F-5a, `1f487638`) restored them. MNT-7 **Resolved** (orchestrator read: `a11yNick` / `a11yFormerSurname` are `L10n.format` functions; `rg StyledFormat macos/App` prints only `plainText`, `styledText`, the helper and a README mention).
+
+## Finish
+Merged `origin/main` (`d47fb287`) at `ef8e153a`, no conflicts. Gate PASS on the merged head.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: none (four parked lines in `docs/ideas/international-names.md`: `NameFormSplit` wrappers, the `Sort` field, seed roles from `matchregistry`, a Go↔Swift join pin) · to user: board exemption, Why heading, VoiceOver markers (all answered 2026-10-31) · CON miss: none · manual check §10 not run (italics unverified)
