@@ -50,7 +50,7 @@ The first quasi-family-tree visualization in the app.
 
 - **R-16. Simple, not a canvas.** A plain laid-out diagram, not a `GraphCanvas` host or a pannable/zoomable surface.
 - **R-17. The nuclear family.** Shows this person's **parents, siblings, spouse(s), and children**: the people they grew up with and the people who grew up with them.
-- **R-18. Implied relationships count.** The diagram shows as much as can be concluded automatically: direct links, links implied through events (shared marriage, a birth's parents, already read through `canonlinks.Reader.For`, S11-49), and **siblings from a shared parent** (new). Extending the graph cache's implied links to make this easy is in scope.
+- **R-18. Implied relationships count.** The diagram shows as much as can be concluded automatically: direct links, links implied through events (shared marriage, a birth's parents, already read through `canonlinks.Reader.For`, S11-49), and **siblings**, both recorded (a `sibling` link, parents unknown) and implied by a shared parent (new). Extending the graph cache's implied links to make this easy is in scope.
 - **R-18a. Siblings are for the page, not for matching.** Matching keeps its current patterns (spouse, parent, grandparent); Promote and the evidence sheet do not count a shared parent as sibling evidence. Revisit if matching needs it later ([`kinship-view.md`](../../ideas/kinship-view.md)).
 - **R-19. Several families.** A person with more than one spouse shows each family. A person with conflicting parents shows each set. The layout handles both.
 - **R-20. Every relative is a link** to that relative's Person page, so the user can bounce from person to person.
