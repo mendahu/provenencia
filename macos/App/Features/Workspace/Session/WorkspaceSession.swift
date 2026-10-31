@@ -191,14 +191,36 @@ final class WorkspaceSession {
             guard let refresh = key.kind.descriptor.refresh else { continue }
             let ids = refresh.follows.ids(in: effects, mutation: mutation)
             if !ids.isEmpty {
-                Task { await refresh.run(self, key, ids) }
+                trackWrite { await refresh.run(self, key, ids) }
             }
         }
         if let kind = mutation?.invalidationKind,
            CatalogQueryRegistry.navCountTriggers.contains(kind),
            let recount = onNavCountsMoved
         {
-            Task { await recount() }
+            trackWrite { await recount() }
+        }
+    }
+
+    /// The refresh and recount tasks `apply` has started and not yet finished.
+    /// Each removes itself when it ends, so the list does not grow.
+    private var writeRefreshes: [UUID: Task<Void, Never>] = [:]
+
+    private func trackWrite(_ work: @escaping @MainActor () async -> Void) {
+        let id = UUID()
+        writeRefreshes[id] = Task { @MainActor [weak self] in
+            await work()
+            self?.writeRefreshes[id] = nil
+        }
+    }
+
+    /// Returns once every refresh and recount `apply` started has finished,
+    /// following any started while it waited. Tests await this instead of
+    /// polling against a deadline, which a busy main actor can outlast.
+    func settleWrites() async {
+        while let task = writeRefreshes.values.first {
+            await task.value
+            await Task.yield()
         }
     }
 
