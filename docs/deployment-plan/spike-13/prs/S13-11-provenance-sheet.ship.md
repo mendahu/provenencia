@@ -1,7 +1,7 @@
 # Ship log — S13-11 Provenance sheet
 
 **Plan:** [`S13-11-provenance-sheet.md`](S13-11-provenance-sheet.md) · **Branch:** `s13-11-provenance-sheet` · **PR:** #650
-**State:** fixing 3 — user scope change
+**State:** fixing 4 — user scope change
 
 ## Round 0 — implement
 Base `main` @ `474ca934`. Head `5ec67292`. Gate PASS (orchestrator run). Report: §10 manual check not run (Escape focus return, Back after each link, VoiceOver wording, 1600pt resize, visual match to frames 6c – 6n; the Escape-focus stop condition is unverified). Deviations: (1) STEP-3 – STEP-7 in one commit; (2) `ReconciliationRecordGroup` gained `init(owner:records:values:)` with `values` defaulting to one headless run; (3) `actionColumnWidth` moved to `ReconciliationRecordRows`; (4) the sheet's Read as, Outcome and Record columns have fixed widths (140/190/112pt Regular, 220/280pt Wide) so the headings line up; (5) a record is not one VoiceOver element: the citation line and its links are separate controls; (6) `S13-D2-provenance-sheet.review.md` stays in `design/`; (7) PR body attribution added with `gh pr edit`.
@@ -125,3 +125,62 @@ Do:
 4. **Swift (D-22).** Give `CatalogOwnerField` an optional `place`. In `ReconciledValueRowModel.derived`, compare, order and ink owners by `owner.place?.entity.id ?? owner.entity.id`. `ownerLine` titles a place owner from `owner.place` through the existing `DerivedPlace` / `PlaceTitleDisplay` helpers. Its id and ref are the Place's, so the group line reads as today. The "from N Places" summary counts distinct place ids. `PersonDetailContent` passes the shown Place's id as `shownOwnerID`, as it already does.
 Tests: update `lifeRowsCarryTheirOwnersRecords` and `placeOwnersEachHoldOneValueWithoutHeadings`. Add `ProvenanceSheetTests` `twoLinksToOnePlaceCountOnePlace`: the summary says one Place, and both group lines title the Place.
 Check: `rg -n "PropertyToponym" core/database/conclusionheaders/compose.go` shows no life-owner use; go tests and Swift tests pass; scripts/check-pr.sh PASS. Add F-11 to the plan's Landed note.
+
+## Round 3 — fix
+Head `974d98e8`. Gate PASS (orchestrator run). First dispatch **stopped** on F-11 step 1: `Link.EndpointPropertyID` is the end the link is seen from (the event's), not the place end. Resolved by the orchestrator without a behavior change: the place end is `v.prop(hops.PlacesOfEvent.To())`; D-20 and F-11 wording corrected (`323b6dbf`). Report deviations: (1) `conclusiondetails.loadProperties` no longer skips Subject-valued Properties (needed for the link's place field; implementer says only associations carry them; depiction Properties still skipped); (2) `recordsFromPlaces` gained a plural on the Place count; (3) D-21 had no failing test first; (4) `lifeOwners` preloads associations with one `g.Nodes` (graph query budget test); (5) no FakeStore person life-row fixture, FakeStore unchanged; (6) "York on two birth events" now lists two owners, one per link. Implementer gate runs flaked twice in unrelated `xcode-test` cases (`SourcePageModelTests`, `SourcesModelTests`, `SourceGraphFormModelTests`).
+
+## Round 3 — review
+Reviewers: CON (Sonnet), MNT, UX, SEC+PRF. Scope `ac82cae3...974d98e8` (user-authorized third round, scope change only). SEC+PRF for `core/database/**`, the matching graph reads and deviation (1).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| PRF-1 (r3) | PRF | blocker | Toponym subquery scans every toponym per outcome on every detail load | Fix now → F-12 | verified by the reviewer's query plan (`observations_property_id_idx`, temp B-tree) and timing: 300 outcomes, 1,747 ms at 20,000 toponyms vs 0.4 ms without; `COALESCE(NULLIF(o.value_text,''), …)` runs it for every date, name and term record |
+| MNT-1 (r3) | MNT | blocker | `loadOutcomes` resolves the toponym Property with its own SQL beside the cached vocabulary | Fix now → F-12 | verified `conclusiondetails.go:426-442`; `graphcache.Vocabulary.PropertyID` is the existing lookup |
+| MNT-3 (r3) | MNT | major | "A Place Subject reads as its first toponym" written again in SQL, already differing from `grapheventtitles` (trim, collation) | Fix now → F-12 | same-pass cleanup: this PR adds the second copy |
+| CON-1 (r3) | CON | minor | D-21 has no direct test or edge cases | Fix now → F-12 | code this PR adds |
+| UX-1, MNT-2 (r3) | UX, MNT | blocker | Two links to one Place draw two "York" groups with one `ForEach` id, both "shown value" | Fix now → F-13 (UX's fix) | verified: `twoLinksToOnePlaceCountOnePlace` asserts two groups with `owner?.id == "pl1"`; `ReconciliationRecordGroup.id` is `owner?.id`. Took UX's one-group-per-Place over MNT's one-group-per-link: D-22 names, orders and inks a place owner by its Place and the summary counts Places, so one group per Place makes the lines, the count and the ids agree; MNT's fix keeps two identical lines |
+| MNT-5 (r3) | MNT | minor | `ownerID` on the Platform type; Place title parts built twice | Fix now → F-13 | files this PR changes |
+| CON-2 (r3), SEC+PRF note | CON, SEC | major (re-rated) | `loadProperties` now keeps Subject-valued fields for every handle | Fix now → F-14 | re-rated: `mentions` and researcher-created Subject-valued Properties exist (`subjectvocab/registry.go:173`, `properties.go:447`); a Person with one gains an empty Vitals row via `PersonDetailContent.swift:125`; deviation (1) was not in the plan |
+| MNT-4 (r3) | MNT | minor | `lifeOwners` follows the hop three times and rebuilds names `eventPlaces` returned | Fix now → F-15 | code this PR adds |
+
+Nits (logged): `CON-3 (r3) · conclusiondetails.go:145 · NULLIF flips HasText for empty text (gone with F-12)` · `CON-4 (r3) · compose.go:752 · "unfolded" doc word (F-15)` · `MNT-6 (r3) · provenance-on-demand.md:7 · fixed by the orchestrator` · `MNT-7 (r3) · GenealogyStore.swift:586 · place/event default mismatch (F-13)` · `SEC note · subquery alias t shadows property_terms t (gone with F-12)`
+
+### Fix plan 4
+
+**F-12 — Read as from one batched toponym load and one shared rule** (from PRF-1, MNT-1, MNT-3, CON-1, nit CON-3)
+Files: `core/database/conclusiondetails/conclusiondetails.go` and its test, `core/database/grapheventtitles/grapheventtitles.go`, the package that will hold the shared rule.
+Failing test first: a table-driven `conclusiondetails` test on a link record's place Subject. Cases: one toponym → that text; none → empty (sheet "—"); a negative toponym and a whitespace-only one skipped; several → the lowest ref (`COLLATE NOCASE`, as the graph load orders). Add a growth subtest: the same handle with about four times as many unrelated toponym Observations issues the same queries. Assert it by query count, or by the batched load's argument count, not by wall time.
+Do:
+1. Remove the correlated subquery and `NULLIF`/`COALESCE` from `sqlOutcomes`. Scan `o.value_subject_id` instead.
+2. In `loadOutcomes`, collect the distinct non-nil `value_subject_id`s. Load their positive toponym Observations in one `sqlbatch` query (`subject_id IN (…) AND property_id = ?`), shaped like `datevalues.LookupManyTx` beside it.
+3. Pick each Subject's text with one exported picker shared with `grapheventtitles`: positive, `strings.TrimSpace` non-empty, lowest ref, NOCASE. Move `grapheventtitles`' inline rule onto the same picker. Place it where both packages can import it without a cycle (`core/database/observations` is a candidate), and say where in the report.
+4. Set the recorded text only when the record's value is a Subject. No other outcome's value changes.
+5. The toponym Property id comes from `g.Vocabulary().PropertyID(vocabkey.PropertyToponym, vocabkey.OriginProvenencia)` in `fieldsOf`, passed into `loadOutcomes`. Delete the private query and its loop.
+Check: `rg -n "value_subject_id" core/database/conclusiondetails/conclusiondetails.go` shows the scan and the batch only. `grapheventtitles` tests still pass. scripts/check-pr.sh PASS.
+
+**F-13 — One group per Place** (from UX-1, MNT-2, MNT-5, nit MNT-7)
+Files: `ReconciledValueRowModel.swift`, `GenealogyStore.swift`, `PlaceTitleDisplay.swift`, `ProvenanceSheetTests.swift`.
+Failing test first: change `twoLinksToOnePlaceCountOnePlace` to expect **one** group for York holding both links' records in link order. When York is the only Place: no group line (AC-3.3), and the summary reads "2 records". Add a case with York (two links) and Leeds: two groups with distinct ids, and the summary reads "… from 2 Places".
+Do:
+- In `ReconciledValueRowModel.derived`, group owners by their Place id (`place?.entity.id ?? entity.id`) before building groups. Each group takes the records of all its owners (`Self.records(owners.map(\.field), …)`), keeping D-22's title, order and ink.
+- The group id is the Place id, which is unique per group.
+- Move `ownerID` off `CatalogOwnerField` into the row model (a `fileprivate` extension).
+- Add `CatalogHeaderPlace.titleParts` beside `CatalogPlaceHeader.titleParts` and use it at both call sites.
+- Give `event` and `place` matching defaults on `CatalogOwnerField`.
+Check: tests pass.
+
+**F-14 — Keep Subject-valued fields only for life-row owners** (from CON-2, SEC note)
+Files: `core/database/conclusiondetails/conclusiondetails.go` and its test.
+Failing test first: `ForEntity` on a Person with a Subject-valued Property record (a researcher-created Property, or `mentions` where the fixture allows it) returns no field for it.
+Do: restore the skip in `loadProperties` by default. Let `PersonDerivedRows` opt in (a parameter on `fieldsOf` / `loadProperties`, not a package global) so the link's place end still reaches the place rows. Depiction Properties stay skipped everywhere.
+Check: `TestPersonDerivedRows` place cases still pass. scripts/check-pr.sh PASS.
+
+**F-15 — `lifeOwners` follows each event's places once** (from MNT-4, nit CON-4)
+Files: `core/database/conclusionheaders/compose.go`.
+Do:
+- Keep each pick's links from the preload loop and reuse them.
+- Build `Place` from the `HeaderPlace` that `eventPlaces` returned (`Entity`, `Names`, no `Parents`). Drop the second `g.Node`/`toponyms`.
+- Fix the `FieldOwner` doc's "unfolded" wording.
+Check: `TestPersonLifeOwners` and the graph-query budget test pass.
+
+Add F-12 – F-15 to the plan's Landed note, including that F-14 narrows round-3 deviation (1).

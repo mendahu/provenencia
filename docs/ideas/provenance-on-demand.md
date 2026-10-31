@@ -4,7 +4,7 @@
 
 ## Today
 
-`GetConclusionDetail` is the one read behind a detail page. For the Person page, it returns every Property's values, and every record behind each value with its outcome, Source, Artifact, Citation and page. It does the same for the fields the life rows read off the person's events, Places and event–place links (`conclusiondetails.PersonDerivedRows`).
+`GetConclusionDetail` is the one read behind a detail page. For the Person page, it returns every Property's values, and every record behind each value with its outcome, Source, Artifact, Citation and page. It does the same for the fields the life rows read off the person's events and event–place links (`conclusiondetails.PersonDerivedRows`).
 
 - **Cost (S13-06 PRF-1).** Four extra batched SQL rounds per Person page load, the same however many events or Places the person has. The rows returned grow with every record of each owner, across all of its Properties (`sqlOutcomes` has no Property filter). S13-11 added two text columns and one locator decode per record.
 - **Not measured.** The Spike 13 map's **Scale** gives no records-per-person or records-per-Place figure.
