@@ -20,7 +20,6 @@ package conclusiondetails
 import (
 	"bytes"
 	"database/sql"
-	"errors"
 	"sort"
 
 	"github.com/mendahu/provenencia/core/apperr"
@@ -33,6 +32,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/gallery"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/locator"
@@ -140,11 +140,15 @@ const (
 	// kind's binding order come from the graph vocabulary.
 	sqlPropertyIDs = `SELECT DISTINCT ao.entity_id, ao.property_id FROM auto_reconciler_outcomes ao WHERE ao.entity_id IN (`
 
+	// A Subject-valued record reads as its Subject's toponym: every positive
+	// toponym Observation of the Subjects in the IN list.
+	sqlToponyms = `SELECT o.subject_id, o.ref, o.polarity, COALESCE(o.value_text, '') FROM observations o
+		WHERE o.property_id = ? AND o.polarity = 'positive' AND o.subject_id IN (`
+
 	sqlOutcomes = `SELECT ao.entity_id, ao.property_id, ao.observation_id, o.ref, ao.reason, ao.value_rank, ao.denied_by,
 			COALESCE(ao.vote_support, 0), COALESCE(ao.vote_total, 0),
-			COALESCE(NULLIF(o.value_text, ''), (SELECT t.value_text FROM observations t WHERE t.subject_id = o.value_subject_id
-				AND t.property_id = ? AND t.polarity = 'positive' AND t.value_text <> '' ORDER BY t.ref LIMIT 1)), o.value_integer, o.value_term_id, COALESCE(t.key, ''), COALESCE(t.label, ''), COALESCE(t.origin, ''),
-			o.value_date_id, o.value_name_id,
+			o.value_text, o.value_integer, o.value_term_id, COALESCE(t.key, ''), COALESCE(t.label, ''), COALESCE(t.origin, ''),
+			o.value_date_id, o.value_name_id, o.value_subject_id,
 			s.id, s.ref, s.graph_id, c.id, a.id, src.id, COALESCE(src.title, ''),
 			COALESCE(a.label, ''), COALESCE(c.label, ''), c.locator_json,
 			COALESCE(sg.key, ''), ` + autoreconciler.ProvenanceColumns + `
@@ -184,7 +188,7 @@ func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
 	for _, l := range tiles[string(entityID)] {
 		leads[string(l.ObservationIDs[0])] = true
 	}
-	fields, leadOutcomes, err := fieldsOf(c.Graph(), db, []*graphcache.Node{n}, leads)
+	fields, leadOutcomes, err := fieldsOf(c.Graph(), db, []*graphcache.Node{n}, leads, false)
 	if err != nil {
 		return Detail{}, err
 	}
@@ -202,7 +206,7 @@ func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
 // node, or a repeated id, is skipped. It also returns the outcomes of the
 // Observations in leads (a gallery's earliest records), which belong to no
 // field.
-func fieldsOf(g *graphcache.Graph, q Querier, nodes []*graphcache.Node, leads map[string]bool) (map[string][]Field, map[string]Outcome, error) {
+func fieldsOf(g *graphcache.Graph, q Querier, nodes []*graphcache.Node, leads map[string]bool, subjectValued bool) (map[string][]Field, map[string]Outcome, error) {
 	var use []*graphcache.Node
 	var ids [][]byte
 	seen := map[string]bool{}
@@ -218,7 +222,7 @@ func fieldsOf(g *graphcache.Graph, q Querier, nodes []*graphcache.Node, leads ma
 	if len(use) == 0 {
 		return out, map[string]Outcome{}, nil
 	}
-	ordered, byProp, err := loadProperties(g, q, use)
+	ordered, byProp, err := loadProperties(g, q, use, subjectValued)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -227,7 +231,12 @@ func fieldsOf(g *graphcache.Graph, q Querier, nodes []*graphcache.Node, leads ma
 			return nil, nil, err
 		}
 	}
-	leadOutcomes, err := loadOutcomes(q, ids, byProp, leads)
+	v, err := g.Vocabulary()
+	if err != nil {
+		return nil, nil, err
+	}
+	toponym := v.PropertyID(vocabkey.PropertyToponym, vocabkey.OriginProvenencia)
+	leadOutcomes, err := loadOutcomes(q, toponym, ids, byProp, leads)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -324,7 +333,7 @@ func state(values []ReconciledValue, cardinality string) autoreconcile.State {
 
 // loadProperties lists each node's fields in its kind's binding order, and
 // the same fields by entity id then property id.
-func loadProperties(g *graphcache.Graph, q Querier, nodes []*graphcache.Node) (map[string][]*Field, map[string]map[string]*Field, error) {
+func loadProperties(g *graphcache.Graph, q Querier, nodes []*graphcache.Node, subjectValued bool) (map[string][]*Field, map[string]map[string]*Field, error) {
 	v, err := g.Vocabulary()
 	if err != nil {
 		return nil, nil, err
@@ -343,7 +352,7 @@ func loadProperties(g *graphcache.Graph, q Querier, nodes []*graphcache.Node) (m
 			return err
 		}
 		p, ok := props[string(id)]
-		if !ok || p.ValueType == propertymeta.ValueTypeDepiction {
+		if !ok || p.ValueType == propertymeta.ValueTypeDepiction || (p.ValueType == propertymeta.ValueTypeSubject && !subjectValued) {
 			return nil
 		}
 		ordered[string(entityID)] = append(ordered[string(entityID)], &Field{
@@ -414,43 +423,28 @@ func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Fi
 // loadOutcomes attaches each field's outcomes to it. It also returns the
 // outcomes of the Observations in leads (a gallery's earliest records), which
 // belong to no field; their Recorded value has no Date or Name.
-func loadOutcomes(q Querier, entityIDs [][]byte, byProp map[string]map[string]*Field, leads map[string]bool) (map[string]Outcome, error) {
+func loadOutcomes(q Querier, toponym []byte, entityIDs [][]byte, byProp map[string]map[string]*Field, leads map[string]bool) (map[string]Outcome, error) {
 	leadOutcomes := map[string]Outcome{}
 	type pending struct {
-		f              *Field
-		o              Outcome
-		dateID, nameID []byte
+		f                         *Field
+		o                         Outcome
+		dateID, nameID, subjectID []byte
 	}
 	var all []pending
 	var dateIDs, nameIDs [][]byte
-	// A record on an event–place link's place end holds a Place: it reads as
-	// that Place's first toponym text (D-21).
-	var toponym []byte
-	pr, err := q.Query(`SELECT id FROM properties WHERE key = ? AND origin = ?`, vocabkey.PropertyToponym, vocabkey.OriginProvenencia)
-	if err != nil {
-		return nil, err
-	}
-	for pr.Next() {
-		if err := pr.Scan(&toponym); err != nil {
-			pr.Close()
-			return nil, err
-		}
-	}
-	if err := errors.Join(pr.Err(), pr.Close()); err != nil {
-		return nil, err
-	}
-	err = sqlbatch.Query(q, sqlOutcomes, ")", []any{toponym}, entityIDs, func(rows *sql.Rows) error {
+	var valueSubjectIDs [][]byte
+	err := sqlbatch.Query(q, sqlOutcomes, ")", nil, entityIDs, func(rows *sql.Rows) error {
 		var (
-			entityID, propertyID, termID, dateID, nameID []byte
-			rank                                         sql.NullInt64
-			text                                         sql.NullString
-			integer                                      sql.NullInt64
-			o                                            Outcome
-			locatorJSON                                  string
+			entityID, propertyID, termID, dateID, nameID, valueSubjectID []byte
+			rank                                                         sql.NullInt64
+			text                                                         sql.NullString
+			integer                                                      sql.NullInt64
+			o                                                            Outcome
+			locatorJSON                                                  string
 		)
 		dest := append([]any{&entityID, &propertyID, &o.ObservationID, &o.ObservationRef, &o.Reason, &rank, &o.DeniedBy,
 			&o.Vote.Support, &o.Vote.Of,
-			&text, &integer, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &o.Recorded.TermOrigin, &dateID, &nameID,
+			&text, &integer, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &o.Recorded.TermOrigin, &dateID, &nameID, &valueSubjectID,
 			&o.SubjectID, &o.SubjectRef, &o.GraphID, &o.CitationID, &o.ArtifactID, &o.SourceID, &o.SourceTitle,
 			&o.ArtifactLabel, &o.CitationLabel, &locatorJSON,
 			&o.CredibilityKey}, autoreconciler.ProvenanceDest(&o.Provenance)...)
@@ -469,7 +463,10 @@ func loadOutcomes(q Querier, entityIDs [][]byte, byProp map[string]map[string]*F
 			}
 			return nil
 		}
-		all = append(all, pending{f: f, o: o, dateID: dateID, nameID: nameID})
+		all = append(all, pending{f: f, o: o, dateID: dateID, nameID: nameID, subjectID: valueSubjectID})
+		if len(valueSubjectID) > 0 {
+			valueSubjectIDs = append(valueSubjectIDs, valueSubjectID)
+		}
 		if len(dateID) > 0 {
 			dateIDs = append(dateIDs, dateID)
 		}
@@ -489,7 +486,17 @@ func loadOutcomes(q Querier, entityIDs [][]byte, byProp map[string]map[string]*F
 	if err != nil {
 		return nil, err
 	}
+	toponyms, err := toponymsOf(q, toponym, valueSubjectIDs)
+	if err != nil {
+		return nil, err
+	}
 	for _, p := range all {
+		if len(p.subjectID) > 0 {
+			// A record on an event–place link's place end holds a Place: it
+			// reads as that Place's first toponym (D-21).
+			p.o.Recorded.Text = toponyms[string(p.subjectID)]
+			p.o.Recorded.HasText = p.o.Recorded.Text != ""
+		}
 		if d, ok := dates[string(p.dateID)]; ok {
 			p.o.Recorded.Date = &d
 		}
@@ -499,6 +506,33 @@ func loadOutcomes(q Querier, entityIDs [][]byte, byProp map[string]map[string]*F
 		p.f.Outcomes = append(p.f.Outcomes, p.o)
 	}
 	return leadOutcomes, nil
+}
+
+// toponymsOf reads each Subject as its first toponym (observations.FirstText),
+// from one batched load. A Subject with none is absent.
+func toponymsOf(q Querier, toponym []byte, subjectIDs [][]byte) (map[string]string, error) {
+	subjectIDs = database.UniqueBlobIDs(subjectIDs)
+	out := map[string]string{}
+	if len(subjectIDs) == 0 {
+		return out, nil
+	}
+	records := map[string][]observations.TextRecord{}
+	err := sqlbatch.Query(q, sqlToponyms, ")", []any{toponym}, subjectIDs, func(rows *sql.Rows) error {
+		var id []byte
+		var r observations.TextRecord
+		if err := rows.Scan(&id, &r.Ref, &r.Polarity, &r.Text); err != nil {
+			return err
+		}
+		records[string(id)] = append(records[string(id)], r)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	for id, rs := range records {
+		out[id] = observations.FirstText(rs)
+	}
+	return out, nil
 }
 
 // DerivedRowKind names a Person life row.
@@ -575,7 +609,7 @@ func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, erro
 	if err != nil {
 		return nil, err
 	}
-	fields, _, err := fieldsOf(g, db, nodes, nil)
+	fields, _, err := fieldsOf(g, db, nodes, nil, true)
 	if err != nil {
 		return nil, err
 	}
