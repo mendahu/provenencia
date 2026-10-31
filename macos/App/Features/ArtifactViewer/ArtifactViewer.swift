@@ -7,7 +7,7 @@ struct ArtifactViewerToolChrome: View {
     var locatorPage: Int?
     var onSetPage: () -> Void
     /// False while a region is drawn: the Citation's page cannot move under it.
-    var isSetPageEnabled: Bool = true
+    var isSetPageEnabled: Bool
     /// The radios drawn, in order; the host narrows them (a depiction is a rectangle).
     var regionTools: [ArtifactRegionTool]
     @Binding var armedRegionTool: ArtifactRegionTool?

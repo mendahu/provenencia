@@ -844,16 +844,25 @@ struct CitationDepictionValueArea: View {
                     tone: .warning,
                     message: L10n.string(L10n.CitationComposer.depictionNeedsPage)
                 ) {
-                    PVButton(
-                        L10n.CitationComposer.depictionSavePage(model.artifactViewer.page),
-                        variant: .secondary,
-                        size: .sm,
-                        loading: model.fields.isSaving
-                    ) {
-                        Task { await savePage() }
+                    VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                        PVButton(
+                            L10n.CitationComposer.depictionSavePage(model.artifactViewer.page),
+                            variant: .secondary,
+                            size: .sm,
+                            loading: model.fields.isSaving
+                        ) {
+                            Task { await savePage() }
+                        }
+                        .disabled(!model.canSaveDepictionCitationPage)
+                        .accessibilityIdentifier("citationComposer.depiction.savePage")
+                        if let error = model.fields.error {
+                            Text(error)
+                                .font(PVFont.body(size: PVTypeScale.micro))
+                                .foregroundStyle(PVColor.danger)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .accessibilityIdentifier("citationComposer.depiction.savePageError")
+                        }
                     }
-                    .disabled(!model.canSaveDepictionCitationPage)
-                    .accessibilityIdentifier("citationComposer.depiction.savePage")
                 }
             } else if draft.regionHidden {
                 PVCallout(
@@ -905,7 +914,10 @@ struct CitationDepictionValueArea: View {
             }
         }
         .accessibilityIdentifier("citationComposer.depiction")
-        .task(id: model.depictionPreviewKey) { await model.renderDepictionPreview() }
+        .task(id: model.depictionPendingCutKey) { await model.renderDepictionPreview() }
+        .onChange(of: model.depictionCaptionState) { _, state in
+            if state == .cutFailed { AccessibilityAnnouncement.post(L10n.string(state.text)) }
+        }
     }
 
     /// The 96pt preview in the state the model derived: loading while the cut
@@ -945,14 +957,17 @@ struct CitationDepictionValueArea: View {
     private func useRegion(_ region: ArtifactRegionDraft) {
         if model.useDepictionRegion(region) {
             AccessibilityAnnouncement.post(L10n.string(model.depictionCaptionState.text))
-            Task { await model.renderDepictionPreview() }
         }
     }
 
     /// Saves the viewer's page to the Citation and announces the caption it produced.
     private func savePage() async {
         if await model.saveDepictionCitationPage() {
-            AccessibilityAnnouncement.post(L10n.string(model.depictionCaptionState.text))
+            FocusClaim.claim(focus, .value) {
+                AccessibilityAnnouncement.post(L10n.string(model.depictionCaptionState.text))
+            }
+        } else if let error = model.fields.error {
+            AccessibilityAnnouncement.post(error)
         }
     }
 }

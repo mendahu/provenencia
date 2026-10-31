@@ -3386,6 +3386,12 @@ enum L10n {
             comment: "Error when the app cannot cut the drawn region from the open file"
         )
 
+        static let depictionCaptionCutFailed = LocalizedStringResource(
+            "citationComposer.depictionCaptionCutFailed",
+            defaultValue: "The region could not be cut from the file. Check that the file is still in the project, then draw it again.",
+            comment: "Caption under the depiction preview when the drawn region could not be cut from the open file"
+        )
+
         static let depictionCaptionEmpty = LocalizedStringResource(
             "citationComposer.depictionCaptionEmpty",
             defaultValue: "Nothing drawn yet. Draw on the file, or use a region button below",

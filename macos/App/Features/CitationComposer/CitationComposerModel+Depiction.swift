@@ -30,6 +30,16 @@ enum DepictionPreviewState: Equatable {
     case saved(relPath: String)
 }
 
+/// Whether the viewer can cut a region now: the one value the caption and the
+/// preview read.
+enum DepictionCutAvailability: Equatable {
+    case ready
+    /// The viewer is still loading the file.
+    case loading
+    /// The viewer holds nothing that can be cut (missing, unreadable, unsupported).
+    case unavailable
+}
+
 /// What the depiction caption says, first match wins: one place for the order
 /// and the tone.
 enum DepictionCaptionState: Equatable {
@@ -45,7 +55,7 @@ enum DepictionCaptionState: Equatable {
         switch self {
         case .needsPage: L10n.CitationComposer.depictionCaptionNeedsPage
         case .cannotCut: L10n.CitationComposer.depictionCaptionCannotCut
-        case .cutFailed: L10n.CitationComposer.depictionRenderFailed
+        case .cutFailed: L10n.CitationComposer.depictionCaptionCutFailed
         case .hidden: L10n.CitationComposer.depictionCaptionHidden
         case .empty: L10n.CitationComposer.depictionCaptionEmpty
         case .redrawn: L10n.CitationComposer.depictionCaptionRedrawn
@@ -217,7 +227,7 @@ extension CitationComposerModel {
     var depictionCaptionState: DepictionCaptionState {
         let draft = currentDepictionDraft
         if depictionNeedsPage { return .needsPage }
-        if !artifactViewer.isLoading, !depictionCanCut { return .cannotCut }
+        if depictionCutAvailability == .unavailable { return .cannotCut }
         if depictionPreviewState == .failed { return .cutFailed }
         if draft?.regionHidden == true { return .hidden }
         if draft?.hasRegion != true { return .empty }
@@ -229,6 +239,12 @@ extension CitationComposerModel {
     /// depiction is drawn on. The one can-cut predicate.
     var depictionCanCut: Bool {
         ArtifactRegionCrop.snapshot(artifactViewer, page: depictionPage ?? artifactViewer.page) != nil
+    }
+
+    /// ``depictionCanCut``, told apart from a viewer that is still loading.
+    var depictionCutAvailability: DepictionCutAvailability {
+        if depictionCanCut { return .ready }
+        return artifactViewer.isLoading ? .loading : .unavailable
     }
 
     /// The open depiction draft has a region and sends a new image with its
@@ -274,13 +290,24 @@ extension CitationComposerModel {
         return depictionCutKey(for: draft)
     }
 
+    /// The key of a cut that is waiting to run; nil when none is. A failed cut
+    /// is nil until ``commitViewerRegion(_:)`` clears its memo, which makes this
+    /// the key again, so the view's `.task(id:)` restarts with no help from it.
+    var depictionPendingCutKey: DepictionCutKey? {
+        depictionPreviewState == .cutting ? depictionPreviewKey : nil
+    }
+
     /// What the preview shows, derived from stored values so `body` never cuts.
     var depictionPreviewState: DepictionPreviewState {
         if let path = unchangedDepictionImagePath {
             return path.isEmpty ? .none : .saved(relPath: path)
         }
         guard depictionNeedsCut else { return .none }
-        guard depictionCanCut else { return artifactViewer.isLoading ? .waiting : .unavailable }
+        switch depictionCutAvailability {
+        case .loading: return .waiting
+        case .unavailable: return .unavailable
+        case .ready: break
+        }
         guard let key = depictionPreviewKey else { return .none }
         guard let memo = depictionPreviewMemo, memo.key == key else { return .cutting }
         if let cut = memo.cut { return .cut(cut.image) }
@@ -311,6 +338,8 @@ extension CitationComposerModel {
     // MARK: - Citation page
 
     /// The needs-page Callout may save the viewer's page to the Citation now.
+    /// `!isDrawingRegion` also covers a tool armed for the Citation, which is
+    /// not ``isDrawingDepiction`` but still locks the Citation's locator.
     var canSaveDepictionCitationPage: Bool {
         depictionNeedsPage && !citationSaveBlocked && !isDrawingRegion && depictionCanCut
     }

@@ -14232,6 +14232,18 @@
         }
       }
     },
+    "citationComposer.depictionCaptionCutFailed": {
+      "comment": "Caption under the depiction preview when the drawn region could not be cut from the open file",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The region could not be cut from the file. Check that the file is still in the project, then draw it again."
+          }
+        }
+      }
+    },
     "citationComposer.depictionCaptionEmpty": {
       "comment": "Caption beside the depiction preview when no region is drawn",
       "extractionState": "manual",

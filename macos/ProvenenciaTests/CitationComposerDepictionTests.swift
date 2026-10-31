@@ -1042,7 +1042,6 @@ struct CitationComposerDepictionTests {
 
     // MARK: - S14-03: one tool, the locator lock, cut and page feedback
 
-    private let wrongPageJSON = #"{"version":1,"selectors":[{"type":"artifact"},{"type":"page","artifact_page":1}]}"#
 
     @Test func depictionOffersTheRectangleAlone() async throws {
         let (projectDir, store) = try seeded()
@@ -1139,6 +1138,35 @@ struct CitationComposerDepictionTests {
         #expect(model.depictionImageBlocksSave)
     }
 
+    @Test func failedCutRetriesOnAnEqualRegion() async throws {
+        let (projectDir, store) = try seeded(.pdf)
+        seedCitation(store, locatorJSON: regionJSON(nil, page: 1))
+        let model = makeModel(store: store, projectDir: projectDir, citationID: "cit-1")
+        await model.prepare()
+        openLikenessDraft(model)
+        let pdfPath = projectDir + "/objects/news.pdf"
+        try FileManager.default.removeItem(atPath: pdfPath)
+        model.startDepictionDrawing()
+        let region = rect(0.5, 0.5, 0.9, 0.9)
+        #expect(model.commitViewerRegion(region))
+        // A region button leaves the view's `.task(id:)` as the one trigger.
+        #expect(model.depictionPendingCutKey == model.depictionPreviewKey)
+        await model.renderDepictionPreview()
+        #expect(model.depictionPreviewState == .failed)
+        #expect(model.depictionPendingCutKey == nil)
+
+        try ArtifactFileFixtures.writeBlankPDF(projectDir: projectDir, relPath: "objects/news.pdf", pageCount: 2)
+        #expect(model.useDepictionRegion(region))
+        let key = try #require(model.depictionPreviewKey)
+        #expect(model.depictionPendingCutKey == key)
+        await model.renderDepictionPreview()
+        guard case .cut = model.depictionPreviewState else {
+            Issue.record("the retried preview should be cut")
+            return
+        }
+        #expect(model.depictionPendingCutKey == nil)
+    }
+
     @Test func failedCutDisablesSaveAndRetries() async throws {
         // An unchanged edit on a file that cannot be cut sends no image and stays savable.
         let (missingDir, missingStore) = try seeded()
@@ -1167,6 +1195,7 @@ struct CitationComposerDepictionTests {
         #expect(model.depictionPreviewState == .failed)
         #expect(model.depictionCaptionState == .cutFailed)
         #expect(model.depictionCaptionState.isWarning)
+        #expect(caption(model) == L10n.string(L10n.CitationComposer.depictionCaptionCutFailed))
         #expect(!model.authoringCanConfirm)
         #expect(model.canStartDepictionDrawing)
 
@@ -1298,7 +1327,7 @@ struct CitationComposerDepictionTests {
     }
 
     @Test func previewLabelFollowsTheSave() async throws {
-        let (model, store) = try await editingSavedLikeness()
+        let (model, _) = try await editingSavedLikeness()
         #expect(model.depictionPreviewState == .saved(relPath: savedRelPath))
         model.startDepictionDrawing()
         #expect(model.commitViewerRegion(rect(0.5, 0.5, 0.9, 0.9)))
@@ -1330,7 +1359,6 @@ struct CitationComposerDepictionTests {
         let call = try #require(polygonStore.recordedCalls.first { $0.hasPrefix("updateObservation") })
         #expect(call.contains(" valueDepictionID=dep-1"))
         #expect(!call.contains(" depiction=1"))
-        _ = store
     }
 
     private func caption(_ model: CitationComposerModel) -> String {
