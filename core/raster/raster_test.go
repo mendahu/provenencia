@@ -2,9 +2,7 @@ package raster
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
-	"hash/crc32"
 	"image"
 	"image/color"
 	"image/gif"
@@ -15,6 +13,8 @@ import (
 	"testing"
 
 	"golang.org/x/image/tiff"
+
+	"github.com/mendahu/provenencia/core/raster/rastertest"
 )
 
 // fakeConfigCalls counts calls to the fake format's config func.
@@ -29,31 +29,6 @@ func init() {
 			return image.Config{Width: 1, Height: 1}, nil
 		},
 	)
-}
-
-// pngHeaderOnly returns a PNG signature plus a valid IHDR chunk declaring
-// w×h. DecodeConfig needs only this, so bombs stay a few bytes long.
-func pngHeaderOnly(t *testing.T, w, h uint32) []byte {
-	t.Helper()
-	var buf bytes.Buffer
-	buf.Write([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'})
-	data := make([]byte, 13)
-	binary.BigEndian.PutUint32(data[0:], w)
-	binary.BigEndian.PutUint32(data[4:], h)
-	data[8] = 8 // bit depth
-	data[9] = 6 // color type RGBA
-	var length [4]byte
-	binary.BigEndian.PutUint32(length[:], 13)
-	buf.Write(length[:])
-	buf.WriteString("IHDR")
-	buf.Write(data)
-	crc := crc32.NewIEEE()
-	crc.Write([]byte("IHDR"))
-	crc.Write(data)
-	var sum [4]byte
-	binary.BigEndian.PutUint32(sum[:], crc.Sum32())
-	buf.Write(sum[:])
-	return buf.Bytes()
 }
 
 // gifHeaderOnly returns a GIF89a header declaring a w×h logical screen.
@@ -89,13 +64,13 @@ func TestEncodeJPEGRejects(t *testing.T) {
 		},
 		{
 			name:   "png bomb 100000x100000 header",
-			src:    func(t *testing.T) []byte { return pngHeaderOnly(t, 100000, 100000) },
+			src:    func(t *testing.T) []byte { return rastertest.HeaderOnlyPNG(t, 100000, 100000) },
 			opts:   Options{MaxEdge: 256},
 			wantIs: ErrTooLarge,
 		},
 		{
 			name:   "png just over pixel budget",
-			src:    func(t *testing.T) []byte { return pngHeaderOnly(t, 8001, 8000) },
+			src:    func(t *testing.T) []byte { return rastertest.HeaderOnlyPNG(t, 8001, 8000) },
 			opts:   Options{MaxEdge: 256},
 			wantIs: ErrTooLarge,
 		},
@@ -139,7 +114,7 @@ func TestEncodeJPEGAtBudgetBoundaries(t *testing.T) {
 	if err != nil || len(out) == 0 {
 		t.Fatalf("MaxEdge=%d should be accepted: %v", MaxEdgeLimit, err)
 	}
-	cfg, _, err := image.DecodeConfig(bytes.NewReader(pngHeaderOnly(t, 8000, 8000)))
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(rastertest.HeaderOnlyPNG(t, 8000, 8000)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -255,7 +230,7 @@ func TestDecode(t *testing.T) {
 		{"tiff outside list", tiffBytes(t, 4, 4), both, ErrUnsupportedFormat},
 		{"fake format outside list, no full decode", []byte("FAKEIMG!rest"), both, ErrUnsupportedFormat},
 		{"tiff with nil list", tiffBytes(t, 4, 4), nil, nil},
-		{"bomb header", pngHeaderOnly(t, 100000, 100000), both, ErrTooLarge},
+		{"bomb header", rastertest.HeaderOnlyPNG(t, 100000, 100000), both, ErrTooLarge},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -3,10 +3,8 @@ package derivatives
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/binary"
 	"encoding/hex"
 	"errors"
-	"hash/crc32"
 	"image"
 	"image/png"
 	"os"
@@ -20,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/raster"
+	"github.com/mendahu/provenencia/core/raster/rastertest"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -197,31 +196,6 @@ func TestEnsureThumbnailFromGeneratedPNG(t *testing.T) {
 	}
 }
 
-// bombPNG returns a PNG signature + valid IHDR declaring w×h pixels; enough
-// for DecodeConfig, tiny on disk — a header-declared decompression bomb.
-func bombPNG(t *testing.T, w, h uint32) []byte {
-	t.Helper()
-	var buf bytes.Buffer
-	buf.Write([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'})
-	data := make([]byte, 13)
-	binary.BigEndian.PutUint32(data[0:], w)
-	binary.BigEndian.PutUint32(data[4:], h)
-	data[8] = 8 // bit depth
-	data[9] = 6 // color type RGBA
-	var length [4]byte
-	binary.BigEndian.PutUint32(length[:], 13)
-	buf.Write(length[:])
-	buf.WriteString("IHDR")
-	buf.Write(data)
-	crc := crc32.NewIEEE()
-	crc.Write([]byte("IHDR"))
-	crc.Write(data)
-	var sum [4]byte
-	binary.BigEndian.PutUint32(sum[:], crc.Sum32())
-	buf.Write(sum[:])
-	return buf.Bytes()
-}
-
 // installFileRow inserts a files row without writing an object, so tests can
 // declare arbitrary ByteSize/checksum metadata.
 func installFileRow(t *testing.T, c *database.Catalog, checksum, mediaType string, byteSize int64) []byte {
@@ -272,8 +246,8 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 		{
 			name: "object bytes do not match catalog checksum",
 			srcID: func(t *testing.T) []byte {
-				id := installSourceFile(t, c, bombPNG(t, 4, 4), "image/png", "swap.png")
-				sum := sha256.Sum256(bombPNG(t, 4, 4))
+				id := installSourceFile(t, c, rastertest.HeaderOnlyPNG(t, 4, 4), "image/png", "swap.png")
+				sum := sha256.Sum256(rastertest.HeaderOnlyPNG(t, 4, 4))
 				rel, err := files.StorageRelPath(hex.EncodeToString(sum[:]), "image/png")
 				if err != nil {
 					t.Fatal(err)
@@ -289,7 +263,7 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 		{
 			name: "object is a symlink to an outside file with the same bytes",
 			srcID: func(t *testing.T) []byte {
-				data := bombPNG(t, 5, 5)
+				data := rastertest.HeaderOnlyPNG(t, 5, 5)
 				id := installSourceFile(t, c, data, "image/png", "link.png")
 				sum := sha256.Sum256(data)
 				rel, err := files.StorageRelPath(hex.EncodeToString(sum[:]), "image/png")
@@ -314,7 +288,7 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 		{
 			name: "source's shard folder is a symlink",
 			srcID: func(t *testing.T) []byte {
-				data := bombPNG(t, 6, 6)
+				data := rastertest.HeaderOnlyPNG(t, 6, 6)
 				id := installSourceFile(t, c, data, "image/png", "shard.png")
 				sum := sha256.Sum256(data)
 				rel, err := files.StorageRelPath(hex.EncodeToString(sum[:]), "image/png")
@@ -344,7 +318,7 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 		{
 			name: "pixel bomb png over decode budget",
 			srcID: func(t *testing.T) []byte {
-				return installSourceFile(t, c, bombPNG(t, 100000, 100000), "image/png", "bomb.png")
+				return installSourceFile(t, c, rastertest.HeaderOnlyPNG(t, 100000, 100000), "image/png", "bomb.png")
 			},
 			wantIs: ErrUnprocessable,
 		},

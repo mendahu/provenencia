@@ -2,9 +2,7 @@ package ingest
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
-	"hash/crc32"
 	"image"
 	"image/color"
 	"image/gif"
@@ -25,6 +23,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ingest/mediatypes"
+	"github.com/mendahu/provenencia/core/raster/rastertest"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -89,28 +88,6 @@ func stagePNG(t *testing.T, w, h int) []byte {
 
 func stageJPEG(t *testing.T, w, h int) []byte {
 	return stageEncode(t, func(wr io.Writer) error { return jpeg.Encode(wr, stagePixels(w, h), nil) })
-}
-
-// stageBombPNG is a PNG signature plus an IHDR declaring w×h.
-func stageBombPNG(w, h uint32) []byte {
-	var buf bytes.Buffer
-	buf.Write([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'})
-	data := make([]byte, 13)
-	binary.BigEndian.PutUint32(data[0:], w)
-	binary.BigEndian.PutUint32(data[4:], h)
-	data[8], data[9] = 8, 6
-	var n [4]byte
-	binary.BigEndian.PutUint32(n[:], 13)
-	buf.Write(n[:])
-	buf.WriteString("IHDR")
-	buf.Write(data)
-	crc := crc32.NewIEEE()
-	crc.Write([]byte("IHDR"))
-	crc.Write(data)
-	var sum [4]byte
-	binary.BigEndian.PutUint32(sum[:], crc.Sum32())
-	buf.Write(sum[:])
-	return buf.Bytes()
 }
 
 // objectFiles lists every regular file under the project's objects folder.
@@ -218,7 +195,7 @@ func TestStageImageRefuses(t *testing.T) {
 		{"bmp", stageWrite(t, dir, "a.bmp", stageEncode(t, func(w io.Writer) error { return bmp.Encode(w, stagePixels(8, 8)) })), 0, ErrUnsupportedImage},
 		{"html named png", stageWrite(t, dir, "page.png", []byte("<html><body>hi</body></html>")), 0, ErrUnsupportedImage},
 		{"random bytes", stageWrite(t, dir, "rand.png", randomBytes), 0, ErrUnsupportedImage},
-		{"decompression bomb", stageWrite(t, dir, "bomb.png", stageBombPNG(100000, 100000)), 0, ErrUnsupportedImage},
+		{"decompression bomb", stageWrite(t, dir, "bomb.png", rastertest.HeaderOnlyPNG(t, 100000, 100000)), 0, ErrUnsupportedImage},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
