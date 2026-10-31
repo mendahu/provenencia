@@ -124,6 +124,41 @@ struct ProvenanceSheetTests {
         #expect(both.provenanceSummary == "3 records from 2 Places")
     }
 
+    @Test func aPooledPlaceGroupHasOneHeadingPerValue() {
+        let york = CatalogCanonicalEntity(id: "pl1", ref: "PLC-1", subjectTypeID: "t", label: "")
+        let leeds = CatalogCanonicalEntity(id: "pl2", ref: "PLC-2", subjectTypeID: "t", label: "")
+        func owner(
+            _ link: String, _ outcomes: [CatalogReconcilerOutcome],
+            place: CatalogCanonicalEntity = york, _ name: String = "York"
+        ) -> CatalogOwnerField {
+            CatalogOwnerField(
+                entity: CatalogCanonicalEntity(id: link, ref: "LOC-\(link)", subjectTypeID: "t", label: ""),
+                event: nil, place: CatalogHeaderPlace(entity: place, names: [name]),
+                field: D.field(
+                    "single", key: "place", label: "place", valueType: "subject", [D.value(1, "kept", .text(name))],
+                    outcomes: outcomes
+                )
+            )
+        }
+        let row = ReconciledValueRowModel.derived(
+            id: "life.birthPlace", label: "Birth place", style: .place, lead: "York", emptyText: "", mixed: true,
+            owners: [
+                owner("lk1", [D.outcome("a", "kept", source: "s1"), D.outcome("d", "lost", rank: nil, source: "s1")]),
+                owner("lk2", [D.outcome("b", "kept", source: "s2")]),
+                owner("lk3", [D.outcome("c", "kept")], place: leeds, "Leeds"),
+            ],
+            shownOwnerID: "pl1", kind: .birthPlace, locale: en
+        )
+        let values = row.recordGroups[0].values
+        #expect(values.map { $0.records.map(\.id) } == [["a", "b"], ["d"]])
+        guard case .value(let heading)? = values[0].heading else {
+            Issue.record("expected a value heading")
+            return
+        }
+        #expect(heading.text == "York" && heading.support == L10n.Conclusions.sourceCount(2))
+        #expect(values[1].heading == .otherRecords)
+    }
+
     @Test func theSummarySaysOnlyWhatTheRowKnows() {
         let merged = D.field("merged", [
             D.value(1, "kept", support: 3, against: 1, .name(D.jamesRobins)),

@@ -143,6 +143,50 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         }
     }
 
+    /// The records of several links to one Place, each link's own runs merged by
+    /// displayed value: runs of the same value join in link order under one
+    /// heading with their Source counts summed, and records under no displayed
+    /// value join last under one "other records" heading.
+    private static func pooledValueGroups(
+        _ members: [(field: CatalogConclusionField, records: [ReconciliationRecord])],
+        locale: Locale,
+        orders: NameFormatOrders
+    ) -> [ReconciliationRecordGroup.ValueGroup] {
+        var valueRuns: [(value: OtherValue, support: Int, records: [ReconciliationRecord])] = []
+        var other: [ReconciliationRecord] = []
+        for member in members {
+            var counted: Set<String> = []
+            for run in member.records.reduce(into: [(rank: Int, records: [ReconciliationRecord])]()) { runs, record in
+                if runs.last?.rank == record.groupRank {
+                    runs[runs.count - 1].records.append(record)
+                } else {
+                    runs.append((record.groupRank, [record]))
+                }
+            } {
+                guard run.rank > 0, let value = member.field.displayedValues.first(where: { $0.rank == run.rank }) else {
+                    other += run.records
+                    continue
+                }
+                let shown = otherValue(value, locale: locale, orders: orders)
+                if let index = valueRuns.firstIndex(where: { $0.value.text == shown.text }) {
+                    valueRuns[index].records += run.records
+                    if counted.insert(shown.text).inserted { valueRuns[index].support += value.support }
+                } else {
+                    counted.insert(shown.text)
+                    valueRuns.append((shown, value.support, run.records))
+                }
+            }
+        }
+        let showsHeadings = valueRuns.count + (other.isEmpty ? 0 : 1) > 1 || valueRuns.isEmpty
+        var groups = valueRuns.map { run -> ReconciliationRecordGroup.ValueGroup in
+            var value = run.value
+            value.support = L10n.Conclusions.sourceCount(run.support)
+            return .init(heading: showsHeadings ? .value(value) : nil, records: run.records)
+        }
+        if !other.isEmpty { groups.append(.init(heading: showsHeadings ? .otherRecords : nil, records: other)) }
+        return groups
+    }
+
     /// Every kept value of a multi-valued field, lead included. A weak
     /// spelling is not displayed, so it stays out of this list.
     private static func listedValues(
@@ -221,9 +265,12 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         }
         let groups = ownerIDs.map { ownerID in
             let members = membersOf[ownerID] ?? []
-            var records = Self.records(members.map(\.field), locale: locale, orders: orders)
-            if ownerID != shownOwnerID {
-                for index in records.indices { records[index].counted = false }
+            let memberRecords = members.map { member -> [ReconciliationRecord] in
+                var records = Self.records([member.field], locale: locale, orders: orders)
+                if ownerID != shownOwnerID {
+                    for index in records.indices { records[index].counted = false }
+                }
+                return records
             }
             return ReconciliationRecordGroup(
                 owner: ownerIDs.count > 1 || ownerID != shownOwnerID
@@ -232,7 +279,11 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
                         locale: locale, orders: orders
                     )
                     : nil,
-                values: Self.valueGroups(records, field: members[0].field, locale: locale, orders: orders)
+                values: members.count == 1
+                    ? Self.valueGroups(memberRecords[0], field: members[0].field, locale: locale, orders: orders)
+                    : Self.pooledValueGroups(
+                        zip(members.map(\.field), memberRecords).map { ($0, $1) }, locale: locale, orders: orders
+                    )
             )
         }
         let recordCount = groups.reduce(0) { $0 + $1.records.count }
