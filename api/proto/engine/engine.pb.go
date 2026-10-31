@@ -11606,9 +11606,16 @@ type ReconcilerOutcomeDetail struct {
 	ArtifactId        string `protobuf:"bytes,17,opt,name=artifact_id,json=artifactId,proto3" json:"artifact_id,omitempty"`
 	// For "outvoted": the winning value's Sources of every Source that voted
 	// on that unit (for a name, the part it lost on). 0 otherwise.
-	VoteSupport   int32  `protobuf:"varint,18,opt,name=vote_support,json=voteSupport,proto3" json:"vote_support,omitempty"`
-	VoteTotal     int32  `protobuf:"varint,19,opt,name=vote_total,json=voteTotal,proto3" json:"vote_total,omitempty"`
-	GraphId       string `protobuf:"bytes,20,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"` // the Evidence graph of the Observation's Subject
+	VoteSupport int32  `protobuf:"varint,18,opt,name=vote_support,json=voteSupport,proto3" json:"vote_support,omitempty"`
+	VoteTotal   int32  `protobuf:"varint,19,opt,name=vote_total,json=voteTotal,proto3" json:"vote_total,omitempty"`
+	GraphId     string `protobuf:"bytes,20,opt,name=graph_id,json=graphId,proto3" json:"graph_id,omitempty"` // the Evidence graph of the Observation's Subject
+	// The citation line's parts (the Artifact and Citation labels, the Citation
+	// locator's page) and the displayed value the record counts under.
+	ArtifactLabel string `protobuf:"bytes,21,opt,name=artifact_label,json=artifactLabel,proto3" json:"artifact_label,omitempty"`
+	CitationLabel string `protobuf:"bytes,22,opt,name=citation_label,json=citationLabel,proto3" json:"citation_label,omitempty"`
+	ArtifactPage  int32  `protobuf:"varint,23,opt,name=artifact_page,json=artifactPage,proto3" json:"artifact_page,omitempty"` // 0 = none
+	PageLabel     string `protobuf:"bytes,24,opt,name=page_label,json=pageLabel,proto3" json:"page_label,omitempty"`           // "" = none
+	GroupRank     int32  `protobuf:"varint,25,opt,name=group_rank,json=groupRank,proto3" json:"group_rank,omitempty"`          // the displayed value it went into; 0 for none
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -11767,6 +11774,41 @@ func (x *ReconcilerOutcomeDetail) GetGraphId() string {
 		return x.GraphId
 	}
 	return ""
+}
+
+func (x *ReconcilerOutcomeDetail) GetArtifactLabel() string {
+	if x != nil {
+		return x.ArtifactLabel
+	}
+	return ""
+}
+
+func (x *ReconcilerOutcomeDetail) GetCitationLabel() string {
+	if x != nil {
+		return x.CitationLabel
+	}
+	return ""
+}
+
+func (x *ReconcilerOutcomeDetail) GetArtifactPage() int32 {
+	if x != nil {
+		return x.ArtifactPage
+	}
+	return 0
+}
+
+func (x *ReconcilerOutcomeDetail) GetPageLabel() string {
+	if x != nil {
+		return x.PageLabel
+	}
+	return ""
+}
+
+func (x *ReconcilerOutcomeDetail) GetGroupRank() int32 {
+	if x != nil {
+		return x.GroupRank
+	}
+	return 0
 }
 
 // ConclusionField is one Property of a handle: its state (single, merged,
@@ -19378,7 +19420,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x12\x18\n" +
 	"\asupport\x18\x03 \x01(\x05R\asupport\x12\x18\n" +
 	"\aagainst\x18\x04 \x01(\x05R\aagainst\x12<\n" +
-	"\x05value\x18\x05 \x01(\v2&.provenencia.engine.v1.ConclusionValueR\x05value\"\x88\x06\n" +
+	"\x05value\x18\x05 \x01(\v2&.provenencia.engine.v1.ConclusionValueR\x05value\"\xb9\a\n" +
 	"\x17ReconcilerOutcomeDetail\x12%\n" +
 	"\x0eobservation_id\x18\x01 \x01(\tR\robservationId\x12'\n" +
 	"\x0fobservation_ref\x18\x02 \x01(\tR\x0eobservationRef\x12\x16\n" +
@@ -19404,7 +19446,14 @@ const file_engine_proto_rawDesc = "" +
 	"\fvote_support\x18\x12 \x01(\x05R\vvoteSupport\x12\x1d\n" +
 	"\n" +
 	"vote_total\x18\x13 \x01(\x05R\tvoteTotal\x12\x19\n" +
-	"\bgraph_id\x18\x14 \x01(\tR\agraphIdJ\x04\b\x0e\x10\x0fJ\x04\b\x10\x10\x11R\x14claim_confidence_keyR\x17claim_confidence_offset\"\xb2\x02\n" +
+	"\bgraph_id\x18\x14 \x01(\tR\agraphId\x12%\n" +
+	"\x0eartifact_label\x18\x15 \x01(\tR\rartifactLabel\x12%\n" +
+	"\x0ecitation_label\x18\x16 \x01(\tR\rcitationLabel\x12#\n" +
+	"\rartifact_page\x18\x17 \x01(\x05R\fartifactPage\x12\x1d\n" +
+	"\n" +
+	"page_label\x18\x18 \x01(\tR\tpageLabel\x12\x1d\n" +
+	"\n" +
+	"group_rank\x18\x19 \x01(\x05R\tgroupRankJ\x04\b\x0e\x10\x0fJ\x04\b\x10\x10\x11R\x14claim_confidence_keyR\x17claim_confidence_offset\"\xb2\x02\n" +
 	"\x0fConclusionField\x12\x1f\n" +
 	"\vproperty_id\x18\x01 \x01(\tR\n" +
 	"propertyId\x12!\n" +

@@ -33,6 +33,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecodec"
@@ -81,6 +82,7 @@ type Outcome struct {
 	ObservationRef string
 	Reason         string
 	ValueRank      int                // the value it went into; 0 for none
+	GroupRank      int                // the displayed value it counts under; 0 for none
 	DeniedBy       []byte             // the negative Observation, for "denied"
 	Vote           autoreconcile.Vote // the majority that beat it, for "outvoted"
 	Recorded       Value              // what the record said
@@ -91,6 +93,10 @@ type Outcome struct {
 	ArtifactID     []byte
 	SourceID       []byte
 	SourceTitle    string
+	ArtifactLabel  string // "" = none
+	CitationLabel  string // "" = none
+	ArtifactPage   int    // the Citation locator's page; 0 = none
+	PageLabel      string // its printed label; "" = none
 	CredibilityKey string // "" = no assessment (standard)
 	// Provenance is the evidence as the auto-reconciler weighed it, relative
 	// to the default grades; Provenance.Weak says whether it is weak, and
@@ -107,7 +113,7 @@ type Field struct {
 	State       autoreconcile.State // read off the displayed values
 	cardinality string
 	Values      []ReconciledValue // rank order
-	Outcomes    []Outcome         // by value rank (none last), then Observation id
+	Outcomes    []Outcome         // by group rank (none last), value rank (none last), then Observation id
 }
 
 // PictureTile is one picture a gallery shows: its image, and the outcome of
@@ -137,6 +143,7 @@ const (
 			o.value_text, o.value_integer, o.value_term_id, COALESCE(t.key, ''), COALESCE(t.label, ''), COALESCE(t.origin, ''),
 			o.value_date_id, o.value_name_id,
 			s.id, s.ref, s.graph_id, c.id, a.id, src.id, COALESCE(src.title, ''),
+			COALESCE(a.label, ''), COALESCE(c.label, ''), c.locator_json,
 			COALESCE(sg.key, ''), ` + autoreconciler.ProvenanceColumns + `
 		FROM auto_reconciler_outcomes ao
 		JOIN observations o ON o.id = ao.observation_id
@@ -233,13 +240,35 @@ func fieldsOf(g *graphcache.Graph, q Querier, nodes []*graphcache.Node, leads ma
 // finish reads a field's state off its values and orders its outcomes.
 func finish(f *Field) {
 	f.State = state(f.Values, f.cardinality)
-	sort.SliceStable(f.Outcomes, func(i, j int) bool {
-		ri, rj := f.Outcomes[i].ValueRank, f.Outcomes[j].ValueRank
-		if (ri == 0) != (rj == 0) {
-			return rj == 0
+	displayed := map[int]bool{}
+	for _, v := range f.Values {
+		if v.Displayed() {
+			displayed[v.Rank] = true
 		}
-		if ri != rj {
-			return ri < rj
+	}
+	for i := range f.Outcomes {
+		o := &f.Outcomes[i]
+		o.GroupRank = 0
+		counts := o.Reason == string(autoreconcile.ReasonKept) || o.Reason == string(autoreconcile.ReasonFolded)
+		if counts && displayed[o.ValueRank] {
+			o.GroupRank = o.ValueRank
+		}
+	}
+	less := func(a, b int) (decided, before bool) {
+		if (a == 0) != (b == 0) {
+			return true, b == 0
+		}
+		if a != b {
+			return true, a < b
+		}
+		return false, false
+	}
+	sort.SliceStable(f.Outcomes, func(i, j int) bool {
+		if d, b := less(f.Outcomes[i].GroupRank, f.Outcomes[j].GroupRank); d {
+			return b
+		}
+		if d, b := less(f.Outcomes[i].ValueRank, f.Outcomes[j].ValueRank); d {
+			return b
 		}
 		return string(f.Outcomes[i].ObservationID) < string(f.Outcomes[j].ObservationID)
 	})
@@ -398,16 +427,19 @@ func loadOutcomes(q Querier, entityIDs [][]byte, byProp map[string]map[string]*F
 			text                                         sql.NullString
 			integer                                      sql.NullInt64
 			o                                            Outcome
+			locatorJSON                                  string
 		)
 		dest := append([]any{&entityID, &propertyID, &o.ObservationID, &o.ObservationRef, &o.Reason, &rank, &o.DeniedBy,
 			&o.Vote.Support, &o.Vote.Of,
 			&text, &integer, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &o.Recorded.TermOrigin, &dateID, &nameID,
 			&o.SubjectID, &o.SubjectRef, &o.GraphID, &o.CitationID, &o.ArtifactID, &o.SourceID, &o.SourceTitle,
+			&o.ArtifactLabel, &o.CitationLabel, &locatorJSON,
 			&o.CredibilityKey}, autoreconciler.ProvenanceDest(&o.Provenance)...)
 		if err := rows.Scan(dest...); err != nil {
 			return err
 		}
 		o.ValueRank = int(rank.Int64)
+		o.ArtifactPage, o.PageLabel = locator.Page(locatorJSON)
 		o.Recorded.Text, o.Recorded.HasText = text.String, text.Valid
 		o.Recorded.Integer, o.Recorded.HasInteger = integer.Int64, integer.Valid
 		o.Recorded.TermID = termID

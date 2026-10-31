@@ -27,10 +27,7 @@ enum ReconciledValueDisplay {
     static func sourceCount(_ field: CatalogConclusionField) -> Int {
         let shown = field.displayedValues
         guard shown.count > 1 else { return shown.first?.support ?? 0 }
-        let ranks = Set(shown.map(\.rank))
-        let sources = Set(field.outcomes.filter { outcome in
-            (outcome.reason == .kept || outcome.reason == .folded) && outcome.valueRank.map(ranks.contains) == true
-        }.map(\.sourceID))
+        let sources = Set(field.outcomes.filter { $0.groupRank > 0 }.map(\.sourceID))
         return sources.isEmpty ? shown.reduce(0) { $0 + $1.support } : sources.count
     }
 

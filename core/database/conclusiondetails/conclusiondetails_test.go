@@ -208,7 +208,7 @@ func TestForEntity(t *testing.T) {
 	if o := outcomeOf(name, bare.ID); o.Reason != "no_evidence" || o.ValueRank != 0 || o.Recorded.Name == nil || o.Recorded.Name.Form != "James Robins" {
 		t.Fatalf("no-evidence outcome %+v", o)
 	}
-	// Outcomes are ordered by the value they went into; no value last.
+	// Outcomes are ordered by the value they count under; no value last.
 	if last := name.Outcomes[len(name.Outcomes)-1]; last.ValueRank != 0 {
 		t.Fatalf("outcome order %+v", name.Outcomes)
 	}
@@ -217,6 +217,67 @@ func TestForEntity(t *testing.T) {
 	// but nobody recorded it, so it isn't read.
 	if len(d.Fields) != 1 || d.Fields[0].PropertyKey != "name" {
 		t.Fatalf("fields %+v", d.Fields)
+	}
+}
+
+// The citation line's parts come with each outcome: the Artifact and Citation
+// labels and the Citation locator's page.
+func TestForEntityCitationParts(t *testing.T) {
+	f := newFixture(t)
+	src := f.source("Register of Baptisms")
+	art, err := artifactstest.Create(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Vol. 3"})
+	must(t, err)
+	a := f.personOn(src)
+	res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			GraphID: a.GraphID, ArtifactID: art.ID, Label: "Baptism of Ada",
+			LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":37}]}`,
+		}, []observations.Input{f.nameIn(a, "given=Ada|surname=Lovelace")})
+	})
+	must(t, err)
+	h := f.promote(a, nil)
+	o := outcomeOf(field(f.detail(h), "name"), res.Observations[0].ID)
+	if o.ArtifactLabel != "Vol. 3" || o.CitationLabel != "Baptism of Ada" || o.ArtifactPage != 37 || o.PageLabel != "" {
+		t.Fatalf("citation parts %+v", o)
+	}
+}
+
+// Go decides which displayed value each record counts under: kept and folded
+// records of a displayed value, and no other.
+func TestForEntityGroupsOutcomesByShownValue(t *testing.T) {
+	f := newFixture(t)
+	register, census, bible := f.source("Register"), f.source("Census"), f.source("Bible")
+	a, b, c := f.personOn(register), f.personOn(census), f.personOn(bible)
+	initial := f.cite(a, f.nameIn(a, "given=J.|surname=Robins"))
+	full := f.cite(b, f.nameIn(b, "given=James|surname=Robins"))
+	misspelt := f.cite(c, f.nameIn(c, "given=James|surname=Robbins"))
+	bare := f.cite(a, f.nameIn(a, "form:James Robins"))
+	h := f.promote(a, nil)
+	f.promote(b, h)
+	f.promote(c, h)
+
+	name := field(f.detail(h), "name")
+	for _, want := range []struct {
+		id        []byte
+		reason    string
+		groupRank int
+	}{{initial.ID, "folded", 1}, {full.ID, "kept", 1}, {misspelt.ID, "outvoted", 0}, {bare.ID, "no_evidence", 0}} {
+		if o := outcomeOf(name, want.id); o.Reason != want.reason || o.GroupRank != want.groupRank {
+			t.Fatalf("outcome %+v, want %s under %d", o, want.reason, want.groupRank)
+		}
+	}
+	if len(name.Outcomes) != 4 {
+		t.Fatalf("outcomes %+v", name.Outcomes)
+	}
+	// Kept and folded by Observation id, then the outvoted, then no evidence.
+	first, second := initial.ID, full.ID
+	if bytes.Compare(first, second) > 0 {
+		first, second = second, first
+	}
+	for i, id := range [][]byte{first, second, misspelt.ID, bare.ID} {
+		if !bytes.Equal(name.Outcomes[i].ObservationID, id) {
+			t.Fatalf("outcome %d is %+v", i, name.Outcomes[i])
+		}
 	}
 }
 

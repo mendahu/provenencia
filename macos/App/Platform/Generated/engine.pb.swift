@@ -4930,6 +4930,36 @@ public nonisolated struct Provenencia_Engine_V1_ReconcilerOutcomeDetail: @unchec
     set {_uniqueStorage()._graphID = newValue}
   }
 
+  /// The citation line's parts (the Artifact and Citation labels, the Citation
+  /// locator's page) and the displayed value the record counts under.
+  public var artifactLabel: String {
+    get {_storage._artifactLabel}
+    set {_uniqueStorage()._artifactLabel = newValue}
+  }
+
+  public var citationLabel: String {
+    get {_storage._citationLabel}
+    set {_uniqueStorage()._citationLabel = newValue}
+  }
+
+  /// 0 = none
+  public var artifactPage: Int32 {
+    get {_storage._artifactPage}
+    set {_uniqueStorage()._artifactPage = newValue}
+  }
+
+  /// "" = none
+  public var pageLabel: String {
+    get {_storage._pageLabel}
+    set {_uniqueStorage()._pageLabel = newValue}
+  }
+
+  /// the displayed value it went into; 0 for none
+  public var groupRank: Int32 {
+    get {_storage._groupRank}
+    set {_uniqueStorage()._groupRank = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -15254,7 +15284,7 @@ nonisolated extension Provenencia_Engine_V1_ReconciledValueDetail: SwiftProtobuf
 
 nonisolated extension Provenencia_Engine_V1_ReconcilerOutcomeDetail: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ReconcilerOutcomeDetail"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}observation_id\0\u{3}observation_ref\0\u{1}reason\0\u{3}value_rank\0\u{3}denied_by_observation_id\0\u{1}recorded\0\u{3}subject_id\0\u{3}subject_ref\0\u{3}citation_id\0\u{3}source_id\0\u{3}source_title\0\u{3}credibility_key\0\u{3}transcription_uncertain\0\u{4}\u{2}credibility_offset\0\u{4}\u{2}artifact_id\0\u{3}vote_support\0\u{3}vote_total\0\u{3}graph_id\0\u{b}claim_confidence_key\0\u{b}claim_confidence_offset\0\u{c}\u{e}\u{1}\u{c}\u{10}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}observation_id\0\u{3}observation_ref\0\u{1}reason\0\u{3}value_rank\0\u{3}denied_by_observation_id\0\u{1}recorded\0\u{3}subject_id\0\u{3}subject_ref\0\u{3}citation_id\0\u{3}source_id\0\u{3}source_title\0\u{3}credibility_key\0\u{3}transcription_uncertain\0\u{4}\u{2}credibility_offset\0\u{4}\u{2}artifact_id\0\u{3}vote_support\0\u{3}vote_total\0\u{3}graph_id\0\u{3}artifact_label\0\u{3}citation_label\0\u{3}artifact_page\0\u{3}page_label\0\u{3}group_rank\0\u{b}claim_confidence_key\0\u{b}claim_confidence_offset\0\u{c}\u{e}\u{1}\u{c}\u{10}\u{1}")
 
   fileprivate class _StorageClass {
     var _observationID: String = String()
@@ -15275,6 +15305,11 @@ nonisolated extension Provenencia_Engine_V1_ReconcilerOutcomeDetail: SwiftProtob
     var _voteSupport: Int32 = 0
     var _voteTotal: Int32 = 0
     var _graphID: String = String()
+    var _artifactLabel: String = String()
+    var _citationLabel: String = String()
+    var _artifactPage: Int32 = 0
+    var _pageLabel: String = String()
+    var _groupRank: Int32 = 0
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -15303,6 +15338,11 @@ nonisolated extension Provenencia_Engine_V1_ReconcilerOutcomeDetail: SwiftProtob
       _voteSupport = source._voteSupport
       _voteTotal = source._voteTotal
       _graphID = source._graphID
+      _artifactLabel = source._artifactLabel
+      _citationLabel = source._citationLabel
+      _artifactPage = source._artifactPage
+      _pageLabel = source._pageLabel
+      _groupRank = source._groupRank
     }
   }
 
@@ -15339,6 +15379,11 @@ nonisolated extension Provenencia_Engine_V1_ReconcilerOutcomeDetail: SwiftProtob
         case 18: try { try decoder.decodeSingularInt32Field(value: &_storage._voteSupport) }()
         case 19: try { try decoder.decodeSingularInt32Field(value: &_storage._voteTotal) }()
         case 20: try { try decoder.decodeSingularStringField(value: &_storage._graphID) }()
+        case 21: try { try decoder.decodeSingularStringField(value: &_storage._artifactLabel) }()
+        case 22: try { try decoder.decodeSingularStringField(value: &_storage._citationLabel) }()
+        case 23: try { try decoder.decodeSingularInt32Field(value: &_storage._artifactPage) }()
+        case 24: try { try decoder.decodeSingularStringField(value: &_storage._pageLabel) }()
+        case 25: try { try decoder.decodeSingularInt32Field(value: &_storage._groupRank) }()
         default: break
         }
       }
@@ -15405,6 +15450,21 @@ nonisolated extension Provenencia_Engine_V1_ReconcilerOutcomeDetail: SwiftProtob
       if !_storage._graphID.isEmpty {
         try visitor.visitSingularStringField(value: _storage._graphID, fieldNumber: 20)
       }
+      if !_storage._artifactLabel.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._artifactLabel, fieldNumber: 21)
+      }
+      if !_storage._citationLabel.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._citationLabel, fieldNumber: 22)
+      }
+      if _storage._artifactPage != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._artifactPage, fieldNumber: 23)
+      }
+      if !_storage._pageLabel.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._pageLabel, fieldNumber: 24)
+      }
+      if _storage._groupRank != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._groupRank, fieldNumber: 25)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -15432,6 +15492,11 @@ nonisolated extension Provenencia_Engine_V1_ReconcilerOutcomeDetail: SwiftProtob
         if _storage._voteSupport != rhs_storage._voteSupport {return false}
         if _storage._voteTotal != rhs_storage._voteTotal {return false}
         if _storage._graphID != rhs_storage._graphID {return false}
+        if _storage._artifactLabel != rhs_storage._artifactLabel {return false}
+        if _storage._citationLabel != rhs_storage._citationLabel {return false}
+        if _storage._artifactPage != rhs_storage._artifactPage {return false}
+        if _storage._pageLabel != rhs_storage._pageLabel {return false}
+        if _storage._groupRank != rhs_storage._groupRank {return false}
         return true
       }
       if !storagesAreEqual {return false}

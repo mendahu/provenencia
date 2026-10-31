@@ -612,6 +612,15 @@ struct CatalogReconcilerOutcome: Sendable, Equatable, Identifiable {
     /// voted on that unit. 0 otherwise.
     var voteSupport: Int = 0
     var voteTotal: Int = 0
+    /// The citation line's parts: the Artifact and Citation labels ("" for
+    /// none) and the Citation locator's page (0, "" for none).
+    var artifactLabel: String = ""
+    var citationLabel: String = ""
+    var artifactPage: Int = 0
+    var pageLabel: String = ""
+    /// The displayed value the record counts under: its value rank for a kept
+    /// or folded record of a displayed value, else 0.
+    var groupRank: Int = 0
 
     var id: String { observationID }
     var isLowTrustSource: Bool { credibilityOffset < 0 }

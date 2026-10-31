@@ -219,3 +219,30 @@ func TestValidate(t *testing.T) {
 		})
 	}
 }
+
+func TestPage(t *testing.T) {
+	tests := []struct {
+		name      string
+		doc       string
+		wantPage  int
+		wantLabel string
+	}{
+		{"page with label", `{"version":1,"selectors":[{"type":"artifact"},{"type":"page","artifact_page":37,"page_label":" 23 "}]}`, 37, "23"},
+		{"page without label", `{"version":1,"selectors":[{"type":"page","artifact_page":4}]}`, 4, ""},
+		{"artifact selector only", `{"version":1,"selectors":[{"type":"artifact"}]}`, 0, ""},
+		{"two page selectors", `{"version":1,"selectors":[{"type":"page","artifact_page":1},{"type":"page","artifact_page":2}]}`, 0, ""},
+		{"page selector without artifact_page", `{"version":1,"selectors":[{"type":"page"}]}`, 0, ""},
+		{"empty", ``, 0, ""},
+		{"truncated", `{`, 0, ""},
+		{"version 2", `{"version":2,"selectors":[{"type":"page","artifact_page":3}]}`, 0, ""},
+		{"over the byte cap", paddedArtifactDoc(MaxDocumentBytes + 1), 0, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			page, label := Page(tt.doc)
+			if page != tt.wantPage || label != tt.wantLabel {
+				t.Fatalf("Page = %d, %q; want %d, %q", page, label, tt.wantPage, tt.wantLabel)
+			}
+		})
+	}
+}

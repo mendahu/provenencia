@@ -187,12 +187,17 @@ func TestConclusionDetailProtoCarriesVoteArtifactAndMembers(t *testing.T) {
 		MemberCount: 4,
 		Fields: []conclusiondetails.Field{{Outcomes: []conclusiondetails.Outcome{{
 			Reason: "outvoted", ArtifactID: artifact, Vote: autoreconcile.Vote{Support: 2, Of: 3},
+			ArtifactLabel: "Vol. 3", CitationLabel: "Baptism of Ada", ArtifactPage: 37, PageLabel: "23", GroupRank: 2,
 		}}}},
 	}
 	got := conclusionDetailProto(d)
 	o := got.Fields[0].Outcomes[0]
 	if got.GetMemberCount() != 4 || o.GetArtifactId() != database.UUIDString(artifact) || o.GetVoteSupport() != 2 || o.GetVoteTotal() != 3 {
 		t.Fatalf("%+v", got)
+	}
+	if o.GetArtifactLabel() != "Vol. 3" || o.GetCitationLabel() != "Baptism of Ada" || o.GetArtifactPage() != 37 ||
+		o.GetPageLabel() != "23" || o.GetGroupRank() != 2 {
+		t.Fatalf("citation parts %+v", o)
 	}
 }
 

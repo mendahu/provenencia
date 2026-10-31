@@ -157,6 +157,11 @@ func reconcilerOutcomeProto(o conclusiondetails.Outcome) *engine.ReconcilerOutco
 		CredibilityKey:         o.CredibilityKey,
 		TranscriptionUncertain: o.Provenance.Uncertain,
 		CredibilityOffset:      int32(o.Provenance.Credibility),
+		ArtifactLabel:          o.ArtifactLabel,
+		CitationLabel:          o.CitationLabel,
+		ArtifactPage:           int32(o.ArtifactPage),
+		PageLabel:              o.PageLabel,
+		GroupRank:              int32(o.GroupRank),
 	}
 	if len(o.DeniedBy) > 0 {
 		po.DeniedByObservationId = database.UUIDString(o.DeniedBy)

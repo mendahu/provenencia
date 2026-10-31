@@ -33,7 +33,8 @@ struct ReconciledValueDisplayTests {
         deniedBy: String = "",
         credibilityOffset: Int = 0,
         uncertain: Bool = false,
-        vote: (Int, Int) = (0, 0)
+        vote: (Int, Int) = (0, 0),
+        groupRank: Int? = nil
     ) -> CatalogReconcilerOutcome {
         CatalogReconcilerOutcome(
             observationID: id, observationRef: "OBS-\(id)", reason: ReconcilerReason(wire: reason), valueRank: rank,
@@ -42,7 +43,8 @@ struct ReconciledValueDisplayTests {
             citationID: "cit-\(id)", artifactID: "art-\(id)", sourceID: source, sourceTitle: title, credibilityKey: "",
             transcriptionUncertain: uncertain,
             credibilityOffset: credibilityOffset,
-            voteSupport: vote.0, voteTotal: vote.1
+            voteSupport: vote.0, voteTotal: vote.1,
+            groupRank: groupRank ?? (["kept", "folded"].contains(reason) ? rank ?? 0 : 0)
         )
     }
 
@@ -107,6 +109,20 @@ struct ReconciledValueDisplayTests {
             Self.outcome("census", "no_evidence", rank: nil, source: "d"),
         ])
         #expect(ReconciledValueDisplay.countLine(mixed) == "3 Sources")
+    }
+
+    @Test func sourceCountCountsOnlyTheSourcesBehindDisplayedValues() {
+        // Records the engine put under no displayed value (group rank 0) do
+        // not count, whatever their value rank.
+        let mixed = Self.field("mixed", key: "deathDate", [
+            Self.value(1, "kept", support: 1), Self.value(2, "kept", support: 1), Self.value(3, "outvoted"),
+        ], outcomes: [
+            Self.outcome("burial", "kept", rank: 1, source: "a"),
+            Self.outcome("bible", "kept", rank: 2, source: "b"),
+            Self.outcome("news", "outvoted", rank: 3, source: "c"),
+            Self.outcome("kept-but-lost", "kept", rank: 3, source: "d", groupRank: 0),
+        ])
+        #expect(ReconciledValueDisplay.sourceCount(mixed) == 2)
     }
 
     @Test func againstLineSaysHowManyRecordsDisagree() {
