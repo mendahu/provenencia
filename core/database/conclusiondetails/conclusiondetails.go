@@ -249,7 +249,7 @@ func finish(f *Field) {
 	for i := range f.Outcomes {
 		o := &f.Outcomes[i]
 		o.GroupRank = 0
-		counts := o.Reason == string(autoreconcile.ReasonKept) || o.Reason == string(autoreconcile.ReasonFolded)
+		counts := autoreconcile.Reason(o.Reason).IntoValue()
 		if counts && displayed[o.ValueRank] {
 			o.GroupRank = o.ValueRank
 		}

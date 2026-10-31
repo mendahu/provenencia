@@ -151,6 +151,10 @@ func (r Reason) Displayed() bool { return r == ReasonKept }
 // another photo (working rule "A gallery is the reconciled likeness values").
 func (r Reason) InGallery() bool { return r == ReasonKept || r == ReasonWeak }
 
+// IntoValue reports whether a record whose outcome has this reason counts toward
+// a displayed value: kept as given, or folded into a fuller one.
+func (r Reason) IntoValue() bool { return r == ReasonKept || r == ReasonFolded }
+
 func (c ReconciledValue) Displayed() bool { return c.Reason.Displayed() }
 
 // Outcome is what happened to one candidate.

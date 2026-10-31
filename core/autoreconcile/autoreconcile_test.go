@@ -249,3 +249,15 @@ func TestReasonInGallery(t *testing.T) {
 		}
 	}
 }
+
+func TestReasonIntoValue(t *testing.T) {
+	for r, want := range map[Reason]bool{
+		ReasonKept: true, ReasonFolded: true,
+		ReasonWeak: false, ReasonOutvoted: false, ReasonDenied: false,
+		ReasonProvisional: false, ReasonNoEvidence: false, ReasonAgainst: false,
+	} {
+		if got := r.IntoValue(); got != want {
+			t.Errorf("%s.IntoValue() = %v, want %v", r, got, want)
+		}
+	}
+}

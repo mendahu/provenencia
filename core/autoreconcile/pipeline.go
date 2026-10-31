@@ -195,7 +195,7 @@ func reconcile(m module, candidates []Candidate, concluded *Value, cardinality s
 	// Displayed rows.
 	var shown []*entry
 	for _, e := range voters {
-		if e.reason == ReasonKept || e.reason == ReasonFolded {
+		if e.reason.IntoValue() {
 			shown = append(shown, e)
 		}
 	}
