@@ -141,8 +141,9 @@ const (
 	sqlPropertyIDs = `SELECT DISTINCT ao.entity_id, ao.property_id FROM auto_reconciler_outcomes ao WHERE ao.entity_id IN (`
 
 	// A Subject-valued record reads as its Subject's toponym: every positive
-	// toponym Observation of the Subjects in the IN list.
-	sqlToponyms = `SELECT o.subject_id, o.ref, o.polarity, COALESCE(o.value_text, '') FROM observations o
+	// toponym Observation of the Subjects in the IN list. INDEXED BY: there are
+	// no planner stats, and property_id would scan every toponym.
+	sqlToponyms = `SELECT o.subject_id, o.ref, o.polarity, COALESCE(o.value_text, '') FROM observations o INDEXED BY observations_subject_id_idx
 		WHERE o.property_id = ? AND o.polarity = 'positive' AND o.subject_id IN (`
 
 	sqlOutcomes = `SELECT ao.entity_id, ao.property_id, ao.observation_id, o.ref, ao.reason, ao.value_rank, ao.denied_by,

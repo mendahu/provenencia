@@ -2,6 +2,7 @@ package conclusiondetails_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -187,5 +188,14 @@ func TestForEntityDropsSubjectValuedFields(t *testing.T) {
 		if fld.ValueType == "subject" {
 			t.Fatalf("field %q of value type subject returned for a Person", fld.PropertyKey)
 		}
+	}
+}
+
+func TestToponymLoadUsesSubjectIndex(t *testing.T) {
+	f := newFixture(t)
+	plan, err := conclusiondetails.ToponymPlan(f.c)
+	must(t, err)
+	if !strings.Contains(plan, "observations_subject_id_idx") || strings.Contains(plan, "observations_property_id_idx") {
+		t.Fatalf("toponym load plan:\n%s", plan)
 	}
 }

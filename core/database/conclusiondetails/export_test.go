@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"strings"
 )
 
 // FieldsOf composes the fields of several handles at once, keyed by entity
@@ -53,4 +54,27 @@ func CountFieldsOfQueries(c *database.Catalog, ids [][]byte, subjectValued bool)
 	var n int
 	_, _, err = fieldsOf(c.Graph(), countingQuerier{db, &n}, nodes, nil, subjectValued)
 	return n, err
+}
+
+// ToponymPlan is SQLite's query plan for the toponym load of one Subject.
+func ToponymPlan(c *database.Catalog) (string, error) {
+	db, err := c.DB()
+	if err != nil {
+		return "", err
+	}
+	rows, err := db.Query("EXPLAIN QUERY PLAN "+sqlToponyms+"?)", []byte("x"), []byte("x"))
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	var plan []string
+	for rows.Next() {
+		var id, parent, unused int
+		var detail string
+		if err := rows.Scan(&id, &parent, &unused, &detail); err != nil {
+			return "", err
+		}
+		plan = append(plan, detail)
+	}
+	return strings.Join(plan, "\n"), rows.Err()
 }
