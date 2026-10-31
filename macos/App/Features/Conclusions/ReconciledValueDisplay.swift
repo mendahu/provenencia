@@ -27,8 +27,17 @@ enum ReconciledValueDisplay {
     static func sourceCount(_ field: CatalogConclusionField) -> Int {
         let shown = field.displayedValues
         guard shown.count > 1 else { return shown.first?.support ?? 0 }
-        let sources = Set(field.outcomes.filter { $0.groupRank > 0 }.map(\.sourceID))
-        return sources.isEmpty ? shown.reduce(0) { $0 + $1.support } : sources.count
+        return distinctSourceCount(
+            of: field.outcomes.filter { $0.groupRank > 0 },
+            fallback: shown.reduce(0) { $0 + $1.support }
+        )
+    }
+
+    /// The distinct Sources among these outcomes; `fallback` (summed support)
+    /// when none carries a Source id.
+    static func distinctSourceCount(of outcomes: [CatalogReconcilerOutcome], fallback: Int) -> Int {
+        let sources = Set(outcomes.map(\.sourceID))
+        return sources.isEmpty ? fallback : sources.count
     }
 
     /// "1 Source", "3 Sources", "by you"; nil for an empty field.

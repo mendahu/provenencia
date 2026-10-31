@@ -145,14 +145,14 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
 
     /// The records of several links to one Place, each link's own runs merged by
     /// displayed value: runs of the same value join in link order under one
-    /// heading with their Source counts summed, and records under no displayed
+    /// heading counting the distinct Sources of their outcomes, and records under no displayed
     /// value join last under one "other records" heading.
     private static func pooledValueGroups(
         _ members: [(field: CatalogConclusionField, records: [ReconciliationRecord])],
         locale: Locale,
         orders: NameFormatOrders
     ) -> [ReconciliationRecordGroup.ValueGroup] {
-        var valueRuns: [(value: OtherValue, support: Int, records: [ReconciliationRecord])] = []
+        var valueRuns: [(value: OtherValue, support: Int, outcomes: [CatalogReconcilerOutcome], records: [ReconciliationRecord])] = []
         var other: [ReconciliationRecord] = []
         for member in members {
             var counted: Set<String> = []
@@ -170,19 +170,23 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
                     continue
                 }
                 let shown = otherValue(value, locale: locale, orders: orders)
+                let outcomes = member.field.outcomes.filter { $0.groupRank == run.rank }
                 if let index = valueRuns.firstIndex(where: { $0.value.text == shown.text }) {
                     valueRuns[index].records += run.records
+                    valueRuns[index].outcomes += outcomes
                     if counted.insert(shown.text).inserted { valueRuns[index].support += value.support }
                 } else {
                     counted.insert(shown.text)
-                    valueRuns.append((shown, value.support, run.records))
+                    valueRuns.append((shown, value.support, outcomes, run.records))
                 }
             }
         }
         let showsHeadings = valueRuns.count + (other.isEmpty ? 0 : 1) > 1 || valueRuns.isEmpty
         var groups = valueRuns.map { run -> ReconciliationRecordGroup.ValueGroup in
             var value = run.value
-            value.support = L10n.Conclusions.sourceCount(run.support)
+            value.support = L10n.Conclusions.sourceCount(
+                ReconciledValueDisplay.distinctSourceCount(of: run.outcomes, fallback: run.support)
+            )
             return .init(heading: showsHeadings ? .value(value) : nil, records: run.records)
         }
         if !other.isEmpty { groups.append(.init(heading: showsHeadings ? .otherRecords : nil, records: other)) }

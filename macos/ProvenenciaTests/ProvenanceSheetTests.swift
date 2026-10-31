@@ -157,6 +157,22 @@ struct ProvenanceSheetTests {
         }
         #expect(heading.text == "York" && heading.support == L10n.Conclusions.sourceCount(2))
         #expect(values[1].heading == .otherRecords)
+
+        // Two links whose kept records cite the same Source: one Source, not two.
+        let shared = ReconciledValueRowModel.derived(
+            id: "life.birthPlace", label: "Birth place", style: .place, lead: "York", emptyText: "", mixed: true,
+            owners: [
+                owner("lk1", [D.outcome("a", "kept", source: "s1"), D.outcome("d", "lost", rank: nil, source: "s1")]),
+                owner("lk2", [D.outcome("b", "kept", source: "s1")]),
+                owner("lk3", [D.outcome("c", "kept")], place: leeds, "Leeds"),
+            ],
+            shownOwnerID: "pl1", kind: .birthPlace, locale: en
+        )
+        guard case .value(let sharedHeading)? = shared.recordGroups[0].values[0].heading else {
+            Issue.record("expected a value heading")
+            return
+        }
+        #expect(sharedHeading.support == L10n.Conclusions.sourceCount(1))
     }
 
     @Test func theSummarySaysOnlyWhatTheRowKnows() {
