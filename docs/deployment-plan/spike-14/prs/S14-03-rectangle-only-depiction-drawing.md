@@ -1,9 +1,9 @@
 # S14-03 — Rectangle-only depiction drawing
 
-**Status:** Planned
+**Status:** Landed in #652 (2026-10-31)
 **Spike / slice:** Spike 14 · Slice 1 — Event and Place pictures
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S14-D6](../design/S14-D6-composer-drawing-feedback.md), board agreed 2026-10-31 (user, 2026-10-31: the PR changes how the composer looks, so it waits on a brief)
+**Brief:** [S14-D6](../design/archive/S14-D6-composer-drawing-feedback.md), board agreed 2026-10-31 (user, 2026-10-31: the PR changes how the composer looks, so it waits on a brief)
 **Board:** [*Citation Composer*](https://claude.ai/design/p/8b120853-4ba4-4c0d-8492-75e76b9f9b7a?via=share), file *Citation Composer.dc.html*, section "S14-D6 · Drawing feedback", frames 1 (with its PDF variant), 2 – 9, 10a, 10b, 11a, 11b. The board's one change from the brief: the two region buttons are ghost (Draw stays secondary), D-15. § 6 macOS describes each frame in words for an implementer who cannot open it.
 **Depends on:** S14-13 (landed [#632](https://github.com/mendahu/provenencia/pull/632)), S14-D6
 **Blocks:** —
@@ -13,6 +13,7 @@
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/design-system-layers.mdc`, `.cursor/rules/depiction-values.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** working rules "A depiction is drawn as a rectangle", "FakeStore is a seeded fake, not a second engine"; bar outcomes 4 and 9; the 2026-10-18 likeness audit items UX-5, UX-6, UX-7 (composer feedback), UX-12, UX-13 (copy) and the freehand cap feedback, whose text is in `git show f88bef38^:docs/ideas/depictions-and-likenesses.md` lines 19 – 21; S14-13's Landed note (the "can cut" predicate is `ArtifactRegionCrop.snapshot`)
 **Planned:** 2026-10-31 against `main` @ `f2dc2a95`
+**Landed:** [#652](https://github.com/mendahu/provenencia/pull/652), 2026-10-31. Differences from the plan: (1) AC-5.3's "tool armed before the dialog" is tested with the tool armed and no dialog open, because D-2 hides a tool armed before the dialog (T-8 asserts nothing locks then), so only an on-screen armed tool refuses the save; (2) `drawingHoldsPasteTranscription` loads a real text-layer PDF (new `ArtifactFileFixtures.writeTextPDF`), since Draw is blocked on a file the viewer cannot cut; (3) the code is one commit, not one per step, as the steps share three files.
 **Review:** [`S14-03-rectangle-only-depiction-drawing.review.md`](S14-03-rectangle-only-depiction-drawing.review.md) — Fits with changes — Ready with changes, 2 rounds; every finding answered; board checked against every DF requirement 2026-10-31
 
 ### Implementer — read this first

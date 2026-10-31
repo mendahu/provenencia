@@ -6,9 +6,9 @@
 **Implements later as:** PR **S14-03** (Rectangle-only depiction drawing)
 **Board:** agreed 2026-10-31 — Claude Design project [*Citation Composer*](https://claude.ai/design/p/8b120853-4ba4-4c0d-8492-75e76b9f9b7a?via=share), file *Citation Composer.dc.html*, section "S14-D6 · Drawing feedback", frames 1 (and its PDF variant), 2 – 9, 10a, 10b, 11a, 11b. Change from this brief: the two region buttons are ghost and Draw stays secondary (plan D-15). Every DF requirement and every string is on the board as written.
 **Depends on:** the agreed S10-D15 board (shipped in S10-34); S14-13 (landed [#632](https://github.com/mendahu/provenencia/pull/632)), which leaves one predicate for whether the viewer can cut the open file.
-**Related:** [`../deployment-plan.md`](../deployment-plan.md) working rule "A depiction is drawn as a rectangle", bar outcomes 4 and 9; the 2026-10-18 likeness audit items UX-5, UX-6, UX-7, UX-12, UX-13 and the freehand cap ([`docs/ideas/depictions-and-likenesses.md`](../../../ideas/depictions-and-likenesses.md)); [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide); plan [`../prs/S14-03-rectangle-only-depiction-drawing.md`](../prs/S14-03-rectangle-only-depiction-drawing.md).
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Related:** [`../deployment-plan.md`](../../deployment-plan.md) working rule "A depiction is drawn as a rectangle", bar outcomes 4 and 9; the 2026-10-18 likeness audit items UX-5, UX-6, UX-7, UX-12, UX-13 and the freehand cap ([`docs/ideas/depictions-and-likenesses.md`](../../../../ideas/depictions-and-likenesses.md)); [`macos-client-patterns.md` § 9](../../../../macos-client-patterns.md#9-window-widths-regular-and-wide); plan [`../prs/S14-03-rectangle-only-depiction-drawing.md`](../../prs/S14-03-rectangle-only-depiction-drawing.md).
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -109,7 +109,7 @@ A researcher cuts a likeness or a picture out of a scan by drawing a region on i
 
 ### 2.1 What this board is not
 
-- The composer's layout or the breakpoint between its two and three panes ([`docs/ideas/wide-layout.md`](../../../ideas/wide-layout.md)).
+- The composer's layout or the breakpoint between its two and three panes ([`docs/ideas/wide-layout.md`](../../../../ideas/wide-layout.md)).
 - Removing shapes from a Citation's own region.
 - Showing every saved depiction on the photo.
 - A distinct glyph for an image the thumbnail check refuses (likeness audit UX-11, idea file).
@@ -207,5 +207,5 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 ## 7. Handoff
 
 1. When the board is agreed, record on the **Board** line: the frame numbers and every change from this brief with the user's answer.
-2. Refresh the [S14-03 plan](../prs/S14-03-rectangle-only-depiction-drawing.md): copy the answers into its Decisions and **Design → macOS**, describe each frame in words, run `review-plan` again, and set it to `Planned`.
-3. S14-03 archives this brief under `design/archive/` and records it in [`../completed.md`](../completed.md).
+2. Refresh the [S14-03 plan](../../prs/S14-03-rectangle-only-depiction-drawing.md): copy the answers into its Decisions and **Design → macOS**, describe each frame in words, run `review-plan` again, and set it to `Planned`.
+3. S14-03 archives this brief under `design/archive/` and records it in [`../completed.md`](../../completed.md).
