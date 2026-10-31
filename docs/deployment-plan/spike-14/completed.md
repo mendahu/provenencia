@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-10 — A Citation belongs to one Evidence graph
+
+**Landed 2026-10-30** in [#645](https://github.com/mendahu/provenencia/pull/645). `citations.graph_id` (migration `000059.sql`, NOT NULL, an audited CASCADE facet of its graph) stores the graph a Citation was made in, required on create and linked to its Artifact, and never changes. A graph lists and counts only its own Citations, an Observation must name a Subject in its Citation's graph, and the Citation `citations` read is its own `graph_id`. An unlink is refused while the graph has any Citation on the Artifact; `citations_need_graph` is gone. A graph delete releases its Citations through `ReleaseCitation` (the removal `citations.Delete` shares) and its confirm names them. The composer passes its graph (`CreateCitationWithObservationsRequest.graph_id`).
+
 ## S14-02 — Pictures in the app
 
 **Landed 2026-10-30** in [#641](https://github.com/mendahu/provenencia/pull/641). Event and Place pages show a Pictures section, lead their header with the engine's picture and choose a thumbnail as a Person chooses a portrait; the Events and Places lists lead with it. `ConclusionDetailBody.gallery` is one slot for all three kinds and `ConclusionLeadModel`, owned by the page, chooses any kind's lead; the Person's copy is unchanged and its ids and caption wrapping follow the shared rule. The Properties list reads the key and bound types, so `event_picture` and `place_picture` sound different. Briefs S14-D2 – S14-D5 are archived.
