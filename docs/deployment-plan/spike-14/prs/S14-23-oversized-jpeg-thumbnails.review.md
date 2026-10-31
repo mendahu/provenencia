@@ -1,7 +1,7 @@
 # Review — S14-23 Thumbnails for oversized JPEGs
 
-**Verdict:** round 1: Fits with changes — Not ready. Round 2: pending.
-**Rounds:** 1 (round 2 running). **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes (every blocker fixed after round 2)
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 - None.
@@ -11,6 +11,7 @@
 - **Byte limit 128 MiB (D-4).** It is `derivatives`' cap today; `StageImage` keeps 32 MiB.
 - **Hand-written Huffman decoder (D-8).** The standard library's is not reusable as is (bound to its decoder struct and reader); adapting it would be a rewrite of the same size.
 - **Vendored Go test fixtures (D-18)** under `core/raster/testdata/third_party/go/` with Go's BSD `LICENSE` and a `NOTICE`.
+- **Allocation guard counts the whole frame (D-12).** Remaining bytes must cover one bit per block of every component before any buffer is allocated.
 - **New guidance:** a "Fuzz targets" paragraph in `.cursor/rules/go-tests.mdc` (STEP-8).
 - **Order before S14-12.** The map prefers S14-12 first; S14-12 is unplanned, and this PR leaves it one byte limit to read.
 
@@ -76,3 +77,48 @@ D-3 wrapped reduced-path failures in `ErrTooLarge` while the stdlib path returne
 
 ### X-11 · nit · Map does not link the plan
 **Answer:** Fixed — map row links the plan.
+
+## Round 2
+
+### M-10 · blocker · `TestDecodeJPEGDCTruncated` is a separate error-family test, against `go-tests.mdc`
+**Answer:** Fixed — T-3's rows are `truncated/…` rows of `TestDecodeJPEGDCRefuses`; the separate function is gone.
+
+### M-11 · major · A third PNG-bomb copy, `core/ingest/stage_test.go` `stageBombPNG`
+**Answer:** Fixed — STEP-2 moves its caller to `rastertest.HeaderOnlyPNG` and deletes it; Codebase fit, Deletes, sweep and Stop conditions updated.
+
+### M-12 · major · Docs still say reduced-path refusals return `ErrTooLarge`
+**Answer:** Fixed — STEP-10 rewrites the design note's "What it refuses", the map's S14-23 **Ships** sentence and the idea file's S12-39 line; the sweep greps `return .ErrTooLarge.|S12-39`.
+
+### M-13 · major · An over-budget reduced frame would be both `ErrTooLarge` and `ErrUndecodable`
+**Answer:** Fixed — D-3 returns a `decodeJPEGDC` error that is `ErrTooLarge` unchanged and wraps only the rest; T-6 asserts the 65,535² row is not `ErrUndecodable`.
+
+### X-12 · blocker · `video-001.progressive.truncated.jpeg` is not an error
+Checked: the file ends `ff d9` after a complete DC scan; the stdlib decodes it.
+**Answer:** Fixed — AC-2.3 / T-3 use `video-001.progressive.jpeg` cut at half; the "truncated" fixture joins T-1's decodable set (D-18).
+
+### X-13 · blocker · STEP-2 needs fixtures STEP-3 copied
+**Answer:** Fixed — STEP-2 is now Shared fixtures and STEP-3 One refusal rule.
+
+### X-14 · major · Which parser gives the fuzz invariant its W and H
+**Answer:** Fixed — D-21 adds one test segment walker, `jpegSegments`; exact bounds are asserted only when the walk succeeds with exactly one SOF.
+
+### X-15 · major · D-12 undefined when the first scan is AC or single-component
+**Answer:** Fixed — D-12 allocates at the first sequential or DC-first SOS and checks bits against every component's blocks; an AC or refinement scan before a DC first scan is an error.
+
+### X-16 · major · `maxPixels` for T-1/T-2 and how header rows are built
+**Answer:** Fixed — D-21: `MaxDecodePixels` unless a row says otherwise; changed segments are assembled from `JPEGSegment` calls, fixture patches located by `jpegSegments`; subtest names `header/`, `scan/`, `truncated/`.
+
+### X-17 · minor · Design note "What it refuses" edit missing
+**Answer:** Fixed — with M-12.
+
+### X-18 · minor · S14-12's scope entry does not record `raster.MaxDecodeBytes`
+**Answer:** Declined — `deployment-plan.md` line 288 (S14-12 **Ships**) ends "The staged thumbnail read caps at `raster.MaxDecodeBytes` (S14-23), not a constant of its own.", committed in `76cc729d`.
+
+### X-19 · minor · `MARKETING_VERSION` lines
+**Answer:** Fixed — STEP-10 says all four lines.
+
+### X-20 · minor · How T-1 compares gray and colour
+**Answer:** Fixed — both sides through `color.RGBAModel`.
+
+### X-21 · minor · `fakeConfigCalls` and `t.Parallel`
+**Answer:** Fixed — T-7 states no `t.Parallel`.
