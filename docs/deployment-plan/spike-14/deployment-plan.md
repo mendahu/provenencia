@@ -113,7 +113,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | S14-01 | Pictures engine | 1 | Rename the gallery layer (Go, proto, Swift wire mapping); seed `event_picture` and `place_picture`; the gallery reads the gallery keys and each picture's own image; Event and Place headers carry the lead picture | — | — | [S14-01-pictures-engine.md](prs/S14-01-pictures-engine.md) | Landed #615 |
 | S14-02 | Pictures in the app | 1 | The gallery slot and the Swift view-layer rename; Event and Place pages show Pictures, a header thumbnail and choosing a thumbnail; Events and Places lists lead with it (Promote wording dropped 2026-10-29) | [S14-D2](design/archive/S14-D2-event-page-pictures.md), [S14-D3](design/archive/S14-D3-place-page-pictures.md), [S14-D4](design/archive/S14-D4-events-list-thumbnail.md), [S14-D5](design/archive/S14-D5-places-list-thumbnail.md) | S14-01, S13-23, S13-10 | [S14-02-pictures-in-the-app.md](prs/S14-02-pictures-in-the-app.md) | Landed #641 |
-| S14-03 | Rectangle-only depiction drawing | 1 | Depiction drawing offers only the rectangle tool; the Citation's region as a depiction uses its bounding rectangle; the composer's drawing feedback, captions and cap announcement | — | S14-13 | — | Scoped |
+| S14-03 | Rectangle-only depiction drawing | 1 | Depiction drawing offers only the rectangle tool; the Citation's region as a depiction uses its bounding rectangle; the composer's drawing feedback, captions and cap announcement | [S14-D6](design/S14-D6-composer-drawing-feedback.md) | S14-13, S14-D6 | [S14-03-rectangle-only-depiction-drawing.md](prs/S14-03-rectangle-only-depiction-drawing.md) | Planned |
 | S14-04 | Promote wording for pictures | — | Folded into S14-02 (working rule "Batch 1 is cut by layer") | — | — | — | Descoped (2026-10-27) → S14-02 |
 | S14-05 | Event and Place headers lead with a picture | — | Folded into S14-01 | — | — | — | Descoped (2026-10-27) → S14-01 |
 | S14-06 | Choose an Event or Place thumbnail | — | Folded into S14-02 | — | — | — | Descoped (2026-10-27) → S14-02 |
@@ -140,7 +140,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 
 ## Design track
 
-[`design/README.md`](design/README.md). **S14-D1** (Wide layout in the design system) put Page columns in the Claude Design kit; board agreed and brief archived 2026-10-29. Spike 13's S13-D1 draws the Person page frame from it, and S13-10 builds it in Swift. Four briefs gate S14-02, one per view it changes (user, 2026-10-30): **S14-D2** the Event page and **S14-D3** the Place page (Pictures section, header thumb, choosing a thumbnail), **S14-D4** the Events list and **S14-D5** the Places list (the lead picture in the row thumb), each drawn as its own turn on the *Person Detail* project beside S13-D1. S14-02 reuses the Person page's gallery, portrait controls and list thumbnail, but every view whose look changes has a board. S14-03 shows fewer radios on an existing strip.
+[`design/README.md`](design/README.md). **S14-D1** (Wide layout in the design system) put Page columns in the Claude Design kit; board agreed and brief archived 2026-10-29. Spike 13's S13-D1 draws the Person page frame from it, and S13-10 builds it in Swift. Four briefs gate S14-02, one per view it changes (user, 2026-10-30): **S14-D2** the Event page and **S14-D3** the Place page (Pictures section, header thumb, choosing a thumbnail), **S14-D4** the Events list and **S14-D5** the Places list (the lead picture in the row thumb), each drawn as its own turn on the *Person Detail* project beside S13-D1. S14-02 reuses the Person page's gallery, portrait controls and list thumbnail, but every view whose look changes has a board. **S14-D6** (the Citation composer's depiction drawing feedback) gates S14-03: it changes how the composer looks, so it waits on a board like any other view (user, 2026-10-31), drawn on the *Citation Composer* project beside S10-D15.
 
 ## Slices
 
@@ -150,6 +150,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 SLICE 1 — Event and Place pictures (batch 1)
   S14-01  Pictures engine
   S14-02  Pictures in the app
+  ✎ S14-D6  Citation composer: depiction drawing feedback
   S14-03  Rectangle-only depiction drawing
   S14-23  Thumbnails for oversized JPEGs
   Check: bar outcomes 1–9 and 12 on a new project.
@@ -199,6 +200,7 @@ S14-01 ──▶ S14-02
 S13-23 ──▶ S14-02   (Spike 13: deletes the Promote files the old plan renamed)
 S13-10 ──▶ S14-02   (Spike 13: Page columns and PersonDetailSections, which S14-02 builds on)
 S14-13 ──▶ S14-03
+S14-D6 ──▶ S14-03
 S14-16 ──▶ S14-17
 S14-14 ──▶ S14-20
 S13-24 ──▶ S14-16, S14-20      (Spike 13)
@@ -232,7 +234,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S14-03 — Rectangle-only depiction drawing
 
-**Ships.** The viewer's region strip takes the tools to offer as `[ArtifactRegionTool]` composer state beside `viewerArmedRegionTool` (the viewer stays unaware of depictions); a depiction draw offers `.rectangle` alone, a Citation region all of `ArtifactRegionTool`. `ArtifactRegionDraft.boundingRectangle`, beside `.whole` and built from `ArtifactRegionGeometry.boundingRect(of:)` and `rectanglePoints`, is what "Use the citation's region" sets on the depiction. While a region or a depiction is drawn, Set page, the locator chip × buttons and Find are disabled and the draw hint hides; Draw and the region buttons are blocked on a file the viewer cannot cut, and a failed cut shows with Save disabled; the needs-page callout sets a PDF Citation's page (UX-5, UX-6, UX-7). The empty, needs-page and region-hidden captions name the region buttons, not only Draw, and an edit that saves no image drops "Image to save" (UX-12, UX-13). The freehand tool's point cap (`ArtifactRegionOverlay`) is announced to VoiceOver, not only beeped. Draw's block and the failed-cut state read one "can cut" predicate, `ArtifactRegionCrop.snapshot`, as S12-28 leaves it.
+**Ships.** The viewer's region strip takes the tools to offer as `[ArtifactRegionTool]` composer state beside `viewerArmedRegionTool` (the viewer stays unaware of depictions); a depiction draw offers `.rectangle` alone, a Citation region all of `ArtifactRegionTool`. `ArtifactRegionDraft.boundingRectangle`, beside `.whole` and built from `ArtifactRegionGeometry.boundingRect(of:)` and `rectanglePoints`, is what "Use the citation's region" sets on the depiction. While a region or a depiction is drawn, Set page, the locator chip × buttons and Find are disabled and the draw hint hides; Draw and the region buttons are blocked on a file the viewer cannot cut, and a failed cut shows with Save disabled; the needs-page callout saves the viewer's page to a PDF Citation in one click (UX-5, UX-6, UX-7; user, 2026-10-31). The empty, needs-page and region-hidden captions name the region buttons, not only Draw, and an edit that saves no image drops "Image to save" (UX-12, UX-13). The freehand tool's point cap (`ArtifactRegionOverlay`) is announced to VoiceOver, not only beeped. Draw's block and the failed-cut state read one "can cut" predicate, `ArtifactRegionCrop.snapshot`, as S12-28 leaves it.
 **Not this PR.** Removing shapes from Citation regions; Go-side rectangle enforcement; rewriting saved polygon depictions.
 **Check.** Draw on a likeness shows one radio; a Citation region shows seven; Swift tests for the strip's tool list and the bounding-rectangle conversion; an old polygon depiction still opens and saves; bar outcome 9, with Swift tests for the disabled controls, the blocked Draw and the failed-cut state.
 **Context.** Working rule "A depiction is drawn as a rectangle"; `ArtifactViewer.swift` `regionTools`, `CitationComposerModel+Depiction.swift` `startDepictionDrawing`, `depictionCitationRegion`, `useDepictionRegion`; the audit items in [`depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) (2026-10-18 likeness audit). If the plan runs past about ten steps, the composer feedback splits out as its own PR.
