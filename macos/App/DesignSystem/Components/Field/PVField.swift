@@ -62,9 +62,7 @@ struct PVField<Content: View>: View {
             content
 
             if let error {
-                Text(error)
-                    .font(PVFont.body(size: PVTypeScale.micro))
-                    .foregroundStyle(PVColor.danger)
+                PVErrorText(error)
             } else if let hint {
                 hint
                     .font(PVFont.body(size: PVTypeScale.micro, italic: true))

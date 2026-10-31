@@ -856,9 +856,7 @@ struct CitationDepictionValueArea: View {
                         .disabled(!model.canSaveDepictionCitationPage)
                         .accessibilityIdentifier("citationComposer.depiction.savePage")
                         if let error = model.fields.error {
-                            Text(error)
-                                .font(PVFont.body(size: PVTypeScale.micro))
-                                .foregroundStyle(PVColor.danger)
+                            PVErrorText(error)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .accessibilityIdentifier("citationComposer.depiction.savePageError")
                         }

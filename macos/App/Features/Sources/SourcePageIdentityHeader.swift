@@ -227,9 +227,7 @@ struct SourcePageIdentityHeader: View {
                     }
 
                     if let typeError = model.identity.typeError {
-                        Text(typeError)
-                            .font(PVFont.body(size: PVTypeScale.caption))
-                            .foregroundStyle(PVColor.danger)
+                        PVErrorText(typeError, size: .caption)
                     }
                 }
             } else {

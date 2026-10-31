@@ -139,14 +139,10 @@ struct DateValueEditorForm: View {
                 )
             }
             if let fieldErr = draft.cascadeFieldError(start: start) {
-                Text(fieldErr)
-                    .font(PVFont.body(size: PVTypeScale.micro))
-                    .foregroundStyle(PVColor.danger)
+                PVErrorText(fieldErr)
                     .accessibilityIdentifier(start ? "\(accessibilityIdentifierPrefix).start.fieldError" : "\(accessibilityIdentifierPrefix).end.fieldError")
             } else if !start, let err = draft.endError {
-                Text(err)
-                    .font(PVFont.body(size: PVTypeScale.micro))
-                    .foregroundStyle(PVColor.danger)
+                PVErrorText(err)
             }
             if start ? draft.showStartTime : draft.showEndTime {
                 timeBlock(start: start)
