@@ -466,7 +466,7 @@ struct PersonDetailTests {
         #expect(birth.recordGroups[1].records.allSatisfy { !$0.counted })
         #expect(birth.recordGroups[0].owner?.title == "Birth of Ada Lovelace")
         #expect(birth.recordGroups[0].owner?.ref == "EVT-9RW7P")
-        #expect(birth.recordGroups[0].owner?.spoken == "Birth of Ada Lovelace, EVT-9RW7P")
+        #expect(birth.recordGroups[0].owner?.spoken == "Birth of Ada Lovelace, EVT-9RW7P, shown value")
 
         // An owner with no header and no label is titled by its ref, once.
         let bare = [CatalogDerivedRow(kind: .birthDate, owners: [
@@ -497,5 +497,90 @@ struct PersonDetailTests {
         let shown = PersonDetailContent(detail: detail(header: lopsided, derivedRows: places), locale: en).rows[4]
         #expect(shown.lead == "Paris" && shown.recordGroups.first?.owner?.id == "pl2")
         #expect(shown.opens?.location == .placeDetail(entityId: "pl2", ref: "PLC-2", title: "Paris"))
+    }
+
+    // MARK: The provenance sheet (S13-11)
+
+    @Test func aRecordOpensItsSourceCitationAndObservation() {
+        let outcome = D.outcome("bible", "kept", source: "S1", title: "Family Bible")
+        let record = ReconciliationRecord(outcome: outcome, in: D.field("single"), locale: en)
+        #expect(record.sourceLocation == .sourcePage(sourceId: "S1", ref: nil, title: "Family Bible"))
+        #expect(record.citationLocation.sourceSurface == .citationComposer)
+        #expect(record.citationLocation.citationId == "cit-bible" && record.citationLocation.observationId == nil)
+        #expect(record.location.citationId == "cit-bible" && record.location.observationId == "bible")
+        #expect(record.observationRef == "OBS-bible" && record.subjectRef == "CPR-bible")
+    }
+
+    @Test func theShownOwnerIsSpokenAsShown() {
+        let first = entity("ev1", "EVT-4KX2M"), second = entity("ev2", "EVT-9PQ2R")
+        let header = lifeHeader(birth: CatalogLifeFacts(event: first, eventCount: 2))
+        func eventHeader(_ entity: CatalogCanonicalEntity) -> CatalogEventHeader {
+            CatalogEventHeader(
+                entity: entity, eventTypeKey: "birth", eventTypeOrigin: CatalogOrigin.provenencia,
+                title: CatalogEventTitle(
+                    rule: .subject, ref: entity.ref, typeKey: "birth", typeOrigin: CatalogOrigin.provenencia,
+                    subjects: [CatalogNameValue(form: "Ada Lovelace")]
+                )
+            )
+        }
+        let rows = [CatalogDerivedRow(kind: .birthDate, owners: [
+            owner(second, key: "date", outcomes: [D.outcome("b", "kept")], event: eventHeader(second)),
+            owner(first, key: "date", outcomes: [D.outcome("a", "kept")], event: eventHeader(first)),
+        ])]
+        let birth = PersonDetailContent(detail: detail(header: header, derivedRows: rows), locale: en).rows[1]
+        #expect(birth.recordGroups.map(\.id) == ["ev1", "ev2"])
+        #expect(birth.recordGroups[0].owner?.shown == true)
+        #expect(birth.recordGroups[0].owner?.spoken == "Birth of Ada Lovelace, EVT-4KX2M, shown value")
+        #expect(birth.recordGroups[1].owner?.shown == false)
+        #expect(birth.recordGroups[1].owner?.spoken == "Birth of Ada Lovelace, EVT-9PQ2R")
+    }
+
+    @Test func oneOwnerHasNoGroupLine() {
+        let event = entity("ev1", "EVT-1")
+        let header = lifeHeader(birth: CatalogLifeFacts(event: event, eventCount: 1))
+        let rows = [CatalogDerivedRow(kind: .birthDate, owners: [
+            owner(event, key: "date", outcomes: [D.outcome("a", "kept")]),
+        ])]
+        let birth = PersonDetailContent(detail: detail(header: header, derivedRows: rows), locale: en).rows[1]
+        #expect(birth.recordGroups.count == 1 && birth.recordGroups[0].owner == nil)
+
+        // The shown owner has no records; the one other owner is not the shown one.
+        let other = entity("ev2", "EVT-2")
+        let lopsided = lifeHeader(birth: CatalogLifeFacts(event: event, eventCount: 2))
+        let others = [CatalogDerivedRow(kind: .birthDate, owners: [
+            owner(other, key: "date", outcomes: [D.outcome("b", "kept")]),
+        ])]
+        let row = PersonDetailContent(detail: detail(header: lopsided, derivedRows: others), locale: en).rows[1]
+        #expect(row.recordGroups.count == 1 && row.recordGroups[0].owner?.shown == false)
+    }
+
+    @Test func onlyRowsWithRecordsOfferProvenance() {
+        let page = PersonDetailContent(detail: detail(header: lifeHeader()), locale: en)
+        #expect(page.rows[1].records.isEmpty)
+
+        let event = entity("ev1", "EVT-1")
+        let denied = [CatalogDerivedRow(kind: .birthDate, owners: [
+            owner(event, key: "date", outcomes: [D.outcome("den", "denied", rank: nil)]),
+        ])]
+        let birth = PersonDetailContent(detail: detail(header: lifeHeader(), derivedRows: denied), locale: en).rows[1]
+        #expect(birth.lead == nil && birth.records.count == 1)
+        #expect(ProvenanceSheetItem(id: birth.id).row(in: [birth]) == birth)
+    }
+
+    @Test func aRecordNamesItsCitation() {
+        var outcome = D.outcome("reg", "kept", title: "Register of Baptisms")
+        outcome.artifactLabel = "Vol. 3"
+        outcome.citationLabel = "Baptism of Ada"
+        outcome.artifactPage = 37
+        #expect(CitationLineDisplay.line(outcome) == "Register of Baptisms, Vol. 3, Baptism of Ada, image 37")
+        outcome.pageLabel = " 23 "
+        #expect(CitationLineDisplay.line(outcome) == "Register of Baptisms, Vol. 3, Baptism of Ada, p. 23")
+        let bare = D.outcome("reg", "kept", title: "Register of Baptisms")
+        #expect(CitationLineDisplay.line(bare) == "Register of Baptisms")
+        let untitled = D.outcome("reg", "kept", title: "")
+        #expect(CitationLineDisplay.line(untitled) == "OBS-reg")
+        var labelled = untitled
+        labelled.artifactLabel = "Vol. 3"
+        #expect(CitationLineDisplay.line(labelled) == "OBS-reg, Vol. 3")
     }
 }

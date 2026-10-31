@@ -45,6 +45,9 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     var recordGroups: [ReconciliationRecordGroup]
     var records: [ReconciliationRecord] { recordGroups.flatMap(\.records) }
     var accessibilityLabel: String
+    /// The provenance sheet's summary line: what the row knows about the records
+    /// behind it. Nil when there is nothing to say.
+    var provenanceSummary: String?
     /// A derived row opens the Event or Place it is read from. Nil otherwise.
     var opens: Opens?
 
@@ -67,23 +70,76 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         count = ReconciledValueDisplay.countLine(field)
         against = ReconciledValueDisplay.againstLine(field)
         otherValuesLabel = ReconciledValueDisplay.otherValuesLabel(field)
-        otherValues = ReconciledValueDisplay.otherValues(field).map {
-            OtherValue(
-                rank: $0.rank,
-                text: ReconciledValueDisplay.string(for: $0.value, locale: locale, orders: orders),
-                support: L10n.Conclusions.sourceCount($0.support)
-            )
-        }
+        otherValues = ReconciledValueDisplay.otherValues(field).map { Self.otherValue($0, locale: locale, orders: orders) }
         listedValues = listed
         whyTitle = listed.count > 1
             ? L10n.Conclusions.whyThese(listed.count, label: field.label)
             : field.valueType == .name
                 ? L10n.Conclusions.whyTitleName(lead ?? field.label)
                 : L10n.Conclusions.whyTitle(lead ?? field.label)
-        recordGroups = [ReconciliationRecordGroup(owner: nil, records: Self.records([field], locale: locale, orders: orders))]
+        let records = Self.records([field], locale: locale, orders: orders)
+        recordGroups = [ReconciliationRecordGroup(
+            owner: nil, records: records,
+            values: Self.valueGroups(records, field: field, locale: locale, orders: orders)
+        )]
         accessibilityLabel = ReconciledValueDisplay.accessibilityLabel(label: field.label, lead: spokenLead, field: field)
+        provenanceSummary = Self.joinSummary([
+            ReconciledValueDisplay.spokenState(field),
+            ReconciledValueDisplay.againstLine(field),
+            records.isEmpty ? nil : L10n.Conclusions.provenanceRecordCount(records.count),
+        ])
     }
 
+    /// The summary's parts, in order, joined with the summary separator; nil when none.
+    private static func joinSummary(_ parts: [String?]) -> String? {
+        let parts = parts.compactMap { $0 }
+        guard let first = parts.first else { return nil }
+        return parts.dropFirst().reduce(first) { L10n.Conclusions.provenanceSummaryJoin($0, $1) }
+    }
+
+    /// A displayed value as a line: its text and its Source count.
+    static func otherValue(
+        _ value: CatalogReconciledValue,
+        locale: Locale,
+        orders: NameFormatOrders
+    ) -> OtherValue {
+        OtherValue(
+            rank: value.rank,
+            text: ReconciledValueDisplay.string(for: value.value, locale: locale, orders: orders),
+            support: L10n.Conclusions.sourceCount(value.support)
+        )
+    }
+
+    /// A group's records in runs of equal `groupRank`, in the order Go sent them.
+    /// Headings show when the group has two or more runs, and over a group whose
+    /// only run counts under no displayed value; one value run needs none.
+    static func valueGroups(
+        _ records: [ReconciliationRecord],
+        field: CatalogConclusionField,
+        locale: Locale,
+        orders: NameFormatOrders
+    ) -> [ReconciliationRecordGroup.ValueGroup] {
+        var runs: [(rank: Int, records: [ReconciliationRecord])] = []
+        for record in records {
+            if runs.last?.rank == record.groupRank {
+                runs[runs.count - 1].records.append(record)
+            } else {
+                runs.append((record.groupRank, [record]))
+            }
+        }
+        let showsHeadings = runs.count > 1 || runs.first?.rank == 0
+        return runs.map { run in
+            let heading: ReconciliationRecordGroup.ValueGroup.Heading?
+            if !showsHeadings {
+                heading = nil
+            } else if run.rank > 0, let value = field.displayedValues.first(where: { $0.rank == run.rank }) {
+                heading = .value(otherValue(value, locale: locale, orders: orders))
+            } else {
+                heading = .otherRecords
+            }
+            return .init(heading: heading, records: run.records)
+        }
+    }
     /// Every kept value of a multi-valued field, lead included. A weak
     /// spelling is not displayed, so it stays out of this list.
     private static func listedValues(
@@ -93,13 +149,8 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     ) -> [OtherValue] {
         guard field.state == .multiple else { return [] }
         return field.displayedValues.compactMap { value in
-            let text = ReconciledValueDisplay.string(for: value.value, locale: locale, orders: orders)
-            guard !text.isEmpty else { return nil }
-            return OtherValue(
-                rank: value.rank,
-                text: text,
-                support: L10n.Conclusions.sourceCount(value.support)
-            )
+            let listed = Self.otherValue(value, locale: locale, orders: orders)
+            return listed.text.isEmpty ? nil : listed
         }
     }
 
@@ -124,7 +175,8 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
             listedValues: [],
             whyTitle: shown.map { L10n.Conclusions.whyTitle($0) } ?? "",
             recordGroups: [ReconciliationRecordGroup(owner: nil, records: records)],
-            accessibilityLabel: spoken
+            accessibilityLabel: spoken,
+            provenanceSummary: records.isEmpty ? nil : L10n.Conclusions.provenanceRecordCount(records.count)
         )
     }
 
@@ -143,6 +195,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         opens: Opens? = nil,
         owners: [CatalogOwnerField] = [],
         shownOwnerID: String? = nil,
+        kind: CatalogDerivedRowKind? = nil,
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders()
     ) -> Self {
@@ -161,15 +214,30 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
                 for index in records.indices { records[index].counted = false }
             }
             return ReconciliationRecordGroup(
-                owner: ordered.count > 1 || owner.entity.id != shownOwnerID ? Self.ownerLine(owner, style: style, locale: locale, orders: orders) : nil,
-                records: records
+                owner: ordered.count > 1 || owner.entity.id != shownOwnerID
+                    ? Self.ownerLine(
+                        owner, style: style, shown: ordered.count > 1 && owner.entity.id == shownOwnerID,
+                        locale: locale, orders: orders
+                    )
+                    : nil,
+                records: records,
+                values: Self.valueGroups(records, field: owner.field, locale: locale, orders: orders)
             )
+        }
+        let recordCount = groups.reduce(0) { $0 + $1.records.count }
+        let summary: String?
+        if recordCount == 0 {
+            summary = nil
+        } else if groups.count > 1, let kind {
+            summary = L10n.Conclusions.provenanceRecordsFromOwners(records: recordCount, owners: groups.count, kind: kind)
+        } else {
+            summary = L10n.Conclusions.provenanceRecordCount(recordCount)
         }
         var row = Self(
             id: id, label: label, style: style, lead: shown, emptyText: emptyText,
             badge: mixed && shown != nil ? .mixed : nil,
             count: nil, against: nil, otherValuesLabel: nil, otherValues: [], listedValues: [],
-            whyTitle: "", recordGroups: groups, accessibilityLabel: spoken
+            whyTitle: "", recordGroups: groups, accessibilityLabel: spoken, provenanceSummary: summary
         )
         if !row.records.isEmpty { row.whyTitle = L10n.Conclusions.whyTitle(shown ?? label) }
         row.opens = opens
@@ -182,6 +250,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     private static func ownerLine(
         _ owner: CatalogOwnerField,
         style: ValueStyle,
+        shown: Bool,
         locale: Locale,
         orders: NameFormatOrders
     ) -> ReconciliationRecordGroup.OwnerLine {
@@ -196,11 +265,14 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
             title = EventTitleDisplay.untitled(owner.entity).text
         }
         let ref = title == owner.entity.ref ? nil : owner.entity.ref
+        let line = ref.map { L10n.Conclusions.a11yList(title, rest: $0) } ?? title
+        let spoken = shown ? L10n.Conclusions.provenanceOwnerShown(line) : line
         return .init(
             id: owner.entity.id,
             title: title,
             ref: ref,
-            spoken: ref.map { L10n.Conclusions.a11yList(title, rest: $0) } ?? title
+            spoken: spoken,
+            shown: shown
         )
     }
 
@@ -220,7 +292,8 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         Self(
             id: id, label: label, style: style, lead: nil, emptyText: emptyText, badge: nil, count: nil,
             against: nil, otherValuesLabel: nil, otherValues: [], listedValues: [], whyTitle: "", recordGroups: [],
-            accessibilityLabel: ReconciledValueDisplay.accessibilityLabel(label: label, lead: nil, field: nil)
+            accessibilityLabel: ReconciledValueDisplay.accessibilityLabel(label: label, lead: nil, field: nil),
+            provenanceSummary: nil
         )
     }
 
@@ -228,7 +301,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         id: String, label: String, style: ValueStyle, lead: String?, emptyText: String,
         badge: ReconciledValueDisplay.StateBadge?, count: String?, against: String?,
         otherValuesLabel: String?, otherValues: [OtherValue], listedValues: [OtherValue], whyTitle: String,
-        recordGroups: [ReconciliationRecordGroup], accessibilityLabel: String
+        recordGroups: [ReconciliationRecordGroup], accessibilityLabel: String, provenanceSummary: String?
     ) {
         self.id = id
         self.label = label
@@ -244,6 +317,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         self.whyTitle = whyTitle
         self.recordGroups = recordGroups
         self.accessibilityLabel = accessibilityLabel
+        self.provenanceSummary = provenanceSummary
     }
 }
 

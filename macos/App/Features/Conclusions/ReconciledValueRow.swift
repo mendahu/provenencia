@@ -5,9 +5,10 @@ import SwiftUI
 /// field's other values and for the Why. State is always text, never colour
 /// alone. Snowflake: Person, Event and Place pages share it from this folder.
 struct ReconciledValueRow: View {
-    /// How the row offers where its value came from. `.why` is the Why disclosure on
-    /// every page today; `.sheet` is the Person page's mode (S13-11 puts the provenance
-    /// control in the slot this reserves and takes the Why accordion out).
+    /// How the row offers where its value came from. `.why` is the Why disclosure
+    /// (the Event and Place pages). `.sheet` is the Person page's mode: the row
+    /// ends with a 28pt slot holding the provenance control (empty when the row
+    /// has no records) and draws no Why.
     enum Provenance {
         case why
         case sheet
@@ -15,6 +16,8 @@ struct ReconciledValueRow: View {
 
     let model: ReconciledValueRowModel
     var provenance: Provenance = .why
+    /// Opens the provenance sheet on this row (`.sheet` mode only).
+    var openProvenance: () -> Void = {}
     @Environment(WorkspaceNavigation.self) private var navigation
     @State private var showsOtherValues = false
     @State private var showsWhy = false
@@ -32,10 +35,7 @@ struct ReconciledValueRow: View {
                 summary
                 disclosures
                 if provenance == .sheet {
-                    // Reserved for the provenance control; VoiceOver skips it.
-                    Color.clear
-                        .frame(width: 28, height: 28)
-                        .accessibilityHidden(true)
+                    provenanceSlot
                 }
             }
             .frame(minHeight: 52)
@@ -45,7 +45,7 @@ struct ReconciledValueRow: View {
                     .padding(.leading, Self.disclosureInset)
                     .padding(.bottom, PVSpacing.space5)
             }
-            if showsWhy {
+            if provenance == .why, showsWhy {
                 ReconciliationReasoningView(
                     title: model.whyTitle,
                     label: model.label,
@@ -130,7 +130,7 @@ struct ReconciledValueRow: View {
                 PVDisclosureButton(label, isExpanded: $showsOtherValues)
                     .accessibilityIdentifier("conclusion.detail.row.\(model.id).others")
             }
-            if !model.records.isEmpty {
+            if provenance == .why, !model.records.isEmpty {
                 PVDisclosureButton(L10n.Conclusions.whyButton, isExpanded: $showsWhy)
                     .accessibilityIdentifier("conclusion.detail.row.\(model.id).why")
             }
@@ -142,6 +142,21 @@ struct ReconciledValueRow: View {
             }
         }
         .frame(minWidth: 72, alignment: .trailing)
+    }
+
+    /// The 28pt slot at the row's end: the provenance control when the row has
+    /// records, else empty so the values line up (VoiceOver skips the empty slot).
+    @ViewBuilder
+    private var provenanceSlot: some View {
+        if model.records.isEmpty {
+            Color.clear
+                .frame(width: 28, height: 28)
+                .accessibilityHidden(true)
+        } else {
+            PVIconButton(.info, label: L10n.Conclusions.provenanceOpen(model.label), size: .sm, action: openProvenance)
+                .frame(width: 28, height: 28)
+                .accessibilityIdentifier("conclusion.detail.row.\(model.id).provenance")
+        }
     }
 
     private var otherValues: some View {

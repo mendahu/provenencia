@@ -386,6 +386,11 @@ struct ConclusionDetailRowsSection: View {
     var title: LocalizedStringResource? = nil
     var provenance: ReconciledValueRow.Provenance = .why
 
+    @Environment(WorkspaceNavigation.self) private var navigation
+    @Environment(\.pvWidthClass) private var widthClass
+    /// The row whose provenance sheet is open (`.sheet` mode); one presenter for all rows.
+    @State private var provenanceItem: ProvenanceSheetItem?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let title {
@@ -396,7 +401,22 @@ struct ConclusionDetailRowsSection: View {
                 })
             }
             ForEach(rows) { row in
-                ReconciledValueRow(model: row, provenance: provenance)
+                ReconciledValueRow(
+                    model: row, provenance: provenance,
+                    openProvenance: { provenanceItem = ProvenanceSheetItem(id: row.id) }
+                )
+            }
+        }
+        .pvSheet(item: $provenanceItem) { item in
+            if let row = item.row(in: rows) {
+                ProvenanceSheet(row: row, isWide: widthClass == .wide, close: { provenanceItem = nil })
+                    .environment(navigation)
+            }
+        }
+        // A row that leaves the page closes its sheet.
+        .onChange(of: rows) {
+            if let item = provenanceItem, item.row(in: rows) == nil {
+                provenanceItem = nil
             }
         }
     }

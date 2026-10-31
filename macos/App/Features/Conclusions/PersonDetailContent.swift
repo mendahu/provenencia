@@ -119,7 +119,7 @@ struct PersonDetailContent: ConclusionDetailBody {
                 id: id, label: L10n.string(label), style: style, lead: lead,
                 emptyText: L10n.string(empty), mixed: mixed, opens: opens,
                 owners: derivedRows.first { $0.kind == kind }?.owners ?? [],
-                shownOwnerID: shownOwnerID, locale: locale, orders: orders
+                shownOwnerID: shownOwnerID, kind: kind, locale: locale, orders: orders
             ))
         }
         for field in fields where field.propertyKey != SeededPropertyKey.name && !field.outcomes.isEmpty {
