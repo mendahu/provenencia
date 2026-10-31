@@ -72,7 +72,9 @@ func (p Profile) Format(name namevalue.Value, style string) string {
 }
 
 // Format joins name's parts by order. An empty order keeps stored order,
-// spaces between parts. No parts returns form.
+// spaces between parts. No parts returns form. The same order and separators
+// as Swift NameValueDisplay; only Swift decorates (quotes, parentheses). This
+// string is a sort key.
 func Format(name namevalue.Value, order []PartOrder) string {
 	if len(name.Parts) == 0 {
 		return strings.TrimSpace(name.Form)

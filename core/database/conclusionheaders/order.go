@@ -35,7 +35,7 @@ func sortByTitle[T any](rows []T, title func(T) string, ref func(T) string) {
 }
 
 // personSortKey is the People list order. A name with parts sorts by the
-// profile's sorted order (the same string the row shows). A catalog with no
+// profile's sorted order, undecorated; the row may add quotes and parentheses. A catalog with no
 // default profile joins those parts in stored order. form is the transcription
 // and is not a sort input: a name with no parts sorts by its working label.
 func personSortKey(h PersonHeader, order []nameformats.PartOrder) string {

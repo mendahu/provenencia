@@ -37,8 +37,9 @@ var partTypeRegistry = []PartTypeInfo{
 	{Key: PartTypeNick, L10nKey: "nameValue.part.type.nick", Sort: 2},
 	{Key: PartTypeSurnamePrefix, L10nKey: "nameValue.part.type.surname_prefix", Sort: 3},
 	{Key: PartTypeSurname, L10nKey: "nameValue.part.type.surname", Sort: 4},
-	{Key: PartTypeSuffix, L10nKey: "nameValue.part.type.suffix", Sort: 5},
-	{Key: PartTypeUndetermined, L10nKey: "nameValue.part.type.undetermined", Sort: 6},
+	{Key: PartTypeFormerSurname, L10nKey: "nameValue.part.type.former_surname", Sort: 5},
+	{Key: PartTypeSuffix, L10nKey: "nameValue.part.type.suffix", Sort: 6},
+	{Key: PartTypeUndetermined, L10nKey: "nameValue.part.type.undetermined", Sort: 7},
 }
 
 var partTypeByKey map[string]PartTypeInfo

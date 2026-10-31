@@ -24,6 +24,7 @@ import (
 	"github.com/mendahu/provenencia/core/ingest/mediatypes"
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/objectpath"
 	"github.com/mendahu/provenencia/core/onboarding"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -39,13 +40,14 @@ import (
 // limit on either side fails here, not as a silently missing badge, row or
 // match, or a wrongly refused input.
 const (
-	swiftVocabulary = "../../macos/App/Platform/ConclusionVocabulary.swift"
-	swiftL10n       = "../../macos/App/Platform/L10n.swift"
-	swiftValueKinds = "../../macos/App/Platform/InterpretationValueKinds.swift"
-	swiftMarks      = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
-	swiftGraphKinds = "../../macos/App/Features/Workspace/Session/EvidenceGraphSnapshot.swift"
-	swiftCatalogMut = "../../macos/App/Features/Workspace/Session/CatalogMutation.swift"
-	swiftSearchKind = "../../macos/App/Platform/CatalogSearchKind.swift"
+	swiftVocabulary   = "../../macos/App/Platform/ConclusionVocabulary.swift"
+	swiftL10n         = "../../macos/App/Platform/L10n.swift"
+	swiftValueKinds   = "../../macos/App/Platform/InterpretationValueKinds.swift"
+	swiftMarks        = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
+	swiftGraphKinds   = "../../macos/App/Features/Workspace/Session/EvidenceGraphSnapshot.swift"
+	swiftCatalogMut   = "../../macos/App/Features/Workspace/Session/CatalogMutation.swift"
+	swiftSearchKind   = "../../macos/App/Platform/CatalogSearchKind.swift"
+	swiftNamePartType = "../../macos/App/Features/Names/NamePartType.swift"
 
 	swiftRegionGeometry      = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
 	swiftProjectFiles        = "../../macos/App/Platform/ProjectFiles.swift"
@@ -404,6 +406,16 @@ func listStrings() []string {
 	return out
 }
 
+// partTypeKeys is every product name part type key; Swift's NamePartType
+// decodes name parts with them.
+func partTypeKeys() []string {
+	var out []string
+	for _, info := range namevalue.PartTypes() {
+		out = append(out, info.Key)
+	}
+	return out
+}
+
 // readStrings is every keyed read's wire key.
 func readStrings() []string {
 	var out []string
@@ -462,6 +474,10 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			name: "value types", path: swiftValueKinds, enum: "PropertyValueType", re: rawCase,
 			want: sorted(propertymeta.ValueTypeText, propertymeta.ValueTypeInteger, propertymeta.ValueTypeDate,
 				propertymeta.ValueTypeName, propertymeta.ValueTypeSubject, propertymeta.ValueTypeTerm, propertymeta.ValueTypeDepiction),
+		},
+		{
+			name: "name part types", path: swiftNamePartType, enum: "NamePartType", re: listCase,
+			want: sorted(partTypeKeys()...),
 		},
 		{
 			name: "primary kinds", path: swiftGraphKinds, enum: "EvidencePrimaryKind", re: rawCase,

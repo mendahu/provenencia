@@ -241,7 +241,15 @@ struct PersonDetailTests {
         #expect(row.lead == "James Robins" && row.style == .text)
         #expect(row.badge == .merged && row.count == "2 Sources" && row.against == nil)
         #expect(row.otherValuesLabel == nil && row.otherValues.isEmpty)
-        #expect(row.whyTitle == "Why “James Robins”")
+        #expect(row.whyTitle == "Why James Robins")
+        let nick = CatalogNameValue(form: "unused", parts: [
+            CatalogNameValuePart(value: "James", type: "given"),
+            CatalogNameValuePart(value: "Jake", type: "nick"),
+            CatalogNameValuePart(value: "Robins", type: "surname"),
+        ])
+        let nicked = PersonDetailContent(detail: detail(name: D.field("single", [D.value(1, "kept", .name(nick))],
+            outcomes: [D.outcome("c", "kept", recorded: .name(nick))]))).rows[0]
+        #expect(nicked.whyTitle == "Why James “Jake” Robins")
         #expect(row.records.map(\.phrase) == [
             "kept", "folded into James Robins", "outvoted (2 of 3 Sources)", "weak · low-trust Source",
         ])

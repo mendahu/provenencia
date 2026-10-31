@@ -2825,6 +2825,35 @@ enum L10n {
             defaultValue: "Surname",
             comment: "NameValue part type: surname"
         )
+        static let partTypeFormerSurname = LocalizedStringResource(
+            "nameValue.part.type.former_surname",
+            defaultValue: "Former surname",
+            comment: "NameValue part type: former_surname"
+        )
+        static let displayNick = LocalizedStringResource(
+            "nameValue.display.nick",
+            defaultValue: "“%@”",
+            comment: "A nickname inside a displayed name; the argument is the nickname. Keep exactly one %@"
+        )
+        static func a11yNick(_ nickname: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "nameValue.a11y.nick",
+                defaultValue: "%@, nickname",
+                comment: "VoiceOver: a nickname inside a spoken name; the argument is the nickname. Keep exactly one %@"
+            ), nickname)
+        }
+        static func a11yFormerSurname(_ surname: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "nameValue.a11y.former_surname",
+                defaultValue: "former surname %@",
+                comment: "VoiceOver: a former surname inside a spoken name; the argument is the surname. Keep exactly one %@"
+            ), surname)
+        }
+        static let displayFormerSurname = LocalizedStringResource(
+            "nameValue.display.former_surname",
+            defaultValue: "(%@)",
+            comment: "A former surname inside a displayed name; the argument is the surname. Keep exactly one %@"
+        )
         static let partTypeSuffix = LocalizedStringResource(
             "nameValue.part.type.suffix",
             defaultValue: "Suffix",
@@ -9541,6 +9570,14 @@ enum L10n {
                 "conclusions.why.title",
                 defaultValue: "Why “%@”",
                 comment: "Heading of the records behind a value; argument is the value"
+            ), value)
+        }
+
+        static func whyTitleName(_ value: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.why.title.name",
+                defaultValue: "Why %@",
+                comment: "Heading of the records behind a name value; the argument is the displayed name, which may carry its own quotes"
             ), value)
         }
 
