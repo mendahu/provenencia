@@ -601,9 +601,8 @@ extension CatalogQueryKey.Kind {
                         guard case .personClaims(_, let entityId) = key else { return [] }
                         return [entityId]
                     },
-                    .applyHiddenPolicy(follows: .evidenceGraphs) { session, key in
-                        let groups: [CatalogPersonClaimGroup]? = session.queryHandle(key)?.value
-                        return Set((groups ?? []).flatMap(\.claims).map(\.graphID))
+                    .applyHiddenPolicy(followsValue: .evidenceGraphs) { (groups: [CatalogPersonClaimGroup]) in
+                        Set(groups.flatMap(\.claims).map(\.graphID))
                     },
                 ],
                 load: { key, store in

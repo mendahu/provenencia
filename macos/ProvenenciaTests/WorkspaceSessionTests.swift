@@ -979,10 +979,21 @@ struct WorkspaceSessionTests {
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g1"])) == [claimsKey])
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g9"])).isEmpty)
         #expect(Set(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"]))) == [claimsKey, detailKey])
-        // A key with no value yet holds no graph to follow.
-        let empty = CatalogQueryKey.personClaims(project: project, entityId: "e2")
-        let _: QueryHandle<[CatalogPersonClaimGroup]> = session.query(empty)
-        #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g1"])) == [claimsKey])
+    }
+
+    /// A `.personClaims` key whose first load is in flight follows every
+    /// graph; once it holds a value it follows only the graphs it holds.
+    @Test func personClaimsFollowEveryGraphUntilLoaded() {
+        let session = makeSession()
+        let project = session.projectKey
+        let key = CatalogQueryKey.personClaims(project: project, entityId: "e1")
+        let _: QueryHandle<[CatalogPersonClaimGroup]> = session.query(key)
+        #expect((session.queryHandle(key) as QueryHandle<[CatalogPersonClaimGroup]>?)?.value == nil)
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g9"])) == [key])
+
+        session.setQueryValue(key, value: claims(onGraph: "g1"))
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g9"])).isEmpty)
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g1"])) == [key])
     }
 
     /// T-12 (AC-2.7): the Evidence graph and list keys declare the slots they

@@ -154,6 +154,19 @@ struct CatalogQueryRefresh: Sendable {
         CatalogQueryRefresh(follows: follows, action: .revalidate { session, key in ids(session, key) })
     }
 
+    /// A refresh whose ids come from the key's cached `Value`. Until the key
+    /// holds a value its first load is in flight and its ids are unknown, so
+    /// the refresh matches any id the slot names.
+    static func applyHiddenPolicy<Value>(
+        followsValue follows: CatalogQueryFollows,
+        ids: @escaping @Sendable (Value) -> Set<String>
+    ) -> CatalogQueryRefresh {
+        CatalogQueryRefresh(follows: follows, action: .revalidate { session, key in
+            let value: Value? = session.queryHandle(key)?.value
+            return value.map(ids)
+        })
+    }
+
     /// A refresh that re-applies the hidden policy to a warmed key whenever the
     /// write names any id.
     static func applyHiddenPolicyOnAny(follows: CatalogQueryFollows) -> CatalogQueryRefresh {
