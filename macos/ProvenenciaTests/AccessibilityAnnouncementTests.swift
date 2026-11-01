@@ -14,7 +14,7 @@ struct AccessibilityAnnouncementTests {
         )
         #expect(
             AccessibilityAnnouncement.text(title: "Couldn't save the evidence graph", message: "The name is taken.")
-                == L10n.DesignSystem.announcementJoin("Couldn't save the evidence graph", "The name is taken.")
+                == L10n.DesignSystem.spokenJoin("Couldn't save the evidence graph", "The name is taken.")
         )
     }
 

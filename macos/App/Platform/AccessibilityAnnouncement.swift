@@ -9,7 +9,7 @@ enum AccessibilityAnnouncement {
         switch parts.count {
         case 0: return nil
         case 1: return parts[0]
-        default: return L10n.DesignSystem.announcementJoin(parts[0], parts[1])
+        default: return L10n.DesignSystem.spokenJoin(parts[0], parts[1])
         }
     }
 

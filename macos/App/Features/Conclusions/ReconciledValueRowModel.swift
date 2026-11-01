@@ -220,7 +220,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     ) -> Self {
         let shown = lead.flatMap { $0.isEmpty ? nil : $0 }
         let records = Self.records(fields, locale: locale, orders: NameFormatOrders())
-        let spoken = shown.map { L10n.Conclusions.a11yList(label, rest: $0) }
+        let spoken = shown.map { L10n.DesignSystem.spokenJoin(label, $0) }
             ?? ReconciledValueDisplay.accessibilityLabel(label: label, lead: nil, field: nil)
         return Self(
             id: id, label: label, style: .date, lead: shown, emptyText: emptyText,
@@ -256,7 +256,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         let spoken: String
         if let shown {
             let parts = [label, shown] + (mixed ? [L10n.string(L10n.Conclusions.badgeMixed)] : [])
-            spoken = parts.dropFirst().reduce(parts[0]) { L10n.Conclusions.a11yList($0, rest: $1) }
+            spoken = parts.dropFirst().reduce(parts[0]) { L10n.DesignSystem.spokenJoin($0, $1) }
         } else {
             spoken = ReconciledValueDisplay.accessibilityLabel(label: label, lead: nil, field: nil)
         }
@@ -332,7 +332,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         }
         let identity = owner.place?.entity ?? owner.entity
         let ref = title == identity.ref ? nil : identity.ref
-        let line = ref.map { L10n.Conclusions.a11yList(title, rest: $0) } ?? title
+        let line = ref.map { L10n.DesignSystem.spokenJoin(title, $0) } ?? title
         let spoken = shown ? L10n.Conclusions.provenanceOwnerShown(line) : line
         return .init(
             id: identity.id,

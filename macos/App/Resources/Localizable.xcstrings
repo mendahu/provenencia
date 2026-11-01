@@ -1338,8 +1338,8 @@
         }
       }
     },
-    "designSystem.announcement.join": {
-      "comment": "VoiceOver join of a toast's or callout's title and message",
+    "designSystem.spokenJoin": {
+      "comment": "VoiceOver join of two spoken parts (a label and its detail, a title and its message)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -18102,18 +18102,6 @@
         }
       }
     },
-    "conclusions.a11y.list": {
-      "comment": "Joins two parts of a spoken Conclusion field (label, value, state, disagreement)",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@, %2$@"
-          }
-        }
-      }
-    },
     "lastUpdated.a11y.updated": {
       "comment": "VoiceOver suffix of a list row; argument is the spoken time (Today at 3:15 PM, Yesterday, October 12, 2026)",
       "extractionState": "manual",
@@ -20937,18 +20925,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Promoted"
-          }
-        }
-      }
-    },
-    "lastUpdated.a11y.join": {
-      "comment": "Joins a list row's spoken label and its last-updated phrase",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@, %2$@"
           }
         }
       }

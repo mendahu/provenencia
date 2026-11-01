@@ -146,12 +146,12 @@ enum L10n {
             comment: "Accessibility label for a PVToast's dismiss button"
         )
 
-        static func announcementJoin(_ title: String, _ message: String) -> String {
+        static func spokenJoin(_ first: String, _ second: String) -> String {
             L10n.format(LocalizedStringResource(
-                "designSystem.announcement.join",
+                "designSystem.spokenJoin",
                 defaultValue: "%1$@, %2$@",
-                comment: "VoiceOver join of a toast's or callout's title and message"
-            ), title, message)
+                comment: "VoiceOver join of two spoken parts (a label and its detail, a title and its message)"
+            ), first, second)
         }
 
         static let reorderHandle = LocalizedStringResource(
@@ -9739,14 +9739,6 @@ enum L10n {
             ), label)
         }
 
-        static func a11yList(_ first: String, rest: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "conclusions.a11y.list",
-                defaultValue: "%1$@, %2$@",
-                comment: "Joins two parts of a spoken Conclusion field (label, value, state, disagreement)"
-            ), first, rest)
-        }
-
         static func a11yLifeLine(_ word: String, date: String, place: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.a11y.vital",
@@ -9815,14 +9807,6 @@ enum L10n {
     /// Last-updated cell on a list row: the hover help and the spoken suffix.
     /// The day words and the stamp are `L10n.Timestamp`.
     enum LastUpdated {
-        static func a11yJoin(_ base: String, _ updated: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "lastUpdated.a11y.join",
-                defaultValue: "%1$@, %2$@",
-                comment: "Joins a list row's spoken label and its last-updated phrase"
-            ), base, updated)
-        }
-
         static func a11yUpdated(_ text: String) -> String {
             L10n.format(LocalizedStringResource(
                 "lastUpdated.a11y.updated",
