@@ -185,6 +185,7 @@ struct PVInput: View {
                 onBlur?()
             }
         }
+        .pvFieldNamed()
     }
 
     private var isFieldFocused: Bool {

@@ -270,7 +270,6 @@ struct CitationComposerEvidenceColumn: View {
                 prompt: L10n.CitationComposer.descriptionPrompt
             )
             .accessibilityIdentifier("citationComposer.label")
-            .accessibilityLabel(Text(L10n.CitationComposer.descriptionLabel))
         }
     }
 

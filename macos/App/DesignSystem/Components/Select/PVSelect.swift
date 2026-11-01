@@ -95,6 +95,7 @@ struct PVSelect<Row: View>: View {
     private let rowHeight: CGFloat
     private let isDisabled: Bool
     private let isInvalid: Bool
+    @Environment(\.pvFieldLabel) private var fieldLabel
     private let accessibilityLabelResource: LocalizedStringResource?
     private let accessibilitySpokenLabel: String?
     private let accessibilityIdentifier: String?
@@ -356,13 +357,10 @@ struct PVSelect<Row: View>: View {
     }
 
     private var accessibilityLabelText: Text {
-        if let accessibilityLabelResource {
-            Text(accessibilityLabelResource)
-        } else if let accessibilitySpokenLabel {
-            Text(verbatim: accessibilitySpokenLabel)
-        } else {
-            Text(verbatim: triggerText)
-        }
+        Text(verbatim: PVFieldLabel.resolve(
+            own: accessibilityLabelResource.map(L10n.string) ?? accessibilitySpokenLabel,
+            field: fieldLabel.map(L10n.string)
+        ) ?? triggerText)
     }
 
     @ViewBuilder
