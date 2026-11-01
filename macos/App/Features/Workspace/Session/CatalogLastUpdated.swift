@@ -29,7 +29,7 @@ enum CatalogQueryFollows: Sendable, Equatable {
     case source
     /// The graph ids of one entry of `CatalogWriteEffects.reads`. Graph
     /// progress also follows the mutation's graph when it names one the
-    /// effects did not (Promote reports no effects yet; S12-32 removes this special case).
+    /// effects did not (Promote reports no effects yet; S14-16 removes this special case).
     case reads(CatalogRead)
     /// `CatalogWriteEffects.touchedHandles`: every handle a write changed or
     /// whose header it changed.

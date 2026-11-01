@@ -77,3 +77,6 @@ Nits (logged): none.
 
 ## Result
 Gate PASS (on `9f9d32af`; `origin/main` unchanged since the branch was cut, `79630be9`) · CI green (first run: `promotealign` `TestLargeSourceBudgets/after_a_handle_commit` took 1.86 s against a 1.5 s budget on the runner; locally 0.71 s on the branch vs 0.82 s on base `79630be9`, so not this PR; the re-run passed) · open: none · follow-ups: PRF-1 (more than 64 Evidence graphs per person cycles the graph LRU; revisit if the Slice 7 budget of 50 rises) · to user: CON-2 (answered 2026-10-31: fix in the refresh helper, F-6) · CON miss: none
+
+## After review (user, 2026-11-01)
+A cache-wide look after the PR was ready: `.personClaims` adds a user of `conclusionTriggers`, so any promote drops every cached person's claims. Later PR → written into S14-16's map scope entry (Ships and Check): `conclusionTriggers` loses `.promotedSubject` and `.deletedSource` once those writes report their handles. Follow-up → new Spike 14 PR S14-27 (user, 2026-11-01): the `lists` / `structure` switch in `CatalogQueryRegistry.invalidations(for list:)` moves onto descriptors. The stale `S12-32` comment in `CatalogLastUpdated.swift` now names S14-16.

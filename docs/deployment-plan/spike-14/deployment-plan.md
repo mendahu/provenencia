@@ -138,6 +138,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-24 | Give every workspace page its width class | 6 | `PVSpacing.widthWideBreakpoint` (1600), `PVWidthClass` and the `pvWidthClass` environment value, measured once at `WorkspaceDestinationHost`; no visible change | — | — | [S14-24-wide-width-class.md](prs/S14-24-wide-width-class.md) | Landed #628 |
 | S14-25 | Page columns in the kit | — | Folded into the page redesigns: Spike 13's S13-10 builds `PVPageColumns` with the Person page frame (user, 2026-10-29) | — | — | — | Descoped (2026-10-29) → S13-10 |
 | S14-26 | A folded nickname shows as a nickname | 3 | When the reconciler folds a nickname recorded as a given name into its formal name (S11-28), the reconciled name keeps it as a `nick` part, so S14-09's quotes show it: *James “Jake” Robins* | — | S14-09, S14-18 | — | Scoped |
+| S14-27 | Every write reaches its keys through their descriptors | 5 | The `lists` and `structure` effects reload keys through each kind's descriptor, as the other effect slots do; the hand-written `CatalogQueryRegistry.invalidations(for list:)` switch goes (S13-01 ship log) | — | S14-17 | — | Scoped |
 | S14-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -176,6 +177,7 @@ SLICE 5 — Audit fixes (batch 5)
   S14-21  Search finds every spelling
   S14-16  Promote and Source writes return their effects   (after S13-24)
   S14-17  Vocabulary writes return their effects
+  S14-27  Every write reaches its keys through their descriptors   (after S14-17)
   S14-20  The Promote page recovers and speaks   (after S14-14, S13-24)
   S14-22  Promote's wire says what Go decided   (after S13-23)
   Check: bar outcomes 15 – 20.
@@ -205,6 +207,7 @@ S13-10 ──▶ S14-02   (Spike 13: Page columns and PersonDetailSections, whic
 S14-13 ──▶ S14-03
 S14-D6 ──▶ S14-03
 S14-16 ──▶ S14-17
+S14-17 ──▶ S14-27
 S14-14 ──▶ S14-20
 S13-24 ──▶ S14-16, S14-20      (Spike 13)
 S13-23 ──▶ S14-22             (Spike 13)
@@ -335,10 +338,10 @@ If the plan runs past about ten steps, it splits along these parts.
 
 #### S14-16 — Promote and Source writes return their effects
 
-**Ships.** `ApplyPromoteGraphAlignment`, `UpdateSource`, `DeleteSource` and `SetSourceCover` return `WriteEffects`, and their callers apply them. Sidebar counts become an effects list, `counts`, set by `sources` and `canonical_entities` creates and deletes; the recount follows `WriteEffects.lists` and `navCountTriggers` goes. `.promotedSubject` goes when `conclusionTriggers` no longer needs it, and the other `CatalogMutation` cases the effects now cover go with it. The dead `promoteSubject` path goes (handler, proto method reserved, store methods, FakeStore). The four `oneof header` copies in `engine.proto` (`SearchHit`, `ConclusionDetail`, `PromoteGraphAlignmentAlternative`, `PromoteGraphAlignmentRow`) become one shared header message, so Swift maps a header once (`GoStore.mapConclusionHeader`, `mapSearchHeader`, `mapPromoteRowHeader`, `mapPromoteAlternativeHeader` become one) while this PR rewrites the Promote mapping (S13-23 review log; user, 2026-10-30). A test in `api/ffi` holds every request with a `user_id` to a response with `WriteEffects`, with an allow-list of S14-17's writes.
+**Ships.** `ApplyPromoteGraphAlignment`, `UpdateSource`, `DeleteSource` and `SetSourceCover` return `WriteEffects`, and their callers apply them. Sidebar counts become an effects list, `counts`, set by `sources` and `canonical_entities` creates and deletes; the recount follows `WriteEffects.lists` and `navCountTriggers` goes. `.promotedSubject` goes when `conclusionTriggers` no longer needs it, and the other `CatalogMutation` cases the effects now cover go with it. `conclusionTriggers` loses `.promotedSubject` and `.deletedSource`: the Conclusion keys (`.conclusionDetail`, `.personClaims`, and the Persons, Events and Places lists) already follow `touchedHandles` through their descriptor `refreshes`, so once Promote and Source delete report the handles they change, a promote reloads only those people's keys instead of every cached person's (S13-01 ship log, 2026-11-01). `.updatedProperty` stays in the set until S14-17. The dead `promoteSubject` path goes (handler, proto method reserved, store methods, FakeStore). The four `oneof header` copies in `engine.proto` (`SearchHit`, `ConclusionDetail`, `PromoteGraphAlignmentAlternative`, `PromoteGraphAlignmentRow`) become one shared header message, so Swift maps a header once (`GoStore.mapConclusionHeader`, `mapSearchHeader`, `mapPromoteRowHeader`, `mapPromoteAlternativeHeader` become one) while this PR rewrites the Promote mapping (S13-23 review log; user, 2026-10-30). A test in `api/ffi` holds every request with a `user_id` to a response with `WriteEffects`, with an allow-list of S14-17's writes.
 **Not this PR.** Vocabulary writes (S14-17).
 **Depends on.** Spike 13's S13-24, which first removes Apply's pin and claim-field inputs from `promote_batch.go` and `GoStore.applyPromoteGraphAlignment`, the handler and mapping this PR rewrites (2026-10-29).
-**Check.** Handler tests assert each write's effects; the pin test passes with its allow-list; a Promote Done refreshes the canvas, progress and the sidebar counts through effects alone; a Source rename refreshes Promote's Source titles.
+**Check.** Handler tests assert each write's effects; the pin test passes with its allow-list; a Promote Done refreshes the canvas, progress and the sidebar counts through effects alone; a Source rename refreshes Promote's Source titles. A session test: a promote of one person revalidates that person's `.personClaims` and `.conclusionDetail` and leaves another warmed person's alone.
 **Context.** Audit A-29, A-35; working rule "Every audited write returns its effects, and a test holds them to it"; map review K-5, K-10; [`macos-client-patterns.md`](../../macos-client-patterns.md) cache contract rule 2 (its exceptions shrink) and `add-workspace-place` (it teaches `navCountTriggers`), both updated; S12-16 (`navCountTriggers`); `add-ffi-handler`. **Spike 12 ship-log leftover (2026-10-29):** the plan confirms the newest recount wins when two finish out of order (today `CatalogCounts.refreshAll` is last-writer-wins).
 
 #### S14-17 — Vocabulary writes return their effects; dead RPCs go
@@ -347,6 +350,13 @@ If the plan runs past about ten steps, it splits along these parts.
 **Not this PR.** Deleting `UpdatePropertyTerm`, `DeletePropertyTerm` or `ReorderSubjectTypeProperties` (named by idea files): they stay and return `WriteEffects` like the rest, so the allow-list empties; the audit's test-net items (L-16).
 **Check.** Handler tests assert effects; the pin test's allow-list is empty; no RPC is left without a Swift caller except the three kept; `macos-client-patterns.md` rule 2 lists only exceptions effects cannot express.
 **Context.** Audit A-29, A-35; working rule "Every audited write returns its effects, and a test holds them to it"; `add-ffi-handler`. After S14-16, whose pin test it empties. The plan confirms `RemoveInstallIdentity` is not planned before deleting it.
+
+#### S14-27 — Every write reaches its keys through their descriptors
+
+**Ships.** A `CatalogQueryFollows` slot for a write's catalog-wide `lists` (and `structure`), so the Properties workspace and the Evidence graphs list declare the lists they follow in their own descriptor, as every other key declares `touchedHandles`, `evidenceGraphs` and `reads`. `CatalogQueryRegistry.invalidations(for list:)` and the `lists` / `structure` half of `invalidations(for:project:)` go, leaving one path from a write's effects to the keys it reloads (`WorkspaceSession.revalidatedKeys`) beside the mutation-name `invalidateOn` that S14-16 and S14-17 shrink. No reload a researcher sees changes.
+**Not this PR.** The sidebar `counts` list (S14-16 sets it; it drives the recount, not a key); removing `invalidateOn`.
+**Check.** Registry and session tests: each list and `structure` reloads exactly the keys it did before; `rg 'invalidations\(for list' macos/App` finds nothing; `add-workspace-place` and `macos-client-patterns.md` describe one path.
+**Context.** S13-01 ship log (2026-11-01: a cache-wide look after S13-01 moved the other effect slots onto descriptor `refreshes`); [`add-workspace-place`](../../../.agents/skills/add-workspace-place/SKILL.md) Refresh; [`macos-client-patterns.md`](../../macos-client-patterns.md) cache contract. After S14-17, the last PR to change which effects writes report.
 
 #### S14-18 — Name folds keep the formal name and never crash
 
