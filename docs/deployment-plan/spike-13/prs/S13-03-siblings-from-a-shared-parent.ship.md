@@ -1,7 +1,7 @@
 # Ship log — S13-03 Siblings from a shared parent
 
 **Plan:** [`S13-03-siblings-from-a-shared-parent.md`](S13-03-siblings-from-a-shared-parent.md) · **Branch:** `s13-03-siblings-from-a-shared-parent` · **PR:** #666
-**State:** ready
+**State:** ready — CI budget test red on the runner, not this PR
 
 ## Round 0 — implement
 Base `067be776` (plan written against `0c166624`; `main` is 23 commits ahead).
@@ -93,5 +93,8 @@ Reviewers: MNT, SEC+PRF (each had a Fix-now blocker or major). CON not re-sent: 
 ## Finish
 Merged `origin/main` (`80ca74ba`, docs only) → `275d09b7`. Gate PASS against `80ca74ba`.
 
+## CI
+Go tests fails `TestLargeSourceBudgets`: run 1 `warm` 362 ms (350 ms) and `after_a_handle_commit` 2.04 s (1.5 s); rerun of the failed job `after_a_handle_commit` 2.05 s. Not this PR: locally, `-count=3`, `main` @ `80ca74ba` 110–115 ms / 583–606 ms and the head 111–116 ms / 574–601 ms; at `-cpu 1`, `main` 131–136 ms / 795–839 ms and the head 146–148 ms / 818–828 ms. Promote never asks for siblings (AC-3.5). The same case failed CI on S13-02 (1.615 s, 2.014 s) and S14-11 (1.89 s) before they merged. Taken to the user; no code fix round.
+
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: SEC-2 (`edgeKey` separator), `TestMemoFollowsCommit/a_handle_merged` fails under `PROVENENCIA_GRAPH_VERIFY=1` on `main` · to user: SEC-1 (answered 2026-11-01: registry cap, keep first N; `MaxPairSteps` = 10) · CON miss: none
+Gate PASS · CI red: `TestLargeSourceBudgets` (promotealign) on the runner, not this PR · open: none · follow-ups: SEC-2 (`edgeKey` separator), `TestMemoFollowsCommit/a_handle_merged` fails under `PROVENENCIA_GRAPH_VERIFY=1` on `main` · to user: SEC-1 (answered 2026-11-01: registry cap, keep first N; `MaxPairSteps` = 10) · CON miss: none
