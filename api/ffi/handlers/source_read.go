@@ -65,15 +65,24 @@ func newListedContext(c *database.Catalog) (listedContext, error) {
 // graph's ref order. Subject labels, for Observations whose value is another
 // Subject, come from the graph's Subjects.
 func (lc listedContext) rows(eg graphcache.EvidenceGraph, keep func(graphcache.EvidenceObservation) bool) ([]observations.Listed, error) {
+	var kept []graphcache.EvidenceObservation
+	for _, o := range eg.Observations {
+		if keep(o) {
+			kept = append(kept, o)
+		}
+	}
+	return lc.rowsOf(eg, kept)
+}
+
+// rowsOf projects the given stored Observations of eg, in order, with the
+// Subject labels of eg.
+func (lc listedContext) rowsOf(eg graphcache.EvidenceGraph, obs []graphcache.EvidenceObservation) ([]observations.Listed, error) {
 	subjectLabels := map[string]string{}
 	for _, s := range eg.Subjects {
 		subjectLabels[string(s.ID)] = s.Label
 	}
 	var rows []observations.Listed
-	for _, o := range eg.Observations {
-		if !keep(o) {
-			continue
-		}
+	for _, o := range obs {
 		listed, err := listedFromSource(o, lc.props, lc.terms, subjectLabels)
 		if err != nil {
 			return nil, err

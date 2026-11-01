@@ -40,10 +40,7 @@ func ListPersonClaims(in []byte) ([]byte, error) {
 		var counts []int
 		for _, g := range groups {
 			for _, cl := range g.Claims {
-				subjectID := cl.Subject.ID
-				claimRows, err := lc.rows(cl.Graph, func(o graphcache.EvidenceObservation) bool {
-					return bytes.Equal(o.SubjectID, subjectID)
-				})
+				claimRows, err := lc.rowsOf(cl.Graph, cl.Observations)
 				if err != nil {
 					return err
 				}
@@ -71,10 +68,7 @@ func ListPersonClaims(in []byte) ([]byte, error) {
 					GraphId:   database.UUIDString(cl.Graph.GraphID),
 					GraphRef:  cl.Graph.GraphRef,
 					GraphName: cl.Graph.GraphName,
-					Subject: subjectProto(subjects.Subject{
-						ID: cl.Subject.ID, Ref: cl.Subject.Ref, SourceID: cl.Subject.SourceID, SubjectTypeID: cl.Subject.SubjectTypeID,
-						Label: cl.Subject.Label, Description: cl.Subject.Description,
-					}),
+					Subject: evidenceSubjectProto(cl.Subject),
 					Observations: protos[next : next+n : next+n],
 				})
 				next += n
