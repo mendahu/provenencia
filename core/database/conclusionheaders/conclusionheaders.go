@@ -3,8 +3,10 @@
 // R4). One header composer per kind serves every surface that shows a handle
 // as a row: lists, Promote's target picker, omnibar hits, later tree nodes.
 //
-// A finished header is stored on the catalog graph. A list read fills any
-// row that is missing, in a fixed number of queries whatever its length.
+// A header's stored row holds ids and keys; term and Property labels are
+// filled on read, from the cached vocabulary. The row is stored on the catalog
+// graph. A list read fills any row that is missing, in a fixed number of
+// queries whatever its length.
 // Go returns structures, including which naming-matrix rule titles an Event
 // (eventtitle); the app formats text.
 package conclusionheaders
