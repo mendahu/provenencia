@@ -123,6 +123,7 @@ enum Method {
   METHOD_DELETE_EVIDENCE_GRAPH = 106;
   METHOD_GET_EVIDENCE_GRAPH_UNLINK_IMPACT = 109;
   METHOD_REORDER_SUBJECT_TYPE_PROPERTIES = 111;
+  METHOD_LIST_PERSON_CLAIMS = 112;
 }
 
 message PingRequest {
@@ -1493,6 +1494,41 @@ message ConclusionField {
 message GetConclusionDetailRequest {
   string project_dir = 1;
   string entity_id = 2;
+}
+
+// ListPersonClaimsRequest asks for a canonical person's accepted identity
+// claims. An unknown or merged handle is conclusiondetails.not_found.
+message ListPersonClaimsRequest {
+  string project_dir = 1;
+  string entity_id = 2;
+}
+
+// ListPersonClaimsResponse groups the person's accepted claims by Source,
+// ordered by Source title (ties by Source ref).
+message ListPersonClaimsResponse {
+  repeated PersonClaimGroup groups = 1;
+}
+
+// PersonClaimGroup is the accepted claims that come from one Source.
+// source_type_id is the Source's type; the client resolves its label.
+message PersonClaimGroup {
+  string source_id = 1;
+  string source_ref = 2;
+  string source_title = 3;
+  string source_type_id = 4;
+  repeated PersonClaim claims = 5;  // by Evidence graph name, then ref
+}
+
+// PersonClaim is one accepted claim: the claimed Subject and its Observations
+// on the Evidence graph that holds them. graph_ref is empty for a graph with
+// no ref.
+message PersonClaim {
+  string claim_id = 1;
+  string graph_id = 2;
+  string graph_ref = 3;
+  string graph_name = 4;
+  Subject subject = 5;
+  repeated Observation observations = 6;
 }
 
 // PictureDetail is one picture a handle's gallery shows (S10-35 / S14-01),
