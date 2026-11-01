@@ -469,6 +469,37 @@ func TestLifeFactsProtoCarriesIdentities(t *testing.T) {
 	}
 }
 
+func TestHeaderProtosCarryTerms(t *testing.T) {
+	termID := mustUUIDBytes(t)
+	t.Run("person", func(t *testing.T) {
+		got := personHeaderProto(conclusionheaders.PersonHeader{
+			Gender: conclusionheaders.TermFacts{
+				Term:  &conclusionheaders.Term{ID: termID, Key: "woman", Origin: "provenencia", Label: "Woman"},
+				Count: 1, PropertyLabel: "Gender",
+			},
+		})
+		g := got.GetGender()
+		if g.GetTerm().GetId() != database.UUIDString(termID) || g.GetTerm().GetKey() != "woman" || g.GetTerm().GetLabel() != "Woman" || g.GetTerm().GetOrigin() != "provenencia" || g.GetCount() != 1 || g.GetPropertyLabel() != "Gender" {
+			t.Fatalf("gender %+v", g)
+		}
+		if got.GetSexAtBirth() == nil || got.GetSexAtBirth().GetTerm() != nil || got.GetSexAtBirth().GetCount() != 0 {
+			t.Fatalf("sex at birth %+v", got.GetSexAtBirth())
+		}
+	})
+	t.Run("event type", func(t *testing.T) {
+		got := eventHeaderProto(conclusionheaders.EventHeader{Type: conclusionheaders.TermFacts{
+			Term:  &conclusionheaders.Term{ID: termID, Key: "birth", Origin: "provenencia", Label: "Birth"},
+			Count: 2,
+		}})
+		if et := got.GetEventType(); et.GetKey() != "birth" || et.GetLabel() != "Birth" || et.GetOrigin() != "provenencia" || got.GetEventTypeCount() != 2 {
+			t.Fatalf("event type %+v count %d", et, got.GetEventTypeCount())
+		}
+		if bare := eventHeaderProto(conclusionheaders.EventHeader{}); bare.GetEventType() != nil {
+			t.Fatalf("event type %+v", bare.GetEventType())
+		}
+	})
+}
+
 func mustUUIDBytes(t *testing.T) []byte {
 	t.Helper()
 	id := uuid.Must(uuid.NewV7())

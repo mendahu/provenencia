@@ -5,9 +5,11 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
@@ -30,6 +32,22 @@ func (f *fixture) cite(s subjects.Subject, in ...observations.Input) {
 		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
 			GraphID:    f.graph,
 			ArtifactID: f.artifact.ID, LocatorJSON: locator,
+		}, in)
+	})
+	must(f.t, err)
+}
+
+// citeOn is cite on art's own Source graph.
+func (f *fixture) citeOn(art artifacts.Artifact, s subjects.Subject, in ...observations.Input) {
+	f.t.Helper()
+	for i := range in {
+		in[i].SubjectID = s.ID
+	}
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
+	_, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			GraphID:    graph,
+			ArtifactID: art.ID, LocatorJSON: locator,
 		}, in)
 	})
 	must(f.t, err)
@@ -222,8 +240,8 @@ func TestCanonicalWalks(t *testing.T) {
 	if forms := subjectForms(birthHeader); !sameSet(forms, []string{"James Robins"}) {
 		t.Fatalf("birth subjects %v", forms)
 	}
-	if birthHeader.EventType == nil || birthHeader.EventType.Key != "birth" {
-		t.Fatalf("birth type %+v", birthHeader.EventType)
+	if birthHeader.Type.Term == nil || birthHeader.Type.Term.Key != "birth" {
+		t.Fatalf("birth type %+v", birthHeader.Type.Term)
 	}
 	if len(birthHeader.Places) != 2 {
 		t.Fatalf("birth locations %d", len(birthHeader.Places))
@@ -232,8 +250,8 @@ func TestCanonicalWalks(t *testing.T) {
 	if forms := subjectForms(marriageHeader); !sameSet(forms, []string{"James Robins", "Mary Smith"}) {
 		t.Fatalf("marriage subjects %v", forms)
 	}
-	if marriageHeader.EventType.Key != "marriage" {
-		t.Fatalf("marriage type %s", marriageHeader.EventType.Key)
+	if marriageHeader.Type.Term.Key != "marriage" {
+		t.Fatalf("marriage type %s", marriageHeader.Type.Term.Key)
 	}
 	if forms := subjectForms(events[string(censusID)]); len(forms) != 3 {
 		t.Fatalf("census subjects %v", forms)
@@ -242,8 +260,8 @@ func TestCanonicalWalks(t *testing.T) {
 		t.Fatalf("unnamed %+v", events[string(baptismID)].Subjects)
 	}
 	fireHeader := events[string(fireID)]
-	if len(fireHeader.Subjects) != 0 || fireHeader.EventType.Label != "Fire" {
-		t.Fatalf("fire %+v subjects %d", fireHeader.EventType, len(fireHeader.Subjects))
+	if len(fireHeader.Subjects) != 0 || fireHeader.Type.Term.Label != "Fire" {
+		t.Fatalf("fire %+v subjects %d", fireHeader.Type.Term, len(fireHeader.Subjects))
 	}
 	if got := placeNames(fireHeader.Places); !sameSet(got, []string{"York", "Tkaronto"}) {
 		t.Fatalf("fire places %v", got)

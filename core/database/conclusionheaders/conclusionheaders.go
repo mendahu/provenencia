@@ -37,6 +37,10 @@ type PersonHeader struct {
 	// death event. Places are folded location chains at the event's date.
 	Birth LifeFacts
 	Death LifeFacts
+	// Gender and SexAtBirth are the displayed gender and sex at birth terms;
+	// the app chooses which colors a person.
+	Gender     TermFacts
+	SexAtBirth TermFacts
 	// PictureImageFileID is the image of the picture the Person leads with
 	// on its page and in the Persons list; nil when none. The preferred
 	// portrait when its picture is in the gallery, else the earliest
@@ -45,6 +49,15 @@ type PersonHeader struct {
 	// Updated is the handle's latest canonical_entity revision and its time.
 	// Filled by List only; zero means none.
 	Updated effects.Activity
+}
+
+// TermFacts is one term-valued Property of a header. Term is the rank-1 kept
+// term, nil when none; Count is the number of kept values, more than one is a
+// disagreement; Term label and origin and PropertyLabel are filled at read time.
+type TermFacts struct {
+	Term          *Term
+	Count         int
+	PropertyLabel string
 }
 
 // LifeFacts is a birth or a death composed from the canonical graph.

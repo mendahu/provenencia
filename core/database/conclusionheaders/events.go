@@ -11,8 +11,9 @@ import (
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
-// EventType is the displayed (kept rank-1) event_type term.
-type EventType struct {
+// Term is a term value of a header: the displayed (kept rank-1) term of a
+// Property. Key names a product term only when Origin is the product's.
+type Term struct {
 	ID     []byte
 	Key    string
 	Origin string // the term's origin; Key is a product type's only when it is the product's
@@ -27,8 +28,8 @@ type EventHeader struct {
 	Entity         canonicalentities.Entity
 	EventName      string
 	EventNameCount int
-	EventType      *EventType
-	EventTypeCount int
+	// Type is the event_type term, with how many values are displayed.
+	Type           TermFacts
 	Date           *datevalue.Value
 	DateCount      int
 	StartDate      *datevalue.Value
@@ -63,8 +64,8 @@ func eventTitle(h EventHeader) eventtitle.Plan {
 		Ref:          h.Entity.Ref,
 		Place:        FirstPlaceName(h.Places),
 	}
-	if h.EventType != nil {
-		parts.TypeKey, parts.TypeOrigin, parts.TypeLabel = h.EventType.Key, h.EventType.Origin, h.EventType.Label
+	if t := h.Type.Term; t != nil {
+		parts.TypeKey, parts.TypeOrigin, parts.TypeLabel = t.Key, t.Origin, t.Label
 	}
 	for _, s := range h.Subjects {
 		parts.Subjects = append(parts.Subjects, eventtitle.Subject{Name: s.Name})

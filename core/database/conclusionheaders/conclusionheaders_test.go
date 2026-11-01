@@ -38,6 +38,7 @@ import (
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
@@ -265,7 +266,7 @@ func TestHeadersShowKeptValuesOnly(t *testing.T) {
 					if string(h.Entity.ID) != string(entityID) {
 						continue
 					}
-					if h.EventName != "" || h.EventType != nil || h.Date != nil {
+					if h.EventName != "" || h.Type.Term != nil || h.Date != nil {
 						t.Fatalf("listed provisional values %+v", h)
 					}
 				}
@@ -298,12 +299,17 @@ func TestHeadersShowKeptValuesOnly(t *testing.T) {
 
 func TestListPersonsQueryCountIsConstant(t *testing.T) {
 	f := newFixture(t)
-	f.person("Ada Lovelace")
+	gender := func(s subjects.Subject) {
+		f.cite(s, observations.Input{PropertyID: f.prop("gender").ID, ValueTermID: f.term("gender", "woman").ID})
+	}
+	s, _, _ := f.person("Ada Lovelace")
+	gender(s)
 	f.c.Graph().Drop()
 	one, err := conclusionheaders.ListPersonsQueryCount(f.c)
 	must(t, err)
 	for i := 0; i < 50; i++ {
-		f.person(fmt.Sprintf("Person %d", i), fmt.Sprintf("Alias %d", i))
+		s, _, _ := f.person(fmt.Sprintf("Person %d", i), fmt.Sprintf("Alias %d", i))
+		gender(s)
 	}
 	f.c.Graph().Drop()
 	many, err := conclusionheaders.ListPersonsQueryCount(f.c)
@@ -601,8 +607,8 @@ func TestListEvents(t *testing.T) {
 		t.Fatalf("fire %+v", got[0])
 	}
 	born := byID[string(birthID)]
-	if born.EventType == nil || born.EventType.Key != "birth" || born.EventType.Label != "Birth" || born.EventType.Origin != "provenencia" || born.Title.Parts.TypeOrigin != "provenencia" || born.EventTypeCount != 1 {
-		t.Fatalf("type %+v", born.EventType)
+	if born.Type.Term == nil || born.Type.Term.Key != "birth" || born.Type.Term.Label != "Birth" || born.Type.Term.Origin != "provenencia" || born.Title.Parts.TypeOrigin != "provenencia" || born.Type.Count != 1 {
+		t.Fatalf("type %+v", born.Type)
 	}
 	if born.Date == nil || *born.Date.StartYear != 1985 || born.StartDate != nil || born.EndDate != nil || born.StartDateCount != 1 {
 		t.Fatalf("date wins over span %+v", born)
@@ -1017,4 +1023,174 @@ func TestByIDs(t *testing.T) {
 	if _, ok := h.Person(make([]byte, 16)); ok {
 		t.Error("an id of no entity was found")
 	}
+}
+
+// termObs cites the term of a product Property.
+func (f *fixture) termObs(propertyKey, termKey string) observations.Input {
+	return observations.Input{PropertyID: f.prop(propertyKey).ID, ValueTermID: f.term(propertyKey, termKey).ID}
+}
+
+func (f *fixture) personHeader(id []byte) conclusionheaders.PersonHeader {
+	f.t.Helper()
+	got, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{id})
+	must(f.t, err)
+	if len(got) != 1 {
+		f.t.Fatalf("headers %d", len(got))
+	}
+	return got[0]
+}
+
+func TestPersonHeaderTerms(t *testing.T) {
+	termKey := func(f conclusionheaders.TermFacts) string {
+		if f.Term == nil {
+			return ""
+		}
+		return f.Term.Key
+	}
+	tests := []struct {
+		name                      string
+		build                     func(f *fixture) []byte
+		gender, sex               string
+		genderCount, sexCount     int
+		genderTermSet, sexTermSet bool
+	}{
+		{
+			name: "one member",
+			build: func(f *fixture) []byte {
+				s, _, id := f.person("Ada")
+				f.cite(s, f.termObs("gender", "woman"))
+				return id
+			},
+			gender: "woman", genderCount: 1, genderTermSet: true,
+		},
+		{
+			name: "sex only",
+			build: func(f *fixture) []byte {
+				s, _, id := f.person("Ada")
+				f.cite(s, f.termObs("sex_at_birth", "male"))
+				return id
+			},
+			sex: "male", sexCount: 1, sexTermSet: true,
+		},
+		{
+			name: "two Sources disagree",
+			build: func(f *fixture) []byte {
+				s, _, id := f.person("Ada")
+				f.cite(s, f.termObs("gender", "woman"))
+				_, art := f.book("Census")
+				s2 := subjectstest.OfType(f.t, f.c, userID, evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID, f.typeID("person"), "")
+				f.citeOn(art, s2, f.termObs("gender", "man"))
+				promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s2.ID, EntityID: id})
+				return id
+			},
+			genderCount: 2, genderTermSet: true,
+		},
+		{
+			name: "provisional",
+			build: func(f *fixture) []byte {
+				personType := f.typeID("person")
+				handle, err := writes.Call(f.c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+					return canonicalentities.Create(tx, userID, canonicalentities.CreateInput{SubjectTypeID: personType})
+				})
+				must(t, err)
+				s := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+				f.cite(s, f.termObs("gender", "woman"))
+				_, err = writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+					return identityclaims.Create(tx, userID, identityclaims.CreateInput{
+						SubjectID: s.ID, EntityID: handle.ID, Status: identityclaims.StatusProvisional,
+					})
+				})
+				must(t, err)
+				db, err := f.c.DB()
+				must(t, err)
+				must(t, autoreconciler.RecomputeTx(db, [][]byte{handle.ID}))
+				return handle.ID
+			},
+		},
+		{
+			name: "user Property",
+			build: func(f *fixture) []byte {
+				s, _, id := f.person("Ada")
+				// Researchers cannot create term Properties, so the user's own
+				// "gender" is a text Property: it still must not feed the header.
+				prop, err := writes.Call(f.c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+					return properties.Create(tx, userID, "Gender", propertymeta.ValueTypeText, "", propertymeta.CardinalityMultiple)
+				})
+				must(f.t, err)
+				personType := f.typeID("person")
+				must(f.t, subjectvocab.EnsureBinding(f.c, personType, prop.ID, 99))
+				f.cite(s, observations.Input{PropertyID: prop.ID, ValueText: "Woman", HasText: true})
+				return id
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newFixture(t)
+			h := f.personHeader(tt.build(f))
+			if h.Gender.Count != tt.genderCount || h.SexAtBirth.Count != tt.sexCount {
+				t.Fatalf("counts gender %d sex %d", h.Gender.Count, h.SexAtBirth.Count)
+			}
+			if (h.Gender.Term != nil) != tt.genderTermSet || (h.SexAtBirth.Term != nil) != tt.sexTermSet {
+				t.Fatalf("terms gender %+v sex %+v", h.Gender.Term, h.SexAtBirth.Term)
+			}
+			if tt.gender != "" && termKey(h.Gender) != tt.gender || tt.sex != "" && termKey(h.SexAtBirth) != tt.sex {
+				t.Fatalf("keys gender %q sex %q", termKey(h.Gender), termKey(h.SexAtBirth))
+			}
+		})
+	}
+}
+
+func TestPersonHeaderTermLabels(t *testing.T) {
+	t.Run("labels", func(t *testing.T) {
+		f := newFixture(t)
+		s, _, id := f.person("Ada")
+		f.cite(s, f.termObs("gender", "woman"))
+		h := f.personHeader(id)
+		if h.Gender.Term == nil || h.Gender.Term.Label != "Woman" || h.Gender.Term.Origin != vocabkey.OriginProvenencia {
+			t.Fatalf("term %+v", h.Gender.Term)
+		}
+		if h.Gender.PropertyLabel != "Gender" || h.SexAtBirth.PropertyLabel != "Sex at birth" {
+			t.Fatalf("property labels %q %q", h.Gender.PropertyLabel, h.SexAtBirth.PropertyLabel)
+		}
+	})
+	t.Run("term relabel", func(t *testing.T) {
+		f := newFixture(t)
+		s, _, id := f.person("Ada")
+		genderID := f.prop("gender").ID
+		term, err := writes.Call(f.c, writes.Op{Action: "create_property_term", UserID: userID}, func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+			return propertyterms.Create(tx, userID, genderID, "Agender", "")
+		})
+		must(t, err)
+		f.cite(s, observations.Input{PropertyID: genderID, ValueTermID: term.ID})
+		if h := f.personHeader(id); h.Gender.Term == nil || h.Gender.Term.Label != "Agender" {
+			t.Fatalf("before %+v", h.Gender.Term)
+		}
+		_, err = writes.Call(f.c, writes.Op{Action: "update_property_term", UserID: userID}, func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+			return propertyterms.Update(tx, userID, term.ID, "No gender", "")
+		})
+		must(t, err)
+		h := f.personHeader(id)
+		if h.Gender.Term == nil || h.Gender.Term.Label != "No gender" || h.Gender.Term.Origin != "user" {
+			t.Fatalf("after %+v", h.Gender.Term)
+		}
+		must(t, f.c.Graph().Verify())
+	})
+	t.Run("Property relabel", func(t *testing.T) {
+		f := newFixture(t)
+		s, _, id := f.person("Ada")
+		f.cite(s, f.termObs("gender", "woman"))
+		if h := f.personHeader(id); h.Gender.PropertyLabel != "Gender" {
+			t.Fatalf("before %q", h.Gender.PropertyLabel)
+		}
+		p := f.prop("gender")
+		_, err := writes.Call(f.c, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+			return properties.Update(tx, userID, p.ID, "Gender identity", p.ValueType, p.Description, p.Cardinality)
+		})
+		must(t, err)
+		if h := f.personHeader(id); h.Gender.PropertyLabel != "Gender identity" {
+			t.Fatalf("after %q", h.Gender.PropertyLabel)
+		}
+		must(t, f.c.Graph().Verify())
+	})
 }

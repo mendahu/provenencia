@@ -21,11 +21,13 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// vocab is the label map a header resolves at read time. Term labels and
-// "today" are not stored on the row, so a rename or a new day does not
-// throw the row away.
+// vocab is the label map a header resolves at read time. Term and Property
+// labels and "today" are not stored on the row, so a rename or a new day does
+// not throw the row away.
 type vocab struct {
-	propID    map[string][]byte
+	propID map[string][]byte
+	// propLabel is each product Property's catalog label, keyed by Property key.
+	propLabel map[string]string
 	termLabel map[string]string
 	// termOrigin is each term's origin: a key names a product term only with the product's.
 	termOrigin map[string]string
@@ -49,63 +51,82 @@ func vocabulary(g *graphcache.Graph) (vocab, error) {
 func loadVocab(g *graphcache.Graph) (vocab, error) {
 	v := vocab{
 		propID:     map[string][]byte{},
+		propLabel:  map[string]string{},
 		termLabel:  map[string]string{},
 		termOrigin: map[string]string{},
 		typeID:     map[string][]byte{},
 	}
-	if err := scanVocab(g, `SELECT id, key FROM properties WHERE origin = ?`, []any{vocabkey.OriginProvenencia}, func(id []byte, key, _ string) {
-		v.propID[key] = append([]byte(nil), id...)
+	if err := scanVocab(g, `SELECT id, key, label FROM properties WHERE origin = ?`, []any{vocabkey.OriginProvenencia}, func(id []byte, cols []string) {
+		v.propID[cols[0]] = append([]byte(nil), id...)
+		v.propLabel[cols[0]] = cols[1]
 	}); err != nil {
 		return vocab{}, err
 	}
-	if err := scanTerms(g, v); err != nil {
+	if err := scanVocab(g, `SELECT id, label, origin FROM property_terms`, nil, func(id []byte, cols []string) {
+		v.termLabel[string(id)] = cols[0]
+		v.termOrigin[string(id)] = cols[1]
+	}); err != nil {
 		return vocab{}, err
 	}
-	if err := scanVocab(g, `SELECT id, key FROM subject_types WHERE origin = ?`, []any{vocabkey.OriginProvenencia}, func(id []byte, key, _ string) {
-		v.typeID[key] = append([]byte(nil), id...)
+	if err := scanVocab(g, `SELECT id, key FROM subject_types WHERE origin = ?`, []any{vocabkey.OriginProvenencia}, func(id []byte, cols []string) {
+		v.typeID[cols[0]] = append([]byte(nil), id...)
 	}); err != nil {
 		return vocab{}, err
 	}
 	return v, nil
 }
 
-// scanTerms reads each term's label and origin in one pass.
-func scanTerms(g *graphcache.Graph, v vocab) error {
-	rows, err := g.Query(`SELECT id, label, origin FROM property_terms`)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var id []byte
-		var label, origin string
-		if err := rows.Scan(&id, &label, &origin); err != nil {
-			return err
-		}
-		v.termLabel[string(id)] = label
-		v.termOrigin[string(id)] = origin
-	}
-	return rows.Err()
-}
-
-func scanVocab(g *graphcache.Graph, query string, args []any, take func(id []byte, a, b string)) error {
+// scanVocab runs query and hands each row to take: the id, then every further
+// column as a string.
+func scanVocab(g *graphcache.Graph, query string, args []any, take func(id []byte, cols []string)) error {
 	rows, err := g.Query(query, args...)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
+	names, err := rows.Columns()
+	if err != nil {
+		return err
+	}
 	for rows.Next() {
 		var id []byte
-		var a string
-		if err := rows.Scan(&id, &a); err != nil {
+		cols := make([]string, len(names)-1)
+		dest := make([]any, len(names))
+		dest[0] = &id
+		for i := range cols {
+			dest[i+1] = &cols[i]
+		}
+		if err := rows.Scan(dest...); err != nil {
 			return err
 		}
-		take(id, a, "")
+		take(id, cols)
 	}
 	return rows.Err()
 }
 
 func (v vocab) prop(key string) []byte { return v.propID[key] }
+
+// propLabelOf is the catalog label of the product Property with key.
+func (v vocab) propLabelOf(key string) string { return v.propLabel[key] }
+
+// finishTerm returns a copy of t with its label and origin filled from the
+// vocabulary; it never writes through t, which may be a stored row's.
+func (v vocab) finishTerm(t *Term) *Term {
+	if t == nil {
+		return nil
+	}
+	out := *t
+	out.Label = v.termLabel[string(out.ID)]
+	out.Origin = v.termOrigin[string(out.ID)]
+	return &out
+}
+
+// finishFacts fills the read-time labels of a term-valued Property's facts.
+func (v vocab) finishFacts(f TermFacts, propertyKey string) TermFacts {
+	f.Term = v.finishTerm(f.Term)
+	f.PropertyLabel = v.propLabelOf(propertyKey)
+	return f
+}
 
 func entityOf(n *graphcache.Node) canonicalentities.Entity {
 	return canonicalentities.Entity{
@@ -153,6 +174,16 @@ func keptTerm(n *graphcache.Node, propID []byte) (id []byte, key string, nkept i
 		return nil, "", len(rows)
 	}
 	return append([]byte(nil), row.TermID...), row.TermKey, len(rows)
+}
+
+// keptTermFacts is the rank-1 kept term of a Property and the kept count.
+func keptTermFacts(n *graphcache.Node, propID []byte) TermFacts {
+	id, key, count := keptTerm(n, propID)
+	f := TermFacts{Count: count}
+	if key != "" {
+		f.Term = &Term{ID: id, Key: key}
+	}
+	return f
 }
 
 func keptDateAt(n *graphcache.Node, propID []byte) (*datevalue.Value, int, string, bool, error) {
@@ -482,14 +513,21 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 	}
 	out := make([]PersonHeader, 0, len(nodes))
 	for _, n := range nodes {
-		if h, ok := fresh[string(n.ID)]; ok {
-			out = append(out, h)
-			continue
+		h, ok := fresh[string(n.ID)]
+		if !ok {
+			row, _ := g.Display(n.ID)
+			h = row.(PersonHeader)
 		}
-		row, _ := g.Display(n.ID)
-		out = append(out, row.(PersonHeader))
+		out = append(out, finishPerson(v, h))
 	}
 	return out, nil
+}
+
+// finishPerson fills the read-time labels of a stored person row.
+func finishPerson(v vocab, h PersonHeader) PersonHeader {
+	h.Gender = v.finishFacts(h.Gender, vocabkey.PropertyGender)
+	h.SexAtBirth = v.finishFacts(h.SexAtBirth, vocabkey.PropertySexAtBirth)
+	return h
 }
 
 // leadPictures returns each handle's leading gallery image File id, keyed by
@@ -515,6 +553,8 @@ func onePerson(v vocab, n *graphcache.Node, g *graphcache.Graph, pg *placeGraph,
 		return PersonHeader{}, err
 	}
 	h.Name, h.NameValueCount = name, count
+	h.Gender = keptTermFacts(n, v.prop(vocabkey.PropertyGender))
+	h.SexAtBirth = keptTermFacts(n, v.prop(vocabkey.PropertySexAtBirth))
 	births, deaths, err := lifePicks(g, v, n)
 	if err != nil {
 		return PersonHeader{}, err
@@ -824,10 +864,7 @@ func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 func oneEvent(g *graphcache.Graph, v vocab, pg *placeGraph, n *graphcache.Node) (EventHeader, error) {
 	h := EventHeader{Entity: entityOf(n)}
 	h.EventName, h.EventNameCount = keptText(n, v.prop("event_name"))
-	if id, key, count := keptTerm(n, v.prop(vocabkey.PropertyEventType)); key != "" {
-		h.EventType = &EventType{ID: id, Key: key}
-		h.EventTypeCount = count
-	}
+	h.Type = keptTermFacts(n, v.prop(vocabkey.PropertyEventType))
 	var err error
 	if h.Date, h.DateCount, _, _, err = keptDateAt(n, v.prop(vocabkey.PropertyDate)); err != nil {
 		return EventHeader{}, err
@@ -875,12 +912,7 @@ func oneEvent(g *graphcache.Graph, v vocab, pg *placeGraph, n *graphcache.Node) 
 }
 
 func finishEvent(v vocab, h EventHeader) EventHeader {
-	if h.EventType != nil {
-		et := *h.EventType
-		et.Label = v.termLabel[string(et.ID)]
-		et.Origin = v.termOrigin[string(et.ID)]
-		h.EventType = &et
-	}
+	h.Type = v.finishFacts(h.Type, vocabkey.PropertyEventType)
 	h.Title = eventTitle(h)
 	return h
 }

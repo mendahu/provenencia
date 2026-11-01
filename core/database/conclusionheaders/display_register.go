@@ -25,7 +25,7 @@ func checkDisplay(g *graphcache.Graph, id []byte, stored any) error {
 		if err != nil {
 			return err
 		}
-		if len(got) != 1 || !reflect.DeepEqual(got[0], row) {
+		if len(got) != 1 || !reflect.DeepEqual(got[0], finishPerson(v, row)) {
 			return fmt.Errorf("conclusionheaders: stored person %x does not match a fresh row", id)
 		}
 	case EventHeader:
