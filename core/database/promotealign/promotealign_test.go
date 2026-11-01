@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
 	"slices"
 	"testing"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
+	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
@@ -33,6 +35,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/ref"
@@ -1594,4 +1597,39 @@ func (f *fixture) filedBirth(src sources.Source, art artifacts.Artifact, name st
 		f.join(b, bh)
 	}
 	return p, b, ph, bh
+}
+
+// A shared parent is not sibling evidence for Promote (R-18a): the siblings the
+// page reads leave the proposal as it was.
+func TestProposeIgnoresStoredSiblings(t *testing.T) {
+	f := newFixture(t)
+	ann := f.person(f.source, f.artifact, "Ann Ames")
+	bea := f.person(f.source, f.artifact, "Bea Ames")
+	cal := f.person(f.source, f.artifact, "Cal Ames")
+	f.relationship(f.source, f.artifact, ann, bea, "parent")
+	f.relationship(f.source, f.artifact, ann, cal, "parent")
+	f.promote(ann)
+	beaID := f.promote(bea).Entity.ID
+	calID := f.promote(cal).Entity.ID
+
+	src, art := f.newSource("Source 1")
+	sbea := f.person(src, art, "Bea Ames")
+	scal := f.person(src, art, "Cal Ames")
+	f.relationship(src, art, sbea, scal, "sibling")
+	before := f.propose(f.graph(src), nil)
+
+	reader, err := canonlinks.NewReader(f.c.Graph(), matchregistry.Default().Kinship)
+	must(t, err)
+	must(t, reader.LoadSiblings([][]byte{beaID, calID}))
+	links, err := reader.Relationships(beaID, canonlinks.Options{Siblings: true})
+	must(t, err)
+	if !slices.ContainsFunc(links, func(l kinship.Link) bool {
+		return slices.ContainsFunc(l.Shapes, func(sh kinship.Shape) bool { return sh.Pattern == kinship.PatternSharedParent })
+	}) {
+		t.Fatal("setup: Bea has no sibling through Ann")
+	}
+	after := f.propose(f.graph(src), nil)
+	if !reflect.DeepEqual(before, after) {
+		t.Fatalf("proposal changed after siblings were stored:\n%+v\n%+v", before, after)
+	}
 }
