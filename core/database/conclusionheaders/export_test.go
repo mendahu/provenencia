@@ -36,5 +36,5 @@ func ListPlacesQueryCount(c *database.Catalog) (int, error) {
 
 // SortPlaces applies the list order to Place rows.
 func SortPlaces(rows []PlaceHeader) {
-	sortByTitle(rows, placeTitle, func(h PlaceHeader) string { return h.Entity.Ref })
+	SortByTitle(rows, placeTitle, func(h PlaceHeader) string { return h.Entity.Ref })
 }

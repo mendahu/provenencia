@@ -290,7 +290,7 @@ func persons(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PersonHeader
 		return nil, err
 	}
 	order := loaded.Profile.Sorted
-	sortByTitle(out, func(h PersonHeader) string { return personSortKey(h, order) }, func(h PersonHeader) string { return h.Entity.Ref })
+	SortByTitle(out, func(h PersonHeader) string { return personSortKey(h, order) }, func(h PersonHeader) string { return h.Entity.Ref })
 	return out, nil
 }
 
@@ -408,7 +408,7 @@ func places(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PlaceHeader, 
 	if err != nil {
 		return nil, err
 	}
-	sortByTitle(out, placeTitle, func(h PlaceHeader) string { return h.Entity.Ref })
+	SortByTitle(out, placeTitle, func(h PlaceHeader) string { return h.Entity.Ref })
 	return out, nil
 }
 
