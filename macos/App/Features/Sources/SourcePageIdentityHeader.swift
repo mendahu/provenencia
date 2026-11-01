@@ -6,7 +6,7 @@ struct SourcePageIdentityHeader: View {
     /// Local draft so title keystrokes don't invalidate the whole Source page
     /// observation graph on every character.
     @State private var titleDraft = ""
-    private enum TypeField: Hashable { case combo }
+    private enum TypeField: Hashable { case combo, edit }
     @FocusState private var typeFieldFocused: TypeField?
 
     var body: some View {
@@ -213,7 +213,7 @@ struct SourcePageIdentityHeader: View {
                         }
                         .frame(width: 210)
                         .disabled(model.identity.isSaving)
-                        .onAppear { DispatchQueue.main.async { typeFieldFocused = .combo } }
+                        .onAppear { FocusClaim.claim($typeFieldFocused, .combo) }
                         .onChange(of: model.identity.typeDraftID) { _, newValue in
                             guard !newValue.isEmpty, newValue != model.identity.sourceTypeID else { return }
                             Task { await model.identity.saveType() }
@@ -241,9 +241,15 @@ struct SourcePageIdentityHeader: View {
                     PVIconButton(.penLine, label: L10n.Sources.editType, size: .sm) {
                         model.identity.beginEditType()
                     }
+                    .focused($typeFieldFocused, equals: .edit)
                     .accessibilityIdentifier("sources.page.type.edit")
                 }
             }
+        }
+        // The pencil is inserted by the commit that closes the editor, so the
+        // hand-back goes through the app's focus claim.
+        .onChange(of: model.identity.editingType) { was, now in
+            if was, !now { FocusClaim.claim($typeFieldFocused, .edit) }
         }
     }
 }
