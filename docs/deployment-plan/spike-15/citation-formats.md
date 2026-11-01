@@ -1,6 +1,6 @@
 # Citation formats
 
-**Status:** Spike 15 design input, not yet cut into PRs ([`README.md`](README.md)); planned together with the first-class Source date ([`source-provenance-date.md`](source-provenance-date.md)), which is one of the fields a standard citation needs (user, 2026-10-31). The first step ships in Spike 13: the provenance sheet (S13-11, brief S13-D2) shows each record's **citation line** built from the data the catalog has (user, 2026-10-31). This file lists what a standard genealogical citation needs that the catalog does not have yet. It replaces the "Layered citation output" note in [`source-structure-later.md`](../../ideas/source-structure-later.md).
+**Status:** Spike 15 design input, not yet cut into PRs ([`README.md`](README.md)); planned together with the first-class Source date ([`source-provenance-date.md`](source-provenance-date.md)), which is one of the fields a standard citation needs (user, 2026-10-31). The first step ships in Spike 13: the provenance sheet (S13-11, brief S13-D2) shows each record's **citation line** built from the data the catalog has (user, 2026-10-31). This file lists what a standard genealogical citation needs that the catalog does not have yet.
 
 ## The convention
 

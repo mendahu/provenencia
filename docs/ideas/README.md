@@ -16,11 +16,9 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 
 ## Current ideas
 
-Pulled into [Spike 15](../deployment-plan/spike-15/) on 2026-11-01: the Source date, citation formats and moving an Artifact to another Source.
-
 
 - [`source-to-source-relationships.md`](source-to-source-relationships.md)
-- [`source-structure-later.md`](source-structure-later.md) — what Spike 12 parked: nested Sources, derivation links, named templates, per-graph credibility (layered citations moved to [`spike-15/citation-formats.md`](../deployment-plan/spike-15/citation-formats.md))
+- [`source-structure-later.md`](source-structure-later.md) — what Spike 12 parked: nested Sources, derivation links, named templates, per-graph credibility
 - [`artifact-outside-graph-marker.md`](artifact-outside-graph-marker.md) — name, in a graph delete's confirm, the Artifacts it leaves in no Evidence graph; the card marker went to Spike 12 (S12-38)
 - [`graph-canvas-second-host.md`](graph-canvas-second-host.md) — what a family-tree canvas host still needs from GraphCanvas: hit targets from measured layout, a routed edge layer, selection, growable bounds, a host zoom range
 - [`promote-ranking.md`](promote-ranking.md) — rebuild Promote's ranking on the Evidence graph scoring; the matching work parked with it when Spike 12 closed
