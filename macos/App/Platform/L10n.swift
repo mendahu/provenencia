@@ -8199,94 +8199,94 @@ enum L10n {
         static let kindNouns: [String: LocalizedStringResource] = [
             "source": LocalizedStringResource(
                 "deleteImpact.kind.source",
-                defaultValue: "source",
+                defaultValue: "%#@noun@",
                 comment: "Impact kind noun, bare, by count"
             ),
             "artifact": LocalizedStringResource(
                 "deleteImpact.kind.artifact",
-                defaultValue: "artifact",
+                defaultValue: "%#@noun@",
                 comment: "Impact kind noun, bare, by count"
             ),
             "evidence_graph": LocalizedStringResource(
                 "deleteImpact.kind.evidence_graph",
-                defaultValue: "evidence graph",
+                defaultValue: "%#@noun@",
                 comment: "Impact kind noun, bare, by count"
             ),
             "citation": LocalizedStringResource(
                 "deleteImpact.kind.citation",
-                defaultValue: "citation",
+                defaultValue: "%#@noun@",
                 comment: "Impact kind noun, bare, by count"
             ),
             "observation": LocalizedStringResource(
                 "deleteImpact.kind.observation",
-                defaultValue: "observation",
+                defaultValue: "%#@noun@",
                 comment: "Impact kind noun, bare, by count"
             ),
             "subject": LocalizedStringResource(
                 "deleteImpact.kind.subject",
-                defaultValue: "subject",
+                defaultValue: "%#@noun@",
                 comment: "Impact kind noun, bare, by count"
             ),
             "source_type": LocalizedStringResource(
                 "deleteImpact.kind.source_type",
-                defaultValue: "source type",
+                defaultValue: "%#@noun@",
                 comment: "Impact kind noun, bare, by count"
             ),
             "metadata_field": LocalizedStringResource(
                 "deleteImpact.kind.metadata_field",
-                defaultValue: "metadata field",
+                defaultValue: "%#@noun@",
                 comment: "Impact kind noun, bare, by count"
             ),
             "source_credibility_grade": LocalizedStringResource(
                 "deleteImpact.kind.source_credibility_grade",
-                defaultValue: "credibility grade",
+                defaultValue: "%#@noun@",
                 comment: "Impact kind noun, bare, by count"
             ),
             "subject_type": LocalizedStringResource(
                 "deleteImpact.kind.subject_type",
-                defaultValue: "subject type",
+                defaultValue: "%#@noun@",
                 comment: "Impact kind noun, bare, by count"
             ),
             "property": LocalizedStringResource(
                 "deleteImpact.kind.property",
-                defaultValue: "property",
+                defaultValue: "%#@noun@",
                 comment: "Impact kind noun, bare, by count"
             ),
             "property_term": LocalizedStringResource(
                 "deleteImpact.kind.property_term",
-                defaultValue: "property term",
+                defaultValue: "%#@noun@",
                 comment: "Impact kind noun, bare, by count"
             ),
             "canonical_entity": LocalizedStringResource(
                 "deleteImpact.kind.canonical_entity",
-                defaultValue: "person, event, or place",
+                defaultValue: "%#@noun@",
                 comment: "Impact kind noun, bare, by count for a Conclusion handle (PER-…, EVT-…, PLC-…)"
             ),
             "user": LocalizedStringResource(
                 "deleteImpact.kind.user",
-                defaultValue: "user",
+                defaultValue: "%#@noun@",
                 comment: "Impact kind noun, bare, by count (infra)"
             ),
             "project": LocalizedStringResource(
                 "deleteImpact.kind.project",
-                defaultValue: "project",
+                defaultValue: "%#@noun@",
                 comment: "Impact kind noun, bare, by count (infra)"
             ),
             "file": LocalizedStringResource(
                 "deleteImpact.kind.file",
-                defaultValue: "file",
+                defaultValue: "%#@noun@",
                 comment: "Impact kind noun, bare, by count"
             ),
             "identity_claim": LocalizedStringResource(
                 "deleteImpact.kind.identity_claim",
-                defaultValue: "identity claim",
+                defaultValue: "%#@noun@",
                 comment: "Impact kind noun, bare, by count"
             ),
         ]
 
         private static let itemNoun = LocalizedStringResource(
             "deleteImpact.kind.item",
-            defaultValue: "item",
+            defaultValue: "%#@noun@",
             comment: "Impact kind noun, bare, by count; fallback for a kind with no noun"
         )
 
@@ -8399,7 +8399,7 @@ enum L10n {
         static func viaFallback(kind: String, total: Int) -> String {
             L10n.format(LocalizedStringResource(
                 "deleteImpact.via.unknown",
-                defaultValue: "%1$lld %2$@ references this",
+                defaultValue: "%1$lld %2$@ %#@verb@ this",
                 comment: "Unknown-via group heading; arguments are total and kind noun (plural noun); the verb agrees with the total"
             ), total, noun(kind, count: total))
         }
