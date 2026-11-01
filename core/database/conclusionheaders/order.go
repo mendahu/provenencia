@@ -9,17 +9,17 @@ import (
 	"golang.org/x/text/language"
 )
 
-// sortByTitle orders Person and Place rows by the title the row shows: its
-// name (or toponym), else its working label, ignoring case and diacritics
-// (Montréal beside Montreal), by the Unicode root collation so the order is
-// the same in every locale. A row titled only by its ref sorts last, by ref.
-// Ties break by ref. This is the one owner of list order; the app shows rows
-// as given.
 // titleCollator is built once. Constructing it sorts the whole collation
 // table, which is most of a list's time when every call makes a new one.
 var titleCollator = collate.New(language.Und, collate.IgnoreCase, collate.IgnoreDiacritics)
 
-func sortByTitle[T any](rows []T, title func(T) string, ref func(T) string) {
+// SortByTitle orders any titled row by the title it shows (a Person or Place
+// row by its name or toponym, else its working label; a Source group by its
+// title), ignoring case and diacritics (Montréal beside Montreal), by the
+// Unicode root collation so the order is the same in every locale. A row
+// titled only by its ref sorts last, by ref. Ties break by ref. This is the
+// one owner of title order; the app shows rows as given.
+func SortByTitle[T any](rows []T, title func(T) string, ref func(T) string) {
 	sort.SliceStable(rows, func(i, j int) bool {
 		ti, tj := strings.TrimSpace(title(rows[i])), strings.TrimSpace(title(rows[j]))
 		if (ti == "") != (tj == "") {

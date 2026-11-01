@@ -164,23 +164,33 @@ const (
 		WHERE ao.entity_id IN (`
 )
 
-// ForEntity composes the detail of one unmerged handle.
-func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
+// Handle returns the graph node of one unmerged handle. A nil catalog or
+// graph, a malformed id, and an unknown or merged handle are ErrNotFound.
+func Handle(c *database.Catalog, entityID []byte) (*graphcache.Node, error) {
 	if c == nil || c.Graph() == nil || len(entityID) != 16 {
-		return Detail{}, ErrNotFound
+		return nil, ErrNotFound
 	}
 	n, err := c.Graph().Node(entityID)
 	if err != nil {
-		return Detail{}, err
+		return nil, err
 	}
 	if n == nil || n.Merged {
-		return Detail{}, ErrNotFound
+		return nil, ErrNotFound
+	}
+	return n, nil
+}
+
+// ForEntity composes the detail of one unmerged handle.
+func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
+	n, err := Handle(c, entityID)
+	if err != nil {
+		return Detail{}, err
 	}
 	db, err := c.DB()
 	if err != nil {
 		return Detail{}, err
 	}
-	d := Detail{Entity: entityOf(n), MemberCount: acceptedMembers(n)}
+	d := Detail{Entity: entityOf(n), MemberCount: len(n.AcceptedMembers())}
 	tiles, err := gallery.ForEntities(db, [][]byte{entityID})
 	if err != nil {
 		return Detail{}, err
@@ -295,16 +305,6 @@ func entityOf(n *graphcache.Node) canonicalentities.Entity {
 		Argument:      n.Argument,
 		Label:         n.Label,
 	}
-}
-
-func acceptedMembers(n *graphcache.Node) int {
-	var nAccepted int
-	for _, m := range n.Members {
-		if m.Accepted {
-			nAccepted++
-		}
-	}
-	return nAccepted
 }
 
 // state reads a field's state off its displayed values, by the same rule as

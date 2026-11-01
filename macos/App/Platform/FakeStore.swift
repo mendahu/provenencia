@@ -90,6 +90,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// A handle's detail as Go would compose it, seeded by tests. Persons
     /// without a seed fall back to the name mirror below.
     var seededConclusionDetails: [String: CatalogConclusionDetail] = [:]
+    /// A Person's claims as Go would group them, seeded by tests. An entity
+    /// with no seed is unknown (an empty list is a seeded Person with none).
+    var seededPersonClaims: [String: [CatalogPersonClaimGroup]] = [:]
     /// The Identity Claim Promote wrote per Subject id.
     var claimBySubject: [String: CatalogIdentityClaim] = [:]
     var subjectPositionsBySubject: [String: CatalogSubjectPosition] = [:]
@@ -1953,6 +1956,17 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             case (.none, .some): return false
             default: return a.entity.ref.localizedCaseInsensitiveCompare(b.entity.ref) == .orderedAscending
             }
+        }
+    }
+
+    func listPersonClaims(projectDir: String, entityID: String) async throws -> [CatalogPersonClaimGroup] {
+        // A read: no `recordedCalls`.
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            guard let seeded = seededPersonClaims[entityID] else {
+                throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
+            }
+            return seeded
         }
     }
 

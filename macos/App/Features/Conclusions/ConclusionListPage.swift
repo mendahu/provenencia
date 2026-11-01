@@ -159,7 +159,7 @@ private struct ConclusionListBody<Kind: ConclusionListKind>: View {
                 PVCallout(tone: .danger, message: message)
             case .rows(let rows, _):
                 PVList(
-                    // Go owns list order (conclusionheaders.sortByTitle); rows show as given.
+                    // Go owns list order (conclusionheaders.SortByTitle); rows show as given.
                     items: rows,
                     thumbnail: {
                         CachedThumbnail(

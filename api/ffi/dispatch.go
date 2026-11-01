@@ -110,6 +110,7 @@ const (
 	MethodGetEvidenceGraphUnlinkImpact      = int32(engine.Method_METHOD_GET_EVIDENCE_GRAPH_UNLINK_IMPACT)
 	MethodReorderSubjectTypeProperties      = int32(engine.Method_METHOD_REORDER_SUBJECT_TYPE_PROPERTIES)
 	MethodGetConclusionDetail               = int32(engine.Method_METHOD_GET_CONCLUSION_DETAIL)
+	MethodListPersonClaims                  = int32(engine.Method_METHOD_LIST_PERSON_CLAIMS)
 	MethodListEventHeaders                  = int32(engine.Method_METHOD_LIST_EVENT_HEADERS)
 	MethodListPlaceHeaders                  = int32(engine.Method_METHOD_LIST_PLACE_HEADERS)
 	MethodListEvidenceGraphEventTitles      = int32(engine.Method_METHOD_LIST_EVIDENCE_GRAPH_EVENT_TITLES)
@@ -334,6 +335,8 @@ func route(method int32, in []byte) ([]byte, error) {
 		return handlers.GetNameFormat(in)
 	case MethodGetConclusionDetail:
 		return handlers.GetConclusionDetail(in)
+	case MethodListPersonClaims:
+		return handlers.ListPersonClaims(in)
 	case MethodListEventHeaders:
 		return handlers.ListEventHeaders(in)
 	case MethodListPlaceHeaders:

@@ -1219,6 +1219,34 @@ struct GoStore: GenealogyStore {
         )
     }
 
+    func listPersonClaims(projectDir: String, entityID: String) async throws -> [CatalogPersonClaimGroup] {
+        var req = Provenencia_Engine_V1_ListPersonClaimsRequest()
+        req.projectDir = projectDir
+        req.entityID = entityID
+        let resp: Provenencia_Engine_V1_ListPersonClaimsResponse = try await provenenciaCall(
+            method: CoreMethod.listPersonClaims,
+            request: req
+        )
+        return resp.groups.map { group in
+            CatalogPersonClaimGroup(
+                sourceID: group.sourceID,
+                sourceRef: group.sourceRef,
+                title: group.sourceTitle,
+                sourceTypeID: group.sourceTypeID,
+                claims: group.claims.map { claim in
+                    CatalogPersonClaim(
+                        claimID: claim.claimID,
+                        graphID: claim.graphID,
+                        graphRef: claim.graphRef,
+                        graphName: claim.graphName,
+                        subject: Self.mapSubject(claim.subject),
+                        observations: claim.observations.map(Self.mapObservation)
+                    )
+                }
+            )
+        }
+    }
+
     func getConclusionDetail(projectDir: String, entityID: String) async throws -> CatalogConclusionDetail {
         var req = Provenencia_Engine_V1_GetConclusionDetailRequest()
         req.projectDir = projectDir
@@ -2089,7 +2117,7 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    private static func mapSubject(_ s: Provenencia_Engine_V1_Subject) -> CatalogSubject {
+    static func mapSubject(_ s: Provenencia_Engine_V1_Subject) -> CatalogSubject {
         CatalogSubject(
             id: s.id,
             ref: s.ref,

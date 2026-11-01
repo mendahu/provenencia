@@ -113,8 +113,8 @@ func TestRetitleDropsEvidenceGraph(t *testing.T) {
 }
 
 // TestOnlyATitleChangeDropsEvidenceGraph: an Evidence graph holds the title and
-// nothing else off the sources row, so a description edit leaves it loaded and
-// a title edit drops it.
+// the type off the sources row and nothing else, so a description edit leaves it
+// loaded and a title edit drops it.
 func TestOnlyATitleChangeDropsEvidenceGraph(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
@@ -173,6 +173,81 @@ func TestOnlyATitleChangeDropsEvidenceGraph(t *testing.T) {
 	update(src)
 	if g.LoadedEvidenceGraphForTest(graphID) {
 		t.Fatal("a title edit left the evidence graph loaded")
+	}
+}
+
+// TestSourceTypeChangeDropsEvidenceGraph: an Evidence graph knows its Source's
+// type, so a type change drops it and the next read has the new type id. The
+// graph's name and its Source's ref read back, and a graph with no ref reads "".
+func TestSourceTypeChangeDropsEvidenceGraph(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	r, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.Upsert(c, userID, "Tester", r); err != nil {
+		t.Fatal(err)
+	}
+	if err := subjectvocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	book, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	letter, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "letter", Origin: vocabkey.OriginProvenencia, Label: "Letter"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: book, Title: "Register"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := c.Graph()
+	sole := evidencegraphstest.SoleGraph(t, c, src.ID)
+	read := func() graphcache.EvidenceGraph {
+		t.Helper()
+		eg, err := g.EvidenceGraph(sole.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return eg
+	}
+	eg := read()
+	if !bytes.Equal(eg.SourceTypeID, book) || eg.SourceRef != src.Ref || eg.GraphName != sole.Name || eg.GraphRef != sole.Ref {
+		t.Fatalf("graph head type %x ref %q name %q graph ref %q", eg.SourceTypeID, eg.SourceRef, eg.GraphName, eg.GraphRef)
+	}
+
+	src.SourceTypeID = letter
+	if _, _, err := writes.Run(c, writes.Op{Action: "update_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		ch, err := sources.Update(tx, userID, src)
+		return src, ch, err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if g.LoadedEvidenceGraphForTest(sole.ID) {
+		t.Fatal("a type change left the evidence graph loaded")
+	}
+	if eg := read(); !bytes.Equal(eg.SourceTypeID, letter) {
+		t.Fatalf("type after the change %x, want the new one", eg.SourceTypeID)
+	}
+
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`UPDATE evidence_graphs SET ref = NULL WHERE id = ?`, sole.ID); err != nil {
+		t.Fatal(err)
+	}
+	g.Drop()
+	if eg := read(); eg.GraphRef != "" || !eg.Found {
+		t.Fatalf("a ref-less graph found %v, ref %q", eg.Found, eg.GraphRef)
 	}
 }
 

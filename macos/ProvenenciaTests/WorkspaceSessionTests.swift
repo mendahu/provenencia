@@ -898,6 +898,125 @@ struct WorkspaceSessionTests {
         #expect(!properties.isFetching && !graph.isFetching && !citations.isFetching)
     }
 
+    private func detail(_ id: String) -> CatalogConclusionDetail {
+        CatalogConclusionDetail(
+            entity: CatalogCanonicalEntity(id: id, ref: "PER-\(id)", subjectTypeID: "t", label: ""),
+            fields: []
+        )
+    }
+
+    private func claims(onGraph graphID: String) -> [CatalogPersonClaimGroup] {
+        [CatalogPersonClaimGroup(
+            sourceID: "s1", sourceRef: "SRC-1", title: "Alpha", sourceTypeID: "t1",
+            claims: [CatalogPersonClaim(
+                claimID: "c1", graphID: graphID, graphRef: "EG-1", graphName: "Default",
+                subject: CatalogSubject(
+                    id: "sub1", ref: "SUB-1", sourceID: "s1", subjectTypeID: "t", label: "Ada", description: ""
+                ),
+                observations: []
+            )]
+        )]
+    }
+
+    /// T-7 (AC-2.1): a write's touched handles revalidate only their own detail
+    /// pages. A visible page reloads; a hidden one is evicted.
+    @Test func touchedHandlesRevalidateOnlyTheirDetailPages() async {
+        let store = FakeStore()
+        seedStore(store)
+        store.seededConclusionDetails = ["e1": detail("e1"), "e3": detail("e3")]
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        session.apply(location: .personDetail(entityId: "e1", ref: "PER-e1", title: "One"))
+        let first = CatalogQueryKey.conclusionDetail(project: project, entityId: "e1")
+        let third = CatalogQueryKey.conclusionDetail(project: project, entityId: "e3")
+        let visible: QueryHandle<CatalogConclusionDetail> = session.query(first)
+        let hidden: QueryHandle<CatalogConclusionDetail> = session.query(third)
+        await waitForQuery(visible)
+        await waitForQuery(hidden)
+
+        let effects = CatalogWriteEffects(handles: ["e1", "e2"])
+        #expect(session.revalidatedKeys(for: effects) == [first])
+        #expect(CatalogQueryRegistry.standard.invalidations(for: effects, project: project).isEmpty)
+        session.apply(effects)
+        #expect(visible.isFetching)
+        await session.settleWrites()
+        #expect(session.queryHandle(third) as QueryHandle<CatalogConclusionDetail>? != nil)
+
+        session.apply(CatalogWriteEffects(handles: ["e3"]))
+        #expect(session.queryHandle(third) as QueryHandle<CatalogConclusionDetail>? == nil)
+    }
+
+    /// T-8 (AC-2.6): a key that two refreshes and a mutation all name is
+    /// revalidated once. A hidden `.personClaims` key is evicted by the pass
+    /// that names it, and nothing loads it again.
+    @Test func aKeyInvalidatedAndRefreshedRevalidatesOnce() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        let key = CatalogQueryKey.personClaims(project: project, entityId: "e1")
+        session.setQueryValue(key, value: claims(onGraph: "g1"))
+        let effects = CatalogWriteEffects(handles: ["e1"], evidenceGraphs: ["g1"])
+
+        #expect(session.revalidatedKeys(for: effects, .promotedSubject(graphId: "g1")) == [key])
+        #expect(CatalogQueryRegistry.standard.invalidations(for: effects, by: .promotedSubject(graphId: "g1"), project: project)
+            .contains(.allCached(.personClaims)))
+        session.apply(effects, .promotedSubject(graphId: "g1"))
+        await session.settleWrites()
+        #expect(session.queryHandle(key) as QueryHandle<[CatalogPersonClaimGroup]>? == nil)
+    }
+
+    /// T-9 (AC-2.1, AC-2.3): person claims follow their handle and the graphs
+    /// they hold a claim on; the detail page follows only the handle.
+    @Test func personClaimsFollowHandlesAndGraphs() {
+        let session = makeSession()
+        let project = session.projectKey
+        let claimsKey = CatalogQueryKey.personClaims(project: project, entityId: "e1")
+        let detailKey = CatalogQueryKey.conclusionDetail(project: project, entityId: "e1")
+        session.setQueryValue(claimsKey, value: claims(onGraph: "g1"))
+        session.setQueryValue(detailKey, value: detail("e1"))
+
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g1"])) == [claimsKey])
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g9"])).isEmpty)
+        #expect(Set(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"]))) == [claimsKey, detailKey])
+    }
+
+    /// A `.personClaims` key whose first load is in flight follows every
+    /// graph; once it holds a value it follows only the graphs it holds.
+    @Test func personClaimsFollowEveryGraphUntilLoaded() {
+        let session = makeSession()
+        let project = session.projectKey
+        let key = CatalogQueryKey.personClaims(project: project, entityId: "e1")
+        let _: QueryHandle<[CatalogPersonClaimGroup]> = session.query(key)
+        #expect((session.queryHandle(key) as QueryHandle<[CatalogPersonClaimGroup]>?)?.value == nil)
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g9"])) == [key])
+
+        session.setQueryValue(key, value: claims(onGraph: "g1"))
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g9"])).isEmpty)
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g1"])) == [key])
+    }
+
+    /// T-12 (AC-2.7): the Evidence graph and list keys declare the slots they
+    /// follow, so a write reloads the graphs it names and every list it touches.
+    @Test func effectSlotsRevalidateTheirKeys() {
+        let session = makeSession()
+        let project = session.projectKey
+        let graph1 = CatalogQueryKey.evidenceGraph(project: project, graphId: "g1")
+        let graph2 = CatalogQueryKey.evidenceGraph(project: project, graphId: "g2")
+        session.setQueryValue(graph1, value: EvidenceGraphRows(graphId: "g1"))
+        session.setQueryValue(graph2, value: EvidenceGraphRows(graphId: "g2"))
+        session.setQueryValue(CatalogQueryKey.personsList(project: project), value: [CatalogPersonHeader]())
+        session.setQueryValue(CatalogQueryKey.eventsList(project: project), value: [CatalogEventHeader]())
+        session.setQueryValue(CatalogQueryKey.placesList(project: project), value: [CatalogPlaceHeader]())
+
+        let named = session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"], evidenceGraphs: ["g1"]))
+        #expect(Set(named) == [
+            graph1, .personsList(project: project), .eventsList(project: project), .placesList(project: project),
+        ])
+        #expect(named.count == 4)
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(handleScopes: ["e1"])).isEmpty)
+    }
+
     private func citation(_ id: String, artifactID: String) -> CatalogCitation {
         CatalogCitation(
             id: id, ref: "CIT-\(id)", artifactID: artifactID, locatorJSON: "{}", transcription: "",

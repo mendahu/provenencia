@@ -29,6 +29,9 @@ enum CatalogQueryKey: Hashable, Sendable {
     /// and death, an Event's subjects and title, a Place's names) read in the
     /// same call. Evicted, not revalidated, while off screen.
     case conclusionDetail(project: ProjectKey, entityId: String)
+    /// One Person's accepted claims grouped by Source (S13-01), read for the
+    /// Sources section. Evicted, not revalidated, while off screen.
+    case personClaims(project: ProjectKey, entityId: String)
 
     /// Case identity without associated payload. Each kind has one
     /// `CatalogQueryDescriptor` (`Kind.descriptor`).
@@ -51,6 +54,7 @@ enum CatalogQueryKey: Hashable, Sendable {
         case eventsList
         case placesList
         case conclusionDetail
+        case personClaims
     }
 
     var kind: Kind {
@@ -91,6 +95,8 @@ enum CatalogQueryKey: Hashable, Sendable {
             return .placesList
         case .conclusionDetail:
             return .conclusionDetail
+        case .personClaims:
+            return .personClaims
         }
     }
 
@@ -113,7 +119,8 @@ enum CatalogQueryKey: Hashable, Sendable {
              .personsList(let project),
              .eventsList(let project),
              .placesList(let project),
-             .conclusionDetail(let project, _):
+             .conclusionDetail(let project, _),
+             .personClaims(let project, _):
             project
         }
     }
