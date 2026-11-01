@@ -58,6 +58,18 @@ func openObjectsRoot(projectDir string, create bool) (*os.Root, error) {
 	return proj.OpenRoot(objectpath.Dir)
 }
 
+// CheckObjects reports ErrUnsafeObjects when projectDir/objects is a symlink or
+// not a folder, and nil when it is a real folder. A staged Temp holds the
+// folder it was made in, so Install calls this first: a folder swapped for a
+// symlink since the stage is refused as it is at the stage.
+func CheckObjects(projectDir string) error {
+	root, err := openObjectsRoot(projectDir, false)
+	if err != nil {
+		return err
+	}
+	return root.Close()
+}
+
 // openRegular opens inner under root for reading. Anything but a regular file,
 // or a shard folder that is not a real folder, is ErrNotRegular. The checks
 // come before the open so a FIFO cannot block it. The app mirrors these rules in

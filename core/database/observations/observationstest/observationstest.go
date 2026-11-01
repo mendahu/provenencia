@@ -78,11 +78,11 @@ func FileArtifact(t testing.TB, c *database.Catalog, userID, sourceID []byte) ar
 // SaveCitation stages every depiction, then files the Citation and its
 // Observations through Cite, discarding any stage left over afterwards.
 func SaveCitation(c *database.Catalog, userID, graphID []byte, art artifacts.Artifact, inputs ...observations.Input) (citations.CreateResult, []rowchange.Change, error) {
-	discard, err := ingest.StageDepictions(c, inputs)
+	stages, err := ingest.StageDepictions(c.Dir(), inputs)
 	if err != nil {
 		return citations.CreateResult{}, nil, err
 	}
-	defer discard()
+	defer stages.Settle(c)
 	return Cite(c, userID, graphID, art.ID, LikenessLocator, inputs...)
 }
 
@@ -100,11 +100,11 @@ func Cite(c *database.Catalog, userID, graphID, artifactID []byte, locator strin
 
 // UpdateObservation stages the input's depiction, then updates the Observation.
 func UpdateObservation(c *database.Catalog, userID []byte, in observations.Input) ([]rowchange.Change, error) {
-	discard, err := ingest.StageDepictions(c, []observations.Input{in})
+	stages, err := ingest.StageDepictions(c.Dir(), []observations.Input{in})
 	if err != nil {
 		return nil, err
 	}
-	defer discard()
+	defer stages.Settle(c)
 	var changes []rowchange.Change
 	_, _, err = writes.Run(c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 		_, ch, err := observations.Update(tx, userID, in)

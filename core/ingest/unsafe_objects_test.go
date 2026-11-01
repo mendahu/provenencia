@@ -44,11 +44,11 @@ func TestFileRefusesSymlinkedObjects(t *testing.T) {
 	wantUnsafeObjects(t, err)
 }
 
-func TestStagedImageInsertTxRefusesSymlinkedObjects(t *testing.T) {
+func TestStagedInsertTxRefusesSymlinkedObjects(t *testing.T) {
 	c := stageCatalog(t)
 	userID := stageUser(t, c)
 	path := stageWrite(t, t.TempDir(), "in.png", stagePNG(t, 8, 8))
-	s, err := StageImage(c, path)
+	s, err := StageImage(c.Dir(), path)
 	if err != nil {
 		t.Fatal(err)
 	}
