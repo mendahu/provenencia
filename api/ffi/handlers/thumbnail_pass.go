@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/derivatives"
 	"github.com/mendahu/provenencia/core/ingest"
@@ -99,26 +100,33 @@ func (p *thumbnailPass) run(projectDir string, then func(*database.Catalog) erro
 		}
 		return withProjectCatalog(projectDir, then)
 	}
+	dir, err := catalogsession.Key(projectDir)
+	if err != nil {
+		return err
+	}
 	for start := 0; start < len(p.jobs); start += thumbnailBatch {
 		end := min(start+thumbnailBatch, len(p.jobs))
 		batch := p.jobs[start:end]
 		var staged []*thumbnailJob
 		last := end == len(p.jobs)
-		err := withStaged(projectDir, func(dir string) (ingest.Stages, error) {
-			var stages ingest.Stages
-			for _, j := range batch {
-				s, err := j.job.Stage(dir)
-				if err != nil {
-					if derivatives.Refused(err) {
-						j.fill("", true)
-						continue
-					}
-					stages.Discard()
-					return nil, err
+		var stages ingest.Stages
+		for _, j := range batch {
+			s, err := j.job.Stage(dir)
+			if err != nil {
+				if derivatives.Refused(err) {
+					j.fill("", true)
+					continue
 				}
-				stages = append(stages, s)
-				staged = append(staged, j)
+				stages.Discard()
+				return err
 			}
+			stages = append(stages, s)
+			staged = append(staged, j)
+		}
+		if len(staged) == 0 && !(last && then != nil) {
+			continue // every job was refused at the stage: nothing to commit
+		}
+		err := withStaged(projectDir, func(string) (ingest.Stages, error) {
 			return stages, nil
 		}, func(c *database.Catalog) error {
 			for _, j := range staged {
