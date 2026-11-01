@@ -126,7 +126,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-12 | File work before the catalog session | 4 | One staged-object type stages ingest, depiction images and thumbnails outside `catalogsession.Do`; Go only (was S12-27) | — | — | [S14-12-file-work-before-session.md](prs/S14-12-file-work-before-session.md) | Landed #664 |
 | S14-13 | A crafted project can't crash the app | 5 | Bounded graph positions; a bounded Artifact viewer decode; the PDF crop re-checks its file; panic recovery at the FFI boundary (was S12-28) | — | — | [S14-13-crafted-project-safe.md](prs/S14-13-crafted-project-safe.md) | Landed #632 |
 | S14-14 | Copy and VoiceOver on graph work | 5 | The graph named in VoiceOver and history; plural counts; Cancel is a danger confirm's default; a dirty graph form asks first; kit toasts and callouts announce; headings; `PVField` names its content (was S12-29, S12-30, S12-45) | — | — | — | Scoped |
-| S14-15 | Xcode synchronized folders | 5 | `project.pbxproj` on synchronized folders; the pbxproj steps leave the skills and rule (was S12-31) | — | — | — | Scoped |
+| S14-15 | Xcode synchronized folders | 5 | `project.pbxproj` on synchronized folders; `check-guidance-names.py` holds non-Swift files in them to the project's membership exceptions; the pbxproj steps leave the skills and rule (was S12-31) | — | — | [S14-15-xcode-synchronized-folders.md](prs/S14-15-xcode-synchronized-folders.md) | Planned |
 | S14-16 | Promote and Source writes return their effects | 5 | Promote and Source handlers return `WriteEffects`; sidebar counts become a `counts` effects list; a test pins effects on every audited write; the dead `promoteSubject` path goes; one shared proto header message (was S12-32) | — | S13-24 | — | Scoped |
 | S14-17 | Vocabulary writes return their effects; dead RPCs go | 5 | Vocabulary handlers return `WriteEffects` and the allow-list empties; unclaimed RPCs and test-only store methods deleted (was S12-33) | — | S14-16 | — | Scoped |
 | S14-18 | Name folds keep the formal name and never crash | 5 | The reconciler resolves values through the fold graph without panics; nickname heads fold only through `nicknameDirections`; `CacheVersion` bump; Go only (was S12-40) | — | — | — | Scoped |
@@ -331,7 +331,7 @@ If the plan runs past about ten steps, it splits along these parts.
 
 #### S14-15 — Xcode synchronized folders
 
-**Ships.** The App and test groups of `project.pbxproj` become synchronized folders; `add-swift-test`, `add-ui-component` and `.cursor/rules/swift-tests.mdc` drop their pbxproj steps.
+**Ships.** The App and test groups of `project.pbxproj` become synchronized folders (`Resources` stays a classic group for the `Fonts` folder reference); `check-guidance-names.py` fails on a non-Swift file in them that is not a membership exception; `add-swift-test`, `add-ui-component` and `.cursor/rules/swift-tests.mdc` drop their pbxproj steps. Xcode 16 becomes the minimum.
 **Not this PR.** Any source change.
 **Check.** `xcodebuild` build and test pass; a new Swift file builds with no pbxproj edit.
 **Context.** Audit A-34. Needs a Mac; lands best before the other slice 5–7 PRs add Swift files.
