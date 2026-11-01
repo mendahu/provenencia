@@ -443,7 +443,7 @@ struct CatalogQueryRegistryTests {
         #expect(registry.hiddenPolicy(.eventsList(project: project)) == .markStale)
         #expect(registry.hiddenPolicy(.placesList(project: project)) == .markStale)
         #expect(registry.hiddenPolicy(.sourcesList(project: project)) == .markStale)
-        #expect(registry.hiddenPolicy(.sourceWorkspace(project: project, sourceId: "s1")) == .revalidate)
+        #expect(registry.hiddenPolicy(.sourceWorkspace(project: project, sourceId: "s1")) == .markStale)
     }
 
     @Test func everyKindHasOneDescriptor() {
@@ -1286,6 +1286,14 @@ struct CatalogQueryRegistryTests {
         )
         await waitForQuery(handle)
         #expect(handle.value == [graph])
+    }
+
+    /// T-14: a hidden graph canvas and a hidden Source page go stale; they do not reload.
+    @Test func graphAndSourcePageKeysMarkStaleWhenHidden() {
+        let project = ProjectKey(projectDir: projectDir)
+        let registry = CatalogQueryRegistry.standard
+        #expect(registry.hiddenPolicy(.evidenceGraph(project: project, graphId: "g-1")) == .markStale)
+        #expect(registry.hiddenPolicy(.sourceWorkspace(project: project, sourceId: "s1")) == .markStale)
     }
 
     @Test func evidenceGraphsListMarksStaleWhenHidden() {

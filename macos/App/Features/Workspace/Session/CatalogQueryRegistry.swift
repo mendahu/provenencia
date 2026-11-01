@@ -258,6 +258,7 @@ extension CatalogQueryKey.Kind {
                     .assignedTypeSuggestion, .removedTypeSuggestion,
                     .deletedSource,
                 ],
+                whenHidden: .markStale,
                 invalidation: { project, mutation in
                     switch mutation {
                     case .mutatedSourceWorkspace(let sourceId), .mutatedSourceMetadata(let sourceId),
@@ -278,12 +279,15 @@ extension CatalogQueryKey.Kind {
                 }
             )
         case .evidenceGraph:
-            // Writes that report effects reload the graphs they name
-            // (`WriteEffects.evidenceGraphs`); Promote reports none.
+            // Writes that report effects name the graphs they move
+            // (`WriteEffects.evidenceGraphs`); Promote reports none. The graph
+            // on screen reloads; a visited graph that is hidden goes stale and
+            // reloads when its canvas, composer or Promote is shown again.
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [.deletedSource, .promotedSubject],
+                whenHidden: .markStale,
                 invalidation: { project, mutation in
                     if let graphId = mutation.evidenceGraphId {
                         return .key(.evidenceGraph(project: project, graphId: graphId))

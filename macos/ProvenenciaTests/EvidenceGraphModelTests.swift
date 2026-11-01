@@ -151,6 +151,10 @@ struct EvidenceGraphModelTests {
             projectKey: ProjectKey(projectDir: projectDir),
             store: store
         )
+        // The canvas is on screen, so its graph key reloads on a write instead of going stale.
+        session.apply(location: WorkspaceLocation(
+            section: .sources, sourceId: sourceID, graphId: graphID, sourceSurface: .graph
+        ))
         return EvidenceGraphModel(
             graphID: graphID,
             sourceID: sourceID,

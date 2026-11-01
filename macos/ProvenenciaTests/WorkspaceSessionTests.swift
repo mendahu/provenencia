@@ -534,6 +534,9 @@ struct WorkspaceSessionTests {
         )
         let session = makeSession(store: store)
         let key = CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: "g-1")
+        session.apply(location: WorkspaceLocation(
+            section: .sources, sourceId: "s1", graphId: "g-1", sourceSurface: .graph
+        ))
         let handle: QueryHandle<EvidenceGraphRows> = session.query(key)
         await waitForQuery(handle)
         #expect(handle.value?.observations.isEmpty == true)
@@ -1511,6 +1514,60 @@ struct WorkspaceSessionTests {
             CatalogQueryKey.sourcesList(project: session.projectKey)
         )
         #expect(handle?.value?.filter { $0.id == "s2" }.count == 1)
+    }
+
+    /// T-15: a hidden graph key goes stale on a write that names it and
+    /// reloads when its canvas is shown again.
+    @Test func hiddenGraphReloadsOnlyWhenRevisited() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        let graphLocation = { (graphId: String) in
+            WorkspaceLocation(section: .sources, sourceId: "s1", graphId: graphId, sourceSurface: .graph)
+        }
+        session.apply(location: graphLocation("G"))
+        await session.settleWrites()
+        session.apply(location: graphLocation("H"))
+        await session.settleWrites()
+        let graphG: QueryHandle<EvidenceGraphRows>? = session.queryHandle(.evidenceGraph(project: project, graphId: "G"))
+        #expect(graphG?.isSettled == true)
+        let before = store.listSubjectsGraphIDs
+
+        session.apply(CatalogWriteEffects(evidenceGraphs: ["G", "H"]))
+        await session.settleWrites()
+        #expect(Array(store.listSubjectsGraphIDs.dropFirst(before.count)) == ["H"])
+        #expect(graphG?.isStale == true)
+
+        session.apply(location: graphLocation("G"))
+        await session.settleWrites()
+        #expect(Array(store.listSubjectsGraphIDs.dropFirst(before.count)) == ["H", "G"])
+        #expect(graphG?.isStale == false)
+    }
+
+    /// T-17: a hidden Source page goes stale on a write and reloads when shown again.
+    @Test func hiddenSourcePageReloadsOnlyWhenRevisited() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        session.apply(location: .sourcePage(sourceId: "s1"))
+        await session.settleWrites()
+        session.apply(location: .sectionRoot(.persons))
+        await session.settleWrites()
+        let page: QueryHandle<CatalogSourceWorkspace>? = session.queryHandle(
+            .sourceWorkspace(project: session.projectKey, sourceId: "s1")
+        )
+        let callsBefore = store.getSourceWorkspaceCalls
+
+        session.apply(.mutatedSourceWorkspace(sourceId: "s1"))
+        await session.settleWrites()
+        #expect(store.getSourceWorkspaceCalls == callsBefore)
+        #expect(page?.isStale == true)
+
+        session.apply(location: .sourcePage(sourceId: "s1"))
+        await session.settleWrites()
+        #expect(store.getSourceWorkspaceCalls == callsBefore + 1)
+        #expect(page?.isStale == false)
     }
 
     /// T-7b: a failed progress re-read reloads the whole map.

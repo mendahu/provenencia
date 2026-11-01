@@ -228,9 +228,14 @@ struct CitationComposerModelTests {
                 artifactID: "art-0"
             )
         }
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        // The composer is on screen, so its graph key reloads on a write instead of going stale.
+        session.apply(location: WorkspaceLocation(
+            section: .sources, sourceId: sourceID, graphId: graphID, sourceSurface: .graph
+        ))
         return CitationComposerModel(
             entry: entry,
-            session: WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store),
+            session: session,
             store: store,
             userID: "user-1"
         )
