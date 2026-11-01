@@ -1,15 +1,11 @@
 package handlers
 
 import (
-	"bytes"
-
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
-	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/persondetail"
-	"github.com/mendahu/provenencia/core/database/subjects"
 	"google.golang.org/protobuf/proto"
 )
 
