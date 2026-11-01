@@ -142,7 +142,7 @@ struct CatalogQueryRefresh: Sendable {
     var follows: CatalogQueryFollows
     var action: Action
 
-    init(follows: CatalogQueryFollows, action: Action) {
+    fileprivate init(follows: CatalogQueryFollows, action: Action) {
         self.follows = follows
         self.action = action
     }
