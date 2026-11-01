@@ -37,6 +37,7 @@ func CreateArtifact(in []byte) ([]byte, error) {
 		return nil, err
 	}
 	var out *engine.CreateArtifactResponse
+	pass := &thumbnailPass{}
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		a, wrote, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
 			func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
@@ -51,13 +52,16 @@ func CreateArtifact(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		ap, err := artifactProto(c, a)
+		ap, err := artifactProto(c, a, pass)
 		if err != nil {
 			return err
 		}
 		out = &engine.CreateArtifactResponse{Artifact: ap, Effects: writeEffectsProto(wrote)}
 		return nil
 	})
+	if err == nil {
+		err = pass.run(req.GetProjectDir(), nil)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -82,6 +86,7 @@ func UpdateArtifact(in []byte) ([]byte, error) {
 		return nil, err
 	}
 	var out *engine.UpdateArtifactResponse
+	pass := &thumbnailPass{}
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		prev, err := artifacts.Get(c, artifactID)
 		if err != nil {
@@ -107,13 +112,16 @@ func UpdateArtifact(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		ap, err := artifactProto(c, got)
+		ap, err := artifactProto(c, got, pass)
 		if err != nil {
 			return err
 		}
 		out = &engine.UpdateArtifactResponse{Artifact: ap, Effects: writeEffectsProto(wrote)}
 		return nil
 	})
+	if err == nil {
+		err = pass.run(req.GetProjectDir(), nil)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -167,6 +175,7 @@ func IngestArtifactFile(in []byte) ([]byte, error) {
 	}
 	var out *engine.IngestArtifactFileResponse
 	var staged *ingest.Staged
+	pass := &thumbnailPass{}
 	err = withStaged(req.GetProjectDir(), func(dir string) (ingest.Stages, error) {
 		s, err := ingest.StageFile(dir, req.GetPath())
 		if err != nil {
@@ -206,7 +215,7 @@ func IngestArtifactFile(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		ap, err := artifactProto(c, got)
+		ap, err := artifactProto(c, got, pass)
 		if err != nil {
 			return err
 		}
@@ -218,20 +227,23 @@ func IngestArtifactFile(in []byte) ([]byte, error) {
 		}
 		return nil
 	})
+	if err == nil {
+		err = pass.run(req.GetProjectDir(), nil)
+	}
 	if err != nil {
 		return nil, err
 	}
 	return proto.Marshal(out)
 }
 
-func listArtifactsProto(c *database.Catalog, sourceID []byte) ([]*engine.Artifact, error) {
+func listArtifactsProto(c *database.Catalog, sourceID []byte, pass *thumbnailPass) ([]*engine.Artifact, error) {
 	rows, err := artifacts.ListBySource(c, sourceID)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]*engine.Artifact, 0, len(rows))
 	for _, a := range rows {
-		ap, err := artifactProto(c, a)
+		ap, err := artifactProto(c, a, pass)
 		if err != nil {
 			return nil, err
 		}
@@ -240,7 +252,9 @@ func listArtifactsProto(c *database.Catalog, sourceID []byte) ([]*engine.Artifac
 	return out, nil
 }
 
-func artifactProto(c *database.Catalog, a artifacts.Artifact) (*engine.Artifact, error) {
+// artifactProto builds the Artifact's proto. Its thumbnail path is filled by
+// pass: at once when the thumbnail exists, else by pass.run after the session.
+func artifactProto(c *database.Catalog, a artifacts.Artifact, pass *thumbnailPass) (*engine.Artifact, error) {
 	out := &engine.Artifact{
 		Id:          database.UUIDString(a.ID),
 		Ref:         a.Ref,
@@ -260,11 +274,9 @@ func artifactProto(c *database.Catalog, a artifacts.Artifact) (*engine.Artifact,
 			return nil, err
 		}
 		out.File = fileRefProto(f, rel)
-		thumb, _, err := thumbnailRelPath(c, a.FileID)
-		if err != nil {
+		if err := pass.need(c, a.FileID, func(rel string, _ bool) { out.ThumbnailRelPath = rel }); err != nil {
 			return nil, err
 		}
-		out.ThumbnailRelPath = thumb
 	}
 	return out, nil
 }

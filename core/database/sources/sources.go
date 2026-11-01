@@ -16,7 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
-	"github.com/mendahu/provenencia/core/derivatives"
+	"github.com/mendahu/provenencia/core/database/filederivatives"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -53,10 +53,10 @@ const (
 		EXISTS (SELECT 1 FROM artifacts a WHERE a.source_id = s.id)
 		FROM sources s
 		ORDER BY s.id DESC`
+	sqlArtifactForCover = `SELECT id, source_id, file_id FROM artifacts WHERE id = ?`
 	sqlCount            = `SELECT COUNT(*) FROM sources`
 	sqlDelete           = `DELETE FROM sources WHERE id = ?`
 	sqlTypeExists       = `SELECT 1 FROM source_types WHERE id = ?`
-	sqlArtifactForCover = `SELECT id, source_id, file_id FROM artifacts WHERE id = ?`
 )
 
 // Source is one sources row.
@@ -144,8 +144,9 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Source, []rowchange
 	}, changes, nil
 }
 
-// NormalizeCover checks a cover choice. Artifact mode ensures a thumbnail,
-// which is its own write, so call this before SetCover's Run.
+// NormalizeCover checks a cover choice. Artifact mode needs the cover's
+// thumbnail to exist already (SetSourceCover makes it before its session), so
+// call this before SetCover's Run.
 func NormalizeCover(c *database.Catalog, sourceID []byte, mode string, primaryArtifactID []byte) (string, []byte, error) {
 	if c == nil || len(sourceID) != 16 {
 		return "", nil, ErrInvalid
@@ -468,32 +469,47 @@ func requireType(tx *sql.Tx, typeID []byte) error {
 	return err
 }
 
-func requireRasterCoverArtifact(c *database.Catalog, sourceID, artifactID []byte) error {
+// CoverArtifactFile returns the File id of the Artifact a cover would pin: the
+// Artifact must exist, belong to the Source and hold a File, else ErrInvalid.
+// It reads one Artifact row of its own (artifacts' tests import sources, so
+// sources cannot import artifacts) and decodes nothing; it is the one place the cover rule
+// lives, for SetSourceCover's stage and NormalizeCover alike.
+func CoverArtifactFile(c *database.Catalog, sourceID, artifactID []byte) ([]byte, error) {
 	db, err := c.DB()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var id, artSource, fileID []byte
 	err = db.QueryRow(sqlArtifactForCover, artifactID).Scan(&id, &artSource, &fileID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrInvalid
+	}
+	if err != nil {
+		return nil, err
+	}
+	if !bytes.Equal(artSource, sourceID) || len(fileID) != 16 {
+		return nil, ErrInvalid
+	}
+	return fileID, nil
+}
+
+// requireRasterCoverArtifact accepts a cover Artifact whose File already has a
+// thumbnail. It never decodes: the thumbnail is made before, outside the
+// session, so an Artifact with no thumbnail (a PDF, an image that failed to
+// decode, one deleted meanwhile) is ErrInvalid.
+func requireRasterCoverArtifact(c *database.Catalog, sourceID, artifactID []byte) error {
+	fileID, err := CoverArtifactFile(c, sourceID, artifactID)
+	if err != nil {
+		return err
+	}
+	link, err := filederivatives.Lookup(c, fileID, filederivatives.TypeThumbnail)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrInvalid
 	}
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(artSource, sourceID) || len(fileID) != 16 {
-		return ErrInvalid
-	}
-	res, err := derivatives.EnsureThumbnail(c, fileID)
-	if err != nil {
-		if errors.Is(err, derivatives.ErrUnprocessable) ||
-			errors.Is(err, derivatives.ErrCorruptObject) ||
-			errors.Is(err, derivatives.ErrInvalid) {
-			return ErrInvalid
-		}
-		return err
-	}
-	if res.Skipped || len(res.Link.DerivedFileID) != 16 {
+	if len(link.DerivedFileID) != 16 {
 		return ErrInvalid
 	}
 	return nil

@@ -10,7 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/filederivatives"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/sources"
-	"github.com/mendahu/provenencia/core/derivatives"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -25,7 +24,8 @@ func EnsureFileThumbnail(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	var out *engine.EnsureFileThumbnailResponse
+	out := &engine.EnsureFileThumbnailResponse{}
+	pass := &thumbnailPass{}
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		ok, err := artifacts.HasPrimaryFile(c, fileID)
 		if err != nil {
@@ -34,43 +34,31 @@ func EnsureFileThumbnail(in []byte) ([]byte, error) {
 		if !ok {
 			return artifacts.ErrInvalid
 		}
-
-		rel, skipped, err := thumbnailRelPath(c, fileID)
-		if err != nil {
-			return err
-		}
-		out = &engine.EnsureFileThumbnailResponse{
-			RelPath: rel,
-			Skipped: skipped,
-		}
-		return nil
+		return pass.need(c, fileID, func(rel string, skipped bool) {
+			out.RelPath, out.Skipped = rel, skipped
+		})
 	})
+	if err == nil {
+		err = pass.run(req.GetProjectDir(), nil)
+	}
 	if err != nil {
 		return nil, err
 	}
 	return proto.Marshal(out)
 }
 
-// thumbnailRelPath ensures the default thumbnail for sourceFileID and returns
-// its objects/… path. Skipped / unprocessable / corrupt → empty path, skipped.
-func thumbnailRelPath(c *database.Catalog, sourceFileID []byte) (relPath string, skipped bool, err error) {
-	if len(sourceFileID) != 16 {
+// derivedRelPath is the one link-to-path tail: the objects/… path of the
+// link's derived File. A derived File that is gone, or whose stored type has no
+// path, is empty and skipped.
+func derivedRelPath(c *database.Catalog, link filederivatives.Link) (relPath string, skipped bool, err error) {
+	if len(link.DerivedFileID) != 16 {
 		return "", true, nil
 	}
-	res, err := derivatives.EnsureThumbnail(c, sourceFileID)
+	f, err := files.Lookup(c, link.DerivedFileID)
 	if err != nil {
-		if errors.Is(err, derivatives.ErrUnprocessable) ||
-			errors.Is(err, derivatives.ErrCorruptObject) ||
-			errors.Is(err, derivatives.ErrInvalid) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return "", true, nil
 		}
-		return "", false, err
-	}
-	if res.Skipped || len(res.Link.DerivedFileID) != 16 {
-		return "", true, nil
-	}
-	f, err := files.Lookup(c, res.Link.DerivedFileID)
-	if err != nil {
 		return "", false, err
 	}
 	rel, err := files.ReadRelPath(f)
@@ -96,17 +84,8 @@ func existingThumbnailRelPath(c *database.Catalog, sourceFileID []byte) (string,
 	if err != nil {
 		return "", err
 	}
-	if len(link.DerivedFileID) != 16 {
-		return "", nil
-	}
-	f, err := files.Lookup(c, link.DerivedFileID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return "", nil
-		}
-		return "", err
-	}
-	return files.ReadRelPath(f)
+	rel, _, err := derivedRelPath(c, link)
+	return rel, err
 }
 
 // sourceCoverThumb is the ListSources / Source proto cover payload.
@@ -205,8 +184,8 @@ func sourceCoverThumbnails(c *database.Catalog, rows []sources.Source) (map[stri
 
 // enrichSourceProto fills identity + cover mode + resolved thumbnail fields +
 // artifact gate for Create/Update/Get workspace responses. Cover thumbs stay
-// lookup-only; generation belongs on EnsureFileThumbnail (and SetCover's
-// raster check).
+// lookup-only; generation belongs on thumbnailPass (EnsureFileThumbnail and
+// SetSourceCover).
 func enrichSourceProto(c *database.Catalog, s sources.Source) (*engine.Source, error) {
 	if err := sources.AttachActivity(c, &s); err != nil {
 		return nil, err

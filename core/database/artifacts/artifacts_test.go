@@ -623,6 +623,13 @@ func TestArtifactDelete(t *testing.T) {
 		}
 		setCover := func(sourceID, artID []byte) {
 			t.Helper()
+			cover, err := Get(c, artID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := derivatives.EnsureThumbnail(c, cover.FileID); err != nil {
+				t.Fatal(err)
+			}
 			coverMode, coverArtID, err := sources.NormalizeCover(c, sourceID, sources.CoverModeArtifact, artID)
 			if err != nil {
 				t.Fatal(err)
