@@ -50,4 +50,4 @@ Reviewers: MNT (had the Fix-now major MNT-1). CON had no Fix-now blocker or majo
 No new blockers. Nits (logged): `MNT-5 · scripts/check-guidance-names.py:29 · re-wrap the docstring line F-2 lengthened`
 
 ## Result
-Gate PASS · CI pending at ready · open: none · follow-ups: MNT-2 (split the disk-vs-declared-list checks out of `check-guidance-names.py` if a third non-guidance check arrives) · to user: — · CON miss: none
+Gate PASS · CI green (macOS tests 8m1s, localizable) · open: none · follow-ups: MNT-2 (split the disk-vs-declared-list checks out of `check-guidance-names.py` if a third non-guidance check arrives) · to user: — · CON miss: none
