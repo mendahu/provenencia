@@ -1,7 +1,7 @@
 # Ship log — S14-11 Reload only what moved, only when it is on screen
 
 **Plan:** [`S14-11-reload-only-what-moved.md`](S14-11-reload-only-what-moved.md) · **Branch:** `s14-11-reload-only-what-moved` · **PR:** #657
-**State:** review 2
+**State:** ready
 
 ## Round 0 — implement
 Base `main` @ `fdd37f19`.
@@ -84,3 +84,13 @@ Head `f4e6ff4c`. Gate PASS (orchestrator run; xcode-test 71s). F-1 (`bd5bb6d9`, 
 
 ## Round 2 — review
 Reviewers: MNT, SEC+PRF (each had a Fix-now major). Scope `1e23f521...f4e6ff4c`.
+MNT: clean. MNT-1 Resolved (`init(follows:action:)` `fileprivate`; `rg "CatalogQueryRefresh\("` hits only `CatalogLastUpdated.swift`). MNT-2 Resolved (`Memo` in `Platform/Memo.swift`; three copies moved; `structural-debt.md` line gone). MNT-3 Resolved (orchestrator read: `refreshCached` doc says it is `.merged`'s entry point, not a feature API). MNT-4 Resolved (reviewer ran the handler tests).
+SEC+PRF: clean. PRF-1 Resolved: splice guarded by `index.revision == previousRevision && handle.revision == previousRevision + 1`; measured 0.15 ms per write at 3,060 graphs (was 1.49 ms full build), 0.57 ms at 12,240.
+
+Nits (logged): `MNT-8 · CitationComposerModel+Depiction.swift:428 · Memo.removeAll() instead of reassigning` · `MNT-9 · CatalogQueryRegistry.swift:525 · afterMerge ignores its key` · `MNT-10 · macos-client-patterns.md · point to Memo`
+
+## Finish
+Merged `main` @ `06367b97` (#656, docs only) as the merge commit below; gate PASS (xcode-test 71s). PR body updated.
+
+## Result
+Gate PASS · CI <pending> · open: none · follow-ups: UX-1 (reloading sign on a revisited canvas) · to user: — · CON miss: none
