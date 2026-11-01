@@ -9,8 +9,6 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
-	"os"
-	"path/filepath"
 	"runtime"
 	"sync/atomic"
 	"testing"
@@ -39,17 +37,6 @@ func init() {
 func gifHeaderOnly(w, h uint16) []byte {
 	b := []byte("GIF89a")
 	b = append(b, byte(w), byte(w>>8), byte(h), byte(h>>8), 0, 0, 0)
-	return b
-}
-
-// goFixture reads a file from the Go distribution's image testdata copied
-// under testdata/third_party/go.
-func goFixture(t *testing.T, name string) []byte {
-	t.Helper()
-	b, err := os.ReadFile(filepath.Join("testdata", "third_party", "go", name))
-	if err != nil {
-		t.Fatal(err)
-	}
 	return b
 }
 
@@ -125,7 +112,7 @@ func TestEncodeJPEGRejects(t *testing.T) {
 		{
 			name: "truncated jpeg within budget",
 			src: func(t *testing.T) []byte {
-				b := goFixture(t, "video-001.jpeg")
+				b := rastertest.GoFixture(t, "video-001.jpeg")
 				return b[:len(b)/2]
 			},
 			opts:   Options{MaxEdge: 256},
@@ -315,12 +302,20 @@ func TestDecode(t *testing.T) {
 		{"bomb header", rastertest.HeaderOnlyPNG(t, 100000, 100000), both, ErrTooLarge},
 	}
 	t.Run("oversized jpeg reduces only when asked", func(t *testing.T) {
-		src := rastertest.JPEGHeader(65535, 65535, 1, nil)
+		src := rastertest.OversizedJPEG(t)
 		if _, err := decode(src, both, false); !errors.Is(err, ErrTooLarge) {
 			t.Fatalf("reduce=false err = %v", err)
 		}
-		if _, err := decode(src, both, true); !errors.Is(err, ErrTooLarge) {
+		img, err := decode(src, both, true)
+		if err != nil {
 			t.Fatalf("reduce=true err = %v", err)
+		}
+		if got := img.Bounds(); got.Dx() != 1001 || got.Dy() != 1000 {
+			t.Fatalf("reduced bounds = %v, want 1001 x 1000", got)
+		}
+		huge := rastertest.JPEGHeader(65535, 65535, 1, nil)
+		if _, err := decode(huge, both, true); !errors.Is(err, ErrTooLarge) {
+			t.Fatalf("65535 header reduce=true err = %v", err)
 		}
 	})
 	for _, tt := range tests {

@@ -361,10 +361,7 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 		{
 			name: "truncated jpeg",
 			srcID: func(t *testing.T) []byte {
-				b, err := os.ReadFile("../raster/testdata/third_party/go/video-001.jpeg")
-				if err != nil {
-					t.Fatal(err)
-				}
+				b := rastertest.GoFixture(t, "video-001.jpeg")
 				return installSourceFile(t, c, b[:len(b)/2], "image/jpeg", "half.jpg")
 			},
 			wantIs: ErrUnprocessable,

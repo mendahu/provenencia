@@ -10,6 +10,9 @@ import (
 	"image"
 	"image/color"
 	"image/jpeg"
+	"os"
+	"path/filepath"
+	"runtime"
 	"sync"
 	"testing"
 )
@@ -127,4 +130,21 @@ func JPEGHeader(w, h uint16, comps int, scanData []byte) []byte {
 	out = append(out, JPEGSegment(0xDA, sos)...)
 
 	return append(out, scanData...)
+}
+
+// GoFixture returns a file from the Go distribution's image testdata copied
+// under core/raster/testdata/third_party/go. It finds the folder from this
+// source file, so any package's tests can call it.
+func GoFixture(tb testing.TB, name string) []byte {
+	tb.Helper()
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		tb.Fatal("rastertest: cannot locate its source file")
+	}
+	dir := filepath.Join(filepath.Dir(file), "..", "testdata", "third_party", "go")
+	b, err := os.ReadFile(filepath.Join(dir, name))
+	if err != nil {
+		tb.Fatal(err)
+	}
+	return b
 }
