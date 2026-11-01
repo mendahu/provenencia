@@ -1,6 +1,6 @@
 package graphcache
 
-// DepsFunc lists handles whose finished row reads one of ids.
+// DepsFunc lists handles whose composed row reads one of ids.
 // conclusionheaders registers it. The graph does not import that package.
 type DepsFunc func(q Querier, ids [][]byte) ([][]byte, error)
 
@@ -24,7 +24,8 @@ func (g *Graph) Display(id []byte) (any, bool) {
 	return v, ok
 }
 
-// SetDisplay stores a finished row.
+// SetDisplay stores a composed header row. It is not finished: its owner
+// fills read-time labels when it reads the row.
 func (g *Graph) SetDisplay(id []byte, v any) {
 	if g == nil || len(id) != 16 || v == nil {
 		return

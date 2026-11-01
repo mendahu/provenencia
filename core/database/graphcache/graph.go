@@ -33,7 +33,7 @@ type Graph struct {
 	vocab   Vocabulary
 	vocabOK bool
 
-	// displays are finished header rows keyed by handle id. memos are the
+	// displays are composed (not finished) header rows keyed by handle id. memos are the
 	// results owners store per node through registered slots (memo.go).
 	// evidenceGraphs are loaded Evidence graphs keyed by graph id, each with
 	// the memos features derive from it, so a memo cannot outlive its graph.
