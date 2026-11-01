@@ -37,6 +37,7 @@ struct PVSectionHeader<Title: PVCopy, Aside: View, Actions: View>: View {
                 .font(PVFont.display(size: PVTypeScale.h3, weight: titleWeight))
                 .lineSpacing((PVLineHeight.snug - 1) * PVTypeScale.h3)
                 .foregroundStyle(PVColor.textDisplay)
+                .accessibilityAddTraits(.isHeader)
             if let meta {
                 Text(verbatim: meta)
                     .font(PVFont.mono(size: PVTypeScale.caption))

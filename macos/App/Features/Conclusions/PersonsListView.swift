@@ -34,9 +34,9 @@ enum PersonsList: ConclusionListKind {
         let title = ConclusionListRow.accessibilityLabel(titleSource(summary, orders: orders), ref: summary.entity.ref)
         let line = PersonLifeDisplay.line(summary)
         guard !line.text.isEmpty else { return title }
-        let label = L10n.Conclusions.a11yList(title, rest: line.text)
+        let label = L10n.DesignSystem.spokenJoin(title, line.text)
         guard line.extraPlaces > 0 else { return label }
-        return L10n.Conclusions.a11yList(label, rest: L10n.Conclusions.morePlaces(count: line.extraPlaces))
+        return L10n.DesignSystem.spokenJoin(label, L10n.Conclusions.morePlaces(count: line.extraPlaces))
     }
 
     static func location(_ summary: CatalogPersonSummary) -> WorkspaceLocation {

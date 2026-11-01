@@ -153,15 +153,15 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Disclosure | `Components/Disclosure/PVDisclosureButton.swift` (added for S9-16's Person page: a `PVButton` that owns an `isExpanded` binding, its chevron, and the spoken state; the caller places the disclosed content. `flushLeading` is forwarded to the button; `pvExpandedState(_:)` is the shared VoiceOver piece, also used by `PVSelect` and the Source page's artifact rows. No JSX twin: boards compose `Button.jsx` with `aria-expanded`) |
 | Icon | `Components/Icon/PVIcon.swift` |
 | Painter | `Components/Painter/PVPainter.swift`, `PVTextMetrics.swift` (AppKit drawing for views that paint themselves, such as a canvas item: token colors resolved per appearance through `PVPainter.color(_:in:)`, continuous rounded shapes, text, symbols and marks; `PVTextMetrics` sizes text by the rule it draws with. `PVSymbolImages` in `Components/Icon/` caches the configured SF Symbol images) |
-| Field | `Components/Field/PVField.swift` (`marker: .required / .optional` marks the label) |
+| Field | `Components/Field/PVField.swift` (`marker: .required / .optional` marks the label; gives its label to the `PVInput`, `PVTextArea` or `PVSelect` inside it through `pvFieldLabel`; a control's own label wins (`PVFieldLabel.resolve`); a read-only input speaks the field name, then its value) |
 | Input | `Components/Input/PVInput.swift` |
 | TextArea | `Components/TextArea/PVTextArea.swift` (multiline field with `PVInput`'s chrome; grows with its text between `lineLimit`'s bounds, or with `fillsHeight` takes the height its container offers, never less than the lower bound, and scrolls inside it; added for inline edit, and for the Promote sheet's argument box beside a column of fields) |
 | InlineEdit | `Components/InlineEdit/PVInlineEdit.swift` (display and pencil → editor and Save / Cancel; `PVInlineEditActions` is the Save / Cancel row for always-editable surfaces; accessibility ids stay at the call site unless `accessibilityIdentifierPrefix` is set) |
-| SectionHeader | `Components/SectionHeader/PVSectionHeader.swift` (detail-page section chrome: display title, mono meta, aside, trailing actions and a bottom rule; a `String` or localized title is semibold; an `AttributedString` title draws regular and its strongly emphasized runs carry the weight) |
+| SectionHeader | `Components/SectionHeader/PVSectionHeader.swift` (detail-page section chrome: display title, mono meta, aside, trailing actions and a bottom rule; the title is a VoiceOver heading; a `String` or localized title is semibold; an `AttributedString` title draws regular and its strongly emphasized runs carry the weight) |
 | Select | `Components/Select/PVSelect.swift` (native popup contract on `PVContextMenu`; see "The Select contract" below) |
 | ContextMenu | `Components/ContextMenu/PVContextMenu.swift`, `PVActionMenu.swift` (action menus are `PVActionMenuItem` lists: a right-click menu that opens at the pointer is one `.pvRightClickMenu`, which adds the state, the trigger and one VoiceOver action per enabled item (the toolbar's Back/Forward history menu anchors to its button and keeps its own presenter); a button-opened menu draws `PVActionMenuRows` inside `.pvContextMenu`, with `keyboardTitles` from `PVActionMenuItem.keyboardTitles`; `PVSelect` uses `.pvContextMenu` directly) |
 | FloatingMenuSelection | `Components/FloatingMenuSelection/PVFloatingMenuSelection.swift` (clamped ↑/↓ highlight movement with no wrap for lists and floating menus; `PVTypeSelectMatcher` is the type-to-select buffer; do not write another highlight mover) |
-| Toast | `Components/Toast/PVToast.swift` |
+| Toast | `Components/Toast/PVToast.swift` (announces its title and message to VoiceOver when it appears) |
 | LogoMark | `Components/LogoMark/PVLogoMark.swift` |
 | SidebarNav | `Components/SidebarNav/PVSidebarNav.swift` (added for the S2-01 workspace chrome; ports that board's revised `collapsed`-capable `SidebarNav.jsx`); an item's icon is a `PVGlyph`, a symbol or a mark (S10-19) |
 | IconButton | `Components/IconButton/PVIconButton.swift` (added for the workspace sidebar's collapse toggle, which needed real hover feedback; `label` is required per `IconButton.jsx` and doubles as the `.help` tooltip; pass `accessibilityLabel` when the spoken label has to name a target the tooltip can leave implicit; `tone: .danger` tints a destructive action; `isSelected` is the armed/radio fill used by Artifact region tools) |
@@ -172,8 +172,9 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | SegmentedControl | `Components/Chip/PVSegmentedControl.swift` (a few exclusive options in one sunken track: `PVSegmentedControl(label, items:, selection:, size:, select:)`; items carry a title, glyph, ⌘ shortcut, disabled flag and accessibility identifier; the group reads its label to VoiceOver; use it instead of hand-building `PVChipGroup(style: .segmented)`) |
 | Divider | `Components/Divider/PVDivider.swift` (1pt hairline; horizontal/vertical) |
 | EmptyState | `Components/EmptyState/PVEmptyState.swift` (added for S2-02's empty/no-match states; the web spec's `action` slot isn't ported — see the file's header comment); the icon slot takes a `PVSymbol` or a `PVGlyph` (S10-19) |
-| Callout | `Components/Callout/PVCallout.swift` (tone / icon / title / body / compact; the title is `PVCopy`; optional `@ViewBuilder` actions under the body — call-site `PVButton`s; `onDismiss` / `detail` / `plain` deferred) |
-| ErrorText | `Components/ErrorText/PVErrorText.swift` (a validation or failure line in the danger color; `size:` `.micro` for a field-level line, `.caption` for a form-level line; call sites keep their own padding and identifiers) |
+| Callout | `Components/Callout/PVCallout.swift` (tone / icon / title / body / compact; the title is `PVCopy`; optional `@ViewBuilder` actions under the body — call-site `PVButton`s; `announces: true` speaks the title and message when it appears or changes (error callouts); `onDismiss` / `detail` / `plain` deferred) |
+| ErrorText | `Components/ErrorText/PVErrorText.swift` (a validation or failure line in the danger color; `size:` `.micro` for a field-level line, `.caption` for a form-level line; call sites keep their own padding and identifiers; `announces: true` speaks the line when it appears or changes) |
+| Announce | `Components/Announce/PVAnnounce.swift` *(new)* (`pvAnnounce(_:priority:)` speaks a text when it appears or changes; toasts, callouts and error lines use it) |
 | Table | `Components/Table/PVTable.swift` (added for S2-22, extracted from the Metadata (then Source fields) list; see "The table tradeoff" below) |
 | Confirm | `Components/Confirm/PVConfirm.swift` (added for S2-22's delete confirmation; the macOS answer to `ConfirmDialog.jsx`, which the web spec says not to port — see "Confirmations are system chrome" below) |
 | Panel | `Components/Panel/PVPanel.swift` (sheet content shell: title / subtitle / body / optional footer; optional title accessory, drawn after the title, filling the row; put a Spacer in it to push a control right; no window chrome); `Components/Panel/PVSheet.swift` (`.pvSheet`, the one sheet presenter: Escape, outside click and the discard question) |
@@ -234,6 +235,13 @@ returns to the form), a clean sheet closes. The visible Cancel button closes at
 once and carries no key of its own. A new sheet gets all of this by presenting
 with `.pvSheet`; do not add a raw `.sheet`, `.pvOutsideClick` or
 `.keyboardShortcut(.cancelAction)` for a sheet.
+
+Content closes its sheet through `@Environment(\.pvSheetClose)`: a dirty sheet
+asks first, then runs the step it was given. A place's `WorkspaceLeaveGuard`
+still holds the navigation that follows. The step waits in a `PVDiscardGate`
+(`Components/Confirm/PVDiscardGate.swift`), the one held-step type for every
+"ask, then do": the owner keeps its own question on screen, the gate hands the
+step out once on Discard and drops it on Keep editing.
 
 ## The combo box subset
 
@@ -515,8 +523,7 @@ cancel-first focus stays visible to keyboard users.
 The copy rules travel in `PVConfirmCopy`: the title is a question naming the
 record ("Delete Photographer?", never "Are you sure?"), the message says what
 is *and is not* lost, confirm repeats the verb ("Delete field", never "OK"),
-and cancel names the safe outcome ("Keep field"). **Focus starts on cancel**,
-so Return cannot complete a destructive action by reflex.
+and cancel names the safe outcome ("Keep field"). A danger confirm's default action is Cancel: Return keeps the record, and the destructive button has no Return shortcut. Focus starts on Cancel. An irreversible confirm keeps Return on its confirm button.
 
 Two further rules from the spec: a blocked action never reaches a confirmation
 — disable the control and explain why in its tooltip, the way Metadata's

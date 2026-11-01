@@ -150,7 +150,7 @@ extension CitationComposerModel {
     func openAuthoring(_ work: @escaping @MainActor () -> Void) {
         guard !isDrawingDepiction else { return }
         if authoring.holdsLeave || (editSession?.isDirty ?? false) {
-            stepContinuation = work
+            leaveGate.hold(work)
             pendingLeave = PendingLeave()
             return
         }

@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -621,6 +622,33 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 					t.Errorf("Swift %s.%s (%s term %q) has no L10n.PropertyTerm resource", tc.enum, m[1], tc.property, m[2])
 				}
 			}
+		}
+	})
+	t.Run("every delete-impact kind has a noun", func(t *testing.T) {
+		want := map[string]bool{"item": true}
+		for _, table := range catalogmodel.Tables {
+			if table.Kind != "" {
+				want[string(table.Kind)] = true
+			}
+		}
+		b, err := os.ReadFile(swiftL10n)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := map[string]bool{}
+		for _, m := range regexp.MustCompile(`"deleteImpact\.kind\.(\w+)"`).FindAllStringSubmatch(string(b), -1) {
+			got[m[1]] = true
+		}
+		if !reflect.DeepEqual(got, want) {
+			names := func(set map[string]bool) []string {
+				out := make([]string, 0, len(set))
+				for k := range set {
+					out = append(out, k)
+				}
+				sort.Strings(out)
+				return out
+			}
+			t.Errorf("Swift deleteImpact.kind.<kind> keys differ from Go's catalogmodel kinds (plus item):\n swift %v\n go    %v", names(got), names(want))
 		}
 	})
 	t.Run("the relationship inverse map is the seeded inverse", func(t *testing.T) {

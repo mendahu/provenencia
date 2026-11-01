@@ -43,8 +43,7 @@ private struct SourceGraphFormDialogModifier: ViewModifier {
             form: { current in
                 SourceGraphForm(
                     model: current,
-                    onNavigate: { navigation.go(to: $0) },
-                    dismiss: { model = nil }
+                    onNavigate: { navigation.go(to: $0) }
                 )
             }
         )
@@ -56,7 +55,6 @@ private struct SourceGraphFormDialogModifier: ViewModifier {
 private struct SourceGraphForm: View {
     @Bindable var model: SourceGraphFormModel
     let onNavigate: (WorkspaceLocation) -> Void
-    let dismiss: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
@@ -64,7 +62,8 @@ private struct SourceGraphForm: View {
                 PVCallout(
                     tone: .danger,
                     title: L10n.Sources.graphFormSaveErrorTitle,
-                    message: saveError
+                    message: saveError,
+                    announces: true
                 )
                 .accessibilityIdentifier("sources.graphForm.error")
             }
@@ -152,11 +151,11 @@ private struct SourceGraphForm: View {
                     PVDeleteImpactGroupList(
                         title: kept.artifact.displayTitle,
                         group: kept.block.citations,
-                        onNavigate: onNavigate,
-                        dismiss: dismiss
+                        onNavigate: onNavigate
                     )
                 }
             }
+            .disabled(model.isSaving)
         }
         .accessibilityIdentifier("sources.graphForm.keptLinked")
     }

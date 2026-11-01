@@ -89,6 +89,8 @@ never a raw `.sheet`. It gives the sheet Escape, a click outside, and the
 discard question for a dirty form, all from one rule (`PVSheetDismiss`). Do not
 add `.pvOutsideClick` or `.keyboardShortcut(.cancelAction)` to a sheet yourself.
 
+Kit components announce themselves: a toast speaks its title and message, and an error callout or error line passes `announces: true`; no call site posts its own. A sheet's content closes its sheet through `@Environment(\.pvSheetClose)`, and a form that asks "Discard changes?" before a step holds the step in a `PVDiscardGate`.
+
 macOS sheets: **no scrim/dim**, no redrawing window corner radius/shadow on panel content.
 Dismissal for async work stays on the caller binding (`isRunning` can show). See
 `PVConfirm.swift` / DesignSystem README “Confirmations are system chrome.”

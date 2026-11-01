@@ -47,12 +47,10 @@ final class ConclusionLeadModel {
             )
             session.apply(effects)
             toast = VocabularyToast(title: copy.toastTitle, body: body, tone: .success)
-            AccessibilityAnnouncement.post(body.isEmpty ? copy.toastTitle : "\(copy.toastTitle), \(body)")
             return true
         } catch {
             let message = L10n.Errors.message(for: error)
             toast = VocabularyToast(title: message, body: "", tone: .danger)
-            AccessibilityAnnouncement.post(message, priority: .high)
             return false
         }
     }

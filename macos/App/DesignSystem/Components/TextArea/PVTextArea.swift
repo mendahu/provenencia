@@ -173,6 +173,7 @@ struct PVTextArea: View {
                 isFocused = true
             }
         }
+        .pvFieldNamed()
     }
 }
 

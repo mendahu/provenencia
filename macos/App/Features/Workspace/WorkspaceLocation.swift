@@ -342,6 +342,15 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
             && lhs.promoteAll == rhs.promoteAll
     }
 
+    /// The Evidence graph this location is on (its canvas, its Citation composer
+    /// or its Promote page), else nil.
+    var graphSurfaceID: String? {
+        switch sourceSurface {
+        case .graph, .citationComposer, .promote: graphId
+        default: nil
+        }
+    }
+
     /// Pending Connect handoff: endpoints are known, the bridge is not written yet.
     var isConnectPrefill: Bool {
         sourceSurface == .citationComposer

@@ -45,8 +45,17 @@ final class SourceArtifactsSection {
         var reject: L10n.Errors.IngestCallout?
     }
 
+    /// A card's pencil or **Link to a graph** pressed while another card holds
+    /// unsaved edits: the question shows, and the target waits in `editGate`.
+    struct PendingEditSwitch: Identifiable {
+        let id = UUID()
+    }
+
     /// The card whose label and description are fields. One at a time.
     var editingArtifactID: String?
+    /// Set while "Discard changes?" asks whether another card may take the edit.
+    var pendingEditSwitch: PendingEditSwitch?
+    @ObservationIgnored private var editGate = PVDiscardGate()
     /// Local edit buffers for the card in edit, keyed by id.
     var labels: [String: String] = [:]
     var descriptions: [String: String] = [:]
@@ -169,10 +178,34 @@ final class SourceArtifactsSection {
 
     // MARK: Card edit
 
+    /// Opens edit on one card. Another card with unsaved edits asks first
+    /// ("Discard changes?"); the target waits in the gate until the answer.
+    func beginEdit(_ id: String) {
+        if editingArtifactID == id || savingID != nil { return }
+        if let current = editingArtifactID, fieldsDirty(current) {
+            editGate.hold { [weak self] in self?.openEdit(id) }
+            pendingEditSwitch = PendingEditSwitch()
+            return
+        }
+        openEdit(id)
+    }
+
+    /// The answer was Discard: the other card's edit is dropped and the target opens.
+    func confirmEditSwitch() {
+        pendingEditSwitch = nil
+        editGate.discard()?()
+    }
+
+    /// The answer was Keep editing: the other card keeps its edit.
+    func cancelEditSwitch() {
+        pendingEditSwitch = nil
+        _ = editGate.keepEditing()
+    }
+
     /// Opens edit on one card and restores any other card to its stored text.
     /// When the session has the Source's graphs it also starts reading which of
     /// the Artifact's links the engine says its graphs must keep.
-    func beginEdit(_ id: String) {
+    private func openEdit(_ id: String) {
         guard let art = items.first(where: { $0.id == id }) else { return }
         if let current = editingArtifactID, current != id {
             cancelFields(id: current)
@@ -681,7 +714,7 @@ final class SourceArtifactsSection {
     /// Opens the Artifact's file in its own app. A file with no path (Go returns none
     /// for a type Provenencia does not store) or one `ProjectFiles` refuses shows the
     /// shared refusal naming the file; a missing one keeps its own message.
-    func open(_ art: CatalogArtifact) {
+    func open(_ art: CatalogArtifact) async {
         guard art.file != nil else { return }
         context.clearPageError()
         let name = art.fileDisplayName
@@ -689,14 +722,12 @@ final class SourceArtifactsSection {
             context.pageError = L10n.ObjectOpen.refused(filename: name)
             return
         }
-        switch ProjectFiles.openObject(projectDir: context.projectDir, relPath: rel) {
-        case nil:
-            break
-        case .unsafe:
-            context.pageError = L10n.ObjectOpen.refused(filename: name)
-        case .missing:
-            context.pageError = L10n.string(L10n.Sources.fileOpenMissing)
-        }
+        guard let refusal = await ProjectFiles.openObject(projectDir: context.projectDir, relPath: rel) else { return }
+        context.pageError = L10n.ObjectOpen.message(
+            for: refusal,
+            filename: name,
+            missing: L10n.string(L10n.Sources.fileOpenMissing)
+        )
     }
 
     private func setReject(

@@ -170,6 +170,7 @@ User, 2026-10-28. They are the map's working rules under "Audit 2 fixes".
 **Where.** `macos/App/Features/Promote/PromoteEvidenceSheet.swift` (about lines 120–138).
 **Problem.** Neither `PVSelect` passes `accessibilityLabel`, so VoiceOver reads the trigger text ("Not stated, Not stated"); the `PVTextArea` has no label, and `PVField` does not tie its label to its content. Eleven of the fifteen `PVSelect` sites under `Features` pass one.
 **Fix.** Pass the labels (`L10n.Promote.status`, `.confidence`) and label the text area; better, `PVField` labels its content in the kit, so every form gains it.
+**Fixed in S14-14.**
 
 ### B-19 — Initials and nicknames are compared before accents are folded
 

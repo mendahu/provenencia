@@ -35,10 +35,10 @@ enum EventsList: ConclusionListKind {
         let line = EventSecondaryDisplay.content(summary)
         var label = L10n.Workspace.eventRowAccessibility(title: titleSource(summary, orders: orders).text, date: line.date, ref: summary.entity.ref)
         if !line.place.isEmpty {
-            label = L10n.Conclusions.a11yList(label, rest: line.place)
+            label = L10n.DesignSystem.spokenJoin(label, line.place)
         }
         if line.extraPlaces > 0 {
-            label = L10n.Conclusions.a11yList(label, rest: L10n.Conclusions.morePlaces(count: line.extraPlaces))
+            label = L10n.DesignSystem.spokenJoin(label, L10n.Conclusions.morePlaces(count: line.extraPlaces))
         }
         return label
     }

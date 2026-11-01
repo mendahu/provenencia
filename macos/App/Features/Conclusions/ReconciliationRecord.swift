@@ -55,7 +55,7 @@ struct ReconciliationRecord: Equatable, Identifiable {
     /// as separate controls.
     var spoken: String {
         let parts = [readAs, citationLine, phrase, observationRef, subjectRef]
-        return parts.dropFirst().reduce(parts[0]) { L10n.Conclusions.a11yList($0, rest: $1) }
+        return parts.dropFirst().reduce(parts[0]) { L10n.DesignSystem.spokenJoin($0, $1) }
     }
 
     /// The Source's title, else the Observation ref when the Source has none.

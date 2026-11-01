@@ -1,7 +1,7 @@
 # Review — S14-14 Copy and VoiceOver on graph work
 
 **Verdict:** Fits with changes — Ready with changes
-**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Rounds:** 2, plus round 3 scoped to the D-19 revision (2026-11-01). **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 - None open. Answered in round 2 (2026-11-01): M-13 — move the composer's held step onto `PVDiscardGate` in this PR (D-22). Answered before review (2026-11-01): one PR rather than a split (the plan bends the scope entry's split line; STEP-13 rewords it); all three ship-log leftovers in; no brief; history rows read graph name then surface; the composer's load error sits under the Citation picker.
@@ -143,3 +143,41 @@
 **Answer:** Fixed — D-8 and manual check 5 accept it.
 
 Smaller notes (README sentence wraps, no Announce row to extend, about 43 `PVField` sites, a 21st non-plural count): Fixed in STEP-1, STEP-2, § 4 and § 6 Edges.
+
+## Round 3 — D-19 revision (2026-11-01)
+
+Why: ship round 0 stopped at STEP-9's probe. A top-level `variations.plural` whose forms carry no number is a hard catalog compile error ("Plural variation requires referencing the number in the string"), for all 18 kind keys. User chose (2026-11-01): probe a substitution, then revise. A scratch catalog compiled with `xcstringstool compile` (exit 0; format emitted as `%1$#@noun@`) and resolved "citation" for 1, "citations" for 0, 2, 5; `deleteImpact.via.unknown`'s shape compiled in the same run. D-19 now uses a `%#@noun@` substitution. Reviewers saw only the plan diff: maintainability (Opus), executability (Sonnet). The two-round cap is spent, so no round 4; the two blockers were missing detail, both fixed.
+
+### X-1 · blocker · The catalog entry's JSON is not written out
+**Answer:** Fixed — § 6 Strings carries the full `deleteImpact.kind.citation` entry; the forms carry no `%arg`, unlike `rowSummary`.
+
+### X-2 · blocker · Current state is not stated: the working tree holds the rejected shape
+**Answer:** Fixed — STEP-9 opens with a resume starting point: `bc8f22ff`, commit STEP-7/8 first, convert the 18 entries in place, `citation` first.
+
+### X-3 · major · How `noun(_:count:)` passes the count is only implied
+**Answer:** Fixed — D-19: signature and one-argument `L10n.format` call kept; count reaches `noun` through `argNum` 1.
+
+### X-4 · major · T-13's skip: why it still works
+**Answer:** Fixed with M-2 — the prefix skip is replaced; the compiled format is `%1$#@noun@` (probe output), which `PluralShape.position(ofVariable:in:)` matches.
+
+### X-5 · minor · The script accepts the shape, unstated
+**Answer:** Fixed — § 6 Edges Assumptions says the script needs no change, and why.
+
+### X-6 · minor · Stop condition has no direction
+**Answer:** Fixed — "Stop and report; do not switch to separate one / other keys."
+
+### X-7 · minor · `promotedBody` reference may be copied for nouns
+**Answer:** Fixed — § 4 A-20 row says that shape must print its number, so not for a bare noun. The verb/noun pairing note is logged as a nit.
+
+### M-1 · major · The skill does not teach the bare-noun shape or the compile trap
+**Answer:** Fixed — STEP-13's `add-localized-string` edit gains the substitution rule and the compile-error trap.
+
+### M-2 · major · The plural test exempts a key prefix
+**Answer:** Fixed — D-19 / T-13: `PluralShape.printsNumber` *(new)* gates the digit checks; the `deleteImpact.kind.` prefix test goes.
+
+### M-3 · minor · `defaultValue` for the kind resources unstated
+**Answer:** Fixed — D-19: `defaultValue: "%#@noun@"`, matching the catalog value per `add-localized-string` step 5.
+
+### Writer's own calls (round 3)
+- `defaultValue` mirrors the catalog (`%#@noun@`) rather than holding the English singular.
+- On a failed in-app probe the implementer stops rather than falling back to separate keys.

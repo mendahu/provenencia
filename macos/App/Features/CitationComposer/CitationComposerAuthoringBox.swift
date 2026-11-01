@@ -856,7 +856,7 @@ struct CitationDepictionValueArea: View {
                         .disabled(!model.canSaveDepictionCitationPage)
                         .accessibilityIdentifier("citationComposer.depiction.savePage")
                         if let error = model.fields.error {
-                            PVErrorText(error)
+                            PVErrorText(error, announces: true)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .accessibilityIdentifier("citationComposer.depiction.savePageError")
                         }
@@ -913,9 +913,10 @@ struct CitationDepictionValueArea: View {
         }
         .accessibilityIdentifier("citationComposer.depiction")
         .task(id: model.depictionPendingCutKey) { await model.renderDepictionPreview() }
-        .onChange(of: model.depictionCaptionState) { _, state in
-            if state == .cutFailed { AccessibilityAnnouncement.post(L10n.string(state.text)) }
-        }
+        .pvAnnounce(
+            model.depictionCaptionState == .cutFailed ? L10n.string(model.depictionCaptionState.text) : nil,
+            priority: .medium
+        )
     }
 
     /// The 96pt preview in the state the model derived: loading while the cut
@@ -964,8 +965,6 @@ struct CitationDepictionValueArea: View {
             FocusClaim.claim(focus, .value) {
                 AccessibilityAnnouncement.post(L10n.string(model.depictionCaptionState.text))
             }
-        } else if let error = model.fields.error {
-            AccessibilityAnnouncement.post(error)
         }
     }
 }

@@ -134,7 +134,7 @@
       }
     },
     "designSystem.formDialog.discardConfirm": {
-      "comment": "Confirms discarding a form sheet's edits after an outside click",
+      "comment": "Confirms dropping the edits of a form sheet or an Artifact card with unsaved edits (outside click, Escape, a row that navigates, another card's edit)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -146,7 +146,7 @@
       }
     },
     "designSystem.formDialog.discardKeep": {
-      "comment": "Returns to the form sheet after an outside click",
+      "comment": "Keeps the edits of a form sheet or an Artifact card with unsaved edits and returns to the form or card (outside click, Escape, a row that navigates, another card's edit)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -158,7 +158,7 @@
       }
     },
     "designSystem.formDialog.discardMessage": {
-      "comment": "Body when an outside click would close a form sheet that has edits",
+      "comment": "Body of the confirm shown when a form sheet or an Artifact card with unsaved edits is about to drop them (outside click, Escape, a row that navigates, another card's edit)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -170,7 +170,7 @@
       }
     },
     "designSystem.formDialog.discardTitle": {
-      "comment": "Title when an outside click would close a form sheet that has edits",
+      "comment": "Title of the confirm shown when a form sheet or an Artifact card with unsaved edits is about to drop them (outside click, Escape, a row that navigates, another card's edit)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -1338,6 +1338,18 @@
         }
       }
     },
+    "designSystem.spokenJoin": {
+      "comment": "VoiceOver join of two spoken parts (a label and its detail, a title and its message)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@"
+          }
+        }
+      }
+    },
     "deleteImpact.confirm.delete": {
       "comment": "Allowed-delete confirm button; argument is kind noun",
       "extractionState": "manual",
@@ -1542,410 +1554,648 @@
         }
       }
     },
-    "deleteImpact.kind.artifact.one": {
-      "comment": "Singular Impact kind noun",
+    "deleteImpact.kind.source": {
+      "comment": "Impact kind noun, bare, by count",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "artifact"
+            "value": "%#@noun@"
+          },
+          "substitutions": {
+            "noun": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "source"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "sources"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
-    "deleteImpact.kind.artifact.other": {
-      "comment": "Plural Impact kind noun",
+    "deleteImpact.kind.artifact": {
+      "comment": "Impact kind noun, bare, by count",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "artifacts"
+            "value": "%#@noun@"
+          },
+          "substitutions": {
+            "noun": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "artifact"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "artifacts"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
-    "deleteImpact.kind.citation.one": {
-      "comment": "Singular Impact kind noun",
+    "deleteImpact.kind.evidence_graph": {
+      "comment": "Impact kind noun, bare, by count",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "citation"
+            "value": "%#@noun@"
+          },
+          "substitutions": {
+            "noun": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "evidence graph"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "evidence graphs"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
-    "deleteImpact.kind.citation.other": {
-      "comment": "Plural Impact kind noun",
+    "deleteImpact.kind.citation": {
+      "comment": "Impact kind noun, bare, by count",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "citations"
+            "value": "%#@noun@"
+          },
+          "substitutions": {
+            "noun": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "citation"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "citations"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
-    "deleteImpact.kind.file.one": {
-      "comment": "Singular Impact kind noun",
+    "deleteImpact.kind.observation": {
+      "comment": "Impact kind noun, bare, by count",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "file"
+            "value": "%#@noun@"
+          },
+          "substitutions": {
+            "noun": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "observation"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "observations"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
-    "deleteImpact.kind.file.other": {
-      "comment": "Plural Impact kind noun",
+    "deleteImpact.kind.subject": {
+      "comment": "Impact kind noun, bare, by count",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "files"
+            "value": "%#@noun@"
+          },
+          "substitutions": {
+            "noun": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "subject"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "subjects"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
-    "deleteImpact.kind.item.one": {
-      "comment": "Singular fallback Impact kind noun",
+    "deleteImpact.kind.source_type": {
+      "comment": "Impact kind noun, bare, by count",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "item"
+            "value": "%#@noun@"
+          },
+          "substitutions": {
+            "noun": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "source type"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "source types"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
-    "deleteImpact.kind.item.other": {
-      "comment": "Plural fallback Impact kind noun",
+    "deleteImpact.kind.metadata_field": {
+      "comment": "Impact kind noun, bare, by count",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "items"
+            "value": "%#@noun@"
+          },
+          "substitutions": {
+            "noun": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "metadata field"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "metadata fields"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
-    "deleteImpact.kind.narrative.one": {
-      "comment": "Singular Impact kind noun",
+    "deleteImpact.kind.source_credibility_grade": {
+      "comment": "Impact kind noun, bare, by count",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "narrative"
+            "value": "%#@noun@"
+          },
+          "substitutions": {
+            "noun": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "credibility grade"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "credibility grades"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
-    "deleteImpact.kind.narrative.other": {
-      "comment": "Plural Impact kind noun",
+    "deleteImpact.kind.subject_type": {
+      "comment": "Impact kind noun, bare, by count",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "narratives"
+            "value": "%#@noun@"
+          },
+          "substitutions": {
+            "noun": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "subject type"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "subject types"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
-    "deleteImpact.kind.reconciliation_claim.one": {
-      "comment": "Singular Impact kind noun",
+    "deleteImpact.kind.property": {
+      "comment": "Impact kind noun, bare, by count",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "reconciliation claim"
+            "value": "%#@noun@"
+          },
+          "substitutions": {
+            "noun": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "property"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "properties"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
-    "deleteImpact.kind.reconciliation_claim.other": {
-      "comment": "Plural Impact kind noun",
+    "deleteImpact.kind.property_term": {
+      "comment": "Impact kind noun, bare, by count",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "reconciliation claims"
+            "value": "%#@noun@"
+          },
+          "substitutions": {
+            "noun": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "property term"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "property terms"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
-    "deleteImpact.kind.credibilityGrade.one": {
-      "comment": "Singular Impact kind noun",
+    "deleteImpact.kind.canonical_entity": {
+      "comment": "Impact kind noun, bare, by count for a Conclusion handle (PER-…, EVT-…, PLC-…)",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "credibility grade"
+            "value": "%#@noun@"
+          },
+          "substitutions": {
+            "noun": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "person, event, or place"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "people, events, or places"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
-    "deleteImpact.kind.credibilityGrade.other": {
-      "comment": "Plural Impact kind noun",
+    "deleteImpact.kind.user": {
+      "comment": "Impact kind noun, bare, by count (infra)",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "credibility grades"
+            "value": "%#@noun@"
+          },
+          "substitutions": {
+            "noun": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "user"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "users"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
-    "deleteImpact.kind.observation.one": {
-      "comment": "Singular Impact kind noun",
+    "deleteImpact.kind.project": {
+      "comment": "Impact kind noun, bare, by count (infra)",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "observation"
+            "value": "%#@noun@"
+          },
+          "substitutions": {
+            "noun": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "project"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "projects"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
-    "deleteImpact.kind.observation.other": {
-      "comment": "Plural Impact kind noun",
+    "deleteImpact.kind.file": {
+      "comment": "Impact kind noun, bare, by count",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "observations"
+            "value": "%#@noun@"
+          },
+          "substitutions": {
+            "noun": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "file"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "files"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
-    "deleteImpact.kind.project.one": {
-      "comment": "Singular infra Impact kind noun",
+    "deleteImpact.kind.identity_claim": {
+      "comment": "Impact kind noun, bare, by count",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "project"
+            "value": "%#@noun@"
+          },
+          "substitutions": {
+            "noun": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "identity claim"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "identity claims"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
-    "deleteImpact.kind.project.other": {
-      "comment": "Plural infra Impact kind noun",
+    "deleteImpact.kind.item": {
+      "comment": "Impact kind noun, bare, by count; fallback for a kind with no noun",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "projects"
+            "value": "%#@noun@"
+          },
+          "substitutions": {
+            "noun": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "item"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "items"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
-    "deleteImpact.kind.property.one": {
-      "comment": "Singular Impact kind noun",
+    "deleteImpact.via.unknown": {
+      "comment": "Unknown-via group heading; arguments are total and kind noun (plural noun)",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "property"
-          }
-        }
-      }
-    },
-    "deleteImpact.kind.property.other": {
-      "comment": "Plural Impact kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "properties"
-          }
-        }
-      }
-    },
-    "deleteImpact.kind.propertyTerm.one": {
-      "comment": "Singular Impact kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "property term"
-          }
-        }
-      }
-    },
-    "deleteImpact.kind.propertyTerm.other": {
-      "comment": "Plural Impact kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "property terms"
-          }
-        }
-      }
-    },
-    "deleteImpact.kind.source.one": {
-      "comment": "Singular Impact kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "source"
-          }
-        }
-      }
-    },
-    "deleteImpact.kind.source.other": {
-      "comment": "Plural Impact kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "sources"
-          }
-        }
-      }
-    },
-    "deleteImpact.kind.metadataField.one": {
-      "comment": "Singular Impact kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "metadata field"
-          }
-        }
-      }
-    },
-    "deleteImpact.kind.metadataField.other": {
-      "comment": "Plural Impact kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "metadata fields"
-          }
-        }
-      }
-    },
-    "deleteImpact.kind.sourceType.one": {
-      "comment": "Singular Impact kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "source type"
-          }
-        }
-      }
-    },
-    "deleteImpact.kind.sourceType.other": {
-      "comment": "Plural Impact kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "source types"
-          }
-        }
-      }
-    },
-    "deleteImpact.kind.subject.one": {
-      "comment": "Singular Impact kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "subject"
-          }
-        }
-      }
-    },
-    "deleteImpact.kind.subject.other": {
-      "comment": "Plural Impact kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "subjects"
-          }
-        }
-      }
-    },
-    "deleteImpact.kind.subjectType.one": {
-      "comment": "Singular Impact kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "subject type"
-          }
-        }
-      }
-    },
-    "deleteImpact.kind.subjectType.other": {
-      "comment": "Plural Impact kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "subject types"
-          }
-        }
-      }
-    },
-    "deleteImpact.kind.user.one": {
-      "comment": "Singular infra Impact kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "user"
-          }
-        }
-      }
-    },
-    "deleteImpact.kind.user.other": {
-      "comment": "Plural infra Impact kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "users"
+            "value": "%1$lld %2$@ %#@verb@ this"
+          },
+          "substitutions": {
+            "verb": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "references"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "reference"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2438,30 +2688,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "deleteImpact.via.unknown.one": {
-      "comment": "Unknown-via group heading, singular; arguments are total and kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld %2$@ references this"
-          }
-        }
-      }
-    },
-    "deleteImpact.via.unknown.other": {
-      "comment": "Unknown-via group heading, plural; arguments are total and kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld %2$@ reference this"
           }
         }
       }
@@ -4958,6 +5184,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Provenencia won't open “%@”. Its file type could run a program, or it isn't a type Provenencia stores."
+          }
+        }
+      }
+    },
+    "objectOpen.notOpened.message": {
+      "comment": "Error when Open hands a stored file to its app and macOS fails to open it; argument is the file name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS couldn't open “%@” in its app."
           }
         }
       }
@@ -11163,13 +11401,13 @@
       }
     },
     "evidenceGraph.subject.addPropertyUnavailable": {
-      "comment": "VoiceOver when Add property is disabled because the Source has no Artifact",
+      "comment": "VoiceOver when Add property is disabled because the graph has no Artifact",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add property, unavailable — this Source has no Artifacts"
+            "value": "Add property, unavailable — this evidence graph has no artifacts"
           }
         }
       }
@@ -11182,6 +11420,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Promote all"
+          }
+        }
+      }
+    },
+    "evidenceGraph.canvas.accessibilityLabel": {
+      "comment": "VoiceOver label of the Evidence graph canvas; argument is the graph's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence graph, %@"
           }
         }
       }
@@ -15464,30 +15714,6 @@
         }
       }
     },
-    "deleteImpact.kind.canonicalEntity.one": {
-      "comment": "Singular Impact kind noun for a Conclusion handle (PER-…, EVT-…, PLC-…)",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "person, event, or place"
-          }
-        }
-      }
-    },
-    "deleteImpact.kind.canonicalEntity.other": {
-      "comment": "Plural Impact kind noun for Conclusion handles",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "people, events, or places"
-          }
-        }
-      }
-    },
     "deleteImpact.confirm.leavesHandle": {
       "comment": "Allowed Subject delete confirm, appended after the consequence; argument is the handle ref(s), e.g. PER-7KD45",
       "extractionState": "manual",
@@ -17876,18 +18102,6 @@
         }
       }
     },
-    "conclusions.a11y.list": {
-      "comment": "Joins two parts of a spoken Conclusion field (label, value, state, disagreement)",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@, %2$@"
-          }
-        }
-      }
-    },
     "lastUpdated.a11y.updated": {
       "comment": "VoiceOver suffix of a list row; argument is the spoken time (Today at 3:15 PM, Yesterday, October 12, 2026)",
       "extractionState": "manual",
@@ -18600,25 +18814,25 @@
       }
     },
     "promote.error.graphUnavailable": {
-      "comment": "Callout when the Promote page opens without the Source's graph; the page would otherwise look empty",
+      "comment": "Callout when the Promote page opens without its Evidence graph; the page would otherwise look empty",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Provenencia couldn't read this Source's Evidence graph, so it can't list the rows to promote. Go back to the graph and open Promote again."
+            "value": "Provenencia couldn't read this Evidence graph, so it can't list the rows to promote. Go back to the graph and open Promote again."
           }
         }
       }
     },
     "promote.error.graphUnavailableRepropose": {
-      "comment": "Callout when proposing again after a decision can't read the Source's graph",
+      "comment": "Callout when proposing again after a decision can't read the Evidence graph",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Provenencia couldn't read this Source's Evidence graph to propose the rows again. Your rows and decisions are kept."
+            "value": "Provenencia couldn't read this Evidence graph to propose the rows again. Your rows and decisions are kept."
           }
         }
       }
@@ -18766,9 +18980,21 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld subjects on this graph"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld subject on this graph"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld subjects on this graph"
+                }
+              }
+            }
           }
         }
       }
@@ -18826,7 +19052,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Adds a row for every other person, event and place on this Source"
+            "value": "Adds a row for every other person, event and place on this Evidence graph"
           }
         }
       }
@@ -19383,6 +19609,30 @@
         }
       }
     },
+    "citationComposer.citationLoadFailed": {
+      "comment": "Under the Citation picker when a Citation fails to load; 1 = the Citation's ref, 2 = the reason",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't open %1$@. %2$@"
+          }
+        }
+      }
+    },
+    "citationComposer.citationLoadFailedUnnamed": {
+      "comment": "Under the Citation picker when a Citation fails to load and its ref is not known; argument is the reason",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't open this citation. %@"
+          }
+        }
+      }
+    },
     "citationComposer.pairPickBoth": {
       "comment": "Bridge draft before either end is chosen",
       "extractionState": "manual",
@@ -19390,7 +19640,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pick two subjects on this Source. The pair decides what the bridge can say"
+            "value": "Pick two subjects on this Evidence graph. The pair decides what the bridge can say"
           }
         }
       }
@@ -19640,9 +19890,21 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld pages"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld page"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld pages"
+                }
+              }
+            }
           }
         }
       }
@@ -19688,9 +19950,21 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld citations"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld citation"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld citations"
+                }
+              }
+            }
           }
         }
       }
@@ -19820,9 +20094,21 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld observations"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld observation"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld observations"
+                }
+              }
+            }
           }
         }
       }
@@ -20643,18 +20929,6 @@
         }
       }
     },
-    "lastUpdated.a11y.join": {
-      "comment": "Joins a list row's spoken label and its last-updated phrase",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@, %2$@"
-          }
-        }
-      }
-    },
     "sources.list.searchPrompt": {
       "comment": "Placeholder of the Sources list search field",
       "extractionState": "manual",
@@ -20735,30 +21009,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ was erased from this source."
-          }
-        }
-      }
-    },
-    "deleteImpact.kind.evidence_graph.one": {
-      "comment": "Singular Impact kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "evidence graph"
-          }
-        }
-      }
-    },
-    "deleteImpact.kind.evidence_graph.other": {
-      "comment": "Plural Impact kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "evidence graphs"
           }
         }
       }

@@ -47,14 +47,18 @@ enum PVCalloutTone {
 /// An inline status/explanation banner — mirrors `components/feedback/Callout.jsx`
 /// (tone-tinted fill, 3pt left rule, optional title, optional actions row under the
 /// body). The title is ``PVCopy``: a catalog resource or an already formatted
-/// `String`. `onDismiss`, `detail`, and `plain` variant remain deferred until a
+/// `String`. `announces: true` speaks the title and message to VoiceOver when
+/// the callout appears or changes (error callouts that show up after an action;
+/// most callouts are static explanations and stay silent). `onDismiss`, `detail`, and `plain` variant remain deferred until a
 /// call site needs them.
 struct PVCallout<Actions: View>: View {
     private let tone: PVCalloutTone
     private let icon: PVSymbol?
     private let title: Text?
+    private let titleCopy: (any PVCopy)?
     private let message: String
     private let compact: Bool
+    private let announces: Bool
     private let actions: Actions
 
     init(
@@ -63,13 +67,16 @@ struct PVCallout<Actions: View>: View {
         title: (any PVCopy)? = nil,
         message: String,
         compact: Bool = false,
+        announces: Bool = false,
         @ViewBuilder actions: () -> Actions
     ) {
         self.tone = tone
         self.icon = icon
         self.title = title?.pvText
+        self.titleCopy = title
         self.message = message
         self.compact = compact
+        self.announces = announces
         self.actions = actions()
     }
 
@@ -109,6 +116,10 @@ struct PVCallout<Actions: View>: View {
                 .frame(width: 3)
         }
         .clipShape(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous))
+        .pvAnnounce(
+            announces ? AccessibilityAnnouncement.text(title: titleCopy?.pvString, message: message) : nil,
+            priority: AccessibilityAnnouncement.priority(danger: tone == .danger)
+        )
     }
 }
 
@@ -118,14 +129,16 @@ extension PVCallout where Actions == EmptyView {
         icon: PVSymbol? = nil,
         title: (any PVCopy)? = nil,
         message: String,
-        compact: Bool = false
+        compact: Bool = false,
+        announces: Bool = false
     ) {
         self.init(
             tone: tone,
             icon: icon,
             title: title,
             message: message,
-            compact: compact
+            compact: compact,
+            announces: announces
         ) {
             EmptyView()
         }

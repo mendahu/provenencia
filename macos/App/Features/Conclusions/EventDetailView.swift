@@ -31,9 +31,9 @@ private struct EventDetailSecondary: View {
         ConclusionDatePlaceLine(
             date: date,
             place: place,
-            accessibilityLabel: L10n.Conclusions.a11yList(
+            accessibilityLabel: L10n.DesignSystem.spokenJoin(
                 date ?? L10n.string(L10n.Conclusions.dateUnknown),
-                rest: place ?? L10n.string(L10n.Conclusions.placeUnknown)
+                place ?? L10n.string(L10n.Conclusions.placeUnknown)
             )
         )
     }

@@ -85,6 +85,7 @@ final class SourcePageModel {
             && metadata.pendingDelete == nil
             && notes.pendingDelete == nil
             && pendingImpact == nil
+            && artifacts.pendingEditSwitch == nil
     }
 
     /// Loads the workspace and page vocabulary, then syncs section state

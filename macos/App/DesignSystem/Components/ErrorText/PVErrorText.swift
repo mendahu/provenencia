@@ -18,16 +18,20 @@ struct PVErrorText: View {
 
     private let text: String
     private let size: Size
+    private let announces: Bool
 
-    init(_ text: String, size: Size = .micro) {
+    /// `announces: true` speaks the line to VoiceOver when it appears or changes.
+    init(_ text: String, size: Size = .micro, announces: Bool = false) {
         self.text = text
         self.size = size
+        self.announces = announces
     }
 
     var body: some View {
         Text(verbatim: text)
             .font(PVFont.body(size: size.points))
             .foregroundStyle(PVColor.danger)
+            .pvAnnounce(announces ? text : nil, priority: .high)
     }
 }
 

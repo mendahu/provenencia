@@ -176,7 +176,7 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: makeStore(artifacts: [art]))
         await model.warmFromSession()
-        model.artifacts.open(art)
+        await model.artifacts.open(art)
         #expect(model.pageError == L10n.ObjectOpen.refused(filename: "run.sh"))
     }
 
@@ -190,7 +190,7 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: makeStore(artifacts: [art]))
         await model.warmFromSession()
-        model.artifacts.open(art)
+        await model.artifacts.open(art)
         #expect(model.pageError == L10n.ObjectOpen.refused(filename: "ART-X"))
     }
 
@@ -207,7 +207,7 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: makeStore(artifacts: [art]))
         await model.warmFromSession()
-        model.artifacts.open(art)
+        await model.artifacts.open(art)
         #expect(model.pageError == L10n.ObjectOpen.refused(filename: art.fileDisplayName))
     }
 
@@ -1088,11 +1088,72 @@ struct SourcePageModelTests {
                 == L10n.string(L10n.Sources.artifactCardLabelRequired)
         )
         model.artifacts.beginEdit("a2")
+        #expect(model.artifacts.editingArtifactID == "a1")
+        model.artifacts.confirmEditSwitch()
         #expect(model.artifacts.editingArtifactID == "a2")
         #expect(model.artifacts.labels["a1"] == "Front")
         model.artifacts.cancelFields(id: "a2")
         #expect(model.artifacts.editingArtifactID == nil)
         #expect(!model.artifacts.canSaveFields("a2"))
+    }
+
+    private func twoCardModel() async -> SourcePageModel {
+        let store = makeStore(
+            artifacts: [
+                CatalogArtifact(
+                    id: "ART-1", ref: "ART-AAAAA", sourceID: sourceID, fileID: "",
+                    label: "Page 1", description: "", file: nil
+                ),
+                CatalogArtifact(
+                    id: "ART-2", ref: "ART-BBBBB", sourceID: sourceID, fileID: "",
+                    label: "Page 2", description: "", file: nil
+                ),
+            ]
+        )
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        return model
+    }
+
+    @Test func cardSwitchAsksWhenDirty() async {
+        let model = await twoCardModel()
+        model.artifacts.beginEdit("ART-1")
+        model.artifacts.labels["ART-1"] = "Page one"
+        model.artifacts.beginEdit("ART-2")
+        #expect(model.artifacts.pendingEditSwitch != nil)
+        #expect(model.artifacts.editingArtifactID == "ART-1")
+        #expect(model.artifacts.labels["ART-1"] == "Page one")
+        #expect(!model.acceptsArtifactPageDrop)
+    }
+
+    @Test func cardSwitchConfirmMovesEdit() async {
+        let model = await twoCardModel()
+        model.artifacts.beginEdit("ART-1")
+        model.artifacts.labels["ART-1"] = "Page one"
+        model.artifacts.beginEdit("ART-2")
+        model.artifacts.confirmEditSwitch()
+        #expect(model.artifacts.editingArtifactID == "ART-2")
+        #expect(model.artifacts.pendingEditSwitch == nil)
+        #expect(model.artifacts.labels["ART-1"] == "Page 1")
+    }
+
+    @Test func cardSwitchCancelKeepsEdit() async {
+        let model = await twoCardModel()
+        model.artifacts.beginEdit("ART-1")
+        model.artifacts.labels["ART-1"] = "Page one"
+        model.artifacts.beginEdit("ART-2")
+        model.artifacts.cancelEditSwitch()
+        #expect(model.artifacts.pendingEditSwitch == nil)
+        #expect(model.artifacts.editingArtifactID == "ART-1")
+        #expect(model.artifacts.labels["ART-1"] == "Page one")
+    }
+
+    @Test func cardSwitchCleanMovesAtOnce() async {
+        let model = await twoCardModel()
+        model.artifacts.beginEdit("ART-1")
+        model.artifacts.beginEdit("ART-2")
+        #expect(model.artifacts.editingArtifactID == "ART-2")
+        #expect(model.artifacts.pendingEditSwitch == nil)
     }
 
     @Test func pageDropStagesFileWithoutCreating() async throws {
@@ -1658,12 +1719,14 @@ struct SourcePageModelTests {
         #expect(model.artifacts.linkEdit?.excluded == ["g-j", "g-s"])
 
         store.unlinkImpactBlocks = [unlinkBlock("P9", graphID: "g-b", citations: 1, reason: .artifactInUse)]
+        model.artifacts.cancelFields(id: "P9")
         model.artifacts.beginEdit("P9")
         await model.artifacts.linkLoadTask?.value
         #expect(model.artifacts.lockedGraphs["g-b"] == "1 citation in this graph uses this artifact")
 
         // A reason this build does not know locks too, with the engine's wording.
         store.unlinkImpactBlocks = [unlinkBlock("P9", graphID: "g-b", citations: 0, reason: .unrecognized("x.y"))]
+        model.artifacts.cancelFields(id: "P9")
         model.artifacts.beginEdit("P9")
         await model.artifacts.linkLoadTask?.value
         #expect(model.artifacts.lockedGraphs["g-b"] == L10n.Errors.message(code: "x.y"))
@@ -1893,17 +1956,28 @@ struct SourcePageModelTests {
         model.artifacts.beginEdit("P3")
         await model.artifacts.linkLoadTask?.value
         model.artifacts.linkEdit?.excluded = ["g-j"]
-        store.updateArtifactError = CoreInvokeError.coded(
+        let failure = CoreInvokeError.coded(
             status: 1, code: "evidencegraphs.artifact_in_use", kind: .conflict, params: []
         )
+        store.updateArtifactError = failure
         store.updateArtifactHold.isOn = true
         let save = Task { await model.artifacts.saveFields(id: "P3") }
         #expect(await waitUntil { store.updateArtifactHold.count == 1 })
         model.artifacts.beginEdit("P4")
         store.updateArtifactHold.release()
         await save.value
-        #expect(model.artifacts.editingArtifactID == "P4")
-        #expect(model.artifacts.cardSaveError == nil)
+        #expect(model.artifacts.editingArtifactID == "P3")
+        #expect(model.artifacts.cardSaveError == L10n.Sources.artifactCardSaveErrorKept(L10n.Errors.message(for: failure)))
+        #expect(model.artifacts.pendingEditSwitch == nil)
+    }
+
+    @Test func beginEditOnTheSameCardKeepsItsEdits() async {
+        let (model, _, _) = await makeCensus()
+        model.artifacts.beginEdit("P3")
+        model.artifacts.labels["P3"] = "Page 3, edited"
+        model.artifacts.beginEdit("P3")
+        #expect(model.artifacts.labels["P3"] == "Page 3, edited")
+        #expect(model.artifacts.pendingEditSwitch == nil)
     }
 
     @Test func addArtifactRetryIgnoresGraphChoice() async {

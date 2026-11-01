@@ -60,6 +60,7 @@ struct PVField<Content: View>: View {
             }
 
             content
+                .environment(\.pvFieldLabel, label)
 
             if let error {
                 PVErrorText(error)
@@ -69,6 +70,47 @@ struct PVField<Content: View>: View {
                     .foregroundStyle(PVColor.textMuted)
             }
         }
+    }
+}
+
+private struct PVFieldLabelKey: EnvironmentKey {
+    static let defaultValue: LocalizedStringResource? = nil
+}
+
+extension EnvironmentValues {
+    /// The label of the nearest enclosing ``PVField``, so the kit text control
+    /// inside it can speak it. A field with no label sets nil, so an outer
+    /// field's label never reaches an inner one.
+    var pvFieldLabel: LocalizedStringResource? {
+        get { self[PVFieldLabelKey.self] }
+        set { self[PVFieldLabelKey.self] = newValue }
+    }
+}
+
+/// Which name a control inside a ``PVField`` speaks: its own label, else the
+/// field's, else nothing (the control keeps what it says today).
+enum PVFieldLabel {
+    static func resolve(own: String?, field: String?) -> String? {
+        own ?? field
+    }
+}
+
+private struct PVFieldNamed: ViewModifier {
+    @Environment(\.pvFieldLabel) private var fieldLabel
+
+    func body(content: Content) -> some View {
+        if let name = PVFieldLabel.resolve(own: nil, field: fieldLabel.map(L10n.string)) {
+            content.accessibilityLabel(Text(verbatim: name))
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    /// Gives a kit text control the label of the ``PVField`` around it.
+    func pvFieldNamed() -> some View {
+        modifier(PVFieldNamed())
     }
 }
 

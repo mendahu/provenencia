@@ -122,22 +122,22 @@ enum L10n {
         static let formDialogDiscardTitle = LocalizedStringResource(
             "designSystem.formDialog.discardTitle",
             defaultValue: "Discard changes?",
-            comment: "Title when an outside click would close a form sheet that has edits"
+            comment: "Title of the confirm shown when a form sheet or an Artifact card with unsaved edits is about to drop them (outside click, Escape, a row that navigates, another card's edit)"
         )
         static let formDialogDiscardMessage = LocalizedStringResource(
             "designSystem.formDialog.discardMessage",
             defaultValue: "Your changes will be lost.",
-            comment: "Body when an outside click would close a form sheet that has edits"
+            comment: "Body of the confirm shown when a form sheet or an Artifact card with unsaved edits is about to drop them (outside click, Escape, a row that navigates, another card's edit)"
         )
         static let formDialogDiscardConfirm = LocalizedStringResource(
             "designSystem.formDialog.discardConfirm",
             defaultValue: "Discard",
-            comment: "Confirms discarding a form sheet's edits after an outside click"
+            comment: "Confirms dropping the edits of a form sheet or an Artifact card with unsaved edits (outside click, Escape, a row that navigates, another card's edit)"
         )
         static let formDialogDiscardKeep = LocalizedStringResource(
             "designSystem.formDialog.discardKeep",
             defaultValue: "Keep editing",
-            comment: "Returns to the form sheet after an outside click"
+            comment: "Keeps the edits of a form sheet or an Artifact card with unsaved edits and returns to the form or card (outside click, Escape, a row that navigates, another card's edit)"
         )
 
         static let toastDismiss = LocalizedStringResource(
@@ -145,6 +145,14 @@ enum L10n {
             defaultValue: "Dismiss",
             comment: "Accessibility label for a PVToast's dismiss button"
         )
+
+        static func spokenJoin(_ first: String, _ second: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "designSystem.spokenJoin",
+                defaultValue: "%1$@, %2$@",
+                comment: "VoiceOver join of two spoken parts (a label and its detail, a title and its message)"
+            ), first, second)
+        }
 
         static let reorderHandle = LocalizedStringResource(
             "designSystem.reorder.handle",
@@ -1425,8 +1433,8 @@ enum L10n {
         static let done = LocalizedStringResource("promote.done.action", defaultValue: "Done", comment: "Promotes the rows on the Promote page")
         static let cancel = LocalizedStringResource("promote.cancel", defaultValue: "Cancel", comment: "Leaves the Promote page")
         static let staleTitle = LocalizedStringResource("promote.stale.title", defaultValue: "Nothing was promoted — the catalog changed while this page was open", comment: "Callout title when Done loses the revision race")
-        static let graphUnavailable = LocalizedStringResource("promote.error.graphUnavailable", defaultValue: "Provenencia couldn't read this Source's Evidence graph, so it can't list the rows to promote. Go back to the graph and open Promote again.", comment: "Callout when the Promote page opens without the Source's graph; the page would otherwise look empty")
-        static let graphUnavailableRepropose = LocalizedStringResource("promote.error.graphUnavailableRepropose", defaultValue: "Provenencia couldn't read this Source's Evidence graph to propose the rows again. Your rows and decisions are kept.", comment: "Callout when proposing again after a decision can't read the Source's graph")
+        static let graphUnavailable = LocalizedStringResource("promote.error.graphUnavailable", defaultValue: "Provenencia couldn't read this Evidence graph, so it can't list the rows to promote. Go back to the graph and open Promote again.", comment: "Callout when the Promote page opens without its Evidence graph; the page would otherwise look empty")
+        static let graphUnavailableRepropose = LocalizedStringResource("promote.error.graphUnavailableRepropose", defaultValue: "Provenencia couldn't read this Evidence graph to propose the rows again. Your rows and decisions are kept.", comment: "Callout when proposing again after a decision can't read the Evidence graph")
         static let stale = LocalizedStringResource("promote.stale.notice", defaultValue: "Provenencia proposed the rows again. Rows you decided are kept. Review the updated rows and press Done.", comment: "Callout body when Done loses the revision race")
         static func promotedTitle(promoted: Int, connections: Int) -> String {
             L10n.format(LocalizedStringResource("promote.toast.promotedTitle", defaultValue: "Promoted %1$lld subjects and %2$lld connections", comment: "Toast title after Done; 1 = subjects promoted, 2 = connections promoted"), promoted, connections)
@@ -1450,7 +1458,7 @@ enum L10n {
         static func singleSummary(more: Int) -> String {
             L10n.format(LocalizedStringResource("promote.page.singleSummary", defaultValue: "1 row · %lld more on this graph", comment: "Header before the rest of the graph is mapped; argument is how many other subjects"), more)
         }
-        static let mapRestHint = LocalizedStringResource("promote.page.mapRestHint", defaultValue: "Adds a row for every other person, event and place on this Source", comment: "Beside the control that maps the rest of the graph")
+        static let mapRestHint = LocalizedStringResource("promote.page.mapRestHint", defaultValue: "Adds a row for every other person, event and place on this Evidence graph", comment: "Beside the control that maps the rest of the graph")
         static let columnSource = LocalizedStringResource("promote.page.column.source", defaultValue: "On this Source", comment: "Promote row column: the subject on this Source")
         static let columnTarget = LocalizedStringResource("promote.page.column.target", defaultValue: "Promotes to", comment: "Promote row column: the handle the subject will promote to")
         static func sectionCount(_ count: Int) -> String {
@@ -1721,8 +1729,8 @@ enum L10n {
 
         static let addPropertyUnavailable = LocalizedStringResource(
             "evidenceGraph.subject.addPropertyUnavailable",
-            defaultValue: "Add property, unavailable — this Source has no Artifacts",
-            comment: "VoiceOver when Add property is disabled because the Source has no Artifact"
+            defaultValue: "Add property, unavailable — this evidence graph has no artifacts",
+            comment: "VoiceOver when Add property is disabled because the graph has no Artifact"
         )
 
         // MARK: Promote + membership footer (S9-D8 / S9-04)
@@ -1824,6 +1832,14 @@ enum L10n {
                 )
             }
             return L10n.format(resource, ref)
+        }
+
+        static func canvasAccessibility(graph: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "evidenceGraph.canvas.accessibilityLabel",
+                defaultValue: "Evidence graph, %@",
+                comment: "VoiceOver label of the Evidence graph canvas; argument is the graph's name"
+            ), graph)
         }
 
         static let promoteAll = LocalizedStringResource(
@@ -3989,9 +4005,25 @@ enum L10n {
             ), width, height)
         }
 
+        static func citationLoadFailed(ref: String, reason: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.citationLoadFailed",
+                defaultValue: "Couldn't open %1$@. %2$@",
+                comment: "Under the Citation picker when a Citation fails to load; 1 = the Citation's ref, 2 = the reason"
+            ), ref, reason)
+        }
+
+        static func citationLoadFailedUnnamed(reason: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.citationLoadFailedUnnamed",
+                defaultValue: "Couldn't open this citation. %@",
+                comment: "Under the Citation picker when a Citation fails to load and its ref is not known; argument is the reason"
+            ), reason)
+        }
+
         static let pairPickBoth = LocalizedStringResource(
             "citationComposer.pairPickBoth",
-            defaultValue: "Pick two subjects on this Source. The pair decides what the bridge can say",
+            defaultValue: "Pick two subjects on this Evidence graph. The pair decides what the bridge can say",
             comment: "Bridge draft before either end is chosen"
         )
 
@@ -5047,6 +5079,24 @@ enum L10n {
                 defaultValue: "Provenencia won't open “%@”. Its file type could run a program, or it isn't a type Provenencia stores.",
                 comment: "Error when Open refuses a stored file; argument is the file name"
             ), filename)
+        }
+
+        static func notOpened(filename: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "objectOpen.notOpened.message",
+                defaultValue: "macOS couldn't open “%@” in its app.",
+                comment: "Error when Open hands a stored file to its app and macOS fails to open it; argument is the file name"
+            ), filename)
+        }
+
+        /// The one mapping from a refusal to the sentence a surface shows.
+        /// `missing` is the surface's own sentence for a file that is not there.
+        static func message(for refusal: ProjectFiles.ObjectRefusal, filename: String, missing: String) -> String {
+            switch refusal {
+            case .unsafe: refused(filename: filename)
+            case .notOpened: notOpened(filename: filename)
+            case .missing: missing
+            }
         }
     }
 
@@ -8143,241 +8193,106 @@ enum L10n {
     }
 
     enum DeleteImpact {
-        static func noun(_ kind: String, count: Int = 1) -> String {
-            let pair: (LocalizedStringResource, LocalizedStringResource)
-            switch kind {
-            case "source":
-                pair = (nounSource, nounSources)
-            case "artifact":
-                pair = (nounArtifact, nounArtifacts)
-            case "evidence_graph":
-                pair = (nounEvidenceGraph, nounEvidenceGraphs)
-            case "citation":
-                pair = (nounCitation, nounCitations)
-            case "observation":
-                pair = (nounObservation, nounObservations)
-            case "subject":
-                pair = (nounSubject, nounSubjects)
-            case "source_type":
-                pair = (nounSourceType, nounSourceTypes)
-            case "metadata_field":
-                pair = (nounMetadataField, nounMetadata)
-            case "source_credibility_grade":
-                pair = (nounCredibilityGrade, nounCredibilityGrades)
-            case "subject_type":
-                pair = (nounSubjectType, nounSubjectTypes)
-            case "property":
-                pair = (nounProperty, nounProperties)
-            case "property_term":
-                pair = (nounPropertyTerm, nounPropertyTerms)
-            case "canonical_entity":
-                pair = (nounCanonicalEntity, nounCanonicalEntities)
-            case "user":
-                pair = (nounUser, nounUsers)
-            case "project":
-                pair = (nounProject, nounProjects)
-            case "file":
-                pair = (nounFile, nounFiles)
-            case "narrative":
-                pair = (nounNarrative, nounNarratives)
-            case "reconciliation_claim":
-                pair = (nounReconciliationClaim, nounReconciliationClaims)
-            default:
-                pair = (nounItem, nounItems)
-            }
-            return L10n.string(count == 1 ? pair.0 : pair.1)
-        }
+        /// One plural catalog key per Go `catalogmodel.Kind`, holding the bare
+        /// noun for a count ("citation" / "citations"). `TestSwiftVocabularyMatchesGo`
+        /// keeps this table equal to Go's kinds; a kind with no entry reads "item".
+        static let kindNouns: [String: LocalizedStringResource] = [
+            "source": LocalizedStringResource(
+                "deleteImpact.kind.source",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "artifact": LocalizedStringResource(
+                "deleteImpact.kind.artifact",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "evidence_graph": LocalizedStringResource(
+                "deleteImpact.kind.evidence_graph",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "citation": LocalizedStringResource(
+                "deleteImpact.kind.citation",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "observation": LocalizedStringResource(
+                "deleteImpact.kind.observation",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "subject": LocalizedStringResource(
+                "deleteImpact.kind.subject",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "source_type": LocalizedStringResource(
+                "deleteImpact.kind.source_type",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "metadata_field": LocalizedStringResource(
+                "deleteImpact.kind.metadata_field",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "source_credibility_grade": LocalizedStringResource(
+                "deleteImpact.kind.source_credibility_grade",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "subject_type": LocalizedStringResource(
+                "deleteImpact.kind.subject_type",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "property": LocalizedStringResource(
+                "deleteImpact.kind.property",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "property_term": LocalizedStringResource(
+                "deleteImpact.kind.property_term",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "canonical_entity": LocalizedStringResource(
+                "deleteImpact.kind.canonical_entity",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count for a Conclusion handle (PER-…, EVT-…, PLC-…)"
+            ),
+            "user": LocalizedStringResource(
+                "deleteImpact.kind.user",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count (infra)"
+            ),
+            "project": LocalizedStringResource(
+                "deleteImpact.kind.project",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count (infra)"
+            ),
+            "file": LocalizedStringResource(
+                "deleteImpact.kind.file",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "identity_claim": LocalizedStringResource(
+                "deleteImpact.kind.identity_claim",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+        ]
 
-        static let nounSource = LocalizedStringResource(
-            "deleteImpact.kind.source.one",
-            defaultValue: "source",
-            comment: "Singular Impact kind noun"
+        private static let itemNoun = LocalizedStringResource(
+            "deleteImpact.kind.item",
+            defaultValue: "%#@noun@",
+            comment: "Impact kind noun, bare, by count; fallback for a kind with no noun"
         )
-        static let nounSources = LocalizedStringResource(
-            "deleteImpact.kind.source.other",
-            defaultValue: "sources",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounArtifact = LocalizedStringResource(
-            "deleteImpact.kind.artifact.one",
-            defaultValue: "artifact",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounArtifacts = LocalizedStringResource(
-            "deleteImpact.kind.artifact.other",
-            defaultValue: "artifacts",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounEvidenceGraph = LocalizedStringResource(
-            "deleteImpact.kind.evidence_graph.one",
-            defaultValue: "evidence graph",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounEvidenceGraphs = LocalizedStringResource(
-            "deleteImpact.kind.evidence_graph.other",
-            defaultValue: "evidence graphs",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounCitation = LocalizedStringResource(
-            "deleteImpact.kind.citation.one",
-            defaultValue: "citation",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounCitations = LocalizedStringResource(
-            "deleteImpact.kind.citation.other",
-            defaultValue: "citations",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounObservation = LocalizedStringResource(
-            "deleteImpact.kind.observation.one",
-            defaultValue: "observation",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounObservations = LocalizedStringResource(
-            "deleteImpact.kind.observation.other",
-            defaultValue: "observations",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounSubject = LocalizedStringResource(
-            "deleteImpact.kind.subject.one",
-            defaultValue: "subject",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounSubjects = LocalizedStringResource(
-            "deleteImpact.kind.subject.other",
-            defaultValue: "subjects",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounSourceType = LocalizedStringResource(
-            "deleteImpact.kind.sourceType.one",
-            defaultValue: "source type",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounSourceTypes = LocalizedStringResource(
-            "deleteImpact.kind.sourceType.other",
-            defaultValue: "source types",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounMetadataField = LocalizedStringResource(
-            "deleteImpact.kind.metadataField.one",
-            defaultValue: "metadata field",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounMetadata = LocalizedStringResource(
-            "deleteImpact.kind.metadataField.other",
-            defaultValue: "metadata fields",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounCredibilityGrade = LocalizedStringResource(
-            "deleteImpact.kind.credibilityGrade.one",
-            defaultValue: "credibility grade",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounCredibilityGrades = LocalizedStringResource(
-            "deleteImpact.kind.credibilityGrade.other",
-            defaultValue: "credibility grades",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounSubjectType = LocalizedStringResource(
-            "deleteImpact.kind.subjectType.one",
-            defaultValue: "subject type",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounSubjectTypes = LocalizedStringResource(
-            "deleteImpact.kind.subjectType.other",
-            defaultValue: "subject types",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounProperty = LocalizedStringResource(
-            "deleteImpact.kind.property.one",
-            defaultValue: "property",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounProperties = LocalizedStringResource(
-            "deleteImpact.kind.property.other",
-            defaultValue: "properties",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounPropertyTerm = LocalizedStringResource(
-            "deleteImpact.kind.propertyTerm.one",
-            defaultValue: "property term",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounPropertyTerms = LocalizedStringResource(
-            "deleteImpact.kind.propertyTerm.other",
-            defaultValue: "property terms",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounCanonicalEntity = LocalizedStringResource(
-            "deleteImpact.kind.canonicalEntity.one",
-            defaultValue: "person, event, or place",
-            comment: "Singular Impact kind noun for a Conclusion handle (PER-…, EVT-…, PLC-…)"
-        )
-        static let nounCanonicalEntities = LocalizedStringResource(
-            "deleteImpact.kind.canonicalEntity.other",
-            defaultValue: "people, events, or places",
-            comment: "Plural Impact kind noun for Conclusion handles"
-        )
-        static let nounUser = LocalizedStringResource(
-            "deleteImpact.kind.user.one",
-            defaultValue: "user",
-            comment: "Singular infra Impact kind noun"
-        )
-        static let nounUsers = LocalizedStringResource(
-            "deleteImpact.kind.user.other",
-            defaultValue: "users",
-            comment: "Plural infra Impact kind noun"
-        )
-        static let nounProject = LocalizedStringResource(
-            "deleteImpact.kind.project.one",
-            defaultValue: "project",
-            comment: "Singular infra Impact kind noun"
-        )
-        static let nounProjects = LocalizedStringResource(
-            "deleteImpact.kind.project.other",
-            defaultValue: "projects",
-            comment: "Plural infra Impact kind noun"
-        )
-        static let nounFile = LocalizedStringResource(
-            "deleteImpact.kind.file.one",
-            defaultValue: "file",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounFiles = LocalizedStringResource(
-            "deleteImpact.kind.file.other",
-            defaultValue: "files",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounNarrative = LocalizedStringResource(
-            "deleteImpact.kind.narrative.one",
-            defaultValue: "narrative",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounNarratives = LocalizedStringResource(
-            "deleteImpact.kind.narrative.other",
-            defaultValue: "narratives",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounReconciliationClaim = LocalizedStringResource(
-            "deleteImpact.kind.reconciliation_claim.one",
-            defaultValue: "reconciliation claim",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounReconciliationClaims = LocalizedStringResource(
-            "deleteImpact.kind.reconciliation_claim.other",
-            defaultValue: "reconciliation claims",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounItem = LocalizedStringResource(
-            "deleteImpact.kind.item.one",
-            defaultValue: "item",
-            comment: "Singular fallback Impact kind noun"
-        )
-        static let nounItems = LocalizedStringResource(
-            "deleteImpact.kind.item.other",
-            defaultValue: "items",
-            comment: "Plural fallback Impact kind noun"
-        )
+
+        static func noun(_ kind: String, count: Int = 1) -> String {
+            L10n.format(kindNouns[kind] ?? itemNoun, count)
+        }
 
         static func confirmTitle(noun: String, ref: String) -> String {
             return L10n.format(LocalizedStringResource(
@@ -8481,19 +8396,12 @@ enum L10n {
             viaFormats[via] != nil
         }
 
-        static let viaUnknownOne = LocalizedStringResource(
-            "deleteImpact.via.unknown.one",
-            defaultValue: "%1$lld %2$@ references this",
-            comment: "Unknown-via group heading, singular; arguments are total and kind noun"
-        )
-        static let viaUnknownOther = LocalizedStringResource(
-            "deleteImpact.via.unknown.other",
-            defaultValue: "%1$lld %2$@ reference this",
-            comment: "Unknown-via group heading, plural; arguments are total and kind noun"
-        )
-
         static func viaFallback(kind: String, total: Int) -> String {
-            return L10n.format(total == 1 ? viaUnknownOne : viaUnknownOther, total, noun(kind, count: total))
+            L10n.format(LocalizedStringResource(
+                "deleteImpact.via.unknown",
+                defaultValue: "%1$lld %2$@ %#@verb@ this",
+                comment: "Unknown-via group heading; arguments are total and kind noun (plural noun); the verb agrees with the total"
+            ), total, noun(kind, count: total))
         }
 
         private static let viaFormats: [String: LocalizedStringResource] = [
@@ -9831,14 +9739,6 @@ enum L10n {
             ), label)
         }
 
-        static func a11yList(_ first: String, rest: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "conclusions.a11y.list",
-                defaultValue: "%1$@, %2$@",
-                comment: "Joins two parts of a spoken Conclusion field (label, value, state, disagreement)"
-            ), first, rest)
-        }
-
         static func a11yLifeLine(_ word: String, date: String, place: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.a11y.vital",
@@ -9907,14 +9807,6 @@ enum L10n {
     /// Last-updated cell on a list row: the hover help and the spoken suffix.
     /// The day words and the stamp are `L10n.Timestamp`.
     enum LastUpdated {
-        static func a11yJoin(_ base: String, _ updated: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "lastUpdated.a11y.join",
-                defaultValue: "%1$@, %2$@",
-                comment: "Joins a list row's spoken label and its last-updated phrase"
-            ), base, updated)
-        }
-
         static func a11yUpdated(_ text: String) -> String {
             L10n.format(LocalizedStringResource(
                 "lastUpdated.a11y.updated",

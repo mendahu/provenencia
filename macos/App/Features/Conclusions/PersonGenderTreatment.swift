@@ -51,7 +51,7 @@ struct PersonGenderTreatment: Equatable {
         ConclusionDetailBadge(
             text: basis == .gender ? text : L10n.Conclusions.sexAtBirthBadge(text),
             ink: family.ink,
-            accessibilityLabel: L10n.Conclusions.a11yList(fieldLabel, rest: text)
+            accessibilityLabel: L10n.DesignSystem.spokenJoin(fieldLabel, text)
         )
     }
 

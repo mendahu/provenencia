@@ -157,7 +157,7 @@ private struct EvidenceGraphContent: View {
             handleKey(press)
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(accessibilityGraphLabel)
+        .accessibilityLabel(Text(verbatim: model.canvasAccessibilityLabel))
         .vocabularyToastOverlay($model.toast, identifier: "evidenceGraph.toast")
         .pvFormDialog(
             isPresented: sheetPresented,
@@ -247,16 +247,6 @@ private struct EvidenceGraphContent: View {
         }
     }
 
-    private var accessibilityGraphLabel: Text {
-        if model.armedConnect {
-            Text(model.connectArmedHint)
-        } else if let kind = model.armedKind {
-            Text(model.armedHint(for: kind))
-        } else {
-            Text(L10n.Workspace.evidenceGraphTitle)
-        }
-    }
-
     private var header: some View {
         EvidenceGraphHeader(
             model: model,
@@ -305,7 +295,8 @@ private struct EvidenceGraphContent: View {
                         PVCallout(
                             tone: .danger,
                             title: L10n.EvidenceGraph.fileOpenFailedTitle,
-                            message: fileOpenError
+                            message: fileOpenError,
+                            announces: true
                         )
                         .frame(width: 360, alignment: .trailing)
                         .accessibilityIdentifier("evidenceGraph.fileOpen.callout")
@@ -665,7 +656,7 @@ private struct EvidenceGraphHeader: View {
             icon: .externalLink,
             iconOnly: iconOnly
         ) {
-            model.openSelectedFile()
+            Task { await model.openSelectedFile() }
         }
         .help(Text(L10n.EvidenceGraph.openFileHelp))
         .accessibilityLabel(Text(verbatim: L10n.EvidenceGraph.openFileAccessibility(filename: filename)))

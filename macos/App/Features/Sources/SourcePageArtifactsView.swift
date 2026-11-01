@@ -390,7 +390,8 @@ struct SourcePageArtifactsView: View {
                     tone: .danger,
                     title: L10n.Sources.artifactCardSaveErrorTitle,
                     message: saveError,
-                    compact: true
+                    compact: true,
+                    announces: true
                 )
                 .accessibilityIdentifier("sources.page.artifact.\(art.id).saveError")
             }
@@ -470,7 +471,7 @@ struct SourcePageArtifactsView: View {
 
     private func activatePreview(_ art: CatalogArtifact) {
         if art.hasFile {
-            model.artifacts.open(art)
+            Task { await model.artifacts.open(art) }
         } else {
             model.artifacts.openAttach(to: art.id)
         }

@@ -1680,7 +1680,8 @@ struct CitationComposerModelTests {
         model.requestSelectArtifact("art-1")
         let switched = await waitUntil { !model.isSwitchingCitation && model.selectedArtifactID == "art-1" }
         #expect(switched)
-        #expect(model.fields.error != nil)
+        #expect(model.citationLoadError != nil)
+        #expect(model.fields.error == nil)
         #expect(model.activeCitationID == nil)
     }
 
@@ -1760,7 +1761,8 @@ struct CitationComposerModelTests {
             .citationsByArtifact(project: model.session.projectKey, graphId: graphID, artifactId: "art-0")
         )
         await model.refreshCitationLines()
-        #expect(model.fields.error != nil)
+        #expect(model.citationLoadError?.hasPrefix("Couldn't open CIT-1.") == true)
+        #expect(model.fields.error == nil)
         #expect(model.observationRows.rows.count == rowCount)
 
         store.citationsByID["cit-1"] = kept
@@ -1768,7 +1770,52 @@ struct CitationComposerModelTests {
             .citationsByArtifact(project: model.session.projectKey, graphId: graphID, artifactId: "art-0")
         )
         await model.refreshCitationLines()
-        #expect(model.fields.error == nil)
+        #expect(model.citationLoadError == nil)
+    }
+
+    /// A Citation the composer never listed or loaded has no ref to name.
+    @Test func loadFailureUnlistedIsUnnamed() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store)
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        model.selectCitation("cit-missing")
+        await model.awaitIdentitySwitch()
+        #expect(model.citationLoadError?.hasPrefix("Couldn't open this citation.") == true)
+    }
+
+    @Test func loadFailureLeavesFieldError() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store)
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        model.fields.error = "Couldn't save."
+        store.citationsByID["cit-1"] = nil
+        model.session.invalidate(
+            .citationsByArtifact(project: model.session.projectKey, graphId: graphID, artifactId: "art-0")
+        )
+        await model.refreshCitationLines()
+        #expect(model.citationLoadError != nil)
+        #expect(model.fields.error == "Couldn't save.")
+    }
+
+    @Test func newCitationClearsLoadFailure() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store)
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        store.citationsByID["cit-1"] = nil
+        model.session.invalidate(
+            .citationsByArtifact(project: model.session.projectKey, graphId: graphID, artifactId: "art-0")
+        )
+        await model.refreshCitationLines()
+        #expect(model.citationLoadError != nil)
+        model.beginNewCitation()
+        await model.awaitIdentitySwitch()
+        #expect(model.citationLoadError == nil)
     }
 
     @Test func customTermReturnsToTheNewObservationDialog() async {

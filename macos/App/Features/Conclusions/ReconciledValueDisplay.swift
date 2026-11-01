@@ -232,6 +232,6 @@ enum ReconciledValueDisplay {
             return L10n.Conclusions.a11yEmpty(label)
         }
         let parts = [label, lead, state] + [againstLine(field)].compactMap { $0 }
-        return parts.dropFirst().reduce(parts[0]) { L10n.Conclusions.a11yList($0, rest: $1) }
+        return parts.dropFirst().reduce(parts[0]) { L10n.DesignSystem.spokenJoin($0, $1) }
     }
 }

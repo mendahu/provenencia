@@ -676,7 +676,7 @@ private struct ConclusionDetailRelationshipSection: View {
         .accessibilityElement(children: section.relationships.isEmpty ? .combine : .contain)
         .accessibilityLabel(
             section.relationships.isEmpty
-                ? L10n.Conclusions.a11yList(L10n.string(section.title), rest: section.emptyText)
+                ? L10n.DesignSystem.spokenJoin(L10n.string(section.title), section.emptyText)
                 : L10n.string(section.title)
         )
     }
