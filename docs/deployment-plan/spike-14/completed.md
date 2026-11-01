@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-12 — File work before the catalog session
+
+**Landed 2026-11-01** in [#664](https://github.com/mendahu/provenencia/pull/664). Attaching a scan, saving a depiction, setting a Source cover and opening a Source page with missing thumbnails no longer copy, hash, decode or encode while holding the catalog session. One `ingest.Staged` type (`StageFile`, `StageImage`, `StageBytes`) stages into a temp in `objects/` outside `catalogsession.Do`; `withStaged` / `withStagedDepictions` stage first, and the session only looks up, inserts and installs (`Settle` purges what a write did not use). `derivatives.Plan` / `Job.Stage` / `Commit` split a thumbnail, and `thumbnailPass` commits them in batches of 16; `sources.NormalizeCover` is lookup-only. `catalogsessiontest.Hold` holds the session in tests. Version 0.2.5. Audit A-24.
+
 ## S14-11 — Reload only what moved, only when it is on screen
 
 **Landed 2026-11-01** in [#657](https://github.com/mendahu/provenencia/pull/657). A graph, link or Artifact write reports a keyed `evidence_graphs` read for its Source (`effects.ReadEvidenceGraphs`, replacing the project-wide list), `ListEvidenceGraphs` takes an optional `source_id`, and the graph list re-reads only the named Sources and merges them (`CatalogQueryRefresh.merged`, `WorkspaceSession.refreshCached`; graph progress uses the same factory). Add and Copy Source insert the returned row through `.createdSource(source)` and `CatalogQueryPatch.sourceRow()`. `QueryHandle.isStale` replaces the session's `invalidatedKeys`: a stale key is not settled, so a returning list publishes its sidebar count after its reload. A visited graph canvas and Source page go stale while hidden and reload when shown. `SourcesModel.visibleSources` builds once per input change. Version 0.2.4. Audit A-9, A-10, A-25.

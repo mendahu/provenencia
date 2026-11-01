@@ -1,6 +1,6 @@
 # S14-12 — File work before the catalog session
 
-**Status:** Planned
+**Status:** Landed in [#664](https://github.com/mendahu/provenencia/pull/664) (2026-11-01)
 **Spike / slice:** Spike 14 · Slice 4 — Evidence graphs finished (batch 4; moved from Spike 12, where it was S12-27, on 2026-10-29)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: every view draws the same rows and thumbnails; only where Go copies, hashes and decodes moves)
@@ -12,6 +12,7 @@
 **Skills to load:** [`use-catalog-session`](../../../../.agents/skills/use-catalog-session/SKILL.md), [`add-ffi-handler`](../../../../.agents/skills/add-ffi-handler/SKILL.md), [`add-depiction-value`](../../../../.agents/skills/add-depiction-value/SKILL.md)
 **Rules that bind:** `.cursor/rules/go-tests.mdc`
 **Context:** [`app-health-audit.md`](../app-health-audit.md) A-24; working rule "File work and decoding happen before the catalog session" (map review K-4); bar outcome 14 ("attaching a large scan does not stall the other panes"); [`source-layer-data-model.md`](../../../source-layer-data-model.md) (line 313: a purge and an import never interleave; line 467: thumbnails); [`oversized-jpeg-thumbnails.md`](../oversized-jpeg-thumbnails.md); S14-23 ship log PRF-1 ([`S14-23-oversized-jpeg-thumbnails.ship.md`](S14-23-oversized-jpeg-thumbnails.ship.md))
+**Landed:** [#664](https://github.com/mendahu/provenencia/pull/664), 2026-11-01. Differences from the plan: (1) D-12: `sources.CoverArtifactFile` keeps a query of its own (`sqlArtifactForCover` stays) because `core/database/artifacts/artifacts_test.go` is an internal test that imports `sources`, so `sources` importing `artifacts` is an import cycle in that test; (2) `objectstore.CheckObjects` (new) runs before `Staged` installs, so an `objects/` swapped for a symlink after the stage is still refused as `ingest.unsafe_objects`, which keeps `TestStagedInsertTxRefusesSymlinkedObjects` unchanged; (3) the ingest test helper `objectFiles` skips staged temps so `TestStageImageRefuses` keeps its "no object written" assertion (`stageTemps` counts temps); (4) the `DELETE FROM file_derivatives` block moved to `damageCatalog` in the same commit as the thumbnail pass, not its own; (5) T-10 is a row in `TestEnsureFileThumbnail`; (6) `Job` has no exported accessor, the pass keys jobs by the File id it already holds; (7) the version was 0.2.4 at branch time, so the bump is 0.2.5.
 **Planned:** 2026-11-01 against `main` @ `a652313`
 **Review:** [`S14-12-file-work-before-session.review.md`](S14-12-file-work-before-session.review.md) — Fits with changes / Ready with changes → Fixed, 2 rounds
 
