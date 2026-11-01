@@ -1719,12 +1719,14 @@ struct SourcePageModelTests {
         #expect(model.artifacts.linkEdit?.excluded == ["g-j", "g-s"])
 
         store.unlinkImpactBlocks = [unlinkBlock("P9", graphID: "g-b", citations: 1, reason: .artifactInUse)]
+        model.artifacts.cancelFields(id: "P9")
         model.artifacts.beginEdit("P9")
         await model.artifacts.linkLoadTask?.value
         #expect(model.artifacts.lockedGraphs["g-b"] == "1 citation in this graph uses this artifact")
 
         // A reason this build does not know locks too, with the engine's wording.
         store.unlinkImpactBlocks = [unlinkBlock("P9", graphID: "g-b", citations: 0, reason: .unrecognized("x.y"))]
+        model.artifacts.cancelFields(id: "P9")
         model.artifacts.beginEdit("P9")
         await model.artifacts.linkLoadTask?.value
         #expect(model.artifacts.lockedGraphs["g-b"] == L10n.Errors.message(code: "x.y"))
@@ -1954,17 +1956,28 @@ struct SourcePageModelTests {
         model.artifacts.beginEdit("P3")
         await model.artifacts.linkLoadTask?.value
         model.artifacts.linkEdit?.excluded = ["g-j"]
-        store.updateArtifactError = CoreInvokeError.coded(
+        let failure = CoreInvokeError.coded(
             status: 1, code: "evidencegraphs.artifact_in_use", kind: .conflict, params: []
         )
+        store.updateArtifactError = failure
         store.updateArtifactHold.isOn = true
         let save = Task { await model.artifacts.saveFields(id: "P3") }
         #expect(await waitUntil { store.updateArtifactHold.count == 1 })
         model.artifacts.beginEdit("P4")
         store.updateArtifactHold.release()
         await save.value
-        #expect(model.artifacts.editingArtifactID == "P4")
-        #expect(model.artifacts.cardSaveError == nil)
+        #expect(model.artifacts.editingArtifactID == "P3")
+        #expect(model.artifacts.cardSaveError == L10n.Sources.artifactCardSaveErrorKept(L10n.Errors.message(for: failure)))
+        #expect(model.artifacts.pendingEditSwitch == nil)
+    }
+
+    @Test func beginEditOnTheSameCardKeepsItsEdits() async {
+        let (model, _, _) = await makeCensus()
+        model.artifacts.beginEdit("P3")
+        model.artifacts.labels["P3"] = "Page 3, edited"
+        model.artifacts.beginEdit("P3")
+        #expect(model.artifacts.labels["P3"] == "Page 3, edited")
+        #expect(model.artifacts.pendingEditSwitch == nil)
     }
 
     @Test func addArtifactRetryIgnoresGraphChoice() async {

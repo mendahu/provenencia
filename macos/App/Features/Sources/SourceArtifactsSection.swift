@@ -181,7 +181,8 @@ final class SourceArtifactsSection {
     /// Opens edit on one card. Another card with unsaved edits asks first
     /// ("Discard changes?"); the target waits in the gate until the answer.
     func beginEdit(_ id: String) {
-        if let current = editingArtifactID, current != id, savingID == nil, fieldsDirty(current) {
+        if editingArtifactID == id || savingID != nil { return }
+        if let current = editingArtifactID, fieldsDirty(current) {
             editGate.hold { [weak self] in self?.openEdit(id) }
             pendingEditSwitch = PendingEditSwitch()
             return
