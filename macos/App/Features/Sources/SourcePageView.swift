@@ -209,6 +209,18 @@ private struct SourcePageContent: View {
         }
         .pvConfirm(
             item: Binding(
+                get: { model.artifacts.pendingEditSwitch },
+                set: { if $0 == nil { model.artifacts.cancelEditSwitch() } }
+            ),
+            copy: { _ in .discardChanges },
+            tone: .danger,
+            accessibilityIdentifierPrefix: "sources.page.artifact.discard",
+            onConfirm: { model.artifacts.confirmEditSwitch() }
+        ) { _ in
+            EmptyView()
+        }
+        .pvConfirm(
+            item: Binding(
                 get: { model.notes.pendingDelete },
                 set: { model.notes.pendingDelete = $0 }
             ),

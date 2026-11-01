@@ -1088,11 +1088,72 @@ struct SourcePageModelTests {
                 == L10n.string(L10n.Sources.artifactCardLabelRequired)
         )
         model.artifacts.beginEdit("a2")
+        #expect(model.artifacts.editingArtifactID == "a1")
+        model.artifacts.confirmEditSwitch()
         #expect(model.artifacts.editingArtifactID == "a2")
         #expect(model.artifacts.labels["a1"] == "Front")
         model.artifacts.cancelFields(id: "a2")
         #expect(model.artifacts.editingArtifactID == nil)
         #expect(!model.artifacts.canSaveFields("a2"))
+    }
+
+    private func twoCardModel() async -> SourcePageModel {
+        let store = makeStore(
+            artifacts: [
+                CatalogArtifact(
+                    id: "ART-1", ref: "ART-AAAAA", sourceID: sourceID, fileID: "",
+                    label: "Page 1", description: "", file: nil
+                ),
+                CatalogArtifact(
+                    id: "ART-2", ref: "ART-BBBBB", sourceID: sourceID, fileID: "",
+                    label: "Page 2", description: "", file: nil
+                ),
+            ]
+        )
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        return model
+    }
+
+    @Test func cardSwitchAsksWhenDirty() async {
+        let model = await twoCardModel()
+        model.artifacts.beginEdit("ART-1")
+        model.artifacts.labels["ART-1"] = "Page one"
+        model.artifacts.beginEdit("ART-2")
+        #expect(model.artifacts.pendingEditSwitch != nil)
+        #expect(model.artifacts.editingArtifactID == "ART-1")
+        #expect(model.artifacts.labels["ART-1"] == "Page one")
+        #expect(!model.acceptsArtifactPageDrop)
+    }
+
+    @Test func cardSwitchConfirmMovesEdit() async {
+        let model = await twoCardModel()
+        model.artifacts.beginEdit("ART-1")
+        model.artifacts.labels["ART-1"] = "Page one"
+        model.artifacts.beginEdit("ART-2")
+        model.artifacts.confirmEditSwitch()
+        #expect(model.artifacts.editingArtifactID == "ART-2")
+        #expect(model.artifacts.pendingEditSwitch == nil)
+        #expect(model.artifacts.labels["ART-1"] == "Page 1")
+    }
+
+    @Test func cardSwitchCancelKeepsEdit() async {
+        let model = await twoCardModel()
+        model.artifacts.beginEdit("ART-1")
+        model.artifacts.labels["ART-1"] = "Page one"
+        model.artifacts.beginEdit("ART-2")
+        model.artifacts.cancelEditSwitch()
+        #expect(model.artifacts.pendingEditSwitch == nil)
+        #expect(model.artifacts.editingArtifactID == "ART-1")
+        #expect(model.artifacts.labels["ART-1"] == "Page one")
+    }
+
+    @Test func cardSwitchCleanMovesAtOnce() async {
+        let model = await twoCardModel()
+        model.artifacts.beginEdit("ART-1")
+        model.artifacts.beginEdit("ART-2")
+        #expect(model.artifacts.editingArtifactID == "ART-2")
+        #expect(model.artifacts.pendingEditSwitch == nil)
     }
 
     @Test func pageDropStagesFileWithoutCreating() async throws {
