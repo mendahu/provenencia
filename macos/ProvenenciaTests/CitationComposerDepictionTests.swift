@@ -731,7 +731,7 @@ struct CitationComposerDepictionTests {
 
     /// Width, height and RGBA bytes of the PNG the save wrote, compared with the preview's cut.
     private func savedPixelsMatchThePreview(_ model: CitationComposerModel) async throws {
-        let preview = try #require(model.depictionPreviewMemo?.cut?.cgImage)
+        let preview = try #require(model.depictionPreviewMemo.entry?.value?.cgImage)
         let values = try #require(draftValues(model))
         // Decode inside the closure: the file is removed when it returns.
         let sent: (width: Int, height: Int, bytes: [UInt8]) = try await model.withDepictionInput(for: values) { input in
@@ -800,7 +800,7 @@ struct CitationComposerDepictionTests {
         #expect(model.commitViewerRegion(rect(0, 0, 1, 1)))
         _ = await model.depictionImage(for: first)
         #expect(model.depictionPreviewState == .cutting)
-        #expect(model.depictionPreviewMemo == nil)
+        #expect(model.depictionPreviewMemo.entry == nil)
         await model.renderDepictionPreview()
         guard case .cut(let image) = model.depictionPreviewState else {
             Issue.record("the current region should be cut")

@@ -1,11 +1,10 @@
 import AppKit
 import Foundation
 
-/// One rendered cut, keyed by what it was cut from. Save reuses the bitmap
-/// the preview already drew. `cut` is nil when the cut failed for that key.
-struct DepictionPreviewMemo {
-    var key: DepictionCutKey
-    var cut: (cgImage: CGImage, image: NSImage)?
+/// One rendered cut: the bitmap Save reuses and the image the preview draws.
+struct DepictionCut {
+    let cgImage: CGImage
+    let image: NSImage
 }
 
 /// What a cut depends on: the file, how the viewer holds it, the page and the region.
@@ -309,8 +308,9 @@ extension CitationComposerModel {
         case .ready: break
         }
         guard let key = depictionPreviewKey else { return .none }
-        guard let memo = depictionPreviewMemo, memo.key == key else { return .cutting }
-        if let cut = memo.cut { return .cut(cut.image) }
+        // A stored nil is a cut that failed for this key.
+        guard let stored = depictionPreviewMemo.value(for: key) else { return .cutting }
+        if let cut = stored { return .cut(cut.image) }
         return .failed
     }
 
@@ -318,12 +318,12 @@ extension CitationComposerModel {
     /// Save. The result is stored only while the draft is still the one on screen.
     func depictionImage(for draft: DepictionValueDraft) async -> CGImage? {
         guard let key = depictionCutKey(for: draft), let region = draft.locator.region else { return nil }
-        if let memo = depictionPreviewMemo, memo.key == key { return memo.cut?.cgImage }
+        if let stored = depictionPreviewMemo.value(for: key) { return stored?.cgImage }
         let rendered = await ArtifactRegionCrop.render(artifactViewer, page: draft.locator.page, region: region)
         if depictionPreviewKey == key {
-            depictionPreviewMemo = DepictionPreviewMemo(
-                key: key,
-                cut: rendered.map { ($0, NSImage(cgImage: $0, size: .zero)) }
+            depictionPreviewMemo.store(
+                rendered.map { DepictionCut(cgImage: $0, image: NSImage(cgImage: $0, size: .zero)) },
+                for: key
             )
         }
         return rendered
@@ -422,7 +422,7 @@ extension CitationComposerModel {
             viewerPage: artifactViewer.page
         ) else { return false }
         writeDepictionDraft(draft)
-        if let memo = depictionPreviewMemo, memo.cut == nil { depictionPreviewMemo = nil }
+        if let entry = depictionPreviewMemo.entry, entry.value == nil { depictionPreviewMemo = Memo() }
         armedRegionTool = nil
         if case .drawingDepiction(let over) = presented {
             restore(over)

@@ -233,7 +233,7 @@ final class CitationComposerModel {
 
     let artifactViewer = ArtifactViewerModel()
     var armedRegionTool: ArtifactRegionTool?
-    var depictionPreviewMemo: DepictionPreviewMemo?
+    var depictionPreviewMemo = Memo<DepictionCutKey, DepictionCut?>()
     var viewerPage: Int { artifactViewer.page }
     var viewerPageCount: Int { artifactViewer.pageCount }
     var locatorCapabilities: ArtifactLocatorCapabilities {

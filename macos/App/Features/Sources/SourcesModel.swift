@@ -271,8 +271,7 @@ final class SourcesModel {
         let progress: Int
     }
 
-    @ObservationIgnored private var visibleRowsToken: VisibleRowsToken?
-    @ObservationIgnored private var visibleRows: [CatalogSource] = []
+    @ObservationIgnored private var visibleRowsMemo = Memo<VisibleRowsToken, [CatalogSource]>()
     /// How many times `visibleSources` built its rows (a test hook).
     @ObservationIgnored private(set) var visibleSourcesBuildCount = 0
 
@@ -291,12 +290,10 @@ final class SourcesModel {
             graphs: filtersByStatus ? graphsHandle?.revision ?? -1 : -1,
             progress: filtersByStatus ? session.evidenceGraphProgressHandle?.revision ?? -1 : -1
         )
-        if token == visibleRowsToken { return visibleRows }
-        let rows = buildVisibleSources()
-        visibleRowsToken = token
-        visibleRows = rows
-        visibleSourcesBuildCount += 1
-        return rows
+        return visibleRowsMemo.value(for: token) {
+            visibleSourcesBuildCount += 1
+            return buildVisibleSources()
+        }
     }
 
     private func buildVisibleSources() -> [CatalogSource] {
