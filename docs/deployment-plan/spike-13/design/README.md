@@ -10,7 +10,7 @@ In order.
 
 | Brief | View | Gates |
 | --- | --- | --- |
-| S13-D3 | Family section (and the shared person tile) | S13-12 |
+| [S13-D3](S13-D3-family-section.md) | Family section (and the shared person tile) | S13-12 |
 | S13-D4 | Timeline section | S13-13 |
 | S13-D5 | Gallery section and likeness viewer | S13-14, S13-15 |
 | S13-D6 | Sources section, Remove and the last-claim warning | S13-16, S13-17 |
