@@ -166,7 +166,15 @@ func IngestArtifactFile(in []byte) ([]byte, error) {
 		return nil, err
 	}
 	var out *engine.IngestArtifactFileResponse
-	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+	var staged *ingest.Staged
+	err = withStaged(req.GetProjectDir(), func(dir string) (ingest.Stages, error) {
+		s, err := ingest.StageFile(dir, req.GetPath())
+		if err != nil {
+			return nil, err
+		}
+		staged = s
+		return ingest.Stages{s}, nil
+	}, func(c *database.Catalog) error {
 		prev, err := artifacts.Get(c, artifactID)
 		if err != nil {
 			return err
@@ -174,7 +182,7 @@ func IngestArtifactFile(in []byte) ([]byte, error) {
 		if len(prev.FileID) == 16 {
 			return artifacts.ErrFileAlreadyAttached
 		}
-		res, err := ingest.File(c, req.GetPath(), userID)
+		res, err := staged.CommitFile(c, userID)
 		if err != nil {
 			return err
 		}

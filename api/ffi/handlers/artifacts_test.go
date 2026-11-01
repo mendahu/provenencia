@@ -2,11 +2,14 @@ package handlers
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"slices"
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/catalogsession/catalogsessiontest"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/ingest"
@@ -335,6 +338,82 @@ func TestUpdateArtifactGraphLinks(t *testing.T) {
 		}
 		if got := linkedTo(id); !slices.Equal(got, []string{def}) || labelOf(id) != "P3" {
 			t.Fatalf("linked %v, label %q", got, labelOf(id))
+		}
+	})
+}
+
+// filelessArtifact is a project with one Artifact that has no File.
+func filelessArtifact(t *testing.T) (dir, userID, artifactID string) {
+	t.Helper()
+	dir, userID, typeID := sourceFixture(t)
+	var src engine.CreateSourceResponse
+	mustRPC(t, CreateSource, &engine.CreateSourceRequest{ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Scan"}, &src)
+	var art engine.CreateArtifactResponse
+	mustRPC(t, CreateArtifact, &engine.CreateArtifactRequest{ProjectDir: dir, UserId: userID, SourceId: src.Source.Id, Label: "Page"}, &art)
+	return dir, userID, art.Artifact.Id
+}
+
+func TestIngestStagesBeforeSession(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	path := filepath.Join(t.TempDir(), "page.png")
+	writePNG(t, path)
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("the copy finishes while another call holds the session", func(t *testing.T) {
+		dir, userID, artifactID := filelessArtifact(t)
+		release := catalogsessiontest.Hold(t, dir)
+		type result struct {
+			out []byte
+			err error
+		}
+		done := make(chan result, 1)
+		in := marshalProto(t, &engine.IngestArtifactFileRequest{ProjectDir: dir, UserId: userID, ArtifactId: artifactID, Path: path})
+		go func() {
+			out, err := IngestArtifactFile(in)
+			done <- result{out, err}
+		}()
+		waitForTemp(t, dir, ".ingest-", info.Size())
+		release()
+		res := <-done
+		if res.err != nil {
+			t.Fatal(res.err)
+		}
+		var got engine.IngestArtifactFileResponse
+		if err := proto.Unmarshal(res.out, &got); err != nil {
+			t.Fatal(err)
+		}
+
+		dir2, userID2, artifactID2 := filelessArtifact(t)
+		var want engine.IngestArtifactFileResponse
+		mustRPC(t, IngestArtifactFile, &engine.IngestArtifactFileRequest{ProjectDir: dir2, UserId: userID2, ArtifactId: artifactID2, Path: path}, &want)
+		if got.Reused != want.Reused || got.File.GetRelPath() != want.File.GetRelPath() || got.File.GetByteSize() != want.File.GetByteSize() ||
+			got.Artifact.GetLabel() != want.Artifact.GetLabel() || got.File.GetId() == "" {
+			t.Fatalf("blocked run %v, unblocked run %v", &got, &want)
+		}
+		if temps := objectTemps(t, dir, ".ingest-"); len(temps) != 0 {
+			t.Fatalf("temps left: %v", temps)
+		}
+	})
+
+	t.Run("an Artifact that has a File refuses and leaves nothing", func(t *testing.T) {
+		dir, userID, artifactID := filelessArtifact(t)
+		var first engine.IngestArtifactFileResponse
+		mustRPC(t, IngestArtifactFile, &engine.IngestArtifactFileRequest{ProjectDir: dir, UserId: userID, ArtifactId: artifactID, Path: path}, &first)
+		before := objectRelPaths(t, dir)
+		other := filepath.Join(t.TempDir(), "other.pdf")
+		writePDF(t, other)
+		_, err := IngestArtifactFile(marshalProto(t, &engine.IngestArtifactFileRequest{ProjectDir: dir, UserId: userID, ArtifactId: artifactID, Path: other}))
+		if !errors.Is(err, artifacts.ErrFileAlreadyAttached) {
+			t.Fatalf("err = %v, want ErrFileAlreadyAttached", err)
+		}
+		if got := objectRelPaths(t, dir); !slices.Equal(got, before) {
+			t.Fatalf("objects %v, want %v", got, before)
+		}
+		if temps := objectTemps(t, dir, ".ingest-"); len(temps) != 0 {
+			t.Fatalf("temps left: %v", temps)
 		}
 	})
 }
