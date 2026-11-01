@@ -31,6 +31,11 @@ enum CatalogQueryFollows: Sendable, Equatable {
     /// progress also follows the mutation's graph when it names one the
     /// effects did not (Promote reports no effects yet; S12-32 removes this special case).
     case reads(CatalogRead)
+    /// `CatalogWriteEffects.touchedHandles`: every handle a write changed or
+    /// whose header it changed.
+    case touchedHandles
+    /// `CatalogWriteEffects.evidenceGraphs`.
+    case evidenceGraphs
 
     /// The ids of a write that this slot follows.
     func ids(in effects: CatalogWriteEffects, mutation: CatalogMutation?) -> [String] {
@@ -47,6 +52,10 @@ enum CatalogQueryFollows: Sendable, Equatable {
                 ids.append(graphId)
             }
             return ids
+        case .touchedHandles:
+            return effects.touchedHandles
+        case .evidenceGraphs:
+            return effects.evidenceGraphs
         }
     }
 }
@@ -106,21 +115,48 @@ struct CatalogQueryPatch: Sendable {
     }
 }
 
-/// A per-key reload of some rows, merged into the cached value. The session
-/// schedules `run` only for a warmed key, with the ids `follows` names.
+/// What a warmed key does when a write reports ids its `follows` slot names.
+/// The session reads a descriptor's list in order.
 struct CatalogQueryRefresh: Sendable {
-    var follows: CatalogQueryFollows
-    var run: @MainActor @Sendable (WorkspaceSession, CatalogQueryKey, [String]) async -> Void
+    enum Action: Sendable {
+        /// Re-applies the hidden policy to the key, synchronously and at most
+        /// once per `apply`, when the write names an id the key depends on.
+        /// The closure returns those ids, read from the key or its cached
+        /// value; `nil` means any id the slot names.
+        case revalidate(@MainActor @Sendable (WorkspaceSession, CatalogQueryKey) -> Set<String>?)
+        /// A partial reload merged into the cached value, run in a task with
+        /// the ids `follows` names.
+        case run(@MainActor @Sendable (WorkspaceSession, CatalogQueryKey, [String]) async -> Void)
+    }
 
-    /// A refresh that re-applies the hidden policy to a warmed key whose id
-    /// (`id(key)`, nil for a key of another shape) the read named.
+    var follows: CatalogQueryFollows
+    var action: Action
+
+    init(follows: CatalogQueryFollows, action: Action) {
+        self.follows = follows
+        self.action = action
+    }
+
+    /// A partial reload (`.run`).
+    init(
+        follows: CatalogQueryFollows,
+        run: @escaping @MainActor @Sendable (WorkspaceSession, CatalogQueryKey, [String]) async -> Void
+    ) {
+        self.init(follows: follows, action: .run(run))
+    }
+
+    /// A refresh that re-applies the hidden policy to a warmed key when the
+    /// write names one of the `ids` the key depends on.
     static func applyHiddenPolicy(
-        follows read: CatalogRead,
-        id: @escaping @Sendable (CatalogQueryKey) -> String?
+        follows: CatalogQueryFollows,
+        ids: @escaping @MainActor @Sendable (WorkspaceSession, CatalogQueryKey) -> Set<String>
     ) -> CatalogQueryRefresh {
-        CatalogQueryRefresh(follows: .reads(read)) { session, key, ids in
-            guard let id = id(key), ids.contains(id) else { return }
-            session.applyHiddenPolicy(to: key)
-        }
+        CatalogQueryRefresh(follows: follows, action: .revalidate { session, key in ids(session, key) })
+    }
+
+    /// A refresh that re-applies the hidden policy to a warmed key whenever the
+    /// write names any id.
+    static func applyHiddenPolicyOnAny(follows: CatalogQueryFollows) -> CatalogQueryRefresh {
+        CatalogQueryRefresh(follows: follows, action: .revalidate { _, _ in nil })
     }
 }

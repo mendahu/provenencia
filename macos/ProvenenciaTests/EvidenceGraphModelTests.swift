@@ -411,10 +411,7 @@ struct EvidenceGraphModelTests {
         )
         #expect(effects.evidenceGraphs == [graphID])
         #expect(created.sourceID == sourceID)
-        let registry = CatalogQueryRegistry.standard
-        let project = ProjectKey(projectDir: projectDir)
-        #expect(registry.invalidations(for: effects, project: project)
-            .contains(.key(.evidenceGraph(project: project, graphId: graphID))))
+        #expect(model.session.revalidatedKeys(for: effects).contains(key))
         model.session.apply(effects)
         await waitForQuery(handle)
         #expect(handle.value?.subjects.map(\.id) == [created.id])

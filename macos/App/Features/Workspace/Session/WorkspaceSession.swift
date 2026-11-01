@@ -173,25 +173,34 @@ final class WorkspaceSession {
     /// The one application of a write. Patches in place first, with no load:
     /// each warmed key runs its descriptor `patches` in order (last-updated
     /// cells from the effects, then an enriched Source row and page shell).
-    /// Then it invalidates the deduped union of what the effects
-    /// reported (each Evidence graph it names, the Conclusions whose
-    /// handles changed) and what the mutation names (the Source page's own
-    /// workspace, the metadata field list), so a key both name is invalidated
-    /// once, not cancelled and restarted twice. Keys the registry evicts or
-    /// marks stale when hidden are not loaded unless on screen. Last, it
-    /// runs each warmed key's descriptor `refresh` for the keyed `reads` the
-    /// effects reported (a graph's citation reads and progress, only the
-    /// graphs named), and runs `onNavCountsMoved` for a mutation in
-    /// `CatalogQueryRegistry.navCountTriggers`. Features only call `apply`;
-    /// they do not query afterward or tell sibling views to refresh.
+    /// Then it revalidates, once per key through one dedupe set, the union of
+    /// what the registry invalidates (the catalog-wide lists and structure the
+    /// effects reported, and what the mutation names: the Source page's own
+    /// workspace, the metadata field list) and the warmed keys whose
+    /// descriptor `refreshes` follow ids the effects reported
+    /// (`revalidatedKeys`: each Evidence graph it names, the handles that
+    /// changed). Keys the registry evicts or marks stale when hidden are not
+    /// loaded unless on screen. Last, it starts each warmed key's `.run`
+    /// refreshes for the keyed `reads` the effects reported (a graph's citation
+    /// reads and progress, only the graphs named), and runs `onNavCountsMoved`
+    /// for a mutation in `CatalogQueryRegistry.navCountTriggers`. Features only
+    /// call `apply`; they do not query afterward or tell sibling views to
+    /// refresh.
     func apply(_ effects: CatalogWriteEffects = .empty, _ mutation: CatalogMutation? = nil) {
         applyPatches(effects, mutation)
-        apply(invalidations: registry.invalidations(for: effects, by: mutation, project: projectKey))
+        let invalidated = cachedKeys(for: registry.invalidations(for: effects, by: mutation, project: projectKey))
+        let refreshed = revalidatedKeys(for: effects, mutation)
+        var seen = Set<CatalogQueryKey>()
+        for key in invalidated + refreshed where seen.insert(key).inserted {
+            applyHiddenPolicy(to: key)
+        }
         for key in Array(handles.keys) where key.project == projectKey {
-            guard let refresh = key.kind.descriptor.refresh else { continue }
-            let ids = refresh.follows.ids(in: effects, mutation: mutation)
-            if !ids.isEmpty {
-                trackWrite { await refresh.run(self, key, ids) }
+            for refresh in key.kind.descriptor.refreshes {
+                guard case .run(let run) = refresh.action else { continue }
+                let ids = refresh.follows.ids(in: effects, mutation: mutation)
+                if !ids.isEmpty {
+                    trackWrite { await run(self, key, ids) }
+                }
             }
         }
         if let kind = mutation?.invalidationKind,
@@ -200,6 +209,29 @@ final class WorkspaceSession {
         {
             trackWrite { await recount() }
         }
+    }
+
+    /// The warmed keys of this project that a write revalidates through their
+    /// descriptor `refreshes`: a `.revalidate` refresh names a key once when the
+    /// ids its `follows` slot reports meet the ids the key depends on, or, for a
+    /// key that depends on any id, when the slot reports one. Synchronous, so a
+    /// key declared here is revalidated in the same pass as the registry's
+    /// invalidations.
+    func revalidatedKeys(for effects: CatalogWriteEffects, _ mutation: CatalogMutation? = nil) -> [CatalogQueryKey] {
+        var named: [CatalogQueryKey] = []
+        var seen = Set<CatalogQueryKey>()
+        for key in Array(handles.keys) where key.project == projectKey {
+            for refresh in key.kind.descriptor.refreshes {
+                guard case .revalidate(let dependsOn) = refresh.action else { continue }
+                let reported = Set(refresh.follows.ids(in: effects, mutation: mutation))
+                if reported.isEmpty { continue }
+                let meets = dependsOn(self, key).map { !$0.isDisjoint(with: reported) } ?? true
+                if meets, seen.insert(key).inserted {
+                    named.append(key)
+                }
+            }
+        }
+        return named
     }
 
     /// The refresh and recount tasks `apply` has started and not yet finished.
@@ -257,17 +289,10 @@ final class WorkspaceSession {
         }
     }
 
-    private func apply(invalidations: [CatalogQueryInvalidation]) {
-        var seen = Set<CatalogQueryKey>()
-        for key in cachedKeys(for: invalidations) where seen.insert(key).inserted {
-            applyHiddenPolicy(to: key)
-        }
-    }
-
     /// What an invalidated key does: a visible one reloads, a hidden one
     /// follows its descriptor's `whenHidden` (evict, mark stale, or reload).
-    /// The one path for `apply(invalidations:)` and for a descriptor `refresh`
-    /// that revalidates a key rather than patching it.
+    /// The one path for a registry invalidation and for a descriptor
+    /// `refreshes` entry that revalidates a key rather than patching it.
     func applyHiddenPolicy(to key: CatalogQueryKey) {
         switch visibleKeys.contains(key) ? CatalogHiddenPolicy.revalidate : registry.hiddenPolicy(key) {
         case .evict:

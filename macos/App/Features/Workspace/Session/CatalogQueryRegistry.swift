@@ -36,8 +36,10 @@ struct CatalogQueryDescriptor: Sendable {
     /// In-place updates run, in order, before invalidation. Empty for kinds
     /// that only reload.
     var patches: [CatalogQueryPatch] = []
-    /// Partial reload of a warmed value. Nil when this kind has none.
-    var refresh: CatalogQueryRefresh? = nil
+    /// How a warmed key follows the ids of a write's effects: which slot, and
+    /// whether it revalidates the key or reloads part of its value. Empty when
+    /// this kind follows none.
+    var refreshes: [CatalogQueryRefresh] = []
     /// Starts the typed load for this kind. Closed over `Value` by `make`.
     let warm: @MainActor @Sendable (WorkspaceSession, CatalogQueryKey) -> Void
 }
@@ -53,7 +55,7 @@ extension CatalogQueryDescriptor {
         whenHidden: CatalogHiddenPolicy = .revalidate,
         invalidation: @escaping @Sendable (ProjectKey, CatalogMutation) -> CatalogQueryInvalidation,
         patches: [CatalogQueryPatch] = [],
-        refresh: CatalogQueryRefresh? = nil,
+        refreshes: [CatalogQueryRefresh] = [],
         load: @escaping @Sendable (CatalogQueryKey, any GenealogyStore) async throws -> Value
     ) -> CatalogQueryDescriptor {
         CatalogQueryDescriptor(
@@ -63,7 +65,7 @@ extension CatalogQueryDescriptor {
             whenHidden: whenHidden,
             invalidation: invalidation,
             patches: patches,
-            refresh: refresh,
+            refreshes: refreshes,
             warm: { session, key in
                 let store = session.store
                 let _: QueryHandle<Value> = session.ensureQuery(key) {
@@ -100,32 +102,20 @@ struct CatalogQueryRegistry: Sendable {
         descriptor(for: key).stalePolicy
     }
 
-    /// Cache effects of one write's reported handles and Sources. Each read
-    /// follows what feeds it: each Evidence graph per `evidenceGraphs`, the
+    /// Cache effects of one write's reported lists and structure: the
     /// catalog-wide lists per `lists`, and the Properties workspace on
-    /// structure. Keyed `reads` invalidate nothing here: each kind's `refresh`
-    /// follows them. Handle scopes invalidate nothing: they move through each
-    /// list's `patches`.
+    /// structure. Evidence graphs, handles and keyed `reads` invalidate nothing
+    /// here: each kind's `refreshes` follow them (`WorkspaceSession.revalidatedKeys`).
+    /// Handle scopes invalidate nothing: they move through each list's `patches`.
     func invalidations(for effects: CatalogWriteEffects, project: ProjectKey) -> [CatalogQueryInvalidation] {
-        var out: [CatalogQueryInvalidation] = []
-        for graphID in effects.evidenceGraphs {
-            out.append(.key(.evidenceGraph(project: project, graphId: graphID)))
-        }
         var listed = CatalogList.allCases.filter { effects.lists.contains($0) }
             .flatMap { Self.invalidations(for: $0, project: project) }
         if effects.structure {
             listed.append(.key(.propertiesWorkspace(project: project)))
         }
+        var out: [CatalogQueryInvalidation] = []
         for invalidation in listed where !out.contains(invalidation) {
             out.append(invalidation)
-        }
-        if !effects.touchedHandles.isEmpty {
-            out.append(.key(.personsList(project: project)))
-            out.append(.key(.eventsList(project: project)))
-            out.append(.key(.placesList(project: project)))
-        }
-        for entityID in effects.touchedHandles {
-            out.append(.key(.conclusionDetail(project: project, entityId: entityID)))
         }
         return out
     }
@@ -302,6 +292,10 @@ extension CatalogQueryKey.Kind {
                     }
                     return .allCached(.evidenceGraph)
                 },
+                refreshes: [.applyHiddenPolicy(follows: .evidenceGraphs) { _, key in
+                    guard case .evidenceGraph(_, let graphId) = key else { return [] }
+                    return [graphId]
+                }],
                 load: { key, store in
                     guard case .evidenceGraph(let project, let graphId) = key else {
                         mismatchedCatalogKey(key, .evidenceGraph)
@@ -344,10 +338,10 @@ extension CatalogQueryKey.Kind {
                 invalidateOn: [],
                 whenHidden: .markStale,
                 invalidation: { _, _ in .allCached(.citationCounts) },
-                refresh: .applyHiddenPolicy(follows: .citations, id: { key in
-                    guard case .citationCounts(_, let graphId) = key else { return nil }
-                    return graphId
-                }),
+                refreshes: [.applyHiddenPolicy(follows: .reads(.citations)) { _, key in
+                    guard case .citationCounts(_, let graphId) = key else { return [] }
+                    return [graphId]
+                }],
                 load: { key, store in
                     guard case .citationCounts(let project, let graphId) = key else {
                         mismatchedCatalogKey(key, .citationCounts)
@@ -448,10 +442,10 @@ extension CatalogQueryKey.Kind {
                 invalidateOn: [],
                 whenHidden: .markStale,
                 invalidation: { _, _ in .allCached(.citationsByArtifact) },
-                refresh: .applyHiddenPolicy(follows: .citations, id: { key in
-                    guard case .citationsByArtifact(_, let graphId, _) = key else { return nil }
-                    return graphId
-                }),
+                refreshes: [.applyHiddenPolicy(follows: .reads(.citations)) { _, key in
+                    guard case .citationsByArtifact(_, let graphId, _) = key else { return [] }
+                    return [graphId]
+                }],
                 load: { key, store in
                     guard case .citationsByArtifact(let project, let graphId, let artifactId) = key else {
                         mismatchedCatalogKey(key, .citationsByArtifact)
@@ -471,7 +465,7 @@ extension CatalogQueryKey.Kind {
                 stalePolicy: .sessionFresh,
                 invalidateOn: [],
                 invalidation: { project, _ in .key(.evidenceGraphProgress(project: project)) },
-                refresh: CatalogQueryRefresh(follows: .reads(.evidenceGraphProgress)) { session, key, ids in
+                refreshes: [CatalogQueryRefresh(follows: .reads(.evidenceGraphProgress)) { session, key, ids in
                     for graphId in ids {
                         guard let _: QueryHandle<[String: EvidenceGraphProgress]> = session.queryHandle(key) else {
                             return
@@ -492,7 +486,7 @@ extension CatalogQueryKey.Kind {
                             // Keep last counts; the next mutation or the next place visit that warms it retries.
                         }
                     }
-                },
+                }],
                 load: { key, store in
                     guard case .evidenceGraphProgress(let project) = key else {
                         mismatchedCatalogKey(key, .evidenceGraphProgress)
@@ -508,7 +502,7 @@ extension CatalogQueryKey.Kind {
         case .evidenceGraphsList:
             // Graph and link writes report the `evidence_graphs` list in
             // `WriteEffects`; `deleteSource` reports none, so `.deletedSource` drops it.
-            // A visible key still revalidates (`WorkspaceSession.apply(invalidations:)`);
+            // A visible key still revalidates (`WorkspaceSession.apply`);
             // a hidden list just goes stale until it is shown again.
             return .make(
                 kind: self,
@@ -531,6 +525,7 @@ extension CatalogQueryKey.Kind {
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.personsList(project: project)) },
                 patches: [.lastUpdated(CatalogPersonHeader.self, follows: .handle)],
+                refreshes: [.applyHiddenPolicyOnAny(follows: .touchedHandles)],
                 load: { key, store in
                     guard case .personsList(let project) = key else {
                         mismatchedCatalogKey(key, .personsList)
@@ -546,6 +541,7 @@ extension CatalogQueryKey.Kind {
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.eventsList(project: project)) },
                 patches: [.lastUpdated(CatalogEventHeader.self, follows: .handle)],
+                refreshes: [.applyHiddenPolicyOnAny(follows: .touchedHandles)],
                 load: { key, store in
                     guard case .eventsList(let project) = key else {
                         mismatchedCatalogKey(key, .eventsList)
@@ -561,6 +557,7 @@ extension CatalogQueryKey.Kind {
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.placesList(project: project)) },
                 patches: [.lastUpdated(CatalogPlaceHeader.self, follows: .handle)],
+                refreshes: [.applyHiddenPolicyOnAny(follows: .touchedHandles)],
                 load: { key, store in
                     guard case .placesList(let project) = key else {
                         mismatchedCatalogKey(key, .placesList)
@@ -577,11 +574,43 @@ extension CatalogQueryKey.Kind {
                 // Any Conclusion edit can touch any handle (a merge, a member's
                 // Observation), so every cached detail is stale.
                 invalidation: { _, _ in .allCached(.conclusionDetail) },
+                refreshes: [.applyHiddenPolicy(follows: .touchedHandles) { _, key in
+                    guard case .conclusionDetail(_, let entityId) = key else { return [] }
+                    return [entityId]
+                }],
                 load: { key, store in
                     guard case .conclusionDetail(let project, let entityId) = key else {
                         mismatchedCatalogKey(key, .conclusionDetail)
                     }
                     return try await store.getConclusionDetail(projectDir: project.projectDir, entityID: entityId)
+                }
+            )
+        case .personClaims:
+            // A Person's claims by Source (S13-01). Any Conclusion edit can
+            // change who a claim belongs to, so every cached key is stale on a
+            // trigger. Otherwise a write reloads it for its own handle, and for
+            // the Evidence graphs it holds a claim on.
+            return .make(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: CatalogQueryRegistry.conclusionTriggers,
+                whenHidden: .evict,
+                invalidation: { _, _ in .allCached(.personClaims) },
+                refreshes: [
+                    .applyHiddenPolicy(follows: .touchedHandles) { _, key in
+                        guard case .personClaims(_, let entityId) = key else { return [] }
+                        return [entityId]
+                    },
+                    .applyHiddenPolicy(follows: .evidenceGraphs) { session, key in
+                        let groups: [CatalogPersonClaimGroup]? = session.queryHandle(key)?.value
+                        return Set((groups ?? []).flatMap(\.claims).map(\.graphID))
+                    },
+                ],
+                load: { key, store in
+                    guard case .personClaims(let project, let entityId) = key else {
+                        mismatchedCatalogKey(key, .personClaims)
+                    }
+                    return try await store.listPersonClaims(projectDir: project.projectDir, entityID: entityId)
                 }
             )
         }
