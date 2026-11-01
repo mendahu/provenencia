@@ -170,9 +170,6 @@ func (s *Staged) install() error {
 	if s.installed {
 		return nil
 	}
-	if err := objectstore.CheckObjects(s.dir); err != nil {
-		return mapObjectsErr(err)
-	}
 	wrote, err := s.tmp.Install(s.rel, s.checksum)
 	s.wrote = s.wrote || wrote
 	if err != nil {

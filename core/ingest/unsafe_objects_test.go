@@ -61,3 +61,28 @@ func TestStagedInsertTxRefusesSymlinkedObjects(t *testing.T) {
 		})
 	wantUnsafeObjects(t, err)
 }
+
+func TestStagedInsertTxRefusesReplacedObjects(t *testing.T) {
+	c := stageCatalog(t)
+	userID := stageUser(t, c)
+	path := stageWrite(t, t.TempDir(), "in.png", stagePNG(t, 8, 8))
+	s, err := StageImage(c.Dir(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Discard()
+	// A real objects/ folder, but not the one the temp was made in.
+	objects := filepath.Join(c.Dir(), "objects")
+	if err := os.Rename(objects, filepath.Join(c.Dir(), "objects-moved")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(objects, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_, _, err = writes.Run(c, writes.Op{Action: "create_file", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			_, ch, err := s.InsertTx(tx.Tx)
+			return struct{}{}, ch, err
+		})
+	wantUnsafeObjects(t, err)
+}
