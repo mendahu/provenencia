@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/swift-tests.mdc`
 **Context:** [person-detail.md](../person-detail.md) R-3, R-21; working rules: "One person header for every tile", "Colors reuse `PersonGenderTreatment`"; [`docs/deployment-plan/archive/spike-11/README.md`](../../archive/spike-11/README.md) ("Gender meets sex at birth through a registry crosswalk")
 **Planned:** 2026-11-01 against `main` @ `fdd37f19`
-**Review:** — (not reviewed yet)
+**Review:** [`S13-02-gender-in-the-person-header.review.md`](S13-02-gender-in-the-person-header.review.md) — Fits with changes / Ready with changes; 1 round; every finding Fixed except M-3, which is To user (D-11)
 
 ### Implementer — read this first
 
@@ -72,7 +72,7 @@ Every place that shows a person as a row or a tile can color it by gender, from 
 | Proto `TermFacts` *(new)*; `PersonHeader.gender = 9`, `sex_at_birth = 10`; `personHeaderProto` fills them | STEP-3, AC-1.7 |
 | Swift `CatalogTermFacts` *(new)* on `CatalogPersonHeader`; `GoStore.mapPersonHeader` maps it | STEP-4, AC-1.7 |
 | `PersonGenderTreatment.read(_ header:)` replaces `read(_ fields:)`; the Person page header reads it; the field read is deleted | STEP-5, AC-2.1 – AC-2.8 |
-| Docs: package and proto comments, the treatment's doc, `person-detail.md`'s S11-30 status, `completed.md`, the map row | STEP-6 |
+| Docs: package doc (stored row vs read-time labels), proto comments, the treatment's doc, the working rule "The family read is served from the graph cache", `person-detail.md`'s S11-30 status, `completed.md`, the map row | STEP-6 |
 
 | Out | Home |
 | --- | --- |
@@ -94,6 +94,7 @@ Every place that shows a person as a row or a tile can color it by gender, from 
 | Vocabulary | `compose.go` `vocab`, `loadVocab`, `scanVocab` | `propID` (key → id) is read with `SELECT id, key FROM properties WHERE origin = ?`; no Property labels. The map is held by `g.Labels()` and dropped by `graphcache.OnCommit` on `effects.ListVocabulary`, which a `properties` or `property_terms` write raises (`core/database/effects/registry.go` `"properties"`) |
 | Kept semantics | `core/database/graphcache/graph.go` `Node.Kept`, `Rank1`; `core/autoreconcile/autoreconcile.go` `Result.Values` | Kept = reason `kept`. Displayed values come first, so one kept value is rank 1. Swift `CatalogConclusionField.displayedValues` is the same filter (`isDisplayed` = `.kept`) |
 | Vocab keys | `core/vocabkey/vocabkey.go` `PropertyGender`, `PropertySexAtBirth` | `"gender"`, `"sex_at_birth"` |
+| Display check | `core/database/conclusionheaders/display_register.go` `checkDisplay` | Run by `Graph.Verify` (tests, and every commit under `PROVENENCIA_GRAPH_VERIFY=1`). Its `PersonHeader` case compares the stored row with a fresh `persons(…)` row by `reflect.DeepEqual`; its `EventHeader` case compares with `finishEvent(v, row)`. Once person rows are finished on read, the person case must finish the stored row too |
 | Wire | `api/proto/engine.proto` `message PersonHeader` (fields 1 – 8), `message ConclusionTerm {id, key, label, origin}` | No gender |
 | Mapper | `api/ffi/handlers/conclusion_headers.go` `personHeaderProto` | The one Go → proto mapper; called by `ListPersonHeaders`, `conclusion_detail.go` `attachHeader`, `promote_align.go`, `search_catalog.go` |
 | Swift model | `macos/App/Platform/GenealogyStore.swift` `CatalogPersonHeader`, `CatalogLifeFacts` | No gender |
@@ -113,13 +114,16 @@ Every place that shows a person as a row or a tile can color it by gender, from 
 | --- | --- | --- | --- |
 | D-1 | The header carries both terms raw: per Property, the rank-1 kept term (nil when none, or when the rank-1 kept value has no term key) and the count of kept values. Go does not pick gender over sex at birth and does not choose a color family | Go returns structures; the app formats (package doc). The treatment's rules and colors are Swift-owned since S10-23 and stay in one place, `PersonGenderTreatment` | A Go-chosen `basis`/`family` enum — moves a display rule into the engine and adds a wire enum; one kept term only — loses "mixed" (count > 1), which must stay neutral (AC-2.3) |
 | D-2 | One shape for both: `TermFacts {Term *Term; Count int; PropertyLabel string}` *(new)* in `conclusionheaders`, mirrored by proto `TermFacts` and Swift `CatalogTermFacts`. `EventType` is renamed `Term` and `EventHeader.EventType` becomes `*Term` | Two Properties, one shape, next to `LifeFacts`; a term struct named for events would be wrong on a person. The rename touches one package only (§4) | Two more flat fields per Property on `PersonHeader` — six fields that differ only by prefix; a second `GenderTerm` struct beside `EventType` — a near-copy |
-| D-3 | `TermFacts.PropertyLabel` is the product Property's catalog label, loaded into `vocab` (new `propLabel` map keyed by property id) by the existing properties query, now `SELECT id, key, label …` read by a dedicated `scanProperties` (as `scanTerms` reads two columns) | The badge's spoken label is "<field label>, <value>" today, and a researcher may relabel a product Property (`properties.Update` allows origin `provenencia`). Reading it from the catalog keeps the spoken label equal to the Vitals row label. Same query, no new round trip | Swift L10n constants "Gender" / "Sex at birth" — diverge from the Vitals row after a relabel; the property label on every `ConclusionTerm` — widens a shared message for one caller |
+| D-3 | `TermFacts.PropertyLabel` is the product Property's catalog label, loaded into `vocab` (new `propLabel` map keyed by Property key, beside `propID`) by the existing properties query, now `SELECT id, key, label FROM properties WHERE origin = ?`. `scanVocab` becomes the one row-scan helper: it scans `id` plus every string column the query selects (`take func(id []byte, cols []string)`, column count from `rows.Columns()`), and `scanTerms` folds onto it | The badge's spoken label is "<field label>, <value>" today, and a researcher may relabel a product Property (`properties.Update` allows origin `provenencia`). Reading it from the catalog keeps the spoken label equal to the Vitals row label. Same query, no new round trip | Swift L10n constants "Gender" / "Sex at birth" — diverge from the Vitals row after a relabel; the property label on every `ConclusionTerm` — widens a shared message for one caller |
 | D-4 | `finishPerson(v, h)` *(new)* fills `Term.Label`, `Term.Origin` and `PropertyLabel` at read time, called in `composePersons`' output loop on fresh and cached rows. The stored display row keeps `Term.ID` and `Term.Key` only. `finishEvent` and `finishPerson` share one helper, `vocab.finishTerm(*Term) *Term` *(new)* | A term or Property relabel raises `ListVocabulary`, which drops `vocab` but must not be the reason a stored header is wrong; this is `finishEvent`'s existing rule (`vocab`'s doc: term labels are not stored on the row, so a rename does not throw the row away) | Storing labels on the row — a relabel would show the old label until the person's node is replaced |
 | D-5 | Only the **product** Properties feed the header (`v.prop(vocabkey.PropertyGender)`, `v.prop(vocabkey.PropertySexAtBirth)`, origin `provenencia`) | `vocab.propID` is product-only already; the treatment's own rule is that a key names a product term only with the product's origin. Today's `fields.first(where:)` could pick a researcher's own Property keyed `gender`; that is the latent bug this read removes (Edges) | Matching by key across origins — repeats the bug |
 | D-6 | `PersonGenderTreatment.read(_ header: CatalogPersonHeader?) -> PersonGenderTreatment?` replaces `read(_ fields:)`, which is deleted. Rule, unchanged: `gender.count > 0` → treat gender (needs count 1, a `.term` value, non-empty text), else treat sex at birth the same way; nil header → nil | The map's Ships line says the treatment reads only the header's terms and the read from detail fields is deleted. Same rules as today, so AC-2.x restate the existing tests | Keeping both reads — two inputs for one treatment, which the map review (K-1) removed |
 | D-7 | `CatalogTermFacts.term` is a `CatalogConclusionValue?` that `GoStore` builds only as `.term(id:key:label:origin:)` | The treatment already destructures `.term` and formats it with `ReconciledValueDisplay.string(for:)`; reusing the value keeps that one formatting path | A new Swift term struct — a third term shape beside `CatalogPropertyTerm` and `CatalogConclusionValue.term` |
 | D-8 | Wire: `message TermFacts { ConclusionTerm term = 1; int32 count = 2; string property_label = 3; }`; `PersonHeader.gender = 9`, `PersonHeader.sex_at_birth = 10`. `personHeaderProto` always sets both (an empty `TermFacts` when the Property is absent from the catalog); `term` is unset when `Term` is nil | Reuses `ConclusionTerm`; additive fields, no renumbering | `optional` presence on the message — Swift reads `count`, so an always-present message is simpler |
 | D-9 | Test layers: Go table-driven tests in `conclusionheaders` for the composed values, one handler test for the wire, Swift Testing for the treatment and the page content. No UI test | The behavior is a mapping and a pure rule; the page chrome is unchanged | An XCUITest of the badge — FakeStore carries no gender (Out) |
+
+| D-10 | One term mapper per side of the wire: Go `termProto`, Swift `GoStore.mapConclusionTerm`. The existing event-type literal and `.term` case call them | Each side then has one place that turns a term into wire format or back; S13-05's role term is the next caller (map row S13-05) | A second literal beside each existing one |
+| D-11 | `EventHeader` keeps `EventType *Term` and `EventTypeCount` and does not move onto `TermFacts` in this PR | The two shapes already share `keptTerm` and `finishTerm`; moving events changes `oneEvent`, `eventTitle`, `eventKeyOf`, `eventHeaderProto` and the event tests (`rg 'EventTypeCount|\.EventType\b' core/database/conclusionheaders api/ffi/handlers` lists 24 lines, tests included), a change to a second header kind that this PR's reviewers would have to check for no behavior change. Open to the user (review log, To user) | Moving events now — doubles the PR's surface for no researcher-visible change |
 
 **Rules this plan bends.** None.
 
@@ -132,12 +136,12 @@ Every place that shows a person as a row or a tile can color it by gender, from 
 | `conclusionheaders.TermFacts` *(new)* | type | `conclusionheaders.LifeFacts`; `EventHeader.EventType` + `EventTypeCount` | `LifeFacts` is an event read; the event pair has no Property label and would be duplicated per Property (D-2) |
 | `conclusionheaders.Term` | type (rename of `EventType`) | `conclusionheaders.EventType` | Reused, renamed so a person's term is not an "event type" (D-2) |
 | `finishPerson` *(new)*, `vocab.finishTerm` *(new)* | func | `finishEvent` | `finishEvent` now calls `finishTerm`; one term-finishing path (D-4) |
-| `vocab.propLabel` *(new)*, `scanProperties` *(new)* | field, func | `vocab.propID`, `scanTerms` | Same query as `propID`; `scanVocab` scans two columns only (D-3) |
+| `vocab.propLabel` *(new)*, `func (v vocab) propLabelOf(key string) string` *(new)* | field, func | `vocab.propID`, `vocab.prop` | Same query as `propID`, keyed the same way (D-3). `scanVocab` is generalized and `scanTerms` folds onto it, so the package keeps one scan loop |
 | `keptTermFacts(n, propID) TermFacts` *(new)* | func | `keptTerm` | Thin wrapper over `keptTerm` that builds the struct; no second kept-term read |
 | proto `TermFacts` *(new)* | message | `ConclusionTerm`, `LifeFacts` | Carries `ConclusionTerm` plus count and label (D-8) |
-| `termFactsProto` *(new)* | func | `lifeFactsProto`, the `ConclusionTerm` literal in `eventHeaderProto` | Shared by both Properties; `eventHeaderProto` keeps its literal (not this PR's code) |
+| `termProto` *(new)*, `termFactsProto` *(new)* | func | the `ConclusionTerm` literal in `eventHeaderProto`; `lifeFactsProto` | `termProto(t *conclusionheaders.Term) *engine.ConclusionTerm` (nil in, nil out) is the one Go term mapper: `eventHeaderProto` drops its literal and calls it, and `termFactsProto` calls it (D-10) |
 | `CatalogTermFacts` *(new)* | type | `CatalogLifeFacts`, `CatalogPropertyTerm` | `CatalogPropertyTerm` is a vocabulary row (description, property id), not a displayed value (D-7) |
-| `GoStore.mapTermFacts` *(new)* | func | `mapLifeFacts` | Same shape as its neighbor |
+| `GoStore.mapConclusionTerm` *(new)*, `GoStore.mapTermFacts` *(new)* | func | the `.term` case of `GoStore.mapConclusionValue`; `mapLifeFacts` | `mapConclusionTerm(_ t: Provenencia_Engine_V1_ConclusionTerm) -> CatalogConclusionValue` is the one Swift term mapper: `mapConclusionValue`'s `.term` case and `mapTermFacts` both call it (D-10) |
 | `PersonGenderTreatment.read(_ header:)` | func (replaces `read(_ fields:)`) | itself | Replaced, not beside (D-6) |
 
 **Builds on.** The header package's split of stored row vs read-time labels (`finishEvent`), the display cache (`g.Display` / `SetDisplay`), `effects.ListVocabulary` dropping `vocab`, and the one mapper `personHeaderProto` that every Person header on the wire goes through.
@@ -173,7 +177,7 @@ None — no catalog change.
 | --- | --- |
 | `core/database/conclusionheaders/events.go` | `type EventType struct` → `type Term struct` (same fields, doc: "a term value of a header; Key names a product term only when Origin is the product's"). `EventHeader.EventType *Term` |
 | `core/database/conclusionheaders/conclusionheaders.go` | `PersonHeader` gains `Gender, SexAtBirth TermFacts` (doc: "the displayed gender and sex at birth terms; the app chooses which colors a person"). `type TermFacts struct { Term *Term; Count int; PropertyLabel string }` *(new)* — doc: "Term is the rank-1 kept term, nil when none; Count is the number of kept values, more than one is a disagreement; Term label and origin and PropertyLabel are filled at read time." Package doc: unchanged except "later tree nodes" stays |
-| `core/database/conclusionheaders/compose.go` | `vocab.propLabel map[string]string` *(new)*; `loadVocab` calls `scanProperties` *(new)* (`SELECT id, key, label FROM properties WHERE origin = ?`) filling `propID` and `propLabel`; `func (v vocab) finishTerm(t *Term) *Term` *(new)* (copy with Label and Origin from `termLabel` / `termOrigin`; nil in → nil out); `finishEvent` uses it; `func keptTermFacts(n *graphcache.Node, propID []byte) TermFacts` *(new)* wraps `keptTerm`; `onePerson` sets `h.Gender = keptTermFacts(n, v.prop(vocabkey.PropertyGender))` and `h.SexAtBirth` likewise; `func finishPerson(v vocab, h PersonHeader) PersonHeader` *(new)* fills both `Term`s through `finishTerm` and `PropertyLabel` from `v.propLabel[string(v.prop(key))]`; `composePersons`' output loop returns `finishPerson(v, h)` for fresh and cached rows. The stored row (`g.SetDisplay`) is the unfinished one, as for events |
+| `core/database/conclusionheaders/compose.go` | `vocab.propLabel map[string]string` *(new)*, keyed by Property key, and `propLabelOf(key)` *(new)*; `scanVocab(g, query, args, take func(id []byte, cols []string))` scans `id` and every further column as a string; `loadVocab` reads `SELECT id, key, label FROM properties WHERE origin = ?` through it, filling `propID` and `propLabel`; the subject types query passes through it unchanged; `scanTerms` is deleted and its query (`SELECT id, label, origin FROM property_terms`) runs through `scanVocab`; `func (v vocab) finishTerm(t *Term) *Term` *(new)* (copy with Label and Origin from `termLabel` / `termOrigin`; nil in → nil out); `finishEvent` uses it; `func keptTermFacts(n *graphcache.Node, propID []byte) TermFacts` *(new)* wraps `keptTerm`; `onePerson` sets `h.Gender = keptTermFacts(n, v.prop(vocabkey.PropertyGender))` and `h.SexAtBirth` likewise; `func finishPerson(v vocab, h PersonHeader) PersonHeader` *(new)* fills both `Term`s through `finishTerm` and `PropertyLabel` from `v.propLabelOf(key)`; `composePersons`' output loop returns `finishPerson(v, h)` for fresh and cached rows. The stored row (`g.SetDisplay`) is the unfinished one, as for events. `display_register.go` `checkDisplay`'s `PersonHeader` case compares the fresh row with `finishPerson(v, row)`, as its `EventHeader` case does with `finishEvent` (M-2) |
 
 Errors: none new.
 
@@ -200,14 +204,14 @@ message PersonHeader {
 }
 ```
 
-`api/ffi/handlers/conclusion_headers.go`: `termFactsProto(f conclusionheaders.TermFacts) *engine.TermFacts` *(new)*; `personHeaderProto` sets `Gender` and `SexAtBirth`. Regenerate with `./scripts/generate-proto.sh`.
+`api/ffi/handlers/conclusion_headers.go`: `termProto(t *conclusionheaders.Term) *engine.ConclusionTerm` *(new)* (nil → nil; `Id: database.UUIDString(t.ID)`, Key, Label, Origin); `eventHeaderProto` sets `EventType: termProto(h.EventType)` in place of its literal; `termFactsProto(f conclusionheaders.TermFacts) *engine.TermFacts` *(new)* uses `termProto`; `personHeaderProto` sets `Gender` and `SexAtBirth`. Regenerate with `./scripts/generate-proto.sh`.
 
 ### macOS
 
 | Building block | Component | Home | Notes |
 | --- | --- | --- | --- |
-| Header terms | `CatalogTermFacts` *(new)*: `var term: CatalogConclusionValue?`, `var count = 0`, `var propertyLabel = ""` | `macos/App/Platform/GenealogyStore.swift`, beside `CatalogLifeFacts` | `CatalogPersonHeader` gains `var gender = CatalogTermFacts()`, `var sexAtBirth = CatalogTermFacts()` after `death` |
-| Mapping | `GoStore.mapTermFacts` *(new)* | `macos/App/Platform/GoStore.swift` | `term: f.hasTerm ? .term(id: f.term.id, key: f.term.key, label: f.term.label, origin: f.term.origin) : nil`, `count: Int(f.count)`, `propertyLabel: f.propertyLabel`; `mapPersonHeader` passes `gender: mapTermFacts(h.gender), sexAtBirth: mapTermFacts(h.sexAtBirth)` |
+| Header terms | `CatalogTermFacts` *(new)*: `var term: CatalogConclusionValue?` (doc: "always `.term` or nil; built by `GoStore.mapConclusionTerm`"), `var count = 0`, `var propertyLabel = ""` | `macos/App/Platform/GenealogyStore.swift`, beside `CatalogLifeFacts` | `CatalogPersonHeader` gains `var gender = CatalogTermFacts()`, `var sexAtBirth = CatalogTermFacts()` after `death` |
+| Mapping | `GoStore.mapConclusionTerm` *(new)*, `GoStore.mapTermFacts` *(new)* | `macos/App/Platform/GoStore.swift` | `mapConclusionTerm(t)` returns `.term(id: t.id, key: t.key, label: t.label, origin: t.origin)`; `mapConclusionValue`'s `case .term(let t)` returns `mapConclusionTerm(t)`; `mapTermFacts`: `term: f.hasTerm ? mapConclusionTerm(f.term) : nil`, `count: Int(f.count)`, `propertyLabel: f.propertyLabel`; `mapPersonHeader` passes `gender: mapTermFacts(h.gender), sexAtBirth: mapTermFacts(h.sexAtBirth)` |
 | Treatment | `PersonGenderTreatment.read(_ header: CatalogPersonHeader?)` | `macos/App/Features/Conclusions/PersonGenderTreatment.swift` | D-6. Private `treatment(_ facts: CatalogTermFacts, basis:)`: `facts.count == 1`, `case .term(_, let key, _, let origin)? = facts.term`, text = `ReconciledValueDisplay.string(for:)` non-empty, `fieldLabel: facts.propertyLabel`. `family`, colors, `badge`, `thumbnailColors` unchanged. Doc comment: "reads the Person header's terms (S13-02)" |
 | Page | `PersonDetailContent` | `macos/App/Features/Conclusions/PersonDetailContent.swift` | `treatment = PersonGenderTreatment.read(header)` (the `header` local already exists) |
 
@@ -225,18 +229,18 @@ Do: rename `EventType` → `Term`; add `TermFacts`, `keptTermFacts`, the two `Pe
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/conclusionheaders/...` passes, T-1 included; `go vet ./core/...` clean.
 
 **STEP-2 — Labels are read at read time**
-Files: `compose.go`, `conclusionheaders_test.go`.
-Do: `propLabel` and `scanProperties` in `loadVocab`; `finishTerm`; `finishEvent` calls it; `finishPerson` applied in `composePersons`' output loop. `finishTerm` returns a new `*Term` and never writes through the pointer it is given: a cached `PersonHeader` from `g.Display` is a value copy whose `Gender.Term` still points at the stored row's `Term`. Write T-2; T-3 stays green; extend `TestListPersonsQueryCountIsConstant` (T-4).
+Files: `compose.go`, `display_register.go`, `conclusionheaders_test.go`.
+Do: generalize `scanVocab` and fold `scanTerms` onto it; `propLabel` and `propLabelOf` in `loadVocab`; `checkDisplay`'s person case finishes the stored row; `finishTerm`; `finishEvent` calls it; `finishPerson` applied in `composePersons`' output loop. `finishTerm` returns a new `*Term` and never writes through the pointer it is given: a cached `PersonHeader` from `g.Display` is a value copy whose `Gender.Term` still points at the stored row's `Term`. Write T-2; T-3 stays green; extend `TestListPersonsQueryCountIsConstant` (T-4).
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/conclusionheaders/... ./core/database/searchindex/...` passes; `TestListEvents` still sees `EventType.Label == "Birth"`.
 
 **STEP-3 — The wire carries the terms**
 Files: `api/proto/engine.proto`, `api/proto/engine/engine.pb.go` and `macos/App/Platform/Generated/engine.pb.swift` (generated), `api/ffi/handlers/conclusion_headers.go`, `api/ffi/handlers/conclusion_headers_test.go`. Skill: `add-ffi-handler`.
-Do: add `TermFacts` and fields 9, 10 (§6 FFI); run `./scripts/generate-proto.sh`; add `termFactsProto` and set both in `personHeaderProto`. Write T-5.
+Do: add `TermFacts` and fields 9, 10 (§6 FFI); run `./scripts/generate-proto.sh`; add `termProto` (and use it in `eventHeaderProto`) and `termFactsProto`, and set both fields in `personHeaderProto`. Write T-5.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./api/...` passes; `git diff --stat` shows both generated files changed. If `./scripts/generate-proto.sh` exits because `protoc`, `protoc-gen-go` or `protoc-gen-swift` is missing, stop and report; do not hand-edit generated files.
 
 **STEP-4 — Swift maps the header terms**
 Files: `macos/App/Platform/GenealogyStore.swift`, `macos/App/Platform/GoStore.swift`.
-Do: `CatalogTermFacts`, the two `CatalogPersonHeader` properties with defaults, `mapTermFacts`, `mapPersonHeader` (§6 macOS).
+Do: `CatalogTermFacts`, the two `CatalogPersonHeader` properties with defaults, `mapConclusionTerm` (and use it in `mapConclusionValue`), `mapTermFacts`, `mapPersonHeader` (§6 macOS).
 Check: `scripts/check-pr.sh` gets through the Xcode build with no new Swift warning (its Swift test stage may still fail on the old treatment tests until STEP-5).
 
 **STEP-5 — The treatment reads only the header**
@@ -245,8 +249,8 @@ Do: replace `read(_ fields:)` with `read(_ header:)` (D-6) and delete the field-
 Check: `rg -n 'read\(_ fields|CatalogConclusionField' macos/App/Features/Conclusions/PersonGenderTreatment.swift` is empty; `scripts/check-pr.sh` passes, Swift tests included.
 
 **STEP-6 — Docs**
-Files: `docs/deployment-plan/spike-13/completed.md`, `docs/deployment-plan/spike-13/deployment-plan.md` (map row), this plan (status, Landed note), `docs/deployment-plan/spike-13/person-detail.md` (the S11-30 row says "In review"; it landed in #509).
-Do: per the Definition of done.
+Files: `docs/deployment-plan/spike-13/completed.md`, `docs/deployment-plan/spike-13/deployment-plan.md` (map row), this plan (status, Landed note), `docs/deployment-plan/spike-13/person-detail.md` (the S11-30 row says "In review"; it landed in #509), `core/database/conclusionheaders/conclusionheaders.go` (package doc), `docs/deployment-plan/spike-13/deployment-plan.md` working rule "The family read is served from the graph cache".
+Do: per the Definition of done. The package doc's "A finished header is stored on the catalog graph" becomes "A header's stored row holds ids and keys; term and Property labels are filled on read, from the cached vocabulary." The working rule's "each relative's tile is the finished `PersonHeader` already stored in the graph's display slot" becomes "each relative's tile is the `PersonHeader` stored in the graph's display slot, read through `conclusionheaders.ByIDs`, which fills its labels with no SQL when warm".
 Check: links resolve; `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-13/prs/S13-02-gender-in-the-person-header.md` reports no errors.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits.
@@ -266,7 +270,7 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-9 | Swift | `macos/ProvenenciaTests/PersonDetailTests.swift` `treatmentRidesOnContentAndRowsStay`, `headerThumbIsTheLeadLikeness` (gender moved onto `header:`; the gender field stays in `extra:` for the Vitals row) | → `.woman`, badge "Woman", thumb colors set, rows include "Gender" | AC-2.7 |
 | T-10 | Swift | same file `treatmentReadsOnlyTheHeader` *(new)* | gender `woman` in `extra:` fields, header with no gender → `treatment == nil`, `badge == nil` | AC-2.8, D-6 |
 
-Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `conclusionheaders` (rename, finish step), `searchindex` (composes `PersonHeader`s via `RowsForSearch`), `api/ffi/handlers` promote and search tests that compare whole `PersonHeader` protos.
+Must stay green: everything `scripts/check-pr.sh` runs, including the `Graph.Verify` calls in `conclusionheaders_test.go` and `display_cache_test.go` (they run `checkDisplay`). Most likely to break: `conclusionheaders` (rename, finish step, `checkDisplay`), `searchindex` (composes `PersonHeader`s via `RowsForSearch`), `api/ffi/handlers` promote and search tests that compare whole `PersonHeader` protos.
 
 ## 9. Definition of done
 
@@ -283,6 +287,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
 - [ ] person-detail.md: the S11-30 row reads Landed (#509)
+- [ ] Package doc of `conclusionheaders` and the working rule "The family read is served from the graph cache" say labels are filled on read (STEP-6)
 - [ ] Domain doc updated if a rule in docs/*.md changed: none expected
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
@@ -312,7 +317,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 
 ## 12. Open questions
 
-None.
+1. Does `EventHeader` move onto `TermFacts` in this PR (review M-3)? Recommended: no, D-11 as written. On a yes, STEP-1 also moves `EventHeader.EventType` and `EventTypeCount` to `Type TermFacts`, with no wire change, and the status becomes Planned.
 
 ## 13. PR
 
