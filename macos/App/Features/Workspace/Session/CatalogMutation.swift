@@ -98,7 +98,7 @@ struct CatalogWriteEffects: Sendable, Equatable {
     /// cannot patch row by row; see `CatalogQueryRegistry.invalidations(for:project:)`.
     var lists: Set<CatalogList> = []
     var structure = false
-    var headerHandles: [String] = []
+    var summaryHandles: [String] = []
     /// Handles whose last-updated time this write moved. The session patches
     /// those rows in the cached lists with `activity`; `touchedHandles` (detail
     /// pages) does not include them.
@@ -113,7 +113,7 @@ struct CatalogWriteEffects: Sendable, Equatable {
 
     var touchedHandles: [String] {
         var seen = Set<String>()
-        return (handles + headerHandles).filter { seen.insert($0).inserted && !$0.isEmpty }
+        return (handles + summaryHandles).filter { seen.insert($0).inserted && !$0.isEmpty }
     }
 }
 

@@ -11,13 +11,13 @@ struct EventDetailTests {
         ref: String = "EVT-8PL22",
         fields: [CatalogConclusionField] = [],
         members: Int = 4,
-        header: CatalogEventHeader? = nil
+        summary: CatalogEventSummary? = nil
     ) -> CatalogConclusionDetail {
         CatalogConclusionDetail(
             entity: CatalogCanonicalEntity(id: "e1", ref: ref, subjectTypeID: "t", label: label),
             fields: fields,
             memberCount: members,
-            header: header.map { .event($0) }
+            summary: summary.map { .event($0) }
         )
     }
 
@@ -37,16 +37,31 @@ struct EventDetailTests {
         )
     }
 
-    private func header(_ title: CatalogEventTitle) -> CatalogEventHeader {
-        CatalogEventHeader(
+    private func dated(
+        date: CatalogDateValueInput? = nil,
+        start: CatalogDateValueInput? = nil,
+        end: CatalogDateValueInput? = nil
+    ) -> CatalogEventSummary {
+        var summary = CatalogEventSummary(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-8PL22", subjectTypeID: "t", label: ""),
+            title: CatalogEventTitle(rule: .ref, ref: "EVT-8PL22")
+        )
+        summary.date = date
+        summary.startDate = start
+        summary.endDate = end
+        return summary
+    }
+
+    private func summary(_ title: CatalogEventTitle) -> CatalogEventSummary {
+        CatalogEventSummary(
             entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-8PL22", subjectTypeID: "t", label: ""),
             title: title
         )
     }
 
-    @Test func titleIsTheHeadersChosenTitle() {
+    @Test func titleIsTheSummaryChosenTitle() {
         let page = EventDetailContent(
-            detail: detail(header: header(CatalogEventTitle(rule: .recordedName, recordedName: "Fire at York", ref: "EVT-8PL22"))),
+            detail: detail(summary: summary(CatalogEventTitle(rule: .recordedName, recordedName: "Fire at York", ref: "EVT-8PL22"))),
             locale: en
         )
         #expect(page.title == .name("Fire at York"))
@@ -54,8 +69,8 @@ struct EventDetailTests {
         #expect(page.ref == "EVT-8PL22")
     }
 
-    @Test func withNoHeaderTheTitleIsTheLabelThenTheRef() {
-        // A recorded name in the detail does not choose a title; only Go's header does.
+    @Test func withNoSummaryTheTitleIsTheLabelThenTheRef() {
+        // A recorded name in the detail does not choose a title; only Go's summary does.
         let named = content(detail(label: "Grandpa's fire", fields: [
             D.field("single", key: "event_name", label: "Event name", valueType: "text", [D.value(1, "kept", .text("Fire at York"))]),
         ]))
@@ -74,29 +89,82 @@ struct EventDetailTests {
             dateField("date", point, id: "point"),
             dateField("start_date", CatalogDateValueInput(kind: "point", startYear: 1849), id: "start"),
             dateField("end_date", CatalogDateValueInput(kind: "point", startYear: 1851), id: "end"),
-        ]))
+        ], summary: dated(date: point)))
         #expect(page.rows.map(\.label) == ["Date", "Place"])
         #expect(page.rows[0].lead == "14 May 1817")
         #expect(page.rows[0].records.map(\.id) == ["point"])
-        #expect(page.summaryDate == "14 May 1817")
+        #expect(page.secondaryDate == "14 May 1817")
     }
 
     @Test func spanLeadWhenThereIsNoDate() {
+        let start = CatalogDateValueInput(kind: "point", startYear: 1849)
+        let end = CatalogDateValueInput(kind: "point", startYear: 1851)
         let page = content(detail(fields: [
-            dateField("start_date", CatalogDateValueInput(kind: "point", startYear: 1849), id: "start"),
-            dateField("end_date", CatalogDateValueInput(kind: "point", startYear: 1851), id: "end"),
-        ]))
+            dateField("start_date", start, id: "start"),
+            dateField("end_date", end, id: "end"),
+        ], summary: dated(start: start, end: end)))
         #expect(page.rows[0].lead == L10n.Dates.rowSpan(start: "1849", end: "1851", locale: en))
         #expect(page.rows[0].records.map(\.id) == ["start", "end"])
         #expect(page.rows[0].badge == nil)
-        #expect(page.summaryDate == page.rows[0].lead)
+        #expect(page.secondaryDate == page.rows[0].lead)
     }
 
-    @Test func headerSuppliesSubjectsAndPlace() {
+    @Test func dateRowFallsToTheSpanWhenTheDateShowsNothing() {
+        let start = CatalogDateValueInput(kind: "point", startYear: 1849)
+        let end = CatalogDateValueInput(kind: "point", startYear: 1851)
+        let page = content(detail(fields: [
+            D.field(
+                "single", key: SeededPropertyKey.date, label: "Date", valueType: "date", [],
+                outcomes: [D.outcome("rec", "kept", title: "Census", recorded: .date(start))]
+            ),
+            dateField("start_date", start, id: "start"),
+            dateField("end_date", end, id: "end"),
+        ], summary: dated(start: start, end: end)))
+        #expect(page.rows[0].lead == L10n.Dates.rowSpan(start: "1849", end: "1851", locale: en))
+        #expect(page.rows[0].records.map(\.id).contains("start"))
+        #expect(page.rows[0].records.map(\.id).contains("end"))
+        #expect(page.rows[0].lead == page.secondaryDate)
+    }
+
+    @Test func dateRowFollowsTheSummaryWhenFieldsDisagree() {
+        let point = CatalogDateValueInput(kind: "point", startYear: 1817, startMonth: 5, startDay: 14)
+        let start = CatalogDateValueInput(kind: "point", startYear: 1849)
+        let end = CatalogDateValueInput(kind: "point", startYear: 1851)
+        let page = content(detail(fields: [
+            dateField("date", point, id: "point"),
+            dateField("start_date", start, id: "start"),
+            dateField("end_date", end, id: "end"),
+        ], summary: dated(start: start, end: end)))
+        #expect(page.rows[0].lead == L10n.Dates.rowSpan(start: "1849", end: "1851", locale: en))
+        #expect(page.rows[0].lead == page.secondaryDate)
+    }
+
+    @Test func bandLineReadsTheSummary() {
+        let point = CatalogDateValueInput(kind: "point", startYear: 1817, startMonth: 5, startDay: 14)
+        let withDate = content(detail(summary: dated(date: point)))
+        #expect(withDate.secondaryDate == "14 May 1817")
+        #expect(withDate.secondaryDate == EventSecondaryDisplay.content(dated(date: point), locale: en).date)
+
+        // A `date` field with records but no displayed value: the band shows the kept span, as the list row does.
+        let start = CatalogDateValueInput(kind: "point", startYear: 1849)
+        let end = CatalogDateValueInput(kind: "point", startYear: 1851)
+        let span = dated(start: start, end: end)
+        let spanned = content(detail(
+            fields: [D.field(
+                "single", key: SeededPropertyKey.date, label: "Date", valueType: "date", [],
+                outcomes: [D.outcome("rec", "kept", title: "Census", recorded: .date(start))]
+            )],
+            summary: span
+        ))
+        #expect(spanned.secondaryDate == EventSecondaryDisplay.content(span, locale: en).date)
+        #expect(spanned.secondaryDate == L10n.Dates.rowSpan(start: "1849", end: "1851", locale: en))
+    }
+
+    @Test func summarySuppliesSubjectsAndPlace() {
         let james = CatalogCanonicalEntity(id: "p1", ref: "PER-1", subjectTypeID: "t", label: "")
         let york = CatalogCanonicalEntity(id: "pl1", ref: "PLC-1", subjectTypeID: "t", label: "")
         let toronto = CatalogCanonicalEntity(id: "pl2", ref: "PLC-2", subjectTypeID: "t", label: "")
-        let header = CatalogEventHeader(
+        let summary = CatalogEventSummary(
             entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-8PL22", subjectTypeID: "t", label: ""),
             eventTypeKey: "birth",
             eventTypeOrigin: CatalogOrigin.provenencia,
@@ -109,17 +177,17 @@ struct EventDetailTests {
                 ),
             ],
             places: [
-                CatalogHeaderPlace(entity: york, names: ["York"]),
-                CatalogHeaderPlace(entity: toronto, names: ["Toronto"]),
+                CatalogChainedPlace(entity: york, names: ["York"]),
+                CatalogChainedPlace(entity: toronto, names: ["Toronto"]),
             ],
             title: CatalogEventTitle(
                 rule: .subject, ref: "EVT-8PL22", typeKey: "birth", typeOrigin: CatalogOrigin.provenencia, typeLabel: "Birth",
                 subjects: [CatalogNameValue(form: "James Robins")], place: "York"
             )
         )
-        let page = EventDetailContent(detail: detail(header: header), locale: en)
+        let page = EventDetailContent(detail: detail(summary: summary), locale: en)
         #expect(page.title == .name(L10n.EventTitle.ofOne(type: "Birth", subject: "James Robins", locale: en)))
-        #expect(page.summaryPlace == "York")
+        #expect(page.secondaryPlace == "York")
         #expect(page.rows[1].lead == "York" && page.rows[1].badge == .mixed && page.rows[1].records.isEmpty)
         #expect(!page.rows[1].lead!.contains(","))
         #expect(page.rows[1].opens?.location == .placeDetail(entityId: "pl1", ref: "PLC-1", title: "York"))
@@ -136,12 +204,12 @@ struct EventDetailTests {
     }
 
     @Test func missingDateIsAnEmptyDateRow() {
-        let page = content(detail())
+        let page = content(detail(summary: dated()))
         let date = page.rows[0]
         #expect(date.label == "Date" && date.style == .date && date.lead == nil)
         #expect(date.emptyText == "No date recorded")
         #expect(date.records.isEmpty)
-        #expect(page.summaryDate == nil)
+        #expect(page.secondaryDate == nil)
     }
 
     @Test func noPictureLeavesTheMarkAndNoGallery() {

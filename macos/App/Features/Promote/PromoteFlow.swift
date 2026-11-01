@@ -377,7 +377,7 @@ struct PromoteFlow: Equatable, Sendable {
     /// selected like a menu pick. Returns true when suggested rows should be
     /// proposed again.
     @discardableResult
-    mutating func hold(subjectID: String, id: String, ref: String, header: CatalogConclusionHeader?) -> Bool {
+    mutating func hold(subjectID: String, id: String, ref: String, summary: CatalogConclusionSummary?) -> Bool {
         guard !id.isEmpty,
               let index = rows.firstIndex(where: { $0.subjectID == subjectID }),
               !rows[index].anchor else { return false }
@@ -386,7 +386,7 @@ struct PromoteFlow: Equatable, Sendable {
             item = offered
         } else {
             item = Self.item(
-                id: id, ref: ref, header: header, orders: nameOrders
+                id: id, ref: ref, summary: summary, orders: nameOrders
             )
             rows[index].menu.append(item)
         }
@@ -548,26 +548,26 @@ struct PromoteFlow: Equatable, Sendable {
     private static func menu(for proposal: CatalogPromoteGraphAlignmentRow, orders: NameFormatOrders) -> [Alternative] {
         var out: [Alternative] = []
         if proposal.target == .handle, !proposal.handleID.isEmpty {
-            out.append(item(id: proposal.handleID, ref: proposal.handleRef, header: proposal.header, orders: orders))
+            out.append(item(id: proposal.handleID, ref: proposal.handleRef, summary: proposal.summary, orders: orders))
         }
         for alt in proposal.alternatives where alt.handleID != proposal.handleID {
-            out.append(item(id: alt.handleID, ref: alt.handleRef, header: alt.header, orders: orders))
+            out.append(item(id: alt.handleID, ref: alt.handleRef, summary: alt.summary, orders: orders))
         }
         return out
     }
 
-    /// One menu item, titled sorted and subtitled from the record's header, whichever way the
+    /// One menu item, titled sorted and subtitled from the record's summary, whichever way the
     /// record reached the menu.
     private static func item(
         id: String,
         ref: String,
-        header: CatalogConclusionHeader?,
+        summary: CatalogConclusionSummary?,
         orders: NameFormatOrders
     ) -> Alternative {
         Alternative(
             id: id, ref: ref,
-            title: header.map { ConclusionHeaderDisplay.title($0, style: .sorted, orders: orders) } ?? ref,
-            subtitle: header.map(ConclusionHeaderDisplay.secondary) ?? ""
+            title: summary.map { ConclusionSummaryDisplay.title($0, style: .sorted, orders: orders) } ?? ref,
+            subtitle: summary.map(ConclusionSummaryDisplay.secondary) ?? ""
         )
     }
 }

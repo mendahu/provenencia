@@ -80,11 +80,11 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var lastPromoteFixed: [CatalogPromoteGraphAlignmentFixed] = []
     /// The last Done the page sent, for tests.
     var lastPromoteBatch: [CatalogPromoteGraphAlignmentFixed]?
-    /// Event and Place headers as Go would compose them, seeded by tests in
+    /// Event and Place summaries as Go would compose them, seeded by tests in
     /// list order. FakeStore does not reconcile, walk, or title them; Go owns
-    /// those rules (`conclusionheaders`, `eventtitle`) and their tests.
-    var seededEventHeaders: [CatalogEventHeader] = []
-    var seededPlaceHeaders: [CatalogPlaceHeader] = []
+    /// those rules (`conclusionsummaries`, `eventtitle`) and their tests.
+    var seededEventSummaries: [CatalogEventSummary] = []
+    var seededPlaceSummaries: [CatalogPlaceSummary] = []
     /// Event card titles Go would choose, per Evidence graph then Subject id.
     var eventTitlesByGraph: [String: [String: CatalogEventTitle]] = [:]
     /// A handle's detail as Go would compose it, seeded by tests. Persons
@@ -1335,7 +1335,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     private func handleSearchHits(query: String, kinds: Set<CatalogSearchKind>) -> [(hit: CatalogSearchHit, score: Double)] {
         let q = TextMatch.Query(query, locale: TextMatch.posix)
         guard !q.isEmpty else { return [] }
-        let names = Dictionary(personHeaders().map { ($0.entity.id, $0.name?.form ?? "") }, uniquingKeysWith: { a, _ in a })
+        let names = Dictionary(personSummaries().map { ($0.entity.id, $0.name?.form ?? "") }, uniquingKeysWith: { a, _ in a })
         var seen = Set<String>()
         var out: [(hit: CatalogSearchHit, score: Double)] = []
         for membership in membershipBySubject.values.sorted(by: { $0.entity.ref < $1.entity.ref }) {
@@ -1344,10 +1344,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                   seen.insert(membership.entity.id).inserted
             else { continue }
             let entity = membership.entity
-            let header = handleSearchHeader(kind: primary, id: entity.id)
+            let summary = handleSearchSummary(kind: primary, id: entity.id)
             let name = names[entity.id] ?? ""
             let title = !name.isEmpty ? name : (!entity.label.isEmpty ? entity.label : entity.ref)
-            guard q.matches(title, entity.ref, entity.label, handleSearchMatchText(header)) else { continue }
+            guard q.matches(title, entity.ref, entity.label, handleSearchMatchText(summary)) else { continue }
             let section: WorkspaceSection = switch primary {
             case .person: .persons
             case .event: .events
@@ -1360,7 +1360,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     matchReason: refMatch ? "ref" : "title",
                     location: WorkspaceLocation(section: section, entityId: entity.id, ref: entity.ref, title: title),
                     memberCount: membershipBySubject.values.filter { $0.entity.id == entity.id }.count,
-                    header: header
+                    summary: summary
                 ),
                 refMatch ? 12 : 10
             ))
@@ -1368,20 +1368,20 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return out
     }
 
-    /// The list header for a handle hit, when the fake has one.
-    private func handleSearchHeader(kind: EvidencePrimaryKind, id: String) -> CatalogConclusionHeader? {
+    /// The list summary for a handle hit, when the fake has one.
+    private func handleSearchSummary(kind: EvidencePrimaryKind, id: String) -> CatalogConclusionSummary? {
         switch kind {
         case .person:
-            if let header = personHeaders().first(where: { $0.entity.id == id }) {
-                return .person(header)
+            if let summary = personSummaries().first(where: { $0.entity.id == id }) {
+                return .person(summary)
             }
         case .event:
-            if let header = seededEventHeaders.first(where: { $0.entity.id == id }) {
-                return .event(header)
+            if let summary = seededEventSummaries.first(where: { $0.entity.id == id }) {
+                return .event(summary)
             }
         case .place:
-            if let header = seededPlaceHeaders.first(where: { $0.entity.id == id }) {
-                return .place(header)
+            if let summary = seededPlaceSummaries.first(where: { $0.entity.id == id }) {
+                return .place(summary)
             }
         }
         return nil
@@ -1389,14 +1389,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     /// Match text the lists would show, so a query for an event title or a
     /// place chain finds the handle the way the index does.
-    private func handleSearchMatchText(_ header: CatalogConclusionHeader?) -> String {
-        switch header {
-        case .person(let header):
-            return PersonLifeDisplay.line(header).text
-        case .event(let header):
-            return EventTitleDisplay.title(header) + " " + EventSecondaryDisplay.line(header)
-        case .place(let header):
-            return (header.names + header.parents).joined(separator: " ")
+    private func handleSearchMatchText(_ summary: CatalogConclusionSummary?) -> String {
+        switch summary {
+        case .person(let summary):
+            return PersonLifeDisplay.line(summary).text
+        case .event(let summary):
+            return EventTitleDisplay.title(summary) + " " + EventSecondaryDisplay.line(summary)
+        case .place(let summary):
+            return (summary.names + summary.parents).joined(separator: " ")
         case nil:
             return ""
         }
@@ -1910,13 +1910,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         // `async let`s beside position writes that log their calls.
         return withState {
             markCatalogSessionHeld(projectDir)
-            let headers = Dictionary(
-                personHeaders().map { ($0.entity.id, $0) },
+            let summaries = Dictionary(
+                personSummaries().map { ($0.entity.id, $0) },
                 uniquingKeysWith: { first, _ in first }
             )
             return (subjectsByGraph[graphID] ?? []).compactMap { subject -> CatalogSubjectMembership? in
                 guard var membership = membershipBySubject[subject.id] else { return nil }
-                membership.name = headers[membership.entity.id]?.name
+                membership.name = summaries[membership.entity.id]?.name
                 return membership
             }
         }
@@ -1926,25 +1926,25 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         Set(memberships.values.filter { $0.kind == kind }.map(\.entity.id)).count
     }
 
-    func listPersonHeaders(projectDir: String) async throws -> [CatalogPersonHeader] {
+    func listPersonSummaries(projectDir: String) async throws -> [CatalogPersonSummary] {
         // A read: no `recordedCalls`.
         return withState {
             markCatalogSessionHeld(projectDir)
-            return personHeaders()
+            return personSummaries()
         }
     }
 
-    func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader] {
+    func listEventSummaries(projectDir: String) async throws -> [CatalogEventSummary] {
         withState {
             markCatalogSessionHeld(projectDir)
-            return seededEventHeaders
+            return seededEventSummaries
         }
     }
 
-    func listPlaceHeaders(projectDir: String) async throws -> [CatalogPlaceHeader] {
+    func listPlaceSummaries(projectDir: String) async throws -> [CatalogPlaceSummary] {
         withState {
             markCatalogSessionHeld(projectDir)
-            return seededPlaceHeaders
+            return seededPlaceSummaries
         }
     }
 
@@ -1952,17 +1952,17 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// Observations group by parts (`nameField`), the most-supported value
     /// (then the earliest) is rank 1, and named Persons sort by name before
     /// unnamed ones by ref. Call inside `withState`.
-    private func personHeaders() -> [CatalogPersonHeader] {
+    private func personSummaries() -> [CatalogPersonSummary] {
         let members = membershipBySubject.values.filter { $0.kind == "person" }
         let byEntity = Dictionary(grouping: members, by: \.entity.id)
-        let headers = byEntity.values.compactMap { group -> CatalogPersonHeader? in
+        let summaries = byEntity.values.compactMap { group -> CatalogPersonSummary? in
             guard let entity = group.first?.entity else { return nil }
             let field = nameField(memberIDs: Set(group.map(\.subjectID)), sources: [])
             var top: CatalogNameValue?
             if case let .name(name)? = field.values.first?.value { top = name }
-            return CatalogPersonHeader(entity: entity, name: top, nameValueCount: field.values.count)
+            return CatalogPersonSummary(entity: entity, name: top, nameValueCount: field.values.count)
         }
-        return headers.sorted { a, b in
+        return summaries.sorted { a, b in
             switch (a.name, b.name) {
             case let (x?, y?) where x.form.lowercased() != y.form.lowercased():
                 return x.form.lowercased() < y.form.lowercased()
@@ -1994,8 +1994,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             guard var detail = conclusionDetail(projectDir: projectDir, entityID: entityID) else {
                 throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
             }
-            if let person = personHeaders().first(where: { $0.entity.id == entityID }) {
-                detail.header = .person(person)
+            if let person = personSummaries().first(where: { $0.entity.id == entityID }) {
+                detail.summary = .person(person)
             }
             return detail
         }

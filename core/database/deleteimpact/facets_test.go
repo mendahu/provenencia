@@ -15,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibility"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
@@ -240,11 +241,7 @@ func TestReleaseCitationChangeNamesEveryColumn(t *testing.T) {
 		t.Fatal(err)
 	}
 	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
-	res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-			GraphID: graph, ArtifactID: art.ID, LocatorJSON: testLocator,
-		}, nil)
-	})
+	res, _, err := observationstest.Cite(c, userID, graph, art.ID, testLocator)
 	if err != nil {
 		t.Fatal(err)
 	}

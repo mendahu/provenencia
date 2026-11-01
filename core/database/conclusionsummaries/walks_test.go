@@ -1,14 +1,17 @@
-package conclusionheaders_test
+package conclusionsummaries_test
 
 import (
 	"bytes"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -23,15 +26,17 @@ import (
 
 func (f *fixture) cite(s subjects.Subject, in ...observations.Input) {
 	f.t.Helper()
+	f.citeOn(f.artifact, s, in...)
+}
+
+// citeOn is cite on art's own Source graph.
+func (f *fixture) citeOn(art artifacts.Artifact, s subjects.Subject, in ...observations.Input) {
+	f.t.Helper()
 	for i := range in {
 		in[i].SubjectID = s.ID
 	}
-	_, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-			GraphID:    f.graph,
-			ArtifactID: f.artifact.ID, LocatorJSON: locator,
-		}, in)
-	})
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
+	_, _, err := observationstest.Cite(f.c, userID, graph, art.ID, locator, in...)
 	must(f.t, err)
 }
 
@@ -169,71 +174,71 @@ func TestCanonicalWalks(t *testing.T) {
 	yorkID := f.promoteSubject(york)
 	torontoID := f.promoteSubject(toronto)
 
-	var jamesHeader conclusionheaders.PersonHeader
+	var jamesSummary conclusionsummaries.PersonSummary
 	for _, h := range f.list() {
 		if bytes.Equal(h.Entity.ID, jamesID) {
-			jamesHeader = h
+			jamesSummary = h
 		}
 	}
-	if jamesHeader.Birth.Date == nil || jamesHeader.Birth.Date.StartYear == nil || *jamesHeader.Birth.Date.StartYear != 1817 {
-		t.Fatalf("birth date %+v", jamesHeader.Birth.Date)
+	if jamesSummary.Birth.Date == nil || jamesSummary.Birth.Date.StartYear == nil || *jamesSummary.Birth.Date.StartYear != 1817 {
+		t.Fatalf("birth date %+v", jamesSummary.Birth.Date)
 	}
-	if jamesHeader.Birth.DateCount != 1 {
-		t.Fatalf("birth date count %d", jamesHeader.Birth.DateCount)
+	if jamesSummary.Birth.DateCount != 1 {
+		t.Fatalf("birth date count %d", jamesSummary.Birth.DateCount)
 	}
-	if jamesHeader.Death.Date == nil || jamesHeader.Death.Date.StartYear == nil || *jamesHeader.Death.Date.StartYear != 1880 {
-		t.Fatalf("death date %+v", jamesHeader.Death.Date)
+	if jamesSummary.Death.Date == nil || jamesSummary.Death.Date.StartYear == nil || *jamesSummary.Death.Date.StartYear != 1880 {
+		t.Fatalf("death date %+v", jamesSummary.Death.Date)
 	}
-	if got := placeNames(jamesHeader.Birth.Places); !sameSet(got, []string{"York", "Tkaronto", "Toronto"}) {
+	if got := placeNames(jamesSummary.Birth.Places); !sameSet(got, []string{"York", "Tkaronto", "Toronto"}) {
 		t.Fatalf("birth places %v", got)
 	}
-	for _, name := range placeNames(jamesHeader.Birth.Places) {
+	for _, name := range placeNames(jamesSummary.Birth.Places) {
 		if bytes.Contains([]byte(name), []byte(",")) {
 			t.Fatalf("chain %q", name)
 		}
 	}
-	yorkPlace := headerPlace(jamesHeader.Birth.Places, "York")
+	yorkPlace := chainedPlace(jamesSummary.Birth.Places, "York")
 	if !sameSet(yorkPlace.Names, []string{"York", "Tkaronto"}) {
 		t.Fatalf("York names %+v", yorkPlace)
 	}
-	if got := placeNames(jamesHeader.Death.Places); !sameSet(got, []string{"Toronto"}) {
+	if got := placeNames(jamesSummary.Death.Places); !sameSet(got, []string{"Toronto"}) {
 		t.Fatalf("death places %v", got)
 	}
 	t.Run("life facts name the event and places they read", func(t *testing.T) {
-		if e := jamesHeader.Birth.Event; e == nil || !bytes.Equal(e.ID, birthID) || e.Ref == "" || len(e.SubjectTypeID) != 16 {
+		if e := jamesSummary.Birth.Event; e == nil || !bytes.Equal(e.ID, birthID) || e.Ref == "" || len(e.SubjectTypeID) != 16 {
 			t.Fatalf("birth event %+v", e)
 		}
-		if e := jamesHeader.Death.Event; e == nil || !bytes.Equal(e.ID, deathID) {
+		if e := jamesSummary.Death.Event; e == nil || !bytes.Equal(e.ID, deathID) {
 			t.Fatalf("death event %+v", e)
 		}
-		if p := headerPlace(jamesHeader.Birth.Places, "York"); !bytes.Equal(p.Entity.ID, yorkID) || p.Entity.Ref == "" {
+		if p := chainedPlace(jamesSummary.Birth.Places, "York"); !bytes.Equal(p.Entity.ID, yorkID) || p.Entity.Ref == "" {
 			t.Fatalf("York entity %+v", p.Entity)
 		}
-		if p := headerPlace(jamesHeader.Death.Places, "Toronto"); !bytes.Equal(p.Entity.ID, torontoID) {
+		if p := chainedPlace(jamesSummary.Death.Places, "Toronto"); !bytes.Equal(p.Entity.ID, torontoID) {
 			t.Fatalf("Toronto entity %+v", p.Entity)
 		}
 	})
 
-	events := map[string]conclusionheaders.EventHeader{}
+	events := map[string]conclusionsummaries.EventSummary{}
 	for _, h := range f.events() {
 		events[string(h.Entity.ID)] = h
 	}
-	birthHeader := events[string(birthID)]
-	if forms := subjectForms(birthHeader); !sameSet(forms, []string{"James Robins"}) {
+	birthSummary := events[string(birthID)]
+	if forms := subjectForms(birthSummary); !sameSet(forms, []string{"James Robins"}) {
 		t.Fatalf("birth subjects %v", forms)
 	}
-	if birthHeader.EventType == nil || birthHeader.EventType.Key != "birth" {
-		t.Fatalf("birth type %+v", birthHeader.EventType)
+	if birthSummary.Type.Term == nil || birthSummary.Type.Term.Key != "birth" {
+		t.Fatalf("birth type %+v", birthSummary.Type.Term)
 	}
-	if len(birthHeader.Places) != 2 {
-		t.Fatalf("birth locations %d", len(birthHeader.Places))
+	if len(birthSummary.Places) != 2 {
+		t.Fatalf("birth locations %d", len(birthSummary.Places))
 	}
-	marriageHeader := events[string(marriageID)]
-	if forms := subjectForms(marriageHeader); !sameSet(forms, []string{"James Robins", "Mary Smith"}) {
+	marriageSummary := events[string(marriageID)]
+	if forms := subjectForms(marriageSummary); !sameSet(forms, []string{"James Robins", "Mary Smith"}) {
 		t.Fatalf("marriage subjects %v", forms)
 	}
-	if marriageHeader.EventType.Key != "marriage" {
-		t.Fatalf("marriage type %s", marriageHeader.EventType.Key)
+	if marriageSummary.Type.Term.Key != "marriage" {
+		t.Fatalf("marriage type %s", marriageSummary.Type.Term.Key)
 	}
 	if forms := subjectForms(events[string(censusID)]); len(forms) != 3 {
 		t.Fatalf("census subjects %v", forms)
@@ -241,15 +246,15 @@ func TestCanonicalWalks(t *testing.T) {
 	if events[string(baptismID)].Subjects[0].Name != nil || !bytes.Equal(events[string(baptismID)].Subjects[0].Entity.ID, unnamedID) {
 		t.Fatalf("unnamed %+v", events[string(baptismID)].Subjects)
 	}
-	fireHeader := events[string(fireID)]
-	if len(fireHeader.Subjects) != 0 || fireHeader.EventType.Label != "Fire" {
-		t.Fatalf("fire %+v subjects %d", fireHeader.EventType, len(fireHeader.Subjects))
+	fireSummary := events[string(fireID)]
+	if len(fireSummary.Subjects) != 0 || fireSummary.Type.Term.Label != "Fire" {
+		t.Fatalf("fire %+v subjects %d", fireSummary.Type.Term, len(fireSummary.Subjects))
 	}
-	if got := placeNames(fireHeader.Places); !sameSet(got, []string{"York", "Tkaronto"}) {
+	if got := placeNames(fireSummary.Places); !sameSet(got, []string{"York", "Tkaronto"}) {
 		t.Fatalf("fire places %v", got)
 	}
-	if len(fireHeader.Places) != 1 || !bytes.Equal(fireHeader.Places[0].Entity.ID, yorkID) {
-		t.Fatalf("fire place entity %+v", fireHeader.Places)
+	if len(fireSummary.Places) != 1 || !bytes.Equal(fireSummary.Places[0].Entity.ID, yorkID) {
+		t.Fatalf("fire place entity %+v", fireSummary.Places)
 	}
 
 	t.Run("each event's title rule comes from its own parts", func(t *testing.T) {
@@ -295,13 +300,13 @@ func TestCanonicalWalks(t *testing.T) {
 
 	db, err := f.c.DB()
 	must(t, err)
-	deps, err := conclusionheaders.HeaderDependents(db, [][]byte{yorkID})
+	deps, err := conclusionsummaries.Dependents(db, [][]byte{yorkID})
 	must(t, err)
 	if !database.ContainsBlobID(deps, birthID) || !database.ContainsBlobID(deps, fireID) || !database.ContainsBlobID(deps, jamesID) || database.ContainsBlobID(deps, deathID) {
 		t.Fatalf("place dependents missing birth/fire/james or included the death")
 	}
 	// The witness is not a subject of the birth, so the place walk does not reach them.
-	fromJames, err := conclusionheaders.HeaderDependents(db, [][]byte{jamesID})
+	fromJames, err := conclusionsummaries.Dependents(db, [][]byte{jamesID})
 	must(t, err)
 	if !database.ContainsBlobID(fromJames, birthID) || !database.ContainsBlobID(fromJames, deathID) || !database.ContainsBlobID(fromJames, marriageID) || !database.ContainsBlobID(fromJames, censusID) {
 		t.Fatal("person dependents missed an event")
@@ -309,16 +314,16 @@ func TestCanonicalWalks(t *testing.T) {
 	if database.ContainsBlobID(fromJames, yorkID) || database.ContainsBlobID(fromJames, baptismID) {
 		t.Fatal("person walk reached a place or someone else's event")
 	}
-	// James's header embeds his birth's date: a change to the birth must
+	// James's summary embeds his birth's date: a change to the birth must
 	// reach him. The witness is not a subject, so they are not reached.
-	fromBirth, err := conclusionheaders.HeaderDependents(db, [][]byte{birthID})
+	fromBirth, err := conclusionsummaries.Dependents(db, [][]byte{birthID})
 	must(t, err)
 	if !database.ContainsBlobID(fromBirth, jamesID) || database.ContainsBlobID(fromBirth, birthID) || database.ContainsBlobID(fromBirth, yorkID) {
 		t.Fatalf("event dependents %d: missing James, or included the event or its place", len(fromBirth))
 	}
 }
 
-func placeNames(places []conclusionheaders.HeaderPlace) []string {
+func placeNames(places []conclusionsummaries.ChainedPlace) []string {
 	var out []string
 	for _, p := range places {
 		out = append(out, p.Names...)
@@ -326,7 +331,7 @@ func placeNames(places []conclusionheaders.HeaderPlace) []string {
 	return out
 }
 
-func headerPlace(places []conclusionheaders.HeaderPlace, name string) conclusionheaders.HeaderPlace {
+func chainedPlace(places []conclusionsummaries.ChainedPlace, name string) conclusionsummaries.ChainedPlace {
 	for _, p := range places {
 		for _, n := range p.Names {
 			if n == name {
@@ -334,10 +339,10 @@ func headerPlace(places []conclusionheaders.HeaderPlace, name string) conclusion
 			}
 		}
 	}
-	return conclusionheaders.HeaderPlace{}
+	return conclusionsummaries.ChainedPlace{}
 }
 
-func subjectForms(h conclusionheaders.EventHeader) []string {
+func subjectForms(h conclusionsummaries.EventSummary) []string {
 	var out []string
 	for _, s := range h.Subjects {
 		if s.Name == nil {
@@ -374,7 +379,7 @@ func sameSet(got, want []string) bool {
 	return true
 }
 
-// Two surviving births are a disagreement: the header counts them and leads
+// Two surviving births are a disagreement: the summary counts them and leads
 // with the earliest dated one, whatever the refs say.
 func TestCompetingLifeEvents(t *testing.T) {
 	tests := []struct {
@@ -410,7 +415,7 @@ func TestCompetingLifeEvents(t *testing.T) {
 			for _, b := range births {
 				f.promoteSubject(b)
 			}
-			var birth conclusionheaders.LifeFacts
+			var birth conclusionsummaries.LifeFacts
 			for _, h := range f.list() {
 				if bytes.Equal(h.Entity.ID, jamesID) {
 					birth = h.Birth

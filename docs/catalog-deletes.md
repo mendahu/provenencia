@@ -43,7 +43,7 @@ Research rows that a delete takes with it are removed **explicitly** and audited
 - **One call per delete.** Domain `Delete` calls `deleteimpact.ReleaseFacets(tx, kind, id)` once, after `Refuse` and before the parent `DELETE`. Then it prepends the changes it returns to its own audit change. It never hand-calls a per-table helper.
 - **Releases compose.** A released row that is itself a parent (a claim, a connection Observation) has its own facets released first, through the same function.
 - **The registry owns ordering.** Callers don't sequence anything.
-- **Handles come from the released changes.** `effects.Handles` reads them. Subject delete passes that set to `autoreconciler.RecomputeTx` after the parent `DELETE`, together with observers, linked handles, and header dependents snapshotted while the link exists. `Run` recomputes the returned changes again.
+- **Handles come from the released changes.** `effects.Handles` reads them. Subject delete passes that set to `autoreconciler.RecomputeTx` after the parent `DELETE`, together with observers, linked handles, and summary dependents snapshotted while the link exists. `Run` recomputes the returned changes again.
 
 | Audited (released) | Silent (`CASCADE` only) |
 | --- | --- |

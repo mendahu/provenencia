@@ -14,37 +14,37 @@ enum PlacesList: ConclusionListKind {
     static func refreshingMeta(_ count: Int) -> String { L10n.Workspace.placeCountRefreshing(count) }
     static var mark: PVMarkKey { .subjectPlace }
 
-    static func ref(_ header: CatalogPlaceHeader) -> String { header.entity.ref }
-    static func updatedAt(_ header: CatalogPlaceHeader) -> String { header.updated.at }
-    static func thumbnailRelPath(_ header: CatalogPlaceHeader) -> String { header.pictureImageRelPath }
+    static func ref(_ summary: CatalogPlaceSummary) -> String { summary.entity.ref }
+    static func updatedAt(_ summary: CatalogPlaceSummary) -> String { summary.updated.at }
+    static func thumbnailRelPath(_ summary: CatalogPlaceSummary) -> String { summary.pictureImageRelPath }
 
-    static func titleSource(_ header: CatalogPlaceHeader) -> ConclusionTitleSource {
-        PlaceTitleDisplay.titleSource(header.titleParts)
+    static func titleSource(_ summary: CatalogPlaceSummary) -> ConclusionTitleSource {
+        PlaceTitleDisplay.titleSource(summary.titleParts)
     }
 
-    static func extraCount(_ header: CatalogPlaceHeader) -> Int { header.extraNameCount }
+    static func extraCount(_ summary: CatalogPlaceSummary) -> Int { summary.extraNameCount }
 
-    static func accessibilityLabel(_ header: CatalogPlaceHeader) -> String {
+    static func accessibilityLabel(_ summary: CatalogPlaceSummary) -> String {
         L10n.Workspace.placeRowAccessibility(
-            title: titleSource(header).text,
-            extra: header.extraNameCount,
+            title: titleSource(summary).text,
+            extra: summary.extraNameCount,
             chain: PlaceChainDisplay.line(
-                parents: header.parents,
-                candidates: header.parentsAreCandidates
+                parents: summary.parents,
+                candidates: summary.parentsAreCandidates
             ),
-            ref: header.entity.ref
+            ref: summary.entity.ref
         )
     }
 
-    static func location(_ header: CatalogPlaceHeader) -> WorkspaceLocation {
-        .placeDetail(entityId: header.entity.id, ref: header.entity.ref, title: PlaceTitleDisplay.title(header))
+    static func location(_ summary: CatalogPlaceSummary) -> WorkspaceLocation {
+        .placeDetail(entityId: summary.entity.id, ref: summary.entity.ref, title: PlaceTitleDisplay.title(summary))
     }
 
     @MainActor
-    static func secondary(_ header: CatalogPlaceHeader) -> PlaceChainLine {
+    static func secondary(_ summary: CatalogPlaceSummary) -> PlaceChainLine {
         PlaceChainLine(text: PlaceChainDisplay.line(
-            parents: header.parents,
-            candidates: header.parentsAreCandidates
+            parents: summary.parents,
+            candidates: summary.parentsAreCandidates
         ))
     }
 }

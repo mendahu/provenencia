@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -82,7 +82,7 @@ func TestEventMatchTitleCoupleUsesTypeWord(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := eventMatchTitle(conclusionheaders.EventHeader{
+			got := eventMatchTitle(conclusionsummaries.EventSummary{
 				Title: eventtitle.Plan{
 					Rule: eventtitle.RuleCouple,
 					Parts: eventtitle.Parts{
@@ -102,8 +102,8 @@ func TestEventMatchTitleCoupleUsesTypeWord(t *testing.T) {
 }
 
 func TestMatchTextListsEachAlternateOnce(t *testing.T) {
-	place := conclusionheaders.PlaceHeader{Names: []string{"Montréal", "Ville-Marie"}, Parents: []string{"Québec"}}
-	person := conclusionheaders.PersonHeader{Name: &namevalue.Value{Form: "José Robins"}}
+	place := conclusionsummaries.PlaceSummary{Names: []string{"Montréal", "Ville-Marie"}, Parents: []string{"Québec"}}
+	person := conclusionsummaries.PersonSummary{Name: &namevalue.Value{Form: "José Robins"}}
 	for _, tt := range []struct {
 		name          string
 		head          handleHead
@@ -128,11 +128,10 @@ func TestMatchTextListsEachAlternateOnce(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			headers := handleHeaders{
-				persons: map[string]conclusionheaders.PersonHeader{"p": person},
-				places:  map[string]conclusionheaders.PlaceHeader{"p": place},
-			}
-			title, secondary := matchText(tt.head, tt.v, headers)
+			person.Entity.ID, place.Entity.ID = []byte("p"), []byte("p")
+			summaries := conclusionsummaries.NewSummaries(
+				[]conclusionsummaries.PersonSummary{person}, nil, []conclusionsummaries.PlaceSummary{place})
+			title, secondary := matchText(tt.head, []byte("p"), tt.v, summaries)
 			if title != tt.wantTitle || !reflect.DeepEqual(secondary, tt.wantSecondary) {
 				t.Fatalf("title %q secondary %q, want %q %q", title, secondary, tt.wantTitle, tt.wantSecondary)
 			}

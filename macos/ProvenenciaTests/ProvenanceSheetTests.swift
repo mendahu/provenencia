@@ -74,7 +74,7 @@ struct ProvenanceSheetTests {
         func owner(_ place: CatalogCanonicalEntity, _ name: String, _ id: String, link: String? = nil) -> CatalogOwnerField {
             CatalogOwnerField(
                 entity: CatalogCanonicalEntity(id: link ?? "lk-\(id)", ref: "LOC-\(id)", subjectTypeID: "t", label: ""),
-                event: nil, place: CatalogHeaderPlace(entity: place, names: [name]),
+                event: nil, place: CatalogChainedPlace(entity: place, names: [name]),
                 field: D.field(
                     "single", key: "place", label: "place", valueType: "subject", [D.value(1, "kept", .text(name))],
                     outcomes: [D.outcome(id, "kept")]
@@ -96,7 +96,7 @@ struct ProvenanceSheetTests {
         func owner(_ link: String, _ id: String, place: CatalogCanonicalEntity = york, _ name: String = "York") -> CatalogOwnerField {
             CatalogOwnerField(
                 entity: CatalogCanonicalEntity(id: link, ref: "LOC-\(link)", subjectTypeID: "t", label: ""),
-                event: nil, place: CatalogHeaderPlace(entity: place, names: [name]),
+                event: nil, place: CatalogChainedPlace(entity: place, names: [name]),
                 field: D.field(
                     "single", key: "place", label: "place", valueType: "subject", [D.value(1, "kept", .text(name))],
                     outcomes: [D.outcome(id, "kept")]
@@ -133,7 +133,7 @@ struct ProvenanceSheetTests {
         ) -> CatalogOwnerField {
             CatalogOwnerField(
                 entity: CatalogCanonicalEntity(id: link, ref: "LOC-\(link)", subjectTypeID: "t", label: ""),
-                event: nil, place: CatalogHeaderPlace(entity: place, names: [name]),
+                event: nil, place: CatalogChainedPlace(entity: place, names: [name]),
                 field: D.field(
                     "single", key: "place", label: "place", valueType: "subject", [D.value(1, "kept", .text(name))],
                     outcomes: outcomes

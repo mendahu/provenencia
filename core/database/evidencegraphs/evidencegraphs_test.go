@@ -21,6 +21,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -266,13 +267,9 @@ func (f fixture) subjectAndCitation(t *testing.T, src sources.Source, artifactID
 	}
 	graph := evidencegraphstest.SoleGraph(t, f.c, src.ID).ID
 	subject := subjectstest.OfType(t, f.c, userID, graph, person.ID, "Ada")
-	res, err := writes.Call(f.c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-			GraphID: graph, ArtifactID: artifactID, LocatorJSON: pageLocator,
-		}, []observations.Input{
-			{SubjectID: subject.ID, PropertyID: nameProp.ID, Name: &namevalue.Value{Form: "Ada"}},
-		})
-	})
+	res, _, err := observationstest.Cite(f.c, userID, graph, artifactID, pageLocator, []observations.Input{
+		{SubjectID: subject.ID, PropertyID: nameProp.ID, Name: &namevalue.Value{Form: "Ada"}},
+	}...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -283,9 +280,7 @@ func (f fixture) subjectAndCitation(t *testing.T, src sources.Source, artifactID
 // Observation. The graph must be linked to the Artifact.
 func (f fixture) bareCitation(t *testing.T, graphID, artifactID []byte) citations.Citation {
 	t.Helper()
-	res, err := writes.Call(f.c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: graphID, ArtifactID: artifactID, LocatorJSON: pageLocator}, nil)
-	})
+	res, _, err := observationstest.Cite(f.c, userID, graphID, artifactID, pageLocator)
 	if err != nil {
 		t.Fatal(err)
 	}

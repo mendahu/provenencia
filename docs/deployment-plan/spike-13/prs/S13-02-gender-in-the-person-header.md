@@ -1,6 +1,6 @@
 # S13-02 — Gender in the person header
 
-**Status:** Planned
+**Status:** Landed in #659 (2026-11-01)
 **Spike / slice:** Spike 13 · Slice 3 — Family (the header terms feed the Family and Timeline tiles, S13-12 and S13-13)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the Person page's badge and thumb read the same terms from a different input and look the same)
@@ -14,6 +14,8 @@
 **Context:** [person-detail.md](../person-detail.md) R-3, R-21; working rules: "One person header for every tile", "Colors reuse `PersonGenderTreatment`"; [`docs/deployment-plan/archive/spike-11/README.md`](../../archive/spike-11/README.md) ("Gender meets sex at birth through a registry crosswalk")
 **Planned:** 2026-11-01 against `main` @ `fdd37f19`
 **Review:** [`S13-02-gender-in-the-person-header.review.md`](S13-02-gender-in-the-person-header.review.md) — Fits with changes / Ready with changes; 1 round; every finding Fixed; M-3 answered by the user (2026-11-01, D-11)
+
+**Landed:** the code differs from the plan in two places, both in tests. (1) T-1 "user Property": `properties.Create` refuses a term-typed Property for researchers, so the test creates the user's own "Gender" as a text Property, cites text on it, and asserts it does not feed the header (the D-5 assertion is the same). (2) `citeOn` and the T-1 and T-2 builders resolve the Source graph, Property and Subject type ids before `writes.Call`, because reading them inside the write transaction waits on the catalog's one connection and never returns.
 
 ### Implementer — read this first
 

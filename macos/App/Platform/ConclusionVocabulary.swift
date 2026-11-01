@@ -165,14 +165,14 @@ enum SeededPropertyKey {
     static let to = "to"
 }
 
-/// Seeded `gender` terms the Person header colours by (`subjectvocab` seed).
+/// Seeded `gender` terms the Person summary colours by (`subjectvocab` seed).
 enum SeededGenderTerm {
     static let man = "man"
     static let woman = "woman"
     static let nonBinary = "non_binary"
 }
 
-/// Seeded `sex_at_birth` terms (`subjectvocab` seed); the Person header colours by female and male.
+/// Seeded `sex_at_birth` terms (`subjectvocab` seed); the Person summary colours by female and male.
 enum SeededSexAtBirthTerm {
     static let female = "female"
     static let male = "male"

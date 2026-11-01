@@ -1,13 +1,15 @@
-// Package conclusionheaders composes the row-shaped header of each canonical
+// Package conclusionsummaries composes the row-shaped summary of each canonical
 // Person, Event, and Place from the auto-reconciler cache (Spike 9
-// R4). One header composer per kind serves every surface that shows a handle
+// R4). One summary composer per kind serves every surface that shows a handle
 // as a row: lists, Promote's target picker, omnibar hits, later tree nodes.
 //
-// A finished header is stored on the catalog graph. A list read fills any
-// row that is missing, in a fixed number of queries whatever its length.
+// A summary's stored row holds ids and keys; term and Property labels are
+// filled on read, from the cached vocabulary. The row is stored on the catalog
+// graph. A list read fills any row that is missing, in a fixed number of
+// queries whatever its length.
 // Go returns structures, including which naming-matrix rule titles an Event
 // (eventtitle); the app formats text.
-package conclusionheaders
+package conclusionsummaries
 
 import (
 	"database/sql"
@@ -24,8 +26,8 @@ type Querier interface {
 	QueryRow(query string, args ...any) *sql.Row
 }
 
-// PersonHeader is one Person as a row.
-type PersonHeader struct {
+// PersonSummary is one Person as a row.
+type PersonSummary struct {
 	Entity canonicalentities.Entity
 	// Name is the displayed auto-reconciled name; nil when no member names
 	// the Person.
@@ -37,6 +39,10 @@ type PersonHeader struct {
 	// death event. Places are folded location chains at the event's date.
 	Birth LifeFacts
 	Death LifeFacts
+	// Gender and SexAtBirth are the displayed gender and sex at birth terms;
+	// the app chooses which colors a person.
+	Gender     TermFacts
+	SexAtBirth TermFacts
 	// PictureImageFileID is the image of the picture the Person leads with
 	// on its page and in the Persons list; nil when none. The preferred
 	// portrait when its picture is in the gallery, else the earliest
@@ -45,6 +51,15 @@ type PersonHeader struct {
 	// Updated is the handle's latest canonical_entity revision and its time.
 	// Filled by List only; zero means none.
 	Updated effects.Activity
+}
+
+// TermFacts is one term-valued Property of a summary. Term is the rank-1 kept
+// term, nil when none; Count is the number of kept values, more than one is a
+// disagreement; Term label and origin and PropertyLabel are filled at read time.
+type TermFacts struct {
+	Term          *Term
+	Count         int
+	PropertyLabel string
 }
 
 // LifeFacts is a birth or a death composed from the canonical graph.
@@ -58,15 +73,15 @@ type LifeFacts struct {
 	// Date is the event's date, else its start date.
 	Date      *datevalue.Value
 	DateCount int
-	Places    []HeaderPlace
+	Places    []ChainedPlace
 }
 
-// HeaderPlace is one Place a walk reached (or a folded location chain).
+// ChainedPlace is one Place a walk reached (or a folded location chain).
 // Names are kept toponyms in rank order. Parents is the hierarchical chain
 // at the walk's date (nearest first); ParentsAreCandidates when several
 // parents hold at once. Entity is the Place (the leaf when folded), whose
 // link records a Person page reads through conclusiondetails.PersonDerivedRows.
-type HeaderPlace struct {
+type ChainedPlace struct {
 	Entity               canonicalentities.Entity
 	Names                []string
 	Parents              []string
@@ -80,7 +95,7 @@ type HeaderPlace struct {
 type FieldOwner struct {
 	Entity     canonicalentities.Entity
 	PropertyID []byte
-	Place      *HeaderPlace
+	Place      *ChainedPlace
 }
 
 // LifeOwners are the owners behind one life row pair: the date owners (one

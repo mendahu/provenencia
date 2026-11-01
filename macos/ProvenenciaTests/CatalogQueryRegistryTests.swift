@@ -315,7 +315,7 @@ struct CatalogQueryRegistryTests {
         #expect(bob != nil && bob?.membership == nil)
     }
 
-    @Test func personsListLoadsHeadersOfPromotedPersons() async throws {
+    @Test func personsListLoadsSummariesOfPromotedPersons() async throws {
         let store = FakeStore()
         seedStore(store)
         store.subjectTypesByProject[projectDir] = [
@@ -340,18 +340,18 @@ struct CatalogQueryRegistryTests {
         let bare = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-2")
 
         let session = makeSession(store: store)
-        let handle: QueryHandle<[CatalogPersonHeader]> = session.query(
+        let handle: QueryHandle<[CatalogPersonSummary]> = session.query(
             CatalogQueryKey.personsList(project: session.projectKey)
         )
         await waitForQuery(handle)
 
-        let headers = try #require(handle.value)
-        #expect(headers.map(\.entity.ref) == [james.entity.ref, bare.entity.ref])
-        #expect(headers[0].name == CatalogNameValue(
+        let summaries = try #require(handle.value)
+        #expect(summaries.map(\.entity.ref) == [james.entity.ref, bare.entity.ref])
+        #expect(summaries[0].name == CatalogNameValue(
             form: "James Robins", parts: [part("James", "given"), part("Robins", "surname")]
         ))
-        #expect(headers[0].nameValueCount == 2)
-        #expect(headers[1].name == nil && PersonHeaderDisplay.title(headers[1]) == bare.entity.ref)
+        #expect(summaries[0].nameValueCount == 2)
+        #expect(summaries[1].name == nil && PersonTitleDisplay.title(summaries[1]) == bare.entity.ref)
         #expect(store.heldCatalogProjectDir == projectDir)
     }
 
@@ -376,7 +376,7 @@ struct CatalogQueryRegistryTests {
         _ = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
 
         let session = makeSession(store: store)
-        let handle: QueryHandle<[CatalogPersonHeader]> = session.query(
+        let handle: QueryHandle<[CatalogPersonSummary]> = session.query(
             CatalogQueryKey.personsList(project: session.projectKey)
         )
         await waitForQuery(handle)
@@ -493,26 +493,26 @@ struct CatalogQueryRegistryTests {
 
     @Test func eventAndPlaceListsAreGosRowsAsGiven() async throws {
         let store = FakeStore()
-        let late = CatalogEventHeader(
+        let late = CatalogEventSummary(
             entity: CatalogCanonicalEntity(id: "e2", ref: "EVT-2", subjectTypeID: "t", label: ""),
             title: CatalogEventTitle(rule: .ref, ref: "EVT-2")
         )
-        let early = CatalogEventHeader(
+        let early = CatalogEventSummary(
             entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-1", subjectTypeID: "t", label: ""),
             title: CatalogEventTitle(rule: .ref, ref: "EVT-1")
         )
-        store.seededEventHeaders = [late, early]
-        let place = CatalogPlaceHeader(
+        store.seededEventSummaries = [late, early]
+        let place = CatalogPlaceSummary(
             entity: CatalogCanonicalEntity(id: "p1", ref: "PLC-1", subjectTypeID: "t", label: ""),
             names: ["Montréal", "Montreal"]
         )
-        store.seededPlaceHeaders = [place]
-        let detail = CatalogConclusionDetail(entity: early.entity, fields: [], memberCount: 1, header: .event(early))
+        store.seededPlaceSummaries = [place]
+        let detail = CatalogConclusionDetail(entity: early.entity, fields: [], memberCount: 1, summary: .event(early))
         store.seededConclusionDetails = [early.entity.id: detail]
         let session = makeSession(store: store)
 
-        let events: QueryHandle<[CatalogEventHeader]> = session.query(.eventsList(project: session.projectKey))
-        let places: QueryHandle<[CatalogPlaceHeader]> = session.query(.placesList(project: session.projectKey))
+        let events: QueryHandle<[CatalogEventSummary]> = session.query(.eventsList(project: session.projectKey))
+        let places: QueryHandle<[CatalogPlaceSummary]> = session.query(.placesList(project: session.projectKey))
         let page: QueryHandle<CatalogConclusionDetail> = session.query(
             .conclusionDetail(project: session.projectKey, entityId: early.entity.id)
         )
@@ -522,7 +522,7 @@ struct CatalogQueryRegistryTests {
         // Order is Go's; the fake does not re-sort or re-derive.
         #expect(events.value == [late, early])
         #expect(places.value == [place])
-        #expect(page.value?.header?.event == early)
+        #expect(page.value?.summary?.event == early)
     }
 
     private func part(_ value: String, _ type: String) -> CatalogNameValuePart {
@@ -912,7 +912,7 @@ struct CatalogQueryRegistryTests {
                 CatalogWriteEffectsRead(read: .evidenceGraphProgress, ids: ["g-1"]),
             ],
             lists: [.propertyUsage],
-            headerHandles: ["e2"]
+            summaryHandles: ["e2"]
         ), project: project) == [
             .key(.propertiesWorkspace(project: project)),
         ])
@@ -1030,9 +1030,9 @@ struct CatalogQueryRegistryTests {
         let registry = CatalogQueryRegistry.standard
         let project = ProjectKey(projectDir: projectDir)
         let session = makeSession()
-        session.setQueryValue(CatalogQueryKey.personsList(project: project), value: [CatalogPersonHeader]())
-        session.setQueryValue(CatalogQueryKey.eventsList(project: project), value: [CatalogEventHeader]())
-        session.setQueryValue(CatalogQueryKey.placesList(project: project), value: [CatalogPlaceHeader]())
+        session.setQueryValue(CatalogQueryKey.personsList(project: project), value: [CatalogPersonSummary]())
+        session.setQueryValue(CatalogQueryKey.eventsList(project: project), value: [CatalogEventSummary]())
+        session.setQueryValue(CatalogQueryKey.placesList(project: project), value: [CatalogPlaceSummary]())
         let detailKey = CatalogQueryKey.conclusionDetail(project: project, entityId: "e1")
         let otherKey = CatalogQueryKey.conclusionDetail(project: project, entityId: "e2")
         session.setQueryValue(detailKey, value: CatalogConclusionDetail(entity: entity("e1"), fields: []))

@@ -10,10 +10,10 @@ enum PersonLifeDisplay {
         var extraPlaces: Int
     }
 
-    static func line(_ header: CatalogPersonHeader, locale: Locale = .autoupdatingCurrent) -> Line {
-        let dates = dateSpan(birth: header.birth.date, death: header.death.date, locale: locale)
-        let places = placeSpan(birth: header.birth.places, death: header.death.places)
-        let extra = DerivedPlace.extra(header.birth.places) + DerivedPlace.extra(header.death.places)
+    static func line(_ summary: CatalogPersonSummary, locale: Locale = .autoupdatingCurrent) -> Line {
+        let dates = dateSpan(birth: summary.birth.date, death: summary.death.date, locale: locale)
+        let places = placeSpan(birth: summary.birth.places, death: summary.death.places)
+        let extra = DerivedPlace.extra(summary.birth.places) + DerivedPlace.extra(summary.death.places)
         let text: String
         switch (dates.isEmpty, places.isEmpty) {
         case (true, true):
@@ -53,7 +53,7 @@ enum PersonLifeDisplay {
         }
     }
 
-    private static func placeSpan(birth: [CatalogHeaderPlace], death: [CatalogHeaderPlace]) -> String {
+    private static func placeSpan(birth: [CatalogChainedPlace], death: [CatalogChainedPlace]) -> String {
         let born = DerivedPlace.name(birth)
         let died = DerivedPlace.name(death)
         switch (born.isEmpty, died.isEmpty) {

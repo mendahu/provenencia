@@ -14,7 +14,7 @@
 //
 // Upkeep goes through writes.Run, which calls RecomputeTx with the handles
 // effects.Resolve named. Subject delete calls RecomputeTx once more after the
-// rows are gone, so header documents see the cleared values. HandlesFor* are
+// rows are gone, so summary documents see the cleared values. HandlesFor* are
 // the sets the registry fixtures compare. Claim status has no edit path yet.
 //
 // Recompute is per handle: all of a handle's Properties are rewritten together.
@@ -39,7 +39,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
@@ -185,9 +185,9 @@ const (
 
 // RecomputeTx rewrites the cached rows of the given handles from truth tables.
 // A handle with no members (or no cacheable values) ends with no rows. The
-// handles' search documents, and the documents of handles whose headers read
+// handles' search documents, and the documents of handles whose summaries read
 // them, are reprojected in the same transaction. Subject delete passes the
-// released handles, observers, linked handles, and header dependents through
+// released handles, observers, linked handles, and summary dependents through
 // this call after the rows are gone, so a removed member updates the rows
 // that named it.
 func RecomputeTx(q Querier, entityIDs [][]byte) error {
@@ -195,11 +195,11 @@ func RecomputeTx(q Querier, entityIDs [][]byte) error {
 	return err
 }
 
-// RecomputeReported is RecomputeTx plus the header dependents that walk found.
+// RecomputeReported is RecomputeTx plus the summary dependents that walk found.
 // The commit drops stored rows for those ids and does not walk again.
 func RecomputeReported(q Querier, entityIDs [][]byte) ([][]byte, error) {
 	ids := database.UniqueBlobIDs(entityIDs)
-	before, err := conclusionheaders.AssociationEndpoints(q, ids)
+	before, err := conclusionsummaries.AssociationEndpoints(q, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -208,12 +208,12 @@ func RecomputeReported(q Querier, entityIDs [][]byte) ([][]byte, error) {
 	}); err != nil {
 		return nil, err
 	}
-	after, err := conclusionheaders.AssociationEndpoints(q, ids)
+	after, err := conclusionsummaries.AssociationEndpoints(q, ids)
 	if err != nil {
 		return nil, err
 	}
 	roots := database.UniqueBlobIDs(append(append(append([][]byte(nil), ids...), before...), after...))
-	deps, err := conclusionheaders.Dependents(q, roots)
+	deps, err := conclusionsummaries.Dependents(q, roots)
 	if err != nil {
 		return nil, err
 	}

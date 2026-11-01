@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -83,9 +84,7 @@ func (f *fixture) subject(kind, label string, in ...observations.Input) subjects
 		for i := range in {
 			in[i].SubjectID = s.ID
 		}
-		_, err = writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: s.GraphID, ArtifactID: f.art.ID, LocatorJSON: locator}, in)
-		})
+		_, _, err = observationstest.Cite(f.c, userID, s.GraphID, f.art.ID, locator, in...)
 		must(f.t, err)
 	}
 	return s

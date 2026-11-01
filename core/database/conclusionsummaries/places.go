@@ -1,4 +1,4 @@
-package conclusionheaders
+package conclusionsummaries
 
 import (
 	"time"
@@ -25,14 +25,14 @@ type PlaceRelationship struct {
 	EndDate   *datevalue.Value
 }
 
-// PlaceHeader is one Place as a row. Names are the kept toponyms in rank
+// PlaceSummary is one Place as a row. Names are the kept toponyms in rank
 // order (a multi-valued Property: Montréal and Montreal are both names).
 // StartDate / EndDate are the Place's period. Parents is today's hierarchical
 // chain (nearest first); ParentsAreCandidates is true when several parents
 // hold at once (join with "or"). Kind stays empty (place_nature deferred).
 // PartOf / Contains / Predecessors / Successors are filled only for detail
-// (AttachPlaceRelationships); list headers leave them empty.
-type PlaceHeader struct {
+// (AttachPlaceRelationships); list summaries leave them empty.
+type PlaceSummary struct {
 	Entity               canonicalentities.Entity
 	Names                []string
 	StartDate            *datevalue.Value

@@ -1,4 +1,4 @@
-package conclusionheaders_test
+package conclusionsummaries_test
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
-	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -98,7 +98,7 @@ func TestPlaceParentsAtDateFromPeriods(t *testing.T) {
 
 	parents := func(y int) []string {
 		t.Helper()
-		got, err := conclusionheaders.ParentsAtDate(f.c, torontoID, *pointYear(y))
+		got, err := conclusionsummaries.ParentsAtDate(f.c, torontoID, *pointYear(y))
 		must(t, err)
 		return got
 	}
@@ -114,7 +114,7 @@ func TestPlaceParentsAtDateFromPeriods(t *testing.T) {
 	// About 1841 → both UC and PC candidates.
 	abt := *pointYear(1841)
 	abt.Qualifier = datevalue.QualifierABT
-	got, err := conclusionheaders.ParentsAtDate(f.c, torontoID, abt)
+	got, err := conclusionsummaries.ParentsAtDate(f.c, torontoID, abt)
 	must(t, err)
 	if !sameSet(got, []string{"Upper Canada", "Province of Canada"}) {
 		t.Fatalf("about 1841 parents %v", got)
@@ -131,7 +131,7 @@ func TestPlaceSeveralParentsAreAllCandidates(t *testing.T) {
 	farmID := f.promoteSubject(farm)
 	f.promoteSubject(township)
 	f.promoteSubject(county)
-	got, err := conclusionheaders.ParentsAtDate(f.c, farmID, conclusionheaders.TodayDate())
+	got, err := conclusionsummaries.ParentsAtDate(f.c, farmID, conclusionsummaries.TodayDate())
 	must(t, err)
 	if !sameSet(got, []string{"York Township", "York County"}) {
 		t.Fatalf("parents %v", got)
@@ -145,24 +145,24 @@ func TestIrelandUKDatedMembershipDropsAfter1922(t *testing.T) {
 	f.placeRel(ireland, uk, propertyterms.KeyPartOf, nil, year(1922))
 	irelandID := f.promoteSubject(ireland)
 	ukID := f.promoteSubject(uk)
-	before, err := conclusionheaders.ParentsAtDate(f.c, irelandID, *pointYear(1900))
+	before, err := conclusionsummaries.ParentsAtDate(f.c, irelandID, *pointYear(1900))
 	must(t, err)
 	if !sameSet(before, []string{"United Kingdom"}) {
 		t.Fatalf("1900 %v", before)
 	}
-	after, err := conclusionheaders.ParentsAtDate(f.c, irelandID, *pointYear(1923))
+	after, err := conclusionsummaries.ParentsAtDate(f.c, irelandID, *pointYear(1923))
 	must(t, err)
 	if len(after) != 0 {
 		t.Fatalf("1923 still has parents %v", after)
 	}
 	// Both places continue: UK still lists Ireland as a former part only via
 	// the dated link — PartsAtDate at 1923 is empty.
-	parts, err := conclusionheaders.PartsAtDate(f.c, ukID, *pointYear(1923))
+	parts, err := conclusionsummaries.PartsAtDate(f.c, ukID, *pointYear(1923))
 	must(t, err)
 	if len(parts) != 0 {
 		t.Fatalf("UK parts in 1923 %v", parts)
 	}
-	parts1900, err := conclusionheaders.PartsAtDate(f.c, ukID, *pointYear(1900))
+	parts1900, err := conclusionsummaries.PartsAtDate(f.c, ukID, *pointYear(1900))
 	must(t, err)
 	if !sameSet(parts1900, []string{"Ireland"}) {
 		t.Fatalf("UK parts in 1900 %v", parts1900)
@@ -176,17 +176,17 @@ func TestSuccessionNeverBuildsChain(t *testing.T) {
 	f.placeRel(york, toronto, propertyterms.KeySucceededBy, nil, nil)
 	yorkID := f.promoteSubject(york)
 	torontoID := f.promoteSubject(toronto)
-	parents, err := conclusionheaders.ParentsAtDate(f.c, yorkID, *pointYear(1834))
+	parents, err := conclusionsummaries.ParentsAtDate(f.c, yorkID, *pointYear(1834))
 	must(t, err)
 	if len(parents) != 0 {
 		t.Fatalf("succession leaked into chain %v", parents)
 	}
-	pred, succ, err := conclusionheaders.SuccessionNames(f.c, yorkID)
+	pred, succ, err := conclusionsummaries.SuccessionNames(f.c, yorkID)
 	must(t, err)
 	if len(pred) != 0 || !sameSet(succ, []string{"Toronto"}) {
 		t.Fatalf("york succession pred=%v succ=%v", pred, succ)
 	}
-	pred, succ, err = conclusionheaders.SuccessionNames(f.c, torontoID)
+	pred, succ, err = conclusionsummaries.SuccessionNames(f.c, torontoID)
 	must(t, err)
 	if !sameSet(pred, []string{"York"}) || len(succ) != 0 {
 		t.Fatalf("toronto succession pred=%v succ=%v", pred, succ)
@@ -209,7 +209,7 @@ func TestSuccessionSplitAndAmalgamation(t *testing.T) {
 	newID := f.promoteSubject(newOne)
 	f.promoteSubject(left)
 	f.promoteSubject(right)
-	pred, succ, err := conclusionheaders.SuccessionNames(f.c, newID)
+	pred, succ, err := conclusionsummaries.SuccessionNames(f.c, newID)
 	must(t, err)
 	if !sameSet(pred, []string{"Old A", "Old B"}) || !sameSet(succ, []string{"Left", "Right"}) {
 		t.Fatalf("amalgamation/split pred=%v succ=%v", pred, succ)
@@ -240,7 +240,7 @@ func TestBirthLocationsFoldWhenPartOf(t *testing.T) {
 	f.promoteSubject(toronto)
 	f.promoteSubject(ontario)
 
-	persons, err := conclusionheaders.ListPersons(f.c)
+	persons, err := conclusionsummaries.ListPersons(f.c)
 	must(t, err)
 	if len(persons) != 1 {
 		t.Fatalf("persons %d", len(persons))
@@ -272,9 +272,9 @@ func TestBirthLocationsFoldWhenPartOf(t *testing.T) {
 	f.promoteSubject(person2)
 	f.promoteSubject(birth2)
 	f.promoteSubject(scotland)
-	persons, err = conclusionheaders.ListPersons(f.c)
+	persons, err = conclusionsummaries.ListPersons(f.c)
 	must(t, err)
-	var mary *conclusionheaders.PersonHeader
+	var mary *conclusionsummaries.PersonSummary
 	for i := range persons {
 		if persons[i].Name != nil && persons[i].Name.Form == "Mary" {
 			mary = &persons[i]
@@ -315,7 +315,7 @@ func TestSiblingBirthPlacesStayCompetingUnderASharedParent(t *testing.T) {
 	f.promoteSubject(hamilton)
 	f.promoteSubject(ontario)
 
-	persons, err := conclusionheaders.ListPersons(f.c)
+	persons, err := conclusionsummaries.ListPersons(f.c)
 	must(t, err)
 	if len(persons) != 1 {
 		t.Fatalf("persons %d", len(persons))
@@ -329,7 +329,7 @@ func TestSiblingBirthPlacesStayCompetingUnderASharedParent(t *testing.T) {
 	}
 }
 
-func TestPlaceHeaderParentsAndPeriod(t *testing.T) {
+func TestPlaceSummaryParentsAndPeriod(t *testing.T) {
 	f := newFixture(t)
 	toronto := f.placeSubject("Toronto", year(1834), nil, 0, 0)
 	ontario := f.placeSubject("Ontario", year(1867), nil, 2, 0)
@@ -337,7 +337,7 @@ func TestPlaceHeaderParentsAndPeriod(t *testing.T) {
 	f.promoteSubject(toronto)
 	f.promoteSubject(ontario)
 	got := f.places()
-	var h *conclusionheaders.PlaceHeader
+	var h *conclusionsummaries.PlaceSummary
 	for i := range got {
 		if sameSet(got[i].Names, []string{"Toronto"}) {
 			h = &got[i]
@@ -365,20 +365,20 @@ func TestAttachPlaceRelationships(t *testing.T) {
 	f.promoteSubject(uc)
 	f.promoteSubject(ontario)
 	yorkID := f.promoteSubject(york)
-	headers, err := conclusionheaders.PlacesByIDs(f.c, [][]byte{torontoID})
+	summaries, err := conclusionsummaries.PlacesByIDs(f.c, [][]byte{torontoID})
 	must(t, err)
-	if len(headers) != 1 {
-		t.Fatalf("%d", len(headers))
+	if len(summaries) != 1 {
+		t.Fatalf("%d", len(summaries))
 	}
-	h := headers[0]
-	must(t, conclusionheaders.AttachPlaceRelationships(f.c, &h))
+	h := summaries[0]
+	must(t, conclusionsummaries.AttachPlaceRelationships(f.c, &h))
 	if len(h.PartOf) != 2 {
 		t.Fatalf("part_of %+v", h.PartOf)
 	}
 	titles := map[string]bool{}
 	for _, r := range h.PartOf {
 		titles[r.Title] = true
-		if r.Kind != conclusionheaders.RelPartOf {
+		if r.Kind != conclusionsummaries.RelPartOf {
 			t.Fatalf("kind %s", r.Kind)
 		}
 	}
@@ -392,9 +392,9 @@ func TestAttachPlaceRelationships(t *testing.T) {
 		t.Fatalf("successors %+v", h.Successors)
 	}
 	// York → Toronto succession both ways; successor shows Toronto's period.
-	yh, err := conclusionheaders.PlacesByIDs(f.c, [][]byte{yorkID})
+	yh, err := conclusionsummaries.PlacesByIDs(f.c, [][]byte{yorkID})
 	must(t, err)
-	must(t, conclusionheaders.AttachPlaceRelationships(f.c, &yh[0]))
+	must(t, conclusionsummaries.AttachPlaceRelationships(f.c, &yh[0]))
 	if len(yh[0].Successors) != 1 || yh[0].Successors[0].Title != "Toronto" {
 		t.Fatalf("york successors %+v", yh[0].Successors)
 	}
@@ -411,9 +411,9 @@ func TestAttachPlaceRelationshipsIrelandMembershipSpan(t *testing.T) {
 	f.placeRel(ireland, uk, propertyterms.KeyPartOf, nil, year(1922))
 	irelandID := f.promoteSubject(ireland)
 	ukID := f.promoteSubject(uk)
-	ih, err := conclusionheaders.PlacesByIDs(f.c, [][]byte{irelandID})
+	ih, err := conclusionsummaries.PlacesByIDs(f.c, [][]byte{irelandID})
 	must(t, err)
-	must(t, conclusionheaders.AttachPlaceRelationships(f.c, &ih[0]))
+	must(t, conclusionsummaries.AttachPlaceRelationships(f.c, &ih[0]))
 	if len(ih[0].PartOf) != 1 || ih[0].PartOf[0].Title != "United Kingdom" {
 		t.Fatalf("ireland part_of %+v", ih[0].PartOf)
 	}
@@ -421,9 +421,9 @@ func TestAttachPlaceRelationshipsIrelandMembershipSpan(t *testing.T) {
 		*ih[0].PartOf[0].EndDate.StartYear != 1922 {
 		t.Fatalf("ireland membership end %+v", ih[0].PartOf[0])
 	}
-	uh, err := conclusionheaders.PlacesByIDs(f.c, [][]byte{ukID})
+	uh, err := conclusionsummaries.PlacesByIDs(f.c, [][]byte{ukID})
 	must(t, err)
-	must(t, conclusionheaders.AttachPlaceRelationships(f.c, &uh[0]))
+	must(t, conclusionsummaries.AttachPlaceRelationships(f.c, &uh[0]))
 	// Contains is "today"; a membership that ended in 1922 is not listed.
 	for _, c := range uh[0].Contains {
 		if c.Title == "Ireland" {
@@ -432,7 +432,7 @@ func TestAttachPlaceRelationshipsIrelandMembershipSpan(t *testing.T) {
 	}
 }
 
-func TestHeaderDependentsIncludeChildPlaces(t *testing.T) {
+func TestDependentsIncludeChildPlaces(t *testing.T) {
 	f := newFixture(t)
 	toronto := f.placeSubject("Toronto", nil, nil, 0, 0)
 	ontario := f.placeSubject("Ontario", nil, nil, 2, 0)
@@ -441,7 +441,7 @@ func TestHeaderDependentsIncludeChildPlaces(t *testing.T) {
 	ontarioID := f.promoteSubject(ontario)
 	db, err := f.c.DB()
 	must(t, err)
-	deps, err := conclusionheaders.HeaderDependents(db, [][]byte{ontarioID})
+	deps, err := conclusionsummaries.Dependents(db, [][]byte{ontarioID})
 	must(t, err)
 	if !database.ContainsBlobID(deps, torontoID) {
 		t.Fatalf("parent dependents missing child: %d", len(deps))
@@ -456,7 +456,7 @@ func TestUndatedPlacesAlwaysHold(t *testing.T) {
 	childID := f.promoteSubject(child)
 	f.promoteSubject(parent)
 	for _, y := range []int{1, 1000, 2020} {
-		got, err := conclusionheaders.ParentsAtDate(f.c, childID, *pointYear(y))
+		got, err := conclusionsummaries.ParentsAtDate(f.c, childID, *pointYear(y))
 		must(t, err)
 		if !sameSet(got, []string{"Parent"}) {
 			t.Fatalf("%d parents %v", y, got)
@@ -574,8 +574,8 @@ func TestPersonLifeOwners(t *testing.T) {
 			var w world
 			w.person = f.promoteSubject(p)
 			w.death.dates = []owner{{f.promoteSubject(ev), "date", nil}}
-			// The order the header gives the Places: compared below against
-			// the header's own walk.
+			// The order the summary gives the Places: compared below against
+			// the summary's own walk.
 			f.promoteSubject(mtl)
 			f.promoteSubject(paris)
 			return w
@@ -637,17 +637,17 @@ func TestPersonLifeOwners(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			w := tc.build(f)
-			birth, death, err := conclusionheaders.PersonLifeOwners(f.c, w.person)
+			birth, death, err := conclusionsummaries.PersonLifeOwners(f.c, w.person)
 			must(t, err)
-			check := func(side string, got conclusionheaders.LifeOwners, want struct{ dates, places []owner }) {
+			check := func(side string, got conclusionsummaries.LifeOwners, want struct{ dates, places []owner }) {
 				t.Helper()
 				for _, part := range []struct {
 					name string
-					got  []conclusionheaders.FieldOwner
+					got  []conclusionsummaries.FieldOwner
 					want []owner
 				}{{"dates", got.Dates, want.dates}, {"places", got.Places, want.places}} {
 					if len(part.got) != len(part.want) {
-						// A case that leaves the order to the header's walk.
+						// A case that leaves the order to the summary's walk.
 						if part.want == nil && side == "death" && part.name == "places" && len(part.got) == 2 {
 							continue
 						}
@@ -670,15 +670,15 @@ func TestPersonLifeOwners(t *testing.T) {
 			check("birth", birth, w.birth)
 			check("death", death, w.death)
 			if tc.name == "death at two Places that do not fold" {
-				persons, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{w.person})
+				persons, err := conclusionsummaries.PersonsByIDs(f.c, [][]byte{w.person})
 				must(t, err)
-				header := persons[0].Death.Places
-				if len(death.Places) != 2 || len(header) != 2 {
-					t.Fatalf("death places %d, header %d", len(death.Places), len(header))
+				summary := persons[0].Death.Places
+				if len(death.Places) != 2 || len(summary) != 2 {
+					t.Fatalf("death places %d, summary %d", len(death.Places), len(summary))
 				}
-				for i := range header {
-					if !bytes.Equal(death.Places[i].Place.Entity.ID, header[i].Entity.ID) {
-						t.Fatalf("death place %d is not the header's", i)
+				for i := range summary {
+					if !bytes.Equal(death.Places[i].Place.Entity.ID, summary[i].Entity.ID) {
+						t.Fatalf("death place %d is not the summary's", i)
 					}
 				}
 			}
@@ -772,7 +772,7 @@ func TestPersonDerivedRows(t *testing.T) {
 				t.Fatal("birth and death owners should be their own links, not York")
 			}
 			if bp.Owners[0].Event != nil || kinds[conclusiondetails.DerivedRowBirthDate].Owners[0].Event == nil {
-				t.Fatal("only date owners carry an Event header")
+				t.Fatal("only date owners carry an Event summary")
 			}
 		}},
 		{"denied-only date", func(t *testing.T, f *fixture) {

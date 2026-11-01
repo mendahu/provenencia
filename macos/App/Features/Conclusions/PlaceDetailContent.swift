@@ -28,18 +28,18 @@ struct PlaceDetailContent: ConclusionDetailBody {
         )
         ref = detail.entity.ref
         members = L10n.Conclusions.memberCount(detail.memberCount)
-        let header = detail.header?.place
+        let summary = detail.summary?.place
         let line = PlaceChainDisplay.line(
-            parents: header?.parents ?? [],
-            candidates: header?.parentsAreCandidates ?? false
+            parents: summary?.parents ?? [],
+            candidates: summary?.parentsAreCandidates ?? false
         )
         chainIsRecorded = !line.isEmpty
         chain = chainIsRecorded ? line : L10n.string(L10n.Conclusions.placeNoParent)
         rows = [
             Self.namesRow(toponym, locale: locale),
-            Self.periodRow(detail: detail, header: header, locale: locale),
+            Self.periodRow(detail: detail, summary: summary, locale: locale),
         ]
-        sections = Self.relationshipSections(header: header)
+        sections = Self.relationshipSections(summary: summary)
         gallery = .pictures(from: detail, fallbackMark: .subjectPlace, choose: .placeThumbnail)
         thumbnail = .leading(
             gallery: gallery,
@@ -76,14 +76,14 @@ struct PlaceDetailContent: ConclusionDetailBody {
 
     static func periodRow(
         detail: CatalogConclusionDetail,
-        header: CatalogPlaceHeader?,
+        summary: CatalogPlaceSummary?,
         locale: Locale
     ) -> ReconciledValueRowModel {
         let label = L10n.string(L10n.Conclusions.placePeriod)
         let empty = L10n.string(L10n.Conclusions.emptyPlacePeriod)
         let lead = PlacePeriodDisplay.span(
-            start: header?.startDate,
-            end: header?.endDate,
+            start: summary?.startDate,
+            end: summary?.endDate,
             locale: locale
         )
         let fields = detail.fields.filter {
@@ -99,11 +99,11 @@ struct PlaceDetailContent: ConclusionDetailBody {
         )
     }
 
-    static func relationshipSections(header: CatalogPlaceHeader?) -> [ConclusionDetailSection] {
-        let partOf = header?.partOf ?? []
-        let contains = header?.contains ?? []
-        let predecessors = header?.predecessors ?? []
-        let successors = header?.successors ?? []
+    static func relationshipSections(summary: CatalogPlaceSummary?) -> [ConclusionDetailSection] {
+        let partOf = summary?.partOf ?? []
+        let contains = summary?.contains ?? []
+        let predecessors = summary?.predecessors ?? []
+        let successors = summary?.successors ?? []
         let visibleContains = Array(contains.prefix(containsVisibleLimit))
         let omitted = max(0, contains.count - visibleContains.count)
 

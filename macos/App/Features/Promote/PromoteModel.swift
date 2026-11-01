@@ -189,7 +189,7 @@ final class PromoteModel {
         guard let open = recordSearch,
               let hit = open.search.hits.first(where: { $0.id == id }) else { return }
         closeRecordSearch()
-        hold(subjectID: open.subjectID, id: hit.id, ref: hit.ref, header: hit.header)
+        hold(subjectID: open.subjectID, id: hit.id, ref: hit.ref, summary: hit.summary)
     }
 
     func closeRecordSearch() {
@@ -198,8 +198,8 @@ final class PromoteModel {
     }
 
     /// Holds a record Promote did not offer as the row's decided target.
-    func hold(subjectID: String, id: String, ref: String, header: CatalogConclusionHeader?) {
-        guard flow.hold(subjectID: subjectID, id: id, ref: ref, header: header) else { return }
+    func hold(subjectID: String, id: String, ref: String, summary: CatalogConclusionSummary?) {
+        guard flow.hold(subjectID: subjectID, id: id, ref: ref, summary: summary) else { return }
         proposeAfterDecision()
     }
 

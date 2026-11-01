@@ -1,4 +1,4 @@
-package conclusionheaders
+package conclusionsummaries
 
 import (
 	"sort"
@@ -38,7 +38,7 @@ func SortByTitle[T any](rows []T, title func(T) string, ref func(T) string) {
 // profile's sorted order, undecorated; the row may add quotes and parentheses. A catalog with no
 // default profile joins those parts in stored order. form is the transcription
 // and is not a sort input: a name with no parts sorts by its working label.
-func personSortKey(h PersonHeader, order []nameformats.PartOrder) string {
+func personSortKey(h PersonSummary, order []nameformats.PartOrder) string {
 	if h.Name != nil && len(h.Name.Parts) > 0 {
 		if key := strings.TrimSpace(nameformats.Format(*h.Name, order)); key != "" {
 			return key
@@ -47,7 +47,7 @@ func personSortKey(h PersonHeader, order []nameformats.PartOrder) string {
 	return strings.TrimSpace(h.Entity.Label)
 }
 
-func placeTitle(h PlaceHeader) string {
+func placeTitle(h PlaceSummary) string {
 	if len(h.Names) > 0 {
 		return h.Names[0]
 	}

@@ -15,7 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
-	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
@@ -114,9 +114,7 @@ func (f *fixture) subjectOn(src sources.Source, kind string) subjects.Subject {
 // name files a name Observation from "type=value|…" parts (or "form:…").
 func (f *fixture) cite(s subjects.Subject, in observations.Input) observations.Observation {
 	f.t.Helper()
-	res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: s.GraphID, ArtifactID: f.arts[string(s.SourceID)].ID, LocatorJSON: locator}, []observations.Input{in})
-	})
+	res, _, err := observationstest.Cite(f.c, userID, s.GraphID, f.arts[string(s.SourceID)].ID, locator, []observations.Input{in}...)
 	must(f.t, err)
 	return res.Observations[0]
 }
@@ -407,10 +405,10 @@ func TestForEntityLikenessNeedsAPNG(t *testing.T) {
 		t.Fatalf("pictures %+v", d.Pictures)
 	}
 	f.c.Graph().Drop()
-	rows, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{h})
+	rows, err := conclusionsummaries.PersonsByIDs(f.c, [][]byte{h})
 	must(t, err)
 	if len(rows) != 1 || rows[0].PictureImageFileID != nil {
-		t.Fatalf("header leads with %x", rows[0].PictureImageFileID)
+		t.Fatalf("summary leads with %x", rows[0].PictureImageFileID)
 	}
 }
 

@@ -32,7 +32,7 @@ struct EvidenceGraphPlacedSubject: Identifiable, Sendable, Equatable {
 
     /// An Event's title as Go chose it from this Source's citations (its
     /// subject-role participations and locations), by the same naming matrix
-    /// as Event headers. Nil for people and places, and until Go has titled it.
+    /// as Event summaries. Nil for people and places, and until Go has titled it.
     var eventTitle: CatalogEventTitle?
 
     /// What the subject is called where it is promoted: its first asserted

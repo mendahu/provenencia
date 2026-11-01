@@ -268,8 +268,8 @@ func TestSearchCatalogHandleKinds(t *testing.T) {
 	if h.GetKind() != "person" || h.GetRef() != handleRef || h.GetMemberCount() != 1 {
 		t.Fatalf("hit %+v", h)
 	}
-	if h.GetPerson().GetName().GetForm() == "" {
-		t.Fatal("person hit has no header")
+	if h.GetSummary().GetPerson().GetName().GetForm() == "" {
+		t.Fatal("person hit has no summary")
 	}
 	if loc := h.GetLocation(); loc.GetSection() != "persons" || loc.GetEntityId() != h.GetId() {
 		t.Fatalf("location %+v", loc)
@@ -313,5 +313,42 @@ func TestSearchHitHidesDamagedCoverThumbnail(t *testing.T) {
 	hit := find("Scanned ledger")
 	if hit.GetId() != f.sourceID || hit.GetThumbnailRelPath() != "" {
 		t.Fatalf("want the Source's hit with an empty thumbnail_rel_path, got %+v", hit)
+	}
+}
+
+// A Person hit carries the lead picture path its list row shows, so the
+// omnibar draws the likeness instead of the kind mark.
+func TestSearchHitCarriesPersonPicture(t *testing.T) {
+	dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
+	saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 128))
+	promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: personID})
+
+	raw, err := ListPersonSummaries(marshalProto(t, &engine.ListPersonSummariesRequest{ProjectDir: dir}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var list engine.ListPersonSummariesResponse
+	if err := proto.Unmarshal(raw, &list); err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Summaries) != 1 || list.Summaries[0].GetPictureImageRelPath() == "" {
+		t.Fatalf("list summaries %+v", list.Summaries)
+	}
+	want := list.Summaries[0].GetPictureImageRelPath()
+	ref := list.Summaries[0].GetEntity().GetRef()
+
+	out, err := SearchCatalog(marshalProto(t, &engine.SearchCatalogRequest{ProjectDir: dir, Query: ref, Kinds: []string{"person"}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var resp engine.SearchCatalogResponse
+	if err := proto.Unmarshal(out, &resp); err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.Hits) != 1 {
+		t.Fatalf("hits %+v", resp.Hits)
+	}
+	if got := resp.Hits[0].GetSummary().GetPerson().GetPictureImageRelPath(); got != want {
+		t.Fatalf("hit picture %q, want %q", got, want)
 	}
 }

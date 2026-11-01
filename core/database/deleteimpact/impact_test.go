@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 
@@ -274,14 +275,9 @@ func TestImpactCitationAndSubject(t *testing.T) {
 			t.Fatal(err)
 		}
 		term := createTerm(t, c, userID, eventTypeProp.ID, "Land Grant")
-		if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-				GraphID:    graph,
-				ArtifactID: art.ID, LocatorJSON: testLocator,
-			}, []observations.Input{{
-				SubjectID: wedding.ID, PropertyID: eventTypeProp.ID, ValueTermID: term.ID,
-			}})
-		}); err != nil {
+		if _, _, err := observationstest.Cite(c, userID, graph, art.ID, testLocator, []observations.Input{{
+			SubjectID: wedding.ID, PropertyID: eventTypeProp.ID, ValueTermID: term.ID,
+		}}...); err != nil {
 			t.Fatal(err)
 		}
 		_, _, err = writes.Run(c, writes.Op{Action: "delete_property_term", UserID: userID},
@@ -302,12 +298,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 				ValueText: fmt.Sprintf("name-%02d", i), HasText: true,
 			}
 		}
-		res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-				GraphID:    graph,
-				ArtifactID: art.ID, LocatorJSON: testLocator,
-			}, inputs)
-		})
+		res, _, err := observationstest.Cite(c, userID, graph, art.ID, testLocator, inputs...)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -451,14 +442,9 @@ func TestImpactCitationAndSubject(t *testing.T) {
 			t.Fatalf("user role %+v", userRole)
 		}
 		subjectvocabtest.Assign(t, c, userID, personType.ID, userRole.ID)
-		res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-				GraphID:    graph,
-				ArtifactID: art.ID, LocatorJSON: testLocator,
-			}, []observations.Input{{
-				SubjectID: alice.ID, PropertyID: userRole.ID, ValueText: "witness", HasText: true,
-			}})
-		})
+		res, _, err := observationstest.Cite(c, userID, graph, art.ID, testLocator, []observations.Input{{
+			SubjectID: alice.ID, PropertyID: userRole.ID, ValueText: "witness", HasText: true,
+		}}...)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -504,14 +490,9 @@ func TestImpactCitationAndSubject(t *testing.T) {
 			t.Fatal(err)
 		}
 		bob := subjectstest.At(t, c, userID, graph, personType.ID, "Bob", subjects.Placement{GridX: 8, GridY: 0})
-		if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-				GraphID:    graph,
-				ArtifactID: art.ID, LocatorJSON: testLocator,
-			}, []observations.Input{{
-				SubjectID: bob.ID, PropertyID: roleProp.ID, ValueTermID: roleTerm.ID,
-			}})
-		}); err != nil {
+		if _, _, err := observationstest.Cite(c, userID, graph, art.ID, testLocator, []observations.Input{{
+			SubjectID: bob.ID, PropertyID: roleProp.ID, ValueTermID: roleTerm.ID,
+		}}...); err != nil {
 			t.Fatal(err)
 		}
 		got := mustImpact(t, c, catalogmodel.KindSubject, bob.ID)
@@ -805,11 +786,7 @@ func TestImpactEvidenceGraph(t *testing.T) {
 	})
 
 	t.Run("a graph's Citations go with it", func(t *testing.T) {
-		cit, err := writes.Call(c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-				GraphID: jones.ID, ArtifactID: art.ID, LocatorJSON: testLocator,
-			}, nil)
-		})
+		cit, _, err := observationstest.Cite(c, userID, jones.ID, art.ID, testLocator)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -990,12 +967,7 @@ func TestListedGroup(t *testing.T) {
 	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 	var rows []deleteimpact.Listed
 	for i := 0; i < 25; i++ {
-		res, err := writes.Call(c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-				GraphID:    graph,
-				ArtifactID: art.ID, LocatorJSON: testLocator,
-			}, nil)
-		})
+		res, _, err := observationstest.Cite(c, userID, graph, art.ID, testLocator)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1086,12 +1058,7 @@ func TestLocationsNameTheirGraph(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cited, err := writes.Call(c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-			GraphID:    jones.ID,
-			ArtifactID: page.ID, LocatorJSON: testLocator,
-		}, []observations.Input{{SubjectID: subject.ID, PropertyID: toponym.ID, ValueText: "Leeds", HasText: true}})
-	})
+	cited, _, err := observationstest.Cite(c, userID, jones.ID, page.ID, testLocator, []observations.Input{{SubjectID: subject.ID, PropertyID: toponym.ID, ValueText: "Leeds", HasText: true}}...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1103,12 +1070,7 @@ func TestLocationsNameTheirGraph(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	bare, err := writes.Call(c, writes.Op{Action: "create_citation", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-			GraphID:    jones.ID,
-			ArtifactID: page.ID, LocatorJSON: testLocator,
-		}, nil)
-	})
+	bare, _, err := observationstest.Cite(c, userID, jones.ID, page.ID, testLocator)
 	if err != nil {
 		t.Fatal(err)
 	}

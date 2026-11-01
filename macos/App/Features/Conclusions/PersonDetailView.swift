@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The Person page (S9-16, board S9-D5). A configuration of
 /// `ConclusionDetailPage`: portrait, name, the b. / d. lines, and the sections under them. Life dates
-/// and places come from the Person header the detail carries.
+/// and places come from the Person summary the detail carries.
 struct PersonDetailView: View {
     let session: WorkspaceSession
     let entityId: String
@@ -16,7 +16,7 @@ struct PersonDetailView: View {
             errorIdentifier: "persons.detail.error",
             userID: userID,
             make: { PersonDetailContent(detail: $0, orders: session.nameFormat) },
-            summary: { PersonDetailLifeLines(lines: $0.lifeLines) },
+            secondary: { PersonDetailLifeLines(lines: $0.lifeLines) },
             pageSections: { PersonDetailSections(content: $0, context: $1) }
         )
     }

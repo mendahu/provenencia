@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -82,9 +83,7 @@ func (f *handleFixture) subject(kind string, in func(s subjects.Subject) []obser
 	s := subjectstest.On(f.t, f.c, f.user, f.graph, kind, "")
 	if in != nil {
 		obs := in(s)
-		if _, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: f.user}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, f.user, citations.CreateInput{GraphID: f.graph, ArtifactID: f.artifact, LocatorJSON: handleLocator}, obs)
-		}); err != nil {
+		if _, _, err := observationstest.Cite(f.c, f.user, f.graph, f.artifact, handleLocator, obs...); err != nil {
 			f.t.Fatal(err)
 		}
 	}
@@ -214,7 +213,7 @@ func TestHandleSearchFollowsEdits(t *testing.T) {
 	}
 }
 
-func TestHeaderSearchFindsTheListTitle(t *testing.T) {
+func TestSummarySearchFindsTheListTitle(t *testing.T) {
 	f := newHandleFixture(t)
 	person := f.person("James Robins", "Kenneth Robins")
 	birth, err := propertyterms.Lookup(f.c, f.prop("event_type").ID, "birth", vocabkey.OriginProvenencia)

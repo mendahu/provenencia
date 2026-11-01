@@ -9,9 +9,9 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
-	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -70,15 +70,10 @@ func namedPersonOnNewSource(t *testing.T, dir, userID, typeID, personName, sexKe
 		if err != nil {
 			return err
 		}
-		_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: uid[:]}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, uid[:], citations.CreateInput{
-				GraphID:    s.GraphID,
-				ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
-			}, []observations.Input{
-				{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluetest.Western(personName)},
-				{SubjectID: s.ID, PropertyID: sex.ID, ValueTermID: term.ID, Polarity: polarity},
-			})
-		})
+		_, _, err = observationstest.Cite(c, uid[:], s.GraphID, art.ID, `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`, []observations.Input{
+			{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluetest.Western(personName)},
+			{SubjectID: s.ID, PropertyID: sex.ID, ValueTermID: term.ID, Polarity: polarity},
+		}...)
 		sourceID, subjectID = database.UUIDString(src.ID), database.UUIDString(s.ID)
 		return err
 	}); err != nil {
@@ -232,7 +227,7 @@ func TestProposalProtoSendsMove(t *testing.T) {
 }
 
 // An unplaced row whose best record is in the weak band starts on that record,
-// with its header; one whose record another row took starts unset.
+// with its summary; one whose record another row took starts unset.
 func TestProposalProtoStartsAWeakRow(t *testing.T) {
 	t.Cleanup(func() { _ = catalogsession.CloseAll() })
 	dir, userID, _, typeID := subjectFixture(t)
@@ -262,12 +257,12 @@ func TestProposalProtoStartsAWeakRow(t *testing.T) {
 
 	started := proposed(row(graphalign.ReasonUnplaced))
 	if started.GetTarget() != "handle" || started.GetHandleId() != h || started.GetHandleRef() != r ||
-		started.GetPerson().GetEntity().GetId() != h {
-		t.Fatalf("weak row %+v, want it started on %s (%s) with a person header", started, h, r)
+		started.GetSummary().GetPerson().GetEntity().GetId() != h {
+		t.Fatalf("weak row %+v, want it started on %s (%s) with a person summary", started, h, r)
 	}
 	taken := proposed(row(graphalign.ReasonTaken))
-	if taken.GetTarget() != "" || taken.GetHandleId() != "" || taken.Header != nil {
-		t.Fatalf("taken row %+v, want it unset with no header", taken)
+	if taken.GetTarget() != "" || taken.GetHandleId() != "" || taken.Summary != nil {
+		t.Fatalf("taken row %+v, want it unset with no summary", taken)
 	}
 }
 

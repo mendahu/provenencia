@@ -16,7 +16,7 @@ struct PlaceDetailView: View {
             errorIdentifier: "places.detail.error",
             userID: userID,
             make: { PlaceDetailContent(detail: $0) },
-            summary: { PlaceDetailChain(text: $0.chain, recorded: $0.chainIsRecorded) }
+            secondary: { PlaceDetailChain(text: $0.chain, recorded: $0.chainIsRecorded) }
         )
     }
 }

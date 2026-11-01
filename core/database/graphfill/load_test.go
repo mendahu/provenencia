@@ -7,11 +7,11 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
-	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -321,10 +321,7 @@ func newTwoGraphs(t *testing.T) twoGraphs {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: f.jones.ID, ArtifactID: page2.ID, LocatorJSON: pageLocator},
-			[]observations.Input{{SubjectID: f.bea.ID, PropertyID: toponym.ID, ValueText: "Bea", HasText: true}})
-	}); err != nil {
+	if _, _, err := observationstest.Cite(c, userID, f.jones.ID, page2.ID, pageLocator, []observations.Input{{SubjectID: f.bea.ID, PropertyID: toponym.ID, ValueText: "Bea", HasText: true}}...); err != nil {
 		t.Fatal(err)
 	}
 	f.other = newSource("Elsewhere")

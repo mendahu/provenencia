@@ -29,10 +29,11 @@ struct CatalogSearchHitRow: View {
         } else {
             CachedThumbnail(
                 projectDir: projectDir,
-                relPath: hit.thumbnailRelPath,
+                relPath: CatalogSearchHitPresentation.leadRelPath(for: hit),
                 typeIconKey: hit.iconKey.isEmpty ? nil : hit.iconKey,
                 size: 40,
-                cornerRadius: PVRadius.sm
+                cornerRadius: PVRadius.sm,
+                fallbackMark: CatalogSearchHitPresentation.fallbackMark(for: hit)
             )
         }
     }

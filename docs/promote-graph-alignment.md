@@ -203,7 +203,7 @@ A bridge (participation, relationship, location, place relationship) has **no id
 
 Spike 9 was replanned around this on 2026-10-06. The close note is [`deployment-plan/archive/spike-9/README.md`](deployment-plan/archive/spike-9/README.md).
 
-- **Events and Places come first** (slices 5–6): graph alignment needs the date module (S9-21), per-Property cardinality (S9-36), and the Event and Place headers for its dropdowns.
+- **Events and Places come first** (slices 5–6): graph alignment needs the date module (S9-21), per-Property cardinality (S9-36), and the Event and Place summaries for its dropdowns.
 - **The canonical graph gets its own slice** (slice 7): the subject module and automatic bridge filing (S9-28), then the derived values that walk it (S9-31 / S9-32).
 - **Place hierarchy comes before Promote** (slice 8): part-of and succession links (splits and amalgamations included) are filed as bridges from the start, so trying Promote on real research captures them, and graph alignment is tested with them as edges.
 - **Promote graph alignment is one slice** (slice 9):

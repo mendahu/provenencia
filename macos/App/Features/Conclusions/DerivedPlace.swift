@@ -6,16 +6,16 @@ import Foundation
 enum DerivedPlace {
     /// The Place the row shows: the first whose line is not empty. The label,
     /// the open arrow and the Why's ink all read this one Place.
-    static func shown(_ places: [CatalogHeaderPlace]) -> CatalogHeaderPlace? {
+    static func shown(_ places: [CatalogChainedPlace]) -> CatalogChainedPlace? {
         places.first { !PlaceChainDisplay.placeLine($0).isEmpty }
     }
 
-    static func name(_ places: [CatalogHeaderPlace]) -> String {
+    static func name(_ places: [CatalogChainedPlace]) -> String {
         shown(places).map { PlaceChainDisplay.placeLine($0) } ?? ""
     }
 
     /// Places beyond the one `name` shows: the list's +N.
-    static func extra(_ places: [CatalogHeaderPlace]) -> Int {
+    static func extra(_ places: [CatalogChainedPlace]) -> Int {
         max(0, places.count - (shown(places) == nil ? 0 : 1))
     }
 }

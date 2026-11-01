@@ -77,7 +77,7 @@ In code, read it from the display cache: `c.Graph().Activity(effects.ScopeSource
 `effects.ScopeCanonicalEntity`) returns the revision and its time. The first read of a scope type
 loads every id with one grouped query (`graphcache/sql.go`); `OnCommit` then moves the loaded map
 forward from the commit's own revision and time, so a list load never scans the history. Fill it
-onto returned copies (`sources.List`, `conclusionheaders.ListPersons`), never into the cached
+onto returned copies (`sources.List`, `conclusionsummaries.ListPersons`), never into the cached
 display rows or the throwaway graph search composes during a write. Do **not** join
 `audit_changes` on `entity_type = …` for this — it misses children and deletes.
 

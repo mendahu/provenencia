@@ -11,9 +11,9 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
-	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -108,15 +108,10 @@ func TestGraphProgress(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-				GraphID:    place.GraphID,
-				ArtifactID: art.ID, LocatorJSON: validLocator,
-			}, []observations.Input{{
-				SubjectID: place.ID, PropertyID: toponym.ID,
-				ValueText: "Boston", HasText: true,
-			}})
-		}); err != nil {
+		if _, _, err := observationstest.Cite(c, userID, place.GraphID, art.ID, validLocator, []observations.Input{{
+			SubjectID: place.ID, PropertyID: toponym.ID,
+			ValueText: "Boston", HasText: true,
+		}}...); err != nil {
 			t.Fatal(err)
 		}
 		return seed{c: c, worked: worked, empty: empty, person: person, place: place, toponym: toponym}
@@ -231,10 +226,7 @@ func TestGraphProgress(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := writes.Call(s.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: ada.GraphID, ArtifactID: art1.ID, LocatorJSON: validLocator},
-				[]observations.Input{{SubjectID: ada.ID, PropertyID: nameProp.ID, Name: namevaluetest.Western("Ada Lee")}})
-		}); err != nil {
+		if _, _, err := observationstest.Cite(s.c, userID, ada.GraphID, art1.ID, validLocator, []observations.Input{{SubjectID: ada.ID, PropertyID: nameProp.ID, Name: namevaluetest.Western("Ada Lee")}}...); err != nil {
 			t.Fatal(err)
 		}
 

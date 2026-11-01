@@ -13,7 +13,7 @@ struct DerivedPlaceTests {
     ])
     func derivedPlaceCountsPlacesNotNames(names: [[String]], name: String, extra: Int) {
         let places = names.enumerated().map { index, names in
-            CatalogHeaderPlace(
+            CatalogChainedPlace(
                 entity: CatalogCanonicalEntity(id: "p\(index)", ref: "PLC-\(index)", subjectTypeID: "t", label: ""),
                 names: names
             )
@@ -23,7 +23,7 @@ struct DerivedPlaceTests {
     }
 
     @Test func placeLineIncludesParents() {
-        let place = CatalogHeaderPlace(
+        let place = CatalogChainedPlace(
             entity: CatalogCanonicalEntity(id: "p0", ref: "PLC-0", subjectTypeID: "t", label: ""),
             names: ["Toronto"],
             parents: ["Ontario", "Canada"]
@@ -33,7 +33,7 @@ struct DerivedPlaceTests {
     }
 
     @Test func placeLineJoinsCandidateParentsWithOr() {
-        let place = CatalogHeaderPlace(
+        let place = CatalogChainedPlace(
             entity: CatalogCanonicalEntity(id: "p0", ref: "PLC-0", subjectTypeID: "t", label: ""),
             names: ["The Farm"],
             parents: ["York Township", "York County"],
@@ -43,17 +43,17 @@ struct DerivedPlaceTests {
     }
 
     @Test func shownSkipsANamelessPlace() {
-        let nameless = CatalogHeaderPlace(
+        let nameless = CatalogChainedPlace(
             entity: CatalogCanonicalEntity(id: "p0", ref: "PLC-0", subjectTypeID: "t", label: ""), names: []
         )
-        let paris = CatalogHeaderPlace(
+        let paris = CatalogChainedPlace(
             entity: CatalogCanonicalEntity(id: "p1", ref: "PLC-1", subjectTypeID: "t", label: ""), names: ["Paris"]
         )
         #expect(DerivedPlace.shown([nameless, paris])?.entity.id == "p1")
         #expect(DerivedPlace.shown([nameless]) == nil)
         #expect(DerivedPlace.name([nameless, paris]) == "Paris")
         #expect(DerivedPlace.extra([nameless, paris]) == 1)
-        let row = PersonDetailContent.rows([], header: CatalogPersonHeader(
+        let row = PersonDetailContent.rows([], summary: CatalogPersonSummary(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: ""),
             nameValueCount: 0,
             death: CatalogLifeFacts(places: [nameless, paris])
@@ -62,11 +62,11 @@ struct DerivedPlaceTests {
     }
 
     @Test func aPlaceWithoutAKeptNameStillOpens() {
-        let bare = CatalogHeaderPlace(
+        let bare = CatalogChainedPlace(
             entity: CatalogCanonicalEntity(id: "p0", ref: "PLC-0", subjectTypeID: "t", label: ""), names: []
         )
         #expect(DerivedPlace.shown([bare]) == nil)
-        let row = PersonDetailContent.rows([], header: CatalogPersonHeader(
+        let row = PersonDetailContent.rows([], summary: CatalogPersonSummary(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: ""),
             nameValueCount: 0,
             death: CatalogLifeFacts(places: [bare])

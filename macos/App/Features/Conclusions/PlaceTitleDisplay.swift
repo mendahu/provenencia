@@ -29,8 +29,8 @@ struct PlaceTitleParts: Equatable, Sendable {
 }
 
 enum PlaceTitleDisplay {
-    static func title(_ header: CatalogPlaceHeader) -> String {
-        titleSource(header.titleParts).text
+    static func title(_ summary: CatalogPlaceSummary) -> String {
+        titleSource(summary.titleParts).text
     }
 
     /// First kept name, else the italic label, else the mono ref.
@@ -56,7 +56,7 @@ enum PlaceTitleDisplay {
     }
 }
 
-extension CatalogPlaceHeader {
+extension CatalogPlaceSummary {
     var titleParts: PlaceTitleParts {
         PlaceTitleParts(names: names, label: entity.label, ref: entity.ref)
     }
@@ -64,7 +64,7 @@ extension CatalogPlaceHeader {
     var extraNameCount: Int { PlaceTitleDisplay.extraNameCount(titleParts) }
 }
 
-extension CatalogHeaderPlace {
+extension CatalogChainedPlace {
     var titleParts: PlaceTitleParts {
         PlaceTitleParts(names: names, label: entity.label, ref: entity.ref)
     }

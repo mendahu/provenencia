@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -337,13 +338,7 @@ func TestCreateCitedBridge(t *testing.T) {
 	t.Run("attach existing citation", func(t *testing.T) {
 		s := mustSeed(t)
 		graph := evidencegraphstest.SoleGraph(t, s.c, s.source.ID).ID
-		cited, err := writes.Call(s.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-				GraphID:     graph,
-				ArtifactID:  s.artifact.ID,
-				LocatorJSON: validLocator,
-			}, nil)
-		})
+		cited, _, err := observationstest.Cite(s.c, userID, graph, s.artifact.ID, validLocator)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -373,13 +368,7 @@ func TestCreateCitedBridge(t *testing.T) {
 	t.Run("attach with citation fields invalid", func(t *testing.T) {
 		s := mustSeed(t)
 		graph := evidencegraphstest.SoleGraph(t, s.c, s.source.ID).ID
-		cited, err := writes.Call(s.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-				GraphID:     graph,
-				ArtifactID:  s.artifact.ID,
-				LocatorJSON: validLocator,
-			}, nil)
-		})
+		cited, _, err := observationstest.Cite(s.c, userID, graph, s.artifact.ID, validLocator)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -486,11 +475,7 @@ func TestCreateCitedBridge(t *testing.T) {
 
 	t.Run("attached citation in another graph refused", func(t *testing.T) {
 		g := mustTwoGraphs(t)
-		cited, err := writes.Call(g.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-				GraphID: g.jones.ID, ArtifactID: g.p2.ID, LocatorJSON: validLocator,
-			}, nil)
-		})
+		cited, _, err := observationstest.Cite(g.c, userID, g.jones.ID, g.p2.ID, validLocator)
 		if err != nil {
 			t.Fatal(err)
 		}

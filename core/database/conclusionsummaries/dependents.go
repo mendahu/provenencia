@@ -1,4 +1,4 @@
-package conclusionheaders
+package conclusionsummaries
 
 import (
 	"bytes"
@@ -13,12 +13,12 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// headerChainDepth is how far a place row's parent chain climbs, and how far
+// summaryChainDepth is how far a place row's parent chain climbs, and how far
 // the reverse of that read walks back down. The place neighborhood uses the same bound.
-const headerChainDepth = 8
+const summaryChainDepth = 8
 
-// Dependents is the reverse of the header reads. A place reaches its
-// descendants to headerChainDepth, the events located at those places, and
+// Dependents is the reverse of the summary reads. A place reaches its
+// descendants to summaryChainDepth, the events located at those places, and
 // the people whose birth or death that event is. A person reaches the events
 // that list them as a subject. An event that changed reaches its subject
 // people whatever type it is now, so a birth that became a marriage still
@@ -31,7 +31,7 @@ func Dependents(q Querier, ids [][]byte) ([][]byte, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	places, err := walkDepth(q, hops.PartsOfPlace, ids, headerChainDepth)
+	places, err := walkDepth(q, hops.PartsOfPlace, ids, summaryChainDepth)
 	if err != nil {
 		return nil, err
 	}
@@ -185,10 +185,4 @@ func birthOrDeath(q Querier, ids [][]byte) ([][]byte, error) {
 		return nil, err
 	}
 	return out, nil
-}
-
-// HeaderDependents is Dependents. Callers that snapshotted the short walk
-// keep this name.
-func HeaderDependents(q Querier, ids [][]byte) ([][]byte, error) {
-	return Dependents(q, ids)
 }

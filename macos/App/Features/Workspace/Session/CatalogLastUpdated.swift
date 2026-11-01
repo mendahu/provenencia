@@ -16,9 +16,9 @@ protocol CatalogLastUpdatedRow: Sendable {
     var updated: CatalogActivity { get set }
 }
 
-extension CatalogPersonHeader: CatalogLastUpdatedRow {}
-extension CatalogEventHeader: CatalogLastUpdatedRow {}
-extension CatalogPlaceHeader: CatalogLastUpdatedRow {}
+extension CatalogPersonSummary: CatalogLastUpdatedRow {}
+extension CatalogEventSummary: CatalogLastUpdatedRow {}
+extension CatalogPlaceSummary: CatalogLastUpdatedRow {}
 extension CatalogSource: CatalogLastUpdatedRow {}
 
 /// Which ids of a write a patch or refresh follows. Each slot carries its own.
@@ -33,7 +33,7 @@ enum CatalogQueryFollows: Sendable, Equatable {
     /// S14-16 removes these special cases).
     case reads(CatalogRead)
     /// `CatalogWriteEffects.touchedHandles`: every handle a write changed or
-    /// whose header it changed.
+    /// whose summary it changed.
     case touchedHandles
     /// `CatalogWriteEffects.evidenceGraphs`.
     case evidenceGraphs

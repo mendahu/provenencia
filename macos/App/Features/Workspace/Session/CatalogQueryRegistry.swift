@@ -540,13 +540,13 @@ extension CatalogQueryKey.Kind {
                 invalidateOn: CatalogQueryRegistry.conclusionTriggers,
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.personsList(project: project)) },
-                patches: [.lastUpdated(CatalogPersonHeader.self, follows: .handle)],
+                patches: [.lastUpdated(CatalogPersonSummary.self, follows: .handle)],
                 refreshes: [.applyHiddenPolicyOnAny(follows: .touchedHandles)],
                 load: { key, store in
                     guard case .personsList(let project) = key else {
                         mismatchedCatalogKey(key, .personsList)
                     }
-                    return try await store.listPersonHeaders(projectDir: project.projectDir)
+                    return try await store.listPersonSummaries(projectDir: project.projectDir)
                 }
             )
         case .eventsList:
@@ -556,13 +556,13 @@ extension CatalogQueryKey.Kind {
                 invalidateOn: CatalogQueryRegistry.conclusionTriggers,
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.eventsList(project: project)) },
-                patches: [.lastUpdated(CatalogEventHeader.self, follows: .handle)],
+                patches: [.lastUpdated(CatalogEventSummary.self, follows: .handle)],
                 refreshes: [.applyHiddenPolicyOnAny(follows: .touchedHandles)],
                 load: { key, store in
                     guard case .eventsList(let project) = key else {
                         mismatchedCatalogKey(key, .eventsList)
                     }
-                    return try await store.listEventHeaders(projectDir: project.projectDir)
+                    return try await store.listEventSummaries(projectDir: project.projectDir)
                 }
             )
         case .placesList:
@@ -572,13 +572,13 @@ extension CatalogQueryKey.Kind {
                 invalidateOn: CatalogQueryRegistry.conclusionTriggers,
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.placesList(project: project)) },
-                patches: [.lastUpdated(CatalogPlaceHeader.self, follows: .handle)],
+                patches: [.lastUpdated(CatalogPlaceSummary.self, follows: .handle)],
                 refreshes: [.applyHiddenPolicyOnAny(follows: .touchedHandles)],
                 load: { key, store in
                     guard case .placesList(let project) = key else {
                         mismatchedCatalogKey(key, .placesList)
                     }
-                    return try await store.listPlaceHeaders(projectDir: project.projectDir)
+                    return try await store.listPlaceSummaries(projectDir: project.projectDir)
                 }
             )
         case .conclusionDetail:

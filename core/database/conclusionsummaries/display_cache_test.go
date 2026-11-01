@@ -1,4 +1,4 @@
-package conclusionheaders_test
+package conclusionsummaries_test
 
 import (
 	"bytes"
@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -48,13 +48,13 @@ func TestDisplayCacheFollowsAPlaceThreeStepsUp(t *testing.T) {
 
 	db, err := f.c.DB()
 	must(t, err)
-	deps, err := conclusionheaders.HeaderDependents(db, [][]byte{countryID})
+	deps, err := conclusionsummaries.Dependents(db, [][]byte{countryID})
 	must(t, err)
 	if !database.ContainsBlobID(deps, townID) || !database.ContainsBlobID(deps, birthID) || !database.ContainsBlobID(deps, personID) {
 		t.Fatalf("country dependents missing the town, the birth, or the person (%d ids)", len(deps))
 	}
 
-	before := personHeader(t, f, personID)
+	before := personSummary(t, f, personID)
 	if !sameSet(before.Birth.Places[0].Parents, []string{"City", "Region", "Country"}) {
 		t.Fatalf("birth parents %v", before.Birth.Places[0].Parents)
 	}
@@ -72,17 +72,17 @@ func TestDisplayCacheFollowsAPlaceThreeStepsUp(t *testing.T) {
 	})
 	must(t, err)
 
-	after := personHeader(t, f, personID)
+	after := personSummary(t, f, personID)
 	if !sameSet(after.Birth.Places[0].Parents, []string{"City", "Region", "Renamed"}) {
 		t.Fatalf("after rename %v", after.Birth.Places[0].Parents)
 	}
 
-	towns, err := conclusionheaders.PlacesByIDs(f.c, [][]byte{townID})
+	towns, err := conclusionsummaries.PlacesByIDs(f.c, [][]byte{townID})
 	must(t, err)
 	if len(towns) != 1 || !sameSet(towns[0].Parents, []string{"City", "Region", "Renamed"}) {
 		t.Fatalf("town chain %v", towns)
 	}
-	must(t, conclusionheaders.AttachPlaceRelationships(f.c, &towns[0]))
+	must(t, conclusionsummaries.AttachPlaceRelationships(f.c, &towns[0]))
 	if len(towns[0].PartOf) != 1 || towns[0].PartOf[0].Title != "City" {
 		t.Fatalf("town part of %+v", towns[0].PartOf)
 	}
@@ -105,7 +105,7 @@ func TestBirthBecomingMarriageDropsThePerson(t *testing.T) {
 	personID := f.promoteSubject(person)
 	birthID := f.promoteSubject(birth)
 
-	before := personHeader(t, f, personID)
+	before := personSummary(t, f, personID)
 	if before.Birth.Event == nil || !bytes.Equal(before.Birth.Event.ID, birthID) {
 		t.Fatal("birth was not on the person row")
 	}
@@ -126,12 +126,12 @@ func TestBirthBecomingMarriageDropsThePerson(t *testing.T) {
 	})
 	must(t, err)
 
-	deps, err := conclusionheaders.HeaderDependents(db, [][]byte{birthID})
+	deps, err := conclusionsummaries.Dependents(db, [][]byte{birthID})
 	must(t, err)
 	if !database.ContainsBlobID(deps, personID) {
 		t.Fatal("a marriage that was a birth did not reach its subject")
 	}
-	after := personHeader(t, f, personID)
+	after := personSummary(t, f, personID)
 	if after.Birth.Event != nil {
 		t.Fatal("person row still shows the birth")
 	}
@@ -148,7 +148,7 @@ func personDocsMentioning(t *testing.T, db *sql.DB, text string) int {
 	return n
 }
 
-func personHeader(t *testing.T, f *fixture, id []byte) conclusionheaders.PersonHeader {
+func personSummary(t *testing.T, f *fixture, id []byte) conclusionsummaries.PersonSummary {
 	t.Helper()
 	for _, h := range f.list() {
 		if string(h.Entity.ID) == string(id) {
@@ -156,7 +156,7 @@ func personHeader(t *testing.T, f *fixture, id []byte) conclusionheaders.PersonH
 		}
 	}
 	t.Fatal("person missing from the list")
-	return conclusionheaders.PersonHeader{}
+	return conclusionsummaries.PersonSummary{}
 }
 
 func observationID(t *testing.T, c *database.Catalog, subjectID, propertyID []byte) []byte {

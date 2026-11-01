@@ -257,7 +257,7 @@ struct PlaceRegistryTests {
         #expect(resolve(location)?.placeID != .sourcePromote)
     }
 
-    @Test func eventsListWarmsTheHeaderRead() {
+    @Test func eventsListWarmsTheSummaryRead() {
         let place = resolve(.sectionRoot(.events))
         #expect(place?.placeID == .eventsList)
         #expect(place?.queryKeys == [.eventsList(project: project)])
@@ -270,7 +270,7 @@ struct PlaceRegistryTests {
         #expect(persons?.placeID == .personsList)
     }
 
-    @Test func placesListWarmsTheHeaderRead() {
+    @Test func placesListWarmsTheSummaryRead() {
         let place = resolve(.sectionRoot(.places))
         #expect(place?.placeID == .placesList)
         #expect(place?.queryKeys == [.placesList(project: project)])
