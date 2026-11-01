@@ -1,7 +1,7 @@
 # Review — S13-04 Person family read
 
 **Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet).
-**Verdict:** round 1 — Fits with changes / Not ready; every finding Fixed. Round 2 below.
+**Verdict:** round 1 — Fits with changes / Not ready; round 2 — Fits with changes / Ready with changes. Every finding Fixed; no blocker open. Planned 2026-11-01.
 
 ## Decisions the user made while planning (2026-11-01)
 
@@ -81,3 +81,19 @@ Both are in the map's working rule "Family groups in Go".
 
 ### X-6 · minor · A partner unit with every partner dropped
 **Answer:** Fixed — D-10 drops a `UnitParents` or `UnitPartner` unit with no partner. Also named in STEP-2: moving `chains` onto `relationshipKeys` drops its `rel` parameter.
+
+## Round 2 — maintainability (verdict: Fits with changes)
+
+### M-10 · blocker · `KinOf`'s parent rows were a second parent-step rule
+**Answer:** Fixed — D-2: `readsTerm` (keys + `e.reads` + self-link check) is the one reader; `ParentStep` is `readsTerm(e, TermParent, terms)`; `KinOf` matches rows through it and an end compare.
+
+### M-11 · blocker · `eventLinks` kept the raw key lookup
+**Answer:** Fixed — D-2, STEP-2, Deletes: `eventLinks` and `chains` take keys from `relationshipKeys` and lose `rel`; `Derive` drops the relationship-bridge lookup.
+
+### M-12 · blocker · No wire slot for `parent_of_parent`
+**Answer:** Fixed — `KINSHIP_PATTERN_PARENT_OF_PARENT = 4`, Swift `parentOfParent`; T-5 has no exception.
+
+### Smaller notes
+**Answer:** Fixed — `isPerson` composed into `shownPerson` (D-7); `kinship.Families` renamed `kinship.FamilyUnits`; `PersonFamily` turns an Event or Place handle into `ErrNotFound` (D-10, AC-1.12); `stepPeople` is a package func and §6 lists `loadSteps` and `stepped`.
+
+Two rounds done (the cap). Nothing is open.
