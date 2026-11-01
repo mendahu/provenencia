@@ -2,7 +2,7 @@
 
 **Status:** idea only — not roadmapped. Left over when [kinship shapes](../deployment-plan/archive/spike-11/README.md) was pulled into Spike 11 (2026-10-24), which teaches matching that a shared marriage, a birth's parents and a parent chain imply spouse, parent and grandparent links.
 
-**Spike 13** ([person detail](../deployment-plan/spike-13/person-detail.md#2-family)) takes the Person page's nuclear family (parents, siblings, spouses, children) and a page-only sibling derivation from a shared parent; S13-03 shipped it (`canonlinks.Options{Siblings: true}`). Sibling evidence for matching stays here.
+**Spike 13** ([person detail](../deployment-plan/spike-13/person-detail.md#2-family)) takes the Person page's nuclear family (parents, siblings, spouses, children) and a page-only sibling derivation from a shared parent; S13-03 shipped it (`canonlinks.Options{Siblings: true}`), and S13-04 shipped the family read as units over a list of ids (`persondetail.Families`). Sibling evidence for matching stays here.
 
 ## What stays here
 

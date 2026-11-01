@@ -628,6 +628,26 @@ extension CatalogQueryKey.Kind {
                     return try await store.listPersonClaims(projectDir: project.projectDir, entityID: entityId)
                 }
             )
+        case .personFamily:
+            // A Person's family units (S13-04). A relative's change touches the
+            // relative's id, not this Person's, and the relatives are up to two
+            // hops away, so any write that names a handle reloads a visible
+            // Family section; the read is cheap warm. A newly filed relative is
+            // not in the cached value, so the key cannot follow the ids it names.
+            return .make(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: CatalogQueryRegistry.conclusionTriggers,
+                whenHidden: .evict,
+                invalidation: { _, _ in .allCached(.personFamily) },
+                refreshes: [.applyHiddenPolicyOnAny(follows: .touchedHandles)],
+                load: { key, store in
+                    guard case .personFamily(let project, let entityId) = key else {
+                        mismatchedCatalogKey(key, .personFamily)
+                    }
+                    return try await store.getPersonFamily(projectDir: project.projectDir, entityID: entityId)
+                }
+            )
         }
     }
 }

@@ -4,7 +4,7 @@
 // person (Reader.For), and one person's relationship links, recorded and
 // implied, merged through kinship.LinkSet (Reader.Relationships), with, on
 // request, the siblings a shared parent implies (Options{Siblings: true},
-// LoadSiblings). Matching and later readers share it.
+// LoadSiblings), and, for many people at once, LoadRelationships. Matching and later readers share it.
 package canonlinks
 
 import (

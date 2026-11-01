@@ -583,3 +583,21 @@ func TestAcceptedMembers(t *testing.T) {
 		})
 	}
 }
+
+func TestNodeIs(t *testing.T) {
+	person, place := []byte{1}, []byte{2}
+	for _, tc := range []struct {
+		name string
+		n    *graphcache.Node
+		want bool
+	}{
+		{"a nil node", nil, false},
+		{"the type", &graphcache.Node{SubjectTypeID: person}, true},
+		{"another type", &graphcache.Node{SubjectTypeID: place}, false},
+		{"merged", &graphcache.Node{SubjectTypeID: person, Merged: true}, false},
+	} {
+		if got := tc.n.Is(person); got != tc.want {
+			t.Errorf("%s: Is = %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}

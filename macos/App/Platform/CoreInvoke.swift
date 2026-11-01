@@ -124,6 +124,7 @@ enum CoreMethod {
     static let listPersonSummaries = Int32(Provenencia_Engine_V1_Method.listPersonSummaries.rawValue)
     static let getConclusionDetail = Int32(Provenencia_Engine_V1_Method.getConclusionDetail.rawValue)
     static let listPersonClaims = Int32(Provenencia_Engine_V1_Method.listPersonClaims.rawValue)
+    static let getPersonFamily = Int32(Provenencia_Engine_V1_Method.getPersonFamily.rawValue)
     static let listEventSummaries = Int32(Provenencia_Engine_V1_Method.listEventSummaries.rawValue)
     static let listPlaceSummaries = Int32(Provenencia_Engine_V1_Method.listPlaceSummaries.rawValue)
     static let listEvidenceGraphEventTitles = Int32(Provenencia_Engine_V1_Method.listEvidenceGraphEventTitles.rawValue)

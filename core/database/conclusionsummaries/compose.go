@@ -491,7 +491,7 @@ func nodesOf(g *graphcache.Graph, typeID []byte, ids [][]byte, all bool) ([]*gra
 		if err != nil {
 			return nil, err
 		}
-		if n == nil || n.Merged || !bytes.Equal(n.SubjectTypeID, typeID) {
+		if !n.Is(typeID) {
 			continue
 		}
 		out = append(out, n)
