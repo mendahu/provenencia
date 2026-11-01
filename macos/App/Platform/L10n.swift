@@ -122,22 +122,22 @@ enum L10n {
         static let formDialogDiscardTitle = LocalizedStringResource(
             "designSystem.formDialog.discardTitle",
             defaultValue: "Discard changes?",
-            comment: "Title when an outside click would close a form sheet that has edits"
+            comment: "Title of the confirm shown when a form sheet or an Artifact card with unsaved edits is about to drop them (outside click, Escape, a row that navigates, another card's edit)"
         )
         static let formDialogDiscardMessage = LocalizedStringResource(
             "designSystem.formDialog.discardMessage",
             defaultValue: "Your changes will be lost.",
-            comment: "Body when an outside click would close a form sheet that has edits"
+            comment: "Body of the confirm shown when a form sheet or an Artifact card with unsaved edits is about to drop them (outside click, Escape, a row that navigates, another card's edit)"
         )
         static let formDialogDiscardConfirm = LocalizedStringResource(
             "designSystem.formDialog.discardConfirm",
             defaultValue: "Discard",
-            comment: "Confirms discarding a form sheet's edits after an outside click"
+            comment: "Confirms dropping the edits of a form sheet or an Artifact card with unsaved edits (outside click, Escape, a row that navigates, another card's edit)"
         )
         static let formDialogDiscardKeep = LocalizedStringResource(
             "designSystem.formDialog.discardKeep",
             defaultValue: "Keep editing",
-            comment: "Returns to the form sheet after an outside click"
+            comment: "Keeps the edits of a form sheet or an Artifact card with unsaved edits and returns to the form or card (outside click, Escape, a row that navigates, another card's edit)"
         )
 
         static let toastDismiss = LocalizedStringResource(

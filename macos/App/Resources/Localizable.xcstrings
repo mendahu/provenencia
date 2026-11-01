@@ -134,7 +134,7 @@
       }
     },
     "designSystem.formDialog.discardConfirm": {
-      "comment": "Confirms discarding a form sheet's edits after an outside click",
+      "comment": "Confirms dropping the edits of a form sheet or an Artifact card with unsaved edits (outside click, Escape, a row that navigates, another card's edit)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -146,7 +146,7 @@
       }
     },
     "designSystem.formDialog.discardKeep": {
-      "comment": "Returns to the form sheet after an outside click",
+      "comment": "Keeps the edits of a form sheet or an Artifact card with unsaved edits and returns to the form or card (outside click, Escape, a row that navigates, another card's edit)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -158,7 +158,7 @@
       }
     },
     "designSystem.formDialog.discardMessage": {
-      "comment": "Body when an outside click would close a form sheet that has edits",
+      "comment": "Body of the confirm shown when a form sheet or an Artifact card with unsaved edits is about to drop them (outside click, Escape, a row that navigates, another card's edit)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -170,7 +170,7 @@
       }
     },
     "designSystem.formDialog.discardTitle": {
-      "comment": "Title when an outside click would close a form sheet that has edits",
+      "comment": "Title of the confirm shown when a form sheet or an Artifact card with unsaved edits is about to drop them (outside click, Escape, a row that navigates, another card's edit)",
       "extractionState": "manual",
       "localizations": {
         "en": {
