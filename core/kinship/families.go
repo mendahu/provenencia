@@ -59,10 +59,12 @@ type Kin map[Role][]Link
 // order: the people whose own kin FamilyUnits reads.
 func (k Kin) Around(person []byte) [][]byte {
 	var ids [][]byte
+	seen := map[string]bool{}
 	for _, role := range []Role{RoleParent, RoleChild} {
 		for _, l := range k[role] {
 			other, _, _ := l.From(person)
-			if !slices.ContainsFunc(ids, func(id []byte) bool { return bytes.Equal(id, other) }) {
+			if !seen[string(other)] {
+				seen[string(other)] = true
 				ids = append(ids, other)
 			}
 		}
@@ -162,8 +164,9 @@ func FamilyUnits(person []byte, kin Kin, kinOf map[string]Kin, rules Rules) []Un
 // apart the unit of siblings with no shown shared parent.
 //
 // More parents than rules.MaxPivotEnd read as malformed data: none is paired
-// with another, and a sibling is placed once, in the unit whose partners are
-// exactly the parents it shares. That keeps what is shown linear in the data.
+// with another, and a sibling is placed once, with the first parent it shares
+// (in parent order), or in the siblings unit when it shares none. That keeps
+// what is shown linear in the data.
 func parentUnits(person []byte, kin Kin, kinOf map[string]Kin, rules Rules) ([]Unit, Unit) {
 	parents := kin[RoleParent]
 	ids := make([][]byte, len(parents))
@@ -236,10 +239,18 @@ func parentUnits(person []byte, kin Kin, kinOf map[string]Kin, rules Rules) ([]U
 			}
 		}
 		joined := false
-		for k, set := range sets {
-			if len(set) > 0 && (pairing || len(shared) == len(set)) && subset(set, shared) {
-				units[k].Children = append(units[k].Children, sib)
+		if !pairing {
+			// Every set is one parent, at that parent's index.
+			if len(shared) > 0 {
+				units[shared[0]].Children = append(units[shared[0]].Children, sib)
 				joined = true
+			}
+		} else {
+			for k, set := range sets {
+				if len(set) > 0 && subset(set, shared) {
+					units[k].Children = append(units[k].Children, sib)
+					joined = true
+				}
 			}
 		}
 		switch {

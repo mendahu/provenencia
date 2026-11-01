@@ -178,7 +178,7 @@ func TestKinOf(t *testing.T) {
 					w = want[term].two
 				}
 				var got []kinship.Role
-				for _, role := range []kinship.Role{kinship.RoleParent, kinship.RoleChild, kinship.RoleSpouse, kinship.RoleSibling} {
+				for _, role := range kinship.Roles() {
 					if len(kin[role]) > 0 {
 						got = append(got, role)
 					}
@@ -284,6 +284,23 @@ func TestFamilies(t *testing.T) {
 		}()},
 		{"siblings unit comes last", slices.Concat(johnMaryPat, []kinship.Edge{sibling(1, 11, 1), parent(1, 14, 2), spouse(1, 2, 3)}), nil,
 			[]string{"Parents{6,7;}", "Partner{2;}", "OneParent{;14}", "Siblings{;11}"}},
+		{"over the bound a sibling sharing several parents sits with the first", func() []kinship.Edge {
+			var es []kinship.Edge
+			for n := byte(2); n <= 12; n++ {
+				es = append(es, parent(n, 1, n))
+			}
+			return append(es, parent(4, 13, 20), parent(8, 13, 21), sibling(1, 13, 22))
+		}(), nil, func() []string {
+			var out []string
+			for n := 2; n <= 12; n++ {
+				if n == 4 {
+					out = append(out, "Parents{4;13}")
+					continue
+				}
+				out = append(out, fmt.Sprintf("Parents{%d;}", n))
+			}
+			return out
+		}()},
 		{"empty kin", nil, nil, nil},
 	}
 	for _, tc := range cases {
@@ -392,17 +409,17 @@ func TestFamiliesMoreParentsThanMaxPivotEnd(t *testing.T) {
 	const parents, sibs = 11, 20 // one more parent than rules.MaxPivotEnd
 	pat, edges := crowd(t, parents, sibs)
 	units := unitsFor(t, pat, edges, nil)
-	if len(units) != parents+1 {
-		t.Fatalf("%d units, want %d lone parents and one shared unit", len(units), parents+1)
+	if len(units) != parents {
+		t.Fatalf("%d units, want %d lone parents", len(units), parents)
 	}
-	for _, u := range units[:parents] {
-		if u.Kind != kinship.UnitParents || len(u.Partners) != 1 || len(u.Children) != 0 {
-			t.Fatalf("want a lone parent with no children, got %d partners and %d children", len(u.Partners), len(u.Children))
+	for i, u := range units {
+		want := 0
+		if i == 0 { // every sibling shares every parent, so sits with the first
+			want = sibs
 		}
-	}
-	last := units[parents]
-	if last.Kind != kinship.UnitParents || len(last.Partners) != parents || len(last.Children) != sibs {
-		t.Fatalf("shared unit has %d partners and %d children, want %d and %d", len(last.Partners), len(last.Children), parents, sibs)
+		if u.Kind != kinship.UnitParents || len(u.Partners) != 1 || len(u.Children) != want {
+			t.Fatalf("unit %d: %d partners and %d children, want 1 and %d", i, len(u.Partners), len(u.Children), want)
+		}
 	}
 }
 
@@ -416,6 +433,75 @@ func TestFamiliesGrowth(t *testing.T) {
 		relatives, shapes := placements(unitsFor(t, pat, edges, nil))
 		if shapes > c*input || relatives > c*input {
 			t.Fatalf("%d parents, %d siblings: %d relatives and %d shapes shown from %d input shapes", n, 2*n, relatives, shapes, input)
+		}
+	}
+}
+
+// pairs is Pat (P1) with parents recorded parents, each parent-to-Pat link
+// carrying assocs associations, and one sibling for each pair of parents,
+// whose parent links to that pair carry assocs associations each.
+func pairs(t testing.TB, parents, assocs int) (pat []byte, edges []kinship.Edge, input int) {
+	t.Helper()
+	pat = p(1)
+	id := func(hi, n int) []byte { return []byte{byte(hi), byte(n)} }
+	br := 0
+	link := func(a, c []byte) {
+		x := rel(t, 1, 2, vocabkey.TermParent, 1)
+		x.A, x.B, x.Associations = a, c, nil
+		for k := 0; k < assocs; k++ {
+			br++
+			x.Associations = append(x.Associations, id(0x30, br))
+		}
+		input += assocs
+		edges = append(edges, x)
+	}
+	for i := 0; i < parents; i++ {
+		link(id(0x50, i), pat)
+	}
+	sib := 0
+	for i := 0; i < parents; i++ {
+		for j := i + 1; j < parents; j++ {
+			link(id(0x50, i), id(0x60, sib))
+			link(id(0x50, j), id(0x60, sib))
+			sib++
+		}
+	}
+	return pat, edges, input
+}
+
+// shown counts the partners and children placed, and the associations on their links.
+func shown(units []kinship.Unit) (partners, children, assocs int) {
+	for _, u := range units {
+		for _, r := range u.Partners {
+			partners++
+			if r.Link != nil {
+				assocs += len(r.Link.Associations)
+			}
+		}
+		for _, r := range u.Children {
+			children++
+			if r.Link != nil {
+				assocs += len(r.Link.Associations)
+			}
+		}
+	}
+	return partners, children, assocs
+}
+
+func TestFamiliesGrowthPairs(t *testing.T) {
+	// Above the bound each parent appears once and each sibling once, so what is
+	// shown does not multiply by the subsets of parents.
+	for _, parents := range []int{11, 14} {
+		pat, edges, input := pairs(t, parents, 3)
+		partners, children, assocs := shown(unitsFor(t, pat, edges, nil))
+		sibs := parents * (parents - 1) / 2
+		if partners != parents || children != sibs {
+			t.Fatalf("%d parents: %d partners and %d children shown, want %d and %d", parents, partners, children, parents, sibs)
+		}
+		// A sibling's implied link carries Pat's own parent association beside the
+		// sibling's, so the shown count is a small multiple of the input.
+		if assocs > 2*input {
+			t.Fatalf("%d parents: %d associations shown from %d input", parents, assocs, input)
 		}
 	}
 }
