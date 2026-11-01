@@ -18462,6 +18462,42 @@
         }
       }
     },
+    "conclusions.family.emptyTitle": {
+      "comment": "Title of the empty Family section of a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No family yet"
+          }
+        }
+      }
+    },
+    "conclusions.family.emptyMessage": {
+      "comment": "Message of the empty Family section of a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relatives appear here when people linked to this person in an Evidence graph are promoted."
+          }
+        }
+      }
+    },
+    "conclusions.family.errorTitle": {
+      "comment": "Title of the Callout shown when a Person's Family section could not be read",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Family could not be read"
+          }
+        }
+      }
+    },
     "conclusions.a11y.ref": {
       "comment": "VoiceOver label of a handle's ref (PER-…)",
       "extractionState": "manual",

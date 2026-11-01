@@ -9314,6 +9314,24 @@ enum L10n {
             ), name)
         }
 
+        static let familyEmptyTitle = LocalizedStringResource(
+            "conclusions.family.emptyTitle",
+            defaultValue: "No family yet",
+            comment: "Title of the empty Family section of a Person page"
+        )
+
+        static let familyEmptyMessage = LocalizedStringResource(
+            "conclusions.family.emptyMessage",
+            defaultValue: "Relatives appear here when people linked to this person in an Evidence graph are promoted.",
+            comment: "Message of the empty Family section of a Person page"
+        )
+
+        static let familyErrorTitle = LocalizedStringResource(
+            "conclusions.family.errorTitle",
+            defaultValue: "Family could not be read",
+            comment: "Title of the Callout shown when a Person's Family section could not be read"
+        )
+
         static let portraitBadge = LocalizedStringResource(
             "conclusions.person.portraitBadge",
             defaultValue: "Portrait",

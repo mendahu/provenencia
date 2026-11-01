@@ -58,6 +58,12 @@ struct PersonFamilyContent: Equatable {
     /// The right column's one caption, over its first group; nil with no groups.
     var rightCaption: String?
 
+    /// Every tile on the page, in reading order.
+    var allTiles: [Tile] {
+        parentSets.flatMap { $0 } + siblings.map(\.tile)
+            + groups.flatMap { ($0.partner.map { [$0] } ?? []) + $0.children }
+    }
+
     /// Nothing to draw but the person: no parent sets, no sibling besides the
     /// person, and no groups.
     var isEmpty: Bool {
