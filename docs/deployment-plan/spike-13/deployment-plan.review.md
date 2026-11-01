@@ -16,7 +16,7 @@ Map review per [`review-plan`](../../../.agents/skills/review-plan/SKILL.md#map-
 | K-10 | S13-06 shaped for birth/death only; makes "its page owns the Why" comments false | **Fixed.** S13-06 "Derived rows carry their records", keyed by owning entity, off `LifeFacts`; comments updated in the PR |
 | K-11 | S13-03 changes a pattern `add-match-rule` teaches ("siblings changes `Derive`") | **Fixed.** S13-03 updates `add-match-rule`; added to the docs-and-skills rule |
 | K-12 | The link-reading move to its own pure package (kinship-view, S11-38 M-3) is not placed | **Declined.** The page reads kinship only in Go through `canonlinks`, which already imports `segmentcompare`; nothing new imports `core/kinship` from a lighter layer, so the weight is already paid. Stays in [`ideas/kinship-view.md`](../../ideas/kinship-view.md) |
-| K-13 | Open question 2 ignores `ideas/source-provenance-date.md` | **Fixed.** S13-01 ships without a date; OQ2 links the idea and names the two options |
+| K-13 | Open question 2 ignores `spike-15/source-provenance-date.md` | **Fixed.** S13-01 ships without a date; OQ2 links the idea and names the two options |
 | K-14 | Owner package for the three new reads not named | **Fixed.** `core/database/persondetail` named in the rule and scopes |
 
 No blocker remains open and no fix reshaped the spike's slices, so no round 2. K-2 and K-9 were answered by the user on 2026-10-26: S13-19 became S11-51; the Why accordion stays on Event and Place until they adopt sections.

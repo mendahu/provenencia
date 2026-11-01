@@ -79,7 +79,7 @@ The user thinks of this section as "where the sources are". The data is the pers
 
 - **R-33. One entry per identity claim.**
 - **R-34. Grouped by Source.** Since Spike 12 a Source can hold several Evidence graphs, so one Source can contribute several claims. Claims from the same Source are grouped under it.
-- **R-35. Each Source group shows** the Source's title and type, and the claims' Subjects beneath it as Evidence graph subject cards. (The Source's date was descoped on 2026-10-31: it lands in Spike 15 with the other Source fields a standard citation needs, [`ideas/source-provenance-date.md`](../../ideas/source-provenance-date.md).)
+- **R-35. Each Source group shows** the Source's title and type, and the claims' Subjects beneath it as Evidence graph subject cards. (The Source's date was descoped on 2026-10-31: it lands in Spike 15 with the other Source fields a standard citation needs, [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md).)
 - **R-36. Groups are ordered by Source title.**
 - **R-37. Each Source links** to its Source page.
 

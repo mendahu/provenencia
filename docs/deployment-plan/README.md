@@ -53,6 +53,8 @@ Spike 10 and earlier cut each PR as an In / Out / Testable table inside `deploym
 
 [Spike 14 — Odds and ends](spike-14/) is open. Plan: [`spike-14/deployment-plan.md`](spike-14/deployment-plan.md). Batch 1 is Event and Place pictures; Batches 4 and 5 are what remained of Spike 12, with the [app-health audit](spike-14/app-health-audit.md) and the [second audit](spike-14/app-health-audit-2.md).
 
+[Spike 15 — Sources and citations](spike-15/) is not yet planned: its three design docs (the Source date, citation formats, moving an Artifact to another Source) and their open questions are gathered in [`spike-15/README.md`](spike-15/README.md).
+
 Ideas: [`ideas/`](../ideas/). Claude Design briefs: [`add-design-brief`](../../.agents/skills/add-design-brief/SKILL.md).
 
 ## Completed

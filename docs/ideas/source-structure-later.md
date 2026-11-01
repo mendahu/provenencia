@@ -28,4 +28,4 @@ Credibility stays per Source. A census household with a poor informant can only 
 
 ## Layered citation output
 
-Moved to [`citation-formats.md`](citation-formats.md) (2026-10-31), which lists what Evidence Explained style citations need and what the provenance sheet ships first.
+Moved to [`citation-formats.md`](../deployment-plan/spike-15/citation-formats.md) (2026-10-31), which lists what Evidence Explained style citations need and what the provenance sheet ships first.

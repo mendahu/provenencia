@@ -1,6 +1,6 @@
 # Move an Artifact to another Source
 
-**Status:** idea, planned for Spike 15 with the Source schema pass ([`citation-formats.md`](citation-formats.md), [`source-provenance-date.md`](source-provenance-date.md)) (user, 2026-11-01). Once Sources carry the fields a citation needs, which Source an Artifact sits under matters more, and researchers will want to re-file Artifacts they already built Evidence graphs on.
+**Status:** Spike 15 design input, not yet cut into PRs ([`README.md`](README.md)); planned with the Source schema pass ([`citation-formats.md`](citation-formats.md), [`source-provenance-date.md`](source-provenance-date.md)) (user, 2026-11-01). Once Sources carry the fields a citation needs, which Source an Artifact sits under matters more, and researchers will want to re-file Artifacts they already built Evidence graphs on.
 
 ## Problem
 
@@ -27,7 +27,7 @@ So a move is an update of `source_id` on three tables in one transaction, with n
 2. `evidence_graphs.source_id` for each graph that moves with it.
 3. `subjects.source_id` for every Subject in those graphs.
 
-Citations, Observations, `evidence_graph_artifacts`, locators, depictions and identity claims do not change. The composite key has no `ON UPDATE CASCADE`, so steps 2 and 3 either run with `PRAGMA defer_foreign_keys = ON` inside the transaction, or a migration adds `ON UPDATE CASCADE` to that key ([`add-catalog-migration`](../../.agents/skills/add-catalog-migration/SKILL.md), [`add-catalog-model`](../../.agents/skills/add-catalog-model/SKILL.md)). Pick one when planning.
+Citations, Observations, `evidence_graph_artifacts`, locators, depictions and identity claims do not change. The composite key has no `ON UPDATE CASCADE`, so steps 2 and 3 either run with `PRAGMA defer_foreign_keys = ON` inside the transaction, or a migration adds `ON UPDATE CASCADE` to that key ([`add-catalog-migration`](../../../.agents/skills/add-catalog-migration/SKILL.md), [`add-catalog-model`](../../../.agents/skills/add-catalog-model/SKILL.md)). Pick one when planning.
 
 ## Which graphs move
 
@@ -45,17 +45,17 @@ Splitting a shared graph (moving only the part built on one Artifact) is out of 
 
 ## Side effects to name in the confirm
 
-- **Credibility.** Assessments are per Source ([`source-structure-later.md`](source-structure-later.md) "Per-graph credibility"), so the moved Observations are scored with the target Source's credibility from then on, and Conclusions that rest on them can re-rank. The confirm says so when the two Sources' assessments differ.
+- **Credibility.** Assessments are per Source ([`source-structure-later.md`](../../ideas/source-structure-later.md) "Per-graph credibility"), so the moved Observations are scored with the target Source's credibility from then on, and Conclusions that rest on them can re-rank. The confirm says so when the two Sources' assessments differ.
 - **Citation line.** The provenance sheet's citation line, and later the formatter, read the new Source's title and fields.
 - **Empty Source.** If the old Source is left with no Artifacts, say so; do not delete it.
 
 ## Engine notes
 
-- One write through the catalog session ([`use-catalog-session`](../../.agents/skills/use-catalog-session/SKILL.md)) and one FFI handler, for example `MoveArtifactsToSource(artifact_ids, target_source_id)` ([`add-ffi-handler`](../../.agents/skills/add-ffi-handler/SKILL.md)), plus a read that previews the closure (graphs, Subjects, Artifacts that would have to come along) for the confirm.
-- **Audit:** one transaction scoped to **both** Sources, so each Source's history and "Updated" sort show the move ([`add-audit-scope`](../../.agents/skills/add-audit-scope/SKILL.md)). Earlier transactions keep their old scope.
+- One write through the catalog session ([`use-catalog-session`](../../../.agents/skills/use-catalog-session/SKILL.md)) and one FFI handler, for example `MoveArtifactsToSource(artifact_ids, target_source_id)` ([`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md)), plus a read that previews the closure (graphs, Subjects, Artifacts that would have to come along) for the confirm.
+- **Audit:** one transaction scoped to **both** Sources, so each Source's history and "Updated" sort show the move ([`add-audit-scope`](../../../.agents/skills/add-audit-scope/SKILL.md)). Earlier transactions keep their old scope.
 - **Refs:** unchanged; `ART-`, `GPH-`, `CIT-` and Subject refs are project-wide.
-- **Search and caches:** re-project the moved rows' search documents if a hit shows its Source title ([`add-searchable-kind`](../../.agents/skills/add-searchable-kind/SKILL.md)); refresh both Sources' pages, the Sources list counts, and any Person page whose provenance rows name the old Source.
-- **Navigation:** if the researcher was on the moved Artifact or graph, land them on it under its new Source ([`add-workspace-location`](../../.agents/skills/add-workspace-location/SKILL.md)).
+- **Search and caches:** re-project the moved rows' search documents if a hit shows its Source title ([`add-searchable-kind`](../../../.agents/skills/add-searchable-kind/SKILL.md)); refresh both Sources' pages, the Sources list counts, and any Person page whose provenance rows name the old Source.
+- **Navigation:** if the researcher was on the moved Artifact or graph, land them on it under its new Source ([`add-workspace-location`](../../../.agents/skills/add-workspace-location/SKILL.md)).
 
 ## Open questions
 

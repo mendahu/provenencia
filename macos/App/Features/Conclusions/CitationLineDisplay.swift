@@ -2,7 +2,7 @@ import Foundation
 
 /// A record's citation line: "Source, Artifact, Citation, page" (S13-11). The
 /// one place to replace when the standard-citation formatter of
-/// `docs/ideas/citation-formats.md` lands.
+/// `docs/deployment-plan/spike-15/citation-formats.md` lands.
 enum CitationLineDisplay {
     /// The Source's title (else the Observation ref), the Artifact label, the
     /// Citation label and the page, each trimmed and dropped when empty. The
