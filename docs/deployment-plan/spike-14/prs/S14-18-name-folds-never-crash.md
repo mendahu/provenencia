@@ -40,7 +40,7 @@ A person whose records hold a chain of name forms, such as B., Bill and William,
 
 **US-1.** As a researcher, when a person's records hold name forms that fold in a chain, the person files, reopens and shows the formal name the chain reaches, so the app does not crash.
 
-Every example: one candidate per name, `surname=Robins` on each, product rules (`autoreconciler.ValueRules`), cardinality single.
+Every example: one candidate per name in the order listed, ObservationIDs `{0,0,0,1}`, `{0,0,0,2}`, … in that order, no SourceID, default Provenance, `surname=Robins` added to each, product rules (`autoreconciler.ValueRules`), cardinality single. Each list gives one value, reason `kept`, holding every candidate; parts are compared in order. The last name of each chain row has outcome `kept` and the others `folded`; in AC-1.7 all three are `kept`.
 
 | AC | Given / when | Then |
 | --- | --- | --- |
@@ -51,7 +51,7 @@ Every example: one candidate per name, `surname=Robins` on each, product rules (
 | AC-1.5 | Given Caroline, Chick, Charles | given `Charles` |
 | AC-1.6 | Given Ann, Anna, Hannah | given `Hannah` |
 | AC-1.7 | Given Dick, Ricky, Rick (a fold cycle with no way out) | given `Dick`, `Ricky`, `Rick`, in that order; no panic |
-| AC-1.8 | Given Joseph, José, and `given=Joseph|given=Jose` | given `Joseph`, `Jose` |
+| AC-1.8 | Given Joseph; given José; and one candidate with two given parts, `given=Joseph|given=Jose` | given `Joseph`, `Jose`; outcomes `folded`, `folded`, `kept` |
 | AC-1.9 | A Subject with given Ann, one with Anna, one with Hannah, promoted and joined into one person, then the cache rebuilt | The joins succeed; the cached name is `given=Hannah|surname=Robins`; upkeep equals rebuild |
 
 **US-2.** As a contributor, the reconciler's fold has no assumption that random lists of nicknames, initials, prefixes and accented forms can break, and the cache rebuilds once for the new resolution.
@@ -187,12 +187,12 @@ None — no copy changes.
 
 **STEP-1 — Resolve folds through chains**
 Files: `core/autoreconcile/pipeline.go`. Skill: `add-match-rule`.
-Do: rewrite `foldValues` per D-1 and D-2. Keep the signature and `root`. Update the doc comment above `foldValues`: "foldValues points each value at the best supported, then best ranked, value it reaches through folds that folds into nothing, and totals each root's Sources and strength. A value that reaches none, as in a fold cycle, is its own root."
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/autoreconcile/ ./core/subjectprofile/ ./core/database/autoreconciler/` passes with no test edited.
+Do: rewrite `foldValues` per D-1 and D-2. Keep the signature and `root`. Reword the `unitValue` field comments "nil when maximal" → "nil on a root" and "Set on maximal values:" → "Set on roots:", and `elect`'s comment "a maximal value with at least" → "a root with at least". After the step, `rg -n maximal core/autoreconcile/*.go` has no hit outside tests. Update the doc comment above `foldValues`: "foldValues points each value at the best supported, then best ranked, value it reaches through folds that folds into nothing, and totals each root's Sources and strength. A value that reaches none, as in a fold cycle, is its own root."
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/autoreconcile/ ./core/subjectprofile/ ./core/database/autoreconciler/ ./core/database/promotealign/` passes with no test edited. `CGO_ENABLED=1 go test -tags fts5 -run '^$' -bench BenchmarkReconcileNames -count 5 ./core/autoreconcile/`, run with and without this step (`git stash`) on the same machine: the median with it is at most 25% slower.
 
 **STEP-2 — Pure tests**
 Files: `core/autoreconcile/names_test.go`, `core/autoreconcile/pipeline_test.go`. Rule: `go-tests.mdc`.
-Do: add `chainRules` beside `aliasRules`: `testRules` plus one `FormalFirst` nickname table, roles given / nick / untyped, sets `{william, bill}`, `{richard, dick}`, `{ricky, dick}`, `{rick, ricky}`, `{dick, rick}`, `{hannah, anna}`, `{anna, ann}`. Add T-1, T-2, T-3. Widen `TestReconcileNamesInvariants` (T-4).
+Do: add `chainRules` beside `aliasRules`, built as `aliasRules` is (copy of `testRules`, `valuecompare.NewAliasIndex(…, rules.Words)`) with one table: `Key: "chains"`, `Kind: valuecompare.AliasNickname`, roles given / nick / untyped, `FormalFirst: true`, sets `{william, bill}`, `{richard, dick}`, `{ricky, dick}`, `{rick, ricky}`, `{dick, rick}`, `{hannah, anna}`, `{anna, ann}`. Add T-1, T-2, T-3. Widen `TestReconcileNamesInvariants` (T-4).
 Check: `CGO_ENABLED=1 go test -tags fts5 -run 'TestReconcileNames|TestFoldValuesRoots' ./core/autoreconcile/` passes; with STEP-1 reverted (`git stash`), T-1 panics. Restore.
 
 **STEP-3 — Product-rule tests**
@@ -212,7 +212,7 @@ Check: `rg -n "fold cycle" docs/conclusion-reconciliation.md` hits the new sente
 
 **STEP-6 — Version bump**
 Files: `VERSION`, `core/version.go`, `macos/Provenencia.xcodeproj/project.pbxproj` (every `MARKETING_VERSION` line). Rule: `versioning.mdc`.
-Do: product patch bump, all together.
+Do: product patch bump, all together: `0.2.5` → `0.2.6`, or the next patch after whatever `VERSION` holds at your base.
 Check: `VERSION`, `core.Version` and every `MARKETING_VERSION` line show the same new version.
 
 **STEP-7 — Docs**
@@ -226,13 +226,13 @@ Commits: one per behavior. (1) "Resolve a name fold through its chain so a perso
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Go | `core/autoreconcile/names_test.go` `TestReconcileNamesFoldChains` *(new)* | Under `chainRules`, `checkNames`, `StateMerged`, one value each: B., Bill, William → `given=William|surname=Robins`; Ann, Anna, Hannah → `given=Hannah|…`; Dick, Ricky, Rick → `given=Dick|given=Ricky|given=Rick|…`; Dick, Ricky, Rick, Richard → `given=Richard|…`; B., Bill → `given=Bill|…`; B., William → `given=B.|given=William|…` | AC-1.1, AC-1.6, AC-1.7, D-1, D-2 |
+| T-1 | Go | `core/autoreconcile/names_test.go` `TestReconcileNamesFoldChains` *(new)* | Under `chainRules`, `checkNames(t, chainRules, in, want, StateMerged, "kept")`; candidates `nm(1, …)`, `nm(2, …)`, … in the order listed, `surname=Robins` on each; one value holding every id: B., Bill, William → `given=William|surname=Robins`; Ann, Anna, Hannah → `given=Hannah|surname=Robins`; Dick, Ricky, Rick → `given=Dick|given=Ricky|given=Rick|surname=Robins`; Dick, Ricky, Rick, Richard → `given=Richard|surname=Robins`; B., Bill → `given=Bill|surname=Robins`; B., William → `given=B.|given=William|surname=Robins` | AC-1.1, AC-1.6, AC-1.7, D-1, D-2 |
 | T-2 | Go | same file, `TestReconcileNamesFoldChains` reversed-order rows | Each T-1 list's candidates, same ids, passed in reverse slice order → the same result | D-1 (order-free) |
-| T-3 | Go | `core/autoreconcile/pipeline_test.go` `TestFoldValuesRoots` *(new)* | Seeded random lists over the T-4 pool under `chainRules`; split with `moduleFor(chainRules, propertymeta.ValueTypeName).split`, grouped by unit name as `reconcile` does, then `foldValues` → every `into == nil` value has `total != nil`; every `into != nil` value's `into.into == nil` | AC-2.2 |
-| T-4 | Go | `core/autoreconcile/names_test.go` `TestReconcileNamesInvariants` | Runs once under `testRules` and once under `chainRules`. The `given` pool adds B., Bill, William, D., Dick, Ricky, Rick, Richard, Ann, Anna, Hannah, Des, Desiree, José, Jose, Joseph; `nick` adds Bill, Dick. Existing invariants unchanged | AC-2.2, D-4 |
-| T-5 | Go | `core/database/autoreconciler/autoreconciler_test.go` `TestValueRulesFoldChains` *(new)* | `autoreconciler.ValueRules`, one candidate per name: the eight AC-1.1 – AC-1.8 lists → the given lists in §2 | AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-1.6, AC-1.7, AC-1.8 |
-| T-6 | Go | same file, `TestValueRulesNamesInvariants` *(new)* | Seeds 1 – 4 × 500 lists, up to 8 candidates, given units of one to three words from: B., Bill, William, D., Dick, Richard, Rick, Ricky, P., Peggy, Margaret, Mo, Molly, Mary, Caroline, Chick, Charles, Ann, Anna, Hannah, Joseph, José, Jose, Des, Desiree, J., Jim, James, Jake; surname Robins → no panic, each positive candidate in exactly one value, shuffled input gives a deeply equal result | AC-2.1 |
-| T-7 | Go | same file, `TestReconciledNames` subtest "a chain of folds files and rebuilds" *(new)* | Three Subjects with given Ann, Anna, Hannah (surname Robins), `f.promote` the first and `f.join` the others → one name row, `given=Hannah|surname=Robins`; the test's closing `assertUpkeepEqualsRebuild` passes | AC-1.9 |
+| T-3 | Go | `core/autoreconcile/pipeline_test.go` `TestFoldValuesRoots` *(new)* | Lists from T-4's generator (seeds 1 – 4 × 200, under `chainRules`). For each list, copy `reconcile`'s grouping loop (`pipeline.go`, the `byName` loop under "3–5. Per unit") into the test: `rank` = the candidate's slice index, `sources` from `sourceKey`, one Source per candidate (no SourceID). Run `foldValues(moduleFor(chainRules, propertymeta.ValueTypeName), name, vals)` per unit name → every `into == nil` value has `total != nil`; every `into != nil` value's `into.into == nil` | AC-2.2 |
+| T-4 | Go | `core/autoreconcile/names_test.go` `TestReconcileNamesInvariants` | The whole body runs once under `testRules` and once under `chainRules`, every invariant included (the rename check holds under `chainRules`: probe at the planning base). The `given` pool adds B., Bill, William, D., Dick, Ricky, Rick, Richard, Ann, Anna, Hannah, Des, Desiree, José, Jose, Joseph; `nick` adds Bill, Dick. The generator is otherwise unchanged (up to 4 parts, so a type's unit holds one to several words) | AC-2.2, D-4 |
+| T-5 | Go | `core/database/autoreconciler/autoreconciler_test.go` `TestValueRulesFoldChains` *(new)* | `autoreconciler.ValueRules`, candidates built as `TestValueRulesFoldNicknamesOnly` builds them (`nameValue`), ids and order as in §2; assert one value, its parts in order, and each Outcome's reason: the eight AC-1.1 – AC-1.8 lists → the given lists in §2 | AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-1.6, AC-1.7, AC-1.8 |
+| T-6 | Go | same file, `TestValueRulesNamesInvariants` *(new)* | Seeds 1 – 4 × 500 lists of 0 – 7 candidates. Each candidate: one to three `given` parts (each a separate part, `given=<word>`), then `surname=Robins`; ObservationID `{0,0,0,i+1}`; no SourceID; default Provenance; never negative or provisional. Words from: B., Bill, William, D., Dick, Richard, Rick, Ricky, P., Peggy, Margaret, Mo, Molly, Mary, Caroline, Chick, Charles, Ann, Anna, Hannah, Joseph, José, Jose, Des, Desiree, J., Jim, James, Jake → `Reconcile` returns no error and does not panic; each candidate is in exactly one value; the same candidates in a shuffled slice give a `reflect.DeepEqual` result | AC-2.1 |
+| T-7 | Go | same file, `TestReconciledNames` subtest "a chain of folds files and rebuilds" *(new)* | Three Subjects: Ann on `f.subject("person")`, Anna on `f.subjectOn(f.other, "person")`, Hannah on `f.subject("person")`, each `given=…|surname=Robins` cited with `nameIn(…, f.props["name"], …)`; `f.promote` Ann and `f.join` the other two → one name row, `given=Hannah|surname=Robins`; the test's closing `assertUpkeepEqualsRebuild` passes | AC-1.9 |
 | T-8 | Go | same file, `TestEnsureCatalogRebuildsStaleVersion`, `TestProductAliasTablesPinCacheVersion` | Stale version 21 rebuilds; pin is version 22 with the unchanged hash | AC-2.3, D-3 |
 | T-9 | Go | same file, `TestValueRulesFoldNicknamesOnly` (unchanged) | Every row as at the planning base | AC-2.4 |
 
@@ -278,7 +278,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `.
 - Any existing test in `./core/autoreconcile/`, `./core/subjectprofile/`, `./core/database/autoreconciler/` or `./core/database/promotealign/` fails after STEP-1 without a test edit.
 - An AC-1.x result under product rules differs from §2. Report the output; do not change the expected value.
 - `TestProductAliasTablesPinCacheVersion` reports a changed hash (something edited the seed).
-- `BenchmarkReconcileNames` is more than 25% slower than at the planning base.
+- The STEP-1 benchmark check fails (median more than 25% slower than without STEP-1).
 
 ## 12. Open questions
 
