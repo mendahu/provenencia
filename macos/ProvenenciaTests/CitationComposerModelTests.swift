@@ -1680,7 +1680,8 @@ struct CitationComposerModelTests {
         model.requestSelectArtifact("art-1")
         let switched = await waitUntil { !model.isSwitchingCitation && model.selectedArtifactID == "art-1" }
         #expect(switched)
-        #expect(model.fields.error != nil)
+        #expect(model.citationLoadError != nil)
+        #expect(model.fields.error == nil)
         #expect(model.activeCitationID == nil)
     }
 
