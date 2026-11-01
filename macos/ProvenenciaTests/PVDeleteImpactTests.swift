@@ -202,17 +202,20 @@ struct PVDeleteImpactCopyTests {
         }
     }
 
-    @Test @MainActor func activateNavigatesThenDismisses() {
+    @Test @MainActor func activateClosesThenNavigates() {
         var navigated: WorkspaceLocation?
-        var dismissed = false
+        var closed = false
         let row = PVDeleteImpactPreviewData.listed(ref: "OBS-4Q2PA", title: "Name: Ellen Hartley")
         PVDeleteImpactControls.activate(
             row,
             onNavigate: { navigated = $0 },
-            dismiss: { dismissed = true },
-            then: { $0() }
+            close: PVSheetClose { next in
+                closed = true
+                #expect(navigated == nil)
+                next()
+            }
         )
-        #expect(dismissed)
+        #expect(closed)
         #expect(navigated == row.location)
     }
 }

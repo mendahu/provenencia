@@ -150,18 +150,10 @@ enum PVDeleteImpactControls {
     static func activate(
         _ listed: CatalogDeleteImpactListed,
         onNavigate: @escaping (WorkspaceLocation) -> Void,
-        dismiss: () -> Void,
-        then: ((@escaping () -> Void) -> Void)? = nil
+        close: PVSheetClose
     ) {
-        dismiss()
         let location = listed.location
-        if let then {
-            then { onNavigate(location) }
-            return
-        }
-        Task { @MainActor in
-            onNavigate(location)
-        }
+        close { onNavigate(location) }
     }
 }
 
@@ -180,7 +172,8 @@ struct PVDeleteImpactNotice: View {
     let target: PVDeleteImpactTarget
     let report: CatalogDeleteImpact
     let onNavigate: (WorkspaceLocation) -> Void
-    let onDismiss: () -> Void
+
+    @Environment(\.pvSheetClose) private var close
 
     var body: some View {
         let groups = report.groups.filter { $0.total > 0 }
@@ -202,8 +195,7 @@ struct PVDeleteImpactNotice: View {
                             PVDeleteImpactGroupList(
                                 title: PVDeleteImpactCopy.heading(group),
                                 group: group,
-                                onNavigate: onNavigate,
-                                dismiss: onDismiss
+                                onNavigate: onNavigate
                             )
                         }
                     }
@@ -214,7 +206,7 @@ struct PVDeleteImpactNotice: View {
         } footer: {
             HStack {
                 Spacer(minLength: PVSpacing.space8)
-                PVButton(L10n.DeleteImpact.done, variant: .primary, size: .lg, action: onDismiss)
+                PVButton(L10n.DeleteImpact.done, variant: .primary, size: .lg) { close() }
                     .keyboardShortcut(.defaultAction)
                     .accessibilityIdentifier("deleteImpact.done")
             }
@@ -246,13 +238,15 @@ struct PVDeleteImpactGroupStack<Content: View>: View {
 /// One DeleteImpact group: a title line (with the raw `via` when it is not a
 /// known one), the listed rows as buttons, and an "and N more" line. The notice
 /// titles each group with its heading; a form that lists what blocks a change
-/// titles it with what the rows block. A row dismisses, then navigates
-/// (``PVDeleteImpactControls/activate(_:onNavigate:dismiss:then:)``).
+/// titles it with what the rows block. A row closes the sheet through
+/// `pvSheetClose`, then navigates
+/// (``PVDeleteImpactControls/activate(_:onNavigate:close:)``).
 struct PVDeleteImpactGroupList: View {
     let title: String
     let group: CatalogDeleteImpactGroup
     let onNavigate: (WorkspaceLocation) -> Void
-    let dismiss: () -> Void
+
+    @Environment(\.pvSheetClose) private var close
 
     var body: some View {
         let rest = PVDeleteImpactControls.remainder(total: group.total, listedCount: group.listed.count)
@@ -273,7 +267,7 @@ struct PVDeleteImpactGroupList: View {
                 ForEach(Array(group.listed.enumerated()), id: \.element.id) { index, row in
                     if index > 0 { PVDivider() }
                     Button {
-                        PVDeleteImpactControls.activate(row, onNavigate: onNavigate, dismiss: dismiss)
+                        PVDeleteImpactControls.activate(row, onNavigate: onNavigate, close: close)
                     } label: {
                         HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space5) {
                             Text(verbatim: row.ref)
@@ -392,8 +386,7 @@ extension View {
                 PVDeleteImpactNotice(
                     target: request.target,
                     report: request.report,
-                    onNavigate: onNavigate,
-                    onDismiss: { item.wrappedValue = nil }
+                    onNavigate: onNavigate
                 )
             }
     }
@@ -652,8 +645,7 @@ enum PVDeleteImpactPreviewData {
     PVDeleteImpactNotice(
         target: PVDeleteImpactPreviewData.citation,
         report: PVDeleteImpactPreviewData.blockedCitation,
-        onNavigate: { _ in },
-        onDismiss: {}
+        onNavigate: { _ in }
     )
 }
 
@@ -661,8 +653,7 @@ enum PVDeleteImpactPreviewData {
     PVDeleteImpactNotice(
         target: PVDeleteImpactPreviewData.subjectG2,
         report: PVDeleteImpactPreviewData.blockedG2,
-        onNavigate: { _ in },
-        onDismiss: {}
+        onNavigate: { _ in }
     )
 }
 
@@ -670,8 +661,7 @@ enum PVDeleteImpactPreviewData {
     PVDeleteImpactNotice(
         target: PVDeleteImpactPreviewData.subjectG2,
         report: PVDeleteImpactPreviewData.blockedG4,
-        onNavigate: { _ in },
-        onDismiss: {}
+        onNavigate: { _ in }
     )
 }
 
@@ -679,8 +669,7 @@ enum PVDeleteImpactPreviewData {
     PVDeleteImpactNotice(
         target: PVDeleteImpactPreviewData.citation,
         report: PVDeleteImpactPreviewData.overflow,
-        onNavigate: { _ in },
-        onDismiss: {}
+        onNavigate: { _ in }
     )
 }
 
@@ -688,8 +677,7 @@ enum PVDeleteImpactPreviewData {
     PVDeleteImpactNotice(
         target: PVDeleteImpactPreviewData.observation,
         report: PVDeleteImpactPreviewData.unknownVia,
-        onNavigate: { _ in },
-        onDismiss: {}
+        onNavigate: { _ in }
     )
 }
 
@@ -697,8 +685,7 @@ enum PVDeleteImpactPreviewData {
     PVDeleteImpactNotice(
         target: PVDeleteImpactPreviewData.observation,
         report: CatalogDeleteImpact(allowed: false, gate: .edgeLocked, groups: []),
-        onNavigate: { _ in },
-        onDismiss: {}
+        onNavigate: { _ in }
     )
 }
 
@@ -706,8 +693,7 @@ enum PVDeleteImpactPreviewData {
     PVDeleteImpactNotice(
         target: PVDeleteImpactPreviewData.citation,
         report: CatalogDeleteImpact(allowed: false, gate: .notFound, groups: []),
-        onNavigate: { _ in },
-        onDismiss: {}
+        onNavigate: { _ in }
     )
 }
 
@@ -715,8 +701,7 @@ enum PVDeleteImpactPreviewData {
     PVDeleteImpactNotice(
         target: PVDeleteImpactPreviewData.property,
         report: CatalogDeleteImpact(allowed: false, gate: .originLocked, groups: []),
-        onNavigate: { _ in },
-        onDismiss: {}
+        onNavigate: { _ in }
     )
 }
 
@@ -724,8 +709,7 @@ enum PVDeleteImpactPreviewData {
     PVDeleteImpactNotice(
         target: PVDeleteImpactPreviewData.user,
         report: CatalogDeleteImpact(allowed: false, gate: .infra, groups: []),
-        onNavigate: { _ in },
-        onDismiss: {}
+        onNavigate: { _ in }
     )
 }
 
@@ -733,8 +717,7 @@ enum PVDeleteImpactPreviewData {
     PVDeleteImpactNotice(
         target: PVDeleteImpactPreviewData.bridge,
         report: PVDeleteImpactPreviewData.g6Extras,
-        onNavigate: { _ in },
-        onDismiss: {}
+        onNavigate: { _ in }
     )
 }
 
@@ -742,7 +725,6 @@ enum PVDeleteImpactPreviewData {
     PVDeleteImpactNotice(
         target: PVDeleteImpactPreviewData.property,
         report: PVDeleteImpactPreviewData.propertyTerms,
-        onNavigate: { _ in },
-        onDismiss: {}
+        onNavigate: { _ in }
     )
 }

@@ -236,6 +236,13 @@ once and carries no key of its own. A new sheet gets all of this by presenting
 with `.pvSheet`; do not add a raw `.sheet`, `.pvOutsideClick` or
 `.keyboardShortcut(.cancelAction)` for a sheet.
 
+Content closes its sheet through `@Environment(\.pvSheetClose)`: a dirty sheet
+asks first, then runs the step it was given. A place's `WorkspaceLeaveGuard`
+still holds the navigation that follows. The step waits in a `PVDiscardGate`
+(`Components/Confirm/PVDiscardGate.swift`), the one held-step type for every
+"ask, then do": the owner keeps its own question on screen, the gate hands the
+step out once on Discard and drops it on Keep editing.
+
 ## The combo box subset
 
 `PVComboBox` ports `components/forms/ComboBox.jsx`, but only the
