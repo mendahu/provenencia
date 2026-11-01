@@ -86,18 +86,34 @@ enum CatalogSearchHitPresentation {
         hit.summary.map(ConclusionSummaryDisplay.secondary) ?? hit.subtitle
     }
 
-    /// The lead thumbnail, or nil for a `source` hit, which `CatalogSearchHitRow`
-    /// draws from the Source's own image.
+    /// The image path `CatalogSearchHitRow` loads when `leadThumbnail` is nil:
+    /// a conclusion's lead picture (what its list row shows), else the Source cover.
+    static func leadRelPath(for hit: CatalogSearchHit) -> String {
+        let picture = hit.summary?.pictureImageRelPath ?? ""
+        return picture.isEmpty ? hit.thumbnailRelPath : picture
+    }
+
+    /// The mark a conclusion hit falls back to when its picture cannot load.
+    static func fallbackMark(for hit: CatalogSearchHit) -> PVMarkKey? {
+        switch hit.searchKind {
+        case .person: EvidencePrimaryKind.person.markKey
+        case .event: EvidencePrimaryKind.event.markKey
+        case .place: EvidencePrimaryKind.place.markKey
+        default: nil
+        }
+    }
+
+    /// The lead thumbnail, or nil when `CatalogSearchHitRow` draws an image:
+    /// a `source` hit's cover, or a person/event/place hit's lead picture.
     static func leadThumbnail(for hit: CatalogSearchHit) -> PVThumbnail.Content? {
+        if !(hit.summary?.pictureImageRelPath ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return nil
+        }
         switch hit.searchKind {
         case .source:
             return nil
-        case .person:
-            return ConclusionListRow.thumbnail(mark: EvidencePrimaryKind.person.markKey)
-        case .event:
-            return ConclusionListRow.thumbnail(mark: EvidencePrimaryKind.event.markKey)
-        case .place:
-            return ConclusionListRow.thumbnail(mark: EvidencePrimaryKind.place.markKey)
+        case .person, .event, .place:
+            return fallbackMark(for: hit).map { ConclusionListRow.thumbnail(mark: $0) }
         case .sourceType:
             if hit.iconKey.isEmpty { return PVThumbnail.Content(glyph: WorkspaceSection.sourceTypes.glyph) }
             return PVThumbnail.Content(

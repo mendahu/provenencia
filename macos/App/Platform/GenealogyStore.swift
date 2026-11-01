@@ -471,7 +471,7 @@ struct CatalogPersonSummary: Sendable, Equatable, Identifiable {
     /// The last revision that touched this Person and when; revision 0 when unknown.
     var updated = CatalogActivity()
     /// The `objects/…` path of the picture the Person leads with; "" when none.
-    /// Filled by the Person list and the detail reads only.
+    /// Filled by the Person list, the detail reads, and omnibar search hits.
     var pictureImageRelPath: String = ""
 
     var id: String { entity.id }
@@ -744,6 +744,15 @@ extension CatalogConclusionSummary {
 
     var place: CatalogPlaceSummary? {
         if case .place(let summary) = self { summary } else { nil }
+    }
+
+    /// The `objects/…` path of the picture this summary leads with; "" when none.
+    var pictureImageRelPath: String {
+        switch self {
+        case .person(let summary): summary.pictureImageRelPath
+        case .event(let summary): summary.pictureImageRelPath
+        case .place(let summary): summary.pictureImageRelPath
+        }
     }
 }
 

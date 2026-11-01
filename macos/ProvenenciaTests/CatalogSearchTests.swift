@@ -288,6 +288,22 @@ struct CatalogSearchHitPresentationTests {
         #expect(leadHit(kind: "source_type").searchKind == .sourceType)
     }
 
+    @Test func aConclusionHitWithAPictureLeadsWithIt() {
+        let entity = CatalogCanonicalEntity(id: "p", ref: "PER-1", subjectTypeID: "t", label: "")
+        var person = CatalogPersonSummary(entity: entity, name: nil, nameValueCount: 0)
+        person.pictureImageRelPath = "objects/ab/cdef.png"
+        var hit = leadHit(kind: "person")
+        hit.summary = .person(person)
+        #expect(CatalogSearchHitPresentation.leadThumbnail(for: hit) == nil)
+        #expect(CatalogSearchHitPresentation.leadRelPath(for: hit) == "objects/ab/cdef.png")
+        #expect(CatalogSearchHitPresentation.fallbackMark(for: hit) == EvidencePrimaryKind.person.markKey)
+
+        // No picture: the kind mark, as before.
+        person.pictureImageRelPath = ""
+        hit.summary = .person(person)
+        #expect(CatalogSearchHitPresentation.leadThumbnail(for: hit)?.glyph == .mark(EvidencePrimaryKind.person.markKey))
+    }
+
     private func leadHit(kind: String, iconKey: String = "") -> CatalogSearchHit {
         CatalogSearchHit(
             kind: kind, id: "h", ref: "REF-AAAAA", title: "Title", subtitle: "",

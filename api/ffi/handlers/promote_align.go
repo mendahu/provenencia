@@ -100,11 +100,11 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 				HandleId:  database.UUIDString(a.HandleID),
 				HandleRef: a.Ref,
 			}
-			alt.Summary = conclusionSummaryProto(summaries, r.Kind, a.HandleID)
+			alt.Summary = conclusionSummaryProto(summaries, r.Kind, a.HandleID, nil)
 			row.Alternatives = append(row.Alternatives, alt)
 		}
 		if start.Target == graphalign.TargetHandle && len(start.HandleID) == 16 {
-			row.Summary = conclusionSummaryProto(summaries, r.Kind, start.HandleID)
+			row.Summary = conclusionSummaryProto(summaries, r.Kind, start.HandleID, nil)
 		}
 		out.Rows = append(out.Rows, row)
 	}

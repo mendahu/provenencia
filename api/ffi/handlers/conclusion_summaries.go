@@ -45,20 +45,27 @@ func ListPersonSummaries(in []byte) ([]byte, error) {
 }
 
 // conclusionSummaryProto wraps the summary of the handle id of the given kind,
-// nil when that id was not read.
-func conclusionSummaryProto(s conclusionsummaries.Summaries, kind string, id []byte) *engine.ConclusionSummary {
+// nil when that id was not read. paths maps a lead picture's image File to its
+// objects/… path (files.RelPaths); a nil map leaves the path empty.
+func conclusionSummaryProto(s conclusionsummaries.Summaries, kind string, id []byte, paths map[string]string) *engine.ConclusionSummary {
 	switch kind {
 	case vocabkey.Person:
 		if p, ok := s.Person(id); ok {
-			return &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Person{Person: personSummaryProto(p)}}
+			ps := personSummaryProto(p)
+			ps.PictureImageRelPath = paths[string(p.PictureImageFileID)]
+			return &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Person{Person: ps}}
 		}
 	case vocabkey.Event:
 		if e, ok := s.Event(id); ok {
-			return &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Event{Event: eventSummaryProto(e)}}
+			es := eventSummaryProto(e)
+			es.PictureImageRelPath = paths[string(e.PictureImageFileID)]
+			return &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Event{Event: es}}
 		}
 	case vocabkey.Place:
 		if p, ok := s.Place(id); ok {
-			return &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Place{Place: placeSummaryProto(p)}}
+			ps := placeSummaryProto(p)
+			ps.PictureImageRelPath = paths[string(p.PictureImageFileID)]
+			return &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Place{Place: ps}}
 		}
 	}
 	return nil

@@ -6,6 +6,7 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
+	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/search"
 	"github.com/mendahu/provenencia/core/workspacelocation"
 	"google.golang.org/protobuf/proto"
@@ -92,7 +93,8 @@ func locationToProto(loc workspacelocation.Location) *engine.WorkspaceLocation {
 	}
 }
 
-// fillHitSummaries attaches the list summary for each person, event, and place hit.
+// fillHitSummaries attaches the list summary for each person, event, and place
+// hit, with the lead picture path its list row shows.
 func fillHitSummaries(c *database.Catalog, hits []*engine.SearchHit) error {
 	var w conclusionsummaries.Want
 	for _, h := range hits {
@@ -104,9 +106,13 @@ func fillHitSummaries(c *database.Catalog, hits []*engine.SearchHit) error {
 	if err != nil {
 		return err
 	}
+	paths, err := files.RelPaths(c, summaries.PictureImageFileIDs())
+	if err != nil {
+		return err
+	}
 	for _, h := range hits {
 		if id, err := parseID(h.GetId()); err == nil {
-			h.Summary = conclusionSummaryProto(summaries, h.GetKind(), id)
+			h.Summary = conclusionSummaryProto(summaries, h.GetKind(), id, paths)
 		}
 	}
 	return nil

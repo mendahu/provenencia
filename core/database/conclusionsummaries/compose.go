@@ -253,6 +253,28 @@ func (h Summaries) Event(id []byte) (EventSummary, bool) { v, ok := h.events[str
 // Place is the summary of the Place with id, or false when it was not read.
 func (h Summaries) Place(id []byte) (PlaceSummary, bool) { v, ok := h.places[string(id)]; return v, ok }
 
+// PictureImageFileIDs is the image File of every summary that leads with a
+// picture, for one files.RelPaths call.
+func (h Summaries) PictureImageFileIDs() [][]byte {
+	var out [][]byte
+	for _, p := range h.persons {
+		if len(p.PictureImageFileID) > 0 {
+			out = append(out, p.PictureImageFileID)
+		}
+	}
+	for _, e := range h.events {
+		if len(e.PictureImageFileID) > 0 {
+			out = append(out, e.PictureImageFileID)
+		}
+	}
+	for _, p := range h.places {
+		if len(p.PictureImageFileID) > 0 {
+			out = append(out, p.PictureImageFileID)
+		}
+	}
+	return out
+}
+
 // Want is the Persons, Events and Places a read asks for, split by kind.
 type Want struct {
 	Persons, Events, Places [][]byte
