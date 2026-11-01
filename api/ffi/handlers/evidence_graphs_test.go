@@ -7,6 +7,7 @@ import (
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
+	"google.golang.org/protobuf/proto"
 )
 
 // graphFixture is citationFixture plus a second Artifact on the same Source, a
@@ -77,13 +78,9 @@ func (f graphFixture) list(t *testing.T) []*engine.EvidenceGraph {
 
 func (f graphFixture) graphsOf(t *testing.T, sourceID string) []*engine.EvidenceGraph {
 	t.Helper()
-	var out []*engine.EvidenceGraph
-	for _, g := range f.list(t) {
-		if g.GetSourceId() == sourceID {
-			out = append(out, g)
-		}
-	}
-	return out
+	var resp engine.ListEvidenceGraphsResponse
+	mustRPC(t, ListEvidenceGraphs, &engine.ListEvidenceGraphsRequest{ProjectDir: f.dir, SourceId: sourceID}, &resp)
+	return resp.GetGraphs()
 }
 
 func (f graphFixture) graph(t *testing.T, id string) *engine.EvidenceGraph {
@@ -105,10 +102,19 @@ func (f graphFixture) createGraph(t *testing.T, name string, artifactIDs ...stri
 	return &resp
 }
 
-func assertGraphEffects(t *testing.T, effects *engine.WriteEffects) {
+// assertGraphEffects checks a graph, link or Artifact write reported the
+// graph list read for sourceID and no catalog-wide list.
+func assertGraphEffects(t *testing.T, effects *engine.WriteEffects, sourceID string) {
 	t.Helper()
-	if !slices.Contains(effects.GetLists(), "evidence_graphs") || effects.GetRevision() <= 0 {
-		t.Fatalf("effects %+v", effects)
+	var read *engine.WriteEffectsRead
+	for _, r := range effects.GetReads() {
+		if r.GetRead() == "evidence_graphs" {
+			read = r
+		}
+	}
+	if read == nil || !slices.Equal(read.GetIds(), []string{sourceID}) ||
+		slices.Contains(effects.GetLists(), "evidence_graphs") || effects.GetRevision() <= 0 {
+		t.Fatalf("effects %+v, want evidence_graphs read for %s", effects, sourceID)
 	}
 }
 
@@ -136,11 +142,39 @@ func TestListEvidenceGraphs(t *testing.T) {
 	if got := f.graphsOf(t, srcB); len(got) != 1 || !slices.Equal(got[0].GetArtifactIds(), []string{pageB}) {
 		t.Fatalf("source B graphs %+v", got)
 	}
+	if f.graphsOf(t, srcB)[0].GetSourceId() != srcB {
+		t.Fatal("a Source's list holds another Source's graph")
+	}
 	a := f.graphsOf(t, f.sourceID)
 	if len(a) != 2 || a[0].GetName() != "Default" || a[1].GetName() != "Smith" ||
 		!slices.Equal(a[1].GetArtifactIds(), []string{f.page1}) || len(a[0].GetArtifactIds()) != 2 {
 		t.Fatalf("source A graphs %+v", a)
 	}
+}
+
+func TestListEvidenceGraphsSourceID(t *testing.T) {
+	f := newGraphFixture(t)
+	srcB, pageB := f.otherSource(t)
+	t.Run("one Source", func(t *testing.T) {
+		got := f.graphsOf(t, srcB)
+		if len(got) != 1 || !slices.Equal(got[0].GetArtifactIds(), []string{pageB}) {
+			t.Fatalf("graphs %+v", got)
+		}
+	})
+	t.Run("every Source", func(t *testing.T) {
+		if got := f.list(t); len(got) != 2 {
+			t.Fatalf("graphs %+v", got)
+		}
+	})
+	t.Run("bad source id", func(t *testing.T) {
+		in, err := proto.Marshal(&engine.ListEvidenceGraphsRequest{ProjectDir: f.dir, SourceId: "x"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := ListEvidenceGraphs(in); !errors.Is(err, errInvalidID) {
+			t.Fatalf("err %v, want errInvalidID", err)
+		}
+	})
 }
 
 func TestCreateEvidenceGraph(t *testing.T) {
@@ -156,7 +190,7 @@ func TestCreateEvidenceGraph(t *testing.T) {
 			g.GetDescription() != "Household 12" || !slices.Equal(g.GetArtifactIds(), []string{f.page1}) {
 			t.Fatalf("graph %+v", g)
 		}
-		assertGraphEffects(t, resp.GetEffects())
+		assertGraphEffects(t, resp.GetEffects(), f.sourceID)
 		if listed := f.graph(t, g.GetId()); listed == nil || listed.GetName() != "Jones" {
 			t.Fatalf("listed %+v", listed)
 		}
@@ -196,7 +230,7 @@ func TestUpdateEvidenceGraph(t *testing.T) {
 		mustRPC(t, UpdateEvidenceGraph, &engine.UpdateEvidenceGraphRequest{
 			ProjectDir: f.dir, UserId: f.userID, GraphId: id, Name: "Jones family", ArtifactIds: []string{f.page2},
 		}, &resp)
-		assertGraphEffects(t, resp.GetEffects())
+		assertGraphEffects(t, resp.GetEffects(), f.sourceID)
 		if resp.GetEffects().GetRevision() != created.GetEffects().GetRevision()+1 {
 			t.Fatalf("revision %d after %d", resp.GetEffects().GetRevision(), created.GetEffects().GetRevision())
 		}
@@ -245,7 +279,7 @@ func TestDeleteEvidenceGraph(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		assertGraphEffects(t, resp.GetEffects())
+		assertGraphEffects(t, resp.GetEffects(), f.sourceID)
 		if f.graph(t, id) != nil {
 			t.Fatal("graph still listed")
 		}

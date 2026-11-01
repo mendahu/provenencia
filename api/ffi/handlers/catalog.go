@@ -40,6 +40,14 @@ func parseID(s string) ([]byte, error) {
 	return u[:], nil
 }
 
+func optionalID(s string) ([]byte, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil, nil
+	}
+	return parseID(s)
+}
+
 // parseIDs parses a repeated id field; the first malformed id fails it. An
 // empty field returns nil.
 func parseIDs(raws []string) ([][]byte, error) {

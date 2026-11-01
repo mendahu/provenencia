@@ -3565,6 +3565,7 @@ func (x *EvidenceGraph) GetArtifactIds() []string {
 type ListEvidenceGraphsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	SourceId      string                 `protobuf:"bytes,2,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"` // empty: every graph of the project
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3602,6 +3603,13 @@ func (*ListEvidenceGraphsRequest) Descriptor() ([]byte, []int) {
 func (x *ListEvidenceGraphsRequest) GetProjectDir() string {
 	if x != nil {
 		return x.ProjectDir
+	}
+	return ""
+}
+
+func (x *ListEvidenceGraphsRequest) GetSourceId() string {
+	if x != nil {
+		return x.SourceId
 	}
 	return ""
 }
@@ -5967,13 +5975,14 @@ type WriteEffects struct {
 	// Swift patches the cached Sources list rows with (revision, revision_at).
 	SourceScopes []string `protobuf:"bytes,10,rep,name=source_scopes,json=sourceScopes,proto3" json:"source_scopes,omitempty"`
 	// Catalog-wide lists this write changed: effects.List values ("vocabulary",
-	// "property_usage", "evidence_graphs"). Swift drops the reads that show each.
+	// "property_usage"). Swift drops the reads that show each.
 	Lists []string `protobuf:"bytes,13,rep,name=lists,proto3" json:"lists,omitempty"`
 	// Evidence graphs whose loaded rows this write changed (graphcache drops each).
 	EvidenceGraphs []string `protobuf:"bytes,14,rep,name=evidence_graphs,json=evidenceGraphs,proto3" json:"evidence_graphs,omitempty"`
-	// Keyed partial reads this write moved, each with the Evidence graphs it
-	// moved them for: effects.Read values ("citations", "evidence_graph_progress").
-	// Swift refreshes only those graphs' reads.
+	// Keyed partial reads this write moved, each with the ids of the read's key
+	// table (Evidence graphs for "citations" and "evidence_graph_progress",
+	// Sources for "evidence_graphs"): effects.Read values. Swift refreshes only
+	// those keys' reads.
 	Reads         []*WriteEffectsRead `protobuf:"bytes,15,rep,name=reads,proto3" json:"reads,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -19061,10 +19070,11 @@ const file_engine_proto_rawDesc = "" +
 	"\tsource_id\x18\x03 \x01(\tR\bsourceId\x12\x12\n" +
 	"\x04name\x18\x04 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x05 \x01(\tR\vdescription\x12!\n" +
-	"\fartifact_ids\x18\x06 \x03(\tR\vartifactIds\"<\n" +
+	"\fartifact_ids\x18\x06 \x03(\tR\vartifactIds\"Y\n" +
 	"\x19ListEvidenceGraphsRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
-	"projectDir\"Z\n" +
+	"projectDir\x12\x1b\n" +
+	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"Z\n" +
 	"\x1aListEvidenceGraphsResponse\x12<\n" +
 	"\x06graphs\x18\x01 \x03(\v2$.provenencia.engine.v1.EvidenceGraphR\x06graphs\"\xcc\x01\n" +
 	"\x1aCreateEvidenceGraphRequest\x12\x1f\n" +
