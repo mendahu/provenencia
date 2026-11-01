@@ -1,6 +1,6 @@
 # S13-04 — Person family read
 
-**Status:** Planned
+**Status:** Landed in #671 (2026-11-01)
 **Spike / slice:** Spike 13 · Slice 3 — Family
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: an engine read, an RPC, a store method and a cache key; no view reads them until S13-12)
@@ -28,6 +28,8 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+**Landed:** the code differs from the plan in four places, all in tests. (1) `graphcachetest.Canon` ids now carry version 7 UUID bits (byte 6 `0x70`, byte 8 `0x80`): `parseID` rejects any other version, so T-5's handler test could not read a Canon person otherwise; id order is unchanged and every suite that uses Canon passes. (2) D-10's dropped relative is tested in `family_drop_test.go` (package `persondetail`) through `dropUnread`, a function split out of `PersonFamily`, because a summary missing mid-read cannot be built from a catalog. (3) `everyKindHasOneDescriptor` counts 20 kinds. (4) The query-count tests warm the default name format with `nameformats.Warm`, as a project session does; a cold format costs one query per summary read. `Marriage` and `Birth` return the event id and the participation ids, so `world.marriage` can name them.
 
 ## 1. Objective
 
