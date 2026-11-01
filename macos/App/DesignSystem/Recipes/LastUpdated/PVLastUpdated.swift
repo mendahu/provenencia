@@ -23,7 +23,7 @@ enum PVLastUpdated {
 
     /// A row's spoken label with its last-updated suffix.
     static func label(_ base: String, updatedAt: String, in context: TimestampFormat.Context) -> String {
-        L10n.LastUpdated.a11yJoin(
+        L10n.DesignSystem.spokenJoin(
             base,
             TimestampFormat.string(updatedAt, .spoken, in: context).map(L10n.LastUpdated.a11yUpdated)
                 ?? L10n.LastUpdated.a11yUnknown

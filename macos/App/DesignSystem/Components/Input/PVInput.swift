@@ -137,6 +137,7 @@ struct PVInput: View {
         Group {
             if isReadOnly {
                 Text(text)
+                    .accessibilityValue(Text(text))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .modifier(chrome(isFocused: false))
             } else if let equalsFocus {
