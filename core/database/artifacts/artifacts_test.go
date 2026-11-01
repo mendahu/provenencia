@@ -1,4 +1,4 @@
-package artifacts
+package artifacts_test
 
 import (
 	"bytes"
@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
@@ -31,12 +32,12 @@ import (
 )
 
 // createChanges creates an Artifact and returns the changes of that write.
-func createChanges(t *testing.T, c *database.Catalog, in CreateInput) (Artifact, []rowchange.Change, error) {
+func createChanges(t *testing.T, c *database.Catalog, in artifacts.CreateInput) (artifacts.Artifact, []rowchange.Change, error) {
 	t.Helper()
 	var changes []rowchange.Change
 	a, err := writes.Call(c, writes.Op{Action: "create_artifact", UserID: []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}},
-		func(tx *database.Tx) (Artifact, []rowchange.Change, error) {
-			a, ch, err := Create(tx, []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}, in)
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			a, ch, err := artifacts.Create(tx, []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}, in)
 			changes = ch
 			return a, ch, err
 		})
@@ -149,7 +150,7 @@ func TestArtifacts(t *testing.T) {
 					"zero":  {},
 					"named": {Given: true, IDs: [][]byte{graph}},
 				} {
-					a, changes, err := createChanges(t, c, CreateInput{SourceID: src.ID, Label: "Scan " + name, Graphs: links})
+					a, changes, err := createChanges(t, c, artifacts.CreateInput{SourceID: src.ID, Label: "Scan " + name, Graphs: links})
 					if err != nil {
 						t.Fatalf("%s: %v", name, err)
 					}
@@ -188,7 +189,7 @@ func TestArtifacts(t *testing.T) {
 				}
 				before := artifactCount(t, c)
 				for name, ids := range bad {
-					_, _, err := createChanges(t, c, CreateInput{SourceID: src.ID, Label: "Scan", Graphs: evidencegraphs.GraphLinks{Given: true, IDs: ids}})
+					_, _, err := createChanges(t, c, artifacts.CreateInput{SourceID: src.ID, Label: "Scan", Graphs: evidencegraphs.GraphLinks{Given: true, IDs: ids}})
 					if !errors.Is(err, evidencegraphs.ErrInvalid) {
 						t.Fatalf("%s: got %v", name, err)
 					}
@@ -203,7 +204,7 @@ func TestArtifacts(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				src := mustSource(t, c)
-				a, err := runCreate(c, userID, CreateInput{
+				a, err := runCreate(c, userID, artifacts.CreateInput{
 					SourceID:    src.ID,
 					Label:       "Physical copy",
 					Description: "held by Mary",
@@ -223,14 +224,14 @@ func TestArtifacts(t *testing.T) {
 				if latestAction(t, c) != "create_artifact" {
 					t.Fatalf("action %q", latestAction(t, c))
 				}
-				got, err := Get(c, a.ID)
+				got, err := artifacts.Get(c, a.ID)
 				if err != nil {
 					t.Fatal(err)
 				}
 				if got.Label != "Physical copy" || got.Description != "held by Mary" || got.FileID != nil {
 					t.Fatalf("got %+v", got)
 				}
-				byRef, err := getByRef(c, a.Ref)
+				byRef, err := artifacts.GetByRef(c, a.Ref)
 				if err != nil || string(byRef.ID) != string(a.ID) {
 					t.Fatalf("%v %+v", err, byRef)
 				}
@@ -242,14 +243,14 @@ func TestArtifacts(t *testing.T) {
 				mustUser(t, c)
 				src := mustSource(t, c)
 				f := mustFile(t, c, "scan.jpg", []byte("jpeg-bytes"))
-				a, err := runCreate(c, userID, CreateInput{SourceID: src.ID, FileID: f.ID, Label: "Scan"})
+				a, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, FileID: f.ID, Label: "Scan"})
 				if err != nil {
 					t.Fatal(err)
 				}
 				if string(a.FileID) != string(f.ID) {
 					t.Fatalf("file_id %+v", a)
 				}
-				got, err := Get(c, a.ID)
+				got, err := artifacts.Get(c, a.ID)
 				if err != nil || string(got.FileID) != string(f.ID) {
 					t.Fatalf("%v %+v", err, got)
 				}
@@ -260,15 +261,15 @@ func TestArtifacts(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				src := mustSource(t, c)
-				if _, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "  "}); !errors.Is(err, ErrInvalid) {
+				if _, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "  "}); !errors.Is(err, artifacts.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
-				a, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "Keep"})
+				a, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Keep"})
 				if err != nil {
 					t.Fatal(err)
 				}
 				a.Label = ""
-				if err := runUpdate(c, userID, a); !errors.Is(err, ErrInvalid) {
+				if err := runUpdate(c, userID, a); !errors.Is(err, artifacts.ErrInvalid) {
 					t.Fatalf("update empty label %v", err)
 				}
 			},
@@ -278,7 +279,7 @@ func TestArtifacts(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				src := mustSource(t, c)
-				a, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "Photo", Description: "photo"})
+				a, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Photo", Description: "photo"})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -303,10 +304,10 @@ func TestArtifacts(t *testing.T) {
 
 				f2 := mustFile(t, c, "b.bin", []byte("file-two"))
 				a.FileID = f2.ID
-				if err := runUpdate(c, userID, a); !errors.Is(err, ErrFileAlreadyAttached) {
+				if err := runUpdate(c, userID, a); !errors.Is(err, artifacts.ErrFileAlreadyAttached) {
 					t.Fatalf("got %v", err)
 				}
-				got, err := Get(c, a.ID)
+				got, err := artifacts.Get(c, a.ID)
 				if err != nil || string(got.FileID) != string(f1.ID) {
 					t.Fatalf("%v %+v", err, got)
 				}
@@ -324,12 +325,12 @@ func TestArtifacts(t *testing.T) {
 				mustUser(t, c)
 				src := mustSource(t, c)
 				f := mustFile(t, c, "x.bin", []byte("x"))
-				a, err := runCreate(c, userID, CreateInput{SourceID: src.ID, FileID: f.ID, Label: "X"})
+				a, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, FileID: f.ID, Label: "X"})
 				if err != nil {
 					t.Fatal(err)
 				}
 				a.FileID = nil
-				if err := runUpdate(c, userID, a); !errors.Is(err, ErrInvalid) {
+				if err := runUpdate(c, userID, a); !errors.Is(err, artifacts.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -341,16 +342,16 @@ func TestArtifacts(t *testing.T) {
 				src := mustSource(t, c)
 				missing := make([]byte, 16)
 				missing[15] = 9
-				if _, err := runCreate(c, userID, CreateInput{SourceID: missing, Label: "X"}); !errors.Is(err, ErrInvalid) {
+				if _, err := runCreate(c, userID, artifacts.CreateInput{SourceID: missing, Label: "X"}); !errors.Is(err, artifacts.ErrInvalid) {
 					t.Fatalf("bad source %v", err)
 				}
-				if _, err := runCreate(c, userID, CreateInput{SourceID: src.ID, FileID: missing, Label: "X"}); !errors.Is(err, ErrInvalid) {
+				if _, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, FileID: missing, Label: "X"}); !errors.Is(err, artifacts.ErrInvalid) {
 					t.Fatalf("bad file %v", err)
 				}
-				if _, err := runCreate(c, nil, CreateInput{SourceID: src.ID, Label: "X"}); !errors.Is(err, ErrInvalid) {
+				if _, err := runCreate(c, nil, artifacts.CreateInput{SourceID: src.ID, Label: "X"}); !errors.Is(err, artifacts.ErrInvalid) {
 					t.Fatalf("nil user %v", err)
 				}
-				if _, err := runCreate(c, []byte{1}, CreateInput{SourceID: src.ID, Label: "X"}); !errors.Is(err, ErrInvalid) {
+				if _, err := runCreate(c, []byte{1}, artifacts.CreateInput{SourceID: src.ID, Label: "X"}); !errors.Is(err, artifacts.ErrInvalid) {
 					t.Fatalf("short user %v", err)
 				}
 			},
@@ -377,16 +378,16 @@ func TestArtifacts(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := runCreate(c, userID, CreateInput{SourceID: s1.ID, Label: "a", Description: "a"}); err != nil {
+				if _, err := runCreate(c, userID, artifacts.CreateInput{SourceID: s1.ID, Label: "a", Description: "a"}); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := runCreate(c, userID, CreateInput{SourceID: s1.ID, Label: "b", Description: "b"}); err != nil {
+				if _, err := runCreate(c, userID, artifacts.CreateInput{SourceID: s1.ID, Label: "b", Description: "b"}); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := runCreate(c, userID, CreateInput{SourceID: s2.ID, Label: "c", Description: "c"}); err != nil {
+				if _, err := runCreate(c, userID, artifacts.CreateInput{SourceID: s2.ID, Label: "c", Description: "c"}); err != nil {
 					t.Fatal(err)
 				}
-				list, err := ListBySource(c, s1.ID)
+				list, err := artifacts.ListBySource(c, s1.ID)
 				if err != nil || len(list) != 2 {
 					t.Fatalf("%v len=%d", err, len(list))
 				}
@@ -403,7 +404,7 @@ func TestArtifacts(t *testing.T) {
 				mustUser(t, c)
 				src := mustSource(t, c)
 				f := mustFile(t, c, "keep.bin", []byte("keep"))
-				if _, err := runCreate(c, userID, CreateInput{SourceID: src.ID, FileID: f.ID, Label: "Keep"}); err != nil {
+				if _, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, FileID: f.ID, Label: "Keep"}); err != nil {
 					t.Fatal(err)
 				}
 				if artifactCount(t, c) != 1 {
@@ -430,7 +431,7 @@ func TestArtifacts(t *testing.T) {
 				mustUser(t, c)
 				src := mustSource(t, c)
 				f := mustFile(t, c, "scan.bin", []byte("scan"))
-				a, err := runCreate(c, userID, CreateInput{SourceID: src.ID, FileID: f.ID, Label: "Scan"})
+				a, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, FileID: f.ID, Label: "Scan"})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -454,7 +455,7 @@ func TestArtifacts(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				src := mustSource(t, c)
-				a, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "Old label", Description: "old"})
+				a, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Old label", Description: "old"})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -463,7 +464,7 @@ func TestArtifacts(t *testing.T) {
 				if err := runUpdate(c, userID, a); err != nil {
 					t.Fatal(err)
 				}
-				got, err := Get(c, a.ID)
+				got, err := artifacts.Get(c, a.ID)
 				if err != nil || got.Label != "New label" || got.Description != "new" {
 					t.Fatalf("%v %+v", err, got)
 				}
@@ -472,7 +473,7 @@ func TestArtifacts(t *testing.T) {
 		{
 			name: "get missing returns ErrNoRows",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Get(c, make([]byte, 16))
+				_, err := artifacts.Get(c, make([]byte, 16))
 				if !errors.Is(err, sql.ErrNoRows) {
 					t.Fatalf("got %v", err)
 				}
@@ -519,14 +520,14 @@ func TestArtifactDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fileless, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "Physical"})
+	fileless, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Physical"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := runDelete(c, userID, fileless.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Get(c, fileless.ID); !errors.Is(err, sql.ErrNoRows) {
+	if _, err := artifacts.Get(c, fileless.ID); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("artifact left %v", err)
 	}
 	db, err := c.DB()
@@ -542,7 +543,7 @@ func TestArtifactDelete(t *testing.T) {
 	}
 
 	const locator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
-	cited, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "Cited scan"})
+	cited, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Cited scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -555,7 +556,7 @@ func TestArtifactDelete(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := runDelete(c, userID, cited.ID); !errors.Is(err, ErrInUse) {
+	if err := runDelete(c, userID, cited.ID); !errors.Is(err, artifacts.ErrInUse) {
 		t.Fatalf("citation inbound %v", err)
 	}
 
@@ -576,11 +577,11 @@ func TestArtifactDelete(t *testing.T) {
 	if err := tx.Commit(); err != nil {
 		t.Fatal(err)
 	}
-	share1, err := runCreate(c, userID, CreateInput{SourceID: src.ID, FileID: fileID, Label: "Share 1"})
+	share1, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, FileID: fileID, Label: "Share 1"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	share2, err := runCreate(c, userID, CreateInput{SourceID: src.ID, FileID: fileID, Label: "Share 2"})
+	share2, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, FileID: fileID, Label: "Share 2"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -598,7 +599,7 @@ func TestArtifactDelete(t *testing.T) {
 	}
 
 	t.Run("cover erase", func(t *testing.T) {
-		newCoverArtifact := func() Artifact {
+		newCoverArtifact := func() artifacts.Artifact {
 			t.Helper()
 			pngPath := filepath.Join(t.TempDir(), "cover.png")
 			img := image.NewRGBA(image.Rect(0, 0, 8, 8))
@@ -613,7 +614,7 @@ func TestArtifactDelete(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			art, err := runCreate(c, userID, CreateInput{
+			art, err := runCreate(c, userID, artifacts.CreateInput{
 				SourceID: src.ID, FileID: ingested.File.ID, Label: "Cover scan",
 			})
 			if err != nil {
@@ -623,7 +624,7 @@ func TestArtifactDelete(t *testing.T) {
 		}
 		setCover := func(sourceID, artID []byte) {
 			t.Helper()
-			cover, err := Get(c, artID)
+			cover, err := artifacts.Get(c, artID)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -655,7 +656,7 @@ func TestArtifactDelete(t *testing.T) {
 			}
 		})
 		t.Run("records cover clear in revision", func(t *testing.T) {
-			coverFor := func(sourceID []byte) Artifact {
+			coverFor := func(sourceID []byte) artifacts.Artifact {
 				t.Helper()
 				pngPath := filepath.Join(t.TempDir(), "cover.png")
 				img := image.NewRGBA(image.Rect(0, 0, 8, 8))
@@ -670,7 +671,7 @@ func TestArtifactDelete(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				art, err := runCreate(c, userID, CreateInput{
+				art, err := runCreate(c, userID, artifacts.CreateInput{
 					SourceID: sourceID, FileID: ingested.File.ID, Label: "Cover scan",
 				})
 				if err != nil {
@@ -701,7 +702,7 @@ func TestArtifactDelete(t *testing.T) {
 			setCover(src.ID, coverArt.ID)
 			var got []rowchange.Change
 			if _, err := writes.Call(c, writes.Op{Action: "delete_artifact", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-				ch, err := Delete(tx, userID, coverArt.ID)
+				ch, err := artifacts.Delete(tx, userID, coverArt.ID)
 				got = ch
 				return struct{}{}, ch, err
 			}); err != nil {
@@ -710,13 +711,13 @@ func TestArtifactDelete(t *testing.T) {
 			dbtest.RequireUpdateBeforeDelete(t, got, "artifact", "source", src.ID, wantFields)
 		})
 		t.Run("non-cover artifact emits no source change", func(t *testing.T) {
-			plain, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "Plain scan"})
+			plain, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Plain scan"})
 			if err != nil {
 				t.Fatal(err)
 			}
 			var got []rowchange.Change
 			if _, err := writes.Call(c, writes.Op{Action: "delete_artifact", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-				ch, err := Delete(tx, userID, plain.ID)
+				ch, err := artifacts.Delete(tx, userID, plain.ID)
 				got = ch
 				return struct{}{}, ch, err
 			}); err != nil {
@@ -730,12 +731,12 @@ func TestArtifactDelete(t *testing.T) {
 		})
 	})
 
-	if err := runDelete(c, userID, make([]byte, 16)); !errors.Is(err, ErrInvalid) {
+	if err := runDelete(c, userID, make([]byte, 16)); !errors.Is(err, artifacts.ErrInvalid) {
 		t.Fatalf("missing %v", err)
 	}
 
 	t.Run("releases its graph links", func(t *testing.T) {
-		linked, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "Linked"})
+		linked, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Linked"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -744,7 +745,7 @@ func TestArtifactDelete(t *testing.T) {
 		}
 		var got []rowchange.Change
 		if _, err := writes.Call(c, writes.Op{Action: "delete_artifact", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-			changes, err := Delete(tx, userID, linked.ID)
+			changes, err := artifacts.Delete(tx, userID, linked.ID)
 			got = changes
 			return struct{}{}, changes, err
 		}); err != nil {
@@ -809,7 +810,7 @@ func TestArtifactDeletePurgesDisk(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		fileless, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "Physical"})
+		fileless, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Physical"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -839,13 +840,13 @@ func TestArtifactDeletePurgesDisk(t *testing.T) {
 			t.Fatal(err)
 		}
 		path := objectPath(t, ingested.File)
-		share1, err := runCreate(c, userID, CreateInput{
+		share1, err := runCreate(c, userID, artifacts.CreateInput{
 			SourceID: src.ID, FileID: ingested.File.ID, Label: "Share 1",
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		share2, err := runCreate(c, userID, CreateInput{
+		share2, err := runCreate(c, userID, artifacts.CreateInput{
 			SourceID: src.ID, FileID: ingested.File.ID, Label: "Share 2",
 		})
 		if err != nil {
@@ -885,7 +886,7 @@ func TestArtifactDeletePurgesDisk(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		art, err := runCreate(c, userID, CreateInput{
+		art, err := runCreate(c, userID, artifacts.CreateInput{
 			SourceID: src.ID, FileID: ingested.File.ID, Label: "Cover scan",
 		})
 		if err != nil {
@@ -938,7 +939,7 @@ func TestArtifactDeletePurgesDisk(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		art, err := runCreate(c, userID, CreateInput{
+		art, err := runCreate(c, userID, artifacts.CreateInput{
 			SourceID: src.ID, FileID: ingested.File.ID, Label: "Shard scan",
 		})
 		if err != nil {
@@ -1050,11 +1051,11 @@ func TestArtifactDeleteKeepsSharedThumbnail(t *testing.T) {
 	if err := tx.Commit(); err != nil {
 		t.Fatal(err)
 	}
-	artOne, err := runCreate(c, userID, CreateInput{SourceID: src.ID, FileID: fileA.ID, Label: "One"})
+	artOne, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, FileID: fileA.ID, Label: "One"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	artTwo, err := runCreate(c, userID, CreateInput{SourceID: src.ID, FileID: fileB.ID, Label: "Two"})
+	artTwo, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, FileID: fileB.ID, Label: "Two"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1127,7 +1128,7 @@ func TestArtifactUpdateGraphs(t *testing.T) {
 	}
 	def := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 	// Q stays in both graphs throughout, so no unlink here is a graph's last.
-	q, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "Q"})
+	q, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Q"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1143,25 +1144,25 @@ func TestArtifactUpdateGraphs(t *testing.T) {
 		}
 		return n
 	}
-	newPage := func(label string, graphs ...[]byte) Artifact {
-		a, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: label, Graphs: evidencegraphs.GraphLinks{Given: true, IDs: graphs}})
+	newPage := func(label string, graphs ...[]byte) artifacts.Artifact {
+		a, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: label, Graphs: evidencegraphs.GraphLinks{Given: true, IDs: graphs}})
 		if err != nil {
 			t.Fatal(err)
 		}
 		return a
 	}
-	update := func(a Artifact, links evidencegraphs.GraphLinks) ([]string, int, error) {
+	update := func(a artifacts.Artifact, links evidencegraphs.GraphLinks) ([]string, int, error) {
 		before := revisions()
 		var kinds []string
 		_, _, err := writes.Run(c, writes.Op{Action: "update_artifact", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-			changes, err := Update(tx, userID, a, links)
+			changes, err := artifacts.Update(tx, userID, a, links)
 			kinds = changeKinds(changes)
 			return struct{}{}, changes, err
 		})
 		return kinds, revisions() - before, err
 	}
 	label := func(id []byte) string {
-		got, err := Get(c, id)
+		got, err := artifacts.Get(c, id)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1240,18 +1241,18 @@ func TestArtifactUpdateGraphs(t *testing.T) {
 	})
 }
 
-func runCreate(c *database.Catalog, userID []byte, in CreateInput) (Artifact, error) {
+func runCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
 	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
-		func(tx *database.Tx) (Artifact, []rowchange.Change, error) {
-			return Create(tx, userID, in)
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
 		})
 	return a, err
 }
 
-func runUpdate(c *database.Catalog, userID []byte, a Artifact) error {
+func runUpdate(c *database.Catalog, userID []byte, a artifacts.Artifact) error {
 	_, _, err := writes.Run(c, writes.Op{Action: "update_artifact", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-			changes, err := Update(tx, userID, a, evidencegraphs.GraphLinks{})
+			changes, err := artifacts.Update(tx, userID, a, evidencegraphs.GraphLinks{})
 			return struct{}{}, changes, err
 		})
 	return err
@@ -1260,7 +1261,7 @@ func runUpdate(c *database.Catalog, userID []byte, a Artifact) error {
 func runDelete(c *database.Catalog, userID, id []byte) error {
 	_, _, err := writes.Run(c, writes.Op{Action: "delete_artifact", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-			changes, err := Delete(tx, userID, id)
+			changes, err := artifacts.Delete(tx, userID, id)
 			return struct{}{}, changes, err
 		})
 	return err

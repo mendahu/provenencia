@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
@@ -53,10 +54,9 @@ const (
 		EXISTS (SELECT 1 FROM artifacts a WHERE a.source_id = s.id)
 		FROM sources s
 		ORDER BY s.id DESC`
-	sqlArtifactForCover = `SELECT id, source_id, file_id FROM artifacts WHERE id = ?`
-	sqlCount            = `SELECT COUNT(*) FROM sources`
-	sqlDelete           = `DELETE FROM sources WHERE id = ?`
-	sqlTypeExists       = `SELECT 1 FROM source_types WHERE id = ?`
+	sqlCount      = `SELECT COUNT(*) FROM sources`
+	sqlDelete     = `DELETE FROM sources WHERE id = ?`
+	sqlTypeExists = `SELECT 1 FROM source_types WHERE id = ?`
 )
 
 // Source is one sources row.
@@ -471,26 +471,20 @@ func requireType(tx *sql.Tx, typeID []byte) error {
 
 // CoverArtifactFile returns the File id of the Artifact a cover would pin: the
 // Artifact must exist, belong to the Source and hold a File, else ErrInvalid.
-// It reads one Artifact row of its own (artifacts' tests import sources, so
-// sources cannot import artifacts) and decodes nothing; it is the one place the cover rule
-// lives, for SetSourceCover's stage and NormalizeCover alike.
+// It decodes nothing; it is the one place the cover rule lives, for
+// SetSourceCover's stage and NormalizeCover alike.
 func CoverArtifactFile(c *database.Catalog, sourceID, artifactID []byte) ([]byte, error) {
-	db, err := c.DB()
-	if err != nil {
-		return nil, err
-	}
-	var id, artSource, fileID []byte
-	err = db.QueryRow(sqlArtifactForCover, artifactID).Scan(&id, &artSource, &fileID)
-	if errors.Is(err, sql.ErrNoRows) {
+	art, err := artifacts.Get(c, artifactID)
+	if errors.Is(err, sql.ErrNoRows) || errors.Is(err, artifacts.ErrInvalid) {
 		return nil, ErrInvalid
 	}
 	if err != nil {
 		return nil, err
 	}
-	if !bytes.Equal(artSource, sourceID) || len(fileID) != 16 {
+	if !bytes.Equal(art.SourceID, sourceID) || len(art.FileID) != 16 {
 		return nil, ErrInvalid
 	}
-	return fileID, nil
+	return art.FileID, nil
 }
 
 // requireRasterCoverArtifact accepts a cover Artifact whose File already has a
