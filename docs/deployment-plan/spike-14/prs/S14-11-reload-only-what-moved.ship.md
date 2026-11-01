@@ -1,7 +1,7 @@
 # Ship log — S14-11 Reload only what moved, only when it is on screen
 
 **Plan:** [`S14-11-reload-only-what-moved.md`](S14-11-reload-only-what-moved.md) · **Branch:** `s14-11-reload-only-what-moved` · **PR:** #657
-**State:** fixing 1
+**State:** review 2
 
 ## Round 0 — implement
 Base `main` @ `fdd37f19`.
@@ -78,3 +78,9 @@ Do: Reach row 1 and Manual check 3 say the canvas shows its cached cards with no
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-11-reload-only-what-moved.md` reports no errors.
 
 Follow-ups: UX-1 (a reloading sign on a revisited canvas, driven by `isRereadingGraph`; needs a brief; suggested home `docs/ideas/`).
+
+## Round 1 — fix
+Head `f4e6ff4c`. Gate PASS (orchestrator run; xcode-test 71s). F-1 (`bd5bb6d9`, failing test seen red with the splice off), F-2 (`6714beeb`), F-3 (`859acb0e`), F-4 (doc line, in `bd5bb6d9`), F-5 (`f4e6ff4c`), F-6 (`2de7fe37`) done. Deviations: `Memo` exposes `private(set) var entry` (the depiction preview resets on a failed cut; `CitationComposerDepictionTests` 734, 803 read it); `evidenceGraphIndexBuildCount` is internal (incremented from another file's extension); `.merged` / `refreshCached` gained `afterMerge`. UX-1: Resolved — read `2de7fe37`: Reach row 1 and Manual check 3 now say the cached cards show with no reloading sign.
+
+## Round 2 — review
+Reviewers: MNT, SEC+PRF (each had a Fix-now major). Scope `1e23f521...f4e6ff4c`.
