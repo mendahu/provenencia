@@ -1,4 +1,4 @@
-package conclusionheaders_test
+package conclusionsummaries_test
 
 import (
 	"bytes"
@@ -13,7 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
-	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
@@ -110,9 +110,9 @@ func (f *fixture) person(forms ...string) (subjects.Subject, []observations.Obse
 	return s, obs, p.Entity.ID
 }
 
-func (f *fixture) list() []conclusionheaders.PersonHeader {
+func (f *fixture) list() []conclusionsummaries.PersonSummary {
 	f.t.Helper()
-	h, err := conclusionheaders.ListPersons(f.c)
+	h, err := conclusionsummaries.ListPersons(f.c)
 	must(f.t, err)
 	return h
 }
@@ -162,7 +162,7 @@ func TestListPersons(t *testing.T) {
 		t.Fatalf("bare last %+v", h)
 	}
 
-	t.Run("a name edit reaches the header", func(t *testing.T) {
+	t.Run("a name edit reaches the summary", func(t *testing.T) {
 		// Kenneth → James merges the two values.
 		_, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 			return observations.Update(tx, userID, observations.Input{
@@ -222,10 +222,10 @@ func TestPersonNameCountIsDisplayedOnly(t *testing.T) {
 	}
 }
 
-// A header shows what the detail page displays: a kept value. When every
+// A summary shows what the detail page displays: a kept value. When every
 // value is held back (here, only a provisional member speaks), rank 1 is not
 // kept, so the row falls back to the label or ref.
-func TestHeadersShowKeptValuesOnly(t *testing.T) {
+func TestSummariesShowKeptValuesOnly(t *testing.T) {
 	tests := []struct {
 		name  string
 		kind  string
@@ -300,14 +300,14 @@ func TestListPersonsQueryCountIsConstant(t *testing.T) {
 	s, _, _ := f.person("Ada Lovelace")
 	gender(s)
 	f.c.Graph().Drop()
-	one, err := conclusionheaders.ListPersonsQueryCount(f.c)
+	one, err := conclusionsummaries.ListPersonsQueryCount(f.c)
 	must(t, err)
 	for i := 0; i < 50; i++ {
 		s, _, _ := f.person(fmt.Sprintf("Person %d", i), fmt.Sprintf("Alias %d", i))
 		gender(s)
 	}
 	f.c.Graph().Drop()
-	many, err := conclusionheaders.ListPersonsQueryCount(f.c)
+	many, err := conclusionsummaries.ListPersonsQueryCount(f.c)
 	must(t, err)
 	// The name row is one query; birth and death are one more, and the
 	// likeness lead one more, each for the whole list. The count stays put as the list grows.
@@ -332,7 +332,7 @@ func pictureLeads[H any](rows []H, id, pic func(H) []byte) map[string][]byte {
 	return out
 }
 
-type headerPictureCase struct {
+type summaryPictureCase struct {
 	name  string
 	key   string
 	setup func(f *fixture) (subjects.Subject, []byte)
@@ -340,14 +340,14 @@ type headerPictureCase struct {
 	byIDs func(f *fixture, ids [][]byte) (map[string][]byte, error)
 }
 
-func headerPictureCases() []headerPictureCase {
-	personID := func(r conclusionheaders.PersonHeader) []byte { return r.Entity.ID }
-	personPic := func(r conclusionheaders.PersonHeader) []byte { return r.PictureImageFileID }
-	eventID := func(r conclusionheaders.EventHeader) []byte { return r.Entity.ID }
-	eventPic := func(r conclusionheaders.EventHeader) []byte { return r.PictureImageFileID }
-	placeID := func(r conclusionheaders.PlaceHeader) []byte { return r.Entity.ID }
-	placePic := func(r conclusionheaders.PlaceHeader) []byte { return r.PictureImageFileID }
-	return []headerPictureCase{
+func summaryPictureCases() []summaryPictureCase {
+	personID := func(r conclusionsummaries.PersonSummary) []byte { return r.Entity.ID }
+	personPic := func(r conclusionsummaries.PersonSummary) []byte { return r.PictureImageFileID }
+	eventID := func(r conclusionsummaries.EventSummary) []byte { return r.Entity.ID }
+	eventPic := func(r conclusionsummaries.EventSummary) []byte { return r.PictureImageFileID }
+	placeID := func(r conclusionsummaries.PlaceSummary) []byte { return r.Entity.ID }
+	placePic := func(r conclusionsummaries.PlaceSummary) []byte { return r.PictureImageFileID }
+	return []summaryPictureCase{
 		{
 			name: "person",
 			key:  vocabkey.PropertyLikeness,
@@ -359,7 +359,7 @@ func headerPictureCases() []headerPictureCase {
 				return pictureLeads(f.list(), personID, personPic), nil
 			},
 			byIDs: func(f *fixture, ids [][]byte) (map[string][]byte, error) {
-				rows, err := conclusionheaders.PersonsByIDs(f.c, ids)
+				rows, err := conclusionsummaries.PersonsByIDs(f.c, ids)
 				return pictureLeads(rows, personID, personPic), err
 			},
 		},
@@ -373,7 +373,7 @@ func headerPictureCases() []headerPictureCase {
 				return pictureLeads(f.events(), eventID, eventPic), nil
 			},
 			byIDs: func(f *fixture, ids [][]byte) (map[string][]byte, error) {
-				rows, err := conclusionheaders.EventsByIDs(f.c, ids)
+				rows, err := conclusionsummaries.EventsByIDs(f.c, ids)
 				return pictureLeads(rows, eventID, eventPic), err
 			},
 		},
@@ -387,15 +387,15 @@ func headerPictureCases() []headerPictureCase {
 				return pictureLeads(f.places(), placeID, placePic), nil
 			},
 			byIDs: func(f *fixture, ids [][]byte) (map[string][]byte, error) {
-				rows, err := conclusionheaders.PlacesByIDs(f.c, ids)
+				rows, err := conclusionsummaries.PlacesByIDs(f.c, ids)
 				return pictureLeads(rows, placeID, placePic), err
 			},
 		},
 	}
 }
 
-func TestHeaderLeadsWithEarliestPicture(t *testing.T) {
-	for _, tc := range headerPictureCases() {
+func TestSummaryLeadsWithEarliestPicture(t *testing.T) {
+	for _, tc := range summaryPictureCases() {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			s, h := tc.setup(f)
@@ -440,7 +440,7 @@ func TestHeaderLeadsWithEarliestPicture(t *testing.T) {
 	}
 }
 
-func TestPersonHeaderSkipsNegativeLikeness(t *testing.T) {
+func TestPersonSummarySkipsNegativeLikeness(t *testing.T) {
 	f := newFixture(t)
 	s, _, h := f.person("Ann Lee")
 	observationstest.SaveNegativeLikeness(t, f.c, userID, f.source.ID, s.ID, 100)
@@ -458,8 +458,8 @@ func TestPersonHeaderSkipsNegativeLikeness(t *testing.T) {
 	must(t, f.c.Graph().Verify())
 }
 
-func TestHeaderLeadsWithChosenPicture(t *testing.T) {
-	for _, tc := range headerPictureCases() {
+func TestSummaryLeadsWithChosenPicture(t *testing.T) {
+	for _, tc := range summaryPictureCases() {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			s, h := tc.setup(f)
@@ -507,12 +507,12 @@ func TestPersonsByIDs(t *testing.T) {
 	})
 	must(t, err)
 
-	got, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{mary, james, mary, place.ID, make([]byte, 16)})
+	got, err := conclusionsummaries.PersonsByIDs(f.c, [][]byte{mary, james, mary, place.ID, make([]byte, 16)})
 	must(t, err)
 	if len(got) != 2 || got[0].Name.Form != "James Robins" || got[1].Name.Form != "Mary Smith" {
 		t.Fatalf("want James, Mary in list order: %+v", got)
 	}
-	if got, err := conclusionheaders.PersonsByIDs(f.c, nil); err != nil || got != nil {
+	if got, err := conclusionsummaries.PersonsByIDs(f.c, nil); err != nil || got != nil {
 		t.Fatalf("no ids: %v %+v", err, got)
 	}
 }
@@ -553,9 +553,9 @@ func (f *fixture) event(in ...observations.Input) []byte {
 	return p.Entity.ID
 }
 
-func (f *fixture) events() []conclusionheaders.EventHeader {
+func (f *fixture) events() []conclusionsummaries.EventSummary {
 	f.t.Helper()
-	h, err := conclusionheaders.ListEvents(f.c)
+	h, err := conclusionsummaries.ListEvents(f.c)
 	must(f.t, err)
 	return h
 }
@@ -592,7 +592,7 @@ func TestListEvents(t *testing.T) {
 	if len(got) != 4 {
 		t.Fatalf("listed %d Events, want 4 (no Person)", len(got))
 	}
-	byID := map[string]conclusionheaders.EventHeader{}
+	byID := map[string]conclusionsummaries.EventSummary{}
 	for _, h := range got {
 		byID[string(h.Entity.ID)] = h
 	}
@@ -625,14 +625,14 @@ func TestListEventsQueryCountIsConstant(t *testing.T) {
 	f := newFixture(t)
 	f.event()
 	f.c.Graph().Drop()
-	one, err := conclusionheaders.ListEventsQueryCount(f.c)
+	one, err := conclusionsummaries.ListEventsQueryCount(f.c)
 	must(t, err)
 	date := f.prop("date")
 	for i := 0; i < 50; i++ {
 		f.event(observations.Input{PropertyID: date.ID, Date: pointYear(1800 + i)})
 	}
 	f.c.Graph().Drop()
-	many, err := conclusionheaders.ListEventsQueryCount(f.c)
+	many, err := conclusionsummaries.ListEventsQueryCount(f.c)
 	must(t, err)
 	// The event row is one query; subjects and places are one each, for the
 	// whole list. The count stays put as the list grows.
@@ -648,7 +648,7 @@ func TestEventsByIDs(t *testing.T) {
 	bare := f.event()
 	f.event(observations.Input{PropertyID: name.ID, ValueText: "Other", HasText: true})
 	_, _, person := f.person("Ada Lovelace")
-	got, err := conclusionheaders.EventsByIDs(f.c, [][]byte{bare, fire, fire, person, make([]byte, 16)})
+	got, err := conclusionsummaries.EventsByIDs(f.c, [][]byte{bare, fire, fire, person, make([]byte, 16)})
 	must(t, err)
 	if len(got) != 2 {
 		t.Fatalf("%+v", got)
@@ -657,7 +657,7 @@ func TestEventsByIDs(t *testing.T) {
 	if !names["Fire"] || !names[""] {
 		t.Fatalf("%+v", got)
 	}
-	if got, err := conclusionheaders.EventsByIDs(f.c, nil); err != nil || got != nil {
+	if got, err := conclusionsummaries.EventsByIDs(f.c, nil); err != nil || got != nil {
 		t.Fatalf("no ids: %v %+v", err, got)
 	}
 }
@@ -727,9 +727,9 @@ func (f *fixture) joinPlace(art artifacts.Artifact, entityID []byte, names ...st
 	promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
 }
 
-func (f *fixture) places() []conclusionheaders.PlaceHeader {
+func (f *fixture) places() []conclusionsummaries.PlaceSummary {
 	f.t.Helper()
-	h, err := conclusionheaders.ListPlaces(f.c)
+	h, err := conclusionsummaries.ListPlaces(f.c)
 	must(f.t, err)
 	return h
 }
@@ -807,15 +807,15 @@ func TestListPlacesQueryCountIsConstant(t *testing.T) {
 	f := newFixture(t)
 	f.place(f.artifact, "York")
 	f.c.Graph().Drop()
-	one, err := conclusionheaders.ListPlacesQueryCount(f.c)
+	one, err := conclusionsummaries.ListPlacesQueryCount(f.c)
 	must(t, err)
 	for i := 0; i < 20; i++ {
 		f.place(f.artifact, fmt.Sprintf("Place %d", i))
 	}
 	f.c.Graph().Drop()
-	many, err := conclusionheaders.ListPlacesQueryCount(f.c)
+	many, err := conclusionsummaries.ListPlacesQueryCount(f.c)
 	must(t, err)
-	// Place list is one header scan plus a fixed place-relationship graph
+	// Place list is one summary scan plus a fixed place-relationship graph
 	// walk for today's chains (S9-39), whatever the row count.
 	if one != many {
 		t.Fatalf("queries: %d for 1 Place, %d for 21", one, many)
@@ -828,7 +828,7 @@ func TestPlacesByIDs(t *testing.T) {
 	bare := f.place(f.artifact)
 	f.place(f.artifact, "Toronto")
 	_, _, person := f.person("Ada Lovelace")
-	got, err := conclusionheaders.PlacesByIDs(f.c, [][]byte{bare, york, york, person, make([]byte, 16)})
+	got, err := conclusionsummaries.PlacesByIDs(f.c, [][]byte{bare, york, york, person, make([]byte, 16)})
 	must(t, err)
 	if len(got) != 2 {
 		t.Fatalf("%+v", got)
@@ -844,38 +844,38 @@ func TestPlacesByIDs(t *testing.T) {
 	if !names["York"] || !names[""] {
 		t.Fatalf("%+v", got)
 	}
-	if got, err := conclusionheaders.PlacesByIDs(f.c, nil); err != nil || got != nil {
+	if got, err := conclusionsummaries.PlacesByIDs(f.c, nil); err != nil || got != nil {
 		t.Fatalf("no ids: %v %+v", err, got)
 	}
 }
 
 func TestListOrderIsByShownTitle(t *testing.T) {
-	place := func(ref, label string, names ...string) conclusionheaders.PlaceHeader {
-		return conclusionheaders.PlaceHeader{Entity: canonicalentities.Entity{Ref: ref, Label: label}, Names: names}
+	place := func(ref, label string, names ...string) conclusionsummaries.PlaceSummary {
+		return conclusionsummaries.PlaceSummary{Entity: canonicalentities.Entity{Ref: ref, Label: label}, Names: names}
 	}
 	tests := []struct {
 		name string
-		in   []conclusionheaders.PlaceHeader
+		in   []conclusionsummaries.PlaceSummary
 		want []string // refs
 	}{
 		{
 			name: "case and diacritics do not split the alphabet",
-			in:   []conclusionheaders.PlaceHeader{place("P3", "", "york"), place("P1", "", "Montréal"), place("P2", "", "Mumbai"), place("P4", "", "Évora")},
+			in:   []conclusionsummaries.PlaceSummary{place("P3", "", "york"), place("P1", "", "Montréal"), place("P2", "", "Mumbai"), place("P4", "", "Évora")},
 			want: []string{"P4", "P1", "P2", "P3"},
 		},
 		{
 			name: "a working label sorts among the names",
-			in:   []conclusionheaders.PlaceHeader{place("P1", "", "York"), place("P2", "the old mill"), place("P3", "", "Kingston")},
+			in:   []conclusionsummaries.PlaceSummary{place("P1", "", "York"), place("P2", "the old mill"), place("P3", "", "Kingston")},
 			want: []string{"P3", "P2", "P1"},
 		},
 		{
 			name: "a ref-only row sorts last, by ref",
-			in:   []conclusionheaders.PlaceHeader{place("PLC-B", ""), place("P1", "", "York"), place("PLC-A", "  ")},
+			in:   []conclusionsummaries.PlaceSummary{place("PLC-B", ""), place("P1", "", "York"), place("PLC-A", "  ")},
 			want: []string{"P1", "PLC-A", "PLC-B"},
 		},
 		{
 			name: "the order the Places list showed when Swift sorted it",
-			in: []conclusionheaders.PlaceHeader{
+			in: []conclusionsummaries.PlaceSummary{
 				place("PLC-9", "", "York"), place("PLC-2", "Home"), place("PLC-B", ""),
 				place("PLC-A", ""), place("PLC-1", "", "Montréal"), place("PLC-3", "", "montreal"),
 			},
@@ -883,14 +883,14 @@ func TestListOrderIsByShownTitle(t *testing.T) {
 		},
 		{
 			name: "the same title breaks by ref",
-			in:   []conclusionheaders.PlaceHeader{place("P2", "", "Montreal"), place("P1", "", "Montréal")},
+			in:   []conclusionsummaries.PlaceSummary{place("P2", "", "Montreal"), place("P1", "", "Montréal")},
 			want: []string{"P1", "P2"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rows := append([]conclusionheaders.PlaceHeader(nil), tt.in...)
-			conclusionheaders.SortPlaces(rows)
+			rows := append([]conclusionsummaries.PlaceSummary(nil), tt.in...)
+			conclusionsummaries.SortPlaces(rows)
 			var got []string
 			for _, r := range rows {
 				got = append(got, r.Entity.Ref)
@@ -902,10 +902,10 @@ func TestListOrderIsByShownTitle(t *testing.T) {
 	}
 }
 
-// TestListHeadersCarryUpdated checks the three lists return each handle's
+// TestListSummariesCarryUpdated checks the three lists return each handle's
 // newest canonical_entity revision and its time, read fresh from the scope
 // rows and not from the display cache.
-func TestListHeadersCarryUpdated(t *testing.T) {
+func TestListSummariesCarryUpdated(t *testing.T) {
 	f := newFixture(t)
 	db, err := f.c.DB()
 	must(t, err)
@@ -948,7 +948,7 @@ func TestListHeadersCarryUpdated(t *testing.T) {
 	if got, ok := byID[string(raw[:])]; !ok || got != (effects.Activity{}) {
 		t.Fatalf("handle without scope rows: listed %v, updated %+v", ok, got)
 	}
-	evs, err := conclusionheaders.ListEvents(f.c)
+	evs, err := conclusionsummaries.ListEvents(f.c)
 	must(t, err)
 	if len(evs) != 1 || string(evs[0].Entity.ID) != string(fire) {
 		t.Fatalf("events %+v", evs)
@@ -986,7 +986,7 @@ func TestListHeadersCarryUpdated(t *testing.T) {
 		t.Fatalf("handle without scope rows updated %+v", got)
 	}
 
-	byIDs, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{bob})
+	byIDs, err := conclusionsummaries.PersonsByIDs(f.c, [][]byte{bob})
 	must(t, err)
 	if len(byIDs) != 1 || byIDs[0].Updated != (effects.Activity{}) {
 		t.Fatalf("PersonsByIDs %+v", byIDs)
@@ -997,7 +997,7 @@ func TestByIDs(t *testing.T) {
 	f := newFixture(t)
 	_, _, person := f.person("Ada Lovelace")
 	event := f.event()
-	h, err := conclusionheaders.ByIDs(f.c, [][]byte{person, event}, [][]byte{event, person}, nil)
+	h, err := conclusionsummaries.ByIDs(f.c, conclusionsummaries.Want{Persons: [][]byte{person, event}, Events: [][]byte{event, person}})
 	must(t, err)
 	if p, ok := h.Person(person); !ok || p.Name.Form != "Ada Lovelace" {
 		t.Errorf("Person(person) = %+v, %v", p, ok)
@@ -1021,18 +1021,18 @@ func (f *fixture) termObs(propertyKey, termKey string) observations.Input {
 	return observations.Input{PropertyID: f.prop(propertyKey).ID, ValueTermID: f.term(propertyKey, termKey).ID}
 }
 
-func (f *fixture) personHeader(id []byte) conclusionheaders.PersonHeader {
+func (f *fixture) personSummary(id []byte) conclusionsummaries.PersonSummary {
 	f.t.Helper()
-	got, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{id})
+	got, err := conclusionsummaries.PersonsByIDs(f.c, [][]byte{id})
 	must(f.t, err)
 	if len(got) != 1 {
-		f.t.Fatalf("headers %d", len(got))
+		f.t.Fatalf("summaries %d", len(got))
 	}
 	return got[0]
 }
 
-func TestPersonHeaderTerms(t *testing.T) {
-	termKey := func(f conclusionheaders.TermFacts) string {
+func TestPersonSummaryTerms(t *testing.T) {
+	termKey := func(f conclusionsummaries.TermFacts) string {
 		if f.Term == nil {
 			return ""
 		}
@@ -1103,7 +1103,7 @@ func TestPersonHeaderTerms(t *testing.T) {
 			build: func(f *fixture) []byte {
 				s, _, id := f.person("Ada")
 				// Researchers cannot create term Properties, so the user's own
-				// "gender" is a text Property: it still must not feed the header.
+				// "gender" is a text Property: it still must not feed the summary.
 				prop, err := writes.Call(f.c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
 					return properties.Create(tx, userID, "Gender", propertymeta.ValueTypeText, "", propertymeta.CardinalityMultiple)
 				})
@@ -1118,7 +1118,7 @@ func TestPersonHeaderTerms(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
-			h := f.personHeader(tt.build(f))
+			h := f.personSummary(tt.build(f))
 			if h.Gender.Count != tt.genderCount || h.SexAtBirth.Count != tt.sexCount {
 				t.Fatalf("counts gender %d sex %d", h.Gender.Count, h.SexAtBirth.Count)
 			}
@@ -1132,12 +1132,12 @@ func TestPersonHeaderTerms(t *testing.T) {
 	}
 }
 
-func TestPersonHeaderTermLabels(t *testing.T) {
+func TestPersonSummaryTermLabels(t *testing.T) {
 	t.Run("labels", func(t *testing.T) {
 		f := newFixture(t)
 		s, _, id := f.person("Ada")
 		f.cite(s, f.termObs("gender", "woman"))
-		h := f.personHeader(id)
+		h := f.personSummary(id)
 		if h.Gender.Term == nil || h.Gender.Term.Label != "Woman" || h.Gender.Term.Origin != vocabkey.OriginProvenencia {
 			t.Fatalf("term %+v", h.Gender.Term)
 		}
@@ -1154,14 +1154,14 @@ func TestPersonHeaderTermLabels(t *testing.T) {
 		})
 		must(t, err)
 		f.cite(s, observations.Input{PropertyID: genderID, ValueTermID: term.ID})
-		if h := f.personHeader(id); h.Gender.Term == nil || h.Gender.Term.Label != "Agender" {
+		if h := f.personSummary(id); h.Gender.Term == nil || h.Gender.Term.Label != "Agender" {
 			t.Fatalf("before %+v", h.Gender.Term)
 		}
 		_, err = writes.Call(f.c, writes.Op{Action: "update_property_term", UserID: userID}, func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
 			return propertyterms.Update(tx, userID, term.ID, "No gender", "")
 		})
 		must(t, err)
-		h := f.personHeader(id)
+		h := f.personSummary(id)
 		if h.Gender.Term == nil || h.Gender.Term.Label != "No gender" || h.Gender.Term.Origin != "user" {
 			t.Fatalf("after %+v", h.Gender.Term)
 		}
@@ -1171,7 +1171,7 @@ func TestPersonHeaderTermLabels(t *testing.T) {
 		f := newFixture(t)
 		s, _, id := f.person("Ada")
 		f.cite(s, f.termObs("gender", "woman"))
-		if h := f.personHeader(id); h.Gender.PropertyLabel != "Gender" {
+		if h := f.personSummary(id); h.Gender.PropertyLabel != "Gender" {
 			t.Fatalf("before %q", h.Gender.PropertyLabel)
 		}
 		p := f.prop("gender")
@@ -1179,7 +1179,7 @@ func TestPersonHeaderTermLabels(t *testing.T) {
 			return properties.Update(tx, userID, p.ID, "Gender identity", p.ValueType, p.Description, p.Cardinality)
 		})
 		must(t, err)
-		if h := f.personHeader(id); h.Gender.PropertyLabel != "Gender identity" {
+		if h := f.personSummary(id); h.Gender.PropertyLabel != "Gender identity" {
 			t.Fatalf("after %q", h.Gender.PropertyLabel)
 		}
 		must(t, f.c.Graph().Verify())

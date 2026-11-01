@@ -1,4 +1,4 @@
-package conclusionheaders
+package conclusionsummaries
 
 import (
 	"strings"
@@ -11,7 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
-// Term is a term value of a header: the displayed (kept rank-1) term of a
+// Term is a term value of a summary: the displayed (kept rank-1) term of a
 // Property. Key names a product term only when Origin is the product's.
 type Term struct {
 	ID     []byte
@@ -20,11 +20,11 @@ type Term struct {
 	Label  string
 }
 
-// EventHeader is one Event as a row. A rank-1 date wins over a start/end
+// EventSummary is one Event as a row. A rank-1 date wins over a start/end
 // span; the span's counts are still reported. Subjects are the subject-role
 // persons, participation ref then person ref. Places are every location's
 // kept names with hierarchical parents at the event's date.
-type EventHeader struct {
+type EventSummary struct {
 	Entity         canonicalentities.Entity
 	EventName      string
 	EventNameCount int
@@ -37,7 +37,7 @@ type EventHeader struct {
 	EndDate        *datevalue.Value
 	EndDateCount   int
 	Subjects       []EventSubject
-	Places         []HeaderPlace
+	Places         []ChainedPlace
 	// PictureImageFileID is the image of the picture the Event leads with;
 	// nil when none. Preferred when set and in the gallery, else earliest.
 	PictureImageFileID []byte
@@ -55,9 +55,9 @@ type EventSubject struct {
 	NameValueCount int
 }
 
-// eventTitle chooses the header's title from its own parts: subjects in
-// header order, and the first named place.
-func eventTitle(h EventHeader) eventtitle.Plan {
+// eventTitle chooses the summary's title from its own parts: subjects in
+// summary order, and the first named place.
+func eventTitle(h EventSummary) eventtitle.Plan {
 	parts := eventtitle.Parts{
 		RecordedName: h.EventName,
 		Label:        h.Entity.Label,
@@ -74,7 +74,7 @@ func eventTitle(h EventHeader) eventtitle.Plan {
 }
 
 // FirstPlaceName is the first kept name of the first named Place.
-func FirstPlaceName(places []HeaderPlace) string {
+func FirstPlaceName(places []ChainedPlace) string {
 	for _, p := range places {
 		for _, n := range p.Names {
 			if n = strings.TrimSpace(n); n != "" {

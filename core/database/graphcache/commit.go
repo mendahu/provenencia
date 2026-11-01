@@ -106,8 +106,8 @@ func (g *Graph) dropCommittedDisplays(roots [][]byte, set effects.Set) error {
 	if len(g.displays) == 0 {
 		return nil
 	}
-	if set.HeaderDepsWalked {
-		g.dropDisplays(uniqueIDs(append(append([][]byte(nil), roots...), set.HeaderDeps...)))
+	if set.SummaryDepsWalked {
+		g.dropDisplays(uniqueIDs(append(append([][]byte(nil), roots...), set.SummaryDeps...)))
 		return nil
 	}
 	return g.forgetDisplays(roots)

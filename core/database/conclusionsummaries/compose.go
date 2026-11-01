@@ -1,4 +1,4 @@
-package conclusionheaders
+package conclusionsummaries
 
 import (
 	"bytes"
@@ -21,7 +21,7 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// vocab is the label map a header resolves at read time. Term and Property
+// vocab is the label map a summary resolves at read time. Term and Property
 // labels and "today" are not stored on the row, so a rename or a new day does
 // not throw the row away.
 type vocab struct {
@@ -211,8 +211,8 @@ func toponyms(n *graphcache.Node, propID []byte) []string {
 	return names
 }
 
-// ListPersons returns every unmerged Person's header in list order.
-func ListPersons(c *database.Catalog) ([]PersonHeader, error) {
+// ListPersons returns every unmerged Person's summary in list order.
+func ListPersons(c *database.Catalog) ([]PersonSummary, error) {
 	out, err := persons(c.Graph(), nil, true, true)
 	if err != nil {
 		return nil, err
@@ -234,57 +234,92 @@ func handleActivity(c *database.Catalog, id []byte) (effects.Activity, error) {
 	return c.Graph().Activity(effects.ScopeCanonicalEntity, id)
 }
 
-// Headers is the headers ByIDs read, found by the entity's raw id.
-type Headers struct {
-	persons map[string]PersonHeader
-	events  map[string]EventHeader
-	places  map[string]PlaceHeader
+// Summaries is the summaries ByIDs read, found by the entity's raw id.
+type Summaries struct {
+	persons map[string]PersonSummary
+	events  map[string]EventSummary
+	places  map[string]PlaceSummary
 }
 
-// Person is the header of the Person with id, or false when it was not read.
-func (h Headers) Person(id []byte) (PersonHeader, bool) { v, ok := h.persons[string(id)]; return v, ok }
+// Person is the summary of the Person with id, or false when it was not read.
+func (h Summaries) Person(id []byte) (PersonSummary, bool) {
+	v, ok := h.persons[string(id)]
+	return v, ok
+}
 
-// Event is the header of the Event with id, or false when it was not read.
-func (h Headers) Event(id []byte) (EventHeader, bool) { v, ok := h.events[string(id)]; return v, ok }
+// Event is the summary of the Event with id, or false when it was not read.
+func (h Summaries) Event(id []byte) (EventSummary, bool) { v, ok := h.events[string(id)]; return v, ok }
 
-// Place is the header of the Place with id, or false when it was not read.
-func (h Headers) Place(id []byte) (PlaceHeader, bool) { v, ok := h.places[string(id)]; return v, ok }
+// Place is the summary of the Place with id, or false when it was not read.
+func (h Summaries) Place(id []byte) (PlaceSummary, bool) { v, ok := h.places[string(id)]; return v, ok }
 
-// ByIDs reads the headers of the given unmerged Persons, Events and Places,
-// each kind in one call. A kind with no ids is not read. An id that is unknown,
-// merged, or of another kind is absent from its kind's headers.
-func ByIDs(c *database.Catalog, persons, events, places [][]byte) (Headers, error) {
-	var out Headers
-	ps, err := PersonsByIDs(c, persons)
-	if err != nil {
-		return Headers{}, err
+// Want is the Persons, Events and Places a read asks for, split by kind.
+type Want struct {
+	Persons, Events, Places [][]byte
+}
+
+// Add keeps a 16-byte id of kind vocabkey.Person, Event or Place and ignores
+// any other kind or id.
+func (w *Want) Add(kind string, id []byte) {
+	if len(id) != 16 {
+		return
 	}
-	out.persons = make(map[string]PersonHeader, len(ps))
+	switch kind {
+	case vocabkey.Person:
+		w.Persons = append(w.Persons, id)
+	case vocabkey.Event:
+		w.Events = append(w.Events, id)
+	case vocabkey.Place:
+		w.Places = append(w.Places, id)
+	}
+}
+
+// Empty reports whether no id was added.
+func (w Want) Empty() bool {
+	return len(w.Persons)+len(w.Events)+len(w.Places) == 0
+}
+
+// NewSummaries indexes the given rows by the entity's raw id.
+func NewSummaries(ps []PersonSummary, es []EventSummary, pl []PlaceSummary) Summaries {
+	out := Summaries{
+		persons: make(map[string]PersonSummary, len(ps)),
+		events:  make(map[string]EventSummary, len(es)),
+		places:  make(map[string]PlaceSummary, len(pl)),
+	}
 	for _, h := range ps {
 		out.persons[string(h.Entity.ID)] = h
 	}
-	es, err := EventsByIDs(c, events)
-	if err != nil {
-		return Headers{}, err
-	}
-	out.events = make(map[string]EventHeader, len(es))
 	for _, h := range es {
 		out.events[string(h.Entity.ID)] = h
 	}
-	pl, err := PlacesByIDs(c, places)
-	if err != nil {
-		return Headers{}, err
-	}
-	out.places = make(map[string]PlaceHeader, len(pl))
 	for _, h := range pl {
 		out.places[string(h.Entity.ID)] = h
 	}
-	return out, nil
+	return out
 }
 
-// PersonsByIDs returns the headers of the given unmerged Persons in list
+// ByIDs reads the summaries of the wanted unmerged Persons, Events and Places,
+// each kind in one call. A kind with no ids is not read. An id that is unknown,
+// merged, or of another kind is absent from its kind's summaries.
+func ByIDs(c *database.Catalog, w Want) (Summaries, error) {
+	ps, err := PersonsByIDs(c, w.Persons)
+	if err != nil {
+		return Summaries{}, err
+	}
+	es, err := EventsByIDs(c, w.Events)
+	if err != nil {
+		return Summaries{}, err
+	}
+	pl, err := PlacesByIDs(c, w.Places)
+	if err != nil {
+		return Summaries{}, err
+	}
+	return NewSummaries(ps, es, pl), nil
+}
+
+// PersonsByIDs returns the summaries of the given unmerged Persons in list
 // order. Unknown, merged, and non-Person ids are absent.
-func PersonsByIDs(c *database.Catalog, ids [][]byte) ([]PersonHeader, error) {
+func PersonsByIDs(c *database.Catalog, ids [][]byte) ([]PersonSummary, error) {
 	if len(database.UniqueBlobIDs(ids)) == 0 {
 		return nil, nil
 	}
@@ -293,14 +328,14 @@ func PersonsByIDs(c *database.Catalog, ids [][]byte) ([]PersonHeader, error) {
 
 // PersonsFromQuerier composes person rows from q without storing them.
 // Search calls this inside the write transaction.
-func PersonsFromQuerier(q Querier, ids [][]byte) ([]PersonHeader, error) {
+func PersonsFromQuerier(q Querier, ids [][]byte) ([]PersonSummary, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
 	return persons(graphcache.Over(q), ids, false, false)
 }
 
-func persons(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PersonHeader, error) {
+func persons(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PersonSummary, error) {
 	if g == nil {
 		return nil, nil
 	}
@@ -321,12 +356,12 @@ func persons(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PersonHeader
 		return nil, err
 	}
 	order := loaded.Profile.Sorted
-	SortByTitle(out, func(h PersonHeader) string { return personSortKey(h, order) }, func(h PersonHeader) string { return h.Entity.Ref })
+	SortByTitle(out, func(h PersonSummary) string { return personSortKey(h, order) }, func(h PersonSummary) string { return h.Entity.Ref })
 	return out, nil
 }
 
-// ListEvents returns every unmerged Event's header in list order.
-func ListEvents(c *database.Catalog) ([]EventHeader, error) {
+// ListEvents returns every unmerged Event's summary in list order.
+func ListEvents(c *database.Catalog) ([]EventSummary, error) {
 	out, err := events(c.Graph(), nil, true, true)
 	if err != nil {
 		return nil, err
@@ -339,8 +374,8 @@ func ListEvents(c *database.Catalog) ([]EventHeader, error) {
 	return out, nil
 }
 
-// EventsByIDs returns the headers of the given unmerged Events in list order.
-func EventsByIDs(c *database.Catalog, ids [][]byte) ([]EventHeader, error) {
+// EventsByIDs returns the summaries of the given unmerged Events in list order.
+func EventsByIDs(c *database.Catalog, ids [][]byte) ([]EventSummary, error) {
 	if len(database.UniqueBlobIDs(ids)) == 0 {
 		return nil, nil
 	}
@@ -348,32 +383,32 @@ func EventsByIDs(c *database.Catalog, ids [][]byte) ([]EventHeader, error) {
 }
 
 // EventsFromQuerier composes event rows from q without storing them.
-func EventsFromQuerier(q Querier, ids [][]byte) ([]EventHeader, error) {
+func EventsFromQuerier(q Querier, ids [][]byte) ([]EventSummary, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
 	return events(graphcache.Over(q), ids, false, false)
 }
 
-// RowsForSearch composes the three header kinds on one graph. Search
+// RowsForSearch composes the three summary kinds on one graph. Search
 // reprojection calls this so a mixed batch does not open three graphs.
-func RowsForSearch(g *graphcache.Graph, personIDs, eventIDs, placeIDs [][]byte) ([]PersonHeader, []EventHeader, []PlaceHeader, error) {
-	ps, err := persons(g, personIDs, false, false)
+func RowsForSearch(g *graphcache.Graph, w Want) (Summaries, error) {
+	ps, err := persons(g, w.Persons, false, false)
 	if err != nil {
-		return nil, nil, nil, err
+		return Summaries{}, err
 	}
-	es, err := events(g, eventIDs, false, false)
+	es, err := events(g, w.Events, false, false)
 	if err != nil {
-		return nil, nil, nil, err
+		return Summaries{}, err
 	}
-	pl, err := places(g, placeIDs, false, false)
+	pl, err := places(g, w.Places, false, false)
 	if err != nil {
-		return nil, nil, nil, err
+		return Summaries{}, err
 	}
-	return ps, es, pl, nil
+	return NewSummaries(ps, es, pl), nil
 }
 
-func events(g *graphcache.Graph, ids [][]byte, all, store bool) ([]EventHeader, error) {
+func events(g *graphcache.Graph, ids [][]byte, all, store bool) ([]EventSummary, error) {
 	if g == nil {
 		return nil, nil
 	}
@@ -393,8 +428,8 @@ func events(g *graphcache.Graph, ids [][]byte, all, store bool) ([]EventHeader, 
 	return out, nil
 }
 
-// ListPlaces returns every unmerged Place's header in list order.
-func ListPlaces(c *database.Catalog) ([]PlaceHeader, error) {
+// ListPlaces returns every unmerged Place's summary in list order.
+func ListPlaces(c *database.Catalog) ([]PlaceSummary, error) {
 	out, err := places(c.Graph(), nil, true, true)
 	if err != nil {
 		return nil, err
@@ -407,8 +442,8 @@ func ListPlaces(c *database.Catalog) ([]PlaceHeader, error) {
 	return out, nil
 }
 
-// PlacesByIDs returns the headers of the given unmerged Places in list order.
-func PlacesByIDs(c *database.Catalog, ids [][]byte) ([]PlaceHeader, error) {
+// PlacesByIDs returns the summaries of the given unmerged Places in list order.
+func PlacesByIDs(c *database.Catalog, ids [][]byte) ([]PlaceSummary, error) {
 	if len(database.UniqueBlobIDs(ids)) == 0 {
 		return nil, nil
 	}
@@ -416,14 +451,14 @@ func PlacesByIDs(c *database.Catalog, ids [][]byte) ([]PlaceHeader, error) {
 }
 
 // PlacesFromQuerier composes place rows from q without storing them.
-func PlacesFromQuerier(q Querier, ids [][]byte) ([]PlaceHeader, error) {
+func PlacesFromQuerier(q Querier, ids [][]byte) ([]PlaceSummary, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
 	return places(graphcache.Over(q), ids, false, false)
 }
 
-func places(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PlaceHeader, error) {
+func places(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PlaceSummary, error) {
 	if g == nil {
 		return nil, nil
 	}
@@ -439,7 +474,7 @@ func places(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PlaceHeader, 
 	if err != nil {
 		return nil, err
 	}
-	SortByTitle(out, placeTitle, func(h PlaceHeader) string { return h.Entity.Ref })
+	SortByTitle(out, placeTitle, func(h PlaceSummary) string { return h.Entity.Ref })
 	return out, nil
 }
 
@@ -498,10 +533,10 @@ func displayed[H any](g *graphcache.Graph, nodes []*graphcache.Node, fresh map[s
 	return out
 }
 
-func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool) ([]PersonHeader, error) {
+func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool) ([]PersonSummary, error) {
 	var need [][]byte
 	var eventIDs [][]byte
-	for _, n := range needed[PersonHeader](g, nodes, store) {
+	for _, n := range needed[PersonSummary](g, nodes, store) {
 		need = append(need, n.ID)
 		links, err := follow(g, n.ID, hops.EventsOfSubject)
 		if err != nil {
@@ -526,7 +561,7 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 	if err != nil {
 		return nil, err
 	}
-	fresh := map[string]PersonHeader{}
+	fresh := map[string]PersonSummary{}
 	for _, id := range need {
 		h, err := onePerson(v, byID[string(id)], g, pg, leads[string(id)])
 		if err != nil {
@@ -537,11 +572,11 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 			g.SetDisplay(id, h)
 		}
 	}
-	return displayed(g, nodes, fresh, func(h PersonHeader) PersonHeader { return finishPerson(v, h) }), nil
+	return displayed(g, nodes, fresh, func(h PersonSummary) PersonSummary { return finishPerson(v, h) }), nil
 }
 
 // finishPerson fills the read-time labels of a stored person row.
-func finishPerson(v vocab, h PersonHeader) PersonHeader {
+func finishPerson(v vocab, h PersonSummary) PersonSummary {
 	h.Gender = v.finishFacts(h.Gender, vocabkey.PropertyGender)
 	h.SexAtBirth = v.finishFacts(h.SexAtBirth, vocabkey.PropertySexAtBirth)
 	return h
@@ -563,25 +598,25 @@ func leadPictures(g *graphcache.Graph, ids [][]byte) (map[string][]byte, error) 
 	return out, nil
 }
 
-func onePerson(v vocab, n *graphcache.Node, g *graphcache.Graph, pg *placeGraph, lead []byte) (PersonHeader, error) {
-	h := PersonHeader{Entity: entityOf(n), PictureImageFileID: lead}
+func onePerson(v vocab, n *graphcache.Node, g *graphcache.Graph, pg *placeGraph, lead []byte) (PersonSummary, error) {
+	h := PersonSummary{Entity: entityOf(n), PictureImageFileID: lead}
 	name, count, err := keptName(n, v.prop(vocabkey.PropertyName))
 	if err != nil {
-		return PersonHeader{}, err
+		return PersonSummary{}, err
 	}
 	h.Name, h.NameValueCount = name, count
 	h.Gender = keptTermFacts(n, v.prop(vocabkey.PropertyGender))
 	h.SexAtBirth = keptTermFacts(n, v.prop(vocabkey.PropertySexAtBirth))
 	births, deaths, err := lifePicks(g, v, n)
 	if err != nil {
-		return PersonHeader{}, err
+		return PersonSummary{}, err
 	}
 	var errLife error
 	if h.Birth, errLife = leadLife(g, v, pg, births); errLife != nil {
-		return PersonHeader{}, errLife
+		return PersonSummary{}, errLife
 	}
 	if h.Death, errLife = leadLife(g, v, pg, deaths); errLife != nil {
-		return PersonHeader{}, errLife
+		return PersonSummary{}, errLife
 	}
 	return h, nil
 }
@@ -792,7 +827,7 @@ func lifeOwners(g *graphcache.Graph, v vocab, pg *placeGraph, picks []lifePick) 
 					continue
 				}
 				if len(l.Association) == 0 {
-					return LifeOwners{}, fmt.Errorf("conclusionheaders: location link of event %x to place %x has no association", pick.event.ID, l.Neighbor)
+					return LifeOwners{}, fmt.Errorf("conclusionsummaries: location link of event %x to place %x has no association", pick.event.ID, l.Neighbor)
 				}
 				listed[string(l.Association)] = true
 				assoc, err := g.Node(l.Association)
@@ -800,11 +835,11 @@ func lifeOwners(g *graphcache.Graph, v vocab, pg *placeGraph, picks []lifePick) 
 					return LifeOwners{}, err
 				}
 				if assoc == nil {
-					return LifeOwners{}, fmt.Errorf("conclusionheaders: association %x is missing", l.Association)
+					return LifeOwners{}, fmt.Errorf("conclusionsummaries: association %x is missing", l.Association)
 				}
 				out.Places = append(out.Places, FieldOwner{
 					Entity: entityOf(assoc), PropertyID: v.prop(hops.PlacesOfEvent.To()),
-					Place: &HeaderPlace{Entity: p.Entity, Names: p.Names},
+					Place: &ChainedPlace{Entity: p.Entity, Names: p.Names},
 				})
 			}
 		}
@@ -812,8 +847,8 @@ func lifeOwners(g *graphcache.Graph, v vocab, pg *placeGraph, picks []lifePick) 
 	return out, nil
 }
 
-func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool) ([]EventHeader, error) {
-	need := needed[EventHeader](g, nodes, store)
+func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool) ([]EventSummary, error) {
+	need := needed[EventSummary](g, nodes, store)
 	var personIDs, placeIDs [][]byte
 	for _, n := range need {
 		subjects, err := follow(g, n.ID, hops.SubjectsOfEvent)
@@ -846,7 +881,7 @@ func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 	if err != nil {
 		return nil, err
 	}
-	fresh := map[string]EventHeader{}
+	fresh := map[string]EventSummary{}
 	for _, n := range need {
 		h, err := oneEvent(g, v, pg, n)
 		if err != nil {
@@ -858,31 +893,31 @@ func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 			g.SetDisplay(n.ID, h)
 		}
 	}
-	return displayed(g, nodes, fresh, func(h EventHeader) EventHeader { return finishEvent(v, h) }), nil
+	return displayed(g, nodes, fresh, func(h EventSummary) EventSummary { return finishEvent(v, h) }), nil
 }
 
-func oneEvent(g *graphcache.Graph, v vocab, pg *placeGraph, n *graphcache.Node) (EventHeader, error) {
-	h := EventHeader{Entity: entityOf(n)}
+func oneEvent(g *graphcache.Graph, v vocab, pg *placeGraph, n *graphcache.Node) (EventSummary, error) {
+	h := EventSummary{Entity: entityOf(n)}
 	h.EventName, h.EventNameCount = keptText(n, v.prop("event_name"))
 	h.Type = keptTermFacts(n, v.prop(vocabkey.PropertyEventType))
 	var err error
 	if h.Date, h.DateCount, _, _, err = keptDateAt(n, v.prop(vocabkey.PropertyDate)); err != nil {
-		return EventHeader{}, err
+		return EventSummary{}, err
 	}
 	if h.StartDate, h.StartDateCount, _, _, err = keptDateAt(n, v.prop(vocabkey.PropertyStartDate)); err != nil {
-		return EventHeader{}, err
+		return EventSummary{}, err
 	}
 	if h.EndDate, h.EndDateCount, _, _, err = keptDateAt(n, v.prop(vocabkey.PropertyEndDate)); err != nil {
-		return EventHeader{}, err
+		return EventSummary{}, err
 	}
 	h.Places, err = eventPlaces(g, v, pg, n)
 	if err != nil {
-		return EventHeader{}, err
+		return EventSummary{}, err
 	}
 	seen := map[string]bool{}
 	subjectLinks, err := follow(g, n.ID, hops.SubjectsOfEvent)
 	if err != nil {
-		return EventHeader{}, err
+		return EventSummary{}, err
 	}
 	for _, l := range subjectLinks {
 		if seen[string(l.Neighbor)] {
@@ -891,14 +926,14 @@ func oneEvent(g *graphcache.Graph, v vocab, pg *placeGraph, n *graphcache.Node) 
 		seen[string(l.Neighbor)] = true
 		person, err := g.Node(l.Neighbor)
 		if err != nil {
-			return EventHeader{}, err
+			return EventSummary{}, err
 		}
 		if person == nil {
 			continue
 		}
 		name, count, err := keptName(person, v.prop(vocabkey.PropertyName))
 		if err != nil {
-			return EventHeader{}, err
+			return EventSummary{}, err
 		}
 		h.Subjects = append(h.Subjects, EventSubject{
 			Entity: entityOf(person), Name: name, NameValueCount: count,
@@ -911,7 +946,7 @@ func oneEvent(g *graphcache.Graph, v vocab, pg *placeGraph, n *graphcache.Node) 
 	return h, nil
 }
 
-func finishEvent(v vocab, h EventHeader) EventHeader {
+func finishEvent(v vocab, h EventSummary) EventSummary {
 	h.Type = v.finishFacts(h.Type, vocabkey.PropertyEventType)
 	h.Title = eventTitle(h)
 	return h
@@ -923,9 +958,9 @@ type eventKey struct {
 	ref string
 }
 
-func sortEvents(rows []EventHeader) {
+func sortEvents(rows []EventSummary) {
 	type keyed struct {
-		h EventHeader
+		h EventSummary
 		k eventKey
 	}
 	keyedRows := make([]keyed, len(rows))
@@ -950,7 +985,7 @@ func eventKeyLess(a, b eventKey) bool {
 	return a.ref < b.ref
 }
 
-func eventKeyOf(h EventHeader) eventKey {
+func eventKeyOf(h EventSummary) eventKey {
 	if key, ok := dateSort(h.Date); ok {
 		return eventKey{key: key, ok: true, ref: strings.ToLower(h.Entity.Ref)}
 	}
@@ -967,8 +1002,8 @@ func dateSort(v *datevalue.Value) (string, bool) {
 	return autoreconcile.SortKey(propertymeta.ValueTypeDate, autoreconcile.Value{Date: v})
 }
 
-func eventPlaces(g *graphcache.Graph, v vocab, pg *placeGraph, ev *graphcache.Node) ([]HeaderPlace, error) {
-	var raw []HeaderPlace
+func eventPlaces(g *graphcache.Graph, v vocab, pg *placeGraph, ev *graphcache.Node) ([]ChainedPlace, error) {
+	var raw []ChainedPlace
 	seen := map[string]bool{}
 	locations, err := follow(g, ev.ID, hops.PlacesOfEvent)
 	if err != nil {
@@ -986,7 +1021,7 @@ func eventPlaces(g *graphcache.Graph, v vocab, pg *placeGraph, ev *graphcache.No
 		if n == nil {
 			continue
 		}
-		raw = append(raw, HeaderPlace{Entity: entityOf(n), Names: toponyms(n, v.prop(vocabkey.PropertyToponym))})
+		raw = append(raw, ChainedPlace{Entity: entityOf(n), Names: toponyms(n, v.prop(vocabkey.PropertyToponym))})
 	}
 	if len(raw) == 0 {
 		return nil, nil
@@ -1003,8 +1038,8 @@ func eventWhen(v vocab, ev *graphcache.Node) (*datevalue.Value, error) {
 	return date, err
 }
 
-func composePlaces(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool) ([]PlaceHeader, error) {
-	need := needed[PlaceHeader](g, nodes, store)
+func composePlaces(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool) ([]PlaceSummary, error) {
+	need := needed[PlaceSummary](g, nodes, store)
 	needIDs := make([][]byte, len(need))
 	for i, n := range need {
 		needIDs[i] = n.ID
@@ -1013,7 +1048,7 @@ func composePlaces(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 	if err != nil {
 		return nil, err
 	}
-	fresh := map[string]PlaceHeader{}
+	fresh := map[string]PlaceSummary{}
 	for _, n := range need {
 		h, err := placeShell(n, v)
 		if err != nil {
@@ -1025,41 +1060,41 @@ func composePlaces(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 			g.SetDisplay(n.ID, h)
 		}
 	}
-	return finishPlaces(g, v, displayed(g, nodes, fresh, func(h PlaceHeader) PlaceHeader { return h }))
+	return finishPlaces(g, v, displayed(g, nodes, fresh, func(h PlaceSummary) PlaceSummary { return h }))
 }
 
-func placeShell(n *graphcache.Node, v vocab) (PlaceHeader, error) {
-	h := PlaceHeader{Entity: entityOf(n), Names: toponyms(n, v.prop(vocabkey.PropertyToponym))}
+func placeShell(n *graphcache.Node, v vocab) (PlaceSummary, error) {
+	h := PlaceSummary{Entity: entityOf(n), Names: toponyms(n, v.prop(vocabkey.PropertyToponym))}
 	var err error
 	if h.StartDate, _, _, _, err = keptDateAt(n, v.prop(vocabkey.PropertyStartDate)); err != nil {
-		return PlaceHeader{}, err
+		return PlaceSummary{}, err
 	}
 	if h.EndDate, _, _, _, err = keptDateAt(n, v.prop(vocabkey.PropertyEndDate)); err != nil {
-		return PlaceHeader{}, err
+		return PlaceSummary{}, err
 	}
 	return h, nil
 }
 
-func finishPlaces(g *graphcache.Graph, v vocab, headers []PlaceHeader) ([]PlaceHeader, error) {
-	if len(headers) == 0 {
+func finishPlaces(g *graphcache.Graph, v vocab, summaries []PlaceSummary) ([]PlaceSummary, error) {
+	if len(summaries) == 0 {
 		return nil, nil
 	}
-	ids := make([][]byte, len(headers))
-	for i := range headers {
-		ids[i] = headers[i].Entity.ID
+	ids := make([][]byte, len(summaries))
+	for i := range summaries {
+		ids[i] = summaries[i].Entity.ID
 	}
 	pg, err := buildPlaceGraph(g, v, ids)
 	if err != nil {
 		return nil, err
 	}
 	today := TodayDate()
-	for i := range headers {
-		pg.byID[string(headers[i].Entity.ID)] = headers[i]
-		pg.period[string(headers[i].Entity.ID)] = periodWindow(headers[i].StartDate, headers[i].EndDate)
-		at := chainQueryDate(headers[i], today)
-		headers[i].Parents, headers[i].ParentsAreCandidates = pg.ParentChain(headers[i].Entity.ID, &at)
+	for i := range summaries {
+		pg.byID[string(summaries[i].Entity.ID)] = summaries[i]
+		pg.period[string(summaries[i].Entity.ID)] = periodWindow(summaries[i].StartDate, summaries[i].EndDate)
+		at := chainQueryDate(summaries[i], today)
+		summaries[i].Parents, summaries[i].ParentsAreCandidates = pg.ParentChain(summaries[i].Entity.ID, &at)
 	}
-	return headers, nil
+	return summaries, nil
 }
 
 func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph, error) {
@@ -1074,7 +1109,7 @@ func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph,
 		seen[string(id)] = true
 	}
 	linked := map[string]bool{}
-	for round := 0; round < headerChainDepth && len(frontier) > 0; round++ {
+	for round := 0; round < summaryChainDepth && len(frontier) > 0; round++ {
 		if err := g.Nodes(frontier); err != nil {
 			return nil, err
 		}
@@ -1218,7 +1253,7 @@ func rememberPlaceLink(pg *placeGraph, g *graphcache.Graph, v vocab, id []byte, 
 		return err
 	}
 	if assoc == nil {
-		return fmt.Errorf("conclusionheaders: association %x is missing", l.Association)
+		return fmt.Errorf("conclusionsummaries: association %x is missing", l.Association)
 	}
 	d, err := assocDatesOf(v, assoc)
 	if err != nil {

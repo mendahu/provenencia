@@ -1,4 +1,4 @@
-package conclusionheaders
+package conclusionsummaries
 
 import (
 	"bytes"
@@ -23,7 +23,7 @@ type placeLink struct {
 // chains for a set of Places at a query date. Links are indexed by endpoint
 // so a parent question does not scan every other place's edges.
 type placeGraph struct {
-	byID     map[string]PlaceHeader
+	byID     map[string]PlaceSummary
 	partFrom map[string][]placeLink // part id → wholes
 	partTo   map[string][]placeLink // whole id → parts
 	succFrom map[string][]placeLink // predecessor id → successors
@@ -33,7 +33,7 @@ type placeGraph struct {
 
 func newPlaceGraph() *placeGraph {
 	return &placeGraph{
-		byID:     map[string]PlaceHeader{},
+		byID:     map[string]PlaceSummary{},
 		partFrom: map[string][]placeLink{},
 		partTo:   map[string][]placeLink{},
 		succFrom: map[string][]placeLink{},
@@ -230,8 +230,8 @@ func (g *placeGraph) isAncestor(ancestor, descendant []byte, at *datevalue.Value
 // below it. Places that are not on one chain stay competing, even when a
 // vaguer listed Place is above both: Toronto and Hamilton under Ontario are
 // two readings, not one. Succession never connects Places.
-func (g *placeGraph) FoldLocations(places []HeaderPlace, at *datevalue.Value) []HeaderPlace {
-	var out []HeaderPlace
+func (g *placeGraph) FoldLocations(places []ChainedPlace, at *datevalue.Value) []ChainedPlace {
+	var out []ChainedPlace
 	seen := map[string]bool{}
 	for i := range places {
 		id := places[i].Entity.ID
@@ -266,7 +266,7 @@ func (g *placeGraph) FoldLocations(places []HeaderPlace, at *datevalue.Value) []
 
 // chainQueryDate is today, or the Place's end when today is after its period
 // (D7: show the last chain for a place whose period has ended).
-func chainQueryDate(h PlaceHeader, today datevalue.Value) datevalue.Value {
+func chainQueryDate(h PlaceSummary, today datevalue.Value) datevalue.Value {
 	if h.EndDate == nil {
 		return today
 	}
@@ -298,7 +298,7 @@ func placeNeighborhood(c *database.Catalog, ids [][]byte) (*placeGraph, error) {
 // AttachPlaceRelationships fills PartOf / Contains / Predecessors /
 // Successors on a Place detail header (every part_of parent with its
 // membership span; children that hold today; succession both ways).
-func AttachPlaceRelationships(c *database.Catalog, h *PlaceHeader) error {
+func AttachPlaceRelationships(c *database.Catalog, h *PlaceSummary) error {
 	if h == nil || len(h.Entity.ID) == 0 {
 		return nil
 	}
@@ -369,7 +369,7 @@ func (g *placeGraph) relationship(id []byte, kind string) PlaceRelationship {
 
 // membershipDates is the span a hierarchical link shows: the link's own
 // dates when present, else the overlap of the two places' periods.
-func membershipDates(l placeLink, from, to PlaceHeader) (start, end *datevalue.Value) {
+func membershipDates(l placeLink, from, to PlaceSummary) (start, end *datevalue.Value) {
 	if l.start != nil || l.end != nil {
 		return l.start, l.end
 	}

@@ -213,7 +213,7 @@ func TestHandleSearchFollowsEdits(t *testing.T) {
 	}
 }
 
-func TestHeaderSearchFindsTheListTitle(t *testing.T) {
+func TestSummarySearchFindsTheListTitle(t *testing.T) {
 	f := newHandleFixture(t)
 	person := f.person("James Robins", "Kenneth Robins")
 	birth, err := propertyterms.Lookup(f.c, f.prop("event_type").ID, "birth", vocabkey.OriginProvenencia)

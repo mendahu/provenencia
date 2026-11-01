@@ -27,7 +27,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/gallery"
 	"github.com/mendahu/provenencia/core/database/graphcache"
@@ -547,18 +547,18 @@ const (
 )
 
 // OwnerField is the field a derived row reads off the entity that owns it.
-// Event is the owner's header when the owner is an Event. Place is the Place
+// Event is the owner's summary when the owner is an Event. Place is the Place
 // a place row's owner (an event–place link's association) holds on its place
 // end, with its own toponyms; nil for every other owner.
 type OwnerField struct {
 	Entity canonicalentities.Entity
-	Event  *conclusionheaders.EventHeader
-	Place  *conclusionheaders.HeaderPlace
+	Event  *conclusionsummaries.EventSummary
+	Place  *conclusionsummaries.ChainedPlace
 	Field  Field
 }
 
 // DerivedRow is one life row's records: one entry per owner, in the order
-// the row lists them (the lead event first; place links in the header's order).
+// the row lists them (the lead event first; place links in the summary's order).
 type DerivedRow struct {
 	Kind   DerivedRowKind
 	Owners []OwnerField
@@ -569,14 +569,14 @@ type DerivedRow struct {
 // owners is not returned. An owner merged or gone, or without the field the
 // row reads, is dropped.
 func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, error) {
-	birth, death, err := conclusionheaders.PersonLifeOwners(c, personID)
+	birth, death, err := conclusionsummaries.PersonLifeOwners(c, personID)
 	if err != nil {
 		return nil, err
 	}
 	lists := []struct {
 		kind   DerivedRowKind
-		owners []conclusionheaders.FieldOwner
-		events bool // the owners are Events, so each carries its header
+		owners []conclusionsummaries.FieldOwner
+		events bool // the owners are Events, so each carries its summary
 	}{
 		{DerivedRowBirthDate, birth.Dates, true}, {DerivedRowBirthPlace, birth.Places, false},
 		{DerivedRowDeathDate, death.Dates, true}, {DerivedRowDeathPlace, death.Places, false},
@@ -614,13 +614,13 @@ func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, erro
 	if err != nil {
 		return nil, err
 	}
-	headers, err := conclusionheaders.EventsByIDs(c, database.UniqueBlobIDs(eventIDs))
+	summaries, err := conclusionsummaries.EventsByIDs(c, database.UniqueBlobIDs(eventIDs))
 	if err != nil {
 		return nil, err
 	}
-	eventOf := map[string]*conclusionheaders.EventHeader{}
-	for i := range headers {
-		eventOf[string(headers[i].Entity.ID)] = &headers[i]
+	eventOf := map[string]*conclusionsummaries.EventSummary{}
+	for i := range summaries {
+		eventOf[string(summaries[i].Entity.ID)] = &summaries[i]
 	}
 	var out []DerivedRow
 	for _, l := range lists {

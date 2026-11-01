@@ -142,7 +142,7 @@ var Registry = []KindSpec{
 
 // Handle kinds join the omnibar default (S9-35). Priority, high to low:
 // persons, events, places, then sources (1, above). Types and fields stay at 0.
-// Documents are match text from the list headers.
+// Documents are match text from the list summaries.
 func init() {
 	handle := func(kind string, priority int) {
 		Registry = append(Registry, KindSpec{

@@ -1,4 +1,4 @@
-package conclusionheaders
+package conclusionsummaries
 
 import "github.com/mendahu/provenencia/core/database"
 
@@ -35,6 +35,6 @@ func ListPlacesQueryCount(c *database.Catalog) (int, error) {
 }
 
 // SortPlaces applies the list order to Place rows.
-func SortPlaces(rows []PlaceHeader) {
-	SortByTitle(rows, placeTitle, func(h PlaceHeader) string { return h.Entity.Ref })
+func SortPlaces(rows []PlaceSummary) {
+	SortByTitle(rows, placeTitle, func(h PlaceSummary) string { return h.Entity.Ref })
 }

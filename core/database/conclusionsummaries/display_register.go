@@ -1,4 +1,4 @@
-package conclusionheaders
+package conclusionsummaries
 
 import (
 	"fmt"
@@ -20,38 +20,38 @@ func checkDisplay(g *graphcache.Graph, id []byte, stored any) error {
 		return err
 	}
 	switch row := stored.(type) {
-	case PersonHeader:
+	case PersonSummary:
 		got, err := persons(g, [][]byte{id}, false, false)
 		if err != nil {
 			return err
 		}
 		if len(got) != 1 || !reflect.DeepEqual(got[0], finishPerson(v, row)) {
-			return fmt.Errorf("conclusionheaders: stored person %x does not match a fresh row", id)
+			return fmt.Errorf("conclusionsummaries: stored person %x does not match a fresh row", id)
 		}
-	case EventHeader:
+	case EventSummary:
 		got, err := events(g, [][]byte{id}, false, false)
 		if err != nil {
 			return err
 		}
 		if len(got) != 1 || !reflect.DeepEqual(got[0], finishEvent(v, row)) {
-			return fmt.Errorf("conclusionheaders: stored event %x does not match a fresh row", id)
+			return fmt.Errorf("conclusionsummaries: stored event %x does not match a fresh row", id)
 		}
-	case PlaceHeader:
+	case PlaceSummary:
 		got, err := places(g, [][]byte{id}, false, false)
 		if err != nil {
 			return err
 		}
 		if len(got) != 1 {
-			return fmt.Errorf("conclusionheaders: stored place %x is missing", id)
+			return fmt.Errorf("conclusionsummaries: stored place %x is missing", id)
 		}
 		fresh := got[0]
 		fresh.Parents, fresh.ParentsAreCandidates = nil, false
 		row.Parents, row.ParentsAreCandidates = nil, false
 		if !reflect.DeepEqual(fresh, row) {
-			return fmt.Errorf("conclusionheaders: stored place %x does not match a fresh row", id)
+			return fmt.Errorf("conclusionsummaries: stored place %x does not match a fresh row", id)
 		}
 	default:
-		return fmt.Errorf("conclusionheaders: stored row %x has type %T", id, stored)
+		return fmt.Errorf("conclusionsummaries: stored row %x has type %T", id, stored)
 	}
 	return nil
 }

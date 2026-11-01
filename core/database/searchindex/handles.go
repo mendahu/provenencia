@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/datevalue"
@@ -17,10 +17,10 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// Handle documents (Conclusion layer) are match text from the header
+// Handle documents (Conclusion layer) are match text from the summary
 // composers: the title the list shows, plus the secondary line (a Person's
 // life, a Place's names and chain). autoreconciler.RecomputeTx reprojects
-// the handles it rewrites and their header dependents, in the same transaction.
+// the handles it rewrites and their summary dependents, in the same transaction.
 const (
 	sqlHandleHeads = `SELECT e.id, e.ref, COALESCE(e.label, ''), st.key, st.origin, e.merged_into_id IS NOT NULL
 		FROM canonical_entities e JOIN subject_types st ON st.id = e.subject_type_id
@@ -97,7 +97,7 @@ func reprojectHandleBatch(q Querier, ids [][]byte) error {
 	if err != nil {
 		return err
 	}
-	headers, err := loadHandleHeaders(q, heads)
+	summaries, err := loadHandleSummaries(q, heads)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func reprojectHandleBatch(q Querier, ids [][]byte) error {
 			}
 			continue
 		}
-		if err := Upsert(q, handleDocument(h, values[string(id)], headers)); err != nil {
+		if err := Upsert(q, handleDocument(h, id, values[string(id)], summaries)); err != nil {
 			return err
 		}
 	}
@@ -184,56 +184,24 @@ func loadHandleValues(q Querier, in string, args []any) (map[string]handleValues
 	return out, rows.Err()
 }
 
-type handleHeaders struct {
-	persons map[string]conclusionheaders.PersonHeader
-	events  map[string]conclusionheaders.EventHeader
-	places  map[string]conclusionheaders.PlaceHeader
-}
-
-func loadHandleHeaders(q Querier, heads map[string]handleHead) (handleHeaders, error) {
-	var persons, events, places [][]byte
+func loadHandleSummaries(q Querier, heads map[string]handleHead) (conclusionsummaries.Summaries, error) {
+	var w conclusionsummaries.Want
 	for key, h := range heads {
-		if h.merged || h.kind == "" {
+		if h.merged {
 			continue
 		}
-		id := []byte(key)
-		switch h.kind {
-		case vocabkey.Person:
-			persons = append(persons, id)
-		case vocabkey.Event:
-			events = append(events, id)
-		case vocabkey.Place:
-			places = append(places, id)
-		}
+		w.Add(h.kind, []byte(key))
 	}
-	out := handleHeaders{
-		persons: map[string]conclusionheaders.PersonHeader{},
-		events:  map[string]conclusionheaders.EventHeader{},
-		places:  map[string]conclusionheaders.PlaceHeader{},
+	if w.Empty() {
+		return conclusionsummaries.Summaries{}, nil
 	}
-	if len(persons)+len(events)+len(places) == 0 {
-		return out, nil
-	}
-	ps, es, pl, err := conclusionheaders.RowsForSearch(graphcache.Over(q), persons, events, places)
-	if err != nil {
-		return handleHeaders{}, err
-	}
-	for _, h := range ps {
-		out.persons[database.UUIDString(h.Entity.ID)] = h
-	}
-	for _, h := range es {
-		out.events[database.UUIDString(h.Entity.ID)] = h
-	}
-	for _, h := range pl {
-		out.places[database.UUIDString(h.Entity.ID)] = h
-	}
-	return out, nil
+	return conclusionsummaries.RowsForSearch(graphcache.Over(q), w)
 }
 
-// handleDocument is match text from the header the lists use. Other cached
+// handleDocument is match text from the summary the lists use. Other cached
 // names and toponyms stay searchable when they are not the displayed title.
-func handleDocument(h handleHead, v handleValues, headers handleHeaders) Document {
-	title, secondary := matchText(h, v, headers)
+func handleDocument(h handleHead, id []byte, v handleValues, summaries conclusionsummaries.Summaries) Document {
+	title, secondary := matchText(h, id, v, summaries)
 	display := title
 	if display == "" {
 		display = h.ref
@@ -249,12 +217,12 @@ func handleDocument(h handleHead, v handleValues, headers handleHeaders) Documen
 	}
 }
 
-func matchText(h handleHead, v handleValues, headers handleHeaders) (string, []string) {
+func matchText(h handleHead, id []byte, v handleValues, summaries conclusionsummaries.Summaries) (string, []string) {
 	var title string
 	var secondary, alts, names, parents []string
 	switch h.kind {
 	case vocabkey.Person:
-		if p, ok := headers.persons[h.id]; ok {
+		if p, ok := summaries.Person(id); ok {
 			if p.Name != nil {
 				title = strings.TrimSpace(p.Name.Form)
 			}
@@ -263,12 +231,12 @@ func matchText(h handleHead, v handleValues, headers handleHeaders) (string, []s
 		alts = distinctAlternates(title, v[vocabkey.PropertyName])
 		secondary = append(secondary, tagged(alts, "name")...)
 	case vocabkey.Event:
-		if e, ok := headers.events[h.id]; ok {
+		if e, ok := summaries.Event(id); ok {
 			title = eventMatchTitle(e)
 			secondary = append(secondary, eventMatchSecondary(e)...)
 		}
 	case vocabkey.Place:
-		if p, ok := headers.places[h.id]; ok {
+		if p, ok := summaries.Place(id); ok {
 			if len(p.Names) > 0 {
 				title = p.Names[0]
 			}
@@ -328,9 +296,9 @@ func distinctAlternates(title string, lists ...[]string) []string {
 	return out
 }
 
-func personLifeMatch(h conclusionheaders.PersonHeader) []string {
+func personLifeMatch(h conclusionsummaries.PersonSummary) []string {
 	var out []string
-	for _, life := range []conclusionheaders.LifeFacts{h.Birth, h.Death} {
+	for _, life := range []conclusionsummaries.LifeFacts{h.Birth, h.Death} {
 		if life.Date != nil {
 			if s := datevalue.CompactDisplay(*life.Date); s != "" {
 				out = append(out, s)
@@ -344,7 +312,7 @@ func personLifeMatch(h conclusionheaders.PersonHeader) []string {
 	return out
 }
 
-func eventMatchSecondary(h conclusionheaders.EventHeader) []string {
+func eventMatchSecondary(h conclusionsummaries.EventSummary) []string {
 	var out []string
 	for _, d := range []*datevalue.Value{h.Date, h.StartDate, h.EndDate} {
 		if d == nil {
@@ -363,8 +331,8 @@ func eventMatchSecondary(h conclusionheaders.EventHeader) []string {
 
 // eventMatchTitle is the English list title, so a query for the words the
 // row shows ("Birth of James Robins") finds the Event. The app still formats
-// the visible row from the structured header.
-func eventMatchTitle(h conclusionheaders.EventHeader) string {
+// the visible row from the structured summary.
+func eventMatchTitle(h conclusionsummaries.EventSummary) string {
 	p := h.Title
 	typeWord := strings.TrimSpace(p.Parts.TypeLabel)
 	if typeWord == "" {

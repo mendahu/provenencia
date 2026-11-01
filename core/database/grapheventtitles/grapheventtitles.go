@@ -2,7 +2,7 @@
 // Evidence graph, from what that graph cites: the event's own event_name and
 // event_type, the people its subject-role participations name, and the places
 // its locations name. The rule is eventtitle's, the same one canonical Event
-// headers use, so a card and the Event it is promoted to title themselves by
+// summaries use, so a card and the Event it is promoted to title themselves by
 // one matrix.
 //
 // It reads the loaded Evidence graph and issues no query.

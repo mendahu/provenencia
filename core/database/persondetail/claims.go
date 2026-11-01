@@ -9,7 +9,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
-	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 )
 
@@ -68,13 +68,13 @@ func Claims(c *database.Catalog, entityID []byte) ([]ClaimGroup, error) {
 		}
 		groups[i].Claims = append(groups[i].Claims, claim)
 	}
-	conclusionheaders.SortByTitle(groups, func(g ClaimGroup) string { return g.Title }, func(g ClaimGroup) string { return g.SourceRef })
+	conclusionsummaries.SortByTitle(groups, func(g ClaimGroup) string { return g.Title }, func(g ClaimGroup) string { return g.SourceRef })
 	for i := range groups {
 		claims := groups[i].Claims
 		sort.SliceStable(claims, func(a, b int) bool {
 			return strings.ToLower(claims[a].Subject.Ref) < strings.ToLower(claims[b].Subject.Ref)
 		})
-		conclusionheaders.SortByTitle(claims, func(cl Claim) string { return cl.Graph.GraphName }, func(cl Claim) string { return cl.Graph.GraphRef })
+		conclusionsummaries.SortByTitle(claims, func(cl Claim) string { return cl.Graph.GraphName }, func(cl Claim) string { return cl.Graph.GraphRef })
 	}
 	return groups, nil
 }

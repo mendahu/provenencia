@@ -1,4 +1,4 @@
-package conclusionheaders
+package conclusionsummaries
 
 import (
 	"testing"
@@ -102,10 +102,10 @@ func TestMembershipDatesByDay(t *testing.T) {
 	oct31, jul1 := day(1867, 10, 31), day(1867, 7, 1)
 	for _, c := range []struct {
 		name     string
-		from, to PlaceHeader
+		from, to PlaceSummary
 	}{
-		{"part first", PlaceHeader{StartDate: march, EndDate: oct31}, PlaceHeader{StartDate: sept, EndDate: jul1}},
-		{"whole first", PlaceHeader{StartDate: sept, EndDate: jul1}, PlaceHeader{StartDate: march, EndDate: oct31}},
+		{"part first", PlaceSummary{StartDate: march, EndDate: oct31}, PlaceSummary{StartDate: sept, EndDate: jul1}},
+		{"whole first", PlaceSummary{StartDate: sept, EndDate: jul1}, PlaceSummary{StartDate: march, EndDate: oct31}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			start, end := membershipDates(placeLink{}, c.from, c.to)
@@ -138,7 +138,7 @@ func TestMembershipDatesByDayBranches(t *testing.T) {
 				a, b = b, a
 			}
 			t.Run(c.name, func(t *testing.T) {
-				start, end := membershipDates(placeLink{}, PlaceHeader{StartDate: a, EndDate: a}, PlaceHeader{StartDate: b, EndDate: b})
+				start, end := membershipDates(placeLink{}, PlaceSummary{StartDate: a, EndDate: a}, PlaceSummary{StartDate: b, EndDate: b})
 				got := end
 				if c.start {
 					got = start
@@ -151,7 +151,7 @@ func TestMembershipDatesByDayBranches(t *testing.T) {
 	}
 	t.Run("a tie keeps the first", func(t *testing.T) {
 		a, b := ptrDate(ymd(1850, nil, nil)), ptrDate(ymd(1850, nil, nil))
-		start, end := membershipDates(placeLink{}, PlaceHeader{StartDate: a, EndDate: a}, PlaceHeader{StartDate: b, EndDate: b})
+		start, end := membershipDates(placeLink{}, PlaceSummary{StartDate: a, EndDate: a}, PlaceSummary{StartDate: b, EndDate: b})
 		if start != a || end != a {
 			t.Fatalf("got %p %p want %p", start, end, a)
 		}

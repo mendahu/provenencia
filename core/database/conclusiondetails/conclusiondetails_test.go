@@ -15,7 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
-	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
@@ -405,10 +405,10 @@ func TestForEntityLikenessNeedsAPNG(t *testing.T) {
 		t.Fatalf("pictures %+v", d.Pictures)
 	}
 	f.c.Graph().Drop()
-	rows, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{h})
+	rows, err := conclusionsummaries.PersonsByIDs(f.c, [][]byte{h})
 	must(t, err)
 	if len(rows) != 1 || rows[0].PictureImageFileID != nil {
-		t.Fatalf("header leads with %x", rows[0].PictureImageFileID)
+		t.Fatalf("summary leads with %x", rows[0].PictureImageFileID)
 	}
 }
 
