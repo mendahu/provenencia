@@ -1283,6 +1283,15 @@ message EventSubject {
 // (names are one structure, so at most 1; > 1 would read as mixed, and the
 // extra values are the list's +N). birth and death are read off the
 // canonical graph.
+// TermFacts is one term-valued Property of a header: the rank-1 displayed
+// term (absent when none), how many values are displayed (> 1 is a
+// disagreement), and the Property's label.
+message TermFacts {
+  ConclusionTerm term = 1;
+  int32 count = 2;
+  string property_label = 3;
+}
+
 message PersonHeader {
   CanonicalEntity entity = 1;
   NameValueInput name = 2;
@@ -1299,6 +1308,10 @@ message PersonHeader {
   // else the earliest gallery picture); empty when none. Filled on ListPersonHeaders and
   // GetConclusionDetail only.
   string picture_image_rel_path = 8;
+  // gender and sex_at_birth are the displayed terms of the product
+  // Properties; the app chooses the colors (gender first). Always set.
+  TermFacts gender = 9;
+  TermFacts sex_at_birth = 10;
 }
 
 // ListPersonHeaders returns every unmerged Person in list order: by the title

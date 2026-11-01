@@ -55,7 +55,26 @@ func personHeaderProto(h conclusionheaders.PersonHeader) *engine.PersonHeader {
 	}
 	ph.Birth = lifeFactsProto(h.Birth)
 	ph.Death = lifeFactsProto(h.Death)
+	ph.Gender = termFactsProto(h.Gender)
+	ph.SexAtBirth = termFactsProto(h.SexAtBirth)
 	return ph
+}
+
+// termProto is the one Go mapper of a header term onto the wire; nil gives nil.
+func termProto(t *conclusionheaders.Term) *engine.ConclusionTerm {
+	if t == nil {
+		return nil
+	}
+	return &engine.ConclusionTerm{
+		Id:     database.UUIDString(t.ID),
+		Key:    t.Key,
+		Origin: t.Origin,
+		Label:  t.Label,
+	}
+}
+
+func termFactsProto(f conclusionheaders.TermFacts) *engine.TermFacts {
+	return &engine.TermFacts{Term: termProto(f.Term), Count: int32(f.Count), PropertyLabel: f.PropertyLabel}
 }
 
 func lifeFactsProto(life conclusionheaders.LifeFacts) *engine.LifeFacts {
@@ -120,21 +139,14 @@ func eventHeaderProto(h conclusionheaders.EventHeader) *engine.EventHeader {
 		Entity:          canonicalEntityProto(h.Entity),
 		EventName:       h.EventName,
 		EventNameCount:  int32(h.EventNameCount),
-		EventTypeCount:  int32(h.EventTypeCount),
+		EventTypeCount:  int32(h.Type.Count),
 		DateCount:       int32(h.DateCount),
 		StartDateCount:  int32(h.StartDateCount),
 		EndDateCount:    int32(h.EndDateCount),
 		UpdatedRevision: h.Updated.Revision,
 		UpdatedAt:       h.Updated.At,
 	}
-	if h.EventType != nil {
-		eh.EventType = &engine.ConclusionTerm{
-			Id:     database.UUIDString(h.EventType.ID),
-			Key:    h.EventType.Key,
-			Origin: h.EventType.Origin,
-			Label:  h.EventType.Label,
-		}
-	}
+	eh.EventType = termProto(h.Type.Term)
 	if h.Date != nil {
 		eh.Date = valuecodec.DateToProto(*h.Date)
 	}

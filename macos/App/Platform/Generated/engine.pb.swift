@@ -4255,6 +4255,34 @@ public nonisolated struct Provenencia_Engine_V1_EventSubject: Sendable {
 /// (names are one structure, so at most 1; > 1 would read as mixed, and the
 /// extra values are the list's +N). birth and death are read off the
 /// canonical graph.
+/// TermFacts is one term-valued Property of a header: the rank-1 displayed
+/// term (absent when none), how many values are displayed (> 1 is a
+/// disagreement), and the Property's label.
+public nonisolated struct Provenencia_Engine_V1_TermFacts: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var term: Provenencia_Engine_V1_ConclusionTerm {
+    get {_term ?? Provenencia_Engine_V1_ConclusionTerm()}
+    set {_term = newValue}
+  }
+  /// Returns true if `term` has been explicitly set.
+  public var hasTerm: Bool {self._term != nil}
+  /// Clears the value of `term`. Subsequent reads from it will return its default value.
+  public mutating func clearTerm() {self._term = nil}
+
+  public var count: Int32 = 0
+
+  public var propertyLabel: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _term: Provenencia_Engine_V1_ConclusionTerm? = nil
+}
+
 public nonisolated struct Provenencia_Engine_V1_PersonHeader: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -4322,6 +4350,26 @@ public nonisolated struct Provenencia_Engine_V1_PersonHeader: @unchecked Sendabl
     get {_storage._pictureImageRelPath}
     set {_uniqueStorage()._pictureImageRelPath = newValue}
   }
+
+  /// gender and sex_at_birth are the displayed terms of the product
+  /// Properties; the app chooses the colors (gender first). Always set.
+  public var gender: Provenencia_Engine_V1_TermFacts {
+    get {_storage._gender ?? Provenencia_Engine_V1_TermFacts()}
+    set {_uniqueStorage()._gender = newValue}
+  }
+  /// Returns true if `gender` has been explicitly set.
+  public var hasGender: Bool {_storage._gender != nil}
+  /// Clears the value of `gender`. Subsequent reads from it will return its default value.
+  public mutating func clearGender() {_uniqueStorage()._gender = nil}
+
+  public var sexAtBirth: Provenencia_Engine_V1_TermFacts {
+    get {_storage._sexAtBirth ?? Provenencia_Engine_V1_TermFacts()}
+    set {_uniqueStorage()._sexAtBirth = newValue}
+  }
+  /// Returns true if `sexAtBirth` has been explicitly set.
+  public var hasSexAtBirth: Bool {_storage._sexAtBirth != nil}
+  /// Clears the value of `sexAtBirth`. Subsequent reads from it will return its default value.
+  public mutating func clearSexAtBirth() {_uniqueStorage()._sexAtBirth = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -14470,9 +14518,53 @@ nonisolated extension Provenencia_Engine_V1_EventSubject: SwiftProtobuf.Message,
   }
 }
 
+nonisolated extension Provenencia_Engine_V1_TermFacts: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TermFacts"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}term\0\u{1}count\0\u{3}property_label\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._term) }()
+      case 2: try { try decoder.decodeSingularInt32Field(value: &self.count) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.propertyLabel) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._term {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    if self.count != 0 {
+      try visitor.visitSingularInt32Field(value: self.count, fieldNumber: 2)
+    }
+    if !self.propertyLabel.isEmpty {
+      try visitor.visitSingularStringField(value: self.propertyLabel, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_TermFacts, rhs: Provenencia_Engine_V1_TermFacts) -> Bool {
+    if lhs._term != rhs._term {return false}
+    if lhs.count != rhs.count {return false}
+    if lhs.propertyLabel != rhs.propertyLabel {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PersonHeader"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}name\0\u{3}name_value_count\0\u{1}birth\0\u{1}death\0\u{3}updated_revision\0\u{3}updated_at\0\u{3}picture_image_rel_path\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}name\0\u{3}name_value_count\0\u{1}birth\0\u{1}death\0\u{3}updated_revision\0\u{3}updated_at\0\u{3}picture_image_rel_path\0\u{1}gender\0\u{3}sex_at_birth\0")
 
   fileprivate class _StorageClass {
     var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
@@ -14483,6 +14575,8 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
     var _updatedRevision: Int64 = 0
     var _updatedAt: String = String()
     var _pictureImageRelPath: String = String()
+    var _gender: Provenencia_Engine_V1_TermFacts? = nil
+    var _sexAtBirth: Provenencia_Engine_V1_TermFacts? = nil
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -14501,6 +14595,8 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
       _updatedRevision = source._updatedRevision
       _updatedAt = source._updatedAt
       _pictureImageRelPath = source._pictureImageRelPath
+      _gender = source._gender
+      _sexAtBirth = source._sexAtBirth
     }
   }
 
@@ -14527,6 +14623,8 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
         case 6: try { try decoder.decodeSingularInt64Field(value: &_storage._updatedRevision) }()
         case 7: try { try decoder.decodeSingularStringField(value: &_storage._updatedAt) }()
         case 8: try { try decoder.decodeSingularStringField(value: &_storage._pictureImageRelPath) }()
+        case 9: try { try decoder.decodeSingularMessageField(value: &_storage._gender) }()
+        case 10: try { try decoder.decodeSingularMessageField(value: &_storage._sexAtBirth) }()
         default: break
         }
       }
@@ -14563,6 +14661,12 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
       if !_storage._pictureImageRelPath.isEmpty {
         try visitor.visitSingularStringField(value: _storage._pictureImageRelPath, fieldNumber: 8)
       }
+      try { if let v = _storage._gender {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+      } }()
+      try { if let v = _storage._sexAtBirth {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -14580,6 +14684,8 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
         if _storage._updatedRevision != rhs_storage._updatedRevision {return false}
         if _storage._updatedAt != rhs_storage._updatedAt {return false}
         if _storage._pictureImageRelPath != rhs_storage._pictureImageRelPath {return false}
+        if _storage._gender != rhs_storage._gender {return false}
+        if _storage._sexAtBirth != rhs_storage._sexAtBirth {return false}
         return true
       }
       if !storagesAreEqual {return false}
