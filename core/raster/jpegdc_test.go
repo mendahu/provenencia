@@ -8,8 +8,6 @@ import (
 	"image/color"
 	"image/jpeg"
 	"math"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/raster/rastertest"
@@ -86,7 +84,7 @@ var decodableFixtures = []string{
 func TestDecodeJPEGDCMatchesStdlib(t *testing.T) {
 	for _, name := range decodableFixtures {
 		t.Run(name, func(t *testing.T) {
-			src := goFixture(t, name)
+			src := rastertest.GoFixture(t, name)
 			got, err := decodeJPEGDC(src, MaxDecodePixels)
 			if err != nil {
 				t.Fatal(err)
@@ -195,7 +193,7 @@ func sofPayload(t *testing.T, src []byte) []byte {
 	return nil
 }
 
-// decoded the pixels of src through the reduced decoder.
+// reducedPix returns the pixels of src decoded by the reduced decoder.
 func reducedPix(t *testing.T, src []byte) []byte {
 	t.Helper()
 	img, err := decodeJPEGDC(src, MaxDecodePixels)
@@ -209,6 +207,7 @@ func reducedPix(t *testing.T, src []byte) []byte {
 // replace the one it changes.
 type headerParts struct {
 	dqt, dhtDC, dhtAC, sof, sos []byte
+	sofMarker                   byte
 }
 
 func defaultParts(comps int) headerParts {
@@ -219,6 +218,7 @@ func defaultParts(comps int) headerParts {
 	return headerParts{
 		dqt: segs[0].payload, dhtDC: segs[1].payload, dhtAC: segs[2].payload,
 		sof: segs[3].payload, sos: segs[4].payload,
+		sofMarker: 0xC0,
 	}
 }
 
@@ -227,7 +227,7 @@ func (p headerParts) build(scan []byte) []byte {
 	out = append(out, rastertest.JPEGSegment(0xDB, p.dqt)...)
 	out = append(out, rastertest.JPEGSegment(0xC4, p.dhtDC)...)
 	out = append(out, rastertest.JPEGSegment(0xC4, p.dhtAC)...)
-	out = append(out, rastertest.JPEGSegment(0xC0, p.sof)...)
+	out = append(out, rastertest.JPEGSegment(p.sofMarker, p.sof)...)
 	out = append(out, rastertest.JPEGSegment(0xDA, p.sos)...)
 	return append(out, scan...)
 }
@@ -245,7 +245,7 @@ func TestDecodeJPEGDCRefuses(t *testing.T) {
 	}
 	fixturePatch := func(name string, f func(t *testing.T, b []byte)) func(t *testing.T) []byte {
 		return func(t *testing.T) []byte {
-			b := clone(goFixture(t, name))
+			b := clone(rastertest.GoFixture(t, name))
 			f(t, b)
 			return b
 		}
@@ -254,7 +254,7 @@ func TestDecodeJPEGDCRefuses(t *testing.T) {
 		name string
 		src  func(t *testing.T) []byte
 	}{
-		{"header/cmyk", func(t *testing.T) []byte { return goFixture(t, "video-001.cmyk.jpeg") }},
+		{"header/cmyk", func(t *testing.T) []byte { return rastertest.GoFixture(t, "video-001.cmyk.jpeg") }},
 		{"header/arithmetic sof", fixturePatch("video-001.jpeg", func(t *testing.T, b []byte) {
 			b[find(t, b, 0xC0).off+1] = 0xC9
 		})},
@@ -263,7 +263,7 @@ func TestDecodeJPEGDCRefuses(t *testing.T) {
 		{"header/sampling 5", func(*testing.T) []byte { return patch(func(p *headerParts) { p.sof[7] = 0x51 }) }},
 		{"header/sampling 3", func(*testing.T) []byte { return patch(func(p *headerParts) { p.sof[7] = 0x31 }) }},
 		{"header/sampling does not divide", func(*testing.T) []byte {
-			// Y 2x2 over Cb 1x1 divides; Cb 2x2 under Y 4x4 does not need to; Cb 4x4 over Y 2x2 does not.
+			// Cb 4×4 over Y 2×2: Hmax % Hc ≠ 0
 			return patch(func(p *headerParts) { p.sof[7] = 0x22; p.sof[10] = 0x44 })
 		}},
 		{"header/repeated component id", func(*testing.T) []byte { return patch(func(p *headerParts) { p.sof[9] = 1 }) }},
@@ -282,9 +282,8 @@ func TestDecodeJPEGDCRefuses(t *testing.T) {
 			p.sos = clone(p.sos)
 			p.sos[0] = 2
 			p.sos = append(p.sos[:5], 1, 63, 0)
-			out := p.build(scan)
-			out[bytes.Index(out, []byte{0xFF, 0xC0})+1] = 0xC2
-			return out
+			p.sofMarker = 0xC2
+			return p.build(scan)
 		}},
 		{"header/sos one byte short", func(*testing.T) []byte {
 			return patch(func(p *headerParts) { p.sos = p.sos[:len(p.sos)-1] })
@@ -298,22 +297,22 @@ func TestDecodeJPEGDCRefuses(t *testing.T) {
 			b[sos.off+4+len(sos.payload)+i+1] = 0xD1
 		})},
 		{"scan/component decoded twice", func(t *testing.T) []byte {
-			b := clone(goFixture(t, "video-001.jpeg"))
+			b := clone(rastertest.GoFixture(t, "video-001.jpeg"))
 			id := find(t, b, 0xC0).payload[6]
 			extra := rastertest.JPEGSegment(0xDA, []byte{1, id, 0x00, 0, 63, 0})
 			end := len(b) - 2
 			return append(append(b[:end:end], extra...), 0x00, 0xFF, 0xD9)
 		}},
 		{"truncated/progressive-half", func(t *testing.T) []byte {
-			b := goFixture(t, "video-001.progressive.jpeg")
+			b := rastertest.GoFixture(t, "video-001.progressive.jpeg")
 			return b[:len(b)/2]
 		}},
 		{"truncated/baseline-half", func(t *testing.T) []byte {
-			b := goFixture(t, "video-001.jpeg")
+			b := rastertest.GoFixture(t, "video-001.jpeg")
 			return b[:len(b)/2]
 		}},
 		{"truncated/no-eoi", func(t *testing.T) []byte {
-			b := goFixture(t, "video-001.jpeg")
+			b := rastertest.GoFixture(t, "video-001.jpeg")
 			return b[:len(b)-2]
 		}},
 	}
@@ -340,7 +339,7 @@ func TestDecodeJPEGDCRefuses(t *testing.T) {
 	})
 
 	t.Run("scan/sof1 decodes like sof0", func(t *testing.T) {
-		b := clone(goFixture(t, "video-001.jpeg"))
+		b := clone(rastertest.GoFixture(t, "video-001.jpeg"))
 		want := reducedPix(t, b)
 		b[find(t, b, 0xC0).off+1] = 0xC1
 		if got := reducedPix(t, b); !bytes.Equal(got, want) {
@@ -350,9 +349,7 @@ func TestDecodeJPEGDCRefuses(t *testing.T) {
 }
 
 func TestJPEGDCHuffman(t *testing.T) {
-	var counts [16]byte
-	counts[0], counts[1] = 1, 2
-	tab, err := newHuffTable(counts, []byte{5, 6, 7}, false)
+	tab, _, err := newHuffTable(append([]byte{1, 2}, append(make([]byte, 14), 5, 6, 7)...), false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -364,19 +361,13 @@ func TestJPEGDCHuffman(t *testing.T) {
 		}
 	}
 
-	counts = [16]byte{3}
-	if _, err := newHuffTable(counts, []byte{1, 2, 3}, false); !errors.Is(err, errJPEGDC) {
+	if _, _, err := newHuffTable(append([]byte{3}, append(make([]byte, 15), 1, 2, 3)...), false); !errors.Is(err, errJPEGDC) {
 		t.Fatalf("three 1-bit codes: err = %v, want overflow", err)
 	}
 
-	src := goFixture(t, "video-001.jpeg")
+	src := rastertest.GoFixture(t, "video-001.jpeg")
 	dht := find(t, src, 0xC4).payload
-	copy(counts[:], dht[1:17])
-	total := 0
-	for _, c := range counts {
-		total += int(c)
-	}
-	if _, err := newHuffTable(counts, dht[17:17+total], dht[0]>>4 == 0); err != nil {
+	if _, _, err := newHuffTable(dht[1:], dht[0]>>4 == 0); err != nil {
 		t.Fatalf("first DHT of video-001.jpeg: %v", err)
 	}
 }
@@ -385,11 +376,7 @@ func TestJPEGDCHuffman(t *testing.T) {
 // panic, and a success must be the 1/8-scale size the frame header declares.
 func FuzzDecodeJPEGDC(f *testing.F) {
 	for _, name := range append([]string{"video-001.cmyk.jpeg"}, decodableFixtures...) {
-		b, err := os.ReadFile(filepath.Join("testdata", "third_party", "go", name))
-		if err != nil {
-			f.Fatal(err)
-		}
-		f.Add(b)
+		f.Add(rastertest.GoFixture(f, name))
 	}
 	grad := image.NewRGBA(image.Rect(0, 0, 37, 21))
 	for y := 0; y < 21; y++ {
