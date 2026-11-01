@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`
 **Context:** [`app-health-audit.md`](../app-health-audit.md) A-24; working rule "File work and decoding happen before the catalog session" (map review K-4); bar outcome 14 ("attaching a large scan does not stall the other panes"); [`source-layer-data-model.md`](../../../source-layer-data-model.md) (line 313: a purge and an import never interleave; line 467: thumbnails); [`oversized-jpeg-thumbnails.md`](../oversized-jpeg-thumbnails.md); S14-23 ship log PRF-1 ([`S14-23-oversized-jpeg-thumbnails.ship.md`](S14-23-oversized-jpeg-thumbnails.ship.md))
 **Planned:** 2026-11-01 against `main` @ `a652313`
-**Review:** — (not reviewed yet)
+**Review:** [`S14-12-file-work-before-session.review.md`](S14-12-file-work-before-session.review.md) — round 1: Fits with changes / Not ready → Fixed; round 2 pending
 
 ### Implementer — read this first
 
@@ -30,11 +30,11 @@
 
 ## 1. Objective
 
-Attaching a large scan, saving a depiction, or opening a Source page whose images have no thumbnail yet no longer holds the catalog session while Go copies, hashes, decodes and encodes. Each of those paths stages its bytes first, outside `catalogsession.Do`, and enters the session only to look up, insert and install. Other panes (Source page, graph loads, counts, search) run while the file work runs.
+Attaching a large scan, saving a depiction, setting a Source cover, or opening a Source page whose images have no thumbnail yet no longer holds the catalog session while Go copies, hashes, decodes and encodes. Each of those paths stages its bytes first, outside `catalogsession.Do`, and enters the session only to look up, insert and install. Other panes (Source page, graph loads, counts, search) run while the file work runs.
 
 **Why now.** Audit A-24 and bar outcome 14. Since S14-23, a JPEG over 64 MP that fails late is decoded in full on every Artifact response (565 ms for a cut-short 11,000 × 18,000 scan, up to 3 s for a crafted one, S14-23 ship log PRF-1), and today all of it runs under the session lock.
 
-**What stays.** Every response, error code, audit revision and `WriteEffects` value is as today. Objects are installed and purged only inside `catalogsession.Do`, so a purge and an import of the same bytes still never interleave ([`source-layer-data-model.md`](../../../source-layer-data-model.md) line 313). Thumbnails are still made lazily by the responses that make them today; nothing stores a refused decode.
+**What stays.** Every response, error code, audit revision and `WriteEffects` value is as today, except the error precedence named in D-13. Objects are installed and purged only inside `catalogsession.Do`, so a purge and an import of the same bytes still never interleave ([`source-layer-data-model.md`](../../../source-layer-data-model.md) line 313). Thumbnails are still made lazily by the responses that make them today; nothing stores a refused decode.
 
 ## 2. User stories
 
@@ -43,8 +43,9 @@ Attaching a large scan, saving a depiction, or opening a Source page whose image
 | AC | Given / when | Then |
 | --- | --- | --- |
 | AC-1.1 | `IngestArtifactFile` while another call holds the catalog session | The copy, hash and sniff finish while the session is held: the `.ingest-*` temp in the project's objects folder reaches the source file's full size before the session is released |
-| AC-1.2 | The session is released | The ingest completes with the same response as an unblocked run, and a `GetSourceWorkspace` queued behind the held call is not held for the copy |
+| AC-1.2 | The session is released | The ingest returns the same Artifact, File and `Reused` as an unblocked run |
 | AC-1.3 | The same file attached twice, a file over `ingest.MaxBytes`, an executable, a symlink | Same results and error codes as today (`TestFile` and the artifact handler tests unchanged in their assertions) |
+| AC-1.4 | `IngestArtifactFile` with a valid file on an Artifact that already has one | `artifacts.ErrFileAlreadyAttached`, as today; no temp and no new object left |
 
 **US-2.** As a researcher, when I save a depiction, its image is decoded and re-encoded before the save enters the catalog session.
 
@@ -52,33 +53,33 @@ Attaching a large scan, saving a depiction, or opening a Source page whose image
 | --- | --- | --- |
 | AC-2.1 | `CreateCitationWithObservations` with one depiction while another call holds the session | The staged PNG temp (`.stage-*` in the objects folder) exists before the session is free; the save completes after it with the same response as today |
 | AC-2.2 | A depiction whose write fails (Observation refused) | No object is left for the staged PNG and no temp is left in the objects folder |
-| AC-2.3 | `UpdateObservation`, `AddObservationsToCitation`, `CreateCitedBridge` with a depiction | Each stages before its session through the same entry point (`withStagedDepictions`); their handler tests pass unchanged in their assertions |
+| AC-2.3 | `UpdateObservation`, `AddObservationsToCitation`, `CreateCitedBridge` with a depiction | Each stages before its session through `withStagedDepictions`; their handler tests pass unchanged in their assertions |
 
-**US-3.** As a researcher, when a Source page lists images with no thumbnail yet, the decodes run outside the catalog session.
+**US-3.** As a researcher, when a Source page lists images with no thumbnail yet, or I pick a cover, the decodes run outside the catalog session.
 
 | AC | Given / when | Then |
 | --- | --- | --- |
 | AC-3.1 | `derivatives.Plan` returns a `Job` inside a session; another call then holds the session | `Job.Stage` completes while the session is held |
-| AC-3.2 | `GetSourceWorkspace` on a Source with two raster Artifacts and no derivatives | Both `thumbnail_rel_path` fields are filled, as today; two `file_derivatives` rows exist after the call |
+| AC-3.2 | `GetSourceWorkspace` on a Source with two raster Artifacts and no derivatives | Both `thumbnail_rel_path` fields are filled, as today; two `file_derivatives` rows exist after the call; no audit revision is added |
 | AC-3.3 | Two Artifacts with the same File on one Source page | One decode, one derivative row; both protos carry the same path |
-| AC-3.4 | A JPEG that fails late (no EOI, over 64 MP) on a Source page | The page returns with an empty `thumbnail_rel_path` for it; the decode ran outside the session; no derivative row |
-| AC-3.5 | `SetSourceCover` to an Artifact whose thumbnail does not exist yet | The thumbnail is made outside the session and the cover is set, as today; a cover on a non-raster or unprocessable Artifact returns `sources.ErrInvalid`, as today |
-| AC-3.6 | `EnsureFileThumbnail` for a raster File with no derivative | Same response as today; the decode ran outside the session |
+| AC-3.4 | A JPEG that fails late (no EOI, over 64 MP) on a Source page | The page returns with an empty `thumbnail_rel_path` for it; no derivative row |
+| AC-3.5 | A Source page with 17 raster Artifacts and no derivatives | All 17 paths filled; the decodes ran in two batches (D-10) |
+| AC-3.6 | `SetSourceCover` to a raster Artifact whose thumbnail does not exist yet | The thumbnail is made outside the session and the cover is set, as today; a cover on a non-raster Artifact, a late-failing JPEG, or an Artifact of another Source returns `sources.ErrInvalid`, as today |
+| AC-3.7 | `EnsureFileThumbnail` for a raster File with no derivative, and for a PDF | Same `RelPath` / `Skipped` as today |
 
 ## 3. Scope
 
 | In | Covered by |
 | --- | --- |
 | `depictionvalue.ImageMediaType` *(new)*, used by `ingest` and `ReadableImage` | STEP-1 |
-| One staged-object type, `ingest.Staged` *(replaces `StagedImage`)*: stage outside the session, insert/install inside, discard what the write did not use | STEP-2, AC-2.2 |
-| `ingest.StageFile` *(new)* and `Staged.CommitFile` *(new)*; `ingest.File` becomes their composition for callers already in a session | STEP-2, AC-1.3 |
-| `StageImage` and `StageDepictions` take a project folder, not a catalog | STEP-2 |
-| `derivatives.Plan`, `Job.Stage`, `derivatives.Commit` *(new)*; `Ensure` becomes their composition | STEP-3, AC-3.1 |
-| `withStaged` / `withStagedDepictions` *(new)*: the one stage-then-write entry point for the citation, observation (×2) and connect handlers | STEP-4, AC-2.1, AC-2.3 |
-| `IngestArtifactFile` stages before `withProjectCatalog` | STEP-5, AC-1.1, AC-1.2 |
-| `thumbnailPass` *(new)*: `artifactProto` callers, `EnsureFileThumbnail` and `SetSourceCover` plan in the session, decode outside it, commit in a second session | STEP-6, AC-3.2 – AC-3.6 |
-| `thumbnails_test.go` uses the harness's `damageCatalog` in place of its raw `DELETE FROM file_derivatives` (Spike 12 ship-log leftover) | STEP-7 |
-| `use-catalog-session`, `add-ffi-handler`, `add-depiction-value`, the maintainability and security lenses, and `source-layer-data-model.md` name the new shape | STEP-8 |
+| One staged-object type, `ingest.Staged` *(replaces `StagedImage`)*: stage outside the session, insert/install inside, purge what the write did not use | STEP-2, AC-2.2 |
+| `withStaged` / `withStagedDepictions` *(new)*: the one stage-then-write entry point; the four depiction handlers use it | STEP-2, AC-2.1, AC-2.3 |
+| `catalogsessiontest.Hold` *(new)* test helper; `catalogsession.Key` exported | STEP-2 |
+| `ingest.StageFile`, `Staged.CommitFile` *(new)*; `IngestArtifactFile` stages before its session | STEP-3, AC-1.1 – AC-1.4 |
+| `derivatives.Plan`, `Job.Stage`, `derivatives.Commit`, `derivatives.Refused` *(new)*; `Ensure` becomes their composition | STEP-4, AC-3.1 |
+| `thumbnailPass` *(new)* for `artifactProto` callers, `EnsureFileThumbnail` and `SetSourceCover`; `sources.CoverArtifactFile` *(new)*; `NormalizeCover` lookup-only | STEP-5, AC-3.2 – AC-3.7 |
+| `thumbnails_test.go` uses the harness's `damageCatalog` in place of its raw `DELETE FROM file_derivatives` (Spike 12 ship-log leftover) | STEP-6 |
+| `use-catalog-session`, `add-ffi-handler`, `add-depiction-value`, the maintainability and security lenses, and `source-layer-data-model.md` name the new shape | STEP-7 |
 
 | Out | Home |
 | --- | --- |
@@ -87,7 +88,8 @@ Attaching a large scan, saving a depiction, or opening a Source page whose image
 | Remembering a refused decode so a late-failing JPEG is not decoded again on the next response (PRF-1's repeat cost) | not planned — this PR takes the decode off the session; reopen from the dogfood log if the Source page itself is slow |
 | Decoding several thumbnails in parallel | not planned — `raster.Slot` bounds memory; one handler decodes in sequence as today |
 | A Swift change, or an `EnsureFileThumbnail` call from the app | not planned — the app reads thumbnail paths from responses, as today |
-| Making `sources.NormalizeCover` lookup-only | not planned — the handler's pass makes the thumbnail first (D-9), and core tests rely on `NormalizeCover` generating |
+| Moving `ingest.File` and `derivatives.Ensure` into test-helper packages | not planned — about 35 test call sites; D-5 and D-8 mark them test-and-fixture only and STEP-7 adds them to `use-catalog-session` "Do not" |
+| PDF cover thumbnails | [PDF thumbnails idea](../../../ideas/artifact-pdf-thumbnails.md) |
 
 ## 4. Current state
 
@@ -95,42 +97,47 @@ Verified at `a652313`.
 
 | Area | Where | Today |
 | --- | --- | --- |
-| Session lock | `core/catalogsession/session.go` `Do`, `runLocked` | One mutex per project; `fn` runs with it held. `api/ffi/handlers/catalog.go` `withProjectCatalog` wraps `Do` |
+| Session lock | `core/catalogsession/session.go` `Do`, `runLocked`, `key` | One mutex per project; `fn` runs with it held. `key` trims and `filepath.Clean`s; empty → `database.ErrNotAProject`. `api/ffi/handlers/catalog.go` `withProjectCatalog` wraps `Do` |
 | Import | `core/ingest/file.go` `File(c, absPath, userID)` | `openChecked` → `streamSource` (stream up to 512 MiB to an `objectstore.Temp` in `objects/.ingest-*`, SHA-256, 512-byte sniff) → `mediatypes.Resolve` → `files.StorageRelPath` → `LookupByChecksum` (reuse: `tmp.Install`, then `reuseFile` Run) or `tmp.Install` → `writes.Run` `create_file` with `insertFile`; a lost checksum race falls back to reuse; a failed write purges what it wrote. All of it runs inside the caller's session |
-| Import call site | `api/ffi/handlers/artifacts.go` `IngestArtifactFile` | Inside one `withProjectCatalog`: `artifacts.Get`, `ingest.File`, `update_artifact` Run, `artifactProto` (which ensures a thumbnail, below) |
-| Depiction stage | `core/ingest/stage.go` `StageImage(c, absPath)`, `StagedImage` | Takes a catalog only for `c.DB()` and `c.Dir()`; reads ≤32 MiB under `raster.Slot`, `raster.EncodePNG` (PNG/JPEG, ≤2048 px) into memory; `InsertTx(tx *sql.Tx)` looks up by checksum in the tx, inserts with `insertFile`, then `objectstore.WriteIfAbsent`; `Discard()` purges through the catalog it kept. `"image/png"` literal three times (lines 76, 104, 128) |
+| Import call site | `api/ffi/handlers/artifacts.go` `IngestArtifactFile` | Inside one `withProjectCatalog`: `artifacts.Get`, `ErrFileAlreadyAttached`, `ingest.File`, `update_artifact` Run, `artifactProto` |
+| Depiction stage | `core/ingest/stage.go` `StageImage(c, absPath)`, `StagedImage` | Takes a catalog only for `c.DB()` and `c.Dir()`; reads ≤32 MiB under `raster.Slot`, `raster.EncodePNG` (PNG/JPEG, ≤2048 px) into memory; `InsertTx(tx *sql.Tx)` looks up by checksum in the tx, inserts with `insertFile`, then `objectstore.WriteIfAbsent`; `Discard()` purges through the catalog it kept. `"image/png"` literal at lines 76, 104, 128 |
 | Depiction batch | `core/ingest/depictions.go` `StageDepictions(c, inputs) (discard func(), err)` | Stages each `observations.Input.Depiction` with no `Image`; discards all on error |
-| Depiction call sites | `api/ffi/handlers/citations.go` `CreateCitationWithObservations`; `observations.go` `UpdateObservation`, `AddObservationsToCitation`; `connect.go` `CreateCitedBridge` | Each calls `ingest.StageDepictions(c, …)` as the first line inside `withProjectCatalog`, then `defer discard()` |
-| Depiction interface | `core/database/observations/depiction.go` `StagedFile` | `InsertTx(tx *sql.Tx) (files.File, []rowchange.Change, error)`; comment names `*ingest.StagedImage` |
-| Test helper | `core/database/observations/observationstest/observationstest.go` `SaveCitation`, `UpdateObservation` | Call `ingest.StageDepictions(c, …)` inside the test's catalog |
-| Stored image type | `core/depictionvalue/depictionvalue.go` `ReadableImage` | Compares `mediaType != "image/png"` (line 49); doc comment names `ingest.StageImage` |
-| Thumbnail | `core/derivatives/ensure.go` `Ensure`, `EnsureThumbnail`, `generate`, `readSourceObject`, `insertLinkOnly`, `errDerivedFileExists` | `files.Lookup` → `raster.Supported` → existing link → `MaxDecodeBytes` → `ReadRelPath` → `generate` (Slot, bounded checksum-verified read, `raster.EncodeJPEG`) → `WriteIfAbsent` → `LookupByChecksum` → unaudited `writes.Run(writes.Op{})` inserting the `files` row and the link (`insertDerivativeLink`, search reprojection after commit). All inside the caller's session |
-| Thumbnail call sites | `api/ffi/handlers/thumbnails.go` `thumbnailRelPath`; callers `artifactProto` (`artifacts.go`: `CreateArtifact`, `UpdateArtifact`, `IngestArtifactFile`, `listArtifactsProto` ← `sources.go` `GetSourceWorkspace`) and `EnsureFileThumbnail` | Each ensures inside `withProjectCatalog`; `ErrUnprocessable`, `ErrCorruptObject`, `ErrInvalid` → empty path (skipped); other errors fail the call |
-| Cover | `core/database/sources/sources.go` `NormalizeCover` → `requireRasterCoverArtifact` → `derivatives.EnsureThumbnail`; handler `api/ffi/handlers/sources.go` `SetSourceCover` | Ensures the cover's thumbnail inside the session before the `set_source_cover` Run |
-| Lookup-only thumbnails | `thumbnails.go` `existingThumbnailRelPath`, `sourceCoverThumbnail(s)` | Never decode; unchanged by this PR |
-| Swift | `macos/App` | Never calls `EnsureFileThumbnail`; reads `thumbnailRelPath` from Artifact protos (`GoStore.swift` line 2071) |
-| Tests | `core/ingest/file_test.go` `TestFile`; `stage_test.go` `TestStageImageRefuses`, `TestStageImageReencodes`, `TestStagedImageInsertTx`, `TestStagedImageDiscard`, helper `stageInsert`; `unsafe_objects_test.go` `TestStagedImageInsertTxRefusesSymlinkedObjects`; `core/derivatives/thumbnail_test.go` (`TestEnsureThumbnail*`); `api/ffi/handlers/thumbnails_test.go` `TestEnsureFileThumbnail`, `TestListSourcesAndWorkspaceThumbnails` (raw `DELETE FROM file_derivatives` at line 217); `api/ffi/handlers/catalog_session_test.go` `TestConcurrentCatalogRPCs`; harness `api/ffi/handlers/harness_test.go` `damageCatalog` (line 156) | Pass at the base |
+| Depiction call sites | `api/ffi/handlers/citations.go` `CreateCitationWithObservations` (line 36); `observations.go` `UpdateObservation` (64), `AddObservationsToCitation` (143); `connect.go` `CreateCitedBridge` (53) | Each calls `ingest.StageDepictions(c, …)` first inside `withProjectCatalog`, then `defer discard()` |
+| Depiction interface | `core/database/observations/depiction.go` `StagedFile` (comments lines 16, 24); `observations.go` line 177 comment | `InsertTx(tx *sql.Tx) (files.File, []rowchange.Change, error)`; comments name `*ingest.StagedImage` and `ingest.StageDepictions` |
+| Test helper | `core/database/observations/observationstest/observationstest.go` `SaveCitation`, `UpdateObservation`, and `ingest.File` at line 64 | Stage inside the test's catalog |
+| Stored image type | `core/depictionvalue/depictionvalue.go` `ReadableImage` (line 49), doc comment line 33 | Compares `mediaType != "image/png"`; comment names `ingest.StageImage` |
+| Writes | `core/writes/run.go` `Run` | Records an audit revision unless every change is a none-effect change (`effects.AllNone`); a `file` create change is not none, a `file_derivative` change is |
+| Thumbnail | `core/derivatives/ensure.go` `Ensure`, `EnsureThumbnail`, `generate`, `readSourceObject`, `insertLinkOnly`, `errDerivedFileExists`, `errDerivativeLinkExists` | `files.Lookup` → `raster.Supported` → existing link → `MaxDecodeBytes` → `ReadRelPath` → `generate` (Slot, bounded checksum-verified read, `raster.EncodeJPEG`) → `WriteIfAbsent` → `LookupByChecksum` → `writes.Run(writes.Op{})` inserting the `files` row with plain `files.Insert` (no change) and the link (`insertDerivativeLink`, search reprojection after commit). All inside the caller's session |
+| Thumbnail call sites | `api/ffi/handlers/thumbnails.go` `thumbnailRelPath`; callers `artifactProto` (`artifacts.go`: `CreateArtifact`, `UpdateArtifact`, `IngestArtifactFile`, `listArtifactsProto` ← `sources.go` `GetSourceWorkspace`) and `EnsureFileThumbnail` | Each ensures inside `withProjectCatalog`; `ErrUnprocessable`, `ErrCorruptObject`, `ErrInvalid` → empty path, skipped; other errors fail the call. `EnsureFileThumbnailResponse` carries `RelPath` and `Skipped` |
+| Cover | `core/database/sources/sources.go` `NormalizeCover` → `requireRasterCoverArtifact` (lines 471–500, `sqlArtifactForCover`) → `derivatives.EnsureThumbnail`, the same three errors → `ErrInvalid`; handler `api/ffi/handlers/sources.go` `SetSourceCover` | Ensures the cover's thumbnail inside the session before the `set_source_cover` Run |
+| Lookup-only thumbnails | `thumbnails.go` `existingThumbnailRelPath`, `sourceCoverThumbnail(s)` | Never decode; unchanged |
+| Swift | `macos/App` | Never calls `EnsureFileThumbnail`; reads `thumbnailRelPath` from Artifact protos (`macos/App/Platform/GoStore.swift` line 2071) |
+| Session tests | `core/catalogsession/session_test.go`, `api/ffi/handlers/catalog_session_test.go` `TestConcurrentCatalogRPCs` | Each hand-rolls a goroutine blocked in `Do` |
+| Tests | `core/ingest/file_test.go` `TestFile`; `stage_test.go` `TestStageImageRefuses`, `TestStageImageReencodes`, `TestStagedImageInsertTx`, `TestStagedImageDiscard`, helper `stageInsert`; `unsafe_objects_test.go` `TestStagedImageInsertTxRefusesSymlinkedObjects`; `core/derivatives/thumbnail_test.go` `TestEnsureThumbnail*`; `core/database/sources/sources_test.go` `runSetCover` (line 54); `core/database/artifacts/artifacts_test.go` line 626; `core/database/sourcecopy/sourcecopy_test.go` line 174; `api/ffi/handlers/thumbnails_test.go` `TestEnsureFileThumbnail`, `TestListSourcesAndWorkspaceThumbnails` (raw `DELETE FROM file_derivatives` block, lines 205–225); harness `api/ffi/handlers/harness_test.go` `damageCatalog` (156), `sourceWithPNG` (130), `sourceFixture` (213) | Pass at the base |
 
-**Precedent.** `3a24ed95` ("Stage an app-rendered image as a checked PNG that a write stores with its File row") split the depiction image into a stage before `writes.Run` and an `InsertTx` inside it. This PR moves that split's boundary from "before the write" to "before the session" and gives the import and the thumbnail the same type. Copy its `InsertTx` / `Discard` contract and its tests' shape; do not copy keeping the encoded bytes in memory (D-3).
+**Precedent.** `3a24ed95` ("Stage an app-rendered image as a checked PNG that a write stores with its File row") split the depiction image into a stage before `writes.Run` and an `InsertTx` inside it. This PR moves that split's boundary from "before the write" to "before the session" and gives the import and the thumbnail the same type. Copy its `InsertTx` contract and its tests' shape; do not copy keeping the encoded bytes in memory (D-3).
 
 ## 5. Decisions
 
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
-| D-1 | One type, `ingest.Staged`, replaces `StagedImage`. Fields: project folder, an `*objectstore.Temp`, checksum, media type, byte size, storage path, sanitized filename (imports only), and the `wrote` / `file` / `haveFile` state `StagedImage` keeps today. Constructors: `StageFile` (import), `StageImage` (depiction), `StageBytes` (bytes Go made: the thumbnail) | Working rule: one staged-object type in `ingest`, used by all three | A second type per path — the rule forbids it; an interface with three implementations — three paths share every field |
-| D-2 | Staging takes the project folder (`projectDir string`), never a `*database.Catalog`, and first calls `database.RequireProject(dir)` *(new: exports the `locateCatalog` check, returns `database.ErrNotAProject`)* so a stage never creates an objects folder in a folder that is not a project. The folder is `filepath.Clean`ed, the same key `catalogsession.Do` uses | A catalog exists only inside `Do`; `objectstore.CreateTemp` makes the objects folder when absent | Opening a session just to read `c.Dir()` — it is the lock this PR avoids |
-| D-3 | Every stage writes its bytes to an `objectstore.Temp` in the project's objects folder outside the session (`.ingest-` prefix for imports, `.stage-` for images and thumbnails). Inside the session only `Temp.Install` (a rename) runs | Install is then cheap and the same for all three; the temp is on the objects volume, so the rename never copies | Keeping PNG/JPEG bytes in memory and `WriteIfAbsent` inside the session — a 2048 px PNG write is file work inside the lock; a temp in `os.TempDir` — a cross-volume move copies inside the lock |
-| D-4 | `Staged.InsertTx(tx *sql.Tx)` keeps `StagedImage.InsertTx`'s contract: look up by checksum in the tx, insert with `insertFile` (setting `original_filename` only when the stage has one), install the temp, record `wrote`; a second call returns the same File and no change. It still satisfies `observations.StagedFile` | The depiction write and the thumbnail commit both run inside a tx; the in-tx lookup removes the checksum race the derivative code handles today | A new interface — `StagedFile` already fits |
-| D-5 | `Staged.CommitFile(c, userID) (Result, error)` is today's `File` body from `files.StorageRelPath` on: `LookupByChecksum` (reuse: install to repair, `reuse_file` Run), else install, `create_file` Run, lost race → reuse, failure → purge. It runs inside the session. `ingest.File(c, absPath, userID)` keeps its signature as `StageFile(c.Dir(), …)` + `CommitFile` + discard, for callers already in a session (fixtures and tests); no handler calls it | Keeps the import's audit actions (`create_file`, `reuse_file`) and error paths byte for byte; keeps 30+ test call sites unchanged | Moving the import into one `InsertTx` Run — it would change the audit action of a reuse |
-| D-6 | Two discard methods. `Staged.Discard(c *database.Catalog)` runs inside the session: it purges the object when this stage wrote it and no row names the checksum, then removes the temp. `Staged.Close()` runs outside: it removes the temp only, never touches an installed object. Both are idempotent. `ingest.Stages` *(new, `[]*Staged`)* has the same two methods | Purge must stay inside `Do` (line 313); a stage that never reached the session (open failed) must still lose its temp | One `Discard()` called from both places — it would purge outside the lock if the inner call were forgotten |
-| D-7 | Handlers stage through one entry point in `api/ffi/handlers/catalog.go`: `withStaged(projectDir string, stages ingest.Stages, fn func(*database.Catalog) error) error` *(new)* defers `stages.Close()`, runs `withProjectCatalog`, and defers `stages.Discard(c)` first inside it. `withStagedDepictions(projectDir, inputs, fn)` *(new)* is `ingest.StageDepictions` + `withStaged`. The four depiction handlers and `IngestArtifactFile` use them; no handler calls `Discard` or `Close` itself | Map: "one stage-then-write entry point"; the two-defer order cannot be got wrong per handler | A per-handler pair of defers — five copies of the same ordering |
-| D-8 | Thumbnails split in `derivatives`: `Plan(c, sourceFileID, spec) (Result, *Job, error)` *(new)* is `Ensure` up to `generate` (returns a final `Result` and a nil `Job`, or a `Job`); `(*Job).Stage(projectDir) (*ingest.Staged, error)` *(new)* holds `raster.Slot`, reads with `readSourceObject` (capped at `raster.MaxDecodeBytes`), `raster.EncodeJPEG`, then `ingest.StageBytes(projectDir, jpeg, "image/jpeg")`; `Commit(c, job, staged) (Result, error)` *(new)* re-checks the source File and an existing link, then one unaudited `writes.Run(writes.Op{})` doing `staged.InsertTx` and `insertDerivativeLink`. `Ensure` becomes `Plan` → `Stage(c.Dir())` → `Commit` with discard, so its error contract and tests are unchanged. `errDerivedFileExists` and `insertLinkOnly` go (D-4's in-tx lookup removes their race) | Map: "the thumbnail splits into read, decode outside, and write"; keeps `Ensure` for callers inside a session | Moving `Plan` / `Commit` into the handlers — the derivative rules belong to `derivatives` |
-| D-9 | Handlers make thumbnails through `thumbnailPass` (new, in `api/ffi/handlers/thumbnail_pass.go` (new)): inside the first session `need(c, fileID, dst *string)` calls `Plan`, fills `dst` from an existing link at once, or records the `Job` (one per File id, any number of `dst`); after it, `run(projectDir)` stages every job outside the session, then, only when a job staged, enters one second session to `Commit` each, fills each `dst`, and discards. `artifactProto(c, a, pass)` takes the pass; `CreateArtifact`, `UpdateArtifact`, `IngestArtifactFile`, `GetSourceWorkspace` and `EnsureFileThumbnail` call `pass.run` after their session and before `proto.Marshal`. `SetSourceCover` in artifact mode runs a first session that plans the cover Artifact's File, runs the pass, and then runs today's session; when the pass skipped that File it returns `sources.ErrInvalid` without calling `NormalizeCover` | Every production decode leaves the session; `NormalizeCover` then finds the link and does not decode | Making the Source page lookup-only and the app ask for thumbnails — a Swift change (Out); one session per job — N extra lock round trips |
-| D-10 | The pass maps errors as `thumbnailRelPath` does today: `ErrUnprocessable`, `ErrCorruptObject`, `ErrInvalid` from `Plan`, `Stage` or `Commit` → empty path; any other error fails the call. A source object missing at `Stage` fails the call, as a missing object does today; a source File gone at `Commit` is `ErrInvalid` → empty path | No response changes; the Source page after the delete re-plans | Treating a missing object as skipped — a behavior change this PR does not need |
-| D-11 | `depictionvalue.ImageMediaType = "image/png"` *(new const)*; `ingest.StageImage` and `ReadableImage` use it. Thumbnails keep their own `"image/jpeg"` | Map scope; one owner for the stored depiction type | A const in `ingest` — `depictionvalue` is the pure type both read |
-| D-12 | Session-freedom tests hold the session with `catalogsession.Do` blocking on a channel and show the stage finishes (or its temp is complete) before release; they need no hook in production code | The map's "slow reader in the stage step" is shown without a test seam | A package-var seam around `ingest.StageFile` in handlers — production indirection for a test |
+| D-1 | One type, `ingest.Staged`, replaces `StagedImage`. Fields: project folder, `*objectstore.Temp`, checksum, media type, byte size, storage path (`files.StorageRelPath`), sanitized filename (set by `StageFile` only), and the `wrote` / `file` / `haveFile` state `StagedImage` keeps. Constructors: `StageFile` (import), `StageImage` (depiction), `StageBytes` (bytes Go made: the thumbnail) | Working rule: one staged-object type in `ingest` | A type per path — the rule forbids it |
+| D-2 | Every constructor takes the project folder (`projectDir string`), never a `*database.Catalog`, and first calls `database.RequireProject(dir)` *(new: exports `locateCatalog`'s check, returns `database.ErrNotAProject`)*, so a stage never creates an objects folder in a folder that is not a project | A catalog exists only inside `Do`; `objectstore.CreateTemp` makes the objects folder when absent | Opening a session to read `c.Dir()` — it is the lock this PR avoids |
+| D-3 | Every stage writes its bytes to an `objectstore.Temp` in the objects folder outside the session (`.ingest-` for imports, `.stage-` for images and thumbnails). Inside the session only `Temp.Install` (a rename) runs | Install is cheap and the same for all three; the rename never copies across volumes | PNG/JPEG bytes in memory with `WriteIfAbsent` inside the session — file writing inside the lock; a temp in `os.TempDir` — a cross-volume move copies inside the lock |
+| D-4 | `Staged.InsertTx(tx *sql.Tx)` keeps `StagedImage.InsertTx`'s contract: look up by checksum in the tx, insert with `insertFile` (setting `original_filename` only when the stage has one), install the temp, record `wrote`; a second call returns the same File and no change. It satisfies `observations.StagedFile` | The depiction write and the thumbnail commit both run in a tx; the in-tx lookup removes the checksum race `derivatives` handles today | A new interface — `StagedFile` fits |
+| D-5 | `Staged.CommitFile(c, userID) (Result, error)` is today's `File` body after `files.StorageRelPath`, reading checksum, media type, byte size, storage path and filename from the stage: `LookupByChecksum` (reuse: `Temp.Install` repairs a missing or mismatched object, else removes the temp; then the `reuse_file` Run), else install, `create_file` Run, lost race → reuse, failure → purge. A stage with no filename (from `StageImage` or `StageBytes`) returns `ErrInvalid`. `ingest.File(c, absPath, userID)` keeps its signature as `StageFile(c.Dir(), …)` + `CommitFile` + `Purge` + `Discard`; its doc comment says it does file work inside the caller's session and is for tests and fixtures only | Keeps the import's audit actions and error paths; keeps about 35 test call sites | One `InsertTx` Run for imports — it would change a reuse's audit action |
+| D-6 | Two cleanup methods, named after `objectstore.Temp` and `files.PurgeUnreferenced`. `Staged.Discard()` runs outside the session: it removes the temp (a no-op after `Install`) and never touches an installed object. `Staged.Purge(c *database.Catalog)` runs inside the session: when this stage wrote its object and no `files` row names the checksum, it calls `files.PurgeUnreferenced`; then it clears `wrote`. Both are idempotent. `ingest.Stages` *(new, `[]*Staged`)* has `Discard()` and `Purge(c)` | Purge must stay inside `Do` (line 313); a stage that never reached the session must still lose its temp; each word keeps one meaning across `objectstore` → `ingest` → `files` | `Close` / `Discard(c)` — `Temp.Close` keeps the file, so `Staged.Close` deleting it would mislead |
+| D-7 | `catalogsession.key` is exported as `Key(projectDir string) (string, error)`. Handlers stage through one entry point in `api/ffi/handlers/catalog.go`: `withStaged(projectDir string, stage func(dir string) (ingest.Stages, error), fn func(*database.Catalog) error) error` *(new)*: it normalizes with `catalogsession.Key`, calls `stage(dir)`, defers `stages.Discard()`, runs `withProjectCatalog(dir, …)` and defers `stages.Purge(c)` first inside it. On a `stage` error it returns the error; the stage function itself discards what it staged before the error. `withStagedDepictions(projectDir, inputs, fn)` *(new)* is `withStaged` with `ingest.StageDepictions` as `stage`. The four depiction handlers, `IngestArtifactFile` and `thumbnailPass` use them; no other code calls `Purge` or `Discard` on a stage | Map: "one stage-then-write entry point"; one folder normalization; the defer order lives in one place | Per-handler defers — six copies of the ordering |
+| D-8 | Thumbnails split in `derivatives`. `Plan(c, sourceFileID, spec) (Result, *Job, error)` *(new)* is `Ensure` up to `generate`: it returns a final `Result` and nil `Job`, or a `Job` (source File id, spec, source object path, source checksum). `(*Job).Stage(projectDir string) (*ingest.Staged, error)` *(new)* holds `raster.Slot`, reads with `readSourceObject`, `raster.EncodeJPEG`, then `ingest.StageBytes(projectDir, jpeg, "image/jpeg")`; it keeps the stage on the `Job` and returns it so the caller can add it to its `Stages`. `Commit(c, j) (Result, error)` *(new)* runs inside the session, outside any tx: `files.Lookup` the source File (gone, or its checksum differs from the Job's → `ErrInvalid`); an existing link → return it (the stage stays unused; the caller's `Purge` and `Discard` clean it); else one `writes.Run(writes.Op{})` doing `j.staged.InsertTx(tx.Tx)`, **dropping the `file` change it returns**, then `insertDerivativeLink`; `errDerivativeLinkExists` → `filederivatives.Lookup`, as today; the after-commit search reprojection error, as today. `Commit` does not purge. `Ensure` = `Plan` → `Stage(c.Dir())` → `Commit` → `Purge` → `Discard`, with its error contract unchanged; its doc comment says it decodes inside the caller's session and is for tests only. `errDerivedFileExists` and `insertLinkOnly` go | Map: "the thumbnail splits into read, decode outside, and write". Derivative Files stay unaudited (a `file` change would make `writes.Run` record a revision) | Moving `Plan` / `Commit` into handlers — the derivative rules belong to `derivatives`; a `Staged` "unaudited" flag — one call site needs it |
+| D-9 | `derivatives.Refused(err error) bool` *(new)*: true for `ErrUnprocessable`, `ErrCorruptObject`, `ErrInvalid`. It is the one "show no thumbnail" predicate; the pass uses it, and `thumbnailRelPath`'s copy goes | One error mapping, not two | — |
+| D-10 | Handlers make thumbnails through `thumbnailPass` *(new, in `api/ffi/handlers/thumbnail_pass.go` (new))*. `need(c, fileID []byte, fill func(relPath string, skipped bool)) error` runs inside a session: a File id that is not 16 bytes → `fill("", true)`; else `Plan`; a final link → `fill(derivedRelPath(c, link))` at once; `Skipped` or `Refused(err)` → `fill("", true)`; another error → returned; a `Job` → recorded once per File id, with every `fill` for that File appended. `derivedRelPath(c, link) (string, bool, error)` *(new, same file)* is `thumbnailRelPath`'s tail (`files.Lookup` + `ReadRelPath`; empty → skipped). `run(projectDir string, then func(*database.Catalog) error) error` runs after the first session: jobs go in batches of 16 (`thumbnailBatch` const); each batch calls `withStaged` with a `stage` that calls `Job.Stage` per job (a `Refused` error → that job's fills get `("", true)` and the job drops; another error → the batch's stages are discarded and the error returned) and an `fn` that `Commit`s each staged job and fills (`Refused` → `("", true)`; another error → returned, failing the call). `then`, when not nil, runs inside the last batch's session, or in one `withProjectCatalog` when no batch ran. No job and nil `then` → no second session | Every production decode leaves the session; at most 16 temps (and 16 open handles on the objects folder) at once; the cover write shares the commit session | One session per job — N lock round trips; staging every job at once — unbounded open files on a large Source |
+| D-11 | Callers of the pass. `artifactProto(c, a, pass)` and `listArtifactsProto(c, id, pass)` take it; `artifactProto`'s fill sets `ThumbnailRelPath`. `CreateArtifact`, `UpdateArtifact`, `IngestArtifactFile`, `GetSourceWorkspace` and `EnsureFileThumbnail` call `pass.run(dir, nil)` after their session and before `proto.Marshal`, and only when their session returned nil. `EnsureFileThumbnail`'s fill sets `RelPath` and `Skipped`. `thumbnailRelPath` goes | One mechanism for every response that carries a thumbnail | — |
+| D-12 | The cover rule lives in `sources` once. `sources.CoverArtifactFile(c, sourceID, artifactID) ([]byte, error)` *(new)* is `requireRasterCoverArtifact`'s query and checks (Artifact exists, belongs to the Source, has a File; else `ErrInvalid`). `requireRasterCoverArtifact` becomes `CoverArtifactFile` + `filederivatives.Lookup(c, fileID, TypeThumbnail)`: no link → `ErrInvalid`; it never decodes, and `sources` stops importing `derivatives`. `SetSourceCover`: when the request's mode is `sources.CoverModeArtifact` and the primary id parses, a first session calls `CoverArtifactFile` (its error is returned, as today's `NormalizeCover` would) and `pass.need(c, fileID, nil-safe no-op fill)`; then `pass.run(dir, then)` where `then` is today's session body (`NormalizeCover`, the `set_source_cover` Run, `enrichSourceProto`). Any other mode skips the first session and `then` runs in one session. `run` accepts a nil `fill` | The cover is decided by `NormalizeCover` alone (no handler pre-check); no production path decodes inside `Do` | A handler that maps a skipped thumbnail to `ErrInvalid` — a third copy of the rule |
+| D-13 | `IngestArtifactFile` stages before checking the Artifact. When a request has two faults, the file's error (missing, symlink, too large, refused type, not a project) now wins over `artifacts.Get`'s or `ErrFileAlreadyAttached`; an already-attached Artifact pays the copy and then discards it. Single-fault errors are unchanged | The app offers Attach only on an Artifact with no File; a pre-check session would add a lock round trip to every attach | A first session for `artifacts.Get` — the extra round trip buys nothing on the app's paths |
+| D-14 | `depictionvalue.ImageMediaType = "image/png"` *(new const)*; `ingest.StageImage` and `ReadableImage` use it. Thumbnails keep their own `"image/jpeg"` | Map scope; one owner for the stored depiction type | A const in `ingest` — `depictionvalue` is the pure type both read |
+| D-15 | Session-freedom tests use `catalogsessiontest.Hold(t, projectDir) (release func())` (new, in `core/catalogsession/catalogsessiontest/catalogsessiontest.go` (new)): it starts `Do` in a goroutine whose `fn` signals it is running and blocks on a channel, waits for the signal, and registers `release` with `t.Cleanup`. Tests that wait for a temp poll the objects folder every 10 ms with a 5 s deadline | One helper for a racy handshake; `catalogsession` does not depend on `ingest`, `derivatives` or `sources` (`go list -deps ./core/catalogsession`), so no cycle | A test seam in production code |
 
-**Rules this plan bends.** None. The `add-ffi-handler` skill's "stages it inside `withProjectCatalog`" sentence changes because the working rule replaced it (STEP-8).
+**Rules this plan bends.** None. The `add-ffi-handler` sentence "stages it inside `withProjectCatalog`" changes because the working rule replaced it (STEP-7).
 
 ## 6. Design
 
@@ -138,40 +145,46 @@ Verified at `a652313`.
 
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
-| `ingest.Staged` *(renamed from `StagedImage`, generalized)* | type | `core/ingest/stage.go` `StagedImage` | It is that type, extended; the name drops "Image" because it now carries imports |
-| `ingest.StageFile` | func | `ingest.File` (its first half), `streamSource` | Reuses `openChecked`, `streamSource`, `mediatypes.Resolve` as they are |
-| `ingest.StageBytes` | func | `objectstore.WriteIfAbsent` | That writes in place; a stage must defer install to the session |
-| `Staged.CommitFile` | method | `ingest.File` (its second half) | Moved, not rewritten |
-| `Staged.Close`, `ingest.Stages` | method, type | `StageDepictions`'s `discardAll` closure | The closure becomes `Stages.Discard`; `Close` is the outside half D-6 needs |
+| `ingest.Staged` *(renamed from `StagedImage`, generalized)* | type | `core/ingest/stage.go` `StagedImage` | It is that type, extended; "Image" goes because it carries imports |
+| `ingest.StageFile` | func | `ingest.File` (first half), `streamSource` | Reuses `openChecked`, `streamSource`, `mediatypes.Resolve` |
+| `ingest.StageBytes` | func | `objectstore.WriteIfAbsent` | That writes in place; a stage defers install to the session |
+| `Staged.CommitFile` | method | `ingest.File` (second half) | Moved, not rewritten |
+| `Staged.Purge`, `Staged.Discard`, `ingest.Stages` | methods, type | `StagedImage.Discard`, `StageDepictions`'s `discardAll` closure | The closure becomes `Stages`; the split follows D-6 |
 | `database.RequireProject` | func | `database.locateCatalog` (unexported) | Exports its check only |
+| `catalogsession.Key` | func | `catalogsession.key` | Exported, not copied |
+| `catalogsessiontest.Hold` | test helper | hand-rolled holds in `session_test.go`, `catalog_session_test.go` | Third and later copies; shaped like `observationstest` |
 | `derivatives.Plan`, `Job`, `Job.Stage`, `derivatives.Commit` | funcs, type | `derivatives.Ensure`, `generate` | `Ensure`'s body cut at its two boundaries |
+| `derivatives.Refused` | func | `thumbnailRelPath`'s and `requireRasterCoverArtifact`'s error checks | Replaces both copies |
+| `sources.CoverArtifactFile` | func | `requireRasterCoverArtifact` (its query half) | Split out so the handler and `NormalizeCover` share it |
 | `depictionvalue.ImageMediaType` | const | literals in `stage.go`, `depictionvalue.go` | Replaces them |
-| `withStaged`, `withStagedDepictions` | helpers | `withProjectCatalog` | Wraps it; no second session doorway |
-| `thumbnailPass` | type | `thumbnailRelPath` | `thumbnailRelPath` becomes `pass.need`'s mapping; searched `rg "type .*Pass|thumbnail" api/ffi/handlers` — no batch thumbnail helper exists |
+| `withStaged`, `withStagedDepictions` | helpers | `withProjectCatalog` | Wrap it; no second session doorway |
+| `thumbnailPass`, `derivedRelPath`, `thumbnailBatch` | type, func, const | `thumbnailRelPath` | `thumbnailRelPath` splits into `need` and `derivedRelPath`; `rg "type .*Pass\|thumbnail" api/ffi/handlers` found no batch helper |
 
-**Builds on.** `objectstore.Temp` (`CreateTemp`, `Install`, `Discard`); `files.LookupByChecksumTx`, `insertFile`, `files.PurgeUnreferenced`; `raster.Slot`; `withProjectCatalog`; the `observations.StagedFile` interface.
-**Deletes.** `StagedImage` (name), its in-memory `png` field and `WriteIfAbsent` call; `StageDepictions`'s returned closure; `derivatives.insertLinkOnly`, `errDerivedFileExists`, `Ensure`'s `WriteIfAbsent` and pre-Run `LookupByChecksum`; `thumbnailRelPath` (folded into `thumbnailPass.need`); the three `"image/png"` literals in `stage.go` and the one in `ReadableImage`; the raw `DELETE FROM file_derivatives` block in `thumbnails_test.go`.
-**Next adds.** A later derivative (a medium preview) is a `Spec` through the same `Plan` / `Job.Stage` / `Commit`. A later client file (an attachment on a note) stages with `StageFile` and writes through `withStaged`.
+**Builds on.** `objectstore.Temp`; `files.LookupByChecksumTx`, `insertFile`, `files.PurgeUnreferenced`; `raster.Slot`; `withProjectCatalog`; `observations.StagedFile`; the `observationstest` helper-package shape.
+**Deletes.** `StagedImage` (name), its in-memory `png` field and `WriteIfAbsent` call; `StageDepictions`'s returned closure; `derivatives.insertLinkOnly`, `errDerivedFileExists`, `Ensure`'s `WriteIfAbsent` and pre-Run `LookupByChecksum`; `thumbnailRelPath`; `requireRasterCoverArtifact`'s `EnsureThumbnail` call and error mapping, and the `sources` → `derivatives` import; the `"image/png"` literals in `stage.go` and `ReadableImage`; the raw `DELETE FROM file_derivatives` block in `thumbnails_test.go`.
+**Next adds.** A later derivative (a medium preview) is a `Spec` through `Plan` / `Job.Stage` / `Commit` and the pass. A later client file (an attachment on a note) is a `stage` func for `withStaged`. A PDF cover ([idea](../../../ideas/artifact-pdf-thumbnails.md)) changes only `derivatives` (a raster for a PDF); `requireRasterCoverArtifact`'s link lookup accepts it unchanged.
 
 ### Reach
 
 | New path or state | Destination | Checked: resets on the new id · handles a missing referent · shows the state |
 | --- | --- | --- |
-| A staged temp exists while the session is held by another call | the objects folder (`objectstore.Temp`) | Purge only removes named objects, never `.ingest-*` / `.stage-*` temps (`files.PurgeUnreferenced` builds paths from checksums) — T-6 |
-| A row or object changes between the pass's two sessions | `derivatives.Commit` | Re-checks the source File (gone → `ErrInvalid` → empty path) and the link (made by another call → returned, staged temp discarded) — T-5 |
-| A stage runs against a folder that is not a project | `database.RequireProject` | `ErrNotAProject`, the error `Do` returns today; no objects folder created — T-1 |
+| A staged temp exists while another call holds the session | the objects folder (`objectstore.Temp`) | Purge removes only objects named by checksum, never `.ingest-*` / `.stage-*` temps (`files.PurgeUnreferenced` builds paths from checksums) — T-6 |
+| A row or object changes between the pass's sessions | `derivatives.Commit` | Re-checks the source File and its checksum (gone → `ErrInvalid` → empty path) and the link (made meanwhile → returned, stage purged/discarded by `withStaged`) — T-5 |
+| A stage runs against a folder that is not a project | `database.RequireProject` | `ErrNotAProject`, the error `Do` returns today; no objects folder made — T-1 |
+| `NormalizeCover` on an Artifact with no thumbnail link | `requireRasterCoverArtifact` | `ErrInvalid`; reached only when the pass refused the File or a delete raced it — T-9, T-12 |
 
 ### Scale
 
-At the map's Scale (a 60-graph census; scans up to `ingest.MaxBytes` 512 MiB; a Source page of up to a few hundred Artifacts): the import holds the session for one rename and two short Runs instead of a 512 MiB copy and hash. A Source page with N Artifacts lacking thumbnails holds the session for one read pass, then N decodes outside it (one `raster.Slot` at a time, each ≤ `raster.MaxDecodeBytes`), then one session with N small Runs. Staged thumbnails are ≤256 px JPEGs on disk, so peak memory is one decode, as today. No new cache, no new key, no `WriteEffects` change: derivative rows stay unaudited.
+At the map's Scale (a 60-graph census; scans up to `ingest.MaxBytes` 512 MiB; a Source page of up to a few hundred Artifacts): the import holds the session for one rename and two short Runs instead of a 512 MiB copy and hash. A Source page with N Artifacts lacking thumbnails holds the session for its read pass, then ⌈N/16⌉ times for 16 small Runs each, with the decodes (one `raster.Slot` at a time, each ≤ `raster.MaxDecodeBytes`) between them outside it. Open handles on the objects folder are at most 16 per call. Staged thumbnails are ≤256 px JPEGs on disk, so peak memory is one decode, as today. No new cache, no new key, no `WriteEffects` change, no audit revision: derivative rows stay unaudited (D-8).
 
 ### Edges
 
-- **Assumptions.** `files.PurgeUnreferenced` assumes no import is mid-install: installs and purges both stay inside `Do` (D-3, D-6), held by T-6. `insertDerivativeLink` assumes the derived File row exists in the same tx: `Commit` runs `InsertTx` first in that Run (T-5). `observations.StagedFile` callers assume a second `InsertTx` returns the same File (`TestStagedImageInsertTx` → renamed, unchanged assertions).
-- **Neighbors.** A File with an existing link: `Plan` returns it, no job, no second session (T-4). A non-raster File: `Skipped`, no job (existing `TestEnsureThumbnailSkipsNonImage`). A late-failing JPEG: `Stage` returns `ErrUnprocessable`, no second session, empty path (T-7).
-- **Removed inputs.** Artifact deleted between the pass's sessions: `Commit` finds no source File → empty path; its staged temp is discarded (T-5). A depiction write refused: `Discard(c)` purges the installed PNG (existing `TestStagedImageDiscard`).
+- **Assumptions.** `files.PurgeUnreferenced` assumes no import is mid-install: installs and purges stay inside `Do` (D-3, D-6), held by T-6. `insertDerivativeLink` assumes the derived File row exists in the same tx: `Commit` runs `InsertTx` first in that Run (T-5). `observations.StagedFile` callers assume a second `InsertTx` returns the same File (`TestStagedInsertTx`, renamed, unchanged assertions). `writes.Run` audits any non-none change: `Commit` drops `InsertTx`'s `file` change (T-5 asserts no revision).
+- **Neighbors.** A File with an existing link: `Plan` returns it, no job (T-4). A non-raster File: `Skipped`, no job (existing `TestEnsureThumbnailSkipsNonImage`; T-10 PDF). A late-failing JPEG: `Stage` → `ErrUnprocessable` → empty path (T-7). Exactly 16 jobs: one batch; 17: two (T-7).
+- **Removed inputs.** Artifact or File deleted between the pass's sessions: `Commit` → `ErrInvalid` → empty path; the stage is purged and discarded (T-5). A depiction write refused: `Purge(c)` removes the installed PNG (T-2, existing discard test renamed).
 - **Real data.** None — no table- or seed-driven rule.
-- **Untrusted size.** Bytes read from the project folder: imports capped at `maxBytes` before and during the copy (`openChecked`, `LimitReader`); depiction images at `maxImageBytes`; thumbnail sources at `raster.MaxDecodeBytes`, verified against the stored checksum before decode. Jobs per response are bounded by Artifacts on the page, deduplicated by File id.
+- **Untrusted size.** Imports capped at `maxBytes` before and during the copy (`openChecked`, `LimitReader`); depiction images at `maxImageBytes`; thumbnail sources at `raster.MaxDecodeBytes`, verified against the stored checksum before decode. Jobs per response are bounded by Artifacts on the page, deduplicated by File id, and staged 16 at a time.
+- **Imports.** `derivatives` → `ingest` brings `core/database/observations` (through `core/ingest/depictions.go`) under `derivatives`. `sources` no longer imports `derivatives` (D-12), so no `sources` → `observations` path appears through it. Stop if `go list -deps ./core/ingest` includes `derivatives` or `sources`.
 
 ### Schema
 
@@ -181,13 +194,16 @@ None — no catalog change.
 
 | Package | Change |
 | --- | --- |
-| `core/database` | `func RequireProject(dir string) error` *(new)* — `locateCatalog`'s check without opening |
-| `core/depictionvalue` | `const ImageMediaType = "image/png"` *(new)*; `ReadableImage` uses it; its doc comment names `ingest.StageImage` still |
-| `core/ingest/stage.go` | `type Staged struct` (D-1); `StageImage(projectDir, absPath string) (*Staged, error)`; `StageBytes(projectDir string, data []byte, mediaType string) (*Staged, error)` *(new)*; `(*Staged) InsertTx(tx *sql.Tx) (files.File, []rowchange.Change, error)`; `(*Staged) Discard(c *database.Catalog)`; `(*Staged) Close()`; `type Stages []*Staged` with `Discard(c)` and `Close()` *(new)* |
-| `core/ingest/file.go` | `StageFile(projectDir, absPath string) (*Staged, error)` *(new)*; `(*Staged) CommitFile(c *database.Catalog, userID []byte) (Result, error)` *(new)*; `File(c, absPath, userID)` = stage + commit + discard (D-5) |
-| `core/ingest/depictions.go` | `StageDepictions(projectDir string, inputs []observations.Input) (Stages, error)`; on error it closes every stage so far and returns nil |
-| `core/database/observations/depiction.go` | Comment: `*ingest.Staged` satisfies `StagedFile` |
-| `core/derivatives/ensure.go` | `type Job struct` *(new: source File id, spec, object path, checksum)*; `Plan`, `(*Job) Stage`, `Commit` *(new)* (D-8); `Ensure` composes them |
+| `core/database` | `func RequireProject(dir string) error` *(new)* |
+| `core/catalogsession` | `key` → exported `Key`; callers in `session.go` follow |
+| `core/catalogsession/catalogsessiontest` *(new)* | `Hold(t testing.TB, projectDir string) (release func())` |
+| `core/depictionvalue` | `const ImageMediaType = "image/png"` *(new)*; `ReadableImage` uses it |
+| `core/ingest/stage.go` | `Staged` (D-1); `StageImage(projectDir, absPath)`; `StageBytes` *(new)*; `InsertTx`; `Purge(c)`; `Discard()`; `Stages` *(new)* |
+| `core/ingest/file.go` | `StageFile` *(new)*; `CommitFile` *(new)*; `File` = composition (D-5) |
+| `core/ingest/depictions.go` | `StageDepictions(projectDir string, inputs []observations.Input) (Stages, error)`; on error it discards every stage so far and returns nil |
+| `core/database/observations` | Comments in `depiction.go` (16, 24) and `observations.go` (177) name `*ingest.Staged` and `withStagedDepictions` |
+| `core/derivatives/ensure.go` | `Job`, `Plan`, `(*Job) Stage`, `Commit`, `Refused` *(new)* (D-8, D-9); `Ensure` composes them |
+| `core/database/sources/sources.go` | `CoverArtifactFile` *(new)*; `requireRasterCoverArtifact` lookup-only (D-12) |
 
 ```go
 // sketch — signatures only
@@ -196,33 +212,39 @@ func StageImage(projectDir, absPath string) (*Staged, error)
 func StageBytes(projectDir string, data []byte, mediaType string) (*Staged, error)
 func (s *Staged) CommitFile(c *database.Catalog, userID []byte) (Result, error)
 func (s *Staged) InsertTx(tx *sql.Tx) (files.File, []rowchange.Change, error)
-func (s *Staged) Discard(c *database.Catalog)
-func (s *Staged) Close()
+func (s *Staged) Purge(c *database.Catalog)
+func (s *Staged) Discard()
 
 func Plan(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, *Job, error)
 func (j *Job) Stage(projectDir string) (*ingest.Staged, error)
-func Commit(c *database.Catalog, j *Job, staged *ingest.Staged) (Result, error)
+func Commit(c *database.Catalog, j *Job) (Result, error)
+func Refused(err error) bool
+
+func CoverArtifactFile(c *database.Catalog, sourceID, artifactID []byte) ([]byte, error)
 ```
 
 Errors: unchanged codes. `RequireProject` → `catalog.not_a_project`.
 
 ### FFI
 
-None — no proto change. Handlers change inside `api/ffi/handlers/`: `catalog.go` (`withStaged`, `withStagedDepictions`), `citations.go`, `observations.go`, `connect.go`, `artifacts.go` (`IngestArtifactFile`, `artifactProto(c, a, pass)`, `listArtifactsProto(c, id, pass)`), `sources.go` (`GetSourceWorkspace`, `SetSourceCover`), `thumbnails.go` (`EnsureFileThumbnail`; `thumbnailRelPath` removed), and the pass's own file (new, below).
+None — no proto change. Handler files: `catalog.go` (`withStaged`, `withStagedDepictions`), `citations.go`, `observations.go`, `connect.go`, `artifacts.go`, `sources.go`, `thumbnails.go`, and the pass's file (D-10).
 
 `IngestArtifactFile` shape:
 
 ```go
-staged, err := ingest.StageFile(req.GetProjectDir(), req.GetPath())
-if err != nil { return nil, err }
+var staged *ingest.Staged
 pass := &thumbnailPass{}
-err = withStaged(req.GetProjectDir(), ingest.Stages{staged}, func(c *database.Catalog) error {
-	// artifacts.Get, ErrFileAlreadyAttached, staged.CommitFile(c, userID), update_artifact Run, artifactProto(c, got, pass)
+err = withStaged(req.GetProjectDir(), func(dir string) (ingest.Stages, error) {
+	s, err := ingest.StageFile(dir, req.GetPath())
+	if err != nil { return nil, err }
+	staged = s
+	return ingest.Stages{s}, nil
+}, func(c *database.Catalog) error {
+	// artifacts.Get, ErrFileAlreadyAttached, staged.CommitFile(c, userID),
+	// update_artifact Run, artifactProto(c, got, pass)
 })
-if err == nil { err = pass.run(req.GetProjectDir()) }
+if err == nil { err = pass.run(req.GetProjectDir(), nil) }
 ```
-
-The `ErrFileAlreadyAttached` check stays inside the session; a file staged for an Artifact that already has one is closed unused.
 
 ### macOS
 
@@ -234,48 +256,45 @@ None — no copy, and no action changes what it covers.
 
 ## 7. Steps
 
+Every step leaves `go build ./...` and `go vet ./...` passing, so each is a commit.
+
 **STEP-1 — One stored-image media type**
 Files: `core/depictionvalue/depictionvalue.go`, `core/ingest/stage.go`. Skill: `add-depiction-value`.
 Do: add `ImageMediaType`; use it in `ReadableImage` and the three `stage.go` literals.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/depictionvalue/... ./core/ingest/...` passes; `rg '"image/png"' core/ingest/stage.go core/depictionvalue` has no hit.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/depictionvalue/... ./core/ingest/...` passes; `rg '"image/png"' core/ingest/stage.go core/depictionvalue/depictionvalue.go` has no hit.
 
-**STEP-2 — One staged-object type in `ingest`**
-Files: `core/database/catalog.go`, `core/ingest/stage.go`, `core/ingest/file.go`, `core/ingest/depictions.go`, `core/database/observations/depiction.go`, `core/database/observations/observationstest/observationstest.go`, `core/ingest/*_test.go`, every `*_test.go` that calls `StageImage` or `StageDepictions`. Skill: `use-catalog-session`.
-Do: add `RequireProject`; build `Staged`, `StageFile`, `StageImage`, `StageBytes`, `InsertTx`, `CommitFile`, `Discard`, `Close`, `Stages` (D-1 – D-6); rewrite `File` as the composition; `StageDepictions` takes the folder and returns `Stages`. `observationstest` stages with `c.Dir()` and defers `Discard(c)` then `Close()`. Tests change only `StagedImage` → `Staged`, `c` → `c.Dir()` in stage calls, and the discard call shape; no assertion changes. Add T-1, T-2, T-6.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/...` passes; `rg StagedImage --type go` has no hit.
+**STEP-2 — Depiction images stage before the session**
+Files: `core/database/catalog.go`, `core/catalogsession/session.go`, `core/catalogsession/catalogsessiontest/catalogsessiontest.go` *(new)*, `core/ingest/stage.go`, `core/ingest/depictions.go`, `core/database/observations/depiction.go`, `core/database/observations/observations.go`, `core/database/observations/observationstest/observationstest.go`, `core/depictionvalue/depictionvalue.go` (comment), `api/ffi/handlers/catalog.go`, `citations.go`, `observations.go`, `connect.go`, `core/ingest/*_test.go`, `api/ffi/handlers/citations_test.go`, every other `*_test.go` that calls `StageImage` or `StageDepictions`. Skills: `use-catalog-session`, `add-ffi-handler`.
+Do: add `RequireProject`, `Key`, `Hold`; build `Staged` with `StageImage`, `StageBytes`, `InsertTx`, `Purge`, `Discard`, `Stages` (D-1 – D-4, D-6); `StageDepictions` takes the folder and returns `Stages`; add `withStaged` and `withStagedDepictions` (D-7) and move the four depiction handlers onto `withStagedDepictions`. `observationstest` stages with `c.Dir()` and defers `Purge(c)` then `Discard()`. Existing tests change only `StagedImage` → `Staged` (test names follow: `TestStagedInsertTx`, `TestStagedPurge`, `TestStagedInsertTxRefusesSymlinkedObjects`), `c` → `c.Dir()` in stage calls, and the cleanup calls. Add T-1 (image and bytes rows), T-2, T-3, T-6.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./...` passes; `rg StagedImage --type go` has no hit; `rg "StageDepictions" api/ffi/handlers` hits only `catalog.go`.
 
-**STEP-3 — Split the thumbnail derivative**
+**STEP-3 — Import stages before the session**
+Files: `core/ingest/file.go`, `core/ingest/stage_test.go`, `api/ffi/handlers/artifacts.go`, `api/ffi/handlers/artifacts_test.go`.
+Do: add `StageFile` and `CommitFile`; rewrite `File` as the composition with its test-only doc comment (D-5); `IngestArtifactFile` per the FFI sketch with today's `artifactProto(c, got)` (the pass comes in STEP-5); D-13's order. Add T-1's file row, T-8.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./...` passes; `rg "ingest\.File\(" api/` has no hit.
+
+**STEP-4 — Split the thumbnail derivative**
 Files: `core/derivatives/ensure.go`, `core/derivatives/thumbnail_test.go`.
-Do: add `Job`, `Plan`, `Job.Stage`, `Commit` (D-8); `Ensure` composes them; delete `insertLinkOnly` and `errDerivedFileExists`. Add T-4, T-5.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/derivatives/... ./core/database/sources/... ./core/database/artifacts/...` passes with every existing `TestEnsureThumbnail*` assertion unchanged.
+Do: add `Job`, `Plan`, `Job.Stage`, `Commit`, `Refused` (D-8, D-9); `Ensure` composes them, with its test-only doc comment; delete `insertLinkOnly` and `errDerivedFileExists`. Add T-4, T-5.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./...` passes with every existing `TestEnsureThumbnail*` assertion unchanged.
 
-**STEP-4 — Depiction handlers stage before the session**
-Files: `api/ffi/handlers/catalog.go`, `citations.go`, `observations.go`, `connect.go`, `api/ffi/handlers/citations_test.go`. Skill: `add-ffi-handler`.
-Do: add `withStaged`, `withStagedDepictions` (D-7); the four handlers call `withStagedDepictions` in place of `withProjectCatalog` + `StageDepictions`. Add T-3.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./api/ffi/...` passes; `rg "StageDepictions" api/ffi/handlers` hits only `catalog.go`.
+**STEP-5 — Thumbnails and covers decode between sessions**
+Files: `api/ffi/handlers/thumbnail_pass.go` *(new)*, `artifacts.go`, `sources.go`, `thumbnails.go`, `core/database/sources/sources.go`, `core/database/sources/sources_test.go`, `core/database/artifacts/artifacts_test.go`, `core/database/sourcecopy/sourcecopy_test.go`, `api/ffi/handlers/thumbnails_test.go`, `api/ffi/handlers/cover_test.go`.
+Do: add `thumbnailPass`, `derivedRelPath`, `thumbnailBatch` (D-10); thread the pass through `artifactProto` and `listArtifactsProto` and call `run` in the five handlers (D-11); add `CoverArtifactFile`, make `requireRasterCoverArtifact` lookup-only and split `SetSourceCover` (D-12); delete `thumbnailRelPath`. The three core tests that set an artifact cover (`sources_test.go` `runSetCover` for `CoverModeArtifact`, `artifacts_test.go` line 626, `sourcecopy_test.go` line 174) call `derivatives.EnsureThumbnail` on the cover's File first; their assertions do not change. Add T-7, T-9, T-12.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./...` passes; `rg "EnsureThumbnail\(|derivatives\.Ensure\(" --type go -g '!*_test.go'` hits only `core/derivatives/ensure.go`; `go list -deps ./core/database/sources | rg core/derivatives` has no hit.
 
-**STEP-5 — Import stages before the session**
-Files: `api/ffi/handlers/artifacts.go`, `api/ffi/handlers/artifacts_test.go`.
-Do: `IngestArtifactFile` per the FFI sketch (thumbnail through the pass comes in STEP-6; in this step `artifactProto` keeps its signature). Add T-8.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./api/ffi/...` passes; `rg "ingest\.File\(" api/` has no hit.
-
-**STEP-6 — Thumbnails decode between two sessions**
-Files: `api/ffi/handlers/thumbnail_pass.go` *(new)*, `artifacts.go`, `sources.go`, `thumbnails.go`, `api/ffi/handlers/thumbnails_test.go`, `api/ffi/handlers/cover_test.go`.
-Do: add `thumbnailPass` (D-9, D-10); thread it through `artifactProto` and `listArtifactsProto`; call `pass.run` in `CreateArtifact`, `UpdateArtifact`, `IngestArtifactFile`, `GetSourceWorkspace`, `EnsureFileThumbnail`; split `SetSourceCover`; delete `thumbnailRelPath`. Add T-7, T-9, T-10.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./api/ffi/... ./core/...` passes; `rg "EnsureThumbnail\(|derivatives\.Ensure\(" api/` has no hit.
-
-**STEP-7 — Thumbnail test uses the harness**
+**STEP-6 — Thumbnail test uses the harness**
 Files: `api/ffi/handlers/thumbnails_test.go`.
 Do: replace the `Close` / `database.Open` / `DELETE FROM file_derivatives` block (lines 205–225 at the base) with `damageCatalog(t, f.dir, "DELETE FROM file_derivatives")`, as `sources_test.go` line 374 does.
 Check: `rg "DELETE FROM file_derivatives" api/ffi/handlers/thumbnails_test.go` hits only the `damageCatalog` call; `go test` passes.
 
-**STEP-8 — Guidance and domain doc**
-Files: `.agents/skills/use-catalog-session/SKILL.md`, `.agents/skills/add-ffi-handler/SKILL.md` (§ Files from the client), `.agents/skills/add-depiction-value/SKILL.md`, `.agents/skills/review-pr/lenses/maintainability.md` (line 313), `.agents/skills/review-pr/lenses/security.md` (line 22), `docs/source-layer-data-model.md` (lines 313 and 467).
-Do: `use-catalog-session` gains a "File work before the session" section: stage outside `Do`, `withStaged` / `withStagedDepictions` for client files, `thumbnailPass` for thumbnails, install and purge only inside `Do`. `add-ffi-handler` says the handler stages before `withProjectCatalog` through `withStaged`. The lenses name `ingest.Staged`. The domain doc says file work and decoding run before the session and the object install and purge inside it.
-Check: `python3 scripts/check-guidance-names.py` passes; `rg "StagedImage|stages it inside" .agents docs` has no hit.
+**STEP-7 — Guidance and domain doc**
+Files: `.agents/skills/use-catalog-session/SKILL.md`, `.agents/skills/add-ffi-handler/SKILL.md` (§ Files from the client, line 67), `.agents/skills/add-depiction-value/SKILL.md` (lines 7, 33, 37), `.agents/skills/review-pr/lenses/maintainability.md` (line 313), `.agents/skills/review-pr/lenses/security.md` (line 22), `docs/source-layer-data-model.md` (lines 313 and 467).
+Do: `use-catalog-session` gains "File work before the session": stage outside `Do` through `withStaged` / `withStagedDepictions`, thumbnails through `thumbnailPass`, install and purge only inside `Do`, `catalogsessiontest.Hold` for tests; its "Do not" adds calling `ingest.File` or `derivatives.Ensure` from a handler. `add-ffi-handler` says the handler stages before the session through `withStaged`. The lenses and `add-depiction-value` name `ingest.Staged`. The domain doc says file work and decoding run before the session, and install and purge inside it.
+Check: `python3 scripts/check-guidance-names.py` passes; `rg "StagedImage|stages it inside" .agents docs/*.md` has no hit (plans under `docs/deployment-plan/` are history and keep their names).
 
-**STEP-9 — Docs**
-Files: `docs/deployment-plan/spike-14/completed.md`, `deployment-plan.md` (map row), this plan (status, Landed note), `VERSION`, `core/version.go`, `MARKETING_VERSION`.
+**STEP-8 — Docs**
+Files: `docs/deployment-plan/spike-14/completed.md`, `deployment-plan.md` (map row), this plan (status, Landed note), `VERSION`, `core/version.go`, `macos/Provenencia.xcodeproj/project.pbxproj` (`MARKETING_VERSION`).
 Do: per the Definition of done.
 Check: links resolve; `scripts/check-pr.sh` prints `check-pr: PASS`.
 
@@ -283,21 +302,24 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 ## 8. Tests
 
+The `catalogsessiontest.Hold` helper and the 10 ms / 5 s poll (D-15) serve T-1, T-3, T-4 and T-8.
+
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Go | `core/ingest/stage_test.go` `TestStageOutsideSession` *(new)* | Table: `StageFile`, `StageImage`, `StageBytes` on a project while a goroutine holds `catalogsession.Do` blocked on a channel → each returns before release; on a folder with no catalog → `database.ErrNotAProject` and no `objects/` folder made | AC-1.1, AC-2.1, D-2, D-12 |
-| T-2 | Go | `core/ingest/stage_test.go` `TestStagedCloseAndDiscard` *(new)* | Close before any session → no temp left in the objects folder; `InsertTx` in a rolled-back write then `Discard(c)` → object purged, temp gone; `Discard` then `Close` → no error, committed object kept | AC-2.2, D-6 |
-| T-3 | Go | `api/ffi/handlers/citations_test.go` `TestDepictionStagesBeforeSession` *(new)* | Session held by a blocked `catalogsession.Do`; `CreateCitationWithObservations` with one depiction in a goroutine → a `.stage-*` temp appears in the objects folder before release; after release the response matches the unblocked run; a refused write leaves no PNG object and no temp | AC-2.1, AC-2.2 |
-| T-4 | Go | `core/derivatives/thumbnail_test.go` `TestPlanStageCommit` *(new)* | Table: no link → `Plan` returns a `Job`; `Job.Stage` while another `Do` holds the session → completes; `Commit` → link and derived File; File with a link → `Plan` returns it and no `Job`; non-raster → `Skipped`, no `Job` | AC-3.1, D-8 |
-| T-5 | Go | `core/derivatives/thumbnail_test.go` `TestCommitAfterChange` *(new)* | Between `Stage` and `Commit`: another `Ensure` made the link → `Commit` returns that link, staged object not left unreferenced; the source File deleted → `ErrInvalid`, no link row, temp gone | D-8, D-10 |
-| T-6 | Go | `core/ingest/stage_test.go` `TestPurgeLeavesTemps` *(new)* | A staged temp in `objects/` and `files.PurgeUnreferenced` for an unrelated unreferenced object → the temp still exists and installs afterwards | Reach row 1, D-3 |
-| T-7 | Go | `api/ffi/handlers/thumbnails_test.go` `TestWorkspaceThumbnailPass` *(new)* | Table: Source with two raster Artifacts, no derivatives → both paths, two link rows; two Artifacts on one File → one link row, same path; a late-failing JPEG (`rastertest.OversizedJPEG` with its last two bytes, the EOI marker, cut off) → empty path, no link row; all derivatives present → no second session (assert with a `file_derivatives` count unchanged and no `.stage-*` temp created) | AC-3.2, AC-3.3, AC-3.4 |
-| T-8 | Go | `api/ffi/handlers/artifacts_test.go` `TestIngestStagesBeforeSession` *(new)* | Session held by a blocked `catalogsession.Do`; `IngestArtifactFile` in a goroutine → an `.ingest-*` temp of the source's full size appears in the objects folder before release (poll with a 5 s deadline); after release the ingest returns the same Artifact, File and `Reused` as an unblocked run on a fresh project | AC-1.1, AC-1.2 |
-| T-9 | Go | `api/ffi/handlers/cover_test.go` `TestSetCoverMakesThumbnailFirst` *(new)* | Cover to a raster Artifact with no derivative → cover set, one link row; to a PDF Artifact → `sources.ErrInvalid` code; to a late-failing JPEG (as in T-7) → `sources.ErrInvalid` code | AC-3.5 |
-| T-10 | Go | `api/ffi/handlers/thumbnails_test.go` `TestEnsureFileThumbnail` *(existing)* | Unchanged assertions pass through the pass | AC-3.6 |
+| T-1 | Go | `core/ingest/stage_test.go` `TestStageOutsideSession` *(new)* | Table: `StageFile`, `StageImage`, `StageBytes` on a project held by `Hold` → each returns before release; on a folder with no catalog → `database.ErrNotAProject` and no objects folder made | AC-1.1, AC-2.1, D-2 |
+| T-2 | Go | `core/ingest/stage_test.go` `TestStagedPurgeAndDiscard` *(new)* | `Discard` with no session → no temp left in the objects folder; `InsertTx` inside a `writes.Run` whose fn then returns an error, then `Purge(c)` → object gone, temp gone; a committed write then `Purge` and `Discard` → object kept; `CommitFile` on a `StageBytes` stage → `ErrInvalid` | AC-2.2, D-5, D-6 |
+| T-3 | Go | `api/ffi/handlers/citations_test.go` `TestDepictionStagesBeforeSession` *(new)* | Project held; `CreateCitationWithObservations` with one depiction in a goroutine → a `.stage-*` temp appears before release; after release the response equals an unblocked run's (ids aside); a refused write leaves no PNG object and no temp | AC-2.1, AC-2.2 |
+| T-4 | Go | `core/derivatives/thumbnail_test.go` `TestPlanStageCommit` *(new)* | Table: no link → `Plan` returns a `Job`; `Job.Stage` while `Hold` holds the session → completes; `Commit` → link and derived File; File with a link → `Plan` returns it and no `Job`; non-raster → `Skipped`, no `Job` | AC-3.1, D-8 |
+| T-5 | Go | `core/derivatives/thumbnail_test.go` `TestCommitAfterChange` *(new)* | `Commit` adds no audit revision; between `Stage` and `Commit`: `EnsureThumbnail` made the link → `Commit` returns that link and, after `Purge` + `Discard`, no unreferenced object is left; the source File row deleted → `ErrInvalid`, no link row | D-8, D-10 |
+| T-6 | Go | `core/ingest/stage_test.go` `TestPurgeLeavesTemps` *(new)* | A staged temp in the objects folder and `files.PurgeUnreferenced` for an unrelated unreferenced object → the temp still exists and installs afterwards | Reach row 1, D-3 |
+| T-7 | Go | `api/ffi/handlers/thumbnails_test.go` `TestWorkspaceThumbnailPass` *(new)* | Fixtures built as `sourceWithPNG` builds its Source and Artifact. Table: two raster Artifacts, no derivatives → both paths, two link rows, audit revision count unchanged by the read; two Artifacts on one File → one link row, same path; a late-failing JPEG (`rastertest.OversizedJPEG` with its last two bytes, the EOI marker, cut off) → empty path, no link row; 17 raster Artifacts (small PNGs) → 17 paths and 17 link rows; all derivatives present → response unchanged, `file_derivatives` count and the objects folder's file count unchanged | AC-3.2, AC-3.3, AC-3.4, AC-3.5 |
+| T-8 | Go | `api/ffi/handlers/artifacts_test.go` `TestIngestStagesBeforeSession` *(new)* | Project held; `IngestArtifactFile` in a goroutine → an `.ingest-*` temp of the source's full size appears before release; after release the Artifact, File and `Reused` equal an unblocked run's on a fresh fixture; Artifact already attached + valid file → `ErrFileAlreadyAttached`, no temp and no new object | AC-1.1, AC-1.2, AC-1.4, D-13 |
+| T-9 | Go | `api/ffi/handlers/cover_test.go` `TestSetCoverMakesThumbnailFirst` *(new)* | Table: raster Artifact with no derivative → cover set, one link row; PDF Artifact → `sources.ErrInvalid` code; late-failing JPEG (as T-7) → `sources.ErrInvalid` code; Artifact of another Source → `sources.ErrInvalid` code; type-icon mode → set, no `.stage-*` temp created | AC-3.6, D-12 |
+| T-10 | Go | `api/ffi/handlers/thumbnails_test.go` `TestEnsureFileThumbnail` *(existing, one row added)* | Existing rows unchanged; a PDF File on an Artifact → `Skipped` true, empty `RelPath` | AC-3.7 |
 | T-11 | Go | `core/ingest/file_test.go` `TestFile`; `api/ffi/handlers/artifacts_test.go`, `citations_test.go`, `connect_test.go` *(existing)* | Unchanged assertions | AC-1.3, AC-2.3 |
+| T-12 | Go | `core/database/sources/sources_test.go` `TestNormalizeCoverNeedsThumbnail` *(new)* | Raster Artifact with no thumbnail link → `ErrInvalid`; after `derivatives.EnsureThumbnail` → artifact mode accepted | D-12 |
 
-Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `core/ingest` (signature changes), `core/database/observations` (`observationstest`), `core/derivatives`, `api/ffi/handlers/thumbnails_test.go` and `cover_test.go`, `TestConcurrentCatalogRPCs`.
+Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `core/ingest`, `core/database/observations` (`observationstest`), `core/derivatives`, `core/database/sources`, `api/ffi/handlers/thumbnails_test.go` and `cover_test.go`, `TestConcurrentCatalogRPCs`.
 
 ## 9. Definition of done
 
@@ -309,11 +331,11 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 - [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left (none expected)
 - [ ] Sweep: `StagedImage`, `thumbnailRelPath`, `insertLinkOnly`, `errDerivedFileExists` `rg`'d across `.agents/`, `.cursor/rules/`, `docs/*.md` and `L10n.swift` with no hit left; `scripts/check-guidance-names.py` passes (check-pr runs it)
 - [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated (none)
-- [ ] UI matches the brief inventory (no UI change)
+- [ ] UI matches the brief inventory — not applicable, no UI change
 - [ ] Version bump: patch — VERSION, core/version.go, MARKETING_VERSION together
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
-- [ ] Brief moved to design/archive/ (not gated)
+- [ ] Brief moved to design/archive/ — not applicable, not gated
 - [ ] Domain doc updated: source-layer-data-model.md lines 313 and 467 (file work and decoding before the session; install and purge inside)
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
@@ -321,25 +343,27 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 ## 10. Manual check
 
 1. Open a project with a Source on a 60-graph census. Attach a scan of at least 300 MB to an Artifact. While it copies, switch to another Source page and open an Evidence graph: both load before the attach finishes.
-2. On a Source whose Artifacts have no thumbnails yet (run `DELETE FROM file_derivatives` on a copy of the project with the app closed), open the Source page while another pane loads: the other pane is not held until the thumbnails finish; the thumbnails appear as before.
-3. Draw a depiction on a Citation and save it: it saves and shows as before.
+2. On a copy of a project with at least 20 image Artifacts on one Source, with the app closed, run `DELETE FROM file_derivatives` on its catalog. Open that Source page and, while it loads, open another pane: the other pane is not held until the thumbnails finish; the thumbnails appear as before.
+3. Pick an image Artifact as that Source's cover: it is set as before.
+4. Draw a depiction on a Citation and save it: it saves and shows as before.
 
 ## 11. Risks and stop conditions
 
 | Risk | Mitigation |
 | --- | --- |
 | An install and a purge of the same checksum interleave | Install and purge stay inside `Do` (D-3, D-6); T-6 |
-| A staged temp leaks when the session never opens | `withStaged` defers `Close` outside the session (D-7); T-2 |
-| A response field changes because thumbnails fill after the first session | `pass.run` runs before `proto.Marshal`; T-7 and existing handler tests compare responses |
-| The second session adds latency to every Source page | No job → no second session (T-7's last row) |
+| A staged temp leaks when the session never opens | `withStaged` defers `Discard` outside the session (D-7); T-2 |
+| A response field changes because thumbnails fill after the first session | `pass.run` runs before `proto.Marshal`; T-7, T-10 and existing handler tests compare responses |
+| A thumbnail starts writing audit revisions | `Commit` drops `InsertTx`'s `file` change (D-8); T-5, T-7 |
+| A large Source opens hundreds of files at once | Batches of 16 (D-10); T-7's 17-Artifact row |
 
 **Stop and report if:**
 
-- `catalogsession.Do`, `ingest.File`, `StageImage`, `derivatives.Ensure` or `thumbnailRelPath` no longer does what §4 says.
-- An existing assertion in `TestFile`, `TestStageImage*`, `TestStagedImage*`, `TestEnsureThumbnail*`, `TestEnsureFileThumbnail` or `TestListSourcesAndWorkspaceThumbnails` must change for the tests to pass (only names, stage arguments and discard calls may change, STEP-2).
-- `go list -deps ./core/ingest` comes to include `core/derivatives` or `core/database/sources` (an import cycle with D-8).
+- `catalogsession.Do`, `ingest.File`, `StageImage`, `derivatives.Ensure`, `thumbnailRelPath` or `requireRasterCoverArtifact` no longer does what §4 says.
+- An existing assertion in `TestFile`, `TestStageImage*`, `TestStagedImage*`, `TestEnsureThumbnail*`, `TestEnsureFileThumbnail` or `TestListSourcesAndWorkspaceThumbnails` must change for the tests to pass (only the names, stage arguments and cleanup calls of STEP-2 and the three setup lines of STEP-5 may change).
+- `go list -deps ./core/ingest` includes `core/derivatives` or `core/database/sources`, or `go list -deps ./core/catalogsession` includes `core/ingest` or `core/derivatives`.
 - A handler needs the catalog to decide what to stage before its session (D-2 assumes request fields are enough).
-- A `WriteEffects` or audit revision count differs from today in any handler test.
+- A `WriteEffects` value or audit revision count differs from today in any handler test.
 
 ## 12. Open questions
 
