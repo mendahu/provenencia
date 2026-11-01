@@ -133,6 +133,49 @@ func TestEnsureThumbnailIdempotent(t *testing.T) {
 	}
 }
 
+func TestEnsureThumbnailOversizedJPEG(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	srcID := installSourceFile(t, c, rastertest.OversizedJPEG(t), "image/jpeg", "big.jpg")
+
+	first, err := EnsureThumbnail(c, srcID)
+	if err != nil || first.Skipped {
+		t.Fatalf("%+v %v", first, err)
+	}
+	derived, err := files.Lookup(c, first.Link.DerivedFileID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if derived.MediaType != "image/jpeg" {
+		t.Fatalf("derived media type = %q", derived.MediaType)
+	}
+	rel, err := files.StorageRelPath(derived.ChecksumSHA256, derived.MediaType)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(filepath.Join(c.Dir(), filepath.FromSlash(rel)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Width != 256 || cfg.Height != 255 {
+		t.Fatalf("thumb = %dx%d, want 256x255", cfg.Width, cfg.Height)
+	}
+	second, err := EnsureThumbnail(c, srcID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(second.Link.ID) != string(first.Link.ID) {
+		t.Fatal("second call made a new link")
+	}
+}
+
 func TestEnsureThumbnailSkipsNonImage(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
