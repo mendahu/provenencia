@@ -3,10 +3,9 @@ package handlers
 import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/graphalign"
-	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -65,27 +64,14 @@ func fixedFromProto(in []*engine.PromoteGraphAlignmentFixed) ([]graphalign.Fixed
 
 func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.ProposePromoteGraphAlignmentResponse, error) {
 	out := &engine.ProposePromoteGraphAlignmentResponse{}
-	var personIDs, eventIDs, placeIDs [][]byte
-	addHeaderID := func(kind string, id []byte) {
-		if len(id) != 16 {
-			return
-		}
-		switch kind {
-		case vocabkey.Person:
-			personIDs = append(personIDs, id)
-		case vocabkey.Event:
-			eventIDs = append(eventIDs, id)
-		case vocabkey.Place:
-			placeIDs = append(placeIDs, id)
-		}
-	}
+	var w conclusionsummaries.Want
 	for _, r := range prop.Rows {
-		addHeaderID(r.Kind, r.Start().HandleID)
+		w.Add(r.Kind, r.Start().HandleID)
 		for _, a := range r.Alternatives {
-			addHeaderID(r.Kind, a.HandleID)
+			w.Add(r.Kind, a.HandleID)
 		}
 	}
-	headers, err := conclusionheaders.ByIDs(c, personIDs, eventIDs, placeIDs)
+	summaries, err := conclusionsummaries.ByIDs(c, w)
 	if err != nil {
 		return nil, err
 	}
@@ -114,37 +100,11 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 				HandleId:  database.UUIDString(a.HandleID),
 				HandleRef: a.Ref,
 			}
-			switch r.Kind {
-			case vocabkey.Person:
-				if h, ok := headers.Person(a.HandleID); ok {
-					alt.Header = &engine.PromoteGraphAlignmentAlternative_Person{Person: personHeaderProto(h)}
-				}
-			case vocabkey.Event:
-				if h, ok := headers.Event(a.HandleID); ok {
-					alt.Header = &engine.PromoteGraphAlignmentAlternative_Event{Event: eventHeaderProto(h)}
-				}
-			case vocabkey.Place:
-				if h, ok := headers.Place(a.HandleID); ok {
-					alt.Header = &engine.PromoteGraphAlignmentAlternative_Place{Place: placeHeaderProto(h)}
-				}
-			}
+			alt.Summary = conclusionSummaryProto(summaries, r.Kind, a.HandleID)
 			row.Alternatives = append(row.Alternatives, alt)
 		}
 		if start.Target == graphalign.TargetHandle && len(start.HandleID) == 16 {
-			switch r.Kind {
-			case vocabkey.Person:
-				if h, ok := headers.Person(start.HandleID); ok {
-					row.Header = &engine.PromoteGraphAlignmentRow_Person{Person: personHeaderProto(h)}
-				}
-			case vocabkey.Event:
-				if h, ok := headers.Event(start.HandleID); ok {
-					row.Header = &engine.PromoteGraphAlignmentRow_Event{Event: eventHeaderProto(h)}
-				}
-			case vocabkey.Place:
-				if h, ok := headers.Place(start.HandleID); ok {
-					row.Header = &engine.PromoteGraphAlignmentRow_Place{Place: placeHeaderProto(h)}
-				}
-			}
+			row.Summary = conclusionSummaryProto(summaries, r.Kind, start.HandleID)
 		}
 		out.Rows = append(out.Rows, row)
 	}

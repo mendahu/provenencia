@@ -227,7 +227,7 @@ func TestProposalProtoSendsMove(t *testing.T) {
 }
 
 // An unplaced row whose best record is in the weak band starts on that record,
-// with its header; one whose record another row took starts unset.
+// with its summary; one whose record another row took starts unset.
 func TestProposalProtoStartsAWeakRow(t *testing.T) {
 	t.Cleanup(func() { _ = catalogsession.CloseAll() })
 	dir, userID, _, typeID := subjectFixture(t)
@@ -257,12 +257,12 @@ func TestProposalProtoStartsAWeakRow(t *testing.T) {
 
 	started := proposed(row(graphalign.ReasonUnplaced))
 	if started.GetTarget() != "handle" || started.GetHandleId() != h || started.GetHandleRef() != r ||
-		started.GetPerson().GetEntity().GetId() != h {
-		t.Fatalf("weak row %+v, want it started on %s (%s) with a person header", started, h, r)
+		started.GetSummary().GetPerson().GetEntity().GetId() != h {
+		t.Fatalf("weak row %+v, want it started on %s (%s) with a person summary", started, h, r)
 	}
 	taken := proposed(row(graphalign.ReasonTaken))
-	if taken.GetTarget() != "" || taken.GetHandleId() != "" || taken.Header != nil {
-		t.Fatalf("taken row %+v, want it unset with no header", taken)
+	if taken.GetTarget() != "" || taken.GetHandleId() != "" || taken.Summary != nil {
+		t.Fatalf("taken row %+v, want it unset with no summary", taken)
 	}
 }
 

@@ -38,7 +38,7 @@ enum Method {
   reserved "METHOD_COUNT_FILES";
   reserved 71;
   reserved "METHOD_UPDATE_CITATION_WITH_OBSERVATIONS";
-  // Per-entity headers ride GetConclusionDetail.
+  // Per-entity summaries ride GetConclusionDetail.
   reserved 88, 92, 94, 95;
   reserved "METHOD_LIST_PROMOTE_TARGET_SUGGESTIONS";
   reserved "METHOD_GET_EVENT_HEADER", "METHOD_GET_PLACE_HEADER", "METHOD_GET_PERSON_HEADER";
@@ -106,10 +106,10 @@ enum Method {
   METHOD_DELETE_CITATION = 84;
   METHOD_PROMOTE_SUBJECT = 85;
   METHOD_LIST_SUBJECT_MEMBERSHIPS = 86;
-  METHOD_LIST_PERSON_HEADERS = 87;
+  METHOD_LIST_PERSON_SUMMARIES = 87;
   METHOD_GET_CONCLUSION_DETAIL = 90;
-  METHOD_LIST_EVENT_HEADERS = 91;
-  METHOD_LIST_PLACE_HEADERS = 93;
+  METHOD_LIST_EVENT_SUMMARIES = 91;
+  METHOD_LIST_PLACE_SUMMARIES = 93;
   METHOD_LIST_EVIDENCE_GRAPH_EVENT_TITLES = 96;
   METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT = 97;
   METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT = 98;
@@ -725,7 +725,7 @@ message WriteEffects {
   reserved 2, 3, 4, 12;
   reserved "sources";
   bool structure = 5;
-  repeated string header_handles = 6;
+  repeated string summary_handles = 6;
   // Handles whose last-updated revision this write moved. Swift patches those
   // rows in the cached People, Events, and Places lists with (revision,
   // revision_at); it reloads nothing and leaves detail pages alone.
@@ -1013,13 +1013,11 @@ message SearchHit {
   // Optional raw snippet for body/rollup matches (notes/metadata/filename). No English prefix.
   string match_snippet = 10;
   int32 member_count = 11; // accepted members, for person / event / place hits
-  // The list header for a person, event, or place hit. Title and subtitle
-  // stay match text; the app formats the row from this header (S9-35).
-  oneof header {
-    PersonHeader person = 12;
-    EventHeader event = 13;
-    PlaceHeader place = 14;
-  }
+  // The list summary for a person, event, or place hit. Title and subtitle
+  // stay match text; the app formats the row from this summary (S9-35).
+  ConclusionSummary summary = 12;
+  reserved 13, 14;
+  reserved "person", "event", "place";
 }
 
 message SearchCatalogResponse {
@@ -1211,7 +1209,7 @@ message EventTitle {
 }
 
 // ListEvidenceGraphEventTitles titles every Event Subject on one Evidence
-// graph from what its Source cites, by the same rule as Event headers.
+// graph from what its Source cites, by the same rule as Event summaries.
 message ListEvidenceGraphEventTitlesRequest {
   string project_dir = 1;
   reserved 2;
@@ -1241,9 +1239,9 @@ message ListSubjectMembershipsResponse {
   repeated SubjectMembership memberships = 1;
 }
 
-// HeaderPlace is one Place a walk reached. names are kept toponyms in rank
+// ChainedPlace is one Place a walk reached. names are kept toponyms in rank
 // order. parents is the hierarchical chain at the walk's date (nearest first).
-message HeaderPlace {
+message ChainedPlace {
   repeated string names = 1;
   reserved 2;
   reserved "name_count"; // always len(names)
@@ -1261,7 +1259,7 @@ message HeaderPlace {
 message LifeFacts {
   DateValueInput date = 1;
   int32 date_count = 2;
-  repeated HeaderPlace places = 3;
+  repeated ChainedPlace places = 3;
   // event is the birth or death event read; absent when none is linked.
   CanonicalEntity event = 4;
   // event_count is how many birth (or death) events survive; > 1 is a
@@ -1276,7 +1274,7 @@ message EventSubject {
   int32 name_value_count = 3;
 }
 
-// TermFacts is one term-valued Property of a header: the rank-1 displayed
+// TermFacts is one term-valued Property of a summary: the rank-1 displayed
 // term (absent when none), how many values are displayed (> 1 is a
 // disagreement), and the Property's label.
 message TermFacts {
@@ -1285,14 +1283,14 @@ message TermFacts {
   string property_label = 3;
 }
 
-// PersonHeader is one Person as a row, composed from the auto-reconciler's
+// PersonSummary is one Person as a row, composed from the auto-reconciler's
 // cache. Structures only: the app formats the title (name, else entity
 // label, else ref). name is the displayed auto-reconciled name, absent when
 // no member names the Person; name_value_count counts displayed name values
 // (names are one structure, so at most 1; > 1 would read as mixed, and the
 // extra values are the list's +N). birth and death are read off the
 // canonical graph.
-message PersonHeader {
+message PersonSummary {
   CanonicalEntity entity = 1;
   NameValueInput name = 2;
   int32 name_value_count = 3;
@@ -1300,12 +1298,12 @@ message PersonHeader {
   LifeFacts death = 5;
   // updated_revision is the latest canonical_entity audit revision (0 = none);
   // updated_at is its RFC3339 UTC time, empty when 0. Filled on the
-  // List*Headers responses only.
+  // List*Summaries responses only.
   int64 updated_revision = 6;
   string updated_at = 7;
   // picture_image_rel_path is the objects/… path of the picture the Person
   // leads with on its page and in the Persons list (the preferred portrait,
-  // else the earliest gallery picture); empty when none. Filled on ListPersonHeaders and
+  // else the earliest gallery picture); empty when none. Filled on ListPersonSummaries and
   // GetConclusionDetail only.
   string picture_image_rel_path = 8;
   // gender and sex_at_birth are the displayed terms of the product
@@ -1314,24 +1312,24 @@ message PersonHeader {
   TermFacts sex_at_birth = 10;
 }
 
-// ListPersonHeaders returns every unmerged Person in list order: by the title
+// ListPersonSummaries returns every unmerged Person in list order: by the title
 // the row shows (auto-reconciled name, else label), ignoring case and
 // diacritics, then ref-only rows by ref. The app shows rows as given.
-message ListPersonHeadersRequest {
+message ListPersonSummariesRequest {
   string project_dir = 1;
 }
 
-message ListPersonHeadersResponse {
-  repeated PersonHeader headers = 1;
+message ListPersonSummariesResponse {
+  repeated PersonSummary summaries = 1;
 }
 
-// EventHeader is one Event as a row, composed from the auto-reconciler's
+// EventSummary is one Event as a row, composed from the auto-reconciler's
 // cache. Structures only: the app formats the title. event_name is the
 // rank-1 recorded name, empty when none. date is the rank-1 date when one
 // exists; otherwise start_date and end_date are the span. Counts are kept
 // values of that Property (the list's +N). subjects and places come from
 // the canonical graph.
-message EventHeader {
+message EventSummary {
   CanonicalEntity entity = 1;
   string event_name = 2;
   int32 event_name_count = 3;
@@ -1347,28 +1345,28 @@ message EventHeader {
   // places are every location's kept names with hierarchical parents at the
   // event's date (Locations that share part_of fold into one chain).
   repeated EventSubject subjects = 12;
-  repeated HeaderPlace places = 13;
+  repeated ChainedPlace places = 13;
   // title is the naming-matrix rule Go chose and the parts it reads.
   EventTitle title = 14;
   // updated_revision is the latest canonical_entity audit revision (0 = none);
   // updated_at is its RFC3339 UTC time, empty when 0. Filled on the
-  // List*Headers responses only.
+  // List*Summaries responses only.
   int64 updated_revision = 15;
   string updated_at = 16;
   // picture_image_rel_path is the objects/… path of the picture the Event
-  // leads with; empty when none. Filled on ListEventHeaders and
+  // leads with; empty when none. Filled on ListEventSummaries and
   // GetConclusionDetail only.
   string picture_image_rel_path = 17;
 }
 
-// ListEventHeaders returns every unmerged Event in list order: dated
+// ListEventSummaries returns every unmerged Event in list order: dated
 // events by the date window, else the start date, then the rest by ref.
-message ListEventHeadersRequest {
+message ListEventSummariesRequest {
   string project_dir = 1;
 }
 
-message ListEventHeadersResponse {
-  repeated EventHeader headers = 1;
+message ListEventSummariesResponse {
+  repeated EventSummary summaries = 1;
 }
 
 // PlaceRelationship is one related Place on a Place detail (S9-40).
@@ -1383,14 +1381,14 @@ message PlaceRelationship {
   DateValueInput end_date = 5;
 }
 
-// PlaceHeader is one Place as a row, composed from the auto-reconciler's
+// PlaceSummary is one Place as a row, composed from the auto-reconciler's
 // cache. names are the kept toponyms in rank order (Montréal and Montreal
 // are both names). start_date / end_date are the Place's period; parents is
 // today's hierarchical chain (or the last chain when the period has ended).
 // parents_are_candidates is true when several parents hold at once.
 // Relationship lists are filled on GetConclusionDetail only. kind stays
 // empty (place_nature deferred).
-message PlaceHeader {
+message PlaceSummary {
   CanonicalEntity entity = 1;
   repeated string names = 2;
   DateValueInput start_date = 3;
@@ -1404,24 +1402,33 @@ message PlaceHeader {
   repeated PlaceRelationship successors = 11;
   // updated_revision is the latest canonical_entity audit revision (0 = none);
   // updated_at is its RFC3339 UTC time, empty when 0. Filled on the
-  // List*Headers responses only.
+  // List*Summaries responses only.
   int64 updated_revision = 12;
   string updated_at = 13;
   // picture_image_rel_path is the objects/… path of the picture the Place
-  // leads with; empty when none. Filled on ListPlaceHeaders and
+  // leads with; empty when none. Filled on ListPlaceSummaries and
   // GetConclusionDetail only.
   string picture_image_rel_path = 14;
 }
 
-// ListPlaceHeaders returns every unmerged Place in list order: by the title
+// ConclusionSummary is one handle's summary, by kind.
+message ConclusionSummary {
+  oneof kind {
+    PersonSummary person = 1;
+    EventSummary event = 2;
+    PlaceSummary place = 3;
+  }
+}
+
+// ListPlaceSummaries returns every unmerged Place in list order: by the title
 // the row shows (first kept toponym, else label), ignoring case and
 // diacritics, then ref-only rows by ref. The app shows rows as given.
-message ListPlaceHeadersRequest {
+message ListPlaceSummariesRequest {
   string project_dir = 1;
 }
 
-message ListPlaceHeadersResponse {
-  repeated PlaceHeader headers = 1;
+message ListPlaceSummariesResponse {
+  repeated PlaceSummary summaries = 1;
 }
 
 // ConclusionValue is one Property value; exactly the field for the
@@ -1566,14 +1573,12 @@ message ConclusionDetail {
   CanonicalEntity entity = 1;
   repeated ConclusionField fields = 2;
   int32 member_count = 3; // accepted members
-  // header is the handle's row for its kind, read with the detail so a page
+  // summary is the handle's row for its kind, read with the detail so a page
   // has one load, one error, and one consistent read. Absent for a kind
-  // with no header composer.
-  oneof header {
-    PersonHeader person = 4;
-    EventHeader event = 5;
-    PlaceHeader place = 6;
-  }
+  // with no summary composer.
+  ConclusionSummary summary = 4;
+  reserved 5, 6;
+  reserved "person", "event", "place";
   repeated PictureDetail pictures = 7;
   // derived_rows are a Person's life rows: the records of each field a row
   // reads off another handle, keyed by that handle (S13-06). Empty for every
@@ -1596,8 +1601,8 @@ enum DerivedRowKind {
 message ConclusionOwnerField {
   CanonicalEntity entity = 1;
   ConclusionField field = 2;
-  EventHeader event = 3;
-  HeaderPlace place = 4;
+  EventSummary event = 3;
+  ChainedPlace place = 4;
 }
 
 // DerivedRow is one life row's records, one owner per entity it reads, in the
@@ -1631,11 +1636,9 @@ message PromoteGraphAlignmentAlternative {
   string handle_ref = 2;
   reserved 3, 7, 8, 9, 10, 11;
   reserved "score", "assessment", "reason", "reason_property_key", "reason_property_origin", "via_neighbor_subject_id";
-  oneof header {
-    PersonHeader person = 4;
-    EventHeader event = 5;
-    PlaceHeader place = 6;
-  }
+  ConclusionSummary summary = 4;
+  reserved 5, 6;
+  reserved "person", "event", "place";
 }
 
 message PromoteGraphAlignmentRow {
@@ -1654,11 +1657,9 @@ message PromoteGraphAlignmentRow {
   repeated PromoteGraphAlignmentAlternative alternatives = 10;
   bool conflict_with_fixed = 11;
   bool possible_duplicate = 12;
-  oneof header {
-    PersonHeader person = 13;
-    EventHeader event = 14;
-    PlaceHeader place = 15;
-  }
+  ConclusionSummary summary = 13;
+  reserved 14, 15;
+  reserved "person", "event", "place";
   // Subject the walk reached this row from, when a neighbor seeded it.
   string via_neighbor_subject_id = 16;
   reserved 17, 18;

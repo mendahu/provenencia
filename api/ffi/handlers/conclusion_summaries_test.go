@@ -11,7 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
@@ -82,33 +82,33 @@ func namedPerson(t *testing.T) (dir, handleRef string) {
 	return req.ProjectDir, promoted.Entity.GetRef()
 }
 
-func TestListPersonHeaders(t *testing.T) {
-	runRPC(t, ListPersonHeaders, []rpcTest{
+func TestListPersonSummaries(t *testing.T) {
+	runRPC(t, ListPersonSummaries, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
 			name: "empty project lists nothing",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _, _, _ := subjectFixture(t)
-				return &engine.ListPersonHeadersRequest{ProjectDir: dir}
+				return &engine.ListPersonSummariesRequest{ProjectDir: dir}
 			},
-			want:  &engine.ListPersonHeadersResponse{},
+			want:  &engine.ListPersonSummariesResponse{},
 			exact: true,
 		},
 		{
 			name: "promoted Person carries its auto-reconciled name and value count",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _ := namedPerson(t)
-				return &engine.ListPersonHeadersRequest{ProjectDir: dir}
+				return &engine.ListPersonSummariesRequest{ProjectDir: dir}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
-				var resp engine.ListPersonHeadersResponse
+				var resp engine.ListPersonSummariesResponse
 				if err := proto.Unmarshal(out, &resp); err != nil {
 					t.Fatal(err)
 				}
-				if len(resp.Headers) != 1 {
-					t.Fatalf("%+v", resp.Headers)
+				if len(resp.Summaries) != 1 {
+					t.Fatalf("%+v", resp.Summaries)
 				}
-				h := resp.Headers[0]
+				h := resp.Summaries[0]
 				// James Robins + Kenneth Robins reconcile into one name (S9-13b).
 				if !strings.HasPrefix(h.Entity.GetRef(), "PER-") || h.GetNameValueCount() != 1 {
 					t.Fatalf("%+v", h)
@@ -131,17 +131,17 @@ func TestListPersonHeaders(t *testing.T) {
 				dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
 				saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 128))
 				promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: personID})
-				return &engine.ListPersonHeadersRequest{ProjectDir: dir}
+				return &engine.ListPersonSummariesRequest{ProjectDir: dir}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
-				var resp engine.ListPersonHeadersResponse
+				var resp engine.ListPersonSummariesResponse
 				if err := proto.Unmarshal(out, &resp); err != nil {
 					t.Fatal(err)
 				}
-				if len(resp.Headers) != 1 {
-					t.Fatalf("%+v", resp.Headers)
+				if len(resp.Summaries) != 1 {
+					t.Fatalf("%+v", resp.Summaries)
 				}
-				if p := resp.Headers[0].GetPictureImageRelPath(); !objectPathPattern.MatchString(p) || !strings.HasSuffix(p, ".png") {
+				if p := resp.Summaries[0].GetPictureImageRelPath(); !objectPathPattern.MatchString(p) || !strings.HasSuffix(p, ".png") {
 					t.Fatalf("picture path %q", p)
 				}
 			},
@@ -152,50 +152,50 @@ func TestListPersonHeaders(t *testing.T) {
 func namedPersonID(t *testing.T) (dir, id string) {
 	t.Helper()
 	dir, ref := namedPerson(t)
-	raw, err := ListPersonHeaders(marshalProto(t, &engine.ListPersonHeadersRequest{ProjectDir: dir}))
+	raw, err := ListPersonSummaries(marshalProto(t, &engine.ListPersonSummariesRequest{ProjectDir: dir}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var resp engine.ListPersonHeadersResponse
+	var resp engine.ListPersonSummariesResponse
 	if err := proto.Unmarshal(raw, &resp); err != nil {
 		t.Fatal(err)
 	}
-	for _, h := range resp.GetHeaders() {
+	for _, h := range resp.GetSummaries() {
 		if h.GetEntity().GetRef() == ref {
 			return dir, h.GetEntity().GetId()
 		}
 	}
-	t.Fatalf("no header for %s", ref)
+	t.Fatalf("no summary for %s", ref)
 	return "", ""
 }
 
-func TestListEventHeaders(t *testing.T) {
-	runRPC(t, ListEventHeaders, []rpcTest{
+func TestListEventSummaries(t *testing.T) {
+	runRPC(t, ListEventSummaries, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
 			name: "empty project lists nothing",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _, _, _ := subjectFixture(t)
-				return &engine.ListEventHeadersRequest{ProjectDir: dir}
+				return &engine.ListEventSummariesRequest{ProjectDir: dir}
 			},
-			want:  &engine.ListEventHeadersResponse{},
+			want:  &engine.ListEventSummariesResponse{},
 			exact: true,
 		},
 		{
 			name: "promoted Event carries its name, type, and date",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _ := citedEvent(t)
-				return &engine.ListEventHeadersRequest{ProjectDir: dir}
+				return &engine.ListEventSummariesRequest{ProjectDir: dir}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
-				var resp engine.ListEventHeadersResponse
+				var resp engine.ListEventSummariesResponse
 				if err := proto.Unmarshal(out, &resp); err != nil {
 					t.Fatal(err)
 				}
-				if len(resp.Headers) != 1 {
-					t.Fatalf("%+v", resp.Headers)
+				if len(resp.Summaries) != 1 {
+					t.Fatalf("%+v", resp.Summaries)
 				}
-				h := resp.Headers[0]
+				h := resp.Summaries[0]
 				if !strings.HasPrefix(h.Entity.GetRef(), "EVT-") || h.GetEventName() != "The Great Fire" || h.GetEventNameCount() != 1 {
 					t.Fatalf("%+v", h)
 				}
@@ -265,36 +265,36 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 	return dir, entityID
 }
 
-func TestListPlaceHeaders(t *testing.T) {
-	runRPC(t, ListPlaceHeaders, []rpcTest{
+func TestListPlaceSummaries(t *testing.T) {
+	runRPC(t, ListPlaceSummaries, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
 			name: "empty project lists nothing",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _, _, _ := subjectFixture(t)
-				return &engine.ListPlaceHeadersRequest{ProjectDir: dir}
+				return &engine.ListPlaceSummariesRequest{ProjectDir: dir}
 			},
-			want:  &engine.ListPlaceHeadersResponse{},
+			want:  &engine.ListPlaceSummariesResponse{},
 			exact: true,
 		},
 		{
 			name: "promoted Place carries every kept toponym",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _ := citedPlace(t)
-				return &engine.ListPlaceHeadersRequest{ProjectDir: dir}
+				return &engine.ListPlaceSummariesRequest{ProjectDir: dir}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
-				var resp engine.ListPlaceHeadersResponse
+				var resp engine.ListPlaceSummariesResponse
 				if err := proto.Unmarshal(out, &resp); err != nil {
 					t.Fatal(err)
 				}
-				if len(resp.Headers) != 1 || len(resp.Headers[0].GetNames()) != 2 ||
-					resp.Headers[0].GetNames()[0] != "York" || resp.Headers[0].GetNames()[1] != "Toronto" ||
-					resp.Headers[0].GetKind() != "" || len(resp.Headers[0].GetParents()) != 0 ||
-					resp.Headers[0].GetStartDate() != nil || resp.Headers[0].GetEndDate() != nil {
-					t.Fatalf("%+v", resp.Headers)
+				if len(resp.Summaries) != 1 || len(resp.Summaries[0].GetNames()) != 2 ||
+					resp.Summaries[0].GetNames()[0] != "York" || resp.Summaries[0].GetNames()[1] != "Toronto" ||
+					resp.Summaries[0].GetKind() != "" || len(resp.Summaries[0].GetParents()) != 0 ||
+					resp.Summaries[0].GetStartDate() != nil || resp.Summaries[0].GetEndDate() != nil {
+					t.Fatalf("%+v", resp.Summaries)
 				}
-				if h := resp.Headers[0]; h.GetUpdatedRevision() <= 0 || h.GetUpdatedAt() == "" {
+				if h := resp.Summaries[0]; h.GetUpdatedRevision() <= 0 || h.GetUpdatedAt() == "" {
 					t.Fatalf("updated %d %q", h.GetUpdatedRevision(), h.GetUpdatedAt())
 				}
 			},
@@ -420,16 +420,16 @@ func TestLifeFactsProtoCarriesIdentities(t *testing.T) {
 	place := canonicalentities.Entity{ID: mustUUIDBytes(t), Ref: "PLC-1", Label: "York"}
 	tests := []struct {
 		name      string
-		in        conclusionheaders.LifeFacts
+		in        conclusionsummaries.LifeFacts
 		wantEvent string
 		wantPlace string
 	}{
-		{name: "no event linked", in: conclusionheaders.LifeFacts{}},
+		{name: "no event linked", in: conclusionsummaries.LifeFacts{}},
 		{
 			name: "event and place",
-			in: conclusionheaders.LifeFacts{
+			in: conclusionsummaries.LifeFacts{
 				Event:  &event,
-				Places: []conclusionheaders.HeaderPlace{{Entity: place, Names: []string{"York"}}},
+				Places: []conclusionsummaries.ChainedPlace{{Entity: place, Names: []string{"York"}}},
 			},
 			wantEvent: "EVT-1",
 			wantPlace: "PLC-1",
@@ -455,12 +455,12 @@ func TestLifeFactsProtoCarriesIdentities(t *testing.T) {
 	}
 }
 
-func TestHeaderProtosCarryTerms(t *testing.T) {
+func TestSummaryProtosCarryTerms(t *testing.T) {
 	termID := mustUUIDBytes(t)
 	t.Run("person", func(t *testing.T) {
-		got := personHeaderProto(conclusionheaders.PersonHeader{
-			Gender: conclusionheaders.TermFacts{
-				Term:  &conclusionheaders.Term{ID: termID, Key: "woman", Origin: "provenencia", Label: "Woman"},
+		got := personSummaryProto(conclusionsummaries.PersonSummary{
+			Gender: conclusionsummaries.TermFacts{
+				Term:  &conclusionsummaries.Term{ID: termID, Key: "woman", Origin: "provenencia", Label: "Woman"},
 				Count: 1, PropertyLabel: "Gender",
 			},
 		})
@@ -473,14 +473,14 @@ func TestHeaderProtosCarryTerms(t *testing.T) {
 		}
 	})
 	t.Run("event type", func(t *testing.T) {
-		got := eventHeaderProto(conclusionheaders.EventHeader{Type: conclusionheaders.TermFacts{
-			Term:  &conclusionheaders.Term{ID: termID, Key: "birth", Origin: "provenencia", Label: "Birth"},
+		got := eventSummaryProto(conclusionsummaries.EventSummary{Type: conclusionsummaries.TermFacts{
+			Term:  &conclusionsummaries.Term{ID: termID, Key: "birth", Origin: "provenencia", Label: "Birth"},
 			Count: 2,
 		}})
 		if et := got.GetEventType(); et.GetKey() != "birth" || et.GetLabel() != "Birth" || et.GetOrigin() != "provenencia" || got.GetEventTypeCount() != 2 {
 			t.Fatalf("event type %+v count %d", et, got.GetEventTypeCount())
 		}
-		if bare := eventHeaderProto(conclusionheaders.EventHeader{}); bare.GetEventType() != nil {
+		if bare := eventSummaryProto(conclusionsummaries.EventSummary{}); bare.GetEventType() != nil {
 			t.Fatalf("event type %+v", bare.GetEventType())
 		}
 	})
@@ -514,18 +514,18 @@ func eventSourceID(t *testing.T, dir string) string {
 }
 
 func TestEventTitlesUseOneRule(t *testing.T) {
-	t.Run("an Event header carries its chosen title", func(t *testing.T) {
+	t.Run("an Event summary carries its chosen title", func(t *testing.T) {
 		dir, _ := citedEvent(t)
 		t.Cleanup(func() { _ = catalogsession.CloseAll() })
-		out, err := ListEventHeaders(marshalProto(t, &engine.ListEventHeadersRequest{ProjectDir: dir}))
+		out, err := ListEventSummaries(marshalProto(t, &engine.ListEventSummariesRequest{ProjectDir: dir}))
 		if err != nil {
 			t.Fatal(err)
 		}
-		var resp engine.ListEventHeadersResponse
+		var resp engine.ListEventSummariesResponse
 		if err := proto.Unmarshal(out, &resp); err != nil {
 			t.Fatal(err)
 		}
-		title := resp.GetHeaders()[0].GetTitle()
+		title := resp.GetSummaries()[0].GetTitle()
 		if title.GetRule() != engine.EventTitleRule_EVENT_TITLE_RULE_RECORDED_NAME || title.GetRecordedName() != "The Great Fire" ||
 			title.GetTypeKey() != "birth" || !strings.HasPrefix(title.GetRef(), "EVT-") {
 			t.Fatalf("%+v", title)

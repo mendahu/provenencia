@@ -3,25 +3,26 @@ package handlers
 import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
 )
 
-func ListPersonHeaders(in []byte) ([]byte, error) {
-	var req engine.ListPersonHeadersRequest
+func ListPersonSummaries(in []byte) ([]byte, error) {
+	var req engine.ListPersonSummariesRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("list_person_headers", err)
+		return nil, unmarshalErr("list_person_summaries", err)
 	}
-	out := &engine.ListPersonHeadersResponse{}
+	out := &engine.ListPersonSummariesResponse{}
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		headers, err := conclusionheaders.ListPersons(c)
+		summaries, err := conclusionsummaries.ListPersons(c)
 		if err != nil {
 			return err
 		}
 		var imageIDs [][]byte
-		for _, h := range headers {
+		for _, h := range summaries {
 			if len(h.PictureImageFileID) > 0 {
 				imageIDs = append(imageIDs, h.PictureImageFileID)
 			}
@@ -30,10 +31,10 @@ func ListPersonHeaders(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		for _, h := range headers {
-			ph := personHeaderProto(h)
+		for _, h := range summaries {
+			ph := personSummaryProto(h)
 			ph.PictureImageRelPath = paths[string(h.PictureImageFileID)]
-			out.Headers = append(out.Headers, ph)
+			out.Summaries = append(out.Summaries, ph)
 		}
 		return nil
 	})
@@ -43,8 +44,28 @@ func ListPersonHeaders(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func personHeaderProto(h conclusionheaders.PersonHeader) *engine.PersonHeader {
-	ph := &engine.PersonHeader{
+// conclusionSummaryProto wraps the summary of the handle id of the given kind,
+// nil when that id was not read.
+func conclusionSummaryProto(s conclusionsummaries.Summaries, kind string, id []byte) *engine.ConclusionSummary {
+	switch kind {
+	case vocabkey.Person:
+		if p, ok := s.Person(id); ok {
+			return &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Person{Person: personSummaryProto(p)}}
+		}
+	case vocabkey.Event:
+		if e, ok := s.Event(id); ok {
+			return &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Event{Event: eventSummaryProto(e)}}
+		}
+	case vocabkey.Place:
+		if p, ok := s.Place(id); ok {
+			return &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Place{Place: placeSummaryProto(p)}}
+		}
+	}
+	return nil
+}
+
+func personSummaryProto(h conclusionsummaries.PersonSummary) *engine.PersonSummary {
+	ph := &engine.PersonSummary{
 		Entity:          canonicalEntityProto(h.Entity),
 		NameValueCount:  int32(h.NameValueCount),
 		UpdatedRevision: h.Updated.Revision,
@@ -60,8 +81,8 @@ func personHeaderProto(h conclusionheaders.PersonHeader) *engine.PersonHeader {
 	return ph
 }
 
-// termProto is the one Go mapper of a header term onto the wire; nil gives nil.
-func termProto(t *conclusionheaders.Term) *engine.ConclusionTerm {
+// termProto is the one Go mapper of a summary term onto the wire; nil gives nil.
+func termProto(t *conclusionsummaries.Term) *engine.ConclusionTerm {
 	if t == nil {
 		return nil
 	}
@@ -73,11 +94,11 @@ func termProto(t *conclusionheaders.Term) *engine.ConclusionTerm {
 	}
 }
 
-func termFactsProto(f conclusionheaders.TermFacts) *engine.TermFacts {
+func termFactsProto(f conclusionsummaries.TermFacts) *engine.TermFacts {
 	return &engine.TermFacts{Term: termProto(f.Term), Count: int32(f.Count), PropertyLabel: f.PropertyLabel}
 }
 
-func lifeFactsProto(life conclusionheaders.LifeFacts) *engine.LifeFacts {
+func lifeFactsProto(life conclusionsummaries.LifeFacts) *engine.LifeFacts {
 	out := &engine.LifeFacts{DateCount: int32(life.DateCount), EventCount: int32(life.EventCount)}
 	if life.Event != nil {
 		out.Event = canonicalEntityProto(*life.Event)
@@ -86,13 +107,13 @@ func lifeFactsProto(life conclusionheaders.LifeFacts) *engine.LifeFacts {
 		out.Date = valuecodec.DateToProto(*life.Date)
 	}
 	for _, p := range life.Places {
-		out.Places = append(out.Places, headerPlaceProto(p))
+		out.Places = append(out.Places, chainedPlaceProto(p))
 	}
 	return out
 }
 
-func headerPlaceProto(p conclusionheaders.HeaderPlace) *engine.HeaderPlace {
-	return &engine.HeaderPlace{
+func chainedPlaceProto(p conclusionsummaries.ChainedPlace) *engine.ChainedPlace {
+	return &engine.ChainedPlace{
 		Entity:               canonicalEntityProto(p.Entity),
 		Names:                append([]string(nil), p.Names...),
 		Parents:              append([]string(nil), p.Parents...),
@@ -100,19 +121,19 @@ func headerPlaceProto(p conclusionheaders.HeaderPlace) *engine.HeaderPlace {
 	}
 }
 
-func ListEventHeaders(in []byte) ([]byte, error) {
-	var req engine.ListEventHeadersRequest
+func ListEventSummaries(in []byte) ([]byte, error) {
+	var req engine.ListEventSummariesRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("list_event_headers", err)
+		return nil, unmarshalErr("list_event_summaries", err)
 	}
-	out := &engine.ListEventHeadersResponse{}
+	out := &engine.ListEventSummariesResponse{}
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		headers, err := conclusionheaders.ListEvents(c)
+		summaries, err := conclusionsummaries.ListEvents(c)
 		if err != nil {
 			return err
 		}
 		var imageIDs [][]byte
-		for _, h := range headers {
+		for _, h := range summaries {
 			if len(h.PictureImageFileID) > 0 {
 				imageIDs = append(imageIDs, h.PictureImageFileID)
 			}
@@ -121,10 +142,10 @@ func ListEventHeaders(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		for _, h := range headers {
-			eh := eventHeaderProto(h)
+		for _, h := range summaries {
+			eh := eventSummaryProto(h)
 			eh.PictureImageRelPath = paths[string(h.PictureImageFileID)]
-			out.Headers = append(out.Headers, eh)
+			out.Summaries = append(out.Summaries, eh)
 		}
 		return nil
 	})
@@ -134,8 +155,8 @@ func ListEventHeaders(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func eventHeaderProto(h conclusionheaders.EventHeader) *engine.EventHeader {
-	eh := &engine.EventHeader{
+func eventSummaryProto(h conclusionsummaries.EventSummary) *engine.EventSummary {
+	eh := &engine.EventSummary{
 		Entity:          canonicalEntityProto(h.Entity),
 		EventName:       h.EventName,
 		EventNameCount:  int32(h.EventNameCount),
@@ -167,25 +188,25 @@ func eventHeaderProto(h conclusionheaders.EventHeader) *engine.EventHeader {
 		eh.Subjects = append(eh.Subjects, sub)
 	}
 	for _, p := range h.Places {
-		eh.Places = append(eh.Places, headerPlaceProto(p))
+		eh.Places = append(eh.Places, chainedPlaceProto(p))
 	}
 	eh.Title = eventTitleProto(h.Title)
 	return eh
 }
 
-func ListPlaceHeaders(in []byte) ([]byte, error) {
-	var req engine.ListPlaceHeadersRequest
+func ListPlaceSummaries(in []byte) ([]byte, error) {
+	var req engine.ListPlaceSummariesRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("list_place_headers", err)
+		return nil, unmarshalErr("list_place_summaries", err)
 	}
-	out := &engine.ListPlaceHeadersResponse{}
+	out := &engine.ListPlaceSummariesResponse{}
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		headers, err := conclusionheaders.ListPlaces(c)
+		summaries, err := conclusionsummaries.ListPlaces(c)
 		if err != nil {
 			return err
 		}
 		var imageIDs [][]byte
-		for _, h := range headers {
+		for _, h := range summaries {
 			if len(h.PictureImageFileID) > 0 {
 				imageIDs = append(imageIDs, h.PictureImageFileID)
 			}
@@ -194,10 +215,10 @@ func ListPlaceHeaders(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		for _, h := range headers {
-			ph := placeHeaderProto(h)
+		for _, h := range summaries {
+			ph := placeSummaryProto(h)
 			ph.PictureImageRelPath = paths[string(h.PictureImageFileID)]
-			out.Headers = append(out.Headers, ph)
+			out.Summaries = append(out.Summaries, ph)
 		}
 		return nil
 	})
@@ -207,8 +228,8 @@ func ListPlaceHeaders(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func placeHeaderProto(h conclusionheaders.PlaceHeader) *engine.PlaceHeader {
-	ph := &engine.PlaceHeader{
+func placeSummaryProto(h conclusionsummaries.PlaceSummary) *engine.PlaceSummary {
+	ph := &engine.PlaceSummary{
 		Entity:               canonicalEntityProto(h.Entity),
 		Names:                h.Names,
 		Kind:                 h.Kind,
@@ -238,7 +259,7 @@ func placeHeaderProto(h conclusionheaders.PlaceHeader) *engine.PlaceHeader {
 	return ph
 }
 
-func placeRelationshipProto(r conclusionheaders.PlaceRelationship) *engine.PlaceRelationship {
+func placeRelationshipProto(r conclusionsummaries.PlaceRelationship) *engine.PlaceRelationship {
 	out := &engine.PlaceRelationship{
 		Entity: canonicalEntityProto(r.Entity),
 		Title:  r.Title,

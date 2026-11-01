@@ -201,8 +201,8 @@ func TestConclusionDetailProtoCarriesVoteArtifactAndMembers(t *testing.T) {
 	}
 }
 
-// A page reads its handle's header with its detail: one load, one error.
-func TestGetConclusionDetailCarriesItsHeader(t *testing.T) {
+// A page reads its handle's summary with its detail: one load, one error.
+func TestGetConclusionDetailCarriesItsSummary(t *testing.T) {
 	t.Cleanup(func() { _ = catalogsession.CloseAll() })
 	tests := []struct {
 		name    string
@@ -210,30 +210,30 @@ func TestGetConclusionDetailCarriesItsHeader(t *testing.T) {
 		check   func(t *testing.T, d *engine.ConclusionDetail, id string)
 	}{
 		{
-			name:    "a Person carries the Person header",
+			name:    "a Person carries the Person summary",
 			fixture: namedPersonID,
 			check: func(t *testing.T, d *engine.ConclusionDetail, id string) {
-				if h := d.GetPerson(); h.GetEntity().GetId() != id || h.GetName().GetForm() == "" {
-					t.Fatalf("person header %+v", h)
+				if h := d.GetSummary().GetPerson(); h.GetEntity().GetId() != id || h.GetName().GetForm() == "" {
+					t.Fatalf("person summary %+v", h)
 				}
 			},
 		},
 		{
-			name:    "an Event carries the Event header and its title",
+			name:    "an Event carries the Event summary and its title",
 			fixture: citedEvent,
 			check: func(t *testing.T, d *engine.ConclusionDetail, id string) {
-				h := d.GetEvent()
+				h := d.GetSummary().GetEvent()
 				if h.GetEntity().GetId() != id || h.GetTitle().GetRule() != engine.EventTitleRule_EVENT_TITLE_RULE_RECORDED_NAME {
-					t.Fatalf("event header %+v", h)
+					t.Fatalf("event summary %+v", h)
 				}
 			},
 		},
 		{
-			name:    "a Place carries the Place header",
+			name:    "a Place carries the Place summary",
 			fixture: citedPlace,
 			check: func(t *testing.T, d *engine.ConclusionDetail, id string) {
-				if h := d.GetPlace(); h.GetEntity().GetId() != id || len(h.GetNames()) == 0 {
-					t.Fatalf("place header %+v", h)
+				if h := d.GetSummary().GetPlace(); h.GetEntity().GetId() != id || len(h.GetNames()) == 0 {
+					t.Fatalf("place summary %+v", h)
 				}
 			},
 		},
@@ -250,7 +250,7 @@ func TestGetConclusionDetailCarriesItsHeader(t *testing.T) {
 				t.Fatal(err)
 			}
 			tt.check(t, &d, id)
-			if d.GetPerson() == nil && len(d.GetDerivedRows()) != 0 {
+			if d.GetSummary().GetPerson() == nil && len(d.GetDerivedRows()) != 0 {
 				t.Fatalf("derived rows on a non-Person: %+v", d.GetDerivedRows())
 			}
 		})
@@ -282,7 +282,7 @@ func TestGetConclusionDetailListsPictures(t *testing.T) {
 	if d.GetPictures()[0].GetRecord().GetObservationId() >= d.GetPictures()[1].GetRecord().GetObservationId() {
 		t.Fatalf("not earliest first: %+v", d.GetPictures())
 	}
-	if got := d.GetPerson().GetPictureImageRelPath(); got == "" || got != d.GetPictures()[0].GetImageRelPath() {
+	if got := d.GetSummary().GetPerson().GetPictureImageRelPath(); got == "" || got != d.GetPictures()[0].GetImageRelPath() {
 		t.Fatalf("person lead %q, first tile %q", got, d.GetPictures()[0].GetImageRelPath())
 	}
 }
@@ -311,7 +311,7 @@ func TestGetConclusionDetailEventPictureLead(t *testing.T) {
 	if leadPath == "" {
 		t.Fatalf("no leading picture among %+v", d.GetPictures())
 	}
-	if got := d.GetEvent().GetPictureImageRelPath(); got != leadPath {
+	if got := d.GetSummary().GetEvent().GetPictureImageRelPath(); got != leadPath {
 		t.Fatalf("event lead %q, leading tile %q", got, leadPath)
 	}
 }
@@ -370,8 +370,8 @@ func TestSetPreferredLikeness(t *testing.T) {
 	if d.GetPictures()[0].GetLeads() || !d.GetPictures()[1].GetLeads() {
 		t.Fatalf("leads after choosing B %+v", d.GetPictures())
 	}
-	if d.GetPerson().GetPictureImageRelPath() != d.GetPictures()[1].GetImageRelPath() {
-		t.Fatalf("lead %q, second tile %q", d.GetPerson().GetPictureImageRelPath(), d.GetPictures()[1].GetImageRelPath())
+	if d.GetSummary().GetPerson().GetPictureImageRelPath() != d.GetPictures()[1].GetImageRelPath() {
+		t.Fatalf("lead %q, second tile %q", d.GetSummary().GetPerson().GetPictureImageRelPath(), d.GetPictures()[1].GetImageRelPath())
 	}
 
 	resp, err = set(b)
@@ -387,7 +387,7 @@ func TestSetPreferredLikeness(t *testing.T) {
 	}
 	d = detail()
 	if d.GetPictures()[0].GetPreferred() || d.GetPictures()[1].GetPreferred() ||
-		d.GetPerson().GetPictureImageRelPath() != d.GetPictures()[0].GetImageRelPath() {
+		d.GetSummary().GetPerson().GetPictureImageRelPath() != d.GetPictures()[0].GetImageRelPath() {
 		t.Fatalf("after clear %+v", d)
 	}
 	if !d.GetPictures()[0].GetLeads() || d.GetPictures()[1].GetLeads() {
@@ -411,7 +411,7 @@ func TestSetPreferredLikeness(t *testing.T) {
 		t.Fatal(err)
 	}
 	d = detail()
-	if len(d.GetPictures()) != 1 || d.GetPerson().GetPictureImageRelPath() != d.GetPictures()[0].GetImageRelPath() || d.GetPictures()[0].GetPreferred() {
+	if len(d.GetPictures()) != 1 || d.GetSummary().GetPerson().GetPictureImageRelPath() != d.GetPictures()[0].GetImageRelPath() || d.GetPictures()[0].GetPreferred() {
 		t.Fatalf("after delete %+v", d)
 	}
 }

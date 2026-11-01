@@ -268,8 +268,8 @@ func TestSearchCatalogHandleKinds(t *testing.T) {
 	if h.GetKind() != "person" || h.GetRef() != handleRef || h.GetMemberCount() != 1 {
 		t.Fatalf("hit %+v", h)
 	}
-	if h.GetPerson().GetName().GetForm() == "" {
-		t.Fatal("person hit has no header")
+	if h.GetSummary().GetPerson().GetName().GetForm() == "" {
+		t.Fatal("person hit has no summary")
 	}
 	if loc := h.GetLocation(); loc.GetSection() != "persons" || loc.GetEntityId() != h.GetId() {
 		t.Fatalf("location %+v", loc)
