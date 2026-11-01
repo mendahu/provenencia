@@ -76,4 +76,4 @@ Reviewers: CON (Sonnet; CON-1 blocker), MNT (MNT-1, MNT-2 blockers, MNT-3 major)
 Nits (logged): none.
 
 ## Result
-Gate PASS (on `9f9d32af`; `origin/main` unchanged since the branch was cut, `79630be9`) · CI <pending> · open: none · follow-ups: PRF-1 (more than 64 Evidence graphs per person cycles the graph LRU; revisit if the Slice 7 budget of 50 rises) · to user: CON-2 (answered 2026-10-31: fix in the refresh helper, F-6) · CON miss: none
+Gate PASS (on `9f9d32af`; `origin/main` unchanged since the branch was cut, `79630be9`) · CI green (first run: `promotealign` `TestLargeSourceBudgets/after_a_handle_commit` took 1.86 s against a 1.5 s budget on the runner; locally 0.71 s on the branch vs 0.82 s on base `79630be9`, so not this PR; the re-run passed) · open: none · follow-ups: PRF-1 (more than 64 Evidence graphs per person cycles the graph LRU; revisit if the Slice 7 budget of 50 rises) · to user: CON-2 (answered 2026-10-31: fix in the refresh helper, F-6) · CON miss: none
