@@ -18258,6 +18258,210 @@
         }
       }
     },
+    "conclusions.family.role.parent": {
+      "comment": "VoiceOver role of a parent's tile in the Family section",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parent"
+          }
+        }
+      }
+    },
+    "conclusions.family.role.sibling": {
+      "comment": "VoiceOver role of a sibling's tile in the Family section",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sibling"
+          }
+        }
+      }
+    },
+    "conclusions.family.role.partner": {
+      "comment": "VoiceOver role of a partner's tile in the Family section",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partner"
+          }
+        }
+      }
+    },
+    "conclusions.family.role.child": {
+      "comment": "VoiceOver role of a child's tile in the Family section",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Child"
+          }
+        }
+      }
+    },
+    "conclusions.family.caption.parent": {
+      "comment": "Caption over a single parent in the Family section (drawn in capitals)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parent"
+          }
+        }
+      }
+    },
+    "conclusions.family.caption.parents": {
+      "comment": "Caption over a pair of parents in the Family section (drawn in capitals)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parents"
+          }
+        }
+      }
+    },
+    "conclusions.family.caption.otherParent": {
+      "comment": "Caption over a second set of one parent in the Family section (drawn in capitals)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other parent"
+          }
+        }
+      }
+    },
+    "conclusions.family.caption.otherParents": {
+      "comment": "Caption over a second set of parents in the Family section (drawn in capitals)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other parents"
+          }
+        }
+      }
+    },
+    "conclusions.family.caption.siblings": {
+      "comment": "Caption over siblings who have no recorded parents in the Family section (drawn in capitals)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siblings"
+          }
+        }
+      }
+    },
+    "conclusions.family.caption.partner": {
+      "comment": "Caption over one partner with no children in the Family section (drawn in capitals)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partner"
+          }
+        }
+      }
+    },
+    "conclusions.family.caption.partners": {
+      "comment": "Caption over several partners with no children in the Family section (drawn in capitals)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partners"
+          }
+        }
+      }
+    },
+    "conclusions.family.caption.partnerAndChildren": {
+      "comment": "Caption over one partner and the children in the Family section (drawn in capitals)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partner and children"
+          }
+        }
+      }
+    },
+    "conclusions.family.caption.partnersAndChildren": {
+      "comment": "Caption over several partners and their children in the Family section (drawn in capitals)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partners and children"
+          }
+        }
+      }
+    },
+    "conclusions.family.caption.children": {
+      "comment": "Caption over children with no recorded partner in the Family section (drawn in capitals)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Children"
+          }
+        }
+      }
+    },
+    "conclusions.family.group.thisPersonAndSiblings": {
+      "comment": "VoiceOver label of the group holding the person and their siblings in the Family section",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This person and siblings"
+          }
+        }
+      }
+    },
+    "conclusions.family.group.partner": {
+      "comment": "VoiceOver label of a partner's group with no children in the Family section; argument is the partner's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partner %@"
+          }
+        }
+      }
+    },
+    "conclusions.family.group.partnerAndChildren": {
+      "comment": "VoiceOver label of a partner's group with children in the Family section; argument is the partner's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partner %@ and children"
+          }
+        }
+      }
+    },
     "conclusions.a11y.ref": {
       "comment": "VoiceOver label of a handle's ref (PER-…)",
       "extractionState": "manual",

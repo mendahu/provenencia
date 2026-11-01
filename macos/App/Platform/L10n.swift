@@ -9208,6 +9208,112 @@ enum L10n {
             comment: "VoiceOver ending of the focus tile of the Family section, mid-sentence"
         )
 
+        static let familyRoleParent = LocalizedStringResource(
+            "conclusions.family.role.parent",
+            defaultValue: "Parent",
+            comment: "VoiceOver role of a parent's tile in the Family section"
+        )
+
+        static let familyRoleSibling = LocalizedStringResource(
+            "conclusions.family.role.sibling",
+            defaultValue: "Sibling",
+            comment: "VoiceOver role of a sibling's tile in the Family section"
+        )
+
+        static let familyRolePartner = LocalizedStringResource(
+            "conclusions.family.role.partner",
+            defaultValue: "Partner",
+            comment: "VoiceOver role of a partner's tile in the Family section"
+        )
+
+        static let familyRoleChild = LocalizedStringResource(
+            "conclusions.family.role.child",
+            defaultValue: "Child",
+            comment: "VoiceOver role of a child's tile in the Family section"
+        )
+
+        static let familyCaptionParent = LocalizedStringResource(
+            "conclusions.family.caption.parent",
+            defaultValue: "Parent",
+            comment: "Caption over a single parent in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionParents = LocalizedStringResource(
+            "conclusions.family.caption.parents",
+            defaultValue: "Parents",
+            comment: "Caption over a pair of parents in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionOtherParent = LocalizedStringResource(
+            "conclusions.family.caption.otherParent",
+            defaultValue: "Other parent",
+            comment: "Caption over a second set of one parent in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionOtherParents = LocalizedStringResource(
+            "conclusions.family.caption.otherParents",
+            defaultValue: "Other parents",
+            comment: "Caption over a second set of parents in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionSiblings = LocalizedStringResource(
+            "conclusions.family.caption.siblings",
+            defaultValue: "Siblings",
+            comment: "Caption over siblings who have no recorded parents in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionPartner = LocalizedStringResource(
+            "conclusions.family.caption.partner",
+            defaultValue: "Partner",
+            comment: "Caption over one partner with no children in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionPartners = LocalizedStringResource(
+            "conclusions.family.caption.partners",
+            defaultValue: "Partners",
+            comment: "Caption over several partners with no children in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionPartnerAndChildren = LocalizedStringResource(
+            "conclusions.family.caption.partnerAndChildren",
+            defaultValue: "Partner and children",
+            comment: "Caption over one partner and the children in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionPartnersAndChildren = LocalizedStringResource(
+            "conclusions.family.caption.partnersAndChildren",
+            defaultValue: "Partners and children",
+            comment: "Caption over several partners and their children in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionChildren = LocalizedStringResource(
+            "conclusions.family.caption.children",
+            defaultValue: "Children",
+            comment: "Caption over children with no recorded partner in the Family section (drawn in capitals)"
+        )
+
+        static let familyGroupThisPersonAndSiblings = LocalizedStringResource(
+            "conclusions.family.group.thisPersonAndSiblings",
+            defaultValue: "This person and siblings",
+            comment: "VoiceOver label of the group holding the person and their siblings in the Family section"
+        )
+
+        static func familyGroupPartner(_ name: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.family.group.partner",
+                defaultValue: "Partner %@",
+                comment: "VoiceOver label of a partner's group with no children in the Family section; argument is the partner's name"
+            ), name)
+        }
+
+        static func familyGroupPartnerAndChildren(_ name: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.family.group.partnerAndChildren",
+                defaultValue: "Partner %@ and children",
+                comment: "VoiceOver label of a partner's group with children in the Family section; argument is the partner's name"
+            ), name)
+        }
+
         static let portraitBadge = LocalizedStringResource(
             "conclusions.person.portraitBadge",
             defaultValue: "Portrait",
