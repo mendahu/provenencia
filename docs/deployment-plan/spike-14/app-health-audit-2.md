@@ -15,7 +15,7 @@ The findings behind slices 5b and 6b of the [map](deployment-plan.md). An area a
 User, 2026-10-28. They are the map's working rules under "Audit 2 fixes".
 
 - **Proposals are liberal; the researcher decides.** The audit rated a prefix pair of two full names (Joseph / Josephine, Jean / Jeanne) and a namesake inside the lifespan slack as defects. Both are accepted as intended: Promote surfaces a candidate on forgiving evidence, and what files is the researcher's choice. Dropped as findings: the prefix pair in matching and in the reconciler fold, an exact tie placed on the lowest ref, and the lifespan slack (reworded in Spike 11's bar, B-25).
-- **A name that heads its own nickname set never folds into another set's head** unless `nicknameDirections` names the pair (option a of B-3). Correct folds that are not yet reviewed, such as Jack → John (`jack` heads `{jack, jackie}`), stop until they are added to that table; the page shows both names meanwhile.
+- **A name that heads its own nickname set never folds into another set's head** unless `nicknameDirections` names the pair (option a of B-3). Correct folds that are not yet reviewed, such as Jack → John (`jack` heads `{jack, jackie}`), stop until they are added to that table; the page shows both names meanwhile. **Reversed 2026-11-01** (user, planning S14-18): when one person's records hold two names of a set, folding into the set's head is intended; B-3 is dropped and the map's working rule "A nickname folds into its set's formal name, as today" replaces this one.
 - **B-14 is descoped** (2026-10-29). The pin policy for an opened sheet goes back to the user to rethink; no PR in slices 5b and 6b changes how pins are chosen.
 
 ## Scheduled
