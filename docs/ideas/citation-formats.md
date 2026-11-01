@@ -84,6 +84,7 @@ Of about 20 elements, 2 are there (title, item label) and 3 are partial (record 
 4. **The formatter in Go** with a template per seeded type and a fallback to today's line for any other type or a missing field. The citation line on the provenance sheet reads from it.
 5. **A citation preview on the Source page** that shows the formatted note and names the fields it is missing, so researchers can fill them.
 6. **Copy citation** (full or short) from the provenance sheet and the Source page.
+7. **Move an Artifact to another Source**, with the Evidence graphs built on it, so researchers can re-file Artifacts as their Sources take on these fields ([`move-artifact-between-sources.md`](move-artifact-between-sources.md)).
 
 ## Open questions
 

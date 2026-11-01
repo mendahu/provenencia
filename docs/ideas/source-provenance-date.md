@@ -45,4 +45,4 @@ Kept so Spike 15 can re-cut them with the citation fields:
 - **Sources list:** each row shows the date; the list sorts by it, undated last; drawn at Wide.
 - **Person page:** each Source group in the Sources section shows the date (R-35).
 
-With the citation fields, one migration pass and one Source page design can cover the date and the fields together ([`citation-formats.md`](citation-formats.md) "What a standard citation still needs").
+With the citation fields, one migration pass and one Source page design can cover the date and the fields together ([`citation-formats.md`](citation-formats.md) "What a standard citation still needs"). Spike 15 also takes moving an Artifact, with its Evidence graphs, to another Source ([`move-artifact-between-sources.md`](move-artifact-between-sources.md)); the Source page design gives it its entry point.

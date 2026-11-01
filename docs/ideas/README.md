@@ -19,6 +19,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`source-to-source-relationships.md`](source-to-source-relationships.md)
 - [`citation-formats.md`](citation-formats.md) — *Evidence Explained* citations: the elements per layer, what the provenance sheet's citation line ships, what the Source schema still needs; planned for Spike 15
 - [`source-provenance-date.md`](source-provenance-date.md) — the first-class Source publication date, descoped from Spike 13 (S13-20 – S13-22); planned for Spike 15 with [`citation-formats.md`](citation-formats.md)
+- [`move-artifact-between-sources.md`](move-artifact-between-sources.md) — move an Artifact, with the Evidence graphs built on it, to another Source; planned for Spike 15 with the Source schema pass
 - [`source-structure-later.md`](source-structure-later.md) — what Spike 12 parked: nested Sources, derivation links, named templates, per-graph credibility (layered citations moved to [`citation-formats.md`](citation-formats.md))
 - [`artifact-outside-graph-marker.md`](artifact-outside-graph-marker.md) — name, in a graph delete's confirm, the Artifacts it leaves in no Evidence graph; the card marker went to Spike 12 (S12-38)
 - [`graph-canvas-second-host.md`](graph-canvas-second-host.md) — what a family-tree canvas host still needs from GraphCanvas: hit targets from measured layout, a routed edge layer, selection, growable bounds, a host zoom range
