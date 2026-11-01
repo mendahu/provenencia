@@ -10,7 +10,9 @@ enum CatalogMutation: Sendable, Equatable {
     /// type, so neither survives the move.
     case changedSourceType(CatalogSource)
 
-    case createdSource
+    /// Add or Copy Source: the row the engine returned, which the Sources list
+    /// takes as a new row (`CatalogQueryPatch.sourceRow()`).
+    case createdSource(CatalogSource)
     case deletedSource(id: String)
 
     case createdSourceType
@@ -218,7 +220,7 @@ extension CatalogMutation {
     /// Enriched Source to patch into the cached list row and page shell, if any.
     var patchedSource: CatalogSource? {
         switch self {
-        case .updatedSource(let source), .changedSourceType(let source):
+        case .updatedSource(let source), .changedSourceType(let source), .createdSource(let source):
             return source
         default:
             return nil

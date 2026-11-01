@@ -180,12 +180,12 @@ extension CatalogQueryKey.Kind {
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [.createdSource, .deletedSource],
+                invalidateOn: [.deletedSource],
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.sourcesList(project: project)) },
                 patches: [
                     .lastUpdated(CatalogSource.self, follows: .source),
-                    .updatedSourceRow(),
+                    .sourceRow(),
                 ],
                 load: { key, store in
                     guard case .sourcesList(let project) = key else {

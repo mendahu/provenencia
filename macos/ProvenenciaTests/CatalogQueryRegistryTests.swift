@@ -627,7 +627,7 @@ struct CatalogQueryRegistryTests {
         #expect(store.heldCatalogProjectDir == nil)
     }
 
-    @Test func applyCreatedSourceInvalidatesList() async {
+    @Test func applyCreatedSourceInsertsRow() async {
         let store = FakeStore()
         seedStore(store)
         let session = makeSession(store: store)
@@ -636,17 +636,14 @@ struct CatalogQueryRegistryTests {
         let handle: QueryHandle<[CatalogSource]> = session.query(key)
         await waitForQuery(handle)
 
-        store.sourcesByProject[projectDir] = [
-            CatalogSource(id: "s1", ref: "SRC-1", sourceTypeID: "", title: "Alpha", description: ""),
-            CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "", title: "New Row", description: ""),
-        ]
+        let callsBefore = store.listSourcesCalls
 
-        session.apply(.createdSource)
+        session.apply(.createdSource(CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "", title: "New Row", description: "")))
         let _: QueryHandle<[CatalogSource]> = session.query(key)
         await waitForQuery(handle)
-        #expect(handle.value?.count == 2)
-        // FakeStore listSources is newest-created-first (id DESC), matching Go.
-        #expect(handle.value?.map(\.title) == ["New Row", "Alpha"])
+        // The returned row is appended (the Sources list sorts for display); nothing reloads.
+        #expect(handle.value?.map(\.title) == ["Alpha", "New Row"])
+        #expect(store.listSourcesCalls == callsBefore)
     }
 
     /// T-14: a write's effects name the Evidence graphs to reload, one warmed key each
@@ -869,8 +866,7 @@ struct CatalogQueryRegistryTests {
         #expect(registry.invalidations(by: .updatedSource(source), project: project).isEmpty)
 
         // A new source moves a type's `usedBy`.
-        #expect(registry.invalidations(by: .createdSource, project: project) == [
-            .key(.sourcesList(project: project)),
+        #expect(registry.invalidations(by: .createdSource(source), project: project) == [
             .key(.sourceTypesList(project: project)),
         ])
         #expect(registry.invalidations(by: .deletedSource(id: "s1"), project: project) == [
@@ -986,7 +982,7 @@ struct CatalogQueryRegistryTests {
         ])
         // Grades are seeded vocabulary with no CRUD surface, so nothing stales them.
         let everyMutation: [CatalogMutation] = [
-            .updatedSource(source), .changedSourceType(source), .createdSource, .deletedSource(id: "s1"),
+            .updatedSource(source), .changedSourceType(source), .createdSource(source), .deletedSource(id: "s1"),
             .createdSourceType, .updatedSourceType(id: "t1"), .deletedSourceType(id: "t1"),
             .createdMetadataField, .updatedMetadataField(id: "f1"), .deletedMetadataField(id: "f1"),
             .assignedTypeSuggestion(typeId: "t1"), .removedTypeSuggestion(typeId: "t1"),
@@ -1198,7 +1194,7 @@ struct CatalogQueryRegistryTests {
         #expect(handle.value?.first?.usedBy == 0)
 
         store.sourceTypesByProject[projectDir]?[0].usedBy = 1
-        session.apply(.createdSource)
+        session.apply(.createdSource(CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "", title: "New Row", description: "")))
 
         let _: QueryHandle<[CatalogSourceType]> = session.query(key)
         await waitForQuery(handle)

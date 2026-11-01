@@ -87,14 +87,23 @@ struct CatalogQueryPatch: Sendable {
         }
     }
 
-    /// Replaces the matching Sources-list row with the mutation's Source.
-    /// Leaves any stale flag: other rows may still owe a reload.
-    static func updatedSourceRow() -> Self {
+    /// Puts the mutation's Source into the Sources list: it replaces the row
+    /// with the same id, and a `.createdSource` appends its row when the list
+    /// lacks it (the list sorts for display). An update or type change of a
+    /// row the list lacks adds nothing. Leaves any stale flag: other rows may
+    /// still owe a reload.
+    static func sourceRow() -> Self {
         Self(follows: nil) { session, key, _, _, mutation in
             guard let source = mutation?.patchedSource else { return .unchanged }
+            var isCreate = false
+            if case .createdSource = mutation { isCreate = true }
             return session.patchCached(key, as: [CatalogSource].self) { sources in
-                guard let index = sources.firstIndex(where: { $0.id == source.id }) else { return false }
-                sources[index] = source
+                if let index = sources.firstIndex(where: { $0.id == source.id }) {
+                    sources[index] = source
+                    return true
+                }
+                guard isCreate else { return false }
+                sources.append(source)
                 return true
             }
         }

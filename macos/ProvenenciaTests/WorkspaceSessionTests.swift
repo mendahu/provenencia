@@ -1387,7 +1387,7 @@ struct WorkspaceSessionTests {
         let session = makeSession()
         var calls = 0
         session.onNavCountsMoved = { calls += 1 }
-        session.apply(.createdSource)
+        session.apply(.createdSource(CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "", title: "New Row", description: "")))
         session.apply(.deletedSource(id: "s1"))
         session.apply(.promotedSubject(graphId: "g-1"))
         await session.settleWrites()
@@ -1400,7 +1400,7 @@ struct WorkspaceSessionTests {
         session.onNavCountsMoved = { calls += 1 }
         session.apply(.mutatedSourceWorkspace(sourceId: "s1"))
         session.apply(CatalogWriteEffects(sourceScopes: ["s1"], activity: CatalogActivity(revision: 1)))
-        session.apply(.createdSource)
+        session.apply(.createdSource(CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "", title: "New Row", description: "")))
         await session.settleWrites()
         #expect(calls == 1)
     }
@@ -1492,6 +1492,25 @@ struct WorkspaceSessionTests {
         await session.settleWrites()
         #expect(await waitUntil { store.listSourcesCalls == 2 })
         #expect(handle?.value?.first?.id == "s1")
+    }
+
+    /// T-8: a created Source applied while the visible list's first load is in
+    /// flight restarts that load, and the row is held once.
+    @Test func createdSourceDuringFirstLoadRestartsTheLoad() async {
+        let store = FakeStore()
+        seedStore(store)
+        let row = CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "t1", title: "Deed", description: "")
+        store.sourcesByProject[projectDir]?.append(row)
+        let session = makeSession(store: store)
+        session.apply(location: .sectionRoot(.sources))
+
+        session.apply(.createdSource(row))
+        await session.settleWrites()
+        #expect(await waitUntil { store.listSourcesCalls == 2 })
+        let handle: QueryHandle<[CatalogSource]>? = session.queryHandle(
+            CatalogQueryKey.sourcesList(project: session.projectKey)
+        )
+        #expect(handle?.value?.filter { $0.id == "s2" }.count == 1)
     }
 
     /// T-7b: a failed progress re-read reloads the whole map.

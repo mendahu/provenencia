@@ -395,7 +395,7 @@ final class SourcesModel {
                 title: draft.trimmedTitle,
                 description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
             )
-            session.apply(effects, .createdSource)
+            session.apply(effects, .createdSource(created))
             isAdding = false
             typeError = nil
             titleError = nil
