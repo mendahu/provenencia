@@ -64,7 +64,8 @@ private struct SourceGraphForm: View {
                 PVCallout(
                     tone: .danger,
                     title: L10n.Sources.graphFormSaveErrorTitle,
-                    message: saveError
+                    message: saveError,
+                    announces: true
                 )
                 .accessibilityIdentifier("sources.graphForm.error")
             }

@@ -146,6 +146,14 @@ enum L10n {
             comment: "Accessibility label for a PVToast's dismiss button"
         )
 
+        static func announcementJoin(_ title: String, _ message: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "designSystem.announcement.join",
+                defaultValue: "%1$@, %2$@",
+                comment: "VoiceOver join of a toast's or callout's title and message"
+            ), title, message)
+        }
+
         static let reorderHandle = LocalizedStringResource(
             "designSystem.reorder.handle",
             defaultValue: "Drag to reorder",

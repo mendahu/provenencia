@@ -96,7 +96,7 @@ private struct SourcePageContent: View {
                             .accessibilityIdentifier("sources.page.loadError")
                     } else {
                         if let pageError = model.pageError {
-                            PVCallout(tone: .danger, message: pageError)
+                            PVCallout(tone: .danger, message: pageError, announces: true)
                                 .accessibilityIdentifier("sources.page.error")
                         }
                         overviewColumns

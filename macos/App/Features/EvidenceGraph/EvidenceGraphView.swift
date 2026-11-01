@@ -305,7 +305,8 @@ private struct EvidenceGraphContent: View {
                         PVCallout(
                             tone: .danger,
                             title: L10n.EvidenceGraph.fileOpenFailedTitle,
-                            message: fileOpenError
+                            message: fileOpenError,
+                            announces: true
                         )
                         .frame(width: 360, alignment: .trailing)
                         .accessibilityIdentifier("evidenceGraph.fileOpen.callout")

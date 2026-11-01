@@ -1338,6 +1338,18 @@
         }
       }
     },
+    "designSystem.announcement.join": {
+      "comment": "VoiceOver join of a toast's or callout's title and message",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@"
+          }
+        }
+      }
+    },
     "deleteImpact.confirm.delete": {
       "comment": "Allowed-delete confirm button; argument is kind noun",
       "extractionState": "manual",

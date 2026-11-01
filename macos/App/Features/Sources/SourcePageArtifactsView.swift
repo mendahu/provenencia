@@ -390,7 +390,8 @@ struct SourcePageArtifactsView: View {
                     tone: .danger,
                     title: L10n.Sources.artifactCardSaveErrorTitle,
                     message: saveError,
-                    compact: true
+                    compact: true,
+                    announces: true
                 )
                 .accessibilityIdentifier("sources.page.artifact.\(art.id).saveError")
             }
