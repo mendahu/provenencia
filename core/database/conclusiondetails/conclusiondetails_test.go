@@ -114,9 +114,7 @@ func (f *fixture) subjectOn(src sources.Source, kind string) subjects.Subject {
 // name files a name Observation from "type=value|…" parts (or "form:…").
 func (f *fixture) cite(s subjects.Subject, in observations.Input) observations.Observation {
 	f.t.Helper()
-	res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: s.GraphID, ArtifactID: f.arts[string(s.SourceID)].ID, LocatorJSON: locator}, []observations.Input{in})
-	})
+	res, _, err := observationstest.Cite(f.c, userID, s.GraphID, f.arts[string(s.SourceID)].ID, locator, []observations.Input{in}...)
 	must(f.t, err)
 	return res.Observations[0]
 }

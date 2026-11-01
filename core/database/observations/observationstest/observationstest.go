@@ -76,16 +76,22 @@ func FileArtifact(t testing.TB, c *database.Catalog, userID, sourceID []byte) ar
 }
 
 // SaveCitation stages every depiction, then files the Citation and its
-// Observations in one write, discarding any stage left over afterwards.
+// Observations through Cite, discarding any stage left over afterwards.
 func SaveCitation(c *database.Catalog, userID, graphID []byte, art artifacts.Artifact, inputs ...observations.Input) (citations.CreateResult, []rowchange.Change, error) {
 	discard, err := ingest.StageDepictions(c, inputs)
 	if err != nil {
 		return citations.CreateResult{}, nil, err
 	}
 	defer discard()
+	return Cite(c, userID, graphID, art.ID, LikenessLocator, inputs...)
+}
+
+// Cite files a Citation of the Artifact under the Evidence graph with its
+// Observations in one write, and returns the changes the write made.
+func Cite(c *database.Catalog, userID, graphID, artifactID []byte, locator string, inputs ...observations.Input) (citations.CreateResult, []rowchange.Change, error) {
 	var changes []rowchange.Change
 	res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		r, ch, err := citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: art.ID, GraphID: graphID, LocatorJSON: LikenessLocator}, inputs)
+		r, ch, err := citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: artifactID, GraphID: graphID, LocatorJSON: locator}, inputs)
 		changes = ch
 		return r, ch, err
 	})

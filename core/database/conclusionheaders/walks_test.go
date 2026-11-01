@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -25,16 +26,7 @@ import (
 
 func (f *fixture) cite(s subjects.Subject, in ...observations.Input) {
 	f.t.Helper()
-	for i := range in {
-		in[i].SubjectID = s.ID
-	}
-	_, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-			GraphID:    f.graph,
-			ArtifactID: f.artifact.ID, LocatorJSON: locator,
-		}, in)
-	})
-	must(f.t, err)
+	f.citeOn(f.artifact, s, in...)
 }
 
 // citeOn is cite on art's own Source graph.
@@ -44,12 +36,7 @@ func (f *fixture) citeOn(art artifacts.Artifact, s subjects.Subject, in ...obser
 		in[i].SubjectID = s.ID
 	}
 	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
-	_, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-			GraphID:    graph,
-			ArtifactID: art.ID, LocatorJSON: locator,
-		}, in)
-	})
+	_, _, err := observationstest.Cite(f.c, userID, graph, art.ID, locator, in...)
 	must(f.t, err)
 }
 

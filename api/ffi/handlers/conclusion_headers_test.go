@@ -11,10 +11,10 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -61,16 +61,12 @@ func namedPerson(t *testing.T) (dir, handleRef string) {
 		if err != nil {
 			return err
 		}
-		_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID[:]}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID[:], citations.CreateInput{
-				GraphID: graphID, ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
-			}, []observations.Input{
-				{SubjectID: subjectID[:], PropertyID: name.ID, Name: &namevalue.Value{Form: "James Robins", Parts: []namevalue.Part{
-					{Idx: 0, Value: "James", Type: namevalue.PartTypeGiven}, {Idx: 1, Value: "Robins", Type: namevalue.PartTypeSurname},
-				}}},
-				{SubjectID: subjectID[:], PropertyID: name.ID, Name: namevaluetest.Western("Kenneth Robins")},
-			})
-		})
+		_, _, err = observationstest.Cite(c, userID[:], graphID, art.ID, `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`, []observations.Input{
+			{SubjectID: subjectID[:], PropertyID: name.ID, Name: &namevalue.Value{Form: "James Robins", Parts: []namevalue.Part{
+				{Idx: 0, Value: "James", Type: namevalue.PartTypeGiven}, {Idx: 1, Value: "Robins", Type: namevalue.PartTypeSurname},
+			}}},
+			{SubjectID: subjectID[:], PropertyID: name.ID, Name: namevaluetest.Western("Kenneth Robins")},
+		}...)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -252,16 +248,11 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 			return err
 		}
 		year := 1849
-		_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID[:]}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID[:], citations.CreateInput{
-				GraphID:    s.GraphID,
-				ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
-			}, []observations.Input{
-				{SubjectID: s.ID, PropertyID: name.ID, ValueText: "The Great Fire", HasText: true},
-				{SubjectID: s.ID, PropertyID: eventType.ID, ValueTermID: term.ID},
-				{SubjectID: s.ID, PropertyID: dateProp.ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &year}},
-			})
-		})
+		_, _, err = observationstest.Cite(c, userID[:], s.GraphID, art.ID, `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`, []observations.Input{
+			{SubjectID: s.ID, PropertyID: name.ID, ValueText: "The Great Fire", HasText: true},
+			{SubjectID: s.ID, PropertyID: eventType.ID, ValueTermID: term.ID},
+			{SubjectID: s.ID, PropertyID: dateProp.ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &year}},
+		}...)
 		if err != nil {
 			return err
 		}
@@ -334,15 +325,10 @@ func citedPlace(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
-		_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID[:]}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID[:], citations.CreateInput{
-				GraphID:    s.GraphID,
-				ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
-			}, []observations.Input{
-				{SubjectID: s.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
-				{SubjectID: s.ID, PropertyID: toponym.ID, ValueText: "Toronto", HasText: true},
-			})
-		})
+		_, _, err = observationstest.Cite(c, userID[:], s.GraphID, art.ID, `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`, []observations.Input{
+			{SubjectID: s.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
+			{SubjectID: s.ID, PropertyID: toponym.ID, ValueText: "Toronto", HasText: true},
+		}...)
 		if err != nil {
 			return err
 		}

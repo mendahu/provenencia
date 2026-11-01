@@ -9,11 +9,11 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
-	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -124,15 +124,10 @@ func TestHandlePaths(t *testing.T) {
 	}
 	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 	year := 1842
-	created, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-			GraphID:    graph,
-			ArtifactID: art.ID, LocatorJSON: locator,
-		}, []observations.Input{{
-			SubjectID: boston.ID, PropertyID: dateProp.ID,
-			Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
-		}})
-	})
+	created, _, err := observationstest.Cite(c, userID, graph, art.ID, locator, []observations.Input{{
+		SubjectID: boston.ID, PropertyID: dateProp.ID,
+		Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
+	}}...)
 	if err != nil {
 		t.Fatal(err)
 	}

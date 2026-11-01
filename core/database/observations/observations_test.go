@@ -150,12 +150,7 @@ func TestObservations(t *testing.T) {
 	}
 	mustCitation := func(t *testing.T, c *database.Catalog, s seed, obs ...observations.Input) citations.Citation {
 		t.Helper()
-		res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-				GraphID:    s.graph,
-				ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
-			}, obs)
-		})
+		res, _, err := observationstest.Cite(c, userID, s.graph, s.artifact.ID, validLocator, obs...)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -337,27 +332,17 @@ func TestObservations(t *testing.T) {
 			name: "blank text observation refused",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				_, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-						GraphID:    s.graph,
-						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
-					}, []observations.Input{{
-						SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-						ValueText: "   ", HasText: true,
-					}})
-				})
+				_, _, err := observationstest.Cite(c, userID, s.graph, s.artifact.ID, validLocator, []observations.Input{{
+					SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+					ValueText: "   ", HasText: true,
+				}}...)
 				if !errors.Is(err, observations.ErrInvalid) {
 					t.Fatalf("got %v want ErrInvalid", err)
 				}
-				_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-						GraphID:    s.graph,
-						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
-					}, []observations.Input{{
-						SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-						HasText: false,
-					}})
-				})
+				_, _, err = observationstest.Cite(c, userID, s.graph, s.artifact.ID, validLocator, []observations.Input{{
+					SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+					HasText: false,
+				}}...)
 				if !errors.Is(err, observations.ErrInvalid) {
 					t.Fatalf("got %v want ErrInvalid", err)
 				}
@@ -368,15 +353,10 @@ func TestObservations(t *testing.T) {
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				year := 1842
-				res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-						GraphID:    s.graph,
-						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
-					}, []observations.Input{{
-						SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
-						Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
-					}})
-				})
+				res, _, err := observationstest.Cite(c, userID, s.graph, s.artifact.ID, validLocator, []observations.Input{{
+					SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
+					Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
+				}}...)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -403,15 +383,10 @@ func TestObservations(t *testing.T) {
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				year := 1842
-				res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-						GraphID:    s.graph,
-						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
-					}, []observations.Input{{
-						SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
-						Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
-					}})
-				})
+				res, _, err := observationstest.Cite(c, userID, s.graph, s.artifact.ID, validLocator, []observations.Input{{
+					SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
+					Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
+				}}...)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -434,15 +409,10 @@ func TestObservations(t *testing.T) {
 			name: "two observations cannot share a name value",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-						GraphID:    s.graph,
-						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
-					}, []observations.Input{{
-						SubjectID: s.person.ID, PropertyID: s.nameProp.ID,
-						Name: &namevalue.Value{Form: "Ada Lovelace"},
-					}})
-				})
+				res, _, err := observationstest.Cite(c, userID, s.graph, s.artifact.ID, validLocator, []observations.Input{{
+					SubjectID: s.person.ID, PropertyID: s.nameProp.ID,
+					Name: &namevalue.Value{Form: "Ada Lovelace"},
+				}}...)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -465,15 +435,10 @@ func TestObservations(t *testing.T) {
 			name: "update no-op records no revision",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-						GraphID:    s.graph,
-						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
-					}, []observations.Input{{
-						SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-						ValueText: "Boston", HasText: true,
-					}})
-				})
+				res, _, err := observationstest.Cite(c, userID, s.graph, s.artifact.ID, validLocator, []observations.Input{{
+					SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+					ValueText: "Boston", HasText: true,
+				}}...)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -543,21 +508,16 @@ func TestObservations(t *testing.T) {
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				year := 1844
-				res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-						GraphID:    s.graph,
-						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
-					}, []observations.Input{
-						{
-							SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
-							Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
-						},
-						{
-							SubjectID: s.person.ID, PropertyID: s.nameProp.ID,
-							Name: &namevalue.Value{Form: "Ada"},
-						},
-					})
-				})
+				res, _, err := observationstest.Cite(c, userID, s.graph, s.artifact.ID, validLocator, []observations.Input{
+					{
+						SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
+						Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
+					},
+					{
+						SubjectID: s.person.ID, PropertyID: s.nameProp.ID,
+						Name: &namevalue.Value{Form: "Ada"},
+					},
+				}...)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -633,15 +593,10 @@ func TestObservations(t *testing.T) {
 			name: "delete schedules no purge with nothing released",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-						GraphID:    s.graph,
-						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
-					}, []observations.Input{{
-						SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-						ValueText: "Boston", HasText: true,
-					}})
-				})
+				res, _, err := observationstest.Cite(c, userID, s.graph, s.artifact.ID, validLocator, []observations.Input{{
+					SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+					ValueText: "Boston", HasText: true,
+				}}...)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -753,15 +708,10 @@ func TestObservations(t *testing.T) {
 				}); !errors.Is(err, observations.ErrEdgeLocked) {
 					t.Fatalf("add edge %v", err)
 				}
-				ordinary, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-						GraphID:    s.graph,
-						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
-					}, []observations.Input{{
-						SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-						ValueText: "Leeds", HasText: true,
-					}})
-				})
+				ordinary, _, err := observationstest.Cite(c, userID, s.graph, s.artifact.ID, validLocator, []observations.Input{{
+					SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+					ValueText: "Leeds", HasText: true,
+				}}...)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -973,9 +923,7 @@ func TestObservations(t *testing.T) {
 						objectsBefore := objectCount(t, c)
 						var err error
 						if tt.unstaged {
-							_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-								return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: s.graph, ArtifactID: tt.art.ID, LocatorJSON: observationstest.LikenessLocator}, tt.inputs)
-							})
+							_, _, err = observationstest.Cite(c, userID, s.graph, tt.art.ID, observationstest.LikenessLocator, tt.inputs...)
 						} else {
 							_, _, err = observationstest.SaveCitation(c, userID, s.graph, tt.art, tt.inputs...)
 						}

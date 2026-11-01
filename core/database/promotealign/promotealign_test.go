@@ -123,12 +123,7 @@ func (f *fixture) cite(art artifacts.Artifact, s subjects.Subject, in ...observa
 	for i := range in {
 		in[i].SubjectID = s.ID
 	}
-	_, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-			GraphID:    s.GraphID,
-			ArtifactID: art.ID, LocatorJSON: locator,
-		}, in)
-	})
+	_, _, err := observationstest.Cite(f.c, userID, s.GraphID, art.ID, locator, in...)
 	must(f.t, err)
 }
 

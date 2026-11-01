@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -115,12 +116,7 @@ func (f *batchFixture) cite(s subjects.Subject, in ...observations.Input) []obse
 	for i := range in {
 		in[i].SubjectID = s.ID
 	}
-	res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-			GraphID:    f.graph,
-			ArtifactID: f.artifact.ID, LocatorJSON: batchLocator,
-		}, in)
-	})
+	res, _, err := observationstest.Cite(f.c, userID, f.graph, f.artifact.ID, batchLocator, in...)
 	if err != nil {
 		f.t.Fatal(err)
 	}

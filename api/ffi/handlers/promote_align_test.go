@@ -9,9 +9,9 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
-	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -70,15 +70,10 @@ func namedPersonOnNewSource(t *testing.T, dir, userID, typeID, personName, sexKe
 		if err != nil {
 			return err
 		}
-		_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: uid[:]}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, uid[:], citations.CreateInput{
-				GraphID:    s.GraphID,
-				ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
-			}, []observations.Input{
-				{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluetest.Western(personName)},
-				{SubjectID: s.ID, PropertyID: sex.ID, ValueTermID: term.ID, Polarity: polarity},
-			})
-		})
+		_, _, err = observationstest.Cite(c, uid[:], s.GraphID, art.ID, `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`, []observations.Input{
+			{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluetest.Western(personName)},
+			{SubjectID: s.ID, PropertyID: sex.ID, ValueTermID: term.ID, Polarity: polarity},
+		}...)
 		sourceID, subjectID = database.UUIDString(src.ID), database.UUIDString(s.ID)
 		return err
 	}); err != nil {

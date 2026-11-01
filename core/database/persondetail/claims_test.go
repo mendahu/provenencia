@@ -9,12 +9,12 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/persondetail"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
@@ -89,9 +89,7 @@ func (f *fixture) person(graphID []byte, label string) subjects.Subject {
 // cite files the Observations on the Subject's graph through the Source's Artifact.
 func (f *fixture) cite(s subjects.Subject, in ...observations.Input) []observations.Observation {
 	f.t.Helper()
-	res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: s.GraphID, ArtifactID: f.arts[string(s.SourceID)].ID, LocatorJSON: locator}, in)
-	})
+	res, _, err := observationstest.Cite(f.c, userID, s.GraphID, f.arts[string(s.SourceID)].ID, locator, in...)
 	must(f.t, err)
 	return res.Observations
 }

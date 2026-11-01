@@ -168,9 +168,7 @@ func (f *fixture) cite(in ...observations.Input) []observations.Observation {
 		art = f.arts[string(s.SourceID)]
 	}
 	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
-	res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{GraphID: graph, ArtifactID: art.ID, LocatorJSON: locator}, in)
-	})
+	res, _, err := observationstest.Cite(f.c, userID, graph, art.ID, locator, in...)
 	must(f.t, err)
 	return res.Observations
 }
