@@ -419,8 +419,8 @@ func TestRelationships(t *testing.T) {
 }
 
 // hasMemo reports whether a result is stored for an id.
-func (w *world) hasMemo(id []byte) bool {
-	_, ok := w.g.Memo(kinshipSlot, id)
+func (w *world) hasMemo(slot graphcache.MemoSlot, id []byte) bool {
+	_, ok := w.g.Memo(slot, id)
 	return ok
 }
 
@@ -500,14 +500,14 @@ func TestForFollowsCommits(t *testing.T) {
 		ann, bob := w.person("Ann"), w.person("Bob")
 		m1 := w.marriage("M1", ann, bob)
 		w.for_(ann)
-		if !w.hasMemo(m1) {
+		if !w.hasMemo(kinshipSlot, m1) {
 			t.Fatal("setup: the event result was not stored")
 		}
 		w.k.CommitVocabulary()
-		if w.hasMemo(m1) {
+		if w.hasMemo(kinshipSlot, m1) {
 			t.Fatal("a vocabulary commit kept a result")
 		}
-		if len(w.for_(ann)) != 1 || !w.hasMemo(m1) {
+		if len(w.for_(ann)) != 1 || !w.hasMemo(kinshipSlot, m1) {
 			t.Fatal("the next read did not derive again")
 		}
 	})
@@ -522,7 +522,7 @@ func TestForFollowsCommits(t *testing.T) {
 		if _, err := w.g.Node(bob); err != nil {
 			t.Fatal(err)
 		}
-		if !w.hasMemo(m1) {
+		if !w.hasMemo(kinshipSlot, m1) {
 			t.Fatal("a first load dropped the result")
 		}
 	})
