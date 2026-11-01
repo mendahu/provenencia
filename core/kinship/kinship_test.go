@@ -553,6 +553,9 @@ func TestPatterns(t *testing.T) {
 			t.Errorf("%s.PivotKind() = %q, want %q", p, got, kinds[i])
 		}
 	}
+	if got := kinship.PatternSharedParent.PivotKind(); got != vocabkey.Person {
+		t.Errorf("PatternSharedParent.PivotKind() = %q, want %q", got, vocabkey.Person)
+	}
 	if got := kinship.Pattern("nope").PivotKind(); got != "" {
 		t.Errorf("unknown PivotKind() = %q", got)
 	}

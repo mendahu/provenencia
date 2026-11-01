@@ -3,6 +3,8 @@
 // imply a parent, and a parent of a parent implies a grandparent. Pure: no
 // catalog, no I/O, no numbers; the catalog's bridge terms and the Rules come
 // in as arguments. It returns only implied links; `LinkSet` merges them with direct ones.
+// `Siblings` reads the siblings a shared parent implies, for the page; matching
+// never calls it.
 package kinship
 
 import (
@@ -80,7 +82,7 @@ const (
 )
 
 // Implied is a relationship link a pattern found. A is the relationship's
-// person end: the parent or grandparent; for spouses, the lesser id.
+// person end: the parent or grandparent; for spouses and siblings, the lesser id.
 type Implied struct {
 	Edge
 	Pattern Pattern
