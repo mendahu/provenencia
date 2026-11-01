@@ -135,19 +135,31 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 	linkChange := onlyEntity(t, artChanges, "evidence_graph_artifact")
 	def := graphChange.EntityID
 
+	// readIDs is the key ids a batch moved one keyed read for.
+	readIDs := func(set effects.Set, read effects.Read) [][]byte {
+		for _, r := range set.Reads {
+			if r.Read == read {
+				return r.IDs
+			}
+		}
+		return nil
+	}
+
 	// A Source create reports its Default graph; the link row alone reports
-	// none and flags the list.
+	// none, and both report the graph list read for the Source.
 	set := resolve("graph and link", []rowchange.Change{graphChange, linkChange})
-	if !set.Has(effects.ListEvidenceGraphs) {
-		t.Fatal("graph and link changes did not flag the graph list")
+	sameIDs("graph and link reads", readIDs(set, effects.ReadEvidenceGraphs), src.ID)
+	if len(set.Lists) != 0 {
+		t.Fatalf("graph and link changes flagged lists %v", set.Lists)
 	}
 	if len(set.SourceScopes) != 1 || !bytes.Equal(set.SourceScopes[0], src.ID) {
 		t.Fatalf("source scopes %x", set.SourceScopes)
 	}
 	sameIDs("source create", set.EvidenceGraphs, def)
 	linkSet := resolve("link", []rowchange.Change{linkChange})
-	if !linkSet.Has(effects.ListEvidenceGraphs) || len(linkSet.EvidenceGraphs) != 0 {
-		t.Fatalf("a link row alone: list %v, graphs %x", linkSet.Has(effects.ListEvidenceGraphs), linkSet.EvidenceGraphs)
+	sameIDs("link reads", readIDs(linkSet, effects.ReadEvidenceGraphs), src.ID)
+	if len(linkSet.EvidenceGraphs) != 0 {
+		t.Fatalf("a link row alone named graphs %x", linkSet.EvidenceGraphs)
 	}
 
 	// A graph write names that graph. A rename resolves from the live row; a
@@ -181,9 +193,7 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 		"graph delete": {deleteChanges, smith.ID},
 	} {
 		got := resolve(name, tc.changes)
-		if !got.Has(effects.ListEvidenceGraphs) {
-			t.Fatalf("%s did not flag the graph list", name)
-		}
+		sameIDs(name+" reads", readIDs(got, effects.ReadEvidenceGraphs), src.ID)
 		if len(got.SourceScopes) != 1 || !bytes.Equal(got.SourceScopes[0], src.ID) {
 			t.Fatalf("%s source scopes %x", name, got.SourceScopes)
 		}
@@ -213,15 +223,6 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 	sameIDs("observation on Jones", resolve("observation on Jones", only(citChanges, "observation")).EvidenceGraphs, jones.ID)
 	sameIDs("citation", resolve("citation", only(citChanges, "citation")).EvidenceGraphs, jones.ID)
 
-	// readIDs is the graphs a batch moved one keyed read for.
-	readIDs := func(set effects.Set, read effects.Read) [][]byte {
-		for _, r := range set.Reads {
-			if r.Read == read {
-				return r.IDs
-			}
-		}
-		return nil
-	}
 	citSet := resolve("citation create", citChanges)
 	sameIDs("citation create reads", readIDs(citSet, effects.ReadCitations), jones.ID)
 	sameIDs("citation create graphs", citSet.EvidenceGraphs, jones.ID)
@@ -239,7 +240,9 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sameIDs("title edit", resolve("title edit", titleChanges).EvidenceGraphs, def, jones.ID)
+	titleSet := resolve("title edit", titleChanges)
+	sameIDs("title edit", titleSet.EvidenceGraphs, def, jones.ID)
+	sameIDs("title edit graph reads", readIDs(titleSet, effects.ReadEvidenceGraphs))
 	_, newArtChanges, err := artifacts.Create(tx, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Page 2"})
 	if err != nil {
 		t.Fatal(err)
@@ -248,6 +251,8 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 	sameIDs("artifact create", artSet.EvidenceGraphs)
 	sameIDs("artifact create progress", readIDs(artSet, effects.ReadEvidenceGraphProgress))
 	sameIDs("artifact create reads", readIDs(artSet, effects.ReadCitations))
+	sameIDs("artifact create graph reads", readIDs(artSet, effects.ReadEvidenceGraphs))
+	sameIDs("artifact create with links", readIDs(resolve("artifact create with links", newArtChanges), effects.ReadEvidenceGraphs), src.ID)
 	labelChanges, err := artifacts.Update(tx, userID, artifacts.Artifact{
 		ID: srcArt.ID, SourceID: src.ID, Label: "Page one",
 	}, evidencegraphs.GraphLinks{})
@@ -256,11 +261,12 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 	}
 	labelSet := resolve("artifact label", only(labelChanges, "artifact"))
 	sameIDs("artifact label", labelSet.EvidenceGraphs)
+	sameIDs("artifact label graph reads", readIDs(labelSet, effects.ReadEvidenceGraphs))
 	if len(labelSet.Reads) != 0 {
 		t.Fatalf("artifact label moved reads %v", labelSet.Reads)
 	}
 
-	// No other write flags the list.
+	// No other write reports the graph list read.
 	_, otherChanges, err := subjects.Create(tx, userID, subjects.CreateInput{
 		GraphID: baseGraph, SubjectTypeID: personType.ID, Label: "Ada",
 	}, nil)
@@ -285,8 +291,8 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 		"citation create": baseCit,
 		"title edit":      baseTitle,
 	} {
-		if resolve(name, changes).Has(effects.ListEvidenceGraphs) {
-			t.Fatalf("%s flagged the graph list", name)
+		if got := readIDs(resolve(name, changes), effects.ReadEvidenceGraphs); len(got) != 0 {
+			t.Fatalf("%s reported the graph list read %x", name, got)
 		}
 	}
 }

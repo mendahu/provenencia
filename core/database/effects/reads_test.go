@@ -16,6 +16,9 @@ func TestReadsDeclare(t *testing.T) {
 		ReadEvidenceGraphProgress: {
 			"identity_claims", "observations", "subjects",
 		},
+		ReadEvidenceGraphs: {
+			"evidence_graph_artifacts", "evidence_graphs",
+		},
 	}
 	got := map[Read][]string{}
 	for table, eff := range registry {
@@ -46,6 +49,9 @@ func TestReadsDeclare(t *testing.T) {
 	}
 	if err := (Effect{Reads: []ReadPath{{ReadCitations, Path{}}}}).validate("x"); err == nil {
 		t.Fatal("a read with no path validated")
+	}
+	if err := (Effect{Reads: []ReadPath{{ReadEvidenceGraphs, self()}}}).validate("evidence_graphs"); err == nil {
+		t.Fatal("a graph list read ending at evidence_graphs validated")
 	}
 	if err := (Effect{None: true, Reads: []ReadPath{{ReadCitations, self()}}}).validate("x"); err == nil {
 		t.Fatal("a None entry with Reads validated")
