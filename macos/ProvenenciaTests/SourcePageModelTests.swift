@@ -47,7 +47,7 @@ struct SourcePageModelTests {
         if let credibility {
             store.credibilityBySource[sourceID] = credibility
         }
-        store.nextWriteEffects = CatalogWriteEffects(lists: [.evidenceGraphs])
+        store.nextWriteEffects = CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .evidenceGraphs, ids: [sourceID])])
         return store
     }
 
@@ -414,7 +414,7 @@ struct SourcePageModelTests {
             graphs[0].artifactIDs = [artID]
             store.evidenceGraphsByProject[projectDir] = graphs
         }
-        session.apply(CatalogWriteEffects(lists: [.evidenceGraphs]))
+        session.apply(CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .evidenceGraphs, ids: [sourceID])]))
         await waitForQuery(session.query(session.evidenceGraphsKey) as QueryHandle<[CatalogEvidenceGraph]>)
         #expect(entryGraphLocation(model)?.graphId == "g-1")
     }
@@ -522,7 +522,7 @@ struct SourcePageModelTests {
                 store.evidenceGraphsByProject[projectDir] = graphs
             }
         }
-        session.apply(CatalogWriteEffects(lists: [.evidenceGraphs]))
+        session.apply(CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .evidenceGraphs, ids: [sourceID])]))
         await waitForQuery(session.query(session.evidenceGraphsKey) as QueryHandle<[CatalogEvidenceGraph]>)
         #expect(entryGraphLocation(model)?.graphId == "g-1")
 
@@ -1723,8 +1723,8 @@ struct SourcePageModelTests {
             graph("g-j", "Jones household", ["P3", "P4", "P9"]),
             graph("g-s", "Smith household", ["P6"]),
         ]
-        session.apply(CatalogWriteEffects(lists: [.evidenceGraphs]))
-        await waitForQuery(session.evidenceGraphsHandle!)
+        session.apply(CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .evidenceGraphs, ids: [sourceID])]))
+        await session.settleWrites()
         store.unlinkImpactBlocks = []
         model.artifacts.beginEdit("P9")
         await model.artifacts.linkLoadTask?.value
@@ -1831,13 +1831,13 @@ struct SourcePageModelTests {
         let (model, store, session) = await makeCensus()
         model.artifacts.beginEdit("P3")
         await model.artifacts.linkLoadTask?.value
-        store.nextWriteEffects = CatalogWriteEffects(lists: [.evidenceGraphs])
+        store.nextWriteEffects = CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .evidenceGraphs, ids: [sourceID])])
         let (created, effects) = try await store.createEvidenceGraph(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
             name: "Walker household", description: "", artifactIDs: ["P3"]
         )
         session.apply(effects)
-        await waitForQuery(session.evidenceGraphsHandle!)
+        await session.settleWrites()
         model.artifacts.linkEdit?.excluded = ["g-b", "g-j"]
         model.artifacts.labels["P3"] = "Page 3, front"
         await model.artifacts.saveFields(id: "P3")
@@ -1929,10 +1929,10 @@ struct SourcePageModelTests {
         await model.artifacts.linkLoadTask?.value
         model.artifacts.linkEdit?.excluded = []
         #expect(model.artifacts.checkedGraphIDs.contains("g-b"))
-        store.nextWriteEffects = CatalogWriteEffects(lists: [.evidenceGraphs])
+        store.nextWriteEffects = CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .evidenceGraphs, ids: [sourceID])])
         let effects = try await store.deleteEvidenceGraph(projectDir: projectDir, userID: userID, graphID: "g-b")
         session.apply(effects)
-        await waitForQuery(session.evidenceGraphsHandle!)
+        await session.settleWrites()
         #expect(session.evidenceGraph(id: "g-b") == nil)
         #expect(!model.artifacts.checkedGraphIDs.contains("g-b"))
         model.artifacts.labels["P3"] = "Page 3, front"

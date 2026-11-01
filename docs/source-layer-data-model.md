@@ -423,7 +423,7 @@ Rules the schema and `core/database/evidencegraphs` hold today:
 - A Citation belongs to the one graph it was made in (`citations.graph_id`, required, linked to its Artifact, never changed). A graph's Citations on an Artifact are those rows; `citations.ListByArtifact` and `CountByEvidenceGraph` read them, and the Citation composer lists only the graph's linked Artifacts. Copy Source copies no Citations.
 - `List` is the one read of graphs: full rows with their linked Artifact ids, by name (case-insensitive), for one Source or the whole project. `Create` needs a name and at least one Artifact of the Source, linked through `Link`. Name and description are editable and names need not be unique. `Update` saves the name, description and the full set of linked Artifacts in one write: Artifacts are linked before others are unlinked, and any refusal rolls back the whole edit.
 - `Delete` refuses a Source's last graph (`deleteimpact` gate `last_graph`, code `evidencegraphs.last_graph`) and a graph with Subjects (`evidencegraphs.in_use`), and releases the graph's links and its Citations, audited.
-- A graph is part of its Source's record and a link row is part of both ends: their deletes are audited and released with the Source or Artifact ([`catalog-deletes.md`](catalog-deletes.md)). Both audit under the Source's scope and flag the graph list (`effects.ListEvidenceGraphs` in `effects.Set.Lists`).
+- A graph is part of its Source's record and a link row is part of both ends: their deletes are audited and released with the Source or Artifact ([`catalog-deletes.md`](catalog-deletes.md)). Both audit under the Source's scope and report the `evidence_graphs` read for their Source (`effects.ReadEvidenceGraphs` in `effects.Set.Reads`).
 
 ---
 

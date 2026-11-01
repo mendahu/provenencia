@@ -330,14 +330,6 @@ func valueInput(
 	return nil
 }
 
-func optionalID(s string) ([]byte, error) {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return nil, nil
-	}
-	return parseID(s)
-}
-
 func observationProto(o observations.Observation) *engine.Observation {
 	return &engine.Observation{
 		Id:               database.UUIDString(o.ID),

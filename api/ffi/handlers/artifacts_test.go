@@ -229,12 +229,12 @@ func TestCreateArtifactGraphLinks(t *testing.T) {
 	}
 
 	everyResp := f.createArtifactResp(t, f.sourceID, "Every", nil)
-	assertGraphEffects(t, everyResp.GetEffects())
+	assertGraphEffects(t, everyResp.GetEffects(), f.sourceID)
 	if got := linkedTo(everyResp.GetArtifact().GetId()); !slices.Equal(got, []string{"Default", "Jones"}) {
 		t.Fatalf("absent links, every graph: %v", got)
 	}
 	chosenResp := f.createArtifactResp(t, f.sourceID, "Chosen", &engine.GraphLinks{GraphIds: []string{second}})
-	assertGraphEffects(t, chosenResp.GetEffects())
+	assertGraphEffects(t, chosenResp.GetEffects(), f.sourceID)
 	if got := linkedTo(chosenResp.GetArtifact().GetId()); !slices.Equal(got, []string{"Jones"}) {
 		t.Fatalf("chosen graph only: %v", got)
 	}

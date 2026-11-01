@@ -26,11 +26,7 @@ final class CitationComposerContext {
     var artifactID: String?
 
     @ObservationIgnored
-    private var memoToken: MemoToken?
-    @ObservationIgnored
-    private var memoSnapshot: EvidenceGraphSnapshot
-    @ObservationIgnored
-    private var memoVocabulary = CitationComposerVocabulary.empty
+    private var memo = Memo<MemoToken, (snapshot: EvidenceGraphSnapshot, vocabulary: CitationComposerVocabulary)>()
     @ObservationIgnored
     private var isCreatingCitation = false
     @ObservationIgnored
@@ -48,7 +44,6 @@ final class CitationComposerContext {
         self.userID = userID
         self.sourceID = sourceID
         self.graphID = graphID
-        memoSnapshot = EvidenceGraphSnapshot(graphId: graphID)
     }
 
     var projectDir: String { session.projectKey.projectDir }
@@ -62,13 +57,11 @@ final class CitationComposerContext {
     }
 
     var graphSnapshot: EvidenceGraphSnapshot {
-        refreshMemo()
-        return memoSnapshot
+        built.snapshot
     }
 
     var vocabulary: CitationComposerVocabulary {
-        refreshMemo()
-        return memoVocabulary
+        built.vocabulary
     }
 
     /// The one funnel for composer writes. The location names the selected
@@ -156,57 +149,41 @@ final class CitationComposerContext {
         .propertyTerms(project: session.projectKey, propertyId: propertyID)
     }
 
-    private func refreshMemo() {
+    /// The snapshot and vocabulary for the current revisions, built once per
+    /// change of any of them.
+    private var built: (snapshot: EvidenceGraphSnapshot, vocabulary: CitationComposerVocabulary) {
         let fieldsHandle: QueryHandle<PropertiesSnapshot>? = session.queryHandle(fieldsKey)
         let rowsHandle: QueryHandle<EvidenceGraphRows>? = session.queryHandle(graphKey)
         let rulesHandle: QueryHandle<[CatalogConnectRule]>? = session.queryHandle(connectRulesKey)
-        let graph = rowsHandle?.revision ?? 0
-        let fieldsRevision = fieldsHandle?.revision ?? 0
-        let rulesRevision = rulesHandle?.revision ?? 0
-        if let memoToken,
-            memoToken.graph == graph,
-            memoToken.fields == fieldsRevision,
-            memoToken.rules == rulesRevision,
-            termRevisionsMatch(memoToken.terms)
-        {
-            return
-        }
         let fields = fieldsHandle?.value ?? .empty
         let terms = termRevisions(in: fields)
-        memoToken = MemoToken(
-            graph: graph,
-            fields: fieldsRevision,
-            rules: rulesRevision,
+        let token = MemoToken(
+            graph: rowsHandle?.revision ?? 0,
+            fields: fieldsHandle?.revision ?? 0,
+            rules: rulesHandle?.revision ?? 0,
             terms: terms
         )
-        let rows = rowsHandle?.value ?? EvidenceGraphRows(graphId: graphID)
-        let rules = rulesHandle?.value ?? []
-        var termLists: [String: [CatalogPropertyTerm]] = [:]
-        for propertyID in terms.keys {
-            let handle: QueryHandle<[CatalogPropertyTerm]>? = session.queryHandle(
-                termsKey(propertyID: propertyID)
-            )
-            if let value = handle?.value {
-                termLists[propertyID] = value
+        return memo.value(for: token) {
+            let rows = rowsHandle?.value ?? EvidenceGraphRows(graphId: graphID)
+            let rules = rulesHandle?.value ?? []
+            var termLists: [String: [CatalogPropertyTerm]] = [:]
+            for propertyID in terms.keys {
+                let handle: QueryHandle<[CatalogPropertyTerm]>? = session.queryHandle(
+                    termsKey(propertyID: propertyID)
+                )
+                if let value = handle?.value {
+                    termLists[propertyID] = value
+                }
             }
-        }
-        memoSnapshot = EvidenceGraphSnapshot.build(rows: rows, types: fields.types, rules: rules)
-        memoVocabulary = CitationComposerVocabulary.make(
-            fields: fields,
-            snapshot: memoSnapshot,
-            rules: rules,
-            termsByPropertyID: termLists
-        )
-    }
-
-    private func termRevisionsMatch(_ stored: [String: Int]) -> Bool {
-        for (propertyID, revision) in stored {
-            let handle: QueryHandle<[CatalogPropertyTerm]>? = session.queryHandle(
-                termsKey(propertyID: propertyID)
+            let snapshot = EvidenceGraphSnapshot.build(rows: rows, types: fields.types, rules: rules)
+            let vocabulary = CitationComposerVocabulary.make(
+                fields: fields,
+                snapshot: snapshot,
+                rules: rules,
+                termsByPropertyID: termLists
             )
-            if (handle?.revision ?? 0) != revision { return false }
+            return (snapshot, vocabulary)
         }
-        return true
     }
 
     private func termRevisions(in fields: PropertiesSnapshot) -> [String: Int] {

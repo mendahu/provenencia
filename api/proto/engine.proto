@@ -465,6 +465,7 @@ message EvidenceGraph {
 
 message ListEvidenceGraphsRequest {
   string project_dir = 1;
+  string source_id = 2; // empty: every graph of the project
 }
 
 message ListEvidenceGraphsResponse {
@@ -739,13 +740,14 @@ message WriteEffects {
   reserved 11;
   reserved "citation_sources";
   // Catalog-wide lists this write changed: effects.List values ("vocabulary",
-  // "property_usage", "evidence_graphs"). Swift drops the reads that show each.
+  // "property_usage"). Swift drops the reads that show each.
   repeated string lists = 13;
   // Evidence graphs whose loaded rows this write changed (graphcache drops each).
   repeated string evidence_graphs = 14;
-  // Keyed partial reads this write moved, each with the Evidence graphs it
-  // moved them for: effects.Read values ("citations", "evidence_graph_progress").
-  // Swift refreshes only those graphs' reads.
+  // Keyed partial reads this write moved, each with the ids of the read's key
+  // table (Evidence graphs for "citations" and "evidence_graph_progress",
+  // Sources for "evidence_graphs"): effects.Read values. Swift refreshes only
+  // those keys' reads.
   repeated WriteEffectsRead reads = 15;
 }
 

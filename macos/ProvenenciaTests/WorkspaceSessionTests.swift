@@ -534,6 +534,9 @@ struct WorkspaceSessionTests {
         )
         let session = makeSession(store: store)
         let key = CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: "g-1")
+        session.apply(location: WorkspaceLocation(
+            section: .sources, sourceId: "s1", graphId: "g-1", sourceSurface: .graph
+        ))
         let handle: QueryHandle<EvidenceGraphRows> = session.query(key)
         await waitForQuery(handle)
         #expect(handle.value?.observations.isEmpty == true)
@@ -1387,7 +1390,7 @@ struct WorkspaceSessionTests {
         let session = makeSession()
         var calls = 0
         session.onNavCountsMoved = { calls += 1 }
-        session.apply(.createdSource)
+        session.apply(.createdSource(CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "", title: "New Row", description: "")))
         session.apply(.deletedSource(id: "s1"))
         session.apply(.promotedSubject(graphId: "g-1"))
         await session.settleWrites()
@@ -1400,10 +1403,452 @@ struct WorkspaceSessionTests {
         session.onNavCountsMoved = { calls += 1 }
         session.apply(.mutatedSourceWorkspace(sourceId: "s1"))
         session.apply(CatalogWriteEffects(sourceScopes: ["s1"], activity: CatalogActivity(revision: 1)))
-        session.apply(.createdSource)
+        session.apply(.createdSource(CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "", title: "New Row", description: "")))
         await session.settleWrites()
         #expect(calls == 1)
     }
+
+    /// T-10: a key marked stale while hidden keeps its value but is not settled
+    /// until it reloads.
+    @Test func staleKeyIsNotSettled() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let key = CatalogQueryKey.sourcesList(project: session.projectKey)
+        let handle: QueryHandle<[CatalogSource]> = session.query(key)
+        await waitForQuery(handle)
+        #expect(handle.isSettled)
+
+        session.apply(.deletedSource(id: "gone"))
+        #expect(handle.isStale)
+        #expect(!handle.isSettled)
+        #expect(handle.status == .ready)
+        #expect(!handle.isFetching)
+
+        let again: QueryHandle<[CatalogSource]> = session.query(key)
+        await waitForQuery(again)
+        #expect(!handle.isStale)
+        #expect(handle.isSettled)
+    }
+
+    /// T-11: a whole-value write makes a stale key current; a partial patch does not.
+    @Test func setQueryValueClearsStaleAndPatchKeepsIt() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let key = CatalogQueryKey.sourcesList(project: session.projectKey)
+        let handle: QueryHandle<[CatalogSource]> = session.query(key)
+        await waitForQuery(handle)
+        session.apply(.deletedSource(id: "gone"))
+        #expect(handle.isStale)
+
+        let result = session.patchCached(key, as: [CatalogSource].self) { rows in
+            rows[0].title = "Patched"
+            return true
+        }
+        #expect(result == .applied)
+        #expect(handle.isStale)
+
+        session.setQueryValue(key, value: handle.value ?? [])
+        #expect(!handle.isStale)
+    }
+
+    /// T-18 (a): a key marked stale while its first load is in flight restarts
+    /// that load when it is queried, instead of keeping an answer that may be older.
+    @Test func staleKeyQueriedDuringLoadReloads() async {
+        let store = FakeStore()
+        store.evidenceGraphsByProject[projectDir] = [evidenceGraph("g1", sourceID: "s1")]
+        store.listEvidenceGraphsHold.isOn = true
+        let session = makeSession(store: store)
+        let key = session.evidenceGraphsKey
+        let handle: QueryHandle<[CatalogEvidenceGraph]> = session.query(key)
+        #expect(await waitUntil { store.listEvidenceGraphsHold.count == 1 })
+
+        session.apply(.deletedSource(id: "s9"))
+        #expect(handle.isStale)
+        store.evidenceGraphsByProject[projectDir] = [evidenceGraph("g2", sourceID: "s1")]
+        let _: QueryHandle<[CatalogEvidenceGraph]> = session.query(key)
+        #expect(await waitUntil { store.listEvidenceGraphsHold.count == 2 })
+        store.listEvidenceGraphsHold.isOn = false
+        store.listEvidenceGraphsHold.release()
+        store.listEvidenceGraphsHold.release()
+        await session.settleWrites()
+        #expect(handle.isSettled)
+        #expect(!handle.isStale)
+        #expect(handle.value?.map(\.id) == ["g2"])
+    }
+
+    /// T-18 (b): a patch that finds the key's first load in flight restarts the load.
+    @Test func patchDuringFirstLoadFallsBack() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        session.apply(location: .sectionRoot(.sources))
+        let handle: QueryHandle<[CatalogSource]>? = session.queryHandle(
+            CatalogQueryKey.sourcesList(project: session.projectKey)
+        )
+        #expect(handle?.value == nil)
+
+        session.apply(CatalogWriteEffects(
+            sourceScopes: ["s1"], activity: CatalogActivity(revision: 5, at: "2026-01-01T00:00:00Z")
+        ))
+        await session.settleWrites()
+        #expect(await waitUntil { store.listSourcesCalls == 2 })
+        #expect(handle?.value?.first?.id == "s1")
+    }
+
+    /// T-8: a created Source applied while the visible list's first load is in
+    /// flight restarts that load, and the row is held once.
+    @Test func createdSourceDuringFirstLoadRestartsTheLoad() async {
+        let store = FakeStore()
+        seedStore(store)
+        let row = CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "t1", title: "Deed", description: "")
+        store.sourcesByProject[projectDir]?.append(row)
+        let session = makeSession(store: store)
+        session.apply(location: .sectionRoot(.sources))
+
+        session.apply(.createdSource(row))
+        await session.settleWrites()
+        #expect(await waitUntil { store.listSourcesCalls == 2 })
+        let handle: QueryHandle<[CatalogSource]>? = session.queryHandle(
+            CatalogQueryKey.sourcesList(project: session.projectKey)
+        )
+        #expect(handle?.value?.filter { $0.id == "s2" }.count == 1)
+    }
+
+    /// T-15: a hidden graph key goes stale on a write that names it and
+    /// reloads when its canvas is shown again.
+    @Test func hiddenGraphReloadsOnlyWhenRevisited() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        let graphLocation = { (graphId: String) in
+            WorkspaceLocation(section: .sources, sourceId: "s1", graphId: graphId, sourceSurface: .graph)
+        }
+        session.apply(location: graphLocation("G"))
+        await session.settleWrites()
+        session.apply(location: graphLocation("H"))
+        await session.settleWrites()
+        let graphG: QueryHandle<EvidenceGraphRows>? = session.queryHandle(.evidenceGraph(project: project, graphId: "G"))
+        #expect(graphG?.isSettled == true)
+        let before = store.listSubjectsGraphIDs
+
+        session.apply(CatalogWriteEffects(evidenceGraphs: ["G", "H"]))
+        await session.settleWrites()
+        #expect(Array(store.listSubjectsGraphIDs.dropFirst(before.count)) == ["H"])
+        #expect(graphG?.isStale == true)
+
+        session.apply(location: graphLocation("G"))
+        await session.settleWrites()
+        #expect(Array(store.listSubjectsGraphIDs.dropFirst(before.count)) == ["H", "G"])
+        #expect(graphG?.isStale == false)
+    }
+
+    /// T-17: a hidden Source page goes stale on a write and reloads when shown again.
+    @Test func hiddenSourcePageReloadsOnlyWhenRevisited() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        session.apply(location: .sourcePage(sourceId: "s1"))
+        await session.settleWrites()
+        session.apply(location: .sectionRoot(.persons))
+        await session.settleWrites()
+        let page: QueryHandle<CatalogSourceWorkspace>? = session.queryHandle(
+            .sourceWorkspace(project: session.projectKey, sourceId: "s1")
+        )
+        let callsBefore = store.getSourceWorkspaceCalls
+
+        session.apply(.mutatedSourceWorkspace(sourceId: "s1"))
+        await session.settleWrites()
+        #expect(store.getSourceWorkspaceCalls == callsBefore)
+        #expect(page?.isStale == true)
+
+        session.apply(location: .sourcePage(sourceId: "s1"))
+        await session.settleWrites()
+        #expect(store.getSourceWorkspaceCalls == callsBefore + 1)
+        #expect(page?.isStale == false)
+    }
+
+    /// T-7b: a failed progress re-read reloads the whole map.
+    @Test func progressReReadFailureReloadsTheMap() async {
+        struct Boom: Error {}
+        let store = FakeStore()
+        seedStore(store)
+        store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
+            graphId: "g-1", subjectCount: 1, observationCount: 1
+        )
+        let session = makeSession(store: store)
+        let progressHandle: QueryHandle<[String: EvidenceGraphProgress]> = session.query(
+            CatalogQueryKey.evidenceGraphProgress(project: session.projectKey)
+        )
+        await waitForQuery(progressHandle)
+        let listCalls = store.listEvidenceGraphProgressCalls
+
+        store.getEvidenceGraphProgressError = Boom()
+        session.apply(CatalogWriteEffects(
+            reads: [CatalogWriteEffectsRead(read: .evidenceGraphProgress, ids: ["g-1"])]
+        ))
+        await session.settleWrites()
+        #expect(store.listEvidenceGraphProgressCalls == listCalls + 1)
+        #expect(!progressHandle.isFetching)
+    }
+
+    // MARK: Graph list re-reads (S14-11)
+
+    private func graphRead(_ sourceIDs: String...) -> CatalogWriteEffects {
+        CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .evidenceGraphs, ids: sourceIDs)])
+    }
+
+    /// A session whose graph list holds `rows` (set without a load) and whose
+    /// place shows it when `visible`.
+    private func graphListSession(
+        store: FakeStore,
+        rows: [CatalogEvidenceGraph],
+        visible: Bool
+    ) -> (WorkspaceSession, QueryHandle<[CatalogEvidenceGraph]>) {
+        let session = makeSession(store: store)
+        session.setQueryValue(session.evidenceGraphsKey, value: rows)
+        if visible {
+            session.apply(location: .sourcePage(sourceId: "S"))
+        }
+        let handle: QueryHandle<[CatalogEvidenceGraph]> = session.query(session.evidenceGraphsKey)
+        return (session, handle)
+    }
+
+    /// T-6: a graph write names one Source, so only that Source's graphs are
+    /// asked for and merged; the other Source's rows are untouched.
+    @Test func graphListMergesOneSourcesReRead() async {
+        let store = FakeStore()
+        let (session, handle) = graphListSession(
+            store: store,
+            rows: [
+                evidenceGraph("s-default", sourceID: "S", name: "Default"),
+                evidenceGraph("s-jones", sourceID: "S", name: "Jones"),
+                evidenceGraph("t-default", sourceID: "T", name: "Default"),
+            ],
+            visible: true
+        )
+        store.evidenceGraphsByProject[projectDir] = [
+            evidenceGraph("s-default", sourceID: "S", name: "Default"),
+            evidenceGraph("s-jones", sourceID: "S", name: "Jones", artifactIDs: ["page2"]),
+            evidenceGraph("s-smith", sourceID: "S", name: "Smith"),
+            evidenceGraph("t-default", sourceID: "T", name: "Default", artifactIDs: ["other"]),
+        ]
+        session.apply(graphRead("S"))
+        #expect(handle.isFetching)
+        await session.settleWrites()
+        #expect(!handle.isFetching)
+        #expect(store.listEvidenceGraphsSourceIDs == ["S"])
+        #expect(session.evidenceGraphs(sourceID: "S")?.map(\.id) == ["s-default", "s-jones", "s-smith"])
+        #expect(session.evidenceGraph(id: "s-jones")?.artifactIDs == ["page2"])
+        #expect(session.evidenceGraphs(sourceID: "T") == [evidenceGraph("t-default", sourceID: "T", name: "Default")])
+    }
+
+    /// F-1: a merged re-read of one Source splices the index; it does not
+    /// rebuild the maps of every other Source.
+    @Test func graphListMergeSplicesTheIndex() async {
+        let store = FakeStore()
+        let (session, _) = graphListSession(
+            store: store,
+            rows: [
+                evidenceGraph("s-default", sourceID: "S", name: "Default"),
+                evidenceGraph("s-jones", sourceID: "S", name: "Jones"),
+                evidenceGraph("t-default", sourceID: "T", name: "Default", artifactIDs: ["t-page"]),
+            ],
+            visible: true
+        )
+        #expect(session.evidenceGraph(id: "s-jones") != nil)
+        let builds = session.evidenceGraphIndexBuildCount
+        store.evidenceGraphsByProject[projectDir] = [
+            evidenceGraph("s-default", sourceID: "S", name: "Default"),
+            evidenceGraph("s-smith", sourceID: "S", name: "Smith", artifactIDs: ["s-page"]),
+            evidenceGraph("s-wyatt", sourceID: "S", name: "Wyatt"),
+            evidenceGraph("t-default", sourceID: "T", name: "Default", artifactIDs: ["t-page"]),
+        ]
+        session.apply(graphRead("S"))
+        await session.settleWrites()
+        #expect(session.evidenceGraphs(sourceID: "S")?.map(\.id) == ["s-default", "s-smith", "s-wyatt"])
+        #expect(session.evidenceGraph(id: "s-smith") != nil)
+        #expect(session.evidenceGraph(id: "s-jones") == nil)
+        #expect(session.evidenceGraphs(sourceID: "T")?.map(\.id) == ["t-default"])
+        #expect(session.artifactIDsInNoGraph(sourceID: "T", artifactIDs: ["t-page", "x"]) == ["x"])
+        #expect(session.artifactIDsInNoGraph(sourceID: "S", artifactIDs: ["s-page", "x"]) == ["x"])
+        #expect(session.evidenceGraphIndexBuildCount == builds)
+    }
+
+    /// T-7 (a): while the re-read waits the list reads as refetching, and a
+    /// waiter on `readyValue` gets the merged rows.
+    @Test func graphListPartialReReadSetsFetching() async {
+        let store = FakeStore()
+        let (session, handle) = graphListSession(
+            store: store,
+            rows: [evidenceGraph("s-default", sourceID: "S", name: "Default")],
+            visible: true
+        )
+        store.evidenceGraphsByProject[projectDir] = [
+            evidenceGraph("s-default", sourceID: "S", name: "Default"),
+            evidenceGraph("s-new", sourceID: "S", name: "New"),
+        ]
+        store.listEvidenceGraphsHold.isOn = true
+        session.apply(graphRead("S"))
+        #expect(await waitUntil { store.listEvidenceGraphsHold.count == 1 })
+        #expect(handle.isFetching)
+        if case .unknown = session.evidenceGraphPresence(id: "s-new") {} else {
+            Issue.record("expected .unknown while the re-read runs")
+        }
+        #expect(session.artifactIDsInNoGraph(sourceID: "S", artifactIDs: ["a"]) == nil)
+
+        let returned = Flag()
+        let waiter = Task { @MainActor in
+            let rows: [CatalogEvidenceGraph]? = await session.readyValue(session.evidenceGraphsKey)
+            returned.isSet = true
+            return rows
+        }
+        await Task.yield()
+        #expect(!returned.isSet)
+        store.listEvidenceGraphsHold.release()
+        let rows = await waiter.value
+        #expect(rows?.map(\.id) == ["s-default", "s-new"])
+        #expect(!handle.isFetching)
+    }
+
+    /// T-7 (b): a failed re-read reloads the whole list through the key's policy.
+    @Test func graphListPartialReReadFailureReloadsTheList() async {
+        struct Boom: Error {}
+        let store = FakeStore()
+        let (session, handle) = graphListSession(
+            store: store,
+            rows: [evidenceGraph("s-default", sourceID: "S", name: "Default")],
+            visible: true
+        )
+        store.listEvidenceGraphsError = Boom()
+        session.apply(graphRead("S"))
+        await session.settleWrites()
+        #expect(store.listEvidenceGraphsSourceIDs.count == 2)
+        #expect(store.listEvidenceGraphsSourceIDs.first == .some("S"))
+        #expect(store.listEvidenceGraphsSourceIDs.last == .some(nil))
+        #expect(handle.status == .error)
+        #expect(handle.value?.map(\.id) == ["s-default"])
+        #expect(!handle.isFetching)
+    }
+
+    /// T-7 (c): a visible list whose first load is in flight restarts that load
+    /// instead of re-reading one Source.
+    @Test func graphListFirstLoadInFlightRestartsWhenVisible() async {
+        let store = FakeStore()
+        store.listEvidenceGraphsHold.isOn = true
+        let session = makeSession(store: store)
+        session.apply(location: .sourcePage(sourceId: "S"))
+        #expect(await waitUntil { store.listEvidenceGraphsHold.count == 1 })
+
+        session.apply(graphRead("S"))
+        #expect(await waitUntil { store.listEvidenceGraphsHold.count == 2 })
+        store.listEvidenceGraphsHold.isOn = false
+        store.listEvidenceGraphsHold.release()
+        store.listEvidenceGraphsHold.release()
+        await session.settleWrites()
+        #expect(store.listEvidenceGraphsSourceIDs == [nil, nil])
+    }
+
+    /// T-7 (d): the same with the list hidden: no new call, and the list is
+    /// stale once the first load lands.
+    @Test func graphListFirstLoadInFlightGoesStaleWhenHidden() async {
+        let store = FakeStore()
+        store.listEvidenceGraphsHold.isOn = true
+        let session = makeSession(store: store)
+        let handle: QueryHandle<[CatalogEvidenceGraph]> = session.query(session.evidenceGraphsKey)
+        #expect(await waitUntil { store.listEvidenceGraphsHold.count == 1 })
+
+        session.apply(graphRead("S"))
+        #expect(handle.isStale)
+        store.listEvidenceGraphsHold.isOn = false
+        store.listEvidenceGraphsHold.release()
+        await session.settleWrites()
+        #expect(store.listEvidenceGraphsSourceIDs == [nil])
+        #expect(handle.isStale)
+        #expect(!handle.isSettled)
+    }
+
+    /// T-7 (e): overlapping re-reads of two Sources keep `isFetching` true
+    /// until the last one ends, and both merge.
+    @Test func overlappingGraphReReadsKeepFetchingUntilTheLastEnds() async {
+        let store = FakeStore()
+        let (session, handle) = graphListSession(
+            store: store,
+            rows: [
+                evidenceGraph("s-default", sourceID: "S", name: "Default"),
+                evidenceGraph("t-default", sourceID: "T", name: "Default"),
+            ],
+            visible: true
+        )
+        store.evidenceGraphsByProject[projectDir] = [
+            evidenceGraph("s-default", sourceID: "S", name: "Default"),
+            evidenceGraph("s-new", sourceID: "S", name: "New"),
+            evidenceGraph("t-default", sourceID: "T", name: "Default"),
+            evidenceGraph("t-new", sourceID: "T", name: "New"),
+        ]
+        store.listEvidenceGraphsHold.isOn = true
+        session.apply(graphRead("S"))
+        session.apply(graphRead("T"))
+        #expect(await waitUntil { store.listEvidenceGraphsHold.count == 2 })
+
+        store.listEvidenceGraphsHold.release()
+        #expect(await waitUntil { handle.value?.count == 3 })
+        #expect(handle.isFetching)
+        store.listEvidenceGraphsHold.release()
+        await session.settleWrites()
+        #expect(!handle.isFetching)
+        #expect(session.evidenceGraphs(sourceID: "S")?.map(\.id) == ["s-default", "s-new"])
+        #expect(session.evidenceGraphs(sourceID: "T")?.map(\.id) == ["t-default", "t-new"])
+    }
+
+    /// T-12: a hidden graph list is flagged stale by the read, fetches nothing,
+    /// and reloads whole on the next query.
+    @Test func hiddenGraphListGoesStaleOnRead() async {
+        let store = FakeStore()
+        let (session, handle) = graphListSession(
+            store: store,
+            rows: [evidenceGraph("s-default", sourceID: "S", name: "Default")],
+            visible: false
+        )
+        store.evidenceGraphsByProject[projectDir] = [evidenceGraph("s-default", sourceID: "S", name: "Default")]
+        session.apply(graphRead("S"))
+        #expect(handle.isStale)
+        await session.settleWrites()
+        #expect(store.listEvidenceGraphsSourceIDs.isEmpty)
+
+        let again: QueryHandle<[CatalogEvidenceGraph]> = session.query(session.evidenceGraphsKey)
+        await waitForQuery(again)
+        await session.settleWrites()
+        #expect(store.listEvidenceGraphsSourceIDs == [nil])
+        #expect(!handle.isStale)
+    }
+
+    /// T-13: deleting a Source drops its graphs through the same re-read.
+    @Test func deletedSourceDropsItsGraphs() async {
+        let store = FakeStore()
+        let (session, handle) = graphListSession(
+            store: store,
+            rows: [
+                evidenceGraph("s-default", sourceID: "S", name: "Default"),
+                evidenceGraph("t-default", sourceID: "T", name: "Default"),
+            ],
+            visible: true
+        )
+        store.evidenceGraphsByProject[projectDir] = [evidenceGraph("t-default", sourceID: "T", name: "Default")]
+        session.apply(.deletedSource(id: "S"))
+        await session.settleWrites()
+        #expect(store.listEvidenceGraphsSourceIDs == ["S"])
+        #expect(handle.value?.map(\.id) == ["t-default"])
+        #expect(session.evidenceGraphs(sourceID: "S")?.isEmpty == true)
+    }
+}
+
+/// A flag a test task sets once it returns.
+@MainActor
+private final class Flag {
+    var isSet = false
 }
 
 /// One-shot gate so concurrent loaders block until tests observe stale data.

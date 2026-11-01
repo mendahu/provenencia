@@ -269,7 +269,7 @@ struct SourcesModelTests {
         #expect(model.toast != nil)
     }
 
-    @Test func createRefreshesListThroughSession() async {
+    @Test func createInsertsTheRowThroughSession() async {
         let store = FakeStore()
         let (model, session) = makeModel(
             store: store,
@@ -278,7 +278,6 @@ struct SourcesModelTests {
         )
         await warmLists(model, session: session)
         session.apply(location: .sectionRoot(.sources))
-        store.sourcesByProject[projectDir]?.append(source(id: "s2", title: "Will", typeID: "t1"))
 
         model.openAdd()
         model.draft.sourceTypeID = "t1"
@@ -290,7 +289,108 @@ struct SourcesModelTests {
             await waitForQuery(handle)
         }
 
-        #expect(Set(model.sources.map(\.title)) == ["Deed", "Will", "Family album"])
+        #expect(Set(model.sources.map(\.title)) == ["Deed", "Family album"])
+    }
+
+    /// T-8: Add Source puts the returned row into the cached list; it does not reload it.
+    @Test func addSourceInsertsTheReturnedRow() async {
+        let store = FakeStore()
+        let (model, session) = makeModel(
+            store: store,
+            sources: [
+                source(id: "s1", title: "Album", typeID: "t1"),
+                source(id: "s2", title: "Will", typeID: "t1"),
+            ],
+            types: [photoType()]
+        )
+        await warmLists(model, session: session)
+        let callsBefore = store.listSourcesCalls
+        let key = SourcesModel.sourcesListKey(for: session)
+
+        model.openAdd()
+        model.draft.sourceTypeID = "t1"
+        model.draft.title = "Deed"
+        let created = await model.create()
+        await session.settleWrites()
+
+        let rows: [CatalogSource]? = session.queryHandle(key)?.value
+        #expect(rows?.count == 3)
+        #expect(rows?.last == created)
+        #expect(store.listSourcesCalls == callsBefore)
+
+        // The same create applied again replaces the row; it does not duplicate it.
+        if let created {
+            session.apply(.createdSource(created))
+            #expect((session.queryHandle(key)?.value as [CatalogSource]?)?.count == 3)
+        }
+    }
+
+    /// T-8: an update or type change of a row the list lacks appends nothing, and
+    /// a list that was never warmed gets no handle.
+    @Test func sourceRowAppendsOnlyForACreate() async {
+        let store = FakeStore()
+        let (model, session) = makeModel(
+            store: store,
+            sources: [source(id: "s1", title: "Album", typeID: "t1")],
+            types: [photoType()]
+        )
+        let key = SourcesModel.sourcesListKey(for: session)
+        let stranger = source(id: "s9", title: "Stranger", typeID: "t1")
+        session.apply(.createdSource(stranger))
+        let unwarmed: QueryHandle<[CatalogSource]>? = session.queryHandle(key)
+        #expect(unwarmed == nil)
+
+        await warmLists(model, session: session)
+        session.apply(.updatedSource(stranger))
+        session.apply(.changedSourceType(stranger))
+        #expect((session.queryHandle(key)?.value as [CatalogSource]?)?.map(\.id) == ["s1"])
+    }
+
+    /// T-16: the rows are built once per change of an input, not once per read.
+    @Test func visibleSourcesBuildsOncePerInputChange() async {
+        let store = FakeStore()
+        let (model, session) = makeModel(
+            store: store,
+            sources: [
+                source(id: "s1", title: "Album", typeID: "t1"),
+                source(id: "s2", title: "Deed", typeID: "t1"),
+                source(id: "s3", title: "Will", typeID: "t1"),
+            ],
+            types: [photoType()]
+        )
+        await warmLists(model, session: session)
+        model.settings.sort = .az
+        #expect(model.visibleSources.map(\.title) == ["Album", "Deed", "Will"])
+        #expect(model.visibleSourcesBuildCount == 1)
+
+        model.openAdd()
+        for title in ["D", "De", "Dee"] {
+            model.draft.title = title
+            _ = model.visibleSources
+        }
+        #expect(model.visibleSourcesBuildCount == 1)
+
+        model.settings.query = "deed"
+        #expect(model.visibleSources.map(\.title) == ["Deed"])
+        #expect(model.visibleSourcesBuildCount == 2)
+
+        let sourcesKey = SourcesModel.sourcesListKey(for: session)
+        session.setQueryValue(sourcesKey, value: model.sources)
+        _ = model.visibleSources
+        #expect(model.visibleSourcesBuildCount == 3)
+
+        // Without a status filter the progress revision is not an input.
+        session.setQueryValue(session.evidenceGraphProgressKey, value: [String: EvidenceGraphProgress]())
+        _ = model.visibleSources
+        #expect(model.visibleSourcesBuildCount == 3)
+
+        model.settings.query = ""
+        model.settings.status = .empty
+        _ = model.visibleSources
+        let afterFilter = model.visibleSourcesBuildCount
+        session.setQueryValue(session.evidenceGraphProgressKey, value: [String: EvidenceGraphProgress]())
+        _ = model.visibleSources
+        #expect(model.visibleSourcesBuildCount == afterFilter + 1)
     }
 
     @Test func cancelAddDoesNotCreate() async {
@@ -382,18 +482,19 @@ struct SourcesModelTests {
         let counts = CatalogCounts(projectDir: projectDir, store: store)
         let (model, session) = makeModel(
             store: store,
-            sources: [source(id: "s1", title: "Album", typeID: "t1", ref: "SRC-0001")],
+            sources: [
+                source(id: "s1", title: "Album", typeID: "t1", ref: "SRC-0001"),
+                source(id: "s2", title: "Deed", typeID: "t1", ref: "SRC-0002"),
+            ],
             types: [photoType()],
             catalogCounts: counts
         )
         await warmLists(model, session: session)
-        #expect(counts.sources == 1)
+        #expect(counts.sources == 2)
 
         // The list is hidden: a write marks it stale instead of reloading it.
-        store.sourcesByProject[projectDir]?.append(
-            source(id: "s2", title: "Deed", typeID: "t1", ref: "SRC-0002")
-        )
-        session.apply(.createdSource)
+        store.sourcesByProject[projectDir]?.removeAll { $0.id == "s2" }
+        session.apply(.deletedSource(id: "s2"))
 
         // Coming back reloads it. The cached `.ready` value must not be republished.
         model.warmListQueries()
@@ -409,8 +510,8 @@ struct SourcesModelTests {
         await waitForQuery(handle)
         #expect(handle.isSettled)
         model.syncCatalogCounts()
-        #expect(model.sources.count == 2)
-        #expect(counts.sources == 2)
+        #expect(model.sources.count == 1)
+        #expect(counts.sources == 1)
     }
 
     /// A write's activity moves the row in the Updated sort without a reload.

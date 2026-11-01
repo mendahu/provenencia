@@ -448,9 +448,10 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    func listEvidenceGraphs(projectDir: String) async throws -> [CatalogEvidenceGraph] {
+    func listEvidenceGraphs(projectDir: String, sourceID: String?) async throws -> [CatalogEvidenceGraph] {
         var req = Provenencia_Engine_V1_ListEvidenceGraphsRequest()
         req.projectDir = projectDir
+        if let sourceID { req.sourceID = sourceID }
         let resp: Provenencia_Engine_V1_ListEvidenceGraphsResponse = try await provenenciaCall(
             method: CoreMethod.listEvidenceGraphs,
             request: req

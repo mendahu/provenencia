@@ -1744,6 +1744,9 @@ public nonisolated struct Provenencia_Engine_V1_ListEvidenceGraphsRequest: Senda
 
   public var projectDir: String = String()
 
+  /// empty: every graph of the project
+  public var sourceID: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -2639,15 +2642,16 @@ public nonisolated struct Provenencia_Engine_V1_WriteEffects: Sendable {
   public var sourceScopes: [String] = []
 
   /// Catalog-wide lists this write changed: effects.List values ("vocabulary",
-  /// "property_usage", "evidence_graphs"). Swift drops the reads that show each.
+  /// "property_usage"). Swift drops the reads that show each.
   public var lists: [String] = []
 
   /// Evidence graphs whose loaded rows this write changed (graphcache drops each).
   public var evidenceGraphs: [String] = []
 
-  /// Keyed partial reads this write moved, each with the Evidence graphs it
-  /// moved them for: effects.Read values ("citations", "evidence_graph_progress").
-  /// Swift refreshes only those graphs' reads.
+  /// Keyed partial reads this write moved, each with the ids of the read's key
+  /// table (Evidence graphs for "citations" and "evidence_graph_progress",
+  /// Sources for "evidence_graphs"): effects.Read values. Swift refreshes only
+  /// those keys' reads.
   public var reads: [Provenencia_Engine_V1_WriteEffectsRead] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -9539,7 +9543,7 @@ nonisolated extension Provenencia_Engine_V1_EvidenceGraph: SwiftProtobuf.Message
 
 nonisolated extension Provenencia_Engine_V1_ListEvidenceGraphsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ListEvidenceGraphsRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}source_id\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -9548,6 +9552,7 @@ nonisolated extension Provenencia_Engine_V1_ListEvidenceGraphsRequest: SwiftProt
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.projectDir) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.sourceID) }()
       default: break
       }
     }
@@ -9557,11 +9562,15 @@ nonisolated extension Provenencia_Engine_V1_ListEvidenceGraphsRequest: SwiftProt
     if !self.projectDir.isEmpty {
       try visitor.visitSingularStringField(value: self.projectDir, fieldNumber: 1)
     }
+    if !self.sourceID.isEmpty {
+      try visitor.visitSingularStringField(value: self.sourceID, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_ListEvidenceGraphsRequest, rhs: Provenencia_Engine_V1_ListEvidenceGraphsRequest) -> Bool {
     if lhs.projectDir != rhs.projectDir {return false}
+    if lhs.sourceID != rhs.sourceID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -15,6 +15,37 @@ struct EvidenceGraphIndex {
         bySource = Dictionary(grouping: rows, by: \.sourceID)
         linkedArtifactIDsBySource = bySource.mapValues { Set($0.flatMap(\.artifactIDs)) }
     }
+
+    private init(
+        revision: Int,
+        byID: [String: CatalogEvidenceGraph],
+        bySource: [String: [CatalogEvidenceGraph]],
+        linkedArtifactIDsBySource: [String: Set<String>]
+    ) {
+        self.revision = revision
+        self.byID = byID
+        self.bySource = bySource
+        self.linkedArtifactIDsBySource = linkedArtifactIDsBySource
+    }
+
+    /// The index after each given Source's graphs were replaced by the listed
+    /// ones (in that order); no other Source is touched.
+    func replacing(sources: [String: [CatalogEvidenceGraph]], revision: Int) -> EvidenceGraphIndex {
+        var byID = byID
+        var bySource = bySource
+        var linked = linkedArtifactIDsBySource
+        for (sourceID, graphs) in sources {
+            for old in bySource[sourceID] ?? [] {
+                byID[old.id] = nil
+            }
+            for graph in graphs where byID[graph.id] == nil {
+                byID[graph.id] = graph
+            }
+            bySource[sourceID] = graphs.isEmpty ? nil : graphs
+            linked[sourceID] = graphs.isEmpty ? nil : Set(graphs.flatMap(\.artifactIDs))
+        }
+        return EvidenceGraphIndex(revision: revision, byID: byID, bySource: bySource, linkedArtifactIDsBySource: linked)
+    }
 }
 
 /// Whether the graph list has a graph: `unknown` while the list cannot say (no
@@ -76,7 +107,20 @@ extension WorkspaceSession {
         if let index = evidenceGraphIndex, index.revision == handle.revision { return index }
         let index = EvidenceGraphIndex(revision: handle.revision, rows: rows)
         evidenceGraphIndex = index
+        evidenceGraphIndexBuildCount += 1
         return index
+    }
+
+    /// Carries the stored index across a merged re-read of some Sources'
+    /// graphs: when the index was current just before the merge and the merge
+    /// was the handle's only revision move, the index takes those Sources'
+    /// graphs in place. Otherwise nothing happens and the next read builds in
+    /// full.
+    func spliceEvidenceGraphIndex(_ parts: [String: [CatalogEvidenceGraph]], previousRevision: Int) {
+        guard let index = evidenceGraphIndex, index.revision == previousRevision,
+              let handle = evidenceGraphsHandle, handle.revision == previousRevision + 1
+        else { return }
+        evidenceGraphIndex = index.replacing(sources: parts, revision: handle.revision)
     }
 
     /// One graph by id; `nil` while the graph list has no value or has no such graph.

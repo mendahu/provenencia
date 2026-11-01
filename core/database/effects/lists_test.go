@@ -49,9 +49,9 @@ func TestResolveLists(t *testing.T) {
 		want    []effects.List
 	}{
 		{"graph then vocabulary", []rowchange.Change{graph, sourceType},
-			[]effects.List{effects.ListVocabulary, effects.ListEvidenceGraphs}},
-		{"repeated change adds one key", []rowchange.Change{graph, graph},
-			[]effects.List{effects.ListEvidenceGraphs}},
+			[]effects.List{effects.ListVocabulary}},
+		{"repeated change adds one key", []rowchange.Change{sourceType, sourceType},
+			[]effects.List{effects.ListVocabulary}},
 		{"observation text edit", []rowchange.Change{obs(rowchange.ActionUpdate, text)}, nil},
 		{"observation property edit", []rowchange.Change{obs(rowchange.ActionUpdate, prop)},
 			[]effects.List{effects.ListPropertyUsage}},

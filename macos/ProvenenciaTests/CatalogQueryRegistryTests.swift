@@ -443,7 +443,7 @@ struct CatalogQueryRegistryTests {
         #expect(registry.hiddenPolicy(.eventsList(project: project)) == .markStale)
         #expect(registry.hiddenPolicy(.placesList(project: project)) == .markStale)
         #expect(registry.hiddenPolicy(.sourcesList(project: project)) == .markStale)
-        #expect(registry.hiddenPolicy(.sourceWorkspace(project: project, sourceId: "s1")) == .revalidate)
+        #expect(registry.hiddenPolicy(.sourceWorkspace(project: project, sourceId: "s1")) == .markStale)
     }
 
     @Test func everyKindHasOneDescriptor() {
@@ -627,7 +627,7 @@ struct CatalogQueryRegistryTests {
         #expect(store.heldCatalogProjectDir == nil)
     }
 
-    @Test func applyCreatedSourceInvalidatesList() async {
+    @Test func applyCreatedSourceInsertsRow() async {
         let store = FakeStore()
         seedStore(store)
         let session = makeSession(store: store)
@@ -636,17 +636,14 @@ struct CatalogQueryRegistryTests {
         let handle: QueryHandle<[CatalogSource]> = session.query(key)
         await waitForQuery(handle)
 
-        store.sourcesByProject[projectDir] = [
-            CatalogSource(id: "s1", ref: "SRC-1", sourceTypeID: "", title: "Alpha", description: ""),
-            CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "", title: "New Row", description: ""),
-        ]
+        let callsBefore = store.listSourcesCalls
 
-        session.apply(.createdSource)
+        session.apply(.createdSource(CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "", title: "New Row", description: "")))
         let _: QueryHandle<[CatalogSource]> = session.query(key)
         await waitForQuery(handle)
-        #expect(handle.value?.count == 2)
-        // FakeStore listSources is newest-created-first (id DESC), matching Go.
-        #expect(handle.value?.map(\.title) == ["New Row", "Alpha"])
+        // The returned row is appended (the Sources list sorts for display); nothing reloads.
+        #expect(handle.value?.map(\.title) == ["Alpha", "New Row"])
+        #expect(store.listSourcesCalls == callsBefore)
     }
 
     /// T-14: a write's effects name the Evidence graphs to reload, one warmed key each
@@ -869,8 +866,7 @@ struct CatalogQueryRegistryTests {
         #expect(registry.invalidations(by: .updatedSource(source), project: project).isEmpty)
 
         // A new source moves a type's `usedBy`.
-        #expect(registry.invalidations(by: .createdSource, project: project) == [
-            .key(.sourcesList(project: project)),
+        #expect(registry.invalidations(by: .createdSource(source), project: project) == [
             .key(.sourceTypesList(project: project)),
         ])
         #expect(registry.invalidations(by: .deletedSource(id: "s1"), project: project) == [
@@ -878,7 +874,6 @@ struct CatalogQueryRegistryTests {
             .key(.sourceTypesList(project: project)),
             .key(.sourceWorkspace(project: project, sourceId: "s1")),
             .allCached(.evidenceGraph),
-            .key(.evidenceGraphsList(project: project)),
             .key(.personsList(project: project)),
             .key(.eventsList(project: project)),
             .key(.placesList(project: project)),
@@ -948,6 +943,10 @@ struct CatalogQueryRegistryTests {
             CatalogQueryKey.Kind.evidenceGraphProgress.descriptor.refreshes.map(\.follows)
                 == [.reads(.evidenceGraphProgress)]
         )
+        #expect(
+            CatalogQueryKey.Kind.evidenceGraphsList.descriptor.refreshes.map(\.follows)
+                == [.reads(.evidenceGraphs)]
+        )
         // The effect slots a key follows are declared on its kind.
         #expect(CatalogQueryKey.Kind.evidenceGraph.descriptor.refreshes.map(\.follows) == [.evidenceGraphs])
         for kind in [CatalogQueryKey.Kind.personsList, .eventsList, .placesList] {
@@ -983,7 +982,7 @@ struct CatalogQueryRegistryTests {
         ])
         // Grades are seeded vocabulary with no CRUD surface, so nothing stales them.
         let everyMutation: [CatalogMutation] = [
-            .updatedSource(source), .changedSourceType(source), .createdSource, .deletedSource(id: "s1"),
+            .updatedSource(source), .changedSourceType(source), .createdSource(source), .deletedSource(id: "s1"),
             .createdSourceType, .updatedSourceType(id: "t1"), .deletedSourceType(id: "t1"),
             .createdMetadataField, .updatedMetadataField(id: "f1"), .deletedMetadataField(id: "f1"),
             .assignedTypeSuggestion(typeId: "t1"), .removedTypeSuggestion(typeId: "t1"),
@@ -1195,7 +1194,7 @@ struct CatalogQueryRegistryTests {
         #expect(handle.value?.first?.usedBy == 0)
 
         store.sourceTypesByProject[projectDir]?[0].usedBy = 1
-        session.apply(.createdSource)
+        session.apply(.createdSource(CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "", title: "New Row", description: "")))
 
         let _: QueryHandle<[CatalogSourceType]> = session.query(key)
         await waitForQuery(handle)
@@ -1250,21 +1249,19 @@ struct CatalogQueryRegistryTests {
         let lists: Set<CatalogList>
         let structure: Bool
         let propertiesInvalidations: Int
-        let graphListInvalidations: Int
 
         var testDescription: String { name }
     }
 
     nonisolated private static let listCases: [ListCase] = [
-        ListCase(name: "vocabulary", lists: [.vocabulary], structure: false, propertiesInvalidations: 1, graphListInvalidations: 0),
-        ListCase(name: "property usage", lists: [.propertyUsage], structure: false, propertiesInvalidations: 1, graphListInvalidations: 0),
+        ListCase(name: "vocabulary", lists: [.vocabulary], structure: false, propertiesInvalidations: 1),
+        ListCase(name: "property usage", lists: [.propertyUsage], structure: false, propertiesInvalidations: 1),
         ListCase(
             name: "vocabulary and property usage", lists: [.vocabulary, .propertyUsage],
-            structure: false, propertiesInvalidations: 1, graphListInvalidations: 0
+            structure: false, propertiesInvalidations: 1
         ),
-        ListCase(name: "structure alone", lists: [], structure: true, propertiesInvalidations: 1, graphListInvalidations: 0),
-        ListCase(name: "vocabulary and structure", lists: [.vocabulary], structure: true, propertiesInvalidations: 1, graphListInvalidations: 0),
-        ListCase(name: "evidence graphs alone", lists: [.evidenceGraphs], structure: false, propertiesInvalidations: 0, graphListInvalidations: 1),
+        ListCase(name: "structure alone", lists: [], structure: true, propertiesInvalidations: 1),
+        ListCase(name: "vocabulary and structure", lists: [.vocabulary], structure: true, propertiesInvalidations: 1),
     ]
 
     @Test(arguments: listCases)
@@ -1275,7 +1272,6 @@ struct CatalogQueryRegistryTests {
             project: project
         )
         #expect(got.filter { $0 == .key(.propertiesWorkspace(project: project)) }.count == tc.propertiesInvalidations)
-        #expect(got.filter { $0 == .key(.evidenceGraphsList(project: project)) }.count == tc.graphListInvalidations)
     }
 
     @Test func evidenceGraphsListLoadsFromStore() async throws {
@@ -1292,10 +1288,12 @@ struct CatalogQueryRegistryTests {
         #expect(handle.value == [graph])
     }
 
-    @Test func deletedSourceInvalidatesEvidenceGraphsList() {
+    /// T-14: a hidden graph canvas and a hidden Source page go stale; they do not reload.
+    @Test func graphAndSourcePageKeysMarkStaleWhenHidden() {
         let project = ProjectKey(projectDir: projectDir)
-        let got = CatalogQueryRegistry.standard.invalidations(by: .deletedSource(id: "s1"), project: project)
-        #expect(got.contains(.key(.evidenceGraphsList(project: project))))
+        let registry = CatalogQueryRegistry.standard
+        #expect(registry.hiddenPolicy(.evidenceGraph(project: project, graphId: "g-1")) == .markStale)
+        #expect(registry.hiddenPolicy(.sourceWorkspace(project: project, sourceId: "s1")) == .markStale)
     }
 
     @Test func evidenceGraphsListMarksStaleWhenHidden() {

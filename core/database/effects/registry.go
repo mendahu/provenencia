@@ -40,20 +40,26 @@ const (
 	// ReadEvidenceGraphProgress: the Subject, filed and Observation counts of
 	// a graph.
 	ReadEvidenceGraphProgress Read = "evidence_graph_progress"
+	// ReadEvidenceGraphs: the graphs of a Source, with their linked Artifacts
+	// (the graph list).
+	ReadEvidenceGraphs Read = "evidence_graphs"
 )
 
 // KeyTable is the table whose ids key the read: Evidence graphs for
-// citations and evidence_graph_progress. "" for an unknown read.
+// citations and evidence_graph_progress, Sources for evidence_graphs. "" for
+// an unknown read.
 func (r Read) KeyTable() string {
 	switch r {
 	case ReadCitations, ReadEvidenceGraphProgress:
 		return "evidence_graphs"
+	case ReadEvidenceGraphs:
+		return "sources"
 	}
 	return ""
 }
 
 // Reads is every keyed read, in the order Set.Reads reports them.
-var Reads = []Read{ReadCitations, ReadEvidenceGraphProgress}
+var Reads = []Read{ReadCitations, ReadEvidenceGraphProgress, ReadEvidenceGraphs}
 
 // ReadPath is one keyed read: Read says which, Path says whose key ids (it
 // ends at Read.KeyTable()).
@@ -81,12 +87,10 @@ const (
 	// ListPropertyUsage: an Observation was created, deleted, or moved to
 	// another Property, so the Properties workspace's usedBy counts changed.
 	ListPropertyUsage List = "property_usage"
-	// ListEvidenceGraphs: a graph or link row was written.
-	ListEvidenceGraphs List = "evidence_graphs"
 )
 
 // Lists is every catalog-wide list, in the order Set.Lists reports them.
-var Lists = []List{ListVocabulary, ListPropertyUsage, ListEvidenceGraphs}
+var Lists = []List{ListVocabulary, ListPropertyUsage}
 
 // Set is what a batch of changes touches. Empty Handles or Search means that
 // job has nothing to do. Lists and Structure are the catalog-wide fields.
@@ -329,14 +333,14 @@ var registry = map[string]Effect{
 	"evidence_graphs": {
 		Entity:        "evidence_graph",
 		EvidenceGraph: self(),
+		Reads:         []ReadPath{{ReadEvidenceGraphs, field("source_id")}},
 		SourceScope:   field("source_id"),
-		Lists:         []List{ListEvidenceGraphs},
 		Search:        []SearchDoc{{Kind: DocEvidenceGraph, Path: self()}},
 	},
 	"evidence_graph_artifacts": {
 		Entity:      "evidence_graph_artifact",
+		Reads:       []ReadPath{{ReadEvidenceGraphs, up("graph_id", "source_id")}},
 		SourceScope: up("graph_id", "source_id"),
-		Lists:       []List{ListEvidenceGraphs},
 	},
 	"files": {
 		Entity:      "file",

@@ -456,7 +456,7 @@ private struct ThrowingStore: GenealogyStore {
         path _: String
     ) async throws
         -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool, effects: CatalogWriteEffects) { throw StoreBoom.boom }
-    func listEvidenceGraphs(projectDir _: String) async throws -> [CatalogEvidenceGraph] { throw StoreBoom.boom }
+    func listEvidenceGraphs(projectDir _: String, sourceID _: String?) async throws -> [CatalogEvidenceGraph] { throw StoreBoom.boom }
     func createEvidenceGraph(
         projectDir _: String,
         userID _: String,

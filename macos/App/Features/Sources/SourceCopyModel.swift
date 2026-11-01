@@ -140,7 +140,7 @@ final class SourceCopyModel {
                 copyCredibility: choices.includeCredibility && credibilityAvailable,
                 artifactIDs: artifactIDsToCopy
             )
-            session.apply(effects, .createdSource)
+            session.apply(effects, .createdSource(copy))
             return copy
         } catch {
             copyError = L10n.Errors.message(for: error)

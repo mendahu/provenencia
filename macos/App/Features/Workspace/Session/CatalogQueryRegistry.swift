@@ -125,8 +125,6 @@ struct CatalogQueryRegistry: Sendable {
         switch list {
         case .vocabulary, .propertyUsage:
             return [.key(.propertiesWorkspace(project: project))]
-        case .evidenceGraphs:
-            return [.key(.evidenceGraphsList(project: project))]
         }
     }
 
@@ -182,12 +180,12 @@ extension CatalogQueryKey.Kind {
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [.createdSource, .deletedSource],
+                invalidateOn: [.deletedSource],
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.sourcesList(project: project)) },
                 patches: [
                     .lastUpdated(CatalogSource.self, follows: .source),
-                    .updatedSourceRow(),
+                    .sourceRow(),
                 ],
                 load: { key, store in
                     guard case .sourcesList(let project) = key else {
@@ -260,6 +258,7 @@ extension CatalogQueryKey.Kind {
                     .assignedTypeSuggestion, .removedTypeSuggestion,
                     .deletedSource,
                 ],
+                whenHidden: .markStale,
                 invalidation: { project, mutation in
                     switch mutation {
                     case .mutatedSourceWorkspace(let sourceId), .mutatedSourceMetadata(let sourceId),
@@ -280,12 +279,15 @@ extension CatalogQueryKey.Kind {
                 }
             )
         case .evidenceGraph:
-            // Writes that report effects reload the graphs they name
-            // (`WriteEffects.evidenceGraphs`); Promote reports none.
+            // Writes that report effects name the graphs they move
+            // (`WriteEffects.evidenceGraphs`); Promote reports none. The graph
+            // on screen reloads; a visited graph that is hidden goes stale and
+            // reloads when its canvas, composer or Promote is shown again.
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [.deletedSource, .promotedSubject],
+                whenHidden: .markStale,
                 invalidation: { project, mutation in
                     if let graphId = mutation.evidenceGraphId {
                         return .key(.evidenceGraph(project: project, graphId: graphId))
@@ -458,35 +460,31 @@ extension CatalogQueryKey.Kind {
                 }
             )
         case .evidenceGraphProgress:
-            // Canvas writes patch one graph via Get + setQueryValue — do not
-            // restale the project-wide map (or sourcesList).
+            // A write re-reads the counts of the graphs it names and merges them
+            // into the warmed map (`.merged`); it does not restale the
+            // project-wide map (or sourcesList). It keeps merging while hidden.
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [],
                 invalidation: { project, _ in .key(.evidenceGraphProgress(project: project)) },
-                refreshes: [CatalogQueryRefresh(follows: .reads(.evidenceGraphProgress)) { session, key, ids in
-                    for graphId in ids {
-                        guard let _: QueryHandle<[String: EvidenceGraphProgress]> = session.queryHandle(key) else {
-                            return
-                        }
-                        do {
-                            let one = try await session.store.getEvidenceGraphProgress(
-                                projectDir: key.project.projectDir,
-                                graphID: graphId
-                            )
-                            var map: [String: EvidenceGraphProgress] = session.queryHandle(key)?.value ?? [:]
-                            if one.isZero {
-                                map.removeValue(forKey: graphId)
-                            } else {
-                                map[graphId] = one
-                            }
-                            session.setQueryValue(key, value: map)
-                        } catch {
-                            // Keep last counts; the next mutation or the next place visit that warms it retries.
+                refreshes: [.merged(
+                    follows: .reads(.evidenceGraphProgress),
+                    as: [String: EvidenceGraphProgress].self,
+                    read: { session, key, graphId in
+                        try await session.store.getEvidenceGraphProgress(
+                            projectDir: key.project.projectDir,
+                            graphID: graphId
+                        )
+                    },
+                    merge: { map, graphId, one in
+                        if one.isZero {
+                            map.removeValue(forKey: graphId)
+                        } else {
+                            map[graphId] = one
                         }
                     }
-                }],
+                )],
                 load: { key, store in
                     guard case .evidenceGraphProgress(let project) = key else {
                         mismatchedCatalogKey(key, .evidenceGraphProgress)
@@ -500,21 +498,39 @@ extension CatalogQueryKey.Kind {
                 }
             )
         case .evidenceGraphsList:
-            // Graph and link writes report the `evidence_graphs` list in
-            // `WriteEffects`; `deleteSource` reports none, so `.deletedSource` drops it.
-            // A visible key still revalidates (`WorkspaceSession.apply`);
-            // a hidden list just goes stale until it is shown again.
+            // Graph and link writes report the `evidence_graphs` read for their
+            // Source (`WriteEffects.reads`), and the arm re-reads that Source's
+            // graphs and merges them into the warmed list. `deleteSource` reports
+            // none, so `CatalogMutation.readIDs(for:)` names the deleted Source.
+            // A hidden list goes stale until it is shown again.
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [.deletedSource],
+                invalidateOn: [],
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.evidenceGraphsList(project: project)) },
+                refreshes: [.merged(
+                    follows: .reads(.evidenceGraphs),
+                    as: [CatalogEvidenceGraph].self,
+                    read: { session, key, sourceId in
+                        try await session.store.listEvidenceGraphs(
+                            projectDir: key.project.projectDir,
+                            sourceID: sourceId
+                        )
+                    },
+                    merge: { rows, sourceId, part in
+                        rows.removeAll { $0.sourceID == sourceId }
+                        rows.append(contentsOf: part)
+                    },
+                    afterMerge: { session, _, parts, previous in
+                        session.spliceEvidenceGraphIndex(parts, previousRevision: previous)
+                    }
+                )],
                 load: { key, store in
                     guard case .evidenceGraphsList(let project) = key else {
                         mismatchedCatalogKey(key, .evidenceGraphsList)
                     }
-                    return try await store.listEvidenceGraphs(projectDir: project.projectDir)
+                    return try await store.listEvidenceGraphs(projectDir: project.projectDir, sourceID: nil)
                 }
             )
         case .personsList:

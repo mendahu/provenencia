@@ -1177,7 +1177,8 @@ protocol GenealogyStore: Sendable {
         artifactID: String,
         path: String
     ) async throws -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool, effects: CatalogWriteEffects)
-    func listEvidenceGraphs(projectDir: String) async throws -> [CatalogEvidenceGraph]
+    /// The project's graphs, or one Source's when `sourceID` is set.
+    func listEvidenceGraphs(projectDir: String, sourceID: String?) async throws -> [CatalogEvidenceGraph]
     func createEvidenceGraph(
         projectDir: String,
         userID: String,
