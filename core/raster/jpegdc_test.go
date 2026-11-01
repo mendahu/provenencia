@@ -8,6 +8,8 @@ import (
 	"image/color"
 	"image/jpeg"
 	"math"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/raster/rastertest"
@@ -377,4 +379,66 @@ func TestJPEGDCHuffman(t *testing.T) {
 	if _, err := newHuffTable(counts, dht[17:17+total], dht[0]>>4 == 0); err != nil {
 		t.Fatalf("first DHT of video-001.jpeg: %v", err)
 	}
+}
+
+// FuzzDecodeJPEGDC feeds arbitrary bytes to the reduced decoder: it must not
+// panic, and a success must be the 1/8-scale size the frame header declares.
+func FuzzDecodeJPEGDC(f *testing.F) {
+	for _, name := range append([]string{"video-001.cmyk.jpeg"}, decodableFixtures...) {
+		b, err := os.ReadFile(filepath.Join("testdata", "third_party", "go", name))
+		if err != nil {
+			f.Fatal(err)
+		}
+		f.Add(b)
+	}
+	grad := image.NewRGBA(image.Rect(0, 0, 37, 21))
+	for y := 0; y < 21; y++ {
+		for x := 0; x < 37; x++ {
+			grad.Set(x, y, color.RGBA{R: uint8(x * 7), G: uint8(y * 11), B: uint8(x + y), A: 255})
+		}
+	}
+	for _, q := range []int{10, 90} {
+		var buf bytes.Buffer
+		if err := jpeg.Encode(&buf, grad, &jpeg.Options{Quality: q}); err != nil {
+			f.Fatal(err)
+		}
+		f.Add(buf.Bytes())
+	}
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, image.NewGray(image.Rect(0, 0, 16, 16)), nil); err != nil {
+		f.Fatal(err)
+	}
+	f.Add(buf.Bytes())
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		img, err := decodeJPEGDC(data, 1<<20)
+		if err != nil {
+			if img != nil {
+				t.Fatal("image returned with an error")
+			}
+			return
+		}
+		b := img.Bounds()
+		if int64(b.Dx())*int64(b.Dy()) > 1<<20 {
+			t.Fatalf("bounds %v over the budget", b)
+		}
+		segs, err := jpegSegments(data)
+		if err != nil {
+			return
+		}
+		var sof []segment
+		for _, s := range segs {
+			if s.marker >= 0xC0 && s.marker <= 0xC2 {
+				sof = append(sof, s)
+			}
+		}
+		if len(sof) != 1 || len(sof[0].payload) < 5 {
+			return
+		}
+		p := sof[0].payload
+		h, w := int(p[1])<<8|int(p[2]), int(p[3])<<8|int(p[4])
+		if b.Dx() != (w+7)/8 || b.Dy() != (h+7)/8 {
+			t.Fatalf("bounds %v, want %dx%d", b, (w+7)/8, (h+7)/8)
+		}
+	})
 }
