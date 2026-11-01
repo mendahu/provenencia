@@ -8,7 +8,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
@@ -49,12 +48,7 @@ func CreateCitedBridge(in []byte) ([]byte, error) {
 		return nil, err
 	}
 	var out *engine.CreateCitedBridgeResponse
-	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		discard, err := ingest.StageDepictions(c, inputs)
-		if err != nil {
-			return err
-		}
-		defer discard()
+	err = withStagedDepictions(req.GetProjectDir(), inputs, func(c *database.Catalog) error {
 		res, wrote, err := writes.Run(c, writes.Op{Action: "create_cited_bridge", UserID: userID},
 			func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 				return connect.CreateCitedBridge(tx, userID, connect.CreateInput{

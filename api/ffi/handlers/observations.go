@@ -8,7 +8,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
@@ -60,12 +59,7 @@ func UpdateObservation(in []byte) ([]byte, error) {
 	}
 	input.Depiction = depictionInput(req.GetDepictionInput())
 	var out *engine.UpdateObservationResponse
-	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		discard, err := ingest.StageDepictions(c, []observations.Input{input})
-		if err != nil {
-			return err
-		}
-		defer discard()
+	err = withStagedDepictions(req.GetProjectDir(), []observations.Input{input}, func(c *database.Catalog) error {
 		row, wrote, err := writes.Run(c, writes.Op{Action: "update_observation", UserID: userID},
 			func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 				return observations.Update(tx, userID, input)
@@ -139,12 +133,7 @@ func AddObservationsToCitation(in []byte) ([]byte, error) {
 		return nil, err
 	}
 	var out *engine.AddObservationsToCitationResponse
-	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		discard, err := ingest.StageDepictions(c, inputs)
-		if err != nil {
-			return err
-		}
-		defer discard()
+	err = withStagedDepictions(req.GetProjectDir(), inputs, func(c *database.Catalog) error {
 		rows, wrote, err := writes.Run(c, writes.Op{Action: "add_observations", UserID: userID},
 			func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
 				return observations.AddToCitation(tx, userID, citationID, inputs)

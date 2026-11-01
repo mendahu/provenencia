@@ -174,7 +174,7 @@ type Input struct {
 	ValueNameID    []byte
 	ValueSubjectID []byte
 	ValueTermID    []byte
-	Depiction      *DepictionInput // staged by ingest.StageDepictions before the write
+	Depiction      *DepictionInput // staged by withStagedDepictions before the session
 	// ValueDepictionID is the Observation's own depiction_values.id, kept on an
 	// update that sets no Depiction. A value row has one owner.
 	ValueDepictionID []byte

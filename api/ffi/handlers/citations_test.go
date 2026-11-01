@@ -14,6 +14,7 @@ import (
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/catalogsession/catalogsessiontest"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/ingest"
@@ -1387,5 +1388,70 @@ func TestDeleteObservation(t *testing.T) {
 				assertLatestAuditAction(t, dr.ProjectDir, "delete_observation")
 			},
 		},
+	})
+}
+
+func TestDepictionStagesBeforeSession(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+
+	t.Run("the PNG is staged while another call holds the session", func(t *testing.T) {
+		dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
+		crop := writeCrop(t, 300, 200, 128)
+		graphID := graphLinking(t, dir, artifactID)
+		release := catalogsessiontest.Hold(t, dir)
+		type result struct {
+			out []byte
+			err error
+		}
+		done := make(chan result, 1)
+		go func() {
+			out, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+				ProjectDir: dir, UserId: userID, ArtifactId: artifactID, GraphId: graphID, LocatorJson: likenessLocatorJSON,
+				Observations: []*engine.ObservationDraft{likenessDraft(personID, likenessID, likenessRegionJSON, crop)},
+			}))
+			done <- result{out, err}
+		}()
+		waitForTemp(t, dir, ".stage-", 1)
+		release()
+		res := <-done
+		if res.err != nil {
+			t.Fatal(res.err)
+		}
+		var created engine.CreateCitationWithObservationsResponse
+		if err := proto.Unmarshal(res.out, &created); err != nil {
+			t.Fatal(err)
+		}
+		if len(created.Observations) != 1 {
+			t.Fatalf("observations %+v", created.Observations)
+		}
+		checkSavedLikeness(t, dir, created.Observations[0])
+		if temps := objectTemps(t, dir, ".stage-"); len(temps) != 0 {
+			t.Fatalf("temps left: %v", temps)
+		}
+
+		// An unblocked run on a fresh project stores the same object path.
+		dir2, userID2, _, artifactID2, personID2, likenessID2 := likenessFixture(t)
+		plain := saveLikeness(t, dir2, userID2, artifactID2, personID2, likenessID2, crop)
+		if got, want := created.Observations[0].GetDepiction().GetImageRelPath(), plain.Observations[0].GetDepiction().GetImageRelPath(); got != want {
+			t.Fatalf("image path %q, unblocked run %q", got, want)
+		}
+	})
+
+	t.Run("a refused write leaves no object and no temp", func(t *testing.T) {
+		dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
+		before := objectRelPaths(t, dir)
+		_, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+			ProjectDir: dir, UserId: userID, ArtifactId: artifactID, GraphId: graphLinking(t, dir, artifactID), LocatorJson: `{}`,
+			Observations: []*engine.ObservationDraft{likenessDraft(personID, likenessID, likenessRegionJSON, writeCrop(t, 300, 200, 128))},
+		}))
+		if err == nil {
+			t.Fatal("expected the write to be refused")
+		}
+		if got := objectRelPaths(t, dir); !slices.Equal(got, before) {
+			t.Fatalf("objects %v, want %v", got, before)
+		}
+		if temps := objectTemps(t, dir, ".stage-"); len(temps) != 0 {
+			t.Fatalf("temps left: %v", temps)
+		}
 	})
 }

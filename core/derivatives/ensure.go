@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
+	"io/fs"
 	"strings"
 
 	"github.com/google/uuid"
@@ -16,18 +17,15 @@ import (
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
+	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/objectstore"
 	"github.com/mendahu/provenencia/core/raster"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
-// errDerivedFileExists is returned from the insert closure when the derived
-// file checksum loses a race. Ensure starts a second Run after that returns.
-// errDerivativeLinkExists is the same for a file_derivatives unique conflict.
-var (
-	errDerivedFileExists    = errors.New("derivatives: derived file already stored")
-	errDerivativeLinkExists = errors.New("derivatives: derivative link already stored")
-)
+// errDerivativeLinkExists is returned from the insert closure on a
+// file_derivatives unique conflict. Commit looks the link up after that returns.
+var errDerivativeLinkExists = errors.New("derivatives: derivative link already stored")
 
 var ErrInvalid = apperr.New(apperr.CodeFileDerivativesInvalid, apperr.KindUser)
 
@@ -64,114 +62,128 @@ type Result struct {
 	Skipped bool // true when media type is not a supported raster image
 }
 
-// EnsureThumbnail creates or returns the default thumbnail derivative.
-// See Ensure for the authorization contract on sourceFileID.
+// EnsureThumbnail creates or returns the default thumbnail derivative. Like
+// Ensure it decodes inside the caller's catalog session, so it is for tests
+// and fixtures only. See Ensure for the authorization contract on sourceFileID.
 func EnsureThumbnail(c *database.Catalog, sourceFileID []byte) (Result, error) {
 	return Ensure(c, sourceFileID, ThumbnailSpec())
 }
 
-// Ensure creates or returns the derivative described by spec.
-// Non-supported media types return Skipped without error. Generation is not audited.
+// Job is the file work of one derivative that Plan found missing: the source
+// File and its object, and the spec to make. Job.Stage does the decode and
+// encode outside the catalog session; Commit stores the result inside it.
+type Job struct {
+	sourceFileID []byte
+	spec         Spec
+	rel          string // the source object's path
+	checksum     string // the source File's checksum when planned
+	staged       *ingest.Staged
+}
+
+// Plan is Ensure up to the decode. It returns a final Result and a nil Job
+// when there is nothing to decode (a non-raster File is Skipped; an existing
+// link is returned), or a Job whose Stage and Commit make the derivative.
+// Non-supported media types return Skipped without error.
 //
-// Authorization: Ensure trusts sourceFileID. Callers — especially future FFI
-// handlers — must first verify the requester may access that File (e.g. via
-// its artifact/source chain) before invoking derivative generation.
-func Ensure(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, error) {
+// Authorization: Plan trusts sourceFileID. Callers must first verify the
+// requester may access that File (e.g. via its artifact/source chain).
+func Plan(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, *Job, error) {
 	spec.Type = strings.TrimSpace(spec.Type)
 	if len(sourceFileID) != 16 || spec.Type == "" ||
 		spec.Raster.MaxEdge < 1 || spec.Raster.MaxEdge > raster.MaxEdgeLimit {
-		return Result{}, ErrInvalid
+		return Result{}, nil, ErrInvalid
 	}
 	src, err := files.Lookup(c, sourceFileID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Result{}, nil, ErrInvalid
+		}
+		return Result{}, nil, err
+	}
+	if !raster.Supported(src.MediaType) {
+		return Result{Skipped: true}, nil, nil
+	}
+
+	if existing, err := filederivatives.Lookup(c, sourceFileID, spec.Type); err == nil {
+		return Result{Link: existing}, nil, nil
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		return Result{}, nil, err
+	}
+
+	if src.ByteSize > raster.MaxDecodeBytes {
+		return Result{}, nil, ErrUnprocessable
+	}
+
+	rel, err := files.ReadRelPath(src)
+	if err != nil {
+		return Result{}, nil, err
+	}
+	if rel == "" {
+		// A stored type off the allowlist has no object path to read.
+		return Result{}, nil, ErrUnprocessable
+	}
+	return Result{}, &Job{
+		sourceFileID: append([]byte(nil), sourceFileID...),
+		spec:         spec,
+		rel:          rel,
+		checksum:     src.ChecksumSHA256,
+	}, nil
+}
+
+// Stage reads the source object (bounded and checksum-verified), decodes and
+// encodes the derivative, and writes it to a temp file in the objects folder.
+// It reads no catalog row, so it runs outside the catalog session. The stage
+// is kept on the Job for Commit and returned so the caller can add it to its
+// ingest.Stages.
+func (j *Job) Stage(projectDir string) (*ingest.Staged, error) {
+	derivedJPEG, err := generate(projectDir, j.rel, j.checksum, j.spec.Raster)
+	if err != nil {
+		return nil, err
+	}
+	s, err := ingest.StageBytes(projectDir, derivedJPEG, "image/jpeg")
+	if err != nil {
+		return nil, err
+	}
+	j.staged = s
+	return s, nil
+}
+
+// Commit stores a staged Job inside the catalog session, outside any write:
+// the derived File row (unaudited) and the link in one Run. A source File that
+// is gone or whose checksum changed since Plan is ErrInvalid; a link made
+// meanwhile is returned and the stage is left unused. It purges nothing: the
+// caller defers ingest.Stages.Settle inside the session.
+func Commit(c *database.Catalog, j *Job) (Result, error) {
+	if j == nil || j.staged == nil {
+		return Result{}, ErrInvalid
+	}
+	src, err := files.Lookup(c, j.sourceFileID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Result{}, ErrInvalid
 		}
 		return Result{}, err
 	}
-	if !raster.Supported(src.MediaType) {
-		return Result{Skipped: true}, nil
+	if src.ChecksumSHA256 != j.checksum {
+		return Result{}, ErrInvalid
 	}
-
-	if existing, err := filederivatives.Lookup(c, sourceFileID, spec.Type); err == nil {
+	if existing, err := filederivatives.Lookup(c, j.sourceFileID, j.spec.Type); err == nil {
 		return Result{Link: existing}, nil
-	} else if !errors.Is(err, sql.ErrNoRows) {
-		return Result{}, err
-	}
-
-	if src.ByteSize > raster.MaxDecodeBytes {
-		return Result{}, ErrUnprocessable
-	}
-
-	rel, err := files.ReadRelPath(src)
-	if err != nil {
-		return Result{}, err
-	}
-	if rel == "" {
-		// A stored type off the allowlist has no object path to read.
-		return Result{}, ErrUnprocessable
-	}
-	derivedJPEG, err := generate(c.Dir(), rel, src.ChecksumSHA256, spec.Raster)
-	if err != nil {
-		return Result{}, err
-	}
-
-	sum := sha256.Sum256(derivedJPEG)
-	checksum := hex.EncodeToString(sum[:])
-	derivedRel, err := files.StorageRelPath(checksum, "image/jpeg")
-	if err != nil {
-		return Result{}, err
-	}
-	if _, err := objectstore.WriteIfAbsent(c.Dir(), derivedRel, checksum, derivedJPEG); err != nil {
-		return Result{}, err
-	}
-
-	// LookupByChecksum uses another pool connection and deadlocks while a Run
-	// transaction is open. Resolve the derived File id before Run.
-	var derivedID []byte
-	if existing, err := files.LookupByChecksum(c, checksum); err == nil {
-		derivedID = append([]byte(nil), existing.ID...)
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return Result{}, err
 	}
 
 	var afterErr error
 	link, _, err := writes.Run(c, writes.Op{}, func(tx *database.Tx) (filederivatives.Link, []rowchange.Change, error) {
-		fileID := derivedID
-		if fileID == nil {
-			id, err := files.NewID()
-			if err != nil {
-				return filederivatives.Link{}, nil, err
-			}
-			row := files.File{
-				ID:             id,
-				ChecksumSHA256: checksum,
-				MediaType:      "image/jpeg",
-				ByteSize:       int64(len(derivedJPEG)),
-			}
-			if err := files.Insert(tx.Tx, row); err != nil {
-				if files.IsUniqueConflict(err) {
-					return filederivatives.Link{}, nil, errDerivedFileExists
-				}
-				return filederivatives.Link{}, nil, err
-			}
-			fileID = append([]byte(nil), id...)
-		}
-		link, changes, err := insertDerivativeLink(tx, c, sourceFileID, fileID, spec.Type, &afterErr)
+		// The derived File stays unaudited: InsertTx's file change is dropped.
+		derived, _, err := j.staged.InsertTx(tx.Tx)
 		if err != nil {
 			return filederivatives.Link{}, nil, err
 		}
-		return link, changes, nil
+		return insertDerivativeLink(tx, c, j.sourceFileID, derived.ID, j.spec.Type, &afterErr)
 	})
-	if errors.Is(err, errDerivedFileExists) {
-		existing, lookupErr := files.LookupByChecksum(c, checksum)
-		if lookupErr != nil {
-			return Result{}, lookupErr
-		}
-		return insertLinkOnly(c, sourceFileID, existing.ID, spec.Type)
-	}
 	if errors.Is(err, errDerivativeLinkExists) {
-		existing, lookupErr := filederivatives.Lookup(c, sourceFileID, spec.Type)
+		existing, lookupErr := filederivatives.Lookup(c, j.sourceFileID, j.spec.Type)
 		if lookupErr != nil {
 			return Result{}, lookupErr
 		}
@@ -184,6 +196,33 @@ func Ensure(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, error)
 		return Result{}, afterErr
 	}
 	return Result{Link: link}, nil
+}
+
+// Refused reports whether err means the File gets no derivative and the caller
+// shows none: the image cannot be decoded safely, its object is corrupt, or
+// the File is gone or not a valid source. It is the one "show no thumbnail"
+// test.
+func Refused(err error) bool {
+	return errors.Is(err, ErrUnprocessable) || errors.Is(err, ErrCorruptObject) || errors.Is(err, ErrInvalid)
+}
+
+// Ensure creates or returns the derivative described by spec: Plan, Stage,
+// Commit. Generation is not audited. It decodes inside the caller's catalog
+// session, so it is for tests and fixtures only; a handler plans in one
+// session, stages outside it, and commits in the next (thumbnailPass in
+// api/ffi/handlers).
+func Ensure(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, error) {
+	res, job, err := Plan(c, sourceFileID, spec)
+	if err != nil || job == nil {
+		return res, err
+	}
+	staged, err := job.Stage(c.Dir())
+	if err != nil {
+		return Result{}, err
+	}
+	stages := ingest.Stages{staged}
+	defer stages.Settle(c)
+	return Commit(c, job)
 }
 
 // generate reads the source object (bounded and checksum-verified) and
@@ -210,12 +249,17 @@ func generate(projectDir, rel, wantChecksum string, opts raster.Options) ([]byte
 // readSourceObject reads at most raster.MaxDecodeBytes from the object at rel and
 // verifies the bytes against the catalog checksum before they reach any
 // decoder. An object that is not a regular file, or a symlinked objects
-// folder, is ErrCorruptObject.
+// folder, is ErrCorruptObject. An object that is gone (its File was deleted
+// after Plan) is ErrInvalid.
 func readSourceObject(projectDir, rel, wantChecksum string) ([]byte, error) {
 	f, err := objectstore.OpenObject(projectDir, rel)
 	if err != nil {
 		if errors.Is(err, objectstore.ErrNotRegular) || errors.Is(err, objectstore.ErrUnsafeObjects) {
 			return nil, ErrCorruptObject
+		}
+		if errors.Is(err, fs.ErrNotExist) {
+			// The File was deleted and its object purged after Plan.
+			return nil, ErrInvalid
 		}
 		return nil, err
 	}
@@ -231,38 +275,6 @@ func readSourceObject(projectDir, rel, wantChecksum string) ([]byte, error) {
 		return nil, ErrCorruptObject
 	}
 	return raw, nil
-}
-
-// insertLinkOnly inserts the derivative link for a File that already exists.
-// Call it only after the previous Run has returned.
-func insertLinkOnly(c *database.Catalog, sourceFileID, derivedID []byte, derivativeType string) (Result, error) {
-	if existing, err := filederivatives.Lookup(c, sourceFileID, derivativeType); err == nil {
-		return Result{Link: existing}, nil
-	} else if !errors.Is(err, sql.ErrNoRows) {
-		return Result{}, err
-	}
-	var afterErr error
-	link, _, err := writes.Run(c, writes.Op{}, func(tx *database.Tx) (filederivatives.Link, []rowchange.Change, error) {
-		link, changes, err := insertDerivativeLink(tx, c, sourceFileID, derivedID, derivativeType, &afterErr)
-		if err != nil {
-			return filederivatives.Link{}, nil, err
-		}
-		return link, changes, nil
-	})
-	if errors.Is(err, errDerivativeLinkExists) {
-		existing, lookupErr := filederivatives.Lookup(c, sourceFileID, derivativeType)
-		if lookupErr != nil {
-			return Result{}, lookupErr
-		}
-		return Result{Link: existing}, nil
-	}
-	if err != nil {
-		return Result{}, err
-	}
-	if afterErr != nil {
-		return Result{}, afterErr
-	}
-	return Result{Link: link}, nil
 }
 
 // insertDerivativeLink writes one file_derivatives row and registers search

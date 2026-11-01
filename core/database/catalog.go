@@ -183,6 +183,16 @@ func (c *Catalog) Graph() *graphcache.Graph {
 	return c.graph
 }
 
+// RequireProject reports whether dir is a project folder, with exactly the
+// error Open gives when it is not: the os.Stat error for a missing folder,
+// ErrNotAProject for a file or a folder with no catalog. Staging code that
+// writes into a project's objects folder outside a session calls it first, so
+// a folder that is not a project never gains an objects folder.
+func RequireProject(dir string) error {
+	_, err := locateCatalog(dir)
+	return err
+}
+
 func locateCatalog(dir string) (string, error) {
 	st, err := os.Stat(dir)
 	if err != nil {

@@ -1,8 +1,9 @@
 // Package ingest copies opaque local files into a project’s content-addressed
 // object store. Checksum reuse returns the existing File, records a reuse_file
 // audit revision, and surfaces IngestedAs so the UI can offer keep/overwrite
-// when the picked name differs. File does not decode or execute file content.
-// StageImage decodes an image only through raster.EncodePNG and stores Go’s own
+// when the picked name differs. Importing does not decode or execute file
+// content. The file work (copy, hash, sniff) is StageFile, before the catalog
+// session; CommitFile stores the result inside it. StageImage decodes an image only through raster.EncodePNG and stores Go’s own
 // re-encode, never the caller’s bytes.
 package ingest
 
@@ -16,7 +17,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
@@ -146,68 +146,67 @@ func insertFile(tx *sql.Tx, row files.File) (rowchange.Change, error) {
 	}, nil
 }
 
-// File reads absPath into the catalog object store. Same bytes reuse the existing
-// File row, verify or repair the object, and record a reuse_file audit event.
+// File reads absPath into the catalog object store: StageFile, then CommitFile.
+// Same bytes reuse the existing File row, verify or repair the object, and
+// record a reuse_file audit event.
+//
+// File does its file work (copy, hash) inside the caller's catalog session. It
+// is for tests and fixtures only; a handler calls StageFile before its session
+// and CommitFile inside it.
 func File(c *database.Catalog, absPath string, userID []byte) (Result, error) {
 	if _, err := c.DB(); err != nil {
 		return Result{}, err
 	}
-	absPath = strings.TrimSpace(absPath)
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Result{}, err
 	}
-	src, err := openChecked(absPath, maxBytes)
+	s, err := StageFile(c.Dir(), absPath)
 	if err != nil {
 		return Result{}, err
 	}
-	defer src.Close()
+	stages := Stages{s}
+	defer stages.Settle(c)
+	return s.CommitFile(c, userID)
+}
 
-	tmp, checksum, byteSize, sniffed, err := streamSource(src, c.Dir())
-	if err != nil {
-		return Result{}, mapObjectsErr(err)
-	}
-	defer tmp.Discard()
-
-	filename := sanitizeFilename(filepath.Base(absPath))
-	mediaType, reason, ok := mediatypes.Resolve(sniffed, filename)
-	if !ok {
-		return Result{}, errForReject(reason, sniffed)
-	}
-
-	relPath, err := files.StorageRelPath(checksum, mediaType)
-	if err != nil {
+// CommitFile stores a StageFile stage inside the catalog session: same bytes
+// reuse the existing File row, verify or repair the object, and record
+// reuse_file; new bytes install the object and record create_file. It purges
+// nothing: a failed commit leaves its object to Settle, which the caller
+// defers inside the session. A stage that did not come from StageFile is
+// ErrInvalid.
+func (s *Staged) CommitFile(c *database.Catalog, userID []byte) (Result, error) {
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Result{}, err
+	}
+	if s.filename == "" {
+		return Result{}, ErrInvalid
 	}
 
 	// LookupByChecksum uses another pool connection and deadlocks while a Run
 	// transaction is open. Reuse is decided here, before create_file's Run.
-	if existing, err := files.LookupByChecksum(c, checksum); err == nil {
-		if _, err := tmp.Install(relPath, checksum); err != nil {
-			return Result{}, mapObjectsErr(err)
+	if existing, err := files.LookupByChecksum(c, s.checksum); err == nil {
+		if err := s.install(); err != nil {
+			return Result{}, err
 		}
-		return reuseFile(c, existing, relPath, filename, userID)
+		return reuseFile(c, existing, s.rel, s.filename, userID)
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return Result{}, err
 	}
 
-	wrote, err := tmp.Install(relPath, checksum)
-	if err != nil {
-		return Result{}, mapObjectsErr(err)
+	if err := s.install(); err != nil {
+		return Result{}, err
 	}
-
 	id, err := files.NewID()
 	if err != nil {
-		if wrote {
-			files.PurgeUnreferenced(c, []files.Object{{ChecksumSHA256: checksum, MediaType: mediaType}})
-		}
 		return Result{}, err
 	}
 	row := files.File{
 		ID:               id,
-		ChecksumSHA256:   checksum,
-		OriginalFilename: filename,
-		MediaType:        mediaType,
-		ByteSize:         byteSize,
+		ChecksumSHA256:   s.checksum,
+		OriginalFilename: s.filename,
+		MediaType:        s.mediaType,
+		ByteSize:         s.byteSize,
 	}
 
 	res, _, err := writes.Run(c, writes.Op{
@@ -218,20 +217,17 @@ func File(c *database.Catalog, absPath string, userID []byte) (Result, error) {
 		if err != nil {
 			return Result{}, nil, err
 		}
-		return Result{File: row, RelPath: relPath, Reused: false, IngestedAs: filename}, []rowchange.Change{ch}, nil
+		return Result{File: row, RelPath: s.rel, Reused: false, IngestedAs: s.filename}, []rowchange.Change{ch}, nil
 	})
 	if err != nil {
 		if errors.Is(err, errChecksumTaken) {
 			// LookupByChecksum uses another pool connection and deadlocks
 			// while a Run transaction is open. This lookup is after Run.
-			existing, lookupErr := files.LookupByChecksum(c, checksum)
+			existing, lookupErr := files.LookupByChecksum(c, s.checksum)
 			if lookupErr != nil {
 				return Result{}, lookupErr
 			}
-			return reuseFile(c, existing, relPath, filename, userID)
-		}
-		if wrote {
-			files.PurgeUnreferenced(c, []files.Object{{ChecksumSHA256: checksum, MediaType: mediaType}})
+			return reuseFile(c, existing, s.rel, s.filename, userID)
 		}
 		return Result{}, err
 	}
@@ -333,7 +329,7 @@ func mapObjectsErr(err error) error {
 }
 
 func streamSource(src *os.File, projectDir string) (t *objectstore.Temp, checksum string, byteSize int64, mediaType string, err error) {
-	t, err = objectstore.CreateTemp(projectDir, ".ingest-")
+	t, err = objectstore.CreateTemp(projectDir, importTempPrefix)
 	if err != nil {
 		return nil, "", 0, "", err
 	}

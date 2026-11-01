@@ -10,6 +10,8 @@ import (
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
+	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/ingest"
 )
 
 var (
@@ -22,6 +24,39 @@ var (
 // withProjectCatalog runs fn on the held exclusive catalog session for projectDir.
 func withProjectCatalog(projectDir string, fn func(*database.Catalog) error) error {
 	return catalogsession.Do(projectDir, fn)
+}
+
+// withStaged is the one stage-then-write entry point. It does the file work
+// first, outside the catalog session: stage makes the request's Stages in the
+// project folder Do will use (a stage that fails discards what it staged
+// itself). Then fn runs on the held session with the stages' Settle deferred
+// first inside it, which purges an object the write installed and did not use;
+// the stages' Discard is deferred outside the session and removes any temp the
+// session never reached. A client file (an attachment, a scan) is a stage func
+// for withStaged; a handler never copies, hashes or decodes inside
+// withProjectCatalog.
+func withStaged(projectDir string, stage func(dir string) (ingest.Stages, error), fn func(*database.Catalog) error) error {
+	dir, err := catalogsession.Key(projectDir)
+	if err != nil {
+		return err
+	}
+	stages, err := stage(dir)
+	if err != nil {
+		return err
+	}
+	defer stages.Discard()
+	return withProjectCatalog(dir, func(c *database.Catalog) error {
+		defer stages.Settle(c)
+		return fn(c)
+	})
+}
+
+// withStagedDepictions is withStaged with the images of the inputs' depictions
+// as the stages (ingest.StageDepictions).
+func withStagedDepictions(projectDir string, inputs []observations.Input, fn func(*database.Catalog) error) error {
+	return withStaged(projectDir, func(dir string) (ingest.Stages, error) {
+		return ingest.StageDepictions(dir, inputs)
+	}, fn)
 }
 
 func parseUserID(s string) ([]byte, error) {

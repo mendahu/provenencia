@@ -13,10 +13,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
-	"github.com/mendahu/provenencia/core/derivatives"
+	"github.com/mendahu/provenencia/core/database/filederivatives"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -53,10 +54,9 @@ const (
 		EXISTS (SELECT 1 FROM artifacts a WHERE a.source_id = s.id)
 		FROM sources s
 		ORDER BY s.id DESC`
-	sqlCount            = `SELECT COUNT(*) FROM sources`
-	sqlDelete           = `DELETE FROM sources WHERE id = ?`
-	sqlTypeExists       = `SELECT 1 FROM source_types WHERE id = ?`
-	sqlArtifactForCover = `SELECT id, source_id, file_id FROM artifacts WHERE id = ?`
+	sqlCount      = `SELECT COUNT(*) FROM sources`
+	sqlDelete     = `DELETE FROM sources WHERE id = ?`
+	sqlTypeExists = `SELECT 1 FROM source_types WHERE id = ?`
 )
 
 // Source is one sources row.
@@ -144,13 +144,27 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Source, []rowchange
 	}, changes, nil
 }
 
-// NormalizeCover checks a cover choice. Artifact mode ensures a thumbnail,
-// which is its own write, so call this before SetCover's Run.
+// normalizeCoverMode is the one parse of a cover mode string.
+func normalizeCoverMode(mode string) string { return strings.TrimSpace(mode) }
+
+// CoverArtifactID reports whether a cover choice pins an Artifact: the mode is
+// CoverModeArtifact and the id is a 16-byte id. It is the one test the
+// handlers use to tell an Artifact cover from the type icon.
+func CoverArtifactID(mode string, primaryArtifactID []byte) ([]byte, bool) {
+	if normalizeCoverMode(mode) != CoverModeArtifact || len(primaryArtifactID) != 16 {
+		return nil, false
+	}
+	return primaryArtifactID, true
+}
+
+// NormalizeCover checks a cover choice. Artifact mode needs the cover's
+// thumbnail to exist already (SetSourceCover makes it before its session), so
+// call this before SetCover's Run.
 func NormalizeCover(c *database.Catalog, sourceID []byte, mode string, primaryArtifactID []byte) (string, []byte, error) {
 	if c == nil || len(sourceID) != 16 {
 		return "", nil, ErrInvalid
 	}
-	mode = strings.TrimSpace(mode)
+	mode = normalizeCoverMode(mode)
 	switch mode {
 	case CoverModeTypeIcon:
 		return mode, nil, nil
@@ -177,7 +191,7 @@ func SetCover(tx *database.Tx, userID, sourceID []byte, mode string, primaryArti
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Source{}, nil, err
 	}
-	mode = strings.TrimSpace(mode)
+	mode = normalizeCoverMode(mode)
 	switch mode {
 	case CoverModeTypeIcon:
 		primaryArtifactID = nil
@@ -468,32 +482,41 @@ func requireType(tx *sql.Tx, typeID []byte) error {
 	return err
 }
 
+// CoverArtifactFile returns the File id of the Artifact a cover would pin: the
+// Artifact must exist, belong to the Source and hold a File, else ErrInvalid.
+// It decodes nothing; it is the one place the cover rule lives, for
+// SetSourceCover's stage and NormalizeCover alike.
+func CoverArtifactFile(c *database.Catalog, sourceID, artifactID []byte) ([]byte, error) {
+	art, err := artifacts.Get(c, artifactID)
+	if errors.Is(err, sql.ErrNoRows) || errors.Is(err, artifacts.ErrInvalid) {
+		return nil, ErrInvalid
+	}
+	if err != nil {
+		return nil, err
+	}
+	if !bytes.Equal(art.SourceID, sourceID) || len(art.FileID) != 16 {
+		return nil, ErrInvalid
+	}
+	return art.FileID, nil
+}
+
+// requireRasterCoverArtifact accepts a cover Artifact whose File already has a
+// thumbnail. It never decodes: the thumbnail is made before, outside the
+// session, so an Artifact with no thumbnail (a PDF, an image that failed to
+// decode, one deleted meanwhile) is ErrInvalid.
 func requireRasterCoverArtifact(c *database.Catalog, sourceID, artifactID []byte) error {
-	db, err := c.DB()
+	fileID, err := CoverArtifactFile(c, sourceID, artifactID)
 	if err != nil {
 		return err
 	}
-	var id, artSource, fileID []byte
-	err = db.QueryRow(sqlArtifactForCover, artifactID).Scan(&id, &artSource, &fileID)
+	link, err := filederivatives.Lookup(c, fileID, filederivatives.TypeThumbnail)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrInvalid
 	}
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(artSource, sourceID) || len(fileID) != 16 {
-		return ErrInvalid
-	}
-	res, err := derivatives.EnsureThumbnail(c, fileID)
-	if err != nil {
-		if errors.Is(err, derivatives.ErrUnprocessable) ||
-			errors.Is(err, derivatives.ErrCorruptObject) ||
-			errors.Is(err, derivatives.ErrInvalid) {
-			return ErrInvalid
-		}
-		return err
-	}
-	if res.Skipped || len(res.Link.DerivedFileID) != 16 {
+	if len(link.DerivedFileID) != 16 {
 		return ErrInvalid
 	}
 	return nil
