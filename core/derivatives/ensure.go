@@ -62,8 +62,9 @@ type Result struct {
 	Skipped bool // true when media type is not a supported raster image
 }
 
-// EnsureThumbnail creates or returns the default thumbnail derivative.
-// See Ensure for the authorization contract on sourceFileID.
+// EnsureThumbnail creates or returns the default thumbnail derivative. Like
+// Ensure it decodes inside the caller's catalog session, so it is for tests
+// and fixtures only. See Ensure for the authorization contract on sourceFileID.
 func EnsureThumbnail(c *database.Catalog, sourceFileID []byte) (Result, error) {
 	return Ensure(c, sourceFileID, ThumbnailSpec())
 }

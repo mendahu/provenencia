@@ -93,4 +93,4 @@ Means something **bypassed** the session (second `database.Open` while held). Ov
 - Nest a second exclusive `database.Open` for the same dir while `Do` holds it
 - Put session registry logic in `database` or Swift (Go owns the contract)
 - Reintroduce `isCatalogReady`-style gates for catalog locking
-- Call `ingest.File` or `derivatives.Ensure` from a handler (they do file work inside the session; tests and fixtures only), or copy, hash or decode inside `withProjectCatalog`
+- Call `ingest.File`, `derivatives.Ensure` or `derivatives.EnsureThumbnail` from a handler (they do file work inside the session; tests and fixtures only), or copy, hash or decode inside `withProjectCatalog`
