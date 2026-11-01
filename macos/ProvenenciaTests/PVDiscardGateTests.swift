@@ -60,7 +60,9 @@ struct PVDiscardGateTests {
             isRunning: false, isDirty: true, isConfirmingDiscard: false, next: step, gate: &gate
         ) == .askToDiscard)
         #expect(gate.holdsStep)
-        #expect(gate.keepEditing())
+        let dropped = gate.keepEditing()
+        #expect(dropped)
+        #expect(!gate.holdsStep)
         #expect(ran == 0)
 
         // Dirty again: Discard hands the step out to run after the close.
