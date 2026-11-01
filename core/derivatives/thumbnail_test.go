@@ -13,10 +13,13 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/catalogsession/catalogsessiontest"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/filederivatives"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/searchindex"
+	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/raster"
 	"github.com/mendahu/provenencia/core/raster/rastertest"
 	"github.com/mendahu/provenencia/core/ref"
@@ -552,4 +555,215 @@ func newID(t *testing.T) []byte {
 		t.Fatal(err)
 	}
 	return id[:]
+}
+
+// sessionProject makes a project and closes it, so the test works through
+// catalogsession.Do and can hold it with catalogsessiontest.Hold.
+func sessionProject(t *testing.T) string {
+	t.Helper()
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := c.Dir()
+	if err := c.Close(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	return dir
+}
+
+func tinyPNG(t *testing.T) []byte {
+	t.Helper()
+	b, err := os.ReadFile("testdata/tiny.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
+}
+
+func TestPlanStageCommit(t *testing.T) {
+	t.Run("a File with no link is staged while the session is held, then committed", func(t *testing.T) {
+		dir := sessionProject(t)
+		var srcID []byte
+		var job *Job
+		err := catalogsession.Do(dir, func(c *database.Catalog) error {
+			srcID = installSourceFile(t, c, tinyPNG(t), "image/png", "tiny.png")
+			res, j, err := Plan(c, srcID, ThumbnailSpec())
+			if err != nil || j == nil || res.Skipped || len(res.Link.ID) != 0 {
+				t.Fatalf("Plan = %+v, %v, %v", res, j, err)
+			}
+			job = j
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		release := catalogsessiontest.Hold(t, dir)
+		staged, err := job.Stage(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		release()
+
+		err = catalogsession.Do(dir, func(c *database.Catalog) error {
+			stages := ingest.Stages{staged}
+			defer stages.Settle(c)
+			res, err := Commit(c, job)
+			if err != nil {
+				return err
+			}
+			if string(res.Link.SourceFileID) != string(srcID) || len(res.Link.DerivedFileID) != 16 {
+				t.Fatalf("link %+v", res.Link)
+			}
+			derived, err := files.Lookup(c, res.Link.DerivedFileID)
+			if err != nil || derived.MediaType != "image/jpeg" {
+				t.Fatalf("derived %+v, %v", derived, err)
+			}
+			rel, err := files.StorageRelPath(derived.ChecksumSHA256, derived.MediaType)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := os.Stat(filepath.Join(c.Dir(), filepath.FromSlash(rel))); err != nil {
+				t.Fatal(err)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("a File with a link plans no job, and a PDF is skipped", func(t *testing.T) {
+		dir := sessionProject(t)
+		err := catalogsession.Do(dir, func(c *database.Catalog) error {
+			srcID := installSourceFile(t, c, tinyPNG(t), "image/png", "tiny.png")
+			made, err := EnsureThumbnail(c, srcID)
+			if err != nil {
+				return err
+			}
+			res, job, err := Plan(c, srcID, ThumbnailSpec())
+			if err != nil || job != nil || string(res.Link.ID) != string(made.Link.ID) {
+				t.Fatalf("Plan = %+v, %v, %v", res, job, err)
+			}
+			pdfID := installSourceFile(t, c, []byte("%PDF-1.4"), "application/pdf", "doc.pdf")
+			res, job, err = Plan(c, pdfID, ThumbnailSpec())
+			if err != nil || job != nil || !res.Skipped {
+				t.Fatalf("Plan(pdf) = %+v, %v, %v", res, job, err)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+func TestCommitAfterChange(t *testing.T) {
+	// plan makes a project with one PNG File, plans it, and stages the job.
+	plan := func(t *testing.T) (dir string, srcID []byte, job *Job, staged *ingest.Staged) {
+		t.Helper()
+		dir = sessionProject(t)
+		err := catalogsession.Do(dir, func(c *database.Catalog) error {
+			srcID = installSourceFile(t, c, tinyPNG(t), "image/png", "tiny.png")
+			_, j, err := Plan(c, srcID, ThumbnailSpec())
+			job = j
+			return err
+		})
+		if err != nil || job == nil {
+			t.Fatalf("plan: %v, %v", job, err)
+		}
+		staged, err = job.Stage(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(staged.Discard)
+		return dir, srcID, job, staged
+	}
+
+	t.Run("a commit adds no audit revision", func(t *testing.T) {
+		dir, _, job, staged := plan(t)
+		err := catalogsession.Do(dir, func(c *database.Catalog) error {
+			defer ingest.Stages{staged}.Settle(c)
+			before := auditTotal(t, c)
+			if _, err := Commit(c, job); err != nil {
+				return err
+			}
+			if after := auditTotal(t, c); after != before {
+				t.Fatalf("audit revisions %d, was %d", after, before)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("a link made meanwhile is returned and nothing unreferenced is left", func(t *testing.T) {
+		dir, srcID, job, staged := plan(t)
+		err := catalogsession.Do(dir, func(c *database.Catalog) error {
+			made, err := EnsureThumbnail(c, srcID)
+			if err != nil {
+				return err
+			}
+			stages := ingest.Stages{staged}
+			res, err := Commit(c, job)
+			if err != nil {
+				return err
+			}
+			stages.Settle(c)
+			if string(res.Link.ID) != string(made.Link.ID) {
+				t.Fatalf("Commit link %x, want %x", res.Link.ID, made.Link.ID)
+			}
+			var objects, temps int
+			err = filepath.WalkDir(filepath.Join(c.Dir(), "objects"), func(p string, d os.DirEntry, err error) error {
+				if err != nil || d.IsDir() {
+					return err
+				}
+				if strings.HasPrefix(d.Name(), ".") {
+					temps++
+				} else {
+					objects++
+				}
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+			// The source object and the one thumbnail; no temp.
+			if objects != 2 || temps != 0 {
+				t.Fatalf("objects = %d, temps = %d", objects, temps)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("a source File deleted meanwhile is invalid and leaves no link", func(t *testing.T) {
+		dir, srcID, job, staged := plan(t)
+		err := catalogsession.Do(dir, func(c *database.Catalog) error {
+			defer ingest.Stages{staged}.Settle(c)
+			db, err := c.DB()
+			if err != nil {
+				return err
+			}
+			if _, err := db.Exec(`DELETE FROM files WHERE id = ?`, srcID); err != nil {
+				return err
+			}
+			if _, err := Commit(c, job); !errors.Is(err, ErrInvalid) {
+				t.Fatalf("Commit err = %v, want ErrInvalid", err)
+			}
+			var n int
+			if err := db.QueryRow(`SELECT COUNT(*) FROM file_derivatives`).Scan(&n); err != nil || n != 0 {
+				t.Fatalf("links = %d, %v", n, err)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
 }
