@@ -97,10 +97,11 @@ type sourceCoverThumb struct {
 // without generating derivatives. artifact → existing raster only; type_icon
 // (or missing derivative) → empty so the client paints the Source type icon.
 func sourceCoverThumbnail(c *database.Catalog, s sources.Source) (sourceCoverThumb, error) {
-	if s.CoverMode != sources.CoverModeArtifact || len(s.PrimaryArtifactID) != 16 {
+	artID, ok := sources.CoverArtifactID(s.CoverMode, s.PrimaryArtifactID)
+	if !ok {
 		return sourceCoverThumb{}, nil
 	}
-	a, err := artifacts.Get(c, s.PrimaryArtifactID)
+	a, err := artifacts.Get(c, artID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return sourceCoverThumb{}, nil
@@ -124,11 +125,12 @@ func sourceCoverThumbnails(c *database.Catalog, rows []sources.Source) (map[stri
 	var artIDs [][]byte
 	need := make([]sources.Source, 0, len(rows))
 	for _, s := range rows {
-		if s.CoverMode != sources.CoverModeArtifact || len(s.PrimaryArtifactID) != 16 {
+		artID, ok := sources.CoverArtifactID(s.CoverMode, s.PrimaryArtifactID)
+		if !ok {
 			continue
 		}
 		need = append(need, s)
-		artIDs = append(artIDs, s.PrimaryArtifactID)
+		artIDs = append(artIDs, artID)
 	}
 	if len(artIDs) == 0 {
 		return out, nil

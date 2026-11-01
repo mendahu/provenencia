@@ -144,6 +144,19 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Source, []rowchange
 	}, changes, nil
 }
 
+// normalizeCoverMode is the one parse of a cover mode string.
+func normalizeCoverMode(mode string) string { return strings.TrimSpace(mode) }
+
+// CoverArtifactID reports whether a cover choice pins an Artifact: the mode is
+// CoverModeArtifact and the id is a 16-byte id. It is the one test the
+// handlers use to tell an Artifact cover from the type icon.
+func CoverArtifactID(mode string, primaryArtifactID []byte) ([]byte, bool) {
+	if normalizeCoverMode(mode) != CoverModeArtifact || len(primaryArtifactID) != 16 {
+		return nil, false
+	}
+	return primaryArtifactID, true
+}
+
 // NormalizeCover checks a cover choice. Artifact mode needs the cover's
 // thumbnail to exist already (SetSourceCover makes it before its session), so
 // call this before SetCover's Run.
@@ -151,7 +164,7 @@ func NormalizeCover(c *database.Catalog, sourceID []byte, mode string, primaryAr
 	if c == nil || len(sourceID) != 16 {
 		return "", nil, ErrInvalid
 	}
-	mode = strings.TrimSpace(mode)
+	mode = normalizeCoverMode(mode)
 	switch mode {
 	case CoverModeTypeIcon:
 		return mode, nil, nil
@@ -178,7 +191,7 @@ func SetCover(tx *database.Tx, userID, sourceID []byte, mode string, primaryArti
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Source{}, nil, err
 	}
-	mode = strings.TrimSpace(mode)
+	mode = normalizeCoverMode(mode)
 	switch mode {
 	case CoverModeTypeIcon:
 		primaryArtifactID = nil

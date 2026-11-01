@@ -863,3 +863,30 @@ func TestNormalizeCoverNeedsThumbnail(t *testing.T) {
 		t.Fatalf("another Source's Artifact: err = %v, want ErrInvalid", err)
 	}
 }
+
+func TestCoverArtifactID(t *testing.T) {
+	id := bytes.Repeat([]byte{7}, 16)
+	for _, tc := range []struct {
+		name string
+		mode string
+		id   []byte
+		want bool
+	}{
+		{"artifact with an id", CoverModeArtifact, id, true},
+		{"mode is trimmed", " artifact ", id, true},
+		{"artifact with no id", CoverModeArtifact, nil, false},
+		{"artifact with a short id", CoverModeArtifact, []byte{1}, false},
+		{"type icon", CoverModeTypeIcon, id, false},
+		{"unknown mode", "pinned", id, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := CoverArtifactID(tc.mode, tc.id)
+			if ok != tc.want {
+				t.Fatalf("ok = %v, want %v", ok, tc.want)
+			}
+			if ok && !bytes.Equal(got, id) {
+				t.Fatalf("id = %x, want %x", got, id)
+			}
+		})
+	}
+}

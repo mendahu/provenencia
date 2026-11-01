@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"strings"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/apperr"
@@ -326,10 +325,10 @@ func SetSourceCover(in []byte) ([]byte, error) {
 		out = &engine.SetSourceCoverResponse{Source: sp}
 		return nil
 	}
-	if strings.TrimSpace(req.GetCoverMode()) == sources.CoverModeArtifact && len(primaryID) == 16 {
+	if coverArtifactID, ok := sources.CoverArtifactID(req.GetCoverMode(), primaryID); ok {
 		pass := &thumbnailPass{}
 		err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-			fileID, err := sources.CoverArtifactFile(c, sourceID, primaryID)
+			fileID, err := sources.CoverArtifactFile(c, sourceID, coverArtifactID)
 			if err != nil {
 				return err
 			}
