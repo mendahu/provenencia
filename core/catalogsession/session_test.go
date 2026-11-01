@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/catalogsession/catalogsessiontest"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/onboarding"
@@ -234,4 +235,33 @@ func TestCloseAll(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = c.Close()
+}
+
+func TestHold(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	created, err := onboarding.Complete(t.TempDir(), t.TempDir(), "Jake", "Robins")
+	if err != nil {
+		t.Fatal(err)
+	}
+	release := catalogsessiontest.Hold(t, created.ProjectDir)
+
+	entered := make(chan struct{})
+	go func() {
+		_ = catalogsession.Do(created.ProjectDir, func(*database.Catalog) error {
+			close(entered)
+			return nil
+		})
+	}()
+	select {
+	case <-entered:
+		t.Fatal("a second Do ran while the session was held")
+	case <-time.After(100 * time.Millisecond):
+	}
+	release()
+	select {
+	case <-entered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the second Do did not run after release")
+	}
+	release() // idempotent
 }
