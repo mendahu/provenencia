@@ -36,12 +36,7 @@ private struct PVSheetChrome<Content: View>: View {
     private var sheetBody: some View {
         if confirmingDiscard {
             PVConfirmContent(
-                copy: PVConfirmCopy(
-                    title: L10n.string(L10n.DesignSystem.formDialogDiscardTitle),
-                    message: L10n.string(L10n.DesignSystem.formDialogDiscardMessage),
-                    confirm: L10n.DesignSystem.formDialogDiscardConfirm,
-                    cancel: L10n.DesignSystem.formDialogDiscardKeep
-                ),
+                copy: .discardChanges,
                 tone: .danger,
                 accessibilityIdentifierPrefix: PVFormDialogAccessibility.identifier(
                     prefix: accessibilityIdentifierPrefix,

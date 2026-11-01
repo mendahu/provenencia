@@ -515,8 +515,7 @@ cancel-first focus stays visible to keyboard users.
 The copy rules travel in `PVConfirmCopy`: the title is a question naming the
 record ("Delete Photographer?", never "Are you sure?"), the message says what
 is *and is not* lost, confirm repeats the verb ("Delete field", never "OK"),
-and cancel names the safe outcome ("Keep field"). **Focus starts on cancel**,
-so Return cannot complete a destructive action by reflex.
+and cancel names the safe outcome ("Keep field"). A danger confirm's default action is Cancel: Return keeps the record, and the destructive button has no Return shortcut. Focus starts on Cancel. An irreversible confirm keeps Return on its confirm button.
 
 Two further rules from the spec: a blocked action never reaches a confirmation
 — disable the control and explain why in its tooltip, the way Metadata's

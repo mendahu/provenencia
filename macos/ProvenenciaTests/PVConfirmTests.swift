@@ -35,6 +35,22 @@ struct PVConfirmToneTests {
 }
 
 @Suite
+struct PVConfirmReturnTests {
+    @Test func dangerReturnCancels() {
+        #expect(PVConfirmTone.danger.returnConfirms == false)
+        #expect(PVConfirmTone.irreversible.returnConfirms == true)
+    }
+
+    @Test func discardCopyIsTheKitsQuestion() {
+        let copy = PVConfirmCopy.discardChanges
+        #expect(copy.title == L10n.string(L10n.DesignSystem.formDialogDiscardTitle))
+        #expect(copy.message == L10n.string(L10n.DesignSystem.formDialogDiscardMessage))
+        #expect(copy.confirm == L10n.string(L10n.DesignSystem.formDialogDiscardConfirm))
+        #expect(copy.cancel == L10n.string(L10n.DesignSystem.formDialogDiscardKeep))
+    }
+}
+
+@Suite
 struct PVConfirmControlsTests {
     @Test func actionsDisableOnlyWhileRunning() {
         #expect(!PVConfirmControls.isActionDisabled(isRunning: false))
