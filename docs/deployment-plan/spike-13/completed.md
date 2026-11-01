@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S13-31 — Header data becomes summaries
+
+**Landed 2026-11-01** in [#660](https://github.com/mendahu/provenencia/pull/660). "Header" now means only the band at the top of a Conclusion page. The data a row or tile shows is a summary in Go, proto and Swift: `PersonSummary`, `EventSummary`, `PlaceSummary`, `ChainedPlace`, package `conclusionsummaries`, and the band's line under the title is `secondary`. The four `oneof header` blocks became one `ConclusionSummary` with the field numbers kept, `ByIDs` and `RowsForSearch` take one `Want` split by kind, and `HeaderDependents` is gone. The one visible change: an Event band whose `date` field has records but no displayed value shows its kept start-end span, as the Events list row does.
+
 ## S13-02 — Gender in the person header
 
 **Landed 2026-11-01** in [#659](https://github.com/mendahu/provenencia/pull/659). Every person row or tile can be colored by gender from the one header type: `PersonHeader` carries the displayed gender and sex at birth terms (the rank-1 kept term, how many values are displayed, and the Property's label), on the wire as the new `TermFacts` and in Swift as `CatalogTermFacts`. A stored header keeps term ids and keys; term and Property labels are filled when it is read, so a relabel shows at once. `PersonGenderTreatment` reads only the header and the Person page moves onto it, with the badge, spoken label and thumb colors unchanged; the read from detail fields is deleted, and only the product `gender` and `sex_at_birth` Properties feed it. `EventHeader`'s type moved onto the same Go shape with no wire change. The Persons list, Promote and search carry the terms and do not draw them.

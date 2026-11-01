@@ -1,6 +1,6 @@
 # S13-31 — Header data becomes summaries
 
-**Status:** Planned
+**Status:** Landed in #660 (2026-11-01)
 **Spike / slice:** Spike 13 · Slice 3 — Family (the Family and Timeline reads, S13-04 and S13-05, are planned on the new names)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: code names only; every view looks and reads the same)
@@ -14,6 +14,8 @@
 **Context:** working rule "One person header for every tile" (renamed here); [`macos-client-patterns.md`](../../../macos-client-patterns.md); [`conclusion-reconciliation.md`](../../../conclusion-reconciliation.md)
 **Planned:** 2026-11-01 against `s13-02-gender-in-the-person-header` @ `3ee06273` (#659's head; branch from `main` after #659 merges)
 **Review:** [`S13-31-header-data-becomes-summaries.review.md`](S13-31-header-data-becomes-summaries.review.md) — 2 rounds; Fits with changes / Ready with changes; every finding Fixed or answered by the user (2026-11-01)
+
+**Landed:** the code differs from the plan in five places. (1) Commits: the Go core, the wire and the Swift side are three commits, not one per step, because renamed proto types cannot build in between; the docs are a fourth. (2) `headerHits` in the Evidence graph cards names a frame value (layout), so D-3's own rule keeps it; the plan's list named it by mistake. (3) `conclusionsummaries.NewSummaries` and `Want.Empty` are added, so `ByIDs`, `RowsForSearch` and the searchindex test build one `Summaries` the same way; `handleDocument` and `matchText` take the raw id beside the head. (4) `EventDetailTests`: the three D-13 tests keep their expected strings, and the span test now expects the span in the band (`secondaryDate == rows[0].lead`) instead of the base value, which is D-13's stated change. (5) The check-plan-docs path check fails on a not-yet-Landed plan whose Current state names the moved paths, so the plan is marked Landed in the same PR.
 
 ### Implementer — read this first
 
