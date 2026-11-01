@@ -180,7 +180,7 @@ func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
 	if err != nil {
 		return Detail{}, err
 	}
-	d := Detail{Entity: entityOf(n), MemberCount: acceptedMembers(n)}
+	d := Detail{Entity: entityOf(n), MemberCount: len(n.AcceptedMembers())}
 	tiles, err := gallery.ForEntities(db, [][]byte{entityID})
 	if err != nil {
 		return Detail{}, err
@@ -295,16 +295,6 @@ func entityOf(n *graphcache.Node) canonicalentities.Entity {
 		Argument:      n.Argument,
 		Label:         n.Label,
 	}
-}
-
-func acceptedMembers(n *graphcache.Node) int {
-	var nAccepted int
-	for _, m := range n.Members {
-		if m.Accepted {
-			nAccepted++
-		}
-	}
-	return nAccepted
 }
 
 // state reads a field's state off its displayed values, by the same rule as

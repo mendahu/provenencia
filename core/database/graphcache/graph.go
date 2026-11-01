@@ -140,6 +140,21 @@ type Member struct {
 	Accepted  bool
 }
 
+// AcceptedMembers returns the node's accepted identity claims in Members
+// order. A nil node has none.
+func (n *Node) AcceptedMembers() []Member {
+	if n == nil {
+		return nil
+	}
+	var accepted []Member
+	for _, m := range n.Members {
+		if m.Accepted {
+			accepted = append(accepted, m)
+		}
+	}
+	return accepted
+}
+
 // Link is one association seen from this node. AssociationRef is the sort
 // key, then the neighbor's ref. FromEnd is true when this node is the
 // association's first endpoint.

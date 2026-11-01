@@ -551,3 +551,35 @@ func TestWarmNeeded(t *testing.T) {
 		t.Error("SetNameFormat did not set the flag")
 	}
 }
+
+func TestAcceptedMembers(t *testing.T) {
+	var nilNode *graphcache.Node
+	cases := []struct {
+		name    string
+		node    *graphcache.Node
+		want    []byte
+		wantLen int
+	}{
+		{"nil node", nilNode, nil, 0},
+		{"no members", &graphcache.Node{}, nil, 0},
+		{"only provisional", &graphcache.Node{Members: []graphcache.Member{{SubjectID: []byte{1}}}}, nil, 0},
+		{"mixed keeps order", &graphcache.Node{Members: []graphcache.Member{
+			{SubjectID: []byte{1}, Accepted: true},
+			{SubjectID: []byte{2}},
+			{SubjectID: []byte{3}, Accepted: true},
+		}}, []byte{1, 3}, 2},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.node.AcceptedMembers()
+			if len(got) != tc.wantLen {
+				t.Fatalf("got %d accepted members, want %d", len(got), tc.wantLen)
+			}
+			for i, m := range got {
+				if m.SubjectID[0] != tc.want[i] || !m.Accepted {
+					t.Fatalf("member %d is %+v", i, m)
+				}
+			}
+		})
+	}
+}
