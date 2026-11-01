@@ -563,7 +563,7 @@ are resolved once per family, size, weight and italic and reused.
 To add a new weight or style later: download it from
 `fonts.googleapis.com/css2?family=...` (see this project's own
 `tokens/fonts.css` for the exact family query), drop the `.ttf` into
-`Resources/Fonts/`, and add it to the Xcode project's Resources phase (see
+`Resources/Fonts/`; it is bundled through the `Fonts` folder reference (see
 "Xcode project registration" below) — no code changes needed since
 `PVFont` resolves by family + weight, not by filename.
 
@@ -604,9 +604,6 @@ readme documents as the intended macOS port:
 
 ## Xcode project registration
 
-`macos/Provenencia.xcodeproj/project.pbxproj` is a classic manually-authored
-Xcode project (not Xcode 16 synchronized groups), so a new file on disk is
-invisible to the build until it's added as a `PBXFileReference` +
-`PBXBuildFile` (and, for source files, a `Sources` build phase entry). Use
-Xcode itself (File → Add Files…) or the `xcodeproj` Ruby gem — do not hand
-edit `project.pbxproj`'s GUIDs.
+`App/App`, `App/Platform`, `App/Features`, `App/DesignSystem` and `ProvenenciaTests` are Xcode synchronized folders: a Swift file saved in one is built into its target with no edit to `project.pbxproj`. Any other file in them is copied into the app bundle, so a README or other note is listed in its folder's membership exceptions (`PBXFileSystemSynchronizedBuildFileExceptionSet`); `scripts/check-guidance-names.py` fails on one that is not.
+
+`Resources/` is a classic group. A new `.ttf` dropped into `Resources/Fonts/` is bundled through the `Fonts` folder reference with no project edit.

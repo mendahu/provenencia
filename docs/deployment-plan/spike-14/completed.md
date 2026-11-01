@@ -49,3 +49,7 @@ One short paragraph per landed PR, newest first. Written by the PR that lands it
 ## S14-D1 — Wide layout in the design system (board)
 
 **Agreed 2026-10-29** in the Provenencia [design-system project](https://claude.ai/design/p/0f6c1f29-8408-4735-b114-5ae4c4c18445); brief archived in [`design/archive/`](design/archive/S14-D1-wide-layout.md). Per the brief, the kit gains `--width-wide-breakpoint` (1600) and `--width-secondary-max` (480), a Width classes README section with the six Wide rules, and the Page columns component: a centered primary column at Regular, primary plus a 340–480 secondary column at Wide, the group centered past both maximums, an optional header slot that scrolls or pins. No PR of its own: Spike 13's S13-10 builds `PVPageColumns` from it with the Person page frame (S14-25 descoped).
+
+## S14-15 — Xcode synchronized folders
+
+**Landed 2026-11-01** in [#668](https://github.com/mendahu/provenencia/pull/668). `App/App`, `App/Platform`, `App/Features`, `App/DesignSystem` and `ProvenenciaTests` are Xcode synchronized folders (`objectVersion = 77`, Xcode 16 or later): a Swift file saved there is built with no `project.pbxproj` edit, and the 425 hand-written Swift entries are gone (audit A-34). `App/Resources` stays a classic group so `Fonts/` keeps its bundle subfolder; membership exceptions keep the three `.md` files out of the app, and `check-guidance-names.py` fails on a non-Swift file that is not an exception or a new folder under `macos/App` the project does not build. The compiled files and bundled resources are identical to before.

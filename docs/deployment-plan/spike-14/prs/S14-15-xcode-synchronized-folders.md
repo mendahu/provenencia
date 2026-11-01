@@ -1,6 +1,6 @@
 # S14-15 — Xcode synchronized folders
 
-**Status:** Planned
+**Status:** Landed in #668 (2026-11-01)
 **Spike / slice:** Spike 14 · Slice 5 — Audit fixes
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: only the Xcode project file and contributor docs change; the app is built from the same files)
@@ -14,6 +14,7 @@
 **Context:** audit [A-34](../app-health-audit.md#a-34--projectpbxproj-is-maintained-by-hand); working rule "Audit items keep their IDs"; [`macos-client-patterns.md`](../../../macos-client-patterns.md); `macos/App/DesignSystem/README.md` § "Xcode project registration". **Needs a Mac with Xcode 16 or later** (map scope entry).
 **Planned:** 2026-11-01 against `main` @ `067be77`
 **Review:** [`S14-15-xcode-synchronized-folders.review.md`](S14-15-xcode-synchronized-folders.review.md) — Fits / Ready, 2 rounds
+**Landed:** AC-3.3 plant 3 prints its two lines sorted (the `README.md` "not on disk" line before the `README.txt` line), as D-7's "sorted" says; the AC listed them the other way round. The STEP-5 gate ran before STEP-6 to STEP-8 and again after them. The manual check in Xcode's UI was not run by the agent; the build, the probe and the SwiftFileList and Resources diffs stand in for it.
 
 ### Implementer — read this first
 

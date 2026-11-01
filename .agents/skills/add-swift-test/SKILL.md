@@ -3,8 +3,7 @@ name: add-swift-test
 description: >-
   Adds Provenencia macOS unit tests under macos/ProvenenciaTests using Swift Testing.
   Use when adding or changing OnboardingModel, InstallPaths, FakeStore, ProvenenciaTests,
-  xcodebuild test, Swift Testing @Test/#expect, or wiring a .swift file into the
-  ProvenenciaTests Xcode target. Not for Go tests, XCUITest, or GoStore/dylib tests.
+  xcodebuild test, Swift Testing @Test/#expect, or adding a test file under macos/ProvenenciaTests. Not for Go tests, XCUITest, or GoStore/dylib tests.
 ---
 
 # Add a Swift unit test
@@ -49,13 +48,7 @@ struct FooTests {
 
 ## Xcode project
 
-Add the file to **ProvenenciaTests** only (never the Provenencia app target).
-
-In [`macos/Provenencia.xcodeproj/project.pbxproj`](../../../macos/Provenencia.xcodeproj/project.pbxproj), copy an existing test file’s four objects and give them unused `AA00000000000000000000xx` IDs (do not reuse `B0`–`BE`):
-
-1. `PBXFileReference` in group `AA00000000000000000000B5` (`path = ProvenenciaTests`)
-2. `PBXBuildFile` in Sources phase `AA00000000000000000000B7`
-3. Do not add a new native target or scheme entry; those already exist.
+`macos/ProvenenciaTests` is a synchronized folder: a `.swift` file saved there is in the **ProvenenciaTests** target. Do not edit `project.pbxproj`, and never add a test file under `macos/App`.
 
 Bundle id stays `app.provenencia.tests`. Host: Provenencia.app.
 
