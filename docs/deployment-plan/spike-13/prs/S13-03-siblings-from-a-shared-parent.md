@@ -1,6 +1,6 @@
 # S13-03 — Siblings from a shared parent
 
-**Status:** Planned
+**Status:** Landed in #666 (2026-11-01)
 **Spike / slice:** Spike 13 · Slice 3 — Family
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: an engine read with no caller in the app until S13-04)
@@ -14,6 +14,8 @@
 **Context:** [person-detail.md § 2 Family](../person-detail.md#2-family) (R-17, R-18, R-18a); [`docs/ideas/kinship-view.md`](../../../ideas/kinship-view.md); S11-51 plan D-4 – D-6 and its Landed note (git history: `f22b19a7:docs/deployment-plan/spike-11/prs/S11-51-person-links.md`); working rules: "Siblings are page-only", "One person's links, direct and implied, from one function", "The family read is served from the graph cache", "The family read is the family tree's first step", "Canonical only, filtered in Go", "Each PR updates the docs and skills it makes false"
 **Planned:** 2026-11-01 against `main` @ `0c166624`
 **Review:** [`S13-03-siblings-from-a-shared-parent.review.md`](S13-03-siblings-from-a-shared-parent.review.md) — Fits with changes / Ready with changes, 2 rounds (every finding answered)
+
+**Landed:** the code differs from the plan in one place, a test. AC-1.8 says the siblings come back in the order `C1` … `C14` and also in the order of Ann's `n.Links`; the graph sorts a node's links by their ref as text (`TST-100` before `TST-98`), so the two differ once the refs pass 99. `TestRelationshipsOptionsSiblings/AC-1.8` asserts the order of Ann's links, the invariant the plan names, and that all 14 children come back. Review round 1 changed D-5: SEC-1 showed duplicate parent links times children allocate their product, so `kinship.Rules` has `MaxPairSteps` (10, user decision 2026-11-01) and `Siblings`, `Parents` and `Derive`'s chain keep only the first 10 steps of one parent–child pair; there is still no bound on a parent's children. `Siblings` and `Parents` therefore take a `Rules` argument, which D-5 said they would not.
 
 ### Implementer — read this first
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"slices"
 
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/kinship"
@@ -37,13 +38,19 @@ type pivotResult struct {
 // the results of their events, and both are one hop from what they read.
 var kinshipSlot graphcache.MemoSlot
 
+// siblingSlot is where each person's implied siblings are stored, for the page.
+// A sibling is two to four hops away, past what Deps can name, so any commit that
+// names a handle drops the whole slot.
+var siblingSlot graphcache.MemoSlot
+
 // forSlot is where each person's full For answer is stored. It reads nodes up
 // to three hops from the person (a birth, the parent, the parent's events), so
 // any commit that names a handle drops the whole slot.
 var forSlot graphcache.MemoSlot
 
-// forResult is one person's stored For answer. It is shared and read-only.
-type forResult struct {
+// personAnswer is one person's stored answer, For's or the siblings'. It is
+// shared and read-only.
+type personAnswer struct {
 	rules kinship.Rules
 	links []kinship.Implied
 }
@@ -61,37 +68,58 @@ func init() {
 		DropOnVocabulary:   true,
 		DropOnHandleCommit: true,
 	})
+	siblingSlot = graphcache.RegisterNodeMemo(graphcache.NodeMemo{
+		Name:               "canonlinks.siblings",
+		Check:              checkSiblings,
+		DropOnVocabulary:   true,
+		DropOnHandleCommit: true,
+	})
 }
 
-// checkFor rebuilds a stored For answer from the cached nodes, with no pivot
-// results, and compares.
-func checkFor(g *graphcache.Graph, id []byte, stored any) error {
-	res, ok := stored.(forResult)
-	if !ok {
-		return fmt.Errorf("canonlinks: stored answer %x has type %T", id, stored)
-	}
-	cached := func(id []byte) (*graphcache.Node, error) {
-		n, ok := g.Cached(id)
+// checkPersonAnswer rebuilds a stored per-person answer from the cached nodes
+// and compares. derive makes the answer for one id with a deriver that loads
+// nothing; found is false when the id has no answer to make.
+func checkPersonAnswer(derive func(d *deriver, id []byte) (links []kinship.Implied, found bool, err error)) graphcache.MemoCheck {
+	return func(g *graphcache.Graph, id []byte, stored any) error {
+		res, ok := stored.(personAnswer)
 		if !ok {
-			return nil, fmt.Errorf("canonlinks: %x is not cached", id)
+			return fmt.Errorf("canonlinks: stored answer %x has type %T", id, stored)
 		}
-		return n, nil
+		d, err := newDeriver(g, res.rules, cachedNodes(g))
+		if err != nil {
+			return err
+		}
+		links, found, err := derive(d, id)
+		if err != nil {
+			return err
+		}
+		if !found {
+			return fmt.Errorf("canonlinks: stored answer %x is for no cached person", id)
+		}
+		if !reflect.DeepEqual(res, personAnswer{rules: res.rules, links: links}) {
+			return fmt.Errorf("canonlinks: stored answer %x does not match a fresh derivation", id)
+		}
+		return nil
 	}
-	d, err := newDeriver(g, res.rules, cached)
-	if err != nil {
-		return err
-	}
-	links, err := d.forLinks(id, cached, d.eventLinks, func(m []byte) ([]kinship.Implied, error) {
+}
+
+// checkFor checks a stored For answer: no pivot results are used.
+var checkFor = checkPersonAnswer(func(d *deriver, id []byte) ([]kinship.Implied, bool, error) {
+	links, err := d.forLinks(id, d.eventLinks, func(m []byte) ([]kinship.Implied, error) {
 		return d.chainLinks(m, d.eventLinks)
 	})
+	return links, true, err
+})
+
+// checkSiblings checks a stored sibling answer.
+var checkSiblings = checkPersonAnswer(func(d *deriver, id []byte) ([]kinship.Implied, bool, error) {
+	answers, err := d.siblingsOf([][]byte{id}, d.eventLinks)
 	if err != nil {
-		return err
+		return nil, false, err
 	}
-	if !reflect.DeepEqual(res, forResult{rules: res.rules, links: links}) {
-		return fmt.Errorf("canonlinks: stored answer %x does not match a fresh derivation", id)
-	}
-	return nil
-}
+	links, found := answers[string(id)]
+	return links, found, nil
+})
 
 // deps names every neighbor of each root, and the root.
 func deps(g *graphcache.Graph, roots [][]byte) ([][]byte, error) {
@@ -99,9 +127,7 @@ func deps(g *graphcache.Graph, roots [][]byte) ([][]byte, error) {
 	for _, id := range roots {
 		out = append(out, id)
 		if n, ok := g.Cached(id); ok {
-			for _, l := range n.Links {
-				out = append(out, l.Neighbor)
-			}
+			out = append(out, neighborsOf([]*graphcache.Node{n})...)
 		}
 	}
 	return out, nil
@@ -114,14 +140,7 @@ func check(g *graphcache.Graph, id []byte, stored any) error {
 		return fmt.Errorf("canonlinks: stored result %x has type %T", id, stored)
 	}
 	// The check must not load: it reads only nodes already cached.
-	cached := func(id []byte) (*graphcache.Node, error) {
-		n, ok := g.Cached(id)
-		if !ok {
-			return nil, fmt.Errorf("canonlinks: %x is not cached", id)
-		}
-		return n, nil
-	}
-	d, err := newDeriver(g, res.rules, cached)
+	d, err := newDeriver(g, res.rules, cachedNodes(g))
 	if err != nil {
 		return err
 	}
@@ -143,16 +162,43 @@ func check(g *graphcache.Graph, id []byte, stored any) error {
 	return nil
 }
 
-// deriver derives one pivot's links from graph nodes, read through node.
+// nodeSource is the one load policy of a derivation: node reads one person's
+// node, and load makes a set of nodes available to it.
+type nodeSource struct {
+	node func([]byte) (*graphcache.Node, error)
+	load func([][]byte) error
+}
+
+// loadingNodes reads nodes from the graph, loading what is missing.
+func loadingNodes(g *graphcache.Graph) nodeSource {
+	return nodeSource{node: g.Node, load: g.Nodes}
+}
+
+// cachedNodes reads only nodes already cached, for a check, which must not
+// load: a node that is not cached is an error, and a load does nothing.
+func cachedNodes(g *graphcache.Graph) nodeSource {
+	return nodeSource{
+		node: func(id []byte) (*graphcache.Node, error) {
+			n, ok := g.Cached(id)
+			if !ok {
+				return nil, fmt.Errorf("canonlinks: %x is not cached", id)
+			}
+			return n, nil
+		},
+		load: func([][]byte) error { return nil },
+	}
+}
+
+// deriver derives one pivot's links from graph nodes, read through src.
 type deriver struct {
 	g             *graphcache.Graph
-	node          func([]byte) (*graphcache.Node, error)
+	src           nodeSource
 	rules         kinship.Rules
 	terms         segmentcompare.Terms
 	eventTypeProp []byte
 }
 
-func newDeriver(g *graphcache.Graph, rules kinship.Rules, node func([]byte) (*graphcache.Node, error)) (*deriver, error) {
+func newDeriver(g *graphcache.Graph, rules kinship.Rules, src nodeSource) (*deriver, error) {
 	terms, err := LoadTerms(g)
 	if err != nil {
 		return nil, err
@@ -161,7 +207,7 @@ func newDeriver(g *graphcache.Graph, rules kinship.Rules, node func([]byte) (*gr
 	if err != nil {
 		return nil, err
 	}
-	return &deriver{g: g, node: node, rules: rules, terms: terms, eventTypeProp: v.PropertyID(vocabkey.PropertyEventType, vocabkey.OriginProvenencia)}, nil
+	return &deriver{g: g, src: src, rules: rules, terms: terms, eventTypeProp: v.PropertyID(vocabkey.PropertyEventType, vocabkey.OriginProvenencia)}, nil
 }
 
 // edge reads one link of n as an edge that stands for that link alone.
@@ -188,9 +234,40 @@ func (d *deriver) relationshipEdges(n *graphcache.Node) []kinship.Edge {
 	return out
 }
 
+// around reads a person's node and makes their neighbors available.
+func (d *deriver) around(id []byte) (*graphcache.Node, error) {
+	n, err := d.src.node(id)
+	if err != nil || n == nil {
+		return nil, err
+	}
+	return n, d.src.load(neighborsOf([]*graphcache.Node{n}))
+}
+
+// kinEdges is n's parent links for a canon read: each relationship link filed
+// on n, then the edge of each birth link in atEnd (n's event links).
+func (d *deriver) kinEdges(n *graphcache.Node, atEnd []kinship.Implied) []kinship.Edge {
+	edges := d.relationshipEdges(n)
+	for _, imp := range atEnd {
+		if imp.Pattern == kinship.PatternBirthParents {
+			edges = append(edges, imp.Edge)
+		}
+	}
+	return edges
+}
+
+// parentEdges is n's parent links for a canon read: the links of the events n
+// stands in, then n's kin edges. event gives an event's links.
+func (d *deriver) parentEdges(n *graphcache.Node, event func([]byte) ([]kinship.Implied, error)) ([]kinship.Edge, error) {
+	atEnd, err := d.eventLinksAt(n, event)
+	if err != nil {
+		return nil, err
+	}
+	return d.kinEdges(n, atEnd), nil
+}
+
 // eventLinks is what the event patterns imply over one event's links.
 func (d *deriver) eventLinks(id []byte) ([]kinship.Implied, error) {
-	n, err := d.node(id)
+	n, err := d.src.node(id)
 	if err != nil || n == nil {
 		return nil, err
 	}
@@ -238,19 +315,13 @@ func (d *deriver) eventLinksAt(n *graphcache.Node, eventResult func([]byte) ([]k
 // parent between. It reads the person's relationship links and the birth links
 // with the person at an end from the results of the events they stand in.
 func (d *deriver) chainLinks(id []byte, eventResult func([]byte) ([]kinship.Implied, error)) ([]kinship.Implied, error) {
-	n, err := d.node(id)
+	n, err := d.src.node(id)
 	if err != nil || n == nil {
 		return nil, err
 	}
-	edges := d.relationshipEdges(n)
-	atEnd, err := d.eventLinksAt(n, eventResult)
+	edges, err := d.parentEdges(n, eventResult)
 	if err != nil {
 		return nil, err
-	}
-	for _, imp := range atEnd {
-		if imp.Pattern == kinship.PatternBirthParents {
-			edges = append(edges, imp.Edge)
-		}
 	}
 	return kinship.Derive(edges, d.terms, d.rules), nil
 }
@@ -264,7 +335,7 @@ type Reader struct {
 
 // NewReader loads the catalog's bridge terms and event type property once.
 func NewReader(g *graphcache.Graph, rules kinship.Rules) (*Reader, error) {
-	d, err := newDeriver(g, rules, g.Node)
+	d, err := newDeriver(g, rules, loadingNodes(g))
 	if err != nil {
 		return nil, err
 	}
@@ -295,17 +366,15 @@ func (r *Reader) chain(id []byte) ([]kinship.Implied, error) {
 	return r.pivot(pivotChain, id, func() ([]kinship.Implied, error) { return r.d.chainLinks(id, r.event) })
 }
 
-// loadAround loads a person and their neighbors.
-func (r *Reader) loadAround(id []byte) (*graphcache.Node, error) {
-	n, err := r.g.Node(id)
-	if err != nil || n == nil {
-		return nil, err
+// answer returns the stored answer of slot for id, when there is one made under
+// the reader's rules.
+func (r *Reader) answer(slot graphcache.MemoSlot, id []byte) ([]kinship.Implied, bool) {
+	if v, ok := r.g.Memo(slot, id); ok {
+		if res, ok := v.(personAnswer); ok && res.rules == r.d.rules {
+			return res.links, true
+		}
 	}
-	ids := make([][]byte, 0, len(n.Links))
-	for _, l := range n.Links {
-		ids = append(ids, l.Neighbor)
-	}
-	return n, r.g.Nodes(ids)
+	return nil, false
 }
 
 // For returns every spouse, parent and grandparent link the patterns imply
@@ -315,30 +384,33 @@ func (r *Reader) loadAround(id []byte) (*graphcache.Node, error) {
 // and read-only. Links from different pivots differ in Event or Through, so
 // none is repeated.
 func (r *Reader) For(id []byte) ([]kinship.Implied, error) {
-	if v, ok := r.g.Memo(forSlot, id); ok {
-		if res, ok := v.(forResult); ok && res.rules == r.d.rules {
-			return res.links, nil
-		}
+	if links, ok := r.answer(forSlot, id); ok {
+		return links, nil
 	}
-	n, err := r.loadAround(id)
+	n, err := r.d.around(id)
 	if err != nil || n == nil {
 		return nil, err
 	}
-	out, err := r.d.forLinks(id, r.loadAround, r.event, r.chain)
+	out, err := r.d.forLinks(id, r.event, r.chain)
 	if err != nil {
 		return nil, err
 	}
-	r.g.SetMemo(forSlot, id, forResult{rules: r.d.rules, links: out})
+	r.g.SetMemo(forSlot, id, personAnswer{rules: r.d.rules, links: out})
 	return out, nil
 }
 
+// Options are what Relationships returns beyond the person's recorded and
+// For-implied links. Siblings adds the siblings a shared parent implies.
+type Options struct{ Siblings bool }
+
 // Relationships returns id's relationship links, recorded and implied, one per
 // pair of ends and keys: each relationship link filed on id, then For's links,
-// merged through one kinship.LinkSet. The caller owns the slice and its bytes.
-// Nothing is filtered: a link to a merged person is returned, as For returns
-// implied links to one.
-func (r *Reader) Relationships(id []byte) ([]kinship.Link, error) {
-	n, err := r.loadAround(id)
+// then, with opts.Siblings, the siblings a shared parent implies, merged through
+// one kinship.LinkSet. The caller owns the slice and its bytes. Nothing is
+// filtered: a link to a merged person is returned, as For returns implied links
+// to one.
+func (r *Reader) Relationships(id []byte, opts Options) ([]kinship.Link, error) {
+	n, err := r.d.around(id)
 	if err != nil || n == nil {
 		return nil, err
 	}
@@ -353,13 +425,141 @@ func (r *Reader) Relationships(id []byte) ([]kinship.Link, error) {
 	for _, imp := range implied {
 		set.AddImplied(imp)
 	}
+	if opts.Siblings {
+		if err := r.LoadSiblings([][]byte{id}); err != nil {
+			return nil, err
+		}
+		siblings, _ := r.answer(siblingSlot, id)
+		for _, imp := range siblings {
+			set.AddImplied(imp)
+		}
+	}
 	return set.Links(), nil
 }
 
-// forLinks is For's derivation. around gives a person's node with their
-// neighbors available to node; event and chain give a pivot's links.
-func (d *deriver) forLinks(id []byte, around func([]byte) (*graphcache.Node, error), event, chain func([]byte) ([]kinship.Implied, error)) ([]kinship.Implied, error) {
-	n, err := around(id)
+// LoadSiblings derives and stores the implied siblings of each id that has none
+// stored, loading every id's nodes in a fixed number of batches. An id that is
+// no node stores nothing.
+func (r *Reader) LoadSiblings(ids [][]byte) error {
+	var need [][]byte
+	for _, id := range ids {
+		if _, ok := r.answer(siblingSlot, id); !ok {
+			need = append(need, id)
+		}
+	}
+	if len(need) == 0 {
+		return nil
+	}
+	answers, err := r.d.siblingsOf(need, r.event)
+	if err != nil {
+		return err
+	}
+	for _, id := range need {
+		if links, ok := answers[string(id)]; ok {
+			r.g.SetMemo(siblingSlot, id, personAnswer{rules: r.d.rules, links: links})
+		}
+	}
+	return nil
+}
+
+// siblingsOf derives the siblings of each id that is a node, in four batched
+// loads however many ids and siblings there are: the ids, their neighbors, their
+// parents, and the parents' neighbors. An id with no entry is no node; a node with no siblings has an empty answer. event gives an event's
+// links. A parent that is linked but not cached is skipped.
+func (d *deriver) siblingsOf(ids [][]byte, event func([]byte) ([]kinship.Implied, error)) (map[string][]kinship.Implied, error) {
+	var want [][]byte
+	seen := map[string]bool{}
+	for _, id := range ids {
+		if !seen[string(id)] {
+			seen[string(id)] = true
+			want = append(want, id)
+		}
+	}
+	if err := d.src.load(want); err != nil {
+		return nil, err
+	}
+	var nodes []*graphcache.Node
+	for _, id := range want {
+		if n, ok := d.g.Cached(id); ok {
+			nodes = append(nodes, n)
+		}
+	}
+	if err := d.src.load(neighborsOf(nodes)); err != nil {
+		return nil, err
+	}
+	edges := make([][]kinship.Edge, len(nodes))
+	parents := make([][][]byte, len(nodes))
+	var allParents [][]byte
+	for i, n := range nodes {
+		var err error
+		if edges[i], err = d.parentEdges(n, event); err != nil {
+			return nil, err
+		}
+		parents[i] = kinship.Parents(n.ID, edges[i], d.terms, d.rules)
+		allParents = append(allParents, parents[i]...)
+	}
+	if err := d.src.load(allParents); err != nil {
+		return nil, err
+	}
+	var parentNodes []*graphcache.Node
+	cachedParents := map[string]*graphcache.Node{}
+	for _, q := range allParents {
+		if n, ok := d.g.Cached(q); ok && cachedParents[string(q)] == nil {
+			cachedParents[string(q)] = n
+			parentNodes = append(parentNodes, n)
+		}
+	}
+	if err := d.src.load(neighborsOf(parentNodes)); err != nil {
+		return nil, err
+	}
+	edgesOfParent := map[string][]kinship.Edge{}
+	for _, n := range parentNodes {
+		es, err := d.parentEdges(n, event)
+		if err != nil {
+			return nil, err
+		}
+		edgesOfParent[string(n.ID)] = es
+	}
+	out := make(map[string][]kinship.Implied, len(nodes))
+	for i, n := range nodes {
+		all := slices.Clone(edges[i])
+		read := map[string]bool{}
+		for _, e := range all {
+			read[edgeKey(e)] = true
+		}
+		for _, q := range parents[i] {
+			for _, e := range edgesOfParent[string(q)] {
+				if k := edgeKey(e); !read[k] {
+					read[k] = true
+					all = append(all, e)
+				}
+			}
+		}
+		out[string(n.ID)] = kinship.Siblings(n.ID, all, d.terms, d.rules)
+	}
+	return out, nil
+}
+
+// edgeKey names the link an edge was read from: its ends and associations. Two
+// distinct links between the same people differ in their associations.
+func edgeKey(e kinship.Edge) string {
+	return string(e.A) + string(e.B) + string(bytes.Join(e.Associations, nil))
+}
+
+// neighborsOf names every neighbor of each node.
+func neighborsOf(nodes []*graphcache.Node) [][]byte {
+	var ids [][]byte
+	for _, n := range nodes {
+		for _, l := range n.Links {
+			ids = append(ids, l.Neighbor)
+		}
+	}
+	return ids
+}
+
+// forLinks is For's derivation. event and chain give a pivot's links.
+func (d *deriver) forLinks(id []byte, event, chain func([]byte) ([]kinship.Implied, error)) ([]kinship.Implied, error) {
+	n, err := d.around(id)
 	if err != nil || n == nil {
 		return nil, err
 	}
@@ -367,12 +567,6 @@ func (d *deriver) forLinks(id []byte, around func([]byte) (*graphcache.Node, err
 	out, err := d.eventLinksAt(n, event)
 	if err != nil {
 		return nil, err
-	}
-	var births []kinship.Implied
-	for _, imp := range out {
-		if imp.Pattern == kinship.PatternBirthParents {
-			births = append(births, imp)
-		}
 	}
 
 	// The people one parent step from id: filed parents and children first,
@@ -385,7 +579,7 @@ func (d *deriver) forLinks(id []byte, around func([]byte) (*graphcache.Node, err
 			people = append(people, person)
 		}
 	}
-	for _, e := range d.relationshipEdges(n) {
+	for _, e := range d.kinEdges(n, out) {
 		parent, child, ok := kinship.ParentStep(e, d.terms)
 		if !ok {
 			continue
@@ -396,12 +590,8 @@ func (d *deriver) forLinks(id []byte, around func([]byte) (*graphcache.Node, err
 			add(parent)
 		}
 	}
-	for _, imp := range births {
-		other, _, _ := imp.Edge.From(id)
-		add(other)
-	}
 	for _, m := range people {
-		if _, err := around(m); err != nil {
+		if _, err := d.around(m); err != nil {
 			return nil, err
 		}
 		links, err := chain(m)

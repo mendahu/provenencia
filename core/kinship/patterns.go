@@ -21,22 +21,23 @@ var eventPatterns = []eventPattern{
 }
 
 // PivotKind is the Subject type a pattern's pivot is: the event for an event
-// pattern, the parent between for a chain, and "" for a code that is no
-// pattern.
+// pattern, the parent between for a chain, the shared parent for a sibling, and
+// "" for a code that is no pattern.
 func (p Pattern) PivotKind() vocabkey.SubjectType {
 	for _, ep := range eventPatterns {
 		if ep.code == p {
 			return vocabkey.Event
 		}
 	}
-	if p == PatternParentOfParent {
+	if p == PatternParentOfParent || p == PatternSharedParent {
 		return vocabkey.Person
 	}
 	return ""
 }
 
 // Patterns are the product's pattern codes: each event pattern in order, then
-// the parent-of-parent chain.
+// the parent-of-parent chain. Page-only codes (PatternSharedParent) are not in
+// it.
 func Patterns() []Pattern {
 	out := make([]Pattern, 0, len(eventPatterns)+1)
 	for _, ep := range eventPatterns {
