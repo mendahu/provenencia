@@ -1,7 +1,7 @@
 # Ship log — S13-02 Gender in the person header
 
 **Plan:** [`S13-02-gender-in-the-person-header.md`](S13-02-gender-in-the-person-header.md) · **Branch:** `s13-02-gender-in-the-person-header` · **PR:** #659
-**State:** ready
+**State:** stopped — CI budget test red on the runner, not this PR
 
 ## Round 0 — implement
 Base `main` @ `a6523137`.
@@ -67,5 +67,8 @@ Nits (logged): `MNT-8 · observationstest.go · Cite takes only GraphID/Artifact
 ## Finish
 Merged `origin/main` @ `c7d19d1e` (S14-12 plan docs only) → head `1f728311`. Gate PASS.
 
+## CI
+Go tests fails `TestLargeSourceBudgets/after_a_handle_commit`: 1.615s, then 2.014s on a rerun of the failed job (budget 1.5s). Not this PR: locally the case runs 0.59–0.63s on the head and 0.61–0.70s on `main` @ `c7d19d1e`; the PR does not touch promotealign's read path (only a test fixture moved onto `observationstest.Cite`); S14-11's run 41316389989 failed the same case at 1.89s before it merged, then passed. Taken to the user.
+
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: MNT-8 (widen `observationstest.Cite` to take a `citations.CreateInput` and move the 13 left sites) · to user: — · CON miss: none
+Gate PASS · CI red: `TestLargeSourceBudgets/after_a_handle_commit` (promotealign) over its 1.5s budget on the runner, 1.615s then 2.014s on rerun · open: none · follow-ups: MNT-8 (widen `observationstest.Cite` to take a `citations.CreateInput` and move the 13 left sites) · to user: — · CON miss: none
