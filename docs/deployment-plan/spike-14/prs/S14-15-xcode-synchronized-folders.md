@@ -43,14 +43,14 @@ A Swift file saved under `macos/App` or `macos/ProvenenciaTests` is in the build
 | AC | Given / when | Then |
 | --- | --- | --- |
 | AC-1.1 | A file `macos/App/Features/Sources/SyncProbe.swift` containing `enum SyncProbe { static let value = 1 }` *(new)* (temporary) is added; nothing else changes | `xcodebuild build-for-testing` compiles it: the path is in the app target's `Provenencia.SwiftFileList` |
-| AC-1.2 | A file `macos/ProvenenciaTests/SyncProbeTests.swift` with one `@Test` reading `SyncProbe.value == 1` *(new)* (temporary) is added | `xcodebuild test … -only-testing:ProvenenciaTests/SyncProbeTests` runs it and passes |
+| AC-1.2 | A file `macos/ProvenenciaTests/SyncProbeTests.swift` *(new)* (temporary), shaped like `PVFontTests.swift`: `import Testing`, `@testable import Provenencia`, `@Suite struct SyncProbeTests { @Test func probeIsBuilt() { #expect(SyncProbe.value == 1) } }`, is added | `xcodebuild test … -only-testing:ProvenenciaTests/SyncProbeTests` runs it and passes |
 | AC-1.3 | After the conversion | `grep -c 'sourcecode.swift' macos/Provenencia.xcodeproj/project.pbxproj` prints `0` |
 
 **US-2.** As the researcher, the app I run after this PR is the app I ran before it.
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-2.1 | `build-for-testing` on `main` @ `067be77` and on the branch, each into its own `-derivedDataPath` | The sorted contents of each target's `.SwiftFileList` are identical (308 app files, 117 test files) |
+| AC-2.1 | `build-for-testing` on `main` @ `067be77` and on the branch, each into its own `-derivedDataPath` | The sorted contents of each target's `.SwiftFileList` are identical. Lines not under `macos/App` or `macos/ProvenenciaTests` (generated files such as `GeneratedAssetSymbols.swift`) are filtered out before the count: 308 app files, 117 test files |
 | AC-2.2 | The same two builds | The sorted listing of `Build/Products/Debug/Provenencia.app/Contents/Resources` (relative paths) is identical: no `README.md` or `MARKS.md` in it, `Fonts/` still a subfolder with 15 `.ttf` |
 | AC-2.3 | `scripts/check-pr.sh` on a Mac | `check-pr: PASS`, including `xcode-test` and `swift-warnings` |
 
@@ -58,7 +58,7 @@ A Swift file saved under `macos/App` or `macos/ProvenenciaTests` is in the build
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-3.1 | `rg -n 'PBXFileReference\|PBXBuildFile\|four objects\|registered in the Xcode project\|Register new files' .agents .cursor macos/App/DesignSystem/README.md docs/macos-client-patterns.md` | No hit |
+| AC-3.1 | `rg -n 'PBXFileReference\|PBXBuildFile\|four objects\|registered in the Xcode project\|Register new files\|Resources phase\|manually-authored\|Wire new files' .agents .cursor macos/App/DesignSystem/README.md docs/macos-client-patterns.md` | No hit |
 | AC-3.2 | `python3 scripts/check-guidance-names.py` | Passes |
 
 ## 3. Scope
@@ -113,7 +113,7 @@ Verified at `067be77`.
 | D-5 | Delete: every `PBXBuildFile` whose `fileRef` is a `.swift` file reference (425); every `PBXFileReference` with `lastKnownFileType = sourcecode.swift` (425); file reference `6AAC04817D6F4CCC9CDC9B17` (`DesignSystem/README.md`); every `PBXGroup` that is a descendant of one of the five D-2 groups. The two Sources phases keep their objects with `files = ( );`. The five D-2 objects leave the `PBXGroup` section. Everything else stays byte-for-byte: build settings, `MARKETING_VERSION`, the Go-core phase, Frameworks, Embed Libraries, Resources, packages, `Core`, `Products`, the scheme. | The synchronized folders supply exactly these files; a leftover explicit entry next to a synchronized folder lists the file twice. | Keeping the old group objects as navigator decoration — they would be dead objects agents keep editing. |
 | D-6 | Proof of sameness is equality, not "it builds": the sorted `.SwiftFileList` of each target and the sorted listing of the built app's `Contents/Resources` are identical before and after (STEP-1, STEP-3). | A dropped file that nothing references, or a stray bundled resource, still builds; equality catches both. | Build and test passing alone. |
 | D-7 | No new guard script. | After this PR the project file has no per-file entries; any `.swift` line reappearing is visible in the diff, and the skills say not to add one. | A `check-pr.sh` check for `sourcecode.swift` in the project — a new check for a mistake the guidance removes; logged as not planned. |
-| D-8 | Guidance text, exactly: `add-swift-test` § "Xcode project" becomes: "`macos/ProvenenciaTests` is a synchronized folder: a `.swift` file saved there is in the **ProvenenciaTests** target. Do not edit `project.pbxproj`, and never add a test file under `macos/App`." `add-ui-component` checklist line 72 becomes "- [ ] File saved under `macos/App/DesignSystem/` or `macos/App/Features/` (synchronized folders; no `project.pbxproj` edit)"; step 4 becomes "4. Save the file in its folder; the synchronized folder adds it to the build. A non-Swift file (a README) in the folder needs a membership exception in `project.pbxproj` (see the DesignSystem README § Xcode project)." `swift-tests.mdc` line 13's last sentence becomes "`macos/ProvenenciaTests` is a synchronized folder: new files need no `project.pbxproj` edit." The DesignSystem README § "Xcode project registration" is rewritten to: the four app source folders and `ProvenenciaTests` are synchronized; a Swift file saved there is built; a non-Swift file in them is bundled unless listed in the folder's `PBXFileSystemSynchronizedBuildFileExceptionSet`; `Resources/` is a classic group, and a new `.ttf` dropped into `Resources/Fonts/` is bundled through the folder reference with no project edit (replacing "add it to the Xcode project's Resources phase"). `docs/macos-client-patterns.md` after line 37 gains: "`App/App`, `App/Platform`, `App/Features`, `App/DesignSystem` and `ProvenenciaTests` are synchronized folders: a file on disk there is in the build. `App/Resources` is a classic group. A new top-level folder under `macos/App` is not built until it is added as a synchronized folder." | The skills and rule are what agents follow; leaving any hand-entry step makes the next agent write entries the project no longer has. | Pointing at Xcode docs only — agents work without Xcode open. |
+| D-8 | Guidance text, exactly: `add-swift-test` § "Xcode project" becomes: "`macos/ProvenenciaTests` is a synchronized folder: a `.swift` file saved there is in the **ProvenenciaTests** target. Do not edit `project.pbxproj`, and never add a test file under `macos/App`." `add-ui-component` checklist line 72 becomes "- [ ] File saved under `macos/App/DesignSystem/` or `macos/App/Features/` (synchronized folders; no `project.pbxproj` edit)"; step 4 becomes "4. Save the file in its folder; the synchronized folder adds it to the build. A non-Swift file (a README) in the folder needs a membership exception in `project.pbxproj` (see the DesignSystem README § Xcode project registration)." `swift-tests.mdc` line 13's last sentence becomes "`macos/ProvenenciaTests` is a synchronized folder: new files need no `project.pbxproj` edit." The DesignSystem README section keeps its heading `## Xcode project registration`, and the fonts paragraph's "(see \"Xcode project registration\" below)" stays; the paragraph's "add it to the Xcode project's Resources phase" becomes "it is bundled through the `Fonts` folder reference". The section body is rewritten to: the four app source folders and `ProvenenciaTests` are synchronized; a Swift file saved there is built; a non-Swift file in them is bundled unless listed in the folder's `PBXFileSystemSynchronizedBuildFileExceptionSet`; `Resources/` is a classic group, and a new `.ttf` dropped into `Resources/Fonts/` is bundled through the folder reference with no project edit. `docs/macos-client-patterns.md` after line 37 gains: "`App/App`, `App/Platform`, `App/Features`, `App/DesignSystem` and `ProvenenciaTests` are synchronized folders: a file on disk there is in the build. `App/Resources` is a classic group. A new top-level folder under `macos/App` is not built until it is added as a synchronized folder." | The skills and rule are what agents follow; leaving any hand-entry step makes the next agent write entries the project no longer has. | Pointing at Xcode docs only — agents work without Xcode open. |
 
 **Rules this plan bends.** None. `.cursor/rules/swift-tests.mdc` changes because its pbxproj sentence becomes false, which is this PR's scope (map scope entry), not a bend.
 
@@ -218,23 +218,30 @@ All steps run on a Mac with Xcode 16 or later. Let `S` be a scratch directory ou
 
 **STEP-1 — Baseline on the planning base**
 Files: none changed.
-Do: on a clean checkout of the branch before any edit (equal to `main`), run `xcodebuild build-for-testing -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -derivedDataPath "$S/dd-before" CODE_SIGNING_ALLOWED=NO`. Save `sort` of each `find "$S/dd-before" -name 'Provenencia.SwiftFileList'` and `-name 'ProvenenciaTests.SwiftFileList'` to `$S/app-before.txt` and `$S/tests-before.txt`, and `(cd "$S/dd-before/Build/Products/Debug/Provenencia.app/Contents/Resources" && find . | sort) > "$S/res-before.txt"`.
+Do: on a clean checkout of the branch before any edit (equal to `main`), run `xcodebuild build-for-testing -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -derivedDataPath "$S/dd-before" CODE_SIGNING_ALLOWED=NO`. Then write the three lists (the build is for the host architecture only, so each `find` matches one file; more than one match is a Stop condition):
+
+```bash
+R="$(git rev-parse --show-toplevel)/macos"
+sort "$(find "$S/dd-before" -name 'Provenencia.SwiftFileList')" | grep -F "$R/App/" > "$S/app-before.txt"
+sort "$(find "$S/dd-before" -name 'ProvenenciaTests.SwiftFileList')" | grep -F "$R/ProvenenciaTests/" > "$S/tests-before.txt"
+(cd "$S/dd-before/Build/Products/Debug/Provenencia.app/Contents/Resources" && find . | sort) > "$S/res-before.txt"
+```
 Check: `wc -l` gives 308 and 117 lines for the two file lists; `res-before.txt` contains `./Fonts/Newsreader-400.ttf` and no `README.md`.
 
 **STEP-2 — Convert the project file**
 Files: `macos/Provenencia.xcodeproj/project.pbxproj`.
-Do: write a throwaway script in `$S` (not committed) that applies D-4 and D-5 and inserts the objects in §6 **macOS** (D-2, D-3). Run it on the project file.
-Check: `plutil -lint macos/Provenencia.xcodeproj/project.pbxproj` prints OK; `xcodebuild -list -project macos/Provenencia.xcodeproj` lists targets `Provenencia` and `ProvenenciaTests` and scheme `Provenencia`; `grep -c 'sourcecode.swift'` prints 0 (AC-1.3); `grep -c 'isa = PBXFileSystemSynchronizedRootGroup'` prints 5; `grep -c 'isa = PBXFileSystemSynchronizedBuildFileExceptionSet'` prints 2; `grep -c 'MARKETING_VERSION = 0.2.5'` prints 2; `git diff --stat` shows only the project file.
+Do: write a throwaway script in `$S` (not committed) that applies D-4 and D-5 and inserts the objects in §6 **macOS** (D-2, D-3). Run it on the project file. Group deletion is by walking `children` from the five D-2 roots: those 5 roots and their 72 descendant groups (77 in all) leave the `PBXGroup` section; every other `PBXGroup` is kept unchanged. Indentation is tabs, as in the rest of the file.
+Check: `plutil -lint macos/Provenencia.xcodeproj/project.pbxproj` prints OK; `xcodebuild -list -project macos/Provenencia.xcodeproj` lists targets `Provenencia` and `ProvenenciaTests` and scheme `Provenencia`; `grep -c 'sourcecode.swift'` prints 0 (AC-1.3); `grep -c 'isa = PBXFileSystemSynchronizedRootGroup'` prints 5; `grep -c 'isa = PBXFileSystemSynchronizedBuildFileExceptionSet'` prints 2; `grep -c 'MARKETING_VERSION = 0.2.5'` prints 4 (both targets, Debug and Release); `grep -c 'isa = PBXGroup;'` prints 5 (82 at the base; the survivors are main `AA0000000000000000000040`, `App` `…41`, `Products` `…42`, `Core` `…43`, `Resources` `…49`); `git diff --stat` shows only the project file.
 
 **STEP-3 — Prove the same build**
 Files: none changed.
-Do: repeat STEP-1's build into `$S/dd-after` and write `app-after.txt`, `tests-after.txt`, `res-after.txt` the same way. The SwiftFileList paths are absolute; both builds run from the same checkout path.
+Do: repeat STEP-1's build and the three commands with `dd-after` and `-after.txt` in place of `dd-before` and `-before.txt`. The SwiftFileList paths are absolute; both builds run from the same checkout path.
 Check: `diff "$S/app-before.txt" "$S/app-after.txt"`, the tests pair and the resources pair each print nothing (AC-2.1, AC-2.2).
 
 **STEP-4 — Probe a new file**
 Files: `macos/App/Features/Sources/SyncProbe.swift` *(new)* (temporary), `macos/ProvenenciaTests/SyncProbeTests.swift` *(new)* (temporary), contents per AC-1.1 and AC-1.2.
-Do: add both, with no project edit; build and run `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/SyncProbeTests CODE_SIGNING_ALLOWED=NO`. Then delete both files.
-Check: the test passes; `git status --porcelain` afterwards lists only `project.pbxproj`.
+Do: add both, with no project edit; run `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -derivedDataPath "$S/dd-probe" -only-testing:ProvenenciaTests/SyncProbeTests CODE_SIGNING_ALLOWED=NO`. Then delete both files.
+Check: `grep -c 'SyncProbe.swift' "$(find "$S/dd-probe" -name 'Provenencia.SwiftFileList')"` prints 1 before the files are deleted (AC-1.1); the test passes (AC-1.2); `git status --porcelain` afterwards lists only `project.pbxproj`.
 
 **STEP-5 — Full gate**
 Files: none changed.
@@ -280,7 +287,7 @@ Must stay green: everything `scripts/check-pr.sh` runs, and CI's `macOS tests / 
 - [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated — none
 - [ ] UI matches the brief inventory; no new kit primitive unless the brief marks it New — no UI change
 - [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together) — none
-- [ ] CI `macOS tests / test` is green on the PR, with its `xcodebuild -version` line quoted in the PR description
+- [ ] CI `macOS tests / test` is green on the PR, with its `xcodebuild -version` line quoted in the PR description (the job runs only on a non-draft PR: this box is checked after the PR is marked ready, per ship-pr)
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped (audit A-34)
 - [ ] Brief moved to design/archive/ and design/README.md updated (if gated) — not gated
@@ -305,11 +312,11 @@ Must stay green: everything `scripts/check-pr.sh` runs, and CI's `macOS tests / 
 **Stop and report if:**
 
 - No Mac with Xcode 16 or later is available: stop before STEP-1.
-- STEP-1's lists do not have 308 and 117 lines, or a group under the five roots has a `path` that is not its folder name (the base moved; §4 is stale).
+- A STEP-1 `find` matches more than one SwiftFileList, or STEP-1's lists do not have 308 and 117 lines, or a group under the five roots has a `path` that is not its folder name (the base moved; §4 is stale).
 - `xcodebuild -list` or the build rejects the converted file, or Xcode reports the project needs an upgrade beyond format 77.
 - Any STEP-3 diff is not empty. Report the differing lines; do not edit the project to hide them.
 - A non-Swift file other than the three in D-3 is found under the five roots at your base.
-- CI's `test` job fails reading the project, or prints an Xcode older than 16.
+- CI's `test` job (once the PR is out of draft) fails reading the project, or prints an Xcode older than 16.
 
 ## 12. Open questions
 
