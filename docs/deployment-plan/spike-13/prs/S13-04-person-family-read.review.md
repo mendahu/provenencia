@@ -61,3 +61,23 @@ Both are in the map's working rule "Family groups in Go".
 
 ### X-7 · minor · Test package and commit ids
 **Answer:** Fixed — T-3 names `persondetail_test`; AC-2.5 commits the association id too.
+
+## Round 2 — executability (verdict: Ready with changes)
+
+### X-1 · major · Proto and Xcode checks need macOS
+**Answer:** Fixed — header line **Runs on:** macOS; the Stop condition stays.
+
+### X-2 · major · T-1 named `Kin` fields that D-2 replaced
+**Answer:** Fixed — T-1 reads `kin[RoleParent]` and so on.
+
+### X-3 · major · Source of `terms` and the Person type id
+**Answer:** Fixed — D-9 (1): `canonlinks.LoadTerms(g)` and `g.Vocabulary().TypeIDsByKey()[vocabkey.Person]`, once per call.
+
+### X-4 · minor · Malformed id in `Families`
+**Answer:** Fixed — D-9 (3) skips an id of other than 16 bytes.
+
+### X-5 · minor · `Canon` builder bodies
+**Answer:** Fixed — D-14: they copy `world`'s bodies and `claims_test.go`'s raw updates; `relationship`'s direction stated.
+
+### X-6 · minor · A partner unit with every partner dropped
+**Answer:** Fixed — D-10 drops a `UnitParents` or `UnitPartner` unit with no partner. Also named in STEP-2: moving `chains` onto `relationshipKeys` drops its `rel` parameter.
