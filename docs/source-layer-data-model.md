@@ -41,7 +41,7 @@ then its `author` metadata may preserve that exact string. The Source layer does
 
 Catalog dates are the same: `publication_date`, `issue_date`, `census_date`, and similar stay as-written text on `source_metadata.value_text` (`"about the year 1890"`, `"15 May 1880"`). They exist so the researcher can file a reference date without parsing it from the Artifact, and so omnibar search can match that wording. They do **not** attach a structured DateValue.
 
-Structured dates belong on Interpretation Observations and later Conclusion claims ([`structured-date-model.md`](structured-date-model.md)). A later project-wide sort or group by when evidence was created or published is a first-class Source attribute, not an EAV metadata key — the printed name of that date changes by type (publication vs issue vs registration vs enumeration). Designed, planned for Spike 15 with the citation fields: [`ideas/source-provenance-date.md`](ideas/source-provenance-date.md).
+Structured dates belong on Interpretation Observations and later Conclusion claims ([`structured-date-model.md`](structured-date-model.md)). A later project-wide sort or group by when evidence was created or published is a first-class Source attribute, not an EAV metadata key — the printed name of that date changes by type (publication vs issue vs registration vs enumeration). Designed, planned for Spike 15 with the citation fields: [`spike-15/source-provenance-date.md`](deployment-plan/spike-15/source-provenance-date.md).
 
 ## 1.3 Offline-first ingestion
 
@@ -201,7 +201,7 @@ Same `origin` / `UNIQUE (key, origin)` rules as `source_types` ([`seeded-vocabul
 
 Possible seeded fields include `author`, `publisher`, `publication_date`, and similar. Date-named keys are still `data_type = 'text'`. The authoritative list is in [`seeded-vocabulary.md`](seeded-vocabulary.md).
 
-The goal is not to create a general typed EAV system. New structured types should only be introduced for concrete use cases. Do not reintroduce `data_type = 'date'` on catalog fields so a later sort can reuse those keys — that sort cannot be global across `publication_date` / `issue_date` / `census_date` without a first-class attribute ([`ideas/source-provenance-date.md`](ideas/source-provenance-date.md), planned for Spike 15).
+The goal is not to create a general typed EAV system. New structured types should only be introduced for concrete use cases. Do not reintroduce `data_type = 'date'` on catalog fields so a later sort can reuse those keys — that sort cannot be global across `publication_date` / `issue_date` / `census_date` without a first-class attribute ([`spike-15/source-provenance-date.md`](deployment-plan/spike-15/source-provenance-date.md), planned for Spike 15).
 
 ## 5.2 `source_type_metadata_fields`
 

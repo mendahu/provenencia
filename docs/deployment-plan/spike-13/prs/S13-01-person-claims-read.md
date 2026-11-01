@@ -84,7 +84,7 @@ The engine can answer "which records make up this person, and where do they come
 | Out | Home |
 | --- | --- |
 | The Sources section UI, type label lookup, Subject card placement, Observation display order | S13-16 |
-| The Source date on a group | Descoped 2026-10-31, [`docs/ideas/source-provenance-date.md`](../../../ideas/source-provenance-date.md) |
+| The Source date on a group | Descoped 2026-10-31, [`docs/deployment-plan/spike-15/source-provenance-date.md`](../../spike-15/source-provenance-date.md) |
 | Family, timeline and record-links keys declaring their refreshes | S13-04, S13-05, S13-27 |
 | Moving title order out of `conclusionheaders` to a neutral package | when a third non-header caller appears — [review M-8](S13-01-person-claims-read.review.md) |
 | Remove a claim | S13-17 |

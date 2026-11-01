@@ -28,6 +28,6 @@ PDF Artifact thumbnails, `text_quote` locators, Source-page Find, Change type, a
 | Extract structure from transcription | [`docs/dogfood/ux.md`](../../../dogfood/ux.md) |
 | `text_quote` locators | [`text-quote-locators.md`](../../../ideas/text-quote-locators.md) |
 | PDF Artifact thumbnails | [`artifact-pdf-thumbnails.md`](../../../ideas/artifact-pdf-thumbnails.md) |
-| First-class Source provenance date | [`source-provenance-date.md`](../../../ideas/source-provenance-date.md) |
+| First-class Source provenance date | [`source-provenance-date.md`](../../spike-15/source-provenance-date.md) |
 | Source-to-source commentary | [`source-to-source-relationships.md`](../../../ideas/source-to-source-relationships.md) |
 | Audio / video Sources | [`audio-video-sources.md`](../../../ideas/audio-video-sources.md) |

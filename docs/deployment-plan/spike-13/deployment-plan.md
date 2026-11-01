@@ -1,6 +1,6 @@
 # Deployment plan — Spike 13
 
-The Person page becomes the place a researcher goes to understand one canonical person: a fixed header over five sections (Vitals, Family, Timeline, Gallery, Sources), a reusable provenance sheet beside every value in Vitals, and controls to remove or review a person's identity claims. The requirements are [`person-detail.md`](person-detail.md) (R-1 … R-40, R-D1 … R-D3); this map links to them instead of restating them. It pulls in the person-page half of [`ideas/kinship-view.md`](../../ideas/kinship-view.md) (siblings from a shared parent). The first-class Source date was pulled in on 2026-10-26 and descoped on 2026-10-31 (S13-20 – S13-22): it moves to Spike 15 with the other Source fields a standard citation needs ([`ideas/source-provenance-date.md`](../../ideas/source-provenance-date.md), [`ideas/citation-formats.md`](../../ideas/citation-formats.md)). One behavior, one PR.
+The Person page becomes the place a researcher goes to understand one canonical person: a fixed header over five sections (Vitals, Family, Timeline, Gallery, Sources), a reusable provenance sheet beside every value in Vitals, and controls to remove or review a person's identity claims. The requirements are [`person-detail.md`](person-detail.md) (R-1 … R-40, R-D1 … R-D3); this map links to them instead of restating them. It pulls in the person-page half of [`ideas/kinship-view.md`](../../ideas/kinship-view.md) (siblings from a shared parent). The first-class Source date was pulled in on 2026-10-26 and descoped on 2026-10-31 (S13-20 – S13-22): it moves to Spike 15 with the other Source fields a standard citation needs ([`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md), [`spike-15/citation-formats.md`](../spike-15/citation-formats.md)). One behavior, one PR.
 
 **Slice 0 comes first** (user, 2026-10-29): it removes Identity Claim Observation pins, Promote's evidence sheet and the engine behind them, as decided in [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5 (docs PR #623). It is precursor work: the Person page's claims sections build on Identity Claims without pins.
 
@@ -45,11 +45,11 @@ Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
 | R-23 – R-28 Timeline | S13-05, S13-13 | S13-D4 |
 | R-29 – R-32 Gallery and viewer | S13-14, S13-15 | S13-D5 |
 | R-33 – R-37 Sources | S13-01, S13-16 | S13-D6 |
-| R-35 Source date | Descoped 2026-10-31 (S13-20 – S13-22): [`ideas/source-provenance-date.md`](../../ideas/source-provenance-date.md), Spike 15 | Descoped (S13-D8, S13-D9) |
+| R-35 Source date | Descoped 2026-10-31 (S13-20 – S13-22): [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md), Spike 15 | Descoped (S13-D8, S13-D9) |
 | R-38, R-39 remove a claim, last claim deletes the person | S13-08, S13-17 | S13-D6 |
 | R-40 claim review, replaced 2026-10-29 by how a person's records connect ([`evidence-graph-comparison.md`](evidence-graph-comparison.md)) | S13-26, S13-27, S13-28 (S13-07, S13-18 descoped) | S13-D10 (S13-D7 descoped) |
 
-**Back in the ideas folder** — [`ideas/kinship-view.md`](../../ideas/kinship-view.md) keeps kinship beyond the nuclear family, conflicts between shapes, a project's own patterns, citing an implied fact on a tree, and sibling evidence for matching (R-18a). [`ideas/citation-formats.md`](../../ideas/citation-formats.md) keeps standard genealogical citations beyond the provenance sheet's citation line, and [`ideas/source-provenance-date.md`](../../ideas/source-provenance-date.md) the first-class Source date; both are planned for Spike 15 (user, 2026-10-31). [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md) keeps weak-claim alerts, the review queue, re-pinning and claim editing. The rest of [person-detail.md § Not this spike](person-detail.md#not-this-spike).
+**Back in the ideas folder** — [`ideas/kinship-view.md`](../../ideas/kinship-view.md) keeps kinship beyond the nuclear family, conflicts between shapes, a project's own patterns, citing an implied fact on a tree, and sibling evidence for matching (R-18a). [`spike-15/citation-formats.md`](../spike-15/citation-formats.md) keeps standard genealogical citations beyond the provenance sheet's citation line, and [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md) the first-class Source date; both are planned for Spike 15 (user, 2026-10-31). [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md) keeps weak-claim alerts, the review queue, re-pinning and claim editing. The rest of [person-detail.md § Not this spike](person-detail.md#not-this-spike).
 
 ## Working rules
 
@@ -98,7 +98,7 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 - **Timeline is direct participation, any role** (R-23). S13-05 adds an unfiltered participation hop to `core/hops` (beside `EventsOfSubject`, which is `subject` role only) and returns, per event, `EventSummary` (title, date, folded places), the person's role term, and the other participants as {role, `PersonSummary`}, ordered by `conclusionsummaries.sortEvents` (undated last). Swift titles events with `EventTitleDisplay` and groups the undated ones (R-24). Binds S13-05.
 - **A derived row carries its owning entity's records.** `ConclusionDetail` already carries `ReconcilerOutcomeDetail` records per field. S13-06 adds, for each derived row, the records of the field on the entity that owns it (every surviving birth or death event's date, the lead first; each of those events' Places' names, not their parent chain or the location link; user, 2026-10-30), keyed by that entity on `ConclusionDetail`, not on `LifeFacts` (which lists and tiles also carry). Event's derived place row can take the same path later. No new provenance RPC. Binds S13-06, S13-11.
 - **Claims are read per person from the graph cache, grouped by Source in Go.** S13-01 reads the person's accepted members from `graphcache` (`Member` has Subject, Source and graph ids; `EvidenceGraph` has the Source title), returns the Source type as its id (the Sources section labels it from the cached source types list, as `SourcesModel` does; user, 2026-10-31), and returns groups ordered by Source title (R-36). Each claim carries the existing `CatalogSubject` and Observation wire messages the Evidence graph's Subject card already renders. Binds S13-01.
-- **The Source date is descoped** (user, 2026-10-31). S13-20, S13-21 and S13-22 and briefs S13-D8 and S13-D9 leave the spike before any was planned: the Source date is one of the fields an *Evidence Explained* citation needs, so it lands in Spike 15 with the rest of the Source schema ([`ideas/citation-formats.md`](../../ideas/citation-formats.md)). Its settled decisions (one Source-level attribute, not a metadata key; the original publication date as a structured `date_values` reference; optional, no backfill; the Sources list shows and sorts by it, undated last) moved with it to [`ideas/source-provenance-date.md`](../../ideas/source-provenance-date.md). The Sources section shows each Source's title and type.
+- **The Source date is descoped** (user, 2026-10-31). S13-20, S13-21 and S13-22 and briefs S13-D8 and S13-D9 leave the spike before any was planned: the Source date is one of the fields an *Evidence Explained* citation needs, so it lands in Spike 15 with the rest of the Source schema ([`spike-15/citation-formats.md`](../spike-15/citation-formats.md)). Its settled decisions (one Source-level attribute, not a metadata key; the original publication date as a structured `date_values` reference; optional, no backfill; the Sources list shows and sorts by it, undated last) moved with it to [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md). The Sources section shows each Source's title and type.
 - **One Unpromote, deletes through the registry.** The Person page's Remove calls the same `UnpromoteSubject` as the Evidence graph (R-38). Removing a canonical entity's last accepted member deletes the entity **wherever** Unpromote runs, the Evidence graph included (user, 2026-10-26; R-39). Both confirms warn first. After a delete the Person page lands on the Persons list; the Evidence graph stays where it is. S13-08 deletes the canonical entity through `core/database/deleteimpact` ([`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md), [`add-audit-scope`](../../../.agents/skills/add-audit-scope/SKILL.md)), and the confirm reads an Impact report through an unpromote preflight, as `GetDeleteImpact` and `GetEvidenceGraphUnlinkImpact` do, not a one-off flag. Binds S13-08, S13-17.
 
 ### Client
@@ -136,15 +136,15 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 | S13-08 | Unpromoting the last member | 6 | `UnpromoteSubject` on the last accepted member deletes the person through `deleteimpact`, wherever Unpromote runs; an unpromote Impact preflight for both confirms | — | S13-25 | — | Scoped |
 | S13-16 | Sources section | 6 | Claims grouped by Source (title, type) with Subject cards, each Source opening its page | S13-D6 | S13-01, S13-10 | — | Scoped |
 | S13-17 | Remove a claim | 6 | Remove on a claim, the last-claim warning, and landing on the Persons list | S13-D6 | S13-08, S13-16 | — | Scoped |
-| S13-20 | Source date engine | 6 | An optional publication date on `sources` as a `date_values` reference (migration, model, read and write RPCs); `ListPersonClaims` groups carry it | — | S13-01 | — | Descoped (2026-10-31): [`ideas/source-provenance-date.md`](../../ideas/source-provenance-date.md), Spike 15 |
+| S13-20 | Source date engine | 6 | An optional publication date on `sources` as a `date_values` reference (migration, model, read and write RPCs); `ListPersonClaims` groups carry it | — | S13-01 | — | Descoped (2026-10-31): [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md), Spike 15 |
 | S13-07 | Stored claim read | 7 | Identity Claims have no stored pins to read back (conclusion §5) | — | — | — | Descoped (2026-10-29) → open question 9 |
 | S13-18 | Claim review | 7 | Replaced by slice 7's view of how the records connect | — | — | — | Descoped (2026-10-29) → S13-26 – S13-28 |
 | S13-26 | Scoring two Evidence graphs | 7 | Requirement 1: a pure, registry-driven function that scores the connection between two Evidence graphs from the Subjects they share, explained in GPS terms; shape decided with open question 11 | — | S13-24 | — | Blocked — on open question 11 |
 | S13-29 | One loader for a Subject's comparable values | 7 | Preparatory: `promotealign`'s per-graph layer loader (values with lifespans, bridges, metas) moves into a shared `core/database` package with one memo key; Promote and `persondetail` read it; Go only | — | S13-24 | — | Blocked — on open question 11 |
 | S13-27 | Person record links read | 7 | `GetPersonRecordLinks` RPC in `persondetail`: the person's Evidence graphs (Source title, type) and a link for each pair, from S13-26; its key joins the per-person invalidation spec | — | S13-01, S13-26, S13-29 | — | Blocked — on open question 11 |
 | S13-28 | How the records connect | 7 | The view of the person's Evidence graphs and their links on the Person page, with what each link agrees and conflicts on | S13-D10 | S13-16, S13-27 | — | Blocked — on open question 11 |
-| S13-21 | Source date on the Source page | 8 | Set and show the Source date where the board puts it | S13-D8 | S13-20 | — | Descoped (2026-10-31): [`ideas/source-provenance-date.md`](../../ideas/source-provenance-date.md), Spike 15 |
-| S13-22 | Source date on the Sources list | 8 | Each Sources list row shows the date; the list sorts by it, undated last | S13-D9 | S13-20 | — | Descoped (2026-10-31): [`ideas/source-provenance-date.md`](../../ideas/source-provenance-date.md), Spike 15 |
+| S13-21 | Source date on the Source page | 8 | Set and show the Source date where the board puts it | S13-D8 | S13-20 | — | Descoped (2026-10-31): [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md), Spike 15 |
+| S13-22 | Source date on the Sources list | 8 | Each Sources list row shows the date; the list sorts by it, undated last | S13-D9 | S13-20 | — | Descoped (2026-10-31): [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md), Spike 15 |
 | S13-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -163,8 +163,8 @@ Each brief is written just before the PR it gates, its board agreed, and that PR
 | S13-D6 | Sources section | **S13-16**, **S13-17** | Source groups, claim cards, Remove and the last-claim warning |
 | S13-D7 | Claim review sheet | — | **Descoped (2026-10-29)** with S13-18 |
 | S13-D10 | Person page: how the records connect | **S13-28** | The person's Evidence graphs as nodes and their links, a link's agreements and conflicts, a record that stands apart, two groups that do not connect. Where it sits (inside Sources or beside it) is the board's call |
-| S13-D8 | Source page: the Source date | — | **Descoped (2026-10-31)** with the Source date: [`ideas/source-provenance-date.md`](../../ideas/source-provenance-date.md) |
-| S13-D9 | Sources list: the Source date | — | **Descoped (2026-10-31)** with the Source date: [`ideas/source-provenance-date.md`](../../ideas/source-provenance-date.md) |
+| S13-D8 | Source page: the Source date | — | **Descoped (2026-10-31)** with the Source date: [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md) |
+| S13-D9 | Sources list: the Source date | — | **Descoped (2026-10-31)** with the Source date: [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md) |
 
 ## Slices
 
@@ -336,7 +336,7 @@ Go, plus deleting Swift's draft rule.
 #### S13-11 — Provenance sheet
 
 **Ships.** The provenance control beside every Vitals value and the sheet from S13-D2: every record, named by its citation line (Source title, Artifact label, Citation label, page; user, 2026-10-31), the reconciler's reasoning, and links to the Source, Citation and Observation. It replaces the Why accordion on the Person page only; Event and Place keep it. `GetConclusionDetail`'s outcomes gain the Artifact label, Citation label and page; no new RPC.
-**Not this PR.** Reconciliation Claims (R-10); the control outside Vitals (R-13b); a formatted *Evidence Explained* citation and the Source fields it needs ([`ideas/citation-formats.md`](../../ideas/citation-formats.md)).
+**Not this PR.** Reconciliation Claims (R-10); the control outside Vitals (R-13b); a formatted *Evidence Explained* citation and the Source fields it needs ([`spike-15/citation-formats.md`](../spike-15/citation-formats.md)).
 **Check.** Bar 2.
 **Context.** R-8 – R-13b; working rule "A derived row carries its owning entity's records"; `ReconciliationReasoningView`; removes the owner group-line branch S13-06 added to it, or moves it into the sheet, which keeps S13-D12's grouping; VoiceOver names which owner group is behind the shown value (S13-06 UX-3): the group's heading says so, a new L10n key; working rule "The provenance sheet replaces the Why on the Person page only".
 
@@ -347,7 +347,7 @@ Go, plus deleting Swift's draft rule.
 #### S13-01 — Person claims read
 
 **Ships.** `ListPersonClaims(personId)` in `core/database/persondetail`, read from `graphcache`: the person's accepted identity claims grouped by Source, groups ordered by Source title, each group with the Source's id, ref, title and type id, and each claim with its claim id, Evidence graph id and name, and the `CatalogSubject` and Observations the Subject card renders. Also: one `graphcache` accepted-members helper with `conclusiondetails.acceptedMembers` moved onto it (`promotealign.acceptedClaims` is deleted by S13-24, its only caller being the evidence read), and the per-handle invalidation descriptor entry (its own `CatalogQueryFollows`) with `.conclusionDetail` and this key declared through it; the older `.evidenceGraph` and list fan-outs move onto the same descriptor `refreshes` (user, 2026-10-31).
-**Not this PR.** The section (S13-16); the Source date (descoped 2026-10-31, [`ideas/source-provenance-date.md`](../../ideas/source-provenance-date.md)).
+**Not this PR.** The section (S13-16); the Source date (descoped 2026-10-31, [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md)).
 **Check.** A handler test: a Source with two graphs each contributing a claim returns one group with two claims; registry tests: a promote into the person refreshes both keys.
 **Context.** Working rules "Each section reads its own query", "One invalidation rule for person-section keys", "Canonical only", "Claims are read per person from the graph cache"; R-33 – R-37.
 
@@ -426,7 +426,7 @@ Go, plus deleting Swift's draft rule.
 
 #### S13-20 — Source date engine
 
-**Descoped (2026-10-31).** The scope moved to [`ideas/source-provenance-date.md`](../../ideas/source-provenance-date.md) ("What Spike 13 had cut"), for Spike 15 with the citation fields (working rule "The Source date is descoped").
+**Descoped (2026-10-31).** The scope moved to [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md) ("What Spike 13 had cut"), for Spike 15 with the citation fields (working rule "The Source date is descoped").
 
 #### S13-08 — Unpromoting the last member
 
@@ -490,7 +490,7 @@ Go, plus deleting Swift's draft rule.
 
 ### Slice 8 — Source date on the Source pages
 
-**Descoped (2026-10-31)** with S13-20: S13-21 (Source date on the Source page, brief S13-D8) and S13-22 (Source date on the Sources list, brief S13-D9). Their scope moved to [`ideas/source-provenance-date.md`](../../ideas/source-provenance-date.md).
+**Descoped (2026-10-31)** with S13-20: S13-21 (Source date on the Source page, brief S13-D8) and S13-22 (Source date on the Sources list, brief S13-D9). Their scope moved to [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md).
 
 ## Open questions
 

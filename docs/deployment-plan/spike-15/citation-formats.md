@@ -1,6 +1,6 @@
 # Citation formats
 
-**Status:** idea, planned for Spike 15 together with the first-class Source date ([`source-provenance-date.md`](source-provenance-date.md)), which is one of the fields a standard citation needs (user, 2026-10-31). The first step ships in Spike 13: the provenance sheet (S13-11, brief S13-D2) shows each record's **citation line** built from the data the catalog has (user, 2026-10-31). This file lists what a standard genealogical citation needs that the catalog does not have yet. It replaces the "Layered citation output" note in [`source-structure-later.md`](source-structure-later.md).
+**Status:** Spike 15 design input, not yet cut into PRs ([`README.md`](README.md)); planned together with the first-class Source date ([`source-provenance-date.md`](source-provenance-date.md)), which is one of the fields a standard citation needs (user, 2026-10-31). The first step ships in Spike 13: the provenance sheet (S13-11, brief S13-D2) shows each record's **citation line** built from the data the catalog has (user, 2026-10-31). This file lists what a standard genealogical citation needs that the catalog does not have yet.
 
 ## The convention
 
@@ -54,7 +54,7 @@ What an *Evidence Explained* citation draws on, and what Provenencia has for eac
 | --- | --- | --- | --- |
 | Repository and its location | The National Archives, Kew | No | Source, or a shared Repository record |
 | Collection, series and call number | "HO 107/2353"; "PR/Y/MB/3" | No | Source |
-| What it is a copy of | an index entry citing an image citing the register | No ([`source-structure-later.md`](source-structure-later.md) "Derivation links") | A link between Sources |
+| What it is a copy of | an index entry citing an image citing the register | No ([`source-structure-later.md`](../../ideas/source-structure-later.md) "Derivation links") | A link between Sources |
 
 An analysis after the citation ("informant was the deceased's son") fits the Citation's notes.
 
@@ -64,12 +64,12 @@ Of about 20 elements, 2 are there (title, item label) and 3 are partial (record 
 
 | Missing | Today | Needed for |
 | --- | --- | --- |
-| **Fields per Source type** | One seeded type (`birth_certificate`: document number, record date, issue date). Every other descriptive value is free-text metadata under a key the researcher chose ([`seeded-vocabulary.md`](../seeded-vocabulary.md)) | Any template: a formatter cannot read "author" or "repository" if every project names them differently |
+| **Fields per Source type** | One seeded type (`birth_certificate`: document number, record date, issue date). Every other descriptive value is free-text metadata under a key the researcher chose ([`seeded-vocabulary.md`](../../seeded-vocabulary.md)) | Any template: a formatter cannot read "author" or "repository" if every project names them differently |
 | **Creator / author, publisher, place of publication** | Free text, if any | Published works, newspapers |
 | **Jurisdiction** (country, county, parish or town) | Free text, if any | Census, parish and civil records |
 | **Repository and its reference** (archive, call number, film or piece number) | Free text, if any | Every unpublished record |
-| **Access layer** (provider, collection, URL, accessed date) | Free text on the Source ([`source-structure-later.md`](source-structure-later.md) "Derivation links" parks Artifact-level access metadata) | The "image, Ancestry, accessed …" layer |
-| **What it is a copy of** | Not modeled ([`source-structure-later.md`](source-structure-later.md) "Derivation links") | The "citing …" layer |
+| **Access layer** (provider, collection, URL, accessed date) | Free text on the Source ([`source-structure-later.md`](../../ideas/source-structure-later.md) "Derivation links" parks Artifact-level access metadata) | The "image, Ancestry, accessed …" layer |
+| **What it is a copy of** | Not modeled ([`source-structure-later.md`](../../ideas/source-structure-later.md) "Derivation links") | The "citing …" layer |
 | **Source date** | Designed, not built: [`source-provenance-date.md`](source-provenance-date.md) (descoped from Spike 13 on 2026-10-31 to land with these fields) | Dates in the note, and the source list order |
 | **Printed page labels** | The locator can hold `page_label`, but the composer writes only `artifact_page` | "p. 23" instead of "image 37"; folio, entry and line numbers |
 | **Entry or line within a page** | Not modeled; a region selector marks where, not which entry | Census line numbers, register entry numbers |
@@ -79,11 +79,12 @@ Of about 20 elements, 2 are there (title, item label) and 3 are partial (record 
 ## How it could arrive
 
 1. **The Source date and the first fields in one Source schema pass** ([`source-provenance-date.md`](source-provenance-date.md)): one migration and one Source page design.
-2. **Seed the fields** for the common types (census, parish register, civil certificate, newspaper item, online image, published book) with [`add-seeded-vocabulary`](../../.agents/skills/add-seeded-vocabulary/SKILL.md): new projects only, and existing ones keep their keys.
+2. **Seed the fields** for the common types (census, parish register, civil certificate, newspaper item, online image, published book) with [`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md): new projects only, and existing ones keep their keys.
 3. **Printed page labels in the composer**, so the locator says "p. 23".
 4. **The formatter in Go** with a template per seeded type and a fallback to today's line for any other type or a missing field. The citation line on the provenance sheet reads from it.
 5. **A citation preview on the Source page** that shows the formatted note and names the fields it is missing, so researchers can fill them.
 6. **Copy citation** (full or short) from the provenance sheet and the Source page.
+7. **Move an Artifact to another Source**, with the Evidence graphs built on it, so researchers can re-file Artifacts as their Sources take on these fields ([`move-artifact-between-sources.md`](move-artifact-between-sources.md)).
 
 ## Open questions
 

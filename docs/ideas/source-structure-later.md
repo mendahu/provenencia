@@ -25,7 +25,3 @@ A FamilySearch index entry is a transcription of an image, which is a film frame
 ## Per-graph credibility
 
 Credibility stays per Source. A census household with a poor informant can only say so in a Citation note. Revisit if dogfooding shows it matters.
-
-## Layered citation output
-
-Moved to [`citation-formats.md`](citation-formats.md) (2026-10-31), which lists what Evidence Explained style citations need and what the provenance sheet ships first.

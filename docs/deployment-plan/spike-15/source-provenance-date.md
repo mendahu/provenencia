@@ -1,6 +1,6 @@
 # First-class Source provenance date
 
-**Status:** idea, planned for Spike 15 with standard citation formats ([`citation-formats.md`](citation-formats.md)), because the Source date is one of the fields an *Evidence Explained* citation needs (user, 2026-10-31). It was pulled into Spike 13 on 2026-10-26 as S13-20 – S13-22, so the Person page's Sources section could show each Source's date, and descoped from it on 2026-10-31 before any of them was planned; the Sources section shows title and type only. Was parked before that after de-scoping structured DateValue from Source metadata (Spike 8 **S8-D4** / **S8-07**). Authoritative catalog rule: [`source-layer-data-model.md`](../source-layer-data-model.md) §1.2 and §5.
+**Status:** Spike 15 design input, not yet cut into PRs ([`README.md`](README.md)); planned with standard citation formats ([`citation-formats.md`](citation-formats.md)), because the Source date is one of the fields an *Evidence Explained* citation needs (user, 2026-10-31). It was pulled into Spike 13 on 2026-10-26 as S13-20 – S13-22, so the Person page's Sources section could show each Source's date, and descoped from it on 2026-10-31 before any of them was planned; the Sources section shows title and type only. Was parked before that after de-scoping structured DateValue from Source metadata (Spike 8 **S8-D4** / **S8-07**). Authoritative catalog rule: [`source-layer-data-model.md`](../../source-layer-data-model.md) §1.2 and §5.
 
 ## Problem
 
@@ -40,9 +40,9 @@ Metadata date fields remain ordinary text.
 
 Kept so Spike 15 can re-cut them with the citation fields:
 
-- **Engine:** an optional publication date on `sources`, a `date_value_id` into `date_values` ([`add-date-value`](../../.agents/skills/add-date-value/SKILL.md)): migration, catalog model, read on the Source, the Sources list rows and the Person page's claim groups (`ListPersonClaims`, S13-01), and the write RPC. Existing Sources start empty.
-- **Source page:** set, change and clear the date where its brief puts it, so it reads as the Source's own date and not another metadata row; the brief also decides whether the Source page moves onto Page columns ([`wide-layout.md`](wide-layout.md)).
+- **Engine:** an optional publication date on `sources`, a `date_value_id` into `date_values` ([`add-date-value`](../../../.agents/skills/add-date-value/SKILL.md)): migration, catalog model, read on the Source, the Sources list rows and the Person page's claim groups (`ListPersonClaims`, S13-01), and the write RPC. Existing Sources start empty.
+- **Source page:** set, change and clear the date where its brief puts it, so it reads as the Source's own date and not another metadata row; the brief also decides whether the Source page moves onto Page columns ([`wide-layout.md`](../../ideas/wide-layout.md)).
 - **Sources list:** each row shows the date; the list sorts by it, undated last; drawn at Wide.
 - **Person page:** each Source group in the Sources section shows the date (R-35).
 
-With the citation fields, one migration pass and one Source page design can cover the date and the fields together ([`citation-formats.md`](citation-formats.md) "What a standard citation still needs").
+With the citation fields, one migration pass and one Source page design can cover the date and the fields together ([`citation-formats.md`](citation-formats.md) "What a standard citation still needs"). Spike 15 also takes moving an Artifact, with its Evidence graphs, to another Source ([`move-artifact-between-sources.md`](move-artifact-between-sources.md)); the Source page design gives it its entry point.

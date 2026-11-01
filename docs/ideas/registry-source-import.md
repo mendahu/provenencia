@@ -37,4 +37,3 @@ Much of this content sits behind a login, so a pasted URL can't just be fetched.
 ## Related
 
 - [`source-structure-later.md`](source-structure-later.md): nested Sources and derivation links (parked by Spike 12). A registry record often belongs to a larger collection; for now its details go in the Source metadata.
-- [`source-provenance-date.md`](source-provenance-date.md): first-class provenance dates on Sources.
