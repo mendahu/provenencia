@@ -79,11 +79,12 @@ func NewCanon(t testing.TB, c *database.Catalog) *Canon {
 	return k
 }
 
-// next is the next id of one table family: {family, 1, 0, ..., counter}.
+// next is the next id of one table family: {family, 1, 0, ..., counter}, with
+// the version and variant bits of a version 7 UUID so that a handler parses it.
 func (k *Canon) next(family byte) []byte {
 	k.n++
 	id := make([]byte, 16)
-	id[0], id[1], id[14], id[15] = family, 1, byte(k.n>>8), byte(k.n)
+	id[0], id[1], id[6], id[8], id[14], id[15] = family, 1, 0x70, 0x80, byte(k.n>>8), byte(k.n)
 	return id
 }
 

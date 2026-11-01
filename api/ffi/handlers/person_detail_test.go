@@ -2,12 +2,16 @@ package handlers
 
 import (
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
+	"github.com/mendahu/provenencia/core/kinship"
+	"github.com/mendahu/provenencia/core/onboarding"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -142,5 +146,88 @@ func TestListPersonClaims(t *testing.T) {
 	}
 	if _, err := ListPersonClaims([]byte{0xff}); err == nil {
 		t.Fatal("a bad proto was accepted")
+	}
+}
+
+// TestGetPersonFamily: two marriages and a child of each, written with the
+// Canon builders inside the project's session, read over the wire.
+func TestGetPersonFamily(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	created, err := onboarding.Complete(t.TempDir(), t.TempDir(), "Jake", "Robins")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := created.ProjectDir
+	var pat, sam, tess, uma, wren, xan, m1, patUma []byte
+	err = catalogsession.Do(dir, func(c *database.Catalog) error {
+		k := graphcachetest.NewCanon(t, c)
+		pat, sam, tess, uma, wren, xan = k.Person(), k.Person(), k.Person(), k.Person(), k.Person(), k.Person()
+		var joins [][]byte
+		m1, joins = k.Marriage(pat, sam)
+		_, more := k.Marriage(pat, tess)
+		joins = append(joins, more...)
+		patUma = k.Parent(pat, uma)
+		samUma := k.Parent(sam, uma)
+		patWren := k.Parent(pat, wren)
+		xanWren := k.Parent(xan, wren)
+		ids := [][]byte{pat, sam, tess, uma, wren, xan, m1, patUma, samUma, patWren, xanWren}
+		k.Commit(append(ids, joins...)...)
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var got engine.GetPersonFamilyResponse
+	mustRPC(t, GetPersonFamily, &engine.GetPersonFamilyRequest{ProjectDir: dir, EntityId: database.UUIDString(pat)}, &got)
+	if len(got.Units) != 3 {
+		t.Fatalf("%d units, want 3: %+v", len(got.Units), got.Units)
+	}
+	for _, u := range got.Units {
+		if u.GetKind() != engine.FamilyUnitKind_FAMILY_UNIT_KIND_PARTNER || len(u.Partners) != 1 || len(u.Children) > 1 {
+			t.Fatalf("unit %+v", u)
+		}
+	}
+	byPartner := map[string]*engine.FamilyUnit{}
+	for _, u := range got.Units {
+		byPartner[u.Partners[0].GetPerson().GetEntity().GetId()] = u
+	}
+	samUnit := byPartner[database.UUIDString(sam)]
+	if samUnit == nil || len(samUnit.Children) != 1 {
+		t.Fatalf("Sam's unit %+v", samUnit)
+	}
+	samMember := samUnit.Partners[0]
+	if samMember.GetPerson().GetEntity().GetRef() == "" || samMember.GetLink() == nil || samMember.GetLink().GetRecorded() ||
+		len(samMember.GetLink().GetImplied()) != 1 ||
+		samMember.GetLink().GetImplied()[0].GetPattern() != engine.KinshipPattern_KINSHIP_PATTERN_MARRIAGE_SPOUSES ||
+		samMember.GetLink().GetImplied()[0].GetPivotId() != database.UUIDString(m1) {
+		t.Fatalf("Sam's link %+v", samMember)
+	}
+	umaMember := samUnit.Children[0]
+	if umaMember.GetPerson().GetEntity().GetId() != database.UUIDString(uma) || !umaMember.GetLink().GetRecorded() ||
+		!slices.Contains(umaMember.GetLink().GetAssociationIds(), database.UUIDString(patUma)) {
+		t.Fatalf("Uma's member %+v", umaMember)
+	}
+	xanUnit := byPartner[database.UUIDString(xan)]
+	if xanUnit == nil || xanUnit.Partners[0].GetLink() != nil || len(xanUnit.Children) != 1 {
+		t.Fatalf("Xan's unit %+v", xanUnit)
+	}
+
+	for _, id := range []string{"not-an-id", "00000000-0000-7000-8000-000000000000"} {
+		err := rpc(t, GetPersonFamily, &engine.GetPersonFamilyRequest{ProjectDir: dir, EntityId: id}, &engine.GetPersonFamilyResponse{})
+		var ae *apperr.Error
+		if !errors.As(err, &ae) || ae.Code() != apperr.CodeConclusionDetailsNotFound {
+			t.Fatalf("id %q: err = %v, want %s", id, err, apperr.CodeConclusionDetailsNotFound)
+		}
+	}
+}
+
+// TestKinshipPatternProto: every pattern code the engine can put on a link has
+// a wire value, so a new code cannot reach the app as unspecified.
+func TestKinshipPatternProto(t *testing.T) {
+	for _, p := range append(kinship.Patterns(), kinship.PatternSharedParent) {
+		if kinshipPatternProto(p) == engine.KinshipPattern_KINSHIP_PATTERN_UNSPECIFIED {
+			t.Errorf("pattern %q maps to unspecified", p)
+		}
 	}
 }

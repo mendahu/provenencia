@@ -124,6 +124,7 @@ enum Method {
   METHOD_GET_EVIDENCE_GRAPH_UNLINK_IMPACT = 109;
   METHOD_REORDER_SUBJECT_TYPE_PROPERTIES = 111;
   METHOD_LIST_PERSON_CLAIMS = 112;
+  METHOD_GET_PERSON_FAMILY = 113;
 }
 
 message PingRequest {
@@ -1553,6 +1554,65 @@ message PersonClaim {
   string graph_name = 4;
   Subject subject = 5;
   repeated Observation observations = 6;
+}
+
+// GetPersonFamilyRequest asks for a canonical person's nuclear family. An
+// unknown or merged handle is conclusiondetails.not_found.
+message GetPersonFamilyRequest {
+  string project_dir = 1;
+  string entity_id = 2;
+}
+
+// GetPersonFamilyResponse is the person's family units, parent sets first,
+// then partners, then children with no other known parent, then siblings
+// whose parents are not shown. Canonical people only.
+message GetPersonFamilyResponse {
+  repeated FamilyUnit units = 1;
+}
+
+// FamilyUnitKind is what a unit is to the person.
+enum FamilyUnitKind {
+  FAMILY_UNIT_KIND_UNSPECIFIED = 0;
+  FAMILY_UNIT_KIND_PARENTS = 1;     // partners: a set of the person's parents; children: siblings through each
+  FAMILY_UNIT_KIND_PARTNER = 2;     // partners: one partner; children: the person's children with them
+  FAMILY_UNIT_KIND_ONE_PARENT = 3;  // children: the person's children with no other known parent
+  FAMILY_UNIT_KIND_SIBLINGS = 4;    // children: siblings with no shown shared parent
+}
+
+message FamilyUnit {
+  FamilyUnitKind kind = 1;
+  repeated FamilyMember partners = 2;
+  repeated FamilyMember children = 3;
+}
+
+// FamilyMember is one relative and the person's link to them; link is unset
+// for a co-parent known only through a child.
+message FamilyMember {
+  PersonSummary person = 1;
+  FamilyLink link = 2;
+}
+
+// FamilyLink says what a link rests on: recorded is true when a link is filed
+// (not only implied); association_ids are the relationship and participation
+// entities behind it; implied are the patterns that imply it, each through its
+// pivot (the marriage or birth, or the shared parent).
+message FamilyLink {
+  bool recorded = 1;
+  repeated string association_ids = 2;
+  repeated KinshipShape implied = 3;
+}
+
+enum KinshipPattern {
+  KINSHIP_PATTERN_UNSPECIFIED = 0;
+  KINSHIP_PATTERN_MARRIAGE_SPOUSES = 1;
+  KINSHIP_PATTERN_BIRTH_PARENTS = 2;
+  KINSHIP_PATTERN_SHARED_PARENT = 3;
+  KINSHIP_PATTERN_PARENT_OF_PARENT = 4;
+}
+
+message KinshipShape {
+  KinshipPattern pattern = 1;
+  string pivot_id = 2;
 }
 
 // PictureDetail is one picture a handle's gallery shows (S10-35 / S14-01),
