@@ -64,15 +64,17 @@ private struct PVSheetChrome<Content: View>: View {
     /// Closes the sheet by the dirty rule, then runs `next`. A dirty sheet asks
     /// first and holds `next` behind the question; Keep editing drops it.
     private func run(_ next: @escaping @MainActor () -> Void) {
-        switch PVSheetDismiss.action(isRunning: isRunning, isDirty: isDirty, isConfirmingDiscard: confirmingDiscard) {
-        case .ignore:
+        switch PVSheetCloseRule.outcome(
+            isRunning: isRunning, isDirty: isDirty, isConfirmingDiscard: confirmingDiscard,
+            next: next, gate: &gate
+        ) {
+        case .nothing:
             break
         case .keepEditing:
             keepEditing()
-        case .confirmDiscard:
-            gate.hold(next)
+        case .askToDiscard:
             confirmingDiscard = true
-        case .close:
+        case .closeThenRun:
             close()
             Task { @MainActor in next() }
         }
@@ -88,6 +90,39 @@ private struct PVSheetChrome<Content: View>: View {
     private func keepEditing() {
         confirmingDiscard = false
         _ = gate.keepEditing()
+    }
+}
+
+/// What a close request does to a sheet, apart from the views: the dirty rule
+/// ``PVSheetDismiss`` picks the action, and a dirty sheet holds `next` in the
+/// gate behind the "Discard changes?" question.
+enum PVSheetCloseRule {
+    enum Outcome: Equatable {
+        case nothing
+        case keepEditing
+        case askToDiscard
+        case closeThenRun
+    }
+
+    @MainActor
+    static func outcome(
+        isRunning: Bool,
+        isDirty: Bool,
+        isConfirmingDiscard: Bool,
+        next: @escaping @MainActor () -> Void,
+        gate: inout PVDiscardGate
+    ) -> Outcome {
+        switch PVSheetDismiss.action(isRunning: isRunning, isDirty: isDirty, isConfirmingDiscard: isConfirmingDiscard) {
+        case .ignore:
+            return .nothing
+        case .keepEditing:
+            return .keepEditing
+        case .confirmDiscard:
+            gate.hold(next)
+            return .askToDiscard
+        case .close:
+            return .closeThenRun
+        }
     }
 }
 
