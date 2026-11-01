@@ -98,4 +98,4 @@ No new blockers from either reviewer.
 Nits (logged): `CON-4 · core/derivatives/thumbnail_test.go:560 · orphaned sessionProject doc comment above tinyPNG`
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · to user: MNT-2 (answered: "Predicate in sources") · CON miss: none
+Gate PASS · CI green (Go tests rerun once: `TestLargeSourceBudgets/after_a_handle_commit` 2.01 s vs 1.5 s budget in `promotealign`, which this PR does not change; passed on rerun) · open: none · follow-ups: none · to user: MNT-2 (answered: "Predicate in sources") · CON miss: none
