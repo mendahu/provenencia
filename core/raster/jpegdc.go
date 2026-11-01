@@ -52,24 +52,32 @@ type huffTable struct {
 	vals    []byte
 }
 
-// newHuffTable builds a table from the 16 code-length counts and the values
-// in code order. It refuses a table whose codes overflow a length (Annex C)
-// and, when dc is set, a value over 11.
-func newHuffTable(counts [16]byte, vals []byte, dc bool) (*huffTable, error) {
+// newHuffTable builds a table from p, the 16 code-length counts followed by
+// the values in code order, and returns the table and the bytes it used. It
+// refuses a payload shorter than its counts, more than 256 codes, a table whose
+// codes overflow a length (Annex C) and, when dc is set, a value over 11. That
+// last check is the guard block relies on for the DC category.
+func newHuffTable(p []byte, dc bool) (*huffTable, int, error) {
+	if len(p) < 16 {
+		return nil, 0, jpegErr("huffman table header length")
+	}
+	var counts [16]byte
+	copy(counts[:], p[:16])
 	total := 0
 	for _, c := range counts {
 		total += int(c)
 	}
 	if total > 256 {
-		return nil, jpegErr("huffman table has more than 256 codes")
+		return nil, 0, jpegErr("huffman table has more than 256 codes")
 	}
-	if len(vals) != total {
-		return nil, jpegErr("huffman table values do not match its counts")
+	if len(p) < 16+total {
+		return nil, 0, jpegErr("huffman table values length")
 	}
+	vals := p[16 : 16+total]
 	if dc {
 		for _, v := range vals {
 			if v > 11 {
-				return nil, jpegErr("dc huffman value over 11")
+				return nil, 0, jpegErr("dc huffman value over 11")
 			}
 		}
 	}
@@ -83,7 +91,7 @@ func newHuffTable(counts [16]byte, vals []byte, dc bool) (*huffTable, error) {
 		t.mincode[l] = code
 		for i := 0; i < n; i++ {
 			if code >= 1<<uint(l) {
-				return nil, jpegErr("huffman code overflows its length")
+				return nil, 0, jpegErr("huffman code overflows its length")
 			}
 			if l <= 9 {
 				shift := uint(9 - l)
@@ -96,12 +104,12 @@ func newHuffTable(counts [16]byte, vals []byte, dc bool) (*huffTable, error) {
 			k++
 		}
 		if code > 1<<uint(l) {
-			return nil, jpegErr("huffman code overflows its length")
+			return nil, 0, jpegErr("huffman code overflows its length")
 		}
 		t.maxcode[l] = code - 1
 		code <<= 1
 	}
-	return t, nil
+	return t, 16 + total, nil
 }
 
 var errTruncated = jpegErr("scan data ends early")
@@ -473,31 +481,16 @@ func (d *dcDecoder) parseSOF(marker byte, p []byte) error {
 
 func (d *dcDecoder) parseDHT(p []byte) error {
 	for len(p) > 0 {
-		if len(p) < 17 {
-			return jpegErr("huffman table header length")
-		}
 		tc, th := int(p[0]>>4), int(p[0]&15)
 		if tc > 1 || th > 3 {
 			return jpegErr("huffman table class or id")
 		}
-		var counts [16]byte
-		copy(counts[:], p[1:17])
-		total := 0
-		for _, c := range counts {
-			total += int(c)
-		}
-		if total > 256 {
-			return jpegErr("huffman table has more than 256 codes")
-		}
-		if len(p) < 17+total {
-			return jpegErr("huffman table values length")
-		}
-		t, err := newHuffTable(counts, p[17:17+total], tc == 0)
+		t, n, err := newHuffTable(p[1:], tc == 0)
 		if err != nil {
 			return err
 		}
 		d.huff[tc][th] = t
-		p = p[17+total:]
+		p = p[1+n:]
 	}
 	return nil
 }
@@ -745,9 +738,6 @@ func (d *dcDecoder) block(sc *dcScan, br *bitReader, i int, c *dcComponent, bx, 
 	}
 	var diff int32
 	if s > 0 {
-		if s > 11 {
-			return jpegErr("dc category over 11")
-		}
 		v, err := br.bits(uint(s))
 		if err != nil {
 			return err
