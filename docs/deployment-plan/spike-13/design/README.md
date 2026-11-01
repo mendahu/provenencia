@@ -10,7 +10,6 @@ In order.
 
 | Brief | View | Gates |
 | --- | --- | --- |
-| [S13-D3](S13-D3-family-section.md) | Family section (and the shared person tile) | S13-12 |
 | S13-D4 | Timeline section | S13-13 |
 | S13-D5 | Gallery section and likeness viewer | S13-14, S13-15 |
 | S13-D6 | Sources section, Remove and the last-claim warning | S13-16, S13-17 |
@@ -26,4 +25,5 @@ In order.
 | [S13-D1](archive/S13-D1-person-page-frame.md) | Person page: header, section switching, Vitals | Agreed 2026-10-29 in the [Claude Design project](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share) | S13-10 ([#634](https://github.com/mendahu/provenencia/pull/634)) |
 | [S13-D11](archive/S13-D11-promote-without-assessment.md) | Promote page without the evidence sheet and the assessment column; its status per row (S13-30) descoped 2026-10-30 | Agreed 2026-10-29 in the [Claude Design project](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share) | S13-23 ([#633](https://github.com/mendahu/provenencia/pull/633)) |
 | [S13-D12](archive/S13-D12-life-rows-why.md) | Person page: the Why on the four life rows | Agreed 2026-10-30 in the [Claude Design project](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), turn 5 | S13-06 ([#640](https://github.com/mendahu/provenencia/pull/640)) |
+| [S13-D3](archive/S13-D3-family-section.md) | Person page: the Family section and the person tile | Agreed 2026-11-01 in the [Claude Design project](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), turn 11 | S13-12 ([#676](https://github.com/mendahu/provenencia/pull/676)) |
 | [S13-D2](archive/S13-D2-provenance-sheet.md) | Person page: the provenance sheet | Agreed 2026-10-31 in the [Claude Design project](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), turn 6 | S13-11 ([#650](https://github.com/mendahu/provenencia/pull/650)) |

@@ -1,9 +1,9 @@
 # S13-12 — Family section
 
-**Status:** Planned
+**Status:** Landed in [#676](https://github.com/mendahu/provenencia/pull/676) (2026-11-01)
 **Spike / slice:** Spike 13 · Slice 3 — Family
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S13-D3](../design/S13-D3-family-section.md), board agreed 2026-11-01
+**Brief:** [S13-D3](../design/archive/S13-D3-family-section.md), board agreed 2026-11-01
 **Board:** agreed 2026-11-01 — Claude Design project [*Person Detail*](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail - Family.dc.html*, turn 11 "S13-D3 · Family in two columns — origin and own family", frames 11a – 11q, decisions FC-1 – FC-5. The implementer may not be able to open it: **Design → macOS** describes every frame in words and gives every measure, and D-12 is the layout
 **Depends on:** S13-04 (landed [#671](https://github.com/mendahu/provenencia/pull/671)), S13-10 (landed [#634](https://github.com/mendahu/provenencia/pull/634)), S13-D3 (board)
 **Blocks:** S13-13 (it reuses the person tile and the section-key mapping)
@@ -12,9 +12,10 @@
 **Version bump:** none — Spike 11–14 PRs leave `VERSION` alone until a release is cut, as S13-01 and S13-04 did ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md), [`add-workspace-place`](../../../../.agents/skills/add-workspace-place/SKILL.md), [`add-workspace-location`](../../../../.agents/skills/add-workspace-location/SKILL.md), [`add-catalog-query`](../../../../.agents/skills/add-catalog-query/SKILL.md), [`add-ffi-handler`](../../../../.agents/skills/add-ffi-handler/SKILL.md) (STEP-1)
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/go-tests.mdc`, `.cursor/rules/swift-tests.mdc`
-**Context:** [person-detail.md § 2. Family](../person-detail.md#2-family) (R-2, R-3, R-16 – R-22); brief [S13-D3](../design/S13-D3-family-section.md); the S13-04 plan [`S13-04-person-family-read.md`](S13-04-person-family-read.md) and its **Landed** note; working rules: "Engine PRs run ahead of their slice" (data, not layout), "Each section reads its own query", "Family groups in Go", "One person summary for every tile", "Canonical only, filtered in Go", "One person tile, built once", "Colors reuse `PersonGenderTreatment`", "A family tile opens the relative on Family", "Sections are places"
+**Context:** [person-detail.md § 2. Family](../person-detail.md#2-family) (R-2, R-3, R-16 – R-22); brief [S13-D3](../design/archive/S13-D3-family-section.md); the S13-04 plan [`S13-04-person-family-read.md`](S13-04-person-family-read.md) and its **Landed** note; working rules: "Engine PRs run ahead of their slice" (data, not layout), "Each section reads its own query", "Family groups in Go", "One person summary for every tile", "Canonical only, filtered in Go", "One person tile, built once", "Colors reuse `PersonGenderTreatment`", "A family tile opens the relative on Family", "Sections are places"
 **Planned:** 2026-11-01 against `main` @ `75d9494` with the S13-04 branch; refreshed 2026-11-01 against `main` @ `be51621`, after S13-04 landed
 **Review:** [`S13-12-family-section.review.md`](S13-12-family-section.review.md) — round 1 Fits with changes / Not ready, round 2 (after the board) Fits with changes / Not ready; every finding Fixed, none open
+**Landed:** the code differs from the plan in six places. (1) `a11yList` no longer exists (#675 renamed it); the tile's spoken joins use `L10n.DesignSystem.spokenJoin`. (2) `AnyQueryHandle` gained `isFetching` and `WorkspaceSession` gained `isRefreshing(_:)`, so `ConclusionDetailLoaded` reads the open section's handle without its value type (D-8 b). (3) Kinship folds a parent shared by two sets into the first, so T-2 case (b)'s second set is Katharina alone and the second caption reads "Other parent". (4) `a11yLifeLineKnown` takes `part:` (D-6 wrote `parts:`). (5) The section's `#Preview`s build their families from a private preview data enum in `PersonFamilySection.swift`, drawing the diagram directly. (6) T-4 to T-13 use shared fixtures in `PersonFamilyFixtures.swift`. Not run by the implementer: the manual check of § 10 and the visual match to frames 11a – 11q.
 
 ### Implementer — read this first
 
