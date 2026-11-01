@@ -25,6 +25,7 @@ struct NameValueEditorForm: View {
                 storedAsSection
             }
         }
+        .environment(\.pvFieldLabel, nil)
         .pvConfirm(
             item: $pendingSplit,
             copy: { _ in
@@ -61,6 +62,7 @@ struct NameValueEditorForm: View {
                     focus: formFocus,
                     onBlur: fillEmptyPartsFromForm
                 )
+                .environment(\.pvFieldLabel, L10n.NameValue.formLabel)
                 .frame(maxWidth: .infinity)
                 .accessibilityIdentifier("\(accessibilityIdentifierPrefix).form")
                 .accessibilityHint(draft.formError.map { Text(verbatim: $0) } ?? Text(L10n.NameValue.formHint))
@@ -177,6 +179,7 @@ struct NameValueEditorForm: View {
                     isInvalid: draft.partValueError(at: index) != nil,
                     activateOnAppear: part.id == partValueToFocus
                 )
+                .environment(\.pvFieldLabel, L10n.NameValue.partValueLabel)
                 .accessibilityIdentifier("\(accessibilityIdentifierPrefix).part.\(index).value")
                 PVSelect(
                     selection: partTypeBinding(index),
