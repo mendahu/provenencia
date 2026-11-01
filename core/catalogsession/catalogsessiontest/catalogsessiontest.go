@@ -11,6 +11,23 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 )
 
+// Project creates an empty catalog in a new temp folder, closes it, and
+// returns the project folder. Cleanup closes every held session, so a test's
+// catalogsession.Do calls on the folder leave nothing open.
+func Project(t testing.TB) string {
+	t.Helper()
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := c.Dir()
+	if err := c.Close(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	return dir
+}
+
 // Hold starts a catalogsession.Do on projectDir whose function blocks until
 // release is called, and returns once that function is running, so the
 // session is held. release is idempotent and is also registered with

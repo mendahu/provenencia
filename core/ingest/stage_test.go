@@ -447,19 +447,6 @@ func TestStagedSettle(t *testing.T) {
 
 // stageProjectDir makes a project and closes it, so a test can hold it with
 // catalogsessiontest.Hold.
-func stageProjectDir(t *testing.T) string {
-	t.Helper()
-	c, err := database.Create(t.TempDir(), "t.provenencia")
-	if err != nil {
-		t.Fatal(err)
-	}
-	dir := c.Dir()
-	if err := c.Close(); err != nil {
-		t.Fatal(err)
-	}
-	return dir
-}
-
 func TestStageOutsideSession(t *testing.T) {
 	src := stageWrite(t, t.TempDir(), "in.png", stagePNG(t, 40, 30))
 	stagers := []struct {
@@ -472,7 +459,7 @@ func TestStageOutsideSession(t *testing.T) {
 	}
 	for _, st := range stagers {
 		t.Run(st.name+" while the session is held", func(t *testing.T) {
-			dir := stageProjectDir(t)
+			dir := catalogsessiontest.Project(t)
 			release := catalogsessiontest.Hold(t, dir)
 			s, err := st.stage(dir)
 			if err != nil {

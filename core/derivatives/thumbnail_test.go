@@ -559,20 +559,6 @@ func newID(t *testing.T) []byte {
 
 // sessionProject makes a project and closes it, so the test works through
 // catalogsession.Do and can hold it with catalogsessiontest.Hold.
-func sessionProject(t *testing.T) string {
-	t.Helper()
-	c, err := database.Create(t.TempDir(), "t.provenencia")
-	if err != nil {
-		t.Fatal(err)
-	}
-	dir := c.Dir()
-	if err := c.Close(); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = catalogsession.CloseAll() })
-	return dir
-}
-
 func tinyPNG(t *testing.T) []byte {
 	t.Helper()
 	b, err := os.ReadFile("testdata/tiny.png")
@@ -584,7 +570,7 @@ func tinyPNG(t *testing.T) []byte {
 
 func TestPlanStageCommit(t *testing.T) {
 	t.Run("a File with no link is staged while the session is held, then committed", func(t *testing.T) {
-		dir := sessionProject(t)
+		dir := catalogsessiontest.Project(t)
 		var srcID []byte
 		var job *Job
 		err := catalogsession.Do(dir, func(c *database.Catalog) error {
@@ -636,7 +622,7 @@ func TestPlanStageCommit(t *testing.T) {
 	})
 
 	t.Run("a File with a link plans no job, and a PDF is skipped", func(t *testing.T) {
-		dir := sessionProject(t)
+		dir := catalogsessiontest.Project(t)
 		err := catalogsession.Do(dir, func(c *database.Catalog) error {
 			srcID := installSourceFile(t, c, tinyPNG(t), "image/png", "tiny.png")
 			made, err := EnsureThumbnail(c, srcID)
@@ -664,7 +650,7 @@ func TestCommitAfterChange(t *testing.T) {
 	// plan makes a project with one PNG File, plans it, and stages the job.
 	plan := func(t *testing.T) (dir string, srcID []byte, job *Job, staged *ingest.Staged) {
 		t.Helper()
-		dir = sessionProject(t)
+		dir = catalogsessiontest.Project(t)
 		err := catalogsession.Do(dir, func(c *database.Catalog) error {
 			srcID = installSourceFile(t, c, tinyPNG(t), "image/png", "tiny.png")
 			_, j, err := Plan(c, srcID, ThumbnailSpec())
@@ -769,7 +755,7 @@ func TestCommitAfterChange(t *testing.T) {
 }
 
 func TestStageAfterPurge(t *testing.T) {
-	dir := sessionProject(t)
+	dir := catalogsessiontest.Project(t)
 	var job *Job
 	err := catalogsession.Do(dir, func(c *database.Catalog) error {
 		srcID := installSourceFile(t, c, tinyPNG(t), "image/png", "tiny.png")

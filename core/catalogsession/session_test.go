@@ -238,16 +238,12 @@ func TestCloseAll(t *testing.T) {
 }
 
 func TestHold(t *testing.T) {
-	t.Cleanup(func() { _ = catalogsession.CloseAll() })
-	created, err := onboarding.Complete(t.TempDir(), t.TempDir(), "Jake", "Robins")
-	if err != nil {
-		t.Fatal(err)
-	}
-	release := catalogsessiontest.Hold(t, created.ProjectDir)
+	projectDir := catalogsessiontest.Project(t)
+	release := catalogsessiontest.Hold(t, projectDir)
 
 	entered := make(chan struct{})
 	go func() {
-		_ = catalogsession.Do(created.ProjectDir, func(*database.Catalog) error {
+		_ = catalogsession.Do(projectDir, func(*database.Catalog) error {
 			close(entered)
 			return nil
 		})
