@@ -57,7 +57,7 @@ struct PromoteFlowTests {
         var event = row(id: "e")
         event.kind = "event"
         event.handleRef = "EVT-D1JBR"
-        event.header = .event(CatalogEventHeader(
+        event.summary = .event(CatalogEventSummary(
             entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-D1JBR", subjectTypeID: "t", label: ""),
             eventName: "",
             title: birth
@@ -65,7 +65,7 @@ struct PromoteFlowTests {
         event.alternatives = [
             CatalogPromoteGraphAlignmentAlternative(
                 handleID: "e2", handleRef: "EVT-2",
-                header: .event(CatalogEventHeader(
+                summary: .event(CatalogEventSummary(
                     entity: CatalogCanonicalEntity(id: "e2", ref: "EVT-2", subjectTypeID: "t", label: ""),
                     title: CatalogEventTitle(rule: .label, label: "Working title", ref: "EVT-2")
                 ))
@@ -73,7 +73,7 @@ struct PromoteFlowTests {
         ]
 
         var person = row(id: "p")
-        person.header = .person(CatalogPersonHeader(
+        person.summary = .person(CatalogPersonSummary(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: "Grandpa"),
             name: nil,
             nameValueCount: 0
@@ -82,7 +82,7 @@ struct PromoteFlowTests {
         var place = row(id: "l")
         place.kind = "place"
         place.handleRef = "PLC-1"
-        place.header = .place(CatalogPlaceHeader(
+        place.summary = .place(CatalogPlaceSummary(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PLC-1", subjectTypeID: "t", label: "The farm"),
             names: [],
             parents: ["Ontario", "Canada"]
@@ -114,7 +114,7 @@ struct PromoteFlowTests {
 
     @Test func aPersonRecordReadsSortedInTheMenu() {
         var person = row(id: "p")
-        person.header = .person(CatalogPersonHeader(
+        person.summary = .person(CatalogPersonSummary(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: ""),
             name: CatalogNameValue(form: "John Smith", parts: [
                 CatalogNameValuePart(value: "John", type: "given"),
@@ -646,7 +646,7 @@ struct PromoteFlowTests {
     }
 
     @Test func aFoundRecordIsHeldAndJoinsTheMenu() {
-        let polly = CatalogPersonHeader(
+        let polly = CatalogPersonSummary(
             entity: CatalogCanonicalEntity(id: "e7", ref: "PER-7", subjectTypeID: "t", label: ""),
             name: CatalogNameValue(form: "Polly Jones", parts: [
                 CatalogNameValuePart(value: "Polly", type: "given"),
@@ -666,7 +666,7 @@ struct PromoteFlowTests {
         var flow = started()
         #expect(flow.rows[0].target == .unset)
         #expect(flow.rows[0].menu.isEmpty)
-        let accepted = flow.hold(subjectID: "a", id: "e7", ref: "PER-7", header: .person(polly))
+        let accepted = flow.hold(subjectID: "a", id: "e7", ref: "PER-7", summary: .person(polly))
         #expect(accepted)
         let held = flow.rows[0]
         #expect(held.target == .handle(id: "e7", ref: "PER-7", title: "Jones, Polly"))
@@ -684,7 +684,7 @@ struct PromoteFlowTests {
         #expect(batch?.handleID == "e7")
 
         var bare = started()
-        let bareAccepted = bare.hold(subjectID: "a", id: "e7", ref: "PER-7", header: nil)
+        let bareAccepted = bare.hold(subjectID: "a", id: "e7", ref: "PER-7", summary: nil)
         #expect(bareAccepted)
         let item = bare.rows[0].menu.last
         #expect(item?.title == "PER-7")
@@ -700,7 +700,7 @@ struct PromoteFlowTests {
             bridges: []
         )
         flow.mapRest()
-        flow.hold(subjectID: "a", id: "e7", ref: "PER-7", header: nil)
+        flow.hold(subjectID: "a", id: "e7", ref: "PER-7", summary: nil)
 
         var heldA = row(id: "a", handleID: "e7")
         heldA.handleRef = "PER-7"
@@ -725,7 +725,7 @@ struct PromoteFlowTests {
         flow.load(entryID: "a", proposal: proposal(rows: [row(id: "a")]), subjects: [fact("a")], bridges: [])
         let offered = flow.rows[0].menu
         #expect(offered.map(\.id) == ["e1", "e2"])
-        let accepted = flow.hold(subjectID: "a", id: "e2", ref: "PER-2", header: nil)
+        let accepted = flow.hold(subjectID: "a", id: "e2", ref: "PER-2", summary: nil)
         #expect(accepted)
         #expect(flow.rows[0].menu == offered)
         #expect(flow.rows[0].target == .handle(id: "e2", ref: "PER-2", title: offered[1].title))
@@ -740,7 +740,7 @@ struct PromoteFlowTests {
             bridges: []
         )
         flow.mapRest()
-        flow.hold(subjectID: "a", id: "e1", ref: "PER-1", header: nil)
+        flow.hold(subjectID: "a", id: "e1", ref: "PER-1", summary: nil)
         #expect(flow.rows.first { $0.subjectID == "a" }?.duplicateNote == .sharesHandle(otherName: "b", ref: "PER-1"))
     }
 
@@ -753,9 +753,9 @@ struct PromoteFlowTests {
             bridges: []
         )
         let before = flow.rows
-        let onAnchor = flow.hold(subjectID: "a", id: "e7", ref: "PER-7", header: nil)
-        let onMissing = flow.hold(subjectID: "zz", id: "e7", ref: "PER-7", header: nil)
-        let withNoID = flow.hold(subjectID: "b", id: "", ref: "PER-7", header: nil)
+        let onAnchor = flow.hold(subjectID: "a", id: "e7", ref: "PER-7", summary: nil)
+        let onMissing = flow.hold(subjectID: "zz", id: "e7", ref: "PER-7", summary: nil)
+        let withNoID = flow.hold(subjectID: "b", id: "", ref: "PER-7", summary: nil)
         #expect(!onAnchor && !onMissing && !withNoID)
         #expect(flow.rows == before)
     }

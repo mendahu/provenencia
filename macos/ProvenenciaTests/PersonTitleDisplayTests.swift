@@ -2,9 +2,9 @@ import SwiftUI
 import Testing
 @testable import Provenencia
 
-struct PersonHeaderDisplayTests {
-    private func header(name: CatalogNameValue?, label: String = "", clusters: Int = 0) -> CatalogPersonHeader {
-        CatalogPersonHeader(
+struct PersonTitleDisplayTests {
+    private func summary(name: CatalogNameValue?, label: String = "", clusters: Int = 0) -> CatalogPersonSummary {
+        CatalogPersonSummary(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "t", label: label),
             name: name,
             nameValueCount: clusters
@@ -12,19 +12,19 @@ struct PersonHeaderDisplayTests {
     }
 
     @Test func partsWinOverTheTranscription() {
-        let h = header(name: CatalogNameValue(form: " Jeremiah Arthurt Gumtree ", parts: [
+        let h = summary(name: CatalogNameValue(form: " Jeremiah Arthurt Gumtree ", parts: [
             CatalogNameValuePart(value: "Jeremiah", type: "given"),
             CatalogNameValuePart(value: "Arthur", type: "given"),
             CatalogNameValuePart(value: "Gumtree", type: "surname"),
         ]), label: "Grandpa", clusters: 1)
-        #expect(PersonHeaderDisplay.title(h) == "Jeremiah Arthur Gumtree")
+        #expect(PersonTitleDisplay.title(h) == "Jeremiah Arthur Gumtree")
     }
 
     @Test func formIsTheFallbackWhenThereAreNoParts() {
-        let h = header(name: CatalogNameValue(form: " James Robins ", parts: [
+        let h = summary(name: CatalogNameValue(form: " James Robins ", parts: [
             CatalogNameValuePart(value: " ", type: "given"),
         ]), label: "Grandpa", clusters: 1)
-        #expect(PersonHeaderDisplay.title(h) == "James Robins")
+        #expect(PersonTitleDisplay.title(h) == "James Robins")
     }
 
     @Test func blankFormFallsBackToParts() {
@@ -34,7 +34,7 @@ struct PersonHeaderDisplayTests {
             CatalogNameValuePart(value: "Robins", type: "surname"),
         ])
         #expect(NameValueDisplay.string(for: name) == "James Robins")
-        #expect(PersonHeaderDisplay.title(header(name: name, clusters: 1)) == "James Robins")
+        #expect(PersonTitleDisplay.title(summary(name: name, clusters: 1)) == "James Robins")
     }
 
     @Test func sortedOrderUsesTheCatalogSeparator() {
@@ -45,15 +45,15 @@ struct PersonHeaderDisplayTests {
         ])
         let orders = NameFormatOrders.western
         #expect(NameValueDisplay.string(for: name, style: .sorted, orders: orders) == "van Gogh, Vincent")
-        #expect(PersonHeaderDisplay.title(header(name: name), style: .sorted, orders: orders) == "van Gogh, Vincent")
+        #expect(PersonTitleDisplay.title(summary(name: name), style: .sorted, orders: orders) == "van Gogh, Vincent")
         #expect(NameValueDisplay.string(for: name, style: .natural, orders: orders) == "Vincent van Gogh")
     }
 
     @Test func emptyNameFallsBackToLabelThenRef() {
         let empty = CatalogNameValue(form: "", parts: [])
-        #expect(PersonHeaderDisplay.title(header(name: empty, label: "Mother of James")) == "Mother of James")
-        #expect(PersonHeaderDisplay.title(header(name: nil, label: "Mother of James")) == "Mother of James")
-        #expect(PersonHeaderDisplay.title(header(name: nil, label: "  ")) == "PER-7KD45")
+        #expect(PersonTitleDisplay.title(summary(name: empty, label: "Mother of James")) == "Mother of James")
+        #expect(PersonTitleDisplay.title(summary(name: nil, label: "Mother of James")) == "Mother of James")
+        #expect(PersonTitleDisplay.title(summary(name: nil, label: "  ")) == "PER-7KD45")
     }
 
     private func james(nicks: [String]) -> CatalogNameValue {
@@ -73,25 +73,25 @@ struct PersonHeaderDisplayTests {
     @Test func nicknamesAreQuoted() {
         let orders = NameFormatOrders.western
         let name = james(nicks: ["Jake"])
-        #expect(PersonHeaderDisplay.title(header(name: name), orders: orders) == "James “Jake” Robins")
-        #expect(PersonHeaderDisplay.title(header(name: name), style: .sorted, orders: orders) == "Robins, James “Jake”")
-        #expect(PersonHeaderDisplay.title(header(name: james(nicks: ["Jake", "Jim"])), orders: orders)
+        #expect(PersonTitleDisplay.title(summary(name: name), orders: orders) == "James “Jake” Robins")
+        #expect(PersonTitleDisplay.title(summary(name: name), style: .sorted, orders: orders) == "Robins, James “Jake”")
+        #expect(PersonTitleDisplay.title(summary(name: james(nicks: ["Jake", "Jim"])), orders: orders)
             == "James “Jake” “Jim” Robins")
-        let conclusion = CatalogConclusionHeader.person(header(name: name))
-        #expect(ConclusionHeaderDisplay.title(conclusion, orders: orders) == "James “Jake” Robins")
+        let conclusion = CatalogConclusionSummary.person(summary(name: name))
+        #expect(ConclusionSummaryDisplay.title(conclusion, orders: orders) == "James “Jake” Robins")
     }
 
     @Test func formerSurnameIsParenthesized() {
         let orders = NameFormatOrders.western
-        #expect(PersonHeaderDisplay.title(header(name: mary), orders: orders) == "Mary (Smith) Jones")
-        #expect(PersonHeaderDisplay.title(header(name: mary), style: .sorted, orders: orders) == "Jones, Mary (Smith)")
+        #expect(PersonTitleDisplay.title(summary(name: mary), orders: orders) == "Mary (Smith) Jones")
+        #expect(PersonTitleDisplay.title(summary(name: mary), style: .sorted, orders: orders) == "Jones, Mary (Smith)")
     }
 
     @Test func unlistedFormerSurnameFollows() {
         var orders = NameFormatOrders.western
         orders.natural.removeAll { $0.partType == "former_surname" }
         orders.sorted.removeAll { $0.partType == "former_surname" }
-        #expect(PersonHeaderDisplay.title(header(name: mary), orders: orders) == "Mary Jones (Smith)")
+        #expect(PersonTitleDisplay.title(summary(name: mary), orders: orders) == "Mary Jones (Smith)")
     }
 
     private func emphasizedRuns(_ styled: AttributedString) -> [String] {
@@ -111,13 +111,13 @@ struct PersonHeaderDisplayTests {
         #expect(NameValueDisplay.display(for: james(nicks: ["Jake"]), style: .natural, orders: orders).styled == nil)
 
         let d = NameValueDisplay.display(for: mary, style: .natural, orders: orders)
-        #expect(PersonHeaderDisplay.titleSource(header(name: mary), orders: orders)
+        #expect(PersonTitleDisplay.titleSource(summary(name: mary), orders: orders)
             == .name("Mary (Smith) Jones", styled: d.styled, spoken: d.spoken))
         let plain = CatalogNameValue(form: "x", parts: [
             CatalogNameValuePart(value: "James", type: "given"),
             CatalogNameValuePart(value: "Robins", type: "surname"),
         ])
-        #expect(PersonHeaderDisplay.titleSource(header(name: plain), orders: orders) == .name("James Robins"))
+        #expect(PersonTitleDisplay.titleSource(summary(name: plain), orders: orders) == .name("James Robins"))
 
         let italic = ConclusionListRow.italicizingEmphasis(try #require(d.styled), font: .body)
         for run in italic.runs {
@@ -133,7 +133,7 @@ struct PersonHeaderDisplayTests {
         let m = NameValueDisplay.display(for: mary, style: .natural, orders: orders)
         #expect(m.spoken == "Mary former surname Smith Jones")
         #expect(NameValueDisplay.display(for: james(nicks: []), style: .natural, orders: orders).spoken == nil)
-        let source = PersonHeaderDisplay.titleSource(name: mary, entity: header(name: mary).entity, orders: orders)
+        let source = PersonTitleDisplay.titleSource(name: mary, entity: summary(name: mary).entity, orders: orders)
         #expect(source.text == "Mary (Smith) Jones")
         #expect(ConclusionListRow.accessibilityLabel(source, ref: "PER-7KD45").contains("former surname Smith"))
     }

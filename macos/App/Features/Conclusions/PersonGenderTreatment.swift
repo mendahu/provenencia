@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// How the Person header shows gender (S10-23, board S10-D12): a Badge above
+/// How the Person summary shows gender (S10-23, board S10-D12): a Badge above
 /// the name and a tint on the thumb. Gender wins; sex at birth stands in only
-/// when the header shows no gender value, and says so. Pure: the view
+/// when the summary shows no gender value, and says so. Pure: the view
 /// only lays it out.
 struct PersonGenderTreatment: Equatable {
     enum Family: Equatable {
@@ -59,13 +59,13 @@ struct PersonGenderTreatment: Equatable {
         PVThumbnail.Colors(tint: family.tint, line: family.line)
     }
 
-    /// Reads the Person header's terms (S13-02). Nil when there is nothing to
-    /// show: no header, no value, a disagreement, or a value that is not a
+    /// Reads the Person summary's terms (S13-02). Nil when there is nothing to
+    /// show: no summary, no value, a disagreement, or a value that is not a
     /// readable term.
-    static func read(_ header: CatalogPersonHeader?) -> PersonGenderTreatment? {
-        guard let header else { return nil }
-        if header.gender.count > 0 { return treatment(header.gender, basis: .gender) }
-        return treatment(header.sexAtBirth, basis: .sexAtBirth)
+    static func read(_ summary: CatalogPersonSummary?) -> PersonGenderTreatment? {
+        guard let summary else { return nil }
+        if summary.gender.count > 0 { return treatment(summary.gender, basis: .gender) }
+        return treatment(summary.sexAtBirth, basis: .sexAtBirth)
     }
 
     private static func treatment(_ facts: CatalogTermFacts, basis: Basis) -> PersonGenderTreatment? {

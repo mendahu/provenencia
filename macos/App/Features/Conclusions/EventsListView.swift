@@ -15,25 +15,25 @@ enum EventsList: ConclusionListKind {
     static func refreshingMeta(_ count: Int) -> String { L10n.Workspace.eventCountRefreshing(count) }
     static var mark: PVMarkKey { .subjectEvent }
 
-    static func ref(_ header: CatalogEventHeader) -> String { header.entity.ref }
-    static func updatedAt(_ header: CatalogEventHeader) -> String { header.updated.at }
-    static func thumbnailRelPath(_ header: CatalogEventHeader) -> String { header.pictureImageRelPath }
+    static func ref(_ summary: CatalogEventSummary) -> String { summary.entity.ref }
+    static func updatedAt(_ summary: CatalogEventSummary) -> String { summary.updated.at }
+    static func thumbnailRelPath(_ summary: CatalogEventSummary) -> String { summary.pictureImageRelPath }
 
-    static func titleSource(_ header: CatalogEventHeader) -> ConclusionTitleSource {
-        titleSource(header, orders: NameFormatOrders())
+    static func titleSource(_ summary: CatalogEventSummary) -> ConclusionTitleSource {
+        titleSource(summary, orders: NameFormatOrders())
     }
 
-    static func titleSource(_ header: CatalogEventHeader, orders: NameFormatOrders) -> ConclusionTitleSource {
-        EventTitleDisplay.titleSource(header, orders: orders)
+    static func titleSource(_ summary: CatalogEventSummary, orders: NameFormatOrders) -> ConclusionTitleSource {
+        EventTitleDisplay.titleSource(summary, orders: orders)
     }
 
-    static func accessibilityLabel(_ header: CatalogEventHeader) -> String {
-        accessibilityLabel(header, orders: NameFormatOrders())
+    static func accessibilityLabel(_ summary: CatalogEventSummary) -> String {
+        accessibilityLabel(summary, orders: NameFormatOrders())
     }
 
-    static func accessibilityLabel(_ header: CatalogEventHeader, orders: NameFormatOrders) -> String {
-        let line = EventSecondaryDisplay.content(header)
-        var label = L10n.Workspace.eventRowAccessibility(title: titleSource(header, orders: orders).text, date: line.date, ref: header.entity.ref)
+    static func accessibilityLabel(_ summary: CatalogEventSummary, orders: NameFormatOrders) -> String {
+        let line = EventSecondaryDisplay.content(summary)
+        var label = L10n.Workspace.eventRowAccessibility(title: titleSource(summary, orders: orders).text, date: line.date, ref: summary.entity.ref)
         if !line.place.isEmpty {
             label = L10n.Conclusions.a11yList(label, rest: line.place)
         }
@@ -43,21 +43,21 @@ enum EventsList: ConclusionListKind {
         return label
     }
 
-    static func location(_ header: CatalogEventHeader) -> WorkspaceLocation {
-        location(header, orders: NameFormatOrders())
+    static func location(_ summary: CatalogEventSummary) -> WorkspaceLocation {
+        location(summary, orders: NameFormatOrders())
     }
 
-    static func location(_ header: CatalogEventHeader, orders: NameFormatOrders) -> WorkspaceLocation {
+    static func location(_ summary: CatalogEventSummary, orders: NameFormatOrders) -> WorkspaceLocation {
         .eventDetail(
-            entityId: header.entity.id,
-            ref: header.entity.ref,
-            title: EventTitleDisplay.title(header, orders: orders)
+            entityId: summary.entity.id,
+            ref: summary.entity.ref,
+            title: EventTitleDisplay.title(summary, orders: orders)
         )
     }
 
     @MainActor
-    static func secondary(_ header: CatalogEventHeader) -> EventSecondaryLine {
-        let line = EventSecondaryDisplay.content(header)
+    static func secondary(_ summary: CatalogEventSummary) -> EventSecondaryLine {
+        let line = EventSecondaryDisplay.content(summary)
         return EventSecondaryLine(date: line.date, place: line.place, extraPlaces: line.extraPlaces)
     }
 }
@@ -71,17 +71,17 @@ enum EventSecondaryDisplay {
         var extraPlaces: Int
     }
 
-    static func content(_ header: CatalogEventHeader) -> Content {
+    static func content(_ summary: CatalogEventSummary, locale: Locale = .autoupdatingCurrent) -> Content {
         Content(
-            date: DateRowDisplay.line(date: header.date, start: header.startDate, end: header.endDate),
-            place: DerivedPlace.name(header.places),
-            extraPlaces: DerivedPlace.extra(header.places)
+            date: DateRowDisplay.line(date: summary.date, start: summary.startDate, end: summary.endDate, locale: locale),
+            place: DerivedPlace.name(summary.places),
+            extraPlaces: DerivedPlace.extra(summary.places)
         )
     }
 
     /// The same date and place on one line. Empty when the event has neither.
-    static func line(_ header: CatalogEventHeader) -> String {
-        let line = content(header)
+    static func line(_ summary: CatalogEventSummary, locale: Locale = .autoupdatingCurrent) -> String {
+        let line = content(summary, locale: locale)
         if line.date.isEmpty { return line.place }
         if line.place.isEmpty { return line.date }
         return L10n.Conclusions.lineJoin(first: line.date, rest: line.place)

@@ -76,14 +76,14 @@ enum CatalogSearchHitPresentation {
     }
 
     /// Title the list would show. Falls back to the indexed title when the hit
-    /// has no structured header.
+    /// has no structured summary.
     static func title(for hit: CatalogSearchHit, orders: NameFormatOrders = NameFormatOrders()) -> String {
-        hit.header.map { ConclusionHeaderDisplay.title($0, style: .sorted, orders: orders) } ?? hit.title
+        hit.summary.map { ConclusionSummaryDisplay.title($0, style: .sorted, orders: orders) } ?? hit.title
     }
 
     /// Secondary line the list would show.
     static func secondary(for hit: CatalogSearchHit) -> String {
-        hit.header.map(ConclusionHeaderDisplay.secondary) ?? hit.subtitle
+        hit.summary.map(ConclusionSummaryDisplay.secondary) ?? hit.subtitle
     }
 
     /// The lead thumbnail, or nil for a `source` hit, which `CatalogSearchHitRow`

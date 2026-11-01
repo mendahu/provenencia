@@ -580,7 +580,7 @@ struct WorkspaceSessionTests {
             CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "Alice", description: ""),
         ]
         let session = makeSession(store: store)
-        let handle: QueryHandle<[CatalogPersonHeader]> = session.query(.personsList(project: session.projectKey))
+        let handle: QueryHandle<[CatalogPersonSummary]> = session.query(.personsList(project: session.projectKey))
         await waitForQuery(handle)
         #expect(handle.value?.isEmpty == true)
 
@@ -589,7 +589,7 @@ struct WorkspaceSessionTests {
         #expect(!handle.isFetching)
         #expect(handle.value?.isEmpty == true)
 
-        let _: QueryHandle<[CatalogPersonHeader]> = session.query(.personsList(project: session.projectKey))
+        let _: QueryHandle<[CatalogPersonSummary]> = session.query(.personsList(project: session.projectKey))
         await waitForQuery(handle)
         #expect(handle.value?.map(\.entity.ref) == [promoted.entity.ref])
     }
@@ -615,7 +615,7 @@ struct WorkspaceSessionTests {
         let session = makeSession(store: store)
         let firstKey = CatalogQueryKey.conclusionDetail(project: session.projectKey, entityId: first.entity.id)
         let secondKey = CatalogQueryKey.conclusionDetail(project: session.projectKey, entityId: second.entity.id)
-        let list: QueryHandle<[CatalogPersonHeader]> = session.query(.personsList(project: session.projectKey))
+        let list: QueryHandle<[CatalogPersonSummary]> = session.query(.personsList(project: session.projectKey))
         await waitForQuery(list)
 
         session.apply(location: .personDetail(entityId: first.entity.id, ref: first.entity.ref, title: nil))
@@ -651,7 +651,7 @@ struct WorkspaceSessionTests {
         // The list is off screen: stale, not reloaded. The next query reloads it.
         #expect(!list.isFetching)
         #expect(list.value?.first?.name?.form != "Jim Robins")
-        let _: QueryHandle<[CatalogPersonHeader]> = session.query(.personsList(project: session.projectKey))
+        let _: QueryHandle<[CatalogPersonSummary]> = session.query(.personsList(project: session.projectKey))
         await waitForQuery(list)
         #expect(list.value?.first?.name?.form == "Jim Robins")
 
@@ -670,8 +670,8 @@ struct WorkspaceSessionTests {
         #expect(reloaded.value?.entity == first.entity)
     }
 
-    private func personHeader(_ id: String, revision: Int64, at: String = "") -> CatalogPersonHeader {
-        CatalogPersonHeader(
+    private func personSummary(_ id: String, revision: Int64, at: String = "") -> CatalogPersonSummary {
+        CatalogPersonSummary(
             entity: CatalogCanonicalEntity(id: id, ref: "PER-\(id)", subjectTypeID: "t", label: ""),
             name: nil,
             nameValueCount: 0,
@@ -679,15 +679,15 @@ struct WorkspaceSessionTests {
         )
     }
 
-    private func eventHeader(_ id: String) -> CatalogEventHeader {
-        CatalogEventHeader(
+    private func eventSummary(_ id: String) -> CatalogEventSummary {
+        CatalogEventSummary(
             entity: CatalogCanonicalEntity(id: id, ref: "EVT-\(id)", subjectTypeID: "t", label: ""),
             title: CatalogEventTitle(rule: .ref, ref: "EVT-\(id)")
         )
     }
 
-    private func placeHeader(_ id: String) -> CatalogPlaceHeader {
-        CatalogPlaceHeader(
+    private func placeSummary(_ id: String) -> CatalogPlaceSummary {
+        CatalogPlaceSummary(
             entity: CatalogCanonicalEntity(id: id, ref: "PLC-\(id)", subjectTypeID: "t", label: "")
         )
     }
@@ -702,12 +702,12 @@ struct WorkspaceSessionTests {
         let people = CatalogQueryKey.personsList(project: session.projectKey)
         let sources = CatalogQueryKey.sourcesList(project: session.projectKey)
         let at = "2026-10-15T16:00:00Z"
-        session.setQueryValue(people, value: [personHeader("e1", revision: 10), personHeader("e2", revision: 9)])
+        session.setQueryValue(people, value: [personSummary("e1", revision: 10), personSummary("e2", revision: 9)])
         session.setQueryValue(sources, value: [
             CatalogSource(id: "s1", ref: "SRC-1", sourceTypeID: "t1", title: "Alpha", description: "",
                           updated: CatalogActivity(revision: 5)),
         ])
-        let list: QueryHandle<[CatalogPersonHeader]> = try #require(session.queryHandle(people))
+        let list: QueryHandle<[CatalogPersonSummary]> = try #require(session.queryHandle(people))
         let sourceList: QueryHandle<[CatalogSource]> = try #require(session.queryHandle(sources))
 
         // AC-2.5: only e1 moves, and nothing loads.
@@ -730,7 +730,7 @@ struct WorkspaceSessionTests {
 
         // AC-2.5c: a load in flight is cancelled and restarted.
         session.invalidate(people)
-        let oldRows = [personHeader("e1", revision: 10)]
+        let oldRows = [personSummary("e1", revision: 10)]
         let slow = session.ensureQuery(people) {
             try await Task.sleep(nanoseconds: 200_000_000)
             return oldRows
@@ -755,10 +755,10 @@ struct WorkspaceSessionTests {
         let people = CatalogQueryKey.personsList(project: project)
         let events = CatalogQueryKey.eventsList(project: project)
         let places = CatalogQueryKey.placesList(project: project)
-        func seed() throws -> (QueryHandle<[CatalogPersonHeader]>, QueryHandle<[CatalogEventHeader]>, QueryHandle<[CatalogPlaceHeader]>) {
-            session.setQueryValue(people, value: [personHeader("e1", revision: 1)])
-            session.setQueryValue(events, value: [eventHeader("e1")])
-            session.setQueryValue(places, value: [placeHeader("e1")])
+        func seed() throws -> (QueryHandle<[CatalogPersonSummary]>, QueryHandle<[CatalogEventSummary]>, QueryHandle<[CatalogPlaceSummary]>) {
+            session.setQueryValue(people, value: [personSummary("e1", revision: 1)])
+            session.setQueryValue(events, value: [eventSummary("e1")])
+            session.setQueryValue(places, value: [placeSummary("e1")])
             return (
                 try #require(session.queryHandle(people)),
                 try #require(session.queryHandle(events)),
@@ -771,7 +771,7 @@ struct WorkspaceSessionTests {
         session.apply(CatalogWriteEffects(handles: ["e1"]))
         #expect(!peopleHandle.isFetching && !eventsHandle.isFetching && !placesHandle.isFetching)
         #expect(peopleHandle.value?.count == 1 && eventsHandle.value?.count == 1 && placesHandle.value?.count == 1)
-        let _: QueryHandle<[CatalogPersonHeader]> = session.query(people)
+        let _: QueryHandle<[CatalogPersonSummary]> = session.query(people)
         await waitForQuery(peopleHandle)
         #expect(peopleHandle.value?.isEmpty == true)
 
@@ -786,7 +786,7 @@ struct WorkspaceSessionTests {
         #expect(!eventsHandle.isFetching && !placesHandle.isFetching)
         #expect(eventsHandle.value?.count == 1 && placesHandle.value?.count == 1)
         // The stale Events list reloads on its next showing.
-        let _: QueryHandle<[CatalogEventHeader]> = session.query(events)
+        let _: QueryHandle<[CatalogEventSummary]> = session.query(events)
         #expect(eventsHandle.isFetching)
         await waitForQuery(eventsHandle)
         #expect(eventsHandle.value?.isEmpty == true)
@@ -812,13 +812,13 @@ struct WorkspaceSessionTests {
         session.setQueryValue(sources, value: [
             CatalogSource(id: "s1", ref: "SRC-1", sourceTypeID: "t1", title: "Alpha", description: ""),
         ])
-        session.setQueryValue(people, value: [personHeader("e1", revision: 1)])
-        session.setQueryValue(events, value: [eventHeader("e1")])
-        session.setQueryValue(places, value: [placeHeader("e1")])
+        session.setQueryValue(people, value: [personSummary("e1", revision: 1)])
+        session.setQueryValue(events, value: [eventSummary("e1")])
+        session.setQueryValue(places, value: [placeSummary("e1")])
         let sourcesHandle: QueryHandle<[CatalogSource]> = try #require(session.queryHandle(sources))
-        let peopleHandle: QueryHandle<[CatalogPersonHeader]> = try #require(session.queryHandle(people))
-        let eventsHandle: QueryHandle<[CatalogEventHeader]> = try #require(session.queryHandle(events))
-        let placesHandle: QueryHandle<[CatalogPlaceHeader]> = try #require(session.queryHandle(places))
+        let peopleHandle: QueryHandle<[CatalogPersonSummary]> = try #require(session.queryHandle(people))
+        let eventsHandle: QueryHandle<[CatalogEventSummary]> = try #require(session.queryHandle(events))
+        let placesHandle: QueryHandle<[CatalogPlaceSummary]> = try #require(session.queryHandle(places))
         func listsAreQuiet() -> Bool {
             !sourcesHandle.isFetching && !peopleHandle.isFetching && !eventsHandle.isFetching
                 && !placesHandle.isFetching
@@ -830,9 +830,9 @@ struct WorkspaceSessionTests {
         session.apply(CatalogWriteEffects(sourceScopes: ["s1"], activity: first), .mutatedSourceWorkspace(sourceId: "s1"))
         #expect(sourcesHandle.value?.first?.updated == first)
         #expect(listsAreQuiet())
-        let _: QueryHandle<[CatalogPersonHeader]> = session.query(people)
-        let _: QueryHandle<[CatalogEventHeader]> = session.query(events)
-        let _: QueryHandle<[CatalogPlaceHeader]> = session.query(places)
+        let _: QueryHandle<[CatalogPersonSummary]> = session.query(people)
+        let _: QueryHandle<[CatalogEventSummary]> = session.query(events)
+        let _: QueryHandle<[CatalogPlaceSummary]> = session.query(places)
         let _: QueryHandle<[CatalogSource]> = session.query(sources)
         #expect(listsAreQuiet())
         #expect(workspace.isFetching)
@@ -847,7 +847,7 @@ struct WorkspaceSessionTests {
         )
         #expect(sourcesHandle.value?.first?.updated == second)
         #expect(listsAreQuiet())
-        let _: QueryHandle<[CatalogPersonHeader]> = session.query(people)
+        let _: QueryHandle<[CatalogPersonSummary]> = session.query(people)
         #expect(peopleHandle.isFetching)
         await waitForQuery(peopleHandle)
         let _: QueryHandle<[CatalogSource]> = session.query(sources)
@@ -1008,9 +1008,9 @@ struct WorkspaceSessionTests {
         let graph2 = CatalogQueryKey.evidenceGraph(project: project, graphId: "g2")
         session.setQueryValue(graph1, value: EvidenceGraphRows(graphId: "g1"))
         session.setQueryValue(graph2, value: EvidenceGraphRows(graphId: "g2"))
-        session.setQueryValue(CatalogQueryKey.personsList(project: project), value: [CatalogPersonHeader]())
-        session.setQueryValue(CatalogQueryKey.eventsList(project: project), value: [CatalogEventHeader]())
-        session.setQueryValue(CatalogQueryKey.placesList(project: project), value: [CatalogPlaceHeader]())
+        session.setQueryValue(CatalogQueryKey.personsList(project: project), value: [CatalogPersonSummary]())
+        session.setQueryValue(CatalogQueryKey.eventsList(project: project), value: [CatalogEventSummary]())
+        session.setQueryValue(CatalogQueryKey.placesList(project: project), value: [CatalogPlaceSummary]())
 
         let named = session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"], evidenceGraphs: ["g1"]))
         #expect(Set(named) == [

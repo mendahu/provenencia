@@ -313,7 +313,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     }
 
     /// The group line of a derived row's owner, titled as its list titles it:
-    /// an Event by its header (else its label or ref), a Place by the kept
+    /// an Event by its summary (else its label or ref), a Place by the kept
     /// names of the Place its link names (else its label or ref).
     private static func ownerLine(
         _ owner: CatalogOwnerField,
@@ -399,7 +399,7 @@ extension ReconciledValueRowModel.Opens {
     }
 
     /// The Place a place name is read from.
-    static func place(_ place: CatalogHeaderPlace) -> Self {
+    static func place(_ place: CatalogChainedPlace) -> Self {
         let title = PlaceTitleDisplay.titleSource(place.titleParts).text
         return Self(
             location: .placeDetail(entityId: place.entity.id, ref: place.entity.ref, title: title),

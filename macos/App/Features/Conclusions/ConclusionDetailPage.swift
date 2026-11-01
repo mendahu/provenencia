@@ -242,7 +242,7 @@ private struct ConclusionDetailHeaderCompactKey: EnvironmentKey {
 
 extension EnvironmentValues {
     /// True while a pinned page header is compact (the page scrolled). The header sets it
-    /// for the kind's `summary`, which may lay itself out more tightly.
+    /// for the kind's `secondary`, which may lay itself out more tightly.
     var conclusionDetailHeaderCompact: Bool {
         get { self[ConclusionDetailHeaderCompactKey.self] }
         set { self[ConclusionDetailHeaderCompactKey.self] = newValue }
@@ -252,13 +252,13 @@ extension EnvironmentValues {
 /// Shared Conclusion detail chrome (S9-24). A view, not a place: the caller
 /// names the entity, and the place registry warms `conclusionDetail` for
 /// that id. Person, Event, and Place stay separate history entries.
-struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View, PageSections: View>: View {
+struct ConclusionDetailPage<Content: ConclusionDetailBody, Secondary: View, PageSections: View>: View {
     let session: WorkspaceSession
     let entityId: String
     let pageIdentifier: String
     let errorIdentifier: String
     let make: (CatalogConclusionDetail) -> Content
-    let summary: (Content) -> Summary
+    let secondary: (Content) -> Secondary
     /// Everything below the header. The convenience initializer supplies `ConclusionDetailDefaultPageSections`.
     let pageSections: (Content, ConclusionDetailPageSectionsContext) -> PageSections
     /// Chooses the lead of any kind's gallery. The page owns it, so the page's toast is its own and the
@@ -272,7 +272,7 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View, PageSe
         errorIdentifier: String,
         userID: String,
         make: @escaping (CatalogConclusionDetail) -> Content,
-        summary: @escaping (Content) -> Summary,
+        secondary: @escaping (Content) -> Secondary,
         pageSections: @escaping (Content, ConclusionDetailPageSectionsContext) -> PageSections
     ) {
         self.session = session
@@ -280,7 +280,7 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View, PageSe
         self.pageIdentifier = pageIdentifier
         self.errorIdentifier = errorIdentifier
         self.make = make
-        self.summary = summary
+        self.secondary = secondary
         self.pageSections = pageSections
         _lead = State(initialValue: ConclusionLeadModel(session: session, userID: userID, entityId: entityId))
     }
@@ -298,7 +298,7 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View, PageSe
                     pageIdentifier: pageIdentifier,
                     errorIdentifier: errorIdentifier,
                     make: make,
-                    summary: summary,
+                    secondary: secondary,
                     lead: lead,
                     pageSections: pageSections
                 )
@@ -335,7 +335,7 @@ extension ConclusionDetailPage where PageSections == ConclusionDetailDefaultPage
         errorIdentifier: String,
         userID: String,
         make: @escaping (CatalogConclusionDetail) -> Content,
-        summary: @escaping (Content) -> Summary
+        secondary: @escaping (Content) -> Secondary
     ) {
         self.init(
             session: session,
@@ -344,7 +344,7 @@ extension ConclusionDetailPage where PageSections == ConclusionDetailDefaultPage
             errorIdentifier: errorIdentifier,
             userID: userID,
             make: make,
-            summary: summary,
+            secondary: secondary,
             pageSections: { ConclusionDetailDefaultPageSections(content: $0, context: $1) }
         )
     }
@@ -422,13 +422,13 @@ struct ConclusionDetailRowsSection: View {
     }
 }
 
-private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: View, PageSections: View>: View {
+private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: View, PageSections: View>: View {
     @Bindable var handle: QueryHandle<CatalogConclusionDetail>
     let projectDir: String
     let pageIdentifier: String
     let errorIdentifier: String
     let make: (CatalogConclusionDetail) -> Content
-    let summary: (Content) -> Summary
+    let secondary: (Content) -> Secondary
     let lead: ConclusionLeadModel
     let pageSections: (Content, ConclusionDetailPageSectionsContext) -> PageSections
 
@@ -452,7 +452,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
         Group {
             switch presentation {
             case .loading:
-                ConclusionDetailPage<Content, Summary, PageSections>.loadingPage
+                ConclusionDetailPage<Content, Secondary, PageSections>.loadingPage
             case .failed(let message):
                 PVPageColumns(primary: {
                     PVCallout(tone: .danger, message: message)
@@ -466,7 +466,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
                         ConclusionDetailHeaderBand(
                             content: content,
                             projectDir: projectDir,
-                            summary: summary,
+                            secondary: secondary,
                             lead: lead,
                             pageIdentifier: pageIdentifier,
                             offeredPageSections: offeredPageSections,
@@ -498,10 +498,10 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
 
 /// The header and, on a page with sections, the section switcher under it. Pinned pages
 /// supply the band's own padding, full or compact; an unpinned page has none.
-private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Summary: View>: View {
+private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Secondary: View>: View {
     let content: Content
     let projectDir: String
-    let summary: (Content) -> Summary
+    let secondary: (Content) -> Secondary
     let lead: ConclusionLeadModel
     let pageIdentifier: String
     let offeredPageSections: [ConclusionPageSection]
@@ -520,7 +520,7 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Summary
             ConclusionDetailHeader(
                 content: content,
                 projectDir: projectDir,
-                summary: summary,
+                secondary: secondary,
                 lead: lead,
                 pageIdentifier: pageIdentifier,
                 compact: isScrolled
@@ -682,12 +682,12 @@ private struct ConclusionDetailRelationshipSection: View {
     }
 }
 
-/// Thumbnail slot · badge, title and the kind's summary · ref and member count. Compact
+/// Thumbnail slot · badge, title and the kind's secondary · ref and member count. Compact
 /// (a pinned page that has scrolled): a 40pt thumb, no Badge, the title one size down.
-private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: View>: View {
+private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Secondary: View>: View {
     let content: Content
     let projectDir: String
-    let summary: (Content) -> Summary
+    let secondary: (Content) -> Secondary
     let lead: ConclusionLeadModel
     let pageIdentifier: String
     var compact = false
@@ -704,7 +704,7 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
                         .accessibilityLabel(badge.accessibilityLabel)
                 }
                 title
-                summary(content)
+                secondary(content)
                     .environment(\.conclusionDetailHeaderCompact, compact)
             }
             .padding(.top, compact ? 0 : PVSpacing.space3)

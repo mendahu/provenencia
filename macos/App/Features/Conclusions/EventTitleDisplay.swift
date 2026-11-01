@@ -4,28 +4,28 @@ import Foundation
 /// parts (`CatalogEventTitle`); this fills the rule's L10n template. It never
 /// chooses a rule, so every surface titles an Event the same way.
 enum EventTitleDisplay {
-    /// The header's event type fills a title plan that omitted it. List,
+    /// The summary's event type fills a title plan that omitted it. List,
     /// detail, and promote all title through this, so they can't disagree.
     static func titleSource(
-        _ header: CatalogEventHeader,
+        _ summary: CatalogEventSummary,
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders()
     ) -> ConclusionTitleSource {
-        var title = header.title
+        var title = summary.title
         if title.typeKey.isEmpty {
-            title.typeKey = header.eventTypeKey
-            title.typeOrigin = header.eventTypeOrigin
+            title.typeKey = summary.eventTypeKey
+            title.typeOrigin = summary.eventTypeOrigin
         }
-        if title.typeLabel.isEmpty { title.typeLabel = header.eventTypeLabel }
+        if title.typeLabel.isEmpty { title.typeLabel = summary.eventTypeLabel }
         return titleSource(title, locale: locale, orders: orders)
     }
 
     static func title(
-        _ header: CatalogEventHeader,
+        _ summary: CatalogEventSummary,
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders()
     ) -> String {
-        titleSource(header, locale: locale, orders: orders).text
+        titleSource(summary, locale: locale, orders: orders).text
     }
 
     static func titleSource(
@@ -67,7 +67,7 @@ enum EventTitleDisplay {
         titleSource(title, locale: locale, orders: orders).text
     }
 
-    /// An Event whose header has not loaded: its label, else its ref.
+    /// An Event whose summary has not loaded: its label, else its ref.
     static func untitled(_ entity: CatalogCanonicalEntity) -> ConclusionTitleSource {
         let label = entity.label.trimmingCharacters(in: .whitespacesAndNewlines)
         return label.isEmpty ? .ref(entity.ref) : .label(label)

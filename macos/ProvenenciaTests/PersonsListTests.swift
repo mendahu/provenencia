@@ -4,8 +4,8 @@ import Testing
 
 @MainActor
 struct PersonsListTests {
-    private func header(_ ref: String, name: String? = nil, label: String = "") -> CatalogPersonHeader {
-        CatalogPersonHeader(
+    private func summary(_ ref: String, name: String? = nil, label: String = "") -> CatalogPersonSummary {
+        CatalogPersonSummary(
             entity: CatalogCanonicalEntity(id: "id-\(ref)", ref: ref, subjectTypeID: "t", label: label),
             name: name.map { CatalogNameValue(form: $0) },
             nameValueCount: name == nil ? 0 : 1
@@ -13,16 +13,16 @@ struct PersonsListTests {
     }
 
     @Test func listThumbIsTheLikenessPath() {
-        var withLikeness = header("PER-1", name: "A")
+        var withLikeness = summary("PER-1", name: "A")
         withLikeness.pictureImageRelPath = "objects/ab/cd.png"
         #expect(PersonsList.thumbnailRelPath(withLikeness) == "objects/ab/cd.png")
-        #expect(PersonsList.thumbnailRelPath(header("PER-2")) == "")
-        let event = CatalogEventHeader(entity: CatalogCanonicalEntity(id: "e", ref: "EVT-1", subjectTypeID: "t", label: ""), title: CatalogEventTitle(rule: .ref, ref: "EVT-1"))
+        #expect(PersonsList.thumbnailRelPath(summary("PER-2")) == "")
+        let event = CatalogEventSummary(entity: CatalogCanonicalEntity(id: "e", ref: "EVT-1", subjectTypeID: "t", label: ""), title: CatalogEventTitle(rule: .ref, ref: "EVT-1"))
         #expect(EventsList.thumbnailRelPath(event) == "")
         var pictured = event
         pictured.pictureImageRelPath = "objects/12/34.png"
         #expect(EventsList.thumbnailRelPath(pictured) == "objects/12/34.png")
-        let place = CatalogPlaceHeader(entity: CatalogCanonicalEntity(id: "p", ref: "PLC-1", subjectTypeID: "t", label: ""))
+        let place = CatalogPlaceSummary(entity: CatalogCanonicalEntity(id: "p", ref: "PLC-1", subjectTypeID: "t", label: ""))
         #expect(PlacesList.thumbnailRelPath(place) == "")
         var picturedPlace = place
         picturedPlace.pictureImageRelPath = "objects/56/78.png"
@@ -34,18 +34,18 @@ struct PersonsListTests {
     }
 
     @Test func listThumbDispatchesThroughTheKind() {
-        var withLikeness = header("PER-1", name: "A")
+        var withLikeness = summary("PER-1", name: "A")
         withLikeness.pictureImageRelPath = "objects/ab/cd.png"
         #expect(listThumb(PersonsList.self, withLikeness) == "objects/ab/cd.png")
-        let event = CatalogEventHeader(entity: CatalogCanonicalEntity(id: "e", ref: "EVT-1", subjectTypeID: "t", label: ""), title: CatalogEventTitle(rule: .ref, ref: "EVT-1"))
+        let event = CatalogEventSummary(entity: CatalogCanonicalEntity(id: "e", ref: "EVT-1", subjectTypeID: "t", label: ""), title: CatalogEventTitle(rule: .ref, ref: "EVT-1"))
         #expect(listThumb(EventsList.self, event) == "")
     }
 
     @Test func titleSourceFallsBackNameThenLabelThenRef() {
-        #expect(PersonHeaderDisplay.titleSource(header("PER-1", name: "James Robins", label: "Grandpa")) == .name("James Robins"))
-        #expect(PersonHeaderDisplay.titleSource(header("PER-2", label: " Unknown father ")) == .label("Unknown father"))
-        #expect(PersonHeaderDisplay.titleSource(header("PER-3")) == .ref("PER-3"))
-        #expect(PersonHeaderDisplay.title(header("PER-3")) == "PER-3")
+        #expect(PersonTitleDisplay.titleSource(summary("PER-1", name: "James Robins", label: "Grandpa")) == .name("James Robins"))
+        #expect(PersonTitleDisplay.titleSource(summary("PER-2", label: " Unknown father ")) == .label("Unknown father"))
+        #expect(PersonTitleDisplay.titleSource(summary("PER-3")) == .ref("PER-3"))
+        #expect(PersonTitleDisplay.title(summary("PER-3")) == "PER-3")
     }
 
     @Test func rowAccessibilityLabelReadsTitleThenRef() {
@@ -54,9 +54,9 @@ struct PersonsListTests {
     }
 
     @Test func presentationFollowsTheHandleState() {
-        let rows = [header("PER-1", name: "A"), header("PER-2", name: "B")]
-        let none: QueryRead<[CatalogPersonHeader]> = .loading
-        let empty: QueryRead<[CatalogPersonHeader]> = .loaded([])
+        let rows = [summary("PER-1", name: "A"), summary("PER-2", name: "B")]
+        let none: QueryRead<[CatalogPersonSummary]> = .loading
+        let empty: QueryRead<[CatalogPersonSummary]> = .loaded([])
         #expect(ConclusionListPresentation(none, isFetching: false) == .loading)
         #expect(ConclusionListPresentation(empty, isFetching: false) == .empty)
         #expect(ConclusionListPresentation(.loaded(rows), isFetching: false) == .rows(rows, refreshing: false))
@@ -64,8 +64,8 @@ struct PersonsListTests {
     }
 
     @Test func headerMetaCountsAndShowsRefreshing() {
-        let one = [header("PER-1", name: "A")]
-        let two = one + [header("PER-2")]
+        let one = [summary("PER-1", name: "A")]
+        let two = one + [summary("PER-2")]
         #expect(ConclusionListPresentation.rows(one, refreshing: false).meta(
             count: L10n.Workspace.personCount, refreshing: L10n.Workspace.personCountRefreshing
         ) == "1 person")
@@ -75,17 +75,17 @@ struct PersonsListTests {
         #expect(ConclusionListPresentation.rows(two, refreshing: true).meta(
             count: L10n.Workspace.personCount, refreshing: L10n.Workspace.personCountRefreshing
         ) == "2 persons · refreshing")
-        #expect(ConclusionListPresentation<[CatalogPersonHeader]>.empty.meta(
+        #expect(ConclusionListPresentation<[CatalogPersonSummary]>.empty.meta(
             count: L10n.Workspace.personCount, refreshing: L10n.Workspace.personCountRefreshing
         ) == nil)
-        #expect(ConclusionListPresentation<[CatalogPersonHeader]>.loading.meta(
+        #expect(ConclusionListPresentation<[CatalogPersonSummary]>.loading.meta(
             count: L10n.Workspace.personCount, refreshing: L10n.Workspace.personCountRefreshing
         ) == nil)
     }
 
     @Test func eventsHeaderMetaNamesTheDateSort() {
-        let one = [CatalogEventHeader(entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-1", subjectTypeID: "t", label: ""), title: CatalogEventTitle(rule: .ref, ref: "EVT-1"))]
-        let two = one + [CatalogEventHeader(entity: CatalogCanonicalEntity(id: "e2", ref: "EVT-2", subjectTypeID: "t", label: ""), title: CatalogEventTitle(rule: .ref, ref: "EVT-2"))]
+        let one = [CatalogEventSummary(entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-1", subjectTypeID: "t", label: ""), title: CatalogEventTitle(rule: .ref, ref: "EVT-1"))]
+        let two = one + [CatalogEventSummary(entity: CatalogCanonicalEntity(id: "e2", ref: "EVT-2", subjectTypeID: "t", label: ""), title: CatalogEventTitle(rule: .ref, ref: "EVT-2"))]
         #expect(ConclusionListPresentation.rows(one, refreshing: false).meta(
             count: L10n.Workspace.eventCount, refreshing: L10n.Workspace.eventCountRefreshing
         ) == "1 event · by date")
@@ -136,9 +136,9 @@ struct ConclusionListKindTests {
 
     @Test func onlyPlacesBadgeNames() {
         let entity = CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: "")
-        let person = CatalogPersonHeader(entity: entity, name: nil, nameValueCount: 0)
+        let person = CatalogPersonSummary(entity: entity, name: nil, nameValueCount: 0)
         #expect(PersonsList.extraCount(person) == 0)
-        let place = CatalogPlaceHeader(entity: entity, names: ["Montréal", "Montreal"])
+        let place = CatalogPlaceSummary(entity: entity, names: ["Montréal", "Montreal"])
         #expect(PlacesList.extraCount(place) == 1)
     }
 
@@ -146,10 +146,10 @@ struct ConclusionListKindTests {
         let york = CatalogCanonicalEntity(id: "pl1", ref: "PLC-1", subjectTypeID: "t", label: "")
         let kingston = CatalogCanonicalEntity(id: "pl2", ref: "PLC-2", subjectTypeID: "t", label: "")
         let places = [
-            CatalogHeaderPlace(entity: york, names: ["York"]),
-            CatalogHeaderPlace(entity: kingston, names: ["Kingston"]),
+            CatalogChainedPlace(entity: york, names: ["York"]),
+            CatalogChainedPlace(entity: kingston, names: ["Kingston"]),
         ]
-        var person = CatalogPersonHeader(
+        var person = CatalogPersonSummary(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: ""),
             name: CatalogNameValue(form: "James Robins"), nameValueCount: 1
         )
@@ -158,7 +158,7 @@ struct ConclusionListKindTests {
         person.birth.places = [places[0]]
         #expect(!PersonsList.accessibilityLabel(person).contains(L10n.Conclusions.morePlaces(count: 1)))
 
-        let event = CatalogEventHeader(
+        let event = CatalogEventSummary(
             entity: CatalogCanonicalEntity(id: "ev1", ref: "EVT-1", subjectTypeID: "t", label: ""),
             places: places,
             title: CatalogEventTitle(rule: .typeAtPlace, ref: "EVT-1", typeLabel: "Fire", place: "York")

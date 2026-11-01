@@ -14,46 +14,46 @@ enum PersonsList: ConclusionListKind {
     static func refreshingMeta(_ count: Int) -> String { L10n.Workspace.personCountRefreshing(count) }
     static var mark: PVMarkKey { .subjectPerson }
 
-    static func ref(_ header: CatalogPersonHeader) -> String { header.entity.ref }
-    static func updatedAt(_ header: CatalogPersonHeader) -> String { header.updated.at }
-    static func thumbnailRelPath(_ header: CatalogPersonHeader) -> String { header.pictureImageRelPath }
+    static func ref(_ summary: CatalogPersonSummary) -> String { summary.entity.ref }
+    static func updatedAt(_ summary: CatalogPersonSummary) -> String { summary.updated.at }
+    static func thumbnailRelPath(_ summary: CatalogPersonSummary) -> String { summary.pictureImageRelPath }
 
-    static func titleSource(_ header: CatalogPersonHeader) -> ConclusionTitleSource {
-        titleSource(header, orders: NameFormatOrders())
+    static func titleSource(_ summary: CatalogPersonSummary) -> ConclusionTitleSource {
+        titleSource(summary, orders: NameFormatOrders())
     }
 
-    static func titleSource(_ header: CatalogPersonHeader, orders: NameFormatOrders) -> ConclusionTitleSource {
-        PersonHeaderDisplay.titleSource(header, style: .sorted, orders: orders)
+    static func titleSource(_ summary: CatalogPersonSummary, orders: NameFormatOrders) -> ConclusionTitleSource {
+        PersonTitleDisplay.titleSource(summary, style: .sorted, orders: orders)
     }
 
-    static func accessibilityLabel(_ header: CatalogPersonHeader) -> String {
-        accessibilityLabel(header, orders: NameFormatOrders())
+    static func accessibilityLabel(_ summary: CatalogPersonSummary) -> String {
+        accessibilityLabel(summary, orders: NameFormatOrders())
     }
 
-    static func accessibilityLabel(_ header: CatalogPersonHeader, orders: NameFormatOrders) -> String {
-        let title = ConclusionListRow.accessibilityLabel(titleSource(header, orders: orders), ref: header.entity.ref)
-        let line = PersonLifeDisplay.line(header)
+    static func accessibilityLabel(_ summary: CatalogPersonSummary, orders: NameFormatOrders) -> String {
+        let title = ConclusionListRow.accessibilityLabel(titleSource(summary, orders: orders), ref: summary.entity.ref)
+        let line = PersonLifeDisplay.line(summary)
         guard !line.text.isEmpty else { return title }
         let label = L10n.Conclusions.a11yList(title, rest: line.text)
         guard line.extraPlaces > 0 else { return label }
         return L10n.Conclusions.a11yList(label, rest: L10n.Conclusions.morePlaces(count: line.extraPlaces))
     }
 
-    static func location(_ header: CatalogPersonHeader) -> WorkspaceLocation {
-        location(header, orders: NameFormatOrders())
+    static func location(_ summary: CatalogPersonSummary) -> WorkspaceLocation {
+        location(summary, orders: NameFormatOrders())
     }
 
-    static func location(_ header: CatalogPersonHeader, orders: NameFormatOrders) -> WorkspaceLocation {
+    static func location(_ summary: CatalogPersonSummary, orders: NameFormatOrders) -> WorkspaceLocation {
         .personDetail(
-            entityId: header.entity.id,
-            ref: header.entity.ref,
-            title: PersonHeaderDisplay.title(header, style: .sorted, orders: orders)
+            entityId: summary.entity.id,
+            ref: summary.entity.ref,
+            title: PersonTitleDisplay.title(summary, style: .sorted, orders: orders)
         )
     }
 
     @MainActor
-    static func secondary(_ header: CatalogPersonHeader) -> PersonLifeLine {
-        PersonLifeLine(line: PersonLifeDisplay.line(header))
+    static func secondary(_ summary: CatalogPersonSummary) -> PersonLifeLine {
+        PersonLifeLine(line: PersonLifeDisplay.line(summary))
     }
 }
 

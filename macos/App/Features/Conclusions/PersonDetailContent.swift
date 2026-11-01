@@ -4,7 +4,7 @@ import Foundation
 /// S9-D5). Pure: views only lay it out.
 struct PersonDetailContent: ConclusionDetailBody {
     /// One header line: *b. 14 May 1817 · York*. Date and place come from
-    /// the Person header. Nil when that half is not recorded.
+    /// the Person summary. Nil when that half is not recorded.
     struct LifeLine: Equatable {
         var abbreviation: String
         var date: String?
@@ -13,7 +13,7 @@ struct PersonDetailContent: ConclusionDetailBody {
     }
 
     /// Name → label → ref (PD-1).
-    var title: PersonHeaderDisplay.TitleSource
+    var title: ConclusionTitleSource
     var ref: String
     /// The ref is repeated at the right only when it isn't the title.
     var showsRef: Bool { if case .ref = title { false } else { true } }
@@ -33,19 +33,19 @@ struct PersonDetailContent: ConclusionDetailBody {
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders()
     ) {
-        let header = detail.header?.person
+        let summary = detail.summary?.person
         let nameField = detail.fields.first { $0.propertyKey == SeededPropertyKey.name }
         var leadName: CatalogNameValue?
         if case .name(let name)? = nameField?.displayedValues.first?.value { leadName = name }
-        title = PersonHeaderDisplay.titleSource(name: leadName, entity: detail.entity, style: .natural, orders: orders)
+        title = PersonTitleDisplay.titleSource(name: leadName, entity: detail.entity, style: .natural, orders: orders)
         ref = detail.entity.ref
         members = L10n.Conclusions.memberCount(detail.memberCount)
         lifeLines = [
-            Self.lifeLine(L10n.Conclusions.personBornAbbr, spoken: L10n.Conclusions.a11yBorn, facts: header?.birth, locale: locale),
-            Self.lifeLine(L10n.Conclusions.personDiedAbbr, spoken: L10n.Conclusions.a11yDied, facts: header?.death, locale: locale),
+            Self.lifeLine(L10n.Conclusions.personBornAbbr, spoken: L10n.Conclusions.a11yBorn, facts: summary?.birth, locale: locale),
+            Self.lifeLine(L10n.Conclusions.personDiedAbbr, spoken: L10n.Conclusions.a11yDied, facts: summary?.death, locale: locale),
         ]
-        rows = Self.rows(detail.fields, header: header, derivedRows: detail.derivedRows, locale: locale, orders: orders)
-        treatment = PersonGenderTreatment.read(header)
+        rows = Self.rows(detail.fields, summary: summary, derivedRows: detail.derivedRows, locale: locale, orders: orders)
+        treatment = PersonGenderTreatment.read(summary)
         gallery = ConclusionDetailGallery(
             title: L10n.Conclusions.likenessesSection,
             openTip: L10n.Conclusions.likenessOpenTip,
@@ -74,7 +74,7 @@ struct PersonDetailContent: ConclusionDetailBody {
     /// speaks to it (sex at birth, a custom birth weight), in binding order.
     static func rows(
         _ fields: [CatalogConclusionField],
-        header: CatalogPersonHeader? = nil,
+        summary: CatalogPersonSummary? = nil,
         derivedRows: [CatalogDerivedRow] = [],
         locale: Locale,
         orders: NameFormatOrders = NameFormatOrders()
@@ -94,7 +94,7 @@ struct PersonDetailContent: ConclusionDetailBody {
             ("life.deathDate", L10n.Conclusions.personDeathDate, L10n.Conclusions.emptyDeathDate, .date, .deathDate),
             ("life.deathPlace", L10n.Conclusions.personDeathPlace, L10n.Conclusions.emptyDeathPlace, .place, .deathPlace),
         ]
-        let facts: [CatalogLifeFacts?] = [header?.birth, header?.birth, header?.death, header?.death]
+        let facts: [CatalogLifeFacts?] = [summary?.birth, summary?.birth, summary?.death, summary?.death]
         for (index, entry) in life.enumerated() {
             let (id, label, empty, style, kind) = entry
             let side = facts[index]

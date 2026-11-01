@@ -22,14 +22,14 @@ struct CatalogSearchModelTests {
             CatalogNameValuePart(value: "John Henry", type: "given"),
             CatalogNameValuePart(value: "Smith", type: "surname"),
         ])
-        let header = CatalogPersonHeader(
+        let summary = CatalogPersonSummary(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: ""),
             name: name, nameValueCount: 1
         )
         let hit = CatalogSearchHit(
             kind: "person", id: "e1", ref: "PER-1", title: "John Henry Smith", subtitle: "", matchReason: "title",
             location: WorkspaceLocation(section: .persons, entityId: "e1", ref: "PER-1", title: "John Henry Smith"),
-            header: .person(header)
+            summary: .person(summary)
         )
         let orders = NameFormatOrders(natural: [], sorted: [
             NameFormatPart(partType: "surname", trailingSeparator: ", "),
@@ -152,11 +152,11 @@ struct CatalogSearchModelTests {
 
 @Suite
 struct CatalogSearchHitPresentationTests {
-    @Test func aHeaderIsTitledByItsKind() {
+    @Test func aSummaryIsTitledByItsKind() {
         func entity(_ ref: String) -> CatalogCanonicalEntity {
             CatalogCanonicalEntity(id: ref, ref: ref, subjectTypeID: "t", label: "")
         }
-        let person = CatalogPersonHeader(
+        let person = CatalogPersonSummary(
             entity: entity("PER-1"),
             name: CatalogNameValue(form: "John Smith", parts: [
                 CatalogNameValuePart(value: "John", type: "given"),
@@ -164,23 +164,23 @@ struct CatalogSearchHitPresentationTests {
             ]),
             nameValueCount: 1
         )
-        let event = CatalogEventHeader(
+        let event = CatalogEventSummary(
             entity: entity("EVT-1"),
             title: CatalogEventTitle(rule: .typeAtPlace, ref: "EVT-1", typeLabel: "Birth", place: "Gumpertz")
         )
-        let place = CatalogPlaceHeader(entity: entity("PLC-1"), names: ["The farm"], parents: ["Ontario", "Canada"])
+        let place = CatalogPlaceSummary(entity: entity("PLC-1"), names: ["The farm"], parents: ["Ontario", "Canada"])
 
-        #expect(ConclusionHeaderDisplay.title(.person(person), style: .sorted)
-            == PersonHeaderDisplay.title(person, style: .sorted))
-        #expect(ConclusionHeaderDisplay.title(.event(event)) == EventTitleDisplay.title(event))
-        #expect(ConclusionHeaderDisplay.title(.place(place)) == PlaceTitleDisplay.title(place))
-        #expect(ConclusionHeaderDisplay.secondary(.person(person)) == PersonLifeDisplay.line(person).text)
-        #expect(ConclusionHeaderDisplay.secondary(.event(event)) == EventSecondaryDisplay.line(event))
-        #expect(ConclusionHeaderDisplay.secondary(.place(place))
+        #expect(ConclusionSummaryDisplay.title(.person(person), style: .sorted)
+            == PersonTitleDisplay.title(person, style: .sorted))
+        #expect(ConclusionSummaryDisplay.title(.event(event)) == EventTitleDisplay.title(event))
+        #expect(ConclusionSummaryDisplay.title(.place(place)) == PlaceTitleDisplay.title(place))
+        #expect(ConclusionSummaryDisplay.secondary(.person(person)) == PersonLifeDisplay.line(person).text)
+        #expect(ConclusionSummaryDisplay.secondary(.event(event)) == EventSecondaryDisplay.line(event))
+        #expect(ConclusionSummaryDisplay.secondary(.place(place))
             == PlaceChainDisplay.line(parents: ["Ontario", "Canada"], candidates: false))
-        #expect(ConclusionHeaderDisplay.ref(.person(person)) == "PER-1")
-        #expect(ConclusionHeaderDisplay.ref(.event(event)) == "EVT-1")
-        #expect(ConclusionHeaderDisplay.ref(.place(place)) == "PLC-1")
+        #expect(ConclusionSummaryDisplay.ref(.person(person)) == "PER-1")
+        #expect(ConclusionSummaryDisplay.ref(.event(event)) == "EVT-1")
+        #expect(ConclusionSummaryDisplay.ref(.place(place)) == "PLC-1")
     }
 
     @Test func accessibilityLabelComposesVisibleRowMetadata() {

@@ -272,7 +272,7 @@ struct PromoteModelTests {
         model.mapRest()
         #expect(model.flow.row("a")?.target == .unset)
 
-        model.hold(subjectID: "a", id: "e-far", ref: "PER-FAR", header: nil)
+        model.hold(subjectID: "a", id: "e-far", ref: "PER-FAR", summary: nil)
         _ = await waitUntil { !model.isProposing }
         #expect(store.lastPromoteFixed == [CatalogPromoteGraphAlignmentFixed(subjectID: "a", handleID: "e-far")])
         let ada = model.flow.row("a")

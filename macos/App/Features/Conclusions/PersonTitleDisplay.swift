@@ -1,18 +1,16 @@
 import Foundation
 
-/// Text for a Person header (S9-07). Go returns structures; this is the one
+/// Text for a Person summary (S9-07). Go returns structures; this is the one
 /// place a Person's row title is made: auto-reconciled name, else the handle's
 /// label, else its ref. `titleSource` says which, so a row can style each
 /// case (S9-D2: name plain, label italic, ref mono).
-enum PersonHeaderDisplay {
-    typealias TitleSource = ConclusionTitleSource
-
+enum PersonTitleDisplay {
     static func titleSource(
         name: CatalogNameValue?,
         entity: CatalogCanonicalEntity,
         style: NameDisplayStyle = .natural,
         orders: NameFormatOrders = NameFormatOrders()
-    ) -> TitleSource {
+    ) -> ConclusionTitleSource {
         if let name {
             let d = NameValueDisplay.display(for: name, style: style, orders: orders)
             if !d.text.isEmpty { return .name(d.text, styled: d.styled, spoken: d.spoken) }
@@ -22,18 +20,18 @@ enum PersonHeaderDisplay {
     }
 
     static func titleSource(
-        _ header: CatalogPersonHeader,
+        _ summary: CatalogPersonSummary,
         style: NameDisplayStyle = .natural,
         orders: NameFormatOrders = NameFormatOrders()
-    ) -> TitleSource {
-        titleSource(name: header.name, entity: header.entity, style: style, orders: orders)
+    ) -> ConclusionTitleSource {
+        titleSource(name: summary.name, entity: summary.entity, style: style, orders: orders)
     }
 
     static func title(
-        _ header: CatalogPersonHeader,
+        _ summary: CatalogPersonSummary,
         style: NameDisplayStyle = .natural,
         orders: NameFormatOrders = NameFormatOrders()
     ) -> String {
-        titleSource(header, style: style, orders: orders).text
+        titleSource(summary, style: style, orders: orders).text
     }
 }

@@ -11,13 +11,13 @@ struct PlaceDetailTests {
         ref: String = "PLC-2MT40",
         fields: [CatalogConclusionField] = [],
         members: Int = 1,
-        placeHeader: CatalogPlaceHeader? = nil
+        placeSummary: CatalogPlaceSummary? = nil
     ) -> CatalogConclusionDetail {
         CatalogConclusionDetail(
             entity: CatalogCanonicalEntity(id: "e1", ref: ref, subjectTypeID: "t", label: label),
             fields: fields,
             memberCount: members,
-            header: placeHeader.map { .place($0) }
+            summary: placeSummary.map { .place($0) }
         )
     }
 
@@ -96,8 +96,8 @@ struct PlaceDetailTests {
         #expect(page.sections.map(\.relationships) == [[], [], []])
     }
 
-    @Test func periodAndRelationshipsFillFromTheHeader() {
-        let header = CatalogPlaceHeader(
+    @Test func periodAndRelationshipsFillFromTheSummary() {
+        let summary = CatalogPlaceSummary(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PLC-2MT40", subjectTypeID: "t", label: ""),
             names: ["Toronto"],
             startDate: CatalogDateValueInput(kind: "point", startYear: 1834 as Int32),
@@ -110,7 +110,7 @@ struct PlaceDetailTests {
             predecessors: [rel(id: "york", title: "York", kind: "predecessor", start: 1793, end: 1834)],
             successors: []
         )
-        let page = content(detail(label: "Toronto", placeHeader: header))
+        let page = content(detail(label: "Toronto", placeSummary: summary))
         #expect(page.chain == "Ontario, Canada")
         #expect(page.chainIsRecorded)
         #expect(page.rows[1].lead == "1834 –")

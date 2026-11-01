@@ -19,13 +19,13 @@ enum CatalogQueryKey: Hashable, Sendable {
     case evidenceGraphProgress(project: ProjectKey)
     /// Every Evidence graph of the project with its linked Artifact ids (S12-05).
     case evidenceGraphsList(project: ProjectKey)
-    /// Every Person header, composed from the auto-reconciler cache (S9-07).
+    /// Every Person summary, composed from the auto-reconciler cache (S9-07).
     case personsList(project: ProjectKey)
-    /// Every Event header, composed from the auto-reconciler cache (S9-22).
+    /// Every Event summary, composed from the auto-reconciler cache (S9-22).
     case eventsList(project: ProjectKey)
-    /// Every Place header, composed from the auto-reconciler cache (S9-25).
+    /// Every Place summary, composed from the auto-reconciler cache (S9-25).
     case placesList(project: ProjectKey)
-    /// One handle's detail, any kind (S9-15), with its kind's header (birth
+    /// One handle's detail, any kind (S9-15), with its kind's summary (birth
     /// and death, an Event's subjects and title, a Place's names) read in the
     /// same call. Evicted, not revalidated, while off screen.
     case conclusionDetail(project: ProjectKey, entityId: String)
