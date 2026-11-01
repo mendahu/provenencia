@@ -36,6 +36,8 @@ The Go dylib is written to [`macos/Core/`](../macos/Core/) as a **build artifact
 
 Open **`macos/Provenencia.xcodeproj`**, not `macos/App`. The latter is the source tree; it is not an Xcode project.
 
+`App/App`, `App/Platform`, `App/Features`, `App/DesignSystem` and `ProvenenciaTests` are synchronized folders: a file on disk there is in the build. `App/Resources` is a classic group. A new top-level folder under `macos/App` is not built until it is added as a synchronized folder; `scripts/check-guidance-names.py` fails until it is.
+
 ### UI composition layers
 
 UI building blocks are **components** (content-agnostic `PV*`), **recipes** (Provenencia-specific, reused), or **snowflakes** (one screen). Under each DesignSystem layer root, use **one folder per control** (`Components/Button/…`) — not UI-category nesting and not loose files at the layer root. Public Components/Recipes types use the **`PV` prefix** so they do not collide with SwiftUI/AppKit (`PVButton`, not `Button`). Stop at the highest layer you need. Full model: [`design-system-layers.md`](design-system-layers.md). Agent workflows: `add-ui-component`, `evaluate-ui-component`.

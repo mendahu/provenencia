@@ -69,7 +69,7 @@ Prefer extending a composite with slots over a new root `PV*` for a slight varia
 - [ ] No catalog types in Components/
 - [ ] User copy via add-localized-string; a11y ids at call sites when UI-tested
 - [ ] #Preview with static sample data for new DesignSystem types
-- [ ] New .swift registered in the Xcode project (pbxproj)
+- [ ] File saved under `macos/App/DesignSystem/` or `macos/App/Features/` (synchronized folders; no `project.pbxproj` edit)
 - [ ] Second call site? Snowflake → Recipes/<Name>/ (or Components/<Name>/ if agnostic)
 - [ ] Each behavior the README promises for it (Return, Escape, dismissal, focus, VoiceOver announcement) is in its code and held by a test. `PVConfirm` promised that Return could not confirm a delete while its Delete button kept the default-action shortcut
 ```
@@ -127,9 +127,9 @@ enum VocabularyDeleteDialog { static func sheet(…) }  // only Metadata uses it
 
 1. Confirm layer = component (decision step 2).
 2. Create **`DesignSystem/Components/<Name>/`** and add `PV<Name>.swift` (type
-   `PV<Name>` — required prefix; plus optional README/helpers in the same folder).
+   `PV<Name>` — required prefix; plus optional helpers in the same folder; a README there is listed in the folder's membership exceptions, which `check-guidance-names.py` enforces).
 3. Follow `PVButton.swift` shape: header names mirrored `.jsx` / deliberate deviations; tokens only; `#Preview` at bottom.
-4. Register new files in `macos/Provenencia.xcodeproj`.
+4. Save the file in its folder; the synchronized folder adds it to the build. A non-Swift file (a README) in the folder needs a membership exception in `project.pbxproj` (see the DesignSystem README § Xcode project registration).
 5. Prefer View modifiers for presentation (`.pvFormDialog`, `.pvConfirm`) when the control is a sheet/alert family.
 6. Leave `.accessibilityIdentifier` to call sites unless the control owns fixed chrome ids by documented convention.
 

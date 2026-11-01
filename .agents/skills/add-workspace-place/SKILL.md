@@ -184,7 +184,7 @@ sync apply from history after list is ready; `fallbackToSectionRoot()` if deep i
 | Host | `WorkspaceDestinationHostTests` (presentation routing) |
 | Feature model | FakeStore + `warmListQueries()` / `warmFromSession()` helpers |
 
-[`add-swift-test`](../add-swift-test/SKILL.md) for wiring new Swift test files.
+[`add-swift-test`](../add-swift-test/SKILL.md) for new Swift test files.
 
 ## Do not
 
