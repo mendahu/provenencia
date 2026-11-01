@@ -1,7 +1,7 @@
 # Review — S13-03 Siblings from a shared parent
 
-**Verdict:** Round 1: Fits with changes — Ready with changes. Round 2: pending
-**Rounds:** 1 so far. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes (both rounds; every finding answered, no blocker open)
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 
@@ -13,6 +13,7 @@ None.
 - **No size bound on siblings** (D-5). `MaxPivotEnd` (10) would hide every sibling in a family of 11 children.
 - **A relative in two roles is returned in both, unflagged** (D-6, X-2). Cal shows as both Bea's parent and her sibling when the data says so. Whether to flag that stays in `ideas/kinship-view.md` "Conflicts between shapes".
 - **A half-sibling is a sibling through the one shared parent** (AC-1.6). Grouping by parent set is S13-04's.
+- **`Relationships` takes a plain `Options` struct** (round 2 note): the repo's shape (`subjectprofile.Options`), and its one call site is a test.
 - **`PivotKind(shared_parent)` is `Person`** (M-8, X-8). Matching does not read `PivotKind`; only `TestPatterns` calls it.
 
 ## Round 1
@@ -74,3 +75,39 @@ Working rule "The family read is the family tree's first step" (3) asks for many
 
 ### X-9 · minor · AC-2.7 "same slice" has no assertion shape
 **Answer:** Fixed by M-1, which removed the case. `Relationships` returns a slice the caller owns, so the old AC-2.7 is gone. AC-1.11 now tests that the caller owns the result, and AC-2.7 is now the missing-parent case.
+
+## Round 2
+
+Round-2 reviewers checked M-1 – M-9 and X-1 – X-9 against the code. All held except M-6 (M-10 below), X-1's AC-1.9 claim (X-1 below) and X-9 / AC-2.7 (X-2 below).
+
+### M-10 · blocker · The M-6 fix added a third way to say whether the deriver may load
+D-7's `load` field sat beside `deriver.node` and `forLinks`' `around` parameter. A wrong pairing (`cachedNodes` with `g.Nodes`) would compile and silently load on a check path.
+**Answer:** Fixed. D-7: one `nodeSource{node, load}`, built by `loadingNodes(g)` or `cachedNodes(g)`; `newDeriver(g, rules, src)`; `Reader.loadAround` becomes `deriver.around`, and `forLinks` loses its `around` parameter. Both paths behave as today. The Out row deferring it to S13-04 is gone.
+
+### M-note · `Option` value vs the repo's `Options` struct (not raised as a finding)
+**Answer:** Fixed. D-11 uses `type Options struct{ Siblings bool }` and `Relationships(id, opts Options)`; the one call passes `Options{}`.
+
+### M-note · `PivotKind`'s doc should name the shared parent
+**Answer:** Fixed. D-2.
+
+### X-1 · blocker · AC-1.9's self-sibling claim is false
+`LinkSet` does not reject a link whose two ends are the same person, so `Relationships` already returns a filed Bea–Bea sibling link.
+**Answer:** Fixed. AC-1.9 now expects that recorded link, unchanged, with nothing implied added. D-6 is corrected: only `ParentStep` rejects one-id ends. `Relationships`' recorded links do not change.
+
+### X-2 · major · AC-2.7 never reaches the "parent not cached" branch
+**Answer:** Fixed. AC-2.7 keeps the removal case (no siblings, no error, Verify passes). It now says the not-cached-parent skip is defensive and no test reaches it, because the catalog cannot hold a link to a parent that is not there.
+
+### X-3 · major · D-4 left interface choices open
+**Answer:** Fixed. D-4 gives `stepPair` at package level, the `parentSteps` fields, how `through` orders and dedups, the signature of `chains`, and `Derive`'s two `stepsOf` calls concatenated before one `indexSteps`.
+
+### X-4 · minor · AC-3.5's command was not runnable from a table cell
+**Answer:** Fixed. The command is a fenced block in STEP-6 with a plain `|`, and it now also matches `kinship.Parents`.
+
+### X-5 · minor · T-8 did not compile
+**Answer:** Fixed. T-8 now uses three `f.person` calls, defines `sbea` and `scal`, and names the imports.
+
+### X-6 · minor · D-8 left small choices open
+**Answer:** Fixed. D-8 now covers: duplicate ids are read once; an id that is not 16 bytes gets no entry; a node with no siblings stores an empty answer; an uncached event on the check path is an error. D-11 says what happens when there is no stored answer.
+
+### X-7 · minor · AC-1.5 said "sorted" but nothing sorts
+**Answer:** Fixed. AC-1.5 expects the shapes in `Parents` order.
