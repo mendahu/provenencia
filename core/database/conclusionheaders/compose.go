@@ -465,17 +465,43 @@ func nodesOf(g *graphcache.Graph, typeID []byte, ids [][]byte, all bool) ([]*gra
 	return out, nil
 }
 
+// needed returns the nodes with no stored H display row when store is on, else
+// all of them: the ones a compose must build fresh.
+func needed[H any](g *graphcache.Graph, nodes []*graphcache.Node, store bool) []*graphcache.Node {
+	if !store {
+		return nodes
+	}
+	var need []*graphcache.Node
+	for _, n := range nodes {
+		if row, ok := g.Display(n.ID); ok {
+			if _, is := row.(H); is {
+				continue
+			}
+		}
+		need = append(need, n)
+	}
+	return need
+}
+
+// displayed returns one H per node in order: the fresh row, else the stored
+// one, each through finish (a stored row is composed but not finished).
+func displayed[H any](g *graphcache.Graph, nodes []*graphcache.Node, fresh map[string]H, finish func(H) H) []H {
+	out := make([]H, 0, len(nodes))
+	for _, n := range nodes {
+		h, ok := fresh[string(n.ID)]
+		if !ok {
+			row, _ := g.Display(n.ID)
+			h = row.(H)
+		}
+		out = append(out, finish(h))
+	}
+	return out
+}
+
 func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool) ([]PersonHeader, error) {
 	var need [][]byte
 	var eventIDs [][]byte
-	for _, n := range nodes {
-		if store {
-			if row, ok := g.Display(n.ID); ok {
-				if _, is := row.(PersonHeader); is {
-					continue
-				}
-			}
-		}
+	for _, n := range needed[PersonHeader](g, nodes, store) {
 		need = append(need, n.ID)
 		links, err := follow(g, n.ID, hops.EventsOfSubject)
 		if err != nil {
@@ -511,16 +537,7 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 			g.SetDisplay(id, h)
 		}
 	}
-	out := make([]PersonHeader, 0, len(nodes))
-	for _, n := range nodes {
-		h, ok := fresh[string(n.ID)]
-		if !ok {
-			row, _ := g.Display(n.ID)
-			h = row.(PersonHeader)
-		}
-		out = append(out, finishPerson(v, h))
-	}
-	return out, nil
+	return displayed(g, nodes, fresh, func(h PersonHeader) PersonHeader { return finishPerson(v, h) }), nil
 }
 
 // finishPerson fills the read-time labels of a stored person row.
@@ -796,17 +813,9 @@ func lifeOwners(g *graphcache.Graph, v vocab, pg *placeGraph, picks []lifePick) 
 }
 
 func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool) ([]EventHeader, error) {
-	var need []*graphcache.Node
+	need := needed[EventHeader](g, nodes, store)
 	var personIDs, placeIDs [][]byte
-	for _, n := range nodes {
-		if store {
-			if row, ok := g.Display(n.ID); ok {
-				if _, is := row.(EventHeader); is {
-					continue
-				}
-			}
-		}
-		need = append(need, n)
+	for _, n := range need {
 		subjects, err := follow(g, n.ID, hops.SubjectsOfEvent)
 		if err != nil {
 			return nil, err
@@ -849,16 +858,7 @@ func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 			g.SetDisplay(n.ID, h)
 		}
 	}
-	out := make([]EventHeader, 0, len(nodes))
-	for _, n := range nodes {
-		h, ok := fresh[string(n.ID)]
-		if !ok {
-			row, _ := g.Display(n.ID)
-			h = row.(EventHeader)
-		}
-		out = append(out, finishEvent(v, h))
-	}
-	return out, nil
+	return displayed(g, nodes, fresh, func(h EventHeader) EventHeader { return finishEvent(v, h) }), nil
 }
 
 func oneEvent(g *graphcache.Graph, v vocab, pg *placeGraph, n *graphcache.Node) (EventHeader, error) {
@@ -1004,17 +1004,7 @@ func eventWhen(v vocab, ev *graphcache.Node) (*datevalue.Value, error) {
 }
 
 func composePlaces(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool) ([]PlaceHeader, error) {
-	var need []*graphcache.Node
-	for _, n := range nodes {
-		if store {
-			if row, ok := g.Display(n.ID); ok {
-				if _, is := row.(PlaceHeader); is {
-					continue
-				}
-			}
-		}
-		need = append(need, n)
-	}
+	need := needed[PlaceHeader](g, nodes, store)
 	needIDs := make([][]byte, len(need))
 	for i, n := range need {
 		needIDs[i] = n.ID
@@ -1035,16 +1025,7 @@ func composePlaces(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 			g.SetDisplay(n.ID, h)
 		}
 	}
-	out := make([]PlaceHeader, 0, len(nodes))
-	for _, n := range nodes {
-		h, ok := fresh[string(n.ID)]
-		if !ok {
-			row, _ := g.Display(n.ID)
-			h = row.(PlaceHeader)
-		}
-		out = append(out, h)
-	}
-	return finishPlaces(g, v, out)
+	return finishPlaces(g, v, displayed(g, nodes, fresh, func(h PlaceHeader) PlaceHeader { return h }))
 }
 
 func placeShell(n *graphcache.Node, v vocab) (PlaceHeader, error) {
