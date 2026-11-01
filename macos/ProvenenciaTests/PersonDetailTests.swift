@@ -374,6 +374,34 @@ struct PersonDetailTests {
         #expect(competing.rows[3].badge == nil && competing.rows[4].badge == nil)
     }
 
+    @Test func lifeLinesOmitMissingHalves() {
+        let en = Locale(identifier: "en_US")
+        let bremen = CatalogCanonicalEntity(id: "pl1", ref: "PLC-1", subjectTypeID: "t", label: "")
+        let anna = CatalogPersonSummary(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "t", label: ""),
+            name: CatalogNameValue(form: "Anna Weber"),
+            nameValueCount: 1,
+            birth: CatalogLifeFacts(
+                date: CatalogDateValueInput(kind: "point", startYear: 1790, startMonth: 5, startDay: 3),
+                dateCount: 1,
+                places: [CatalogChainedPlace(entity: bremen, names: ["Bremen"])]
+            ),
+            death: CatalogLifeFacts(date: CatalogDateValueInput(kind: "point", startYear: 1851), dateCount: 1)
+        )
+        let stated = PersonLifeDisplay.lifeLines(anna, locale: en, missing: .stated)
+        #expect(stated.map(\.abbreviation) == ["b.", "d."])
+        #expect(stated[1].place == nil)
+        #expect(stated[1].accessibilityLabel == "Died 1851, place unknown")
+        let omitted = PersonLifeDisplay.lifeLines(anna, locale: en, missing: .omitted)
+        #expect(omitted.count == 2 && omitted[1].place == nil)
+        #expect(omitted.map(\.accessibilityLabel) == ["born 3 May 1790, Bremen", "died 1851"])
+        var bare = anna
+        bare.birth = CatalogLifeFacts()
+        bare.death = CatalogLifeFacts()
+        #expect(PersonLifeDisplay.lifeLines(bare, locale: en, missing: .omitted).isEmpty)
+        #expect(PersonLifeDisplay.lifeLines(bare, locale: en, missing: .stated).count == 2)
+    }
+
     @Test func lifeLinesSayUnknownUntilLifeEventsArrive() {
         let lines = PersonDetailContent(detail: detail()).lifeLines
         #expect(lines.map(\.abbreviation) == ["b.", "d."])

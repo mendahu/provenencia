@@ -65,7 +65,7 @@ private struct PersonDetailSections: View {
 
 /// The two life lines under a Person's name.
 private struct PersonDetailLifeLines: View {
-    let lines: [PersonDetailContent.LifeLine]
+    let lines: [PersonLifeDisplay.LifeLine]
     @Environment(\.conclusionDetailHeaderCompact) private var compact
 
     var body: some View {

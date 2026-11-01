@@ -9196,6 +9196,18 @@ enum L10n {
             comment: "Accessibility label of the empty portrait slot on a Person page"
         )
 
+        static let familyThisPerson = LocalizedStringResource(
+            "conclusions.family.thisPerson",
+            defaultValue: "This person",
+            comment: "Badge on the focus tile of the Family section, and the label of the focus alone in the siblings group"
+        )
+
+        static let familyThisPersonSpoken = LocalizedStringResource(
+            "conclusions.family.thisPersonSpoken",
+            defaultValue: "this person",
+            comment: "VoiceOver ending of the focus tile of the Family section, mid-sentence"
+        )
+
         static let portraitBadge = LocalizedStringResource(
             "conclusions.person.portraitBadge",
             defaultValue: "Portrait",
@@ -9745,6 +9757,26 @@ enum L10n {
                 defaultValue: "%1$@ %2$@, %3$@",
                 comment: "VoiceOver for a Person header line; arguments are Born/Died, the date, and the place"
             ), word, date, place)
+        }
+
+        static let a11yBornInline = LocalizedStringResource(
+            "conclusions.a11y.bornInline",
+            defaultValue: "born",
+            comment: "VoiceOver word before a person tile's birth date and place, mid-sentence"
+        )
+
+        static let a11yDiedInline = LocalizedStringResource(
+            "conclusions.a11y.diedInline",
+            defaultValue: "died",
+            comment: "VoiceOver word before a person tile's death date and place, mid-sentence"
+        )
+
+        static func a11yLifeLineKnown(_ word: String, part: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.a11y.vitalKnown",
+                defaultValue: "%1$@ %2$@",
+                comment: "VoiceOver for a person tile line with one half known; arguments are born/died and the date or the place"
+            ), word, part)
         }
 
         static func sexAtBirthBadge(_ value: String) -> String {

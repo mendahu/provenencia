@@ -18198,6 +18198,66 @@
         }
       }
     },
+    "conclusions.a11y.bornInline": {
+      "comment": "VoiceOver word before a person tile's birth date and place, mid-sentence",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "born"
+          }
+        }
+      }
+    },
+    "conclusions.a11y.diedInline": {
+      "comment": "VoiceOver word before a person tile's death date and place, mid-sentence",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "died"
+          }
+        }
+      }
+    },
+    "conclusions.a11y.vitalKnown": {
+      "comment": "VoiceOver for a person tile line with one half known; arguments are born/died and the date or the place",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "conclusions.family.thisPerson": {
+      "comment": "Badge on the focus tile of the Family section, and the label of the focus alone in the siblings group",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This person"
+          }
+        }
+      }
+    },
+    "conclusions.family.thisPersonSpoken": {
+      "comment": "VoiceOver ending of the focus tile of the Family section, mid-sentence",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "this person"
+          }
+        }
+      }
+    },
     "conclusions.a11y.ref": {
       "comment": "VoiceOver label of a handle's ref (PER-…)",
       "extractionState": "manual",

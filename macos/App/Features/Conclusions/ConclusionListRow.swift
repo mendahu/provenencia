@@ -42,10 +42,16 @@ enum ConclusionListRow {
     /// its width; the title truncates. Main actor: `PVBadge` builds its label there.
     @MainActor
     @ViewBuilder
-    static func title(_ source: ConclusionTitleSource, extraCount: Int = 0) -> some View {
+    static func title(
+        _ source: ConclusionTitleSource,
+        extraCount: Int = 0,
+        lineLimit: Int = 1,
+        emphasized: Bool = false
+    ) -> some View {
         HStack(spacing: PVSpacing.space4) {
             titleText(source)
-                .lineLimit(1)
+                .fontWeight(emphasized ? .semibold : nil)
+                .lineLimit(lineLimit)
                 .truncationMode(.tail)
             if extraCount > 0 {
                 PVBadge(text: L10n.Conclusions.moreCount(extraCount), tone: .neutral, subtle: true)
