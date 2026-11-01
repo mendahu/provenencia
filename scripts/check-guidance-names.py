@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Fail when a skill or Cursor rule names code that no longer exists, or a kit
-folder has no DesignSystem README row.
+"""Fail when a skill or Cursor rule names code that no longer exists, a kit
+folder has no DesignSystem README row, or an Xcode synchronized folder would
+bundle a non-Swift file by accident (or lists an exception that is gone).
 
 Skills and rules teach the next agent the patterns; a name they cite that the
 code renamed or deleted trains it wrong (app-health audit 2026-10-27, A-6:
@@ -25,7 +26,7 @@ a row names its folder as `Components/Name/` or `Recipes/Name/` in backticks.
 It reads macos/Provenencia.xcodeproj/project.pbxproj for the synchronized
 folders Xcode builds from disk (PBXFileSystemSynchronizedRootGroup), keeping no
 list of its own, and fails on: a file in one that is not Swift and not in its
-membership exceptions (Xcode would bundle it in the app), a membership
+membership exceptions of a target that builds the folder (Xcode would bundle it in the app), a membership
 exception that is not on disk, a synchronized folder missing on disk, and a
 file or folder directly under macos/App that the project neither synchronizes
 nor groups (nothing would build it).
@@ -124,13 +125,21 @@ def _objects(text, isa):
 
 
 def _field(body, key):
-    m = re.search(r"\b%s = (\"[^\"]*\"|[^;\s]+);" % key, body)
+    m = re.search(r"\b%s = (\"[^\"]*\"|[^;\s]+)(?: /\*.*?\*/)?;" % key, body)
     return m.group(1).strip('"') if m else None
 
 
-def _id_list(body, key):
+def _list(body, key):
+    """Entries of `key = ( ... );`, one per comma, without quotes, comments or blanks."""
     m = re.search(r"\b%s = \((.*?)\);" % key, body, re.S)
-    return re.findall(r"\b([0-9A-Fa-f]{24})\b", m.group(1)) if m else []
+    if not m:
+        return []
+    items = (e.strip().strip('"') for e in re.sub(r"/\*.*?\*/", "", m.group(1), flags=re.S).split(","))
+    return [e for e in items if e]
+
+
+def _id_list(body, key):
+    return [e for e in _list(body, key) if re.fullmatch(r"[0-9A-Fa-f]{24}", e)]
 
 
 def synced_folders_unlisted():
@@ -140,6 +149,10 @@ def synced_folders_unlisted():
     groups = dict(_objects(text, "PBXGroup"))
     roots = dict(_objects(text, "PBXFileSystemSynchronizedRootGroup"))
     sets = dict(_objects(text, "PBXFileSystemSynchronizedBuildFileExceptionSet"))
+    builders = {}
+    for tid, body in _objects(text, "PBXNativeTarget"):
+        for rid in _id_list(body, "fileSystemSynchronizedGroups"):
+            builders.setdefault(rid, set()).add(tid)
     problems = []
     for rid, body in roots.items():
         path = _field(body, "path")
@@ -147,8 +160,8 @@ def synced_folders_unlisted():
         rel = "/".join(["macos"] + ([parent] if parent else []) + [path])
         exceptions = set()
         for sid in _id_list(body, "exceptions"):
-            m = re.search(r"membershipExceptions = \((.*?)\);", sets.get(sid, ""), re.S)
-            exceptions.update(e.strip().strip(",").strip('"') for e in (m.group(1).split("\n") if m else []) if e.strip())
+            if _field(sets.get(sid, ""), "target") in builders.get(rid, ()):
+                exceptions.update(_list(sets[sid], "membershipExceptions"))
         base = os.path.join(ROOT, rel)
         if not os.path.isdir(base):
             problems.append(f"{rel}: synchronized folder missing on disk")
