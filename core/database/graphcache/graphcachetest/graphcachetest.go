@@ -79,11 +79,12 @@ func NewCanon(t testing.TB, c *database.Catalog) *Canon {
 	return k
 }
 
-// next is the next id of one table family: {family, 1, 0, ..., counter}.
+// next is the next id of one table family: {family, 1, 0, ..., counter}, with
+// the version and variant bits of a version 7 UUID so that a handler parses it.
 func (k *Canon) next(family byte) []byte {
 	k.n++
 	id := make([]byte, 16)
-	id[0], id[1], id[14], id[15] = family, 1, byte(k.n>>8), byte(k.n)
+	id[0], id[1], id[6], id[8], id[14], id[15] = family, 1, 0x70, 0x80, byte(k.n>>8), byte(k.n)
 	return id
 }
 
@@ -183,6 +184,81 @@ func (k *Canon) Link(kind string, ends map[string][]byte, termProp, termKey stri
 	}
 	k.Term(id, termProp, termKey)
 	return id
+}
+
+// Person adds a canonical Person and returns its id.
+func (k *Canon) Person() []byte {
+	k.t.Helper()
+	return k.Entity("person")
+}
+
+// Event adds a canonical Event of an event type and returns its id.
+func (k *Canon) Event(eventType vocabkey.EventType) []byte {
+	k.t.Helper()
+	id := k.Entity("event")
+	k.Term(id, vocabkey.PropertyEventType, string(eventType))
+	return id
+}
+
+// Join files person's participation in event under a role and returns the
+// participation's id.
+func (k *Canon) Join(person, event []byte, role string) []byte {
+	k.t.Helper()
+	return k.Link("participation", map[string][]byte{"person": person, "event": event}, "role", role)
+}
+
+// Relationship files a relationship of the term from a's end to b's and
+// returns its id.
+func (k *Canon) Relationship(a, b []byte, term string) []byte {
+	k.t.Helper()
+	return k.Link("relationship", map[string][]byte{"person": a, "related_to": b}, "relationship_type", term)
+}
+
+// Parent files parent as the parent of child and returns the relationship's id.
+func (k *Canon) Parent(parent, child []byte) []byte {
+	k.t.Helper()
+	return k.Relationship(parent, child, "parent")
+}
+
+// Marriage adds a marriage Event of the people, each its subject, and returns
+// the event's id and the participations' ids in people order.
+func (k *Canon) Marriage(people ...[]byte) (event []byte, joins [][]byte) {
+	k.t.Helper()
+	event = k.Event(vocabkey.EventMarriage)
+	for _, p := range people {
+		joins = append(joins, k.Join(p, event, "subject"))
+	}
+	return event, joins
+}
+
+// Birth adds a birth Event of subject, with father and mother in those roles;
+// a nil father or mother is left out. It returns the event's id and the
+// participations' ids: the subject's, then the father's, then the mother's.
+func (k *Canon) Birth(subject, father, mother []byte) (event []byte, joins [][]byte) {
+	k.t.Helper()
+	event = k.Event(vocabkey.EventBirth)
+	joins = append(joins, k.Join(subject, event, "subject"))
+	if father != nil {
+		joins = append(joins, k.Join(father, event, "father"))
+	}
+	if mother != nil {
+		joins = append(joins, k.Join(mother, event, "mother"))
+	}
+	return event, joins
+}
+
+// Merge marks the canonical entity id as merged into another. Commit id and
+// into to tell the graph.
+func (k *Canon) Merge(id, into []byte) {
+	k.t.Helper()
+	k.exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, into, id)
+}
+
+// Provisional moves every identity claim of the entity id to provisional, so it
+// has no accepted member. Commit id to tell the graph.
+func (k *Canon) Provisional(id []byte) {
+	k.t.Helper()
+	k.exec(`UPDATE identity_claims SET status = 'provisional' WHERE entity_id = ?`, id)
 }
 
 // Remove deletes an entity, its Subject and what they hold.

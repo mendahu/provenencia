@@ -82,3 +82,7 @@
 
 ### Order and other points
 **Answer:** Fixed — L10n keys are added in the step that first uses them (§ 6 Strings); STEP-1 names the generated files, and the header says it needs `protoc`.
+
+## Refresh after S13-04 landed (2026-11-01)
+
+S13-04 merged in #671 (`main` @ `be51621`). Since the planning base `b12a7fe`, only `core/kinship/families.go` changed: past `Rules.MaxPivotEnd` parents, a sibling sits with the first parent it shares. Every § 4 path and symbol was checked on `main`. The S13-04 Landed note (5) says that at or under the bound a sibling can sit under more than one parent set; the plan's Edges "Assumptions" line, T-6 and the brief's domain facts and frame 3 said each relative appears once, and now say a sibling can repeat. The status drops "and on S13-04 landing"; the plan stays Blocked on the board. No Decision changed.

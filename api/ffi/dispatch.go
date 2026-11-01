@@ -111,6 +111,7 @@ const (
 	MethodReorderSubjectTypeProperties      = int32(engine.Method_METHOD_REORDER_SUBJECT_TYPE_PROPERTIES)
 	MethodGetConclusionDetail               = int32(engine.Method_METHOD_GET_CONCLUSION_DETAIL)
 	MethodListPersonClaims                  = int32(engine.Method_METHOD_LIST_PERSON_CLAIMS)
+	MethodGetPersonFamily                   = int32(engine.Method_METHOD_GET_PERSON_FAMILY)
 	MethodListEventSummaries                = int32(engine.Method_METHOD_LIST_EVENT_SUMMARIES)
 	MethodListPlaceSummaries                = int32(engine.Method_METHOD_LIST_PLACE_SUMMARIES)
 	MethodListEvidenceGraphEventTitles      = int32(engine.Method_METHOD_LIST_EVIDENCE_GRAPH_EVENT_TITLES)
@@ -337,6 +338,8 @@ func route(method int32, in []byte) ([]byte, error) {
 		return handlers.GetConclusionDetail(in)
 	case MethodListPersonClaims:
 		return handlers.ListPersonClaims(in)
+	case MethodGetPersonFamily:
+		return handlers.GetPersonFamily(in)
 	case MethodListEventSummaries:
 		return handlers.ListEventSummaries(in)
 	case MethodListPlaceSummaries:

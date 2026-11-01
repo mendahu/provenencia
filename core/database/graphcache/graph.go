@@ -5,6 +5,7 @@
 package graphcache
 
 import (
+	"bytes"
 	"database/sql"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
@@ -153,6 +154,12 @@ func (n *Node) AcceptedMembers() []Member {
 		}
 	}
 	return accepted
+}
+
+// Is reports whether the node is an unmerged Subject of typeID. A nil node is
+// none.
+func (n *Node) Is(typeID []byte) bool {
+	return n != nil && !n.Merged && bytes.Equal(n.SubjectTypeID, typeID)
 }
 
 // Link is one association seen from this node. AssociationRef is the sort

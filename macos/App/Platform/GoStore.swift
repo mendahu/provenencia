@@ -1231,6 +1231,60 @@ struct GoStore: GenealogyStore {
         }
     }
 
+    func getPersonFamily(projectDir: String, entityID: String) async throws -> CatalogPersonFamily {
+        var req = Provenencia_Engine_V1_GetPersonFamilyRequest()
+        req.projectDir = projectDir
+        req.entityID = entityID
+        let resp: Provenencia_Engine_V1_GetPersonFamilyResponse = try await provenenciaCall(
+            method: CoreMethod.getPersonFamily,
+            request: req
+        )
+        return CatalogPersonFamily(units: resp.units.compactMap(Self.mapFamilyUnit))
+    }
+
+    /// A unit of a kind this build doesn't know is dropped, as is a shape of a
+    /// pattern it doesn't know.
+    private static func mapFamilyUnit(_ u: Provenencia_Engine_V1_FamilyUnit) -> CatalogFamilyUnit? {
+        let kind: CatalogFamilyUnit.Kind
+        switch u.kind {
+        case .parents: kind = .parents
+        case .partner: kind = .partner
+        case .oneParent: kind = .oneParent
+        case .siblings: kind = .siblings
+        case .unspecified, .UNRECOGNIZED: return nil
+        }
+        return CatalogFamilyUnit(
+            kind: kind,
+            partners: u.partners.map(mapFamilyMember),
+            children: u.children.map(mapFamilyMember)
+        )
+    }
+
+    private static func mapFamilyMember(_ m: Provenencia_Engine_V1_FamilyMember) -> CatalogFamilyMember {
+        CatalogFamilyMember(
+            person: mapPersonSummary(m.person),
+            link: m.hasLink ? mapFamilyLink(m.link) : nil
+        )
+    }
+
+    private static func mapFamilyLink(_ l: Provenencia_Engine_V1_FamilyLink) -> CatalogFamilyLink {
+        CatalogFamilyLink(
+            recorded: l.recorded,
+            associationIDs: l.associationIds,
+            implied: l.implied.compactMap { shape in
+                let pattern: CatalogKinshipShape.Pattern
+                switch shape.pattern {
+                case .marriageSpouses: pattern = .marriageSpouses
+                case .birthParents: pattern = .birthParents
+                case .sharedParent: pattern = .sharedParent
+                case .parentOfParent: pattern = .parentOfParent
+                case .unspecified, .UNRECOGNIZED: return nil
+                }
+                return CatalogKinshipShape(pattern: pattern, pivotID: shape.pivotID)
+            }
+        )
+    }
+
     func getConclusionDetail(projectDir: String, entityID: String) async throws -> CatalogConclusionDetail {
         var req = Provenencia_Engine_V1_GetConclusionDetailRequest()
         req.projectDir = projectDir

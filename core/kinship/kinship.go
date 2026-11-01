@@ -4,7 +4,8 @@
 // catalog, no I/O, no numbers; the catalog's bridge terms and the Rules come
 // in as arguments. It returns only implied links; `LinkSet` merges them with direct ones.
 // `Siblings` reads the siblings a shared parent implies, for the page; matching
-// never calls it.
+// never calls it. `KinOf` and `FamilyUnits` read a person's nuclear family for
+// the page, from links `LinkSet` has merged; matching never calls them.
 package kinship
 
 import (
@@ -184,17 +185,13 @@ func Derive(edges []Edge, terms segmentcompare.Terms, rules Rules) []Implied {
 	if !ok {
 		return nil
 	}
-	rel, ok := connectrules.LookupBridge(vocabkey.BridgeRelationship)
-	if !ok {
-		return nil
-	}
 
 	var out []Implied
 	steps := stepsOf(edges, terms)
 
 	var implied []Implied
 	for _, p := range eventPatterns {
-		implied = append(implied, eventLinks(p, edges, part, rel, terms, rules.MaxPivotEnd)...)
+		implied = append(implied, eventLinks(p, edges, part, terms, rules.MaxPivotEnd)...)
 	}
 	out = append(out, implied...)
 	impliedEdges := make([]Edge, len(implied))
@@ -202,7 +199,7 @@ func Derive(edges []Edge, terms segmentcompare.Terms, rules Rules) []Implied {
 		impliedEdges[i] = imp.Edge
 	}
 	steps = append(steps, stepsOf(impliedEdges, terms)...)
-	return append(out, chains(indexSteps(steps, rules.MaxPairSteps), rel, terms, rules.MaxPivotEnd)...)
+	return append(out, chains(indexSteps(steps, rules.MaxPairSteps), terms, rules.MaxPivotEnd)...)
 }
 
 // step is one parent step: g is m's parent, and edge is the link it was read
@@ -293,21 +290,41 @@ func associationsOf(edges []Edge) [][]byte {
 	return assoc
 }
 
+// relationshipKeys returns the keys a relationship link of term has from its
+// first endpoint's end and from its second: the one lookup of a relationship
+// term's keys in the package. ok is false when the relationship bridge is not
+// registered.
+func relationshipKeys(term vocabkey.BridgeTerm, terms segmentcompare.Terms) (first, second vocabkey.BridgeKey, ok bool) {
+	rel, found := connectrules.LookupBridge(vocabkey.BridgeRelationship)
+	if !found {
+		return vocabkey.BridgeKey{}, vocabkey.BridgeKey{}, false
+	}
+	first, second = segmentcompare.Keys(rel, term, "", terms)
+	return first, second, true
+}
+
+// readsTerm reads an edge as one relationship term from either end: first is
+// the end that reads the term's first key (the parent, for TermParent), second
+// the end that reads its second. It is false for any other link, and for a link
+// that joins a Subject to itself. It is the one reader of a relationship link.
+func readsTerm(e Edge, term vocabkey.BridgeTerm, terms segmentcompare.Terms) (first, second []byte, ok bool) {
+	keyFirst, keySecond, found := relationshipKeys(term, terms)
+	if !found {
+		return nil, nil, false
+	}
+	first, second, ok = e.reads(keyFirst, keySecond)
+	if !ok || bytes.Equal(first, second) {
+		return nil, nil, false
+	}
+	return first, second, true
+}
+
 // ParentStep reads an edge as one parent step: parent is child's parent, from
 // whichever end the link is read. It is false for any other link, and for a
 // link that joins a Subject to itself. It is the one rule for what a parent
 // step is, shared by Derive and the readers of its inputs.
 func ParentStep(e Edge, terms segmentcompare.Terms) (parent, child []byte, ok bool) {
-	rel, found := connectrules.LookupBridge(vocabkey.BridgeRelationship)
-	if !found {
-		return nil, nil, false
-	}
-	first, second := segmentcompare.Keys(rel, vocabkey.TermParent, "", terms)
-	parent, child, ok = e.reads(first, second)
-	if !ok || bytes.Equal(parent, child) {
-		return nil, nil, false
-	}
-	return parent, child, true
+	return readsTerm(e, vocabkey.TermParent, terms)
 }
 
 // participant is one person's participation edge in an event, and the ends of
@@ -320,7 +337,7 @@ type participant struct {
 
 // eventLinks makes the links one event pattern implies, one per event and
 // pair of participation edges.
-func eventLinks(p eventPattern, edges []Edge, part, rel connectrules.Bridge, terms segmentcompare.Terms, maxPivotEnd int) []Implied {
+func eventLinks(p eventPattern, edges []Edge, part connectrules.Bridge, terms segmentcompare.Terms, maxPivotEnd int) []Implied {
 	type roleKeys struct {
 		person, event vocabkey.BridgeKey
 		atA, atB      bool
@@ -348,7 +365,10 @@ func eventLinks(p eventPattern, edges []Edge, part, rel connectrules.Bridge, ter
 		}
 	}
 
-	first, second := segmentcompare.Keys(rel, p.term, "", terms)
+	first, second, ok := relationshipKeys(p.term, terms)
+	if !ok {
+		return nil
+	}
 	symmetric := first == second
 	var out []Implied
 	for _, event := range order {
@@ -389,8 +409,11 @@ func eventLinks(p eventPattern, edges []Edge, part, rel connectrules.Bridge, ter
 }
 
 // chains makes one grandparent link per grandparent, middle and grandchild.
-func chains(idx parentSteps, rel connectrules.Bridge, terms segmentcompare.Terms, maxPivotEnd int) []Implied {
-	first, second := segmentcompare.Keys(rel, vocabkey.TermGrandparent, "", terms)
+func chains(idx parentSteps, terms segmentcompare.Terms, maxPivotEnd int) []Implied {
+	first, second, ok := relationshipKeys(vocabkey.TermGrandparent, terms)
+	if !ok {
+		return nil
+	}
 	var out []Implied
 	for _, up := range idx.order {
 		// A middle person with too many parents implies nothing.

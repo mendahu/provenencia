@@ -58,32 +58,42 @@ func (w *world) entity(kind, name string) []byte {
 	return id
 }
 
-func (w *world) person(name string) []byte { return w.entity("person", name) }
+func (w *world) person(name string) []byte {
+	id := w.k.Person()
+	w.note(id, name)
+	return id
+}
 
 func (w *world) event(name string, eventType vocabkey.EventType) []byte {
-	id := w.entity("event", name)
-	w.k.Term(id, vocabkey.PropertyEventType, string(eventType))
+	id := w.k.Event(eventType)
+	w.note(id, name)
 	return id
 }
 
 func (w *world) join(name string, person, event []byte, role string) []byte {
-	id := w.k.Link("participation", map[string][]byte{"person": person, "event": event}, "role", role)
-	w.names[string(id)] = name
-	w.all = append(w.all, id)
+	id := w.k.Join(person, event, role)
+	w.note(id, name)
 	return id
 }
 
 // relationship files a relationship of the term from a to b.
 func (w *world) relationship(name string, a, b []byte, term string) []byte {
-	id := w.k.Link("relationship", map[string][]byte{"person": a, "related_to": b}, "relationship_type", term)
-	w.names[string(id)] = name
-	w.all = append(w.all, id)
+	id := w.k.Relationship(a, b, term)
+	w.note(id, name)
 	return id
 }
 
 // parent files parent as the parent of child.
 func (w *world) parent(name string, parent, child []byte) []byte {
-	return w.relationship(name, parent, child, "parent")
+	id := w.k.Parent(parent, child)
+	w.note(id, name)
+	return id
+}
+
+// name_ records a test name for id.
+func (w *world) note(id []byte, name string) {
+	w.names[string(id)] = name
+	w.all = append(w.all, id)
 }
 
 // shape is a link as a test reads it: ids by name, associations as a set.
@@ -153,9 +163,10 @@ func (w *world) keys(bridge string, term vocabkey.BridgeTerm) (vocabkey.BridgeKe
 
 // marriage records a marriage of the people, each its subject.
 func (w *world) marriage(name string, people ...[]byte) []byte {
-	m := w.event(name, vocabkey.EventMarriage)
-	for _, p := range people {
-		w.join(name+"/"+w.name(p), p, m, "subject")
+	m, joins := w.k.Marriage(people...)
+	w.note(m, name)
+	for i, p := range people {
+		w.note(joins[i], name+"/"+w.name(p))
 	}
 	return m
 }
@@ -1004,6 +1015,68 @@ func TestLoadSiblingsQueryCount(t *testing.T) {
 		})
 		if a == 0 || a != b || a != c {
 			t.Fatalf("queries: one other child %d, seven with births %d, three families %d", a, b, c)
+		}
+	})
+}
+
+func TestLoadRelationshipsQueryCount(t *testing.T) {
+	// family files a parent of a first child and of more, each also the subject
+	// of a birth the parent is the father of; it returns the parent and the
+	// first child.
+	family := func(w *world, tag string, others int) (parent, first []byte) {
+		parent = w.person(tag + "Ann")
+		first = w.person(tag + "Bea")
+		kids := [][]byte{first}
+		for i := 0; i < others; i++ {
+			kids = append(kids, w.person(fmt.Sprintf("%sK%d", tag, i)))
+		}
+		for i, kid := range kids {
+			w.parent(fmt.Sprintf("%sAK%d", tag, i), parent, kid)
+			b := w.event(fmt.Sprintf("%sB%d", tag, i), vocabkey.EventBirth)
+			w.join(fmt.Sprintf("%sB%d/Ann", tag, i), parent, b, "father")
+			w.join(fmt.Sprintf("%sB%d/K", tag, i), kid, b, "subject")
+		}
+		return parent, first
+	}
+	t.Run("AC-2.4 warm", func(t *testing.T) {
+		w := newWorld(t)
+		parent, first := family(w, "", 3)
+		ids := [][]byte{parent, first}
+		if err := w.r.LoadRelationships(ids, Options{Siblings: true}); err != nil {
+			t.Fatal(err)
+		}
+		var queries int
+		w.g.SetQueryCounterForTest(func() { queries++ })
+		for _, id := range ids {
+			if _, err := w.r.Relationships(id, Options{Siblings: true}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if queries != 0 {
+			t.Fatalf("Relationships issued %d queries after LoadRelationships", queries)
+		}
+	})
+	t.Run("AC-2.4 cold", func(t *testing.T) {
+		count := func(build func(w *world) [][]byte) int {
+			w := newWorld(t)
+			ids := build(w)
+			var queries int
+			w.g.SetQueryCounterForTest(func() { queries++ })
+			if err := w.r.LoadRelationships(ids, Options{Siblings: true}); err != nil {
+				t.Fatal(err)
+			}
+			return queries
+		}
+		a := count(func(w *world) [][]byte { p, _ := family(w, "", 1); return [][]byte{p} })
+		b := count(func(w *world) [][]byte { p, _ := family(w, "", 7); return [][]byte{p} })
+		c := count(func(w *world) [][]byte {
+			x, _ := family(w, "x", 1)
+			y, _ := family(w, "y", 1)
+			z, _ := family(w, "z", 1)
+			return [][]byte{x, y, z}
+		})
+		if a == 0 || a != b || a != c {
+			t.Fatalf("queries: one child %d, seven with births %d, three families %d", a, b, c)
 		}
 	})
 }

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"slices"
 
-	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -28,11 +27,10 @@ func Parents(person []byte, edges []Edge, terms segmentcompare.Terms, rules Rule
 // .MaxPairSteps keeps the work linear in the edges when a pair is filed many
 // times.
 func Siblings(person []byte, edges []Edge, terms segmentcompare.Terms, rules Rules) []Implied {
-	rel, ok := connectrules.LookupBridge(vocabkey.BridgeRelationship)
+	first, second, ok := relationshipKeys(vocabkey.TermSibling, terms)
 	if !ok {
 		return nil
 	}
-	first, second := segmentcompare.Keys(rel, vocabkey.TermSibling, "", terms)
 	idx := indexSteps(stepsOf(edges, terms), rules.MaxPairSteps)
 	var out []Implied
 	for _, q := range idx.parentsOf[string(person)] {

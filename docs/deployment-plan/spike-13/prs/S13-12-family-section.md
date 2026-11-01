@@ -1,20 +1,20 @@
 # S13-12 — Family section
 
-**Status:** Blocked — on board S13-D3, and on S13-04 landing
+**Status:** Blocked — on board S13-D3
 **Spike / slice:** Spike 13 · Slice 3 — Family
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S13-D3](../design/S13-D3-family-section.md), board not drawn yet
 **Board:** — (not agreed). When agreed: the Claude Design project [*Person Detail*](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail.dc.html*, the S13-D3 turn. The implementer may not be able to open it, so on agreement this plan's **Design → macOS** describes each frame in words (S13-D3 § 7)
-**Depends on:** S13-04 (implemented on branch `s13-04-person-family-read` @ `b12a7fe`, pull request [#671](https://github.com/mendahu/provenencia/pull/671), not on `main` at the planning base), S13-10 (landed [#634](https://github.com/mendahu/provenencia/pull/634)), S13-D3 (board)
+**Depends on:** S13-04 (landed [#671](https://github.com/mendahu/provenencia/pull/671)), S13-10 (landed [#634](https://github.com/mendahu/provenencia/pull/634)), S13-D3 (board)
 **Blocks:** S13-13 (it reuses the person tile and the section-key mapping)
 **Branch:** `s13-12-family-section`
 **Runs on:** macOS: STEP-1 needs `protoc` and its plugins (`./scripts/generate-proto.sh`), and STEP-2 – STEP-7 and `scripts/check-pr.sh` need Xcode
 **Version bump:** none — Spike 11–14 PRs leave `VERSION` alone until a release is cut, as S13-01 and S13-04 did ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md), [`add-workspace-place`](../../../../.agents/skills/add-workspace-place/SKILL.md), [`add-workspace-location`](../../../../.agents/skills/add-workspace-location/SKILL.md), [`add-catalog-query`](../../../../.agents/skills/add-catalog-query/SKILL.md), [`add-ffi-handler`](../../../../.agents/skills/add-ffi-handler/SKILL.md) (STEP-1)
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/go-tests.mdc`, `.cursor/rules/swift-tests.mdc`
-**Context:** [person-detail.md § 2. Family](../person-detail.md#2-family) (R-2, R-3, R-16 – R-22); brief [S13-D3](../design/S13-D3-family-section.md); the S13-04 plan `S13-04-person-family-read.md` on its branch; working rules: "Engine PRs run ahead of their slice" (data, not layout), "Each section reads its own query", "Family groups in Go", "One person summary for every tile", "Canonical only, filtered in Go", "One person tile, built once", "Colors reuse `PersonGenderTreatment`", "A family tile opens the relative on Family", "Sections are places"
-**Planned:** 2026-11-01 against `main` @ `75d9494` plus the S13-04 branch @ `b12a7fe` (every S13-04 path below is read from that branch)
-**Review:** [`S13-12-family-section.review.md`](S13-12-family-section.review.md) — round 1 Fits with changes / Not ready; every finding Fixed; status stays Blocked on the board
+**Context:** [person-detail.md § 2. Family](../person-detail.md#2-family) (R-2, R-3, R-16 – R-22); brief [S13-D3](../design/S13-D3-family-section.md); the S13-04 plan [`S13-04-person-family-read.md`](S13-04-person-family-read.md) and its **Landed** note; working rules: "Engine PRs run ahead of their slice" (data, not layout), "Each section reads its own query", "Family groups in Go", "One person summary for every tile", "Canonical only, filtered in Go", "One person tile, built once", "Colors reuse `PersonGenderTreatment`", "A family tile opens the relative on Family", "Sections are places"
+**Planned:** 2026-11-01 against `main` @ `75d9494` with the S13-04 branch; refreshed 2026-11-01 against `main` @ `be51621`, after S13-04 landed
+**Review:** [`S13-12-family-section.review.md`](S13-12-family-section.review.md) — round 1 Fits with changes / Not ready; every finding Fixed; refreshed after S13-04 landed; status stays Blocked on the board
 
 ### Implementer — read this first
 
@@ -110,12 +110,12 @@ A researcher opens a Person's Family section and sees the person's parents, sibl
 | Switcher refresh | same file `ConclusionDetailHeaderBand.switcher(selection:)` | Shows `ProgressView` + `L10n.Conclusions.detailRefreshing` when `refreshing`, which `ConclusionDetailLoaded` takes from the `conclusionDetail` presentation |
 | Read states | same file `ConclusionDetailPresentation<Content>` | `.loading` / `.failed(String)` / `.content(Content, refreshing:)`; `init(_ read: QueryRead<CatalogConclusionDetail>, isFetching:content:)`, failure through `L10n.Errors.message(for:)` |
 | Session in views | `macos/App/Features/Workspace/WorkspaceView.swift` | Injects `.environment(session)`; `SourcePageView` and others read `@Environment(WorkspaceSession.self)` |
-| Family read (Swift) | S13-04 branch: `macos/App/Platform/GenealogyStore.swift` `CatalogPersonFamily` (`units`), `CatalogFamilyUnit` (`Kind`: `.parents`, `.partner`, `.oneParent`, `.siblings`), `CatalogFamilyMember` (`person: CatalogPersonSummary`, `link: CatalogFamilyLink?`); `GoStore.getPersonFamily`, `mapFamilyUnit` | Units in Go's order. The person is in no unit; the response has no summary of the person |
-| Family key | S13-04 branch: `macos/App/Features/Workspace/Session/CatalogQueryKey.swift` `.personFamily(project:entityId:)`; `CatalogQueryRegistry.swift` its descriptor | `.sessionFresh`, `.evict` when hidden, refreshes on any touched handle. No view queries it |
+| Family read (Swift) | `macos/App/Platform/GenealogyStore.swift` `CatalogPersonFamily` (`units`), `CatalogFamilyUnit` (`Kind`: `.parents`, `.partner`, `.oneParent`, `.siblings`), `CatalogFamilyMember` (`person: CatalogPersonSummary`, `link: CatalogFamilyLink?`); `GoStore.getPersonFamily`, `mapFamilyUnit` | Units in Go's order. The person is in no unit; the response has no summary of the person |
+| Family key | `macos/App/Features/Workspace/Session/CatalogQueryKey.swift` `.personFamily(project:entityId:)`; `CatalogQueryRegistry.swift` its descriptor | `.sessionFresh`, `.evict` when hidden, refreshes on any touched handle. No view queries it |
 | Place warm | `macos/App/Features/Workspace/Session/PlaceRegistry.swift` Spec `.personDetail` | Warms only `.conclusionDetail` |
-| Family read (Go) | S13-04 branch: `core/database/persondetail/family.go` `PersonFamily`, `dropUnread` | Units with children in link order (`kinship.FamilyUnits`), summaries of the relatives only |
-| Handler | S13-04 branch: `api/ffi/handlers/person_detail.go` | Maps units and members (`personSummaryProto(h, paths)`) in the order given |
-| Proto | S13-04 branch: `api/proto/engine.proto` `GetPersonFamilyResponse` | `repeated FamilyUnit units = 1;` |
+| Family read (Go) | `core/database/persondetail/family.go` `PersonFamily`, `dropUnread` | Units with children in link order (`kinship.FamilyUnits`), summaries of the relatives only |
+| Handler | `api/ffi/handlers/person_detail.go` | Maps units and members (`personSummaryProto(h, paths)`) in the order given |
+| Proto | `api/proto/engine.proto` `GetPersonFamilyResponse` | `repeated FamilyUnit units = 1;` |
 | Date order | `core/database/conclusionsummaries/compose.go` `eventKey`, `eventKeyLess`, `eventKeyOf`, `sortEvents`, `dateSort` | Events: keys computed once per row, dated first, then key, then lower-cased ref |
 | Title order | `core/database/conclusionsummaries/order.go` `SortByTitle` | "The one owner of title order; the app shows rows as given" |
 | Life lines | `macos/App/Features/Conclusions/PersonDetailContent.swift` `LifeLine`, `lifeLine(_:spoken:facts:locale:)` (private); used by `PersonDetailView.swift` `PersonDetailLifeLines` | Header lines; a missing half is spoken as unknown (`a11yLifeLine`) |
@@ -125,8 +125,8 @@ A researcher opens a Person's Family section and sees the person's parents, sibl
 | Gender colors | `macos/App/Features/Conclusions/PersonGenderTreatment.swift` `read(_:)`, `thumbnailColors` | Reads a `CatalogPersonSummary` |
 | Thumb, card, wrap | `macos/App/Platform/CachedThumbnail.swift` `CachedThumbnail`; `macos/App/DesignSystem/Components/Card/PVCard.swift` `PVCard` (`tone`, `border: .solid / .dashed`, `elevated`); `macos/App/DesignSystem/Components/FlowLayout/PVFlowLayout.swift` `PVFlowLayout` (leading-aligned) | — |
 | Button chrome | `macos/App/DesignSystem/Components/HoverEffect/PVHoverEffect.swift`; precedent `macos/App/Features/Sources/SourcesGraphButton.swift` `SourcesGraphButtonStyle`, `SourcesGraphButtonBody` | Hover, press and focus ring for a feature button |
-| Test fixture | S13-04 branch: `core/database/graphcache/graphcachetest/graphcachetest.go` `Canon` (`Birth`, `Term`, private `observe`) | No helper sets a date on an entity |
-| Tests | `macos/ProvenenciaTests/PersonDetailTests.swift`, `PlaceRegistryTests.swift`; S13-04 branch `core/database/persondetail/family_test.go` `TestPersonFamily` (its `kinWorld.show` sorts names), `family_query_test.go` `TestPersonFamilyQueryCount`, `api/ffi/handlers/person_detail_test.go` `TestGetPersonFamily`, `macos/ProvenenciaTests/WorkspaceSessionTests.swift` `personFamilyFollowsEveryTouchedHandle` | — |
+| Test fixture | `core/database/graphcache/graphcachetest/graphcachetest.go` `Canon` (`Birth`, `Term`, private `observe`) | No helper sets a date on an entity |
+| Tests | `macos/ProvenenciaTests/PersonDetailTests.swift`, `PlaceRegistryTests.swift`; `core/database/persondetail/family_test.go` `TestPersonFamily` (its `kinWorld.show` sorts names), `family_query_test.go` `TestPersonFamilyQueryCount`, `api/ffi/handlers/person_detail_test.go` `TestGetPersonFamily`, `macos/ProvenenciaTests/WorkspaceSessionTests.swift` `personFamilyFollowsEveryTouchedHandle` | — |
 
 **Precedent.** S13-10 ([#634](https://github.com/mendahu/provenencia/pull/634)) filled the Person page's sections inside `PersonDetailSections`; copy its shape. S13-11 ([#650](https://github.com/mendahu/provenencia/pull/650)) navigated from a section with `navigation.go(to:)` from the environment. `ConclusionDetailGallerySection` lays out a wrapping grid of `CachedThumbnail` tiles. `SourcesGraphButtonStyle` is the button style to copy for the tile.
 
@@ -187,7 +187,7 @@ At the brief's sizes (§ 2: typical 10 – 20 tiles, large about 30, malformed 5
 
 ### Edges
 
-- **Assumptions.** Go puts each relative in one place (S13-04); the focus may repeat per unit (D-3), and `Tile.id` includes the unit index so ids stay unique (T-6). `dateKeyLess` is a strict weak order (keys, then ref); refs are unique per entity.
+- **Assumptions.** A relative can sit in more than one unit: at or under `Rules.MaxPivotEnd` parents, a sibling sits under every parent set whose parents it shares (S13-04 Landed note (5)); past the bound, once. The focus repeats per parent and sibling unit (D-3). `Tile.id` includes the unit index so ids stay unique (T-6 covers a sibling in two units). `dateKeyLess` is a strict weak order (keys, then ref); refs are unique per entity.
 - **Neighbors.** A `.parents` unit with one partner → one parent over the children; a `.partner` unit with no children → the focus and the partner, no children row; a co-parent (`link == nil`) → drawn as any partner; `.oneParent` → the focus alone above the children (T-6).
 - **Removed inputs.** A relative unpromoted or merged after the read: the next refresh drops them; a click before that lands on the page's not-found Callout.
 - **Real data.** None — no table or seed drives the section.
@@ -283,7 +283,7 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-3 | Go | `api/ffi/handlers/person_detail_test.go` `TestGetPersonFamily` (new case "carries the person") | The person with one parent and one partner → `person` is the person's summary; the person is a child of the parents unit with no link and absent from the partner unit's children | D-3 |
 | T-4 | Swift | `macos/ProvenenciaTests/PersonDetailTests.swift` `lifeLinesOmitMissingHalves` *(new)* | Birth date and place, death date only: `.stated` → two lines, the d. place nil and spoken "place unknown"; `.omitted` → two lines, spoken "born 3 May 1790, Bremen" and "died 1851"; no dates or places with `.omitted` → no lines | D-6, AC-2.1 |
 | T-5 | Swift | `macos/ProvenenciaTests/PersonTileTests.swift` *(new)* `tileContentFromSummary` | Anna (AC-2.1), Wilhelm (AC-2.2), a ref-only child (AC-2.3) → title source, lines, mark, colors | AC-2.1 – AC-2.3 |
-| T-6 | Swift | `macos/ProvenenciaTests/PersonFamilyContentTests.swift` *(new)* `unitsPlaceTheFocusByKind` | One unit of each kind, a lone parent, a partner with no children, a co-parent (`link` nil), the focus in two parents units, `person` nil → roles per D-7; `focusBesidePartners` true for `.partner` and `.oneParent`; the focus tile `isFocus` with nil location; `Tile.id`s unique; with `person` nil no tile is the focus | AC-1.1 – AC-1.3, AC-2.5, D-4, D-7 |
+| T-6 | Swift | `macos/ProvenenciaTests/PersonFamilyContentTests.swift` *(new)* `unitsPlaceTheFocusByKind` | One unit of each kind, a lone parent, a partner with no children, a co-parent (`link` nil), the focus in two parents units, one sibling in two parents units, `person` nil → roles per D-7; `focusBesidePartners` true for `.partner` and `.oneParent`; the focus tile `isFocus` with nil location; `Tile.id`s unique; with `person` nil no tile is the focus | AC-1.1 – AC-1.3, AC-2.5, D-4, D-7 |
 | T-7 | Swift | same file `tilesOpenTheRelativeOnFamily` | A member → `PersonsList.location(summary, orders:).withPageSection(.family)` | AC-3.1, D-1 |
 | T-8 | Swift | same file `spokenLabels` | Anna as parent → "Parent, Anna Weber, born 3 May 1790, Bremen, died 1851"; the focus → no role; partner group → "Partner Maria Schulz and children" | AC-2.4, AC-2.5 |
 | T-9 | Swift | same file `fiftyMembersKeepOrder`; `emptyFamilyIsEmpty` | 50 children in one unit → 50 tiles in order; `units: []` → `isEmpty` | D-14, AC-1.5 |
@@ -331,12 +331,12 @@ Bar 3 and the slice's Check. Use a project with the § 5 sample family promoted 
 | Risk | Mitigation |
 | --- | --- |
 | Anchor-drawn lines misplace when rows wrap at a resize | D-12 anchors to tile bounds, recomputed on layout; manual check 9 |
-| S13-04 lands with a different shape | Re-check § 4 rows against `main` after it lands (Implementer step 2) |
+| `main` moves under the S13-04 files before this PR starts | Implementer step 2 re-checks § 4 against `main` @ `be51621` |
 | Renaming `eventKey` touches another package | It is unexported; the rename stays in `compose.go` |
 
 **Stop and report if:**
 
-- S13-04 has not landed on `main`, or `CatalogPersonFamily`, `CatalogFamilyUnit.Kind`, `.personFamily` or `persondetail.PersonFamily` differ from § 4.
+- `CatalogPersonFamily`, `CatalogFamilyUnit.Kind`, `.personFamily` or `persondetail.PersonFamily` differ from § 4.
 - The agreed board draws a recorded / implied difference, a placeholder for an unknown relative, or a secondary column (they contradict D-4, R-2, FS-W2).
 - The board needs data `GetPersonFamily` does not return (for example a marriage date to order partners): a follow-up engine PR, not this one.
 - `TestPersonFamilyQueryCount` needs more queries after STEP-1.

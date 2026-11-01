@@ -688,6 +688,60 @@ struct CatalogPersonClaim: Sendable, Equatable {
     var observations: [CatalogObservation]
 }
 
+/// A Person's family units (S13-04), grouped by Go: parent sets with the
+/// siblings through them, each partner with the children they share, the
+/// children with no other known parent, and siblings with no shown shared
+/// parent, in that order. Canonical people only.
+struct CatalogPersonFamily: Sendable, Equatable {
+    var units: [CatalogFamilyUnit]
+}
+
+/// One family unit.
+struct CatalogFamilyUnit: Sendable, Equatable {
+    /// What a unit is to the person.
+    enum Kind: Sendable, Equatable {
+        /// `partners`: a set of the person's parents; `children`: siblings through each.
+        case parents
+        /// `partners`: one partner; `children`: the person's children with them.
+        case partner
+        /// `children`: the person's children with no other known parent.
+        case oneParent
+        /// `children`: siblings with no shown shared parent.
+        case siblings
+    }
+
+    var kind: Kind
+    var partners: [CatalogFamilyMember]
+    var children: [CatalogFamilyMember]
+}
+
+/// One relative and the person's link to them. `link` is nil for a co-parent
+/// known only through a child.
+struct CatalogFamilyMember: Sendable, Equatable {
+    var person: CatalogPersonSummary
+    var link: CatalogFamilyLink?
+}
+
+/// What a link rests on: `recorded` when it is filed (not only implied),
+/// `associationIDs` the relationship and participation entities behind it, and
+/// `implied` the patterns that imply it.
+struct CatalogFamilyLink: Sendable, Equatable {
+    var recorded: Bool
+    var associationIDs: [String]
+    var implied: [CatalogKinshipShape]
+}
+
+/// One pattern that implies a link, through its pivot (the marriage or birth,
+/// or the shared parent).
+struct CatalogKinshipShape: Sendable, Equatable {
+    enum Pattern: Sendable, Equatable {
+        case marriageSpouses, birthParents, sharedParent, parentOfParent
+    }
+
+    var pattern: Pattern
+    var pivotID: String
+}
+
 /// One handle's detail (S9-15), composed by Go from the auto-reconciler cache.
 /// Generic over kind: Person, Event and Place pages all read it.
 struct CatalogConclusionDetail: Sendable, Equatable {
@@ -1388,6 +1442,9 @@ protocol GenealogyStore: Sendable {
     /// then Source ref; claims by Evidence graph name, then ref). Throws
     /// `conclusiondetails.not_found` for an unknown or merged handle.
     func listPersonClaims(projectDir: String, entityID: String) async throws -> [CatalogPersonClaimGroup]
+    /// A Person's family units (S13-04). Throws `conclusiondetails.not_found`
+    /// for an unknown or merged handle.
+    func getPersonFamily(projectDir: String, entityID: String) async throws -> CatalogPersonFamily
     func listSubjects(projectDir: String, graphID: String) async throws -> [CatalogSubject]
     func setSubjectPosition(
         projectDir: String,

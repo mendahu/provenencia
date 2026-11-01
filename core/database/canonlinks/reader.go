@@ -437,6 +437,27 @@ func (r *Reader) Relationships(id []byte, opts Options) ([]kinship.Link, error) 
 	return set.Links(), nil
 }
 
+// LoadRelationships loads what Relationships(id, opts) reads for each id in a
+// fixed number of batches, however many ids and relatives: the ids, their
+// neighbors, the people one parent step from each, and those people's
+// neighbors. It then derives and stores each id's For answer, and with
+// opts.Siblings the siblings'. After it, Relationships for each id issues no
+// query. An id that is no node stores nothing.
+func (r *Reader) LoadRelationships(ids [][]byte, opts Options) error {
+	if _, err := r.d.loadSteps(ids, r.event); err != nil {
+		return err
+	}
+	for _, id := range ids {
+		if _, err := r.For(id); err != nil {
+			return err
+		}
+	}
+	if opts.Siblings {
+		return r.LoadSiblings(ids)
+	}
+	return nil
+}
+
 // LoadSiblings derives and stores the implied siblings of each id that has none
 // stored, loading every id's nodes in a fixed number of batches. An id that is
 // no node stores nothing.
@@ -462,11 +483,46 @@ func (r *Reader) LoadSiblings(ids [][]byte) error {
 	return nil
 }
 
-// siblingsOf derives the siblings of each id that is a node, in four batched
-// loads however many ids and siblings there are: the ids, their neighbors, their
-// parents, and the parents' neighbors. An id with no entry is no node; a node with no siblings has an empty answer. event gives an event's
-// links. A parent that is linked but not cached is skipped.
-func (d *deriver) siblingsOf(ids [][]byte, event func([]byte) ([]kinship.Implied, error)) (map[string][]kinship.Implied, error) {
+// stepped is one id's node, its parent links for a canon read, and the people
+// one parent step away over them.
+type stepped struct {
+	node   *graphcache.Node
+	edges  []kinship.Edge
+	people [][]byte
+}
+
+// stepPeople returns the distinct people one parent step from id over edges,
+// first-seen, never id: each edge's child when id is its parent, else its
+// parent. An edge that is no parent step is skipped.
+func stepPeople(id []byte, edges []kinship.Edge, terms segmentcompare.Terms) [][]byte {
+	seen := map[string]bool{string(id): true}
+	var people [][]byte
+	add := func(person []byte) {
+		if !seen[string(person)] {
+			seen[string(person)] = true
+			people = append(people, person)
+		}
+	}
+	for _, e := range edges {
+		parent, child, ok := kinship.ParentStep(e, terms)
+		if !ok {
+			continue
+		}
+		if bytes.Equal(parent, id) {
+			add(child)
+		} else {
+			add(parent)
+		}
+	}
+	return people
+}
+
+// loadSteps loads, in four batches however many ids there are, the ids, their
+// neighbors, the people one parent step from each, and those people's
+// neighbors. It returns, per distinct id that is a node, its stepped; an id that
+// is no node is skipped. event gives an event's links. A person that is linked
+// but not cached is skipped by the caller that reads it.
+func (d *deriver) loadSteps(ids [][]byte, event func([]byte) ([]kinship.Implied, error)) ([]stepped, error) {
 	var want [][]byte
 	seen := map[string]bool{}
 	for _, id := range ids {
@@ -487,42 +543,64 @@ func (d *deriver) siblingsOf(ids [][]byte, event func([]byte) ([]kinship.Implied
 	if err := d.src.load(neighborsOf(nodes)); err != nil {
 		return nil, err
 	}
-	edges := make([][]kinship.Edge, len(nodes))
-	parents := make([][][]byte, len(nodes))
-	var allParents [][]byte
+	out := make([]stepped, len(nodes))
+	var allPeople [][]byte
 	for i, n := range nodes {
-		var err error
-		if edges[i], err = d.parentEdges(n, event); err != nil {
-			return nil, err
-		}
-		parents[i] = kinship.Parents(n.ID, edges[i], d.terms, d.rules)
-		allParents = append(allParents, parents[i]...)
-	}
-	if err := d.src.load(allParents); err != nil {
-		return nil, err
-	}
-	var parentNodes []*graphcache.Node
-	cachedParents := map[string]*graphcache.Node{}
-	for _, q := range allParents {
-		if n, ok := d.g.Cached(q); ok && cachedParents[string(q)] == nil {
-			cachedParents[string(q)] = n
-			parentNodes = append(parentNodes, n)
-		}
-	}
-	if err := d.src.load(neighborsOf(parentNodes)); err != nil {
-		return nil, err
-	}
-	edgesOfParent := map[string][]kinship.Edge{}
-	for _, n := range parentNodes {
-		es, err := d.parentEdges(n, event)
+		edges, err := d.parentEdges(n, event)
 		if err != nil {
 			return nil, err
 		}
-		edgesOfParent[string(n.ID)] = es
+		out[i] = stepped{node: n, edges: edges, people: stepPeople(n.ID, edges, d.terms)}
+		allPeople = append(allPeople, out[i].people...)
 	}
-	out := make(map[string][]kinship.Implied, len(nodes))
-	for i, n := range nodes {
-		all := slices.Clone(edges[i])
+	if err := d.src.load(allPeople); err != nil {
+		return nil, err
+	}
+	var peopleNodes []*graphcache.Node
+	have := map[string]bool{}
+	for _, q := range allPeople {
+		if n, ok := d.g.Cached(q); ok && !have[string(q)] {
+			have[string(q)] = true
+			peopleNodes = append(peopleNodes, n)
+		}
+	}
+	if err := d.src.load(neighborsOf(peopleNodes)); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// siblingsOf derives the siblings of each id that is a node, from loadSteps'
+// four batched loads however many ids and siblings there are. An id with no
+// entry is no node; a node with no siblings has an empty answer. event gives an
+// event's links. A parent that is linked but not cached is skipped.
+func (d *deriver) siblingsOf(ids [][]byte, event func([]byte) ([]kinship.Implied, error)) (map[string][]kinship.Implied, error) {
+	steps, err := d.loadSteps(ids, event)
+	if err != nil {
+		return nil, err
+	}
+	parents := make([][][]byte, len(steps))
+	edgesOfParent := map[string][]kinship.Edge{}
+	for i, s := range steps {
+		parents[i] = kinship.Parents(s.node.ID, s.edges, d.terms, d.rules)
+		for _, q := range parents[i] {
+			if _, done := edgesOfParent[string(q)]; done {
+				continue
+			}
+			n, ok := d.g.Cached(q)
+			if !ok {
+				continue
+			}
+			es, err := d.parentEdges(n, event)
+			if err != nil {
+				return nil, err
+			}
+			edgesOfParent[string(q)] = es
+		}
+	}
+	out := make(map[string][]kinship.Implied, len(steps))
+	for i, s := range steps {
+		all := slices.Clone(s.edges)
 		read := map[string]bool{}
 		for _, e := range all {
 			read[edgeKey(e)] = true
@@ -535,7 +613,7 @@ func (d *deriver) siblingsOf(ids [][]byte, event func([]byte) ([]kinship.Implied
 				}
 			}
 		}
-		out[string(n.ID)] = kinship.Siblings(n.ID, all, d.terms, d.rules)
+		out[string(s.node.ID)] = kinship.Siblings(s.node.ID, all, d.terms, d.rules)
 	}
 	return out, nil
 }
@@ -571,25 +649,7 @@ func (d *deriver) forLinks(id []byte, event, chain func([]byte) ([]kinship.Impli
 
 	// The people one parent step from id: filed parents and children first,
 	// then the birth links above.
-	seen := map[string]bool{string(id): true}
-	var people [][]byte
-	add := func(person []byte) {
-		if !seen[string(person)] {
-			seen[string(person)] = true
-			people = append(people, person)
-		}
-	}
-	for _, e := range d.kinEdges(n, out) {
-		parent, child, ok := kinship.ParentStep(e, d.terms)
-		if !ok {
-			continue
-		}
-		if bytes.Equal(parent, id) {
-			add(child)
-		} else {
-			add(parent)
-		}
-	}
+	people := stepPeople(id, d.kinEdges(n, out), d.terms)
 	for _, m := range people {
 		if _, err := d.around(m); err != nil {
 			return nil, err
