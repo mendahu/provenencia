@@ -123,7 +123,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var promoteSubjectDelayNanoseconds: UInt64 = 0
     /// When set, `listSources` throws instead of returning the in-memory list.
     var listSourcesError: Error?
-    var listSubjectsCalls = 0
+    /// The graph id of each `listSubjects` call, in order.
+    var listSubjectsGraphIDs: [String] = []
     var listSubjectTypesCalls = 0
     var getSourceWorkspaceCalls = 0
     var listEvidenceGraphProgressCalls = 0
@@ -154,6 +155,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var graphProgressByGraph: [String: EvidenceGraphProgress] = [:]
     var listEvidenceGraphProgressError: Error?
     var listEvidenceGraphsError: Error?
+    /// The `sourceID` of each `listEvidenceGraphs` call, in order (nil: the whole project).
+    var listEvidenceGraphsSourceIDs: [String?] = []
+    /// While on, `listEvidenceGraphs` suspends after recording the call and before it reads.
+    let listEvidenceGraphsHold = FakeHold()
+    /// How many times `listSources` was called.
+    var listSourcesCalls = 0
     var createEvidenceGraphError: Error?
     /// Effects every write returns until a test assigns another value.
     var nextWriteEffects: CatalogWriteEffects = .empty
@@ -392,6 +399,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func listSources(projectDir: String) async throws -> [CatalogSource] {
         return try withState {
+            listSourcesCalls += 1
             markCatalogSessionHeld(projectDir)
             if let listSourcesError { throw listSourcesError }
             // Match Go `sources.List`: newest-created-first (UUIDv7 / id DESC).
@@ -790,11 +798,17 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func listEvidenceGraphs(projectDir: String) async throws -> [CatalogEvidenceGraph] {
+    func listEvidenceGraphs(projectDir: String, sourceID: String?) async throws -> [CatalogEvidenceGraph] {
         try withState {
+            listEvidenceGraphsSourceIDs.append(sourceID)
             if let listEvidenceGraphsError { throw listEvidenceGraphsError }
+        }
+        await listEvidenceGraphsHold.wait()
+        return withState {
             markCatalogSessionHeld(projectDir)
-            return evidenceGraphsByProject[projectDir] ?? []
+            let rows = evidenceGraphsByProject[projectDir] ?? []
+            guard let sourceID else { return rows }
+            return rows.filter { $0.sourceID == sourceID }
         }
     }
 
@@ -2148,7 +2162,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func listSubjects(projectDir: String, graphID: String) async throws -> [CatalogSubject] {
         return try withState {
-            listSubjectsCalls += 1
+            listSubjectsGraphIDs.append(graphID)
             markCatalogSessionHeld(projectDir)
             if let listSubjectsError {
                 throw listSubjectsError

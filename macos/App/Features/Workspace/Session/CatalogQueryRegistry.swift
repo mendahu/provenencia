@@ -514,7 +514,7 @@ extension CatalogQueryKey.Kind {
                     guard case .evidenceGraphsList(let project) = key else {
                         mismatchedCatalogKey(key, .evidenceGraphsList)
                     }
-                    return try await store.listEvidenceGraphs(projectDir: project.projectDir)
+                    return try await store.listEvidenceGraphs(projectDir: project.projectDir, sourceID: nil)
                 }
             )
         case .personsList:
