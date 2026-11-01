@@ -65,6 +65,15 @@ func ListThings(in []byte) ([]byte, error) {
 - **Also close:** Go `SignOut` / `RemoveActiveProject` / `OpenProject` (switch) call `Close`/`CloseAll`.
 - **Create (`Complete` / `createCatalog`):** create-then-close; do not register a closed handle in the session map. Later RPCs open via `Do`.
 
+## File work before the session
+
+Copying, hashing, decoding and encoding never run inside `Do`. A handler stages first, outside it, and enters the session only to look up, insert and install:
+
+- **Imports and depictions:** `withStaged(projectDir, stage, fn)` (and `withStagedDepictions`) in [`api/ffi/handlers/catalog.go`](../../../api/ffi/handlers/catalog.go). `stage` makes the request's `ingest.Stages` (`ingest.StageFile`, `StageDepictions`) from the normalized project folder; `fn` runs in the session with `stages.Settle(c)` deferred first. Temps live in `objects/` (`.ingest-`, `.stage-`).
+- **Thumbnails:** `thumbnailPass` (`api/ffi/handlers/thumbnail_pass.go`): `need` inside the first session (`derivatives.Plan`), `run` after it (`Job.Stage` outside, `derivatives.Commit` in batches of 16). `SetSourceCover` shares the last batch's session.
+- **Install and purge only inside `Do`.** `Staged.Settle(c)` is the one in-session cleanup; `Staged.Discard()` runs outside. A purge and an import of the same bytes never interleave.
+- **Tests:** `catalogsessiontest.Hold(t, projectDir)` holds the session so a test can see the staged temp appear before the release. Build fixtures through `catalogsession.Do`, never on a `database.Open` catalog (`ErrAlreadyOpen`).
+
 ## `catalog.already_open`
 
 Means something **bypassed** the session (second `database.Open` while held). Overlapping FFI calls must **queue** on `Do`, not fail. Treat `already_open` in product paths as a bug to fix, not normal UX.
@@ -84,3 +93,4 @@ Means something **bypassed** the session (second `database.Open` while held). Ov
 - Nest a second exclusive `database.Open` for the same dir while `Do` holds it
 - Put session registry logic in `database` or Swift (Go owns the contract)
 - Reintroduce `isCatalogReady`-style gates for catalog locking
+- Call `ingest.File` or `derivatives.Ensure` from a handler (they do file work inside the session; tests and fixtures only), or copy, hash or decode inside `withProjectCatalog`
