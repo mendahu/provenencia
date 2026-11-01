@@ -38,15 +38,9 @@ type Claim struct {
 // conclusiondetails.ErrNotFound; a handle with no accepted claim has no
 // groups.
 func Claims(c *database.Catalog, entityID []byte) ([]ClaimGroup, error) {
-	if c == nil || c.Graph() == nil || len(entityID) != 16 {
-		return nil, conclusiondetails.ErrNotFound
-	}
-	n, err := c.Graph().Node(entityID)
+	n, err := conclusiondetails.Handle(c, entityID)
 	if err != nil {
 		return nil, err
-	}
-	if n == nil || n.Merged {
-		return nil, conclusiondetails.ErrNotFound
 	}
 	members, err := memberGraphs(c, n)
 	if err != nil {
@@ -55,7 +49,7 @@ func Claims(c *database.Catalog, entityID []byte) ([]ClaimGroup, error) {
 	var groups []ClaimGroup
 	bySource := map[string]int{}
 	for _, m := range members {
-		claim := Claim{ClaimID: m.claimID, Graph: m.graph, Subject: m.subject}
+		claim := Claim{ClaimID: m.member.ClaimID, Graph: m.graph, Subject: m.subject}
 		for _, o := range m.graph.Observations {
 			if bytes.Equal(o.SubjectID, m.subject.ID) {
 				claim.Observations = append(claim.Observations, o)
@@ -88,8 +82,7 @@ func Claims(c *database.Catalog, entityID []byte) ([]ClaimGroup, error) {
 // memberGraph is one accepted member of a handle with what its Evidence graph
 // says about it.
 type memberGraph struct {
-	member  graphcache.Member
-	claimID []byte
+	member  graphcache.EvidenceMember
 	graph   graphcache.EvidenceGraph
 	subject graphcache.EvidenceSubject
 }
@@ -113,10 +106,10 @@ func memberGraphs(c *database.Catalog, n *graphcache.Node) ([]memberGraph, error
 		if !eg.Found {
 			continue
 		}
-		var claimID []byte
-		for _, em := range eg.Members {
-			if bytes.Equal(em.SubjectID, m.SubjectID) && bytes.Equal(em.EntityID, n.ID) {
-				claimID = em.ClaimID
+		var member *graphcache.EvidenceMember
+		for i := range eg.Members {
+			if bytes.Equal(eg.Members[i].SubjectID, m.SubjectID) && bytes.Equal(eg.Members[i].EntityID, n.ID) {
+				member = &eg.Members[i]
 				break
 			}
 		}
@@ -127,10 +120,10 @@ func memberGraphs(c *database.Catalog, n *graphcache.Node) ([]memberGraph, error
 				break
 			}
 		}
-		if claimID == nil || subject == nil {
+		if member == nil || member.ClaimID == nil || subject == nil {
 			continue
 		}
-		out = append(out, memberGraph{member: m, claimID: claimID, graph: eg, subject: *subject})
+		out = append(out, memberGraph{member: *member, graph: eg, subject: *subject})
 	}
 	return out, nil
 }
