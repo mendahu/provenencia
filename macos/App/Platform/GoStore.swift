@@ -950,7 +950,7 @@ struct GoStore: GenealogyStore {
                     CatalogPromoteGraphAlignmentAlternative(
                         handleID: a.handleID,
                         handleRef: a.handleRef,
-                        summary: Self.mapConclusionSummary(a.hasSummary ? a.summary : nil)
+                        summary: Self.mapConclusionSummary(a.summary)
                     )
                 },
                 conflictWithFixed: r.conflictWithFixed,
@@ -959,7 +959,7 @@ struct GoStore: GenealogyStore {
                 viaNeighborSubjectID: r.viaNeighborSubjectID,
                 moveReason: r.moveReason.isEmpty ? nil : PromoteMoveReason(wire: r.moveReason),
                 moveNeighborSubjectID: r.moveNeighborSubjectID,
-                summary: Self.mapConclusionSummary(r.hasSummary ? r.summary : nil)
+                summary: Self.mapConclusionSummary(r.summary)
             )
         }
         return CatalogPromoteGraphAlignmentProposal(revision: resp.revision, rows: rows)
@@ -1087,12 +1087,12 @@ struct GoStore: GenealogyStore {
     }
 
     private static func mapConclusionSummary(
-        _ summary: Provenencia_Engine_V1_ConclusionSummary?
+        _ summary: Provenencia_Engine_V1_ConclusionSummary
     ) -> CatalogConclusionSummary? {
-        switch summary?.kind {
-        case .person(let p)?: .person(mapPersonSummary(p))
-        case .event(let e)?: .event(mapEventSummary(e))
-        case .place(let p)?: .place(mapPlaceSummary(p))
+        switch summary.kind {
+        case .person(let p): .person(mapPersonSummary(p))
+        case .event(let e): .event(mapEventSummary(e))
+        case .place(let p): .place(mapPlaceSummary(p))
         case nil: nil
         }
     }
@@ -1243,7 +1243,7 @@ struct GoStore: GenealogyStore {
             entity: Self.mapCanonicalEntity(resp.entity),
             fields: resp.fields.map(Self.mapConclusionField),
             memberCount: Int(resp.memberCount),
-            summary: Self.mapConclusionSummary(resp.hasSummary ? resp.summary : nil),
+            summary: Self.mapConclusionSummary(resp.summary),
             pictures: resp.pictures.map {
                 CatalogPicture(
                     imageRelPath: $0.imageRelPath,
@@ -1976,7 +1976,7 @@ struct GoStore: GenealogyStore {
             thumbnailRelPath: h.thumbnailRelPath,
             iconKey: h.iconKey,
             memberCount: Int(h.memberCount),
-            summary: Self.mapConclusionSummary(h.hasSummary ? h.summary : nil)
+            summary: Self.mapConclusionSummary(h.summary)
         )
     }
 

@@ -192,9 +192,6 @@ func loadHandleSummaries(q Querier, heads map[string]handleHead) (conclusionsumm
 		}
 		w.Add(h.kind, []byte(key))
 	}
-	if w.Empty() {
-		return conclusionsummaries.Summaries{}, nil
-	}
 	return conclusionsummaries.RowsForSearch(graphcache.Over(q), w)
 }
 

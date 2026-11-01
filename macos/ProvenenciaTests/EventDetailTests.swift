@@ -109,6 +109,23 @@ struct EventDetailTests {
         #expect(page.secondaryDate == page.rows[0].lead)
     }
 
+    @Test func dateRowFallsToTheSpanWhenTheDateShowsNothing() {
+        let start = CatalogDateValueInput(kind: "point", startYear: 1849)
+        let end = CatalogDateValueInput(kind: "point", startYear: 1851)
+        let page = content(detail(fields: [
+            D.field(
+                "single", key: SeededPropertyKey.date, label: "Date", valueType: "date", [],
+                outcomes: [D.outcome("rec", "kept", title: "Census", recorded: .date(start))]
+            ),
+            dateField("start_date", start, id: "start"),
+            dateField("end_date", end, id: "end"),
+        ], summary: dated(start: start, end: end)))
+        #expect(page.rows[0].lead == L10n.Dates.rowSpan(start: "1849", end: "1851", locale: en))
+        #expect(page.rows[0].records.map(\.id).contains("start"))
+        #expect(page.rows[0].records.map(\.id).contains("end"))
+        #expect(page.rows[0].lead == page.secondaryDate)
+    }
+
     @Test func bandLineReadsTheSummary() {
         let point = CatalogDateValueInput(kind: "point", startYear: 1817, startMonth: 5, startDay: 14)
         let withDate = content(detail(summary: dated(date: point)))
@@ -120,7 +137,10 @@ struct EventDetailTests {
         let end = CatalogDateValueInput(kind: "point", startYear: 1851)
         let span = dated(start: start, end: end)
         let spanned = content(detail(
-            fields: [D.field("single", key: SeededPropertyKey.date, label: "Date", valueType: "date", [])],
+            fields: [D.field(
+                "single", key: SeededPropertyKey.date, label: "Date", valueType: "date", [],
+                outcomes: [D.outcome("rec", "kept", title: "Census", recorded: .date(start))]
+            )],
             summary: span
         ))
         #expect(spanned.secondaryDate == EventSecondaryDisplay.content(span, locale: en).date)

@@ -1411,7 +1411,9 @@ message PlaceSummary {
   string picture_image_rel_path = 14;
 }
 
-// ConclusionSummary is one handle's summary, by kind.
+// ConclusionSummary is one handle's summary, by kind. A message that carries a
+// summary of any kind has this one field, built by conclusionSummaryProto and
+// mapped by mapConclusionSummary; mixed-kind reads go through Want.Add and ByIDs.
 message ConclusionSummary {
   oneof kind {
     PersonSummary person = 1;

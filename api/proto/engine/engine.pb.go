@@ -11235,7 +11235,9 @@ func (x *PlaceSummary) GetPictureImageRelPath() string {
 	return ""
 }
 
-// ConclusionSummary is one handle's summary, by kind.
+// ConclusionSummary is one handle's summary, by kind. A message that carries a
+// summary of any kind has this one field, built by conclusionSummaryProto and
+// mapped by mapConclusionSummary; mixed-kind reads go through Want.Add and ByIDs.
 type ConclusionSummary struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Kind:

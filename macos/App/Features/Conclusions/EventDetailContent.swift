@@ -1,16 +1,16 @@
 import Foundation
 
 /// The Event page, worded from one `CatalogConclusionDetail` and the Event
-/// summary it carries (S9-24, board S9-D6). The summary supplies the title and
-/// places. The date's Why stays on this page's date row.
+/// summary it carries (S9-24, board S9-D6). The summary supplies the title, the
+/// kept date or span (the band) and the places. The date's Why stays on this page's date row.
 struct EventDetailContent: ConclusionDetailBody {
     var title: ConclusionTitleSource
     var ref: String
     var showsRef: Bool { if case .ref = title { false } else { true } }
     var members: String
-    /// Compact date under the title. Nil when none is recorded.
+    /// Compact date under the title, from the summary's kept date or span. Nil when it has none.
     var secondaryDate: String?
-    /// First place name under the title. Nil when none is recorded.
+    /// First place name under the title, from the summary's places. Nil when it has none.
     var secondaryPlace: String?
     var rows: [ReconciledValueRowModel]
     /// The pictures recorded for the Event, earliest first.
@@ -41,12 +41,20 @@ struct EventDetailContent: ConclusionDetailBody {
         )
     }
 
-    /// The Date row. A `date` with records is that field. Otherwise one row
-    /// whose lead is the start–end span and whose Why lists those records.
-    /// Stated empty when none of them is set.
+    /// The Date row, following the band. A `date` with a displayed value is that
+    /// field. Otherwise, when the start or end shows a value, one row whose lead
+    /// is the start–end span and whose Why lists those records. Otherwise a
+    /// `date` with records is that field. Stated empty when none is set.
     static func dateRow(_ fields: [CatalogConclusionField], locale: Locale) -> ReconciledValueRowModel {
         let label = L10n.string(L10n.Conclusions.eventDate)
-        if let date = fields.first(where: { $0.propertyKey == SeededPropertyKey.date }), !date.outcomes.isEmpty {
+        let date = fields.first { $0.propertyKey == SeededPropertyKey.date }
+        if let date, dateValue(date) != nil {
+            return labeled(ReconciledValueRowModel(field: date, locale: locale), label, field: date)
+        }
+        let spanShows = [SeededPropertyKey.startDate, SeededPropertyKey.endDate].contains {
+            dateValue(fields, key: $0) != nil
+        }
+        if !spanShows, let date, !date.outcomes.isEmpty {
             return labeled(ReconciledValueRowModel(field: date, locale: locale), label, field: date)
         }
         let span = [SeededPropertyKey.startDate, SeededPropertyKey.endDate].compactMap { key in

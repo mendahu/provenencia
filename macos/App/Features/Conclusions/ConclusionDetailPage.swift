@@ -62,8 +62,8 @@ struct ConclusionDetailThumbnail: Equatable {
     var colors: PVThumbnail.Colors? = nil
 
     /// The header thumb of a kind that leads with its gallery's lead picture. The gallery is the
-    /// one source for the lead: the engine sets the header path and every picture path from one
-    /// lead rule, so the page reads no header path beside it (S14-02 D-5).
+    /// one source for the lead: the engine sets the summary path and every picture path from one
+    /// lead rule, so the page reads no summary path beside it (S14-02 D-5).
     static func leading(
         gallery: ConclusionDetailGallery,
         noImage: LocalizedStringResource,

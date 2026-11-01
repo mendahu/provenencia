@@ -4699,7 +4699,9 @@ public nonisolated struct Provenencia_Engine_V1_PlaceSummary: @unchecked Sendabl
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
-/// ConclusionSummary is one handle's summary, by kind.
+/// ConclusionSummary is one handle's summary, by kind. A message that carries a
+/// summary of any kind has this one field, built by conclusionSummaryProto and
+/// mapped by mapConclusionSummary; mixed-kind reads go through Want.Add and ByIDs.
 public nonisolated struct Provenencia_Engine_V1_ConclusionSummary: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

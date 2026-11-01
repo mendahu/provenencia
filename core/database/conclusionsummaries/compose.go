@@ -274,11 +274,6 @@ func (w *Want) Add(kind string, id []byte) {
 	}
 }
 
-// Empty reports whether no id was added.
-func (w Want) Empty() bool {
-	return len(w.Persons)+len(w.Events)+len(w.Places) == 0
-}
-
 // NewSummaries indexes the given rows by the entity's raw id.
 func NewSummaries(ps []PersonSummary, es []EventSummary, pl []PlaceSummary) Summaries {
 	out := Summaries{
@@ -324,15 +319,6 @@ func PersonsByIDs(c *database.Catalog, ids [][]byte) ([]PersonSummary, error) {
 		return nil, nil
 	}
 	return persons(c.Graph(), ids, false, true)
-}
-
-// PersonsFromQuerier composes person rows from q without storing them.
-// Search calls this inside the write transaction.
-func PersonsFromQuerier(q Querier, ids [][]byte) ([]PersonSummary, error) {
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	return persons(graphcache.Over(q), ids, false, false)
 }
 
 func persons(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PersonSummary, error) {
@@ -382,28 +368,27 @@ func EventsByIDs(c *database.Catalog, ids [][]byte) ([]EventSummary, error) {
 	return events(c.Graph(), ids, false, true)
 }
 
-// EventsFromQuerier composes event rows from q without storing them.
-func EventsFromQuerier(q Querier, ids [][]byte) ([]EventSummary, error) {
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	return events(graphcache.Over(q), ids, false, false)
-}
-
 // RowsForSearch composes the three summary kinds on one graph. Search
 // reprojection calls this so a mixed batch does not open three graphs.
 func RowsForSearch(g *graphcache.Graph, w Want) (Summaries, error) {
-	ps, err := persons(g, w.Persons, false, false)
-	if err != nil {
-		return Summaries{}, err
+	var ps []PersonSummary
+	var es []EventSummary
+	var pl []PlaceSummary
+	var err error
+	if len(w.Persons) > 0 {
+		if ps, err = persons(g, w.Persons, false, false); err != nil {
+			return Summaries{}, err
+		}
 	}
-	es, err := events(g, w.Events, false, false)
-	if err != nil {
-		return Summaries{}, err
+	if len(w.Events) > 0 {
+		if es, err = events(g, w.Events, false, false); err != nil {
+			return Summaries{}, err
+		}
 	}
-	pl, err := places(g, w.Places, false, false)
-	if err != nil {
-		return Summaries{}, err
+	if len(w.Places) > 0 {
+		if pl, err = places(g, w.Places, false, false); err != nil {
+			return Summaries{}, err
+		}
 	}
 	return NewSummaries(ps, es, pl), nil
 }
@@ -448,14 +433,6 @@ func PlacesByIDs(c *database.Catalog, ids [][]byte) ([]PlaceSummary, error) {
 		return nil, nil
 	}
 	return places(c.Graph(), ids, false, true)
-}
-
-// PlacesFromQuerier composes place rows from q without storing them.
-func PlacesFromQuerier(q Querier, ids [][]byte) ([]PlaceSummary, error) {
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	return places(graphcache.Over(q), ids, false, false)
 }
 
 func places(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PlaceSummary, error) {

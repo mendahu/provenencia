@@ -282,7 +282,7 @@ The auto-reconciler, its cache, the pages that read it, place chains, Promote, a
 | Cache, evidence, outcomes, and upkeep (credibility and certainty included) | `core/database/autoreconciler` |
 | Detail read: each field's state, values, and outcomes with their evidence | `core/database/conclusiondetails` |
 | Subject-valued bridges filed by their ends | `core/database/identityclaims` |
-| Place chains at a date, folded from `part_of` | `core/database/conclusionsummaries` |
+| Place chains at a date, folded from `part_of` | `core/database/conclusionsummaries` (a message that carries a summary of any kind has one `ConclusionSummary` field, built by `conclusionSummaryProto` and mapped by `mapConclusionSummary`; mixed-kind reads go through `Want.Add` and `ByIDs`) |
 | Graph alignment and the proposal read | `core/graphalign`, `core/database/promotealign` |
 | Batch Promote: claims and bridges in one transaction | `core/database/promote` |
 | Search documents composed from the list summaries | `core/database/searchindex`, `core/search` |

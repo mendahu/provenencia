@@ -4,7 +4,7 @@ One short paragraph per landed PR, newest first. Written by the PR that lands it
 
 ## S13-31 — Header data becomes summaries
 
-**Landed 2026-11-01** in [#660](https://github.com/mendahu/provenencia/pull/660). "Header" now means only the band at the top of a Conclusion page. The data a row or tile shows is a summary in Go, proto and Swift: `PersonSummary`, `EventSummary`, `PlaceSummary`, `ChainedPlace`, package `conclusionsummaries`, and the band's line under the title is `secondary`. The four `oneof header` blocks became one `ConclusionSummary` with the field numbers kept, `ByIDs` and `RowsForSearch` take one `Want` split by kind, and `HeaderDependents` is gone. The one visible change: an Event band whose `date` field has records but no displayed value shows its kept start-end span, as the Events list row does.
+**Landed 2026-11-01** in [#660](https://github.com/mendahu/provenencia/pull/660). "Header" now means only the band at the top of a Conclusion page. The data a row or tile shows is a summary in Go, proto and Swift: `PersonSummary`, `EventSummary`, `PlaceSummary`, `ChainedPlace`, package `conclusionsummaries`, and the band's line under the title is `secondary`. The four `oneof header` blocks became one `ConclusionSummary` with the field numbers kept, `ByIDs` and `RowsForSearch` take one `Want` split by kind, and `HeaderDependents` is gone. The one visible change: an Event band whose `date` field has records but no displayed value shows its kept start-end span, as the Events list row does, and the Date row shows the same span.
 
 ## S13-02 — Gender in the person header
 
