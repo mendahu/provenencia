@@ -12,9 +12,6 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// idLen is the length of a Subject id; graphcache stores no answer for any other.
-const idLen = 16
-
 // pivotKind says what a cached result is a result of.
 type pivotKind int
 
@@ -79,53 +76,50 @@ func init() {
 	})
 }
 
-// checkFor rebuilds a stored For answer from the cached nodes, with no pivot
-// results, and compares.
-func checkFor(g *graphcache.Graph, id []byte, stored any) error {
-	res, ok := stored.(personAnswer)
-	if !ok {
-		return fmt.Errorf("canonlinks: stored answer %x has type %T", id, stored)
+// checkPersonAnswer rebuilds a stored per-person answer from the cached nodes
+// and compares. derive makes the answer for one id with a deriver that loads
+// nothing; found is false when the id has no answer to make.
+func checkPersonAnswer(derive func(d *deriver, id []byte) (links []kinship.Implied, found bool, err error)) graphcache.MemoCheck {
+	return func(g *graphcache.Graph, id []byte, stored any) error {
+		res, ok := stored.(personAnswer)
+		if !ok {
+			return fmt.Errorf("canonlinks: stored answer %x has type %T", id, stored)
+		}
+		d, err := newDeriver(g, res.rules, cachedNodes(g))
+		if err != nil {
+			return err
+		}
+		links, found, err := derive(d, id)
+		if err != nil {
+			return err
+		}
+		if !found {
+			return fmt.Errorf("canonlinks: stored answer %x is for no cached person", id)
+		}
+		if !reflect.DeepEqual(res, personAnswer{rules: res.rules, links: links}) {
+			return fmt.Errorf("canonlinks: stored answer %x does not match a fresh derivation", id)
+		}
+		return nil
 	}
-	d, err := newDeriver(g, res.rules, cachedNodes(g))
-	if err != nil {
-		return err
-	}
+}
+
+// checkFor checks a stored For answer: no pivot results are used.
+var checkFor = checkPersonAnswer(func(d *deriver, id []byte) ([]kinship.Implied, bool, error) {
 	links, err := d.forLinks(id, d.eventLinks, func(m []byte) ([]kinship.Implied, error) {
 		return d.chainLinks(m, d.eventLinks)
 	})
-	if err != nil {
-		return err
-	}
-	if !reflect.DeepEqual(res, personAnswer{rules: res.rules, links: links}) {
-		return fmt.Errorf("canonlinks: stored answer %x does not match a fresh derivation", id)
-	}
-	return nil
-}
+	return links, true, err
+})
 
-// checkSiblings rebuilds a stored sibling answer from the cached nodes and
-// compares.
-func checkSiblings(g *graphcache.Graph, id []byte, stored any) error {
-	res, ok := stored.(personAnswer)
-	if !ok {
-		return fmt.Errorf("canonlinks: stored answer %x has type %T", id, stored)
-	}
-	d, err := newDeriver(g, res.rules, cachedNodes(g))
-	if err != nil {
-		return err
-	}
+// checkSiblings checks a stored sibling answer.
+var checkSiblings = checkPersonAnswer(func(d *deriver, id []byte) ([]kinship.Implied, bool, error) {
 	answers, err := d.siblingsOf([][]byte{id}, d.eventLinks)
 	if err != nil {
-		return err
+		return nil, false, err
 	}
-	links, ok := answers[string(id)]
-	if !ok {
-		return fmt.Errorf("canonlinks: stored answer %x is for no cached person", id)
-	}
-	if !reflect.DeepEqual(res, personAnswer{rules: res.rules, links: links}) {
-		return fmt.Errorf("canonlinks: stored answer %x does not match a fresh derivation", id)
-	}
-	return nil
-}
+	links, found := answers[string(id)]
+	return links, found, nil
+})
 
 // deps names every neighbor of each root, and the root.
 func deps(g *graphcache.Graph, roots [][]byte) ([][]byte, error) {
@@ -133,9 +127,7 @@ func deps(g *graphcache.Graph, roots [][]byte) ([][]byte, error) {
 	for _, id := range roots {
 		out = append(out, id)
 		if n, ok := g.Cached(id); ok {
-			for _, l := range n.Links {
-				out = append(out, l.Neighbor)
-			}
+			out = append(out, neighborsOf([]*graphcache.Node{n})...)
 		}
 	}
 	return out, nil
@@ -248,11 +240,7 @@ func (d *deriver) around(id []byte) (*graphcache.Node, error) {
 	if err != nil || n == nil {
 		return nil, err
 	}
-	ids := make([][]byte, 0, len(n.Links))
-	for _, l := range n.Links {
-		ids = append(ids, l.Neighbor)
-	}
-	return n, d.src.load(ids)
+	return n, d.src.load(neighborsOf([]*graphcache.Node{n}))
 }
 
 // kinEdges is n's parent links for a canon read: each relationship link filed
@@ -265,6 +253,16 @@ func (d *deriver) kinEdges(n *graphcache.Node, atEnd []kinship.Implied) []kinshi
 		}
 	}
 	return edges
+}
+
+// parentEdges is n's parent links for a canon read: the links of the events n
+// stands in, then n's kin edges. event gives an event's links.
+func (d *deriver) parentEdges(n *graphcache.Node, event func([]byte) ([]kinship.Implied, error)) ([]kinship.Edge, error) {
+	atEnd, err := d.eventLinksAt(n, event)
+	if err != nil {
+		return nil, err
+	}
+	return d.kinEdges(n, atEnd), nil
 }
 
 // eventLinks is what the event patterns imply over one event's links.
@@ -321,11 +319,11 @@ func (d *deriver) chainLinks(id []byte, eventResult func([]byte) ([]kinship.Impl
 	if err != nil || n == nil {
 		return nil, err
 	}
-	atEnd, err := d.eventLinksAt(n, eventResult)
+	edges, err := d.parentEdges(n, eventResult)
 	if err != nil {
 		return nil, err
 	}
-	return kinship.Derive(d.kinEdges(n, atEnd), d.terms, d.rules), nil
+	return kinship.Derive(edges, d.terms, d.rules), nil
 }
 
 // Reader reads the links the kinship patterns imply, from one cached result
@@ -466,14 +464,13 @@ func (r *Reader) LoadSiblings(ids [][]byte) error {
 
 // siblingsOf derives the siblings of each id that is a node, in four batched
 // loads however many ids and siblings there are: the ids, their neighbors, their
-// parents, and the parents' neighbors. An id with no entry is no node (or not 16
-// bytes); a node with no siblings has an empty answer. event gives an event's
+// parents, and the parents' neighbors. An id with no entry is no node; a node with no siblings has an empty answer. event gives an event's
 // links. A parent that is linked but not cached is skipped.
 func (d *deriver) siblingsOf(ids [][]byte, event func([]byte) ([]kinship.Implied, error)) (map[string][]kinship.Implied, error) {
 	var want [][]byte
 	seen := map[string]bool{}
 	for _, id := range ids {
-		if len(id) == idLen && !seen[string(id)] {
+		if !seen[string(id)] {
 			seen[string(id)] = true
 			want = append(want, id)
 		}
@@ -494,12 +491,11 @@ func (d *deriver) siblingsOf(ids [][]byte, event func([]byte) ([]kinship.Implied
 	parents := make([][][]byte, len(nodes))
 	var allParents [][]byte
 	for i, n := range nodes {
-		atEnd, err := d.eventLinksAt(n, event)
-		if err != nil {
+		var err error
+		if edges[i], err = d.parentEdges(n, event); err != nil {
 			return nil, err
 		}
-		edges[i] = d.kinEdges(n, atEnd)
-		parents[i] = kinship.Parents(n.ID, edges[i], d.terms)
+		parents[i] = kinship.Parents(n.ID, edges[i], d.terms, d.rules)
 		allParents = append(allParents, parents[i]...)
 	}
 	if err := d.src.load(allParents); err != nil {
@@ -516,23 +512,38 @@ func (d *deriver) siblingsOf(ids [][]byte, event func([]byte) ([]kinship.Implied
 	if err := d.src.load(neighborsOf(parentNodes)); err != nil {
 		return nil, err
 	}
-	parentEdges := map[string][]kinship.Edge{}
+	edgesOfParent := map[string][]kinship.Edge{}
 	for _, n := range parentNodes {
-		atEnd, err := d.eventLinksAt(n, event)
+		es, err := d.parentEdges(n, event)
 		if err != nil {
 			return nil, err
 		}
-		parentEdges[string(n.ID)] = d.kinEdges(n, atEnd)
+		edgesOfParent[string(n.ID)] = es
 	}
 	out := make(map[string][]kinship.Implied, len(nodes))
 	for i, n := range nodes {
-		all := edges[i]
-		for _, q := range parents[i] {
-			all = slices.Concat(all, parentEdges[string(q)])
+		all := slices.Clone(edges[i])
+		read := map[string]bool{}
+		for _, e := range all {
+			read[edgeKey(e)] = true
 		}
-		out[string(n.ID)] = kinship.Siblings(n.ID, all, d.terms)
+		for _, q := range parents[i] {
+			for _, e := range edgesOfParent[string(q)] {
+				if k := edgeKey(e); !read[k] {
+					read[k] = true
+					all = append(all, e)
+				}
+			}
+		}
+		out[string(n.ID)] = kinship.Siblings(n.ID, all, d.terms, d.rules)
 	}
 	return out, nil
+}
+
+// edgeKey names the link an edge was read from: its ends and associations. Two
+// distinct links between the same people differ in their associations.
+func edgeKey(e kinship.Edge) string {
+	return string(e.A) + string(e.B) + string(bytes.Join(e.Associations, nil))
 }
 
 // neighborsOf names every neighbor of each node.

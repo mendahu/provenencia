@@ -18,7 +18,7 @@ import (
 var terms = segmentcomparetest.Terms()
 
 // rules is the shipped bound, written here because the layer holds no numbers.
-var rules = kinship.Rules{MaxPivotEnd: 10}
+var rules = kinship.Rules{MaxPivotEnd: 10, MaxPairSteps: 10}
 
 // Subject ids: people P1.. = 0x11.., events E1.. = 0x21.., bridges b1.. = 0x31...
 func p(n byte) []byte { return []byte{0x10 + n} }
@@ -314,12 +314,40 @@ func TestDeriveManyDuplicateParentSteps(t *testing.T) {
 			kinship.Edge{A: []byte("m"), B: []byte("c"), KeyA: first, KeyB: second, Associations: [][]byte{a}})
 	}
 	start := time.Now()
-	got := kinship.Derive(edges, terms, kinship.Rules{MaxPivotEnd: 10})
+	got := kinship.Derive(edges, terms, kinship.Rules{MaxPivotEnd: 10, MaxPairSteps: 10})
 	if len(got) != 1 {
 		t.Fatalf("Derive made %d links, want 1", len(got))
 	}
 	if d := time.Since(start); d > time.Second {
 		t.Errorf("Derive took %v for %d duplicate steps, want under a second", d, n)
+	}
+}
+
+// TestDeriveManyDuplicatesTimesGrandchildren files the g-to-m link 2,000 times
+// and 2,000 children of m: each grandparent link keeps a bounded From.
+func TestDeriveManyDuplicatesTimesGrandchildren(t *testing.T) {
+	const n = 2000
+	rel := segmentcomparetest.Bridge(t, vocabkey.BridgeRelationship)
+	first, second := segmentcompare.Keys(rel, vocabkey.TermParent, "", terms)
+	var edges []kinship.Edge
+	for i := 0; i < n; i++ {
+		a := []byte(fmt.Sprintf("a%d", i))
+		edges = append(edges,
+			kinship.Edge{A: []byte("g"), B: []byte("m"), KeyA: first, KeyB: second, Associations: [][]byte{a}},
+			kinship.Edge{A: []byte("m"), B: []byte(fmt.Sprintf("c%d", i)), KeyA: first, KeyB: second, Associations: [][]byte{a}})
+	}
+	start := time.Now()
+	got := kinship.Derive(edges, terms, rules)
+	if len(got) != n {
+		t.Fatalf("Derive made %d links, want %d", len(got), n)
+	}
+	for _, imp := range got {
+		if len(imp.From) > rules.MaxPairSteps+1 {
+			t.Fatalf("a link's From holds %d edges, want at most %d", len(imp.From), rules.MaxPairSteps+1)
+		}
+	}
+	if d := time.Since(start); d > time.Second {
+		t.Errorf("Derive took %v, want under a second", d)
 	}
 }
 

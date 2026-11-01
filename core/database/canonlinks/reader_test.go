@@ -276,6 +276,31 @@ type relShape struct {
 	OnlyImplied bool
 }
 
+// cloneLinks copies links so a later edit of the originals cannot change them.
+func cloneLinks(in []kinship.Link) []kinship.Link {
+	var out []kinship.Link
+	for _, l := range in {
+		out = append(out, kinship.Link{Edge: l.Edge.Clone(), Recording: l.Recording.Clone()})
+	}
+	return out
+}
+
+// cloneImplied copies implied links, bytes included.
+func cloneImplied(in []kinship.Implied) []kinship.Implied {
+	var out []kinship.Implied
+	for _, l := range in {
+		c := l
+		c.Edge = l.Edge.Clone()
+		c.Event, c.Through = bytes.Clone(l.Event), bytes.Clone(l.Through)
+		c.From = nil
+		for _, f := range l.From {
+			c.From = append(c.From, f.Clone())
+		}
+		out = append(out, c)
+	}
+	return out
+}
+
 func (w *world) relShapes(links []kinship.Link) []relShape {
 	var out []relShape
 	for _, l := range links {
@@ -382,27 +407,6 @@ func TestRelationships(t *testing.T) {
 		ann, bob := w.person("Ann"), w.person("Bob")
 		w.relationship("AB", ann, bob, "spouse")
 		w.marriage("M1", ann, bob)
-		cloneLinks := func(in []kinship.Link) []kinship.Link {
-			var out []kinship.Link
-			for _, l := range in {
-				out = append(out, kinship.Link{Edge: l.Edge.Clone(), Recording: l.Recording.Clone()})
-			}
-			return out
-		}
-		cloneImplied := func(in []kinship.Implied) []kinship.Implied {
-			var out []kinship.Implied
-			for _, l := range in {
-				c := l
-				c.Edge = l.Edge.Clone()
-				c.Event, c.Through = bytes.Clone(l.Event), bytes.Clone(l.Through)
-				c.From = nil
-				for _, f := range l.From {
-					c.From = append(c.From, f.Clone())
-				}
-				out = append(out, c)
-			}
-			return out
-		}
 		wantRel, wantFor := cloneLinks(w.relationships(ann)), cloneImplied(w.for_(ann))
 		got := w.relationships(ann)
 		got[0].A[0] ^= 0xff
@@ -789,6 +793,10 @@ func TestRelationshipsOptionsSiblings(t *testing.T) {
 		w := newWorld(t)
 		check(t, read(w, w.person("Ann")))
 		check(t, read(w, make([]byte, 16)))
+		check(t, read(w, []byte{1, 2, 3}))
+		if _, ok := w.g.Memo(siblingSlot, []byte{1, 2, 3}); ok {
+			t.Fatal("a wrong-length id stored an answer")
+		}
 		if _, ok := w.g.Memo(siblingSlot, make([]byte, 16)); ok {
 			t.Fatal("an unknown id stored an answer")
 		}
@@ -803,6 +811,45 @@ func TestRelationshipsOptionsSiblings(t *testing.T) {
 		w.parent("AC", ann, cal)
 		w.parent("CB", cal, bea)
 		check(t, read(w, bea), want(w, "Bea", "Cal", []string{"AB", "AC"}, sharedParent("Ann")))
+	})
+	t.Run("an edge in both lists is read once", func(t *testing.T) {
+		// fromNames reads the names of the associations of Bea's stored
+		// sibling link's From edges.
+		fromNames := func(w *world, id []byte) []string {
+			v, ok := w.g.Memo(siblingSlot, id)
+			if !ok {
+				t.Fatal("no stored sibling answer")
+			}
+			var out []string
+			for _, imp := range v.(personAnswer).links {
+				for _, f := range imp.From {
+					for _, a := range f.Associations {
+						out = append(out, w.name(a))
+					}
+				}
+			}
+			slices.Sort(out)
+			return out
+		}
+		w := newWorld(t)
+		ann, bea, cal := w.person("Ann"), w.person("Bea"), w.person("Cal")
+		w.parent("AB", ann, bea)
+		w.parent("AC", ann, cal)
+		w.siblings(bea)
+		if got := fromNames(w, bea); !reflect.DeepEqual(got, []string{"AB", "AC"}) {
+			t.Fatalf("From holds %v, want AB once and AC once", got)
+		}
+		w = newWorld(t)
+		ann, bea, cal = w.person("Ann"), w.person("Bea"), w.person("Cal")
+		b1, b2 := w.event("B1", vocabkey.EventBirth), w.event("B2", vocabkey.EventBirth)
+		w.join("B1/Ann", ann, b1, "father")
+		w.join("B1/Bea", bea, b1, "subject")
+		w.join("B2/Ann", ann, b2, "father")
+		w.join("B2/Cal", cal, b2, "subject")
+		w.siblings(bea)
+		if got := fromNames(w, bea); !reflect.DeepEqual(got, []string{"B1/Ann", "B1/Bea", "B2/Ann", "B2/Cal"}) {
+			t.Fatalf("From holds %v, want each birth once", got)
+		}
 	})
 	t.Run("AC-1.11", func(t *testing.T) {
 		w := newWorld(t)
@@ -967,28 +1014,7 @@ func TestSiblingsLeaveMatchingAlone(t *testing.T) {
 	ann, bea, cal := w.person("Ann"), w.person("Bea"), w.person("Cal")
 	w.parent("AB", ann, bea)
 	w.parent("AC", ann, cal)
-	copyImplied := func(in []kinship.Implied) []kinship.Implied {
-		var out []kinship.Implied
-		for _, l := range in {
-			c := l
-			c.Edge = l.Edge.Clone()
-			c.Event, c.Through = bytes.Clone(l.Event), bytes.Clone(l.Through)
-			c.From = nil
-			for _, f := range l.From {
-				c.From = append(c.From, f.Clone())
-			}
-			out = append(out, c)
-		}
-		return out
-	}
-	copyLinks := func(in []kinship.Link) []kinship.Link {
-		var out []kinship.Link
-		for _, l := range in {
-			out = append(out, kinship.Link{Edge: l.Edge.Clone(), Recording: l.Recording.Clone()})
-		}
-		return out
-	}
-	wantFor, wantRel := copyImplied(w.for_(bea)), copyLinks(w.relationships(bea))
+	wantFor, wantRel := cloneImplied(w.for_(bea)), cloneLinks(w.relationships(bea))
 	if len(w.siblings(bea)) != 1 {
 		t.Fatal("setup: want one sibling link")
 	}

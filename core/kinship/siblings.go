@@ -2,6 +2,7 @@ package kinship
 
 import (
 	"bytes"
+	"slices"
 
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/segmentcompare"
@@ -14,8 +15,8 @@ const PatternSharedParent Pattern = "shared_parent"
 
 // Parents returns person's distinct parents among edges, read through
 // ParentStep, in first-seen order.
-func Parents(person []byte, edges []Edge, terms segmentcompare.Terms) [][]byte {
-	return indexSteps(stepsOf(edges, terms)).parentsOf[string(person)]
+func Parents(person []byte, edges []Edge, terms segmentcompare.Terms, rules Rules) [][]byte {
+	return indexSteps(stepsOf(edges, terms), rules.MaxPairSteps).parentsOf[string(person)]
 }
 
 // Siblings returns the siblings person's parents imply among edges: one link
@@ -23,23 +24,26 @@ func Parents(person []byte, edges []Edge, terms segmentcompare.Terms) [][]byte {
 // only implied links; LinkSet merges them with a recorded sibling link. It is
 // for the page; matching never calls it.
 //
-// It has no MaxPivotEnd bound: a family of eleven children is real data, and
-// the work is linear in the edges.
-func Siblings(person []byte, edges []Edge, terms segmentcompare.Terms) []Implied {
+// It has no MaxPivotEnd bound: a family of eleven children is real data. Rules
+// .MaxPairSteps keeps the work linear in the edges when a pair is filed many
+// times.
+func Siblings(person []byte, edges []Edge, terms segmentcompare.Terms, rules Rules) []Implied {
 	rel, ok := connectrules.LookupBridge(vocabkey.BridgeRelationship)
 	if !ok {
 		return nil
 	}
 	first, second := segmentcompare.Keys(rel, vocabkey.TermSibling, "", terms)
-	idx := indexSteps(stepsOf(edges, terms))
+	idx := indexSteps(stepsOf(edges, terms), rules.MaxPairSteps)
 	var out []Implied
 	for _, q := range idx.parentsOf[string(person)] {
+		mine := idx.edgesOf(stepPair{string(q), string(person)})
 		for _, i := range idx.childrenOf[string(q)] {
 			c := idx.steps[i].m
 			if bytes.Equal(c, person) {
 				continue
 			}
-			from, assoc := idx.through(stepPair{string(q), string(person)}, stepPair{string(q), string(c)})
+			from := slices.Concat(mine, idx.edgesOf(stepPair{string(q), string(c)}))
+			assoc := associationsOf(from)
 			a, b := person, c
 			if bytes.Compare(a, b) > 0 {
 				a, b = b, a

@@ -23,6 +23,10 @@ type Rules struct {
 	// end reads as malformed data and implies nothing. It keeps Derive linear
 	// in its input.
 	MaxPivotEnd int
+	// MaxPairSteps is the most steps kept for one parent-child pair; later
+	// duplicates of the same pair are not read. It keeps Siblings and the
+	// parent-of-parent chain linear in their input.
+	MaxPairSteps int
 }
 
 // Edge is one link between two primary Subjects: its two ends, the link read
@@ -198,7 +202,7 @@ func Derive(edges []Edge, terms segmentcompare.Terms, rules Rules) []Implied {
 		impliedEdges[i] = imp.Edge
 	}
 	steps = append(steps, stepsOf(impliedEdges, terms)...)
-	return append(out, chains(indexSteps(steps), rel, terms, rules.MaxPivotEnd)...)
+	return append(out, chains(indexSteps(steps, rules.MaxPairSteps), rel, terms, rules.MaxPivotEnd)...)
 }
 
 // step is one parent step: g is m's parent, and edge is the link it was read
@@ -238,8 +242,9 @@ type parentSteps struct {
 	parentsOf  map[string][][]byte
 }
 
-// indexSteps builds the index of steps.
-func indexSteps(steps []step) parentSteps {
+// indexSteps builds the index of steps, keeping the first maxPairSteps steps of
+// each parent and child pair, in input order; the pair itself is always indexed.
+func indexSteps(steps []step, maxPairSteps int) parentSteps {
 	idx := parentSteps{
 		steps:      steps,
 		byPair:     map[stepPair][]int{},
@@ -248,26 +253,36 @@ func indexSteps(steps []step) parentSteps {
 	}
 	for i, s := range steps {
 		k := stepPair{string(s.g), string(s.m)}
-		if _, seen := idx.byPair[k]; !seen {
+		kept, seen := idx.byPair[k]
+		if !seen {
 			idx.order = append(idx.order, k)
 			idx.childrenOf[k.g] = append(idx.childrenOf[k.g], i)
 			idx.parentsOf[k.m] = append(idx.parentsOf[k.m], s.g)
 		}
-		idx.byPair[k] = append(idx.byPair[k], i)
+		if len(kept) < max(maxPairSteps, 1) {
+			kept = append(kept, i)
+		}
+		idx.byPair[k] = kept
 	}
 	return idx
 }
 
-// through returns the edges of the steps of each pair, in argument order, and
-// those edges' associations, each once, first-seen.
-func (s parentSteps) through(pairs ...stepPair) (from []Edge, assoc [][]byte) {
+// edgesOf returns the edges of the kept steps of each pair, in argument order.
+func (s parentSteps) edgesOf(pairs ...stepPair) []Edge {
+	var from []Edge
 	for _, p := range pairs {
 		for _, j := range s.byPair[p] {
 			from = append(from, s.steps[j].edge)
 		}
 	}
+	return from
+}
+
+// associationsOf returns the associations of edges, each once, first-seen.
+func associationsOf(edges []Edge) [][]byte {
+	var assoc [][]byte
 	seen := map[string]struct{}{}
-	for _, e := range from {
+	for _, e := range edges {
 		for _, a := range e.Associations {
 			if _, dup := seen[string(a)]; !dup {
 				seen[string(a)] = struct{}{}
@@ -275,7 +290,7 @@ func (s parentSteps) through(pairs ...stepPair) (from []Edge, assoc [][]byte) {
 			}
 		}
 	}
-	return from, assoc
+	return assoc
 }
 
 // ParentStep reads an edge as one parent step: parent is child's parent, from
@@ -388,7 +403,8 @@ func chains(idx parentSteps, rel connectrules.Bridge, terms segmentcompare.Terms
 			if bytes.Equal(upStep.g, down.m) {
 				continue
 			}
-			from, assoc := idx.through(up, stepPair{up.m, string(down.m)})
+			from := idx.edgesOf(up, stepPair{up.m, string(down.m)})
+			assoc := associationsOf(from)
 			out = append(out, Implied{
 				Edge:    Edge{A: upStep.g, B: down.m, KeyA: first, KeyB: second, Associations: assoc},
 				Pattern: PatternParentOfParent,

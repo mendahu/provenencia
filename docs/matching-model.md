@@ -208,6 +208,7 @@ Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Fiel
 | `alignment.Shortlist.Dated.event.Type` | `event_type` | decided ([`comparison-layers.md`](deployment-plan/archive/spike-11/comparison-layers.md#layer-6-procedure)) | The term keyed with each year bucket |
 | `alignment.Shortlist.Dated.event.Date` | `date` | decided ([`comparison-layers.md`](deployment-plan/archive/spike-11/comparison-layers.md#layer-6-procedure)) | The date whose reach is bucketed; a period stands for it |
 | `kinship.MaxPivotEnd` | 10 | user, 2026-10-26 (S11-39): more than two, for unusual families, with a bound so one malformed event stays cheap | Most participants at either end of a pivot (an event, or the parent between in a chain) before it reads as malformed and implies nothing |
+| `kinship.MaxPairSteps` | 10 | user, 2026-11-01 (S13-03 SEC-1): keep the first 10 steps of one parent–child pair, so duplicate links times children stays linear; real data files a handful | Most steps kept for one parent–child pair; later duplicates of the same pair are not read, though the pair, its parent and child stay known |
 
 ## Not knobs
 

@@ -1,11 +1,15 @@
 package kinship_test
 
 import (
+	"fmt"
 	"reflect"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/mendahu/provenencia/core/kinship"
+	"github.com/mendahu/provenencia/core/segmentcompare"
+	"github.com/mendahu/provenencia/core/segmentcompare/segmentcomparetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -38,7 +42,7 @@ func TestSiblings(t *testing.T) {
 	}
 	check := func(t *testing.T, person byte, edges []kinship.Edge, want ...sib) {
 		t.Helper()
-		got := sibsOf(kinship.Siblings(p(person), edges, terms))
+		got := sibsOf(kinship.Siblings(p(person), edges, terms, rules))
 		if len(got) == 0 && len(want) == 0 {
 			return
 		}
@@ -51,7 +55,7 @@ func TestSiblings(t *testing.T) {
 		edges := []kinship.Edge{parent(1, 2, 1), parent(1, 3, 2)}
 		check(t, 2, edges, sib{2, 3, 1, []byte{1, 2}})
 		check(t, 3, edges, sib{2, 3, 1, []byte{2, 1}})
-		imps := kinship.Siblings(p(2), edges, terms)
+		imps := kinship.Siblings(p(2), edges, terms, rules)
 		if imps[0].Pattern != kinship.PatternSharedParent || imps[0].Event != nil {
 			t.Fatalf("got pattern %q event %v", imps[0].Pattern, imps[0].Event)
 		}
@@ -86,7 +90,7 @@ func TestSiblings(t *testing.T) {
 	t.Run("AC-1.5", func(t *testing.T) {
 		edges := []kinship.Edge{parent(1, 2, 1), parent(1, 3, 2), parent(4, 2, 3), parent(4, 3, 4)}
 		check(t, 2, edges, sib{2, 3, 1, []byte{1, 2}}, sib{2, 3, 4, []byte{3, 4}})
-		if got := kinship.Parents(p(2), edges, terms); !reflect.DeepEqual(got, [][]byte{p(1), p(4)}) {
+		if got := kinship.Parents(p(2), edges, terms, rules); !reflect.DeepEqual(got, [][]byte{p(1), p(4)}) {
 			t.Fatalf("Parents = %v", got)
 		}
 	})
@@ -119,14 +123,14 @@ func TestSiblings(t *testing.T) {
 	t.Run("AC-1.9", func(t *testing.T) {
 		check(t, 2, nil)
 		check(t, 2, []kinship.Edge{parent(2, 2, 1)})
-		if got := kinship.Parents(p(2), nil, terms); len(got) != 0 {
+		if got := kinship.Parents(p(2), nil, terms, rules); len(got) != 0 {
 			t.Fatalf("Parents of nothing = %v", got)
 		}
 	})
 	t.Run("AC-1.10", func(t *testing.T) {
 		edges := []kinship.Edge{parent(1, 2, 1), parent(1, 3, 2), parent(3, 2, 3)}
 		check(t, 2, edges, sib{2, 3, 1, []byte{1, 2}})
-		if got := kinship.Parents(p(2), edges, terms); !reflect.DeepEqual(got, [][]byte{p(1), p(3)}) {
+		if got := kinship.Parents(p(2), edges, terms, rules); !reflect.DeepEqual(got, [][]byte{p(1), p(3)}) {
 			t.Fatalf("Parents = %v", got)
 		}
 	})
@@ -134,7 +138,7 @@ func TestSiblings(t *testing.T) {
 		// The same step passed twice adds no association.
 		edges := []kinship.Edge{parent(1, 2, 1), parent(1, 2, 1), parent(1, 3, 2)}
 		check(t, 2, edges, sib{2, 3, 1, []byte{1, 2}})
-		if got := kinship.Parents(p(2), edges, terms); !reflect.DeepEqual(got, [][]byte{p(1)}) {
+		if got := kinship.Parents(p(2), edges, terms, rules); !reflect.DeepEqual(got, [][]byte{p(1)}) {
 			t.Fatalf("Parents = %v", got)
 		}
 	})
@@ -165,4 +169,33 @@ func TestSiblings(t *testing.T) {
 			t.Fatal("Patterns lists PatternSharedParent")
 		}
 	})
+}
+
+// TestSiblingsManyDuplicatesTimesChildren files the person's parent link 2,000
+// times and 2,000 children of the parent: the work stays linear, and each link
+// keeps at most MaxPairSteps steps of each pair.
+func TestSiblingsManyDuplicatesTimesChildren(t *testing.T) {
+	const n = 2000
+	rel := segmentcomparetest.Bridge(t, vocabkey.BridgeRelationship)
+	first, second := segmentcompare.Keys(rel, vocabkey.TermParent, "", terms)
+	var edges []kinship.Edge
+	for i := 0; i < n; i++ {
+		a := []byte(fmt.Sprintf("a%d", i))
+		edges = append(edges,
+			kinship.Edge{A: []byte("q"), B: []byte("person"), KeyA: first, KeyB: second, Associations: [][]byte{a}},
+			kinship.Edge{A: []byte("q"), B: []byte(fmt.Sprintf("c%d", i)), KeyA: first, KeyB: second, Associations: [][]byte{a}})
+	}
+	start := time.Now()
+	got := kinship.Siblings([]byte("person"), edges, terms, rules)
+	if len(got) != n {
+		t.Fatalf("Siblings made %d links, want %d", len(got), n)
+	}
+	for _, imp := range got {
+		if len(imp.From) > rules.MaxPairSteps+1 {
+			t.Fatalf("a link's From holds %d edges, want at most %d", len(imp.From), rules.MaxPairSteps+1)
+		}
+	}
+	if d := time.Since(start); d > time.Second {
+		t.Errorf("Siblings took %v, want under a second", d)
+	}
 }
