@@ -40,11 +40,6 @@ var ErrUnprocessable = apperr.New(apperr.CodeFileDerivativesUnprocessable, apper
 // recorded in the catalog, so they were refused before decode.
 var ErrCorruptObject = apperr.New(apperr.CodeFileDerivativesCorruptObject, apperr.KindInternal)
 
-// maxSourceBytes caps how much of a source object Ensure will read and
-// decode. Larger Files are valid catalog content but are refused for
-// derivative generation with ErrUnprocessable.
-const maxSourceBytes = 128 << 20 // 128 MiB
-
 // Spec describes one derivative to ensure. Type is the file_derivatives.derivative_type key
 // (unique per source). Raster holds encode parameters; add Spec helpers (Medium, …) as needed.
 type Spec struct {
@@ -104,7 +99,7 @@ func Ensure(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, error)
 		return Result{}, err
 	}
 
-	if src.ByteSize > maxSourceBytes {
+	if src.ByteSize > raster.MaxDecodeBytes {
 		return Result{}, ErrUnprocessable
 	}
 
@@ -203,7 +198,8 @@ func generate(projectDir, rel, wantChecksum string, opts raster.Options) ([]byte
 	}
 	derivedJPEG, err := raster.EncodeJPEG(raw, opts)
 	if err != nil {
-		if errors.Is(err, raster.ErrTooLarge) || errors.Is(err, raster.ErrUnsupportedFormat) {
+		if errors.Is(err, raster.ErrTooLarge) || errors.Is(err, raster.ErrUnsupportedFormat) ||
+			errors.Is(err, raster.ErrUndecodable) {
 			return nil, ErrUnprocessable
 		}
 		return nil, err
@@ -211,7 +207,7 @@ func generate(projectDir, rel, wantChecksum string, opts raster.Options) ([]byte
 	return derivedJPEG, nil
 }
 
-// readSourceObject reads at most maxSourceBytes from the object at rel and
+// readSourceObject reads at most raster.MaxDecodeBytes from the object at rel and
 // verifies the bytes against the catalog checksum before they reach any
 // decoder. An object that is not a regular file, or a symlinked objects
 // folder, is ErrCorruptObject.
@@ -224,11 +220,11 @@ func readSourceObject(projectDir, rel, wantChecksum string) ([]byte, error) {
 		return nil, err
 	}
 	defer f.Close()
-	raw, err := io.ReadAll(io.LimitReader(f, maxSourceBytes+1))
+	raw, err := io.ReadAll(io.LimitReader(f, raster.MaxDecodeBytes+1))
 	if err != nil {
 		return nil, err
 	}
-	if int64(len(raw)) > maxSourceBytes {
+	if int64(len(raw)) > raster.MaxDecodeBytes {
 		return nil, ErrUnprocessable
 	}
 	if sha256Hex(raw) != wantChecksum {

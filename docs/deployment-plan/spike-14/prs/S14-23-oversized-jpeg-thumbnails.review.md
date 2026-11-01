@@ -122,3 +122,19 @@ Checked: the file ends `ff d9` after a complete DC scan; the stdlib decodes it.
 
 ### X-21 · minor · `fakeConfigCalls` and `t.Parallel`
 **Answer:** Fixed — T-7 states no `t.Parallel`.
+
+## Amendment 2026-10-31 — T-1 reference (after the ship-pr round-0 stop)
+
+Round 0 stopped on §11's tolerance condition: D-17's output cannot meet ≤ 3.0 against the full decode's 8 × 8 cell means on any subsampled fixture (4 – 21 levels; ship log). User chose the block-level reference. AC-2.1, T-1 and the Stop condition now cite the new D-22. One fresh reviewer checked D-22 against the Go 1.27 `image/jpeg` source and measured it on every D-18 fixture with the round-0 decoder: 0.00 – 0.84 worst channel. Verdict: Ready with changes.
+
+### A-1 · minor · D-22's evidence quoted unclipped numbers
+**Answer:** Fixed — rationale states 0.13 – 0.84 clipped, 410/411 Cr highest.
+
+### A-2 · minor · Where T-1 reads the sampling factors
+**Answer:** Fixed — from the SOF payload via `jpegSegments`, never from the decoder; T-1 added to D-21's users.
+
+### A-3 · minor · T-1 "both sides through `color.RGBAModel`"
+**Answer:** Fixed — only the decoder's pixel goes through the model; the reference is already per channel.
+
+### A-4 · minor · Clipped edge cells compare a partial mean with a full-block DC
+**Answer:** Declined — kept clipping: worst fixture 0.84 against 3.0, and excluding cells would stop checking the right edge's chroma block.

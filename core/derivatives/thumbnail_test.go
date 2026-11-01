@@ -3,10 +3,8 @@ package derivatives
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/binary"
 	"encoding/hex"
 	"errors"
-	"hash/crc32"
 	"image"
 	"image/png"
 	"os"
@@ -20,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/raster"
+	"github.com/mendahu/provenencia/core/raster/rastertest"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -134,6 +133,49 @@ func TestEnsureThumbnailIdempotent(t *testing.T) {
 	}
 }
 
+func TestEnsureThumbnailOversizedJPEG(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	srcID := installSourceFile(t, c, rastertest.OversizedJPEG(t), "image/jpeg", "big.jpg")
+
+	first, err := EnsureThumbnail(c, srcID)
+	if err != nil || first.Skipped {
+		t.Fatalf("%+v %v", first, err)
+	}
+	derived, err := files.Lookup(c, first.Link.DerivedFileID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if derived.MediaType != "image/jpeg" {
+		t.Fatalf("derived media type = %q", derived.MediaType)
+	}
+	rel, err := files.StorageRelPath(derived.ChecksumSHA256, derived.MediaType)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(filepath.Join(c.Dir(), filepath.FromSlash(rel)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Width != 256 || cfg.Height != 255 {
+		t.Fatalf("thumb = %dx%d, want 256x255", cfg.Width, cfg.Height)
+	}
+	second, err := EnsureThumbnail(c, srcID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(second.Link.ID) != string(first.Link.ID) {
+		t.Fatal("second call made a new link")
+	}
+}
+
 func TestEnsureThumbnailSkipsNonImage(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
@@ -197,31 +239,6 @@ func TestEnsureThumbnailFromGeneratedPNG(t *testing.T) {
 	}
 }
 
-// bombPNG returns a PNG signature + valid IHDR declaring w×h pixels; enough
-// for DecodeConfig, tiny on disk — a header-declared decompression bomb.
-func bombPNG(t *testing.T, w, h uint32) []byte {
-	t.Helper()
-	var buf bytes.Buffer
-	buf.Write([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'})
-	data := make([]byte, 13)
-	binary.BigEndian.PutUint32(data[0:], w)
-	binary.BigEndian.PutUint32(data[4:], h)
-	data[8] = 8 // bit depth
-	data[9] = 6 // color type RGBA
-	var length [4]byte
-	binary.BigEndian.PutUint32(length[:], 13)
-	buf.Write(length[:])
-	buf.WriteString("IHDR")
-	buf.Write(data)
-	crc := crc32.NewIEEE()
-	crc.Write([]byte("IHDR"))
-	crc.Write(data)
-	var sum [4]byte
-	binary.BigEndian.PutUint32(sum[:], crc.Sum32())
-	buf.Write(sum[:])
-	return buf.Bytes()
-}
-
 // installFileRow inserts a files row without writing an object, so tests can
 // declare arbitrary ByteSize/checksum metadata.
 func installFileRow(t *testing.T, c *database.Catalog, checksum, mediaType string, byteSize int64) []byte {
@@ -265,15 +282,15 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 		{
 			name: "declared ByteSize over source cap",
 			srcID: func(t *testing.T) []byte {
-				return installFileRow(t, c, hex.EncodeToString(tinySum[:]), "image/png", maxSourceBytes+1)
+				return installFileRow(t, c, hex.EncodeToString(tinySum[:]), "image/png", raster.MaxDecodeBytes+1)
 			},
 			wantIs: ErrUnprocessable,
 		},
 		{
 			name: "object bytes do not match catalog checksum",
 			srcID: func(t *testing.T) []byte {
-				id := installSourceFile(t, c, bombPNG(t, 4, 4), "image/png", "swap.png")
-				sum := sha256.Sum256(bombPNG(t, 4, 4))
+				id := installSourceFile(t, c, rastertest.HeaderOnlyPNG(t, 4, 4), "image/png", "swap.png")
+				sum := sha256.Sum256(rastertest.HeaderOnlyPNG(t, 4, 4))
 				rel, err := files.StorageRelPath(hex.EncodeToString(sum[:]), "image/png")
 				if err != nil {
 					t.Fatal(err)
@@ -289,7 +306,7 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 		{
 			name: "object is a symlink to an outside file with the same bytes",
 			srcID: func(t *testing.T) []byte {
-				data := bombPNG(t, 5, 5)
+				data := rastertest.HeaderOnlyPNG(t, 5, 5)
 				id := installSourceFile(t, c, data, "image/png", "link.png")
 				sum := sha256.Sum256(data)
 				rel, err := files.StorageRelPath(hex.EncodeToString(sum[:]), "image/png")
@@ -314,7 +331,7 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 		{
 			name: "source's shard folder is a symlink",
 			srcID: func(t *testing.T) []byte {
-				data := bombPNG(t, 6, 6)
+				data := rastertest.HeaderOnlyPNG(t, 6, 6)
 				id := installSourceFile(t, c, data, "image/png", "shard.png")
 				sum := sha256.Sum256(data)
 				rel, err := files.StorageRelPath(hex.EncodeToString(sum[:]), "image/png")
@@ -342,9 +359,17 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 			wantIs: ErrUnprocessable,
 		},
 		{
+			name: "truncated jpeg",
+			srcID: func(t *testing.T) []byte {
+				b := rastertest.GoFixture(t, "video-001.jpeg")
+				return installSourceFile(t, c, b[:len(b)/2], "image/jpeg", "half.jpg")
+			},
+			wantIs: ErrUnprocessable,
+		},
+		{
 			name: "pixel bomb png over decode budget",
 			srcID: func(t *testing.T) []byte {
-				return installSourceFile(t, c, bombPNG(t, 100000, 100000), "image/png", "bomb.png")
+				return installSourceFile(t, c, rastertest.HeaderOnlyPNG(t, 100000, 100000), "image/png", "bomb.png")
 			},
 			wantIs: ErrUnprocessable,
 		},

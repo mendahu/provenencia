@@ -43,8 +43,8 @@ type StagedImage struct {
 }
 
 // StageImage applies the import path checks to absPath, decodes it as PNG or
-// JPEG within the pixel budget, and re-encodes it as a PNG of at most 2048
-// pixels on the long edge. It reads no catalog row and writes nothing. Never
+// JPEG within the byte limit and pixel budget, and re-encodes it as a PNG of
+// at most 2048 pixels on the long edge. It reads no catalog row and writes nothing. Never
 // call it inside writes.Run. Defer Discard before the write that inserts it.
 func StageImage(c *database.Catalog, absPath string) (*StagedImage, error) {
 	if _, err := c.DB(); err != nil {
