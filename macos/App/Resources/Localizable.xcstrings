@@ -11181,7 +11181,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add property, unavailable — this Source has no Artifacts"
+            "value": "Add property, unavailable — this evidence graph has no artifacts"
           }
         }
       }
@@ -18630,7 +18630,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Provenencia couldn't read this Source's Evidence graph, so it can't list the rows to promote. Go back to the graph and open Promote again."
+            "value": "Provenencia couldn't read this Evidence graph, so it can't list the rows to promote. Go back to the graph and open Promote again."
           }
         }
       }
@@ -18642,7 +18642,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Provenencia couldn't read this Source's Evidence graph to propose the rows again. Your rows and decisions are kept."
+            "value": "Provenencia couldn't read this Evidence graph to propose the rows again. Your rows and decisions are kept."
           }
         }
       }
@@ -18850,7 +18850,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Adds a row for every other person, event and place on this Source"
+            "value": "Adds a row for every other person, event and place on this Evidence graph"
           }
         }
       }
@@ -19414,7 +19414,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pick two subjects on this Source. The pair decides what the bridge can say"
+            "value": "Pick two subjects on this Evidence graph. The pair decides what the bridge can say"
           }
         }
       }

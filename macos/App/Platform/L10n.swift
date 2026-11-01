@@ -1433,8 +1433,8 @@ enum L10n {
         static let done = LocalizedStringResource("promote.done.action", defaultValue: "Done", comment: "Promotes the rows on the Promote page")
         static let cancel = LocalizedStringResource("promote.cancel", defaultValue: "Cancel", comment: "Leaves the Promote page")
         static let staleTitle = LocalizedStringResource("promote.stale.title", defaultValue: "Nothing was promoted — the catalog changed while this page was open", comment: "Callout title when Done loses the revision race")
-        static let graphUnavailable = LocalizedStringResource("promote.error.graphUnavailable", defaultValue: "Provenencia couldn't read this Source's Evidence graph, so it can't list the rows to promote. Go back to the graph and open Promote again.", comment: "Callout when the Promote page opens without the Source's graph; the page would otherwise look empty")
-        static let graphUnavailableRepropose = LocalizedStringResource("promote.error.graphUnavailableRepropose", defaultValue: "Provenencia couldn't read this Source's Evidence graph to propose the rows again. Your rows and decisions are kept.", comment: "Callout when proposing again after a decision can't read the Source's graph")
+        static let graphUnavailable = LocalizedStringResource("promote.error.graphUnavailable", defaultValue: "Provenencia couldn't read this Evidence graph, so it can't list the rows to promote. Go back to the graph and open Promote again.", comment: "Callout when the Promote page opens without its Evidence graph; the page would otherwise look empty")
+        static let graphUnavailableRepropose = LocalizedStringResource("promote.error.graphUnavailableRepropose", defaultValue: "Provenencia couldn't read this Evidence graph to propose the rows again. Your rows and decisions are kept.", comment: "Callout when proposing again after a decision can't read the Evidence graph")
         static let stale = LocalizedStringResource("promote.stale.notice", defaultValue: "Provenencia proposed the rows again. Rows you decided are kept. Review the updated rows and press Done.", comment: "Callout body when Done loses the revision race")
         static func promotedTitle(promoted: Int, connections: Int) -> String {
             L10n.format(LocalizedStringResource("promote.toast.promotedTitle", defaultValue: "Promoted %1$lld subjects and %2$lld connections", comment: "Toast title after Done; 1 = subjects promoted, 2 = connections promoted"), promoted, connections)
@@ -1458,7 +1458,7 @@ enum L10n {
         static func singleSummary(more: Int) -> String {
             L10n.format(LocalizedStringResource("promote.page.singleSummary", defaultValue: "1 row · %lld more on this graph", comment: "Header before the rest of the graph is mapped; argument is how many other subjects"), more)
         }
-        static let mapRestHint = LocalizedStringResource("promote.page.mapRestHint", defaultValue: "Adds a row for every other person, event and place on this Source", comment: "Beside the control that maps the rest of the graph")
+        static let mapRestHint = LocalizedStringResource("promote.page.mapRestHint", defaultValue: "Adds a row for every other person, event and place on this Evidence graph", comment: "Beside the control that maps the rest of the graph")
         static let columnSource = LocalizedStringResource("promote.page.column.source", defaultValue: "On this Source", comment: "Promote row column: the subject on this Source")
         static let columnTarget = LocalizedStringResource("promote.page.column.target", defaultValue: "Promotes to", comment: "Promote row column: the handle the subject will promote to")
         static func sectionCount(_ count: Int) -> String {
@@ -1729,8 +1729,8 @@ enum L10n {
 
         static let addPropertyUnavailable = LocalizedStringResource(
             "evidenceGraph.subject.addPropertyUnavailable",
-            defaultValue: "Add property, unavailable — this Source has no Artifacts",
-            comment: "VoiceOver when Add property is disabled because the Source has no Artifact"
+            defaultValue: "Add property, unavailable — this evidence graph has no artifacts",
+            comment: "VoiceOver when Add property is disabled because the graph has no Artifact"
         )
 
         // MARK: Promote + membership footer (S9-D8 / S9-04)
@@ -4007,7 +4007,7 @@ enum L10n {
 
         static let pairPickBoth = LocalizedStringResource(
             "citationComposer.pairPickBoth",
-            defaultValue: "Pick two subjects on this Source. The pair decides what the bridge can say",
+            defaultValue: "Pick two subjects on this Evidence graph. The pair decides what the bridge can say",
             comment: "Bridge draft before either end is chosen"
         )
 
