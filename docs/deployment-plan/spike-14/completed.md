@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-14 — Copy and VoiceOver on graph work
+
+**Landed 2026-11-01** in [#675](https://github.com/mendahu/provenencia/pull/675). Return cancels a danger confirm (`PVConfirmTone.returnConfirms`), and a dirty graph form or Artifact card asks "Discard changes?" before a Kept-linked link or another card takes it, through one `PVDiscardGate` the sheet chrome (`pvSheetClose`), the Artifact cards and the composer share. Toasts, error callouts and error lines (`announces: true`) speak to VoiceOver through `pvAnnounce`, section titles are headings, and `PVField` gives its label to the `PVInput`, `PVTextArea` or `PVSelect` inside it. `WorkspaceLocationLabels` names the open Evidence graph in the crumbs, the Back / Forward rows and the canvas's VoiceOver label. Four counts and the 18 delete-impact kind nouns are plural keys, five strings name the Evidence graph, and `check-localizable-xcstrings.py` fails on an uninflected `%lld <word>`. A failed Citation load names the Citation under the picker, a file macOS fails to open says so (`ObjectRefusal.notOpened`), and the Source type editor returns focus to the Type pencil. Version 0.2.6.
+
 ## S14-12 — File work before the catalog session
 
 **Landed 2026-11-01** in [#664](https://github.com/mendahu/provenencia/pull/664). Attaching a scan, saving a depiction, setting a Source cover and opening a Source page with missing thumbnails no longer copy, hash, decode or encode while holding the catalog session. One `ingest.Staged` type (`StageFile`, `StageImage`, `StageBytes`) stages into a temp in `objects/` outside `catalogsession.Do`; `withStaged` / `withStagedDepictions` stage first, and the session only looks up, inserts and installs (`Settle` purges what a write did not use). `derivatives.Plan` / `Job.Stage` / `Commit` split a thumbnail, and `thumbnailPass` commits them in batches of 16; `sources.NormalizeCover` is lookup-only. `catalogsessiontest.Hold` holds the session in tests. Version 0.2.5. Audit A-24.
