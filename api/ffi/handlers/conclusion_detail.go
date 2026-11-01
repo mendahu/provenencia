@@ -129,7 +129,7 @@ func derivedRowsProto(rows []conclusiondetails.DerivedRow) []*engine.DerivedRow 
 		for _, o := range r.Owners {
 			po := &engine.ConclusionOwnerField{Entity: canonicalEntityProto(o.Entity), Field: conclusionFieldProto(o.Field)}
 			if o.Event != nil {
-				po.Event = eventSummaryProto(*o.Event)
+				po.Event = eventSummaryProto(*o.Event, nil)
 			}
 			if o.Place != nil {
 				po.Place = chainedPlaceProto(*o.Place)
@@ -214,7 +214,7 @@ func attachSummary(c *database.Catalog, d conclusiondetails.Detail, out *engine.
 		if err != nil || len(h) != 1 {
 			return nil, err
 		}
-		out.Summary = &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Person{Person: personSummaryProto(h[0])}}
+		out.Summary = &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Person{Person: personSummaryProto(h[0], nil)}}
 		rows, err := conclusiondetails.PersonDerivedRows(c, d.Entity.ID)
 		if err != nil {
 			return nil, err
@@ -226,7 +226,7 @@ func attachSummary(c *database.Catalog, d conclusiondetails.Detail, out *engine.
 		if err != nil || len(h) != 1 {
 			return nil, err
 		}
-		out.Summary = &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Event{Event: eventSummaryProto(h[0])}}
+		out.Summary = &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Event{Event: eventSummaryProto(h[0], nil)}}
 		return h[0].PictureImageFileID, nil
 	case vocabkey.Place:
 		h, err := conclusionsummaries.PlacesByIDs(c, ids)
@@ -236,7 +236,7 @@ func attachSummary(c *database.Catalog, d conclusiondetails.Detail, out *engine.
 		if err := conclusionsummaries.AttachPlaceRelationships(c, &h[0]); err != nil {
 			return nil, err
 		}
-		out.Summary = &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Place{Place: placeSummaryProto(h[0])}}
+		out.Summary = &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Place{Place: placeSummaryProto(h[0], nil)}}
 		return h[0].PictureImageFileID, nil
 	}
 	return nil, nil

@@ -463,7 +463,7 @@ func TestSummaryProtosCarryTerms(t *testing.T) {
 				Term:  &conclusionsummaries.Term{ID: termID, Key: "woman", Origin: "provenencia", Label: "Woman"},
 				Count: 1, PropertyLabel: "Gender",
 			},
-		})
+		}, nil)
 		g := got.GetGender()
 		if g.GetTerm().GetId() != database.UUIDString(termID) || g.GetTerm().GetKey() != "woman" || g.GetTerm().GetLabel() != "Woman" || g.GetTerm().GetOrigin() != "provenencia" || g.GetCount() != 1 || g.GetPropertyLabel() != "Gender" {
 			t.Fatalf("gender %+v", g)
@@ -476,11 +476,11 @@ func TestSummaryProtosCarryTerms(t *testing.T) {
 		got := eventSummaryProto(conclusionsummaries.EventSummary{Type: conclusionsummaries.TermFacts{
 			Term:  &conclusionsummaries.Term{ID: termID, Key: "birth", Origin: "provenencia", Label: "Birth"},
 			Count: 2,
-		}})
+		}}, nil)
 		if et := got.GetEventType(); et.GetKey() != "birth" || et.GetLabel() != "Birth" || et.GetOrigin() != "provenencia" || got.GetEventTypeCount() != 2 {
 			t.Fatalf("event type %+v count %d", et, got.GetEventTypeCount())
 		}
-		if bare := eventSummaryProto(conclusionsummaries.EventSummary{}); bare.GetEventType() != nil {
+		if bare := eventSummaryProto(conclusionsummaries.EventSummary{}, nil); bare.GetEventType() != nil {
 			t.Fatalf("event type %+v", bare.GetEventType())
 		}
 	})

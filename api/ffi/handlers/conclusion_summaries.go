@@ -21,20 +21,12 @@ func ListPersonSummaries(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		var imageIDs [][]byte
-		for _, h := range summaries {
-			if len(h.PictureImageFileID) > 0 {
-				imageIDs = append(imageIDs, h.PictureImageFileID)
-			}
-		}
-		paths, err := files.RelPaths(c, imageIDs)
+		paths, err := picturePaths(c, summaries, func(h conclusionsummaries.PersonSummary) []byte { return h.PictureImageFileID })
 		if err != nil {
 			return err
 		}
 		for _, h := range summaries {
-			ph := personSummaryProto(h)
-			ph.PictureImageRelPath = paths[string(h.PictureImageFileID)]
-			out.Summaries = append(out.Summaries, ph)
+			out.Summaries = append(out.Summaries, personSummaryProto(h, paths))
 		}
 		return nil
 	})
@@ -44,6 +36,19 @@ func ListPersonSummaries(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
+// picturePaths resolves the lead picture of each row to its objects/… path in
+// one files.RelPaths call, keyed by image File; image reads a row's image File
+// (empty when it has none).
+func picturePaths[S any](c *database.Catalog, rows []S, image func(S) []byte) (map[string]string, error) {
+	var ids [][]byte
+	for _, r := range rows {
+		if id := image(r); len(id) > 0 {
+			ids = append(ids, id)
+		}
+	}
+	return files.RelPaths(c, ids)
+}
+
 // conclusionSummaryProto wraps the summary of the handle id of the given kind,
 // nil when that id was not read. paths maps a lead picture's image File to its
 // objects/… path (files.RelPaths); a nil map leaves the path empty.
@@ -51,32 +56,29 @@ func conclusionSummaryProto(s conclusionsummaries.Summaries, kind string, id []b
 	switch kind {
 	case vocabkey.Person:
 		if p, ok := s.Person(id); ok {
-			ps := personSummaryProto(p)
-			ps.PictureImageRelPath = paths[string(p.PictureImageFileID)]
-			return &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Person{Person: ps}}
+			return &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Person{Person: personSummaryProto(p, paths)}}
 		}
 	case vocabkey.Event:
 		if e, ok := s.Event(id); ok {
-			es := eventSummaryProto(e)
-			es.PictureImageRelPath = paths[string(e.PictureImageFileID)]
-			return &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Event{Event: es}}
+			return &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Event{Event: eventSummaryProto(e, paths)}}
 		}
 	case vocabkey.Place:
 		if p, ok := s.Place(id); ok {
-			ps := placeSummaryProto(p)
-			ps.PictureImageRelPath = paths[string(p.PictureImageFileID)]
-			return &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Place{Place: ps}}
+			return &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Place{Place: placeSummaryProto(p, paths)}}
 		}
 	}
 	return nil
 }
 
-func personSummaryProto(h conclusionsummaries.PersonSummary) *engine.PersonSummary {
+// personSummaryProto maps h to the wire; paths gives its lead picture's objects/…
+// path (picturePaths), and a nil map leaves it empty.
+func personSummaryProto(h conclusionsummaries.PersonSummary, paths map[string]string) *engine.PersonSummary {
 	ph := &engine.PersonSummary{
-		Entity:          canonicalEntityProto(h.Entity),
-		NameValueCount:  int32(h.NameValueCount),
-		UpdatedRevision: h.Updated.Revision,
-		UpdatedAt:       h.Updated.At,
+		PictureImageRelPath: paths[string(h.PictureImageFileID)],
+		Entity:              canonicalEntityProto(h.Entity),
+		NameValueCount:      int32(h.NameValueCount),
+		UpdatedRevision:     h.Updated.Revision,
+		UpdatedAt:           h.Updated.At,
 	}
 	if h.Name != nil {
 		ph.Name = valuecodec.NameToProto(*h.Name)
@@ -139,20 +141,12 @@ func ListEventSummaries(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		var imageIDs [][]byte
-		for _, h := range summaries {
-			if len(h.PictureImageFileID) > 0 {
-				imageIDs = append(imageIDs, h.PictureImageFileID)
-			}
-		}
-		paths, err := files.RelPaths(c, imageIDs)
+		paths, err := picturePaths(c, summaries, func(h conclusionsummaries.EventSummary) []byte { return h.PictureImageFileID })
 		if err != nil {
 			return err
 		}
 		for _, h := range summaries {
-			eh := eventSummaryProto(h)
-			eh.PictureImageRelPath = paths[string(h.PictureImageFileID)]
-			out.Summaries = append(out.Summaries, eh)
+			out.Summaries = append(out.Summaries, eventSummaryProto(h, paths))
 		}
 		return nil
 	})
@@ -162,17 +156,20 @@ func ListEventSummaries(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func eventSummaryProto(h conclusionsummaries.EventSummary) *engine.EventSummary {
+// eventSummaryProto maps h to the wire; paths gives its lead picture's objects/…
+// path (picturePaths), and a nil map leaves it empty.
+func eventSummaryProto(h conclusionsummaries.EventSummary, paths map[string]string) *engine.EventSummary {
 	eh := &engine.EventSummary{
-		Entity:          canonicalEntityProto(h.Entity),
-		EventName:       h.EventName,
-		EventNameCount:  int32(h.EventNameCount),
-		EventTypeCount:  int32(h.Type.Count),
-		DateCount:       int32(h.DateCount),
-		StartDateCount:  int32(h.StartDateCount),
-		EndDateCount:    int32(h.EndDateCount),
-		UpdatedRevision: h.Updated.Revision,
-		UpdatedAt:       h.Updated.At,
+		PictureImageRelPath: paths[string(h.PictureImageFileID)],
+		Entity:              canonicalEntityProto(h.Entity),
+		EventName:           h.EventName,
+		EventNameCount:      int32(h.EventNameCount),
+		EventTypeCount:      int32(h.Type.Count),
+		DateCount:           int32(h.DateCount),
+		StartDateCount:      int32(h.StartDateCount),
+		EndDateCount:        int32(h.EndDateCount),
+		UpdatedRevision:     h.Updated.Revision,
+		UpdatedAt:           h.Updated.At,
 	}
 	eh.EventType = termProto(h.Type.Term)
 	if h.Date != nil {
@@ -212,20 +209,12 @@ func ListPlaceSummaries(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		var imageIDs [][]byte
-		for _, h := range summaries {
-			if len(h.PictureImageFileID) > 0 {
-				imageIDs = append(imageIDs, h.PictureImageFileID)
-			}
-		}
-		paths, err := files.RelPaths(c, imageIDs)
+		paths, err := picturePaths(c, summaries, func(h conclusionsummaries.PlaceSummary) []byte { return h.PictureImageFileID })
 		if err != nil {
 			return err
 		}
 		for _, h := range summaries {
-			ph := placeSummaryProto(h)
-			ph.PictureImageRelPath = paths[string(h.PictureImageFileID)]
-			out.Summaries = append(out.Summaries, ph)
+			out.Summaries = append(out.Summaries, placeSummaryProto(h, paths))
 		}
 		return nil
 	})
@@ -235,8 +224,11 @@ func ListPlaceSummaries(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func placeSummaryProto(h conclusionsummaries.PlaceSummary) *engine.PlaceSummary {
+// placeSummaryProto maps h to the wire; paths gives its lead picture's objects/…
+// path (picturePaths), and a nil map leaves it empty.
+func placeSummaryProto(h conclusionsummaries.PlaceSummary, paths map[string]string) *engine.PlaceSummary {
 	ph := &engine.PlaceSummary{
+		PictureImageRelPath:  paths[string(h.PictureImageFileID)],
 		Entity:               canonicalEntityProto(h.Entity),
 		Names:                h.Names,
 		Kind:                 h.Kind,
