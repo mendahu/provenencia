@@ -1,6 +1,6 @@
 # Review — S13-31 Header data becomes summaries
 
-**Verdict:** Fits with changes — Ready with changes (after round 2 fixes; one To user item open)
+**Verdict:** Fits with changes — Ready with changes (after round 2 fixes; To user answered)
 **Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
@@ -8,13 +8,14 @@
 - M-1 answered (2026-11-01): the band's line becomes `secondary` (D-10).
 - M-2 answered (2026-11-01): `HeaderPlace` → `ChainedPlace` (D-1).
 
-- **M-12 (round 2): an Event's date-and-place line is built twice** (band: `EventDetailContent.summaryDate`; list and search: `EventSecondaryDisplay.content`), with different precedence when a recorded `date` has records but no displayed value. Recommendation: keep D-10's names here; add a small map PR before S13-05 that has the band use `EventSecondaryDisplay` (with `locale:`) and settles the precedence. Plan Open question 1.
+- **M-12 (round 2): an Event's date-and-place line is built twice** (band: `EventDetailContent.summaryDate`; list and search: `EventSecondaryDisplay.content`), with different precedence when a recorded `date` has records but no displayed value. Writer recommended a PR before S13-05; **answered (2026-11-01): merge it in S13-31** → D-13.
 
 ## Writer's own calls
 - `PersonTitleDisplay` for `PersonHeaderDisplay` (M-3), matching its Event and Place siblings.
 - `summaryChainDepth` for `headerChainDepth`.
 - The folded field takes the lowest of each old oneof's numbers and reserves the other two.
 - Planning base is #659's head, not `main`, since S13-02 has not merged.
+- D-13's rule: the band takes the summary's precedence (kept `date`, else span), not the page's; changing Go's `eventDate` would move the Events list's date sort. In the edge case the band now shows the span while the Vitals Date row keeps the date field's records.
 - M-11 answered Fixed under the user's standing same-pass rule (dedupe refactors of copies a PR touches ride on that PR), not sent To user. Veto it and D-12 moves to a follow-up.
 
 ## Round 1
@@ -82,7 +83,7 @@ Reviewers fresh: maintainability (Opus), executability (Sonnet). Round-1 answers
 **Answer:** Fixed — D-12 *(new)*, STEP-3 *(new)*: `Want` and `Want.Add`, `ByIDs` and `RowsForSearch` take a `Want` and return `Summaries`; `handleHeaders` and the three splits go. The Out row is removed. Queries unchanged (each kind still one call).
 
 ### M-12 · blocker · Two builders of an Event's date-and-place line under one name
-**Answer:** To user — Open question 1 (behavior call on date precedence).
+**Answer:** To user → answered: merge in S13-31 (D-13, T-7, AC-1.6).
 
 ### B-1 · blocker · `git grep -E` has no `\b`
 **Answer:** Fixed — sweeps use `-P` (verified: `-E 'TitleSource\b'` finds nothing at the base, `-P` finds 3).

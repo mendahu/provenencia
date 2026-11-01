@@ -1,6 +1,6 @@
 # S13-31 — Header data becomes summaries
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 13 · Slice 3 — Family (the Family and Timeline reads, S13-04 and S13-05, are planned on the new names)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: code names only; every view looks and reads the same)
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/swift-tests.mdc`
 **Context:** working rule "One person header for every tile" (renamed here); [`macos-client-patterns.md`](../../../macos-client-patterns.md); [`conclusion-reconciliation.md`](../../../conclusion-reconciliation.md)
 **Planned:** 2026-11-01 against `s13-02-gender-in-the-person-header` @ `3ee06273` (#659's head; branch from `main` after #659 merges)
-**Review:** [`S13-31-header-data-becomes-summaries.review.md`](S13-31-header-data-becomes-summaries.review.md) — 2 rounds; Fits with changes / Ready with changes; one To user item open (Open questions 1)
+**Review:** [`S13-31-header-data-becomes-summaries.review.md`](S13-31-header-data-becomes-summaries.review.md) — 2 rounds; Fits with changes / Ready with changes; every finding Fixed or answered by the user (2026-11-01)
 
 ### Implementer — read this first
 
@@ -30,11 +30,11 @@
 
 ## 1. Objective
 
-"Header" names two things today: the band at the top of a Conclusion page (`ConclusionDetailHeader`) and the data type that holds one person's, event's or place's core facts for every row and tile (`PersonHeader`, `EventHeader`, `PlaceHeader`). The data type becomes a **summary** in Go, proto and Swift, so "header" means only the band (user, 2026-11-01). The band's line under the title, which the page code calls `summary` today, becomes `secondary`, as the list pages already call it (user, 2026-11-01). After this PR: **header** is the band, **secondary** is the line under a title, **summary** is the data. Nothing a researcher sees changes.
+"Header" names two things today: the band at the top of a Conclusion page (`ConclusionDetailHeader`) and the data type that holds one person's, event's or place's core facts for every row and tile (`PersonHeader`, `EventHeader`, `PlaceHeader`). The data type becomes a **summary** in Go, proto and Swift, so "header" means only the band (user, 2026-11-01). The band's line under the title, which the page code calls `summary` today, becomes `secondary`, as the list pages already call it (user, 2026-11-01). After this PR: **header** is the band, **secondary** is the line under a title, **summary** is the data. The Event band's date-and-place line is built by the same helper as the Events list's, from the summary (user, 2026-11-01). That is the one change a researcher can see, in one edge case (D-13); everything else looks the same.
 
 **Why now.** S13-04 (family read) and S13-05 (timeline read) return these types to the Family and Timeline tiles, where a tile is not a header at all. Renaming before they are planned means their plans, code and tests use the new names from the start (user, 2026-11-01: right after S13-02).
 
-**What stays.** Every field, value, rule, cache and query. The band's own names (D-2). The graph cache's display slot (`Display`, `SetDisplay`, `dropDisplays`, `DepsFunc`). Landed plans, review logs, ship logs, audits and `completed.md`, which keep the names they shipped with.
+**What stays.** Every field, value, rule, cache and query, except D-13's band line. The band's own names (D-2). The graph cache's display slot (`Display`, `SetDisplay`, `dropDisplays`, `DepsFunc`). Landed plans, review logs, ship logs, audits and `completed.md`, which keep the names they shipped with.
 
 ## 2. User stories
 
@@ -47,6 +47,7 @@
 | AC-1.3 | `PersonSummary`, `EventSummary`, `PlaceSummary`, `ChainedPlace` in `core/database/conclusionsummaries` | hold exactly the fields `PersonHeader`, `EventHeader`, `PlaceHeader`, `HeaderPlace` hold at the planning base; every test that passed at the base passes, renamed only |
 | AC-1.4 | The app reads the Persons, Events and Places lists, a Conclusion page, search hits and a Promote proposal | each shows what it showed at the base (Swift tests below, renamed only; manual check §10) |
 | AC-1.5 | The **map sweep** below runs at the PR head | it prints only lines of the S13-02 and S13-31 PR-map rows and scope entries |
+| AC-1.6 | An Event whose summary has date 14 May 1817; and an Event whose `date` field has records but no displayed value, with start 1849 and end 1851 kept | the band shows "14 May 1817" and the list row shows "14 May 1817"; the band shows the 1849–1851 span, as the Events list row does (at the base the band showed no date) |
 
 **Old-name sweep** (AC-1.1, T-4):
 
@@ -80,7 +81,7 @@ grep -nE 'PersonHeader|EventHeader|PlaceHeader|HeaderPlace|conclusionheaders|per
 | Proto: messages, fields, `Method` values and comments named for the data; the four `oneof header` blocks folded into one `ConclusionSummary` (D-4); regenerated Go and Swift; FFI handlers | STEP-4 |
 | Swift: wire mapping onto the regenerated names | STEP-4 |
 | Swift: wire types, store methods, display helpers (D-1, D-6) | STEP-5 |
-| Swift: the band's `summary` slot → `secondary` (D-10) | STEP-6 |
+| Swift: the band's `summary` slot → `secondary` (D-10); the Event band line from `EventSecondaryDisplay` (D-13) | STEP-6, AC-1.6 |
 | Swift: properties, locals, test names, file moves (D-3, D-6, D-9, D-11) | STEP-7 |
 | Docs: living docs, skills, rules, and the map lines in D-8 | STEP-8, AC-1.5 |
 
@@ -134,6 +135,7 @@ Verified at `3ee06273`. 76 hand-written files carry a data name (`git grep -l` w
 | D-10 | **The band's line is secondary.** `ConclusionDetailPage<Content, Secondary: View, PageSections>`, `let secondary`, `secondary:` parameters; `ConclusionDetailLoaded<Content, Secondary, PageSections>` (425; `let secondary` 431, uses at 455 and 469), `ConclusionDetailHeaderBand<Content, Secondary>`, `ConclusionDetailHeader<Content, Secondary>`; the doc comment at 245 and the comment at 685 "the kind's secondary line"; `EventDetailSummary` → `EventDetailSecondary`; `summaryDate`, `summaryPlace` → `secondaryDate`, `secondaryPlace`; the `summary:` arguments in `PersonDetailView`, `EventDetailView`, `PlaceDetailView`; `EventDetailTests` | User, 2026-11-01: matches the list pages' `Secondary` and `ConclusionHeaderDisplay.secondary`, so "summary" means only the data | Leaving the band's `summary` — two meanings in one struct (`EventDetailContent`) |
 | D-11 | `PersonHeaderDisplay.TitleSource` (a typealias of `ConclusionTitleSource`) is deleted; `PersonDetailContent.swift:16` uses `ConclusionTitleSource`, as `EventDetailContent.swift:7` does | One name for the title source type | — |
 | D-12 | **One split by kind, one by-id result.** `conclusionsummaries.Want` *(new)* holds person, event and place ids; `func (w *Want) Add(kind string, id []byte)` keeps a 16-byte id of kind `vocabkey.Person`, `Event` or `Place` and ignores the rest (`search.KindPerson` and siblings equal the `vocabkey` values, `core/search/search.go:21-23`). `ByIDs(c *database.Catalog, w Want) (Summaries, error)` and `RowsForSearch(g *graphcache.Graph, w Want) (Summaries, error)` replace their three-slice forms. `fillHitHeaders`, `proposalProto` (`addHeaderID` goes) and `loadHandleHeaders` call `Want.Add`; `searchindex.handleHeaders` is deleted and `matchText` reads `Summaries` by the raw id (the `heads` map key). Each kind is still read in one call, so queries are unchanged | User's standing same-pass rule: this PR renames every copy, so the dedupe rides here (review M-11). Three splits and two by-id types become one each, and S13-04 and S13-05's mixed-kind reads add none | Out row to a follow-up — a second mechanism is answered here or by the user, not deferred (review-plan Floors) |
+| D-13 | **One builder for an Event's date-and-place line** (user, 2026-11-01). `EventDetailContent` fills `secondaryDate` and `secondaryPlace` from `EventSecondaryDisplay.content(summary, locale:)`; `EventSecondaryDisplay.content` and `.line` gain `locale: Locale = .autoupdatingCurrent`, passed to `DateRowDisplay.line(date:start:end:locale:)`. `EventDetailContent.summaryDate(_:locale:)` is deleted. The rule is the summary's: the rank-1 kept `date`, else the kept start–end span (`conclusionsummaries` `eventDate` and the event compose that clears the span when a date is kept). The band ignores `extraPlaces`, as it does today. The Vitals Date row keeps its own field-based rule (`dateRow`) | The summary already feeds the Events list, search and Promote; the band joins them, so S13-05's timeline rows have one helper. Edge: a `date` with records and no kept value showed no band date; it now shows the span, as the list does. The Date row still shows that field's records | The page rule in Go — `eventDate` also drives the list's date sort, so changing it moves list order |
 
 **Rules this plan bends.** None. It renames working rule "One person header for every tile" to "One person summary for every tile" at the user's request (2026-11-01); the rule's content is unchanged.
 
@@ -152,7 +154,7 @@ Verified at `3ee06273`. 76 hand-written files carry a data name (`git grep -l` w
 Every other name is a rename of an existing type (D-1).
 
 **Builds on.** S14-01's rename shape (`8e519655`, `067e26a0`); `./scripts/generate-proto.sh`; `add-swift-test`'s pbxproj notes.
-**Deletes.** `HeaderDependents` (D-5); `PersonHeaderDisplay.TitleSource` (D-11); the four `oneof header` blocks, three of the four Go wrapping switches (`attachSummary` keeps its reads), three of the four Swift union mappers (D-4); `searchindex.handleHeaders` and the three hand-written splits by kind in `fillHitHeaders`, `proposalProto` (`addHeaderID`) and `loadHandleHeaders` (D-12).
+**Deletes.** `HeaderDependents` (D-5); `EventDetailContent.summaryDate(_:locale:)` (D-13); `PersonHeaderDisplay.TitleSource` (D-11); the four `oneof header` blocks, three of the four Go wrapping switches (`attachSummary` keeps its reads), three of the four Swift union mappers (D-4); `searchindex.handleHeaders` and the three hand-written splits by kind in `fillHitHeaders`, `proposalProto` (`addHeaderID`) and `loadHandleHeaders` (D-12).
 **Next adds.** S13-04 (`GetPersonFamily` returns `PersonSummary`s through `conclusionsummaries.ByIDs`), S13-05 (`ListPersonEvents` returns `EventSummary`s with {role, `PersonSummary`}), the S13-12 and S13-13 tiles read `CatalogPersonSummary`. A message that carries one summary of any kind adds one `ConclusionSummary` field.
 
 ### Reach
@@ -238,7 +240,7 @@ Check: `scripts/check-pr.sh` PASS.
 
 **STEP-6 — The band's line becomes secondary**
 Files: `ConclusionDetailPage.swift`, `PersonDetailView.swift`, `EventDetailView.swift`, `PlaceDetailView.swift`, `EventDetailContent.swift`, `EventDetailTests.swift`.
-Do: D-10.
+Do: D-10. D-13: `EventDetailContent` reads `EventSecondaryDisplay.content(summary, locale:)`; delete `summaryDate(_:locale:)`; the tests at `EventDetailTests.swift` 81, 92 and 144 give their detail a summary carrying the same dates and keep their expected strings; add T-7.
 Check: `git grep -nwE 'Summary|summary|summaryDate|summaryPlace|EventDetailSummary' -- macos/App/Features/Conclusions/ConclusionDetailPage.swift 'macos/App/Features/Conclusions/*DetailView.swift' macos/App/Features/Conclusions/EventDetailContent.swift` prints only lines naming `CatalogConclusionSummary`; `scripts/check-pr.sh` PASS.
 
 **STEP-7 — Swift names, files and tests**
@@ -255,7 +257,7 @@ Commits: one per step. Subjects are full sentences ("Rename the conclusion heade
 
 ## 8. Tests
 
-No new behavior tests: each existing test passing under its new name pins the rename. The fold (D-4) is covered by the tests that read each oneof today.
+One new behavior test (T-7, D-13); otherwise each existing test passing under its new name pins the rename. The fold (D-4) is covered by the tests that read each oneof today.
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
@@ -265,6 +267,7 @@ No new behavior tests: each existing test passing under its new name pins the re
 | T-4 | Grep | old-name sweep (§2) | → no output | AC-1.1 |
 | T-5 | Grep | word sweep (§2) | → keep-list lines only | AC-1.2, D-3 |
 | T-6 | Grep | map sweep (§2) | → S13-02 and S13-31 lines only | AC-1.5, D-8 |
+| T-7 | Swift | `macos/ProvenenciaTests/EventDetailTests.swift` `bandLineReadsTheSummary` *(new)* | summary date 14 May 1817, no date fields → band "14 May 1817"; `date` field with records and no displayed value, summary with start 1849 and end 1851 → band equals `EventSecondaryDisplay.content(summary, locale: en).date` (the span); locale `en` | AC-1.6, D-13 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `xcode-test` (pbxproj paths, the folded oneof), `guidance-names` (a skill naming an old symbol).
 
@@ -290,7 +293,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `x
 ## 10. Manual check
 
 1. Build and run. Open a project with Persons, Events and Places. The Persons, Events and Places lists show the same rows, titles, dates and thumbnails as on `main`.
-2. Open a Person: the band at the top shows the name, life lines, gender badge and thumb as on `main`. Open an Event (date and place under the title) and a Place (its chain): the same.
+2. Open a Person: the band at the top shows the name, life lines, gender badge and thumb as on `main`. Open an Event: the date and place under the title match its Events list row. Open a Place (its chain): as on `main`.
 3. Type a person's name in the omnibar: the hit row reads as on `main`. Open Promote on a Source: the proposal rows and their alternatives read as on `main`.
 
 ## 11. Risks and stop conditions
@@ -304,15 +307,15 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `x
 **Stop and report if:**
 
 - Any name in §4 is stored or read back from disk, a JSON file, a golden file, `UserDefaults` or navigation history (a hit for an old name outside Go, proto and Swift source).
-- A test can pass only by changing an assertion, not a name or the oneof accessor.
+- A test other than T-7 can pass only by changing an asserted value, not a name, the oneof accessor, or (for D-13's three tests) the fixture.
 - A file under §4 Current state has changed at your base so a row no longer holds (for example S13-04 landed first and added header names).
 - A fifth `oneof` over person, event and place exists at your base that §4 does not list.
 
 ## 12. Open questions
 
-1. **An Event's date-and-place line is built twice (review M-12).** The page band uses `EventDetailContent.summaryDate(_:locale:)` from the detail's fields (a recorded `date` with records wins, even when none of its values is displayed); the Events list and search use `EventSecondaryDisplay.content` from the summary (`DateRowDisplay.line(date:start:end:)`). After D-10 they are `secondaryDate` and `EventSecondaryDisplay`. Merging them changes which date the band shows in that edge case, so it is a behavior call. Recommended: keep D-10's names in this PR, and add a small map PR before S13-05 (whose timeline rows show an Event's date and place) that makes the band use `EventSecondaryDisplay` with a `locale:` parameter and settles the precedence.
+None.
 
 ## 13. PR
 
 **Title:** S13-31 — Header data becomes summaries
-**Body:** objective in one sentence; US-1 against AC-1.1 – AC-1.5 with the three sweeps' output; the D-4 fold; deviations; manual check; `Plan: docs/deployment-plan/spike-13/prs/S13-31-header-data-becomes-summaries.md`.
+**Body:** objective in one sentence; D-13's band-line change and its edge case; US-1 against AC-1.1 – AC-1.5 with the three sweeps' output; the D-4 fold; deviations; manual check; `Plan: docs/deployment-plan/spike-13/prs/S13-31-header-data-becomes-summaries.md`.
