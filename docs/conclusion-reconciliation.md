@@ -270,7 +270,7 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 
 # 12. Implementation status
 
-The auto-reconciler, its cache, the pages that read it, place chains, Promote, and header search documents have shipped. A full rebuild of the cache matches incremental upkeep.
+The auto-reconciler, its cache, the pages that read it, place chains, Promote, and summary search documents have shipped. A full rebuild of the cache matches incremental upkeep.
 
 | Piece | Where |
 | --- | --- |
@@ -282,9 +282,9 @@ The auto-reconciler, its cache, the pages that read it, place chains, Promote, a
 | Cache, evidence, outcomes, and upkeep (credibility and certainty included) | `core/database/autoreconciler` |
 | Detail read: each field's state, values, and outcomes with their evidence | `core/database/conclusiondetails` |
 | Subject-valued bridges filed by their ends | `core/database/identityclaims` |
-| Place chains at a date, folded from `part_of` | `core/database/conclusionheaders` |
+| Place chains at a date, folded from `part_of` | `core/database/conclusionsummaries` |
 | Graph alignment and the proposal read | `core/graphalign`, `core/database/promotealign` |
 | Batch Promote: claims and bridges in one transaction | `core/database/promote` |
-| Search documents composed from the list headers | `core/database/searchindex`, `core/search` |
+| Search documents composed from the list summaries | `core/database/searchindex`, `core/search` |
 
 Reconciliation Claims, which would override a cached value, are not built. An earlier names-first cut of the name and evidence work was closed; its migrations landed with the schema that shipped.

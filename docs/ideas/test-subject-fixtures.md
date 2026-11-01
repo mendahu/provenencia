@@ -4,4 +4,4 @@
 
 ## One placement write
 
-These test helpers create a Subject with `subjects.Create` and no placement, then run a second write with `subjectpositions.Set`: promotealign, canonicalgraph, the graphcache walk, the promote batch, autoreconciler, grapheventtitles, the conclusionheaders walks and search handles. `subjectstest.At` takes a `subjects.Placement`, so each can create and place the Subject in one write; moving them onto it is the work left.
+These test helpers create a Subject with `subjects.Create` and no placement, then run a second write with `subjectpositions.Set`: promotealign, canonicalgraph, the graphcache walk, the promote batch, autoreconciler, grapheventtitles, the conclusionsummaries walks and search handles. `subjectstest.At` takes a `subjects.Placement`, so each can create and place the Subject in one write; moving them onto it is the work left.
