@@ -1,18 +1,21 @@
 # Review — S13-31 Header data becomes summaries
 
-**Verdict:** Fits with changes — Not ready → Ready with changes after round 1 fixes (pending D-4)
-**Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes (after round 2 fixes; one To user item open)
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
-- **D-4 (M-6): fold the four `oneof header` blocks into one `ConclusionSummary` message?** Recommendation: yes. The user asked (2026-11-01) whether it still makes sense if the person, event and place detail pages diverge. The fold shares only the wrapper that says which kind a summary is; each kind's message stays its own, and page content lives in `ConclusionDetail`'s fields and sections. Open until answered.
+- **D-4 (M-6): fold the four `oneof header` blocks into one `ConclusionSummary` message?** Answered (2026-11-01): yes, fold them. The user first asked whether it still makes sense if the detail pages diverge; the fold shares only the wrapper, each kind's message stays its own, and page content lives in `ConclusionDetail`.
 - M-1 answered (2026-11-01): the band's line becomes `secondary` (D-10).
 - M-2 answered (2026-11-01): `HeaderPlace` → `ChainedPlace` (D-1).
+
+- **M-12 (round 2): an Event's date-and-place line is built twice** (band: `EventDetailContent.summaryDate`; list and search: `EventSecondaryDisplay.content`), with different precedence when a recorded `date` has records but no displayed value. Recommendation: keep D-10's names here; add a small map PR before S13-05 that has the band use `EventSecondaryDisplay` (with `locale:`) and settles the precedence. Plan Open question 1.
 
 ## Writer's own calls
 - `PersonTitleDisplay` for `PersonHeaderDisplay` (M-3), matching its Event and Place siblings.
 - `summaryChainDepth` for `headerChainDepth`.
 - The folded field takes the lowest of each old oneof's numbers and reserves the other two.
 - Planning base is #659's head, not `main`, since S13-02 has not merged.
+- M-11 answered Fixed under the user's standing same-pass rule (dedupe refactors of copies a PR touches ride on that PR), not sent To user. Veto it and D-12 moves to a follow-up.
 
 ## Round 1
 
@@ -32,7 +35,7 @@
 **Answer:** Fixed — §2 adds the word sweep over changed files with D-2's keep list (AC-1.2, T-5); D-3 names `addHeaderID`, `handleHeaders`, `headerChainDepth` and the other compounds; D-2 lists every kept band name.
 
 ### M-6 · major · The person/event/place oneof is written four times in proto, Go and Swift
-**Answer:** To user — D-4 written for the fold, Open question 1. Contradicts the first "rename only" framing, so the user decides.
+**Answer:** To user → answered: fold (D-4).
 
 ### M-7 · minor · `searchindex.handleHeaders` rebuilds the package's by-id result
 **Answer:** Declined for this PR — it is a refactor of `RowsForSearch`'s return type, not a rename; Out row with the PR body as its follow-up home.
@@ -68,3 +71,32 @@ Logged. The comment is reworded (D-4); `Summaries` kept, as D-1's user word.
 **Answer:** Fixed — D-8 names `add-audit-scope/SKILL.md:80` and `swift-tests.mdc:23`; D-7 names the proto comment lines.
 
 Nits (logged): STEP-3's number check is a script, not a reading (X, "Checks I could not run").
+
+## Round 2
+Reviewers fresh: maintainability (Opus), executability (Sonnet). Round-1 answers held except M-7 (below).
+
+### M-10 · blocker · `attachHeader` cannot fold; `conclusionSummaryProto` had no shape
+**Answer:** Fixed — D-4 gives `conclusionSummaryProto(s Summaries, kind string, id []byte) *engine.ConclusionSummary`; `attachSummary` keeps its per-kind reads; Deletes says three of four switches.
+
+### M-11 · blocker · The split by kind is hand-written three times; `searchindex.handleHeaders` is a second by-id type; M-7 moved to Out against the Floors
+**Answer:** Fixed — D-12 *(new)*, STEP-3 *(new)*: `Want` and `Want.Add`, `ByIDs` and `RowsForSearch` take a `Want` and return `Summaries`; `handleHeaders` and the three splits go. The Out row is removed. Queries unchanged (each kind still one call).
+
+### M-12 · blocker · Two builders of an Event's date-and-place line under one name
+**Answer:** To user — Open question 1 (behavior call on date precedence).
+
+### B-1 · blocker · `git grep -E` has no `\b`
+**Answer:** Fixed — sweeps use `-P` (verified: `-E 'TitleSource\b'` finds nothing at the base, `-P` finds 3).
+
+### B-2 · blocker · `TitleSource\b` matches `ConclusionTitleSource`
+**Answer:** Fixed — term dropped; `PersonHeaderDisplay` covers `PersonHeaderDisplay.TitleSource`.
+
+### X-M-1 · major · STEP-3's Swift grep selects 359 lines
+**Answer:** Fixed — STEP-4 (renumbered) greps only the generated names that change.
+
+### X-M-2 · major · D-10 omits `ConclusionDetailLoaded`
+**Answer:** Fixed — D-10 and §4 name it (425, 431, 455, 469) and the doc comment at 245.
+
+### X-M-3 · major · STEP-5 check allowed `detail.summary` before it exists
+**Answer:** Fixed — STEP-6 (renumbered) allows `CatalogConclusionSummary` only.
+
+Nits (logged): §4's 76-file count vs 77 (not used as a check); STEP-4's number check is a reading, not a script.
