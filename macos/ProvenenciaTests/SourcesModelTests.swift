@@ -346,6 +346,53 @@ struct SourcesModelTests {
         #expect((session.queryHandle(key)?.value as [CatalogSource]?)?.map(\.id) == ["s1"])
     }
 
+    /// T-16: the rows are built once per change of an input, not once per read.
+    @Test func visibleSourcesBuildsOncePerInputChange() async {
+        let store = FakeStore()
+        let (model, session) = makeModel(
+            store: store,
+            sources: [
+                source(id: "s1", title: "Album", typeID: "t1"),
+                source(id: "s2", title: "Deed", typeID: "t1"),
+                source(id: "s3", title: "Will", typeID: "t1"),
+            ],
+            types: [photoType()]
+        )
+        await warmLists(model, session: session)
+        model.settings.sort = .az
+        #expect(model.visibleSources.map(\.title) == ["Album", "Deed", "Will"])
+        #expect(model.visibleSourcesBuildCount == 1)
+
+        model.openAdd()
+        for title in ["D", "De", "Dee"] {
+            model.draft.title = title
+            _ = model.visibleSources
+        }
+        #expect(model.visibleSourcesBuildCount == 1)
+
+        model.settings.query = "deed"
+        #expect(model.visibleSources.map(\.title) == ["Deed"])
+        #expect(model.visibleSourcesBuildCount == 2)
+
+        let sourcesKey = SourcesModel.sourcesListKey(for: session)
+        session.setQueryValue(sourcesKey, value: model.sources)
+        _ = model.visibleSources
+        #expect(model.visibleSourcesBuildCount == 3)
+
+        // Without a status filter the progress revision is not an input.
+        session.setQueryValue(session.evidenceGraphProgressKey, value: [String: EvidenceGraphProgress]())
+        _ = model.visibleSources
+        #expect(model.visibleSourcesBuildCount == 3)
+
+        model.settings.query = ""
+        model.settings.status = .empty
+        _ = model.visibleSources
+        let afterFilter = model.visibleSourcesBuildCount
+        session.setQueryValue(session.evidenceGraphProgressKey, value: [String: EvidenceGraphProgress]())
+        _ = model.visibleSources
+        #expect(model.visibleSourcesBuildCount == afterFilter + 1)
+    }
+
     @Test func cancelAddDoesNotCreate() async {
         let (model, session) = makeModel(types: [photoType()])
         await warmLists(model, session: session)
