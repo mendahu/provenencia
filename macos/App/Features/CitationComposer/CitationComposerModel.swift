@@ -120,7 +120,12 @@ final class CitationComposerModel {
     var bridgeToast: (title: String, message: String)?
     var editSession: CitationEditSession?
     private(set) var presented: ComposerPresented?
-    var stepContinuation: (() -> Void)?
+    /// The step "Discard changes?" waits on: the next Citation, a step, or an
+    /// authoring action. Held while `pendingLeave` asks, handed out once on Discard.
+    var leaveGate = PVDiscardGate()
+    /// Why the last Citation load failed, shown under the Citation picker naming
+    /// the Citation. Cleared by the next load that succeeds and by a new Citation.
+    private(set) var citationLoadError: String?
     private var didApplyEntry = false
     private var switchGeneration = 0
     var isSwitchingCitation = false
@@ -313,12 +318,19 @@ final class CitationComposerModel {
     var isLocatorArtifactOnly: Bool { locator.isArtifactOnly }
     var locatorPage: Int? { locator.page }
     var activeCitationRef: String {
-        if let id = activeCitationID,
-           let listed = listedCitations.first(where: { $0.id == id })
-        {
-            return listed.citation.ref
-        }
+        activeCitationID.flatMap(citationRef(for:)) ?? loadedCitationRef
+    }
+
+    /// The ref of Citation `id`: its listing row's, else the loaded Citation's
+    /// when `id` is the open one. Nil when neither knows it.
+    func citationRef(for id: String) -> String? {
+        if let listed = listedCitation(id) { return listed.citation.ref }
+        guard id == activeCitationID, !loadedCitationRef.isEmpty else { return nil }
         return loadedCitationRef
+    }
+
+    private func listedCitation(_ id: String) -> CatalogListedCitation? {
+        listedCitations.first(where: { $0.id == id })
     }
 
     var citationCountsByArtifact: [String: Int] {
@@ -525,7 +537,7 @@ final class CitationComposerModel {
             if fields.isDirty {
                 guard !isTranscribing else { return }
                 let target = id
-                stepContinuation = { self.switchOpenCitation(to: target) }
+                leaveGate.hold { self.switchOpenCitation(to: target) }
                 pendingLeave = PendingLeave(keepDraft: true)
                 return
             }
@@ -546,7 +558,7 @@ final class CitationComposerModel {
     func requestStep(_ work: @escaping @MainActor () async -> Void) {
         guard !isTranscribing else { return }
         if hasUnsavedDocumentWork {
-            stepContinuation = { self.startIdentitySwitch(work) }
+            leaveGate.hold { self.startIdentitySwitch(work) }
             pendingLeave = PendingLeave()
             return
         }
@@ -557,7 +569,7 @@ final class CitationComposerModel {
     /// Citation text, label, and the file viewer stay as they are.
     func refreshCitationLines() async {
         guard let id = activeCitationID else { return }
-        if let loaded = await showingLoadFailure({ try await fetchOpenCitation(id) }) ?? nil {
+        if let loaded = await showingLoadFailure(citationID: id, { try await fetchOpenCitation(id) }) ?? nil {
             if Task.isCancelled { return }
             applyGroupedLines(loaded.observations)
         }
@@ -988,6 +1000,7 @@ final class CitationComposerModel {
     }
 
     private func startIdentitySwitch(_ work: @escaping @MainActor () async -> Void) {
+        citationLoadError = nil
         switchGeneration += 1
         let generation = switchGeneration
         isSwitchingCitation = true
@@ -1016,7 +1029,7 @@ final class CitationComposerModel {
         await reloadListedCitations()
         let ordered = CitationComposerAuthoring.stepperOrder(listedCitations)
         if let first = ordered.first {
-            _ = await showingLoadFailure { try await loadCitation(first.citation.id) }
+            _ = await showingLoadFailure(citationID: first.citation.id) { try await loadCitation(first.citation.id) }
         }
         if Task.isCancelled { return }
         await presentAfterIdentityChange()
@@ -1040,7 +1053,7 @@ final class CitationComposerModel {
         if id == nil || id?.isEmpty == true {
             openBlankCitation()
         } else if let id {
-            guard await showingLoadFailure({ try await loadCitation(id) }) != nil else { return }
+            guard await showingLoadFailure(citationID: id, { try await loadCitation(id) }) != nil else { return }
         }
         if Task.isCancelled { return }
         if activeCitationID != before {
@@ -1055,6 +1068,7 @@ final class CitationComposerModel {
     /// Drops the open citation. The new one is the whole artifact; it does not
     /// inherit the previous page or region.
     private func openBlankCitation() {
+        citationLoadError = nil
         activeCitationID = nil
         loadedCitationRef = ""
         fields.resetBlank()
@@ -1072,32 +1086,30 @@ final class CitationComposerModel {
             return
         }
         guard let id else { return }
-        guard await showingLoadFailure({ try await loadCitation(id) }) != nil else { return }
+        guard await showingLoadFailure(citationID: id, { try await loadCitation(id) }) != nil else { return }
         if Task.isCancelled { return }
         await presentAfterIdentityChange()
     }
 
-    /// Runs a Citation load. A failure shows its error in the form (unless this
-    /// task was cancelled) and returns `nil`, so the caller keeps what it had.
-    private func showingLoadFailure<T>(_ work: () async throws -> T) async -> T? {
+    /// Runs the load of Citation `citationID`. A failure sets `citationLoadError`
+    /// naming the Citation (unless this task was cancelled) and returns `nil`, so
+    /// the caller keeps what it had; a success clears it. The form's own error
+    /// (a save or validation error) is never touched.
+    private func showingLoadFailure<T>(citationID: String, _ work: () async throws -> T) async -> T? {
         do {
             let result = try await work()
-            // Only the message this method set; a save or validation error stays.
-            if let shown = loadFailureMessage, fields.error == shown { fields.error = nil }
-            loadFailureMessage = nil
+            citationLoadError = nil
             return result
         } catch {
             if !Task.isCancelled {
-                let message = L10n.Errors.message(for: error)
-                fields.error = message
-                loadFailureMessage = message
+                let reason = L10n.Errors.message(for: error)
+                citationLoadError = citationRef(for: citationID).map {
+                    L10n.CitationComposer.citationLoadFailed(ref: $0, reason: reason)
+                } ?? L10n.CitationComposer.citationLoadFailedUnnamed(reason: reason)
             }
             return nil
         }
     }
-
-    /// The error `showingLoadFailure` last put in the form, so a later load can clear it.
-    private var loadFailureMessage: String?
 
     private struct FetchedCitation {
         var citation: CatalogCitation
@@ -1273,9 +1285,7 @@ final class CitationComposerModel {
     }
 
     private func announceIdentityChange() {
-        if let active = activeCitationID,
-           let listed = listedCitations.first(where: { $0.id == active })
-        {
+        if let active = activeCitationID, let listed = listedCitation(active) {
             identityAnnouncement = L10n.CitationComposer.identityChangedCitation(
                 ref: listed.citation.ref,
                 count: listed.observationCount
@@ -1321,8 +1331,7 @@ extension CitationComposerModel: WorkspaceLeaveGuard {
 
     func discardLeaveChanges() {
         let keepDraft = pendingLeave?.keepDraft == true
-        let next = stepContinuation
-        stepContinuation = nil
+        let next = leaveGate.discard()
         if keepDraft {
             pendingLeave = nil
         } else {
@@ -1339,8 +1348,7 @@ extension CitationComposerModel: WorkspaceLeaveGuard {
     }
 
     func keepEditingAfterLeave() {
-        let stepping = stepContinuation != nil
-        stepContinuation = nil
+        let stepping = leaveGate.keepEditing()
         pendingLeave = nil
         if !stepping {
             navigation?.cancelHeldNavigation()

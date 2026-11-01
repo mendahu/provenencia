@@ -19621,6 +19621,30 @@
         }
       }
     },
+    "citationComposer.citationLoadFailed": {
+      "comment": "Under the Citation picker when a Citation fails to load; 1 = the Citation's ref, 2 = the reason",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't open %1$@. %2$@"
+          }
+        }
+      }
+    },
+    "citationComposer.citationLoadFailedUnnamed": {
+      "comment": "Under the Citation picker when a Citation fails to load and its ref is not known; argument is the reason",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't open this citation. %@"
+          }
+        }
+      }
+    },
     "citationComposer.pairPickBoth": {
       "comment": "Bridge draft before either end is chosen",
       "extractionState": "manual",

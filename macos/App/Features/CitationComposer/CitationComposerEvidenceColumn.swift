@@ -52,6 +52,7 @@ struct CitationComposerEvidenceColumn: View {
             VStack(alignment: .leading, spacing: PVSpacing.space5) {
                 artifactStepper
                 citationStepper
+                citationLoadErrorLine
             }
             PVDivider(axis: .horizontal, color: PVColor.borderSubtle)
             labelField
@@ -68,6 +69,7 @@ struct CitationComposerEvidenceColumn: View {
                 citationStepper
                     .frame(maxWidth: .infinity)
             }
+            citationLoadErrorLine
             WeightedColumns(weights: [1.5, 1], spacing: PVSpacing.space6) {
                 VStack(alignment: .leading, spacing: 10) {
                     transcriptionColumn(rows: 6...40)
@@ -75,6 +77,16 @@ struct CitationComposerEvidenceColumn: View {
                 }
                 labelField
             }
+        }
+    }
+
+    /// Why the last Citation load failed, naming the Citation, under the picker.
+    @ViewBuilder
+    private var citationLoadErrorLine: some View {
+        if let error = model.citationLoadError {
+            PVErrorText(error, announces: true)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("citationComposer.citationLoadError")
         }
     }
 

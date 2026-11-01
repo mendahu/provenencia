@@ -4005,6 +4005,22 @@ enum L10n {
             ), width, height)
         }
 
+        static func citationLoadFailed(ref: String, reason: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.citationLoadFailed",
+                defaultValue: "Couldn't open %1$@. %2$@",
+                comment: "Under the Citation picker when a Citation fails to load; 1 = the Citation's ref, 2 = the reason"
+            ), ref, reason)
+        }
+
+        static func citationLoadFailedUnnamed(reason: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.citationLoadFailedUnnamed",
+                defaultValue: "Couldn't open this citation. %@",
+                comment: "Under the Citation picker when a Citation fails to load and its ref is not known; argument is the reason"
+            ), reason)
+        }
+
         static let pairPickBoth = LocalizedStringResource(
             "citationComposer.pairPickBoth",
             defaultValue: "Pick two subjects on this Evidence graph. The pair decides what the bridge can say",
