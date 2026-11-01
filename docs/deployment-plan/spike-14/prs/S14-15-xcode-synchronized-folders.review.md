@@ -1,7 +1,7 @@
 # Review — S14-15 Xcode synchronized folders
 
-**Verdict:** Fits with changes — Ready with changes (round 1)
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits — Ready (after round 2 fixes)
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 
@@ -58,3 +58,35 @@ None.
 
 ### M-4 · nit · New ID scheme and one-line layout
 **Answer:** Logged — Xcode rewrites layout on first open (Risks row 3).
+
+## Round 2
+
+Fresh reviewers with the plan and this log. Both checked the round-1 answers against the repo and found them holding (X-1 count 4, 77 removed groups and 5 survivors, the three `.md` files, the guidance line numbers).
+
+### M-5 · blocker · `SYNCED_ROOTS` is a second hand-kept copy of the project's folder list
+**Answer:** Fixed — D-7 rewritten: the check derives roots, exceptions and the names under `macos/App` from `project.pbxproj` (no constant); adds (d) a root missing on disk; the docstring and the `check-pr.sh` comment are updated in STEP-6. T-4 counts corrected.
+
+### X-11 · blocker · AC-3.1's `rg` uses `\|`, which matches nothing
+**Answer:** Fixed — the sweep is a code block outside the table with plain `|`; STEP-7 first confirms 12 hits at the base (measured: 12).
+
+### X-12 · major · Message text and parsing left open
+**Answer:** Fixed — D-7 gives the four exact report lines, recursive `os.walk` skipping names starting with `.`, whole-object regex parsing, and the docstring change; AC-3.3 names three plants with their exact output.
+
+### X-13 · minor · (c) covered directories only
+**Answer:** Fixed — (c) covers any file or directory directly under `macos/App`.
+
+### X-14 · minor · Two D-8 edits not exact
+**Answer:** Fixed — `add-swift-test` lines 52–58 replaced entirely (heading and bundle-id line stay); the DesignSystem README body is given verbatim; `README.md` keeps its `1. ` marker.
+
+### X-15 · minor · Empty phase format
+**Answer:** Fixed — D-5 uses the file's multi-line empty `files` form, as phase `AA00000000000000000000B9`.
+
+### X-16 · minor · STEP-6 status check
+**Answer:** Fixed — `git status --porcelain` is empty except the step's two files.
+
+### X-17 · nit · plan-docs warnings
+**Answer:** Logged — 0 errors; the 7 warnings are bundle paths.
+
+## Verdict
+
+Fits / Ready after round 2's fixes. Two rounds done; no blocker open; nothing To user.
