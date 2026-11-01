@@ -767,3 +767,35 @@ func TestCommitAfterChange(t *testing.T) {
 		}
 	})
 }
+
+func TestStageAfterPurge(t *testing.T) {
+	dir := sessionProject(t)
+	var job *Job
+	err := catalogsession.Do(dir, func(c *database.Catalog) error {
+		srcID := installSourceFile(t, c, tinyPNG(t), "image/png", "tiny.png")
+		_, j, err := Plan(c, srcID, ThumbnailSpec())
+		job = j
+		return err
+	})
+	if err != nil || job == nil {
+		t.Fatalf("plan: %v, %v", job, err)
+	}
+	// What files.PurgeAfterCommit does after an Artifact delete.
+	err = filepath.WalkDir(filepath.Join(dir, "objects"), func(p string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		return os.Remove(p)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	staged, err := job.Stage(dir)
+	if err == nil {
+		staged.Discard()
+		t.Fatal("Stage succeeded with the source object gone")
+	}
+	if !Refused(err) {
+		t.Fatalf("Stage err = %v, want Refused", err)
+	}
+}

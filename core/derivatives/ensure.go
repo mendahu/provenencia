@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
+	"io/fs"
 	"strings"
 
 	"github.com/google/uuid"
@@ -247,12 +248,17 @@ func generate(projectDir, rel, wantChecksum string, opts raster.Options) ([]byte
 // readSourceObject reads at most raster.MaxDecodeBytes from the object at rel and
 // verifies the bytes against the catalog checksum before they reach any
 // decoder. An object that is not a regular file, or a symlinked objects
-// folder, is ErrCorruptObject.
+// folder, is ErrCorruptObject. An object that is gone (its File was deleted
+// after Plan) is ErrInvalid.
 func readSourceObject(projectDir, rel, wantChecksum string) ([]byte, error) {
 	f, err := objectstore.OpenObject(projectDir, rel)
 	if err != nil {
 		if errors.Is(err, objectstore.ErrNotRegular) || errors.Is(err, objectstore.ErrUnsafeObjects) {
 			return nil, ErrCorruptObject
+		}
+		if errors.Is(err, fs.ErrNotExist) {
+			// The File was deleted and its object purged after Plan.
+			return nil, ErrInvalid
 		}
 		return nil, err
 	}
