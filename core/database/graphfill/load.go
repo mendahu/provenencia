@@ -25,7 +25,7 @@ func init() {
 
 func loadEvidenceGraph(g *graphcache.Graph, graphID []byte) (graphcache.EvidenceGraph, error) {
 	q := graphcache.Querier(g)
-	sourceID, title, found, err := loadGraphSource(q, graphID)
+	head, found, err := loadGraphHead(q, graphID)
 	if err != nil {
 		return graphcache.EvidenceGraph{}, err
 	}
@@ -44,13 +44,17 @@ func loadEvidenceGraph(g *graphcache.Graph, graphID []byte) (graphcache.Evidence
 	if err != nil {
 		return graphcache.EvidenceGraph{}, err
 	}
-	people, places, err := loadTitleEdges(g, graphcache.EvidenceGraph{GraphID: graphID, SourceID: sourceID, Subjects: subjects, Observations: observations})
+	people, places, err := loadTitleEdges(g, graphcache.EvidenceGraph{GraphID: graphID, SourceID: head.sourceID, Subjects: subjects, Observations: observations})
 	if err != nil {
 		return graphcache.EvidenceGraph{}, err
 	}
 	return graphcache.EvidenceGraph{
-		SourceID:     sourceID,
-		SourceTitle:  title,
+		GraphRef:     head.ref,
+		GraphName:    head.name,
+		SourceID:     head.sourceID,
+		SourceRef:    head.sourceRef,
+		SourceTitle:  head.sourceTitle,
+		SourceTypeID: head.sourceTypeID,
 		Found:        true,
 		Subjects:     subjects,
 		Observations: observations,
@@ -60,17 +64,29 @@ func loadEvidenceGraph(g *graphcache.Graph, graphID []byte) (graphcache.Evidence
 	}, nil
 }
 
-// loadGraphSource reads the Source of an Evidence graph and its title, and
-// whether the graph exists.
-func loadGraphSource(q graphcache.Querier, graphID []byte) (sourceID []byte, title string, found bool, err error) {
-	err = q.QueryRow(`SELECT g.source_id, s.title FROM evidence_graphs g JOIN sources s ON s.id = g.source_id WHERE g.id = ?`, graphID).Scan(&sourceID, &title)
+// graphHead is the graph's own row and its Source's.
+type graphHead struct {
+	ref, name, sourceRef, sourceTitle string
+	sourceID, sourceTypeID            []byte
+}
+
+// loadGraphHead reads an Evidence graph's ref and name and its Source's id,
+// ref, title and type, and whether the graph exists. A graph's ref may be
+// NULL and reads "".
+func loadGraphHead(q graphcache.Querier, graphID []byte) (graphHead, bool, error) {
+	var h graphHead
+	err := q.QueryRow(`SELECT COALESCE(g.ref, ''), g.name, g.source_id, s.ref, s.title, s.source_type_id
+		FROM evidence_graphs g JOIN sources s ON s.id = g.source_id WHERE g.id = ?`, graphID).
+		Scan(&h.ref, &h.name, &h.sourceID, &h.sourceRef, &h.sourceTitle, &h.sourceTypeID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, "", false, nil
+		return graphHead{}, false, nil
 	}
 	if err != nil {
-		return nil, "", false, err
+		return graphHead{}, false, err
 	}
-	return append([]byte(nil), sourceID...), title, true, nil
+	h.sourceID = append([]byte(nil), h.sourceID...)
+	h.sourceTypeID = append([]byte(nil), h.sourceTypeID...)
+	return h, true, nil
 }
 
 func loadGraphSubjects(q graphcache.Querier, graphID []byte) ([]graphcache.EvidenceSubject, error) {
