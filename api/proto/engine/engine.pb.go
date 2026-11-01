@@ -10485,13 +10485,6 @@ func (x *EventSubject) GetNameValueCount() int32 {
 	return 0
 }
 
-// PersonHeader is one Person as a row, composed from the auto-reconciler's
-// cache. Structures only: the app formats the title (name, else entity
-// label, else ref). name is the displayed auto-reconciled name, absent when
-// no member names the Person; name_value_count counts displayed name values
-// (names are one structure, so at most 1; > 1 would read as mixed, and the
-// extra values are the list's +N). birth and death are read off the
-// canonical graph.
 // TermFacts is one term-valued Property of a header: the rank-1 displayed
 // term (absent when none), how many values are displayed (> 1 is a
 // disagreement), and the Property's label.
@@ -10555,6 +10548,13 @@ func (x *TermFacts) GetPropertyLabel() string {
 	return ""
 }
 
+// PersonHeader is one Person as a row, composed from the auto-reconciler's
+// cache. Structures only: the app formats the title (name, else entity
+// label, else ref). name is the displayed auto-reconciled name, absent when
+// no member names the Person; name_value_count counts displayed name values
+// (names are one structure, so at most 1; > 1 would read as mixed, and the
+// extra values are the list's +N). birth and death are read off the
+// canonical graph.
 type PersonHeader struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Entity         *CanonicalEntity       `protobuf:"bytes,1,opt,name=entity,proto3" json:"entity,omitempty"`

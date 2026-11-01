@@ -4248,13 +4248,6 @@ public nonisolated struct Provenencia_Engine_V1_EventSubject: Sendable {
   fileprivate var _name: Provenencia_Engine_V1_NameValueInput? = nil
 }
 
-/// PersonHeader is one Person as a row, composed from the auto-reconciler's
-/// cache. Structures only: the app formats the title (name, else entity
-/// label, else ref). name is the displayed auto-reconciled name, absent when
-/// no member names the Person; name_value_count counts displayed name values
-/// (names are one structure, so at most 1; > 1 would read as mixed, and the
-/// extra values are the list's +N). birth and death are read off the
-/// canonical graph.
 /// TermFacts is one term-valued Property of a header: the rank-1 displayed
 /// term (absent when none), how many values are displayed (> 1 is a
 /// disagreement), and the Property's label.
@@ -4283,6 +4276,13 @@ public nonisolated struct Provenencia_Engine_V1_TermFacts: Sendable {
   fileprivate var _term: Provenencia_Engine_V1_ConclusionTerm? = nil
 }
 
+/// PersonHeader is one Person as a row, composed from the auto-reconciler's
+/// cache. Structures only: the app formats the title (name, else entity
+/// label, else ref). name is the displayed auto-reconciled name, absent when
+/// no member names the Person; name_value_count counts displayed name values
+/// (names are one structure, so at most 1; > 1 would read as mixed, and the
+/// extra values are the list's +N). birth and death are read off the
+/// canonical graph.
 public nonisolated struct Provenencia_Engine_V1_PersonHeader: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
