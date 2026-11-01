@@ -1,7 +1,7 @@
 # Review — S14-12 File work before the catalog session
 
-**Verdict:** Round 1: Fits with changes — Not ready → Fixed. Round 2 pending.
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Ready with changes → Fixed (round 2 raised three new blockers, all fixed; none open)
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet), fresh each round
 
 ## To user
 
@@ -73,3 +73,37 @@ I confirmed this in `core/writes/run.go`: a non-none change records a revision.
 
 ### X-10 · minor · Undefined edges and leftovers
 **Answer:** Fixed. D-10: dedup per File id, and the behavior of a stage or commit failing mid-batch (batch discarded and purged by `withStaged`, call fails). The pass runs only when the first session returned nil (D-11). The DoD brief line is marked not applicable. STEP-2 now also updates the `observations.go` line 177 and `depictionvalue.go` line 33 comments.
+
+## Round 2
+
+All round-1 answers were confirmed against the code by both reviewers (import graph, `effects` registry `file_derivatives` None, the three cover tests).
+
+### M-9 · blocker · `derivedRelPath` is a second link-to-path tail beside `existingThumbnailRelPath`
+**Answer:** Fixed. D-10: `derivedRelPath` lives in `thumbnails.go` and is the one tail. A missing derived row is empty and skipped, as `existingThumbnailRelPath` treats it today; `existingThumbnailRelPath` becomes `filederivatives.Lookup` + `derivedRelPath`. Codebase fit and Deletes name it, and T-14 keeps its test green.
+
+### M-10 · blocker · Stage cleanup order hand-rolled in four places
+**Answer:** Fixed. D-6: one in-session method, `Staged.Settle(c)` / `Stages.Settle(c)` (purge if unused, then discard); the purge half is unexported. `withStaged`, `ingest.File`, `derivatives.Ensure` and `observationstest` all defer `Settle`. D-7's sentence is now true as written.
+
+### M-11 · blocker · `CoverArtifactFile` exports a private artifacts query beside `artifacts.Get`
+**Answer:** Fixed. D-12: `CoverArtifactFile` reads through `artifacts.Get`, and `sqlArtifactForCover` goes (Deletes, STEP-6 check). I checked that neither `artifacts` nor `sources` imports the other.
+
+### X-11 · major · `Hold` vs fixtures on a directly opened catalog
+**Answer:** Fixed. D-15: a test that holds a project builds fixtures and runs `Plan` and `Commit` inside `catalogsession.Do`, calls `Hold` only around the stage, and releases before the next `Do`.
+
+### X-12 · minor · `RequireProject` contract
+**Answer:** Fixed. D-2: it returns exactly what `locateCatalog` returns (the raw `os.Stat` error for a missing folder), the same as `database.Open`. T-1 and T-13 have a missing-folder row.
+
+### X-13 · minor · User-id check order
+**Answer:** Fixed. D-5: `File` checks `RequireUserID` before staging, keeping its refusal order, and `CommitFile` checks it too.
+
+### X-14 · minor · D-12 wording and cover edge cases
+**Answer:** Fixed. `need` accepts a nil fill (it said `run` before). The mode is trimmed before comparing. Artifact mode with an empty id skips the first session, and `NormalizeCover` returns `ErrInvalid`, as today.
+
+### X-15 · minor · "two batches" not checkable
+**Answer:** Fixed. AC-3.5 asserts 17 paths and 17 link rows only.
+
+### X-16 · minor · STEP-2 too large
+**Answer:** Fixed. The session helpers are their own step (STEP-2, T-13); the steps renumber to nine.
+
+### Checks not runnable on Linux
+`scripts/check-pr.sh`'s Xcode step and the manual check need macOS and the app. That is the implementer's and reviewer's environment, so no plan change.
