@@ -124,10 +124,10 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 | S13-11 | Provenance sheet | 2 | The provenance control and sheet replace the Why accordion on every Vitals row, with links to Source, Citation and Observation | [S13-D2](design/archive/S13-D2-provenance-sheet.md) | S13-06, S13-10 | [S13-11](prs/S13-11-provenance-sheet.md) | Landed #650 |
 | S13-01 | Person claims read | 3 | `ListPersonClaims` RPC from the graph cache: a person's accepted claims grouped by Source (title, type id), ordered by title, each with its Subject card data, graph and claim id; one accepted-members helper; per-handle invalidation spec | — | — | [S13-01](prs/S13-01-person-claims-read.md) | Landed #655 |
 | S13-02 | Gender in the person header | 3 | `PersonHeader` gains the gender and sex terms; `PersonGenderTreatment` reads only the header | — | S11-30 (landed #509) | [S13-02](prs/S13-02-gender-in-the-person-header.md) | Landed #659 |
+| S13-31 | Header data becomes summaries | 3 | Rename only: `PersonHeader`, `EventHeader`, `PlaceHeader` → `PersonSummary`, `EventSummary`, `PlaceSummary` (Go, proto, Swift `Catalog*`), `conclusionheaders` → `conclusionsummaries`, `List*Headers` → `List*Summaries`; "header" then means only the band at the top of a detail page | — | S13-02 | — | [S13-31](prs/S13-31-header-data-becomes-summaries.md) | Draft |
 | S13-03 | Siblings from a shared parent | 3 | A page-only sibling derivation in `core/kinship` (recorded sibling links and a shared parent), outside matching's pattern set, stored in a `graphcache` memo slot, with a test that matching is unchanged | — | S11-39 | — | Scoped |
-| S13-04 | Person family read | 3 | `GetPersonFamily` RPC: parents, siblings, spouses, children from S11-51's links, grouped into families, as `PersonHeader`s, served from the graph cache with no SQL when warm | — | S13-01, S13-02, S13-03, S11-51 | — | Scoped |
-| S13-31 | Header data becomes summaries | 3 | Rename only: `PersonHeader`, `EventHeader`, `PlaceHeader` → `PersonSummary`, `EventSummary`, `PlaceSummary` (Go, proto, Swift `Catalog*`), `conclusionheaders` → `conclusionsummaries`, `List*Headers` → `List*Summaries`, and what S13-04 adds under the old names; "header" then means only the band at the top of a detail page | — | S13-04 | — | Scoped |
-| S13-12 | Family section | 3 | The family diagram with person tiles, lines and several families | S13-D3 | S13-04, S13-10, S13-31 | — | Scoped |
+| S13-04 | Person family read | 3 | `GetPersonFamily` RPC: parents, siblings, spouses, children from S11-51's links, grouped into families, as `PersonHeader`s, served from the graph cache with no SQL when warm | — | S13-01, S13-02, S13-03, S11-51, S13-31 | — | Scoped |
+| S13-12 | Family section | 3 | The family diagram with person tiles, lines and several families | S13-D3 | S13-04, S13-10 | — | Scoped |
 | S13-19 | One person's links | 3 | Moved to Spike 11 as S11-51 so it ships with S11-39 | — | — | — | Descoped (2026-10-26) → S11-51 |
 | S13-05 | Person timeline read | 4 | An any-role participation hop; `ListPersonEvents` RPC: `EventHeader`s sorted by `sortEvents`, with the person's role and the other participants as {role, `PersonHeader`} | — | S13-01, S13-02, S13-31 | — | Scoped |
 | S13-13 | Timeline section | 4 | The chronological event list with roles, depiction placeholder, participants as person tiles, Undated group | S13-D4 | S13-05, S13-12 | — | Scoped |
@@ -190,10 +190,10 @@ SLICE 2 — Provenance sheet
 SLICE 3 — Family
   S13-01  Person claims read   (its accepted-members helper and invalidation spec are needed here)
   S13-02  Gender in the person header   (after S11-30)
+  S13-31  Header data becomes summaries   (rename, right after S13-02)
   S13-03  Siblings from a shared parent   (after S11-39)
           S11-51 One person's links   (Spike 11, after S11-39)
   S13-04  Person family read
-  S13-31  Header data becomes summaries   (rename, right after S13-04)
   ✎ S13-D3 ──▶ S13-12  Family section
   Check: bar 3 and 8
 
@@ -358,6 +358,13 @@ Go, plus deleting Swift's draft rule.
 **Check.** `PersonsByIDs` tests cover the terms; Swift treatment tests read a header; the Person page badge and thumb colors are unchanged.
 **Context.** Working rule "One person header for every tile"; R-3, R-21; S11-30's gender ↔ sex crosswalk lands first so the terms are final.
 
+#### S13-31 — Header data becomes summaries
+
+**Ships.** A rename with no behavior change (user, 2026-11-01). "Header" named both the band at the top of a detail page (`ConclusionDetailHeader`) and the data type that holds one person's, event's or place's core facts for every row and tile; the data type becomes a summary. `PersonHeader`, `EventHeader`, `PlaceHeader` and their helpers → `PersonSummary`, `EventSummary`, `PlaceSummary` in Go and proto; `CatalogPersonHeader` and its siblings → `CatalogPersonSummary` and siblings in Swift; package `core/database/conclusionheaders` → `conclusionsummaries`; `ListPersonHeaders`, `ListEventHeaders`, `ListPlaceHeaders` → `ListPersonSummaries`, `ListEventSummaries`, `ListPlaceSummaries`, with their store methods. Proto field numbers stay. Display rows live only in the in-memory graph cache, so nothing stored changes. It renames the working rules that say "person header" (rule "One person header for every tile" → "One person summary for every tile"), the skills and `docs/*.md` that name the types, and the map's scope entries for S13-04, S13-05, S13-12 and S13-13, which have no plans yet.
+**Not this PR.** `ConclusionDetailHeader` and the page band, which keep "header"; any field or behavior change; landed plans and ship logs, which keep the names they shipped with.
+**Check.** `scripts/check-pr.sh` PASS with no test changed except by name; `rg -n 'PersonHeader|EventHeader|PlaceHeader|conclusionheaders|List(Person|Event|Place)Headers' core api macos/App macos/ProvenenciaTests .agents .cursor docs/*.md` finds nothing.
+**Context.** Working rule "One person header for every tile"; S13-02 ([#659](https://github.com/mendahu/provenencia/pull/659)) added the gender terms to the type. Lands right after S13-02 (user, 2026-11-01), before S13-04 and S13-05 are planned, so both are written on the new names.
+
 #### S13-03 — Siblings from a shared parent
 
 **Ships.** A sibling derivation in `core/kinship`: two canonical people are siblings when a sibling link is recorded between them (parents unknown) or when they share a parent (direct or implied), with the link or the parent and links behind it; a pair found both ways is one sibling, recorded. It is reachable only from an explicit option, not from the pattern set `canonlinks.Reader.For` gives matching. Each person's answer is stored in a new `graphcache` memo slot that drops on any handle commit (working rule "The family read is served from the graph cache").
@@ -375,13 +382,6 @@ Go, plus deleting Swift's draft rule.
 **Not this PR.** The diagram (S13-12); grandparents and beyond.
 **Check.** Handler tests: two marriages give two families; two conflicting parent sets give two parent groups; a relationship recorded directly and implied by a marriage appears once; a second read of the same family issues zero queries (`SetQueryCounterForTest`).
 **Context.** Working rules "One person's links, direct and implied, from one function" (S11-51), "Family groups in Go", "The family read is served from the graph cache", "The family read is the family tree's first step", "Canonical only"; R-17 – R-19.
-
-#### S13-31 — Header data becomes summaries
-
-**Ships.** A rename with no behavior change (user, 2026-11-01). "Header" named both the band at the top of a detail page (`ConclusionDetailHeader`) and the data type that holds one person's, event's or place's core facts for every row and tile; the data type becomes a summary. `PersonHeader`, `EventHeader`, `PlaceHeader` and their helpers → `PersonSummary`, `EventSummary`, `PlaceSummary` in Go and proto; `CatalogPersonHeader` and its siblings → `CatalogPersonSummary` and siblings in Swift; package `core/database/conclusionheaders` → `conclusionsummaries`; `ListPersonHeaders`, `ListEventHeaders`, `ListPlaceHeaders` → `ListPersonSummaries`, `ListEventSummaries`, `ListPlaceSummaries`, with their `CatalogQueryKey`s and store methods. Proto field numbers stay. Display rows live only in the in-memory graph cache, so nothing stored changes. It renames what S13-04 added under the old names, the working rules that say "person header" (rule "One person header for every tile" → "One person summary for every tile"), the skills and `docs/*.md` that name the types, and the open plans of S13-05, S13-12 and S13-13.
-**Not this PR.** `ConclusionDetailHeader` and the page band, which keep "header"; any field or behavior change; landed plans and ship logs, which keep the names they shipped with.
-**Check.** `scripts/check-pr.sh` PASS with no test changed except by name; `rg -n 'PersonHeader|EventHeader|PlaceHeader|conclusionheaders|List(Person|Event|Place)Headers' core api macos/App macos/ProvenenciaTests .agents .cursor docs/*.md` finds nothing.
-**Context.** Working rule "One person header for every tile"; S13-02 ([#659](https://github.com/mendahu/provenencia/pull/659)) added the gender terms to the type. Planned after S13-04 lands, so its Current state includes the family read; S13-05 and S13-12 are planned after it, on the new names.
 
 #### S13-12 — Family section
 

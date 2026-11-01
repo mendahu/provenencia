@@ -1,0 +1,310 @@
+# S13-31 — Header data becomes summaries
+
+**Status:** Draft
+**Spike / slice:** Spike 13 · Slice 3 — Family (the Family and Timeline reads, S13-04 and S13-05, are planned on the new names)
+**Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
+**Brief:** — (no chrome change: code names only; every view looks and reads the same)
+**Board:** —
+**Depends on:** S13-02 ([#659](https://github.com/mendahu/provenencia/pull/659))
+**Blocks:** S13-04, S13-05
+**Branch:** `s13-31-header-data-becomes-summaries`
+**Version bump:** none — Spike 11–14 PRs leave `VERSION` alone until a release is cut ([`docs/versioning.md`](../../../versioning.md))
+**Skills to load:** [`add-ffi-handler`](../../../../.agents/skills/add-ffi-handler/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md) (moving a file in `project.pbxproj`)
+**Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/swift-tests.mdc`
+**Context:** working rule "One person header for every tile" (renamed here); [`macos-client-patterns.md`](../../../macos-client-patterns.md); [`conclusion-reconciliation.md`](../../../conclusion-reconciliation.md)
+**Planned:** 2026-11-01 against `s13-02-gender-in-the-person-header` @ `3ee06273` (#659's head; branch from `main` after #659 merges)
+**Review:** [`S13-31-header-data-becomes-summaries.review.md`](S13-31-header-data-becomes-summaries.review.md) — round 1 answered; D-4 waits on the user
+
+### Implementer — read this first
+
+1. **This file is the whole task.** Read it top to bottom before you change code. Then read every file under **Current state** and load every skill under **Skills to load**.
+2. **Check the base.** Compare `main` with the **Planned** commit. If a file under **Current state** has changed so a row is no longer true, stop and report which rows.
+3. **Decisions are made.** Do not reopen a **Decision** or a **Scope** line, and do not swap in a design you like better. If one cannot work, stop: say which ID it is, what you found (path, line, output), and what you would need. Do not improvise around it.
+4. **Do only In.** Out stays out, even when it is one line away. Do not refactor, rename, or tidy code the plan does not name.
+5. **Work the Steps in order.** Run each step's check before you start the next. A failing check is fixed in that step.
+6. **Hit a Stop condition → stop.** Report it. Do not work around it.
+7. **Done is the Definition of done.** Report each box with its evidence: the command and its result, the test name, or the manual check you ran.
+8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
+
+---
+
+## 1. Objective
+
+"Header" names two things today: the band at the top of a Conclusion page (`ConclusionDetailHeader`) and the data type that holds one person's, event's or place's core facts for every row and tile (`PersonHeader`, `EventHeader`, `PlaceHeader`). The data type becomes a **summary** in Go, proto and Swift, so "header" means only the band (user, 2026-11-01). The band's line under the title, which the page code calls `summary` today, becomes `secondary`, as the list pages already call it (user, 2026-11-01). After this PR: **header** is the band, **secondary** is the line under a title, **summary** is the data. Nothing a researcher sees changes.
+
+**Why now.** S13-04 (family read) and S13-05 (timeline read) return these types to the Family and Timeline tiles, where a tile is not a header at all. Renaming before they are planned means their plans, code and tests use the new names from the start (user, 2026-11-01: right after S13-02).
+
+**What stays.** Every field, value, rule, cache and query. The band's own names (D-2). The graph cache's display slot (`Display`, `SetDisplay`, `dropDisplays`, `DepsFunc`). Landed plans, review logs, ship logs, audits and `completed.md`, which keep the names they shipped with.
+
+## 2. User stories
+
+**US-1.** As a contributor, when I read code, a plan or a doc, "header" means the band at the top of a Conclusion page, "secondary" the line under a title, and "summary" the facts a row or tile shows.
+
+| AC | Given / when | Then |
+| --- | --- | --- |
+| AC-1.1 | The **old-name sweep** below runs at the PR head | it prints nothing |
+| AC-1.2 | The **word sweep** below runs at the PR head | every line it prints is on its keep list |
+| AC-1.3 | `PersonSummary`, `EventSummary`, `PlaceSummary`, `ChainedPlace` in `core/database/conclusionsummaries` | hold exactly the fields `PersonHeader`, `EventHeader`, `PlaceHeader`, `HeaderPlace` hold at the planning base; every test that passed at the base passes, renamed only |
+| AC-1.4 | The app reads the Persons, Events and Places lists, a Conclusion page, search hits and a Promote proposal | each shows what it showed at the base (Swift tests below, renamed only; manual check §10) |
+| AC-1.5 | The **map sweep** below runs at the PR head | it prints only lines of the S13-02 and S13-31 PR-map rows and scope entries |
+
+**Old-name sweep** (AC-1.1, T-4):
+
+```bash
+git grep -nE '(Person|Event|Place)Headers?|HeaderPlace|ConclusionHeader|conclusionheaders|conclusion_headers|List(Person|Event|Place)Headers|LIST_(PERSON|EVENT|PLACE)_HEADERS|HeaderDeps|HeaderDependents|header_handles|headerHandles|HeaderHandles|list_(person|event|place)_headers|EventDetailSummary|PersonHeaderDisplay|TitleSource\b' -- core api macos/App macos/ProvenenciaTests .agents .cursor ':(glob)docs/*.md' docs/ideas ':!*Generated/*' ':!*.pb.go'
+```
+
+It does not match `METHOD_GET_*_HEADER` (D-4) or the band's names (D-2). Generated code follows from `./scripts/generate-proto.sh`.
+
+**Word sweep** (AC-1.2, T-5) over the files this PR changes:
+
+```bash
+git diff --name-only --diff-filter=AMR 3ee06273 -- core api macos/App macos/ProvenenciaTests ':!*Generated/*' ':!*.pb.go' | xargs git grep -nE '[Hh]eaders?\b|[Hh]eader[A-Z]\w*|\w+Headers?\b' --
+```
+
+Keep list: the band and layout names in D-2; `METHOD_GET_*_HEADER` and its `reserved` line (D-4); comments that describe the band. Any other line is a miss.
+
+**Map sweep** (AC-1.5, T-6):
+
+```bash
+grep -nE 'PersonHeader|EventHeader|PlaceHeader|HeaderPlace|conclusionheaders|person header' docs/deployment-plan/spike-13/deployment-plan.md
+```
+
+## 3. Scope
+
+| In | Covered by |
+| --- | --- |
+| Go: package `conclusionheaders` → `conclusionsummaries`, its types, functions, locals and comments, and every importer in `core/` and `api/` (D-1, D-3, D-7) | STEP-1, AC-1.3 |
+| Go: `effects.Set.HeaderDeps`, `HeaderDepsWalked`; `HeaderDependents` deleted (D-5) | STEP-2 |
+| Proto: messages, fields, `Method` values and comments named for the data; the four `oneof header` blocks folded into one `ConclusionSummary` (D-4); regenerated Go and Swift; FFI handlers | STEP-3 |
+| Swift: wire mapping onto the regenerated names | STEP-3 |
+| Swift: wire types, store methods, display helpers (D-1, D-6) | STEP-4 |
+| Swift: the band's `summary` slot → `secondary` (D-10) | STEP-5 |
+| Swift: properties, locals, test names, file moves (D-3, D-6, D-9, D-11) | STEP-6 |
+| Docs: living docs, skills, rules, and the map lines in D-8 | STEP-7, AC-1.5 |
+
+| Out | Home |
+| --- | --- |
+| The band's names and every layout name in `macos/App` (D-2) | not planned |
+| The graph cache display slot (`Display`, `SetDisplay`, `displays`) | not planned ("display" names the slot) |
+| `searchindex`'s `handleSummaries` by-id maps beside `conclusionsummaries.Summaries` (review M-7) | follow-up: listed in the S13-31 PR body; a refactor, not a rename |
+| Any field, behavior, query or cache change | not planned |
+| Landed plans, ship and review logs, audits, `completed.md` | not planned (records of what shipped) |
+| Proto `reserved "METHOD_GET_*_HEADER"` names | not planned (D-4) |
+
+## 4. Current state
+
+Verified at `3ee06273`. 76 hand-written files carry a data name (`git grep -l` with the old-name sweep's pattern over `core api macos`).
+
+| Area | Where | Today |
+| --- | --- | --- |
+| Go package | `core/database/conclusionheaders/` (14 files: `compose.go`, `conclusionheaders.go`, `dependents.go`, `display_register.go`, `events.go`, `order.go`, `placechains.go`, `places.go`, and tests `conclusionheaders_test.go`, `display_cache_test.go`, `export_test.go`, `placechains_internal_test.go`, `placechains_test.go`, `walks_test.go`; external tests are `package conclusionheaders_test`) | Types `PersonHeader`, `EventHeader`, `PlaceHeader`, `HeaderPlace` (`conclusionheaders.go:79`), `Headers` (`compose.go:238`, the `ByIDs` result); `headerChainDepth` (`dependents.go:18`); `HeaderDependents` (`dependents.go:190-194`), documented "HeaderDependents is Dependents", body `return Dependents(q, ids)` |
+| Go importers | `core/database/autoreconciler/autoreconciler.go`, `core/database/conclusiondetails/conclusiondetails.go`, `core/database/persondetail/claims.go`, `core/database/searchindex/handles.go` (`handleHeaders` 187, `loadHandleHeaders` 193), `core/database/subjects/subjects.go:247` (`HeaderDependents`), `core/database/graphcache/display.go`; `api/ffi/handlers/conclusion_detail.go` (`attachHeader` 202), `conclusion_headers.go` (+ `_test.go`), `promote_align.go` (`addHeaderID` 69, `headers` 119-145), `search_catalog.go` (`fillHitHeaders` 96, `h.Header`), `write_effects.go` (+ `_test.go`) | import `conclusionheaders` |
+| Effects | `core/database/effects/registry.go:117-122` `HeaderDeps`, `HeaderDepsWalked`; `core/writes/run.go:88`; `core/database/graphcache/commit.go:109-110`; `api/ffi/handlers/write_effects.go:19`, `write_effects_test.go:44` | handles whose stored display rows read the written handles |
+| Proto | `api/proto/engine.proto` | messages `PersonHeader`, `EventHeader`, `PlaceHeader`, `HeaderPlace` (1246), `List{Person,Event,Place}Headers{Request,Response}` (field `headers = 1`); `oneof header { PersonHeader person; EventHeader event; PlaceHeader place; }` in `SearchHit` (1018, numbers 12-14), `ConclusionDetail` (1572, 4-6), `PromoteGraphAlignmentAlternative` (1634, 4-6), `PromoteGraphAlignmentRow` (1657, 13-15); `WriteEffects.header_handles = 6`; `METHOD_LIST_{PERSON,EVENT,PLACE}_HEADERS = 87, 91, 93`; `reserved "METHOD_GET_EVENT_HEADER", …` (44) under the comment "Per-entity headers ride GetConclusionDetail." (41); comments at 1016-1017, 1303, 1355, 1407 |
+| FFI dispatch | `api/ffi/dispatch.go` | method cases |
+| Go oneof copies | `api/ffi/handlers/search_catalog.go:123-132`, `promote_align.go:119-128`, `136-145`, `conclusion_detail.go:217-239` | four switches filling the oneof |
+| Swift wire types | `macos/App/Platform/GenealogyStore.swift` `CatalogHeaderPlace` (406), `CatalogPersonHeader` (460), `CatalogEventHeader` (483), `CatalogPlaceHeader` (544), `CatalogConclusionHeader` (730) and its `person`/`event`/`place` accessors (736-746); `var header: CatalogConclusionHeader?` (244, 320, 340, 700); `listPersonHeaders`, `listEventHeaders`, `listPlaceHeaders` (1372-1374) | |
+| Swift mapping | `macos/App/Platform/GoStore.swift` `mapPersonHeader`, `mapEventHeader`, `mapPlaceHeader`, `mapHeaderPlace`, and four bodies producing `CatalogConclusionHeader`: `mapConclusionHeader`, `mapSearchHeader`, `mapPromoteRowHeader`, `mapPromoteAlternativeHeader` (1089-1129); `headerHandles:` (1865); `CoreInvoke.swift`; `FakeStore.swift` `seededEventHeaders`, `seededPlaceHeaders` | |
+| Swift display | `macos/App/Features/Conclusions/PersonHeaderDisplay.swift` `enum PersonHeaderDisplay` (title only; `typealias TitleSource = ConclusionTitleSource` at 8, used outside only at `PersonDetailContent.swift:16`); `ConclusionHeaderDisplay.swift` `enum ConclusionHeaderDisplay` (title, secondary, ref over the union); siblings `EventTitleDisplay.swift`, `PlaceTitleDisplay.swift` | |
+| Band line | `macos/App/Features/Conclusions/ConclusionDetailPage.swift` `ConclusionDetailPage<Content, Summary: View, PageSections>` (255), `let summary` (261), init parameters (275, 338), `ConclusionDetailHeaderBand<Content, Summary>` (501), `ConclusionDetailHeader<Content, Summary>` (687), comment "the kind's summary" (685); `EventDetailView.swift:26` `EventDetailSummary`; `PersonDetailView.swift:19`, `PlaceDetailView.swift:19`, `EventDetailView.swift` pass `summary:`; `EventDetailContent.swift:12,14` `summaryDate`, `summaryPlace`; `EventDetailTests.swift` (4 hits) | the band's line under the title; the list pages call the same slot `Secondary` (`ConclusionListPage.swift:41, 66`) |
+| Swift callers | `Features/Conclusions/*`, `Features/Promote/PromoteFlow.swift` (`header:` 380, 564), `PromoteModel.swift:201`, `Features/Catalog/Search/CatalogSearchHitPresentation.swift`, `Features/Workspace/Session/CatalogMutation.swift` (`headerHandles` 101, 116), `CatalogLastUpdated.swift`, `CatalogQueryRegistry.swift` | |
+| Xcode | `macos/Provenencia.xcodeproj/project.pbxproj` | explicit file references; each file's name appears in its `PBXFileReference` `path`, and in the `/* … */` comments of its `PBXBuildFile`, group child list and Sources phase entries. The Xcode build phase runs `scripts/build-macos-core.sh` (`project.pbxproj:2204`), so `xcode-test` rebuilds the Go library |
+| Query keys | `macos/App/Features/Workspace/Session/CatalogQueryKey.swift` `personsList`, `eventsList`, `placesList` | no "header"; nothing to rename |
+| Persistence | `git grep` for the names in `*.json`, golden and `testdata` files; `protojson` in `core api` | none: the FFI is binary proto, and display rows live only in `graphcache` memory |
+| Docs | `.agents/skills/add-audit-scope/SKILL.md:80` (`conclusionheaders.ListPersons`), `.cursor/rules/swift-tests.mdc:23` (`seededEventHeaders`), `docs/conclusion-reconciliation.md:285`, `docs/macos-client-patterns.md:105`, `docs/ideas/test-subject-fixtures.md:7`; `docs/deployment-plan/spike-13/deployment-plan.md` (D-8) | |
+| Tests | Go: every test in `core/database/conclusionheaders/`, `api/ffi/handlers/conclusion_headers_test.go`, `write_effects_test.go`, `core/database/conclusiondetails/conclusiondetails_test.go`, `core/database/searchindex/searchindex_test.go`. Swift: the 15 files under `macos/ProvenenciaTests` the old-name sweep lists, `PersonHeaderDisplayTests.swift` among them | pass at the base |
+
+**Precedent.** S14-01's gallery rename: `8e519655` (`git mv` of the package directory, importers updated) and `067e26a0` (proto names changed, field numbers kept, `./scripts/generate-proto.sh`, Swift mapping renamed to compile). Copy the `git mv` and the keep-the-numbers proto edit. Its behavior changes do not apply here.
+
+## 5. Decisions
+
+| ID | Decision | Why | Rejected |
+| --- | --- | --- | --- |
+| D-1 | **Names.** Go and proto: `PersonSummary`, `EventSummary`, `PlaceSummary`, `ChainedPlace` (was `HeaderPlace`), `Summaries` (was `Headers`), `ConclusionSummary` *(new, D-4)*, package `conclusionsummaries`, `summaryChainDepth` (was `headerChainDepth`). Swift: `CatalogPersonSummary`, `CatalogEventSummary`, `CatalogPlaceSummary`, `CatalogChainedPlace`, `CatalogConclusionSummary`, `PersonTitleDisplay` (was `PersonHeaderDisplay`), `ConclusionSummaryDisplay` (was `ConclusionHeaderDisplay`) | User, 2026-11-01: "summary" for the data; `ChainedPlace` uses the existing place-chain vocabulary (`placechains.go`, `PlaceChainDisplay`) and is not confused with `PlaceSummary`. `PersonTitleDisplay` matches `EventTitleDisplay` and `PlaceTitleDisplay`, since it only builds titles | `SummaryPlace` — one word-swap from `PlaceSummary`; `PersonSummaryDisplay` — it formats a title, not a summary |
+| D-2 | **What renames:** every type, package, file, function, method, proto message, field, enum value, error-context string, test name and comment that names the data. **What stays:** the band and layout names — `ConclusionDetailHeader`, `ConclusionDetailHeaderBand`, `ConclusionDetailHeaderCompactKey`, `conclusionDetailHeaderCompact`, `PVSectionHeader`, `SectionHeader`, `sectionHeaders`, `headerHeight`, `headerToBodyGap`, `headerToBodySpacing`, `headerPinned`, `headerMeta`, `headerWidth`, `headerRect`, `headerButtons`, `headerAndBody`, `headerActionHitHeight`, `headerContentHeightCited`, `headerContentHeightUncited`, `headerLabel`, `headerBitmap`, `hasHeader`, `showsHeader`, `isHeader`, `panelHeader`, `paintHeader`, `partHeader`, `brandHeader`, `columnHeaders`, `pvWorkspaceHeaderRow`, `SourcePageIdentityHeader`, `EvidenceGraphHeader`, `EvidenceGraphHeaderWidthKey`, `EvidenceGraphLabeledHeaderWidthKey`, `EvidenceCardHeaderActionHits`, `VocabularyHeader`, `VocabularyPanelHeader`, `OnboardingHeader`, `unpromoteConfirmBridgesHeader`; image-format names `JPEGHeader`, `HeaderOnlyPNG`, `ImageHeaderDecode`, `declaredPNGHeaderData`, `writeDeclaredPNGHeader`, `gifHeaderOnly`; `Provenencia_Bridging_Header_h` | Header is the band (user, 2026-11-01) | Renaming every "header" — the band's names are right |
+| D-3 | **Locals and properties follow their type.** A variable, constant, parameter, property, closure, proto field or Go field whose type is a summary type, an optional or collection of one, or the union is renamed `header` → `summary`, `headers` → `summaries`, and compound names likewise. Named here so none is a judgment call: `personHeader`, `jamesHeader`, `birthHeader`, `marriageHeader`, `fireHeader`, `lifeHeader`, `eventHeader`, `placeHeader`, `personHeaders` → `…Summary` / `…Summaries`; `attachHeader` → `attachSummary`; `fillHitHeaders` → `fillHitSummaries`; `addHeaderID` → `addSummaryID`; `handleHeaders` → `handleSummaries`; `loadHandleHeaders` → `loadHandleSummaries`; `headerPictureCase(s)` → `summaryPictureCase(s)`; `headerParts` → `summaryParts`; `headerHits` → `summaryHits`; `headerPlace` → `chainedPlace`. A name whose type is a view, size or layout value stays (D-2) | The type decides; the word sweep proves it | Leaving locals as `header` — the next reader sees `header: PersonSummary` |
+| D-4 | **Proto.** Names change; every kept field and enum number stays: `List{Person,Event,Place}Summaries{Request,Response}` with `repeated … summaries = 1`; `WriteEffects.summary_handles = 6`; `METHOD_LIST_{PERSON,EVENT,PLACE}_SUMMARIES = 87, 91, 93`. The four `oneof header` blocks fold into one message `ConclusionSummary { oneof kind { PersonSummary person = 1; EventSummary event = 2; PlaceSummary place = 3; } }` *(new)*; each of the four messages gets `ConclusionSummary summary = N` with the lowest number its old oneof used (`SearchHit` 12, `ConclusionDetail` 4, `PromoteGraphAlignmentAlternative` 4, `PromoteGraphAlignmentRow` 13) and reserves the other two numbers and the names `person`, `event`, `place`. Go builds it in one `conclusionSummaryProto` *(new)*; Swift maps it in one `mapConclusionSummary` *(new)*, and the four Swift bodies and four Go switches go. The `reserved "METHOD_GET_*_HEADER"` line stays; its comment at 41 becomes "Per-entity summaries ride GetConclusionDetail." | The FFI is binary proto, the dylib and app ship together, and nothing stores these messages, so the rename and the fold are wire-safe (S14-01 precedent). Eight hand-kept copies of one union become two (review M-6) | Four renamed oneofs — keeps four copies in each language. **Waiting on the user** (Open questions) |
+| D-5 | `effects.Set.HeaderDeps` → `SummaryDeps`, `HeaderDepsWalked` → `SummaryDepsWalked`; Swift `headerHandles` → `summaryHandles`. `HeaderDependents` is deleted: it forwards to `Dependents`, which `autoreconciler.go:216` and `display_register.go` already call; its callers (`subjects.go:247`, `display_cache_test.go:51,129`, `placechains_test.go:444`, `walks_test.go:303,309,319`) call `conclusionsummaries.Dependents` | One name for one walk | Renaming the alias — keeps a forwarder under a new name |
+| D-6 | **Files** move with `git mv`: the package directory; `conclusionheaders.go` → `conclusionsummaries.go`; `conclusionheaders_test.go` → `conclusionsummaries_test.go`; `api/ffi/handlers/conclusion_headers.go` (+ `_test.go`) → `conclusion_summaries.go` (+ `_test.go`); `PersonHeaderDisplay.swift` → `PersonTitleDisplay.swift`; `ConclusionHeaderDisplay.swift` → `ConclusionSummaryDisplay.swift`; `PersonHeaderDisplayTests.swift` → `PersonTitleDisplayTests.swift`. `display_register.go` and `display_cache_test.go` keep their names. In `project.pbxproj`, replace each moved file's name everywhere it appears (the `path =` value and the `/* … */` comments), keeping every object ID | `git mv` keeps history; editing in place keeps target membership | New pbxproj objects — duplicate membership |
+| D-7 | Comments that call the data a header say summary, including proto comments (1016-1017, 1303, 1355, 1407) and graphcache's ("A stored summary row is composed, not finished"). Comments about the band stay | Same line as D-2 | — |
+| D-8 | **Docs.** Rename in living docs: `docs/*.md`, `docs/ideas/`, `.agents/skills/add-audit-scope/SKILL.md:80`, `.cursor/rules/swift-tests.mdc:23`. In `docs/deployment-plan/spike-13/deployment-plan.md`: the working rules at lines 91 ("One person header for every tile" → "One person summary for every tile", and its body), 96, 97, 98 and 111; the S13-04 and S13-05 PR-map rows and scope entries. Leave: the S13-02 row and scope entry (landed), S13-31's own row and entry (they describe the rename), the slice diagram's PR titles, landed rows in `docs/deployment-plan/spike-14/deployment-plan.md`, plans, logs, audits, `completed.md` | Records say what shipped then; living docs say what is true now | Rewriting history — a ship log's names would no longer be in `git log` |
+| D-9 | **Test names.** Go: `TestPersonHeaderTerms`, `TestPersonHeaderTermLabels`, `TestPersonHeaderSkipsNegativeLikeness`, `TestPlaceHeaderParentsAndPeriod`, `TestListPersonHeaders`, `TestListEventHeaders`, `TestListPlaceHeaders`, `TestListHeadersCarryUpdated`, `TestHeadersShowKeptValuesOnly`, `TestHeaderSearchFindsTheListTitle`, `TestHeaderProtosCarryTerms`, `TestHeaderLeadsWithEarliestPicture`, `TestHeaderLeadsWithChosenPicture`, `TestGetConclusionDetailCarriesItsHeader` → Summary; `TestHeaderDependentsIncludeChildPlaces` → `TestDependentsIncludeChildPlaces`. Swift: `PersonHeaderDisplayTests` → `PersonTitleDisplayTests`; `treatmentReadsOnlyTheHeader`, `titleIsTheHeadersChosenTitle`, `withNoHeaderTheTitleIsTheLabelThenTheRef`, `placesListWarmsTheHeaderRead`, `eventsListWarmsTheHeaderRead`, `personsListLoadsHeadersOfPromotedPersons`, `periodAndRelationshipsFillFromTheHeader`, `headerTypeFillsATitleThatOmittedIt`, `headerSuppliesSubjectsAndPlace`, `aHeaderIsTitledByItsKind` → Summary. Stay (they test the band or a list's meta line): `headerThumbIsTheLeadLikeness`, `headerFallsBackNameLabelRef`, `aSinglePictureLeadsTheHeaderWithoutAMenu`, `aPictureFillsTheGalleryAndLeadsTheHeader`, `headerMetaCountsAndShowsRefreshing`, `eventsHeaderMetaNamesTheDateSort`, `anEmphasizedRunInASectionHeaderTitleDrawsHeavier`, `headerActionHitsCenterOnTrailingIcons`, `TestEncodeJPEGOversizedHeaderAllocation` | Read test by test at the planning base | — |
+| D-10 | **The band's line is secondary.** `ConclusionDetailPage<Content, Secondary: View, PageSections>`, `let secondary`, `secondary:` parameters; `ConclusionDetailHeaderBand<Content, Secondary>`, `ConclusionDetailHeader<Content, Secondary>`; the comment at 685 "the kind's secondary line"; `EventDetailSummary` → `EventDetailSecondary`; `summaryDate`, `summaryPlace` → `secondaryDate`, `secondaryPlace`; the `summary:` arguments in `PersonDetailView`, `EventDetailView`, `PlaceDetailView`; `EventDetailTests` | User, 2026-11-01: matches the list pages' `Secondary` and `ConclusionHeaderDisplay.secondary`, so "summary" means only the data | Leaving the band's `summary` — two meanings in one struct (`EventDetailContent`) |
+| D-11 | `PersonHeaderDisplay.TitleSource` (a typealias of `ConclusionTitleSource`) is deleted; `PersonDetailContent.swift:16` uses `ConclusionTitleSource`, as `EventDetailContent.swift:7` does | One name for the title source type | — |
+
+**Rules this plan bends.** None. It renames working rule "One person header for every tile" to "One person summary for every tile" at the user's request (2026-11-01); the rule's content is unchanged.
+
+## 6. Design
+
+### Codebase fit
+
+| New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
+| --- | --- | --- | --- |
+| `core/database/conclusionsummaries` *(renamed)* | package | `core/database/conclusionheaders` | It is that package, moved |
+| `ConclusionSummary` *(new)* | proto message | the four `oneof header` blocks | It replaces them (D-4) |
+| `conclusionSummaryProto` *(new)* | Go func | the four switches in §4 | It replaces them |
+| `mapConclusionSummary` *(new)* | Swift func | `mapConclusionHeader` and three copies | It replaces them |
+
+Every other name is a rename of an existing type (D-1).
+
+**Builds on.** S14-01's rename shape (`8e519655`, `067e26a0`); `./scripts/generate-proto.sh`; `add-swift-test`'s pbxproj notes.
+**Deletes.** `HeaderDependents` (D-5); `PersonHeaderDisplay.TitleSource` (D-11); the four `oneof header` blocks, the four Go switches, and three of the four Swift union mappers (D-4).
+**Next adds.** S13-04 (`GetPersonFamily` returns `PersonSummary`s through `conclusionsummaries.ByIDs`), S13-05 (`ListPersonEvents` returns `EventSummary`s with {role, `PersonSummary`}), the S13-12 and S13-13 tiles read `CatalogPersonSummary`. A message that carries one summary of any kind adds one `ConclusionSummary` field.
+
+### Reach
+
+None — no new path into existing code, no new state reachable.
+
+### Scale
+
+None — no write, list or loop changes.
+
+### Edges
+
+None — no rule, comparison or algorithm changes. The one assumption the PR leans on, that nothing persists these names or messages, is checked in §4 (Persistence) and is a stop condition.
+
+### Schema
+
+None — no catalog change.
+
+### Go core
+
+| Package | Change |
+| --- | --- |
+| `core/database/conclusionsummaries` | moved from `conclusionheaders`; types renamed (D-1); `HeaderDependents` deleted (D-5); docs and comments say summary (D-7) |
+| `core/database/effects`, `core/writes`, `core/database/graphcache`, `core/database/subjects` | `SummaryDeps`, `SummaryDepsWalked`; `subjects` calls `Dependents` (D-5); graphcache comments (D-7) |
+| `autoreconciler`, `conclusiondetails`, `persondetail`, `searchindex` | import path, type names, D-3 locals |
+
+### FFI
+
+```proto
+// ConclusionSummary is one handle's summary, by kind.
+message ConclusionSummary {
+  oneof kind {
+    PersonSummary person = 1;
+    EventSummary event = 2;
+    PlaceSummary place = 3;
+  }
+}
+
+message SearchHit {
+  // (other fields unchanged)
+  ConclusionSummary summary = 12;
+  reserved 13, 14;
+  reserved "person", "event", "place";
+}
+```
+
+The same shape in `ConclusionDetail` (4; reserves 5, 6), `PromoteGraphAlignmentAlternative` (4; reserves 5, 6), `PromoteGraphAlignmentRow` (13; reserves 14, 15). Handlers: `conclusion_summaries.go` with `personSummaryProto`, `eventSummaryProto`, `placeSummaryProto`, `chainedPlaceProto`, `conclusionSummaryProto`, `unmarshalErr("list_person_summaries", …)` and siblings; `conclusion_detail.go` `attachSummary`; `dispatch.go` method cases. Regenerate with `./scripts/generate-proto.sh`.
+
+### macOS
+
+None — no view changes. Renames only (D-1, D-3, D-6, D-10, D-11): `listPersonSummaries`, `listEventSummaries`, `listPlaceSummaries` on `GenealogyStore`, `GoStore`, `FakeStore`; `mapPersonSummary`, `mapEventSummary`, `mapPlaceSummary`, `mapChainedPlace`, `mapConclusionSummary`; `seededEventSummaries`, `seededPlaceSummaries`.
+
+### Strings
+
+None — no user-facing copy names the type or the band's slot.
+
+## 7. Steps
+
+**STEP-1 — Move the Go package**
+Files: `core/database/conclusionheaders/` → `core/database/conclusionsummaries/` *(new)*; its importers in `core/` and `api/ffi/handlers/` (§4 Go importers).
+Do: `git mv` the directory and the two Go files named in D-6; rename the package clauses, types, `headerChainDepth`, D-3 locals, comments (D-7) and Go test names (D-9) inside the package; in the importers, change only the import path and the type names so they build. `HeaderDependents` stays until STEP-2; handler files keep their names until STEP-3.
+Check: `CGO_ENABLED=1 go build -tags fts5 ./core/... ./api/...` and `CGO_ENABLED=1 go test -tags fts5 ./core/... ./api/...` pass; `git grep -n conclusionheaders -- core api` prints nothing.
+
+**STEP-2 — Effects names and the forwarder**
+Files: `core/database/effects/registry.go`, `core/writes/run.go`, `core/database/graphcache/commit.go`, `core/database/subjects/subjects.go`, `core/database/conclusionsummaries/dependents.go` *(new)* (moved in STEP-1) and its tests, `api/ffi/handlers/write_effects.go`, `write_effects_test.go`.
+Do: D-5 on the Go side (the proto field stays `header_handles` until STEP-3). Delete `HeaderDependents`; point its callers at `Dependents`; rename `TestHeaderDependentsIncludeChildPlaces`.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/... ./api/...` passes; `git grep -nE 'HeaderDeps|HeaderDependents' -- core api ':!*.pb.go'` prints nothing.
+
+**STEP-3 — Proto, FFI and the Swift wire mapping**
+Files: `api/proto/engine.proto`, `api/ffi/dispatch.go`, `api/ffi/handlers/*`, generated `api/proto/engine/engine.pb.go` and `macos/App/Platform/Generated/engine.pb.swift`; in Swift, only the lines that name a generated type or field (`git grep -nE 'Provenencia_Engine_V1_|\.header\b|headerHandles|OneOf_Header' -- macos/App macos/ProvenenciaTests ':!*Generated/*'`). Skill: `add-ffi-handler`.
+Do: D-4 and D-7 in the proto; `git mv` the handler files (D-6); add `conclusionSummaryProto` and use it at the four sites; rename the handler functions and D-3 locals; run `./scripts/generate-proto.sh`; in `GoStore.swift`, replace the four union bodies with one `mapConclusionSummary` that still returns `CatalogConclusionHeader` (Swift's own names change in STEP-4), and fix the other generated-name lines.
+Check: in `git diff -- api/proto/engine.proto`, outside the four folded messages each removed line ending `= N;` has an added line with the same `N`, and the four folded messages show exactly D-4's kept and reserved numbers; `CGO_ENABLED=1 go test -tags fts5 ./api/...` passes; `scripts/check-pr.sh` PASS.
+
+**STEP-4 — Swift wire types and store**
+Files: `macos/App/Platform/GenealogyStore.swift`, `GoStore.swift`, `CoreInvoke.swift`, `FakeStore.swift`, and every file that names a renamed Swift type (`git grep -lE 'Catalog(Person|Event|Place|Conclusion)Header|CatalogHeaderPlace|list(Person|Event|Place)Headers|seeded(Event|Place)Headers' -- macos/App macos/ProvenenciaTests`).
+Do: D-1 Swift type names, store methods, mappers, `FakeStore` seeds, `summaryHandles` (D-5). Type names only; properties and locals are STEP-6.
+Check: `scripts/check-pr.sh` PASS.
+
+**STEP-5 — The band's line becomes secondary**
+Files: `ConclusionDetailPage.swift`, `PersonDetailView.swift`, `EventDetailView.swift`, `PlaceDetailView.swift`, `EventDetailContent.swift`, `EventDetailTests.swift`.
+Do: D-10.
+Check: `git grep -nwE 'Summary|summary|summaryDate|summaryPlace|EventDetailSummary' -- macos/App/Features/Conclusions/ConclusionDetailPage.swift 'macos/App/Features/Conclusions/*DetailView.swift' macos/App/Features/Conclusions/EventDetailContent.swift` prints only lines that name the data (`CatalogConclusionSummary`, `detail.summary`); `scripts/check-pr.sh` PASS.
+
+**STEP-6 — Swift names, files and tests**
+Files: `PersonHeaderDisplay.swift`, `ConclusionHeaderDisplay.swift`, `PersonHeaderDisplayTests.swift`, `project.pbxproj`, `PersonDetailContent.swift`, and every Swift file the word sweep lists. Skill: `add-swift-test`.
+Do: D-6 moves and pbxproj edits; D-11; D-3 properties and locals (`var summary: CatalogConclusionSummary?`, `detail.summary`); D-9 Swift test names. Work one folder at a time (`Platform/`, `Features/Conclusions/`, `Features/Promote/`, `Features/Catalog/`, `Features/Workspace/`, `macos/ProvenenciaTests/`); building between folders with Xcode or `xcodebuild` is allowed.
+Check: the old-name sweep and the word sweep (keep list only) over `macos/`; `scripts/check-pr.sh` PASS.
+
+**STEP-7 — Docs**
+Files: per D-8; this plan; `docs/deployment-plan/spike-13/completed.md`.
+Do: D-8 renames. After `gh pr create`: this plan's Status and Landed note, the map row status, one `completed.md` paragraph.
+Check: the old-name sweep prints nothing; the word sweep prints only keep-list lines; the map sweep prints only S13-02 and S13-31 lines; `scripts/check-pr.sh` PASS (it runs `check-guidance-names.py`).
+
+Commits: one per step. Subjects are full sentences ("Rename the conclusion header package to conclusion summaries.").
+
+## 8. Tests
+
+No new behavior tests: each existing test passing under its new name pins the rename. The fold (D-4) is covered by the tests that read each oneof today.
+
+| ID | Layer | File · test | Case: input → expected | Covers |
+| --- | --- | --- | --- | --- |
+| T-1 | Go | `core/database/conclusionsummaries/*_test.go` *(new)* (all, renamed per D-9) | the base cases → the base results | AC-1.3 |
+| T-2 | Go | `api/ffi/handlers/conclusion_summaries_test.go` *(new)* `TestSummaryProtosCarryTerms`, `TestListPersonSummaries`, `TestListEventSummaries`, `TestListPlaceSummaries`; the `conclusion_detail` and `search_catalog` handler tests (read `GetSummary()`); `write_effects_test.go` (`SummaryHandles`) | the base cases → the base results | AC-1.3, D-4, D-5 |
+| T-3 | Swift | the 15 test files the old-name sweep lists at the base, `PersonTitleDisplayTests` among them; `CatalogSearchTests`, `PromoteFlowTests`, `PersonDetailTests` read the folded union | the base cases → the base results | AC-1.4, D-4 |
+| T-4 | Grep | old-name sweep (§2) | → no output | AC-1.1 |
+| T-5 | Grep | word sweep (§2) | → keep-list lines only | AC-1.2, D-3 |
+| T-6 | Grep | map sweep (§2) | → S13-02 and S13-31 lines only | AC-1.5, D-8 |
+
+Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `xcode-test` (pbxproj paths, the folded oneof), `guidance-names` (a skill naming an old symbol).
+
+## 9. Definition of done
+
+```
+- [ ] Every AC in §2 is true: test name or manual check line for each
+- [ ] Every T-# in §8 exists and passes
+- [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests with no Swift warning, catalog and plan-doc checks)
+- [ ] No Out line was implemented; no code outside §4 / §6 was refactored
+- [ ] New user-facing copy is in L10n + Localizable.xcstrings: N/A, no copy changes
+- [ ] Sweep: each renamed or deleted name `rg`'d by its old, qualified name across `.agents/`, `.cursor/rules/`, `docs/*.md` and `L10n.swift` with no hit left; `scripts/check-guidance-names.py` passes (check-pr runs it)
+- [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated: N/A, none
+- [ ] UI matches the brief inventory: N/A, no UI change
+- [ ] Version bump as the header says: none
+- [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan (after gh pr create)
+- [ ] deployment-plan.md: map row status; docs/deployment-plan/spike-13/completed.md: one short paragraph of what shipped
+- [ ] Brief moved to design/archive/: N/A, not gated
+- [ ] Domain doc updated: `conclusion-reconciliation.md` and `macos-client-patterns.md` name the new package and types
+- [ ] PR description: what shipped, AC evidence (the three sweeps' output), deviations, manual check, follow-up M-7
+```
+
+## 10. Manual check
+
+1. Build and run. Open a project with Persons, Events and Places. The Persons, Events and Places lists show the same rows, titles, dates and thumbnails as on `main`.
+2. Open a Person: the band at the top shows the name, life lines, gender badge and thumb as on `main`. Open an Event (date and place under the title) and a Place (its chain): the same.
+3. Type a person's name in the omnibar: the hit row reads as on `main`. Open Promote on a Source: the proposal rows and their alternatives read as on `main`.
+
+## 11. Risks and stop conditions
+
+| Risk | Mitigation |
+| --- | --- |
+| A proto number is dropped in the fold | STEP-3 number check; D-4 lists each kept and reserved number |
+| A pbxproj name is missed and a file drops out of a target | STEP-6 runs the full Xcode tests; D-6 edits in place |
+| A band or layout name is renamed by a blind replace | D-2 keep list; D-3 type rule; the word sweep |
+
+**Stop and report if:**
+
+- Any name in §4 is stored or read back from disk, a JSON file, a golden file, `UserDefaults` or navigation history (a hit for an old name outside Go, proto and Swift source).
+- A test can pass only by changing an assertion, not a name or the oneof accessor.
+- A file under §4 Current state has changed at your base so a row no longer holds (for example S13-04 landed first and added header names).
+- A fifth `oneof` over person, event and place exists at your base that §4 does not list.
+
+## 12. Open questions
+
+1. **D-4 — fold the four `oneof header` blocks into one `ConclusionSummary` message?** Recommended: yes. The fold shares only the "one of three kinds" wrapper; each kind's own message (`PersonSummary`, `EventSummary`, `PlaceSummary`) stays separate and can grow its own fields, and the detail pages' contents live in `ConclusionDetail`'s fields and sections, not in this wrapper. If the user says no, D-4 renames each oneof to `oneof summary` in place, the Codebase fit rows for the new message and mappers go, and the fold becomes a follow-up.
+
+## 13. PR
+
+**Title:** S13-31 — Header data becomes summaries
+**Body:** objective in one sentence; US-1 against AC-1.1 – AC-1.5 with the three sweeps' output; the D-4 fold; deviations; manual check; follow-up M-7; `Plan: docs/deployment-plan/spike-13/prs/S13-31-header-data-becomes-summaries.md`.
