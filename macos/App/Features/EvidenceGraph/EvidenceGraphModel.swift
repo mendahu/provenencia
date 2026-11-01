@@ -1327,7 +1327,7 @@ final class EvidenceGraphModel {
     var canvasAccessibilityLabel: String {
         if armedConnect { return L10n.string(connectArmedHint) }
         if let kind = armedKind { return L10n.string(armedHint(for: kind)) }
-        if let name = LocationNames(session: session).graphName(graphID)?.nilIfEmpty {
+        if let name = WorkspaceLocationLabels.graphName(graphID: graphID, names: LocationNames(session: session)) {
             return L10n.EvidenceGraph.canvasAccessibility(graph: name)
         }
         return L10n.string(L10n.Workspace.evidenceGraphTitle)

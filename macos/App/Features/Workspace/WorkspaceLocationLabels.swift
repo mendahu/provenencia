@@ -38,21 +38,23 @@ enum WorkspaceLocationLabels {
         for location: WorkspaceLocation,
         names: LocationNames = .none
     ) -> (leaf: String?, section: String?) {
-        if location.sourceSurface == .graph || location.sourceSurface == .citationComposer
-            || location.sourceSurface == .promote,
-           let graphID = location.graphId
-        {
+        if let graphID = location.graphSurfaceID {
             return (graphLabel(graphID: graphID, names: names), surfaceLabel(for: location))
         }
         return (
-            location.title?.nilIfEmpty ?? location.ref?.nilIfEmpty,
+            location.title?.trimmedNonEmpty ?? location.ref?.trimmedNonEmpty,
             location.pageSection.map { L10n.string($0.label) }
         )
     }
 
+    /// The graph's name, when the session knows one.
+    static func graphName(graphID: String, names: LocationNames) -> String? {
+        names.graphName(graphID)?.trimmedNonEmpty
+    }
+
     /// The graph's name, else "Evidence graph".
     static func graphLabel(graphID: String, names: LocationNames) -> String {
-        names.graphName(graphID)?.nilIfEmpty ?? L10n.string(L10n.Workspace.evidenceGraphTitle)
+        graphName(graphID: graphID, names: names) ?? L10n.string(L10n.Workspace.evidenceGraphTitle)
     }
 
     /// The surface on a graph: the composer's Citation, the Promote page. The
@@ -62,7 +64,7 @@ enum WorkspaceLocationLabels {
         case .promote:
             return location.promoteAll
                 ? L10n.string(L10n.EvidenceGraph.promoteAll)
-                : L10n.Promote.breadcrumb(ref: location.ref?.nilIfEmpty ?? scope(of: location))
+                : L10n.Promote.breadcrumb(ref: location.ref?.trimmedNonEmpty ?? scope(of: location))
         case .citationComposer:
             return L10n.CitationComposer.breadcrumbCitationFor(scope: scope(of: location))
         default:
@@ -72,19 +74,19 @@ enum WorkspaceLocationLabels {
 
     /// What the surface is about: the title, else the ref, else an ellipsis.
     private static func scope(of location: WorkspaceLocation) -> String {
-        location.title?.nilIfEmpty ?? location.ref?.nilIfEmpty ?? "…"
+        location.title?.trimmedNonEmpty ?? location.ref?.trimmedNonEmpty ?? "…"
     }
 }
 
 extension String {
-    var nilIfEmpty: String? {
+    var trimmedNonEmpty: String? {
         let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
     }
 }
 
 extension Optional where Wrapped == String {
-    var nilIfEmpty: String? {
-        self?.nilIfEmpty
+    var trimmedNonEmpty: String? {
+        self?.trimmedNonEmpty
     }
 }

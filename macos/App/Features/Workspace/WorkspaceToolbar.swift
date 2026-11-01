@@ -213,14 +213,11 @@ struct WorkspaceToolbar: View {
             ),
         ]
 
-        if location.sourceSurface == .graph || location.sourceSurface == .citationComposer
-            || location.sourceSurface == .promote,
-           let sourceID = location.sourceId, let graphID = location.graphId
-        {
+        if let graphID = location.graphSurfaceID, let sourceID = location.sourceId {
             let onCanvas = location.sourceSurface == .graph
             let carriedTitle = onCanvas ? location.title : location.sourceTitle
-            let sourceLabel = names.sourceTitle(sourceID).flatMap { $0.nilIfEmpty }
-                ?? carriedTitle.flatMap { $0.nilIfEmpty }
+            let sourceLabel = names.sourceTitle(sourceID).flatMap { $0.trimmedNonEmpty }
+                ?? carriedTitle.flatMap { $0.trimmedNonEmpty }
             if let sourceLabel {
                 items.append(
                     PVBreadcrumbItem(
@@ -272,8 +269,8 @@ struct WorkspaceToolbar: View {
                 return items
             }
         } else {
-            leaf = location.ref.flatMap { $0.nilIfEmpty }
-                ?? location.title.flatMap { $0.nilIfEmpty }
+            leaf = location.ref.flatMap { $0.trimmedNonEmpty }
+                ?? location.title.flatMap { $0.trimmedNonEmpty }
                 ?? "…"
         }
         items.append(
@@ -448,7 +445,7 @@ private struct HistoryJumpRow: Identifiable {
     let leafLabel: String?
 
     var refLabel: String {
-        location.ref?.nilIfEmpty ?? ""
+        location.ref?.trimmedNonEmpty ?? ""
     }
 
     init(index: Int, location: WorkspaceLocation, leafLabel: String?) {
