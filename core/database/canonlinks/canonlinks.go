@@ -2,8 +2,9 @@
 // between its two ends with the key it has from each (EdgeOf), the catalog's
 // bridge terms (LoadTerms), and the links the kinship patterns imply for one
 // person (Reader.For), and one person's relationship links, recorded and
-// implied, merged through kinship.LinkSet (Reader.Relationships). Matching and
-// later readers share it.
+// implied, merged through kinship.LinkSet (Reader.Relationships), with, on
+// request, the siblings a shared parent implies (Options{Siblings: true},
+// LoadSiblings). Matching and later readers share it.
 package canonlinks
 
 import (

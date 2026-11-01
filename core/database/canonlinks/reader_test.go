@@ -294,7 +294,7 @@ func (w *world) relShapes(links []kinship.Link) []relShape {
 
 func (w *world) relationships(id []byte) []kinship.Link {
 	w.t.Helper()
-	links, err := w.r.Relationships(id)
+	links, err := w.r.Relationships(id, Options{})
 	if err != nil {
 		w.t.Fatal(err)
 	}
@@ -631,5 +631,400 @@ func TestVerifyCatchesAStaleResult(t *testing.T) {
 	}}})
 	if err := w.g.Verify(); err == nil {
 		t.Fatal("Verify accepted a stale result")
+	}
+}
+
+// sibling files a sibling relationship from a to b.
+func (w *world) sibling(name string, a, b []byte) []byte {
+	return w.relationship(name, a, b, "sibling")
+}
+
+// siblings are the sibling-key links of id's relationships, siblings included.
+func (w *world) siblings(id []byte) []kinship.Link {
+	w.t.Helper()
+	ka, kb := w.keys(vocabkey.BridgeRelationship, vocabkey.TermSibling)
+	links, err := w.r.Relationships(id, Options{Siblings: true})
+	if err != nil {
+		w.t.Fatal(err)
+	}
+	var out []kinship.Link
+	for _, l := range links {
+		if l.KeyA == ka && l.KeyB == kb {
+			out = append(out, l)
+		}
+	}
+	return out
+}
+
+// sharedParent is the shape string of a sibling implied through a person.
+func sharedParent(name string) string { return string(kinship.PatternSharedParent) + "/" + name }
+
+func TestRelationshipsOptionsSiblings(t *testing.T) {
+	// want builds a sibling link as relShapes reads it.
+	want := func(w *world, a, b string, assoc []string, shapes ...string) relShape {
+		ka, kb := w.keys(vocabkey.BridgeRelationship, vocabkey.TermSibling)
+		return relShape{A: a, B: b, KeyA: ka, KeyB: kb, Assoc: assoc, Shapes: shapes, OnlyImplied: len(shapes) > 0}
+	}
+	read := func(w *world, id []byte) []relShape { return lesserFirst(w.relShapes(w.siblings(id))) }
+	check := func(t *testing.T, got []relShape, want ...relShape) {
+		t.Helper()
+		if len(got) == 0 && len(want) == 0 {
+			return
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("got  %+v\nwant %+v", got, want)
+		}
+	}
+	t.Run("AC-1.1", func(t *testing.T) {
+		w := newWorld(t)
+		bea, cal := w.person("Bea"), w.person("Cal")
+		w.sibling("BC", bea, cal)
+		check(t, read(w, bea), want(w, "Bea", "Cal", []string{"BC"}))
+		check(t, read(w, cal), want(w, "Bea", "Cal", []string{"BC"}))
+	})
+	t.Run("AC-1.2", func(t *testing.T) {
+		w := newWorld(t)
+		ann, bea, cal := w.person("Ann"), w.person("Bea"), w.person("Cal")
+		w.parent("AB", ann, bea)
+		w.parent("AC", ann, cal)
+		check(t, read(w, bea), want(w, "Bea", "Cal", []string{"AB", "AC"}, sharedParent("Ann")))
+		check(t, read(w, cal), want(w, "Bea", "Cal", []string{"AB", "AC"}, sharedParent("Ann")))
+	})
+	t.Run("AC-1.3", func(t *testing.T) {
+		w := newWorld(t)
+		ann, bea, cal := w.person("Ann"), w.person("Bea"), w.person("Cal")
+		b1, b2 := w.event("B1", vocabkey.EventBirth), w.event("B2", vocabkey.EventBirth)
+		w.join("B1/Ann", ann, b1, "father")
+		w.join("B1/Bea", bea, b1, "subject")
+		w.join("B2/Ann", ann, b2, "father")
+		w.join("B2/Cal", cal, b2, "subject")
+		check(t, read(w, bea), want(w, "Bea", "Cal", []string{"B1/Ann", "B1/Bea", "B2/Ann", "B2/Cal"}, sharedParent("Ann")))
+	})
+	t.Run("AC-1.4", func(t *testing.T) {
+		w := newWorld(t)
+		ann, bea, cal := w.person("Ann"), w.person("Bea"), w.person("Cal")
+		w.parent("AB", ann, bea)
+		w.parent("AC", ann, cal)
+		w.sibling("BC", bea, cal)
+		got := w.relShapes(w.siblings(bea))
+		wantLink := want(w, "Bea", "Cal", []string{"AB", "AC", "BC"}, sharedParent("Ann"))
+		wantLink.OnlyImplied = false
+		check(t, got, wantLink)
+	})
+	t.Run("AC-1.5", func(t *testing.T) {
+		w := newWorld(t)
+		ann, bea, cal, dan := w.person("Ann"), w.person("Bea"), w.person("Cal"), w.person("Dan")
+		w.parent("AB", ann, bea)
+		w.parent("AC", ann, cal)
+		w.parent("DB", dan, bea)
+		w.parent("DC", dan, cal)
+		check(t, read(w, bea), want(w, "Bea", "Cal", []string{"AB", "AC", "DB", "DC"}, sharedParent("Ann"), sharedParent("Dan")))
+	})
+	t.Run("AC-1.6", func(t *testing.T) {
+		w := newWorld(t)
+		ann, bea, cal, dan := w.person("Ann"), w.person("Bea"), w.person("Cal"), w.person("Dan")
+		w.parent("AB", ann, bea)
+		w.parent("AC", ann, cal)
+		w.parent("DC", dan, cal)
+		for _, id := range [][]byte{bea, cal} {
+			check(t, read(w, id), want(w, "Bea", "Cal", []string{"AB", "AC"}, sharedParent("Ann")))
+		}
+	})
+	t.Run("AC-1.7", func(t *testing.T) {
+		w := newWorld(t)
+		ann, bea, cal, dan, eve := w.person("Ann"), w.person("Bea"), w.person("Cal"), w.person("Dan"), w.person("Eve")
+		w.parent("AB", ann, bea)
+		w.relationship("AD", ann, dan, "spouse")
+		w.parent("DE", dan, eve)
+		w.parent("BC2", bea, cal)
+		for _, id := range [][]byte{bea, cal, eve} {
+			check(t, read(w, id))
+		}
+	})
+	t.Run("AC-1.8", func(t *testing.T) {
+		w := newWorld(t)
+		ann, bea := w.person("Ann"), w.person("Bea")
+		w.parent("AB", ann, bea)
+		var wantLinks []relShape
+		var kids [][]byte
+		for i := 1; i <= 14; i++ {
+			name := fmt.Sprintf("C%d", i)
+			kid := w.person(name)
+			kids = append(kids, kid)
+			w.parent(fmt.Sprintf("AC%d", i), ann, kid)
+			wantLinks = append(wantLinks, want(w, "Bea", name, []string{"AB", fmt.Sprintf("AC%d", i)}, sharedParent("Ann")))
+		}
+		got := w.siblings(bea)
+		// The order is that of Ann's links, which the graph sorts by the link's
+		// ref as text: not always the order the children were filed in.
+		n, err := w.g.Node(ann)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var order [][]byte
+		for _, l := range n.Links {
+			for _, k := range kids {
+				if bytes.Equal(l.Neighbor, k) {
+					order = append(order, k)
+				}
+			}
+		}
+		if len(got) != len(kids) || len(order) != len(kids) {
+			t.Fatalf("got %d links, %d children among Ann's links, want %d", len(got), len(order), len(kids))
+		}
+		var wantInOrder []relShape
+		for i, l := range got {
+			other := l.A
+			if bytes.Equal(l.A, bea) {
+				other = l.B
+			}
+			if !bytes.Equal(other, order[i]) {
+				t.Fatalf("link %d is to %s, want %s", i, w.name(other), w.name(order[i]))
+			}
+			wantInOrder = append(wantInOrder, wantLinks[slices.IndexFunc(kids, func(k []byte) bool { return bytes.Equal(k, order[i]) })])
+		}
+		check(t, lesserFirst(w.relShapes(got)), lesserFirst(wantInOrder)...)
+	})
+	t.Run("AC-1.9", func(t *testing.T) {
+		w := newWorld(t)
+		check(t, read(w, w.person("Ann")))
+		check(t, read(w, make([]byte, 16)))
+		if _, ok := w.g.Memo(siblingSlot, make([]byte, 16)); ok {
+			t.Fatal("an unknown id stored an answer")
+		}
+		bea := w.person("Bea")
+		w.sibling("BB", bea, bea)
+		check(t, read(w, bea), want(w, "Bea", "Bea", []string{"BB"}))
+	})
+	t.Run("AC-1.10", func(t *testing.T) {
+		w := newWorld(t)
+		ann, bea, cal := w.person("Ann"), w.person("Bea"), w.person("Cal")
+		w.parent("AB", ann, bea)
+		w.parent("AC", ann, cal)
+		w.parent("CB", cal, bea)
+		check(t, read(w, bea), want(w, "Bea", "Cal", []string{"AB", "AC"}, sharedParent("Ann")))
+	})
+	t.Run("AC-1.11", func(t *testing.T) {
+		w := newWorld(t)
+		ann, bea, cal := w.person("Ann"), w.person("Bea"), w.person("Cal")
+		w.parent("AB", ann, bea)
+		w.parent("AC", ann, cal)
+		wantLink := want(w, "Bea", "Cal", []string{"AB", "AC"}, sharedParent("Ann"))
+		got := w.siblings(bea)
+		check(t, lesserFirst(w.relShapes(got)), wantLink)
+		got[0].A[0] ^= 0xff
+		got[0].B[0] ^= 0xff
+		for _, a := range got[0].Associations {
+			a[0] ^= 0xff
+		}
+		for _, sh := range got[0].Shapes {
+			sh.Pivot[0] ^= 0xff
+		}
+		check(t, read(w, bea), wantLink)
+	})
+}
+
+func TestSiblingsFollowCommits(t *testing.T) {
+	w2 := func(t *testing.T) (w *world, ann, bea, cal []byte) {
+		w = newWorld(t)
+		ann, bea, cal = w.person("Ann"), w.person("Bea"), w.person("Cal")
+		w.parent("AB", ann, bea)
+		return
+	}
+	t.Run("AC-2.3", func(t *testing.T) {
+		w, ann, bea, cal := w2(t)
+		if got := w.siblings(bea); len(got) != 0 {
+			t.Fatalf("setup: %+v", w.relShapes(got))
+		}
+		w.parent("AC", ann, cal)
+		w.k.Commit(w.all[len(w.all)-1])
+		got := lesserFirst(w.relShapes(w.siblings(bea)))
+		if len(got) != 1 || got[0].A != "Bea" || got[0].B != "Cal" || !reflect.DeepEqual(got[0].Shapes, []string{sharedParent("Ann")}) {
+			t.Fatalf("got %+v", got)
+		}
+	})
+	filed := func(t *testing.T) (w *world, ann, bea []byte) {
+		var cal []byte
+		w, ann, bea, cal = w2(t)
+		w.parent("AC", ann, cal)
+		if len(w.siblings(bea)) != 1 {
+			t.Fatal("setup: want one sibling")
+		}
+		if !w.hasMemo(siblingSlot, bea) {
+			t.Fatal("setup: the answer was not stored")
+		}
+		return
+	}
+	t.Run("AC-2.4", func(t *testing.T) {
+		w, ann, bea := filed(t)
+		w.k.Commit(ann)
+		if w.hasMemo(siblingSlot, bea) {
+			t.Fatal("a commit naming Ann kept the answer")
+		}
+		if len(w.siblings(bea)) != 1 || !w.hasMemo(siblingSlot, bea) {
+			t.Fatal("the next read did not derive again")
+		}
+	})
+	t.Run("AC-2.5", func(t *testing.T) {
+		w, _, bea := filed(t)
+		w.k.CommitVocabulary()
+		if w.hasMemo(siblingSlot, bea) {
+			t.Fatal("a vocabulary commit kept the answer")
+		}
+		if len(w.siblings(bea)) != 1 || !w.hasMemo(siblingSlot, bea) {
+			t.Fatal("the next read did not derive again")
+		}
+	})
+	t.Run("AC-2.7", func(t *testing.T) {
+		w, ann, bea := filed(t)
+		for _, id := range slices.Clone(w.all) {
+			if w.name(id) == "AB" || w.name(id) == "AC" {
+				w.k.Remove(id)
+				w.k.Commit(id)
+			}
+		}
+		w.k.Remove(ann)
+		w.k.Commit(ann)
+		if got := w.siblings(bea); len(got) != 0 {
+			t.Fatalf("got %+v, want none", w.relShapes(got))
+		}
+		if err := w.g.Verify(); err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+func TestLoadSiblingsQueryCount(t *testing.T) {
+	t.Run("AC-2.1", func(t *testing.T) {
+		w := newWorld(t)
+		ann, bea, cal := w.person("Ann"), w.person("Bea"), w.person("Cal")
+		w.parent("AB", ann, bea)
+		w.parent("AC", ann, cal)
+		first, err := w.r.Relationships(bea, Options{Siblings: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var queries int
+		w.g.SetQueryCounterForTest(func() { queries++ })
+		second, err := w.r.Relationships(bea, Options{Siblings: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queries != 0 {
+			t.Fatalf("a second read issued %d queries", queries)
+		}
+		if !reflect.DeepEqual(first, second) {
+			t.Fatalf("second read differs:\n%+v\n%+v", first, second)
+		}
+	})
+	t.Run("AC-2.2", func(t *testing.T) {
+		// family files a parent of a first child and of more, each also a
+		// birth's subject when births is set; it returns the first child.
+		family := func(w *world, tag string, others int, births bool) []byte {
+			ann := w.person(tag + "Ann")
+			first := w.person(tag + "Bea")
+			w.parent(tag+"AB", ann, first)
+			for i := 0; i < others; i++ {
+				kid := w.person(fmt.Sprintf("%sK%d", tag, i))
+				w.parent(fmt.Sprintf("%sAK%d", tag, i), ann, kid)
+				if births {
+					b := w.event(fmt.Sprintf("%sB%d", tag, i), vocabkey.EventBirth)
+					w.join(fmt.Sprintf("%sB%d/Ann", tag, i), ann, b, "father")
+					w.join(fmt.Sprintf("%sB%d/K", tag, i), kid, b, "subject")
+				}
+			}
+			return first
+		}
+		count := func(build func(w *world) [][]byte) int {
+			w := newWorld(t)
+			ids := build(w)
+			var queries int
+			w.g.SetQueryCounterForTest(func() { queries++ })
+			if err := w.r.LoadSiblings(ids); err != nil {
+				t.Fatal(err)
+			}
+			for _, id := range ids {
+				if !w.hasMemo(siblingSlot, id) {
+					t.Fatalf("no answer stored for %s", w.name(id))
+				}
+			}
+			return queries
+		}
+		a := count(func(w *world) [][]byte { return [][]byte{family(w, "", 1, false)} })
+		b := count(func(w *world) [][]byte { return [][]byte{family(w, "", 7, true)} })
+		c := count(func(w *world) [][]byte {
+			return [][]byte{family(w, "x", 1, false), family(w, "y", 1, false), family(w, "z", 1, false)}
+		})
+		if a == 0 || a != b || a != c {
+			t.Fatalf("queries: one other child %d, seven with births %d, three families %d", a, b, c)
+		}
+	})
+}
+
+func TestSiblingsLeaveMatchingAlone(t *testing.T) {
+	// AC-3.2
+	w := newWorld(t)
+	ann, bea, cal := w.person("Ann"), w.person("Bea"), w.person("Cal")
+	w.parent("AB", ann, bea)
+	w.parent("AC", ann, cal)
+	copyImplied := func(in []kinship.Implied) []kinship.Implied {
+		var out []kinship.Implied
+		for _, l := range in {
+			c := l
+			c.Edge = l.Edge.Clone()
+			c.Event, c.Through = bytes.Clone(l.Event), bytes.Clone(l.Through)
+			c.From = nil
+			for _, f := range l.From {
+				c.From = append(c.From, f.Clone())
+			}
+			out = append(out, c)
+		}
+		return out
+	}
+	copyLinks := func(in []kinship.Link) []kinship.Link {
+		var out []kinship.Link
+		for _, l := range in {
+			out = append(out, kinship.Link{Edge: l.Edge.Clone(), Recording: l.Recording.Clone()})
+		}
+		return out
+	}
+	wantFor, wantRel := copyImplied(w.for_(bea)), copyLinks(w.relationships(bea))
+	if len(w.siblings(bea)) != 1 {
+		t.Fatal("setup: want one sibling link")
+	}
+	if got := w.for_(bea); !reflect.DeepEqual(got, wantFor) {
+		t.Fatalf("For changed:\n%+v\n%+v", got, wantFor)
+	}
+	if got := w.relationships(bea); !reflect.DeepEqual(got, wantRel) {
+		t.Fatalf("Relationships changed:\n%+v\n%+v", got, wantRel)
+	}
+	for _, l := range w.for_(bea) {
+		if l.Pattern == kinship.PatternSharedParent {
+			t.Fatalf("For holds %+v", l)
+		}
+	}
+	for _, l := range w.relationships(bea) {
+		for _, sh := range l.Shapes {
+			if sh.Pattern == kinship.PatternSharedParent {
+				t.Fatalf("Relationships holds %+v", l)
+			}
+		}
+	}
+}
+
+func TestVerifyCatchesAStaleSiblingAnswer(t *testing.T) {
+	w := newWorld(t)
+	ann, bea, cal := w.person("Ann"), w.person("Bea"), w.person("Cal")
+	w.parent("AB", ann, bea)
+	w.parent("AC", ann, cal)
+	if len(w.siblings(bea)) != 1 {
+		t.Fatal("setup: want one sibling link")
+	}
+	if err := w.g.Verify(); err != nil {
+		t.Fatalf("a fresh answer failed Verify: %v", err)
+	}
+	w.g.SetMemo(siblingSlot, bea, personAnswer{rules: shipped})
+	if err := w.g.Verify(); err == nil {
+		t.Fatal("Verify accepted a stale answer")
 	}
 }
