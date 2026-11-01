@@ -1,6 +1,6 @@
 # S13-01 — Person claims read
 
-**Status:** Planned
+**Status:** Landed in #655 (2026-10-31)
 **Spike / slice:** Spike 13 · Slice 3 — Family (the read serves slice 6's Sources section; its helper and invalidation spec are needed by S13-04)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: a read, a store method and a cache key; no view consumes them until S13-16)
@@ -14,6 +14,8 @@
 **Context:** [person-detail.md § 5. Sources](../person-detail.md#5-sources) (R-33 – R-37), working rules: "Each section reads its own query", "One invalidation rule for person-section keys", "Canonical only, filtered in Go", "Claims are read per person from the graph cache, grouped by Source in Go"
 **Planned:** 2026-10-31 against `main` @ `474ca93`
 **Review:** [`S13-01-person-claims-read.review.md`](S13-01-person-claims-read.review.md) — Fits with changes / Ready with changes; 2 rounds; every finding Fixed, one scope call answered by the user
+
+**Landed:** the code differs from the plan in four places. (1) T-8 warms a hidden `.personClaims` key (no place shows it until S13-16), so it asserts that `revalidatedKeys` names the key once for a touched handle, a graph and a promote together, that the registry invalidates it on the promote, and that the pass evicts it; the "one reload" of a visible key is not observable from a test. (2) T-6 counts the graph's queries on the second call (0); the one `files.RelPaths` query is not countable, so "at most one" rests on the handler's single `listedProtos` call. T-6 also assigns the Person Subject type the Subject-valued `person` Property (`AssignSubjectTypeProperty`), because no seeded Person type carries one. (3) `CatalogQueryRefresh` has two initializers, `init(follows:action:)` and `init(follows:run:)` (the second keeps today's trailing-closure call for `.run`), and `WorkspaceSession.revalidatedKeys(for:_:)` takes the mutation as an optional second argument so `follows.ids` reads Promote's graph as it does for `.run`. (4) The working rule "One invalidation rule for person-section keys" already said what STEP-11 asks, so it is unchanged. `go list -deps` for `persondetail` lists `api/proto/engine` (reached through `apperr`, as for `conclusiondetails`) and no handler package.
 
 ### Implementer — read this first
 
