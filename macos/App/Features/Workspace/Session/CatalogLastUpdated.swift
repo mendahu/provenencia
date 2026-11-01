@@ -67,7 +67,7 @@ struct CatalogQueryPatch: Sendable {
     var follows: CatalogQueryFollows?
     let apply: @MainActor @Sendable (
         WorkspaceSession, CatalogQueryKey, Set<String>, CatalogActivity, CatalogMutation?
-    ) -> Void
+    ) -> CatalogPatchResult
 
     /// Moves each row whose id is in the set and whose revision is older than
     /// the write's. A row only moves forward; nothing is fetched.
@@ -92,8 +92,8 @@ struct CatalogQueryPatch: Sendable {
     /// Leaves any stale flag: other rows may still owe a reload.
     static func updatedSourceRow() -> Self {
         Self(follows: nil) { session, key, _, _, mutation in
-            guard let source = mutation?.patchedSource else { return }
-            session.patchCached(key, as: [CatalogSource].self) { sources in
+            guard let source = mutation?.patchedSource else { return .unchanged }
+            return session.patchCached(key, as: [CatalogSource].self) { sources in
                 guard let index = sources.firstIndex(where: { $0.id == source.id }) else { return false }
                 sources[index] = source
                 return true
@@ -101,16 +101,16 @@ struct CatalogQueryPatch: Sendable {
         }
     }
 
-    /// Writes the mutation's Source onto the cached page shell and marks that
-    /// page current. `setQueryValue` clears the stale flag; this patch does
-    /// not touch the invalidation set itself.
+    /// Writes the mutation's Source onto the cached page shell. A partial
+    /// patch: a page marked stale stays stale and reloads on its next visit.
     static func updatedSourceShell() -> Self {
         Self(follows: nil) { session, key, _, _, mutation in
-            guard let source = mutation?.patchedSource else { return }
-            guard case .sourceWorkspace(_, let sourceId) = key, sourceId == source.id else { return }
-            guard var workspace: CatalogSourceWorkspace = session.queryHandle(key)?.value else { return }
-            workspace.source = source
-            session.setQueryValue(key, value: workspace)
+            guard let source = mutation?.patchedSource else { return .unchanged }
+            guard case .sourceWorkspace(_, let sourceId) = key, sourceId == source.id else { return .unchanged }
+            return session.patchCached(key, as: CatalogSourceWorkspace.self) { workspace in
+                workspace.source = source
+                return true
+            }
         }
     }
 }
@@ -118,6 +118,8 @@ struct CatalogQueryPatch: Sendable {
 /// What a warmed key does when a write reports ids its `follows` slot names.
 /// The session reads a descriptor's list in order.
 struct CatalogQueryRefresh: Sendable {
+    typealias Run = @MainActor @Sendable (WorkspaceSession, CatalogQueryKey, [String]) async -> Void
+
     enum Action: Sendable {
         /// Re-applies the hidden policy to the key, synchronously and at most
         /// once per `apply`, when the write names an id the key depends on.
@@ -126,7 +128,7 @@ struct CatalogQueryRefresh: Sendable {
         case revalidate(@MainActor @Sendable (WorkspaceSession, CatalogQueryKey) -> Set<String>?)
         /// A partial reload merged into the cached value, run in a task with
         /// the ids `follows` names.
-        case run(@MainActor @Sendable (WorkspaceSession, CatalogQueryKey, [String]) async -> Void)
+        case run(Run)
     }
 
     var follows: CatalogQueryFollows
@@ -137,12 +139,30 @@ struct CatalogQueryRefresh: Sendable {
         self.action = action
     }
 
-    /// A partial reload (`.run`).
-    init(
-        follows: CatalogQueryFollows,
-        run: @escaping @MainActor @Sendable (WorkspaceSession, CatalogQueryKey, [String]) async -> Void
-    ) {
+    /// A partial reload (`.run`). `merged` is the only way to declare one.
+    fileprivate init(follows: CatalogQueryFollows, run: @escaping Run) {
         self.init(follows: follows, action: .run(run))
+    }
+
+    /// A partial reload of a warmed value: `read` fetches one id's part and
+    /// `merge` folds it into the cached value (`WorkspaceSession.refreshCached`).
+    /// The key's `isFetching` stays true while it runs; a failed read reloads
+    /// the key through its hidden policy.
+    static func merged<Value: Sendable, Part: Sendable>(
+        follows: CatalogQueryFollows,
+        as _: Value.Type,
+        read: @escaping @MainActor @Sendable (WorkspaceSession, CatalogQueryKey, String) async throws -> Part,
+        merge: @escaping @MainActor @Sendable (inout Value, String, Part) -> Void
+    ) -> CatalogQueryRefresh {
+        CatalogQueryRefresh(follows: follows, run: { session, key, ids in
+            await session.refreshCached(
+                key,
+                as: Value.self,
+                ids: ids,
+                read: { id in try await read(session, key, id) },
+                merge: merge
+            )
+        })
     }
 
     /// A refresh that re-applies the hidden policy to a warmed key when the

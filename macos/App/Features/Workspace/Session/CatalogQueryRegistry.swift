@@ -458,35 +458,31 @@ extension CatalogQueryKey.Kind {
                 }
             )
         case .evidenceGraphProgress:
-            // Canvas writes patch one graph via Get + setQueryValue — do not
-            // restale the project-wide map (or sourcesList).
+            // A write re-reads the counts of the graphs it names and merges them
+            // into the warmed map (`.merged`); it does not restale the
+            // project-wide map (or sourcesList). It keeps merging while hidden.
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
                 invalidateOn: [],
                 invalidation: { project, _ in .key(.evidenceGraphProgress(project: project)) },
-                refreshes: [CatalogQueryRefresh(follows: .reads(.evidenceGraphProgress)) { session, key, ids in
-                    for graphId in ids {
-                        guard let _: QueryHandle<[String: EvidenceGraphProgress]> = session.queryHandle(key) else {
-                            return
-                        }
-                        do {
-                            let one = try await session.store.getEvidenceGraphProgress(
-                                projectDir: key.project.projectDir,
-                                graphID: graphId
-                            )
-                            var map: [String: EvidenceGraphProgress] = session.queryHandle(key)?.value ?? [:]
-                            if one.isZero {
-                                map.removeValue(forKey: graphId)
-                            } else {
-                                map[graphId] = one
-                            }
-                            session.setQueryValue(key, value: map)
-                        } catch {
-                            // Keep last counts; the next mutation or the next place visit that warms it retries.
+                refreshes: [.merged(
+                    follows: .reads(.evidenceGraphProgress),
+                    as: [String: EvidenceGraphProgress].self,
+                    read: { session, key, graphId in
+                        try await session.store.getEvidenceGraphProgress(
+                            projectDir: key.project.projectDir,
+                            graphID: graphId
+                        )
+                    },
+                    merge: { map, graphId, one in
+                        if one.isZero {
+                            map.removeValue(forKey: graphId)
+                        } else {
+                            map[graphId] = one
                         }
                     }
-                }],
+                )],
                 load: { key, store in
                     guard case .evidenceGraphProgress(let project) = key else {
                         mismatchedCatalogKey(key, .evidenceGraphProgress)

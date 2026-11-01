@@ -1404,6 +1404,119 @@ struct WorkspaceSessionTests {
         await session.settleWrites()
         #expect(calls == 1)
     }
+
+    /// T-10: a key marked stale while hidden keeps its value but is not settled
+    /// until it reloads.
+    @Test func staleKeyIsNotSettled() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let key = CatalogQueryKey.sourcesList(project: session.projectKey)
+        let handle: QueryHandle<[CatalogSource]> = session.query(key)
+        await waitForQuery(handle)
+        #expect(handle.isSettled)
+
+        session.apply(.deletedSource(id: "gone"))
+        #expect(handle.isStale)
+        #expect(!handle.isSettled)
+        #expect(handle.status == .ready)
+        #expect(!handle.isFetching)
+
+        let again: QueryHandle<[CatalogSource]> = session.query(key)
+        await waitForQuery(again)
+        #expect(!handle.isStale)
+        #expect(handle.isSettled)
+    }
+
+    /// T-11: a whole-value write makes a stale key current; a partial patch does not.
+    @Test func setQueryValueClearsStaleAndPatchKeepsIt() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let key = CatalogQueryKey.sourcesList(project: session.projectKey)
+        let handle: QueryHandle<[CatalogSource]> = session.query(key)
+        await waitForQuery(handle)
+        session.apply(.deletedSource(id: "gone"))
+        #expect(handle.isStale)
+
+        let result = session.patchCached(key, as: [CatalogSource].self) { rows in
+            rows[0].title = "Patched"
+            return true
+        }
+        #expect(result == .applied)
+        #expect(handle.isStale)
+
+        session.setQueryValue(key, value: handle.value ?? [])
+        #expect(!handle.isStale)
+    }
+
+    /// T-18 (a): a key marked stale while its first load is in flight restarts
+    /// that load when it is queried, instead of keeping an answer that may be older.
+    @Test func staleKeyQueriedDuringLoadReloads() async {
+        let store = FakeStore()
+        store.evidenceGraphsByProject[projectDir] = [evidenceGraph("g1", sourceID: "s1")]
+        store.listEvidenceGraphsHold.isOn = true
+        let session = makeSession(store: store)
+        let key = session.evidenceGraphsKey
+        let handle: QueryHandle<[CatalogEvidenceGraph]> = session.query(key)
+        #expect(await waitUntil { store.listEvidenceGraphsHold.count == 1 })
+
+        session.apply(.deletedSource(id: "s9"))
+        #expect(handle.isStale)
+        store.evidenceGraphsByProject[projectDir] = [evidenceGraph("g2", sourceID: "s1")]
+        let _: QueryHandle<[CatalogEvidenceGraph]> = session.query(key)
+        #expect(await waitUntil { store.listEvidenceGraphsHold.count == 2 })
+        store.listEvidenceGraphsHold.isOn = false
+        store.listEvidenceGraphsHold.release()
+        store.listEvidenceGraphsHold.release()
+        await session.settleWrites()
+        #expect(handle.isSettled)
+        #expect(!handle.isStale)
+        #expect(handle.value?.map(\.id) == ["g2"])
+    }
+
+    /// T-18 (b): a patch that finds the key's first load in flight restarts the load.
+    @Test func patchDuringFirstLoadFallsBack() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        session.apply(location: .sectionRoot(.sources))
+        let handle: QueryHandle<[CatalogSource]>? = session.queryHandle(
+            CatalogQueryKey.sourcesList(project: session.projectKey)
+        )
+        #expect(handle?.value == nil)
+
+        session.apply(CatalogWriteEffects(
+            sourceScopes: ["s1"], activity: CatalogActivity(revision: 5, at: "2026-01-01T00:00:00Z")
+        ))
+        await session.settleWrites()
+        #expect(await waitUntil { store.listSourcesCalls == 2 })
+        #expect(handle?.value?.first?.id == "s1")
+    }
+
+    /// T-7b: a failed progress re-read reloads the whole map.
+    @Test func progressReReadFailureReloadsTheMap() async {
+        struct Boom: Error {}
+        let store = FakeStore()
+        seedStore(store)
+        store.graphProgressByGraph["g-1"] = EvidenceGraphProgress(
+            graphId: "g-1", subjectCount: 1, observationCount: 1
+        )
+        let session = makeSession(store: store)
+        let progressHandle: QueryHandle<[String: EvidenceGraphProgress]> = session.query(
+            CatalogQueryKey.evidenceGraphProgress(project: session.projectKey)
+        )
+        await waitForQuery(progressHandle)
+        let listCalls = store.listEvidenceGraphProgressCalls
+
+        store.getEvidenceGraphProgressError = Boom()
+        session.apply(CatalogWriteEffects(
+            reads: [CatalogWriteEffectsRead(read: .evidenceGraphProgress, ids: ["g-1"])]
+        ))
+        await session.settleWrites()
+        #expect(store.listEvidenceGraphProgressCalls == listCalls + 1)
+        #expect(!progressHandle.isFetching)
+    }
 }
 
 /// One-shot gate so concurrent loaders block until tests observe stale data.

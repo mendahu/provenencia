@@ -13,11 +13,10 @@ final class WorkspaceSession {
     /// which keeps stored part order.
     var nameFormat = NameFormatOrders()
 
-    private var handles: [CatalogQueryKey: AnyObject] = [:]
+    private var handles: [CatalogQueryKey: any AnyQueryHandle] = [:]
     private var valueTypes: [CatalogQueryKey: ObjectIdentifier] = [:]
     private var generations: [CatalogQueryKey: Int] = [:]
     private var inFlight: [CatalogQueryKey: (generation: Int, task: Task<Void, Never>)] = [:]
-    private var invalidatedKeys: Set<CatalogQueryKey> = []
     /// Keys of the place on screen, from the last `apply(location:)`.
     private(set) var visibleKeys: Set<CatalogQueryKey> = []
     /// Transient notice after leaving a place (composer save, etc.).
@@ -78,13 +77,20 @@ final class WorkspaceSession {
         handles[key] as? QueryHandle<Value>
     }
 
-    /// Waits out an in-flight load, then returns the cached value.
+    /// Waits out an in-flight load and every partial re-read a write started
+    /// for the key, then returns the cached value.
     /// Does not start a load. Nil when the key was never warmed, is stale, or the load failed.
     func readyValue<Value>(_ key: CatalogQueryKey) async -> Value? {
-        while let task = inFlight[key]?.task {
-            await task.value
+        while true {
+            var pending: [Task<Void, Never>] = []
+            if let task = inFlight[key]?.task { pending.append(task) }
+            pending += writeRefreshes.values.filter { $0.key == key }.map(\.task)
+            if pending.isEmpty { break }
+            for task in pending {
+                await task.value
+            }
         }
-        if invalidatedKeys.contains(key) {
+        if handles[key]?.isStale == true {
             return nil
         }
         return queryHandle(key)?.value
@@ -126,10 +132,10 @@ final class WorkspaceSession {
         let handle = typedHandle(for: key, as: Value.self)
         handle.applySuccess(value)
         if clearStale {
-            invalidatedKeys.remove(key)
+            handle.clearStale()
         }
         if hadInFlight {
-            invalidatedKeys.insert(key)
+            handle.markStale()
             revalidate(key)
         }
     }
@@ -137,17 +143,62 @@ final class WorkspaceSession {
     /// Edits the cached value in place. `change` returns whether it changed
     /// anything; nothing happens when it did not or the key has no value. The
     /// stale flag is left as it was: a partial patch does not make the key current.
-    /// Returns whether a patch applied.
+    /// A key whose first load is in flight has no value to patch and that load
+    /// may have read before the write: the result says so (`.awaitingFirstValue`)
+    /// and `apply` restarts or stales the key.
     @discardableResult
     func patchCached<Value>(
         _ key: CatalogQueryKey,
         as _: Value.Type,
         _ change: (inout Value) -> Bool
-    ) -> Bool {
-        guard let handle: QueryHandle<Value> = queryHandle(key), var value = handle.value else { return false }
-        guard change(&value) else { return false }
+    ) -> CatalogPatchResult {
+        if awaitsFirstValue(key) { return .awaitingFirstValue }
+        guard let handle: QueryHandle<Value> = queryHandle(key), var value = handle.value else { return .unchanged }
+        guard change(&value) else { return .unchanged }
         replaceValue(key, value, clearStale: false)
-        return true
+        return .applied
+    }
+
+    /// Re-reads part of a warmed value and merges it in: `read` runs once per
+    /// id, in order, and every part is merged in one `patchCached`. A failed
+    /// read falls back to the key's hidden policy (a reload) and merges
+    /// nothing. Nothing happens for a key evicted before it starts. `apply`
+    /// holds the handle's `isFetching` count for the whole run.
+    func refreshCached<Value, Part>(
+        _ key: CatalogQueryKey,
+        as _: Value.Type,
+        ids: [String],
+        read: @MainActor (String) async throws -> Part,
+        merge: @MainActor (inout Value, String, Part) -> Void
+    ) async {
+        guard let _: QueryHandle<Value> = queryHandle(key) else { return }
+        var parts: [(String, Part)] = []
+        for id in ids {
+            do {
+                parts.append((id, try await read(id)))
+            } catch {
+                applyHiddenPolicy(to: key)
+                return
+            }
+        }
+        patchCached(key, as: Value.self) { value in
+            for (id, part) in parts {
+                merge(&value, id, part)
+            }
+            return true
+        }
+    }
+
+    /// What a key does when a write reaches it: a visible one revalidates, a
+    /// hidden one follows its descriptor's `whenHidden`.
+    private func effectivePolicy(for key: CatalogQueryKey) -> CatalogHiddenPolicy {
+        visibleKeys.contains(key) ? .revalidate : registry.hiddenPolicy(key)
+    }
+
+    /// The key has no value yet and its first load is in flight; that load
+    /// may have read before the write that is being applied.
+    private func awaitsFirstValue(_ key: CatalogQueryKey) -> Bool {
+        handles[key].map { !$0.hasValue } == true && inFlight[key] != nil
     }
 
     /// Resolves the place for `location` and starts loading its query keys (non-blocking).
@@ -176,31 +227,52 @@ final class WorkspaceSession {
     /// Then it revalidates, once per key through one dedupe set, the union of
     /// what the registry invalidates (the catalog-wide lists and structure the
     /// effects reported, and what the mutation names: the Source page's own
-    /// workspace, the metadata field list) and the warmed keys whose
-    /// descriptor `refreshes` follow ids the effects reported
-    /// (`revalidatedKeys`: each Evidence graph it names, the handles that
-    /// changed). Keys the registry evicts or marks stale when hidden are not
-    /// loaded unless on screen. Last, it starts each warmed key's `.run`
-    /// refreshes for the keyed `reads` the effects reported (a graph's citation
-    /// reads and progress, only the graphs named), and runs `onNavCountsMoved`
+    /// workspace, the metadata field list), the warmed keys whose descriptor
+    /// `refreshes` follow ids the effects reported (`revalidatedKeys`: each
+    /// Evidence graph it names, the handles that changed), the keys a patch
+    /// found with their first load still in flight, and the keys a `.run`
+    /// refresh cannot run for. Keys the registry evicts or marks stale when
+    /// hidden are not loaded unless on screen. Last, it starts each warmed
+    /// key's `.run` refreshes for the ids the effects reported (graph
+    /// progress per graph, the graph list per Source, only the ids named),
+    /// gated per key: one runs only for a key that would revalidate (visible,
+    /// or `whenHidden: .revalidate`), holds a value and is not stale, and
+    /// holds a count on the handle's `isFetching` until it ends. Any other
+    /// warmed key such an entry names joins the dedupe pass instead (reloaded
+    /// when visible, marked stale when hidden), and a key in that pass starts
+    /// no `.run`. It also runs `onNavCountsMoved`
     /// for a mutation in `CatalogQueryRegistry.navCountTriggers`. Features only
     /// call `apply`; they do not query afterward or tell sibling views to
     /// refresh.
     func apply(_ effects: CatalogWriteEffects = .empty, _ mutation: CatalogMutation? = nil) {
-        applyPatches(effects, mutation)
+        let awaiting = applyPatches(effects, mutation)
         let invalidated = cachedKeys(for: registry.invalidations(for: effects, by: mutation, project: projectKey))
         let refreshed = revalidatedKeys(for: effects, mutation)
-        var seen = Set<CatalogQueryKey>()
-        for key in invalidated + refreshed where seen.insert(key).inserted {
-            applyHiddenPolicy(to: key)
-        }
+        var running: [(key: CatalogQueryKey, run: CatalogQueryRefresh.Run, ids: [String])] = []
+        var fallbacks: [CatalogQueryKey] = []
         for key in Array(handles.keys) where key.project == projectKey {
+            guard let handle = handles[key] else { continue }
             for refresh in key.kind.descriptor.refreshes {
                 guard case .run(let run) = refresh.action else { continue }
                 let ids = refresh.follows.ids(in: effects, mutation: mutation)
-                if !ids.isEmpty {
-                    trackWrite { await run(self, key, ids) }
+                if ids.isEmpty { continue }
+                if effectivePolicy(for: key) == .revalidate, !handle.isStale, handle.hasValue {
+                    running.append((key, run, ids))
+                } else {
+                    fallbacks.append(key)
                 }
+            }
+        }
+        var seen = Set<CatalogQueryKey>()
+        for key in invalidated + refreshed + awaiting + fallbacks where seen.insert(key).inserted {
+            applyHiddenPolicy(to: key)
+        }
+        for entry in running where !seen.contains(entry.key) {
+            guard let handle = handles[entry.key] else { continue }
+            handle.beginRefresh()
+            trackWrite(for: entry.key) {
+                await entry.run(self, entry.key, entry.ids)
+                handle.endRefresh()
             }
         }
         if let kind = mutation?.invalidationKind,
@@ -236,14 +308,15 @@ final class WorkspaceSession {
 
     /// The refresh and recount tasks `apply` has started and not yet finished.
     /// Each removes itself when it ends, so the list does not grow.
-    private var writeRefreshes: [UUID: Task<Void, Never>] = [:]
+    /// A refresh names its key so `readyValue` can wait for the rows it merges.
+    private var writeRefreshes: [UUID: (key: CatalogQueryKey?, task: Task<Void, Never>)] = [:]
 
-    private func trackWrite(_ work: @escaping @MainActor () async -> Void) {
+    private func trackWrite(for key: CatalogQueryKey? = nil, _ work: @escaping @MainActor () async -> Void) {
         let id = UUID()
-        writeRefreshes[id] = Task { @MainActor [weak self] in
+        writeRefreshes[id] = (key, Task { @MainActor [weak self] in
             await work()
             self?.writeRefreshes[id] = nil
-        }
+        })
     }
 
     /// Returns once every refresh and recount `apply` started and every query
@@ -254,7 +327,7 @@ final class WorkspaceSession {
     func settleWrites() async {
         var awaited = Set<Task<Void, Never>>()
         while true {
-            let pending = Array(writeRefreshes.values) + inFlight.values.map(\.task)
+            let pending = writeRefreshes.values.map(\.task) + inFlight.values.map(\.task)
             let next = pending.filter { !awaited.contains($0) }
             if next.isEmpty { return }
             for task in next {
@@ -272,21 +345,25 @@ final class WorkspaceSession {
 
     /// Runs each warmed key's descriptor patches. A patch with `follows` gets
     /// the ids that slot names, and only when the write reported activity.
-    /// A patch with no `follows` reads the mutation.
-    private func applyPatches(_ effects: CatalogWriteEffects, _ mutation: CatalogMutation?) {
+    /// A patch with no `follows` reads the mutation. Returns the keys a patch
+    /// could not write because their first load is still in flight.
+    private func applyPatches(_ effects: CatalogWriteEffects, _ mutation: CatalogMutation?) -> [CatalogQueryKey] {
+        var awaiting: [CatalogQueryKey] = []
         for key in Array(handles.keys) where key.project == projectKey {
             for patch in key.kind.descriptor.patches {
+                let result: CatalogPatchResult
                 if let follows = patch.follows {
                     guard effects.activity.revision > 0 else { continue }
                     let ids = Set(follows.ids(in: effects, mutation: mutation))
-                    if !ids.isEmpty {
-                        patch.apply(self, key, ids, effects.activity, mutation)
-                    }
+                    if ids.isEmpty { continue }
+                    result = patch.apply(self, key, ids, effects.activity, mutation)
                 } else {
-                    patch.apply(self, key, [], effects.activity, mutation)
+                    result = patch.apply(self, key, [], effects.activity, mutation)
                 }
+                if result == .awaitingFirstValue { awaiting.append(key) }
             }
         }
+        return awaiting
     }
 
     /// What an invalidated key does: a visible one reloads, a hidden one
@@ -294,12 +371,12 @@ final class WorkspaceSession {
     /// The one path for a registry invalidation and for a descriptor
     /// `refreshes` entry that revalidates a key rather than patching it.
     func applyHiddenPolicy(to key: CatalogQueryKey) {
-        switch visibleKeys.contains(key) ? CatalogHiddenPolicy.revalidate : registry.hiddenPolicy(key) {
+        switch effectivePolicy(for: key) {
         case .evict:
             evict(key)
         case .markStale:
             // The old value stays; the next `query` reloads it.
-            if handles[key] != nil { invalidatedKeys.insert(key) }
+            handles[key]?.markStale()
         case .revalidate:
             invalidate(key)
             revalidate(key)
@@ -329,18 +406,21 @@ final class WorkspaceSession {
     ) -> QueryHandle<Value> {
         let handle = typedHandle(for: key, as: Value.self)
 
-        let isStale = invalidatedKeys.contains(key)
-        if handle.status == .ready, !isStale, inFlight[key] == nil {
+        if handle.status == .ready, !handle.isStale, inFlight[key] == nil {
             return handle
         }
         if inFlight[key] != nil {
-            return handle
+            if !handle.isStale { return handle }
+            // A write marked the key while its load was in flight: that load
+            // may have read before the write, so start over.
+            bumpGeneration(key)
+            inFlight[key]?.task.cancel()
+            inFlight[key] = nil
         }
 
-        invalidatedKeys.remove(key)
         let captured = bumpGeneration(key)
         let hadStaleValue = handle.value != nil
-        handle.beginLoading(stale: hadStaleValue)
+        handle.beginLoading(keepingValue: hadStaleValue)
 
         let task = Task { @MainActor in
             let outcome: Result<Value, Error>
@@ -370,7 +450,7 @@ final class WorkspaceSession {
         bumpGeneration(key)
         inFlight[key]?.task.cancel()
         inFlight[key] = nil
-        invalidatedKeys.insert(key)
+        handles[key]?.markStale()
     }
 
     /// Drops a key: its in-flight load is cancelled and its handle forgotten,
@@ -379,7 +459,6 @@ final class WorkspaceSession {
         bumpGeneration(key)
         inFlight[key]?.task.cancel()
         inFlight[key] = nil
-        invalidatedKeys.remove(key)
         handles[key] = nil
         valueTypes[key] = nil
     }
@@ -420,4 +499,14 @@ final class WorkspaceSession {
         handles[key] = handle
         return handle
     }
+}
+
+/// What `WorkspaceSession.patchCached` did.
+enum CatalogPatchResult: Sendable, Equatable {
+    /// The cached value changed.
+    case applied
+    /// Nothing to change: no handle, no value, or the patch changed nothing.
+    case unchanged
+    /// The key's first load is in flight and may have read before the write.
+    case awaitingFirstValue
 }
