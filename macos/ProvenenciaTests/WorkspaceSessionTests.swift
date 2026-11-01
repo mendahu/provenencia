@@ -984,6 +984,17 @@ struct WorkspaceSessionTests {
         #expect(Set(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"]))) == [claimsKey, detailKey])
     }
 
+    /// T-8 (AC-4.3): a warmed family key follows every touched handle, a
+    /// relative's included; a write that touches none leaves it alone.
+    @Test func personFamilyFollowsEveryTouchedHandle() {
+        let session = makeSession()
+        let key = CatalogQueryKey.personFamily(project: session.projectKey, entityId: "e1")
+        session.setQueryValue(key, value: CatalogPersonFamily(units: []))
+
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e7"])) == [key])
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects.empty).isEmpty)
+    }
+
     /// A `.personClaims` key whose first load is in flight follows every
     /// graph; once it holds a value it follows only the graphs it holds.
     @Test func personClaimsFollowEveryGraphUntilLoaded() {

@@ -93,6 +93,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// A Person's claims as Go would group them, seeded by tests. An entity
     /// with no seed is unknown (an empty list is a seeded Person with none).
     var seededPersonClaims: [String: [CatalogPersonClaimGroup]] = [:]
+    /// A Person's family by entity id; an unseeded id throws `conclusiondetails.not_found`.
+    var seededPersonFamilies: [String: CatalogPersonFamily] = [:]
     /// The Identity Claim Promote wrote per Subject id.
     var claimBySubject: [String: CatalogIdentityClaim] = [:]
     var subjectPositionsBySubject: [String: CatalogSubjectPosition] = [:]
@@ -1978,6 +1980,17 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         try withState {
             markCatalogSessionHeld(projectDir)
             guard let seeded = seededPersonClaims[entityID] else {
+                throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
+            }
+            return seeded
+        }
+    }
+
+    func getPersonFamily(projectDir: String, entityID: String) async throws -> CatalogPersonFamily {
+        // A read: no `recordedCalls`.
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            guard let seeded = seededPersonFamilies[entityID] else {
                 throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
             }
             return seeded
