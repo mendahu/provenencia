@@ -109,6 +109,7 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 - **One sectioned Conclusion page, not a Person fork.** `ConclusionDetailPage` stays the one page for Person, Event and Place. S13-09 gives it a sections slot; Event and Place pass a single section and look unchanged (R-1), and the Person page later passes five. When Event and Place adopt sections, they fill the slot. Binds S13-09, S13-10.
 - **One person tile, built once.** The tile is built in S13-12 (Family) and reused by S13-13 (Timeline), placed per [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) as a recipe once it has the second caller. Briefs S13-D3 and S13-D4 draw the same tile. Binds S13-12, S13-13.
 - **Colors reuse `PersonGenderTreatment`** (R-3), fed from `PersonSummary`'s terms (S13-02). Binds S13-12, S13-13.
+- **A family tile opens the relative on Family** (user, 2026-11-01). A click on a relative in the Family section opens that relative's Person page on its Family section, so the researcher walks the family person to person; every other link to a Person still lands on Vitals (S13-D1 PPF-5). The diagram draws recorded and implied relatives alike, and each unit's children come in birth order, sorted in Go (user, 2026-11-01). Binds S13-12.
 
 ## PR map
 
@@ -127,7 +128,7 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 | S13-31 | Header data becomes summaries | 3 | Rename: `PersonHeader`, `EventHeader`, `PlaceHeader` → `PersonSummary`, `EventSummary`, `PlaceSummary` (Go, proto, Swift `Catalog*`), `conclusionheaders` → `conclusionsummaries`, `List*Headers` → `List*Summaries`; "header" then means only the band at the top of a detail page | — | S13-02 | — | [S13-31](prs/S13-31-header-data-becomes-summaries.md) | Landed #660 |
 | S13-03 | Siblings from a shared parent | 3 | A page-only sibling derivation in `core/kinship` (recorded sibling links and a shared parent), outside matching's pattern set, stored in a `graphcache` memo slot, with a test that matching is unchanged | — | S11-39 | [S13-03](prs/S13-03-siblings-from-a-shared-parent.md) | Landed #666 |
 | S13-04 | Person family read | 3 | `GetPersonFamily` RPC: parents, siblings, spouses, children from S11-51's links, grouped into families, as `PersonSummary`s, served from the graph cache with no SQL when warm | — | S13-01, S13-02, S13-03, S11-51, S13-31 | [S13-04](prs/S13-04-person-family-read.md) | Landed #671 |
-| S13-12 | Family section | 3 | The family diagram with person tiles, lines and several families | S13-D3 | S13-04, S13-10 | — | Scoped |
+| S13-12 | Family section | 3 | The family diagram with person tiles, lines and several families; each unit's children in birth order and the siblings once with the person among them (Go, two proto fields); two columns from board S13-D3; a tile opens the relative on Family | [S13-D3](design/S13-D3-family-section.md) | S13-04, S13-10 | [S13-12](prs/S13-12-family-section.md) | Planned |
 | S13-19 | One person's links | 3 | Moved to Spike 11 as S11-51 so it ships with S11-39 | — | — | — | Descoped (2026-10-26) → S11-51 |
 | S13-05 | Person timeline read | 4 | An any-role participation hop; `ListPersonEvents` RPC: `EventSummary`s sorted by `sortEvents`, with the person's role and the other participants as {role, `PersonSummary`} | — | S13-01, S13-02, S13-31 | — | Scoped |
 | S13-13 | Timeline section | 4 | The chronological event list with roles, depiction placeholder, participants as person tiles, Undated group | S13-D4 | S13-05, S13-12 | — | Scoped |
@@ -157,7 +158,7 @@ Each brief is written just before the PR it gates, its board agreed, and that PR
 | [S13-D1](design/archive/S13-D1-person-page-frame.md) | Person page: header, section switching, Vitals | **S13-10** | Board agreed 2026-10-29. Explores stacked-with-shortcuts versus tabs (R-7). Draws the whole frame, all five sections as places (working rule "S13-D1 draws the whole frame"), at Regular and Wide on Page columns, after the S14-D1 board (working rule "Redesigns adopt Page columns") |
 | [S13-D12](design/archive/S13-D12-life-rows-why.md) | Person page: the Why on the four life rows | **S13-06** | Added 2026-10-30 (user: the life rows show their records now); board agreed 2026-10-30, option (a): a group line per owner. Interim: S13-D2 replaces the Why on the Person page |
 | [S13-D2](design/archive/S13-D2-provenance-sheet.md) | Provenance sheet | **S13-11** | Board agreed 2026-10-31 in the [Claude Design project](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), turn 6. Reusable beyond Person (R-13); leaves room for Reconciliation Claims (R-10); keeps S13-D12's group line per owner for records from several events or Places |
-| S13-D3 | Family section | **S13-12** | Draws the shared person tile; two marriages and conflicting parents |
+| [S13-D3](design/S13-D3-family-section.md) | Family section | **S13-12** | Draws the shared person tile; two marriages and conflicting parents. Board agreed 2026-11-01 in the [Claude Design project](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), turn 11: two columns, origin and formed |
 | S13-D4 | Timeline section | **S13-13** | Reuses S13-D3's tile; depiction placeholder; Undated group |
 | S13-D5 | Gallery section and likeness viewer | **S13-14**, **S13-15** | Viewer options: expand, slideshow (R-30) |
 | S13-D6 | Sources section | **S13-16**, **S13-17** | Source groups, claim cards, Remove and the last-claim warning |
@@ -385,7 +386,7 @@ Go, plus deleting Swift's draft rule.
 
 #### S13-12 — Family section
 
-**Ships.** The Family section from S13-D3: person tiles, lines, several families, each tile opening its person.
+**Ships.** The Family section from S13-D3: person tiles, lines, several families, each tile opening its person on Family; `persondetail.PersonFamily` orders each unit's children by birth, undated last (user, 2026-11-01).
 **Check.** Bar 3.
 **Context.** R-16 – R-22; working rules "One person tile, built once", "Colors reuse `PersonGenderTreatment`".
 
