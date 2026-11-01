@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S13-03 — Siblings from a shared parent
+
+**Landed 2026-11-01** in [#666](https://github.com/mendahu/provenencia/pull/666). The engine answers who a person's siblings are: `canonlinks.Reader.Relationships(id, Options{Siblings: true})` adds one link to each other child of any of the person's parents, whether filed as a parent link or read from a birth's father or mother, merged with a recorded `sibling` link into one link (recorded when found both ways), and each implied sibling says which parent it rests on. `LoadSiblings` derives them for many people in four batched loads and stores them in a new `canonlinks.siblings` graph-cache slot that any commit drops. The rule is `kinship.Siblings`, page-only: outside `eventPatterns`, `Derive` and `Patterns()`, so matching, `Reader.For` and every Promote proposal are unchanged (a test proves it). `Derive` and the grandparent chain now share one parent-step index with it, and `canonlinks` shares one node-loading policy and one stored-answer lookup. No view reads siblings until S13-04.
+
 ## S13-31 — Header data becomes summaries
 
 **Landed 2026-11-01** in [#660](https://github.com/mendahu/provenencia/pull/660). "Header" now means only the band at the top of a Conclusion page. The data a row or tile shows is a summary in Go, proto and Swift: `PersonSummary`, `EventSummary`, `PlaceSummary`, `ChainedPlace`, package `conclusionsummaries`, and the band's line under the title is `secondary`. The four `oneof header` blocks became one `ConclusionSummary` with the field numbers kept, `ByIDs` and `RowsForSearch` take one `Want` split by kind, and `HeaderDependents` is gone. The one visible change: an Event band whose `date` field has records but no displayed value shows its kept start-end span, as the Events list row does, and the Date row shows the same span.
