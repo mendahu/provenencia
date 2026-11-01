@@ -143,8 +143,8 @@ func EncodeJPEG(src []byte, opts Options) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// EncodePNG decodes src with the same format allowlist and pixel budget as
-// EncodeJPEG, scales to MaxEdge, applies Transforms, and encodes PNG. Quality
+// EncodePNG decodes src with the same byte limit, format allowlist and pixel
+// budget as EncodeJPEG, scales to MaxEdge, applies Transforms, and encodes PNG. Quality
 // is ignored. It never takes the reduced JPEG path: an image over the pixel
 // budget is ErrTooLarge.
 func EncodePNG(src []byte, opts Options) ([]byte, error) {
