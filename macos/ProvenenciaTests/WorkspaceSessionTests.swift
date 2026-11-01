@@ -1645,6 +1645,38 @@ struct WorkspaceSessionTests {
         #expect(session.evidenceGraphs(sourceID: "T") == [evidenceGraph("t-default", sourceID: "T", name: "Default")])
     }
 
+    /// F-1: a merged re-read of one Source splices the index; it does not
+    /// rebuild the maps of every other Source.
+    @Test func graphListMergeSplicesTheIndex() async {
+        let store = FakeStore()
+        let (session, _) = graphListSession(
+            store: store,
+            rows: [
+                evidenceGraph("s-default", sourceID: "S", name: "Default"),
+                evidenceGraph("s-jones", sourceID: "S", name: "Jones"),
+                evidenceGraph("t-default", sourceID: "T", name: "Default", artifactIDs: ["t-page"]),
+            ],
+            visible: true
+        )
+        #expect(session.evidenceGraph(id: "s-jones") != nil)
+        let builds = session.evidenceGraphIndexBuildCount
+        store.evidenceGraphsByProject[projectDir] = [
+            evidenceGraph("s-default", sourceID: "S", name: "Default"),
+            evidenceGraph("s-smith", sourceID: "S", name: "Smith", artifactIDs: ["s-page"]),
+            evidenceGraph("s-wyatt", sourceID: "S", name: "Wyatt"),
+            evidenceGraph("t-default", sourceID: "T", name: "Default", artifactIDs: ["t-page"]),
+        ]
+        session.apply(graphRead("S"))
+        await session.settleWrites()
+        #expect(session.evidenceGraphs(sourceID: "S")?.map(\.id) == ["s-default", "s-smith", "s-wyatt"])
+        #expect(session.evidenceGraph(id: "s-smith") != nil)
+        #expect(session.evidenceGraph(id: "s-jones") == nil)
+        #expect(session.evidenceGraphs(sourceID: "T")?.map(\.id) == ["t-default"])
+        #expect(session.artifactIDsInNoGraph(sourceID: "T", artifactIDs: ["t-page", "x"]) == ["x"])
+        #expect(session.artifactIDsInNoGraph(sourceID: "S", artifactIDs: ["s-page", "x"]) == ["x"])
+        #expect(session.evidenceGraphIndexBuildCount == builds)
+    }
+
     /// T-7 (a): while the re-read waits the list reads as refetching, and a
     /// waiter on `readyValue` gets the merged rows.
     @Test func graphListPartialReReadSetsFetching() async {

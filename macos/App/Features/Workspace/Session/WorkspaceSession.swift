@@ -32,6 +32,10 @@ final class WorkspaceSession {
     /// Not observed: filling it while a view reads must not invalidate that view.
     @ObservationIgnored
     var evidenceGraphIndex: EvidenceGraphIndex?
+    /// How many times the index was built in full (a test hook: a merged
+    /// re-read splices instead).
+    @ObservationIgnored
+    var evidenceGraphIndexBuildCount = 0
     /// Bridge to select the next time that graph appears. Consumed once.
     private var pendingGraphSelections: [String: String] = [:]
 
@@ -163,13 +167,19 @@ final class WorkspaceSession {
     /// id, in order, and every part is merged in one `patchCached`. A failed
     /// read falls back to the key's hidden policy (a reload) and merges
     /// nothing. Nothing happens for a key evicted before it starts. `apply`
-    /// holds the handle's `isFetching` count for the whole run.
+    /// holds the handle's `isFetching` count for the whole run. After an
+    /// applied merge, `afterMerge` gets the parts by id and the handle
+    /// revision from just before the patch.
+    ///
+    /// Called only by `CatalogQueryRefresh.merged`, inside `apply`'s gate and
+    /// count; it is not a feature API.
     func refreshCached<Value, Part>(
         _ key: CatalogQueryKey,
         as _: Value.Type,
         ids: [String],
         read: @MainActor (String) async throws -> Part,
-        merge: @MainActor (inout Value, String, Part) -> Void
+        merge: @MainActor (inout Value, String, Part) -> Void,
+        afterMerge: (@MainActor ([String: Part], _ previousRevision: Int) -> Void)? = nil
     ) async {
         guard let _: QueryHandle<Value> = queryHandle(key) else { return }
         var parts: [(String, Part)] = []
@@ -181,11 +191,16 @@ final class WorkspaceSession {
                 return
             }
         }
-        patchCached(key, as: Value.self) { value in
+        let previousRevision = queryHandle(key).map { (handle: QueryHandle<Value>) in handle.revision }
+        let result = patchCached(key, as: Value.self) { value in
             for (id, part) in parts {
                 merge(&value, id, part)
             }
             return true
+        }
+        // Any other result (awaiting a first value, unchanged) is `apply`'s to settle.
+        if case .applied = result, let previousRevision, let afterMerge {
+            afterMerge(Dictionary(parts, uniquingKeysWith: { _, last in last }), previousRevision)
         }
     }
 

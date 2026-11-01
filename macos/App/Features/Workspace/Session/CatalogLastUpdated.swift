@@ -155,12 +155,18 @@ struct CatalogQueryRefresh: Sendable {
     /// A partial reload of a warmed value: `read` fetches one id's part and
     /// `merge` folds it into the cached value (`WorkspaceSession.refreshCached`).
     /// The key's `isFetching` stays true while it runs; a failed read reloads
-    /// the key through its hidden policy.
+    /// the key through its hidden policy. `afterMerge`, when given, runs once
+    /// the merge landed, with the parts read (by id) and the handle's revision
+    /// from just before the merge, so a derived index can follow the merge
+    /// instead of rebuilding.
     static func merged<Value: Sendable, Part: Sendable>(
         follows: CatalogQueryFollows,
         as _: Value.Type,
         read: @escaping @MainActor @Sendable (WorkspaceSession, CatalogQueryKey, String) async throws -> Part,
-        merge: @escaping @MainActor @Sendable (inout Value, String, Part) -> Void
+        merge: @escaping @MainActor @Sendable (inout Value, String, Part) -> Void,
+        afterMerge: (@MainActor @Sendable (
+            WorkspaceSession, CatalogQueryKey, _ parts: [String: Part], _ previousRevision: Int
+        ) -> Void)? = nil
     ) -> CatalogQueryRefresh {
         CatalogQueryRefresh(follows: follows, run: { session, key, ids in
             await session.refreshCached(
@@ -168,7 +174,10 @@ struct CatalogQueryRefresh: Sendable {
                 as: Value.self,
                 ids: ids,
                 read: { id in try await read(session, key, id) },
-                merge: merge
+                merge: merge,
+                afterMerge: afterMerge.map { after in
+                    { parts, previous in after(session, key, parts, previous) }
+                }
             )
         })
     }

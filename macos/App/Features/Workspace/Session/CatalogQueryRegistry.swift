@@ -521,6 +521,9 @@ extension CatalogQueryKey.Kind {
                     merge: { rows, sourceId, part in
                         rows.removeAll { $0.sourceID == sourceId }
                         rows.append(contentsOf: part)
+                    },
+                    afterMerge: { session, _, parts, previous in
+                        session.spliceEvidenceGraphIndex(parts, previousRevision: previous)
                     }
                 )],
                 load: { key, store in
