@@ -126,6 +126,19 @@ struct EventDetailTests {
         #expect(page.rows[0].lead == page.secondaryDate)
     }
 
+    @Test func dateRowFollowsTheSummaryWhenFieldsDisagree() {
+        let point = CatalogDateValueInput(kind: "point", startYear: 1817, startMonth: 5, startDay: 14)
+        let start = CatalogDateValueInput(kind: "point", startYear: 1849)
+        let end = CatalogDateValueInput(kind: "point", startYear: 1851)
+        let page = content(detail(fields: [
+            dateField("date", point, id: "point"),
+            dateField("start_date", start, id: "start"),
+            dateField("end_date", end, id: "end"),
+        ], summary: dated(start: start, end: end)))
+        #expect(page.rows[0].lead == L10n.Dates.rowSpan(start: "1849", end: "1851", locale: en))
+        #expect(page.rows[0].lead == page.secondaryDate)
+    }
+
     @Test func bandLineReadsTheSummary() {
         let point = CatalogDateValueInput(kind: "point", startYear: 1817, startMonth: 5, startDay: 14)
         let withDate = content(detail(summary: dated(date: point)))

@@ -31,7 +31,7 @@ struct EventDetailContent: ConclusionDetailBody {
         let line = summary.map { EventSecondaryDisplay.content($0, locale: locale) }
         secondaryDate = line.flatMap { $0.date.isEmpty ? nil : $0.date }
         secondaryPlace = line.flatMap { $0.place.isEmpty ? nil : $0.place }
-        rows = [Self.dateRow(detail.fields, locale: locale), Self.placeRow(summary)]
+        rows = [Self.dateRow(detail.fields, summary: summary, locale: locale), Self.placeRow(summary)]
         gallery = .pictures(from: detail, fallbackMark: .subjectEvent, choose: .eventThumbnail)
         thumbnail = .leading(
             gallery: gallery,
@@ -41,20 +41,22 @@ struct EventDetailContent: ConclusionDetailBody {
         )
     }
 
-    /// The Date row, following the band. A `date` with a displayed value is that
-    /// field. Otherwise, when the start or end shows a value, one row whose lead
-    /// is the start–end span and whose Why lists those records. Otherwise a
-    /// `date` with records is that field. Stated empty when none is set.
-    static func dateRow(_ fields: [CatalogConclusionField], locale: Locale) -> ReconciledValueRowModel {
+    /// The Date row, following the summary the band reads. A summary `date` is
+    /// the `date` field. Otherwise, when the summary has a start or end, one row
+    /// whose lead is the start–end span and whose Why lists those fields' records.
+    /// Otherwise a `date` with records is that field. Stated empty when none is set.
+    static func dateRow(
+        _ fields: [CatalogConclusionField],
+        summary: CatalogEventSummary?,
+        locale: Locale
+    ) -> ReconciledValueRowModel {
         let label = L10n.string(L10n.Conclusions.eventDate)
         let date = fields.first { $0.propertyKey == SeededPropertyKey.date }
-        if let date, dateValue(date) != nil {
+        if summary?.date != nil, let date {
             return labeled(ReconciledValueRowModel(field: date, locale: locale), label, field: date)
         }
-        let spanShows = [SeededPropertyKey.startDate, SeededPropertyKey.endDate].contains {
-            dateValue(fields, key: $0) != nil
-        }
-        if !spanShows, let date, !date.outcomes.isEmpty {
+        let spanKept = summary?.startDate != nil || summary?.endDate != nil
+        if !spanKept, let date, !date.outcomes.isEmpty {
             return labeled(ReconciledValueRowModel(field: date, locale: locale), label, field: date)
         }
         let span = [SeededPropertyKey.startDate, SeededPropertyKey.endDate].compactMap { key in
@@ -68,10 +70,7 @@ struct EventDetailContent: ConclusionDetailBody {
             return labeled(ReconciledValueRowModel(field: only, locale: locale), label, field: only)
         }
         let lead = DateRowDisplay.line(
-            date: nil,
-            start: dateValue(fields, key: SeededPropertyKey.startDate),
-            end: dateValue(fields, key: SeededPropertyKey.endDate),
-            locale: locale
+            date: nil, start: summary?.startDate, end: summary?.endDate, locale: locale
         )
         return .spanning(id: "date", label: label, lead: lead, emptyText: empty, fields: span, locale: locale)
     }
@@ -98,15 +97,5 @@ struct EventDetailContent: ConclusionDetailBody {
         row.label = label
         row.accessibilityLabel = ReconciledValueDisplay.accessibilityLabel(label: label, lead: row.lead, field: field)
         return row
-    }
-
-    private static func dateValue(_ field: CatalogConclusionField) -> CatalogDateValueInput? {
-        guard case .date(let date)? = field.displayedValues.first?.value else { return nil }
-        return date
-    }
-
-    private static func dateValue(_ fields: [CatalogConclusionField], key: String) -> CatalogDateValueInput? {
-        guard let field = fields.first(where: { $0.propertyKey == key }) else { return nil }
-        return dateValue(field)
     }
 }
