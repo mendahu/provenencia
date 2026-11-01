@@ -655,6 +655,27 @@ struct CatalogPicture: Sendable, Equatable, Identifiable {
     var id: String { record.observationID }
 }
 
+/// The accepted claims of one Person that come from one Source. The Source's
+/// type is its id; the app resolves the label from the source types list.
+struct CatalogPersonClaimGroup: Sendable, Equatable {
+    var sourceID: String
+    var sourceRef: String
+    var title: String
+    var sourceTypeID: String
+    var claims: [CatalogPersonClaim]
+}
+
+/// One accepted claim: the claimed Subject and its Observations, on the
+/// Evidence graph that holds them. `graphRef` is empty for a graph with no ref.
+struct CatalogPersonClaim: Sendable, Equatable {
+    var claimID: String
+    var graphID: String
+    var graphRef: String
+    var graphName: String
+    var subject: CatalogSubject
+    var observations: [CatalogObservation]
+}
+
 /// One handle's detail (S9-15), composed by Go from the auto-reconciler cache.
 /// Generic over kind: Person, Event and Place pages all read it.
 struct CatalogConclusionDetail: Sendable, Equatable {
@@ -1341,6 +1362,10 @@ protocol GenealogyStore: Sendable {
     /// One handle's fields, auto-reconciled values and outcomes. Throws
     /// `conclusiondetails.not_found` for an unknown or merged handle.
     func getConclusionDetail(projectDir: String, entityID: String) async throws -> CatalogConclusionDetail
+    /// A Person's accepted claims grouped by Source, in Go's order (Source title,
+    /// then Source ref; claims by Evidence graph name, then ref). Throws
+    /// `conclusiondetails.not_found` for an unknown or merged handle.
+    func listPersonClaims(projectDir: String, entityID: String) async throws -> [CatalogPersonClaimGroup]
     func listSubjects(projectDir: String, graphID: String) async throws -> [CatalogSubject]
     func setSubjectPosition(
         projectDir: String,
