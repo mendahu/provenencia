@@ -60,11 +60,11 @@ func ListPersonClaims(in []byte) ([]byte, error) {
 				n := counts[0]
 				counts = counts[1:]
 				group.Claims = append(group.Claims, &engine.PersonClaim{
-					ClaimId:   database.UUIDString(cl.ClaimID),
-					GraphId:   database.UUIDString(cl.Graph.GraphID),
-					GraphRef:  cl.Graph.GraphRef,
-					GraphName: cl.Graph.GraphName,
-					Subject: evidenceSubjectProto(cl.Subject),
+					ClaimId:      database.UUIDString(cl.ClaimID),
+					GraphId:      database.UUIDString(cl.Graph.GraphID),
+					GraphRef:     cl.Graph.GraphRef,
+					GraphName:    cl.Graph.GraphName,
+					Subject:      evidenceSubjectProto(cl.Subject),
 					Observations: protos[next : next+n : next+n],
 				})
 				next += n
