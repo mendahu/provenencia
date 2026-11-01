@@ -22,6 +22,14 @@ It also fails on a folder under macos/App/DesignSystem/Components/ or Recipes/
 that macos/App/DesignSystem/README.md has no row for (app-health audit A-33):
 a row names its folder as `Components/Name/` or `Recipes/Name/` in backticks.
 
+It reads macos/Provenencia.xcodeproj/project.pbxproj for the synchronized
+folders Xcode builds from disk (PBXFileSystemSynchronizedRootGroup), keeping no
+list of its own, and fails on: a file in one that is not Swift and not in its
+membership exceptions (Xcode would bundle it in the app), a membership
+exception that is not on disk, a synchronized folder missing on disk, and a
+file or folder directly under macos/App that the project neither synchronizes
+nor groups (nothing would build it).
+
     python3 scripts/check-guidance-names.py
 """
 import os
@@ -95,6 +103,82 @@ def kit_rows_missing():
     return problems
 
 
+def _objects(text, isa):
+    """(id, body) of each project object of the given isa; an object is one line or runs to a tab-indented `};`."""
+    out, cur = [], None
+    for line in text.split("\n"):
+        if cur is None:
+            m = re.match(r"\t\t([0-9A-Fa-f]{24})(?: /\*.*?\*/)? = \{", line)
+            if not m:
+                continue
+            cur = (m.group(1), [line])
+            if line.rstrip().endswith("};"):
+                out.append((cur[0], line))
+                cur = None
+        else:
+            cur[1].append(line)
+            if line == "\t\t};":
+                out.append((cur[0], "\n".join(cur[1])))
+                cur = None
+    return [(i, body) for i, body in out if re.search(r"\bisa = %s;" % isa, body)]
+
+
+def _field(body, key):
+    m = re.search(r"\b%s = (\"[^\"]*\"|[^;\s]+);" % key, body)
+    return m.group(1).strip('"') if m else None
+
+
+def _id_list(body, key):
+    m = re.search(r"\b%s = \((.*?)\);" % key, body, re.S)
+    return re.findall(r"\b([0-9A-Fa-f]{24})\b", m.group(1)) if m else []
+
+
+def synced_folders_unlisted():
+    """Problems between the Xcode synchronized folders and the disk (see the docstring)."""
+    with open(os.path.join(ROOT, "macos", "Provenencia.xcodeproj", "project.pbxproj"), encoding="utf-8") as fh:
+        text = fh.read()
+    groups = dict(_objects(text, "PBXGroup"))
+    roots = dict(_objects(text, "PBXFileSystemSynchronizedRootGroup"))
+    sets = dict(_objects(text, "PBXFileSystemSynchronizedBuildFileExceptionSet"))
+    problems = []
+    for rid, body in roots.items():
+        path = _field(body, "path")
+        parent = next((_field(g, "path") for g in groups.values() if rid in _id_list(g, "children")), None)
+        rel = "/".join(["macos"] + ([parent] if parent else []) + [path])
+        exceptions = set()
+        for sid in _id_list(body, "exceptions"):
+            m = re.search(r"membershipExceptions = \((.*?)\);", sets.get(sid, ""), re.S)
+            exceptions.update(e.strip().strip(",").strip('"') for e in (m.group(1).split("\n") if m else []) if e.strip())
+        base = os.path.join(ROOT, rel)
+        if not os.path.isdir(base):
+            problems.append(f"{rel}: synchronized folder missing on disk")
+            continue
+        found = set()
+        for d, dirs, files in os.walk(base):
+            dirs[:] = [x for x in dirs if not x.startswith(".")]
+            for f in files:
+                if f.startswith("."):
+                    continue
+                sub = os.path.relpath(os.path.join(d, f), base).replace(os.sep, "/")
+                found.add(sub)
+                if not f.endswith(".swift") and sub not in exceptions:
+                    problems.append(f"{rel}/{sub}: not Swift and not in a membership exception of the {rel} synchronized folder")
+        for entry in sorted(exceptions - found):
+            problems.append(f"{rel}/{entry}: listed in a membership exception but not on disk")
+    main_group = _field(text, "mainGroup")
+    named = set()
+    for child in _id_list(groups.get(main_group, ""), "children"):
+        if child in groups and _field(groups[child], "path") == "App":
+            for sub in _id_list(groups[child], "children"):
+                body = groups.get(sub) or roots.get(sub) or ""
+                named.add(_field(body, "path"))
+    app = os.path.join(ROOT, "macos", "App")
+    for name in sorted(os.listdir(app)):
+        if not name.startswith(".") and name not in named:
+            problems.append(f"macos/App/{name}: not a synchronized folder or group in the Xcode project")
+    return sorted(problems)
+
+
 def main():
     words, allow = code_words(), allowed()
     problems = []
@@ -110,11 +194,14 @@ def main():
                         if looks_like_code(name) and name not in words and name not in allow:
                             problems.append(f"{rel}:{lineno}: `{span}` names {name}, which no code defines")
     problems += kit_rows_missing()
+    problems += synced_folders_unlisted()
     if problems:
         print("\n".join(problems))
         print(f"check-guidance-names: {len(problems)} problem(s). Rename a stale name to the current code "
               "or add it to scripts/check-guidance-names.allow with the reason; "
-              "give a kit folder a row in macos/App/DesignSystem/README.md.")
+              "give a kit folder a row in macos/App/DesignSystem/README.md; "
+              "list a non-Swift file in its synchronized folder's membership exceptions in "
+              "macos/Provenencia.xcodeproj/project.pbxproj")
         return 1
     print("check-guidance-names: OK")
     return 0
