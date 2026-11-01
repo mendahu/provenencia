@@ -37,7 +37,7 @@ struct SourceGraphFormModelTests {
         ]
         store.artifactsBySource[sourceID] = artifacts(artifactCount)
         store.evidenceGraphsByProject[projectDir] = graphs
-        store.nextWriteEffects = CatalogWriteEffects(lists: [.evidenceGraphs])
+        store.nextWriteEffects = CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .evidenceGraphs, ids: [sourceID])])
         return store
     }
 

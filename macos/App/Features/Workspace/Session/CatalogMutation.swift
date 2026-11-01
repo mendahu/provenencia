@@ -59,12 +59,11 @@ enum CatalogList: String, Sendable, CaseIterable {
     /// An Observation was created, deleted, or moved to another Property, so
     /// the Properties workspace's `usedBy` counts changed.
     case propertyUsage = "property_usage"
-    /// A graph or link row was written.
-    case evidenceGraphs = "evidence_graphs"
 }
 
 /// A keyed partial read a write moved, per id of the read's key table
-/// (Evidence graphs for `citations` and `evidence_graph_progress`). The raw values are
+/// (Evidence graphs for `citations` and `evidence_graph_progress`, Sources for
+/// `evidence_graphs`). The raw values are
 /// Go's `effects.Read` wire keys (`WriteEffects.reads`); a key this build does
 /// not know is dropped when the effects are decoded.
 enum CatalogRead: String, Sendable, CaseIterable {
@@ -72,10 +71,12 @@ enum CatalogRead: String, Sendable, CaseIterable {
     case citations = "citations"
     /// The Subject, filed and Observation counts of a graph.
     case evidenceGraphProgress = "evidence_graph_progress"
+    /// The graphs of a Source with their linked Artifacts (the graph list).
+    case evidenceGraphs = "evidence_graphs"
 }
 
-/// One keyed read and the key ids (Evidence graphs for both current reads) it
-/// moved for.
+/// One keyed read and the key ids (Evidence graphs, or Sources for
+/// `evidence_graphs`) it moved for.
 struct CatalogWriteEffectsRead: Sendable, Equatable {
     var read: CatalogRead
     var ids: [String]
@@ -189,13 +190,28 @@ extension CatalogMutation {
 
     /// The Evidence graph this mutation changes, for a mutation that names one
     /// and brings no effects with it. The registry reloads it and the session
-    /// patches its progress; nil for every other mutation.
+    /// patches its progress; nil for every other mutation. S14-16 removes this
+    /// when Promote reports effects.
     var evidenceGraphId: String? {
         switch self {
         case .promotedSubject(let graphId):
             return graphId
         default:
             return nil
+        }
+    }
+
+    /// The ids of `read` this mutation names for a write that reports no
+    /// effects: Promote's graph for graph progress, a deleted Source for the
+    /// graph list. S14-16 removes this when Promote and DeleteSource report effects.
+    func readIDs(for read: CatalogRead) -> [String] {
+        switch (read, self) {
+        case (.evidenceGraphProgress, _):
+            return evidenceGraphId.map { [$0] } ?? []
+        case (.evidenceGraphs, .deletedSource(let id)):
+            return [id]
+        default:
+            return []
         }
     }
 

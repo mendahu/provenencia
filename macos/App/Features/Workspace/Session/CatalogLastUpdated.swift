@@ -27,9 +27,10 @@ enum CatalogQueryFollows: Sendable, Equatable {
     case handle
     /// `CatalogWriteEffects.sourceScopes`.
     case source
-    /// The graph ids of one entry of `CatalogWriteEffects.reads`. Graph
-    /// progress also follows the mutation's graph when it names one the
-    /// effects did not (Promote reports no effects yet; S14-16 removes this special case).
+    /// The key ids of one entry of `CatalogWriteEffects.reads`. A read also
+    /// follows the ids its mutation names when the effects did not
+    /// (`CatalogMutation.readIDs(for:)`: Promote's graph, a deleted Source;
+    /// S14-16 removes these special cases).
     case reads(CatalogRead)
     /// `CatalogWriteEffects.touchedHandles`: every handle a write changed or
     /// whose header it changed.
@@ -46,10 +47,8 @@ enum CatalogQueryFollows: Sendable, Equatable {
             return effects.sourceScopes
         case .reads(let read):
             var ids = effects.reads.first { $0.read == read }?.ids ?? []
-            if read == .evidenceGraphProgress,
-               let graphId = mutation?.evidenceGraphId, !ids.contains(graphId)
-            {
-                ids.append(graphId)
+            for id in mutation?.readIDs(for: read) ?? [] where !ids.contains(id) {
+                ids.append(id)
             }
             return ids
         case .touchedHandles:

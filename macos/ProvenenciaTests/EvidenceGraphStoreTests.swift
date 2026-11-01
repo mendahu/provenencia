@@ -48,8 +48,8 @@ struct EvidenceGraphStoreTests {
 
     @Test func writesReturnScriptedEffects() async throws {
         let store = seededStore()
-        store.nextWriteEffects = CatalogWriteEffects(lists: [.evidenceGraphs])
-        let expected: Set<CatalogList> = [.evidenceGraphs]
+        store.nextWriteEffects = CatalogWriteEffects(lists: [.vocabulary])
+        let expected: Set<CatalogList> = [.vocabulary]
         let (made, created) = try await store.createEvidenceGraph(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
             name: "Jones", description: "", artifactIDs: ["a1"]

@@ -125,8 +125,6 @@ struct CatalogQueryRegistry: Sendable {
         switch list {
         case .vocabulary, .propertyUsage:
             return [.key(.propertiesWorkspace(project: project))]
-        case .evidenceGraphs:
-            return [.key(.evidenceGraphsList(project: project))]
         }
     }
 
@@ -496,16 +494,31 @@ extension CatalogQueryKey.Kind {
                 }
             )
         case .evidenceGraphsList:
-            // Graph and link writes report the `evidence_graphs` list in
-            // `WriteEffects`; `deleteSource` reports none, so `.deletedSource` drops it.
-            // A visible key still revalidates (`WorkspaceSession.apply`);
-            // a hidden list just goes stale until it is shown again.
+            // Graph and link writes report the `evidence_graphs` read for their
+            // Source (`WriteEffects.reads`), and the arm re-reads that Source's
+            // graphs and merges them into the warmed list. `deleteSource` reports
+            // none, so `CatalogMutation.readIDs(for:)` names the deleted Source.
+            // A hidden list goes stale until it is shown again.
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [.deletedSource],
+                invalidateOn: [],
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.evidenceGraphsList(project: project)) },
+                refreshes: [.merged(
+                    follows: .reads(.evidenceGraphs),
+                    as: [CatalogEvidenceGraph].self,
+                    read: { session, key, sourceId in
+                        try await session.store.listEvidenceGraphs(
+                            projectDir: key.project.projectDir,
+                            sourceID: sourceId
+                        )
+                    },
+                    merge: { rows, sourceId, part in
+                        rows.removeAll { $0.sourceID == sourceId }
+                        rows.append(contentsOf: part)
+                    }
+                )],
                 load: { key, store in
                     guard case .evidenceGraphsList(let project) = key else {
                         mismatchedCatalogKey(key, .evidenceGraphsList)

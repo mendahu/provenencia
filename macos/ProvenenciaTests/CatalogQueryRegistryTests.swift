@@ -878,7 +878,6 @@ struct CatalogQueryRegistryTests {
             .key(.sourceTypesList(project: project)),
             .key(.sourceWorkspace(project: project, sourceId: "s1")),
             .allCached(.evidenceGraph),
-            .key(.evidenceGraphsList(project: project)),
             .key(.personsList(project: project)),
             .key(.eventsList(project: project)),
             .key(.placesList(project: project)),
@@ -947,6 +946,10 @@ struct CatalogQueryRegistryTests {
         #expect(
             CatalogQueryKey.Kind.evidenceGraphProgress.descriptor.refreshes.map(\.follows)
                 == [.reads(.evidenceGraphProgress)]
+        )
+        #expect(
+            CatalogQueryKey.Kind.evidenceGraphsList.descriptor.refreshes.map(\.follows)
+                == [.reads(.evidenceGraphs)]
         )
         // The effect slots a key follows are declared on its kind.
         #expect(CatalogQueryKey.Kind.evidenceGraph.descriptor.refreshes.map(\.follows) == [.evidenceGraphs])
@@ -1250,21 +1253,19 @@ struct CatalogQueryRegistryTests {
         let lists: Set<CatalogList>
         let structure: Bool
         let propertiesInvalidations: Int
-        let graphListInvalidations: Int
 
         var testDescription: String { name }
     }
 
     nonisolated private static let listCases: [ListCase] = [
-        ListCase(name: "vocabulary", lists: [.vocabulary], structure: false, propertiesInvalidations: 1, graphListInvalidations: 0),
-        ListCase(name: "property usage", lists: [.propertyUsage], structure: false, propertiesInvalidations: 1, graphListInvalidations: 0),
+        ListCase(name: "vocabulary", lists: [.vocabulary], structure: false, propertiesInvalidations: 1),
+        ListCase(name: "property usage", lists: [.propertyUsage], structure: false, propertiesInvalidations: 1),
         ListCase(
             name: "vocabulary and property usage", lists: [.vocabulary, .propertyUsage],
-            structure: false, propertiesInvalidations: 1, graphListInvalidations: 0
+            structure: false, propertiesInvalidations: 1
         ),
-        ListCase(name: "structure alone", lists: [], structure: true, propertiesInvalidations: 1, graphListInvalidations: 0),
-        ListCase(name: "vocabulary and structure", lists: [.vocabulary], structure: true, propertiesInvalidations: 1, graphListInvalidations: 0),
-        ListCase(name: "evidence graphs alone", lists: [.evidenceGraphs], structure: false, propertiesInvalidations: 0, graphListInvalidations: 1),
+        ListCase(name: "structure alone", lists: [], structure: true, propertiesInvalidations: 1),
+        ListCase(name: "vocabulary and structure", lists: [.vocabulary], structure: true, propertiesInvalidations: 1),
     ]
 
     @Test(arguments: listCases)
@@ -1275,7 +1276,6 @@ struct CatalogQueryRegistryTests {
             project: project
         )
         #expect(got.filter { $0 == .key(.propertiesWorkspace(project: project)) }.count == tc.propertiesInvalidations)
-        #expect(got.filter { $0 == .key(.evidenceGraphsList(project: project)) }.count == tc.graphListInvalidations)
     }
 
     @Test func evidenceGraphsListLoadsFromStore() async throws {
@@ -1290,12 +1290,6 @@ struct CatalogQueryRegistryTests {
         )
         await waitForQuery(handle)
         #expect(handle.value == [graph])
-    }
-
-    @Test func deletedSourceInvalidatesEvidenceGraphsList() {
-        let project = ProjectKey(projectDir: projectDir)
-        let got = CatalogQueryRegistry.standard.invalidations(by: .deletedSource(id: "s1"), project: project)
-        #expect(got.contains(.key(.evidenceGraphsList(project: project))))
     }
 
     @Test func evidenceGraphsListMarksStaleWhenHidden() {
