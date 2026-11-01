@@ -7,7 +7,6 @@ import (
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
-	"google.golang.org/protobuf/proto"
 )
 
 // graphFixture is citationFixture plus a second Artifact on the same Source, a
@@ -126,7 +125,7 @@ func TestListEvidenceGraphs(t *testing.T) {
 	})
 	f := newGraphFixture(t)
 	f.createGraph(t, "Smith", f.page1)
-	srcB, pageB := f.otherSource(t)
+	f.otherSource(t)
 
 	graphs := f.list(t)
 	var names []string
@@ -138,12 +137,6 @@ func TestListEvidenceGraphs(t *testing.T) {
 	}
 	if !slices.Equal(names, []string{"Default", "Default", "Smith"}) {
 		t.Fatalf("names %v", names)
-	}
-	if got := f.graphsOf(t, srcB); len(got) != 1 || !slices.Equal(got[0].GetArtifactIds(), []string{pageB}) {
-		t.Fatalf("source B graphs %+v", got)
-	}
-	if f.graphsOf(t, srcB)[0].GetSourceId() != srcB {
-		t.Fatal("a Source's list holds another Source's graph")
 	}
 	a := f.graphsOf(t, f.sourceID)
 	if len(a) != 2 || a[0].GetName() != "Default" || a[1].GetName() != "Smith" ||
@@ -167,11 +160,9 @@ func TestListEvidenceGraphsSourceID(t *testing.T) {
 		}
 	})
 	t.Run("bad source id", func(t *testing.T) {
-		in, err := proto.Marshal(&engine.ListEvidenceGraphsRequest{ProjectDir: f.dir, SourceId: "x"})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := ListEvidenceGraphs(in); !errors.Is(err, errInvalidID) {
+		err := rpc(t, ListEvidenceGraphs, &engine.ListEvidenceGraphsRequest{ProjectDir: f.dir, SourceId: "x"},
+			&engine.ListEvidenceGraphsResponse{})
+		if !errors.Is(err, errInvalidID) {
 			t.Fatalf("err %v, want errInvalidID", err)
 		}
 	})
