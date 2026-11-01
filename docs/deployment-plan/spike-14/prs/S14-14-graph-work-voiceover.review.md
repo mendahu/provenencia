@@ -1,10 +1,10 @@
 # Review — S14-14 Copy and VoiceOver on graph work
 
-**Verdict:** pending round 2
-**Rounds:** 1 of 2 so far. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
-- None open. Answered before review (2026-11-01): one PR rather than a split (the plan bends the scope entry's split line; STEP-13 rewords it); all three ship-log leftovers in; no brief; history rows read graph name then surface; the composer's load error sits under the Citation picker.
+- None open. Answered in round 2 (2026-11-01): M-13 — move the composer's held step onto `PVDiscardGate` in this PR (D-22). Answered before review (2026-11-01): one PR rather than a split (the plan bends the scope entry's split line; STEP-13 rewords it); all three ship-log leftovers in; no brief; history rows read graph name then surface; the composer's load error sits under the Citation picker.
 
 ## Writer's own calls
 - `PVDiscardGate` is a kit type shared by sheets and in-page edits (M-9), not a sheet-only state.
@@ -103,3 +103,43 @@
 
 ### X-17 · minor · Smaller choices
 **Answer:** Fixed — `HistoryJumpMenuHost` is under `WorkspaceView`'s `.environment(session)` (§ 4); every opted-in callout is a `PVCallout` (§ 4); the two opted-in `PVErrorText`s are named (D-8); README wording given for every row (STEP-2); D-2 names the initializer; the duplicate ref is accepted (D-14); the header says Spike 12 and Spike 11 leftovers.
+
+## Round 2
+
+### M-13 · blocker · `PVDiscardGate` beside the composer's `stepContinuation`
+**Answer:** To user → answered (2026-11-01): move the composer in this PR. D-3 narrows the gate to the held step only, since each owner's question stays in its own presentation (the composer's in `presented`); D-22 replaces `stepContinuation`; AC-2.13, T-19, manual check 8; Codebase fit row names it.
+
+### M-14 · blocker · Card switch stored twice; `beginEdit` still silent
+**Answer:** Fixed — D-12: `beginEdit` is the asking entry and `openEdit` is private; the target lives only in the held step; `PendingEditSwitch` is an id-only question value, as `PendingLeave`.
+
+### M-15 · blocker · Third copy of the Citation ref lookup
+**Answer:** Fixed — D-16 adds `citationRef(for:)`; `activeCitationRef` and `announceIdentityChange()` call it.
+
+### M-16 · blocker · Hand-written on-change post in a file STEP-2 edits
+**Answer:** Fixed — D-8 moves the cut-failed caption onto `pvAnnounce`; § 3 Out keeps only `NameValueEditorForm`, which posts after an action.
+
+### X-18 · major · `StoreBoom` is private
+**Answer:** Fixed — AC-7.1, AC-7.3 and T-17 assert by prefix.
+
+### X-19 · major · When `citationLoadError` clears
+**Answer:** Fixed — D-16 clears it in `openBlankCitation()` and at the start of `startIdentitySwitch`; AC-7.9.
+
+### X-20 · major · Where `PVInput` applies the label; nested fields
+**Answer:** Fixed — D-10: on the outermost view of `PVInput` and `PVTextArea`; `PVField` always sets the value, nil without a label; several controls in one field share it (accepted).
+
+### X-21 · major · T-15 depends on the host's PDF app
+**Answer:** Fixed — D-17 moves the app lookup into `ProjectFiles.launch`, so the seam covers it; T-15 also checks a refusal passes through.
+
+### X-22 · minor · How the Go test gets the kinds
+**Answer:** Fixed — D-20 / T-18 collect `Table.Kind` over `catalogmodel.Tables`.
+
+### X-23 · minor · Save-page line speaks for any `fields.error`
+**Answer:** Fixed — D-8 states it and accepts it.
+
+### X-24 · minor · Two `rows` callers
+**Answer:** Fixed — D-14 names both callers and the new `HistoryJumpRow` initializer.
+
+### X-25 · minor · Toasts on onboarding and bridges now speak
+**Answer:** Fixed — D-8 and manual check 5 accept it.
+
+Smaller notes (README sentence wraps, no Announce row to extend, about 43 `PVField` sites, a 21st non-plural count): Fixed in STEP-1, STEP-2, § 4 and § 6 Edges.
