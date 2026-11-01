@@ -122,8 +122,20 @@ struct PVDeleteImpactCopyTests {
     @Test func unknownViaStillListsRefs() {
         let group = PVDeleteImpactPreviewData.unknownVia.groups[0]
         #expect(!PVDeleteImpactCopy.isKnownVia(group.via))
-        #expect(PVDeleteImpactCopy.heading(group) == "2 narratives reference this")
+        #expect(PVDeleteImpactCopy.heading(group) == "2 items reference this")
         #expect(group.listed.map(\.ref) == ["NAR-3JQ8", "NAR-3JQ9"])
+    }
+
+    @Test func nounReadsPluralKey() {
+        #expect(L10n.DeleteImpact.noun("citation", count: 1) == "citation")
+        #expect(L10n.DeleteImpact.noun("citation", count: 2) == "citations")
+        #expect(L10n.DeleteImpact.noun("identity_claim") == "identity claim")
+        #expect(L10n.DeleteImpact.noun("unknown_kind") == "item")
+    }
+
+    @Test func unknownViaHeadingPlural() {
+        #expect(L10n.DeleteImpact.viaFallback(kind: "file", total: 1) == "1 file references this")
+        #expect(L10n.DeleteImpact.viaFallback(kind: "file", total: 3) == "3 files reference this")
     }
 
     @Test func extraGatesHaveNoDestructiveButtonAndNoInventedList() {

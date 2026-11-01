@@ -17,6 +17,11 @@ A catalog value with more than one argument must number them (%1$@ %2$lld),
 so translations can reorder them. Plural substitutions (%#@count@) are bound
 to their argument by argNum and count as numbered.
 
+A count in copy is a plural key: an English value with %lld (or %N$lld) followed
+by a word, in an entry with no plural variations or substitutions, reads "1
+subjects". Give the key plural variations, or add the word to NON_INFLECTING
+when the word is not a noun that takes a plural ("of", "more", "px").
+
 No LocalizedStringResource may interpolate (defaultValue: "\\(count) items").
 Copy with arguments is a catalog format filled by an L10n format function
 returning String, so every resource stays safe to resolve with L10n.string.
@@ -74,6 +79,36 @@ def unnumbered_arguments(value: str) -> bool:
     return any(m.group(1) is None and not m.group(2).startswith("#@") for m in specifiers)
 
 
+# Words that follow a count without agreeing with it: "%lld of", "%lld more".
+NON_INFLECTING = {"of", "more", "percent", "set", "up", "down", "cannot", "to", "unselected", "already", "px"}
+
+# A count and the word after it: "%lld subjects", "%2$lld rows".
+COUNT_WORD_RE = re.compile(r"%(?:\d+\$)?lld\s+([A-Za-z]+)")
+
+
+def uninflected_counts(strings: dict) -> list[str]:
+    """Problems for each English value that counts a noun without a plural rule."""
+    problems: list[str] = []
+    for key, entry in strings.items():
+        if not isinstance(entry, dict):
+            continue
+        en = entry.get("localizations", {}).get("en", {})
+        if "variations" in en or "substitutions" in en:
+            continue
+        value = en.get("stringUnit", {}).get("value")
+        if not value:
+            continue
+        for match in COUNT_WORD_RE.finditer(value):
+            if match.group(1).lower() not in NON_INFLECTING:
+                problems.append(
+                    f"{key!r}: {value!r} counts {match.group(1)!r} with no plural rule — "
+                    f"give the key plural variations (or add the word to NON_INFLECTING "
+                    f"when it does not take a plural)"
+                )
+                break
+    return problems
+
+
 def string_localized_calls() -> list[tuple[Path, int]]:
     """(file, line) of every String(localized:) call outside comments."""
     hits: list[tuple[Path, int]] = []
@@ -102,12 +137,12 @@ def resource_keys() -> dict[str, Path]:
     return keys
 
 
-def main() -> int:
-    if not CATALOG.is_file():
-        print(f"error: missing {CATALOG}", file=sys.stderr)
+def main(catalog: Path = CATALOG) -> int:
+    if not catalog.is_file():
+        print(f"error: missing {catalog}", file=sys.stderr)
         return 2
 
-    data = json.loads(CATALOG.read_text(encoding="utf-8"))
+    data = json.loads(catalog.read_text(encoding="utf-8"))
     strings = data.get("strings")
     if not isinstance(strings, dict):
         print("error: Localizable.xcstrings missing strings object", file=sys.stderr)
@@ -145,6 +180,8 @@ def main() -> int:
                 f"entry and fix the call site (Text(verbatim:) or L10n)"
             )
 
+    problems.extend(uninflected_counts(strings))
+
     for key, path in resource_keys().items():
         if key not in strings:
             problems.append(
@@ -174,9 +211,10 @@ def main() -> int:
             print(f"  - {p}", file=sys.stderr)
         return 1
 
-    print(f"OK: {len(strings)} keys in {CATALOG.relative_to(ROOT)}")
+    shown = catalog.relative_to(ROOT) if catalog.is_relative_to(ROOT) else catalog
+    print(f"OK: {len(strings)} keys in {shown}")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(Path(sys.argv[1]) if len(sys.argv) > 1 else CATALOG))

@@ -8159,241 +8159,106 @@ enum L10n {
     }
 
     enum DeleteImpact {
-        static func noun(_ kind: String, count: Int = 1) -> String {
-            let pair: (LocalizedStringResource, LocalizedStringResource)
-            switch kind {
-            case "source":
-                pair = (nounSource, nounSources)
-            case "artifact":
-                pair = (nounArtifact, nounArtifacts)
-            case "evidence_graph":
-                pair = (nounEvidenceGraph, nounEvidenceGraphs)
-            case "citation":
-                pair = (nounCitation, nounCitations)
-            case "observation":
-                pair = (nounObservation, nounObservations)
-            case "subject":
-                pair = (nounSubject, nounSubjects)
-            case "source_type":
-                pair = (nounSourceType, nounSourceTypes)
-            case "metadata_field":
-                pair = (nounMetadataField, nounMetadata)
-            case "source_credibility_grade":
-                pair = (nounCredibilityGrade, nounCredibilityGrades)
-            case "subject_type":
-                pair = (nounSubjectType, nounSubjectTypes)
-            case "property":
-                pair = (nounProperty, nounProperties)
-            case "property_term":
-                pair = (nounPropertyTerm, nounPropertyTerms)
-            case "canonical_entity":
-                pair = (nounCanonicalEntity, nounCanonicalEntities)
-            case "user":
-                pair = (nounUser, nounUsers)
-            case "project":
-                pair = (nounProject, nounProjects)
-            case "file":
-                pair = (nounFile, nounFiles)
-            case "narrative":
-                pair = (nounNarrative, nounNarratives)
-            case "reconciliation_claim":
-                pair = (nounReconciliationClaim, nounReconciliationClaims)
-            default:
-                pair = (nounItem, nounItems)
-            }
-            return L10n.string(count == 1 ? pair.0 : pair.1)
-        }
+        /// One plural catalog key per Go `catalogmodel.Kind`, holding the bare
+        /// noun for a count ("citation" / "citations"). `TestSwiftVocabularyMatchesGo`
+        /// keeps this table equal to Go's kinds; a kind with no entry reads "item".
+        static let kindNouns: [String: LocalizedStringResource] = [
+            "source": LocalizedStringResource(
+                "deleteImpact.kind.source",
+                defaultValue: "source",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "artifact": LocalizedStringResource(
+                "deleteImpact.kind.artifact",
+                defaultValue: "artifact",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "evidence_graph": LocalizedStringResource(
+                "deleteImpact.kind.evidence_graph",
+                defaultValue: "evidence graph",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "citation": LocalizedStringResource(
+                "deleteImpact.kind.citation",
+                defaultValue: "citation",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "observation": LocalizedStringResource(
+                "deleteImpact.kind.observation",
+                defaultValue: "observation",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "subject": LocalizedStringResource(
+                "deleteImpact.kind.subject",
+                defaultValue: "subject",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "source_type": LocalizedStringResource(
+                "deleteImpact.kind.source_type",
+                defaultValue: "source type",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "metadata_field": LocalizedStringResource(
+                "deleteImpact.kind.metadata_field",
+                defaultValue: "metadata field",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "source_credibility_grade": LocalizedStringResource(
+                "deleteImpact.kind.source_credibility_grade",
+                defaultValue: "credibility grade",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "subject_type": LocalizedStringResource(
+                "deleteImpact.kind.subject_type",
+                defaultValue: "subject type",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "property": LocalizedStringResource(
+                "deleteImpact.kind.property",
+                defaultValue: "property",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "property_term": LocalizedStringResource(
+                "deleteImpact.kind.property_term",
+                defaultValue: "property term",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "canonical_entity": LocalizedStringResource(
+                "deleteImpact.kind.canonical_entity",
+                defaultValue: "person, event, or place",
+                comment: "Impact kind noun, bare, by count for a Conclusion handle (PER-…, EVT-…, PLC-…)"
+            ),
+            "user": LocalizedStringResource(
+                "deleteImpact.kind.user",
+                defaultValue: "user",
+                comment: "Impact kind noun, bare, by count (infra)"
+            ),
+            "project": LocalizedStringResource(
+                "deleteImpact.kind.project",
+                defaultValue: "project",
+                comment: "Impact kind noun, bare, by count (infra)"
+            ),
+            "file": LocalizedStringResource(
+                "deleteImpact.kind.file",
+                defaultValue: "file",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "identity_claim": LocalizedStringResource(
+                "deleteImpact.kind.identity_claim",
+                defaultValue: "identity claim",
+                comment: "Impact kind noun, bare, by count"
+            ),
+        ]
 
-        static let nounSource = LocalizedStringResource(
-            "deleteImpact.kind.source.one",
-            defaultValue: "source",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounSources = LocalizedStringResource(
-            "deleteImpact.kind.source.other",
-            defaultValue: "sources",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounArtifact = LocalizedStringResource(
-            "deleteImpact.kind.artifact.one",
-            defaultValue: "artifact",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounArtifacts = LocalizedStringResource(
-            "deleteImpact.kind.artifact.other",
-            defaultValue: "artifacts",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounEvidenceGraph = LocalizedStringResource(
-            "deleteImpact.kind.evidence_graph.one",
-            defaultValue: "evidence graph",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounEvidenceGraphs = LocalizedStringResource(
-            "deleteImpact.kind.evidence_graph.other",
-            defaultValue: "evidence graphs",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounCitation = LocalizedStringResource(
-            "deleteImpact.kind.citation.one",
-            defaultValue: "citation",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounCitations = LocalizedStringResource(
-            "deleteImpact.kind.citation.other",
-            defaultValue: "citations",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounObservation = LocalizedStringResource(
-            "deleteImpact.kind.observation.one",
-            defaultValue: "observation",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounObservations = LocalizedStringResource(
-            "deleteImpact.kind.observation.other",
-            defaultValue: "observations",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounSubject = LocalizedStringResource(
-            "deleteImpact.kind.subject.one",
-            defaultValue: "subject",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounSubjects = LocalizedStringResource(
-            "deleteImpact.kind.subject.other",
-            defaultValue: "subjects",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounSourceType = LocalizedStringResource(
-            "deleteImpact.kind.sourceType.one",
-            defaultValue: "source type",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounSourceTypes = LocalizedStringResource(
-            "deleteImpact.kind.sourceType.other",
-            defaultValue: "source types",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounMetadataField = LocalizedStringResource(
-            "deleteImpact.kind.metadataField.one",
-            defaultValue: "metadata field",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounMetadata = LocalizedStringResource(
-            "deleteImpact.kind.metadataField.other",
-            defaultValue: "metadata fields",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounCredibilityGrade = LocalizedStringResource(
-            "deleteImpact.kind.credibilityGrade.one",
-            defaultValue: "credibility grade",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounCredibilityGrades = LocalizedStringResource(
-            "deleteImpact.kind.credibilityGrade.other",
-            defaultValue: "credibility grades",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounSubjectType = LocalizedStringResource(
-            "deleteImpact.kind.subjectType.one",
-            defaultValue: "subject type",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounSubjectTypes = LocalizedStringResource(
-            "deleteImpact.kind.subjectType.other",
-            defaultValue: "subject types",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounProperty = LocalizedStringResource(
-            "deleteImpact.kind.property.one",
-            defaultValue: "property",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounProperties = LocalizedStringResource(
-            "deleteImpact.kind.property.other",
-            defaultValue: "properties",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounPropertyTerm = LocalizedStringResource(
-            "deleteImpact.kind.propertyTerm.one",
-            defaultValue: "property term",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounPropertyTerms = LocalizedStringResource(
-            "deleteImpact.kind.propertyTerm.other",
-            defaultValue: "property terms",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounCanonicalEntity = LocalizedStringResource(
-            "deleteImpact.kind.canonicalEntity.one",
-            defaultValue: "person, event, or place",
-            comment: "Singular Impact kind noun for a Conclusion handle (PER-…, EVT-…, PLC-…)"
-        )
-        static let nounCanonicalEntities = LocalizedStringResource(
-            "deleteImpact.kind.canonicalEntity.other",
-            defaultValue: "people, events, or places",
-            comment: "Plural Impact kind noun for Conclusion handles"
-        )
-        static let nounUser = LocalizedStringResource(
-            "deleteImpact.kind.user.one",
-            defaultValue: "user",
-            comment: "Singular infra Impact kind noun"
-        )
-        static let nounUsers = LocalizedStringResource(
-            "deleteImpact.kind.user.other",
-            defaultValue: "users",
-            comment: "Plural infra Impact kind noun"
-        )
-        static let nounProject = LocalizedStringResource(
-            "deleteImpact.kind.project.one",
-            defaultValue: "project",
-            comment: "Singular infra Impact kind noun"
-        )
-        static let nounProjects = LocalizedStringResource(
-            "deleteImpact.kind.project.other",
-            defaultValue: "projects",
-            comment: "Plural infra Impact kind noun"
-        )
-        static let nounFile = LocalizedStringResource(
-            "deleteImpact.kind.file.one",
-            defaultValue: "file",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounFiles = LocalizedStringResource(
-            "deleteImpact.kind.file.other",
-            defaultValue: "files",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounNarrative = LocalizedStringResource(
-            "deleteImpact.kind.narrative.one",
-            defaultValue: "narrative",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounNarratives = LocalizedStringResource(
-            "deleteImpact.kind.narrative.other",
-            defaultValue: "narratives",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounReconciliationClaim = LocalizedStringResource(
-            "deleteImpact.kind.reconciliation_claim.one",
-            defaultValue: "reconciliation claim",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounReconciliationClaims = LocalizedStringResource(
-            "deleteImpact.kind.reconciliation_claim.other",
-            defaultValue: "reconciliation claims",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounItem = LocalizedStringResource(
-            "deleteImpact.kind.item.one",
+        private static let itemNoun = LocalizedStringResource(
+            "deleteImpact.kind.item",
             defaultValue: "item",
-            comment: "Singular fallback Impact kind noun"
+            comment: "Impact kind noun, bare, by count; fallback for a kind with no noun"
         )
-        static let nounItems = LocalizedStringResource(
-            "deleteImpact.kind.item.other",
-            defaultValue: "items",
-            comment: "Plural fallback Impact kind noun"
-        )
+
+        static func noun(_ kind: String, count: Int = 1) -> String {
+            L10n.format(kindNouns[kind] ?? itemNoun, count)
+        }
 
         static func confirmTitle(noun: String, ref: String) -> String {
             return L10n.format(LocalizedStringResource(
@@ -8497,19 +8362,12 @@ enum L10n {
             viaFormats[via] != nil
         }
 
-        static let viaUnknownOne = LocalizedStringResource(
-            "deleteImpact.via.unknown.one",
-            defaultValue: "%1$lld %2$@ references this",
-            comment: "Unknown-via group heading, singular; arguments are total and kind noun"
-        )
-        static let viaUnknownOther = LocalizedStringResource(
-            "deleteImpact.via.unknown.other",
-            defaultValue: "%1$lld %2$@ reference this",
-            comment: "Unknown-via group heading, plural; arguments are total and kind noun"
-        )
-
         static func viaFallback(kind: String, total: Int) -> String {
-            return L10n.format(total == 1 ? viaUnknownOne : viaUnknownOther, total, noun(kind, count: total))
+            L10n.format(LocalizedStringResource(
+                "deleteImpact.via.unknown",
+                defaultValue: "%1$lld %2$@ references this",
+                comment: "Unknown-via group heading; arguments are total and kind noun (plural noun); the verb agrees with the total"
+            ), total, noun(kind, count: total))
         }
 
         private static let viaFormats: [String: LocalizedStringResource] = [
