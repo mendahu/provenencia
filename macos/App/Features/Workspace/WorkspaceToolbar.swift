@@ -153,10 +153,7 @@ struct WorkspaceToolbar: View {
     private var breadcrumbs: some View {
         PVBreadcrumbs(items: Self.breadcrumbItems(
             for: navigation.currentLocation,
-            names: BreadcrumbNames(
-                sourceTitle: { session.source(id: $0)?.title },
-                graphName: { session.evidenceGraph(id: $0)?.name }
-            ),
+            names: LocationNames(session: session),
             goTo: { location in
                 WindowDrag.unlessDragging {
                     navigation.go(to: location)
@@ -188,18 +185,6 @@ struct WorkspaceToolbar: View {
         .accessibilityIdentifier("workspace.toolbar.omnibar")
     }
 
-    /// Names the crumbs read from the session's lists, so a rename shows at
-    /// once. `.none` knows no name; crumbs then fall back to what the location
-    /// carries.
-    struct BreadcrumbNames {
-        var sourceTitle: (String) -> String?
-        var graphName: (String) -> String?
-
-        static var none: BreadcrumbNames {
-            BreadcrumbNames(sourceTitle: { _ in nil }, graphName: { _ in nil })
-        }
-    }
-
     /// Builds toolbar crumbs.
     /// Graph (S12-11): `Sources › {Source title} › {graph name}`; the Source
     /// crumb goes to the Source page.
@@ -208,7 +193,7 @@ struct WorkspaceToolbar: View {
     /// Promote (S9-11): `Sources › {Source title} › {graph name} › Promote {ref}`, the same way.
     static func breadcrumbItems(
         for location: WorkspaceLocation,
-        names: BreadcrumbNames = .none,
+        names: LocationNames = .none,
         goTo: @escaping (WorkspaceLocation) -> Void
     ) -> [PVBreadcrumbItem] {
         let sectionLabel = L10n.string(location.section.label)
@@ -245,41 +230,24 @@ struct WorkspaceToolbar: View {
                     )
                 )
             }
-            let graphLabel = names.graphName(graphID).flatMap { $0.nilIfEmpty }
-                ?? L10n.string(L10n.Workspace.evidenceGraphTitle)
             items.append(
                 PVBreadcrumbItem(
                     id: "graph-\(graphID)",
-                    label: graphLabel,
+                    label: WorkspaceLocationLabels.graphLabel(graphID: graphID, names: names),
                     action: onCanvas ? nil : {
                         goTo(.evidenceGraph(sourceId: sourceID, graphId: graphID, title: sourceLabel))
                     }
                 )
             )
             if onCanvas { return items }
-            let scope = location.title.flatMap { $0.nilIfEmpty }
-                ?? location.ref.flatMap { $0.nilIfEmpty }
-                ?? "…"
-            if location.sourceSurface == .promote {
-                let label = location.promoteAll
-                    ? L10n.string(L10n.EvidenceGraph.promoteAll)
-                    : L10n.Promote.breadcrumb(ref: location.ref.flatMap { $0.nilIfEmpty } ?? scope)
-                items.append(
-                    PVBreadcrumbItem(
-                        id: "promote-\(graphID)",
-                        label: label,
-                        action: nil
-                    )
+            let surface = WorkspaceLocationLabels.surfaceLabel(for: location) ?? ""
+            items.append(
+                PVBreadcrumbItem(
+                    id: location.sourceSurface == .promote ? "promote-\(graphID)" : "composer-\(graphID)",
+                    label: surface,
+                    action: nil
                 )
-            } else {
-                items.append(
-                    PVBreadcrumbItem(
-                        id: "composer-\(graphID)",
-                        label: L10n.CitationComposer.breadcrumbCitationFor(scope: scope),
-                        action: nil
-                    )
-                )
-            }
+            )
             return items
         }
 
@@ -287,7 +255,7 @@ struct WorkspaceToolbar: View {
         if location.sourceSurface == .graph, location.sourceId != nil {
             leaf = L10n.string(L10n.Workspace.evidenceGraphTitle)
         } else if location.entityId != nil {
-            let labels = locationLabels(for: location)
+            let labels = WorkspaceLocationLabels.labels(for: location)
             leaf = labels.leaf ?? "…"
             if let section = labels.section {
                 // A section of the page: the record's crumb goes back to its first section.
@@ -313,15 +281,6 @@ struct WorkspaceToolbar: View {
         )
         return items
     }
-
-    /// What a location is called in the crumbs and the Back menu: the record
-    /// (`title ?? ref`) and, on a section of its page, the section's name.
-    nonisolated static func locationLabels(for location: WorkspaceLocation) -> (leaf: String?, section: String?) {
-        (
-            location.title?.nilIfEmpty ?? location.ref?.nilIfEmpty,
-            location.pageSection.map { L10n.string($0.label) }
-        )
-    }
 }
 
 // MARK: - Jump menu host (content-column overlay)
@@ -329,6 +288,7 @@ struct WorkspaceToolbar: View {
 /// Renders and dismisses the jump menu over the workspace content column.
 struct HistoryJumpMenuHost: View {
     @Environment(WorkspaceNavigation.self) private var navigation
+    @Environment(WorkspaceSession.self) private var session
     var jumpMenu: HistoryJumpMenuModel
     @State private var dismissMonitor: Any?
     @State private var activeIndex = -1
@@ -337,7 +297,7 @@ struct HistoryJumpMenuHost: View {
         Group {
             if let side = jumpMenu.side,
                let anchor = jumpMenu.anchors[side] {
-                let items = Self.rows(for: side, navigation: navigation)
+                let items = Self.rows(for: side, navigation: navigation, names: LocationNames(session: session))
                 if !items.isEmpty {
                     HistoryJumpMenuPanel(
                         items: items,
@@ -365,15 +325,23 @@ struct HistoryJumpMenuHost: View {
         }
     }
 
+    @MainActor
     private static func rows(
         for side: HistoryJumpMenuSide,
-        navigation: WorkspaceNavigation
+        navigation: WorkspaceNavigation,
+        names: LocationNames
     ) -> [HistoryJumpRow] {
         let raw: [(index: Int, location: WorkspaceLocation)] = switch side {
         case .back: navigation.backJumpItems()
         case .forward: navigation.forwardJumpItems()
         }
-        return raw.map(HistoryJumpRow.init)
+        return raw.map { row in
+            let labels = WorkspaceLocationLabels.labels(for: row.location, names: names)
+            let leaf = labels.leaf.flatMap { leaf in
+                labels.section.map { L10n.Conclusions.pageSectionLeaf(leaf, $0) } ?? leaf
+            }
+            return HistoryJumpRow(index: row.index, location: row.location, leafLabel: leaf)
+        }
     }
 
     private func armDismissMonitor() {
@@ -413,7 +381,7 @@ struct HistoryJumpMenuHost: View {
             return nil
         }
         guard let side = jumpMenu.side else { return event }
-        let items = Self.rows(for: side, navigation: navigation)
+        let items = Self.rows(for: side, navigation: navigation, names: LocationNames(session: session))
         guard !items.isEmpty else { return event }
 
         switch event.keyCode {
@@ -477,21 +445,16 @@ private struct HistoryJumpRow: Identifiable {
         L10n.string(location.section.label)
     }
 
-    var leafLabel: String? {
-        let labels = WorkspaceToolbar.locationLabels(for: location)
-        if let leaf = labels.leaf, let section = labels.section {
-            return L10n.Conclusions.pageSectionLeaf(leaf, section)
-        }
-        return labels.leaf
-    }
+    let leafLabel: String?
 
     var refLabel: String {
         location.ref?.nilIfEmpty ?? ""
     }
 
-    init(index: Int, location: WorkspaceLocation) {
+    init(index: Int, location: WorkspaceLocation, leafLabel: String?) {
         self.index = index
         self.location = location
+        self.leafLabel = leafLabel
     }
 }
 
@@ -621,19 +584,6 @@ private struct HistoryJumpMenuPanel: View {
             }
         }
         .accessibilityLabel(Text(L10n.Workspace.jumpMenuAccessibilityLabel))
-    }
-}
-
-private extension String {
-    var nilIfEmpty: String? {
-        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
-    }
-}
-
-private extension Optional where Wrapped == String {
-    var nilIfEmpty: String? {
-        self?.nilIfEmpty
     }
 }
 

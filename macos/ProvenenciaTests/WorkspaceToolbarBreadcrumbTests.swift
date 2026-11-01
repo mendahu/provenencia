@@ -84,7 +84,7 @@ struct WorkspaceToolbarBreadcrumbTests {
         #expect(property.last?.label == "Name")
     }
 
-    private let names = WorkspaceToolbar.BreadcrumbNames(
+    private let names = LocationNames(
         sourceTitle: { $0 == "src-1" ? "1851 census" : nil },
         graphName: { $0 == "g-1" ? "Jones household" : nil }
     )
@@ -217,31 +217,86 @@ struct WorkspaceToolbarBreadcrumbTests {
     }
 
     @Test func locationLabelsNameTheSection() {
-        let family = WorkspaceToolbar.locationLabels(
+        let family = WorkspaceLocationLabels.labels(
             for: .personDetail(entityId: "per-1", ref: "PER-1", title: "Jane Doe", pageSection: .family)
         )
         #expect(family.leaf == "Jane Doe")
         #expect(family.section == L10n.string(L10n.Conclusions.pageSectionFamily))
 
-        let vitals = WorkspaceToolbar.locationLabels(
+        let vitals = WorkspaceLocationLabels.labels(
             for: .personDetail(entityId: "per-1", ref: "PER-1", title: "Jane Doe")
         )
         #expect(vitals.leaf == "Jane Doe")
         #expect(vitals.section == nil)
 
-        let bare = WorkspaceToolbar.locationLabels(
+        let bare = WorkspaceLocationLabels.labels(
             for: .personDetail(entityId: "per-1", ref: "PER-1", title: nil)
         )
         #expect(bare.leaf == "PER-1")
 
-        let source = WorkspaceToolbar.locationLabels(
+        let source = WorkspaceLocationLabels.labels(
             for: .sourcePage(sourceId: "src-1", ref: "SRC-AAAA", title: "Deed")
         )
         #expect(source.leaf == "Deed")
         #expect(source.section == nil)
 
-        let root = WorkspaceToolbar.locationLabels(for: .sectionRoot(.metadata))
+        let root = WorkspaceLocationLabels.labels(for: .sectionRoot(.metadata))
         #expect(root.leaf == nil)
         #expect(root.section == nil)
+    }
+
+    private let graphNames = LocationNames(
+        sourceTitle: { _ in "1881 Census" },
+        graphName: { $0 == "G1" ? "Jones household" : nil }
+    )
+
+    @Test func locationLabelsNameTheGraph() {
+        let canvas = WorkspaceLocationLabels.labels(
+            for: .evidenceGraph(sourceId: "S1", graphId: "G1", ref: "SRC-1", title: "1881 Census"),
+            names: graphNames
+        )
+        #expect(canvas.leaf == "Jones household")
+        #expect(canvas.section == nil)
+
+        let page = WorkspaceLocationLabels.labels(for: .sourcePage(sourceId: "S1", title: "1881 Census"))
+        #expect(page.leaf == "1881 Census")
+        #expect(page.section == nil)
+    }
+
+    @Test func locationLabelsFallBackToEvidenceGraph() {
+        let labels = WorkspaceLocationLabels.labels(
+            for: .evidenceGraph(sourceId: "S1", graphId: "G1", ref: "SRC-1", title: "1881 Census"),
+            names: .none
+        )
+        #expect(labels.leaf == L10n.string(L10n.Workspace.evidenceGraphTitle))
+    }
+
+    @Test func composerAndPromoteLabelsCarryTheSurface() {
+        let composer = WorkspaceLocationLabels.labels(
+            for: .citationComposer(sourceId: "S1", graphId: "G1", ref: "CIT-K4M2P", title: "CIT-K4M2P"),
+            names: graphNames
+        )
+        #expect(composer.leaf == "Jones household")
+        #expect(composer.section == L10n.CitationComposer.breadcrumbCitationFor(scope: "CIT-K4M2P"))
+        #expect(
+            composer.leaf.flatMap { leaf in composer.section.map { L10n.Conclusions.pageSectionLeaf(leaf, $0) } }
+                == "Jones household · Citation for CIT-K4M2P"
+        )
+
+        let promote = WorkspaceLocationLabels.labels(
+            for: WorkspaceLocation(
+                section: .sources, sourceId: "S1", graphId: "G1", sourceSurface: .promote, ref: "PER-7H2Q"
+            ),
+            names: graphNames
+        )
+        #expect(promote.section == L10n.Promote.breadcrumb(ref: "PER-7H2Q"))
+
+        let all = WorkspaceLocationLabels.labels(
+            for: WorkspaceLocation(
+                section: .sources, sourceId: "S1", graphId: "G1", sourceSurface: .promote, promoteAll: true
+            ),
+            names: graphNames
+        )
+        #expect(all.section == L10n.string(L10n.EvidenceGraph.promoteAll))
     }
 }

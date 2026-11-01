@@ -1834,6 +1834,14 @@ enum L10n {
             return L10n.format(resource, ref)
         }
 
+        static func canvasAccessibility(graph: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "evidenceGraph.canvas.accessibilityLabel",
+                defaultValue: "Evidence graph, %@",
+                comment: "VoiceOver label of the Evidence graph canvas; argument is the graph's name"
+            ), graph)
+        }
+
         static let promoteAll = LocalizedStringResource(
             "evidenceGraph.header.promoteAll",
             defaultValue: "Promote all",

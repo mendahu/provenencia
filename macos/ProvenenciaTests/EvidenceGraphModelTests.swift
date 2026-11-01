@@ -164,6 +164,20 @@ struct EvidenceGraphModelTests {
         )
     }
 
+    @Test func canvasLabelNamesTheGraph() {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        #expect(model.canvasAccessibilityLabel == L10n.string(L10n.Workspace.evidenceGraphTitle))
+
+        model.session.setQueryValue(model.session.evidenceGraphsKey, value: [
+            evidenceGraph(graphID, sourceID: sourceID, name: "Jones household"),
+        ])
+        #expect(model.canvasAccessibilityLabel == "Evidence graph, Jones household")
+
+        model.armedConnect = true
+        #expect(model.canvasAccessibilityLabel == L10n.string(model.connectArmedHint))
+    }
+
     /// Card copy is formatted once per snapshot, matches the card formatters,
     /// and rebuilds when the graph rows change.
     @Test func displayTextFollowsTheSnapshot() throws {

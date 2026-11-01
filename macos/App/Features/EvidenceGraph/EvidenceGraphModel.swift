@@ -1327,6 +1327,17 @@ final class EvidenceGraphModel {
         }
     }
 
+    /// What VoiceOver says for the canvas: the armed tool's hint, else the
+    /// graph's name ("Evidence graph, Jones household"), else just "Evidence graph".
+    var canvasAccessibilityLabel: String {
+        if armedConnect { return L10n.string(connectArmedHint) }
+        if let kind = armedKind { return L10n.string(armedHint(for: kind)) }
+        if let name = LocationNames(session: session).graphName(graphID)?.nilIfEmpty {
+            return L10n.EvidenceGraph.canvasAccessibility(graph: name)
+        }
+        return L10n.string(L10n.Workspace.evidenceGraphTitle)
+    }
+
     var connectArmedHint: LocalizedStringResource {
         if connectOriginID != nil {
             return L10n.EvidenceGraph.armedHintConnectPickB

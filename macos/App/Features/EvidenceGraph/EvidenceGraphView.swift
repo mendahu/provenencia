@@ -157,7 +157,7 @@ private struct EvidenceGraphContent: View {
             handleKey(press)
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(accessibilityGraphLabel)
+        .accessibilityLabel(Text(verbatim: model.canvasAccessibilityLabel))
         .vocabularyToastOverlay($model.toast, identifier: "evidenceGraph.toast")
         .pvFormDialog(
             isPresented: sheetPresented,
@@ -244,16 +244,6 @@ private struct EvidenceGraphContent: View {
                     PVCallout(tone: .danger, message: error)
                 }
             }
-        }
-    }
-
-    private var accessibilityGraphLabel: Text {
-        if model.armedConnect {
-            Text(model.connectArmedHint)
-        } else if let kind = model.armedKind {
-            Text(model.armedHint(for: kind))
-        } else {
-            Text(L10n.Workspace.evidenceGraphTitle)
         }
     }
 

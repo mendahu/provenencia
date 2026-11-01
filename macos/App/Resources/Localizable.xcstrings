@@ -11412,6 +11412,18 @@
             "value": "Add property"
           }
         }
+    "evidenceGraph.canvas.accessibilityLabel": {
+      "comment": "VoiceOver label of the Evidence graph canvas; argument is the graph's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence graph, %@"
+          }
+        }
+      }
+    },
       }
     },
     "evidenceGraph.noArtifact.title": {
