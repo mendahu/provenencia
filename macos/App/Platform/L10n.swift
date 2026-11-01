@@ -5064,6 +5064,24 @@ enum L10n {
                 comment: "Error when Open refuses a stored file; argument is the file name"
             ), filename)
         }
+
+        static func notOpened(filename: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "objectOpen.notOpened.message",
+                defaultValue: "macOS couldn't open “%@” in its app.",
+                comment: "Error when Open hands a stored file to its app and macOS fails to open it; argument is the file name"
+            ), filename)
+        }
+
+        /// The one mapping from a refusal to the sentence a surface shows.
+        /// `missing` is the surface's own sentence for a file that is not there.
+        static func message(for refusal: ProjectFiles.ObjectRefusal, filename: String, missing: String) -> String {
+            switch refusal {
+            case .unsafe: refused(filename: filename)
+            case .notOpened: notOpened(filename: filename)
+            case .missing: missing
+            }
+        }
     }
 
     /// The **Sources** workspace destination (S2-17–18): browse Sources as an

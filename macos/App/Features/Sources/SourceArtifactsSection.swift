@@ -713,7 +713,7 @@ final class SourceArtifactsSection {
     /// Opens the Artifact's file in its own app. A file with no path (Go returns none
     /// for a type Provenencia does not store) or one `ProjectFiles` refuses shows the
     /// shared refusal naming the file; a missing one keeps its own message.
-    func open(_ art: CatalogArtifact) {
+    func open(_ art: CatalogArtifact) async {
         guard art.file != nil else { return }
         context.clearPageError()
         let name = art.fileDisplayName
@@ -721,14 +721,12 @@ final class SourceArtifactsSection {
             context.pageError = L10n.ObjectOpen.refused(filename: name)
             return
         }
-        switch ProjectFiles.openObject(projectDir: context.projectDir, relPath: rel) {
-        case nil:
-            break
-        case .unsafe:
-            context.pageError = L10n.ObjectOpen.refused(filename: name)
-        case .missing:
-            context.pageError = L10n.string(L10n.Sources.fileOpenMissing)
-        }
+        guard let refusal = await ProjectFiles.openObject(projectDir: context.projectDir, relPath: rel) else { return }
+        context.pageError = L10n.ObjectOpen.message(
+            for: refusal,
+            filename: name,
+            missing: L10n.string(L10n.Sources.fileOpenMissing)
+        )
     }
 
     private func setReject(

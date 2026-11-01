@@ -330,22 +330,17 @@ final class EvidenceGraphModel {
     }
 
     /// Opens the selected file in its own app. Leaves the card selection and camera alone.
-    func openSelectedFile() {
+    func openSelectedFile() async {
         let id = resolvedFileArtifactID
         guard let row = fileRows.first(where: { $0.id == id }) else { return }
         selectedFileArtifactID = id
         fileOpenError = nil
-        switch ProjectFiles.openObject(projectDir: session.projectKey.projectDir, relPath: row.relPath) {
-        case nil:
-            break
-        case .unsafe:
-            fileOpenError = L10n.ObjectOpen.refused(filename: row.displayFilename)
-        case .missing:
-            fileOpenError = L10n.EvidenceGraph.fileNotFoundMessage(
-                name: row.title,
-                filename: row.displayFilename
-            )
-        }
+        guard let refusal = await ProjectFiles.openObject(projectDir: session.projectKey.projectDir, relPath: row.relPath) else { return }
+        fileOpenError = L10n.ObjectOpen.message(
+            for: refusal,
+            filename: row.displayFilename,
+            missing: L10n.EvidenceGraph.fileNotFoundMessage(name: row.title, filename: row.displayFilename)
+        )
     }
 
     func presentation(for typeKey: String) -> CatalogSubjectTypePresentation? {

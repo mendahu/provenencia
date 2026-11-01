@@ -176,7 +176,7 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: makeStore(artifacts: [art]))
         await model.warmFromSession()
-        model.artifacts.open(art)
+        await model.artifacts.open(art)
         #expect(model.pageError == L10n.ObjectOpen.refused(filename: "run.sh"))
     }
 
@@ -190,7 +190,7 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: makeStore(artifacts: [art]))
         await model.warmFromSession()
-        model.artifacts.open(art)
+        await model.artifacts.open(art)
         #expect(model.pageError == L10n.ObjectOpen.refused(filename: "ART-X"))
     }
 
@@ -207,7 +207,7 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: makeStore(artifacts: [art]))
         await model.warmFromSession()
-        model.artifacts.open(art)
+        await model.artifacts.open(art)
         #expect(model.pageError == L10n.ObjectOpen.refused(filename: art.fileDisplayName))
     }
 

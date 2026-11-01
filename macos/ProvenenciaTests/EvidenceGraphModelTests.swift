@@ -2253,7 +2253,7 @@ struct EvidenceGraphModelTests {
     @Test func openSelectedFileReportsAMissingFileAndKeepsTheSelection() async {
         let model = await fileModel(artifactIDs: ["a", "b"])
         model.selectFile("b")
-        model.openSelectedFile()
+        await model.openSelectedFile()
         #expect(
             model.fileOpenError
                 == L10n.EvidenceGraph.fileNotFoundMessage(name: "Page b", filename: "b.jpg")
@@ -2272,7 +2272,7 @@ struct EvidenceGraphModelTests {
         try ArtifactFileFixtures.write(Data("x".utf8), projectDir: projectDir, relPath: rel, mode: 0o644)
         let model = await fileModel(artifactIDs: ["a"], relPath: rel)
         let row = try #require(model.fileRows.first)
-        model.openSelectedFile()
+        await model.openSelectedFile()
         #expect(model.fileOpenError == L10n.ObjectOpen.refused(filename: row.displayFilename))
         if case .fileOpenFailed = model.canvasNotice {} else {
             Issue.record("canvasNotice \(String(describing: model.canvasNotice)), want .fileOpenFailed")
@@ -2281,22 +2281,22 @@ struct EvidenceGraphModelTests {
 
     @Test func armingAToolClearsTheMissingFileError() async {
         let model = await fileModel(artifactIDs: ["a"])
-        func missingFileError() -> String? {
-            model.openSelectedFile()
+        func missingFileError() async -> String? {
+            await model.openSelectedFile()
             return model.fileOpenError
         }
 
-        #expect(missingFileError() != nil)
+        #expect(await missingFileError() != nil)
         model.toggleArm(.person)
         #expect(model.armedKind == .person)
         #expect(model.fileOpenError == nil)
 
-        #expect(missingFileError() != nil)
+        #expect(await missingFileError() != nil)
         model.toggleConnect()
         #expect(model.armedConnect)
         #expect(model.fileOpenError == nil)
 
-        #expect(missingFileError() != nil)
+        #expect(await missingFileError() != nil)
         model.toggleSelect()
         #expect(model.armedSelect)
         #expect(model.fileOpenError == nil)

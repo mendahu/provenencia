@@ -231,7 +231,7 @@ struct ProjectFilesTests {
         #expect(ProjectFiles.openableObjectURL(projectDir: project, relPath: rel) == .failure(.missing))
     }
 
-    @Test func openObjectReportsMissingForSymlinkedObject() throws {
+    @Test func openObjectReportsMissingForSymlinkedObject() async throws {
         let fm = FileManager.default
         let project = ArtifactFileFixtures.uniqueProjectDir()
         let rel = "objects/ab/cd/x.png"
@@ -240,12 +240,46 @@ struct ProjectFilesTests {
             try? fm.removeItem(atPath: project)
             try? fm.removeItem(atPath: outside)
         }
-        #expect(ProjectFiles.openObject(projectDir: project, relPath: rel) == .missing)
+        #expect(await ProjectFiles.openObject(projectDir: project, relPath: rel) == .missing)
     }
 
-    @Test func openObjectReportsMissingForRejectedRelPath() {
+    @Test func openObjectReportsNotOpenedWhenLaunchThrows() async throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        let rel = "objects/ab/cd/abcd.pdf"
+        try ArtifactFileFixtures.write(Data("x".utf8), projectDir: project, relPath: rel, mode: 0o644)
+        let refusal = await ProjectFiles.openObject(projectDir: project, relPath: rel) { _ in
+            throw CocoaError(.fileReadUnknown)
+        }
+        #expect(refusal == .notOpened)
+    }
+
+    @Test func openObjectPassesARefusalThrough() async throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        let rel = "objects/ab/cd/abcd.pdf"
+        try ArtifactFileFixtures.write(Data("x".utf8), projectDir: project, relPath: rel, mode: 0o644)
+        let refusal = await ProjectFiles.openObject(projectDir: project, relPath: rel) { _ in
+            throw ProjectFiles.ObjectRefusal.missing
+        }
+        #expect(refusal == .missing)
+    }
+
+    @Test func refusalMessages() {
         #expect(
-            ProjectFiles.openObject(
+            L10n.ObjectOpen.message(for: .notOpened, filename: "scan.pdf", missing: "x")
+                == L10n.ObjectOpen.notOpened(filename: "scan.pdf")
+        )
+        #expect(
+            L10n.ObjectOpen.message(for: .unsafe, filename: "scan.pdf", missing: "x")
+                == L10n.ObjectOpen.refused(filename: "scan.pdf")
+        )
+        #expect(L10n.ObjectOpen.message(for: .missing, filename: "scan.pdf", missing: "x") == "x")
+    }
+
+    @Test func openObjectReportsMissingForRejectedRelPath() async {
+        #expect(
+            await ProjectFiles.openObject(
                 projectDir: "/tmp/proj.provenencia",
                 relPath: "../etc/passwd"
             ) == .missing

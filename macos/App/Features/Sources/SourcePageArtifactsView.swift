@@ -471,7 +471,7 @@ struct SourcePageArtifactsView: View {
 
     private func activatePreview(_ art: CatalogArtifact) {
         if art.hasFile {
-            model.artifacts.open(art)
+            Task { await model.artifacts.open(art) }
         } else {
             model.artifacts.openAttach(to: art.id)
         }

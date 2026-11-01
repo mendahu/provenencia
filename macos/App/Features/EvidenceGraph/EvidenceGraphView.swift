@@ -656,7 +656,7 @@ private struct EvidenceGraphHeader: View {
             icon: .externalLink,
             iconOnly: iconOnly
         ) {
-            model.openSelectedFile()
+            Task { await model.openSelectedFile() }
         }
         .help(Text(L10n.EvidenceGraph.openFileHelp))
         .accessibilityLabel(Text(verbatim: L10n.EvidenceGraph.openFileAccessibility(filename: filename)))

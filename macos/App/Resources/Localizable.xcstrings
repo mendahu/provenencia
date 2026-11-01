@@ -5188,6 +5188,18 @@
         }
       }
     },
+    "objectOpen.notOpened.message": {
+      "comment": "Error when Open hands a stored file to its app and macOS fails to open it; argument is the file name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS couldn't open “%@” in its app."
+          }
+        }
+      }
+    },
     "origin.badge.provenencia": {
       "comment": "Origin badge for a vocabulary row seeded by Provenencia",
       "extractionState": "manual",
