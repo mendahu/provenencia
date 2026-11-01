@@ -220,6 +220,60 @@ func TestGetPersonFamily(t *testing.T) {
 			t.Fatalf("id %q: err = %v, want %s", id, err, apperr.CodeConclusionDetailsNotFound)
 		}
 	}
+
+	t.Run("carries the person and the origin siblings", func(t *testing.T) {
+		created, err := onboarding.Complete(t.TempDir(), t.TempDir(), "Jake", "Robins")
+		if err != nil {
+			t.Fatal(err)
+		}
+		dir := created.ProjectDir
+		var person, sibling, partner []byte
+		err = catalogsession.Do(dir, func(c *database.Catalog) error {
+			k := graphcachetest.NewCanon(t, c)
+			person, sibling, partner = k.Person(), k.Person(), k.Person()
+			father, mother := k.Person(), k.Person()
+			ev1, j1 := k.Birth(person, father, mother)
+			ev2, j2 := k.Birth(sibling, father, mother)
+			m, j3 := k.Marriage(person, partner)
+			ids := [][]byte{person, sibling, partner, father, mother, ev1, ev2, m}
+			k.Commit(append(append(append(ids, j1...), j2...), j3...)...)
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got engine.GetPersonFamilyResponse
+		mustRPC(t, GetPersonFamily, &engine.GetPersonFamilyRequest{ProjectDir: dir, EntityId: database.UUIDString(person)}, &got)
+		if got.GetPerson().GetEntity().GetId() != database.UUIDString(person) {
+			t.Fatalf("person %+v", got.GetPerson())
+		}
+		if len(got.OriginSiblings) != 2 {
+			t.Fatalf("%d origin siblings, want 2: %+v", len(got.OriginSiblings), got.OriginSiblings)
+		}
+		ids := map[string]*engine.OriginSibling{}
+		for _, o := range got.OriginSiblings {
+			ids[o.GetMember().GetPerson().GetEntity().GetId()] = o
+			if len(o.GetParentSets()) != 1 || o.GetParentSets()[0] != 0 {
+				t.Fatalf("parent_sets %v, want [0]", o.GetParentSets())
+			}
+		}
+		if o := ids[database.UUIDString(person)]; o == nil || o.GetMember().GetLink() != nil {
+			t.Fatalf("the person's member %+v: want present, with no link", o)
+		}
+		if o := ids[database.UUIDString(sibling)]; o == nil || o.GetMember().GetLink() == nil {
+			t.Fatalf("the sibling's member %+v: want present, with a link", o)
+		}
+		var partnerUnits int
+		for _, u := range got.Units {
+			if u.GetKind() == engine.FamilyUnitKind_FAMILY_UNIT_KIND_PARTNER &&
+				u.Partners[0].GetPerson().GetEntity().GetId() == database.UUIDString(partner) {
+				partnerUnits++
+			}
+		}
+		if partnerUnits != 1 {
+			t.Fatalf("%d partner units for the partner, want 1", partnerUnits)
+		}
+	})
 }
 
 // TestKinshipPatternProto: every pattern code the engine can put on a link has

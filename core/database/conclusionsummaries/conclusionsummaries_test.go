@@ -1185,3 +1185,36 @@ func TestPersonSummaryTermLabels(t *testing.T) {
 		must(t, f.c.Graph().Verify())
 	})
 }
+
+func TestSortByBirth(t *testing.T) {
+	person := func(ref string, year int) conclusionsummaries.PersonSummary {
+		h := conclusionsummaries.PersonSummary{Entity: canonicalentities.Entity{Ref: ref}}
+		if year != 0 {
+			h.Birth.Date = pointYear(year)
+		}
+		return h
+	}
+	cases := []struct {
+		name string
+		in   []conclusionsummaries.PersonSummary
+		want []string
+	}{
+		{"dated before undated", []conclusionsummaries.PersonSummary{person("PER-A", 0), person("PER-B", 1820)}, []string{"PER-B", "PER-A"}},
+		{"earliest first", []conclusionsummaries.PersonSummary{person("PER-A", 1820), person("PER-B", 1815)}, []string{"PER-B", "PER-A"}},
+		{"undated by ref", []conclusionsummaries.PersonSummary{person("PER-B", 0), person("PER-A", 0)}, []string{"PER-A", "PER-B"}},
+		{"equal dates by ref", []conclusionsummaries.PersonSummary{person("PER-B", 1820), person("PER-A", 1820)}, []string{"PER-A", "PER-B"}},
+		{"refs differing only in case keep input order", []conclusionsummaries.PersonSummary{person("PER-a", 1820), person("PER-A", 1820)}, []string{"PER-a", "PER-A"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			conclusionsummaries.SortByBirth(tc.in, func(h conclusionsummaries.PersonSummary) conclusionsummaries.PersonSummary { return h })
+			var got []string
+			for _, h := range tc.in {
+				got = append(got, h.Entity.Ref)
+			}
+			if fmt.Sprint(got) != fmt.Sprint(tc.want) {
+				t.Fatalf("got %v, want %v", got, tc.want)
+			}
+		})
+	}
+}

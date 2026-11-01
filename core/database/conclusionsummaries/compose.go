@@ -951,7 +951,7 @@ func finishEvent(v vocab, h EventSummary) EventSummary {
 	return h
 }
 
-type eventKey struct {
+type dateKey struct {
 	key string
 	ok  bool
 	ref string
@@ -960,21 +960,21 @@ type eventKey struct {
 func sortEvents(rows []EventSummary) {
 	type keyed struct {
 		h EventSummary
-		k eventKey
+		k dateKey
 	}
 	keyedRows := make([]keyed, len(rows))
 	for i := range rows {
 		keyedRows[i] = keyed{h: rows[i], k: eventKeyOf(rows[i])}
 	}
 	sort.SliceStable(keyedRows, func(i, j int) bool {
-		return eventKeyLess(keyedRows[i].k, keyedRows[j].k)
+		return dateKeyLess(keyedRows[i].k, keyedRows[j].k)
 	})
 	for i := range rows {
 		rows[i] = keyedRows[i].h
 	}
 }
 
-func eventKeyLess(a, b eventKey) bool {
+func dateKeyLess(a, b dateKey) bool {
 	if a.ok != b.ok {
 		return a.ok
 	}
@@ -984,14 +984,24 @@ func eventKeyLess(a, b eventKey) bool {
 	return a.ref < b.ref
 }
 
-func eventKeyOf(h EventSummary) eventKey {
+func eventKeyOf(h EventSummary) dateKey {
 	if key, ok := dateSort(h.Date); ok {
-		return eventKey{key: key, ok: true, ref: strings.ToLower(h.Entity.Ref)}
+		return dateKey{key: key, ok: true, ref: strings.ToLower(h.Entity.Ref)}
 	}
 	if key, ok := dateSort(h.StartDate); ok {
-		return eventKey{key: key, ok: true, ref: strings.ToLower(h.Entity.Ref)}
+		return dateKey{key: key, ok: true, ref: strings.ToLower(h.Entity.Ref)}
 	}
-	return eventKey{ref: strings.ToLower(h.Entity.Ref)}
+	return dateKey{ref: strings.ToLower(h.Entity.Ref)}
+}
+
+// birthKeyOf is a person's place in birth order: the birth date when there is
+// one, else the ref alone.
+func birthKeyOf(h PersonSummary) dateKey {
+	ref := strings.ToLower(h.Entity.Ref)
+	if key, ok := dateSort(h.Birth.Date); ok {
+		return dateKey{key: key, ok: true, ref: ref}
+	}
+	return dateKey{ref: ref}
 }
 
 func dateSort(v *datevalue.Value) (string, bool) {

@@ -10,10 +10,12 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/databasetest" // registers graphcache.SetTruth for verify mode
+	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -171,6 +173,17 @@ func (k *Canon) Term(entity []byte, propKey, termKey string) {
 		k.t.Fatal(err)
 	}
 	k.observe(entity, propKey, "value_term_id", termID)
+}
+
+// Date sets the kept date of one property of an entity (an event's date, say)
+// to v.
+func (k *Canon) Date(entity []byte, propKey string, v datevalue.Value) {
+	k.t.Helper()
+	id, err := datevalues.InsertTx(k.db, v)
+	if err != nil {
+		k.t.Fatal(err)
+	}
+	k.observe(entity, propKey, "value_date_id", id)
 }
 
 // Link adds an association of a bridge subject type. ends maps each endpoint
