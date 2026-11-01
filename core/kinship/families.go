@@ -4,39 +4,9 @@ import (
 	"bytes"
 	"slices"
 
-	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
-
-// relationshipKeys returns the keys a relationship link of term has from its
-// first endpoint's end and from its second: the one lookup of a relationship
-// term's keys in the package. ok is false when the relationship bridge is not
-// registered.
-func relationshipKeys(term vocabkey.BridgeTerm, terms segmentcompare.Terms) (first, second vocabkey.BridgeKey, ok bool) {
-	rel, found := connectrules.LookupBridge(vocabkey.BridgeRelationship)
-	if !found {
-		return vocabkey.BridgeKey{}, vocabkey.BridgeKey{}, false
-	}
-	first, second = segmentcompare.Keys(rel, term, "", terms)
-	return first, second, true
-}
-
-// readsTerm reads an edge as one relationship term from either end: first is
-// the end that reads the term's first key (the parent, for TermParent), second
-// the end that reads its second. It is false for any other link, and for a link
-// that joins a Subject to itself. It is the one reader of a relationship link.
-func readsTerm(e Edge, term vocabkey.BridgeTerm, terms segmentcompare.Terms) (first, second []byte, ok bool) {
-	keyFirst, keySecond, found := relationshipKeys(term, terms)
-	if !found {
-		return nil, nil, false
-	}
-	first, second, ok = e.reads(keyFirst, keySecond)
-	if !ok || bytes.Equal(first, second) {
-		return nil, nil, false
-	}
-	return first, second, true
-}
 
 // Role is a nuclear-family role of a relative, read from the person's end.
 type Role int
@@ -73,8 +43,32 @@ var nuclearRoles = []roleRow{
 	{RoleSibling, vocabkey.TermSibling, atFirst},
 }
 
+// Roles returns the roles KinOf reads, in output order: the one list of them.
+func Roles() []Role {
+	roles := make([]Role, len(nuclearRoles))
+	for i, row := range nuclearRoles {
+		roles[i] = row.role
+	}
+	return roles
+}
+
 // Kin is a person's links by role, each in link order.
 type Kin map[Role][]Link
+
+// Around returns the distinct ids of person's parents then person's children, in
+// order: the people whose own kin FamilyUnits reads.
+func (k Kin) Around(person []byte) [][]byte {
+	var ids [][]byte
+	for _, role := range []Role{RoleParent, RoleChild} {
+		for _, l := range k[role] {
+			other, _, _ := l.From(person)
+			if !slices.ContainsFunc(ids, func(id []byte) bool { return bytes.Equal(id, other) }) {
+				ids = append(ids, other)
+			}
+		}
+	}
+	return ids
+}
 
 // KinOf reads person's links through nuclearRoles: each link is in every role
 // whose key it carries from person's end. Any other link is in no role.
@@ -127,6 +121,19 @@ type Unit struct {
 	Children []Relative
 }
 
+// Empty reports whether the unit names nobody it is about: a parents or partner
+// unit with no partner, a one parent or siblings unit with no child. A kind it
+// does not know is empty.
+func (u Unit) Empty() bool {
+	switch u.Kind {
+	case UnitParents, UnitPartner:
+		return len(u.Partners) == 0
+	case UnitOneParent, UnitSiblings:
+		return len(u.Children) == 0
+	}
+	return true
+}
+
 // relativeOf is the relative a person's link names, with the link.
 func relativeOf(person []byte, l Link) Relative {
 	other, _, _ := l.From(person)
@@ -139,19 +146,25 @@ func relativeOf(person []byte, l Link) Relative {
 // parent, in that order. Every Relative.Link is person's own link to that
 // relative. kinOf holds the kin of each of person's parents and children, keyed
 // by string(id); a missing entry has none.
-func FamilyUnits(person []byte, kin Kin, kinOf map[string]Kin) []Unit {
-	units := parentUnits(person, kin, kinOf)
+func FamilyUnits(person []byte, kin Kin, kinOf map[string]Kin, rules Rules) []Unit {
+	units, siblings := parentUnits(person, kin, kinOf, rules)
 	partners, oneParent := partnerUnits(person, kin, kinOf)
 	units = append(units, partners...)
-	if len(oneParent.Children) > 0 {
-		units = append(units, oneParent)
+	for _, u := range []Unit{oneParent, siblings} {
+		if !u.Empty() {
+			units = append(units, u)
+		}
 	}
 	return units
 }
 
-// parentUnits makes the parent sets and the siblings through them, and the
-// unit of siblings with no shown shared parent.
-func parentUnits(person []byte, kin Kin, kinOf map[string]Kin) []Unit {
+// parentUnits makes the parent sets and the siblings through them, and returns
+// apart the unit of siblings with no shown shared parent.
+//
+// More parents than rules.MaxPivotEnd read as malformed data: none is paired
+// with another, and a sibling is placed once, in the unit whose partners are
+// exactly the parents it shares. That keeps what is shown linear in the data.
+func parentUnits(person []byte, kin Kin, kinOf map[string]Kin, rules Rules) ([]Unit, Unit) {
 	parents := kin[RoleParent]
 	ids := make([][]byte, len(parents))
 	for i, l := range parents {
@@ -186,8 +199,9 @@ func parentUnits(person []byte, kin Kin, kinOf map[string]Kin) []Unit {
 	}
 	var sets [][]int
 	inPair := make([]bool, len(parents))
+	pairing := len(parents) <= rules.MaxPivotEnd
 	for i := range parents {
-		for j := i + 1; j < len(parents); j++ {
+		for j := i + 1; pairing && j < len(parents); j++ {
 			if paired(i, j) {
 				sets = append(sets, []int{i, j})
 				inPair[i], inPair[j] = true, true
@@ -223,7 +237,7 @@ func parentUnits(person []byte, kin Kin, kinOf map[string]Kin) []Unit {
 		}
 		joined := false
 		for k, set := range sets {
-			if len(set) > 0 && subset(set, shared) {
+			if len(set) > 0 && (pairing || len(shared) == len(set)) && subset(set, shared) {
 				units[k].Children = append(units[k].Children, sib)
 				joined = true
 			}
@@ -246,11 +260,7 @@ func parentUnits(person []byte, kin Kin, kinOf map[string]Kin) []Unit {
 			extra[at].Children = append(extra[at].Children, sib)
 		}
 	}
-	units = append(units, extra...)
-	if len(unplaced.Children) > 0 {
-		units = append(units, unplaced)
-	}
-	return units
+	return append(units, extra...), unplaced
 }
 
 // subset reports whether every index of set is in of.

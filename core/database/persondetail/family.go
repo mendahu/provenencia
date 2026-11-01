@@ -1,8 +1,6 @@
 package persondetail
 
 import (
-	"bytes"
-
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
@@ -19,16 +17,11 @@ type Family struct {
 	Units  []kinship.Unit
 }
 
-// isPerson reports whether n is an unmerged Person.
-func isPerson(n *graphcache.Node, personTypeID []byte) bool {
-	return n != nil && !n.Merged && bytes.Equal(n.SubjectTypeID, personTypeID)
-}
-
 // shownPerson is the package's one canonical-relative rule: an unmerged Person
 // with at least one accepted member. A section that names other people calls it
 // before it groups them.
 func shownPerson(n *graphcache.Node, personTypeID []byte) bool {
-	return isPerson(n, personTypeID) && len(n.AcceptedMembers()) > 0
+	return n.Is(personTypeID) && len(n.AcceptedMembers()) > 0
 }
 
 // personTypeID is the id of the provenencia Person type.
@@ -40,9 +33,6 @@ func personTypeID(g *graphcache.Graph) ([]byte, error) {
 	return v.TypeIDsByKey()[vocabkey.Person], nil
 }
 
-// familyRoles are the roles whose relatives a family names.
-var familyRoles = []kinship.Role{kinship.RoleParent, kinship.RoleChild, kinship.RoleSpouse, kinship.RoleSibling}
-
 // Families reads the family of each id that is an unmerged Person, in ids
 // order, from the graph cache: canonical relatives only, a fixed number of
 // batched loads cold, no query warm. An id that is not a Person, is merged, or
@@ -52,7 +42,8 @@ func Families(c *database.Catalog, ids [][]byte) ([]Family, error) {
 		return nil, nil
 	}
 	g := c.Graph()
-	r, err := canonlinks.NewReader(g, matchregistry.Default().Kinship)
+	rules := matchregistry.Default().Kinship
+	r, err := canonlinks.NewReader(g, rules)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +73,7 @@ func Families(c *database.Catalog, ids [][]byte) ([]Family, error) {
 	named := map[string]bool{}
 	for _, id := range want {
 		n, _ := g.Cached(id)
-		if !isPerson(n, typeID) {
+		if !n.Is(typeID) {
 			continue
 		}
 		people = append(people, id)
@@ -91,7 +82,7 @@ func Families(c *database.Catalog, ids [][]byte) ([]Family, error) {
 			return nil, err
 		}
 		kin := kinship.KinOf(id, links, terms)
-		for _, role := range familyRoles {
+		for _, role := range kinship.Roles() {
 			for _, l := range kin[role] {
 				if other, _, _ := l.From(id); !named[string(other)] {
 					named[string(other)] = true
@@ -127,18 +118,12 @@ func Families(c *database.Catalog, ids [][]byte) ([]Family, error) {
 			return nil, err
 		}
 		around := map[string]kinship.Kin{}
-		for _, role := range []kinship.Role{kinship.RoleParent, kinship.RoleChild} {
-			for _, l := range kin[role] {
-				other, _, _ := l.From(id)
-				if _, done := around[string(other)]; done {
-					continue
-				}
-				if around[string(other)], err = kinOf(other, canonlinks.Options{}); err != nil {
-					return nil, err
-				}
+		for _, other := range kin.Around(id) {
+			if around[string(other)], err = kinOf(other, canonlinks.Options{}); err != nil {
+				return nil, err
 			}
 		}
-		out = append(out, Family{Person: id, Units: kinship.FamilyUnits(id, kin, around)})
+		out = append(out, Family{Person: id, Units: kinship.FamilyUnits(id, kin, around, rules)})
 	}
 	return out, nil
 }
@@ -148,16 +133,8 @@ func Families(c *database.Catalog, ids [][]byte) ([]Family, error) {
 // is conclusiondetails.ErrNotFound. The family and the summaries agree: a
 // relative with no summary is dropped, and a unit left empty with it.
 func PersonFamily(c *database.Catalog, entityID []byte) (Family, conclusionsummaries.Summaries, error) {
-	n, err := conclusiondetails.Handle(c, entityID)
-	if err != nil {
+	if _, err := conclusiondetails.Handle(c, entityID); err != nil {
 		return Family{}, conclusionsummaries.Summaries{}, err
-	}
-	typeID, err := personTypeID(c.Graph())
-	if err != nil {
-		return Family{}, conclusionsummaries.Summaries{}, err
-	}
-	if !isPerson(n, typeID) {
-		return Family{}, conclusionsummaries.Summaries{}, conclusiondetails.ErrNotFound
 	}
 	families, err := Families(c, [][]byte{entityID})
 	if err != nil {
@@ -200,15 +177,8 @@ func dropUnread(family Family, summaries conclusionsummaries.Summaries) Family {
 	var units []kinship.Unit
 	for _, u := range family.Units {
 		u.Partners, u.Children = read(u.Partners), read(u.Children)
-		switch u.Kind {
-		case kinship.UnitParents, kinship.UnitPartner:
-			if len(u.Partners) == 0 {
-				continue
-			}
-		default:
-			if len(u.Children) == 0 {
-				continue
-			}
+		if u.Empty() {
+			continue
 		}
 		units = append(units, u)
 	}

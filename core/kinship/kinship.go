@@ -290,6 +290,35 @@ func associationsOf(edges []Edge) [][]byte {
 	return assoc
 }
 
+// relationshipKeys returns the keys a relationship link of term has from its
+// first endpoint's end and from its second: the one lookup of a relationship
+// term's keys in the package. ok is false when the relationship bridge is not
+// registered.
+func relationshipKeys(term vocabkey.BridgeTerm, terms segmentcompare.Terms) (first, second vocabkey.BridgeKey, ok bool) {
+	rel, found := connectrules.LookupBridge(vocabkey.BridgeRelationship)
+	if !found {
+		return vocabkey.BridgeKey{}, vocabkey.BridgeKey{}, false
+	}
+	first, second = segmentcompare.Keys(rel, term, "", terms)
+	return first, second, true
+}
+
+// readsTerm reads an edge as one relationship term from either end: first is
+// the end that reads the term's first key (the parent, for TermParent), second
+// the end that reads its second. It is false for any other link, and for a link
+// that joins a Subject to itself. It is the one reader of a relationship link.
+func readsTerm(e Edge, term vocabkey.BridgeTerm, terms segmentcompare.Terms) (first, second []byte, ok bool) {
+	keyFirst, keySecond, found := relationshipKeys(term, terms)
+	if !found {
+		return nil, nil, false
+	}
+	first, second, ok = e.reads(keyFirst, keySecond)
+	if !ok || bytes.Equal(first, second) {
+		return nil, nil, false
+	}
+	return first, second, true
+}
+
 // ParentStep reads an edge as one parent step: parent is child's parent, from
 // whichever end the link is read. It is false for any other link, and for a
 // link that joins a Subject to itself. It is the one rule for what a parent

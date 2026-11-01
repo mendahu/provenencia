@@ -62,18 +62,21 @@ func withoutPeople(person []byte, links []kinship.Link, drop []byte) []kinship.L
 // people in drop not shown.
 func unitsOf(t testing.TB, person byte, edges []kinship.Edge, drop ...byte) []kinship.Unit {
 	t.Helper()
+	return unitsFor(t, p(person), edges, dropIDs(drop))
+}
+
+// unitsFor is unitsOf for any person id; drop holds one-byte ids not shown.
+func unitsFor(t testing.TB, person []byte, edges []kinship.Edge, drop []byte) []kinship.Unit {
+	t.Helper()
 	read := func(id []byte) kinship.Kin {
-		return kinship.KinOf(id, withoutPeople(id, linksFor(t, id, edges), dropIDs(drop)), terms)
+		return kinship.KinOf(id, withoutPeople(id, linksFor(t, id, edges), drop), terms)
 	}
-	kin := read(p(person))
+	kin := read(person)
 	kinOf := map[string]kinship.Kin{}
-	for _, role := range []kinship.Role{kinship.RoleParent, kinship.RoleChild} {
-		for _, l := range kin[role] {
-			other, _, _ := l.From(p(person))
-			kinOf[string(other)] = read(other)
-		}
+	for _, other := range kin.Around(person) {
+		kinOf[string(other)] = read(other)
 	}
-	return kinship.FamilyUnits(p(person), kin, kinOf)
+	return kinship.FamilyUnits(person, kin, kinOf, rules)
 }
 
 func dropIDs(drop []byte) []byte {
@@ -279,6 +282,8 @@ func TestFamilies(t *testing.T) {
 			}
 			return out
 		}()},
+		{"siblings unit comes last", slices.Concat(johnMaryPat, []kinship.Edge{sibling(1, 11, 1), parent(1, 14, 2), spouse(1, 2, 3)}), nil,
+			[]string{"Parents{6,7;}", "Partner{2;}", "OneParent{;14}", "Siblings{;11}"}},
 		{"empty kin", nil, nil, nil},
 	}
 	for _, tc := range cases {
@@ -336,6 +341,159 @@ func TestFamilies(t *testing.T) {
 		}
 		if wren := relativeIn(t, units, kinship.UnitPartner, "children", 12); wren.Link == nil {
 			t.Fatal("Wren has no link")
+		}
+	})
+}
+
+// crowd is Pat (P1) with parents recorded parents, each pair married to each
+// other, and sibs siblings who each have every one of them as a parent. Their
+// ids are two bytes, so the count is not held to the p() range.
+func crowd(t testing.TB, parents, sibs int) (pat []byte, edges []kinship.Edge) {
+	t.Helper()
+	pat = p(1)
+	id := func(hi, n int) []byte { return []byte{byte(hi), byte(n)} }
+	link := func(a, c []byte, term vocabkey.BridgeTerm, br int) {
+		x := rel(t, 1, 2, term, 1)
+		x.A, x.B, x.Associations = a, c, [][]byte{id(0x30, br)}
+		edges = append(edges, x)
+	}
+	br := 0
+	for i := 0; i < parents; i++ {
+		br++
+		link(id(0x50, i), pat, vocabkey.TermParent, br)
+		for j := i + 1; j < parents; j++ {
+			br++
+			link(id(0x50, i), id(0x50, j), vocabkey.TermSpouse, br)
+		}
+		for s := 0; s < sibs; s++ {
+			br++
+			link(id(0x50, i), id(0x60, s), vocabkey.TermParent, br)
+		}
+	}
+	return pat, edges
+}
+
+// placements counts every relative in every unit, and the shapes on their links.
+func placements(units []kinship.Unit) (relatives, shapes int) {
+	for _, u := range units {
+		for _, rs := range [][]kinship.Relative{u.Partners, u.Children} {
+			for _, r := range rs {
+				relatives++
+				if r.Link != nil {
+					shapes += len(r.Link.Shapes)
+				}
+			}
+		}
+	}
+	return relatives, shapes
+}
+
+func TestFamiliesMoreParentsThanMaxPivotEnd(t *testing.T) {
+	const parents, sibs = 11, 20 // one more parent than rules.MaxPivotEnd
+	pat, edges := crowd(t, parents, sibs)
+	units := unitsFor(t, pat, edges, nil)
+	if len(units) != parents+1 {
+		t.Fatalf("%d units, want %d lone parents and one shared unit", len(units), parents+1)
+	}
+	for _, u := range units[:parents] {
+		if u.Kind != kinship.UnitParents || len(u.Partners) != 1 || len(u.Children) != 0 {
+			t.Fatalf("want a lone parent with no children, got %d partners and %d children", len(u.Partners), len(u.Children))
+		}
+	}
+	last := units[parents]
+	if last.Kind != kinship.UnitParents || len(last.Partners) != parents || len(last.Children) != sibs {
+		t.Fatalf("shared unit has %d partners and %d children, want %d and %d", len(last.Partners), len(last.Children), parents, sibs)
+	}
+}
+
+func TestFamiliesGrowth(t *testing.T) {
+	// A sibling's link carries one shared_parent shape per parent, so the input
+	// holds parents*sibs shapes. Shown shapes stay a small multiple of it.
+	const c = 2
+	for _, n := range []int{11, 22} {
+		pat, edges := crowd(t, n, 2*n)
+		input := n * 2 * n
+		relatives, shapes := placements(unitsFor(t, pat, edges, nil))
+		if shapes > c*input || relatives > c*input {
+			t.Fatalf("%d parents, %d siblings: %d relatives and %d shapes shown from %d input shapes", n, 2*n, relatives, shapes, input)
+		}
+	}
+}
+
+func TestUnitEmpty(t *testing.T) {
+	r := []kinship.Relative{{ID: p(2)}}
+	for _, tc := range []struct {
+		kind         kinship.UnitKind
+		partnersHold bool // the side that makes the unit non-empty
+	}{
+		{kinship.UnitParents, true},
+		{kinship.UnitPartner, true},
+		{kinship.UnitOneParent, false},
+		{kinship.UnitSiblings, false},
+	} {
+		t.Run(unitName(tc.kind), func(t *testing.T) {
+			onlyPartners := kinship.Unit{Kind: tc.kind, Partners: r}
+			onlyChildren := kinship.Unit{Kind: tc.kind, Children: r}
+			if onlyPartners.Empty() == tc.partnersHold || onlyChildren.Empty() != tc.partnersHold {
+				t.Fatalf("empty: only partners %v, only children %v", onlyPartners.Empty(), onlyChildren.Empty())
+			}
+			if !(kinship.Unit{Kind: tc.kind}).Empty() {
+				t.Fatal("a unit with neither side is not empty")
+			}
+		})
+	}
+}
+
+func TestKinAround(t *testing.T) {
+	links := []kinship.Link{
+		{Edge: rel(t, 6, 1, vocabkey.TermParent, 1)},
+		{Edge: rel(t, 1, 9, vocabkey.TermParent, 2)},
+		{Edge: rel(t, 6, 1, vocabkey.TermParent, 3)},
+		{Edge: rel(t, 1, 8, vocabkey.TermSpouse, 4)},
+	}
+	got := kinship.KinOf(p(1), links, terms).Around(p(1))
+	if !reflect.DeepEqual(got, [][]byte{p(6), p(9)}) {
+		t.Fatalf("got %v", got)
+	}
+}
+
+// FuzzFamilyUnits reads a byte string as edges among fifteen people (three
+// bytes each: kind, a, c) and checks that grouping never panics and that what
+// it shows is bounded by the data and the rules.
+func FuzzFamilyUnits(f *testing.F) {
+	for _, seed := range [][]byte{
+		{0, 6, 1, 0, 7, 1, 1, 6, 7},           // two married parents
+		{0, 6, 1, 0, 7, 1},                    // two parents, no pairing
+		{0, 1, 14, 1, 1, 2},                   // a child and a spouse
+		{0, 6, 1, 1, 1, 6},                    // a parent who is also a spouse
+		{0, 6, 1, 0, 6, 9, 2, 1, 11, 2, 1, 9}, // siblings through a parent and recorded
+		{0, 2, 1, 0, 3, 1, 0, 4, 1, 0, 5, 1, 0, 6, 1, 0, 7, 1, 0, 8, 1, 0, 9, 1, 0, 10, 1, 0, 11, 1, 0, 12, 1, 0, 2, 13, 0, 3, 13, 0, 12, 13}, // eleven parents and a sibling
+	} {
+		f.Add(seed)
+	}
+	f.Fuzz(func(t *testing.T, data []byte) {
+		var edges []kinship.Edge
+		for i := 0; i+2 < len(data) && i < 3*400; i += 3 {
+			a, c := data[i+1]%15+1, data[i+2]%15+1
+			if a == c {
+				continue
+			}
+			switch data[i] % 3 {
+			case 0:
+				edges = append(edges, rel(t, a, c, vocabkey.TermParent, byte(i)))
+			case 1:
+				edges = append(edges, rel(t, a, c, vocabkey.TermSpouse, byte(i)))
+			default:
+				edges = append(edges, rel(t, a, c, vocabkey.TermSibling, byte(i)))
+			}
+		}
+		units := unitsFor(t, p(1), edges, nil)
+		kin := kinship.KinOf(p(1), linksFor(t, p(1), edges), terms)
+		slots := rules.MaxPivotEnd*(rules.MaxPivotEnd-1)/2 + rules.MaxPivotEnd
+		bound := (len(kin[kinship.RoleSibling])+1)*(2*slots+len(kin[kinship.RoleParent])+1) +
+			(len(kin[kinship.RoleChild])+1)*(len(edges)+1) + len(kin[kinship.RoleSpouse])
+		if relatives, _ := placements(units); relatives > bound {
+			t.Fatalf("%d relatives shown, bound %d", relatives, bound)
 		}
 	})
 }

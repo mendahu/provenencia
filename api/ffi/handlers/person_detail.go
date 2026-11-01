@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
@@ -103,20 +104,30 @@ func GetPersonFamily(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		members := func(rs []kinship.Relative) []*engine.FamilyMember {
+		members := func(rs []kinship.Relative) ([]*engine.FamilyMember, error) {
 			var out []*engine.FamilyMember
 			for _, r := range rs {
-				if m := familyMemberProto(r, summaries, paths); m != nil {
-					out = append(out, m)
+				m, err := familyMemberProto(r, summaries, paths)
+				if err != nil {
+					return nil, err
 				}
+				out = append(out, m)
 			}
-			return out
+			return out, nil
 		}
 		for _, u := range family.Units {
+			partners, err := members(u.Partners)
+			if err != nil {
+				return err
+			}
+			children, err := members(u.Children)
+			if err != nil {
+				return err
+			}
 			out.Units = append(out.Units, &engine.FamilyUnit{
 				Kind:     familyUnitKindProto(u.Kind),
-				Partners: members(u.Partners),
-				Children: members(u.Children),
+				Partners: partners,
+				Children: children,
 			})
 		}
 		return nil
@@ -127,11 +138,12 @@ func GetPersonFamily(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-// familyMemberProto maps one relative; nil when the summaries hold none for it.
-func familyMemberProto(r kinship.Relative, summaries conclusionsummaries.Summaries, paths map[string]string) *engine.FamilyMember {
+// familyMemberProto maps one relative. PersonFamily drops a relative with no
+// summary, so a missing one is a broken invariant, not a case to hide.
+func familyMemberProto(r kinship.Relative, summaries conclusionsummaries.Summaries, paths map[string]string) (*engine.FamilyMember, error) {
 	h, ok := summaries.Person(r.ID)
 	if !ok {
-		return nil
+		return nil, fmt.Errorf("get_person_family: relative %s has no summary", database.UUIDString(r.ID))
 	}
 	m := &engine.FamilyMember{Person: personSummaryProto(h, paths)}
 	if r.Link != nil {
@@ -147,7 +159,7 @@ func familyMemberProto(r kinship.Relative, summaries conclusionsummaries.Summari
 		}
 		m.Link = link
 	}
-	return m
+	return m, nil
 }
 
 func familyUnitKindProto(k kinship.UnitKind) engine.FamilyUnitKind {
