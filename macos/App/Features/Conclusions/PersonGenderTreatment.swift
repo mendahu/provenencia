@@ -2,7 +2,7 @@ import SwiftUI
 
 /// How the Person header shows gender (S10-23, board S10-D12): a Badge above
 /// the name and a tint on the thumb. Gender wins; sex at birth stands in only
-/// when no gender field has a displayed value, and says so. Pure: the view
+/// when the header shows no gender value, and says so. Pure: the view
 /// only lays it out.
 struct PersonGenderTreatment: Equatable {
     enum Family: Equatable {
@@ -44,7 +44,7 @@ struct PersonGenderTreatment: Equatable {
     var basis: Basis
     /// The value as the Details row words it.
     var text: String
-    /// The field's own label ("Gender", "Sex at birth").
+    /// The Property's own label ("Gender", "Sex at birth").
     var fieldLabel: String
 
     var badge: ConclusionDetailBadge {
@@ -59,23 +59,20 @@ struct PersonGenderTreatment: Equatable {
         PVThumbnail.Colors(tint: family.tint, line: family.line)
     }
 
-    /// Nil when there is nothing to show: no value, a disagreement, or a
-    /// value that is not a readable term.
-    static func read(_ fields: [CatalogConclusionField]) -> PersonGenderTreatment? {
-        if let gender = fields.first(where: { $0.propertyKey == SeededPropertyKey.gender }),
-           !gender.displayedValues.isEmpty {
-            return treatment(gender, basis: .gender)
-        }
-        guard let sex = fields.first(where: { $0.propertyKey == SeededPropertyKey.sexAtBirth }) else { return nil }
-        return treatment(sex, basis: .sexAtBirth)
+    /// Reads the Person header's terms (S13-02). Nil when there is nothing to
+    /// show: no header, no value, a disagreement, or a value that is not a
+    /// readable term.
+    static func read(_ header: CatalogPersonHeader?) -> PersonGenderTreatment? {
+        guard let header else { return nil }
+        if header.gender.count > 0 { return treatment(header.gender, basis: .gender) }
+        return treatment(header.sexAtBirth, basis: .sexAtBirth)
     }
 
-    private static func treatment(_ field: CatalogConclusionField, basis: Basis) -> PersonGenderTreatment? {
-        let shown = field.displayedValues
-        guard shown.count == 1, case .term(_, let key, _, let origin) = shown[0].value else { return nil }
-        let text = ReconciledValueDisplay.string(for: shown[0].value)
+    private static func treatment(_ facts: CatalogTermFacts, basis: Basis) -> PersonGenderTreatment? {
+        guard facts.count == 1, let value = facts.term, case .term(_, let key, _, let origin) = value else { return nil }
+        let text = ReconciledValueDisplay.string(for: value)
         guard !text.isEmpty else { return nil }
-        return PersonGenderTreatment(family: family(CatalogOrigin.isProduct(origin) ? key : "", basis: basis), basis: basis, text: text, fieldLabel: field.label)
+        return PersonGenderTreatment(family: family(CatalogOrigin.isProduct(origin) ? key : "", basis: basis), basis: basis, text: text, fieldLabel: facts.propertyLabel)
     }
 
     private static func family(_ key: String, basis: Basis) -> Family {

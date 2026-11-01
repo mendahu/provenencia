@@ -1135,9 +1135,23 @@ struct GoStore: GenealogyStore {
             nameValueCount: Int(h.nameValueCount),
             birth: mapLifeFacts(h.birth),
             death: mapLifeFacts(h.death),
+            gender: mapTermFacts(h.gender),
+            sexAtBirth: mapTermFacts(h.sexAtBirth),
             updated: CatalogActivity(revision: h.updatedRevision, at: h.updatedAt),
             pictureImageRelPath: h.pictureImageRelPath
         )
+    }
+
+    private static func mapTermFacts(_ f: Provenencia_Engine_V1_TermFacts) -> CatalogTermFacts {
+        CatalogTermFacts(
+            term: f.hasTerm ? mapConclusionTerm(f.term) : nil,
+            count: Int(f.count),
+            propertyLabel: f.propertyLabel
+        )
+    }
+
+    private static func mapConclusionTerm(_ t: Provenencia_Engine_V1_ConclusionTerm) -> CatalogConclusionValue {
+        .term(id: t.id, key: t.key, label: t.label, origin: t.origin)
     }
 
     private static func mapLifeFacts(_ life: Provenencia_Engine_V1_LifeFacts) -> CatalogLifeFacts {
@@ -1349,7 +1363,7 @@ struct GoStore: GenealogyStore {
         switch v.kind {
         case .text(let t): return .text(t)
         case .integer(let i): return .integer(i)
-        case .term(let t): return .term(id: t.id, key: t.key, label: t.label, origin: t.origin)
+        case .term(let t): return mapConclusionTerm(t)
         case .date(let d): return .date(mapDateValue(d))
         case .name(let n): return .name(mapNameValue(n))
         case .depiction(let d): return .depiction(mapDepictionValue(d))

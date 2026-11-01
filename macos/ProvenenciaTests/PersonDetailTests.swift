@@ -70,7 +70,12 @@ struct PersonDetailTests {
             "single", key: "gender", label: "Gender", valueType: "term",
             [D.value(1, "kept", woman)], outcomes: [D.outcome("g", "kept", recorded: woman)]
         )
-        let content = PersonDetailContent(detail: detail(extra: [gender]))
+        var personHeader = CatalogPersonHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "t", label: ""),
+            name: nil, nameValueCount: 0
+        )
+        personHeader.gender = CatalogTermFacts(term: woman, count: 1, propertyLabel: "Gender")
+        let content = PersonDetailContent(detail: detail(extra: [gender], header: personHeader))
         #expect(content.treatment?.family == .woman)
         #expect(content.thumbnail.colors != nil)
         #expect(content.badge?.text == "Woman")
@@ -85,6 +90,17 @@ struct PersonDetailTests {
         #expect(place.thumbnail == .init(mark: .subjectPlace, label: L10n.Conclusions.placeNoImage) && place.badge == nil)
     }
 
+    @Test func treatmentReadsOnlyTheHeader() {
+        let woman = CatalogConclusionValue.term(id: "t", key: "woman", label: "Woman", origin: CatalogOrigin.provenencia)
+        let gender = D.field(
+            "single", key: "gender", label: "Gender", valueType: "term",
+            [D.value(1, "kept", woman)], outcomes: [D.outcome("g", "kept", recorded: woman)]
+        )
+        let content = PersonDetailContent(detail: detail(extra: [gender]))
+        #expect(content.treatment == nil && content.badge == nil)
+        #expect(content.rows.map(\.label).contains("Gender"))
+    }
+
     @Test func headerThumbIsTheLeadLikeness() {
         let woman = CatalogConclusionValue.term(id: "t", key: "woman", label: "Woman", origin: CatalogOrigin.provenencia)
         let gender = D.field(
@@ -96,6 +112,7 @@ struct PersonDetailTests {
             name: nil, nameValueCount: 0
         )
         header.pictureImageRelPath = "objects/ab/cd.png"
+        header.gender = CatalogTermFacts(term: woman, count: 1, propertyLabel: "Gender")
         var source = detail(extra: [gender], header: header)
         var lead = D.picture("a", path: "objects/ab/cd.png", title: "Register")
         lead.leads = true

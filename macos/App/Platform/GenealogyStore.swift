@@ -438,6 +438,15 @@ struct CatalogLifeFacts: Sendable, Equatable {
     var places: [CatalogHeaderPlace] = []
 }
 
+/// One term-valued Property of a header: the rank-1 displayed term, how many
+/// values are displayed (above 1 is a disagreement), and the Property's label.
+struct CatalogTermFacts: Sendable, Equatable {
+    /// Always `.term` or nil; built by `GoStore.mapConclusionTerm`.
+    var term: CatalogConclusionValue?
+    var count = 0
+    var propertyLabel = ""
+}
+
 /// One subject-role person on an event.
 struct CatalogEventSubject: Sendable, Equatable {
     var entity: CatalogCanonicalEntity
@@ -456,6 +465,9 @@ struct CatalogPersonHeader: Sendable, Equatable, Identifiable {
     var nameValueCount: Int
     var birth: CatalogLifeFacts = CatalogLifeFacts()
     var death: CatalogLifeFacts = CatalogLifeFacts()
+    /// The displayed gender and sex at birth terms; `PersonGenderTreatment` chooses the colors.
+    var gender = CatalogTermFacts()
+    var sexAtBirth = CatalogTermFacts()
     /// The last revision that touched this Person and when; revision 0 when unknown.
     var updated = CatalogActivity()
     /// The `objects/…` path of the picture the Person leads with; "" when none.

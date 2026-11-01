@@ -45,7 +45,7 @@ struct PersonDetailContent: ConclusionDetailBody {
             Self.lifeLine(L10n.Conclusions.personDiedAbbr, spoken: L10n.Conclusions.a11yDied, facts: header?.death, locale: locale),
         ]
         rows = Self.rows(detail.fields, header: header, derivedRows: detail.derivedRows, locale: locale, orders: orders)
-        treatment = PersonGenderTreatment.read(detail.fields)
+        treatment = PersonGenderTreatment.read(header)
         gallery = ConclusionDetailGallery(
             title: L10n.Conclusions.likenessesSection,
             openTip: L10n.Conclusions.likenessOpenTip,
