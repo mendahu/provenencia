@@ -35,6 +35,16 @@ enum ConclusionPageSection: String, Codable, CaseIterable, Sendable {
         }
     }
 
+    /// The query a section reads for itself, beside the page's detail read. The place
+    /// warms it, the switcher's refresh follows it, and the section reads the same
+    /// key. Nil for a section that reads nothing of its own.
+    func queryKey(project: ProjectKey, entityId: String) -> CatalogQueryKey? {
+        switch self {
+        case .family: return .personFamily(project: project, entityId: entityId)
+        case .vitals, .timeline, .gallery, .sources: return nil
+        }
+    }
+
     var label: LocalizedStringResource {
         switch self {
         case .vitals: return L10n.Conclusions.pageSectionVitals

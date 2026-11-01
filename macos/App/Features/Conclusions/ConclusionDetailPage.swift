@@ -8,10 +8,10 @@ enum ConclusionDetailPresentation<Content: Equatable>: Equatable {
     case failed(String)
     case content(Content, refreshing: Bool)
 
-    init(
-        _ read: QueryRead<CatalogConclusionDetail>,
+    init<Value>(
+        _ read: QueryRead<Value>,
         isFetching: Bool,
-        content: (CatalogConclusionDetail) -> Content
+        content: (Value) -> Content
     ) {
         switch read {
         case .loaded(let value):
@@ -294,6 +294,8 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Secondary: View, Page
             if let handle: QueryHandle<CatalogConclusionDetail> = session.queryHandle(key) {
                 ConclusionDetailLoaded(
                     handle: handle,
+                    session: session,
+                    entityId: entityId,
                     projectDir: session.projectKey.projectDir,
                     pageIdentifier: pageIdentifier,
                     errorIdentifier: errorIdentifier,
@@ -424,6 +426,8 @@ struct ConclusionDetailRowsSection: View {
 
 private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: View, PageSections: View>: View {
     @Bindable var handle: QueryHandle<CatalogConclusionDetail>
+    let session: WorkspaceSession
+    let entityId: String
     let projectDir: String
     let pageIdentifier: String
     let errorIdentifier: String
@@ -446,6 +450,12 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
     /// The open page section: the location's, else the kind's first.
     private var pageSection: ConclusionPageSection? {
         offeredPageSections.isEmpty ? nil : (navigation.currentLocation.pageSection ?? offeredPageSections[0])
+    }
+
+    /// The open section is reloading behind a value it already shows. Its first load
+    /// is the section's own spinner and does not count.
+    private var sectionRefreshing: Bool {
+        pageSection?.queryKey(project: session.projectKey, entityId: entityId).map(session.isRefreshing) ?? false
     }
 
     var body: some View {
@@ -471,7 +481,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
                             pageIdentifier: pageIdentifier,
                             offeredPageSections: offeredPageSections,
                             pageSection: pageSection,
-                            refreshing: refreshing,
+                            refreshing: refreshing || sectionRefreshing,
                             isScrolled: isScrolled,
                             select: { navigation.go(to: navigation.currentLocation.withPageSection($0)) }
                         )

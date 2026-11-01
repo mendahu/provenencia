@@ -374,6 +374,15 @@ struct PersonDetailTests {
         #expect(competing.rows[3].badge == nil && competing.rows[4].badge == nil)
     }
 
+    @Test func sectionQueryKeys() {
+        let project = ProjectKey(projectDir: "/tmp/section-keys.provenencia")
+        #expect(ConclusionPageSection.family.queryKey(project: project, entityId: "e1")
+            == .personFamily(project: project, entityId: "e1"))
+        for section in ConclusionPageSection.allCases where section != .family {
+            #expect(section.queryKey(project: project, entityId: "e1") == nil)
+        }
+    }
+
     @Test func lifeLinesOmitMissingHalves() {
         let en = Locale(identifier: "en_US")
         let bremen = CatalogCanonicalEntity(id: "pl1", ref: "PLC-1", subjectTypeID: "t", label: "")

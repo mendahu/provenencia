@@ -270,6 +270,17 @@ struct PlaceRegistryTests {
         #expect(persons?.placeID == .personsList)
     }
 
+    @Test func personDetailOnFamilyWarmsTheFamily() {
+        let family = resolve(WorkspaceLocation.personDetail(entityId: "per-1", ref: "PER-1", title: "Weber, Anna").withPageSection(.family))
+        #expect(family?.placeID == .personDetail)
+        #expect(family?.queryKeys == [
+            .conclusionDetail(project: project, entityId: "per-1"),
+            .personFamily(project: project, entityId: "per-1"),
+        ])
+        let vitals = resolve(.personDetail(entityId: "per-1", ref: "PER-1", title: "Weber, Anna"))
+        #expect(vitals?.queryKeys == [.conclusionDetail(project: project, entityId: "per-1")])
+    }
+
     @Test func placesListWarmsTheSummaryRead() {
         let place = resolve(.sectionRoot(.places))
         #expect(place?.placeID == .placesList)
