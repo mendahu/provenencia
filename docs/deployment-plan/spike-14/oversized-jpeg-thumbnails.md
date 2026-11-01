@@ -1,5 +1,7 @@
 # Thumbnails for oversized JPEGs
 
+Landed in [#654](https://github.com/mendahu/provenencia/pull/654).
+
 Design for S12-39. Pulled in from `ideas/large-jpeg-thumbnails.md` (user, 2026-10-27), which proposed a macOS-only ImageIO path; the user chose a portable, purpose-built Go decoder instead, so Windows reuses it. PR order and status are in the [map](deployment-plan.md).
 
 ## Problem

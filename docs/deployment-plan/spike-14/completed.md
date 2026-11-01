@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-23 — Oversized JPEG thumbnails
+
+**Landed 2026-10-31** in [#654](https://github.com/mendahu/provenencia/pull/654). A JPEG over 64 megapixels gets its thumbnail: `raster.EncodeJPEG` decodes it at 1/8 scale from its DC coefficients with a pure-Go decoder (`core/raster/jpegdc.go`, baseline and progressive Huffman, fuzzed), then scales and encodes as before, so the tile, Source cover and omnibar show it. `core/raster` also refuses input over `MaxDecodeBytes` (128 MiB, which `derivatives` now uses) and every decode failure is `ErrUndecodable`, mapped by `derivatives` to the glyph instead of a failed Artifact response. `core/raster/rastertest` holds the shared over-budget fixtures; `go-tests.mdc` has a "Fuzz targets" paragraph.
+
 ## S14-09 — Quote nicknames and add former surnames
 
 **Landed 2026-10-31** in [#649](https://github.com/mendahu/provenencia/pull/649). A nickname part shows in curly quotes and the new `former_surname` product part type (role `family`, after the nickname in both Western orders, seeded in new catalogs only) shows in parentheses, in every name display. `NameValueDisplay.display` returns the text and, when a word is emphasized, a styled copy; the Persons list row and Person page title draw the former surname italic through `ConclusionTitleSource.name(_, styled:)` and `ConclusionListRow.italicizingEmphasis`. The two titles also carry a spoken copy (`NameDisplay.spoken`: "Jake, nickname", "former surname Smith") for VoiceOver, and the Why heading of a Name value has no outer quotes. Go's `nameformats.Format` sort key stays undecorated. `NamePartType` spells every raw value and has a "name part types" row in `TestSwiftVocabularyMatchesGo`; `add-name-value` step 6 lists every place a part type lives.

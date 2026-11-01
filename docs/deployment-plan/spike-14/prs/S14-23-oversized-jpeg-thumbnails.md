@@ -1,6 +1,6 @@
 # S14-23 — Thumbnails for oversized JPEGs
 
-**Status:** Planned
+**Status:** Landed in #654 (2026-10-31)
 **Spike / slice:** Spike 14 · Slice 1 — Event and Place pictures
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: a thumbnail that was missing now appears in the existing tile, header and cover slots; no control, copy or layout changes)
@@ -12,6 +12,7 @@
 **Skills to load:** — (no skill covers `core/raster`)
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** [design](../oversized-jpeg-thumbnails.md); working rule "(Batch 1) Oversized JPEGs get a thumbnail from a reduced decode of our own"; map scope entry [S14-23](../deployment-plan.md#s14-23--thumbnails-for-oversized-jpegs); likeness audit SEC-3 (a raster byte limit, [`docs/ideas/depictions-and-likenesses.md`](../../../ideas/depictions-and-likenesses.md)); bar outcome 12; ITU-T T.81 (Annex B syntax, Annex C and F.2.2 Huffman decoding, G.1.1.1.1 and G.1.2 progressive DC scans, A.2 block order, E.1.4 restart)
+**Landed:** [#654](https://github.com/mendahu/provenencia/pull/654), 2026-10-31. Differences from the plan: (1) the version was already 0.2.3 (S14-03 bumped it), so STEP-10 made no bump; (2) T-6's allocation row is its own test, `TestEncodeJPEGOversizedHeaderAllocation`, beside `TestEncodeJPEGRejects`; (3) T-1 compares against D-22's reference, added after the round-0 stop.
 **Planned:** 2026-10-31 against `main` @ `b6a8f3e`
 **Review:** [`S14-23-oversized-jpeg-thumbnails.review.md`](S14-23-oversized-jpeg-thumbnails.review.md) — Fits with changes — Ready with changes, 2 rounds; every blocker fixed
 
