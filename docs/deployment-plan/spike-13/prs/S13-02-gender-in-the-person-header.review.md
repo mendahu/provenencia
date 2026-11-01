@@ -7,7 +7,7 @@ Round 1 raised three blockers (M-1, X-1, X-2), all Fixed. Round 2 is not run: th
 
 ## To user
 
-- **M-3 — does `EventHeader` move onto `TermFacts` in this PR?** Today the event header's type is `EventType *Term` plus `EventTypeCount`; the person header's terms are `TermFacts`. Both already share `keptTerm` and `finishTerm`, and the wire is unchanged either way. Moving events touches 24 lines in `conclusionheaders` and the handlers (tests included): `oneEvent`, `eventTitle`, `eventKeyOf`, `eventHeaderProto`. **Recommendation: keep it out (D-11).** This PR stays a person-only change, and events move when the Event page is redesigned. If you want one shape now, D-11 flips: STEP-1 also moves `EventHeader.EventType` and `EventTypeCount` to `Type TermFacts`, with no wire change.
+- **M-3 — does `EventHeader` move onto `TermFacts` in this PR?** Writer recommended no. **User, 2026-11-01: yes, move it at the same time.** D-11 now moves `EventHeader.EventType` and `EventTypeCount` to `Type TermFacts` in Go; the wire and Swift's `CatalogEventHeader` stay as they are (Out row, Event page redesign).
 
 ## Writer's own calls
 
@@ -15,7 +15,7 @@ Round 1 raised three blockers (M-1, X-1, X-2), all Fixed. Round 2 is not run: th
 - D-2: one `TermFacts` shape; `EventType` is renamed `Term`.
 - D-3: the spoken label uses the Property's catalog label, because a product Property can be relabeled.
 - D-5: only the product Properties feed the header. A researcher's own Property keyed `gender` stops coloring the badge.
-- D-11: events keep their own field pair (To user above).
+- D-11 (after the user's answer): only the Go header moves; the event wire fields and `CatalogEventHeader` stay, so the PR adds no client change for events.
 
 ## Round 1
 
@@ -28,7 +28,7 @@ Round 1 raised three blockers (M-1, X-1, X-2), all Fixed. Round 2 is not run: th
 **Answer:** Fixed. New Current state row; §6 Go core and STEP-2 make the person case compare with `finishPerson(v, row)`, as the event case does with `finishEvent`. §8 names the Verify tests that must stay green.
 
 ### M-3 · major · `EventHeader` keeps its own term pair beside the new `TermFacts`
-**Answer:** To user (above), with D-11 recording the recommendation. Not Declined on the plan's own say-so: the cost is 24 lines, and the choice is one of PR scope.
+**Answer:** To user; the user chose to move it (2026-11-01). Fixed: D-11, §3 In, §4 Term type row, §6 Go core and FFI, STEP-1, STEP-2, T-3, T-11, Edges "Event type count", DoD sweep. The wire and Swift event triple are an Out row.
 
 ### M-4 · major · `scanProperties` adds a third private scan loop
 **Answer:** Fixed. D-3 and §6 Go core: `scanVocab` scans `id` plus every further string column. `loadVocab`'s properties query and the old `scanTerms` query both run through it, and `scanTerms` is deleted.
