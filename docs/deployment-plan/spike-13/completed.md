@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S13-02 — Gender in the person header
+
+**Landed 2026-11-01** in [#659](https://github.com/mendahu/provenencia/pull/659). Every person row or tile can be colored by gender from the one header type: `PersonHeader` carries the displayed gender and sex at birth terms (the rank-1 kept term, how many values are displayed, and the Property's label), on the wire as the new `TermFacts` and in Swift as `CatalogTermFacts`. A stored header keeps term ids and keys; term and Property labels are filled when it is read, so a relabel shows at once. `PersonGenderTreatment` reads only the header and the Person page moves onto it, with the badge, spoken label and thumb colors unchanged; the read from detail fields is deleted, and only the product `gender` and `sex_at_birth` Properties feed it. `EventHeader`'s type moved onto the same Go shape with no wire change. The Persons list, Promote and search carry the terms and do not draw them.
+
 ## S13-01 — Person claims read
 
 **Landed 2026-10-31** in [#655](https://github.com/mendahu/provenencia/pull/655). The engine answers which records make up a person: `ListPersonClaims` returns a canonical person's accepted claims grouped by Source and ordered by Source title, each claim with its Evidence graph, Subject and that Subject's Observations (a Subject-valued Observation carries the other Subject's label), served from the graph cache with no query when warm. The app reads it under a new `.personClaims` key. One `Node.AcceptedMembers` helper replaces the private count, `conclusionheaders.SortByTitle` is exported, and a loaded Evidence graph carries its ref, name and its Source's ref and type (a Source type change now drops it). A key now declares the write effects it follows in its descriptor's `refreshes` list, and `apply` revalidates each key once; the Evidence graph, the Persons, Events and Places lists and the detail page moved onto it from hand-written fan-outs, and `.personClaims` follows its own handle and the graphs it holds a claim on. No view reads it until the Sources section (S13-16).
