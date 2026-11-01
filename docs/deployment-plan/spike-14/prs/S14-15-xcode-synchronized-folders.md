@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/swift-tests.mdc`
 **Context:** audit [A-34](../app-health-audit.md#a-34--projectpbxproj-is-maintained-by-hand); working rule "Audit items keep their IDs"; [`macos-client-patterns.md`](../../../macos-client-patterns.md); `macos/App/DesignSystem/README.md` § "Xcode project registration". **Needs a Mac with Xcode 16 or later** (map scope entry).
 **Planned:** 2026-11-01 against `main` @ `067be77`
-**Review:** — (not reviewed yet)
+**Review:** [`S14-15-xcode-synchronized-folders.review.md`](S14-15-xcode-synchronized-folders.review.md) — Fits with changes / Ready with changes, round 1
 
 ### Implementer — read this first
 
@@ -58,8 +58,9 @@ A Swift file saved under `macos/App` or `macos/ProvenenciaTests` is in the build
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-3.1 | `rg -n 'PBXFileReference\|PBXBuildFile\|four objects\|registered in the Xcode project\|Register new files\|Resources phase\|manually-authored\|Wire new files' .agents .cursor macos/App/DesignSystem/README.md docs/macos-client-patterns.md` | No hit |
+| AC-3.1 | `rg -n 'PBXFileReference\|PBXBuildFile\|four objects\|registered in the Xcode project\|Register new files\|Resources phase\|manually-authored\|Wire new files\|wiring a .swift file\|wiring new Swift test files' .agents .cursor macos/App/DesignSystem/README.md docs/macos-client-patterns.md` | No hit |
 | AC-3.2 | `python3 scripts/check-guidance-names.py` | Passes |
+| AC-3.3 | A file `macos/App/Features/Sources/NOTES.md` *(new)* (temporary) is added, then removed; separately a folder `macos/App/Extra/` *(new)* (temporary) holding one `.swift` file is added, then removed | While each is present, `python3 scripts/check-guidance-names.py` exits 1 and names it (`macos/App/Features/Sources/NOTES.md: not Swift and not in a membership exception …`; `macos/App/Extra/: not a synchronized folder …`); after removal it prints `check-guidance-names: OK` |
 
 ## 3. Scope
 
@@ -69,14 +70,16 @@ A Swift file saved under `macos/App` or `macos/ProvenenciaTests` is in the build
 | Membership exceptions keep the three `.md` files out of the app bundle (D-3) | STEP-2, AC-2.2 |
 | Same compiled files and bundled resources, proved by equality (D-6) | STEP-1, STEP-3, AC-2.1, AC-2.2 |
 | A new file builds with no project edit (A-34) | STEP-4, AC-1.1, AC-1.2 |
-| `add-swift-test`, `add-ui-component`, `.cursor/rules/swift-tests.mdc` drop their pbxproj steps (D-8) | STEP-6, AC-3.1 |
-| `README.md` names Xcode 16 as the minimum; `macos-client-patterns.md` and the DesignSystem README describe the folders (D-4, D-8) | STEP-7, AC-3.1 |
+| `check-guidance-names.py` checks the synchronized folders against the project file on every host (D-7) | STEP-6, AC-3.3 |
+| `add-swift-test`, `add-ui-component`, `add-workspace-place`, `.cursor/rules/swift-tests.mdc` drop their pbxproj steps; `docs/design-system-layers.md` names the README exception (D-8) | STEP-7, AC-3.1 |
+| `README.md` names Xcode 16 as the minimum; `macos-client-patterns.md` and the DesignSystem README describe the folders (D-4, D-8) | STEP-8, AC-3.1 |
 
 | Out | Home |
 | --- | --- |
 | Any Swift, Go or resource change, including loading fonts from the bundle root so `Resources/` could be synchronized too | not planned (D-2) |
 | Converting `macos/App/Resources` to a synchronized folder | not planned (D-2) |
-| A check-pr guard that fails on a `sourcecode.swift` entry in the project file | not planned (D-7) |
+| A check that fails on a `sourcecode.swift` entry in the project file | not planned (D-7) |
+| One synchronized root for all of `macos/App` with folder exceptions (review M-3) | not planned (D-2; D-7's check closes the new-folder trap) |
 | Moving the three `.md` files out of `macos/App` | not planned (D-3) |
 | Raising `MACOSX_DEPLOYMENT_TARGET`, `SWIFT_VERSION` or any build setting | not planned |
 | Updating historical plans, ship logs and audits that mention hand-written entries | not planned: they record what was true then |
@@ -98,6 +101,8 @@ Verified at `067be77`.
 | CI | `.github/workflows/macos-test.yml` job `test`, `runs-on: macos-15`, `xcodebuild test … -only-testing:ProvenenciaTests CODE_SIGNING_ALLOWED=NO` | The `macos-15` image's default Xcode is 16.x, which reads `objectVersion = 77`; the job prints `xcodebuild -version` |
 | Gate | `scripts/check-pr.sh` `xcode_test`, `swift_warnings` | On a non-Darwin host `xcode-test` is reported failed ("needs macOS") |
 | Guidance | `.agents/skills/add-swift-test/SKILL.md` § "Xcode project" (lines 50–58: copy four objects, IDs `AA…xx`, group `B5`, phase `B7`); `.agents/skills/add-ui-component/SKILL.md` line 72 (checklist "New .swift registered in the Xcode project (pbxproj)") and line 132 (step 4 "Register new files in `macos/Provenencia.xcodeproj`."); `.cursor/rules/swift-tests.mdc` line 13 ("Wire new files into the ProvenenciaTests target in `project.pbxproj` only."); `macos/App/DesignSystem/README.md` lines 563–568 (fonts: "add it to the Xcode project's Resources phase") and § "Xcode project registration" (lines 605–612); `docs/macos-client-patterns.md` line 37; `README.md` line 13 ("any current Xcode that can target macOS 14 is fine") | All describe the hand-written project |
+| Disk-vs-list check | `scripts/check-guidance-names.py` `kit_rows_missing` (from audit A-33), called from `main` | Walks `macos/App/DesignSystem/{Components,Recipes}` and fails on a folder the DesignSystem README has no row for; runs on every host through check-pr's `guidance-names` |
+| More guidance | `.agents/skills/add-swift-test/SKILL.md` frontmatter `description` ("…or wiring a .swift file into the ProvenenciaTests Xcode target."); `.agents/skills/add-workspace-place/SKILL.md` line 187 ("for wiring new Swift test files"); `.agents/skills/add-ui-component/SKILL.md` line 130 ("plus optional README/helpers in the same folder"); `docs/design-system-layers.md` line 43 ("# optional: README.md, private helpers, previews-only fixtures") | Describe wiring that goes away, or invite a non-Swift file with no word about its exception |
 | Tests | every suite in `macos/ProvenenciaTests` (117 files), including `PVFontTests.swift` | Run by `xcode-test`; no test reads the project file |
 
 **Precedent.** None in this repo. The target shape is the one Xcode 16 writes for a new project or for **Convert to Folder** on a group: a `PBXFileSystemSynchronizedRootGroup` per folder, listed in the target's `fileSystemSynchronizedGroups`, with a `PBXFileSystemSynchronizedBuildFileExceptionSet` for files kept out of a target. §6 **macOS** gives the exact objects.
@@ -112,8 +117,8 @@ Verified at `067be77`.
 | D-4 | `objectVersion = 60` → `77`. In the PBXProject object, delete `compatibilityVersion = "Xcode 15.0";` and add `preferredProjectObjectVersion = 77;` after `packageReferences`. `README.md` names Xcode 16 as the minimum. | Xcode reads `PBXFileSystemSynchronizedRootGroup` only in format 77 (Xcode 16); this is the pair Xcode 16 writes. CI's `macos-15` runner and the README's "last built with Xcode 26" are both 16 or later. | Keeping format 60 — the new objects are not readable in it. |
 | D-5 | Delete: every `PBXBuildFile` whose `fileRef` is a `.swift` file reference (425); every `PBXFileReference` with `lastKnownFileType = sourcecode.swift` (425); file reference `6AAC04817D6F4CCC9CDC9B17` (`DesignSystem/README.md`); every `PBXGroup` that is a descendant of one of the five D-2 groups. The two Sources phases keep their objects with `files = ( );`. The five D-2 objects leave the `PBXGroup` section. Everything else stays byte-for-byte: build settings, `MARKETING_VERSION`, the Go-core phase, Frameworks, Embed Libraries, Resources, packages, `Core`, `Products`, the scheme. | The synchronized folders supply exactly these files; a leftover explicit entry next to a synchronized folder lists the file twice. | Keeping the old group objects as navigator decoration — they would be dead objects agents keep editing. |
 | D-6 | Proof of sameness is equality, not "it builds": the sorted `.SwiftFileList` of each target and the sorted listing of the built app's `Contents/Resources` are identical before and after (STEP-1, STEP-3). | A dropped file that nothing references, or a stray bundled resource, still builds; equality catches both. | Build and test passing alone. |
-| D-7 | No new guard script. | After this PR the project file has no per-file entries; any `.swift` line reappearing is visible in the diff, and the skills say not to add one. | A `check-pr.sh` check for `sourcecode.swift` in the project — a new check for a mistake the guidance removes; logged as not planned. |
-| D-8 | Guidance text, exactly: `add-swift-test` § "Xcode project" becomes: "`macos/ProvenenciaTests` is a synchronized folder: a `.swift` file saved there is in the **ProvenenciaTests** target. Do not edit `project.pbxproj`, and never add a test file under `macos/App`." `add-ui-component` checklist line 72 becomes "- [ ] File saved under `macos/App/DesignSystem/` or `macos/App/Features/` (synchronized folders; no `project.pbxproj` edit)"; step 4 becomes "4. Save the file in its folder; the synchronized folder adds it to the build. A non-Swift file (a README) in the folder needs a membership exception in `project.pbxproj` (see the DesignSystem README § Xcode project registration)." `swift-tests.mdc` line 13's last sentence becomes "`macos/ProvenenciaTests` is a synchronized folder: new files need no `project.pbxproj` edit." The DesignSystem README section keeps its heading `## Xcode project registration`, and the fonts paragraph's "(see \"Xcode project registration\" below)" stays; the paragraph's "add it to the Xcode project's Resources phase" becomes "it is bundled through the `Fonts` folder reference". The section body is rewritten to: the four app source folders and `ProvenenciaTests` are synchronized; a Swift file saved there is built; a non-Swift file in them is bundled unless listed in the folder's `PBXFileSystemSynchronizedBuildFileExceptionSet`; `Resources/` is a classic group, and a new `.ttf` dropped into `Resources/Fonts/` is bundled through the folder reference with no project edit. `docs/macos-client-patterns.md` after line 37 gains: "`App/App`, `App/Platform`, `App/Features`, `App/DesignSystem` and `ProvenenciaTests` are synchronized folders: a file on disk there is in the build. `App/Resources` is a classic group. A new top-level folder under `macos/App` is not built until it is added as a synchronized folder." | The skills and rule are what agents follow; leaving any hand-entry step makes the next agent write entries the project no longer has. | Pointing at Xcode docs only — agents work without Xcode open. |
+| D-7 | `scripts/check-guidance-names.py` gains `synced_folders_unlisted()` *(new)*, called from `main` beside `kit_rows_missing()`. It reads `macos/Provenencia.xcodeproj/project.pbxproj`, maps each `PBXFileSystemSynchronizedRootGroup` (by its `path`) to its exception sets' `membershipExceptions`, and reports: (a) a file under one of `SYNCED_ROOTS` *(new)* = `macos/App/App`, `macos/App/Platform`, `macos/App/Features`, `macos/App/DesignSystem`, `macos/ProvenenciaTests` that is not `.swift`, not a dotfile, and not listed in its root's exceptions; (b) a listed exception whose file does not exist; (c) a directory directly under `macos/App` that is neither a synchronized root nor `Resources`. The final hint line gains "list a non-Swift file in its folder's membership exceptions". No check for `sourcecode.swift` lines. | The exception lists are the one hand-kept list left in the project file (review M-1). A missed exception ships a file in the app with no error, and a second `README.md` fails only the Mac build; this script runs on every host. (c) closes the new-top-level-folder trap D-2 leaves. Precedent: `kit_rows_missing`, a disk-vs-list check in the same script. | No check (review round 1 draft) — an agent without Xcode gets no signal. A new script — `check-guidance-names.py` already owns disk-vs-list checks and runs in check-pr. A `sourcecode.swift` check — the skills remove the habit and a reappearing entry shows in the diff. |
+| D-8 | Guidance text, exactly: `add-swift-test` § "Xcode project" becomes: "`macos/ProvenenciaTests` is a synchronized folder: a `.swift` file saved there is in the **ProvenenciaTests** target. Do not edit `project.pbxproj`, and never add a test file under `macos/App`." `add-ui-component` checklist line 72 becomes "- [ ] File saved under `macos/App/DesignSystem/` or `macos/App/Features/` (synchronized folders; no `project.pbxproj` edit)"; step 4 becomes "4. Save the file in its folder; the synchronized folder adds it to the build. A non-Swift file (a README) in the folder needs a membership exception in `project.pbxproj` (see the DesignSystem README § Xcode project registration)." `swift-tests.mdc` line 13's last sentence becomes "`macos/ProvenenciaTests` is a synchronized folder: new files need no `project.pbxproj` edit." The DesignSystem README section keeps its heading `## Xcode project registration`, and the fonts paragraph's "(see \"Xcode project registration\" below)" stays; the paragraph's "add it to the Xcode project's Resources phase" becomes "it is bundled through the `Fonts` folder reference". The section body is rewritten to: the four app source folders and `ProvenenciaTests` are synchronized; a Swift file saved there is built; a non-Swift file in them is bundled unless listed in the folder's `PBXFileSystemSynchronizedBuildFileExceptionSet`; `Resources/` is a classic group, and a new `.ttf` dropped into `Resources/Fonts/` is bundled through the folder reference with no project edit. `add-swift-test`'s frontmatter `description` phrase "or wiring a .swift file into the ProvenenciaTests Xcode target" becomes "or adding a test file under macos/ProvenenciaTests". In `add-workspace-place` line 187, "for wiring new Swift test files" becomes "for new Swift test files". `add-ui-component` line 130's "plus optional README/helpers in the same folder" becomes "plus optional helpers in the same folder; a README there is listed in the folder's membership exceptions, which `check-guidance-names.py` enforces". `docs/design-system-layers.md` line 43 becomes "# optional: private helpers, previews-only fixtures; a README.md is listed in DesignSystem's membership exceptions". `docs/macos-client-patterns.md` after line 37 gains: "`App/App`, `App/Platform`, `App/Features`, `App/DesignSystem` and `ProvenenciaTests` are synchronized folders: a file on disk there is in the build. `App/Resources` is a classic group. A new top-level folder under `macos/App` is not built until it is added as a synchronized folder; `scripts/check-guidance-names.py` fails until it is." | The skills and rule are what agents follow; leaving any hand-entry step makes the next agent write entries the project no longer has. | Pointing at Xcode docs only — agents work without Xcode open. |
 
 **Rules this plan bends.** None. `.cursor/rules/swift-tests.mdc` changes because its pbxproj sentence becomes false, which is this PR's scope (map scope entry), not a bend.
 
@@ -126,12 +131,13 @@ Verified at `067be77`.
 | Five `PBXFileSystemSynchronizedRootGroup` objects | project objects | The five `PBXGroup`s they replace (same IDs) | They are the replacement; D-2 |
 | Two `PBXFileSystemSynchronizedBuildFileExceptionSet` objects `AA15150000000000000000E1`, `AA15150000000000000000E2` *(new)* | project objects | None (no exception mechanism in format 60) | D-3 |
 | `fileSystemSynchronizedGroups` on both targets *(new key)* | project key | `packageProductDependencies` on the app target | Different list |
+| `synced_folders_unlisted()`, `SYNCED_ROOTS` *(new)* | func, constant | `scripts/check-guidance-names.py` `kit_rows_missing`, `KIT` | Extends the same script with a sibling check (D-7); a different list (project file, not README) |
 
 Searched: `rg -n fileSystemSynchronized macos` (none), `rg -n 'pbxproj|PBXFileReference|PBXBuildFile' .agents .cursor docs/*.md macos/App scripts` (the guidance rows in §4 and `check-guidance-names.py`'s extension list, which needs no change).
 
 **Builds on.** Xcode 16's synchronized folder format; the existing classic `Resources` group and `Fonts` folder reference.
 **Deletes.** 425 Swift `PBXBuildFile`s, 425 Swift `PBXFileReference`s, file reference `6AAC04817D6F4CCC9CDC9B17`, every descendant `PBXGroup` of the five roots, the Sources phases' file lines, `compatibilityVersion`; the hand-entry instructions in `add-swift-test`, `add-ui-component`, `swift-tests.mdc` and the DesignSystem README.
-**Next adds.** Every later PR that adds a Swift file (S14-14, S14-16, S14-17, S14-20, S14-21, S14-22, S14-27, and Spike 13's open PRs) saves the file and edits no project file.
+**Next adds.** A README in a new kit folder is one `membershipExceptions` line, which the check names. Every later PR that adds a Swift file (S14-14, S14-16, S14-17, S14-20, S14-21, S14-22, S14-27, and Spike 13's open PRs) saves the file and edits no project file.
 
 ### Reach
 
@@ -248,13 +254,18 @@ Files: none changed.
 Do: `scripts/check-pr.sh`.
 Check: `check-pr: PASS` (AC-2.3). Commit the project file: "Build every Swift file in the app and test folders without listing it in the Xcode project."
 
-**STEP-6 — Skills and rule**
-Files: `.agents/skills/add-swift-test/SKILL.md`, `.agents/skills/add-ui-component/SKILL.md`, `.cursor/rules/swift-tests.mdc`. Skill: `add-swift-test`, `add-ui-component`.
-Do: replace the text named in §4 **Guidance** with D-8's text.
+**STEP-6 — Check the synchronized folders**
+Files: `scripts/check-guidance-names.py`.
+Do: add `SYNCED_ROOTS` and `synced_folders_unlisted()` per D-7, beside `KIT` and `kit_rows_missing`; parse the project file with regular expressions as the script parses its other inputs (no new dependency).
+Check: `python3 scripts/check-guidance-names.py` prints `check-guidance-names: OK`; AC-3.3's two plants each make it exit 1 naming the file or folder; after removing them it prints OK and `git status --porcelain` lists only the branch's files. This step runs on any host. Commit: "Fail the guidance check when a synchronized folder holds a file the app would bundle by accident."
+
+**STEP-7 — Skills and rule**
+Files: `.agents/skills/add-swift-test/SKILL.md` (§ Xcode project and frontmatter), `.agents/skills/add-ui-component/SKILL.md` (lines 72, 130, 132), `.agents/skills/add-workspace-place/SKILL.md` (line 187), `.cursor/rules/swift-tests.mdc`. Skill: `add-swift-test`, `add-ui-component`.
+Do: replace the text named in §4 **Guidance** and **More guidance** (skills and rule only) with D-8's text.
 Check: AC-3.1's `rg` has no hit in `.agents` and `.cursor`; `python3 scripts/check-guidance-names.py` passes.
 
-**STEP-7 — Docs**
-Files: `README.md` (line 13: "Install Xcode 16 or later (this repo was last built with Xcode 26) and Go 1.27+."), `docs/macos-client-patterns.md`, `macos/App/DesignSystem/README.md` (fonts paragraph and § "Xcode project registration" per D-8), `docs/deployment-plan/spike-14/completed.md`, `docs/deployment-plan/spike-14/deployment-plan.md` (map row), this plan (status and Landed note).
+**STEP-8 — Docs**
+Files: `docs/design-system-layers.md` (line 43, per D-8), `README.md` (line 13: "Install Xcode 16 or later (this repo was last built with Xcode 26) and Go 1.27+."), `docs/macos-client-patterns.md`, `macos/App/DesignSystem/README.md` (fonts paragraph and § "Xcode project registration" per D-8), `docs/deployment-plan/spike-14/completed.md`, `docs/deployment-plan/spike-14/deployment-plan.md` (map row), this plan (status and Landed note).
 Do: per D-8 and the Definition of done.
 Check: AC-3.1's full `rg` has no hit; `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-15-xcode-synchronized-folders.md` reports no errors; `scripts/check-pr.sh` prints `check-pr: PASS`. Commit: "Tell contributors that new Swift files need no Xcode project edit."
 
@@ -272,6 +283,7 @@ No Swift or Go test is added: no source changes, and the existing suite is the r
 | T-4 | Lint | STEP-2 checks | `plutil -lint` OK; counts 0 / 5 / 2 / 2 | AC-1.3, D-4 |
 | T-5 | Swift | all of `macos/ProvenenciaTests` via `xcode-test` (including `PVFontTests`) | → pass, no Swift warning | AC-2.3 |
 | T-6 | Guidance | `scripts/check-guidance-names.py` and AC-3.1's `rg` | → pass, no hit | AC-3.1, AC-3.2, D-8 |
+| T-7 | Script | STEP-6 plants *(new)* (temporary): `macos/App/Features/Sources/NOTES.md`, `macos/App/Extra/Probe.swift` | each → exit 1 naming it; removed → OK | AC-3.3, D-7 |
 
 Must stay green: everything `scripts/check-pr.sh` runs, and CI's `macOS tests / test` job on `macos-15` (its first run on the new format).
 
@@ -316,6 +328,7 @@ Must stay green: everything `scripts/check-pr.sh` runs, and CI's `macOS tests / 
 - `xcodebuild -list` or the build rejects the converted file, or Xcode reports the project needs an upgrade beyond format 77.
 - Any STEP-3 diff is not empty. Report the differing lines; do not edit the project to hide them.
 - A non-Swift file other than the three in D-3 is found under the five roots at your base.
+- `synced_folders_unlisted()` reports anything on the converted tree before the plants (the exceptions in §6 and the disk disagree).
 - CI's `test` job (once the PR is out of draft) fails reading the project, or prints an Xcode older than 16.
 
 ## 12. Open questions
