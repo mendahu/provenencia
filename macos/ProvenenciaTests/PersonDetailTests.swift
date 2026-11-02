@@ -404,6 +404,10 @@ struct PersonDetailTests {
         let omitted = PersonLifeDisplay.lifeLines(anna, locale: en, missing: .omitted)
         #expect(omitted.count == 2 && omitted[1].place == nil)
         #expect(omitted.map(\.accessibilityLabel) == ["born 3 May 1790, Bremen", "died 1851"])
+        var placeOnly = anna
+        placeOnly.death = CatalogLifeFacts(places: [CatalogChainedPlace(entity: bremen, names: ["Hamburg"])])
+        #expect(PersonLifeDisplay.lifeLines(placeOnly, locale: en, missing: .omitted).map(\.accessibilityLabel)
+            == ["born 3 May 1790, Bremen", "died in Hamburg"])
         var bare = anna
         bare.birth = CatalogLifeFacts()
         bare.death = CatalogLifeFacts()

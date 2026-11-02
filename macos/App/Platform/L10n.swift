@@ -154,6 +154,13 @@ enum L10n {
             ), first, second)
         }
 
+        /// The parts spoken as one line, joined two at a time through the
+        /// catalog; nil when there are none.
+        static func spokenJoin(_ parts: [String]) -> String? {
+            guard let first = parts.first else { return nil }
+            return parts.dropFirst().reduce(first) { spokenJoin($0, $1) }
+        }
+
         static let reorderHandle = LocalizedStringResource(
             "designSystem.reorder.handle",
             defaultValue: "Drag to reorder",
@@ -9901,6 +9908,14 @@ enum L10n {
                 defaultValue: "%1$@ %2$@",
                 comment: "VoiceOver for a person tile line with one half known; arguments are born/died and the date or the place"
             ), word, part)
+        }
+
+        static func a11yLifeLinePlaceOnly(_ word: String, place: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.a11y.vitalPlaceOnly",
+                defaultValue: "%1$@ in %2$@",
+                comment: "VoiceOver for a person tile line with only a place known; arguments are born/died and the place"
+            ), word, place)
         }
 
         static func sexAtBirthBadge(_ value: String) -> String {

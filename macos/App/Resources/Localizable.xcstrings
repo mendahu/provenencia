@@ -18234,6 +18234,18 @@
         }
       }
     },
+    "conclusions.a11y.vitalPlaceOnly": {
+      "comment": "VoiceOver for a person tile line with only a place known; arguments are born/died and the place",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ in %2$@"
+          }
+        }
+      }
+    },
     "conclusions.family.thisPerson": {
       "comment": "Badge on the focus tile of the Family section, and the label of the focus alone in the siblings group",
       "extractionState": "manual",

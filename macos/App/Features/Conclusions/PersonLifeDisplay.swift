@@ -84,7 +84,7 @@ enum PersonLifeDisplay {
             case (true, true): return nil
             case (false, false): label = L10n.Conclusions.a11yLifeLine(word, date: date, place: place)
             case (false, true): label = L10n.Conclusions.a11yLifeLineKnown(word, part: date)
-            case (true, false): label = L10n.Conclusions.a11yLifeLineKnown(word, part: place)
+            case (true, false): label = L10n.Conclusions.a11yLifeLinePlaceOnly(word, place: place)
             }
         }
         return LifeLine(
