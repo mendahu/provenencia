@@ -16,6 +16,12 @@ func TestValidate(t *testing.T) {
 		{name: "range start after end", v: Value{Kind: KindRange, StartYear: n(1900), EndYear: n(1890)}, wantErr: true},
 		{name: "point about year", v: Value{Kind: KindPoint, Qualifier: QualifierABT, StartYear: n(1817)}},
 		{name: "empty value", v: Value{}, wantErr: true},
+		{name: "point year above the window", v: Value{Kind: KindPoint, StartYear: n(10000)}, wantErr: true},
+		{name: "point year below the window", v: Value{Kind: KindPoint, StartYear: n(-10000)}, wantErr: true},
+		{name: "range end year above the window", v: Value{Kind: KindRange, StartYear: n(1900), EndYear: n(10000)}, wantErr: true},
+		{name: "range end year below the window", v: Value{Kind: KindRange, StartYear: n(-10000), EndYear: n(1900)}, wantErr: true},
+		{name: "point year at the window edge", v: Value{Kind: KindPoint, StartYear: n(MaxYear)}},
+		{name: "range across the window", v: Value{Kind: KindRange, StartYear: n(MinYear), EndYear: n(MaxYear)}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -1250,6 +1250,10 @@ func TestEventSpan(t *testing.T) {
 		{"both ends open", conclusionsummaries.EventSummary{Date: bothOpen}, conclusionsummaries.TimelineSpan{}, false},
 		{"date with no year, dated start", conclusionsummaries.EventSummary{Date: noYear, StartDate: datevaluetest.YMD(1860, 0, 0)}, year(1860, 1861, false, false), true},
 		{"date wins over start", conclusionsummaries.EventSummary{Date: datevaluetest.YMD(1850, 0, 0), StartDate: datevaluetest.YMD(1860, 0, 0)}, year(1850, 1851, false, false), true},
+		{"year above the window", conclusionsummaries.EventSummary{Date: datevaluetest.YMD(1<<31-1, 0, 0)}, conclusionsummaries.TimelineSpan{}, false},
+		{"year below the window", conclusionsummaries.EventSummary{Date: datevaluetest.YMD(-1<<31, 0, 0)}, conclusionsummaries.TimelineSpan{}, false},
+		{"range from -2^31 to 2^31", conclusionsummaries.EventSummary{Date: datevaluetest.Between(-1<<31, 0, 0, 1<<31-1, 0, 0)}, conclusionsummaries.TimelineSpan{}, false},
+		{"range with one end past the window", conclusionsummaries.EventSummary{Date: datevaluetest.Between(1844, 0, 0, 10000, 0, 0)}, conclusionsummaries.TimelineSpan{}, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -997,7 +997,8 @@ type TimelineSpan struct {
 // datePlace is the one rule for where a date sits: its order key and its span
 // from one valuecompare.DateEnds call. The key is the first day of the first
 // end, or of the last end when the first is open. ok is false when v is nil,
-// has no year to place, or has both ends open.
+// has no year to place, has both ends open, or has a closed end whose year is
+// outside datevalue.MinYear…MaxYear.
 func datePlace(v *datevalue.Value) (key int, span TimelineSpan, ok bool) {
 	if v == nil {
 		return 0, TimelineSpan{}, false
@@ -1005,6 +1006,11 @@ func datePlace(v *datevalue.Value) (key int, span TimelineSpan, ok bool) {
 	first, last, ok := valuecompare.DateEnds(*v)
 	if !ok || (first.Open && last.Open) {
 		return 0, TimelineSpan{}, false
+	}
+	for _, end := range []valuecompare.DateEnd{first, last} {
+		if !end.Open && !datevalue.YearInWindow(end.Year) {
+			return 0, TimelineSpan{}, false
+		}
 	}
 	switch {
 	case first.Open:
