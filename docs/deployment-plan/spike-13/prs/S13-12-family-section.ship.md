@@ -157,4 +157,4 @@ Reviewers: MNT, UX, SEC+PRF (each had a Fix-now major). Not sent: CON (minors on
 No new findings. No Fix plan 2.
 
 ## Result
-Gate PASS (head `7ca95a03`; `main` unmoved at `018e5176`) · CI <pending> · open: none · follow-ups: none · to user: UX-2 (Tab order, manual check step 4); F-9 sibling order on frame 11c (manual check step 3) · CON miss: none
+Gate PASS (head `7ca95a03`; `main` unmoved at `018e5176`) · CI green · open: none · follow-ups: none · to user: UX-2 (Tab order, manual check step 4); F-9 sibling order on frame 11c (manual check step 3) · CON miss: none
