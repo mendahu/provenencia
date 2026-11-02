@@ -27,7 +27,7 @@ struct PersonFamilyLayoutTests {
     }
 
     @Test func regularAndWideMeasures() throws {
-        let (content, l) = layout(FamilyFixtures.full)
+        let (content, l) = layout(PersonFamilyPreviewData.full)
         #expect(l.columnWidth == 485 && l.rightX == 553 && l.busX == 521)
         let margarethe = try #require(frame(l, content, "Margarethe Weber"))
         #expect(margarethe.minX == 52 && margarethe.width == 453 && margarethe.minY == 242)
@@ -51,14 +51,14 @@ struct PersonFamilyLayoutTests {
         ])
         #expect(l.captions.map(\.text) == ["Parents", "Partners and children"])
 
-        let (_, regular) = layout(FamilyFixtures.full, width: 1180, .regular)
+        let (_, regular) = layout(PersonFamilyPreviewData.full, width: 1180, .regular)
         #expect(regular.columnWidth == 556 && PersonFamilyLayout.gutter(.regular) == 48)
-        let (_, wide) = layout(FamilyFixtures.full, width: 1180, .wide)
+        let (_, wide) = layout(PersonFamilyPreviewData.full, width: 1180, .wide)
         #expect(wide.columnWidth == 532 && PersonFamilyLayout.gutter(.wide) == 96 && wide.rightX == 20 + 532 + 96)
     }
 
     @Test func parentSetRails() throws {
-        let (content, l) = layout(FamilyFixtures.conflicting)
+        let (content, l) = layout(PersonFamilyPreviewData.conflicting)
         let rail0 = try #require(verticals(l, at: 6).first)
         let rail1 = try #require(verticals(l, at: 14).first)
         let wilhelm = try #require(frame(l, content, "Wilhelm Weber"))
@@ -74,22 +74,22 @@ struct PersonFamilyLayoutTests {
     }
 
     @Test func siblingsOnlyAndTheFocusAlone() throws {
-        let (content, l) = layout(FamilyFixtures.siblingsOnly)
+        let (content, l) = layout(PersonFamilyPreviewData.siblingsOnly)
         let ida = try #require(frame(l, content, "Ida Weber"))
         #expect(ida.minX == 20 && ida.minY == 26 && !verticals(l, at: 10).isEmpty)
         #expect(l.captions.map(\.text) == ["Siblings"])
-        let (annaContent, anna) = layout(FamilyFixtures.annaOnly)
+        let (annaContent, anna) = layout(PersonFamilyPreviewData.annaOnly)
         let focus = try #require(frame(anna, annaContent, "Anna Weber"))
         #expect(focus.origin == CGPoint(x: 20, y: 26))
         #expect(anna.captions.map(\.text) == ["Partner and children"])
     }
 
     @Test func fiftySiblingsStack() {
-        let kids = (0..<49).map { FamilyFixtures.member("kid\($0)", "Kid \($0)") }
+        let kids = (0..<49).map { PersonFamilyPreviewData.member("kid\($0)", "Kid \($0)") }
         let family = CatalogPersonFamily(
-            units: [FamilyFixtures.unit(.parents, partners: [FamilyFixtures.member("a", "A"), FamilyFixtures.member("b", "B")], children: kids)],
-            person: FamilyFixtures.johann,
-            originSiblings: kids.map { FamilyFixtures.origin($0, [0]) } + [FamilyFixtures.origin(FamilyFixtures.johannMember, [0])]
+            units: [PersonFamilyPreviewData.unit(.parents, partners: [PersonFamilyPreviewData.member("a", "A"), PersonFamilyPreviewData.member("b", "B")], children: kids)],
+            person: PersonFamilyPreviewData.johann,
+            originSiblings: kids.map { PersonFamilyPreviewData.origin($0, [0]) } + [PersonFamilyPreviewData.origin(PersonFamilyPreviewData.johannMember, [0])]
         )
         let (content, l) = layout(family)
         let ids = content.parentSets.flatMap { $0 }.map(\.id) + content.siblings.map(\.tile.id)

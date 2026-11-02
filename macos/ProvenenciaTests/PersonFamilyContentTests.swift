@@ -10,7 +10,7 @@ struct PersonFamilyContentTests {
     private func names(_ tiles: [PersonFamilyContent.Tile]) -> [String] { tiles.map(\.content.title.text) }
 
     @Test func columnsFromFamily() {
-        let full = content(FamilyFixtures.full)
+        let full = content(PersonFamilyPreviewData.full)
         #expect(full.parentSets.map(names) == [["Heinrich Weber", "Anna Weber"]])
         #expect(full.siblings.map(\.tile.content.title.text) == ["Margarethe Weber", "Johann Weber", "Friedrich Weber", "Wilhelm Weber"])
         #expect(full.siblings.map(\.sets) == [[0], [0], [0], [0]])
@@ -24,7 +24,7 @@ struct PersonFamilyContentTests {
             + full.groups.flatMap { ($0.partner.map { [$0] } ?? []) + $0.children }.map(\.id)
         #expect(Set(ids).count == ids.count)
 
-        let conflicting = content(FamilyFixtures.conflicting)
+        let conflicting = content(PersonFamilyPreviewData.conflicting)
         #expect(conflicting.parentSets.map(names) == [["Heinrich Weber", "Anna Weber"], ["Heinrich Weber", "Katharina Weber"]])
         #expect(conflicting.siblings.map(\.tile.content.title.text)
             == ["Johann Weber", "Friedrich Weber", "Christian Weber", "Margarethe Weber", "Wilhelm Weber"])
@@ -32,17 +32,17 @@ struct PersonFamilyContentTests {
         let conflictingIDs = conflicting.parentSets.flatMap { $0 }.map(\.id) + conflicting.siblings.map(\.tile.id)
         #expect(Set(conflictingIDs).count == conflictingIDs.count)
 
-        let only = content(FamilyFixtures.siblingsOnly)
+        let only = content(PersonFamilyPreviewData.siblingsOnly)
         #expect(only.parentSets.isEmpty && only.siblingsCaption && only.groups.isEmpty)
         #expect(only.siblings.map(\.tile.content.title.text) == ["Ida Weber", "Clara Weber", "Bernhard Weber"])
 
-        let anna = content(FamilyFixtures.annaOnly)
+        let anna = content(PersonFamilyPreviewData.annaOnly)
         #expect(anna.siblings.count == 1 && anna.siblings[0].tile.content.isFocus && !anna.siblingsCaption)
         #expect(anna.groups.count == 1 && anna.groups[0].children.count == 4)
     }
 
     @Test func aCoParentIsAPartnerAndNoPersonMeansNoFocus() {
-        var family = FamilyFixtures.full
+        var family = PersonFamilyPreviewData.full
         family.units[1].partners[0].link = nil
         #expect(content(family).groups[0].partner?.content.title.text == "Maria Schulz")
         family.person = nil
@@ -51,44 +51,44 @@ struct PersonFamilyContentTests {
     }
 
     @Test func tilesOpenTheRelativeOnFamily() throws {
-        let anna = try #require(content(FamilyFixtures.full).parentSets[0].last)
-        let summary = FamilyFixtures.summary("anna", "Anna Weber")
+        let anna = try #require(content(PersonFamilyPreviewData.full).parentSets[0].last)
+        let summary = PersonFamilyPreviewData.summary("anna", "Anna Weber")
         #expect(anna.location == PersonsList.location(summary, orders: NameFormatOrders()).withPageSection(.family))
         #expect(anna.location?.pageSection == .family)
         #expect(anna.content.role == "Parent")
     }
 
     @Test func captionsAndGroupLabels() {
-        let full = content(FamilyFixtures.full)
+        let full = content(PersonFamilyPreviewData.full)
         #expect(full.parentCaptions == ["Parents"] && full.rightCaption == "Partners and children")
         #expect(full.siblingsLabel == "This person and siblings")
         #expect(full.groups.map(\.label) == ["Partner Maria Schulz and children", "Partner Sophie Brandt and children", "Children"])
-        #expect(content(FamilyFixtures.conflicting).parentCaptions == ["Parents", "Other parents"])
-        #expect(content(FamilyFixtures.annaOnly).rightCaption == "Partner and children")
-        #expect(content(FamilyFixtures.annaOnly).siblingsLabel == "This person")
+        #expect(content(PersonFamilyPreviewData.conflicting).parentCaptions == ["Parents", "Other parents"])
+        #expect(content(PersonFamilyPreviewData.annaOnly).rightCaption == "Partner and children")
+        #expect(content(PersonFamilyPreviewData.annaOnly).siblingsLabel == "This person")
 
         let one = CatalogPersonFamily(
-            units: [FamilyFixtures.unit(.parents, partners: [FamilyFixtures.member("dorothea", "Dorothea Weber")],
-                                        children: [FamilyFixtures.member("heinrich", "Heinrich Weber")])],
-            person: FamilyFixtures.johann,
-            originSiblings: [FamilyFixtures.origin(FamilyFixtures.member("heinrich", "Heinrich Weber"), [0]),
-                             FamilyFixtures.origin(FamilyFixtures.johannMember, [0])]
+            units: [PersonFamilyPreviewData.unit(.parents, partners: [PersonFamilyPreviewData.member("dorothea", "Dorothea Weber")],
+                                        children: [PersonFamilyPreviewData.member("heinrich", "Heinrich Weber")])],
+            person: PersonFamilyPreviewData.johann,
+            originSiblings: [PersonFamilyPreviewData.origin(PersonFamilyPreviewData.member("heinrich", "Heinrich Weber"), [0]),
+                             PersonFamilyPreviewData.origin(PersonFamilyPreviewData.johannMember, [0])]
         )
         #expect(content(one).parentCaptions == ["Parent"])
 
-        var partnerAlone = FamilyFixtures.annaOnly
+        var partnerAlone = PersonFamilyPreviewData.annaOnly
         partnerAlone.units[0].children = []
         let alone = content(partnerAlone)
         #expect(alone.rightCaption == "Partner" && alone.groups[0].label == "Partner Heinrich Weber")
 
         let childrenOnly = CatalogPersonFamily(
-            units: [FamilyFixtures.unit(.oneParent, children: [FamilyFixtures.member("kid", "Kid Weber")])],
-            person: FamilyFixtures.johann,
-            originSiblings: [FamilyFixtures.origin(FamilyFixtures.johannMember, [])]
+            units: [PersonFamilyPreviewData.unit(.oneParent, children: [PersonFamilyPreviewData.member("kid", "Kid Weber")])],
+            person: PersonFamilyPreviewData.johann,
+            originSiblings: [PersonFamilyPreviewData.origin(PersonFamilyPreviewData.johannMember, [])]
         )
         #expect(content(childrenOnly).rightCaption == "Children")
 
-        var twoPartners = FamilyFixtures.full
+        var twoPartners = PersonFamilyPreviewData.full
         twoPartners.units = [twoPartners.units[1], twoPartners.units[2]]
         twoPartners.units[0].children = []
         twoPartners.units[1].children = []
@@ -96,11 +96,11 @@ struct PersonFamilyContentTests {
     }
 
     @Test func fiftyMembersKeepOrder() {
-        let kids = (0..<50).map { FamilyFixtures.member("kid\($0)", "Kid \($0)") }
+        let kids = (0..<50).map { PersonFamilyPreviewData.member("kid\($0)", "Kid \($0)") }
         let family = CatalogPersonFamily(
-            units: [FamilyFixtures.unit(.partner, partners: [FamilyFixtures.member("sam", "Sam Weber")], children: kids)],
-            person: FamilyFixtures.johann,
-            originSiblings: [FamilyFixtures.origin(FamilyFixtures.johannMember, [])]
+            units: [PersonFamilyPreviewData.unit(.partner, partners: [PersonFamilyPreviewData.member("sam", "Sam Weber")], children: kids)],
+            person: PersonFamilyPreviewData.johann,
+            originSiblings: [PersonFamilyPreviewData.origin(PersonFamilyPreviewData.johannMember, [])]
         )
         let tiles = content(family).groups[0].children
         #expect(tiles.count == 50 && names(tiles) == (0..<50).map { "Kid \($0)" })
@@ -109,11 +109,11 @@ struct PersonFamilyContentTests {
 
     @Test func emptyFamilyIsEmpty() {
         let empty = CatalogPersonFamily(
-            units: [], person: FamilyFixtures.johann,
-            originSiblings: [FamilyFixtures.origin(FamilyFixtures.johannMember, [])]
+            units: [], person: PersonFamilyPreviewData.johann,
+            originSiblings: [PersonFamilyPreviewData.origin(PersonFamilyPreviewData.johannMember, [])]
         )
         #expect(content(empty).isEmpty)
         #expect(content(CatalogPersonFamily(units: [])).isEmpty)
-        #expect(!content(FamilyFixtures.full).isEmpty)
+        #expect(!content(PersonFamilyPreviewData.full).isEmpty)
     }
 }
