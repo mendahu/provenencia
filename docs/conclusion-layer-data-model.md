@@ -537,7 +537,7 @@ Merge:
 
 Typical trigger: the researcher decides two handles are one historical thing (two working fathers turn out to be one man), not a new Identity Claim. A claim only adds a subject to one handle. If that subject already belongs to the other handle, accepting it requires releasing the previous accepted claim first; the empty handle can then be merged or left as a stub.
 
-Old ids and human refs should continue resolving to the surviving entity. Merge remains explicit and auditable. Identity Claims and Reconciliation Claims on the absorbed entity are re-pointed onto the survivor by application rules (§2.3). A subject that already has a row for the survivor updates that row; an accepted claim wins over a provisional or rejected one.
+Old ids and human refs should continue resolving to the surviving entity. Merge remains explicit and auditable. Identity Claims and Reconciliation Claims on the absorbed entity are re-pointed onto the survivor by application rules (§2.3). The merge write declares no extra effects for the in-memory graph: `effects.Resolve` names the merged handle (`canonical_entities`) and the survivor (re-pointed `identity_claims.entity_id`), and the graph drops the merged handle's links from its loaded neighbors itself. A subject that already has a row for the survivor updates that row; an accepted claim wins over a provisional or rejected one.
 
 ---
 

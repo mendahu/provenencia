@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-19 — A merge leaves no stale link in the graph cache
+
+**Landed 2026-11-01** in [#681](https://github.com/mendahu/provenencia/pull/681).  `graphcache.OnCommit` reloads the loaded neighbors of every committed merged handle (`mergedNeighbors`, one batched link lookup before the single reload) and adds them to the roots whose displays and memos drop, so no loaded node keeps a link a fresh load drops and `PROVENENCIA_GRAPH_VERIFY=1` passes `promotealign` `TestMemoFollowsCommit/a_handle_merged`. `graphcache.VerifyMode()` is the one reader of that variable (`commit.go`, the `canonlinks` skip, `TestLargeSourceBudgets`), and the budget test logs its timings without failing them in verify mode. `TestCommitOfAMergedHandle` holds the rule. Version 0.2.8. Audit L-16 (verify-mode half).
+
 ## S14-14 — Copy and VoiceOver on graph work
 
 **Landed 2026-11-01** in [#675](https://github.com/mendahu/provenencia/pull/675). Return cancels a danger confirm (`PVConfirmTone.returnConfirms`), and a dirty graph form or Artifact card asks "Discard changes?" before a Kept-linked link or another card takes it, through one `PVDiscardGate` the sheet chrome (`pvSheetClose`), the Artifact cards and the composer share. Toasts, error callouts and error lines (`announces: true`) speak to VoiceOver through `pvAnnounce`, section titles are headings, and `PVField` gives its label to the `PVInput`, `PVTextArea` or `PVSelect` inside it. `WorkspaceLocationLabels` names the open Evidence graph in the crumbs, the Back / Forward rows and the canvas's VoiceOver label. Four counts and the 18 delete-impact kind nouns are plural keys, five strings name the Evidence graph, and `check-localizable-xcstrings.py` fails on an uninflected `%lld <word>`. A failed Citation load names the Citation under the picker, a file macOS fails to open says so (`ObjectRefusal.notOpened`), and the Source type editor returns focus to the Type pencil. Version 0.2.6.
