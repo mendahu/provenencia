@@ -12484,16 +12484,15 @@ func (x *ListPersonEventsRequest) GetEntityId() string {
 	return ""
 }
 
-// ListPersonEventsResponse is every canonical event the person took part in
-// directly, in any role: dated first, earliest first, then by ref, the order
-// of ListEventSummaries. Canonical events and participants only.
-// ListPersonEventsResponse is a person's timeline: the events in date order,
-// and where the lifeline's birth and death markers go. Each marker is always
-// sent. An event_id names the recorded event (the header's birth or death)
-// when it is one of the rows; empty is a placeholder. beside_event_id is set
-// whenever the marker has no span of its own: the dated event it sits beside
-// (a birth beside the first dated event that may follow birth, a death beside
-// the last that may precede death); no date is invented.
+// ListPersonEventsResponse is a person's timeline: every canonical event the
+// person took part in directly, in any role, in date order (dated first,
+// earliest first, then by ref, the order of ListEventSummaries), and where the
+// lifeline's birth and death markers go. Canonical events and participants
+// only. Each marker is always sent. An event_id names the recorded event (the
+// header's birth or death) when it is one of the rows; empty is a placeholder.
+// beside_event_id is set whenever the marker has no span of its own: the dated
+// event it sits beside (a birth beside the first dated event that may follow
+// birth, a death beside the last that may precede death); no date is invented.
 type ListPersonEventsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Events        []*PersonEvent         `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
