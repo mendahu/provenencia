@@ -1,6 +1,6 @@
 # S14-18 — Name folds never crash
 
-**Status:** Planned
+**Status:** Landed in #677 (2026-11-01)
 **Spike / slice:** Spike 14 · Slice 5 — Audit fixes
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the reconciler's Go fold only; every view draws as before)
@@ -12,6 +12,7 @@
 **Skills to load:** [`add-match-rule`](../../../../.agents/skills/add-match-rule/SKILL.md) (the reconciler section and the `CacheVersion` rule)
 **Rules that bind:** `.cursor/rules/match-rules.mdc`, `.cursor/rules/go-tests.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** [audit 2 B-1](../app-health-audit-2.md#b-1--the-reconciler-panics-on-folds-that-do-not-chain); [`docs/conclusion-reconciliation.md`](../../../conclusion-reconciliation.md) §5 step 3 and §7.2 Fold; working rules: "A nickname folds into its set's formal name, as today", "Proposals are liberal; the researcher decides", "Audit items keep their IDs"
+**Landed:** The product version bump is 0.2.6 to 0.2.7, because `VERSION` already held 0.2.6 at the base. The manual check in the app was not run by the agent; the chain, rebuild and invariants tests stand in for it.
 **Planned:** 2026-11-01 against `main` @ `be51621f` (start from a clean checkout)
 **Review:** [`S14-18-name-folds-never-crash.review.md`](S14-18-name-folds-never-crash.review.md) — Fits with changes — Ready with changes, 1 round
 
