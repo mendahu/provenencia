@@ -205,9 +205,8 @@ struct SourcePageArtifactsView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PVFocusRingButtonStyle(cornerRadius: 0))
             .focused($focusedPreviewID, equals: art.id)
-            .pvFocusRing(focusedPreviewID == art.id, cornerRadius: 0)
             .help(Text(art.hasFile ? L10n.Sources.artifactOpenFileTip : L10n.Sources.artifactAddFileTip))
             .accessibilityLabel(previewLabel(art))
             .accessibilityIdentifier(
