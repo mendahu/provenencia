@@ -46,3 +46,17 @@ Maintainability: **Fits with changes**. Every round-1 answer holds except M-10.
 | M-13 | blocker | (M-10 reopened) The Sources badge keeps `publishSources` beside the `counts` recount, and `add-workspace-place` teaches both | **Fixed.** D-18 deletes the Sources publish path (`publishSources`, `SourcesModel.syncCatalogCounts`, the `.onSettled` hook, their tests); STEP-6 and STEP-10 rewrite the skill's "Sidebar badges" line and checklist item. The vocabulary `publish*` writers go on S14-17's scope entry (map change, reported to the user) |
 
 Below the round-2 bar, not raised: `promote.Result` and `promote.Written` are the same pair (D-17's `fileSubject` returns it as a tuple); `refreshGeneration` is another hand-rolled generation counter.
+
+Executability: **Ready with changes**. Every round-1 answer holds.
+
+| ID | Severity | Finding | Answer |
+| --- | --- | --- | --- |
+| X-10 | blocker (environment) | No `protoc` or Xcode in the reviewer's Linux sandbox | **Declined.** Not a plan defect: the stop line covers it, and `implement-pr` runs on a Mac with both. Logged |
+| X-11 | major | T-12 passes without the guard if the fake reads counts after its sleep | **Fixed.** D-10: the fake snapshots inside `withState`, then sleeps, then returns the snapshot; T-12 says it fails without the guard |
+| X-12 | major | Which checks stay in the fake's Apply and which the seed makes `preconditionFailure` | **Fixed.** D-15 names `seedPromotionLocked`'s signature, Apply's kept guards, and the seed's three `preconditionFailure`s |
+| X-13 | minor | Test syntax, the T-12 Source add, `EvidenceGraphStoreTests.deleteSource`, the source-types read | **Fixed.** T-8, T-13 use `CatalogWriteEffects(…)`; T-12 adds the Source through `createSource`; STEP-7 names the `rg` and `EvidenceGraphStoreTests`; D-16 names the `queryHandle` read |
+| X-14 | minor | Pin-test helper shape; a request with no response | **Fixed.** D-8: `missingEffects(in:pending:)`; a missing response is a failure |
+| X-15 | minor | "STEP-10 drops it from the map" is already done | **Fixed.** "Already on `main`" says the map already says so |
+| — | note | `identityClaimProto` loses its last callers | **Fixed.** D-6 and Deletes name it |
+
+No open blocker after round 2. Verdict: **Planned**.
