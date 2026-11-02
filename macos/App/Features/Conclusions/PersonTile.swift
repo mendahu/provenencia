@@ -31,10 +31,8 @@ struct PersonTileContent: Equatable {
         colors = PersonGenderTreatment.read(summary)?.thumbnailColors
         self.role = role
         self.isFocus = isFocus
-        let join = L10n.DesignSystem.spokenJoin
-        let life = lines.map(\.accessibilityLabel).reduce(nil) { (joined: String?, next: String) in
-            joined.map { join($0, next) } ?? next
-        }
+        let join: (String, String) -> String = L10n.DesignSystem.spokenJoin
+        let life = L10n.DesignSystem.spokenJoin(lines.map(\.accessibilityLabel))
         let named = life.map { join(title.spokenText, $0) } ?? title.spokenText
         if isFocus {
             spokenLabel = join(named, L10n.string(L10n.Conclusions.familyThisPersonSpoken))
