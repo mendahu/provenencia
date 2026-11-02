@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -191,5 +192,29 @@ func TestMatchTextDropsAlternateTheFoldedColumnCovers(t *testing.T) {
 	title, secondary := matchText(handleHead{id: "p", kind: vocabkey.Place}, []byte("p"), handleValues{}, summaries)
 	if title != "Søby" || len(secondary) != 0 {
 		t.Fatalf("title %q secondary %q", title, secondary)
+	}
+}
+
+func TestMatchTextCarriesFoldedInNicknames(t *testing.T) {
+	for _, tt := range []struct {
+		form string
+		v    handleValues
+		want []string
+	}{
+		{"Thomas Smith", handleValues{vocabkey.PropertyName: {"Thomas Smith", "Tomas Smyth"}},
+			[]string{"name:\tTomas Smyth", "alias:\tthom", "alias:\tthos", "alias:\ttom", "alias:\ttommy"}},
+		{"Tom Smith", handleValues{}, []string{"alias:\ttommy"}},
+		{"Hannah Smith", handleValues{}, []string{"alias:\tanna", "alias:\tnan", "alias:\tnanny"}},
+		{"Smith", handleValues{}, nil},
+	} {
+		t.Run(tt.form, func(t *testing.T) {
+			person := conclusionsummaries.PersonSummary{Name: namevaluetest.Western(tt.form)}
+			person.Entity.ID = []byte("p")
+			summaries := conclusionsummaries.NewSummaries([]conclusionsummaries.PersonSummary{person}, nil, nil)
+			_, secondary := matchText(handleHead{id: "p", kind: vocabkey.Person}, []byte("p"), tt.v, summaries)
+			if !reflect.DeepEqual(secondary, tt.want) {
+				t.Fatalf("secondary %q, want %q", secondary, tt.want)
+			}
+		})
 	}
 }

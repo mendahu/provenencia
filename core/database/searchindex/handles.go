@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/eventtitle"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -219,14 +220,19 @@ func matchText(h handleHead, id []byte, v handleValues, summaries conclusionsumm
 	var secondary, alts, names, parents []string
 	switch h.kind {
 	case vocabkey.Person:
+		var folds []string
 		if p, ok := summaries.Person(id); ok {
 			if p.Name != nil {
 				title = strings.TrimSpace(p.Name.Form)
+				folds = valuecompare.NameFoldsInto(valuecompare.Value{Type: propertymeta.ValueTypeName, Name: p.Name}, productRules)
 			}
 			secondary = append(secondary, personLifeMatch(p)...)
 		}
 		alts = distinctAlternates(title, v[vocabkey.PropertyName])
 		secondary = append(secondary, tagged(alts, SecondaryTagName)...)
+		// The names that fold into the shown name: the reconciler hid them
+		// behind it, so search restores them (not read back as a match line).
+		secondary = append(secondary, tagged(folds, SecondaryTagAlias)...)
 	case vocabkey.Event:
 		if e, ok := summaries.Event(id); ok {
 			title = eventMatchTitle(e)

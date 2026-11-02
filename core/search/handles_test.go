@@ -587,3 +587,29 @@ func TestFoldedSpellingsFindPlaces(t *testing.T) {
 		}
 	})
 }
+
+func TestNicknameFindsTheFormalName(t *testing.T) {
+	t.Run("a folded nickname finds the person", func(t *testing.T) {
+		f := newHandleFixture(t)
+		thomas := f.promote(f.person("Tom Smith", "Thomas Smith"), nil)
+		hits := f.search("Tom", KindPerson)
+		if len(hits) != 1 || hits[0].Ref != thomas.Entity.Ref || hits[0].Title != "Thomas Smith" ||
+			hits[0].MatchReason != "other" || hits[0].MatchSnippet != "" {
+			t.Fatalf("got %+v", hits)
+		}
+	})
+	t.Run("a nickname no record spells finds the person", func(t *testing.T) {
+		f := newHandleFixture(t)
+		thomas := f.promote(f.person("Thomas Smith"), nil)
+		if hits := f.search("Tommy", KindPerson); len(hits) != 1 || hits[0].Ref != thomas.Entity.Ref {
+			t.Fatalf("got %+v", hits)
+		}
+	})
+	t.Run("a name that does not fold into it finds nothing", func(t *testing.T) {
+		f := newHandleFixture(t)
+		f.promote(f.person("William Smith"), nil)
+		if hits := f.search("Robert", KindPerson); len(hits) != 0 {
+			t.Fatalf("got %+v", hits)
+		}
+	})
+}
