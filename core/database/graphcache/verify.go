@@ -3,9 +3,15 @@ package graphcache
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"slices"
 	"sort"
 )
+
+// VerifyMode reports whether PROVENENCIA_GRAPH_VERIFY=1, which rebuilds and checks the cache after every commit.
+func VerifyMode() bool {
+	return os.Getenv("PROVENENCIA_GRAPH_VERIFY") == "1"
+}
 
 // TruthRow is one value a fresh reconcile would write for an entity.
 type TruthRow struct {
