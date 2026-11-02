@@ -3,7 +3,6 @@ package canonlinks
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"reflect"
 	"slices"
 	"sort"
@@ -490,7 +489,7 @@ func TestForFollowsCommits(t *testing.T) {
 	})
 	t.Run("an event deleted alone", func(t *testing.T) {
 		// It commits a handle set that leaves the cache out of step with the catalog on purpose, to exercise the neighbor drop for a writer that omits an event's associations; verify mode would flag that inconsistency, not the drop.
-		if os.Getenv("PROVENENCIA_GRAPH_VERIFY") == "1" {
+		if graphcache.VerifyMode() {
 			t.Skip("commits a deliberately inconsistent handle set")
 		}
 		w := newWorld(t)
