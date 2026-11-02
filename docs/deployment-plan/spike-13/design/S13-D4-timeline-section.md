@@ -16,8 +16,8 @@
 **View:** Person detail, Timeline section
 **Implements later as:** PR **S13-13** (the Timeline section).
 **Board:** drawn 2026-11-02 — Claude Design project [*Person Detail*](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail - Timeline.dc.html*, turn 12 "S13-D4 · Timeline — the event list and the lifeline (update 2026-11-02)", frames 12a – 12y. Answers: rows divided by the kit rule, a 72pt picture, the title in the display face at heading size as a link button, the date in mono at body size (TL-1, TL-2); role Badges, Subject in the outline Badge (TL-4); a vertical lifeline in an 80pt column, stretched to the list's height, ticks every 1 – 50 years at least 34pt apart with quarter ticks when a year is tall, dots for days, bars for spans, open ends for bef./aft., curves from the rows in view, clickable points (TL-5); end caps for birth and death, a dashed "?" and a muted row 40pt from the neighbour for a placeholder (TL-5a); undated just before the death marker with the hint "No date, so no place on the line" (TL-3); participants as **compact 52pt cards** (40pt likeness, one-line name, life years; full lines in the tooltip and VoiceOver) at a 232pt grid minimum, the user's call, so the tile gains a compact size (TL-6; user, 2026-11-02); participants ordered by role then name, in Go (S13-33; user, 2026-11-02); at Wide the section fills the pane and the line keeps its column, no secondary column (TL-W1; user, 2026-11-02: full width). The S13-13 plan describes every frame in words.
-**Depends on:** S13-33 (each event's place on the line and the birth and death markers; the data TL-5 and TL-5a draw); the agreed S13-D1 board (the frame, the header, the switcher; [archived brief](archive/S13-D1-person-page-frame.md)); the agreed S13-D3 board (the person tile and the Family section's states; [archived brief](archive/S13-D3-family-section.md), built by S13-12 [#676](https://github.com/mendahu/provenencia/pull/676)); the agreed S14-D4 board (the Events list row's thumbnail; [archived brief](../../spike-14/design/archive/S14-D4-events-list-thumbnail.md)); S13-05's timeline read (landed [#680](https://github.com/mendahu/provenencia/pull/680), the data this board draws); S13-32 (the tile as a kit shell with person content at the call site; no visible change, so the board draws the tile as S13-D3 did).
-**Related:** [`../person-detail.md`](../person-detail.md) R-2, R-3, R-23 – R-28; [`../deployment-plan.md`](../deployment-plan.md) working rules "Timeline is direct participation, any role", "One person tile, built once", "Colors reuse `PersonGenderTreatment`", "A timeline tile opens the participant on Timeline", "Timeline lists fold"; [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide); plan [`../prs/S13-13-timeline-section.md`](../prs/S13-13-timeline-section.md).
+**Depends on:** S13-33 (each event's place on the line and the birth and death markers; the data TL-5 and TL-5a draw); the agreed S13-D1 board (the frame, the header, the switcher; [archived brief](archive/S13-D1-person-page-frame.md)); the agreed S13-D3 board (the person tile and the Family section's states; [archived brief](archive/S13-D3-family-section.md), built by S13-12 [#676](https://github.com/mendahu/provenencia/pull/676)); the agreed S14-D4 board (the Events list row's thumbnail; [archived brief](../../spike-14/design/archive/S14-D4-events-list-thumbnail.md)); S13-05's timeline read (landed [#680](https://github.com/mendahu/provenencia/pull/680), the data this board draws). (S13-32, the tile as a kit shell, was descoped on 2026-11-02: the compact card is the tile's second size, S13-13.)
+**Related:** [`../person-detail.md`](../person-detail.md) R-2, R-3, R-23 – R-28; [`../deployment-plan.md`](../deployment-plan.md) working rules "Timeline is direct participation, any role", "One person tile, two sizes, in the feature", "Colors reuse `PersonGenderTreatment`", "A timeline tile opens the participant on Timeline", "Timeline lists fold"; [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide); plan [`../prs/S13-13-timeline-section.md`](../prs/S13-13-timeline-section.md).
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
 **Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
 
@@ -130,7 +130,7 @@ A researcher opens a Person's Timeline section and reads the person's life from 
 - The provenance control on an event, a role or a tile (R-13b).
 - Events the person is linked to only through a relative (a child's birth with no Father named) or through a place.
 - A filter by role or event type, or a search box.
-- A second person tile design.
+- A second person tile type (the compact card is the tile's second size).
 
 ---
 
@@ -138,7 +138,7 @@ A researcher opens a Person's Timeline section and reads the person's life from 
 
 | | |
 | --- | --- |
-| Ships in **S13-13** | TL-1 … TL-13 and TL-W1 … TL-W3: the Timeline section on the Person page, the lifeline with its birth and death markers, the event row with its picture slot, roles and participants, the undated events between birth and death, the folds, the empty, loading, error and refreshing states, keyboard and VoiceOver, light and dark, at Regular and Wide. The tile itself is unchanged: S13-32 first splits it into a content-agnostic kit shell and the person content Family and the Timeline build (user, 2026-11-02), with no visible change. |
+| Ships in **S13-13** | TL-1 … TL-13 and TL-W1 … TL-W3: the Timeline section on the Person page, the lifeline with its birth and death markers, the event row with its picture slot, roles and participants, the undated events between birth and death, the folds, the empty, loading, error and refreshing states, keyboard and VoiceOver, light and dark, at Regular and Wide. The participants are the person tile's compact size, which S13-13 adds (board turn 12; user, 2026-11-02); Family keeps the regular size. |
 | Later boards | None planned. Event and Place pages adopting sections (R-1) would reuse this row later. |
 | Stays out | Any change to the header, switcher or other sections; the tile's size or content; the Event and Place pages. |
 
@@ -154,7 +154,7 @@ A researcher opens a Person's Timeline section and reads the person's life from 
 | TL-4 | **The person's role (R-25).** The person's role on each row, plain to see without reading the participants: for example a Badge or a muted line ("as Witness"). Two roles read as a list. Decide how a "Subject" role reads on the person's own birth and death ("Subject" as worded, or a softer form); the role is always present (R-25). |
 | TL-5 | **The lifeline (R-24a).** Draw the line to scale beside the list, with year ticks or decade labels so a place on it reads as a year. Each dated event points to its place: a point for a day, a short bar for a span, an open end for BEF or AFT. The rows stay a readable list (their heights vary with their participants), so a row cannot sit exactly at its date: draw how a row points to its place (a connector from the row to the line, a dot on the line that highlights its row on hover or focus, or another way) and say why. Several events close together on the line still each point to their own place. Pick the line's orientation (a vertical rail beside the list is the natural fit for a scrolling page) and how its scale fits the space (the whole life in the section's height, or a fixed number of points per year that scrolls with the list); say why, with a 90-year life and a 30-year one. Kit lines and tokens only. |
 | TL-5a | **Birth and death markers.** The recorded birth and death as markers at their dates, ends of the line. A placeholder: a question mark and "Birth unknown" or "Death unknown", a short fixed distance from its neighbouring event, joined by a dashed stretch that is not to scale. Draw: both recorded; birth unknown (first record an 1835 census); death unknown with a recorded funeral (the placeholder before the funeral); both unknown; a person with no dated events (both placeholders and only undated events between them). |
-| TL-6 | **Participants (R-27).** The other promoted participants under the event, each as the S13-D3 tile (not redrawn), laid out in a wrapping grid that fills the row's width at the tile's Family size. Each participant's role is **seen** as a caption above the tile (the Family captions' micro caps); the tile itself does not change (its height, content and slots are Family's). Decide the caption's spacing, and the grid's columns at Regular and Wide. An event with no other participant shows no participant area. Participants keep the engine's order unless the board asks for another (§ 2). |
+| TL-6 | **Participants (R-27).** The other promoted participants under the event, each as the S13-D3 person tile at its **compact** size (board turn 12: 52pt, a 40pt likeness, the name on one line, the life span in years; the full lines in the tooltip and VoiceOver), laid out in a wrapping grid at a 232pt minimum. Each participant's role is **seen** as a caption above the card (the Family captions' micro caps). Decide the caption's spacing, and the grid's columns at Regular and Wide. An event with no other participant shows no participant area. Participants keep the engine's order unless the board asks for another (§ 2). |
 | TL-7 | **Folding (user, 2026-11-02).** An event with more than 15 participants shows the first 15 and a "Show N more" row; the event list shows the first 50 events and a "Show N more" row, and the Undated group the same. Use the Family section's "Show N more" row (a ghost Button) unchanged. |
 | TL-8 | **Opening.** A click on an event's title opens its Event page. A click on a participant's tile opens that person's Person page on **Timeline**. Draw the toolbar for one frame: after clicking Anna Weber's tile on Johann's birth, the breadcrumbs read *Persons › Weber, Anna › Timeline* (a Person crumb uses the sorted title, as Family's does) and the Back menu lists *Johann Weber · Timeline*. |
 | TL-9 | **Long and sparse rows.** A long title wraps to two lines, then truncates, with the full title in the tooltip and VoiceOver. A long place truncates at its tail. A row with no date, or no place, or neither, leaves the part out; a row whose title is a ref shows it in mono. |
@@ -162,16 +162,16 @@ A researcher opens a Person's Timeline section and reads the person's life from 
 | TL-11 | **Loading, error, refreshing.** First load: a small spinner where the list goes (the header and switcher already show). Failure: a danger Callout in the section titled "Timeline could not be read", with the error message. Refreshing: the list stays drawn; "Refreshing" at the end of the switcher row (S13-D1 PPF-8), as on Family. |
 | TL-12 | **Keyboard and VoiceOver.** Tab moves through each event's title, then its participants' tiles, then any "Show N more" row, in reading order; Return or Space opens the focused item. VoiceOver reads each event as a group named by its title and role, for example "Birth of Johann Weber, 12 Mar 1817, Bremen, as Subject", with its title as a link and its tiles as buttons ("Mother, Anna Weber, born 3 May 1790, Bremen, died 1851, button"). The Undated caption is read as a heading. The birth and death markers are read in their place in the list ("Born 12 Mar 1817, Bremen", "Death unknown"); the line, ticks and connectors are decoration and are not read. |
 | TL-13 | **Dark mode.** Frames 1, 5, 6b and 9 in dark mode: the lifeline, markers and placeholders, rows, pictures and the Event mark, role marks, tiles and every gender tint. |
-| TL-W1 | **The list at Wide: explore a secondary column (user, 2026-11-02).** The lifeline stays beside the list at both widths, at its Regular measure. Draw two Wide options and recommend one. (A) **Primary-only**, as Vitals and Family: the rows keep their Regular measure and the participant grids add tiles per row (rule 3). (B) **A secondary column** of supporting content beside the list in Page columns' secondary column: for example a jump list of decades (or years) with event counts that scrolls the list to that period, or a short summary of the life (first and last dated event, how many events, how many undated). Rule 4 binds B: whatever sits in the secondary column at Wide is stacked above or below the list, or behind a disclosure, at Regular; draw that Regular placement too. Say which option ages better as the list grows to 120 events. |
-| TL-W2 | **Tiles keep their size.** At both widths the participant tile is the Family tile's size; Wide adds tiles per row, it does not stretch them. |
+| TL-W1 | **The list at Wide (board turn 12; user, 2026-11-02).** The section fills the pane between the page gutters; the lifeline keeps its 80pt column; titles and date lines keep their Regular measure; the card grids add cards per row. No secondary column (the board drew one and dropped it). The header and switcher keep their Regular measure. |
+| TL-W2 | **Cards keep their size.** At both widths the compact card keeps its 232pt minimum and 52pt height; Wide adds cards per row, it does not stretch them. |
 | TL-W3 | **Crossing 1600 keeps the place (rule 5).** Resizing across the line keeps the section, the scroll position, the focused item and any unfolded list. A note on the Wide frame. |
 
 ### 4.1 Wide layout
 
 | View | Regular (pane below 1600) | Wide (pane 1600 and up) | What moves where |
 | --- | --- | --- | --- |
-| Timeline section | The lifeline and the event list in the primary column; participant tiles wrap within each row | (A) the same list, more tiles per row, centered primary-only; or (B) the list in the primary column and supporting content in the secondary column (TL-W1) | (A) nothing; (B) the secondary column's content sits stacked or behind a disclosure at Regular |
-| Person tile | The Family tile's size | Same size | Nothing (rule 3: cards keep their size) |
+| Timeline section | The lifeline and the event list in the primary column; cards wrap within each row | The section fills the pane; the line keeps its column; titles keep their measure; more cards per row (TL-W1) | Nothing moves; the primary widens (Page columns' opt-in full-width mode) |
+| Person card (compact) | 232pt minimum, 52pt tall | Same size | Nothing (rule 3: cards keep their size) |
 | No events, loading, error | EmptyState, spinner or Callout in the primary column | Centered primary-only | Nothing |
 
 ---
@@ -193,8 +193,8 @@ Sample life for frames 1 – 4: **Johann Weber** (the person, as on the Family b
 | 7 | Marriage of Friedrich Weber and Clara Lenz | 1850 · Bremen | Witness | Friedrich Weber (Subject), Clara Lenz (Subject) |
 | 8 | Death of Maria Schulz | 1859 · Hamburg | Witness, Informant | Maria Schulz (Subject) |
 | 9 | Marriage of Johann Weber and Sophie Brandt | 1861 · Hamburg | Subject | Sophie Brandt (Subject) |
-| 10 | Death of Johann Weber | 1880 · Hamburg | Subject | Otto Weber (Informant) |
-| 11 | Burial of Johann Weber | bef. 1880 · Ohlsdorf, Hamburg | Subject | — |
+| 10 | Death of Johann Weber | 18 Sep 1880 · Hamburg | Subject | Otto Weber (Informant) |
+| 11 | Burial of Johann Weber | 22 Sep 1880 · Ohlsdorf, Hamburg (the board's dates, matching his header and putting the burial past death) | Subject | — |
 | 12 | Residence at Altona (undated) | — · Altona | Subject | — |
 | 13 | Migration (undated, no place) | — | Subject | Sophie Brandt (Subject) |
 
@@ -214,7 +214,7 @@ Not on the list: Luise's birth (1848), whose record names no father (R-23).
 10. **Keyboard.** Frame 1 with focus on Anna Weber's tile under event 1; the VoiceOver reading of event 1 and of the tile as a note (TL-12).
 11. **Dark mode.** Frames 1, 3 and 8 in dark (TL-13).
 12. **Wide, option A.** Frame 1 at Wide, the lifeline at its Regular measure, primary-only (TL-W1, TL-W2), with the rule-5 note (TL-W3).
-13. **Wide, option B.** Frame 1 at Wide with the secondary column (TL-W1), and its Regular placement beside it.
+13. **Wide, option B.** Dropped by the board (turn 12): the line does the job a secondary column would.
 14. **Wide large.** Frame 4 at Wide in the recommended option.
 15. **Wide dark.** The recommended Wide frame in dark.
 
@@ -230,19 +230,18 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Timeline section | Snowflake | **New** | `Features/Conclusions/PersonTimelineSection.swift` *(new)* | The lifeline beside the event list, the markers, the undated events, the folds. Only the Person page uses it. Not a chart, not `GraphCanvas`. |
 | Event row | Snowflake | **New** (inside the Timeline section) | `PersonTimelineSection.swift` | TL-1. A `PVCard` per event, or rows on one surface divided by the kit's rule; the board picks one. Not a new card style. |
 | Event picture | Component | Ship | `CachedThumbnail` over `PVThumbnail`, fallback mark `subjectEvent` | TL-2. The Events list row's thumbnail and mark (S14-D4); no new placeholder artwork. |
-| Event title | Snowflake | Ship | `ConclusionListRow.title(_:lineLimit: 2)` with `EventTitleDisplay`, as a link-styled button with the kit focus ring | TL-1, TL-9, TL-12. Name / italic label / mono ref, as every Events row. Return activates it through the kit's Return modifier (S13-32). |
+| Event title | Snowflake | Ship | `ConclusionListRow.title(_:lineLimit: 2)` with `EventTitleDisplay`, as a link-styled button with the kit focus ring | TL-1, TL-9, TL-12. Name / italic label / mono ref, as every Events row. Return activates it through the kit's Return modifier; the focus ring through the feature's focus-ring button style (S13-13). |
 | Date and place line | Snowflake | Ship | `EventSecondaryLine` and `EventSecondaryDisplay` (`Features/Conclusions/EventsListView.swift`) | TL-1, TL-9. The Events row's date (mono) · place (italic) · "+N" Badge, unchanged. |
 | The person's role | Component | Ship | `PVBadge` (neutral, subtle) or muted caption text | TL-4. Worded from the role term the read gives, as the Evidence graph names roles. |
 | Lifeline | Snowflake | **New** (inside the Timeline section) | `PersonTimelineLifeline.swift` *(new)* | TL-5, TL-5a. The line, ticks, event points, connectors and markers, drawn with `Path` in kit line and text tokens (`--border-strong` as the Family lines, micro caps for years). Not `GraphCanvas`, no new token. |
 | Birth / death placeholder | Component | Ship | `PVBadge` (neutral) or muted text with a `questionmark` glyph | TL-5a. Not new artwork. |
-| Person tile | Component (shell) + feature content | Ship | the tile shell S13-32 adds to the design system; the person content builder in `Features/Conclusions` | TL-6. The S13-D3 tile, unchanged, as Family draws it (S13-32 splits it, no visible change). Its role is spoken; a visible role is the caption above it. |
+| Person tile, compact size | Snowflake (feature) | Extend | `Features/Conclusions/PersonTile.swift` `PersonTile.Size.compact` | TL-6. One tile, two sizes (working rule "One person tile, two sizes, in the feature"): the compact size is 52pt with a 40pt likeness, a one-line name and the life span in years. Its role is spoken; a visible role is the caption above it. |
 | Participant role caption | Component | Ship | micro caps text (`pvMicroCaps`), as the Family captions | TL-6. |
 | Participant grid | Component | Ship | an adaptive `LazyVGrid` at the tile's minimum width, as the Gallery's likeness grid | TL-6, TL-W2. Tiles keep their minimum and wrap; Wide adds columns. |
 | "Show N more" row | Snowflake | Ship | Family's "Show N more" row (`PersonFamilySection.swift`, a ghost `PVButton`) | TL-7. The same row and wording; the plan shares it rather than copying it. |
 | Undated caption | Component | Ship | micro caps text, or `PVSectionHeader` | TL-3. Read as a heading. |
 | No events | Component | Ship | `PVEmptyState` | TL-10. The Timeline glyph `calendar`, as S13-D1's empty place. |
 | Loading, error, refreshing | Component | Ship | `ProgressView` small, `PVCallout` danger; the switcher row's refresh indicator | TL-11. As Family. |
-| Secondary column content | Snowflake | **New**, only if TL-W1 picks B | `PersonTimelineSection.swift` | TL-W1. Composed from kit text, `PVButton` (ghost) or `PVChip` for jump targets; not a new navigation component. |
 | Breadcrumbs, Back menu | Component | Ship | `PVBreadcrumbs`, the toolbar jump menu | TL-8. Unchanged; they already name the section. |
 
 ### Explicit non-goals
@@ -251,7 +250,7 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | --- | --- |
 | Zoom, pan, a draggable canvas or a horizontal swimlane | § 2.1: the app draws the line at its own scale. |
 | Gap labels, estimated years for unknown ends, or warning marks on events outside the life | User, 2026-11-02 (§ 2.1). |
-| A second person tile, or a new tile size | Working rule "One person tile, built once"; TL-W2. |
+| A second person tile type | Working rule "One person tile, two sizes, in the feature": the compact card is the tile's second size, not a new tile. |
 | Placeholder artwork for an event with no picture | The Event mark is the fallback (S14-D4). |
 | Age at each event | Not computed this spike (§ 2.1). |
 | Add, link, unlink or reorder controls, or a context menu | This spike is view only. |

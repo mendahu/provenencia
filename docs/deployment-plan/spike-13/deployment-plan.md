@@ -165,7 +165,7 @@ Each brief is written just before the PR it gates, its board agreed, and that PR
 | [S13-D12](design/archive/S13-D12-life-rows-why.md) | Person page: the Why on the four life rows | **S13-06** | Added 2026-10-30 (user: the life rows show their records now); board agreed 2026-10-30, option (a): a group line per owner. Interim: S13-D2 replaces the Why on the Person page |
 | [S13-D2](design/archive/S13-D2-provenance-sheet.md) | Provenance sheet | **S13-11** | Board agreed 2026-10-31 in the [Claude Design project](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), turn 6. Reusable beyond Person (R-13); leaves room for Reconciliation Claims (R-10); keeps S13-D12's group line per owner for records from several events or Places |
 | [S13-D3](design/S13-D3-family-section.md) | Family section | **S13-12** | Draws the shared person tile; two marriages and conflicting parents. Board agreed 2026-11-01 in the [Claude Design project](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), turn 11: two columns, origin and formed |
-| [S13-D4](design/S13-D4-timeline-section.md) | Timeline section | **S13-13** | Reuses S13-D3's tile; the event's lead picture, else the Event mark (R-26, updated 2026-11-02); Undated group; folds; explores a Wide secondary column (user, 2026-11-02). Board drawn 2026-11-02 in the [Claude Design project](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), turn 12: compact participant cards, a vertical lifeline, full width at Wide |
+| [S13-D4](design/S13-D4-timeline-section.md) | Timeline section | **S13-13** | The person tile at a compact size; the event's lead picture, else the Event mark (R-26, updated 2026-11-02); undated events before the death marker; folds; full width at Wide, no secondary column (user, 2026-11-02). Board drawn 2026-11-02 in the [Claude Design project](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), turn 12: compact participant cards, a vertical lifeline, full width at Wide |
 | S13-D5 | Gallery section and likeness viewer | **S13-14**, **S13-15** | Viewer options: expand, slideshow (R-30) |
 | S13-D6 | Sources section | **S13-16**, **S13-17** | Source groups, claim cards, Remove and the last-claim warning |
 | S13-D7 | Claim review sheet | — | **Descoped (2026-10-29)** with S13-18 |
@@ -395,7 +395,7 @@ Go, plus deleting Swift's draft rule.
 
 **Ships.** The Family section from S13-D3: person tiles, lines, several families, each tile opening its person on Family; `persondetail.PersonFamily` orders each unit's children by birth, undated last (user, 2026-11-01).
 **Check.** Bar 3.
-**Context.** R-16 – R-22; working rules "One person tile, built once", "Colors reuse `PersonGenderTreatment`".
+**Context.** R-16 – R-22; working rules "One person tile, two sizes, in the feature", "Colors reuse `PersonGenderTreatment`".
 
 ### Slice 4 — Timeline
 
@@ -419,7 +419,7 @@ Go, plus deleting Swift's draft rule.
 
 #### S13-13 — Timeline section
 
-**Ships.** The Timeline section from S13-D4: the lifeline to scale with birth and death markers from S13-33 (placeholders when unrecorded), each dated event pointing to its place, undated events between birth and death; events in order, roles, the event's lead picture (else the Event mark), participants as the S13-12 tile (now a recipe) opening on Timeline, Undated group, folds at 50 events and 15 participants (working rules "A timeline tile opens the participant on Timeline", "Timeline lists fold", "The Timeline shows each event's picture").
+**Ships.** The Timeline section from S13-D4: the lifeline to scale with birth and death markers from S13-33 (placeholders when unrecorded), each dated event pointing to its place, undated events between birth and death; events in order, roles, the event's lead picture (else the Event mark), participants as the S13-12 tile at its compact size, ordered by role then name, opening on Timeline, undated events just before the death marker, folds at 50 events and 15 participants (working rules "A timeline tile opens the participant on Timeline", "Timeline lists fold", "The Timeline shows each event's picture").
 **Check.** Bar 4.
 **Context.** R-23 – R-28.
 
