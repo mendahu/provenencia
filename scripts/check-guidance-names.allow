@@ -1,5 +1,8 @@
 # Names a skill or Cursor rule mentions on purpose although no code defines them.
 # One name per line; say why after a #. scripts/check-guidance-names.py reads it.
+# Every entry excuses a guide's mention of a name no code defines; the entries
+# under the last heading (Kit check) also excuse design-system code that names
+# a feature type.
 
 # Anti-patterns a guide tells agents not to write or bring back
 sqlInUse                # private in-use probe; use deleteimpact
@@ -35,4 +38,6 @@ NavigationPath          # SwiftUI
 StringProtocol          # Swift standard library
 accessibilityRepresentation  # SwiftUI modifier
 sync_with_base_branch   # a CI tool name ship-pr cites
+
+# Kit check: feature types design-system code may name
 WorkspaceLocation       # PVDeleteImpact navigates to a delete's referrers; logged as structural debt (S13-34)

@@ -89,6 +89,20 @@ def allowed():
     return names
 
 
+def kit_allowed():
+    """Names under the allow file's `# Kit check:` heading, the only ones the kit check excuses."""
+    names, in_kit = set(), False
+    path = os.path.join(ROOT, "scripts", "check-guidance-names.allow")
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            if line.startswith("# Kit check:"):
+                in_kit = True
+            name = line.split("#", 1)[0].strip()
+            if in_kit and name:
+                names.add(name)
+    return names
+
+
 def looks_like_code(name):
     if len(name) < 6 or name.startswith("_") or APPLE.match(name):
         return False
@@ -144,7 +158,7 @@ def kit_names_feature_types():
     app = os.path.join(ROOT, "macos", "App")
     features = _declared(os.path.join(app, "Features"))
     features -= _declared(KIT) | _declared(os.path.join(app, "Platform")) | SWIFTUI_NAMES
-    features -= allowed()
+    features -= kit_allowed()
     problems = []
     for path in _swift_files(KIT):
         with open(path, encoding="utf-8", errors="ignore") as fh:
