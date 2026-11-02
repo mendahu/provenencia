@@ -1,5 +1,16 @@
 # S13-D4 — Person page: the Timeline section
 
+> **Update 2026-11-02: the lifeline.** If you already started this board from the first version of this brief, **extend your frames**; do not start a second Timeline. For this revision:
+> - **Add a lifeline (TL-5, replaces "period markers").** A line drawn **to scale** over the life, beside the event list: equal stretches of line are equal stretches of time, so silences in the record are long empty stretches. Gaps are drawn, never labelled. Each dated event points to its place: a point for a day, a short bar for a range, month or year, an open end for "bef." or "aft.". Rows stay a readable list (their heights vary), so draw how a row points to its place, and pick the line's orientation and how its scale fits a 90-year and a 3-year life. Year ticks or decade labels. No zoom, pan or swimlane.
+> - **Birth and death always have a marker (new TL-5a).** A recorded birth or death sits at its date at the line's ends. When unrecorded, a placeholder with a question mark, "Birth unknown" or "Death unknown", with **no estimated year**: the birth placeholder just before the earliest dated event; the death placeholder just after the latest event that cannot come after death (burial and funeral can), so a recorded funeral with no death puts the placeholder **before** the funeral. A placeholder sits a short fixed distance from its neighbour, joined by a dashed stretch that is not to scale.
+> - **Every event sits at its own date**, a burial after death included: the line runs on to it. No warning marks.
+> - **Undated events move (TL-3).** They sit together under "Undated" **between the birth and death markers**, not at the end of the list. Decide where between them, and how the reader sees they have no place on the line.
+> - **Folds:** the line still shows a point for every dated event, folded or not.
+> - **The person tile is unchanged and the role sits only in a caption above it (TL-6)**; drop any "role on the tile" option. Participants lay out in an adaptive grid at the tile's minimum width (Wide adds columns).
+> - **The event title** is a link-styled button with the kit focus ring.
+> - **Crumbs (TL-8)** read *Persons › Weber, Anna › Timeline* (sorted title).
+> - **New frames:** 6b *Unknown ends* (Johann without his birth and death: "Birth unknown" before the baptism, "Death unknown" after the 1861 marriage and before the burial); 6c *Short life* (a child born 1845, died 1848, three events). Frame 1 now shows the line from 1817 to 1880 with the 1861 – 1880 stretch empty and the burial past death; frame 6 shows both placeholders around two undated events; dark mode adds frame 6b.
+
 **Kind:** Claude Design board (**enhancement** of the agreed S13-D1 Person page frame: it fills the Timeline section, which S13-D1 drew as an empty place, and places the S13-D3 person tile in a second view)
 **Spike:** Provenencia Spike 13 (Person detail page)
 **View:** Person detail, Timeline section
