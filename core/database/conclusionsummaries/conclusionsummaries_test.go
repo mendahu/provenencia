@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -1216,5 +1217,50 @@ func TestSortByBirth(t *testing.T) {
 				t.Fatalf("got %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestHasEventDate(t *testing.T) {
+	noYear := &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian"}
+	cases := []struct {
+		name string
+		in   conclusionsummaries.EventSummary
+		want bool
+	}{
+		{"date", conclusionsummaries.EventSummary{Date: pointYear(1850)}, true},
+		{"start date only", conclusionsummaries.EventSummary{StartDate: pointYear(1860)}, true},
+		{"end date only", conclusionsummaries.EventSummary{EndDate: pointYear(1870)}, false},
+		{"no date", conclusionsummaries.EventSummary{}, false},
+		{"date with no sort key", conclusionsummaries.EventSummary{Date: noYear}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := conclusionsummaries.HasEventDate(tc.in); got != tc.want {
+				t.Fatalf("HasEventDate = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestTermLabeler(t *testing.T) {
+	c := graphcachetest.OpenCatalog(t)
+	label, err := conclusionsummaries.TermLabeler(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var id []byte
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow(`SELECT id FROM property_terms WHERE key = 'witness' AND origin = 'provenencia'`).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	got, ok := label(id, "witness")
+	if !ok || got.Key != "witness" || got.Label != "Witness" || got.Origin != vocabkey.OriginProvenencia || !bytes.Equal(got.ID, id) {
+		t.Fatalf("label(witness) = %+v, %v", got, ok)
+	}
+	if _, ok := label(bytes.Repeat([]byte{0x7e}, 16), "witness"); ok {
+		t.Fatal("an unknown id was labelled")
 	}
 }
