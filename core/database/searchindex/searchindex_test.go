@@ -138,3 +138,43 @@ func TestMatchTextListsEachAlternateOnce(t *testing.T) {
 		})
 	}
 }
+
+func TestFoldedSpelling(t *testing.T) {
+	for _, tt := range []struct {
+		raw  string
+		want string
+		ok   bool
+	}{
+		{"Søby", "soby", true},
+		{"Montréal", "", false},
+		{"Straße", "strasse", true},
+		{"O'Brien", "obrien", true},
+		{"D’Arcy", "darcy", true},
+		{"1,200", "", false},
+		{"scan.pdf", "", false},
+		{"St.", "", false},
+		{"soby", "", false},
+	} {
+		got, ok := FoldedSpelling(tt.raw)
+		if got != tt.want || ok != tt.ok {
+			t.Errorf("FoldedSpelling(%q) = (%q, %v), want (%q, %v)", tt.raw, got, ok, tt.want, tt.ok)
+		}
+	}
+}
+
+func TestFoldedWords(t *testing.T) {
+	for _, tt := range []struct {
+		texts []string
+		want  string
+	}{
+		{[]string{"Ærøskøbing Havn"}, "aeroskobing"},
+		{[]string{"Straße Straße"}, "strasse"},
+		{[]string{"St. Søby"}, "soby"},
+		{[]string{"Łask", "Søby", "Łask"}, "lask soby"},
+		{[]string{""}, ""},
+	} {
+		if got := foldedWords(tt.texts...); got != tt.want {
+			t.Errorf("foldedWords(%q) = %q, want %q", tt.texts, got, tt.want)
+		}
+	}
+}

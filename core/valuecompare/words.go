@@ -102,7 +102,7 @@ func prefixesOf(fold string, r Rules) []string {
 // reconciler share.
 func SplitWords(s string, w WordRules) []string {
 	isParticle := func(token string) bool { return slices.Contains(w.Particles, token) }
-	raw := rawTokens(s)
+	raw := RawTokens(s)
 	var out []string
 	for i := 0; i < len(raw); i++ {
 		if i+1 < len(raw) && spacedParticle(raw[i], isParticle) {
@@ -119,10 +119,10 @@ func SplitWords(s string, w WordRules) []string {
 	return out
 }
 
-// rawTokens splits on whitespace and on the dash and slash breaks
+// RawTokens splits on whitespace and on the dash and slash breaks
 // NormalizeForm uses, and keeps other punctuation so a period initial
 // can be told from a particle.
-func rawTokens(s string) []string {
+func RawTokens(s string) []string {
 	var b strings.Builder
 	var out []string
 	flush := func() {
