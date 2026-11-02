@@ -45,9 +45,8 @@ func SortByBirth[T any](rows []T, summary func(T) PersonSummary) {
 // order places it by (a date, else a start date, whichever has a place). ok is
 // false when h is undated, so "dated" and "has a span" are one fact.
 func EventSpan(h EventSummary) (TimelineSpan, bool) {
-	d, _ := eventDating(h.Date, h.StartDate)
-	_, span, ok := datePlace(d)
-	return span, ok
+	d := eventDating(h.Date, h.StartDate)
+	return d.span, d.key.ok
 }
 
 // sortByDateKey orders rows by their date key: dated first, earliest first,
