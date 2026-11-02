@@ -188,15 +188,24 @@ func (k *Canon) Date(entity []byte, propKey string, v datevalue.Value) {
 
 // Link adds an association of a bridge subject type. ends maps each endpoint
 // property key (person, event, related_to) to the entity it joins; the term is
-// the association's disambiguating term (role, relationship_type).
+// the association's disambiguating term (role, relationship_type); with no
+// termProp the association has no term.
 func (k *Canon) Link(kind string, ends map[string][]byte, termProp, termKey string) []byte {
 	k.t.Helper()
 	id := k.Entity(kind)
 	for prop, end := range ends {
 		k.observe(id, prop, "value_subject_id", end)
 	}
-	k.Term(id, termProp, termKey)
+	if termProp != "" {
+		k.Term(id, termProp, termKey)
+	}
 	return id
+}
+
+// Location files the event as held at the place and returns the location's id.
+func (k *Canon) Location(event, place []byte) []byte {
+	k.t.Helper()
+	return k.Link("location", map[string][]byte{"event": event, "place": place}, "", "")
 }
 
 // Person adds a canonical Person and returns its id.
