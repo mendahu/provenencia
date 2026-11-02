@@ -56,7 +56,7 @@ enum TextMatch {
         return String(out)
     }
 
-    /// Go's word breaks (`rawTokens`); unlike Go `SplitWords`, particles do not rejoin.
+    /// Go's word breaks (`RawTokens`); unlike Go `SplitWords`, particles do not rejoin.
     static func words(_ text: String, at level: Level = .equivalent, locale: Locale = .autoupdatingCurrent) -> [String] {
         var pieces: [String.UnicodeScalarView] = []
         var current = String.UnicodeScalarView()
