@@ -36,3 +36,13 @@ Maintainability: **Fits with changes**. Executability: **Not ready**.
 | X-9 | minor | Delay queue empty; `applySource` callers | **Fixed.** Empty means no delay (D-10); `SourceArtifactsSection` dropped from STEP-7, the two callers named in D-12 |
 
 Round 1 had blockers, so round 2 runs.
+
+## Round 2 (2026-11-02)
+
+Maintainability: **Fits with changes**. Every round-1 answer holds except M-10.
+
+| ID | Severity | Finding | Answer |
+| --- | --- | --- | --- |
+| M-13 | blocker | (M-10 reopened) The Sources badge keeps `publishSources` beside the `counts` recount, and `add-workspace-place` teaches both | **Fixed.** D-18 deletes the Sources publish path (`publishSources`, `SourcesModel.syncCatalogCounts`, the `.onSettled` hook, their tests); STEP-6 and STEP-10 rewrite the skill's "Sidebar badges" line and checklist item. The vocabulary `publish*` writers go on S14-17's scope entry (map change, reported to the user) |
+
+Below the round-2 bar, not raised: `promote.Result` and `promote.Written` are the same pair (D-17's `fileSubject` returns it as a tuple); `refreshGeneration` is another hand-rolled generation counter.
