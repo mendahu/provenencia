@@ -57,3 +57,7 @@ One short paragraph per landed PR, newest first. Written by the PR that lands it
 ## S14-15 — Xcode synchronized folders
 
 **Landed 2026-11-01** in [#668](https://github.com/mendahu/provenencia/pull/668). `App/App`, `App/Platform`, `App/Features`, `App/DesignSystem` and `ProvenenciaTests` are Xcode synchronized folders (`objectVersion = 77`, Xcode 16 or later): a Swift file saved there is built with no `project.pbxproj` edit, and the 425 hand-written Swift entries are gone (audit A-34). `App/Resources` stays a classic group so `Fonts/` keeps its bundle subfolder; membership exceptions keep the three `.md` files out of the app, and `check-guidance-names.py` fails on a non-Swift file that is not an exception or a new folder under `macos/App` the project does not build. The compiled files and bundled resources are identical to before.
+
+## S14-18 — Name folds never crash
+
+**Landed 2026-11-01** in [#677](https://github.com/mendahu/provenencia/pull/677). The reconciler resolves each name value through the fold graph to the best supported, then best ranked, value that folds into nothing, so a person recorded as B., Bill and William (or Ann, Anna and Hannah) files, reopens and shows the formal name instead of writing to a nil map (audit 2 B-1). A fold cycle with no way out keeps each value. Which pairs fold is unchanged; `CacheVersion` is 22, so every catalog rebuilds once on open.

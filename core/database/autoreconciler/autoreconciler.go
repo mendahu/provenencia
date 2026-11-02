@@ -78,7 +78,8 @@ import (
 //	19: Des is a nickname of Desiree and of Desirae (S11-44).
 //	20: a given name that is the start of another folds into it, like an initial (S11-45).
 //	21: a claim's confidence grade no longer weakens or orders its values (S13-24).
-const CacheVersion = 21
+//	22: a fold follows chains to the formal value it reaches; a fold cycle keeps each value (S14-18).
+const CacheVersion = 22
 
 // ValueRules are the value compare rules reconciling reads: the shipped
 // registry and the product alias seed, never a catalog's own alias rows or name

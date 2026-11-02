@@ -593,15 +593,11 @@ func TestReconciledNames(t *testing.T) {
 		if len(names) != 1 || names[0].Support != 2 || names[0].Rank != 1 {
 			t.Fatalf("names %+v", names)
 		}
-		n, err := valuecodec.UnmarshalName(names[0].Name)
-		must(t, err)
-		var parts []string
-		for _, p := range n.Parts {
-			parts = append(parts, p.Type+"="+p.Value)
-		}
-		if got := strings.Join(parts, "|"); got != "given=James|surname=Robins|suffix=Jr." {
+		if got := nameSpec(t, names[0].Name); got != "given=James|surname=Robins|suffix=Jr." {
 			t.Fatalf("parts %s", got)
 		}
+		n, err := valuecodec.UnmarshalName(names[0].Name)
+		must(t, err)
 		if n.Form != "James Robins Jr." || *names[0].SortKey != "james robins jr" {
 			t.Fatalf("form %q sort %q", n.Form, *names[0].SortKey)
 		}
@@ -617,13 +613,7 @@ func TestReconciledNames(t *testing.T) {
 		if len(names) != 1 || names[0].Support != 2 {
 			t.Fatalf("names %+v", names)
 		}
-		n, err := valuecodec.UnmarshalName(names[0].Name)
-		must(t, err)
-		var parts []string
-		for _, p := range n.Parts {
-			parts = append(parts, p.Type+"="+p.Value)
-		}
-		if got := strings.Join(parts, "|"); got != "given=Christopher|surname=Robins" {
+		if got := nameSpec(t, names[0].Name); got != "given=Christopher|surname=Robins" {
 			t.Fatalf("parts %s", got)
 		}
 	})
@@ -638,6 +628,23 @@ func TestReconciledNames(t *testing.T) {
 		}
 		if age := rowsFor(all, h, f.props["age"].ID); len(age) != 1 {
 			t.Fatalf("age %+v", age)
+		}
+	})
+
+	t.Run("a chain of folds files and rebuilds", func(t *testing.T) {
+		a, b, c := f.subject("person"), f.subjectOn(f.other, "person"), f.subject("person")
+		f.cite(nameIn(a, f.props["name"], "given=Ann|surname=Robins"))
+		f.cite(nameIn(b, f.props["name"], "given=Anna|surname=Robins"))
+		f.cite(nameIn(c, f.props["name"], "given=Hannah|surname=Robins"))
+		h := f.promote(a)
+		f.join(b, h)
+		f.join(c, h)
+		names := rowsFor(f.rows(), h, f.props["name"].ID)
+		if len(names) != 1 {
+			t.Fatalf("names %+v", names)
+		}
+		if got := nameSpec(t, names[0].Name); got != "given=Hannah|surname=Robins" {
+			t.Fatalf("parts %s", got)
 		}
 	})
 
@@ -1071,7 +1078,7 @@ func TestReconciledEvidence(t *testing.T) {
 }
 
 func TestEnsureCatalogRebuildsStaleVersion(t *testing.T) {
-	for _, stale := range []int{0, 2, 3, 4, 5, 6, 7, 14, 20} {
+	for _, stale := range []int{0, 2, 3, 4, 5, 6, 7, 14, 20, 21} {
 		t.Run(fmt.Sprint("version ", stale), func(t *testing.T) {
 			f := newFixture(t)
 			p := f.subject("person")
@@ -1603,12 +1610,7 @@ func TestValueRulesFoldNicknamesOnly(t *testing.T) {
 			if len(res.Values) != 1 {
 				t.Fatalf("%d values", len(res.Values))
 			}
-			var given []string
-			for _, p := range res.Values[0].Value.Name.Parts {
-				if p.Type == "given" {
-					given = append(given, p.Value)
-				}
-			}
+			given := givenOf(res.Values[0].Value)
 			want := []string{tc.want}
 			if tc.want == "" {
 				want = []string{tc.a, tc.b}
@@ -1629,7 +1631,7 @@ func TestValueRulesFoldNicknamesOnly(t *testing.T) {
 var productAliasPin = struct {
 	CacheVersion int
 	Hash         string
-}{CacheVersion: 21, Hash: "0dee1d25e240c9acebe8007415ea16eb365565cf345d8102e4ebcf22a6771065"}
+}{CacheVersion: 22, Hash: "0dee1d25e240c9acebe8007415ea16eb365565cf345d8102e4ebcf22a6771065"}
 
 // TestProductAliasTablesPinCacheVersion: the reconciler cache reads the product
 // alias seed, so a seed edit must come with a CacheVersion bump.
@@ -1660,5 +1662,128 @@ func TestProductAliasTablesPinCacheVersion(t *testing.T) {
 	}
 	if autoreconciler.CacheVersion != productAliasPin.CacheVersion {
 		t.Fatalf("CacheVersion %d, pinned %d: write the new version beside the new hash", autoreconciler.CacheVersion, productAliasPin.CacheVersion)
+	}
+}
+
+// nameSpec renders a name's parts as "type=value|…".
+func nameSpec(t *testing.T, raw []byte) string {
+	t.Helper()
+	n, err := valuecodec.UnmarshalName(raw)
+	must(t, err)
+	var parts []string
+	for _, p := range n.Parts {
+		parts = append(parts, p.Type+"="+p.Value)
+	}
+	return strings.Join(parts, "|")
+}
+
+// givenOf lists a reconciled name's given parts in order.
+func givenOf(v autoreconcile.Value) []string {
+	var given []string
+	for _, p := range v.Name.Parts {
+		if p.Type == "given" {
+			given = append(given, p.Value)
+		}
+	}
+	return given
+}
+
+// TestValueRulesFoldChains: under the product rules a name folds through its
+// chain to the formal name it reaches, and a cycle with no way out keeps each
+// name (S14-18).
+func TestValueRulesFoldChains(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		in      []string // one given spec per candidate
+		given   []string
+		reasons []autoreconcile.Reason // per candidate, in order
+	}{
+		{"AC-1.1", []string{"B.", "Bill", "William"}, []string{"William"}, folded3},
+		{"AC-1.2", []string{"D.", "Dick", "Richard"}, []string{"Richard"}, folded3},
+		{"AC-1.3", []string{"P.", "Peggy", "Margaret"}, []string{"Margaret"}, folded3},
+		{"AC-1.4", []string{"Mo", "Molly", "Mary"}, []string{"Mary"}, folded3},
+		{"AC-1.5", []string{"Caroline", "Chick", "Charles"}, []string{"Charles"}, folded3},
+		{"AC-1.6", []string{"Ann", "Anna", "Hannah"}, []string{"Hannah"}, folded3},
+		{"AC-1.7", []string{"Dick", "Ricky", "Rick"}, []string{"Dick", "Ricky", "Rick"},
+			[]autoreconcile.Reason{autoreconcile.ReasonKept, autoreconcile.ReasonKept, autoreconcile.ReasonKept}},
+		{"AC-1.8", []string{"Joseph", "José", "Joseph|given=Jose"}, []string{"Joseph", "Jose"},
+			[]autoreconcile.Reason{autoreconcile.ReasonFolded, autoreconcile.ReasonFolded, autoreconcile.ReasonKept}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var in []autoreconcile.Candidate
+			for i, g := range tc.in {
+				in = append(in, autoreconcile.Candidate{
+					ObservationID: []byte{0, 0, 0, byte(i + 1)},
+					Value:         autoreconcile.Value{Name: nameValue("given=" + g + "|surname=Robins")},
+				})
+			}
+			res, err := autoreconcile.Reconcile(autoreconciler.ValueRules, propertymeta.ValueTypeName, in, nil, propertymeta.CardinalitySingle)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(res.Values) != 1 {
+				t.Fatalf("%d values", len(res.Values))
+			}
+			if got := givenOf(res.Values[0].Value); !slices.Equal(got, tc.given) {
+				t.Fatalf("given %v, want %v", got, tc.given)
+			}
+			if len(res.Values[0].ObservationIDs) != len(in) {
+				t.Fatalf("value holds %d candidates, want %d", len(res.Values[0].ObservationIDs), len(in))
+			}
+			for i, o := range res.Outcomes {
+				if o.Reason != tc.reasons[i] {
+					t.Fatalf("candidate %d: reason %q, want %q", i+1, o.Reason, tc.reasons[i])
+				}
+			}
+		})
+	}
+}
+
+var folded3 = []autoreconcile.Reason{autoreconcile.ReasonFolded, autoreconcile.ReasonFolded, autoreconcile.ReasonKept}
+
+// TestValueRulesNamesInvariants: random lists of nicknames, initials, prefixes
+// and accented forms never panic, put each candidate in one value, and do not
+// depend on input order (S14-18).
+func TestValueRulesNamesInvariants(t *testing.T) {
+	words := []string{"B.", "Bill", "William", "D.", "Dick", "Richard", "Rick", "Ricky", "P.", "Peggy", "Margaret",
+		"Mo", "Molly", "Mary", "Caroline", "Chick", "Charles", "Ann", "Anna", "Hannah", "Joseph", "José", "Jose",
+		"Des", "Desiree", "J.", "Jim", "James", "Jake"}
+	for _, seed := range []int64{1, 2, 3, 4} {
+		rng := rand.New(rand.NewSource(seed))
+		for list := 0; list < 500; list++ {
+			var in []autoreconcile.Candidate
+			for i, k := 0, rng.Intn(8); i < k; i++ {
+				var parts []string
+				for j, w := 0, 1+rng.Intn(3); j < w; j++ {
+					parts = append(parts, "given="+words[rng.Intn(len(words))])
+				}
+				in = append(in, autoreconcile.Candidate{
+					ObservationID: []byte{0, 0, 0, byte(i + 1)},
+					Value:         autoreconcile.Value{Name: nameValue(strings.Join(parts, "|") + "|surname=Robins")},
+				})
+			}
+			where := fmt.Sprintf("seed %d list %d", seed, list)
+			got, err := autoreconcile.Reconcile(autoreconciler.ValueRules, propertymeta.ValueTypeName, in, nil, propertymeta.CardinalitySingle)
+			if err != nil {
+				t.Fatalf("%s: %v", where, err)
+			}
+			seen := map[byte]int{}
+			for _, v := range got.Values {
+				for _, oid := range v.ObservationIDs {
+					seen[oid[3]]++
+				}
+			}
+			for _, c := range in {
+				if seen[c.ObservationID[3]] != 1 {
+					t.Fatalf("%s: candidate %d in %d values", where, c.ObservationID[3], seen[c.ObservationID[3]])
+				}
+			}
+			shuffled := slices.Clone(in)
+			rng.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
+			again, err := autoreconcile.Reconcile(autoreconciler.ValueRules, propertymeta.ValueTypeName, shuffled, nil, propertymeta.CardinalitySingle)
+			if err != nil || !reflect.DeepEqual(again, got) {
+				t.Fatalf("%s: input order changed the result (%v)", where, err)
+			}
+		}
 	}
 }
