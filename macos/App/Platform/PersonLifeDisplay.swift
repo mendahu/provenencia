@@ -37,11 +37,13 @@ enum PersonLifeDisplay {
         var accessibilityLabel: String
     }
 
-    /// `.stated` is the header: both lines always, the half "unknown", spoken in
-    /// full ("Born 3 May 1790, Bremen"). `.omitted` is a tile: only lines with a
-    /// date or a place, the half left out, spoken mid-sentence in lowercase
-    /// ("born 3 May 1790, Bremen"; "died 1851").
     /// The *b.* and *d.* lines of a Person.
+    ///
+    /// `missing` is how a half that is not recorded reads. `.stated` is the
+    /// header: both lines always, the half "unknown", spoken in full ("Born 3
+    /// May 1790, Bremen"). `.omitted` is a tile: only lines with a date or a
+    /// place, the half left out, spoken mid-sentence in lowercase ("born 3 May
+    /// 1790, Bremen"; "died 1851").
     static func lifeLines(
         _ summary: CatalogPersonSummary?,
         locale: Locale = .autoupdatingCurrent,
