@@ -95,20 +95,17 @@ final class SourcesModel {
     private let userID: String
     private let store: any GenealogyStore
     private let session: WorkspaceSession
-    private let catalogCounts: CatalogCounts?
     private let settingsStore: SourcesListSettingsStore?
 
     init(
         session: WorkspaceSession,
         userID: String,
         store: any GenealogyStore,
-        catalogCounts: CatalogCounts? = nil,
         settingsStore: SourcesListSettingsStore? = nil
     ) {
         self.session = session
         self.userID = userID
         self.store = store
-        self.catalogCounts = catalogCounts
         self.settingsStore = settingsStore
         self.settings = settingsStore?.load() ?? SourcesListSettings()
     }

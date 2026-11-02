@@ -47,7 +47,6 @@ struct SourcesModelTests {
         store: FakeStore = FakeStore(),
         sources: [CatalogSource] = [],
         types: [CatalogSourceType] = [],
-        catalogCounts: CatalogCounts? = nil,
         settingsStore: SourcesListSettingsStore? = nil
     ) -> (SourcesModel, WorkspaceSession) {
         store.sourcesByProject[projectDir] = sources
@@ -66,7 +65,6 @@ struct SourcesModelTests {
             session: session,
             userID: userID,
             store: store,
-            catalogCounts: catalogCounts,
             settingsStore: settingsStore
         )
         return (model, session)

@@ -29,8 +29,7 @@ struct WorkspaceDestinationHost: View {
                 session: session,
                 userID: userID,
                 projectUuid: navigation.projectUuid,
-                store: store,
-                catalogCounts: catalogCounts
+                store: store
             )
         case .sourcePage:
             if let sourceID = navigation.currentLocation.sourceId {
