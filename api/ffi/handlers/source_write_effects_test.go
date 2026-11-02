@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/database"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -23,8 +24,8 @@ func filedSubject(t *testing.T, observed bool) (dir, userID, sourceID, subjectID
 			t.Fatal(err)
 		}
 	}
-	promoted := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: subjectID})
-	return dir, userID, sourceID, subjectID, promoted.GetEntity().GetId()
+	promoted := promoteInDir(t, dir, userID, subjectID, "")
+	return dir, userID, sourceID, subjectID, database.UUIDString(promoted.Entity.ID)
 }
 
 // TestSourceWritesReturnEffects: a Source-page or graph write tells the app

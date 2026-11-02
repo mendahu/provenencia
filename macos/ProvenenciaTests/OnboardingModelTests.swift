@@ -575,14 +575,6 @@ private struct ThrowingStore: GenealogyStore {
         label _: String,
         description _: String
     ) async throws -> (CatalogSubject, CatalogWriteEffects) { throw StoreBoom.boom }
-    func promoteSubject(
-        projectDir _: String,
-        userID _: String,
-        subjectID _: String,
-        entityID _: String?
-    ) async throws -> CatalogPromoteResult {
-        throw StoreBoom.boom
-    }
     func proposePromoteGraphAlignment(
         projectDir _: String,
         graphID _: String,

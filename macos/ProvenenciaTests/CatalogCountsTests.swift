@@ -55,8 +55,8 @@ struct CatalogCountsTests {
             CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
             CatalogSubject(id: "sub-2", ref: "CPR-2", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
         ]
-        _ = try await store.promoteSubject(projectDir: projectDir, userID: "u", subjectID: "sub-1")
-        _ = try await store.promoteSubject(projectDir: projectDir, userID: "u", subjectID: "sub-2")
+        _ = store.seedPromotion(projectDir: projectDir, subjectID: "sub-1")
+        _ = store.seedPromotion(projectDir: projectDir, subjectID: "sub-2")
         let counts = makeCounts(store: store)
         await counts.refreshAll()
         #expect(counts.persons == 2)

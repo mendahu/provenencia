@@ -66,11 +66,10 @@ func TestListPersonClaims(t *testing.T) {
 		&engine.ObservationDraft{SubjectId: adaID, PropertyId: personPropID, ValueSubjectId: cyID})
 	cite(burials, likenessDraft(beaID, likenessID, likenessRegion2JSON, writeCrop(t, 300, 200, 64)))
 
-	var ada engine.PromoteSubjectResponse
-	mustRPC(t, PromoteSubject, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: adaID}, &ada)
-	mustRPC(t, PromoteSubject, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: beaID, EntityId: ada.Entity.GetId()}, &engine.PromoteSubjectResponse{})
+	ada := promoteInDir(t, dir, userID, adaID, "")
+	promoteInDir(t, dir, userID, beaID, database.UUIDString(ada.Entity.ID))
 
-	req := &engine.ListPersonClaimsRequest{ProjectDir: dir, EntityId: ada.Entity.GetId()}
+	req := &engine.ListPersonClaimsRequest{ProjectDir: dir, EntityId: database.UUIDString(ada.Entity.ID)}
 	var got engine.ListPersonClaimsResponse
 	mustRPC(t, ListPersonClaims, req, &got)
 	if len(got.Groups) != 1 {

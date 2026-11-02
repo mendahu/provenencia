@@ -1694,7 +1694,6 @@ struct EvidenceGraphModelTests {
         #expect(location?.ref == "CPR-2AB91")
         #expect(location?.title == "James Robins")
         #expect(location.flatMap(PromoteEntry.init(location:))?.kind == .person)
-        #expect(!store.recordedCalls.contains { $0.hasPrefix("promoteSubject") })
     }
 
     /// Promote all opens the same place with every subject expanded, including
@@ -1923,7 +1922,7 @@ struct EvidenceGraphModelTests {
 
     @Test func unpromoteWithNoBridgesHasEmptyDetail() async throws {
         let (store, model) = await promotableModel()
-        _ = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "s-james")
+        _ = store.seedPromotion(projectDir: projectDir, subjectID: "s-james")
         model.session.apply(.promotedSubject(graphId: graphID))
         let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         let loaded = await waitUntil(timeout: .seconds(5)) {
@@ -1998,7 +1997,7 @@ struct EvidenceGraphModelTests {
 
     /// Files s-james the way the Promote place does: write, then invalidate.
     private func promoteJames(_ store: FakeStore, _ model: EvidenceGraphModel) async throws {
-        _ = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "s-james")
+        _ = store.seedPromotion(projectDir: projectDir, subjectID: "s-james")
         model.session.apply(.promotedSubject(graphId: graphID))
     }
 
@@ -2056,14 +2055,8 @@ struct EvidenceGraphModelTests {
         await model.prepare()
         #expect(model.openHandle(subjectID: "s-fire") == nil)
 
-        _ = try await store.promoteSubject(
-            projectDir: projectDir, userID: "user-1", subjectID: "s-fire",
-            entityID: nil
-        )
-        _ = try await store.promoteSubject(
-            projectDir: projectDir, userID: "user-1", subjectID: "s-york",
-            entityID: nil
-        )
+        store.seedPromotion(projectDir: projectDir, subjectID: "s-fire")
+        store.seedPromotion(projectDir: projectDir, subjectID: "s-york")
         model.session.apply(.promotedSubject(graphId: graphID))
         let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         let loaded = await waitUntil(timeout: .seconds(5)) {

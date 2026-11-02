@@ -900,32 +900,6 @@ struct GoStore: GenealogyStore {
         return Self.mapWriteEffects(resp.effects)
     }
 
-    func promoteSubject(
-        projectDir: String,
-        userID: String,
-        subjectID: String,
-        entityID: String?
-    ) async throws -> CatalogPromoteResult {
-        var req = Provenencia_Engine_V1_PromoteSubjectRequest()
-        req.projectDir = projectDir
-        req.userID = userID
-        req.subjectID = subjectID
-        req.entityID = entityID ?? ""
-        let resp: Provenencia_Engine_V1_PromoteSubjectResponse = try await provenenciaCall(
-            method: CoreMethod.promoteSubject,
-            request: req
-        )
-        return CatalogPromoteResult(
-            entity: Self.mapCanonicalEntity(resp.entity),
-            claim: CatalogIdentityClaim(
-                id: resp.claim.id,
-                subjectID: resp.claim.subjectID,
-                entityID: resp.claim.entityID,
-                status: resp.claim.status
-            )
-        )
-    }
-
     func proposePromoteGraphAlignment(
         projectDir: String,
         graphID: String,

@@ -584,7 +584,7 @@ struct WorkspaceSessionTests {
         await waitForQuery(handle)
         #expect(handle.value?.isEmpty == true)
 
-        let promoted = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
+        let promoted = store.seedPromotion(projectDir: projectDir, subjectID: "sub-1")
         session.apply(.promotedSubject(graphId: "g-1"))
         #expect(!handle.isFetching)
         #expect(handle.value?.isEmpty == true)
@@ -610,8 +610,8 @@ struct WorkspaceSessionTests {
             CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
             CatalogSubject(id: "sub-2", ref: "CPR-2", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
         ]
-        let first = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
-        let second = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-2")
+        let first = store.seedPromotion(projectDir: projectDir, subjectID: "sub-1")
+        let second = store.seedPromotion(projectDir: projectDir, subjectID: "sub-2")
         let session = makeSession(store: store)
         let firstKey = CatalogQueryKey.conclusionDetail(project: session.projectKey, entityId: first.entity.id)
         let secondKey = CatalogQueryKey.conclusionDetail(project: session.projectKey, entityId: second.entity.id)

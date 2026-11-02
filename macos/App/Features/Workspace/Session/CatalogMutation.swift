@@ -39,8 +39,7 @@ enum CatalogMutation: Sendable, Equatable {
     case deletedSubject
 
     /// A Subject on this Evidence graph was promoted (an Identity Claim filed it
-    /// onto a handle), so its graph card's membership changed. The S9-04 card
-    /// dispatches it after `promoteSubject` succeeds.
+    /// onto a handle), so its graph card's membership changed.
     case promotedSubject(graphId: String)
 
     case createdProperty

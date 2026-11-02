@@ -104,12 +104,12 @@ func TestProposeSendsWhereARowStarts(t *testing.T) {
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, _, typeID := subjectFixture(t)
 				_, handleSubject := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityPositive)
-				handle := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: handleSubject})
+				handle := promoteInDir(t, dir, userID, handleSubject, "")
 				var sourceID string
 				sourceID, incoming = personOnNewSource(t, dir, userID, typeID, "male", tc.polarity)
 				req := &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, GraphId: soleGraphID(t, dir, sourceID)}
 				if tc.fix {
-					req.Fixed = []*engine.PromoteGraphAlignmentFixed{{SubjectId: incoming, HandleId: handle.Entity.GetId()}}
+					req.Fixed = []*engine.PromoteGraphAlignmentFixed{{SubjectId: incoming, HandleId: database.UUIDString(handle.Entity.ID)}}
 				}
 				return req
 			},
@@ -152,10 +152,10 @@ func newFoundRecordFixture(t *testing.T) foundRecordFixture {
 	dir, userID, _, typeID := subjectFixture(t)
 	f := foundRecordFixture{dir: dir, userID: userID, typeID: typeID}
 	_, subject := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityPositive)
-	res := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: subject})
-	f.handle = res.Entity.GetId()
+	res := promoteInDir(t, dir, userID, subject, "")
+	f.handle = database.UUIDString(res.Entity.ID)
 	f.members = []string{subject}
-	f.claims = []string{res.Claim.GetId()}
+	f.claims = []string{database.UUIDString(res.Claim.ID)}
 	f.sourceID, f.incoming = namedPersonOnNewSource(t, dir, userID, typeID, "Polly Jones", "male", observations.PolarityPositive)
 	f.graphID = soleGraphID(t, dir, f.sourceID)
 	return f
@@ -232,8 +232,8 @@ func TestProposalProtoStartsAWeakRow(t *testing.T) {
 	t.Cleanup(func() { _ = catalogsession.CloseAll() })
 	dir, userID, _, typeID := subjectFixture(t)
 	_, handleSubject := personOnNewSource(t, dir, userID, typeID, "male", observations.PolarityPositive)
-	promoted := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: handleSubject})
-	h, r := promoted.Entity.GetId(), promoted.Entity.GetRef()
+	promoted := promoteInDir(t, dir, userID, handleSubject, "")
+	h, r := database.UUIDString(promoted.Entity.ID), promoted.Entity.Ref
 	hid := uuid.MustParse(h)
 	s := uuid.New()
 	row := func(reason graphalign.Reason) graphalign.Row {

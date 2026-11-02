@@ -133,4 +133,9 @@ func TestRetiredFieldsStayReserved(t *testing.T) {
 			t.Errorf("ApplyPromoteGraphAlignmentResponse field %d is not reserved", n)
 		}
 	}
+	methodDesc := engine.Method(0).Descriptor()
+	if !methodDesc.ReservedRanges().Has(85) || !methodDesc.ReservedNames().Has("METHOD_PROMOTE_SUBJECT") ||
+		methodDesc.Values().ByNumber(85) != nil {
+		t.Error("METHOD_PROMOTE_SUBJECT (85) is not reserved")
+	}
 }

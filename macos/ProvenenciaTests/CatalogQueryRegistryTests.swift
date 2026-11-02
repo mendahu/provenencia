@@ -293,7 +293,7 @@ struct CatalogQueryRegistryTests {
         for (id, x) in [("sub-1", Int64(1)), ("sub-2", Int64(4))] {
             store.subjectPositionsBySubject[id] = CatalogSubjectPosition(subjectID: id, gridX: x, gridY: 1)
         }
-        let promoted = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
+        let promoted = store.seedPromotion(projectDir: projectDir, subjectID: "sub-1")
 
         let session = makeSession(store: store)
         let handle: QueryHandle<EvidenceGraphRows> = session.query(
@@ -336,8 +336,8 @@ struct CatalogQueryRegistryTests {
             nameObservation(id: "o3", subjectID: "sub-1", form: "ROBINS, James",
                             parts: [part("ROBINS", "surname"), part("James", "given")]),
         ]
-        let james = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
-        let bare = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-2")
+        let james = store.seedPromotion(projectDir: projectDir, subjectID: "sub-1")
+        let bare = store.seedPromotion(projectDir: projectDir, subjectID: "sub-2")
 
         let session = makeSession(store: store)
         let handle: QueryHandle<[CatalogPersonSummary]> = session.query(
@@ -373,7 +373,7 @@ struct CatalogQueryRegistryTests {
             nameObservation(id: "o2", subjectID: "sub-1", form: "Jose Robins",
                             parts: [part("Jose", "given"), part("Robins", "surname")]),
         ]
-        _ = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
+        _ = store.seedPromotion(projectDir: projectDir, subjectID: "sub-1")
 
         let session = makeSession(store: store)
         let handle: QueryHandle<[CatalogPersonSummary]> = session.query(
@@ -408,7 +408,7 @@ struct CatalogQueryRegistryTests {
                             parts: [part("ROBINS", "surname"), part("James", "given")]),
             nameObservation(id: "o4", subjectID: "sub-1", form: "J. Robins", parts: []),
         ]
-        let james = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
+        let james = store.seedPromotion(projectDir: projectDir, subjectID: "sub-1")
 
         let session = makeSession(store: store)
         let handle: QueryHandle<CatalogConclusionDetail> = session.query(

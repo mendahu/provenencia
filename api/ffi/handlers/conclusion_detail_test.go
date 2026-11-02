@@ -262,8 +262,8 @@ func TestGetConclusionDetailListsPictures(t *testing.T) {
 	dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
 	saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 100))
 	saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 200))
-	promoted := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: personID})
-	out, err := GetConclusionDetail(marshalProto(t, &engine.GetConclusionDetailRequest{ProjectDir: dir, EntityId: promoted.Entity.GetId()}))
+	promoted := promoteInDir(t, dir, userID, personID, "")
+	out, err := GetConclusionDetail(marshalProto(t, &engine.GetConclusionDetailRequest{ProjectDir: dir, EntityId: database.UUIDString(promoted.Entity.ID)}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -292,8 +292,8 @@ func TestGetConclusionDetailEventPictureLead(t *testing.T) {
 	dir, userID, _, artifactID, eventID, pictureID := depictionFixture(t, "event", "event_picture")
 	saveLikeness(t, dir, userID, artifactID, eventID, pictureID, writeCrop(t, 300, 200, 100))
 	saveLikeness(t, dir, userID, artifactID, eventID, pictureID, writeCrop(t, 300, 200, 200))
-	promoted := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: eventID})
-	out, err := GetConclusionDetail(marshalProto(t, &engine.GetConclusionDetailRequest{ProjectDir: dir, EntityId: promoted.Entity.GetId()}))
+	promoted := promoteInDir(t, dir, userID, eventID, "")
+	out, err := GetConclusionDetail(marshalProto(t, &engine.GetConclusionDetailRequest{ProjectDir: dir, EntityId: database.UUIDString(promoted.Entity.ID)}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -321,7 +321,7 @@ func TestSetPreferredLikeness(t *testing.T) {
 	dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
 	saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 100))
 	b := saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 200)).GetObservations()[0].GetId()
-	entity := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: personID}).Entity.GetId()
+	entity := database.UUIDString(promoteInDir(t, dir, userID, personID, "").Entity.ID)
 	set := func(observationID string) (*engine.SetPreferredLikenessResponse, error) {
 		out, err := SetPreferredLikeness(marshalProto(t, &engine.SetPreferredLikenessRequest{
 			ProjectDir: dir, UserId: userID, EntityId: entity, ObservationId: observationID,
@@ -479,10 +479,10 @@ func TestGetConclusionDetailCarriesDerivedRows(t *testing.T) {
 			t.Fatalf("citation %d: %v", i, err)
 		}
 	}
-	person := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: personID})
-	event := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: eventID})
+	person := promoteInDir(t, dir, userID, personID, "")
+	event := promoteInDir(t, dir, userID, eventID, "")
 
-	out, err := GetConclusionDetail(marshalProto(t, &engine.GetConclusionDetailRequest{ProjectDir: dir, EntityId: person.Entity.GetId()}))
+	out, err := GetConclusionDetail(marshalProto(t, &engine.GetConclusionDetailRequest{ProjectDir: dir, EntityId: database.UUIDString(person.Entity.ID)}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -495,7 +495,7 @@ func TestGetConclusionDetailCarriesDerivedRows(t *testing.T) {
 		t.Fatalf("derived rows %+v", rows)
 	}
 	owner := rows[0].GetOwners()[0]
-	if owner.GetEntity().GetId() != event.Entity.GetId() || owner.GetEvent().GetEntity().GetId() != event.Entity.GetId() {
+	if owner.GetEntity().GetId() != database.UUIDString(event.Entity.ID) || owner.GetEvent().GetEntity().GetId() != database.UUIDString(event.Entity.ID) {
 		t.Fatalf("owner %+v", owner)
 	}
 	if owner.GetPlace() != nil {

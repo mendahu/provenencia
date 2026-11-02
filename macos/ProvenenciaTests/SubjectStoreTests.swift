@@ -106,64 +106,13 @@ struct SubjectStoreTests {
         return store
     }
 
-    @Test func promoteMintsHandleOnceThenRefuses() async throws {
-        let store = storeWithPersonType()
-        let (subject, _) = try await store.createSubject(
-            projectDir: projectDir, userID: "user-1", graphID: graphID,
-            subjectTypeID: typeID, label: "James", description: "", placement: nil
-        )
-        let result = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: subject.id)
-        #expect(result.entity.ref.hasPrefix("PER-"))
-        #expect(result.claim.status == "accepted")
-        #expect(result.claim.entityID == result.entity.id)
-        #expect(store.membershipBySubject[subject.id]?.entity == result.entity)
-        #expect(store.membershipBySubject[subject.id]?.claimID == result.claim.id)
-
-        await #expect(throws: CoreInvokeError.self) {
-            _ = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: subject.id)
-        }
-    }
-
-    @Test func promoteJoinsExistingHandle() async throws {
-        let store = storeWithPersonType()
-        store.subjectTypesByProject[projectDir]?.append(CatalogSubjectType(
-            id: "type-event", key: "event", origin: "provenencia", label: "Event",
-            description: "", refPrefix: "EVT", candidateRefPrefix: "CEV"
-        ))
-        func make(_ type: String) async throws -> CatalogSubject {
-            try await store.createSubject(
-                projectDir: projectDir, userID: "user-1", graphID: graphID,
-                subjectTypeID: type, label: "", description: "", placement: nil
-            ).0
-        }
-        let first = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: try await make(typeID).id)
-        let second = try await make(typeID)
-        let joined = try await store.promoteSubject(
-            projectDir: projectDir, userID: "user-1", subjectID: second.id,
-            entityID: first.entity.id
-        )
-        #expect(joined.entity == first.entity)
-        #expect(joined.claim.status == "accepted")
-        #expect(store.membershipBySubject[second.id]?.entity.ref == first.entity.ref)
-
-        let event = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: try await make("type-event").id)
-        let james = try await make(typeID)
-        await #expect(throws: CoreInvokeError.self) {
-            _ = try await store.promoteSubject(
-                projectDir: projectDir, userID: "user-1", subjectID: james.id,
-                entityID: event.entity.id
-            )
-        }
-        #expect(store.membershipBySubject[james.id] == nil)
-    }
-
     @Test func deletingPromotedSubjectNamesHandleThenClearsMembership() async throws {
         let store = storeWithPersonType()
         let (subject, _) = try await store.createSubject(
             projectDir: projectDir, userID: "user-1", graphID: graphID,
             subjectTypeID: typeID, label: "James", description: "", placement: nil
         )
-        let result = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: subject.id)
+        let result = store.seedPromotion(projectDir: projectDir, subjectID: subject.id)
 
         let report = try await store.getDeleteImpact(projectDir: projectDir, kind: "subject", id: subject.id)
         #expect(report.allowed)
