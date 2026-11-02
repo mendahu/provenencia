@@ -70,3 +70,20 @@
 
 ### M-10 · minor · Per-person keys need hand-kept test lists; S13-27 adds the next
 **Answer:** Fixed (logged) — STEP-9 adds a second `structural-debt.md` row, touched with S13-27.
+
+## Round 2 — executability
+
+### X-8 · major · STEP-9 says the map already links the plan; it does not
+**Answer:** Fixed — the map row links the plan at planning (wire step); STEP-9 says so.
+
+### X-9 · major · AC-2.2's fixture does not say what keeps the batches equal
+**Answer:** Fixed — AC-2.2: every event located, every co-participant with a dated, placed birth, in both (a) and (b).
+
+### X-10 · minor · How to build a date with no sort key
+**Answer:** Fixed — T-1 names a point `datevalue.Value` with no year.
+
+### X-11 · minor · The scope entry names `ListPersonEvents` as the Go function
+**Answer:** Fixed — STEP-9 rewords it to the RPC over `persondetail.PersonEvents`.
+
+### X-12 · minor · "no SQL" vs graph queries counted
+**Answer:** Fixed — §1 says "no graph query".
