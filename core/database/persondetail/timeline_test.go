@@ -491,6 +491,21 @@ func TestPersonEventsLifeline(t *testing.T) {
 			t.Errorf("first row span %+v", tl.Events[0].Span)
 		}
 	})
+	t.Run("provisional earlier birth and accepted later birth", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		early := w.event("Early", vocabkey.EventBirth, 1818)
+		b := w.event("B", vocabkey.EventBirth, 1820)
+		dEarly := w.event("DEarly", vocabkey.EventDeath, 1880)
+		d := w.event("D", vocabkey.EventDeath, 1888)
+		for _, e := range [][]byte{early, b, dEarly, d} {
+			w.k.Join(pat, e, "subject")
+		}
+		w.k.Provisional(early)
+		w.k.Provisional(dEarly)
+		w.k.Commit(early, dEarly)
+		check(t, w, pat, markers{birthEvent: b, deathEvent: d})
+	})
 	t.Run("AC-2.7", func(t *testing.T) {
 		w := newKinWorld(t)
 		pat, kid := w.person("Pat"), w.person("Kid")
@@ -524,8 +539,8 @@ func TestPersonEventsLifeline(t *testing.T) {
 		if len(tl.Birth.Event) != 0 || !bytes.Equal(tl.Birth.Beside, c) {
 			t.Fatalf("birth marker %+v, want a placeholder beside the census", tl.Birth)
 		}
-		if me, _ := summaries.Person(pat); me.Birth.Event == nil {
-			t.Fatal("the header does not name the non-canonical birth: the case does not test D-6")
+		if me, _ := summaries.Person(pat); me.Birth.Event != nil {
+			t.Fatal("the header names the non-canonical birth")
 		}
 	})
 }

@@ -643,7 +643,8 @@ type lifePick struct {
 	key dateKey
 }
 
-// lifePicks returns the person's surviving birth and death events, in the
+// lifePicks returns the person's canonical birth and death events (the
+// product's own types), in the
 // order the person's links give them. It loads the events at once, so its
 // graph queries do not grow with their number.
 func lifePicks(g *graphcache.Graph, v vocab, n *graphcache.Node) (births, deaths []lifePick, err error) {
@@ -666,7 +667,16 @@ func lifePicks(g *graphcache.Graph, v vocab, n *graphcache.Node) (births, deaths
 		if ev == nil {
 			continue
 		}
-		_, key, _ := keptTerm(ev, v.prop(vocabkey.PropertyEventType))
+		// A canonical event has an accepted member (the rule of
+		// persondetail's canonical); a provisional-only event is not the
+		// person's birth or death.
+		if len(ev.AcceptedMembers()) == 0 {
+			continue
+		}
+		typeID, key, _ := keptTerm(ev, v.prop(vocabkey.PropertyEventType))
+		if v.termOrigin[string(typeID)] != vocabkey.OriginProvenencia {
+			continue
+		}
 		if key != string(vocabkey.EventBirth) && key != string(vocabkey.EventDeath) {
 			continue
 		}
