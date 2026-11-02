@@ -61,8 +61,8 @@ type unitValue struct {
 	rank    int             // best-ranked carrier
 	sources map[string]bool // Sources carrying exactly this value
 	strong  bool            // some exact carrier is not weak
-	into    *unitValue      // the fuller value it folds into; nil when maximal
-	// Set on maximal values:
+	into    *unitValue      // the fuller value it folds into; nil on a root
+	// Set on roots:
 	total     map[string]bool // Sources once folded values are added
 	anyStrong bool            // some carrier, folded ones included, is not weak
 	fate      Reason          // ReasonKept, ReasonOutvoted or ReasonWeak
@@ -284,40 +284,57 @@ func reconcile(m module, candidates []Candidate, concluded *Value, cardinality s
 	return res
 }
 
-// foldValues points each non-maximal value at the maximal value it folds
-// into (the best supported, then the best ranked) and totals each maximal
-// value's Sources and strength.
+// foldValues points each value at the best supported, then best ranked, value
+// it reaches through folds that folds into nothing, and totals each root's
+// Sources and strength. A value that reaches none, as in a fold cycle, is its
+// own root.
 func foldValues(m module, name string, vals []*unitValue) {
-	var maximal []*unitValue
-	for _, v := range vals {
-		isMax := true
-		for _, u := range vals {
-			if u != v && m.fold(name, v.u, u.u) {
-				isMax = false
-				break
+	n := len(vals)
+	edge := make([][]bool, n)
+	sink := make([]bool, n)
+	for a := range vals {
+		edge[a] = make([]bool, n)
+		sink[a] = true
+		for b := range vals {
+			if a != b && m.fold(name, vals[a].u, vals[b].u) {
+				edge[a][b] = true
+				sink[a] = false
 			}
-		}
-		if isMax {
-			maximal = append(maximal, v)
 		}
 	}
-	for _, v := range vals {
-		target := v
-		for _, u := range maximal {
-			if u == v || !m.fold(name, v.u, u.u) {
-				continue
-			}
-			if target == v || len(u.sources) > len(target.sources) ||
-				(len(u.sources) == len(target.sources) && u.rank < target.rank) {
-				target = u
+	for a, v := range vals {
+		if sink[a] {
+			continue
+		}
+		seen := make([]bool, n)
+		seen[a] = true
+		stack := []int{a}
+		var target *unitValue
+		for len(stack) > 0 {
+			x := stack[len(stack)-1]
+			stack = stack[:len(stack)-1]
+			for y := range vals {
+				if !edge[x][y] || seen[y] {
+					continue
+				}
+				seen[y] = true
+				if !sink[y] {
+					stack = append(stack, y)
+					continue
+				}
+				u := vals[y]
+				if target == nil || len(u.sources) > len(target.sources) ||
+					(len(u.sources) == len(target.sources) && u.rank < target.rank) {
+					target = u
+				}
 			}
 		}
-		if target != v {
-			v.into = target
-		}
+		v.into = target
 	}
-	for _, v := range maximal {
-		v.total = map[string]bool{}
+	for _, v := range vals {
+		if v.into == nil {
+			v.total = map[string]bool{}
+		}
 	}
 	for _, v := range vals {
 		r := root(v)
@@ -328,7 +345,7 @@ func foldValues(m module, name string, vals []*unitValue) {
 	}
 }
 
-// elect: a maximal value with at least MinMajoritySupport Sources and more
+// elect: a root with at least MinMajoritySupport Sources and more
 // than half the unit's support wins; the others the module lets it outvote
 // are outvoted. Otherwise every value stays.
 func elect(m module, name string, vals []*unitValue) {

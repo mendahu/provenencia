@@ -418,12 +418,23 @@ func TestReconcileNamesValue(t *testing.T) {
 // reconciler's invariants. A failure names its seed and list; shrink it into
 // TestReconcileNames.
 func TestReconcileNamesInvariants(t *testing.T) {
+	for label, rules := range map[string]valuecompare.Rules{"testRules": testRules, "aliasRules": aliasRules} {
+		t.Run(label, func(t *testing.T) { checkNameInvariants(t, rules) })
+	}
+}
+
+// checkNameInvariants runs the generated lists under rules: aliasRules adds
+// the chain and cycle sets, so nicknames, initials and prefixes fold in chains.
+func checkNameInvariants(t *testing.T, rules valuecompare.Rules) {
+	t.Helper()
 	pools := map[string][]string{
-		"given":   {"James", "J.", "Jim", "Mary", "M", "Kenneth", "K."},
+		"given": {"James", "J.", "Jim", "Mary", "M", "Kenneth", "K.",
+			"B.", "Bill", "William", "D.", "Dick", "Ricky", "Rick", "Richard", "Ann", "Anna", "Hannah",
+			"Des", "Desiree", "José", "Jose", "Joseph"},
 		"surname": {"Robins", "Robbins", "ROBINS", "Smith"},
 		"prefix":  {"Rev.", "Dr."},
 		"suffix":  {"Jr.", "Sr."},
-		"nick":    {"Jim"},
+		"nick":    {"Jim", "Bill", "Dick"},
 		"":        {"James", "Robins"},
 	}
 	types := []string{"given", "given", "surname", "surname", "prefix", "suffix", "nick", ""}
@@ -447,7 +458,7 @@ func TestReconcileNamesInvariants(t *testing.T) {
 				in = append(in, gen(byte(i+1)))
 			}
 			where := fmt.Sprintf("seed %d list %d: %s", seed, list, describe(in))
-			got, err := Reconcile(testRules, propertymeta.ValueTypeName, in, nil, propertymeta.CardinalitySingle)
+			got, err := Reconcile(rules, propertymeta.ValueTypeName, in, nil, propertymeta.CardinalitySingle)
 			if err != nil {
 				t.Fatalf("%s: %v", where, err)
 			}
@@ -455,7 +466,7 @@ func TestReconcileNamesInvariants(t *testing.T) {
 			// Order independent.
 			shuffled := append([]Candidate(nil), in...)
 			rng.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
-			if again, _ := Reconcile(testRules, propertymeta.ValueTypeName, shuffled, nil, propertymeta.CardinalitySingle); !reflect.DeepEqual(again, got) {
+			if again, _ := Reconcile(rules, propertymeta.ValueTypeName, shuffled, nil, propertymeta.CardinalitySingle); !reflect.DeepEqual(again, got) {
 				t.Fatalf("%s: input order changed the result", where)
 			}
 
@@ -497,7 +508,7 @@ func TestReconcileNamesInvariants(t *testing.T) {
 			for i, c := range in {
 				reformed[i] = withNameForm(c, "anything "+strings.Repeat("x", i))
 			}
-			if again, _ := Reconcile(testRules, propertymeta.ValueTypeName, reformed, nil, propertymeta.CardinalitySingle); !reflect.DeepEqual(specs(again), specs(got)) {
+			if again, _ := Reconcile(rules, propertymeta.ValueTypeName, reformed, nil, propertymeta.CardinalitySingle); !reflect.DeepEqual(specs(again), specs(got)) {
 				t.Fatalf("%s: forms changed the result", where)
 			}
 
@@ -513,7 +524,7 @@ func TestReconcileNamesInvariants(t *testing.T) {
 				renamed[i] = c
 				renamed[i].Value = Value{Name: &n}
 			}
-			if again, _ := Reconcile(testRules, propertymeta.ValueTypeName, renamed, nil, propertymeta.CardinalitySingle); !reflect.DeepEqual(shape(again), shape(got)) {
+			if again, _ := Reconcile(rules, propertymeta.ValueTypeName, renamed, nil, propertymeta.CardinalitySingle); !reflect.DeepEqual(shape(again), shape(got)) {
 				t.Fatalf("%s: renaming types changed the values", where)
 			}
 		}
@@ -676,6 +687,10 @@ var aliasRules = func() valuecompare.Rules {
 			Sets: [][]string{
 				{"christopher", "chris", "kit"}, {"christina", "chris"}, {"william", "bill"},
 				{"james", "jim"}, {"abel", "ebbie"}, {"allan", "allen"}, {"allen", "allan"},
+				// Fold chains and a cycle (S14-18): B. → Bill → William, Ann → Anna → Hannah,
+				// and Dick, Ricky, Rick folding into each other with Richard as the way out.
+				{"richard", "dick"}, {"ricky", "dick"}, {"rick", "ricky"}, {"dick", "rick"},
+				{"hannah", "anna"}, {"anna", "ann"},
 			},
 		},
 		{
@@ -728,6 +743,40 @@ func TestReconcileNamesAliases(t *testing.T) {
 		{"AC-1.9 a nickname longer than its formal name folds",
 			[]Candidate{nm(1, "given=Ebbie|surname=Robins"), nm(2, "given=Abel|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=Abel|surname=Robins"}}},
+	}
+	// Fold chains: each value reaches the formal value at the end (S14-18).
+	for _, tc := range []struct {
+		name  string
+		names []string
+		want  string
+	}{
+		{"AC-1.1 B., Bill, William", []string{"B.", "Bill", "William"}, "given=William"},
+		{"AC-1.6 Ann, Anna, Hannah", []string{"Ann", "Anna", "Hannah"}, "given=Hannah"},
+		{"AC-1.7 Dick, Ricky, Rick keep each", []string{"Dick", "Ricky", "Rick"}, "given=Dick|given=Ricky|given=Rick"},
+		{"Dick, Ricky, Rick reach Richard", []string{"Dick", "Ricky", "Rick", "Richard"}, "given=Richard"},
+		{"B. folds into Bill", []string{"B.", "Bill"}, "given=Bill"},
+		{"B. and William do not chain", []string{"B.", "William"}, "given=B.|given=William"},
+	} {
+		var in, rev []Candidate
+		var ids []byte
+		for i, n := range tc.names {
+			in = append(in, nm(byte(i+1), "given="+n+"|surname=Robins"))
+			ids = append(ids, byte(i+1))
+		}
+		for i := len(in) - 1; i >= 0; i-- {
+			rev = append(rev, in[i])
+		}
+		// One value holds every id, parts in value order.
+		want := []cl{{ids, tc.want + "|surname=Robins"}}
+		folds = append(folds, struct {
+			name string
+			in   []Candidate
+			want []cl
+		}{tc.name, in, want}, struct {
+			name string
+			in   []Candidate
+			want []cl
+		}{tc.name + " reversed", rev, want})
 	}
 	for _, tc := range folds {
 		t.Run(tc.name, func(t *testing.T) {

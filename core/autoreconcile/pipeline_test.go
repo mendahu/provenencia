@@ -376,3 +376,59 @@ func TestOutvotedVote(t *testing.T) {
 		}
 	}
 }
+
+// foldValues resolves every value through its chain of folds to a value that
+// folds into nothing; a value that reaches none is its own root with a total
+// (S14-18).
+func TestFoldValuesRoots(t *testing.T) {
+	m := moduleFor(aliasRules, propertymeta.ValueTypeName)
+	build := func(names ...string) []*unitValue {
+		var vals []*unitValue
+		for i, n := range names {
+			units, ok := m.split(Value{Name: parse("given=" + n)})
+			if !ok {
+				t.Fatalf("no units for %s", n)
+			}
+			vals = append(vals, &unitValue{u: units["given"], rank: i, sources: map[string]bool{fmt.Sprint("s", i): true}})
+		}
+		return vals
+	}
+	for _, tc := range []struct {
+		name  string
+		names []string
+		into  map[string]string // name → the name it must reach; absent means a root
+	}{
+		{"chain", []string{"B.", "Bill", "William"}, map[string]string{"B.": "William", "Bill": "William"}},
+		{"cycle", []string{"Dick", "Ricky", "Rick"}, nil},
+		{"cycle with a way out", []string{"Dick", "Ricky", "Rick", "Richard"},
+			map[string]string{"Dick": "Richard", "Ricky": "Richard", "Rick": "Richard"}},
+		{"alias chain", []string{"Ann", "Anna", "Hannah"}, map[string]string{"Ann": "Hannah", "Anna": "Hannah"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			vals := build(tc.names...)
+			foldValues(m, "given", vals)
+			for i, v := range vals {
+				n := tc.names[i]
+				if v.into == nil && v.total == nil {
+					t.Fatalf("%s is a root with no total", n)
+				}
+				if v.into != nil && v.into.into != nil {
+					t.Fatalf("%s folds into %s, which folds on", n, tc.names[indexOf(vals, v.into)])
+				}
+				want, folds := tc.into[n]
+				if folds != (v.into != nil) || (folds && tc.names[indexOf(vals, v.into)] != want) {
+					t.Fatalf("%s: into %v, want %q", n, v.into != nil, want)
+				}
+			}
+		})
+	}
+}
+
+func indexOf(vals []*unitValue, v *unitValue) int {
+	for i, u := range vals {
+		if u == v {
+			return i
+		}
+	}
+	return -1
+}
