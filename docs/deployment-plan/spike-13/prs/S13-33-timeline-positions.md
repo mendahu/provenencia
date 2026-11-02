@@ -1,6 +1,6 @@
 # S13-33 — Timeline positions
 
-**Status:** Planned
+**Status:** Landed in #687 (2026-11-02)
 **Spike / slice:** Spike 13 · Slice 4 — Timeline
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: an engine read's new fields, their wire and their Swift mapping; nothing draws them until S13-13)
@@ -28,6 +28,8 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+**Landed:** the code differs from the plan in four places. (1) The check that every seeded `role` term is in `participantRoleOrder` is `TestParticipantRolesCoverSeed` in `persondetail`, not a row of `TestVocabKeysMatchSeed`: `subjectvocab` cannot import `persondetail` (import cycle), so the `export_test.go` accessor is not visible there. (2) T-8's lead-birth case is in `TestPersonEventsLifeline` ("lead birth is an open-start date"): the `conclusionsummaries` fixture cannot join a person to events. (3) `TestParticipantOrder` is an external test on `kinWorld`, whose people have no name observations, so ties are checked in ref order. (4) The structural-debt row is `A-36`, because `A-35` is the Spike 14 audit's.
 
 ## 1. Objective
 
