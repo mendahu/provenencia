@@ -53,14 +53,18 @@ func NewHop(bridgeTypeKey, fromProperty, toProperty string, filter *TermFilter) 
 
 // The product hops. A subject-role participation joins a person to an event
 // (role stays off the association's identity; walks read the role). A
-// location joins an event to a place. Place relationships join two places
-// (part_of for containment chains; succeeded_by for lineage, never chains).
+// participation in any role joins a person to an event; walks read the role
+// off the link. A location joins an event to a place. Place relationships join
+// two places (part_of for containment chains; succeeded_by for lineage, never chains).
 var (
 	EventsOfSubject = MustHop("participation", "person", "event",
 		&TermFilter{PropertyKey: connectrules.DisambiguationRole, TermKey: "subject"})
 	SubjectsOfEvent = EventsOfSubject.Reverse()
-	PlacesOfEvent   = MustHop("location", "event", "place", nil)
-	EventsAtPlace   = PlacesOfEvent.Reverse()
+	// EventsOfParticipant: a person's participation in any role.
+	EventsOfParticipant = MustHop("participation", "person", "event", nil)
+	ParticipantsOfEvent = EventsOfParticipant.Reverse()
+	PlacesOfEvent       = MustHop("location", "event", "place", nil)
+	EventsAtPlace       = PlacesOfEvent.Reverse()
 	// ParentsOfPlace: from = part, to = whole (part_of).
 	ParentsOfPlace = MustHop("place_relationship", "from", "to",
 		&TermFilter{PropertyKey: connectrules.DisambiguationPlaceRelationshipType, TermKey: "part_of"})
