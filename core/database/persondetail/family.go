@@ -5,7 +5,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
-	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -15,14 +14,6 @@ import (
 type Family struct {
 	Person []byte
 	Units  []kinship.Unit
-}
-
-// canonical is the package's one rule for a canonical entity a section names
-// (a relative, an event, a participant): not merged, of the type, with at least
-// one accepted member. A section that names other entities calls it before it
-// groups or shows them.
-func canonical(n *graphcache.Node, typeID []byte) bool {
-	return n.Is(typeID) && len(n.AcceptedMembers()) > 0
 }
 
 // Families reads the family of each id that is an unmerged Person, in ids
@@ -98,7 +89,7 @@ func Families(c *database.Catalog, ids [][]byte) ([]Family, error) {
 		var shown []kinship.Link
 		for _, l := range links {
 			other, _, _ := l.From(id)
-			if n, _ := g.Cached(other); canonical(n, typeID) {
+			if n, _ := g.Cached(other); n.Canonical(typeID) {
 				shown = append(shown, l)
 			}
 		}

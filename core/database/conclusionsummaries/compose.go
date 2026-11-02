@@ -667,16 +667,12 @@ func lifePicks(g *graphcache.Graph, v vocab, n *graphcache.Node) (births, deaths
 		if ev == nil {
 			continue
 		}
-		// A canonical event has an accepted member (the rule of
-		// persondetail's canonical); a provisional-only event is not the
-		// person's birth or death.
-		if len(ev.AcceptedMembers()) == 0 {
+		// A provisional-only event is not the person's birth or death.
+		if !ev.Canonical(v.typeID[vocabkey.Event]) {
 			continue
 		}
-		typeID, key, _ := keptTerm(ev, v.prop(vocabkey.PropertyEventType))
-		if v.termOrigin[string(typeID)] != vocabkey.OriginProvenencia {
-			continue
-		}
+		typeID, kept, _ := keptTerm(ev, v.prop(vocabkey.PropertyEventType))
+		key := v.finishTerm(&Term{ID: typeID, Key: kept}).ProductKey()
 		if key != string(vocabkey.EventBirth) && key != string(vocabkey.EventDeath) {
 			continue
 		}

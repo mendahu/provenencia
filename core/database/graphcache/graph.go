@@ -162,6 +162,14 @@ func (n *Node) Is(typeID []byte) bool {
 	return n != nil && !n.Merged && bytes.Equal(n.SubjectTypeID, typeID)
 }
 
+// Canonical reports whether the node is a canonical entity of typeID: an
+// unmerged Subject of the type with at least one accepted member. It is the
+// one rule for a canonical entity; a section or summary that names entities
+// calls it before it groups or shows them.
+func (n *Node) Canonical(typeID []byte) bool {
+	return n.Is(typeID) && len(n.AcceptedMembers()) > 0
+}
+
 // Link is one association seen from this node. AssociationRef is the sort
 // key, then the neighbor's ref. FromEnd is true when this node is the
 // association's first endpoint.

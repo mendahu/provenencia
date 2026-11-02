@@ -127,7 +127,7 @@ func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsum
 	walks := map[string]walk{}
 	var events, others [][]byte
 	for _, m := range mine {
-		if e, _ := g.Cached(m.id); !canonical(e, eventType) {
+		if e, _ := g.Cached(m.id); !e.Canonical(eventType) {
 			continue
 		}
 		ls, err := g.Follow(m.id, hops.ParticipantsOfEvent)
@@ -147,7 +147,7 @@ func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsum
 	}
 	keep := func(id []byte) bool {
 		p, _ := g.Cached(id)
-		return !bytes.Equal(id, entityID) && canonical(p, personType)
+		return !bytes.Equal(id, entityID) && p.Canonical(personType)
 	}
 	participants := map[string][]neighborRoles{}
 	var people [][]byte
@@ -199,7 +199,7 @@ func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsum
 	}
 	typeOf := func(event []byte) vocabkey.EventType {
 		if h, ok := summaries.Event(event); ok {
-			return vocabkey.EventType(productKey(h.Type.Term))
+			return vocabkey.EventType(h.Type.Term.ProductKey())
 		}
 		return ""
 	}
