@@ -1,9 +1,10 @@
 # Review — S14-21 Search finds every spelling
 
-**Verdict:** round 1 answered; round 2 pending (round 1 had blockers)
-**Rounds:** 1 so far. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes → all fixed; Ready with changes → all fixed. Planned.
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
+- M-11 (2026-11-02): direct folds only; the chained-nickname gap (Ann for a Hannah) is written into Edges and pinned by T-6. Answered.
 - None open. Answered before review (2026-11-02): keep one PR over the size limit (D-14); nicknames that fold in only (D-7); no match line for a nickname hit (D-8); folded spellings for every document kind (D-1).
 
 ## Writer's own calls
@@ -98,7 +99,26 @@ It stops before `promote` and `fileBridges`. `TestSummarySearchFindsTheListTitle
 - the cap: the 33-word case runs against `MaxWords` 32
 
 ### X-14 · major · Row order and keying in `recomputeBatch` are implicit
-**Answer:** Fixed. §6 sorts new rows by `bytes.Compare(PropertyID)` then `Rank`, matching SQLite's `memcmp` order. Rows are keyed by `string(entity_id)`, and an id with no rows on either side is unmoved.
+**Answer:** Fixed, then superseded by M-9. Rows are compared per entity and property in rank order (`StoredValues` returns them so, and `res.Values` index + 1 is the rank), so no cross-property sort is needed. An id with no rows on either side is unmoved.
 
 ### X-15 · minor · The trigram `'delete'` row
 **Answer:** Fixed. §6 says the trigram `'delete'` row keeps four columns.
+
+Maintainability round 2 confirmed M-2 and M-4 – M-8 are carried into the plan. It found M-1 and M-3 only partly carried and raised three blockers.
+
+### M-9 · blocker · `storedRows` is a second read of the stored row, and `truthRow` a second build beside `insertRow`
+**Answer:** Fixed. D-10 and §6:
+- `loadValues` is exported as `(*Graph).StoredValues`, and `recomputeBatch` reads the before rows through `graphcache.Over(q).StoredValues`. `storedRows` is gone.
+- `insertRow` takes the `TruthRow` that `truthRow` built and adds only `date_lo`, `date_hi` and `sort_key`, so each row is built once and the compared row is the written row.
+- The comparison is `SameDisplay(rowOf(v), t)`.
+
+### M-10 · blocker · `alternateKey` and `FoldedSpelling` compose the fold themselves
+**Answer:** Fixed. `FoldedSpelling`, `alternateKey` and the query's plain parts all use `valuecompare.TextKey(…, Equivalent, …)`, the key rescoring reads. `accentOnly` is `valueWords` with no `Folds`. The apostrophe test is not taken into `valuecompare`: since round-2 X-12, D-2 counts only mid-word apostrophes (U+0027, U+2019, U+02BC). That is a fact about SQLite's tokenizer, not a rule for which runes a word drops, so it does not copy `wordRune`.
+
+### M-11 · blocker · `FoldsInto` lists direct folds; the reconciler follows chains
+**Answer:** To user, answered 2026-11-02: direct folds only. I measured chains on the product seed: following them grows 2,627 pairs to 3,478, up to 21 per name, with 286 names gaining, and brings "Fred" to William and Robert. Edges Assumption 5 states the gap, Real data gives hannah's direct folds, and T-6 pins "Hannah Smith" with no `alias:\tann`.
+
+### Below blocker (writer's call)
+- The Out row's STEP reference was wrong: Fixed (STEP-12).
+- `NameFoldsInto` used `slices.Contains(AliasRoles(), …)` where `PrefixRuleRole` already exists: Fixed.
+- A shared Swift `CatalogSearchHit` fixture file: Declined. The builder is one line, private to `SearchCatalogStoreTests`, and the T-14 seeds are per-test values a fixture would only rename. Logged for the next PR that builds hits.
