@@ -191,26 +191,26 @@ struct PromoteModelTests {
         ]
         let model = model(store: store, subjectID: "a")
         // Not warm: the carried title, no ref, the default mark.
-        #expect(model.sourceTitle == "Census")
-        #expect(model.sourceRef == "")
-        #expect(model.sourceMark == .defaultTypeMark)
+        #expect(model.sourceHeader.title == "Census")
+        #expect(model.sourceHeader.ref == "")
+        #expect(model.sourceHeader.mark == .defaultTypeMark)
 
         let sources: QueryHandle<[CatalogSource]> = model.session.query(model.sourcesKey)
         let types: QueryHandle<[CatalogSourceType]> = model.session.query(model.sourceTypesKey)
         await waitForQuery(sources)
         await waitForQuery(types)
-        #expect(model.sourceTitle == "Census 1851")
-        #expect(model.sourceRef == "SRC-1")
-        #expect(model.sourceMark == PVMarkKey(catalogKey: "type_census"))
+        #expect(model.sourceHeader.title == "Census 1851")
+        #expect(model.sourceHeader.ref == "SRC-1")
+        #expect(model.sourceHeader.mark == PVMarkKey(catalogKey: "type_census"))
 
         var renamed = CatalogSource(id: sourceID, ref: "SRC-1", sourceTypeID: "t-census", title: "Census 1851 (Ward 3)", description: "")
         model.session.apply(.updatedSource(renamed))
-        #expect(model.sourceTitle == "Census 1851 (Ward 3)")
+        #expect(model.sourceHeader.title == "Census 1851 (Ward 3)")
 
         renamed.sourceTypeID = "t-register"
         model.session.apply(.changedSourceType(renamed))
-        #expect(model.sourceMark == PVMarkKey(catalogKey: "type_certificate"))
-        #expect(model.sourceRef == "SRC-1")
+        #expect(model.sourceHeader.mark == PVMarkKey(catalogKey: "type_certificate"))
+        #expect(model.sourceHeader.ref == "SRC-1")
     }
 
     // MARK: - T-12

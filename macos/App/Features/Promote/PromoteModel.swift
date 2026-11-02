@@ -103,22 +103,18 @@ final class PromoteModel {
     var sourcesKey: CatalogQueryKey { .sourcesList(project: session.projectKey) }
     var sourceTypesKey: CatalogQueryKey { .sourceTypesList(project: session.projectKey) }
 
-    /// The Source's row from the session, which every rename and type change patches;
-    /// nil while the Sources list is not warm or the Source is gone.
-    var source: CatalogSource? { session.source(id: entry.sourceID) }
-    /// The header's title: the session's, else the one the location carried.
-    var sourceTitle: String? {
-        WorkspaceLocationLabels.sourceTitle(
-            sourceID: entry.sourceID, carried: entry.sourceTitle, names: LocationNames(session: session)
-        )
-    }
-    var sourceRef: String { source?.ref ?? "" }
-    var sourceMark: PVMarkKey {
+    /// What the header shows of the Source, read from one lookup of its row in the
+    /// session (which every rename and type change patches). While the Sources list is
+    /// not warm, or once the Source is gone: the carried title, no ref, the default mark.
+    var sourceHeader: PromoteSourceHeader {
+        let row = session.source(id: entry.sourceID)
         let types: QueryHandle<[CatalogSourceType]>? = session.queryHandle(sourceTypesKey)
-        guard let iconKey = types?.value?.iconKey(forTypeID: source?.sourceTypeID) else {
-            return .defaultTypeMark
-        }
-        return PVMarkKey(catalogKey: iconKey)
+        let mark = types?.value?.iconKey(forTypeID: row?.sourceTypeID).map { PVMarkKey(catalogKey: $0) }
+        return PromoteSourceHeader(
+            title: row?.title.trimmedNonEmpty ?? entry.sourceTitle,
+            ref: row?.ref ?? "",
+            mark: mark ?? .defaultTypeMark
+        )
     }
 
     var hasUnsavedWork: Bool { flow.manual }
@@ -418,4 +414,11 @@ extension PromoteModel: WorkspaceLeaveGuard {
     func shouldHoldNavigation(_ pending: PendingNavigation) -> Bool {
         flow.requestLeave(pending)
     }
+}
+
+/// The Source facts the Promote page header shows.
+struct PromoteSourceHeader: Equatable {
+    let title: String?
+    let ref: String
+    let mark: PVMarkKey
 }

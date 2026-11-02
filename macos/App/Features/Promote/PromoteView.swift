@@ -24,7 +24,7 @@ struct PromoteView: View {
         let model = model
         let connections = model.flow.connectionsByRow
         VStack(spacing: 0) {
-            header
+            PromoteHeader(model: model)
             ScrollView {
                 VStack(alignment: .leading, spacing: PVSpacing.space7) {
                     notices
@@ -99,60 +99,6 @@ struct PromoteView: View {
                 PVCallout(tone: .danger, message: error)
             }
         }
-    }
-
-    private var header: some View {
-        HStack(alignment: .center, spacing: PVSpacing.space5) {
-            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                .fill(PVColor.surfaceSunken)
-                .overlay(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous).strokeBorder(PVColor.borderSubtle, lineWidth: 1))
-                .overlay(PVMark(model.sourceMark, size: 24, decorative: true).foregroundStyle(PVColor.textSecondary))
-                .frame(width: 44, height: 44)
-            VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                Text(L10n.Promote.pageTitle)
-                    .pvMicroCaps()
-                    .foregroundStyle(PVColor.textMuted)
-                if let title = model.sourceTitle {
-                    Text(verbatim: title)
-                        .font(PVFont.display(size: PVTypeScale.h3, weight: PVFontWeight.semibold))
-                        .foregroundStyle(PVColor.textDisplay)
-                }
-                if !model.sourceRef.isEmpty {
-                    Text(verbatim: model.sourceRef)
-                        .font(PVFont.mono(size: PVTypeScale.caption))
-                        .foregroundStyle(PVColor.textMuted)
-                }
-            }
-            Spacer(minLength: PVSpacing.space6)
-            VStack(alignment: .trailing, spacing: PVSpacing.space1) {
-                Text(verbatim: promoting)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
-                Text(verbatim: countLine)
-                    .font(PVFont.mono(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textMuted)
-            }
-        }
-        .padding(.horizontal, PVSpacing.space10)
-        .padding(.vertical, PVSpacing.space6)
-        .background(PVColor.surfaceCard)
-        .overlay(alignment: .bottom) { PVDivider() }
-    }
-
-    private var promoting: String {
-        if model.flow.mappedRest {
-            return L10n.Promote.promoting(count: model.flow.rows.count)
-        }
-        return model.entry.subjectName
-    }
-
-    private var countLine: String {
-        if model.flow.mappedRest {
-            return L10n.Promote.rowSummary(
-                rows: model.flow.rows.count,
-                promoted: model.flow.rows.filter(\.anchor).count
-            )
-        }
-        return L10n.Promote.singleSummary(more: model.flow.restCount)
     }
 
     private var openedFromNote: some View {
@@ -729,5 +675,65 @@ private struct PromoteKindTile: View {
             .overlay(PVMark(kind.markKey, size: markSize, decorative: true).foregroundStyle(style.ink))
             .frame(width: size, height: size)
             .accessibilityHidden(true)
+    }
+}
+
+/// The page header. Its own view so the Source row and types it reads re-render it alone.
+private struct PromoteHeader: View {
+    let model: PromoteModel
+
+    var body: some View {
+        let source = model.sourceHeader
+        return HStack(alignment: .center, spacing: PVSpacing.space5) {
+            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                .fill(PVColor.surfaceSunken)
+                .overlay(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous).strokeBorder(PVColor.borderSubtle, lineWidth: 1))
+                .overlay(PVMark(source.mark, size: 24, decorative: true).foregroundStyle(PVColor.textSecondary))
+                .frame(width: 44, height: 44)
+            VStack(alignment: .leading, spacing: PVSpacing.space2) {
+                Text(L10n.Promote.pageTitle)
+                    .pvMicroCaps()
+                    .foregroundStyle(PVColor.textMuted)
+                if let title = source.title {
+                    Text(verbatim: title)
+                        .font(PVFont.display(size: PVTypeScale.h3, weight: PVFontWeight.semibold))
+                        .foregroundStyle(PVColor.textDisplay)
+                }
+                if !source.ref.isEmpty {
+                    Text(verbatim: source.ref)
+                        .font(PVFont.mono(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.textMuted)
+                }
+            }
+            Spacer(minLength: PVSpacing.space6)
+            VStack(alignment: .trailing, spacing: PVSpacing.space1) {
+                Text(verbatim: promoting)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
+                Text(verbatim: countLine)
+                    .font(PVFont.mono(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
+            }
+        }
+        .padding(.horizontal, PVSpacing.space10)
+        .padding(.vertical, PVSpacing.space6)
+        .background(PVColor.surfaceCard)
+        .overlay(alignment: .bottom) { PVDivider() }
+    }
+
+    private var promoting: String {
+        if model.flow.mappedRest {
+            return L10n.Promote.promoting(count: model.flow.rows.count)
+        }
+        return model.entry.subjectName
+    }
+
+    private var countLine: String {
+        if model.flow.mappedRest {
+            return L10n.Promote.rowSummary(
+                rows: model.flow.rows.count,
+                promoted: model.flow.rows.filter(\.anchor).count
+            )
+        }
+        return L10n.Promote.singleSummary(more: model.flow.restCount)
     }
 }
