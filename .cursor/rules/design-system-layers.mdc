@@ -37,5 +37,6 @@ struct Button: View { … }  // fights SwiftUI.Button
 - Do **not** add new files under legacy `Components/Core|Forms|Feedback|Navigation|Data|Research/`, or as loose `.swift` files directly under `Components|Recipes|Snowflakes/`.
 - New `Components/` / `Recipes/` public types use `PV*`; do not introduce bare `Button` / `Table`-style kit types.
 - Compose down; don’t clone sideways for a slight variant.
+- Kit code names no `Features/` type (`scripts/check-guidance-names.py` fails on it); recipes may read `Platform/` formatters and `Catalog*` types.
 - No dimming/scrim on sheets — window owns chrome (see `PVConfirm` / DesignSystem README).
 - Search existing components/recipes before inventing chrome under `Features/`.
