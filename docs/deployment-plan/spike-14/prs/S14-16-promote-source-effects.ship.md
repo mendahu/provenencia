@@ -98,4 +98,6 @@ Check: `PromoteHeader`'s body and its stored properties read no `flow` and take 
 F-6b head `01e9a3dd` (`4def3e07` code, `01e9a3dd` Landed note). Orchestrator read: `PromoteHeader` holds only `let model`, its body reads `sourceHeader` and places `PromoteHeaderCounts(model:)`, which alone reads `flow`. **PRF-1 Resolved.** **Gate (orchestrator) PASS** on `01e9a3dd`; `origin/main` unmoved since base `04a2c99b`.
 
 ## Result
-Gate PASS · CI pending · open: none (blocker/major) · follow-ups: UX-1 · to user: CON-5 (`fileSubject` refusal order), MNT-3 (`BatchResult.Written`) · CON miss: none
+CI: first run red — Go `TestLargeSourceBudgets/warm` 373 ms vs 350 ms budget (`promotealign` proposal, untouched by this PR; local gate green) and macOS job never acquired a runner (capacity). Rerun of failed jobs green.
+
+Gate PASS · CI green · open: none (blocker/major) · follow-ups: UX-1 · to user: CON-5 (`fileSubject` refusal order), MNT-3 (`BatchResult.Written`) · CON miss: none
