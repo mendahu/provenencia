@@ -458,77 +458,138 @@ func checkNameInvariants(t *testing.T, rules valuecompare.Rules) {
 				in = append(in, gen(byte(i+1)))
 			}
 			where := fmt.Sprintf("seed %d list %d: %s", seed, list, describe(in))
-			got, err := Reconcile(rules, propertymeta.ValueTypeName, in, nil, propertymeta.CardinalitySingle)
-			if err != nil {
-				t.Fatalf("%s: %v", where, err)
-			}
+			checkNameList(t, rules, in, rng, where)
+		}
+	}
+}
 
-			// Order independent.
-			shuffled := append([]Candidate(nil), in...)
-			rng.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
-			if again, _ := Reconcile(rules, propertymeta.ValueTypeName, shuffled, nil, propertymeta.CardinalitySingle); !reflect.DeepEqual(again, got) {
-				t.Fatalf("%s: input order changed the result", where)
-			}
+// checkNameList reconciles one list under rules and checks every invariant;
+// rng orders the shuffled rerun. The fuzz target calls it too.
+func checkNameList(t *testing.T, rules valuecompare.Rules, in []Candidate, rng *rand.Rand, where string) {
+	t.Helper()
+	got, err := Reconcile(rules, propertymeta.ValueTypeName, in, nil, propertymeta.CardinalitySingle)
+	if err != nil {
+		t.Fatalf("%s: %v", where, err)
+	}
 
-			// Every structured positive candidate in exactly one value; no
-			// negative in any.
-			seen := map[byte]int{}
-			for _, c := range got.Values {
-				for _, oid := range c.ObservationIDs {
-					seen[oid[3]]++
-				}
-			}
-			for _, c := range in {
-				want := 1
-				if c.Negative || signatureOf(c.Value.Name) == "" {
-					want = 0
-				}
-				if seen[c.ObservationID[3]] != want {
-					t.Fatalf("%s: candidate %d in %d values, want %d", where, c.ObservationID[3], seen[c.ObservationID[3]], want)
-				}
-			}
+	// Order independent.
+	shuffled := append([]Candidate(nil), in...)
+	rng.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
+	if again, _ := Reconcile(rules, propertymeta.ValueTypeName, shuffled, nil, propertymeta.CardinalitySingle); !reflect.DeepEqual(again, got) {
+		t.Fatalf("%s: input order changed the result", where)
+	}
 
-			// Every reconciled part is some candidate's part of that type.
-			had := map[string]bool{}
-			for _, c := range in {
-				for _, p := range c.Value.Name.Parts {
-					had[p.Type+"="+valuecompare.NormalizeForm(p.Value)] = true
-				}
-			}
-			for _, c := range got.Values {
-				for _, p := range c.Value.Name.Parts {
-					if !had[p.Type+"="+valuecompare.NormalizeForm(p.Value)] {
-						t.Fatalf("%s: invented part %s=%s", where, p.Type, p.Value)
-					}
-				}
-			}
+	// Every structured positive candidate in exactly one value; no
+	// negative in any.
+	seen := map[byte]int{}
+	for _, c := range got.Values {
+		for _, oid := range c.ObservationIDs {
+			seen[oid[3]]++
+		}
+	}
+	for _, c := range in {
+		want := 1
+		if c.Negative || signatureOf(c.Value.Name) == "" {
+			want = 0
+		}
+		if seen[c.ObservationID[3]] != want {
+			t.Fatalf("%s: candidate %d in %d values, want %d", where, c.ObservationID[3], seen[c.ObservationID[3]], want)
+		}
+	}
 
-			// Forms never matter.
-			reformed := make([]Candidate, len(in))
-			for i, c := range in {
-				reformed[i] = withNameForm(c, "anything "+strings.Repeat("x", i))
-			}
-			if again, _ := Reconcile(rules, propertymeta.ValueTypeName, reformed, nil, propertymeta.CardinalitySingle); !reflect.DeepEqual(specs(again), specs(got)) {
-				t.Fatalf("%s: forms changed the result", where)
-			}
-
-			// Renaming types one-to-one renames the result and nothing else.
-			rename := map[string]string{"given": "x", "surname": "given", "prefix": "", "suffix": "nick", "nick": "suffix", "": "surname"}
-			renamed := make([]Candidate, len(in))
-			for i, c := range in {
-				n := *c.Value.Name
-				n.Parts = append([]namevalue.Part(nil), n.Parts...)
-				for j := range n.Parts {
-					n.Parts[j].Type = rename[n.Parts[j].Type]
-				}
-				renamed[i] = c
-				renamed[i].Value = Value{Name: &n}
-			}
-			if again, _ := Reconcile(rules, propertymeta.ValueTypeName, renamed, nil, propertymeta.CardinalitySingle); !reflect.DeepEqual(shape(again), shape(got)) {
-				t.Fatalf("%s: renaming types changed the values", where)
+	// Every reconciled part is some candidate's part of that type.
+	had := map[string]bool{}
+	for _, c := range in {
+		for _, p := range c.Value.Name.Parts {
+			had[p.Type+"="+valuecompare.NormalizeForm(p.Value)] = true
+		}
+	}
+	for _, c := range got.Values {
+		for _, p := range c.Value.Name.Parts {
+			if !had[p.Type+"="+valuecompare.NormalizeForm(p.Value)] {
+				t.Fatalf("%s: invented part %s=%s", where, p.Type, p.Value)
 			}
 		}
 	}
+
+	// Forms never matter.
+	reformed := make([]Candidate, len(in))
+	for i, c := range in {
+		reformed[i] = withNameForm(c, "anything "+strings.Repeat("x", i))
+	}
+	if again, _ := Reconcile(rules, propertymeta.ValueTypeName, reformed, nil, propertymeta.CardinalitySingle); !reflect.DeepEqual(specs(again), specs(got)) {
+		t.Fatalf("%s: forms changed the result", where)
+	}
+
+	// Renaming types one-to-one renames the result and nothing else. Alias
+	// tables key on a name's role, so a rename that moves a name out of the
+	// given, nick and untyped roles may legitimately stop a fold: aliasRules
+	// skip this check (the fuzz target found Rick, Ricky, Ricky as nicks).
+	if !reflect.DeepEqual(rules.Names.Aliases, testRules.Names.Aliases) {
+		return
+	}
+	rename := map[string]string{"given": "x", "surname": "given", "prefix": "", "suffix": "nick", "nick": "suffix", "": "surname"}
+	renamed := make([]Candidate, len(in))
+	for i, c := range in {
+		n := *c.Value.Name
+		n.Parts = append([]namevalue.Part(nil), n.Parts...)
+		for j := range n.Parts {
+			n.Parts[j].Type = rename[n.Parts[j].Type]
+		}
+		renamed[i] = c
+		renamed[i].Value = Value{Name: &n}
+	}
+	if again, _ := Reconcile(rules, propertymeta.ValueTypeName, renamed, nil, propertymeta.CardinalitySingle); !reflect.DeepEqual(shape(again), shape(got)) {
+		t.Fatalf("%s: renaming types changed the values", where)
+	}
+}
+
+// FuzzReconcileNames reads a byte string as a short list of name candidates
+// and checks, under aliasRules, the invariants of the generated lists: no
+// panic, each candidate in exactly one value, input order and forms never
+// matter. Layout: a candidate count, then per candidate a part count and per
+// part a type byte and a word byte; the word after the last pool word is free
+// text spelled from the next byte.
+func FuzzReconcileNames(f *testing.F) {
+	for _, seed := range [][]byte{
+		{3, 1, 0, 0, 1, 0, 1, 1, 0, 2},                // B., Bill, William
+		{3, 1, 0, 3, 1, 0, 4, 1, 0, 5},                // Ann, Anna, Hannah
+		{3, 1, 0, 6, 1, 0, 7, 1, 0, 8},                // Dick, Ricky, Rick: a cycle
+		{4, 1, 0, 6, 1, 0, 7, 1, 0, 8, 1, 0, 9},       // the cycle with Richard as the way out
+		{2, 2, 0, 0, 1, 1, 2, 2, 0, 2, 1, 1},          // B. Robins, William Robins
+		{3, 1, 0, 13, 65, 1, 0, 13, 66, 1, 0, 13, 65}, // free text
+	} {
+		f.Add(seed)
+	}
+	words := []string{"B.", "Bill", "William", "Ann", "Anna", "Hannah", "Dick", "Ricky", "Rick", "Richard", "J.", "James", "Jim"}
+	types := []string{"given", "given", "surname", "nick", "prefix", ""}
+	f.Fuzz(func(t *testing.T, data []byte) {
+		next := func() int {
+			if len(data) == 0 {
+				return 0
+			}
+			b := data[0]
+			data = data[1:]
+			return int(b)
+		}
+		var in []Candidate
+		for i, n := 0, next()%6; i < n; i++ {
+			v := &namevalue.Value{Form: "(as written)"}
+			for j, k := 0, next()%4; j < k; j++ {
+				typ := types[next()%len(types)]
+				w := next() % (len(words) + 1)
+				word := ""
+				if w < len(words) {
+					word = words[w]
+				} else {
+					word = strings.Repeat(string(rune('a'+next()%26)), 1+next()%3)
+				}
+				v.Parts = append(v.Parts, namevalue.Part{Idx: j, Type: typ, Value: word})
+			}
+			in = append(in, Candidate{ObservationID: id(byte(i + 1)), Value: Value{Name: v}})
+		}
+		checkNameList(t, aliasRules, in, rand.New(rand.NewSource(1)), fmt.Sprintf("fuzz: %s", describe(in)))
+	})
 }
 
 func describe(in []Candidate) string {
