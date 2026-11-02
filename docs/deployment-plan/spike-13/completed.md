@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S13-35 — The person card joins the design system
+
+**Landed 2026-11-02** in [#690](https://github.com/mendahu/provenencia/pull/690). The person card is a design-system piece any feature can place, so a family tree can reuse it. `PVTileCard` is a content-agnostic card shell with thumbnail, title, lines and trailing slots at a regular and a compact size; `PVPersonCard` fills it, and the compact size (52pt, one-line name, the life span in years, full lines in the tooltip) has no caller until the Timeline. `PVGenderTreatment` is a recipe now, with the badge built on the Person page. Return activation (`pvActivatesOnReturn`) and the bare-button focus ring (`PVFocusRingButtonStyle`) are kit pieces that Family, the citation composer, the gallery tile and the artifact preview use. Family looks and behaves as before.
+
 ## S13-34 — Display pieces move down a layer
 
 **Landed 2026-11-02** in [#689](https://github.com/mendahu/provenencia/pull/689). The pieces that word and style a person, a date, a place or a term left the Person, Names and Dates features so the design system can build a person card without reaching into feature code. Title styling and the date · place line are design-system components (`PVTitleText`, `PVDatePlaceLine`, `PVBadge.moreCount`); name, date, place, person-title and life-span formatting live in `Platform/`, and the life span can read as its year alone. Two things look different: a built-in term the researcher relabelled (the gender `woman` relabelled "Female (self-described)") now reads with the app's name ("Woman") on the Vitals rows, the gender badge, the provenance sheet's "Read as" lines, Evidence graph cards and bridge sentences, through one rule, `PropertyTermDisplay.name(_:propertyKey:)`; and the Events list's place takes the Person header's small italic secondary style. `scripts/check-guidance-names.py` now fails when design-system code names a `Features/` type (`WorkspaceLocation` allowed, logged as structural debt A-39).
