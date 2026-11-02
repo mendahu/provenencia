@@ -163,6 +163,10 @@ A DateValue may be phrase-forward (structure sparse or empty) when the evidence 
 
 `calendar` records the calendar system when known (default in product UI: Gregorian). It does not replace dual-date wording in `phrase` when both old and new style appear in the source.
 
+## 3.4 The display date of an event
+
+An event shown in a list or on a timeline has one display date: its kept `date`, else its kept `start_date`, whichever has a place (`conclusionsummaries` owns the rule). A date has a place when at least one of its ends is closed: a point, a range, `aft.`, `bef.`, a range with only a start or only an end year. A date with no year, or with both ends open, is undated, and so is an event that has only an end date. The event sorts by the first day of its first end, or of its known end when the start is open (`bef. 1880` sorts at 1 Jan 1880, among that year's events by ref). On a timeline it spans `From` to `To` on the year line, `bef.` and `aft.` spanning their known end with the open side flagged. This is the display order, separate from the reconciler's `sort_key`, which still treats an open start as no key.
+
 ---
 
 # 4. Cross-layer use
