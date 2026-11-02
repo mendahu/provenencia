@@ -198,8 +198,8 @@ func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsum
 		birth, death = recorded(rows, me.Birth.Event), recorded(rows, me.Death.Event)
 	}
 	typeOf := func(event []byte) vocabkey.EventType {
-		if h, ok := summaries.Event(event); ok && h.Type.Term != nil {
-			return vocabkey.EventType(h.Type.Term.Key)
+		if h, ok := summaries.Event(event); ok {
+			return vocabkey.EventType(productKey(h.Type.Term))
 		}
 		return ""
 	}

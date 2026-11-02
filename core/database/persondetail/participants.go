@@ -16,6 +16,15 @@ var participantRoleOrder = []vocabkey.Role{
 	vocabkey.RoleWitness, vocabkey.RoleInformant, vocabkey.RolePallbearer,
 }
 
+// productKey is the key of t when t is the product's own term, else "": a key
+// means the product's only within the product's origin.
+func productKey(t *conclusionsummaries.Term) string {
+	if t == nil || t.Origin != vocabkey.OriginProvenencia {
+		return ""
+	}
+	return t.Key
+}
+
 // sortParticipants orders one event's participants by rank, then by index (their
 // place in the title order of PersonsByIDs). A participant's rank is the best
 // rank of its roles: a listed (product) role ranks by its place in
@@ -26,10 +35,11 @@ func sortParticipants(ps []EventParticipant, index map[string]int) {
 	var unlisted []conclusionsummaries.Term
 	seen := map[string]bool{}
 	listed := func(t conclusionsummaries.Term) int {
-		if t.Origin != vocabkey.OriginProvenencia {
+		key := productKey(&t)
+		if key == "" {
 			return -1
 		}
-		return slices.Index(participantRoleOrder, vocabkey.Role(t.Key))
+		return slices.Index(participantRoleOrder, vocabkey.Role(key))
 	}
 	for _, p := range ps {
 		for _, t := range p.Roles {

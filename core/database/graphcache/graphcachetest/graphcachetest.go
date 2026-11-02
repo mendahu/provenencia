@@ -175,6 +175,17 @@ func (k *Canon) Term(entity []byte, propKey, termKey string) {
 	k.observe(entity, propKey, "value_term_id", termID)
 }
 
+// UserTerm sets the kept term of one property of an entity to a researcher's
+// own term (origin user) with the key, adding it to the vocabulary. Call
+// CommitVocabulary before the graph reads it.
+func (k *Canon) UserTerm(entity []byte, propKey, termKey string) {
+	k.t.Helper()
+	termID := k.next(3)
+	k.exec(`INSERT INTO property_terms (id, property_id, key, origin, label) VALUES (?, ?, ?, ?, ?)`,
+		termID, k.propID(propKey), termKey, vocabkey.OriginUser, termKey)
+	k.observe(entity, propKey, "value_term_id", termID)
+}
+
 // Date sets the kept date of one property of an entity (an event's date, say)
 // to v.
 func (k *Canon) Date(entity []byte, propKey string, v datevalue.Value) {

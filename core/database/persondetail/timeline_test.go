@@ -464,6 +464,21 @@ func TestPersonEventsLifeline(t *testing.T) {
 		w.k.Join(pat, b1, "subject")
 		check(t, w, pat, markers{birthEvent: b1, deathBeside: b2})
 	})
+	t.Run("a researcher's burial term is not the product's", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		c := w.event("C", vocabkey.EventType("census"), 1851)
+		d := w.event("D", vocabkey.EventDeath, 0)
+		u := w.k.Entity("event")
+		w.names[string(u)] = "U"
+		w.k.UserTerm(u, vocabkey.PropertyEventType, string(vocabkey.EventBurial))
+		w.k.Date(u, vocabkey.PropertyDate, *datevaluetest.YMD(1890, 0, 0))
+		w.k.CommitVocabulary()
+		for _, e := range [][]byte{c, d, u} {
+			w.k.Join(pat, e, "subject")
+		}
+		check(t, w, pat, markers{birthBeside: c, deathEvent: d, deathBeside: u})
+	})
 	t.Run("lead birth is an open-start date", func(t *testing.T) {
 		w := newKinWorld(t)
 		pat := w.person("Pat")
