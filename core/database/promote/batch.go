@@ -65,7 +65,7 @@ func SaveBatch(tx *database.Tx, userID []byte, in Batch) (struct{}, []rowchange.
 
 	var changes []rowchange.Change
 	for _, row := range in.Rows {
-		rowChanges, _, err := applyRow(q, in.GraphID, row)
+		rowChanges, err := applyRow(q, in.GraphID, row)
 		if err != nil {
 			return struct{}{}, nil, err
 		}
@@ -86,61 +86,61 @@ func latestRevision(tx *sql.Tx) (int64, error) {
 	return rev, err
 }
 
-// applyRow files one claim and returns its changes and the filed handle's id;
-// an anchor or a skip files nothing and returns nils.
-func applyRow(tx *sql.Tx, graphID []byte, row BatchRow) ([]rowchange.Change, []byte, error) {
+// applyRow files one claim and returns its changes;
+// an anchor or a skip files nothing and returns nil.
+func applyRow(tx *sql.Tx, graphID []byte, row BatchRow) ([]rowchange.Change, error) {
 	switch row.Target {
 	case TargetSkip:
 		if len(row.EntityID) != 0 {
-			return nil, nil, ErrInvalid
+			return nil, ErrInvalid
 		}
-		return nil, nil, nil
+		return nil, nil
 	case TargetNew:
 		if len(row.EntityID) != 0 {
-			return nil, nil, ErrInvalid
+			return nil, ErrInvalid
 		}
 	case TargetHandle:
 		if len(row.EntityID) != 16 {
-			return nil, nil, ErrInvalid
+			return nil, ErrInvalid
 		}
 	default:
-		return nil, nil, ErrInvalid
+		return nil, ErrInvalid
 	}
 	if len(row.SubjectID) != 16 {
-		return nil, nil, ErrInvalid
+		return nil, ErrInvalid
 	}
 
 	subject, err := subjects.GetTx(tx, row.SubjectID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil, ErrInvalid
+		return nil, ErrInvalid
 	}
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if !bytes.Equal(subject.GraphID, graphID) {
-		return nil, nil, ErrInvalid
+		return nil, ErrInvalid
 	}
 	if err := requirePrimary(tx, subject); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	existing, err := identityclaims.AcceptedEntityForSubjectTx(tx, subject.ID)
 	if err == nil {
 		if row.Target == TargetHandle && bytes.Equal(existing.EntityID, row.EntityID) {
-			return nil, nil, nil
+			return nil, nil
 		}
-		return nil, nil, identityclaims.ErrAlreadyMember
+		return nil, identityclaims.ErrAlreadyMember
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var entityID []byte
 	if row.Target == TargetHandle {
 		entityID = row.EntityID
 	}
-	entity, _, changes, err := fileSubject(tx, subject, entityID)
+	_, _, changes, err := fileSubject(tx, subject, entityID)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return changes, entity.ID, nil
+	return changes, nil
 }
