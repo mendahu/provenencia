@@ -182,3 +182,9 @@ Reviewed the plan rewritten after the board (turn 12), S13-32's descoping and th
 ### X-24 · minor · Smaller items
 **Answer:** Fixed: the compact card's lift (D-4); the fold row's style (D-9); the host's signature (D-12); the caption's join and nil (D-5); no new years keys (M-11); the Events list tests are `PersonsListTests` (§ 4, § 8); STEP-7's check includes the repeat-click scroll; the fold reset is the section's `.onChange`, as Family (§ 8 note).
 
+
+## Carried from the S13-34 and S13-35 reviews (2026-11-02)
+
+- The user cut S13-35's `.row` size: D-16's event row is now a Timeline snowflake (`PersonTimelineEventRow`), a `.contain` group so its title button stays reachable; D-6's picture is a plain 72pt; the stop condition names the row's reachability instead of the shell.
+- S13-34 makes the Events list's line a call to `PVDatePlaceLine` with `dateSize` and `extraCount`: the event row reads `PVDatePlaceLine(…, dateSize: PVTypeScale.body)`; `EventSecondaryLine(dateSize:)` is gone from this plan.
+- Names follow the prep plans: `PVPersonCard(…, size: PVTileCardSize.compact, …)` (no mirror `Size`), `PVTitleText(_:style:…)`, `pvActivatesOnReturn(when:_:)`, `PVFocusRingButtonStyle(cornerRadius:)`.
