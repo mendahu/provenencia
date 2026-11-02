@@ -1,6 +1,6 @@
 # S14-19 — A merge leaves no stale link in the graph cache
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 14 · Slice 5 — Audit fixes
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the in-memory graph's commit path and two Go tests only; every view draws as before)
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** [audit L-16](../app-health-audit.md) (its `a_handle_merged` and verify-mode half); [`docs/conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md) §2.3 and §9 Canonical merge; [`docs/promote-graph-alignment.md`](../../../promote-graph-alignment.md) (loads read `graphcache`); the S13-03 ship log follow-up ([`../../spike-13/prs/S13-03-siblings-from-a-shared-parent.ship.md`](../../spike-13/prs/S13-03-siblings-from-a-shared-parent.ship.md), "fails `TestMemoFollowsCommit/a_handle_merged` (`links: count 1, catalog 0`)"); working rules: "Audit items keep their IDs", "Every audited write returns its effects, and a test holds them to it"
 **Planned:** 2026-11-02 against `main` @ `e2efbd0`
-**Review:** — (not reviewed yet)
+**Review:** [`S14-19-merge-leaves-no-stale-link.review.md`](S14-19-merge-leaves-no-stale-link.review.md) — Fits with changes — Ready with changes, 1 round
 
 ### Implementer — read this first
 
@@ -53,6 +53,7 @@ The catalog's in-memory graph (`core/database/graphcache`) drops a link to a han
 | In | Covered by |
 | --- | --- |
 | `graphcache.OnCommit` reloads the loaded neighbors of every committed handle that is merged, and adds them to the roots whose displays and memos drop (D-1, D-2) | STEP-3, AC-1.1 – AC-1.3 |
+| `graphcache.VerifyMode()` replaces the hand-typed verify-mode checks (D-7) | STEP-4 |
 | A table-driven `graphcache` test for the merge commit (D-5) | STEP-2, AC-1.1 – AC-1.3 |
 | `TestLargeSourceBudgets` logs its timings without failing them when `PROVENENCIA_GRAPH_VERIFY=1` (D-4), so the map's Check holds on any machine | STEP-4, AC-1.4 |
 | `OnCommit`'s doc comment says what a merged handle does | STEP-3 |
@@ -97,8 +98,9 @@ Verified by reading the code at `e2efbd0`. The planning session could not run Go
 | D-1 | The fix lives in `graphcache.OnCommit`. For every committed id whose entity row has `merged` true and is not a bridge, the graph finds that handle's catalog links with the existing `loadLinks`, and each link's `Neighbor` that is loaded goes to `reload`. Every neighbor found, loaded or not, goes to `roots` | `linkLoadSQL`'s `n.merged_into_id IS NULL` is the graph's own rule, so the graph owns its invalidation; any future merge writer only names the handles it changed. `loadLinks` is the indexed query the graph already runs (self is not filtered, so it returns a merged handle's links) | (a) Make the merge writer also commit the merged handle's associations — rejected: a merge changes no association row, and every writer would have to know the cache's filter. (b) Use the cached merged node's `Links` only — rejected: misses AC-1.2, where the neighbor is loaded and the merged handle is not. (c) Scan every loaded node's links — rejected: O(graph) per commit at the map's Scale |
 | D-2 | The neighbor lookup runs before the single `g.loadIDs(reload, true)`, so one reload covers the merged handle and its neighbors. It runs once per commit over all merged ids, through `sqlbatch.Each` so a commit naming many merged handles stays under SQLite's variable limit | One reload, one link query batch; a shared neighbor reloads once (`loadIDs` uniques) | A second reload after the first — rejected: two passes for no gain |
 | D-3 | The lookup runs for every committed merged handle, not only for one whose merge is new to the cache | The graph cannot tell "newly merged" for a handle it never loaded (AC-1.2). For a handle already merged, `loadLinks` still finds the neighbors, which by then hold no link to it, so the extra work is one query and at most a reload of loaded neighbors | Compare with the cached `Node.Merged` — rejected: wrong when the handle is not loaded |
-| D-4 | `TestLargeSourceBudgets`'s `over` helper logs and returns without failing when `PROVENENCIA_GRAPH_VERIFY=1`. Every other assertion in the test (the fixture's row counts, "memo matches a fresh run", "warm queries") still runs in verify mode | Verify mode checks the cache, not speed: it rebuilds every loaded node after each commit, and the budgets were set without it. The map's Check runs the whole package in verify mode, which a timing test cannot pass on every machine | Skip the whole test in verify mode — rejected: loses its correctness subtests under verify. Leave it — rejected: the map's Check then depends on the machine |
+| D-4 | `TestLargeSourceBudgets`'s `over` helper logs and returns without failing when `graphcache.VerifyMode()` *(new, D-7)* is true. Every other assertion in the test (the fixture's row counts, "memo matches a fresh run", "warm queries") still runs in verify mode | Verify mode checks the cache, not speed: it rebuilds every loaded node after each commit, and the budgets were set without it. The map's Check runs the whole package in verify mode, which a timing test cannot pass on every machine | Skip the whole test in verify mode — rejected: loses its correctness subtests under verify. Leave it — rejected: the map's Check then depends on the machine |
 | D-5 | The new test is `graphcache` `TestCommitOfAMergedHandle` *(new)* in `graph_test.go`, one table over AC-1.1 – AC-1.3 (`mergedLoaded`, `eventLoaded` booleans). It builds with `graphcachetest.NewCanon`, `Entity`, `Link`, `Merge`, `Commit`, and calls `g.Verify()` directly, so it holds the rule whether or not the environment sets verify mode | The rule is the graph's; `promotealign`'s test reaches it only through Propose and only in verify mode | Rely on `TestMemoFollowsCommit` alone — rejected: it fails only in verify mode, which CI does not run |
+| D-7 | `graphcache` exports `func VerifyMode() bool` *(new)*, in `verify.go`: `os.Getenv("PROVENENCIA_GRAPH_VERIFY") == "1"`. `verifyIfSet` in `commit.go`, the `canonlinks` "an event deleted alone" skip, and D-4's `over` call it; no other code reads the variable | The env name and its `== "1"` rule are hand-typed in two places today (`commit.go` `verifyIfSet`, `core/database/canonlinks/reader_test.go`); D-4 would add a third, in a third package | A third literal copy — rejected: a rename or a new accepted value would miss one (review M-1) |
 | D-6 | Product version bump: patch | `docs/versioning.md`: a bugfix | none — the code changes, so docs-only does not apply |
 
 **Rules this plan bends.** None.
@@ -110,11 +112,12 @@ Verified by reading the code at `e2efbd0`. The planning session could not run Go
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
 | `(*Graph).mergedNeighbors(ids [][]byte) (reload, touched [][]byte, err error)` *(new)*, in `commit.go` | func | `(*Graph).detachAssociation` (returns `reload, touched` for an association); `(*Graph).loadLinks` | Same return shape as `detachAssociation` on purpose; it calls `loadLinks` instead of adding a query. `detachAssociation` itself removes the association node and loads fresh endpoints, which a merge does not need. Searched: `rg 'merged' core/database/graphcache`, `rg 'value_entity_id' core/database/graphcache core/database/canonlinks core/database/canonicalgraph` |
+| `graphcache.VerifyMode() bool` *(new)*, in `verify.go` | func | `commit.go` `verifyIfSet`'s `os.Getenv` check; the literal in `core/database/canonlinks/reader_test.go` | It is that check, extracted so the three readers share it (D-7). Searched: `rg PROVENENCIA_GRAPH_VERIFY --type go` |
 | `TestCommitOfAMergedHandle` *(new)* | test | `TestCommitOfAnAssociationLoadsEndpoints` | A different commit shape; same helpers (`graphcachetest.Canon`, `loaded`) |
 
 **Builds on.** `OnCommit`'s `reload` / `roots` pattern; `loadLinks` and `sqlbatch.Each`; `graphcachetest.Canon.Merge`.
-**Deletes.** None — nothing becomes dead. `core/database/canonlinks/reader_test.go`'s verify skip stays (it commits a deliberately inconsistent set, unrelated to merges).
-**Next adds.** A product merge writer (not planned) commits `Handles: [merged, survivor]` and the graph follows with no further change. S14-20's `checkFixed` release of a pair whose record was merged reads the graph this PR keeps true.
+**Deletes.** The two hand-typed `os.Getenv("PROVENENCIA_GRAPH_VERIFY")` checks (`commit.go` `verifyIfSet`, `core/database/canonlinks/reader_test.go`) become `graphcache.VerifyMode()` calls, and `reader_test.go`'s `"os"` import goes with its only use; `commit.go` drops `"os"` too (nothing else in it uses it). The `canonlinks` verify skip itself stays (it commits a deliberately inconsistent set, unrelated to merges).
+**Next adds.** A product merge writer on `writes.Run` (not planned) needs nothing extra: `effects.Resolve` already names the merged handle (`core/database/effects/registry.go` `"canonical_entities"` `Handles: self()`) and the survivor (re-pointed `"identity_claims"` `field("entity_id")`), and the graph drops the stale links itself. [`docs/ideas/name-index-on-commit.md`](../../../ideas/name-index-on-commit.md)'s "a merge: remove both, add the survivor" can read the `merged` list `OnCommit` now builds. S14-20's `checkFixed` release of a pair whose record was merged reads the graph this PR keeps true.
 
 ### Reach
 
@@ -140,9 +143,11 @@ None — no catalog change.
 
 | Package | Change |
 | --- | --- |
-| `core/database/graphcache` | `commit.go` `OnCommit`: in the `ids` loop, a found, non-bridge row with `row.merged` adds `row.id` to a local `merged` list (it still goes to `entities` as today). Before `g.loadIDs(reload, true)`, `mergedNeighbors(merged)` *(new)* returns `reload` (link neighbors that are in `g.nodes`) and `touched` (every link neighbor); append them to `reload` and `roots`. The doc comment gains one sentence: "A merged handle's loaded neighbors are reloaded, so none keeps a link a fresh load would drop." |
+| `core/database/graphcache` | `commit.go` `OnCommit`: in the `ids` loop, a found, non-bridge row with `row.merged` adds `row.id` to a local `merged` list (it still goes to `entities` as today). Before `g.loadIDs(reload, true)`, `mergedNeighbors(merged)` *(new)* returns `reload` (link neighbors that are in `g.nodes`) and `touched` (every link neighbor); append them to `reload` and `roots`. The doc comment gains two sentences, side by side: "A deleted handle's neighbors become roots; its writer commits the associations it removed. A merged handle's loaded neighbors are reloaded by the graph, so none keeps a link a fresh load would drop." |
 | `core/database/graphcache` | `mergedNeighbors(ids)`: returns nil, nil, nil for no ids; otherwise `sqlbatch.Each(ids, ...)` over `g.loadLinks(chunk)`, collecting each `Link.Neighbor` |
-| `core/database/promotealign` | `perf_test.go` `TestLargeSourceBudgets` `over`: after `t.Logf`, return when `os.Getenv("PROVENENCIA_GRAPH_VERIFY") == "1"`, with a comment: "Verify mode rebuilds the cache on every commit; budgets are measured without it." |
+| `core/database/graphcache` | `verify.go`: `// VerifyMode reports whether PROVENENCIA_GRAPH_VERIFY=1, which rebuilds and checks the cache after every commit.` `func VerifyMode() bool` *(new)*, with `"os"` added to `verify.go`'s imports. `commit.go` `verifyIfSet` returns nil when `!VerifyMode()`; drop `commit.go`'s `"os"` import |
+| `core/database/canonlinks` | `reader_test.go` "an event deleted alone": `if graphcache.VerifyMode()` in place of the `os.Getenv` check; drop the `"os"` import (its only use) |
+| `core/database/promotealign` | `perf_test.go` `TestLargeSourceBudgets` `over`: after `t.Logf`, return when `graphcache.VerifyMode()`, with a comment: "Verify mode rebuilds the cache on every commit; budgets are measured without it." |
 
 Errors: `mergedNeighbors` returns `loadLinks`'s error, and `OnCommit` returns it as it does for `entityRows`.
 
@@ -176,9 +181,9 @@ Do: per §6 Go core: the `merged` list in `OnCommit`, `mergedNeighbors` *(new)*,
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/graphcache/...` passes, `TestCommitOfAMergedHandle` included; `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 -timeout 30m -run TestMemoFollowsCommit ./core/database/promotealign/` passes.
 
 **STEP-4 — Budgets log in verify mode**
-Files: `core/database/promotealign/perf_test.go`.
-Do: D-4 in `over`; add `"os"` to the file's imports.
-Check: `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 -timeout 30m ./core/database/promotealign/...` passes (AC-1.4); `CGO_ENABLED=1 go test -tags fts5 -run TestLargeSourceBudgets ./core/database/promotealign/` still fails a subtest when a budget constant is set to `time.Nanosecond` locally (revert after checking; do not commit it).
+Files: `core/database/graphcache/verify.go`, `core/database/graphcache/commit.go`, `core/database/canonlinks/reader_test.go`, `core/database/promotealign/perf_test.go`.
+Do: D-7 first (`VerifyMode`, then `verifyIfSet` and the `canonlinks` skip onto it, per §6 Go core), then D-4 in `over`, importing `github.com/mendahu/provenencia/core/database/graphcache` in `perf_test.go` if it is not imported yet.
+Check: `rg PROVENENCIA_GRAPH_VERIFY --type go` hits only `verify.go` (code and comment) and comments elsewhere; `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 -timeout 30m ./core/database/promotealign/... ./core/database/canonlinks/...` passes (AC-1.4); `CGO_ENABLED=1 go test -tags fts5 -run TestLargeSourceBudgets ./core/database/promotealign/` still fails a subtest when a budget constant is set to `time.Nanosecond` locally (revert after checking; do not commit it).
 
 **STEP-5 — Whole suite**
 Files: none.
@@ -186,7 +191,7 @@ Do: run the suite both ways and compare with STEP-1's baseline.
 Check: `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 -timeout 30m ./api/... ./core/...` fails no package beyond STEP-1's list minus `promotealign`; `scripts/check-pr.sh` prints `check-pr: PASS` (AC-1.5).
 
 **STEP-6 — Docs**
-Files: `docs/deployment-plan/spike-14/completed.md`, `docs/deployment-plan/spike-14/deployment-plan.md` (map row status; S14-19 scope entry Context: "`core/database/graphcache` `OnCommit` (memos and `Deps`)" in place of "the merge path in `canonicalentities`", and drop `use-catalog-session`), this plan (status, Landed note), `docs/deployment-plan/spike-14/app-health-audit.md` (L-16: replace "`PROVENENCIA_GRAPH_VERIFY=1` is not suite-clean (`promotealign` `TestMemoFollowsCommit/a_handle_merged`, `TestLargeSourceBudgets`);" with "`PROVENENCIA_GRAPH_VERIFY=1` is not suite-clean (`promotealign` `TestMemoFollowsCommit/a_handle_merged`, `TestLargeSourceBudgets`; **fixed in S14-19**);" and leave the rest of the bullet as it is), `VERSION`, `core/version.go`, every `MARKETING_VERSION` line in `macos/Provenencia.xcodeproj/project.pbxproj`.
+Files: `docs/deployment-plan/spike-14/completed.md`, `docs/deployment-plan/spike-14/deployment-plan.md` (map row status; S14-19 scope entry Context: "`core/database/graphcache` `OnCommit` (memos and `Deps`)" in place of "the merge path in `canonicalentities`", and drop `use-catalog-session`; the **Ships** sentence "The merge's effects drop that link, and the verify-mode test passes." becomes "`graphcache.OnCommit` reloads the loaded neighbors of a committed merged handle, so none keeps the link, and the verify-mode test passes."), `docs/conclusion-layer-data-model.md` §9 (after the sentence ending "re-pointed onto the survivor by application rules (§2.3)." add: "The merge write declares no extra effects for the in-memory graph: `effects.Resolve` names the merged handle (`canonical_entities`) and the survivor (re-pointed `identity_claims.entity_id`), and the graph drops the merged handle's links from its loaded neighbors itself."), this plan (status, Landed note), `docs/deployment-plan/spike-14/app-health-audit.md` (L-16: replace "`PROVENENCIA_GRAPH_VERIFY=1` is not suite-clean (`promotealign` `TestMemoFollowsCommit/a_handle_merged`, `TestLargeSourceBudgets`);" with "`PROVENENCIA_GRAPH_VERIFY=1` is not suite-clean (`promotealign` `TestMemoFollowsCommit/a_handle_merged`, `TestLargeSourceBudgets`; **fixed in S14-19**);" and leave the rest of the bullet as it is), `VERSION`, `core/version.go`, every `MARKETING_VERSION` line in `macos/Provenencia.xcodeproj/project.pbxproj`.
 Do: per the Definition of done. Version: the next patch after what `VERSION` holds on your base (0.2.7 → 0.2.8 at the planning base), in all three places. `completed.md`: a new `## S14-19 — A merge leaves no stale link in the graph cache` section at the top (newest first), one paragraph starting `**Landed YYYY-MM-DD** in [#N](https://github.com/mendahu/provenencia/pull/N).` Map row: Plan column links this file; Status `Landed in #N (YYYY-MM-DD)` like the other landed rows.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-19-merge-leaves-no-stale-link.md` reports no errors; links resolve.
 
@@ -219,10 +224,10 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `g
 - [ ] UI matches the brief inventory; no new kit primitive unless the brief marks it New — no UI
 - [ ] Version bump: patch (VERSION, core/version.go, MARKETING_VERSION together)
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
-- [ ] deployment-plan.md: map row status and the S14-19 Context line (STEP-6); completed.md: one short paragraph of what shipped
+- [ ] deployment-plan.md: map row status, the S14-19 Context line and Ships sentence (STEP-6), and `rg "merge's effects drop" docs` finds nothing outside this plan; completed.md: one short paragraph of what shipped
 - [ ] app-health-audit.md L-16: the two verify-mode items marked fixed in S14-19
 - [ ] Brief moved to design/archive/ and design/README.md updated (if gated) — not gated
-- [ ] Domain doc updated if a rule in docs/*.md changed: none (the graph cache's commit rule is documented in commit.go)
+- [ ] Domain doc updated: docs/conclusion-layer-data-model.md §9 gains the merge-effects sentence (STEP-6)
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
 
