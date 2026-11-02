@@ -182,7 +182,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// Per-call delay before `workspaceNavCounts` returns, consumed in call
     /// order; empty means no delay. The counts are read when the call starts,
     /// so a delayed recount returns the counts from then.
-    var workspaceNavCountsDelays: [Duration] = []
+    /// Pauses a `workspaceNavCounts` call after it reads its snapshot, so a test can finish a later recount first.
+    let workspaceNavCountsHold = FakeHold()
     /// When set, `updateSource` throws (identity title/type/description saves).
     var updateSourceError: Error?
     /// When set, `addObservationsToCitation` throws after recording the call.
@@ -1258,23 +1259,22 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     func workspaceNavCounts(projectDir: String) async throws -> WorkspaceNavCounts {
-        let claimed: (delay: Duration?, counts: WorkspaceNavCounts) = try withState {
+        let counts: WorkspaceNavCounts = try withState {
             markCatalogSessionHeld(projectDir)
             if let workspaceNavCountsError { throw workspaceNavCountsError }
-            let delay: Duration? = workspaceNavCountsDelays.isEmpty ? nil : workspaceNavCountsDelays.removeFirst()
             let types = sourceTypesByProject[projectDir] ?? []
             let fields = fieldsByProject[projectDir] ?? []
-            return (delay, WorkspaceNavCounts(
+            return WorkspaceNavCounts(
                 sources: (sourcesByProject[projectDir] ?? []).count,
                 sourceTypes: Self.originCounts(from: types.map(\.origin)),
                 metadataFields: Self.originCounts(from: fields.map(\.origin)),
                 persons: Self.handleCount(membershipBySubject, kind: "person"),
                 events: Self.handleCount(membershipBySubject, kind: "event"),
                 places: Self.handleCount(membershipBySubject, kind: "place")
-            ))
+            )
         }
-        if let delay = claimed.delay { try? await Task.sleep(for: delay) }
-        return claimed.counts
+        await workspaceNavCountsHold.wait()
+        return counts
     }
 
     func nameFormat(projectDir: String) async throws -> NameFormatOrders {

@@ -118,19 +118,20 @@ struct CatalogCountsTests {
     /// slower one finishing after it must not overwrite its counts.
     @Test func newestRecountWins() async throws {
         let store = FakeStore()
-        store.workspaceNavCountsDelays = [.milliseconds(200), .zero]
+        store.workspaceNavCountsHold.isOn = true
         let counts = makeCounts(store: store)
 
         let first = Task { await counts.refreshAll() }
-        // The first recount has claimed its delay and read zero Sources.
-        let started = await waitUntil(timeout: .seconds(5)) { store.workspaceNavCountsDelays.count == 1 }
-        #expect(started)
+        // The first recount has read zero Sources and is held before returning them.
+        try #require(await waitUntil(timeout: .seconds(15)) { store.workspaceNavCountsHold.count == 1 })
+        store.workspaceNavCountsHold.isOn = false
         _ = try await store.createSource(
             projectDir: projectDir, userID: "u", sourceTypeID: "t1", title: "New", description: ""
         )
 
         await counts.refreshAll()
         #expect(counts.sources == 1)
+        store.workspaceNavCountsHold.release()
         await first.value
         #expect(counts.sources == 1)
     }
