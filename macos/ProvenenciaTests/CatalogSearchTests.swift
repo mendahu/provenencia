@@ -41,11 +41,18 @@ struct CatalogSearchModelTests {
         #expect(CatalogSearchHitPresentation.accessibilityLabel(for: hit).hasPrefix(CatalogSearchHitPresentation.title(for: hit)))
     }
 
-    @Test func exactRefHitIsTop() async {
+    @Test func modelKeepsEngineOrder() async {
         let store = FakeStore()
-        store.sourcesByProject[projectDir] = [
-            CatalogSource(id: "s1", ref: "SRC-ZZ9K2", sourceTypeID: "", title: "Quiet", description: ""),
-            CatalogSource(id: "s2", ref: "SRC-OTHER", sourceTypeID: "", title: "SRC-ZZ9K2 in title", description: ""),
+        store.seededSearchHits = [
+            CatalogSearchHit(
+                kind: "source", id: "s1", ref: "SRC-ZZ9K2", title: "Quiet", subtitle: "", matchReason: "ref",
+                location: WorkspaceLocation(section: .sources, sourceId: "s1", ref: "SRC-ZZ9K2", title: "Quiet")
+            ),
+            CatalogSearchHit(
+                kind: "source", id: "s2", ref: "SRC-OTHER", title: "SRC-ZZ9K2 in title", subtitle: "",
+                matchReason: "title",
+                location: WorkspaceLocation(section: .sources, sourceId: "s2", ref: "SRC-OTHER", title: "SRC-ZZ9K2 in title")
+            ),
         ]
         let model = CatalogSearchModel()
         model.query = "SRC-ZZ9K2"
@@ -96,24 +103,25 @@ struct CatalogSearchModelTests {
     }
 
     @Test func kindsRestrictHits() async throws {
-        let (store, james) = try await robinsSearchStore(projectDir: projectDir)
+        let store = FakeStore()
+        store.seededSearchHits = [
+            CatalogSearchHit(
+                kind: "person", id: "e-1", ref: "PER-1", title: "James Robins", subtitle: "", matchReason: "title",
+                location: WorkspaceLocation(section: .persons, entityId: "e-1")
+            ),
+            CatalogSearchHit(
+                kind: "source", id: "src-1", ref: "SRC-1", title: "Robins register", subtitle: "",
+                matchReason: "title", location: WorkspaceLocation(section: .sources, sourceId: "src-1")
+            ),
+        ]
         let model = CatalogSearchModel(kinds: ["person"])
         model.query = "Robins"
         model.scheduleSearch(projectDir: projectDir, location: nil, store: store)
         await waitForSearch(model)
         #expect(model.hits.map(\.kind) == ["person"])
-        #expect(model.hits.first?.ref == james.entity.ref)
+        #expect(model.hits.first?.ref == "PER-1")
         #expect(model.hasSearched)
         #expect(model.searchError == nil)
-    }
-
-    @Test func noLocationGivesNoSectionNudge() async throws {
-        let (store, _) = try await robinsSearchStore(projectDir: projectDir)
-        let model = CatalogSearchModel()
-        model.query = "Robins"
-        model.scheduleSearch(projectDir: projectDir, location: nil, store: store)
-        await waitForSearch(model)
-        #expect(model.hits.map(\.kind) == ["person", "source"])
     }
 
     @Test func cancelKeepsResultsAndStopsLoading() {
