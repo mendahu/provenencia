@@ -218,7 +218,7 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.updateSource,
             request: req
         )
-        return (Self.mapSource(resp.source), resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty)
+        return (Self.mapSource(resp.source), Self.mapWriteEffects(resp.effects))
     }
 
     func setSourceCover(
@@ -238,7 +238,7 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.setSourceCover,
             request: req
         )
-        return (Self.mapSource(resp.source), resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty)
+        return (Self.mapSource(resp.source), Self.mapWriteEffects(resp.effects))
     }
 
     func addSourceNote(projectDir: String, userID: String, sourceID: String, body: String) async throws
@@ -265,7 +265,7 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.deleteSource,
             request: req
         )
-        return resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+        return Self.mapWriteEffects(resp.effects)
     }
 
     func updateSourceNote(projectDir: String, userID: String, noteID: String, body: String) async throws
@@ -971,7 +971,7 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.applyPromoteGraphAlignment,
             request: req
         )
-        return resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+        return Self.mapWriteEffects(resp.effects)
     }
 
     func listEvidenceGraphEventTitles(projectDir: String, graphID: String) async throws -> [String: CatalogEventTitle] {
@@ -1630,7 +1630,7 @@ struct GoStore: GenealogyStore {
             Self.mapSubject(resp.subject),
             Self.mapCitation(resp.citation),
             resp.observations.map(Self.mapObservation),
-            resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+            Self.mapWriteEffects(resp.effects)
         )
     }
 
@@ -1666,7 +1666,7 @@ struct GoStore: GenealogyStore {
         return (
             Self.mapCitation(resp.citation),
             resp.observations.map(Self.mapObservation),
-            resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+            Self.mapWriteEffects(resp.effects)
         )
     }
 
@@ -1707,7 +1707,7 @@ struct GoStore: GenealogyStore {
         )
         return (
             resp.observations.map(Self.mapObservation),
-            resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+            Self.mapWriteEffects(resp.effects)
         )
     }
 
@@ -1828,7 +1828,7 @@ struct GoStore: GenealogyStore {
         )
         return (
             Self.mapCitation(resp.citation),
-            resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+            Self.mapWriteEffects(resp.effects)
         )
     }
 
@@ -1850,7 +1850,7 @@ struct GoStore: GenealogyStore {
         )
         return (
             Self.mapObservation(resp.observation),
-            resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+            Self.mapWriteEffects(resp.effects)
         )
     }
 
@@ -1863,7 +1863,7 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.deleteObservation,
             request: req
         )
-        return resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+        return Self.mapWriteEffects(resp.effects)
     }
 
     func deleteCitation(projectDir: String, userID: String, citationID: String) async throws -> CatalogWriteEffects {
@@ -1875,7 +1875,7 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.deleteCitation,
             request: req
         )
-        return resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+        return Self.mapWriteEffects(resp.effects)
     }
 
     private static func mapWriteEffects(_ effects: Provenencia_Engine_V1_WriteEffects) -> CatalogWriteEffects {
