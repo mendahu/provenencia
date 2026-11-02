@@ -52,7 +52,9 @@ struct PersonTile: View {
     /// Opens the person; ignored for the focus.
     var open: () -> Void = {}
 
-    static let height: CGFloat = 92
+    nonisolated static let height: CGFloat = 92
+
+    @FocusState private var focused: Bool
 
     var body: some View {
         if content.isFocus {
@@ -63,6 +65,12 @@ struct PersonTile: View {
         } else {
             Button(action: open) { card }
                 .buttonStyle(PersonTileButtonStyle())
+                .focused($focused)
+                .onKeyPress(.return) {
+                    guard focused else { return .ignored }
+                    open()
+                    return .handled
+                }
                 .pvLiftHover(scale: 1.025)
                 .accessibilityLabel(content.spokenLabel)
                 .help(content.title.text)

@@ -6,8 +6,13 @@ import Testing
 struct PersonFamilyLayoutTests {
     private let en = Locale(identifier: "en_US")
 
-    private func layout(_ family: CatalogPersonFamily, width: CGFloat = 1038, _ widthClass: PVWidthClass = .regular) -> (PersonFamilyContent, PersonFamilyLayout) {
-        let content = PersonFamilyContent(family: family, locale: en)
+    private func layout(
+        _ family: CatalogPersonFamily,
+        expanded: Set<PersonFamilyContent.Fold> = [],
+        width: CGFloat = 1038,
+        _ widthClass: PVWidthClass = .regular
+    ) -> (PersonFamilyContent, PersonFamilyLayout) {
+        let content = PersonFamilyContent(family: family, expanded: expanded, locale: en)
         return (content, PersonFamilyLayout(content: content, width: width, widthClass: widthClass))
     }
 
@@ -91,7 +96,7 @@ struct PersonFamilyLayoutTests {
             person: PersonFamilyPreviewData.johann,
             originSiblings: kids.map { PersonFamilyPreviewData.origin($0, [0]) } + [PersonFamilyPreviewData.origin(PersonFamilyPreviewData.johannMember, [0])]
         )
-        let (content, l) = layout(family)
+        let (content, l) = layout(family, expanded: [.siblings])
         let ids = content.parentSets.flatMap { $0 }.map(\.id) + content.siblings.map(\.tile.id)
         let frames = ids.compactMap { l.frame(ofTile: $0) }
         #expect(frames.count == 52)
@@ -99,5 +104,27 @@ struct PersonFamilyLayoutTests {
         let siblings: CGFloat = 50 * 104 - 12
         #expect(l.height == captionAndParents + 20 + siblings)
         for (a, b) in zip(frames, frames.dropFirst()) { #expect(!a.intersects(b)) }
+    }
+
+    @Test func fiftySiblingsFolded() throws {
+        let kids = (0..<49).map { PersonFamilyPreviewData.member("kid\($0)", "Kid \($0)") }
+        let family = CatalogPersonFamily(
+            units: [PersonFamilyPreviewData.unit(.parents, partners: [PersonFamilyPreviewData.member("a", "A"), PersonFamilyPreviewData.member("b", "B")], children: kids)],
+            person: PersonFamilyPreviewData.johann,
+            originSiblings: kids.map { PersonFamilyPreviewData.origin($0, [0]) } + [PersonFamilyPreviewData.origin(PersonFamilyPreviewData.johannMember, [0])]
+        )
+        let (content, l) = layout(family)
+        #expect(content.siblings.count == 31 && content.siblingsHidden == 19)
+        let group = try #require(l.groups.first { $0.label == content.siblingsLabel })
+        #expect(group.tiles.count == 31 && group.more.count == 1)
+        let more = try #require(group.more.first)
+        #expect(more.fold == .siblings && more.count == 19 && more.frame.height == PersonFamilyLayout.moreRowHeight)
+        let frames = group.tiles.map { $0.frame } + [more.frame]
+        for (a, b) in zip(frames, frames.dropFirst()) { #expect(!a.intersects(b)) }
+        // The group's frame holds the row, and so does the page.
+        let absolute = more.frame.offsetBy(dx: group.frame.minX, dy: group.frame.minY)
+        #expect(group.frame.contains(absolute) && l.height == absolute.maxY)
+        // No line reaches the row.
+        #expect(!l.segments.contains { $0.intersects(absolute) })
     }
 }

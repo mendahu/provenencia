@@ -9339,6 +9339,14 @@ enum L10n {
             comment: "Title of the Callout shown when a Person's Family section could not be read"
         )
 
+        static func familyShowMore(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.family.showMore",
+                defaultValue: "Show %lld more",
+                comment: "Button under a Family list folded at 30 that shows the rest; argument is how many are hidden"
+            ), count)
+        }
+
         static let portraitBadge = LocalizedStringResource(
             "conclusions.person.portraitBadge",
             defaultValue: "Portrait",

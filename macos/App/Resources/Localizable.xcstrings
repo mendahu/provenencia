@@ -18510,6 +18510,30 @@
         }
       }
     },
+    "conclusions.family.showMore": {
+      "comment": "Button under a Family list folded at 30 that shows the rest; argument is how many are hidden",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Show %lld more"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Show %lld more"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "conclusions.a11y.ref": {
       "comment": "VoiceOver label of a handle's ref (PER-…)",
       "extractionState": "manual",

@@ -9,6 +9,9 @@ struct PersonFamilySection: View {
 
     @Environment(WorkspaceSession.self) private var session
 
+    /// The lists the researcher has unfolded. Reset when the page is another person.
+    @State private var expanded: Set<PersonFamilyContent.Fold> = []
+
     private var key: CatalogQueryKey {
         .personFamily(project: session.projectKey, entityId: entityId)
     }
@@ -16,7 +19,12 @@ struct PersonFamilySection: View {
     var body: some View {
         Group {
             if let handle: QueryHandle<CatalogPersonFamily> = session.queryHandle(key) {
-                PersonFamilyLoaded(handle: handle, projectDir: session.projectKey.projectDir, orders: session.nameFormat)
+                PersonFamilyLoaded(
+                    handle: handle,
+                    projectDir: session.projectKey.projectDir,
+                    orders: session.nameFormat,
+                    expanded: $expanded
+                )
             } else {
                 PersonFamilyLoading()
             }
@@ -24,6 +32,7 @@ struct PersonFamilySection: View {
         .task {
             let _: QueryHandle<CatalogPersonFamily> = session.query(key)
         }
+        .onChange(of: entityId) { expanded = [] }
     }
 }
 
@@ -39,6 +48,7 @@ private struct PersonFamilyLoaded: View {
     @Bindable var handle: QueryHandle<CatalogPersonFamily>
     let projectDir: String
     let orders: NameFormatOrders
+    @Binding var expanded: Set<PersonFamilyContent.Fold>
 
     @Environment(WorkspaceNavigation.self) private var navigation
     @Environment(\.pvWidthClass) private var widthClass
@@ -47,7 +57,7 @@ private struct PersonFamilyLoaded: View {
         let presentation = ConclusionDetailPresentation<PersonFamilyContent>(
             handle.read,
             isFetching: handle.isFetching
-        ) { PersonFamilyContent(family: $0, locale: .autoupdatingCurrent, orders: orders) }
+        ) { PersonFamilyContent(family: $0, expanded: expanded, locale: .autoupdatingCurrent, orders: orders) }
         switch presentation {
         case .loading:
             PersonFamilyLoading()
@@ -67,7 +77,8 @@ private struct PersonFamilyLoaded: View {
                     content: content,
                     projectDir: projectDir,
                     widthClass: widthClass,
-                    open: { navigation.go(to: $0) }
+                    open: { navigation.go(to: $0) },
+                    expand: { expanded.insert($0) }
                 )
                 .accessibilityIdentifier("persons.detail.family")
             }
@@ -83,6 +94,7 @@ struct PersonFamilyDiagram: View {
     let projectDir: String
     let widthClass: PVWidthClass
     let open: (WorkspaceLocation) -> Void
+    var expand: (PersonFamilyContent.Fold) -> Void = { _ in }
 
     @State private var width: CGFloat = 0
 
@@ -99,7 +111,7 @@ struct PersonFamilyDiagram: View {
     }
 
     private func diagram(_ layout: PersonFamilyLayout) -> some View {
-        let tiles = Dictionary(uniqueKeysWithValues: content.allTiles.map { ($0.id, $0) })
+        let tiles = Dictionary(content.allTiles.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         return ZStack(alignment: .topLeading) {
             Path { path in
                 for segment in layout.segments { path.addRect(segment) }
@@ -126,6 +138,12 @@ struct PersonFamilyDiagram: View {
                             .accessibilityIdentifier("persons.detail.family.tile.\(placed.id)")
                         }
                     }
+                    ForEach(group.more, id: \.fold) { more in
+                        PersonFamilyMoreRow(count: more.count) { expand(more.fold) }
+                            .frame(width: more.frame.width, height: more.frame.height, alignment: .leading)
+                            .offset(x: more.frame.minX, y: more.frame.minY)
+                            .accessibilityIdentifier("persons.detail.family.more")
+                    }
                 }
                 .frame(width: group.frame.width, height: group.frame.height, alignment: .topLeading)
                 .offset(x: group.frame.minX, y: group.frame.minY)
@@ -134,6 +152,28 @@ struct PersonFamilyDiagram: View {
             }
         }
         .frame(width: width, height: layout.height, alignment: .topLeading)
+    }
+}
+
+/// The "Show N more" row that ends a folded list: a plain borderless button.
+/// Return and Space activate it.
+private struct PersonFamilyMoreRow: View {
+    let count: Int
+    let expand: () -> Void
+
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        Button(action: expand) {
+            Text(verbatim: L10n.Conclusions.familyShowMore(count))
+        }
+        .buttonStyle(.pv(.ghost, size: .sm))
+        .focused($focused)
+        .onKeyPress(.return) {
+            guard focused else { return .ignored }
+            expand()
+            return .handled
+        }
     }
 }
 

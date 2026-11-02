@@ -9,9 +9,18 @@ import CoreGraphics
 /// siblings indented beneath on rails in the margin, the person among them. The
 /// right column is the family the person formed: each partner with their
 /// children indented beneath. A bus joins the person's tile to every partner.
+/// A folded list ends in one "more" row; no line goes to it.
 struct PersonFamilyLayout: Equatable {
     struct PlacedTile: Equatable {
         var id: String
+        /// Relative to its group.
+        var frame: CGRect
+    }
+
+    /// The "Show N more" row that ends a folded list. The view words it.
+    struct PlacedMore: Equatable {
+        var fold: PersonFamilyContent.Fold
+        var count: Int
         /// Relative to its group.
         var frame: CGRect
     }
@@ -21,6 +30,7 @@ struct PersonFamilyLayout: Equatable {
         var label: String
         var frame: CGRect
         var tiles: [PlacedTile]
+        var more: [PlacedMore] = []
     }
 
     struct Caption: Equatable {
@@ -29,7 +39,8 @@ struct PersonFamilyLayout: Equatable {
     }
 
     static let margin: CGFloat = 20
-    static let tileHeight: CGFloat = 92
+    static let moreRowHeight: CGFloat = 28
+    static let moreGap: CGFloat = 4
     static let tileGap: CGFloat = 12
     static let captionBand: CGFloat = 26
     static let indent: CGFloat = 32
@@ -72,7 +83,7 @@ struct PersonFamilyLayout: Equatable {
 
     init(content: PersonFamilyContent, width: CGFloat, widthClass: PVWidthClass) {
         let m = Self.margin
-        let th = Self.tileHeight
+        let th = PersonTile.height
         let step = th + Self.tileGap
         let gutter = Self.gutter(widthClass)
         let tp = max((width - m - gutter) / 2, 120).rounded(.down)
@@ -82,14 +93,20 @@ struct PersonFamilyLayout: Equatable {
         busX = c2 - Self.indent
 
         // Absolute frames collected per container, then made relative.
-        func container(_ label: String, _ placed: [(String, CGRect)]) -> Group {
-            let union = placed.dropFirst().reduce(placed[0].1) { $0.union($1.1) }
+        func container(_ label: String, _ placed: [(String, CGRect)], more: [(PersonFamilyContent.Fold, Int, CGRect)] = []) -> Group {
+            let union = (placed.map(\.1) + more.map(\.2)).dropFirst().reduce(placed[0].1) { $0.union($1) }
             return Group(
                 label: label,
                 frame: union,
-                tiles: placed.map { PlacedTile(id: $0.0, frame: $0.1.offsetBy(dx: -union.minX, dy: -union.minY)) }
+                tiles: placed.map { PlacedTile(id: $0.0, frame: $0.1.offsetBy(dx: -union.minX, dy: -union.minY)) },
+                more: more.map { PlacedMore(fold: $0.0, count: $0.1, frame: $0.2.offsetBy(dx: -union.minX, dy: -union.minY)) }
             )
         }
+        /// The row under a list that ends at `bottom`.
+        func moreRow(x: CGFloat, width: CGFloat, below bottom: CGFloat) -> CGRect {
+            CGRect(x: x, y: bottom + Self.moreGap, width: width, height: Self.moreRowHeight)
+        }
+        let moreBand = Self.moreGap + Self.moreRowHeight
         func horizontal(_ x1: CGFloat, _ x2: CGFloat, y: CGFloat) {
             segments.append(CGRect(x: min(x1, x2), y: y, width: abs(x2 - x1), height: 1))
         }
@@ -115,10 +132,15 @@ struct PersonFamilyLayout: Equatable {
                 placed.append((tile.id, CGRect(x: m, y: top, width: tp, height: th)))
                 centers.append(top + th / 2)
             }
-            if !placed.isEmpty { groups.append(container(content.parentCaptions[k], placed)) }
+            var bottom = y + Self.captionBand + CGFloat(set.count) * step - Self.tileGap
+            var more: [(PersonFamilyContent.Fold, Int, CGRect)] = []
+            if k == n - 1, content.parentSetsHidden > 0 {
+                more.append((.parentSets, content.parentSetsHidden, moreRow(x: m, width: tp, below: bottom)))
+                bottom += moreBand
+            }
+            if !placed.isEmpty { groups.append(container(content.parentCaptions[k], placed, more: more)) }
             parentCenters.append(centers)
             firstParentCenter.append(centers.first ?? y + Self.captionBand)
-            let bottom = y + Self.captionBand + CGFloat(set.count) * step - Self.tileGap
             leftBottom = max(leftBottom, bottom)
             y = bottom + Self.afterSet
         }
@@ -127,8 +149,8 @@ struct PersonFamilyLayout: Equatable {
         let siblingX = n > 0 ? m + Self.indent : m
         let siblingWidth = n > 0 ? tp - Self.indent : tp
         let siblingTop = n > 0 ? y : Self.captionBand
-        if content.siblingsCaption {
-            captions.append(Caption(text: L10n.string(L10n.Conclusions.familyCaptionSiblings), origin: CGPoint(x: m, y: 0)))
+        if let caption = content.siblingsCaption {
+            captions.append(Caption(text: caption, origin: CGPoint(x: m, y: 0)))
         }
         var siblingCenters: [CGFloat] = []
         var siblingPlaced: [(String, CGRect)] = []
@@ -143,18 +165,32 @@ struct PersonFamilyLayout: Equatable {
             }
             leftBottom = max(leftBottom, top + th)
         }
-        if !siblingPlaced.isEmpty { groups.append(container(content.siblingsLabel, siblingPlaced)) }
+        var siblingMore: [(PersonFamilyContent.Fold, Int, CGRect)] = []
+        if content.siblingsHidden > 0, let last = siblingPlaced.last {
+            let row = moreRow(x: siblingX, width: siblingWidth, below: last.1.maxY)
+            siblingMore.append((.siblings, content.siblingsHidden, row))
+            leftBottom = max(leftBottom, row.maxY)
+        }
+        if !siblingPlaced.isEmpty { groups.append(container(content.siblingsLabel, siblingPlaced, more: siblingMore)) }
 
-        // Left lines.
+        // Left lines. One pass finds each parent set's siblings and the first
+        // set each sibling is in.
         if n > 0 {
+            var members = [[Int]](repeating: [], count: n)
+            var firstSet = [Int?](repeating: nil, count: content.siblings.count)
+            for (i, sibling) in content.siblings.enumerated() {
+                for k in sibling.sets where k >= 0 && k < n {
+                    members[k].append(i)
+                    firstSet[i] = min(firstSet[i] ?? k, k)
+                }
+            }
             for k in 0..<n {
                 let rail = Self.railX(k, of: n)
                 for center in parentCenters[k] { horizontal(rail, m, y: center) }
-                let inSet = content.siblings.indices.filter { content.siblings[$0].sets.contains(k) }
-                if let last = inSet.last {
+                if let last = members[k].last {
                     vertical(x: rail, firstParentCenter[k], siblingCenters[last])
                 }
-                for i in inSet where content.siblings[i].sets.min() == k {
+                for i in members[k] where firstSet[i] == k {
                     horizontal(rail, siblingX, y: siblingCenters[i])
                 }
             }
@@ -179,7 +215,7 @@ struct PersonFamilyLayout: Equatable {
         }
         let childX = c2 + Self.indent
         let childRail = c2 - 12
-        for group in content.groups {
+        for (index, group) in content.groups.enumerated() {
             var placed: [(String, CGRect)] = []
             var top = gy
             var partnerCenter: CGFloat?
@@ -209,9 +245,18 @@ struct PersonFamilyLayout: Equatable {
                 vertical(x: childRail, first, last)
                 for center in childCenters { horizontal(childRail, childX, y: center) }
             }
+            var bottom = top - Self.tileGap
+            var more: [(PersonFamilyContent.Fold, Int, CGRect)] = []
+            if group.childrenHidden > 0 {
+                more.append((.children(index), group.childrenHidden, moreRow(x: childX, width: tp - Self.indent, below: bottom)))
+                bottom += moreBand
+            }
+            if index == content.groups.count - 1, content.groupsHidden > 0 {
+                more.append((.partners, content.groupsHidden, moreRow(x: c2, width: tp, below: bottom)))
+                bottom += moreBand
+            }
             if !placed.isEmpty {
-                groups.append(container(group.label, placed))
-                let bottom = top - Self.tileGap
+                groups.append(container(group.label, placed, more: more))
                 rightBottom = max(rightBottom, bottom)
                 gy = bottom + Self.betweenGroups
             }
