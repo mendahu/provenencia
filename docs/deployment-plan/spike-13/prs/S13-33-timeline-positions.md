@@ -1,6 +1,6 @@
 # S13-33 — Timeline positions
 
-**Status:** Planned
+**Status:** Landed in #687 (2026-11-02)
 **Spike / slice:** Spike 13 · Slice 4 — Timeline
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: an engine read's new fields, their wire and their Swift mapping; nothing draws them until S13-13)
@@ -28,6 +28,8 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+**Landed:** the code differs from the plan in six places. (1) The check that every seeded `role` term is in `participantRoleOrder` is `TestParticipantRolesCoverSeed` in `persondetail`, not a row of `TestVocabKeysMatchSeed`: `subjectvocab` cannot import `persondetail` (import cycle), so the `export_test.go` accessor is not visible there. (2) T-8's lead-birth case is in `TestPersonEventsLifeline` ("lead birth is an open-start date"): the `conclusionsummaries` fixture cannot join a person to events. (3) `TestParticipantOrder` is an external test on `kinWorld`, whose people have no name observations, so ties are checked in ref order. (4) The structural-debt row is `A-36`, because `A-35` is the Spike 14 audit's. The user struck the row on 2026-11-02 (see 5). (5) The § 3 Out line on `lifePicks` was superseded by the user on 2026-11-02 (review finding UX-1): `lifePicks` now skips an event with no accepted member and matches the event type only among the product's own terms, so the header names canonical births and deaths only; `A-36` is closed and AC-2.9's test now expects the header to name none. (6) The review round added a supported-year window, `datevalue.MinYear…MaxYear`, held on write (`ErrInvalid`) and on read (`datePlace`), after finding SEC-1; D-2's single `DateEnds` call per chosen date is now `eventDating`'s `eventDated`.
 
 ## 1. Objective
 

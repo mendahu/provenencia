@@ -1048,7 +1048,7 @@ struct WorkspaceSessionTests {
     @Test func personEventsFollowEveryTouchedHandle() {
         let session = makeSession()
         let key = CatalogQueryKey.personEvents(project: session.projectKey, entityId: "e1")
-        session.setQueryValue(key, value: [CatalogPersonEvent]())
+        session.setQueryValue(key, value: CatalogPersonTimeline())
 
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e7"])) == [key])
         #expect(session.revalidatedKeys(for: CatalogWriteEffects.empty).isEmpty)

@@ -9,9 +9,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/persondetail"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -62,10 +64,27 @@ func (w *kinWorld) line(r persondetail.PersonEvent) string {
 
 func (w *kinWorld) events(id []byte) ([]persondetail.PersonEvent, conclusionsummaries.Summaries) {
 	w.t.Helper()
-	rows, summaries, err := persondetail.PersonEvents(w.c, id)
+	t, summaries := w.timeline(id)
+	return t.Events, summaries
+}
+
+// eventOn is event with any date value (nil for none).
+func (w *kinWorld) eventOn(name string, typ vocabkey.EventType, d *datevalue.Value) []byte {
+	id := w.k.Event(typ)
+	w.names[string(id)] = name
+	if d != nil {
+		w.k.Date(id, vocabkey.PropertyDate, *d)
+	}
+	return id
+}
+
+func (w *kinWorld) timeline(id []byte) (persondetail.Timeline, conclusionsummaries.Summaries) {
+	w.t.Helper()
+	tl, summaries, err := persondetail.PersonEvents(w.c, id)
 	if err != nil {
 		w.t.Fatal(err)
 	}
+	rows := tl.Events
 	for _, r := range rows {
 		if _, ok := summaries.Event(r.Event); !ok {
 			w.t.Errorf("no summary for event %s", w.name(r.Event))
@@ -76,7 +95,7 @@ func (w *kinWorld) events(id []byte) ([]persondetail.PersonEvent, conclusionsumm
 			}
 		}
 	}
-	return rows, summaries
+	return tl, summaries
 }
 
 func (w *kinWorld) expectEvents(id []byte, want ...string) []persondetail.PersonEvent {
@@ -171,8 +190,8 @@ func TestPersonEvents(t *testing.T) {
 		}
 		dated := map[string]bool{"B1": true, "T": true, "R": false, "V": false}
 		for _, row := range rows {
-			if row.Dated != dated[w.name(row.Event)] {
-				t.Errorf("%s dated = %v", w.name(row.Event), row.Dated)
+			if (row.Span != nil) != dated[w.name(row.Event)] {
+				t.Errorf("%s dated = %v", w.name(row.Event), row.Span != nil)
 			}
 		}
 	})
@@ -354,5 +373,174 @@ func TestPersonEventsQueryCount(t *testing.T) {
 		j := w.k.Join(pat, e, "witness")
 		w.k.Commit(pat, e, j)
 		w.expectEvents(pat, "B1(subject;)", "W(witness;)")
+	})
+}
+
+func TestPersonEventsLifeline(t *testing.T) {
+	type markers struct{ birthEvent, birthBeside, deathEvent, deathBeside []byte }
+	check := func(t *testing.T, w *kinWorld, pat []byte, want markers) persondetail.Timeline {
+		t.Helper()
+		tl, summaries := w.timeline(pat)
+		for _, c := range []struct {
+			name      string
+			got, want []byte
+		}{
+			{"birth.event", tl.Birth.Event, want.birthEvent},
+			{"birth.beside", tl.Birth.Beside, want.birthBeside},
+			{"death.event", tl.Death.Event, want.deathEvent},
+			{"death.beside", tl.Death.Beside, want.deathBeside},
+		} {
+			if !bytes.Equal(c.got, c.want) {
+				t.Errorf("%s = %q, want %q", c.name, w.name(c.got), w.name(c.want))
+			}
+		}
+		// The recorded markers are the header's.
+		me, ok := summaries.Person(pat)
+		if !ok {
+			t.Fatal("no summary for the person")
+		}
+		for name, c := range map[string]struct {
+			got  []byte
+			pick *canonicalentities.Entity
+		}{"birth": {tl.Birth.Event, me.Birth.Event}, "death": {tl.Death.Event, me.Death.Event}} {
+			if len(c.got) > 0 && (c.pick == nil || !bytes.Equal(c.got, c.pick.ID)) {
+				t.Errorf("%s marker is not the header's pick", name)
+			}
+		}
+		return tl
+	}
+	t.Run("AC-2.1", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		b := w.event("B", vocabkey.EventBirth, 1820)
+		c := w.event("C", vocabkey.EventType("census"), 1851)
+		d := w.event("D", vocabkey.EventDeath, 1888)
+		u := w.event("U", vocabkey.EventBurial, 1890)
+		for _, e := range [][]byte{b, c, d, u} {
+			w.k.Join(pat, e, "subject")
+		}
+		check(t, w, pat, markers{birthEvent: b, deathEvent: d})
+	})
+	t.Run("AC-2.2", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		c := w.event("C", vocabkey.EventType("census"), 1835)
+		m := w.event("M", vocabkey.EventMarriage, 1840)
+		w.k.Join(pat, c, "subject")
+		w.k.Join(pat, m, "subject")
+		check(t, w, pat, markers{birthBeside: c, deathBeside: m})
+	})
+	t.Run("AC-2.3", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		c := w.event("C", vocabkey.EventType("census"), 1875)
+		f := w.event("F", vocabkey.EventFuneral, 1880)
+		w.k.Join(pat, c, "subject")
+		w.k.Join(pat, f, "subject")
+		check(t, w, pat, markers{birthBeside: c, deathBeside: c})
+	})
+	t.Run("AC-2.4", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		r := w.event("R", vocabkey.EventType("residence"), 0)
+		w.k.Join(pat, r, "subject")
+		check(t, w, pat, markers{})
+	})
+	t.Run("AC-2.5", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		b := w.event("B", vocabkey.EventBirth, 0)
+		c := w.event("C", vocabkey.EventType("census"), 1835)
+		w.k.Join(pat, b, "subject")
+		w.k.Join(pat, c, "subject")
+		check(t, w, pat, markers{birthEvent: b, birthBeside: c, deathBeside: c})
+	})
+	t.Run("AC-2.6", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		b1 := w.event("B1", vocabkey.EventBirth, 1820)
+		b2 := w.event("B2", vocabkey.EventBirth, 1822)
+		w.k.Join(pat, b2, "subject")
+		w.k.Join(pat, b1, "subject")
+		check(t, w, pat, markers{birthEvent: b1, deathBeside: b2})
+	})
+	t.Run("a researcher's burial term is not the product's", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		c := w.event("C", vocabkey.EventType("census"), 1851)
+		d := w.event("D", vocabkey.EventDeath, 0)
+		u := w.k.Entity("event")
+		w.names[string(u)] = "U"
+		w.k.UserTerm(u, vocabkey.PropertyEventType, string(vocabkey.EventBurial))
+		w.k.Date(u, vocabkey.PropertyDate, *datevaluetest.YMD(1890, 0, 0))
+		w.k.CommitVocabulary()
+		for _, e := range [][]byte{c, d, u} {
+			w.k.Join(pat, e, "subject")
+		}
+		check(t, w, pat, markers{birthBeside: c, deathEvent: d, deathBeside: u})
+	})
+	t.Run("lead birth is an open-start date", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		before := w.eventOn("Before", vocabkey.EventBirth, datevaluetest.Before(1820, 0, 0))
+		later := w.event("Later", vocabkey.EventBirth, 1825)
+		w.k.Join(pat, later, "subject")
+		w.k.Join(pat, before, "subject")
+		tl := check(t, w, pat, markers{birthEvent: before, deathBeside: later})
+		if tl.Events[0].Span == nil || !tl.Events[0].Span.OpenStart {
+			t.Errorf("first row span %+v", tl.Events[0].Span)
+		}
+	})
+	t.Run("provisional earlier birth and accepted later birth", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		early := w.event("Early", vocabkey.EventBirth, 1818)
+		b := w.event("B", vocabkey.EventBirth, 1820)
+		dEarly := w.event("DEarly", vocabkey.EventDeath, 1880)
+		d := w.event("D", vocabkey.EventDeath, 1888)
+		for _, e := range [][]byte{early, b, dEarly, d} {
+			w.k.Join(pat, e, "subject")
+		}
+		w.k.Provisional(early)
+		w.k.Provisional(dEarly)
+		w.k.Commit(early, dEarly)
+		check(t, w, pat, markers{birthEvent: b, deathEvent: d})
+	})
+	t.Run("AC-2.7", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat, kid := w.person("Pat"), w.person("Kid")
+		b := w.event("B", vocabkey.EventBirth, 1850)
+		w.k.Join(kid, b, "subject")
+		w.k.Join(pat, b, "witness")
+		check(t, w, pat, markers{birthBeside: b, deathBeside: b})
+	})
+	t.Run("AC-2.8", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		d := w.event("D", vocabkey.EventDeath, 1888)
+		c := w.event("C", vocabkey.EventType("census"), 1890)
+		w.k.Join(pat, d, "subject")
+		w.k.Join(pat, c, "subject")
+		tl := check(t, w, pat, markers{deathEvent: d, birthBeside: d})
+		if tl.Events[1].Span == nil || tl.Events[1].Span.From != 1890 {
+			t.Errorf("census span %+v", tl.Events[1].Span)
+		}
+	})
+	t.Run("AC-2.9", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		b := w.event("B", vocabkey.EventBirth, 1820)
+		c := w.event("C", vocabkey.EventType("census"), 1851)
+		w.k.Join(pat, b, "subject")
+		w.k.Join(pat, c, "subject")
+		w.k.Provisional(b)
+		w.k.Commit(b)
+		tl, summaries := w.timeline(pat)
+		if len(tl.Birth.Event) != 0 || !bytes.Equal(tl.Birth.Beside, c) {
+			t.Fatalf("birth marker %+v, want a placeholder beside the census", tl.Birth)
+		}
+		if me, _ := summaries.Person(pat); me.Birth.Event != nil {
+			t.Fatal("the header names the non-canonical birth")
+		}
 	})
 }

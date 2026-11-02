@@ -5298,15 +5298,80 @@ public nonisolated struct Provenencia_Engine_V1_ListPersonEventsRequest: Sendabl
   public init() {}
 }
 
-/// ListPersonEventsResponse is every canonical event the person took part in
-/// directly, in any role: dated first, earliest first, then by ref, the order
-/// of ListEventSummaries. Canonical events and participants only.
+/// ListPersonEventsResponse is a person's timeline: every canonical event the
+/// person took part in directly, in any role, in date order (dated first,
+/// earliest first, then by ref, the order of ListEventSummaries), and where the
+/// lifeline's birth and death markers go. Canonical events and participants
+/// only. Each marker is always sent. An event_id names the recorded event (the
+/// header's birth or death) when it is one of the rows; empty is a placeholder.
+/// beside_event_id is set whenever the marker has no span of its own: the dated
+/// event it sits beside (a birth beside the first dated event that may follow
+/// birth, a death beside the last that may precede death); no date is invented.
 public nonisolated struct Provenencia_Engine_V1_ListPersonEventsResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   public var events: [Provenencia_Engine_V1_PersonEvent] = []
+
+  public var birth: Provenencia_Engine_V1_LifeMarker {
+    get {_birth ?? Provenencia_Engine_V1_LifeMarker()}
+    set {_birth = newValue}
+  }
+  /// Returns true if `birth` has been explicitly set.
+  public var hasBirth: Bool {self._birth != nil}
+  /// Clears the value of `birth`. Subsequent reads from it will return its default value.
+  public mutating func clearBirth() {self._birth = nil}
+
+  public var death: Provenencia_Engine_V1_LifeMarker {
+    get {_death ?? Provenencia_Engine_V1_LifeMarker()}
+    set {_death = newValue}
+  }
+  /// Returns true if `death` has been explicitly set.
+  public var hasDeath: Bool {self._death != nil}
+  /// Clears the value of `death`. Subsequent reads from it will return its default value.
+  public mutating func clearDeath() {self._death = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _birth: Provenencia_Engine_V1_LifeMarker? = nil
+  fileprivate var _death: Provenencia_Engine_V1_LifeMarker? = nil
+}
+
+/// LifeMarker is where a timeline puts a birth or a death. Ids are UUID strings,
+/// empty for none.
+public nonisolated struct Provenencia_Engine_V1_LifeMarker: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var eventID: String = String()
+
+  public var besideEventID: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// TimelineSpan is where a date sits on a line of years: from to to, a whole
+/// year being [y, y+1) and a day its share of the year. An open side (BEF, AFT, a
+/// range with one year) spans its known end and is flagged. An event whose date
+/// has an open start but a known end is placed at that end.
+public nonisolated struct Provenencia_Engine_V1_TimelineSpan: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var from: Double = 0
+
+  public var to: Double = 0
+
+  public var openStart: Bool = false
+
+  public var openEnd: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -5315,8 +5380,9 @@ public nonisolated struct Provenencia_Engine_V1_ListPersonEventsResponse: Sendab
 
 /// PersonEvent is one event of a person's timeline: the event, the person's
 /// roles on it (one per distinct role term, usually one; empty when the
-/// participation has none), the other canonical participants in participation
-/// order, and dated, false for an event the order puts last.
+/// participation has none), the other canonical participants (most important
+/// role first, then by name), and span, absent for an undated event, which the
+/// order puts last.
 public nonisolated struct Provenencia_Engine_V1_PersonEvent: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -5335,13 +5401,21 @@ public nonisolated struct Provenencia_Engine_V1_PersonEvent: Sendable {
 
   public var participants: [Provenencia_Engine_V1_EventParticipant] = []
 
-  public var dated: Bool = false
+  public var span: Provenencia_Engine_V1_TimelineSpan {
+    get {_span ?? Provenencia_Engine_V1_TimelineSpan()}
+    set {_span = newValue}
+  }
+  /// Returns true if `span` has been explicitly set.
+  public var hasSpan: Bool {self._span != nil}
+  /// Clears the value of `span`. Subsequent reads from it will return its default value.
+  public mutating func clearSpan() {self._span = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
   fileprivate var _event: Provenencia_Engine_V1_EventSummary? = nil
+  fileprivate var _span: Provenencia_Engine_V1_TimelineSpan? = nil
 }
 
 /// EventParticipant is one other canonical person on an event and their roles.
@@ -16350,7 +16424,7 @@ nonisolated extension Provenencia_Engine_V1_ListPersonEventsRequest: SwiftProtob
 
 nonisolated extension Provenencia_Engine_V1_ListPersonEventsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ListPersonEventsResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}events\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}events\0\u{1}birth\0\u{1}death\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -16359,20 +16433,114 @@ nonisolated extension Provenencia_Engine_V1_ListPersonEventsResponse: SwiftProto
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.events) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._birth) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._death) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.events.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.events, fieldNumber: 1)
     }
+    try { if let v = self._birth {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try { if let v = self._death {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_ListPersonEventsResponse, rhs: Provenencia_Engine_V1_ListPersonEventsResponse) -> Bool {
     if lhs.events != rhs.events {return false}
+    if lhs._birth != rhs._birth {return false}
+    if lhs._death != rhs._death {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_LifeMarker: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".LifeMarker"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}event_id\0\u{3}beside_event_id\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.eventID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.besideEventID) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.eventID.isEmpty {
+      try visitor.visitSingularStringField(value: self.eventID, fieldNumber: 1)
+    }
+    if !self.besideEventID.isEmpty {
+      try visitor.visitSingularStringField(value: self.besideEventID, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_LifeMarker, rhs: Provenencia_Engine_V1_LifeMarker) -> Bool {
+    if lhs.eventID != rhs.eventID {return false}
+    if lhs.besideEventID != rhs.besideEventID {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_TimelineSpan: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TimelineSpan"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}from\0\u{1}to\0\u{3}open_start\0\u{3}open_end\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularDoubleField(value: &self.from) }()
+      case 2: try { try decoder.decodeSingularDoubleField(value: &self.to) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.openStart) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.openEnd) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.from.bitPattern != 0 {
+      try visitor.visitSingularDoubleField(value: self.from, fieldNumber: 1)
+    }
+    if self.to.bitPattern != 0 {
+      try visitor.visitSingularDoubleField(value: self.to, fieldNumber: 2)
+    }
+    if self.openStart != false {
+      try visitor.visitSingularBoolField(value: self.openStart, fieldNumber: 3)
+    }
+    if self.openEnd != false {
+      try visitor.visitSingularBoolField(value: self.openEnd, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_TimelineSpan, rhs: Provenencia_Engine_V1_TimelineSpan) -> Bool {
+    if lhs.from != rhs.from {return false}
+    if lhs.to != rhs.to {return false}
+    if lhs.openStart != rhs.openStart {return false}
+    if lhs.openEnd != rhs.openEnd {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -16380,7 +16548,7 @@ nonisolated extension Provenencia_Engine_V1_ListPersonEventsResponse: SwiftProto
 
 nonisolated extension Provenencia_Engine_V1_PersonEvent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PersonEvent"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}event\0\u{1}roles\0\u{1}participants\0\u{1}dated\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}event\0\u{1}roles\0\u{1}participants\0\u{2}\u{2}span\0\u{b}dated\0\u{c}\u{4}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -16391,7 +16559,7 @@ nonisolated extension Provenencia_Engine_V1_PersonEvent: SwiftProtobuf.Message, 
       case 1: try { try decoder.decodeSingularMessageField(value: &self._event) }()
       case 2: try { try decoder.decodeRepeatedMessageField(value: &self.roles) }()
       case 3: try { try decoder.decodeRepeatedMessageField(value: &self.participants) }()
-      case 4: try { try decoder.decodeSingularBoolField(value: &self.dated) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._span) }()
       default: break
       }
     }
@@ -16411,9 +16579,9 @@ nonisolated extension Provenencia_Engine_V1_PersonEvent: SwiftProtobuf.Message, 
     if !self.participants.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.participants, fieldNumber: 3)
     }
-    if self.dated != false {
-      try visitor.visitSingularBoolField(value: self.dated, fieldNumber: 4)
-    }
+    try { if let v = self._span {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -16421,7 +16589,7 @@ nonisolated extension Provenencia_Engine_V1_PersonEvent: SwiftProtobuf.Message, 
     if lhs._event != rhs._event {return false}
     if lhs.roles != rhs.roles {return false}
     if lhs.participants != rhs.participants {return false}
-    if lhs.dated != rhs.dated {return false}
+    if lhs._span != rhs._span {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

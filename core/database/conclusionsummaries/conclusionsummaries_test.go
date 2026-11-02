@@ -1191,6 +1191,11 @@ func TestSortByBirth(t *testing.T) {
 		}
 		return h
 	}
+	personWith := func(ref string, d *datevalue.Value) conclusionsummaries.PersonSummary {
+		h := person(ref, 0)
+		h.Birth.Date = d
+		return h
+	}
 	cases := []struct {
 		name string
 		in   []conclusionsummaries.PersonSummary
@@ -1200,6 +1205,7 @@ func TestSortByBirth(t *testing.T) {
 		{"earliest first", []conclusionsummaries.PersonSummary{person("PER-A", 1820), person("PER-B", 1815)}, []string{"PER-B", "PER-A"}},
 		{"undated by ref", []conclusionsummaries.PersonSummary{person("PER-B", 0), person("PER-A", 0)}, []string{"PER-A", "PER-B"}},
 		{"equal dates by ref", []conclusionsummaries.PersonSummary{person("PER-B", 1820), person("PER-A", 1820)}, []string{"PER-A", "PER-B"}},
+		{"open start sits at its known end", []conclusionsummaries.PersonSummary{person("PER-D", 0), person("PER-C", 1820), personWith("PER-B", datevaluetest.Before(1817, 0, 0)), person("PER-A", 1815)}, []string{"PER-A", "PER-B", "PER-C", "PER-D"}},
 		{"refs differing only in case keep input order", []conclusionsummaries.PersonSummary{person("PER-a", 1820), person("PER-A", 1820)}, []string{"PER-a", "PER-A"}},
 	}
 	for _, tc := range cases {
@@ -1216,26 +1222,94 @@ func TestSortByBirth(t *testing.T) {
 	}
 }
 
-func TestHasEventDate(t *testing.T) {
+func TestEventSpan(t *testing.T) {
 	noYear := &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian"}
+	noStart := &datevalue.Value{Kind: datevalue.KindRange, Calendar: "gregorian", EndYear: datevaluetest.Part(1849)}
+	bothOpen := &datevalue.Value{Kind: datevalue.KindRange, Calendar: "gregorian"}
+	march := datevaluetest.YMD(1817, 3, 12)
+	year := func(from, to float64, openStart, openEnd bool) conclusionsummaries.TimelineSpan {
+		return conclusionsummaries.TimelineSpan{From: from, To: to, OpenStart: openStart, OpenEnd: openEnd}
+	}
 	cases := []struct {
-		name string
-		in   conclusionsummaries.EventSummary
-		want bool
+		name   string
+		in     conclusionsummaries.EventSummary
+		want   conclusionsummaries.TimelineSpan
+		wantOK bool
 	}{
-		{"date", conclusionsummaries.EventSummary{Date: datevaluetest.YMD(1850, 0, 0)}, true},
-		{"start date only", conclusionsummaries.EventSummary{StartDate: datevaluetest.YMD(1860, 0, 0)}, true},
-		{"end date only", conclusionsummaries.EventSummary{EndDate: datevaluetest.YMD(1870, 0, 0)}, false},
-		{"no date", conclusionsummaries.EventSummary{}, false},
-		{"date with no sort key", conclusionsummaries.EventSummary{Date: noYear}, false},
+		{"day", conclusionsummaries.EventSummary{Date: march}, year(1817+70.0/365, 1817+71.0/365, false, false), true},
+		{"year", conclusionsummaries.EventSummary{Date: datevaluetest.YMD(1835, 0, 0)}, year(1835, 1836, false, false), true},
+		{"range", conclusionsummaries.EventSummary{Date: datevaluetest.Between(1844, 0, 0, 1849, 0, 0)}, year(1844, 1850, false, false), true},
+		{"after", conclusionsummaries.EventSummary{Date: datevaluetest.After(1870, 0, 0)}, year(1870, 1871, false, true), true},
+		{"about is not widened", conclusionsummaries.EventSummary{Date: datevaluetest.About(1846, 0, 0)}, year(1846, 1847, false, false), true},
+		{"before", conclusionsummaries.EventSummary{Date: datevaluetest.Before(1880, 0, 0)}, year(1880, 1881, true, false), true},
+		{"range with no start year", conclusionsummaries.EventSummary{Date: noStart}, year(1849, 1850, true, false), true},
+		{"start date only", conclusionsummaries.EventSummary{StartDate: datevaluetest.YMD(1860, 0, 0)}, year(1860, 1861, false, false), true},
+		{"end date only", conclusionsummaries.EventSummary{EndDate: datevaluetest.YMD(1870, 0, 0)}, conclusionsummaries.TimelineSpan{}, false},
+		{"no date", conclusionsummaries.EventSummary{}, conclusionsummaries.TimelineSpan{}, false},
+		{"date with no year", conclusionsummaries.EventSummary{Date: noYear}, conclusionsummaries.TimelineSpan{}, false},
+		{"both ends open", conclusionsummaries.EventSummary{Date: bothOpen}, conclusionsummaries.TimelineSpan{}, false},
+		{"date with no year, dated start", conclusionsummaries.EventSummary{Date: noYear, StartDate: datevaluetest.YMD(1860, 0, 0)}, year(1860, 1861, false, false), true},
+		{"date wins over start", conclusionsummaries.EventSummary{Date: datevaluetest.YMD(1850, 0, 0), StartDate: datevaluetest.YMD(1860, 0, 0)}, year(1850, 1851, false, false), true},
+		{"year above the window", conclusionsummaries.EventSummary{Date: datevaluetest.YMD(1<<31-1, 0, 0)}, conclusionsummaries.TimelineSpan{}, false},
+		{"year below the window", conclusionsummaries.EventSummary{Date: datevaluetest.YMD(-1<<31, 0, 0)}, conclusionsummaries.TimelineSpan{}, false},
+		{"range from -2^31 to 2^31", conclusionsummaries.EventSummary{Date: datevaluetest.Between(-1<<31, 0, 0, 1<<31-1, 0, 0)}, conclusionsummaries.TimelineSpan{}, false},
+		{"range with one end past the window", conclusionsummaries.EventSummary{Date: datevaluetest.Between(1844, 0, 0, 10000, 0, 0)}, conclusionsummaries.TimelineSpan{}, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := conclusionsummaries.HasEventDate(tc.in); got != tc.want {
-				t.Fatalf("HasEventDate = %v, want %v", got, tc.want)
+			got, ok := conclusionsummaries.EventSpan(tc.in)
+			if ok != tc.wantOK || got != tc.want {
+				t.Fatalf("EventSpan = %+v, %v; want %+v, %v", got, ok, tc.want, tc.wantOK)
 			}
 		})
 	}
+}
+
+func TestEventOrderAtKnownEnd(t *testing.T) {
+	f := newFixture(t)
+	date := f.prop("date")
+	dated := func(d *datevalue.Value) []byte {
+		return f.event(observations.Input{PropertyID: date.ID, Date: d})
+	}
+	undated := f.event()
+	y1881 := dated(datevaluetest.YMD(1881, 0, 0))
+	bef1880 := dated(datevaluetest.Before(1880, 0, 0))
+	y1880 := dated(datevaluetest.YMD(1880, 0, 0))
+	y1879 := dated(datevaluetest.YMD(1879, 0, 0))
+
+	var first, second []byte
+	if strings.ToLower(refOf(t, f, bef1880)) < strings.ToLower(refOf(t, f, y1880)) {
+		first, second = bef1880, y1880
+	} else {
+		first, second = y1880, bef1880
+	}
+	want := [][]byte{y1879, first, second, y1881, undated}
+
+	check := func(name string, got []conclusionsummaries.EventSummary) {
+		t.Helper()
+		if len(got) != len(want) {
+			t.Fatalf("%s: %d rows, want %d", name, len(got), len(want))
+		}
+		for i := range want {
+			if !bytes.Equal(got[i].Entity.ID, want[i]) {
+				t.Fatalf("%s: row %d is %s, want %s", name, i, got[i].Entity.Ref, refOf(t, f, want[i]))
+			}
+		}
+	}
+	check("ListEvents", f.events())
+	byIDs, err := conclusionsummaries.EventsByIDs(f.c, [][]byte{undated, y1881, bef1880, y1880, y1879})
+	must(t, err)
+	check("EventsByIDs", byIDs)
+}
+
+func refOf(t *testing.T, f *fixture, id []byte) string {
+	t.Helper()
+	got, err := conclusionsummaries.EventsByIDs(f.c, [][]byte{id})
+	must(t, err)
+	if len(got) != 1 {
+		t.Fatalf("no event %x", id)
+	}
+	return got[0].Entity.Ref
 }
 
 func TestTermLabeler(t *testing.T) {

@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // Term is a term value of a summary: the displayed (kept rank-1) term of a
@@ -18,6 +19,15 @@ type Term struct {
 	Key    string
 	Origin string // the term's origin; Key is a product type's only when it is the product's
 	Label  string
+}
+
+// ProductKey is the key of t when t is the product's own term, else "": a key
+// means the product's only within the product's origin. A nil Term has none.
+func (t *Term) ProductKey() string {
+	if t == nil || t.Origin != vocabkey.OriginProvenencia {
+		return ""
+	}
+	return t.Key
 }
 
 // EventSummary is one Event as a row. A rank-1 date wins over a start/end

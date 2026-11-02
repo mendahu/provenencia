@@ -333,7 +333,7 @@ func TestListPersonEvents(t *testing.T) {
 	}
 	wantOrder := []string{database.UUIDString(b1), database.UUIDString(mar), database.UUIDString(b2), database.UUIDString(cs), database.UUIDString(u)}
 	for i, e := range got.Events {
-		if !e.GetDated() || e.GetEvent().GetEntity().GetRef() == "" {
+		if e.GetSpan() == nil || e.GetEvent().GetEntity().GetRef() == "" {
 			t.Errorf("event %d: %+v", i, e)
 		}
 		if e.GetEvent().GetEntity().GetId() != wantOrder[i] {
@@ -358,6 +358,50 @@ func TestListPersonEvents(t *testing.T) {
 			t.Fatalf("B2 participant %s", id)
 		}
 	}
+
+	if got.GetBirth().GetEventId() != database.UUIDString(b1) || got.GetBirth().GetBesideEventId() != "" {
+		t.Errorf("birth marker %+v", got.GetBirth())
+	}
+	if got.GetDeath() == nil || got.GetDeath().GetEventId() != "" || got.GetDeath().GetBesideEventId() != database.UUIDString(cs) {
+		t.Errorf("death marker %+v, want a placeholder beside the census (the burial may follow death)", got.GetDeath())
+	}
+	if sp := got.Events[0].GetSpan(); sp.GetFrom() != 1820 || sp.GetTo() != 1821 || sp.GetOpenStart() || sp.GetOpenEnd() {
+		t.Errorf("birth span %+v", sp)
+	}
+
+	t.Run("carries spans and markers", func(t *testing.T) {
+		created, err := onboarding.Complete(t.TempDir(), t.TempDir(), "Jake", "Robins")
+		if err != nil {
+			t.Fatal(err)
+		}
+		dir := created.ProjectDir
+		var lee, born, resided []byte
+		err = catalogsession.Do(dir, func(c *database.Catalog) error {
+			k := graphcachetest.NewCanon(t, c)
+			lee = k.Person()
+			var j []byte
+			born, _ = k.Birth(lee, nil, nil)
+			k.Date(born, vocabkey.PropertyDate, *datevaluetest.YMD(1800, 0, 0))
+			resided = k.Event(vocabkey.EventType("residence"))
+			j = k.Join(lee, resided, "subject")
+			k.Commit(lee, born, resided, j)
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var res engine.ListPersonEventsResponse
+		mustRPC(t, ListPersonEvents, &engine.ListPersonEventsRequest{ProjectDir: dir, EntityId: database.UUIDString(lee)}, &res)
+		if len(res.Events) != 2 || res.Events[0].GetSpan() == nil || res.Events[1].GetSpan() != nil {
+			t.Fatalf("events %+v", res.Events)
+		}
+		if res.GetBirth().GetEventId() != database.UUIDString(born) || res.GetBirth().GetBesideEventId() != "" {
+			t.Errorf("birth %+v", res.GetBirth())
+		}
+		if res.GetDeath() == nil || res.GetDeath().GetEventId() != "" || res.GetDeath().GetBesideEventId() != database.UUIDString(born) {
+			t.Errorf("death %+v", res.GetDeath())
+		}
+	})
 
 	for _, id := range []string{"not-an-id", "00000000-0000-7000-8000-000000000000", database.UUIDString(u)} {
 		err := rpc(t, ListPersonEvents, &engine.ListPersonEventsRequest{ProjectDir: dir, EntityId: id}, &engine.ListPersonEventsResponse{})

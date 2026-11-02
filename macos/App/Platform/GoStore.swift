@@ -1224,7 +1224,7 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    func listPersonEvents(projectDir: String, entityID: String) async throws -> [CatalogPersonEvent] {
+    func listPersonEvents(projectDir: String, entityID: String) async throws -> CatalogPersonTimeline {
         var req = Provenencia_Engine_V1_ListPersonEventsRequest()
         req.projectDir = projectDir
         req.entityID = entityID
@@ -1232,16 +1232,31 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.listPersonEvents,
             request: req
         )
-        return resp.events.map { e in
+        let events = resp.events.map { e in
             CatalogPersonEvent(
                 event: Self.mapEventSummary(e.event),
                 roles: e.roles.map(Self.mapConclusionTerm),
                 participants: e.participants.map {
                     CatalogEventParticipant(person: Self.mapPersonSummary($0.person), roles: $0.roles.map(Self.mapConclusionTerm))
                 },
-                dated: e.dated
+                span: e.hasSpan
+                    ? CatalogTimelineSpan(from: e.span.from, to: e.span.to, openStart: e.span.openStart, openEnd: e.span.openEnd)
+                    : nil
             )
         }
+        return CatalogPersonTimeline(
+            events: events,
+            birth: Self.mapLifeMarker(resp.birth),
+            death: Self.mapLifeMarker(resp.death)
+        )
+    }
+
+    /// An empty id is nil: a placeholder, or a marker with no span to sit beside.
+    private static func mapLifeMarker(_ m: Provenencia_Engine_V1_LifeMarker) -> CatalogLifeMarker {
+        CatalogLifeMarker(
+            eventId: m.eventID.isEmpty ? nil : m.eventID,
+            besideEventId: m.besideEventID.isEmpty ? nil : m.besideEventID
+        )
     }
 
     /// A unit of a kind this build doesn't know is dropped, as is a shape of a

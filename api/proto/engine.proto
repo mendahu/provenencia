@@ -1562,22 +1562,51 @@ message ListPersonEventsRequest {
   string entity_id = 2;
 }
 
-// ListPersonEventsResponse is every canonical event the person took part in
-// directly, in any role: dated first, earliest first, then by ref, the order
-// of ListEventSummaries. Canonical events and participants only.
+// ListPersonEventsResponse is a person's timeline: every canonical event the
+// person took part in directly, in any role, in date order (dated first,
+// earliest first, then by ref, the order of ListEventSummaries), and where the
+// lifeline's birth and death markers go. Canonical events and participants
+// only. Each marker is always sent. An event_id names the recorded event (the
+// header's birth or death) when it is one of the rows; empty is a placeholder.
+// beside_event_id is set whenever the marker has no span of its own: the dated
+// event it sits beside (a birth beside the first dated event that may follow
+// birth, a death beside the last that may precede death); no date is invented.
 message ListPersonEventsResponse {
   repeated PersonEvent events = 1;
+  LifeMarker birth = 2;
+  LifeMarker death = 3;
+}
+
+// LifeMarker is where a timeline puts a birth or a death. Ids are UUID strings,
+// empty for none.
+message LifeMarker {
+  string event_id = 1;
+  string beside_event_id = 2;
+}
+
+// TimelineSpan is where a date sits on a line of years: from to to, a whole
+// year being [y, y+1) and a day its share of the year. An open side (BEF, AFT, a
+// range with one year) spans its known end and is flagged. An event whose date
+// has an open start but a known end is placed at that end.
+message TimelineSpan {
+  double from = 1;
+  double to = 2;
+  bool open_start = 3;
+  bool open_end = 4;
 }
 
 // PersonEvent is one event of a person's timeline: the event, the person's
 // roles on it (one per distinct role term, usually one; empty when the
-// participation has none), the other canonical participants in participation
-// order, and dated, false for an event the order puts last.
+// participation has none), the other canonical participants (most important
+// role first, then by name), and span, absent for an undated event, which the
+// order puts last.
 message PersonEvent {
+  reserved 4;
+  reserved "dated";
   EventSummary event = 1;
   repeated ConclusionTerm roles = 2;
   repeated EventParticipant participants = 3;
-  bool dated = 4;
+  TimelineSpan span = 5;
 }
 
 // EventParticipant is one other canonical person on an event and their roles.

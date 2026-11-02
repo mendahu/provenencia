@@ -4,6 +4,7 @@ import (
 	"bytes"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/graphcache"
@@ -12,12 +13,20 @@ import (
 )
 
 // PersonEvent is one event a person took part in directly: the person's roles
-// on it, the other canonical participants, and whether it is dated.
+// on it, the other canonical participants (most important role first), and its
+// span on the line of years, nil when it is undated.
 type PersonEvent struct {
 	Event        []byte
 	Roles        []conclusionsummaries.Term
 	Participants []EventParticipant
-	Dated        bool
+	Span         *conclusionsummaries.TimelineSpan
+}
+
+// Timeline is the Timeline section's read: the person's events in date order
+// and where the birth and death markers go.
+type Timeline struct {
+	Events       []PersonEvent
+	Birth, Death LifeMarker
 }
 
 // EventParticipant is one other canonical person on the event and their roles.
@@ -70,34 +79,36 @@ func rolesByNeighbor(links []graphcache.Link, label func(id []byte, key string) 
 }
 
 // PersonEvents is the Timeline section's read: every canonical event the
-// person took part in, in any role, in event date order, and the summary of
-// every event and participant it names. An unknown or merged handle, or one
+// person took part in, in any role, in event date order, each with its span on
+// the line of years, the birth and death markers (the header's birth and death
+// when they are among the events, else placed beside a dated event), and the
+// summary of every event and participant it names. An unknown or merged handle, or one
 // that is no Person, is conclusiondetails.ErrNotFound.
-func PersonEvents(c *database.Catalog, entityID []byte) ([]PersonEvent, conclusionsummaries.Summaries, error) {
+func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsummaries.Summaries, error) {
 	none := conclusionsummaries.Summaries{}
 	n, err := conclusiondetails.Handle(c, entityID)
 	if err != nil {
-		return nil, none, err
+		return Timeline{}, none, err
 	}
 	g := c.Graph()
 	v, err := g.Vocabulary()
 	if err != nil {
-		return nil, none, err
+		return Timeline{}, none, err
 	}
 	types := v.TypeIDsByKey()
 	personType, eventType := types[vocabkey.Person], types[vocabkey.Event]
 	if !n.Is(personType) {
-		return nil, none, conclusiondetails.ErrNotFound
+		return Timeline{}, none, conclusiondetails.ErrNotFound
 	}
 	label, err := conclusionsummaries.TermLabeler(c)
 	if err != nil {
-		return nil, none, err
+		return Timeline{}, none, err
 	}
 	keepAll := func([]byte) bool { return true }
 
 	links, err := g.Follow(entityID, hops.EventsOfParticipant)
 	if err != nil {
-		return nil, none, err
+		return Timeline{}, none, err
 	}
 	mine := rolesByNeighbor(links, label, keepAll)
 	eventIDs := make([][]byte, len(mine))
@@ -105,7 +116,7 @@ func PersonEvents(c *database.Catalog, entityID []byte) ([]PersonEvent, conclusi
 		eventIDs[i] = m.id
 	}
 	if err := g.Nodes(eventIDs); err != nil {
-		return nil, none, err
+		return Timeline{}, none, err
 	}
 
 	// The canonical events, each with the links to its participants.
@@ -116,12 +127,12 @@ func PersonEvents(c *database.Catalog, entityID []byte) ([]PersonEvent, conclusi
 	walks := map[string]walk{}
 	var events, others [][]byte
 	for _, m := range mine {
-		if e, _ := g.Cached(m.id); !canonical(e, eventType) {
+		if e, _ := g.Cached(m.id); !e.Canonical(eventType) {
 			continue
 		}
 		ls, err := g.Follow(m.id, hops.ParticipantsOfEvent)
 		if err != nil {
-			return nil, none, err
+			return Timeline{}, none, err
 		}
 		walks[string(m.id)] = walk{roles: m.roles, links: ls}
 		events = append(events, m.id)
@@ -132,11 +143,11 @@ func PersonEvents(c *database.Catalog, entityID []byte) ([]PersonEvent, conclusi
 		}
 	}
 	if err := g.Nodes(others); err != nil {
-		return nil, none, err
+		return Timeline{}, none, err
 	}
 	keep := func(id []byte) bool {
 		p, _ := g.Cached(id)
-		return !bytes.Equal(id, entityID) && canonical(p, personType)
+		return !bytes.Equal(id, entityID) && p.Canonical(personType)
 	}
 	participants := map[string][]neighborRoles{}
 	var people [][]byte
@@ -150,13 +161,17 @@ func PersonEvents(c *database.Catalog, entityID []byte) ([]PersonEvent, conclusi
 
 	eventRows, err := conclusionsummaries.EventsByIDs(c, events)
 	if err != nil {
-		return nil, none, err
+		return Timeline{}, none, err
 	}
-	personRows, err := conclusionsummaries.PersonsByIDs(c, people)
+	personRows, err := conclusionsummaries.PersonsByIDs(c, append(people, entityID))
 	if err != nil {
-		return nil, none, err
+		return Timeline{}, none, err
 	}
 	summaries := conclusionsummaries.NewSummaries(personRows, eventRows, nil)
+	index := make(map[string]int, len(personRows))
+	for i, p := range personRows {
+		index[string(p.Entity.ID)] = i
+	}
 
 	rows := make([]PersonEvent, 0, len(eventRows))
 	for _, h := range eventRows {
@@ -170,15 +185,47 @@ func PersonEvents(c *database.Catalog, entityID []byte) ([]PersonEvent, conclusi
 	rows = dropUnreadEvents(rows, summaries)
 	for i := range rows {
 		h, _ := summaries.Event(rows[i].Event)
-		rows[i].Dated = conclusionsummaries.HasEventDate(h)
+		if span, ok := conclusionsummaries.EventSpan(h); ok {
+			rows[i].Span = &span
+		}
 	}
-	return rows, summaries, nil
+	for i := range rows {
+		sortParticipants(rows[i].Participants, index)
+	}
+
+	var birth, death []byte
+	if me, ok := summaries.Person(entityID); ok {
+		birth, death = recorded(rows, me.Birth.Event), recorded(rows, me.Death.Event)
+	}
+	typeOf := func(event []byte) vocabkey.EventType {
+		if h, ok := summaries.Event(event); ok {
+			return vocabkey.EventType(h.Type.Term.ProductKey())
+		}
+		return ""
+	}
+	t := Timeline{Events: rows}
+	t.Birth, t.Death = lifeMarkers(rows, typeOf, birth, death)
+	return t, summaries, nil
+}
+
+// recorded is the id of pick when it is one of the timeline's rows, else nil:
+// the header can name an event the timeline drops.
+func recorded(rows []PersonEvent, pick *canonicalentities.Entity) []byte {
+	if pick == nil {
+		return nil
+	}
+	for _, r := range rows {
+		if bytes.Equal(r.Event, pick.ID) {
+			return r.Event
+		}
+	}
+	return nil
 }
 
 // dropUnreadEvents drops each event whose summary was not read and each
 // participant whose summary was not read (a node dropped mid-read: the next
 // read is right, as dropUnread does). An event whose participants are all
-// dropped stays. It neither orders nor sets Dated.
+// dropped stays. It neither orders nor sets Span.
 func dropUnreadEvents(events []PersonEvent, summaries conclusionsummaries.Summaries) []PersonEvent {
 	var out []PersonEvent
 	for _, e := range events {

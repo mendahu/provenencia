@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/effects"
@@ -15,8 +14,8 @@ import (
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/namevalue"
-	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -201,18 +200,17 @@ func keptTermFacts(n *graphcache.Node, propID []byte) TermFacts {
 	return f
 }
 
-func keptDateAt(n *graphcache.Node, propID []byte) (*datevalue.Value, int, string, bool, error) {
+func keptDateAt(n *graphcache.Node, propID []byte) (*datevalue.Value, int, error) {
 	rows := n.Kept(propID)
 	row, ok := graphcache.Rank1(rows)
 	if !ok {
-		return nil, len(rows), "", false, nil
+		return nil, len(rows), nil
 	}
 	date, err := unmarshalDate(row.Date)
 	if err != nil || date == nil {
-		return nil, len(rows), "", false, err
+		return nil, len(rows), err
 	}
-	key, ok := autoreconcile.SortKey(propertymeta.ValueTypeDate, autoreconcile.Value{Date: date})
-	return date, len(rows), key, ok, nil
+	return date, len(rows), nil
 }
 
 func toponyms(n *graphcache.Node, propID []byte) []string {
@@ -645,7 +643,8 @@ type lifePick struct {
 	key dateKey
 }
 
-// lifePicks returns the person's surviving birth and death events, in the
+// lifePicks returns the person's canonical birth and death events (the
+// product's own types), in the
 // order the person's links give them. It loads the events at once, so its
 // graph queries do not grow with their number.
 func lifePicks(g *graphcache.Graph, v vocab, n *graphcache.Node) (births, deaths []lifePick, err error) {
@@ -668,15 +667,20 @@ func lifePicks(g *graphcache.Graph, v vocab, n *graphcache.Node) (births, deaths
 		if ev == nil {
 			continue
 		}
-		_, key, _ := keptTerm(ev, v.prop(vocabkey.PropertyEventType))
-		if key != "birth" && key != "death" {
+		// A provisional-only event is not the person's birth or death.
+		if !ev.Canonical(v.typeID[vocabkey.Event]) {
+			continue
+		}
+		typeID, kept, _ := keptTerm(ev, v.prop(vocabkey.PropertyEventType))
+		key := v.finishTerm(&Term{ID: typeID, Key: kept}).ProductKey()
+		if key != string(vocabkey.EventBirth) && key != string(vocabkey.EventDeath) {
 			continue
 		}
 		item, err := lifeFrom(v, ev)
 		if err != nil {
 			return nil, nil, err
 		}
-		if key == "birth" {
+		if key == string(vocabkey.EventBirth) {
 			births = append(births, item)
 		} else {
 			deaths = append(deaths, item)
@@ -686,30 +690,35 @@ func lifePicks(g *graphcache.Graph, v vocab, n *graphcache.Node) (births, deaths
 }
 
 func lifeFrom(v vocab, ev *graphcache.Node) (lifePick, error) {
-	date, dateCount, sortKey, dateOK, propID, err := eventDate(v, ev)
+	dating, dateCount, propID, err := eventDate(v, ev)
 	if err != nil {
 		return lifePick{}, err
 	}
 	return lifePick{
-		event: ev, date: date, dateProp: propID, count: dateCount,
-		key: dateKey{key: sortKey, ok: dateOK, ref: strings.ToLower(ev.Ref)},
+		event: ev, date: dating.value, dateProp: propID, count: dateCount,
+		key: dating.key.withRef(ev.Ref),
 	}, nil
 }
 
-// eventDate reads an Event's date: the kept date, else the kept start date.
-// propID is the Property read; the date Property when neither has a value.
-func eventDate(v vocab, ev *graphcache.Node) (date *datevalue.Value, count int, sortKey string, ok bool, propID []byte, err error) {
+// eventDate reads an Event's date through eventDating: the kept date, else the
+// kept start date, whichever has a place, with its place. propID is the
+// Property read; the date Property when neither has a value.
+func eventDate(v vocab, ev *graphcache.Node) (dating eventDated, count int, propID []byte, err error) {
 	propID = v.prop(vocabkey.PropertyDate)
-	date, count, sortKey, ok, err = keptDateAt(ev, propID)
-	if err != nil || date != nil {
-		return date, count, sortKey, ok, propID, err
+	date, count, err := keptDateAt(ev, propID)
+	if err != nil {
+		return eventDated{}, 0, propID, err
 	}
 	start := v.prop(vocabkey.PropertyStartDate)
-	date, count, sortKey, ok, err = keptDateAt(ev, start)
-	if err == nil && date != nil {
-		propID = start
+	startDate, startCount, err := keptDateAt(ev, start)
+	if err != nil {
+		return eventDated{}, 0, propID, err
 	}
-	return date, count, sortKey, ok, propID, err
+	dating = eventDating(date, startDate)
+	if dating.value != nil && dating.isStart {
+		return dating, startCount, start, nil
+	}
+	return dating, count, propID, nil
 }
 
 func leadLife(g *graphcache.Graph, v vocab, pg *placeGraph, items []lifePick) (LifeFacts, error) {
@@ -908,13 +917,13 @@ func oneEvent(g *graphcache.Graph, v vocab, pg *placeGraph, n *graphcache.Node) 
 	h.EventName, h.EventNameCount = keptText(n, v.prop("event_name"))
 	h.Type = keptTermFacts(n, v.prop(vocabkey.PropertyEventType))
 	var err error
-	if h.Date, h.DateCount, _, _, err = keptDateAt(n, v.prop(vocabkey.PropertyDate)); err != nil {
+	if h.Date, h.DateCount, err = keptDateAt(n, v.prop(vocabkey.PropertyDate)); err != nil {
 		return EventSummary{}, err
 	}
-	if h.StartDate, h.StartDateCount, _, _, err = keptDateAt(n, v.prop(vocabkey.PropertyStartDate)); err != nil {
+	if h.StartDate, h.StartDateCount, err = keptDateAt(n, v.prop(vocabkey.PropertyStartDate)); err != nil {
 		return EventSummary{}, err
 	}
-	if h.EndDate, h.EndDateCount, _, _, err = keptDateAt(n, v.prop(vocabkey.PropertyEndDate)); err != nil {
+	if h.EndDate, h.EndDateCount, err = keptDateAt(n, v.prop(vocabkey.PropertyEndDate)); err != nil {
 		return EventSummary{}, err
 	}
 	h.Places, err = eventPlaces(g, v, pg, n)
@@ -960,9 +969,22 @@ func finishEvent(v vocab, h EventSummary) EventSummary {
 }
 
 type dateKey struct {
-	key string
+	// key is the first day number of the date's place (datePlace).
+	key int
 	ok  bool
 	ref string
+}
+
+// dateKeyOf is v's place in date order, with ref breaking ties.
+func dateKeyOf(v *datevalue.Value, ref string) dateKey {
+	key, _, ok := datePlace(v)
+	return dateKey{key: key, ok: ok, ref: strings.ToLower(ref)}
+}
+
+// withRef is k with ref as its tie-break.
+func (k dateKey) withRef(ref string) dateKey {
+	k.ref = strings.ToLower(ref)
+	return k
 }
 
 func sortEvents(rows []EventSummary) {
@@ -979,31 +1001,77 @@ func dateKeyLess(a, b dateKey) bool {
 	return a.ref < b.ref
 }
 
+// TimelineSpan is where a date sits on a line of years: From to To, with the
+// side the date leaves open flagged. A date open on one side (BEF, AFT, a range
+// with one year) spans its known end, so it can be drawn there.
+type TimelineSpan struct {
+	From, To  float64
+	OpenStart bool
+	OpenEnd   bool
+}
+
+// datePlace is the one rule for where a date sits: its order key and its span
+// from one valuecompare.DateEnds call. The key is the first day of the first
+// end, or of the last end when the first is open. ok is false when v is nil,
+// has no year to place, has both ends open, or has a closed end whose year is
+// outside datevalue.MinYear…MaxYear.
+func datePlace(v *datevalue.Value) (key int, span TimelineSpan, ok bool) {
+	if v == nil {
+		return 0, TimelineSpan{}, false
+	}
+	first, last, ok := valuecompare.DateEnds(*v)
+	if !ok || (first.Open && last.Open) {
+		return 0, TimelineSpan{}, false
+	}
+	for _, end := range []valuecompare.DateEnd{first, last} {
+		if !end.Open && !datevalue.YearInWindow(end.Year) {
+			return 0, TimelineSpan{}, false
+		}
+	}
+	switch {
+	case first.Open:
+		return last.Lo, TimelineSpan{From: last.From, To: last.To, OpenStart: true}, true
+	case last.Open:
+		return first.Lo, TimelineSpan{From: first.From, To: first.To, OpenEnd: true}, true
+	}
+	return first.Lo, TimelineSpan{From: first.From, To: last.To}, true
+}
+
+// eventDated is the date an event is placed by, with its place.
+type eventDated struct {
+	value *datevalue.Value
+	// isStart is true when value is the start date.
+	isStart bool
+	// key is value's order key with no ref; key.ok is false when value has no
+	// place.
+	key  dateKey
+	span TimelineSpan
+}
+
+// eventDating chooses the date an event is placed by: date when it has a place,
+// else start when it has one, else date if present, else start. It places each
+// date once.
+func eventDating(date, start *datevalue.Value) eventDated {
+	if k, span, ok := datePlace(date); ok {
+		return eventDated{value: date, key: dateKey{key: k, ok: true}, span: span}
+	}
+	if k, span, ok := datePlace(start); ok {
+		return eventDated{value: start, isStart: true, key: dateKey{key: k, ok: true}, span: span}
+	}
+	if date != nil {
+		return eventDated{value: date}
+	}
+	return eventDated{value: start, isStart: start != nil}
+}
+
 func eventKeyOf(h EventSummary) dateKey {
-	if key, ok := dateSort(h.Date); ok {
-		return dateKey{key: key, ok: true, ref: strings.ToLower(h.Entity.Ref)}
-	}
-	if key, ok := dateSort(h.StartDate); ok {
-		return dateKey{key: key, ok: true, ref: strings.ToLower(h.Entity.Ref)}
-	}
-	return dateKey{ref: strings.ToLower(h.Entity.Ref)}
+	return eventDating(h.Date, h.StartDate).key.withRef(h.Entity.Ref)
 }
 
 // birthKeyOf is a person's place in birth order: the birth date when there is
 // one, else the ref alone.
 func birthKeyOf(h PersonSummary) dateKey {
-	ref := strings.ToLower(h.Entity.Ref)
-	if key, ok := dateSort(h.Birth.Date); ok {
-		return dateKey{key: key, ok: true, ref: ref}
-	}
-	return dateKey{ref: ref}
-}
-
-func dateSort(v *datevalue.Value) (string, bool) {
-	if v == nil {
-		return "", false
-	}
-	return autoreconcile.SortKey(propertymeta.ValueTypeDate, autoreconcile.Value{Date: v})
+	return dateKeyOf(h.Birth.Date, h.Entity.Ref)
 }
 
 func eventPlaces(g *graphcache.Graph, v vocab, pg *placeGraph, ev *graphcache.Node) ([]ChainedPlace, error) {
@@ -1038,8 +1106,8 @@ func eventPlaces(g *graphcache.Graph, v vocab, pg *placeGraph, ev *graphcache.No
 }
 
 func eventWhen(v vocab, ev *graphcache.Node) (*datevalue.Value, error) {
-	date, _, _, _, _, err := eventDate(v, ev)
-	return date, err
+	dating, _, _, err := eventDate(v, ev)
+	return dating.value, err
 }
 
 func composePlaces(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool) ([]PlaceSummary, error) {
@@ -1070,10 +1138,10 @@ func composePlaces(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 func placeShell(n *graphcache.Node, v vocab) (PlaceSummary, error) {
 	h := PlaceSummary{Entity: entityOf(n), Names: toponyms(n, v.prop(vocabkey.PropertyToponym))}
 	var err error
-	if h.StartDate, _, _, _, err = keptDateAt(n, v.prop(vocabkey.PropertyStartDate)); err != nil {
+	if h.StartDate, _, err = keptDateAt(n, v.prop(vocabkey.PropertyStartDate)); err != nil {
 		return PlaceSummary{}, err
 	}
-	if h.EndDate, _, _, _, err = keptDateAt(n, v.prop(vocabkey.PropertyEndDate)); err != nil {
+	if h.EndDate, _, err = keptDateAt(n, v.prop(vocabkey.PropertyEndDate)); err != nil {
 		return PlaceSummary{}, err
 	}
 	return h, nil
@@ -1278,11 +1346,11 @@ func rememberPlaceLink(pg *placeGraph, g *graphcache.Graph, v vocab, id []byte, 
 }
 
 func assocDatesOf(v vocab, n *graphcache.Node) (assocDates, error) {
-	start, _, _, _, err := keptDateAt(n, v.prop(vocabkey.PropertyStartDate))
+	start, _, err := keptDateAt(n, v.prop(vocabkey.PropertyStartDate))
 	if err != nil {
 		return assocDates{}, err
 	}
-	end, _, _, _, err := keptDateAt(n, v.prop(vocabkey.PropertyEndDate))
+	end, _, err := keptDateAt(n, v.prop(vocabkey.PropertyEndDate))
 	if err != nil {
 		return assocDates{}, err
 	}

@@ -141,6 +141,9 @@ func validateComponentRanges(s side) error {
 	if !hasCivil(s) {
 		return ErrInvalid
 	}
+	if s.year != nil && !YearInWindow(*s.year) {
+		return ErrInvalid
+	}
 	if s.month != nil && !monthOK(*s.month) {
 		return ErrInvalid
 	}
@@ -185,6 +188,13 @@ func sideLessOrEqual(a, b side) bool {
 	}
 	return true
 }
+
+// MinYear and MaxYear are the years a stored date may hold. A year outside
+// them is invalid on write and has no place on a line of years on read.
+const MinYear, MaxYear = -9999, 9999
+
+// YearInWindow reports whether y is between MinYear and MaxYear.
+func YearInWindow(y int) bool { return y >= MinYear && y <= MaxYear }
 
 func monthOK(m int) bool { return m >= 1 && m <= 12 }
 func dayOK(d int) bool   { return d >= 1 && d <= 31 }

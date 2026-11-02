@@ -699,15 +699,44 @@ struct CatalogPersonFamily: Sendable, Equatable {
 /// One event of a Person's timeline (S13-05): an event the person took part in
 /// directly, in any role. `roles` are the person's distinct role terms on it
 /// (usually one; empty when the participation has none), `participants` the
-/// other canonical people on it in participation order. `dated` is false for an
-/// event Go's order puts last; Swift does not sort, group or title.
+/// other canonical people on it, the most important role first. `span` is where
+/// its date sits on the line of years, nil for an event Go's order puts last;
+/// Swift does not sort, group, title or place.
 struct CatalogPersonEvent: Sendable, Equatable, Identifiable {
     var event: CatalogEventSummary
     var roles: [CatalogConclusionValue]
     var participants: [CatalogEventParticipant]
-    var dated: Bool
+    var span: CatalogTimelineSpan? = nil
 
     var id: String { event.entity.id }
+
+    /// "Dated" is "has a span": one fact, one field.
+    var dated: Bool { span != nil }
+}
+
+/// Where a date sits on a line of years: `from` to `to`, a whole year being
+/// [y, y+1). An open side (BEF, AFT, a range with one year) spans its known end
+/// and is flagged.
+struct CatalogTimelineSpan: Sendable, Equatable {
+    var from: Double
+    var to: Double
+    var openStart: Bool
+    var openEnd: Bool
+}
+
+/// Where the timeline puts a birth or a death. `eventId` is the recorded event,
+/// nil for a placeholder; `besideEventId` is the dated event a marker with no
+/// span of its own sits beside, nil for none. No date is invented.
+struct CatalogLifeMarker: Sendable, Equatable {
+    var eventId: String? = nil
+    var besideEventId: String? = nil
+}
+
+/// A Person's timeline: the events in date order and the birth and death markers.
+struct CatalogPersonTimeline: Sendable, Equatable {
+    var events: [CatalogPersonEvent] = []
+    var birth = CatalogLifeMarker()
+    var death = CatalogLifeMarker()
 }
 
 /// One other canonical person on an event and their role terms.
@@ -1469,7 +1498,7 @@ protocol GenealogyStore: Sendable {
     /// The canonical events a Person took part in, in any role, in Go's date
     /// order (S13-05). Throws `conclusiondetails.not_found` for an unknown or
     /// merged handle, or one that is no Person.
-    func listPersonEvents(projectDir: String, entityID: String) async throws -> [CatalogPersonEvent]
+    func listPersonEvents(projectDir: String, entityID: String) async throws -> CatalogPersonTimeline
     func listSubjects(projectDir: String, graphID: String) async throws -> [CatalogSubject]
     func setSubjectPosition(
         projectDir: String,
