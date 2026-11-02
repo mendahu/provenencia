@@ -295,7 +295,7 @@ func TestRebuildIndexesEvidenceGraphs(t *testing.T) {
 	if !ok || h.Location.SourceID != uuidString(f.source) {
 		t.Fatalf("after rebuild: %+v", h)
 	}
-	if v, err := searchindex.ProjectionVersionStored(db); err != nil || v != 9 {
+	if v, err := searchindex.ProjectionVersionStored(db); err != nil || v != searchindex.ProjectionVersion {
 		t.Fatalf("stored version %d, %v", v, err)
 	}
 }

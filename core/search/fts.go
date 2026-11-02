@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/searchindex"
+	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/workspacelocation"
 )
 
@@ -316,11 +317,11 @@ func mergeFTS(ctx context.Context, db *sql.DB, byKey map[string]docRow, match st
 	w := FTSBM25Weights
 	rows, err := db.QueryContext(ctx, fmt.Sprintf(`
 		SELECT %s,
-			bm25(catalog_search_fts, %f, %f, %f, %f) AS rank
+			bm25(catalog_search_fts, %f, %f, %f, %f, %f) AS rank
 		FROM catalog_search_fts
 		JOIN catalog_search_docs d ON d.rowid = catalog_search_fts.rowid
 		WHERE catalog_search_fts MATCH ?%s
-	`, docColumns, w.Title, w.Ref, w.Secondary, w.Body, kindSQL(kinds)), append([]any{match}, kindArgs(kinds)...)...)
+	`, docColumns, w.Title, w.Ref, w.Secondary, w.Body, w.Folded, kindSQL(kinds)), append([]any{match}, kindArgs(kinds)...)...)
 	if err != nil {
 		return err
 	}
@@ -504,6 +505,8 @@ func locationFor(d docRow) workspacelocation.Location {
 }
 
 // buildMatchQuery joins tokens with AND or OR; last token gets a prefix star for typeahead.
+// A token with a fold letter also matches its folded spelling ("søby" or
+// "soby"), which is how a document written without the letter is reached.
 func buildMatchQuery(tokens []string, orJoin bool) string {
 	if len(tokens) == 0 {
 		return ""
@@ -514,11 +517,7 @@ func buildMatchQuery(tokens []string, orJoin bool) string {
 		if tok == "" {
 			continue
 		}
-		if i == len(tokens)-1 {
-			parts = append(parts, `"`+tok+`"*`)
-		} else {
-			parts = append(parts, `"`+tok+`"`)
-		}
+		parts = append(parts, matchTerm(tok, i == len(tokens)-1))
 	}
 	if len(parts) == 0 {
 		return ""
@@ -528,6 +527,35 @@ func buildMatchQuery(tokens []string, orJoin bool) string {
 		sep = " OR "
 	}
 	return strings.Join(parts, sep)
+}
+
+// matchTerm is one sanitized token as an FTS term, starred when it is the
+// typeahead token.
+func matchTerm(tok string, star bool) string {
+	quote := func(s string, star bool) string {
+		if star {
+			return `"` + s + `"*`
+		}
+		return `"` + s + `"`
+	}
+	words := valuecompare.RawTokens(tok)
+	alt := make([]string, 0, len(words))
+	anyFolded := false
+	for _, w := range words {
+		spelling, folded := searchindex.QueryPart(w)
+		anyFolded = anyFolded || folded
+		if spelling != "" {
+			alt = append(alt, spelling)
+		}
+	}
+	if !anyFolded || len(alt) == 0 {
+		return quote(tok, star)
+	}
+	quoted := make([]string, len(alt))
+	for i, a := range alt {
+		quoted[i] = quote(a, star && i == len(alt)-1)
+	}
+	return "(" + quote(tok, star) + " OR (" + strings.Join(quoted, " AND ") + "))"
 }
 
 func sanitizeFTSToken(tok string) string {

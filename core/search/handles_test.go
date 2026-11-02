@@ -541,3 +541,49 @@ func TestHandleKindsArePrimaryKinds(t *testing.T) {
 		t.Fatalf("Handle kinds = %v, want vocabkey.PrimaryKinds() = %v", got, want)
 	}
 }
+
+// place creates a place Subject with one toponym Observation per form.
+func (f *handleFixture) place(toponyms ...string) subjects.Subject {
+	return f.subject("place", func(s subjects.Subject) []observations.Input {
+		var in []observations.Input
+		for _, name := range toponyms {
+			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, ValueText: name, HasText: true})
+		}
+		return in
+	})
+}
+
+func TestFoldedSpellingsFindPlaces(t *testing.T) {
+	f := newHandleFixture(t)
+	for _, tt := range []struct{ title, query string }{
+		{"Ærøskøbing", "Aeroskobing"},
+		{"Søby", "Soby"},
+		{"Łask", "Lask"},
+		{"Œuilly", "Oeuilly"},
+		{"Straße", "Strasse"},
+	} {
+		place := f.promote(f.place(tt.title), nil)
+		hits := f.search(tt.query, KindPlace)
+		if len(hits) == 0 || hits[0].Ref != place.Entity.Ref || hits[0].MatchReason != "title" {
+			t.Errorf("%q: want %s first as a title hit, got %+v", tt.query, tt.title, hits)
+		}
+	}
+
+	t.Run("a deduped alternate keeps the place findable both ways", func(t *testing.T) {
+		f := newHandleFixture(t)
+		place := f.promote(f.place("Søby", "Soby"), nil)
+		for _, q := range []string{"Soby", "Søby"} {
+			if hits := f.search(q, KindPlace); len(hits) != 1 || hits[0].Ref != place.Entity.Ref {
+				t.Errorf("%q: %+v", q, hits)
+			}
+		}
+	})
+
+	t.Run("a place written without the letter is found with it", func(t *testing.T) {
+		f := newHandleFixture(t)
+		place := f.promote(f.place("Soby"), nil)
+		if hits := f.search("Søby", KindPlace); len(hits) != 1 || hits[0].Ref != place.Entity.Ref {
+			t.Errorf("%+v", hits)
+		}
+	})
+}

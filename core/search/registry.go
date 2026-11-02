@@ -3,6 +3,7 @@ package search
 import (
 	"strings"
 
+	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/workspacelocation"
@@ -15,18 +16,20 @@ type FieldWeight struct {
 }
 
 // FTSBM25Weights are global bm25 column weights for catalog_search_fts, in
-// table column order: title, ref, secondary, body. Shared across kinds;
+// table column order: title, ref, secondary, body, folded. Shared across kinds;
 // per-kind field importance still comes from KindSpec.Fields via scoreFields.
 var FTSBM25Weights = struct {
 	Title     float64
 	Ref       float64
 	Secondary float64
 	Body      float64
+	Folded    float64
 }{
 	Title:     10,
 	Ref:       12,
 	Secondary: 4,
 	Body:      1,
+	Folded:    4,
 }
 
 // RefBoostWeights multiply a hit's score when the query matches display_ref
@@ -289,10 +292,10 @@ func alternateMatch(secondary string, q queryTokens) (field, snippet string) {
 	for _, line := range strings.Split(secondary, "\n") {
 		var kind, text string
 		switch {
-		case strings.HasPrefix(line, "name:\t"):
-			kind, text = "name", strings.TrimPrefix(line, "name:\t")
-		case strings.HasPrefix(line, "toponym:\t"):
-			kind, text = "place", strings.TrimPrefix(line, "toponym:\t")
+		case strings.HasPrefix(line, searchindex.SecondaryTagName):
+			kind, text = "name", strings.TrimPrefix(line, searchindex.SecondaryTagName)
+		case strings.HasPrefix(line, searchindex.SecondaryTagToponym):
+			kind, text = "place", strings.TrimPrefix(line, searchindex.SecondaryTagToponym)
 		default:
 			continue
 		}

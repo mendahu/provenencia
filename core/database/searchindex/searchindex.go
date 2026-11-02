@@ -194,6 +194,18 @@ func FoldedSpelling(raw string) (string, bool) {
 	return "", false
 }
 
+// QueryPart is one query token part (as valuecompare.RawTokens splits it) as
+// the index spells it: its FoldedSpelling when it has one (folded true), else
+// its text key with accents stripped and no fold table, which is how
+// remove_diacritics 2 indexes it. Empty when the part has no word.
+func QueryPart(raw string) (spelling string, folded bool) {
+	if f, ok := FoldedSpelling(raw); ok {
+		return f, true
+	}
+	a, _ := valuecompare.TextKey(raw, valuecompare.Equivalent, accentOnly)
+	return a, false
+}
+
 // midWordApostrophe reports an apostrophe (U+0027, U+2019 or U+02BC) with a
 // word rune on both sides.
 func midWordApostrophe(s string) bool {

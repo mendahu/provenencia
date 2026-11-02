@@ -9,6 +9,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
@@ -819,4 +821,93 @@ func runFieldCreate(c *database.Catalog, label, dataType, description string) (m
 			return metadatafields.Create(tx, label, dataType, description)
 		})
 	return got, err
+}
+
+func TestFoldedSpellingsFindEveryKind(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := seedUser(t, c)
+	typeID := seedType(t, c, "Book", "")
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Søby kirkebog"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID)
+	if _, _, err := writes.Run(c, writes.Op{Action: "update_evidence_graph", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		changes, err := evidencegraphs.Update(tx, userID, graph.ID, evidencegraphs.UpdateInput{Name: "Ærø household"})
+		return struct{}{}, changes, err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	st, err := runSourceTypeCreate(c, "Fødested", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	field, err := runFieldCreate(c, "Łódź parish", "text", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct{ query, kind, id string }{
+		{"Soby", KindSource, uuidString(src.ID)},
+		{"Aero", KindEvidenceGraph, uuidString(graph.ID)},
+		{"Fodested", KindSourceType, uuidString(st.ID)},
+		{"Lodz", KindMetadataField, uuidString(field.ID)},
+	} {
+		hits, err := DefaultEngine().Search(context.Background(), c, Query{Text: tt.query})
+		if err != nil {
+			t.Fatal(err)
+		}
+		found := false
+		for _, h := range hits {
+			found = found || (h.Kind == tt.kind && h.ID == tt.id)
+		}
+		if !found {
+			t.Errorf("%q: want a %s hit, got %+v", tt.query, tt.kind, hits)
+		}
+	}
+}
+
+func TestBuildMatchQueryAddsFoldedSpelling(t *testing.T) {
+	for _, tt := range []struct {
+		tokens []string
+		or     bool
+		want   string
+	}{
+		{[]string{"søby"}, false, `("søby"* OR ("soby"*))`},
+		{[]string{"soby"}, false, `"soby"*`},
+		{[]string{"søby", "kirke"}, false, `("søby" OR ("soby")) AND "kirke"*`},
+		{[]string{"søby-kirke"}, false, `("søby-kirke"* OR ("soby" AND "kirke"*))`},
+		{[]string{"montréal"}, false, `"montréal"*`},
+		{[]string{"o'brien"}, false, `"obrien"*`},
+	} {
+		if got := buildMatchQuery(tt.tokens, tt.or); got != tt.want {
+			t.Errorf("buildMatchQuery(%q) = %s, want %s", tt.tokens, got, tt.want)
+		}
+	}
+
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := seedUser(t, c)
+	typeID := seedType(t, c, "Book", "")
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Søby Kirke register"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	hits, err := DefaultEngine().Search(context.Background(), c, Query{Text: "Søby-Kirke"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) == 0 || hits[0].ID != uuidString(src.ID) {
+		t.Fatalf("want the Source, got %+v", hits)
+	}
 }
