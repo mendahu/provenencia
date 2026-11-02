@@ -16470,6 +16470,18 @@
         }
       }
     },
+    "conclusions.lifeLine.text": {
+      "comment": "A life line as plain text: the birth or death abbreviation, then its date and place (the compact person card's tooltip line, \"b. 3 May 1790 · Bremen\"). Arguments are the abbreviation and the date and place.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        }
+      }
+    },
     "conclusions.line.join": {
       "comment": "Joins two parts of one secondary line (dates · places, a date · its phrase). Arguments are the two parts.",
       "extractionState": "manual",
@@ -18247,7 +18259,7 @@
       }
     },
     "conclusions.family.thisPerson": {
-      "comment": "Badge on the focus tile of the Family section, and the label of the focus alone in the siblings group",
+      "comment": "The label of the focus alone in the siblings group of the Family section.",
       "extractionState": "manual",
       "localizations": {
         "en": {

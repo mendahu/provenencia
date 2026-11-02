@@ -85,9 +85,7 @@ enum EventSecondaryDisplay {
 
     /// The date and place of an already-built `Content` on one line.
     static func line(_ content: Content) -> String {
-        if content.date.isEmpty { return content.place }
-        if content.place.isEmpty { return content.date }
-        return L10n.Conclusions.lineJoin(first: content.date, rest: content.place)
+        PVDatePlaceLine.text(date: content.date, place: content.place)
     }
 }
 

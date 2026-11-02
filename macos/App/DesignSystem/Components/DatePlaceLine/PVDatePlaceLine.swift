@@ -54,6 +54,16 @@ struct PVDatePlaceLine: View {
         place ?? L10n.string(L10n.DesignSystem.datePlaceLinePlaceUnknown)
     }
 
+    /// The date and place as one plain-text line, "3 May 1790 · Bremen". A nil
+    /// or empty half is left out, with its dot; empty when neither is recorded.
+    nonisolated static func text(date: String?, place: String?) -> String {
+        let date = date ?? ""
+        let place = place ?? ""
+        if date.isEmpty { return place }
+        if place.isEmpty { return date }
+        return L10n.Conclusions.lineJoin(first: date, rest: place)
+    }
+
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
             if let leading {

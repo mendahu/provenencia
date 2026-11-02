@@ -14,17 +14,7 @@ enum PersonLifeDisplay {
         let dates = dateSpan(birth: summary.birth.date, death: summary.death.date, locale: locale, precision: .full)
         let places = placeSpan(birth: summary.birth.places, death: summary.death.places)
         let extra = DerivedPlace.extra(summary.birth.places) + DerivedPlace.extra(summary.death.places)
-        let text: String
-        switch (dates.isEmpty, places.isEmpty) {
-        case (true, true):
-            text = ""
-        case (false, true):
-            text = dates
-        case (true, false):
-            text = places
-        case (false, false):
-            text = L10n.Conclusions.lineJoin(first: dates, rest: places)
-        }
+        let text = PVDatePlaceLine.text(date: dates, place: places)
         return Line(text: text, extraPlaces: extra)
     }
 
@@ -39,14 +29,8 @@ enum PersonLifeDisplay {
         /// The line as plain text: the abbreviation, then date and place; a
         /// missing half is left out ("b. 3 May 1790 · Bremen", "d. 1851").
         var text: String {
-            let rest: String
-            switch (date, place) {
-            case (let date?, let place?): rest = L10n.Conclusions.lineJoin(first: date, rest: place)
-            case (let date?, nil): rest = date
-            case (nil, let place?): rest = place
-            case (nil, nil): rest = ""
-            }
-            return rest.isEmpty ? abbreviation : "\(abbreviation) \(rest)"
+            let rest = PVDatePlaceLine.text(date: date, place: place)
+            return rest.isEmpty ? abbreviation : L10n.Conclusions.lifeLineText(abbreviation: abbreviation, rest: rest)
         }
     }
 

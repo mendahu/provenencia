@@ -9047,6 +9047,15 @@ enum L10n {
             return L10n.format(resource, born, died)
         }
 
+        static func lifeLineText(abbreviation: String, rest: String) -> String {
+            let resource = LocalizedStringResource(
+                "conclusions.lifeLine.text",
+                defaultValue: "%1$@ %2$@",
+                comment: "A life line as plain text: the birth or death abbreviation, then its date and place (the compact person card's tooltip line, \"b. 3 May 1790 · Bremen\"). Arguments are the abbreviation and the date and place."
+            )
+            return L10n.format(resource, abbreviation, rest)
+        }
+
         static func lineJoin(first: String, rest: String) -> String {
             let resource = LocalizedStringResource(
                 "conclusions.line.join",
@@ -9230,7 +9239,7 @@ enum L10n {
         static let familyThisPerson = LocalizedStringResource(
             "conclusions.family.thisPerson",
             defaultValue: "This person",
-            comment: "Badge on the focus tile of the Family section, and the label of the focus alone in the siblings group"
+            comment: "The label of the focus alone in the siblings group of the Family section."
         )
 
         static let familyRoleParent = LocalizedStringResource(

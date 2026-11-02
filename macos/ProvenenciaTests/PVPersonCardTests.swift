@@ -89,6 +89,16 @@ struct PVPersonCardTests {
         #expect(years(birth: phrase, death: date(1851)) == "during the war – 1851")
         #expect(years(birth: nil, death: nil) == "")
 
+        let placeOnly = PVPersonCardContent(
+            summary: summary(
+                name: "Anna Weber",
+                birth: CatalogLifeFacts(places: [place("Bremen")]),
+                death: CatalogLifeFacts(date: date(1851), dateCount: 1)
+            ),
+            role: nil, isFocus: false, locale: en
+        )
+        #expect(placeOnly.helpText == "Anna Weber\nb. Bremen\nd. 1851")
+
         let bare = PVPersonCardContent(summary: summary(name: "Wilhelm Weber"), role: nil, isFocus: false, locale: en)
         #expect(bare.years == "" && bare.helpText == "Wilhelm Weber")
     }

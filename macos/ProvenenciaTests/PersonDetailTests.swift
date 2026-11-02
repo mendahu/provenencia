@@ -435,6 +435,15 @@ struct PersonDetailTests {
         #expect(PVDatePlaceLine.spokenPlace(nil) == "place unknown")
     }
 
+    @Test func datePlaceLineTextJoinsWhatIsRecorded() {
+        #expect(PVDatePlaceLine.text(date: "3 May 1790", place: "Bremen") == "3 May 1790 · Bremen")
+        #expect(PVDatePlaceLine.text(date: "3 May 1790", place: nil) == "3 May 1790")
+        #expect(PVDatePlaceLine.text(date: "3 May 1790", place: "") == "3 May 1790")
+        #expect(PVDatePlaceLine.text(date: nil, place: "Bremen") == "Bremen")
+        #expect(PVDatePlaceLine.text(date: "", place: "Bremen") == "Bremen")
+        #expect(PVDatePlaceLine.text(date: nil, place: nil) == "")
+    }
+
     @Test func lifeLinesSayUnknownUntilLifeEventsArrive() {
         let lines = PersonDetailContent(detail: detail()).lifeLines
         #expect(lines.map(\.abbreviation) == ["b.", "d."])
