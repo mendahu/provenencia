@@ -65,6 +65,9 @@ func Save(tx *database.Tx, userID []byte, in Input) (Result, []rowchange.Change,
 	if err != nil {
 		return Result{}, nil, err
 	}
+	if err := requirePrimary(q, subject); err != nil {
+		return Result{}, nil, err
+	}
 	if _, err := identityclaims.AcceptedEntityForSubjectTx(q, subject.ID); err == nil {
 		return Result{}, nil, identityclaims.ErrAlreadyMember
 	} else if !errors.Is(err, sql.ErrNoRows) {
@@ -82,22 +85,30 @@ func Save(tx *database.Tx, userID []byte, in Input) (Result, []rowchange.Change,
 	return Result{Entity: entity, Claim: claim}, changes, nil
 }
 
-// fileSubject files one Subject that has no accepted claim: the primary-type
-// check, a new handle of its type (entityID nil) or a join onto entityID, and
-// the accepted claim. Callers check membership first and keep their own
-// follow-up (Save appends the filing of bridges; SaveBatch files them once
-// for the whole graph).
-func fileSubject(tx *sql.Tx, subject subjects.Subject, entityID []byte) (canonicalentities.Entity, identityclaims.Claim, []rowchange.Change, error) {
+// requirePrimary refuses a Subject whose type is not a primary type (an
+// association is filed by its bridge, never promoted on its own). It runs
+// before any membership check, so the refusal does not depend on filing state.
+func requirePrimary(tx *sql.Tx, subject subjects.Subject) error {
 	st, err := subjecttypes.GetByIDTx(tx, subject.SubjectTypeID)
 	if err != nil {
-		return canonicalentities.Entity{}, identityclaims.Claim{}, nil, err
+		return err
 	}
 	if !vocabkey.IsPrimaryType(st.Key, st.Origin) {
-		return canonicalentities.Entity{}, identityclaims.Claim{}, nil, ErrUnsupportedType
+		return ErrUnsupportedType
 	}
+	return nil
+}
+
+// fileSubject files one Subject that has no accepted claim: a new handle of
+// its type (entityID nil) or a join onto entityID, and the accepted claim.
+// Callers check the primary type (requirePrimary) and membership first and
+// keep their own follow-up (Save appends the filing of bridges; SaveBatch
+// files them once for the whole graph).
+func fileSubject(tx *sql.Tx, subject subjects.Subject, entityID []byte) (canonicalentities.Entity, identityclaims.Claim, []rowchange.Change, error) {
 	var (
 		entity  canonicalentities.Entity
 		changes []rowchange.Change
+		err     error
 	)
 	if entityID == nil {
 		minted, change, err := canonicalentities.InsertTx(tx, canonicalentities.CreateInput{

@@ -158,15 +158,14 @@ func (f *batchFixture) revision() int64 {
 	return rev
 }
 
-func (f *batchFixture) save(in promote.Batch) promote.BatchResult {
+func (f *batchFixture) save(in promote.Batch) {
 	f.t.Helper()
-	res, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+	_, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 		return promote.SaveBatch(tx, userID, in)
 	})
 	if err != nil {
 		f.t.Fatal(err)
 	}
-	return res
 }
 
 func (f *batchFixture) bridgeClaims(kind string) int {
@@ -204,15 +203,15 @@ func TestSaveBatchFilesBothEndsOnce(t *testing.T) {
 	event := f.bare("event")
 	f.participation(person, event)
 
-	res := f.save(promote.Batch{
+	f.save(promote.Batch{
 		GraphID: f.graph, SeenRevision: f.revision(),
 		Rows: []promote.BatchRow{
 			{SubjectID: person.ID, Target: promote.TargetNew},
 			{SubjectID: event.ID, Target: promote.TargetNew},
 		},
 	})
-	if len(res.Written) != 2 {
-		t.Fatalf("written %d", len(res.Written))
+	if !f.hasClaim(person.ID) || !f.hasClaim(event.ID) {
+		t.Fatal("both ends were not filed")
 	}
 	if f.bridgeClaims("participation") != 1 {
 		t.Fatalf("participation claims %d, want 1", f.bridgeClaims("participation"))
@@ -279,7 +278,7 @@ func TestSaveBatchStaleWritesNothing(t *testing.T) {
 	person := f.bare("person")
 	seen := f.revision()
 	_ = f.bare("place") // a later write advances the revision
-	_, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+	_, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 		return promote.SaveBatch(tx, userID, promote.Batch{
 			GraphID: f.graph, SeenRevision: seen,
 			Rows: []promote.BatchRow{{SubjectID: person.ID, Target: promote.TargetNew}},
@@ -310,7 +309,7 @@ func TestSaveBatchFilesClaimsAndBridgesOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	res := f.save(promote.Batch{
+	f.save(promote.Batch{
 		GraphID: f.graph, SeenRevision: f.revision(),
 		Rows: []promote.BatchRow{
 			{SubjectID: a.ID, Target: promote.TargetHandle, EntityID: e1.Entity.ID},
@@ -318,13 +317,15 @@ func TestSaveBatchFilesClaimsAndBridgesOnly(t *testing.T) {
 			{SubjectID: d.ID, Target: promote.TargetSkip},
 		},
 	})
-	if len(res.Written) != 2 {
-		t.Fatalf("written %d, want 2", len(res.Written))
+	joined, err := identityclaims.AcceptedEntityForSubject(f.c, a.ID)
+	if err != nil || !bytes.Equal(joined.EntityID, e1.Entity.ID) {
+		t.Fatalf("a joined %v on %x, want %x", err, joined.EntityID, e1.Entity.ID)
 	}
-	for _, w := range res.Written {
-		if w.Claim.Status != identityclaims.StatusAccepted {
-			t.Fatalf("claim status %s", w.Claim.Status)
-		}
+	if !f.hasClaim(c.ID) {
+		t.Fatal("c was not filed")
+	}
+	if f.hasClaim(d.ID) {
+		t.Fatal("the skipped row was filed")
 	}
 	if n := f.bridgeClaims("participation"); n != 1 {
 		t.Fatalf("participation claims %d, want 1", n)
@@ -347,17 +348,18 @@ func TestSaveBatchAnchorsARowOnItsOwnHandle(t *testing.T) {
 	e1 := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: a.ID})
 	e2 := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: other.ID})
 
-	res := f.save(promote.Batch{
-		GraphID: f.graph, SeenRevision: f.revision(),
+	before := f.revision()
+	f.save(promote.Batch{
+		GraphID: f.graph, SeenRevision: before,
 		Rows: []promote.BatchRow{{SubjectID: a.ID, Target: promote.TargetHandle, EntityID: e1.Entity.ID}},
 	})
-	if len(res.Written) != 0 {
-		t.Fatalf("an anchor wrote %+v", res.Written)
+	if got := f.revision(); got != before {
+		t.Fatalf("an anchor wrote: revision %d, want %d", got, before)
 	}
 
 	try := func(row promote.BatchRow) error {
 		seen := f.revision()
-		_, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+		_, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			return promote.SaveBatch(tx, userID, promote.Batch{GraphID: f.graph, SeenRevision: seen, Rows: []promote.BatchRow{row}})
 		})
 		return err
@@ -408,7 +410,7 @@ func TestSaveBatchFilesOnlyItsGraph(t *testing.T) {
 	refused := func(t *testing.T, f *batchFixture, in promote.Batch) {
 		t.Helper()
 		before := f.revision()
-		_, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+		_, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			return promote.SaveBatch(tx, userID, in)
 		})
 		if !errors.Is(err, promote.ErrInvalid) {
@@ -437,4 +439,29 @@ func TestSaveBatchFilesOnlyItsGraph(t *testing.T) {
 		refused(t, f, promote.Batch{GraphID: make([]byte, 16), SeenRevision: f.revision()})
 		refused(t, f, promote.Batch{GraphID: []byte{1, 2, 3}, SeenRevision: f.revision()})
 	})
+}
+
+// A row naming an association Subject is unsupported even once its bridge is
+// filed: the type is checked before membership.
+func TestSaveBatchRefusesAnAssociationRowAlreadyFiled(t *testing.T) {
+	f := newBatchFixture(t)
+	person := f.bare("person")
+	event := f.bare("event")
+	bridge := f.participation(person, event)
+	promotetest.Save(t, f.c, userID, promote.Input{SubjectID: person.ID})
+	promotetest.Save(t, f.c, userID, promote.Input{SubjectID: event.ID})
+	entity, err := identityclaims.AcceptedEntityForSubject(f.c, bridge.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := f.revision()
+	_, err = writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		return promote.SaveBatch(tx, userID, promote.Batch{
+			GraphID: f.graph, SeenRevision: seen,
+			Rows: []promote.BatchRow{{SubjectID: bridge.ID, Target: promote.TargetHandle, EntityID: entity.EntityID}},
+		})
+	})
+	if !errors.Is(err, promote.ErrUnsupportedType) {
+		t.Fatalf("err %v, want promote.ErrUnsupportedType", err)
+	}
 }

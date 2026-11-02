@@ -38,7 +38,7 @@ func ApplyPromoteGraphAlignment(in []byte) ([]byte, error) {
 
 	var out *engine.ApplyPromoteGraphAlignmentResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		_, wrote, err := writes.Run(c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+		_, wrote, err := writes.Run(c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			return promote.SaveBatch(tx, userID, promote.Batch{
 				GraphID:      graphID,
 				SeenRevision: req.GetSeenRevision(),

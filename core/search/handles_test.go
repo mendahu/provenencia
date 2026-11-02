@@ -347,7 +347,7 @@ func (f *handleFixture) fileBridges() {
 	if err := db.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev); err != nil {
 		f.t.Fatal(err)
 	}
-	if _, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: f.user}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+	if _, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: f.user}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 		return promote.SaveBatch(tx, f.user, promote.Batch{GraphID: f.graph, SeenRevision: rev})
 	}); err != nil {
 		f.t.Fatal(err)
