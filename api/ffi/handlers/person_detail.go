@@ -154,7 +154,7 @@ func GetPersonFamily(in []byte) ([]byte, error) {
 
 // ListPersonEvents returns every canonical event a canonical person took part
 // in, in any role, as event summaries with the person's roles and the other
-// canonical participants.
+// canonical participants, and the birth and death markers.
 func ListPersonEvents(in []byte) ([]byte, error) {
 	var req engine.ListPersonEventsRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
@@ -166,7 +166,7 @@ func ListPersonEvents(in []byte) ([]byte, error) {
 	}
 	out := &engine.ListPersonEventsResponse{}
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		rows, summaries, err := persondetail.PersonEvents(c, entityID)
+		timeline, summaries, err := persondetail.PersonEvents(c, entityID)
 		if err != nil {
 			return err
 		}
@@ -174,19 +174,32 @@ func ListPersonEvents(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		for _, r := range rows {
+		for _, r := range timeline.Events {
 			e, err := personEventProto(r, summaries, paths)
 			if err != nil {
 				return err
 			}
 			out.Events = append(out.Events, e)
 		}
+		out.Birth, out.Death = lifeMarkerProto(timeline.Birth), lifeMarkerProto(timeline.Death)
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 	return proto.Marshal(out)
+}
+
+// lifeMarkerProto maps a marker; an id that is not there is empty.
+func lifeMarkerProto(m persondetail.LifeMarker) *engine.LifeMarker {
+	out := &engine.LifeMarker{}
+	if len(m.Event) > 0 {
+		out.EventId = database.UUIDString(m.Event)
+	}
+	if len(m.Beside) > 0 {
+		out.BesideEventId = database.UUIDString(m.Beside)
+	}
+	return out
 }
 
 // personEventProto maps one timeline row. PersonEvents returns a summary for
@@ -197,7 +210,10 @@ func personEventProto(r persondetail.PersonEvent, summaries conclusionsummaries.
 	if !ok {
 		return nil, fmt.Errorf("list_person_events: event %s has no summary", database.UUIDString(r.Event))
 	}
-	out := &engine.PersonEvent{Event: eventSummaryProto(h, paths), Roles: termsProto(r.Roles), Dated: r.Dated}
+	out := &engine.PersonEvent{Event: eventSummaryProto(h, paths), Roles: termsProto(r.Roles)}
+	if r.Span != nil {
+		out.Span = &engine.TimelineSpan{From: r.Span.From, To: r.Span.To, OpenStart: r.Span.OpenStart, OpenEnd: r.Span.OpenEnd}
+	}
 	for _, p := range r.Participants {
 		ph, ok := summaries.Person(p.Person)
 		if !ok {
