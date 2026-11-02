@@ -120,7 +120,7 @@ struct PVTitleText: View {
 
     /// `styled` with `font` italicized on each emphasized run. The italic is set explicitly,
     /// so it does not depend on how SwiftUI draws `.emphasized` in the custom display font.
-    static func italicizingEmphasis(_ styled: AttributedString, font: Font) -> AttributedString {
+    nonisolated static func italicizingEmphasis(_ styled: AttributedString, font: Font) -> AttributedString {
         var out = styled
         var italic = AttributeContainer()
         italic[AttributeScopes.SwiftUIAttributes.FontAttribute.self] = font.italic()

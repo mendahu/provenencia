@@ -41,12 +41,12 @@ struct PVDatePlaceLine: View {
     }
 
     /// The date half as spoken: the date, or the "date unknown" copy.
-    static func spokenDate(_ date: String?) -> String {
+    nonisolated static func spokenDate(_ date: String?) -> String {
         date ?? L10n.string(L10n.DesignSystem.datePlaceLineDateUnknown)
     }
 
     /// The place half as spoken: the place, or the "place unknown" copy.
-    static func spokenPlace(_ place: String?) -> String {
+    nonisolated static func spokenPlace(_ place: String?) -> String {
         place ?? L10n.string(L10n.DesignSystem.datePlaceLinePlaceUnknown)
     }
 
