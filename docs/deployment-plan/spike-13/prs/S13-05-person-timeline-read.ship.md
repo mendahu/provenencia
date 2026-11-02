@@ -57,4 +57,4 @@ Not run: round 1 had no blocker or major.
 Merged `origin/main` @ `ae789572` (#679, docs only). Gate PASS against `ae789572`.
 
 ## Result
-Gate PASS · CI <pending> · open: none · follow-ups: none · to user: — · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: none · to user: — · CON miss: none
