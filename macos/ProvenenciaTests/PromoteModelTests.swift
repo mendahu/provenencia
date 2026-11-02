@@ -158,6 +158,61 @@ struct PromoteModelTests {
         #expect((store.lastPromoteBatch ?? []).map(\.subjectID) == ["z"])
     }
 
+    /// The Done's effects drive the reload: the canvas on screen revalidates and the sidebar recounts once.
+    @Test func doneAppliesItsEffects() async {
+        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")])]
+        store.nextWriteEffects = CatalogWriteEffects(handles: ["h1"], evidenceGraphs: [graphID], lists: [.counts])
+        let model = model(store: store, subjectID: "a")
+        var recounts = 0
+        model.session.onNavCountsMoved = { recounts += 1 }
+        await model.load()
+        model.session.apply(location: .evidenceGraph(sourceId: sourceID, graphId: graphID, title: nil))
+        let canvas: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(model.graphKey)
+        #expect(await waitUntil { canvas?.value != nil && canvas?.isFetching == false })
+        let loadsBefore = store.listSubjectsGraphIDs.count
+
+        model.done()
+        #expect(await waitUntil { store.lastPromoteBatch != nil })
+        await model.session.settleWrites()
+        #expect(store.listSubjectsGraphIDs.count == loadsBefore + 1)
+        #expect(recounts == 1)
+    }
+
+    /// The header reads its Source from the session, so a rename or a type change shows at once.
+    @Test func headerFollowsSourceRow() async {
+        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(id: sourceID, ref: "SRC-1", sourceTypeID: "t-census", title: "Census 1851", description: ""),
+        ]
+        store.sourceTypesByProject[projectDir] = [
+            CatalogSourceType(id: "t-census", key: "census", origin: "provenencia", label: "Census", description: "", iconKey: "type_census"),
+            CatalogSourceType(id: "t-register", key: "register", origin: "provenencia", label: "Register", description: "", iconKey: "type_certificate"),
+        ]
+        let model = model(store: store, subjectID: "a")
+        // Not warm: the carried title, no ref, the default mark.
+        #expect(model.sourceTitle == "Census")
+        #expect(model.sourceRef == "")
+        #expect(model.sourceMark == .defaultTypeMark)
+
+        let sources: QueryHandle<[CatalogSource]> = model.session.query(model.sourcesKey)
+        let types: QueryHandle<[CatalogSourceType]> = model.session.query(model.sourceTypesKey)
+        await waitForQuery(sources)
+        await waitForQuery(types)
+        #expect(model.sourceTitle == "Census 1851")
+        #expect(model.sourceRef == "SRC-1")
+        #expect(model.sourceMark == PVMarkKey(catalogKey: "type_census"))
+
+        var renamed = CatalogSource(id: sourceID, ref: "SRC-1", sourceTypeID: "t-census", title: "Census 1851 (Ward 3)", description: "")
+        model.session.apply(.updatedSource(renamed))
+        #expect(model.sourceTitle == "Census 1851 (Ward 3)")
+
+        renamed.sourceTypeID = "t-register"
+        model.session.apply(.changedSourceType(renamed))
+        #expect(model.sourceMark == PVMarkKey(catalogKey: "type_certificate"))
+        #expect(model.sourceRef == "SRC-1")
+    }
+
     // MARK: - T-12
 
     @Test func donePromotesEveryRowWithATargetOnly() async {

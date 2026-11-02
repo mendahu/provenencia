@@ -96,6 +96,31 @@ struct SourcePageModelTests {
         #expect(store.sourcesByProject[projectDir]?.first?.title == "Revised title")
     }
 
+    /// A rename applies the write's effects: the Source's visible canvas reloads and the list row shows the title.
+    @Test func renameAppliesItsEffects() async throws {
+        let store = makeStore()
+        store.nextWriteEffects = CatalogWriteEffects(evidenceGraphs: ["g1"])
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = makeModel(store: store, session: session)
+        await model.warmFromSession()
+        let list: QueryHandle<[CatalogSource]> = session.query(.sourcesList(project: session.projectKey))
+        await waitForQuery(list)
+        session.apply(location: .evidenceGraph(sourceId: sourceID, graphId: "g1", title: nil))
+        let canvas: QueryHandle<EvidenceGraphRows> = try #require(
+            session.queryHandle(.evidenceGraph(project: session.projectKey, graphId: "g1"))
+        )
+        await waitForQuery(canvas)
+        let loadsBefore = store.listSubjectsGraphIDs.count
+
+        model.identity.beginEditTitle()
+        model.identity.titleDraft = "Revised title"
+        await model.identity.saveTitle()
+        await session.settleWrites()
+
+        #expect(store.listSubjectsGraphIDs.count == loadsBefore + 1)
+        #expect(list.value?.first?.title == "Revised title")
+    }
+
     @Test func saveTypeUpdatesCommittedType() async {
         let store = makeStore()
         store.sourceTypesByProject[projectDir] = [
@@ -1560,6 +1585,7 @@ struct SourcePageModelTests {
                 title: "Letters", description: ""
             )
         )
+        store.nextWriteEffects = CatalogWriteEffects(lists: [.counts])
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let counts = CatalogCounts(projectDir: projectDir, store: store)
         session.onNavCountsMoved = { await counts.refreshAll() }

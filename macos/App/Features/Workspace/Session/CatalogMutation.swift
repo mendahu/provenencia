@@ -38,10 +38,6 @@ enum CatalogMutation: Sendable, Equatable {
     /// write's effects.
     case deletedSubject
 
-    /// A Subject on this Evidence graph was promoted (an Identity Claim filed it
-    /// onto a handle), so its graph card's membership changed.
-    case promotedSubject(graphId: String)
-
     case createdProperty
     case updatedProperty
     case deletedProperty
@@ -60,6 +56,10 @@ enum CatalogList: String, Sendable, CaseIterable {
     /// An Observation was created, deleted, or moved to another Property, so
     /// the Properties workspace's `usedBy` counts changed.
     case propertyUsage = "property_usage"
+    /// A Source or a handle (of any type) was created, deleted or merged, so a
+    /// sidebar count may have changed. It names no cache key: the session
+    /// recounts (`WorkspaceSession.onNavCountsMoved`).
+    case counts = "counts"
 }
 
 /// A keyed partial read a write moved, per id of the read's key table
@@ -132,7 +132,6 @@ enum CatalogMutationKind: Hashable, Sendable {
     case mutatedSourceWorkspace
     case mutatedSourceMetadata
     case deletedSubject
-    case promotedSubject
     case createdProperty
     case updatedProperty
     case deletedProperty
@@ -174,8 +173,6 @@ extension CatalogMutation {
             return .mutatedSourceMetadata
         case .deletedSubject:
             return .deletedSubject
-        case .promotedSubject:
-            return .promotedSubject
         case .createdProperty:
             return .createdProperty
         case .updatedProperty:
@@ -186,33 +183,6 @@ extension CatalogMutation {
             return .mutatedSubjectTypeProperties
         case .createdPropertyTerm:
             return .createdPropertyTerm
-        }
-    }
-
-    /// The Evidence graph this mutation changes, for a mutation that names one
-    /// and brings no effects with it. The registry reloads it and the session
-    /// patches its progress; nil for every other mutation. S14-16 removes this
-    /// when Promote reports effects.
-    var evidenceGraphId: String? {
-        switch self {
-        case .promotedSubject(let graphId):
-            return graphId
-        default:
-            return nil
-        }
-    }
-
-    /// The ids of `read` this mutation names for a write that reports no
-    /// effects: Promote's graph for graph progress, a deleted Source for the
-    /// graph list. S14-16 removes this when Promote and DeleteSource report effects.
-    func readIDs(for read: CatalogRead) -> [String] {
-        switch (read, self) {
-        case (.evidenceGraphProgress, _):
-            return evidenceGraphId.map { [$0] } ?? []
-        case (.evidenceGraphs, .deletedSource(let id)):
-            return [id]
-        default:
-            return []
         }
     }
 

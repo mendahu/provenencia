@@ -390,9 +390,9 @@ private struct ThrowingStore: GenealogyStore {
         sourceTypeID _: String,
         title _: String,
         description _: String
-    ) async throws -> CatalogSource { throw StoreBoom.boom }
-    func deleteSource(projectDir _: String, userID _: String, sourceID _: String) async throws {
-        throw StoreBoom.boom
+    ) async throws -> (CatalogSource, CatalogWriteEffects) { throw StoreBoom.boom }
+    func deleteSource(projectDir _: String, userID _: String, sourceID _: String) async throws -> CatalogWriteEffects {
+        .empty
     }
     func setSourceCover(
         projectDir _: String,
@@ -400,7 +400,7 @@ private struct ThrowingStore: GenealogyStore {
         sourceID _: String,
         coverMode _: String,
         primaryArtifactID _: String
-    ) async throws -> CatalogSource { throw StoreBoom.boom }
+    ) async throws -> (CatalogSource, CatalogWriteEffects) { throw StoreBoom.boom }
     func addSourceNote(projectDir _: String, userID _: String, sourceID _: String, body _: String) async throws
         -> (CatalogSourceNote, CatalogWriteEffects) { throw StoreBoom.boom }
     func updateSourceNote(projectDir _: String, userID _: String, noteID _: String, body _: String) async throws
@@ -588,8 +588,8 @@ private struct ThrowingStore: GenealogyStore {
         graphID _: String,
         seenRevision _: Int64,
         rows _: [CatalogPromoteGraphAlignmentFixed]
-    ) async throws {
-        throw StoreBoom.boom
+    ) async throws -> CatalogWriteEffects {
+        .empty
     }
     func listSubjectMemberships(projectDir _: String, graphID _: String) async throws -> [CatalogSubjectMembership] {
         throw StoreBoom.boom

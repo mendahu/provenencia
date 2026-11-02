@@ -448,11 +448,4 @@ final class SourcesModel {
             return nil
         }
     }
-
-    /// Publishes the count of a settled list to the sidebar. The view calls it
-    /// through `onSettled`: a refetch keeps the cached `.ready` value, which
-    /// may be stale.
-    func syncCatalogCounts() {
-        catalogCounts?.publishSources(sources.count)
-    }
 }

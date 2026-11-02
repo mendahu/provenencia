@@ -112,7 +112,6 @@ private struct SourcesListContent: View {
             model.refreshTypes()
             model.selectSoleTypeIfNeeded()
         }
-        .onSettled(sourcesHandle) { model.syncCatalogCounts() }
         .onChange(of: typesHandle.status) { _, _ in
             if model.isAdding { model.selectSoleTypeIfNeeded() }
         }

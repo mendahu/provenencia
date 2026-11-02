@@ -179,6 +179,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var seededSearchHits: [CatalogSearchHit] = []
     /// When set, `workspaceNavCounts` throws instead of returning counts.
     var workspaceNavCountsError: Error?
+    /// Per-call delay before `workspaceNavCounts` returns, consumed in call
+    /// order; empty means no delay. The counts are read when the call starts,
+    /// so a delayed recount returns the counts from then.
+    var workspaceNavCountsDelays: [Duration] = []
     /// When set, `updateSource` throws (identity title/type/description saves).
     var updateSourceError: Error?
     /// When set, `addObservationsToCitation` throws after recording the call.
@@ -503,7 +507,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         sourceTypeID: String,
         title: String,
         description: String
-    ) async throws -> CatalogSource {
+    ) async throws -> (CatalogSource, CatalogWriteEffects) {
         return try withState {
             if let updateSourceError { throw updateSourceError }
             var list = sourcesByProject[projectDir] ?? []
@@ -516,7 +520,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             list[idx].updated = CatalogActivity(revision: nextAuditRevision)
             nextAuditRevision += 1
             sourcesByProject[projectDir] = list
-            return enrichCoverFields(list[idx])
+            return (enrichCoverFields(list[idx]), nextWriteEffects)
         }
     }
 
@@ -526,7 +530,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         sourceID: String,
         coverMode: String,
         primaryArtifactID: String
-    ) async throws -> CatalogSource {
+    ) async throws -> (CatalogSource, CatalogWriteEffects) {
         return try withState {
             var list = sourcesByProject[projectDir] ?? []
             guard let idx = list.firstIndex(where: { $0.id == sourceID }) else {
@@ -551,7 +555,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             list[idx].updated = CatalogActivity(revision: nextAuditRevision)
             nextAuditRevision += 1
             sourcesByProject[projectDir] = list
-            return enrichCoverFields(list[idx])
+            return (enrichCoverFields(list[idx]), nextWriteEffects)
         }
     }
 
@@ -593,7 +597,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func deleteSource(projectDir: String, userID _: String, sourceID: String) async throws {
+    func deleteSource(projectDir: String, userID _: String, sourceID: String) async throws -> CatalogWriteEffects {
         withState {
             markCatalogSessionHeld(projectDir)
             deleteSourceCalls += 1
@@ -611,6 +615,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             }
             metadataBySource[sourceID] = nil
             credibilityBySource[sourceID] = nil
+            return nextWriteEffects
         }
     }
 
@@ -1253,20 +1258,23 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     func workspaceNavCounts(projectDir: String) async throws -> WorkspaceNavCounts {
-        return try withState {
+        let claimed: (delay: Duration?, counts: WorkspaceNavCounts) = try withState {
             markCatalogSessionHeld(projectDir)
             if let workspaceNavCountsError { throw workspaceNavCountsError }
+            let delay: Duration? = workspaceNavCountsDelays.isEmpty ? nil : workspaceNavCountsDelays.removeFirst()
             let types = sourceTypesByProject[projectDir] ?? []
             let fields = fieldsByProject[projectDir] ?? []
-            return WorkspaceNavCounts(
+            return (delay, WorkspaceNavCounts(
                 sources: (sourcesByProject[projectDir] ?? []).count,
                 sourceTypes: Self.originCounts(from: types.map(\.origin)),
                 metadataFields: Self.originCounts(from: fields.map(\.origin)),
                 persons: Self.handleCount(membershipBySubject, kind: "person"),
                 events: Self.handleCount(membershipBySubject, kind: "event"),
                 places: Self.handleCount(membershipBySubject, kind: "place")
-            )
+            ))
         }
+        if let delay = claimed.delay { try? await Task.sleep(for: delay) }
+        return claimed.counts
     }
 
     func nameFormat(projectDir: String) async throws -> NameFormatOrders {
@@ -1552,7 +1560,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         graphID: String,
         seenRevision: Int64,
         rows: [CatalogPromoteGraphAlignmentFixed]
-    ) async throws {
+    ) async throws -> CatalogWriteEffects {
         try withState {
             markCatalogSessionHeld(projectDir)
             recordedCalls.append("applyPromoteGraphAlignment graph=\(graphID) rows=\(rows.count)")
@@ -1578,6 +1586,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 written += 1
             }
             if written > 0 { nextAuditRevision += 1 }
+            return nextWriteEffects
         }
     }
 

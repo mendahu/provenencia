@@ -112,7 +112,7 @@ struct PromoteView: View {
                 Text(L10n.Promote.pageTitle)
                     .pvMicroCaps()
                     .foregroundStyle(PVColor.textMuted)
-                if let title = model.entry.sourceTitle {
+                if let title = model.sourceTitle {
                     Text(verbatim: title)
                         .font(PVFont.display(size: PVTypeScale.h3, weight: PVFontWeight.semibold))
                         .foregroundStyle(PVColor.textDisplay)

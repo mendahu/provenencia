@@ -1923,7 +1923,7 @@ struct EvidenceGraphModelTests {
     @Test func unpromoteWithNoBridgesHasEmptyDetail() async throws {
         let (store, model) = await promotableModel()
         _ = store.seedPromotion(projectDir: projectDir, subjectID: "s-james")
-        model.session.apply(.promotedSubject(graphId: graphID))
+        model.session.apply(CatalogWriteEffects(evidenceGraphs: [graphID]))
         let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         let loaded = await waitUntil(timeout: .seconds(5)) {
             let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
@@ -1995,10 +1995,10 @@ struct EvidenceGraphModelTests {
         #expect(model.pendingUnpromote?.error == nil)
     }
 
-    /// Files s-james the way the Promote place does: write, then invalidate.
+    /// Files s-james the way the Promote place does: write, then apply the Done's effects.
     private func promoteJames(_ store: FakeStore, _ model: EvidenceGraphModel) async throws {
         _ = store.seedPromotion(projectDir: projectDir, subjectID: "s-james")
-        model.session.apply(.promotedSubject(graphId: graphID))
+        model.session.apply(CatalogWriteEffects(evidenceGraphs: [graphID]))
     }
 
     /// A promoted person's membership row opens its Person page (S9-09 stub)
@@ -2057,7 +2057,7 @@ struct EvidenceGraphModelTests {
 
         store.seedPromotion(projectDir: projectDir, subjectID: "s-fire")
         store.seedPromotion(projectDir: projectDir, subjectID: "s-york")
-        model.session.apply(.promotedSubject(graphId: graphID))
+        model.session.apply(CatalogWriteEffects(evidenceGraphs: [graphID]))
         let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         let loaded = await waitUntil(timeout: .seconds(5)) {
             let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)

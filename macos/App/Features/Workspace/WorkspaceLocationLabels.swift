@@ -52,6 +52,12 @@ enum WorkspaceLocationLabels {
         names.graphName(graphID)?.trimmedNonEmpty
     }
 
+    /// The Source's title, when the session knows one, else the title the
+    /// location carries. Blank titles count as none.
+    static func sourceTitle(sourceID: String, carried: String?, names: LocationNames) -> String? {
+        names.sourceTitle(sourceID)?.trimmedNonEmpty ?? carried?.trimmedNonEmpty
+    }
+
     /// The graph's name, else "Evidence graph".
     static func graphLabel(graphID: String, names: LocationNames) -> String {
         graphName(graphID: graphID, names: names) ?? L10n.string(L10n.Workspace.evidenceGraphTitle)

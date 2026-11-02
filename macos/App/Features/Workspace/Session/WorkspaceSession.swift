@@ -21,7 +21,7 @@ final class WorkspaceSession {
     private(set) var visibleKeys: Set<CatalogQueryKey> = []
     /// Transient notice after leaving a place (composer save, etc.).
     var noticeToast: VocabularyToast?
-    /// Recounts the sidebar after a write in `CatalogQueryRegistry.navCountTriggers`. Set by `WorkspaceView`.
+    /// Recounts the sidebar after a write whose effects report the `counts` list (`WriteEffects.lists`). Set by `WorkspaceView`.
     @ObservationIgnored
     var onNavCountsMoved: (@MainActor () async -> Void)?
     /// Evidence-graph pan and zoom, keyed by graph id. Not catalog data; quit drops it.
@@ -262,20 +262,20 @@ final class WorkspaceSession {
     /// warmed key such an entry names joins the dedupe pass instead (reloaded
     /// when visible, marked stale when hidden), and a key in that pass starts
     /// no `.run`. It also runs `onNavCountsMoved`
-    /// for a mutation in `CatalogQueryRegistry.navCountTriggers`. Features only
+    /// once when the effects report the `counts` list. Features only
     /// call `apply`; they do not query afterward or tell sibling views to
     /// refresh.
     func apply(_ effects: CatalogWriteEffects = .empty, _ mutation: CatalogMutation? = nil) {
         let awaiting = applyPatches(effects, mutation)
         let invalidated = cachedKeys(for: registry.invalidations(for: effects, by: mutation, project: projectKey))
-        let refreshed = revalidatedKeys(for: effects, mutation)
+        let refreshed = revalidatedKeys(for: effects)
         var running: [(key: CatalogQueryKey, run: CatalogQueryRefresh.Run, ids: [String])] = []
         var fallbacks: [CatalogQueryKey] = []
         for key in Array(handles.keys) where key.project == projectKey {
             guard let handle = handles[key] else { continue }
             for refresh in key.kind.descriptor.refreshes {
                 guard case .run(let run) = refresh.action else { continue }
-                let ids = refresh.follows.ids(in: effects, mutation: mutation)
+                let ids = refresh.follows.ids(in: effects)
                 if ids.isEmpty { continue }
                 if effectivePolicy(for: key) == .revalidate, !handle.isStale, handle.hasValue {
                     running.append((key, run, ids))
@@ -296,10 +296,7 @@ final class WorkspaceSession {
                 handle.endRefresh()
             }
         }
-        if let kind = mutation?.invalidationKind,
-           CatalogQueryRegistry.navCountTriggers.contains(kind),
-           let recount = onNavCountsMoved
-        {
+        if effects.lists.contains(.counts), let recount = onNavCountsMoved {
             trackWrite { await recount() }
         }
     }
@@ -310,13 +307,13 @@ final class WorkspaceSession {
     /// key that depends on any id, when the slot reports one. Synchronous, so a
     /// key declared here is revalidated in the same pass as the registry's
     /// invalidations.
-    func revalidatedKeys(for effects: CatalogWriteEffects, _ mutation: CatalogMutation? = nil) -> [CatalogQueryKey] {
+    func revalidatedKeys(for effects: CatalogWriteEffects) -> [CatalogQueryKey] {
         var named: [CatalogQueryKey] = []
         var seen = Set<CatalogQueryKey>()
         for key in Array(handles.keys) where key.project == projectKey {
             for refresh in key.kind.descriptor.refreshes {
                 guard case .revalidate(let dependsOn) = refresh.action else { continue }
-                let reported = Set(refresh.follows.ids(in: effects, mutation: mutation))
+                let reported = Set(refresh.follows.ids(in: effects))
                 if reported.isEmpty { continue }
                 let meets = dependsOn(self, key).map { !$0.isDisjoint(with: reported) } ?? true
                 if meets, seen.insert(key).inserted {
@@ -375,7 +372,7 @@ final class WorkspaceSession {
                 let result: CatalogPatchResult
                 if let follows = patch.follows {
                     guard effects.activity.revision > 0 else { continue }
-                    let ids = Set(follows.ids(in: effects, mutation: mutation))
+                    let ids = Set(follows.ids(in: effects))
                     if ids.isEmpty { continue }
                     result = patch.apply(self, key, ids, effects.activity, mutation)
                 } else {

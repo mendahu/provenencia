@@ -89,8 +89,6 @@ final class PromoteModel {
     weak var navigation: WorkspaceNavigation?
 
     private(set) var flow: PromoteFlow
-    private(set) var sourceRef: String = ""
-    private(set) var sourceMark: PVMarkKey = .defaultTypeMark
     private(set) var loadError: String?
     private(set) var saveError: String?
     private(set) var proposeError: String?
@@ -104,6 +102,24 @@ final class PromoteModel {
     var rulesKey: CatalogQueryKey { .connectRules(project: session.projectKey) }
     var sourcesKey: CatalogQueryKey { .sourcesList(project: session.projectKey) }
     var sourceTypesKey: CatalogQueryKey { .sourceTypesList(project: session.projectKey) }
+
+    /// The Source's row from the session, which every rename and type change patches;
+    /// nil while the Sources list is not warm or the Source is gone.
+    var source: CatalogSource? { session.source(id: entry.sourceID) }
+    /// The header's title: the session's, else the one the location carried.
+    var sourceTitle: String? {
+        WorkspaceLocationLabels.sourceTitle(
+            sourceID: entry.sourceID, carried: entry.sourceTitle, names: LocationNames(session: session)
+        )
+    }
+    var sourceRef: String { source?.ref ?? "" }
+    var sourceMark: PVMarkKey {
+        let types: QueryHandle<[CatalogSourceType]>? = session.queryHandle(sourceTypesKey)
+        guard let iconKey = types?.value?.iconKey(forTypeID: source?.sourceTypeID) else {
+            return .defaultTypeMark
+        }
+        return PVMarkKey(catalogKey: iconKey)
+    }
 
     var hasUnsavedWork: Bool { flow.manual }
     var pendingLeave: PendingLeave? { flow.pendingLeave.map(PendingLeave.init(navigation:)) }
@@ -138,7 +154,7 @@ final class PromoteModel {
                 loadError = L10n.string(L10n.Promote.graphUnavailable)
                 return
             }
-            await attachSource()
+            await warmSourceKeys()
             syncNameOrders()
             let subjects = subjectFacts(snapshot)
             flow.load(
@@ -307,14 +323,14 @@ final class PromoteModel {
         let batch = flow.batchRows()
         let seen = flow.revision
         do {
-            try await store.applyPromoteGraphAlignment(
+            let effects = try await store.applyPromoteGraphAlignment(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 graphID: entry.graphID,
                 seenRevision: seen,
                 rows: batch
             )
-            session.apply(.promotedSubject(graphId: entry.graphID))
+            session.apply(effects)
             session.noticeToast = VocabularyToast(
                 title: L10n.Promote.promotedTitle(promoted: flow.promoteCount, connections: flow.connectionCount),
                 body: flow.skipCount > 0 ? L10n.Promote.promotedBody(skipped: flow.skipCount) : "",
@@ -391,14 +407,10 @@ final class PromoteModel {
         }
     }
 
-    private func attachSource() async {
-        let sources: [CatalogSource]? = await session.readyValue(sourcesKey)
-        let types: [CatalogSourceType]? = await session.readyValue(sourceTypesKey)
-        guard let source = sources?.first(where: { $0.id == entry.sourceID }) else { return }
-        sourceRef = source.ref
-        if let iconKey = types?.iconKey(forTypeID: source.sourceTypeID) {
-            sourceMark = PVMarkKey(catalogKey: iconKey)
-        }
+    /// Waits for the Sources and source-types keys so the header has values when the page settles.
+    private func warmSourceKeys() async {
+        let _: [CatalogSource]? = await session.readyValue(sourcesKey)
+        let _: [CatalogSourceType]? = await session.readyValue(sourceTypesKey)
     }
 }
 

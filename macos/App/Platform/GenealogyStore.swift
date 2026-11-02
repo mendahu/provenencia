@@ -1205,7 +1205,7 @@ protocol GenealogyStore: Sendable {
         copyCredibility: Bool,
         artifactIDs: [String]
     ) async throws -> (CatalogSource, CatalogWriteEffects)
-    func deleteSource(projectDir: String, userID: String, sourceID: String) async throws
+    func deleteSource(projectDir: String, userID: String, sourceID: String) async throws -> CatalogWriteEffects
     func updateSource(
         projectDir: String,
         userID: String,
@@ -1213,7 +1213,7 @@ protocol GenealogyStore: Sendable {
         sourceTypeID: String,
         title: String,
         description: String
-    ) async throws -> CatalogSource
+    ) async throws -> (CatalogSource, CatalogWriteEffects)
     /// Pin a raster Artifact as cover, or revert to the Source type icon (`type_icon`).
     /// Non-image Files (PDF, …) cannot be cover.
     func setSourceCover(
@@ -1222,7 +1222,7 @@ protocol GenealogyStore: Sendable {
         sourceID: String,
         coverMode: String,
         primaryArtifactID: String
-    ) async throws -> CatalogSource
+    ) async throws -> (CatalogSource, CatalogWriteEffects)
     func addSourceNote(projectDir: String, userID: String, sourceID: String, body: String) async throws
         -> (CatalogSourceNote, CatalogWriteEffects)
     func updateSourceNote(projectDir: String, userID: String, noteID: String, body: String) async throws
@@ -1447,7 +1447,7 @@ protocol GenealogyStore: Sendable {
         graphID: String,
         seenRevision: Int64,
         rows: [CatalogPromoteGraphAlignmentFixed]
-    ) async throws
+    ) async throws -> CatalogWriteEffects
     /// Accepted handle of every promoted Subject on one Evidence graph.
     func listSubjectMemberships(projectDir: String, graphID: String) async throws -> [CatalogSubjectMembership]
     /// The title of every Event Subject on one Evidence graph, keyed by Subject id.

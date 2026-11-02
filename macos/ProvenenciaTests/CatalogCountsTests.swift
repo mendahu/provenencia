@@ -108,12 +108,31 @@ struct CatalogCountsTests {
         let counts = makeCounts()
         counts.publishMetadata(CatalogCountSummary(total: 5, seeded: 2, user: 2, plugin: 1))
         counts.publishSourceTypes(CatalogCountSummary(total: 3, seeded: 1, user: 2, plugin: 0))
-        counts.publishSources(7)
         #expect(counts.badge(for: .metadata) == 5)
         #expect(counts.metadata?.plugin == 1)
         #expect(counts.badge(for: .sourceTypes) == 3)
         #expect(counts.sourceTypes?.user == 2)
-        #expect(counts.badge(for: .sources) == 7)
+    }
+
+    /// Two recounts overlap: the one started last reads the newest catalog, so the earlier,
+    /// slower one finishing after it must not overwrite its counts.
+    @Test func newestRecountWins() async throws {
+        let store = FakeStore()
+        store.workspaceNavCountsDelays = [.milliseconds(200), .zero]
+        let counts = makeCounts(store: store)
+
+        let first = Task { await counts.refreshAll() }
+        // The first recount has claimed its delay and read zero Sources.
+        let started = await waitUntil(timeout: .seconds(5)) { store.workspaceNavCountsDelays.count == 1 }
+        #expect(started)
+        _ = try await store.createSource(
+            projectDir: projectDir, userID: "u", sourceTypeID: "t1", title: "New", description: ""
+        )
+
+        await counts.refreshAll()
+        #expect(counts.sources == 1)
+        await first.value
+        #expect(counts.sources == 1)
     }
 
     @Test func summaryFromRowsSplitsByOrigin() {

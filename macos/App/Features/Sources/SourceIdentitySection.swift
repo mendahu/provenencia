@@ -166,7 +166,7 @@ final class SourceIdentitySection {
         isSaving = true
         defer { isSaving = false }
         do {
-            let updated = try await context.store.updateSource(
+            let (updated, effects) = try await context.store.updateSource(
                 projectDir: context.projectDir,
                 userID: context.userID,
                 sourceID: context.sourceID,
@@ -176,7 +176,7 @@ final class SourceIdentitySection {
             )
             context.workspace?.source = updated
             typeDraftID = updated.sourceTypeID
-            context.applySource(updated, typeChanged: sourceTypeID != current.sourceTypeID)
+            context.applySource(updated, effects: effects, typeChanged: sourceTypeID != current.sourceTypeID)
             return nil
         } catch {
             return L10n.Errors.message(for: error)

@@ -223,7 +223,7 @@ struct EvidenceGraphStoreTests {
         let afterArtifact = try await store.listEvidenceGraphs(projectDir: projectDir, sourceID: nil)
         #expect(afterArtifact.map(\.artifactIDs) == [["a2"], []])
 
-        try await store.deleteSource(projectDir: projectDir, userID: userID, sourceID: sourceID)
+        _ = try await store.deleteSource(projectDir: projectDir, userID: userID, sourceID: sourceID)
         #expect(try await store.listEvidenceGraphs(projectDir: projectDir, sourceID: nil).isEmpty)
     }
 

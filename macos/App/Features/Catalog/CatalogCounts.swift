@@ -66,6 +66,8 @@ final class CatalogCounts {
 
     private let projectDir: String
     private let store: any GenealogyStore
+    /// Bumped by each `refreshAll`; a recount assigns only while it is the newest.
+    private var refreshGeneration = 0
 
     init(projectDir: String, store: any GenealogyStore) {
         self.projectDir = projectDir
@@ -103,22 +105,21 @@ final class CatalogCounts {
         properties = summary
     }
 
-    /// Writes the Sources total the feature model already knows from its
-    /// in-memory list (after load).
-    func publishSources(_ count: Int) {
-        sources = count
-    }
-
     /// Full badge refresh via `GetWorkspaceNavCounts`. Safe to overlap with
     /// destination `load()` — Go `catalogsession` serializes catalog ops.
     /// Failures set `lastRefreshError` and leave badges unchanged (absent until
     /// a later success). Vocabulary mutations use `publish*` instead of
-    /// recounting; a write in `CatalogQueryRegistry.navCountTriggers` recounts
+    /// recounting; a write whose `WriteEffects.lists` has `counts` recounts
     /// through here, called by `WorkspaceSession.apply` (wired in
-    /// `WorkspaceView`).
+    /// `WorkspaceView`). The newest recount wins: Go serializes catalog ops in
+    /// call order, so the call started last read the newest catalog, and a
+    /// slower earlier call that finishes after it assigns nothing.
     func refreshAll() async {
+        refreshGeneration += 1
+        let generation = refreshGeneration
         do {
             let nav = try await store.workspaceNavCounts(projectDir: projectDir)
+            guard generation == refreshGeneration else { return }
             sources = nav.sources
             sourceTypes = CatalogCountSummary(nav.sourceTypes)
             metadata = CatalogCountSummary(nav.metadataFields)
@@ -127,6 +128,7 @@ final class CatalogCounts {
             places = nav.places
             lastRefreshError = nil
         } catch {
+            guard generation == refreshGeneration else { return }
             lastRefreshError = L10n.Errors.message(for: error)
         }
     }

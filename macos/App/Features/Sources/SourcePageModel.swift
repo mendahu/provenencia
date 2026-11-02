@@ -187,12 +187,12 @@ final class SourcePageModel {
         let erasedSource = await deleteImpact.confirm { target in
             switch target.kind {
             case "source":
-                try await context.store.deleteSource(
+                let effects = try await context.store.deleteSource(
                     projectDir: context.projectDir,
                     userID: context.userID,
                     sourceID: target.id
                 )
-                context.session.apply(.deletedSource(id: target.id))
+                context.session.apply(effects, .deletedSource(id: target.id))
             case "artifact":
                 let effects = try await context.store.deleteArtifact(
                     projectDir: context.projectDir,
