@@ -60,6 +60,6 @@ No migration. New seeds reach new catalogs only (Spike 10 rule "New seeds are fo
 
 ## Stays later
 
-- **The event picture in the Person Timeline.** Spike 13 reserves the slot (R-26); filling it is Spike 13's call once S14-01 lands.
+- **The event picture in the Person Timeline.** Spike 13 fills the slot R-26 reserved with the event's lead picture, else the Event mark (S13-13; user, 2026-11-02).
 - **Pictures as matching evidence for an Event or Place.** `subjectcompare` gives pictures no weight.
 - **Signature.** Still open in the [depictions idea](../../ideas/depictions-and-likenesses.md).

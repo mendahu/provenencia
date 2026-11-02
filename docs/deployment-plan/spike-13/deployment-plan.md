@@ -23,7 +23,7 @@ Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
 1. **One page, five sections.** The header (name, born/died line, portrait, gender badge) stays put while the user moves between Vitals, Family, Timeline, Gallery and Sources in one action from anywhere on the page.
 2. **Every Vitals value explains itself.** Clicking the provenance control beside the birth date opens a sheet listing every record of that date (from the birth event), the auto-reconciler's reasoning, and links that open the Source, the Citation and the exact Observation. A disagreeing value still shows as mixed in the row.
 3. **The family is there.** A person with two marriages shows both families, each spouse with their children; their parents; and their siblings, including siblings known only through a shared parent. Every tile shows a likeness, name, birth and death date and place, in the person's gender/sex color, and opens that relative's page. Nobody unpromoted appears.
-4. **A life in order.** The Timeline lists every event the person took part in, earliest first, each with its name, date, place, the person's role, a depiction placeholder, and the other canonical participants with their roles; undated events sit in an Undated group at the end. Every event and participant opens its page.
+4. **A life in order.** The Timeline lists every event the person took part in, earliest first, each with its name, date, place, the person's role, the event's picture (else the Event mark; 2026-11-02), and the other canonical participants with their roles; undated events sit in an Undated group at the end. Every event opens its page, and every participant opens their Timeline.
 5. **Likenesses.** The Gallery shows every likeness; one opens a viewer that steps through them; from the gallery or viewer a likeness can be set as the portrait or opened at its Citation.
 6. **Sources.** The Sources section lists every identity claim, grouped under its Source (title and type; the date was descoped 2026-10-31) and ordered by Source title, with each claim's Subject card; a census contributing two claims from two graphs shows one group. Each Source opens its page.
 7. **Claims.** Removing a claim un-promotes the Subject; removing the last one warns that the person will be deleted, and proceeding lands on the Persons list. (A claim's review became bar 10 on 2026-10-29.)
@@ -109,6 +109,9 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 - **One sectioned Conclusion page, not a Person fork.** `ConclusionDetailPage` stays the one page for Person, Event and Place. S13-09 gives it a sections slot; Event and Place pass a single section and look unchanged (R-1), and the Person page later passes five. When Event and Place adopt sections, they fill the slot. Binds S13-09, S13-10.
 - **One person tile, built once.** The tile is built in S13-12 (Family) and reused by S13-13 (Timeline), placed per [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) as a recipe once it has the second caller. Briefs S13-D3 and S13-D4 draw the same tile. Binds S13-12, S13-13.
 - **Colors reuse `PersonGenderTreatment`** (R-3), fed from `PersonSummary`'s terms (S13-02). Binds S13-12, S13-13.
+- **A timeline tile opens the participant on Timeline** (user, 2026-11-02). A click on a participant's tile in the Timeline section opens that person's Person page on its Timeline section, so the researcher walks from one life to the next, as a family tile opens on Family; every other link to a Person still lands on Vitals (S13-D1 PPF-5). An event's title opens its Event page (R-28). Binds S13-13.
+- **Timeline lists fold** (user, 2026-11-02). As on Family, nothing is hidden for good: each event's participants fold at 15 and the event list (the dated list and the Undated group each) at 50, behind the shared "Show N more" row; Go still returns every event and participant. Binds S13-13.
+- **The Timeline shows each event's picture** (user, 2026-11-02; R-26 updated). Event pictures shipped with Spike 14 (S14-02, #641): the slot R-26 reserved shows the event's lead picture, else the Event mark, as the Events list row does. Binds S13-13.
 - **A family tile opens the relative on Family** (user, 2026-11-01). A click on a relative in the Family section opens that relative's Person page on its Family section, so the researcher walks the family person to person; every other link to a Person still lands on Vitals (S13-D1 PPF-5). The diagram draws recorded and implied relatives alike, and each unit's children come in birth order, sorted in Go (user, 2026-11-01). Binds S13-12.
 
 ## PR map
@@ -131,7 +134,7 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 | S13-12 | Family section | 3 | The family diagram with person tiles, lines and several families; each unit's children in birth order and the siblings once with the person among them (Go, two proto fields); two columns from board S13-D3; a tile opens the relative on Family | [S13-D3](design/archive/S13-D3-family-section.md) | S13-04, S13-10 | [S13-12](prs/S13-12-family-section.md) | Landed #676 |
 | S13-19 | One person's links | 3 | Moved to Spike 11 as S11-51 so it ships with S11-39 | — | — | — | Descoped (2026-10-26) → S11-51 |
 | S13-05 | Person timeline read | 4 | An any-role participation hop; `ListPersonEvents` RPC: `EventSummary`s sorted by `sortEvents`, with the person's roles and the other participants as {roles, `PersonSummary`} | — | S13-01, S13-02, S13-31 | [S13-05](prs/S13-05-person-timeline-read.md) | Landed #680 |
-| S13-13 | Timeline section | 4 | The chronological event list with roles, depiction placeholder, participants as person tiles, Undated group | S13-D4 | S13-05, S13-12 | — | Scoped |
+| S13-13 | Timeline section | 4 | The chronological event list with roles, the event's lead picture (else the Event mark), participants as person tiles opening on Timeline, Undated group, folds (events 50, participants 15); the person tile becomes a recipe | [S13-D4](design/S13-D4-timeline-section.md) | S13-05, S13-12 | [S13-13](prs/S13-13-timeline-section.md) | Blocked — on board S13-D4 |
 | S13-14 | Gallery section | 5 | The gallery as a section, with set as portrait and open Citation | S13-D5 | S13-10, S14-02 (Spike 14: the `gallery` slot and lead model) | — | Scoped |
 | S13-15 | Likeness viewer | 5 | Expand a likeness and step through the gallery | S13-D5 | S13-14 | — | Scoped |
 | S13-08 | Unpromoting the last member | 6 | `UnpromoteSubject` on the last accepted member deletes the person through `deleteimpact`, wherever Unpromote runs; an unpromote Impact preflight for both confirms | — | S13-25 | — | Scoped |
@@ -159,7 +162,7 @@ Each brief is written just before the PR it gates, its board agreed, and that PR
 | [S13-D12](design/archive/S13-D12-life-rows-why.md) | Person page: the Why on the four life rows | **S13-06** | Added 2026-10-30 (user: the life rows show their records now); board agreed 2026-10-30, option (a): a group line per owner. Interim: S13-D2 replaces the Why on the Person page |
 | [S13-D2](design/archive/S13-D2-provenance-sheet.md) | Provenance sheet | **S13-11** | Board agreed 2026-10-31 in the [Claude Design project](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), turn 6. Reusable beyond Person (R-13); leaves room for Reconciliation Claims (R-10); keeps S13-D12's group line per owner for records from several events or Places |
 | [S13-D3](design/S13-D3-family-section.md) | Family section | **S13-12** | Draws the shared person tile; two marriages and conflicting parents. Board agreed 2026-11-01 in the [Claude Design project](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), turn 11: two columns, origin and formed |
-| S13-D4 | Timeline section | **S13-13** | Reuses S13-D3's tile; depiction placeholder; Undated group |
+| [S13-D4](design/S13-D4-timeline-section.md) | Timeline section | **S13-13** | Reuses S13-D3's tile; the event's lead picture, else the Event mark (R-26, updated 2026-11-02); Undated group; folds; explores a Wide secondary column (user, 2026-11-02). Written 2026-11-02, board not drawn |
 | S13-D5 | Gallery section and likeness viewer | **S13-14**, **S13-15** | Viewer options: expand, slideshow (R-30) |
 | S13-D6 | Sources section | **S13-16**, **S13-17** | Source groups, claim cards, Remove and the last-claim warning |
 | S13-D7 | Claim review sheet | — | **Descoped (2026-10-29)** with S13-18 |
@@ -401,7 +404,7 @@ Go, plus deleting Swift's draft rule.
 
 #### S13-13 — Timeline section
 
-**Ships.** The Timeline section from S13-D4: events in order, roles, depiction placeholder, participants as the S13-12 tile, Undated group.
+**Ships.** The Timeline section from S13-D4: events in order, roles, the event's lead picture (else the Event mark), participants as the S13-12 tile (now a recipe) opening on Timeline, Undated group, folds at 50 events and 15 participants (working rules "A timeline tile opens the participant on Timeline", "Timeline lists fold", "The Timeline shows each event's picture").
 **Check.** Bar 4.
 **Context.** R-23 – R-28.
 
