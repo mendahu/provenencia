@@ -107,4 +107,6 @@ Merged `origin/main` @ `8918bc27` (S14-17 / S14-27 plans, docs only) → head `0
 - UX-2 Swift: align `DateRowDisplay.line` with the engine's event-date field choice (a no-year `date` with a placed `start_date`); suggested home `docs/ideas/` or the next Events-list PR. Noted in `structured-date-model.md` § 3.4.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: UX-2 (Swift) · to user: SEC-1, UX-1, UX-2 (answered 2026-11-02) · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: UX-2 (Swift) · to user: SEC-1, UX-1, UX-2 (answered 2026-11-02) · CON miss: none
+
+CI: first run, Go `test` failed `promotealign` `TestLargeSourceBudgets/warm` (385.8ms, budget 350ms) at `fd7a44de`. Not this PR: local warm timing ×3 is base `8918bc27` 106–114ms, head 101–109ms. Re-ran the failed job: green.
