@@ -15,6 +15,10 @@
 - D-14: the accessibility-id scheme.
 - M-2, M-4 and M-8 are placed in S13-32's scope (the term resolver, the Return modifier, the tile's key names), because S13-32 lands first and the tile shell owns them.
 
+## Scope change after round 1 (user, 2026-11-02)
+
+The user asked for a lifeline: a line to scale over the life, each event pointing to its place, gaps shown as empty stretches. Answers: an unknown birth or death is a placeholder with no invented date, placed by which event types may come before birth or after death (matching's lifespan window pads 110 years, so it is not reused); every event sits at its own date; undated events sit between the birth and death markers (R-24 changed, R-24a added); gaps are not labelled. Positions are Go's (new map row S13-33, Timeline positions, using `valuecompare.DateEnds`); the plan gains US-5, D-15, D-16, T-8, T-9. Round 2 reviews this text.
+
 ## Round 1
 
 ### M-1 · blocker · `PVPersonTile` in `Recipes/` would import the Conclusions feature

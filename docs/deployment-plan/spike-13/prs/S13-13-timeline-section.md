@@ -1,19 +1,19 @@
 # S13-13 — Timeline section
 
-**Status:** Blocked — on S13-32 and board S13-D4
+**Status:** Blocked — on S13-32, S13-33 and board S13-D4
 **Spike / slice:** Spike 13 · Slice 4 — Timeline
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S13-D4](../design/S13-D4-timeline-section.md), board not agreed yet
 **Board:** — (not drawn yet). When it is agreed, the brief's **Board** line names the Claude Design turn and frames; this plan then describes every frame in words under **Design → macOS**, so an implementer who cannot open the board can still build it
-**Depends on:** S13-05 (landed [#680](https://github.com/mendahu/provenencia/pull/680)), S13-12 (landed [#676](https://github.com/mendahu/provenencia/pull/676)), S13-32 (scoped: the tile as a kit shell with person content at the call site; not planned yet), S13-D4 (board)
+**Depends on:** S13-05 (landed [#680](https://github.com/mendahu/provenencia/pull/680)), S13-12 (landed [#676](https://github.com/mendahu/provenencia/pull/676)), S13-32 (scoped: the tile as a kit shell with person content at the call site; not planned yet), S13-33 (scoped: each event's place on the line and the birth and death markers; not planned yet), S13-D4 (board)
 **Blocks:** —
 **Branch:** `s13-13-timeline-section`
 **Runs on:** macOS: every Step and `scripts/check-pr.sh` need Xcode. No Go or proto change unless the board asks for another participant order (§ 12, question 6)
 **Version bump:** none — Spike 11–14 PRs leave `VERSION` alone until a release is cut, as S13-05 and S13-12 did ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md), [`add-workspace-place`](../../../../.agents/skills/add-workspace-place/SKILL.md), [`add-workspace-location`](../../../../.agents/skills/add-workspace-location/SKILL.md)
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/swift-tests.mdc`
-**Context:** [person-detail.md § 3. Timeline](../person-detail.md#3-timeline) (R-2, R-3, R-23 – R-28); brief [S13-D4](../design/S13-D4-timeline-section.md); the S13-05 plan [`S13-05-person-timeline-read.md`](S13-05-person-timeline-read.md) and the S13-12 plan [`S13-12-family-section.md`](S13-12-family-section.md), with their **Landed** notes; working rules: "Engine PRs run ahead of their slice" (data, not layout), "Each section reads its own query", "Timeline is direct participation, any role", "One person tile, built once; the shell in the kit, the content at the call site", "Colors reuse `PersonGenderTreatment`", "A timeline tile opens the participant on Timeline", "Timeline lists fold", "Sections are places"
-**Planned:** 2026-11-02 against `main` @ `51dccd4` (draft). Refreshed when S13-32 lands (its tile names and slots replace § 4's Person tile row and D-4) and when the board is agreed (§ 12)
+**Context:** [person-detail.md § 3. Timeline](../person-detail.md#3-timeline) (R-2, R-3, R-23 – R-28, R-24a); brief [S13-D4](../design/S13-D4-timeline-section.md); the S13-05 plan [`S13-05-person-timeline-read.md`](S13-05-person-timeline-read.md) and the S13-12 plan [`S13-12-family-section.md`](S13-12-family-section.md), with their **Landed** notes; working rules: "Engine PRs run ahead of their slice" (data, not layout), "Each section reads its own query", "Timeline is direct participation, any role", "One person tile, built once; the shell in the kit, the content at the call site", "Colors reuse `PersonGenderTreatment`", "A timeline tile opens the participant on Timeline", "Timeline lists fold", "The timeline is a lifeline", "Sections are places"
+**Planned:** 2026-11-02 against `main` @ `51dccd4` (draft). Refreshed when S13-32 and S13-33 land (the tile's names and slots replace § 4's Person tile row and D-4; the position and marker fields replace D-15's provisional names) and when the board is agreed (§ 12)
 **Review:** [`S13-13-timeline-section.review.md`](S13-13-timeline-section.review.md) — round 1 Fits with changes / Ready with changes; M-1 answered by the user (a preparatory PR, S13-32), every other finding Fixed or Declined; round 2 runs after the board
 
 ### Implementer — read this first
@@ -31,7 +31,7 @@
 
 ## 1. Objective
 
-A researcher opens a Person's Timeline section and reads the person's life as a list of events, earliest first: each event's picture, title, date and place, the person's role in it, and the other people who took part as the same person tiles as on Family; undated events sit in an Undated group at the end. A click on an event opens its Event page, and a click on a participant opens that participant's Timeline. It fills the empty place S13-10 left (S13-D1 PPF-10) with the data S13-05 reads, reuses the person tile as S13-32 leaves it (a kit shell filled with person content at the call site), and gives Family and the Timeline one host for a section's own read.
+A researcher opens a Person's Timeline section and reads the person's life on a lifeline drawn to scale from birth to death, where gaps in the record show as empty line, beside a list of events, earliest first, each pointing to its place: each event's picture, title, date and place, the person's role in it, and the other people who took part as the same person tiles as on Family. Birth and death always have a marker, a placeholder when unrecorded; undated events sit between them. A click on an event opens its Event page, and a click on a participant opens that participant's Timeline. It fills the empty place S13-10 left (S13-D1 PPF-10) with the data S13-05 and S13-33 read, reuses the person tile as S13-32 leaves it (a kit shell filled with person content at the call site), and gives Family and the Timeline one host for a section's own read.
 
 **Why now.** Slice 4's Check is bar 4 ("A life in order"); S13-05 has the read, S13-12 has the tile, S13-32 decouples it, and this is the last PR of the slice.
 
@@ -43,7 +43,7 @@ A researcher opens a Person's Timeline section and reads the person's life as a 
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-1.1 | Johann (brief § 5 sample, events 1 – 13) | Events 1 – 11 in that order, then an "Undated" group with 12 (Residence at Altona) and 13 (Migration), in the order the read returns them (R-23, R-24; D-6) |
+| AC-1.1 | Johann (brief § 5 sample, events 1 – 13) | Events 1 – 11 in that order; 12 (Residence at Altona) and 13 (Migration) under "Undated" between the birth and death markers, in the order the read returns them, where the board places them (R-23, R-24; D-6, D-16) |
 | AC-1.2 | Luise's birth names no father | It is not listed (R-23; S13-05 filters it) |
 | AC-1.3 | Event 4 | Title "Marriage of Johann Weber and Maria Schulz" (`EventTitleDisplay`), "4 Jun 1844 · Bremen" (`EventSecondaryDisplay`), Johann's role "Subject", tiles Maria Schulz and Friedrich Weber (R-25, R-27; D-5, D-6) |
 | AC-1.4 | Event 8: Johann is Witness and Informant | Both roles shown, in the read's order, joined as the board words it (D-5; § 12 question 3) |
@@ -51,7 +51,7 @@ A researcher opens a Person's Timeline section and reads the person's life as a 
 | AC-1.6 | Event 13: no date, no place | The date and place line is not drawn |
 | AC-1.7 | A person with no promoted events (`[]`) | The EmptyState of TL-10 |
 | AC-1.8 | The read fails with `conclusiondetails.not_found` | A danger Callout in the section titled "Timeline could not be read" with the mapped message; the header and switcher still show (TL-11) |
-| AC-1.9 | Only undated events | The Undated group is the whole list; its caption shows or not as the board answers TL-3 |
+| AC-1.9 | Only undated events | Both placeholders ("Birth unknown", "Death unknown") with the undated events between them; no point on the line (D-15, D-16) |
 
 **US-2.** As a researcher, I can move from an event to its page and from a participant to their life.
 
@@ -71,6 +71,17 @@ A researcher opens a Person's Timeline section and reads the person's life as a 
 | AC-3.2 | A person with 120 dated events | 50 events, then "Show 70 more"; pressing it shows all 120; the Undated group folds the same way on its own (D-8). Evidence: T-6, and the `#Preview` "Long life" (D-13) |
 | AC-3.3 | Unfold a list, then open another person and come Back | The list is folded again (D-8, as Family) |
 
+**US-5.** As a researcher, I see the shape of the life at a glance: where its records cluster and where they fall silent (R-24a; user, 2026-11-02).
+
+| AC | Given / when | Then |
+| --- | --- | --- |
+| AC-5.1 | Johann: birth 12 Mar 1817, death 1880 | The line runs from the birth marker to the death marker; each of events 1 – 11 points to its place; the stretch from 1861 to 1880 has no point (D-15) |
+| AC-5.2 | Event 4 on 4 Jun 1844 and event 5 on 2 Feb 1845 | Their points are as far apart on the line as eight months are at the line's scale; the 1850 – 1859 gap is about twelve times longer (D-15) |
+| AC-5.3 | A range "1844 – 1849"; "bef. 1880" | A span on the line; a point with an open start (D-15) |
+| AC-5.4 | Johann without event 1 (no birth recorded) | A "Birth unknown" placeholder just before the baptism, joined by a dashed stretch not to scale; no year shown (D-16) |
+| AC-5.5 | A funeral in 1880, a census in 1875, no death | The "Death unknown" placeholder sits after the census and before the funeral; the funeral sits at its own date (D-16) |
+| AC-5.6 | The burial, dated after death | It sits at its own date, past the death marker, and the line runs on to it (D-15) |
+
 **US-4.** As a researcher, the section stays current while I work.
 
 | AC | Given / when | Then |
@@ -83,6 +94,7 @@ A researcher opens a Person's Timeline section and reads the person's life as a 
 | In | Covered by |
 | --- | --- |
 | One "Show N more" row for Family and Timeline (TL-7, D-9) | STEP-1 |
+| The lifeline: scale, event points, birth and death markers and placeholders (TL-5, TL-5a; D-15, D-16) | STEP-5, AC-5.1 – AC-5.6 |
 | One host for a page section's own read; Family moves onto it, unchanged (D-12) | STEP-2 |
 | The Timeline section's query key: warm, read, refresh (D-3) | STEP-3, AC-4.1, AC-4.2 |
 | The section's content model: rows, roles, participants, locations, folds, accessibility (TL-1 – TL-9, TL-12; D-1, D-2, D-5 – D-8) | STEP-4, AC-1.1 – AC-1.6, AC-2.1, AC-2.3, AC-2.4, AC-3.1 – AC-3.3 |
@@ -91,8 +103,10 @@ A researcher opens a Person's Timeline section and reads the person's life as a 
 
 | Out | Home |
 | --- | --- |
-| A scaled time axis, chart, zoom or swimlane | not planned (brief § 2.1) |
-| Age at each event, gaps between events | not planned this spike (brief § 2.1) |
+| Zoom, pan, a draggable canvas or a swimlane | not planned (brief § 2.1) |
+| Gap labels; an estimated year for an unknown birth or death; marks on events outside the life | not planned (user, 2026-11-02) |
+| Positions and markers in Go | S13-33 |
+| Age at each event | not planned this spike (brief § 2.1) |
 | Filtering or searching the timeline | not planned |
 | Events reached only through a relative or a place | not planned (R-23) |
 | The provenance control on a row, role or tile | not planned this spike (R-13b) |
@@ -109,7 +123,7 @@ A researcher opens a Person's Timeline section and reads the person's life as a 
 | Timeline section | `macos/App/Features/Conclusions/PersonDetailView.swift` `PersonDetailSections` | `.timeline, .sources` draw one `PVEmptyState` with `L10n.Conclusions.pageSectionLater`. `.family` draws `PersonFamilySection(entityId:)` |
 | Section key | `macos/App/Features/Workspace/WorkspaceLocation.swift` `ConclusionPageSection.queryKey(project:entityId:)` | `.family → .personFamily`; every other section nil. Read by `PlaceRegistry` Spec `.personDetail` (warms it) and `ConclusionDetailLoaded.sectionRefreshing` (`ConclusionDetailPage.swift`) |
 | Timeline key | `macos/App/Features/Workspace/Session/CatalogQueryKey.swift` `.personEvents(project:entityId:)`; `CatalogQueryRegistry.swift` its descriptor | `.sessionFresh`, `.evict` when hidden, `.allCached(.personEvents)`, refreshes on any touched handle; loads `store.listPersonEvents`. No view queries it |
-| Timeline data | `macos/App/Platform/GenealogyStore.swift` `CatalogPersonEvent` (`event: CatalogEventSummary`, `roles: [CatalogConclusionValue]`, `participants: [CatalogEventParticipant]`, `dated`), `CatalogEventParticipant` (`person: CatalogPersonSummary`, `roles`) | Rows in Go's date order, undated last and flagged; roles are `.term(id:key:label:origin:)` with labels filled in Go; participants in participation-ref order, never the person |
+| Timeline data | `macos/App/Platform/GenealogyStore.swift` `CatalogPersonEvent` (`event: CatalogEventSummary`, `roles: [CatalogConclusionValue]`, `participants: [CatalogEventParticipant]`, `dated`), `CatalogEventParticipant` (`person: CatalogPersonSummary`, `roles`) | Rows in Go's date order, undated last and flagged; roles are `.term(id:key:label:origin:)` with labels filled in Go; participants in participation-ref order, never the person. S13-33 (not landed) adds each dated event's place (first and last day, open ends) and the response's birth and death markers (a recorded event, or a placeholder with the event it sits before or after); refresh this row then |
 | Person tile | Today: `macos/App/Features/Conclusions/PersonTile.swift` `PersonTile`, `PersonTileContent`. After S13-32 (not landed; refresh this row then): a tile shell in `macos/App/DesignSystem/` with slots and a declared minimum width, and the person content built in `Features/Conclusions` from a `CatalogPersonSummary` and an optional spoken role | `PersonTileContent.init(summary:role:isFocus:locale:orders:)` speaks the role and never draws it; height 92. Callers: `PersonFamilySection.swift`, `PersonFamilyContent.swift`, `PersonFamilyLayout.swift`; tests `macos/ProvenenciaTests/PersonTileTests.swift` |
 | Show more | `macos/App/Features/Conclusions/PersonFamilySection.swift` private `PersonFamilyMoreRow`; `macos/App/Platform/L10n.swift` `L10n.Conclusions.familyShowMore(_:)` (key `conclusions.family.showMore`, "Show %lld more") | A ghost `PVButton` (`.pv(.ghost, size: .sm)`) with Return handling; Family only |
 | Folds | `macos/App/Features/Conclusions/PersonFamilyContent.swift` `foldLimit` (30), `Fold`, `expanded`; `PersonFamilySection` keeps `@State expanded`, reset `.onChange(of: entityId)` | The pattern to copy for the Timeline's folds |
@@ -135,7 +149,7 @@ A researcher opens a Person's Timeline section and reads the person's life as a 
 | D-3 | `ConclusionPageSection.queryKey` gains `.timeline → .personEvents(project:entityId:)`. Nothing else is wired: `PlaceRegistry` warms it and the switcher's refresh follows it, through the two readers S13-12 added | S13-12 D-8: one declaration per section key; S13-05's descriptor already invalidates and refreshes | A per-section branch in `PlaceRegistry` |
 | D-4 | The participant tile is the tile S13-32 lands: its kit shell filled by the person content builder in `Features/Conclusions` with `summary: participant.person`, `role:` the spoken role (D-5), not the focus. The Timeline adds no tile code and no tile variant. If S13-32 lands with other names, this plan is refreshed before STEP-1 | Working rule "One person tile, built once; the shell in the kit, the content at the call site" (user, 2026-11-02) | Moving today's `PersonTile` into `DesignSystem/Recipes/` (it reads six Conclusions display types: review M-1); a Timeline copy of the tile |
 | D-5 | Role labels through one shared resolver: each role is `PropertyTermDisplay.name(value, propertyKey: SeededPropertyKey.role)` (S13-32), nil for a value that is not a term; a term with an empty label shows its key, as every term name does. The person's roles and each participant's roles are the non-nil names in the read's order. A participant's spoken role (the tile's `role:`) is its names joined with `L10n.DesignSystem.spokenJoin`; nil when none. No timeline-only role type | One rule turns a term into a name (review M-2); the read gives terms with Go's labels (S13-05 D-5) | `PersonTimelineRole` with its own empty-label rule; a Swift role enum (the vocabulary is open) |
-| D-6 | `PersonTimelineContent` *(new, pure, `Equatable`)* in `macos/App/Features/Conclusions/PersonTimelineContent.swift` *(new)*: `init(events: [CatalogPersonEvent], expanded: Set<Fold> = [], locale: Locale = .autoupdatingCurrent, orders: NameFormatOrders = NameFormatOrders())`. `dated: [Row]` and `undated: [Row]` keep the read's order, split by `CatalogPersonEvent.dated`; Swift never sorts and never decides "undated" from dates (S13-05 D-8). `Row` holds `id` (event entity id), `title: ConclusionTitleSource` (`EventTitleDisplay.titleSource(event, locale:orders:)`), `line: EventSecondaryDisplay.Content`, `imageRelPath` (`event.pictureImageRelPath`), `roles: [String]` (D-5), `location` (D-2), `participants: [Participant]`, `participantsHidden: Int`, and `spokenLabel` = `spokenJoin(EventsList.accessibilityLabel(event, orders:, includesRef: false), rolesSpoken)`, where `rolesSpoken` is the roles joined with `spokenJoin` and its wording ("as Subject" or the bare role) comes with the board (TL-4, TL-12). `EventsList.accessibilityLabel` gains `includesRef: Bool = true` *(new parameter)*: with false it uses the title and date only (`L10n.Conclusions.lineJoin` when both, else the one present), then the place and "+N places" as today; every existing caller is unchanged. `Participant` holds `id` ("\(eventId)-\(personId)"), `tile` (the S13-32 person content), `roles: [String]`, `location` (D-1). `isEmpty` is `events.isEmpty` | Go orders and flags; Swift places (working rule "Engine PRs run ahead of their slice"); the Events row's own builders, spoken label included, so a timeline row and an Events row cannot disagree (review M-3) | Sorting or grouping in Swift; a second title, date-line or spoken-label builder |
+| D-6 | `PersonTimelineContent` *(new, pure, `Equatable`)* in `macos/App/Features/Conclusions/PersonTimelineContent.swift` *(new)*: `init(events: [CatalogPersonEvent], expanded: Set<Fold> = [], locale: Locale = .autoupdatingCurrent, orders: NameFormatOrders = NameFormatOrders())`. `dated: [Row]` and `undated: [Row]` keep the read's order, split by `CatalogPersonEvent.dated`; the view places `undated` between the markers (D-16); Swift never sorts and never decides "undated" from dates (S13-05 D-8). `Row` holds `id` (event entity id), `title: ConclusionTitleSource` (`EventTitleDisplay.titleSource(event, locale:orders:)`), `line: EventSecondaryDisplay.Content`, `imageRelPath` (`event.pictureImageRelPath`), `roles: [String]` (D-5), `location` (D-2), `participants: [Participant]`, `participantsHidden: Int`, and `spokenLabel` = `spokenJoin(EventsList.accessibilityLabel(event, orders:, includesRef: false), rolesSpoken)`, where `rolesSpoken` is the roles joined with `spokenJoin` and its wording ("as Subject" or the bare role) comes with the board (TL-4, TL-12). `EventsList.accessibilityLabel` gains `includesRef: Bool = true` *(new parameter)*: with false it uses the title and date only (`L10n.Conclusions.lineJoin` when both, else the one present), then the place and "+N places" as today; every existing caller is unchanged. `Participant` holds `id` ("\(eventId)-\(personId)"), `tile` (the S13-32 person content), `roles: [String]`, `location` (D-1). `isEmpty` is `events.isEmpty` | Go orders and flags; Swift places (working rule "Engine PRs run ahead of their slice"); the Events row's own builders, spoken label included, so a timeline row and an Events row cannot disagree (review M-3) | Sorting or grouping in Swift; a second title, date-line or spoken-label builder |
 | D-7 | The picture slot is `CachedThumbnail(projectDir:relPath: row.imageRelPath, … fallbackMark: .subjectEvent, fallbackLabel: L10n.Conclusions.eventPictureThumb, colors: nil)`, at the size the board picks (TL-2). R-26 is updated in the planning commit: the slot shows the event's lead picture, else the Event mark (user, 2026-11-02) | Event pictures shipped (S14-02, #641); the summary carries the lead picture; the Events list's fallback | An empty placeholder (R-26's old wording) |
 | D-8 | Folds (user, 2026-11-02; working rule "Timeline lists fold"): `PersonTimelineContent.eventFoldLimit = 50`, `participantFoldLimit = 15`; `enum Fold: Hashable { case dated, undated, participants(eventId: String) }`. `datedHidden`, `undatedHidden` and each row's `participantsHidden` count what is folded. The section keeps `expanded` as `@State`, reset on a new entity id, through D-12's host | The user's caps; Family's fold shape; nothing is hidden for good | A shared fold type with Family (their lists differ) |
 | D-9 | One "Show N more" row: `PersonFamilyMoreRow` moves out of `PersonFamilySection.swift` to `macos/App/Features/Conclusions/ConclusionShowMoreRow.swift` *(new)* as `ConclusionShowMoreRow(count:expand:)`; its Return handling is the kit's Return modifier S13-32 adds. `L10n.Conclusions.familyShowMore(_:)` is renamed `showMore(_:)`, key `conclusions.showMore`, comment "Button under a folded list on a Conclusion page that shows the rest; argument is how many are hidden"; the String Catalog entry moves with it. Family calls it with no visible change | One row and one string for both sections (brief TL-7) | A private copy in the Timeline; keeping a Family-named key for a shared row |
@@ -145,7 +159,10 @@ A researcher opens a Person's Timeline section and reads the person's life as a 
 | D-13 | Fixtures: `macos/App/Features/Conclusions/PersonTimelinePreviewData.swift` *(new)* (`#if DEBUG`, internal) `enum PersonTimelinePreviewData` builds `[CatalogPersonEvent]` for the brief's frames: `johann` (the 13 events of brief § 5, with events 1, 2, 4, 5, 9 and 10 holding a `pictureImageRelPath`), `largeEvent` (one burial with 41 participants), `longLife` (120 dated events and 2 undated), `onlyUndated` (2 undated). People come from `PersonFamilyPreviewData.summary`; events from one `event(_ id:, title rule:, date:, place:, picture:)` helper in the file. `PersonTimelineSection`'s `#Preview`s and `PersonTimelineContentTests` (`@testable`) both use it | S13-12's Landed note (6): one fixture shared by previews and tests (review M-7, X-5) | A private preview enum plus a test-only copy |
 | D-14 | Accessibility ids under `persons.detail.timeline`: the list `persons.detail.timeline`; a row `.row.<eventId>`; its title `.title.<eventId>`; a tile `.tile.<Participant.id>`; the Undated caption `.undated`; fold rows `.more.dated`, `.more.undated`, `.more.<eventId>`; plus D-12's `.error` and `.empty` | Unique ids for UI tests and the manual check (X-7) | One shared `.more` id |
 
-**Frame-dependent Decisions, filled when the board is agreed** (§ 12): the row form (TL-1), the picture size (TL-2), the Undated caption (TL-3), the role mark and the "Subject" wording (TL-4), the period markers (TL-5), the role caption's spacing and the participant order (TL-6), the empty copy (TL-10), the roles' spoken wording (TL-12), and the Wide option (TL-W1). If the board picks Wide option B, a Decision adds a secondary slot to `ConclusionDetailPage`'s page sections (today they fill the primary column only) and a Step for it; that is checked against **Size** before the plan is Planned.
+| D-15 | The lifeline's geometry is a pure function, `PersonTimelineLifeline` *(new)* in `macos/App/Features/Conclusions/PersonTimelineLifeline.swift` *(new)*: `init(content: PersonTimelineContent, length: CGFloat)` maps S13-33's day positions linearly onto `length` between the first and last placed thing (the birth marker or the earliest point, the death marker or the latest point, a burial past death included), and gives each dated row's point (`at: CGFloat`, `spanTo: CGFloat?`, `openStart`, `openEnd`), the markers' positions, and the year ticks. Swift does no date arithmetic: it reads S13-33's day numbers only. The orientation, the scale rule (fit or points per year) and how a row points to its place are the board's (TL-5) and become this function's parameters | Working rule "The timeline is a lifeline": positions are data, Swift only scales them; a pure function, tested, as `PersonFamilyLayout` | Computing positions from `CatalogDateValueInput` in Swift (a second copy of `valuecompare.DateEnds`); `GraphCanvas` |
+| D-16 | Markers: the birth and death markers come from S13-33. A recorded marker is drawn at its event's point; a placeholder is drawn a fixed distance (the board's) before or after the event S13-33 names, joined by a dashed stretch that `PersonTimelineLifeline` leaves out of the scale; with no bounding event, the placeholders sit at the two ends of the line. The undated rows sit between the markers in the list, where the board places them (TL-3). No marker or event is ever hidden or flagged | User, 2026-11-02: every timeline has a spot for birth and death; no invented dates; events sit at their dates | An estimated year (matching's window pads 110 years); a warning on an event outside the life |
+
+**Frame-dependent Decisions, filled when the board is agreed** (§ 12): the row form (TL-1), the picture size (TL-2), where the undated rows sit between the markers (TL-3), the lifeline's orientation, scale rule and row-to-point link (TL-5), the placeholder's distance and look (TL-5a), the role mark and the "Subject" wording (TL-4), the role caption's spacing and the participant order (TL-6), the empty copy (TL-10), the roles' spoken wording (TL-12), and the Wide option (TL-W1). If the board picks Wide option B, a Decision adds a secondary slot to `ConclusionDetailPage`'s page sections (today they fill the primary column only) and a Step for it; that is checked against **Size** before the plan is Planned.
 
 **Rules this plan bends.** S13-D1 PPF-5 (archived brief: "Opening a Person from anywhere lands on Vitals") → D-1 opens participant tiles on Timeline → user, 2026-11-02 → the planning commit adds the working rule "A timeline tile opens the participant on Timeline" to the map. R-26 ("a placeholder thumbnail slot") → D-7 shows the lead picture → user, 2026-11-02 → the planning commit updates R-26 and person-detail's "Not this spike" event-depictions line. The working rule "One person tile, built once" said the tile becomes a recipe with its second caller → that would put Conclusions display types in the design system (review M-1, against `docs/design-system-layers.md`) → user, 2026-11-02: the design system holds content-agnostic shells and treatments, value resolvers live at the repository level, content at the call site; a preparatory PR (S13-32) → the planning commit rewrites the rule and adds S13-32 to the map. No other rule is bent.
 
@@ -160,6 +177,7 @@ A researcher opens a Person's Timeline section and reads the person's life as a 
 | `EventsList.accessibilityLabel(_:orders:includesRef:)` *(new parameter)* | func | `EventsList.accessibilityLabel(_:orders:)` | Extended, not copied (D-6) |
 | `PersonTimelineContent` *(new)* | pure model | `PersonFamilyContent`, `EventsList` | A different read; reuses `EventTitleDisplay`, `EventSecondaryDisplay`, `EventsList.location`, `EventsList.accessibilityLabel`, `PersonsList.location`, `PropertyTermDisplay` |
 | `PersonTimelineSection` *(new)* | snowflake | `PersonFamilySection`, `ConclusionDetailGallerySection` | A list of events with tile grids, on D-12's host |
+| `PersonTimelineLifeline` *(new)* | pure layout | `PersonFamilyLayout`, `PVPageColumns` | A scale from day numbers to points; neither knows time (D-15) |
 | `PersonTimelinePreviewData` *(new)* | fixture | `PersonFamilyPreviewData` | Timeline events; its people come from `PersonFamilyPreviewData.summary` (D-13) |
 | `.timeline` case in `ConclusionPageSection.queryKey` | key | `.family` | One more case (D-3) |
 | `L10n.Conclusions.timeline*` *(new)* | keys | `L10n.Conclusions.family*` | New copy |
@@ -177,7 +195,8 @@ A researcher opens a Person's Timeline section and reads the person's life as a 
 | A participant tile opens a Person on Timeline | `PersonDetailView` / `ConclusionDetailPage`, keyed by entity id | `viewIdentity: { $0.entityId }` resets the page; `expanded` resets on `entityId` (D-8); a participant merged since the read gives `conclusiondetails.not_found`, the page's Callout |
 | An event title opens an Event page | `EventDetailView` | The Events list's path; an event merged since gives the Event page's not-found Callout |
 | Back to a Timeline entry | `PersonTimelineSection` | D-3 warms both keys; `.evict` while hidden, so Back reloads (spinner, then list) |
-| Only undated events; no events | `PersonTimelineContent` | `dated` empty → the Undated group alone (AC-1.9); `[]` → EmptyState (AC-1.7) |
+| Only undated events; no events | `PersonTimelineContent`, `PersonTimelineLifeline` | `dated` empty → both placeholders at the line's ends with the undated rows between (AC-1.9); `[]` → EmptyState (AC-1.7) |
+| One dated event only; birth and death on one day | `PersonTimelineLifeline` | A zero-length scale: the line has a minimum length and the point sits mid-line (T-9) |
 
 ### Scale
 
@@ -185,7 +204,7 @@ At the brief's sizes (typical 8 – 25 events with 0 – 4 participants; large 1
 
 ### Edges
 
-- **Assumptions.** The read's rows are in date order with undated last (S13-05 D-8); D-6 splits by `dated` and keeps order, so an out-of-order `dated` flag would put a dated event in the Undated group: T-4 holds the split. A participant appears once per event (S13-05 D-5 de-duplicates); `Participant.id` includes the event id, since one person can be on several events (T-4).
+- **Assumptions.** The read's rows are in date order with undated last (S13-05 D-8); S13-33's positions are in the same order for dated rows (a span's first day), so points never cross rows' order except where spans overlap (T-8); D-6 splits by `dated` and keeps order, so an out-of-order `dated` flag would put a dated event in the Undated group: T-4 holds the split. A participant appears once per event (S13-05 D-5 de-duplicates); `Participant.id` includes the event id, since one person can be on several events (T-4).
 - **Neighbors.** A role with an empty label and no product name → its key, as every term name (D-5); a value that is not a term → no role; a participant with no roles → the tile with no spoken role; an event with roles empty → no role mark (data the app did not write; T-5).
 - **Removed inputs.** An event or participant unpromoted or merged after the read: the next refresh drops them (the key follows every touched handle); a click before that lands on the destination's not-found Callout.
 - **Real data.** None — no table or seed drives the section; role labels come from the vocabulary through `PropertyTermDisplay`.
@@ -214,6 +233,7 @@ The board is not agreed. This section lists the building blocks fixed now; the f
 | Content | pure | `macos/App/Features/Conclusions/PersonTimelineContent.swift` *(new)* | D-5, D-6, D-8 |
 | Event row | snowflake (in the section) | `PersonTimelineSection.swift` | `PVCard` or rows on one surface (TL-1, board); the title (D-10); `EventSecondaryLine` from `row.line`; the role mark (TL-4, board) |
 | Picture | `CachedThumbnail` | — | D-7 |
+| Lifeline | `Path` in kit tokens | `macos/App/Features/Conclusions/PersonTimelineLifeline.swift` *(new)* (geometry) and its drawing in `PersonTimelineSection.swift` | D-15, D-16; line, ticks and connectors `.accessibilityHidden(true)`; markers are list items VoiceOver reads (TL-12) |
 | Participant tiles | S13-32's tile shell with person content, in an adaptive `LazyVGrid` | — | D-4, D-11 |
 | Show more | `ConclusionShowMoreRow` | — | D-9 |
 | Undated caption | micro caps or `PVSectionHeader` | — | TL-3 (board); `.accessibilityAddTraits(.isHeader)` |
@@ -223,13 +243,13 @@ Ids: D-14. Accessibility: each row is `.accessibilityElement(children: .contain)
 
 ### Strings
 
-L10n keys *(new)* under `L10n.Conclusions` (copy from the brief; final with the board): `timelineEmptyTitle` = "No events yet"; `timelineEmptyMessage` = "Events appear here when events this person took part in are promoted from an Evidence graph."; `timelineErrorTitle` = "Timeline could not be read"; `timelineUndated` = "Undated". The role mark's wording ("as %@" or a bare Badge) and any period-marker copy come with the board (§ 12 questions 3, 4). Renamed: `familyShowMore` → `showMore` (D-9). Each key is added in the step that first uses it (`add-localized-string`), with its entry in `macos/App/Resources/Localizable.xcstrings`.
+L10n keys *(new)* under `L10n.Conclusions` (copy from the brief; final with the board): `timelineEmptyTitle` = "No events yet"; `timelineEmptyMessage` = "Events appear here when events this person took part in are promoted from an Evidence graph."; `timelineErrorTitle` = "Timeline could not be read"; `timelineUndated` = "Undated"; `timelineBirthUnknown` = "Birth unknown"; `timelineDeathUnknown` = "Death unknown". The role mark's wording ("as %@" or a bare Badge) and any period-marker copy come with the board (§ 12 questions 3, 4). Renamed: `familyShowMore` → `showMore` (D-9). Each key is added in the step that first uses it (`add-localized-string`), with its entry in `macos/App/Resources/Localizable.xcstrings`.
 
 ## 7. Steps
 
 **STEP-0 — Refresh against S13-32**
 Files: this plan.
-Do: when S13-32 has landed, read its **Landed** note; replace § 4's Person tile row, D-4, D-5's resolver name and D-11's minimum-width name with the landed names. When the board is agreed, fill § 12's Decisions and the frames in words, and run `review-plan` round 2.
+Do: when S13-32 and S13-33 have landed, read their **Landed** notes; replace D-15 and D-16's provisional field names with S13-33's; replace § 4's Person tile row, D-4, D-5's resolver name and D-11's minimum-width name with the landed names. When the board is agreed, fill § 12's Decisions and the frames in words, and run `review-plan` round 2.
 Check: § 12 Open questions reads "None."; status `Planned`.
 
 **STEP-1 — One "Show N more" row**
@@ -248,13 +268,13 @@ Do: D-3.
 Check: T-1, T-2 pass.
 
 **STEP-4 — The section's content and fixtures**
-Files: `macos/App/Features/Conclusions/PersonTimelineContent.swift` *(new)*, `PersonTimelinePreviewData.swift` *(new)*, `EventsListView.swift` (`includesRef:`), `macos/ProvenenciaTests/PersonTimelineContentTests.swift` *(new)*. Skill: `add-swift-test`.
-Do: D-1, D-2, D-5 – D-8, D-13.
-Check: T-3 – T-7 pass; `PersonsListTests` and the Events list tests pass unchanged.
+Files: `macos/App/Features/Conclusions/PersonTimelineContent.swift` *(new)*, `PersonTimelineLifeline.swift` *(new)*, `PersonTimelinePreviewData.swift` *(new)*, `EventsListView.swift` (`includesRef:`), `macos/ProvenenciaTests/PersonTimelineContentTests.swift` *(new)*. Skill: `add-swift-test`.
+Do: D-1, D-2, D-5 – D-8, D-13, D-15's geometry.
+Check: T-3 – T-9 pass; `PersonsListTests` and the Events list tests pass unchanged.
 
 **STEP-5 — The section view**
 Files: `macos/App/Features/Conclusions/PersonTimelineSection.swift` *(new)*, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`. Skill: `add-ui-component`, `add-localized-string`.
-Do: D-7, D-10, D-11, D-12's second caller, D-14 and the board's frame Decisions; the `#Preview`s.
+Do: D-7, D-10, D-11, D-12's second caller, D-14, D-16 and the lifeline's drawing (D-15), and the board's frame Decisions; the `#Preview`s.
 Check: the app builds; the previews render as § 6 describes each frame.
 
 **STEP-6 — Wiring**
@@ -280,6 +300,8 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-5 | Swift | same file `rolesAndLocations` | Roles `witness`, `informant` → ["Witness", "Informant"]; a custom role labelled "Godparent" → "Godparent"; a custom role with an empty label and key `godparent` → "godparent"; a `.text` value → no role; Anna as `mother` → tile spoken "Mother, Anna Weber, born 3 May 1790, Bremen, died 1851"; a participant's location → `PersonsList.location(…).withPageSection(.timeline)`; a row's location → `EventsList.location(…)` | AC-1.4, AC-2.1, AC-2.3, AC-2.4, D-1, D-2, D-5 |
 | T-6 | Swift | same file `foldsAtFiftyAndFifteen` | `longLife` → 50 dated rows, `datedHidden` 70; with `.dated` expanded → 120; `largeEvent` → 15 participants, `participantsHidden` 26; with `.participants(eventId:)` expanded → 41; `[]` → `isEmpty` | AC-1.7, AC-3.1, AC-3.2, D-8, Scale |
 | T-7 | Swift | same file `spokenLabelReusesTheEventsRow` | Event 1's `spokenLabel` begins with `EventsList.accessibilityLabel(event, orders:, includesRef: false)` and holds no ref; `EventsList.accessibilityLabel(event, orders:)` unchanged (with the ref) | D-6 |
+| T-8 | Swift | `macos/ProvenenciaTests/PersonTimelineLifelineTests.swift` *(new)* `pointsToScale` | Johann's events with S13-33 positions, length 1000 → birth at 0, the burial (past death) at 1000; event 4 and event 5 eight months apart; the 1850 – 1859 gap about twelve times that; a range → `spanTo` set; a BEF date → `openStart`; points in row order | AC-5.1, AC-5.2, AC-5.3, AC-5.6, D-15 |
+| T-9 | Swift | same file `placeholdersAndDegenerateLives` | No birth recorded → the birth placeholder before the baptism, outside the scale; a funeral and no death → the death placeholder before the funeral; only undated → both placeholders at the ends; one dated event → a minimum-length line, the point mid-line | AC-1.9, AC-5.4, AC-5.5, D-16 |
 
 AC-1.2 is S13-05's (`TestPersonEvents`). AC-1.8, AC-1.9, AC-2.2, AC-2.5, AC-3.3, AC-4.1 are covered by the manual check (§ 10). Frame-dependent tests (the role mark's and spoken roles' wording, period markers, the Undated caption rule) are added when the board is agreed. Must stay green: everything `scripts/check-pr.sh` runs; most likely to break: `PersonFamilyContentTests`, `PersonFamilyLayoutTests` (STEP-2), `PlaceRegistryTests` (STEP-3), `PersonsListTests` and the Events list tests (STEP-4).
 
@@ -305,7 +327,7 @@ AC-1.2 is S13-05's (`TestPersonEvents`). AC-1.8, AC-1.9, AC-2.2, AC-2.5, AC-3.3,
 
 Bar 4 and the slice's Check. Use a project with the brief § 5 sample promoted (or the product owner's own test people).
 
-1. (AC-1.1, AC-1.3, AC-1.5, AC-1.6) Open Johann, choose Timeline: events 1 – 11 earliest first, then "Undated" with Residence and Migration; event 4 reads as AC-1.3; event 1's picture and event 11's Event mark.
+1. (AC-1.1, AC-1.3, AC-1.5, AC-1.6, AC-5.1 – AC-5.6) Open Johann, choose Timeline: the line from birth to death with the 1861 – 1880 stretch empty and the burial past death; events 1 – 11 earliest first, each pointing to its place; "Undated" with Residence and Migration between the markers; remove his birth record and see "Birth unknown" before the baptism; event 4 reads as AC-1.3; event 1's picture and event 11's Event mark.
 2. (AC-1.2) Luise's birth is not listed.
 3. (AC-1.4) Event 8 shows Witness and Informant.
 4. (AC-2.1, AC-2.2, AC-2.4, AC-2.5) Click Anna's tile on event 1: her Timeline opens, crumbs *Persons › Weber, Anna › Timeline*; Back returns. Tab from event 1's title through its tiles; VoiceOver on Anna's tile reads AC-2.4.
@@ -335,18 +357,18 @@ Bar 4 and the slice's Check. Use a project with the brief § 5 sample promoted (
 
 ## 12. Open questions
 
-Questions 1 – 9 wait on the S13-D4 board, which the brief asks; question 10 waits on S13-32. Recommendation in brackets.
+Questions 1 – 9 wait on the S13-D4 board, which the brief asks; question 10 waits on S13-32 and S13-33. Recommendation in brackets.
 
 1. **Row form (TL-1).** A Card per event, or rows divided by rules? [Card per event, as the tile is a card.]
 2. **Picture size (TL-2).** The Events list row's size or larger? [The Events list's size.]
 3. **Role mark and "Subject" (TL-4).** Badge or "as …" line; how "Subject" reads on the person's own events? [A subtle neutral Badge; "Subject" as worded.]
-4. **Period markers (TL-5).** Year in the margin, year or decade captions, or a rail? [A year caption where the year changes.]
+4. **The lifeline (TL-5, TL-5a).** Orientation, scale rule (fit the section or points per year), how a row points to its place, where undated rows sit between the markers, the placeholder's distance and look. [A vertical rail beside the list, points per year with a minimum and maximum, a connector from each row.]
 5. **Participant role caption (TL-6).** Its spacing above the tile, and the grid's columns at Regular and Wide. [As the Family captions.]
 6. **Participant order (TL-6).** The read's order, or by role or title? [The read's order; another order adds a Go sort here.]
 7. **Wide (TL-W1).** Primary-only, or a secondary column (decade jump list or life summary)? [The board recommends; option B needs a page-section secondary slot, checked against Size.]
 8. **Empty copy (TL-10).** [As the brief.]
 9. **Spoken roles (TL-12).** "as Subject" or the bare role after the event. ["as Subject", as the brief's sample.]
-10. **S13-32's names.** The tile shell, its minimum width, the Return modifier and the term resolver as landed (STEP-0).
+10. **S13-32's and S13-33's names.** The tile shell, its minimum width, the Return modifier and the term resolver as landed (STEP-0).
 
 ## 13. PR
 

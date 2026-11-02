@@ -60,7 +60,8 @@ The first quasi-family-tree visualization in the app.
 ## 3. Timeline
 
 - **R-23. Events this person took part in directly,** in chronological order, so the section reads as a visualization of the life from birth to death. Family events the person was not a participant in (a child's birth they are not recorded at) are not listed.
-- **R-24. Undated events** go in an "Undated" group at the end.
+- **R-24. Undated events** sit together between the birth and death markers (user, 2026-11-02; until then, an "Undated" group at the end).
+- **R-24a. A lifeline.** A line drawn to scale over the life, from birth to death, with each dated event pointing to its place on it, so gaps in the record show as empty stretches (not labelled). Birth and death always have a marker: the recorded event, else a placeholder ("Birth unknown", "Death unknown") that invents no date and is placed by which event types may come before birth or after death. Every event sits at its own date (user, 2026-11-02).
 - **R-25. Each event shows** a name, a date, a location, and the person's role in it.
 - **R-26. The event's picture.** Each event shows its lead picture (the chosen or earliest Event picture, as the Events list row shows it), else the Event mark. Event pictures shipped in Spike 14 (S14-02); until 2026-11-02 this requirement reserved an empty placeholder slot (user, 2026-11-02).
 - **R-27. Participants.** Each event lists the other canonical people who took part, each with their role and drawn as the shared person tile (R-21), each a link to their Person page.
