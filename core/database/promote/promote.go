@@ -1,6 +1,8 @@
-// Package promote is the Identity Claim write behind Promote: one transaction
-// per promoted Subject. A step either mints a new handle of the Subject's type
-// or joins an existing one, and files an accepted claim.
+// Package promote is the Identity Claim write behind Promote's Done. A step
+// either mints a new handle of the Subject's type or joins an existing one,
+// and files an accepted claim. SaveBatch is the production write; Save is the
+// single-Subject form tests seed with, and both file a Subject through
+// fileSubject.
 package promote
 
 import (
@@ -40,9 +42,10 @@ type Result struct {
 	Claim  identityclaims.Claim
 }
 
-// Save files an accepted Identity Claim for the Subject in one transaction,
-// recorded as promote_subject: onto a newly minted handle of its type, or onto
-// in.EntityID. The caller records the returned changes.
+// Save files an accepted Identity Claim for one Subject, then its bridges, in
+// one transaction: onto a newly minted handle of its type, or onto in.EntityID.
+// It is the single-Subject form used to seed tests, by the same filing rule as
+// SaveBatch. The caller records the returned changes.
 func Save(tx *database.Tx, userID []byte, in Input) (Result, []rowchange.Change, error) {
 	if tx == nil {
 		return Result{}, nil, ErrInvalid
@@ -62,51 +65,63 @@ func Save(tx *database.Tx, userID []byte, in Input) (Result, []rowchange.Change,
 	if err != nil {
 		return Result{}, nil, err
 	}
-	st, err := subjecttypes.GetByIDTx(q, subject.SubjectTypeID)
-	if err != nil {
-		return Result{}, nil, err
-	}
-	if !vocabkey.IsPrimaryType(st.Key, st.Origin) {
-		return Result{}, nil, ErrUnsupportedType
-	}
 	if _, err := identityclaims.AcceptedEntityForSubjectTx(q, subject.ID); err == nil {
 		return Result{}, nil, identityclaims.ErrAlreadyMember
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return Result{}, nil, err
 	}
 
-	var (
-		entity  canonicalentities.Entity
-		changes []rowchange.Change
-	)
-	if in.EntityID == nil {
-		minted, change, err := canonicalentities.InsertTx(q, canonicalentities.CreateInput{
-			SubjectTypeID: subject.SubjectTypeID,
-		})
-		if err != nil {
-			return Result{}, nil, err
-		}
-		entity, changes = minted, append(changes, change)
-	} else {
-		entity, err = joinTarget(q, in.EntityID, subject.SubjectTypeID)
-		if err != nil {
-			return Result{}, nil, err
-		}
-	}
-	claim, claimChange, err := identityclaims.InsertTx(q, identityclaims.CreateInput{
-		SubjectID: subject.ID,
-		EntityID:  entity.ID,
-		Status:    identityclaims.StatusAccepted,
-	})
+	entity, claim, changes, err := fileSubject(q, subject, in.EntityID)
 	if err != nil {
 		return Result{}, nil, err
 	}
-	changes = append(changes, claimChange)
 	_, changes, err = identityclaims.AppendFiling(q, subject.ID, changes)
 	if err != nil {
 		return Result{}, nil, err
 	}
 	return Result{Entity: entity, Claim: claim}, changes, nil
+}
+
+// fileSubject files one Subject that has no accepted claim: the primary-type
+// check, a new handle of its type (entityID nil) or a join onto entityID, and
+// the accepted claim. Callers check membership first and keep their own
+// follow-up (Save appends the filing of bridges; SaveBatch files them once
+// for the whole graph).
+func fileSubject(tx *sql.Tx, subject subjects.Subject, entityID []byte) (canonicalentities.Entity, identityclaims.Claim, []rowchange.Change, error) {
+	st, err := subjecttypes.GetByIDTx(tx, subject.SubjectTypeID)
+	if err != nil {
+		return canonicalentities.Entity{}, identityclaims.Claim{}, nil, err
+	}
+	if !vocabkey.IsPrimaryType(st.Key, st.Origin) {
+		return canonicalentities.Entity{}, identityclaims.Claim{}, nil, ErrUnsupportedType
+	}
+	var (
+		entity  canonicalentities.Entity
+		changes []rowchange.Change
+	)
+	if entityID == nil {
+		minted, change, err := canonicalentities.InsertTx(tx, canonicalentities.CreateInput{
+			SubjectTypeID: subject.SubjectTypeID,
+		})
+		if err != nil {
+			return canonicalentities.Entity{}, identityclaims.Claim{}, nil, err
+		}
+		entity, changes = minted, append(changes, change)
+	} else {
+		entity, err = joinTarget(tx, entityID, subject.SubjectTypeID)
+		if err != nil {
+			return canonicalentities.Entity{}, identityclaims.Claim{}, nil, err
+		}
+	}
+	claim, claimChange, err := identityclaims.InsertTx(tx, identityclaims.CreateInput{
+		SubjectID: subject.ID,
+		EntityID:  entity.ID,
+		Status:    identityclaims.StatusAccepted,
+	})
+	if err != nil {
+		return canonicalentities.Entity{}, identityclaims.Claim{}, nil, err
+	}
+	return entity, claim, append(changes, claimChange), nil
 }
 
 // joinTarget loads an existing handle for a join. A missing or merged handle

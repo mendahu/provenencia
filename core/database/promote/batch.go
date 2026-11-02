@@ -6,14 +6,12 @@ import (
 	"errors"
 
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/vocabkey"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/database/subjecttypes"
 )
 
 // Row targets for one Done. They match graphalign.Target strings.
@@ -140,14 +138,6 @@ func applyRow(tx *sql.Tx, graphID []byte, row BatchRow) (*Written, []rowchange.C
 	if !bytes.Equal(subject.GraphID, graphID) {
 		return nil, nil, nil, ErrInvalid
 	}
-	st, err := subjecttypes.GetByIDTx(tx, subject.SubjectTypeID)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	if !vocabkey.IsPrimaryType(st.Key, st.Origin) {
-		return nil, nil, nil, ErrUnsupportedType
-	}
-
 	existing, err := identityclaims.AcceptedEntityForSubjectTx(tx, subject.ID)
 	if err == nil {
 		if row.Target == TargetHandle && bytes.Equal(existing.EntityID, row.EntityID) {
@@ -159,32 +149,13 @@ func applyRow(tx *sql.Tx, graphID []byte, row BatchRow) (*Written, []rowchange.C
 		return nil, nil, nil, err
 	}
 
-	var (
-		entity  canonicalentities.Entity
-		changes []rowchange.Change
-	)
-	if row.Target == TargetNew {
-		minted, change, err := canonicalentities.InsertTx(tx, canonicalentities.CreateInput{
-			SubjectTypeID: subject.SubjectTypeID,
-		})
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		entity, changes = minted, append(changes, change)
-	} else {
-		entity, err = joinTarget(tx, row.EntityID, subject.SubjectTypeID)
-		if err != nil {
-			return nil, nil, nil, err
-		}
+	var entityID []byte
+	if row.Target == TargetHandle {
+		entityID = row.EntityID
 	}
-	claim, claimChange, err := identityclaims.InsertTx(tx, identityclaims.CreateInput{
-		SubjectID: subject.ID,
-		EntityID:  entity.ID,
-		Status:    identityclaims.StatusAccepted,
-	})
+	entity, claim, changes, err := fileSubject(tx, subject, entityID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	changes = append(changes, claimChange)
 	return &Written{Entity: entity, Claim: claim}, changes, entity.ID, nil
 }
