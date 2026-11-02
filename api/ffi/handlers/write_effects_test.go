@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database/effects"
@@ -120,5 +121,16 @@ func TestRetiredFieldsStayReserved(t *testing.T) {
 	}
 	if progressDesc.Fields().ByName("source_id") != nil {
 		t.Error("EvidenceGraphProgress still declares source_id")
+	}
+	applyDesc := (&engine.ApplyPromoteGraphAlignmentResponse{}).ProtoReflect().Descriptor()
+	for _, n := range []protoreflect.Name{"revision", "written"} {
+		if !applyDesc.ReservedNames().Has(n) || applyDesc.Fields().ByName(n) != nil {
+			t.Errorf("ApplyPromoteGraphAlignmentResponse.%s is not reserved", n)
+		}
+	}
+	for _, n := range []protoreflect.FieldNumber{1, 2} {
+		if !applyDesc.ReservedRanges().Has(n) || applyDesc.Fields().ByNumber(n) != nil {
+			t.Errorf("ApplyPromoteGraphAlignmentResponse field %d is not reserved", n)
+		}
 	}
 }

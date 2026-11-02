@@ -226,11 +226,12 @@ func UpdateSource(in []byte) ([]byte, error) {
 			Title:        req.GetTitle(),
 			Description:  req.GetDescription(),
 		}
-		if _, _, err := writes.Run(c, writes.Op{Action: "update_source", UserID: userID},
+		_, wrote, err := writes.Run(c, writes.Op{Action: "update_source", UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := sources.Update(tx, userID, s)
 				return struct{}{}, changes, err
-			}); err != nil {
+			})
+		if err != nil {
 			return err
 		}
 		got, err := sources.Get(c, id)
@@ -241,7 +242,7 @@ func UpdateSource(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.UpdateSourceResponse{Source: sp}
+		out = &engine.UpdateSourceResponse{Source: sp, Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
@@ -265,7 +266,7 @@ func DeleteSource(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeleteSourceResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		_, _, err := writes.Run(c, writes.Op{Action: "delete_source", UserID: userID},
+		_, wrote, err := writes.Run(c, writes.Op{Action: "delete_source", UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := sources.Delete(tx, userID, sourceID)
 				return struct{}{}, changes, err
@@ -273,7 +274,7 @@ func DeleteSource(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.DeleteSourceResponse{}
+		out = &engine.DeleteSourceResponse{Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
@@ -311,7 +312,7 @@ func SetSourceCover(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		got, _, err := writes.Run(c, writes.Op{Action: "set_source_cover", UserID: userID},
+		got, wrote, err := writes.Run(c, writes.Op{Action: "set_source_cover", UserID: userID},
 			func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
 				return sources.SetCover(tx, userID, sourceID, mode, artID)
 			})
@@ -322,7 +323,7 @@ func SetSourceCover(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.SetSourceCoverResponse{Source: sp}
+		out = &engine.SetSourceCoverResponse{Source: sp, Effects: writeEffectsProto(wrote)}
 		return nil
 	}
 	if coverArtifactID, ok := sources.CoverArtifactID(req.GetCoverMode(), primaryID); ok {

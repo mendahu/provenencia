@@ -546,6 +546,7 @@ message UpdateSourceRequest {
 
 message UpdateSourceResponse {
   Source source = 1;
+  WriteEffects effects = 2;
 }
 
 message DeleteSourceRequest {
@@ -554,7 +555,9 @@ message DeleteSourceRequest {
   string source_id = 3;
 }
 
-message DeleteSourceResponse {}
+message DeleteSourceResponse {
+  WriteEffects effects = 1;
+}
 
 message SetSourceCoverRequest {
   string project_dir = 1;
@@ -568,6 +571,7 @@ message SetSourceCoverRequest {
 
 message SetSourceCoverResponse {
   Source source = 1;
+  WriteEffects effects = 2;
 }
 
 message AddSourceNoteRequest {
@@ -1813,16 +1817,10 @@ message ApplyPromoteGraphAlignmentRow {
   reserved "confidence_grade_id", "argument", "pin_ids", "default_pins";
 }
 
-message ApplyPromoteGraphAlignmentWritten {
-  CanonicalEntity entity = 1;
-  IdentityClaim claim = 2;
-  reserved 3;
-  reserved "pins";
-}
-
 message ApplyPromoteGraphAlignmentResponse {
-  int64 revision = 1;
-  repeated ApplyPromoteGraphAlignmentWritten written = 2;
+  reserved 1, 2;
+  reserved "revision", "written";
+  WriteEffects effects = 3;
 }
 
 message ListSubjectsRequest {

@@ -45,19 +45,15 @@ type Written struct {
 	Claim  identityclaims.Claim
 }
 
-// BatchResult is the revision the batch wrote (or SeenRevision when nothing
-// changed) and the claims it filed. Anchors and skips are absent.
+// BatchResult is the claims the batch filed. Anchors and skips are absent.
 type BatchResult struct {
-	Revision int64
-	Written  []Written
+	Written []Written
 }
 
 // SaveBatch files one Done in a single transaction: claims and bridges whose
-// ends are both handles. The caller records the returned
-// changes as promote_batch. Revision on the result is SeenRevision; the
-// caller replaces it with the revision it recorded when that is non-zero,
-// so an all-skip batch still reports the revision the proposal was read at.
-// A catalog write since SeenRevision is ErrStale and writes nothing.
+// ends are both handles. The caller records the returned changes as
+// promote_batch. A catalog write since SeenRevision is ErrStale and writes
+// nothing.
 func SaveBatch(tx *database.Tx, userID []byte, in Batch) (BatchResult, []rowchange.Change, error) {
 	if tx == nil {
 		return BatchResult{}, nil, ErrInvalid
@@ -102,7 +98,7 @@ func SaveBatch(tx *database.Tx, userID []byte, in Batch) (BatchResult, []rowchan
 		return BatchResult{}, nil, err
 	}
 	changes = append(changes, filed...)
-	return BatchResult{Revision: rev, Written: written}, changes, nil
+	return BatchResult{Written: written}, changes, nil
 }
 
 func latestRevision(tx *sql.Tx) (int64, error) {
