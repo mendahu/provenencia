@@ -32,7 +32,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
-	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
@@ -595,7 +595,7 @@ func termID(t *testing.T, f *fixture, key string) []byte {
 }
 
 func (f *fixture) dateIn(s subjects.Subject, year int) observations.Input {
-	return observations.Input{SubjectID: s.ID, PropertyID: f.date.ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &year}}
+	return observations.Input{SubjectID: s.ID, PropertyID: f.date.ID, Date: datevaluetest.YMD(year, 0, 0)}
 }
 
 func TestFieldsOf(t *testing.T) {

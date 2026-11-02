@@ -36,6 +36,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -254,7 +255,7 @@ func TestSummariesShowKeptValuesOnly(t *testing.T) {
 				return []observations.Input{
 					{PropertyID: f.prop("event_name").ID, ValueText: "Phantom Fair", HasText: true},
 					{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
-					{PropertyID: f.prop("date").ID, Date: pointYear(1801)},
+					{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1801, 0, 0)},
 				}
 			},
 			check: func(t *testing.T, f *fixture, entityID []byte) {
@@ -533,11 +534,6 @@ func (f *fixture) term(propertyKey, termKey string) propertyterms.Term {
 	return term
 }
 
-func pointYear(year int) *datevalue.Value {
-	y := year
-	return &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}
-}
-
 // event promotes a new event Subject with the given Observations.
 func (f *fixture) event(in ...observations.Input) []byte {
 	f.t.Helper()
@@ -575,16 +571,16 @@ func TestListEvents(t *testing.T) {
 
 	fire := f.event(
 		observations.Input{PropertyID: name.ID, ValueText: " The Great Fire ", HasText: true},
-		observations.Input{PropertyID: date.ID, Date: pointYear(1849)},
+		observations.Input{PropertyID: date.ID, Date: datevaluetest.YMD(1849, 0, 0)},
 	)
 	birthID := f.event(
 		observations.Input{PropertyID: eventType.ID, ValueTermID: birth.ID},
-		observations.Input{PropertyID: date.ID, Date: pointYear(1985)},
-		observations.Input{PropertyID: start.ID, Date: pointYear(1900)},
+		observations.Input{PropertyID: date.ID, Date: datevaluetest.YMD(1985, 0, 0)},
+		observations.Input{PropertyID: start.ID, Date: datevaluetest.YMD(1900, 0, 0)},
 	)
 	span := f.event(
-		observations.Input{PropertyID: start.ID, Date: pointYear(1900)},
-		observations.Input{PropertyID: end.ID, Date: pointYear(1910)},
+		observations.Input{PropertyID: start.ID, Date: datevaluetest.YMD(1900, 0, 0)},
+		observations.Input{PropertyID: end.ID, Date: datevaluetest.YMD(1910, 0, 0)},
 	)
 	undated := f.event()
 	f.person("Ada Lovelace")
@@ -630,7 +626,7 @@ func TestListEventsQueryCountIsConstant(t *testing.T) {
 	must(t, err)
 	date := f.prop("date")
 	for i := 0; i < 50; i++ {
-		f.event(observations.Input{PropertyID: date.ID, Date: pointYear(1800 + i)})
+		f.event(observations.Input{PropertyID: date.ID, Date: datevaluetest.YMD(1800+i, 0, 0)})
 	}
 	f.c.Graph().Drop()
 	many, err := conclusionsummaries.ListEventsQueryCount(f.c)
@@ -1191,7 +1187,7 @@ func TestSortByBirth(t *testing.T) {
 	person := func(ref string, year int) conclusionsummaries.PersonSummary {
 		h := conclusionsummaries.PersonSummary{Entity: canonicalentities.Entity{Ref: ref}}
 		if year != 0 {
-			h.Birth.Date = pointYear(year)
+			h.Birth.Date = datevaluetest.YMD(year, 0, 0)
 		}
 		return h
 	}
@@ -1227,9 +1223,9 @@ func TestHasEventDate(t *testing.T) {
 		in   conclusionsummaries.EventSummary
 		want bool
 	}{
-		{"date", conclusionsummaries.EventSummary{Date: pointYear(1850)}, true},
-		{"start date only", conclusionsummaries.EventSummary{StartDate: pointYear(1860)}, true},
-		{"end date only", conclusionsummaries.EventSummary{EndDate: pointYear(1870)}, false},
+		{"date", conclusionsummaries.EventSummary{Date: datevaluetest.YMD(1850, 0, 0)}, true},
+		{"start date only", conclusionsummaries.EventSummary{StartDate: datevaluetest.YMD(1860, 0, 0)}, true},
+		{"end date only", conclusionsummaries.EventSummary{EndDate: datevaluetest.YMD(1870, 0, 0)}, false},
 		{"no date", conclusionsummaries.EventSummary{}, false},
 		{"date with no sort key", conclusionsummaries.EventSummary{Date: noYear}, false},
 	}

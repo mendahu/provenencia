@@ -19,6 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/writes"
@@ -108,13 +109,13 @@ func TestCanonicalWalks(t *testing.T) {
 	birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.cite(birth,
 		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
-		observations.Input{PropertyID: f.prop("date").ID, Date: pointYear(1817)},
+		observations.Input{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1817, 0, 0)},
 	)
 	f.at(birth, 4, 0)
 	death := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.cite(death,
 		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "death").ID},
-		observations.Input{PropertyID: f.prop("start_date").ID, Date: pointYear(1880)},
+		observations.Input{PropertyID: f.prop("start_date").ID, Date: datevaluetest.YMD(1880, 0, 0)},
 	)
 	f.at(death, 4, 2)
 	marriage := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
@@ -404,7 +405,7 @@ func TestCompetingLifeEvents(t *testing.T) {
 				birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 				in := []observations.Input{{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID}}
 				if year != 0 {
-					in = append(in, observations.Input{PropertyID: f.prop("date").ID, Date: pointYear(year)})
+					in = append(in, observations.Input{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(year, 0, 0)})
 				}
 				f.cite(birth, in...)
 				f.at(birth, 4, int64(2*i))

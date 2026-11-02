@@ -10,7 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
-	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/onboarding"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -297,9 +297,6 @@ func TestListPersonEvents(t *testing.T) {
 		t.Fatal(err)
 	}
 	dir := created.ProjectDir
-	year := func(y int) datevalue.Value {
-		return datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}
-	}
 	var pat, ned, kid, sam, b1, b2, u, mar, cs []byte
 	err = catalogsession.Do(dir, func(c *database.Catalog) error {
 		k := graphcachetest.NewCanon(t, c)
@@ -307,20 +304,20 @@ func TestListPersonEvents(t *testing.T) {
 		var ids [][]byte
 		var j [][]byte
 		b1, j = k.Birth(pat, nil, nil)
-		k.Date(b1, vocabkey.PropertyDate, year(1820))
+		k.Date(b1, vocabkey.PropertyDate, *datevaluetest.YMD(1820, 0, 0))
 		ids = append(ids, j...)
 		mar, j = k.Marriage(pat, sam)
-		k.Date(mar, vocabkey.PropertyDate, year(1845))
+		k.Date(mar, vocabkey.PropertyDate, *datevaluetest.YMD(1845, 0, 0))
 		ids = append(ids, mar)
 		ids = append(ids, j...)
 		cs = k.Event(vocabkey.EventType("census"))
-		k.Date(cs, vocabkey.PropertyDate, year(1851))
+		k.Date(cs, vocabkey.PropertyDate, *datevaluetest.YMD(1851, 0, 0))
 		ids = append(ids, cs, k.Join(pat, cs, "subject"), k.Join(kid, cs, "subject"))
 		u = k.Event(vocabkey.EventBurial)
-		k.Date(u, vocabkey.PropertyDate, year(1890))
+		k.Date(u, vocabkey.PropertyDate, *datevaluetest.YMD(1890, 0, 0))
 		ids = append(ids, u, k.Join(ned, u, "subject"), k.Join(pat, u, "witness"))
 		b2, j = k.Birth(kid, pat, sam)
-		k.Date(b2, vocabkey.PropertyDate, year(1850))
+		k.Date(b2, vocabkey.PropertyDate, *datevaluetest.YMD(1850, 0, 0))
 		ids = append(ids, b2)
 		ids = append(ids, j...)
 		k.Commit(append(ids, pat, ned, kid, sam, b1)...)

@@ -12,13 +12,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/persondetail"
-	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
-
-func yearValue(y int) datevalue.Value {
-	return datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}
-}
 
 // event adds an event of the type, names it for the failure messages and gives
 // it a date when year is not zero.
@@ -26,7 +22,7 @@ func (w *kinWorld) event(name string, typ vocabkey.EventType, year int) []byte {
 	id := w.k.Event(typ)
 	w.names[string(id)] = name
 	if year != 0 {
-		w.k.Date(id, vocabkey.PropertyDate, yearValue(year))
+		w.k.Date(id, vocabkey.PropertyDate, *datevaluetest.YMD(year, 0, 0))
 	}
 	return id
 }
@@ -162,9 +158,9 @@ func TestPersonEvents(t *testing.T) {
 		b1 := w.event("B1", vocabkey.EventBirth, 1820)
 		r := w.event("R", vocabkey.EventType("residence"), 0)
 		tr := w.event("T", vocabkey.EventType("travel"), 0)
-		w.k.Date(tr, vocabkey.PropertyStartDate, yearValue(1860))
+		w.k.Date(tr, vocabkey.PropertyStartDate, *datevaluetest.YMD(1860, 0, 0))
 		v := w.event("V", vocabkey.EventType("migration"), 0)
-		w.k.Date(v, vocabkey.PropertyEndDate, yearValue(1870))
+		w.k.Date(v, vocabkey.PropertyEndDate, *datevaluetest.YMD(1870, 0, 0))
 		for _, e := range [][]byte{r, v, tr, b1} {
 			w.k.Join(pat, e, "subject")
 		}
@@ -294,7 +290,7 @@ func (w *kinWorld) located(event []byte) {
 func (w *kinWorld) guest(event []byte, name string, year int) {
 	g := w.person(name)
 	b, _ := w.k.Birth(g, nil, nil)
-	w.k.Date(b, vocabkey.PropertyDate, yearValue(year))
+	w.k.Date(b, vocabkey.PropertyDate, *datevaluetest.YMD(year, 0, 0))
 	w.located(b)
 	w.k.Join(g, event, "subject")
 }
