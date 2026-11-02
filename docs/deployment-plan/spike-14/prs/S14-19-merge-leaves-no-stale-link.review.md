@@ -47,3 +47,16 @@ Checked: `core/database/effects/registry.go` `"canonical_entities"` resolves `Ha
 ### M-4 · nit · The `OnCommit` doc comment should put the delete contract next to the new merge contract
 **Answer:** Fixed — STEP-3's doc comment states both rules side by side.
 
+
+## Round 2
+
+Executability (sonnet): every round-1 answer confirmed against the code; no blocker. Ready with changes.
+
+### X-7 · minor · The DoD `rg "merge's effects drop" docs` cannot pass as written
+**Answer:** Fixed — the DoD excludes this plan and its review log.
+
+### X-8 · minor · STEP-2 reads `Cached` as a single return value
+**Answer:** Fixed — STEP-2 uses `n, ok := g.Cached(E)` and `m, ok := g.Cached(P)`, failing on `!ok` where the row says loaded.
+
+### X-9 · minor · STEP-6's Context-line edit is ambiguous
+**Answer:** Fixed — STEP-6 gives the whole replacement Context line.
