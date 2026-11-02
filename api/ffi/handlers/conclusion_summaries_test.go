@@ -22,7 +22,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
-	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
@@ -247,11 +247,10 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
-		year := 1849
 		_, _, err = observationstest.Cite(c, userID[:], s.GraphID, art.ID, `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`, []observations.Input{
 			{SubjectID: s.ID, PropertyID: name.ID, ValueText: "The Great Fire", HasText: true},
 			{SubjectID: s.ID, PropertyID: eventType.ID, ValueTermID: term.ID},
-			{SubjectID: s.ID, PropertyID: dateProp.ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &year}},
+			{SubjectID: s.ID, PropertyID: dateProp.ID, Date: datevaluetest.YMD(1849, 0, 0)},
 		}...)
 		if err != nil {
 			return err

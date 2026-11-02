@@ -10,8 +10,10 @@ import (
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/onboarding"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -282,6 +284,87 @@ func TestKinshipPatternProto(t *testing.T) {
 	for _, p := range append(kinship.Patterns(), kinship.PatternSharedParent) {
 		if kinshipPatternProto(p) == engine.KinshipPattern_KINSHIP_PATTERN_UNSPECIFIED {
 			t.Errorf("pattern %q maps to unspecified", p)
+		}
+	}
+}
+
+// TestListPersonEvents covers AC-3.1 and AC-3.2: a person's events in date
+// order, each with the person's roles and the other canonical participants.
+func TestListPersonEvents(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	created, err := onboarding.Complete(t.TempDir(), t.TempDir(), "Jake", "Robins")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := created.ProjectDir
+	var pat, ned, kid, sam, b1, b2, u, mar, cs []byte
+	err = catalogsession.Do(dir, func(c *database.Catalog) error {
+		k := graphcachetest.NewCanon(t, c)
+		pat, ned, kid, sam = k.Person(), k.Person(), k.Person(), k.Person()
+		var ids [][]byte
+		var j [][]byte
+		b1, j = k.Birth(pat, nil, nil)
+		k.Date(b1, vocabkey.PropertyDate, *datevaluetest.YMD(1820, 0, 0))
+		ids = append(ids, j...)
+		mar, j = k.Marriage(pat, sam)
+		k.Date(mar, vocabkey.PropertyDate, *datevaluetest.YMD(1845, 0, 0))
+		ids = append(ids, mar)
+		ids = append(ids, j...)
+		cs = k.Event(vocabkey.EventType("census"))
+		k.Date(cs, vocabkey.PropertyDate, *datevaluetest.YMD(1851, 0, 0))
+		ids = append(ids, cs, k.Join(pat, cs, "subject"), k.Join(kid, cs, "subject"))
+		u = k.Event(vocabkey.EventBurial)
+		k.Date(u, vocabkey.PropertyDate, *datevaluetest.YMD(1890, 0, 0))
+		ids = append(ids, u, k.Join(ned, u, "subject"), k.Join(pat, u, "witness"))
+		b2, j = k.Birth(kid, pat, sam)
+		k.Date(b2, vocabkey.PropertyDate, *datevaluetest.YMD(1850, 0, 0))
+		ids = append(ids, b2)
+		ids = append(ids, j...)
+		k.Commit(append(ids, pat, ned, kid, sam, b1)...)
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var got engine.ListPersonEventsResponse
+	mustRPC(t, ListPersonEvents, &engine.ListPersonEventsRequest{ProjectDir: dir, EntityId: database.UUIDString(pat)}, &got)
+	if len(got.Events) != 5 {
+		t.Fatalf("%d events, want 5: %+v", len(got.Events), got.Events)
+	}
+	wantOrder := []string{database.UUIDString(b1), database.UUIDString(mar), database.UUIDString(b2), database.UUIDString(cs), database.UUIDString(u)}
+	for i, e := range got.Events {
+		if !e.GetDated() || e.GetEvent().GetEntity().GetRef() == "" {
+			t.Errorf("event %d: %+v", i, e)
+		}
+		if e.GetEvent().GetEntity().GetId() != wantOrder[i] {
+			t.Errorf("event %d is %s, want %s", i, e.GetEvent().GetEntity().GetId(), wantOrder[i])
+		}
+	}
+	last := got.Events[4]
+	if len(last.Roles) != 1 || last.Roles[0].GetKey() != "witness" || last.Roles[0].GetLabel() != "Witness" {
+		t.Fatalf("burial roles %+v", last.Roles)
+	}
+	if len(last.Participants) != 1 || last.Participants[0].GetPerson().GetEntity().GetId() != database.UUIDString(ned) ||
+		len(last.Participants[0].Roles) != 1 || last.Participants[0].Roles[0].GetKey() != "subject" {
+		t.Fatalf("burial participants %+v", last.Participants)
+	}
+	births := got.Events[2]
+	if len(births.Participants) != 2 || births.Participants[0].GetPerson().GetEntity().GetId() == births.Participants[1].GetPerson().GetEntity().GetId() {
+		t.Fatalf("B2 participants %+v", births.Participants)
+	}
+	for _, p := range births.Participants {
+		id := p.GetPerson().GetEntity().GetId()
+		if id != database.UUIDString(kid) && id != database.UUIDString(sam) {
+			t.Fatalf("B2 participant %s", id)
+		}
+	}
+
+	for _, id := range []string{"not-an-id", "00000000-0000-7000-8000-000000000000", database.UUIDString(u)} {
+		err := rpc(t, ListPersonEvents, &engine.ListPersonEventsRequest{ProjectDir: dir, EntityId: id}, &engine.ListPersonEventsResponse{})
+		var ae *apperr.Error
+		if !errors.As(err, &ae) || ae.Code() != apperr.CodeConclusionDetailsNotFound {
+			t.Fatalf("id %q: err = %v, want %s", id, err, apperr.CodeConclusionDetailsNotFound)
 		}
 	}
 }

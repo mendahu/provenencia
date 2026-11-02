@@ -29,7 +29,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
-	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -197,10 +196,6 @@ func (f *batchFixture) hasClaim(subjectID []byte) bool {
 		f.t.Fatal(err)
 	}
 	return true
-}
-
-func yearDate(y int) *datevalue.Value {
-	return &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}
 }
 
 func TestSaveBatchFilesBothEndsOnce(t *testing.T) {

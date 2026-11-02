@@ -17,20 +17,12 @@ type Family struct {
 	Units  []kinship.Unit
 }
 
-// shownPerson is the package's one canonical-relative rule: an unmerged Person
-// with at least one accepted member. A section that names other people calls it
-// before it groups them.
-func shownPerson(n *graphcache.Node, personTypeID []byte) bool {
-	return n.Is(personTypeID) && len(n.AcceptedMembers()) > 0
-}
-
-// personTypeID is the id of the provenencia Person type.
-func personTypeID(g *graphcache.Graph) ([]byte, error) {
-	v, err := g.Vocabulary()
-	if err != nil {
-		return nil, err
-	}
-	return v.TypeIDsByKey()[vocabkey.Person], nil
+// canonical is the package's one rule for a canonical entity a section names
+// (a relative, an event, a participant): not merged, of the type, with at least
+// one accepted member. A section that names other entities calls it before it
+// groups or shows them.
+func canonical(n *graphcache.Node, typeID []byte) bool {
+	return n.Is(typeID) && len(n.AcceptedMembers()) > 0
 }
 
 // Families reads the family of each id that is an unmerged Person, in ids
@@ -51,10 +43,11 @@ func Families(c *database.Catalog, ids [][]byte) ([]Family, error) {
 	if err != nil {
 		return nil, err
 	}
-	typeID, err := personTypeID(g)
+	v, err := g.Vocabulary()
 	if err != nil {
 		return nil, err
 	}
+	typeID := v.TypeIDsByKey()[vocabkey.Person]
 	var want [][]byte
 	seen := map[string]bool{}
 	for _, id := range ids {
@@ -105,7 +98,7 @@ func Families(c *database.Catalog, ids [][]byte) ([]Family, error) {
 		var shown []kinship.Link
 		for _, l := range links {
 			other, _, _ := l.From(id)
-			if n, _ := g.Cached(other); shownPerson(n, typeID) {
+			if n, _ := g.Cached(other); canonical(n, typeID) {
 				shown = append(shown, l)
 			}
 		}

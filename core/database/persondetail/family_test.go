@@ -15,7 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/persondetail"
-	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -268,15 +268,12 @@ func TestPersonFamily(t *testing.T) {
 }
 
 func TestPersonFamilyOriginSiblings(t *testing.T) {
-	year := func(y int) datevalue.Value {
-		return datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}
-	}
 	// born gives a person a birth event (with the parents named) and, when
 	// year is not 0, a birth date.
 	born := func(w *kinWorld, p []byte, y int, father, mother []byte) {
 		ev, _ := w.k.Birth(p, father, mother)
 		if y != 0 {
-			w.k.Date(ev, vocabkey.PropertyDate, year(y))
+			w.k.Date(ev, vocabkey.PropertyDate, *datevaluetest.YMD(y, 0, 0))
 		}
 	}
 	// origin reads the origin siblings as "name[parent sets]", each set as its

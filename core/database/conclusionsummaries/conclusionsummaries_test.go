@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -35,6 +36,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -253,7 +255,7 @@ func TestSummariesShowKeptValuesOnly(t *testing.T) {
 				return []observations.Input{
 					{PropertyID: f.prop("event_name").ID, ValueText: "Phantom Fair", HasText: true},
 					{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
-					{PropertyID: f.prop("date").ID, Date: pointYear(1801)},
+					{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1801, 0, 0)},
 				}
 			},
 			check: func(t *testing.T, f *fixture, entityID []byte) {
@@ -532,11 +534,6 @@ func (f *fixture) term(propertyKey, termKey string) propertyterms.Term {
 	return term
 }
 
-func pointYear(year int) *datevalue.Value {
-	y := year
-	return &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}
-}
-
 // event promotes a new event Subject with the given Observations.
 func (f *fixture) event(in ...observations.Input) []byte {
 	f.t.Helper()
@@ -574,16 +571,16 @@ func TestListEvents(t *testing.T) {
 
 	fire := f.event(
 		observations.Input{PropertyID: name.ID, ValueText: " The Great Fire ", HasText: true},
-		observations.Input{PropertyID: date.ID, Date: pointYear(1849)},
+		observations.Input{PropertyID: date.ID, Date: datevaluetest.YMD(1849, 0, 0)},
 	)
 	birthID := f.event(
 		observations.Input{PropertyID: eventType.ID, ValueTermID: birth.ID},
-		observations.Input{PropertyID: date.ID, Date: pointYear(1985)},
-		observations.Input{PropertyID: start.ID, Date: pointYear(1900)},
+		observations.Input{PropertyID: date.ID, Date: datevaluetest.YMD(1985, 0, 0)},
+		observations.Input{PropertyID: start.ID, Date: datevaluetest.YMD(1900, 0, 0)},
 	)
 	span := f.event(
-		observations.Input{PropertyID: start.ID, Date: pointYear(1900)},
-		observations.Input{PropertyID: end.ID, Date: pointYear(1910)},
+		observations.Input{PropertyID: start.ID, Date: datevaluetest.YMD(1900, 0, 0)},
+		observations.Input{PropertyID: end.ID, Date: datevaluetest.YMD(1910, 0, 0)},
 	)
 	undated := f.event()
 	f.person("Ada Lovelace")
@@ -629,7 +626,7 @@ func TestListEventsQueryCountIsConstant(t *testing.T) {
 	must(t, err)
 	date := f.prop("date")
 	for i := 0; i < 50; i++ {
-		f.event(observations.Input{PropertyID: date.ID, Date: pointYear(1800 + i)})
+		f.event(observations.Input{PropertyID: date.ID, Date: datevaluetest.YMD(1800+i, 0, 0)})
 	}
 	f.c.Graph().Drop()
 	many, err := conclusionsummaries.ListEventsQueryCount(f.c)
@@ -1190,7 +1187,7 @@ func TestSortByBirth(t *testing.T) {
 	person := func(ref string, year int) conclusionsummaries.PersonSummary {
 		h := conclusionsummaries.PersonSummary{Entity: canonicalentities.Entity{Ref: ref}}
 		if year != 0 {
-			h.Birth.Date = pointYear(year)
+			h.Birth.Date = datevaluetest.YMD(year, 0, 0)
 		}
 		return h
 	}
@@ -1216,5 +1213,50 @@ func TestSortByBirth(t *testing.T) {
 				t.Fatalf("got %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestHasEventDate(t *testing.T) {
+	noYear := &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian"}
+	cases := []struct {
+		name string
+		in   conclusionsummaries.EventSummary
+		want bool
+	}{
+		{"date", conclusionsummaries.EventSummary{Date: datevaluetest.YMD(1850, 0, 0)}, true},
+		{"start date only", conclusionsummaries.EventSummary{StartDate: datevaluetest.YMD(1860, 0, 0)}, true},
+		{"end date only", conclusionsummaries.EventSummary{EndDate: datevaluetest.YMD(1870, 0, 0)}, false},
+		{"no date", conclusionsummaries.EventSummary{}, false},
+		{"date with no sort key", conclusionsummaries.EventSummary{Date: noYear}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := conclusionsummaries.HasEventDate(tc.in); got != tc.want {
+				t.Fatalf("HasEventDate = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestTermLabeler(t *testing.T) {
+	c := graphcachetest.OpenCatalog(t)
+	label, err := conclusionsummaries.TermLabeler(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var id []byte
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow(`SELECT id FROM property_terms WHERE key = 'witness' AND origin = 'provenencia'`).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	got, ok := label(id, "witness")
+	if !ok || got.Key != "witness" || got.Label != "Witness" || got.Origin != vocabkey.OriginProvenencia || !bytes.Equal(got.ID, id) {
+		t.Fatalf("label(witness) = %+v, %v", got, ok)
+	}
+	if _, ok := label(bytes.Repeat([]byte{0x7e}, 16), "witness"); ok {
+		t.Fatal("an unknown id was labelled")
 	}
 }

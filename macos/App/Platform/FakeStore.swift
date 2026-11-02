@@ -95,6 +95,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var seededPersonClaims: [String: [CatalogPersonClaimGroup]] = [:]
     /// A Person's family by entity id; an unseeded id throws `conclusiondetails.not_found`.
     var seededPersonFamilies: [String: CatalogPersonFamily] = [:]
+    /// A Person's timeline events by entity id; an unseeded id throws `conclusiondetails.not_found`.
+    var seededPersonEvents: [String: [CatalogPersonEvent]] = [:]
     /// The Identity Claim Promote wrote per Subject id.
     var claimBySubject: [String: CatalogIdentityClaim] = [:]
     var subjectPositionsBySubject: [String: CatalogSubjectPosition] = [:]
@@ -1991,6 +1993,17 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         try withState {
             markCatalogSessionHeld(projectDir)
             guard let seeded = seededPersonFamilies[entityID] else {
+                throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
+            }
+            return seeded
+        }
+    }
+
+    func listPersonEvents(projectDir: String, entityID: String) async throws -> [CatalogPersonEvent] {
+        // A read: no `recordedCalls`.
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            guard let seeded = seededPersonEvents[entityID] else {
                 throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
             }
             return seeded

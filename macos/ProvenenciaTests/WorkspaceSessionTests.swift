@@ -995,6 +995,18 @@ struct WorkspaceSessionTests {
         #expect(session.revalidatedKeys(for: CatalogWriteEffects.empty).isEmpty)
     }
 
+    /// T-8 (AC-4.3): a warmed timeline key follows every touched handle, an
+    /// event's or a co-participant's included; a write that touches none leaves
+    /// it alone.
+    @Test func personEventsFollowEveryTouchedHandle() {
+        let session = makeSession()
+        let key = CatalogQueryKey.personEvents(project: session.projectKey, entityId: "e1")
+        session.setQueryValue(key, value: [CatalogPersonEvent]())
+
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e7"])) == [key])
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects.empty).isEmpty)
+    }
+
     /// A `.personClaims` key whose first load is in flight follows every
     /// graph; once it holds a value it follows only the graphs it holds.
     @Test func personClaimsFollowEveryGraphUntilLoaded() {

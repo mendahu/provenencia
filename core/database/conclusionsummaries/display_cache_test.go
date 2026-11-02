@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -33,7 +34,7 @@ func TestDisplayCacheFollowsAPlaceThreeStepsUp(t *testing.T) {
 	birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.cite(birth,
 		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
-		observations.Input{PropertyID: f.prop("date").ID, Date: pointYear(1901)},
+		observations.Input{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1901, 0, 0)},
 	)
 	f.at(birth, 8, 2)
 	f.participation(person, birth, "subject")
@@ -98,7 +99,7 @@ func TestBirthBecomingMarriageDropsThePerson(t *testing.T) {
 	birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
 	f.cite(birth,
 		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
-		observations.Input{PropertyID: f.prop("date").ID, Date: pointYear(1901)},
+		observations.Input{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1901, 0, 0)},
 	)
 	f.at(birth, 2, 0)
 	f.participation(person, birth, "subject")

@@ -34,6 +34,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/matchregistry"
@@ -955,14 +956,7 @@ func datedEvent(f *fixture, src sources.Source, art artifacts.Artifact, eventTyp
 // datedOn is an event cited as an event type on a date (m and d 0 for a year).
 func (f *fixture) datedOn(src sources.Source, art artifacts.Artifact, eventType string, y, m, d int) subjects.Subject {
 	f.t.Helper()
-	date := datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}
-	if m != 0 {
-		date.StartMonth = &m
-	}
-	if d != 0 {
-		date.StartDay = &d
-	}
-	return f.eventOn(src, art, eventType, &date)
+	return f.eventOn(src, art, eventType, datevaluetest.YMD(y, m, d))
 }
 
 // marriage is a marriage event cited in src with a and b as its participants,

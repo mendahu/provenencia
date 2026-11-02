@@ -41,6 +41,10 @@ func SortByBirth[T any](rows []T, summary func(T) PersonSummary) {
 	sortByDateKey(rows, func(row T) dateKey { return birthKeyOf(summary(row)) })
 }
 
+// HasEventDate reports whether the event order (EventsByIDs, ListEvents)
+// places h among the dated rows: a date, else a start date, with a sort key.
+func HasEventDate(h EventSummary) bool { return eventKeyOf(h).ok }
+
 // sortByDateKey orders rows by their date key: dated first, earliest first,
 // then by ref. Each key is computed once, and rows with equal keys keep their
 // order.

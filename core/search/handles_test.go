@@ -25,7 +25,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
-	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/workspacelocation"
@@ -220,11 +220,10 @@ func TestSummarySearchFindsTheListTitle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	y := 1817
 	event := f.subject("event", func(s subjects.Subject) []observations.Input {
 		return []observations.Input{
 			{SubjectID: s.ID, PropertyID: f.prop("event_type").ID, ValueTermID: birth.ID},
-			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}},
+			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1817, 0, 0)},
 		}
 	})
 	place := f.subject("place", func(s subjects.Subject) []observations.Input {
@@ -374,11 +373,10 @@ func TestHandleSearchEventsAndPlaces(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	y, m := 1817, 5
 	event := f.promote(f.subject("event", func(s subjects.Subject) []observations.Input {
 		return []observations.Input{
 			{SubjectID: s.ID, PropertyID: f.prop("event_type").ID, ValueTermID: birth.ID},
-			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y, StartMonth: &m}},
+			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1817, 5, 0)},
 		}
 	}), nil)
 	place := f.promote(f.subject("place", func(s subjects.Subject) []observations.Input {

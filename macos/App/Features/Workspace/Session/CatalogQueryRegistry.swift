@@ -648,6 +648,26 @@ extension CatalogQueryKey.Kind {
                     return try await store.getPersonFamily(projectDir: project.projectDir, entityID: entityId)
                 }
             )
+        case .personEvents:
+            // A Person's timeline (S13-05). An edit to an event or a
+            // co-participant touches their id, not this Person's, and a newly
+            // filed participation is not in the cached value, so any write that
+            // names a handle reloads a visible Timeline section; the read is
+            // cheap warm.
+            return .make(
+                kind: self,
+                stalePolicy: .sessionFresh,
+                invalidateOn: CatalogQueryRegistry.conclusionTriggers,
+                whenHidden: .evict,
+                invalidation: { _, _ in .allCached(.personEvents) },
+                refreshes: [.applyHiddenPolicyOnAny(follows: .touchedHandles)],
+                load: { key, store in
+                    guard case .personEvents(let project, let entityId) = key else {
+                        mismatchedCatalogKey(key, .personEvents)
+                    }
+                    return try await store.listPersonEvents(projectDir: project.projectDir, entityID: entityId)
+                }
+            )
         }
     }
 }

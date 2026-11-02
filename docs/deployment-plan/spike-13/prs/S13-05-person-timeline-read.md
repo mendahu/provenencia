@@ -1,6 +1,6 @@
 # S13-05 — Person timeline read
 
-**Status:** Planned
+**Status:** Landed in #680 (2026-11-01)
 **Spike / slice:** Spike 13 · Slice 4 — Timeline
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: an engine read, an RPC, a store method and a cache key; no view reads them until S13-13)
@@ -28,6 +28,8 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+**Landed:** the code differs from the plan in one place, a test. `TestListPersonEvents` (T-5) asserts B2's participants as the set {Kid, Sam} rather than in order, because participation refs compare as strings (D-13) and the order is covered by `TestPersonEvents/AC-1.3`, which derives it from the refs. It also adds `termsProto` in `api/ffi/handlers/conclusion_summaries.go`, beside `termProto`: a list mapper the plan did not name, with no behavior change.
 
 ## 1. Objective
 

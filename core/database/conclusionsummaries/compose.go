@@ -103,6 +103,22 @@ func scanVocab(g *graphcache.Graph, query string, args []any, take func(id []byt
 	return rows.Err()
 }
 
+// TermLabeler returns a function that builds the summary-wire Term of a term
+// id and key, with its label and origin filled as every summary term is. It
+// reports false when the id is not a term of the catalog's vocabulary.
+func TermLabeler(c *database.Catalog) (func(id []byte, key string) (Term, bool), error) {
+	v, err := vocabulary(c.Graph())
+	if err != nil {
+		return nil, err
+	}
+	return func(id []byte, key string) (Term, bool) {
+		if _, ok := v.termLabel[string(id)]; !ok {
+			return Term{}, false
+		}
+		return *v.finishTerm(&Term{ID: id, Key: key}), true
+	}, nil
+}
+
 func (v vocab) prop(key string) []byte { return v.propID[key] }
 
 // propLabelOf is the catalog label of the product Property with key.
