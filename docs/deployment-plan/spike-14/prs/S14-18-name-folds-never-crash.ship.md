@@ -71,4 +71,4 @@ Nits (logged): `MNT-6 · core/autoreconcile/names_test.go:542 · FuzzReconcileNa
 No Fix plan 2 (no round-2 blocker). Plan Landed note extended with the fuzz target and the alias-role rename (orchestrator, docs only). `origin/main` unchanged since the branch was cut (`f4a1c940`); no merge needed.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · to user: — · CON miss: none
+Gate PASS · CI green (Go tests, macOS tests) · open: none · follow-ups: none · to user: — · CON miss: none
