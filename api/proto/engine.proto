@@ -1118,16 +1118,6 @@ message CanonicalEntity {
   string label = 4;
 }
 
-// IdentityClaim files one Subject onto one handle; accepted claims are members.
-message IdentityClaim {
-  string id = 1;
-  string subject_id = 2;
-  string entity_id = 3;
-  string status = 4; // provisional | accepted | rejected
-  reserved 5, 6;
-  reserved "confidence_grade_id", "argument";
-}
-
 // UnpromoteSubject deletes a primary Subject's accepted claim and, in the same
 // revision, the accepted claims of the bridges on its Evidence graph that have
 // it as an end. No handle is deleted. A Subject with no accepted claim writes nothing.

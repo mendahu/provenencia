@@ -7,16 +7,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/artifacts"
-	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
-	"github.com/mendahu/provenencia/core/database/observations"
-	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
-	"github.com/mendahu/provenencia/core/database/properties"
-	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
-	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
-	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -261,45 +253,4 @@ func TestListSubjectMemberships(t *testing.T) {
 			wantErr: true,
 		},
 	})
-}
-
-// personBeside creates another person Subject on the same Source as subjectID,
-// named by forms (one Observation each), and returns its id.
-func personBeside(t *testing.T, dir, userID, subjectID string, forms ...string) string {
-	t.Helper()
-	first := uuid.MustParse(subjectID)
-	user := uuid.MustParse(userID)
-	var id []byte
-	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
-		db, err := c.DB()
-		if err != nil {
-			return err
-		}
-		var graphID, typeID []byte
-		if err := db.QueryRow(`SELECT graph_id, subject_type_id FROM subjects WHERE id = ?`, first[:]).Scan(&graphID, &typeID); err != nil {
-			return err
-		}
-		s := subjectstest.OfType(t, c, user[:], graphID, typeID, "")
-		id = s.ID
-		if len(forms) == 0 {
-			return nil
-		}
-		name, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
-		if err != nil {
-			return err
-		}
-		art, err := artifactstest.Create(c, user[:], artifacts.CreateInput{SourceID: s.SourceID, Label: "Scan"})
-		if err != nil {
-			return err
-		}
-		var in []observations.Input
-		for _, form := range forms {
-			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluetest.Western(form)})
-		}
-		_, _, err = observationstest.Cite(c, user[:], s.GraphID, art.ID, `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`, in...)
-		return err
-	}); err != nil {
-		t.Fatal(err)
-	}
-	return database.UUIDString(id)
 }
