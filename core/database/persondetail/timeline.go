@@ -31,6 +31,7 @@ type EventParticipant struct {
 type neighborRoles struct {
 	id    []byte
 	roles []conclusionsummaries.Term
+	seen  map[string]struct{}
 }
 
 // rolesByNeighbor is the one collapse rule for both timeline walks: links in
@@ -54,17 +55,14 @@ func rolesByNeighbor(links []graphcache.Link, label func(id []byte, key string) 
 		if len(l.TermID) == 0 {
 			continue
 		}
-		have := false
-		for _, r := range out[i].roles {
-			if bytes.Equal(r.ID, l.TermID) {
-				have = true
-				break
-			}
-		}
-		if have {
+		if _, have := out[i].seen[string(l.TermID)]; have {
 			continue
 		}
 		if t, ok := label(l.TermID, l.TermKey); ok {
+			if out[i].seen == nil {
+				out[i].seen = map[string]struct{}{}
+			}
+			out[i].seen[string(l.TermID)] = struct{}{}
 			out[i].roles = append(out[i].roles, t)
 		}
 	}
@@ -86,7 +84,8 @@ func PersonEvents(c *database.Catalog, entityID []byte) ([]PersonEvent, conclusi
 	if err != nil {
 		return nil, none, err
 	}
-	personType, eventType := v.TypeIDsByKey()[vocabkey.Person], v.TypeIDsByKey()[vocabkey.Event]
+	types := v.TypeIDsByKey()
+	personType, eventType := types[vocabkey.Person], types[vocabkey.Event]
 	if !n.Is(personType) {
 		return nil, none, conclusiondetails.ErrNotFound
 	}

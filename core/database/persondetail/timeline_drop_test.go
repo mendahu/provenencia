@@ -44,6 +44,30 @@ func TestRolesByNeighbor(t *testing.T) {
 	}
 }
 
+// TestRolesByNeighborManyLinks pins the contract for one neighbor reached by
+// many links: each distinct role once, in first-seen order.
+func TestRolesByNeighborManyLinks(t *testing.T) {
+	id := func(n byte) []byte { return []byte{n} }
+	label := func(termID []byte, key string) (conclusionsummaries.Term, bool) {
+		return conclusionsummaries.Term{ID: termID, Key: key}, true
+	}
+	var links []graphcache.Link
+	for i := 0; i < 50; i++ {
+		for _, term := range []byte{3, 1, 2, 3, 1} {
+			links = append(links, graphcache.Link{Neighbor: id('A'), TermID: id(term), TermKey: "t"})
+		}
+	}
+	got := rolesByNeighbor(links, label, func([]byte) bool { return true })
+	if len(got) != 1 || len(got[0].roles) != 3 {
+		t.Fatalf("got %+v", got)
+	}
+	for i, want := range []byte{3, 1, 2} {
+		if !bytes.Equal(got[0].roles[i].ID, id(want)) {
+			t.Fatalf("role %d: %+v, want %d", i, got[0].roles[i], want)
+		}
+	}
+}
+
 // TestDropUnreadEvents covers D-7: a summary missing mid-read cannot be built
 // from the catalog, so the summaries come from the rows given.
 func TestDropUnreadEvents(t *testing.T) {
