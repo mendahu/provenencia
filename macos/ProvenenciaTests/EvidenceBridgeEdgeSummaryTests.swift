@@ -235,7 +235,7 @@ struct EvidenceBridgeEdgeSummaryTests {
             primary(id: "e1", kind: .event, label: "Marriage", ref: "CEV-1", observations: [eventType]),
         ])
         let sentence = EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap)
-        #expect(sentence.lowercased().contains("witness"))
+        #expect(sentence == "Alice participated as witness at Marriage")
         #expect(!sentence.contains("ceremony"))
     }
 
@@ -248,6 +248,12 @@ struct EvidenceBridgeEdgeSummaryTests {
         ]
         for kind in EvidenceBridgeKind.allCases {
             #expect(ConnectionSentenceRegistry.termProperty(for: kind) == expected[kind])
+            // The bridge fixture for the kind carries its term on that property, so
+            // the observation's own propertyKey (D-3) reads the same term.
+            let term = observation(
+                propertyKey: expected[kind] ?? "", valueText: "Term", valueType: "term"
+            )
+            #expect(term.propertyKey == ConnectionSentenceRegistry.termProperty(for: kind))
         }
     }
 
