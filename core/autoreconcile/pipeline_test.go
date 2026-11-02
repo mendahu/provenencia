@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -413,22 +414,13 @@ func TestFoldValuesRoots(t *testing.T) {
 					t.Fatalf("%s is a root with no total", n)
 				}
 				if v.into != nil && v.into.into != nil {
-					t.Fatalf("%s folds into %s, which folds on", n, tc.names[indexOf(vals, v.into)])
+					t.Fatalf("%s folds into %s, which folds on", n, tc.names[slices.Index(vals, v.into)])
 				}
 				want, folds := tc.into[n]
-				if folds != (v.into != nil) || (folds && tc.names[indexOf(vals, v.into)] != want) {
+				if folds != (v.into != nil) || (folds && tc.names[slices.Index(vals, v.into)] != want) {
 					t.Fatalf("%s: into %v, want %q", n, v.into != nil, want)
 				}
 			}
 		})
 	}
-}
-
-func indexOf(vals []*unitValue, v *unitValue) int {
-	for i, u := range vals {
-		if u == v {
-			return i
-		}
-	}
-	return -1
 }
