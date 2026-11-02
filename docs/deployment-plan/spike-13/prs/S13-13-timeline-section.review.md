@@ -1,19 +1,25 @@
 # Review — S13-13 Timeline section (and brief S13-D4)
 
-**Verdict:** Fits with changes — Ready with changes (round 1, on the draft blocked on S13-32 and the board)
-**Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet). Round 2 runs after S13-32 lands and the board is agreed (plan STEP-0).
+**Verdict:** round 1 Fits with changes — Ready with changes; round 2 Fits with changes — Not ready, every finding Fixed or answered by the user; none open. Status stays `Blocked — on S13-33` until S13-33 lands.
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet).
 
 ## To user
 
-- **M-1: the person tile and the layering rule.** Answered 2026-11-02. The user wants the tile in the design system, but only as a content-agnostic shell: "The components that should be promoted into the design system should be content-agnostic. They should just be the little shells that have slots for content to go in, and then the callers can inject the content they need … The design system can have the basic components and things like the gender colors. At the repository level, we can also have shared helpers, like just basic things that resolve values, but the content should live at the call sites." A preparatory PR comes first. **Applied:** map row and scope entry S13-32 "The person tile becomes a kit shell"; the working rule "One person tile, built once" is rewritten; the plan depends on S13-32 (D-4, STEP-0).
+- **M-1: the person tile and the layering rule.** Answered 2026-11-02. The user wants the tile in the design system, but only as a content-agnostic shell: "The components that should be promoted into the design system should be content-agnostic. They should just be the little shells that have slots for content to go in, and then the callers can inject the content they need … The design system can have the basic components and things like the gender colors. At the repository level, we can also have shared helpers, like just basic things that resolve values, but the content should live at the call sites." A preparatory PR came first: S13-32 "The person tile becomes a kit shell". **Superseded the same day:** the board (turn 12) drew compact participant cards, which the user kept ("I decided to make them smaller … if we don't need to do that anymore, you can cancel those PRs"). S13-32 is descoped; the tile stays in `Features/Conclusions` with two sizes (D-4); the working rule is now "One person tile, two sizes, in the feature". Its shared pieces moved back into this plan: the term-name overload (D-5), the Return modifier (D-10).
+- **Board answers (2026-11-02).** Compact cards kept; participants ordered by role, then name, in Go (S13-33 D-10); full width at Wide (D-17, which bends Wide rule 2: STEP-9 rewords it in § 9 and the add-design-brief Paste block together).
+- **Round 2 M-14: one term-name rule.** Answered 2026-11-02: unify in this PR. Vitals rows, place titles and the gender badge read terms through `PropertyTermDisplay` (D-18, STEP-2); a relabelled built-in term shows the product name in Vitals and on the badge (AC-7.1).
+- **Round 2 M-11: the compact card's years.** Answered 2026-11-02: reuse the Persons list's life span at year precision ("1820 –", not the board's "b. 1820") (D-4, D-20).
 
 ## Writer's own calls
 
-- D-6: `EventsList.accessibilityLabel` gains `includesRef:` so the timeline speaks an event without its ref. The ref adds noise on a person's own timeline; the board can ask for it back.
-- D-11: participants sit in an adaptive `LazyVGrid` at the tile's declared minimum width (the Gallery's precedent), not in Family's column formula.
+- D-6: the timeline speaks an event without its ref (`EventsList.spokenLine`); the ref adds noise on a person's own timeline.
+- D-11: participants sit in an adaptive `LazyVGrid` at `PersonTile.Size.compact.minimumWidth` (the Gallery's precedent), not in Family's column formula.
+- D-7: the board's 72pt event picture over the Events list's 44pt.
+- D-6: a fold covers the dated rows before the death marker; the death marker, the undated group and the rows after death always show (the board drew no folded death).
+- D-15: a repeat click on a point re-scrolls by resetting the target to nil first.
 - D-12: Family moves onto a shared section host in this PR, not in a preparatory one: the host is about 70 lines, and Family is its first caller.
 - D-14: the accessibility-id scheme.
-- M-2, M-4 and M-8 are placed in S13-32's scope (the term resolver, the Return modifier, the tile's key names), because S13-32 lands first and the tile shell owns them.
+- (Superseded) M-2, M-4 and M-8 were placed in S13-32's scope; with S13-32 descoped they are answered in this plan again (round 2 M-20).
 
 ## Scope change after round 1 (user, 2026-11-02)
 
@@ -27,16 +33,16 @@ The tile reads `ConclusionListRow.title`, `ConclusionTitleSource`, `ConclusionDa
 
 ### M-2 · blocker · `PersonTimelineRole.label` is a second term-label rule
 `PropertyTermDisplay.name(key:origin:propertyKey:catalogLabel:)` already falls back to the key; T-5 contradicted it.
-**Answer:** Fixed. D-5 uses `PropertyTermDisplay.name(_ value: CatalogConclusionValue, propertyKey:)`, which S13-32 adds; `PersonTimelineRole` is gone; T-5 and Edges now show the key. The older copy in `ReconciledValueDisplay.string(for:)` is logged to `docs/ideas/structural-debt.md` in STEP-7, and S13-32 moves `PersonGenderTreatment` off it.
+**Answer:** Fixed. D-5 adds `PropertyTermDisplay.name(_ value: CatalogConclusionValue, propertyKey:)` in this PR (re-answered in round 2: S13-32 is descoped); `PersonTimelineRole` is gone. The older rule in `ReconciledValueDisplay.string(for:)` is unified in this PR (round 2 M-14, D-18), not logged.
 
 ### M-3 · blocker · `Row.spokenLabel` is a second spoken label for an event
-**Answer:** Fixed. D-6 composes `EventsList.accessibilityLabel(event, orders:, includesRef: false)` with the roles; T-7 pins it.
+**Answer:** Fixed; reshaped in round 2 (M-19): D-6 composes `EventsList.spokenLine` with the roles; T-7 pins it.
 
 ### M-4 · major · The title button has no owner; Return handling would be a third hand copy
-**Answer:** Fixed. D-10 names the title's style and uses the kit's Return modifier, which S13-32 adds and moves the tile and the fold row onto (S13-32 scope); D-9 uses it too. The brief's inventory names the style.
+**Answer:** Fixed; re-answered in round 2 (M-18): the Return modifier is added in this PR (D-10) and the title's style is `ConclusionFocusRingButtonStyle` (D-19).
 
 ### M-5 · major · D-11 copied Family's column formula
-**Answer:** Fixed. D-11: an adaptive grid at the minimum width declared on the tile shell (S13-32). Executability X-2 is closed by the same fix.
+**Answer:** Fixed; re-answered in round 2 (M-21): the minimum width is `PersonTile.Size.compact.minimumWidth` (D-4, D-11). Executability X-2 is closed by the same fix.
 
 ### M-6 · major · The section host is copied from Family, with S13-16 as the third copy
 **Answer:** Fixed. D-12 `ConclusionPageSectionHost`; Family moves onto it in STEP-2.
@@ -45,10 +51,10 @@ The tile reads `ConclusionListRow.title`, `ConclusionTitleSource`, `ConclusionDa
 **Answer:** Fixed. D-13 `PersonTimelinePreviewData`, shared by the previews and the tests, with people from `PersonFamilyPreviewData.summary`. Closes X-5.
 
 ### M-8 · major · The shared tile keeps Family-named keys
-**Answer:** Fixed by moving the work: S13-32's scope renames the tile's "this person" keys. The Out row says so.
+**Answer:** Declined (re-answered in round 2): a compact card is never the focus, so the Timeline never reads `familyThisPerson` / `familyThisPersonSpoken`; the keys keep their one reader (Family's focus tile). The Out row says so.
 
 ### M-9 · minor · `Participant` nearly copies `PersonFamilyContent.Tile`
-**Answer:** Declined for now. S13-32 decides the person content type both hold, so a shared "tile with a destination" is reconsidered there; the plan says so under Codebase fit.
+**Answer:** Declined (re-answered in round 2): `Participant` adds a `caption` that Family's `Tile` never has, so a shared struct would carry an optional field one caller never sets; both hold the same `PersonTileContent`. Codebase fit says so.
 
 ### M-10 · minor · Brief: the Event title status, and TL-6's role on the tile
 **Answer:** Fixed. The title row is Ship. TL-6 allows only a caption above the tile.
@@ -88,3 +94,80 @@ The tile reads `ConclusionListRow.title`, `ConclusionTitleSource`, `ConclusionDa
 
 ### X-12 · minor · `sectionQueryKeys` asserts the other sections are nil
 **Answer:** Fixed. STEP-3 says `.timeline` leaves the nil list.
+
+## Round 2
+
+Reviewed the plan rewritten after the board (turn 12), S13-32's descoping and the S13-33 plan. Maintainability: Fits with changes. Executability: Not ready (two blockers). All answered below; S13-33's final names (Planned) re-checked against § 4, D-6 and D-15: `dated` is computed from `span`, a recorded marker is exactly the header's birth or death, a non-canonical header birth is a placeholder; no `HasEventDate` mention remains.
+
+### M-11 · blocker · `PersonLifeDisplay.years` and the `lifeYears*` keys are a second life-span rule
+**Answer:** To user → answered 2026-11-02: reuse the Persons list's span. D-20 adds `DateRowDisplay.Precision.year` (qualifiers and ranges kept); D-4's `years` is `dateSpan` at year precision; the three keys are dropped; T-2 gains "abt." and one-sided cases.
+
+### M-12 · blocker · The row order is worked out twice
+**Answer:** Fixed. D-6 builds one `items` sequence (markers, rows, undated header, more rows) with the folds applied; the view and `PersonTimelineLifeline` read it; the folded-death, undated-death and undated-birth cases are decided; T-5 and T-6 assert the sequences.
+
+### M-13 · blocker · A second scroll mechanism and an unowned viewport
+**Answer:** Fixed. D-15: clicks set `scrollTarget` for `pvScrollsRowIntoView(_, anchor: .top)`; `PVPageColumns` publishes `pvPageVisibleRect` from the state it already measures; frames are measured in named spaces. T-9 covers tethers against `visible`.
+
+### M-14 · blocker · Two term-name rules
+**Answer:** To user → answered 2026-11-02: unify in this PR. D-18, STEP-2, T-12, AC-7.1, AC-7.2; the structural-debt Out row is removed; the Objective names the visible change.
+
+### M-15 · major · The brief and map still describe S13-32
+**Answer:** Fixed in the planning commit: the brief's Depends, Ships, TL-6, TL-W1, TL-W2, Wide table, frame 13, inventory (tile, title, secondary column row removed) and Out rows, and the map's S13-D4 track row, S13-12 Context and S13-13 Ships; the DoD sweep adds "One person tile, built once" and `S13-32`.
+
+### M-16 · major · D-17 bends Wide rule 2; one `group` cannot serve columns and band
+**Answer:** Fixed. Rules this plan bends names rule 2 with the user's answer; STEP-9 rewords it in § 9 and the add-design-brief Paste block together; `columnWidths` returns a `band`; T-10 asserts the band stays 1180.
+
+### M-17 · major · The host takes key and glyph instead of the section
+**Answer:** Fixed. D-12: `ConclusionPageSectionHost(section:entityId:…)` derives the key, glyph and id root; Family's hand-built key goes.
+
+### M-18 · major · The title's button style is not chosen
+**Answer:** Fixed. D-19: `ConclusionFocusRingButtonStyle`, moved from the tile, for the tile and the title.
+
+### M-19 · major · `includesRef:` is a mode Bool and joins speech with the visual separator
+**Answer:** Fixed. D-6: `EventsList.spokenLine` with `spokenJoin`; `accessibilityLabel` unchanged.
+
+### M-20 · minor · Round-1 answers rested on S13-32
+**Answer:** Fixed: To user records S13-32's descoping and the user's answers; M-1, M-2, M-4, M-5, M-8 and M-9 are re-answered above.
+
+### M-21 · minor · The card's minimum width belongs on the card
+**Answer:** Fixed. `PersonTile.Size.minimumWidth` (D-4), read by D-11 and by `PersonFamilyLayout` in place of its literal 120.
+
+### M-22 · minor · "Subject" needs the seeded constant and the origin check
+**Answer:** Fixed. D-5 `isSubject`; T-7 has a researcher's term keyed `subject`.
+
+### X-13 · blocker · The viewport source for tethers
+**Answer:** Fixed with M-13 (D-15 Coordinates).
+
+### X-14 · major · A new `ScrollViewReader`
+**Answer:** Fixed with M-13: one mechanism, `.top` anchor, nil-then-id reset, unfold-then-scroll ordering, cap clicks scroll to their marker item.
+
+### X-15 · blocker · The row order is not decided by the model
+**Answer:** Fixed with M-12 (D-6 Order and Folds).
+
+### X-16 · major · STEP-4's check needed a later step
+**Answer:** Fixed. `fillsWidth` turns true for `.timeline` in STEP-5 with T-3; STEP-1 adds it all false.
+
+### X-17 · major · T-8's tick step contradicted D-15
+**Answer:** Fixed. T-8: 1-year ticks at about 43pt a year; `lise` heights given (4000pt → 1-year, 1000pt → 5-year); `ernst` 1200pt.
+
+### X-18 · major · A recorded marker's spoken label decided twice
+**Answer:** Fixed. D-6: a recorded marker reads its row's label; "Born …" is dropped; T-7.
+
+### X-19 · major · The tooltip text was not specified
+**Answer:** Fixed. D-4: `LifeLine.text` and `PersonTileContent.helpText`, with T-2's example.
+
+### X-20 · major · The title's style, font and line limit
+**Answer:** Fixed. D-19: `PVFont.display(size: PVTypeScale.h3)`, two lines, only the title is the hit area; the date at `PVTypeScale.body` through `EventSecondaryLine(dateSize:)`.
+
+### X-21 · major · `primaryFill` and the three initializers
+**Answer:** Fixed. D-17: all three initializers, the band layout on `band`, ignored with a secondary or an unbounded proposal; T-10.
+
+### X-22 · major · Empty roles and `isSubject`
+**Answer:** Fixed. D-5, D-6: no Badges and no "as" clause; nil caption and spoken role; `isSubject` defined; AC-1.10, T-7.
+
+### X-23 · minor · Fixture details
+**Answer:** Fixed. D-13 lists each fixture's facts (the rest is the writer's, tests check only named properties); the brief's sample now carries Johann's death 18 Sep 1880 and burial 22 Sep 1880; T-5's event list is unambiguous.
+
+### X-24 · minor · Smaller items
+**Answer:** Fixed: the compact card's lift (D-4); the fold row's style (D-9); the host's signature (D-12); the caption's join and nil (D-5); no new years keys (M-11); the Events list tests are `PersonsListTests` (§ 4, § 8); STEP-7's check includes the repeat-click scroll; the fold reset is the section's `.onChange`, as Family (§ 8 note).
+
