@@ -179,9 +179,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var seededSearchHits: [CatalogSearchHit] = []
     /// When set, `workspaceNavCounts` throws instead of returning counts.
     var workspaceNavCountsError: Error?
-    /// Per-call delay before `workspaceNavCounts` returns, consumed in call
-    /// order; empty means no delay. The counts are read when the call starts,
-    /// so a delayed recount returns the counts from then.
     /// Pauses a `workspaceNavCounts` call after it reads its snapshot, so a test can finish a later recount first.
     let workspaceNavCountsHold = FakeHold()
     /// When set, `updateSource` throws (identity title/type/description saves).

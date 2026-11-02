@@ -130,8 +130,7 @@ func contains(ids []string, id string) bool {
 }
 
 // TestUpdateAndCoverReturnEffects: a rename or a cover change reports the
-// Source and, for a title, its graphs, and never a sidebar recount; a delete
-// reports its graphs, the graph-list read and the recount.
+// Source and, for a title, its graphs, and never a sidebar recount.
 func TestUpdateAndCoverReturnEffects(t *testing.T) {
 	t.Run("a rename reports the Source and its graph, no counts", func(t *testing.T) {
 		dir, userID, sourceID, _, _ := filedSubject(t, false)
