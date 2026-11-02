@@ -1,6 +1,6 @@
 # Review — S13-13 Timeline section (and brief S13-D4)
 
-**Verdict:** round 1 Fits with changes — Ready with changes; round 2 Fits with changes — Not ready, every finding Fixed or answered by the user; none open. Status stays `Blocked — on S13-33` until S13-33 lands.
+**Verdict:** round 1 Fits with changes — Ready with changes; round 2 Fits with changes — Not ready, every finding Fixed or answered by the user; none open. After round 2 the card work moved to S13-34 and S13-35 (below); the refreshed plan has not been re-reviewed. Status `Blocked — on S13-33, S13-35`.
 **Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet).
 
 ## To user
@@ -24,6 +24,17 @@
 ## Scope change after round 1 (user, 2026-11-02)
 
 The user asked for a lifeline: a line to scale over the life, each event pointing to its place, gaps shown as empty stretches. Answers: an unknown birth or death is a placeholder with no invented date, placed by which event types may come before birth or after death (matching's lifespan window pads 110 years, so it is not reused); every event sits at its own date; undated events sit between the birth and death markers (R-24 changed, R-24a added); gaps are not labelled. Positions are Go's (new map row S13-33, Timeline positions, using `valuecompare.DateEnds`); the plan gains US-5, D-15, D-16, T-8, T-9. Round 2 reviews this text.
+
+## Scope change after round 2 (user, 2026-11-02)
+
+The user asked to hoist the person card into the design system, regular and compact, because a family tree in another feature will reuse it, and to decouple display from content first. An evaluation of `PersonTile` (2026-11-02) found that the card and the display pieces it is built from sit in `Features/`; the map re-cut the work as two preparatory PRs (working rule "The person card lives in the design system; display is decoupled from content"). This plan now builds on them and no longer carries:
+
+- **To S13-34** (display pieces move down a layer): D-5's `PropertyTermDisplay.name(_:propertyKey:)` overload and D-18's one term rule for Vitals and the badge (with the former US-7, its AC-7.1 and AC-7.2, STEP-2, T-1, T-12); D-20's year precision on `DateRowDisplay`. Round 2 M-11, M-14 and M-22's resolver half are answered there.
+- **To S13-35** (the person card joins the design system): D-4's compact size, `years`, `LifeLine.text` and `helpText` (STEP-4, T-2); D-10's `pvActivatesOnReturn`; D-19's focus-ring style, now `PVFocusRingButtonStyle` in the kit (round 2 M-18). Round 2 M-21's minimum width is `PVTileCardSize.compact.minimumWidth`.
+- **Kept here, renumbered:** role badges (D-4), items (D-5), picture (D-6), folds (D-7), fold row (D-8), card grid (D-9, now `PVPersonCard(size: .compact)`), host (D-10), fixtures (D-11), ids (D-12), lifeline (D-13), placeholders (D-14), full width (D-15), and the event row (D-16, now `PVTileCard(size: .row)` with the title button in its title slot). Tests T-3 – T-11 became T-1 – T-9; Steps went from STEP-0 – STEP-9 to STEP-0 – STEP-7.
+- **Rules this plan bends** no longer lists the tile rule or the term-name change: the prep PRs carry them.
+
+A round 3 (or a fresh round on the three plans together) should check this refresh against S13-34 and S13-35.
 
 ## Round 1
 
