@@ -10,7 +10,7 @@ The Person page (`macos/App/Features/Conclusions/PersonDetailView.swift`, worded
 
 - **R-1. Person page only.** Event and Place pages keep their current layout this spike. The section pattern may be reused for them later.
 - **R-2. Canonical people only.** Everything on the page is canonical (promoted) entities. A relative, participant, or anything else that exists only as an unpromoted Subject does not appear. Where nothing is promoted, nothing is drawn.
-- **R-3. Reuse the existing gender/sex colors.** Every person treatment on the page (Family, Timeline participants) uses the color logic already shipped (`PVGenderTreatment`, `PersonGenderTreatment` until S13-35; S10-23), including its treatment for unknown values.
+- **R-3. Reuse the existing gender/sex colors.** Every person treatment on the page (Family, Timeline participants) uses the color logic already shipped (`PVGenderTreatment`; S10-23), including its treatment for unknown values.
 
 ## Design, then build, one view at a time
 
