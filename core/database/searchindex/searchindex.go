@@ -49,11 +49,13 @@ const (
 
 // Tagged secondary line prefixes for Person and Place handle documents
 // (parsed by core/search for match field codes + snippets, except the alias
-// tag, which only makes the line findable).
+// tag, which only makes the line findable). Each tag is ASCII punctuation and
+// a tab, which the tokenizer and the value rules drop as separators, so no tag
+// word is searchable.
 const (
-	SecondaryTagName    = "name:\t"
-	SecondaryTagToponym = "toponym:\t"
-	SecondaryTagAlias   = "alias:\t"
+	SecondaryTagName    = "=\t"
+	SecondaryTagToponym = "@\t"
+	SecondaryTagAlias   = "~\t"
 )
 
 // Querier is *sql.Tx or *sql.DB.

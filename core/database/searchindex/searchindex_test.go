@@ -115,22 +115,22 @@ func TestMatchTextListsEachAlternateOnce(t *testing.T) {
 		{
 			name: "place", head: handleHead{id: "p", kind: vocabkey.Place},
 			v:         handleValues{vocabkey.PropertyToponym: {"Montréal", "Montreal", "Ville-Marie", "Ville Marie"}},
-			wantTitle: "Montréal", wantSecondary: []string{"toponym:\tVille-Marie", "Québec"},
+			wantTitle: "Montréal", wantSecondary: []string{"@\tVille-Marie", "Québec"},
 		},
 		{
 			name: "person", head: handleHead{id: "p", kind: vocabkey.Person},
 			v:         handleValues{vocabkey.PropertyName: {"José Robins", "Jose Robins", "JOSÉ ROBINS", "Joe Robins"}},
-			wantTitle: "José Robins", wantSecondary: []string{"name:\tJoe Robins"},
+			wantTitle: "José Robins", wantSecondary: []string{"=\tJoe Robins"},
 		},
 		{
 			name: "label reading like the title adds no line", head: handleHead{id: "p", kind: vocabkey.Place, label: "montreal"},
 			v:         handleValues{vocabkey.PropertyToponym: {"Montréal", "Montreal", "Ville-Marie", "Ville Marie"}},
-			wantTitle: "Montréal", wantSecondary: []string{"toponym:\tVille-Marie", "Québec"},
+			wantTitle: "Montréal", wantSecondary: []string{"@\tVille-Marie", "Québec"},
 		},
 		{
 			name: "a spelling that differs by a word break stays", head: handleHead{id: "p", kind: vocabkey.Place},
 			v:         handleValues{vocabkey.PropertyToponym: {"Montréal", "Ville-Marie", "Villemarie"}},
-			wantTitle: "Montréal", wantSecondary: []string{"toponym:\tVille-Marie", "toponym:\tVillemarie", "Québec"},
+			wantTitle: "Montréal", wantSecondary: []string{"@\tVille-Marie", "@\tVillemarie", "Québec"},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -202,9 +202,9 @@ func TestMatchTextCarriesFoldedInNicknames(t *testing.T) {
 		want []string
 	}{
 		{"Thomas Smith", handleValues{vocabkey.PropertyName: {"Thomas Smith", "Tomas Smyth"}},
-			[]string{"name:\tTomas Smyth", "alias:\tthom", "alias:\tthos", "alias:\ttom", "alias:\ttommy"}},
-		{"Tom Smith", handleValues{}, []string{"alias:\ttommy"}},
-		{"Hannah Smith", handleValues{}, []string{"alias:\tanna", "alias:\tnan", "alias:\tnanny"}},
+			[]string{"=\tTomas Smyth", "~\tthom", "~\tthos", "~\ttom", "~\ttommy"}},
+		{"Tom Smith", handleValues{}, []string{"~\ttommy"}},
+		{"Hannah Smith", handleValues{}, []string{"~\tanna", "~\tnan", "~\tnanny"}},
 		{"Smith", handleValues{}, nil},
 	} {
 		t.Run(tt.form, func(t *testing.T) {
