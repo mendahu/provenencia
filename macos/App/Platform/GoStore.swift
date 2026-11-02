@@ -1248,6 +1248,26 @@ struct GoStore: GenealogyStore {
         )
     }
 
+    func listPersonEvents(projectDir: String, entityID: String) async throws -> [CatalogPersonEvent] {
+        var req = Provenencia_Engine_V1_ListPersonEventsRequest()
+        req.projectDir = projectDir
+        req.entityID = entityID
+        let resp: Provenencia_Engine_V1_ListPersonEventsResponse = try await provenenciaCall(
+            method: CoreMethod.listPersonEvents,
+            request: req
+        )
+        return resp.events.map { e in
+            CatalogPersonEvent(
+                event: Self.mapEventSummary(e.event),
+                roles: e.roles.map(Self.mapConclusionTerm),
+                participants: e.participants.map {
+                    CatalogEventParticipant(person: Self.mapPersonSummary($0.person), roles: $0.roles.map(Self.mapConclusionTerm))
+                },
+                dated: e.dated
+            )
+        }
+    }
+
     /// A unit of a kind this build doesn't know is dropped, as is a shape of a
     /// pattern it doesn't know.
     private static func mapFamilyUnit(_ u: Provenencia_Engine_V1_FamilyUnit) -> CatalogFamilyUnit? {

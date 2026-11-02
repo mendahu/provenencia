@@ -448,7 +448,7 @@ struct CatalogQueryRegistryTests {
 
     @Test func everyKindHasOneDescriptor() {
         let kinds = CatalogQueryKey.Kind.allCases
-        #expect(kinds.count == 20)
+        #expect(kinds.count == 21)
         let described = kinds.map { kind -> CatalogQueryKey.Kind in
             let descriptor = kind.descriptor
             #expect(descriptor.kind == kind)
@@ -880,6 +880,7 @@ struct CatalogQueryRegistryTests {
             .allCached(.conclusionDetail),
             .allCached(.personClaims),
             .allCached(.personFamily),
+            .allCached(.personEvents),
         ])
         // Adding vocabulary touches only the list that owns it — the Source
         // page reads that list rather than carrying its own copy.
@@ -978,6 +979,7 @@ struct CatalogQueryRegistryTests {
             .allCached(.conclusionDetail),
             .allCached(.personClaims),
             .allCached(.personFamily),
+            .allCached(.personEvents),
         ])
         #expect(registry.invalidations(by: .createdPropertyTerm(propertyId: "p1"), project: project) == [
             .key(.propertyTerms(project: project, propertyId: "p1")),
@@ -1014,6 +1016,7 @@ struct CatalogQueryRegistryTests {
             #expect(invalidations.contains(.allCached(.conclusionDetail)) == isTrigger, "\(mutation)")
             #expect(invalidations.contains(.allCached(.personClaims)) == isTrigger, "\(mutation)")
             #expect(invalidations.contains(.allCached(.personFamily)) == isTrigger, "\(mutation)")
+            #expect(invalidations.contains(.allCached(.personEvents)) == isTrigger, "\(mutation)")
         }
         #expect(CatalogQueryRegistry.conclusionTriggers == [.promotedSubject, .deletedSource, .updatedProperty])
         #expect(registry.invalidations(by: .mutatedSourceMetadata(sourceId: "s1"), project: project) == [
@@ -1384,6 +1387,50 @@ struct CatalogQueryRegistryTests {
         #expect(handle.value == family)
         await #expect(throws: CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])) {
             _ = try await store.getPersonFamily(projectDir: projectDir, entityID: "e9")
+        }
+    }
+
+    /// T-6 (AC-4.2, AC-4.3): a promote stales every cached person's timeline;
+    /// the key is evicted while hidden and follows every touched handle.
+    @Test func personEventsInvalidateOnPromote() {
+        let project = ProjectKey(projectDir: projectDir)
+        let invalidations = CatalogQueryRegistry.standard.invalidations(by: .promotedSubject(graphId: "g-1"), project: project)
+        #expect(invalidations.contains(.allCached(.personEvents)))
+        let key = CatalogQueryKey.personEvents(project: project, entityId: "e1")
+        #expect(key.kind == .personEvents)
+        #expect(key.project == project)
+        #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .evict)
+        #expect(CatalogQueryRegistry.standard.stalePolicy(for: key) == .sessionFresh)
+        #expect(CatalogQueryKey.Kind.personEvents.descriptor.refreshes.map(\.follows) == [.touchedHandles])
+    }
+
+    /// T-7 (AC-4.1): the key loads through the store; an unseeded handle is
+    /// coded not found, as Go answers for an unknown handle.
+    @Test func personEventsLoadThroughTheStore() async throws {
+        let store = FakeStore()
+        let person = CatalogCanonicalEntity(id: "e2", ref: "PER-2", subjectTypeID: "t-person", label: "")
+        let event = CatalogCanonicalEntity(id: "ev1", ref: "EVT-1", subjectTypeID: "t-event", label: "")
+        let witness = CatalogConclusionValue.term(id: "r1", key: "witness", label: "Witness", origin: CatalogOrigin.provenencia)
+        let events = [
+            CatalogPersonEvent(
+                event: CatalogEventSummary(entity: event, title: CatalogEventTitle(rule: .ref, ref: "EVT-1")),
+                roles: [witness],
+                participants: [CatalogEventParticipant(
+                    person: CatalogPersonSummary(entity: person, name: nil, nameValueCount: 0),
+                    roles: [witness]
+                )],
+                dated: true
+            ),
+        ]
+        store.seededPersonEvents = ["e1": events]
+        let session = makeSession(store: store)
+        let handle: QueryHandle<[CatalogPersonEvent]> = session.query(
+            .personEvents(project: session.projectKey, entityId: "e1")
+        )
+        await waitForQuery(handle)
+        #expect(handle.value == events)
+        await #expect(throws: CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])) {
+            _ = try await store.listPersonEvents(projectDir: projectDir, entityID: "e9")
         }
     }
 }

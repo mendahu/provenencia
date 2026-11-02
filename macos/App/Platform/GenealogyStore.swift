@@ -702,6 +702,26 @@ struct CatalogPersonFamily: Sendable, Equatable {
     var originSiblings: [CatalogOriginSibling] = []
 }
 
+/// One event of a Person's timeline (S13-05): an event the person took part in
+/// directly, in any role. `roles` are the person's distinct role terms on it
+/// (usually one; empty when the participation has none), `participants` the
+/// other canonical people on it in participation order. `dated` is false for an
+/// event Go's order puts last; Swift does not sort, group or title.
+struct CatalogPersonEvent: Sendable, Equatable, Identifiable {
+    var event: CatalogEventSummary
+    var roles: [CatalogConclusionValue]
+    var participants: [CatalogEventParticipant]
+    var dated: Bool
+
+    var id: String { event.entity.id }
+}
+
+/// One other canonical person on an event and their role terms.
+struct CatalogEventParticipant: Sendable, Equatable {
+    var person: CatalogPersonSummary
+    var roles: [CatalogConclusionValue]
+}
+
 /// One child of the person's parents, or a sibling recorded with no shared
 /// parent. The person's own member has no link. `parentSets` are the indexes,
 /// among the `.parents` units, of the parent sets it is a child of; empty for a
@@ -1460,6 +1480,10 @@ protocol GenealogyStore: Sendable {
     /// A Person's family units (S13-04). Throws `conclusiondetails.not_found`
     /// for an unknown or merged handle.
     func getPersonFamily(projectDir: String, entityID: String) async throws -> CatalogPersonFamily
+    /// The canonical events a Person took part in, in any role, in Go's date
+    /// order (S13-05). Throws `conclusiondetails.not_found` for an unknown or
+    /// merged handle, or one that is no Person.
+    func listPersonEvents(projectDir: String, entityID: String) async throws -> [CatalogPersonEvent]
     func listSubjects(projectDir: String, graphID: String) async throws -> [CatalogSubject]
     func setSubjectPosition(
         projectDir: String,
