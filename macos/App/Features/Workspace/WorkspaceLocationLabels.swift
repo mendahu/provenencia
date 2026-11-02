@@ -55,7 +55,13 @@ enum WorkspaceLocationLabels {
     /// The Source's title, when the session knows one, else the title the
     /// location carries. Blank titles count as none.
     static func sourceTitle(sourceID: String, carried: String?, names: LocationNames) -> String? {
-        names.sourceTitle(sourceID)?.trimmedNonEmpty ?? carried?.trimmedNonEmpty
+        sourceTitle(live: names.sourceTitle(sourceID), carried: carried)
+    }
+
+    /// The one rule for a Source's displayed title: the live title, else the carried
+    /// one. Blank titles count as none.
+    static func sourceTitle(live: String?, carried: String?) -> String? {
+        live?.trimmedNonEmpty ?? carried?.trimmedNonEmpty
     }
 
     /// The graph's name, else "Evidence graph".

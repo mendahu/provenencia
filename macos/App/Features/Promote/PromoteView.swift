@@ -24,7 +24,7 @@ struct PromoteView: View {
         let model = model
         let connections = model.flow.connectionsByRow
         VStack(spacing: 0) {
-            PromoteHeader(model: model)
+            PromoteHeader(model: model, counts: promotingCounts(model))
             ScrollView {
                 VStack(alignment: .leading, spacing: PVSpacing.space7) {
                     notices
@@ -78,6 +78,23 @@ struct PromoteView: View {
             onConfirm: { model.leave() },
             detail: { _ in EmptyView() }
         )
+    }
+
+    private func promotingCounts(_ model: PromoteModel) -> some View {
+        let flow = model.flow
+        let promoting = flow.mappedRest
+            ? L10n.Promote.promoting(count: flow.rows.count)
+            : model.entry.subjectName
+        let countLine = flow.mappedRest
+            ? L10n.Promote.rowSummary(rows: flow.rows.count, promoted: flow.rows.filter(\.anchor).count)
+            : L10n.Promote.singleSummary(more: flow.restCount)
+        return VStack(alignment: .trailing, spacing: PVSpacing.space1) {
+            Text(verbatim: promoting)
+                .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
+            Text(verbatim: countLine)
+                .font(PVFont.mono(size: PVTypeScale.caption))
+                .foregroundStyle(PVColor.textMuted)
+        }
     }
 
     private var notices: some View {
@@ -678,9 +695,11 @@ private struct PromoteKindTile: View {
     }
 }
 
-/// The page header. Its own view so the Source row and types it reads re-render it alone.
-private struct PromoteHeader: View {
+/// The page header. Its own view so the Source row and types it reads re-render it alone;
+/// the counts on the right are built by the caller, so the flow's changes do not.
+private struct PromoteHeader<Counts: View>: View {
     let model: PromoteModel
+    let counts: Counts
 
     var body: some View {
         let source = model.sourceHeader
@@ -706,34 +725,11 @@ private struct PromoteHeader: View {
                 }
             }
             Spacer(minLength: PVSpacing.space6)
-            VStack(alignment: .trailing, spacing: PVSpacing.space1) {
-                Text(verbatim: promoting)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
-                Text(verbatim: countLine)
-                    .font(PVFont.mono(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textMuted)
-            }
+            counts
         }
         .padding(.horizontal, PVSpacing.space10)
         .padding(.vertical, PVSpacing.space6)
         .background(PVColor.surfaceCard)
         .overlay(alignment: .bottom) { PVDivider() }
-    }
-
-    private var promoting: String {
-        if model.flow.mappedRest {
-            return L10n.Promote.promoting(count: model.flow.rows.count)
-        }
-        return model.entry.subjectName
-    }
-
-    private var countLine: String {
-        if model.flow.mappedRest {
-            return L10n.Promote.rowSummary(
-                rows: model.flow.rows.count,
-                promoted: model.flow.rows.filter(\.anchor).count
-            )
-        }
-        return L10n.Promote.singleSummary(more: model.flow.restCount)
     }
 }
