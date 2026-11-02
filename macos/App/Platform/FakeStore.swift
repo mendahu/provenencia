@@ -95,6 +95,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var seededPersonClaims: [String: [CatalogPersonClaimGroup]] = [:]
     /// A Person's family by entity id; an unseeded id throws `conclusiondetails.not_found`.
     var seededPersonFamilies: [String: CatalogPersonFamily] = [:]
+    /// A Person's timeline events by entity id; an unseeded id throws `conclusiondetails.not_found`.
     var seededPersonEvents: [String: [CatalogPersonEvent]] = [:]
     /// The Identity Claim Promote wrote per Subject id.
     var claimBySubject: [String: CatalogIdentityClaim] = [:]

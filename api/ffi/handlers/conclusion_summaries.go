@@ -103,6 +103,15 @@ func termProto(t *conclusionsummaries.Term) *engine.ConclusionTerm {
 	}
 }
 
+// termsProto maps terms in order with termProto; no terms gives nil.
+func termsProto(ts []conclusionsummaries.Term) []*engine.ConclusionTerm {
+	var out []*engine.ConclusionTerm
+	for i := range ts {
+		out = append(out, termProto(&ts[i]))
+	}
+	return out
+}
+
 func termFactsProto(f conclusionsummaries.TermFacts) *engine.TermFacts {
 	return &engine.TermFacts{Term: termProto(f.Term), Count: int32(f.Count), PropertyLabel: f.PropertyLabel}
 }

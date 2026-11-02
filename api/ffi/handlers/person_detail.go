@@ -208,14 +208,6 @@ func personEventProto(r persondetail.PersonEvent, summaries conclusionsummaries.
 	return out, nil
 }
 
-func termsProto(ts []conclusionsummaries.Term) []*engine.ConclusionTerm {
-	var out []*engine.ConclusionTerm
-	for i := range ts {
-		out = append(out, termProto(&ts[i]))
-	}
-	return out
-}
-
 // familyMemberProto maps one relative. PersonFamily drops a relative with no
 // summary, so a missing one is a broken invariant, not a case to hide.
 func familyMemberProto(r kinship.Relative, summaries conclusionsummaries.Summaries, paths map[string]string) (*engine.FamilyMember, error) {
