@@ -1,6 +1,6 @@
 # S13-35 — The person card joins the design system
 
-**Status:** Blocked — on S13-34
+**Status:** Landed in #690 (2026-11-02)
 **Spike / slice:** Spike 13 · Slice 4 — Timeline (preparatory)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: Family looks, reads and behaves as before; the compact size is first drawn by S13-13, from board S13-D4 turn 12)
@@ -14,6 +14,7 @@
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/design-system-layers.mdc`
 **Context:** working rule "The person card lives in the design system; display is decoupled from content" ([`../deployment-plan.md`](../deployment-plan.md#client)); [`docs/design-system-layers.md`](../../../design-system-layers.md); the evaluation of `PersonTile` (2026-11-02, plan items 3 and 4); the S13-12 plan [`S13-12-family-section.md`](S13-12-family-section.md) and its **Landed** note; the S13-13 plan [`S13-13-timeline-section.md`](S13-13-timeline-section.md) (its compact card, Return modifier and focus-ring style are taken over here); the S13-34 plan
 **Planned:** 2026-11-02 against `main` @ `04a2c99` (S13-34's base); STEP-0 re-checks S13-34's landed names
+**Landed:** the code differs from the plan in five places. (1) The compact years use the app's qualifier wording ("abt 1790"), as S13-34 landed it, not "abt." (T-2 asserts the app's wording). (2) `PersonDetailContent.badge(_:)` is a static function taking the treatment, so `PVGenderTreatmentTests` can check the badge without a detail fixture. (3) The shell's `hasTrailing` is read from the `Trailing` type (`EmptyView`) at init. (4) The regular lines slot applies no line limit (as the tile did); `linesLineLimit` is read by the compact years line only. (5) The date · place text has one rule, `PVDatePlaceLine.text(date:place:)`, which `PersonLifeDisplay.line`, `LifeLine.text` and `EventsList.line` share; `LifeLine.text` joins its abbreviation through the localized `conclusions.lifeLine.text`.
 **Review:** [`S13-35-person-card-joins-the-design-system.review.md`](S13-35-person-card-joins-the-design-system.review.md) — round 1 Fits with changes / Not ready; every finding Fixed; the user's answer of 2026-11-02 (no `.row` size) applied; none open
 
 ### Implementer — read this first

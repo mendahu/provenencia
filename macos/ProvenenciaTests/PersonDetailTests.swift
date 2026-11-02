@@ -82,7 +82,7 @@ struct PersonDetailTests {
         #expect(content.rows.map(\.label).contains("Gender"))
         let plain = PersonDetailContent(detail: detail())
         #expect(plain.treatment == nil && plain.badge == nil)
-        #expect(plain.thumbnail == .init(mark: .subjectPerson, label: L10n.Conclusions.personNoLikeness))
+        #expect(plain.thumbnail == .init(mark: .subjectPerson, label: L10n.PersonCard.noLikeness))
         #expect(plain.rows.map(\.label) == ["Name", "Birth date", "Birth place", "Death date", "Death place"])
         let event = EventDetailContent(detail: detail())
         #expect(event.thumbnail == .init(mark: .subjectEvent, label: L10n.Conclusions.eventNoImage) && event.badge == nil)
@@ -125,7 +125,7 @@ struct PersonDetailTests {
         #expect(thumb.label == L10n.Conclusions.personLikenessThumb)
         summary.pictureImageRelPath = ""
         let bare = PersonDetailContent(detail: detail(extra: [gender], summary: summary)).thumbnail
-        #expect(bare.label == L10n.Conclusions.personNoLikeness)
+        #expect(bare.label == L10n.PersonCard.noLikeness)
     }
 
     @Test func likenessesBecomeTilesEarliestFirst() {
@@ -433,6 +433,15 @@ struct PersonDetailTests {
         #expect(PVDatePlaceLine.spokenDate(nil) == "date unknown")
         #expect(PVDatePlaceLine.spokenDate("1851") == "1851")
         #expect(PVDatePlaceLine.spokenPlace(nil) == "place unknown")
+    }
+
+    @Test func datePlaceLineTextJoinsWhatIsRecorded() {
+        #expect(PVDatePlaceLine.text(date: "3 May 1790", place: "Bremen") == "3 May 1790 · Bremen")
+        #expect(PVDatePlaceLine.text(date: "3 May 1790", place: nil) == "3 May 1790")
+        #expect(PVDatePlaceLine.text(date: "3 May 1790", place: "") == "3 May 1790")
+        #expect(PVDatePlaceLine.text(date: nil, place: "Bremen") == "Bremen")
+        #expect(PVDatePlaceLine.text(date: "", place: "Bremen") == "Bremen")
+        #expect(PVDatePlaceLine.text(date: nil, place: nil) == "")
     }
 
     @Test func lifeLinesSayUnknownUntilLifeEventsArrive() {

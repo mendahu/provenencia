@@ -14,17 +14,7 @@ enum PersonLifeDisplay {
         let dates = dateSpan(birth: summary.birth.date, death: summary.death.date, locale: locale, precision: .full)
         let places = placeSpan(birth: summary.birth.places, death: summary.death.places)
         let extra = DerivedPlace.extra(summary.birth.places) + DerivedPlace.extra(summary.death.places)
-        let text: String
-        switch (dates.isEmpty, places.isEmpty) {
-        case (true, true):
-            text = ""
-        case (false, true):
-            text = dates
-        case (true, false):
-            text = places
-        case (false, false):
-            text = L10n.Conclusions.lineJoin(first: dates, rest: places)
-        }
+        let text = PVDatePlaceLine.text(date: dates, place: places)
         return Line(text: text, extraPlaces: extra)
     }
 
@@ -35,6 +25,19 @@ enum PersonLifeDisplay {
         var date: String?
         var place: String?
         var accessibilityLabel: String
+
+        /// The line as plain text: the abbreviation, then date and place; a
+        /// missing half is left out ("b. 3 May 1790 · Bremen", "d. 1851").
+        var text: String {
+            let rest = PVDatePlaceLine.text(date: date, place: place)
+            return rest.isEmpty ? abbreviation : L10n.Conclusions.lifeLineText(abbreviation: abbreviation, rest: rest)
+        }
+    }
+
+    /// A Person's life span at year precision, for a compact card: "1790 – 1851",
+    /// "1820 –", "– 1851". Empty when neither date has a year or a phrase.
+    static func years(_ summary: CatalogPersonSummary?, locale: Locale = .autoupdatingCurrent) -> String {
+        dateSpan(birth: summary?.birth.date, death: summary?.death.date, locale: locale, precision: .year)
     }
 
     /// The *b.* and *d.* lines of a Person.

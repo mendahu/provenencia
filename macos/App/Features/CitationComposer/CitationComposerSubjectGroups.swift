@@ -201,11 +201,7 @@ struct CitationComposerObservationsColumn: View {
         .focusable()
         .focused($lineFocus, equals: .row(line.id))
         .onTapGesture { model.beginEdit(line: line) }
-        .onKeyPress(.return) {
-            guard lineFocus == .row(line.id) else { return .ignored }
-            model.beginEdit(line: line)
-            return .handled
-        }
+        .pvActivatesOnReturn(when: lineFocus == .row(line.id)) { model.beginEdit(line: line) }
         .onKeyPress(.space) {
             guard lineFocus == .row(line.id) else { return .ignored }
             model.beginEdit(line: line)

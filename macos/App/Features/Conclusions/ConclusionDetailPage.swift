@@ -627,9 +627,8 @@ struct ConclusionDetailGallerySection: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PVFocusRingButtonStyle(cornerRadius: PVRadius.sm))
                 .focused($focusedID, equals: tile.id)
-                .pvFocusRing(focusedID == tile.id, cornerRadius: PVRadius.sm)
                 .help(Text(gallery.openTip))
                 .accessibilityLabel(tile.accessibilityLabel)
                 .accessibilityIdentifier(tileID)
